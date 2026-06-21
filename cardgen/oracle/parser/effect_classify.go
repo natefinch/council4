@@ -1049,6 +1049,24 @@ func priorPTChange(tokens []shared.Token, index int) bool {
 	return false
 }
 
+// effectFallbackOnInability reports whether an effect's subject is a "who can't"
+// relative clause naming the players who couldn't satisfy a preceding required
+// action ("Each player who can't discards a card."). It detects "who"
+// immediately followed by "can't"/"cannot" within the subject token range
+// [start,index), the verb-leading subject of the effect.
+func effectFallbackOnInability(tokens []shared.Token, start, index int) bool {
+	if start < 0 || index > len(tokens) {
+		return false
+	}
+	for i := start; i+1 < index; i++ {
+		if equalWord(tokens[i], "who") &&
+			(equalWord(tokens[i+1], "can't") || equalWord(tokens[i+1], "cannot")) {
+			return true
+		}
+	}
+	return false
+}
+
 func effectIsNegated(tokens []shared.Token, index int) bool {
 	start := max(0, index-3)
 	for i, token := range tokens[start:index] {

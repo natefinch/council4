@@ -637,6 +637,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		default:
 		}
 		eachSourceDamageGroup, eachSourceDamageRecipient := eachSourceDamageSyntax(kind, tokens[ownershipStart:tokenIndex], clause, atoms)
+		fallbackOnInability := effectFallbackOnInability(tokens, ownershipStart, tokenIndex)
 		effects = append(effects, EffectSyntax{
 			Kind:                      kind,
 			Context:                   context,
@@ -682,7 +683,8 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			CastAsAdventure:           effectContainsWords(normalizedWords(clause), "as", "an", "adventure"),
 			CastWithoutPayingManaCost: kind == EffectCast &&
 				effectContainsWords(normalizedWords(clause), "without", "paying", "its", "mana", "cost"),
-			Negated:                 effectIsNegated(tokens, tokenIndex),
+			Negated:                 effectIsNegated(tokens, tokenIndex) && !fallbackOnInability,
+			FallbackOnInability:     fallbackOnInability,
 			Optional:                optional,
 			OptionalSpan:            optionalSpan,
 			LifeObject:              gainLoseLifeObject(kind, clause),

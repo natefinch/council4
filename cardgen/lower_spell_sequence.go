@@ -70,6 +70,9 @@ func lowerOrderedSequenceSpecialCase(
 	if content, ok := lowerSacrificeThenSearchSequence(ctx); ok {
 		return content, nil, true
 	}
+	if content, ok := lowerSacrificeWithInabilityFallback(ctx); ok {
+		return content, nil, true
+	}
 	if content, ok := lowerCounterThenNextMainManaSequence(ctx); ok {
 		return content, nil, true
 	}

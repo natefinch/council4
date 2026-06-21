@@ -910,7 +910,13 @@ type EffectSyntax struct {
 	// effect, including ones that pay an alternative or normal cost.
 	CastWithoutPayingManaCost bool `json:",omitempty"`
 	Negated                   bool `json:",omitempty"`
-	Optional                  bool `json:",omitempty"`
+	// FallbackOnInability marks an effect whose subject is a "who can't" relative
+	// clause ("Each player who can't discards a card."): it applies only to
+	// players who couldn't satisfy the immediately preceding required action. It
+	// also suppresses the spurious negation the "can't" qualifier would otherwise
+	// trigger, so the effect keeps its plain (non-negated) classification.
+	FallbackOnInability bool `json:",omitempty"`
+	Optional            bool `json:",omitempty"`
 	// Divided reports a "deals N damage divided as you choose among <targets>"
 	// effect: a fixed total split among the chosen targets, at least one each.
 	Divided      bool             `json:",omitempty"`

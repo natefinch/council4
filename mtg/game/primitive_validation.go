@@ -1422,10 +1422,27 @@ func (p SacrificePermanents) validatePrimitive(targets []TargetSpec, checkTarget
 	if hasGroup == hasPlayer {
 		return errors.New("SacrificePermanents requires exactly one of Player or PlayerGroup")
 	}
+	if err := p.Fallback.validate(targets, checkTargets); err != nil {
+		return err
+	}
 	if hasGroup {
 		return validatePlayerGroupReference(p.PlayerGroup)
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p SacrificeFallback) validate(targets []TargetSpec, checkTargets bool) error {
+	switch p.Kind {
+	case SacrificeFallbackNone:
+		if p.Amount.IsDynamic() || p.Amount.Value() != 0 {
+			return errors.New("SacrificeFallbackNone requires a zero Amount")
+		}
+		return nil
+	case SacrificeFallbackDiscard, SacrificeFallbackLoseLife:
+		return validateQuantity(p.Amount, targets, checkTargets)
+	default:
+		return fmt.Errorf("unknown SacrificeFallbackKind %d", p.Kind)
+	}
 }
 
 func (p Untap) validatePrimitive(targets []TargetSpec, checkTargets bool) error {

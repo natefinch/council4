@@ -885,7 +885,35 @@ func (r Renderer) renderSacrificePermanents(ctx *renderCtx, value *game.Sacrific
 	if renderedSelection != "game.Selection{}" {
 		fields = append(fields, fmt.Sprintf("Selection: %s,", renderedSelection))
 	}
+	if value.Fallback.Kind != game.SacrificeFallbackNone {
+		renderedFallback, err := r.renderSacrificeFallback(ctx, value.Fallback)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Fallback: %s,", renderedFallback))
+	}
 	return structLit("game.SacrificePermanents", fields), nil
+}
+
+func (r Renderer) renderSacrificeFallback(ctx *renderCtx, value game.SacrificeFallback) (string, error) {
+	renderedAmount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	var kind string
+	switch value.Kind {
+	case game.SacrificeFallbackDiscard:
+		kind = "game.SacrificeFallbackDiscard"
+	case game.SacrificeFallbackLoseLife:
+		kind = "game.SacrificeFallbackLoseLife"
+	default:
+		return "", fmt.Errorf("render: unsupported sacrifice fallback kind %d", value.Kind)
+	}
+	fields := []string{
+		fmt.Sprintf("Kind: %s,", kind),
+		fmt.Sprintf("Amount: %s,", renderedAmount),
+	}
+	return structLit("game.SacrificeFallback", fields), nil
 }
 
 func (r Renderer) renderBounce(ctx *renderCtx, value game.Bounce) (string, error) {

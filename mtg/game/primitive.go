@@ -583,6 +583,32 @@ type SacrificePermanents struct {
 	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
 	Amount      Quantity             // number of permanents to sacrifice
 	Selection   Selection            // eligible permanent filter; zero = any permanent
+	// Fallback is applied to each affected player who controls no permanent
+	// matching Selection, i.e. who can't satisfy the edict ("Each player who
+	// can't discards a card."). SacrificeFallbackNone leaves no rider.
+	Fallback SacrificeFallback
+}
+
+// SacrificeFallbackKind identifies the per-player rider applied to players who
+// can't satisfy a SacrificePermanents edict.
+type SacrificeFallbackKind uint8
+
+const (
+	// SacrificeFallbackNone marks an edict with no who-can't rider.
+	SacrificeFallbackNone SacrificeFallbackKind = iota
+	// SacrificeFallbackDiscard makes each player who can't sacrifice discard
+	// Amount cards ("Each player who can't discards a card.").
+	SacrificeFallbackDiscard
+	// SacrificeFallbackLoseLife makes each player who can't sacrifice lose
+	// Amount life ("Each player who can't loses 2 life.").
+	SacrificeFallbackLoseLife
+)
+
+// SacrificeFallback is the per-player rider applied to each player who can't
+// satisfy a SacrificePermanents edict.
+type SacrificeFallback struct {
+	Kind   SacrificeFallbackKind
+	Amount Quantity
 }
 
 // Untap untaps one referenced permanent or permanents in a referenced group.

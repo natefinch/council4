@@ -1167,13 +1167,17 @@ type CompiledEffect struct {
 	// route the cast-for-free primitive; it is false for every other effect.
 	CastWithoutPayingManaCost bool
 	Negated                   bool
-	Optional                  bool
-	Divided                   bool
-	OptionalSpan              shared.Span
-	Mana                      CompiledEffectMana
-	Replacement               parser.EffectReplacementSyntax
-	Payment                   CompiledEffectPayment
-	Exact                     bool
+	// FallbackOnInability mirrors the parser flag for a "who can't" relative
+	// clause effect ("Each player who can't discards a card."): it applies only
+	// to players who couldn't satisfy the immediately preceding required action.
+	FallbackOnInability bool
+	Optional            bool
+	Divided             bool
+	OptionalSpan        shared.Span
+	Mana                CompiledEffectMana
+	Replacement         parser.EffectReplacementSyntax
+	Payment             CompiledEffectPayment
+	Exact               bool
 	// SourceSpellCostReduction and SourceSpellCostReductionAmount carry the typed
 	// source-scoped cast cost reduction recognized by the parser ("This spell
 	// costs {N} less to cast for each <countable battlefield object>"). Amount
