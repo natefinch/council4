@@ -75,8 +75,14 @@ const (
 // restrictions that must be legal when chosen and again on resolution
 // (CR 115.1, CR 608.2b).
 type TargetPredicate struct {
-	PermanentTypes []types.Card
-	ExcludedTypes  []types.Card
+	// PermanentTypes matches a permanent by card type. By default the permanent
+	// must carry any one of the listed types ("target artifact or creature");
+	// when PermanentTypesConjunctive is set it must carry every listed type at
+	// once ("target artifact creature"), mirroring the spell-side
+	// SpellCardTypes vs SpellCardTypesAny distinction.
+	PermanentTypes            []types.Card
+	PermanentTypesConjunctive bool
+	ExcludedTypes             []types.Card
 
 	// Supertypes must all be present; Subtypes matches when any listed subtype
 	// is present. ExcludedSupertype, when non-empty, names a single supertype

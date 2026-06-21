@@ -946,6 +946,9 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		if digLookInstruction(tokens[index:]) {
 			return EffectDig
 		}
+		if lookAtTopCardAnyTimeInstruction(tokens[index:]) {
+			return EffectUnknown
+		}
 		return EffectManifestDread
 	case equalWord(tokens[index], "win") || equalWord(tokens[index], "wins"):
 		if winGameVerbAt(tokens, index) {
@@ -1089,6 +1092,17 @@ func digLookInstruction(tokens []shared.Token) bool {
 		tokens[4].Kind == shared.Word &&
 		effectWordsAt(tokens, 5, "cards", "of", "your", "library") &&
 		tokens[9].Kind == shared.Period
+}
+
+// lookAtTopCardAnyTimeInstruction reports whether the sentence is the
+// continuous-visibility static "look at the top card of your library any time."
+// (Bolas's Citadel, Vizier of the Menagerie, Sphinx of Jwar Isle). It is a
+// player-rule permission rather than a resolving effect, so the effect
+// classifier leaves the "look" verb for the static-declaration recognizer.
+func lookAtTopCardAnyTimeInstruction(tokens []shared.Token) bool {
+	return len(tokens) == 11 &&
+		effectWordsAt(tokens, 0, "look", "at", "the", "top", "card", "of", "your", "library", "any", "time") &&
+		tokens[10].Kind == shared.Period
 }
 
 // chooseNewTargetsVerbAt reports whether a retarget effect ("[You may] choose

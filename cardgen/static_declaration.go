@@ -689,6 +689,12 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 			AffectedPlayer: game.PlayerYou,
 		})
 		return true
+	case compiler.StaticPlayerRuleLookAtTopCardAnyTime:
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectLookAtTopCardAnyTime,
+			AffectedPlayer: game.PlayerYou,
+		})
+		return true
 	case compiler.StaticPlayerRuleCastSpellsFromLibraryTop:
 		var spellTypes []types.Card
 		if len(declaration.Player.SpellTypes) > 0 {
@@ -1342,6 +1348,12 @@ func canonicalStaticDeclarationVarName(declaration compiler.StaticDeclaration) s
 		declaration.Player != nil &&
 		declaration.Player.Kind == compiler.StaticPlayerRulePlayWithTopCardRevealed {
 		return "game.PlayWithTopCardRevealedStaticBody"
+	}
+	if declaration.Kind == compiler.StaticDeclarationPlayerRule &&
+		declaration.Condition == nil &&
+		declaration.Player != nil &&
+		declaration.Player.Kind == compiler.StaticPlayerRuleLookAtTopCardAnyTime {
+		return "game.LookAtTopCardAnyTimeStaticBody"
 	}
 	if declaration.Kind != compiler.StaticDeclarationRule ||
 		declaration.Rule == nil ||

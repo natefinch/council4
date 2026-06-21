@@ -663,6 +663,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectPlayLandsFromZone", nil
 	case game.RuleEffectPlayWithTopCardRevealed:
 		return "game.RuleEffectPlayWithTopCardRevealed", nil
+	case game.RuleEffectLookAtTopCardAnyTime:
+		return "game.RuleEffectLookAtTopCardAnyTime", nil
 	case game.RuleEffectCastSpellsFromZone:
 		return "game.RuleEffectCastSpellsFromZone", nil
 	case game.RuleEffectCastFromZone:

@@ -18,12 +18,12 @@ func keywordsFor(t *testing.T, source string) []Keyword {
 func TestParseKeywordVocabularyMeaning(t *testing.T) {
 	t.Parallel()
 	tests := map[string]KeywordKind{
-		"Affinity": KeywordAffinity, "Annihilator": KeywordAnnihilator, "Cascade": KeywordCascade,
+		"Affinity": KeywordAffinity, "Annihilator": KeywordAnnihilator, "Bloodthirst": KeywordBloodthirst, "Cascade": KeywordCascade,
 		"Companion": KeywordCompanion, "Convoke": KeywordConvoke, "Cumulative upkeep": KeywordCumulativeUpkeep, "Cycling": KeywordCycling,
 		"Deathtouch": KeywordDeathtouch, "Defender": KeywordDefender, "Delve": KeywordDelve,
 		"Devoid": KeywordDevoid, "Disguise": KeywordDisguise, "Double strike": KeywordDoubleStrike,
 		"Emerge": KeywordEmerge, "Enchant": KeywordEnchant, "Equip": KeywordEquip, "Escape": KeywordEscape,
-		"Eternalize": KeywordEternalize, "Embalm": KeywordEmbalm, "Exalted": KeywordExalted, "Fear": KeywordFear, "First strike": KeywordFirstStrike,
+		"Eternalize": KeywordEternalize, "Embalm": KeywordEmbalm, "Evolve": KeywordEvolve, "Exalted": KeywordExalted, "Fear": KeywordFear, "First strike": KeywordFirstStrike,
 		"Flash": KeywordFlash, "Flashback": KeywordFlashback, "Flying": KeywordFlying, "Foretell": KeywordForetell,
 		"Haste": KeywordHaste, "Hexproof": KeywordHexproof, "Improvise": KeywordImprovise,
 		"Horsemanship":   KeywordHorsemanship,
@@ -81,6 +81,19 @@ func TestParseKeywordParameterComposition(t *testing.T) {
 		keywords[5].Parameter.Kind != KeywordParameterManaCost ||
 		!slices.Equal(keywords[5].Parameter.ManaCost(), cost.Mana{cost.X}) {
 		t.Fatalf("cycling = %+v", keywords[5])
+	}
+}
+
+func TestParseBloodthirstIntegerParameter(t *testing.T) {
+	t.Parallel()
+	keywords := keywordsFor(t, "Bloodthirst 2")
+	if len(keywords) != 1 {
+		t.Fatalf("keywords = %+v; want one", keywords)
+	}
+	if keywords[0].Kind != KeywordBloodthirst ||
+		keywords[0].Parameter.Kind != KeywordParameterInteger ||
+		keywords[0].Parameter.Integer() != 2 {
+		t.Fatalf("bloodthirst = %+v", keywords[0])
 	}
 }
 

@@ -713,6 +713,11 @@ type SelectionSyntax struct {
 	Colorless     bool `json:",omitempty"`
 	Multicolored  bool `json:",omitempty"`
 	BasicLandType bool `json:",omitempty"`
+	// ConjunctiveTypes records that a multi-member RequiredTypesAny names card
+	// types the permanent must carry all at once ("artifact creature") rather
+	// than any one of them ("artifact or creature"). It lowers the type set to
+	// the conjunctive permanent-type target filter.
+	ConjunctiveTypes bool `json:",omitempty"`
 	// PlayerOrPlaneswalker marks the combined "player or planeswalker" /
 	// "opponent or planeswalker" combined damage target. Kind stays
 	// SelectionPlayer or SelectionOpponent for the player half; this flag records

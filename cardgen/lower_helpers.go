@@ -148,6 +148,7 @@ var keywordStaticBodies = map[parser.KeywordKind]loweredStaticAbility{
 	parser.KeywordDelve:          {Body: game.DelveStaticBody, VarName: "game.DelveStaticBody"},
 	parser.KeywordDoubleStrike:   {Body: game.DoubleStrikeStaticBody, VarName: "game.DoubleStrikeStaticBody"},
 	parser.KeywordExalted:        {Body: game.ExaltedStaticBody, VarName: "game.ExaltedStaticBody"},
+	parser.KeywordEvolve:         {Body: game.EvolveStaticBody, VarName: "game.EvolveStaticBody"},
 	parser.KeywordFear:           {Body: game.FearStaticBody, VarName: "game.FearStaticBody"},
 	parser.KeywordFirstStrike:    {Body: game.FirstStrikeStaticBody, VarName: "game.FirstStrikeStaticBody"},
 	parser.KeywordFlash:          {Body: game.FlashStaticBody, VarName: "game.FlashStaticBody"},

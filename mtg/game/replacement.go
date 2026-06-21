@@ -246,8 +246,14 @@ type ReplacementEffect struct {
 	// (Xorn). TokenRequiredSubtypes, when non-empty, restricts a token-creation
 	// replacement to tokens carrying all of the listed subtypes (Xorn's Treasure
 	// filter); an empty filter matches every created token (Doubling Season).
-	TokenAddend                   int
-	TokenRequiredSubtypes         []types.Sub
+	TokenAddend           int
+	TokenRequiredSubtypes []types.Sub
+	// TokenAddendDef, when non-nil, makes the addend create TokenAddend copies of
+	// this predefined token rather than copies of the triggering token (Tippy-Toe:
+	// "create those tokens plus an additional Food token"). The addend tokens are
+	// created directly alongside the matched tokens, so they neither re-trigger
+	// this replacement nor multiply with TokenMultiplier.
+	TokenAddendDef                *CardDef
 	CounterMultiplier             int
 	CounterAddend                 int
 	MatchCounterKind              bool

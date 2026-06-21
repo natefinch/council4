@@ -101,6 +101,9 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 		}
 		fields = append(fields, fmt.Sprintf("PermanentTypes: %s,", lits))
 	}
+	if predicate.PermanentTypesConjunctive {
+		fields = append(fields, "PermanentTypesConjunctive: true,")
+	}
 	if len(predicate.ExcludedTypes) > 0 {
 		lits, err := renderTypesCardSlice(ctx, predicate.ExcludedTypes)
 		if err != nil {
@@ -740,6 +743,8 @@ func renderKeyword(kw game.Keyword) (string, error) {
 		return "game.Annihilator", nil
 	case game.Exalted:
 		return "game.Exalted", nil
+	case game.Evolve:
+		return "game.Evolve", nil
 	case game.ReadAhead:
 		return "game.ReadAhead", nil
 	case game.Horsemanship:

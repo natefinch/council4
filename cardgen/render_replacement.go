@@ -432,6 +432,9 @@ func renderFilteredTokenCreationReplacement(ctx *renderCtx, ability *game.Replac
 		}
 		fields = append(fields, fmt.Sprintf("Subtypes: %s,", subtypes))
 	}
+	if replacement.TokenAddendDef != nil {
+		fields = append(fields, fmt.Sprintf("AddendDef: %s,", ctx.tokenDefVar(replacement.TokenAddendDef)))
+	}
 	fields = append(fields, fmt.Sprintf("Filter: %s,", controller))
 	return fmt.Sprintf("game.TokenCreationReplacementFiltered(%q, &game.TokenCreationReplacementSpec{%s})",
 		ability.Text,
