@@ -781,6 +781,15 @@ func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier)
 	if modifier.ChosenSubtypeFromEntryChoice {
 		fields = append(fields, "ChosenSubtypeFromEntryChoice: true,")
 	}
+	if modifier.SourceZone.Exists {
+		ctx.need(importZone)
+		ctx.need(importOpt)
+		zoneLit, err := renderZone(modifier.SourceZone.Val)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("SourceZone: opt.Val(%s),", zoneLit))
+	}
 	if modifier.AbilityKeyword != game.KeywordNone {
 		keyword, err := renderKeyword(modifier.AbilityKeyword)
 		if err != nil {

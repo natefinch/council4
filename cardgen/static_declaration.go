@@ -1210,6 +1210,13 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 		GenericReduction: cost.GenericReduction,
 		GenericIncrease:  cost.GenericIncrease,
 	}
+	if cost.SourceZone != "" {
+		castZone, ok := lowerCastFromZone(cost.SourceZone)
+		if !ok {
+			return false
+		}
+		base.SourceZone = opt.Val(castZone)
+	}
 	if cost.ChosenSubtypeFromEntryChoice {
 		base.ChosenSubtypeFromEntryChoice = true
 	}

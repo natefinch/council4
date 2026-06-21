@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func TestLowerStaticSpellCostModifier(t *testing.T) {
@@ -202,11 +203,34 @@ func TestLowerStaticSpellSubtypeCostModifier(t *testing.T) {
 	}
 }
 
+func TestLowerStaticSpellCostModifierGraveyardZone(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Graveyard Reducer",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "Spells you cast from your graveyard cost {1} less to cast.",
+	})
+	if len(face.StaticAbilities) != 1 || len(face.StaticAbilities[0].Body.RuleEffects) != 1 {
+		t.Fatalf("static abilities = %#v, want one graveyard-zone cost effect", face.StaticAbilities)
+	}
+	modifier := face.StaticAbilities[0].Body.RuleEffects[0].CostModifier
+	if modifier.Kind != game.CostModifierSpell ||
+		modifier.MatchCardType ||
+		modifier.MatchColor ||
+		modifier.GenericReduction != 1 ||
+		!modifier.SourceZone.Exists ||
+		modifier.SourceZone.Val != zone.Graveyard {
+		t.Fatalf("modifier = %#v, want graveyard-scoped {1} reduction", modifier)
+	}
+}
+
 func TestLowerStaticSpellCostModifierRejectsUnsupported(t *testing.T) {
 	t.Parallel()
 	sources := map[string]string{
 		"leading condition": "During turns other than yours, spells you cast cost {1} less to cast.",
 		"colored mana cost": "Black spells you cast cost {B} more to cast.",
+		"unsupported zone":  "Spells you cast from anywhere other than your hand cost {2} less to cast.",
 	}
 	for name, source := range sources {
 		t.Run(name, func(t *testing.T) {

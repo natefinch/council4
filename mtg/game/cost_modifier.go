@@ -83,6 +83,15 @@ type CostModifier struct {
 	// when the spell has at least one of the listed subtypes. It may combine with
 	// MatchColor and is mutually exclusive with MatchCardType and MatchColors.
 	MatchSubtypes []types.Sub
+
+	// SourceZone constrains a spell cost modifier to spells being cast from a
+	// single zone ("Spells you cast from your graveyard cost {N} less to cast.",
+	// Gravebreaker Lamia, Patrician Geist): the modifier applies only when the
+	// spell is cast from this zone. When the option is absent the modifier
+	// applies to spells cast from any zone. It is meaningful only on a
+	// CostModifierSpell and combines with the card-type, color, and subtype
+	// filters.
+	SourceZone opt.V[zone.Type]
 }
 
 // RuleEffectKind identifies non-layer continuous rules effects such as

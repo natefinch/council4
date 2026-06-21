@@ -327,6 +327,12 @@ type StaticDeclarationSyntax struct {
 	SpellColor         StaticDeclarationSpellColorKind `json:",omitempty"`
 	ChosenCreatureType bool                            `json:",omitempty"`
 
+	// SpellCastZone scopes a cast-cost modifier to spells cast from a single
+	// non-hand zone ("Spells you cast from your graveyard cost {N} less to
+	// cast."). The empty kind applies no zone filter, so the modifier affects the
+	// controller's spells cast from any zone.
+	SpellCastZone StaticDeclarationCastZoneKind `json:",omitempty"`
+
 	// SpellColors lists the colors of a cast-cost modifier's color disjunction
 	// ("Each spell you cast that's red or green ..." / "Blue spells and red
 	// spells you cast ..."): a spell matches when it has any one of these
@@ -1751,34 +1757,29 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token, atoms Atoms)
 			return StaticDeclarationSyntax{}, false
 		}
 	}
-	if len(rest) != 9 ||
-		!staticWordsAt(rest, 0, "spells", "you", "cast", "cost") ||
-		rest[4].Kind != shared.Symbol ||
-		!staticWordsAt(rest, 6, "to", "cast") {
+	if !staticWordsAt(rest, 0, "spells", "you", "cast") {
 		return StaticDeclarationSyntax{}, false
 	}
-	amount, ok := staticGenericSymbolValue(rest[4].Text)
-	if !ok || amount <= 0 {
-		return StaticDeclarationSyntax{}, false
+	rest = rest[3:]
+	var castZone StaticDeclarationCastZoneKind
+	if staticWordsAt(rest, 0, "from", "your", "graveyard") {
+		castZone = StaticDeclarationCastZoneGraveyard
+		rest = rest[3:]
 	}
-	var kind StaticDeclarationCostModifierKind
-	switch {
-	case equalWord(rest[5], "less"):
-		kind = StaticDeclarationCostModifierSpellReduction
-	case equalWord(rest[5], "more"):
-		kind = StaticDeclarationCostModifierSpellIncrease
-	default:
+	tail, ok := staticSpellCostModifierTail(rest)
+	if !ok {
 		return StaticDeclarationSyntax{}, false
 	}
 	return StaticDeclarationSyntax{
 		Kind:                StaticDeclarationCostModifier,
 		Span:                shared.SpanOf(tokens),
-		OperationSpan:       shared.SpanOf(rest[3:8]),
-		CostModifier:        kind,
-		CostReductionAmount: amount,
+		OperationSpan:       tail.OperationSpan,
+		CostModifier:        tail.Kind,
+		CostReductionAmount: tail.Amount,
 		SpellType:           spellType,
 		SpellColor:          spellColor,
 		SpellSubtypes:       subtypes,
+		SpellCastZone:       castZone,
 	}, true
 }
 
