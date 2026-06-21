@@ -125,6 +125,14 @@ const (
 	// Context, the optional sacrifice filter in Selection, and PunisherSacrifice
 	// / PunisherDiscard record which alternatives are offered.
 	EffectPunisherLoseLife EffectKind = "EffectPunisherLoseLife"
+	// EffectMoveCounters models moving counters off the source permanent onto a
+	// single target permanent ("Move a +1/+1 counter from this creature onto
+	// target creature.", "Move all counters from this permanent onto target
+	// creature."). The source is the effect's own permanent (a self reference),
+	// the destination is the single target, the counter kind is in CounterKind /
+	// CounterKnown (unset for the kind-agnostic "all counters" form), and the
+	// fixed count is in Amount. MoveCountersAll records the "all counters" form.
+	EffectMoveCounters EffectKind = "EffectMoveCounters"
 	// EffectMustAttack models the one-shot, turn-scoped forced-attack effect
 	// "<group> attack this turn if able." (Bident of Thassa: "Creatures your
 	// opponents control attack this turn if able."). The affected creature group
@@ -930,8 +938,14 @@ type EffectSyntax struct {
 	// attached-permanent reference. It is set only for the bare "enchanted
 	// creature" recipient; any other wording leaves it false so lowering fails
 	// closed.
-	CounterRecipientAttached bool      `json:",omitempty"`
-	FromZone                 zone.Type `json:",omitempty"`
+	CounterRecipientAttached bool `json:",omitempty"`
+	// MoveCountersAll reports the kind-agnostic "move all counters" form of an
+	// EffectMoveCounters effect, where every counter on the source moves to the
+	// destination regardless of kind ("Move all counters from this permanent onto
+	// target creature."). It is false for a specific-kind move ("Move a +1/+1
+	// counter ..."), whose kind is carried in CounterKind / CounterKnown.
+	MoveCountersAll bool      `json:",omitempty"`
+	FromZone        zone.Type `json:",omitempty"`
 	// GraveyardZoneExile records a recognized whole-graveyard exile ("Exile
 	// target player's graveyard."), naming whose graveyard is exiled. It is
 	// GraveyardZoneExileNone for every other effect, including single-card

@@ -115,6 +115,7 @@ func addCounterTransferTriggerSource(g *game.Game, controller game.PlayerID) *ga
 								Source: game.CounterSourceSpec{
 									Kind: game.CounterSourceEventPermanent,
 								},
+								AllKinds: true,
 							},
 						},
 					},

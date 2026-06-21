@@ -893,6 +893,48 @@ func TestRenderInstructionEnvelope(t *testing.T) {
 	}
 }
 
+func TestRenderMoveCountersPrimitive(t *testing.T) {
+	t.Parallel()
+	named, err := (Renderer{}).renderInstruction(newRenderCtx(), &game.Instruction{
+		Primitive: game.MoveCounters{
+			Amount:      game.Fixed(1),
+			Object:      game.TargetPermanentReference(0),
+			CounterKind: counter.PlusOnePlusOne,
+			Source:      game.CounterSourceSpec{Kind: game.CounterSourceSelf},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.MoveCounters",
+		"Amount: game.Fixed(1)",
+		"Object: game.TargetPermanentReference(0)",
+		"CounterKind: counter.PlusOnePlusOne",
+		"Source: game.CounterSourceSpec{Kind: game.CounterSourceSelf}",
+	} {
+		if !strings.Contains(named, want) {
+			t.Fatalf("rendered named move missing %q:\n%s", want, named)
+		}
+	}
+	all, err := (Renderer{}).renderInstruction(newRenderCtx(), &game.Instruction{
+		Primitive: game.MoveCounters{
+			Object:   game.TargetPermanentReference(0),
+			Source:   game.CounterSourceSpec{Kind: game.CounterSourceSelf},
+			AllKinds: true,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(all, "AllKinds: true") || strings.Contains(all, "CounterKind:") {
+		t.Fatalf("rendered all-kinds move = %s", all)
+	}
+	if _, err := parser.ParseExprFrom(token.NewFileSet(), "", "game.Instruction"+named, 0); err != nil {
+		t.Fatalf("rendered move counters does not parse: %v\n%s", err, named)
+	}
+}
+
 func TestRenderSacrificePermanentsPrimitive(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

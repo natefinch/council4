@@ -1003,6 +1003,7 @@ const (
 	EffectPunisherLoseLife
 	EffectMassReanimationExchange
 	EffectRepeatProcess
+	EffectMoveCounters
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1182,7 +1183,12 @@ type CompiledEffect struct {
 	// creature"). Lowering routes it to the runtime's source attached-permanent
 	// reference; it is false for every other recipient.
 	CounterRecipientAttached bool
-	FromZone                 zone.Type
+	// MoveCountersAll carries the parser's kind-agnostic "move all counters"
+	// form of an EffectMoveCounters effect through to lowering, which moves every
+	// counter on the source regardless of kind. It is false for a specific-kind
+	// move, whose kind is in CounterKind / CounterKindKnown.
+	MoveCountersAll bool
+	FromZone        zone.Type
 	// GraveyardZoneExile carries the parser's recognized whole-graveyard exile
 	// owner relation ("Exile target player's graveyard.") through to lowering,
 	// which builds the target-player + graveyard-group MoveCard. It is
