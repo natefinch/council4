@@ -158,6 +158,73 @@ func TestEntersWithCountersIfReplacementMorbid(t *testing.T) {
 	})
 }
 
+// TestBloodthirstReplacementEntersWithCountersWhenOpponentDamaged covers the
+// Bloodthirst N keyword's conditional enters-with-counters replacement: the
+// creature enters with N +1/+1 counters only when an opponent was dealt damage
+// earlier this turn.
+func TestBloodthirstReplacementEntersWithCountersWhenOpponentDamaged(t *testing.T) {
+	bloodthirstDef := func() *game.CardDef {
+		return &game.CardDef{CardFace: game.CardFace{Name: "Bloodthirst Brute",
+			Types:     []types.Card{types.Creature},
+			Power:     opt.Val(game.PT{Value: 2}),
+			Toughness: opt.Val(game.PT{Value: 2}),
+			ReplacementAbilities: []game.ReplacementAbility{
+				game.BloodthirstReplacement("Bloodthirst 2", 2),
+			}},
+		}
+	}
+
+	enter := func(g *game.Game) *game.Permanent {
+		cardID := addCardToHand(g, game.Player1, bloodthirstDef())
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			t.Fatal("card instance not found")
+		}
+		g.Players[game.Player1].Hand.Remove(cardID)
+		permanent, ok := createCardPermanent(g, card, game.Player1, zone.Hand)
+		if !ok {
+			t.Fatal("permanent not created")
+		}
+		return permanent
+	}
+
+	damagePlayer := func(g *game.Game, victim game.PlayerID) {
+		emitEvent(g, game.Event{
+			Kind:            game.EventDamageDealt,
+			Controller:      game.Player1,
+			Player:          victim,
+			Amount:          3,
+			DamageRecipient: game.DamageRecipientPlayer,
+		})
+	}
+
+	t.Run("no damage dealt", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		permanent := enter(g)
+		if got := permanent.Counters.Get(counter.PlusOnePlusOne); got != 0 {
+			t.Fatalf("+1/+1 counters = %d, want 0 when no opponent was damaged", got)
+		}
+	})
+
+	t.Run("opponent damaged this turn", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		damagePlayer(g, game.Player2)
+		permanent := enter(g)
+		if got := permanent.Counters.Get(counter.PlusOnePlusOne); got != 2 {
+			t.Fatalf("+1/+1 counters = %d, want 2 when an opponent was damaged", got)
+		}
+	})
+
+	t.Run("only controller damaged this turn", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		damagePlayer(g, game.Player1)
+		permanent := enter(g)
+		if got := permanent.Counters.Get(counter.PlusOnePlusOne); got != 0 {
+			t.Fatalf("+1/+1 counters = %d, want 0 when only the controller was damaged", got)
+		}
+	})
+}
+
 // TestEntersTappedWithCountersReplacement covers the combined "This land enters
 // tapped with N charge counters on it." replacement (the Vivid land cycle): the
 // permanent enters both tapped and with the listed counters.

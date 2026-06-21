@@ -186,6 +186,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordStaticLowering(&flashbackAbility, ability, syntax), true, nil
 	}
+	if bloodthirstAbility, ok, diag := lowerBloodthirstAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordReplacementLowering(&bloodthirstAbility, ability, syntax), true, nil
+	}
 	return abilityLowering{}, false, nil
 }
 
@@ -294,6 +300,50 @@ func keywordTriggeredLowering(
 		consumed:         semanticConsumption{keywords: 1},
 		sourceSpans:      keywordSpans(ability, syntax),
 	}
+}
+
+func keywordReplacementLowering(
+	body *game.ReplacementAbility,
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) abilityLowering {
+	return abilityLowering{
+		replacementAbility: opt.Val(*body),
+		consumed:           semanticConsumption{keywords: 1},
+		sourceSpans:        keywordSpans(ability, syntax),
+	}
+}
+
+// lowerBloodthirstAbility lowers the Bloodthirst N keyword (CR 702.54) to a
+// conditional enters-with-counters replacement. Only the canonical fixed-N form
+// is supported; the rare "Bloodthirst X" variant (Indoraptor) carries no
+// integer parameter and stays unsupported.
+func lowerBloodthirstAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordBloodthirst {
+		return game.ReplacementAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterInteger ||
+		keyword.Integer <= 0 ||
+		ability.Kind != compiler.AbilityStatic ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Bloodthirst ability",
+			"the executable source backend supports only exact \"Bloodthirst N\" with a fixed positive amount",
+		)
+	}
+	return game.BloodthirstReplacement(keyword.Name+" "+keyword.Parameter, keyword.Integer), true, nil
 }
 
 func keywordSpans(ability compiler.CompiledAbility, syntax *parser.Ability) []shared.Span {
