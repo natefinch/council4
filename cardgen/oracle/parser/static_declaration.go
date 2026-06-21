@@ -33,6 +33,7 @@ const (
 	StaticDeclarationEnteringTriggerMultiplier            StaticDeclarationKind = "StaticDeclarationEnteringTriggerMultiplier"
 	StaticDeclarationUntapDuringOtherUntapStep            StaticDeclarationKind = "StaticDeclarationUntapDuringOtherUntapStep"
 	StaticDeclarationCharacteristicDefiningPowerToughness StaticDeclarationKind = "StaticDeclarationCharacteristicDefiningPowerToughness"
+	StaticDeclarationEnchantedTypeChange                  StaticDeclarationKind = "StaticDeclarationEnchantedTypeChange"
 	StaticDeclarationEnterBattlefieldRestriction          StaticDeclarationKind = "StaticDeclarationEnterBattlefieldRestriction"
 )
 
@@ -216,6 +217,9 @@ type StaticGrantedManaAbilitySyntax struct {
 	// controller chooses one color and adds Amount mana of it (Amount >= 2).
 	// It is mutually exclusive with AnyColor.
 	AnyOneColor bool `json:",omitempty"`
+	// Colorless marks the bare "{T}: Add {C}" ability that adds one colorless
+	// mana. It is mutually exclusive with AnyColor and AnyOneColor.
+	Colorless bool `json:",omitempty"`
 }
 
 // StaticDeclarationSyntax is one composable typed static declaration. The
@@ -340,6 +344,15 @@ type StaticDeclarationSyntax struct {
 	CastSpellTypes []CardType `json:"-"`
 	AlsoPlayLands  bool       `json:",omitempty"`
 
+	// Enchanted-type-change payload: a removal Aura whose continuous effect sets
+	// the enchanted permanent's card types and creature subtypes (CardTypes,
+	// Subtypes, SET), optionally makes it colorless (BecomeColorless), optionally
+	// grants a single mana ability (GrantedManaAbility), and optionally strips its
+	// other abilities (LoseAllAbilities). Backs "Enchanted permanent is a
+	// colorless Forest land." (Song of the Dryads) and "Enchanted permanent is a
+	// colorless land with '{T}: Add {C}' and loses all other card types and
+	// abilities." (Imprisoned in the Moon).
+	BecomeColorless bool `json:",omitempty"`
 	// Enter-the-battlefield zone-restriction payload: an
 	// EnterRestrictFilter-filtered set of cards cannot enter the battlefield out
 	// of the zones in EnterRestrictFromZones ("Creature cards in graveyards and
@@ -451,6 +464,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticOpponentActionRestrictionDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticEnchantedTypeChangeDeclaration(tokens, quoted, atoms); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticEnterBattlefieldRestrictionDeclaration(tokens); ok {
@@ -607,7 +623,40 @@ func parseStaticGrantedManaAbility(quoted Delimited) (StaticGrantedManaAbilitySy
 	if ability, ok := parseStaticGrantedAnyColorManaAbility(quoted); ok {
 		return ability, true
 	}
+	if ability, ok := parseStaticGrantedColorlessManaAbility(quoted); ok {
+		return ability, true
+	}
 	return parseStaticGrantedSacrificeManaAbility(quoted)
+}
+
+// parseStaticGrantedColorlessManaAbility recognizes the bare quoted ability
+// "{T}: Add {C}." that adds one colorless mana, granted by removal Auras such as
+// Imprisoned in the Moon.
+func parseStaticGrantedColorlessManaAbility(quoted Delimited) (StaticGrantedManaAbilitySyntax, bool) {
+	tokens := quoted.Tokens
+	if len(tokens) < 6 ||
+		tokens[0].Kind != shared.Quote ||
+		tokens[1].Kind != shared.Symbol ||
+		tokens[1].Text != "{T}" ||
+		tokens[2].Kind != shared.Colon ||
+		!staticWordsAt(tokens, 3, "add") ||
+		tokens[4].Kind != shared.Symbol ||
+		tokens[4].Text != "{C}" {
+		return StaticGrantedManaAbilitySyntax{}, false
+	}
+	rest := tokens[5:]
+	validTail := (len(rest) == 2 && rest[0].Kind == shared.Period && rest[1].Kind == shared.Quote) ||
+		(len(rest) == 1 && rest[0].Kind == shared.Quote)
+	if !validTail {
+		return StaticGrantedManaAbilitySyntax{}, false
+	}
+	return StaticGrantedManaAbilitySyntax{
+		Span:      shared.SpanOf(tokens[1:5]),
+		Text:      staticGrantedAbilityText(quoted),
+		TapCost:   true,
+		Amount:    1,
+		Colorless: true,
+	}, true
 }
 
 func parseStaticGrantedAnyColorManaAbility(quoted Delimited) (StaticGrantedManaAbilitySyntax, bool) {

@@ -257,7 +257,10 @@ type StaticContinuousDeclaration struct {
 	SetToughness int
 
 	// Color characteristic payload (StaticContinuousAddColors / SetColors).
-	Colors []color.Color
+	// SetColorless marks a SetColors operation that makes the affected object
+	// colorless (its color set becomes empty); Colors is then empty.
+	Colors       []color.Color
+	SetColorless bool
 
 	// Type characteristic payload. AddTypes/AddSubtypes are additive
 	// (StaticContinuousAddTypes); SetTypes/SetSubtypes replace the affected
@@ -283,6 +286,9 @@ type StaticGrantedManaAbility struct {
 	// AnyOneColor marks the "Add <Amount> mana of any one color" output (one
 	// chosen color, Amount >= 2). It is mutually exclusive with AnyColor.
 	AnyOneColor bool
+	// Colorless marks the bare "{T}: Add {C}" ability that adds one colorless
+	// mana. It is mutually exclusive with AnyColor and AnyOneColor.
+	Colorless bool
 }
 
 // StaticRuleDeclaration is one prohibition, requirement, or permission.
@@ -485,6 +491,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 	}
 	statics := syntax.StaticDeclarations
 	if declarations, ok := recognizeTypedStaticRuleDeclarations(*compiled, syntax); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
+		return
+	}
+	if declarations, ok := recognizeStaticEnchantedTypeChangeDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
 	}
@@ -1147,6 +1157,120 @@ func recognizeStaticLoseAbilitiesBecomeDeclaration(ability CompiledAbility, stat
 	}
 	if keywords := staticDeclarationGrantKeywords(ability.Content); len(keywords) != 0 {
 		declarations = append(declarations, staticKeywordGrantDeclaration(node.Span, group, nil, keywords))
+	}
+	return declarations, true
+}
+
+// recognizeStaticEnchantedTypeChangeDeclaration maps the removal-Aura syntax
+// "<attached subject> is [colorless] <types> [with '<mana ability>'] [and loses
+// all other abilities]" onto layer-faithful semantic declarations: an optional
+// remove-all-abilities ability-layer declaration, an optional make-colorless
+// color-layer declaration, a set-type/subtype type-layer declaration, and an
+// optional granted mana ability. The remove-all-abilities declaration precedes
+// the granted ability so the ability survives the loss within the ability layer.
+func recognizeStaticEnchantedTypeChangeDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationEnchantedTypeChange) {
+		return nil, false
+	}
+	node := &statics[0]
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		ability.AbilityWord != "" {
+		return nil, false
+	}
+	group, ok := staticGroupForParserSubject(node.Subject)
+	if !ok {
+		return nil, false
+	}
+	var declarations []StaticDeclaration
+	if node.LoseAllAbilities {
+		declarations = append(declarations, StaticDeclaration{
+			Kind:          StaticDeclarationContinuous,
+			Span:          node.Span,
+			OperationSpan: node.OperationSpan,
+			Group:         group,
+			Continuous: &StaticContinuousDeclaration{
+				Layer:     StaticLayerAbility,
+				Operation: StaticContinuousRemoveAllAbilities,
+			},
+		})
+	}
+	if node.BecomeColorless {
+		declarations = append(declarations, StaticDeclaration{
+			Kind:          StaticDeclarationContinuous,
+			Span:          node.Span,
+			OperationSpan: node.OperationSpan,
+			Group:         group,
+			Continuous: &StaticContinuousDeclaration{
+				Layer:        StaticLayerColor,
+				Operation:    StaticContinuousSetColors,
+				SetColorless: true,
+			},
+		})
+	} else if len(node.Colors) != 0 {
+		colors, ok := staticRuntimeColors(node.Colors)
+		if !ok {
+			return nil, false
+		}
+		declarations = append(declarations, StaticDeclaration{
+			Kind:          StaticDeclarationContinuous,
+			Span:          node.Span,
+			OperationSpan: node.OperationSpan,
+			Group:         group,
+			Continuous: &StaticContinuousDeclaration{
+				Layer:     StaticLayerColor,
+				Operation: StaticContinuousSetColors,
+				Colors:    colors,
+			},
+		})
+	}
+	if len(node.CardTypes) != 0 || len(node.Subtypes) != 0 {
+		cardTypes, ok := staticCardTypesFromParser(node.CardTypes)
+		if !ok {
+			return nil, false
+		}
+		declarations = append(declarations, StaticDeclaration{
+			Kind:          StaticDeclarationContinuous,
+			Span:          node.Span,
+			OperationSpan: node.OperationSpan,
+			Group:         group,
+			Continuous: &StaticContinuousDeclaration{
+				Layer:       StaticLayerType,
+				Operation:   StaticContinuousSetTypes,
+				SetTypes:    cardTypes,
+				SetSubtypes: slices.Clone(node.Subtypes),
+			},
+		})
+	}
+	if granted := node.GrantedManaAbility; granted != nil {
+		if !granted.TapCost || !staticGrantedManaAbilityValid(granted) {
+			return nil, false
+		}
+		declarations = append(declarations, StaticDeclaration{
+			Kind:          StaticDeclarationContinuous,
+			Span:          node.Span,
+			OperationSpan: node.OperationSpan,
+			Group:         group,
+			Continuous: &StaticContinuousDeclaration{
+				Layer:     StaticLayerAbility,
+				Operation: StaticContinuousGrantManaAbility,
+				GrantedMana: &StaticGrantedManaAbility{
+					TapCost:     granted.TapCost,
+					Amount:      granted.Amount,
+					AnyColor:    granted.AnyColor,
+					Text:        granted.Text,
+					Sacrifice:   granted.Sacrifice,
+					AnyOneColor: granted.AnyOneColor,
+					Colorless:   granted.Colorless,
+				},
+			},
+		})
+	}
+	if len(declarations) == 0 {
+		return nil, false
 	}
 	return declarations, true
 }
@@ -2322,9 +2446,11 @@ func recognizeStaticPermanentAbilityGrantDeclaration(ability CompiledAbility, st
 func staticGrantedManaAbilityValid(granted *parser.StaticGrantedManaAbilitySyntax) bool {
 	switch {
 	case granted.AnyColor:
-		return granted.Amount == 1 && !granted.Sacrifice && !granted.AnyOneColor
+		return granted.Amount == 1 && !granted.Sacrifice && !granted.AnyOneColor && !granted.Colorless
 	case granted.AnyOneColor:
 		return granted.Amount >= 2 && granted.Sacrifice
+	case granted.Colorless:
+		return granted.Amount == 1 && !granted.Sacrifice
 	default:
 		return false
 	}
