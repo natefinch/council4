@@ -108,6 +108,12 @@ const (
 	// ("You may have this creature enter the battlefield as a copy of any creature
 	// on the battlefield.", Clone), CR 706.
 	EffectEnterAsCopy EffectKind = "EffectEnterAsCopy"
+	// EffectPunisherLoseLife models the "punisher" family ("Each opponent loses
+	// N life unless that player sacrifices a permanent of their choice or
+	// discards a card."). The life amount is in Amount, the player group in
+	// Context, the optional sacrifice filter in Selection, and PunisherSacrifice
+	// / PunisherDiscard record which alternatives are offered.
+	EffectPunisherLoseLife EffectKind = "EffectPunisherLoseLife"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -1085,16 +1091,17 @@ type EffectSyntax struct {
 	// for the bare and "under your control" forms.
 	UnderOwnersControl bool `json:",omitempty"`
 	// TokenCopyOfForEach reports a per-each copy-token create whose copy source
-	// is each member of a controlled battlefield group ("For each token you
-	// control, create a token that's a copy of that permanent." — Second
-	// Harvest). The created token copies each iterated permanent rather than a
-	// single fixed source; "that permanent" refers to the per-iteration member.
-	// The iterated group is carried in TokenCopyForEachGroup.
+	// is each member of a controlled battlefield group (Second Harvest). The
+	// iterated group is carried in TokenCopyForEachGroup.
 	TokenCopyOfForEach bool `json:",omitempty"`
 	// TokenCopyForEachGroup carries the controlled battlefield group iterated by
-	// a TokenCopyOfForEach create ("token you control", "creature you control").
-	// It is nil unless TokenCopyOfForEach is set.
+	// a TokenCopyOfForEach create. Nil unless TokenCopyOfForEach is set.
 	TokenCopyForEachGroup *SelectionSyntax `json:",omitempty"`
+	// PunisherSacrifice and PunisherDiscard mark the alternatives offered by an
+	// EffectPunisherLoseLife effect ("... unless that player sacrifices a
+	// permanent of their choice or discards a card.").
+	PunisherSacrifice bool `json:",omitempty"`
+	PunisherDiscard   bool `json:",omitempty"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend

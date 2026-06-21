@@ -326,6 +326,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				SpellsCantBeCounteredNextOnly:   syntax.SpellsCantBeCounteredNextOnly,
 				DoublePower:                     syntax.DoublePower,
 				DoubleToughness:                 syntax.DoubleToughness,
+				PunisherSacrifice:               syntax.PunisherSacrifice,
+				PunisherDiscard:                 syntax.PunisherDiscard,
 			})
 		}
 	}

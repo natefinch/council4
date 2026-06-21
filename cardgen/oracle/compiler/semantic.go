@@ -972,6 +972,7 @@ const (
 	EffectPreventDamage
 	EffectSpellsCantBeCountered
 	EffectEnterAsCopy
+	EffectPunisherLoseLife
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1286,13 +1287,17 @@ type CompiledEffect struct {
 	// is false for the bare and "under your control" forms.
 	UnderOwnersControl bool
 	// TokenCopyOfForEach mirrors the parser flag for a per-each copy-token create
-	// whose copy source is each member of a controlled battlefield group ("For
-	// each token you control, create a token that's a copy of that permanent." —
-	// Second Harvest). The iterated group is carried in TokenCopyForEachGroup.
+	// whose copy source is each member of a controlled battlefield group (Second
+	// Harvest). The iterated group is carried in TokenCopyForEachGroup.
 	TokenCopyOfForEach bool
 	// TokenCopyForEachGroup carries the controlled battlefield group a
 	// TokenCopyOfForEach create iterates, copying each member in turn.
 	TokenCopyForEachGroup CompiledSelector
+	// PunisherSacrifice and PunisherDiscard mirror the parser flags for an
+	// EffectPunisherLoseLife effect, recording which alternatives the affected
+	// players may pay instead of losing life.
+	PunisherSacrifice bool
+	PunisherDiscard   bool
 }
 
 // CompiledManaSpendRider is the typed semantic form of a mana-spend rider.
