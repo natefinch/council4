@@ -8,8 +8,8 @@ import (
 
 // TestLowerMithrilCoatAttachTrigger verifies the enters-the-battlefield
 // auto-attach trigger "When ~ enters, attach it to target legendary creature you
-// control." lowers to an Attach primitive attaching the source permanent to the
-// single chosen target.
+// control." lowers to an Attach primitive attaching the entering permanent (the
+// triggering event permanent) to the single chosen target.
 func TestLowerMithrilCoatAttachTrigger(t *testing.T) {
 	card := &ScryfallCard{
 		Name:       "Mithril Coat",
@@ -33,8 +33,8 @@ func TestLowerMithrilCoatAttachTrigger(t *testing.T) {
 	if !ok {
 		t.Fatalf("primitive type = %T, want game.Attach", sequence[0].Primitive)
 	}
-	if attach.Attachment.Kind() != game.ObjectReferenceSourcePermanent {
-		t.Fatalf("attachment reference = %v, want source permanent", attach.Attachment.Kind())
+	if attach.Attachment.Kind() != game.ObjectReferenceEventPermanent {
+		t.Fatalf("attachment reference = %v, want event permanent", attach.Attachment.Kind())
 	}
 	if attach.Target.Kind() != game.ObjectReferenceTargetPermanent || attach.Target.TargetIndex() != 0 {
 		t.Fatalf("target reference = %v idx %d, want target permanent 0", attach.Target.Kind(), attach.Target.TargetIndex())
@@ -64,6 +64,49 @@ func TestLowerOptionalAttachTrigger(t *testing.T) {
 	}
 	if !trigger.Optional && !sequence[0].Optional {
 		t.Fatal("neither trigger nor instruction Optional set, want one true for \"you may attach\"")
+	}
+}
+
+// TestLowerHammerOfNazahnAttachTrigger verifies the self-or-another-Equipment
+// enters trigger "Whenever ~ or another Equipment you control enters, you may
+// attach that Equipment to target creature you control." lowers to an optional
+// Attach that attaches the triggering event permanent (the entering Equipment,
+// which may be a different Equipment than the source) to the chosen target.
+func TestLowerHammerOfNazahnAttachTrigger(t *testing.T) {
+	card := &ScryfallCard{
+		Name:       "Hammer of Nazahn",
+		Layout:     "normal",
+		TypeLine:   "Artifact — Equipment",
+		ManaCost:   "{4}",
+		OracleText: "Whenever Hammer of Nazahn or another Equipment you control enters, you may attach that Equipment to target creature you control.\nEquipped creature gets +2/+0 and has indestructible.\nEquip {4}",
+	}
+	face := lowerSingleFace(t, card)
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	trigger := face.TriggeredAbilities[0]
+	if !trigger.Optional {
+		t.Fatal("trigger Optional = false, want true for \"you may attach\"")
+	}
+	if trigger.Trigger.Pattern.Event != game.EventPermanentEnteredBattlefield {
+		t.Fatalf("trigger event = %v, want permanent entered battlefield", trigger.Trigger.Pattern.Event)
+	}
+	if !trigger.Trigger.Pattern.SubjectSelectionOrSelf {
+		t.Fatal("trigger SubjectSelectionOrSelf = false, want true for \"~ or another Equipment\"")
+	}
+	sequence := trigger.Content.Modes[0].Sequence
+	if len(sequence) != 1 {
+		t.Fatalf("sequence length = %d, want 1", len(sequence))
+	}
+	attach, ok := sequence[0].Primitive.(game.Attach)
+	if !ok {
+		t.Fatalf("primitive type = %T, want game.Attach", sequence[0].Primitive)
+	}
+	if attach.Attachment.Kind() != game.ObjectReferenceEventPermanent {
+		t.Fatalf("attachment reference = %v, want event permanent", attach.Attachment.Kind())
+	}
+	if attach.Target.Kind() != game.ObjectReferenceTargetPermanent || attach.Target.TargetIndex() != 0 {
+		t.Fatalf("target reference = %v idx %d, want target permanent 0", attach.Target.Kind(), attach.Target.TargetIndex())
 	}
 }
 
