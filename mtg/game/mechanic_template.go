@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -558,6 +559,48 @@ func FabricateTriggeredAbility(count int) TriggeredAbility {
 			MinModes: 1,
 			MaxModes: 1,
 		},
+	}
+}
+
+// SoulshiftTriggeredAbility builds the canonical Soulshift N triggered ability
+// (CR 702.46): when this creature dies, its controller may return a target
+// Spirit card with mana value N or less from their graveyard to their hand.
+func SoulshiftTriggeredAbility(n int) TriggeredAbility {
+	return TriggeredAbility{
+		Text: fmt.Sprintf("Soulshift %d", n),
+		Trigger: TriggerCondition{
+			Type: TriggerWhen,
+			Pattern: TriggerPattern{
+				Event:            EventPermanentDied,
+				Source:           TriggerSourceSelf,
+				SubjectSelection: Selection{RequiredTypes: []types.Card{types.Creature}},
+			},
+		},
+		Optional: true,
+		KeywordAbilities: []KeywordAbility{
+			SoulshiftKeyword{Count: n},
+		},
+		Content: Mode{
+			Targets: []TargetSpec{{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Constraint: fmt.Sprintf("target Spirit card with mana value %d or less from your graveyard", n),
+				Allow:      TargetAllowCard,
+				TargetZone: zone.Graveyard,
+				Selection: opt.Val(Selection{
+					SubtypesAny: []types.Sub{types.Sub("Spirit")},
+					Controller:  ControllerYou,
+					ManaValue:   opt.Val(compare.Int{Op: compare.LessOrEqual, Value: n}),
+				}),
+			}},
+			Sequence: []Instruction{{
+				Primitive: MoveCard{
+					Card:        CardReference{Kind: CardReferenceTarget},
+					FromZone:    zone.Graveyard,
+					Destination: zone.Hand,
+				},
+			}},
+		}.Ability(),
 	}
 }
 

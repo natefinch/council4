@@ -83,6 +83,7 @@ const (
 	Outlast
 	Scavenge
 	Dethrone
+	Soulshift
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
