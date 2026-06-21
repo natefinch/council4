@@ -328,6 +328,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				Replacement:                     syntax.Replacement,
 				Payment:                         compileEffectPayment(syntax.Payment),
 				Exact:                           syntax.Exact,
+				RevealUntilThenPut:              syntax.RevealUntilThenPut,
 				SourceSpellCostReduction:        syntax.SourceSpellCostReduction,
 				SourceSpellCostReductionAmount:  syntax.SourceSpellCostReductionAmount,
 				SourceSpellCostReductionDynamic: syntax.SourceSpellCostReductionDynamic,

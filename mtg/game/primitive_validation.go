@@ -380,6 +380,10 @@ func (p PutHandOnLibraryThenDraw) validateCapturedTargetControllerReferences(tar
 	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
 }
 
+func (p RevealUntil) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
+}
+
 func (p Scry) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
 		return err
@@ -1650,6 +1654,24 @@ func (p ExileTopOfLibrary) validatePrimitive(targets []TargetSpec, checkTargets 
 func (p PutHandOnLibraryThenDraw) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.DrawOffset < 0 {
 		return errors.New("PutHandOnLibraryThenDraw requires a non-negative DrawOffset")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p RevealUntil) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Destination != zone.Graveyard && p.Destination != zone.Hand {
+		return errors.New("RevealUntil requires a Graveyard or Hand Destination")
+	}
+	if err := firstProblem(p.Until.Validate()); err != nil {
+		return err
+	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
+	hasPlayer := p.Player.Kind() != PlayerReferenceNone
+	if hasGroup == hasPlayer {
+		return errors.New("RevealUntil requires exactly one of Player or PlayerGroup")
+	}
+	if hasGroup {
+		return validatePlayerGroupReference(p.PlayerGroup)
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }

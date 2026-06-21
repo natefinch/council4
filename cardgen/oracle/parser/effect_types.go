@@ -1363,9 +1363,17 @@ type EffectSyntax struct {
 	SubjectTargets                  []TargetSyntax          `json:",omitempty"`
 	Payment                         EffectPaymentSyntax     `json:",omitzero"`
 	Exact                           bool                    `json:",omitempty"`
-	RequiresOrderedLowering         bool                    `json:",omitempty"`
-	HasUnrecognizedSibling          bool                    `json:",omitempty"`
-	UnsupportedDetail               string                  `json:",omitempty"`
+	// RevealUntilThenPut marks each effect of the recognized closed "reveal
+	// cards from the top of <library> until <player> reveal a <type> card, then
+	// put those cards into <zone>" sequence. The parser keeps the three-effect
+	// shape [Reveal, match-Reveal, Put], sets this marker on each, captures the
+	// until predicate on the match-Reveal's Selection, and the destination on
+	// the Put's ToZone. Lowering reads these typed fields to emit a single
+	// RevealUntil primitive; the marker is false for every other effect.
+	RevealUntilThenPut      bool   `json:",omitempty"`
+	RequiresOrderedLowering bool   `json:",omitempty"`
+	HasUnrecognizedSibling  bool   `json:",omitempty"`
+	UnsupportedDetail       string `json:",omitempty"`
 	// Order is the effect's dense source-order rank (of Span); VerbOrder is the
 	// rank of VerbSpan. Downstream stages compare these ranks to order effects
 	// and bind references to effect verbs without inspecting byte offsets.

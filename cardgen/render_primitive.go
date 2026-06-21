@@ -1147,6 +1147,42 @@ func (r Renderer) renderSacrificePermanents(ctx *renderCtx, value *game.Sacrific
 	return structLit("game.SacrificePermanents", fields), nil
 }
 
+func (r Renderer) renderRevealUntil(ctx *renderCtx, value *game.RevealUntil) (string, error) {
+	destination, err := renderZone(value.Destination)
+	if err != nil {
+		return "", err
+	}
+	ctx.need(importZone)
+	renderedSelection, err := r.renderSelection(ctx, value.Until)
+	if err != nil {
+		return "", err
+	}
+	var fields []string
+	if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		var renderedGroup string
+		switch value.PlayerGroup.Kind {
+		case game.PlayerGroupReferenceOpponents:
+			renderedGroup = "game.OpponentsReference()"
+		case game.PlayerGroupReferenceAllPlayers:
+			renderedGroup = "game.AllPlayersReference()"
+		default:
+			return "", fmt.Errorf("render: unsupported player group reference kind %d", value.PlayerGroup.Kind)
+		}
+		fields = append(fields, fmt.Sprintf("PlayerGroup: %s,", renderedGroup))
+	} else {
+		player, err := r.renderPlayerReference(value.Player)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Player: %s,", player))
+	}
+	if renderedSelection != "game.Selection{}" {
+		fields = append(fields, fmt.Sprintf("Until: %s,", renderedSelection))
+	}
+	fields = append(fields, fmt.Sprintf("Destination: %s,", destination))
+	return structLit("game.RevealUntil", fields), nil
+}
+
 func (r Renderer) renderPunisherEachLoseLife(ctx *renderCtx, value *game.PunisherEachLoseLife) (string, error) {
 	renderedAmount, err := r.renderQuantity(ctx, value.Amount)
 	if err != nil {

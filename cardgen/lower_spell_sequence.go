@@ -490,6 +490,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityC
 	if content, ok := lowerShuffleRevealPermanentSequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerRevealUntilSequence(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerRemovalManifestSequence(ctx); ok {
 		return content, true
 	}
@@ -953,6 +956,98 @@ func lowerShuffleRevealPermanentSequence(ctx contentCtx) (game.AbilityContent, b
 			},
 		},
 	}.Ability(), true
+}
+
+// lowerRevealUntilSequence lowers the closed "reveal cards from the top of
+// <library> until <player> reveal a <type> card, then put those cards into
+// <zone>" family (Undercity Informer, Balustrade Spy, Treasure Hunt) into a
+// single RevealUntil primitive. The parser marks all three effects with
+// RevealUntilThenPut, records the boundary card type on the match reveal's
+// selector, and the destination on the put effect's ToZone. This text-blind
+// lowerer reads only those typed fields plus the head reveal's player subject;
+// any shape mismatch or unmodeled subject fails closed.
+func lowerRevealUntilSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 3 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	revealUntil := ctx.content.Effects[0]
+	matchReveal := ctx.content.Effects[1]
+	put := ctx.content.Effects[2]
+	if !revealUntil.RevealUntilThenPut ||
+		!matchReveal.RevealUntilThenPut ||
+		!put.RevealUntilThenPut ||
+		revealUntil.Kind != compiler.EffectReveal ||
+		matchReveal.Kind != compiler.EffectReveal ||
+		put.Kind != compiler.EffectPut {
+		return game.AbilityContent{}, false
+	}
+	if put.ToZone != zone.Graveyard && put.ToZone != zone.Hand {
+		return game.AbilityContent{}, false
+	}
+	until, ok := cardSelectionForSelector(matchReveal.Selector)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	primitive := game.RevealUntil{
+		Until:       until,
+		Destination: put.ToZone,
+	}
+	targets, ok := revealUntilPlayerSubject(ctx, revealUntil.Context, &primitive)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Targets: targets,
+		Sequence: []game.Instruction{
+			{Primitive: primitive},
+		},
+	}.Ability(), true
+}
+
+// revealUntilPlayerSubject resolves the reveal's player subject from the head
+// reveal effect's typed Context, setting the primitive's single Player or group
+// PlayerGroup, and returns the player target spec when the subject is a single
+// target player. Unmodeled subjects fail closed.
+func revealUntilPlayerSubject(
+	ctx contentCtx,
+	context parser.EffectContextKind,
+	primitive *game.RevealUntil,
+) ([]game.TargetSpec, bool) {
+	switch context {
+	case parser.EffectContextController:
+		if len(ctx.content.Targets) != 0 {
+			return nil, false
+		}
+		primitive.Player = game.ControllerReference()
+		return nil, true
+	case parser.EffectContextEachOpponent, parser.EffectContextEachOtherPlayer:
+		if len(ctx.content.Targets) != 0 {
+			return nil, false
+		}
+		primitive.PlayerGroup = game.OpponentsReference()
+		return nil, true
+	case parser.EffectContextEachPlayer:
+		if len(ctx.content.Targets) != 0 {
+			return nil, false
+		}
+		primitive.PlayerGroup = game.AllPlayersReference()
+		return nil, true
+	case parser.EffectContextTarget, parser.EffectContextPriorSubject:
+		if len(ctx.content.Targets) != 1 {
+			return nil, false
+		}
+		targetSpec, ok := playerTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return nil, false
+		}
+		primitive.Player = game.TargetPlayerReference(0)
+		return []game.TargetSpec{targetSpec}, true
+	}
+	return nil, false
 }
 
 func referencesContainBinding(references []compiler.CompiledReference, binding compiler.ReferenceBinding, prior int) bool {

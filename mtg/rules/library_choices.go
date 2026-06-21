@@ -41,6 +41,69 @@ func millCards(g *game.Game, playerID game.PlayerID, amount int) {
 	}
 }
 
+// revealUntilCards reveals cards from the top of playerID's library one at a
+// time until a revealed card matches until, then puts every card revealed this
+// way (including the matching card) into destination. When the library empties
+// before a match, every revealed card is still moved. destination must be
+// zone.Graveyard or zone.Hand; a graveyard move honors the commander
+// replacement (CR 903.9a).
+func revealUntilCards(g *game.Game, playerID game.PlayerID, until game.Selection, destination zone.Type) {
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return
+	}
+	for {
+		cardID, ok := player.Library.Top()
+		if !ok {
+			return
+		}
+		player.Library.Remove(cardID)
+		matched := revealedCardMatches(g, playerID, cardID, until)
+		dest := destination
+		if destination == zone.Graveyard {
+			dest = commanderReplacementDestination(g, cardID, zone.Graveyard)
+		}
+		zoneOwner := playerID
+		if card, ok := g.GetCardInstance(cardID); dest == zone.Command && ok {
+			zoneOwner = card.Owner
+		}
+		destinationCards, ok := destinationZone(g, zoneOwner, dest)
+		if !ok {
+			return
+		}
+		destinationCards.Add(cardID)
+		emitZoneChangeEvent(g, game.Event{
+			Player:   playerID,
+			CardID:   cardID,
+			FromZone: zone.Library,
+			ToZone:   dest,
+			Amount:   1,
+		})
+		if matched {
+			return
+		}
+	}
+}
+
+// revealedCardMatches reports whether the card revealed from playerID's library
+// satisfies the reveal-until predicate. An empty predicate matches the first
+// revealed card.
+func revealedCardMatches(g *game.Game, playerID game.PlayerID, cardID id.ID, until game.Selection) bool {
+	if until.Empty() {
+		return true
+	}
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		return false
+	}
+	return matchSelection(&selectionSubject{
+		kind:   subjectCard,
+		g:      g,
+		card:   card,
+		viewer: playerID,
+	}, &until)
+}
+
 func exileTopOfLibraryCards(g *game.Game, playerID game.PlayerID, amount int) {
 	player, ok := playerByID(g, playerID)
 	if !ok || amount <= 0 {

@@ -452,6 +452,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", errors.New("render: internal error: SacrificePermanents kind has unexpected concrete type")
 		}
 		return r.renderSacrificePermanents(ctx, &value)
+	case game.PrimitiveRevealUntil:
+		value, ok := primitive.(game.RevealUntil)
+		if !ok {
+			return "", errors.New("render: internal error: RevealUntil kind has unexpected concrete type")
+		}
+		return r.renderRevealUntil(ctx, &value)
 	case game.PrimitivePunisherEachLoseLife:
 		value, ok := primitive.(game.PunisherEachLoseLife)
 		if !ok {
