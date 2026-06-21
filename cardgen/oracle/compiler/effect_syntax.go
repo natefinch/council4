@@ -585,6 +585,10 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountTriggeringCombatDamage
 	case parser.EffectDynamicAmountDestroyedThisWay:
 		return DynamicAmountDestroyedThisWay
+	case parser.EffectDynamicAmountLifeLostThisTurn:
+		return DynamicAmountLifeLostThisTurn
+	case parser.EffectDynamicAmountLifeGainedThisTurn:
+		return DynamicAmountLifeGainedThisTurn
 	default:
 		return DynamicAmountNone
 	}

@@ -138,6 +138,16 @@ const (
 	// the count by the printed N. Added last so existing kinds keep their wire
 	// values.
 	DynamicAmountBlockingCreaturesBeyondFirst
+	// DynamicAmountLifeLostThisTurn is the total life Player has lost so far this
+	// turn, summed from the turn's EventLifeLost amounts (CR 608.2c). Damage to
+	// the player counts, because dealing damage to a player causes that player to
+	// lose that much life (CR 120.3), which the rules emit as a life-loss event.
+	// It backs Children of Korlis's "gain life equal to the life you've lost this
+	// turn." DynamicAmountLifeGainedThisTurn is the life-gained sibling, summed
+	// from the turn's EventLifeGained amounts. Both read the resolving ability's
+	// controller. Added last so existing kinds keep their wire values.
+	DynamicAmountLifeLostThisTurn
+	DynamicAmountLifeGainedThisTurn
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

@@ -533,6 +533,40 @@ func TestParseSpellsCastThisTurnAmount(t *testing.T) {
 	}
 }
 
+func TestParseLifeChangedThisTurnAmount(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		want   EffectDynamicAmountKind
+	}{
+		// "equal to the life you've lost this turn" (Children of Korlis).
+		{"You gain life equal to the life you've lost this turn.", EffectDynamicAmountLifeLostThisTurn},
+		{"You gain life equal to the life you have lost this turn.", EffectDynamicAmountLifeLostThisTurn},
+		// "the amount of life you gained this turn" (the where-X life-tracking family).
+		{"You lose life equal to the amount of life you gained this turn.", EffectDynamicAmountLifeGainedThisTurn},
+		{"You gain life equal to the amount of life you lost this turn.", EffectDynamicAmountLifeLostThisTurn},
+		{"You lose life equal to the life you gained this turn.", EffectDynamicAmountLifeGainedThisTurn},
+		// Fail closed: a bare fixed life change stays non-dynamic.
+		{"You gain 1 life.", EffectDynamicAmountNone},
+		// Fail closed: unrecognized trailing wording is not the per-turn amount.
+		{"You gain life equal to the life you've lost this game.", EffectDynamicAmountNone},
+		{"You gain life equal to the life you've spent this turn.", EffectDynamicAmountNone},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if got := effects[0].Amount.DynamicKind; got != test.want {
+				t.Fatalf("amount dynamic kind = %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
 func TestParseCreateTokenDynamicCountExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
