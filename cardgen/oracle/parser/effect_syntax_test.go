@@ -1609,11 +1609,17 @@ func TestParseCreateCopyOfTargetToken(t *testing.T) {
 	tests := []struct {
 		source string
 		copy   bool
+		amount int
+		tapped bool
 	}{
-		{"Create a token that's a copy of target creature you control.", true},
-		{"Create a token that's a copy of target artifact.", true},
-		{"Create a 1/1 white Soldier creature token.", false},
-		{"Create a token that's a copy of target creature you control, then celebrate.", false},
+		{"Create a token that's a copy of target creature you control.", true, 1, false},
+		{"Create a token that's a copy of target artifact.", true, 1, false},
+		{"Create two tokens that are copies of target creature.", true, 2, false},
+		{"Create three tokens that are copies of target creature you control.", true, 3, false},
+		{"Create a tapped token that's a copy of target creature.", true, 1, true},
+		{"Create two tapped tokens that are copies of target creature.", true, 2, true},
+		{"Create a 1/1 white Soldier creature token.", false, 0, false},
+		{"Create a token that's a copy of target creature you control, then celebrate.", false, 0, false},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
@@ -1631,6 +1637,12 @@ func TestParseCreateCopyOfTargetToken(t *testing.T) {
 			}
 			if test.copy && !effects[0].Exact {
 				t.Fatalf("copy token effect should be exact: %#v", effects[0])
+			}
+			if test.copy && effects[0].Amount.Value != test.amount {
+				t.Fatalf("Amount.Value = %d, want %d", effects[0].Amount.Value, test.amount)
+			}
+			if test.copy && effects[0].TokenCopyEntersTapped != test.tapped {
+				t.Fatalf("TokenCopyEntersTapped = %v, want %v", effects[0].TokenCopyEntersTapped, test.tapped)
 			}
 		})
 	}
@@ -1685,11 +1697,15 @@ func TestParseCreateCopyOfReferenceToken(t *testing.T) {
 	tests := []struct {
 		source string
 		copy   bool
+		tapped bool
 	}{
-		{"Create a token that's a copy of this creature.", true},
-		{"Create a token that's a copy of this creature instead.", true},
-		{"Create a token that's a copy of target creature you control.", false},
-		{"Create a 1/1 white Soldier creature token.", false},
+		{"Create a token that's a copy of this creature.", true, false},
+		{"Create a token that's a copy of this creature instead.", true, false},
+		{"Create two tokens that are copies of this creature.", true, false},
+		{"Create a tapped token that's a copy of this creature.", true, true},
+		{"Create two tapped tokens that are copies of this creature.", true, true},
+		{"Create a token that's a copy of target creature you control.", false, false},
+		{"Create a 1/1 white Soldier creature token.", false, false},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
@@ -1704,6 +1720,9 @@ func TestParseCreateCopyOfReferenceToken(t *testing.T) {
 			}
 			if effects[0].TokenCopyOfReference != test.copy {
 				t.Fatalf("TokenCopyOfReference = %v, want %v", effects[0].TokenCopyOfReference, test.copy)
+			}
+			if test.copy && effects[0].TokenCopyEntersTapped != test.tapped {
+				t.Fatalf("TokenCopyEntersTapped = %v, want %v", effects[0].TokenCopyEntersTapped, test.tapped)
 			}
 			if test.copy && !effects[0].Exact {
 				t.Fatalf("copy-of-reference token effect should be exact: %#v", effects[0])

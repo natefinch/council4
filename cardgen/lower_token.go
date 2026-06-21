@@ -244,12 +244,17 @@ func lowerCreateCopyTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Dia
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
+	amount, ok := createTokenAmount(ctx, &effect)
+	if !ok {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
 	return game.Mode{
 		Targets: []game.TargetSpec{targetSpec},
 		Sequence: []game.Instruction{{
 			Primitive: game.CreateToken{
-				Amount: game.Fixed(1),
-				Source: game.TokenCopyOf(spec),
+				Amount:      amount,
+				Source:      game.TokenCopyOf(spec),
+				EntryTapped: effect.TokenCopyEntersTapped,
 			},
 		}},
 	}.Ability(), nil
@@ -289,11 +294,16 @@ func lowerCreateCopyTokenReferenceSpell(ctx contentCtx) (game.AbilityContent, *s
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
+	amount, ok := createTokenAmount(ctx, &effect)
+	if !ok {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
 	return game.Mode{
 		Sequence: []game.Instruction{{
 			Primitive: game.CreateToken{
-				Amount: game.Fixed(1),
-				Source: game.TokenCopyOf(spec),
+				Amount:      amount,
+				Source:      game.TokenCopyOf(spec),
+				EntryTapped: effect.TokenCopyEntersTapped,
 			},
 		}},
 	}.Ability(), nil
@@ -324,11 +334,16 @@ func lowerCreateCopyTokenAttachedSpell(ctx contentCtx) (game.AbilityContent, *sh
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
+	amount, ok := createTokenAmount(ctx, &effect)
+	if !ok {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
 	return game.Mode{
 		Sequence: []game.Instruction{{
 			Primitive: game.CreateToken{
-				Amount: game.Fixed(1),
-				Source: game.TokenCopyOf(spec),
+				Amount:      amount,
+				Source:      game.TokenCopyOf(spec),
+				EntryTapped: effect.TokenCopyEntersTapped,
 			},
 		}},
 	}.Ability(), nil
@@ -366,8 +381,9 @@ func lowerCreateCopyTokenForEachSpell(ctx contentCtx) (game.AbilityContent, *sha
 	return game.Mode{
 		Sequence: []game.Instruction{{
 			Primitive: game.CreateToken{
-				Amount: game.Fixed(1),
-				Source: game.TokenCopyOf(spec),
+				Amount:      game.Fixed(1),
+				Source:      game.TokenCopyOf(spec),
+				EntryTapped: effect.TokenCopyEntersTapped,
 			},
 		}},
 	}.Ability(), nil

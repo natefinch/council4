@@ -56,6 +56,50 @@ func TestLowerMultipleCreatureTokens(t *testing.T) {
 	}
 }
 
+func TestLowerMultipleCopyTokensOfTarget(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Copy Tokens",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create two tokens that are copies of target creature.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	create, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.CreateToken)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.CreateToken", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	if create.Amount.Value() != 2 {
+		t.Fatalf("amount = %d, want 2", create.Amount.Value())
+	}
+	spec, ok := create.Source.TokenCopy()
+	if !ok || spec.Source != game.TokenCopySourceObject {
+		t.Fatalf("token source = %#v, want a copy of the target object", create.Source)
+	}
+}
+
+func TestLowerTappedCopyTokens(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Tapped Copy Tokens",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create two tapped tokens that are copies of target creature.",
+	})
+	create, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.CreateToken)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.CreateToken", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	if create.Amount.Value() != 2 {
+		t.Fatalf("amount = %d, want 2", create.Amount.Value())
+	}
+	if !create.EntryTapped {
+		t.Fatal("EntryTapped = false, want true for a tapped copy token")
+	}
+}
+
 func TestLowerForEachTokenCount(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

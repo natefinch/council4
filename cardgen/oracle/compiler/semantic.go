@@ -1241,6 +1241,9 @@ type CompiledEffect struct {
 	// TokenCopyDropLegendary reports a copy-token "except <it/the token> isn't
 	// legendary" modifier: the created token drops the Legendary supertype.
 	TokenCopyDropLegendary bool
+	// TokenCopyEntersTapped reports a copy-token "tapped" entry modifier: every
+	// created copy enters the battlefield tapped.
+	TokenCopyEntersTapped bool
 	// TokenCopyGrantKeywords lists keyword abilities the created copy token gains
 	// from a folded "[That token/It] gains <keyword>." rider, in source order.
 	TokenCopyGrantKeywords []parser.KeywordKind
