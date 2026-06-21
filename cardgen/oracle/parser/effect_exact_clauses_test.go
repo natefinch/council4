@@ -176,6 +176,11 @@ func TestExactGraveyardCardTargetAccepts(t *testing.T) {
 		"Return target green card from your graveyard to your hand.",
 		"Return target multicolored card from your graveyard to your hand.",
 		"Return target colorless card from your graveyard to your hand.",
+		// Color + type/subtype combinations render in canonical order; lowering
+		// restricts on both the color and the type.
+		"Return target blue creature card from your graveyard to your hand.",
+		"Return target red sorcery card from your graveyard to your hand.",
+		"Return target colorless artifact card from your graveyard to the battlefield.",
 		"Return target Zombie card from your graveyard to the battlefield.",
 		"Return target creature card with mana value 3 or less from your graveyard to your hand.",
 		"Return another target creature card from your graveyard to your hand.",
@@ -198,10 +203,9 @@ func TestExactGraveyardCardTargetFailsClosed(t *testing.T) {
 	// cannot faithfully reconstruct, so the round-trip must fail closed and the
 	// card must keep failing rather than lower to a wrong predicate.
 	rejected := []string{
-		// Supertype, excluded type, and color+type combinations are unrendered.
+		// Supertype and excluded-type combinations are unrendered.
 		"Return target basic land card from your graveyard to the battlefield.",
 		"Return target nonland permanent card from your graveyard to the battlefield.",
-		"Return target blue creature card from your graveyard to your hand.",
 		// "and/or" unions are not the canonical " or " join.
 		"Return up to two target instant and/or sorcery cards from your graveyard to your hand.",
 	}
@@ -228,6 +232,9 @@ func TestExactChosenGraveyardReturnAccepts(t *testing.T) {
 		// A single instant/sorcery type is retained in RequiredTypesAny.
 		"Return a sorcery card from your graveyard to your hand.",
 		"Return an instant card from your graveyard to your hand.",
+		// Color + type combinations render in canonical order.
+		"Return a blue creature card from your graveyard to your hand.",
+		"Return a red sorcery card from your graveyard to your hand.",
 		"Return a creature card with mana value 3 or less from your graveyard to your hand.",
 	}
 	for _, source := range accepted {
@@ -243,9 +250,8 @@ func TestExactChosenGraveyardReturnAccepts(t *testing.T) {
 func TestExactChosenGraveyardReturnFailsClosed(t *testing.T) {
 	t.Parallel()
 	rejected := []string{
-		// Supertype and color+type combinations are unrendered.
+		// Supertype combinations are unrendered.
 		"Return a basic land card from your graveyard to your hand.",
-		"Return a blue creature card from your graveyard to your hand.",
 		// Another player's graveyard has no non-target "your" phrasing here.
 		"Return a creature card from an opponent's graveyard to your hand.",
 	}
