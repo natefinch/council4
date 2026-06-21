@@ -64,6 +64,12 @@ var roundTripCards = []*ScryfallCard{
 		Colors:     []string{"W"},
 		OracleText: "Return all enchantment cards from your graveyard to the battlefield.",
 	},
+	{
+		Name:       "RT Brotherhood Regalia",
+		Layout:     "normal",
+		TypeLine:   "Artifact — Equipment",
+		OracleText: "Equipped creature has ward {2}, is an Assassin in addition to its other types, and can't be blocked.\nEquip legendary creature {1}\nEquip {3}",
+	},
 }
 
 // writeRoundTripPackage generates source for roundTripCards into a fresh package

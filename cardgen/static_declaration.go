@@ -556,13 +556,23 @@ func lowerStaticContinuousLayer(layer compiler.StaticContinuousLayer) (game.Cont
 }
 
 func lowerStaticGrantedAbility(keywords []compiler.CompiledKeyword) (game.StaticAbility, bool) {
-	if len(keywords) != 1 || keywords[0].Kind != parser.KeywordProtection {
+	if len(keywords) != 1 {
 		return game.StaticAbility{}, false
 	}
-	if !keywords[0].ProtectionKnown {
+	switch keywords[0].Kind {
+	case parser.KeywordProtection:
+		if !keywords[0].ProtectionKnown {
+			return game.StaticAbility{}, false
+		}
+		return staticAbilityFromProtectionKeyword(keywords[0].Protection, ""), true
+	case parser.KeywordWard:
+		if keywords[0].ParameterKind != parser.KeywordParameterManaCost || len(keywords[0].ManaCost) == 0 {
+			return game.StaticAbility{}, false
+		}
+		return game.WardStaticAbility(slices.Clone(keywords[0].ManaCost)), true
+	default:
 		return game.StaticAbility{}, false
 	}
-	return staticAbilityFromProtectionKeyword(keywords[0].Protection, ""), true
 }
 
 func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {

@@ -1542,6 +1542,76 @@ func TestCompileComposedPowerToughnessRuleDeclarations(t *testing.T) {
 	}
 }
 
+// TestCompileComposedCharacteristicRuleDeclarations verifies that a compound
+// "<subject> ... is a[n] <type> in addition to its other types ... and <rule>"
+// wording recognizes both the type-addition characteristic declaration and the
+// single-subject rule declaration on the attached object, including alongside a
+// keyword grant (Brotherhood Regalia's "has ward {2}, is an Assassin in addition
+// to its other types, and can't be blocked").
+func TestCompileComposedCharacteristicRuleDeclarations(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source       string
+		rule         StaticRuleKind
+		wantSubtype  types.Sub
+		wantKeywords bool
+	}{
+		"type addition and can't be blocked": {
+			source:      "Equipped creature is an Assassin in addition to its other types and can't be blocked.",
+			rule:        StaticRuleCantBeBlocked,
+			wantSubtype: types.Sub("Assassin"),
+		},
+		"keyword, type addition, and rule": {
+			source:       "Equipped creature has ward {2}, is an Assassin in addition to its other types, and can't be blocked.",
+			rule:         StaticRuleCantBeBlocked,
+			wantSubtype:  types.Sub("Assassin"),
+			wantKeywords: true,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(test.source, pipelineContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := compilation.Abilities[0]
+			if ability.Static == nil || ability.Static.Blocker != StaticDeclarationBlockerNone {
+				t.Fatalf("ability static = %#v, want recognized declarations", ability.Static)
+			}
+			var characteristic, rule, keyword *StaticDeclaration
+			for i := range ability.Static.Declarations {
+				declaration := &ability.Static.Declarations[i]
+				switch {
+				case declaration.Kind == StaticDeclarationRule:
+					rule = declaration
+				case declaration.Continuous != nil && declaration.Continuous.Layer == StaticLayerType:
+					characteristic = declaration
+				case declaration.Continuous != nil && declaration.Continuous.Operation == StaticContinuousGrantKeywords:
+					keyword = declaration
+				default:
+				}
+			}
+			if characteristic == nil || len(characteristic.Continuous.AddSubtypes) != 1 ||
+				characteristic.Continuous.AddSubtypes[0] != test.wantSubtype {
+				t.Fatalf("missing type-addition declaration: %#v", ability.Static.Declarations)
+			}
+			if characteristic.Group.Domain != StaticGroupAttachedObject {
+				t.Fatalf("characteristic group = %v, want attached object", characteristic.Group.Domain)
+			}
+			if rule == nil || rule.Rule == nil || rule.Rule.Kind != test.rule {
+				t.Fatalf("missing rule declaration %v: %#v", test.rule, ability.Static.Declarations)
+			}
+			if rule.Group.Domain != StaticGroupAttachedObject {
+				t.Fatalf("rule group = %v, want attached object", rule.Group.Domain)
+			}
+			if (keyword != nil) != test.wantKeywords {
+				t.Fatalf("keyword grant present = %v, want %v: %#v", keyword != nil, test.wantKeywords, ability.Static.Declarations)
+			}
+		})
+	}
+}
+
 // TestCompileComposedPowerToughnessRuleNearMissesFailClosed confirms that
 // compound power/toughness and rule wordings outside the single-subject runtime
 // model (battlefield groups, conditional rules) produce no rule declaration.
