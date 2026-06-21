@@ -85,6 +85,10 @@ const (
 	// (Borne Upon a Wind, Emergence Zone), letting the controller cast spells at
 	// instant speed for the rest of the turn (CR 702.8 / 601.3e).
 	EffectCastAsThoughFlash EffectKind = "EffectCastAsThoughFlash"
+	// EffectWinGame models a player winning the game ("you win the game"), as in
+	// Felidar Sovereign and Thassa's Oracle (CR 104.2a). It mirrors
+	// EffectLoseGame.
+	EffectWinGame EffectKind = "EffectWinGame"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."

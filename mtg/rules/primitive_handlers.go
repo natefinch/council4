@@ -391,6 +391,25 @@ func handlePlayerLosesGame(r *effectResolver, prim game.PlayerLosesGame) effectR
 	return res
 }
 
+func handlePlayerWinsGame(r *effectResolver, prim game.PlayerWinsGame) effectResolved {
+	res := effectResolved{accepted: true}
+	winnerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	if player, ok := playerByID(r.game, winnerID); ok && player.Eliminated {
+		return res
+	}
+	for _, player := range r.game.Players {
+		if player.ID == winnerID || player.Eliminated {
+			continue
+		}
+		r.game.MarkedToLoseGame[player.ID] = true
+		res.succeeded = true
+	}
+	return res
+}
+
 func handleUntap(r *effectResolver, prim game.Untap) effectResolved {
 	res := effectResolved{accepted: true}
 	if prim.ChooseUpTo {

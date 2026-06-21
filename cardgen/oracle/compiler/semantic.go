@@ -929,6 +929,7 @@ const (
 	EffectLoseGame
 	EffectChooseNewTargets
 	EffectCastAsThoughFlash
+	EffectWinGame
 )
 
 // DurationKind identifies common continuous-effect durations.
