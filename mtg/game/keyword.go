@@ -471,6 +471,60 @@ func ActivatedBodyEternalize(body *ActivatedAbility) bool {
 	return BodyHasKeyword(body, Eternalize)
 }
 
+// ActivatedBodyEmbalm reports whether the body is an embalm ability.
+func ActivatedBodyEmbalm(body *ActivatedAbility) bool {
+	return BodyHasKeyword(body, Embalm)
+}
+
+// ActivatedBodyEternalizeParams returns the mana cost and the card's printed
+// creature subtypes from an Eternalize activated body, reporting whether the
+// body carries the Eternalize keyword and the structure those parameters
+// produce. Callers confirm the exact body with EternalizeActivatedBody.
+func ActivatedBodyEternalizeParams(body *ActivatedAbility) (cost.Mana, []types.Sub, bool) {
+	return eternalizeFamilyParams(body, Eternalize)
+}
+
+// ActivatedBodyEmbalmParams returns the mana cost and the card's printed
+// creature subtypes from an Embalm activated body, reporting whether the body
+// carries the Embalm keyword. Callers confirm the exact body with
+// EmbalmActivatedBody.
+func ActivatedBodyEmbalmParams(body *ActivatedAbility) (cost.Mana, []types.Sub, bool) {
+	return eternalizeFamilyParams(body, Embalm)
+}
+
+func eternalizeFamilyParams(body *ActivatedAbility, kw Keyword) (cost.Mana, []types.Sub, bool) {
+	if !BodyHasKeyword(body, kw) || !body.ManaCost.Exists {
+		return nil, nil, false
+	}
+	subtypes, ok := tokenCopyAddedCreatureSubtypes(body)
+	if !ok {
+		return nil, nil, false
+	}
+	return body.ManaCost.Val, subtypes, true
+}
+
+// tokenCopyAddedCreatureSubtypes recovers the card's printed creature subtypes
+// from an Eternalize/Embalm token-copy body by dropping the leading Zombie type
+// the builders prepend. It reports false when the body is not a single
+// copy-token instruction in that exact shape.
+func tokenCopyAddedCreatureSubtypes(body *ActivatedAbility) ([]types.Sub, bool) {
+	if len(body.Content.Modes) != 1 || len(body.Content.Modes[0].Sequence) != 1 {
+		return nil, false
+	}
+	create, ok := body.Content.Modes[0].Sequence[0].Primitive.(CreateToken)
+	if !ok {
+		return nil, false
+	}
+	spec, ok := create.Source.TokenCopy()
+	if !ok {
+		return nil, false
+	}
+	if len(spec.SetSubtypes) == 0 || spec.SetSubtypes[0] != types.Zombie {
+		return nil, false
+	}
+	return spec.SetSubtypes[1:], true
+}
+
 // ActivatedBodyKicker returns the KickerKeyword from an ActivatedAbilityBody's keywords.
 func ActivatedBodyKicker(body *ActivatedAbility) (KickerKeyword, bool) {
 	ka, ok := BodyKeywordAbility(body, Kicker)

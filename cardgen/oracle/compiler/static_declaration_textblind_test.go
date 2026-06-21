@@ -462,6 +462,75 @@ func TestRecognizeStaticChosenTypeSpellCostModifierFromTypedNode(t *testing.T) {
 	}
 }
 
+func TestRecognizeStaticSpellColorDisjunctionCostModifierFromTypedNode(t *testing.T) {
+	t.Parallel()
+	node := parser.StaticDeclarationSyntax{
+		Kind:                parser.StaticDeclarationCostModifier,
+		CostModifier:        parser.StaticDeclarationCostModifierSpellReduction,
+		CostReductionAmount: 1,
+		SpellType:           parser.StaticDeclarationSpellTypeAll,
+		SpellColors: []parser.StaticDeclarationSpellColorKind{
+			parser.StaticDeclarationSpellColorRed,
+			parser.StaticDeclarationSpellColorGreen,
+		},
+	}
+	declaration, ok := recognizeStaticSpellCostModifierDeclaration(
+		CompiledAbility{Kind: AbilityStatic},
+		[]parser.StaticDeclarationSyntax{node},
+	)
+	if !ok || declaration.Cost == nil ||
+		declaration.Cost.Kind != StaticCostModifierSpell ||
+		declaration.Cost.GenericReduction != 1 ||
+		declaration.Cost.MatchSpellColor ||
+		len(declaration.Cost.SpellTypes) != 0 ||
+		declaration.Group.Domain != StaticGroupControllerSpells ||
+		!slices.Equal(declaration.Cost.SpellColors, []color.Color{color.Red, color.Green}) {
+		t.Fatalf("declaration = %#v ok = %v, want red/green disjunction", declaration, ok)
+	}
+}
+
+func TestRecognizeStaticSpellColorDisjunctionFailsClosed(t *testing.T) {
+	t.Parallel()
+	tests := map[string]parser.StaticDeclarationSyntax{
+		"single color disjunction": {
+			Kind:                parser.StaticDeclarationCostModifier,
+			CostModifier:        parser.StaticDeclarationCostModifierSpellReduction,
+			CostReductionAmount: 1,
+			SpellColors:         []parser.StaticDeclarationSpellColorKind{parser.StaticDeclarationSpellColorRed},
+		},
+		"colorless in disjunction": {
+			Kind:                parser.StaticDeclarationCostModifier,
+			CostModifier:        parser.StaticDeclarationCostModifierSpellReduction,
+			CostReductionAmount: 1,
+			SpellColors: []parser.StaticDeclarationSpellColorKind{
+				parser.StaticDeclarationSpellColorRed,
+				parser.StaticDeclarationSpellColorColorless,
+			},
+		},
+		"disjunction with type filter": {
+			Kind:                parser.StaticDeclarationCostModifier,
+			CostModifier:        parser.StaticDeclarationCostModifierSpellReduction,
+			CostReductionAmount: 1,
+			SpellType:           parser.StaticDeclarationSpellTypeCreature,
+			SpellColors: []parser.StaticDeclarationSpellColorKind{
+				parser.StaticDeclarationSpellColorRed,
+				parser.StaticDeclarationSpellColorGreen,
+			},
+		},
+	}
+	for name, node := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if _, ok := recognizeStaticSpellCostModifierDeclaration(
+				CompiledAbility{Kind: AbilityStatic},
+				[]parser.StaticDeclarationSyntax{node},
+			); ok {
+				t.Fatalf("recognized malformed color disjunction %#v, want fail closed", node)
+			}
+		})
+	}
+}
+
 func TestRecognizeStaticSpellCostModifierFailsClosedOnContent(t *testing.T) {
 	t.Parallel()
 	node := parser.StaticDeclarationSyntax{

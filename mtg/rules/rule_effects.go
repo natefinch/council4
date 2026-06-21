@@ -619,6 +619,21 @@ func spellCostModifierBaseMatchesCard(modifier game.CostModifier, card *game.Car
 			return false
 		}
 	}
+	if len(modifier.MatchColors) != 0 {
+		if card == nil {
+			return false
+		}
+		matched := false
+		for _, c := range modifier.MatchColors {
+			if slices.Contains(card.Colors, c) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			return false
+		}
+	}
 	return true
 }
 

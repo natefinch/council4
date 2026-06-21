@@ -71,6 +71,7 @@ const (
 	Horsemanship
 	CumulativeUpkeep
 	Riot
+	Embalm
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -613,6 +614,41 @@ func EternalizeActivatedBody(manaCost cost.Mana, creatureSubtypes ...types.Sub) 
 		}}}.Ability(),
 
 		KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: Eternalize}},
+	}
+}
+
+// EmbalmActivatedBody builds the ActivatedAbilityBody for the Embalm keyword.
+// Like Eternalize, it exiles the card from its owner's graveyard at sorcery
+// speed to create a token copy, except the token is white, gains the Zombie
+// creature type, and has no mana cost. Unlike Eternalize it keeps the card's
+// printed power and toughness. Use this in CardFace.ActivatedAbilities with
+// categorized fields.
+func EmbalmActivatedBody(manaCost cost.Mana, creatureSubtypes ...types.Sub) ActivatedAbility {
+	tokenSubtypes := make([]types.Sub, 0, len(creatureSubtypes)+1)
+	tokenSubtypes = append(tokenSubtypes, types.Zombie)
+	tokenSubtypes = append(tokenSubtypes, creatureSubtypes...)
+	return ActivatedAbility{
+		Text:           "Embalm " + manaCost.String(),
+		ManaCost:       opt.Val(append(cost.Mana(nil), manaCost...)),
+		ZoneOfFunction: zone.Graveyard,
+		Timing:         SorceryOnly,
+		AdditionalCosts: []cost.Additional{{
+			Kind: cost.AdditionalExileSource,
+			Text: "Exile this card from your graveyard",
+		}},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: CreateToken{
+				Amount: Fixed(1),
+				Source: TokenCopyOf(TokenCopySpec{
+					Source:      TokenCopySourceSourceCard,
+					SetColors:   []color.Color{color.White},
+					SetSubtypes: tokenSubtypes,
+					NoManaCost:  true,
+				}),
+			},
+		}}}.Ability(),
+
+		KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: Embalm}},
 	}
 }
 

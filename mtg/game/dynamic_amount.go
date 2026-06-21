@@ -103,6 +103,14 @@ const (
 	// toughness sibling. Added last so existing kinds keep their wire values.
 	DynamicAmountTotalPowerInGroup
 	DynamicAmountTotalToughnessInGroup
+	// DynamicAmountColorCountInGroup is the number of distinct colors among the
+	// permanents of Group, evaluated as the effect resolves (CR 608.2c). A
+	// permanent contributes each of its colors (CR 105.2, CR 202.2); colorless
+	// permanents contribute none. It backs "the number of colors among <group>"
+	// amounts such as Faeburrow Elder's "+1/+1 for each color among permanents
+	// you control"; an empty or fully colorless group yields zero. Added last so
+	// existing kinds keep their wire values.
+	DynamicAmountColorCountInGroup
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

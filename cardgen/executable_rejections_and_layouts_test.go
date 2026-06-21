@@ -62,6 +62,58 @@ func TestGenerateExecutableCardSourceSupportsOptionalKickedEnterTrigger(t *testi
 	}
 }
 
+// TestGenerateExecutableCardSourceSupportsConditionalSingleEffectSpell verifies
+// that a single-effect spell carrying a content-level effect-gate condition
+// ("If you control a creature, draw two cards.") lowers with the condition
+// applied as the draw instruction's gate, instead of being rejected because the
+// single-effect draw lowerer cannot itself apply conditions.
+func TestGenerateExecutableCardSourceSupportsConditionalSingleEffectSpell(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Draw",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "If you control a creature, draw two cards.",
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v, want none", diagnostics)
+	}
+	if !strings.Contains(source, "game.Draw{") || !strings.Contains(source, "Condition: opt.Val(game.EffectCondition{") {
+		t.Fatalf("source missing gated draw:\n%s", source)
+	}
+}
+
+// TestGenerateExecutableCardSourceSupportsAddendumCastTimingGate verifies that
+// the Azorius "Addendum" cast-timing rider lowers: the ability-word label is
+// stripped and the bonus effect is gated on the controller casting the spell
+// during their own main phase (CastDuringControllerMainPhase). The "this spell"
+// inside the condition must not leak as an effect reference.
+func TestGenerateExecutableCardSourceSupportsAddendumCastTimingGate(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Addendum",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Draw two cards.\nAddendum — If you cast this spell during your main phase, you gain 2 life.",
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v, want none", diagnostics)
+	}
+	if !strings.Contains(source, "CastDuringControllerMainPhase: true") {
+		t.Fatalf("source missing cast-timing gate:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -84,7 +136,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "investigate with unrecognized sibling", cardName: "Test Clue", typeLine: "Sorcery", oracleText: "Investigate, then celebrate."},
 		{name: "proliferate with unrecognized sibling", cardName: "Test Counter", typeLine: "Sorcery", oracleText: "Proliferate, then celebrate."},
 		{name: "another fight target", cardName: "Test Fight", typeLine: "Sorcery", oracleText: "Target creature fights another target creature."},
-		{name: "conditional draw", cardName: "Test Draw", typeLine: "Sorcery", oracleText: "If you control a creature, draw two cards."},
 		{name: "conditional destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "If it is tapped, destroy target creature."},
 		{name: "regeneration destroy with non-pronoun subject", cardName: "Test Doom", typeLine: "Instant", oracleText: "Destroy target creature. That creature can't be regenerated."},
 		{name: "restricted destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "Destroy target nonblack nonred creature."},
@@ -96,7 +147,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "parameterized temporary keyword", cardName: "Test Ward", typeLine: "Instant", oracleText: "Target creature gains ward {2} until end of turn."},
 		{name: "set life total", cardName: "Test Life", typeLine: "Sorcery", oracleText: "Your life total becomes 10."},
 		{name: "variable scry", cardName: "Test Vision", typeLine: "Sorcery", oracleText: "Scry X."},
-		{name: "conditional scry", cardName: "Test Vision", typeLine: "Sorcery", oracleText: "If you control a creature, scry 2."},
 		{name: "targeted scry", cardName: "Test Vision", typeLine: "Sorcery", oracleText: "Target player scries 2."},
 		{name: "random discard", cardName: "Test Mind", typeLine: "Sorcery", oracleText: "Target player discards a card at random."},
 		{name: "named discard", cardName: "Test Mind", typeLine: "Sorcery", oracleText: "Target player discards a creature card."},

@@ -456,14 +456,25 @@ func handlePlayerWinsGame(r *effectResolver, prim game.PlayerWinsGame) effectRes
 	if player, ok := playerByID(r.game, winnerID); ok && player.Eliminated {
 		return res
 	}
-	for _, player := range r.game.Players {
+	res.succeeded = markPlayerWinsGame(r.game, winnerID)
+	return res
+}
+
+// markPlayerWinsGame marks every other still-active player to lose the game so
+// the named player wins (CR 104.2a). It returns whether any opponent was marked.
+func markPlayerWinsGame(g *game.Game, winnerID game.PlayerID) bool {
+	if player, ok := playerByID(g, winnerID); ok && player.Eliminated {
+		return false
+	}
+	marked := false
+	for _, player := range g.Players {
 		if player.ID == winnerID || player.Eliminated {
 			continue
 		}
-		r.game.MarkedToLoseGame[player.ID] = true
-		res.succeeded = true
+		g.MarkedToLoseGame[player.ID] = true
+		marked = true
 	}
-	return res
+	return marked
 }
 
 func handleUntap(r *effectResolver, prim game.Untap) effectResolved {

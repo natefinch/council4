@@ -229,6 +229,34 @@ func TestLowerQualifiedOverloadPreservesOrRejectsSelectors(t *testing.T) {
 	}
 }
 
+func TestGenerateDreadReturnFlashbackSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Dread Return",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		ManaCost:   "{2}{B}{B}",
+		OracleText: "Return target creature card from your graveyard to the battlefield.\nFlashback—Sacrifice three creatures. (You may cast this card from your graveyard for its flashback cost. Then exile it.)",
+	}, "dreadReturn")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"game.SimpleKeyword{Kind: game.Flashback}",
+		`Label: "Flashback"`,
+		"AdditionalCosts: []cost.Additional{",
+		"Kind:               cost.AdditionalSacrifice,",
+		"PermanentType:      types.Creature,",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("source missing %q:\n%s", want, source)
+		}
+	}
+}
+
 func TestGenerateVandalblastSource(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
@@ -308,7 +336,7 @@ func TestLowerSafeOverloadSiblings(t *testing.T) {
 
 func TestLowerCommanderAlternativeCostIsTextBlind(t *testing.T) {
 	t.Parallel()
-	lowered, diagnostic := lowerSpellAlternativeCost(compiler.CompiledAbility{
+	lowered, diagnostic := lowerSpellAlternativeCost("", compiler.CompiledAbility{
 		Kind: compiler.AbilitySpellAlternativeCost,
 		Text: "not Oracle wording",
 		AlternativeCost: &compiler.CompiledAlternativeCost{

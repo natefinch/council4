@@ -32,6 +32,14 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 		}
 		return fmt.Sprintf("game.CyclingActivatedAbility(%s)", renderedCost), nil
 	}
+	if manaCost, subtypes, ok := game.ActivatedBodyEternalizeParams(ability); ok &&
+		reflect.DeepEqual(*ability, game.EternalizeActivatedBody(manaCost, subtypes...)) {
+		return r.renderEternalizeFamilyAbility(ctx, "game.EternalizeActivatedBody", manaCost, subtypes)
+	}
+	if manaCost, subtypes, ok := game.ActivatedBodyEmbalmParams(ability); ok &&
+		reflect.DeepEqual(*ability, game.EmbalmActivatedBody(manaCost, subtypes...)) {
+		return r.renderEternalizeFamilyAbility(ctx, "game.EmbalmActivatedBody", manaCost, subtypes)
+	}
 
 	var fields []string
 	if ability.ManaCost.Exists {

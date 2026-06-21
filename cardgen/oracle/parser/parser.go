@@ -219,6 +219,9 @@ func parseAbility(
 		if chapters, ok := parseChapterHeading(tokens[:dash]); context.Saga && ok {
 			ability.Chapters = chapters
 			ability.ChapterSpan = shared.SpanOf(tokens[:dash])
+		} else if flashback, costPhrase, ok := flashbackAlternativeCostClause(source, tokens, dash); ok {
+			ability.AlternativeCost = flashback
+			ability.costPhrase = &costPhrase
 		} else {
 			phrase := phraseFromTokens(source, tokens[:dash])
 			ability.AbilityWord = &AbilityWordClause{
@@ -233,9 +236,12 @@ func parseAbility(
 		phrase := phraseFromTokens(source, body[:colon])
 		ability.costPhrase = &phrase
 	}
-	if len(ability.Chapters) > 0 {
+	switch {
+	case len(ability.Chapters) > 0:
 		ability.Kind = AbilityChapter
-	} else {
+	case ability.AlternativeCost != nil:
+		ability.Kind = AbilitySpellAlternativeCost
+	default:
 		ability.Kind = classifyAbility(body, context)
 	}
 	// The "As an additional cost to cast this spell," prefix applies to any card

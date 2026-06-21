@@ -5,6 +5,62 @@ import (
 	"testing"
 )
 
+func TestGenerateExecutableCardSourceEternalize(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Eternalizer",
+		Layout:     "normal",
+		TypeLine:   "Creature — Snake Druid",
+		ManaCost:   "{1}{G}",
+		Power:      new("1"),
+		Toughness:  new("4"),
+		OracleText: "Eternalize {2}{G}{G} ({2}{G}{G}, Exile this card from your graveyard: Create a token that's a copy of it, except it's a 4/4 black Zombie Snake Druid with no mana cost. Eternalize only as a sorcery.)",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"ActivatedAbilities: []game.ActivatedAbility",
+		`game.EternalizeActivatedBody(cost.Mana{cost.O(2), cost.G, cost.G}, types.Sub("Snake"), types.Sub("Druid"))`,
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceEmbalm(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Embalmer",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Cleric",
+		ManaCost:   "{2}{W}",
+		Power:      new("1"),
+		Toughness:  new("4"),
+		OracleText: "Embalm {3}{W} ({3}{W}, Exile this card from your graveyard: Create a token that's a copy of it, except it's a white Zombie Human Cleric with no mana cost. Embalm only as a sorcery.)",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"ActivatedAbilities: []game.ActivatedAbility",
+		`game.EmbalmActivatedBody(cost.Mana{cost.O(3), cost.W}, types.Sub("Human"), types.Sub("Cleric"))`,
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceCycling(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

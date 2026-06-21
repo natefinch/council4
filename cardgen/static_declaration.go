@@ -824,6 +824,19 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 	if cost.ChosenSubtypeFromEntryChoice {
 		base.ChosenSubtypeFromEntryChoice = true
 	}
+	if len(cost.SpellColors) != 0 {
+		if cost.MatchSpellColor || len(cost.SpellTypes) != 0 {
+			return false
+		}
+		modifier := base
+		modifier.MatchColors = slices.Clone(cost.SpellColors)
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectCostModifier,
+			AffectedPlayer: game.PlayerYou,
+			CostModifier:   modifier,
+		})
+		return true
+	}
 	if cost.MatchSpellColor {
 		if len(cost.SpellTypes) != 0 {
 			return false

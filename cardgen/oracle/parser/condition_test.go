@@ -51,6 +51,7 @@ func TestParseConditionPredicateMeaning(t *testing.T) {
 		{"created token this turn", "you created a token this turn", ConditionPredicateCreatedTokenThisTurn, 0},
 		{"active token creation", "an effect would create one or more tokens under your control", ConditionPredicateTokenCreationUnderController, 0},
 		{"passive token creation", "one or more tokens would be created under your control", ConditionPredicateTokenCreationUnderController, 0},
+		{"cast during main phase", "you cast this spell during your main phase", ConditionPredicateCastDuringControllerMainPhase, 0},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

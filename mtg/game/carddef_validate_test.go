@@ -3,6 +3,7 @@ package game
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -144,6 +145,50 @@ func TestValidateCardDefValidatesDynamicSpellCostReduction(t *testing.T) {
 	}
 	if issues := ValidateCardDef(makeCard(unsupportedKind)); !hasCardDefIssue(issues, CardDefIssueInvalidRuleEffect) {
 		t.Fatalf("unsupported dynamic reduction kind issues = %+v, want %s", issues, CardDefIssueInvalidRuleEffect)
+	}
+}
+
+func TestValidateCardDefColorDisjunctionCostModifier(t *testing.T) {
+	t.Parallel()
+
+	makeCard := func(modifier CostModifier) *CardDef {
+		return &CardDef{CardFace: CardFace{
+			Name: "Disjunction Reducer",
+			StaticAbilities: []StaticAbility{{
+				RuleEffects: []RuleEffect{{
+					Kind:         RuleEffectCostModifier,
+					CostModifier: modifier,
+				}},
+			}},
+		}}
+	}
+
+	valid := CostModifier{
+		Kind:             CostModifierSpell,
+		GenericReduction: 1,
+		MatchColors:      []color.Color{color.Red, color.Green},
+	}
+	if issues := ValidateCardDef(makeCard(valid)); len(issues) != 0 {
+		t.Fatalf("valid color-disjunction cost modifier issues = %+v, want none", issues)
+	}
+
+	singleColor := valid
+	singleColor.MatchColors = []color.Color{color.Red}
+	if issues := ValidateCardDef(makeCard(singleColor)); !hasCardDefIssue(issues, CardDefIssueInvalidRuleEffect) {
+		t.Fatalf("single-color disjunction issues = %+v, want %s", issues, CardDefIssueInvalidRuleEffect)
+	}
+
+	withSingleMatch := valid
+	withSingleMatch.MatchColor = true
+	withSingleMatch.Color = color.Red
+	if issues := ValidateCardDef(makeCard(withSingleMatch)); !hasCardDefIssue(issues, CardDefIssueInvalidRuleEffect) {
+		t.Fatalf("disjunction combined with single color issues = %+v, want %s", issues, CardDefIssueInvalidRuleEffect)
+	}
+
+	emptyColor := valid
+	emptyColor.MatchColors = []color.Color{color.Red, ""}
+	if issues := ValidateCardDef(makeCard(emptyColor)); !hasCardDefIssue(issues, CardDefIssueInvalidRuleEffect) {
+		t.Fatalf("disjunction with empty color issues = %+v, want %s", issues, CardDefIssueInvalidRuleEffect)
 	}
 }
 

@@ -273,3 +273,30 @@ func TestExactThoseSubjectKeywordGrantFailsClosed(t *testing.T) {
 		}
 	}
 }
+
+// TestExactLeadingDurationMassPumpAccepts verifies that a sentence-leading
+// "Until end of turn," distributes the duration so both the keyword grant and
+// the dynamic power/toughness pump reconstruct byte-exactly (Overwhelming
+// Stampede's printed wording).
+func TestExactLeadingDurationMassPumpAccepts(t *testing.T) {
+	t.Parallel()
+	accepted := []string{
+		"Until end of turn, creatures you control gain trample and get +X/+X, where X is the greatest power among creatures you control.",
+		"Until end of turn, creatures you control gain trample and get +X/+X, where X is the number of creatures you control.",
+	}
+	for _, source := range accepted {
+		document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+		if len(diagnostics) != 0 {
+			t.Fatalf("Parse(%q) diagnostics = %#v", source, diagnostics)
+		}
+		effects := document.Abilities[0].Sentences[0].Effects
+		if len(effects) != 2 {
+			t.Fatalf("Parse(%q) effects = %#v", source, effects)
+		}
+		for i := range effects {
+			if !effects[i].Exact {
+				t.Errorf("Parse(%q) effect[%d] not exact", source, i)
+			}
+		}
+	}
+}
