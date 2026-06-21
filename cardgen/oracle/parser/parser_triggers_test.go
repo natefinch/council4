@@ -367,6 +367,9 @@ func TestParsePlayerEventTriggerClauses(t *testing.T) {
 		{"Whenever a player surveils", TriggerPlayerSelectorAny, PlayerEventActionSurveil, PlayerEventCardNone, PlayerEventOccurrenceAny, 0},
 		{"Whenever an opponent gains life", TriggerPlayerSelectorOpponent, PlayerEventActionGainLife, PlayerEventCardNone, PlayerEventOccurrenceAny, 0},
 		{"Whenever you lose life", TriggerPlayerSelectorYou, PlayerEventActionLoseLife, PlayerEventCardNone, PlayerEventOccurrenceAny, 0},
+		{"Whenever an opponent searches their library", TriggerPlayerSelectorOpponent, PlayerEventActionSearchLibrary, PlayerEventCardNone, PlayerEventOccurrenceAny, 0},
+		{"Whenever a player searches their library", TriggerPlayerSelectorAny, PlayerEventActionSearchLibrary, PlayerEventCardNone, PlayerEventOccurrenceAny, 0},
+		{"Whenever you search your library", TriggerPlayerSelectorYou, PlayerEventActionSearchLibrary, PlayerEventCardNone, PlayerEventOccurrenceAny, 0},
 		{"Whenever a player draws their fourth card each turn", TriggerPlayerSelectorAny, PlayerEventActionDraw, PlayerEventCardSingle, PlayerEventOccurrenceOrdinalEachTurn, 4},
 		{"When you surveil for the first time each turn", TriggerPlayerSelectorYou, PlayerEventActionSurveil, PlayerEventCardNone, PlayerEventOccurrenceFirstEachTurn, 1},
 	}

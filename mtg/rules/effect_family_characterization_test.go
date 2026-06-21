@@ -121,6 +121,7 @@ func TestHighFrequencyEffectFamilyCharacterizationSnapshot(t *testing.T) {
 		"draw P1 Drawn Card",
 		"life-lost P2 amount=3",
 		fmt.Sprintf("damage player P2 amount=3 source=%s", cardName(g, sourceID)),
+		"library-searched P1",
 		"reveal P1 Searched Creature from Library",
 		"zone Searched Creature Library->Hand",
 		"fight Valiant Cub->Hill Giant",
@@ -201,6 +202,8 @@ func phaseZeroEventLine(g *game.Game, labels map[id.ID]string, event game.Event)
 		return fmt.Sprintf("spell-resolved %s", cardName(g, event.CardID))
 	case game.EventPermanentDied:
 		return fmt.Sprintf("died %s", labels[event.PermanentID])
+	case game.EventLibrarySearched:
+		return fmt.Sprintf("library-searched %s", phaseZeroPlayer(event.Player))
 	default:
 		return fmt.Sprintf("event-%d", event.Kind)
 	}

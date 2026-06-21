@@ -51,6 +51,11 @@ const (
 	EventSpellCopied
 	EventPermanentPhasedOut
 	EventPermanentPhasedIn
+	// EventLibrarySearched marks a player searching their library (CR 701.19).
+	// It is emitted once per search instruction regardless of whether a card is
+	// found, so "whenever a player/an opponent/you searches their library"
+	// triggers fire. Event.Player is the searching player.
+	EventLibrarySearched
 )
 
 // DamageRecipientKind identifies what received damage. Values are flags so a

@@ -196,6 +196,14 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 	if !ok {
 		return false, nil
 	}
+	// A player searches their library when this runs regardless of whether a
+	// matching card is found (CR 701.19a), so the search event fires once here
+	// for "whenever a player searches their library" triggers.
+	emitEvent(g, game.Event{
+		Kind:       game.EventLibrarySearched,
+		Controller: playerID,
+		Player:     playerID,
+	})
 	if spec.MaxManaValueFromX {
 		// "with mana value X or less" bounds the search by the spell's chosen X,
 		// resolved from the resolving stack object as the search runs.

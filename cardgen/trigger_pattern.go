@@ -318,6 +318,8 @@ func lowerTriggerEvent(event compiler.TriggerEvent) (game.EventKind, bool) {
 		return game.EventAttackerBecameBlocked, true
 	case compiler.TriggerEventTokenCreated:
 		return game.EventTokenCreated, true
+	case compiler.TriggerEventLibrarySearched:
+		return game.EventLibrarySearched, true
 	default:
 		return game.EventUnknown, false
 	}

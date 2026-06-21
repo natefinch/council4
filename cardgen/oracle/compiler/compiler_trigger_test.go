@@ -366,6 +366,22 @@ func TestCompileActionTriggerPatterns(t *testing.T) {
 			},
 		},
 		{
+			source: "Whenever an opponent searches their library, you gain 1 life and draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventLibrarySearched || pattern.Player != TriggerPlayerOpponent {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			source: "Whenever a player searches their library, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventLibrarySearched || pattern.Player != TriggerPlayerAny {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
 			source: "Whenever you create a token, draw a card.",
 			check: func(t *testing.T, pattern TriggerPattern) {
 				if pattern.Event != TriggerEventTokenCreated ||
