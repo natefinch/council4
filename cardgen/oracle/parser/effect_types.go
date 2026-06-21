@@ -405,14 +405,15 @@ type EffectReplacementKind string
 
 // Resolving replacement modifiers recognized by the parser.
 const (
-	EffectReplacementNone          EffectReplacementKind = ""
-	EffectReplacementInstead       EffectReplacementKind = "EffectReplacementInstead"
-	EffectReplacementTwiceThatMany EffectReplacementKind = "EffectReplacementTwiceThatMany"
-	EffectReplacementThatMuchPlus  EffectReplacementKind = "EffectReplacementThatMuchPlus"
-	EffectReplacementDoubleThat    EffectReplacementKind = "EffectReplacementDoubleThat"
-	EffectReplacementThatManyPlus  EffectReplacementKind = "EffectReplacementThatManyPlus"
-	EffectReplacementOneOfEach     EffectReplacementKind = "EffectReplacementOneOfEach"
-	EffectReplacementTwiceThatMuch EffectReplacementKind = "EffectReplacementTwiceThatMuch"
+	EffectReplacementNone           EffectReplacementKind = ""
+	EffectReplacementInstead        EffectReplacementKind = "EffectReplacementInstead"
+	EffectReplacementTwiceThatMany  EffectReplacementKind = "EffectReplacementTwiceThatMany"
+	EffectReplacementThatMuchPlus   EffectReplacementKind = "EffectReplacementThatMuchPlus"
+	EffectReplacementDoubleThat     EffectReplacementKind = "EffectReplacementDoubleThat"
+	EffectReplacementThatManyPlus   EffectReplacementKind = "EffectReplacementThatManyPlus"
+	EffectReplacementOneOfEach      EffectReplacementKind = "EffectReplacementOneOfEach"
+	EffectReplacementTwiceThatMuch  EffectReplacementKind = "EffectReplacementTwiceThatMuch"
+	EffectReplacementPlusAdditional EffectReplacementKind = "EffectReplacementPlusAdditional"
 )
 
 // EffectReplacementSyntax is a source-spanned replacement modifier.

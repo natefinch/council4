@@ -334,6 +334,37 @@ func TokenCreationReplacement(text string, multiplier int, filter TriggerControl
 	}
 }
 
+// TokenCreationReplacementSpec parameterizes a token-creation value-modifying
+// replacement (CR 614). Multiplier multiplies the created token count (1 leaves
+// it unchanged) and Addend then adds a fixed number of extra tokens. Subtypes,
+// when non-empty, restricts the replacement to tokens carrying all listed
+// subtypes. Filter scopes which player's creations are affected.
+type TokenCreationReplacementSpec struct {
+	Multiplier int
+	Addend     int
+	Subtypes   []types.Sub
+	Filter     TriggerControllerFilter
+}
+
+// TokenCreationReplacementFiltered creates a persistent replacement that
+// multiplies and/or augments token creation events, optionally restricted to a
+// token subtype and scoped by player. It backs the token-doubling family
+// (Doubling Season, Primal Vigor) and the additive variant (Xorn).
+func TokenCreationReplacementFiltered(text string, spec *TokenCreationReplacementSpec) ReplacementAbility {
+	return ReplacementAbility{
+		Text: text,
+		Replacement: ReplacementEffect{
+			Description:           text,
+			MatchEvent:            EventTokenCreated,
+			ControllerFilter:      spec.Filter,
+			TokenMultiplier:       spec.Multiplier,
+			TokenAddend:           spec.Addend,
+			TokenRequiredSubtypes: append([]types.Sub(nil), spec.Subtypes...),
+			Duration:              DurationPermanent,
+		},
+	}
+}
+
 // NamedTokenSetReplacement creates a persistent replacement that, when the
 // controller would create a token whose name matches one of defs, instead
 // creates one of each token in defs (Academy Manufactor). The defs double as

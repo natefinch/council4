@@ -890,13 +890,16 @@ func matchLibraryTopReorder(tokens []shared.Token, atoms Atoms) (EffectAmountSyn
 // EffectReplacementTwiceThatMany. The matching intervening-if condition is
 // recognized separately by recognizeTokenCreationCondition.
 func parsePassiveTokenDoublingEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
-	commaIndex, ok := matchPassiveTokenDoubling(tokens)
+	commaIndex, anyController, ok := matchPassiveTokenDoubling(tokens)
 	if !ok {
 		return nil, false
 	}
 	condition := tokens[:commaIndex]
 	resolving := tokens[commaIndex+1:]
 	createdIndex := commaIndex - 4
+	if anyController {
+		createdIndex = commaIndex - 1
+	}
 	createEffect := EffectSyntax{
 		Kind:             EffectCreate,
 		Context:          EffectContextController,
@@ -906,7 +909,7 @@ func parsePassiveTokenDoublingEffects(sentence Sentence, tokens []shared.Token, 
 		Text:             sentence.Text,
 		Tokens:           append([]shared.Token(nil), condition...),
 		Amount:           EffectAmountSyntax{Value: 1, Known: true},
-		UnderYourControl: true,
+		UnderYourControl: !anyController,
 	}
 	doubledIndex := commaIndex + 8
 	doubledEffect := EffectSyntax{
@@ -929,20 +932,27 @@ func parsePassiveTokenDoublingEffects(sentence Sentence, tokens []shared.Token, 
 
 // matchPassiveTokenDoubling reports the index of the comma separating the
 // would-create condition clause from the doubled output clause when tokens spell
-// the passive token-doubling replacement under the controller's control. It
-// fails closed on the controller-agnostic wording ("...would be created, ...",
-// Primal Vigor), whose any-player scope the controller-only runtime node cannot
-// represent.
-func matchPassiveTokenDoubling(tokens []shared.Token) (int, bool) {
-	if len(tokens) != 22 ||
-		!effectWordsAt(tokens, 0, "if", "one", "or", "more", "tokens", "would", "be", "created") ||
-		!effectWordsAt(tokens, 8, "under", "your", "control") ||
-		tokens[11].Kind != shared.Comma ||
-		!effectWordsAt(tokens, 12, "twice", "that", "many", "of", "those", "tokens", "are", "created", "instead") ||
-		tokens[21].Kind != shared.Period {
-		return 0, false
+// the passive token-doubling replacement. The controller-only wording ("...under
+// your control, ...", Mondrak) and the controller-agnostic wording ("...would be
+// created, ...", Primal Vigor) are distinguished by anyController, which the
+// any-player runtime node honors via an any-player scope.
+func matchPassiveTokenDoubling(tokens []shared.Token) (commaIndex int, anyController, ok bool) {
+	if len(tokens) == 22 &&
+		effectWordsAt(tokens, 0, "if", "one", "or", "more", "tokens", "would", "be", "created") &&
+		effectWordsAt(tokens, 8, "under", "your", "control") &&
+		tokens[11].Kind == shared.Comma &&
+		effectWordsAt(tokens, 12, "twice", "that", "many", "of", "those", "tokens", "are", "created", "instead") &&
+		tokens[21].Kind == shared.Period {
+		return 11, false, true
 	}
-	return 11, true
+	if len(tokens) == 19 &&
+		effectWordsAt(tokens, 0, "if", "one", "or", "more", "tokens", "would", "be", "created") &&
+		tokens[8].Kind == shared.Comma &&
+		effectWordsAt(tokens, 9, "twice", "that", "many", "of", "those", "tokens", "are", "created", "instead") &&
+		tokens[18].Kind == shared.Period {
+		return 8, true, true
+	}
+	return 0, false, false
 }
 
 // parseDrawEmptyLibraryWinReplacement recognizes the draw-from-empty-library win

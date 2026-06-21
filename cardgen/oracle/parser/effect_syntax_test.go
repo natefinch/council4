@@ -2094,6 +2094,42 @@ func TestParseAdditiveCounterPlacementReplacement(t *testing.T) {
 	}
 }
 
+func TestParseAnyCreatureCounterPlacementReplacement(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"If one or more +1/+1 counters would be put on a creature, twice that many +1/+1 counters are put on that creature instead.",
+		Context{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	cond := document.Abilities[0].ConditionClauses[0]
+	if cond.Predicate != ConditionPredicateCounterPlacementOnAnyCreature ||
+		cond.Counter != ConditionCounterPlusOnePlusOne {
+		t.Fatalf("condition = %#v", cond)
+	}
+}
+
+func TestParsePlusAdditionalTokenReplacement(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"If you would create one or more Treasure tokens, instead create those tokens plus an additional Treasure token.",
+		Context{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	cond := document.Abilities[0].ConditionClauses[0]
+	if cond.Predicate != ConditionPredicateTokenCreationUnderController {
+		t.Fatalf("condition = %#v", cond)
+	}
+	effects := document.Abilities[0].Sentences[0].Effects
+	replacement := effects[len(effects)-1].Replacement
+	if replacement.Kind != EffectReplacementPlusAdditional || replacement.Amount != 1 {
+		t.Fatalf("replacement = %#v", replacement)
+	}
+}
+
 func TestParseDrawFromEmptyLibraryWinReplacement(t *testing.T) {
 	t.Parallel()
 	document, diagnostics := Parse(

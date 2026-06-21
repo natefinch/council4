@@ -51,6 +51,9 @@ func TestParseConditionPredicateMeaning(t *testing.T) {
 		{"created token this turn", "you created a token this turn", ConditionPredicateCreatedTokenThisTurn, 0},
 		{"active token creation", "an effect would create one or more tokens under your control", ConditionPredicateTokenCreationUnderController, 0},
 		{"passive token creation", "one or more tokens would be created under your control", ConditionPredicateTokenCreationUnderController, 0},
+		{"any-player active token creation", "an effect would create one or more tokens", ConditionPredicateTokenCreationAnyController, 0},
+		{"any-player passive token creation", "one or more tokens would be created", ConditionPredicateTokenCreationAnyController, 0},
+		{"typed controller token creation", "you would create one or more Treasure tokens", ConditionPredicateTokenCreationUnderController, 0},
 		{"cast during main phase", "you cast this spell during your main phase", ConditionPredicateCastDuringControllerMainPhase, 0},
 	}
 	for _, test := range tests {
