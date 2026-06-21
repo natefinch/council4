@@ -898,6 +898,15 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		}
 		eachSourceDamageGroup, eachSourceDamageRecipient := eachSourceDamageSyntax(kind, tokens[ownershipStart:tokenIndex], clause, atoms)
 		fallbackOnInability := effectFallbackOnInability(tokens, ownershipStart, tokenIndex)
+		effectSelection := parseSelection(selectionClause, atoms)
+		// A group selection naming a creature conjoined with one other permanent
+		// type ("each artifact creature you control") records both card types in
+		// RequiredTypesAny with no conjunctive marker, exactly as a target does.
+		// Mark it so the lowering reads the two-word type as a single all-of
+		// filter rather than an any-of union, mirroring conjunctive targets.
+		if conjunctiveTypeTarget(effectSelection) {
+			effectSelection.ConjunctiveTypes = true
+		}
 		effects = append(effects, EffectSyntax{
 			Kind:                      kind,
 			Context:                   context,
@@ -910,7 +919,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			Tokens:                    append([]shared.Token(nil), ownership...),
 			Duration:                  duration,
 			DelayedTiming:             delayed,
-			Selection:                 parseSelection(selectionClause, atoms),
+			Selection:                 effectSelection,
 			DamageRecipientPair:       parseDamageRecipientPair(kind, clause, amount, atoms),
 			EachSourceDamageGroup:     eachSourceDamageGroup,
 			EachSourceDamageRecipient: eachSourceDamageRecipient,

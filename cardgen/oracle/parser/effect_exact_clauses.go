@@ -1654,7 +1654,7 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 		selection.Colorless || selection.Multicolored ||
 		len(selection.Supertypes) > 1 ||
 		len(selection.ExcludedColors) != 0 ||
-		len(selection.RequiredTypesAny) > 1 ||
+		(len(selection.RequiredTypesAny) > 1 && !selection.ConjunctiveTypes) ||
 		len(selection.ColorsAny) > 1 ||
 		len(selection.SubtypesAny) > 1 ||
 		len(selection.ExcludedTypes) > 1 {
@@ -1669,10 +1669,22 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 	if !hasNoun && selection.Kind != SelectionUnknown {
 		return "", false
 	}
-	// The parser records a permanent noun both as the selection Kind and as a
-	// redundant single-element RequiredTypesAny. Accept only that redundant form
-	// (a union or a type inconsistent with the noun is not representable here).
-	if len(selection.RequiredTypesAny) == 1 {
+	// A conjunctive two-type group ("each artifact creature you control") renders
+	// the combined noun "artifact creature" the parser captured rather than the
+	// single Kind noun. The two card types live in RequiredTypesAny with the
+	// ConjunctiveTypes marker, so render the joined noun and skip the
+	// single-type redundancy check below.
+	if selection.ConjunctiveTypes {
+		conjunctiveNoun, ok := conjunctiveCreatureTargetNoun(selection)
+		if !ok {
+			return "", false
+		}
+		noun, hasNoun = conjunctiveNoun, true
+	} else if len(selection.RequiredTypesAny) == 1 {
+		// The parser records a permanent noun both as the selection Kind and as a
+		// redundant single-element RequiredTypesAny. Accept only that redundant
+		// form (a union or a type inconsistent with the noun is not
+		// representable here).
 		requiredNoun, ok := permanentCardTypeNoun(selection.RequiredTypesAny[0])
 		if !ok || !hasNoun || requiredNoun != noun {
 			return "", false
