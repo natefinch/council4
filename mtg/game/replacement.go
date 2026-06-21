@@ -353,6 +353,29 @@ type ReplacementEffect struct {
 	// instead.", Teferi's Ageless Insight). It is only meaningful when
 	// DrawCardMultiplier is greater than one.
 	DrawCardExceptFirstInDrawStep bool
+
+	// ContinuousZoneRedirect marks a continuous static replacement that redirects
+	// a card (or permanent) headed for a graveyard to a different zone (CR 614),
+	// as on "If a card would be put into a graveyard from anywhere, exile it
+	// instead." (Leyline of the Void, Samurai of the Pale Curtain). It is
+	// registered into Game.ReplacementEffects while its source is on the
+	// battlefield and matched against every card the event moves, using
+	// RedirectOwnerFilter and RedirectTypeFilter. The self form printed on a
+	// single card ("If THIS would be put into a graveyard, ...") is not marked
+	// and is handled by the static self-zone replacement path instead.
+	ContinuousZoneRedirect bool
+
+	// RedirectOwnerFilter restricts a ContinuousZoneRedirect replacement by the
+	// owner of the moving card relative to the replacement's controller: You
+	// watches the controller's own graveyard, Opponent an opponent's, and Any
+	// every player's. It is only meaningful when ContinuousZoneRedirect is true.
+	RedirectOwnerFilter TriggerControllerFilter
+
+	// RedirectTypeFilter restricts a ContinuousZoneRedirect replacement to moving
+	// cards that have any of these card types ("an instant or sorcery card").
+	// It is empty when every card is redirected. It is only meaningful when
+	// ContinuousZoneRedirect is true.
+	RedirectTypeFilter []types.Card
 }
 
 // EntryTypeChoiceKey is the ChoiceKey under which an entry-time creature-type

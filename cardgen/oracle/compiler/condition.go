@@ -150,6 +150,13 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		condition.Predicate = ConditionPredicateWouldDrawCard
 	case parser.ConditionPredicateWouldDrawCardExceptFirstInDrawStep:
 		condition.Predicate = ConditionPredicateWouldDrawCardExceptFirstInDrawStep
+	case parser.ConditionPredicateCardWouldGoToGraveyard:
+		condition.Predicate = ConditionPredicateCardWouldGoToGraveyard
+		condition.GraveyardRedirectScope = compileGraveyardRedirectScope(clause.GraveyardRedirectScope)
+		condition.GraveyardFromBattlefieldOnly = clause.GraveyardFromBattlefieldOnly
+		for _, value := range clause.GraveyardSubjectTypesAny {
+			condition.GraveyardSubjectTypesAny = append(condition.GraveyardSubjectTypesAny, compileTriggerCardType(value))
+		}
 	default:
 	}
 }
@@ -395,6 +402,17 @@ func compileConditionObjectBinding(value parser.ConditionObjectBinding) Referenc
 		return ReferenceBindingEventPermanent
 	default:
 		return ReferenceBindingUnsupported
+	}
+}
+
+func compileGraveyardRedirectScope(value parser.GraveyardRedirectScope) GraveyardRedirectScope {
+	switch value {
+	case parser.GraveyardRedirectScopeYou:
+		return GraveyardRedirectScopeYou
+	case parser.GraveyardRedirectScopeOpponent:
+		return GraveyardRedirectScopeOpponent
+	default:
+		return GraveyardRedirectScopeAny
 	}
 }
 

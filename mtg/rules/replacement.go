@@ -753,6 +753,13 @@ func matchingStaticSelfZoneReplacementEffects(g *game.Game, event game.Event, ap
 		if replacement.ReplaceToZone == zone.None {
 			continue
 		}
+		// Continuous graveyard-redirect replacements are registered into
+		// g.ReplacementEffects while their source is on the battlefield and
+		// matched there against every moving card; the self-zone path must not
+		// re-apply them from the printed card definition.
+		if replacement.ContinuousZoneRedirect {
+			continue
+		}
 		// Optional entry-to-zone replacements are handled by the entry-payment
 		// path (optionalEntryReplacementDeclined); they must not redirect a
 		// generic zone change without prompting for their cost.
@@ -1002,6 +1009,9 @@ func replacementEffectMatchesEventWithSource(g *game.Game, replacement *game.Rep
 	if replacement.MatchToZone && replacement.ToZone != event.ToZone {
 		return false
 	}
+	if replacement.ContinuousZoneRedirect && !continuousZoneRedirectMatchesEvent(g, replacement, event, controller) {
+		return false
+	}
 	if !conditionSatisfied(g, conditionContext{
 		controller: controller,
 		source:     source,
@@ -1019,6 +1029,42 @@ func replacementCurrentController(g *game.Game, replacement *game.ReplacementEff
 		}
 	}
 	return replacement.Controller
+}
+
+// continuousZoneRedirectMatchesEvent reports whether a continuous
+// graveyard-redirect replacement (CR 614) applies to the zone-change event. The
+// watched graveyard belongs to the moving card's owner (event.Player), matched
+// relative to the replacement's controller, and the moving card must carry one
+// of the replacement's required card types when the filter is non-empty.
+func continuousZoneRedirectMatchesEvent(g *game.Game, replacement *game.ReplacementEffect, event game.Event, controller game.PlayerID) bool {
+	if replacement.RedirectOwnerFilter != game.TriggerControllerAny &&
+		!triggerControllerMatches(controller, replacement.RedirectOwnerFilter, event.Player) {
+		return false
+	}
+	if len(replacement.RedirectTypeFilter) == 0 {
+		return true
+	}
+	return movingCardHasAnyType(g, event, replacement.RedirectTypeFilter)
+}
+
+// movingCardHasAnyType reports whether the card moved by a zone-change event has
+// any of the given card types, read from the card's moving face. Tokens (which
+// carry no card instance) never match a non-empty type filter.
+func movingCardHasAnyType(g *game.Game, event game.Event, cardTypes []types.Card) bool {
+	if event.CardID == 0 {
+		return false
+	}
+	card, ok := g.GetCardInstance(event.CardID)
+	if !ok || card.Def == nil {
+		return false
+	}
+	def := cardFaceOrDefault(card, event.Face)
+	for _, cardType := range cardTypes {
+		if slices.Contains(def.Types, cardType) {
+			return true
+		}
+	}
+	return false
 }
 
 // drawFromEmptyLibraryWins reports whether an active replacement effect causes
