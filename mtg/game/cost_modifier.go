@@ -173,9 +173,13 @@ const (
 	RuleEffectUntapDuringOtherPlayersUntapStep
 	// RuleEffectCastSpellsAsThoughFlash lets the affected player cast spells as
 	// though they had flash, i.e. at instant speed ("You may cast spells this
-	// turn as though they had flash.", Borne Upon a Wind, Emergence Zone; CR
-	// 702.8 / 601.3e). It is a timing permission only and does not bypass other
-	// casting restrictions.
+	// turn as though they had flash.", Borne Upon a Wind, Emergence Zone; "You
+	// may cast spells as though they had flash.", Vedalken Orrery, Leyline of
+	// Anticipation; CR 702.8 / 601.3e). It is a timing permission only and does
+	// not bypass other casting restrictions. SpellTypes and SpellSubtypes
+	// optionally narrow the grant to spells of those card types ("sorcery
+	// spells", Hypersonic Dragon) or subtypes ("Aura and Equipment spells",
+	// Sigarda's Aid); empty filters permit every spell.
 	RuleEffectCastSpellsAsThoughFlash
 	// RuleEffectPlayLandsFromZone grants the affected player a continuous
 	// permission to play land cards from CastFromZone ("You may play lands from
@@ -348,6 +352,12 @@ type RuleEffect struct {
 	// forbids the affected players from casting spells out of. It is unused for
 	// every other kind.
 	CantCastFromZones []zone.Type
+
+	// SpellSubtypes optionally narrows a RuleEffectCastSpellsAsThoughFlash grant
+	// to spells carrying any one of these subtypes ("Aura and Equipment spells
+	// ...", Sigarda's Aid). An empty list applies no subtype filter. It is unused
+	// for every other kind.
+	SpellSubtypes []types.Sub
 
 	// EnterFromZones lists the zones a RuleEffectCantEnterFromZones restriction
 	// forbids cards from entering the battlefield out of. It is unused for every
