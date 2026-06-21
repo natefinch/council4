@@ -237,6 +237,57 @@ func TestParseStaticKeywordGrantDeclarationMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticQuotedAbilityGrantDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		`Equipped creature gets +1/+1 and has trample and "Whenever this creature deals combat damage to a player or planeswalker, create that many Treasure tokens."`,
+		Context{},
+	)
+	if len(declarations) != 3 {
+		t.Fatalf("declarations = %#v, want three", declarations)
+	}
+	if declarations[0].Kind != StaticDeclarationContinuousPowerToughness {
+		t.Fatalf("declaration[0] = %#v, want continuous power/toughness", declarations[0])
+	}
+	if declarations[1].Kind != StaticDeclarationKeywordGrant {
+		t.Fatalf("declaration[1] = %#v, want keyword grant", declarations[1])
+	}
+	grant := declarations[2]
+	if grant.Kind != StaticDeclarationContinuousQuotedAbilityGrant ||
+		grant.Subject.Kind != StaticDeclarationSubjectGroup ||
+		grant.Subject.Group.Kind != EffectStaticSubjectAttachedObject ||
+		grant.GrantedAbility == nil {
+		t.Fatalf("declaration[2] = %#v, want attached-object quoted ability grant", grant)
+	}
+	inner, diagnostics := grant.GrantedAbility.Inner()
+	if len(diagnostics) != 0 {
+		t.Fatalf("inner diagnostics = %#v", diagnostics)
+	}
+	if len(inner.Abilities) != 1 {
+		t.Fatalf("inner abilities = %#v, want exactly one", inner.Abilities)
+	}
+}
+
+func TestParseStaticQuotedAbilityGrantOnlyMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		`Equipped creature has "When this creature dies, draw a card."`,
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	grant := declarations[0]
+	if grant.Kind != StaticDeclarationContinuousQuotedAbilityGrant ||
+		grant.Subject.Kind != StaticDeclarationSubjectGroup ||
+		grant.Subject.Group.Kind != EffectStaticSubjectAttachedObject ||
+		grant.GrantedAbility == nil {
+		t.Fatalf("declaration = %#v, want attached-object quoted ability grant", grant)
+	}
+}
+
 func TestParseStaticPermanentManaAbilityGrantMeaning(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(

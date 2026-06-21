@@ -194,6 +194,160 @@ func parseStaticSubjectDeclarations(
 	return operations, true
 }
 
+// parseStaticQuotedAbilityGrantDeclarations recognizes the static grant
+// "<subject> [gets +X/+Y] [and] [has <keyword>] [and] has '<quoted ability>'."
+// in which a permanent (the equipped/enchanted creature, or a controlled group)
+// is granted a full quoted triggered or activated ability. Because the quoted
+// ability and its terminating period are removed from the semantic token stream
+// before static declarations are parsed, the residual body ends in a dangling
+// connector ("and", "has", or "have") rather than a period; this recognizer
+// detects that residual shape, parses any leading power/toughness or keyword
+// operations, and appends the quoted-ability grant. The quoted body is parsed
+// once through the same pipeline so downstream layers lower it from typed data.
+func parseStaticQuotedAbilityGrantDeclarations(
+	tokens []shared.Token,
+	quoted []Delimited,
+	atoms Atoms,
+	conditions []ConditionClause,
+) ([]StaticDeclarationSyntax, bool) {
+	if len(quoted) != 1 {
+		return nil, false
+	}
+	opTokens, condition, hasCondition := staticOperationTokens(tokens, conditions)
+	if len(opTokens) < 3 {
+		return nil, false
+	}
+	subject, verbStart, ok := parseStaticDeclarationSubject(opTokens, atoms)
+	if !ok || !staticQuotedGrantSubjectSupported(subject) {
+		return nil, false
+	}
+	leadingEnd, ok := staticQuotedGrantLeadingEnd(opTokens, verbStart)
+	if !ok {
+		return nil, false
+	}
+	operations, ok := staticQuotedGrantLeadingOperations(opTokens, verbStart, leadingEnd, subject, atoms)
+	if !ok {
+		return nil, false
+	}
+	grant, ok := parseStaticGrantedAbility(quoted[0])
+	if !ok {
+		return nil, false
+	}
+	operations = append(operations, StaticDeclarationSyntax{
+		Kind:           StaticDeclarationContinuousQuotedAbilityGrant,
+		OperationSpan:  quoted[0].Span,
+		GrantedAbility: &grant,
+	})
+	span := shared.SpanOf(tokens)
+	for i := range operations {
+		operations[i].Span = span
+		operations[i].Subject = subject
+		if hasCondition {
+			operations[i].HasCondition = true
+			operations[i].ConditionSpan = condition.Span
+		}
+	}
+	return operations, true
+}
+
+// staticQuotedGrantSubjectSupported reports whether subject is one the quoted
+// ability grant supports: the attached object of an Equipment/Aura ("Equipped
+// creature", "Enchanted creature") or a controlled-permanent group.
+func staticQuotedGrantSubjectSupported(subject StaticDeclarationSubject) bool {
+	if subject.Kind != StaticDeclarationSubjectGroup {
+		return false
+	}
+	switch subject.Group.Kind {
+	case EffectStaticSubjectAttachedObject,
+		EffectStaticSubjectControlledCreatures,
+		EffectStaticSubjectOtherControlledCreatures,
+		EffectStaticSubjectControlledPermanents:
+		return true
+	default:
+		return false
+	}
+}
+
+// staticQuotedGrantLeadingEnd returns the exclusive end index of the leading
+// power/toughness and keyword operations that precede the quoted ability grant,
+// stripping the dangling connector ("and", "has", or "have") the quoted-text
+// removal leaves behind. It fails closed when the residual body does not end in
+// one of those connectors.
+func staticQuotedGrantLeadingEnd(opTokens []shared.Token, verbStart int) (int, bool) {
+	n := len(opTokens)
+	if n == 0 {
+		return 0, false
+	}
+	last := opTokens[n-1]
+	switch {
+	case equalWord(last, "has") || equalWord(last, "have"):
+		end := n - 1
+		if end > verbStart && equalWord(opTokens[end-1], "and") {
+			end--
+		}
+		return end, true
+	case equalWord(last, "and"):
+		return n - 1, true
+	default:
+		return 0, false
+	}
+}
+
+// staticQuotedGrantLeadingOperations parses the leading operations of a quoted
+// ability grant (between verbStart and leadingEnd). When there are no leading
+// operations it returns an empty slice; otherwise it synthesizes a sentence
+// period and reuses parseStaticOperations so the leading power/toughness and
+// keyword grants parse identically to a standalone declaration.
+func staticQuotedGrantLeadingOperations(
+	opTokens []shared.Token,
+	verbStart, leadingEnd int,
+	subject StaticDeclarationSubject,
+	atoms Atoms,
+) ([]StaticDeclarationSyntax, bool) {
+	if leadingEnd <= verbStart {
+		return nil, true
+	}
+	leadTokens := make([]shared.Token, 0, leadingEnd+1)
+	leadTokens = append(leadTokens, opTokens[:leadingEnd]...)
+	// Synthesize a sentence-terminating period strictly past the last operation
+	// token so parseStaticOperations sees a terminator. Its offset must lie
+	// beyond the final token's span so span-coverage checks (e.g. keyword atom
+	// lookups) do not mistake the period for part of the preceding operation.
+	endPos := opTokens[leadingEnd-1].Span.End
+	endPos.Offset++
+	endPos.Column++
+	leadTokens = append(leadTokens, shared.Token{
+		Kind: shared.Period,
+		Text: ".",
+		Span: shared.Span{Start: endPos, End: endPos},
+	})
+	return parseStaticOperations(leadTokens, verbStart, subject, atoms)
+}
+
+// parseStaticGrantedAbility parses a quoted full ability body into a typed
+// granted-ability syntax, running the quoted text (with its surrounding quotes
+// removed) through the same pipeline so downstream layers lower it from typed
+// data instead of re-parsing its Oracle wording.
+func parseStaticGrantedAbility(quoted Delimited) (StaticGrantedAbilitySyntax, bool) {
+	tokens := quoted.Tokens
+	if len(tokens) < 3 ||
+		tokens[0].Kind != shared.Quote ||
+		tokens[len(tokens)-1].Kind != shared.Quote {
+		return StaticGrantedAbilitySyntax{}, false
+	}
+	text := staticGrantedAbilityText(quoted)
+	document, diagnostics := Parse(text, Context{})
+	if len(document.Abilities) != 1 {
+		return StaticGrantedAbilitySyntax{}, false
+	}
+	return StaticGrantedAbilitySyntax{
+		Span:        quoted.Span,
+		Text:        text,
+		document:    document,
+		diagnostics: diagnostics,
+	}, true
+}
+
 func parseStaticDeclarationSubject(tokens []shared.Token, atoms Atoms) (StaticDeclarationSubject, int, bool) {
 	if staticWordsAt(tokens, 0, "this", "creature") {
 		return StaticDeclarationSubject{
