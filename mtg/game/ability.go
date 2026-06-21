@@ -444,6 +444,13 @@ type TriggerCondition struct {
 	// it" and additionally requires the trigger controller to be the caster.
 	InterveningIfEventPermanentWasCastByController bool
 
+	// InterveningIfEventPermanentEnteredOrCastFromGraveyard is true for the
+	// enter-trigger intervening "if" that gates on the entering object(s) having
+	// come from a graveyard, either by entering directly from a graveyard or by
+	// being cast from a graveyard ("if it entered from your graveyard or you cast
+	// it from your graveyard"; "if they entered or were cast from a graveyard").
+	InterveningIfEventPermanentEnteredOrCastFromGraveyard bool
+
 	// State describes a state trigger. State triggers latch while true and only
 	// trigger again after becoming false, then true again (CR 603.8).
 	State opt.V[StateTriggerCondition]

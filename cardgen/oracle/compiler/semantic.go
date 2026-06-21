@@ -411,6 +411,7 @@ const (
 	ConditionPredicateEventSubjectWasKicked
 	ConditionPredicateEventSubjectWasCast
 	ConditionPredicateEventSubjectWasCastByController
+	ConditionPredicateEventSubjectEnteredOrCastFromGraveyard
 	ConditionPredicateEventSubjectHadNoCounter
 	ConditionPredicatePriorInstructionNotAccepted
 	// ConditionPredicatePriorInstructionAccepted is satisfied when the prior

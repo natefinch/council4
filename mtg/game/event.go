@@ -164,6 +164,12 @@ type Event struct {
 	EnterCastController    PlayerID
 	EnterHasCastController bool
 
+	// EnterCastFromZone is the zone the spell was cast from when an entering
+	// permanent resulted from resolving a cast. It is only meaningful when
+	// EnterWasCast is true; it feeds the "was cast from a graveyard" intervening
+	// condition (CR 603.4).
+	EnterCastFromZone zone.Type
+
 	// CardTypes records the relevant card types at event time for spell-cast
 	// filters such as "noncreature spell" or "artifact spell"; cast triggers
 	// look at the spell as cast on the stack (CR 601.2, CR 603.2).

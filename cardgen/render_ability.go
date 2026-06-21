@@ -557,6 +557,9 @@ func (r Renderer) renderTriggerCondition(ctx *renderCtx, trigger *game.TriggerCo
 	if trigger.InterveningIfEventPermanentWasCastByController {
 		fields = append(fields, "InterveningIfEventPermanentWasCastByController: true,")
 	}
+	if trigger.InterveningIfEventPermanentEnteredOrCastFromGraveyard {
+		fields = append(fields, "InterveningIfEventPermanentEnteredOrCastFromGraveyard: true,")
+	}
 	return structLit("game.TriggerCondition", fields), nil
 }
 

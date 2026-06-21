@@ -70,6 +70,8 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		condition.Predicate = ConditionPredicateEventSubjectWasCast
 	case parser.ConditionPredicateEventSubjectWasCastByController:
 		condition.Predicate = ConditionPredicateEventSubjectWasCastByController
+	case parser.ConditionPredicateEventSubjectEnteredOrCastFromGraveyard:
+		condition.Predicate = ConditionPredicateEventSubjectEnteredOrCastFromGraveyard
 	case parser.ConditionPredicateEventSubjectHadCounters:
 		condition.Predicate = ConditionPredicateEventSubjectHadCounters
 		condition.ObjectBinding = compileConditionObjectBinding(clause.ObjectBinding)

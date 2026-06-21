@@ -364,6 +364,56 @@ func TestParseConditionEventSubjectAndSourceState(t *testing.T) {
 	}
 }
 
+// TestParseEnteredOrCastFromGraveyardCondition covers the enters-the-battlefield
+// intervening condition that gates on the entering object(s) having come from a
+// graveyard, in both the singular self form and the plural group form, and
+// confirms unrelated zone wording fails closed.
+func TestParseEnteredOrCastFromGraveyardCondition(t *testing.T) {
+	t.Parallel()
+	recognized := []struct {
+		name      string
+		condition string
+	}{
+		{"self full", "it entered from your graveyard or you cast it from your graveyard"},
+		{"self broad", "it entered or was cast from a graveyard"},
+		{"group", "they entered or were cast from a graveyard"},
+	}
+	for _, test := range recognized {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			clause := parseSingleConditionClause(t, test.condition)
+			if clause.Predicate != ConditionPredicateEventSubjectEnteredOrCastFromGraveyard {
+				t.Fatalf("clause = %#v, want EnteredOrCastFromGraveyard", clause)
+			}
+		})
+	}
+	rejected := []struct {
+		name      string
+		condition string
+	}{
+		{"from exile", "it entered from exile"},
+		{"from hand", "you cast it from your hand"},
+		{"entered tapped", "it entered tapped"},
+	}
+	for _, test := range rejected {
+		t.Run("reject_"+test.name, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(
+				"When this creature enters, if "+test.condition+", draw a card.",
+				Context{},
+			)
+			if len(document.Abilities) != 1 {
+				t.Fatalf("abilities = %#v", document.Abilities)
+			}
+			for _, clause := range document.Abilities[0].ConditionClauses {
+				if clause.Predicate == ConditionPredicateEventSubjectEnteredOrCastFromGraveyard {
+					t.Fatalf("condition %q unexpectedly matched EnteredOrCastFromGraveyard", test.condition)
+				}
+			}
+		})
+	}
+}
+
 // TestParseConditionPriorInstruction covers the affirmative "you do" and
 // negative "you don't" reflexive prior-instruction clauses used by optional
 // resolving flow ("you may X. If you do/don't, Y").
