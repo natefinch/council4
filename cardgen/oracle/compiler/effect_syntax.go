@@ -390,6 +390,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectWinGame
 	case parser.EffectEnterAsCopy:
 		return EffectEnterAsCopy
+	case parser.EffectMassReanimationExchange:
+		return EffectMassReanimationExchange
 	case parser.EffectChooseNewTargets:
 		return EffectChooseNewTargets
 	case parser.EffectCastAsThoughFlash:

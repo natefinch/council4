@@ -972,6 +972,7 @@ const (
 	EffectPreventDamage
 	EffectSpellsCantBeCountered
 	EffectEnterAsCopy
+	EffectMassReanimationExchange
 )
 
 // DurationKind identifies common continuous-effect durations.
