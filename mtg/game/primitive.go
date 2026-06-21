@@ -79,6 +79,7 @@ const (
 	PrimitiveMoveCommander
 	PrimitivePutPermanentOnLibrary
 	PrimitiveChooseNewTargets
+	PrimitiveGroupSourceDamage
 	PrimitiveMassReturnFromGraveyard
 )
 
@@ -119,6 +120,17 @@ type Damage struct {
 	// one to each at resolution (CR 601.2d). It is valid only with an
 	// any-target recipient that addresses a multi-target spec.
 	Divided bool
+}
+
+// GroupSourceDamage has each permanent in a battlefield group deal an amount of
+// damage to its own controller, or its owner when ToOwner is set. It models
+// "Each creature deals 1 damage to its controller.": every group member is the
+// damage source and the recipient is the player who controls (or owns) that
+// member.
+type GroupSourceDamage struct {
+	Group   GroupReference
+	Amount  Quantity
+	ToOwner bool
 }
 
 // Draw draws cards for a referenced player, or for every player in a referenced

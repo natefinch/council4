@@ -495,6 +495,9 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 	if effects, ok := parseAdditionalLandPlaysEffect(sentence, tokens, atoms); ok {
 		return effects
 	}
+	if effects, ok := parseCastAsThoughFlashEffect(sentence, tokens); ok {
+		return effects
+	}
 	indices := effectIndices(tokens, atoms)
 	requiresOrderedLowering := legacyEffectCount(tokens, atoms) > 1
 	effects := make([]EffectSyntax, 0, len(indices))
@@ -569,44 +572,47 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
 		default:
 		}
+		eachSourceDamageGroup, eachSourceDamageRecipient := eachSourceDamageSyntax(kind, tokens[ownershipStart:tokenIndex], clause, atoms)
 		effects = append(effects, EffectSyntax{
-			Kind:                     kind,
-			Context:                  context,
-			Connection:               connection,
-			ConnectionSpan:           connectionSpan,
-			Span:                     sentence.Span,
-			VerbSpan:                 tokens[tokenIndex].Span,
-			ClauseSpan:               ownershipSpan,
-			Text:                     sentence.Text,
-			Tokens:                   append([]shared.Token(nil), ownership...),
-			Duration:                 parseEffectDuration(durationTokens, atoms),
-			DelayedTiming:            delayed,
-			Selection:                parseSelection(selectionClause, atoms),
-			DamageRecipientPair:      parseDamageRecipientPair(kind, clause, atoms),
-			Amount:                   amount,
-			PowerDelta:               power,
-			ToughnessDelta:           toughness,
-			TokenPower:               tokenPower,
-			TokenToughness:           tokenToughness,
-			TokenPTKnown:             tokenPTKnown,
-			TokenKeywords:            parseTokenKeywords(kind, clause, atoms),
-			TokenName:                parseTokenName(kind, clause),
-			TokenChoice:              parseTokenChoice(kind, clause),
-			StaticSubject:            staticSubject,
-			CounterKind:              counterKind,
-			CounterKnown:             counterKnown,
-			CounterRecipientAttached: counterRecipientAttached(kind, counterKnown, clause),
-			FromZone:                 firstZone(atoms, span, ZoneRoleFrom),
-			ToZone:                   toZone,
-			Destination:              parseEffectDestination(ownership),
-			EntersTapped:             effectWordsAtAny(ownership, "battlefield", "tapped"),
-			EntersTappedSelf:         entersTappedSelfSyntax(kind, clause),
-			EntersColorChoice:        entersColorChoice,
-			EntersColorChoiceExclude: entersColorChoiceExclude,
-			EntersTypeChoice:         entersTypeChoiceSyntax(kind, clause),
-			EntersWithCounters:       entersWithCountersSyntax(kind, clause),
-			UnderYourControl:         effectContainsWords(normalizedWords(ownership), "under", "your", "control"),
-			CastAsAdventure:          effectContainsWords(normalizedWords(clause), "as", "an", "adventure"),
+			Kind:                      kind,
+			Context:                   context,
+			Connection:                connection,
+			ConnectionSpan:            connectionSpan,
+			Span:                      sentence.Span,
+			VerbSpan:                  tokens[tokenIndex].Span,
+			ClauseSpan:                ownershipSpan,
+			Text:                      sentence.Text,
+			Tokens:                    append([]shared.Token(nil), ownership...),
+			Duration:                  parseEffectDuration(durationTokens, atoms),
+			DelayedTiming:             delayed,
+			Selection:                 parseSelection(selectionClause, atoms),
+			DamageRecipientPair:       parseDamageRecipientPair(kind, clause, atoms),
+			EachSourceDamageGroup:     eachSourceDamageGroup,
+			EachSourceDamageRecipient: eachSourceDamageRecipient,
+			Amount:                    amount,
+			PowerDelta:                power,
+			ToughnessDelta:            toughness,
+			TokenPower:                tokenPower,
+			TokenToughness:            tokenToughness,
+			TokenPTKnown:              tokenPTKnown,
+			TokenKeywords:             parseTokenKeywords(kind, clause, atoms),
+			TokenName:                 parseTokenName(kind, clause),
+			TokenChoice:               parseTokenChoice(kind, clause),
+			StaticSubject:             staticSubject,
+			CounterKind:               counterKind,
+			CounterKnown:              counterKnown,
+			CounterRecipientAttached:  counterRecipientAttached(kind, counterKnown, clause),
+			FromZone:                  firstZone(atoms, span, ZoneRoleFrom),
+			ToZone:                    toZone,
+			Destination:               parseEffectDestination(ownership),
+			EntersTapped:              effectWordsAtAny(ownership, "battlefield", "tapped"),
+			EntersTappedSelf:          entersTappedSelfSyntax(kind, clause),
+			EntersColorChoice:         entersColorChoice,
+			EntersColorChoiceExclude:  entersColorChoiceExclude,
+			EntersTypeChoice:          entersTypeChoiceSyntax(kind, clause),
+			EntersWithCounters:        entersWithCountersSyntax(kind, clause),
+			UnderYourControl:          effectContainsWords(normalizedWords(ownership), "under", "your", "control"),
+			CastAsAdventure:           effectContainsWords(normalizedWords(clause), "as", "an", "adventure"),
 			CastWithoutPayingManaCost: kind == EffectCast &&
 				effectContainsWords(normalizedWords(clause), "without", "paying", "its", "mana", "cost"),
 			Negated:                 effectIsNegated(tokens, tokenIndex),
@@ -1288,6 +1294,50 @@ func parseGroupPhaseOutEffect(sentence Sentence, tokens []shared.Token, atoms At
 // may" permission is folded into an unconditional allowance (the player is never
 // forced to play the extra land). The static "on each of your turns" form is a
 // separate static ability and is not matched here.
+// parseCastAsThoughFlashEffect recognizes the controller-scoped, turn-scoped
+// timing permission "You may cast spells this turn as though they had flash."
+// (Borne Upon a Wind, Emergence Zone). The leading "you may" is a permission,
+// not a resolving choice, so the effect is modeled unconditionally (like
+// parseAdditionalLandPlaysEffect) rather than as an optional cast effect. Any
+// other wording fails closed and flows through the generic effect parser.
+func parseCastAsThoughFlashEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	if len(words) >= 2 && equalWord(words[0], "you") && equalWord(words[1], "may") {
+		words = words[2:]
+	}
+	if len(words) != 9 || !equalWord(words[0], "cast") {
+		return nil, false
+	}
+	castToken := words[0]
+	if !equalWord(words[1], "spells") ||
+		!equalWord(words[2], "this") ||
+		!equalWord(words[3], "turn") ||
+		!equalWord(words[4], "as") ||
+		!equalWord(words[5], "though") ||
+		!equalWord(words[6], "they") ||
+		!equalWord(words[7], "had") ||
+		!equalWord(words[8], "flash") {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:       EffectCastAsThoughFlash,
+		Span:       sentence.Span,
+		ClauseSpan: sentence.Span,
+		VerbSpan:   castToken.Span,
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		Context:    EffectContextController,
+		Duration:   EffectDurationThisTurn,
+		Exact:      true,
+	}}, true
+}
+
 func parseAdditionalLandPlaysEffect(sentence Sentence, tokens []shared.Token, _ Atoms) ([]EffectSyntax, bool) {
 	words := make([]shared.Token, 0, len(tokens))
 	for _, token := range tokens {
@@ -1553,6 +1603,38 @@ func damageRecipientTokens(clause []shared.Token) ([]shared.Token, bool) {
 // span) so the recipient is read from the verb clause alone. It returns None for
 // every other recipient (a target, a group, or a dual recipient), leaving those
 // to their existing paths.
+// eachSourceDamageSyntax recognizes an "each <group> deals N damage to its
+// controller/owner" effect, where every member of the subject group is the
+// damage source dealing to the player who controls (or owns) it ("Each creature
+// deals 1 damage to its controller."). It returns the parsed source-group
+// selection and the recipient role (controller or owner). It fails closed
+// (empty selection, None role) for every other shape: a non-damage effect, a
+// subject that does not begin with "each" or does not parse to a recognized
+// group, or a recipient that is not the bare "its controller"/"its owner".
+func eachSourceDamageSyntax(kind EffectKind, subject, clause []shared.Token, atoms Atoms) (SelectionSyntax, DamageRecipientReferenceKind) {
+	if kind != EffectDealDamage || len(subject) == 0 || !equalWord(subject[0], "each") {
+		return SelectionSyntax{}, DamageRecipientReferenceNone
+	}
+	recipient, ok := damageRecipientTokens(clause)
+	if !ok || len(recipient) != 2 || !equalWord(recipient[0], "its") {
+		return SelectionSyntax{}, DamageRecipientReferenceNone
+	}
+	var role DamageRecipientReferenceKind
+	switch {
+	case equalWord(recipient[1], "controller"):
+		role = DamageRecipientReferenceController
+	case equalWord(recipient[1], "owner"):
+		role = DamageRecipientReferenceOwner
+	default:
+		return SelectionSyntax{}, DamageRecipientReferenceNone
+	}
+	selection := parseSelection(subject, atoms)
+	if selection.Kind == SelectionUnknown {
+		return SelectionSyntax{}, DamageRecipientReferenceNone
+	}
+	return selection, role
+}
+
 func damageRecipientReference(effect *EffectSyntax) DamageRecipientReferenceKind {
 	if effect.Kind != EffectDealDamage {
 		return DamageRecipientReferenceNone

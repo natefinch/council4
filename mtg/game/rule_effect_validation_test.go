@@ -36,6 +36,7 @@ func TestRuleEffectKindValid(t *testing.T) {
 		RuleEffectCantActivateAbilities,
 		RuleEffectAdditionalTriggerForEnteringPermanent,
 		RuleEffectUntapDuringOtherPlayersUntapStep,
+		RuleEffectCastSpellsAsThoughFlash,
 	}
 	for _, kind := range valid {
 		if !kind.Valid() {
@@ -46,7 +47,7 @@ func TestRuleEffectKindValid(t *testing.T) {
 	invalid := []RuleEffectKind{
 		RuleEffectNone,
 		-1,
-		RuleEffectUntapDuringOtherPlayersUntapStep + 1,
+		RuleEffectCastSpellsAsThoughFlash + 1,
 		RuleEffectKind(1 << 20),
 	}
 	for _, kind := range invalid {
@@ -65,7 +66,7 @@ func TestValidateApplyRulePlayFromZone(t *testing.T) {
 	}
 
 	for name, kind := range map[string]RuleEffectKind{
-		"future":       RuleEffectUntapDuringOtherPlayersUntapStep + 1,
+		"future":       RuleEffectCastSpellsAsThoughFlash + 1,
 		"out of range": RuleEffectKind(1 << 20),
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -89,7 +90,7 @@ func TestValidateCardDefPlayFromZone(t *testing.T) {
 	}
 
 	for name, kind := range map[string]RuleEffectKind{
-		"future":       RuleEffectUntapDuringOtherPlayersUntapStep + 1,
+		"future":       RuleEffectCastSpellsAsThoughFlash + 1,
 		"out of range": RuleEffectKind(1 << 20),
 	} {
 		t.Run(name, func(t *testing.T) {

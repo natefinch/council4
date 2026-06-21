@@ -12,6 +12,43 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+// lowerEachSourceDamageSpell lowers an "each <group> deals N damage to its
+// controller/owner" effect ("Each creature deals 1 damage to its controller.")
+// onto a GroupSourceDamage primitive: every member of the battlefield group is
+// the damage source dealing the amount to the player who controls (or owns) it.
+// It fails closed (ok=false) for every other shape, leaving the standard damage
+// paths to handle their own effects.
+func lowerEachSourceDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectDealDamage ||
+		effect.EachSourceDamageRecipient == parser.DamageRecipientReferenceNone ||
+		effect.Negated ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 {
+		return game.AbilityContent{}, false
+	}
+	amount, ok := groupDamageAmount(effect.Amount)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	group, ok := damageGroupRecipient(effect.EachSourceDamageGroup)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	primitive := game.GroupSourceDamage{
+		Group:   group,
+		Amount:  amount,
+		ToOwner: effect.EachSourceDamageRecipient == parser.DamageRecipientReferenceOwner,
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{Primitive: primitive}},
+	}.Ability(), true
+}
+
 func lowerGroupDamageSpell(
 	_ string,
 	ctx contentCtx,

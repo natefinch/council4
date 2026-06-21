@@ -192,6 +192,9 @@ func canCastAtCurrentTiming(g *game.Game, playerID game.PlayerID, card *game.Car
 	if card.HasType(types.Instant) || card.HasKeyword(game.Flash) {
 		return true
 	}
+	if playerCanCastAsThoughFlash(g, playerID) {
+		return true
+	}
 	return isSorcerySpeed(g, playerID)
 }
 

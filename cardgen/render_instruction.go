@@ -196,6 +196,8 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 	switch primitive.Kind() {
 	case game.PrimitiveDamage:
 		return r.renderDamagePrimitive(ctx, primitive)
+	case game.PrimitiveGroupSourceDamage:
+		return r.renderGroupSourceDamage(ctx, primitive)
 	case game.PrimitiveDraw, game.PrimitiveDiscard, game.PrimitiveMill,
 		game.PrimitiveScry, game.PrimitiveSurveil, game.PrimitiveGainLife,
 		game.PrimitiveLoseLife, game.PrimitiveReorderLibraryTop:

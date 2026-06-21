@@ -151,6 +151,7 @@ func lowerActivationCostComponents(
 			if !ok {
 				return nil, nil, false
 			}
+			additional.ChoiceGroup = component.ChoiceGroup
 			additionalCosts = append(additionalCosts, additional)
 		}
 	}

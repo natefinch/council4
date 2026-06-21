@@ -208,6 +208,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				Selector:                             compileTypedSelection(syntax.Selection),
 				DamageRecipientSelectors:             compileDamageRecipientSelectors(syntax.DamageRecipientPair),
 				DamageRecipientReference:             syntax.DamageRecipientReference,
+				EachSourceDamageGroup:                compileTypedSelection(syntax.EachSourceDamageGroup),
+				EachSourceDamageRecipient:            syntax.EachSourceDamageRecipient,
 				HasSelfDamageRider:                   syntax.HasSelfDamageRider,
 				SelfDamageRiderValue:                 syntax.SelfDamageRiderValue,
 				TargetControllerDamageRiderRecipient: syntax.TargetControllerDamageRiderRecipient,

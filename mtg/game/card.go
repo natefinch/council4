@@ -665,6 +665,9 @@ func clonePrimitive(primitive Primitive) Primitive {
 	case Bounce:
 		value.Group = cloneGroupReference(value.Group)
 		return value
+	case GroupSourceDamage:
+		value.Group = cloneGroupReference(value.Group)
+		return value
 	case Pay:
 		value.Payment = cloneResolutionPayment(value.Payment)
 		return value

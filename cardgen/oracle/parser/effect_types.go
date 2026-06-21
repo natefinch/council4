@@ -80,6 +80,11 @@ const (
 	// ability on the stack ("You may choose new targets for target spell or
 	// ability."), the Deflecting Swat / Redirect retarget family (CR 115.7).
 	EffectChooseNewTargets EffectKind = "EffectChooseNewTargets"
+	// EffectCastAsThoughFlash models the controller-scoped, turn-scoped timing
+	// permission "You may cast spells this turn as though they had flash."
+	// (Borne Upon a Wind, Emergence Zone), letting the controller cast spells at
+	// instant speed for the rest of the turn (CR 702.8 / 601.3e).
+	EffectCastAsThoughFlash EffectKind = "EffectCastAsThoughFlash"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -672,6 +677,16 @@ type EffectSyntax struct {
 	// owner of a referenced object (the prior removal target), as in "deals 2
 	// damage to that land's controller". It is None for every other recipient.
 	DamageRecipientReference DamageRecipientReferenceKind `json:",omitempty"`
+	// EachSourceDamageGroup holds the source group of an "each <group> deals N
+	// damage to its controller/owner" effect ("Each creature deals 1 damage to
+	// its controller."), where every member of the group is the damage source
+	// dealing to the player who controls (or owns) it. It is populated only when
+	// the subject begins with "each", parses to a recognized group, and the
+	// recipient is exactly the bare "its controller"/"its owner"; it is empty for
+	// every other shape. EachSourceDamageRecipient records the per-source
+	// recipient role.
+	EachSourceDamageGroup     SelectionSyntax              `json:",omitzero"`
+	EachSourceDamageRecipient DamageRecipientReferenceKind `json:",omitempty"`
 	// HasSelfDamageRider reports a "... and N damage to you" rider appended to a
 	// single-target deal-damage clause ("deals A damage to any target and B
 	// damage to you"). SelfDamageRiderValue holds the fixed self-damage amount
