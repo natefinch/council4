@@ -311,6 +311,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				SearchDestination:               syntax.SearchDestination,
 				DiscardEntireHand:               syntax.DiscardEntireHand,
 				CounteredSpellExileReplacement:  syntax.CounteredSpellExileReplacement,
+				CantCastSpellsAllPlayers:        syntax.CantCastSpellsAllPlayers,
 			})
 		}
 	}
