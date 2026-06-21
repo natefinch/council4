@@ -1190,7 +1190,7 @@ func exactTemporaryKeywordList(text string) bool {
 	for keyword := range strings.SplitSeq(text, ", ") {
 		switch keyword {
 		case "deathtouch", "double strike", "fear", "first strike", "flying", "haste",
-			"hexproof", "indestructible", "intimidate", "lifelink", "menace", "reach", "shroud", "trample", "vigilance",
+			"hexproof", "indestructible", "intimidate", "lifelink", "menace", "reach", "shadow", "shroud", "trample", "vigilance",
 			"protection from each color", "protection from everything",
 			"protection from monocolored", "protection from multicolored",
 			"protection from white", "protection from blue", "protection from black",
@@ -2300,9 +2300,17 @@ func exactGroupModifyPTEffectSyntax(effect *EffectSyntax) bool {
 	if len(subject) == 0 {
 		return false
 	}
+	// The distributive "each creature" subject takes the singular verb ("Each
+	// creature gets ..."), unlike the plural "all creatures get ..."; pick the
+	// verb form from the subject so the round-trip reconstructs the source text.
+	verb := "get"
+	if equalWord(subject[0], "each") {
+		verb = "gets"
+	}
 	prefix := fmt.Sprintf(
-		"%s get %s/%s",
+		"%s %s %s/%s",
 		joinedEffectText(subject),
+		verb,
 		signedPTSideText(effect.PowerDelta),
 		signedPTSideText(effect.ToughnessDelta),
 	)

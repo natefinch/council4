@@ -51,6 +51,26 @@ func TestLowerGroupModifyPTAllCreatures(t *testing.T) {
 	}
 }
 
+func TestLowerGroupModifyPTEachCreature(t *testing.T) {
+	t.Parallel()
+	// "Each creature gets ..." is the singular distributive wording for the same
+	// every-creature group as "All creatures get ...".
+	effect := groupModifyPTContinuous(t, "Each creature gets -1/-1 until end of turn.")
+	if effect.PowerDelta != -1 || effect.ToughnessDelta != -1 {
+		t.Fatalf("delta = %d/%d, want -1/-1", effect.PowerDelta, effect.ToughnessDelta)
+	}
+	selection := effect.Group.Selection()
+	if effect.Group.Domain() != game.GroupDomainBattlefield ||
+		selection.Controller != game.ControllerAny ||
+		len(selection.RequiredTypes) != 1 ||
+		selection.RequiredTypes[0] != types.Creature {
+		t.Fatalf("selection = %+v, want every creature on the battlefield", selection)
+	}
+	if _, excludes := effect.Group.Exclusion(); excludes {
+		t.Fatal("each creature must not exclude the source")
+	}
+}
+
 func TestLowerGroupModifyPTAllOtherCreatures(t *testing.T) {
 	t.Parallel()
 	effect := groupModifyPTContinuous(t, "All other creatures get -2/-2 until end of turn.")
@@ -166,6 +186,7 @@ func TestLowerGroupModifyPTFailsClosed(t *testing.T) {
 	cases := []string{
 		// Variable / dynamic group amount.
 		"All creatures get -X/-X until end of turn.",
+		"Each creature gets -X/-X until end of turn.",
 		"Creatures you control get +X/+X until end of turn.",
 		// Color-filtered groups are not yet representable.
 		"Green creatures you control get +1/+1 until end of turn.",

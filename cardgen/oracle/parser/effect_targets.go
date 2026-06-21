@@ -1750,6 +1750,16 @@ func staticGroupVerb(token shared.Token) bool {
 		equalWord(token, "gain") || equalWord(token, "lose")
 }
 
+// staticGroupVerbSingular reports the singular-subject counterparts of
+// staticGroupVerb. The distributive "each creature" wording takes the singular
+// verb ("Each creature gets/has/gains/loses ...") in place of the plural
+// "get/have/gain/lose" used after "all creatures", so it introduces the same
+// resolving group effect over every creature.
+func staticGroupVerbSingular(token shared.Token) bool {
+	return equalWord(token, "gets") || equalWord(token, "has") ||
+		equalWord(token, "gains") || equalWord(token, "loses")
+}
+
 func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSubjectSyntax {
 	if subject, ok := parseColoredControlledCreatureGroup(tokens); ok {
 		return subject
@@ -1783,6 +1793,12 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllOtherCreatures, Span: shared.SpanOf(tokens[:3])}
 	case len(tokens) >= 3 && effectWordsAt(tokens, 0, "all", "creatures") &&
 		staticGroupVerb(tokens[2]):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllCreatures, Span: shared.SpanOf(tokens[:2])}
+	case len(tokens) >= 3 && effectWordsAt(tokens, 0, "each", "creature") &&
+		staticGroupVerbSingular(tokens[2]):
+		// "Each creature gets ..." names every creature on the battlefield just as
+		// "All creatures get ..." does, but with the singular "each creature" noun
+		// and verb. It maps to the same all-creatures group.
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllCreatures, Span: shared.SpanOf(tokens[:2])}
 	case len(tokens) >= 3 && effectWordsAt(tokens, 0, "attacking", "creatures") &&
 		staticGroupVerb(tokens[2]):

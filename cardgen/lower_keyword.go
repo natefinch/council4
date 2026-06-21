@@ -774,6 +774,7 @@ func mixedStaticKeywordImplemented(keyword game.Keyword) bool {
 		game.Vigilance,
 		game.Wither,
 		game.Horsemanship,
+		game.Shadow,
 		game.Infect,
 		game.Exalted,
 		game.Riot,
