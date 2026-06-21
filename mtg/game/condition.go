@@ -217,4 +217,7 @@ const (
 type EventHistoryCondition struct {
 	Pattern TriggerPattern
 	Window  EventHistoryWindow
+	// MinCount is the minimum number of events in Window that must match Pattern
+	// for the condition to hold. A zero value requires a single matching event.
+	MinCount int
 }

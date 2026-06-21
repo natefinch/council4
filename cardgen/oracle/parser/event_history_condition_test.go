@@ -16,12 +16,27 @@ func TestEventHistoryConditions(t *testing.T) {
 		playerEvent PlayerEventActionKind
 		player      TriggerPlayerSelectorKind
 		negated     bool
+		minCount    int
 	}{
 		{
 			name:        "controller attacked current turn",
 			condition:   "you attacked this turn",
 			window:      EventHistoryWindowCurrentTurn,
 			triggerKind: TriggerEventKindAttack,
+		},
+		{
+			name:        "controller attacked with two or more creatures current turn",
+			condition:   "you attacked with two or more creatures this turn",
+			window:      EventHistoryWindowCurrentTurn,
+			triggerKind: TriggerEventKindAttack,
+			minCount:    2,
+		},
+		{
+			name:        "controller attacked with a creature current turn",
+			condition:   "you attacked with a creature this turn",
+			window:      EventHistoryWindowCurrentTurn,
+			triggerKind: TriggerEventKindAttack,
+			minCount:    1,
 		},
 		{
 			name:        "creature died current turn",
@@ -78,6 +93,9 @@ func TestEventHistoryConditions(t *testing.T) {
 			}
 			if condition.Window.Kind != test.window || condition.Negated != test.negated {
 				t.Fatalf("condition = %#v", condition)
+			}
+			if condition.MinCount != test.minCount {
+				t.Fatalf("condition MinCount = %d, want %d", condition.MinCount, test.minCount)
 			}
 			if test.triggerKind != TriggerEventKindUnknown {
 				if condition.TriggerEvent == nil || condition.TriggerEvent.Kind != test.triggerKind ||
