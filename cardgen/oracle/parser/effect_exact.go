@@ -2300,9 +2300,17 @@ func exactGroupModifyPTEffectSyntax(effect *EffectSyntax) bool {
 	if len(subject) == 0 {
 		return false
 	}
+	// The distributive "each creature" subject takes the singular verb ("Each
+	// creature gets ..."), unlike the plural "all creatures get ..."; pick the
+	// verb form from the subject so the round-trip reconstructs the source text.
+	verb := "get"
+	if equalWord(subject[0], "each") {
+		verb = "gets"
+	}
 	prefix := fmt.Sprintf(
-		"%s get %s/%s",
+		"%s %s %s/%s",
 		joinedEffectText(subject),
+		verb,
 		signedPTSideText(effect.PowerDelta),
 		signedPTSideText(effect.ToughnessDelta),
 	)
