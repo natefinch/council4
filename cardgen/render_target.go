@@ -740,6 +740,8 @@ func renderKeyword(kw game.Keyword) (string, error) {
 		return "game.Annihilator", nil
 	case game.Exalted:
 		return "game.Exalted", nil
+	case game.Evolve:
+		return "game.Evolve", nil
 	case game.ReadAhead:
 		return "game.ReadAhead", nil
 	case game.Horsemanship:

@@ -408,6 +408,8 @@ func runtimeKeyword(keyword parser.KeywordKind) (game.Keyword, bool) {
 		return game.Prowess, true
 	case parser.KeywordExalted:
 		return game.Exalted, true
+	case parser.KeywordEvolve:
+		return game.Evolve, true
 	case parser.KeywordWither:
 		return game.Wither, true
 	case parser.KeywordInfect:

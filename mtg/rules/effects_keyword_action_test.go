@@ -706,3 +706,55 @@ func TestManifestDreadWithOneCardManifestsWithoutChoice(t *testing.T) {
 	}
 	t.Fatal("single-card manifest dread did not manifest the only card")
 }
+
+func TestEvolveAddsCounterWhenGreaterCreatureEnters(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	evolver := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Evolving Creature",
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(game.PT{Value: 1}),
+		Toughness:       opt.Val(game.PT{Value: 1}),
+		StaticAbilities: []game.StaticAbility{game.EvolveStaticBody},
+	}})
+	entering := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	emitEvent(g, game.Event{
+		Kind:        game.EventPermanentEnteredBattlefield,
+		Controller:  game.Player1,
+		PermanentID: entering.ObjectID,
+	})
+
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("evolve trigger was not put on stack")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := evolver.Counters.Get(counter.PlusOnePlusOne); got != 1 {
+		t.Fatalf("evolve counters = %d, want 1 after greater creature entered", got)
+	}
+}
+
+func TestEvolveDoesNotTriggerWhenSmallerCreatureEnters(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	evolver := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Evolving Creature",
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(game.PT{Value: 2}),
+		Toughness:       opt.Val(game.PT{Value: 2}),
+		StaticAbilities: []game.StaticAbility{game.EvolveStaticBody},
+	}})
+	entering := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	emitEvent(g, game.Event{
+		Kind:        game.EventPermanentEnteredBattlefield,
+		Controller:  game.Player1,
+		PermanentID: entering.ObjectID,
+	})
+
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("evolve trigger fired for an equal-stats creature")
+	}
+	if got := evolver.Counters.Get(counter.PlusOnePlusOne); got != 0 {
+		t.Fatalf("evolve counters = %d, want 0 for equal-stats creature", got)
+	}
+}
