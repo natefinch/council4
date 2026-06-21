@@ -222,6 +222,21 @@ func EntersWithCountersReplacement(text string, placements ...CounterPlacement) 
 	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
+// EntersWithCountersGroupReplacement creates a continuous static replacement
+// that adds the given counter placements to a group of OTHER permanents as they
+// enter, as in "Each other creature you control enters with an additional
+// vigilance counter on it." (Tayam, Luminous Enigma). recipient selects the
+// entering permanents the replacement applies to, evaluated relative to the
+// source's controller (its Controller scope handles "you control" and its
+// ExcludeSource the "other" rider).
+func EntersWithCountersGroupReplacement(text string, recipient *Selection, placements ...CounterPlacement) ReplacementAbility {
+	replacement := etbReplacement(text)
+	replacement.EntersWithCounters = append([]CounterPlacement(nil), placements...)
+	replacement.EntersWithCountersOthers = true
+	replacement.EntersWithCountersRecipient = recipient
+	return ReplacementAbility{Text: text, Replacement: replacement}
+}
+
 // EntersWithCountersIfReplacement creates a conditional ETB counter-placement
 // replacement, as in "This creature enters with a +1/+1 counter on it if you
 // attacked this turn." (Raid) or "... if a creature died this turn." (Morbid).

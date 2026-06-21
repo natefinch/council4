@@ -19,6 +19,9 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 	if ability.Replacement.EntersTappedOthers {
 		return r.renderGroupEntersTappedReplacement(ctx, ability)
 	}
+	if ability.Replacement.EntersWithCountersOthers {
+		return r.renderGroupEntersWithCountersReplacement(ctx, ability)
+	}
 	if len(ability.Replacement.EntersWithCounters) > 0 {
 		if ability.UnlessPaid.Exists {
 			return "", errors.New("render: ETB counter replacement cannot also require payment")
@@ -26,7 +29,7 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		if ability.Replacement.EntersTapped && ability.Replacement.Condition.Exists {
 			return "", errors.New("render: ETB counter replacement cannot both tap and have a condition")
 		}
-		placements, err := renderCounterPlacements(ctx, ability.Replacement.EntersWithCounters)
+		placements, err := r.renderCounterPlacements(ctx, ability.Replacement.EntersWithCounters)
 		if err != nil {
 			return "", err
 		}
@@ -213,6 +216,30 @@ func (Renderer) renderGroupEntersTappedReplacement(ctx *renderCtx, ability *game
 	}
 	return fmt.Sprintf("game.EntersTappedGroupReplacement(%q, %s, %s)",
 		ability.Text, controller, strings.Join(typeLiterals, ", ")), nil
+}
+
+// renderGroupEntersWithCountersReplacement renders a continuous static
+// enters-with-counters replacement that adds counters to a group of OTHER
+// permanents as they enter (Tayam, Luminous Enigma family).
+func (r Renderer) renderGroupEntersWithCountersReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	replacement := ability.Replacement
+	if replacement.EntersWithCountersRecipient == nil ||
+		replacement.EntersTapped ||
+		len(replacement.EntersWithCounters) == 0 ||
+		ability.UnlessPaid.Exists ||
+		replacement.Condition.Exists {
+		return "", errors.New("render: unsupported group enters-with-counters replacement shape")
+	}
+	placements, err := r.renderCounterPlacements(ctx, replacement.EntersWithCounters)
+	if err != nil {
+		return "", err
+	}
+	recipient, err := r.renderSelection(ctx, *replacement.EntersWithCountersRecipient)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("game.EntersWithCountersGroupReplacement(%q, &%s, %s)",
+		ability.Text, recipient, strings.Join(placements, ", ")), nil
 }
 
 // renderGroupEntersTappedController renders the trigger-controller filter for a
@@ -574,14 +601,24 @@ func renderZoneDestinationReplacement(ctx *renderCtx, ability *game.ReplacementA
 	), nil
 }
 
-func renderCounterPlacements(ctx *renderCtx, placements []game.CounterPlacement) ([]string, error) {
+func (r Renderer) renderCounterPlacements(ctx *renderCtx, placements []game.CounterPlacement) ([]string, error) {
 	rendered := make([]string, 0, len(placements))
-	for _, placement := range placements {
+	for i := range placements {
+		placement := placements[i]
 		kind, err := renderCounterKind(placement.Kind)
 		if err != nil {
 			return nil, err
 		}
 		ctx.need(importCounter)
+		if placement.Dynamic.Exists && placement.Dynamic.Val != nil {
+			dynamic, err := r.renderDynamicAmount(ctx, placement.Dynamic.Val)
+			if err != nil {
+				return nil, err
+			}
+			ctx.need(importOpt)
+			rendered = append(rendered, fmt.Sprintf("game.CounterPlacement{Kind: %s, Dynamic: opt.Val(&%s)}", kind, dynamic))
+			continue
+		}
 		if placement.AmountFromX {
 			rendered = append(rendered, fmt.Sprintf("game.CounterPlacement{Kind: %s, AmountFromX: true}", kind))
 			continue

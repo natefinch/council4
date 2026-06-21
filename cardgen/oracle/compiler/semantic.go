@@ -1367,6 +1367,12 @@ type CompiledEffect struct {
 	EntersColorChoiceExclude mana.Color
 	EntersTypeChoice         bool
 	EntersWithCounters       bool
+	// EntersWithCountersGroup mirrors the parser flag for a static
+	// enters-with-counters replacement that adds one counter to a group of the
+	// controller's permanents as they enter (Tayam, Luminous Enigma). Lowering
+	// reads it together with Selector and CounterKind to build a continuous
+	// controller-scoped replacement; it is false for the self form.
+	EntersWithCountersGroup bool
 	// EntersDevour mirrors the parser's Devour as-enters replacement flag and
 	// EntersDevourMultiplier its per-sacrificed-creature +1/+1 counter count.
 	// Lowering reads them to build the runtime Devour replacement (CR 702.81).

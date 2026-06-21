@@ -231,6 +231,28 @@ func TestCounterPlacementReplacementDoublesETBCounters(t *testing.T) {
 	}
 }
 
+func TestEntersWithCountersReplacementPlacesDynamicAmount(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Players[game.Player1].Life = 4
+	def := &game.CardDef{CardFace: game.CardFace{
+		Name:  "Dynamic Entering Creature",
+		Types: []types.Card{types.Creature},
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.EntersWithCountersReplacement(
+				"This creature enters with a +1/+1 counter on it for each point of your life total.",
+				game.CounterPlacement{
+					Kind:    counter.PlusOnePlusOne,
+					Dynamic: opt.Val(&game.DynamicAmount{Kind: game.DynamicAmountControllerLife}),
+				},
+			),
+		},
+	}}
+	permanent := addReplacementPermanent(t, g, game.Player1, def)
+	if got := permanent.Counters.Get(counter.PlusOnePlusOne); got != 4 {
+		t.Fatalf("dynamic ETB +1/+1 counters = %d, want 4", got)
+	}
+}
+
 func TestAnyCounterPlacementReplacementDoublesAllCounterKinds(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addReplacementPermanent(t, g, game.Player1, anyCounterDoublingReplacementCardDef())

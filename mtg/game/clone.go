@@ -255,7 +255,8 @@ func fixupReplacementEffect(e *ReplacementEffect) {
 	e.CounterRecipientTypesAny = cloneSlice(e.CounterRecipientTypesAny)
 	e.DamageSourceColors = cloneSlice(e.DamageSourceColors)
 	e.EntersWithCounters = cloneSlice(e.EntersWithCounters)
-	// Condition is immutable rules data and is copied by value.
+	// Condition, Selection, EntersAsCopySelection, and EntersWithCountersRecipient
+	// are immutable rules data and are copied by value or shared pointer.
 }
 
 func fixupRuleEffect(e *RuleEffect) {

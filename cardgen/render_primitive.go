@@ -71,7 +71,7 @@ func (r Renderer) renderPutOnBattlefield(ctx *renderCtx, value game.PutOnBattlef
 		fields = append(fields, "EntryTapped: true,")
 	}
 	if len(value.EntryCounters) > 0 {
-		counters, err := renderCounterPlacements(ctx, value.EntryCounters)
+		counters, err := r.renderCounterPlacements(ctx, value.EntryCounters)
 		if err != nil {
 			return "", err
 		}

@@ -939,6 +939,9 @@ func lowerEntersWithCountersReplacement(
 			detail,
 		)
 	}
+	if ability.Content.Effects[0].EntersWithCountersGroup {
+		return lowerGroupEntersWithCountersReplacement(ability, unsupported)
+	}
 	if len(ability.Content.Effects) != 1 ||
 		len(ability.Content.Targets) != 0 ||
 		len(ability.Content.Keywords) != 0 ||
@@ -958,9 +961,17 @@ func lowerEntersWithCountersReplacement(
 	// Hangarback Walker, Endless One) places counters equal to the spell's
 	// chosen X, resolved by the runtime from the entering permanent.
 	amountFromX := effect.Amount.VariableX
+	var dynamic opt.V[*game.DynamicAmount]
 	if !amountFromX &&
 		(!effect.Amount.Known || effect.Amount.Value <= 0) {
-		return unsupported("the executable source backend does not yet support dynamic enters-with-counters quantities")
+		// "This creature enters with a +1/+1 counter on it for each <X>."
+		// (Golgari Grave-Troll) places a rules-derived number of counters; reuse
+		// the shared dynamic-amount lowering so every supported count form works.
+		lowered, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+		if !ok {
+			return unsupported("the executable source backend does not support this dynamic enters-with-counters quantity")
+		}
+		dynamic = opt.Val(&lowered)
 	}
 	if !effect.CounterKindKnown {
 		return unsupported("the executable source backend does not support this enters-with-counters counter kind")
@@ -972,6 +983,7 @@ func lowerEntersWithCountersReplacement(
 		Kind:        effect.CounterKind,
 		Amount:      effect.Amount.Value,
 		AmountFromX: amountFromX,
+		Dynamic:     dynamic,
 	}
 	// "... enters with N counters on it if <condition>" (Raid, Morbid, Ferocious).
 	if len(ability.Content.Conditions) == 1 {
@@ -1012,6 +1024,116 @@ func isEntersWithCountersReplacement(ability compiler.CompiledAbility) bool {
 func selfEntersWithCountersReferences(references []compiler.CompiledReference) bool {
 	return len(references) == 2 &&
 		referencesBindTo(references, compiler.ReferenceBindingSource, 0)
+}
+
+// lowerGroupEntersWithCountersReplacement lowers a static enters-with-counters
+// replacement that adds a single counter to a group of the controller's
+// permanents as they enter ("Each other creature you control enters with an
+// additional vigilance counter on it." — Tayam, Luminous Enigma). The recipient
+// group is read from the parser-recognized Selector; dynamic quantities and
+// recipient shapes the runtime Selection cannot represent fail closed.
+func lowerGroupEntersWithCountersReplacement(
+	ability compiler.CompiledAbility,
+	unsupported func(string) (game.ReplacementAbility, bool, *shared.Diagnostic),
+) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Effects) != 1 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional {
+		return unsupported("the executable source backend supports only exact group enters-with-counters replacements")
+	}
+	effect := ability.Content.Effects[0]
+	if effect.Duration != compiler.DurationNone || effect.Negated ||
+		effect.EntersColorChoice || effect.EntersTypeChoice || effect.Selector.Tapped {
+		return unsupported("the executable source backend supports only exact group enters-with-counters replacements")
+	}
+	if !effect.CounterKindKnown {
+		return unsupported("the executable source backend does not support this enters-with-counters counter kind")
+	}
+	if !effect.Exact {
+		return unsupported("the executable source backend does not yet support dynamic group enters-with-counters quantities")
+	}
+	if effect.Amount.VariableX {
+		return unsupported("the executable source backend does not yet support dynamic group enters-with-counters quantities")
+	}
+	recipient, ok := lowerGroupEntersWithCountersRecipient(effect.Selector)
+	if !ok {
+		return unsupported("the executable source backend does not support this group enters-with-counters recipient")
+	}
+	amount := effect.Amount.Value
+	if amount <= 0 {
+		amount = 1
+	}
+	placement := game.CounterPlacement{Kind: effect.CounterKind, Amount: amount}
+	return game.EntersWithCountersGroupReplacement(ability.Text, recipient, placement), true, nil
+}
+
+// lowerGroupEntersWithCountersRecipient maps the recipient selector of a group
+// enters-with-counters replacement to a runtime Selection scoped to the
+// controller's permanents. Only the controller scope, card-type, subtype,
+// excluded-subtype, color, keyword, token-status, and "other" filters are
+// supported; any other selector shape fails closed.
+func lowerGroupEntersWithCountersRecipient(selector compiler.CompiledSelector) (*game.Selection, bool) {
+	if selector.Controller != compiler.ControllerYou {
+		return nil, false
+	}
+	if selector.All || selector.Another || selector.Attacking || selector.Blocking ||
+		selector.Tapped || selector.Untapped || selector.MatchCounter ||
+		selector.MatchManaValue || selector.MatchPower || selector.MatchToughness ||
+		selector.BasicLandType || selector.PlayerOrPlaneswalker ||
+		selector.SubtypeFromEntryChoice || selector.SubtypeFromChosenType ||
+		len(selector.Alternatives) != 0 || selector.Zone != zone.None {
+		return nil, false
+	}
+	requiredType, ok := groupEntersWithCountersRequiredType(selector)
+	if !ok {
+		return nil, false
+	}
+	selection, ok := selectorCharacteristics(selector)
+	if !ok {
+		return nil, false
+	}
+	if requiredType != "" {
+		selection.RequiredTypes = append(selection.RequiredTypes, requiredType)
+	}
+	selection.Controller = game.ControllerYou
+	selection.ExcludeSource = selector.Other
+	selection.NonToken = selector.NonToken
+	selection.TokenOnly = selector.TokenOnly
+	return &selection, true
+}
+
+// groupEntersWithCountersRequiredType maps a group enters-with-counters
+// recipient selector kind to the runtime card type the entering permanent must
+// have. SelectorPermanent imposes no type ("" with ok=true); the bare
+// subtype-named group form ("Each Dragon you control", SelectorUnknown) is
+// accepted only when a subtype constraint scopes it. Any other kind fails closed.
+func groupEntersWithCountersRequiredType(selector compiler.CompiledSelector) (types.Card, bool) {
+	switch selector.Kind {
+	case compiler.SelectorCreature:
+		return types.Creature, true
+	case compiler.SelectorPlaneswalker:
+		return types.Planeswalker, true
+	case compiler.SelectorArtifact:
+		return types.Artifact, true
+	case compiler.SelectorEnchantment:
+		return types.Enchantment, true
+	case compiler.SelectorLand:
+		return types.Land, true
+	case compiler.SelectorPermanent:
+		return "", true
+	case compiler.SelectorUnknown:
+		if len(selector.SubtypesAny()) > 0 {
+			return "", true
+		}
+		return "", false
+	default:
+		return "", false
+	}
 }
 
 func lowerOptionalEntryPayment(ability compiler.CompiledAbility) (game.ReplacementAbility, bool) {

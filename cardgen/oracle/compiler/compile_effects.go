@@ -282,6 +282,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				BecomeCopyAddKeywords:        slices.Clone(syntax.BecomeCopyAddKeywords),
 
 				EntersWithCounters:        syntax.EntersWithCounters,
+				EntersWithCountersGroup:   syntax.EntersWithCountersGroup,
 				UnderYourControl:          syntax.UnderYourControl,
 				UnderOwnersControl:        syntax.UnderOwnersControl,
 				TokenCopyOfForEach:        syntax.TokenCopyOfForEach,

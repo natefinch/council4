@@ -174,6 +174,51 @@ func TestPermanentSourceReplacementStopsAfterSourceLeaves(t *testing.T) {
 	}
 }
 
+func TestGroupEntersWithCountersReplacementAddsCounterToOtherControlledCreatures(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := &game.CardDef{CardFace: game.CardFace{
+		Name:  "Tayam, Luminous Enigma",
+		Types: []types.Card{types.Creature},
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.EntersWithCountersGroupReplacement(
+				"Each other creature you control enters with an additional vigilance counter on it.",
+				&game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+					Controller:    game.ControllerYou,
+					ExcludeSource: true,
+				},
+				game.CounterPlacement{Kind: counter.Vigilance, Amount: 1},
+			),
+		},
+	}}
+	sourcePerm := addReplacementPermanent(t, g, game.Player1, source)
+	if len(g.ReplacementEffects) != 1 {
+		t.Fatalf("registered replacement effects = %d, want 1", len(g.ReplacementEffects))
+	}
+	if got := sourcePerm.Counters.Get(counter.Vigilance); got != 0 {
+		t.Fatalf("source vigilance counters = %d, want 0 (ExcludeSource)", got)
+	}
+
+	creatureDef := func() *game.CardDef {
+		return &game.CardDef{CardFace: game.CardFace{Name: "Bear", Types: []types.Card{types.Creature}}}
+	}
+	ownCreature := addReplacementPermanent(t, g, game.Player1, creatureDef())
+	if got := ownCreature.Counters.Get(counter.Vigilance); got != 1 {
+		t.Fatalf("controlled creature vigilance counters = %d, want 1", got)
+	}
+	opponentCreature := addReplacementPermanent(t, g, game.Player2, creatureDef())
+	if got := opponentCreature.Counters.Get(counter.Vigilance); got != 0 {
+		t.Fatalf("opponent creature vigilance counters = %d, want 0", got)
+	}
+	ownLand := addReplacementPermanent(t, g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Wastes",
+		Types: []types.Card{types.Land},
+	}})
+	if got := ownLand.Counters.Get(counter.Vigilance); got != 0 {
+		t.Fatalf("controlled land vigilance counters = %d, want 0 (creature-only filter)", got)
+	}
+}
+
 func TestGroupEntersTappedReplacementTapsOpponentPermanents(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	authority := &game.CardDef{CardFace: game.CardFace{
