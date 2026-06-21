@@ -857,8 +857,6 @@ func TapManaChosenColorCountAbility(text string, selection Selection) ManaAbilit
 // "...where X is this creature's power."). The controller chooses any one color
 // as the ability resolves; the produced mana is that color and its amount is the
 // supplied dynamic value.
-//
-//nolint:gocritic // the template owns an immutable copy of the dynamic amount.
 func TapManaChosenColorDynamicAbility(text string, amount DynamicAmount) ManaAbility {
 	return ManaAbility{
 		Text:            text,
