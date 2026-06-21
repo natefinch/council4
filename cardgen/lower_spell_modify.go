@@ -2647,7 +2647,7 @@ func lowerBecomeCopyContent(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 			"the executable source backend supports only a become-a-copy effect with one target permanent",
 		)
 	}
-	targetSpec, ok := permanentTargetSpec(ctx.content.Targets[0])
+	target, ok := becomeCopyTargetSpec(ctx.content.Targets[0])
 	if !ok {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -2668,15 +2668,39 @@ func lowerBecomeCopyContent(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 		keywords = append(keywords, runtime)
 	}
 	primitive := game.BecomeCopy{
-		Object:             game.TargetPermanentReference(0),
+		Object:             target.object,
+		Card:               target.card,
 		UntilEndOfTurn:     effect.BecomeCopyUntilEndOfTurn,
 		RetainsThisAbility: effect.BecomeCopyRetainsThisAbility,
 		AddKeywords:        keywords,
 	}
 	return game.Mode{
-		Targets:  []game.TargetSpec{targetSpec},
+		Targets:  []game.TargetSpec{target.spec},
 		Sequence: []game.Instruction{{Primitive: primitive}},
 	}.Ability(), nil
+}
+
+// becomeCopyTarget pairs a become-a-copy target spec with the reference the
+// BecomeCopy primitive uses to find the copied object: object for a battlefield
+// permanent, card for a card in a non-battlefield zone. Exactly one is set.
+type becomeCopyTarget struct {
+	spec   game.TargetSpec
+	object game.ObjectReference
+	card   game.CardReference
+}
+
+// becomeCopyTargetSpec builds the target spec and copy reference for a
+// become-a-copy effect. A battlefield permanent target (Thespian's Stage) copies
+// the permanent referenced by object; a permanent card in the controller's
+// graveyard (Shifting Woodland) copies the card referenced by card.
+func becomeCopyTargetSpec(target compiler.CompiledTarget) (becomeCopyTarget, bool) {
+	if spec, ok := cardInZoneTargetSpec(target, zone.Graveyard); ok {
+		return becomeCopyTarget{spec: spec, card: game.CardReference{Kind: game.CardReferenceTarget}}, true
+	}
+	if spec, ok := permanentTargetSpec(target); ok {
+		return becomeCopyTarget{spec: spec, object: game.TargetPermanentReference(0)}, true
+	}
+	return becomeCopyTarget{}, false
 }
 
 func matchesExactSinglePermanentTargetSpell(ctx contentCtx) bool {

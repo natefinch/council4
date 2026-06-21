@@ -851,12 +851,16 @@ type Regenerate struct {
 // permanent (CR 706), as for an activated/resolving copy ability ("This land
 // becomes a copy of target land, except it has this ability.", Thespian's Stage;
 // "... until end of turn.", Mirage Mirror). Object references the copied target.
+// Card instead references a copied card in a non-battlefield zone, such as a
+// permanent card in a graveyard ("... becomes a copy of target permanent card in
+// your graveyard ...", Shifting Woodland); exactly one of Object or Card is set.
 // UntilEndOfTurn limits the copy to end of turn; otherwise it lasts for as long
 // as the source remains on the battlefield. RetainsThisAbility keeps the source's
 // own become-a-copy ability so it can copy again, and AddKeywords applies any
 // "except it has <keyword>" copiable riders.
 type BecomeCopy struct {
 	Object             ObjectReference
+	Card               CardReference
 	UntilEndOfTurn     bool
 	RetainsThisAbility bool
 	AddKeywords        []Keyword
