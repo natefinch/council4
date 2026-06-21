@@ -690,6 +690,69 @@ func TestLegendaryManaCannotPayForNonlegendarySpell(t *testing.T) {
 	}
 }
 
+func TestPowerstoneManaCannotPayForNonartifactSpell(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	player := g.Players[game.Player1]
+	player.ManaPool.Add(mana.C, 1)
+	player.ManaRiders = append(player.ManaRiders, game.ManaRiderInstance{
+		Unit:       mana.Unit{Color: mana.C},
+		Controller: game.Player1,
+		Rider: game.ManaSpendRider{
+			Condition:   game.ManaSpendCastArtifactSpell,
+			Restriction: game.ManaSpendRestrictedToCondition,
+		},
+	})
+
+	goblin := creatureSpellDef("Goblin", types.Goblin)
+	goblin.ManaCost = opt.Val(cost.Mana{cost.O(1)})
+	goblin.Power = opt.Val(game.PT{Value: 1})
+	goblin.Toughness = opt.Val(game.PT{Value: 1})
+	spellID := addCardToHand(g, game.Player1, goblin)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("cast nonartifact spell with Powerstone-restricted mana succeeded")
+	}
+	if player.ManaPool.Amount(mana.C) != 1 || len(player.ManaRiders) != 1 {
+		t.Fatalf("restricted mana changed after rejected cast: pool=%d riders=%d", player.ManaPool.Amount(mana.C), len(player.ManaRiders))
+	}
+}
+
+func TestPowerstoneManaPaysForArtifactSpell(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	player := g.Players[game.Player1]
+	player.ManaPool.Add(mana.C, 1)
+	player.ManaRiders = append(player.ManaRiders, game.ManaRiderInstance{
+		Unit:       mana.Unit{Color: mana.C},
+		Controller: game.Player1,
+		Rider: game.ManaSpendRider{
+			Condition:   game.ManaSpendCastArtifactSpell,
+			Restriction: game.ManaSpendRestrictedToCondition,
+		},
+	})
+
+	bauble := &game.CardDef{CardFace: game.CardFace{
+		Name:     "Bauble",
+		Types:    []types.Card{types.Artifact},
+		ManaCost: opt.Val(cost.Mana{cost.O(1)}),
+	}}
+	spellID := addCardToHand(g, game.Player1, bauble)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("cast artifact spell with Powerstone-restricted mana failed")
+	}
+	if player.ManaPool.Amount(mana.C) != 0 {
+		t.Fatalf("Powerstone mana not spent on artifact spell: pool=%d", player.ManaPool.Amount(mana.C))
+	}
+}
+
 // TestCreatureSpellHasteManaSpendRiderGrantsHaste covers the unrestricted Arena
 // of Glory / Generator Servant bonus rider: a creature spell paid for with the
 // tagged mana resolves with haste until end of turn, and the haste is cleared at

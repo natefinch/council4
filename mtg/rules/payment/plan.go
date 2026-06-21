@@ -707,6 +707,10 @@ func restrictedManaCanPay(s State, rider game.ManaRiderInstance, ctx spendContex
 			abilitySourceIsChosenCreatureType(s, rider, ctx.abilitySource)
 	case game.ManaSpendCastLegendarySpell:
 		return ctx.spell != nil && ctx.spell.HasSupertype(types.Legendary)
+	case game.ManaSpendCastArtifactSpell:
+		// Powerstone: usable for anything except a nonartifact spell cast. A
+		// non-spell payment (ability cost; ctx.spell is nil) is always allowed.
+		return ctx.spell == nil || ctx.spell.HasType(types.Artifact)
 	default:
 		return false
 	}

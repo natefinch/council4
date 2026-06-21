@@ -755,6 +755,15 @@ func validateManaSpendRider(rider ManaSpendRider) error {
 			return errors.New("creature-spell mana spend rider has unsupported fields")
 		}
 		return nil
+	case ManaSpendCastArtifactSpell:
+		if rider.Restriction != ManaSpendRestrictedToCondition ||
+			rider.ChosenSubtypeFrom != "" ||
+			rider.SpellRuleEffect != RuleEffectNone ||
+			len(rider.SpellGainsKeywords) != 0 ||
+			len(rider.Effect.Sequence) != 0 {
+			return errors.New("artifact-spell mana spend rider has unsupported fields")
+		}
+		return nil
 	default:
 		return errors.New("add mana spend rider requires a recognized condition")
 	}
