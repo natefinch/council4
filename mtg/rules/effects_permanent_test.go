@@ -948,6 +948,44 @@ func TestMoveCountersFromSelfMovesOneNamedCounter(t *testing.T) {
 	}
 }
 
+// TestMoveCountersChooseKindMovesOneCounterBetweenTargets covers the two-target
+// "Move a counter from target permanent you control onto a second target
+// permanent." slice (Nesting Grounds): the counters are read from the first
+// target (CounterSourceTarget) and one counter of the lone present kind is moved
+// onto the second target, leaving the surplus on the source.
+func TestMoveCountersChooseKindMovesOneCounterBetweenTargets(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Source Relic",
+		Types: []types.Card{types.Artifact}},
+	})
+	destination := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Destination Relic",
+		Types: []types.Card{types.Artifact}},
+	})
+	source.Counters.Add(counter.Charge, 3)
+	addEffectSpellToStack(g, game.Player1, game.MoveCounters{
+		Amount: game.Fixed(1),
+		Object: game.TargetPermanentReference(1),
+		Source: game.CounterSourceSpec{
+			Kind:   game.CounterSourceTarget,
+			Object: game.TargetPermanentReference(0),
+		},
+		ChooseKind: true,
+	}, []game.Target{
+		game.PermanentTarget(source.ObjectID),
+		game.PermanentTarget(destination.ObjectID),
+	})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := source.Counters.Get(counter.Charge); got != 2 {
+		t.Fatalf("source charge counters = %d, want 2", got)
+	}
+	if got := destination.Counters.Get(counter.Charge); got != 1 {
+		t.Fatalf("destination charge counters = %d, want 1", got)
+	}
+}
+
 // TestMoveCountersDistributeAmongOtherCreatures covers the distributed
 // move-counters form (Forgotten Ancient): "move any number of +1/+1 counters
 // from this creature onto other creatures." The controller distributes the

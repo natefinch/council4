@@ -1044,8 +1044,19 @@ type EffectSyntax struct {
 	// creatures rather than a single target ("move any number of +1/+1 counters
 	// from this creature onto other creatures."). It is false for the
 	// single-target move forms.
-	MoveCountersDistribute bool      `json:",omitempty"`
-	FromZone               zone.Type `json:",omitempty"`
+	MoveCountersDistribute bool `json:",omitempty"`
+	// MoveCountersFromTarget reports the two-target counter-move form, where the
+	// counters are read from a first chosen target permanent and placed onto a
+	// second chosen target permanent ("Move a counter from target permanent you
+	// control onto a second target permanent." — Nesting Grounds). It is false
+	// for the self-source single-target move and the distributed group form.
+	MoveCountersFromTarget bool `json:",omitempty"`
+	// MoveCountersAnyKind reports the kind-unspecified single counter move ("Move
+	// a counter ..."), where the controller moves one counter of any kind present
+	// on the source. It is false for a named-kind move ("Move a +1/+1 counter
+	// ...") and the kind-agnostic "all counters" move.
+	MoveCountersAnyKind bool      `json:",omitempty"`
+	FromZone            zone.Type `json:",omitempty"`
 	// GraveyardZoneExile records a recognized whole-graveyard exile ("Exile
 	// target player's graveyard."), naming whose graveyard is exiled. It is
 	// GraveyardZoneExileNone for every other effect, including single-card
