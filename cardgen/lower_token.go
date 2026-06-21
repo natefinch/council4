@@ -29,6 +29,16 @@ import (
 // quoted abilities, multiple keywords, modifiers) and unrepresentable dynamic
 // counts fail closed pending follow-up work under the token-creation epic.
 func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	return lowerCreateTokenSpellLinked(ctx, "")
+}
+
+// lowerCreateTokenSpellLinked lowers a token-creation effect, optionally
+// publishing the created token(s) under publishLinked so a following clause
+// ("That token gains <keyword> until end of turn.") can reference them. A blank
+// publishLinked leaves the token unpublished, the ordinary standalone form. The
+// copy- and choice-token variants do not thread the link key; callers that need a
+// published token must restrict themselves to the synthesized token forms.
+func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	if effect.TokenCopyOfTarget {
 		return lowerCreateCopyTokenSpell(ctx)
@@ -138,6 +148,7 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 				EntryAttacking: effect.Selector.Attacking,
 				Power:          dynamicPower,
 				Toughness:      dynamicToughness,
+				PublishLinked:  publishLinked,
 			},
 		}},
 	}.Ability(), nil

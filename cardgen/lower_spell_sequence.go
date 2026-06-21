@@ -544,6 +544,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityC
 	if content, ok := lowerGroupCounterThenGroupKeywordSequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerCreateTokenThenGrantKeywordSequence(ctx); ok {
+		return content, true
+	}
 	return game.AbilityContent{}, false
 }
 
@@ -676,6 +679,80 @@ func lowerGroupCounterThenGroupKeywordSequence(ctx contentCtx) (game.AbilityCont
 				ContinuousEffects: []game.ContinuousEffect{{
 					Layer:        game.LayerAbility,
 					Group:        group,
+					AddKeywords:  keywords,
+					AddAbilities: abilities,
+				}},
+				Duration: game.DurationUntilEndOfTurn,
+			}},
+		},
+	}.Ability(), true
+}
+
+// createdTokenLinkKey links a freshly created token to a following "that token
+// gains <keyword> until end of turn" grant so the keyword is applied to exactly
+// that token. The runtime scopes the key per source object, so a fixed string is
+// unambiguous across cards.
+const createdTokenLinkKey = "created-token"
+
+// lowerCreateTokenThenGrantKeywordSequence lowers the ordered pair "Create
+// [token]. That token gains <keyword> until end of turn." (Loyal Apprentice).
+// The first clause creates a token; the second grants it a temporary keyword. The
+// grant's "that token" back-reference binds to the create instruction's result,
+// realized by publishing the created token under a link key and resolving the
+// grant's object reference to that linked token. It supports only the singular
+// "that token" back-reference onto a controller-created synthesized token; it
+// fails closed for copy/choice tokens, plural back-references, other recipients,
+// durations, or unsupported keywords.
+func lowerCreateTokenThenGrantKeywordSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		ctx.optional {
+		return game.AbilityContent{}, false
+	}
+	createEffect := ctx.content.Effects[0]
+	keywordEffect := ctx.content.Effects[1]
+	if createEffect.Kind != compiler.EffectCreate ||
+		keywordEffect.Kind != compiler.EffectGain ||
+		!createEffect.Exact ||
+		!keywordEffect.Exact ||
+		createEffect.Negated ||
+		keywordEffect.Negated ||
+		createEffect.Optional ||
+		keywordEffect.Optional ||
+		createEffect.Context != parser.EffectContextController ||
+		keywordEffect.Context != parser.EffectContextReferencedObject ||
+		keywordEffect.Duration != compiler.DurationUntilEndOfTurn ||
+		keywordEffect.StaticSubject != compiler.StaticSubjectNone ||
+		createEffect.TokenCopyOfTarget ||
+		createEffect.TokenCopyOfReference ||
+		createEffect.TokenCopyOfAttached ||
+		createEffect.TokenCopyOfForEach ||
+		createEffect.TokenChoice ||
+		!referencesBindTo(keywordEffect.SubjectReferences, compiler.ReferenceBindingPriorInstructionResult, 0) {
+		return game.AbilityContent{}, false
+	}
+	keywords, abilities, ok := partitionTemporaryKeywords(
+		keywordsWithinSpan(ctx.content.Keywords, keywordEffect.ClauseSpan))
+	if !ok || (len(keywords) == 0 && len(abilities) == 0) {
+		return game.AbilityContent{}, false
+	}
+	createContent, diagnostic := lowerCreateTokenSpellLinked(
+		contextForEffect(ctx, &createEffect), createdTokenLinkKey)
+	if diagnostic != nil ||
+		len(createContent.Modes) != 1 ||
+		len(createContent.Modes[0].Sequence) != 1 ||
+		len(createContent.Modes[0].Targets) != 0 {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{
+			createContent.Modes[0].Sequence[0],
+			{Primitive: game.ApplyContinuous{
+				Object: opt.Val(game.LinkedObjectReference(string(createdTokenLinkKey))),
+				ContinuousEffects: []game.ContinuousEffect{{
+					Layer:        game.LayerAbility,
 					AddKeywords:  keywords,
 					AddAbilities: abilities,
 				}},
