@@ -1162,6 +1162,37 @@ func TestParseStaticCharacteristicTypeInAdditionMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticGroupSubtypeInAdditionMeaning(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		group EffectStaticSubjectKind
+	}{
+		{"Creatures you control are Slivers in addition to their other creature types.", EffectStaticSubjectControlledCreatures},
+		{"Other creatures you control are Zombies in addition to their other types.", EffectStaticSubjectOtherControlledCreatures},
+		{"All creatures are Zombies in addition to their other types.", EffectStaticSubjectAllCreatures},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.name, Context{})
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.Kind != StaticDeclarationContinuousCharacteristic {
+				t.Fatalf("kind = %s, want characteristic", declaration.Kind)
+			}
+			if declaration.Subject.Group.Kind != test.group {
+				t.Fatalf("group = %s, want %s", declaration.Subject.Group.Kind, test.group)
+			}
+			if declaration.ColorsAdd || len(declaration.Subtypes) != 1 {
+				t.Fatalf("declaration = %#v, want one added subtype", declaration)
+			}
+		})
+	}
+}
+
 func TestParseStaticChosenCreatureTypeAddition(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(
