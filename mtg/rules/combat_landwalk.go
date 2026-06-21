@@ -37,6 +37,9 @@ func attackerLandwalkUnblockableBy(g *game.Game, attacker, blocker *game.Permane
 // subtype for a typed variant.
 func defenderControlsLandwalkLand(g *game.Game, defender game.PlayerID, landwalk game.LandwalkKeyword) bool {
 	for _, permanent := range g.Battlefield {
+		if permanent.PhasedOut {
+			continue
+		}
 		if effectiveController(g, permanent) != defender {
 			continue
 		}

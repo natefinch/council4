@@ -94,3 +94,19 @@ func TestGenericLandwalkAnyLandEvades(t *testing.T) {
 		t.Fatal("generic landwalker could be blocked while defender controls a land")
 	}
 }
+
+// TestLandwalkIgnoresPhasedOutLand confirms a phased-out matching land does not
+// grant landwalk evasion: a phased-out permanent is treated as nonexistent
+// (CR 702.26e), so the forestwalker remains blockable.
+func TestLandwalkIgnoresPhasedOutLand(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addLandwalkAttacker(g, game.Player1, &game.ForestwalkStaticBody)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+
+	forest := addLandPermanent(g, game.Player2, "Forest", types.Forest)
+	forest.PhasedOut = true
+
+	if !canBlockAttacker(g, blocker, attacker) {
+		t.Fatal("forestwalker became unblockable from a phased-out Forest")
+	}
+}
