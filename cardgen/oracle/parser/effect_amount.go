@@ -1189,6 +1189,7 @@ func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms 
 		subjectEnd := end + len(suffix)
 		selectionEnd := subjectEnd
 		chosenType := false
+		chosenResolutionType := false
 		if !dynamicAmountBoundary(tokens, subjectEnd) {
 			if _, qEnd, ok := counterQualifierKind(tokens, subjectEnd); ok && dynamicAmountBoundary(tokens, qEnd) {
 				subjectEnd, selectionEnd = qEnd, qEnd
@@ -1196,12 +1197,15 @@ func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms 
 				subjectEnd, selectionEnd = cEnd, cEnd
 			} else if cEnd, ok := chosenTypeQualifierEnd(tokens, subjectEnd); ok && dynamicAmountBoundary(tokens, cEnd) {
 				subjectEnd, chosenType = cEnd, true
+			} else if cEnd, ok := thatTypeQualifierEnd(tokens, subjectEnd); ok && dynamicAmountBoundary(tokens, cEnd) {
+				subjectEnd, chosenResolutionType = cEnd, true
 			} else {
 				continue
 			}
 		}
 		selection := parseSelection(tokens[start:selectionEnd], atoms)
 		selection.SubtypeFromEntryChoice = chosenType
+		selection.SubtypeFromChosenType = chosenResolutionType
 		return dynamicAmountSubject{
 			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountCount, Selection: &selection},
 			end:    subjectEnd, count: true, plural: plural,
@@ -1254,6 +1258,18 @@ func dynamicCharacteristicQualifierEnd(tokens []shared.Token, start int, atoms A
 func chosenTypeQualifierEnd(tokens []shared.Token, start int) (int, bool) {
 	if effectWordsAt(tokens, start, "of", "the", "chosen", "type") {
 		return start + 4, true
+	}
+	return 0, false
+}
+
+// thatTypeQualifierEnd recognizes a trailing "of that type" qualifier on a count
+// subject ("each permanent you control of that type") and returns the token index
+// just past it. The matched permanents must share the creature subtype chosen
+// earlier in the same resolution by a "Choose a creature type." effect (Distant
+// Melody); the caller records that as Selection.SubtypeFromChosenType.
+func thatTypeQualifierEnd(tokens []shared.Token, start int) (int, bool) {
+	if effectWordsAt(tokens, start, "of", "that", "type") {
+		return start + 3, true
 	}
 	return 0, false
 }

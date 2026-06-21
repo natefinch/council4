@@ -48,7 +48,7 @@ func TestLowerTriggerBodyResolutionCondition(t *testing.T) {
 // TestLowerChosenTypeCastTrigger verifies that a chosen-type cast trigger
 // ("Whenever you cast a creature spell of the chosen type, draw a card.")
 // lowers to an EventSpellCast pattern whose CardSelection carries the runtime
-// SubtypeFromSourceEntryChoice predicate alongside the creature card type, so
+// SubtypeChoiceSourceEntry predicate alongside the creature card type, so
 // the trigger fires only for spells sharing the source's entry-time creature
 // type. The full Vanquisher's Banner card (entry choice + chosen-type anthem +
 // chosen-type cast trigger) lowers end to end.
@@ -70,8 +70,8 @@ func TestLowerChosenTypeCastTrigger(t *testing.T) {
 		t.Errorf("event = %v, want EventSpellCast", ta.Trigger.Pattern.Event)
 	}
 	selection := ta.Trigger.Pattern.CardSelection
-	if !selection.SubtypeFromSourceEntryChoice {
-		t.Errorf("CardSelection.SubtypeFromSourceEntryChoice = false, want true: %#v", selection)
+	if selection.SubtypeChoice != game.SubtypeChoiceSourceEntry {
+		t.Errorf("CardSelection.SubtypeChoice != SubtypeChoiceSourceEntry, want SourceEntry: %#v", selection)
 	}
 	if len(selection.RequiredTypes) != 1 || selection.RequiredTypes[0] != types.Creature {
 		t.Errorf("CardSelection.RequiredTypes = %#v, want [Creature]", selection.RequiredTypes)

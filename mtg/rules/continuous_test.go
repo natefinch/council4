@@ -1063,8 +1063,8 @@ func TestContinuousEffectChosenTypeGroupBuffsOnlyChosenSubtype(t *testing.T) {
 		SourceObjectID: source.ObjectID,
 		Layer:          game.LayerPowerToughnessModify,
 		Group: game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{
-			RequiredTypes:                []types.Card{types.Creature},
-			SubtypeFromSourceEntryChoice: true,
+			RequiredTypes: []types.Card{types.Creature},
+			SubtypeChoice: game.SubtypeChoiceSourceEntry,
 		}),
 		PowerDelta:     1,
 		ToughnessDelta: 1,
@@ -1099,8 +1099,8 @@ func TestContinuousEffectChosenTypeGroupFailsClosedWithoutChoice(t *testing.T) {
 		SourceObjectID: source.ObjectID,
 		Layer:          game.LayerPowerToughnessModify,
 		Group: game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{
-			RequiredTypes:                []types.Card{types.Creature},
-			SubtypeFromSourceEntryChoice: true,
+			RequiredTypes: []types.Card{types.Creature},
+			SubtypeChoice: game.SubtypeChoiceSourceEntry,
 		}),
 		PowerDelta:     1,
 		ToughnessDelta: 1,

@@ -285,7 +285,7 @@ func TestLowerStaticDeclarationGroupAnthems(t *testing.T) {
 
 // TestLowerStaticDeclarationChosenTypeAnthems covers the chosen-type anthem
 // group: "creatures you control of the chosen type" buffs, whose runtime
-// Selection must carry SubtypeFromSourceEntryChoice so only permanents matching
+// Selection must carry SubtypeChoiceSourceEntry so only permanents matching
 // the source's entry-time creature-type choice are affected (Patchwork Banner,
 // Adaptive Automaton, Obelisk of Urd).
 func TestLowerStaticDeclarationChosenTypeAnthems(t *testing.T) {
@@ -328,7 +328,7 @@ func TestLowerStaticDeclarationChosenTypeAnthems(t *testing.T) {
 			selection := effect.Group.Selection()
 			if effect.Group.Domain() != game.GroupDomainObjectControlled ||
 				!slices.Equal(selection.RequiredTypes, []types.Card{types.Creature}) ||
-				!selection.SubtypeFromSourceEntryChoice {
+				selection.SubtypeChoice != game.SubtypeChoiceSourceEntry {
 				t.Fatalf("continuous effect group = %#v", effect)
 			}
 			if _, excluded := effect.Group.Exclusion(); excluded != test.excluded {

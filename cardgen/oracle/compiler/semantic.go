@@ -869,6 +869,11 @@ type CompiledSelector struct {
 	// subtype the source permanent chose as it entered ("creatures you control of
 	// the chosen type"). It lowers to Selection.SubtypeFromSourceEntryChoice.
 	SubtypeFromEntryChoice bool
+	// SubtypeFromChosenType requires each matched permanent to share the creature
+	// subtype chosen earlier in the same resolution by a "Choose a creature type."
+	// effect ("each permanent you control of that type"). It lowers to
+	// Selection.SubtypeFromChosenType (which reads game.SpellChosenTypeChoiceKey).
+	SubtypeFromChosenType bool
 	// ConjunctiveTypes records that a multi-member RequiredTypesAny names types a
 	// permanent must carry all at once ("artifact creature") rather than any one
 	// of ("artifact or creature"). It lowers the type set to the conjunctive
@@ -1083,6 +1088,7 @@ const (
 	EffectDevour
 	EffectRenown
 	EffectTribute
+	EffectChooseCreatureType
 )
 
 // DurationKind identifies common continuous-effect durations.

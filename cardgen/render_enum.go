@@ -515,6 +515,8 @@ func renderResolutionChoiceKind(kind game.ResolutionChoiceKind) (string, error) 
 		return "game.ResolutionChoiceCard", nil
 	case game.ResolutionChoiceNumber:
 		return "game.ResolutionChoiceNumber", nil
+	case game.ResolutionChoiceSubtype:
+		return "game.ResolutionChoiceSubtype", nil
 	default:
 		return "", fmt.Errorf("render: unsupported resolution choice kind %d", kind)
 	}

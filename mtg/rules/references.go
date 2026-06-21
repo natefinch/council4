@@ -419,11 +419,12 @@ func (r referenceResolver) objectControlledGroupMembers(ref game.GroupReference)
 func (r referenceResolver) permanentMatchesGroupSelection(sel *game.Selection, source, permanent *game.Permanent) bool {
 	values := effectivePermanentValues(r.g, permanent)
 	subject := selectionSubject{
-		kind:      subjectPermanent,
-		g:         r.g,
-		permanent: permanent,
-		values:    &values,
-		viewer:    r.obj.Controller,
+		kind:              subjectPermanent,
+		g:                 r.g,
+		permanent:         permanent,
+		values:            &values,
+		viewer:            r.obj.Controller,
+		resolutionChoices: r.obj.ResolutionChoices,
 	}
 	if sel.Controller != game.ControllerAny {
 		subject.controller = effectiveController(r.g, permanent)

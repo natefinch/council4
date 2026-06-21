@@ -457,3 +457,11 @@ const EntryTypeChoiceKey = ChoiceKey("oracle-entry-type")
 // stored on a Permanent's EntryChoices map. Mana abilities that add "one mana of
 // the chosen color" read the result from this key.
 const EntryColorChoiceKey = ChoiceKey("oracle-entry-color")
+
+// SpellChosenTypeChoiceKey is the ChoiceKey under which a resolution-time
+// creature-type choice made by a resolving spell or ability is published (a
+// Choose instruction's PublishChoice). Later effects in the same resolution that
+// reference "of that type" read the chosen subtype from this key, as in "Choose a
+// creature type. Draw a card for each permanent you control of that type."
+// (Distant Melody).
+const SpellChosenTypeChoiceKey = ChoiceKey("oracle-chosen-type")

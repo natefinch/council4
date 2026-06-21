@@ -85,8 +85,8 @@ func TestSpellCastTriggerFiltersChosenType(t *testing.T) {
 		Event:      game.EventSpellCast,
 		Controller: game.TriggerControllerYou,
 		CardSelection: game.Selection{
-			RequiredTypes:                []types.Card{types.Creature},
-			SubtypeFromSourceEntryChoice: true,
+			RequiredTypes: []types.Card{types.Creature},
+			SubtypeChoice: game.SubtypeChoiceSourceEntry,
 		},
 	}
 
@@ -117,7 +117,7 @@ func TestSpellCastTriggerChosenTypeFailsWithoutEntryChoice(t *testing.T) {
 		Event:      game.EventSpellCast,
 		Controller: game.TriggerControllerYou,
 		CardSelection: game.Selection{
-			SubtypeFromSourceEntryChoice: true,
+			SubtypeChoice: game.SubtypeChoiceSourceEntry,
 		},
 	}
 	event := game.Event{

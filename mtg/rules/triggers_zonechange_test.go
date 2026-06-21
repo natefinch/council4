@@ -653,8 +653,8 @@ func TestZoneChangeTriggerChosenTypeSubjectGatesOnSourceEntryChoice(t *testing.T
 		Event:      game.EventPermanentEnteredBattlefield,
 		Controller: game.TriggerControllerYou,
 		SubjectSelection: game.Selection{
-			RequiredTypes:                []types.Card{types.Creature},
-			SubtypeFromSourceEntryChoice: true,
+			RequiredTypes: []types.Card{types.Creature},
+			SubtypeChoice: game.SubtypeChoiceSourceEntry,
 		},
 	}
 	source := addTriggeredPermanent(g, game.Player1, pattern, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)

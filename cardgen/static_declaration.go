@@ -1355,7 +1355,7 @@ func lowerStaticSelection(selection compiler.StaticSelection) (game.Selection, b
 	}
 	result.SubtypesAny = append(result.SubtypesAny, selection.SubtypesAny...)
 	if selection.SubtypeFromEntryChoice {
-		result.SubtypeFromSourceEntryChoice = true
+		result.SubtypeChoice = game.SubtypeChoiceSourceEntry
 	}
 	if selection.MatchCounter {
 		result.MatchCounter = true
