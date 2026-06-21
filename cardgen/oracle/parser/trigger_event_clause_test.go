@@ -44,6 +44,7 @@ func TestTriggerEventClauses(t *testing.T) {
 func triggerEventClauseTests() []triggerEventClauseTest {
 	tests := zoneChangeTriggerEventClauseTests()
 	tests = append(tests, spellAndAbilityTriggerEventClauseTests()...)
+	tests = append(tests, actorOrdinalSpellTriggerEventClauseTests()...)
 	tests = append(tests, chosenTypeSpellTriggerEventClauseTests()...)
 	tests = append(tests, combatTriggerEventClauseTests()...)
 	tests = append(tests, enterAttackUnionTriggerEventClauseTests()...)
@@ -423,6 +424,52 @@ func spellAndAbilityTriggerEventClauseTests() []triggerEventClauseTest {
 			check: func(t *testing.T, clause *TriggerEventClause) {
 				t.Helper()
 				if clause.Actor.Kind != TriggerEventActorOpponent || !selectionHasType(clause.SourceSelection, TriggerCardTypeCreature) {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+	}
+}
+
+func actorOrdinalSpellTriggerEventClauseTests() []triggerEventClauseTest {
+	return []triggerEventClauseTest{
+		{
+			name:   "spell ordinal second player actor",
+			source: "Whenever a player casts their second spell each turn, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindSpellCast || clause.Actor.Kind != TriggerEventActorPlayer {
+					t.Fatalf("clause = %#v", clause)
+				}
+				if clause.SpellSelection.Ordinal != 2 {
+					t.Fatalf("ordinal = %d, want 2", clause.SpellSelection.Ordinal)
+				}
+			},
+		},
+		{
+			name:   "spell ordinal third opponent actor",
+			source: "Whenever an opponent casts their third spell each turn, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Actor.Kind != TriggerEventActorOpponent {
+					t.Fatalf("clause = %#v", clause)
+				}
+				if clause.SpellSelection.Ordinal != 3 {
+					t.Fatalf("ordinal = %d, want 3", clause.SpellSelection.Ordinal)
+				}
+			},
+		},
+		{
+			name:   "spell ordinal filtered opponent actor",
+			source: "Whenever an opponent casts their second instant spell each turn, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Actor.Kind != TriggerEventActorOpponent {
+					t.Fatalf("clause = %#v", clause)
+				}
+				if clause.SpellSelection.Ordinal != 2 ||
+					len(clause.SpellSelection.Types) != 1 ||
+					clause.SpellSelection.Types[0] != TriggerCardTypeInstant {
 					t.Fatalf("clause = %#v", clause)
 				}
 			},
