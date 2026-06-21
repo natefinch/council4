@@ -294,7 +294,7 @@ func targetControllerTokenInstruction(ctx contentCtx, tokenEffect *compiler.Comp
 	if !ok {
 		return game.Instruction{}, false
 	}
-	amount, ok := createTokenAmount(ctx, tokenEffect)
+	amount, ok := createTokenAmount(ctx, tokenEffect, game.ObjectReference{})
 	if !ok {
 		return game.Instruction{}, false
 	}

@@ -1130,6 +1130,38 @@ func TestGenerateExecutableCardSourceKeywordTokenCompiles(t *testing.T) {
 	}
 }
 
+// TestGenerateChasmSkulkerSource verifies the death-triggered token creation
+// whose count equals the dying permanent's +1/+1 counters (Chasm Skulker),
+// including the islandwalk rider on the synthesized Squid token. The token count
+// reads the event permanent's counters (last-known information at death).
+func TestGenerateChasmSkulkerSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:     "Chasm Skulker",
+		Layout:   "normal",
+		ManaCost: "{2}{U}",
+		TypeLine: "Creature — Squid Horror",
+		OracleText: "Whenever you draw a card, put a +1/+1 counter on Chasm Skulker.\n" +
+			"When Chasm Skulker dies, create X 1/1 blue Squid creature tokens with islandwalk, where X is the number of +1/+1 counters on it.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Kind:        game.DynamicAmountObjectCounters,",
+		"CounterKind: counter.PlusOnePlusOne,",
+		"Object:      game.EventPermanentReference(),",
+		"game.IslandwalkStaticBody,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestLowerNamedArtifactToken(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

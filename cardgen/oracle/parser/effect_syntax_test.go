@@ -734,6 +734,10 @@ func TestParseCreateTokenMultiKeywordExactness(t *testing.T) {
 		{"Create a 4/4 white Angel creature token with flying, vigilance, and indestructible.", true},
 		// Single keyword stays exact (regression guard).
 		{"Create a 4/4 red Dragon creature token with flying.", true},
+		// Landwalk evasion keywords on a created token reconstruct exactly.
+		{"Create a 1/1 blue Squid creature token with islandwalk.", true},
+		{"Create two 2/2 black Horror creature tokens with swampwalk.", true},
+		{"Create a 3/3 green Beast creature token with forestwalk and trample.", true},
 		// A keyword the token model does not grant fails the whole rider closed.
 		{"Create a 3/3 green Beast creature token with trample and devour 2.", false},
 	}

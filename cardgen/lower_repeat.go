@@ -30,7 +30,7 @@ func lowerRepeatProcessSpell(cardName string, ctx contentCtx, syntax *parser.Abi
 		len(effect.RepeatBody) != 1 {
 		return unsupported()
 	}
-	times, ok := createTokenAmount(ctx, &effect)
+	times, ok := createTokenAmount(ctx, &effect, game.ObjectReference{})
 	if !ok {
 		return unsupported()
 	}
