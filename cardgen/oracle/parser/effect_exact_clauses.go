@@ -520,7 +520,32 @@ func exactDirectTargetEffectSyntax(effect *EffectSyntax, verb string) bool {
 // the effect's own clause text never carries it; any other trailing clause
 // leaves the text non-exact and fails closed.
 func exactCopyStackObjectEffectSyntax(effect *EffectSyntax) bool {
-	return exactDirectTargetEffectSyntax(effect, "Copy")
+	return exactDirectTargetEffectSyntax(effect, "Copy") ||
+		exactCopyReferencedSpellEffectSyntax(effect)
+}
+
+// exactCopyReferencedSpellEffectSyntax recognizes the resolving effect "Copy
+// that spell." / "Copy it.", whose copy source is a back-reference to the
+// triggering spell rather than a chosen target ("Whenever you cast a spell ...,
+// copy that spell.", Reflections of Littjara). It requires no targets and a
+// single "that spell"/"it" reference; the compiler binds that reference to the
+// triggering spell and lowering copies it. The optional "You may choose new
+// targets for the copy." rider folds separately once this clause is exact.
+func exactCopyReferencedSpellEffectSyntax(effect *EffectSyntax) bool {
+	if len(effect.Targets) != 0 || len(effect.References) != 1 {
+		return false
+	}
+	reference := effect.References[0]
+	switch reference.Kind {
+	case ReferenceThatObject:
+	case ReferencePronoun:
+		if reference.Pronoun != PronounIt {
+			return false
+		}
+	default:
+		return false
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), "Copy "+reference.Text+".")
 }
 
 // exactChooseNewTargetsEffectSyntax recognizes the retarget effect "[You may]

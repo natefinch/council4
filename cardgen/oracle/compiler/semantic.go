@@ -1992,6 +1992,11 @@ const (
 	// subject. At runtime EventPlayerReference() resolves this to the player
 	// identified by the event.
 	ReferenceBindingEventPlayer
+	// ReferenceBindingEventStackObject binds "that spell"/"it" in a spell-cast
+	// trigger body to the spell that was cast. At runtime
+	// EventStackObjectReference() resolves this to the triggering event's stack
+	// object ("Whenever you cast a spell ..., copy that spell.").
+	ReferenceBindingEventStackObject
 )
 
 // CompiledReference records a source-spanned reference and its bound referent.

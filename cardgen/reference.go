@@ -43,6 +43,11 @@ func lowerObjectReference(reference compiler.CompiledReference, ctx referenceLow
 			return game.ObjectReference{}, false
 		}
 		result = game.EventPermanentReference()
+	case compiler.ReferenceBindingEventStackObject:
+		if !ctx.AllowEvent {
+			return game.ObjectReference{}, false
+		}
+		result = game.EventStackObjectReference()
 	case compiler.ReferenceBindingPriorInstructionResult:
 		if ctx.PriorLinkedKey == "" || reference.PriorInstruction != ctx.PriorInstruction {
 			return game.ObjectReference{}, false

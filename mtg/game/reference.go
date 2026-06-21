@@ -41,6 +41,11 @@ const (
 	// creature of a "becomes blocked by" event. It backs flanking's penalty on
 	// the blocker (CR 702.25).
 	ObjectReferenceEventRelatedPermanent
+	// ObjectReferenceEventStackObject references the stack object named by the
+	// triggering event (its StackObjectID), such as the spell that was cast for
+	// a spell-cast trigger. It backs "Whenever you cast a spell ..., copy that
+	// spell." copy-the-triggering-spell effects (Reflections of Littjara).
+	ObjectReferenceEventStackObject
 )
 
 // ObjectReference describes how a rules effect finds an object at resolution.
@@ -137,6 +142,13 @@ func EventRelatedPermanentReference() ObjectReference {
 	return ObjectReference{kind: ObjectReferenceEventRelatedPermanent}
 }
 
+// EventStackObjectReference references the stack object named by the resolving
+// stack object's triggering event (its StackObjectID), such as the spell cast
+// for a spell-cast trigger ("copy that spell").
+func EventStackObjectReference() ObjectReference {
+	return ObjectReference{kind: ObjectReferenceEventStackObject}
+}
+
 // Validate reports structural problems with an ObjectReference that represent
 // card-definition bugs. It checks kind/field consistency only; target-index
 // bounds depend on the surrounding TargetSpec list and are checked by
@@ -208,6 +220,10 @@ func (r ObjectReference) Validate() []string {
 	case ObjectReferenceEventRelatedPermanent:
 		if r.targetIndex != 0 || r.linkID != "" {
 			return []string{"event related permanent reference must not set TargetIndex or LinkID"}
+		}
+	case ObjectReferenceEventStackObject:
+		if r.targetIndex != 0 || r.linkID != "" {
+			return []string{"event stack object reference must not set TargetIndex or LinkID"}
 		}
 	case ObjectReferenceNone:
 		return []string{"object reference has no kind"}
