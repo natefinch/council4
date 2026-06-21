@@ -660,6 +660,14 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 		}
 		specFields = append(specFields, fmt.Sprintf("SubtypesAny: []types.Sub{%s},", subtypes))
 	}
+	if len(value.Spec.ColorsAny) > 0 {
+		colorLits, err := colorValueLiterals(value.Spec.ColorsAny)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importColor)
+		specFields = append(specFields, fmt.Sprintf("ColorsAny: []color.Color{%s},", colorLits))
+	}
 	if value.Spec.MaxManaValue.Exists {
 		ctx.need(importOpt)
 		specFields = append(specFields, fmt.Sprintf("MaxManaValue: opt.Val(%d),", value.Spec.MaxManaValue.Val))

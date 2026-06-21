@@ -586,10 +586,10 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 		selector.MatchPower ||
 		selector.MatchToughness ||
 		len(selector.ExcludedTypes()) != 0 ||
-		len(selector.ColorsAny()) != 0 ||
 		len(selector.ExcludedColors()) != 0 {
 		return game.SearchSpec{}, false
 	}
+	spec.ColorsAny = slices.Clone(selector.ColorsAny())
 	switch selector.Kind {
 	case compiler.SelectorCard:
 	case compiler.SelectorLand:

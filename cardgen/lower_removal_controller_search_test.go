@@ -233,10 +233,10 @@ func TestLowerRemovalThenControllerSearchFailsClosed(t *testing.T) {
 			oracle: "Exile target creature. You may search your library for a basic land card, put it onto the battlefield tapped, then shuffle.",
 		},
 		{
-			// A color filter the runtime SearchSpec cannot express must keep the
-			// whole body unsupported.
+			// A multi-type union the single-type runtime SearchSpec cannot express
+			// must keep the whole body unsupported.
 			name:   "unsupported search filter",
-			oracle: "Exile target creature. Its controller may search their library for a green creature card, put it onto the battlefield, then shuffle.",
+			oracle: "Exile target creature. Its controller may search their library for an artifact creature card, put it onto the battlefield, then shuffle.",
 		},
 	}
 	for _, tc := range cases {
