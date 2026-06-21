@@ -524,10 +524,11 @@ func lowerChooseNewTargetsSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 	}.Ability(), nil
 }
 
-// lowerCopyStackObjectSpell lowers "Copy target [activated or ]triggered ability
-// you control[. You may choose new targets for the copy]." to a single
-// CopyStackObject primitive over a stack-object target. The optional retarget
-// rider (folded by the parser into CopyMayChooseNewTargets) sets
+// lowerCopyStackObjectSpell lowers "Copy target <activated ability|triggered
+// ability|spell, activated ability, or triggered ability|instant or sorcery
+// spell|...> [you control][. You may choose new targets for the copy]." to a
+// single CopyStackObject primitive over a stack-object target. The optional
+// retarget rider (folded by the parser into CopyMayChooseNewTargets) sets
 // MayChooseNewTargets so the resolving controller may re-choose the copy's
 // targets. Any condition, extra effect, or unrecognized rider leaves the body
 // unrecognized so it fails closed.
@@ -536,7 +537,7 @@ func lowerCopyStackObjectSpell(ctx contentCtx) (game.AbilityContent, *shared.Dia
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported copy effect",
-			"the executable source backend supports only exact copy of one target activated or triggered ability",
+			"the executable source backend supports only exact copy of one target spell or activated/triggered ability",
 		)
 	}
 	if len(ctx.content.Effects) != 1 ||
@@ -561,7 +562,7 @@ func lowerCopyStackObjectSpell(ctx contentCtx) (game.AbilityContent, *shared.Dia
 		effect.Duration != compiler.DurationNone {
 		return unsupported()
 	}
-	targetSpec, ok := counterAbilityTargetSpec(ctx.content.Targets[0])
+	targetSpec, ok := counterTargetSpec(ctx.content.Targets[0])
 	if !ok {
 		return unsupported()
 	}
