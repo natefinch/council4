@@ -331,3 +331,46 @@ func TestExpandBushidoKeywordLeavesOtherTextAlone(t *testing.T) {
 		t.Fatalf("rewrote rankless keyword: %q", got)
 	}
 }
+
+func TestExpandAnnihilatorKeyword(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		source string
+		want   string
+	}{
+		{
+			"ulamog's crusher",
+			"Annihilator 2 (Whenever this creature attacks, defending player sacrifices two permanents of their choice.)",
+			"Whenever this creature attacks, defending player sacrifices two permanents of their choice.",
+		},
+		{
+			"single permanent",
+			"Annihilator 1",
+			"Whenever this creature attacks, defending player sacrifices a permanent of their choice.",
+		},
+		{
+			"bare keyword four",
+			"Annihilator 4",
+			"Whenever this creature attacks, defending player sacrifices four permanents of their choice.",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			if got := expandAnnihilatorKeyword(test.source); got != test.want {
+				t.Fatalf("expandAnnihilatorKeyword = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+func TestExpandAnnihilatorKeywordLeavesOtherTextAlone(t *testing.T) {
+	t.Parallel()
+	if got := expandAnnihilatorKeyword("Whenever Annihilator attacks, draw a card."); got != "Whenever Annihilator attacks, draw a card." {
+		t.Fatalf("rewrote unrelated line: %q", got)
+	}
+	if got := expandAnnihilatorKeyword("Annihilator"); got != "Annihilator" {
+		t.Fatalf("rewrote rankless keyword: %q", got)
+	}
+}
