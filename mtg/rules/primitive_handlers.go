@@ -93,6 +93,7 @@ func handleDestroy(r *effectResolver, prim game.Destroy) effectResolved {
 			destroyed = append(destroyed, permanent)
 		}
 		res.succeeded = movePermanentsToZoneSimultaneously(r.game, destroyed, zone.Graveyard)
+		res.amount = len(destroyed)
 		return res
 	}
 	permanent, ok := r.resolveObject(prim.Object)

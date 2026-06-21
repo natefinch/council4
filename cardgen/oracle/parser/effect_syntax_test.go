@@ -458,6 +458,49 @@ func TestParseDevotionDrawAmount(t *testing.T) {
 	}
 }
 
+func TestParseDestroyedThisWayAmount(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source     string
+		dynamic    bool
+		multiplier int
+	}{
+		// "for each <noun> destroyed this way" is the mass-destroy payoff amount;
+		// the gain/draw clause stays a single effect and captures the per-permanent
+		// multiplier.
+		{"You gain 1 life for each creature destroyed this way.", true, 1},
+		{"You gain 2 life for each permanent destroyed this way.", true, 2},
+		{"Draw a card for each permanent destroyed this way.", true, 1},
+		// A bare fixed life gain stays non-dynamic (regression guard).
+		{"You gain 1 life.", false, 0},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			gotDynamic := effects[0].Amount.DynamicKind == EffectDynamicAmountDestroyedThisWay
+			if gotDynamic != test.dynamic {
+				t.Fatalf("amount dynamic kind = %v, want DestroyedThisWay=%v", effects[0].Amount.DynamicKind, test.dynamic)
+			}
+			if test.dynamic {
+				if effects[0].Amount.DynamicForm != EffectDynamicAmountFormForEach {
+					t.Fatalf("amount form = %v, want ForEach", effects[0].Amount.DynamicForm)
+				}
+				if effects[0].Amount.Multiplier != test.multiplier {
+					t.Fatalf("amount multiplier = %d, want %d", effects[0].Amount.Multiplier, test.multiplier)
+				}
+				if !effects[0].Exact {
+					t.Fatal("effect Exact = false, want true so the sequence lowerer can attach the payoff")
+				}
+			}
+		})
+	}
+}
+
 func TestParseSpellsCastThisTurnAmount(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
