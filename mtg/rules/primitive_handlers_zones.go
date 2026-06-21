@@ -1145,6 +1145,20 @@ func playerHasCardsInHand(g *game.Game, playerID game.PlayerID) bool {
 	return ok && player.Hand.Size() > 0
 }
 
+// handleRepeatProcess resolves a "Repeat the following process X times. <body>"
+// loop (Torment of Hailfire): it evaluates the repeat count and re-resolves the
+// body content that many times. The body is re-resolved from scratch on each
+// iteration so any per-player or random choices it makes recur independently.
+func handleRepeatProcess(r *effectResolver, prim game.RepeatProcess) effectResolved {
+	res := effectResolved{accepted: true}
+	times := r.quantity(prim.Times)
+	for range times {
+		r.engine.resolveAbilityContentWithChoices(r.game, r.obj, prim.Body, r.agents, r.log)
+		res.succeeded = true
+	}
+	return res
+}
+
 // handlePunisherEachLoseLife resolves the "punisher" family ("Each opponent
 // loses N life unless that player sacrifices a permanent or discards a card."):
 // each affected player decides, in APNAP order, whether to take the life loss

@@ -108,6 +108,9 @@ func (PlayerWinsGame) Kind() PrimitiveKind { return PrimitivePlayerWinsGame }
 // Kind implements Primitive for PunisherEachLoseLife.
 func (PunisherEachLoseLife) Kind() PrimitiveKind { return PrimitivePunisherEachLoseLife }
 
+// Kind implements Primitive for RepeatProcess.
+func (RepeatProcess) Kind() PrimitiveKind { return PrimitiveRepeatProcess }
+
 // Kind implements Primitive for Exile.
 func (Exile) Kind() PrimitiveKind { return PrimitiveExile }
 
@@ -246,6 +249,7 @@ func (LoseLife) isPrimitive()                    {}
 func (PlayerLosesGame) isPrimitive()             {}
 func (PlayerWinsGame) isPrimitive()              {}
 func (PunisherEachLoseLife) isPrimitive()        {}
+func (RepeatProcess) isPrimitive()               {}
 func (Exile) isPrimitive()                       {}
 func (Bounce) isPrimitive()                      {}
 func (Sacrifice) isPrimitive()                   {}
@@ -364,6 +368,7 @@ func (p LoseLife) instructionRefs() primitiveRefs             { return quantityR
 func (PlayerLosesGame) instructionRefs() primitiveRefs        { return primitiveRefs{} }
 func (PlayerWinsGame) instructionRefs() primitiveRefs         { return primitiveRefs{} }
 func (p PunisherEachLoseLife) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
+func (p RepeatProcess) instructionRefs() primitiveRefs        { return quantityRefs(p.Times) }
 
 func (p Exile) instructionRefs() primitiveRefs {
 	return primitiveRefs{publishesLinked: p.ExileLinkedKey}

@@ -973,6 +973,7 @@ const (
 	EffectSpellsCantBeCountered
 	EffectEnterAsCopy
 	EffectPunisherLoseLife
+	EffectRepeatProcess
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1301,6 +1302,10 @@ type CompiledEffect struct {
 	// reads them with the effect's Selector for the sacrifice filter.
 	PunisherSacrifice bool
 	PunisherDiscard   bool
+	// RepeatBody carries the sub-effect(s) of a "Repeat the following process X
+	// times. <body>" loop (EffectRepeatProcess). Lowering lowers it to a nested
+	// AbilityContent executed Amount times; it is nil for every other effect.
+	RepeatBody []CompiledEffect
 }
 
 // CompiledManaSpendRider is the typed semantic form of a mana-spend rider.

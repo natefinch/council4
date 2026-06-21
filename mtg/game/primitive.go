@@ -83,10 +83,11 @@ const (
 	PrimitiveMassReturnFromGraveyard
 	PrimitivePlayerWinsGame
 	PrimitivePunisherEachLoseLife
+	PrimitiveRepeatProcess
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitivePunisherEachLoseLife) + 1
+const primitiveKindCount = int(PrimitiveRepeatProcess) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -627,6 +628,17 @@ type PunisherEachLoseLife struct {
 	AllowSacrifice     bool
 	SacrificeSelection Selection
 	AllowDiscard       bool
+}
+
+// RepeatProcess resolves Body a number of times equal to Times ("Repeat the
+// following process X times. <body>" — Torment of Hailfire), where X is the
+// resolving spell's chosen value of {X}. Body is a non-modal AbilityContent
+// holding the repeated sub-effect; it is re-resolved from scratch on each
+// iteration so any per-player or random choices recur independently. A Times of
+// zero or fewer resolves Body no times.
+type RepeatProcess struct {
+	Times Quantity
+	Body  AbilityContent
 }
 
 // Untap untaps one referenced permanent or permanents in a referenced group.
