@@ -78,6 +78,7 @@ const (
 	Skulk
 	Evolve
 	Unleash
+	Fabricate
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.

@@ -480,6 +480,61 @@ func CumulativeUpkeepTriggeredAbility(manaCost cost.Mana) TriggeredAbility {
 	}
 }
 
+// fabricateServoToken is the canonical 1/1 colorless Servo artifact creature
+// token created by the Fabricate keyword.
+var fabricateServoToken = &CardDef{
+	CardFace: CardFace{
+		Name:      "Servo",
+		Types:     []types.Card{types.Artifact, types.Creature},
+		Subtypes:  []types.Sub{types.Servo},
+		Power:     opt.Val(PT{Value: 1}),
+		Toughness: opt.Val(PT{Value: 1}),
+	},
+}
+
+// FabricateTriggeredAbility builds the entry trigger for Fabricate N: a modal
+// choice to put N +1/+1 counters on this creature or create N Servo tokens.
+func FabricateTriggeredAbility(count int) TriggeredAbility {
+	return TriggeredAbility{
+		Text: fmt.Sprintf("Fabricate %d", count),
+		Trigger: TriggerCondition{
+			Type: TriggerWhen,
+			Pattern: TriggerPattern{
+				Event:  EventPermanentEnteredBattlefield,
+				Source: TriggerSourceSelf,
+			},
+		},
+		KeywordAbilities: []KeywordAbility{
+			FabricateKeyword{Count: count},
+		},
+		Content: AbilityContent{
+			Modes: []Mode{
+				{
+					Text: fmt.Sprintf("Put %d +1/+1 counters on it.", count),
+					Sequence: []Instruction{{
+						Primitive: AddCounter{
+							Amount:      Fixed(count),
+							Object:      EventPermanentReference(),
+							CounterKind: counter.PlusOnePlusOne,
+						},
+					}},
+				},
+				{
+					Text: fmt.Sprintf("Create %d 1/1 colorless Servo artifact creature tokens.", count),
+					Sequence: []Instruction{{
+						Primitive: CreateToken{
+							Amount: Fixed(count),
+							Source: TokenDef(fabricateServoToken),
+						},
+					}},
+				},
+			},
+			MinModes: 1,
+			MaxModes: 1,
+		},
+	}
+}
+
 // NinjutsuActivatedAbility builds the complete hand-zone activation template
 // for Ninjutsu with a mana cost.
 func NinjutsuActivatedAbility(manaCost cost.Mana) ActivatedAbility {
