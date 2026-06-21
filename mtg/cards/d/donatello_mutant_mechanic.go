@@ -132,6 +132,7 @@ var DonatelloMutantMechanic = &game.CardDef{
 								Source: game.CounterSourceSpec{
 									Kind: game.CounterSourceEventPermanent,
 								},
+								AllKinds: true,
 							},
 							Description: "move all counters from the triggering artifact to target",
 						},

@@ -78,6 +78,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return strings.EqualFold(exactEffectClauseText(effect), "Manifest dread.")
 	case EffectMill:
 		return exactCardCountEffectSyntax(effect, "Mill", "mills", true)
+	case EffectMoveCounters:
+		return exactMoveCountersEffectSyntax(effect)
 	case EffectModifyPT:
 		return exactModifyPTEffectSyntax(effect)
 	case EffectPut:
@@ -2367,6 +2369,43 @@ func exactGroupModifyPTBody(effect *EffectSyntax, prefix string) bool {
 	default:
 		return false
 	}
+}
+
+// exactMoveCountersEffectSyntax recognizes the supported counter-movement form:
+// moving counters off the source permanent onto a single target permanent
+// ("Move a +1/+1 counter from this creature onto target creature.", "Move all
+// counters from this permanent onto target creature."). The source is a single
+// self reference (the effect's own permanent — "this <object>" or the card's
+// own name), the destination is the single exact target, and the move is either
+// a single specific-kind counter (CounterKnown, Amount one) or the kind-agnostic
+// "all counters" form (MoveCountersAll). The "onto other creatures" group
+// distribution (Forgotten Ancient) carries no target and stays unrecognized.
+func exactMoveCountersEffectSyntax(effect *EffectSyntax) bool {
+	if len(effect.Targets) != 1 ||
+		!effect.Targets[0].Exact ||
+		effect.Targets[0].Cardinality.Max != 1 {
+		return false
+	}
+	source, ok := exactSelfSubjectReferenceText(effect.References)
+	if !ok {
+		return false
+	}
+	dest := effect.Targets[0].Text
+	text := exactEffectClauseText(effect)
+	if effect.MoveCountersAll {
+		return strings.EqualFold(
+			text,
+			fmt.Sprintf("Move all counters from %s onto %s.", source, dest),
+		)
+	}
+	if !effect.CounterKnown || !effect.Amount.Known || effect.Amount.Value != 1 {
+		return false
+	}
+	return strings.EqualFold(
+		text,
+		fmt.Sprintf("Move %s %s counter from %s onto %s.",
+			effectAmountSourceText(effect), effect.CounterKind.String(), source, dest),
+	)
 }
 
 func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {

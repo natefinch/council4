@@ -955,6 +955,8 @@ func effectWordKind(token shared.Token) EffectKind {
 		return EffectManifest
 	case "mill", "mills":
 		return EffectMill
+	case "move", "moves":
+		return EffectMoveCounters
 	case "get", "gets":
 		return EffectModifyPT
 	case "put", "puts":

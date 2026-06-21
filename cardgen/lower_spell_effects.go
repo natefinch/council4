@@ -713,6 +713,59 @@ func lowerReferencedCounterPlacement(ctx contentCtx) (game.AbilityContent, *shar
 	}.Ability(), nil
 }
 
+// lowerMoveCountersSpell lowers the counter-movement family ("Move a +1/+1
+// counter from this creature onto target creature.", "Move all counters from
+// this permanent onto target creature.") into a single MoveCounters instruction
+// that reads counters from the ability's own source permanent
+// (CounterSourceSelf) and places them on the single target. The specific-kind
+// form moves one counter of the recognized kind; the kind-agnostic "all
+// counters" form moves every counter regardless of kind. It fails closed for any
+// shape the parser did not recognize as exact, any non-controller or negated
+// effect, a missing or non-source self reference, a non-single target, and any
+// conditional or modal content.
+func lowerMoveCountersSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		len(ctx.content.Targets) != 1 ||
+		ctx.content.Targets[0].Cardinality.Min != 1 ||
+		ctx.content.Targets[0].Cardinality.Max != 1 ||
+		len(ctx.content.References) != 1 ||
+		ctx.content.References[0].Binding != compiler.ReferenceBindingSource ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	target, ok := permanentTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	move := game.MoveCounters{
+		Object: game.TargetPermanentReference(0),
+		Source: game.CounterSourceSpec{Kind: game.CounterSourceSelf},
+	}
+	if effect.MoveCountersAll {
+		move.AllKinds = true
+	} else {
+		if !effect.CounterKindKnown ||
+			!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
+			effect.CounterKind.PlayerOnly() ||
+			!effect.Amount.Known ||
+			effect.Amount.Value != 1 {
+			return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+		}
+		move.Amount = game.Fixed(effect.Amount.Value)
+		move.CounterKind = effect.CounterKind
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{target},
+		Sequence: []game.Instruction{{
+			Primitive: move,
+		}},
+	}.Ability(), nil
+}
+
 func unsupportedCounterPlacementDiagnostic(ctx contentCtx) *shared.Diagnostic {
 	return contentDiagnostic(
 		ctx,

@@ -407,7 +407,7 @@ func validatePlayerGroupReference(ref PlayerGroupReference) error {
 
 func validateCounterSourceSpec(source CounterSourceSpec, targets []TargetSpec, checkTargets bool) error {
 	switch source.Kind {
-	case CounterSourceNone, CounterSourceEventPermanent:
+	case CounterSourceNone, CounterSourceEventPermanent, CounterSourceSelf:
 		return nil
 	case CounterSourceTarget:
 		return validateObjectReference(source.Object, targets, checkTargets)

@@ -221,11 +221,24 @@ func handleMoveCounters(r *effectResolver, prim game.MoveCounters) effectResolve
 	if !ok || counters.IsEmpty() || source != nil && source.ObjectID == destination.ObjectID {
 		return res
 	}
-	for kind, amount := range counters.All() {
-		addCountersToPermanentControlledBy(r.game, stackObjectController(r.obj), destination, kind, amount)
-		if source != nil {
-			source.Counters.Remove(kind, amount)
+	if prim.AllKinds {
+		for kind, amount := range counters.All() {
+			addCountersToPermanentControlledBy(r.game, stackObjectController(r.obj), destination, kind, amount)
+			if source != nil {
+				source.Counters.Remove(kind, amount)
+			}
 		}
+		res.succeeded = true
+		return res
+	}
+	available := counters.Get(prim.CounterKind)
+	moved := min(available, res.amount)
+	if moved <= 0 {
+		return res
+	}
+	addCountersToPermanentControlledBy(r.game, stackObjectController(r.obj), destination, prim.CounterKind, moved)
+	if source != nil {
+		source.Counters.Remove(prim.CounterKind, moved)
 	}
 	res.succeeded = true
 	return res

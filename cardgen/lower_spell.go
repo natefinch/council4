@@ -1090,6 +1090,8 @@ func lowerImmediateSingleEffectSpell(
 		return lowerReturnSpell(ctx)
 	case compiler.EffectPut:
 		return lowerPutEffectSpell(ctx)
+	case compiler.EffectMoveCounters:
+		return lowerMoveCountersSpell(ctx)
 	case compiler.EffectModifyPT:
 		return lowerFixedModifyPTSpell(ctx, syntax)
 	case compiler.EffectDouble:

@@ -680,6 +680,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			CounterKind:               counterKind,
 			CounterKnown:              counterKnown,
 			CounterRecipientAttached:  counterRecipientAttached(kind, counterKnown, clause),
+			MoveCountersAll:           kind == EffectMoveCounters && moveAllCountersClause(clause),
 			FromZone:                  firstZone(atoms, span, ZoneRoleFrom),
 			ToZone:                    toZone,
 			Destination:               parseEffectDestination(ownership),
@@ -3154,4 +3155,13 @@ func counterRecipientAttached(kind EffectKind, counterKnown bool, clause []share
 		return false
 	}
 	return effectHasTokenWords(clause, "on", "enchanted", "creature")
+}
+
+// moveAllCountersClause reports the kind-agnostic "move all counters" form,
+// where every counter on the source moves regardless of kind ("Move all
+// counters from this permanent onto target creature."). It anchors on the
+// literal "all counters" run so the specific-kind form ("a +1/+1 counter")
+// keeps MoveCountersAll false and lowers through its named-kind path.
+func moveAllCountersClause(clause []shared.Token) bool {
+	return effectHasTokenWords(clause, "all", "counters")
 }

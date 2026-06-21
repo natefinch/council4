@@ -562,6 +562,10 @@ const (
 	// caused a triggered ability to trigger. If that permanent has left the
 	// battlefield, mtg/rules reads its last-known information.
 	CounterSourceEventPermanent
+
+	// CounterSourceSelf reads counters from the source permanent of the effect
+	// itself ("Move a +1/+1 counter from this creature onto target creature.").
+	CounterSourceSelf
 )
 
 // CounterSourceSpec describes the source object for counter-moving effects.

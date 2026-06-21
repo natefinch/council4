@@ -243,12 +243,17 @@ type AddPlayerCounter struct {
 	CounterKind counter.Kind
 }
 
-// MoveCounters moves counters from a source to a target permanent.
+// MoveCounters moves counters from a source to a target permanent. When AllKinds
+// is set every counter on the source moves regardless of kind and Amount is
+// ignored ("Move all counters from this permanent onto target creature.");
+// otherwise only Amount counters of CounterKind move ("Move a +1/+1 counter from
+// this creature onto target creature.").
 type MoveCounters struct {
 	Amount      Quantity
 	Object      ObjectReference
 	CounterKind counter.Kind
 	Source      CounterSourceSpec
+	AllKinds    bool
 }
 
 // ApplyContinuous applies continuous effects to a target (or globally).

@@ -400,6 +400,51 @@ func (r Renderer) renderAddPlayerCounter(ctx *renderCtx, value *game.AddPlayerCo
 	}), nil
 }
 
+func (r Renderer) renderMoveCounters(ctx *renderCtx, value *game.MoveCounters) (string, error) {
+	object, err := r.renderObjectReference(value.Object)
+	if err != nil {
+		return "", err
+	}
+	source, err := renderCounterSourceSpec(value.Source)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{}
+	if !value.AllKinds {
+		amount, err := r.renderQuantity(ctx, value.Amount)
+		if err != nil {
+			return "", err
+		}
+		kind, err := renderCounterKind(value.CounterKind)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importCounter)
+		fields = append(fields,
+			fmt.Sprintf("Amount: %s,", amount),
+			fmt.Sprintf("Object: %s,", object),
+			fmt.Sprintf("CounterKind: %s,", kind),
+			fmt.Sprintf("Source: %s,", source),
+		)
+		return structLit("game.MoveCounters", fields), nil
+	}
+	fields = append(fields,
+		fmt.Sprintf("Object: %s,", object),
+		fmt.Sprintf("Source: %s,", source),
+		"AllKinds: true,",
+	)
+	return structLit("game.MoveCounters", fields), nil
+}
+
+func renderCounterSourceSpec(source game.CounterSourceSpec) (string, error) {
+	switch source.Kind {
+	case game.CounterSourceSelf:
+		return "game.CounterSourceSpec{Kind: game.CounterSourceSelf}", nil
+	default:
+		return "", fmt.Errorf("render: unsupported counter source kind %d", source.Kind)
+	}
+}
+
 func (r Renderer) renderGroupSourceDamage(ctx *renderCtx, primitive game.Primitive) (string, error) {
 	value, ok := primitive.(game.GroupSourceDamage)
 	if !ok {

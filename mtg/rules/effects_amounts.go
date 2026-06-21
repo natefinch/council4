@@ -574,6 +574,12 @@ func effectCounterSource(g *game.Game, obj *game.StackObject, source game.Counte
 		if snapshot, ok := lastKnownObject(g, obj.TriggerEvent.PermanentID); ok {
 			return cloneCounters(snapshot.Counters), nil, true
 		}
+	case game.CounterSourceSelf:
+		// "Move a +1/+1 counter from this creature onto target creature." reads
+		// counters from the ability's own source permanent.
+		if permanent, ok := permanentByObjectID(g, obj.SourceID); ok {
+			return cloneCounters(permanent.Counters), permanent, true
+		}
 	default:
 	}
 	return counter.Set{}, nil, false

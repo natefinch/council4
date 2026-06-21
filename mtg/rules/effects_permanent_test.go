@@ -882,6 +882,7 @@ func TestMoveCountersEffectMovesCountersBetweenTargets(t *testing.T) {
 			Kind:   game.CounterSourceTarget,
 			Object: game.TargetPermanentReference(0),
 		},
+		AllKinds: true,
 	}, []game.Target{
 		game.PermanentTarget(source.ObjectID),
 		game.PermanentTarget(destination.ObjectID),
@@ -900,6 +901,50 @@ func TestMoveCountersEffectMovesCountersBetweenTargets(t *testing.T) {
 	}
 	if got := destination.Counters.Get(counter.Charge); got != 1 {
 		t.Fatalf("destination charge counters = %d, want 1", got)
+	}
+}
+
+// TestMoveCountersFromSelfMovesOneNamedCounter covers the generated
+// counter-movement slice: "Move a +1/+1 counter from this creature onto target
+// creature." reads counters from the ability's own source permanent
+// (CounterSourceSelf), moving exactly one counter of the named kind and leaving
+// other kinds and the surplus +1/+1 counters on the source.
+func TestMoveCountersFromSelfMovesOneNamedCounter(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Source Steed",
+		Types: []types.Card{types.Creature}},
+	})
+	destination := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Destination Steed",
+		Types: []types.Card{types.Creature}},
+	})
+	source.Counters.Add(counter.PlusOnePlusOne, 2)
+	source.Counters.Add(counter.Charge, 1)
+	obj := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackActivatedAbility,
+		SourceID:   source.ObjectID,
+		Controller: game.Player1,
+		Targets:    []game.Target{game.PermanentTarget(destination.ObjectID)},
+	}
+	resolveInstruction(engine, g, obj, game.MoveCounters{
+		Amount:      game.Fixed(1),
+		Object:      game.TargetPermanentReference(0),
+		CounterKind: counter.PlusOnePlusOne,
+		Source:      game.CounterSourceSpec{Kind: game.CounterSourceSelf},
+	}, &TurnLog{})
+
+	if got := source.Counters.Get(counter.PlusOnePlusOne); got != 1 {
+		t.Fatalf("source +1/+1 counters = %d, want 1", got)
+	}
+	if got := source.Counters.Get(counter.Charge); got != 1 {
+		t.Fatalf("source charge counters = %d, want 1 (named-kind move leaves other kinds)", got)
+	}
+	if got := destination.Counters.Get(counter.PlusOnePlusOne); got != 1 {
+		t.Fatalf("destination +1/+1 counters = %d, want 1", got)
+	}
+	if got := destination.Counters.Get(counter.Charge); got != 0 {
+		t.Fatalf("destination charge counters = %d, want 0", got)
 	}
 }
 
