@@ -671,6 +671,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parsePassiveTokenDoublingEffects(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseEntersAsCopyEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDevourEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseTributeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseBecomeCopyEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawDoublingReplacement(sentence, tokens, atoms) },
@@ -3325,7 +3326,62 @@ func devourSentenceMultiplier(body []shared.Token) (int, bool) {
 	return 0, false
 }
 
-// becomes a copy of target land, except it has this ability.", Thespian's Stage;
+// parseTributeEffect recognizes the canonical as-enters replacement that the
+// printed "Tribute N" keyword expands to (CR 702.110): "As this creature enters,
+// an opponent of your choice may put N +1/+1 counters on it." The wording is
+// produced solely by expandTributeKeyword, so this matches that exact sentence
+// and recovers the +1/+1 counter count N; any other sentence fails closed.
+func parseTributeEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	body := semanticEffectTokens(tokens)
+	n, ok := tributeSentenceCount(body)
+	if !ok {
+		return nil, false
+	}
+	effect := EffectSyntax{
+		Kind:               EffectTribute,
+		Context:            EffectContextController,
+		Span:               sentence.Span,
+		ClauseSpan:         sentence.Span,
+		Text:               sentence.Text,
+		Tokens:             append([]shared.Token(nil), body...),
+		EntersTribute:      true,
+		EntersTributeCount: n,
+	}
+	effect.Exact = exactEffectSyntax(&effect)
+	return []EffectSyntax{effect}, true
+}
+
+// tributeSentenceCount matches the exact canonical Tribute expansion token
+// sequence and returns its +1/+1 counter count N. N is the integer that precedes
+// the "+1/+1 counters" phrase. Any deviation from the canonical wording fails
+// closed.
+func tributeSentenceCount(body []shared.Token) (int, bool) {
+	words := normalizedWords(body)
+	expected := []string{
+		"as", "this", "creature", "enters",
+		"an", "opponent", "of", "your", "choice", "may", "put",
+		"counters", "on", "it",
+	}
+	if !slices.Equal(words, expected) {
+		return 0, false
+	}
+	for i := 0; i+5 < len(body); i++ {
+		if body[i].Kind == shared.Integer &&
+			body[i+1].Kind == shared.Plus &&
+			body[i+2].Kind == shared.Integer && body[i+2].Text == "1" &&
+			body[i+3].Kind == shared.Slash &&
+			body[i+4].Kind == shared.Plus &&
+			body[i+5].Kind == shared.Integer && body[i+5].Text == "1" {
+			n, err := strconv.Atoi(body[i].Text)
+			if err != nil || n <= 0 {
+				return 0, false
+			}
+			return n, true
+		}
+	}
+	return 0, false
+}
+
 // "This artifact becomes a copy of target ... until end of turn.", Mirage
 // Mirror; CR 706). The copied-permanent target is left as the ordinary "target"
 // selector for the target machinery to extract; only the "until end of turn"

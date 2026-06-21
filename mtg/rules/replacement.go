@@ -398,6 +398,9 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 		if replacement.EntryDevourMultiplier > 0 {
 			applyEntryDevour(ctx, g, permanent, replacement.Controller, replacement.EntryDevourMultiplier)
 		}
+		if replacement.EntryTributeCount > 0 {
+			applyEntryTribute(ctx, g, permanent, replacement.Controller, replacement.EntryTributeCount)
+		}
 		if replacement.EntersAsCopy {
 			applyEntersAsCopy(ctx, g, permanent, replacement)
 		}
@@ -575,6 +578,62 @@ func applyEntryDevour(ctx enterBattlefieldContext, g *game.Game, permanent *game
 	}
 	sacrificePermanentsSimultaneously(g, sacrificed)
 	addCountersToPermanent(g, permanent, counter.PlusOnePlusOne, multiplier*len(sacrificed))
+}
+
+// applyEntryTribute resolves the Tribute keyword for an entering permanent (CR
+// 702.110): an opponent of the controller's choice may put count +1/+1 counters
+// on it as it enters. The controller first chooses which opponent (when more
+// than one is alive); that opponent then decides whether to add the counters.
+// Adding them sets the permanent's TributePaid flag so a paired "if tribute
+// wasn't paid" intervening-if can react. Declining (or having no opponent) leaves
+// the flag unset.
+func applyEntryTribute(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, controller game.PlayerID, count int) {
+	engine := ctx.engine
+	if engine == nil {
+		engine = NewEngine(nil)
+	}
+	opponents := aliveOpponents(g, controller)
+	if len(opponents) == 0 {
+		return
+	}
+	chosenOpponent := opponents[0]
+	if len(opponents) > 1 {
+		options := make([]game.ChoiceOption, len(opponents))
+		for i, opponent := range opponents {
+			options[i] = game.ChoiceOption{Index: i, Label: fmt.Sprintf("Player %d", opponent+1)}
+		}
+		request := game.ChoiceRequest{
+			Kind:             game.ChoiceModal,
+			Player:           controller,
+			Prompt:           "Tribute: choose an opponent.",
+			Options:          options,
+			MinChoices:       1,
+			MaxChoices:       1,
+			DefaultSelection: []int{0},
+		}
+		selected := engine.chooseChoice(g, ctx.agents, request, ctx.log)
+		if len(selected) == 1 && selected[0] >= 0 && selected[0] < len(opponents) {
+			chosenOpponent = opponents[selected[0]]
+		}
+	}
+	request := game.ChoiceRequest{
+		Kind:   game.ChoiceModal,
+		Player: chosenOpponent,
+		Prompt: fmt.Sprintf("Tribute: put %d +1/+1 counters on it, or decline.", count),
+		Options: []game.ChoiceOption{
+			{Index: 0, Label: "Put the counters on it"},
+			{Index: 1, Label: "Decline"},
+		},
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: []int{0},
+	}
+	selected := engine.chooseChoice(g, ctx.agents, request, ctx.log)
+	if len(selected) == 1 && selected[0] == 1 {
+		return
+	}
+	addCountersToPermanent(g, permanent, counter.PlusOnePlusOne, count)
+	permanent.TributePaid = true
 }
 
 // applyEntersAsCopy has the entering permanent enter as a copy of a permanent

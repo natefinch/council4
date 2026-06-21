@@ -62,6 +62,9 @@ func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering,
 	if replacementAbility, handled, diagnostic := lowerDevourReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
+	if replacementAbility, handled, diagnostic := lowerTributeReplacement(ability); handled || diagnostic != nil {
+		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+	}
 	if replacementAbility, handled, diagnostic := lowerGroupEntersTappedReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
@@ -1367,6 +1370,40 @@ func lowerDevourReplacement(ability compiler.CompiledAbility) (game.ReplacementA
 		return unsupported("the executable source backend supports only the exact unconditional self devour replacement")
 	}
 	return game.DevourReplacement(ability.Text, effect.EntersDevourMultiplier), true, nil
+}
+
+// lowerTributeReplacement lowers the Tribute as-enters replacement (CR 702.110)
+// produced by the keyword expansion. It accepts only the exact unconditional
+// self replacement (a single EntersTribute effect with a positive count and no
+// targets, conditions, cost, or trigger) and builds a game.TributeReplacement;
+// anything else keeps the card unsupported.
+func lowerTributeReplacement(ability compiler.CompiledAbility) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+	tributeIndex := -1
+	for i := range ability.Content.Effects {
+		if ability.Content.Effects[i].EntersTribute {
+			tributeIndex = i
+			break
+		}
+	}
+	if tributeIndex < 0 {
+		return game.ReplacementAbility{}, false, nil
+	}
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(ability, "unsupported tribute replacement", detail)
+	}
+	effect := ability.Content.Effects[tributeIndex]
+	if len(ability.Content.Effects) != 1 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		effect.Negated ||
+		effect.EntersTributeCount <= 0 ||
+		!allReferencesBindToSource(ability.Content.References) {
+		return unsupported("the executable source backend supports only the exact unconditional self tribute replacement")
+	}
+	return game.TributeReplacement(ability.Text, effect.EntersTributeCount), true, nil
 }
 
 func lowerEntersAsCopyReplacement(ability compiler.CompiledAbility) (game.ReplacementAbility, bool, *shared.Diagnostic) {

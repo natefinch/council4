@@ -119,6 +119,8 @@ func exactEffectSyntaxTail(effect *EffectSyntax) bool {
 	switch effect.Kind {
 	case EffectDevour:
 		return effect.EntersDevour && effect.EntersDevourMultiplier > 0
+	case EffectTribute:
+		return effect.EntersTribute && effect.EntersTributeCount > 0
 	case EffectSacrifice:
 		return exactDirectPronounEffectSyntax(effect, "Sacrifice it.") ||
 			exactSacrificeChoiceEffectSyntax(effect)
