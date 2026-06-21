@@ -683,6 +683,15 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 			})
 		}
 		return true
+	case compiler.StaticPlayerRuleCastThisFromGraveyard:
+		body.ZoneOfFunction = zone.Graveyard
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectCastFromZone,
+			AffectedPlayer: game.PlayerYou,
+			CastFromZone:   zone.Graveyard,
+			AffectedSource: true,
+		})
+		return true
 	default:
 		return false
 	}

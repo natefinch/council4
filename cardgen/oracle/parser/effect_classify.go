@@ -781,6 +781,15 @@ func castSpellsFromLibraryTopAt(tokens []shared.Token, index int) bool {
 	return effectWordsAt(tokens, i, "from", "the", "top", "of", "your", "library")
 }
 
+// castThisFromGraveyardAt reports whether the "cast" verb at index begins the
+// self-scoped cast-from-graveyard static permission "cast this card from your
+// graveyard" (Gravecrawler, Hogaak). That phrase is a continuous player-rule
+// static, not a cast effect, so the effect classifier must not treat it as an
+// EffectCast and let the static-declaration path recognize it.
+func castThisFromGraveyardAt(tokens []shared.Token, index int) bool {
+	return effectWordsAt(tokens, index, "cast", "this", "card", "from", "your", "graveyard")
+}
+
 func resolvingClauseEnd(tokens []shared.Token, indices []int, effectIndex int) int {
 	start := indices[effectIndex] + 1
 	end := len(tokens)
@@ -924,6 +933,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 	case kind == EffectCast && castDuringMainPhaseConditionAt(tokens, index):
 		return EffectUnknown
 	case kind == EffectCast && castSpellsFromLibraryTopAt(tokens, index):
+		return EffectUnknown
+	case kind == EffectCast && castThisFromGraveyardAt(tokens, index):
 		return EffectUnknown
 	case kind == EffectCounter && !counterVerbAt(tokens, index):
 		return EffectUnknown
