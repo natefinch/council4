@@ -29,6 +29,10 @@ const (
 	// AdditionalDynamicHandSize is the number of cards in the paying player's
 	// hand, backing a "discard your hand" cost (Lion's Eye Diamond).
 	AdditionalDynamicHandSize
+	// AdditionalDynamicLifeGainedThisTurn is the amount of life the paying player
+	// has gained so far this turn, backing a "pay X life, where X is the amount
+	// of life you gained this turn" cost (Tivash, Gloom Summoner).
+	AdditionalDynamicLifeGainedThisTurn
 )
 
 // SubtypeSet holds the one or two alternative subtypes supported by a card

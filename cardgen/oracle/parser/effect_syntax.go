@@ -28,6 +28,7 @@ func emitResolvingSyntax(abilities []Ability) {
 			abilities[i].TriggerFrequency,
 			abilities[i].SourceAbilityCostReduction,
 		)
+		attachTokenGrantedAbilities(&abilities[i])
 		recognizeControllerOptionalPaymentSequence(&abilities[i])
 		recognizeOptionalManaPaymentBenefitSequence(&abilities[i])
 		recognizeEventPlayerOptionalPaymentSequence(&abilities[i])
@@ -53,6 +54,63 @@ func sentencesHaveImpulseExile(sentences []Sentence) bool {
 	return len(sentences) == 2 &&
 		len(sentences[0].Effects) == 1 &&
 		sentences[0].Effects[0].Kind == EffectImpulseExile
+}
+
+// attachTokenGrantedAbilities binds each quoted ability captured on the ability
+// ("... creature token with \"When this token dies, you gain 1 life.\"") to the
+// create-token effect whose clause contains it, parsing the quoted body through
+// the same pipeline so downstream layers lower it from the typed inner document.
+// It re-evaluates the affected effect's exactness so the reconstructed "... token
+// with" rider is byte-checked. A quoted body that fails to parse, or that no
+// single create clause contains, is left unattached so the create fails closed.
+func attachTokenGrantedAbilities(ability *Ability) {
+	if len(ability.Quoted) == 0 {
+		return
+	}
+	for q := range ability.Quoted {
+		quoted := ability.Quoted[q]
+		effect := createEffectContainingSpan(ability, quoted.Span)
+		if effect == nil || effect.TokenGrantedAbility != nil {
+			continue
+		}
+		granted, ok := parseStaticGrantedAbility(quoted)
+		if !ok {
+			continue
+		}
+		// Only a quoted triggered ability ("When this token dies, ...") attaches
+		// to the created token. Static, activated, and mana granted abilities stay
+		// fail-closed pending dedicated lowering support, so the create reconstructs
+		// only when the rider is a triggered ability the downstream layers handle.
+		if len(granted.document.Abilities) != 1 ||
+			granted.document.Abilities[0].Kind != AbilityTriggered {
+			continue
+		}
+		stored := granted
+		effect.TokenGrantedAbility = &stored
+		effect.Exact = exactEffectSyntax(effect)
+	}
+}
+
+// createEffectContainingSpan returns the lone create-token effect whose clause
+// contains span. It returns nil when no create clause contains span, or when
+// more than one might, so an ambiguous granted-ability binding fails closed.
+func createEffectContainingSpan(ability *Ability, span shared.Span) *EffectSyntax {
+	var match *EffectSyntax
+	for i := range ability.Sentences {
+		for j := range ability.Sentences[i].Effects {
+			effect := &ability.Sentences[i].Effects[j]
+			if effect.Kind != EffectCreate ||
+				span.Start.Offset < effect.ClauseSpan.Start.Offset ||
+				span.End.Offset > effect.Span.End.Offset {
+				continue
+			}
+			if match != nil {
+				return nil
+			}
+			match = effect
+		}
+	}
+	return match
 }
 
 func emitSentenceResolvingSyntax(
@@ -799,6 +857,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			}
 		}
 		tokenPower, tokenToughness, tokenPTKnown := parseTokenPowerToughness(kind, clause)
+		tokenPTVariableX := parseTokenPTVariableX(kind, clause)
 		amount := parseEffectAmount(kind, clause, atoms)
 		if forEach, ok := parseCreateForEachAmount(kind, context, tokenPTKnown, tokens[ownershipStart:tokenIndex], amount, atoms); ok {
 			amount = forEach
@@ -862,6 +921,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			TokenPower:                tokenPower,
 			TokenToughness:            tokenToughness,
 			TokenPTKnown:              tokenPTKnown,
+			TokenPTVariableX:          tokenPTVariableX,
 			TokenKeywords:             parseTokenKeywords(kind, clause, atoms),
 			TokenName:                 parseTokenName(kind, clause),
 			TokenChoice:               parseTokenChoice(kind, clause),

@@ -54,6 +54,10 @@ const (
 	// PayLifeDynamicCommanderColorIdentityCount recognizes "the number of
 	// colors in your commanders' color identity" (War Room).
 	PayLifeDynamicCommanderColorIdentityCount
+	// PayLifeDynamicLifeGainedThisTurn recognizes "X, where X is the amount of
+	// life you gained this turn" as the value of a "pay X life" cost (Tivash,
+	// Gloom Summoner).
+	PayLifeDynamicLifeGainedThisTurn
 )
 
 // Cost is the ordered, source-spanned typed cost the parser recognizes before an

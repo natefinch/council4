@@ -372,6 +372,16 @@ type CreateToken struct {
 	EntryTapped    bool
 	EntryAttacking bool
 
+	// Power and Toughness, when set, override the source definition's printed
+	// power and toughness with a dynamic amount evaluated once at creation
+	// ("create an X/X ... token, where X is the amount of life you gained this
+	// turn."). Both are set together; the handler clones the token definition and
+	// fixes its power and toughness to the resolved value so the token keeps that
+	// size for its lifetime. They are unset for tokens with a printed
+	// power/toughness.
+	Power     opt.V[Quantity]
+	Toughness opt.V[Quantity]
+
 	// PublishLinked, when set, remembers each created token as an object-scoped
 	// linked object so a later instruction can reference it ("create a 0/0 black
 	// Phyrexian Germ creature token, then attach this Equipment to it.", Living

@@ -107,6 +107,26 @@ func parseTokenPowerToughness(kind EffectKind, tokens []shared.Token) (power, to
 	return 0, 0, false
 }
 
+// parseTokenPTVariableX reports a created token whose printed power and
+// toughness are both the variable "X" ("an X/X ... token"): a word "X", a
+// slash, and a word "X". The actual value of X is bound elsewhere in the
+// ability ("where X is <dynamic>"); this only records that the token's P/T is
+// the variable rather than fixed integers.
+func parseTokenPTVariableX(kind EffectKind, tokens []shared.Token) bool {
+	if kind != EffectCreate {
+		return false
+	}
+	for i := 0; i+2 < len(tokens); i++ {
+		if tokens[i+1].Kind != shared.Slash ||
+			!equalWord(tokens[i], "X") ||
+			!equalWord(tokens[i+2], "X") {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
 // parseTokenKeywords returns, in source order, every recognized keyword name in a
 // create clause ("with menace and reach" -> [Menace, Reach]). It scans only the
 // effect clause, so each returned keyword is present in that clause's text; the
