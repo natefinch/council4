@@ -151,6 +151,7 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		SubtypeFromChosenType:  syntax.SubtypeFromChosenType,
 		ConjunctiveTypes:       syntax.ConjunctiveTypes,
 		RequiredName:           syntax.RequiredName,
+		EnteredThisTurn:        syntax.EnteredThisTurn,
 	}
 	// A required card-type union is always kept. A single required card type is
 	// kept for a spell selection ("counter target instant or sorcery spell") and

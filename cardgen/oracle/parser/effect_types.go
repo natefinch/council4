@@ -875,6 +875,11 @@ type SelectionSyntax struct {
 	// source tokens after "named" so the byte-exact search reconstruction can
 	// rebuild the qualifier; the runtime matches a library card by this name.
 	RequiredName string `json:",omitempty"`
+	// EnteredThisTurn records a trailing "that entered this turn" relative clause
+	// ("each green creature that entered this turn"), restricting the match to
+	// permanents that entered the battlefield during the current turn. It lowers
+	// to Selection.EnteredThisTurn.
+	EnteredThisTurn bool `json:",omitempty"`
 }
 
 // TargetCardinalitySyntax is an inclusive target-count range.

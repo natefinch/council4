@@ -143,6 +143,12 @@ type Selection struct {
 
 	// RequiredCounter names the counter kind required when MatchCounter is set.
 	RequiredCounter counter.Kind
+
+	// EnteredThisTurn requires the matched permanent to have entered the
+	// battlefield this turn ("each green creature that entered this turn"). A
+	// non-battlefield subject never matches. Placed at the end of the struct so
+	// the bool joins no existing cluster's documented packing.
+	EnteredThisTurn bool
 }
 
 // Empty reports whether the Selection carries no active predicate and therefore
@@ -172,6 +178,7 @@ func (s Selection) Empty() bool {
 		!s.Toughness.Exists &&
 		!s.MatchCounter &&
 		!s.MatchAnyCounter &&
+		!s.EnteredThisTurn &&
 		!s.ExcludeSource &&
 		!s.NonToken &&
 		!s.TokenOnly

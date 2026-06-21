@@ -173,6 +173,9 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if sel.MatchAnyCounter && !s.hasAnyCounter() {
 		return false
 	}
+	if sel.EnteredThisTurn && !s.enteredThisTurn() {
+		return false
+	}
 	if sel.ExcludeSource && s.isSource() {
 		return false
 	}
@@ -410,6 +413,19 @@ func (s *selectionSubject) hasAnyCounter() bool {
 		if snapshot, ok := lastKnownObject(s.g, s.event.PermanentID); ok {
 			return !snapshot.Counters.IsEmpty()
 		}
+	}
+	return false
+}
+
+// enteredThisTurn reports whether the subject permanent entered the battlefield
+// this turn. Only a live or event permanent can match; a card or cast-spell
+// subject never entered the battlefield and fails closed.
+func (s *selectionSubject) enteredThisTurn() bool {
+	if s.kind == subjectPermanent {
+		return s.permanent != nil && permanentEnteredThisTurn(s.g, s.permanent.ObjectID)
+	}
+	if s.kind == subjectEventPermanent && s.event.PermanentID != 0 {
+		return permanentEnteredThisTurn(s.g, s.event.PermanentID)
 	}
 	return false
 }
