@@ -2,6 +2,8 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -204,6 +206,54 @@ func setPermanentTappedForMana(g *game.Game, permanent *game.Permanent) {
 	event := permanentTappedEvent(g, permanent, true)
 	event.TappedForMana = true
 	emitEvent(g, event)
+}
+
+// manaPoolColorSnapshot records, per color, how much mana the player currently
+// holds. producedManaColorsSince diffs against it to learn which types a mana
+// ability just added.
+func manaPoolColorSnapshot(g *game.Game, playerID game.PlayerID) map[mana.Color]int {
+	snapshot := make(map[mana.Color]int)
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return snapshot
+	}
+	for unit, amount := range player.ManaPool.Units() {
+		snapshot[unit.Color] += amount
+	}
+	return snapshot
+}
+
+// producedManaColorsSince returns the distinct mana types whose count in the
+// player's pool grew relative to before, in WUBRG order with colorless last. It
+// reports exactly the types a just-resolved mana ability added, backing the
+// "one mana of any type that land produced" mana-doubler trigger.
+func producedManaColorsSince(g *game.Game, playerID game.PlayerID, before map[mana.Color]int) []mana.Color {
+	after := manaPoolColorSnapshot(g, playerID)
+	var produced []mana.Color
+	for _, c := range []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G, mana.C} {
+		if after[c] > before[c] {
+			produced = append(produced, c)
+		}
+	}
+	return produced
+}
+
+// recordTappedForManaProduced annotates the most recent tapped-for-mana event
+// for permanentID with the mana types its tap produced, so a "one mana of any
+// type that land produced" trigger (Mirari's Wake) can mirror them at
+// resolution. It is a no-op when no colors were produced or no matching event
+// is found.
+func recordTappedForManaProduced(g *game.Game, permanentID id.ID, colors []mana.Color) {
+	if len(colors) == 0 {
+		return
+	}
+	for i := len(g.Events) - 1; i >= 0; i-- {
+		event := &g.Events[i]
+		if event.Kind == game.EventPermanentTapped && event.TappedForMana && event.PermanentID == permanentID {
+			event.ProducedManaColors = append(event.ProducedManaColors, colors...)
+			return
+		}
+	}
 }
 
 func emitTargetEvents(g *game.Game, obj *game.StackObject) {

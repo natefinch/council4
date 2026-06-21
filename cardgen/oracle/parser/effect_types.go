@@ -659,6 +659,13 @@ type EffectManaSyntax struct {
 	// rather than an additional output; lowering pairs the two into one ability
 	// whose larger output replaces the base when the condition holds.
 	Instead bool `json:",omitempty"`
+	// TriggerLandProducedType reports the body "one mana of any type that land
+	// produced" (Mirari's Wake, Zendikar Resurgent, Dictate of Karametra, Mana
+	// Flare, Heartbeat of Spring). It is the mana-doubler output of a
+	// tapped-for-mana trigger: one additional mana whose type is chosen among the
+	// types the triggering land produced on that tap, recomputed at resolution
+	// from the triggering tap rather than from a fixed color or the battlefield.
+	TriggerLandProducedType bool `json:",omitempty"`
 }
 
 // ManaLandsProduceScope identifies which battlefield lands' producible colors

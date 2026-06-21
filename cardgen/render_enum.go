@@ -536,6 +536,8 @@ func renderResolutionChoiceColorSource(source game.ResolutionChoiceColorSource) 
 		return "game.ResolutionChoiceColorSourceLinkedExileColors", nil
 	case game.ResolutionChoiceColorSourceControlledPermanentColors:
 		return "game.ResolutionChoiceColorSourceControlledPermanentColors", nil
+	case game.ResolutionChoiceColorSourceTriggerLandProduced:
+		return "game.ResolutionChoiceColorSourceTriggerLandProduced", nil
 	default:
 		return "", fmt.Errorf("render: unsupported resolution choice color source %d", source)
 	}

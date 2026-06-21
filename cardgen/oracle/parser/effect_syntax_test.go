@@ -2997,6 +2997,49 @@ func TestParseLandsProduceManaFailsClosed(t *testing.T) {
 	}
 }
 
+// TestParseTriggerLandProducedManaSyntax verifies the "add one mana of any type
+// that land produced" mana-doubler body (Mirari's Wake, Zendikar Resurgent)
+// parses to Mana.TriggerLandProducedType without setting the battlefield
+// lands-produce or any-color flags.
+func TestParseTriggerLandProducedManaSyntax(t *testing.T) {
+	t.Parallel()
+	document, _ := Parse("Whenever you tap a land for mana, add one mana of any type that land produced.", Context{})
+	var found bool
+	for _, ability := range document.Abilities {
+		for _, sentence := range ability.Sentences {
+			for _, effect := range sentence.Effects {
+				if !effect.Mana.TriggerLandProducedType {
+					continue
+				}
+				found = true
+				if effect.Mana.LandsProduce || effect.Mana.AnyColor || effect.Mana.CommanderIdentity {
+					t.Fatal("trigger-land-produced mana must not set LandsProduce, AnyColor, or CommanderIdentity")
+				}
+			}
+		}
+	}
+	if !found {
+		t.Fatal("expected Mana.TriggerLandProducedType for the mana-doubler body")
+	}
+}
+
+// TestParseTriggerLandProducedManaFailsClosed asserts the mana-doubler
+// recognition does not over-match the related battlefield "that a land you
+// control could produce" body, which must stay LandsProduce.
+func TestParseTriggerLandProducedManaFailsClosed(t *testing.T) {
+	t.Parallel()
+	document, _ := Parse("{T}: Add one mana of any type that a land you control could produce.", Context{})
+	for _, ability := range document.Abilities {
+		for _, sentence := range ability.Sentences {
+			for _, effect := range sentence.Effects {
+				if effect.Mana.TriggerLandProducedType {
+					t.Fatal("battlefield lands-produce body wrongly recognized as trigger-land-produced")
+				}
+			}
+		}
+	}
+}
+
 func TestParseChosenColorManaSyntax(t *testing.T) {
 	t.Parallel()
 	document, _ := Parse("{T}: Add one mana of the chosen color.", Context{})

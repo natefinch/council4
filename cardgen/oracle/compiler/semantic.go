@@ -1608,6 +1608,10 @@ type CompiledEffectMana struct {
 	// alternative mana production ("Add {B}{B}{B}{B}{B} instead if ...", the
 	// Threshold cycle). See parser.EffectManaSyntax.Instead.
 	Instead bool
+	// TriggerLandProducedType mirrors the parser's "one mana of any type that
+	// land produced" mana-doubler body (Mirari's Wake, Zendikar Resurgent). See
+	// parser.EffectManaSyntax.TriggerLandProducedType.
+	TriggerLandProducedType bool
 }
 
 // CompiledEffectPayment is a typed resolution payment embedded in an effect.

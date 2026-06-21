@@ -318,6 +318,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 					AnyOneColorDynamic:       syntax.Mana.AnyOneColorDynamic,
 					AnyColorCount:            syntax.Mana.AnyColorCount,
 					Instead:                  syntax.Mana.Instead,
+					TriggerLandProducedType:  syntax.Mana.TriggerLandProducedType,
 				},
 				Replacement:                     syntax.Replacement,
 				Payment:                         compileEffectPayment(syntax.Payment),
