@@ -576,6 +576,13 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("SpellTypes: %s,", spellTypes))
 	}
+	if len(effect.SpellSubtypes) > 0 {
+		spellSubtypes, err := renderSubtypeSlice(ctx, effect.SpellSubtypes)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("SpellSubtypes: %s,", spellSubtypes))
+	}
 	if effect.RestrictedDuringControllerTurn {
 		fields = append(fields, "RestrictedDuringControllerTurn: true,")
 	}

@@ -848,6 +848,12 @@ func matchingTokenCreationReplacementEffects(g *game.Game, event game.Event, tok
 		if replacement.TokenMultiplier <= 1 && replacement.TokenAddend == 0 {
 			continue
 		}
+		// Cross-type addends create a different predefined token (Tippy-Toe's Food)
+		// rather than more of the matched token, so they are handled separately and
+		// must not inflate the matched-token count here.
+		if replacement.TokenAddendDef != nil {
+			continue
+		}
 		if !tokenHasAllSubtypes(token, replacement.TokenRequiredSubtypes) {
 			continue
 		}
@@ -1217,6 +1223,40 @@ func replacementLifeGainAmount(g *game.Game, playerID game.PlayerID, amount int)
 			amount *= replacement.LifeGainMultiplier
 		}
 		amount += replacement.LifeGainAddend
+	}
+	if amount < 0 {
+		return 0
+	}
+	return amount
+}
+
+// replacementLifeLossAmount reports how much life a single "would lose life"
+// event by playerID becomes after applying registered life-loss replacements
+// (CR 614), as on Bloodletter of Aclazotz ("twice that much"). Multiple
+// replacements compound in registration order; each multiplies the running
+// amount and then adds its addend. Replacements restricted to opponents skip
+// loss by their own controller, and turn-restricted replacements apply only on
+// their controller's turn. The result is never negative.
+func replacementLifeLossAmount(g *game.Game, playerID game.PlayerID, amount int) int {
+	for i := range g.ReplacementEffects {
+		replacement := &g.ReplacementEffects[i]
+		if replacement.LifeLossMultiplier <= 1 && replacement.LifeLossAddend == 0 {
+			continue
+		}
+		if !replacementSourceIsActive(g, replacement) {
+			continue
+		}
+		controller := replacementCurrentController(g, replacement)
+		if replacement.LifeLossRecipientOpponent && playerID == controller {
+			continue
+		}
+		if replacement.LifeLossDuringControllerTurn && g.Turn.ActivePlayer != controller {
+			continue
+		}
+		if replacement.LifeLossMultiplier > 1 {
+			amount *= replacement.LifeLossMultiplier
+		}
+		amount += replacement.LifeLossAddend
 	}
 	if amount < 0 {
 		return 0

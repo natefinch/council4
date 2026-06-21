@@ -39,6 +39,7 @@ const (
 	KeywordEternalize       KeywordKind = "KeywordEternalize"
 	KeywordEmbalm           KeywordKind = "KeywordEmbalm"
 	KeywordExalted          KeywordKind = "KeywordExalted"
+	KeywordEvolve           KeywordKind = "KeywordEvolve"
 	KeywordFear             KeywordKind = "KeywordFear"
 	KeywordFirstStrike      KeywordKind = "KeywordFirstStrike"
 	KeywordFlash            KeywordKind = "KeywordFlash"
@@ -112,6 +113,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordEternalize:       "Eternalize",
 	KeywordEmbalm:           "Embalm",
 	KeywordExalted:          "Exalted",
+	KeywordEvolve:           "Evolve",
 	KeywordFear:             "Fear",
 	KeywordFirstStrike:      "First strike",
 	KeywordFlash:            "Flash",
@@ -212,6 +214,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordEternalize, Words: []string{"eternalize"}},
 	{Kind: KeywordEmbalm, Words: []string{"embalm"}},
 	{Kind: KeywordExalted, Words: []string{"exalted"}},
+	{Kind: KeywordEvolve, Words: []string{"evolve"}},
 	{Kind: KeywordFear, Words: []string{"fear"}},
 	{Kind: KeywordFlash, Words: []string{"flash"}},
 	{Kind: KeywordFlashback, Words: []string{"flashback"}},
@@ -551,6 +554,12 @@ func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
 		// granted ability keyword, so it must not be scanned as one.
 		if atoms.SelfNameAt(nameSpan) {
 			i += width - 1
+			continue
+		}
+		// "flash" in the cast-permission idiom "as though they had flash" (or
+		// "... it had flash") names the timing reference, not a granted Flash
+		// keyword, so it is parsed by the cast-as-though-flash static instead.
+		if kind == KeywordFlash && i > 0 && equalWord(tokens[i-1], "had") {
 			continue
 		}
 		end := i + width

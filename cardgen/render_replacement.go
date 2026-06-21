@@ -20,9 +20,8 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		return fmt.Sprintf("game.DrawCardMultiplierReplacement(%q, %d, %t)",
 			ability.Text, ability.Replacement.DrawCardMultiplier, ability.Replacement.DrawCardExceptFirstInDrawStep), nil
 	}
-	if ability.Replacement.LifeGainMultiplier > 1 || ability.Replacement.LifeGainAddend != 0 {
-		return fmt.Sprintf("game.LifeGainReplacement(%q, %d, %d)",
-			ability.Text, ability.Replacement.LifeGainMultiplier, ability.Replacement.LifeGainAddend), nil
+	if rendered, handled := renderLifeModifierReplacement(ability); handled {
+		return rendered, nil
 	}
 	if ability.Replacement.EntersTappedOthers {
 		return r.renderGroupEntersTappedReplacement(ctx, ability)
@@ -153,6 +152,22 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		return replacement, nil
 	}
 	return "", fmt.Errorf("render: unsupported replacement ability %q", ability.Text)
+}
+
+// renderLifeModifierReplacement renders the life-gain and life-loss
+// value-modifying replacements (Boon Reflection, Bloodletter of Aclazotz),
+// reporting handled=false when the replacement modifies neither life event.
+func renderLifeModifierReplacement(ability *game.ReplacementAbility) (string, bool) {
+	if ability.Replacement.LifeGainMultiplier > 1 || ability.Replacement.LifeGainAddend != 0 {
+		return fmt.Sprintf("game.LifeGainReplacement(%q, %d, %d)",
+			ability.Text, ability.Replacement.LifeGainMultiplier, ability.Replacement.LifeGainAddend), true
+	}
+	if ability.Replacement.LifeLossMultiplier > 1 || ability.Replacement.LifeLossAddend != 0 {
+		return fmt.Sprintf("game.LifeLossReplacement(%q, %d, %d, %t, %t)",
+			ability.Text, ability.Replacement.LifeLossMultiplier, ability.Replacement.LifeLossAddend,
+			ability.Replacement.LifeLossRecipientOpponent, ability.Replacement.LifeLossDuringControllerTurn), true
+	}
+	return "", false
 }
 
 // renderGroupEntersTappedReplacement renders a continuous static enters-tapped
@@ -416,6 +431,9 @@ func renderFilteredTokenCreationReplacement(ctx *renderCtx, ability *game.Replac
 			return "", err
 		}
 		fields = append(fields, fmt.Sprintf("Subtypes: %s,", subtypes))
+	}
+	if replacement.TokenAddendDef != nil {
+		fields = append(fields, fmt.Sprintf("AddendDef: %s,", ctx.tokenDefVar(replacement.TokenAddendDef)))
 	}
 	fields = append(fields, fmt.Sprintf("Filter: %s,", controller))
 	return fmt.Sprintf("game.TokenCreationReplacementFiltered(%q, &game.TokenCreationReplacementSpec{%s})",

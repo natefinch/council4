@@ -659,6 +659,19 @@ func detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *game.Permane
 			ordinaryTrigger: true,
 		})
 	}
+	if evolve, ok := evolveTriggerForEvent(g, permanent, controller, event); ok {
+		pending = append(pending, pendingTriggeredAbility{
+			controller:      controller,
+			sourceID:        permanent.ObjectID,
+			sourceCardID:    permanent.CardInstanceID,
+			sourceToken:     permanent.TokenDef,
+			face:            permanent.Face,
+			inline:          evolve,
+			event:           event,
+			hasEvent:        true,
+			ordinaryTrigger: true,
+		})
+	}
 	return pending
 }
 
@@ -721,6 +734,47 @@ func exaltedTriggerForEvent(g *game.Game, permanent *game.Permanent, controller 
 		}.Ability(),
 		KeywordAbilities: game.SimpleKeywords(game.Exalted),
 	}, true
+}
+
+func evolveTriggerForEvent(g *game.Game, permanent *game.Permanent, controller game.PlayerID, event game.Event) (*game.TriggeredAbility, bool) {
+	if event.Kind != game.EventPermanentEnteredBattlefield || event.Controller != controller || !hasKeyword(g, permanent, game.Evolve) {
+		return nil, false
+	}
+	if event.PermanentID == permanent.ObjectID {
+		return nil, false
+	}
+	entered, ok := permanentByObjectID(g, event.PermanentID)
+	if !ok || !permanentHasType(g, entered, types.Creature) {
+		return nil, false
+	}
+	if !evolveGreater(g, entered, permanent) {
+		return nil, false
+	}
+	instr := game.Instruction{Primitive: game.AddCounter{
+		Object:      game.SourcePermanentReference(),
+		CounterKind: counter.PlusOnePlusOne,
+		Amount:      game.Fixed(1),
+	}}
+	return &game.TriggeredAbility{
+		Text: "Evolve",
+		Content: game.Mode{
+			Sequence: []game.Instruction{instr},
+		}.Ability(),
+		KeywordAbilities: game.SimpleKeywords(game.Evolve),
+	}, true
+}
+
+// evolveGreater reports whether the entered creature has greater power or
+// greater toughness than the evolve creature (CR 702.100b). Toughness counts
+// only when both creatures have a defined toughness, so an undefined "*"
+// toughness never satisfies the comparison on that axis.
+func evolveGreater(g *game.Game, entered, evolve *game.Permanent) bool {
+	if effectivePower(g, entered) > effectivePower(g, evolve) {
+		return true
+	}
+	enteredToughness, enteredOK := effectiveToughness(g, entered)
+	evolveToughness, evolveOK := effectiveToughness(g, evolve)
+	return enteredOK && evolveOK && enteredToughness > evolveToughness
 }
 
 func (*Engine) detectStateTriggeredAbilities(g *game.Game) []pendingTriggeredAbility {

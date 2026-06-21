@@ -119,3 +119,42 @@ func TestCounterPlacementAnyCreatureScopeDoublesOpponentCounters(t *testing.T) {
 		t.Fatalf("opponent creature +1/+1 counters under any-creature doubler = %d, want 2", got)
 	}
 }
+
+func crossTypeAddendCardDef() *game.CardDef {
+	food := &game.CardDef{CardFace: game.CardFace{
+		Name:     "Food",
+		Types:    []types.Card{types.Artifact},
+		Subtypes: []types.Sub{types.Food},
+	}}
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  "Tippy-Toe, Terrific Partner",
+		Types: []types.Card{types.Creature},
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.TokenCreationReplacementFiltered(
+				"If you would create one or more tokens, instead create those tokens plus an additional Food token.",
+				&game.TokenCreationReplacementSpec{
+					Multiplier: 1,
+					Addend:     1,
+					Filter:     game.TriggerControllerYou,
+					AddendDef:  food,
+				},
+			),
+		},
+	}}
+}
+
+func TestTokenAddendCreatesDifferentPredefinedTokenType(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, crossTypeAddendCardDef())
+	token := &game.CardDef{CardFace: game.CardFace{Name: "Squirrel", Types: []types.Card{types.Creature}}}
+
+	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player1, token, 1, false, [game.NumPlayers]PlayerAgent{}, nil) {
+		t.Fatal("createTokenPermanentsWithChoices() = false, want true")
+	}
+	if got := countTokenPermanentsNamed(g, "Squirrel"); got != 1 {
+		t.Fatalf("created Squirrel tokens = %d, want 1 (addend must not duplicate the matched token)", got)
+	}
+	if got := countTokenPermanentsNamed(g, "Food"); got != 1 {
+		t.Fatalf("created Food tokens = %d, want 1 (cross-type addend)", got)
+	}
+}

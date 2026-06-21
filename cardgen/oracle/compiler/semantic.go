@@ -514,6 +514,18 @@ const (
 	// +1/+1 counters are put on that creature instead.", Primal Vigor). Counter
 	// optionally restricts the replacement to a single counter kind.
 	ConditionPredicateCounterPlacementOnAnyCreature
+	// ConditionPredicateOpponentLifeLossDuringControllerTurn is satisfied when an
+	// opponent of the controller would lose life during the controller's turn. It
+	// gates the life-loss replacement "they lose twice that much life instead."
+	// (Bloodletter of Aclazotz).
+	ConditionPredicateOpponentLifeLossDuringControllerTurn
+	// ConditionPredicateOpponentLifeLoss is satisfied when an opponent of the
+	// controller would lose life at any time. It gates the untimed life-loss
+	// doubling generalization.
+	ConditionPredicateOpponentLifeLoss
+	// ConditionPredicateAnyPlayerLifeLoss is satisfied when any player would lose
+	// life. It gates the any-player life-loss doubling generalization.
+	ConditionPredicateAnyPlayerLifeLoss
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard

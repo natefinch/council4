@@ -307,6 +307,7 @@ func createTokenPermanent(g *game.Game, controller game.PlayerID, token *game.Ca
 			}
 		}
 	}
+	createTokenCreationCrossTypeAddends(NewEngine(nil), g, controller, token, false, [game.NumPlayers]PlayerAgent{}, nil)
 	return first, first != nil
 }
 
@@ -338,7 +339,38 @@ func createTokenPermanentsCollectingWithChoices(e *Engine, g *game.Game, control
 			created = append(created, permanent)
 		}
 	}
+	createTokenCreationCrossTypeAddends(e, g, controller, token, tapped, agents, log)
 	return created, true
+}
+
+// createTokenCreationCrossTypeAddends creates the additional predefined tokens
+// contributed by cross-type token-creation replacements (Tippy-Toe's "plus an
+// additional Food token") that match a token-creation event for token under
+// controller. The addend tokens are created directly so they neither multiply
+// with the matched tokens nor recursively re-trigger the same replacement.
+func createTokenCreationCrossTypeAddends(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, tapped bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+	event := game.Event{
+		Kind:       game.EventTokenCreated,
+		Controller: controller,
+		Player:     controller,
+		Amount:     1,
+	}
+	for i := range g.ReplacementEffects {
+		replacement := &g.ReplacementEffects[i]
+		if replacement.TokenAddendDef == nil || replacement.TokenAddend <= 0 {
+			continue
+		}
+		if !tokenHasAllSubtypes(token, replacement.TokenRequiredSubtypes) {
+			continue
+		}
+		if !replacementEffectMatchesEvent(g, replacement, event) {
+			continue
+		}
+		simultaneousID := tokenCreationSimultaneousID(g, replacement.TokenAddend)
+		for range replacement.TokenAddend {
+			createTokenPermanentWithChoicesInBatch(e, g, controller, replacement.TokenAddendDef, simultaneousID, tapped, agents, log)
+		}
+	}
 }
 
 func createTokenPermanentWithChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {

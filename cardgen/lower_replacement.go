@@ -71,6 +71,9 @@ func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering,
 	if replacementAbility, handled, diagnostic := lowerLifeGainReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
+	if replacementAbility, handled, diagnostic := lowerLifeLossReplacement(ability); handled || diagnostic != nil {
+		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+	}
 	replacementAbility, diagnostic := lowerEntersTappedReplacement(ability)
 	return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 }
@@ -181,6 +184,58 @@ func lowerDrawDoublingReplacement(
 	}
 	multiplier := ability.Content.Effects[0].Amount.Value
 	return game.DrawCardMultiplierReplacement(ability.Text, multiplier, exceptFirstInDrawStep), true, nil
+}
+
+// lowerLifeLossReplacement lowers the life-loss replacement "If an opponent
+// would lose life during your turn, they lose twice that much life instead."
+// (Bloodletter of Aclazotz) and its untimed/any-player generalizations to a
+// persistent replacement that scales the matched player's life loss.
+func lowerLifeLossReplacement(
+	ability compiler.CompiledAbility,
+) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Conditions) != 1 {
+		return game.ReplacementAbility{}, false, nil
+	}
+	var recipientOpponent, duringControllerTurn bool
+	switch ability.Content.Conditions[0].Predicate {
+	case compiler.ConditionPredicateOpponentLifeLossDuringControllerTurn:
+		recipientOpponent = true
+		duringControllerTurn = true
+	case compiler.ConditionPredicateOpponentLifeLoss:
+		recipientOpponent = true
+	case compiler.ConditionPredicateAnyPlayerLifeLoss:
+	default:
+		return game.ReplacementAbility{}, false, nil
+	}
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported life-loss replacement",
+			detail,
+		)
+	}
+	if len(ability.Content.Effects) != 1 ||
+		ability.Content.Effects[0].Kind != compiler.EffectLose ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional {
+		return unsupported("the executable source backend supports only exact additive or multiplicative life-loss replacements")
+	}
+	switch ability.Content.Effects[0].Replacement.Kind {
+	case parser.EffectReplacementTwiceThatMuch:
+		return game.LifeLossReplacement(ability.Text, 2, 0, recipientOpponent, duringControllerTurn), true, nil
+	case parser.EffectReplacementThatMuchPlus:
+		addend := ability.Content.Effects[0].Replacement.Amount
+		if addend <= 0 {
+			return unsupported("the executable source backend supports only positive additive life-loss replacements")
+		}
+		return game.LifeLossReplacement(ability.Text, 1, addend, recipientOpponent, duringControllerTurn), true, nil
+	default:
+		return unsupported("the executable source backend supports only double or additive life-loss replacements")
+	}
 }
 
 // lowerLifeGainReplacement lowers the life-gain replacement "If you would gain
@@ -689,15 +744,28 @@ func lowerTokenCreationReplacement(
 			Filter:     filter,
 		}), true, nil
 	case parser.EffectReplacementPlusAdditional:
-		subtypes := output.Selector.SubtypesAny()
-		if len(subtypes) == 0 || !slices.Equal(subtypes, ability.Content.Effects[0].Selector.SubtypesAny()) {
-			return unsupported("the executable source backend supports only same-token additive token-creation replacements")
+		addendSubtypes := output.Selector.SubtypesAny()
+		if len(addendSubtypes) == 0 {
+			return unsupported("the executable source backend supports only named additive token-creation replacements")
+		}
+		if slices.Equal(addendSubtypes, ability.Content.Effects[0].Selector.SubtypesAny()) {
+			return game.TokenCreationReplacementFiltered(ability.Text, &game.TokenCreationReplacementSpec{
+				Multiplier: 1,
+				Addend:     output.Replacement.Amount,
+				Subtypes:   addendSubtypes,
+				Filter:     filter,
+			}), true, nil
+		}
+		addendDef, ok := synthesizeNamedArtifactTokenDef(&output)
+		if !ok {
+			return unsupported("the executable source backend supports only same-token or predefined-token additive token-creation replacements")
 		}
 		return game.TokenCreationReplacementFiltered(ability.Text, &game.TokenCreationReplacementSpec{
 			Multiplier: 1,
 			Addend:     output.Replacement.Amount,
-			Subtypes:   subtypes,
+			Subtypes:   ability.Content.Effects[0].Selector.SubtypesAny(),
 			Filter:     filter,
+			AddendDef:  addendDef,
 		}), true, nil
 	default:
 		return unsupported("the executable source backend supports only token-doubling or additive replacement amounts")
