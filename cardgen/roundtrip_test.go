@@ -48,6 +48,16 @@ var roundTripCards = []*ScryfallCard{
 		TypeLine:   "Land",
 		OracleText: "{T}: Add {C}.\n{1}, {T}: Move a counter from target permanent you control onto a second target permanent. Activate only as a sorcery.",
 	},
+	{
+		// Exercises MassReturnFromGraveyard, whose rendered Destination zone
+		// literal requires the zone import (regression guard for #995).
+		Name:       "RT Replenish",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		ManaCost:   "{3}{W}",
+		Colors:     []string{"W"},
+		OracleText: "Return all enchantment cards from your graveyard to the battlefield.",
+	},
 }
 
 // writeRoundTripPackage generates source for roundTripCards into a fresh package
