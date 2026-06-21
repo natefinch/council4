@@ -256,6 +256,42 @@ func lowerSourceSpellExile(ctx contentCtx) (game.AbilityContent, bool) {
 	}}}.Ability(), true
 }
 
+// isExactSourceSpellShuffleIntoLibrary reports whether effect is the exact
+// "Shuffle <this card> into its owner's library." resolution tail naming the
+// resolving spell itself. The parser validated the precise wording, so this
+// keys off the exact EffectShuffle clause whose destination is the library and
+// which names the source spell.
+func isExactSourceSpellShuffleIntoLibrary(effect *compiler.CompiledEffect) bool {
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Duration != compiler.DurationNone ||
+		effect.Kind != compiler.EffectShuffle ||
+		effect.ToZone != zone.Library {
+		return false
+	}
+	return referencesContainKind(effect.References, compiler.ReferenceSelfName) ||
+		referencesContainKind(effect.References, compiler.ReferenceThisObject)
+}
+
+// lowerSourceSpellShuffleIntoLibrary lowers the exact "Shuffle <this card> into
+// its owner's library." resolution tail (Green Sun's Zenith, the Beacon cycle)
+// to a single source-spell shuffle-into-library instruction. The shuffled
+// object is the resolving spell itself, so the instruction carries no referent.
+func lowerSourceSpellShuffleIntoLibrary(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.enclosingKind != compiler.AbilitySpell ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		!isExactSourceSpellShuffleIntoLibrary(&ctx.content.Effects[0]) {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.ShuffleSpellIntoLibrary{},
+	}}}.Ability(), true
+}
+
 func lowerPlayerRuleEffect(ctx contentCtx, kind game.RuleEffectKind) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	keywordsValid := len(ctx.content.Keywords) == 0

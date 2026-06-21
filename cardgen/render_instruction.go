@@ -309,6 +309,11 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: ShufflePermanentIntoLibrary kind has unexpected concrete type")
 		}
 		return r.renderShufflePermanentIntoLibrary(value)
+	case game.PrimitiveShuffleSpellIntoLibrary:
+		if _, ok := primitive.(game.ShuffleSpellIntoLibrary); !ok {
+			return "", errors.New("render: internal error: ShuffleSpellIntoLibrary kind has unexpected concrete type")
+		}
+		return "game.ShuffleSpellIntoLibrary{}", nil
 	case game.PrimitivePutPermanentOnLibrary:
 		value, ok := primitive.(game.PutPermanentOnLibrary)
 		if !ok {

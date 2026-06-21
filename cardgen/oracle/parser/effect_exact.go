@@ -131,7 +131,8 @@ func exactEffectSyntaxTail(effect *EffectSyntax) bool {
 	case EffectSurveil:
 		return exactControllerAmountEffectSyntax(effect, "Surveil")
 	case EffectShuffle:
-		return exactOptionalControllerShuffleEffectSyntax(effect)
+		return exactOptionalControllerShuffleEffectSyntax(effect) ||
+			exactSourceSpellShuffleIntoLibrarySyntax(effect)
 	case EffectTap:
 		return exactDirectTargetEffectSyntax(effect, "Tap") ||
 			exactDirectReferenceEffectSyntax(effect, "Tap") ||

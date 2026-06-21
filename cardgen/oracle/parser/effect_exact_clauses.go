@@ -145,6 +145,37 @@ func exactSourceSpellExileSyntax(effect *EffectSyntax) bool {
 	return effect.Text == "Exile "+reference.Text+"."
 }
 
+// exactSourceSpellShuffleIntoLibrarySyntax recognizes the exact resolution tail
+// "Shuffle <this card> into its owner's library." (Green Sun's Zenith, the
+// Beacon cycle, Blue Sun's Zenith), where the shuffled object is the resolving
+// spell itself named by "this card"/"this spell" or its own name. Lowering turns
+// it into a single source-spell shuffle-into-library instruction. The parser
+// owns this wording; any other shuffle clause leaves it non-exact so lowering
+// fails closed.
+func exactSourceSpellShuffleIntoLibrarySyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectShuffle ||
+		effect.Negated ||
+		effect.Duration != EffectDurationNone ||
+		effect.FromZone != zone.None ||
+		effect.ToZone != zone.Library ||
+		len(effect.Targets) != 0 ||
+		len(effect.References) != 2 {
+		return false
+	}
+	object := effect.References[0]
+	if object.Kind != ReferenceThisObject && object.Kind != ReferenceSelfName {
+		return false
+	}
+	if object.Kind == ReferenceThisObject && object.Text != "this spell" && object.Text != "this card" {
+		return false
+	}
+	owner := effect.References[1]
+	if owner.Kind != ReferencePronoun || owner.Pronoun != PronounIts {
+		return false
+	}
+	return effect.Text == "Shuffle "+object.Text+" into its owner's library."
+}
+
 // exactCounteredSpellExileSyntax recognizes the exact counter rider "If that
 // spell is countered this way, exile it instead of putting it into its owner's
 // graveyard." and marks it so a preceding counter effect lowers to a single

@@ -131,3 +131,24 @@ func TestResolveSorcerySpellMovesCardToGraveyard(t *testing.T) {
 		t.Fatalf("resolve result = %q, want %q", log.Resolves[0].Result, "graveyard")
 	}
 }
+
+func TestShuffleSpellIntoLibraryReturnsSpellToOwnersLibrary(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Deck Card"}})
+	sourceID := addInstructionSpellToStackForController(g, game.Player1, []game.Instruction{
+		{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}},
+		{Primitive: game.ShuffleSpellIntoLibrary{}},
+	}, nil)
+	log := TurnLog{}
+
+	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &log)
+
+	player := g.Players[game.Player1]
+	if !player.Library.Contains(sourceID) {
+		t.Fatal("spell card was not shuffled into its owner's library")
+	}
+	if player.Graveyard.Contains(sourceID) {
+		t.Fatal("spell card was sent to the graveyard instead of the library")
+	}
+}

@@ -424,6 +424,15 @@ func handleShufflePermanentIntoLibrary(r *effectResolver, prim game.ShufflePerma
 	return res
 }
 
+func handleShuffleSpellIntoLibrary(r *effectResolver, _ game.ShuffleSpellIntoLibrary) effectResolved {
+	res := effectResolved{accepted: true}
+	if r.obj != nil {
+		r.obj.ShuffleIntoLibraryOnResolution = true
+		res.succeeded = true
+	}
+	return res
+}
+
 func handlePutPermanentOnLibrary(r *effectResolver, prim game.PutPermanentOnLibrary) effectResolved {
 	res := effectResolved{accepted: true}
 	permanent, ok := r.resolveObject(prim.Object)

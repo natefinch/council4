@@ -375,6 +375,17 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 			detail,
 		)
 	}
+	// A trailing "Shuffle this card into its owner's library." tail (Green Sun's
+	// Zenith) is the resolving spell shuffling itself back in. Strip it from the
+	// search-sequence analysis and re-append it as a source-spell shuffle
+	// instruction after the search resolves.
+	appendSelfShuffle := false
+	if n := len(ctx.content.Effects); n >= 2 && isExactSourceSpellShuffleIntoLibrary(&ctx.content.Effects[n-1]) {
+		appendSelfShuffle = true
+		shuffleSpan := ctx.content.Effects[n-1].ClauseSpan
+		ctx.content.Effects = ctx.content.Effects[:n-1]
+		ctx.content.References = referencesOutsideSpan(ctx.content.References, shuffleSpan)
+	}
 	// Search is one runtime primitive, but each reference still binds to the
 	// prior semantic search/reveal instruction that produced the found card.
 	for _, ref := range ctx.content.References {
@@ -421,6 +432,9 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 			Player: game.ControllerReference(),
 			Amount: game.Fixed(life.Amount.Value),
 		}})
+	}
+	if appendSelfShuffle {
+		sequence = append(sequence, game.Instruction{Primitive: game.ShuffleSpellIntoLibrary{}})
 	}
 	return game.Mode{Sequence: sequence}.Ability(), nil
 }
@@ -1092,6 +1106,15 @@ func lowerImmediateSingleEffectSpell(
 		return lowerUntapSpell(ctx)
 	case compiler.EffectExile:
 		return lowerFixedExileSpell(ctx)
+	case compiler.EffectShuffle:
+		if content, ok := lowerSourceSpellShuffleIntoLibrary(ctx); ok {
+			return content, nil
+		}
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported shuffle effect",
+			"the executable source backend supports only a source-spell shuffle into its owner's library",
+		)
 	case compiler.EffectReturn:
 		return lowerReturnSpell(ctx)
 	case compiler.EffectPut:

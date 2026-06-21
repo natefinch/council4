@@ -515,3 +515,50 @@ func TestExactGraveyardExileFailsClosed(t *testing.T) {
 		}
 	}
 }
+
+// shuffleSelfIntoLibraryExact parses a single shuffle sentence with the given
+// card name and reports whether the resulting effect is exact.
+func shuffleSelfIntoLibraryExact(t *testing.T, cardName, source string) bool {
+	t.Helper()
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true, CardName: cardName})
+	if len(diagnostics) != 0 {
+		t.Fatalf("Parse(%q) diagnostics = %#v", source, diagnostics)
+	}
+	effects := document.Abilities[0].Sentences[0].Effects
+	if len(effects) != 1 || effects[0].Kind != EffectShuffle {
+		t.Fatalf("Parse(%q) effects = %#v", source, effects)
+	}
+	return effects[0].Exact
+}
+
+func TestExactSourceSpellShuffleIntoLibraryAccepts(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		cardName string
+		source   string
+	}{
+		{"Green Sun's Zenith", "Shuffle Green Sun's Zenith into its owner's library."},
+		{"Beacon of Destruction", "Shuffle Beacon of Destruction into its owner's library."},
+	}
+	for _, tc := range cases {
+		if !shuffleSelfIntoLibraryExact(t, tc.cardName, tc.source) {
+			t.Errorf("shuffleSelfIntoLibraryExact(%q, %q) = false, want true", tc.cardName, tc.source)
+		}
+	}
+}
+
+func TestExactSourceSpellShuffleIntoLibraryFailsClosed(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		cardName string
+		source   string
+	}{
+		{"Foo", "Shuffle target creature into its owner's library."},
+		{"Foo", "Shuffle your graveyard into your library."},
+	}
+	for _, tc := range cases {
+		if shuffleSelfIntoLibraryExact(t, tc.cardName, tc.source) {
+			t.Errorf("shuffleSelfIntoLibraryExact(%q, %q) = true, want false", tc.cardName, tc.source)
+		}
+	}
+}

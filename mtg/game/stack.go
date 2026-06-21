@@ -121,6 +121,12 @@ type StackObject struct {
 	// graveyard destination after its remaining instructions resolve.
 	ExileOnResolution bool
 
+	// ShuffleIntoLibraryOnResolution is set by a resolving self-shuffle
+	// instruction. A non-copy instant or sorcery is shuffled into its owner's
+	// library instead of its normal graveyard destination after its remaining
+	// instructions resolve (Green Sun's Zenith, the Beacon cycle).
+	ShuffleIntoLibraryOnResolution bool
+
 	// Suspend is true if this spell was cast from exile by suspend.
 	Suspend bool
 

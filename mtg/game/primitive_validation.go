@@ -1198,6 +1198,10 @@ func (p Renown) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 	return validateObjectReference(p.Object, targets, checkTargets)
 }
 
+func (ShuffleSpellIntoLibrary) validatePrimitive(_ []TargetSpec, _ bool) error {
+	return nil
+}
+
 func (p Pay) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validateResolutionPayment(p.Payment, targets, checkTargets)
 }
