@@ -25,6 +25,37 @@ func triggerContentUnsupported(ability compiler.CompiledAbility) bool {
 	return len(ability.Content.Modes) != 0 && !exactConnectionModeLabels(ability.Content.Modes)
 }
 
+// modalTriggerBody reports whether a triggered ability's resolving body is a
+// generic modal "choose one/up to one —" choice that routes through the shared
+// modal-content lowering rather than the single-effect trigger-body path. The
+// exact labeled "first main phase" modal (Black Market Connections) keeps its
+// dedicated handling, so it is excluded here.
+func modalTriggerBody(ability compiler.CompiledAbility) bool {
+	return len(ability.Content.Modes) != 0 && !exactConnectionModeLabels(ability.Content.Modes)
+}
+
+// lowerModalTriggerBody lowers a triggered ability whose resolving body is a
+// modal choice. Each mode lowers as an independent already-supported effect; the
+// runtime presents the modes when the ability resolves. The shared modal-content
+// lowering fails closed on intervening/resolution conditions or effects shared
+// across modes, so only a bare modal trigger body is accepted.
+func lowerModalTriggerBody(
+	cardName string,
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+	triggerEvent game.EventKind,
+) (game.AbilityContent, *shared.Diagnostic) {
+	ctx := contentCtx{
+		text:                  ability.Text,
+		span:                  ability.Span,
+		content:               ability.Content,
+		enclosingKind:         compiler.AbilityTriggered,
+		triggerCardCountEvent: triggerEvent,
+		triggerEvent:          triggerEvent,
+	}
+	return lowerModalContent(cardName, ctx, syntax)
+}
+
 func lowerAtTrigger(
 	cardName string,
 	ability compiler.CompiledAbility,
@@ -256,6 +287,23 @@ func lowerGenericPatternTrigger(
 	if !ok {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
 			"the executable source backend does not support this semantic trigger condition")
+	}
+	if modalTriggerBody(ability) {
+		content, diagnostic := lowerModalTriggerBody(cardName, ability, syntax, pattern.Event)
+		if diagnostic != nil {
+			return game.TriggeredAbility{}, diagnostic
+		}
+		return game.TriggeredAbility{
+			Text: ability.Text,
+			Trigger: game.TriggerCondition{
+				Type:                 triggerType,
+				Pattern:              pattern,
+				InterveningIf:        interveningIfText(ability.Trigger),
+				InterveningCondition: intervening,
+			},
+			Optional: ability.Optional,
+			Content:  content,
+		}, nil
 	}
 	if triggerContentUnsupported(ability) {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",

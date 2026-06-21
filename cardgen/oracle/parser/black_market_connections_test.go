@@ -57,3 +57,30 @@ func TestParseLabeledChooseOneOrMoreTrigger(t *testing.T) {
 func sharedText(source string, span shared.Span) string {
 	return shared.SliceSpan(source, span)
 }
+
+func TestParseChooseUpToOneTrigger(t *testing.T) {
+	t.Parallel()
+
+	source := "Whenever you cast a spell, choose up to one —\n" +
+		"• Return target spell you don't control to its owner's hand.\n" +
+		"• Return target nonland permanent to its owner's hand."
+	document, diagnostics := Parse(source, Context{CardName: "Hullbreaker Horror"})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if len(document.Abilities) != 1 {
+		t.Fatalf("abilities = %#v, want one", document.Abilities)
+	}
+	ability := document.Abilities[0]
+	if ability.Kind != AbilityTriggered || ability.Modal == nil {
+		t.Fatalf("ability = %#v, want triggered modal ability", ability)
+	}
+	// "choose up to one —" is an optional choice: minimum zero modes, maximum one.
+	if !ability.Modal.ChoiceKnown || ability.Modal.MinModes != 0 || ability.Modal.MaxModes != 1 {
+		t.Fatalf("choice = %d..%d known=%v, want optional 0..1",
+			ability.Modal.MinModes, ability.Modal.MaxModes, ability.Modal.ChoiceKnown)
+	}
+	if len(ability.Modal.Options) != 2 {
+		t.Fatalf("options = %#v, want two", ability.Modal.Options)
+	}
+}
