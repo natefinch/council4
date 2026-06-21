@@ -815,6 +815,9 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 		ctx.need(importOpt)
 		specFields = append(specFields, fmt.Sprintf("MinToughness: opt.Val(%d),", value.Spec.MinToughness.Val))
 	}
+	if value.Spec.Name != "" {
+		specFields = append(specFields, fmt.Sprintf("Name: %q,", value.Spec.Name))
+	}
 	if value.Spec.Reveal {
 		specFields = append(specFields, "Reveal: true,")
 	}

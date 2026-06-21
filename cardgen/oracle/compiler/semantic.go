@@ -869,8 +869,12 @@ type CompiledSelector struct {
 	// of ("artifact or creature"). It lowers the type set to the conjunctive
 	// TargetPredicate.PermanentTypesAll filter instead of PermanentTypes.
 	ConjunctiveTypes bool
-	Alternatives     []CompiledSelector
-	atoms            *CompiledSelectorAtoms
+	// RequiredName carries the verbatim card name of a "named <Name>" library
+	// search filter ("a card named Trustworthy Scout"). It lowers to
+	// SearchSpec.Name; the parser owns the wording, so the compiler only copies it.
+	RequiredName string
+	Alternatives []CompiledSelector
+	atoms        *CompiledSelectorAtoms
 }
 
 // CompiledSelectorAtoms holds parser-owned atom-derived selector filters that

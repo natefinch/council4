@@ -100,11 +100,39 @@ func TestExactLibrarySearchAccepts(t *testing.T) {
 		// life payments); the search clause itself stays exact.
 		"Search your library for a card, put that card into your hand, discard a card at random, then shuffle.",
 		"Search your library for a creature card, put it into your hand, you lose 2 life, then shuffle.",
+		// A "named <Name>" filter searches for a specific card by name (Daru
+		// Cavalier, Trustworthy Scout). The name reconstructs verbatim, including
+		// a multi-word name whose final word is also a creature subtype.
+		"Search your library for a card named Llanowar Elves, reveal it, put it into your hand, then shuffle.",
+		"Search your library for a card named Trustworthy Scout, reveal it, put it into your hand, then shuffle.",
 	}
 	for _, source := range accepted {
 		if !searchExact(t, source) {
 			t.Errorf("searchExact(%q) = false, want true", source)
 		}
+	}
+}
+
+// TestExactLibrarySearchNamedFilterCapturesName confirms the "named <Name>"
+// search filter captures the verbatim card name onto the selection so it can
+// thread to the runtime SearchSpec.Name, without misreading a trailing subtype
+// word in the name as a subtype filter.
+func TestExactLibrarySearchNamedFilterCapturesName(t *testing.T) {
+	t.Parallel()
+	source := "Search your library for a card named Trustworthy Scout, reveal it, put it into your hand, then shuffle."
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("Parse(%q) diagnostics = %#v", source, diagnostics)
+	}
+	search := document.Abilities[0].Sentences[0].Effects[0]
+	if !search.Exact {
+		t.Fatal("search effect Exact = false, want true")
+	}
+	if search.Selection.RequiredName != "Trustworthy Scout" {
+		t.Fatalf("RequiredName = %q, want %q", search.Selection.RequiredName, "Trustworthy Scout")
+	}
+	if len(search.Selection.SubtypesAny) != 0 {
+		t.Fatalf("SubtypesAny = %#v, want empty (the name's trailing subtype word must not leak)", search.Selection.SubtypesAny)
 	}
 }
 
