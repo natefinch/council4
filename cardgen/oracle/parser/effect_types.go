@@ -108,6 +108,12 @@ const (
 	// ("You may have this creature enter the battlefield as a copy of any creature
 	// on the battlefield.", Clone), CR 706.
 	EffectEnterAsCopy EffectKind = "EffectEnterAsCopy"
+	// EffectPunisherLoseLife models the "punisher" family ("Each opponent loses
+	// N life unless that player sacrifices a permanent of their choice or
+	// discards a card."). The life amount is in Amount, the player group in
+	// Context, the optional sacrifice filter in Selection, and PunisherSacrifice
+	// / PunisherDiscard record which alternatives are offered.
+	EffectPunisherLoseLife EffectKind = "EffectPunisherLoseLife"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -1067,6 +1073,14 @@ type EffectSyntax struct {
 	// the control of its own owner rather than the resolving player. It is false
 	// for the bare and "under your control" forms.
 	UnderOwnersControl bool `json:",omitempty"`
+	// PunisherSacrifice and PunisherDiscard mark the alternatives offered by an
+	// EffectPunisherLoseLife effect ("... unless that player sacrifices a
+	// permanent of their choice or discards a card."): PunisherSacrifice records
+	// that a sacrifice alternative (filtered by Selection) is offered, and
+	// PunisherDiscard records that a discard-a-card alternative is offered. Both
+	// are false for every other effect.
+	PunisherSacrifice bool `json:",omitempty"`
+	PunisherDiscard   bool `json:",omitempty"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend

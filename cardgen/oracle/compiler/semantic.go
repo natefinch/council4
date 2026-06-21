@@ -962,6 +962,7 @@ const (
 	EffectPreventDamage
 	EffectSpellsCantBeCountered
 	EffectEnterAsCopy
+	EffectPunisherLoseLife
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1275,6 +1276,13 @@ type CompiledEffect struct {
 	// Planar Birth), where each moved card enters under its owner's control. It
 	// is false for the bare and "under your control" forms.
 	UnderOwnersControl bool
+	// PunisherSacrifice and PunisherDiscard mirror the parser flags for an
+	// EffectPunisherLoseLife effect ("... unless that player sacrifices a
+	// permanent of their choice or discards a card."): they record which
+	// alternatives the affected players may pay instead of losing life. Lowering
+	// reads them with the effect's Selector for the sacrifice filter.
+	PunisherSacrifice bool
+	PunisherDiscard   bool
 }
 
 // CompiledManaSpendRider is the typed semantic form of a mana-spend rider.

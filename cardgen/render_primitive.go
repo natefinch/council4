@@ -902,6 +902,40 @@ func (r Renderer) renderSacrificePermanents(ctx *renderCtx, value *game.Sacrific
 	return structLit("game.SacrificePermanents", fields), nil
 }
 
+func (r Renderer) renderPunisherEachLoseLife(ctx *renderCtx, value *game.PunisherEachLoseLife) (string, error) {
+	renderedAmount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	var renderedGroup string
+	switch value.PlayerGroup.Kind {
+	case game.PlayerGroupReferenceOpponents:
+		renderedGroup = "game.OpponentsReference()"
+	case game.PlayerGroupReferenceAllPlayers:
+		renderedGroup = "game.AllPlayersReference()"
+	default:
+		return "", fmt.Errorf("render: unsupported player group reference kind %d", value.PlayerGroup.Kind)
+	}
+	fields := []string{
+		fmt.Sprintf("PlayerGroup: %s,", renderedGroup),
+		fmt.Sprintf("Amount: %s,", renderedAmount),
+	}
+	if value.AllowSacrifice {
+		fields = append(fields, "AllowSacrifice: true,")
+		renderedSelection, err := r.renderSelection(ctx, value.SacrificeSelection)
+		if err != nil {
+			return "", err
+		}
+		if renderedSelection != "game.Selection{}" {
+			fields = append(fields, fmt.Sprintf("SacrificeSelection: %s,", renderedSelection))
+		}
+	}
+	if value.AllowDiscard {
+		fields = append(fields, "AllowDiscard: true,")
+	}
+	return structLit("game.PunisherEachLoseLife", fields), nil
+}
+
 func (r Renderer) renderSacrificeFallback(ctx *renderCtx, value game.SacrificeFallback) (string, error) {
 	renderedAmount, err := r.renderQuantity(ctx, value.Amount)
 	if err != nil {
