@@ -32,6 +32,9 @@ func TestExactGroupKeywordGrantAccepts(t *testing.T) {
 		"Blocking creatures gain first strike until end of turn.",
 		"All creatures gain haste until end of turn.",
 		"Creatures you control gain lifelink, indestructible, and protection from each color until end of turn.",
+		"Creatures you control gain protection from red until end of turn.",
+		"Permanents you control gain protection from red until end of turn.",
+		"Creatures you control gain protection from the color of your choice until end of turn.",
 		"Permanents your opponents control gain hexproof until end of turn.",
 		"Permanents you control lose hexproof until end of turn.",
 		"Permanents your opponents control lose hexproof and indestructible until end of turn.",
@@ -52,11 +55,9 @@ func TestExactGroupKeywordGrantFailsClosed(t *testing.T) {
 	rejected := []string{
 		"Target permanents you control gain indestructible until end of turn.",
 		"Permanents you control gain hexproof until your next turn.",
-		"Permanents you control gain protection from red until end of turn.",
 		"Permanents you control gain ward {1} until end of turn.",
 		"Permanents you control gain hexproof and \"This permanent can't be sacrificed\" until end of turn.",
 		"Nonland permanents you control gain indestructible until end of turn.",
-		"Creatures you control gain protection from red until end of turn.",
 		"Creatures you control gain trample.",
 		"Creatures you control gain flying until your next turn.",
 	}

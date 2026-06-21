@@ -94,6 +94,12 @@ type ProtectionKeyword struct {
 	Monocolored  bool          // protection from sources with exactly 1 color
 	Everything   bool          // protection from all sources
 	EachColor    bool          // protection from sources with any color (all five)
+	// ChosenColor marks a grant that resolves to protection from a single color
+	// chosen as the granting ability resolves ("protection from the color of
+	// your choice"). The rules resolve the choice and rewrite this into
+	// FromColors before the continuous effect is stored, so protection checks
+	// never observe ChosenColor.
+	ChosenColor bool
 }
 
 // ToxicKeyword parameterizes the number of poison counters given after combat

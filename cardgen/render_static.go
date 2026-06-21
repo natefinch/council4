@@ -109,6 +109,10 @@ func (Renderer) renderProtectionStaticAbility(ctx *renderCtx, body *game.StaticA
 		if reflect.DeepEqual(*body, game.ProtectionFromEachColorStaticAbility()) {
 			return "game.ProtectionFromEachColorStaticAbility()", nil
 		}
+	case prot.ChosenColor:
+		if reflect.DeepEqual(*body, game.ProtectionFromChosenColorStaticAbility()) {
+			return "game.ProtectionFromChosenColorStaticAbility()", nil
+		}
 	case prot.Multicolored:
 		if reflect.DeepEqual(*body, game.ProtectionFromMulticoloredStaticAbility()) {
 			return "game.ProtectionFromMulticoloredStaticAbility()", nil
