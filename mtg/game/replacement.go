@@ -22,6 +22,12 @@ type CounterPlacement struct {
 	// "This creature enters with X +1/+1 counters on it." (Walking Ballista,
 	// Hangarback Walker, Endless One).
 	AmountFromX bool
+	// Dynamic places a number of counters equal to a rules-derived amount
+	// evaluated as the permanent enters (CR 608.2c), such as "for each creature
+	// card in your graveyard." (Golgari Grave-Troll). When set, Amount and
+	// AmountFromX are ignored and a non-positive evaluated amount places no
+	// counters. The amount is immutable rules configuration shared across clones.
+	Dynamic opt.V[*DynamicAmount]
 }
 
 // ConditionalCounterPlacement places Amount counters of Kind on an entering
@@ -358,6 +364,21 @@ type ReplacementEffect struct {
 	// permanents that have any of these card types. It is empty when every
 	// entering permanent is tapped ("Permanents ... enter tapped.").
 	EntersTappedTypes []types.Card
+
+	// EntersWithCountersOthers marks a continuous static enters-with-counters
+	// replacement that adds the EntersWithCounters placements to a group of OTHER
+	// permanents as they enter ("Each other creature you control enters with an
+	// additional vigilance counter on it." — Tayam, Luminous Enigma), as opposed
+	// to the self form printed on the entering permanent. It is registered into
+	// Game.ReplacementEffects while its source is on the battlefield and matched
+	// against every entering permanent that satisfies EntersWithCountersRecipient.
+	EntersWithCountersOthers bool
+
+	// EntersWithCountersRecipient restricts an EntersWithCountersOthers
+	// replacement to entering permanents matched by this selection (controller
+	// scope, card types, subtypes, and source exclusion for the "other" form). It
+	// is nil for the self form.
+	EntersWithCountersRecipient *Selection
 
 	// CreateOneOfEachTokens replaces the creation of a token whose name matches
 	// one of these definitions with the creation of one of each listed token

@@ -897,6 +897,14 @@ func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
 			i += width - 1
 			continue
 		}
+		// A keyword word immediately followed by "counter(s)" names a keyword
+		// counter (CR 122.1c), e.g. "a vigilance counter" / "a flying counter",
+		// not a granted keyword ability, so it must not be scanned as one.
+		if i+width < len(tokens) &&
+			(equalWord(tokens[i+width], "counter") || equalWord(tokens[i+width], "counters")) {
+			i += width - 1
+			continue
+		}
 		// "flash" in the cast-permission idiom "as though they had flash" (or
 		// "... it had flash") names the timing reference, not a granted Flash
 		// keyword, so it is parsed by the cast-as-though-flash static instead.

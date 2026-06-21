@@ -402,6 +402,10 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 		}
 		fields = append(fields, fmt.Sprintf("SubtypesAny: []types.Sub{%s},", strings.Join(literals, ", ")))
 	}
+	if selection.ExcludedSubtype != "" {
+		ctx.need(importTypes)
+		fields = append(fields, fmt.Sprintf("ExcludedSubtype: %s,", SubtypeToLiteral(string(selection.ExcludedSubtype), nil)))
+	}
 	fields, err := appendSubtypeChoiceField(fields, selection.SubtypeChoice)
 	if err != nil {
 		return "", err

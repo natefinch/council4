@@ -1196,6 +1196,14 @@ type EffectSyntax struct {
 	EntersTapped       bool                      `json:",omitempty"`
 	EntersTappedSelf   bool                      `json:",omitempty"`
 	EntersWithCounters bool                      `json:",omitempty"`
+	// EntersWithCountersGroup reports a static enters-with-counters replacement
+	// that adds a counter to a group of OTHER permanents as they enter, e.g.
+	// "Each other creature you control enters with an additional vigilance
+	// counter on it." (Tayam, Luminous Enigma). It is distinct from the self
+	// form (EntersWithCounters with a self subject). The affected permanents are
+	// the controller's permanents matched by Selection; the counter kind is in
+	// CounterKind / CounterKnown and exactly one counter is added.
+	EntersWithCountersGroup bool `json:",omitempty"`
 	// EntersTappedGroup reports a static enters-tapped replacement that taps a
 	// group of OTHER permanents as they enter, e.g. "Creatures your opponents
 	// control enter tapped." (Authority of the Consuls). It is distinct from the

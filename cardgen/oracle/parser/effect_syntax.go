@@ -775,6 +775,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parsePunisherEachLoseLifeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseLibraryTopReorderEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseGroupEntersTappedEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parseGroupEntersWithCountersEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePlayerProtectionEffects(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseGroupPhaseOutEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseMassReanimationExchangeEffect(sentence, tokens, atoms) },
@@ -4125,8 +4126,106 @@ func parseGroupEntersTappedEffect(sentence Sentence, tokens []shared.Token) ([]E
 	return []EffectSyntax{effect}, true
 }
 
-// entersTappedSelfSyntax recognizes a self enters-tapped instruction such as
-// "This land enters tapped." or "Nyx Lotus enters tapped." The enters verb is
+// parseGroupEntersWithCountersEffect recognizes a static enters-with-counters
+// replacement that adds a single counter to a group of the controller's
+// permanents as they enter, e.g. "Each other creature you control enters with
+// an additional vigilance counter on it." (Tayam, Luminous Enigma) or "Each
+// planeswalker you control enters with an additional loyalty counter on it."
+// (Oath of Gideon). The subject is an "Each <group> you control" noun phrase
+// recognized by parseSelection; the predicate is exactly "enters with an
+// additional <kind> counter on it." Dynamic forms ("... for each ...", "a
+// number of additional ... counters ... equal to ...") and multi-counter or
+// numeric quantities fail closed so the card stays unsupported.
+func parseGroupEntersWithCountersEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	body := semanticEffectTokens(tokens)
+	if len(body) < 8 || body[len(body)-1].Kind != shared.Period {
+		return nil, false
+	}
+	words := body[:len(body)-1]
+	if !equalWord(words[0], "each") {
+		return nil, false
+	}
+	entersIndex := -1
+	for i := 1; i < len(words); i++ {
+		if equalWord(words[i], "enters") {
+			entersIndex = i
+			break
+		}
+	}
+	if entersIndex < 0 {
+		return nil, false
+	}
+	recipient := words[1:entersIndex]
+	if len(recipient) == 0 {
+		return nil, false
+	}
+	if recipientHasRelativeClause(recipient) {
+		return nil, false
+	}
+	predicate := words[entersIndex+1:]
+	if len(predicate) < 5 ||
+		!equalWord(predicate[0], "with") ||
+		!equalWord(predicate[1], "an") ||
+		!equalWord(predicate[2], "additional") ||
+		!equalWord(predicate[len(predicate)-2], "on") ||
+		!equalWord(predicate[len(predicate)-1], "it") {
+		return nil, false
+	}
+	counterClause := predicate[3 : len(predicate)-2]
+	if len(counterClause) < 2 {
+		return nil, false
+	}
+	last := counterClause[len(counterClause)-1]
+	if !equalWord(last, "counter") && !equalWord(last, "counters") {
+		return nil, false
+	}
+	if equalWord(counterClause[0], "x") {
+		return nil, false
+	}
+	counterKind, counterKnown := parseCounterPlacement(counterClause, atoms)
+	if !counterKnown {
+		return nil, false
+	}
+	selection := parseSelection(recipient, atoms)
+	if selection.Controller != SelectionControllerYou {
+		return nil, false
+	}
+	effect := EffectSyntax{
+		Kind:                    EffectEnterTapped,
+		Context:                 EffectContextController,
+		Span:                    sentence.Span,
+		ClauseSpan:              sentence.Span,
+		Text:                    sentence.Text,
+		Tokens:                  append([]shared.Token(nil), tokens...),
+		EntersWithCounters:      true,
+		EntersWithCountersGroup: true,
+		Selection:               selection,
+		CounterKind:             counterKind,
+		CounterKnown:            counterKnown,
+	}
+	effect.Exact = exactEffectSyntax(&effect)
+	return []EffectSyntax{effect}, true
+}
+
+// recipientHasRelativeClause reports whether a group enters-with-counters
+// recipient phrase carries a relative or possessive clause ("of the chosen
+// type", "that's a Wolf or a Werewolf", "that has an Adventure") that
+// parseSelection cannot fully and reliably represent. Such phrases either drop
+// silently (over-broadening the group) or map to characteristics whose runtime
+// meaning is uncertain, so the recognizer fails closed on them and only accepts
+// simple "[other] [non-<subtype>] [<subtype>] <type> you control" recipients.
+func recipientHasRelativeClause(recipient []shared.Token) bool {
+	for _, tok := range recipient {
+		switch strings.ToLower(tok.Text) {
+		case "that", "that's", "of", "with", "named", "chosen", "has", "have", "whose", "without":
+			return true
+		}
+	}
+	return false
+}
+
+// entersTappedSelfSyntax recognizes a plain self enters-tapped clause. "This
+// land enters tapped." or "Nyx Lotus enters tapped." The enters verb is
 // shared by many entry constructs ("As ~ enters, choose ...", "enters with
 // counters", "enters tapped and attacking"), so the qualifier following the
 // verb must be exactly "tapped" (optionally "the battlefield tapped") to avoid

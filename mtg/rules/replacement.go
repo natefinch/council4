@@ -384,6 +384,14 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 			if placement.AmountFromX {
 				amount = ctx.xValue
 			}
+			if placement.Dynamic.Exists && placement.Dynamic.Val != nil {
+				obj := &game.StackObject{
+					SourceID:     permanent.ObjectID,
+					SourceCardID: permanent.CardInstanceID,
+					Controller:   replacement.Controller,
+				}
+				amount = dynamicAmountValue(g, obj, replacement.Controller, *placement.Dynamic.Val)
+			}
 			if amount <= 0 {
 				continue
 			}
@@ -804,6 +812,13 @@ func staticETBReplacementEffects(ctx enterBattlefieldContext, g *game.Game, perm
 			continue
 		}
 		replacement := ability.Replacement
+		// Group enters-with-counters replacements ("Each other creature you
+		// control enters ...") apply to OTHER entering permanents through the
+		// registered global matching path, not to the source itself; skip them
+		// here so the source does not gain its own group counters on entry.
+		if replacement.EntersWithCountersOthers {
+			continue
+		}
 		replacement.Controller = event.Controller
 		replacement.SourceCardID = permanent.CardInstanceID
 		replacement.SourceObjectID = 0
@@ -961,6 +976,14 @@ func matchingETBReplacementEffects(g *game.Game, permanent *game.Permanent, even
 				continue
 			}
 		}
+		if replacement.EntersWithCountersOthers {
+			if replacement.SourceObjectID != 0 && replacement.SourceObjectID == event.PermanentID {
+				continue
+			}
+			if !entersWithCountersGroupMatches(g, replacement, source) {
+				continue
+			}
+		}
 		if !replacementEffectMatchesEventWithSource(g, replacement, event, source) {
 			continue
 		}
@@ -985,6 +1008,25 @@ func entersTappedGroupTypeMatches(g *game.Game, replacement *game.ReplacementEff
 		}
 	}
 	return false
+}
+
+// entersWithCountersGroupMatches reports whether the entering permanent is a
+// recipient of a group enters-with-counters replacement ("Each other creature
+// you control enters ..."). The recipient selection carries the controller
+// scope and the source-exclusion ("other") rider, evaluated relative to the
+// replacement's source permanent and controller.
+func entersWithCountersGroupMatches(g *game.Game, replacement *game.ReplacementEffect, permanent *game.Permanent) bool {
+	if replacement.EntersWithCountersRecipient == nil || permanent == nil {
+		return false
+	}
+	sourcePermanent, _ := permanentByObjectID(g, replacement.SourceObjectID)
+	controller := replacementCurrentController(g, replacement)
+	resolver := newReferenceResolver(g, &game.StackObject{
+		SourceID:     replacement.SourceObjectID,
+		SourceCardID: replacement.SourceCardID,
+		Controller:   controller,
+	})
+	return resolver.permanentMatchesGroupSelection(replacement.EntersWithCountersRecipient, sourcePermanent, permanent)
 }
 
 func matchingTokenCreationReplacementEffects(g *game.Game, event game.Event, token *game.CardDef, applied map[id.ID]bool) []game.ReplacementEffect {
