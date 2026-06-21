@@ -1467,6 +1467,23 @@ func handleMill(r *effectResolver, prim game.Mill) effectResolved {
 	return res
 }
 
+func handleExileTopOfLibrary(r *effectResolver, prim game.ExileTopOfLibrary) effectResolved {
+	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
+			exileTopOfLibraryCards(r.game, playerID, res.amount)
+		}
+		res.succeeded = res.amount > 0
+		return res
+	}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if ok {
+		exileTopOfLibraryCards(r.game, playerID, res.amount)
+		res.succeeded = res.amount > 0
+	}
+	return res
+}
+
 func handleScry(r *effectResolver, prim game.Scry) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	playerID, ok := r.resolvePlayer(prim.Player)

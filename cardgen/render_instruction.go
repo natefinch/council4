@@ -200,7 +200,8 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		return r.renderGroupSourceDamage(ctx, primitive)
 	case game.PrimitiveDraw, game.PrimitiveDiscard, game.PrimitiveMill,
 		game.PrimitiveScry, game.PrimitiveSurveil, game.PrimitiveGainLife,
-		game.PrimitiveLoseLife, game.PrimitiveReorderLibraryTop:
+		game.PrimitiveLoseLife, game.PrimitiveReorderLibraryTop,
+		game.PrimitiveExileTopOfLibrary:
 		return r.renderPlayerAmountPrimitive(ctx, primitive)
 	case game.PrimitivePlayerLosesGame:
 		value, ok := primitive.(game.PlayerLosesGame)

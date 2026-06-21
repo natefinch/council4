@@ -41,6 +41,37 @@ func millCards(g *game.Game, playerID game.PlayerID, amount int) {
 	}
 }
 
+func exileTopOfLibraryCards(g *game.Game, playerID game.PlayerID, amount int) {
+	player, ok := playerByID(g, playerID)
+	if !ok || amount <= 0 {
+		return
+	}
+	for range amount {
+		cardID, ok := player.Library.Top()
+		if !ok {
+			return
+		}
+		player.Library.Remove(cardID)
+		destination := commanderReplacementDestination(g, cardID, zone.Exile)
+		zoneOwner := playerID
+		if card, ok := g.GetCardInstance(cardID); destination == zone.Command && ok {
+			zoneOwner = card.Owner
+		}
+		destinationCards, ok := destinationZone(g, zoneOwner, destination)
+		if !ok {
+			return
+		}
+		destinationCards.Add(cardID)
+		emitZoneChangeEvent(g, game.Event{
+			Player:   playerID,
+			CardID:   cardID,
+			FromZone: zone.Library,
+			ToZone:   destination,
+			Amount:   1,
+		})
+	}
+}
+
 func (e *Engine) scryCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, amount int) {
 	player, ok := playerByID(g, playerID)
 	if !ok || amount <= 0 {

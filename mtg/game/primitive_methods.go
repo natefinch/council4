@@ -138,6 +138,9 @@ func (CounterObject) Kind() PrimitiveKind { return PrimitiveCounterObject }
 // Kind implements Primitive for Mill.
 func (Mill) Kind() PrimitiveKind { return PrimitiveMill }
 
+// Kind implements Primitive for ExileTopOfLibrary.
+func (ExileTopOfLibrary) Kind() PrimitiveKind { return PrimitiveExileTopOfLibrary }
+
 // Kind implements Primitive for Scry.
 func (Scry) Kind() PrimitiveKind { return PrimitiveScry }
 
@@ -277,6 +280,7 @@ func (Untap) isPrimitive()                       {}
 func (SkipNextUntap) isPrimitive()               {}
 func (CounterObject) isPrimitive()               {}
 func (Mill) isPrimitive()                        {}
+func (ExileTopOfLibrary) isPrimitive()           {}
 func (Scry) isPrimitive()                        {}
 func (Surveil) isPrimitive()                     {}
 func (Dig) isPrimitive()                         {}
@@ -417,9 +421,12 @@ func (p SacrificePermanents) instructionRefs() primitiveRefs { return quantityRe
 func (p Untap) instructionRefs() primitiveRefs {
 	return mergePrimitiveRefs(objectReferenceRefs(p.Object), quantityRefs(p.Amount))
 }
-func (SkipNextUntap) instructionRefs() primitiveRefs  { return primitiveRefs{} }
-func (CounterObject) instructionRefs() primitiveRefs  { return primitiveRefs{} }
-func (p Mill) instructionRefs() primitiveRefs         { return quantityRefs(p.Amount) }
+func (SkipNextUntap) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (CounterObject) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (p Mill) instructionRefs() primitiveRefs        { return quantityRefs(p.Amount) }
+func (p ExileTopOfLibrary) instructionRefs() primitiveRefs {
+	return quantityRefs(p.Amount)
+}
 func (p Scry) instructionRefs() primitiveRefs         { return quantityRefs(p.Amount) }
 func (p Surveil) instructionRefs() primitiveRefs      { return quantityRefs(p.Amount) }
 func (p Dig) instructionRefs() primitiveRefs          { return quantityRefs(p.Look) }

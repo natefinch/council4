@@ -51,6 +51,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectExile:
 		return exactSourceSpellExileSyntax(effect) ||
 			exactCounteredSpellExileSyntax(effect) ||
+			exactExileTopOfLibrarySyntax(effect) ||
 			exactDirectTargetEffectSyntax(effect, "Exile") ||
 			exactMassEffectSyntax(effect, "Exile all ") ||
 			exactBackReferenceEffectSyntax(effect, "Exile") ||
