@@ -334,6 +334,7 @@ const (
 	StaticPlayerRuleNoMaximumHandSize
 	StaticPlayerRuleAttackTax
 	StaticPlayerRuleAdditionalLandPlays
+	StaticPlayerRulePlayLandsFromGraveyard
 )
 
 // StaticPlayerRuleDeclaration is one player-scoped static rule applied to the
@@ -2264,6 +2265,10 @@ var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPla
 		kind:                    StaticPlayerRuleAdditionalLandPlays,
 		usesAdditionalLandPlays: true,
 		matchesContent:          emptyStaticPlayerRuleContent,
+	},
+	parser.StaticDeclarationPlayerRulePlayLandsFromGraveyard: {
+		kind:           StaticPlayerRulePlayLandsFromGraveyard,
+		matchesContent: emptyStaticPlayerRuleContent,
 	},
 }
 

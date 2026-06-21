@@ -59,6 +59,10 @@ const (
 	StaticDeclarationPlayerRuleNoMaximumHandSize   StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleNoMaximumHandSize"
 	StaticDeclarationPlayerRuleAttackTax           StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleAttackTax"
 	StaticDeclarationPlayerRuleAdditionalLandPlays StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleAdditionalLandPlays"
+	// StaticDeclarationPlayerRulePlayLandsFromGraveyard grants the controller a
+	// continuous permission to play land cards from their graveyard ("You may
+	// play lands from your graveyard.", Ramunap Excavator, Crucible of Worlds).
+	StaticDeclarationPlayerRulePlayLandsFromGraveyard StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRulePlayLandsFromGraveyard"
 )
 
 // StaticDeclarationCardFilterKind identifies the closed card filter that a
@@ -746,6 +750,7 @@ var staticPlayerRuleParsers = []staticPlayerRuleParser{
 	parseStaticNoMaximumHandSizeDeclaration,
 	parseStaticAttackTaxDeclaration,
 	parseStaticAdditionalLandPlaysDeclaration,
+	parseStaticPlayLandsFromGraveyardDeclaration,
 }
 
 func parseStaticPlayerRuleDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
@@ -841,6 +846,31 @@ func parseStaticAdditionalLandPlaysDeclaration(tokens []shared.Token) (StaticDec
 		},
 		PlayerRule:          StaticDeclarationPlayerRuleAdditionalLandPlays,
 		AdditionalLandPlays: count,
+	}, true
+}
+
+// parseStaticPlayLandsFromGraveyardDeclaration recognizes the controller-scoped
+// continuous permission to play land cards from the controller's graveyard ("You
+// may play lands from your graveyard.", Ramunap Excavator, Crucible of Worlds).
+// The "you may" permission is folded into an unconditional allowance; the
+// controller still chooses whether to play such a land.
+func parseStaticPlayLandsFromGraveyardDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 8 || tokens[7].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "you", "may", "play", "lands", "from", "your", "graveyard") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens[1:7]),
+		Subject: StaticDeclarationSubject{
+			Kind:       StaticDeclarationSubjectController,
+			Span:       tokens[0].Span,
+			CardFilter: StaticDeclarationCardFilterLand,
+		},
+		PlayerRule: StaticDeclarationPlayerRulePlayLandsFromGraveyard,
 	}, true
 }
 
