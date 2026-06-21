@@ -317,6 +317,11 @@ type CostComponent struct {
 	// source ("another"), recognized by the parser.
 	ExcludeSource bool
 
+	// ChoiceGroup tags this component as one alternative of a printed "<cost> or
+	// <cost>" choice. Zero means a mandatory standalone cost; components sharing
+	// a nonzero value are alternatives of which exactly one is paid.
+	ChoiceGroup uint8
+
 	// PayLifeAmountDynamic names a rules-derived amount for a "pay life equal
 	// to ..." cost whose value is neither fixed nor X. DynamicAmountNone means
 	// the life amount is a fixed value or X.
