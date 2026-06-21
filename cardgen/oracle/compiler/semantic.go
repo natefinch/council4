@@ -770,6 +770,12 @@ type CompiledCondition struct {
 	GraveyardRedirectScope       GraveyardRedirectScope
 	GraveyardSubjectTypesAny     []TriggerCardType
 	GraveyardFromBattlefieldOnly bool
+
+	// CounterRecipientTypesAny carries the type-union recipient filter of a
+	// ConditionPredicateCounterPlacementOnControlledPermanent clause ("an
+	// artifact or creature you control", Ozolith, the Shattered Spire). It is
+	// empty for the unrestricted "a permanent you control" form.
+	CounterRecipientTypesAny []TriggerCardType
 }
 
 // TargetCardinality is an inclusive target count range.
@@ -881,6 +887,11 @@ type CompiledSelector struct {
 	// effect ("each permanent you control of that type"). It lowers to
 	// Selection.SubtypeFromChosenType (which reads game.SpellChosenTypeChoiceKey).
 	SubtypeFromChosenType bool
+	// SubtypeFromChosenTypeExcluded requires each matched permanent to NOT share
+	// the creature subtype chosen earlier in the same resolution by a "Choose a
+	// creature type." effect ("all creatures that aren't of the chosen type",
+	// Kindred Dominance). It lowers to game.SubtypeChoiceResolutionExcluded.
+	SubtypeFromChosenTypeExcluded bool
 	// ConjunctiveTypes records that a multi-member RequiredTypesAny names types a
 	// permanent must carry all at once ("artifact creature") rather than any one
 	// of ("artifact or creature"). It lowers the type set to the conjunctive
@@ -1100,6 +1111,7 @@ const (
 	EffectRenown
 	EffectTribute
 	EffectChooseCreatureType
+	EffectNoMaximumHandSize
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1171,6 +1183,7 @@ const (
 	StaticSubjectOtherControlledCreaturesChosenType
 	StaticSubjectOpponentControlledPermanents
 	StaticSubjectOtherAttackingCreatures
+	StaticSubjectOtherControlledPermanents
 )
 
 // CompiledEffect is one recognized instruction verb and the sentence containing
@@ -1605,6 +1618,10 @@ type CompiledEffectMana struct {
 	// alternative mana production ("Add {B}{B}{B}{B}{B} instead if ...", the
 	// Threshold cycle). See parser.EffectManaSyntax.Instead.
 	Instead bool
+	// TriggerLandProducedType mirrors the parser's "one mana of any type that
+	// land produced" mana-doubler body (Mirari's Wake, Zendikar Resurgent). See
+	// parser.EffectManaSyntax.TriggerLandProducedType.
+	TriggerLandProducedType bool
 }
 
 // CompiledEffectPayment is a typed resolution payment embedded in an effect.
@@ -1952,6 +1969,7 @@ type CompiledAmount struct {
 	DynamicForm   DynamicAmountForm
 	Multiplier    int
 	ReferenceSpan shared.Span
+	Addend        int
 	CounterKind   counter.Kind
 	Text          string
 	// Colors carries the colors of a devotion amount; empty otherwise.

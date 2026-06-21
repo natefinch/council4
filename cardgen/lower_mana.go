@@ -413,6 +413,9 @@ func attachManaSpendRider(content *game.AbilityContent, rider game.ManaSpendRide
 
 func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	if content, ok := lowerTriggerLandProducedMana(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerTargetOpponentHandMana(ctx); ok {
 		return content, nil
 	}
@@ -707,6 +710,39 @@ func lowerAnyOneColorDynamicMana(ctx contentCtx) (game.AbilityContent, bool) {
 	return game.TapManaChosenColorDynamicAbility("", dynamic).Content, true
 }
 
+// lowerTriggerLandProducedMana lowers the mana-doubler body of a tapped-for-mana
+// trigger that adds "one mana of any type that land produced" (Mirari's Wake,
+// Zendikar Resurgent). The "that land" pronoun binds to the triggering permanent
+// (a single event-permanent reference), but the produced mana is read at
+// resolution from the triggering tap's recorded production rather than from the
+// referenced object, so the reference is consumed here. The mana goes to the
+// ability's controller ("add ...", EffectContextController).
+func lowerTriggerLandProducedMana(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	for _, reference := range ctx.content.References {
+		if reference.Binding != compiler.ReferenceBindingEventPermanent {
+			return game.AbilityContent{}, false
+		}
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectAddMana ||
+		!effect.Mana.TriggerLandProducedType ||
+		effect.Context != parser.EffectContextController ||
+		effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone {
+		return game.AbilityContent{}, false
+	}
+	return game.TriggerLandProducedManaContent(), true
+}
+
 // lowerReferencedControllerAddMana lowers a triggered-ability body that adds
 // fixed mana to the controller of the permanent that fired the trigger ("its
 // controller adds an additional {G}", Wild Growth and the mana-additional aura
@@ -771,6 +807,9 @@ func lowerReferencedControllerAddMana(ctx contentCtx) (game.AbilityContent, bool
 }
 
 func typedManaEffectContent(effect compiler.CompiledEffectMana) (game.AbilityContent, bool) {
+	if effect.TriggerLandProducedType {
+		return game.TriggerLandProducedManaContent(), true
+	}
 	if effect.FilterPair {
 		if len(effect.FilterColors) != 2 {
 			return game.AbilityContent{}, false

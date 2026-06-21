@@ -132,6 +132,14 @@ const (
 	// (CR 605.1a). Colorless ({C}) is never offered because a permanent's colors
 	// are only the five colors (CR 105.2, CR 202.2).
 	ResolutionChoiceColorSourceControlledPermanentColors
+	// ResolutionChoiceColorSourceTriggerLandProduced offers every type of mana
+	// the land that fired the resolving tapped-for-mana trigger produced on that
+	// tap, read from the stack object's TriggerEvent.ProducedManaColors. It models
+	// the mana-doubler body "add one mana of any type that land produced."
+	// (Mirari's Wake, Zendikar Resurgent, Dictate of Karametra). The candidate
+	// types are exactly the colors (including colorless) the triggering tap added;
+	// an empty set leaves the trigger producing no mana (CR 605.1a).
+	ResolutionChoiceColorSourceTriggerLandProduced
 )
 
 // ResolutionChoice describes a bounded value-producing choice made during
@@ -253,12 +261,18 @@ type ReplacementEffect struct {
 	// "create those tokens plus an additional Food token"). The addend tokens are
 	// created directly alongside the matched tokens, so they neither re-trigger
 	// this replacement nor multiply with TokenMultiplier.
-	TokenAddendDef                *CardDef
-	CounterMultiplier             int
-	CounterAddend                 int
-	MatchCounterKind              bool
-	CounterKindFilter             counter.Kind
-	CounterRecipientTypes         []types.Card
+	TokenAddendDef        *CardDef
+	CounterMultiplier     int
+	CounterAddend         int
+	MatchCounterKind      bool
+	CounterKindFilter     counter.Kind
+	CounterRecipientTypes []types.Card
+	// CounterRecipientTypesAny restricts the recipient to a permanent that has at
+	// least one of the listed card types ("an artifact or creature you control",
+	// Ozolith, the Shattered Spire). An empty slice imposes no type restriction.
+	// Unlike CounterRecipientTypes (which requires every listed type), this is a
+	// union filter.
+	CounterRecipientTypesAny      []types.Card
 	CounterRecipientAnyPermanent  bool
 	CounterUseRecipientController bool
 	DamageMultiplier              int

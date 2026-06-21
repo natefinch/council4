@@ -120,38 +120,39 @@ func compileTokenCopyForEachGroup(syntax *parser.SelectionSyntax) CompiledSelect
 
 func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 	selector := CompiledSelector{
-		Kind:                   compileSelectionKind(syntax.Kind),
-		Controller:             compileSelectionController(syntax.Controller),
-		All:                    syntax.All,
-		Another:                syntax.Another,
-		Other:                  syntax.Other,
-		Attacking:              syntax.Attacking,
-		Blocking:               syntax.Blocking,
-		Tapped:                 syntax.Tapped,
-		Untapped:               syntax.Untapped,
-		NonToken:               syntax.NonToken,
-		TokenOnly:              syntax.TokenOnly,
-		Keyword:                syntax.Keyword,
-		ExcludedKeyword:        syntax.ExcludedKeyword,
-		Zone:                   syntax.Zone,
-		ManaValue:              syntax.ManaValue,
-		MatchManaValue:         syntax.MatchManaValue,
-		ManaValueX:             syntax.ManaValueX,
-		Power:                  syntax.Power,
-		MatchPower:             syntax.MatchPower,
-		Toughness:              syntax.Toughness,
-		MatchToughness:         syntax.MatchToughness,
-		Colorless:              syntax.Colorless,
-		Multicolored:           syntax.Multicolored,
-		BasicLandType:          syntax.BasicLandType,
-		MatchCounter:           syntax.CounterRequired,
-		RequiredCounter:        syntax.CounterKind,
-		PlayerOrPlaneswalker:   syntax.PlayerOrPlaneswalker,
-		SubtypeFromEntryChoice: syntax.SubtypeFromEntryChoice,
-		SubtypeFromChosenType:  syntax.SubtypeFromChosenType,
-		ConjunctiveTypes:       syntax.ConjunctiveTypes,
-		RequiredName:           syntax.RequiredName,
-		EnteredThisTurn:        syntax.EnteredThisTurn,
+		Kind:                          compileSelectionKind(syntax.Kind),
+		Controller:                    compileSelectionController(syntax.Controller),
+		All:                           syntax.All,
+		Another:                       syntax.Another,
+		Other:                         syntax.Other,
+		Attacking:                     syntax.Attacking,
+		Blocking:                      syntax.Blocking,
+		Tapped:                        syntax.Tapped,
+		Untapped:                      syntax.Untapped,
+		NonToken:                      syntax.NonToken,
+		TokenOnly:                     syntax.TokenOnly,
+		Keyword:                       syntax.Keyword,
+		ExcludedKeyword:               syntax.ExcludedKeyword,
+		Zone:                          syntax.Zone,
+		ManaValue:                     syntax.ManaValue,
+		MatchManaValue:                syntax.MatchManaValue,
+		ManaValueX:                    syntax.ManaValueX,
+		Power:                         syntax.Power,
+		MatchPower:                    syntax.MatchPower,
+		Toughness:                     syntax.Toughness,
+		MatchToughness:                syntax.MatchToughness,
+		Colorless:                     syntax.Colorless,
+		Multicolored:                  syntax.Multicolored,
+		BasicLandType:                 syntax.BasicLandType,
+		MatchCounter:                  syntax.CounterRequired,
+		RequiredCounter:               syntax.CounterKind,
+		PlayerOrPlaneswalker:          syntax.PlayerOrPlaneswalker,
+		SubtypeFromEntryChoice:        syntax.SubtypeFromEntryChoice,
+		SubtypeFromChosenType:         syntax.SubtypeFromChosenType,
+		SubtypeFromChosenTypeExcluded: syntax.SubtypeFromChosenTypeExcluded,
+		ConjunctiveTypes:              syntax.ConjunctiveTypes,
+		RequiredName:                  syntax.RequiredName,
+		EnteredThisTurn:               syntax.EnteredThisTurn,
 	}
 	// A required card-type union is always kept. A single required card type is
 	// kept for a spell selection ("counter target instant or sorcery spell") and
@@ -226,6 +227,8 @@ func compileStaticSubjectKind(kind parser.EffectStaticSubjectKind) StaticSubject
 		return StaticSubjectBlockingCreatures
 	case parser.EffectStaticSubjectControlledPermanents:
 		return StaticSubjectControlledPermanents
+	case parser.EffectStaticSubjectOtherControlledPermanents:
+		return StaticSubjectOtherControlledPermanents
 	case parser.EffectStaticSubjectControlledCreatures:
 		return StaticSubjectControlledCreatures
 	case parser.EffectStaticSubjectOtherControlledCreatures:
@@ -411,6 +414,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectTribute
 	case parser.EffectChooseCreatureType:
 		return EffectChooseCreatureType
+	case parser.EffectNoMaximumHandSize:
+		return EffectNoMaximumHandSize
 	case parser.EffectMassReanimationExchange:
 		return EffectMassReanimationExchange
 	case parser.EffectPunisherLoseLife:
@@ -524,6 +529,7 @@ func compileTypedAmount(amount parser.EffectAmountSyntax) CompiledAmount {
 		DynamicForm:   compileDynamicAmountForm(amount.DynamicForm),
 		Multiplier:    amount.Multiplier,
 		ReferenceSpan: amount.ReferenceSpan,
+		Addend:        amount.Addend,
 		CounterKind:   amount.CounterKind,
 		Text:          amount.Text,
 		Colors:        compileAmountColors(amount.Colors),

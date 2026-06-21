@@ -136,6 +136,9 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		if counter, ok := compileConditionCounter(clause.Counter); ok {
 			condition.Counter = counter
 		}
+		for _, value := range clause.CounterRecipientTypesAny {
+			condition.CounterRecipientTypesAny = append(condition.CounterRecipientTypesAny, compileTriggerCardType(value))
+		}
 	case parser.ConditionPredicateDamageByControlledSource:
 		selection, ok := compileConditionSelection(clause.Selection)
 		if !ok {

@@ -35,6 +35,14 @@ const (
 	// "of that type" restriction of "Choose a creature type. ... of that type."
 	// spells (Distant Melody). A missing or non-subtype choice matches nothing.
 	SubtypeChoiceResolution
+
+	// SubtypeChoiceResolutionExcluded requires the matched permanent to NOT share
+	// the creature subtype published under SpellChosenTypeChoiceKey by an earlier
+	// Choose instruction in the same resolution, the "aren't of the chosen type"
+	// restriction of "Choose a creature type. Destroy all creatures that aren't of
+	// the chosen type." spells (Kindred Dominance). A missing or non-subtype choice
+	// matches nothing, failing closed like its positive sibling.
+	SubtypeChoiceResolutionExcluded
 )
 
 // SubtypeChoiceWithoutEntry returns choice with the source-entry variant cleared

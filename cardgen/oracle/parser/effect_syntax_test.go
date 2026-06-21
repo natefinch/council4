@@ -151,6 +151,40 @@ func TestParseGreatestCharacteristicDrawAmount(t *testing.T) {
 	}
 }
 
+// TestParseDynamicAmountCardsInHandPlusOffset covers the "the number of cards
+// in your hand plus N" draw amount that carries a fixed offset on top of the
+// dynamic count (Sea Gate Restoration).
+func TestParseDynamicAmountCardsInHandPlusOffset(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		kind   EffectDynamicAmountKind
+		offset int
+	}{
+		{"Draw cards equal to the number of cards in your hand plus one.", EffectDynamicAmountCount, 1},
+		{"Draw cards equal to the number of cards in your hand plus two.", EffectDynamicAmountCount, 2},
+		{"Draw cards equal to the number of cards in your hand plus 3.", EffectDynamicAmountCount, 3},
+		// Without an offset rider the dynamic count carries no offset.
+		{"Draw cards equal to the number of cards in your hand.", EffectDynamicAmountCount, 0},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if got := effects[0].Amount.DynamicKind; got != test.kind {
+				t.Fatalf("draw dynamic kind = %v, want %v", got, test.kind)
+			}
+			if got := effects[0].Amount.Addend; got != test.offset {
+				t.Fatalf("draw amount offset = %d, want %d", got, test.offset)
+			}
+		})
+	}
+}
+
 // TestParseColorCountSelfBuffAmount covers the "for each color among <group>"
 // and "the number of colors among <group>" dynamic amounts that scale a
 // continuous P/T self-buff (Faeburrow Elder).
@@ -186,16 +220,19 @@ func TestParseColorCountSelfBuffAmount(t *testing.T) {
 
 // TestParseSharedCreatureTypeAnthemAmount covers the "for each other creature
 // ... that shares a creature type with it" dynamic amount that scales the Coat
-// of Arms tribal anthem, including the "you control" scope variant.
+// of Arms tribal anthem, including the "you control" scope variant and the
+// "other attacking creature" combat-scoped variant (Shared Animosity).
 func TestParseSharedCreatureTypeAnthemAmount(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		source string
-		kind   EffectDynamicAmountKind
+		source    string
+		kind      EffectDynamicAmountKind
+		attacking bool
 	}{
-		{"Each creature gets +1/+1 for each other creature on the battlefield that shares a creature type with it.", EffectDynamicAmountSharedCreatureTypeCount},
-		{"Each creature gets +1/+1 for each other creature on the battlefield that shares at least one creature type with it.", EffectDynamicAmountSharedCreatureTypeCount},
-		{"Each creature you control gets +1/+1 for each other creature you control that shares a creature type with it.", EffectDynamicAmountSharedCreatureTypeCount},
+		{"Each creature gets +1/+1 for each other creature on the battlefield that shares a creature type with it.", EffectDynamicAmountSharedCreatureTypeCount, false},
+		{"Each creature gets +1/+1 for each other creature on the battlefield that shares at least one creature type with it.", EffectDynamicAmountSharedCreatureTypeCount, false},
+		{"Each creature you control gets +1/+1 for each other creature you control that shares a creature type with it.", EffectDynamicAmountSharedCreatureTypeCount, false},
+		{"Whenever a creature you control attacks, it gets +1/+0 until end of turn for each other attacking creature that shares a creature type with it.", EffectDynamicAmountSharedCreatureTypeCount, true},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
@@ -210,6 +247,9 @@ func TestParseSharedCreatureTypeAnthemAmount(t *testing.T) {
 			}
 			if effects[0].Amount.Selection == nil {
 				t.Fatalf("amount missing group selection: %#v", effects[0].Amount)
+			}
+			if got := effects[0].Amount.Selection.Attacking; got != test.attacking {
+				t.Fatalf("amount group attacking = %v, want %v", got, test.attacking)
 			}
 		})
 	}
@@ -240,6 +280,37 @@ func TestParseCastAsThoughFlashEffect(t *testing.T) {
 			}
 			if gotFlash && effects[0].Optional {
 				t.Fatal("flash permission should be unconditional, got Optional=true")
+			}
+		})
+	}
+}
+
+func TestParseNoMaximumHandSizeForRestOfGameEffect(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		noMax  bool
+	}{
+		// The exact controller-scoped rest-of-game wording is recognized as a
+		// single non-optional continuous effect (Sea Gate Restoration,
+		// Praetor's Counsel, Wisdom of Ages).
+		{"You have no maximum hand size for the rest of the game.", true},
+		// Variant wordings fail closed and flow through the generic effect parser.
+		{"You have no maximum hand size.", false},
+		{"Target player has no maximum hand size for the rest of the game.", false},
+		{"You have no maximum hand size until end of turn.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			gotNoMax := len(effects) == 1 && effects[0].Kind == EffectNoMaximumHandSize
+			if gotNoMax != test.noMax {
+				t.Fatalf("recognized no-maximum-hand-size = %v, want %v (effects=%#v)", gotNoMax, test.noMax, effects)
+			}
+			if gotNoMax && effects[0].Optional {
+				t.Fatal("no-maximum-hand-size effect should be unconditional, got Optional=true")
 			}
 		})
 	}
@@ -804,8 +875,8 @@ func TestParseCreateNamedTokenChoiceExactness(t *testing.T) {
 		// Single named token (no choice) stays exact but is not a choice.
 		{"Create a Treasure token.", true, false},
 		// A non-predefined alternative fails closed.
-		{"Create a Powerstone token or a Treasure token.", false, true},
-		{"Create your choice of a Powerstone token, a Food token, or a Treasure token.", false, true},
+		{"Create an Incubator token or a Treasure token.", false, true},
+		{"Create your choice of an Incubator token, a Food token, or a Treasure token.", false, true},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
@@ -1043,11 +1114,10 @@ func TestParseCreateNamedTokenExactness(t *testing.T) {
 		{"Create a Mutagen token.", true},
 		{"Create a Map token.", true},
 		{"Create a Junk token.", true},
+		{"Create a Powerstone token.", true},
 		{"Create two Treasure tokens.", true},
-		// Named tokens whose ability the runtime token model does not represent
-		// yet stay fail-closed: Powerstone's restricted mana and Incubator's
-		// transform ability.
-		{"Create a Powerstone token.", false},
+		// Incubator's transform ability is not yet modeled, so it stays
+		// fail-closed.
 		{"Create an Incubator token.", false},
 		// A "tapped" entry on a recognized named token is now representable.
 		{"Create a tapped Treasure token.", true},
@@ -2921,6 +2991,49 @@ func TestParseLandsProduceManaFailsClosed(t *testing.T) {
 					if effect.Mana.LandsProduce {
 						t.Fatalf("unmodeled body wrongly recognized as lands-produce: %q", text)
 					}
+				}
+			}
+		}
+	}
+}
+
+// TestParseTriggerLandProducedManaSyntax verifies the "add one mana of any type
+// that land produced" mana-doubler body (Mirari's Wake, Zendikar Resurgent)
+// parses to Mana.TriggerLandProducedType without setting the battlefield
+// lands-produce or any-color flags.
+func TestParseTriggerLandProducedManaSyntax(t *testing.T) {
+	t.Parallel()
+	document, _ := Parse("Whenever you tap a land for mana, add one mana of any type that land produced.", Context{})
+	var found bool
+	for _, ability := range document.Abilities {
+		for _, sentence := range ability.Sentences {
+			for _, effect := range sentence.Effects {
+				if !effect.Mana.TriggerLandProducedType {
+					continue
+				}
+				found = true
+				if effect.Mana.LandsProduce || effect.Mana.AnyColor || effect.Mana.CommanderIdentity {
+					t.Fatal("trigger-land-produced mana must not set LandsProduce, AnyColor, or CommanderIdentity")
+				}
+			}
+		}
+	}
+	if !found {
+		t.Fatal("expected Mana.TriggerLandProducedType for the mana-doubler body")
+	}
+}
+
+// TestParseTriggerLandProducedManaFailsClosed asserts the mana-doubler
+// recognition does not over-match the related battlefield "that a land you
+// control could produce" body, which must stay LandsProduce.
+func TestParseTriggerLandProducedManaFailsClosed(t *testing.T) {
+	t.Parallel()
+	document, _ := Parse("{T}: Add one mana of any type that a land you control could produce.", Context{})
+	for _, ability := range document.Abilities {
+		for _, sentence := range ability.Sentences {
+			for _, effect := range sentence.Effects {
+				if effect.Mana.TriggerLandProducedType {
+					t.Fatal("battlefield lands-produce body wrongly recognized as trigger-land-produced")
 				}
 			}
 		}

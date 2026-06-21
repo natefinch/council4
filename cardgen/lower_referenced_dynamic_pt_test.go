@@ -98,6 +98,31 @@ func TestLowerEventPermanentDynamicWhereXPump(t *testing.T) {
 	}
 }
 
+// TestLowerSharedAnimosityAttacksPump lowers Shared Animosity's attack-trigger
+// self-pump scaled by the number of other attacking creatures that share a
+// creature type with the triggering attacker. The pump addresses the triggering
+// permanent and reads a shared-creature-type count scoped to attacking creatures.
+func TestLowerSharedAnimosityAttacksPump(t *testing.T) {
+	t.Parallel()
+	modify := referencedDynamicModifyPT(t,
+		"Enchantment",
+		"Whenever a creature you control attacks, it gets +1/+0 until end of turn for each other attacking creature that shares a creature type with it.",
+		false)
+	if modify.Object != game.EventPermanentReference() {
+		t.Fatalf("object = %+v, want event permanent reference", modify.Object)
+	}
+	power := modify.PowerDelta.DynamicAmount()
+	if !power.Exists || power.Val.Kind != game.DynamicAmountSharedCreatureTypeCountInGroup || power.Val.Multiplier != 1 {
+		t.Fatalf("power delta = %+v, want shared-creature-type count multiplier 1", modify.PowerDelta)
+	}
+	if state := power.Val.Group.Selection().CombatState; state != game.CombatStateAttacking {
+		t.Fatalf("power group combat state = %v, want attacking", state)
+	}
+	if modify.ToughnessDelta.IsDynamic() || modify.ToughnessDelta.Value() != 0 {
+		t.Fatalf("toughness delta = %+v, want fixed 0", modify.ToughnessDelta)
+	}
+}
+
 // TestLowerSourceDynamicSourcePowerSelfPump lowers a self-pump scaled by the
 // source's own power ("This creature gets +X/+X until end of turn, where X is its
 // power."). The pump addresses the source and reads the source's power, which the

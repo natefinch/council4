@@ -194,6 +194,14 @@ const (
 	// type." (Distant Melody). It lowers to a game.Choose instruction whose
 	// ResolutionChoice is a ResolutionChoiceSubtype over creature types.
 	EffectChooseCreatureType EffectKind = "EffectChooseCreatureType"
+	// EffectNoMaximumHandSize models the controller-scoped, rest-of-game
+	// continuous effect "You have no maximum hand size for the rest of the game."
+	// (Sea Gate Restoration). As a resolving spell effect it removes the
+	// controller's maximum hand size permanently; it lowers to an ApplyRule
+	// carrying the continuous RuleEffectNoMaximumHandSize with a permanent
+	// duration. The permanent static "You have no maximum hand size." form
+	// (Reliquary Tower) is a static declaration, not this resolving effect.
+	EffectNoMaximumHandSize EffectKind = "EffectNoMaximumHandSize"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -488,20 +496,25 @@ const (
 
 // EffectAmountSyntax is a fixed or rules-derived source-spanned amount.
 type EffectAmountSyntax struct {
-	Span          shared.Span             `json:"-"`
-	Text          string                  `json:",omitempty"`
-	Value         int                     `json:",omitempty"`
-	Known         bool                    `json:",omitempty"`
-	RangeKnown    bool                    `json:",omitempty"`
-	Minimum       int                     `json:",omitempty"`
-	Maximum       int                     `json:",omitempty"`
-	VariableX     bool                    `json:",omitempty"`
-	DynamicKind   EffectDynamicAmountKind `json:",omitempty"`
-	DynamicForm   EffectDynamicAmountForm `json:",omitempty"`
-	Multiplier    int                     `json:",omitempty"`
-	ReferenceSpan shared.Span             `json:"-"`
-	CounterKind   counter.Kind            `json:",omitempty"`
-	Selection     *SelectionSyntax        `json:",omitempty"`
+	Span        shared.Span             `json:"-"`
+	Text        string                  `json:",omitempty"`
+	Value       int                     `json:",omitempty"`
+	Known       bool                    `json:",omitempty"`
+	RangeKnown  bool                    `json:",omitempty"`
+	Minimum     int                     `json:",omitempty"`
+	Maximum     int                     `json:",omitempty"`
+	VariableX   bool                    `json:",omitempty"`
+	DynamicKind EffectDynamicAmountKind `json:",omitempty"`
+	DynamicForm EffectDynamicAmountForm `json:",omitempty"`
+	Multiplier  int                     `json:",omitempty"`
+	// Addend is a fixed integer added to a dynamic count after the multiplier,
+	// modeling the "plus N" rider on a counted amount ("the number of cards in
+	// your hand plus one.", Sea Gate Restoration). It is zero when no such rider
+	// is present.
+	Addend        int              `json:",omitempty"`
+	ReferenceSpan shared.Span      `json:"-"`
+	CounterKind   counter.Kind     `json:",omitempty"`
+	Selection     *SelectionSyntax `json:",omitempty"`
 	// Colors carries the colors of a devotion amount ("your devotion to
 	// <color(s)>"). It is empty for every other amount kind.
 	Colors []Color `json:",omitempty"`
@@ -646,6 +659,13 @@ type EffectManaSyntax struct {
 	// rather than an additional output; lowering pairs the two into one ability
 	// whose larger output replaces the base when the condition holds.
 	Instead bool `json:",omitempty"`
+	// TriggerLandProducedType reports the body "one mana of any type that land
+	// produced" (Mirari's Wake, Zendikar Resurgent, Dictate of Karametra, Mana
+	// Flare, Heartbeat of Spring). It is the mana-doubler output of a
+	// tapped-for-mana trigger: one additional mana whose type is chosen among the
+	// types the triggering land produced on that tap, recomputed at resolution
+	// from the triggering tap rather than from a fixed color or the battlefield.
+	TriggerLandProducedType bool `json:",omitempty"`
 }
 
 // ManaLandsProduceScope identifies which battlefield lands' producible colors
@@ -863,6 +883,14 @@ type SelectionSyntax struct {
 	// to the runtime Selection.SubtypeFromChosenType predicate (which reads
 	// game.SpellChosenTypeChoiceKey).
 	SubtypeFromChosenType bool `json:",omitempty"`
+	// SubtypeFromChosenTypeExcluded records a trailing "that aren't of the chosen
+	// type" qualifier on a mass group ("Destroy all creatures that aren't of the
+	// chosen type." — Kindred Dominance), requiring each matched permanent to NOT
+	// share the creature subtype chosen earlier in the same resolution by a "Choose
+	// a creature type." effect. It lowers to the runtime
+	// game.SubtypeChoiceResolutionExcluded predicate (which reads
+	// game.SpellChosenTypeChoiceKey).
+	SubtypeFromChosenTypeExcluded bool `json:",omitempty"`
 	// ManaValueX records that the MatchManaValue comparison bound is the spell's
 	// chosen {X} rather than a fixed number ("with mana value X or less"). When
 	// set, ManaValue holds the operator (LessOrEqual) with no fixed Value; the
@@ -1592,6 +1620,12 @@ const (
 	// except the source ("each other attacking creature gets +1/+0 until end of
 	// turn."), the affected group of the Battle cry triggered ability.
 	EffectStaticSubjectOtherAttackingCreatures EffectStaticSubjectKind = "EffectStaticSubjectOtherAttackingCreatures"
+
+	// EffectStaticSubjectOtherControlledPermanents names every permanent you
+	// control except the source ("Other permanents you control have
+	// indestructible.", Avacyn, Angel of Hope), the self-excluded sibling of
+	// EffectStaticSubjectControlledPermanents.
+	EffectStaticSubjectOtherControlledPermanents EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledPermanents"
 )
 
 // EffectStaticSubjectSyntax is a source-spanned typed static-effect subject.

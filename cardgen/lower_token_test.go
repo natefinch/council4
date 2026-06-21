@@ -91,6 +91,35 @@ func TestLowerCreateJunkTokenSource(t *testing.T) {
 	}
 }
 
+func TestLowerCreatePowerstoneTokenSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Powerstone Maker",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a tapped Powerstone token.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		`Name:     "Powerstone"`,
+		"types.Powerstone",
+		"game.AddMana",
+		"mana.C",
+		"game.ManaSpendCastArtifactSpell",
+		"game.ManaSpendRestrictedToCondition",
+		"EntryTapped: true",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+}
+
 func TestLowerMultipleCreatureTokens(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -1475,7 +1504,7 @@ func TestGenerateExecutableCardSourceAttackingOnlyTokenRendersEntryAttacking(t *
 func TestCreateTokenFailsClosedForUnsupportedShapes(t *testing.T) {
 	t.Parallel()
 	for _, oracle := range []string{
-		"Create a Powerstone token.", // named token without a representable ability
+		"Create an Incubator token.", // named token without a representable ability
 		"Create a 1/1 white Soldier creature token with flying and protection from red.", // parameterized keyword rider not representable
 		"Create a 2/2 green Boar creature token that's tapped and blocking.",             // blocking entry not representable
 		"Each opponent creates a 1/1 white Human creature token.",                        // player-group recipient not a single player reference

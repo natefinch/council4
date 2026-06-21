@@ -20,6 +20,22 @@ func (r *effectResolver) quantity(q game.Quantity) int {
 	return q.Value()
 }
 
+// quantityForPermanent evaluates a quantity whose dynamic amount may depend on
+// the specific permanent being modified. The shared-creature-type-in-group count
+// yields a different value per affected permanent (Shared Animosity counts the
+// other attacking creatures sharing a creature type with the triggering
+// attacker), so it is resolved relative to permanent; every other amount is
+// independent of the affected permanent and delegates to quantity.
+func (r *effectResolver) quantityForPermanent(q game.Quantity, permanent *game.Permanent) int {
+	if q.IsDynamic() {
+		dynamic := q.DynamicAmount().Val
+		if dynamic.Kind == game.DynamicAmountSharedCreatureTypeCountInGroup {
+			return dynamicAmountValueForPermanent(r.game, permanent, stackObjectController(r.obj), dynamic, 0)
+		}
+	}
+	return r.quantity(q)
+}
+
 func (r *effectResolver) resolveObject(object game.ObjectReference) (*game.Permanent, bool) {
 	resolved, ok := resolveObjectReference(r.game, r.obj, object)
 	return resolved.permanent, ok && resolved.permanent != nil
@@ -489,8 +505,8 @@ func handleModifyPT(r *effectResolver, prim game.ModifyPT) effectResolved {
 	if !ok || prim.Duration != game.DurationUntilEndOfTurn {
 		return res
 	}
-	powerDelta := r.quantity(prim.PowerDelta)
-	toughnessDelta := r.quantity(prim.ToughnessDelta)
+	powerDelta := r.quantityForPermanent(prim.PowerDelta, permanent)
+	toughnessDelta := r.quantityForPermanent(prim.ToughnessDelta, permanent)
 	r.game.ContinuousEffects = append(r.game.ContinuousEffects, untilEndOfTurnPTContinuousEffect(r.game, r.obj, permanent, powerDelta, toughnessDelta))
 	if prim.PublishLinked != "" {
 		rememberLinkedObject(

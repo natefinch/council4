@@ -36,6 +36,15 @@ func objectCharacteristicAmount(kind compiler.DynamicAmountKind, object game.Obj
 }
 
 func lowerDynamicAmount(amount compiler.CompiledAmount, object game.ObjectReference) (game.DynamicAmount, bool) {
+	dynamic, ok := lowerDynamicAmountKind(amount, object)
+	if !ok {
+		return game.DynamicAmount{}, false
+	}
+	dynamic.Addend = amount.Addend
+	return dynamic, true
+}
+
+func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectReference) (game.DynamicAmount, bool) {
 	if amount.Multiplier < 1 {
 		return game.DynamicAmount{}, false
 	}
@@ -183,14 +192,18 @@ func dynamicAmountSelection(selector compiler.CompiledSelector) (game.Selection,
 	if !ok {
 		return game.Selection{}, false
 	}
+	combatState := dynamicCombatState(selector)
 	filtered := selector
 	filtered.Tapped = false
 	filtered.Untapped = false
+	filtered.Attacking = false
+	filtered.Blocking = false
 	selection, ok := dynamicCountCharacteristics(filtered)
 	if !ok {
 		return game.Selection{}, false
 	}
 	selection.Tapped = tapped
+	selection.CombatState = combatState
 	requiredType, known := dynamicBattlefieldRequiredType(selector.Kind)
 	switch {
 	case len(selector.RequiredTypesAny()) >= 2:
@@ -228,6 +241,23 @@ func dynamicTapState(selector compiler.CompiledSelector) (game.TriState, bool) {
 		return game.TriFalse, true
 	default:
 		return game.TriAny, true
+	}
+}
+
+// dynamicCombatState maps a compiled count selector's combat-involvement flags
+// onto the runtime combat-state filter that scopes a battlefield-group count to
+// attacking and/or blocking permanents ("for each other attacking creature …").
+// The zero value (neither flag set) imposes no combat restriction.
+func dynamicCombatState(selector compiler.CompiledSelector) game.CombatStateFilter {
+	switch {
+	case selector.Attacking && selector.Blocking:
+		return game.CombatStateAttackingOrBlocking
+	case selector.Attacking:
+		return game.CombatStateAttacking
+	case selector.Blocking:
+		return game.CombatStateBlocking
+	default:
+		return game.CombatStateAny
 	}
 }
 

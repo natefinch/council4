@@ -409,6 +409,43 @@ func lowerCastAsThoughFlash(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 	}}}.Ability(), nil
 }
 
+// lowerNoMaximumHandSize lowers the controller-scoped, rest-of-game continuous
+// effect "You have no maximum hand size for the rest of the game." (Sea Gate
+// Restoration) to an ApplyRule that removes the controller's maximum hand size
+// permanently. It reuses the continuous RuleEffectNoMaximumHandSize rule effect
+// (shared with the permanent static "You have no maximum hand size." form on
+// Reliquary Tower and similar) with a permanent duration, since "for the rest of
+// the game" never expires. Targets, references, conditions, keywords, modes, a
+// negation, an amount, or a non-controller scope fail closed.
+func lowerNoMaximumHandSize(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Amount.Known ||
+		effect.Duration != compiler.DurationNone ||
+		effect.Context != parser.EffectContextController ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported no-maximum-hand-size effect",
+			"the executable source backend supports only the exact controller-scoped rest-of-game no-maximum-hand-size effect",
+		)
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.ApplyRule{
+			RuleEffects: []game.RuleEffect{{
+				Kind:           game.RuleEffectNoMaximumHandSize,
+				AffectedPlayer: game.PlayerYou,
+			}},
+			Duration: game.DurationPermanent,
+		},
+	}}}.Ability(), nil
+}
+
 // lowerCantCastSpells lowers the one-shot, turn-scoped player cast prohibition
 // "<players> can't cast spells this turn." (Silence) to an ApplyRule that
 // forbids the affected players from casting spells for the rest of the turn. The
@@ -554,6 +591,9 @@ func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.
 		return content, diagnostic, true
 	case compiler.EffectCastAsThoughFlash:
 		content, diagnostic := lowerCastAsThoughFlash(ctx)
+		return content, diagnostic, true
+	case compiler.EffectNoMaximumHandSize:
+		content, diagnostic := lowerNoMaximumHandSize(ctx)
 		return content, diagnostic, true
 	case compiler.EffectCantCastSpells:
 		content, diagnostic := lowerCantCastSpells(ctx)
@@ -997,6 +1037,15 @@ func massGroupSelection(selector compiler.CompiledSelector) (game.Selection, boo
 	if selector.MatchCounter {
 		selection.MatchCounter = true
 		selection.RequiredCounter = selector.RequiredCounter
+	}
+	switch {
+	case selector.SubtypeFromChosenTypeExcluded:
+		selection.SubtypeChoice = game.SubtypeChoiceResolutionExcluded
+	case selector.SubtypeFromChosenType:
+		selection.SubtypeChoice = game.SubtypeChoiceResolution
+	case selector.SubtypeFromEntryChoice:
+		selection.SubtypeChoice = game.SubtypeChoiceSourceEntry
+	default:
 	}
 	if len(selection.Validate()) != 0 {
 		return game.Selection{}, false

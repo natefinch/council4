@@ -252,6 +252,7 @@ func cloneReplacementDecision(d ReplacementDecision) ReplacementDecision {
 
 func fixupReplacementEffect(e *ReplacementEffect) {
 	e.CounterRecipientTypes = cloneSlice(e.CounterRecipientTypes)
+	e.CounterRecipientTypesAny = cloneSlice(e.CounterRecipientTypesAny)
 	e.DamageSourceColors = cloneSlice(e.DamageSourceColors)
 	e.EntersWithCounters = cloneSlice(e.EntersWithCounters)
 	// Condition is immutable rules data and is copied by value.

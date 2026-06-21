@@ -119,6 +119,12 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 			return false
 		}
 	}
+	if sel.SubtypeChoice == game.SubtypeChoiceResolutionExcluded {
+		subtype, ok := s.resolutionChoiceSubtype(game.SpellChosenTypeChoiceKey)
+		if !ok || s.hasAnySubtype([]types.Sub{subtype}) {
+			return false
+		}
+	}
 	if len(sel.ColorsAny) > 0 && !s.hasAnyColor(sel.ColorsAny) {
 		return false
 	}

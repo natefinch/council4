@@ -1122,6 +1122,38 @@ func landsProduceTexts(relation PlayerRelation, includeColorless bool) (text, pr
 	}
 }
 
+// triggerLandProducedManaKey publishes the type chosen for a "one mana of any
+// type that land produced" mana-doubler trigger (Mirari's Wake, Zendikar
+// Resurgent; see TriggerLandProducedManaContent).
+const triggerLandProducedManaKey = ChoiceKey("oracle-trigger-land-produced-type")
+
+// TriggerLandProducedManaContent builds the triggered-ability content of a "add
+// one mana of any type that land produced" mana doubler (Mirari's Wake, Zendikar
+// Resurgent). The controller chooses one of the types the land that fired the
+// tapped-for-mana trigger produced on that tap and adds one mana of it. The
+// candidate types are recomputed at resolution from the triggering tap's
+// TriggerEvent.ProducedManaColors; an empty set produces no mana (CR 605.1a).
+func TriggerLandProducedManaContent() AbilityContent {
+	return Mode{Sequence: []Instruction{
+		{
+			Primitive: Choose{
+				Choice: ResolutionChoice{
+					Kind:        ResolutionChoiceMana,
+					Prompt:      "Choose a type of mana that land produced",
+					ColorSource: ResolutionChoiceColorSourceTriggerLandProduced,
+				},
+				PublishChoice: triggerLandProducedManaKey,
+			},
+		},
+		{
+			Primitive: AddMana{
+				Amount:     Fixed(1),
+				ChoiceFrom: triggerLandProducedManaKey,
+			},
+		},
+	}}.Ability()
+}
+
 // TapManaAmongControlledColorsAbility builds the complete "{T}: Add one mana of
 // any color among <permanents> you control." mana ability (Mox Amber, Plaza of
 // Heroes). text is the exact oracle text. selection describes which permanents

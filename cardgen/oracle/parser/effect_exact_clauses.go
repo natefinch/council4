@@ -905,7 +905,33 @@ func exactMassEffectSyntax(effect *EffectSyntax, prefix string) bool {
 		return false
 	}
 	phrase := text[len(prefix) : len(text)-1]
+	if base, ok := massChosenTypeBasePhrase(&effect.Selection, phrase); ok {
+		return exactMassGroupPhrase(base)
+	}
 	return exactMassGroupPhrase(phrase) || exactMassSubtypePhrase(&effect.Selection, phrase)
+}
+
+// massChosenTypeBasePhrase strips a trailing chosen-type qualifier ("of the
+// chosen type" / "that aren't of the chosen type") from a mass group phrase when
+// the selection records the matching chosen-type field, returning the base group
+// phrase to validate and true. The base ("creatures") is then checked by the
+// shared exactMassGroupPhrase, so "Destroy all creatures that aren't of the
+// chosen type." (Kindred Dominance) round-trips through the same machinery as the
+// bare mass group. It fails closed when neither chosen-type field is set or the
+// phrase lacks the expected suffix.
+func massChosenTypeBasePhrase(selection *SelectionSyntax, phrase string) (string, bool) {
+	switch {
+	case selection.SubtypeFromChosenTypeExcluded:
+		if base, ok := strings.CutSuffix(phrase, " that aren't of the chosen type"); ok {
+			return base, true
+		}
+	case selection.SubtypeFromChosenType:
+		if base, ok := strings.CutSuffix(phrase, " of the chosen type"); ok {
+			return base, true
+		}
+	default:
+	}
+	return "", false
 }
 
 // exactMassEachEffectSyntax recognizes the singular "each" mass form

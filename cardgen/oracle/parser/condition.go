@@ -265,6 +265,13 @@ type ConditionClause struct {
 	GraveyardRedirectScope       GraveyardRedirectScope `json:",omitempty"`
 	GraveyardSubjectTypesAny     []TriggerCardType      `json:",omitempty"`
 	GraveyardFromBattlefieldOnly bool                   `json:",omitempty"`
+
+	// CounterRecipientTypesAny restricts a
+	// ConditionPredicateCounterPlacementOnControlledPermanent clause to a
+	// controlled permanent that has at least one of the listed card types ("an
+	// artifact or creature you control", Ozolith, the Shattered Spire). It is
+	// empty for the unrestricted "a permanent you control" form.
+	CounterRecipientTypesAny []TriggerCardType `json:",omitempty"`
 }
 
 // ConditionControlComparison describes a cross-player control-count comparison
@@ -959,6 +966,9 @@ func recognizeCounterPlacementCondition(body []shared.Token, atoms Atoms) (Condi
 			Counter:   counterKind,
 		}, true
 	}
+	if clause, ok := recognizeControlledTypeUnionCounterPlacement(rest, body, atoms); ok {
+		return clause, true
+	}
 	tail, ok := stripTokenSuffix(rest, "counters", "would", "be", "put", "on", "a", "creature")
 	if !ok || len(tail) == 0 {
 		return ConditionClause{}, false
@@ -970,6 +980,40 @@ func recognizeCounterPlacementCondition(body []shared.Token, atoms Atoms) (Condi
 	return ConditionClause{
 		Predicate: ConditionPredicateCounterPlacementOnAnyCreature,
 		Counter:   counterKind,
+	}, true
+}
+
+// recognizeControlledTypeUnionCounterPlacement recognizes the type-restricted
+// controlled-permanent recipient of a counter-placement replacement, as on
+// Ozolith, the Shattered Spire ("... would be put on an artifact or creature you
+// control ..."). It accepts an "or"-joined card-type union ("artifact",
+// "artifact or creature") before "you control"; the plain "a permanent you
+// control" and "a creature you control" forms are handled by their own branches.
+func recognizeControlledTypeUnionCounterPlacement(rest, body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	split := tokenSubsequenceIndex(rest, "counters", "would", "be", "put", "on")
+	if split < 1 {
+		return ConditionClause{}, false
+	}
+	recipient := rest[split+5:]
+	inner, ok := stripTokenSuffix(recipient, "you", "control")
+	if !ok || len(inner) < 2 {
+		return ConditionClause{}, false
+	}
+	if !equalWord(inner[0], "a") && !equalWord(inner[0], "an") {
+		return ConditionClause{}, false
+	}
+	cardTypes, ok := parseGraveyardRedirectSubjectTypes(inner[1:], atoms)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	counterKind, ok := conditionCounterAtom(shared.SpanOf(body), atoms)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate:                ConditionPredicateCounterPlacementOnControlledPermanent,
+		Counter:                  counterKind,
+		CounterRecipientTypesAny: cardTypes,
 	}, true
 }
 

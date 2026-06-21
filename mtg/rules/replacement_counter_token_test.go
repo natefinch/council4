@@ -611,3 +611,78 @@ func countTokenPermanentsNamed(g *game.Game, name string) int {
 	}
 	return count
 }
+
+func ozolithCounterReplacementCardDef() *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  "Ozolith, the Shattered Spire",
+		Types: []types.Card{types.Artifact},
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.ControlledPermanentTypesCounterKindPlacementReplacement(
+				"If one or more +1/+1 counters would be put on an artifact or creature you control, that many plus one +1/+1 counters are put on it instead.",
+				0,
+				1,
+				counter.PlusOnePlusOne,
+				[]types.Card{types.Artifact, types.Creature},
+				game.TriggerControllerYou,
+			),
+		},
+	}}
+}
+
+func TestCounterPlacementReplacementTypeUnionAddsToArtifactOrCreature(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, ozolithCounterReplacementCardDef())
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Controlled Creature",
+		Types: []types.Card{types.Creature},
+	}})
+	artifact := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Controlled Artifact",
+		Types: []types.Card{types.Artifact},
+	}})
+
+	if !addCountersToPermanent(g, creature, counter.PlusOnePlusOne, 2) {
+		t.Fatal("addCountersToPermanent(creature) = false, want true")
+	}
+	if got := creature.Counters.Get(counter.PlusOnePlusOne); got != 3 {
+		t.Fatalf("creature +1/+1 counters = %d, want 3", got)
+	}
+	if !addCountersToPermanent(g, artifact, counter.PlusOnePlusOne, 4) {
+		t.Fatal("addCountersToPermanent(artifact) = false, want true")
+	}
+	if got := artifact.Counters.Get(counter.PlusOnePlusOne); got != 5 {
+		t.Fatalf("artifact +1/+1 counters = %d, want 5", got)
+	}
+}
+
+func TestCounterPlacementReplacementTypeUnionIgnoresOtherTypes(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, ozolithCounterReplacementCardDef())
+	enchantment := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Controlled Enchantment",
+		Types: []types.Card{types.Enchantment},
+	}})
+
+	if !addCountersToPermanent(g, enchantment, counter.PlusOnePlusOne, 2) {
+		t.Fatal("addCountersToPermanent(enchantment) = false, want true")
+	}
+	if got := enchantment.Counters.Get(counter.PlusOnePlusOne); got != 2 {
+		t.Fatalf("enchantment +1/+1 counters = %d, want 2 (unmodified)", got)
+	}
+}
+
+func TestCounterPlacementReplacementTypeUnionIgnoresOpponentPermanents(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, ozolithCounterReplacementCardDef())
+	opponentCreature := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Opponent Creature",
+		Types: []types.Card{types.Creature},
+	}})
+
+	if !addCountersToPermanent(g, opponentCreature, counter.PlusOnePlusOne, 2) {
+		t.Fatal("addCountersToPermanent(opponent) = false, want true")
+	}
+	if got := opponentCreature.Counters.Get(counter.PlusOnePlusOne); got != 2 {
+		t.Fatalf("opponent creature +1/+1 counters = %d, want 2 (unmodified)", got)
+	}
+}

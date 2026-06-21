@@ -66,7 +66,9 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		}
 		if len(manaBody.Content.Modes) > 0 {
 			seedEntryChoices(obj, permanent)
+			before := manaPoolColorSnapshot(g, playerID)
 			e.resolveAbilityContentWithChoices(g, obj, manaBody.Content, agents, log)
+			recordTappedForManaProduced(g, permanent.ObjectID, producedManaColorsSince(g, playerID, before))
 		}
 		emitAbilityActivatedEvent(g, obj, permanent.ObjectID, true)
 		recordActivatedAbilityUse(g, permanent.ObjectID, activate.AbilityIndex, manaBody.Timing)

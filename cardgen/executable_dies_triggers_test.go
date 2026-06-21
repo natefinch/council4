@@ -326,7 +326,6 @@ func TestGenerateExecutableCardSourceDynamicSourcePowerDamage(t *testing.T) {
 func TestGenerateExecutableCardSourceRejectsAmbiguousDynamicAmount(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
-		"Test Swarm deals damage equal to the number of creatures you control plus one to any target.",
 		"Test Swarm deals damage equal to creatures you control to any target.",
 		"You gain X life, where X is opponent.",
 	} {

@@ -515,6 +515,29 @@ func ControlledPermanentCounterKindPlacementReplacement(text string, multiplier,
 	return replacement
 }
 
+// ControlledPermanentTypesCounterPlacementReplacement creates a persistent
+// replacement that modifies placement of any counter kind on a permanent the
+// controller controls whose card types include at least one of recipientTypesAny
+// (a type-union filter, CR 614).
+func ControlledPermanentTypesCounterPlacementReplacement(text string, multiplier, addend int, recipientTypesAny []types.Card, filter TriggerControllerFilter) ReplacementAbility {
+	replacement := AnyCounterPlacementReplacement(text, multiplier, addend, filter)
+	replacement.Replacement.CounterUseRecipientController = true
+	replacement.Replacement.CounterRecipientTypesAny = append([]types.Card(nil), recipientTypesAny...)
+	return replacement
+}
+
+// ControlledPermanentTypesCounterKindPlacementReplacement creates a persistent
+// replacement that modifies placement of one specific counter kind on a
+// permanent the controller controls whose card types include at least one of
+// recipientTypesAny ("If one or more +1/+1 counters would be put on an artifact
+// or creature you control, ...", Ozolith, the Shattered Spire, CR 614).
+func ControlledPermanentTypesCounterKindPlacementReplacement(text string, multiplier, addend int, kindFilter counter.Kind, recipientTypesAny []types.Card, filter TriggerControllerFilter) ReplacementAbility {
+	replacement := ControlledPermanentTypesCounterPlacementReplacement(text, multiplier, addend, recipientTypesAny, filter)
+	replacement.Replacement.MatchCounterKind = true
+	replacement.Replacement.CounterKindFilter = kindFilter
+	return replacement
+}
+
 // DamageReplacement creates a persistent replacement that modifies damage from
 // matching sources before it is dealt.
 func DamageReplacement(text string, multiplier, addend int, sourceColors []color.Color, filter TriggerControllerFilter) ReplacementAbility {

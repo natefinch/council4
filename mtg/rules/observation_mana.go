@@ -96,6 +96,13 @@ func addInstructionManaColors(primitive game.Primitive, entryChoices map[game.Ch
 			// activation/resolution from the linked exiled card.
 			return
 		}
+		if choose.Choice.ColorSource == game.ResolutionChoiceColorSourceTriggerLandProduced {
+			// The colors come from the type the triggering land just produced,
+			// known only at resolution of the firing tapped-for-mana trigger. This
+			// derived ability contributes no colors of its own to the static
+			// report (CR 605.1a).
+			return
+		}
 		if choose.Choice.ColorSource != game.ResolutionChoiceColorSourceStatic {
 			// "any color" and commander-identity choices can yield any color.
 			for _, c := range color.AllColors() {
