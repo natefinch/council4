@@ -73,6 +73,22 @@ func TestLowerTargetedGraveyardReturnSingleNonpermanentType(t *testing.T) {
 	}
 }
 
+func TestLowerTargetedGraveyardReturnColorAndType(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Color Type Return",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return target red sorcery card from your graveyard to your hand.",
+	})
+	target := face.SpellAbility.Val.Modes[0].Targets[0]
+	if target.Allow != game.TargetAllowCard || target.TargetZone != zone.Graveyard ||
+		!slices.Equal(target.Selection.Val.RequiredTypesAny, []types.Card{types.Sorcery}) ||
+		!slices.Equal(target.Selection.Val.ColorsAny, []color.Color{color.Red}) {
+		t.Fatalf("target = %#v, want RequiredTypesAny=[Sorcery] ColorsAny=[Red]", target)
+	}
+}
+
 func TestLowerTargetedGraveyardReturnCardsWithCyclingToHand(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

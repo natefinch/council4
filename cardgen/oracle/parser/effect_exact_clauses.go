@@ -371,58 +371,91 @@ func graveyardCardCardinalityPrefix(c TargetCardinalitySyntax, another bool) (pr
 }
 
 // graveyardCardNoun reconstructs the singular graveyard-card noun ("creature
-// card", "creature or enchantment card", "permanent card", "green card",
-// "multicolored card", "colorless card", "Zombie card", or the plain "card")
-// from selection's typed fields. It accepts exactly one restriction category so
-// combinations it could not render in canonical order fail closed.
+// card", "sorcery card", "creature or enchantment card", "permanent card",
+// "green card", "red sorcery card", "multicolored creature card", "colorless
+// card", "Zombie card", or the plain "card") from selection's typed fields. It
+// accepts an optional single color qualifier (a single color, "colorless", or
+// "multicolored") followed by at most one type/subtype/permanent core, rendered
+// in canonical Oracle order, and fails closed for any combination it could not
+// reconstruct.
 func graveyardCardNoun(sel SelectionSyntax) (string, bool) {
-	hasTypes := len(sel.RequiredTypesAny) > 0
-	hasColors := len(sel.ColorsAny) > 0
-	hasColorQualifier := sel.Colorless || sel.Multicolored
-	hasSubtype := len(sel.SubtypesAny) > 0
-	isPermanent := sel.Kind == SelectionPermanent
-
-	categories := 0
-	for _, present := range []bool{hasTypes, hasColors, hasColorQualifier, hasSubtype, isPermanent} {
-		if present {
-			categories++
-		}
-	}
-	if categories > 1 {
+	colorPrefix, hasColor, ok := graveyardColorPrefix(sel)
+	if !ok {
 		return "", false
 	}
+
+	hasTypes := len(sel.RequiredTypesAny) > 0
+	hasSubtype := len(sel.SubtypesAny) > 0
+	isPermanent := sel.Kind == SelectionPermanent
+	cores := 0
+	for _, present := range []bool{hasTypes, hasSubtype, isPermanent} {
+		if present {
+			cores++
+		}
+	}
+	if cores > 1 {
+		return "", false
+	}
+
+	var core string
 	switch {
 	case hasTypes:
-		return graveyardCardTypeNoun(sel)
-	case isPermanent:
-		return "permanent card", true
-	case hasColors:
-		if len(sel.ColorsAny) != 1 {
-			return "", false
-		}
-		word, ok := colorWord(sel.ColorsAny[0])
+		core, ok = graveyardCardTypeNoun(sel)
 		if !ok {
 			return "", false
 		}
-		return word + " card", true
-	case hasColorQualifier:
-		if sel.Colorless && sel.Multicolored {
-			return "", false
-		}
-		if sel.Colorless {
-			return "colorless card", true
-		}
-		return "multicolored card", true
+	case isPermanent:
+		core = "permanent card"
 	case hasSubtype:
 		if len(sel.SubtypesAny) != 1 {
 			return "", false
 		}
-		return string(sel.SubtypesAny[0]) + " card", true
+		core = string(sel.SubtypesAny[0]) + " card"
 	default:
-		if sel.Kind != SelectionCard {
+		// The plain "card" noun requires the generic card kind, unless a color
+		// qualifier already restricts it ("green card", "colorless card").
+		if sel.Kind != SelectionCard && !hasColor {
 			return "", false
 		}
-		return "card", true
+		core = "card"
+	}
+	return colorPrefix + core, true
+}
+
+// graveyardColorPrefix renders the optional leading color qualifier of a
+// graveyard-card noun: a single color word ("green "), "colorless ", or
+// "multicolored ", each followed by a trailing space so the caller appends the
+// core noun directly. It reports whether any color qualifier was present and
+// fails closed when more than one color signal is set (e.g. a color list, or a
+// color combined with colorless/multicolored), which has no canonical phrasing.
+func graveyardColorPrefix(sel SelectionSyntax) (prefix string, hasColor, ok bool) {
+	hasColors := len(sel.ColorsAny) > 0
+	signals := 0
+	for _, present := range []bool{hasColors, sel.Colorless, sel.Multicolored} {
+		if present {
+			signals++
+		}
+	}
+	if signals == 0 {
+		return "", false, true
+	}
+	if signals > 1 {
+		return "", false, false
+	}
+	switch {
+	case hasColors:
+		if len(sel.ColorsAny) != 1 {
+			return "", false, false
+		}
+		word, ok := colorWord(sel.ColorsAny[0])
+		if !ok {
+			return "", false, false
+		}
+		return word + " ", true, true
+	case sel.Colorless:
+		return "colorless ", true, true
+	default:
+		return "multicolored ", true, true
 	}
 }
 
