@@ -20,7 +20,7 @@ func compileKeywords(syntaxKeywords []parser.Keyword) []CompiledKeyword {
 			ParameterKind: keyword.Parameter.Kind,
 			ManaCost:      keyword.Parameter.ManaCost(),
 			Integer:       keyword.Parameter.Integer(),
-			EnchantTarget: keyword.Parameter.EnchantTarget(),
+			EnchantTarget: compileEnchantTarget(keyword.Parameter.EnchantTarget()),
 		}
 		if keyword.Parameter.Kind == parser.KeywordParameterProtection {
 			compiled.Protection, compiled.ProtectionKnown = compileProtectionKeyword(keyword.Parameter.Protection())
@@ -48,6 +48,45 @@ func compileEquipRestriction(restriction *parser.KeywordEquipRestriction) *Compi
 		compiled.Supertypes = append(compiled.Supertypes, mapped)
 	}
 	return compiled
+}
+
+// enchantPermanentCardTypes lists the permanent card types an Aura may enchant
+// (CR 303.4); a subtype must be defined for one of them to be a legal Enchant
+// subtype. Instant and sorcery are never permanents.
+var enchantPermanentCardTypes = []types.Card{
+	types.Artifact, types.Battle, types.Creature,
+	types.Enchantment, types.Land, types.Planeswalker,
+}
+
+// compileEnchantTarget maps a parser Enchant predicate to its runtime-typed
+// form. It fails closed (Known=false) when the predicate is empty, names a
+// non-permanent card type, or names a subtype that no permanent card type
+// defines, so an unsupported or illegal Enchant target stays unsupported rather
+// than silently widening attachment legality.
+func compileEnchantTarget(predicate parser.EnchantPredicate) CompiledEnchantTarget {
+	if predicate.Empty() {
+		return CompiledEnchantTarget{}
+	}
+	target := CompiledEnchantTarget{
+		Player:    predicate.Player,
+		Opponent:  predicate.Opponent,
+		Permanent: predicate.Permanent,
+	}
+	for _, cardType := range predicate.CardTypes {
+		runtime, ok := compilerCardType(cardType)
+		if !ok || !runtime.IsPermanent() {
+			return CompiledEnchantTarget{}
+		}
+		target.CardTypes = append(target.CardTypes, runtime)
+	}
+	for _, subtype := range predicate.Subtypes {
+		if !parser.SubtypeMatchesAnyRuntimeCardType(subtype, enchantPermanentCardTypes) {
+			return CompiledEnchantTarget{}
+		}
+		target.Subtypes = append(target.Subtypes, subtype)
+	}
+	target.Known = true
+	return target
 }
 
 func compileProtectionKeyword(parameter parser.ProtectionParameter) (game.ProtectionKeyword, bool) {

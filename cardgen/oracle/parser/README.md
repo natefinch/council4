@@ -560,8 +560,10 @@ card types, supertypes, subtypes, object nouns, zones, counter kinds, cardinal
 and ordinal number words, selection modifiers, and plural→singular noun
 normalization, returning typed values. `keyword.go` owns the complete supported
 keyword vocabulary and emits source-spanned `Keyword` syntax with composable
-typed parameter shapes: mana costs, integers, Enchant targets, and Protection
-predicates over colors, card types, and creature/land subtypes. It also emits
+typed parameter shapes: mana costs, integers, Enchant targets (a player word,
+the any-permanent word, or a disjunctive union of singular permanent card types
+and subtypes such as "artifact or creature" or "creature or Vehicle"), and
+Protection predicates over colors, card types, and creature/land subtypes. It also emits
 typed `with`/`without` keyword-selector syntax. A keyword whose name span is
 covered by a `with`/`without` keyword-selector qualifier (e.g. the "flying" in
 "creature with flying") is excluded from the ability's semantic keywords, so it

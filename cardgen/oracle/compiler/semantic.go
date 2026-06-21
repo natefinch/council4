@@ -1574,6 +1574,21 @@ type CompiledSignedAmount struct {
 	VariableX bool
 }
 
+// CompiledEnchantTarget is the runtime-typed object restriction following an
+// Enchant keyword, mapped from the parser's EnchantPredicate. A permanent
+// matches when it has any listed card type or any listed subtype (disjunctive).
+// Player, Opponent, and Permanent select non-type objects. Known is false when
+// the predicate is empty or names a non-permanent card type or a subtype that no
+// permanent type defines, so an unsupported Enchant target fails closed.
+type CompiledEnchantTarget struct {
+	Known     bool
+	Player    bool
+	Opponent  bool
+	Permanent bool
+	CardTypes []types.Card
+	Subtypes  []types.Sub
+}
+
 // CompiledKeyword is a recognized keyword ability.
 type CompiledKeyword struct {
 	Kind            parser.KeywordKind
@@ -1584,7 +1599,7 @@ type CompiledKeyword struct {
 	ParameterKind   parser.KeywordParameterKind
 	ManaCost        cost.Mana
 	Integer         int
-	EnchantTarget   parser.ObjectNoun
+	EnchantTarget   CompiledEnchantTarget
 	Protection      game.ProtectionKeyword
 	ProtectionKnown bool
 	// EquipRestriction is the typed quality restriction of a restricted Equip
