@@ -689,3 +689,79 @@ func TestLowerMassGraveyardReturnToHand(t *testing.T) {
 		t.Fatalf("mass = %#v", mass)
 	}
 }
+
+// TestLowerMassGraveyardReturnAllGraveyardsUnderYourControl covers the
+// all-graveyards reanimation "Put all <filter> cards from all graveyards onto
+// the battlefield under your control" (Rise of the Dark Realms), which scans
+// every player's graveyard and enters each card under the resolving controller.
+func TestLowerMassGraveyardReturnAllGraveyardsUnderYourControl(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Dark Realms",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Put all creature cards from all graveyards onto the battlefield under your control.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	mass, ok := mode.Sequence[0].Primitive.(game.MassReturnFromGraveyard)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.MassReturnFromGraveyard", mode.Sequence[0].Primitive)
+	}
+	if mass.Destination != zone.Battlefield ||
+		mass.EntryTapped ||
+		mass.SourceGroup.Kind != game.PlayerGroupReferenceAllPlayers ||
+		mass.ControlledByOwner ||
+		!slices.Equal(mass.Selection.RequiredTypes, []types.Card{types.Creature}) {
+		t.Fatalf("mass = %#v", mass)
+	}
+}
+
+// TestLowerMassGraveyardReturnAllGraveyardsUnderOwnersControl covers the
+// owners'-control all-graveyards reanimation "Return all <filter> cards from all
+// graveyards to the battlefield under their owners' control" (Open the Vaults),
+// which enters each card under its own owner's control.
+func TestLowerMassGraveyardReturnAllGraveyardsUnderOwnersControl(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Open Vaults",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return all artifact and enchantment cards from all graveyards to the battlefield under their owners' control.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	mass, ok := mode.Sequence[0].Primitive.(game.MassReturnFromGraveyard)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.MassReturnFromGraveyard", mode.Sequence[0].Primitive)
+	}
+	if mass.Destination != zone.Battlefield ||
+		mass.SourceGroup.Kind != game.PlayerGroupReferenceAllPlayers ||
+		!mass.ControlledByOwner ||
+		!slices.Equal(mass.Selection.RequiredTypesAny, []types.Card{types.Artifact, types.Enchantment}) {
+		t.Fatalf("mass = %#v", mass)
+	}
+}
+
+// TestLowerMassGraveyardReturnAllGraveyardsTapped covers the tapped owners'-
+// control all-graveyards reanimation (Planar Birth), confirming the entry-tapped
+// rider survives and the entry word does not pollute the selector.
+func TestLowerMassGraveyardReturnAllGraveyardsTapped(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Planar Birth",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return all basic land cards from all graveyards to the battlefield tapped under their owners' control.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	mass, ok := mode.Sequence[0].Primitive.(game.MassReturnFromGraveyard)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.MassReturnFromGraveyard", mode.Sequence[0].Primitive)
+	}
+	if mass.Destination != zone.Battlefield ||
+		!mass.EntryTapped ||
+		mass.SourceGroup.Kind != game.PlayerGroupReferenceAllPlayers ||
+		!mass.ControlledByOwner ||
+		!slices.Equal(mass.Selection.RequiredTypes, []types.Card{types.Land}) {
+		t.Fatalf("mass = %#v", mass)
+	}
+}

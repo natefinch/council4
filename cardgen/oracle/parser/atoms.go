@@ -308,6 +308,10 @@ func graveyardZonePhrase(tokens []shared.Token) bool {
 		(equalWord(tokens[1], "graveyard") || equalWord(tokens[1], "graveyards")):
 		return true
 	case len(tokens) >= 2 &&
+		equalWord(tokens[0], "all") &&
+		(equalWord(tokens[1], "graveyard") || equalWord(tokens[1], "graveyards")):
+		return true
+	case len(tokens) >= 2 &&
 		strings.EqualFold(tokens[0].Text, "owner's") &&
 		(equalWord(tokens[1], "graveyard") || equalWord(tokens[1], "graveyards")):
 		return true

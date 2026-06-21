@@ -1024,6 +1024,12 @@ type EffectSyntax struct {
 	// life, double counters, double mana).
 	DoublePower     bool `json:",omitempty"`
 	DoubleToughness bool `json:",omitempty"`
+	// UnderOwnersControl marks a battlefield-destination effect carrying the
+	// rider "under their owners' control" / "under its owner's control" (Open
+	// the Vaults, Planar Birth, Living Death), where each moved card enters under
+	// the control of its own owner rather than the resolving player. It is false
+	// for the bare and "under your control" forms.
+	UnderOwnersControl bool `json:",omitempty"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend
