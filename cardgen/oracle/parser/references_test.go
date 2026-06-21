@@ -14,6 +14,22 @@ func referenceKinds(references []Reference) []ReferenceKind {
 	return kinds
 }
 
+// TestParseEmitsSelfNameReferenceTrailingApostrophe proves a plural-possessive
+// card name whose final word ends in a bare apostrophe ("Inventors'") is still
+// recognized as a self-name, so "Sacrifice <self by name>" costs resolve.
+func TestParseEmitsSelfNameReferenceTrailingApostrophe(t *testing.T) {
+	t.Parallel()
+	source := "Sacrifice Inventors' Fair: Draw a card"
+	atoms := atomsFor(t, source, "Inventors' Fair")
+	refs := atoms.References()
+	if kinds := referenceKinds(refs); len(kinds) != 1 || kinds[0] != ReferenceSelfName {
+		t.Fatalf("references = %+v; want one self-name", refs)
+	}
+	if got := shared.SliceSpan(source, refs[0].Span); got != "Inventors' Fair" {
+		t.Errorf("self-name span = %q; want %q", got, "Inventors' Fair")
+	}
+}
+
 // TestParseEmitsSelfNameReference proves the parser recognizes the card's own
 // name from Context.CardName and emits a source-spanned self-name reference.
 func TestParseEmitsSelfNameReference(t *testing.T) {
