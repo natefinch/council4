@@ -82,6 +82,9 @@ func lowerOrderedSequenceSpecialCase(
 	if content, ok := lowerCounterThenExileInstead(ctx); ok {
 		return content, nil, true
 	}
+	if content, ok := lowerSelfBlinkSequence(ctx); ok {
+		return content, nil, true
+	}
 	for _, target := range ctx.content.Targets {
 		if _, ok := counterAbilityTargetSpec(target); ok {
 			return game.AbilityContent{},
@@ -2076,6 +2079,97 @@ func lowerDelayedBlinkReturn(
 		}}}}.Ability(),
 	}}
 	return exile, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
+}
+
+// lowerSelfBlinkSequence lowers the self-blink "Exile this creature, then return
+// it to the battlefield [tapped] under [its owner's|your] control [with a <kind>
+// counter on it]." (Flickering Spirit, Ojutai Exemplars, Magus of the Bridge).
+// Unlike the target blink the exiled object is the source permanent itself, which
+// the compiler co-references through "it"/"its" bound to the source. The parser
+// deliberately leaves the standalone "Exile this creature" inexact (nonsensical
+// in isolation, e.g. on a spell), so the exile-then-return pair is recognized
+// wholesale here rather than through per-effect lowering. It fails closed for any
+// shape it does not fully model.
+func lowerSelfBlinkSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	content := ctx.content
+	if ctx.optional ||
+		len(content.Effects) != 2 ||
+		len(content.Targets) != 0 ||
+		len(content.Conditions) != 0 ||
+		len(content.Keywords) != 0 ||
+		len(content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	exileEffect := content.Effects[0]
+	returnEffect := content.Effects[1]
+	if exileEffect.Kind != compiler.EffectExile ||
+		exileEffect.Negated ||
+		exileEffect.Context != parser.EffectContextController ||
+		exileEffect.DelayedTiming != 0 ||
+		len(exileEffect.Targets) != 0 ||
+		len(exileEffect.References) != 1 ||
+		exileEffect.References[0].Kind != compiler.ReferenceThisObject ||
+		exileEffect.References[0].Binding != compiler.ReferenceBindingSource {
+		return game.AbilityContent{}, false
+	}
+	if returnEffect.Kind != compiler.EffectReturn ||
+		returnEffect.Connection != parser.EffectConnectionThen ||
+		returnEffect.DelayedTiming != 0 ||
+		returnEffect.Negated ||
+		returnEffect.ToZone != zone.Battlefield ||
+		returnEffect.EntersColorChoice ||
+		returnEffect.EntersTypeChoice ||
+		returnEffect.EntersWithCounters ||
+		len(returnEffect.Targets) != 0 ||
+		len(returnEffect.References) == 0 {
+		return game.AbilityContent{}, false
+	}
+	// Every effect reference is consumed below; the content-level reference list
+	// must hold exactly the exile's "this creature" plus the return's "it"/"its"
+	// so nothing is silently dropped.
+	if len(content.References) != len(exileEffect.References)+len(returnEffect.References) {
+		return game.AbilityContent{}, false
+	}
+	// The return's "it"/"its" co-reference the just-exiled source permanent; "it"
+	// must name it directly so the clause carries a return object.
+	hasDirectObject := false
+	for _, ref := range returnEffect.References {
+		if ref.Binding != compiler.ReferenceBindingSource ||
+			ref.Kind != compiler.ReferencePronoun ||
+			(ref.Pronoun != compiler.ReferencePronounIt && ref.Pronoun != compiler.ReferencePronounIts) {
+			return game.AbilityContent{}, false
+		}
+		hasDirectObject = hasDirectObject || ref.Pronoun == compiler.ReferencePronounIt
+	}
+	if !hasDirectObject {
+		return game.AbilityContent{}, false
+	}
+	// "with a <kind> counter on it" rider: only fixed, known, positive counts of a
+	// known kind are modeled; every other counter form fails closed.
+	var entryCounters []game.CounterPlacement
+	if returnEffect.CounterKindKnown {
+		if !returnEffect.Amount.Known || returnEffect.Amount.Value < 1 {
+			return game.AbilityContent{}, false
+		}
+		entryCounters = []game.CounterPlacement{{
+			Kind:   returnEffect.CounterKind,
+			Amount: returnEffect.Amount.Value,
+		}}
+	}
+	key := game.LinkedKey("self-blink")
+	exile := game.Exile{Object: game.SourcePermanentReference(), ExileLinkedKey: key}
+	put := game.PutOnBattlefield{
+		Source:        game.LinkedBattlefieldSource(key),
+		EntryTapped:   returnEffect.EntersTapped,
+		EntryCounters: entryCounters,
+	}
+	if returnEffect.UnderYourControl {
+		put.Recipient = opt.Val(game.ControllerReference())
+	}
+	return game.Mode{Sequence: []game.Instruction{
+		{Primitive: exile},
+		{Primitive: put},
+	}}.Ability(), true
 }
 
 // lowerImmediateBlinkReturn lowers the immediate "Exile target <permanent>, then
