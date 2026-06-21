@@ -58,7 +58,8 @@ func lowerControllerPaidEffect(
 	condition := ctx.content.Conditions[0]
 	hasMana := len(payment.ManaCost) != 0
 	hasAdditional := payment.AdditionalCost != nil
-	if !effect.Exact ||
+	if effect.Context != parser.EffectContextController ||
+		!effect.Exact ||
 		effect.Optional ||
 		effect.Negated ||
 		effect.DelayedTiming != 0 ||
@@ -110,6 +111,93 @@ func lowerControllerPaidEffect(
 	for i := range consequence {
 		if consequence[i].Optional ||
 			consequence[i].PublishResult != "" ||
+			consequence[i].ResultGate.Exists {
+			return game.AbilityContent{}, false
+		}
+		consequence[i].ResultGate = opt.Val(game.InstructionResultGate{
+			Key:       controllerPaidResultKey,
+			Succeeded: game.TriTrue,
+		})
+	}
+	sequence := make([]game.Instruction, 0, len(consequence)+1)
+	sequence = append(sequence, game.Instruction{
+		Primitive:     game.Pay{Payment: resolutionPayment},
+		PublishResult: controllerPaidResultKey,
+	})
+	sequence = append(sequence, consequence...)
+	return game.Mode{Sequence: sequence}.Ability(), true
+}
+
+// lowerOptionalPaidBenefit lowers a "you may pay {mana}. If you do, <body>."
+// resolution whose consequence body begins with a non-controller-context effect,
+// such as the Extort drain "each opponent loses 1 life and you gain that much
+// life." Unlike lowerControllerPaidEffect it does not strip the consequence to a
+// single controller verb; it lowers the entire consequence body through the
+// shared content path and then gates every resulting instruction on the optional
+// payment. The controller, verb-initial family is handled by
+// lowerControllerPaidEffect, so this path keys on a non-controller leading
+// effect to keep the two disjoint.
+func lowerOptionalPaidBenefit(
+	cardName string,
+	ctx contentCtx,
+	syntax *parser.Ability,
+) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) < 2 ||
+		len(ctx.content.Conditions) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	payIdx := -1
+	for i := range ctx.content.Effects {
+		if ctx.content.Effects[i].Payment.Form == parser.EffectPaymentFormMayPayThenIfDo {
+			if payIdx != -1 {
+				return game.AbilityContent{}, false
+			}
+			payIdx = i
+		}
+	}
+	if payIdx != 0 || ctx.content.Effects[0].Context == parser.EffectContextController {
+		return game.AbilityContent{}, false
+	}
+	payment := ctx.content.Effects[0].Payment
+	condition := ctx.content.Conditions[0]
+	if len(payment.ManaCost) == 0 ||
+		payment.AdditionalCost != nil ||
+		payment.Form != parser.EffectPaymentFormMayPayThenIfDo ||
+		payment.Payer != parser.EffectPaymentPayerController ||
+		manaCostHasVariableSymbol(payment.ManaCost) ||
+		payment.GenericManaAmount.DynamicKind != compiler.DynamicAmountNone ||
+		condition.Kind != compiler.ConditionIf ||
+		condition.Predicate != compiler.ConditionPredicatePriorInstructionAccepted ||
+		condition.NodeID != payment.SuccessConditionNodeID ||
+		payment.Span.End.Offset >= condition.Span.Start.Offset {
+		return game.AbilityContent{}, false
+	}
+	resolutionPayment, ok := controllerPaidResolutionPayment(cardName, payment)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+
+	bodyCtx := ctx
+	bodyCtx.content.Conditions = nil
+	bodyEffects := slices.Clone(ctx.content.Effects)
+	bodyEffects[0].Payment = compiler.CompiledEffectPayment{}
+	bodyCtx.content.Effects = bodyEffects
+	content, diagnostic := lowerContent(cardName, bodyCtx, syntax)
+	if diagnostic != nil ||
+		content.IsModal() ||
+		len(content.SharedTargets) != 0 ||
+		len(content.Modes) != 1 ||
+		len(content.Modes[0].Targets) != 0 ||
+		len(content.Modes[0].Sequence) == 0 {
+		return game.AbilityContent{}, false
+	}
+	consequence := content.Modes[0].Sequence
+	for i := range consequence {
+		if consequence[i].Optional ||
 			consequence[i].ResultGate.Exists {
 			return game.AbilityContent{}, false
 		}
