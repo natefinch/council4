@@ -291,7 +291,7 @@ func parseSignedAmount(sign, amount shared.Token) (SignedAmountSyntax, bool) {
 }
 
 func parseEffectAmount(kind EffectKind, tokens []shared.Token, atoms Atoms) EffectAmountSyntax {
-	if kind == EffectGainEnergy {
+	if kind == EffectGainPlayerCounter {
 		if symbols := energySymbolsAfter(tokens, 0); len(symbols) > 0 {
 			return EffectAmountSyntax{
 				Span:  shared.SpanOf(symbols),
@@ -299,7 +299,9 @@ func parseEffectAmount(kind EffectKind, tokens []shared.Token, atoms Atoms) Effe
 				Known: true,
 			}
 		}
-		return EffectAmountSyntax{}
+		// Named player-counter word form ("an experience counter", "two poison
+		// counters"): the count is an ordinary leading number/article handled by
+		// the generic amount parsing below, defaulting to one.
 	}
 	if amount, attempted, ok := parseDynamicEffectAmount(tokens, atoms); attempted {
 		if ok {
