@@ -959,6 +959,7 @@ const (
 	EffectCastAsThoughFlash
 	EffectCantCastSpells
 	EffectWinGame
+	EffectSpellsCantBeCountered
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1241,6 +1242,12 @@ type CompiledEffect struct {
 	// rather than only the controller's opponents. Lowering reads it to pick the
 	// affected-player relation; it is false for the opponents-only form.
 	CantCastSpellsAllPlayers bool
+	// SpellsCantBeCounteredNextOnly mirrors the parser flag for an
+	// EffectSpellsCantBeCountered clause that limits the buff to the single next
+	// spell the controller casts ("The next spell you cast this turn can't be
+	// countered.") rather than every spell cast this turn. Lowering reads it to
+	// set AppliesToNextSpellOnly on the rule effect.
+	SpellsCantBeCounteredNextOnly bool
 	// DoublePower and DoubleToughness mirror the parser flags for an EffectDouble
 	// whose object is "the power[ and toughness] of <group>" (Unnatural Growth).
 	// Lowering reads them together with StaticSubject to emit a power/toughness

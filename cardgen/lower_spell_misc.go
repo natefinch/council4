@@ -414,6 +414,44 @@ func lowerCantCastSpells(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 	}}}.Ability(), nil
 }
 
+// lowerSpellsCantBeCountered lowers the controller-scoped, turn-scoped resolving
+// buff "The next spell you cast this turn can't be countered." (Mistrise
+// Village) and the all-spells form "Spells you cast this turn can't be
+// countered." (Domri, Anarch of Bolas) to an ApplyRule that makes the
+// controller's spells uncounterable for the rest of the turn. The
+// next-spell-only variant sets AppliesToNextSpellOnly so the buff is consumed by
+// the single next spell the controller casts. Targets, references, conditions,
+// modes, a negation, an amount, or a non-controller scope fail closed.
+func lowerSpellsCantBeCountered(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Amount.Known ||
+		effect.Duration != compiler.DurationThisTurn ||
+		effect.Context != parser.EffectContextController ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported spells-cant-be-countered effect",
+			"the executable source backend supports only the exact controller-scoped spells-cant-be-countered buff this turn",
+		)
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.ApplyRule{
+			RuleEffects: []game.RuleEffect{{
+				Kind:                   game.RuleEffectCantBeCountered,
+				AffectedController:     game.ControllerYou,
+				AppliesToNextSpellOnly: effect.SpellsCantBeCounteredNextOnly,
+			}},
+			Duration: game.DurationThisTurn,
+		},
+	}}}.Ability(), nil
+}
+
 func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic, bool) {
 	switch ctx.content.Effects[0].Kind {
 	case compiler.EffectLifeTotalCantChange:
@@ -430,6 +468,9 @@ func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.
 		return content, diagnostic, true
 	case compiler.EffectCantCastSpells:
 		content, diagnostic := lowerCantCastSpells(ctx)
+		return content, diagnostic, true
+	case compiler.EffectSpellsCantBeCountered:
+		content, diagnostic := lowerSpellsCantBeCountered(ctx)
 		return content, diagnostic, true
 	case compiler.EffectPhaseOut:
 		content, diagnostic := lowerMassOrSinglePermanentSpell(ctx, "Phase out", func(group game.GroupReference) game.Primitive {

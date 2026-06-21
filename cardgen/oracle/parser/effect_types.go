@@ -97,6 +97,13 @@ const (
 	// Felidar Sovereign and Thassa's Oracle (CR 104.2a). It mirrors
 	// EffectLoseGame.
 	EffectWinGame EffectKind = "EffectWinGame"
+	// EffectSpellsCantBeCountered models the controller-scoped, turn-scoped
+	// resolving buff "The next spell you cast this turn can't be countered."
+	// (Mistrise Village) and the all-spells form "Spells you cast this turn
+	// can't be countered." (Domri, Anarch of Bolas). It applies the continuous
+	// RuleEffectCantBeCountered to the controller's spells with a this-turn
+	// duration; SpellsCantBeCounteredNextOnly limits it to the single next spell.
+	EffectSpellsCantBeCountered EffectKind = "EffectSpellsCantBeCountered"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -727,9 +734,15 @@ type EffectSyntax struct {
 	// affects every player ("Players can't cast spells this turn.") rather than
 	// only the controller's opponents ("Your opponents can't cast spells this
 	// turn."). It is meaningful only when Kind is EffectCantCastSpells.
-	CantCastSpellsAllPlayers bool              `json:",omitempty"`
-	DelayedTiming            DelayedTimingKind `json:",omitempty"`
-	Selection                SelectionSyntax   `json:",omitzero"`
+	CantCastSpellsAllPlayers bool `json:",omitempty"`
+	// SpellsCantBeCounteredNextOnly reports that an EffectSpellsCantBeCountered
+	// clause limits the buff to the single next spell the controller casts ("The
+	// next spell you cast this turn can't be countered.") rather than every spell
+	// cast this turn ("Spells you cast this turn can't be countered."). It is
+	// meaningful only when Kind is EffectSpellsCantBeCountered.
+	SpellsCantBeCounteredNextOnly bool              `json:",omitempty"`
+	DelayedTiming                 DelayedTimingKind `json:",omitempty"`
+	Selection                     SelectionSyntax   `json:",omitzero"`
 	// DamageRecipientPair holds the two recipient groups of a dual-recipient
 	// fixed group-damage effect ("deals N damage to each X and each Y"). It is
 	// populated only when the recipient is exactly two "each <group>" phrases

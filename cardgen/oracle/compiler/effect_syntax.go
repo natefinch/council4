@@ -384,6 +384,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectCastAsThoughFlash
 	case parser.EffectCantCastSpells:
 		return EffectCantCastSpells
+	case parser.EffectSpellsCantBeCountered:
+		return EffectSpellsCantBeCountered
 	case parser.EffectManifest:
 		return EffectManifest
 	case parser.EffectManifestDread:

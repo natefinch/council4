@@ -211,6 +211,42 @@ func TestParseCantCastSpellsEffect(t *testing.T) {
 	}
 }
 
+// TestParseSpellsCantBeCounteredEffect proves the controller-scoped, turn-scoped
+// uncounterable buff is recognized for the next-spell (Mistrise Village) and
+// all-spells (Domri, Anarch of Bolas) wordings, while targeted, typed, and
+// otherwise-modified wordings fail closed and flow through the generic effect
+// parser.
+func TestParseSpellsCantBeCounteredEffect(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source     string
+		recognized bool
+		nextOnly   bool
+	}{
+		{"The next spell you cast this turn can't be countered.", true, true},
+		{"Spells you cast this turn can't be countered.", true, false},
+		{"The next spell you cast this turn cannot be countered.", true, true},
+		// Variant wordings fail closed.
+		{"The next creature spell you cast this turn can't be countered.", false, false},
+		{"Target spell can't be countered.", false, false},
+		{"Spells you cast can't be countered.", false, false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			got := len(effects) == 1 && effects[0].Kind == EffectSpellsCantBeCountered
+			if got != test.recognized {
+				t.Fatalf("recognized = %v, want %v (effects=%#v)", got, test.recognized, effects)
+			}
+			if got && effects[0].SpellsCantBeCounteredNextOnly != test.nextOnly {
+				t.Fatalf("nextOnly = %v, want %v", effects[0].SpellsCantBeCounteredNextOnly, test.nextOnly)
+			}
+		})
+	}
+}
+
 func TestParseDevotionDrawAmount(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

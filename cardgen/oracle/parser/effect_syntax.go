@@ -505,32 +505,47 @@ func stripLeadingDurationClause(tokens []shared.Token, atoms Atoms) ([]shared.To
 	return tokens[comma+1:], duration
 }
 
-func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []EffectSyntax {
+// parseWholeSentenceEffect dispatches the recognizers that consume an entire
+// sentence as a single typed effect, short-circuiting the generic verb-indexed
+// effect parser. Each recognizer returns its effects and true when it matches.
+// The order is significant: each guard fails closed so an unmatched sentence
+// flows through to the next recognizer and ultimately to the generic parser.
+func parseWholeSentenceEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
 	if effects, ok := parsePassiveTokenDoublingEffects(sentence, tokens, atoms); ok {
-		return effects
+		return effects, true
 	}
 	if effects, ok := parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms); ok {
-		return effects
+		return effects, true
 	}
 	if effects, ok := parseLibraryTopReorderEffect(sentence, tokens, atoms); ok {
-		return effects
+		return effects, true
 	}
 	if effects, ok := parseGroupEntersTappedEffect(sentence, tokens); ok {
-		return effects
+		return effects, true
 	}
 	if effects, ok := parsePlayerProtectionEffects(sentence, tokens, atoms); ok {
-		return effects
+		return effects, true
 	}
 	if effects, ok := parseGroupPhaseOutEffect(sentence, tokens, atoms); ok {
-		return effects
+		return effects, true
 	}
 	if effects, ok := parseAdditionalLandPlaysEffect(sentence, tokens, atoms); ok {
-		return effects
+		return effects, true
 	}
 	if effects, ok := parseCastAsThoughFlashEffect(sentence, tokens); ok {
-		return effects
+		return effects, true
 	}
 	if effects, ok := parseCantCastSpellsEffect(sentence, tokens); ok {
+		return effects, true
+	}
+	if effects, ok := parseSpellsCantBeCounteredEffect(sentence, tokens); ok {
+		return effects, true
+	}
+	return nil, false
+}
+
+func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []EffectSyntax {
+	if effects, ok := parseWholeSentenceEffect(sentence, tokens, atoms); ok {
 		return effects
 	}
 	indices := effectIndices(tokens, atoms)
@@ -1583,6 +1598,71 @@ func parseCantCastSpellsEffect(sentence Sentence, tokens []shared.Token) ([]Effe
 		Duration:                 EffectDurationThisTurn,
 		CantCastSpellsAllPlayers: allPlayers,
 		Exact:                    true,
+	}}, true
+}
+
+// parseSpellsCantBeCounteredEffect recognizes the controller-scoped, turn-scoped
+// resolving buff "The next spell you cast this turn can't be countered."
+// (Mistrise Village) and the all-spells form "Spells you cast this turn can't be
+// countered." (Domri, Anarch of Bolas). The leading "The next" marks the
+// single-next-spell variant; a bare "Spells" marks the every-spell-this-turn
+// variant. The buff applies to the controller's own spells, so any other
+// subject, a type filter, a negation, or extra wording fails closed and flows
+// through the generic effect parser.
+func parseSpellsCantBeCounteredEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	index := 0
+	nextOnly := false
+	switch {
+	case len(words) >= 3 && equalWord(words[0], "the") && equalWord(words[1], "next") && equalWord(words[2], "spell"):
+		nextOnly = true
+		index = 3
+	case len(words) >= 1 && equalWord(words[0], "spells"):
+		index = 1
+	default:
+		return nil, false
+	}
+	rest := []string{"you", "cast", "this", "turn"}
+	if index+len(rest) > len(words) {
+		return nil, false
+	}
+	for offset, want := range rest {
+		if !equalWord(words[index+offset], want) {
+			return nil, false
+		}
+	}
+	castToken := words[index+1]
+	index += len(rest)
+	if index >= len(words) || (!equalWord(words[index], "can't") && !equalWord(words[index], "cannot")) {
+		return nil, false
+	}
+	index++
+	tail := []string{"be", "countered"}
+	if len(words)-index != len(tail) {
+		return nil, false
+	}
+	for offset, want := range tail {
+		if !equalWord(words[index+offset], want) {
+			return nil, false
+		}
+	}
+	return []EffectSyntax{{
+		Kind:                          EffectSpellsCantBeCountered,
+		Span:                          sentence.Span,
+		ClauseSpan:                    sentence.Span,
+		VerbSpan:                      castToken.Span,
+		Text:                          sentence.Text,
+		Tokens:                        append([]shared.Token(nil), tokens...),
+		Context:                       EffectContextController,
+		Duration:                      EffectDurationThisTurn,
+		SpellsCantBeCounteredNextOnly: nextOnly,
+		Exact:                         true,
 	}}, true
 }
 
