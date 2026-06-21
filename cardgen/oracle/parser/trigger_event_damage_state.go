@@ -421,8 +421,11 @@ func parsePermanentStateTriggerEventClause(
 }
 
 // parseTappedForManaTriggerEventClause recognizes "Whenever <subject> is tapped
-// for mana" (Wild Growth and the mana-additional aura family), reusing the
-// becomes-tapped event family with the TappedForMana provenance flag set.
+// for mana" (Wild Growth and the mana-additional aura family) and the
+// active-voice "Whenever you tap <subject> for mana" (Forbidden Orchard), reusing
+// the becomes-tapped event family with the TappedForMana provenance flag set. The
+// active-voice form accepts the source itself ("you tap this land for mana"),
+// which is equivalent to the passive self form.
 func parseTappedForManaTriggerEventClause(
 	tokens []shared.Token,
 	intro TriggerIntroductionKind,
@@ -436,6 +439,13 @@ func parseTappedForManaTriggerEventClause(
 		inner, ok := stripTokenSuffix(rest, "for", "mana")
 		if !ok {
 			return nil
+		}
+		if span, count, ok := parseSelfSubject(inner, atoms); ok && count == len(inner) {
+			return &TriggerEventClause{
+				Kind:          TriggerEventKindBecomesTapped,
+				Subject:       TriggerEventSubject{Kind: TriggerEventSubjectSelf, Span: span},
+				TappedForMana: true,
+			}
 		}
 		subject := parsePermanentEventSubject(inner, false, atoms)
 		if !subject.ok || subject.oneOrMore || subject.subject.Kind == TriggerEventSubjectSelf {

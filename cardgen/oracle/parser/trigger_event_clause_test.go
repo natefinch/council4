@@ -1059,6 +1059,18 @@ func stateAndOtherTriggerEventClauseTests() []triggerEventClauseTest {
 			},
 		},
 		{
+			name:   "tapped for mana active voice self",
+			source: "Whenever you tap this land for mana, target opponent creates a 1/1 colorless Spirit creature token.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindBecomesTapped ||
+					clause.Subject.Kind != TriggerEventSubjectSelf ||
+					!clause.TappedForMana {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
 			name:   "state face up",
 			source: "When enchanted creature is turned face up, draw a card.",
 			check: func(t *testing.T, clause *TriggerEventClause) {
