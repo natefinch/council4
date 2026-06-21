@@ -446,7 +446,7 @@ func effectWordsAtAny(tokens []shared.Token, first, second string) bool {
 }
 
 func effectContextAt(tokens []shared.Token, index int, atoms Atoms) EffectContextKind {
-	start := effectSubjectStart(tokens, index)
+	start := effectSubjectStart(tokens, index, atoms.SelfNameSpans())
 	subject := tokens[start:index]
 	// "You and target <player> each <verb>" splits on its "and" so the retained
 	// subject is "target <player> each". Recognize the dropped "you and" prefix
@@ -540,19 +540,35 @@ func subjectReferencesObject(subject []shared.Token, atoms Atoms) bool {
 	return false
 }
 
-func effectHasExplicitSubject(tokens []shared.Token, index int) bool {
-	return effectSubjectStart(tokens, index) < index
+func effectHasExplicitSubject(tokens []shared.Token, index int, selfNames []shared.Span) bool {
+	return effectSubjectStart(tokens, index, selfNames) < index
 }
 
-func effectSubjectStart(tokens []shared.Token, index int) int {
+func effectSubjectStart(tokens []shared.Token, index int, selfNames []shared.Span) int {
 	start := 0
 	for i := range index {
+		if spanWithinAny(tokens[i].Span, selfNames) {
+			continue
+		}
 		if tokens[i].Kind == shared.Comma || tokens[i].Kind == shared.Period || tokens[i].Kind == shared.Semicolon ||
 			equalWord(tokens[i], "then") || equalWord(tokens[i], "and") {
 			start = i + 1
 		}
 	}
 	return start
+}
+
+// spanWithinAny reports whether span is covered by any of the given spans. It
+// lets subject-boundary detection ignore commas and conjunctions that fall
+// inside the card's own printed name (e.g. "Syr Konrad, the Grim"), which would
+// otherwise truncate the subject at the name's internal comma.
+func spanWithinAny(span shared.Span, spans []shared.Span) bool {
+	for _, outer := range spans {
+		if spanCovers(outer, span) {
+			return true
+		}
+	}
+	return false
 }
 
 func parseEffectPayment(tokens []shared.Token, atoms Atoms) EffectPaymentSyntax {

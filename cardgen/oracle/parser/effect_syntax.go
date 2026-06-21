@@ -523,7 +523,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		connection, connectionSpan := effectConnection(tokens, indices, effectIndex)
 		optional, optionalSpan := effectOptional(tokens, tokenIndex)
 		context := effectContextAt(tokens, tokenIndex, atoms)
-		if effectIndex > 0 && !effectHasExplicitSubject(tokens, tokenIndex) &&
+		if effectIndex > 0 && !effectHasExplicitSubject(tokens, tokenIndex, atoms.SelfNameSpans()) &&
 			effects[len(effects)-1].Context != EffectContextController {
 			context = EffectContextPriorSubject
 		}

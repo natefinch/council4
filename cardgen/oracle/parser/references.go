@@ -323,6 +323,12 @@ func referenceTokenWordsEqual(tokens []shared.Token, words []string) bool {
 			}
 			continue
 		}
+		if words[i] == "," || words[i] == "." || words[i] == "&" || words[i] == "/" {
+			if !strings.EqualFold(tokens[i].Text, words[i]) {
+				return false
+			}
+			continue
+		}
 		normalized := strings.ToLower(strings.Trim(tokens[i].Text, ",.'\u2019"))
 		if tokens[i].Kind != shared.Word || normalized != words[i] {
 			return false
