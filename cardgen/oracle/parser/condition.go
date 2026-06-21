@@ -442,6 +442,7 @@ func parseConditionClause(
 func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
 	for _, recognize := range []func([]shared.Token, Atoms) (ConditionClause, bool){
 		recognizePriorInstructionCondition,
+		recognizeDestroyedThisWayCondition,
 		recognizeEventSubjectCondition,
 		recognizeSourceStateCondition,
 		recognizeSourceCounterStateCondition,
@@ -478,6 +479,37 @@ func recognizePriorInstructionCondition(body []shared.Token, _ Atoms) (Condition
 		return ConditionClause{Predicate: ConditionPredicatePriorInstructionAccepted}, true
 	}
 	return ConditionClause{}, false
+}
+
+// recognizeDestroyedThisWayCondition matches the resolving success gate "a
+// <permanent noun> is destroyed this way" (and the plural "are" form) that
+// follows a preceding optional destroy effect, as in Noxious Gearhulk's "you may
+// destroy another target creature. If a creature is destroyed this way, you gain
+// life equal to its toughness." It is the outcome-worded equivalent of "if you
+// do": the gate holds exactly when the prior destroy actually moved a permanent
+// to the graveyard, so it maps to the same prior-instruction success predicate.
+// The noun is the descriptive type of what the prior clause destroyed and carries
+// no selection of its own. It fails closed on any other wording.
+func recognizeDestroyedThisWayCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "a")
+	if !ok {
+		rest, ok = cutTokenPrefix(body, "an")
+	}
+	if !ok || len(rest) == 0 {
+		return ConditionClause{}, false
+	}
+	plural, ok := destroyedThisWayNounPlural(rest[0])
+	if !ok {
+		return ConditionClause{}, false
+	}
+	copula := "is"
+	if plural {
+		copula = "are"
+	}
+	if !tokenWordsEqual(rest[1:], copula, "destroyed", "this", "way") {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{Predicate: ConditionPredicatePriorInstructionAccepted}, true
 }
 
 // recognizeCastTimingCondition handles the Addendum cast-timing gate "you cast
