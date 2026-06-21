@@ -1412,6 +1412,9 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 	if pattern.OneOrMorePerAttackTarget && (!pattern.OneOrMore || pattern.Event != EventAttackerDeclared) {
 		v.add(faceName, path, CardDefIssueInvalidSelection, "OneOrMorePerAttackTarget requires a one-or-more attacker-declared pattern")
 	}
+	if pattern.AttackedPlayerHasMostLife && pattern.Event != EventAttackerDeclared {
+		v.add(faceName, appendPath(path, "AttackedPlayerHasMostLife"), CardDefIssueInvalidSelection, "attacked-player-has-most-life trigger filter is only supported for attacker-declared events")
+	}
 	v.validateAttackerCountRelations(faceName, path, pattern)
 	if !pattern.StepPlayerSourceAttachedSelection.Empty() {
 		v.validateSelection(faceName, appendPath(path, "StepPlayerSourceAttachedSelection"), pattern.StepPlayerSourceAttachedSelection)

@@ -144,6 +144,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordTriggeredLowering(&undyingPersistAbility, ability, syntax), true, nil
 	}
+	if dethroneAbility, ok, diag := lowerDethroneAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordTriggeredLowering(&dethroneAbility, ability, syntax), true, nil
+	}
 	if flankingAbility, ok, diag := lowerFlankingAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -314,6 +320,38 @@ func lowerUndyingPersistAbility(
 		)
 	}
 	return body, true, nil
+}
+
+// lowerDethroneAbility lowers a printed Dethrone (CR 702.103) keyword to its
+// canonical attacks-the-most-life-player triggered ability. Dethrone is printed
+// bare (its reminder text is stripped), so the lowering expands the keyword to
+// the reusable typed body. It supports only the exact keyword with no other
+// rules text.
+func lowerDethroneAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.TriggeredAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordDethrone {
+		return game.TriggeredAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterNone ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported "+keyword.Name+" ability",
+			"the executable source backend supports only the exact "+keyword.Name+" keyword",
+		)
+	}
+	return game.DethroneTriggeredBody, true, nil
 }
 
 // lowerFlankingAbility lowers a printed Flanking (CR 702.25) keyword to its

@@ -448,6 +448,9 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 	if reflect.DeepEqual(*ability, game.PersistTriggeredBody) {
 		return "game.PersistTriggeredBody", nil
 	}
+	if reflect.DeepEqual(*ability, game.DethroneTriggeredBody) {
+		return "game.DethroneTriggeredBody", nil
+	}
 	if reflect.DeepEqual(*ability, game.FlankingTriggeredBody) {
 		return "game.FlankingTriggeredBody", nil
 	}
