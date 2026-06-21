@@ -366,10 +366,13 @@ func TestParseSpellsCantBeCounteredEffect(t *testing.T) {
 		{"The next spell you cast this turn can't be countered.", true, true},
 		{"Spells you cast this turn can't be countered.", true, false},
 		{"The next spell you cast this turn cannot be countered.", true, true},
+		{"Spells you control can't be countered this turn.", true, false},
+		{"Spells you control cannot be countered this turn.", true, false},
 		// Variant wordings fail closed.
 		{"The next creature spell you cast this turn can't be countered.", false, false},
 		{"Target spell can't be countered.", false, false},
 		{"Spells you cast can't be countered.", false, false},
+		{"Spells you control can't be countered.", false, false},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
