@@ -1078,6 +1078,17 @@ type EffectSyntax struct {
 	// the control of its own owner rather than the resolving player. It is false
 	// for the bare and "under your control" forms.
 	UnderOwnersControl bool `json:",omitempty"`
+	// TokenCopyOfForEach reports a per-each copy-token create whose copy source
+	// is each member of a controlled battlefield group ("For each token you
+	// control, create a token that's a copy of that permanent." — Second
+	// Harvest). The created token copies each iterated permanent rather than a
+	// single fixed source; "that permanent" refers to the per-iteration member.
+	// The iterated group is carried in TokenCopyForEachGroup.
+	TokenCopyOfForEach bool `json:",omitempty"`
+	// TokenCopyForEachGroup carries the controlled battlefield group iterated by
+	// a TokenCopyOfForEach create ("token you control", "creature you control").
+	// It is nil unless TokenCopyOfForEach is set.
+	TokenCopyForEachGroup *SelectionSyntax `json:",omitempty"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend
