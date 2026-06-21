@@ -681,6 +681,13 @@ func canBlockAttacker(g *game.Game, blocker, attacker *game.Permanent) bool {
 		!slices.Contains(permanentEffectiveColors(g, blocker), color.Black) {
 		return false
 	}
+	// CR 702.13b: a creature with intimidate can't be blocked except by artifact
+	// creatures and/or creatures that share a color with it.
+	if hasKeyword(g, attacker, game.Intimidate) &&
+		!permanentHasType(g, blocker, types.Artifact) &&
+		!sharesColor(permanentEffectiveColors(g, attacker), permanentEffectiveColors(g, blocker)) {
+		return false
+	}
 	// CR 702.16b: the attacker can't be blocked by a permanent it has protection from.
 	if permanentProtectedFromPermanentEffective(g, attacker, blocker) {
 		return false
@@ -690,6 +697,17 @@ func canBlockAttacker(g *game.Game, blocker, attacker *game.Permanent) bool {
 
 func attackerRequiresMultipleBlockers(g *game.Game, attacker *game.Permanent) bool {
 	return hasKeyword(g, attacker, game.Menace)
+}
+
+// sharesColor reports whether the two color sets have at least one color in
+// common. Colorless creatures (empty color sets) share no color.
+func sharesColor(a, b []color.Color) bool {
+	for _, c := range a {
+		if slices.Contains(b, c) {
+			return true
+		}
+	}
+	return false
 }
 
 // applyDeclareBlockers validates and applies the declare-blockers action.

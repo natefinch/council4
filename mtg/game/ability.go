@@ -74,6 +74,7 @@ const (
 	Embalm
 	Fear
 	Shadow
+	Intimidate
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -191,6 +192,11 @@ var (
 	// ability: a creature with fear can't be blocked except by artifact creatures
 	// and/or black creatures (CR 702.36c).
 	FearStaticBody = simpleKeywordStaticBody("Fear", Fear)
+
+	// IntimidateStaticBody is the reusable StaticAbilityBody for intimidate, an
+	// evasion ability: a creature with intimidate can't be blocked except by
+	// artifact creatures and/or creatures that share a color with it (CR 702.13b).
+	IntimidateStaticBody = simpleKeywordStaticBody("Intimidate", Intimidate)
 )
 
 func simpleKeywordStaticBody(text string, keyword Keyword) StaticAbility {
@@ -236,6 +242,8 @@ func KeywordStaticBody(keyword Keyword) (StaticAbility, bool) {
 		return VigilanceStaticBody, true
 	case Fear:
 		return FearStaticBody, true
+	case Intimidate:
+		return IntimidateStaticBody, true
 	default:
 		return StaticAbility{}, false
 	}
