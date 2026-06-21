@@ -63,6 +63,7 @@ const (
 	ConditionPredicateControllerWouldCreateNamedToken       ConditionPredicateKind = "ConditionPredicateControllerWouldCreateNamedToken"
 	ConditionPredicateControlComparison                     ConditionPredicateKind = "ConditionPredicateControlComparison"
 	ConditionPredicateEventSubjectNameUnique                ConditionPredicateKind = "ConditionPredicateEventSubjectNameUnique"
+	ConditionPredicateWouldDrawFromEmptyLibrary             ConditionPredicateKind = "ConditionPredicateWouldDrawFromEmptyLibrary"
 )
 
 // ConditionControlScope identifies which players' battlefields a "controls"
@@ -319,6 +320,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeControlsCondition,
 		recognizeTotalPowerCondition,
 		recognizeSourceDeathCondition,
+		recognizeDrawFromEmptyLibraryCondition,
 	} {
 		if clause, ok := recognize(body, atoms); ok {
 			return clause, true
@@ -668,6 +670,20 @@ func recognizeTokenCreationCondition(body []shared.Token, _ Atoms) (ConditionCla
 	}
 	if _, ok := cutTokenPrefix(body, "you", "would", "create", "a"); ok {
 		return ConditionClause{Predicate: ConditionPredicateControllerWouldCreateNamedToken}, true
+	}
+	return ConditionClause{}, false
+}
+
+// recognizeDrawFromEmptyLibraryCondition matches the intervening condition that
+// gates the draw-from-empty-library win replacement: "you would draw a card
+// while your library has no cards in it" (Laboratory Maniac, Jace, Wielder of
+// Mysteries). The matching replacement result ("you win the game instead") is
+// recognized separately by parseDrawEmptyLibraryWinReplacement.
+func recognizeDrawFromEmptyLibraryCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if tokenWordsEqual(body,
+		"you", "would", "draw", "a", "card",
+		"while", "your", "library", "has", "no", "cards", "in", "it") {
+		return ConditionClause{Predicate: ConditionPredicateWouldDrawFromEmptyLibrary}, true
 	}
 	return ConditionClause{}, false
 }

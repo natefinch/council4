@@ -453,6 +453,11 @@ const (
 	// the same name as another creature you control or a creature card in your
 	// graveyard", Guardian Project).
 	ConditionPredicateEventSubjectNameUnique
+	// ConditionPredicateWouldDrawFromEmptyLibrary is satisfied when the
+	// controller would draw a card while their library is empty ("if you would
+	// draw a card while your library has no cards in it"). It gates the
+	// draw-from-empty-library win replacement (Laboratory Maniac).
+	ConditionPredicateWouldDrawFromEmptyLibrary
 )
 
 // ConditionEventHistoryWindow identifies which turn's event log to search.
