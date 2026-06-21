@@ -228,6 +228,56 @@ func TestCompileSemanticTriggerPatterns(t *testing.T) {
 	}
 }
 
+func TestCompileSpellCastDisjunctionTriggerPatterns(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		source string
+		check  func(*testing.T, TriggerPattern)
+	}{
+		{
+			name:   "cast spell card-type disjunction",
+			source: "Whenever you cast an artifact or enchantment spell, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventSpellCast ||
+					!slices.Equal(pattern.CardSelection.RequiredTypesAny,
+						[]TriggerCardType{TriggerCardTypeArtifact, TriggerCardTypeEnchantment}) {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			name:   "cast spell subtype disjunction",
+			source: "Whenever you cast an Aura, Equipment, or Vehicle spell, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventSpellCast ||
+					!slices.Equal(pattern.CardSelection.SubtypesAny,
+						[]TriggerSubtype{types.Aura, types.Equipment, types.Vehicle}) {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(test.source, pipelineContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			trigger := compilation.Abilities[0].Trigger
+			if trigger == nil || trigger.Event == "" {
+				t.Fatalf("trigger = %#v", trigger)
+			}
+			eventText := test.source[trigger.Pattern.Span.Start.Offset:trigger.Pattern.Span.End.Offset]
+			if eventText != trigger.Event {
+				t.Fatalf("pattern span text = %q, raw diagnostic event = %q", eventText, trigger.Event)
+			}
+			test.check(t, trigger.Pattern)
+		})
+	}
+}
+
 func TestCompileSelfOrAnotherTriggerPattern(t *testing.T) {
 	t.Parallel()
 	compilation, diagnostics := compileSource(

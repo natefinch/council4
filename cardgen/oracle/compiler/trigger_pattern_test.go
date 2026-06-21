@@ -282,7 +282,7 @@ func TestTypedTriggerEventsFailClosedOnUnsupportedSlots(t *testing.T) {
 	}{
 		{event: "two or more artifacts you control enter", kind: TriggerWhenever},
 		{event: "a creature you or an opponent controls enters", kind: TriggerWhenever},
-		{event: "you cast a creature or artifact spell", kind: TriggerWhenever},
+		{event: "you cast an instant or Wizard spell", kind: TriggerWhenever},
 		{event: "you activate a boast ability", kind: TriggerWhenever},
 		{event: "you turn a permanent face up", kind: TriggerWhenever},
 		{event: "you scry or surveil", kind: TriggerWhenever},
