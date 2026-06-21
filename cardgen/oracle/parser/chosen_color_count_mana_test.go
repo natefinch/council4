@@ -87,3 +87,83 @@ func TestParseChosenTypeDynamicCount(t *testing.T) {
 		t.Fatalf("draw amount selection SubtypeFromEntryChoice not set: %#v", drawEffect.Amount.Selection)
 	}
 }
+
+// TestParseAnyOneColorDynamicMana covers Kami of Whispered Hopes' "{T}: Add X
+// mana of any one color, where X is this creature's power.": the add-mana body
+// is recognized as the any-one-color dynamic form, its amount is the source's
+// power, and the effect is exact. It also covers the "an amount of mana of any
+// one color equal to <dynamic>" wording and the devotion amount variant, and
+// confirms a plain fixed "any color" body does not gain the dynamic flag.
+func TestParseAnyOneColorDynamicMana(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name     string
+		text     string
+		wantKind EffectDynamicAmountKind
+	}{
+		{"where X is power", "{T}: Add X mana of any one color, where X is this creature's power.", EffectDynamicAmountSourcePower},
+		{"equal to power", "{T}: Add an amount of mana of any one color equal to this creature's power.", EffectDynamicAmountSourcePower},
+		{"devotion", "{T}: Add X mana of any one color, where X is your devotion to green.", EffectDynamicAmountDevotion},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(tc.text, Context{CardName: "Probe"})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			var manaEffect *EffectSyntax
+			for i := range document.Abilities {
+				for j := range document.Abilities[i].Sentences {
+					for k := range document.Abilities[i].Sentences[j].Effects {
+						if document.Abilities[i].Sentences[j].Effects[k].Kind == EffectAddMana {
+							manaEffect = &document.Abilities[i].Sentences[j].Effects[k]
+						}
+					}
+				}
+			}
+			if manaEffect == nil {
+				t.Fatalf("no add-mana effect: %#v", document.Abilities)
+			}
+			if !manaEffect.Mana.AnyOneColorDynamic {
+				t.Fatalf("AnyOneColorDynamic not set: %#v", manaEffect.Mana)
+			}
+			if !manaEffect.Exact {
+				t.Fatal("add-mana effect not exact")
+			}
+			if manaEffect.Amount.DynamicKind != tc.wantKind {
+				t.Fatalf("amount kind = %v, want %v", manaEffect.Amount.DynamicKind, tc.wantKind)
+			}
+		})
+	}
+}
+
+// TestParseAnyOneColorFixedNotDynamic confirms the fixed "Add one mana of any
+// color." body keeps its plain AnyColor typing and does not gain the dynamic
+// flag, so the dynamic recognizer stays fail-closed without a dynamic amount.
+func TestParseAnyOneColorFixedNotDynamic(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse("{T}: Add one mana of any color.", Context{CardName: "Probe"})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	var manaEffect *EffectSyntax
+	for i := range document.Abilities {
+		for j := range document.Abilities[i].Sentences {
+			for k := range document.Abilities[i].Sentences[j].Effects {
+				if document.Abilities[i].Sentences[j].Effects[k].Kind == EffectAddMana {
+					manaEffect = &document.Abilities[i].Sentences[j].Effects[k]
+				}
+			}
+		}
+	}
+	if manaEffect == nil {
+		t.Fatalf("no add-mana effect: %#v", document.Abilities)
+	}
+	if manaEffect.Mana.AnyOneColorDynamic {
+		t.Fatal("fixed any-color body wrongly typed as dynamic")
+	}
+	if !manaEffect.Mana.AnyColor {
+		t.Fatalf("AnyColor not set: %#v", manaEffect.Mana)
+	}
+}

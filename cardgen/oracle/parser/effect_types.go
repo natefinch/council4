@@ -404,6 +404,15 @@ type EffectManaSyntax struct {
 	// resolution. Unlike ColorsAmongControlled, no color is chosen; one mana of
 	// every color in the union is added.
 	EachColorAmongControlled bool `json:",omitempty"`
+	// AnyOneColorDynamic reports the body "X mana of any one color" (or "an
+	// amount of mana of any one color") whose quantity is a dynamic amount
+	// carried by EffectSyntax.Amount (Kami of Whispered Hopes: "Add X mana of
+	// any one color, where X is this creature's power."). The controller chooses
+	// any one color as the ability resolves; the produced mana is that color and
+	// its amount is the dynamic value. It pairs a freely-chosen single color with
+	// a generic dynamic amount (source power/toughness, devotion, a permanent
+	// count, and so on).
+	AnyOneColorDynamic bool `json:",omitempty"`
 }
 
 // ManaLandsProduceScope identifies which battlefield lands' producible colors

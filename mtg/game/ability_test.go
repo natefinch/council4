@@ -481,6 +481,36 @@ func TestTapManaCommanderIdentityAbilityBuildsCompleteMechanic(t *testing.T) {
 	}
 }
 
+func TestTapManaChosenColorDynamicAbilityBuildsCompleteMechanic(t *testing.T) {
+	amount := DynamicAmount{Kind: DynamicAmountObjectPower, Multiplier: 1, Object: SourcePermanentReference()}
+	ability := TapManaChosenColorDynamicAbility("", amount)
+
+	if len(ability.AdditionalCosts) != 1 || ability.AdditionalCosts[0] != cost.T {
+		t.Fatalf("additional costs = %+v, want tap", ability.AdditionalCosts)
+	}
+	content := BodyContent(&ability)
+	if content.IsModal() || len(content.Modes) != 1 || len(content.Modes[0].Sequence) != 2 {
+		t.Fatalf("content = %+v, want choose then add", content)
+	}
+	choose, ok := content.Modes[0].Sequence[0].Primitive.(Choose)
+	if !ok ||
+		choose.Choice.Kind != ResolutionChoiceMana ||
+		!slices.Equal(choose.Choice.Colors, []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G}) ||
+		choose.PublishChoice == "" {
+		t.Fatalf("first instruction = %+v, want any-color mana choice", content.Modes[0].Sequence[0])
+	}
+	add, ok := content.Modes[0].Sequence[1].Primitive.(AddMana)
+	if !ok || !add.Amount.IsDynamic() || add.ChoiceFrom != choose.PublishChoice {
+		t.Fatalf("second instruction = %+v, want dynamic mana from published choice", content.Modes[0].Sequence[1])
+	}
+	if got := add.Amount.DynamicAmount().Val; got.Kind != DynamicAmountObjectPower {
+		t.Fatalf("dynamic amount kind = %v, want object power", got.Kind)
+	}
+	if err := ValidateInstructionSequence(content.Modes[0].Sequence); err != nil {
+		t.Fatalf("instruction sequence invalid: %v", err)
+	}
+}
+
 func TestBodyAccessors(t *testing.T) {
 	targets := []TargetSpec{{MinTargets: 1, MaxTargets: 1}}
 	activationCondition := opt.Val(Condition{SourceNotMonstrous: true})
