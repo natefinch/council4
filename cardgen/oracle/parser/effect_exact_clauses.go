@@ -781,6 +781,100 @@ func exactMassEffectSyntax(effect *EffectSyntax, prefix string) bool {
 	return exactMassGroupPhrase(phrase) || exactMassSubtypePhrase(&effect.Selection, phrase)
 }
 
+// exactMassEachEffectSyntax recognizes the singular "each" mass form
+// ("Destroy each nonland permanent with mana value 2 or less.") that selects
+// every matching permanent just like the plural "all" form ("Destroy all
+// nonland permanents ..."). The "each" wording names a single permanent type,
+// so its group phrase is validated in the singular by exactMassEachGroupPhrase
+// while reusing the shared numeric-comparison clause. It fails closed for every
+// other wording so single-target and player-distributive forms are untouched.
+func exactMassEachEffectSyntax(effect *EffectSyntax, prefix string) bool {
+	text := exactEffectClauseText(effect)
+	if effect.Context == EffectContextController {
+		if len(text) > 4 && strings.EqualFold(text[:4], "you ") {
+			text = text[4:]
+		}
+	}
+	if !strings.HasPrefix(strings.ToLower(text), strings.ToLower(prefix)) || !strings.HasSuffix(text, ".") {
+		return false
+	}
+	return exactMassEachGroupPhrase(text[len(prefix) : len(text)-1])
+}
+
+// exactMassEachGroupPhrase validates the singular group phrase that follows
+// "Destroy each ". It mirrors exactMassGroupPhrase's excluded-type/color
+// prefixes, base nouns, and numeric comparison clauses, but in the singular
+// ("nonland permanent with mana value 2 or less" rather than the plural
+// "nonland permanents ..."), so an "each" mass clause round-trips to the same
+// group selection the plural form lowers.
+func exactMassEachGroupPhrase(phrase string) bool {
+	if phrase == "" || strings.TrimSpace(phrase) != phrase {
+		return false
+	}
+	phrase = strings.ToLower(phrase)
+	for _, suffix := range []string{" you don't control", " your opponents control", " you control"} {
+		if remainder, ok := strings.CutSuffix(phrase, suffix); ok {
+			phrase = remainder
+			break
+		}
+	}
+	if exactMassEachNumericPhrase(phrase) {
+		return true
+	}
+	if exactMassEachBaseNoun(phrase) {
+		return true
+	}
+	for _, prefix := range []string{
+		"other ", "tapped ", "untapped ", "nonland ", "nonartifact ", "noncreature ", "nonenchantment ",
+		"white ", "blue ", "black ", "red ", "green ", "nonwhite ", "nonblue ", "nonblack ", "nonred ", "nongreen ",
+		"attacking ", "blocking ", "attacking or blocking ",
+	} {
+		if remainder, ok := strings.CutPrefix(phrase, prefix); ok {
+			return exactMassEachBaseNoun(remainder)
+		}
+	}
+	if remainder, ok := strings.CutPrefix(phrase, "nonbasic "); ok {
+		return remainder == "land"
+	}
+	return false
+}
+
+func exactMassEachBaseNoun(phrase string) bool {
+	switch phrase {
+	case "creature", "artifact", "enchantment", "land", "planeswalker", "permanent":
+		return true
+	default:
+		return false
+	}
+}
+
+// exactMassEachNumericPhrase recognizes a singular "each" mass group restricted
+// by a numeric "with mana value"/"with power"/"with toughness" comparison,
+// optionally behind a single excluded-type prefix. It is the singular sibling of
+// exactMassNumericPhrase.
+func exactMassEachNumericPhrase(phrase string) bool {
+	for _, exPrefix := range []string{"", "nonland ", "nonartifact ", "noncreature ", "nonenchantment "} {
+		rest, ok := strings.CutPrefix(phrase, exPrefix)
+		if !ok {
+			continue
+		}
+		for _, noun := range []string{"creature", "artifact", "enchantment", "land", "planeswalker", "permanent"} {
+			comparison, ok := strings.CutPrefix(rest, noun+" with ")
+			if !ok {
+				continue
+			}
+			qualifiers := []string{"mana value"}
+			if exPrefix == "" && noun == "creature" {
+				qualifiers = []string{"mana value", "power", "toughness"}
+			}
+			if exactMassComparisonClause(comparison, qualifiers) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // exactMassSubtypePhrase reconstructs the canonical mass phrase for a subtype
 // group ("all Islands", "all Goblins", "all Dragon creatures") from the parsed
 // selection and compares it byte-exactly to the source phrase. A bare subtype

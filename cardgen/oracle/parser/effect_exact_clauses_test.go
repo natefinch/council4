@@ -301,6 +301,44 @@ func TestExactDestroyMassSubtypeAndNumericAccepts(t *testing.T) {
 	}
 }
 
+func TestExactDestroyMassEachAccepts(t *testing.T) {
+	t.Parallel()
+	// The singular "each" mass form selects every matching permanent exactly as
+	// the plural "all" form does, so it must round-trip to an exact group destroy.
+	accepted := []string{
+		"Destroy each creature.",
+		"Destroy each artifact.",
+		"Destroy each enchantment.",
+		"Destroy each permanent.",
+		"Destroy each nonland permanent.",
+		"Destroy each nonland permanent with mana value 2 or less.",
+		"Destroy each creature with power 3 or greater.",
+		"Destroy each tapped creature.",
+		"Destroy each creature you control.",
+		"Destroy each nonbasic land.",
+	}
+	for _, source := range accepted {
+		if !destroyEffectExact(t, source) {
+			t.Errorf("destroyEffectExact(%q) = false, want true", source)
+		}
+	}
+}
+
+func TestExactDestroyMassEachFailsClosed(t *testing.T) {
+	t.Parallel()
+	// "each" mass groups inherit the same fail-closed shapes as the plural form;
+	// power/toughness exist only on creatures and multi-qualifier subtypes have
+	// no canonical singular round-trip.
+	rejected := []string{
+		"Destroy each artifact with power 3 or less.",
+	}
+	for _, source := range rejected {
+		if destroyEffectExact(t, source) {
+			t.Errorf("destroyEffectExact(%q) = true, want false (fail closed)", source)
+		}
+	}
+}
+
 func TestExactDestroyMassFailsClosed(t *testing.T) {
 	t.Parallel()
 	// Each carries a shape the canonical mass phrasing cannot faithfully

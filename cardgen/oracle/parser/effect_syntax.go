@@ -737,6 +737,14 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	if recognizeTargetColorIfRider(effect, atoms) {
 		effect.Exact = true
 	}
+	// "Destroy each <permanent group>" selects every matching permanent like the
+	// plural "all" form, so flag its selection as a mass group to lower to a
+	// battlefield-group destroy. Scoped to the recognized destroy mass form so
+	// "each creature" damage recipients and "each player" distributive effects on
+	// other effect kinds are untouched.
+	if effect.Kind == EffectDestroy && exactMassEachEffectSyntax(effect, "Destroy each ") {
+		effect.Selection.All = true
+	}
 	effect.TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(effect)
 	effect.TokenCopyOfReference = exactCreateCopyTokenReferenceEffectSyntax(effect)
 	effect.TokenCopyOfAttached = exactCreateCopyTokenAttachedEffectSyntax(effect)
