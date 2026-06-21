@@ -840,6 +840,18 @@ func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error
 	return structLit(typeName, []string{fmt.Sprintf("%s: %s,", fieldName, rendered)}), nil
 }
 
+func (r Renderer) renderCopyStackObjectPrimitive(value game.CopyStackObject) (string, error) {
+	rendered, err := r.renderObjectReference(value.Object)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Object: %s,", rendered)}
+	if value.MayChooseNewTargets {
+		fields = append(fields, "MayChooseNewTargets: true,")
+	}
+	return structLit("game.CopyStackObject", fields), nil
+}
+
 func (r Renderer) renderFightPrimitive(primitive game.Primitive) (string, error) {
 	value, ok := primitive.(game.Fight)
 	if !ok {
@@ -858,7 +870,6 @@ func (r Renderer) renderFightPrimitive(primitive game.Primitive) (string, error)
 		fmt.Sprintf("RelatedObject: %s,", related),
 	}), nil
 }
-
 func (r Renderer) renderAttachPrimitive(primitive game.Primitive) (string, error) {
 	value, ok := primitive.(game.Attach)
 	if !ok {

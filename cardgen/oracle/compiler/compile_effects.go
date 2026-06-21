@@ -315,6 +315,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				VerbOrder:                       syntax.VerbOrder,
 				PreventRegeneration:             syntax.PreventRegeneration,
 				RegenerationRiderSpan:           syntax.RegenerationRiderSpan,
+				CopyMayChooseNewTargets:         syntax.CopyMayChooseNewTargets,
+				CopyChooseNewTargetsRiderSpan:   syntax.CopyChooseNewTargetsRiderSpan,
 				Dig:                             syntax.Dig,
 				HandLibraryPut:                  syntax.HandLibraryPut,
 				HandDiscard:                     syntax.HandDiscard,

@@ -524,6 +524,58 @@ func lowerChooseNewTargetsSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 	}.Ability(), nil
 }
 
+// lowerCopyStackObjectSpell lowers "Copy target [activated or ]triggered ability
+// you control[. You may choose new targets for the copy]." to a single
+// CopyStackObject primitive over a stack-object target. The optional retarget
+// rider (folded by the parser into CopyMayChooseNewTargets) sets
+// MayChooseNewTargets so the resolving controller may re-choose the copy's
+// targets. Any condition, extra effect, or unrecognized rider leaves the body
+// unrecognized so it fails closed.
+func lowerCopyStackObjectSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported copy effect",
+			"the executable source backend supports only exact copy of one target activated or triggered ability",
+		)
+	}
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 1 ||
+		ctx.content.Targets[0].Cardinality.Min != 1 ||
+		ctx.content.Targets[0].Cardinality.Max != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 0 {
+		return unsupported()
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectCopyStackObject ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		ctx.optional ||
+		effect.Context != parser.EffectContextController ||
+		effect.Amount.Known ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone {
+		return unsupported()
+	}
+	targetSpec, ok := counterAbilityTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return unsupported()
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{{
+			Primitive: game.CopyStackObject{
+				Object:              game.TargetStackObjectReference(0),
+				MayChooseNewTargets: effect.CopyMayChooseNewTargets,
+			},
+		}},
+	}.Ability(), nil
+}
+
 func lowerSacrificeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(

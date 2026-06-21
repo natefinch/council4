@@ -146,6 +146,12 @@ const (
 	// or a fixed cardinal) and RepeatBody holds the sub-effect(s) executed each
 	// iteration.
 	EffectRepeatProcess EffectKind = "EffectRepeatProcess"
+	// EffectCopyStackObject models the resolving effect "Copy target [activated
+	// or ]triggered ability you control[. You may choose new targets for the
+	// copy]." The targeted stack object is the activated or triggered ability to
+	// copy; CopyMayChooseNewTargets records the optional retarget rider. The copy
+	// is put on the stack and resolves independently (CR 707, 706.10).
+	EffectCopyStackObject EffectKind = "EffectCopyStackObject"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -1078,6 +1084,16 @@ type EffectSyntax struct {
 	// lowerer can credit them toward source coverage. It is set only when
 	// PreventRegeneration is true.
 	RegenerationRiderSpan shared.Span `json:"-"`
+	// CopyMayChooseNewTargets reports that a copy-stack-object effect is
+	// followed by the optional "You may choose new targets for the copy[ies]."
+	// rider. The rider is a separate sentence whose "the copy" subject denotes
+	// the copy this effect creates; the parser folds it onto the copy effect so
+	// lowering emits a CopyStackObject that may re-choose the copy's targets.
+	CopyMayChooseNewTargets bool `json:",omitempty"`
+	// CopyChooseNewTargetsRiderSpan covers the folded "You may choose new
+	// targets for the copy[ies]." rider sentence so the lowerer can credit it
+	// toward source coverage. It is set only when CopyMayChooseNewTargets is true.
+	CopyChooseNewTargetsRiderSpan shared.Span `json:"-"`
 	// Dig holds the structured fields of an impulse "Put N of them into your
 	// hand and the rest into your graveyard." clause. It is set only on the
 	// EffectPut half of an impulse dig sequence (Dig.Put true); the look half is

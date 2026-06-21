@@ -22,6 +22,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactCantBeBlockedEffectSyntax(effect)
 	case EffectCounter:
 		return exactCounterEffectSyntax(effect)
+	case EffectCopyStackObject:
+		return exactCopyStackObjectEffectSyntax(effect)
 	case EffectChooseNewTargets:
 		return exactChooseNewTargetsEffectSyntax(effect)
 	case EffectCreate:
@@ -101,6 +103,16 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactGraveyardReturnEffectSyntax(effect) ||
 			exactChosenCardsBattlefieldReturnEffectSyntax(effect) ||
 			exactDirectPronounEffectSyntax(effect, "Return it to its owner's hand.")
+	default:
+		return exactEffectSyntaxTail(effect)
+	}
+}
+
+// exactEffectSyntaxTail continues the exact-reconstruction dispatch for the
+// remaining effect kinds. It is split out of exactEffectSyntax so neither
+// function's maintainability index falls below the linter threshold.
+func exactEffectSyntaxTail(effect *EffectSyntax) bool {
+	switch effect.Kind {
 	case EffectSacrifice:
 		return exactDirectPronounEffectSyntax(effect, "Sacrifice it.") ||
 			exactSacrificeChoiceEffectSyntax(effect)

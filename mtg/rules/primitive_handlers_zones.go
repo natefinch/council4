@@ -1312,6 +1312,30 @@ func handleChooseNewTargets(r *effectResolver, prim game.ChooseNewTargets) effec
 	}
 }
 
+// handleCopyStackObject puts a copy of the targeted activated or triggered
+// ability onto the stack (CR 707). The copy is a new object that resolves
+// independently of the original; when the effect allows it, the resolving
+// controller may choose new targets for the copy (CR 707.10c).
+func handleCopyStackObject(r *effectResolver, prim game.CopyStackObject) effectResolved {
+	if prim.Object.Kind() != game.ObjectReferenceTargetStackObject {
+		return effectResolved{accepted: true}
+	}
+	stackObjectID, ok := effectStackObjectID(r.obj, prim.Object.TargetIndex())
+	if !ok {
+		return effectResolved{accepted: true}
+	}
+	original, ok := stackObjectByID(r.game, stackObjectID)
+	if !ok {
+		return effectResolved{accepted: true}
+	}
+	copyObj := game.NewStackObjectCopy(original, r.game.IDGen.Next())
+	r.game.Stack.Push(copyObj)
+	if prim.MayChooseNewTargets {
+		r.engine.retargetStackObjectChoice(r.game, r.obj.Controller, copyObj, r.agents, r.log)
+	}
+	return effectResolved{accepted: true, succeeded: true}
+}
+
 // retargetStackObject re-chooses the targets of the spell or ability referenced
 // by obj's target slot (CR 115.7). The new targets must be legal for the
 // referenced object's own target specs, but the resolving controller of the
@@ -1325,6 +1349,15 @@ func (e *Engine) retargetStackObject(g *game.Game, obj *game.StackObject, target
 	if !ok {
 		return false
 	}
+	return e.retargetStackObjectChoice(g, obj.Controller, target, agents, log)
+}
+
+// retargetStackObjectChoice re-chooses the targets of target (CR 115.7). The
+// new targets must be legal for target's own target specs, but the resolving
+// controller chooser makes the selection. It is shared by the ChooseNewTargets
+// retarget effect and by CopyStackObject's "you may choose new targets for the
+// copy" rider, which retargets the freshly created copy.
+func (e *Engine) retargetStackObjectChoice(g *game.Game, chooser game.PlayerID, target *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	specs, ok := stackObjectTargetSpecs(g, target)
 	if !ok || len(specs.specs) == 0 {
 		return false
@@ -1333,7 +1366,7 @@ func (e *Engine) retargetStackObject(g *game.Game, obj *game.StackObject, target
 	if result.kind != targetLegalChoicesFound || len(result.choices) == 0 {
 		return false
 	}
-	selected := e.chooseChoice(g, agents, targetChoiceRequest(obj.Controller, "Choose new targets", result.choices), log)
+	selected := e.chooseChoice(g, agents, targetChoiceRequest(chooser, "Choose new targets", result.choices), log)
 	if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(result.choices) {
 		return false
 	}

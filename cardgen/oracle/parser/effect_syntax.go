@@ -106,6 +106,10 @@ func emitSentenceResolvingSyntax(
 		legacyEffects -= foldedLegacy
 		currentEffects -= foldedEffects
 	}
+	if foldedLegacy, foldedEffects, ok := creditCopyChooseNewTargetsRider(sentences, atoms); ok {
+		legacyEffects -= foldedLegacy
+		currentEffects -= foldedEffects
+	}
 	if currentEffects == 1 && unrecognizedSibling {
 		for i := range sentences {
 			for j := range sentences[i].Effects {
@@ -285,6 +289,69 @@ func creditTokenCopyGrantRider(sentences []Sentence, atoms Atoms) (foldedLegacy,
 		return foldedLegacy, foldedEffects, true
 	}
 	return 0, 0, false
+}
+
+// creditCopyChooseNewTargetsRider folds the optional "You may choose new targets
+// for the copy[ies]." rider sentence onto the ability's lone copy-stack-object
+// effect: it sets CopyMayChooseNewTargets plus a coverage span on the copy and
+// clears the rider sentence's effects so reference and coverage scans credit it.
+// It credits only when the ability holds exactly one copy-stack-object effect,
+// that copy is exact, and the rider sentence is exactly the recognized retarget
+// clause; otherwise the rider stays uncredited and the card fails closed.
+func creditCopyChooseNewTargetsRider(sentences []Sentence, atoms Atoms) (foldedLegacy, foldedEffects int, ok bool) {
+	copyEffect := loneCopyStackObjectEffect(sentences)
+	if copyEffect == nil || !copyEffect.Exact {
+		return 0, 0, false
+	}
+	for i := range sentences {
+		if len(sentences[i].Effects) != 1 || sentences[i].Effects[0].Kind != EffectChooseNewTargets {
+			continue
+		}
+		tokens := semanticEffectTokens(sentences[i].Tokens)
+		if !isCopyChooseNewTargetsRiderTokens(tokens) {
+			continue
+		}
+		copyEffect.CopyMayChooseNewTargets = true
+		copyEffect.CopyChooseNewTargetsRiderSpan = sentences[i].Span
+		foldedEffects = len(sentences[i].Effects)
+		if sentences[i].LegacyEffects {
+			foldedLegacy = legacyEffectCount(tokens, atoms)
+		}
+		sentences[i].Effects = nil
+		sentences[i].LegacyEffects = false
+		sentences[i].CopyChooseNewTargetsRider = true
+		return foldedLegacy, foldedEffects, true
+	}
+	return 0, 0, false
+}
+
+// loneCopyStackObjectEffect returns the single copy-stack-object effect across
+// the sentences, or nil when the sentences hold zero or more than one.
+func loneCopyStackObjectEffect(sentences []Sentence) *EffectSyntax {
+	var found *EffectSyntax
+	for i := range sentences {
+		for j := range sentences[i].Effects {
+			effect := &sentences[i].Effects[j]
+			if effect.Kind != EffectCopyStackObject {
+				continue
+			}
+			if found != nil {
+				return nil
+			}
+			found = effect
+		}
+	}
+	return found
+}
+
+// isCopyChooseNewTargetsRiderTokens reports whether the sentence tokens are
+// exactly "You may choose new targets for the copy[ies]." The plural "copies"
+// form covers multi-copy effects ("Copy ... X times. You may choose new targets
+// for the copies."). Any other wording leaves the rider uncredited.
+func isCopyChooseNewTargetsRiderTokens(tokens []shared.Token) bool {
+	clause := strings.TrimSuffix(strings.ToLower(joinedEffectText(tokens)), ".")
+	return clause == "you may choose new targets for the copy" ||
+		clause == "you may choose new targets for the copies"
 }
 
 // loneCopyTokenCreateEffect returns the single create-copy-token effect across
@@ -2707,6 +2774,8 @@ func legacyEffectKindAt(tokens []shared.Token, index int) EffectKind {
 	case kind == EffectCast && castDuringMainPhaseConditionAt(tokens, index):
 		return EffectUnknown
 	case kind == EffectCounter && !counterVerbAt(tokens, index):
+		return EffectUnknown
+	case kind == EffectCopyStackObject && !copyVerbAt(tokens, index):
 		return EffectUnknown
 	case kind == EffectGain && index+1 < len(tokens) && equalWord(tokens[index+1], "control"):
 		return EffectGainControl
