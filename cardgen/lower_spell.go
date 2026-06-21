@@ -419,19 +419,30 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 		}
 		sequence = append(sequence, inst)
 	}
-	if len(ctx.content.Effects) > group.Length {
-		if group.Spec.Destination != zone.Library ||
-			group.Spec.DestinationPosition != game.SearchPositionTop {
-			return unsupported("the executable source backend supports a life-loss rider only on a library-top search")
+	// Effects after the search group (its trailing "then shuffle") are riders
+	// that resolve once the search completes — Grim Tutor's "You lose 3 life.",
+	// Environmental Sciences' "You gain 2 life."
+	topSearch := group.Spec.Destination == zone.Library &&
+		group.Spec.DestinationPosition == game.SearchPositionTop
+	for i := group.Length; i < len(ctx.content.Effects); i++ {
+		effect := &ctx.content.Effects[i]
+		// Top-of-library tutors keep their tighter contract: only a fixed
+		// controller life-loss rider (Vampiric Tutor, Imperial Seal).
+		if topSearch {
+			if !exactControllerLifeLoss(effect) {
+				return unsupported("the executable source backend supports a fixed life-loss rider only on a library-top search")
+			}
+			sequence = append(sequence, game.Instruction{Primitive: game.LoseLife{
+				Player: game.ControllerReference(),
+				Amount: game.Fixed(effect.Amount.Value),
+			}})
+			continue
 		}
-		life := &ctx.content.Effects[group.Length]
-		if !exactControllerLifeLoss(life) {
-			return unsupported("the executable source backend supports only a fixed controller life-loss rider")
+		inst, ok := lowerSearchRider(effect)
+		if !ok {
+			return unsupported("the executable source backend supports only fixed controller life-change or random-discard riders after a library-search sequence")
 		}
-		sequence = append(sequence, game.Instruction{Primitive: game.LoseLife{
-			Player: game.ControllerReference(),
-			Amount: game.Fixed(life.Amount.Value),
-		}})
+		sequence = append(sequence, inst)
 	}
 	if appendSelfShuffle {
 		sequence = append(sequence, game.Instruction{Primitive: game.ShuffleSpellIntoLibrary{}})
@@ -565,9 +576,12 @@ func exactSearchEffectSequence(effects []compiler.CompiledEffect) (searchSequenc
 }
 
 // exactSearchPutShuffleSequence matches the hand/battlefield destination shapes
-// "search, [reveal,] put, [rider,] then shuffle." A single optional rider effect
-// (a random discard or a fixed controller life loss) may sit between the put and
-// the trailing shuffle; lowering validates and lowers it after the search.
+// "search, [reveal,] put, [rider,] then shuffle[. <trailing rider>]." A single
+// optional rider effect (a random discard or a fixed controller life loss) may
+// sit between the put and the trailing shuffle; lowering validates and lowers it
+// after the search. The group ends at the trailing shuffle, so any effects after
+// it (e.g. Grim Tutor's "You lose 3 life.") are left for the caller to lower as
+// post-search riders rather than being folded into the search shape.
 func exactSearchPutShuffleSequence(effects []compiler.CompiledEffect) (searchSequenceShape, bool) {
 	idx := 1
 	reveal := false
@@ -581,16 +595,16 @@ func exactSearchPutShuffleSequence(effects []compiler.CompiledEffect) (searchSeq
 	putIndex := idx
 	idx++
 	riderIndex := 0
-	if idx == len(effects)-2 {
+	if idx < len(effects) && effects[idx].Kind != compiler.EffectShuffle {
 		riderIndex = idx
 		idx++
 	}
-	if idx != len(effects)-1 ||
+	if idx >= len(effects) ||
 		effects[idx].Kind != compiler.EffectShuffle ||
 		effects[idx].Connection != parser.EffectConnectionThen {
 		return searchSequenceShape{}, false
 	}
-	return searchSequenceShape{length: len(effects), putIndex: putIndex, riderIndex: riderIndex, reveal: reveal}, true
+	return searchSequenceShape{length: idx + 1, putIndex: putIndex, riderIndex: riderIndex, reveal: reveal}, true
 }
 
 func exactControllerLifeLoss(effect *compiler.CompiledEffect) bool {
@@ -606,13 +620,34 @@ func exactControllerLifeLoss(effect *compiler.CompiledEffect) bool {
 		!effect.Optional
 }
 
-// lowerSearchRider lowers a supported rider effect that sits inside a
-// library-search sequence (between the put and the trailing shuffle) into the
-// instruction that runs after the search primitive. It models a fixed controller
-// life loss and a random own-hand discard, failing closed for any other effect.
+func exactControllerLifeGain(effect *compiler.CompiledEffect) bool {
+	return effect.Kind == compiler.EffectGain &&
+		effect.Context == parser.EffectContextController &&
+		effect.LifeObject &&
+		effect.Exact &&
+		effect.Amount.Known &&
+		effect.Amount.Value > 0 &&
+		effect.DelayedTiming == 0 &&
+		effect.Duration == compiler.DurationNone &&
+		!effect.Negated &&
+		!effect.Optional &&
+		len(effect.References) == 0
+}
+
+// lowerSearchRider lowers a supported rider effect that resolves as part of a
+// library-search sequence — one sitting between the put and the trailing shuffle,
+// or one trailing the shuffle as its own sentence — into the instruction that
+// runs after the search primitive. It models a fixed controller life loss or
+// gain and a random own-hand discard, failing closed for any other effect.
 func lowerSearchRider(rider *compiler.CompiledEffect) (game.Instruction, bool) {
 	if exactControllerLifeLoss(rider) {
 		return game.Instruction{Primitive: game.LoseLife{
+			Player: game.ControllerReference(),
+			Amount: game.Fixed(rider.Amount.Value),
+		}}, true
+	}
+	if exactControllerLifeGain(rider) {
+		return game.Instruction{Primitive: game.GainLife{
 			Player: game.ControllerReference(),
 			Amount: game.Fixed(rider.Amount.Value),
 		}}, true
