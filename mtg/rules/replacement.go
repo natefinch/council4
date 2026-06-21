@@ -1032,6 +1032,36 @@ func drawFromEmptyLibraryWins(g *game.Game, playerID game.PlayerID) bool {
 	return false
 }
 
+// drawCardMultiplier reports how many cards a single "would draw a card" event
+// by playerID becomes after applying registered draw-doubling replacements
+// (CR 614). firstInDrawStep marks the controller's first draw in their own draw
+// step, which DrawCardExceptFirstInDrawStep replacements (Teferi's Ageless
+// Insight) leave unmultiplied. Multiple draw multipliers compound. The result is
+// always at least one.
+func drawCardMultiplier(g *game.Game, playerID game.PlayerID, firstInDrawStep bool) int {
+	multiplier := 1
+	for i := range g.ReplacementEffects {
+		replacement := &g.ReplacementEffects[i]
+		if replacement.DrawCardMultiplier <= 1 {
+			continue
+		}
+		if firstInDrawStep && replacement.DrawCardExceptFirstInDrawStep {
+			continue
+		}
+		if !replacementSourceIsActive(g, replacement) {
+			continue
+		}
+		if replacementCurrentController(g, replacement) != playerID {
+			continue
+		}
+		multiplier *= replacement.DrawCardMultiplier
+	}
+	if multiplier < 1 {
+		return 1
+	}
+	return multiplier
+}
+
 func replacementSourceStillApplies(g *game.Game, replacement *game.ReplacementEffect) bool {
 	if replacement.Duration != game.DurationPermanent || replacement.SourceObjectID == 0 {
 		return true

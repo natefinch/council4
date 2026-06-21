@@ -99,6 +99,15 @@ func lowerDynamicAmount(amount compiler.CompiledAmount, object game.ObjectRefere
 		dynamic.Colors = append([]color.Color(nil), amount.Colors...)
 	case compiler.DynamicAmountSpellsCastThisTurn:
 		dynamic.Kind = game.DynamicAmountSpellsCastThisTurn
+	case compiler.DynamicAmountSacrificedPower:
+		dynamic.Kind = game.DynamicAmountObjectPower
+		dynamic.Object = game.SacrificedCostReference()
+	case compiler.DynamicAmountSacrificedToughness:
+		dynamic.Kind = game.DynamicAmountObjectToughness
+		dynamic.Object = game.SacrificedCostReference()
+	case compiler.DynamicAmountSacrificedManaValue:
+		dynamic.Kind = game.DynamicAmountObjectManaValue
+		dynamic.Object = game.SacrificedCostReference()
 	default:
 		return game.DynamicAmount{}, false
 	}
@@ -401,6 +410,8 @@ func runtimeKeyword(keyword parser.KeywordKind) (game.Keyword, bool) {
 		return game.Persist, true
 	case parser.KeywordRiot:
 		return game.Riot, true
+	case parser.KeywordFear:
+		return game.Fear, true
 	default:
 		return game.KeywordNone, false
 	}

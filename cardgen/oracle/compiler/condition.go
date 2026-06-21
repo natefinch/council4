@@ -146,6 +146,10 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		condition.ObjectBinding = compileConditionObjectBinding(clause.ObjectBinding)
 	case parser.ConditionPredicateCastDuringControllerMainPhase:
 		condition.Predicate = ConditionPredicateCastDuringControllerMainPhase
+	case parser.ConditionPredicateWouldDrawCard:
+		condition.Predicate = ConditionPredicateWouldDrawCard
+	case parser.ConditionPredicateWouldDrawCardExceptFirstInDrawStep:
+		condition.Predicate = ConditionPredicateWouldDrawCardExceptFirstInDrawStep
 	default:
 	}
 }

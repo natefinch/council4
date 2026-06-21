@@ -320,6 +320,20 @@ type ReplacementEffect struct {
 	// types to the copied values. It is empty for every other replacement and
 	// only consulted when EntersAsCopy is true.
 	EntersAsCopyAddTypes []types.Card
+
+	// DrawCardMultiplier replaces a single "draw a card" event by the controller
+	// with drawing this many cards instead (CR 614). It backs the draw-doubling
+	// replacement "If you would draw a card, draw two cards instead." A value of
+	// zero or one leaves draws unchanged. It is registered while its source is on
+	// the battlefield.
+	DrawCardMultiplier int
+
+	// DrawCardExceptFirstInDrawStep exempts the controller's first draw in each
+	// of their own draw steps from DrawCardMultiplier ("If you would draw a card
+	// except the first one you draw in each of your draw steps, draw two cards
+	// instead.", Teferi's Ageless Insight). It is only meaningful when
+	// DrawCardMultiplier is greater than one.
+	DrawCardExceptFirstInDrawStep bool
 }
 
 // EntryTypeChoiceKey is the ChoiceKey under which an entry-time creature-type

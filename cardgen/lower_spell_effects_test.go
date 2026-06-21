@@ -753,6 +753,67 @@ func TestLowerMassDestroyAndExile(t *testing.T) {
 	}
 }
 
+func TestLowerMassDestroyEachGroup(t *testing.T) {
+	t.Parallel()
+	// The singular "each" mass form lowers to the same battlefield-group destroy
+	// as the plural "all" form.
+	tests := []struct {
+		name       string
+		oracleText string
+		selection  game.Selection
+	}{
+		{
+			name:       "creature",
+			oracleText: "Destroy each creature.",
+			selection:  game.Selection{RequiredTypes: []types.Card{types.Creature}},
+		},
+		{
+			name:       "nonland permanent mana value",
+			oracleText: "Destroy each nonland permanent with mana value 2 or less.",
+			selection: game.Selection{
+				ExcludedTypes: []types.Card{types.Land},
+				ManaValue: opt.Val(compare.Int{
+					Op:    compare.LessOrEqual,
+					Value: 2,
+				}),
+			},
+		},
+		{
+			name:       "creature power",
+			oracleText: "Destroy each creature with power 3 or greater.",
+			selection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Power: opt.Val(compare.Int{
+					Op:    compare.GreaterOrEqual,
+					Value: 3,
+				}),
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Each Wipe",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracleText,
+			})
+			primitive := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive
+			destroy, ok := primitive.(game.Destroy)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.Destroy", primitive)
+			}
+			if destroy.Group.Domain() != game.GroupDomainBattlefield {
+				t.Fatalf("group domain = %v, want battlefield", destroy.Group.Domain())
+			}
+			if selection := destroy.Group.Selection(); !reflect.DeepEqual(selection, test.selection) {
+				t.Fatalf("selection = %#v, want %#v", selection, test.selection)
+			}
+		})
+	}
+}
+
 func TestLowerMassTapAndUntap(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

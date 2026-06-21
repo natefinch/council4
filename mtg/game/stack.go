@@ -150,6 +150,12 @@ type StackObject struct {
 	// (e.g., "sacrificed a creature", "discarded a card").
 	AdditionalCostsPaid []string
 
+	// SacrificedAsCostIDs are the object IDs of permanents sacrificed to pay
+	// this ability's activation cost. They let an effect read the sacrificed
+	// permanent through last-known information ("the sacrificed creature's
+	// power"). Empty when no permanent was sacrificed as a cost.
+	SacrificedAsCostIDs []id.ID
+
 	// SourceZone is the zone the source card occupied before this spell or
 	// ability was put on the stack.
 	SourceZone zone.Type

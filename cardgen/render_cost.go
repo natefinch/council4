@@ -86,6 +86,8 @@ func (Renderer) renderObjectReference(reference game.ObjectReference) (string, e
 		return "game.EventPermanentReference()", nil
 	case game.ObjectReferenceSourceCard:
 		return "game.SourceCardPermanentReference()", nil
+	case game.ObjectReferenceSacrificedCost:
+		return "game.SacrificedCostReference()", nil
 	default:
 		return "", fmt.Errorf("render: unsupported object reference kind %d", reference.Kind())
 	}

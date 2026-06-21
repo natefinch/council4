@@ -309,6 +309,17 @@ const (
 	// "+1/+1 for each color among permanents you control" self-buff family
 	// (Faeburrow Elder).
 	EffectDynamicAmountColorCount EffectDynamicAmountKind = "EffectDynamicAmountColorCount"
+	// EffectDynamicAmountSacrificedPower is the power of the permanent
+	// sacrificed to pay an activated ability's cost ("the sacrificed creature's
+	// power"). Unlike EffectDynamicAmountSourcePower it has no in-text referent
+	// span: the subject is the cost-sacrificed permanent, read at resolution
+	// from last-known information. EffectDynamicAmountSacrificedToughness and
+	// EffectDynamicAmountSacrificedManaValue are the toughness and mana-value
+	// siblings. They back Altar of Dementia, whose sacrifice-cost ability mills
+	// cards equal to the sacrificed creature's power.
+	EffectDynamicAmountSacrificedPower     EffectDynamicAmountKind = "EffectDynamicAmountSacrificedPower"
+	EffectDynamicAmountSacrificedToughness EffectDynamicAmountKind = "EffectDynamicAmountSacrificedToughness"
+	EffectDynamicAmountSacrificedManaValue EffectDynamicAmountKind = "EffectDynamicAmountSacrificedManaValue"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
@@ -706,6 +717,12 @@ const (
 	EffectConnectionNone EffectConnectionKind = ""
 	EffectConnectionAnd  EffectConnectionKind = "EffectConnectionAnd"
 	EffectConnectionThen EffectConnectionKind = "EffectConnectionThen"
+	// EffectConnectionOtherwise marks an effect introduced by a leading
+	// "Otherwise," that runs only when the immediately preceding effect's gate
+	// condition is false ("draw a card if its power is 3 or greater. Otherwise,
+	// put two +1/+1 counters on it."). The lowering gates this effect on the
+	// negation of the preceding effect's condition so exactly one branch runs.
+	EffectConnectionOtherwise EffectConnectionKind = "EffectConnectionOtherwise"
 )
 
 // EffectPlayerKind identifies the player who performs an effect and whose zone
@@ -1073,12 +1090,16 @@ type EffectSyntax struct {
 	// the control of its own owner rather than the resolving player. It is false
 	// for the bare and "under your control" forms.
 	UnderOwnersControl bool `json:",omitempty"`
+	// TokenCopyOfForEach reports a per-each copy-token create whose copy source
+	// is each member of a controlled battlefield group (Second Harvest). The
+	// iterated group is carried in TokenCopyForEachGroup.
+	TokenCopyOfForEach bool `json:",omitempty"`
+	// TokenCopyForEachGroup carries the controlled battlefield group iterated by
+	// a TokenCopyOfForEach create. Nil unless TokenCopyOfForEach is set.
+	TokenCopyForEachGroup *SelectionSyntax `json:",omitempty"`
 	// PunisherSacrifice and PunisherDiscard mark the alternatives offered by an
 	// EffectPunisherLoseLife effect ("... unless that player sacrifices a
-	// permanent of their choice or discards a card."): PunisherSacrifice records
-	// that a sacrifice alternative (filtered by Selection) is offered, and
-	// PunisherDiscard records that a discard-a-card alternative is offered. Both
-	// are false for every other effect.
+	// permanent of their choice or discards a card.").
 	PunisherSacrifice bool `json:",omitempty"`
 	PunisherDiscard   bool `json:",omitempty"`
 }

@@ -66,6 +66,8 @@ const (
 	ConditionPredicateTargetColor                           ConditionPredicateKind = "ConditionPredicateTargetColor"
 	ConditionPredicateWouldDrawFromEmptyLibrary             ConditionPredicateKind = "ConditionPredicateWouldDrawFromEmptyLibrary"
 	ConditionPredicateCastDuringControllerMainPhase         ConditionPredicateKind = "ConditionPredicateCastDuringControllerMainPhase"
+	ConditionPredicateWouldDrawCard                         ConditionPredicateKind = "ConditionPredicateWouldDrawCard"
+	ConditionPredicateWouldDrawCardExceptFirstInDrawStep    ConditionPredicateKind = "ConditionPredicateWouldDrawCardExceptFirstInDrawStep"
 )
 
 // ConditionControlScope identifies which players' battlefields a "controls"
@@ -327,6 +329,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeSourceDeathCondition,
 		recognizeTargetColorCondition,
 		recognizeDrawFromEmptyLibraryCondition,
+		recognizeDrawCardReplacementCondition,
 		recognizeCastTimingCondition,
 	} {
 		if clause, ok := recognize(body, atoms); ok {
@@ -375,10 +378,37 @@ func recognizeEventSubjectCondition(body []shared.Token, atoms Atoms) (Condition
 	if clause, ok := recognizeEventSubjectCounterCondition(body, atoms); ok {
 		return clause, true
 	}
+	if clause, ok := recognizeEventSubjectPowerState(body); ok {
+		return clause, true
+	}
 	if clause, ok := recognizeEventSubjectNameUniqueCondition(body); ok {
 		return clause, true
 	}
 	return recognizeEventSubjectMatchCondition(body, atoms)
+}
+
+// recognizeEventSubjectPowerState handles the triggering object's own power
+// threshold "its power is <n> or greater" ("Whenever a creature you control
+// enters, draw a card if its power is 3 or greater."). The possessive "its"
+// binds the event permanent, so the recognized clause carries a power-at-least
+// selection matched against that object.
+func recognizeEventSubjectPowerState(body []shared.Token) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "its", "power", "is")
+	if !ok {
+		return ConditionClause{}, false
+	}
+	if len(rest) != 3 {
+		return ConditionClause{}, false
+	}
+	value, ok := conditionNumberValue(rest[0])
+	if !ok || !equalWord(rest[1], "or") || !equalWord(rest[2], "greater") {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate:     ConditionPredicateObjectMatches,
+		ObjectBinding: ConditionObjectBindingEventPermanent,
+		Selection:     ConditionSelection{PowerAtLeast: value, MatchPowerAtLeast: true},
+	}, true
 }
 
 // recognizeEventSubjectNameUniqueCondition handles the name-uniqueness
@@ -728,6 +758,25 @@ func recognizeDrawFromEmptyLibraryCondition(body []shared.Token, _ Atoms) (Condi
 		"you", "would", "draw", "a", "card",
 		"while", "your", "library", "has", "no", "cards", "in", "it") {
 		return ConditionClause{Predicate: ConditionPredicateWouldDrawFromEmptyLibrary}, true
+	}
+	return ConditionClause{}, false
+}
+
+// recognizeDrawCardReplacementCondition matches the intervening condition that
+// gates the draw-doubling replacement: the plain "you would draw a card"
+// (Thought Reflection) and the draw-step exception form "you would draw a card
+// except the first one you draw in each of your draw steps" (Teferi's Ageless
+// Insight). The matching replacement result ("draw two cards instead") is
+// recognized separately by parseDrawDoublingReplacement.
+func recognizeDrawCardReplacementCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if tokenWordsEqual(body, "you", "would", "draw", "a", "card") {
+		return ConditionClause{Predicate: ConditionPredicateWouldDrawCard}, true
+	}
+	if tokenWordsEqual(body,
+		"you", "would", "draw", "a", "card",
+		"except", "the", "first", "one", "you", "draw",
+		"in", "each", "of", "your", "draw", "steps") {
+		return ConditionClause{Predicate: ConditionPredicateWouldDrawCardExceptFirstInDrawStep}, true
 	}
 	return ConditionClause{}, false
 }

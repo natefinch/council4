@@ -527,6 +527,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parsePassiveTokenDoublingEffects(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseEntersAsCopyEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseDrawDoublingReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePunisherEachLoseLifeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseLibraryTopReorderEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseGroupEntersTappedEffect(sentence, tokens) },
@@ -637,6 +638,13 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
 		case kind == EffectCreate && trailingDynamicCountInClause(clause, amount):
 			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
+		case kind == EffectMill && trailingDynamicCountInClause(clause, amount):
+			// "mills cards equal to <dynamic>" embeds the count subject in the
+			// same clause as the milled-card noun. Scoping the selection to the
+			// tokens before the count phrase keeps a competing permanent noun in
+			// the amount (e.g. "the sacrificed creature's power") from folding
+			// into the milled-card selection.
+			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
 		default:
 		}
 		eachSourceDamageGroup, eachSourceDamageRecipient := eachSourceDamageSyntax(kind, tokens[ownershipStart:tokenIndex], clause, atoms)
@@ -738,9 +746,21 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	if recognizeTargetColorIfRider(effect, atoms) {
 		effect.Exact = true
 	}
+	// "Destroy each <permanent group>" selects every matching permanent like the
+	// plural "all" form, so flag its selection as a mass group to lower to a
+	// battlefield-group destroy. Scoped to the recognized destroy mass form so
+	// "each creature" damage recipients and "each player" distributive effects on
+	// other effect kinds are untouched.
+	if effect.Kind == EffectDestroy && exactMassEachEffectSyntax(effect, "Destroy each ") {
+		effect.Selection.All = true
+	}
 	effect.TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(effect)
 	effect.TokenCopyOfReference = exactCreateCopyTokenReferenceEffectSyntax(effect)
 	effect.TokenCopyOfAttached = exactCreateCopyTokenAttachedEffectSyntax(effect)
+	if group, ok := exactCreateCopyTokenForEachEffectSyntax(effect, atoms); ok {
+		effect.TokenCopyOfForEach = true
+		effect.TokenCopyForEachGroup = group
+	}
 	effect.Mana.LegacyBodyExact = legacyExactManaBody(effect, sentence)
 	if effect.Kind == EffectSearch {
 		effect.UnsupportedDetail = searchUnsupportedDetail(effect)
@@ -1020,6 +1040,86 @@ func matchDrawEmptyLibraryWin(tokens []shared.Token) (int, bool) {
 		return 0, false
 	}
 	return 14, true
+}
+
+// parseDrawDoublingReplacement recognizes the draw-doubling replacement "If you
+// would draw a card[ except the first one you draw in each of your draw steps],
+// draw <N> cards instead." (Thought Reflection, Teferi's Ageless Insight) and
+// emits a single draw effect carrying the replacement multiplier N for the
+// resolving clause. The matching intervening-if condition is recognized
+// separately by recognizeDrawCardReplacementCondition.
+func parseDrawDoublingReplacement(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	commaIndex, amount, ok := matchDrawDoubling(tokens)
+	if !ok {
+		return nil, false
+	}
+	resolving := tokens[commaIndex+1:]
+	drawIndex := commaIndex + 1
+	return []EffectSyntax{{
+		Kind:       EffectDraw,
+		Context:    EffectContextController,
+		Span:       shared.SpanOf(tokens),
+		VerbSpan:   tokens[drawIndex].Span,
+		ClauseSpan: shared.SpanOf(tokens),
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), resolving...),
+		Amount:     EffectAmountSyntax{Value: amount, Known: true},
+		Replacement: EffectReplacementSyntax{
+			Kind: EffectReplacementInstead,
+			Span: tokens[len(tokens)-2].Span,
+		},
+		References: referencesInSpan(atoms, shared.SpanOf(resolving)),
+		Exact:      true,
+	}}, true
+}
+
+// matchDrawDoubling reports the comma index separating the would-draw condition
+// from the "draw <N> cards instead" result and the multiplier N when tokens
+// spell a draw-doubling replacement. The condition must be the plain would-draw
+// or the draw-step exception form, and the result an N (>= 2) card draw.
+func matchDrawDoubling(tokens []shared.Token) (commaIndex, amount int, ok bool) {
+	if len(tokens) < 6 || tokens[len(tokens)-1].Kind != shared.Period {
+		return 0, 0, false
+	}
+	if !effectWordsAt(tokens, 0, "if", "you", "would", "draw", "a", "card") {
+		return 0, 0, false
+	}
+	comma := -1
+	for i := range tokens {
+		if tokens[i].Kind == shared.Comma {
+			comma = i
+			break
+		}
+	}
+	if comma < 0 || !drawDoublingConditionBody(tokens[1:comma]) {
+		return 0, 0, false
+	}
+	result := tokens[comma+1 : len(tokens)-1]
+	if len(result) != 4 ||
+		!equalWord(result[0], "draw") ||
+		!equalWord(result[2], "cards") ||
+		!equalWord(result[3], "instead") {
+		return 0, 0, false
+	}
+	n, valueOK := CardinalWordValue(result[1].Text)
+	if !valueOK || n < 2 {
+		return 0, 0, false
+	}
+	return comma, n, true
+}
+
+// drawDoublingConditionBody reports whether a draw-doubling condition body is one
+// of the two supported forms: the plain "you would draw a card" or the draw-step
+// exception "you would draw a card except the first one you draw in each of your
+// draw steps".
+func drawDoublingConditionBody(body []shared.Token) bool {
+	if tokenWordsEqual(body, "you", "would", "draw", "a", "card") {
+		return true
+	}
+	return tokenWordsEqual(body,
+		"you", "would", "draw", "a", "card",
+		"except", "the", "first", "one", "you", "draw",
+		"in", "each", "of", "your", "draw", "steps")
 }
 
 func recognizeImpulseExileSequence(sentences []Sentence) bool {

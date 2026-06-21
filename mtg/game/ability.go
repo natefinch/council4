@@ -72,6 +72,7 @@ const (
 	CumulativeUpkeep
 	Riot
 	Embalm
+	Fear
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -179,6 +180,11 @@ var (
 	// gain haste. The runtime reads the riot keyword on an entering permanent and
 	// applies that modal choice; the keyword itself carries no continuous effect.
 	RiotStaticBody = simpleKeywordStaticBody("Riot", Riot)
+
+	// FearStaticBody is the reusable StaticAbilityBody for fear, an evasion
+	// ability: a creature with fear can't be blocked except by artifact creatures
+	// and/or black creatures (CR 702.36c).
+	FearStaticBody = simpleKeywordStaticBody("Fear", Fear)
 )
 
 func simpleKeywordStaticBody(text string, keyword Keyword) StaticAbility {
@@ -222,6 +228,8 @@ func KeywordStaticBody(keyword Keyword) (StaticAbility, bool) {
 		return TrampleStaticBody, true
 	case Vigilance:
 		return VigilanceStaticBody, true
+	case Fear:
+		return FearStaticBody, true
 	default:
 		return StaticAbility{}, false
 	}
@@ -557,6 +565,11 @@ const (
 	TokenCopySourceNone TokenCopySource = iota
 	TokenCopySourceObject
 	TokenCopySourceSourceCard
+	// TokenCopySourceEachInGroup copies each member of Group in turn, creating
+	// one token per matched permanent ("For each token you control, create a
+	// token that's a copy of that permanent." — Second Harvest). It is the only
+	// source that reads Group; the others read Object or the source card.
+	TokenCopySourceEachInGroup
 )
 
 // TokenCopySpec describes a token that starts as a copy of another object/card,
@@ -582,6 +595,12 @@ type TokenCopySpec struct {
 	// AddKeywords grants additional keyword abilities to the created token on top
 	// of the copied characteristics ("That token gains haste").
 	AddKeywords []Keyword
+	// Group is the controlled battlefield group copied member-by-member when
+	// Source is TokenCopySourceEachInGroup; one token is created per matched
+	// permanent, copying that permanent. It is nil for every other source. It is
+	// held by pointer so the embedded GroupReference does not inflate the heavily
+	// value-passed TokenCopySpec past the by-value size budget.
+	Group *GroupReference
 }
 
 // EternalizeActivatedBody builds the ActivatedAbilityBody for the Eternalize

@@ -349,6 +349,9 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	if !ok {
 		return res
 	}
+	if spec, ok := prim.Source.TokenCopy(); ok && spec.Source == game.TokenCopySourceEachInGroup {
+		return r.createCopyTokensForEach(prim, spec, recipient)
+	}
 	token, ok := r.typedTokenDefinition(prim.Source)
 	if !ok {
 		return res
@@ -361,6 +364,40 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 		declareCreatedTokensAttacking(r.engine, r.game, recipient, created, r.agents, r.log)
 	}
 	res.succeeded = res.amount > 0
+	return res
+}
+
+// createCopyTokensForEach creates one token copying each member of the spec's
+// controlled battlefield group ("For each token you control, create a token
+// that's a copy of that permanent." — Second Harvest). It snapshots the group
+// and builds every copy definition before creating any token so the new tokens
+// are not themselves copied (the copies are created simultaneously, CR 707).
+func (r *effectResolver) createCopyTokensForEach(prim game.CreateToken, spec game.TokenCopySpec, recipient game.PlayerID) effectResolved {
+	res := effectResolved{accepted: true}
+	members := r.groupPermanents(*spec.Group)
+	defs := make([]*game.CardDef, 0, len(members))
+	for _, member := range members {
+		source, ok := permanentCopyDef(r.game, member)
+		if !ok {
+			continue
+		}
+		def, ok := applyTokenCopyOverrides(source, spec)
+		if !ok {
+			continue
+		}
+		defs = append(defs, def)
+	}
+	for _, def := range defs {
+		created, ok := createTokenPermanentsCollectingWithChoices(r.engine, r.game, recipient, def, 1, prim.EntryTapped, r.agents, r.log)
+		if !ok {
+			continue
+		}
+		if prim.EntryAttacking {
+			declareCreatedTokensAttacking(r.engine, r.game, recipient, created, r.agents, r.log)
+		}
+		res.amount++
+		res.succeeded = true
+	}
 	return res
 }
 

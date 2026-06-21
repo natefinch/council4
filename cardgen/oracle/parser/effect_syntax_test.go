@@ -80,6 +80,46 @@ func TestParseLifeLostThisWayAmountExactness(t *testing.T) {
 	}
 }
 
+// TestParseSacrificedCreatureAmount verifies that "the sacrificed creature's
+// power/toughness/mana value" parses to the matching back-reference dynamic
+// kind and reconstructs exactly, including the apostrophe-split possessive
+// tokenization.
+func TestParseSacrificedCreatureAmount(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		kind   EffectDynamicAmountKind
+	}{
+		{"Sacrifice a creature: Target player mills cards equal to the sacrificed creature's power.", EffectDynamicAmountSacrificedPower},
+		{"Sacrifice a creature: Target player mills cards equal to the sacrificed creature's toughness.", EffectDynamicAmountSacrificedToughness},
+		{"Sacrifice a creature: Target player mills cards equal to the sacrificed creature's mana value.", EffectDynamicAmountSacrificedManaValue},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{})
+			var mill *EffectSyntax
+			for si := range document.Abilities[0].Sentences {
+				sentence := &document.Abilities[0].Sentences[si]
+				for ei := range sentence.Effects {
+					if sentence.Effects[ei].Kind == EffectMill {
+						mill = &sentence.Effects[ei]
+					}
+				}
+			}
+			if mill == nil {
+				t.Fatalf("no mill effect parsed from %q", test.source)
+			}
+			if mill.Amount.DynamicKind != test.kind {
+				t.Fatalf("mill dynamic kind = %v, want %v", mill.Amount.DynamicKind, test.kind)
+			}
+			if !mill.Exact {
+				t.Fatal("mill Exact = false, want true")
+			}
+		})
+	}
+}
+
 func TestParseGreatestCharacteristicDrawAmount(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -1491,6 +1531,50 @@ func TestParseCreateCopyOfTargetToken(t *testing.T) {
 	}
 }
 
+func TestParseCreateCopyTokenForEach(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source    string
+		forEach   bool
+		tokenOnly bool
+	}{
+		{"For each token you control, create a token that's a copy of that permanent.", true, true},
+		{"For each creature you control, create a token that's a copy of that permanent.", true, false},
+		{"For each artifact you control, create a token that's a copy of it.", true, false},
+		{"Create a token that's a copy of target creature you control.", false, false},
+		{"For each token an opponent controls, create a token that's a copy of that permanent.", false, false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].TokenCopyOfForEach != test.forEach {
+				t.Fatalf("TokenCopyOfForEach = %v, want %v", effects[0].TokenCopyOfForEach, test.forEach)
+			}
+			if !test.forEach {
+				return
+			}
+			group := effects[0].TokenCopyForEachGroup
+			if group == nil {
+				t.Fatal("TokenCopyForEachGroup = nil, want a group")
+			}
+			if group.Controller != SelectionControllerYou {
+				t.Fatalf("group controller = %v, want you", group.Controller)
+			}
+			if group.TokenOnly != test.tokenOnly {
+				t.Fatalf("group TokenOnly = %v, want %v", group.TokenOnly, test.tokenOnly)
+			}
+		})
+	}
+}
+
 func TestParseCreateCopyOfReferenceToken(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -2005,6 +2089,57 @@ func TestParseDrawFromEmptyLibraryWinReplacement(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("would-draw-from-empty condition not recognized: %#v", clauses)
+	}
+}
+
+func TestParseDrawDoublingReplacement(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name      string
+		text      string
+		predicate ConditionPredicateKind
+	}{
+		{
+			name:      "plain",
+			text:      "If you would draw a card, draw two cards instead.",
+			predicate: ConditionPredicateWouldDrawCard,
+		},
+		{
+			name:      "draw-step exception",
+			text:      "If you would draw a card except the first one you draw in each of your draw steps, draw two cards instead.",
+			predicate: ConditionPredicateWouldDrawCardExceptFirstInDrawStep,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(tc.text, Context{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %d, want 1", len(effects))
+			}
+			if effects[0].Kind != EffectDraw {
+				t.Fatalf("effect kind = %v, want EffectDraw", effects[0].Kind)
+			}
+			if effects[0].Replacement.Kind != EffectReplacementInstead {
+				t.Fatalf("replacement kind = %v, want instead", effects[0].Replacement.Kind)
+			}
+			if effects[0].Amount.Value != 2 {
+				t.Fatalf("amount = %d, want 2", effects[0].Amount.Value)
+			}
+			found := false
+			for _, clause := range document.Abilities[0].ConditionClauses {
+				if clause.Predicate == tc.predicate {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("condition %v not recognized: %#v", tc.predicate, document.Abilities[0].ConditionClauses)
+			}
+		})
 	}
 }
 

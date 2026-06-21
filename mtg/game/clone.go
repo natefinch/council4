@@ -195,6 +195,7 @@ func cloneStackObject(o *StackObject) *StackObject {
 		return effect
 	})
 	clone.AdditionalCostsPaid = cloneSlice(o.AdditionalCostsPaid)
+	clone.SacrificedAsCostIDs = cloneSlice(o.SacrificedAsCostIDs)
 	clone.GainsKeywordsUntilEndOfTurn = cloneSlice(o.GainsKeywordsUntilEndOfTurn)
 	clone.ResolvedAmounts = cloneComparableMap(o.ResolvedAmounts)
 	clone.ResolvedExcessDamage = cloneComparableMap(o.ResolvedExcessDamage)
