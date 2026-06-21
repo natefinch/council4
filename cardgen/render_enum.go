@@ -184,6 +184,8 @@ func renderAdditionalDynamicAmount(kind cost.AdditionalDynamicAmount) (string, e
 		return "cost.AdditionalDynamicCommanderColorIdentityCount", nil
 	case cost.AdditionalDynamicHandSize:
 		return "cost.AdditionalDynamicHandSize", nil
+	case cost.AdditionalDynamicLifeGainedThisTurn:
+		return "cost.AdditionalDynamicLifeGainedThisTurn", nil
 	default:
 		return "", fmt.Errorf("render: unsupported additional dynamic amount %d", kind)
 	}

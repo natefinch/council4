@@ -303,6 +303,22 @@ func (r Renderer) renderCreateToken(ctx *renderCtx, value game.CreateToken) (str
 	if value.EntryAttacking {
 		fields = append(fields, "EntryAttacking: true,")
 	}
+	if value.Power.Exists {
+		power, err := r.renderQuantity(ctx, value.Power.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Power: opt.Val(%s),", power))
+	}
+	if value.Toughness.Exists {
+		toughness, err := r.renderQuantity(ctx, value.Toughness.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Toughness: opt.Val(%s),", toughness))
+	}
 	if value.PublishLinked != "" {
 		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
 	}

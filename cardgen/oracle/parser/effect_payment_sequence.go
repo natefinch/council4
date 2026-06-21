@@ -79,6 +79,10 @@ func recognizeControllerOptionalPaymentSequence(ability *Ability) {
 	paymentSentence := &ability.Sentences[0]
 	consequenceSentence := &ability.Sentences[1]
 	paymentTokens := semanticEffectTokens(paymentSentence.Tokens)
+	// An intervening-if condition may precede the optional payment ("... if you
+	// gained life this turn, you may pay X life, ..."); the trigger frame owns
+	// that condition, so drop it before matching the "you may" payment offer.
+	paymentTokens = stripLeadingInterveningIfPayment(paymentTokens)
 	if len(paymentTokens) < 4 ||
 		!effectWordsAt(paymentTokens, 0, "you", "may") ||
 		paymentTokens[len(paymentTokens)-1].Kind != shared.Period {
@@ -103,9 +107,17 @@ func recognizeControllerOptionalPaymentSequence(ability *Ability) {
 		Payer:                  EffectPaymentPayerController,
 		SuccessConditionNodeID: boundary.NodeID,
 	}
-	switch manaCost, paymentEnd, manaOK := parseKeywordManaCost(paymentTokens, 3); {
-	case effectWordsAt(paymentTokens, 2, "pay") && manaOK && paymentEnd == len(paymentTokens)-1:
+	var tokenPTBinding EffectDynamicAmountKind
+	switch lifeCost, lifeBinding, lifeOK := controllerPayLifeDynamicCost(paymentSentence, paymentTokens[2:len(paymentTokens)-1]); {
+	case payKeywordManaCostOK(paymentTokens):
+		manaCost, _, _ := parseKeywordManaCost(paymentTokens, 3)
 		payment.ManaCost = manaCost
+	case lifeOK:
+		// "you may pay X life, where X is <dynamic>" pays a rules-derived amount
+		// of life as a resolution cost. The same dynamic sizes a variable "X/X"
+		// token created by the consequence, so carry the binding through.
+		payment.AdditionalCost = lifeCost
+		tokenPTBinding = lifeBinding
 	case len(consequenceSentence.Effects) > 1:
 		// A non-mana optional cost ("you may sacrifice a land", "you may discard
 		// a card") leaves its own cost effect in the payment sentence, so a
@@ -157,6 +169,11 @@ func recognizeControllerOptionalPaymentSequence(ability *Ability) {
 	if !effect.Exact {
 		return
 	}
+	// Bind a variable "X/X" token's size to the same dynamic amount the pay-life
+	// cost uses, so the consequence creates a token sized to the life paid.
+	if tokenPTBinding != EffectDynamicAmountNone && effect.TokenPTVariableX {
+		effect.TokenPTDynamic = tokenPTBinding
+	}
 
 	paymentSentence.PaymentPrelude = &effect.Payment
 	consequenceSentence.Effects[0] = effect
@@ -164,7 +181,88 @@ func recognizeControllerOptionalPaymentSequence(ability *Ability) {
 	ability.OptionalSpan = shared.Span{}
 }
 
-// recognizeOptionalManaPaymentBenefitSequence folds the optional mana payment of
+// stripLeadingInterveningIfPayment drops a leading intervening-if condition
+// ("if you gained life this turn, you may pay ...") from an optional-payment
+// sentence's tokens, returning the tokens from the payment offer onward. It
+// strips only when the tokens open with "if", a top-level comma separates the
+// condition from the remainder, and the remainder opens with "you may"; in every
+// other shape it returns the tokens unchanged so non-conditional payments and
+// unrelated wording are untouched.
+func stripLeadingInterveningIfPayment(tokens []shared.Token) []shared.Token {
+	if len(tokens) == 0 || !effectWordsAt(tokens, 0, "if") {
+		return tokens
+	}
+	comma := shared.TopLevelIndex(tokens, shared.Comma)
+	if comma <= 0 || comma+1 >= len(tokens) {
+		return tokens
+	}
+	rest := tokens[comma+1:]
+	if !effectWordsAt(rest, 0, "you", "may") {
+		return tokens
+	}
+	return rest
+}
+
+// payKeywordManaCostOK reports whether an optional-payment sentence's tokens form
+// the "you may pay {mana}." offer: a "pay" verb at index 2 followed by a keyword
+// mana cost that runs to the trailing period.
+func payKeywordManaCostOK(paymentTokens []shared.Token) bool {
+	if !effectWordsAt(paymentTokens, 2, "pay") {
+		return false
+	}
+	_, paymentEnd, ok := parseKeywordManaCost(paymentTokens, 3)
+	return ok && paymentEnd == len(paymentTokens)-1
+}
+
+// controllerPayLifeDynamicCost recognizes a "pay X life, where X is <dynamic>"
+// resolution cost (the tokens between "you may" and the trailing period), such
+// as Tivash's "pay X life, where X is the amount of life you gained this turn".
+// It returns a single-component pay-life Cost carrying the recognized dynamic
+// amount plus the bound dynamic kind, or ok=false for any other shape.
+func controllerPayLifeDynamicCost(sentence *Sentence, costTokens []shared.Token) (*Cost, EffectDynamicAmountKind, bool) {
+	if len(costTokens) < 8 ||
+		!equalWord(costTokens[0], "pay") ||
+		!equalWord(costTokens[1], "X") ||
+		!equalWord(costTokens[2], "life") ||
+		costTokens[3].Kind != shared.Comma ||
+		!effectWordsAt(costTokens, 4, "where", "X", "is") {
+		return nil, EffectDynamicAmountNone, false
+	}
+	subject, ok := parseDynamicLifeChangedThisTurnSubject(costTokens, 7)
+	if !ok || subject.end != len(costTokens) {
+		return nil, EffectDynamicAmountNone, false
+	}
+	dynamic, ok := payLifeDynamicForKind(subject.amount.DynamicKind)
+	if !ok {
+		return nil, EffectDynamicAmountNone, false
+	}
+	span := shared.SpanOf(costTokens)
+	text := shared.SliceSpan(sentence.Text, costRelativeSpan(span, sentence.Span.Start.Offset))
+	cost := &Cost{
+		Span: span,
+		Text: text,
+		Components: []CostComponent{{
+			Kind:           CostComponentPayLife,
+			Span:           span,
+			Text:           text,
+			PayLifeDynamic: dynamic,
+		}},
+	}
+	return cost, subject.amount.DynamicKind, true
+}
+
+// payLifeDynamicForKind maps a recognized effect dynamic-amount kind onto the
+// pay-life cost vocabulary, for amounts a life cost can resolve. It fails closed
+// for kinds with no pay-life representation.
+func payLifeDynamicForKind(kind EffectDynamicAmountKind) (PayLifeDynamicAmount, bool) {
+	switch kind {
+	case EffectDynamicAmountLifeGainedThisTurn:
+		return PayLifeDynamicLifeGainedThisTurn, true
+	default:
+		return PayLifeDynamicAmountNone, false
+	}
+}
+
 // a "you may pay {mana}. If you do, <body>." triggered ability whose consequence
 // body begins with a non-controller-context effect (such as the Extort drain
 // "each opponent loses 1 life and you gain that much life"). The controller
@@ -225,8 +323,7 @@ func recognizeOptionalManaPaymentBenefitSequence(ability *Ability) {
 	ability.OptionalSpan = shared.Span{}
 }
 
-// parseControllerPaymentAdditionalCost recognizes the non-mana cost phrase of a
-// "you may <cost>. If you do, ..." controller payment (the tokens between "you
+// parseControllerPaymentAdditionalCost recognizes the non-mana cost phrase of a// "you may <cost>. If you do, ..." controller payment (the tokens between "you
 // may" and the trailing period), such as "sacrifice a land" or "discard a card."
 // It reuses the activated-ability cost grammar and fails closed unless every
 // recognized component is a non-mana, non-loyalty payment the downstream layers

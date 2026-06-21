@@ -493,8 +493,14 @@ func prepareTriggerBody(
 	// the resolution), and the remaining "if you do" gate stays in the body for
 	// the shared ordered-effect-sequence path to consume. The shared lowering
 	// fails closed if the residual body conditions are not exactly that gate.
+	// The optional flow also covers the single-effect payment shape ("if
+	// CONDITION, you may pay COST. If you do, EFFECT."), where paying the cost
+	// is not itself a resolving effect: the lone effect carries the optional
+	// payment and the residual "if you do" gate, exactly as the non-intervening
+	// payment form does, so the same body composition applies.
 	interveningOptionalSequence := hasInterveningCondition &&
-		len(ability.Content.Effects) > 1 && hasOptionalResolvingEffect(ability.Content.Effects)
+		((len(ability.Content.Effects) > 1 && hasOptionalResolvingEffect(ability.Content.Effects)) ||
+			hasOptionalPaymentResolvingEffect(ability.Content.Effects))
 	// A resolution condition ("Whenever X, EFFECT if CONDITION." or "Whenever
 	// X, if CONDITION, EFFECT.") is a body condition checked only when the
 	// ability resolves, not an intervening "if" re-checked at trigger time. It

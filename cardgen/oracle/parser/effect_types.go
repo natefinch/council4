@@ -1069,6 +1069,24 @@ type EffectSyntax struct {
 	TokenPower     int  `json:",omitempty"`
 	TokenToughness int  `json:",omitempty"`
 	TokenPTKnown   bool `json:",omitempty"`
+	// TokenPTVariableX reports a created token whose printed power and toughness
+	// are both the variable "X" ("an X/X ... token"), rather than fixed integers.
+	// The value of X is supplied by a binding clause elsewhere in the ability
+	// ("where X is <dynamic>"); downstream layers resolve it into TokenPTDynamic.
+	// It is false for fixed-power/toughness tokens.
+	TokenPTVariableX bool `json:",omitempty"`
+	// TokenPTDynamic names the rules-derived amount a variable "X/X" token's
+	// power and toughness each equal, bound from the ability's "where X is
+	// <dynamic>" clause. It is set only when TokenPTVariableX is true and the
+	// binding resolves to a recognized dynamic amount; lowering reads it to size
+	// the token at creation. It stays empty for fixed-power/toughness tokens.
+	TokenPTDynamic EffectDynamicAmountKind `json:",omitempty"`
+	// TokenGrantedAbility is the full quoted ability a created token enters with
+	// ("... creature token with \"When this token dies, you gain 1 life.\""),
+	// parsed once through the same pipeline so downstream layers lower it from
+	// the typed inner document. It is nil for tokens with no quoted-ability
+	// rider.
+	TokenGrantedAbility *StaticGrantedAbilitySyntax `json:"-"`
 	// TokenKeywords lists every creature keyword a created token enters with, in
 	// source order ("with menace and reach" -> [Menace, Reach]). The first
 	// keyword is also recorded on Selection.Keyword (a "with <keyword>" selector

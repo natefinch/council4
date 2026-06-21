@@ -43,6 +43,8 @@ func (s *rulesPaymentState) AdditionalDynamicAmountValue(playerID game.PlayerID,
 			return 0
 		}
 		return player.Hand.Size()
+	case cost.AdditionalDynamicLifeGainedThisTurn:
+		return lifeChangedThisTurn(s.g, playerID, game.EventLifeGained)
 	default:
 		return 0
 	}
