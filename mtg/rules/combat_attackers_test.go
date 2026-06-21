@@ -566,3 +566,65 @@ func TestMustAttackAttachedRequiresEnchantedCreatureToAttackIfAble(t *testing.T)
 		t.Fatal("attached must-attack rule forced an unrelated creature to attack")
 	}
 }
+
+// TestGroupMustAttackRuleForcesOpponentCreaturesToAttack verifies that a
+// one-shot, turn-scoped RuleEffectMustAttack scoped to the controller's
+// opponents (Bident of Thassa: "Creatures your opponents control attack this
+// turn if able.") forces an opponent's creature to attack while leaving the
+// controller's own creatures free not to attack.
+func TestGroupMustAttackRuleForcesOpponentCreaturesToAttack(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	forced := addCombatCreaturePermanent(g, game.Player1)
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Combat = &game.CombatState{}
+	g.RuleEffects = append(g.RuleEffects, game.RuleEffect{
+		ID:                 g.IDGen.Next(),
+		Kind:               game.RuleEffectMustAttack,
+		Controller:         game.Player2,
+		AffectedController: game.ControllerOpponent,
+		PermanentTypes:     []types.Card{types.Creature},
+	})
+
+	legal := legalDeclareAttackersActions(g, game.Player1)
+	if len(legal) == 0 {
+		t.Fatal("no legal declare-attackers actions")
+	}
+	for _, act := range legal {
+		declarations := mustDeclareAttackersPayload(t, act)
+		if len(declarations.Attackers) == 0 {
+			t.Fatalf("legal actions included no attacks despite forced opponent creature: %+v", legal)
+		}
+		if !slices.ContainsFunc(declarations.Attackers, func(declaration game.AttackDeclaration) bool {
+			return declaration.Attacker == forced.ObjectID
+		}) {
+			t.Fatalf("legal action omitted forced attacker: %+v", declarations.Attackers)
+		}
+	}
+}
+
+// TestGroupMustAttackRuleDoesNotForceControllerCreatures verifies that the
+// opponents-scoped forced-attack rule leaves the rule's own controller's
+// creatures free not to attack.
+func TestGroupMustAttackRuleDoesNotForceControllerCreatures(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	own := addCombatCreaturePermanent(g, game.Player2)
+	g.Turn.ActivePlayer = game.Player2
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Combat = &game.CombatState{}
+	g.RuleEffects = append(g.RuleEffects, game.RuleEffect{
+		ID:                 g.IDGen.Next(),
+		Kind:               game.RuleEffectMustAttack,
+		Controller:         game.Player2,
+		AffectedController: game.ControllerOpponent,
+		PermanentTypes:     []types.Card{types.Creature},
+	})
+
+	legal := legalDeclareAttackersActions(g, game.Player2)
+	if !slices.ContainsFunc(legal, func(act action.Action) bool {
+		return len(mustDeclareAttackersPayload(t, act).Attackers) == 0
+	}) {
+		t.Fatalf("controller's own creature %d was wrongly forced to attack", own.ObjectID)
+	}
+}
