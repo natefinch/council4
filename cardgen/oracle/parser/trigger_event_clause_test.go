@@ -667,6 +667,18 @@ func combatTriggerEventClauseTests() []triggerEventClauseTest {
 			},
 		},
 		{
+			name:     "attack self attacks by legendary name with comma",
+			source:   "Whenever Etali, Primal Storm attacks, draw a card.",
+			cardName: "Etali, Primal Storm",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindAttack ||
+					clause.Subject.Kind != TriggerEventSubjectSelf {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
 			name:   "attack self attacks alone",
 			source: "Whenever this creature attacks alone, draw a card.",
 			check: func(t *testing.T, clause *TriggerEventClause) {
