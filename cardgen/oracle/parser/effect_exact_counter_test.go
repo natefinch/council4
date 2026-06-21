@@ -121,6 +121,35 @@ func TestExactCounterPlacementGroupControllerKeywordOrderingAccepts(t *testing.T
 	}
 }
 
+// TestExactCounterPlacementGroupEnteredThisTurnAccepts covers the "that entered
+// this turn" temporal group filter (Oran-Rief, the Vastwood; Raucous
+// Entertainer), asserting the recipient round-trips byte-exactly and the parser
+// records the EnteredThisTurn flag on the recipient selection.
+func TestExactCounterPlacementGroupEnteredThisTurnAccepts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source     string
+		controller SelectionController
+	}{
+		{"Put a +1/+1 counter on each green creature that entered this turn.", SelectionControllerAny},
+		{"Put a +1/+1 counter on each creature you control that entered this turn.", SelectionControllerYou},
+		{"Put a +1/+1 counter on each creature that entered this turn.", SelectionControllerAny},
+	}
+	for _, test := range tests {
+		if !counterPlacementExact(t, test.source) {
+			t.Errorf("counterPlacementExact(%q) = false, want true", test.source)
+			continue
+		}
+		effect := counterPlacementEffect(t, test.source)
+		if !effect.Selection.EnteredThisTurn {
+			t.Errorf("Parse(%q) selection.EnteredThisTurn = false, want true", test.source)
+		}
+		if effect.Selection.Controller != test.controller {
+			t.Errorf("Parse(%q) selection.Controller = %v, want %v", test.source, effect.Selection.Controller, test.controller)
+		}
+	}
+}
+
 // counterPlacementEffect parses a single counter-placement sentence and returns
 // its resolving effect for recipient-shape assertions.
 func counterPlacementEffect(t *testing.T, source string) EffectSyntax {

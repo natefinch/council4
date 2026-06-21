@@ -951,6 +951,7 @@ func massGroupSelection(selector compiler.CompiledSelector) (game.Selection, boo
 		ExcludedColors:   append([]color.Color(nil), selector.ExcludedColors()...),
 		Colorless:        selector.Colorless,
 		Multicolored:     selector.Multicolored,
+		EnteredThisTurn:  selector.EnteredThisTurn,
 		ExcludeSource:    selector.Another || selector.Other,
 	}
 	if excludedSupertypes := selector.ExcludedSupertypes(); len(excludedSupertypes) > 1 {

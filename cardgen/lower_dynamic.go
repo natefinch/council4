@@ -361,8 +361,9 @@ func dynamicCountCharacteristics(selector compiler.CompiledSelector) (game.Selec
 // combat, tapped, and "other" flags, which callers translate per context.
 func selectorCharacteristics(selector compiler.CompiledSelector) (game.Selection, bool) {
 	selection := game.Selection{
-		Colorless:    selector.Colorless,
-		Multicolored: selector.Multicolored,
+		Colorless:       selector.Colorless,
+		Multicolored:    selector.Multicolored,
+		EnteredThisTurn: selector.EnteredThisTurn,
 	}
 	if selector.Keyword != parser.KeywordUnknown {
 		keyword, ok := runtimeKeyword(selector.Keyword)
@@ -423,6 +424,7 @@ func selectorHasCountCharacteristic(selector compiler.CompiledSelector) bool {
 		selector.MatchManaValue || selector.MatchPower || selector.MatchToughness ||
 		selector.SubtypeFromEntryChoice ||
 		selector.SubtypeFromChosenType ||
+		selector.EnteredThisTurn ||
 		len(selector.SubtypesAny()) > 0 ||
 		len(selector.ExcludedSubtypes()) > 0 ||
 		len(selector.Supertypes()) > 0 ||

@@ -1791,6 +1791,8 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	selection.Untapped = atoms.SelectionFlagIn(span, SelectionFlagUntapped)
 	selection.NonToken = atoms.SelectionFlagIn(span, SelectionFlagNonToken)
 	selection.TokenOnly = atoms.SelectionFlagIn(span, SelectionFlagToken)
+	selection.EnteredThisTurn = effectContainsWords(words, "that", "entered", "this", "turn") ||
+		effectContainsWords(words, "that", "entered", "the", "battlefield", "this", "turn")
 	if slices.Contains(words, "any") && selection.Kind == SelectionUnknown {
 		selection.Kind = SelectionAny
 	}

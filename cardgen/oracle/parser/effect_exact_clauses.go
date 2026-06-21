@@ -1758,5 +1758,8 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 		}
 		words = append(words, "without", keywordWord)
 	}
+	if selection.EnteredThisTurn {
+		words = append(words, "that", "entered", "this", "turn")
+	}
 	return strings.Join(words, " "), true
 }

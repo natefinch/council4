@@ -487,6 +487,9 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 	if selection.TokenOnly {
 		fields = append(fields, "TokenOnly: true,")
 	}
+	if selection.EnteredThisTurn {
+		fields = append(fields, "EnteredThisTurn: true,")
+	}
 
 	for i := range fields {
 		fields[i] = strings.TrimSuffix(fields[i], ",")

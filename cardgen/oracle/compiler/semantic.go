@@ -901,8 +901,12 @@ type CompiledSelector struct {
 	// search filter ("a card named Trustworthy Scout"). It lowers to
 	// SearchSpec.Name; the parser owns the wording, so the compiler only copies it.
 	RequiredName string
-	Alternatives []CompiledSelector
-	atoms        *CompiledSelectorAtoms
+	// EnteredThisTurn requires each matched permanent to have entered the
+	// battlefield this turn ("each green creature that entered this turn"). It
+	// lowers to Selection.EnteredThisTurn.
+	EnteredThisTurn bool
+	Alternatives    []CompiledSelector
+	atoms           *CompiledSelectorAtoms
 }
 
 // CompiledSelectorAtoms holds parser-owned atom-derived selector filters that
