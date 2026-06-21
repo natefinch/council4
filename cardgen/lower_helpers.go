@@ -180,4 +180,11 @@ var keywordStaticBodies = map[parser.KeywordKind]loweredStaticAbility{
 	parser.KeywordCascade:        {Body: game.CascadeStaticBody, VarName: "game.CascadeStaticBody"},
 	parser.KeywordConvoke:        {Body: game.ConvokeStaticBody, VarName: "game.ConvokeStaticBody"},
 	parser.KeywordChangeling:     {Body: game.ChangelingStaticBody, VarName: "game.ChangelingStaticBody"},
+	parser.KeywordLandwalk:       {Body: game.LandwalkStaticBody, VarName: "game.LandwalkStaticBody"},
+	parser.KeywordPlainswalk:     {Body: game.PlainswalkStaticBody, VarName: "game.PlainswalkStaticBody"},
+	parser.KeywordIslandwalk:     {Body: game.IslandwalkStaticBody, VarName: "game.IslandwalkStaticBody"},
+	parser.KeywordSwampwalk:      {Body: game.SwampwalkStaticBody, VarName: "game.SwampwalkStaticBody"},
+	parser.KeywordMountainwalk:   {Body: game.MountainwalkStaticBody, VarName: "game.MountainwalkStaticBody"},
+	parser.KeywordForestwalk:     {Body: game.ForestwalkStaticBody, VarName: "game.ForestwalkStaticBody"},
+	parser.KeywordDesertwalk:     {Body: game.DesertwalkStaticBody, VarName: "game.DesertwalkStaticBody"},
 }

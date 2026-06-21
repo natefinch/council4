@@ -136,6 +136,16 @@ type SoulshiftKeyword struct {
 	Count int
 }
 
+// LandwalkKeyword parameterizes the landwalk evasion family (CR 702.14). A
+// creature with landwalk can't be blocked as long as the defending player
+// controls a land matching this filter: a land with Subtype (Forest, Island,
+// Swamp, Mountain, Plains, Desert) for the typed variants, or any land when
+// AnyLand is true (generic "landwalk").
+type LandwalkKeyword struct {
+	Subtype types.Sub
+	AnyLand bool
+}
+
 func (SimpleKeyword) isKeywordAbility()           {}
 func (WardKeyword) isKeywordAbility()             {}
 func (CumulativeUpkeepKeyword) isKeywordAbility() {}
@@ -157,6 +167,7 @@ func (ScavengeKeyword) isKeywordAbility()         {}
 func (FabricateKeyword) isKeywordAbility()        {}
 func (RampageKeyword) isKeywordAbility()          {}
 func (SoulshiftKeyword) isKeywordAbility()        {}
+func (LandwalkKeyword) isKeywordAbility()         {}
 
 func (ability SimpleKeyword) keyword() Keyword { return ability.Kind }
 func (WardKeyword) keyword() Keyword           { return Ward }
@@ -181,6 +192,7 @@ func (ScavengeKeyword) keyword() Keyword   { return Scavenge }
 func (FabricateKeyword) keyword() Keyword  { return Fabricate }
 func (RampageKeyword) keyword() Keyword    { return Rampage }
 func (SoulshiftKeyword) keyword() Keyword  { return Soulshift }
+func (LandwalkKeyword) keyword() Keyword   { return Landwalk }
 
 func (ability SimpleKeyword) cloneKeywordAbility() KeywordAbility { return ability }
 func (ability WardKeyword) cloneKeywordAbility() KeywordAbility {
@@ -256,6 +268,7 @@ func (ability ScavengeKeyword) cloneKeywordAbility() KeywordAbility {
 func (ability FabricateKeyword) cloneKeywordAbility() KeywordAbility { return ability }
 func (ability RampageKeyword) cloneKeywordAbility() KeywordAbility   { return ability }
 func (ability SoulshiftKeyword) cloneKeywordAbility() KeywordAbility { return ability }
+func (ability LandwalkKeyword) cloneKeywordAbility() KeywordAbility  { return ability }
 
 // SimpleKeywords returns sealed keyword variants for non-parameterized keywords.
 func SimpleKeywords(keywords ...Keyword) []KeywordAbility {
@@ -618,4 +631,14 @@ func StaticBodyProtectionKeyword(body *StaticAbility) (ProtectionKeyword, bool) 
 	}
 	protection, ok := ka.(ProtectionKeyword)
 	return protection, ok
+}
+
+// StaticBodyLandwalkKeyword returns the LandwalkKeyword from a StaticAbility body.
+func StaticBodyLandwalkKeyword(body *StaticAbility) (LandwalkKeyword, bool) {
+	ka, ok := BodyKeywordAbility(body, Landwalk)
+	if !ok {
+		return LandwalkKeyword{}, false
+	}
+	landwalk, ok := ka.(LandwalkKeyword)
+	return landwalk, ok
 }

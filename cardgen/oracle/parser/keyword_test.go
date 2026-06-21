@@ -126,6 +126,47 @@ func TestParseRampageIntegerParameter(t *testing.T) {
 	}
 }
 
+func TestParseLandwalkVocabulary(t *testing.T) {
+	t.Parallel()
+	tests := map[string]KeywordKind{
+		"Landwalk":     KeywordLandwalk,
+		"Plainswalk":   KeywordPlainswalk,
+		"Islandwalk":   KeywordIslandwalk,
+		"Swampwalk":    KeywordSwampwalk,
+		"Mountainwalk": KeywordMountainwalk,
+		"Forestwalk":   KeywordForestwalk,
+		"Desertwalk":   KeywordDesertwalk,
+	}
+	for source, want := range tests {
+		keywords := keywordsFor(t, source)
+		if len(keywords) != 1 ||
+			keywords[0].Kind != want ||
+			keywords[0].Parameter.Kind != KeywordParameterNone ||
+			keywords[0].Kind.String() != source {
+			t.Errorf("%q keywords = %+v; want %v", source, keywords, want)
+		}
+	}
+}
+
+// TestParseQualifiedLandwalkFailsClosed confirms that qualified landwalk forms
+// (snow/legendary/nonbasic), which the executable backend does not support,
+// leave the qualifier word uncovered so they fail closed downstream rather than
+// being silently treated as plain landwalk.
+func TestParseQualifiedLandwalkFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{"Snow swampwalk", "Legendary landwalk", "Nonbasic landwalk"} {
+		keywords := keywordsFor(t, source)
+		if len(keywords) != 1 {
+			t.Fatalf("%q keywords = %+v; want one", source, keywords)
+		}
+		// The recognized keyword text is only the bare "<type>walk" word, so the
+		// leading qualifier remains uncovered for the coverage check.
+		if keywords[0].Text == source {
+			t.Errorf("%q keyword text = %q; want only the bare landwalk word", source, keywords[0].Text)
+		}
+	}
+}
+
 func TestParseFlashbackManaCost(t *testing.T) {
 	t.Parallel()
 	keywords := keywordsFor(t, "Flashback {2}{R}")
