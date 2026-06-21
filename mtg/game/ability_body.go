@@ -321,6 +321,25 @@ func DrawFromEmptyLibraryWinReplacement(text string) ReplacementAbility {
 	}
 }
 
+// DrawCardMultiplierReplacement builds the draw-doubling replacement "If you
+// would draw a card[ except the first one you draw in each of your draw steps],
+// draw <multiplier> cards instead." (Teferi's Ageless Insight, Thought
+// Reflection). When exceptFirstInDrawStep is set, the controller's first draw in
+// each of their own draw steps is not multiplied.
+func DrawCardMultiplierReplacement(text string, multiplier int, exceptFirstInDrawStep bool) ReplacementAbility {
+	return ReplacementAbility{
+		Text: text,
+		Replacement: ReplacementEffect{
+			Description:                   text,
+			MatchEvent:                    EventCardDrawn,
+			ControllerFilter:              TriggerControllerYou,
+			DrawCardMultiplier:            multiplier,
+			DrawCardExceptFirstInDrawStep: exceptFirstInDrawStep,
+			Duration:                      DurationPermanent,
+		},
+	}
+}
+
 // CounterPlacementReplacement creates a persistent replacement that modifies
 // placement of one specific counter kind by multiplying the count and then
 // adding a fixed amount (CR 614).

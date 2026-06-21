@@ -13,6 +13,10 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 	if ability.Replacement.DrawFromEmptyLibraryWins {
 		return fmt.Sprintf("game.DrawFromEmptyLibraryWinReplacement(%q)", ability.Text), nil
 	}
+	if ability.Replacement.DrawCardMultiplier > 1 {
+		return fmt.Sprintf("game.DrawCardMultiplierReplacement(%q, %d, %t)",
+			ability.Text, ability.Replacement.DrawCardMultiplier, ability.Replacement.DrawCardExceptFirstInDrawStep), nil
+	}
 	if ability.Replacement.EntersTappedOthers {
 		return r.renderGroupEntersTappedReplacement(ctx, ability)
 	}

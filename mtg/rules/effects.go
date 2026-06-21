@@ -242,13 +242,16 @@ func (e *Engine) drawCards(g *game.Game, playerID game.PlayerID, amount int, log
 	}
 	drew := false
 	for range amount {
-		cardID, ok := e.drawCard(g, playerID)
-		drew = drew || ok
-		log.addDraw(DrawLog{
-			Player: playerID,
-			CardID: cardID,
-			Failed: !ok,
-		})
+		count := drawCardMultiplier(g, playerID, false)
+		for range count {
+			cardID, ok := e.drawCard(g, playerID)
+			drew = drew || ok
+			log.addDraw(DrawLog{
+				Player: playerID,
+				CardID: cardID,
+				Failed: !ok,
+			})
+		}
 	}
 	return drew
 }
@@ -363,6 +366,7 @@ func registerPermanentReplacementEffects(g *game.Game, permanent *game.Permanent
 			replacement.DamageAddend == 0 &&
 			len(replacement.CreateOneOfEachTokens) == 0 &&
 			!replacement.EntersTappedOthers &&
+			replacement.DrawCardMultiplier <= 1 &&
 			!replacement.DrawFromEmptyLibraryWins {
 			continue
 		}

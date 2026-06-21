@@ -59,6 +59,9 @@ func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering,
 	if replacementAbility, handled, diagnostic := lowerDrawEmptyLibraryWinReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
+	if replacementAbility, handled, diagnostic := lowerDrawDoublingReplacement(ability); handled || diagnostic != nil {
+		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+	}
 	replacementAbility, diagnostic := lowerEntersTappedReplacement(ability)
 	return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 }
@@ -128,6 +131,47 @@ func lowerDrawEmptyLibraryWinReplacement(
 		return unsupported("the executable source backend supports only the exact draw-from-empty-library win replacement")
 	}
 	return game.DrawFromEmptyLibraryWinReplacement(ability.Text), true, nil
+}
+
+// lowerDrawDoublingReplacement lowers the draw-doubling replacement ("If you
+// would draw a card[ except the first one you draw in each of your draw steps],
+// draw two cards instead.", Thought Reflection, Teferi's Ageless Insight) to a
+// persistent replacement that multiplies the controller's card draws. It reports
+// handled=false unless a recognized would-draw-card condition is present so
+// unrelated replacements keep flowing down the chain.
+func lowerDrawDoublingReplacement(
+	ability compiler.CompiledAbility,
+) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Conditions) != 1 {
+		return game.ReplacementAbility{}, false, nil
+	}
+	predicate := ability.Content.Conditions[0].Predicate
+	exceptFirstInDrawStep := predicate == compiler.ConditionPredicateWouldDrawCardExceptFirstInDrawStep
+	if predicate != compiler.ConditionPredicateWouldDrawCard && !exceptFirstInDrawStep {
+		return game.ReplacementAbility{}, false, nil
+	}
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported draw-doubling replacement",
+			detail,
+		)
+	}
+	if len(ability.Content.Effects) != 1 ||
+		ability.Content.Effects[0].Kind != compiler.EffectDraw ||
+		ability.Content.Effects[0].Replacement.Kind != parser.EffectReplacementInstead ||
+		!ability.Content.Effects[0].Amount.Known ||
+		ability.Content.Effects[0].Amount.Value < 2 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional {
+		return unsupported("the executable source backend supports only the exact draw-doubling replacement")
+	}
+	multiplier := ability.Content.Effects[0].Amount.Value
+	return game.DrawCardMultiplierReplacement(ability.Text, multiplier, exceptFirstInDrawStep), true, nil
 }
 
 // groupEntersTappedController maps the parsed controller scope of a group
