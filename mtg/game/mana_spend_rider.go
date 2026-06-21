@@ -40,6 +40,12 @@ const (
 	// be spent on anything, but a creature spell paid for with it gains the
 	// rider's SpellGainsKeywords until end of turn once it resolves.
 	ManaSpendCastCreatureSpell
+	// ManaSpendCastArtifactSpell is "this mana can't be spent to cast a
+	// nonartifact spell" (Powerstone). Paired with ManaSpendRestrictedToCondition
+	// it is a restriction-only rider with no resolving effect: the tagged mana may
+	// pay for artifact spells and any non-spell payment (ability costs), but never
+	// for a nonartifact spell cast.
+	ManaSpendCastArtifactSpell
 )
 
 // ManaSpendRestrictionKind identifies whether a tagged mana unit may be spent

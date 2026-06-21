@@ -189,6 +189,8 @@ func manaSpendConditionSatisfied(g *game.Game, rider game.ManaRiderInstance, spe
 		return spellDef != nil && spellDef.HasSupertype(types.Legendary)
 	case game.ManaSpendCastCreatureSpell:
 		return spellDef != nil && spellDef.HasType(types.Creature)
+	case game.ManaSpendCastArtifactSpell:
+		return spellDef != nil && spellDef.HasType(types.Artifact)
 	default:
 		return false
 	}

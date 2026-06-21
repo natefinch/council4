@@ -804,8 +804,8 @@ func TestParseCreateNamedTokenChoiceExactness(t *testing.T) {
 		// Single named token (no choice) stays exact but is not a choice.
 		{"Create a Treasure token.", true, false},
 		// A non-predefined alternative fails closed.
-		{"Create a Powerstone token or a Treasure token.", false, true},
-		{"Create your choice of a Powerstone token, a Food token, or a Treasure token.", false, true},
+		{"Create an Incubator token or a Treasure token.", false, true},
+		{"Create your choice of an Incubator token, a Food token, or a Treasure token.", false, true},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
@@ -1043,11 +1043,10 @@ func TestParseCreateNamedTokenExactness(t *testing.T) {
 		{"Create a Mutagen token.", true},
 		{"Create a Map token.", true},
 		{"Create a Junk token.", true},
+		{"Create a Powerstone token.", true},
 		{"Create two Treasure tokens.", true},
-		// Named tokens whose ability the runtime token model does not represent
-		// yet stay fail-closed: Powerstone's restricted mana and Incubator's
-		// transform ability.
-		{"Create a Powerstone token.", false},
+		// Incubator's transform ability is not yet modeled, so it stays
+		// fail-closed.
 		{"Create an Incubator token.", false},
 		// A "tapped" entry on a recognized named token is now representable.
 		{"Create a tapped Treasure token.", true},

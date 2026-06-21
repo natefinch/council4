@@ -599,6 +599,8 @@ func namedArtifactTokenDef(sub types.Sub) (*game.CardDef, bool) {
 		return mapTokenDef(), true
 	case types.Junk:
 		return junkTokenDef(), true
+	case types.Powerstone:
+		return powerstoneTokenDef(), true
 	default:
 		return nil, false
 	}
@@ -713,6 +715,34 @@ func mapTokenDef() *game.CardDef {
 			},
 		}.Ability(),
 	})
+}
+
+// powerstoneTokenDef builds the Powerstone token: tap for one colorless mana that
+// can't be spent to cast a nonartifact spell. The mana ability tags its produced
+// mana with the artifact-spell spend restriction; the token enters tapped via the
+// creating spell's "tapped" modifier.
+func powerstoneTokenDef() *game.CardDef {
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:     string(types.Powerstone),
+			Types:    []types.Card{types.Artifact},
+			Subtypes: []types.Sub{types.Powerstone},
+			ManaAbilities: []game.ManaAbility{{
+				Text:            "{T}: Add {C}. This mana can't be spent to cast a nonartifact spell.",
+				AdditionalCosts: []cost.Additional{cost.T},
+				Content: game.Mode{Sequence: []game.Instruction{
+					{Primitive: game.AddMana{
+						Amount:    game.Fixed(1),
+						ManaColor: mana.C,
+						SpendRider: opt.Val(game.ManaSpendRider{
+							Condition:   game.ManaSpendCastArtifactSpell,
+							Restriction: game.ManaSpendRestrictedToCondition,
+						}),
+					}},
+				}}.Ability(),
+			}},
+		},
+	}
 }
 
 // junkTokenDef builds the Junk token: tap and sacrifice it to exile the top card
