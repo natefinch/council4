@@ -9,7 +9,7 @@ import (
 )
 
 func compileEffectPayment(payment parser.EffectPaymentSyntax) CompiledEffectPayment {
-	return CompiledEffectPayment{
+	compiled := CompiledEffectPayment{
 		Span:                   payment.Span,
 		Form:                   payment.Form,
 		Payer:                  payment.Payer,
@@ -19,6 +19,11 @@ func compileEffectPayment(payment parser.EffectPaymentSyntax) CompiledEffectPaym
 		FailureConditionNodeID: payment.FailureConditionNodeID,
 		Order:                  payment.Order,
 	}
+	if payment.AdditionalCost != nil {
+		additional := compileCost(*payment.AdditionalCost)
+		compiled.AdditionalCost = &additional
+	}
+	return compiled
 }
 
 func applyEffectPaymentsToConditions(effects []CompiledEffect, conditions []CompiledCondition) {

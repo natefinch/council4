@@ -1269,11 +1269,15 @@ type CompiledEffectMana struct {
 
 // CompiledEffectPayment is a typed resolution payment embedded in an effect.
 type CompiledEffectPayment struct {
-	Span                   shared.Span
-	Form                   parser.EffectPaymentForm
-	Payer                  parser.EffectPaymentPayerKind
-	ManaCost               cost.Mana
-	GenericManaAmount      CompiledAmount
+	Span              shared.Span
+	Form              parser.EffectPaymentForm
+	Payer             parser.EffectPaymentPayerKind
+	ManaCost          cost.Mana
+	GenericManaAmount CompiledAmount
+	// AdditionalCost is a non-mana resolution payment cost (such as "sacrifice a
+	// land"). It is nil for mana-only payments; ManaCost and AdditionalCost are
+	// never both set.
+	AdditionalCost         *CompiledCost
 	SuccessConditionNodeID int
 	FailureConditionNodeID int
 	// Order is the payment's dense source-order rank, used to test condition

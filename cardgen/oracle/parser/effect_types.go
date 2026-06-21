@@ -1000,13 +1000,18 @@ const (
 
 // EffectPaymentSyntax is a source-spanned typed resolution payment.
 type EffectPaymentSyntax struct {
-	Span                   shared.Span            `json:"-"`
-	Form                   EffectPaymentForm      `json:",omitempty"`
-	Payer                  EffectPaymentPayerKind `json:",omitempty"`
-	ManaCost               cost.Mana              `json:",omitempty"`
-	GenericManaAmount      EffectAmountSyntax     `json:",omitzero"`
-	SuccessConditionNodeID int                    `json:"-"`
-	FailureConditionNodeID int                    `json:"-"`
+	Span              shared.Span            `json:"-"`
+	Form              EffectPaymentForm      `json:",omitempty"`
+	Payer             EffectPaymentPayerKind `json:",omitempty"`
+	ManaCost          cost.Mana              `json:",omitempty"`
+	GenericManaAmount EffectAmountSyntax     `json:",omitzero"`
+	// AdditionalCost is a non-mana resolution payment cost (such as "sacrifice a
+	// land" or "discard a card") recognized in a "you may <cost>. If you do, ..."
+	// sequence. It is nil for mana-only payments; ManaCost and AdditionalCost are
+	// never both set.
+	AdditionalCost         *Cost `json:",omitempty"`
+	SuccessConditionNodeID int   `json:"-"`
+	FailureConditionNodeID int   `json:"-"`
 	// Order is the payment's dense source-order rank, used downstream to test
 	// condition containment without byte offsets.
 	Order shared.SourceOrder `json:"-"`
