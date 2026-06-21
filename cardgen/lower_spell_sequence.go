@@ -128,6 +128,11 @@ func lowerOrderedEffectSequence(
 	if optionalFlow.enabled {
 		consumedConditions++
 	}
+	// Every gate condition is consumed by the matching above (which fails closed
+	// unless all conditions matched and lowered). A single condition may gate
+	// multiple effects of a shared-sentence group, so count conditions here
+	// rather than per gated effect.
+	consumedConditions += len(gateConditions)
 	// "If <condition>, <create> instead." replaces the immediately preceding
 	// effect when the condition holds (an either/or, not an additive effect).
 	// The conditional clause is already gated on the condition by
@@ -248,7 +253,6 @@ func lowerOrderedEffectSequence(
 			if !applyEffectConditionGate(mode.Sequence, &effectCondition) {
 				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — per-effect condition gate not applicable")
 			}
-			consumedConditions++
 		}
 		if insteadGate, gated := insteadGates[i]; gated {
 			if !applyEffectConditionGate(mode.Sequence, &insteadGate) {
@@ -274,13 +278,23 @@ func lowerOrderedEffectSequence(
 		}
 		sequence = append(sequence, mode.Sequence...)
 	}
-	if consumedTargets != len(ctx.content.Targets) ||
-		consumedKeywords != len(ctx.content.Keywords) ||
-		consumedReferences != len(ctx.content.References) ||
-		consumedConditions != len(ctx.content.Conditions) {
+	if !sequenceCountsConsumed(ctx, consumedTargets, consumedKeywords, consumedReferences, consumedConditions) {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — unconsumed targets/references/keywords")
 	}
 	return game.Mode{Targets: targets, Sequence: sequence}.Ability(), nil
+}
+
+// sequenceCountsConsumed reports whether the per-clause lowering consumed every
+// target, keyword, reference, and condition the ordered sequence carried. A
+// shortfall means a clause was silently dropped, so the sequence fails closed.
+func sequenceCountsConsumed(
+	ctx contentCtx,
+	consumedTargets, consumedKeywords, consumedReferences, consumedConditions int,
+) bool {
+	return consumedTargets == len(ctx.content.Targets) &&
+		consumedKeywords == len(ctx.content.Keywords) &&
+		consumedReferences == len(ctx.content.References) &&
+		consumedConditions == len(ctx.content.Conditions)
 }
 
 func lowerLinkedSearchUntapSequence(ctx contentCtx) (game.AbilityContent, bool) {
@@ -1109,30 +1123,60 @@ func matchSequenceEffectConditions(
 	result := make(map[int]game.EffectCondition, len(conditions))
 	for ci := range conditions {
 		condition := conditions[ci]
-		matchIdx := -1
+		var matched []int
 		for ei := range effects {
 			if spanCovered(condition.Span, []shared.Span{effects[ei].Span}) {
-				if matchIdx != -1 {
-					return nil, false
-				}
-				matchIdx = ei
+				matched = append(matched, ei)
 			}
 		}
-		if matchIdx == -1 {
+		if len(matched) == 0 {
 			return nil, false
 		}
-		if _, exists := result[matchIdx]; exists {
+		// A condition span-covered by more than one effect must be a leading
+		// condition on a shared-sentence "then" group (the effects share an
+		// identical sentence span), e.g. "If you control X, draw a card, then
+		// discard a card." Such a condition gates every effect in the group.
+		// Any other multi-match shape (a mid-sentence condition, or effects with
+		// differing spans) fails closed.
+		if len(matched) > 1 && !leadingGroupCondition(condition, effects, matched) {
 			return nil, false
 		}
 		lowered, ok := lowerCondition(condition, conditionContextEffectGate)
 		if !ok {
 			return nil, false
 		}
-		result[matchIdx] = game.EffectCondition{
-			Condition: opt.Val(lowered),
+		for _, ei := range matched {
+			if _, exists := result[ei]; exists {
+				return nil, false
+			}
+			result[ei] = game.EffectCondition{
+				Condition: opt.Val(lowered),
+			}
 		}
 	}
 	return result, true
+}
+
+// leadingGroupCondition reports whether the matched effects form a shared-
+// sentence "then" group (every matched effect has the same sentence span) whose
+// leading clause begins at or after the condition. A leading condition on such a
+// group gates the entire group rather than a single clause.
+func leadingGroupCondition(
+	condition compiler.CompiledCondition,
+	effects []compiler.CompiledEffect,
+	matched []int,
+) bool {
+	groupSpan := effects[matched[0]].Span
+	minClauseStart := effects[matched[0]].ClauseSpan.Start.Offset
+	for _, ei := range matched {
+		if effects[ei].Span != groupSpan {
+			return false
+		}
+		if effects[ei].ClauseSpan.Start.Offset < minClauseStart {
+			minClauseStart = effects[ei].ClauseSpan.Start.Offset
+		}
+	}
+	return condition.Span.Start.Offset <= minClauseStart
 }
 
 // sequenceInsteadGates builds, for each effect carrying an "instead"
