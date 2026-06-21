@@ -1188,7 +1188,7 @@ func exactTemporaryKeywordList(text string) bool {
 	text = strings.ReplaceAll(text, " and ", ", ")
 	for keyword := range strings.SplitSeq(text, ", ") {
 		switch keyword {
-		case "deathtouch", "double strike", "first strike", "flying", "haste",
+		case "deathtouch", "double strike", "fear", "first strike", "flying", "haste",
 			"hexproof", "indestructible", "lifelink", "menace", "reach", "shroud", "trample", "vigilance",
 			"protection from each color", "protection from everything",
 			"protection from monocolored", "protection from multicolored",

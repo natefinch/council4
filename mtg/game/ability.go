@@ -72,6 +72,7 @@ const (
 	CumulativeUpkeep
 	Riot
 	Embalm
+	Fear
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -179,6 +180,11 @@ var (
 	// gain haste. The runtime reads the riot keyword on an entering permanent and
 	// applies that modal choice; the keyword itself carries no continuous effect.
 	RiotStaticBody = simpleKeywordStaticBody("Riot", Riot)
+
+	// FearStaticBody is the reusable StaticAbilityBody for fear, an evasion
+	// ability: a creature with fear can't be blocked except by artifact creatures
+	// and/or black creatures (CR 702.36c).
+	FearStaticBody = simpleKeywordStaticBody("Fear", Fear)
 )
 
 func simpleKeywordStaticBody(text string, keyword Keyword) StaticAbility {
@@ -222,6 +228,8 @@ func KeywordStaticBody(keyword Keyword) (StaticAbility, bool) {
 		return TrampleStaticBody, true
 	case Vigilance:
 		return VigilanceStaticBody, true
+	case Fear:
+		return FearStaticBody, true
 	default:
 		return StaticAbility{}, false
 	}

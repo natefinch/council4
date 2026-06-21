@@ -926,3 +926,50 @@ func TestCantBeBlockedByCreaturesWithArtifactRejectsArtifactBlocker(t *testing.T
 		t.Fatal("non-artifact blocker rejected for can't-be-blocked-by-artifact attacker")
 	}
 }
+
+// TestFearBlockLegalityRequiresArtifactOrBlack proves CR 702.36c: a creature
+// with fear can't be blocked except by artifact creatures and/or black
+// creatures. A colorless non-artifact creature cannot block; an artifact
+// creature and a black creature each can.
+func TestFearBlockLegalityRequiresArtifactOrBlack(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+
+	pt := game.PT{Value: 2}
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2, game.Fear)
+	plainBlocker := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Colorless Creature",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}})
+	artifactBlocker := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Artifact Creature",
+		Types:     []types.Card{types.Artifact, types.Creature},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}})
+	blackBlocker := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Black Creature",
+		Types:     []types.Card{types.Creature},
+		Colors:    []color.Color{color.Black},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}})
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+
+	if canBlockAttacker(g, plainBlocker, attacker) {
+		t.Fatal("colorless non-artifact creature blocked a fear attacker, want false")
+	}
+	if !canBlockAttacker(g, artifactBlocker, attacker) {
+		t.Fatal("artifact creature could not block a fear attacker, want true")
+	}
+	if !canBlockAttacker(g, blackBlocker, attacker) {
+		t.Fatal("black creature could not block a fear attacker, want true")
+	}
+}

@@ -399,6 +399,55 @@ func TestLowerTargetProtectionGrantSpell(t *testing.T) {
 	}
 }
 
+func TestLowerTargetFearGrantSpell(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name           string
+		oracle         string
+		wantSupertypes []types.Super
+	}{
+		{
+			name:   "plain creature target",
+			oracle: "Target creature gains fear until end of turn.",
+		},
+		{
+			name:           "legendary creature target",
+			oracle:         "Target legendary creature gains fear until end of turn. (It can't be blocked except by artifact creatures and/or black creatures.)",
+			wantSupertypes: []types.Super{types.Legendary},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Fear Grant",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: tc.oracle,
+			})
+			mode := face.SpellAbility.Val.Modes[0]
+			if len(mode.Targets) != 1 {
+				t.Fatalf("targets = %d, want 1", len(mode.Targets))
+			}
+			if !reflect.DeepEqual(mode.Targets[0].Predicate.Supertypes, tc.wantSupertypes) {
+				t.Fatalf("target supertypes = %v, want %v", mode.Targets[0].Predicate.Supertypes, tc.wantSupertypes)
+			}
+			apply, ok := mode.Sequence[0].Primitive.(game.ApplyContinuous)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.ApplyContinuous", mode.Sequence[0].Primitive)
+			}
+			if apply.Duration != game.DurationUntilEndOfTurn {
+				t.Fatalf("duration = %v, want until end of turn", apply.Duration)
+			}
+			effect := apply.ContinuousEffects[0]
+			if effect.Layer != game.LayerAbility ||
+				!reflect.DeepEqual(effect.AddKeywords, []game.Keyword{game.Fear}) {
+				t.Fatalf("continuous effect = %+v, want fear keyword grant", effect)
+			}
+		})
+	}
+}
+
 func TestLowerManifestSpell(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
