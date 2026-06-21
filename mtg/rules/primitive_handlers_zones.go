@@ -364,6 +364,12 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	if !ok {
 		return res
 	}
+	if prim.Power.Exists && prim.Toughness.Exists {
+		sized := *token
+		sized.Power = opt.Val(game.PT{Value: r.quantity(prim.Power.Val)})
+		sized.Toughness = opt.Val(game.PT{Value: r.quantity(prim.Toughness.Val)})
+		token = &sized
+	}
 	created, ok := createTokenPermanentsCollectingWithChoices(r.engine, r.game, recipient, token, res.amount, prim.EntryTapped, r.agents, r.log)
 	if !ok {
 		return res

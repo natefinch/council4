@@ -112,6 +112,40 @@ func TestLowerCounterPlacementAnotherSubtypeTarget(t *testing.T) {
 	}
 }
 
+// A conjunctive two-type group ("each artifact creature you control") lowers its
+// type set to the all-of RequiredTypes filter, not the any-of RequiredTypesAny
+// union, so the counter lands only on permanents that are both artifact and
+// creature (Steel Overseer).
+func TestLowerCounterPlacementConjunctiveGroupRecipient(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Overseer",
+		Layout:     "normal",
+		TypeLine:   "Artifact Creature",
+		OracleText: "{T}: Put a +1/+1 counter on each artifact creature you control.",
+	})
+	add, ok := face.ActivatedAbilities[0].Content.Modes[0].Sequence[0].Primitive.(game.AddCounter)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.AddCounter", face.ActivatedAbilities[0].Content.Modes[0].Sequence[0].Primitive)
+	}
+	if add.Group.Domain() == 0 {
+		t.Fatal("Group not set on group counter placement")
+	}
+	selection := add.Group.Selection()
+	if !slices.Equal(selection.RequiredTypes, []types.Card{types.Artifact, types.Creature}) {
+		t.Fatalf("RequiredTypes = %v, want [Artifact Creature]", selection.RequiredTypes)
+	}
+	if len(selection.RequiredTypesAny) != 0 {
+		t.Fatalf("RequiredTypesAny = %v, want empty (conjunctive filter)", selection.RequiredTypesAny)
+	}
+	if selection.Controller != game.ControllerYou {
+		t.Fatalf("group controller = %v, want ControllerYou", selection.Controller)
+	}
+	if add.CounterKind != counter.PlusOnePlusOne {
+		t.Fatalf("counter kind = %v, want +1/+1", add.CounterKind)
+	}
+}
+
 func TestLowerCounterPlacementGroupRecipient(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

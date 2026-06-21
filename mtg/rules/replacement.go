@@ -1065,6 +1065,9 @@ func matchingCounterPlacementReplacementEffects(g *game.Game, event game.Event, 
 		if len(replacement.CounterRecipientTypes) > 0 && !counterRecipientPermanentMatches(g, event.PermanentID, recipient, replacement.CounterRecipientTypes) {
 			continue
 		}
+		if len(replacement.CounterRecipientTypesAny) > 0 && !counterRecipientPermanentMatchesAny(g, event.PermanentID, recipient, replacement.CounterRecipientTypesAny) {
+			continue
+		}
 		if replacement.CounterRecipientAnyPermanent && !counterRecipientPermanentMatches(g, event.PermanentID, recipient, nil) {
 			continue
 		}
@@ -1210,6 +1213,28 @@ func counterRecipientPermanentMatches(g *game.Game, permanentID id.ID, permanent
 		}
 	}
 	return true
+}
+
+// counterRecipientPermanentMatchesAny reports whether the counter recipient is a
+// permanent that has at least one of anyTypes (a type-union filter, as on
+// Ozolith, the Shattered Spire's "an artifact or creature you control").
+func counterRecipientPermanentMatchesAny(g *game.Game, permanentID id.ID, permanent *game.Permanent, anyTypes []types.Card) bool {
+	if permanent == nil {
+		if permanentID == 0 {
+			return false
+		}
+		var ok bool
+		permanent, ok = permanentByObjectID(g, permanentID)
+		if !ok {
+			return false
+		}
+	}
+	for _, cardType := range anyTypes {
+		if permanentHasType(g, permanent, cardType) {
+			return true
+		}
+	}
+	return false
 }
 
 func replacementEffectMatchesEvent(g *game.Game, replacement *game.ReplacementEffect, event game.Event) bool {

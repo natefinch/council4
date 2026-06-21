@@ -1016,6 +1016,68 @@ func TestGenerateDoublingSeasonSource(t *testing.T) {
 	}
 }
 
+// TestLowerControlledTypeUnionCounterReplacement verifies the type-restricted
+// controlled-permanent recipient ("an artifact or creature you control",
+// Ozolith, the Shattered Spire) lowers to a +1/+1 counter-placement replacement
+// carrying the artifact-or-creature recipient type union.
+func TestLowerControlledTypeUnionCounterReplacement(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Ozolith",
+		Layout:     "normal",
+		TypeLine:   "Legendary Artifact",
+		OracleText: "If one or more +1/+1 counters would be put on an artifact or creature you control, that many plus one +1/+1 counters are put on it instead.",
+	})
+	if len(face.ReplacementAbilities) != 1 {
+		t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+	}
+	replacement := face.ReplacementAbilities[0].Replacement
+	if replacement.MatchEvent != game.EventCountersAdded ||
+		replacement.ControllerFilter != game.TriggerControllerYou ||
+		replacement.CounterMultiplier != 0 ||
+		replacement.CounterAddend != 1 ||
+		!replacement.MatchCounterKind ||
+		replacement.CounterKindFilter != counter.PlusOnePlusOne ||
+		!replacement.CounterUseRecipientController ||
+		replacement.CounterRecipientAnyPermanent ||
+		replacement.Duration != game.DurationPermanent {
+		t.Fatalf("replacement = %+v, want artifact-or-creature +1/+1 additive modifier", replacement)
+	}
+	want := []types.Card{types.Artifact, types.Creature}
+	if !slices.Equal(replacement.CounterRecipientTypesAny, want) {
+		t.Fatalf("recipient types = %v, want %v", replacement.CounterRecipientTypesAny, want)
+	}
+}
+
+func TestGenerateControlledTypeUnionCounterReplacementSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Ozolith",
+		Layout:     "normal",
+		TypeLine:   "Legendary Artifact",
+		OracleText: "If one or more +1/+1 counters would be put on an artifact or creature you control, that many plus one +1/+1 counters are put on it instead.",
+	}, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.ControlledPermanentTypesCounterKindPlacementReplacement",
+		"counter.PlusOnePlusOne",
+		"[]types.Card{types.Artifact, types.Creature}",
+		"game.TriggerControllerYou",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
 func TestGenerateControlledPermanentCounterKindReplacementSource(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{

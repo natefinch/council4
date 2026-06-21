@@ -659,6 +659,13 @@ type EffectManaSyntax struct {
 	// rather than an additional output; lowering pairs the two into one ability
 	// whose larger output replaces the base when the condition holds.
 	Instead bool `json:",omitempty"`
+	// TriggerLandProducedType reports the body "one mana of any type that land
+	// produced" (Mirari's Wake, Zendikar Resurgent, Dictate of Karametra, Mana
+	// Flare, Heartbeat of Spring). It is the mana-doubler output of a
+	// tapped-for-mana trigger: one additional mana whose type is chosen among the
+	// types the triggering land produced on that tap, recomputed at resolution
+	// from the triggering tap rather than from a fixed color or the battlefield.
+	TriggerLandProducedType bool `json:",omitempty"`
 }
 
 // ManaLandsProduceScope identifies which battlefield lands' producible colors
@@ -876,6 +883,14 @@ type SelectionSyntax struct {
 	// to the runtime Selection.SubtypeFromChosenType predicate (which reads
 	// game.SpellChosenTypeChoiceKey).
 	SubtypeFromChosenType bool `json:",omitempty"`
+	// SubtypeFromChosenTypeExcluded records a trailing "that aren't of the chosen
+	// type" qualifier on a mass group ("Destroy all creatures that aren't of the
+	// chosen type." — Kindred Dominance), requiring each matched permanent to NOT
+	// share the creature subtype chosen earlier in the same resolution by a "Choose
+	// a creature type." effect. It lowers to the runtime
+	// game.SubtypeChoiceResolutionExcluded predicate (which reads
+	// game.SpellChosenTypeChoiceKey).
+	SubtypeFromChosenTypeExcluded bool `json:",omitempty"`
 	// ManaValueX records that the MatchManaValue comparison bound is the spell's
 	// chosen {X} rather than a fixed number ("with mana value X or less"). When
 	// set, ManaValue holds the operator (LessOrEqual) with no fixed Value; the
@@ -888,6 +903,11 @@ type SelectionSyntax struct {
 	// source tokens after "named" so the byte-exact search reconstruction can
 	// rebuild the qualifier; the runtime matches a library card by this name.
 	RequiredName string `json:",omitempty"`
+	// EnteredThisTurn records a trailing "that entered this turn" relative clause
+	// ("each green creature that entered this turn"), restricting the match to
+	// permanents that entered the battlefield during the current turn. It lowers
+	// to Selection.EnteredThisTurn.
+	EnteredThisTurn bool `json:",omitempty"`
 }
 
 // TargetCardinalitySyntax is an inclusive target-count range.
@@ -1049,6 +1069,24 @@ type EffectSyntax struct {
 	TokenPower     int  `json:",omitempty"`
 	TokenToughness int  `json:",omitempty"`
 	TokenPTKnown   bool `json:",omitempty"`
+	// TokenPTVariableX reports a created token whose printed power and toughness
+	// are both the variable "X" ("an X/X ... token"), rather than fixed integers.
+	// The value of X is supplied by a binding clause elsewhere in the ability
+	// ("where X is <dynamic>"); downstream layers resolve it into TokenPTDynamic.
+	// It is false for fixed-power/toughness tokens.
+	TokenPTVariableX bool `json:",omitempty"`
+	// TokenPTDynamic names the rules-derived amount a variable "X/X" token's
+	// power and toughness each equal, bound from the ability's "where X is
+	// <dynamic>" clause. It is set only when TokenPTVariableX is true and the
+	// binding resolves to a recognized dynamic amount; lowering reads it to size
+	// the token at creation. It stays empty for fixed-power/toughness tokens.
+	TokenPTDynamic EffectDynamicAmountKind `json:",omitempty"`
+	// TokenGrantedAbility is the full quoted ability a created token enters with
+	// ("... creature token with \"When this token dies, you gain 1 life.\""),
+	// parsed once through the same pipeline so downstream layers lower it from
+	// the typed inner document. It is nil for tokens with no quoted-ability
+	// rider.
+	TokenGrantedAbility *StaticGrantedAbilitySyntax `json:"-"`
 	// TokenKeywords lists every creature keyword a created token enters with, in
 	// source order ("with menace and reach" -> [Menace, Reach]). The first
 	// keyword is also recorded on Selection.Keyword (a "with <keyword>" selector
@@ -1600,6 +1638,12 @@ const (
 	// except the source ("each other attacking creature gets +1/+0 until end of
 	// turn."), the affected group of the Battle cry triggered ability.
 	EffectStaticSubjectOtherAttackingCreatures EffectStaticSubjectKind = "EffectStaticSubjectOtherAttackingCreatures"
+
+	// EffectStaticSubjectOtherControlledPermanents names every permanent you
+	// control except the source ("Other permanents you control have
+	// indestructible.", Avacyn, Angel of Hope), the self-excluded sibling of
+	// EffectStaticSubjectControlledPermanents.
+	EffectStaticSubjectOtherControlledPermanents EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledPermanents"
 )
 
 // EffectStaticSubjectSyntax is a source-spanned typed static-effect subject.

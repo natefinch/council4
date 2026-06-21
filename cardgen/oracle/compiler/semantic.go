@@ -770,6 +770,12 @@ type CompiledCondition struct {
 	GraveyardRedirectScope       GraveyardRedirectScope
 	GraveyardSubjectTypesAny     []TriggerCardType
 	GraveyardFromBattlefieldOnly bool
+
+	// CounterRecipientTypesAny carries the type-union recipient filter of a
+	// ConditionPredicateCounterPlacementOnControlledPermanent clause ("an
+	// artifact or creature you control", Ozolith, the Shattered Spire). It is
+	// empty for the unrestricted "a permanent you control" form.
+	CounterRecipientTypesAny []TriggerCardType
 }
 
 // TargetCardinality is an inclusive target count range.
@@ -881,6 +887,11 @@ type CompiledSelector struct {
 	// effect ("each permanent you control of that type"). It lowers to
 	// Selection.SubtypeFromChosenType (which reads game.SpellChosenTypeChoiceKey).
 	SubtypeFromChosenType bool
+	// SubtypeFromChosenTypeExcluded requires each matched permanent to NOT share
+	// the creature subtype chosen earlier in the same resolution by a "Choose a
+	// creature type." effect ("all creatures that aren't of the chosen type",
+	// Kindred Dominance). It lowers to game.SubtypeChoiceResolutionExcluded.
+	SubtypeFromChosenTypeExcluded bool
 	// ConjunctiveTypes records that a multi-member RequiredTypesAny names types a
 	// permanent must carry all at once ("artifact creature") rather than any one
 	// of ("artifact or creature"). It lowers the type set to the conjunctive
@@ -890,8 +901,12 @@ type CompiledSelector struct {
 	// search filter ("a card named Trustworthy Scout"). It lowers to
 	// SearchSpec.Name; the parser owns the wording, so the compiler only copies it.
 	RequiredName string
-	Alternatives []CompiledSelector
-	atoms        *CompiledSelectorAtoms
+	// EnteredThisTurn requires each matched permanent to have entered the
+	// battlefield this turn ("each green creature that entered this turn"). It
+	// lowers to Selection.EnteredThisTurn.
+	EnteredThisTurn bool
+	Alternatives    []CompiledSelector
+	atoms           *CompiledSelectorAtoms
 }
 
 // CompiledSelectorAtoms holds parser-owned atom-derived selector filters that
@@ -1168,6 +1183,7 @@ const (
 	StaticSubjectOtherControlledCreaturesChosenType
 	StaticSubjectOpponentControlledPermanents
 	StaticSubjectOtherAttackingCreatures
+	StaticSubjectOtherControlledPermanents
 )
 
 // CompiledEffect is one recognized instruction verb and the sentence containing
@@ -1237,6 +1253,19 @@ type CompiledEffect struct {
 	TokenPower                   int
 	TokenToughness               int
 	TokenPTKnown                 bool
+	// TokenPTVariableX reports a created token whose printed power and toughness
+	// are both the variable "X" ("an X/X ... token"); lowering reads
+	// TokenPTDynamic to size it at creation. It is false for fixed tokens.
+	TokenPTVariableX bool
+	// TokenPTDynamic names the rules-derived amount a variable-X token's power and
+	// toughness each equal, bound from the ability's "where X is <dynamic>" clause.
+	// It is set only when TokenPTVariableX is true. It is empty for fixed tokens.
+	TokenPTDynamic parser.EffectDynamicAmountKind
+	// TokenGrantedAbility is the quoted ability a created token enters with ("...
+	// token with \"When this token dies, you gain 1 life.\""), parsed once through
+	// the pipeline. Lowering compiles its inner document and attaches the runtime
+	// ability to the token's definition. It is nil for tokens with no such rider.
+	TokenGrantedAbility *parser.StaticGrantedAbilitySyntax
 	// TokenName is a created creature token's explicit Oracle name ("named Koma's
 	// Coil"), captured verbatim from source. It is empty when the token is named
 	// only by its subtypes.
@@ -1602,6 +1631,10 @@ type CompiledEffectMana struct {
 	// alternative mana production ("Add {B}{B}{B}{B}{B} instead if ...", the
 	// Threshold cycle). See parser.EffectManaSyntax.Instead.
 	Instead bool
+	// TriggerLandProducedType mirrors the parser's "one mana of any type that
+	// land produced" mana-doubler body (Mirari's Wake, Zendikar Resurgent). See
+	// parser.EffectManaSyntax.TriggerLandProducedType.
+	TriggerLandProducedType bool
 }
 
 // CompiledEffectPayment is a typed resolution payment embedded in an effect.

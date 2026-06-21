@@ -951,6 +951,7 @@ func massGroupSelection(selector compiler.CompiledSelector) (game.Selection, boo
 		ExcludedColors:   append([]color.Color(nil), selector.ExcludedColors()...),
 		Colorless:        selector.Colorless,
 		Multicolored:     selector.Multicolored,
+		EnteredThisTurn:  selector.EnteredThisTurn,
 		ExcludeSource:    selector.Another || selector.Other,
 	}
 	if excludedSupertypes := selector.ExcludedSupertypes(); len(excludedSupertypes) > 1 {
@@ -1036,6 +1037,22 @@ func massGroupSelection(selector compiler.CompiledSelector) (game.Selection, boo
 	if selector.MatchCounter {
 		selection.MatchCounter = true
 		selection.RequiredCounter = selector.RequiredCounter
+	}
+	switch {
+	case selector.SubtypeFromChosenTypeExcluded:
+		selection.SubtypeChoice = game.SubtypeChoiceResolutionExcluded
+	case selector.SubtypeFromChosenType:
+		selection.SubtypeChoice = game.SubtypeChoiceResolution
+	case selector.SubtypeFromEntryChoice:
+		selection.SubtypeChoice = game.SubtypeChoiceSourceEntry
+	default:
+	}
+	// "each artifact creature you control" names two card types the permanent
+	// must carry at once, so its type set lowers to the conjunctive RequiredTypes
+	// (all-of) filter rather than the default any-of RequiredTypesAny union.
+	if selector.ConjunctiveTypes {
+		selection.RequiredTypes = selection.RequiredTypesAny
+		selection.RequiredTypesAny = nil
 	}
 	if len(selection.Validate()) != 0 {
 		return game.Selection{}, false

@@ -16,6 +16,8 @@ func lowerAdditionalDynamicAmount(kind compiler.DynamicAmountKind) (cost.Additio
 	switch kind {
 	case compiler.DynamicAmountCommanderColorCount:
 		return cost.AdditionalDynamicCommanderColorIdentityCount, true
+	case compiler.DynamicAmountLifeGainedThisTurn:
+		return cost.AdditionalDynamicLifeGainedThisTurn, true
 	default:
 		return cost.AdditionalDynamicAmountNone, false
 	}

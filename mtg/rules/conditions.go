@@ -533,8 +533,15 @@ func conditionTargetEnteredThisTurn(g *game.Game, ctx conditionContext, targetIn
 	if !ok {
 		return false
 	}
+	return permanentEnteredThisTurn(g, permanent.ObjectID)
+}
+
+// permanentEnteredThisTurn reports whether the permanent identified by id entered
+// the battlefield during the current turn, scanning this turn's events for its
+// enter-the-battlefield event.
+func permanentEnteredThisTurn(g *game.Game, permanentID id.ID) bool {
 	for _, event := range g.EventsThisTurn() {
-		if event.Kind == game.EventPermanentEnteredBattlefield && event.PermanentID == permanent.ObjectID {
+		if event.Kind == game.EventPermanentEnteredBattlefield && event.PermanentID == permanentID {
 			return true
 		}
 	}

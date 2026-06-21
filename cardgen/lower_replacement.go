@@ -547,7 +547,19 @@ func lowerCounterPlacementReplacement(
 		if !ok {
 			return unsupported("the executable source backend supports only controlled-permanent counter-doubling or additive replacement amounts")
 		}
-		if ability.Content.Conditions[0].Counter == compiler.ConditionCounterPlusOnePlusOne {
+		condition := ability.Content.Conditions[0]
+		plusOnePlusOne := condition.Counter == compiler.ConditionCounterPlusOnePlusOne
+		if len(condition.CounterRecipientTypesAny) > 0 {
+			recipientTypes, ok := lowerTriggerCardTypes(condition.CounterRecipientTypesAny)
+			if !ok {
+				return unsupported("the executable source backend does not support this counter-recipient card-type filter")
+			}
+			if plusOnePlusOne {
+				return game.ControlledPermanentTypesCounterKindPlacementReplacement(ability.Text, multiplier, addend, counter.PlusOnePlusOne, recipientTypes, game.TriggerControllerYou), true, nil
+			}
+			return game.ControlledPermanentTypesCounterPlacementReplacement(ability.Text, multiplier, addend, recipientTypes, game.TriggerControllerYou), true, nil
+		}
+		if plusOnePlusOne {
 			return game.ControlledPermanentCounterKindPlacementReplacement(ability.Text, multiplier, addend, counter.PlusOnePlusOne, game.TriggerControllerYou), true, nil
 		}
 		return game.ControlledPermanentCounterPlacementReplacement(ability.Text, multiplier, addend, game.TriggerControllerYou), true, nil

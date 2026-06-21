@@ -367,6 +367,15 @@ func hasOptionalResolvingEffect(effects []compiler.CompiledEffect) bool {
 	return false
 }
 
+func hasOptionalPaymentResolvingEffect(effects []compiler.CompiledEffect) bool {
+	for i := range effects {
+		if effects[i].Payment.Form == parser.EffectPaymentFormMayPayThenIfDo {
+			return true
+		}
+	}
+	return false
+}
+
 func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupported := func(detail string) (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(

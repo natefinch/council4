@@ -186,6 +186,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordActivatedLowering(&scavengeAbility, ability, syntax), true, nil
 	}
+	if unearthAbility, ok, diag := lowerUnearthAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordActivatedLowering(&unearthAbility, ability, syntax), true, nil
+	}
 	if outlastAbility, ok, diag := lowerOutlastAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -1566,4 +1572,37 @@ func lowerScavengeAbility(
 		)
 	}
 	return game.ScavengeActivatedAbility(slices.Clone(keyword.ManaCost)), true, nil
+}
+
+// lowerUnearthAbility lowers the Unearth keyword (CR 702.83) to its canonical
+// graveyard-activated ability: at sorcery speed the controller pays the unearth
+// cost to return this card from their graveyard to the battlefield with haste,
+// exiling it at the next end step. Only the exact keyword with a fixed mana cost
+// and no other rules text is supported; anything else fails closed.
+func lowerUnearthAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.ActivatedAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordUnearth {
+		return game.ActivatedAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterManaCost ||
+		len(keyword.ManaCost) == 0 ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Unearth ability",
+			"the executable source backend supports only exact Unearth with a mana cost",
+		)
+	}
+	return game.UnearthActivatedAbility(slices.Clone(keyword.ManaCost)), true, nil
 }

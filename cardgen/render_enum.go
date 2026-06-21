@@ -184,6 +184,8 @@ func renderAdditionalDynamicAmount(kind cost.AdditionalDynamicAmount) (string, e
 		return "cost.AdditionalDynamicCommanderColorIdentityCount", nil
 	case cost.AdditionalDynamicHandSize:
 		return "cost.AdditionalDynamicHandSize", nil
+	case cost.AdditionalDynamicLifeGainedThisTurn:
+		return "cost.AdditionalDynamicLifeGainedThisTurn", nil
 	default:
 		return "", fmt.Errorf("render: unsupported additional dynamic amount %d", kind)
 	}
@@ -536,6 +538,8 @@ func renderResolutionChoiceColorSource(source game.ResolutionChoiceColorSource) 
 		return "game.ResolutionChoiceColorSourceLinkedExileColors", nil
 	case game.ResolutionChoiceColorSourceControlledPermanentColors:
 		return "game.ResolutionChoiceColorSourceControlledPermanentColors", nil
+	case game.ResolutionChoiceColorSourceTriggerLandProduced:
+		return "game.ResolutionChoiceColorSourceTriggerLandProduced", nil
 	default:
 		return "", fmt.Errorf("render: unsupported resolution choice color source %d", source)
 	}

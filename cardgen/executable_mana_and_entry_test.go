@@ -873,8 +873,36 @@ func TestGenerateExecutableCardSourceAnyPlayerTapManaThatPlayer(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceTriggerLandProducedMana covers the Mirari's
+// Wake / Zendikar Resurgent mana-doubler: "Whenever you tap a land for mana, add
+// one mana of any type that land produced." It lowers to a tapped-for-mana
+// trigger whose mana mirrors the produced type via the dedicated color source.
+func TestGenerateExecutableCardSourceTriggerLandProducedMana(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Mirari's Wake",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "Creatures you control get +1/+1.\nWhenever you tap a land for mana, add one mana of any type that land produced.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"RequireTappedForMana: true",
+		"game.ResolutionChoiceColorSourceTriggerLandProduced",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("source missing %q:\n%s", want, source)
+		}
+	}
+}
+
 // TestGenerateExecutableCardSourceLandsProduceFailsClosed asserts the
-// lands-produce recognition does not over-match related "could produce" wordings
 // (basic-land, Gate, sacrificed-land, plural-quantity, non-land, and unscoped
 // "a player controls" variants), which must fail closed.
 func TestGenerateExecutableCardSourceLandsProduceFailsClosed(t *testing.T) {

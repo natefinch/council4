@@ -799,6 +799,10 @@ func TestParseCreateTokenMultiKeywordExactness(t *testing.T) {
 		{"Create a 4/4 white Angel creature token with flying, vigilance, and indestructible.", true},
 		// Single keyword stays exact (regression guard).
 		{"Create a 4/4 red Dragon creature token with flying.", true},
+		// Landwalk evasion keywords on a created token reconstruct exactly.
+		{"Create a 1/1 blue Squid creature token with islandwalk.", true},
+		{"Create two 2/2 black Horror creature tokens with swampwalk.", true},
+		{"Create a 3/3 green Beast creature token with forestwalk and trample.", true},
 		// A keyword the token model does not grant fails the whole rider closed.
 		{"Create a 3/3 green Beast creature token with trample and devour 2.", false},
 	}
@@ -2991,6 +2995,49 @@ func TestParseLandsProduceManaFailsClosed(t *testing.T) {
 					if effect.Mana.LandsProduce {
 						t.Fatalf("unmodeled body wrongly recognized as lands-produce: %q", text)
 					}
+				}
+			}
+		}
+	}
+}
+
+// TestParseTriggerLandProducedManaSyntax verifies the "add one mana of any type
+// that land produced" mana-doubler body (Mirari's Wake, Zendikar Resurgent)
+// parses to Mana.TriggerLandProducedType without setting the battlefield
+// lands-produce or any-color flags.
+func TestParseTriggerLandProducedManaSyntax(t *testing.T) {
+	t.Parallel()
+	document, _ := Parse("Whenever you tap a land for mana, add one mana of any type that land produced.", Context{})
+	var found bool
+	for _, ability := range document.Abilities {
+		for _, sentence := range ability.Sentences {
+			for _, effect := range sentence.Effects {
+				if !effect.Mana.TriggerLandProducedType {
+					continue
+				}
+				found = true
+				if effect.Mana.LandsProduce || effect.Mana.AnyColor || effect.Mana.CommanderIdentity {
+					t.Fatal("trigger-land-produced mana must not set LandsProduce, AnyColor, or CommanderIdentity")
+				}
+			}
+		}
+	}
+	if !found {
+		t.Fatal("expected Mana.TriggerLandProducedType for the mana-doubler body")
+	}
+}
+
+// TestParseTriggerLandProducedManaFailsClosed asserts the mana-doubler
+// recognition does not over-match the related battlefield "that a land you
+// control could produce" body, which must stay LandsProduce.
+func TestParseTriggerLandProducedManaFailsClosed(t *testing.T) {
+	t.Parallel()
+	document, _ := Parse("{T}: Add one mana of any type that a land you control could produce.", Context{})
+	for _, ability := range document.Abilities {
+		for _, sentence := range ability.Sentences {
+			for _, effect := range sentence.Effects {
+				if effect.Mana.TriggerLandProducedType {
+					t.Fatal("battlefield lands-produce body wrongly recognized as trigger-land-produced")
 				}
 			}
 		}

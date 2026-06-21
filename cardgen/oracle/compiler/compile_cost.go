@@ -97,6 +97,8 @@ func compilePayLifeDynamic(kind parser.PayLifeDynamicAmount) DynamicAmountKind {
 	switch kind {
 	case parser.PayLifeDynamicCommanderColorIdentityCount:
 		return DynamicAmountCommanderColorCount
+	case parser.PayLifeDynamicLifeGainedThisTurn:
+		return DynamicAmountLifeGainedThisTurn
 	default:
 		return DynamicAmountNone
 	}

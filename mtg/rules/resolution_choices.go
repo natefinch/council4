@@ -160,6 +160,8 @@ func resolutionChoiceMana(g *game.Game, obj *game.StackObject, playerID game.Pla
 		return fixedOrEntryChosenMana(obj, choice)
 	case game.ResolutionChoiceColorSourceLandsProduce:
 		return landsProduceMana(g, playerID, choice)
+	case game.ResolutionChoiceColorSourceTriggerLandProduced:
+		return triggerLandProducedMana(obj)
 	case game.ResolutionChoiceColorSourceLinkedExileColors:
 		return linkedExileColorsMana(g, obj, choice)
 	case game.ResolutionChoiceColorSourceControlledPermanentColors:
@@ -231,6 +233,25 @@ func landsProduceMana(g *game.Game, playerID game.PlayerID, choice *game.Resolut
 		manaColors = append(manaColors, mana.C)
 	}
 	return manaColors
+}
+
+// triggerLandProducedMana returns the distinct types of mana the land that fired
+// the resolving tapped-for-mana trigger produced on that tap, read from the
+// stack object's recorded triggering event. It models "add one mana of any type
+// that land produced." (Mirari's Wake): the candidate types are exactly the
+// colors the triggering tap added, in production order. An empty set (no
+// recorded production) leaves the trigger adding no mana (CR 605.1a).
+func triggerLandProducedMana(obj *game.StackObject) []mana.Color {
+	if obj == nil || !obj.HasTriggerEvent {
+		return nil
+	}
+	var colors []mana.Color
+	for _, c := range obj.TriggerEvent.ProducedManaColors {
+		if !slices.Contains(colors, c) {
+			colors = append(colors, c)
+		}
+	}
+	return colors
 }
 
 // linkedExileColorsMana returns, in WUBRG order, the colors of the card linked

@@ -1445,9 +1445,25 @@ func creatureTokenSpecBody(effect *EffectSyntax) (func(countWord, noun string) s
 	if !ok {
 		return nil, false
 	}
+	// A token's quoted granted ability ("... token with \"When this token dies,
+	// ...\"") is stripped from the clause text to a bare "with"; reconstruct that
+	// trailing word so the byte-exact comparison succeeds. The keyword rider and
+	// the granted-ability rider both occupy the "with" slot, so reject the
+	// combined "with <keyword> and \"...\"" shape pending dedicated support.
+	grantedPart := ""
+	if effect.TokenGrantedAbility != nil {
+		if len(effect.TokenKeywords) != 0 {
+			return nil, false
+		}
+		grantedPart = " with"
+	}
 	colorPart, ok := tokenColorPart(sel)
 	if !ok {
 		return nil, false
+	}
+	ptPart := fmt.Sprintf("%d/%d", effect.TokenPower, effect.TokenToughness)
+	if effect.TokenPTVariableX {
+		ptPart = "X/X"
 	}
 	subtypeWords := make([]string, 0, len(sel.SubtypesAny))
 	for _, sub := range sel.SubtypesAny {
@@ -1467,9 +1483,9 @@ func creatureTokenSpecBody(effect *EffectSyntax) (func(countWord, noun string) s
 		tappedPart = "tapped "
 	}
 	return func(countWord, noun string) string {
-		return fmt.Sprintf("%s %s%d/%d %s%s %s %s%s%s%s",
-			countWord, tappedPart, effect.TokenPower, effect.TokenToughness, colorPart,
-			subtypeJoin, typeWords, noun, keywordPart, namePart, tokenAttackClause(sel, noun))
+		return fmt.Sprintf("%s %s%s %s%s %s %s%s%s%s%s",
+			countWord, tappedPart, ptPart, colorPart,
+			subtypeJoin, typeWords, noun, keywordPart, grantedPart, namePart, tokenAttackClause(sel, noun))
 	}, true
 }
 
@@ -1538,7 +1554,7 @@ func tokenAttackClause(sel SelectionSyntax, noun string) string {
 
 func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 	targetRecipient, ok := exactCreateTokenRecipientContext(effect)
-	if !ok || !effect.TokenPTKnown || effect.Negated {
+	if !ok || (!effect.TokenPTKnown && !effect.TokenPTVariableX) || effect.Negated {
 		return false
 	}
 	specBody, ok := creatureTokenSpecBody(effect)
@@ -1576,6 +1592,9 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 			return false
 		}
 		countWord, noun := "a", "token"
+		if effect.TokenPTVariableX {
+			countWord = "an"
+		}
 		if effect.Amount.Value != 1 {
 			countWord, noun = effectAmountSourceText(effect), "tokens"
 		}
@@ -2135,13 +2154,17 @@ func joinKeywordWords(words []string) string {
 
 // tokenCreatureKeyword reports whether a keyword is a creature combat/evergreen
 // keyword that is safe to grant a synthesized creature token through its typed
-// static-ability body.
+// static-ability body. The landwalk evasion family (CR 702.14) is included: each
+// typed variant ("islandwalk", "swampwalk", ...) and the generic and nonbasic
+// forms carry a fixed typed static body the runtime already models.
 func tokenCreatureKeyword(k KeywordKind) bool {
 	switch k {
 	case KeywordChangeling, KeywordFlying, KeywordFirstStrike, KeywordDoubleStrike, KeywordDeathtouch,
 		KeywordHaste, KeywordHexproof, KeywordIndestructible, KeywordLifelink,
 		KeywordMenace, KeywordReach, KeywordTrample, KeywordVigilance,
-		KeywordDefender, KeywordShroud, KeywordWither, KeywordInfect, KeywordProwess:
+		KeywordDefender, KeywordShroud, KeywordWither, KeywordInfect, KeywordProwess,
+		KeywordLandwalk, KeywordPlainswalk, KeywordIslandwalk, KeywordSwampwalk,
+		KeywordMountainwalk, KeywordForestwalk, KeywordDesertwalk, KeywordNonbasicLandwalk:
 		return true
 	default:
 		return false

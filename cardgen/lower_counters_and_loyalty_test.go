@@ -7,6 +7,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -56,6 +57,45 @@ func TestLowerNamedCounterPlacement(t *testing.T) {
 				t.Fatalf("primitive = %+v", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
 			}
 		})
+	}
+}
+
+func TestLowerGroupCounterPlacementEnteredThisTurn(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Oran-Rief, the Vastwood",
+		Layout:     "normal",
+		TypeLine:   "Land",
+		OracleText: "This land enters tapped.\n{T}: Add {G}.\n{T}: Put a +1/+1 counter on each green creature that entered this turn.",
+	})
+	var add game.AddCounter
+	found := false
+	for _, ability := range face.ActivatedAbilities {
+		for _, instruction := range ability.Content.Modes[0].Sequence {
+			if placement, ok := instruction.Primitive.(game.AddCounter); ok {
+				add = placement
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatal("no AddCounter primitive lowered")
+	}
+	if add.CounterKind != counter.PlusOnePlusOne || add.Amount.Value() != 1 {
+		t.Fatalf("primitive = %+v, want one +1/+1 counter", add)
+	}
+	if !add.Group.Valid() {
+		t.Fatalf("counter placement missing battlefield group: %+v", add)
+	}
+	selection := add.Group.Selection()
+	if !selection.EnteredThisTurn {
+		t.Fatalf("group selection = %+v, want EnteredThisTurn", selection)
+	}
+	if len(selection.RequiredTypes) != 1 || selection.RequiredTypes[0] != types.Creature {
+		t.Fatalf("group required types = %+v, want creature", selection.RequiredTypes)
+	}
+	if len(selection.ColorsAny) != 1 || selection.ColorsAny[0] != color.Green {
+		t.Fatalf("group colors = %+v, want green", selection.ColorsAny)
 	}
 }
 

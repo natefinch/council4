@@ -905,7 +905,33 @@ func exactMassEffectSyntax(effect *EffectSyntax, prefix string) bool {
 		return false
 	}
 	phrase := text[len(prefix) : len(text)-1]
+	if base, ok := massChosenTypeBasePhrase(&effect.Selection, phrase); ok {
+		return exactMassGroupPhrase(base)
+	}
 	return exactMassGroupPhrase(phrase) || exactMassSubtypePhrase(&effect.Selection, phrase)
+}
+
+// massChosenTypeBasePhrase strips a trailing chosen-type qualifier ("of the
+// chosen type" / "that aren't of the chosen type") from a mass group phrase when
+// the selection records the matching chosen-type field, returning the base group
+// phrase to validate and true. The base ("creatures") is then checked by the
+// shared exactMassGroupPhrase, so "Destroy all creatures that aren't of the
+// chosen type." (Kindred Dominance) round-trips through the same machinery as the
+// bare mass group. It fails closed when neither chosen-type field is set or the
+// phrase lacks the expected suffix.
+func massChosenTypeBasePhrase(selection *SelectionSyntax, phrase string) (string, bool) {
+	switch {
+	case selection.SubtypeFromChosenTypeExcluded:
+		if base, ok := strings.CutSuffix(phrase, " that aren't of the chosen type"); ok {
+			return base, true
+		}
+	case selection.SubtypeFromChosenType:
+		if base, ok := strings.CutSuffix(phrase, " of the chosen type"); ok {
+			return base, true
+		}
+	default:
+	}
+	return "", false
 }
 
 // exactMassEachEffectSyntax recognizes the singular "each" mass form
@@ -1628,7 +1654,7 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 		selection.Colorless || selection.Multicolored ||
 		len(selection.Supertypes) > 1 ||
 		len(selection.ExcludedColors) != 0 ||
-		len(selection.RequiredTypesAny) > 1 ||
+		(len(selection.RequiredTypesAny) > 1 && !selection.ConjunctiveTypes) ||
 		len(selection.ColorsAny) > 1 ||
 		len(selection.SubtypesAny) > 1 ||
 		len(selection.ExcludedTypes) > 1 {
@@ -1643,10 +1669,22 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 	if !hasNoun && selection.Kind != SelectionUnknown {
 		return "", false
 	}
-	// The parser records a permanent noun both as the selection Kind and as a
-	// redundant single-element RequiredTypesAny. Accept only that redundant form
-	// (a union or a type inconsistent with the noun is not representable here).
-	if len(selection.RequiredTypesAny) == 1 {
+	// A conjunctive two-type group ("each artifact creature you control") renders
+	// the combined noun "artifact creature" the parser captured rather than the
+	// single Kind noun. The two card types live in RequiredTypesAny with the
+	// ConjunctiveTypes marker, so render the joined noun and skip the
+	// single-type redundancy check below.
+	if selection.ConjunctiveTypes {
+		conjunctiveNoun, ok := conjunctiveCreatureTargetNoun(selection)
+		if !ok {
+			return "", false
+		}
+		noun, hasNoun = conjunctiveNoun, true
+	} else if len(selection.RequiredTypesAny) == 1 {
+		// The parser records a permanent noun both as the selection Kind and as a
+		// redundant single-element RequiredTypesAny. Accept only that redundant
+		// form (a union or a type inconsistent with the noun is not
+		// representable here).
 		requiredNoun, ok := permanentCardTypeNoun(selection.RequiredTypesAny[0])
 		if !ok || !hasNoun || requiredNoun != noun {
 			return "", false
@@ -1731,6 +1769,9 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 			return "", false
 		}
 		words = append(words, "without", keywordWord)
+	}
+	if selection.EnteredThisTurn {
+		words = append(words, "that", "entered", "this", "turn")
 	}
 	return strings.Join(words, " "), true
 }

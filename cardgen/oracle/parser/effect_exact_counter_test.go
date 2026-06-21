@@ -104,6 +104,30 @@ func TestExactCounterPlacementControllerKeywordOrderingAccepts(t *testing.T) {
 	}
 }
 
+// TestExactCounterPlacementGroupConjunctiveTypeAccepts covers group recipients
+// whose noun conjoins two card types the permanent must carry at once ("each
+// artifact creature you control") — Steel Overseer. The conjunctive marker keeps
+// the two-word type a single all-of filter rather than an any-of union.
+func TestExactCounterPlacementGroupConjunctiveTypeAccepts(t *testing.T) {
+	t.Parallel()
+	accepted := []string{
+		"Put a +1/+1 counter on each artifact creature you control.",
+		"Put a +1/+1 counter on each enchantment creature you control.",
+	}
+	for _, source := range accepted {
+		if !counterPlacementExact(t, source) {
+			t.Errorf("counterPlacementExact(%q) = false, want true", source)
+		}
+		effect := counterPlacementEffect(t, source)
+		if !effect.Selection.ConjunctiveTypes {
+			t.Errorf("Selection.ConjunctiveTypes(%q) = false, want true", source)
+		}
+		if len(effect.Selection.RequiredTypesAny) != 2 {
+			t.Errorf("Selection.RequiredTypesAny(%q) = %v, want two types", source, effect.Selection.RequiredTypesAny)
+		}
+	}
+}
+
 // TestExactCounterPlacementGroupControllerKeywordOrderingAccepts covers group
 // recipients whose controller clause precedes a keyword qualifier ("each
 // creature you control with flying"), the dominant Oracle ordering.
@@ -117,6 +141,35 @@ func TestExactCounterPlacementGroupControllerKeywordOrderingAccepts(t *testing.T
 	for _, source := range accepted {
 		if !counterPlacementExact(t, source) {
 			t.Errorf("counterPlacementExact(%q) = false, want true", source)
+		}
+	}
+}
+
+// TestExactCounterPlacementGroupEnteredThisTurnAccepts covers the "that entered
+// this turn" temporal group filter (Oran-Rief, the Vastwood; Raucous
+// Entertainer), asserting the recipient round-trips byte-exactly and the parser
+// records the EnteredThisTurn flag on the recipient selection.
+func TestExactCounterPlacementGroupEnteredThisTurnAccepts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source     string
+		controller SelectionController
+	}{
+		{"Put a +1/+1 counter on each green creature that entered this turn.", SelectionControllerAny},
+		{"Put a +1/+1 counter on each creature you control that entered this turn.", SelectionControllerYou},
+		{"Put a +1/+1 counter on each creature that entered this turn.", SelectionControllerAny},
+	}
+	for _, test := range tests {
+		if !counterPlacementExact(t, test.source) {
+			t.Errorf("counterPlacementExact(%q) = false, want true", test.source)
+			continue
+		}
+		effect := counterPlacementEffect(t, test.source)
+		if !effect.Selection.EnteredThisTurn {
+			t.Errorf("Parse(%q) selection.EnteredThisTurn = false, want true", test.source)
+		}
+		if effect.Selection.Controller != test.controller {
+			t.Errorf("Parse(%q) selection.Controller = %v, want %v", test.source, effect.Selection.Controller, test.controller)
 		}
 	}
 }

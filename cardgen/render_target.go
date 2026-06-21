@@ -487,6 +487,9 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 	if selection.TokenOnly {
 		fields = append(fields, "TokenOnly: true,")
 	}
+	if selection.EnteredThisTurn {
+		fields = append(fields, "EnteredThisTurn: true,")
+	}
 
 	for i := range fields {
 		fields[i] = strings.TrimSuffix(fields[i], ",")
@@ -542,6 +545,8 @@ func appendSubtypeChoiceField(fields []string, choice game.SubtypeChoiceSource) 
 		return append(fields, "SubtypeChoice: game.SubtypeChoiceSourceEntry,"), nil
 	case game.SubtypeChoiceResolution:
 		return append(fields, "SubtypeChoice: game.SubtypeChoiceResolution,"), nil
+	case game.SubtypeChoiceResolutionExcluded:
+		return append(fields, "SubtypeChoice: game.SubtypeChoiceResolutionExcluded,"), nil
 	default:
 		return nil, fmt.Errorf("render: unsupported subtype choice source %d", choice)
 	}

@@ -65,9 +65,21 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 	}
 	var recipient opt.V[game.PlayerReference]
 	var targets []game.TargetSpec
+	var counterObject game.ObjectReference
+	sourceCounterAmount := effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount
 	switch {
 	case controllerRecipient:
-		if len(ctx.content.References) != 0 {
+		if sourceCounterAmount {
+			if len(ctx.content.References) != 1 {
+				return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+			}
+			object, ok := lowerObjectReference(ctx.content.References[0],
+				referenceLoweringContext{AllowSource: true, AllowEvent: true})
+			if !ok {
+				return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+			}
+			counterObject = object
+		} else if len(ctx.content.References) != 0 {
 			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 		}
 	case referencedRecipient:
@@ -102,9 +114,18 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
-	amount, ok := createTokenAmount(ctx, &effect)
+	amount, ok := createTokenAmount(ctx, &effect, counterObject)
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	var dynamicPower, dynamicToughness opt.V[game.Quantity]
+	if effect.TokenPTVariableX {
+		quantity, ok := tokenPTDynamicQuantity(effect.TokenPTDynamic)
+		if !ok {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		dynamicPower = opt.Val(quantity)
+		dynamicToughness = opt.Val(quantity)
 	}
 	return game.Mode{
 		Targets: targets,
@@ -115,9 +136,23 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 				Recipient:      recipient,
 				EntryTapped:    effect.Selector.Tapped,
 				EntryAttacking: effect.Selector.Attacking,
+				Power:          dynamicPower,
+				Toughness:      dynamicToughness,
 			},
 		}},
 	}.Ability(), nil
+}
+
+// tokenPTDynamicQuantity maps a variable "X/X" token's bound dynamic-amount kind
+// onto a runtime quantity the create handler evaluates once at creation. It
+// fails closed for kinds with no token-sizing representation.
+func tokenPTDynamicQuantity(kind parser.EffectDynamicAmountKind) (game.Quantity, bool) {
+	switch kind {
+	case parser.EffectDynamicAmountLifeGainedThisTurn:
+		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountLifeGainedThisTurn}), true
+	default:
+		return game.Quantity{}, false
+	}
 }
 
 // lowerCreateNamedTokenChoiceSpell lowers an N-way (N >= 2) choice among
@@ -139,7 +174,7 @@ func lowerCreateNamedTokenChoiceSpell(ctx contentCtx, effect *compiler.CompiledE
 		effect.TokenPTKnown {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
-	amount, ok := createTokenAmount(ctx, effect)
+	amount, ok := createTokenAmount(ctx, effect, game.ObjectReference{})
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
@@ -185,8 +220,11 @@ func createTokenDurationOK(duration compiler.DurationKind) bool {
 // fixed literal lowers to that count; the spell's variable X lowers to the
 // runtime X amount; and every recognized rules-derived count ("for each <X>",
 // "equal to <X>", "where X is <X>") lowers through the shared dynamic-amount
-// lowerer. Source-power counts and any unrepresented dynamic kind fail closed.
-func createTokenAmount(ctx contentCtx, effect *compiler.CompiledEffect) (game.Quantity, bool) {
+// lowerer. A "the number of <kind> counters on it" count reads the source
+// permanent's counters (last-known information once it has died), as for
+// Chasm Skulker's death-triggered Squid tokens. Source-power counts and any
+// unrepresented dynamic kind fail closed.
+func createTokenAmount(ctx contentCtx, effect *compiler.CompiledEffect, counterObject game.ObjectReference) (game.Quantity, bool) {
 	switch {
 	case effect.Amount.Known:
 		if effect.Amount.Value < 1 {
@@ -205,7 +243,11 @@ func createTokenAmount(ctx contentCtx, effect *compiler.CompiledEffect) (game.Qu
 		if effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower {
 			return game.Quantity{}, false
 		}
-		dynamic, ok := lowerDynamicAmount(effect.Amount, game.ObjectReference{})
+		object := game.ObjectReference{}
+		if effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount {
+			object = counterObject
+		}
+		dynamic, ok := lowerDynamicAmount(effect.Amount, object)
 		if !ok {
 			return game.Quantity{}, false
 		}
@@ -244,7 +286,7 @@ func lowerCreateCopyTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Dia
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
-	amount, ok := createTokenAmount(ctx, &effect)
+	amount, ok := createTokenAmount(ctx, &effect, game.ObjectReference{})
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
@@ -294,7 +336,7 @@ func lowerCreateCopyTokenReferenceSpell(ctx contentCtx) (game.AbilityContent, *s
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
-	amount, ok := createTokenAmount(ctx, &effect)
+	amount, ok := createTokenAmount(ctx, &effect, game.ObjectReference{})
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
@@ -334,7 +376,7 @@ func lowerCreateCopyTokenAttachedSpell(ctx contentCtx) (game.AbilityContent, *sh
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
-	amount, ok := createTokenAmount(ctx, &effect)
+	amount, ok := createTokenAmount(ctx, &effect, game.ObjectReference{})
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
@@ -477,7 +519,7 @@ func tokenCopyAuxiliaryReferencesOK(references []compiler.CompiledReference) boo
 // Oracle name when one is printed ("... token named <Name>"); otherwise it is
 // the joined subtypes, matching paper tokens.
 func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect, extraKeywords []parser.KeywordKind) (*game.CardDef, bool) {
-	if !effect.TokenPTKnown {
+	if !effect.TokenPTKnown && !effect.TokenPTVariableX {
 		return nil, false
 	}
 	subtypes := effect.Selector.SubtypesAny()
@@ -502,13 +544,18 @@ func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect, extraKeywords [
 	}
 	def := &game.CardDef{
 		CardFace: game.CardFace{
-			Name:      name,
-			Colors:    slices.Clone(colors),
-			Types:     cardTypes,
-			Subtypes:  slices.Clone(subtypes),
-			Power:     opt.Val(game.PT{Value: effect.TokenPower}),
-			Toughness: opt.Val(game.PT{Value: effect.TokenToughness}),
+			Name:     name,
+			Colors:   slices.Clone(colors),
+			Types:    cardTypes,
+			Subtypes: slices.Clone(subtypes),
 		},
+	}
+	// A fixed-power/toughness token carries its printed power and toughness on
+	// the definition. A variable "X/X" token leaves them unset here; the create
+	// instruction sizes the token from a dynamic amount at creation time.
+	if effect.TokenPTKnown {
+		def.Power = opt.Val(game.PT{Value: effect.TokenPower})
+		def.Toughness = opt.Val(game.PT{Value: effect.TokenToughness})
 	}
 	keywords := make([]parser.KeywordKind, 0, 1+len(extraKeywords))
 	if effect.Selector.Keyword != parser.KeywordUnknown {
@@ -522,7 +569,75 @@ func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect, extraKeywords [
 		}
 		def.StaticAbilities = append(def.StaticAbilities, static.Body)
 	}
+	if effect.TokenGrantedAbility != nil {
+		if !attachTokenGrantedAbility(def, effect.TokenGrantedAbility) {
+			return nil, false
+		}
+	}
 	return def, true
+}
+
+// attachTokenGrantedAbility compiles and lowers the quoted ability a created
+// token enters with ("... token with \"When this token dies, you gain 1
+// life.\""), appending the resulting triggered, activated, or mana ability to
+// the token definition. It mirrors lowerStaticGrantedQuotedAbility's recursive
+// compile + lower of an already-parsed quoted body, and fails closed when the
+// inner document does not compile to exactly one such lowered ability.
+func attachTokenGrantedAbility(def *game.CardDef, granted *parser.StaticGrantedAbilitySyntax) bool {
+	innerDocument, innerDiags := granted.Inner()
+	if len(innerDiags) != 0 {
+		return false
+	}
+	innerComp, compilerDiags := compiler.Compile(innerDocument, compiler.Context{})
+	if len(compilerDiags) != 0 ||
+		len(innerComp.Abilities) != 1 ||
+		len(innerComp.Syntax.Abilities) != 1 {
+		return false
+	}
+	lowered, diagnostic := lowerExecutableAbility("", false, nil, innerComp.Abilities[0], &innerComp.Syntax.Abilities[0])
+	if diagnostic != nil {
+		return false
+	}
+	switch {
+	case lowered.triggeredAbility.Exists:
+		if abilityContentCreatesToken(lowered.triggeredAbility.Val.Content) {
+			return false
+		}
+		def.TriggeredAbilities = append(def.TriggeredAbilities, lowered.triggeredAbility.Val)
+		return true
+	case lowered.activatedAbility.Exists:
+		if abilityContentCreatesToken(lowered.activatedAbility.Val.Content) {
+			return false
+		}
+		def.ActivatedAbilities = append(def.ActivatedAbilities, lowered.activatedAbility.Val)
+		return true
+	case lowered.manaAbility.Exists:
+		if abilityContentCreatesToken(lowered.manaAbility.Val.Content) {
+			return false
+		}
+		def.ManaAbilities = append(def.ManaAbilities, lowered.manaAbility.Val)
+		return true
+	default:
+		return false
+	}
+}
+
+// abilityContentCreatesToken reports whether a lowered ability body creates a
+// token. A token's granted ability that itself creates a token would require the
+// renderer to emit a second, nested token definition from within a token
+// definition (Wolf's Quarry's Boar creating a Food token; the Fish/Whale/Kraken
+// chain). The token-definition emitter does not synthesize those nested defs, so
+// such granted abilities fail closed here rather than producing a token def that
+// references an unemitted variable.
+func abilityContentCreatesToken(content game.AbilityContent) bool {
+	for i := range content.Modes {
+		for j := range content.Modes[i].Sequence {
+			if _, ok := content.Modes[i].Sequence[j].Primitive.(game.CreateToken); ok {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // creatureTokenCardTypes returns the card types for a synthesized creature

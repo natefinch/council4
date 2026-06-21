@@ -88,6 +88,7 @@ const (
 	Soulshift
 	Landwalk
 	Dredge
+	Unearth
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -888,6 +889,44 @@ func ScavengeActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 			}},
 		}.Ability(),
 		KeywordAbilities: []KeywordAbility{ScavengeKeyword{Cost: append(cost.Mana(nil), manaCost...)}},
+	}
+}
+
+// UnearthActivatedAbility builds the canonical graveyard-activated ability for
+// the Unearth keyword (CR 702.83): while this card is in its owner's graveyard,
+// "{cost}: Return this card from your graveyard to the battlefield. It gains
+// haste. Exile it at the beginning of the next end step or if it would leave the
+// battlefield. Unearth only as a sorcery." The ability returns the source card
+// to the battlefield under its controller, grants it haste while it remains
+// there, and schedules a delayed end-step trigger that exiles it.
+func UnearthActivatedAbility(manaCost cost.Mana) ActivatedAbility {
+	return ActivatedAbility{
+		Text:           "Unearth " + manaCost.String(),
+		ManaCost:       opt.Val(append(cost.Mana(nil), manaCost...)),
+		ZoneOfFunction: zone.Graveyard,
+		Timing:         SorceryOnly,
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: PutOnBattlefield{
+					Source:    CardBattlefieldSource(CardReference{Kind: CardReferenceSource}),
+					Recipient: opt.Val(ControllerReference()),
+					ContinuousEffects: []ContinuousEffect{{
+						Layer:          LayerAbility,
+						AffectedSource: true,
+						AddKeywords:    []Keyword{Haste},
+					}},
+				},
+			},
+			{
+				Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
+					Timing: DelayedAtBeginningOfNextEndStep,
+					Content: Mode{Sequence: []Instruction{{
+						Primitive: Exile{Object: SourceCardPermanentReference()},
+					}}}.Ability(),
+				}},
+			},
+		}}.Ability(),
+		KeywordAbilities: []KeywordAbility{UnearthKeyword{Cost: append(cost.Mana(nil), manaCost...)}},
 	}
 }
 

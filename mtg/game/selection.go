@@ -35,6 +35,14 @@ const (
 	// "of that type" restriction of "Choose a creature type. ... of that type."
 	// spells (Distant Melody). A missing or non-subtype choice matches nothing.
 	SubtypeChoiceResolution
+
+	// SubtypeChoiceResolutionExcluded requires the matched permanent to NOT share
+	// the creature subtype published under SpellChosenTypeChoiceKey by an earlier
+	// Choose instruction in the same resolution, the "aren't of the chosen type"
+	// restriction of "Choose a creature type. Destroy all creatures that aren't of
+	// the chosen type." spells (Kindred Dominance). A missing or non-subtype choice
+	// matches nothing, failing closed like its positive sibling.
+	SubtypeChoiceResolutionExcluded
 )
 
 // SubtypeChoiceWithoutEntry returns choice with the source-entry variant cleared
@@ -143,6 +151,12 @@ type Selection struct {
 
 	// RequiredCounter names the counter kind required when MatchCounter is set.
 	RequiredCounter counter.Kind
+
+	// EnteredThisTurn requires the matched permanent to have entered the
+	// battlefield this turn ("each green creature that entered this turn"). A
+	// non-battlefield subject never matches. Placed at the end of the struct so
+	// the bool joins no existing cluster's documented packing.
+	EnteredThisTurn bool
 }
 
 // Empty reports whether the Selection carries no active predicate and therefore
@@ -172,6 +186,7 @@ func (s Selection) Empty() bool {
 		!s.Toughness.Exists &&
 		!s.MatchCounter &&
 		!s.MatchAnyCounter &&
+		!s.EnteredThisTurn &&
 		!s.ExcludeSource &&
 		!s.NonToken &&
 		!s.TokenOnly
