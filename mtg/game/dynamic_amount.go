@@ -123,6 +123,13 @@ const (
 	// creature type with it"). Added last so existing kinds keep their wire
 	// values.
 	DynamicAmountSharedCreatureTypeCountInGroup
+	// DynamicAmountSourceCardPower is the power of the resolving ability's source
+	// card, read from the card instance in whatever zone it occupies (CR 702.94).
+	// It backs Scavenge, whose exile-from-graveyard cost moves the source card to
+	// exile before the ability resolves, so the count reads the card's printed
+	// power directly rather than a battlefield permanent. Added last so existing
+	// kinds keep their wire values.
+	DynamicAmountSourceCardPower
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

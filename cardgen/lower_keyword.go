@@ -162,6 +162,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordActivatedLowering(&cyclingAbility, ability, syntax), true, nil
 	}
+	if scavengeAbility, ok, diag := lowerScavengeAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordActivatedLowering(&scavengeAbility, ability, syntax), true, nil
+	}
 	if outlastAbility, ok, diag := lowerOutlastAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -1339,4 +1345,32 @@ func fixedKeywordManaCost(keyword compiler.CompiledKeyword) (cost.Mana, bool) {
 		}
 	}
 	return slices.Clone(keyword.ManaCost), true
+}
+
+func lowerScavengeAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.ActivatedAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordScavenge {
+		return game.ActivatedAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterManaCost ||
+		len(keyword.ManaCost) == 0 ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Scavenge ability",
+			"the executable source backend supports only exact Scavenge with a mana cost",
+		)
+	}
+	return game.ScavengeActivatedAbility(slices.Clone(keyword.ManaCost)), true, nil
 }

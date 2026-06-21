@@ -81,6 +81,7 @@ const (
 	Fabricate
 	Flanking
 	Outlast
+	Scavenge
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -797,6 +798,42 @@ func EmbalmActivatedBody(manaCost cost.Mana, creatureSubtypes ...types.Sub) Acti
 		}}}.Ability(),
 
 		KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: Embalm}},
+	}
+}
+
+// ScavengeActivatedAbility builds the canonical graveyard-activated ability for
+// the Scavenge keyword (CR 702.94): exile this card from your graveyard at
+// sorcery speed to put a number of +1/+1 counters equal to this card's power on
+// target creature.
+func ScavengeActivatedAbility(manaCost cost.Mana) ActivatedAbility {
+	return ActivatedAbility{
+		Text:           "Scavenge " + manaCost.String(),
+		ManaCost:       opt.Val(append(cost.Mana(nil), manaCost...)),
+		ZoneOfFunction: zone.Graveyard,
+		Timing:         SorceryOnly,
+		AdditionalCosts: []cost.Additional{{
+			Kind: cost.AdditionalExileSource,
+			Text: "Exile this card from your graveyard",
+		}},
+		Content: Mode{
+			Targets: []TargetSpec{{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Constraint: "target creature",
+				Allow:      TargetAllowPermanent,
+				Predicate:  TargetPredicate{PermanentTypes: []types.Card{types.Creature}},
+			}},
+			Sequence: []Instruction{{
+				Primitive: AddCounter{
+					Amount: Dynamic(DynamicAmount{
+						Kind: DynamicAmountSourceCardPower,
+					}),
+					Object:      TargetPermanentReference(0),
+					CounterKind: counter.PlusOnePlusOne,
+				},
+			}},
+		}.Ability(),
+		KeywordAbilities: []KeywordAbility{ScavengeKeyword{Cost: append(cost.Mana(nil), manaCost...)}},
 	}
 }
 
