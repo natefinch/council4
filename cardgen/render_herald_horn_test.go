@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -80,6 +81,21 @@ func TestRenderCostModifierChosenSubtype(t *testing.T) {
 	}
 	if !strings.Contains(rendered, "ChosenSubtypeFromEntryChoice: true") {
 		t.Fatalf("rendered CostModifier missing chosen-subtype provenance:\n%s", rendered)
+	}
+	assertParsesAsGoExpr(t, rendered)
+}
+
+func TestRenderCostModifierColorDisjunction(t *testing.T) {
+	rendered, err := (Renderer{}).renderCostModifier(newRenderCtx(), game.CostModifier{
+		Kind:             game.CostModifierSpell,
+		GenericReduction: 1,
+		MatchColors:      []color.Color{color.Red, color.Green},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(rendered, "MatchColors: []color.Color{color.Red, color.Green}") {
+		t.Fatalf("rendered CostModifier missing color disjunction:\n%s", rendered)
 	}
 	assertParsesAsGoExpr(t, rendered)
 }
