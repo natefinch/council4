@@ -1332,6 +1332,7 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 		token := tokens[end]
 		if token.Kind == shared.Comma || token.Kind == shared.Period || token.Kind == shared.Semicolon ||
 			targetDestinationStartsAt(tokens, end) ||
+			moveCounterDestinationStartsAt(tokens, end) ||
 			equalWord(token, "unless") ||
 			(equalWord(token, "equal") && end+1 < len(tokens) && equalWord(tokens[end+1], "to")) ||
 			(equalWord(token, "and") && end+2 < len(tokens) && equalWord(tokens[end+1], "you") && effectWordKind(tokens[end+2]) != EffectUnknown) ||
@@ -1511,6 +1512,34 @@ func targetDestinationStartsAt(tokens []shared.Token, index int) bool {
 		{"on", "the", "top", "of", "its", "owner's", "library"},
 		{"on", "bottom", "of", "its", "owner's", "library"},
 		{"on", "the", "bottom", "of", "its", "owner's", "library"},
+	} {
+		if _, ok := cutTokenPrefix(tokens[index:], phrase...); ok {
+			return true
+		}
+	}
+	return false
+}
+
+// moveCounterDestinationStartsAt reports whether a counter-move destination
+// target phrase ("onto target ...", "onto a second target ...", "onto another
+// target ...", "onto other target ...") begins at index. Source-target scanning
+// stops before it so the first target ("Move a counter from target permanent you
+// control ...") does not swallow the second, "onto"-introduced destination
+// target; the two targets are then parsed independently and lowering emits a
+// single MoveCounters reading the source target and placing onto the
+// destination. The "onto the battlefield" zone destination is handled by
+// targetDestinationStartsAt and is not a target, so it is excluded here.
+func moveCounterDestinationStartsAt(tokens []shared.Token, index int) bool {
+	if index < 0 || index > len(tokens) {
+		return false
+	}
+	for _, phrase := range [][]string{
+		{"onto", "target"},
+		{"onto", "targets"},
+		{"onto", "a", "target"},
+		{"onto", "a", "second", "target"},
+		{"onto", "another", "target"},
+		{"onto", "other", "target"},
 	} {
 		if _, ok := cutTokenPrefix(tokens[index:], phrase...); ok {
 			return true

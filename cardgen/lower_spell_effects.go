@@ -795,6 +795,9 @@ func lowerMoveCountersSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 	if effect.MoveCountersDistribute {
 		return lowerMoveCountersDistributeSpell(ctx)
 	}
+	if effect.MoveCountersFromTarget {
+		return lowerMoveCountersFromTargetSpell(ctx)
+	}
 	if !effect.Exact ||
 		effect.Negated ||
 		effect.Context != parser.EffectContextController ||
@@ -872,6 +875,67 @@ func lowerMoveCountersDistributeSpell(ctx contentCtx) (game.AbilityContent, *sha
 		Distribute:  true,
 	}
 	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: move,
+		}},
+	}.Ability(), nil
+}
+
+// lowerMoveCountersFromTargetSpell lowers the two-target counter-move form ("Move
+// a counter from target permanent you control onto a second target permanent." —
+// Nesting Grounds, "Move a +1/+1 counter from target creature onto a second
+// target creature." — Daghatar, "Move all counters from target creature onto
+// another target creature." — Fate Transfer) into a single MoveCounters
+// instruction that reads counters from the first target (CounterSourceTarget)
+// and places them on the second target. The kind-agnostic "all counters" form
+// moves every counter regardless of kind; the named-kind form moves one counter
+// of the recognized kind; the "a counter" form moves one counter of a kind the
+// controller chooses. It fails closed for any non-controller or negated effect,
+// a wrong target count, a non-permanent target, a non-placeable named kind, and
+// any conditional or modal content.
+func lowerMoveCountersFromTargetSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		len(ctx.content.Targets) != 2 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	sourceTarget, ok := permanentTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	destTarget, ok := permanentTargetSpec(ctx.content.Targets[1])
+	if !ok {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	move := game.MoveCounters{
+		Object: game.TargetPermanentReference(1),
+		Source: game.CounterSourceSpec{
+			Kind:   game.CounterSourceTarget,
+			Object: game.TargetPermanentReference(0),
+		},
+	}
+	switch {
+	case effect.MoveCountersAll:
+		move.AllKinds = true
+	case effect.MoveCountersAnyKind:
+		move.Amount = game.Fixed(1)
+		move.ChooseKind = true
+	default:
+		if !effect.CounterKindKnown ||
+			!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
+			effect.CounterKind.PlayerOnly() {
+			return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+		}
+		move.Amount = game.Fixed(1)
+		move.CounterKind = effect.CounterKind
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{sourceTarget, destTarget},
 		Sequence: []game.Instruction{{
 			Primitive: move,
 		}},

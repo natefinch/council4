@@ -884,6 +884,10 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	effect.SearchSplit = parseSearchSplitPut(effect)
 	effect.GraveyardZoneExile = parseGraveyardZoneExile(effect)
 	effect.Additional = drawAdditionalCardsQualifier(effect)
+	effect.MoveCountersFromTarget = effect.Kind == EffectMoveCounters &&
+		!effect.MoveCountersDistribute && len(effect.Targets) == 2
+	effect.MoveCountersAnyKind = effect.Kind == EffectMoveCounters &&
+		!effect.MoveCountersDistribute && !effect.MoveCountersAll && !effect.CounterKnown
 	effect.Exact = exactEffectSyntax(effect)
 	if recognizeTargetOpponentHandMana(effect) {
 		effect.Exact = true

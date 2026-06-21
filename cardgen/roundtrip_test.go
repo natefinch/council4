@@ -42,6 +42,12 @@ var roundTripCards = []*ScryfallCard{
 		TypeLine:   "Land",
 		OracleText: "When this land enters, exile target player's graveyard.",
 	},
+	{
+		Name:       "RT Nesting Grounds",
+		Layout:     "normal",
+		TypeLine:   "Land",
+		OracleText: "{T}: Add {C}.\n{1}, {T}: Move a counter from target permanent you control onto a second target permanent. Activate only as a sorcery.",
+	},
 }
 
 // writeRoundTripPackage generates source for roundTripCards into a fresh package

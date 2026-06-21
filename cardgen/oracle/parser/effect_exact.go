@@ -2521,6 +2521,9 @@ func exactMoveCountersEffectSyntax(effect *EffectSyntax) bool {
 	if effect.MoveCountersDistribute {
 		return exactMoveCountersDistributeEffectSyntax(effect)
 	}
+	if effect.MoveCountersFromTarget {
+		return exactMoveCountersFromTargetEffectSyntax(effect)
+	}
 	if len(effect.Targets) != 1 ||
 		!effect.Targets[0].Exact ||
 		effect.Targets[0].Cardinality.Max != 1 {
@@ -2546,6 +2549,67 @@ func exactMoveCountersEffectSyntax(effect *EffectSyntax) bool {
 		fmt.Sprintf("Move %s %s counter from %s onto %s.",
 			effectAmountSourceText(effect), effect.CounterKind.String(), source, dest),
 	)
+}
+
+// exactMoveCountersFromTargetEffectSyntax recognizes the two-target counter-move
+// form, where the counters are read from a first chosen target permanent and
+// placed onto a second chosen target permanent ("Move a counter from target
+// permanent you control onto a second target permanent." — Nesting Grounds,
+// "Move a +1/+1 counter from target creature onto a second target creature." —
+// Daghatar, "Move all counters from target creature onto another target
+// creature." — Fate Transfer). The source target is the first exact single
+// permanent target and the destination is the second; both selections must be
+// exactly representable. The moved counter is one named-kind counter, the
+// kind-agnostic "all counters" form, or one counter of a kind the controller
+// chooses ("a counter"). It reconstructs the full clause from typed pieces and
+// accepts only an exact round-trip, with the destination's "a second" determiner
+// admitted alongside the bare and "another"/"other" determiners, so any
+// unrepresentable wording (a relational "with the same controller" destination,
+// a fixed count other than one) keeps the effect inexact.
+func exactMoveCountersFromTargetEffectSyntax(effect *EffectSyntax) bool {
+	single := TargetCardinalitySyntax{Min: 1, Max: 1}
+	if len(effect.Targets) != 2 ||
+		!effect.Targets[0].Exact || effect.Targets[0].Cardinality != single ||
+		!effect.Targets[1].Exact || effect.Targets[1].Cardinality != single {
+		return false
+	}
+	source, ok := exactPermanentTargetText(effect.Targets[0].Selection)
+	if !ok {
+		return false
+	}
+	dest, ok := exactPermanentTargetText(effect.Targets[1].Selection)
+	if !ok {
+		return false
+	}
+	var kindPhrase string
+	switch {
+	case effect.MoveCountersAll:
+		kindPhrase = "all counters"
+	case effect.CounterKnown:
+		if !effect.Amount.Known || effect.Amount.Value != 1 {
+			return false
+		}
+		kindPhrase = fmt.Sprintf("%s %s counter",
+			effectAmountSourceText(effect), effect.CounterKind.String())
+	default:
+		if effect.Amount.Known && effect.Amount.Value != 1 {
+			return false
+		}
+		kindPhrase = fmt.Sprintf("%s counter", effectAmountSourceText(effect))
+	}
+	destForms := []string{dest}
+	destSelection := effect.Targets[1].Selection
+	if !destSelection.Another && !destSelection.Other {
+		destForms = append(destForms, "a second "+dest)
+	}
+	text := exactEffectClauseText(effect)
+	for _, destForm := range destForms {
+		if strings.EqualFold(text,
+			fmt.Sprintf("Move %s from %s onto %s.", kindPhrase, source, destForm)) {
+			return true
+		}
+	}
+	return false
 }
 
 // exactMoveCountersDistributeEffectSyntax recognizes the "move any number of

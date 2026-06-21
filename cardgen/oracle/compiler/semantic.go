@@ -1270,7 +1270,18 @@ type CompiledEffect struct {
 	// rather than moving them onto a single target. It is false for the
 	// single-target move forms.
 	MoveCountersDistribute bool
-	FromZone               zone.Type
+	// MoveCountersFromTarget carries the parser's two-target counter-move form
+	// (counters read from a first chosen target permanent and placed onto a
+	// second chosen target permanent) through to lowering, which emits a
+	// MoveCounters reading the source target. It is false for the self-source
+	// single-target move and the distributed group form.
+	MoveCountersFromTarget bool
+	// MoveCountersAnyKind carries the parser's kind-unspecified single counter
+	// move ("Move a counter ..."), where the controller moves one counter of any
+	// kind present on the source. It is false for a named-kind move and the
+	// kind-agnostic "all counters" move.
+	MoveCountersAnyKind bool
+	FromZone            zone.Type
 	// GraveyardZoneExile carries the parser's recognized whole-graveyard exile
 	// owner relation ("Exile target player's graveyard.") through to lowering,
 	// which builds the target-player + graveyard-group MoveCard. It is

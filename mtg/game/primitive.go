@@ -272,6 +272,12 @@ type MoveCounters struct {
 	// heavily value-passed MoveCounters past the by-value size budget.
 	Group      *GroupReference
 	Distribute bool
+	// ChooseKind moves one counter of a single kind the controller chooses among
+	// the kinds present on the source ("Move a counter from target permanent you
+	// control onto a second target permanent."). Amount counters of the chosen
+	// kind move; CounterKind and AllKinds are ignored. It is false for a
+	// named-kind move and the kind-agnostic AllKinds move.
+	ChooseKind bool
 }
 
 // ApplyContinuous applies continuous effects to a target (or globally).
