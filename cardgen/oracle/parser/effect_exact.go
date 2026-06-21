@@ -90,7 +90,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactModifyPTEffectSyntax(effect)
 	case EffectPut:
 		return exactCounterPlacementEffectSyntax(effect) || exactGraveyardPutEffectSyntax(effect) ||
-			exactDigPutEffectSyntax(effect) || exactHandLibraryPutEffectSyntax(effect)
+			exactDigPutEffectSyntax(effect) || exactHandLibraryPutEffectSyntax(effect) ||
+			exactPutThoseCountersEffectSyntax(effect)
 	case EffectProliferate:
 		return exactStandaloneActionEffectSyntax(effect, "Proliferate")
 	case EffectRegenerate:
@@ -2612,6 +2613,58 @@ func exactMoveCountersEffectSyntax(effect *EffectSyntax) bool {
 		fmt.Sprintf("Move %s %s counter from %s onto %s.",
 			effectAmountSourceText(effect), effect.CounterKind.String(), source, dest),
 	)
+}
+
+// exactPutThoseCountersEffectSyntax recognizes the counter-salvage form "put
+// those counters on <destination>", where "those counters" names the counters a
+// triggering permanent had as it left a zone ("Whenever a creature you control
+// leaves the battlefield, if it had counters on it, put those counters on target
+// creature you control."). The destination is either a single/optional exact
+// target permanent or the source permanent itself ("this <object>" or the card's
+// own name). The clause is reconstructed and matched byte-exact so any
+// unrepresentable destination keeps the wording unsupported.
+func exactPutThoseCountersEffectSyntax(effect *EffectSyntax) bool {
+	if !effect.MoveThoseCounters {
+		return false
+	}
+	text := exactEffectClauseText(effect)
+	if len(effect.Targets) == 1 {
+		if !effect.Targets[0].Exact || effect.Targets[0].Cardinality.Max != 1 {
+			return false
+		}
+		return strings.EqualFold(
+			text,
+			fmt.Sprintf("Put those counters on %s.", effect.Targets[0].Text),
+		)
+	}
+	if len(effect.Targets) != 0 {
+		return false
+	}
+	dest, ok := putThoseCountersSelfText(effect.References)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(text, fmt.Sprintf("Put those counters on %s.", dest))
+}
+
+// putThoseCountersSelfText returns the rendered text of a self destination for
+// the counter-salvage form when the references carry exactly one source
+// self-reference ("this <object>" or the card's own name) alongside the
+// salvage's "it"/"those" back-references. It fails closed when no self
+// reference, or more than one, is present.
+func putThoseCountersSelfText(references []Reference) (string, bool) {
+	text := ""
+	count := 0
+	for _, reference := range references {
+		if reference.Kind == ReferenceThisObject || reference.Kind == ReferenceSelfName {
+			text = joinedEffectText(reference.Tokens)
+			count++
+		}
+	}
+	if count != 1 {
+		return "", false
+	}
+	return text, true
 }
 
 // exactMoveCountersFromTargetEffectSyntax recognizes the two-target counter-move

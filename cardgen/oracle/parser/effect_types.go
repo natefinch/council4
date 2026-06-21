@@ -1054,6 +1054,14 @@ type EffectSyntax struct {
 	// from this creature onto other creatures."). It is false for the
 	// single-target move forms.
 	MoveCountersDistribute bool `json:",omitempty"`
+	// MoveThoseCounters reports the counter-salvage form of an EffectPut effect,
+	// "put those counters on <destination>", where "those counters" back-refers
+	// to the counters a triggering permanent had as it left a zone ("Whenever a
+	// creature you control leaves the battlefield, if it had counters on it, put
+	// those counters on target creature you control."). The counters are read
+	// from the triggering event permanent's last-known information and placed on
+	// the destination (a single/optional target permanent or the source itself).
+	MoveThoseCounters bool `json:",omitempty"`
 	// MoveCountersFromTarget reports the two-target counter-move form, where the
 	// counters are read from a first chosen target permanent and placed onto a
 	// second chosen target permanent ("Move a counter from target permanent you

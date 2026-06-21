@@ -834,6 +834,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			CounterRecipientAttached:  counterRecipientAttached(kind, counterKnown, clause),
 			MoveCountersAll:           kind == EffectMoveCounters && moveAllCountersClause(clause),
 			MoveCountersDistribute:    kind == EffectMoveCounters && moveCountersDistributeClause(clause),
+			MoveThoseCounters:         kind == EffectPut && moveThoseCountersClause(clause),
 			FromZone:                  firstZone(atoms, span, ZoneRoleFrom),
 			ToZone:                    toZone,
 			Destination:               parseEffectDestination(ownership),
@@ -3927,4 +3928,13 @@ func moveAllCountersClause(clause []shared.Token) bool {
 // keep MoveCountersDistribute false.
 func moveCountersDistributeClause(clause []shared.Token) bool {
 	return effectHasTokenWords(clause, "any", "number", "of")
+}
+
+// moveThoseCountersClause reports the counter-salvage form "put those counters
+// on <destination>", where "those counters" names the counters a triggering
+// permanent had as it left a zone. It anchors on the literal "those counters"
+// run so an ordinary counter placement ("put a +1/+1 counter on ...") keeps
+// MoveThoseCounters false.
+func moveThoseCountersClause(clause []shared.Token) bool {
+	return effectHasTokenWords(clause, "those", "counters")
 }

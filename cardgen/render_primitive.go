@@ -481,6 +481,8 @@ func (r Renderer) renderCounterSourceSpec(source game.CounterSourceSpec) (string
 	switch source.Kind {
 	case game.CounterSourceSelf:
 		return "game.CounterSourceSpec{Kind: game.CounterSourceSelf}", nil
+	case game.CounterSourceEventPermanent:
+		return "game.CounterSourceSpec{Kind: game.CounterSourceEventPermanent}", nil
 	case game.CounterSourceTarget:
 		object, err := r.renderObjectReference(source.Object)
 		if err != nil {

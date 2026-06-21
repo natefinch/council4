@@ -672,6 +672,9 @@ type ConditionSelection struct {
 	DamageRecipientOpponent   bool
 	DamageNoncombatOnly       bool
 	DamageSourceAnyController bool
+	// AnyCounter requires the matched permanent to carry at least one counter of
+	// any kind ("if this permanent has counters on it").
+	AnyCounter bool
 }
 
 // CompiledCondition is a closed, source-spanned semantic condition.
@@ -1277,6 +1280,11 @@ type CompiledEffect struct {
 	// rather than moving them onto a single target. It is false for the
 	// single-target move forms.
 	MoveCountersDistribute bool
+	// MoveThoseCounters carries the parser's counter-salvage form "put those
+	// counters on <destination>" through to lowering, which reads the counters
+	// the triggering event permanent had (its last-known information) and places
+	// them on the destination. It is set only on EffectPut effects.
+	MoveThoseCounters bool
 	// MoveCountersFromTarget carries the parser's two-target counter-move form
 	// (counters read from a first chosen target permanent and placed onto a
 	// second chosen target permanent) through to lowering, which emits a

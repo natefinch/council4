@@ -75,6 +75,12 @@ type Selection struct {
 	// +1/+1 counter.
 	MatchCounter bool
 
+	// MatchAnyCounter, when true, requires the matched permanent to carry at
+	// least one counter of any kind ("if this permanent has counters on it").
+	// Unlike MatchCounter it is kind-agnostic. A non-battlefield subject never
+	// matches. Placed beside MatchCounter to pack into the bool cluster.
+	MatchAnyCounter bool
+
 	// SubtypeFromSourceEntryChoice, when true, requires the matched permanent to
 	// share the creature subtype the predicate's source permanent chose as it
 	// entered (its EntryChoices[EntryTypeChoiceKey]), the "of the chosen type"
@@ -130,6 +136,7 @@ func (s Selection) Empty() bool {
 		!s.Power.Exists &&
 		!s.Toughness.Exists &&
 		!s.MatchCounter &&
+		!s.MatchAnyCounter &&
 		!s.ExcludeSource &&
 		!s.NonToken &&
 		!s.TokenOnly
