@@ -1048,6 +1048,8 @@ func dynamicCostReductionKindSupported(kind DynamicAmountKind) bool {
 		DynamicAmountGreatestPowerInGroup,
 		DynamicAmountGreatestToughnessInGroup,
 		DynamicAmountGreatestManaValueInGroup,
+		DynamicAmountTotalPowerInGroup,
+		DynamicAmountTotalToughnessInGroup,
 		DynamicAmountControllerLife,
 		DynamicAmountControllerHandSize,
 		DynamicAmountControllerGraveyardSize,

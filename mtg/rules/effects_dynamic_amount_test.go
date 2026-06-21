@@ -169,6 +169,18 @@ func TestDynamicAmountGreatestCharacteristicInGroup(t *testing.T) {
 	}); got != 4 {
 		t.Fatalf("greatest mana value among your creatures = %d, want 4", got)
 	}
+	if got := dynamicAmountValue(g, obj, game.Player1, game.DynamicAmount{
+		Kind:  game.DynamicAmountTotalPowerInGroup,
+		Group: yourCreatures,
+	}); got != 8 {
+		t.Fatalf("total power among your creatures = %d, want 8", got)
+	}
+	if got := dynamicAmountValue(g, obj, game.Player1, game.DynamicAmount{
+		Kind:  game.DynamicAmountTotalToughnessInGroup,
+		Group: yourCreatures,
+	}); got != 8 {
+		t.Fatalf("total toughness among your creatures = %d, want 8", got)
+	}
 	emptyGroup := game.BattlefieldGroup(game.Selection{
 		RequiredTypes: []types.Card{types.Artifact},
 		Controller:    game.ControllerYou,

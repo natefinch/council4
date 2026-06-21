@@ -77,6 +77,13 @@ func lowerDynamicAmount(amount compiler.CompiledAmount, object game.ObjectRefere
 		}
 		dynamic.Kind = greatestInGroupKind(amount.DynamicKind)
 		dynamic.Group = game.BattlefieldGroup(selection)
+	case compiler.DynamicAmountTotalPower, compiler.DynamicAmountTotalToughness:
+		selection, ok := dynamicAmountSelection(amount.Selector())
+		if !ok {
+			return game.DynamicAmount{}, false
+		}
+		dynamic.Kind = totalInGroupKind(amount.DynamicKind)
+		dynamic.Group = game.BattlefieldGroup(selection)
 	case compiler.DynamicAmountDevotion:
 		if len(amount.Colors) == 0 {
 			return game.DynamicAmount{}, false
@@ -101,6 +108,17 @@ func greatestInGroupKind(kind compiler.DynamicAmountKind) game.DynamicAmountKind
 		return game.DynamicAmountGreatestManaValueInGroup
 	default:
 		return game.DynamicAmountGreatestPowerInGroup
+	}
+}
+
+// totalInGroupKind maps a compiled total-characteristic amount kind to its
+// runtime "total <characteristic> across group" sibling.
+func totalInGroupKind(kind compiler.DynamicAmountKind) game.DynamicAmountKind {
+	switch kind {
+	case compiler.DynamicAmountTotalToughness:
+		return game.DynamicAmountTotalToughnessInGroup
+	default:
+		return game.DynamicAmountTotalPowerInGroup
 	}
 }
 

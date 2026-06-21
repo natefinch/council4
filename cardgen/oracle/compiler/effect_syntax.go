@@ -514,6 +514,10 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountGreatestToughness
 	case parser.EffectDynamicAmountGreatestManaValue:
 		return DynamicAmountGreatestManaValue
+	case parser.EffectDynamicAmountTotalPower:
+		return DynamicAmountTotalPower
+	case parser.EffectDynamicAmountTotalToughness:
+		return DynamicAmountTotalToughness
 	case parser.EffectDynamicAmountDevotion:
 		return DynamicAmountDevotion
 	case parser.EffectDynamicAmountGreatestDiscardedThisWay:

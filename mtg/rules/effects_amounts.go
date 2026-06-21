@@ -95,6 +95,8 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		amount = countPermanentsMatchingGroup(g, obj, controller, dynamic.Group)
 	case game.DynamicAmountGreatestPowerInGroup, game.DynamicAmountGreatestToughnessInGroup, game.DynamicAmountGreatestManaValueInGroup:
 		amount = greatestCharacteristicInGroup(g, obj, controller, dynamic.Group, dynamic.Kind)
+	case game.DynamicAmountTotalPowerInGroup, game.DynamicAmountTotalToughnessInGroup:
+		amount = totalCharacteristicInGroup(g, obj, controller, dynamic.Group, dynamic.Kind)
 	case game.DynamicAmountCountCardsInZone:
 		if dynamic.Player != nil && dynamic.Selection != nil {
 			amount = countCardsInZoneMatchingSelection(g, obj, controller, *dynamic.Player, dynamic.CardZone, *dynamic.Selection)
@@ -284,6 +286,41 @@ func greatestCharacteristicInGroup(g *game.Game, obj *game.StackObject, controll
 		}
 	}
 	return greatest
+}
+
+// totalGroupCharacteristic maps a total-characteristic dynamic amount kind to
+// the permanent characteristic summed across the group.
+func totalGroupCharacteristic(kind game.DynamicAmountKind) characteristic {
+	switch kind {
+	case game.DynamicAmountTotalToughnessInGroup:
+		return characteristicToughness
+	default:
+		return characteristicPower
+	}
+}
+
+// totalCharacteristicInGroup returns the sum of the characteristic named by kind
+// across the permanents of group, evaluated as the effect resolves (CR 608.2c).
+// An empty group yields zero, matching "the total power of <group>" amounts
+// (Ghalta, Primal Hunger's cost reduction) over an empty battlefield.
+func totalCharacteristicInGroup(g *game.Game, obj *game.StackObject, controller game.PlayerID, group game.GroupReference, kind game.DynamicAmountKind) int {
+	resolverObj := obj
+	if resolverObj == nil {
+		resolverObj = &game.StackObject{Controller: controller}
+	}
+	which := totalGroupCharacteristic(kind)
+	total := 0
+	for _, objectID := range newReferenceResolver(g, resolverObj).groupMembers(group) {
+		permanent, ok := permanentByObjectID(g, objectID)
+		if !ok {
+			continue
+		}
+		value, ok := permanentCharacteristicValue(g, permanent, which)
+		if ok {
+			total += value
+		}
+	}
+	return total
 }
 
 func permanentCharacteristicValue(g *game.Game, permanent *game.Permanent, which characteristic) (int, bool) {

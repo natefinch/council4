@@ -279,6 +279,13 @@ const (
 	// Exquisite Blood, Marauding Blight-Priest), reading the triggering event's
 	// life quantity.
 	EffectDynamicAmountTriggeringLifeChange EffectDynamicAmountKind = "EffectDynamicAmountTriggeringLifeChange"
+	// EffectDynamicAmountTotalPower is the sum of power across a battlefield
+	// group ("the total power of <group>"). The group is carried in the
+	// amount's Selection. It backs "where X is the total power of creatures you
+	// control" cost reductions (Ghalta, Primal Hunger) and the matching draw and
+	// damage amounts. EffectDynamicAmountTotalToughness is the toughness sibling.
+	EffectDynamicAmountTotalPower     EffectDynamicAmountKind = "EffectDynamicAmountTotalPower"
+	EffectDynamicAmountTotalToughness EffectDynamicAmountKind = "EffectDynamicAmountTotalToughness"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.

@@ -1547,6 +1547,14 @@ const (
 	// life"). It backs the life-drain mirror family (Sanguine Bond, Exquisite
 	// Blood). Added last so existing kinds keep their wire values.
 	DynamicAmountTriggeringLifeChange
+	// DynamicAmountTotalPower is the sum of power across the selector's
+	// battlefield group ("the total power of <group>"). It backs the dynamic
+	// "where X is the total power of creatures you control" cost reduction
+	// (Ghalta, Primal Hunger) and the matching draw and damage amounts.
+	// DynamicAmountTotalToughness is the toughness sibling. Added last so
+	// existing kinds keep their wire values.
+	DynamicAmountTotalPower
+	DynamicAmountTotalToughness
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.
