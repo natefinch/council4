@@ -601,6 +601,51 @@ func eternalizeFamilyCreatureSubtypes(subtypes []string) []types.Sub {
 	return result
 }
 
+// keywordOnlyContent reports whether an ability's content is a bare keyword
+// declaration carrying keywords but no effects, targets, conditions,
+// references, or modes. Such a paragraph is a static keyword ability even when
+// it compiles as a spell ability on an instant or sorcery.
+func keywordOnlyContent(content compiler.AbilityContent) bool {
+	return len(content.Keywords) > 0 &&
+		len(content.Effects) == 0 &&
+		len(content.Targets) == 0 &&
+		len(content.Conditions) == 0 &&
+		len(content.References) == 0 &&
+		len(content.Modes) == 0
+}
+
+// lowerStaticKeywordLowering lowers a keyword-only ability to its reusable
+// static keyword bodies, accumulating the keyword, ability-word, reminder, and
+// keyword-list separator source spans the ability consumes.
+func lowerStaticKeywordLowering(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (abilityLowering, *shared.Diagnostic) {
+	bodies, diagnostic := lowerKeywordAbility(ability, syntax)
+	if diagnostic != nil {
+		return abilityLowering{}, diagnostic
+	}
+	spans := make([]shared.Span, 0, len(ability.Content.Keywords)+len(syntax.Reminders))
+	if syntax.AbilityWord != nil && len(ability.Content.Keywords) > 0 {
+		spans = append(spans, shared.Span{
+			Start: ability.Span.Start,
+			End:   ability.Content.Keywords[0].Span.Start,
+		})
+	}
+	spans = appendKeywordSpans(spans, ability.Content.Keywords)
+	for _, reminder := range syntax.Reminders {
+		spans = append(spans, reminder.Span)
+	}
+	spans = appendKeywordListSemicolonSpans(spans, syntax.Tokens)
+	return abilityLowering{
+		staticAbilities: bodies,
+		consumed: semanticConsumption{
+			keywords: len(ability.Content.Keywords),
+		},
+		sourceSpans: spans,
+	}, nil
+}
+
 func lowerExecutableAbility(
 	cardName string,
 	saga bool,
@@ -613,35 +658,19 @@ func lowerExecutableAbility(
 	}
 	switch ability.Kind {
 	case compiler.AbilityStatic:
-		bodies, diagnostic := lowerKeywordAbility(ability, syntax)
-		if diagnostic != nil {
-			return abilityLowering{}, diagnostic
-		}
-
-		spans := make([]shared.Span, 0, len(ability.Content.Keywords)+len(syntax.Reminders))
-		if syntax.AbilityWord != nil && len(ability.Content.Keywords) > 0 {
-			spans = append(spans, shared.Span{
-				Start: ability.Span.Start,
-				End:   ability.Content.Keywords[0].Span.Start,
-			})
-		}
-		spans = appendKeywordSpans(spans, ability.Content.Keywords)
-		for _, reminder := range syntax.Reminders {
-			spans = append(spans, reminder.Span)
-		}
-		spans = appendKeywordListSemicolonSpans(spans, syntax.Tokens)
-		return abilityLowering{
-			staticAbilities: bodies,
-			consumed: semanticConsumption{
-				keywords: len(ability.Content.Keywords),
-			},
-			sourceSpans: spans,
-		}, nil
+		return lowerStaticKeywordLowering(ability, syntax)
 	case compiler.AbilityActivated:
 		return lowerActivatedAbilityKind(cardName, ability, syntax)
 	case compiler.AbilityLoyalty:
 		return lowerLoyaltyAbility(cardName, ability, syntax)
 	case compiler.AbilitySpell:
+		// A spell keyword on its own paragraph (e.g. Delve, Convoke, or Storm on
+		// an instant or sorcery) compiles as a keyword-only spell ability. It is
+		// a static keyword ability, not a resolving spell effect, so lower it
+		// through the same static keyword path the permanent keywords use.
+		if keywordOnlyContent(ability.Content) {
+			return lowerStaticKeywordLowering(ability, syntax)
+		}
 		body, bodySyntax, ok := spellBodyWithoutAbilityWord(ability, syntax)
 		if !ok {
 			return abilityLowering{}, executableDiagnostic(
