@@ -477,6 +477,9 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 	if subject, ok := parseDynamicGreatestCharacteristicSubject(tokens, start, atoms); ok {
 		return subject, true
 	}
+	if subject, ok := parseDynamicSharedCreatureTypeCountSubject(tokens, start, atoms); ok {
+		return subject, true
+	}
 	if subject, ok := parseDynamicTotalCharacteristicSubject(tokens, start, atoms); ok {
 		return subject, true
 	}
@@ -795,6 +798,52 @@ func parseDynamicGreatestCharacteristicSubject(tokens []shared.Token, start int,
 	return dynamicAmountSubject{
 		amount: EffectAmountSyntax{DynamicKind: kind, Selection: inner.amount.Selection},
 		end:    inner.end,
+	}, true
+}
+
+// parseDynamicSharedCreatureTypeCountSubject recognizes the "other creature
+// <scope> that shares [at least one | a] creature type with it" count subject
+// (Coat of Arms: "for each other creature on the battlefield that shares a
+// creature type with it"), the number of other creatures in a battlefield group
+// that share a creature type with the affected permanent. The scope after the
+// creature noun selects the group ("on the battlefield" for every creature, "you
+// control" for the controller's creatures); the recognized selection is carried
+// on the amount so the lowerer can rebuild the battlefield group. The "other"
+// qualifier is intentionally dropped from the selection — the affected permanent
+// is excluded at resolution, not by the group filter. It fails closed for any
+// other wording so unsupported phrasings stay rejected.
+func parseDynamicSharedCreatureTypeCountSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
+	if !effectWordsAt(tokens, start, "other", "creature") {
+		return dynamicAmountSubject{}, false
+	}
+	scopeEnd := start + 2
+	matched := false
+	for _, suffix := range [][]string{{"on", "the", "battlefield"}, {"you", "control"}} {
+		if effectWordsAt(tokens, scopeEnd, suffix...) {
+			scopeEnd += len(suffix)
+			matched = true
+			break
+		}
+	}
+	if !matched || !effectWordsAt(tokens, scopeEnd, "that", "shares") {
+		return dynamicAmountSubject{}, false
+	}
+	idx := scopeEnd + 2
+	switch {
+	case effectWordsAt(tokens, idx, "at", "least", "one"):
+		idx += 3
+	case effectWordsAt(tokens, idx, "a"):
+		idx++
+	default:
+	}
+	if !effectWordsAt(tokens, idx, "creature", "type", "with", "it") ||
+		!dynamicAmountBoundary(tokens, idx+4) {
+		return dynamicAmountSubject{}, false
+	}
+	selection := parseSelection(tokens[start+1:scopeEnd], atoms)
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountSharedCreatureTypeCount, Selection: &selection},
+		end:    idx + 4, count: true,
 	}, true
 }
 
