@@ -38,6 +38,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectDestroy:
 		return exactDirectTargetEffectSyntax(effect, "Destroy") ||
 			exactMassEffectSyntax(effect, "Destroy all ") ||
+			exactMassEachEffectSyntax(effect, "Destroy each ") ||
 			exactBackReferenceEffectSyntax(effect, "Destroy")
 	case EffectDig:
 		return exactDigLookEffectSyntax(effect)
@@ -1188,7 +1189,7 @@ func exactTemporaryKeywordList(text string) bool {
 	text = strings.ReplaceAll(text, " and ", ", ")
 	for keyword := range strings.SplitSeq(text, ", ") {
 		switch keyword {
-		case "deathtouch", "double strike", "first strike", "flying", "haste",
+		case "deathtouch", "double strike", "fear", "first strike", "flying", "haste",
 			"hexproof", "indestructible", "lifelink", "menace", "reach", "shadow", "shroud", "trample", "vigilance",
 			"protection from each color", "protection from everything",
 			"protection from monocolored", "protection from multicolored",
@@ -1697,6 +1698,92 @@ func exactCreateCopyTokenAttachedEffectSyntax(effect *EffectSyntax) bool {
 	}
 	effect.TokenCopyDropLegendary = dropLegendary
 	return true
+}
+
+// exactCreateCopyTokenForEachEffectSyntax reports whether the effect is a
+// per-each copy-token create whose copy source is each member of a controlled
+// battlefield group: "For each <permanent filter> you control, create a token
+// that's a copy of that permanent." (Second Harvest) or the "... a copy of it"
+// variant. The created token copies each iterated permanent in turn; the
+// trailing "that permanent"/"that token"/"it" reference names the per-iteration
+// member rather than a single fixed source. It returns the iterated group
+// selection, parsed from the pre-verb "For each <group>," prefix, when the shape
+// matches. It requires the controller recipient, a single (per-iteration) token,
+// no targets, and no fixed power/toughness.
+func exactCreateCopyTokenForEachEffectSyntax(effect *EffectSyntax, atoms Atoms) (*SelectionSyntax, bool) {
+	if effect.Kind != EffectCreate ||
+		effect.Context != EffectContextController ||
+		effect.TokenPTKnown ||
+		effect.Negated ||
+		!effect.Amount.Known || effect.Amount.Value != 1 ||
+		len(effect.Targets) != 0 {
+		return nil, false
+	}
+	verb := slices.IndexFunc(effect.Tokens, func(token shared.Token) bool {
+		return token.Span == effect.VerbSpan
+	})
+	if verb < 0 {
+		return nil, false
+	}
+	group, ok := parseForEachControlledGroup(effect.Tokens[:verb], atoms)
+	if !ok {
+		return nil, false
+	}
+	base, dropLegendary, ok := copyTokenExceptModifier(copyForEachClauseText(effect, verb))
+	if !ok || !copyForEachSourcePhrase(base) {
+		return nil, false
+	}
+	effect.TokenCopyDropLegendary = dropLegendary
+	return group, true
+}
+
+// parseForEachControlledGroup parses a leading "For each <permanent filter> you
+// control," iteration prefix into the controlled battlefield group it iterates.
+// It reuses parseDynamicAmountPrefix to recognize the "for each" form and
+// parseSelection to model the group's filter, requiring the trailing comma and a
+// "you control" controller scope so only controlled groups qualify.
+func parseForEachControlledGroup(pre []shared.Token, atoms Atoms) (*SelectionSyntax, bool) {
+	prefix, ok := parseDynamicAmountPrefix(pre, 0, atoms)
+	if !ok || prefix.form != EffectDynamicAmountFormForEach {
+		return nil, false
+	}
+	if len(pre) == 0 || pre[len(pre)-1].Kind != shared.Comma {
+		return nil, false
+	}
+	groupTokens := pre[prefix.start : len(pre)-1]
+	if len(groupTokens) == 0 {
+		return nil, false
+	}
+	selection := parseSelection(groupTokens, atoms)
+	if selection.Controller != SelectionControllerYou {
+		return nil, false
+	}
+	return &selection, true
+}
+
+// copyForEachClauseText reconstructs the post-prefix create clause ("Create a
+// token that's a copy of that permanent.") from the verb token onward, restoring
+// the trailing period the sentence split may have dropped.
+func copyForEachClauseText(effect *EffectSyntax, verb int) string {
+	text := joinedEffectText(effect.Tokens[verb:])
+	if len(effect.Tokens) > 0 && effect.Tokens[len(effect.Tokens)-1].Kind != shared.Period {
+		text += "."
+	}
+	return text
+}
+
+// copyForEachSourcePhrase reports whether base names a per-each copy source that
+// refers to the iterated group member ("that permanent", "that token", or the
+// pronoun "it").
+func copyForEachSourcePhrase(base string) bool {
+	switch {
+	case strings.EqualFold(base, "Create a token that's a copy of that permanent."),
+		strings.EqualFold(base, "Create a token that's a copy of that token."),
+		strings.EqualFold(base, "Create a token that's a copy of it."):
+		return true
+	default:
+		return false
+	}
 }
 
 // copyTokenExceptModifier splits a copy-token clause into its base "Create a

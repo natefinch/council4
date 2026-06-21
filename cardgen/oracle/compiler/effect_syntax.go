@@ -108,6 +108,16 @@ func compileColorsAmongSelector(syntax *parser.SelectionSyntax) *CompiledSelecto
 	return &selector
 }
 
+// compileTokenCopyForEachGroup compiles the controlled battlefield group a
+// per-each copy-token create iterates, returning the zero CompiledSelector when
+// the parser recorded no group (a non-per-each create).
+func compileTokenCopyForEachGroup(syntax *parser.SelectionSyntax) CompiledSelector {
+	if syntax == nil {
+		return CompiledSelector{}
+	}
+	return compileTypedSelection(*syntax)
+}
+
 func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 	selector := CompiledSelector{
 		Kind:                   compileSelectionKind(syntax.Kind),

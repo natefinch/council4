@@ -52,6 +52,14 @@ func BattlefieldGroupExcluding(selection Selection, exclude ObjectReference) Gro
 	return GroupReference{domain: GroupDomainBattlefield, selection: selection, exclude: opt.Val(exclude)}
 }
 
+// GroupRef returns a pointer to a copy of group for specs that hold a group
+// reference by pointer to stay within the by-value size budget, mirroring how
+// GroupDamageRecipient stores its group.
+func GroupRef(group GroupReference) *GroupReference {
+	g := group
+	return &g
+}
+
 // AttachedObjectGroup matches the single permanent that anchor is attached to.
 func AttachedObjectGroup(anchor ObjectReference) GroupReference {
 	return GroupReference{domain: GroupDomainAttachedObject, anchor: opt.Val(anchor)}
