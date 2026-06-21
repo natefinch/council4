@@ -1291,6 +1291,11 @@ type CompiledEffectMana struct {
 	// is the single color chosen as the ability resolves; its amount is the
 	// dynamic value. See parser.EffectManaSyntax.AnyOneColorDynamic.
 	AnyOneColorDynamic bool
+	// AnyColorCount mirrors the parser's "<N> mana of any one color" body
+	// (Gilded Lotus: "Add three mana of any one color."), N >= 2. It is set
+	// together with AnyColor; N mana of the single chosen color are produced. See
+	// parser.EffectManaSyntax.AnyColorCount.
+	AnyColorCount int
 }
 
 // CompiledEffectPayment is a typed resolution payment embedded in an effect.

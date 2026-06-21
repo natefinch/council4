@@ -413,6 +413,12 @@ type EffectManaSyntax struct {
 	// a generic dynamic amount (source power/toughness, devotion, a permanent
 	// count, and so on).
 	AnyOneColorDynamic bool `json:",omitempty"`
+	// AnyColorCount reports the body "<N> mana of any one color" (Gilded Lotus:
+	// "Add three mana of any one color."), N >= 2. The controller chooses a
+	// single color as the ability resolves and adds that many mana of the one
+	// chosen color. It is set together with AnyColor; the plain "one mana of any
+	// color" body leaves it zero (one mana of the chosen color).
+	AnyColorCount int `json:",omitempty"`
 }
 
 // ManaLandsProduceScope identifies which battlefield lands' producible colors
