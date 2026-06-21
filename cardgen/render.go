@@ -123,6 +123,38 @@ func renderPTValue(pt game.PT) string {
 	return fmt.Sprintf("game.PT{Value: %d}", pt.Value)
 }
 
+// renderDynamicValue renders a typed game.DynamicValue as a Go literal. It is
+// used for characteristic-defining power/toughness values ("equal to the number
+// of cards in your hand").
+func renderDynamicValue(value game.DynamicValue) string {
+	kind := dynamicValueKindLiteral(value.Kind)
+	if value.Value != 0 {
+		return fmt.Sprintf("game.DynamicValue{Kind: %s, Value: %d}", kind, value.Value)
+	}
+	return fmt.Sprintf("game.DynamicValue{Kind: %s}", kind)
+}
+
+func dynamicValueKindLiteral(kind game.DynamicValueKind) string {
+	switch kind {
+	case game.DynamicValueConstant:
+		return "game.DynamicValueConstant"
+	case game.DynamicValueControllerHandSize:
+		return "game.DynamicValueControllerHandSize"
+	case game.DynamicValueControllerGraveyardSize:
+		return "game.DynamicValueControllerGraveyardSize"
+	case game.DynamicValueControllerCreatureCount:
+		return "game.DynamicValueControllerCreatureCount"
+	case game.DynamicValueControllerLandCount:
+		return "game.DynamicValueControllerLandCount"
+	case game.DynamicValueControllerArtifactCount:
+		return "game.DynamicValueControllerArtifactCount"
+	case game.DynamicValueAllBattlefieldCreatureCount:
+		return "game.DynamicValueAllBattlefieldCreatureCount"
+	default:
+		return "game.DynamicValueNone"
+	}
+}
+
 // Renderer renders typed game ability values and complete CardDef values as
 // deterministic Go source. IdentifierSuffix disambiguates distinct cards that
 // share a printed name without changing CardDef.Name. A zero-value Renderer is
@@ -470,6 +502,16 @@ func (Renderer) writeFaceScalarFields(b *strings.Builder, ctx *renderCtx, face *
 	if face.Toughness.Exists {
 		ctx.need(importOpt)
 		_, _ = fmt.Fprintf(b, "%sToughness: opt.Val(%s),\n", indent, renderPTValue(face.Toughness.Val))
+	}
+	if face.DynamicPower.Exists {
+		ctx.need(importOpt)
+		ctx.need(importGame)
+		_, _ = fmt.Fprintf(b, "%sDynamicPower: opt.Val(%s),\n", indent, renderDynamicValue(face.DynamicPower.Val))
+	}
+	if face.DynamicToughness.Exists {
+		ctx.need(importOpt)
+		ctx.need(importGame)
+		_, _ = fmt.Fprintf(b, "%sDynamicToughness: opt.Val(%s),\n", indent, renderDynamicValue(face.DynamicToughness.Val))
 	}
 	if face.Loyalty.Exists {
 		ctx.need(importOpt)

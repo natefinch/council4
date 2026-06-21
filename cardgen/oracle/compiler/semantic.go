@@ -973,6 +973,8 @@ const (
 	EffectSpellsCantBeCountered
 	EffectEnterAsCopy
 	EffectPunisherLoseLife
+	EffectMassReanimationExchange
+	EffectRepeatProcess
 	EffectMoveCounters
 )
 
@@ -1304,10 +1306,16 @@ type CompiledEffect struct {
 	// TokenCopyOfForEach create iterates, copying each member in turn.
 	TokenCopyForEachGroup CompiledSelector
 	// PunisherSacrifice and PunisherDiscard mirror the parser flags for an
-	// EffectPunisherLoseLife effect, recording which alternatives the affected
-	// players may pay instead of losing life.
+	// EffectPunisherLoseLife effect ("... unless that player sacrifices a
+	// permanent of their choice or discards a card."): they record which
+	// alternatives the affected players may pay instead of losing life. Lowering
+	// reads them with the effect's Selector for the sacrifice filter.
 	PunisherSacrifice bool
 	PunisherDiscard   bool
+	// RepeatBody carries the sub-effect(s) of a "Repeat the following process X
+	// times. <body>" loop (EffectRepeatProcess). Lowering lowers it to a nested
+	// AbilityContent executed Amount times; it is nil for every other effect.
+	RepeatBody []CompiledEffect
 }
 
 // CompiledManaSpendRider is the typed semantic form of a mana-spend rider.

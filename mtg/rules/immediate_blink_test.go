@@ -125,3 +125,58 @@ func TestImmediateBlinkReturnsCreatureUnderYourControl(t *testing.T) {
 		t.Fatalf("returned permanent owner = %v, want Player2 (ownership preserved)", returned.Owner)
 	}
 }
+
+// selfBlinkInstructions builds the exile-then-return instruction pair the
+// cardgen immediate-blink lowerer emits for the self-blink "Exile this
+// creature, then return it to the battlefield under its owner's control." The
+// exile names the source permanent rather than a target.
+func selfBlinkInstructions() []game.Instruction {
+	return []game.Instruction{
+		{Primitive: game.Exile{Object: game.SourcePermanentReference(), ExileLinkedKey: "blink"}},
+		{
+			Primitive: game.PutOnBattlefield{Source: game.LinkedBattlefieldSource("blink")},
+			CardCondition: opt.Val(game.CardCondition{
+				Card:                 game.CardReference{Kind: game.CardReferenceLinked, LinkID: "blink"},
+				RequirePermanentCard: true,
+			}),
+		},
+	}
+}
+
+func TestImmediateSelfBlinkReturnsSourceUnderOwnersControl(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Flickering Spirit",
+		Types: []types.Card{types.Creature},
+	}})
+	obj := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackActivatedAbility,
+		SourceID:   source.ObjectID,
+		Controller: game.Player1,
+	}
+	log := TurnLog{}
+	instrs := selfBlinkInstructions()
+	for i := range instrs {
+		engine.resolveInstructionWithChoices(g, obj, &instrs[i], [game.NumPlayers]PlayerAgent{}, &log)
+	}
+	if _, ok := permanentByObjectID(g, source.ObjectID); ok {
+		t.Fatal("source creature object remained on battlefield after self-exile")
+	}
+	var returned *game.Permanent
+	for _, permanent := range g.Battlefield {
+		if permanent.CardInstanceID == source.CardInstanceID {
+			returned = permanent
+		}
+	}
+	if returned == nil {
+		t.Fatal("self-blinked creature card did not return to the battlefield")
+	}
+	if returned.ObjectID == source.ObjectID {
+		t.Fatal("returned permanent reused the original object identity")
+	}
+	if returned.Controller != game.Player1 || returned.Owner != game.Player1 {
+		t.Fatalf("returned permanent controller/owner = %v/%v, want Player1", returned.Controller, returned.Owner)
+	}
+}

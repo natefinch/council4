@@ -1110,8 +1110,12 @@ func lowerImmediateSingleEffectSpell(
 		return lowerAttachSpell(ctx)
 	case compiler.EffectWinGame:
 		return lowerWinGameSpell(ctx)
+	case compiler.EffectMassReanimationExchange:
+		return lowerMassReanimationExchangeSpell(ctx)
 	case compiler.EffectPunisherLoseLife:
 		return lowerPunisherLoseLifeSpell(ctx)
+	case compiler.EffectRepeatProcess:
+		return lowerRepeatProcessSpell(cardName, ctx, syntax)
 	case compiler.EffectPreventDamage:
 		return lowerPreventDamageSpell(ctx)
 	default:

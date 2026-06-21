@@ -790,6 +790,67 @@ func handleMassReturnFromGraveyard(r *effectResolver, prim game.MassReturnFromGr
 	}
 	return res
 }
+
+// handleMassReanimationExchange resolves "Each player exiles all <type> cards
+// from their graveyard, then sacrifices all <type> they control, then puts all
+// cards they exiled this way onto the battlefield." For every player it exiles
+// the matching graveyard cards first, then sacrifices the matching battlefield
+// permanents, then returns the just-exiled cards to the battlefield under their
+// owners' control. Exiling before sacrificing keeps the freshly sacrificed
+// permanents out of the returned set, realizing the "cards they exiled this way"
+// back-reference.
+func handleMassReanimationExchange(r *effectResolver, prim game.MassReanimationExchange) effectResolved {
+	res := effectResolved{accepted: true}
+	players := playersInAPNAPOrder(r.game, r.playerGroupMembers(game.AllPlayersReference()))
+	resolver := newReferenceResolver(r.game, r.obj)
+	type exiledCard struct {
+		cardID id.ID
+		owner  game.PlayerID
+	}
+	var exiled []exiledCard
+	for _, owner := range players {
+		player, ok := playerByID(r.game, owner)
+		if !ok {
+			continue
+		}
+		for _, cardID := range player.Graveyard.All() {
+			card, cardOK := r.game.GetCardInstance(cardID)
+			if !cardOK {
+				continue
+			}
+			if handCardMatchesSelection(r.game, card, prim.Selection, owner) {
+				exiled = append(exiled, exiledCard{cardID: cardID, owner: owner})
+			}
+		}
+	}
+	for _, candidate := range exiled {
+		moveCardBetweenZonesWithPlacement(r.game, candidate.owner, candidate.cardID, zone.Graveyard, zone.Exile, false)
+	}
+	var sacrificed []*game.Permanent
+	for _, permanent := range r.game.Battlefield {
+		if resolver.permanentMatchesGroupSelection(&prim.Selection, nil, permanent) {
+			sacrificed = append(sacrificed, permanent)
+		}
+	}
+	if len(sacrificed) > 0 {
+		sacrificePermanentsSimultaneously(r.game, sacrificed)
+	}
+	resolved := make([]resolvedBattlefieldCard, 0, len(exiled))
+	for _, candidate := range exiled {
+		card, cardOK := r.game.GetCardInstance(candidate.cardID)
+		if !cardOK {
+			continue
+		}
+		resolved = append(resolved, resolvedBattlefieldCard{
+			card:       card,
+			fromZone:   zone.Exile,
+			controller: candidate.owner,
+		})
+	}
+	res.succeeded = r.putResolvedCardsOnBattlefieldValue(resolved, nil, permanentCreationOptions{})
+	return res
+}
+
 func handleBounce(r *effectResolver, prim game.Bounce) effectResolved {
 	res := effectResolved{accepted: true}
 	if prim.ControlledChoice {
@@ -1143,6 +1204,20 @@ func (r *effectResolver) applySacrificeFallback(fallback game.SacrificeFallback,
 func playerHasCardsInHand(g *game.Game, playerID game.PlayerID) bool {
 	player, ok := playerByID(g, playerID)
 	return ok && player.Hand.Size() > 0
+}
+
+// handleRepeatProcess resolves a "Repeat the following process X times. <body>"
+// loop (Torment of Hailfire): it evaluates the repeat count and re-resolves the
+// body content that many times. The body is re-resolved from scratch on each
+// iteration so any per-player or random choices it makes recur independently.
+func handleRepeatProcess(r *effectResolver, prim game.RepeatProcess) effectResolved {
+	res := effectResolved{accepted: true}
+	times := r.quantity(prim.Times)
+	for range times {
+		r.engine.resolveAbilityContentWithChoices(r.game, r.obj, prim.Body, r.agents, r.log)
+		res.succeeded = true
+	}
+	return res
 }
 
 // handlePunisherEachLoseLife resolves the "punisher" family ("Each opponent

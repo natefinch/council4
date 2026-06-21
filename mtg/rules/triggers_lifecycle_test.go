@@ -302,6 +302,42 @@ func TestExaltedGrantedByContinuousEffectTriggers(t *testing.T) {
 	}
 }
 
+// TestExaltedStacksAcrossMultipleSources proves that each exalted instance
+// triggers independently (CR 702.83b): with two exalted sources in play, a sole
+// attacker gets +1/+1 from each, for +2/+2 total.
+func TestExaltedStacksAcrossMultipleSources(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	for range 2 {
+		addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Exalted Source",
+			Types:           []types.Card{types.Creature},
+			Power:           opt.Val(game.PT{Value: 0}),
+			Toughness:       opt.Val(game.PT{Value: 1}),
+			StaticAbilities: []game.StaticAbility{game.ExaltedStaticBody}},
+		})
+	}
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}}},
+	}
+	emitEvent(g, game.Event{
+		Kind:        game.EventAttackerDeclared,
+		Controller:  game.Player1,
+		PermanentID: attacker.ObjectID,
+	})
+
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("exalted triggers were not put on stack")
+	}
+	for g.Stack.Size() > 0 {
+		engine.resolveTopOfStack(g, &TurnLog{})
+	}
+
+	if got := effectivePower(g, attacker); got != 4 {
+		t.Fatalf("effective power = %d, want 4 after two exalted triggers", got)
+	}
+}
+
 func TestExaltedDoesNotTriggerForMultipleAttackers(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

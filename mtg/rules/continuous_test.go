@@ -407,6 +407,37 @@ func TestTypeAndPTContinuousEffectsAffectCombatAndSBAs(t *testing.T) {
 	}
 }
 
+func TestDynamicStarPowerToughnessTracksLandCount(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	star := game.PT{IsStar: true}
+	dynamic := game.DynamicValue{Kind: game.DynamicValueControllerLandCount}
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Multani",
+		Types:            []types.Card{types.Creature},
+		Power:            opt.Val(star),
+		Toughness:        opt.Val(star),
+		DynamicPower:     opt.Val(dynamic),
+		DynamicToughness: opt.Val(dynamic)},
+	})
+	for range 4 {
+		addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Forest",
+			Types: []types.Card{types.Land}}})
+	}
+
+	if got := effectivePower(g, creature); got != 4 {
+		t.Fatalf("effective power = %d, want land count 4", got)
+	}
+	toughness, ok := effectiveToughness(g, creature)
+	if !ok || toughness != 4 {
+		t.Fatalf("effective toughness = %d (ok=%v), want land count 4", toughness, ok)
+	}
+
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Mountain",
+		Types: []types.Card{types.Land}}})
+	if got := effectivePower(g, creature); got != 5 {
+		t.Fatalf("effective power after extra land = %d, want 5", got)
+	}
+}
+
 func TestDynamicStarPowerAffectsCombatDamage(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	star := game.PT{IsStar: true}

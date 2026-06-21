@@ -83,10 +83,12 @@ const (
 	PrimitiveMassReturnFromGraveyard
 	PrimitivePlayerWinsGame
 	PrimitivePunisherEachLoseLife
+	PrimitiveMassReanimationExchange
+	PrimitiveRepeatProcess
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitivePunisherEachLoseLife) + 1
+const primitiveKindCount = int(PrimitiveRepeatProcess) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -514,6 +516,21 @@ type MassReturnFromGraveyard struct {
 	ControlledByOwner bool
 }
 
+// MassReanimationExchange resolves the symmetric mass-reanimation exchange "Each
+// player exiles all <type> cards from their graveyard, then sacrifices all
+// <type> they control, then puts all cards they exiled this way onto the
+// battlefield." (Living Death, Living End, Scrap Mastery). For every player at
+// once it (1) exiles each graveyard card matching Selection, (2) sacrifices each
+// battlefield permanent matching Selection, then (3) returns the cards exiled in
+// step 1 to the battlefield under their owners' control. Exiling before
+// sacrificing keeps the freshly sacrificed permanents out of the returned set,
+// realizing the "cards they exiled this way" back-reference without tracking it
+// across separate effects. Selection carries only the card-type filter (creature
+// or artifact); it never narrows by controller.
+type MassReanimationExchange struct {
+	Selection Selection
+}
+
 // Bounce returns one referenced permanent or every permanent in a referenced
 // group to hand. When ControlledChoice is set, the resolving controller chooses
 // Amount permanents from among the permanents matched by Group (its candidate
@@ -632,6 +649,17 @@ type PunisherEachLoseLife struct {
 	AllowSacrifice     bool
 	SacrificeSelection Selection
 	AllowDiscard       bool
+}
+
+// RepeatProcess resolves Body a number of times equal to Times ("Repeat the
+// following process X times. <body>" — Torment of Hailfire), where X is the
+// resolving spell's chosen value of {X}. Body is a non-modal AbilityContent
+// holding the repeated sub-effect; it is re-resolved from scratch on each
+// iteration so any per-player or random choices recur independently. A Times of
+// zero or fewer resolves Body no times.
+type RepeatProcess struct {
+	Times Quantity
+	Body  AbilityContent
 }
 
 // Untap untaps one referenced permanent or permanents in a referenced group.
