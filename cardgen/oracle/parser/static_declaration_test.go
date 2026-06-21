@@ -1957,3 +1957,24 @@ func TestParseStaticEnterBattlefieldRestrictionMeaning(t *testing.T) {
 		})
 	}
 }
+
+func TestParseStaticLookAtTopCardAnyTimeMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t, "You may look at the top card of your library any time.", Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationPlayerRule {
+		t.Fatalf("kind = %v, want player rule", declaration.Kind)
+	}
+	if declaration.Subject.Kind != StaticDeclarationSubjectController {
+		t.Fatalf("subject = %#v, want controller", declaration.Subject)
+	}
+	if declaration.PlayerRule != StaticDeclarationPlayerRuleLookAtTopCardAnyTime {
+		t.Fatalf("player rule = %v, want look at top card any time", declaration.PlayerRule)
+	}
+	if declaration.Span == (shared.Span{}) || declaration.OperationSpan == (shared.Span{}) {
+		t.Fatalf("spans = declaration %#v operation %#v, want source spans", declaration.Span, declaration.OperationSpan)
+	}
+}

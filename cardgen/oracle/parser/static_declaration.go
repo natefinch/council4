@@ -108,6 +108,12 @@ const (
 	// The permission is self-scoped to the source card and may carry an optional
 	// "as long as <condition>" gate.
 	StaticDeclarationPlayerRuleCastThisFromGraveyard StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleCastThisFromGraveyard"
+	// StaticDeclarationPlayerRuleLookAtTopCardAnyTime lets the controller look at
+	// the top card of their library at any time ("You may look at the top card of
+	// your library any time.", Bolas's Citadel, Vizier of the Menagerie, Sphinx of
+	// Jwar Isle). It is a private-visibility static: only the controller may see
+	// the card.
+	StaticDeclarationPlayerRuleLookAtTopCardAnyTime StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleLookAtTopCardAnyTime"
 )
 
 // StaticDeclarationCardFilterKind identifies the closed card filter that a
@@ -1096,6 +1102,7 @@ var staticPlayerRuleParsers = []staticPlayerRuleParser{
 	parseStaticPlayLandsFromLibraryTopDeclaration,
 	parseStaticPlayWithTopCardRevealedDeclaration,
 	parseStaticCastSpellsFromLibraryTopDeclaration,
+	parseStaticLookAtTopCardAnyTimeDeclaration,
 }
 
 func parseStaticPlayerRuleDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
@@ -1338,6 +1345,28 @@ func parseStaticPlayWithTopCardRevealedDeclaration(tokens []shared.Token) (Stati
 			Span: tokens[6].Span,
 		},
 		PlayerRule: StaticDeclarationPlayerRulePlayWithTopCardRevealed,
+	}, true
+}
+
+// parseStaticLookAtTopCardAnyTimeDeclaration recognizes the controller-scoped
+// private-visibility static "You may look at the top card of your library any
+// time." (Bolas's Citadel, Vizier of the Menagerie, Sphinx of Jwar Isle).
+func parseStaticLookAtTopCardAnyTimeDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 13 || tokens[12].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "you", "may", "look", "at", "the", "top", "card", "of", "your", "library", "any", "time") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens[1:12]),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: tokens[0].Span,
+		},
+		PlayerRule: StaticDeclarationPlayerRuleLookAtTopCardAnyTime,
 	}, true
 }
 

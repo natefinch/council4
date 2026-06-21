@@ -866,6 +866,24 @@ func playerPlaysWithTopCardRevealed(g *game.Game, playerID game.PlayerID) bool {
 	return false
 }
 
+// playerCanLookAtTopCardAnyTime reports whether playerID may privately look at
+// the top card of their library at any time ("You may look at the top card of
+// your library any time.", Bolas's Citadel). It is a private-visibility static,
+// the look-at-your-own-card counterpart of playerPlaysWithTopCardRevealed.
+func playerCanLookAtTopCardAnyTime(g *game.Game, playerID game.PlayerID) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectLookAtTopCardAnyTime {
+			continue
+		}
+		if playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
+			return true
+		}
+	}
+	return false
+}
+
 func castableZonesForPlayer(g *game.Game, playerID game.PlayerID) []zone.Type {
 	zones := []zone.Type{zone.Hand}
 	if player, ok := playerByID(g, playerID); ok {

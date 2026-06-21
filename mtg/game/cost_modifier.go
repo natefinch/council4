@@ -218,6 +218,12 @@ const (
 	// PermanentTypes restricts every permanent card. EnterExcludeLandCards exempts
 	// land cards, expressing the "nonland permanent" forms.
 	RuleEffectCantEnterFromZones
+	// RuleEffectLookAtTopCardAnyTime lets the affected player look at the top card
+	// of their library at any time ("You may look at the top card of your library
+	// any time.", Bolas's Citadel, Vizier of the Menagerie, Sphinx of Jwar Isle).
+	// It is a private-visibility static (only the affected player sees the card)
+	// and grants no play or cast permission on its own.
+	RuleEffectLookAtTopCardAnyTime
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -252,7 +258,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectPlayWithTopCardRevealed,
 		RuleEffectCastSpellsFromZone,
 		RuleEffectCantCastFromZones,
-		RuleEffectCantEnterFromZones:
+		RuleEffectCantEnterFromZones,
+		RuleEffectLookAtTopCardAnyTime:
 		return true
 	default:
 		return false
