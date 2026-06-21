@@ -420,8 +420,8 @@ func TestLowerEnteredOrCastFromGraveyardEnterTriggers(t *testing.T) {
 		Power:      new("2"),
 		Toughness:  new("2"),
 	})
-	if trigger := self.TriggeredAbilities[0].Trigger; !trigger.InterveningIfEventPermanentEnteredOrCastFromGraveyard {
-		t.Fatalf("self trigger = %+v, want entered-or-cast-from-graveyard intervening-if", trigger)
+	if trigger := self.TriggeredAbilities[0].Trigger; !trigger.InterveningIfEventPermanentEnteredOrCastFromControllerGraveyard {
+		t.Fatalf("self trigger = %+v, want controller-graveyard intervening-if", trigger)
 	}
 	group := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Test Overseer",
@@ -432,7 +432,7 @@ func TestLowerEnteredOrCastFromGraveyardEnterTriggers(t *testing.T) {
 		Toughness:  new("2"),
 	})
 	if trigger := group.TriggeredAbilities[0].Trigger; !trigger.InterveningIfEventPermanentEnteredOrCastFromGraveyard {
-		t.Fatalf("group trigger = %+v, want entered-or-cast-from-graveyard intervening-if", trigger)
+		t.Fatalf("group trigger = %+v, want any-graveyard intervening-if", trigger)
 	}
 }
 

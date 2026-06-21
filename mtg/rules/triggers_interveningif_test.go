@@ -106,7 +106,7 @@ func TestWasCastInterveningIfCheckedWhenTriggeringAndResolving(t *testing.T) {
 
 func TestEnteredOrCastFromGraveyardInterveningIfChecksEnterEvent(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	trigger := game.TriggerCondition{InterveningIfEventPermanentEnteredOrCastFromGraveyard: true}
+	anyTrigger := game.TriggerCondition{InterveningIfEventPermanentEnteredOrCastFromGraveyard: true}
 	cases := []struct {
 		name  string
 		event *game.Event
@@ -117,6 +117,31 @@ func TestEnteredOrCastFromGraveyardInterveningIfChecksEnterEvent(t *testing.T) {
 		{"entered from exile", &game.Event{FromZone: zone.Exile, ToZone: zone.Battlefield}, false},
 		{"cast from hand", &game.Event{FromZone: zone.Stack, ToZone: zone.Battlefield, EnterWasCast: true, EnterCastFromZone: zone.Hand}, false},
 		{"cast-from-graveyard zone ignored when not cast", &game.Event{FromZone: zone.Stack, ToZone: zone.Battlefield, EnterCastFromZone: zone.Graveyard}, false},
+		{"opponent graveyard still counts for any-graveyard", &game.Event{FromZone: zone.Graveyard, ToZone: zone.Battlefield, Player: game.Player2}, true},
+		{"nil event", nil, false},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			if got := triggerInterveningIf(g, nil, game.Player1, &anyTrigger, test.event); got != test.want {
+				t.Fatalf("triggerInterveningIf() = %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestEnteredOrCastFromControllerGraveyardInterveningIfChecksOwnership(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	trigger := game.TriggerCondition{InterveningIfEventPermanentEnteredOrCastFromControllerGraveyard: true}
+	cases := []struct {
+		name  string
+		event *game.Event
+		want  bool
+	}{
+		{"reanimated from your graveyard", &game.Event{FromZone: zone.Graveyard, ToZone: zone.Battlefield, Player: game.Player1}, true},
+		{"reanimated from opponent graveyard", &game.Event{FromZone: zone.Graveyard, ToZone: zone.Battlefield, Player: game.Player2}, false},
+		{"you cast it from your graveyard", &game.Event{FromZone: zone.Stack, ToZone: zone.Battlefield, Player: game.Player1, EnterWasCast: true, EnterCastFromZone: zone.Graveyard, EnterHasCastController: true, EnterCastController: game.Player1}, true},
+		{"opponent cast it from your graveyard", &game.Event{FromZone: zone.Stack, ToZone: zone.Battlefield, Player: game.Player1, EnterWasCast: true, EnterCastFromZone: zone.Graveyard, EnterHasCastController: true, EnterCastController: game.Player2}, false},
+		{"cast from your hand", &game.Event{FromZone: zone.Stack, ToZone: zone.Battlefield, Player: game.Player1, EnterWasCast: true, EnterCastFromZone: zone.Hand, EnterHasCastController: true, EnterCastController: game.Player1}, false},
 		{"nil event", nil, false},
 	}
 	for _, test := range cases {
@@ -133,12 +158,13 @@ func TestEnteredOrCastFromGraveyardInterveningIfCheckedOnStack(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		engine := NewEngine(nil)
 		source := addSelfEnterInterveningTrigger(g, &game.TriggerCondition{
-			InterveningIfEventPermanentEnteredOrCastFromGraveyard: true,
+			InterveningIfEventPermanentEnteredOrCastFromControllerGraveyard: true,
 		})
 		emitEvent(g, game.Event{
 			Kind:        game.EventPermanentEnteredBattlefield,
 			CardID:      source.CardInstanceID,
 			PermanentID: source.ObjectID,
+			Player:      source.Owner,
 			FromZone:    zone.Graveyard,
 			ToZone:      zone.Battlefield,
 		})
@@ -151,12 +177,13 @@ func TestEnteredOrCastFromGraveyardInterveningIfCheckedOnStack(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		engine := NewEngine(nil)
 		source := addSelfEnterInterveningTrigger(g, &game.TriggerCondition{
-			InterveningIfEventPermanentEnteredOrCastFromGraveyard: true,
+			InterveningIfEventPermanentEnteredOrCastFromControllerGraveyard: true,
 		})
 		emitEvent(g, game.Event{
 			Kind:              game.EventPermanentEnteredBattlefield,
 			CardID:            source.CardInstanceID,
 			PermanentID:       source.ObjectID,
+			Player:            source.Owner,
 			FromZone:          zone.Stack,
 			ToZone:            zone.Battlefield,
 			EnterWasCast:      true,

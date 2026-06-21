@@ -412,6 +412,7 @@ const (
 	ConditionPredicateEventSubjectWasCast
 	ConditionPredicateEventSubjectWasCastByController
 	ConditionPredicateEventSubjectEnteredOrCastFromGraveyard
+	ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard
 	ConditionPredicateEventSubjectHadNoCounter
 	ConditionPredicatePriorInstructionNotAccepted
 	// ConditionPredicatePriorInstructionAccepted is satisfied when the prior

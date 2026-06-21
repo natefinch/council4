@@ -373,17 +373,19 @@ func TestParseEnteredOrCastFromGraveyardCondition(t *testing.T) {
 	recognized := []struct {
 		name      string
 		condition string
+		predicate ConditionPredicateKind
 	}{
-		{"self full", "it entered from your graveyard or you cast it from your graveyard"},
-		{"self broad", "it entered or was cast from a graveyard"},
-		{"group", "they entered or were cast from a graveyard"},
+		{"controller full", "it entered from your graveyard or you cast it from your graveyard", ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard},
+		{"controller plural", "they entered from your graveyard or you cast them from your graveyard", ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard},
+		{"any singular", "it entered or was cast from a graveyard", ConditionPredicateEventSubjectEnteredOrCastFromGraveyard},
+		{"any plural", "they entered or were cast from a graveyard", ConditionPredicateEventSubjectEnteredOrCastFromGraveyard},
 	}
 	for _, test := range recognized {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			clause := parseSingleConditionClause(t, test.condition)
-			if clause.Predicate != ConditionPredicateEventSubjectEnteredOrCastFromGraveyard {
-				t.Fatalf("clause = %#v, want EnteredOrCastFromGraveyard", clause)
+			if clause.Predicate != test.predicate {
+				t.Fatalf("clause = %#v, want %s", clause, test.predicate)
 			}
 		})
 	}
@@ -406,8 +408,9 @@ func TestParseEnteredOrCastFromGraveyardCondition(t *testing.T) {
 				t.Fatalf("abilities = %#v", document.Abilities)
 			}
 			for _, clause := range document.Abilities[0].ConditionClauses {
-				if clause.Predicate == ConditionPredicateEventSubjectEnteredOrCastFromGraveyard {
-					t.Fatalf("condition %q unexpectedly matched EnteredOrCastFromGraveyard", test.condition)
+				if clause.Predicate == ConditionPredicateEventSubjectEnteredOrCastFromGraveyard ||
+					clause.Predicate == ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard {
+					t.Fatalf("condition %q unexpectedly matched a graveyard zone-change predicate", test.condition)
 				}
 			}
 		})

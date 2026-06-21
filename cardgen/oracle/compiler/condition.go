@@ -25,11 +25,44 @@ func recognizeCondition(
 	}
 }
 
+// simplePredicateMap holds the typed parser predicates that map one-to-one onto
+// a semantic predicate with no additional clause data. Keeping these out of the
+// large clause switch keeps that function's complexity manageable.
+var simplePredicateMap = map[parser.ConditionPredicateKind]ConditionPredicate{
+	parser.ConditionPredicateControllerHandEmpty:                              ConditionPredicateControllerHandEmpty,
+	parser.ConditionPredicateEventSubjectWasKicked:                            ConditionPredicateEventSubjectWasKicked,
+	parser.ConditionPredicateEventSubjectWasCast:                              ConditionPredicateEventSubjectWasCast,
+	parser.ConditionPredicateEventSubjectWasCastByController:                  ConditionPredicateEventSubjectWasCastByController,
+	parser.ConditionPredicateEventSubjectEnteredOrCastFromGraveyard:           ConditionPredicateEventSubjectEnteredOrCastFromGraveyard,
+	parser.ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard: ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard,
+	parser.ConditionPredicatePriorInstructionNotAccepted:                      ConditionPredicatePriorInstructionNotAccepted,
+	parser.ConditionPredicatePriorInstructionAccepted:                         ConditionPredicatePriorInstructionAccepted,
+	parser.ConditionPredicateEventPlayerDoesNotPay:                            ConditionPredicateEventPlayerDoesNotPay,
+	parser.ConditionPredicateControllerCounterPlacement:                       ConditionPredicateControllerCounterPlacement,
+	parser.ConditionPredicateTokenCreationUnderController:                     ConditionPredicateTokenCreationUnderController,
+	parser.ConditionPredicateTokenCreationAnyController:                       ConditionPredicateTokenCreationAnyController,
+	parser.ConditionPredicateControllerWouldCreateNamedToken:                  ConditionPredicateControllerWouldCreateNamedToken,
+	parser.ConditionPredicateWouldDrawFromEmptyLibrary:                        ConditionPredicateWouldDrawFromEmptyLibrary,
+	parser.ConditionPredicateCreatedTokenThisTurn:                             ConditionPredicateControllerCreatedTokenThisTurn,
+	parser.ConditionPredicateCastDuringControllerMainPhase:                    ConditionPredicateCastDuringControllerMainPhase,
+	parser.ConditionPredicateWouldDrawCard:                                    ConditionPredicateWouldDrawCard,
+	parser.ConditionPredicateWouldDrawCardExceptFirstInDrawStep:               ConditionPredicateWouldDrawCardExceptFirstInDrawStep,
+	parser.ConditionPredicateControllerLifeGain:                               ConditionPredicateControllerLifeGain,
+	parser.ConditionPredicateOpponentLifeLossDuringControllerTurn:             ConditionPredicateOpponentLifeLossDuringControllerTurn,
+	parser.ConditionPredicateOpponentLifeLoss:                                 ConditionPredicateOpponentLifeLoss,
+	parser.ConditionPredicateAnyPlayerLifeLoss:                                ConditionPredicateAnyPlayerLifeLoss,
+	parser.ConditionPredicateSourceTributeNotPaid:                             ConditionPredicateSourceTributeNotPaid,
+}
+
 // compileConditionClause mechanically maps one typed ConditionClause onto the
 // semantic condition. Any clause whose typed selection, counter, or scope cannot
 // be expressed in the closed semantic vocabulary leaves the predicate
 // unsupported (fail closed).
 func compileConditionClause(condition *CompiledCondition, clause *parser.ConditionClause) {
+	if predicate, ok := simplePredicateMap[clause.Predicate]; ok {
+		condition.Predicate = predicate
+		return
+	}
 	switch clause.Predicate {
 	case parser.ConditionPredicateControllerLifeAtLeast:
 		condition.Predicate = ConditionPredicateControllerLifeAtLeast
@@ -43,8 +76,6 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 	case parser.ConditionPredicateAnyOpponentPoisonAtLeast:
 		condition.Predicate = ConditionPredicateAnyOpponentPoisonAtLeast
 		condition.Threshold = clause.Threshold
-	case parser.ConditionPredicateControllerHandEmpty:
-		condition.Predicate = ConditionPredicateControllerHandEmpty
 	case parser.ConditionPredicateAnyPlayerLifeAtMost:
 		condition.Predicate = ConditionPredicateAnyPlayerLifeAtMost
 		condition.Threshold = clause.Threshold
@@ -64,14 +95,6 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		compileControlsCondition(condition, clause)
 	case parser.ConditionPredicateControlComparison:
 		compileControlComparisonCondition(condition, clause)
-	case parser.ConditionPredicateEventSubjectWasKicked:
-		condition.Predicate = ConditionPredicateEventSubjectWasKicked
-	case parser.ConditionPredicateEventSubjectWasCast:
-		condition.Predicate = ConditionPredicateEventSubjectWasCast
-	case parser.ConditionPredicateEventSubjectWasCastByController:
-		condition.Predicate = ConditionPredicateEventSubjectWasCastByController
-	case parser.ConditionPredicateEventSubjectEnteredOrCastFromGraveyard:
-		condition.Predicate = ConditionPredicateEventSubjectEnteredOrCastFromGraveyard
 	case parser.ConditionPredicateEventSubjectHadCounters:
 		condition.Predicate = ConditionPredicateEventSubjectHadCounters
 		condition.ObjectBinding = compileConditionObjectBinding(clause.ObjectBinding)
@@ -92,12 +115,6 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		}
 		condition.Predicate = ConditionPredicateEventSubjectHadNoCounter
 		condition.Counter = counter
-	case parser.ConditionPredicatePriorInstructionNotAccepted:
-		condition.Predicate = ConditionPredicatePriorInstructionNotAccepted
-	case parser.ConditionPredicatePriorInstructionAccepted:
-		condition.Predicate = ConditionPredicatePriorInstructionAccepted
-	case parser.ConditionPredicateEventPlayerDoesNotPay:
-		condition.Predicate = ConditionPredicateEventPlayerDoesNotPay
 	case parser.ConditionPredicateCounterPlacementOnControlledCreature:
 		counter, ok := compileConditionCounter(clause.Counter)
 		if !ok {
@@ -126,16 +143,6 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		}
 		condition.Predicate = ConditionPredicateDamageByControlledSource
 		condition.Selection = selection
-	case parser.ConditionPredicateTokenCreationUnderController:
-		condition.Predicate = ConditionPredicateTokenCreationUnderController
-	case parser.ConditionPredicateTokenCreationAnyController:
-		condition.Predicate = ConditionPredicateTokenCreationAnyController
-	case parser.ConditionPredicateControllerWouldCreateNamedToken:
-		condition.Predicate = ConditionPredicateControllerWouldCreateNamedToken
-	case parser.ConditionPredicateWouldDrawFromEmptyLibrary:
-		condition.Predicate = ConditionPredicateWouldDrawFromEmptyLibrary
-	case parser.ConditionPredicateCreatedTokenThisTurn:
-		condition.Predicate = ConditionPredicateControllerCreatedTokenThisTurn
 	case parser.ConditionPredicateSourceWouldDie:
 		condition.Predicate = ConditionPredicateSourceWouldDie
 		condition.SubjectSpan = clause.SubjectSpan
@@ -155,12 +162,6 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 	case parser.ConditionPredicateObjectExists:
 		condition.Predicate = ConditionPredicateObjectExists
 		condition.ObjectBinding = compileConditionObjectBinding(clause.ObjectBinding)
-	case parser.ConditionPredicateCastDuringControllerMainPhase:
-		condition.Predicate = ConditionPredicateCastDuringControllerMainPhase
-	case parser.ConditionPredicateWouldDrawCard:
-		condition.Predicate = ConditionPredicateWouldDrawCard
-	case parser.ConditionPredicateWouldDrawCardExceptFirstInDrawStep:
-		condition.Predicate = ConditionPredicateWouldDrawCardExceptFirstInDrawStep
 	case parser.ConditionPredicateCardWouldGoToGraveyard:
 		condition.Predicate = ConditionPredicateCardWouldGoToGraveyard
 		condition.GraveyardRedirectScope = compileGraveyardRedirectScope(clause.GraveyardRedirectScope)
@@ -168,16 +169,6 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		for _, value := range clause.GraveyardSubjectTypesAny {
 			condition.GraveyardSubjectTypesAny = append(condition.GraveyardSubjectTypesAny, compileTriggerCardType(value))
 		}
-	case parser.ConditionPredicateControllerLifeGain:
-		condition.Predicate = ConditionPredicateControllerLifeGain
-	case parser.ConditionPredicateOpponentLifeLossDuringControllerTurn:
-		condition.Predicate = ConditionPredicateOpponentLifeLossDuringControllerTurn
-	case parser.ConditionPredicateOpponentLifeLoss:
-		condition.Predicate = ConditionPredicateOpponentLifeLoss
-	case parser.ConditionPredicateAnyPlayerLifeLoss:
-		condition.Predicate = ConditionPredicateAnyPlayerLifeLoss
-	case parser.ConditionPredicateSourceTributeNotPaid:
-		condition.Predicate = ConditionPredicateSourceTributeNotPaid
 	default:
 	}
 }
