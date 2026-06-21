@@ -681,6 +681,12 @@ func canBlockAttacker(g *game.Game, blocker, attacker *game.Permanent) bool {
 		!slices.Contains(permanentEffectiveColors(g, blocker), color.Black) {
 		return false
 	}
+	// CR 702.72b: a creature with skulk can't be blocked by creatures with
+	// greater power than it.
+	if hasKeyword(g, attacker, game.Skulk) &&
+		effectivePower(g, blocker) > effectivePower(g, attacker) {
+		return false
+	}
 	// CR 702.16b: the attacker can't be blocked by a permanent it has protection from.
 	if permanentProtectedFromPermanentEffective(g, attacker, blocker) {
 		return false

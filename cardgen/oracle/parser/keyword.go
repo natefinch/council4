@@ -65,6 +65,7 @@ const (
 	KeywordReach            KeywordKind = "KeywordReach"
 	KeywordShadow           KeywordKind = "KeywordShadow"
 	KeywordShroud           KeywordKind = "KeywordShroud"
+	KeywordSkulk            KeywordKind = "KeywordSkulk"
 	KeywordSplitSecond      KeywordKind = "KeywordSplitSecond"
 	KeywordStorm            KeywordKind = "KeywordStorm"
 	KeywordSuspend          KeywordKind = "KeywordSuspend"
@@ -136,6 +137,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordReach:            "Reach",
 	KeywordShadow:           "Shadow",
 	KeywordShroud:           "Shroud",
+	KeywordSkulk:            "Skulk",
 	KeywordSplitSecond:      "Split second",
 	KeywordStorm:            "Storm",
 	KeywordSuspend:          "Suspend",
@@ -232,6 +234,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordReach, Words: []string{"reach"}},
 	{Kind: KeywordShadow, Words: []string{"shadow"}},
 	{Kind: KeywordShroud, Words: []string{"shroud"}},
+	{Kind: KeywordSkulk, Words: []string{"skulk"}},
 	{Kind: KeywordStorm, Words: []string{"storm"}},
 	{Kind: KeywordSuspend, Words: []string{"suspend"}},
 	{Kind: KeywordToxic, Words: []string{"toxic"}},
