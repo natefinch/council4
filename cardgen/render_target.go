@@ -101,6 +101,9 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 		}
 		fields = append(fields, fmt.Sprintf("PermanentTypes: %s,", lits))
 	}
+	if predicate.PermanentTypesConjunctive {
+		fields = append(fields, "PermanentTypesConjunctive: true,")
+	}
 	if len(predicate.ExcludedTypes) > 0 {
 		lits, err := renderTypesCardSlice(ctx, predicate.ExcludedTypes)
 		if err != nil {

@@ -234,6 +234,28 @@ func EntersWithCountersIfReplacement(text string, condition *Condition, placemen
 	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
+// BloodthirstReplacement creates the conditional ETB counter-placement
+// replacement for the Bloodthirst N keyword (CR 702.54): "If an opponent was
+// dealt damage this turn, this creature enters with N +1/+1 counters on it."
+// The intervening-if is an event-history condition matching any damage dealt to
+// an opponent during the current turn.
+func BloodthirstReplacement(text string, n int) ReplacementAbility {
+	condition := Condition{
+		EventHistory: opt.Val(EventHistoryCondition{
+			Pattern: TriggerPattern{
+				Event:           EventDamageDealt,
+				DamageRecipient: DamageRecipientPlayer,
+				Player:          TriggerPlayerOpponent,
+			},
+			Window: EventHistoryCurrentTurn,
+		}),
+	}
+	return EntersWithCountersIfReplacement(text, &condition, CounterPlacement{
+		Kind:   counter.PlusOnePlusOne,
+		Amount: n,
+	})
+}
+
 // EntersTappedWithCountersReplacement creates a combined ETB replacement for
 // "This permanent enters tapped with N <kind> counters on it." (the Vivid land
 // cycle). The permanent enters tapped and with the listed counters.

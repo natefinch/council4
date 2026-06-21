@@ -218,6 +218,51 @@ func simpleKeywordStaticBody(text string, keyword Keyword) StaticAbility {
 	return StaticAbility{Text: text, KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: keyword}}}
 }
 
+// Reusable TriggeredAbility templates for keywords that expand to a canonical
+// triggered ability. Treat these values as immutable.
+var (
+	// UndyingTriggeredBody is the canonical triggered ability for undying
+	// (CR 702.92): "When this creature dies, if it had no +1/+1 counters on it,
+	// return it to the battlefield under its owner's control with a +1/+1 counter
+	// on it." The ability carries the Undying keyword so HasKeyword(Undying)
+	// reports true.
+	UndyingTriggeredBody = diesReturnWithCounterTriggeredBody("Undying", Undying, counter.PlusOnePlusOne)
+
+	// PersistTriggeredBody is the canonical triggered ability for persist
+	// (CR 702.78): "When this creature dies, if it had no -1/-1 counters on it,
+	// return it to the battlefield under its owner's control with a -1/-1 counter
+	// on it." The ability carries the Persist keyword so HasKeyword(Persist)
+	// reports true.
+	PersistTriggeredBody = diesReturnWithCounterTriggeredBody("Persist", Persist, counter.MinusOneMinusOne)
+)
+
+// diesReturnWithCounterTriggeredBody builds the canonical undying/persist
+// triggered ability: a self dies-trigger gated on the dying creature having had
+// no counters of the given kind, returning it to the battlefield under its
+// owner's control with one such counter (CR 702.78, CR 702.92). The triggered
+// ability carries the keyword itself so HasKeyword reports the printed keyword.
+func diesReturnWithCounterTriggeredBody(text string, keyword Keyword, kind counter.Kind) TriggeredAbility {
+	return TriggeredAbility{
+		Text:             text,
+		KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: keyword}},
+		Trigger: TriggerCondition{
+			Type: TriggerWhen,
+			Pattern: TriggerPattern{
+				Event:            EventPermanentDied,
+				Source:           TriggerSourceSelf,
+				SubjectSelection: Selection{RequiredTypes: []types.Card{types.Creature}},
+			},
+			InterveningIfEventPermanentHadNoCounterKind: opt.Val(kind),
+		},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: PutOnBattlefield{
+				Source:        CardBattlefieldSource(CardReference{Kind: CardReferenceEvent}),
+				EntryCounters: []CounterPlacement{{Kind: kind, Amount: 1}},
+			},
+		}}}.Ability(),
+	}
+}
+
 // KeywordStaticBody returns the reusable StaticAbility granting the given
 // non-parameterized keyword ability. It reports ok=false for parameterized or
 // unsupported keywords (ward, protection, equip, and similar) that cannot be

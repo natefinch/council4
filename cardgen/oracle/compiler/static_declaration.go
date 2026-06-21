@@ -355,6 +355,7 @@ const (
 	StaticPlayerRulePlayWithTopCardRevealed
 	StaticPlayerRuleCastSpellsFromLibraryTop
 	StaticPlayerRuleCastThisFromGraveyard
+	StaticPlayerRuleLookAtTopCardAnyTime
 )
 
 // StaticPlayerRuleDeclaration is one player-scoped static rule applied to the
@@ -2588,6 +2589,10 @@ var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPla
 	parser.StaticDeclarationPlayerRuleCastThisFromGraveyard: {
 		kind:           StaticPlayerRuleCastThisFromGraveyard,
 		matchesContent: castThisFromGraveyardStaticPlayerRuleContent,
+	},
+	parser.StaticDeclarationPlayerRuleLookAtTopCardAnyTime: {
+		kind:           StaticPlayerRuleLookAtTopCardAnyTime,
+		matchesContent: emptyStaticPlayerRuleContent,
 	},
 }
 

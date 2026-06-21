@@ -170,6 +170,17 @@ var PlayWithTopCardRevealedStaticBody = StaticAbility{
 	}},
 }
 
+// LookAtTopCardAnyTimeStaticBody is the complete static ability for "You may look
+// at the top card of your library any time." The controller may privately look
+// at the top card of their library at any time.
+var LookAtTopCardAnyTimeStaticBody = StaticAbility{
+	Text: "You may look at the top card of your library any time.",
+	RuleEffects: []RuleEffect{{
+		Kind:           RuleEffectLookAtTopCardAnyTime,
+		AffectedPlayer: PlayerYou,
+	}},
+}
+
 // WardStaticAbility builds the complete static ability for Ward with a mana cost.
 func WardStaticAbility(manaCost cost.Mana) StaticAbility {
 	keywordCost := append(cost.Mana(nil), manaCost...)
