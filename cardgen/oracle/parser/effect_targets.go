@@ -200,15 +200,27 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 	case SelectionTriggeredAbilityOrSpell:
 		return selectionHasCounterAbilityQualifier(selection)
 	case SelectionSpell:
-		switch strings.ToLower(text) {
+		base := strings.ToLower(text)
+		if selection.MatchManaValue {
+			rider, ok := targetManaValueRider(selection.ManaValue)
+			if !ok {
+				return false
+			}
+			trimmed, had := strings.CutSuffix(base, rider)
+			if !had {
+				return false
+			}
+			base = trimmed
+		}
+		switch base {
 		case "target spell", "target instant spell", "target sorcery spell", "target creature spell",
 			"target artifact spell", "target noncreature spell":
 			return true
 		}
 		if len(selection.RequiredTypesAny) >= 2 {
-			return exactTypeUnionTargetSyntax(text, selection)
+			return exactTypeUnionTargetSyntax(base, selection)
 		}
-		return exactSpellColorTargetSyntax(text, selection)
+		return exactSpellColorTargetSyntax(base, selection)
 	case SelectionCreature:
 		if strings.EqualFold(text, "target creature spell") {
 			return true
@@ -241,6 +253,24 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 		return false
 	}
 	return strings.EqualFold(text, expected)
+}
+
+// targetManaValueRider reconstructs the " with mana value N", " with mana value
+// N or less", or " with mana value N or greater" filter rider on a spell or
+// permanent target from the parsed comparison. Only the exact, "or less", and
+// "or greater" bounds the printed Oracle wording uses are modeled; every other
+// comparison (less-than, greater-than, or an X-derived bound) fails closed.
+func targetManaValueRider(mv compare.Int) (string, bool) {
+	switch mv.Op {
+	case compare.Equal:
+		return " with mana value " + strconv.Itoa(mv.Value), true
+	case compare.LessOrEqual:
+		return " with mana value " + strconv.Itoa(mv.Value) + " or less", true
+	case compare.GreaterOrEqual:
+		return " with mana value " + strconv.Itoa(mv.Value) + " or greater", true
+	default:
+		return "", false
+	}
 }
 
 func exactChosenCreatureCardsInYourGraveyardTargetSyntax(

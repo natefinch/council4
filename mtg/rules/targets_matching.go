@@ -161,6 +161,12 @@ func stackObjectTargetMatchesSpec(g *game.Game, controller game.PlayerID, source
 // "ability or qualified spell" target accepts any ability while restricting the
 // spell choice (CR 115.4).
 func stackObjectSpellQualifiersMatch(g *game.Game, obj *game.StackObject, pred game.TargetPredicate) bool {
+	if pred.ManaValue.Exists && obj.Kind == game.StackSpell {
+		manaValue, ok := stackObjectManaValue(g, obj)
+		if !ok || !pred.ManaValue.Val.Matches(manaValue) {
+			return false
+		}
+	}
 	hasSpellQualifier := len(pred.SpellCardTypes) > 0 ||
 		len(pred.SpellCardTypesAny) > 0 ||
 		len(pred.ExcludedSpellCardTypes) > 0 ||
