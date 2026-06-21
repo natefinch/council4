@@ -207,8 +207,20 @@ func zoneRole(atoms Atoms, role ZoneRole) (zone.Type, bool) {
 	return zone.None, false
 }
 
-// TestParseEmitsCounterAtoms proves a counter atom carries the typed counter kind
-// and spans the counter-kind name preceding the "counter" noun.
+// TestParseEmitsAllGraveyardsZoneAtom proves the all-players source wording "from
+// all graveyards" emits a from-role graveyard zone atom, matching the per-player
+// "from your graveyard" form.
+func TestParseEmitsAllGraveyardsZoneAtom(t *testing.T) {
+	t.Parallel()
+	atoms := atomsFor(t, "return all creature cards from all graveyards to the battlefield", "")
+	if z, ok := zoneRole(atoms, ZoneRoleFrom); !ok || z != zone.Graveyard {
+		t.Errorf("from zone = %v, %v; want graveyard, true", z, ok)
+	}
+	if z, ok := zoneRole(atoms, ZoneRoleTo); !ok || z != zone.Battlefield {
+		t.Errorf("to zone = %v, %v; want battlefield, true", z, ok)
+	}
+}
+
 func TestParseEmitsCounterAtoms(t *testing.T) {
 	t.Parallel()
 	source := "put two +1/+1 counters on target creature"

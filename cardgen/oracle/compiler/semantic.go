@@ -1234,6 +1234,11 @@ type CompiledEffect struct {
 	// doubling continuous effect; both are false for every other double effect.
 	DoublePower     bool
 	DoubleToughness bool
+	// UnderOwnersControl mirrors the parser flag for a battlefield-destination
+	// effect carrying the "under their owners' control" rider (Open the Vaults,
+	// Planar Birth), where each moved card enters under its owner's control. It
+	// is false for the bare and "under your control" forms.
+	UnderOwnersControl bool
 }
 
 // CompiledManaSpendRider is the typed semantic form of a mana-spend rider.

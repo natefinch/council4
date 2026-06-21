@@ -255,6 +255,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				EntersTypeChoice:          syntax.EntersTypeChoice,
 				EntersWithCounters:        syntax.EntersWithCounters,
 				UnderYourControl:          syntax.UnderYourControl,
+				UnderOwnersControl:        syntax.UnderOwnersControl,
 				CastAsAdventure:           syntax.CastAsAdventure,
 				CastWithoutPayingManaCost: syntax.CastWithoutPayingManaCost,
 				Negated:                   syntax.Negated,

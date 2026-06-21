@@ -1049,6 +1049,14 @@ func (p MassReturnFromGraveyard) validatePrimitive(targets []TargetSpec, checkTa
 	if p.EntryTapped && p.Destination != zone.Battlefield {
 		return errors.New("mass return from graveyard tapped entry requires a battlefield destination")
 	}
+	if p.ControlledByOwner && p.Destination != zone.Battlefield {
+		return errors.New("mass return from graveyard owner control requires a battlefield destination")
+	}
+	if p.SourceGroup.Kind != PlayerGroupReferenceNone {
+		if problems := p.SourceGroup.Validate(); len(problems) != 0 {
+			return errors.New(problems[0])
+		}
+	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 

@@ -173,7 +173,19 @@ func isChosenColorChooseTokens(tokens []shared.Token) bool {
 	return true
 }
 
-// creditChosenColorChoice folds a leading "Choose a color." sentence onto the
+// underOwnersControl reports the battlefield-destination ownership rider "under
+// their owners' control" / "under its owner's control", under which each moved
+// card enters controlled by its own owner rather than the resolving player. It
+// is distinct from the "under your control" rider and the bare form.
+func underOwnersControl(tokens []shared.Token) bool {
+	words := normalizedWords(tokens)
+	if !slices.Contains(words, "under") {
+		return false
+	}
+	return effectContainsWords(words, "owners", "control") ||
+		effectContainsWords(words, "owner's", "control")
+}
+
 // ability's lone chosen-color add-mana effect by widening that effect's span to
 // cover the choice sentence, so the mana ability's coverage scan credits the
 // choice. It succeeds only when the ability holds exactly one add-mana effect
@@ -624,6 +636,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			EntersTypeChoice:          entersTypeChoiceSyntax(kind, clause),
 			EntersWithCounters:        entersWithCountersSyntax(kind, clause),
 			UnderYourControl:          effectContainsWords(normalizedWords(ownership), "under", "your", "control"),
+			UnderOwnersControl:        underOwnersControl(ownership),
 			CastAsAdventure:           effectContainsWords(normalizedWords(clause), "as", "an", "adventure"),
 			CastWithoutPayingManaCost: kind == EffectCast &&
 				effectContainsWords(normalizedWords(clause), "without", "paying", "its", "mana", "cost"),

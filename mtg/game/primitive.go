@@ -492,11 +492,20 @@ type ReturnFromGraveyard struct {
 // either zone.Hand (each card returns to its owner's hand) or zone.Battlefield
 // (each card enters under Player's control, tapped when EntryTapped is set). An
 // empty or fully unmatched graveyard is a legal no-op.
+//
+// SourceGroup widens the scanned graveyards beyond Player's own: when its Kind
+// is not None, every matching card in each member player's graveyard moves at
+// once ("... from all graveyards", Rise of the Dark Realms, Open the Vaults).
+// When ControlledByOwner is set, each card entering the battlefield does so
+// under its own owner's control rather than Player's ("... under their owners'
+// control").
 type MassReturnFromGraveyard struct {
-	Player      PlayerReference
-	Selection   Selection
-	Destination zone.Type
-	EntryTapped bool
+	Player            PlayerReference
+	Selection         Selection
+	Destination       zone.Type
+	EntryTapped       bool
+	SourceGroup       PlayerGroupReference
+	ControlledByOwner bool
 }
 
 // Bounce returns one referenced permanent or every permanent in a referenced
