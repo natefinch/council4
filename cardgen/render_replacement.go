@@ -13,14 +13,7 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 	if ability.Replacement.EntersAsCopy {
 		return r.renderEntersAsCopyReplacement(ctx, ability)
 	}
-	if ability.Replacement.DrawFromEmptyLibraryWins {
-		return fmt.Sprintf("game.DrawFromEmptyLibraryWinReplacement(%q)", ability.Text), nil
-	}
-	if ability.Replacement.DrawCardMultiplier > 1 {
-		return fmt.Sprintf("game.DrawCardMultiplierReplacement(%q, %d, %t)",
-			ability.Text, ability.Replacement.DrawCardMultiplier, ability.Replacement.DrawCardExceptFirstInDrawStep), nil
-	}
-	if rendered, handled := renderLifeModifierReplacement(ability); handled {
+	if rendered, handled := renderStringReplacement(ability); handled {
 		return rendered, nil
 	}
 	if ability.Replacement.EntersTappedOthers {
@@ -168,6 +161,24 @@ func renderLifeModifierReplacement(ability *game.ReplacementAbility) (string, bo
 			ability.Replacement.LifeLossRecipientOpponent, ability.Replacement.LifeLossDuringControllerTurn), true
 	}
 	return "", false
+}
+
+// renderStringReplacement renders the replacements that depend only on the
+// ability text plus a few scalar parameters (Devour, draw-from-empty-library
+// win, draw multiplier, and the life-modifier family), reporting handled=false
+// when the replacement is none of these.
+func renderStringReplacement(ability *game.ReplacementAbility) (string, bool) {
+	if ability.Replacement.EntryDevourMultiplier > 0 {
+		return fmt.Sprintf("game.DevourReplacement(%q, %d)", ability.Text, ability.Replacement.EntryDevourMultiplier), true
+	}
+	if ability.Replacement.DrawFromEmptyLibraryWins {
+		return fmt.Sprintf("game.DrawFromEmptyLibraryWinReplacement(%q)", ability.Text), true
+	}
+	if ability.Replacement.DrawCardMultiplier > 1 {
+		return fmt.Sprintf("game.DrawCardMultiplierReplacement(%q, %d, %t)",
+			ability.Text, ability.Replacement.DrawCardMultiplier, ability.Replacement.DrawCardExceptFirstInDrawStep), true
+	}
+	return renderLifeModifierReplacement(ability)
 }
 
 // renderGroupEntersTappedReplacement renders a continuous static enters-tapped
