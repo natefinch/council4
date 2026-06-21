@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
@@ -162,8 +163,17 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 	}
 	switch effect.Kind {
 	case compiler.EffectReturn:
-		if (!effect.Exact && !referencesContainKind(ctx.content.References, compiler.ReferenceThatObject)) ||
-			effect.ToZone != zone.Hand || ctx.optional {
+		switch effect.ToZone {
+		case zone.Hand:
+			if (!effect.Exact && !referencesContainKind(ctx.content.References, compiler.ReferenceThatObject)) ||
+				ctx.optional {
+				return game.AbilityContent{}, false
+			}
+		case zone.Battlefield:
+			if ctx.optional {
+				return game.AbilityContent{}, false
+			}
+		default:
 			return game.AbilityContent{}, false
 		}
 	case compiler.EffectExile:
@@ -184,6 +194,20 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 	}
 	switch effect.Kind {
 	case compiler.EffectReturn:
+		if effect.ToZone == zone.Battlefield {
+			put := game.PutOnBattlefield{
+				Source: game.CardBattlefieldSource(eventCard),
+			}
+			if effect.ReturnAsEnchantment {
+				put.ContinuousEffects = []game.ContinuousEffect{{
+					Layer:    game.LayerType,
+					SetTypes: []types.Card{types.Enchantment},
+				}}
+			}
+			return game.Mode{Sequence: []game.Instruction{{
+				Primitive: put,
+			}}}.Ability(), true
+		}
 		return game.Mode{Sequence: []game.Instruction{{
 			Primitive: game.MoveCard{
 				Card:        eventCard,
