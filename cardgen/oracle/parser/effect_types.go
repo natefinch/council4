@@ -98,6 +98,13 @@ const (
 	// Felidar Sovereign and Thassa's Oracle (CR 104.2a). It mirrors
 	// EffectLoseGame.
 	EffectWinGame EffectKind = "EffectWinGame"
+	// EffectSpellsCantBeCountered models the controller-scoped, turn-scoped
+	// resolving buff "The next spell you cast this turn can't be countered."
+	// (Mistrise Village) and the all-spells form "Spells you cast this turn
+	// can't be countered." (Domri, Anarch of Bolas). It applies the continuous
+	// RuleEffectCantBeCountered to the controller's spells with a this-turn
+	// duration; SpellsCantBeCounteredNextOnly limits it to the single next spell.
+	EffectSpellsCantBeCountered EffectKind = "EffectSpellsCantBeCountered"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -739,13 +746,15 @@ type EffectSyntax struct {
 	// that prevents all combat damage for the turn to and/or from a single
 	// referenced or targeted permanent ("Prevent all combat damage that would
 	// be dealt to and dealt by that creature this turn." — Maze of Ith).
-	// PreventDamageTo prevents damage dealt to the object; PreventDamageBy
-	// prevents damage dealt by it. At least one is set when Kind is
-	// EffectPreventDamage.
-	PreventDamageTo bool              `json:",omitempty"`
-	PreventDamageBy bool              `json:",omitempty"`
-	DelayedTiming   DelayedTimingKind `json:",omitempty"`
-	Selection       SelectionSyntax   `json:",omitzero"`
+	PreventDamageTo bool `json:",omitempty"`
+	PreventDamageBy bool `json:",omitempty"`
+	// SpellsCantBeCounteredNextOnly reports that an EffectSpellsCantBeCountered
+	// clause limits the buff to the single next spell the controller casts ("The
+	// next spell you cast this turn can't be countered.") rather than every spell
+	// cast this turn ("Spells you cast this turn can't be countered.").
+	SpellsCantBeCounteredNextOnly bool              `json:",omitempty"`
+	DelayedTiming                 DelayedTimingKind `json:",omitempty"`
+	Selection                     SelectionSyntax   `json:",omitzero"`
 	// DamageRecipientPair holds the two recipient groups of a dual-recipient
 	// fixed group-damage effect ("deals N damage to each X and each Y"). It is
 	// populated only when the recipient is exactly two "each <group>" phrases

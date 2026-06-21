@@ -316,6 +316,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				CantCastSpellsAllPlayers:        syntax.CantCastSpellsAllPlayers,
 				PreventDamageTo:                 syntax.PreventDamageTo,
 				PreventDamageBy:                 syntax.PreventDamageBy,
+				SpellsCantBeCounteredNextOnly:   syntax.SpellsCantBeCounteredNextOnly,
 				DoublePower:                     syntax.DoublePower,
 				DoubleToughness:                 syntax.DoubleToughness,
 			})

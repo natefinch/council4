@@ -960,6 +960,7 @@ const (
 	EffectCantCastSpells
 	EffectWinGame
 	EffectPreventDamage
+	EffectSpellsCantBeCountered
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1244,10 +1245,13 @@ type CompiledEffect struct {
 	CantCastSpellsAllPlayers bool
 	// PreventDamageTo and PreventDamageBy mirror the parser flags for an
 	// EffectPreventDamage clause, recording whether all combat damage dealt to
-	// and/or dealt by the referenced permanent is prevented for the turn. At
-	// least one is true when Kind is EffectPreventDamage.
+	// and/or dealt by the referenced permanent is prevented for the turn.
 	PreventDamageTo bool
 	PreventDamageBy bool
+	// SpellsCantBeCounteredNextOnly mirrors the parser flag for an
+	// EffectSpellsCantBeCountered clause that limits the buff to the single next
+	// spell the controller casts rather than every spell cast this turn.
+	SpellsCantBeCounteredNextOnly bool
 	// DoublePower and DoubleToughness mirror the parser flags for an EffectDouble
 	// whose object is "the power[ and toughness] of <group>" (Unnatural Growth).
 	// Lowering reads them together with StaticSubject to emit a power/toughness

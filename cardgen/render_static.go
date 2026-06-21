@@ -547,6 +547,9 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 	if effect.RestrictedDuringControllerTurn {
 		fields = append(fields, "RestrictedDuringControllerTurn: true,")
 	}
+	if effect.AppliesToNextSpellOnly {
+		fields = append(fields, "AppliesToNextSpellOnly: true,")
+	}
 	return structLit("game.RuleEffect", fields), nil
 }
 

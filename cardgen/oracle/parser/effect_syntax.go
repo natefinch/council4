@@ -533,6 +533,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseAdditionalLandPlaysEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseCastAsThoughFlashEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseCantCastSpellsEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parseSpellsCantBeCounteredEffect(sentence, tokens) },
 	} {
 		if effects, ok := recognize(); ok {
 			return effects, true
@@ -1599,6 +1600,71 @@ func parseCantCastSpellsEffect(sentence Sentence, tokens []shared.Token) ([]Effe
 		Duration:                 EffectDurationThisTurn,
 		CantCastSpellsAllPlayers: allPlayers,
 		Exact:                    true,
+	}}, true
+}
+
+// parseSpellsCantBeCounteredEffect recognizes the controller-scoped, turn-scoped
+// resolving buff "The next spell you cast this turn can't be countered."
+// (Mistrise Village) and the all-spells form "Spells you cast this turn can't be
+// countered." (Domri, Anarch of Bolas). The leading "The next" marks the
+// single-next-spell variant; a bare "Spells" marks the every-spell-this-turn
+// variant. The buff applies to the controller's own spells, so any other
+// subject, a type filter, a negation, or extra wording fails closed and flows
+// through the generic effect parser.
+func parseSpellsCantBeCounteredEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	index := 0
+	nextOnly := false
+	switch {
+	case len(words) >= 3 && equalWord(words[0], "the") && equalWord(words[1], "next") && equalWord(words[2], "spell"):
+		nextOnly = true
+		index = 3
+	case len(words) >= 1 && equalWord(words[0], "spells"):
+		index = 1
+	default:
+		return nil, false
+	}
+	rest := []string{"you", "cast", "this", "turn"}
+	if index+len(rest) > len(words) {
+		return nil, false
+	}
+	for offset, want := range rest {
+		if !equalWord(words[index+offset], want) {
+			return nil, false
+		}
+	}
+	castToken := words[index+1]
+	index += len(rest)
+	if index >= len(words) || (!equalWord(words[index], "can't") && !equalWord(words[index], "cannot")) {
+		return nil, false
+	}
+	index++
+	tail := []string{"be", "countered"}
+	if len(words)-index != len(tail) {
+		return nil, false
+	}
+	for offset, want := range tail {
+		if !equalWord(words[index+offset], want) {
+			return nil, false
+		}
+	}
+	return []EffectSyntax{{
+		Kind:                          EffectSpellsCantBeCountered,
+		Span:                          sentence.Span,
+		ClauseSpan:                    sentence.Span,
+		VerbSpan:                      castToken.Span,
+		Text:                          sentence.Text,
+		Tokens:                        append([]shared.Token(nil), tokens...),
+		Context:                       EffectContextController,
+		Duration:                      EffectDurationThisTurn,
+		SpellsCantBeCounteredNextOnly: nextOnly,
+		Exact:                         true,
 	}}, true
 }
 
