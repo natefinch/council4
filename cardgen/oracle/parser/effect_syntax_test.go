@@ -1488,6 +1488,50 @@ func TestParseCreateCopyOfTargetToken(t *testing.T) {
 	}
 }
 
+func TestParseCreateCopyTokenForEach(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source    string
+		forEach   bool
+		tokenOnly bool
+	}{
+		{"For each token you control, create a token that's a copy of that permanent.", true, true},
+		{"For each creature you control, create a token that's a copy of that permanent.", true, false},
+		{"For each artifact you control, create a token that's a copy of it.", true, false},
+		{"Create a token that's a copy of target creature you control.", false, false},
+		{"For each token an opponent controls, create a token that's a copy of that permanent.", false, false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].TokenCopyOfForEach != test.forEach {
+				t.Fatalf("TokenCopyOfForEach = %v, want %v", effects[0].TokenCopyOfForEach, test.forEach)
+			}
+			if !test.forEach {
+				return
+			}
+			group := effects[0].TokenCopyForEachGroup
+			if group == nil {
+				t.Fatal("TokenCopyForEachGroup = nil, want a group")
+			}
+			if group.Controller != SelectionControllerYou {
+				t.Fatalf("group controller = %v, want you", group.Controller)
+			}
+			if group.TokenOnly != test.tokenOnly {
+				t.Fatalf("group TokenOnly = %v, want %v", group.TokenOnly, test.tokenOnly)
+			}
+		})
+	}
+}
+
 func TestParseCreateCopyOfReferenceToken(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

@@ -564,6 +564,34 @@ func TestGenerateExecutableCardSourceCopyOfAttachedExceptNotLegendaryGainsKeywor
 	}
 }
 
+func TestGenerateExecutableCardSourceCopyTokenForEach(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Second Harvest",
+		Layout:     "normal",
+		ManaCost:   "{2}{G}{G}",
+		TypeLine:   "Instant",
+		OracleText: "For each token you control, create a token that's a copy of that permanent.",
+		Colors:     []string{"G"},
+	}, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Primitive: game.CreateToken{",
+		"Source: game.TokenCopyOf(game.TokenCopySpec{",
+		"Source: game.TokenCopySourceEachInGroup,",
+		"Group:  game.GroupRef(game.BattlefieldGroup(game.Selection{Controller: game.ControllerYou, TokenOnly: true})),",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceConditionalCopyTokenInstead(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{

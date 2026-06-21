@@ -1263,6 +1263,14 @@ type CompiledEffect struct {
 	// Planar Birth), where each moved card enters under its owner's control. It
 	// is false for the bare and "under your control" forms.
 	UnderOwnersControl bool
+	// TokenCopyOfForEach mirrors the parser flag for a per-each copy-token create
+	// whose copy source is each member of a controlled battlefield group ("For
+	// each token you control, create a token that's a copy of that permanent." —
+	// Second Harvest). The iterated group is carried in TokenCopyForEachGroup.
+	TokenCopyOfForEach bool
+	// TokenCopyForEachGroup carries the controlled battlefield group a
+	// TokenCopyOfForEach create iterates, copying each member in turn.
+	TokenCopyForEachGroup CompiledSelector
 }
 
 // CompiledManaSpendRider is the typed semantic form of a mana-spend rider.

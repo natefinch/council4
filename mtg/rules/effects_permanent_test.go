@@ -1173,6 +1173,66 @@ func TestCreateTokenCanCopySourceCardWithModifications(t *testing.T) {
 	}
 }
 
+func TestCreateTokenForEachCopiesEachControlledToken(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	pt := game.PT{Value: 2}
+	for _, name := range []string{"Soldier Token", "Beast Token"} {
+		g.Battlefield = append(g.Battlefield, &game.Permanent{
+			ObjectID:   g.IDGen.Next(),
+			Owner:      game.Player1,
+			Controller: game.Player1,
+			Token:      true,
+			TokenDef: &game.CardDef{CardFace: game.CardFace{
+				Name:      name,
+				Types:     []types.Card{types.Creature},
+				Power:     opt.Val(pt),
+				Toughness: opt.Val(pt),
+			}},
+		})
+	}
+	// A nontoken creature and an opponent's token must be left uncopied.
+	g.Battlefield = append(g.Battlefield,
+		&game.Permanent{
+			ObjectID:   g.IDGen.Next(),
+			Owner:      game.Player1,
+			Controller: game.Player1,
+			TokenDef:   &game.CardDef{CardFace: game.CardFace{Name: "Bear", Types: []types.Card{types.Creature}, Power: opt.Val(pt), Toughness: opt.Val(pt)}},
+		},
+		&game.Permanent{
+			ObjectID:   g.IDGen.Next(),
+			Owner:      game.Player2,
+			Controller: game.Player2,
+			Token:      true,
+			TokenDef:   &game.CardDef{CardFace: game.CardFace{Name: "Goblin Token", Types: []types.Card{types.Creature}, Power: opt.Val(pt), Toughness: opt.Val(pt)}},
+		},
+	)
+
+	addEffectSpellToStack(g, game.Player1, game.CreateToken{
+		Amount: game.Fixed(1),
+		Source: game.TokenCopyOf(game.TokenCopySpec{
+			Source: game.TokenCopySourceEachInGroup,
+			Group:  game.GroupRef(game.BattlefieldGroup(game.Selection{Controller: game.ControllerYou, TokenOnly: true})),
+		}),
+	}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	names := map[string]int{}
+	for _, permanent := range g.Battlefield {
+		if permanent.Token && permanent.Controller == game.Player1 {
+			names[permanent.TokenDef.Name]++
+		}
+	}
+	// Each original token plus one new copy of it (controlled by Player1).
+	if names["Soldier Token"] != 2 || names["Beast Token"] != 2 {
+		t.Fatalf("token counts = %#v, want two Soldier and two Beast tokens", names)
+	}
+	if names["Goblin Token"] != 0 {
+		t.Fatalf("opponent token was copied: %#v", names)
+	}
+}
+
 func TestBuildTokenCopyDefDropsLegendaryAndGrantsKeyword(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	sourceID := g.IDGen.Next()

@@ -307,12 +307,23 @@ func (r Renderer) renderTokenSource(ctx *renderCtx, source game.TokenSource) (st
 		return fmt.Sprintf("game.TokenDef(%s)", ctx.tokenDefVar(def)), nil
 	}
 	spec, ok := source.TokenCopy()
-	if !ok || spec.Source != game.TokenCopySourceObject ||
+	if !ok ||
 		spec.SetName != "" || len(spec.SetColors) != 0 || len(spec.SetTypes) != 0 ||
 		len(spec.SetSubtypes) != 0 || spec.SetPower.Exists || spec.SetToughness.Exists ||
 		spec.NoManaCost || spec.NoPrintedText {
 		return "", errors.New("render: unsupported CreateToken token source")
 	}
+	switch spec.Source {
+	case game.TokenCopySourceObject:
+		return r.renderTokenCopyObjectSource(ctx, spec)
+	case game.TokenCopySourceEachInGroup:
+		return r.renderTokenCopyForEachSource(ctx, spec)
+	default:
+		return "", errors.New("render: unsupported CreateToken token source")
+	}
+}
+
+func (r Renderer) renderTokenCopyObjectSource(ctx *renderCtx, spec game.TokenCopySpec) (string, error) {
 	object, err := r.renderObjectReference(spec.Object)
 	if err != nil {
 		return "", err
@@ -321,21 +332,51 @@ func (r Renderer) renderTokenSource(ctx *renderCtx, source game.TokenSource) (st
 		"Source: game.TokenCopySourceObject,",
 		fmt.Sprintf("Object: %s,", object),
 	}
+	fields = appendTokenCopyModifierFields(fields, spec)
+	rendered, err := renderTokenCopyKeywordField(fields, spec)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.TokenCopyOf(game.TokenCopySpec", rendered) + ")", nil
+}
+
+func (r Renderer) renderTokenCopyForEachSource(ctx *renderCtx, spec game.TokenCopySpec) (string, error) {
+	group, err := r.renderGroupReference(ctx, *spec.Group)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		"Source: game.TokenCopySourceEachInGroup,",
+		fmt.Sprintf("Group: game.GroupRef(%s),", group),
+	}
+	fields = appendTokenCopyModifierFields(fields, spec)
+	rendered, err := renderTokenCopyKeywordField(fields, spec)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.TokenCopyOf(game.TokenCopySpec", rendered) + ")", nil
+}
+
+func appendTokenCopyModifierFields(fields []string, spec game.TokenCopySpec) []string {
 	if spec.SetNotLegendary {
 		fields = append(fields, "SetNotLegendary: true,")
 	}
-	if len(spec.AddKeywords) != 0 {
-		rendered := make([]string, 0, len(spec.AddKeywords))
-		for _, keyword := range spec.AddKeywords {
-			literal, err := renderKeyword(keyword)
-			if err != nil {
-				return "", err
-			}
-			rendered = append(rendered, literal)
-		}
-		fields = append(fields, fmt.Sprintf("AddKeywords: []game.Keyword{%s},", strings.Join(rendered, ", ")))
+	return fields
+}
+
+func renderTokenCopyKeywordField(fields []string, spec game.TokenCopySpec) ([]string, error) {
+	if len(spec.AddKeywords) == 0 {
+		return fields, nil
 	}
-	return structLit("game.TokenCopyOf(game.TokenCopySpec", fields) + ")", nil
+	rendered := make([]string, 0, len(spec.AddKeywords))
+	for _, keyword := range spec.AddKeywords {
+		literal, err := renderKeyword(keyword)
+		if err != nil {
+			return nil, err
+		}
+		rendered = append(rendered, literal)
+	}
+	return append(fields, fmt.Sprintf("AddKeywords: []game.Keyword{%s},", strings.Join(rendered, ", "))), nil
 }
 
 func (r Renderer) renderAddPlayerCounter(ctx *renderCtx, value *game.AddPlayerCounter) (string, error) {

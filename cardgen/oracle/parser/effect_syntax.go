@@ -737,6 +737,10 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	effect.TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(effect)
 	effect.TokenCopyOfReference = exactCreateCopyTokenReferenceEffectSyntax(effect)
 	effect.TokenCopyOfAttached = exactCreateCopyTokenAttachedEffectSyntax(effect)
+	if group, ok := exactCreateCopyTokenForEachEffectSyntax(effect, atoms); ok {
+		effect.TokenCopyOfForEach = true
+		effect.TokenCopyForEachGroup = group
+	}
 	effect.Mana.LegacyBodyExact = legacyExactManaBody(effect, sentence)
 	if effect.Kind == EffectSearch {
 		effect.UnsupportedDetail = searchUnsupportedDetail(effect)
