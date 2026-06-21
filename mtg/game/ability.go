@@ -83,6 +83,7 @@ const (
 	Outlast
 	Scavenge
 	Dethrone
+	Rampage
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.

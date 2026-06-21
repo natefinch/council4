@@ -580,6 +580,10 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		if keyword.Count <= 0 {
 			v.add(faceName, appendPath(path, "Count"), CardDefIssueInvalidKeywordAbility, "fabricate count must be positive")
 		}
+	case RampageKeyword:
+		if keyword.Count <= 0 {
+			v.add(faceName, appendPath(path, "Count"), CardDefIssueInvalidKeywordAbility, "rampage count must be positive")
+		}
 	case nil:
 		v.add(faceName, path, CardDefIssueInvalidKeywordAbility, "keyword ability is nil")
 	default:

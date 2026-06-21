@@ -130,6 +130,14 @@ const (
 	// power directly rather than a battlefield permanent. Added last so existing
 	// kinds keep their wire values.
 	DynamicAmountSourceCardPower
+	// DynamicAmountBlockingCreaturesBeyondFirst is the number of creatures
+	// blocking the resolving ability's source permanent beyond the first, read
+	// from the current combat's block declarations as the ability resolves
+	// (CR 509.1, CR 702.23). It is zero when the source is blocked by one or no
+	// creatures, or outside combat. It backs Rampage N, whose Multiplier scales
+	// the count by the printed N. Added last so existing kinds keep their wire
+	// values.
+	DynamicAmountBlockingCreaturesBeyondFirst
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves
