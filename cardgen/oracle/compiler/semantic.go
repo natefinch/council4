@@ -1313,6 +1313,10 @@ type CompiledEffectMana struct {
 	// together with AnyColor; N mana of the single chosen color are produced. See
 	// parser.EffectManaSyntax.AnyColorCount.
 	AnyColorCount int
+	// Instead mirrors the parser's trailing-"instead" flag on a conditional
+	// alternative mana production ("Add {B}{B}{B}{B}{B} instead if ...", the
+	// Threshold cycle). See parser.EffectManaSyntax.Instead.
+	Instead bool
 }
 
 // CompiledEffectPayment is a typed resolution payment embedded in an effect.

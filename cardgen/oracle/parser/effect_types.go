@@ -445,6 +445,13 @@ type EffectManaSyntax struct {
 	// chosen color. It is set together with AnyColor; the plain "one mana of any
 	// color" body leaves it zero (one mana of the chosen color).
 	AnyColorCount int `json:",omitempty"`
+	// Instead reports a trailing "instead" on the add-mana body ("Add
+	// {B}{B}{B}{B}{B} instead if there are seven or more cards in your
+	// graveyard.", the Threshold conditional-mana cycle). It marks this mana
+	// production as the conditional alternative to a sibling base production
+	// rather than an additional output; lowering pairs the two into one ability
+	// whose larger output replaces the base when the condition holds.
+	Instead bool `json:",omitempty"`
 }
 
 // ManaLandsProduceScope identifies which battlefield lands' producible colors

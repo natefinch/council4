@@ -181,7 +181,7 @@ func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) Eff
 	body := tokens
 	if tokens[len(tokens)-1].Kind == shared.Period {
 		body = tokens[:len(tokens)-1]
-	} else if !connected {
+	} else if !connected && !equalWord(tokens[len(tokens)-1], "instead") {
 		return EffectManaSyntax{}
 	}
 	body = stripLeadingAdditionalMana(body)
@@ -251,45 +251,18 @@ func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) Eff
 			FilterColors: []mana.Color{first, second},
 		}
 	}
-	var symbols []string
-	choice := false
-	expectSymbol := true
-	for i := 0; i < len(body); i++ {
-		token := body[i]
-		if expectSymbol {
-			if token.Kind != shared.Symbol {
-				return EffectManaSyntax{}
-			}
-			symbols = append(symbols, token.Text)
-			expectSymbol = false
-			continue
-		}
-		switch {
-		case token.Kind == shared.Symbol:
-			if choice {
-				return EffectManaSyntax{}
-			}
-			symbols = append(symbols, token.Text)
-		case token.Kind == shared.Comma:
-			if len(symbols) != 1 && !choice {
-				return EffectManaSyntax{}
-			}
-			choice = true
-			expectSymbol = true
-			if i+1 < len(body) && equalWord(body[i+1], "or") {
-				i++
-			}
-		case equalWord(token, "or"):
-			if len(symbols) != 1 && !choice {
-				return EffectManaSyntax{}
-			}
-			choice = true
-			expectSymbol = true
-		default:
-			return EffectManaSyntax{}
-		}
+	// A trailing "instead" marks a conditional alternative mana production
+	// ("Add {B}{B}{B}{B}{B} instead if ...", the Threshold cycle). The word
+	// itself adds no mana, so strip it from the symbol body while recording the
+	// flag and keeping it in the consumed span.
+	instead := false
+	loopBody := body
+	if n := len(loopBody); n > 0 && equalWord(loopBody[n-1], "instead") {
+		instead = true
+		loopBody = loopBody[:n-1]
 	}
-	if len(symbols) == 0 || expectSymbol || choice && len(symbols) < 2 {
+	symbols, choice, ok := parseManaSymbolBody(loopBody)
+	if !ok {
 		return EffectManaSyntax{}
 	}
 	colors, colorsKnown := effectManaColors(symbols)
@@ -299,7 +272,55 @@ func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) Eff
 		Colors:      colors,
 		ColorsKnown: colorsKnown,
 		Choice:      choice,
+		Instead:     instead,
 	}
+}
+
+// parseManaSymbolBody reads a fixed mana-symbol sequence ("{B}{B}{B}") or a
+// single-symbol choice list ("{W}, {U}, or {B}") from a body of tokens. It
+// reports the recognized symbols, whether the body is a choice among them, and
+// whether the body is a well-formed mana sequence at all.
+func parseManaSymbolBody(body []shared.Token) (symbols []string, choice, ok bool) {
+	expectSymbol := true
+	for i := 0; i < len(body); i++ {
+		token := body[i]
+		if expectSymbol {
+			if token.Kind != shared.Symbol {
+				return nil, false, false
+			}
+			symbols = append(symbols, token.Text)
+			expectSymbol = false
+			continue
+		}
+		switch {
+		case token.Kind == shared.Symbol:
+			if choice {
+				return nil, false, false
+			}
+			symbols = append(symbols, token.Text)
+		case token.Kind == shared.Comma:
+			if len(symbols) != 1 && !choice {
+				return nil, false, false
+			}
+			choice = true
+			expectSymbol = true
+			if i+1 < len(body) && equalWord(body[i+1], "or") {
+				i++
+			}
+		case equalWord(token, "or"):
+			if len(symbols) != 1 && !choice {
+				return nil, false, false
+			}
+			choice = true
+			expectSymbol = true
+		default:
+			return nil, false, false
+		}
+	}
+	if len(symbols) == 0 || expectSymbol || choice && len(symbols) < 2 {
+		return nil, false, false
+	}
+	return symbols, choice, true
 }
 
 // manaAnyOneColorCount resolves the leading count of the body "<N> mana of any
