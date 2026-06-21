@@ -78,6 +78,8 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.ControlComparison = opt.Val(comparison)
 	case compiler.ConditionPredicateControllerHandEmpty:
 		result.ControllerHandEmpty = true
+	case compiler.ConditionPredicateEventSubjectNameUnique:
+		result.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures = true
 	case compiler.ConditionPredicateControllerCreatedTokenThisTurn:
 		result.ControllerCreatedTokenThisTurn = true
 	case compiler.ConditionPredicateControllerGraveyardCardCountAtLeast:
@@ -181,6 +183,8 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			return true
 		case compiler.ConditionPredicateEventHistory:
 			return ctx == conditionContextInterveningTrigger || ctx == conditionContextActivation
+		case compiler.ConditionPredicateEventSubjectNameUnique:
+			return ctx == conditionContextInterveningTrigger
 		case compiler.ConditionPredicateControllerHandSizeExactly:
 			return ctx == conditionContextStatic || ctx == conditionContextActivation
 		default:
