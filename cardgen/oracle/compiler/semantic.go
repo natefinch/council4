@@ -1029,6 +1029,7 @@ const (
 	EffectMoveCounters
 	EffectCopyStackObject
 	EffectBecomeCopy
+	EffectAmass
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1173,6 +1174,11 @@ type CompiledEffect struct {
 	// only by its subtypes.
 	TokenName         string
 	TokenCopyOfTarget bool
+	// AmassSubtype is the creature subtype named by an EffectAmass keyword action
+	// ("Amass Orcs N" -> Orc, "Amass Zombies N" -> Zombie). The untyped "Amass N"
+	// form defaults to Zombie. Lowering carries it onto game.Amass so the runtime
+	// builds the Army token with this subtype when one must be created.
+	AmassSubtype types.Sub
 	// TokenCopyOfReference reports that the created token is a copy of the
 	// effect's single explicit reference ("Create a token that's a copy of this
 	// creature[ instead]."). The copy source is the lone reference in References,

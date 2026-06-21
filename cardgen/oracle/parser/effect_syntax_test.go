@@ -1295,6 +1295,9 @@ func TestParseResolvingEffectKinds(t *testing.T) {
 		{"Destroy target creature.", EffectDestroy},
 		{"Discard a card.", EffectDiscard},
 		{"Discover 3.", EffectDiscover},
+		{"Amass Orcs 1.", EffectAmass},
+		{"Amass Zombies 3.", EffectAmass},
+		{"Amass 2.", EffectAmass},
 		{"Double its power.", EffectDouble},
 		{"Draw a card.", EffectDraw},
 		{"This land enters tapped.", EffectEnterTapped},
@@ -1338,6 +1341,41 @@ func TestParseResolvingEffectKinds(t *testing.T) {
 			effects := document.Abilities[0].Sentences[0].Effects
 			if len(effects) == 0 || effects[0].Kind != test.kind {
 				t.Fatalf("effects = %#v, want first kind %v", effects, test.kind)
+			}
+		})
+	}
+}
+
+func TestParseAmassSubtype(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source  string
+		subtype types.Sub
+		amount  int
+	}{
+		{"Amass Orcs 1.", types.Orc, 1},
+		{"Amass Zombies 3.", types.Zombie, 3},
+		{"Amass 2.", types.Zombie, 2},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want exactly one", effects)
+			}
+			if effects[0].Kind != EffectAmass {
+				t.Fatalf("kind = %v, want EffectAmass", effects[0].Kind)
+			}
+			if effects[0].AmassSubtype != test.subtype {
+				t.Fatalf("AmassSubtype = %q, want %q", effects[0].AmassSubtype, test.subtype)
+			}
+			if !effects[0].Amount.Known || effects[0].Amount.Value != test.amount {
+				t.Fatalf("Amount = %#v, want known %d", effects[0].Amount, test.amount)
 			}
 		})
 	}
