@@ -291,6 +291,16 @@ func parseSignedAmount(sign, amount shared.Token) (SignedAmountSyntax, bool) {
 }
 
 func parseEffectAmount(kind EffectKind, tokens []shared.Token, atoms Atoms) EffectAmountSyntax {
+	if kind == EffectGainEnergy {
+		if symbols := energySymbolsAfter(tokens, 0); len(symbols) > 0 {
+			return EffectAmountSyntax{
+				Span:  shared.SpanOf(symbols),
+				Value: len(symbols),
+				Known: true,
+			}
+		}
+		return EffectAmountSyntax{}
+	}
 	if amount, attempted, ok := parseDynamicEffectAmount(tokens, atoms); attempted {
 		if ok {
 			return amount

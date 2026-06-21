@@ -1070,6 +1070,7 @@ const (
 	EffectFight
 	EffectGain
 	EffectGainControl // gain control of [target permanent]
+	EffectGainEnergy  // controller gains {E} energy counters
 	EffectGrantKeyword
 	EffectInvestigate
 	EffectExplore

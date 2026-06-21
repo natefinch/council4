@@ -1179,6 +1179,26 @@ func lowerInvestigateSpell(
 	)
 }
 
+// lowerGainEnergySpell lowers "You get {E}…{E}." to a player-counter placement of
+// the fixed number of energy counters on the controller.
+func lowerGainEnergySpell(
+	ctx contentCtx,
+	syntax *parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
+	return lowerExactPrimitiveSpell(
+		ctx,
+		syntax,
+		"gain energy",
+		func(amount game.Quantity) game.Primitive {
+			return game.AddPlayerCounter{
+				Amount:      amount,
+				Player:      game.ControllerReference(),
+				CounterKind: counter.Energy,
+			}
+		},
+	)
+}
+
 // lowerAmassContent lowers a single amass keyword-action effect ("Amass Orcs N"
 // / "Amass Zombies N" / "Amass N") to a game.Amass primitive carrying the fixed
 // count and the named Army subtype recognized by the parser.

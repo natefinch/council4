@@ -1210,6 +1210,8 @@ func lowerImmediateSingleEffectSpell(
 		})
 	case compiler.EffectInvestigate:
 		return lowerInvestigateSpell(ctx, syntax)
+	case compiler.EffectGainEnergy:
+		return lowerGainEnergySpell(ctx, syntax)
 	case compiler.EffectAmass:
 		return lowerAmassContent(ctx, syntax)
 	case compiler.EffectRenown:
