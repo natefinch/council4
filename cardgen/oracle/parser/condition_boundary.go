@@ -52,7 +52,7 @@ func emitConditionBoundaries(abilities []Ability) {
 		ability.ConditionBoundaries = conditionBoundaries(
 			ability.Tokens,
 			ability.Kind == AbilityTriggered,
-			conditionAttacksEachCombatIfAble(semantic),
+			conditionForcedAttackIfAble(semantic),
 		)
 		if ability.Modal == nil {
 			continue
@@ -63,7 +63,7 @@ func emitConditionBoundaries(abilities []Ability) {
 			mode.ConditionBoundaries = conditionBoundaries(
 				mode.Tokens,
 				false,
-				conditionAttacksEachCombatIfAble(semantic),
+				conditionForcedAttackIfAble(semantic),
 			)
 		}
 	}
@@ -148,6 +148,16 @@ func conditionActivationKeyword(tokens []shared.Token, index int, intro Conditio
 // not become a standalone condition.
 func conditionAttacksEachCombatIfAble(semantic []shared.Token) bool {
 	return conditionContainsSequence(semantic, 0, "attacks", "each", "combat", "if", "able")
+}
+
+// conditionForcedAttackIfAble reports whether the semantic tokens spell a
+// forced-attack restriction whose trailing "if able" must not become a
+// standalone condition: the static "attacks each combat if able" form or the
+// one-shot group "attack this turn if able" form (Bident of Thassa: "Creatures
+// your opponents control attack this turn if able.").
+func conditionForcedAttackIfAble(semantic []shared.Token) bool {
+	return conditionAttacksEachCombatIfAble(semantic) ||
+		conditionContainsSequence(semantic, 0, "attack", "this", "turn", "if", "able")
 }
 
 // conditionAsLongAsIsDuration reports whether an "as long as" introducer at index

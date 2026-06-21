@@ -41,6 +41,22 @@ func TestChangelingHasEveryCreatureSubtype(t *testing.T) {
 	}
 }
 
+func TestChangelingMatchesArbitrarySubtypesSimultaneously(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	permanent := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Universal Automaton",
+		Types:           []types.Card{types.Creature},
+		Subtypes:        []types.Sub{types.Shapeshifter},
+		StaticAbilities: []game.StaticAbility{game.ChangelingStaticBody},
+	}})
+
+	for _, subtype := range []types.Sub{types.Goblin, types.Elf} {
+		if !permanentHasSubtype(g, permanent, subtype) {
+			t.Fatalf("changeling not treated as %s", subtype)
+		}
+	}
+}
+
 func TestStaticPTEffectAffectsCombatDamage(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addAnthemPermanent(g, game.Player1)

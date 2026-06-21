@@ -481,6 +481,25 @@ const (
 	// in each of your draw steps"). It gates the draw-doubling replacement whose
 	// draw-step draw is exempt (Teferi's Ageless Insight).
 	ConditionPredicateWouldDrawCardExceptFirstInDrawStep
+	// ConditionPredicateCardWouldGoToGraveyard is satisfied when a card (or
+	// permanent) would be put into a watched graveyard. It gates the continuous
+	// graveyard-redirect replacement "If a card would be put into [a/your/an
+	// opponent's] graveyard from anywhere, exile it instead." (Leyline of the
+	// Void, Samurai of the Pale Curtain, Dryad Militant, Rest in Peace). The
+	// watched scope, card-type filter, and battlefield-only restriction live in
+	// the condition's Graveyard* fields.
+	ConditionPredicateCardWouldGoToGraveyard
+)
+
+// GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
+// replacement watches.
+type GraveyardRedirectScope uint8
+
+// Graveyard redirect scopes recognized by the semantic compiler.
+const (
+	GraveyardRedirectScopeAny GraveyardRedirectScope = iota
+	GraveyardRedirectScopeYou
+	GraveyardRedirectScopeOpponent
 )
 
 // ConditionEventHistoryWindow identifies which turn's event log to search.
@@ -675,6 +694,15 @@ type CompiledCondition struct {
 	// runtime condition; lowering reads this flag to set the ability's zone of
 	// function rather than emitting a runtime predicate for it.
 	SourceInGraveyard bool
+
+	// GraveyardRedirectScope, GraveyardSubjectTypesAny, and
+	// GraveyardFromBattlefieldOnly carry the parameters of a
+	// ConditionPredicateCardWouldGoToGraveyard clause: whose graveyard is
+	// watched, which card types the moving object may have (empty matches any
+	// card), and whether the moving object can only leave the battlefield.
+	GraveyardRedirectScope       GraveyardRedirectScope
+	GraveyardSubjectTypesAny     []TriggerCardType
+	GraveyardFromBattlefieldOnly bool
 }
 
 // TargetCardinality is an inclusive target count range.

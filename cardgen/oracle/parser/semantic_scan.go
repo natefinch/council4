@@ -15,7 +15,23 @@ func (a *Ability) computeSemanticReferences() []Reference {
 			tokens = tokensOutsideParserSpan(tokens, a.Sentences[i].Span)
 		}
 	}
+	for i := range a.StaticDeclarations {
+		if staticDeclarationConsumesReferences(&a.StaticDeclarations[i]) {
+			tokens = tokensOutsideParserSpan(tokens, a.StaticDeclarations[i].Span)
+		}
+	}
 	return a.Atoms.ReferencesWithin(tokens)
+}
+
+// staticDeclarationConsumesReferences reports whether a fully recognized static
+// declaration absorbs the pronouns within its span as part of a fixed idiom
+// rather than as object back-references. The each-player additional-land rule
+// ("... on each of their turns.") owns its "their", so that pronoun must not
+// surface as a dangling semantic reference that would block the text-blind
+// compiler's empty-content recognition of the player rule.
+func staticDeclarationConsumesReferences(declaration *StaticDeclarationSyntax) bool {
+	return declaration.Kind == StaticDeclarationPlayerRule &&
+		declaration.Subject.Kind == StaticDeclarationSubjectEachPlayer
 }
 
 // computeSemanticKeywords returns the keywords recognized in the ability's

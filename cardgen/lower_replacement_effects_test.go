@@ -1229,3 +1229,73 @@ func TestGenerateControlledCreaturesPTBuffWithKeyword(t *testing.T) {
 		t.Fatalf("source missing vigilance:\n%s", source)
 	}
 }
+
+func TestLowerGraveyardRedirectReplacement(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name                string
+		typeLine            string
+		oracle              string
+		ownerFilter         game.TriggerControllerFilter
+		cardTypes           []types.Card
+		fromBattlefieldOnly bool
+	}{
+		{
+			name:        "any graveyard from anywhere",
+			typeLine:    "Enchantment",
+			oracle:      "If a card would be put into a graveyard from anywhere, exile it instead.",
+			ownerFilter: game.TriggerControllerAny,
+		},
+		{
+			name:        "opponent graveyard from anywhere",
+			typeLine:    "Creature — Human",
+			oracle:      "If a card would be put into an opponent's graveyard from anywhere, exile it instead.",
+			ownerFilter: game.TriggerControllerOpponent,
+		},
+		{
+			name:        "typed card filter",
+			typeLine:    "Creature — Human Soldier",
+			oracle:      "If an instant or sorcery card would be put into a graveyard from anywhere, exile it instead.",
+			ownerFilter: game.TriggerControllerAny,
+			cardTypes:   []types.Card{types.Instant, types.Sorcery},
+		},
+		{
+			name:                "permanent from battlefield",
+			typeLine:            "Creature — Kor",
+			oracle:              "If a permanent would be put into a graveyard, exile it instead.",
+			ownerFilter:         game.TriggerControllerAny,
+			fromBattlefieldOnly: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Card",
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracle,
+			})
+			if len(face.ReplacementAbilities) != 1 {
+				t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+			}
+			replacement := face.ReplacementAbilities[0].Replacement
+			if !replacement.ContinuousZoneRedirect {
+				t.Fatalf("replacement is not a continuous graveyard redirect: %#v", replacement)
+			}
+			if replacement.ReplaceToZone != zone.Exile || replacement.ToZone != zone.Graveyard || !replacement.MatchToZone {
+				t.Fatalf("replacement zones = %#v, want exile-instead-of-graveyard", replacement)
+			}
+			if replacement.RedirectOwnerFilter != test.ownerFilter {
+				t.Fatalf("owner filter = %v, want %v", replacement.RedirectOwnerFilter, test.ownerFilter)
+			}
+			if !slices.Equal(replacement.RedirectTypeFilter, test.cardTypes) {
+				t.Fatalf("type filter = %v, want %v", replacement.RedirectTypeFilter, test.cardTypes)
+			}
+			gotBattlefieldOnly := replacement.MatchFromZone && replacement.FromZone == zone.Battlefield
+			if gotBattlefieldOnly != test.fromBattlefieldOnly {
+				t.Fatalf("from-battlefield-only = %v, want %v", gotBattlefieldOnly, test.fromBattlefieldOnly)
+			}
+		})
+	}
+}

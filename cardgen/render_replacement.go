@@ -95,6 +95,9 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 	if ability.Replacement.EntryTypeChoice {
 		return fmt.Sprintf("game.EntryTypeChoiceReplacement(%q)", ability.Text), nil
 	}
+	if ability.Replacement.ContinuousZoneRedirect {
+		return r.renderGraveyardRedirectReplacement(ctx, ability)
+	}
 	if ability.Replacement.ReplaceToZone != zone.None && ability.UnlessPaid.Exists {
 		if ability.Replacement.EntersTapped || ability.Replacement.Condition.Exists {
 			return "", errors.New("render: optional entry zone replacement cannot also enter tapped or have a condition")
@@ -342,6 +345,41 @@ func renderTokenCreationReplacement(ability *game.ReplacementAbility) (string, e
 		replacement.TokenMultiplier,
 		controller,
 	), nil
+}
+
+func (Renderer) renderGraveyardRedirectReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	replacement := ability.Replacement
+	if replacement.ReplaceToZone != zone.Exile ||
+		!replacement.MatchToZone ||
+		replacement.ToZone != zone.Graveyard ||
+		replacement.MatchEvent != game.EventZoneChanged ||
+		replacement.Condition.Exists ||
+		ability.UnlessPaid.Exists {
+		return "", errors.New("render: unsupported graveyard-redirect replacement shape")
+	}
+	fromBattlefieldOnly := replacement.MatchFromZone && replacement.FromZone == zone.Battlefield
+	if replacement.MatchFromZone && !fromBattlefieldOnly {
+		return "", errors.New("render: unsupported graveyard-redirect source zone")
+	}
+	controller, err := renderGroupEntersTappedController(replacement.RedirectOwnerFilter)
+	if err != nil {
+		return "", err
+	}
+	if len(replacement.RedirectTypeFilter) == 0 {
+		return fmt.Sprintf("game.GraveyardRedirectReplacement(%q, %s, %t)",
+			ability.Text, controller, fromBattlefieldOnly), nil
+	}
+	ctx.need(importTypes)
+	typeLiterals := make([]string, 0, len(replacement.RedirectTypeFilter))
+	for _, cardType := range replacement.RedirectTypeFilter {
+		literal, err := cardTypeLiteral(cardType)
+		if err != nil {
+			return "", err
+		}
+		typeLiterals = append(typeLiterals, literal)
+	}
+	return fmt.Sprintf("game.GraveyardRedirectReplacement(%q, %s, %t, %s)",
+		ability.Text, controller, fromBattlefieldOnly, strings.Join(typeLiterals, ", ")), nil
 }
 
 func renderZoneDestinationReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {

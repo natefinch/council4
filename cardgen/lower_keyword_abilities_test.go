@@ -113,6 +113,24 @@ func TestLowerKeywordAbilityStaticBodies(t *testing.T) {
 	}
 }
 
+func TestLowerChangelingKeywordStaticBody(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Woodland Changeling",
+		Layout:     "normal",
+		TypeLine:   "Creature — Shapeshifter",
+		OracleText: "Changeling (This card is every creature type.)",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.StaticAbilities) != 1 {
+		t.Fatalf("got %d static abilities, want 1", len(face.StaticAbilities))
+	}
+	if got := face.StaticAbilities[0].VarName; got != "game.ChangelingStaticBody" {
+		t.Fatalf("changeling static VarName = %q", got)
+	}
+}
+
 func TestLowerSemicolonSeparatedKeywordLine(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

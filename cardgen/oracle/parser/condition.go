@@ -68,6 +68,19 @@ const (
 	ConditionPredicateCastDuringControllerMainPhase         ConditionPredicateKind = "ConditionPredicateCastDuringControllerMainPhase"
 	ConditionPredicateWouldDrawCard                         ConditionPredicateKind = "ConditionPredicateWouldDrawCard"
 	ConditionPredicateWouldDrawCardExceptFirstInDrawStep    ConditionPredicateKind = "ConditionPredicateWouldDrawCardExceptFirstInDrawStep"
+	ConditionPredicateCardWouldGoToGraveyard                ConditionPredicateKind = "ConditionPredicateCardWouldGoToGraveyard"
+)
+
+// GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
+// replacement watches ("a graveyard" = any player, "your graveyard" = the
+// controller, "an opponent's graveyard" = an opponent).
+type GraveyardRedirectScope string
+
+// Graveyard redirect scopes recognized by the parser.
+const (
+	GraveyardRedirectScopeAny      GraveyardRedirectScope = ""
+	GraveyardRedirectScopeYou      GraveyardRedirectScope = "GraveyardRedirectScopeYou"
+	GraveyardRedirectScopeOpponent GraveyardRedirectScope = "GraveyardRedirectScopeOpponent"
 )
 
 // ConditionControlScope identifies which players' battlefields a "controls"
@@ -209,6 +222,17 @@ type ConditionClause struct {
 	// remaining predicate carries the accompanying runtime condition (e.g. "you
 	// control a Mountain").
 	SourceInGraveyard bool `json:",omitempty"`
+
+	// GraveyardRedirectScope, GraveyardSubjectTypesAny, and
+	// GraveyardFromBattlefieldOnly describe a
+	// ConditionPredicateCardWouldGoToGraveyard clause ("If a card would be put
+	// into an opponent's graveyard from anywhere, exile it instead."). Scope
+	// names whose graveyard is watched; TypesAny restricts the moving card to any
+	// of the listed card types (empty matches any card); FromBattlefieldOnly
+	// marks the "a permanent" subject, which can only leave the battlefield.
+	GraveyardRedirectScope       GraveyardRedirectScope `json:",omitempty"`
+	GraveyardSubjectTypesAny     []TriggerCardType      `json:",omitempty"`
+	GraveyardFromBattlefieldOnly bool                   `json:",omitempty"`
 }
 
 // ConditionControlComparison describes a cross-player control-count comparison
@@ -360,6 +384,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeGraveyardControlsCondition,
 		recognizeControlsCondition,
 		recognizeTotalPowerCondition,
+		recognizeCardToGraveyardReplacementCondition,
 		recognizeSourceDeathCondition,
 		recognizeTargetColorCondition,
 		recognizeDrawFromEmptyLibraryCondition,
@@ -1010,6 +1035,137 @@ func recognizeSourceDeathCondition(body []shared.Token, atoms Atoms) (ConditionC
 		}, true
 	}
 	return ConditionClause{}, false
+}
+
+// recognizeCardToGraveyardReplacementCondition recognizes the global
+// graveyard-redirect replacement condition "[a/an] <subject> would be put into
+// [a/your/an opponent's] graveyard [from anywhere]" (Leyline of the Void,
+// Samurai of the Pale Curtain, Dryad Militant, Rest in Peace, Dauthi
+// Voidwalker). It is distinct from recognizeSourceDeathCondition, whose subject
+// binds the ability's own source. The subject "a permanent" leaves only the
+// battlefield; "a card"/"a card or token"/typed "<types> card" subjects come
+// from anywhere.
+func recognizeCardToGraveyardReplacementCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	pivot := tokenSubsequenceIndex(body, "would", "be", "put", "into")
+	if pivot <= 0 {
+		return ConditionClause{}, false
+	}
+	destination, ok := parseGraveyardRedirectDestination(body[pivot+4:])
+	if !ok {
+		return ConditionClause{}, false
+	}
+	subjectTypes, subjectFromBattlefield, ok := parseGraveyardRedirectSubject(body[:pivot], atoms)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	fromBattlefieldOnly := subjectFromBattlefield || destination.fromBattlefield
+	if !fromBattlefieldOnly && !destination.fromAnywhere {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate:                    ConditionPredicateCardWouldGoToGraveyard,
+		GraveyardRedirectScope:       destination.scope,
+		GraveyardSubjectTypesAny:     subjectTypes,
+		GraveyardFromBattlefieldOnly: fromBattlefieldOnly,
+	}, true
+}
+
+// graveyardRedirectDestination is the parsed destination phrase of a
+// graveyard-redirect condition: the watched graveyard scope, whether "from
+// anywhere" was present, and whether the source zone was restricted to the
+// battlefield ("from the battlefield").
+type graveyardRedirectDestination struct {
+	scope           GraveyardRedirectScope
+	fromAnywhere    bool
+	fromBattlefield bool
+}
+
+// parseGraveyardRedirectDestination parses the destination phrase of a
+// graveyard-redirect condition. It fails closed for unrecognized phrases.
+func parseGraveyardRedirectDestination(rest []shared.Token) (graveyardRedirectDestination, bool) {
+	result := graveyardRedirectDestination{}
+	if trimmed, ok := stripTokenSuffix(rest, "from", "anywhere"); ok {
+		rest = trimmed
+		result.fromAnywhere = true
+	} else if trimmed, ok := stripTokenSuffix(rest, "from", "the", "battlefield"); ok {
+		rest = trimmed
+		result.fromBattlefield = true
+	}
+	switch {
+	case tokenWordsEqual(rest, "a", "graveyard"):
+		result.scope = GraveyardRedirectScopeAny
+	case tokenWordsEqual(rest, "your", "graveyard"):
+		result.scope = GraveyardRedirectScopeYou
+	case tokenWordsEqual(rest, "an", "opponent's", "graveyard"):
+		result.scope = GraveyardRedirectScopeOpponent
+	default:
+		return graveyardRedirectDestination{}, false
+	}
+	return result, true
+}
+
+// parseGraveyardRedirectSubject parses the moving-object subject of a
+// graveyard-redirect condition, returning the typed card-type filter (empty for
+// any card) and whether the subject can only leave the battlefield ("a
+// permanent"). It fails closed for unrecognized subjects.
+func parseGraveyardRedirectSubject(subject []shared.Token, atoms Atoms) (cardTypes []TriggerCardType, fromBattlefieldOnly, ok bool) {
+	if len(subject) < 2 || (!equalWord(subject[0], "a") && !equalWord(subject[0], "an")) {
+		return nil, false, false
+	}
+	noun := subject[1:]
+	switch {
+	case tokenWordsEqual(noun, "permanent"):
+		return nil, true, true
+	case tokenWordsEqual(noun, "card"), tokenWordsEqual(noun, "card", "or", "token"):
+		return nil, false, true
+	}
+	typeTokens, ok := stripTokenSuffix(noun, "card")
+	if !ok || len(typeTokens) == 0 {
+		return nil, false, false
+	}
+	subjectTypes, ok := parseGraveyardRedirectSubjectTypes(typeTokens, atoms)
+	if !ok {
+		return nil, false, false
+	}
+	return subjectTypes, false, true
+}
+
+// parseGraveyardRedirectSubjectTypes parses an "or"-joined card-type list
+// ("instant or sorcery", "creature") into typed card types.
+func parseGraveyardRedirectSubjectTypes(tokens []shared.Token, atoms Atoms) ([]TriggerCardType, bool) {
+	var result []TriggerCardType
+	for i := range tokens {
+		if i%2 == 1 {
+			if !equalWord(tokens[i], "or") {
+				return nil, false
+			}
+			continue
+		}
+		cardType, ok := atoms.CardTypeAt(tokens[i].Span)
+		if !ok {
+			return nil, false
+		}
+		mapped := triggerCardTypeFromAtom(cardType)
+		if mapped == TriggerCardTypeUnknown || slices.Contains(result, mapped) {
+			return nil, false
+		}
+		result = append(result, mapped)
+	}
+	if len(result) == 0 {
+		return nil, false
+	}
+	return result, true
+}
+
+// tokenSubsequenceIndex returns the start index of the first occurrence of the
+// word subsequence in tokens, or -1 when absent.
+func tokenSubsequenceIndex(tokens []shared.Token, words ...string) int {
+	for start := 0; start+len(words) <= len(tokens); start++ {
+		if equalWordSequence(tokens, start, words...) {
+			return start
+		}
+	}
+	return -1
 }
 
 type conditionCount struct {
