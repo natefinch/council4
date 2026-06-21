@@ -28,7 +28,7 @@ func writeSupportDocumentation(cfg config, output report, results []result) erro
 		}
 	}
 	if cfg.unsupportedReasonsPath != "" {
-		if err := writeUnsupportedReasonsMarkdown(cfg.unsupportedReasonsPath, output); err != nil {
+		if err := writeUnsupportedReasonsMarkdown(cfg.unsupportedReasonsPath, output, results); err != nil {
 			return err
 		}
 	}
@@ -103,7 +103,7 @@ func writeUnsupportedMarkdown(path string, output report) error {
 	return writeDocumentationFile(path, builder.String())
 }
 
-func writeUnsupportedReasonsMarkdown(path string, output report) error {
+func writeUnsupportedReasonsMarkdown(path string, output report, results []result) error {
 	analysis := analyzeSupport(output)
 	var builder strings.Builder
 	_, _ = builder.WriteString("# Card-Support Planning Report\n\n")
@@ -161,6 +161,7 @@ func writeUnsupportedReasonsMarkdown(path string, output report) error {
 	}
 	writeOrderedSequenceCategories(&builder, output)
 	writeConditionRecognitionBacklog(&builder, output)
+	writeEnvelopeGapBacklog(&builder, output, results)
 	return writeDocumentationFile(path, builder.String())
 }
 
@@ -220,6 +221,48 @@ func writeConditionRecognitionBacklog(builder *strings.Builder, output report) {
 			markdownTableCell(entry.condition),
 			formatCount(entry.affectedCards),
 			formatCount(entry.soleBlockerCards),
+		)
+	}
+}
+
+// writeEnvelopeGapBacklog renders the ranked list of modeled-capability envelope
+// gaps: families the compiler recognizes but lowers only within an exact
+// envelope, ranked by how many cards a single envelope detail sole-blocks. Each
+// row shows a few example wordings so the specific parameter the envelope must
+// grow to cover (a dynamic amount, a graveyard zone, a multi-target count, a
+// filter) is visible. It is the effect-family analogue of the unrecognized
+// per-effect condition backlog.
+func writeEnvelopeGapBacklog(builder *strings.Builder, output report, results []result) {
+	gaps := analyzeEnvelopeGapBacklog(output)
+	if len(gaps) == 0 {
+		return
+	}
+	samples := collectEnvelopeSamples(output, results)
+	_, _ = builder.WriteString("\n## Modeled-capability envelope gaps (parameter backlog)\n\n")
+	_, _ = builder.WriteString(
+		"Families the compiler recognizes but lowers only within an exact envelope. Each row is " +
+			"one supported-envelope blocker ranked by sole blockers (cards it is the only blocker " +
+			"for); growing the envelope to cover the example wordings unblocks the listed cards. " +
+			"This is the effect-family analogue of the unrecognized-condition backlog above.\n\n",
+	)
+	_, _ = builder.WriteString("| Capability | Supported envelope (blocker) | Affected cards | Sole blockers | Example wordings |\n")
+	_, _ = builder.WriteString("| --- | --- | ---: | ---: | --- |\n")
+	for index, gap := range gaps {
+		if index >= envelopeGapBacklogLimit {
+			break
+		}
+		examples := "-"
+		if rows := samples[envelopeGapKey(gap.summary, gap.detail)]; len(rows) > 0 {
+			examples = markdownTableCell(strings.Join(rows, "; "))
+		}
+		_, _ = fmt.Fprintf(
+			builder,
+			"| %s | %s | %s | %s | %s |\n",
+			markdownTableCell(gap.summary),
+			markdownTableCell(gap.detail),
+			formatCount(gap.affectedCards),
+			formatCount(gap.soleBlockerCards),
+			examples,
 		)
 	}
 }
