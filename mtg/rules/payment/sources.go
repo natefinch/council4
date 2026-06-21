@@ -451,6 +451,46 @@ func costWithConvokePayments(manaCost *cost.Mana, genericReduction int, paidColo
 	return &modified
 }
 
+func improviseCandidates(s State, playerID game.PlayerID, exclude map[id.ID]bool) []*game.Permanent {
+	var nonMana []*game.Permanent
+	var manaArtifacts []*game.Permanent
+	for _, permanent := range s.Battlefield() {
+		if !canImproviseWith(s, playerID, permanent, exclude) {
+			continue
+		}
+		if _, ok := permanentManaOutput(s, permanent); ok {
+			manaArtifacts = append(manaArtifacts, permanent)
+			continue
+		}
+		nonMana = append(nonMana, permanent)
+	}
+	return append(nonMana, manaArtifacts...)
+}
+
+// improvisePayment taps untapped artifacts to pay for generic mana only; unlike
+// convoke it never covers colored pips. The returned cost retains every colored
+// and variable symbol and only its generic requirement is reduced.
+func improvisePayment(s State, playerID game.PlayerID, manaCost *cost.Mana, xValue int, exclude map[id.ID]bool) ([]*game.Permanent, *cost.Mana, bool) {
+	_, generic, ok := costRequirements(manaCost, xValue)
+	if !ok || generic <= 0 {
+		return nil, manaCost, false
+	}
+	candidates := improviseCandidates(s, playerID, exclude)
+	var taps []*game.Permanent
+	genericReduction := 0
+	for _, permanent := range candidates {
+		if genericReduction == generic {
+			break
+		}
+		taps = append(taps, permanent)
+		genericReduction++
+	}
+	if len(taps) == 0 {
+		return nil, manaCost, false
+	}
+	return taps, costWithConvokePayments(manaCost, genericReduction, nil), true
+}
+
 func costWithGenericRequirement(manaCost *cost.Mana, generic int) *cost.Mana {
 	if generic < 0 {
 		generic = 0
