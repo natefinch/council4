@@ -366,6 +366,13 @@ const (
 	EffectDynamicAmountSacrificedPower     EffectDynamicAmountKind = "EffectDynamicAmountSacrificedPower"
 	EffectDynamicAmountSacrificedToughness EffectDynamicAmountKind = "EffectDynamicAmountSacrificedToughness"
 	EffectDynamicAmountSacrificedManaValue EffectDynamicAmountKind = "EffectDynamicAmountSacrificedManaValue"
+	// EffectDynamicAmountSharedCreatureTypeCount is the number of other creatures
+	// in a battlefield group that share at least one creature type with the
+	// affected permanent ("for each other creature on the battlefield that shares
+	// a creature type with it"). The group is carried in the amount's Selection.
+	// It backs the shared-creature-type anthem family (Coat of Arms), a per-
+	// affected-creature dynamic power/toughness bonus.
+	EffectDynamicAmountSharedCreatureTypeCount EffectDynamicAmountKind = "EffectDynamicAmountSharedCreatureTypeCount"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.

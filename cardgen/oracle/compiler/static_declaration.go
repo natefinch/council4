@@ -1750,9 +1750,31 @@ type staticDeclarationEffectGroupResult struct {
 	AffectedSource bool
 }
 
+// staticSubjectGroupReferencesTolerated reports whether the ability's free
+// references are compatible with a static-subject affected group. A static
+// subject names its own affected group, so a free reference normally signals a
+// referent-bound group and disqualifies it. The shared-creature-type bonus is
+// the exception: its amount inherently names the affected creature with the
+// pronoun "it" ("for each other creature ... that shares a creature type with
+// it"), which is internal to the amount rather than a separate antecedent.
+func staticSubjectGroupReferencesTolerated(references []CompiledReference, effect *CompiledEffect) bool {
+	if len(references) == 0 {
+		return true
+	}
+	if effect.Amount.DynamicKind != DynamicAmountSharedCreatureTypeCount {
+		return false
+	}
+	for i := range references {
+		if references[i].Pronoun != ReferencePronounIt {
+			return false
+		}
+	}
+	return true
+}
+
 func staticDeclarationEffectGroup(ability CompiledAbility, effect *CompiledEffect) (staticDeclarationEffectGroupResult, bool) {
 	if effect.StaticSubject != StaticSubjectNone {
-		if len(ability.Content.References) != 0 {
+		if !staticSubjectGroupReferencesTolerated(ability.Content.References, effect) {
 			return staticDeclarationEffectGroupResult{}, false
 		}
 		keyword, excludedKeyword := staticSubjectKeywordFilter(effect)

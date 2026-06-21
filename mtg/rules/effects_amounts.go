@@ -322,6 +322,81 @@ func totalCharacteristicInGroup(g *game.Game, obj *game.StackObject, controller 
 	return total
 }
 
+// dynamicAmountValueForPermanent evaluates a dynamic amount for a continuous
+// modification applied to permanent. Most dynamic amounts do not depend on the
+// affected permanent and delegate to dynamicAmountValueBeforeLayer; the
+// shared-creature-type count yields a different value per affected permanent, so
+// it counts the other creatures in its group that share a creature type with it.
+//
+//nolint:gocritic // Value semantics keep dynamic expressions immutable during evaluation.
+func dynamicAmountValueForPermanent(g *game.Game, permanent *game.Permanent, controller game.PlayerID, dynamic game.DynamicAmount, before game.ContinuousLayer) int {
+	if dynamic.Kind != game.DynamicAmountSharedCreatureTypeCountInGroup {
+		return dynamicAmountValueBeforeLayer(g, nil, controller, dynamic, before)
+	}
+	multiplier := dynamic.Multiplier
+	if multiplier == 0 {
+		multiplier = 1
+	}
+	return sharedCreatureTypeCountInGroup(g, permanent, controller, dynamic.Group) * multiplier
+}
+
+// sharedCreatureTypeCountInGroup returns the number of permanents in the group's
+// scope, other than permanent, that share at least one creature type with it
+// (CR 700.4, CR 608.2c). The battlefield is scanned directly rather than through
+// the group resolver because membership resolution evaluates each permanent's
+// full continuous values, which would re-enter the power/toughness modification
+// this count feeds and recurse without bound; only the group's controller scope
+// is honored here. Creature subtypes are read before the power/toughness layers
+// for the same reason. A Changeling, which has every creature type, shares with
+// any other creature that has at least one; a permanent with no creature types
+// shares with nothing.
+func sharedCreatureTypeCountInGroup(g *game.Game, permanent *game.Permanent, controller game.PlayerID, group game.GroupReference) int {
+	own := creatureSubtypesBeforePowerToughness(g, permanent)
+	if len(own) == 0 {
+		return 0
+	}
+	selection := group.Selection()
+	count := 0
+	for _, other := range g.Battlefield {
+		if other.ObjectID == permanent.ObjectID {
+			continue
+		}
+		if selection.Controller == game.ControllerYou && effectiveController(g, other) != controller {
+			continue
+		}
+		if shareCreatureSubtype(own, creatureSubtypesBeforePowerToughness(g, other)) {
+			count++
+		}
+	}
+	return count
+}
+
+// creatureSubtypesBeforePowerToughness returns the set of creature subtypes a
+// permanent has after the type-changing layers but before the power/toughness
+// layers, so reading it from inside a power/toughness modification cannot
+// recurse. Non-creature subtypes are dropped because only creature types are
+// shared (CR 700.4).
+func creatureSubtypesBeforePowerToughness(g *game.Game, permanent *game.Permanent) map[types.Sub]struct{} {
+	values := permanentValuesBeforeLayer(g, permanent, game.LayerPowerToughnessSet)
+	subtypes := make(map[types.Sub]struct{})
+	for _, subtype := range values.subtypes {
+		if types.KnownSubtypeForType(types.Creature, subtype) {
+			subtypes[subtype] = struct{}{}
+		}
+	}
+	return subtypes
+}
+
+// shareCreatureSubtype reports whether two creature-subtype sets intersect.
+func shareCreatureSubtype(a, b map[types.Sub]struct{}) bool {
+	for subtype := range a {
+		if _, ok := b[subtype]; ok {
+			return true
+		}
+	}
+	return false
+}
+
 // groupDynamicAmount dispatches the battlefield-group amounts, each derived from
 // the permanents of dynamic.Group as the effect resolves (CR 608.2c): the member
 // count, the greatest or total power/toughness/mana value, and the distinct

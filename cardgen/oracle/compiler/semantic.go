@@ -1751,6 +1751,13 @@ const (
 	DynamicAmountSacrificedPower
 	DynamicAmountSacrificedToughness
 	DynamicAmountSacrificedManaValue
+	// DynamicAmountSharedCreatureTypeCount is the number of other creatures in
+	// the selector's battlefield group that share at least one creature type with
+	// the affected permanent ("for each other creature on the battlefield that
+	// shares a creature type with it"). It backs the shared-creature-type anthem
+	// family (Coat of Arms), a per-affected-creature dynamic power/toughness
+	// bonus. Added last so existing kinds keep their wire values.
+	DynamicAmountSharedCreatureTypeCount
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.
