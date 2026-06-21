@@ -198,7 +198,9 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateObjectExists:
 			return true
 		case compiler.ConditionPredicateEventHistory:
-			return ctx == conditionContextInterveningTrigger || ctx == conditionContextActivation
+			return ctx == conditionContextInterveningTrigger ||
+				ctx == conditionContextActivation ||
+				ctx == conditionContextEffectGate
 		case compiler.ConditionPredicateCastDuringControllerMainPhase:
 			return ctx == conditionContextEffectGate
 		case compiler.ConditionPredicateEventSubjectNameUnique,

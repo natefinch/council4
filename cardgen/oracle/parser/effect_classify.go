@@ -93,6 +93,25 @@ func parsePlusAdditionalReplacement(tokens []shared.Token, atoms Atoms) (EffectR
 	return EffectReplacementSyntax{}, false
 }
 
+// trailingInsteadBeforeConditionReplacement recognizes the plain "instead"
+// replacement marker that ends an effect clause whose trailing "if" condition
+// has already been stripped from the ownership tokens ("That creature gets
+// -13/-13 until end of turn instead if a creature died this turn.", Tragic
+// Slip, whose ownership tokens end at "instead"). The "instead" word marks this
+// effect as replacing the preceding effect; the stripped trailing condition
+// gates when the replacement applies. It is distinguished from the final
+// "... instead." form the caller handles next by requiring the clause to end at
+// the bare "instead" word with no closing period.
+func trailingInsteadBeforeConditionReplacement(tokens []shared.Token) (EffectReplacementSyntax, bool) {
+	if len(tokens) == 0 || !equalWord(tokens[len(tokens)-1], "instead") {
+		return EffectReplacementSyntax{}, false
+	}
+	return EffectReplacementSyntax{
+		Kind: EffectReplacementInstead,
+		Span: tokens[len(tokens)-1].Span,
+	}, true
+}
+
 func parseEffectReplacement(tokens []shared.Token, atoms Atoms) EffectReplacementSyntax {
 	if replacement, ok := parseInsteadOneOfEachReplacement(tokens); ok {
 		return replacement
@@ -101,6 +120,9 @@ func parseEffectReplacement(tokens []shared.Token, atoms Atoms) EffectReplacemen
 		return replacement
 	}
 	if replacement, ok := leadingInsteadReplacement(tokens); ok {
+		return replacement
+	}
+	if replacement, ok := trailingInsteadBeforeConditionReplacement(tokens); ok {
 		return replacement
 	}
 	if len(tokens) < 2 ||

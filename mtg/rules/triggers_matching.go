@@ -45,8 +45,18 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 
 	// Trigger patterns are checked when the triggering event is processed, and
 	// LTB/dies checks may need last-known information for the moved permanent
-	// (CR 603.2, CR 603.6c, CR 603.10).
-	sourceController := effectiveController(g, source)
+	// (CR 603.2, CR 603.6c, CR 603.10). A nil source has no controller; that
+	// only reaches here for source-agnostic event-history conditions evaluated
+	// during a spell's resolution, where source-relative filters fail closed via
+	// the out-of-range controller sentinel below.
+	sourceController := game.PlayerID(-1)
+	if source != nil {
+		sourceController = effectiveController(g, source)
+	}
+	var sourceObjectID id.ID
+	if source != nil {
+		sourceObjectID = source.ObjectID
+	}
 	subjectController := event.Controller
 	if subject, ok := triggerSubjectPermanent(g, pattern.Subject, event); ok {
 		subjectController = effectiveController(g, subject)
@@ -112,7 +122,7 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 		}
 	}
 	if subjectSel := triggerSubjectSelection(pattern); !subjectSel.Empty() {
-		matched := triggerSelectionMatches(g, sourceController, event, event.PermanentID, &subjectSel, source.ObjectID)
+		matched := triggerSelectionMatches(g, sourceController, event, event.PermanentID, &subjectSel, sourceObjectID)
 		if !matched && pattern.SubjectSelectionOrSelf {
 			matched = triggerSourceMatches(g, source, game.TriggerSourceSelf, pattern.Subject, event)
 		}
@@ -126,7 +136,7 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 			g:              g,
 			event:          event,
 			cardTypes:      eventSpellCardTypes(g, event),
-			sourceObjectID: source.ObjectID,
+			sourceObjectID: sourceObjectID,
 		}
 		if !matchSelection(&subject, &cardSel) {
 			return false
