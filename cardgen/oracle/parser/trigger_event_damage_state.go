@@ -432,6 +432,27 @@ func parseTappedForManaTriggerEventClause(
 	if intro != TriggerIntroductionWhenever {
 		return nil
 	}
+	if rest, ok := cutSyntaxWords(tokens, "you", "tap"); ok {
+		inner, ok := stripTokenSuffix(rest, "for", "mana")
+		if !ok {
+			return nil
+		}
+		subject := parsePermanentEventSubject(inner, false, atoms)
+		if !subject.ok || subject.oneOrMore || subject.subject.Kind == TriggerEventSubjectSelf {
+			return nil
+		}
+		controller := subject.controller
+		if !mergeTriggerController(&controller, ControllerYou) {
+			return nil
+		}
+		return &TriggerEventClause{
+			Kind:          TriggerEventKindBecomesTapped,
+			Subject:       subject.subject,
+			Controller:    controller,
+			ExcludeSelf:   subject.excludeSelf,
+			TappedForMana: true,
+		}
+	}
 	prefix, ok := stripTokenSuffix(tokens, "is", "tapped", "for", "mana")
 	if !ok {
 		return nil

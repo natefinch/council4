@@ -1046,6 +1046,19 @@ func stateAndOtherTriggerEventClauseTests() []triggerEventClauseTest {
 			},
 		},
 		{
+			name:   "tapped for mana active voice",
+			source: "Whenever you tap a Swamp for mana, add an additional {B}.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindBecomesTapped ||
+					clause.Subject.Kind != TriggerEventSubjectSelection ||
+					clause.Controller != ControllerYou ||
+					!clause.TappedForMana {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
 			name:   "state face up",
 			source: "When enchanted creature is turned face up, draw a card.",
 			check: func(t *testing.T, clause *TriggerEventClause) {
