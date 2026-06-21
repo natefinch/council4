@@ -815,6 +815,19 @@ func recognizeModalChoice(header Phrase, atoms Atoms) modalChoiceRecognition {
 		tokens[4].Kind == shared.EmDash {
 		return modalChoiceRecognition{minModes: 1, maxModes: -1, kind: ModalChoiceKindOneOrMore, ok: true}
 	}
+	if len(tokens) == 5 &&
+		tokens[0].Kind == shared.Word && strings.EqualFold(tokens[0].Text, "choose") &&
+		tokens[1].Kind == shared.Word && strings.EqualFold(tokens[1].Text, "up") &&
+		tokens[2].Kind == shared.Word && strings.EqualFold(tokens[2].Text, "to") &&
+		tokens[3].Kind == shared.Word &&
+		tokens[4].Kind == shared.EmDash {
+		// "Choose up to <number> —" is an optional modal choice: the controller
+		// may pick between zero and <number> distinct modes.
+		if n, numOK := atoms.CardinalAt(tokens[3].Span); numOK {
+			return modalChoiceRecognition{minModes: 0, maxModes: n, ok: true}
+		}
+		return modalChoiceRecognition{}
+	}
 	// Expected: [Word("Choose"), Word(<number>), EmDash]
 	if len(tokens) != 3 ||
 		tokens[0].Kind != shared.Word || !strings.EqualFold(tokens[0].Text, "choose") ||
