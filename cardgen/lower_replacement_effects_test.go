@@ -801,11 +801,57 @@ func TestGenerateEntersWithCountersReplacementSource(t *testing.T) {
 	}
 }
 
+func TestLowerEntersWithXCountersReplacement(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Walking Ballista",
+		Layout:     "normal",
+		TypeLine:   "Artifact Creature — Construct",
+		OracleText: "This creature enters with X +1/+1 counters on it.",
+		Power:      new("0"),
+		Toughness:  new("0"),
+	})
+	if len(face.ReplacementAbilities) != 1 {
+		t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+	}
+	replacement := face.ReplacementAbilities[0].Replacement
+	if len(replacement.EntersWithCounters) != 1 {
+		t.Fatalf("counter placements = %#v, want one", replacement.EntersWithCounters)
+	}
+	placement := replacement.EntersWithCounters[0]
+	if placement.Kind != counter.PlusOnePlusOne || !placement.AmountFromX || placement.Amount != 0 {
+		t.Fatalf("placement = %#v, want +1/+1 from X", placement)
+	}
+}
+
+func TestGenerateEntersWithXCountersReplacementSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Walking Ballista",
+		Layout:     "normal",
+		TypeLine:   "Artifact Creature — Construct",
+		OracleText: "This creature enters with X +1/+1 counters on it.",
+		Power:      new("0"),
+		Toughness:  new("0"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	if !strings.Contains(source, "game.CounterPlacement{Kind: counter.PlusOnePlusOne, AmountFromX: true}") {
+		t.Fatalf("source missing X counter placement:\n%s", source)
+	}
+	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
 func TestLowerEntersWithCountersRejectsUnsupportedForms(t *testing.T) {
 	t.Parallel()
 	tests := map[string]string{
 		"conditional": "If a creature died this turn, this creature enters with a +1/+1 counter on it.",
-		"dynamic":     "This creature enters with X +1/+1 counters on it.",
 	}
 	for name, oracleText := range tests {
 		t.Run(name, func(t *testing.T) {

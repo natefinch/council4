@@ -494,6 +494,7 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 			WasCast:           !obj.Copy,
 			CastController:    obj.Controller,
 			HasCastController: !obj.Copy,
+			XValue:            obj.XValue,
 		},
 		agents,
 		log,

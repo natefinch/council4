@@ -593,8 +593,12 @@ func lowerEntersWithCountersReplacement(
 		effect.EntersColorChoice || effect.EntersTypeChoice {
 		return unsupported("the executable source backend supports only exact self enters-with-counters replacements")
 	}
-	if !effect.Amount.Known ||
-		effect.Amount.Value <= 0 {
+	// "This creature enters with X +1/+1 counters on it." (Walking Ballista,
+	// Hangarback Walker, Endless One) places counters equal to the spell's
+	// chosen X, resolved by the runtime from the entering permanent.
+	amountFromX := effect.Amount.VariableX
+	if !amountFromX &&
+		(!effect.Amount.Known || effect.Amount.Value <= 0) {
 		return unsupported("the executable source backend does not yet support dynamic enters-with-counters quantities")
 	}
 	if !effect.CounterKindKnown {
@@ -604,8 +608,9 @@ func lowerEntersWithCountersReplacement(
 		return unsupported("the executable source backend does not yet support dynamic enters-with-counters quantities")
 	}
 	placement := game.CounterPlacement{
-		Kind:   effect.CounterKind,
-		Amount: effect.Amount.Value,
+		Kind:        effect.CounterKind,
+		Amount:      effect.Amount.Value,
+		AmountFromX: amountFromX,
 	}
 	// "... enters with N counters on it if <condition>" (Raid, Morbid, Ferocious).
 	if len(ability.Content.Conditions) == 1 {
