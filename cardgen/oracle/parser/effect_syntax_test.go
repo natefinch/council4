@@ -2880,3 +2880,28 @@ func TestParseDoublePowerToughnessObject(t *testing.T) {
 		})
 	}
 }
+
+func TestParseLeadingInsteadSearchReplacement(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"Sacrifice a land. Search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle. If you control a creature with power 4 or greater, instead search your library for up to three basic land cards, put them onto the battlefield tapped, then shuffle.",
+		Context{InstantOrSorcery: true},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effects := document.Abilities[0].Sentences[2].Effects
+	if len(effects) == 0 {
+		t.Fatal("no effects parsed for the conditional search sentence")
+	}
+	search := effects[0]
+	if search.Kind != EffectSearch {
+		t.Fatalf("first effect kind = %v, want EffectSearch", search.Kind)
+	}
+	if search.Replacement.Kind != EffectReplacementInstead {
+		t.Fatalf("replacement kind = %v, want instead", search.Replacement.Kind)
+	}
+	if got := searchUnsupportedDetail(&search); got != "" {
+		t.Fatalf("instead search clause unsupported: %q", got)
+	}
+}

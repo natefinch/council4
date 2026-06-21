@@ -67,6 +67,9 @@ func lowerOrderedSequenceSpecialCase(
 			unsupportedEffectSequenceDiagnostic(ctx, "structural — unsupported sacrifice-conditioned reanimation"),
 			true
 	}
+	if content, ok := lowerSacrificeThenSearchSequence(ctx); ok {
+		return content, nil, true
+	}
 	if content, ok := lowerCounterThenNextMainManaSequence(ctx); ok {
 		return content, nil, true
 	}
