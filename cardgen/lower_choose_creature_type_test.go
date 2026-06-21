@@ -56,3 +56,50 @@ func TestLowerChooseCreatureTypeThenDrawForEach(t *testing.T) {
 		t.Fatal("SubtypeChoice != SubtypeChoiceResolution, want Resolution")
 	}
 }
+
+// TestLowerChooseCreatureTypeThenDestroyExcluded verifies "Choose a creature
+// type. Destroy all creatures that aren't of the chosen type." (Kindred Dominance)
+// lowers to a Choose instruction publishing the chosen subtype followed by a mass
+// destroy whose battlefield group reads it back through the negated
+// SubtypeChoiceResolutionExcluded predicate.
+func TestLowerChooseCreatureTypeThenDestroyExcluded(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Kindred Dominance",
+		Layout:     "normal",
+		ManaCost:   "{5}{B}{B}",
+		TypeLine:   "Sorcery",
+		OracleText: "Choose a creature type. Destroy all creatures that aren't of the chosen type.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	if len(face.SpellAbility.Val.Modes) != 1 {
+		t.Fatalf("modes = %d, want 1", len(face.SpellAbility.Val.Modes))
+	}
+	sequence := face.SpellAbility.Val.Modes[0].Sequence
+	if len(sequence) != 2 {
+		t.Fatalf("sequence length = %d, want 2", len(sequence))
+	}
+	choose, ok := sequence[0].Primitive.(game.Choose)
+	if !ok {
+		t.Fatalf("first primitive = %#v, want game.Choose", sequence[0].Primitive)
+	}
+	if choose.Choice.Kind != game.ResolutionChoiceSubtype || choose.Choice.SubtypeOfType != types.Creature {
+		t.Fatalf("choice = (%v,%v), want (Subtype, Creature)", choose.Choice.Kind, choose.Choice.SubtypeOfType)
+	}
+	if choose.PublishChoice != game.SpellChosenTypeChoiceKey {
+		t.Fatalf("PublishChoice = %q, want %q", choose.PublishChoice, game.SpellChosenTypeChoiceKey)
+	}
+	destroy, ok := sequence[1].Primitive.(game.Destroy)
+	if !ok {
+		t.Fatalf("second primitive = %#v, want game.Destroy", sequence[1].Primitive)
+	}
+	selection := destroy.Group.Selection()
+	if selection.SubtypeChoice != game.SubtypeChoiceResolutionExcluded {
+		t.Fatalf("SubtypeChoice = %v, want SubtypeChoiceResolutionExcluded", selection.SubtypeChoice)
+	}
+	if len(selection.RequiredTypes) != 1 || selection.RequiredTypes[0] != types.Creature {
+		t.Fatalf("RequiredTypes = %v, want [Creature]", selection.RequiredTypes)
+	}
+}

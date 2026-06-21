@@ -542,6 +542,8 @@ func appendSubtypeChoiceField(fields []string, choice game.SubtypeChoiceSource) 
 		return append(fields, "SubtypeChoice: game.SubtypeChoiceSourceEntry,"), nil
 	case game.SubtypeChoiceResolution:
 		return append(fields, "SubtypeChoice: game.SubtypeChoiceResolution,"), nil
+	case game.SubtypeChoiceResolutionExcluded:
+		return append(fields, "SubtypeChoice: game.SubtypeChoiceResolutionExcluded,"), nil
 	default:
 		return nil, fmt.Errorf("render: unsupported subtype choice source %d", choice)
 	}

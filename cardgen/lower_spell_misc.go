@@ -997,6 +997,15 @@ func massGroupSelection(selector compiler.CompiledSelector) (game.Selection, boo
 		selection.MatchCounter = true
 		selection.RequiredCounter = selector.RequiredCounter
 	}
+	switch {
+	case selector.SubtypeFromChosenTypeExcluded:
+		selection.SubtypeChoice = game.SubtypeChoiceResolutionExcluded
+	case selector.SubtypeFromChosenType:
+		selection.SubtypeChoice = game.SubtypeChoiceResolution
+	case selector.SubtypeFromEntryChoice:
+		selection.SubtypeChoice = game.SubtypeChoiceSourceEntry
+	default:
+	}
 	if len(selection.Validate()) != 0 {
 		return game.Selection{}, false
 	}

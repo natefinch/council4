@@ -1808,10 +1808,30 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 		(selection.Kind == SelectionOpponent && slices.Equal(words, []string{"opponent", "or", "planeswalker"})) {
 		selection.PlayerOrPlaneswalker = true
 	}
+	parseSelectionChosenTypeQualifier(words, &selection)
 	if !parseSelectionNumbers(tokens, atoms, &selection) {
 		return SelectionSyntax{Span: span, Text: joinedEffectText(tokens)}
 	}
 	return selection
+}
+
+// parseSelectionChosenTypeQualifier records a trailing "of the chosen type" /
+// "that aren't of the chosen type" qualifier on a selection. The matched
+// permanents must (positive) or must not (negated) share the creature subtype a
+// "Choose a creature type." effect selects earlier in the same resolution
+// (Kindred Dominance: "Destroy all creatures that aren't of the chosen type.").
+// The resolution-time chosen type is the only sense a one-shot effect body's "the
+// chosen type" can denote; entry-time anthem groups take a separate static-subject
+// parse path. It fails closed for any other trailing wording so unrelated
+// selections are untouched.
+func parseSelectionChosenTypeQualifier(words []string, selection *SelectionSyntax) {
+	switch {
+	case hasWordSuffix(words, "that", "aren't", "of", "the", "chosen", "type"):
+		selection.SubtypeFromChosenTypeExcluded = true
+	case hasWordSuffix(words, "of", "the", "chosen", "type"):
+		selection.SubtypeFromChosenType = true
+	default:
+	}
 }
 
 // counterQualifierKind detects a "with a/an <kind> counter on it/them" qualifier
