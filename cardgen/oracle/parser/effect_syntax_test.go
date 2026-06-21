@@ -80,6 +80,46 @@ func TestParseLifeLostThisWayAmountExactness(t *testing.T) {
 	}
 }
 
+// TestParseSacrificedCreatureAmount verifies that "the sacrificed creature's
+// power/toughness/mana value" parses to the matching back-reference dynamic
+// kind and reconstructs exactly, including the apostrophe-split possessive
+// tokenization.
+func TestParseSacrificedCreatureAmount(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		kind   EffectDynamicAmountKind
+	}{
+		{"Sacrifice a creature: Target player mills cards equal to the sacrificed creature's power.", EffectDynamicAmountSacrificedPower},
+		{"Sacrifice a creature: Target player mills cards equal to the sacrificed creature's toughness.", EffectDynamicAmountSacrificedToughness},
+		{"Sacrifice a creature: Target player mills cards equal to the sacrificed creature's mana value.", EffectDynamicAmountSacrificedManaValue},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{})
+			var mill *EffectSyntax
+			for si := range document.Abilities[0].Sentences {
+				sentence := &document.Abilities[0].Sentences[si]
+				for ei := range sentence.Effects {
+					if sentence.Effects[ei].Kind == EffectMill {
+						mill = &sentence.Effects[ei]
+					}
+				}
+			}
+			if mill == nil {
+				t.Fatalf("no mill effect parsed from %q", test.source)
+			}
+			if mill.Amount.DynamicKind != test.kind {
+				t.Fatalf("mill dynamic kind = %v, want %v", mill.Amount.DynamicKind, test.kind)
+			}
+			if !mill.Exact {
+				t.Fatal("mill Exact = false, want true")
+			}
+		})
+	}
+}
+
 func TestParseGreatestCharacteristicDrawAmount(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

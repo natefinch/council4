@@ -2,6 +2,7 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
@@ -42,17 +43,19 @@ func (o paymentOrchestratorType) buildAbilityCostPlan(g *game.Game, req payment.
 
 // payAbilityCosts pays all ability costs described by req. Paying an ability cost
 // is never a spell cast, so any tagged mana-spend rider units it consumes are
-// dropped without firing, keeping rider provenance exact for later payments.
-func (o paymentOrchestratorType) payAbilityCosts(g *game.Game, req payment.AbilityRequest) bool {
+// dropped without firing, keeping rider provenance exact for later payments. It
+// returns the object IDs of any permanents sacrificed as a cost so the caller
+// can record them on the resolving stack object.
+func (o paymentOrchestratorType) payAbilityCosts(g *game.Game, req payment.AbilityRequest) ([]id.ID, bool) {
 	before, hasRiders := manaSpendRiderSnapshot(g, req.PlayerID)
-	poolSpend, ok := o.planner(g).PayAbilityCosts(req)
+	poolSpend, sacrificedIDs, ok := o.planner(g).PayAbilityCosts(req)
 	if !ok {
-		return false
+		return nil, false
 	}
 	if hasRiders {
 		consumeManaSpendRidersForPayment(g, req.PlayerID, req.Source, before, poolSpend)
 	}
-	return true
+	return sacrificedIDs, true
 }
 
 // canPayGenericCost reports whether the player can pay the mana cost described by req.

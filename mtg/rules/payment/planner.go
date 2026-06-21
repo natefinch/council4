@@ -1,6 +1,9 @@
 package payment
 
-import "github.com/natefinch/council4/mtg/game/mana"
+import (
+	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
+)
 
 // Planner is the payment planner. It exposes the public entry points for cost
 // checking and payment. Construction is via New; the zero value is not usable.
@@ -40,8 +43,9 @@ func (p Planner) BuildAbilityCostPlan(req AbilityRequest) bool {
 
 // PayAbilityCosts pays all costs for the activated ability described by req. It
 // returns the per-unit amount of pool mana consumed (for mana-spend rider
-// resolution) plus a success flag.
-func (p Planner) PayAbilityCosts(req AbilityRequest) (poolSpend map[mana.Unit]int, ok bool) {
+// resolution), the object IDs of permanents sacrificed as a cost, plus a
+// success flag.
+func (p Planner) PayAbilityCosts(req AbilityRequest) (poolSpend map[mana.Unit]int, sacrificedIDs []id.ID, ok bool) {
 	return payAbilityCosts(p.s, req)
 }
 

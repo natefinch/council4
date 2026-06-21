@@ -169,6 +169,11 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 		return resolvedObjectReference{}, false
 	case game.ObjectReferenceTargetObject:
 		return r.targetObject(ref.TargetIndex())
+	case game.ObjectReferenceSacrificedCost:
+		if r.obj == nil || len(r.obj.SacrificedAsCostIDs) == 0 {
+			return resolvedObjectReference{}, false
+		}
+		return resolvePermanentOrLastKnown(r.g, r.obj.SacrificedAsCostIDs[0])
 	default:
 		return resolvedObjectReference{}, false
 	}

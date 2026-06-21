@@ -889,11 +889,11 @@ func TestChosenTypeCastOrActivateManaPaysCreatureSourceAbility(t *testing.T) {
 
 	elfSource := addPermanentForSBA(g, game.Player1, elfCreatureDef())
 	manaCost := cost.Mana{cost.G}
-	if !paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
+	if _, ok := paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
 		PlayerID: game.Player1,
 		Source:   elfSource,
 		ManaCost: opt.Val(manaCost),
-	}) {
+	}); !ok {
 		t.Fatal("cast-or-activate mana did not pay an Elf source's ability cost")
 	}
 	if player.ManaPool.Amount(mana.G) != 0 || len(player.ManaRiders) != 0 {
@@ -929,11 +929,11 @@ func TestChosenTypeCastOrActivateManaRejectsNonCreatureSourceAbility(t *testing.
 		Subtypes: []types.Sub{types.Goblin},
 	}})
 	manaCost := cost.Mana{cost.G}
-	if paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
+	if _, ok := paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
 		PlayerID: game.Player1,
 		Source:   goblinSource,
 		ManaCost: opt.Val(manaCost),
-	}) {
+	}); ok {
 		t.Fatal("cast-or-activate mana paid a non-matching source's ability cost")
 	}
 	if player.ManaPool.Amount(mana.G) != 1 || len(player.ManaRiders) != 1 {

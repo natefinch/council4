@@ -548,3 +548,48 @@ func TestLowerVariableMillSpell(t *testing.T) {
 		t.Fatalf("mill amount = %+v, want dynamic controlled creature count", mill.Amount)
 	}
 }
+
+// TestLowerSacrificedCreatureMill verifies that a sacrifice-cost activated
+// ability whose mill amount back-references the sacrificed creature
+// ("Sacrifice a creature: Target player mills cards equal to the sacrificed
+// creature's power.") lowers to a Mill whose dynamic amount reads the
+// sacrificed permanent's characteristic through SacrificedCostReference.
+func TestLowerSacrificedCreatureMill(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		text string
+		kind game.DynamicAmountKind
+	}{
+		{"power", "Sacrifice a creature: Target player mills cards equal to the sacrificed creature's power.", game.DynamicAmountObjectPower},
+		{"toughness", "Sacrifice a creature: Target player mills cards equal to the sacrificed creature's toughness.", game.DynamicAmountObjectToughness},
+		{"mana value", "Sacrifice a creature: Target player mills cards equal to the sacrificed creature's mana value.", game.DynamicAmountObjectManaValue},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Altar",
+				Layout:     "normal",
+				TypeLine:   "Artifact",
+				OracleText: tc.text,
+			})
+			mode := face.ActivatedAbilities[0].Content.Modes[0]
+			mill, ok := mode.Sequence[0].Primitive.(game.Mill)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.Mill", mode.Sequence[0].Primitive)
+			}
+			if mill.Player != game.TargetPlayerReference(0) {
+				t.Fatalf("mill player = %+v, want target player 0", mill.Player)
+			}
+			dynamic := mill.Amount.DynamicAmount()
+			if !dynamic.Exists {
+				t.Fatalf("mill amount = %+v, want dynamic sacrificed-creature characteristic", mill.Amount)
+			}
+			if dynamic.Val.Kind != tc.kind ||
+				dynamic.Val.Object != game.SacrificedCostReference() {
+				t.Fatalf("mill amount = %+v, want %v from SacrificedCostReference", dynamic.Val, tc.kind)
+			}
+		})
+	}
+}

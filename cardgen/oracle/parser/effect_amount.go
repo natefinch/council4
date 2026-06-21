@@ -492,6 +492,9 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 	if subject, ok := parseDynamicSpellsCastThisTurnSubject(tokens, start); ok {
 		return subject, true
 	}
+	if subject, ok := parseSacrificedCreatureCharacteristic(tokens, start); ok {
+		return subject, true
+	}
 	switch {
 	case effectWordsAt(tokens, start, "your", "life", "total") && dynamicAmountBoundary(tokens, start+3):
 		return dynamicAmountSubject{
@@ -587,6 +590,47 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 		}, true
 	}
 	return dynamicAmountSubject{}, false
+}
+
+// parseSacrificedCreatureCharacteristic recognizes "the sacrificed creature's
+// power/toughness/mana value" — a back-reference to the permanent sacrificed to
+// pay the enclosing activated ability's cost (Altar of Dementia). The possessive
+// is accepted both as a single "creature's" token and as the "creature" "'" "s"
+// apostrophe split. It fails closed when the trailing characteristic is not one
+// of the three recognized words.
+func parseSacrificedCreatureCharacteristic(tokens []shared.Token, start int) (dynamicAmountSubject, bool) {
+	if !effectWordsAt(tokens, start, "the", "sacrificed") {
+		return dynamicAmountSubject{}, false
+	}
+	possessiveEnd := start + 2
+	switch {
+	case possessiveEnd < len(tokens) && strings.EqualFold(tokens[possessiveEnd].Text, "creature's"):
+		possessiveEnd++
+	case possessiveEnd+2 < len(tokens) && equalWord(tokens[possessiveEnd], "creature") &&
+		tokens[possessiveEnd+1].Kind == shared.Apostrophe && equalWord(tokens[possessiveEnd+2], "s"):
+		possessiveEnd += 3
+	default:
+		return dynamicAmountSubject{}, false
+	}
+	switch {
+	case effectWordsAt(tokens, possessiveEnd, "power") && dynamicAmountBoundary(tokens, possessiveEnd+1):
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountSacrificedPower},
+			end:    possessiveEnd + 1,
+		}, true
+	case effectWordsAt(tokens, possessiveEnd, "toughness") && dynamicAmountBoundary(tokens, possessiveEnd+1):
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountSacrificedToughness},
+			end:    possessiveEnd + 1,
+		}, true
+	case effectWordsAt(tokens, possessiveEnd, "mana", "value") && dynamicAmountBoundary(tokens, possessiveEnd+2):
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountSacrificedManaValue},
+			end:    possessiveEnd + 2,
+		}, true
+	default:
+		return dynamicAmountSubject{}, false
+	}
 }
 
 // parseDynamicDevotionSubject recognizes "your devotion to <color>" and the

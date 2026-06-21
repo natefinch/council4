@@ -260,27 +260,41 @@ func paymentPlanTappedPermanents(plan paymentPlan) []*game.Permanent {
 	return permanents
 }
 
-func payAbilityCosts(s State, req AbilityRequest) (poolSpend map[mana.Unit]int, ok bool) {
+func payAbilityCosts(s State, req AbilityRequest) (poolSpend map[mana.Unit]int, sacrificedIDs []id.ID, ok bool) {
 	plan, ok := buildAbilityCostPlan(s, req)
 	if !ok {
-		return nil, false
+		return nil, nil, false
 	}
 	player, ok := s.Player(req.PlayerID)
 	if !ok || !abilityCostPlanStillValid(s, player, req.Source, plan) {
-		return nil, false
+		return nil, nil, false
 	}
 	if !applyPaymentPlan(s, req.PlayerID, plan.mana) {
-		return nil, false
+		return nil, nil, false
 	}
 	if plan.tapSource {
 		if !tapForAbility(s, req.Source, req.ForMana) {
-			return nil, false
+			return nil, nil, false
 		}
 	}
 	if !applyAdditionalCostPlan(s, plan.additional) {
 		panic("ability cost plan became invalid while paying additional costs")
 	}
-	return clonePoolSpend(plan.mana.poolSpend), true
+	return clonePoolSpend(plan.mana.poolSpend), sacrificedPermanentIDs(plan.additional), true
+}
+
+// sacrificedPermanentIDs returns the object IDs of permanents sacrificed by the
+// additional-cost plan, in plan order, so an effect can read the sacrificed
+// permanent's last-known information ("the sacrificed creature's power").
+func sacrificedPermanentIDs(plan additionalCostPlan) []id.ID {
+	if len(plan.sacrifices) == 0 {
+		return nil
+	}
+	ids := make([]id.ID, 0, len(plan.sacrifices))
+	for _, sacrifice := range plan.sacrifices {
+		ids = append(ids, sacrifice.ObjectID)
+	}
+	return ids
 }
 
 func canPayGenericCost(s State, req GenericRequest) bool {
