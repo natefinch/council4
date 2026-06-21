@@ -260,6 +260,13 @@ const (
 	// each spell you've cast this turn." The triggering spell counts, since its
 	// cast event precedes the resolving ability.
 	EffectDynamicAmountSpellsCastThisTurn EffectDynamicAmountKind = "EffectDynamicAmountSpellsCastThisTurn"
+	// EffectDynamicAmountTriggeringLifeChange is the amount of life gained or
+	// lost by the event that triggered the enclosing life-change trigger ("that
+	// much life" in "Whenever you gain life, target opponent loses that much
+	// life."). It backs the life-drain mirror family (Sanguine Bond, Vito,
+	// Exquisite Blood, Marauding Blight-Priest), reading the triggering event's
+	// life quantity.
+	EffectDynamicAmountTriggeringLifeChange EffectDynamicAmountKind = "EffectDynamicAmountTriggeringLifeChange"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.

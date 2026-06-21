@@ -34,6 +34,16 @@ func lowerFixedLifeSpell(
 	switch {
 	case effect.Amount.Known:
 		amount = game.Fixed(effect.Amount.Value)
+	case effect.Amount.DynamicKind == compiler.DynamicAmountTriggeringLifeChange:
+		dynamic, ok := lowerEventLifeChangeAmount(ctx, effect.Amount)
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported life spell",
+				"the executable source backend supports only exact supported life changes",
+			)
+		}
+		amount = game.Dynamic(dynamic)
 	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
 		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
 		sourceCounterReferences := effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount &&

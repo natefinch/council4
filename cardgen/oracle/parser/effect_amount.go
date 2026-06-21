@@ -293,6 +293,17 @@ func parseEffectAmount(kind EffectKind, tokens []shared.Token, atoms Atoms) Effe
 		}
 		break
 	}
+	if kind == EffectGain || kind == EffectLose {
+		for i := 0; i+1 < len(tokens); i++ {
+			if equalWord(tokens[i], "that") && equalWord(tokens[i+1], "much") {
+				return EffectAmountSyntax{
+					Span:        shared.SpanOf(tokens[i : i+2]),
+					Text:        joinedEffectText(tokens[i : i+2]),
+					DynamicKind: EffectDynamicAmountTriggeringLifeChange,
+				}
+			}
+		}
+	}
 	if kind == EffectDraw || kind == EffectUntap {
 		for i, token := range tokens {
 			value, ok := effectNumber(token, atoms)

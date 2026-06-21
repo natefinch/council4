@@ -394,6 +394,24 @@ func lowerEventCardCountAmount(ctx contentCtx, amount compiler.CompiledAmount) (
 	}, true
 }
 
+// lowerEventLifeChangeAmount lowers a "that much life" amount into a
+// DynamicAmountEventLifeChange. It succeeds only inside a life-gain or life-loss
+// triggered ability (ctx.triggerEvent records the triggering event kind),
+// keeping the amount closed in spell and non-matching contexts where no
+// triggering life quantity exists.
+func lowerEventLifeChangeAmount(ctx contentCtx, amount compiler.CompiledAmount) (game.DynamicAmount, bool) {
+	switch ctx.triggerEvent {
+	case game.EventLifeGained, game.EventLifeLost:
+	default:
+		return game.DynamicAmount{}, false
+	}
+	multiplier := max(amount.Multiplier, 1)
+	return game.DynamicAmount{
+		Kind:       game.DynamicAmountEventLifeChange,
+		Multiplier: multiplier,
+	}, true
+}
+
 func exactDamageAmountReferences(amount compiler.CompiledAmount, references []compiler.CompiledReference) bool {
 	if amount.DynamicKind != compiler.DynamicAmountSourcePower {
 		_, ok := lowerDamageSourceReference(references)
