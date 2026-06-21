@@ -95,6 +95,7 @@ func TestParseTypedActivationRestrictions(t *testing.T) {
 		{"controller upkeep", "Activate only during your upkeep.", ActivationRestrictionPhaseStep, ActivationFrequencyCountUnknown, ActivationFrequencyPeriodUnknown, PhaseStepQuantifierSingle, TriggerPlayerSelectorYou, PhaseStepNameUpkeep},
 		{"typed unsupported phase", "Activate only during your end step.", ActivationRestrictionPhaseStep, ActivationFrequencyCountUnknown, ActivationFrequencyPeriodUnknown, PhaseStepQuantifierSingle, TriggerPlayerSelectorYou, PhaseStepNameEndStep},
 		{"explicit unsupported", "Activate only before combat.", ActivationRestrictionUnsupported, ActivationFrequencyCountUnknown, ActivationFrequencyPeriodUnknown, PhaseStepQuantifierUnknown, TriggerPlayerSelectorUnknown, PhaseStepNameUnknown},
+		{"instant timing", "Activate only as an instant.", ActivationRestrictionInstantTiming, ActivationFrequencyCountUnknown, ActivationFrequencyPeriodUnknown, PhaseStepQuantifierUnknown, TriggerPlayerSelectorUnknown, PhaseStepNameUnknown},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -137,6 +138,9 @@ func TestParseActivationRestrictionGrammarVariants(t *testing.T) {
 	for _, restriction := range []string{
 		"Activate only at sorcery speed.",
 		"Activate only any time you could cast a sorcery.",
+		"Activate only as an instant.",
+		"Activate only at instant speed.",
+		"Activate only any time you could cast an instant.",
 		"Activate only once per turn.",
 		"Activate only one time every turn.",
 		"Activate only during each combat.",
@@ -216,7 +220,6 @@ func TestParseActivationPlayerTurnFailClosed(t *testing.T) {
 func TestParseActivationRestrictionsFailClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
-		"{1}: Draw a card. Activate only as an instant.",
 		"{1}: Draw a card. Activate only once each round.",
 		"{1}: Draw a card. Activate only during your next upkeep.",
 		"{1}: Draw a card. Activate only during combat on your turn.",

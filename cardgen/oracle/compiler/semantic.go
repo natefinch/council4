@@ -161,6 +161,10 @@ const (
 	ActivationTimingDuringUpkeep
 	ActivationTimingDuringYourTurn
 	ActivationTimingUnsupported
+	// ActivationTimingInstant marks an explicit instant-speed restriction
+	// ("Activate only as an instant"), which is the default timing for an
+	// activated ability and lowers to no runtime restriction.
+	ActivationTimingInstant
 )
 
 // AbilityContent is the reusable semantic content of an ability, independent
@@ -320,6 +324,10 @@ type CostComponent struct {
 	// ExcludeSource reports that the cost object excludes the ability's own
 	// source ("another"), recognized by the parser.
 	ExcludeSource bool
+
+	// DiscardWholeHand reports a "discard your hand" cost object, recognized by
+	// the parser. The payer discards every card in their hand.
+	DiscardWholeHand bool
 
 	// ChoiceGroup tags this component as one alternative of a printed "<cost> or
 	// <cost>" choice. Zero means a mandatory standalone cost; components sharing
