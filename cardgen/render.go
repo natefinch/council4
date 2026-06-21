@@ -374,13 +374,8 @@ func tokenFaceHints(def *game.CardDef) faceRenderHints {
 // tokenStaticBodyVarName returns the package-level variable reference the Renderer
 // emits for a synthesized token's typed static-ability body, or "" if the body has
 // no reusable variable and must fall back to structural rendering. It mirrors the
-// keyword bodies lowered onto synthesized tokens in lower_token.go, including
-// changeling, which is granted to tokens without being part of the printed-keyword
-// keywordStaticBodies catalog.
+// keyword bodies lowered onto synthesized tokens in lower_token.go.
 func tokenStaticBodyVarName(body *game.StaticAbility) string {
-	if reflect.DeepEqual(game.ChangelingStaticBody, *body) {
-		return "game.ChangelingStaticBody"
-	}
 	for kw := range keywordStaticBodies {
 		if reflect.DeepEqual(keywordStaticBodies[kw].Body, *body) {
 			return keywordStaticBodies[kw].VarName

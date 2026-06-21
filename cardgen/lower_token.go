@@ -494,17 +494,11 @@ func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect, extraKeywords [
 	}
 	keywords = append(keywords, extraKeywords...)
 	for _, keyword := range keywords {
-		var body game.StaticAbility
-		if keyword == parser.KeywordChangeling {
-			body = game.ChangelingStaticBody
-		} else {
-			static, ok := keywordStaticBodies[keyword]
-			if !ok {
-				return nil, false
-			}
-			body = static.Body
+		static, ok := keywordStaticBodies[keyword]
+		if !ok {
+			return nil, false
 		}
-		def.StaticAbilities = append(def.StaticAbilities, body)
+		def.StaticAbilities = append(def.StaticAbilities, static.Body)
 	}
 	return def, true
 }
