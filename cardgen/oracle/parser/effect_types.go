@@ -745,6 +745,16 @@ const (
 	EffectCardSourcePriorInstructionResult EffectCardSourceKind = "EffectCardSourcePriorInstructionResult"
 )
 
+// EntersAsCopyConditionalCounter is a conditional copiable counter rider on an
+// enters-as-copy replacement: Amount counters of Kind are placed on the copy
+// only when the copy has IfType among its card types ("it enters with an
+// additional +1/+1 counter on it if it's a creature"; Spark Double).
+type EntersAsCopyConditionalCounter struct {
+	Kind   counter.Kind `json:",omitempty"`
+	Amount int          `json:",omitempty"`
+	IfType types.Card   `json:",omitempty"`
+}
+
 // EffectSyntax is one typed resolving instruction. Text and Tokens remain
 // lossless metadata; all meaning consumed downstream is carried by typed fields.
 type EffectSyntax struct {
@@ -956,8 +966,13 @@ type EffectSyntax struct {
 	// <type> in addition to its other types" copiable rider on an EntersAsCopy
 	// replacement (Phyrexian Metamorph). It is empty for every other replacement.
 	EntersAsCopyAddTypes []types.Card `json:",omitempty"`
-	UnderYourControl     bool         `json:",omitempty"`
-	CastAsAdventure      bool         `json:",omitempty"`
+	// EntersAsCopyConditionalCounters lists the conditional copiable counter
+	// riders of an EntersAsCopy replacement ("it enters with an additional +1/+1
+	// counter on it if it's a creature", "... loyalty counter ... if it's a
+	// planeswalker"; Spark Double). It is empty for every other replacement.
+	EntersAsCopyConditionalCounters []EntersAsCopyConditionalCounter `json:",omitempty"`
+	UnderYourControl                bool                             `json:",omitempty"`
+	CastAsAdventure                 bool                             `json:",omitempty"`
 	// CastWithoutPayingManaCost reports a cast effect carrying the free-cast
 	// rider "... without paying its mana cost" ("(You may) cast <spell> from
 	// <zone> without paying its mana cost."). It is false for every other cast

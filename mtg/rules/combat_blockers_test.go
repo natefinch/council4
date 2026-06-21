@@ -1058,3 +1058,61 @@ func TestFearBlockLegalityRequiresArtifactOrBlack(t *testing.T) {
 		t.Fatal("black creature could not block a fear attacker, want true")
 	}
 }
+
+// TestIntimidateBlockLegalityRequiresArtifactOrSharedColor proves CR 702.13b: a
+// creature with intimidate can't be blocked except by artifact creatures and/or
+// creatures that share a color with it. A non-artifact creature that shares no
+// color cannot block; an artifact creature and a creature sharing a color each
+// can.
+func TestIntimidateBlockLegalityRequiresArtifactOrSharedColor(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+
+	pt := game.PT{Value: 2}
+	attacker := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Red Intimidator",
+		Types:     []types.Card{types.Creature},
+		Colors:    []color.Color{color.Red},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+		StaticAbilities: []game.StaticAbility{{
+			KeywordAbilities: game.SimpleKeywords(game.Intimidate),
+		}},
+	}})
+	otherColorBlocker := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Blue Creature",
+		Types:     []types.Card{types.Creature},
+		Colors:    []color.Color{color.Blue},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}})
+	artifactBlocker := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Artifact Creature",
+		Types:     []types.Card{types.Artifact, types.Creature},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}})
+	sharedColorBlocker := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Red Creature",
+		Types:     []types.Card{types.Creature},
+		Colors:    []color.Color{color.Red},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}})
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+
+	if canBlockAttacker(g, otherColorBlocker, attacker) {
+		t.Fatal("non-artifact creature sharing no color blocked an intimidate attacker, want false")
+	}
+	if !canBlockAttacker(g, artifactBlocker, attacker) {
+		t.Fatal("artifact creature could not block an intimidate attacker, want true")
+	}
+	if !canBlockAttacker(g, sharedColorBlocker, attacker) {
+		t.Fatal("creature sharing a color could not block an intimidate attacker, want true")
+	}
+}

@@ -414,6 +414,8 @@ func runtimeKeyword(keyword parser.KeywordKind) (game.Keyword, bool) {
 		return game.Fear, true
 	case parser.KeywordSkulk:
 		return game.Skulk, true
+	case parser.KeywordIntimidate:
+		return game.Intimidate, true
 	default:
 		return game.KeywordNone, false
 	}
