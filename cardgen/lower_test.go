@@ -56,6 +56,43 @@ func TestLowerEventPlayerCoordinatedSubjectInTrigger(t *testing.T) {
 	}
 }
 
+func TestLowerEachPlayerDrawStepThatPlayerDraws(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name       string
+		oracleText string
+	}{
+		{
+			name:       "plain each-player draw step",
+			oracleText: "At the beginning of each player's draw step, that player draws an additional card.",
+		},
+		{
+			name:       "gated by untapped intervening condition",
+			oracleText: "At the beginning of each player's draw step, if this artifact is untapped, that player draws an additional card.",
+		},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test " + test.name,
+				Layout:     "normal",
+				TypeLine:   "Artifact",
+				OracleText: test.oracleText,
+			})
+			ability := face.TriggeredAbilities[0]
+			if ability.Trigger.Pattern.Event != game.EventBeginningOfStep || ability.Trigger.Pattern.Step != game.StepDraw {
+				t.Fatalf("trigger pattern = %#v", ability.Trigger.Pattern)
+			}
+			mode := ability.Content.Modes[0]
+			draw, ok := mode.Sequence[0].Primitive.(game.Draw)
+			if !ok || draw.Player != game.EventPlayerReference() {
+				t.Fatalf("that-player draw = %#v", mode.Sequence[0].Primitive)
+			}
+		})
+	}
+}
+
 func compileTestOracle(source string, parserContext parser.Context, compilerContext compiler.Context) (compiler.Compilation, []shared.Diagnostic) {
 	document, diagnostics := parser.Parse(source, parserContext)
 	compilation, compilerDiagnostics := compiler.Compile(document, compilerContext)
