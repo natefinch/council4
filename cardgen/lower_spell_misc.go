@@ -452,6 +452,59 @@ func lowerSpellsCantBeCountered(ctx contentCtx) (game.AbilityContent, *shared.Di
 	}}}.Ability(), nil
 }
 
+// lowerGroupMustAttack lowers the one-shot, turn-scoped forced-attack effect
+// "<group> attack this turn if able." (Bident of Thassa: "Creatures your
+// opponents control attack this turn if able.") to an ApplyRule that forces the
+// affected creatures to attack for the rest of the turn. The affected creature
+// group is read from the parser-recognized StaticSubject and mapped to a
+// controller relation; the rule reuses the continuous RuleEffectMustAttack rule
+// effect with a this-turn duration. Targets, references, conditions, modes, a
+// negation, an amount, or an unsupported group subject fail closed.
+func lowerGroupMustAttack(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	var controller game.ControllerRelation
+	switch effect.StaticSubject {
+	case compiler.StaticSubjectControlledCreatures:
+		controller = game.ControllerYou
+	case compiler.StaticSubjectOpponentControlledCreatures:
+		controller = game.ControllerOpponent
+	case compiler.StaticSubjectAllCreatures:
+		controller = game.ControllerAny
+	default:
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported forced-attack effect",
+			"the executable source backend supports only the exact you/opponents/all creatures forced-attack effect this turn",
+		)
+	}
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Amount.Known ||
+		effect.Duration != compiler.DurationThisTurn ||
+		effect.Context != parser.EffectContextController ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported forced-attack effect",
+			"the executable source backend supports only the exact you/opponents/all creatures forced-attack effect this turn",
+		)
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.ApplyRule{
+			RuleEffects: []game.RuleEffect{{
+				Kind:               game.RuleEffectMustAttack,
+				AffectedController: controller,
+				PermanentTypes:     []types.Card{types.Creature},
+			}},
+			Duration: game.DurationThisTurn,
+		},
+	}}}.Ability(), nil
+}
+
 func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic, bool) {
 	switch ctx.content.Effects[0].Kind {
 	case compiler.EffectLifeTotalCantChange:
@@ -471,6 +524,9 @@ func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.
 		return content, diagnostic, true
 	case compiler.EffectSpellsCantBeCountered:
 		content, diagnostic := lowerSpellsCantBeCountered(ctx)
+		return content, diagnostic, true
+	case compiler.EffectMustAttack:
+		content, diagnostic := lowerGroupMustAttack(ctx)
 		return content, diagnostic, true
 	case compiler.EffectPhaseOut:
 		content, diagnostic := lowerMassOrSinglePermanentSpell(ctx, "Phase out", func(group game.GroupReference) game.Primitive {

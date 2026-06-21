@@ -540,6 +540,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseAdditionalLandPlaysEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseCastAsThoughFlashEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseCantCastSpellsEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parseGroupMustAttackEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseSpellsCantBeCounteredEffect(sentence, tokens) },
 	} {
 		if effects, ok := recognize(); ok {
@@ -1904,7 +1905,62 @@ func parseCantCastSpellsEffect(sentence Sentence, tokens []shared.Token) ([]Effe
 	}}, true
 }
 
-// parseSpellsCantBeCounteredEffect recognizes the controller-scoped, turn-scoped
+// parseGroupMustAttackEffect recognizes the one-shot, turn-scoped forced-attack
+// effect "<group> attack this turn if able." (Bident of Thassa: "Creatures your
+// opponents control attack this turn if able."; "Creatures you control attack
+// this turn if able."; "All creatures attack this turn if able."). The affected
+// creature group is recorded in StaticSubject so lowering can scope the
+// continuous must-attack rule effect by controller. Any other subject,
+// duration, or trailing clause fails closed and flows through the generic effect
+// parser.
+func parseGroupMustAttackEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	var subject EffectStaticSubjectKind
+	index := 0
+	switch {
+	case len(words) >= 4 && equalWord(words[0], "creatures") &&
+		equalWord(words[1], "your") && equalWord(words[2], "opponents") && equalWord(words[3], "control"):
+		subject = EffectStaticSubjectOpponentControlledCreatures
+		index = 4
+	case len(words) >= 3 && equalWord(words[0], "creatures") &&
+		equalWord(words[1], "you") && equalWord(words[2], "control"):
+		subject = EffectStaticSubjectControlledCreatures
+		index = 3
+	case len(words) >= 2 && equalWord(words[0], "all") && equalWord(words[1], "creatures"):
+		subject = EffectStaticSubjectAllCreatures
+		index = 2
+	default:
+		return nil, false
+	}
+	rest := []string{"attack", "this", "turn", "if", "able"}
+	if len(words)-index != len(rest) {
+		return nil, false
+	}
+	for offset, want := range rest {
+		if !equalWord(words[index+offset], want) {
+			return nil, false
+		}
+	}
+	return []EffectSyntax{{
+		Kind:          EffectMustAttack,
+		Span:          sentence.Span,
+		ClauseSpan:    sentence.Span,
+		VerbSpan:      words[index].Span,
+		Text:          sentence.Text,
+		Tokens:        append([]shared.Token(nil), tokens...),
+		Context:       EffectContextController,
+		Duration:      EffectDurationThisTurn,
+		StaticSubject: EffectStaticSubjectSyntax{Kind: subject, Span: shared.SpanOf(words[:index])},
+		Exact:         true,
+	}}, true
+}
+
 // resolving buff "The next spell you cast this turn can't be countered."
 // (Mistrise Village) and the all-spells form "Spells you cast this turn can't be
 // countered." (Domri, Anarch of Bolas). The leading "The next" marks the

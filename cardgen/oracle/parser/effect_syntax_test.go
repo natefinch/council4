@@ -284,6 +284,42 @@ func TestParseCantCastSpellsEffect(t *testing.T) {
 	}
 }
 
+// TestParseGroupMustAttackEffect proves the one-shot, turn-scoped forced-attack
+// effect is recognized for the you/opponents/all creature group scopes (Bident
+// of Thassa) and records the affected group in StaticSubject, while filtered,
+// each-combat, and non-creature wordings fail closed and flow through the
+// generic effect parser.
+func TestParseGroupMustAttackEffect(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source     string
+		recognized bool
+		subject    EffectStaticSubjectKind
+	}{
+		{"Creatures your opponents control attack this turn if able.", true, EffectStaticSubjectOpponentControlledCreatures},
+		{"Creatures you control attack this turn if able.", true, EffectStaticSubjectControlledCreatures},
+		{"All creatures attack this turn if able.", true, EffectStaticSubjectAllCreatures},
+		// Variant wordings fail closed.
+		{"Creatures your opponents control attack each combat if able.", false, EffectStaticSubjectNone},
+		{"Goblins you control attack this turn if able.", false, EffectStaticSubjectNone},
+		{"Creatures you control attack this turn.", false, EffectStaticSubjectNone},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			got := len(effects) == 1 && effects[0].Kind == EffectMustAttack
+			if got != test.recognized {
+				t.Fatalf("recognized = %v, want %v (effects=%#v)", got, test.recognized, effects)
+			}
+			if got && effects[0].StaticSubject.Kind != test.subject {
+				t.Fatalf("subject = %v, want %v", effects[0].StaticSubject.Kind, test.subject)
+			}
+		})
+	}
+}
+
 // TestParseSpellsCantBeCounteredEffect proves the controller-scoped, turn-scoped
 // uncounterable buff is recognized for the next-spell (Mistrise Village) and
 // all-spells (Domri, Anarch of Bolas) wordings, while targeted, typed, and

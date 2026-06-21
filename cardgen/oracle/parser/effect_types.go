@@ -125,6 +125,14 @@ const (
 	// Context, the optional sacrifice filter in Selection, and PunisherSacrifice
 	// / PunisherDiscard record which alternatives are offered.
 	EffectPunisherLoseLife EffectKind = "EffectPunisherLoseLife"
+	// EffectMustAttack models the one-shot, turn-scoped forced-attack effect
+	// "<group> attack this turn if able." (Bident of Thassa: "Creatures your
+	// opponents control attack this turn if able."). The affected creature group
+	// is carried in StaticSubject (creatures you control, creatures your
+	// opponents control, or all creatures); lowering reads it to scope the
+	// continuous RuleEffectMustAttack rule effect, applied with a this-turn
+	// duration.
+	EffectMustAttack EffectKind = "EffectMustAttack"
 	// EffectRepeatProcess models a "Repeat the following process X times.
 	// <body>" loop. Amount holds the repeat count (the spell's {X} via VariableX
 	// or a fixed cardinal) and RepeatBody holds the sub-effect(s) executed each
