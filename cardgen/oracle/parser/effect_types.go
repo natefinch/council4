@@ -125,6 +125,11 @@ const (
 	// Context, the optional sacrifice filter in Selection, and PunisherSacrifice
 	// / PunisherDiscard record which alternatives are offered.
 	EffectPunisherLoseLife EffectKind = "EffectPunisherLoseLife"
+	// EffectRepeatProcess models a "Repeat the following process X times.
+	// <body>" loop. Amount holds the repeat count (the spell's {X} via VariableX
+	// or a fixed cardinal) and RepeatBody holds the sub-effect(s) executed each
+	// iteration.
+	EffectRepeatProcess EffectKind = "EffectRepeatProcess"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -1125,9 +1130,15 @@ type EffectSyntax struct {
 	TokenCopyForEachGroup *SelectionSyntax `json:",omitempty"`
 	// PunisherSacrifice and PunisherDiscard mark the alternatives offered by an
 	// EffectPunisherLoseLife effect ("... unless that player sacrifices a
-	// permanent of their choice or discards a card.").
+	// permanent of their choice or discards a card."): PunisherSacrifice records
+	// that a sacrifice alternative (filtered by Selection) is offered, and
+	// PunisherDiscard records that a discard-a-card alternative is offered. Both
+	// are false for every other effect.
 	PunisherSacrifice bool `json:",omitempty"`
 	PunisherDiscard   bool `json:",omitempty"`
+	// RepeatBody holds the sub-effect(s) of an EffectRepeatProcess loop ("Repeat
+	// the following process X times. <body>"). It is nil for every other effect.
+	RepeatBody []EffectSyntax `json:",omitempty"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend

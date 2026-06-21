@@ -977,6 +977,21 @@ func (r Renderer) renderPunisherEachLoseLife(ctx *renderCtx, value *game.Punishe
 	return structLit("game.PunisherEachLoseLife", fields), nil
 }
 
+func (r Renderer) renderRepeatProcess(ctx *renderCtx, value *game.RepeatProcess) (string, error) {
+	renderedTimes, err := r.renderQuantity(ctx, value.Times)
+	if err != nil {
+		return "", err
+	}
+	renderedBody, err := r.renderAbilityContent(ctx, value.Body)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.RepeatProcess", []string{
+		fmt.Sprintf("Times: %s,", renderedTimes),
+		fmt.Sprintf("Body: %s,", renderedBody),
+	}), nil
+}
+
 func (r Renderer) renderSacrificeFallback(ctx *renderCtx, value game.SacrificeFallback) (string, error) {
 	renderedAmount, err := r.renderQuantity(ctx, value.Amount)
 	if err != nil {

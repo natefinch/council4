@@ -420,6 +420,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", errors.New("render: internal error: PunisherEachLoseLife kind has unexpected concrete type")
 		}
 		return r.renderPunisherEachLoseLife(ctx, &value)
+	case game.PrimitiveRepeatProcess:
+		value, ok := primitive.(game.RepeatProcess)
+		if !ok {
+			return "", errors.New("render: internal error: RepeatProcess kind has unexpected concrete type")
+		}
+		return r.renderRepeatProcess(ctx, &value)
 	case game.PrimitiveCreateToken:
 		value, ok := primitive.(game.CreateToken)
 		if !ok {

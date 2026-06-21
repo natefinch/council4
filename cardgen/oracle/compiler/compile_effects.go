@@ -331,6 +331,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				DoubleToughness:                 syntax.DoubleToughness,
 				PunisherSacrifice:               syntax.PunisherSacrifice,
 				PunisherDiscard:                 syntax.PunisherDiscard,
+				RepeatBody:                      compileEffects([]parser.Sentence{{Effects: syntax.RepeatBody}}),
 			})
 		}
 	}

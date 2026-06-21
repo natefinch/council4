@@ -60,6 +60,9 @@ func emitSentenceResolvingSyntax(
 	if recognizeImpulseExileSequence(sentences) {
 		return
 	}
+	if recognizeRepeatProcessSequence(sentences, atoms) {
+		return
+	}
 	legacyEffects := 0
 	currentEffects := 0
 	unrecognizedSibling := false
