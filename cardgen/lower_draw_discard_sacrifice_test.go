@@ -881,3 +881,66 @@ func TestLowerDrawForEachPlainCountHasNoCounter(t *testing.T) {
 		t.Fatal("RequiredCounter set for a count subject without a counter qualifier")
 	}
 }
+
+func TestLowerSacrificeThenSearchSequence(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Sac Ramp",
+		Layout:     "normal",
+		ManaCost:   "{2}{G}",
+		TypeLine:   "Sorcery",
+		OracleText: "Sacrifice a land. Search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence length = %d, want 2", len(mode.Sequence))
+	}
+	if _, ok := mode.Sequence[0].Primitive.(game.SacrificePermanents); !ok {
+		t.Fatalf("first primitive = %#v, want SacrificePermanents", mode.Sequence[0].Primitive)
+	}
+	search, ok := mode.Sequence[1].Primitive.(game.Search)
+	if !ok {
+		t.Fatalf("second primitive = %#v, want Search", mode.Sequence[1].Primitive)
+	}
+	if !search.Spec.EntersTapped {
+		t.Error("search spec should enter the battlefield tapped")
+	}
+	if mode.Sequence[1].Condition.Exists {
+		t.Error("unconditional search should carry no gate condition")
+	}
+}
+
+func TestLowerSacrificeThenConditionalInsteadSearchSequence(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Entish Ramp",
+		Layout:     "normal",
+		ManaCost:   "{2}{G}",
+		TypeLine:   "Sorcery",
+		OracleText: "Sacrifice a land. Search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle. If you control a creature with power 4 or greater, instead search your library for up to three basic land cards, put them onto the battlefield tapped, then shuffle.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Sequence) != 3 {
+		t.Fatalf("sequence length = %d, want 3", len(mode.Sequence))
+	}
+	base, ok := mode.Sequence[1].Primitive.(game.Search)
+	if !ok {
+		t.Fatalf("base primitive = %#v, want Search", mode.Sequence[1].Primitive)
+	}
+	if got := base.Amount; got != game.Fixed(2) {
+		t.Errorf("base search amount = %#v, want Fixed(2)", got)
+	}
+	if !mode.Sequence[1].Condition.Exists || !mode.Sequence[1].Condition.Val.Condition.Val.Negate {
+		t.Error("base search should be gated on the negated condition")
+	}
+	instead, ok := mode.Sequence[2].Primitive.(game.Search)
+	if !ok {
+		t.Fatalf("instead primitive = %#v, want Search", mode.Sequence[2].Primitive)
+	}
+	if got := instead.Amount; got != game.Fixed(3) {
+		t.Errorf("instead search amount = %#v, want Fixed(3)", got)
+	}
+	if !mode.Sequence[2].Condition.Exists || mode.Sequence[2].Condition.Val.Condition.Val.Negate {
+		t.Error("instead search should be gated on the non-negated condition")
+	}
+}
