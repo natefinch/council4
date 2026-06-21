@@ -38,6 +38,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectDestroy:
 		return exactDirectTargetEffectSyntax(effect, "Destroy") ||
 			exactMassEffectSyntax(effect, "Destroy all ") ||
+			exactMassEachEffectSyntax(effect, "Destroy each ") ||
 			exactBackReferenceEffectSyntax(effect, "Destroy")
 	case EffectDig:
 		return exactDigLookEffectSyntax(effect)
