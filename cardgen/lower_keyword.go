@@ -132,6 +132,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordTriggeredLowering(&cumulativeAbility, ability, syntax), true, nil
 	}
+	if undyingPersistAbility, ok, diag := lowerUndyingPersistAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordTriggeredLowering(&undyingPersistAbility, ability, syntax), true, nil
+	}
 	if equipAbility, ok, diag := lowerEquipAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -209,6 +215,47 @@ func lowerCumulativeUpkeepAbility(
 		)
 	}
 	return game.CumulativeUpkeepTriggeredAbility(manaCost), true, nil
+}
+
+// lowerUndyingPersistAbility lowers a printed Undying (CR 702.92) or Persist
+// (CR 702.78) keyword to its canonical dies-return-with-counter triggered
+// ability. Both keywords are printed bare (their reminder text is stripped), so
+// the lowering expands the keyword to the reusable typed body. It supports only
+// the exact keyword with no other rules text.
+func lowerUndyingPersistAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.TriggeredAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 {
+		return game.TriggeredAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	var body game.TriggeredAbility
+	switch keyword.Kind {
+	case parser.KeywordUndying:
+		body = game.UndyingTriggeredBody
+	case parser.KeywordPersist:
+		body = game.PersistTriggeredBody
+	default:
+		return game.TriggeredAbility{}, false, nil
+	}
+	if keyword.ParameterKind != parser.KeywordParameterNone ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported "+keyword.Name+" ability",
+			"the executable source backend supports only the exact "+keyword.Name+" keyword",
+		)
+	}
+	return body, true, nil
 }
 
 func keywordStaticLowering(
