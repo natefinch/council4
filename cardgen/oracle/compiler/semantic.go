@@ -973,6 +973,7 @@ const (
 	EffectSpellsCantBeCountered
 	EffectEnterAsCopy
 	EffectPunisherLoseLife
+	EffectMassReanimationExchange
 )
 
 // DurationKind identifies common continuous-effect durations.

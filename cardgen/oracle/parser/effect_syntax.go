@@ -533,6 +533,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseGroupEntersTappedEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parsePlayerProtectionEffects(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseGroupPhaseOutEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseMassReanimationExchangeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseAdditionalLandPlaysEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseCastAsThoughFlashEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseCantCastSpellsEffect(sentence, tokens) },
@@ -1727,6 +1728,72 @@ func parseGroupPhaseOutEffect(sentence Sentence, tokens []shared.Token, atoms At
 	}}, true
 }
 
+// parseMassReanimationExchangeEffect recognizes the symmetric mass-reanimation
+// sentence "Each player exiles all <type> cards from their graveyard, then
+// sacrifices all <type> they control, then puts all cards they exiled this way
+// onto the battlefield." (Living Death, Living End, Scrap Mastery). The leading
+// type word is singular ("creature"/"artifact") in the exile clause and plural
+// ("creatures"/"artifacts") in the sacrifice clause; both must name the same
+// card type. The whole sentence collapses to one EffectMassReanimationExchange
+// whose Selection carries the card-type filter (parsed from the "all <type>
+// cards from their graveyard" sub-phrase), letting the lowering stay text-blind.
+// Any other wording fails closed and flows through the generic effect parser.
+func parseMassReanimationExchangeEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	words, ok := massReanimationExchangeWords(tokens)
+	if !ok {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:       EffectMassReanimationExchange,
+		Span:       sentence.Span,
+		ClauseSpan: sentence.Span,
+		VerbSpan:   words[2].Span,
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		Context:    EffectContextEachPlayer,
+		Selection:  parseSelection(words[3:9], atoms),
+		Exact:      true,
+	}}, true
+}
+
+// massReanimationExchangeWords returns the non-punctuation tokens of a sentence
+// when they match the mass-reanimation exchange template (see
+// parseMassReanimationExchangeEffect), and reports whether they matched. The
+// returned slice is indexable by the template positions, so callers read the
+// "all <type> cards from their graveyard" sub-phrase as words[3:9].
+func massReanimationExchangeWords(tokens []shared.Token) ([]shared.Token, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Word {
+			words = append(words, token)
+		}
+	}
+	template := []string{
+		"each", "player", "exiles", "all", "", "cards", "from", "their", "graveyard",
+		"then", "sacrifices", "all", "", "they", "control",
+		"then", "puts", "all", "cards", "they", "exiled", "this", "way", "onto", "the", "battlefield",
+	}
+	if len(words) != len(template) {
+		return nil, false
+	}
+	for offset, want := range template {
+		if want == "" {
+			continue
+		}
+		if !equalWord(words[offset], want) {
+			return nil, false
+		}
+	}
+	singular := strings.ToLower(words[4].Text)
+	if singular != "creature" && singular != "artifact" {
+		return nil, false
+	}
+	if !equalWord(words[12], singular+"s") {
+		return nil, false
+	}
+	return words, true
+}
+
 // parseAdditionalLandPlaysEffect recognizes the controller-scoped grant of one
 // or more extra land plays for the turn: "Play an additional land this turn.",
 // "You may play an additional land this turn.", and the multi-land "... two
@@ -2531,6 +2598,9 @@ func legacyExactManaBody(effect *EffectSyntax, sentence Sentence) bool {
 }
 
 func legacyEffectCount(tokens []shared.Token, atoms Atoms) int {
+	if _, ok := massReanimationExchangeWords(tokens); ok {
+		return 1
+	}
 	count := 0
 	for i := range tokens {
 		if legacyEffectKindAt(tokens, i) != EffectUnknown &&
