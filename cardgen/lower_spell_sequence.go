@@ -129,9 +129,9 @@ func lowerOrderedEffectSequence(
 	// Match each condition to the single effect whose clause span contains it and
 	// lower it as an effect gate. Fails closed if any condition is not contained
 	// in exactly one effect or is not a supported effect-gate condition.
-	effectConditions, ok := matchSequenceEffectConditions(ctx.content.Effects, gateConditions)
+	effectConditions, matchReason, ok := matchSequenceEffectConditions(ctx.content.Effects, gateConditions)
 	if !ok {
-		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — per-effect condition not matched to one clause")
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, matchReason)
 	}
 	consumedConditions := 0
 	if optionalFlow.enabled {
@@ -1387,13 +1387,16 @@ func applySequenceClauseGates(
 // returns the lowered EffectCondition keyed by effect index. ok is false (fail
 // closed) if any condition is not contained in exactly one effect, if two
 // conditions land on the same effect, or if a condition is not a supported
-// effect-gate condition.
+// effect-gate condition. On failure it also returns a closed, enumerable
+// blocker category (see the effectGateCategory* constants) so the support
+// report can break the otherwise-opaque per-effect-condition reason into
+// actionable sub-categories rather than one large bucket.
 func matchSequenceEffectConditions(
 	effects []compiler.CompiledEffect,
 	conditions []compiler.CompiledCondition,
-) (map[int]game.EffectCondition, bool) {
+) (map[int]game.EffectCondition, string, bool) {
 	if len(conditions) == 0 {
-		return nil, true
+		return nil, "", true
 	}
 	result := make(map[int]game.EffectCondition, len(conditions))
 	for ci := range conditions {
@@ -1405,7 +1408,7 @@ func matchSequenceEffectConditions(
 			}
 		}
 		if len(matched) == 0 {
-			return nil, false
+			return nil, effectGateCategoryNoClause, false
 		}
 		// A condition span-covered by more than one effect must be a leading
 		// condition on a shared-sentence "then" group (the effects share an
@@ -1414,22 +1417,57 @@ func matchSequenceEffectConditions(
 		// Any other multi-match shape (a mid-sentence condition, or effects with
 		// differing spans) fails closed.
 		if len(matched) > 1 && !leadingGroupCondition(condition, effects, matched) {
-			return nil, false
+			return nil, effectGateCategoryMultiClause, false
 		}
 		lowered, ok := lowerCondition(condition, conditionContextEffectGate)
 		if !ok {
-			return nil, false
+			return nil, effectGateRejectCategory(condition), false
 		}
 		for _, ei := range matched {
 			if _, exists := result[ei]; exists {
-				return nil, false
+				return nil, effectGateCategoryMultiCondition, false
 			}
 			result[ei] = game.EffectCondition{
 				Condition: opt.Val(lowered),
 			}
 		}
 	}
-	return result, true
+	return result, "", true
+}
+
+// Closed blocker categories for an ordered sequence whose per-effect condition
+// could not be matched and lowered as an effect gate. Each is a stable,
+// enumerable diagnostic detail consumed by the support report's
+// ordered-sequence sub-category breakdown. effectGateCategoryUnrecognizedPrefix
+// is followed by the recognized condition wording so the report can rank which
+// unrecognized conditions block the most cards; the other categories are exact.
+const (
+	effectGateCategoryNoClause           = "structural — per-effect condition has no containing clause"
+	effectGateCategoryMultiClause        = "structural — per-effect condition spans multiple clauses"
+	effectGateCategoryMultiCondition     = "structural — multiple conditions gate one clause"
+	effectGateCategoryKind               = "structural — per-effect condition kind not gateable"
+	effectGateCategoryPredicate          = "structural — per-effect condition predicate not gateable"
+	effectGateCategoryLowering           = "structural — per-effect condition lowering failed"
+	effectGateCategoryUnrecognizedPrefix = "structural — per-effect condition unrecognized: "
+)
+
+// effectGateRejectCategory classifies why lowerCondition rejected a condition in
+// the effect-gate context, returning one of the closed effectGateCategory
+// constants. When the predicate was never recognized (the compiler emitted
+// ConditionPredicateUnsupported), it appends the recognized condition wording so
+// the support report can rank unrecognized conditions by how many cards they
+// block. The wording is diagnostic metadata only; lowering never reads it back.
+func effectGateRejectCategory(condition compiler.CompiledCondition) string {
+	if !conditionKindAllowedInContext(condition, conditionContextEffectGate) {
+		return effectGateCategoryKind
+	}
+	if !conditionPredicateAllowedInContext(condition.Predicate, conditionContextEffectGate) {
+		if condition.Predicate == compiler.ConditionPredicateUnsupported {
+			return effectGateCategoryUnrecognizedPrefix + strings.TrimSpace(condition.Text)
+		}
+		return effectGateCategoryPredicate
+	}
+	return effectGateCategoryLowering
 }
 
 // leadingGroupCondition reports whether the matched effects form a shared-
