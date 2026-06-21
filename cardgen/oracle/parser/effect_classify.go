@@ -1002,23 +1002,41 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectUnknown
 	case kind == EffectGrantKeyword && effectWordsAt(tokens, index+1, "the", "same", "name"):
 		return EffectUnknown
-	case kind == EffectModifyPT && gainEnergyVerbAt(tokens, index):
-		return EffectGainEnergy
+	case kind == EffectModifyPT && playerCounterGainVerbAt(tokens, index):
+		return EffectGainPlayerCounter
 	default:
 		return kind
 	}
 }
 
-// gainEnergyVerbAt reports whether the "get"/"gets" verb at index is followed
-// only by energy symbols ("You get {E}{E}."), i.e. an energy-gain effect rather
-// than a power/toughness modification. The recipient (controller vs other) is
-// resolved separately; this only distinguishes the verb's object as energy.
-func gainEnergyVerbAt(tokens []shared.Token, index int) bool {
+// playerCounterGainVerbAt reports whether the "get"/"gets" verb at index is
+// followed by a player-counter object — energy symbols ("You get {E}{E}.") or a
+// named player counter ("You get an experience counter.") — rather than a
+// power/toughness modification ("gets +1/+1"). The recipient and exact count are
+// resolved separately; this only distinguishes the verb's object.
+func playerCounterGainVerbAt(tokens []shared.Token, index int) bool {
 	if !equalWord(tokens[index], "get") && !equalWord(tokens[index], "gets") {
 		return false
 	}
-	symbols := energySymbolsAfter(tokens, index+1)
-	return len(symbols) > 0
+	return len(energySymbolsAfter(tokens, index+1)) > 0 ||
+		playerCounterWordAfter(tokens, index+1)
+}
+
+// playerCounterWordAfter reports whether the tokens beginning at start name a
+// player-only counter kind immediately followed by the "counter"/"counters"
+// noun ("an experience counter", "two poison counters"). The kind word and count
+// are recognized later from counter atoms and the effect amount; this only gates
+// classification so a "gets +1/+1" P/T change never matches.
+func playerCounterWordAfter(tokens []shared.Token, start int) bool {
+	for i := start; i+1 < len(tokens); i++ {
+		if !equalWord(tokens[i], "experience") && !equalWord(tokens[i], "poison") {
+			continue
+		}
+		if equalWord(tokens[i+1], "counter") || equalWord(tokens[i+1], "counters") {
+			return true
+		}
+	}
+	return false
 }
 
 // energySymbolsAfter returns the run of consecutive energy ({E}) symbol tokens

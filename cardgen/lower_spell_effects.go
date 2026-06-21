@@ -1179,21 +1179,27 @@ func lowerInvestigateSpell(
 	)
 }
 
-// lowerGainEnergySpell lowers "You get {E}…{E}." to a player-counter placement of
-// the fixed number of energy counters on the controller.
-func lowerGainEnergySpell(
+// lowerGainPlayerCounterSpell lowers "You get {E}…{E}." or "You get <N> <kind>
+// counter(s)." to a player-counter placement of the fixed count on the
+// controller. The energy symbol form carries no named counter kind, so it
+// defaults to energy; the named word form carries the recognized player counter.
+func lowerGainPlayerCounterSpell(
 	ctx contentCtx,
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	kind := counter.Energy
+	if effect := ctx.content.Effects[0]; effect.CounterKindKnown {
+		kind = effect.CounterKind
+	}
 	return lowerExactPrimitiveSpell(
 		ctx,
 		syntax,
-		"gain energy",
+		"gain player counter",
 		func(amount game.Quantity) game.Primitive {
 			return game.AddPlayerCounter{
 				Amount:      amount,
 				Player:      game.ControllerReference(),
-				CounterKind: counter.Energy,
+				CounterKind: kind,
 			}
 		},
 	)

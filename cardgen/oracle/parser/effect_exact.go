@@ -92,8 +92,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactMoveCountersEffectSyntax(effect)
 	case EffectModifyPT:
 		return exactModifyPTEffectSyntax(effect)
-	case EffectGainEnergy:
-		return exactGainEnergyEffectSyntax(effect)
+	case EffectGainPlayerCounter:
+		return exactGainPlayerCounterEffectSyntax(effect)
 	case EffectPut:
 		return exactCounterPlacementEffectSyntax(effect) || exactGraveyardPutEffectSyntax(effect) ||
 			exactDigPutEffectSyntax(effect) || exactHandLibraryPutEffectSyntax(effect) ||
@@ -2978,12 +2978,13 @@ func effectAmountSourceText(effect *EffectSyntax) string {
 	return effect.Amount.Text
 }
 
-// exactGainEnergyEffectSyntax recognizes the controller energy-gain effect "You
-// get {E}…{E}." (with an optional "(N energy counters)" reminder the parser
-// already strips). The clause must be exactly the "get"/"gets" verb followed by N
-// energy symbols and a closing period, with no other object, target, or
-// reference, so every richer or differently-recipient form fails closed.
-func exactGainEnergyEffectSyntax(effect *EffectSyntax) bool {
+// exactGainPlayerCounterEffectSyntax recognizes the controller player-counter gain
+// effect "You get {E}…{E}." (energy symbols) or "You get <N> <kind> counter(s)."
+// (a named player-only counter). The optional "(N energy counters)" reminder is
+// already stripped. It requires the controller recipient with a known positive
+// count and no target or reference, so every richer or differently-recipient form
+// fails closed; the lowering re-checks exact source consumption.
+func exactGainPlayerCounterEffectSyntax(effect *EffectSyntax) bool {
 	if effect.Context != EffectContextController ||
 		!effect.Amount.Known || effect.Amount.Value < 1 ||
 		len(effect.Targets) != 0 || len(effect.References) != 0 {
@@ -2999,5 +3000,11 @@ func exactGainEnergyEffectSyntax(effect *EffectSyntax) bool {
 	if len(rest) > 0 && rest[len(rest)-1].Kind == shared.Period {
 		rest = rest[:len(rest)-1]
 	}
-	return len(rest) == effect.Amount.Value && allEnergySymbols(rest)
+	if len(rest) == effect.Amount.Value && allEnergySymbols(rest) {
+		return true
+	}
+	// Named player-counter word form: the recognized counter kind must be a
+	// player-only kind; the count and noun are validated by the lowering's exact
+	// source consumption.
+	return effect.CounterKnown && effect.CounterKind.PlayerOnly()
 }

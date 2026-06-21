@@ -46,7 +46,7 @@ const (
 	EffectMill              EffectKind = "EffectMill"
 	EffectManaSpendRider    EffectKind = "EffectManaSpendRider"
 	EffectModifyPT          EffectKind = "EffectModifyPT"
-	EffectGainEnergy        EffectKind = "EffectGainEnergy"
+	EffectGainPlayerCounter EffectKind = "EffectGainPlayerCounter"
 	EffectPut               EffectKind = "EffectPut"
 	EffectProliferate       EffectKind = "EffectProliferate"
 	EffectRegenerate        EffectKind = "EffectRegenerate"

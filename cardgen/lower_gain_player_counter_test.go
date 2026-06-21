@@ -9,20 +9,23 @@ func TestGenerateGainEnergySource(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
 		oracle string
+		kind   string
 		amount string
 	}{
-		{"You get {E}{E} (two energy counters).", "game.Fixed(2)"},
-		{"You get {E} (an energy counter).", "game.Fixed(1)"},
-		{"You get {E}{E}{E}{E} (four energy counters).", "game.Fixed(4)"},
+		{"You get {E}{E} (two energy counters).", "counter.Energy", "game.Fixed(2)"},
+		{"You get {E} (an energy counter).", "counter.Energy", "game.Fixed(1)"},
+		{"You get {E}{E}{E}{E} (four energy counters).", "counter.Energy", "game.Fixed(4)"},
+		{"You get an experience counter.", "counter.Experience", "game.Fixed(1)"},
+		{"You get two experience counters.", "counter.Experience", "game.Fixed(2)"},
 	} {
 		t.Run(tc.oracle, func(t *testing.T) {
 			t.Parallel()
 			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
-				Name:       "Energy Maker",
+				Name:       "Counter Maker",
 				Layout:     "normal",
 				TypeLine:   "Instant",
 				OracleText: tc.oracle,
-			}, "e")
+			}, "c")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -31,7 +34,7 @@ func TestGenerateGainEnergySource(t *testing.T) {
 			}
 			for _, want := range []string{
 				"game.AddPlayerCounter",
-				"counter.Energy",
+				tc.kind,
 				"game.ControllerReference()",
 				tc.amount,
 			} {
