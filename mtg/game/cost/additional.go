@@ -91,7 +91,9 @@ type Additional struct {
 	MatchCardType bool
 	CardType      types.Card
 
-	// MatchCardColor constrains card costs to cards with the listed color.
+	// MatchCardColor constrains card costs to cards with the listed color, and
+	// battlefield permanent costs (such as "sacrifice a black creature") to
+	// permanents with the listed color.
 	MatchCardColor bool
 	CardColor      color.Color
 

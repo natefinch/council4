@@ -359,6 +359,9 @@ func additionalCostMatchesPermanent(s State, permanent *game.Permanent, addition
 		(additional.PermanentTypeAlt == "" || !s.PermanentHasType(permanent, additional.PermanentTypeAlt)) {
 		return false
 	}
+	if additional.MatchCardColor && !slices.Contains(s.PermanentEffectiveColors(permanent), additional.CardColor) {
+		return false
+	}
 	if additional.SubtypesAny != (cost.SubtypeSet{}) {
 		for _, subtype := range additional.SubtypesAny {
 			if subtype != "" && s.PermanentHasSubtype(permanent, subtype) {

@@ -57,6 +57,42 @@ func TestParseSacrificeSubtypeCostObject(t *testing.T) {
 	}
 }
 
+func TestParseSacrificeColorCostObject(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		source  string
+		color   Color
+		noun    ObjectNoun
+		exclude bool
+	}{
+		{"another black creature", "Sacrifice another black creature: Draw a card.", ColorBlack, ObjectNounCreature, true},
+		{"a blue creature", "Sacrifice a blue creature: Draw a card.", ColorBlue, ObjectNounCreature, false},
+		{"a green permanent you control", "Sacrifice a green permanent you control: Draw a card.", ColorGreen, ObjectNounPermanent, false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			component := soleCostComponent(t, test.source)
+			if component.Kind != CostComponentSacrifice {
+				t.Fatalf("kind = %v, want sacrifice", component.Kind)
+			}
+			if !component.ObjectColorKnown || component.ObjectColor != test.color {
+				t.Fatalf("color = (%v, %v), want %v", component.ObjectColor, component.ObjectColorKnown, test.color)
+			}
+			if component.ObjectNoun != test.noun {
+				t.Fatalf("noun = %v, want %v", component.ObjectNoun, test.noun)
+			}
+			if component.ExcludeSource != test.exclude {
+				t.Fatalf("ExcludeSource = %v, want %v", component.ExcludeSource, test.exclude)
+			}
+			if !component.AmountKnown || component.AmountValue != 1 {
+				t.Fatalf("amount = (%d, %v), want 1", component.AmountValue, component.AmountKnown)
+			}
+		})
+	}
+}
+
 func TestParseSacrificeAnotherExcludesSource(t *testing.T) {
 	t.Parallel()
 	component := soleCostComponent(t, "Sacrifice another creature: Draw a card.")
