@@ -27,6 +27,9 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 	if e.applyHandAbilityWithChoices(g, playerID, activate, agents, log) {
 		return true
 	}
+	if e.applyHandManaAbilityWithChoices(g, playerID, activate, agents, log) {
+		return true
+	}
 	if e.applyGraveyardAbilityWithChoices(g, playerID, activate, agents, log) {
 		return true
 	}
@@ -214,6 +217,41 @@ func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerI
 	pushAbilityToStack(g, obj)
 	emitAbilityActivatedEvent(g, obj, 0, false)
 	recordActivatedAbilityUse(g, card.ID, activate.AbilityIndex, ability.Timing)
+	return true
+}
+
+// applyHandManaAbilityWithChoices activates a mana ability printed on a card in
+// the player's hand whose cost is exiling that card from hand (Simian/Elvish
+// Spirit Guide). The card is exiled as the activation cost and the add-mana
+// content resolves immediately into the controller's mana pool; the ability
+// never uses the stack, like any mana ability.
+func (e *Engine) applyHandManaAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	card, body, ok := handManaAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex)
+	if !ok || !canActivateHandManaAbility(g, playerID, card.ID, &body, activate.AbilityIndex) {
+		return false
+	}
+	if len(activate.Targets) != 0 || len(activate.TargetCounts) != 0 || activate.XValue != 0 || len(activate.ChosenModes) != 0 {
+		return false
+	}
+	sourceCardID := card.ID
+	if !moveCardBetweenZones(g, playerID, card.ID, zone.Hand, zone.Exile) {
+		return false
+	}
+	obj := &game.StackObject{
+		ID:                  g.IDGen.Next(),
+		Kind:                game.StackActivatedAbility,
+		SourceID:            sourceCardID,
+		SourceCardID:        sourceCardID,
+		SourceZone:          zone.Exile,
+		AbilityIndex:        activate.AbilityIndex,
+		Controller:          playerID,
+		AdditionalCostsPaid: []string{"Exile this card from your hand"},
+	}
+	if len(body.Content.Modes) > 0 {
+		e.resolveAbilityContentWithChoices(g, obj, body.Content, agents, log)
+	}
+	emitAbilityActivatedEvent(g, obj, 0, true)
+	recordActivatedAbilityUse(g, sourceCardID, activate.AbilityIndex, body.Timing)
 	return true
 }
 

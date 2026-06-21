@@ -120,12 +120,19 @@ func lowerManaAbility(
 			"the executable source backend cannot lower this add-mana content",
 		)
 	}
-	if shell.zoneOfFunction != zone.Battlefield {
+	supportedZone := shell.zoneOfFunction == zone.Battlefield ||
+		(shell.zoneOfFunction == zone.Hand && handManaAbilityCostSupported(shell.manaCost, shell.additionalCosts))
+	if !supportedZone {
 		return game.ManaAbility{}, executableDiagnostic(
 			ability,
 			"unsupported activation zone",
-			"the Payment Planner supports mana abilities only on the battlefield",
+			"the Payment Planner supports mana abilities only on the battlefield or, with a self-exile-from-hand cost, in the hand",
 		)
+	}
+
+	functionZone := shell.zoneOfFunction
+	if functionZone == zone.Battlefield {
+		functionZone = zone.None
 	}
 
 	return game.ManaAbility{
@@ -135,7 +142,21 @@ func lowerManaAbility(
 		Timing:              shell.timing,
 		ActivationCondition: shell.activationCondition,
 		AdditionalCosts:     shell.additionalCosts,
+		ZoneOfFunction:      functionZone,
 	}, nil
+}
+
+// handManaAbilityCostSupported reports whether a hand-activated mana ability has
+// exactly the self-exile-from-hand cost shape — no mana and a single
+// "Exile this card from your hand" cost — modelling Simian Spirit Guide and
+// Elvish Spirit Guide. Other hand mana costs fail closed.
+func handManaAbilityCostSupported(manaCost opt.V[cost.Mana], additionalCosts []cost.Additional) bool {
+	if manaCost.Exists && len(manaCost.Val) != 0 {
+		return false
+	}
+	return len(additionalCosts) == 1 &&
+		additionalCosts[0].Kind == cost.AdditionalExileSource &&
+		additionalCosts[0].Source == zone.Hand
 }
 
 // isSelfDamageToControllerRider reports whether effect is exactly a

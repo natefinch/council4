@@ -301,6 +301,35 @@ func TestParseExileThisCardFromGraveyardIsSelf(t *testing.T) {
 	}
 }
 
+func TestParseExileThisFromHandIsSelf(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		source string
+	}{
+		{"this card", "Exile this card from your hand: Add {R}."},
+		{"this creature", "Exile this creature from your hand: Add {G}."},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			component := soleCostComponent(t, test.source)
+			if component.Kind != CostComponentExile {
+				t.Fatalf("kind = %v, want exile", component.Kind)
+			}
+			if !component.SourceSelf {
+				t.Fatal("SourceSelf = false, want true")
+			}
+			if component.SourceZone != zone.Hand {
+				t.Fatalf("source zone = %v, want hand", component.SourceZone)
+			}
+			if component.ObjectIsCard {
+				t.Fatal("ObjectIsCard = true, want false for a source self-exile")
+			}
+		})
+	}
+}
+
 func TestParseExileTypedCardAmounts(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

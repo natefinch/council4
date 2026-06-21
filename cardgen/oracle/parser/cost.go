@@ -502,6 +502,25 @@ func costCardNoun(token shared.Token, atoms Atoms) bool {
 	return ok && noun == ObjectNounCard
 }
 
+// costSelfExileNoun reports whether a noun token following "this" names the
+// source object for a self-exile cost ("Exile this card/creature from your
+// hand"). It accepts the generic "card" noun and the permanent card-type nouns
+// so single-type self-exilers (e.g. "Exile this creature from your hand") match
+// the same source-exile cost as the generic "this card" wording.
+func costSelfExileNoun(token shared.Token, atoms Atoms) bool {
+	noun, ok := atoms.ObjectNounAt(token.Span)
+	if !ok {
+		return false
+	}
+	switch noun {
+	case ObjectNounCard, ObjectNounCreature, ObjectNounArtifact,
+		ObjectNounEnchantment, ObjectNounLand, ObjectNounPermanent:
+		return true
+	default:
+		return false
+	}
+}
+
 // sacrificeSubtypeFamilies lists the permanent card types whose subtypes a
 // sacrifice cost object may name, e.g. "Sacrifice a Goblin" or "Sacrifice three
 // Treasures". A named subtype must belong to one of these families to be
@@ -974,25 +993,33 @@ func annotateCostPermanentObject(component *CostComponent, object []shared.Token
 func annotateExileCostObject(component *CostComponent, object []shared.Token, atoms Atoms) {
 	if len(object) < 5 ||
 		!equalWord(object[len(object)-3], "from") ||
-		!equalWord(object[len(object)-2], "your") ||
-		!equalWord(object[len(object)-1], "graveyard") {
+		!equalWord(object[len(object)-2], "your") {
 		return
 	}
-	if z, ok := atoms.ZoneIn(shared.SpanOf(object[len(object)-3:]), ZoneRoleFrom); !ok || z != zone.Graveyard {
+	var sourceZone zone.Type
+	switch {
+	case equalWord(object[len(object)-1], "graveyard"):
+		sourceZone = zone.Graveyard
+	case equalWord(object[len(object)-1], "hand"):
+		sourceZone = zone.Hand
+	default:
 		return
 	}
-	// Record the graveyard source zone as soon as the "from your graveyard"
-	// suffix is confirmed: the compiler reads this typed zone to decide an
-	// activated ability's source zone even when the exiled object is the source
-	// itself (e.g. "Exile this card from your graveyard"), which the object
-	// recognition below does not classify as a card selector.
-	component.SourceZone = zone.Graveyard
+	if z, ok := atoms.ZoneIn(shared.SpanOf(object[len(object)-3:]), ZoneRoleFrom); !ok || z != sourceZone {
+		return
+	}
+	// Record the source zone as soon as the "from your <zone>" suffix is
+	// confirmed: the compiler reads this typed zone to decide an activated
+	// ability's source zone even when the exiled object is the source itself
+	// (e.g. "Exile this card from your hand"), which the object recognition
+	// below does not classify as a card selector.
+	component.SourceZone = sourceZone
 	prefix := object[:len(object)-3]
 	switch {
-	case len(prefix) == 2 && equalWord(prefix[0], "this") && costCardNoun(prefix[1], atoms):
-		// "Exile this card from your graveyard" exiles the source card itself;
-		// the compiler routes this to an AdditionalExileSource cost paid from the
-		// graveyard source zone recorded above.
+	case len(prefix) == 2 && equalWord(prefix[0], "this") && costSelfExileNoun(prefix[1], atoms):
+		// "Exile this card/creature from your hand or graveyard" exiles the
+		// source card itself; the compiler routes this to an
+		// AdditionalExileSource cost paid from the source zone recorded above.
 		component.SourceSelf = true
 	case len(prefix) == 2 && exileCardAmount(component, prefix[0], atoms) && costCardNoun(prefix[1], atoms):
 		component.ObjectNoun = ObjectNounCard

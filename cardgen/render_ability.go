@@ -257,6 +257,14 @@ func (r Renderer) renderManaAbility(ctx *renderCtx, ability *game.ManaAbility) (
 	}
 
 	var fields []string
+	if ability.ZoneOfFunction != zone.None {
+		ctx.need(importZone)
+		zoneLiteral, err := renderZone(ability.ZoneOfFunction)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ZoneOfFunction: %s,", zoneLiteral))
+	}
 	if ability.ManaCost.Exists {
 		ctx.need(importOpt)
 		manaCostLit, err := r.renderManaCost(ctx, ability.ManaCost.Val)
