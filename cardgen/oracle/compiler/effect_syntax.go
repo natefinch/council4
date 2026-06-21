@@ -536,6 +536,12 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountSpellsCastThisTurn
 	case parser.EffectDynamicAmountTriggeringLifeChange:
 		return DynamicAmountTriggeringLifeChange
+	case parser.EffectDynamicAmountSacrificedPower:
+		return DynamicAmountSacrificedPower
+	case parser.EffectDynamicAmountSacrificedToughness:
+		return DynamicAmountSacrificedToughness
+	case parser.EffectDynamicAmountSacrificedManaValue:
+		return DynamicAmountSacrificedManaValue
 	default:
 		return DynamicAmountNone
 	}

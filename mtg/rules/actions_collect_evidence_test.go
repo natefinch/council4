@@ -87,7 +87,7 @@ func TestCollectEvidenceRejectsStalePreferenceWithoutMutation(t *testing.T) {
 	graveyardCard := addCardToGraveyard(g, game.Player1, evidenceCard("Evidence Four", 4))
 	handCard := addCardToHand(g, game.Player1, evidenceCard("Stale Evidence", 4))
 
-	ok := paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
+	_, ok := paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
 		PlayerID: game.Player1,
 		Source:   source,
 		AdditionalCosts: []cost.Additional{{
@@ -113,7 +113,7 @@ func TestCollectEvidenceAndExileCostCannotReuseGraveyardCard(t *testing.T) {
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Evidence Source"}})
 	graveyardCard := addCardToGraveyard(g, game.Player1, evidenceCard("Evidence Four", 4))
 
-	ok := paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
+	_, ok := paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
 		PlayerID: game.Player1,
 		Source:   source,
 		AdditionalCosts: []cost.Additional{

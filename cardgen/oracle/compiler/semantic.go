@@ -1631,6 +1631,16 @@ const (
 	// family (Faeburrow Elder). Added last so existing kinds keep their wire
 	// values.
 	DynamicAmountColorCount
+	// DynamicAmountSacrificedPower is the power of the permanent sacrificed to
+	// pay the enclosing activated ability's cost ("the sacrificed creature's
+	// power"). DynamicAmountSacrificedToughness and
+	// DynamicAmountSacrificedManaValue are the toughness and mana-value
+	// siblings. They back Altar of Dementia's "Sacrifice a creature: Target
+	// player mills cards equal to the sacrificed creature's power." Added last
+	// so existing kinds keep their wire values.
+	DynamicAmountSacrificedPower
+	DynamicAmountSacrificedToughness
+	DynamicAmountSacrificedManaValue
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

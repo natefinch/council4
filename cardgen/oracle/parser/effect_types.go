@@ -303,6 +303,17 @@ const (
 	// "+1/+1 for each color among permanents you control" self-buff family
 	// (Faeburrow Elder).
 	EffectDynamicAmountColorCount EffectDynamicAmountKind = "EffectDynamicAmountColorCount"
+	// EffectDynamicAmountSacrificedPower is the power of the permanent
+	// sacrificed to pay an activated ability's cost ("the sacrificed creature's
+	// power"). Unlike EffectDynamicAmountSourcePower it has no in-text referent
+	// span: the subject is the cost-sacrificed permanent, read at resolution
+	// from last-known information. EffectDynamicAmountSacrificedToughness and
+	// EffectDynamicAmountSacrificedManaValue are the toughness and mana-value
+	// siblings. They back Altar of Dementia, whose sacrifice-cost ability mills
+	// cards equal to the sacrificed creature's power.
+	EffectDynamicAmountSacrificedPower     EffectDynamicAmountKind = "EffectDynamicAmountSacrificedPower"
+	EffectDynamicAmountSacrificedToughness EffectDynamicAmountKind = "EffectDynamicAmountSacrificedToughness"
+	EffectDynamicAmountSacrificedManaValue EffectDynamicAmountKind = "EffectDynamicAmountSacrificedManaValue"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.

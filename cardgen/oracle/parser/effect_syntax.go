@@ -637,6 +637,13 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
 		case kind == EffectCreate && trailingDynamicCountInClause(clause, amount):
 			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
+		case kind == EffectMill && trailingDynamicCountInClause(clause, amount):
+			// "mills cards equal to <dynamic>" embeds the count subject in the
+			// same clause as the milled-card noun. Scoping the selection to the
+			// tokens before the count phrase keeps a competing permanent noun in
+			// the amount (e.g. "the sacrificed creature's power") from folding
+			// into the milled-card selection.
+			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
 		default:
 		}
 		eachSourceDamageGroup, eachSourceDamageRecipient := eachSourceDamageSyntax(kind, tokens[ownershipStart:tokenIndex], clause, atoms)

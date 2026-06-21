@@ -30,6 +30,12 @@ const (
 	// object was selected. It backs combined targets that accept either a spell
 	// on the stack or a permanent ("target spell or nonland permanent").
 	ObjectReferenceTargetObject
+	// ObjectReferenceSacrificedCost references the permanent sacrificed to pay
+	// the resolving activated ability's cost, read from last-known information
+	// once it has left the battlefield. It backs effects scaled by the
+	// sacrificed permanent ("the sacrificed creature's power") on a
+	// sacrifice-cost ability (Altar of Dementia).
+	ObjectReferenceSacrificedCost
 )
 
 // ObjectReference describes how a rules effect finds an object at resolution.
@@ -87,6 +93,12 @@ func SourcePermanentReference() ObjectReference {
 // by the resolving stack object's source card.
 func SourceCardPermanentReference() ObjectReference {
 	return ObjectReference{kind: ObjectReferenceSourceCard}
+}
+
+// SacrificedCostReference references the permanent sacrificed to pay the
+// resolving activated ability's cost.
+func SacrificedCostReference() ObjectReference {
+	return ObjectReference{kind: ObjectReferenceSacrificedCost}
 }
 
 // SourceAttachedPermanentReference references the permanent that the source permanent
@@ -176,6 +188,10 @@ func (r ObjectReference) Validate() []string {
 		}
 		if r.targetIndex < 0 {
 			return []string{"target object reference must not use a negative TargetIndex"}
+		}
+	case ObjectReferenceSacrificedCost:
+		if r.targetIndex != 0 || r.linkID != "" {
+			return []string{"sacrificed cost reference must not set TargetIndex or LinkID"}
 		}
 	case ObjectReferenceNone:
 		return []string{"object reference has no kind"}
