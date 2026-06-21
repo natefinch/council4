@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -20,6 +21,11 @@ const (
 	// card from hand (optionally paying extra life) rather than pay the
 	// spell's mana cost.
 	SpellAlternativeCostPitch
+	// SpellAlternativeCostFlashback is the alternative-cost form of Flashback,
+	// written "Flashback—<cost>" with an em dash before a non-mana (or compound)
+	// cost. The cost itself is carried through the ability's CostSyntax; this
+	// kind only marks the paragraph as granting Flashback for that cost.
+	SpellAlternativeCostFlashback
 )
 
 // SpellAlternativeCostCondition identifies a condition on an alternative spell cost.
@@ -90,6 +96,30 @@ func spellAlternativeCostClause(body []shared.Token) (*SpellAlternativeCost, boo
 		Condition:             SpellAlternativeCostConditionControlsCommander,
 		WithoutPayingManaCost: true,
 	}, true
+}
+
+// flashbackAlternativeCostClause recognizes the em-dash Flashback form
+// "Flashback—<cost>", where the pre-dash label is exactly the Flashback keyword
+// and the post-dash body is a non-mana or compound cost. The cost tokens become
+// the paragraph's cost phrase so the shared cost machinery types them; the
+// returned span covers the whole paragraph so its label and dash are accounted
+// for in coverage. It returns ok=false when the label is not Flashback or the
+// body is empty.
+func flashbackAlternativeCostClause(source string, tokens []shared.Token, dash int) (*SpellAlternativeCost, Phrase, bool) {
+	if !slices.Equal(normalizedWords(tokens[:dash]), []string{"flashback"}) {
+		return nil, Phrase{}, false
+	}
+	clause := tokens[dash+1:]
+	if period := shared.TopLevelIndex(clause, shared.Period); period >= 0 {
+		clause = clause[:period]
+	}
+	if len(clause) == 0 {
+		return nil, Phrase{}, false
+	}
+	return &SpellAlternativeCost{
+		Span: shared.SpanOf(tokens),
+		Kind: SpellAlternativeCostFlashback,
+	}, phraseFromTokens(source, clause), true
 }
 
 func overloadAlternativeCostClause(body []shared.Token) (*SpellAlternativeCost, bool) {

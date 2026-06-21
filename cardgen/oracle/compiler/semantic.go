@@ -122,6 +122,10 @@ const (
 	// AlternativeCostPitch is the Force of Will family: exile a colored card
 	// from hand (optionally paying extra life) instead of paying mana.
 	AlternativeCostPitch
+	// AlternativeCostFlashback is the alternative-cost form of Flashback: cast
+	// the spell from the graveyard by paying the cost carried on the ability's
+	// CompiledCost, then exile it.
+	AlternativeCostFlashback
 )
 
 // CompiledAlternativeCost is text-independent semantic data for an optional

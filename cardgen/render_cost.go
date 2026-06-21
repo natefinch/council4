@@ -103,6 +103,13 @@ func (r Renderer) renderPlayerReference(reference game.PlayerReference) (string,
 }
 
 func (r Renderer) renderKeywordAbility(ctx *renderCtx, keyword game.KeywordAbility) (string, error) {
+	if simple, ok := keyword.(game.SimpleKeyword); ok {
+		kw, err := renderKeyword(simple.Kind)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.SimpleKeyword{Kind: %s}", kw), nil
+	}
 	if ward, ok := keyword.(game.WardKeyword); ok {
 		wardCost, err := r.renderManaCost(ctx, ward.Cost)
 		if err != nil {
