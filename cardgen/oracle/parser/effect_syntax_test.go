@@ -385,6 +385,39 @@ func TestParseSacrificeChoiceFilterExactness(t *testing.T) {
 	}
 }
 
+// TestParseMassEffectLeadingControllerActorExactness verifies that a mass
+// effect with a leading "you" controller actor ("You untap all lands you
+// control.") reconstructs canonically, including when it appears as a sequence
+// clause in an equipment combat-damage trigger (Sword of Feast and Famine).
+func TestParseMassEffectLeadingControllerActorExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		// Bare mass untap (regression guard).
+		{"Untap all lands you control.", true},
+		// Leading "you" controller actor reconstructs.
+		{"You untap all lands you control.", true},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].Exact != test.exact {
+				t.Fatalf("effect Exact = %v, want %v", effects[0].Exact, test.exact)
+			}
+		})
+	}
+}
+
 func TestParseDualTargetBounceExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

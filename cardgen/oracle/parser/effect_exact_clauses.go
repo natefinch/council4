@@ -761,6 +761,15 @@ func exactFightEffectSyntax(effect *EffectSyntax) bool {
 
 func exactMassEffectSyntax(effect *EffectSyntax, prefix string) bool {
 	text := exactEffectClauseText(effect)
+	// A mass effect may carry an explicit "You" controller actor when it is one
+	// clause of a sequence ("..., and you untap all lands you control"). The
+	// canonical mass phrase has no actor, so strip a leading "You " before the
+	// prefix check when the effect's subject is its controller.
+	if effect.Context == EffectContextController {
+		if len(text) > 4 && strings.EqualFold(text[:4], "you ") {
+			text = text[4:]
+		}
+	}
 	if !strings.HasPrefix(strings.ToLower(text), strings.ToLower(prefix)) || !strings.HasSuffix(text, ".") {
 		return false
 	}

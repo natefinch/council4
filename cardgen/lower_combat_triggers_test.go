@@ -649,6 +649,40 @@ func TestLowerWheneverEquippedCreatureDiesRegression(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceSwordCombatDamageTrigger verifies the "Sword
+// of X and Y" equipment combat-damage trigger lowers: "that player" in a
+// combat-damage-to-a-player trigger binds to the damaged player (EventPlayer),
+// and "you untap all lands you control" lowers as a controller-actor mass untap.
+func TestGenerateExecutableCardSourceSwordCombatDamageTrigger(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:     "Test Sword",
+		Layout:   "normal",
+		TypeLine: "Artifact — Equipment",
+		OracleText: "Equipped creature gets +2/+2 and has protection from black and from green.\n" +
+			"Whenever equipped creature deals combat damage to a player, that player discards a card and you untap all lands you control.\n" +
+			"Equip {2}",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"game.EventDamageDealt",
+		"game.DamageRecipientPlayer",
+		"game.Discard{",
+		"Player: game.EventPlayerReference()",
+		"game.Untap{",
+		"game.ControllerYou",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("source missing %q:\n%s", want, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceExpandedSemanticTriggerPatterns(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
