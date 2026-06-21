@@ -522,6 +522,9 @@ func renderSelectionComparisons(ctx *renderCtx, selection game.Selection) ([]str
 		}
 		fields = append(fields, "MatchCounter: true,", fmt.Sprintf("RequiredCounter: %s,", kind))
 	}
+	if selection.MatchAnyCounter {
+		fields = append(fields, "MatchAnyCounter: true,")
+	}
 	return fields, nil
 }
 

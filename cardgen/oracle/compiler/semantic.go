@@ -672,6 +672,9 @@ type ConditionSelection struct {
 	DamageRecipientOpponent   bool
 	DamageNoncombatOnly       bool
 	DamageSourceAnyController bool
+	// AnyCounter requires the matched permanent to carry at least one counter of
+	// any kind ("if this permanent has counters on it").
+	AnyCounter bool
 }
 
 // CompiledCondition is a closed, source-spanned semantic condition.
@@ -1270,7 +1273,12 @@ type CompiledEffect struct {
 	// rather than moving them onto a single target. It is false for the
 	// single-target move forms.
 	MoveCountersDistribute bool
-	FromZone               zone.Type
+	// MoveThoseCounters carries the parser's counter-salvage form "put those
+	// counters on <destination>" through to lowering, which reads the counters
+	// the triggering event permanent had (its last-known information) and places
+	// them on the destination. It is set only on EffectPut effects.
+	MoveThoseCounters bool
+	FromZone          zone.Type
 	// GraveyardZoneExile carries the parser's recognized whole-graveyard exile
 	// owner relation ("Exile target player's graveyard.") through to lowering,
 	// which builds the target-player + graveyard-group MoveCard. It is

@@ -1044,8 +1044,16 @@ type EffectSyntax struct {
 	// creatures rather than a single target ("move any number of +1/+1 counters
 	// from this creature onto other creatures."). It is false for the
 	// single-target move forms.
-	MoveCountersDistribute bool      `json:",omitempty"`
-	FromZone               zone.Type `json:",omitempty"`
+	MoveCountersDistribute bool `json:",omitempty"`
+	// MoveThoseCounters reports the counter-salvage form of an EffectPut effect,
+	// "put those counters on <destination>", where "those counters" back-refers
+	// to the counters a triggering permanent had as it left a zone ("Whenever a
+	// creature you control leaves the battlefield, if it had counters on it, put
+	// those counters on target creature you control."). The counters are read
+	// from the triggering event permanent's last-known information and placed on
+	// the destination (a single/optional target permanent or the source itself).
+	MoveThoseCounters bool      `json:",omitempty"`
+	FromZone          zone.Type `json:",omitempty"`
 	// GraveyardZoneExile records a recognized whole-graveyard exile ("Exile
 	// target player's graveyard."), naming whose graveyard is exiled. It is
 	// GraveyardZoneExileNone for every other effect, including single-card

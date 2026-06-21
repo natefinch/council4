@@ -472,6 +472,8 @@ func renderCounterSourceSpec(source game.CounterSourceSpec) (string, error) {
 	switch source.Kind {
 	case game.CounterSourceSelf:
 		return "game.CounterSourceSpec{Kind: game.CounterSourceSelf}", nil
+	case game.CounterSourceEventPermanent:
+		return "game.CounterSourceSpec{Kind: game.CounterSourceEventPermanent}", nil
 	default:
 		return "", fmt.Errorf("render: unsupported counter source kind %d", source.Kind)
 	}

@@ -836,6 +836,49 @@ func lowerMoveCountersSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 	}.Ability(), nil
 }
 
+// lowerPutThoseCountersSpell lowers the counter-salvage form "put those counters
+// on <destination>" (The Ozolith, Iron Apprentice). The counters are read from
+// the triggering event permanent's last-known information
+// (CounterSourceEventPermanent) and placed, regardless of kind, on either a
+// single/optional target permanent or the source permanent itself. It applies
+// only inside a triggered ability, where a triggering event permanent exists,
+// and fails closed for any non-controller or negated effect, an unrepresentable
+// target, and any conditional or modal content.
+func lowerPutThoseCountersSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	effect := ctx.content.Effects[0]
+	if !effect.MoveThoseCounters ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		ctx.enclosingKind != compiler.AbilityTriggered ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	move := game.MoveCounters{
+		Source:   game.CounterSourceSpec{Kind: game.CounterSourceEventPermanent},
+		AllKinds: true,
+	}
+	if len(ctx.content.Targets) == 0 {
+		move.Object = game.SourcePermanentReference()
+		return game.Mode{
+			Sequence: []game.Instruction{{Primitive: move}},
+		}.Ability(), true
+	}
+	if len(ctx.content.Targets) != 1 {
+		return game.AbilityContent{}, false
+	}
+	target, ok := permanentTargetSpecWithCardinality(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	move.Object = game.TargetPermanentReference(0)
+	return game.Mode{
+		Targets:  []game.TargetSpec{target},
+		Sequence: []game.Instruction{{Primitive: move}},
+	}.Ability(), true
+}
+
 // lowerMoveCountersDistributeSpell lowers the "move any number of <kind>
 // counters from this permanent onto other creatures" form (Forgotten Ancient)
 // into a MoveCounters instruction that reads counters from the ability's own

@@ -545,3 +545,21 @@ func TestConditionControlCountComparison(t *testing.T) {
 		t.Fatal("did not expect controller (1 land) to control more lands than each opponent (2 lands)")
 	}
 }
+
+func TestConditionSourceHasAnyCounter(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Ozolith",
+		Types: []types.Card{types.Artifact}},
+	})
+	condition := opt.Val(game.Condition{
+		Object:        opt.Val(game.SourcePermanentReference()),
+		ObjectMatches: opt.Val(game.Selection{MatchAnyCounter: true}),
+	})
+	if conditionSatisfied(g, conditionContext{controller: game.Player1, source: source}, condition) {
+		t.Fatal("source without counters must not satisfy a has-counters condition")
+	}
+	source.Counters.Add(counter.PlusOnePlusOne, 1)
+	if !conditionSatisfied(g, conditionContext{controller: game.Player1, source: source}, condition) {
+		t.Fatal("source with a +1/+1 counter should satisfy a has-counters condition")
+	}
+}

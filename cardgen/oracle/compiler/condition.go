@@ -327,6 +327,7 @@ func compileConditionSelection(syntax parser.ConditionSelection) (ConditionSelec
 	selection.DamageRecipientOpponent = syntax.DamageRecipientOpponent
 	selection.DamageNoncombatOnly = syntax.DamageNoncombatOnly
 	selection.DamageSourceAnyController = syntax.DamageSourceAnyController
+	selection.AnyCounter = syntax.AnyCounter
 	return selection, true
 }
 
