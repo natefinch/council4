@@ -676,13 +676,18 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 		}
 	}
 	if selector.MatchManaValue {
-		// Only the "with mana value N or less" rider is modeled: a fixed upper
-		// bound. Every other comparison (exact, "or greater", or an X-derived
-		// bound, which reaches lowering as a non-exact clause) fails closed.
-		if selector.ManaValue.Op != compare.LessOrEqual {
-			return game.SearchSpec{}, false
+		// "with mana value N or less" is a fixed upper bound; "with mana value X
+		// or less" binds the upper bound to the spell's chosen {X}, resolved as
+		// the search runs. Every other comparison (exact, "or greater") fails
+		// closed.
+		if selector.ManaValueX {
+			spec.MaxManaValueFromX = true
+		} else {
+			if selector.ManaValue.Op != compare.LessOrEqual {
+				return game.SearchSpec{}, false
+			}
+			spec.MaxManaValue = opt.Val(selector.ManaValue.Value)
 		}
-		spec.MaxManaValue = opt.Val(selector.ManaValue.Value)
 	}
 	supertypes := selector.Supertypes()
 	if len(supertypes) > 1 {

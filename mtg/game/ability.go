@@ -734,6 +734,14 @@ type SearchSpec struct {
 	// rider on a library search.
 	MaxManaValue opt.V[int]
 
+	// MaxManaValueFromX, when true, restricts matches to cards whose mana value
+	// is less than or equal to the spell's chosen {X}, modeling the "with mana
+	// value X or less" rider on an X-cost library-search tutor (Green Sun's
+	// Zenith, Chord of Calling, Wargate). The bound is resolved from the
+	// resolving stack object's X as the search runs, so it is mutually exclusive
+	// with the fixed MaxManaValue.
+	MaxManaValueFromX bool
+
 	Reveal       bool
 	EntersTapped bool
 
@@ -767,6 +775,7 @@ func (s SearchSpec) IsUnrestricted() bool {
 		len(s.SubtypesAny) == 0 &&
 		len(s.ColorsAny) == 0 &&
 		!s.MaxManaValue.Exists &&
+		!s.MaxManaValueFromX &&
 		!s.SharedSubtype
 }
 

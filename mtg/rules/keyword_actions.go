@@ -196,6 +196,12 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 	if !ok {
 		return false, nil
 	}
+	if spec.MaxManaValueFromX {
+		// "with mana value X or less" bounds the search by the spell's chosen X,
+		// resolved from the resolving stack object as the search runs.
+		spec.MaxManaValue = opt.Val(obj.XValue)
+		spec.MaxManaValueFromX = false
+	}
 	var candidates []id.ID
 	for _, cardID := range player.Library.All() {
 		if searchSpecMatches(g, cardID, spec) {

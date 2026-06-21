@@ -493,6 +493,50 @@ func TestSearchLibraryPermanentAndManaValueFilter(t *testing.T) {
 	}
 }
 
+// TestSearchLibraryManaValueFromXBound verifies the SearchSpec.MaxManaValueFromX
+// filter ("a creature card with mana value X or less" onto the battlefield):
+// the bound resolves from the resolving spell's chosen X, so only creatures at
+// or below X are findable and the chosen card enters the battlefield.
+func TestSearchLibraryManaValueFromXBound(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cheap := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Small Bear",
+		ManaCost: opt.Val(cost.Mana{cost.O(2)}),
+		Types:    []types.Card{types.Creature},
+	}})
+	pricey := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Giant Bear",
+		ManaCost: opt.Val(cost.Mana{cost.O(5)}),
+		Types:    []types.Card{types.Creature},
+	}})
+	addEffectSpellToStack(g, game.Player1, game.Search{
+		Amount: game.Fixed(1),
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:        zone.Library,
+			Destination:       zone.Battlefield,
+			CardType:          opt.Val(types.Creature),
+			MaxManaValueFromX: true,
+		},
+	}, nil)
+	obj, ok := g.Stack.Peek()
+	if !ok {
+		t.Fatal("expected the search spell on the stack")
+	}
+	obj.XValue = 3
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &searchByNameAgent{wanted: "Small Bear"}}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+	if permanentForCard(g, cheap) == nil {
+		t.Fatal("a creature within the X mana-value bound did not enter the battlefield")
+	}
+	if !g.Players[game.Player1].Library.Contains(pricey) {
+		t.Fatal("a creature above the X mana-value bound was incorrectly findable")
+	}
+}
+
 func TestSearchLibraryNilAgentFindsFirstMatch(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

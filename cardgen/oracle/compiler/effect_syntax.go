@@ -136,6 +136,7 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		Zone:                   syntax.Zone,
 		ManaValue:              syntax.ManaValue,
 		MatchManaValue:         syntax.MatchManaValue,
+		ManaValueX:             syntax.ManaValueX,
 		Power:                  syntax.Power,
 		MatchPower:             syntax.MatchPower,
 		Toughness:              syntax.Toughness,

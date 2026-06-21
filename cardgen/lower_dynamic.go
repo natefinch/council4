@@ -272,6 +272,9 @@ func dynamicCountCharacteristics(selector compiler.CompiledSelector) (game.Selec
 		return game.Selection{}, false
 	}
 	if selector.MatchManaValue {
+		if selector.ManaValueX {
+			return game.Selection{}, false
+		}
 		selection.ManaValue = opt.Val(selector.ManaValue)
 	}
 	if selector.MatchPower {
@@ -768,6 +771,9 @@ func permanentTargetSpecWithCardinality(target compiler.CompiledTarget) (game.Ta
 		spec.Predicate.ExcludedKeyword = keyword
 	}
 	if target.Selector.MatchManaValue {
+		if target.Selector.ManaValueX {
+			return game.TargetSpec{}, false
+		}
 		spec.Predicate.ManaValue = opt.Val(target.Selector.ManaValue)
 	}
 	if target.Selector.MatchPower {
@@ -885,6 +891,9 @@ func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool
 		ExcludedSpellCardTypes: append([]types.Card(nil), excluded...),
 	}
 	if target.Selector.MatchManaValue {
+		if target.Selector.ManaValueX {
+			return game.TargetSpec{}, false
+		}
 		predicate.ManaValue = opt.Val(target.Selector.ManaValue)
 	}
 	if len(required) == 1 {

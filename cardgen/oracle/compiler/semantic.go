@@ -784,13 +784,17 @@ type CompiledSelector struct {
 	Zone            zone.Type
 	ManaValue       compare.Int
 	MatchManaValue  bool
-	Power           compare.Int
-	MatchPower      bool
-	Toughness       compare.Int
-	MatchToughness  bool
-	Colorless       bool
-	Multicolored    bool
-	BasicLandType   bool
+	// ManaValueX records that the MatchManaValue bound is the spell's chosen {X}
+	// ("with mana value X or less") rather than a fixed number; ManaValue then
+	// holds only the operator. It lowers to SearchSpec.MaxManaValueFromX.
+	ManaValueX     bool
+	Power          compare.Int
+	MatchPower     bool
+	Toughness      compare.Int
+	MatchToughness bool
+	Colorless      bool
+	Multicolored   bool
+	BasicLandType  bool
 	// MatchCounter records whether RequiredCounter is active ("creature you
 	// control with a +1/+1 counter on it"); RequiredCounter names the counter
 	// kind the matched permanent must carry.

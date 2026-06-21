@@ -932,6 +932,9 @@ func massGroupSelection(selector compiler.CompiledSelector) (game.Selection, boo
 	default:
 	}
 	if selector.MatchManaValue {
+		if selector.ManaValueX {
+			return game.Selection{}, false
+		}
 		selection.ManaValue = opt.Val(selector.ManaValue)
 	}
 	if selector.MatchPower {

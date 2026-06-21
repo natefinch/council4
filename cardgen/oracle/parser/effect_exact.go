@@ -434,7 +434,7 @@ func analyzeSearchClause(effect *EffectSyntax) (detail string, sharedSubtype boo
 	}
 	mvRider := ""
 	if effect.Selection.MatchManaValue {
-		rider, ok := searchManaValueRider(effect.Selection.ManaValue)
+		rider, ok := searchManaValueRider(effect.Selection)
 		if !ok {
 			return unsupportedSearchFilterDetail(rest), false, EffectDestinationUnspecified
 		}
@@ -659,15 +659,19 @@ func unsupportedSearchFilterDetail(rest string) string {
 	return fmt.Sprintf("unsupported library-search filter %q", filter)
 }
 
-// searchManaValueRider reconstructs the "with mana value N or less" filter rider
-// from the parsed mana-value comparison. Only a fixed upper bound (LessOrEqual)
-// is modeled, mirroring SearchSpec.MaxManaValue; every other comparison (exact,
-// "or greater", or an X-derived bound) fails closed.
-func searchManaValueRider(mv compare.Int) (string, bool) {
-	if mv.Op != compare.LessOrEqual {
+// searchManaValueRider reconstructs the "with mana value N or less" or "with
+// mana value X or less" filter rider from the parsed selection. A fixed upper
+// bound (LessOrEqual) mirrors SearchSpec.MaxManaValue; an X-derived bound
+// mirrors SearchSpec.MaxManaValueFromX (Green Sun's Zenith, Wargate). Every
+// other comparison (exact or "or greater") fails closed.
+func searchManaValueRider(sel SelectionSyntax) (string, bool) {
+	if sel.ManaValueX {
+		return " with mana value X or less", true
+	}
+	if sel.ManaValue.Op != compare.LessOrEqual {
 		return "", false
 	}
-	return fmt.Sprintf(" with mana value %d or less", mv.Value), true
+	return fmt.Sprintf(" with mana value %d or less", sel.ManaValue.Value), true
 }
 
 // canonicalSearchFilter renders the modeled portion of a search filter (the text

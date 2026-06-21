@@ -1686,6 +1686,16 @@ func selectionCounterQualifier(tokens []shared.Token) (counter.Kind, bool) {
 func parseSelectionNumbers(tokens []shared.Token, atoms Atoms, selection *SelectionSyntax) bool {
 	for i := range tokens {
 		if i+2 < len(tokens) && effectWordsAt(tokens, i, "mana", "value") {
+			if i+4 < len(tokens) && equalWord(tokens[i+2], "X") &&
+				equalWord(tokens[i+3], "or") && equalWord(tokens[i+4], "less") {
+				// "mana value X or less" bounds the match by the spell's chosen
+				// {X}, which no fixed comparison can express. Record the operator
+				// and flag the X-derived bound; lowering resolves it from X.
+				selection.ManaValue = compare.Int{Op: compare.LessOrEqual}
+				selection.MatchManaValue = true
+				selection.ManaValueX = true
+				continue
+			}
 			comparison, ok := parseSelectionNumberComparison(tokens[i+2:], atoms)
 			if !ok {
 				return false

@@ -709,6 +709,13 @@ type SelectionSyntax struct {
 	// permanent chose as it entered (Three Tree City). It lowers to the runtime
 	// Selection.SubtypeFromSourceEntryChoice predicate.
 	SubtypeFromEntryChoice bool `json:",omitempty"`
+	// ManaValueX records that the MatchManaValue comparison bound is the spell's
+	// chosen {X} rather than a fixed number ("with mana value X or less"). When
+	// set, ManaValue holds the operator (LessOrEqual) with no fixed Value; the
+	// bound is resolved from the spell's X as the effect resolves. It backs the
+	// X-bounded library-search tutors (Green Sun's Zenith, Chord of Calling,
+	// Wargate).
+	ManaValueX bool `json:",omitempty"`
 }
 
 // TargetCardinalitySyntax is an inclusive target-count range.
