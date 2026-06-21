@@ -367,7 +367,8 @@ func registerPermanentReplacementEffects(g *game.Game, permanent *game.Permanent
 			len(replacement.CreateOneOfEachTokens) == 0 &&
 			!replacement.EntersTappedOthers &&
 			replacement.DrawCardMultiplier <= 1 &&
-			!replacement.DrawFromEmptyLibraryWins {
+			!replacement.DrawFromEmptyLibraryWins &&
+			!replacement.ContinuousZoneRedirect {
 			continue
 		}
 		replacement.ID = g.IDGen.Next()

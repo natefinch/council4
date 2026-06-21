@@ -41,6 +41,9 @@ func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering,
 	if replacementAbility, handled, diagnostic := lowerNamedTokenSetReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
+	if replacementAbility, handled, diagnostic := lowerGraveyardRedirectReplacement(ability); handled || diagnostic != nil {
+		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+	}
 	if replacementAbility, handled, diagnostic := lowerSelfZoneDestinationReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
@@ -303,6 +306,67 @@ func lowerSelfZoneDestinationReplacement(
 			Duration:           game.DurationPermanent,
 		},
 	}, true, nil
+}
+
+func lowerGraveyardRedirectReplacement(
+	ability compiler.CompiledAbility,
+) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Conditions) != 1 ||
+		ability.Content.Conditions[0].Kind != compiler.ConditionIf ||
+		ability.Content.Conditions[0].Predicate != compiler.ConditionPredicateCardWouldGoToGraveyard {
+		return game.ReplacementAbility{}, false, nil
+	}
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported graveyard-redirect replacement",
+			detail,
+		)
+	}
+	if len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional {
+		return unsupported("the executable source backend supports only exact graveyard-redirect replacements")
+	}
+	if len(ability.Content.Effects) == 0 {
+		return unsupported("the executable source backend supports only exile graveyard-redirect replacements")
+	}
+	destination, ok := selfZoneReplacementDestination(ability.Content.Effects)
+	if !ok || destination != zone.Exile ||
+		replacementSelectorHasUnsupportedQualifier(ability.Content.Effects[len(ability.Content.Effects)-1].Selector) {
+		return unsupported("the executable source backend supports only exile graveyard-redirect replacements")
+	}
+	condition := ability.Content.Conditions[0]
+	cardTypes, ok := lowerTriggerCardTypes(condition.GraveyardSubjectTypesAny)
+	if !ok {
+		return unsupported("the executable source backend does not support this graveyard-redirect card-type filter")
+	}
+	ownerFilter, ok := graveyardRedirectOwnerFilter(condition.GraveyardRedirectScope)
+	if !ok {
+		return unsupported("the executable source backend does not support this graveyard-redirect scope")
+	}
+	return game.GraveyardRedirectReplacement(
+		ability.Text,
+		ownerFilter,
+		condition.GraveyardFromBattlefieldOnly,
+		cardTypes...,
+	), true, nil
+}
+
+func graveyardRedirectOwnerFilter(scope compiler.GraveyardRedirectScope) (game.TriggerControllerFilter, bool) {
+	switch scope {
+	case compiler.GraveyardRedirectScopeAny:
+		return game.TriggerControllerAny, true
+	case compiler.GraveyardRedirectScopeYou:
+		return game.TriggerControllerYou, true
+	case compiler.GraveyardRedirectScopeOpponent:
+		return game.TriggerControllerOpponent, true
+	default:
+		return game.TriggerControllerAny, false
+	}
 }
 
 func lowerCounterPlacementReplacement(

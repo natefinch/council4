@@ -151,6 +151,33 @@ func EntersTappedGroupReplacement(text string, controller TriggerControllerFilte
 	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
+// GraveyardRedirectReplacement creates a continuous static replacement that
+// exiles a card (or permanent) that would be put into a watched graveyard
+// instead (CR 614), as in "If a card would be put into a graveyard from
+// anywhere, exile it instead." (Leyline of the Void). ownerFilter selects whose
+// graveyard is watched relative to the source's controller; cardTypes restricts
+// the redirected cards to any of the listed types (empty redirects every card);
+// fromBattlefieldOnly limits the redirect to cards leaving the battlefield ("a
+// permanent").
+func GraveyardRedirectReplacement(text string, ownerFilter TriggerControllerFilter, fromBattlefieldOnly bool, cardTypes ...types.Card) ReplacementAbility {
+	replacement := ReplacementEffect{
+		Description:            text,
+		MatchEvent:             EventZoneChanged,
+		MatchToZone:            true,
+		ToZone:                 zone.Graveyard,
+		ReplaceToZone:          zone.Exile,
+		Duration:               DurationPermanent,
+		ContinuousZoneRedirect: true,
+		RedirectOwnerFilter:    ownerFilter,
+		RedirectTypeFilter:     append([]types.Card(nil), cardTypes...),
+	}
+	if fromBattlefieldOnly {
+		replacement.MatchFromZone = true
+		replacement.FromZone = zone.Battlefield
+	}
+	return ReplacementAbility{Text: text, Replacement: replacement}
+}
+
 // EntersTappedIfReplacement creates a conditional "enters tapped" replacement.
 func EntersTappedIfReplacement(text string, condition *Condition) ReplacementAbility {
 	replacement := etbReplacement(text)
