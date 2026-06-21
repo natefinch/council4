@@ -2094,6 +2094,8 @@ func legacyEffectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectUnknown
 	case kind == EffectCast && pastCastCountPhraseAt(tokens, index):
 		return EffectUnknown
+	case kind == EffectCast && castDuringMainPhaseConditionAt(tokens, index):
+		return EffectUnknown
 	case kind == EffectCounter && !counterVerbAt(tokens, index):
 		return EffectUnknown
 	case kind == EffectGain && index+1 < len(tokens) && equalWord(tokens[index+1], "control"):

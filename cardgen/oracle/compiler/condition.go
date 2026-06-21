@@ -142,6 +142,8 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 	case parser.ConditionPredicateObjectExists:
 		condition.Predicate = ConditionPredicateObjectExists
 		condition.ObjectBinding = compileConditionObjectBinding(clause.ObjectBinding)
+	case parser.ConditionPredicateCastDuringControllerMainPhase:
+		condition.Predicate = ConditionPredicateCastDuringControllerMainPhase
 	default:
 	}
 }

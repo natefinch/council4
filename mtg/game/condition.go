@@ -88,6 +88,12 @@ type Condition struct {
 	TargetEnteredThisTurn                                        opt.V[int]
 	CastFromZone                                                 opt.V[zone.Type]
 
+	// CastDuringControllerMainPhase is satisfied when the resolving spell was
+	// cast during its controller's main phase ("Addendum — If you cast this
+	// spell during your main phase, ..."). It is evaluated against the resolving
+	// stack object's captured cast timing and is false for copies.
+	CastDuringControllerMainPhase bool
+
 	// EventHistory is satisfied when the selected turn's event history contains
 	// at least one event matching the stored pattern. When Condition.Negate is
 	// true the predicate is inverted (e.g. "if no spells were cast last turn").
@@ -188,6 +194,7 @@ func (c *Condition) Empty() bool {
 		!c.ControllerHasMaxSpeed &&
 		!c.TargetEnteredThisTurn.Exists &&
 		!c.CastFromZone.Exists &&
+		!c.CastDuringControllerMainPhase &&
 		!c.EventHistory.Exists
 }
 

@@ -458,6 +458,10 @@ const (
 	// Blast). The color filter lives in Selection.ColorsAny; counter/destroy
 	// lowering binds the predicate to the effect's target object.
 	ConditionPredicateTargetColor
+	// ConditionPredicateCastDuringControllerMainPhase is satisfied when the
+	// resolving spell was cast during its controller's main phase ("Addendum —
+	// If you cast this spell during your main phase, ...").
+	ConditionPredicateCastDuringControllerMainPhase
 )
 
 // ConditionEventHistoryWindow identifies which turn's event log to search.
