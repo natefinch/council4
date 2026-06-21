@@ -1194,6 +1194,8 @@ func TestParseResolvingEffectKinds(t *testing.T) {
 		{"Lose 2 life.", EffectLose},
 		{"Manifest the top card of your library.", EffectManifest},
 		{"Manifest dread.", EffectManifestDread},
+		{"Its controller manifests the top card of their library.", EffectManifest},
+		{"Its controller manifests dread.", EffectManifestDread},
 		{"Look at the top two cards of your library.", EffectDig},
 		{"Mill two cards.", EffectMill},
 		{"Target creature gets +2/+2.", EffectModifyPT},

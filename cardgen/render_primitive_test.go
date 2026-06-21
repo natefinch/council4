@@ -621,6 +621,18 @@ func TestRenderManifestPrimitive(t *testing.T) {
 			t.Fatalf("rendered manifest dread missing %q:\n%s", want, rendered)
 		}
 	}
+
+	rendered, err = (Renderer{}).renderPrimitive(newRenderCtx(), game.Manifest{
+		Player: game.ObjectControllerReference(game.TargetPermanentReference(0)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"game.Manifest", "Player: game.ObjectControllerReference(game.TargetPermanentReference(0))"} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered manifest player missing %q:\n%s", want, rendered)
+		}
+	}
 }
 
 func TestRenderReturnToHandAdditionalCost(t *testing.T) {

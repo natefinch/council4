@@ -693,9 +693,12 @@ type Explore struct {
 	Creature ObjectReference
 }
 
-// Manifest puts cards from the controller's library onto the battlefield face down.
+// Manifest puts cards from a player's library onto the battlefield face down.
+// Player identifies the manifesting player; the zero value (PlayerReferenceNone)
+// manifests for the resolving ability's controller.
 type Manifest struct {
-	Dread bool
+	Dread  bool
+	Player PlayerReference
 }
 
 // Goad goads the referenced creature.

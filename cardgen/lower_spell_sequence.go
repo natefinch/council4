@@ -451,6 +451,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityC
 	if content, ok := lowerShuffleRevealPermanentSequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerRemovalManifestSequence(ctx); ok {
+		return content, true
+	}
 	if len(ctx.content.Conditions) != 0 {
 		return game.AbilityContent{}, false
 	}
@@ -843,6 +846,68 @@ func referencesContainBinding(references []compiler.CompiledReference, binding c
 		}
 	}
 	return false
+}
+
+// lowerRemovalManifestSequence lowers the ordered pair "<Exile/Destroy> target
+// creature. Its controller manifests [dread / the top card of their library]."
+// (Reality Shift, Unwanted Remake) into a removal of the single target followed
+// by a manifest performed by that target's controller. The manifesting player is
+// bound to the controller of the removed permanent (resolved through last-known
+// information after it leaves the battlefield), so cards are manifested from that
+// player's library. It accepts only the controller-subject removal paired with a
+// referenced-controller manifest whose "Its" reference resolves to the lone
+// target; every other shape (mass removal, multiple targets, or any added clause)
+// fails closed so the general sequence path is untouched.
+func lowerRemovalManifestSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 2 ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	removal := ctx.content.Effects[0]
+	manifest := ctx.content.Effects[1]
+	if removal.Context != parser.EffectContextController ||
+		!removal.Exact ||
+		removal.Optional ||
+		removal.Negated ||
+		removal.Duration != compiler.DurationNone ||
+		len(removal.Targets) != 1 ||
+		len(removal.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	dread := manifest.Kind == compiler.EffectManifestDread
+	if manifest.Kind != compiler.EffectManifest && !dread ||
+		manifest.Context != parser.EffectContextReferencedObjectController ||
+		manifest.Optional ||
+		manifest.Negated ||
+		len(manifest.Targets) != 0 ||
+		!referencesContainBinding(manifest.References, compiler.ReferenceBindingTarget, 0) {
+		return game.AbilityContent{}, false
+	}
+	target, ok := permanentTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	removed := game.TargetPermanentReference(0)
+	var removalPrimitive game.Primitive
+	switch removal.Kind {
+	case compiler.EffectExile:
+		removalPrimitive = game.Exile{Object: removed}
+	case compiler.EffectDestroy:
+		removalPrimitive = game.Destroy{Object: removed}
+	default:
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{target},
+		Sequence: []game.Instruction{
+			{Primitive: removalPrimitive},
+			{Primitive: game.Manifest{Dread: dread, Player: game.ObjectControllerReference(removed)}},
+		},
+	}.Ability(), true
 }
 
 // lowerTapDownSequence lowers the "tap then stun" sequence — "Tap <target
