@@ -166,6 +166,9 @@ func lowerContent(
 	if content, ok := lowerControllerPaidEffect(cardName, ctx, syntax); ok {
 		return content, nil
 	}
+	if content, ok := lowerOptionalPaidBenefit(cardName, ctx, syntax); ok {
+		return content, nil
+	}
 	if content, ok := lowerEventPlayerTaxedControllerBenefit(cardName, ctx, syntax); ok {
 		return content, nil
 	}

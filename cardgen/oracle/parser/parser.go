@@ -12,6 +12,7 @@ import (
 // alongside localized diagnostics when the input is malformed.
 func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	source = expandBushidoKeyword(source)
+	source = expandExtortKeyword(source)
 	tokens, diagnostics := lexAll(source)
 	lines := splitLines(tokens)
 	document := Document{

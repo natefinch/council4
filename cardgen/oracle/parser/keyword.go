@@ -493,6 +493,51 @@ func bushidoLineRank(line string) (int, bool) {
 	return rank, true
 }
 
+// extortCanonicalText is the triggered ability that the printed "Extort" keyword
+// abbreviates (CR 702.99a).
+const extortCanonicalText = "Whenever you cast a spell, you may pay {W/B}. " +
+	"If you do, each opponent loses 1 life and you gain that much life."
+
+// expandExtortKeyword rewrites each printed "Extort" keyword line into the
+// triggered ability it abbreviates. Like Bushido, Extort is pure shorthand for a
+// fixed triggered ability, so expanding it to canonical wording lets the standard
+// trigger pipeline lower it. Multiple printed instances each expand to their own
+// trigger, matching the rule that each Extort instance triggers separately. The
+// rewrite is parser-owned because it is a wording substitution; downstream stages
+// see only the expanded ability.
+func expandExtortKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		if !isExtortKeywordLine(line) {
+			continue
+		}
+		lines[i] = extortCanonicalText
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
+
+// isExtortKeywordLine reports whether a line is exactly the printed "Extort"
+// keyword, optionally followed only by its parenthesized reminder text. Lines
+// that merely contain the word elsewhere, or pair it with other rules text, are
+// left untouched.
+func isExtortKeywordLine(line string) bool {
+	const keyword = "Extort"
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, keyword) {
+		return false
+	}
+	tail := strings.TrimSpace(trimmed[len(keyword):])
+	if tail == "" {
+		return true
+	}
+	return strings.HasPrefix(tail, "(") && strings.HasSuffix(tail, ")")
+}
+
 func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
 	var keywords []Keyword
 	for i := 0; i < len(tokens); i++ {

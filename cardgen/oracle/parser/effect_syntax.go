@@ -25,6 +25,7 @@ func emitResolvingSyntax(abilities []Ability) {
 			abilities[i].SourceAbilityCostReduction,
 		)
 		recognizeControllerOptionalPaymentSequence(&abilities[i])
+		recognizeOptionalManaPaymentBenefitSequence(&abilities[i])
 		recognizeEventPlayerOptionalPaymentSequence(&abilities[i])
 		recognizeControllerMandatoryPaymentSequence(&abilities[i])
 		if abilities[i].Modal == nil {

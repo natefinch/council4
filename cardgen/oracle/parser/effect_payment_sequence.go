@@ -164,6 +164,67 @@ func recognizeControllerOptionalPaymentSequence(ability *Ability) {
 	ability.OptionalSpan = shared.Span{}
 }
 
+// recognizeOptionalManaPaymentBenefitSequence folds the optional mana payment of
+// a "you may pay {mana}. If you do, <body>." triggered ability whose consequence
+// body begins with a non-controller-context effect (such as the Extort drain
+// "each opponent loses 1 life and you gain that much life"). The controller
+// recognizer above owns consequences that begin with a controller-context,
+// verb-initial effect; this recognizer captures the complementary family without
+// rewriting the consequence tokens, so the full multi-effect body still lowers
+// through the standard content path while the folded payment gates it. Only the
+// mana form is recognized here; non-mana optional costs remain the controller
+// recognizer's domain.
+func recognizeOptionalManaPaymentBenefitSequence(ability *Ability) {
+	if ability.Kind != AbilityTriggered || len(ability.Sentences) < 2 {
+		return
+	}
+	for i := 2; i < len(ability.Sentences); i++ {
+		if len(semanticEffectTokens(ability.Sentences[i].Tokens)) != 0 {
+			return
+		}
+	}
+	paymentSentence := &ability.Sentences[0]
+	consequenceSentence := &ability.Sentences[1]
+	paymentTokens := semanticEffectTokens(paymentSentence.Tokens)
+	if len(paymentTokens) < 5 ||
+		!effectWordsAt(paymentTokens, 0, "you", "may", "pay") ||
+		paymentTokens[len(paymentTokens)-1].Kind != shared.Period {
+		return
+	}
+	manaCost, paymentEnd, manaOK := parseKeywordManaCost(paymentTokens, 3)
+	if !manaOK || paymentEnd != len(paymentTokens)-1 {
+		return
+	}
+
+	consequenceTokens := semanticEffectTokens(consequenceSentence.Tokens)
+	if len(consequenceTokens) < 5 ||
+		!effectWordsAt(consequenceTokens, 0, "if", "you", "do") ||
+		consequenceTokens[3].Kind != shared.Comma ||
+		len(consequenceSentence.Effects) == 0 {
+		return
+	}
+	firstEffect := &consequenceSentence.Effects[0]
+	if firstEffect.Context == EffectContextController ||
+		firstEffect.Payment.Form != EffectPaymentFormUnknown {
+		return
+	}
+	boundary, ok := conditionBoundaryAt(ability.ConditionBoundaries, consequenceTokens[0].Span.Start)
+	if !ok || boundary.Kind != ConditionIntroIf {
+		return
+	}
+
+	firstEffect.Payment = EffectPaymentSyntax{
+		Span:                   shared.SpanOf(paymentTokens),
+		Form:                   EffectPaymentFormMayPayThenIfDo,
+		Payer:                  EffectPaymentPayerController,
+		ManaCost:               manaCost,
+		SuccessConditionNodeID: boundary.NodeID,
+	}
+	paymentSentence.PaymentPrelude = &firstEffect.Payment
+	ability.Optional = false
+	ability.OptionalSpan = shared.Span{}
+}
+
 // parseControllerPaymentAdditionalCost recognizes the non-mana cost phrase of a
 // "you may <cost>. If you do, ..." controller payment (the tokens between "you
 // may" and the trailing period), such as "sacrifice a land" or "discard a card."
