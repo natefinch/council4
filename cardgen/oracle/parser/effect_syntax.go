@@ -833,6 +833,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			CounterKnown:              counterKnown,
 			CounterRecipientAttached:  counterRecipientAttached(kind, counterKnown, clause),
 			MoveCountersAll:           kind == EffectMoveCounters && moveAllCountersClause(clause),
+			MoveCountersDistribute:    kind == EffectMoveCounters && moveCountersDistributeClause(clause),
 			FromZone:                  firstZone(atoms, span, ZoneRoleFrom),
 			ToZone:                    toZone,
 			Destination:               parseEffectDestination(ownership),
@@ -3913,4 +3914,13 @@ func counterRecipientAttached(kind EffectKind, counterKnown bool, clause []share
 // keeps MoveCountersAll false and lowers through its named-kind path.
 func moveAllCountersClause(clause []shared.Token) bool {
 	return effectHasTokenWords(clause, "all", "counters")
+}
+
+// moveCountersDistributeClause reports the "move any number of <kind> counters
+// ... onto other creatures" form, where the controller distributes the source's
+// counters among a group of other creatures rather than a single target. It
+// anchors on the literal "any number of" run so the single-target move forms
+// keep MoveCountersDistribute false.
+func moveCountersDistributeClause(clause []shared.Token) bool {
+	return effectHasTokenWords(clause, "any", "number", "of")
 }

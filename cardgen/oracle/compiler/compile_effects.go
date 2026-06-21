@@ -244,6 +244,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				CounterKindKnown:         syntax.CounterKnown,
 				CounterRecipientAttached: syntax.CounterRecipientAttached,
 				MoveCountersAll:          syntax.MoveCountersAll,
+				MoveCountersDistribute:   syntax.MoveCountersDistribute,
 				FromZone:                 syntax.FromZone,
 				GraveyardZoneExile:       syntax.GraveyardZoneExile,
 				ToZone:                   syntax.ToZone,

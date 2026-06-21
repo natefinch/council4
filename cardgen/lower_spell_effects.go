@@ -792,6 +792,9 @@ func lowerReferencedCounterPlacement(ctx contentCtx) (game.AbilityContent, *shar
 // conditional or modal content.
 func lowerMoveCountersSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	if effect.MoveCountersDistribute {
+		return lowerMoveCountersDistributeSpell(ctx)
+	}
 	if !effect.Exact ||
 		effect.Negated ||
 		effect.Context != parser.EffectContextController ||
@@ -827,6 +830,48 @@ func lowerMoveCountersSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 	}
 	return game.Mode{
 		Targets: []game.TargetSpec{target},
+		Sequence: []game.Instruction{{
+			Primitive: move,
+		}},
+	}.Ability(), nil
+}
+
+// lowerMoveCountersDistributeSpell lowers the "move any number of <kind>
+// counters from this permanent onto other creatures" form (Forgotten Ancient)
+// into a MoveCounters instruction that reads counters from the ability's own
+// source (CounterSourceSelf) and distributes them, by the controller, among the
+// "other creatures" group rather than a single target. It fails closed for any
+// non-controller or negated effect, a missing or non-source self reference, a
+// non-placeable or kind-unknown counter, an unrepresentable destination group,
+// and any target, conditional, or modal content.
+func lowerMoveCountersDistributeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 1 ||
+		ctx.content.References[0].Binding != compiler.ReferenceBindingSource ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	if !effect.CounterKindKnown ||
+		!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
+		effect.CounterKind.PlayerOnly() {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	selection, ok := massGroupSelection(effect.Selector)
+	if !ok {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	move := game.MoveCounters{
+		CounterKind: effect.CounterKind,
+		Source:      game.CounterSourceSpec{Kind: game.CounterSourceSelf},
+		Group:       game.GroupRef(game.BattlefieldGroupExcluding(selection, game.SourcePermanentReference())),
+		Distribute:  true,
+	}
+	return game.Mode{
 		Sequence: []game.Instruction{{
 			Primitive: move,
 		}},

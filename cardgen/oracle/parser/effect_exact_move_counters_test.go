@@ -18,22 +18,24 @@ func moveCountersEffect(t *testing.T, source, cardName string) EffectSyntax {
 	return effects[0]
 }
 
-// TestExactMoveCountersAccepts covers the recognized single-target
-// counter-movement forms: a single named counter and the kind-agnostic "all
-// counters" form, each from the source permanent (a self reference) onto one
-// target creature.
+// TestExactMoveCountersAccepts covers the recognized counter-movement forms: a
+// single named counter and the kind-agnostic "all counters" form (each from the
+// source permanent onto one target creature) and the distributed "any number of
+// counters ... onto other creatures" group form (Forgotten Ancient).
 func TestExactMoveCountersAccepts(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
-		source string
-		card   string
-		all    bool
-		kind   bool
+		source     string
+		card       string
+		all        bool
+		kind       bool
+		distribute bool
 	}{
-		{"Move a +1/+1 counter from this creature onto target creature.", "Steed", false, true},
-		{"Move a +1/+1 counter from this artifact onto target creature you control.", "Weapon Rack", false, true},
-		{"Move a +1/+1 counter from Afiya Grove onto target creature.", "Afiya Grove", false, true},
-		{"Move all counters from this permanent onto target creature.", "The Ozolith", true, false},
+		{"Move a +1/+1 counter from this creature onto target creature.", "Steed", false, true, false},
+		{"Move a +1/+1 counter from this artifact onto target creature you control.", "Weapon Rack", false, true, false},
+		{"Move a +1/+1 counter from Afiya Grove onto target creature.", "Afiya Grove", false, true, false},
+		{"Move all counters from this permanent onto target creature.", "The Ozolith", true, false, false},
+		{"Move any number of +1/+1 counters from this creature onto other creatures.", "Forgotten Ancient", false, true, true},
 	}
 	for _, tc := range cases {
 		effect := moveCountersEffect(t, tc.source, tc.card)
@@ -46,17 +48,18 @@ func TestExactMoveCountersAccepts(t *testing.T) {
 		if effect.CounterKnown != tc.kind {
 			t.Errorf("CounterKnown(%q) = %v, want %v", tc.source, effect.CounterKnown, tc.kind)
 		}
+		if effect.MoveCountersDistribute != tc.distribute {
+			t.Errorf("MoveCountersDistribute(%q) = %v, want %v", tc.source, effect.MoveCountersDistribute, tc.distribute)
+		}
 	}
 }
 
 // TestExactMoveCountersRejects keeps the unmodeled shapes failing closed: the
-// group-distribution form ("onto other creatures", no target — Forgotten
-// Ancient) and the from-another-target form ("from target creature", which is
-// not a self source — Fate Transfer) are not recognized as exact.
+// from-another-target form ("from target creature", which is not a self source —
+// Fate Transfer) is not recognized as exact.
 func TestExactMoveCountersRejects(t *testing.T) {
 	t.Parallel()
 	cases := []struct{ source, card string }{
-		{"Move any number of +1/+1 counters from this creature onto other creatures.", "Forgotten Ancient"},
 		{"Move all counters from target creature onto another target creature.", "Fate Transfer"},
 	}
 	for _, tc := range cases {

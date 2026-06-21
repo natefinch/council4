@@ -948,6 +948,51 @@ func TestMoveCountersFromSelfMovesOneNamedCounter(t *testing.T) {
 	}
 }
 
+// TestMoveCountersDistributeAmongOtherCreatures covers the distributed
+// move-counters form (Forgotten Ancient): "move any number of +1/+1 counters
+// from this creature onto other creatures." The controller distributes the
+// source's counters one at a time among other creatures, here splitting two
+// counters across two distinct other creatures and leaving none on the source.
+func TestMoveCountersDistributeAmongOtherCreatures(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Forgotten Ancient",
+		Types: []types.Card{types.Creature}},
+	})
+	first := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "First Beneficiary",
+		Types: []types.Card{types.Creature}},
+	})
+	second := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Second Beneficiary",
+		Types: []types.Card{types.Creature}},
+	})
+	source.Counters.Add(counter.PlusOnePlusOne, 2)
+	obj := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackActivatedAbility,
+		SourceID:   source.ObjectID,
+		Controller: game.Player1,
+	}
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{0}, {1}}},
+	}
+	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.MoveCounters{
+		CounterKind: counter.PlusOnePlusOne,
+		Source:      game.CounterSourceSpec{Kind: game.CounterSourceSelf},
+		Group:       game.GroupRef(game.BattlefieldGroupExcluding(game.Selection{RequiredTypes: []types.Card{types.Creature}, ExcludeSource: true}, game.SourcePermanentReference())),
+		Distribute:  true,
+	}}, agents, &TurnLog{})
+
+	if got := source.Counters.Get(counter.PlusOnePlusOne); got != 0 {
+		t.Fatalf("source +1/+1 counters = %d, want 0 (all distributed)", got)
+	}
+	if got := first.Counters.Get(counter.PlusOnePlusOne); got != 1 {
+		t.Fatalf("first beneficiary +1/+1 counters = %d, want 1", got)
+	}
+	if got := second.Counters.Get(counter.PlusOnePlusOne); got != 1 {
+		t.Fatalf("second beneficiary +1/+1 counters = %d, want 1", got)
+	}
+}
+
 func TestConditionalContinuousEffectAnimatesNonCreatureArtifact(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

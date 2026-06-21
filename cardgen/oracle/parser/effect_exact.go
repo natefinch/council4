@@ -2480,6 +2480,9 @@ func exactGroupModifyPTBody(effect *EffectSyntax, prefix string) bool {
 // "all counters" form (MoveCountersAll). The "onto other creatures" group
 // distribution (Forgotten Ancient) carries no target and stays unrecognized.
 func exactMoveCountersEffectSyntax(effect *EffectSyntax) bool {
+	if effect.MoveCountersDistribute {
+		return exactMoveCountersDistributeEffectSyntax(effect)
+	}
 	if len(effect.Targets) != 1 ||
 		!effect.Targets[0].Exact ||
 		effect.Targets[0].Cardinality.Max != 1 {
@@ -2505,6 +2508,61 @@ func exactMoveCountersEffectSyntax(effect *EffectSyntax) bool {
 		fmt.Sprintf("Move %s %s counter from %s onto %s.",
 			effectAmountSourceText(effect), effect.CounterKind.String(), source, dest),
 	)
+}
+
+// exactMoveCountersDistributeEffectSyntax recognizes the "move any number of
+// <kind> counters from <source> onto other creatures" form (Forgotten Ancient),
+// where the controller distributes the source's counters among a group of other
+// creatures rather than a single target. The source is a single self reference,
+// the destination is the "other creatures" group, the counter kind is known, and
+// the effect carries no target.
+func exactMoveCountersDistributeEffectSyntax(effect *EffectSyntax) bool {
+	if len(effect.Targets) != 0 || !effect.CounterKnown {
+		return false
+	}
+	source, ok := exactSelfSubjectReferenceText(effect.References)
+	if !ok {
+		return false
+	}
+	group, ok := exactMoveCountersDistributeGroupText(effect.Selection)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(
+		exactEffectClauseText(effect),
+		fmt.Sprintf("Move any number of %s counters from %s onto %s.",
+			effect.CounterKind.String(), source, group),
+	)
+}
+
+// exactMoveCountersDistributeGroupText renders the destination phrase for the
+// distributed move-counters form. It recognizes only the bare "other creatures"
+// group (creature kind, "other" qualifier, no other selector qualifiers) and
+// fails closed for every other shape so an unrepresentable group keeps the
+// wording unsupported.
+func exactMoveCountersDistributeGroupText(selection SelectionSyntax) (string, bool) {
+	if selection.Kind != SelectionCreature || !selection.Other {
+		return "", false
+	}
+	if selection.All || selection.Another || selection.Controller != SelectionControllerAny ||
+		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
+		selection.NonToken || selection.TokenOnly || selection.Colorless || selection.Multicolored ||
+		selection.BasicLandType || selection.MatchManaValue || selection.MatchPower ||
+		selection.MatchToughness || selection.CounterRequired ||
+		selection.Keyword != KeywordUnknown || selection.ExcludedKeyword != KeywordUnknown ||
+		selection.Zone != zone.None ||
+		len(selection.ExcludedTypes) != 0 || len(selection.Supertypes) != 0 ||
+		len(selection.ExcludedSupertypes) != 0 || len(selection.ColorsAny) != 0 ||
+		len(selection.ExcludedColors) != 0 || len(selection.SubtypesAny) != 0 ||
+		len(selection.ExcludedSubtypes) != 0 || len(selection.Alternatives) != 0 {
+		return "", false
+	}
+	for _, required := range selection.RequiredTypesAny {
+		if required != CardTypeCreature {
+			return "", false
+		}
+	}
+	return "other creatures", true
 }
 
 func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {

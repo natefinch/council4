@@ -269,6 +269,9 @@ func handleAddPlayerCounter(r *effectResolver, prim game.AddPlayerCounter) effec
 }
 
 func handleMoveCounters(r *effectResolver, prim game.MoveCounters) effectResolved {
+	if prim.Distribute {
+		return r.distributeMoveCounters(prim)
+	}
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	destination, ok := r.resolveObject(prim.Object)
 	if !ok {
@@ -298,6 +301,56 @@ func handleMoveCounters(r *effectResolver, prim game.MoveCounters) effectResolve
 		source.Counters.Remove(prim.CounterKind, moved)
 	}
 	res.succeeded = true
+	return res
+}
+
+// distributeMoveCounters implements the "move any number of <kind> counters from
+// this permanent onto other creatures" form (CR, e.g. Forgotten Ancient). The
+// controller distributes the source's counters of the given kind among the
+// permanents of Group one at a time, choosing a destination for each counter or
+// stopping early, until the source runs out of counters of that kind.
+func (r *effectResolver) distributeMoveCounters(prim game.MoveCounters) effectResolved {
+	res := effectResolved{accepted: true}
+	counters, source, ok := effectCounterSource(r.game, r.obj, prim.Source)
+	if !ok || source == nil {
+		return res
+	}
+	available := counters.Get(prim.CounterKind)
+	candidates := r.groupPermanents(*prim.Group)
+	if available <= 0 || len(candidates) == 0 {
+		return res
+	}
+	placementController := stackObjectController(r.obj)
+	for available > 0 {
+		options := make([]game.ChoiceOption, len(candidates))
+		for i, permanent := range candidates {
+			options[i] = game.ChoiceOption{
+				Index: i,
+				Label: permanentChoiceLabel(r.game, permanent),
+				Card:  permanentChoiceInfo(r.game, permanent),
+			}
+		}
+		selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+			Kind:       game.ChoiceResolution,
+			Player:     r.obj.Controller,
+			Prompt:     "Choose a creature to move a counter onto, or stop",
+			Options:    options,
+			MinChoices: 0,
+			MaxChoices: 1,
+		}, r.log)
+		if len(selected) == 0 {
+			break
+		}
+		index := selected[0]
+		if index < 0 || index >= len(candidates) {
+			break
+		}
+		addCountersToPermanentControlledBy(r.game, placementController, candidates[index], prim.CounterKind, 1)
+		source.Counters.Remove(prim.CounterKind, 1)
+		available--
+		res.amount++
+		res.succeeded = true
+	}
 	return res
 }
 
