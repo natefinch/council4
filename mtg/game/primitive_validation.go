@@ -366,6 +366,13 @@ func (p Mill) validateCapturedTargetControllerReferences(targets []TargetSpec, c
 	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
 }
 
+func (p ExileTopOfLibrary) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
 func (p Scry) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
 		return err
@@ -1581,6 +1588,21 @@ func (p Mill) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	hasPlayer := p.Player.Kind() != PlayerReferenceNone
 	if hasGroup == hasPlayer {
 		return errors.New("Mill requires exactly one of Player or PlayerGroup")
+	}
+	if hasGroup {
+		return validatePlayerGroupReference(p.PlayerGroup)
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p ExileTopOfLibrary) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
+	hasPlayer := p.Player.Kind() != PlayerReferenceNone
+	if hasGroup == hasPlayer {
+		return errors.New("ExileTopOfLibrary requires exactly one of Player or PlayerGroup")
 	}
 	if hasGroup {
 		return validatePlayerGroupReference(p.PlayerGroup)
