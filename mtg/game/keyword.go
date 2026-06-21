@@ -43,6 +43,11 @@ type CyclingKeyword struct {
 	Cost cost.Mana
 }
 
+// ScavengeKeyword parameterizes Scavenge for its graveyard-activation mana cost.
+type ScavengeKeyword struct {
+	Cost cost.Mana
+}
+
 // NinjutsuKeyword parameterizes Ninjutsu activation costs.
 type NinjutsuKeyword struct {
 	Cost cost.Mana
@@ -124,6 +129,7 @@ func (DisguiseKeyword) isKeywordAbility()         {}
 func (SuspendKeyword) isKeywordAbility()          {}
 func (ProtectionKeyword) isKeywordAbility()       {}
 func (ToxicKeyword) isKeywordAbility()            {}
+func (ScavengeKeyword) isKeywordAbility()         {}
 
 func (ability SimpleKeyword) keyword() Keyword { return ability.Kind }
 func (WardKeyword) keyword() Keyword           { return Ward }
@@ -143,6 +149,7 @@ func (DisguiseKeyword) keyword() Keyword   { return Disguise }
 func (SuspendKeyword) keyword() Keyword    { return Suspend }
 func (ProtectionKeyword) keyword() Keyword { return Protection }
 func (ToxicKeyword) keyword() Keyword      { return Toxic }
+func (ScavengeKeyword) keyword() Keyword   { return Scavenge }
 
 func (ability SimpleKeyword) cloneKeywordAbility() KeywordAbility { return ability }
 func (ability WardKeyword) cloneKeywordAbility() KeywordAbility {
@@ -207,6 +214,10 @@ func (ability ProtectionKeyword) cloneKeywordAbility() KeywordAbility {
 	return ability
 }
 func (ability ToxicKeyword) cloneKeywordAbility() KeywordAbility { return ability }
+func (ability ScavengeKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
 
 // SimpleKeywords returns sealed keyword variants for non-parameterized keywords.
 func SimpleKeywords(keywords ...Keyword) []KeywordAbility {
@@ -321,6 +332,19 @@ func ActivatedBodyCyclingCost(body *ActivatedAbility) (cost.Mana, bool) {
 		return nil, false
 	}
 	return cycling.Cost, true
+}
+
+// ActivatedBodyScavengeCost returns the Scavenge cost from an activated ability.
+func ActivatedBodyScavengeCost(body *ActivatedAbility) (cost.Mana, bool) {
+	ka, ok := BodyKeywordAbility(body, Scavenge)
+	if !ok {
+		return nil, false
+	}
+	scavenge, ok := ka.(ScavengeKeyword)
+	if !ok {
+		return nil, false
+	}
+	return scavenge.Cost, true
 }
 
 // ActivatedBodyNinjutsuCost returns the Ninjutsu cost from an activated ability.
