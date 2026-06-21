@@ -894,11 +894,7 @@ func handleBecomeCopy(r *effectResolver, prim game.BecomeCopy) effectResolved {
 	if !ok {
 		return res
 	}
-	target, ok := r.resolveObject(prim.Object)
-	if !ok {
-		return res
-	}
-	def, ok := permanentCopyDef(g, target)
+	def, ok := becomeCopyTargetDef(g, r, prim)
 	if !ok {
 		return res
 	}
@@ -934,6 +930,27 @@ func handleBecomeCopy(r *effectResolver, prim game.BecomeCopy) effectResolved {
 	})
 	res.succeeded = true
 	return res
+}
+
+// becomeCopyTargetDef resolves the copiable card definition the source becomes a
+// copy of. The copy target is either a battlefield permanent (Thespian's Stage,
+// Mirage Mirror) or a card in a non-battlefield zone such as a graveyard
+// (Shifting Woodland), distinguished by which of the primitive's Object or Card
+// reference is set.
+func becomeCopyTargetDef(g *game.Game, r *effectResolver, prim game.BecomeCopy) (*game.CardDef, bool) {
+	if prim.Card.Kind != game.CardReferenceNone {
+		cardID, _, ok := resolveCardReference(g, r.obj, prim.Card)
+		if !ok {
+			return nil, false
+		}
+		_, def, ok := cardInstanceFaceDef(g, cardID, game.FaceFront)
+		return def, ok
+	}
+	target, ok := r.resolveObject(prim.Object)
+	if !ok {
+		return nil, false
+	}
+	return permanentCopyDef(g, target)
 }
 
 // becomeCopyRetainedAbilities returns the activated become-a-copy abilities of a

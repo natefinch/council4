@@ -850,11 +850,20 @@ func (r Renderer) renderExile(ctx *renderCtx, value game.Exile) (string, error) 
 // until-end-of-turn duration, retain-this-ability flag, and copiable keyword
 // riders.
 func (r Renderer) renderBecomeCopy(value game.BecomeCopy) (string, error) {
-	object, err := r.renderObjectReference(value.Object)
-	if err != nil {
-		return "", err
+	var fields []string
+	if value.Card.Kind != game.CardReferenceNone {
+		card, err := renderCardReference(value.Card)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Card: %s,", card))
+	} else {
+		object, err := r.renderObjectReference(value.Object)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Object: %s,", object))
 	}
-	fields := []string{fmt.Sprintf("Object: %s,", object)}
 	if value.UntilEndOfTurn {
 		fields = append(fields, "UntilEndOfTurn: true,")
 	}

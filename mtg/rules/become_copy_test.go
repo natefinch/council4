@@ -106,3 +106,47 @@ func permanentHasBecomeCopyAbility(g *game.Game, permanent *game.Permanent) bool
 	}
 	return false
 }
+
+// TestBecomeCopyOfGraveyardCard covers a become-a-copy effect whose copy target
+// is a permanent card in the controller's graveyard (Shifting Woodland): the
+// source land becomes a copy of the targeted graveyard card until end of turn.
+func TestBecomeCopyOfGraveyardCard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	graveyardCard := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Tarmogoyf",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 4}),
+		Toughness: opt.Val(game.PT{Value: 5}),
+	}})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Shifting Woodland",
+		Types: []types.Card{types.Land},
+	}})
+
+	obj := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackActivatedAbility,
+		Controller: game.Player1,
+		SourceID:   source.ObjectID,
+		Targets:    []game.Target{currentCardTarget(t, g, graveyardCard)},
+	}
+	r := &effectResolver{engine: NewEngine(nil), game: g, obj: obj, log: &TurnLog{}}
+
+	resolved := handleBecomeCopy(r, game.BecomeCopy{
+		Card:           game.CardReference{Kind: game.CardReferenceTarget},
+		UntilEndOfTurn: true,
+	})
+	if !resolved.succeeded {
+		t.Fatal("handleBecomeCopy did not succeed copying a graveyard card")
+	}
+	if got := permanentEffectiveName(g, source); got != "Tarmogoyf" {
+		t.Fatalf("effective name = %q, want copied Tarmogoyf", got)
+	}
+	last := g.ContinuousEffects[len(g.ContinuousEffects)-1]
+	if last.Layer != game.LayerCopy || !last.CopyValues.Exists {
+		t.Fatalf("expected a LayerCopy continuous effect with copy values, got %+v", last)
+	}
+	if last.Duration != game.DurationUntilEndOfTurn {
+		t.Fatalf("duration = %v, want DurationUntilEndOfTurn", last.Duration)
+	}
+}

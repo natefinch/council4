@@ -1685,6 +1685,15 @@ func (p Regenerate) validatePrimitive(targets []TargetSpec, checkTargets bool) e
 }
 
 func (p BecomeCopy) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Card.Kind != CardReferenceNone {
+		if p.Object.Kind() != ObjectReferenceNone {
+			return errors.New("become copy must set only one of Object or Card")
+		}
+		if err := validateCardReference(p.Card); err != nil {
+			return err
+		}
+		return validateTargetCardReference(p.Card, targets, checkTargets)
+	}
 	return validateObjectReference(p.Object, targets, checkTargets)
 }
 
