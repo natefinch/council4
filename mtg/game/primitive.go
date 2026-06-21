@@ -92,10 +92,11 @@ const (
 	PrimitiveRenown
 	PrimitiveShuffleSpellIntoLibrary
 	PrimitiveExileTopOfLibrary
+	PrimitivePutHandOnLibraryThenDraw
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveExileTopOfLibrary) + 1
+const primitiveKindCount = int(PrimitivePutHandOnLibraryThenDraw) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -781,6 +782,20 @@ type ExileTopOfLibrary struct {
 	Amount      Quantity
 	Player      PlayerReference      // single player; zero if PlayerGroup is set
 	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
+}
+
+// PutHandOnLibraryThenDraw has Player put any number of cards from their hand on
+// one end of their library, then draw a number of cards equal to the number put
+// plus DrawOffset. Bottom selects the library end the hand cards move to (bottom
+// when true, top when false). It models "put any number of cards from your hand
+// on the bottom of your library, then draw that many cards[ plus N]." The
+// player-chosen count and the "that many" back-reference are not expressible
+// through separate instructions, so the whole sequence resolves as one
+// primitive.
+type PutHandOnLibraryThenDraw struct {
+	Player     PlayerReference
+	Bottom     bool
+	DrawOffset int
 }
 
 // Scry looks at and reorders the top cards of a referenced player's library.

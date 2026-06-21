@@ -104,6 +104,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleCopyStackObject)
 	registerPrimitiveHandler(reg, handleMill)
 	registerPrimitiveHandler(reg, handleExileTopOfLibrary)
+	registerPrimitiveHandler(reg, handlePutHandOnLibraryThenDraw)
 	registerPrimitiveHandler(reg, handleScry)
 	registerPrimitiveHandler(reg, handleSurveil)
 	registerPrimitiveHandler(reg, handleDig)

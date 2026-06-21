@@ -17,6 +17,9 @@ func emitResolvingSyntax(abilities []Ability) {
 		if recognizeChosenTypeLibraryTopSequence(&abilities[i]) {
 			continue
 		}
+		if recognizeBottomHandThenDrawSequence(&abilities[i]) {
+			continue
+		}
 		emitSentenceResolvingSyntax(
 			abilities[i].Sentences,
 			abilities[i].Atoms,

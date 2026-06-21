@@ -15,12 +15,18 @@ const (
 	// card of your library; if it's a creature card of the chosen type, you may
 	// reveal it and put it into your hand" sequence.
 	ExactSequenceChosenTypeLibraryTopToHand
+	// ExactSequenceBottomHandThenDraw is the spell "put any number of cards from
+	// your hand on the bottom (or top) of your library, then draw that many
+	// cards[ plus N]" sequence.
+	ExactSequenceBottomHandThenDraw
 )
 
 func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
 	switch kind {
 	case parser.ExactSequenceChosenTypeLibraryTopToHand:
 		return ExactSequenceChosenTypeLibraryTopToHand
+	case parser.ExactSequenceBottomHandThenDraw:
+		return ExactSequenceBottomHandThenDraw
 	default:
 		return ExactSequenceUnknown
 	}

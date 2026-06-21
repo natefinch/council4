@@ -373,6 +373,10 @@ func (p ExileTopOfLibrary) validateCapturedTargetControllerReferences(targets []
 	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
 }
 
+func (p PutHandOnLibraryThenDraw) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
+}
+
 func (p Scry) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
 		return err
@@ -1610,6 +1614,13 @@ func (p ExileTopOfLibrary) validatePrimitive(targets []TargetSpec, checkTargets 
 	}
 	if hasGroup {
 		return validatePlayerGroupReference(p.PlayerGroup)
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p PutHandOnLibraryThenDraw) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.DrawOffset < 0 {
+		return errors.New("PutHandOnLibraryThenDraw requires a non-negative DrawOffset")
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
