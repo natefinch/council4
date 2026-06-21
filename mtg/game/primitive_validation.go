@@ -533,6 +533,13 @@ func validatePositiveQuantity(quantity Quantity, targets []TargetSpec, checkTarg
 	return validateQuantity(quantity, targets, checkTargets)
 }
 
+func (p GroupSourceDamage) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateGroupReference(p.Group, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateQuantity(p.Amount, targets, checkTargets)
+}
+
 func (p Damage) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if !p.Recipient.Valid() {
 		return errors.New("damage requires a valid recipient")

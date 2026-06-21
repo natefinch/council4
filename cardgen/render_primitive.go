@@ -359,6 +359,29 @@ func (r Renderer) renderAddPlayerCounter(ctx *renderCtx, value *game.AddPlayerCo
 	}), nil
 }
 
+func (r Renderer) renderGroupSourceDamage(ctx *renderCtx, primitive game.Primitive) (string, error) {
+	value, ok := primitive.(game.GroupSourceDamage)
+	if !ok {
+		return "", errors.New("render: internal error: GroupSourceDamage kind has unexpected concrete type")
+	}
+	group, err := r.renderGroupReference(ctx, value.Group)
+	if err != nil {
+		return "", err
+	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Group: %s,", group),
+		fmt.Sprintf("Amount: %s,", amount),
+	}
+	if value.ToOwner {
+		fields = append(fields, "ToOwner: true,")
+	}
+	return structLit("game.GroupSourceDamage", fields), nil
+}
+
 func (r Renderer) renderDamagePrimitive(ctx *renderCtx, primitive game.Primitive) (string, error) {
 	value, ok := primitive.(game.Damage)
 	if !ok {

@@ -1027,6 +1027,13 @@ type CompiledEffect struct {
 	// owner of a referenced object (the prior removal target), as in "deals 2
 	// damage to that land's controller". It is None for every other recipient.
 	DamageRecipientReference parser.DamageRecipientReferenceKind
+	// EachSourceDamageGroup is the source group of an "each <group> deals N
+	// damage to its controller/owner" effect ("Each creature deals 1 damage to
+	// its controller."), where every group member is the damage source dealing
+	// to the player who controls (or owns) it. EachSourceDamageRecipient records
+	// the per-source recipient role; it is None for every other effect.
+	EachSourceDamageGroup     CompiledSelector
+	EachSourceDamageRecipient parser.DamageRecipientReferenceKind
 	// HasSelfDamageRider reports a "... and N damage to you" rider on a
 	// single-target deal-damage clause ("deals A damage to any target and B
 	// damage to you"). SelfDamageRiderValue holds the fixed self-damage amount B
