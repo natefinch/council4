@@ -2321,27 +2321,67 @@ func parseCantCastSpellsEffect(sentence Sentence, tokens []shared.Token) ([]Effe
 		return nil, false
 	}
 	index++
-	rest := []string{"cast", "spells", "this", "turn"}
-	if len(words)-index != len(rest) {
+	if index >= len(words) || !equalWord(words[index], "cast") {
 		return nil, false
 	}
-	for offset, want := range rest {
+	castSpan := words[index].Span
+	index++
+	// An optional card-type word between "cast" and "spells" filters the
+	// prohibition: a bare card type ("creature spells") restricts it to that
+	// type, while a "non"-prefixed word ("noncreature spells") exempts that type.
+	var requiredTypes, excludedTypes []CardType
+	switch len(words) - index {
+	case 4:
+		requiredType, excludedType, ok := cantCastSpellsFilterType(words[index].Text)
+		if !ok {
+			return nil, false
+		}
+		if requiredType != CardTypeUnknown {
+			requiredTypes = []CardType{requiredType}
+		} else {
+			excludedTypes = []CardType{excludedType}
+		}
+		index++
+	case 3:
+	default:
+		return nil, false
+	}
+	for offset, want := range []string{"spells", "this", "turn"} {
 		if !equalWord(words[index+offset], want) {
 			return nil, false
 		}
 	}
 	return []EffectSyntax{{
-		Kind:                     EffectCantCastSpells,
-		Span:                     sentence.Span,
-		ClauseSpan:               sentence.Span,
-		VerbSpan:                 words[index].Span,
-		Text:                     sentence.Text,
-		Tokens:                   append([]shared.Token(nil), tokens...),
-		Context:                  EffectContextController,
-		Duration:                 EffectDurationThisTurn,
-		CantCastSpellsAllPlayers: allPlayers,
-		Exact:                    true,
+		Kind:                        EffectCantCastSpells,
+		Span:                        sentence.Span,
+		ClauseSpan:                  sentence.Span,
+		VerbSpan:                    castSpan,
+		Text:                        sentence.Text,
+		Tokens:                      append([]shared.Token(nil), tokens...),
+		Context:                     EffectContextController,
+		Duration:                    EffectDurationThisTurn,
+		CantCastSpellsAllPlayers:    allPlayers,
+		CantCastSpellsRequiredTypes: requiredTypes,
+		CantCastSpellsExcludedTypes: excludedTypes,
+		Exact:                       true,
 	}}, true
+}
+
+// cantCastSpellsFilterType maps the optional card-type word in a "<players> can't
+// cast <filter> spells this turn" clause to either a required card type (a bare
+// type word such as "creature") or an excluded card type (a "non"-prefixed word
+// such as "noncreature"). Exactly one of the returned types is set; it fails
+// closed for any word that is not a recognized card type.
+func cantCastSpellsFilterType(word string) (required, excluded CardType, ok bool) {
+	if cardType, found := recognizeCardTypeWord(word); found {
+		return cardType, CardTypeUnknown, true
+	}
+	if rest, found := strings.CutPrefix(strings.ToLower(word), "non"); found {
+		if cardType, found := recognizeCardTypeWord(rest); found {
+			return CardTypeUnknown, cardType, true
+		}
+	}
+	return CardTypeUnknown, CardTypeUnknown, false
 }
 
 // parseGroupMustAttackEffect recognizes the one-shot, turn-scoped forced-attack

@@ -479,8 +479,10 @@ func lowerCantCastSpells(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 	return game.Mode{Sequence: []game.Instruction{{
 		Primitive: game.ApplyRule{
 			RuleEffects: []game.RuleEffect{{
-				Kind:           game.RuleEffectCantCastSpells,
-				AffectedPlayer: affected,
+				Kind:               game.RuleEffectCantCastSpells,
+				AffectedPlayer:     affected,
+				SpellTypes:         append([]types.Card(nil), effect.CantCastSpellsRequiredTypes...),
+				ExcludedSpellTypes: append([]types.Card(nil), effect.CantCastSpellsExcludedTypes...),
 			}},
 			Duration: game.DurationThisTurn,
 		},

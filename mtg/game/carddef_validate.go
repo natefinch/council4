@@ -1029,6 +1029,9 @@ func (v *cardDefValidator) validateActionRestrictionRuleEffect(faceName, path st
 	if effect.Kind == RuleEffectCantActivateAbilities && len(effect.SpellTypes) != 0 {
 		v.add(faceName, appendPath(path, "SpellTypes"), CardDefIssueInvalidRuleEffect, "activation prohibition does not constrain spell types")
 	}
+	if effect.Kind == RuleEffectCantActivateAbilities && len(effect.ExcludedSpellTypes) != 0 {
+		v.add(faceName, appendPath(path, "ExcludedSpellTypes"), CardDefIssueInvalidRuleEffect, "activation prohibition does not constrain spell types")
+	}
 }
 
 // validateCastZoneRestrictionRuleEffect checks a cast-zone restriction rule

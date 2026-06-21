@@ -220,6 +220,22 @@ func compilerCardType(cardType parser.CardType) (types.Card, bool) {
 	}
 }
 
+// compilerCardTypes maps a slice of parser card types to runtime card types,
+// dropping any unrecognized type. The parser owns the wording, so this only
+// translates the typed values the compiler carries text-blind.
+func compilerCardTypes(cardTypes []parser.CardType) []types.Card {
+	if len(cardTypes) == 0 {
+		return nil
+	}
+	result := make([]types.Card, 0, len(cardTypes))
+	for _, cardType := range cardTypes {
+		if runtimeType, ok := compilerCardType(cardType); ok {
+			result = append(result, runtimeType)
+		}
+	}
+	return result
+}
+
 func compilerSupertype(supertype parser.Supertype) (types.Super, bool) {
 	switch supertype {
 	case parser.SupertypeLegendary:

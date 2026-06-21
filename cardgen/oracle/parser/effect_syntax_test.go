@@ -353,22 +353,29 @@ func TestParseTriggeringLifeChangeAmount(t *testing.T) {
 
 // TestParseCantCastSpellsEffect proves the one-shot, turn-scoped player cast
 // prohibition is recognized for the opponents and all-players scopes (Silence,
-// Mandate of Peace) while targeted, referenced, and filtered wordings fail
-// closed and flow through the generic effect parser.
+// Mandate of Peace) and the optional spell-type filter ("noncreature spells",
+// Ranger-Captain of Eos; "creature spells"), while targeted, referenced, and
+// unfiltered-duration wordings fail closed and flow through the generic effect
+// parser.
 func TestParseCantCastSpellsEffect(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		source     string
-		recognized bool
-		allPlayers bool
+		source       string
+		recognized   bool
+		allPlayers   bool
+		requiredType []CardType
+		excludedType []CardType
 	}{
-		{"Your opponents can't cast spells this turn.", true, false},
-		{"Each opponent can't cast spells this turn.", true, false},
-		{"Players can't cast spells this turn.", true, true},
+		{"Your opponents can't cast spells this turn.", true, false, nil, nil},
+		{"Each opponent can't cast spells this turn.", true, false, nil, nil},
+		{"Players can't cast spells this turn.", true, true, nil, nil},
+		{"Your opponents can't cast noncreature spells this turn.", true, false, nil, []CardType{CardTypeCreature}},
+		{"Players can't cast noncreature spells this turn.", true, true, nil, []CardType{CardTypeCreature}},
+		{"Your opponents can't cast creature spells this turn.", true, false, []CardType{CardTypeCreature}, nil},
 		// Variant wordings fail closed.
-		{"Target player can't cast spells this turn.", false, false},
-		{"Your opponents can't cast noncreature spells this turn.", false, false},
-		{"Your opponents can't cast spells.", false, false},
+		{"Target player can't cast spells this turn.", false, false, nil, nil},
+		{"Your opponents can't cast bogus spells this turn.", false, false, nil, nil},
+		{"Your opponents can't cast spells.", false, false, nil, nil},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
@@ -379,11 +386,32 @@ func TestParseCantCastSpellsEffect(t *testing.T) {
 			if got != test.recognized {
 				t.Fatalf("recognized = %v, want %v (effects=%#v)", got, test.recognized, effects)
 			}
-			if got && effects[0].CantCastSpellsAllPlayers != test.allPlayers {
+			if !got {
+				return
+			}
+			if effects[0].CantCastSpellsAllPlayers != test.allPlayers {
 				t.Fatalf("allPlayers = %v, want %v", effects[0].CantCastSpellsAllPlayers, test.allPlayers)
+			}
+			if !cardTypeSlicesEqual(effects[0].CantCastSpellsRequiredTypes, test.requiredType) {
+				t.Fatalf("requiredTypes = %v, want %v", effects[0].CantCastSpellsRequiredTypes, test.requiredType)
+			}
+			if !cardTypeSlicesEqual(effects[0].CantCastSpellsExcludedTypes, test.excludedType) {
+				t.Fatalf("excludedTypes = %v, want %v", effects[0].CantCastSpellsExcludedTypes, test.excludedType)
 			}
 		})
 	}
+}
+
+func cardTypeSlicesEqual(a, b []CardType) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // TestParseGroupMustAttackEffect proves the one-shot, turn-scoped forced-attack

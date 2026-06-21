@@ -393,6 +393,9 @@ func spellCastProhibited(g *game.Game, playerID game.PlayerID, spellDef *game.Ca
 		if len(effect.SpellTypes) > 0 && !cardDefHasAnyType(spellDef, effect.SpellTypes) {
 			continue
 		}
+		if len(effect.ExcludedSpellTypes) > 0 && cardDefHasAnyType(spellDef, effect.ExcludedSpellTypes) {
+			continue
+		}
 		return true
 	}
 	return false

@@ -349,6 +349,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				DiscardEntireHand:               syntax.DiscardEntireHand,
 				CounteredSpellExileReplacement:  syntax.CounteredSpellExileReplacement,
 				CantCastSpellsAllPlayers:        syntax.CantCastSpellsAllPlayers,
+				CantCastSpellsRequiredTypes:     compilerCardTypes(syntax.CantCastSpellsRequiredTypes),
+				CantCastSpellsExcludedTypes:     compilerCardTypes(syntax.CantCastSpellsExcludedTypes),
 				PreventDamageTo:                 syntax.PreventDamageTo,
 				PreventDamageBy:                 syntax.PreventDamageBy,
 				SpellsCantBeCounteredNextOnly:   syntax.SpellsCantBeCounteredNextOnly,

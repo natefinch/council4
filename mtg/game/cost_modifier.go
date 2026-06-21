@@ -139,9 +139,12 @@ const (
 	RuleEffectAdditionalLandPlays
 	// RuleEffectCantCastSpells forbids the affected players (AffectedPlayer) from
 	// casting spells ("Your opponents can't cast spells."). When SpellTypes is
-	// non-empty only spells of those card types are forbidden; an empty SpellTypes
-	// forbids every spell. RestrictedDuringControllerTurn scopes the prohibition
-	// to the source controller's turn ("During your turn, ...").
+	// non-empty only spells of those card types are forbidden ("can't cast
+	// creature spells"); when ExcludedSpellTypes is non-empty spells carrying any
+	// of those card types are exempt ("can't cast noncreature spells"). An empty
+	// SpellTypes and ExcludedSpellTypes forbids every spell.
+	// RestrictedDuringControllerTurn scopes the prohibition to the source
+	// controller's turn ("During your turn, ...").
 	RuleEffectCantCastSpells
 	// RuleEffectCantActivateAbilities forbids the affected players (AffectedPlayer)
 	// from activating abilities of permanents whose card type is in PermanentTypes
@@ -316,6 +319,10 @@ type RuleEffect struct {
 	AffectedController ControllerRelation
 	PermanentTypes     []types.Card
 	SpellTypes         []types.Card
+	// ExcludedSpellTypes exempts spells carrying any of these card types from a
+	// RuleEffectCantCastSpells prohibition, expressing the "noncreature spells"
+	// family ("Your opponents can't cast noncreature spells this turn.").
+	ExcludedSpellTypes []types.Card
 	DefendingPlayer    PlayerRelation
 
 	BlockerRestriction BlockerRestriction
