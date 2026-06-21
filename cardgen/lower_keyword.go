@@ -132,11 +132,23 @@ func lowerKeywordDispatch(
 		}
 		return keywordTriggeredLowering(&cumulativeAbility, ability, syntax), true, nil
 	}
+	if fabricateAbility, ok, diag := lowerFabricateAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordTriggeredLowering(&fabricateAbility, ability, syntax), true, nil
+	}
 	if undyingPersistAbility, ok, diag := lowerUndyingPersistAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
 		}
 		return keywordTriggeredLowering(&undyingPersistAbility, ability, syntax), true, nil
+	}
+	if flankingAbility, ok, diag := lowerFlankingAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordTriggeredLowering(&flankingAbility, ability, syntax), true, nil
 	}
 	if equipAbility, ok, diag := lowerEquipAbility(ability, syntax); ok {
 		if diag != nil {
@@ -229,6 +241,34 @@ func lowerCumulativeUpkeepAbility(
 	return game.CumulativeUpkeepTriggeredAbility(manaCost), true, nil
 }
 
+func lowerFabricateAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.TriggeredAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordFabricate {
+		return game.TriggeredAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterInteger ||
+		keyword.Integer < 1 ||
+		ability.Kind != compiler.AbilityStatic ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Fabricate ability",
+			"the executable source backend supports only exact Fabricate with one integer parameter",
+		)
+	}
+	return game.FabricateTriggeredAbility(keyword.Integer), true, nil
+}
+
 // lowerUndyingPersistAbility lowers a printed Undying (CR 702.92) or Persist
 // (CR 702.78) keyword to its canonical dies-return-with-counter triggered
 // ability. Both keywords are printed bare (their reminder text is stripped), so
@@ -268,6 +308,38 @@ func lowerUndyingPersistAbility(
 		)
 	}
 	return body, true, nil
+}
+
+// lowerFlankingAbility lowers a printed Flanking (CR 702.25) keyword to its
+// canonical becomes-blocked triggered ability. Flanking is printed bare (its
+// reminder text is stripped), so the lowering expands the keyword to the
+// reusable typed body. It supports only the exact keyword with no other rules
+// text.
+func lowerFlankingAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.TriggeredAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordFlanking {
+		return game.TriggeredAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterNone ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported "+keyword.Name+" ability",
+			"the executable source backend supports only the exact "+keyword.Name+" keyword",
+		)
+	}
+	return game.FlankingTriggeredBody, true, nil
 }
 
 func keywordStaticLowering(
@@ -926,6 +998,7 @@ func mixedStaticKeywordImplemented(keyword game.Keyword) bool {
 		game.Exalted,
 		game.Riot,
 		game.Evolve,
+		game.Unleash,
 		game.Fear,
 		game.Skulk,
 		game.Intimidate:
@@ -958,6 +1031,14 @@ func resolvingStaticSubjectGroup(effect *compiler.CompiledEffect) (game.GroupRef
 			RequiredTypes: []types.Card{types.Creature},
 			CombatState:   game.CombatStateAttacking,
 		}), true
+	case compiler.StaticSubjectOtherAttackingCreatures:
+		return game.BattlefieldGroupExcluding(
+			game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				CombatState:   game.CombatStateAttacking,
+			},
+			game.SourcePermanentReference(),
+		), true
 	case compiler.StaticSubjectBlockingCreatures:
 		return game.BattlefieldGroup(game.Selection{
 			RequiredTypes: []types.Card{types.Creature},

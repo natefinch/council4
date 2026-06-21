@@ -675,6 +675,8 @@ func renderKeyword(kw game.Keyword) (string, error) {
 		return "game.Vigilance", nil
 	case game.Riot:
 		return "game.Riot", nil
+	case game.Unleash:
+		return "game.Unleash", nil
 	case game.Ward:
 		return "game.Ward", nil
 	case game.SplitSecond:

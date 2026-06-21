@@ -670,6 +670,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 	for _, recognize := range []func() ([]EffectSyntax, bool){
 		func() ([]EffectSyntax, bool) { return parsePassiveTokenDoublingEffects(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseEntersAsCopyEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseDevourEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseBecomeCopyEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawDoublingReplacement(sentence, tokens, atoms) },
@@ -3241,8 +3242,64 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 	return []EffectSyntax{effect}, true
 }
 
-// parseBecomeCopyEffect recognizes an activated/resolving copy effect that has
-// the source permanent become a copy of a targeted permanent ("This land
+// parseDevourEffect recognizes the canonical as-enters replacement that the
+// printed "Devour N" keyword expands to (CR 702.81): "As this creature enters,
+// you may sacrifice any number of creatures, then it enters with N +1/+1
+// counters on it for each creature sacrificed." The wording is produced solely
+// by expandDevourKeyword, so this matches that exact sentence and recovers the
+// per-sacrificed-creature multiplier N; any other sentence fails closed.
+func parseDevourEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	body := semanticEffectTokens(tokens)
+	n, ok := devourSentenceMultiplier(body)
+	if !ok {
+		return nil, false
+	}
+	effect := EffectSyntax{
+		Kind:                   EffectDevour,
+		Context:                EffectContextController,
+		Span:                   sentence.Span,
+		ClauseSpan:             sentence.Span,
+		Text:                   sentence.Text,
+		Tokens:                 append([]shared.Token(nil), body...),
+		EntersDevour:           true,
+		EntersDevourMultiplier: n,
+	}
+	effect.Exact = exactEffectSyntax(&effect)
+	return []EffectSyntax{effect}, true
+}
+
+// devourSentenceMultiplier matches the exact canonical Devour expansion token
+// sequence and returns its +1/+1 counter multiplier N. The multiplier is the
+// integer that precedes the "+1/+1 counters" phrase. Any deviation from the
+// canonical wording fails closed.
+func devourSentenceMultiplier(body []shared.Token) (int, bool) {
+	words := normalizedWords(body)
+	expected := []string{
+		"as", "this", "creature", "enters",
+		"you", "may", "sacrifice", "any", "number", "of", "creatures",
+		"then", "it", "enters", "with",
+		"counters", "on", "it", "for", "each", "creature", "sacrificed",
+	}
+	if !slices.Equal(words, expected) {
+		return 0, false
+	}
+	for i := 0; i+5 < len(body); i++ {
+		if body[i].Kind == shared.Integer &&
+			body[i+1].Kind == shared.Plus &&
+			body[i+2].Kind == shared.Integer && body[i+2].Text == "1" &&
+			body[i+3].Kind == shared.Slash &&
+			body[i+4].Kind == shared.Plus &&
+			body[i+5].Kind == shared.Integer && body[i+5].Text == "1" {
+			n, err := strconv.Atoi(body[i].Text)
+			if err != nil || n <= 0 {
+				return 0, false
+			}
+			return n, true
+		}
+	}
+	return 0, false
+}
+
 // becomes a copy of target land, except it has this ability.", Thespian's Stage;
 // "This artifact becomes a copy of target ... until end of turn.", Mirage
 // Mirror; CR 706). The copied-permanent target is left as the ordinary "target"

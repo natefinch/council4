@@ -395,6 +395,9 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 		if replacement.EntryTypeChoice {
 			applyEntryTypeChoice(ctx, g, permanent, replacement.Controller)
 		}
+		if replacement.EntryDevourMultiplier > 0 {
+			applyEntryDevour(ctx, g, permanent, replacement.Controller, replacement.EntryDevourMultiplier)
+		}
 		if replacement.EntersAsCopy {
 			applyEntersAsCopy(ctx, g, permanent, replacement)
 		}
@@ -402,6 +405,38 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 	if hasKeyword(g, permanent, game.Riot) {
 		applyEntryRiotChoice(ctx, g, permanent)
 	}
+	if hasKeyword(g, permanent, game.Unleash) {
+		applyEntryUnleashChoice(ctx, g, permanent)
+	}
+}
+
+// applyEntryUnleashChoice resolves the unleash keyword for an entering permanent
+// (CR 702.86): its controller may have it enter with a +1/+1 counter on it. A
+// permanent that entered with such a counter can't block while it still has one;
+// that restriction is enforced where block legality is determined.
+func applyEntryUnleashChoice(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent) {
+	engine := ctx.engine
+	if engine == nil {
+		engine = NewEngine(nil)
+	}
+	controller := effectiveController(g, permanent)
+	request := game.ChoiceRequest{
+		Kind:   game.ChoiceModal,
+		Player: controller,
+		Prompt: "Unleash: choose whether to enter with a +1/+1 counter.",
+		Options: []game.ChoiceOption{
+			{Index: 0, Label: "Enter with a +1/+1 counter"},
+			{Index: 1, Label: "Enter without a counter"},
+		},
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: []int{0},
+	}
+	selected := engine.chooseChoice(g, ctx.agents, request, ctx.log)
+	if len(selected) == 1 && selected[0] == 1 {
+		return
+	}
+	addCountersToPermanent(g, permanent, counter.PlusOnePlusOne, 1)
 }
 
 // applyEntryRiotChoice resolves the riot keyword for an entering permanent
@@ -488,6 +523,58 @@ func applyEntryTypeChoice(ctx enterBattlefieldContext, g *game.Game, permanent *
 		permanent.EntryChoices = make(map[game.ChoiceKey]game.ResolutionChoiceResult)
 	}
 	permanent.EntryChoices[game.EntryTypeChoiceKey] = result
+}
+
+// applyEntryDevour resolves the Devour keyword for an entering permanent (CR
+// 702.81): its controller may sacrifice any number of other creatures they
+// control as it enters, and it enters with multiplier +1/+1 counters on it for
+// each creature sacrificed this way. Choosing to sacrifice nothing is legal and
+// is the default.
+func applyEntryDevour(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, controller game.PlayerID, multiplier int) {
+	engine := ctx.engine
+	if engine == nil {
+		engine = NewEngine(nil)
+	}
+	var candidates []*game.Permanent
+	for _, candidate := range g.Battlefield {
+		if candidate.ObjectID == permanent.ObjectID {
+			continue
+		}
+		if effectiveController(g, candidate) != controller {
+			continue
+		}
+		if !permanentHasType(g, candidate, types.Creature) {
+			continue
+		}
+		candidates = append(candidates, candidate)
+	}
+	if len(candidates) == 0 {
+		return
+	}
+	options := make([]game.ChoiceOption, len(candidates))
+	for i, candidate := range candidates {
+		options[i] = game.ChoiceOption{Index: i, Label: permanentChoiceLabel(g, candidate), Card: permanentChoiceInfo(g, candidate)}
+	}
+	request := game.ChoiceRequest{
+		Kind:       game.ChoicePayment,
+		Player:     controller,
+		Prompt:     "Devour: choose any number of creatures to sacrifice.",
+		Options:    options,
+		MinChoices: 0,
+		MaxChoices: len(candidates),
+	}
+	selected := engine.chooseChoice(g, ctx.agents, request, ctx.log)
+	sacrificed := make([]*game.Permanent, 0, len(selected))
+	for _, index := range selected {
+		if index >= 0 && index < len(candidates) {
+			sacrificed = append(sacrificed, candidates[index])
+		}
+	}
+	if len(sacrificed) == 0 {
+		return
+	}
+	sacrificePermanentsSimultaneously(g, sacrificed)
+	addCountersToPermanent(g, permanent, counter.PlusOnePlusOne, multiplier*len(sacrificed))
 }
 
 // applyEntersAsCopy has the entering permanent enter as a copy of a permanent

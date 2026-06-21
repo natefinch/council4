@@ -113,6 +113,11 @@ type ToxicKeyword struct {
 	Amount int
 }
 
+// FabricateKeyword parameterizes Fabricate for its counter-or-token count.
+type FabricateKeyword struct {
+	Count int
+}
+
 func (SimpleKeyword) isKeywordAbility()           {}
 func (WardKeyword) isKeywordAbility()             {}
 func (CumulativeUpkeepKeyword) isKeywordAbility() {}
@@ -130,6 +135,7 @@ func (DisguiseKeyword) isKeywordAbility()         {}
 func (SuspendKeyword) isKeywordAbility()          {}
 func (ProtectionKeyword) isKeywordAbility()       {}
 func (ToxicKeyword) isKeywordAbility()            {}
+func (FabricateKeyword) isKeywordAbility()        {}
 
 func (ability SimpleKeyword) keyword() Keyword { return ability.Kind }
 func (WardKeyword) keyword() Keyword           { return Ward }
@@ -150,6 +156,7 @@ func (DisguiseKeyword) keyword() Keyword   { return Disguise }
 func (SuspendKeyword) keyword() Keyword    { return Suspend }
 func (ProtectionKeyword) keyword() Keyword { return Protection }
 func (ToxicKeyword) keyword() Keyword      { return Toxic }
+func (FabricateKeyword) keyword() Keyword  { return Fabricate }
 
 func (ability SimpleKeyword) cloneKeywordAbility() KeywordAbility { return ability }
 func (ability WardKeyword) cloneKeywordAbility() KeywordAbility {
@@ -217,7 +224,8 @@ func (ability ProtectionKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.FromSubtypes = append([]types.Sub(nil), ability.FromSubtypes...)
 	return ability
 }
-func (ability ToxicKeyword) cloneKeywordAbility() KeywordAbility { return ability }
+func (ability ToxicKeyword) cloneKeywordAbility() KeywordAbility     { return ability }
+func (ability FabricateKeyword) cloneKeywordAbility() KeywordAbility { return ability }
 
 // SimpleKeywords returns sealed keyword variants for non-parameterized keywords.
 func SimpleKeywords(keywords ...Keyword) []KeywordAbility {
