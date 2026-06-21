@@ -553,6 +553,48 @@ func TestGenerateExecutableCardSourceAnyColorTapMana(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceAnyOneColorCountTapMana covers the "Add <N>
+// mana of any one color" family (Gilded Lotus): N mana, all of one chosen color.
+func TestGenerateExecutableCardSourceAnyOneColorCountTapMana(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name       string
+		oracleText string
+		want       string
+	}{
+		{
+			name:       "Gilded Lotus",
+			oracleText: "{T}: Add three mana of any one color.",
+			want:       "game.TapManaChoiceCountAbility(\"{T}: Add three mana of any one color.\", 3, mana.W, mana.U, mana.B, mana.R, mana.G)",
+		},
+		{
+			name:       "Two Lotus",
+			oracleText: "{T}: Add two mana of any one color.",
+			want:       "game.TapManaChoiceCountAbility(\"{T}: Add two mana of any one color.\", 2, mana.W, mana.U, mana.B, mana.R, mana.G)",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       tc.name,
+				Layout:     "normal",
+				TypeLine:   "Artifact",
+				OracleText: tc.oracleText,
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if !strings.Contains(source, tc.want) {
+				t.Fatalf("source missing %q:\n%s", tc.want, source)
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableChromaticLanternStaticManaGrant(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -604,9 +646,8 @@ func TestGenerateExecutableCardSourceCommanderIdentityTapMana(t *testing.T) {
 
 // TestGenerateExecutableCardSourceUnscopedAnyColorTapManaFailsClosed asserts the
 // commander-identity recognition does not over-match other "any color" wordings.
-// "any one color" adds three mana of a single freely-chosen color, which the
-// runtime mana model does not yet support, so it must fail closed rather than
-// lower to a commander-identity ability.
+// "any one color" adds three mana of a single freely-chosen color, which lowers
+// to the choose-then-add count ability rather than a commander-identity ability.
 func TestGenerateExecutableCardSourceUnscopedAnyColorTapManaFailsClosed(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -619,8 +660,8 @@ func TestGenerateExecutableCardSourceUnscopedAnyColorTapManaFailsClosed(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(diagnostics) == 0 {
-		t.Fatalf("expected fail-closed diagnostic, got source:\n%s", source)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	if strings.Contains(source, "game.TapManaCommanderIdentityAbility()") {
 		t.Fatalf("unscoped any-color wording wrongly lowered to commander identity:\n%s", source)

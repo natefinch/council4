@@ -195,6 +195,19 @@ func (r Renderer) renderManaAbility(ctx *renderCtx, ability *game.ManaAbility) (
 		}
 		return fmt.Sprintf("game.TapManaChoiceAbility(%s)", strings.Join(colorLiterals, ", ")), nil
 	}
+	if colors, count, ok := tapManaChoiceCountColors(ability); ok &&
+		reflect.DeepEqual(*ability, game.TapManaChoiceCountAbility(ability.Text, count, colors...)) {
+		ctx.need(importMana)
+		colorLiterals := make([]string, 0, len(colors))
+		for _, manaColor := range colors {
+			colorLiteral, err := renderManaColor(manaColor)
+			if err != nil {
+				return "", err
+			}
+			colorLiterals = append(colorLiterals, colorLiteral)
+		}
+		return fmt.Sprintf("game.TapManaChoiceCountAbility(%q, %d, %s)", ability.Text, count, strings.Join(colorLiterals, ", ")), nil
+	}
 	if reflect.DeepEqual(*ability, game.TapChosenColorManaAbility(ability.Text)) {
 		return fmt.Sprintf("game.TapChosenColorManaAbility(%q)", ability.Text), nil
 	}
@@ -306,6 +319,16 @@ func renderTimingRestriction(timing game.TimingRestriction) (string, error) {
 func tapManaChoiceColors(ability *game.ManaAbility) ([]mana.Color, bool) {
 	colors, amount, ok := game.ManaAbilityChoiceOutput(ability)
 	return colors, ok && amount == 1
+}
+
+// tapManaChoiceCountColors extracts the color choices and produced count from a
+// mana ability that adds N mana (N >= 2) of a single chosen color, so the
+// ability can render back to game.TapManaChoiceCountAbility (Gilded Lotus's
+// "Add three mana of any one color."). It rejects the single-mana choice, which
+// renders to game.TapManaChoiceAbility instead.
+func tapManaChoiceCountColors(ability *game.ManaAbility) ([]mana.Color, int, bool) {
+	colors, amount, ok := game.ManaAbilityChoiceOutput(ability)
+	return colors, amount, ok && amount >= 2
 }
 
 // linkedExileColorManaLinkID extracts the imprint link identifier from a mana

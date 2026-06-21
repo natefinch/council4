@@ -738,6 +738,9 @@ func typedManaEffectContent(effect compiler.CompiledEffectMana) (game.AbilityCon
 		return game.TapManaAmongControlledColorsAbility("", selection).Content, true
 	}
 	if effect.AnyColor {
+		if effect.AnyColorCount >= 2 {
+			return game.TapManaChoiceCountAbility("", effect.AnyColorCount, mana.W, mana.U, mana.B, mana.R, mana.G).Content, true
+		}
 		return game.TapManaChoiceAbility(mana.W, mana.U, mana.B, mana.R, mana.G).Content, true
 	}
 	if !effect.ColorsKnown {

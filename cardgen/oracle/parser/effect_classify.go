@@ -188,6 +188,11 @@ func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) Eff
 	if len(body) == 5 && effectWordsAt(body, 0, "one", "mana", "of", "any", "color") {
 		return EffectManaSyntax{Span: shared.SpanOf(body), AnyColor: true}
 	}
+	if len(body) == 6 && effectWordsAt(body, 1, "mana", "of", "any", "one", "color") {
+		if count, ok := manaAnyOneColorCount(body[0]); ok {
+			return EffectManaSyntax{Span: shared.SpanOf(body), AnyColor: true, AnyColorCount: count}
+		}
+	}
 	if len(body) == 10 &&
 		effectWordsAt(body, 0, "an", "amount", "of") &&
 		body[3].Kind == shared.Symbol &&
@@ -295,6 +300,18 @@ func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) Eff
 		ColorsKnown: colorsKnown,
 		Choice:      choice,
 	}
+}
+
+// manaAnyOneColorCount resolves the leading count of the body "<N> mana of any
+// one color" (Gilded Lotus). It accepts an integer or cardinal-word count and
+// requires N >= 2 so the single "one mana of any color" body keeps its own
+// exact branch and "any combination of colors" wordings fail closed.
+func manaAnyOneColorCount(token shared.Token) (int, bool) {
+	count, ok := additionalLandCountWord(token)
+	if !ok || count < 2 {
+		return 0, false
+	}
+	return count, true
 }
 
 // effectManaColors maps every add-mana symbol to its typed basic mana color. It

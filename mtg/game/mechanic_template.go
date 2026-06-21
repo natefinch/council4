@@ -577,6 +577,43 @@ func TapManaChoiceAbility(colors ...mana.Color) ManaAbility {
 	}
 }
 
+// TapManaChoiceCountAbility builds the tap ability for "Add <count> mana of any
+// one color." (Gilded Lotus: "Add three mana of any one color."), count >= 2.
+// The controller chooses a single color from colors as the ability resolves and
+// adds that many mana of the one chosen color. text is the ability's oracle
+// text; the renderer passes it through so the rendered ability matches the
+// lowered one regardless of the cardinal wording.
+func TapManaChoiceCountAbility(text string, count int, colors ...mana.Color) ManaAbility {
+	manaColors := append([]mana.Color(nil), colors...)
+	validateManaColorChoice(manaColors)
+	prompt := "Choose a color"
+	if containsManaColor(manaColors, mana.C) {
+		prompt = "Choose a type of mana"
+	}
+	return ManaAbility{
+		Text:            text,
+		AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalTap}},
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: Choose{
+					Choice: ResolutionChoice{
+						Kind:   ResolutionChoiceMana,
+						Prompt: prompt,
+						Colors: manaColors,
+					},
+					PublishChoice: tapManaChoiceKey,
+				},
+			},
+			{
+				Primitive: AddMana{
+					Amount:     Fixed(count),
+					ChoiceFrom: tapManaChoiceKey,
+				},
+			},
+		}}.Ability(),
+	}
+}
+
 // TapManaChosenColorDevotionAbility builds the resolving content for "Choose a
 // color. Add an amount of mana of that color equal to your devotion to that
 // color." (Nykthos, Shrine to Nyx). The controller chooses a color as the

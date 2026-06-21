@@ -1285,6 +1285,11 @@ type CompiledEffectMana struct {
 	// ColorsAmongSelector is produced. See
 	// parser.EffectManaSyntax.EachColorAmongControlled.
 	EachColorAmongControlled bool
+	// AnyColorCount mirrors the parser's "<N> mana of any one color" body
+	// (Gilded Lotus: "Add three mana of any one color."), N >= 2. It is set
+	// together with AnyColor; N mana of the single chosen color are produced. See
+	// parser.EffectManaSyntax.AnyColorCount.
+	AnyColorCount int
 }
 
 // CompiledEffectPayment is a typed resolution payment embedded in an effect.
