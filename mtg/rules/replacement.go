@@ -19,6 +19,7 @@ type enterBattlefieldContext struct {
 	engine *Engine
 	agents [game.NumPlayers]PlayerAgent
 	log    *TurnLog
+	xValue int
 }
 
 type damageEvent struct {
@@ -194,6 +195,50 @@ func replacementZoneChange(g *game.Game, event game.Event) zoneChangeReplacement
 	}
 }
 
+// replacementTokenCreationTypes applies token-type replacement effects (Academy
+// Manufactor: "If you would create a Clue, Food, or Treasure token, instead
+// create one of each.") to a single token the controller would create. It
+// returns the token definitions to create instead, which is just the original
+// token when no replacement matches. The substitute tokens are created directly
+// by callers without re-entering this function, so a matched replacement cannot
+// recursively re-trigger itself.
+func replacementTokenCreationTypes(g *game.Game, controller game.PlayerID, token *game.CardDef) []*game.CardDef {
+	if token == nil {
+		return nil
+	}
+	event := game.Event{
+		Kind:       game.EventTokenCreated,
+		Controller: controller,
+		Player:     controller,
+		Amount:     1,
+	}
+	for i := range g.ReplacementEffects {
+		replacement := &g.ReplacementEffects[i]
+		if len(replacement.CreateOneOfEachTokens) == 0 {
+			continue
+		}
+		if !replacementEffectMatchesEvent(g, replacement, event) {
+			continue
+		}
+		if !tokenNameInSet(token, replacement.CreateOneOfEachTokens) {
+			continue
+		}
+		return replacement.CreateOneOfEachTokens
+	}
+	return []*game.CardDef{token}
+}
+
+// tokenNameInSet reports whether token shares a name with any definition in set,
+// the trigger condition for a one-of-each token-type replacement.
+func tokenNameInSet(token *game.CardDef, set []*game.CardDef) bool {
+	for _, def := range set {
+		if def != nil && def.Name == token.Name {
+			return true
+		}
+	}
+	return false
+}
+
 func replacementTokenCreationAmount(g *game.Game, controller game.PlayerID, amount int) int {
 	if amount <= 0 {
 		return amount
@@ -245,7 +290,10 @@ func replacementPermanentCounterPlacementAmount(g *game.Game, placementControlle
 		}
 		replacement := matches[0]
 		applied[replacement.ID] = true
-		amount *= replacement.CounterMultiplier
+		if replacement.CounterMultiplier > 1 {
+			amount *= replacement.CounterMultiplier
+		}
+		amount += replacement.CounterAddend
 	}
 }
 
@@ -272,7 +320,10 @@ func replacementPlayerCounterPlacementAmount(g *game.Game, placementController, 
 		}
 		replacement := matches[0]
 		applied[replacement.ID] = true
-		amount *= replacement.CounterMultiplier
+		if replacement.CounterMultiplier > 1 {
+			amount *= replacement.CounterMultiplier
+		}
+		amount += replacement.CounterAddend
 	}
 }
 
@@ -314,7 +365,7 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 			staticMatches = staticETBReplacementEffects(ctx, g, permanent, def, event)
 		}
 	}
-	matches := matchingETBReplacementEffects(g, event)
+	matches := matchingETBReplacementEffects(g, permanent, event)
 	matches = append(matches, staticMatches...)
 	if len(matches) > 1 {
 		recordReplacementDecision(g, replacementEventPlayer(event), replacementEffectLabels(matches))
@@ -325,7 +376,14 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 			setPermanentTapped(g, permanent, true)
 		}
 		for _, placement := range replacement.EntersWithCounters {
-			addCountersToPermanent(g, permanent, placement.Kind, placement.Amount)
+			amount := placement.Amount
+			if placement.AmountFromX {
+				amount = ctx.xValue
+			}
+			if amount <= 0 {
+				continue
+			}
+			addCountersToPermanent(g, permanent, placement.Kind, amount)
 		}
 		if replacement.EntryColorChoice {
 			applyEntryColorChoice(ctx, g, permanent, replacement.Controller, replacement.EntryColorChoiceExclude)
@@ -334,6 +392,40 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 			applyEntryTypeChoice(ctx, g, permanent, replacement.Controller)
 		}
 	}
+	if hasKeyword(g, permanent, game.Riot) {
+		applyEntryRiotChoice(ctx, g, permanent)
+	}
+}
+
+// applyEntryRiotChoice resolves the riot keyword for an entering permanent
+// (CR 702.137): its controller chooses for it to enter with a +1/+1 counter or
+// to gain haste. The haste choice clears summoning sickness, which is equivalent
+// to granting haste for a permanent that is entering now and uniformly enables
+// both attacking and activating tap abilities this turn.
+func applyEntryRiotChoice(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent) {
+	engine := ctx.engine
+	if engine == nil {
+		engine = NewEngine(nil)
+	}
+	controller := effectiveController(g, permanent)
+	request := game.ChoiceRequest{
+		Kind:   game.ChoiceModal,
+		Player: controller,
+		Prompt: "Riot: choose to enter with a +1/+1 counter or gain haste.",
+		Options: []game.ChoiceOption{
+			{Index: 0, Label: "Enter with a +1/+1 counter"},
+			{Index: 1, Label: "Gain haste"},
+		},
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: []int{0},
+	}
+	selected := engine.chooseChoice(g, ctx.agents, request, ctx.log)
+	if len(selected) == 1 && selected[0] == 1 {
+		permanent.SummoningSick = false
+		return
+	}
+	addCountersToPermanent(g, permanent, counter.PlusOnePlusOne, 1)
 }
 
 // applyEntryColorChoice prompts the permanent's controller to choose a color as
@@ -422,6 +514,12 @@ func staticETBReplacementEffects(ctx enterBattlefieldContext, g *game.Game, perm
 	var replacements []game.ReplacementEffect
 	for i := range def.ReplacementAbilities {
 		ability := &def.ReplacementAbilities[i]
+		// Optional entry-to-zone replacements (Mox Diamond) are resolved before
+		// entry by optionalEntryReplacementDeclined; skip them here so the
+		// payment is not prompted twice.
+		if ability.Replacement.ReplaceToZone != zone.None {
+			continue
+		}
 		replacement := ability.Replacement
 		replacement.Controller = event.Controller
 		replacement.SourceCardID = permanent.CardInstanceID
@@ -438,6 +536,30 @@ func staticETBReplacementEffects(ctx enterBattlefieldContext, g *game.Game, perm
 		}
 	}
 	return replacements
+}
+
+// optionalEntryReplacementDeclined resolves an optional self enters-the-
+// battlefield replacement that lets the controller pay an alternative cost to
+// keep the permanent on the battlefield, or sends it to another zone if the
+// cost is not paid (Mox Diamond). It returns true when the permanent must not
+// enter because the controller declined or could not pay; the card has then
+// been moved from fromZone to the replacement zone.
+func optionalEntryReplacementDeclined(ctx enterBattlefieldContext, g *game.Game, card *game.CardInstance, permanent *game.Permanent, def *game.CardDef, fromZone zone.Type) bool {
+	if def == nil || card == nil || permanent.FaceDown {
+		return false
+	}
+	for i := range def.ReplacementAbilities {
+		ability := &def.ReplacementAbilities[i]
+		if !ability.UnlessPaid.Exists || ability.Replacement.ReplaceToZone == zone.None {
+			continue
+		}
+		if enterBattlefieldPaymentPaid(ctx, g, permanent.Controller, permanent, ability.UnlessPaid.Val) {
+			return false
+		}
+		moveCardBetweenZones(g, card.Owner, card.ID, fromZone, ability.Replacement.ReplaceToZone)
+		return true
+	}
+	return false
 }
 
 func enterBattlefieldPaymentPaid(ctx enterBattlefieldContext, g *game.Game, playerID game.PlayerID, source *game.Permanent, res game.ResolutionPayment) bool {
@@ -509,6 +631,12 @@ func matchingStaticSelfZoneReplacementEffects(g *game.Game, event game.Event, ap
 		if replacement.ReplaceToZone == zone.None {
 			continue
 		}
+		// Optional entry-to-zone replacements are handled by the entry-payment
+		// path (optionalEntryReplacementDeclined); they must not redirect a
+		// generic zone change without prompting for their cost.
+		if ability.UnlessPaid.Exists {
+			continue
+		}
 		replacement.ID = event.CardID
 		replacement.Controller = event.Controller
 		replacement.SourceCardID = event.CardID
@@ -524,13 +652,24 @@ func matchingStaticSelfZoneReplacementEffects(g *game.Game, event game.Event, ap
 	return matches
 }
 
-func matchingETBReplacementEffects(g *game.Game, event game.Event) []game.ReplacementEffect {
-	source, _ := permanentByObjectID(g, event.PermanentID)
+func matchingETBReplacementEffects(g *game.Game, permanent *game.Permanent, event game.Event) []game.ReplacementEffect {
+	source := permanent
+	if source == nil {
+		source, _ = permanentByObjectID(g, event.PermanentID)
+	}
 	var matches []game.ReplacementEffect
 	for i := range g.ReplacementEffects {
 		replacement := &g.ReplacementEffects[i]
 		if !replacement.EntersTapped && len(replacement.EntersWithCounters) == 0 {
 			continue
+		}
+		if replacement.EntersTappedOthers {
+			if replacement.SourceObjectID != 0 && replacement.SourceObjectID == event.PermanentID {
+				continue
+			}
+			if !entersTappedGroupTypeMatches(g, replacement, source) {
+				continue
+			}
 		}
 		if !replacementEffectMatchesEventWithSource(g, replacement, event, source) {
 			continue
@@ -538,6 +677,24 @@ func matchingETBReplacementEffects(g *game.Game, event game.Event) []game.Replac
 		matches = append(matches, *replacement)
 	}
 	return matches
+}
+
+// entersTappedGroupTypeMatches reports whether the entering permanent satisfies
+// the permanent-type filter of a group enters-tapped replacement. An empty
+// filter taps every entering permanent.
+func entersTappedGroupTypeMatches(g *game.Game, replacement *game.ReplacementEffect, permanent *game.Permanent) bool {
+	if len(replacement.EntersTappedTypes) == 0 {
+		return true
+	}
+	if permanent == nil {
+		return false
+	}
+	for _, cardType := range replacement.EntersTappedTypes {
+		if permanentHasType(g, permanent, cardType) {
+			return true
+		}
+	}
+	return false
 }
 
 func matchingTokenCreationReplacementEffects(g *game.Game, event game.Event, applied map[id.ID]bool) []game.ReplacementEffect {
@@ -582,13 +739,16 @@ func matchingCounterPlacementReplacementEffects(g *game.Game, event game.Event, 
 	var matches []game.ReplacementEffect
 	for i := range g.ReplacementEffects {
 		replacement := &g.ReplacementEffects[i]
-		if replacement.CounterMultiplier <= 1 {
+		if replacement.CounterMultiplier <= 1 && replacement.CounterAddend == 0 {
 			continue
 		}
 		if replacement.MatchCounterKind && replacement.CounterKindFilter != event.CounterKind {
 			continue
 		}
 		if len(replacement.CounterRecipientTypes) > 0 && !counterRecipientPermanentMatches(g, event.PermanentID, recipient, replacement.CounterRecipientTypes) {
+			continue
+		}
+		if replacement.CounterRecipientAnyPermanent && !counterRecipientPermanentMatches(g, event.PermanentID, recipient, nil) {
 			continue
 		}
 		matchEvent := counterPlacementMatchEvent(g, replacement, event, recipient)

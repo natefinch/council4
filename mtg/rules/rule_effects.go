@@ -191,6 +191,43 @@ func canGainLife(g *game.Game, playerID game.PlayerID) bool {
 	return true
 }
 
+// playerCanCastAsThoughFlash reports whether an active rule effect lets playerID
+// cast spells as though they had flash, i.e. at instant speed ("You may cast
+// spells this turn as though they had flash.", Borne Upon a Wind, Emergence
+// Zone; CR 702.8 / 601.3e).
+func playerCanCastAsThoughFlash(g *game.Game, playerID game.PlayerID) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectCastSpellsAsThoughFlash {
+			continue
+		}
+		if playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
+			return true
+		}
+	}
+	return false
+}
+
+// additionalLandPlaysFor returns the number of extra land plays granted to
+// playerID by active RuleEffectAdditionalLandPlays effects (Explore, Exploration,
+// Azusa, etc.), summed across all such effects. It is added to the
+// one-land-per-turn baseline when checking whether the player may play a land.
+func additionalLandPlaysFor(g *game.Game, playerID game.PlayerID) int {
+	total := 0
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectAdditionalLandPlays {
+			continue
+		}
+		if playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
+			total += effect.AdditionalLandPlays
+		}
+	}
+	return total
+}
+
 // playerHasNoMaximumHandSize reports whether an active rule effect removes the
 // maximum hand size of playerID, so that player skips discarding down to a
 // hand-size limit during their cleanup step (CR 402.2).
@@ -206,6 +243,66 @@ func playerHasNoMaximumHandSize(g *game.Game, playerID game.PlayerID) bool {
 		}
 	}
 	return false
+}
+
+// spellCastProhibited reports whether an active RuleEffectCantCastSpells effect
+// forbids playerID from casting spellDef ("Your opponents can't cast spells.",
+// Grand Abolisher's "During your turn, your opponents can't cast spells ...").
+// The prohibition honors its affected-player relation, optional controller-turn
+// scope, and optional spell-type filter.
+func spellCastProhibited(g *game.Game, playerID game.PlayerID, spellDef *game.CardDef) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectCantCastSpells ||
+			!playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) ||
+			!actionRestrictionTurnActive(g, effect) {
+			continue
+		}
+		if len(effect.SpellTypes) > 0 && !cardDefHasAnyType(spellDef, effect.SpellTypes) {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
+// abilityActivationProhibited reports whether an active
+// RuleEffectCantActivateAbilities effect forbids playerID from activating an
+// ability of permanent ("... activate abilities of artifacts, creatures, or
+// enchantments."). The prohibition honors its affected-player relation, optional
+// controller-turn scope, and the permanent-type filter.
+func abilityActivationProhibited(g *game.Game, playerID game.PlayerID, permanent *game.Permanent) bool {
+	card, ok := permanentCardDef(g, permanent)
+	if !ok {
+		return false
+	}
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectCantActivateAbilities ||
+			!playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) ||
+			!actionRestrictionTurnActive(g, effect) {
+			continue
+		}
+		if len(effect.PermanentTypes) > 0 && !cardDefHasAnyType(card, effect.PermanentTypes) {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
+// actionRestrictionTurnActive reports whether a turn-scoped action restriction
+// is in force right now: an effect scoped to the controller's turn applies only
+// while that controller is the active player.
+func actionRestrictionTurnActive(g *game.Game, effect *game.RuleEffect) bool {
+	return !effect.RestrictedDuringControllerTurn || g.Turn.ActivePlayer == effect.Controller
+}
+
+// cardDefHasAnyType reports whether def has at least one of the given card types.
+func cardDefHasAnyType(def *game.CardDef, cardTypes []types.Card) bool {
+	return slices.ContainsFunc(cardTypes, def.HasType)
 }
 
 func gainLife(g *game.Game, playerID game.PlayerID, amount int) int {
@@ -471,7 +568,7 @@ func staticCostModifiersForContext(g *game.Game, playerID game.PlayerID, card *g
 		if modifier.Kind != game.CostModifierSpell {
 			continue
 		}
-		if !spellCostModifierMatchesCard(modifier, card) {
+		if !spellCostModifierEffectMatchesCard(g, effect, card) {
 			continue
 		}
 		modifiers = append(modifiers, modifier)
@@ -483,7 +580,30 @@ func staticCostModifiersForContext(g *game.Game, playerID game.PlayerID, card *g
 // and color filters admit the given spell card. A nil card fails any active
 // filter. The colorless sentinel (MatchColor with an empty Color) matches spells
 // that have no colors; otherwise the spell must carry the named color.
+func spellCostModifierEffectMatchesCard(g *game.Game, effect *game.RuleEffect, card *game.CardDef) bool {
+	modifier := effect.CostModifier
+	if !spellCostModifierBaseMatchesCard(modifier, card) {
+		return false
+	}
+	if !modifier.ChosenSubtypeFromEntryChoice {
+		return true
+	}
+	source, ok := permanentByObjectID(g, effect.SourceObjectID)
+	if !ok || card == nil {
+		return false
+	}
+	choice, ok := source.EntryChoices[game.EntryTypeChoiceKey]
+	return ok &&
+		choice.Kind == game.ResolutionChoiceSubtype &&
+		types.KnownSubtypeForType(types.Creature, choice.Subtype) &&
+		card.HasSubtype(choice.Subtype)
+}
+
 func spellCostModifierMatchesCard(modifier game.CostModifier, card *game.CardDef) bool {
+	return !modifier.ChosenSubtypeFromEntryChoice && spellCostModifierBaseMatchesCard(modifier, card)
+}
+
+func spellCostModifierBaseMatchesCard(modifier game.CostModifier, card *game.CardDef) bool {
 	if modifier.MatchCardType && (card == nil || !card.HasType(modifier.CardType)) {
 		return false
 	}

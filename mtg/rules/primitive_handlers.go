@@ -101,11 +101,31 @@ func handleDestroy(r *effectResolver, prim game.Destroy) effectResolved {
 
 func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	if res.amount <= 0 {
+	if res.amount <= 0 && !prim.Amount.IsDynamic() {
 		res.amount = 1
 	}
-	player, ok := playerByID(r.game, r.obj.Controller)
+	recipientID := r.obj.Controller
+	if prim.Player.Exists {
+		resolved, ok := r.resolvePlayer(prim.Player.Val)
+		if !ok {
+			return res
+		}
+		recipientID = resolved
+	}
+	player, ok := playerByID(r.game, recipientID)
 	if !ok || player.Eliminated {
+		return res
+	}
+	if prim.EachControlledColor != nil {
+		snow := stackObjectSourceIsSnow(r.game, r.obj)
+		for _, c := range controlledPermanentColors(r.game, recipientID, prim.EachControlledColor) {
+			if snow {
+				player.ManaPool.AddSnow(c, res.amount)
+			} else {
+				player.ManaPool.Add(c, res.amount)
+			}
+			res.succeeded = true
+		}
 		return res
 	}
 	manaColor := prim.ManaColor
@@ -353,6 +373,39 @@ func handleLoseLife(r *effectResolver, prim game.LoseLife) effectResolved {
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
 		res.succeeded = loseLife(r.game, playerID, res.amount) > 0
+	}
+	return res
+}
+
+func handlePlayerLosesGame(r *effectResolver, prim game.PlayerLosesGame) effectResolved {
+	res := effectResolved{accepted: true}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	if player, ok := playerByID(r.game, playerID); ok && player.Eliminated {
+		return res
+	}
+	r.game.MarkedToLoseGame[playerID] = true
+	res.succeeded = true
+	return res
+}
+
+func handlePlayerWinsGame(r *effectResolver, prim game.PlayerWinsGame) effectResolved {
+	res := effectResolved{accepted: true}
+	winnerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	if player, ok := playerByID(r.game, winnerID); ok && player.Eliminated {
+		return res
+	}
+	for _, player := range r.game.Players {
+		if player.ID == winnerID || player.Eliminated {
+			continue
+		}
+		r.game.MarkedToLoseGame[player.ID] = true
+		res.succeeded = true
 	}
 	return res
 }
@@ -625,6 +678,22 @@ func handleRegenerate(r *effectResolver, prim game.Regenerate) effectResolved {
 	return res
 }
 
+func handleAttach(r *effectResolver, prim game.Attach) effectResolved {
+	res := effectResolved{accepted: true}
+	attachment, ok := r.resolveObject(prim.Attachment)
+	if !ok {
+		return res
+	}
+	target, ok := r.resolveObject(prim.Target)
+	if !ok {
+		return res
+	}
+	if attachPermanent(r.game, attachment, target) {
+		res.succeeded = true
+	}
+	return res
+}
+
 func handleSkipStep(r *effectResolver, prim game.SkipStep) effectResolved {
 	res := effectResolved{accepted: true}
 	if playerID, ok := r.resolvePlayer(prim.Player); ok {
@@ -721,12 +790,19 @@ func applyTypedContinuousEffects(g *game.Game, obj *game.StackObject, permanent 
 	return applied
 }
 
+// snapshotContinuousX locks a one-shot continuous effect's dynamic power and
+// toughness deltas to fixed values at resolution. A mass pump such as
+// "Creatures you control get +X/+X until end of turn, where X is the number of
+// creatures you control." computes X once when the spell or ability resolves,
+// so every dynamic delta kind (the spell's X, a battlefield count, a greatest
+// characteristic, …) is evaluated here and frozen rather than re-evaluated each
+// time the continuous effect applies.
 func snapshotContinuousX(g *game.Game, obj *game.StackObject, effect *game.ContinuousEffect) {
-	if effect.PowerDeltaDynamic.Exists && effect.PowerDeltaDynamic.Val.Kind == game.DynamicAmountX {
+	if effect.PowerDeltaDynamic.Exists {
 		effect.PowerDelta += dynamicAmountValue(g, obj, obj.Controller, effect.PowerDeltaDynamic.Val)
 		effect.PowerDeltaDynamic.Exists = false
 	}
-	if effect.ToughnessDeltaDynamic.Exists && effect.ToughnessDeltaDynamic.Val.Kind == game.DynamicAmountX {
+	if effect.ToughnessDeltaDynamic.Exists {
 		effect.ToughnessDelta += dynamicAmountValue(g, obj, obj.Controller, effect.ToughnessDeltaDynamic.Val)
 		effect.ToughnessDeltaDynamic.Exists = false
 	}

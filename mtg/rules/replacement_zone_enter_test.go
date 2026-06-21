@@ -14,6 +14,60 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+func TestPermanentEntersWithXCounters(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	def := &game.CardDef{CardFace: game.CardFace{Name: "Walking Ballista",
+		Types:     []types.Card{types.Artifact, types.Creature},
+		Power:     opt.Val(game.PT{Value: 0}),
+		Toughness: opt.Val(game.PT{Value: 0}),
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.EntersWithCountersReplacement("Walking Ballista enters with X +1/+1 counters on it.", game.CounterPlacement{Kind: counter.PlusOnePlusOne, AmountFromX: true}),
+		}},
+	}
+
+	cardID := addCardToHand(g, game.Player1, def)
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		t.Fatal("card instance not found")
+	}
+	g.Players[game.Player1].Hand.Remove(cardID)
+
+	permanent, ok := createCardPermanentFaceWithOptions(NewEngine(nil), g, card, game.Player1, zone.Hand, game.FaceFront, nil, permanentCreationOptions{XValue: 3}, [game.NumPlayers]PlayerAgent{}, nil)
+	if !ok {
+		t.Fatal("permanent not created")
+	}
+	if got := permanent.Counters.Get(counter.PlusOnePlusOne); got != 3 {
+		t.Fatalf("+1/+1 counters = %d, want 3", got)
+	}
+}
+
+func TestPermanentEntersWithXCountersZeroWhenNotCast(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	def := &game.CardDef{CardFace: game.CardFace{Name: "Walking Ballista",
+		Types:     []types.Card{types.Artifact, types.Creature},
+		Power:     opt.Val(game.PT{Value: 0}),
+		Toughness: opt.Val(game.PT{Value: 0}),
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.EntersWithCountersReplacement("Walking Ballista enters with X +1/+1 counters on it.", game.CounterPlacement{Kind: counter.PlusOnePlusOne, AmountFromX: true}),
+		}},
+	}
+
+	cardID := addCardToHand(g, game.Player1, def)
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		t.Fatal("card instance not found")
+	}
+	g.Players[game.Player1].Hand.Remove(cardID)
+
+	permanent, ok := createCardPermanent(g, card, game.Player1, zone.Hand)
+	if !ok {
+		t.Fatal("permanent not created")
+	}
+	if got := permanent.Counters.Get(counter.PlusOnePlusOne); got != 0 {
+		t.Fatalf("+1/+1 counters = %d, want 0 when entering without a cast X", got)
+	}
+}
+
 func TestPermanentEntersTappedAndWithCounters(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	def := &game.CardDef{CardFace: game.CardFace{Name: "Tapped Walker",
@@ -652,5 +706,80 @@ func payLifeETBModalLand() *game.CardDef {
 				}),
 			},
 		}),
+	}
+}
+
+func optionalDiscardElseGraveyardArtifact() *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  "Mox Diamond",
+		Types: []types.Card{types.Artifact},
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.EntersUnlessPaidElseZoneReplacement(
+				"If this artifact would enter, you may discard a land card instead. If you do, put this artifact onto the battlefield. If you don't, put it into its owner's graveyard.",
+				game.ResolutionPayment{
+					Prompt: "Pay the alternative cost?",
+					AdditionalCosts: []cost.Additional{{
+						Kind:          cost.AdditionalDiscard,
+						Amount:        1,
+						Source:        zone.Hand,
+						MatchCardType: true,
+						CardType:      types.Land,
+					}},
+				},
+				zone.Graveyard,
+			),
+		}},
+	}
+}
+
+func TestOptionalEntryReplacementPaysCostAndEnters(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	log := &TurnLog{}
+
+	moxID := addCardToHand(g, game.Player1, optionalDiscardElseGraveyardArtifact())
+	forestID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Forest", Types: []types.Card{types.Land},
+	}})
+	mox, ok := g.GetCardInstance(moxID)
+	if !ok {
+		t.Fatal("mox card instance not found")
+	}
+	g.Players[game.Player1].Hand.Remove(moxID)
+
+	permanent, ok := createCardPermanentFaceWithChoices(engine, g, mox, game.Player1, zone.Hand, game.FaceFront, [game.NumPlayers]PlayerAgent{}, log)
+	if !ok || permanent == nil {
+		t.Fatalf("createCardPermanentFaceWithChoices() = %v, %v, want permanent entered", permanent, ok)
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(forestID) {
+		t.Fatal("forest was not discarded to pay the alternative cost")
+	}
+	if g.Players[game.Player1].Graveyard.Contains(moxID) {
+		t.Fatal("mox should be on the battlefield, not in the graveyard")
+	}
+}
+
+func TestOptionalEntryReplacementUnpayableGoesToGraveyard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	log := &TurnLog{}
+
+	moxID := addCardToHand(g, game.Player1, optionalDiscardElseGraveyardArtifact())
+	mox, ok := g.GetCardInstance(moxID)
+	if !ok {
+		t.Fatal("mox card instance not found")
+	}
+
+	permanent, ok := createCardPermanentFaceWithChoices(engine, g, mox, game.Player1, zone.Hand, game.FaceFront, [game.NumPlayers]PlayerAgent{}, log)
+	if ok || permanent != nil {
+		t.Fatalf("createCardPermanentFaceWithChoices() = %v, %v, want declined entry", permanent, ok)
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(moxID) {
+		t.Fatal("mox should be in the graveyard when the cost cannot be paid")
+	}
+	for _, p := range g.Battlefield {
+		if p.CardInstanceID == moxID {
+			t.Fatal("mox should not have entered the battlefield")
+		}
 	}
 }

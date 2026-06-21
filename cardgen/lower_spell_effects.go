@@ -69,6 +69,132 @@ func selfCardGraveyardReturnReferences(references []compiler.CompiledReference) 
 	return referencesBindTo(references, compiler.ReferenceBindingSource, 0)
 }
 
+// lowerChosenCardGraveyardReturn lowers the non-target "Return a <filter> card
+// from your graveyard to your hand" recursion wording, where the returned card
+// is chosen from the controller's own graveyard at resolution rather than
+// targeted (Takenuma's "creature or planeswalker card", Grapple with the Past,
+// ...). The targeted form lowers through lowerTargetedGraveyardReturn instead.
+// It produces one game.ReturnFromGraveyard instruction whose Selection carries
+// the same card filter the targeted and search paths reconstruct. It is
+// card-name-blind and fails closed on any shape it does not fully model — a
+// reference or target, a non-graveyard source, a non-hand destination, an
+// "enters tapped"/counter/control rider, a selector qualifier it cannot
+// express, or an amount other than exactly one card.
+func lowerChosenCardGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectReturn ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		effect.FromZone != zone.Graveyard ||
+		effect.ToZone != zone.Hand ||
+		effect.EntersTapped ||
+		effect.CounterKindKnown ||
+		effect.UnderYourControl {
+		return game.AbilityContent{}, false
+	}
+	selector := effect.Selector
+	if selector.Zone != zone.Graveyard ||
+		selector.Controller != compiler.ControllerYou ||
+		selector.All ||
+		selector.Another ||
+		selector.Other ||
+		selector.Attacking ||
+		selector.Blocking ||
+		selector.Tapped ||
+		selector.Untapped {
+		return game.AbilityContent{}, false
+	}
+	if !effect.Amount.Known ||
+		effect.Amount.RangeKnown ||
+		effect.Amount.VariableX ||
+		effect.Amount.DynamicKind != 0 ||
+		effect.Amount.Value != 1 {
+		return game.AbilityContent{}, false
+	}
+	selection, ok := cardSelectionForSelector(selector)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.ReturnFromGraveyard{
+			Player:    game.ControllerReference(),
+			Selection: selection,
+			Amount:    game.Fixed(1),
+		},
+	}}}.Ability(), true
+}
+
+// lowerMassGraveyardReturn lowers the non-target mass recursion wording "Return
+// all <filter> cards from your graveyard to the battlefield" (Brilliant
+// Restoration) or "... to your hand". The compiler models it as a single
+// non-exact EffectReturn whose graveyard selector has All set; every matching
+// card in the controller's graveyard moves at once with no choice. It is
+// card-name-blind and fails closed on any shape it does not fully model — a
+// target or reference, a non-graveyard source, a destination other than hand or
+// battlefield, a counter/under-your-control/amount rider, a selector qualifier
+// it cannot express, or a selector that is not the controller's "all" graveyard.
+func lowerMassGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectReturn ||
+		effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		effect.FromZone != zone.Graveyard ||
+		effect.CounterKindKnown ||
+		effect.UnderYourControl ||
+		effect.Amount.Known {
+		return game.AbilityContent{}, false
+	}
+	if effect.ToZone != zone.Hand && effect.ToZone != zone.Battlefield {
+		return game.AbilityContent{}, false
+	}
+	if effect.EntersTapped && effect.ToZone != zone.Battlefield {
+		return game.AbilityContent{}, false
+	}
+	selector := effect.Selector
+	if !selector.All ||
+		selector.Zone != zone.Graveyard ||
+		selector.Controller != compiler.ControllerYou ||
+		selector.Another ||
+		selector.Other ||
+		selector.Attacking ||
+		selector.Blocking ||
+		selector.Tapped ||
+		selector.Untapped {
+		return game.AbilityContent{}, false
+	}
+	selection, ok := cardSelectionForSelector(selector)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.MassReturnFromGraveyard{
+			Player:      game.ControllerReference(),
+			Selection:   selection,
+			Destination: effect.ToZone,
+			EntryTapped: effect.EntersTapped,
+		},
+	}}}.Ability(), true
+}
+
 func lowerTargetedGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Targets) != 1 ||
 		len(ctx.content.Effects) != 1 ||
@@ -756,6 +882,28 @@ func typedManifestDreadSequence(content compiler.AbilityContent) bool {
 		graveyard.ToZone == zone.Graveyard &&
 		reference.Binding == compiler.ReferenceBindingPriorInstructionResult &&
 		reference.PriorInstruction == 0
+}
+
+// lowerWinGameSpell lowers the exact controller effect "You win the game."
+// (Felidar Sovereign, Thassa's Oracle) to a single PlayerWinsGame instruction
+// scoped to the ability's controller. It mirrors lowerExactPrimitiveSpell but
+// carries no amount, since winning the game takes no count.
+func lowerWinGameSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if effect.Negated ||
+		!effect.Exact ||
+		effect.Context != parser.EffectContextController ||
+		ctx.content.Unconsumed() ||
+		len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported win-game effect",
+			"the executable source backend supports only the exact controller \"You win the game.\"",
+		)
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.PlayerWinsGame{Player: game.ControllerReference()},
+	}}}.Ability(), nil
 }
 
 func lowerExactPrimitiveSpell(

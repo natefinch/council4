@@ -394,7 +394,7 @@ func TestManaSpendRiderNonSpellPaymentDropsRider(t *testing.T) {
 
 	before := poolUnitsSnapshot(player)
 	player.ManaPool.Spend(mana.G, 1)
-	consumeManaSpendRidersForPayment(g, game.Player1, before, map[mana.Unit]int{{Color: mana.G}: 1})
+	consumeManaSpendRidersForPayment(g, game.Player1, nil, before, map[mana.Unit]int{{Color: mana.G}: 1})
 
 	if got := firedSpendRiderCount(g); got != 0 {
 		t.Fatalf("scry triggers on stack = %d, want 0 (non-spell payment)", got)
@@ -419,7 +419,7 @@ func TestManaSpendRiderNoFalseReattachAfterNonSpellSpend(t *testing.T) {
 	// The tagged green is spent on a non-spell payment (e.g. an ability).
 	beforeAbility := poolUnitsSnapshot(player)
 	player.ManaPool.Spend(mana.G, 1)
-	consumeManaSpendRidersForPayment(g, game.Player1, beforeAbility, map[mana.Unit]int{{Color: mana.G}: 1})
+	consumeManaSpendRidersForPayment(g, game.Player1, nil, beforeAbility, map[mana.Unit]int{{Color: mana.G}: 1})
 	if len(player.ManaRiders) != 0 {
 		t.Fatalf("riders after ability payment = %d, want 0", len(player.ManaRiders))
 	}
@@ -618,6 +618,156 @@ func TestChosenTypeManaCannotPayForNonqualifyingSpell(t *testing.T) {
 	}
 }
 
+func TestLegendaryManaSpendRiderMakesQualifyingSpellUncounterable(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	player := g.Players[game.Player1]
+	player.ManaPool.Add(mana.G, 1)
+	player.ManaRiders = append(player.ManaRiders, game.ManaRiderInstance{
+		Unit:       mana.Unit{Color: mana.G},
+		Controller: game.Player1,
+		Rider: game.ManaSpendRider{
+			Condition:       game.ManaSpendCastLegendarySpell,
+			Restriction:     game.ManaSpendRestrictedToCondition,
+			SpellRuleEffect: game.RuleEffectCantBeCountered,
+		},
+	})
+
+	spellDef := elfCreatureDef()
+	spellDef.Supertypes = []types.Super{types.Legendary}
+	spellDef.ManaCost = opt.Val(cost.Mana{cost.G})
+	spellDef.Power = opt.Val(game.PT{Value: 1})
+	spellDef.Toughness = opt.Val(game.PT{Value: 1})
+	spellID := addCardToHand(g, game.Player1, spellDef)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("applyAction(cast legendary creature) = false, want true")
+	}
+	stackObjects := g.Stack.Objects()
+	if len(stackObjects) != 1 || stackObjects[0].Kind != game.StackSpell {
+		t.Fatalf("stack = %#v, want one spell", stackObjects)
+	}
+	if stackSpellCanBeCountered(g, stackObjects[0]) {
+		t.Fatal("qualifying legendary spell paid with tagged mana can be countered")
+	}
+	if len(player.ManaRiders) != 0 {
+		t.Fatalf("riders remaining = %d, want 0", len(player.ManaRiders))
+	}
+}
+
+func TestLegendaryManaCannotPayForNonlegendarySpell(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	player := g.Players[game.Player1]
+	player.ManaPool.Add(mana.G, 1)
+	player.ManaRiders = append(player.ManaRiders, game.ManaRiderInstance{
+		Unit:       mana.Unit{Color: mana.G},
+		Controller: game.Player1,
+		Rider: game.ManaSpendRider{
+			Condition:       game.ManaSpendCastLegendarySpell,
+			Restriction:     game.ManaSpendRestrictedToCondition,
+			SpellRuleEffect: game.RuleEffectCantBeCountered,
+		},
+	})
+
+	goblin := creatureSpellDef("Goblin", types.Goblin)
+	goblin.ManaCost = opt.Val(cost.Mana{cost.G})
+	goblin.Power = opt.Val(game.PT{Value: 1})
+	goblin.Toughness = opt.Val(game.PT{Value: 1})
+	spellID := addCardToHand(g, game.Player1, goblin)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("cast nonlegendary creature with legendary-restricted mana succeeded")
+	}
+	if player.ManaPool.Amount(mana.G) != 1 || len(player.ManaRiders) != 1 {
+		t.Fatalf("restricted mana changed after rejected cast: pool=%d riders=%d", player.ManaPool.Amount(mana.G), len(player.ManaRiders))
+	}
+}
+
+// TestCreatureSpellHasteManaSpendRiderGrantsHaste covers the unrestricted Arena
+// of Glory / Generator Servant bonus rider: a creature spell paid for with the
+// tagged mana resolves with haste until end of turn, and the haste is cleared at
+// cleanup.
+func TestCreatureSpellHasteManaSpendRiderGrantsHaste(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	player := g.Players[game.Player1]
+	player.ManaPool.Add(mana.R, 1)
+	player.ManaRiders = append(player.ManaRiders, game.ManaRiderInstance{
+		Unit:       mana.Unit{Color: mana.R},
+		Controller: game.Player1,
+		Rider: game.ManaSpendRider{
+			Condition:          game.ManaSpendCastCreatureSpell,
+			SpellGainsKeywords: []game.Keyword{game.Haste},
+		},
+	})
+
+	goblin := creatureSpellDef("Goblin", types.Goblin)
+	goblin.ManaCost = opt.Val(cost.Mana{cost.R})
+	goblin.Power = opt.Val(game.PT{Value: 1})
+	goblin.Toughness = opt.Val(game.PT{Value: 1})
+	spellID := addCardToHand(g, game.Player1, goblin)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("applyAction(cast creature with haste-tagged mana) = false, want true")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	permanent, ok := findPermanentByCardID(g, spellID)
+	if !ok {
+		t.Fatal("creature spell did not resolve to the battlefield")
+	}
+	if !hasKeyword(g, permanent, game.Haste) {
+		t.Fatal("creature paid with haste-tagged mana did not gain haste")
+	}
+	if len(player.ManaRiders) != 0 {
+		t.Fatalf("riders remaining = %d, want 0", len(player.ManaRiders))
+	}
+	expireCleanupDurations(g)
+	if hasKeyword(g, permanent, game.Haste) {
+		t.Fatal("granted haste persisted past end of turn")
+	}
+}
+
+// TestCreatureSpellHasteManaSpendRiderUntaggedManaNoHaste verifies the haste
+// grant is gated on spending the tagged mana: a creature cast with ordinary mana
+// resolves without haste even when the controller also holds a haste rider unit.
+func TestCreatureSpellHasteManaSpendRiderUntaggedManaNoHaste(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	player := g.Players[game.Player1]
+	player.ManaPool.Add(mana.R, 1)
+
+	goblin := creatureSpellDef("Goblin", types.Goblin)
+	goblin.ManaCost = opt.Val(cost.Mana{cost.R})
+	goblin.Power = opt.Val(game.PT{Value: 1})
+	goblin.Toughness = opt.Val(game.PT{Value: 1})
+	spellID := addCardToHand(g, game.Player1, goblin)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("applyAction(cast creature with plain mana) = false, want true")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	permanent, ok := findPermanentByCardID(g, spellID)
+	if !ok {
+		t.Fatal("creature spell did not resolve to the battlefield")
+	}
+	if hasKeyword(g, permanent, game.Haste) {
+		t.Fatal("creature cast with untagged mana gained haste")
+	}
+}
+
 func TestAddManaCapturesChosenSubtypeAndSourceIdentity(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
@@ -711,6 +861,80 @@ func TestChosenTypeManaCannotPayNonspellCost(t *testing.T) {
 		Cost:     &genericCost,
 	}) {
 		t.Fatal("restricted chosen-type mana paid a nonspell cost")
+	}
+	if player.ManaPool.Amount(mana.G) != 1 || len(player.ManaRiders) != 1 {
+		t.Fatalf("restricted mana changed after rejected payment: pool=%d riders=%d", player.ManaPool.Amount(mana.G), len(player.ManaRiders))
+	}
+}
+
+// TestChosenTypeCastOrActivateManaPaysCreatureSourceAbility verifies the
+// cast-or-activate chosen-type restriction (Secluded Courtyard): its tagged mana
+// may pay to activate an ability of a creature source of the chosen type and is
+// consumed without firing.
+func TestChosenTypeCastOrActivateManaPaysCreatureSourceAbility(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	player := g.Players[game.Player1]
+	player.ManaPool.Add(mana.G, 1)
+	player.ManaRiders = append(player.ManaRiders, game.ManaRiderInstance{
+		Unit:          mana.Unit{Color: mana.G},
+		Controller:    game.Player1,
+		ChosenSubtype: types.Elf,
+		Rider: game.ManaSpendRider{
+			Condition:         game.ManaSpendCastOrActivateChosenCreatureType,
+			Restriction:       game.ManaSpendRestrictedToCondition,
+			ChosenSubtypeFrom: game.EntryTypeChoiceKey,
+		},
+	})
+
+	elfSource := addPermanentForSBA(g, game.Player1, elfCreatureDef())
+	manaCost := cost.Mana{cost.G}
+	if !paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
+		PlayerID: game.Player1,
+		Source:   elfSource,
+		ManaCost: opt.Val(manaCost),
+	}) {
+		t.Fatal("cast-or-activate mana did not pay an Elf source's ability cost")
+	}
+	if player.ManaPool.Amount(mana.G) != 0 || len(player.ManaRiders) != 0 {
+		t.Fatalf("rider not consumed by qualifying activation: pool=%d riders=%d", player.ManaPool.Amount(mana.G), len(player.ManaRiders))
+	}
+	if firedSpendRiderCount(g) != 0 {
+		t.Fatalf("effectless rider fired an ability: count=%d", firedSpendRiderCount(g))
+	}
+}
+
+// TestChosenTypeCastOrActivateManaRejectsNonCreatureSourceAbility verifies the
+// cast-or-activate chosen-type restriction does not admit its tagged mana to the
+// activated-ability cost of a source that is not a creature of the chosen type.
+func TestChosenTypeCastOrActivateManaRejectsNonCreatureSourceAbility(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	player := g.Players[game.Player1]
+	player.ManaPool.Add(mana.G, 1)
+	player.ManaRiders = append(player.ManaRiders, game.ManaRiderInstance{
+		Unit:          mana.Unit{Color: mana.G},
+		Controller:    game.Player1,
+		ChosenSubtype: types.Elf,
+		Rider: game.ManaSpendRider{
+			Condition:         game.ManaSpendCastOrActivateChosenCreatureType,
+			Restriction:       game.ManaSpendRestrictedToCondition,
+			ChosenSubtypeFrom: game.EntryTypeChoiceKey,
+		},
+	})
+
+	goblinSource := addPermanentForSBA(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Goblin Source",
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Goblin},
+	}})
+	manaCost := cost.Mana{cost.G}
+	if paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
+		PlayerID: game.Player1,
+		Source:   goblinSource,
+		ManaCost: opt.Val(manaCost),
+	}) {
+		t.Fatal("cast-or-activate mana paid a non-matching source's ability cost")
 	}
 	if player.ManaPool.Amount(mana.G) != 1 || len(player.ManaRiders) != 1 {
 		t.Fatalf("restricted mana changed after rejected payment: pool=%d riders=%d", player.ManaPool.Amount(mana.G), len(player.ManaRiders))

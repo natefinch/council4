@@ -73,6 +73,9 @@ func lowerOrderedSequenceSpecialCase(
 	if content, diagnostic, handled := lowerLinkedCounterTokenSequence(ctx); handled {
 		return content, diagnostic, true
 	}
+	if content, ok := lowerCounterThenExileInstead(ctx); ok {
+		return content, nil, true
+	}
 	for _, target := range ctx.content.Targets {
 		if _, ok := counterAbilityTargetSpec(target); ok {
 			return game.AbilityContent{},
@@ -124,6 +127,16 @@ func lowerOrderedEffectSequence(
 	consumedConditions := 0
 	if optionalFlow.enabled {
 		consumedConditions++
+	}
+	// "If <condition>, <create> instead." replaces the immediately preceding
+	// effect when the condition holds (an either/or, not an additive effect).
+	// The conditional clause is already gated on the condition by
+	// effectConditions; gate the replaced (preceding) effect on the negation so
+	// exactly one of the two effects runs. insteadGates maps the replaced
+	// effect's index to that negated gate.
+	insteadGates, ok := sequenceInsteadGates(ctx.content.Effects, effectConditions)
+	if !ok {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — instead replacement not gatable")
 	}
 	var targets []game.TargetSpec
 	var sequence []game.Instruction
@@ -236,6 +249,11 @@ func lowerOrderedEffectSequence(
 				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — per-effect condition gate not applicable")
 			}
 			consumedConditions++
+		}
+		if insteadGate, gated := insteadGates[i]; gated {
+			if !applyEffectConditionGate(mode.Sequence, &insteadGate) {
+				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — instead negated gate not applicable")
+			}
 		}
 		if optionalFlow.enabled || optionalFlow.bareIndex >= 0 {
 			if category, ok := applyOptionalFlowEnvelope(optionalFlow, i, mode.Sequence); !ok {
@@ -434,6 +452,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityC
 	if content, ok := lowerLifeLostThisWayDrain(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerDiscardDrawGreatestThisWaySequence(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerTapDownSequence(ctx); ok {
 		return content, true
 	}
@@ -449,7 +470,151 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityC
 	if content, ok := lowerDrawHandDiscardSequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerDynamicCountDrawThenGroupKeywordSequence(ctx); ok {
+		return content, true
+	}
+	if content, ok := lowerGroupCounterThenGroupKeywordSequence(ctx); ok {
+		return content, true
+	}
 	return game.AbilityContent{}, false
+}
+
+// groupBackReferenceThose reports whether the effect's subject is the plural
+// demonstrative "those" — the back-reference wording of "Those creatures gain
+// <keyword> until end of turn." after a preceding "for each <group>" count. The
+// pronoun denotes the just-counted group; it is reconstructed from that count's
+// selection rather than bound to an antecedent target.
+func groupBackReferenceThose(refs []compiler.CompiledReference) bool {
+	return len(refs) == 1 &&
+		refs[0].Kind == compiler.ReferencePronoun &&
+		refs[0].Pronoun == compiler.ReferencePronounThose
+}
+
+// lowerDynamicCountDrawThenGroupKeywordSequence lowers the ordered pair
+// "Draw a card for each <group>. Those creatures gain <keyword> until end of
+// turn." (Inspiring Call). The first clause counts a battlefield group; the
+// second grants a keyword to that same group. Because nothing between the two
+// clauses changes the board, the runtime's group continuous effect snapshots its
+// members at resolution, so re-evaluating the count's selection yields exactly
+// "those creatures". It reuses the count's resolved group for the grant and
+// fails closed for any other shape, non-battlefield count, or unsupported
+// keyword.
+func lowerDynamicCountDrawThenGroupKeywordSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		ctx.optional {
+		return game.AbilityContent{}, false
+	}
+	drawEffect := ctx.content.Effects[0]
+	keywordEffect := ctx.content.Effects[1]
+	if drawEffect.Kind != compiler.EffectDraw ||
+		keywordEffect.Kind != compiler.EffectGain ||
+		!drawEffect.Exact ||
+		!keywordEffect.Exact ||
+		drawEffect.Negated ||
+		keywordEffect.Negated ||
+		drawEffect.Optional ||
+		keywordEffect.Optional ||
+		drawEffect.Context != parser.EffectContextController ||
+		drawEffect.Amount.DynamicKind != compiler.DynamicAmountCount ||
+		keywordEffect.Duration != compiler.DurationUntilEndOfTurn ||
+		keywordEffect.StaticSubject != compiler.StaticSubjectNone ||
+		!groupBackReferenceThose(keywordEffect.SubjectReferences) {
+		return game.AbilityContent{}, false
+	}
+	dynamic, ok := lowerDynamicAmount(drawEffect.Amount, game.SourcePermanentReference())
+	if !ok || dynamic.Kind != game.DynamicAmountCountSelector || !dynamic.Group.Valid() {
+		return game.AbilityContent{}, false
+	}
+	keywords, abilities, ok := partitionTemporaryKeywords(keywordsWithinSpan(ctx.content.Keywords, keywordEffect.ClauseSpan))
+	if !ok || (len(keywords) == 0 && len(abilities) == 0) {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{Primitive: game.Draw{
+				Amount: game.Dynamic(dynamic),
+				Player: game.ControllerReference(),
+			}},
+			{Primitive: game.ApplyContinuous{
+				ContinuousEffects: []game.ContinuousEffect{{
+					Layer:        game.LayerAbility,
+					Group:        dynamic.Group,
+					AddKeywords:  keywords,
+					AddAbilities: abilities,
+				}},
+				Duration: game.DurationUntilEndOfTurn,
+			}},
+		},
+	}.Ability(), true
+}
+
+// lowerGroupCounterThenGroupKeywordSequence lowers the ordered pair "Put a
+// +1/+1 counter on each creature you control. Those creatures gain <keyword>
+// until end of turn." (Felidar Retreat's second mode). The first clause places
+// a fixed counter on a battlefield group; the second grants a keyword to that
+// same group. As with the draw-count variant, nothing between the two clauses
+// changes the board, so the runtime's group continuous effect snapshots the same
+// members the counter placement affected and "those creatures" resolves to that
+// group. It reuses the counter clause's resolved group for the grant and fails
+// closed for any other shape, non-group recipient, or unsupported keyword.
+func lowerGroupCounterThenGroupKeywordSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		ctx.optional {
+		return game.AbilityContent{}, false
+	}
+	counterEffect := ctx.content.Effects[0]
+	keywordEffect := ctx.content.Effects[1]
+	if counterEffect.Kind != compiler.EffectPut ||
+		keywordEffect.Kind != compiler.EffectGain ||
+		!counterEffect.Exact ||
+		!keywordEffect.Exact ||
+		counterEffect.Negated ||
+		keywordEffect.Negated ||
+		counterEffect.Optional ||
+		keywordEffect.Optional ||
+		counterEffect.Context != parser.EffectContextController ||
+		!counterEffect.CounterKindKnown ||
+		!compiler.CounterKindPlacementSupported(counterEffect.CounterKind) ||
+		counterEffect.CounterKind.PlayerOnly() ||
+		!counterEffect.Amount.Known ||
+		counterEffect.Amount.Value < 1 ||
+		keywordEffect.Duration != compiler.DurationUntilEndOfTurn ||
+		keywordEffect.StaticSubject != compiler.StaticSubjectNone ||
+		!groupBackReferenceThose(keywordEffect.SubjectReferences) {
+		return game.AbilityContent{}, false
+	}
+	group, ok := damageGroupRecipient(counterEffect.Selector)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	keywords, abilities, ok := partitionTemporaryKeywords(keywordsWithinSpan(ctx.content.Keywords, keywordEffect.ClauseSpan))
+	if !ok || (len(keywords) == 0 && len(abilities) == 0) {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{Primitive: game.AddCounter{
+				Amount:      game.Fixed(counterEffect.Amount.Value),
+				Group:       group,
+				CounterKind: counterEffect.CounterKind,
+			}},
+			{Primitive: game.ApplyContinuous{
+				ContinuousEffects: []game.ContinuousEffect{{
+					Layer:        game.LayerAbility,
+					Group:        group,
+					AddKeywords:  keywords,
+					AddAbilities: abilities,
+				}},
+				Duration: game.DurationUntilEndOfTurn,
+			}},
+		},
+	}.Ability(), true
 }
 
 func lowerPonderSequence(ctx contentCtx) (game.AbilityContent, bool) {
@@ -483,6 +648,30 @@ func lowerPonderSequence(ctx contentCtx) (game.AbilityContent, bool) {
 		})
 	}
 	return game.Mode{Sequence: sequence}.Ability(), true
+}
+
+// lowerStandaloneReorderLibraryTop lowers a lone "Look at the top N cards of
+// your library, then put them back in any order." effect — Index, and Sensei's
+// Divining Top's first activated ability — into a single ReorderLibraryTop
+// instruction. The effect already captures the full look-and-reorder semantics;
+// the internal "them" pronoun that refers to the looked-at cards is consumed
+// here rather than bound to an external antecedent. It fails closed on any other
+// shape (targets, conditions, modes, keywords, or a non-reorder effect).
+func lowerStandaloneReorderLibraryTop(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		!matchPonderReorder(&ctx.content.Effects[0], ctx.content.References) {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.ReorderLibraryTop{
+			Player: game.ControllerReference(),
+			Amount: game.Fixed(ctx.content.Effects[0].Amount.Value),
+		},
+	}}}.Ability(), true
 }
 
 func matchPonderReorder(effect *compiler.CompiledEffect, references []compiler.CompiledReference) bool {
@@ -876,8 +1065,9 @@ func lowerDrawHandDiscardSequence(ctx contentCtx) (game.AbilityContent, bool) {
 				Amount: game.Fixed(draw.Amount.Value),
 			}},
 			{Primitive: game.Discard{
-				Player: game.ControllerReference(),
-				Amount: game.Fixed(discard.Amount.Value),
+				Player:   game.ControllerReference(),
+				Amount:   game.Fixed(discard.Amount.Value),
+				AtRandom: discard.HandDiscard.AtRandom,
 			}},
 		},
 	}.Ability(), true
@@ -940,6 +1130,61 @@ func matchSequenceEffectConditions(
 		}
 	}
 	return result, true
+}
+
+// sequenceInsteadGates builds, for each effect carrying an "instead"
+// replacement, a negated gate on the immediately preceding effect. The "instead"
+// effect replaces the prior effect when its own condition holds, so gating the
+// prior effect on the negation makes exactly one of the two run. It fails closed
+// (ok=false) when an "instead" effect has no preceding effect, is not gated by a
+// condition, its condition cannot be negated, or two replacements target the
+// same preceding effect.
+func sequenceInsteadGates(
+	effects []compiler.CompiledEffect,
+	effectConditions map[int]game.EffectCondition,
+) (map[int]game.EffectCondition, bool) {
+	var gates map[int]game.EffectCondition
+	for j := range effects {
+		if effects[j].Replacement.Kind != parser.EffectReplacementInstead {
+			continue
+		}
+		if j == 0 {
+			return nil, false
+		}
+		condition, gated := effectConditions[j]
+		if !gated {
+			return nil, false
+		}
+		negated, ok := negatedEffectCondition(&condition)
+		if !ok {
+			return nil, false
+		}
+		if _, exists := gates[j-1]; exists {
+			return nil, false
+		}
+		if gates == nil {
+			gates = make(map[int]game.EffectCondition)
+		}
+		gates[j-1] = negated
+	}
+	return gates, true
+}
+
+// negatedEffectCondition returns the logical negation of an effect-gate
+// condition by inverting its wrapped shared Condition. It fails closed for
+// permanent-type effect gates (which carry no wrapped Condition) because those
+// are not part of the supported "instead" replacement forms.
+func negatedEffectCondition(condition *game.EffectCondition) (game.EffectCondition, bool) {
+	if !condition.Condition.Exists {
+		return game.EffectCondition{}, false
+	}
+	inner := condition.Condition.Val
+	inner.Negate = !inner.Negate
+	return game.EffectCondition{
+		Text:      condition.Text,
+		Object:    condition.Object,
+		Condition: opt.Val(inner),
+	}, true
 }
 
 func localizeTargetReferences(
@@ -1892,10 +2137,63 @@ func lowerLifeLostThisWayDrain(ctx contentCtx) (game.AbilityContent, bool) {
 	}.Ability(), true
 }
 
+// lowerDiscardDrawGreatestThisWaySequence handles the Windfall pattern
+// "Each player discards their hand, then draws cards equal to the greatest
+// number of cards a player discarded this way." The discard clause is an exact
+// each-player "discard their hand" and the draw clause inherits the each-player
+// subject ("then draws ...") with the "greatest number of cards a player
+// discarded this way" dynamic amount. It emits a group Discard that publishes
+// the greatest per-player discard count under "discarded-this-way" followed by a
+// group Draw whose amount reads that published result, so every player draws
+// that maximum. It fails closed unless every guard holds.
+func lowerDiscardDrawGreatestThisWaySequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 {
+		return game.AbilityContent{}, false
+	}
+	discard := &ctx.content.Effects[0]
+	draw := &ctx.content.Effects[1]
+	if discard.Kind != compiler.EffectDiscard ||
+		draw.Kind != compiler.EffectDraw ||
+		!discard.DiscardEntireHand ||
+		discard.Context != parser.EffectContextEachPlayer ||
+		draw.Context != parser.EffectContextPriorSubject && draw.Context != parser.EffectContextEachPlayer ||
+		discard.Negated || draw.Negated || discard.Optional || draw.Optional || ctx.optional ||
+		!discard.Exact || !draw.Exact ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	if draw.Amount.DynamicKind != compiler.DynamicAmountGreatestDiscardedThisWay ||
+		draw.Amount.DynamicForm != compiler.DynamicAmountEqual {
+		return game.AbilityContent{}, false
+	}
+	const resultKey = game.ResultKey("discarded-this-way")
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{
+				Primitive:     game.Discard{EntireHand: true, PlayerGroup: game.AllPlayersReference()},
+				PublishResult: resultKey,
+			},
+			{
+				Primitive: game.Draw{
+					PlayerGroup: game.AllPlayersReference(),
+					Amount: game.Dynamic(game.DynamicAmount{
+						Kind:      game.DynamicAmountPreviousEffectResult,
+						ResultKey: resultKey,
+					}),
+				},
+			},
+		},
+	}.Ability(), true
+}
+
 // drainLoseAmount lowers the life-loss amount of an "Each opponent loses
 // <amount> life" drain clause to a runtime quantity. It accepts a fixed value, a
-// spell's X ("loses X life"), or an "equal to ..." count that lowerDynamicAmount
-// recognizes; it fails closed for every other amount form.
+// spell's X ("loses X life"), or a dynamic "equal to ..." / "where X is ..."
+// count that lowerDynamicAmount recognizes (for example "where X is your
+// devotion to black"); it fails closed for every other amount form.
 func drainLoseAmount(effect *compiler.CompiledEffect) (game.Quantity, bool) {
 	amount := effect.Amount
 	switch {
@@ -1905,7 +2203,8 @@ func drainLoseAmount(effect *compiler.CompiledEffect) (game.Quantity, bool) {
 	case amount.DynamicKind == compiler.DynamicAmountNone && amount.VariableX && !amount.Known:
 		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), true
 	case amount.DynamicKind != compiler.DynamicAmountNone &&
-		amount.DynamicForm == compiler.DynamicAmountEqual:
+		(amount.DynamicForm == compiler.DynamicAmountEqual ||
+			amount.DynamicForm == compiler.DynamicAmountWhereX):
 		dynamic, ok := lowerDynamicAmount(amount, game.SourcePermanentReference())
 		if !ok {
 			return game.Quantity{}, false

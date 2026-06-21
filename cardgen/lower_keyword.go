@@ -105,7 +105,7 @@ func protectionKeywordRuntimeSupported(prot game.ProtectionKeyword) bool {
 }
 
 // lowerKeywordDispatch tries Enchant, Protection, Cumulative upkeep, Equip,
-// Cycling, Ninjutsu, Mutate, and Flashback — the
+// Cycling, Landcycling, Ninjutsu, Mutate, and Flashback — the
 // single-keyword special cases that each produce a full abilityLowering.
 // Returns (lowering, true, nil) on success, (lowering, true, diag) on a
 // recognized-but-rejected attempt, and ({}, false, nil) when no attempt matches.
@@ -142,6 +142,12 @@ func lowerKeywordDispatch(
 			return abilityLowering{}, true, diag
 		}
 		return keywordActivatedLowering(&cyclingAbility, ability, syntax), true, nil
+	}
+	if landcyclingAbility, ok, diag := lowerLandcyclingAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordActivatedLowering(&landcyclingAbility, ability, syntax), true, nil
 	}
 	if ninjutsuAbility, ok, diag := lowerNinjutsuAbility(ability, syntax); ok {
 		if diag != nil {
@@ -261,39 +267,67 @@ func staticAbilityFromProtectionKeyword(prot game.ProtectionKeyword, text string
 	}
 }
 
-func enchantTargetSpec(targetKind parser.ObjectNoun) (game.TargetSpec, bool) {
-	target := game.TargetSpec{
+func enchantTargetSpec(target compiler.CompiledEnchantTarget) (game.TargetSpec, bool) {
+	if !target.Known {
+		return game.TargetSpec{}, false
+	}
+	spec := game.TargetSpec{
 		MinTargets: 1,
 		MaxTargets: 1,
 	}
-	if targetKind == parser.ObjectNounPlayer {
-		target.Constraint = "player"
-		target.Allow = game.TargetAllowPlayer
-		return target, true
+	switch {
+	case target.Player:
+		spec.Allow = game.TargetAllowPlayer
+		spec.Constraint = "player"
+		return spec, true
+	case target.Opponent:
+		spec.Allow = game.TargetAllowPlayer
+		spec.Predicate.Player = game.PlayerOpponent
+		spec.Constraint = "opponent"
+		return spec, true
+	case target.Permanent:
+		spec.Allow = game.TargetAllowPermanent
+		spec.Constraint = "permanent"
+		return spec, true
 	}
-	target.Allow = game.TargetAllowPermanent
-	switch targetKind {
-	case parser.ObjectNounArtifact:
-		target.Constraint = "artifact"
-		target.Predicate.PermanentTypes = []types.Card{types.Artifact}
-	case parser.ObjectNounCreature:
-		target.Constraint = "creature"
-		target.Predicate.PermanentTypes = []types.Card{types.Creature}
-	case parser.ObjectNounEnchantment:
-		target.Constraint = "enchantment"
-		target.Predicate.PermanentTypes = []types.Card{types.Enchantment}
-	case parser.ObjectNounLand:
-		target.Constraint = "land"
-		target.Predicate.PermanentTypes = []types.Card{types.Land}
-	case parser.ObjectNounPermanent:
-		target.Constraint = "permanent"
-	case parser.ObjectNounPlaneswalker:
-		target.Constraint = "planeswalker"
-		target.Predicate.PermanentTypes = []types.Card{types.Planeswalker}
+	spec.Allow = game.TargetAllowPermanent
+	switch {
+	case len(target.Subtypes) == 0:
+		spec.Constraint = enchantConstraintText(target)
+		spec.Predicate.PermanentTypes = slices.Clone(target.CardTypes)
+	case len(target.CardTypes) == 0:
+		spec.Constraint = enchantConstraintText(target)
+		spec.Predicate.Subtypes = slices.Clone(target.Subtypes)
 	default:
-		return game.TargetSpec{}, false
+		// A union mixing card types and subtypes ("creature or Vehicle") is a
+		// disjunction across two characteristic families, which a single
+		// Selection cannot express conjunctively; AnyOf restores the "match any
+		// alternative" meaning. The Constraint is intentionally left empty: the
+		// runtime permanent-type matcher re-parses a non-empty Constraint and
+		// cannot recognize a subtype as a card type, so an empty Constraint keeps
+		// the Selection authoritative for attachment legality.
+		spec.Selection = opt.Val(game.Selection{
+			AnyOf: []game.Selection{
+				{RequiredTypesAny: slices.Clone(target.CardTypes)},
+				{SubtypesAny: slices.Clone(target.Subtypes)},
+			},
+		})
 	}
-	return target, true
+	return spec, true
+}
+
+// enchantConstraintText renders the display Constraint for a permanent Enchant
+// target from its typed card types and subtypes. The structured Allow,
+// Predicate, and Selection fields drive legality; Constraint is display only.
+func enchantConstraintText(target compiler.CompiledEnchantTarget) string {
+	words := make([]string, 0, len(target.CardTypes)+len(target.Subtypes))
+	for _, cardType := range target.CardTypes {
+		words = append(words, strings.ToLower(string(cardType)))
+	}
+	for _, subtype := range target.Subtypes {
+		words = append(words, strings.ToLower(string(subtype)))
+	}
+	return strings.Join(words, " or ")
 }
 
 func lowerEquipAbility(
@@ -332,6 +366,13 @@ func lowerEquipAbility(
 			"unsupported Equip ability",
 			"the executable source backend supports only exact Equip with a mana cost",
 		)
+	}
+	if keyword.EquipRestriction != nil {
+		return game.EquipRestrictedActivatedAbility(
+			slices.Clone(keyword.ManaCost),
+			slices.Clone(keyword.EquipRestriction.Supertypes),
+			slices.Clone(keyword.EquipRestriction.Subtypes),
+		), true, nil
 	}
 	return game.EquipActivatedAbility(slices.Clone(keyword.ManaCost)), true, nil
 }
@@ -378,6 +419,52 @@ func lowerCyclingAbility(
 		)
 	}
 	return game.CyclingActivatedAbility(slices.Clone(keyword.ManaCost)), true, nil
+}
+
+// landcyclingKeywordKinds maps each typed landcycling keyword to the library
+// search filter its reminder text describes. Plain Landcycling finds any land;
+// Basic landcycling finds a basic land; each typed variant finds a basic land
+// of its own land type.
+var landcyclingKeywordKinds = map[parser.KeywordKind]game.SearchSpec{
+	parser.KeywordLandcycling:      {CardType: opt.Val(types.Land)},
+	parser.KeywordBasicLandcycling: {CardType: opt.Val(types.Land), Supertype: opt.Val(types.Basic)},
+	parser.KeywordPlainscycling:    {SubtypesAny: []types.Sub{types.Plains}},
+	parser.KeywordIslandcycling:    {SubtypesAny: []types.Sub{types.Island}},
+	parser.KeywordSwampcycling:     {SubtypesAny: []types.Sub{types.Swamp}},
+	parser.KeywordMountaincycling:  {SubtypesAny: []types.Sub{types.Mountain}},
+	parser.KeywordForestcycling:    {SubtypesAny: []types.Sub{types.Forest}},
+}
+
+func lowerLandcyclingAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.ActivatedAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 {
+		return game.ActivatedAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	spec, ok := landcyclingKeywordKinds[keyword.Kind]
+	if !ok {
+		return game.ActivatedAbility{}, false, nil
+	}
+	manaCost, fixed := fixedKeywordManaCost(keyword)
+	if !fixed ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported landcycling ability",
+			"the executable source backend supports only exact typed landcycling with a mana cost",
+		)
+	}
+	return game.LandcyclingActivatedAbility(manaCost, spec), true, nil
 }
 
 func lowerNinjutsuAbility(
@@ -491,23 +578,56 @@ func lowerFlashbackAbility(
 	}, true, nil
 }
 
+func simpleStaticKeyword(keyword compiler.CompiledKeyword) (game.Keyword, bool) {
+	if keyword.ParameterKind != parser.KeywordParameterNone {
+		return 0, false
+	}
+	body, ok := keywordStaticBodies[keyword.Kind]
+	if !ok || len(body.Body.KeywordAbilities) != 1 {
+		return 0, false
+	}
+	simple, ok := body.Body.KeywordAbilities[0].(game.SimpleKeyword)
+	if !ok || !mixedStaticKeywordImplemented(simple.Kind) {
+		return 0, false
+	}
+	return simple.Kind, true
+}
+
 func mixedStaticKeywords(keywords []compiler.CompiledKeyword) ([]game.Keyword, bool) {
 	result := make([]game.Keyword, 0, len(keywords))
 	for _, keyword := range keywords {
-		if keyword.ParameterKind != parser.KeywordParameterNone {
+		simple, ok := simpleStaticKeyword(keyword)
+		if !ok {
 			return nil, false
 		}
-		body, ok := keywordStaticBodies[keyword.Kind]
-		if !ok || len(body.Body.KeywordAbilities) != 1 {
-			return nil, false
-		}
-		simple, ok := body.Body.KeywordAbilities[0].(game.SimpleKeyword)
-		if !ok || !mixedStaticKeywordImplemented(simple.Kind) {
-			return nil, false
-		}
-		result = append(result, simple.Kind)
+		result = append(result, simple)
 	}
 	return result, true
+}
+
+// partitionTemporaryKeywords splits keyword grants into simple keyword enum
+// values and granted ability bodies. Protection keywords lower to static ability
+// bodies so the grant carries their full characteristics; every other keyword
+// must reduce to a simple keyword. It fails closed for anything else.
+func partitionTemporaryKeywords(keywords []compiler.CompiledKeyword) ([]game.Keyword, []game.Ability, bool) {
+	simpleKeywords := make([]game.Keyword, 0, len(keywords))
+	var abilities []game.Ability
+	for _, keyword := range keywords {
+		if keyword.Kind == parser.KeywordProtection {
+			if !keyword.ProtectionKnown {
+				return nil, nil, false
+			}
+			ability := staticAbilityFromProtectionKeyword(keyword.Protection, keyword.Text)
+			abilities = append(abilities, &ability)
+			continue
+		}
+		simple, ok := simpleStaticKeyword(keyword)
+		if !ok {
+			return nil, nil, false
+		}
+		simpleKeywords = append(simpleKeywords, simple)
+	}
+	return simpleKeywords, abilities, true
 }
 
 // abilityKeywordsExcludingSelectorPredicates returns the ability's keyword grants
@@ -581,7 +701,8 @@ func mixedStaticKeywordImplemented(keyword game.Keyword) bool {
 		game.Wither,
 		game.Horsemanship,
 		game.Infect,
-		game.Exalted:
+		game.Exalted,
+		game.Riot:
 		return true
 	default:
 		return false
@@ -617,6 +738,8 @@ func resolvingStaticSubjectGroup(effect *compiler.CompiledEffect) (game.GroupRef
 			CombatState:   game.CombatStateBlocking,
 		}), true
 	case compiler.StaticSubjectControlledPermanents:
+	case compiler.StaticSubjectOpponentControlledPermanents:
+		selection.Controller = game.ControllerOpponent
 	case compiler.StaticSubjectControlledCreatures:
 		selection.RequiredTypes = []types.Card{types.Creature}
 	case compiler.StaticSubjectOtherControlledCreatures:
@@ -635,12 +758,22 @@ func resolvingStaticSubjectGroup(effect *compiler.CompiledEffect) (game.GroupRef
 		if !effect.StaticSubjectSubKnown() {
 			return game.GroupReference{}, false
 		}
-		selection.SubtypesAny = []types.Sub{effect.StaticSubjectSub()}
+		if effect.StaticSubjectSubExcluded() {
+			selection.RequiredTypes = []types.Card{types.Creature}
+			selection.ExcludedSubtype = effect.StaticSubjectSub()
+		} else {
+			selection.SubtypesAny = []types.Sub{effect.StaticSubjectSub()}
+		}
 	case compiler.StaticSubjectOtherControlledCreatureSubtype:
 		if !effect.StaticSubjectSubKnown() {
 			return game.GroupReference{}, false
 		}
-		selection.SubtypesAny = []types.Sub{effect.StaticSubjectSub()}
+		if effect.StaticSubjectSubExcluded() {
+			selection.RequiredTypes = []types.Card{types.Creature}
+			selection.ExcludedSubtype = effect.StaticSubjectSub()
+		} else {
+			selection.SubtypesAny = []types.Sub{effect.StaticSubjectSub()}
+		}
 		return game.BattlefieldGroupExcluding(selection, game.SourcePermanentReference()), true
 	default:
 		return game.GroupReference{}, false
@@ -767,6 +900,7 @@ func rulesFreeAbilityWordLabel(label string) bool {
 		"Revolt",
 		"Survival",
 		"Threshold",
+		"Vivid",
 		"Void",
 		"Will of the council":
 		return true

@@ -7,6 +7,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -263,6 +264,28 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 				Reveal:              true,
 			},
 		},
+		{
+			name:       "unrestricted tutor to graveyard (Entomb)",
+			typeLine:   "Instant",
+			oracleText: "Search your library for a card, put that card into your graveyard, then shuffle.",
+			amount:     1,
+			spec: game.SearchSpec{
+				SourceZone:       zone.Library,
+				Destination:      zone.Graveyard,
+				FailToFindPolicy: game.SearchMustFindIfAvailable,
+			},
+		},
+		{
+			name:       "creature tutor to graveyard, up to three",
+			typeLine:   "Sorcery",
+			oracleText: "Search your library for up to three creature cards, put them into your graveyard, then shuffle.",
+			amount:     3,
+			spec: game.SearchSpec{
+				SourceZone:  zone.Library,
+				Destination: zone.Graveyard,
+				CardType:    opt.Val(types.Creature),
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -270,6 +293,115 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 			search := loweredSearch(t, test.typeLine, test.oracleText)
 			if got := search.Amount.Value(); got != test.amount {
 				t.Errorf("amount = %d, want %d", got, test.amount)
+			}
+			if got := search.Spec; !searchSpecEqual(got, test.spec) {
+				t.Errorf("spec = %+v, want %+v", got, test.spec)
+			}
+		})
+	}
+}
+
+// TestLowerSearchColorFilterSpecs covers color-restricted tutors (Green Sun's
+// Zenith family): a single color and a color union lower to the ColorsAny filter
+// on the SearchSpec alongside the card type.
+func TestLowerSearchColorFilterSpecs(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		spec       game.SearchSpec
+	}{
+		{
+			name:       "green creature tutor to battlefield",
+			oracleText: "Search your library for a green creature card, put it onto the battlefield, then shuffle.",
+			spec: game.SearchSpec{
+				SourceZone:  zone.Library,
+				Destination: zone.Battlefield,
+				CardType:    opt.Val(types.Creature),
+				ColorsAny:   []color.Color{color.Green},
+			},
+		},
+		{
+			name:       "color-union creature tutor to battlefield",
+			oracleText: "Search your library for a red or green creature card, put it onto the battlefield, then shuffle.",
+			spec: game.SearchSpec{
+				SourceZone:  zone.Library,
+				Destination: zone.Battlefield,
+				CardType:    opt.Val(types.Creature),
+				ColorsAny:   []color.Color{color.Red, color.Green},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			search := loweredSearch(t, "Sorcery", test.oracleText)
+			if got := search.Amount.Value(); got != 1 {
+				t.Errorf("amount = %d, want 1", got)
+			}
+			if got := search.Spec; !searchSpecEqual(got, test.spec) {
+				t.Errorf("spec = %+v, want %+v", got, test.spec)
+			}
+		})
+	}
+}
+
+// TestLowerSpellTypeTutorSpecs covers library-top tutors filtered by the spell
+// card types instant and sorcery: a type union ("instant or sorcery card") lowers
+// to CardTypesAny, while a single spell type ("a sorcery card") lowers to the
+// singular CardType filter. The "the card" demonstrative case confirms the put
+// destination accepts that wording alongside "it"/"that card".
+func TestLowerSpellTypeTutorSpecs(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		typeLine   string
+		oracleText string
+		spec       game.SearchSpec
+	}{
+		{
+			name:       "instant or sorcery tutor to top with reveal (Mystical Tutor)",
+			typeLine:   "Instant",
+			oracleText: "Search your library for an instant or sorcery card, reveal it, then shuffle and put that card on top.",
+			spec: game.SearchSpec{
+				SourceZone:          zone.Library,
+				Destination:         zone.Library,
+				DestinationPosition: game.SearchPositionTop,
+				CardTypesAny:        []types.Card{types.Instant, types.Sorcery},
+				Reveal:              true,
+			},
+		},
+		{
+			name:       "single sorcery tutor to top with reveal (Personal Tutor)",
+			typeLine:   "Sorcery",
+			oracleText: "Search your library for a sorcery card, reveal it, then shuffle and put that card on top.",
+			spec: game.SearchSpec{
+				SourceZone:          zone.Library,
+				Destination:         zone.Library,
+				DestinationPosition: game.SearchPositionTop,
+				CardType:            opt.Val(types.Sorcery),
+				Reveal:              true,
+			},
+		},
+		{
+			name:       "single creature tutor to top with \"the card\" wording (Worldly Tutor)",
+			typeLine:   "Instant",
+			oracleText: "Search your library for a creature card, reveal it, then shuffle and put the card on top.",
+			spec: game.SearchSpec{
+				SourceZone:          zone.Library,
+				Destination:         zone.Library,
+				DestinationPosition: game.SearchPositionTop,
+				CardType:            opt.Val(types.Creature),
+				Reveal:              true,
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			search := loweredSearch(t, test.typeLine, test.oracleText)
+			if got := search.Amount.Value(); got != 1 {
+				t.Errorf("amount = %d, want 1", got)
 			}
 			if got := search.Spec; !searchSpecEqual(got, test.spec) {
 				t.Errorf("spec = %+v, want %+v", got, test.spec)
@@ -339,7 +471,8 @@ func searchSpecEqual(a, b game.SearchSpec) bool {
 		a.SplitDestination == b.SplitDestination &&
 		a.SharedSubtype == b.SharedSubtype &&
 		slices.Equal(a.CardTypesAny, b.CardTypesAny) &&
-		slices.Equal(a.SubtypesAny, b.SubtypesAny)
+		slices.Equal(a.SubtypesAny, b.SubtypesAny) &&
+		slices.Equal(a.ColorsAny, b.ColorsAny)
 }
 
 func TestLowerVampiricTutorSearchThenLoseLife(t *testing.T) {
@@ -367,6 +500,32 @@ func TestLowerVampiricTutorSearchThenLoseLife(t *testing.T) {
 	lose, ok := mode.Sequence[1].Primitive.(game.LoseLife)
 	if !ok || lose.Amount.Value() != 2 || lose.Player != game.ControllerReference() {
 		t.Fatalf("second primitive = %#v, want controller lose 2 life", mode.Sequence[1].Primitive)
+	}
+}
+
+func TestLowerGambleSearchThenRandomDiscard(t *testing.T) {
+	t.Parallel()
+	faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Gamble",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Search your library for a card, put that card into your hand, discard a card at random, then shuffle.",
+	})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	mode := faces[0].SpellAbility.Val.Modes[0]
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want search then random discard", mode.Sequence)
+	}
+	search, ok := mode.Sequence[0].Primitive.(game.Search)
+	if !ok || search.Spec.Destination != zone.Hand {
+		t.Fatalf("first primitive = %#v, want library-to-hand search", mode.Sequence[0].Primitive)
+	}
+	discard, ok := mode.Sequence[1].Primitive.(game.Discard)
+	if !ok || !discard.AtRandom || discard.Amount.Value() != 1 ||
+		discard.Player != game.ControllerReference() {
+		t.Fatalf("second primitive = %#v, want controller discard 1 at random", mode.Sequence[1].Primitive)
 	}
 }
 

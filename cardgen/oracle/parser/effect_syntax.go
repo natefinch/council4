@@ -1,17 +1,22 @@
 package parser
 
 import (
+	"fmt"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func emitResolvingSyntax(abilities []Ability) {
 	for i := range abilities {
+		if recognizeChosenTypeLibraryTopSequence(&abilities[i]) {
+			continue
+		}
 		emitSentenceResolvingSyntax(
 			abilities[i].Sentences,
 			abilities[i].Atoms,
@@ -21,6 +26,7 @@ func emitResolvingSyntax(abilities []Ability) {
 		)
 		recognizeControllerOptionalPaymentSequence(&abilities[i])
 		recognizeEventPlayerOptionalPaymentSequence(&abilities[i])
+		recognizeControllerMandatoryPaymentSequence(&abilities[i])
 		if abilities[i].Modal == nil {
 			continue
 		}
@@ -58,6 +64,7 @@ func emitSentenceResolvingSyntax(
 	currentEffects := 0
 	unrecognizedSibling := false
 	var riderCandidates []int
+	var chooseColorCandidates []int
 	for i := range sentences {
 		if sentences[i].StaticRule != nil ||
 			sourceCostReduction != nil && sentences[i].Span == sourceCostReduction.Span ||
@@ -77,14 +84,24 @@ func emitSentenceResolvingSyntax(
 		if len(tokens) > 0 && len(sentences[i].Effects) == 0 &&
 			len(atoms.KeywordsWithin(tokens)) == 0 && count == 0 &&
 			!effectWordsAt(tokens, 0, "activate", "only", "if") {
-			if isRegenerationRiderTokens(tokens) {
+			switch {
+			case isRegenerationRiderTokens(tokens) || isThisWayRegenerationRiderTokens(tokens):
 				riderCandidates = append(riderCandidates, i)
-			} else {
+			case isChosenColorChooseTokens(tokens):
+				chooseColorCandidates = append(chooseColorCandidates, i)
+			default:
 				unrecognizedSibling = true
 			}
 		}
 	}
 	recognizeShuffleRevealPermanentSequence(sentences)
+	if len(chooseColorCandidates) > 0 && !creditChosenColorChoice(sentences, chooseColorCandidates) {
+		unrecognizedSibling = true
+	}
+	if foldedLegacy, foldedEffects, ok := creditTokenCopyGrantRider(sentences, atoms); ok {
+		legacyEffects -= foldedLegacy
+		currentEffects -= foldedEffects
+	}
 	if currentEffects == 1 && unrecognizedSibling {
 		for i := range sentences {
 			for j := range sentences[i].Effects {
@@ -138,6 +155,65 @@ func creditRegenerationRider(sentences []Sentence, riderCandidates []int, unreco
 	}
 }
 
+// isChosenColorChooseTokens reports whether the sentence tokens are exactly
+// "Choose a color" (with optional trailing periods). This bare color-choice
+// sentence precedes "Add an amount of mana of that color equal to your devotion
+// to that color." (Nykthos, Shrine to Nyx); the choice itself produces no
+// standalone effect, so it is folded onto the chosen-color devotion add-mana.
+func isChosenColorChooseTokens(tokens []shared.Token) bool {
+	if !effectWordsAt(tokens, 0, "choose", "a", "color") {
+		return false
+	}
+	rest := tokens[3:]
+	for i := range rest {
+		if rest[i].Kind != shared.Period {
+			return false
+		}
+	}
+	return true
+}
+
+// creditChosenColorChoice folds a leading "Choose a color." sentence onto the
+// ability's lone chosen-color add-mana effect by widening that effect's span to
+// cover the choice sentence, so the mana ability's coverage scan credits the
+// choice. It succeeds only when the ability holds exactly one add-mana effect
+// that carries a chosen-color body (devotion or dynamic count) and that effect is
+// exact; otherwise it reports failure so the choice stays unrecognized and the
+// card fails closed.
+func creditChosenColorChoice(sentences []Sentence, chooseCandidates []int) bool {
+	manaEffect := loneChosenColorManaEffect(sentences)
+	if manaEffect == nil || !manaEffect.Exact {
+		return false
+	}
+	for _, index := range chooseCandidates {
+		if sentences[index].Span.Start.Offset < manaEffect.Span.Start.Offset {
+			manaEffect.Span.Start = sentences[index].Span.Start
+		}
+	}
+	return true
+}
+
+// loneChosenColorManaEffect returns the single chosen-color add-mana effect
+// (devotion or dynamic count) across the sentences, or nil when the sentences
+// hold zero or more than one such effect.
+func loneChosenColorManaEffect(sentences []Sentence) *EffectSyntax {
+	var found *EffectSyntax
+	for i := range sentences {
+		for j := range sentences[i].Effects {
+			manaSyntax := sentences[i].Effects[j].Mana
+			if sentences[i].Effects[j].Kind != EffectAddMana ||
+				!manaSyntax.ChosenColorDevotion && !manaSyntax.ChosenColorDynamic {
+				continue
+			}
+			if found != nil {
+				return nil
+			}
+			found = &sentences[i].Effects[j]
+		}
+	}
+	return found
+}
+
 // loneDestroyEffect returns the single EffectDestroy across the sentences, or nil
 // when the sentences hold zero or more than one destroy effect. Sibling effects
 // of other kinds are permitted and ignored; only the count of destroy effects
@@ -159,9 +235,105 @@ func loneDestroyEffect(sentences []Sentence) *EffectSyntax {
 	return found
 }
 
-// isRegenerationRiderTokens reports whether the sentence tokens are a
-// regeneration rider restricted to the pronoun forms "It can't be regenerated"
-// and "They can't be regenerated". Pronoun-only forms avoid introducing phantom
+// creditTokenCopyGrantRider folds a "[That token/It] gains <keyword>." rider
+// sentence onto the sentences' lone create-copy-token effect. The created token
+// gains the keyword(s); the rider sentence's effects are cleared and the
+// sentence is marked so reference and coverage scans credit it to the create.
+// It credits only when the sentences hold exactly one exact create-copy-token
+// effect and a single matching gain-keyword sentence whose subject denotes the
+// created token; otherwise nothing is folded and the card fails closed. It
+// returns the folded sentence's legacy-effect and current-effect counts so the
+// caller can correct its sequence-length bookkeeping.
+func creditTokenCopyGrantRider(sentences []Sentence, atoms Atoms) (foldedLegacy, foldedEffects int, ok bool) {
+	create := loneCopyTokenCreateEffect(sentences)
+	if create == nil || !create.Exact {
+		return 0, 0, false
+	}
+	for i := range sentences {
+		if len(sentences[i].Effects) != 1 || sentences[i].Effects[0].Kind != EffectGain {
+			continue
+		}
+		tokens := semanticEffectTokens(sentences[i].Tokens)
+		keywords, match := tokenCopyGrantRiderKeywords(tokens, atoms)
+		if !match {
+			continue
+		}
+		create.TokenCopyGrantKeywords = keywords
+		create.TokenCopyGrantRiderSpan = sentences[i].Span
+		foldedEffects = len(sentences[i].Effects)
+		if sentences[i].LegacyEffects {
+			foldedLegacy = legacyEffectCount(tokens, atoms)
+		}
+		sentences[i].Effects = nil
+		sentences[i].TokenCopyGrantRider = true
+		return foldedLegacy, foldedEffects, true
+	}
+	return 0, 0, false
+}
+
+// loneCopyTokenCreateEffect returns the single create-copy-token effect across
+// the sentences (a copy of a target, reference, or attached permanent), or nil
+// when the sentences hold zero or more than one such effect.
+func loneCopyTokenCreateEffect(sentences []Sentence) *EffectSyntax {
+	var found *EffectSyntax
+	for i := range sentences {
+		for j := range sentences[i].Effects {
+			effect := &sentences[i].Effects[j]
+			if !effect.TokenCopyOfTarget && !effect.TokenCopyOfReference && !effect.TokenCopyOfAttached {
+				continue
+			}
+			if found != nil {
+				return nil
+			}
+			found = effect
+		}
+	}
+	return found
+}
+
+// tokenCopyGrantRiderKeywords reports whether the sentence tokens are exactly
+// "[That token/Those tokens/It/They] gain(s) <keyword>[ and <keyword> ...]." and
+// returns the granted keyword kinds in source order. It fails closed for any
+// trailing duration ("until end of turn"), quoted ability, or other content so
+// only a plain keyword grant on the created token is folded.
+func tokenCopyGrantRiderKeywords(tokens []shared.Token, atoms Atoms) ([]KeywordKind, bool) {
+	verb := -1
+	for i := range tokens {
+		if equalWord(tokens[i], "gains") || equalWord(tokens[i], "gain") {
+			verb = i
+			break
+		}
+	}
+	if verb <= 0 {
+		return nil, false
+	}
+	subject := strings.ToLower(joinedEffectText(tokens[:verb]))
+	switch subject {
+	case "that token", "those tokens", "it", "they":
+	default:
+		return nil, false
+	}
+	keywordAtoms := atoms.KeywordsWithin(tokens)
+	if len(keywordAtoms) == 0 {
+		return nil, false
+	}
+	kinds := make([]KeywordKind, 0, len(keywordAtoms))
+	texts := make([]string, 0, len(keywordAtoms))
+	for _, keyword := range keywordAtoms {
+		if keyword.Parameter.Kind != KeywordParameterNone {
+			return nil, false
+		}
+		kinds = append(kinds, keyword.Kind)
+		texts = append(texts, keyword.Text)
+	}
+	remainder := strings.TrimSuffix(joinedEffectText(tokens[verb+1:]), ".")
+	expected := strings.Join(texts, " and ")
+	if !strings.EqualFold(normalizeApostrophes(remainder), normalizeApostrophes(expected)) {
+		return nil, false
+	}
+	return kinds, true
+}
+
 // targets that subject phrases ("that creature", "a creature destroyed this
 // way") would otherwise contribute to the compiled target set.
 func isRegenerationRiderTokens(tokens []shared.Token) bool {
@@ -176,6 +348,30 @@ func isRegenerationRiderTokens(tokens []shared.Token) bool {
 		}
 	}
 	return true
+}
+
+// isThisWayRegenerationRiderTokens reports whether the sentence tokens are a
+// regeneration rider of the "destroyed this way" templated form, for example
+// "A creature destroyed this way can't be regenerated." (Damn) or "Creatures
+// destroyed this way can't be regenerated." Unlike the bare "that
+// creature"/"those creatures" subject forms, this indefinite "destroyed this
+// way" clause introduces no back-reference, so it contributes no phantom target
+// or reference to the compiled effect and can fold onto the lone destroy safely.
+// "Dealt damage this way" riders are intentionally excluded: they belong to a
+// damage effect, which has no prevent-regeneration lowering yet, so they remain
+// fail-closed instead of silently dropping the clause.
+func isThisWayRegenerationRiderTokens(tokens []shared.Token) bool {
+	end := len(tokens)
+	for end > 0 && tokens[end-1].Kind == shared.Period {
+		end--
+	}
+	core := tokens[:end]
+	return endsWithWords(core, "destroyed", "this", "way", "can't", "be", "regenerated")
+}
+
+// endsWithWords reports whether the trailing tokens match words in order.
+func endsWithWords(tokens []shared.Token, words ...string) bool {
+	return effectWordsAt(tokens, len(tokens)-len(words), words...)
 }
 
 func spanInsideActivationRestriction(span shared.Span, restrictions []ActivationRestriction) bool {
@@ -236,14 +432,73 @@ func tokensBeforeOffset(tokens []shared.Token, offset int) []shared.Token {
 	return result
 }
 
+// trailingDynamicCountInClause reports whether amount is a trailing dynamic
+// count phrase ("for each ...", "equal to ...", "where X is ...") whose tokens
+// fall inside clause. A leading count prefix ("For each X, create ...") lives
+// before the verb, so its span starts before the clause and is excluded here.
+func trailingDynamicCountInClause(clause []shared.Token, amount EffectAmountSyntax) bool {
+	switch amount.DynamicForm {
+	case EffectDynamicAmountFormForEach, EffectDynamicAmountFormEqual, EffectDynamicAmountFormWhereX:
+	default:
+		return false
+	}
+	if len(clause) == 0 {
+		return false
+	}
+	return amount.Span.Start.Offset >= clause[0].Span.Start.Offset
+}
+
+// stripLeadingConditionClause drops a leading "As long as this card/creature is
+// in your graveyard and ..." condition clause so the subject grammar sees only
+// the effect's group subject ("creatures you control"). The first effect's
+// ownership tokens begin at the sentence start, so the graveyard zone-of-
+// function condition would otherwise prevent the group subject from being
+// recognized at token zero. The strip is restricted to graveyard conditions so
+// other leading conditions keep their existing recognition path unchanged.
+func stripLeadingConditionClause(tokens []shared.Token) []shared.Token {
+	if len(tokens) == 0 {
+		return tokens
+	}
+	intro, width := conditionIntroAt(tokens, 0)
+	if intro == ConditionIntroUnknown {
+		return tokens
+	}
+	body := tokens[width:]
+	if _, ok := cutTokenPrefix(body, "this", "card", "is", "in", "your", "graveyard", "and"); !ok {
+		if _, ok := cutTokenPrefix(body, "this", "creature", "is", "in", "your", "graveyard", "and"); !ok {
+			return tokens
+		}
+	}
+	end := conditionClauseEnd(tokens, 0)
+	if end < len(tokens) && tokens[end].Kind == shared.Comma {
+		return tokens[end+1:]
+	}
+	return tokens
+}
+
 func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []EffectSyntax {
+	if effects, ok := parsePassiveTokenDoublingEffects(sentence, tokens, atoms); ok {
+		return effects
+	}
 	if effects, ok := parseLibraryTopReorderEffect(sentence, tokens, atoms); ok {
+		return effects
+	}
+	if effects, ok := parseGroupEntersTappedEffect(sentence, tokens); ok {
 		return effects
 	}
 	if effects, ok := parsePlayerProtectionEffects(sentence, tokens, atoms); ok {
 		return effects
 	}
 	if effects, ok := parseGroupPhaseOutEffect(sentence, tokens, atoms); ok {
+		return effects
+	}
+	if effects, ok := parseAdditionalLandPlaysEffect(sentence, tokens, atoms); ok {
+		return effects
+	}
+	if effects, ok := parseCastAsThoughFlashEffect(sentence, tokens); ok {
+		return effects
+	}
+	if effects, ok := parseCantCastSpellsEffect(sentence, tokens); ok {
 		return effects
 	}
 	indices := effectIndices(tokens, atoms)
@@ -266,12 +521,12 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		if ambiguousZoneChoice(ownership, atoms, span) {
 			toZone = zone.None
 		}
-		staticSubject := parseEffectStaticSubject(ownership, atoms)
+		staticSubject := parseEffectStaticSubject(stripLeadingConditionClause(ownership), atoms)
 		payment := parseEffectPayment(tokens, atoms)
 		connection, connectionSpan := effectConnection(tokens, indices, effectIndex)
 		optional, optionalSpan := effectOptional(tokens, tokenIndex)
 		context := effectContextAt(tokens, tokenIndex, atoms)
-		if effectIndex > 0 && !effectHasExplicitSubject(tokens, tokenIndex) &&
+		if effectIndex > 0 && !effectHasExplicitSubject(tokens, tokenIndex, atoms.SelfNameSpans()) &&
 			effects[len(effects)-1].Context != EffectContextController {
 			context = EffectContextPriorSubject
 		}
@@ -285,7 +540,17 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			}
 		}
 		kind := effectKindAt(tokens, tokenIndex)
+		if loseGameObject(kind, clause) {
+			kind = EffectLoseGame
+		}
 		entersColorChoice, entersColorChoiceExclude := entersColorChoiceSyntax(kind, clause)
+		doublePower, doubleToughness := false, false
+		if kind == EffectDouble {
+			if object, okDouble := parseDoublePTObject(clause, atoms); okDouble {
+				staticSubject = object.Subject
+				doublePower, doubleToughness = object.DoublePower, object.DoubleToughness
+			}
+		}
 		tokenPower, tokenToughness, tokenPTKnown := parseTokenPowerToughness(kind, clause)
 		amount := parseEffectAmount(kind, clause, atoms)
 		if forEach, ok := parseCreateForEachAmount(kind, context, tokenPTKnown, tokens[ownershipStart:tokenIndex], amount, atoms); ok {
@@ -302,87 +567,126 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		// tokens before the trailing count phrase, so scope the recipient
 		// Selection to those, leaving the count subject to the amount's own
 		// selector.
+		// A create-token clause whose amount is a trailing "for each <permanent>
+		// you control" (or "equal to ...") count phrase ("Create a 0/1 green
+		// Plant creature token for each land you control.") embeds the
+		// counted-subject selector in the same clause as the token's own
+		// characteristics. Like the deal-damage case above, scope the token
+		// Selection to the run of tokens before the count phrase so the count
+		// subject's filters do not fold into the token's type line.
 		selectionClause := clause
-		if kind == EffectDealDamage && amount.DynamicForm == EffectDynamicAmountFormWhereX {
+		switch {
+		case kind == EffectDealDamage && amount.DynamicForm == EffectDynamicAmountFormWhereX:
 			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
+		case kind == EffectCreate && trailingDynamicCountInClause(clause, amount):
+			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
+		default:
 		}
+		eachSourceDamageGroup, eachSourceDamageRecipient := eachSourceDamageSyntax(kind, tokens[ownershipStart:tokenIndex], clause, atoms)
 		effects = append(effects, EffectSyntax{
-			Kind:                     kind,
-			Context:                  context,
-			Connection:               connection,
-			ConnectionSpan:           connectionSpan,
-			Span:                     sentence.Span,
-			VerbSpan:                 tokens[tokenIndex].Span,
-			ClauseSpan:               ownershipSpan,
-			Text:                     sentence.Text,
-			Tokens:                   append([]shared.Token(nil), ownership...),
-			Duration:                 parseEffectDuration(durationTokens, atoms),
-			DelayedTiming:            delayed,
-			Selection:                parseSelection(selectionClause, atoms),
-			DamageRecipientPair:      parseDamageRecipientPair(kind, clause, atoms),
-			Amount:                   amount,
-			PowerDelta:               power,
-			ToughnessDelta:           toughness,
-			TokenPower:               tokenPower,
-			TokenToughness:           tokenToughness,
-			TokenPTKnown:             tokenPTKnown,
-			TokenKeywords:            parseTokenKeywords(kind, clause, atoms),
-			TokenName:                parseTokenName(kind, clause),
-			StaticSubject:            staticSubject,
-			CounterKind:              counterKind,
-			CounterKnown:             counterKnown,
-			CounterRecipientAttached: counterRecipientAttached(kind, counterKnown, clause),
-			FromZone:                 firstZone(atoms, span, ZoneRoleFrom),
-			ToZone:                   toZone,
-			Destination:              parseEffectDestination(ownership),
-			EntersTapped:             effectWordsAtAny(ownership, "battlefield", "tapped"),
-			EntersTappedSelf:         entersTappedSelfSyntax(kind, clause),
-			EntersColorChoice:        entersColorChoice,
-			EntersColorChoiceExclude: entersColorChoiceExclude,
-			EntersTypeChoice:         entersTypeChoiceSyntax(kind, clause),
-			EntersWithCounters:       entersWithCountersSyntax(kind, clause),
-			UnderYourControl:         effectContainsWords(normalizedWords(ownership), "under", "your", "control"),
-			CastAsAdventure:          effectContainsWords(normalizedWords(clause), "as", "an", "adventure"),
-			Negated:                  effectIsNegated(tokens, tokenIndex),
-			Optional:                 optional,
-			OptionalSpan:             optionalSpan,
-			LifeObject:               gainLoseLifeObject(kind, clause),
-			Symbol:                   firstEffectSymbol(clause),
-			Mana:                     parseEffectMana(kind, clause, nextConnection != EffectConnectionNone),
-			Replacement:              parseEffectReplacement(ownership, atoms),
-			References:               referencesInSpan(atoms, ownershipSpan),
-			SubjectReferences:        referencesInSpan(atoms, shared.SpanOf(tokens[ownershipStart:tokenIndex])),
-			Targets:                  targetsInSpan(sentence.Targets, ownershipSpan),
-			SubjectTargets:           targetsInSpan(sentence.Targets, shared.SpanOf(tokens[ownershipStart:tokenIndex])),
-			Payment:                  payment,
-			RequiresOrderedLowering:  requiresOrderedLowering,
+			Kind:                      kind,
+			Context:                   context,
+			Connection:                connection,
+			ConnectionSpan:            connectionSpan,
+			Span:                      sentence.Span,
+			VerbSpan:                  tokens[tokenIndex].Span,
+			ClauseSpan:                ownershipSpan,
+			Text:                      sentence.Text,
+			Tokens:                    append([]shared.Token(nil), ownership...),
+			Duration:                  parseEffectDuration(durationTokens, atoms),
+			DelayedTiming:             delayed,
+			Selection:                 parseSelection(selectionClause, atoms),
+			DamageRecipientPair:       parseDamageRecipientPair(kind, clause, amount, atoms),
+			EachSourceDamageGroup:     eachSourceDamageGroup,
+			EachSourceDamageRecipient: eachSourceDamageRecipient,
+			Amount:                    amount,
+			PowerDelta:                power,
+			ToughnessDelta:            toughness,
+			TokenPower:                tokenPower,
+			TokenToughness:            tokenToughness,
+			TokenPTKnown:              tokenPTKnown,
+			TokenKeywords:             parseTokenKeywords(kind, clause, atoms),
+			TokenName:                 parseTokenName(kind, clause),
+			TokenChoice:               parseTokenChoice(kind, clause),
+			StaticSubject:             staticSubject,
+			DoublePower:               doublePower,
+			DoubleToughness:           doubleToughness,
+			CounterKind:               counterKind,
+			CounterKnown:              counterKnown,
+			CounterRecipientAttached:  counterRecipientAttached(kind, counterKnown, clause),
+			FromZone:                  firstZone(atoms, span, ZoneRoleFrom),
+			ToZone:                    toZone,
+			Destination:               parseEffectDestination(ownership),
+			EntersTapped:              effectWordsAtAny(ownership, "battlefield", "tapped"),
+			EntersTappedSelf:          entersTappedSelfSyntax(kind, clause),
+			EntersColorChoice:         entersColorChoice,
+			EntersColorChoiceExclude:  entersColorChoiceExclude,
+			EntersTypeChoice:          entersTypeChoiceSyntax(kind, clause),
+			EntersWithCounters:        entersWithCountersSyntax(kind, clause),
+			UnderYourControl:          effectContainsWords(normalizedWords(ownership), "under", "your", "control"),
+			CastAsAdventure:           effectContainsWords(normalizedWords(clause), "as", "an", "adventure"),
+			CastWithoutPayingManaCost: kind == EffectCast &&
+				effectContainsWords(normalizedWords(clause), "without", "paying", "its", "mana", "cost"),
+			Negated:                 effectIsNegated(tokens, tokenIndex),
+			Optional:                optional,
+			OptionalSpan:            optionalSpan,
+			LifeObject:              gainLoseLifeObject(kind, clause),
+			Symbol:                  firstEffectSymbol(clause),
+			Mana:                    parseEffectMana(kind, clause, nextConnection != EffectConnectionNone),
+			Replacement:             parseEffectReplacement(ownership, atoms),
+			References:              referencesInSpan(atoms, ownershipSpan),
+			SubjectReferences:       referencesInSpan(atoms, shared.SpanOf(tokens[ownershipStart:tokenIndex])),
+			Targets:                 targetsInSpan(sentence.Targets, ownershipSpan),
+			SubjectTargets:          targetsInSpan(sentence.Targets, shared.SpanOf(tokens[ownershipStart:tokenIndex])),
+			Payment:                 payment,
+			RequiresOrderedLowering: requiresOrderedLowering,
 		})
 	}
 
 	for i := range effects {
-		effects[i].Divided = dividedDamageEffect(&effects[i])
-		effects[i].DamageRecipientReference = damageRecipientReference(&effects[i])
-		effects[i].SelfDamageRiderValue, effects[i].HasSelfDamageRider = damageSelfRider(&effects[i])
-		effects[i].TargetControllerDamageRiderValue, effects[i].TargetControllerDamageRiderRecipient = damageTargetControllerRider(&effects[i])
-		effects[i].SecondTargetDamageRiderValue, effects[i].HasSecondTargetDamageRider = damageSecondTargetRider(&effects[i])
-		effects[i].Dig = parseDigPut(&effects[i])
-		effects[i].HandLibraryPut = parseHandLibraryPut(&effects[i])
-		effects[i].HandDiscard = parseHandDiscard(&effects[i])
-		effects[i].SearchSplit = parseSearchSplitPut(&effects[i])
-		effects[i].GraveyardZoneExile = parseGraveyardZoneExile(&effects[i])
-		effects[i].Exact = exactEffectSyntax(&effects[i])
-		if recognizeTargetOpponentHandMana(&effects[i]) {
-			effects[i].Exact = true
-		}
-		effects[i].TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(&effects[i])
-		effects[i].Mana.LegacyBodyExact = legacyExactManaBody(&effects[i], sentence)
-		if effects[i].Kind == EffectSearch {
-			effects[i].UnsupportedDetail = searchUnsupportedDetail(&effects[i])
-			effects[i].SearchSharedSubtype = searchSharedSubtypeRider(&effects[i])
-			effects[i].SearchDestination = searchDestinationPosition(&effects[i])
-		}
+		finalizeParsedEffect(&effects[i], sentence, atoms)
 	}
 	return effects
+}
+
+func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) {
+	effect.Divided = dividedDamageEffect(effect)
+	effect.DamageRecipientReference = damageRecipientReference(effect)
+	effect.SelfDamageRiderValue, effect.HasSelfDamageRider = damageSelfRider(effect)
+	effect.TargetControllerDamageRiderValue, effect.TargetControllerDamageRiderRecipient = damageTargetControllerRider(effect)
+	effect.SecondTargetDamageRiderValue, effect.HasSecondTargetDamageRider = damageSecondTargetRider(effect)
+	effect.Dig = parseDigPut(effect)
+	effect.HandLibraryPut = parseHandLibraryPut(effect)
+	effect.HandDiscard = parseHandDiscard(effect)
+	effect.DiscardEntireHand = parseDiscardEntireHand(effect)
+	effect.SearchSplit = parseSearchSplitPut(effect)
+	effect.GraveyardZoneExile = parseGraveyardZoneExile(effect)
+	effect.Additional = drawAdditionalCardsQualifier(effect)
+	effect.Exact = exactEffectSyntax(effect)
+	if recognizeTargetOpponentHandMana(effect) {
+		effect.Exact = true
+	}
+	if recognizeDynamicCountMana(effect) {
+		effect.Exact = true
+	}
+	if recognizeColorsAmongControlledMana(effect, atoms) {
+		effect.Exact = true
+	}
+	if recognizeEachColorAmongControlledMana(effect, atoms) {
+		effect.Exact = true
+	}
+	if recognizeTargetColorIfRider(effect, atoms) {
+		effect.Exact = true
+	}
+	effect.TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(effect)
+	effect.TokenCopyOfReference = exactCreateCopyTokenReferenceEffectSyntax(effect)
+	effect.TokenCopyOfAttached = exactCreateCopyTokenAttachedEffectSyntax(effect)
+	effect.Mana.LegacyBodyExact = legacyExactManaBody(effect, sentence)
+	if effect.Kind == EffectSearch {
+		effect.UnsupportedDetail = searchUnsupportedDetail(effect)
+		effect.SearchSharedSubtype = searchSharedSubtypeRider(effect)
+		effect.SearchDestination = searchDestinationPosition(effect)
+	}
 }
 
 func parseLibraryTopReorderEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
@@ -418,10 +722,83 @@ func matchLibraryTopReorder(tokens []shared.Token, atoms Atoms) (EffectAmountSyn
 	return amount, amount.Known && amount.Value > 0
 }
 
+// parsePassiveTokenDoublingEffects recognizes the passive-voice token-doubling
+// replacement "If one or more tokens would be created under your control, twice
+// that many of those tokens are created instead." (Mondrak, Adrix and Nev). Its
+// active-voice equivalent "If an effect would create one or more tokens under
+// your control, it creates twice that many of those tokens instead." (Doubling
+// Season, Anointed Procession, Parallel Lives) parses through the ordinary
+// create-verb path. The passive wording carries no active "create" verb, so it
+// is recognized here and emitted as the same two EffectCreate instructions the
+// active form produces: the would-create group and the doubled output marked
+// EffectReplacementTwiceThatMany. The matching intervening-if condition is
+// recognized separately by recognizeTokenCreationCondition.
+func parsePassiveTokenDoublingEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	commaIndex, ok := matchPassiveTokenDoubling(tokens)
+	if !ok {
+		return nil, false
+	}
+	condition := tokens[:commaIndex]
+	resolving := tokens[commaIndex+1:]
+	createdIndex := commaIndex - 4
+	createEffect := EffectSyntax{
+		Kind:             EffectCreate,
+		Context:          EffectContextController,
+		Span:             shared.SpanOf(condition),
+		VerbSpan:         tokens[createdIndex].Span,
+		ClauseSpan:       shared.SpanOf(condition),
+		Text:             sentence.Text,
+		Tokens:           append([]shared.Token(nil), condition...),
+		Amount:           EffectAmountSyntax{Value: 1, Known: true},
+		UnderYourControl: true,
+	}
+	doubledIndex := commaIndex + 8
+	doubledEffect := EffectSyntax{
+		Kind:       EffectCreate,
+		Context:    EffectContextReferencedObject,
+		Span:       shared.SpanOf(resolving),
+		VerbSpan:   tokens[doubledIndex].Span,
+		ClauseSpan: shared.SpanOf(resolving),
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), resolving...),
+		Amount:     EffectAmountSyntax{Value: 2, Known: true},
+		Replacement: EffectReplacementSyntax{
+			Kind: EffectReplacementTwiceThatMany,
+			Span: tokens[len(tokens)-2].Span,
+		},
+		References: referencesInSpan(atoms, shared.SpanOf(resolving)),
+	}
+	return []EffectSyntax{createEffect, doubledEffect}, true
+}
+
+// matchPassiveTokenDoubling reports the index of the comma separating the
+// would-create condition clause from the doubled output clause when tokens spell
+// the passive token-doubling replacement under the controller's control. It
+// fails closed on the controller-agnostic wording ("...would be created, ...",
+// Primal Vigor), whose any-player scope the controller-only runtime node cannot
+// represent.
+func matchPassiveTokenDoubling(tokens []shared.Token) (int, bool) {
+	if len(tokens) != 22 ||
+		!effectWordsAt(tokens, 0, "if", "one", "or", "more", "tokens", "would", "be", "created") ||
+		!effectWordsAt(tokens, 8, "under", "your", "control") ||
+		tokens[11].Kind != shared.Comma ||
+		!effectWordsAt(tokens, 12, "twice", "that", "many", "of", "those", "tokens", "are", "created", "instead") ||
+		tokens[21].Kind != shared.Period {
+		return 0, false
+	}
+	return 11, true
+}
+
 func recognizeImpulseExileSequence(sentences []Sentence) bool {
-	if len(sentences) != 2 ||
-		!strings.EqualFold(strings.TrimSpace(sentences[0].Text), "Exile the top three cards of your library.") ||
-		!strings.EqualFold(strings.TrimSpace(sentences[1].Text), "You may play them this turn.") {
+	if len(sentences) != 2 {
+		return false
+	}
+	amount, ok := matchImpulseExileClause(strings.TrimSpace(sentences[0].Text))
+	if !ok {
+		return false
+	}
+	duration, ok := matchImpulsePlayPermissionClause(strings.TrimSpace(sentences[1].Text), amount)
+	if !ok {
 		return false
 	}
 	span := shared.Span{Start: sentences[0].Span.Start, End: sentences[1].Span.End}
@@ -432,11 +809,63 @@ func recognizeImpulseExileSequence(sentences []Sentence) bool {
 		ClauseSpan: span,
 		Text:       sentences[0].Text + " " + sentences[1].Text,
 		Tokens:     append(append([]shared.Token(nil), sentences[0].Tokens...), sentences[1].Tokens...),
-		Amount:     EffectAmountSyntax{Value: 3, Known: true},
-		Duration:   EffectDurationThisTurn,
+		Amount:     EffectAmountSyntax{Value: amount, Known: true},
+		Duration:   duration,
 		Exact:      true,
 	}}
 	return true
+}
+
+// matchImpulseExileClause recognizes "Exile the top card of your library." and
+// its counted plural "Exile the top <N> cards of your library." (N a cardinal
+// word two..ten), returning the fixed number of cards exiled.
+func matchImpulseExileClause(text string) (int, bool) {
+	if strings.EqualFold(text, "Exile the top card of your library.") {
+		return 1, true
+	}
+	const prefix = "Exile the top "
+	const suffix = " cards of your library."
+	if len(text) <= len(prefix)+len(suffix) ||
+		!strings.EqualFold(text[:len(prefix)], prefix) ||
+		!strings.EqualFold(text[len(text)-len(suffix):], suffix) {
+		return 0, false
+	}
+	count, ok := CardinalWordValue(text[len(prefix) : len(text)-len(suffix)])
+	if !ok || count < 2 {
+		return 0, false
+	}
+	return count, true
+}
+
+// matchImpulsePlayPermissionClause recognizes the temporary play-permission
+// sentence that follows an impulse exile: "You may play <object> this turn.",
+// the "until end of turn" variants (trailing or leading "Until end of turn,"),
+// where <object> agrees in number with the count exiled ("it"/"that card" for a
+// single card, "them"/"those cards" for several). It returns the play window.
+func matchImpulsePlayPermissionClause(text string, amount int) (EffectDurationKind, bool) {
+	for _, object := range impulsePlayObjects(amount) {
+		switch {
+		case strings.EqualFold(text, "You may play "+object+" this turn."):
+			return EffectDurationThisTurn, true
+		case strings.EqualFold(text, "You may play "+object+" until end of turn."),
+			strings.EqualFold(text, "Until end of turn, you may play "+object+"."):
+			return EffectDurationUntilEndOfTurn, true
+		case strings.EqualFold(text, "You may play "+object+" until the end of your next turn."),
+			strings.EqualFold(text, "Until the end of your next turn, you may play "+object+"."):
+			return EffectDurationUntilEndOfYourNextTurn, true
+		}
+	}
+	return EffectDurationNone, false
+}
+
+// impulsePlayObjects lists the demonstratives an impulse play-permission sentence
+// uses to refer back to the exiled cards, matching grammatical number to the
+// count exiled.
+func impulsePlayObjects(amount int) []string {
+	if amount == 1 {
+		return []string{"it", "that card"}
+	}
+	return []string{"them", "those cards"}
 }
 
 func recognizeTargetOpponentHandMana(effect *EffectSyntax) bool {
@@ -476,16 +905,434 @@ func recognizeTargetOpponentHandManaSentence(sentence *Sentence) {
 	sentence.Effects[0].Targets = []TargetSyntax{target}
 }
 
+// recognizeDynamicCountMana types an add-mana body whose produced amount scales
+// with a dynamic count: a fixed-color battlefield count ("for each <permanent>
+// you control", recognizeControlledCountMana), a chosen-color battlefield count
+// ("equal to <count>", recognizeChosenColorCountMana), or a source-counter count
+// ("for each <kind> counter on this permanent", recognizeSourceCounterCountMana).
+func recognizeDynamicCountMana(effect *EffectSyntax) bool {
+	return recognizeControlledCountMana(effect) ||
+		recognizeChosenColorCountMana(effect) ||
+		recognizeSourceCounterCountMana(effect) ||
+		recognizeAnyOneColorDynamicMana(effect)
+}
+
+// recognizeTargetColorIfRider reports whether a single-target counter or destroy
+// effect carries the trailing color rider "if it's <color>" / "if it is
+// <color>" (Pyroblast, Red Elemental Blast). The rider is segmented separately
+// as a ConditionPredicateTargetColor condition (which carries the color and is
+// consumed by counter/destroy lowering), but it leaves the verb clause text
+// reading "<verb> <target> if it's <color>." so exactEffectSyntax cannot
+// round-trip the bare "<verb> <target>." shape. This credits the effect as exact
+// when the only trailing text past the lone exact target is the recognized color
+// rider, so lowering can attach the resolving target-color gate.
+func recognizeTargetColorIfRider(effect *EffectSyntax, atoms Atoms) bool {
+	if effect.Kind != EffectCounter && effect.Kind != EffectDestroy {
+		return false
+	}
+	if len(effect.Targets) != 1 ||
+		!effect.Targets[0].Exact ||
+		effect.Targets[0].Cardinality.Min != 1 ||
+		effect.Targets[0].Cardinality.Max != 1 {
+		return false
+	}
+	targetEnd := effect.Targets[0].Span.End.Offset
+	var rider []shared.Token
+	for _, token := range effect.Tokens {
+		if token.Span.Start.Offset >= targetEnd {
+			rider = append(rider, token)
+		}
+	}
+	for len(rider) > 0 && rider[len(rider)-1].Kind == shared.Period {
+		rider = rider[:len(rider)-1]
+	}
+	rest, ok := cutTokenPrefix(rider, "if", "it's")
+	if !ok {
+		if rest, ok = cutTokenPrefix(rider, "if", "it", "is"); !ok {
+			return false
+		}
+	}
+	if len(rest) != 1 {
+		return false
+	}
+	_, ok = atoms.ColorAt(rest[0].Span)
+	return ok
+}
+
+// recognizeAnyOneColorDynamicMana types the add-mana body "X mana of any one
+// color" or "an amount of mana of any one color" (Kami of Whispered Hopes:
+// "Add X mana of any one color, where X is this creature's power."). The
+// produced quantity is the dynamic amount already typed onto effect.Amount by
+// parseEffectAmount ("where X is <dynamic>" or "equal to <dynamic>"); the body
+// itself is left unrecognized by parseEffectMana. This credits the
+// freely-chosen single-color output when the body matches exactly and a dynamic
+// amount is present, so the lowerer can produce that many mana of one chosen
+// color. It fails closed when no dynamic amount is present.
+func recognizeAnyOneColorDynamicMana(effect *EffectSyntax) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Amount.DynamicKind == EffectDynamicAmountNone {
+		return false
+	}
+	switch effect.Amount.DynamicForm {
+	case EffectDynamicAmountFormWhereX, EffectDynamicAmountFormEqual:
+	default:
+		return false
+	}
+	body := manaBodyBeforeAmount(effect)
+	for len(body) > 0 && body[len(body)-1].Kind == shared.Comma {
+		body = body[:len(body)-1]
+	}
+	if !anyOneColorDynamicManaBody(body) {
+		return false
+	}
+	effect.Mana = EffectManaSyntax{Span: shared.SpanOf(body), AnyOneColorDynamic: true}
+	return true
+}
+
+// anyOneColorDynamicManaBody reports whether body is the leading add-mana phrase
+// of an "any one color" dynamic-amount output: "X mana of any one color" or "an
+// amount of mana of any one color".
+func anyOneColorDynamicManaBody(body []shared.Token) bool {
+	if len(body) == 6 &&
+		equalWord(body[0], "x") &&
+		effectWordsAt(body, 1, "mana", "of", "any", "one", "color") {
+		return true
+	}
+	if len(body) == 8 &&
+		effectWordsAt(body, 0, "an", "amount", "of", "mana", "of", "any", "one", "color") {
+		return true
+	}
+	return false
+}
+
+// recognizeControlledCountMana types an "Add <mana> for each <permanent> you
+// control" add-mana body (Cabal Coffers, Gaea's Cradle, Serra's Sanctum) whose
+// produced amount scales with a battlefield permanent count. The "for each
+// <permanent>" suffix is already typed onto effect.Amount as a dynamic
+// battlefield count by parseEffectAmount; the leading mana symbol, however, is
+// left unparsed because parseEffectMana rejects the trailing count clause. This
+// re-parses just the symbols before the count phrase and records the produced
+// color, so the lowerer can emit one mana per counted permanent. It fires only
+// for a single fixed produced color over a battlefield (non-zone) count, so
+// choice, any-color, and multi-symbol outputs stay fail-closed.
+func recognizeControlledCountMana(effect *EffectSyntax) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Amount.DynamicKind != EffectDynamicAmountCount ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormForEach ||
+		effect.Amount.Multiplier < 1 ||
+		effect.Amount.Selection == nil ||
+		effect.Amount.Selection.Zone != zone.None {
+		return false
+	}
+	body := manaBodyBeforeAmount(effect)
+	if len(body) == 0 {
+		return false
+	}
+	parsed := parseEffectMana(EffectAddMana, body, true)
+	if !parsed.ColorsKnown || len(parsed.Colors) != 1 || parsed.Choice {
+		return false
+	}
+	effect.Mana = parsed
+	return true
+}
+
+// recognizeSourceCounterCountMana types an "Add <mana> for each <kind> counter
+// on <this permanent>" add-mana body (Everflowing Chalice) whose produced amount
+// scales with the number of counters of one kind on the source permanent.
+// parseEffectAmount types the trailing "for each ... counter on this artifact"
+// suffix as a source-counter-count dynamic amount, but the leading mana symbol is
+// left unparsed because parseEffectMana rejects the trailing count clause. This
+// re-parses just the symbols before the count phrase and records the produced
+// color so the lowerer can emit one mana per counter. It fires only for a single
+// fixed produced color over a recognized counter kind, so choice and any-color
+// outputs stay fail-closed.
+func recognizeSourceCounterCountMana(effect *EffectSyntax) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Amount.DynamicKind != EffectDynamicAmountSourceCounterCount ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormForEach ||
+		effect.Amount.Multiplier < 1 ||
+		!effect.Amount.CounterKind.Valid() {
+		return false
+	}
+	body := manaBodyBeforeAmount(effect)
+	if len(body) == 0 {
+		return false
+	}
+	parsed := parseEffectMana(EffectAddMana, body, true)
+	if !parsed.ColorsKnown || len(parsed.Colors) != 1 || parsed.Choice {
+		return false
+	}
+	effect.Mana = parsed
+	return true
+}
+
+// recognizeChosenColorCountMana types the add-mana body "an amount of mana of
+// that color equal to <dynamic count>" (Three Tree City: "...equal to the number
+// of creatures you control of the chosen type."). The trailing count phrase is
+// already typed onto effect.Amount as a dynamic battlefield count by
+// parseEffectAmount; the leading "an amount of mana of that color" body is left
+// unrecognized by parseEffectMana. This credits the chosen-color output when the
+// body matches exactly and the amount is a supported battlefield (non-zone)
+// count, so the lowerer can produce one mana of the chosen color per counted
+// permanent. It fails closed for a card-zone count or a missing amount.
+func recognizeChosenColorCountMana(effect *EffectSyntax) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Amount.DynamicKind != EffectDynamicAmountCount ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormEqual ||
+		effect.Amount.Multiplier < 1 ||
+		effect.Amount.Selection == nil ||
+		effect.Amount.Selection.Zone != zone.None {
+		return false
+	}
+	body := manaBodyBeforeAmount(effect)
+	if len(body) != 7 ||
+		!effectWordsAt(body, 0, "an", "amount", "of", "mana", "of", "that", "color") {
+		return false
+	}
+	effect.Mana = EffectManaSyntax{Span: shared.SpanOf(body), ChosenColor: true, ChosenColorDynamic: true}
+	return true
+}
+
+// manaBodyBeforeAmount returns the effect tokens that sit after the add-mana
+// verb and before the trailing dynamic-count phrase (the produced mana symbols).
+func manaBodyBeforeAmount(effect *EffectSyntax) []shared.Token {
+	verbEnd := effect.VerbSpan.End.Offset
+	amountStart := effect.Amount.Span.Start.Offset
+	var body []shared.Token
+	for _, token := range effect.Tokens {
+		if token.Span.Start.Offset >= verbEnd && token.Span.End.Offset <= amountStart {
+			body = append(body, token)
+		}
+	}
+	return body
+}
+
+// manaBodyAfterVerb returns the add-mana body tokens that follow the verb,
+// dropping a trailing sentence period.
+func manaBodyAfterVerb(effect *EffectSyntax) []shared.Token {
+	verbEnd := effect.VerbSpan.End.Offset
+	var body []shared.Token
+	for _, token := range effect.Tokens {
+		if token.Span.Start.Offset >= verbEnd {
+			body = append(body, token)
+		}
+	}
+	for len(body) > 0 && body[len(body)-1].Kind == shared.Period {
+		body = body[:len(body)-1]
+	}
+	return body
+}
+
+// recognizeColorsAmongControlledMana recognizes the add-mana body "one mana of
+// any color among <permanents> you control" (Mox Amber, Plaza of Heroes), whose
+// produced color is chosen at resolution from the union of colors of the
+// permanents the controller controls matching the filter. The filter after
+// "among" is parsed by the shared selection parser so it stays generic over the
+// permanent group (legendary creatures and planeswalkers, legendary permanents,
+// and so on). It fires only for a "you control" battlefield group carrying a
+// type, supertype, subtype, or color filter, so an empty wildcard or a non-
+// battlefield wording stays fail-closed.
+func recognizeColorsAmongControlledMana(effect *EffectSyntax, atoms Atoms) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Mana.AnyColor || effect.Mana.ColorsKnown ||
+		effect.Mana.CommanderIdentity || effect.Mana.LandsProduce ||
+		effect.Mana.LinkedExileColors || effect.Mana.FilterPair ||
+		len(effect.Mana.Symbols) != 0 {
+		return false
+	}
+	body := manaBodyAfterVerb(effect)
+	if len(body) <= 6 || !effectWordsAt(body, 0, "one", "mana", "of", "any", "color", "among") {
+		return false
+	}
+	selection := parseSelection(body[6:], atoms)
+	if selection.Controller != SelectionControllerYou ||
+		selection.Zone != zone.None ||
+		!colorsAmongSelectionSupported(selection) {
+		return false
+	}
+	clone := selection
+	effect.Mana = EffectManaSyntax{
+		Span:                  shared.SpanOf(body),
+		ColorsAmongControlled: true,
+		ColorsAmongSelection:  &clone,
+	}
+	return true
+}
+
+// recognizeEachColorAmongControlledMana recognizes the add-mana body "For each
+// color among <permanents> you control, add one mana of that color" (Bloom
+// Tender), which produces one mana of each distinct color found among the
+// permanents the controller controls matching the filter. The "for each color
+// among <group>" prefix precedes the "add" verb; the body after the verb is
+// "one mana of that color". The group after "among" is parsed by the shared
+// selection parser so it stays generic over the permanent group, and a bare
+// "permanents you control" is accepted because the whole controlled board
+// legitimately contributes its colors. It fires only for a "you control"
+// battlefield group, so a foreign controller or a non-battlefield wording stays
+// fail-closed.
+func recognizeEachColorAmongControlledMana(effect *EffectSyntax, atoms Atoms) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Mana.AnyColor || effect.Mana.ColorsKnown ||
+		effect.Mana.ChosenColor || effect.Mana.CommanderIdentity ||
+		effect.Mana.LandsProduce || effect.Mana.LinkedExileColors ||
+		effect.Mana.FilterPair || effect.Mana.ColorsAmongControlled ||
+		effect.Amount.DynamicKind != "" ||
+		len(effect.Mana.Symbols) != 0 {
+		return false
+	}
+	body := manaBodyAfterVerb(effect)
+	if len(body) != 5 || !effectWordsAt(body, 0, "one", "mana", "of", "that", "color") {
+		return false
+	}
+	prefix := manaPrefixBeforeVerb(effect)
+	for len(prefix) > 0 && prefix[len(prefix)-1].Kind == shared.Comma {
+		prefix = prefix[:len(prefix)-1]
+	}
+	if len(prefix) <= 4 || !effectWordsAt(prefix, 0, "for", "each", "color", "among") {
+		return false
+	}
+	selection := parseSelection(prefix[4:], atoms)
+	if selection.Controller != SelectionControllerYou ||
+		selection.Zone != zone.None {
+		return false
+	}
+	// Accept either a narrowed group whose predicate the selection parser
+	// captures (the colorsAmongControlled facets) or the exact literal bare
+	// "permanents you control" group. Any other prefix (e.g. "monocolored
+	// permanents you control", whose qualifier the selection parser drops
+	// silently) fails closed so it cannot lower to a mislabeled ability.
+	bareControlled := len(prefix) == 7 && effectWordsAt(prefix, 4, "permanents", "you", "control")
+	if !colorsAmongSelectionSupported(selection) && !bareControlled {
+		return false
+	}
+	clone := selection
+	effect.Mana = EffectManaSyntax{
+		Span:                     shared.SpanOf(effect.Tokens),
+		EachColorAmongControlled: true,
+		ColorsAmongSelection:     &clone,
+	}
+	return true
+}
+
+// manaPrefixBeforeVerb returns the effect tokens that precede the add-mana verb,
+// such as a "For each color among <group>," distributive prefix.
+func manaPrefixBeforeVerb(effect *EffectSyntax) []shared.Token {
+	verbStart := effect.VerbSpan.Start.Offset
+	var prefix []shared.Token
+	for _, token := range effect.Tokens {
+		if token.Span.End.Offset <= verbStart {
+			prefix = append(prefix, token)
+		}
+	}
+	return prefix
+}
+
+// filter carries an exact, supported permanent predicate. It requires a type,
+// supertype, subtype, or color filter (so a bare "permanents you control" with
+// no narrowing predicate fails closed) and rejects qualifiers the executable
+// backend cannot represent for this body (numeric, combat, tapped, "another",
+// or excluded-type/keyword qualifiers).
+func colorsAmongSelectionSupported(selection SelectionSyntax) bool {
+	if selection.All || selection.Another || selection.Other ||
+		selection.Attacking || selection.Blocking ||
+		selection.Tapped || selection.Untapped ||
+		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		selection.Keyword != KeywordUnknown || selection.ExcludedKeyword != KeywordUnknown ||
+		len(selection.ExcludedTypes) != 0 || len(selection.ExcludedSupertypes) != 0 ||
+		len(selection.ExcludedColors) != 0 || len(selection.Alternatives) != 0 {
+		return false
+	}
+	return len(selection.RequiredTypesAny) != 0 ||
+		len(selection.Supertypes) != 0 ||
+		len(selection.SubtypesAny) != 0 ||
+		len(selection.ColorsAny) != 0 ||
+		selection.Colorless || selection.Multicolored ||
+		selectionKindNarrowsPermanent(selection.Kind)
+}
+
+// selectionKindNarrowsPermanent reports whether a selection Kind names a concrete
+// permanent card type (so "creatures you control" narrows) rather than the
+// catch-all permanent/any kinds (so "permanents you control" alone does not).
+func selectionKindNarrowsPermanent(kind SelectionKind) bool {
+	switch kind {
+	case SelectionArtifact, SelectionCreature, SelectionEnchantment,
+		SelectionLand, SelectionPlaneswalker:
+		return true
+	default:
+		return false
+	}
+}
+
 func parseHandDiscard(effect *EffectSyntax) HandDiscardSyntax {
 	if effect.Kind != EffectDiscard ||
 		effect.Context != EffectContextController ||
 		!effect.Amount.Known || effect.Amount.Value < 1 ||
 		len(effect.Targets) != 0 ||
-		len(effect.References) != 0 ||
-		!exactCardCountEffectSyntax(effect, "Discard", "discards", false) {
+		len(effect.References) != 0 {
 		return HandDiscardSyntax{}
 	}
-	return HandDiscardSyntax{Present: true}
+	if exactCardCountEffectSyntax(effect, "Discard", "discards", false) {
+		return HandDiscardSyntax{Present: true}
+	}
+	if exactControllerRandomDiscardSyntax(effect) {
+		return HandDiscardSyntax{Present: true, AtRandom: true}
+	}
+	return HandDiscardSyntax{}
+}
+
+// exactControllerRandomDiscardSyntax reconstructs the canonical "discard <N>
+// card(s) at random" wording for a controller-context discard of a known fixed
+// count. The "at random" suffix marks a random discard, distinguishing it from
+// the player-choice discard exactCardCountEffectSyntax recognizes.
+func exactControllerRandomDiscardSyntax(effect *EffectSyntax) bool {
+	if !effect.Amount.Known || effect.Amount.Value < 1 || effect.Amount.RangeKnown ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormNone {
+		return false
+	}
+	noun := "cards"
+	if effect.Amount.Value == 1 {
+		noun = "card"
+	}
+	text := exactEffectClauseText(effect)
+	amountText := effectAmountSourceText(effect)
+	for _, prefix := range []string{"Discard", "You discard"} {
+		if strings.EqualFold(text, fmt.Sprintf("%s %s %s at random.", prefix, amountText, noun)) {
+			return true
+		}
+	}
+	return false
+}
+
+// parseDiscardEntireHand recognizes a "discard their hand" clause whose affected
+// player discards every card in hand. It accepts the controller ("Discard your
+// hand"), each-player, each-opponent, and single-target-player forms; the
+// amount is unknown because it depends on the player's hand at resolution.
+func parseDiscardEntireHand(effect *EffectSyntax) bool {
+	if effect.Kind != EffectDiscard ||
+		effect.Amount.Known ||
+		effect.Negated ||
+		effect.Optional {
+		return false
+	}
+	text := strings.TrimSpace(exactEffectClauseText(effect))
+	switch effect.Context {
+	case EffectContextController:
+		return len(effect.Targets) == 0 &&
+			(strings.EqualFold(text, "Discard your hand.") ||
+				strings.EqualFold(text, "You discard your hand."))
+	case EffectContextEachPlayer:
+		return len(effect.Targets) == 0 &&
+			strings.EqualFold(text, "Each player discards their hand.")
+	case EffectContextEachOpponent:
+		return len(effect.Targets) == 0 &&
+			strings.EqualFold(text, "Each opponent discards their hand.")
+	case EffectContextTarget:
+		return len(effect.Targets) == 1 && effect.Targets[0].Exact &&
+			exactCardCountTargetPlayer(effect.Targets[0].Selection) &&
+			strings.EqualFold(text, titleFirstEffectText(effect.Targets[0].Text)+" discards their hand.")
+	default:
+		return false
+	}
 }
 
 func parsePlayerProtectionEffects(sentence Sentence, tokens []shared.Token, _ Atoms) ([]EffectSyntax, bool) {
@@ -542,6 +1389,187 @@ func parseGroupPhaseOutEffect(sentence Sentence, tokens []shared.Token, atoms At
 		Selection:  parseSelection(tokens, atoms),
 		Exact:      true,
 	}}, true
+}
+
+// parseAdditionalLandPlaysEffect recognizes the controller-scoped grant of one
+// or more extra land plays for the turn: "Play an additional land this turn.",
+// "You may play an additional land this turn.", and the multi-land "... two
+// additional lands ..." / "... up to N additional lands ..." variants. The "you
+// may" permission is folded into an unconditional allowance (the player is never
+// forced to play the extra land). The static "on each of your turns" form is a
+// separate static ability and is not matched here.
+// parseCastAsThoughFlashEffect recognizes the controller-scoped, turn-scoped
+// timing permission "You may cast spells this turn as though they had flash."
+// (Borne Upon a Wind, Emergence Zone). The leading "you may" is a permission,
+// not a resolving choice, so the effect is modeled unconditionally (like
+// parseAdditionalLandPlaysEffect) rather than as an optional cast effect. Any
+// other wording fails closed and flows through the generic effect parser.
+func parseCastAsThoughFlashEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	if len(words) >= 2 && equalWord(words[0], "you") && equalWord(words[1], "may") {
+		words = words[2:]
+	}
+	if len(words) != 9 || !equalWord(words[0], "cast") {
+		return nil, false
+	}
+	castToken := words[0]
+	if !equalWord(words[1], "spells") ||
+		!equalWord(words[2], "this") ||
+		!equalWord(words[3], "turn") ||
+		!equalWord(words[4], "as") ||
+		!equalWord(words[5], "though") ||
+		!equalWord(words[6], "they") ||
+		!equalWord(words[7], "had") ||
+		!equalWord(words[8], "flash") {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:       EffectCastAsThoughFlash,
+		Span:       sentence.Span,
+		ClauseSpan: sentence.Span,
+		VerbSpan:   castToken.Span,
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		Context:    EffectContextController,
+		Duration:   EffectDurationThisTurn,
+		Exact:      true,
+	}}, true
+}
+
+// parseCantCastSpellsEffect recognizes the one-shot, turn-scoped player cast
+// prohibition "<players> can't cast spells this turn." (Silence: "Your opponents
+// can't cast spells this turn."; "Players can't cast spells this turn."). The
+// affected players are the controller's opponents ("your opponents", "each
+// opponent") or every player ("players"). It is modeled as an unconditional
+// turn-scoped restriction reusing the continuous cast-prohibition rule effect.
+// Targeted, referenced, defending-player, and spell-type-filtered wordings fail
+// closed and flow through the generic effect parser.
+func parseCantCastSpellsEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	index := 0
+	allPlayers := false
+	switch {
+	case len(words) >= 2 && equalWord(words[0], "your") && equalWord(words[1], "opponents"):
+		index = 2
+	case len(words) >= 2 && equalWord(words[0], "each") && equalWord(words[1], "opponent"):
+		index = 2
+	case len(words) >= 1 && equalWord(words[0], "players"):
+		allPlayers = true
+		index = 1
+	default:
+		return nil, false
+	}
+	if index >= len(words) || (!equalWord(words[index], "can't") && !equalWord(words[index], "cannot")) {
+		return nil, false
+	}
+	index++
+	rest := []string{"cast", "spells", "this", "turn"}
+	if len(words)-index != len(rest) {
+		return nil, false
+	}
+	for offset, want := range rest {
+		if !equalWord(words[index+offset], want) {
+			return nil, false
+		}
+	}
+	return []EffectSyntax{{
+		Kind:                     EffectCantCastSpells,
+		Span:                     sentence.Span,
+		ClauseSpan:               sentence.Span,
+		VerbSpan:                 words[index].Span,
+		Text:                     sentence.Text,
+		Tokens:                   append([]shared.Token(nil), tokens...),
+		Context:                  EffectContextController,
+		Duration:                 EffectDurationThisTurn,
+		CantCastSpellsAllPlayers: allPlayers,
+		Exact:                    true,
+	}}, true
+}
+
+func parseAdditionalLandPlaysEffect(sentence Sentence, tokens []shared.Token, _ Atoms) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	start := 0
+	if len(words) >= 2 && equalWord(words[0], "you") && equalWord(words[1], "may") {
+		start = 2
+	}
+	rest := words[start:]
+	// Shortest match: "play an additional land this turn" (6 words).
+	if len(rest) < 6 || !equalWord(rest[0], "play") {
+		return nil, false
+	}
+	playToken := rest[0]
+	rest = rest[1:]
+	if equalWord(rest[0], "up") && len(rest) >= 2 && equalWord(rest[1], "to") {
+		rest = rest[2:]
+	}
+	if len(rest) < 5 {
+		return nil, false
+	}
+	count, ok := additionalLandCountWord(rest[0])
+	if !ok || !equalWord(rest[1], "additional") {
+		return nil, false
+	}
+	plural := count != 1
+	landWord := "land"
+	if plural {
+		landWord = "lands"
+	}
+	if !equalWord(rest[2], landWord) ||
+		!equalWord(rest[3], "this") ||
+		!equalWord(rest[4], "turn") ||
+		len(rest) != 5 {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:       EffectAdditionalLandPlays,
+		Span:       sentence.Span,
+		ClauseSpan: sentence.Span,
+		VerbSpan:   playToken.Span,
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		Context:    EffectContextController,
+		Duration:   EffectDurationThisTurn,
+		Amount:     EffectAmountSyntax{Value: count, Known: true},
+		Exact:      true,
+	}}, true
+}
+
+// additionalLandCountWord reads the extra-land count from the determiner or
+// number word preceding "additional land(s)": "a"/"an"/"one" mean a single extra
+// land, and small cardinal words ("two", "three", ...) and integer literals give
+// their value.
+func additionalLandCountWord(token shared.Token) (int, bool) {
+	if token.Kind == shared.Integer {
+		value, err := strconv.Atoi(token.Text)
+		if err != nil || value < 1 {
+			return 0, false
+		}
+		return value, true
+	}
+	switch strings.ToLower(token.Text) {
+	case "a", "an", "one":
+		return 1, true
+	default:
+		return CardinalWordValue(token.Text)
+	}
 }
 
 func parseHandLibraryPut(effect *EffectSyntax) HandLibraryPutSyntax {
@@ -689,13 +1717,16 @@ func parseSearchSplitSlot(clause []shared.Token, i int) (SearchSplitSlot, int, b
 // top-level "and", and each phrase is parsed by the same parseSelection used for
 // a lone group recipient. The downstream exactness gate reconstructs both halves
 // and compares them byte-for-byte, so an over-broad split simply fails closed.
-func parseDamageRecipientPair(kind EffectKind, clause []shared.Token, atoms Atoms) []SelectionSyntax {
+func parseDamageRecipientPair(kind EffectKind, clause []shared.Token, amount EffectAmountSyntax, atoms Atoms) []SelectionSyntax {
 	if kind != EffectDealDamage {
 		return nil
 	}
 	recipient, ok := damageRecipientTokens(clause)
 	if !ok {
-		return nil
+		recipient, ok = damageRecipientTokensAfterAmount(clause, amount)
+		if !ok {
+			return nil
+		}
 	}
 	left, right, ok := splitEachAndEach(recipient)
 	if !ok {
@@ -705,6 +1736,37 @@ func parseDamageRecipientPair(kind EffectKind, clause []shared.Token, atoms Atom
 		parseSelection(left, atoms),
 		parseSelection(right, atoms),
 	}
+}
+
+// damageRecipientTokensAfterAmount returns the recipient tokens of a deal-damage
+// clause whose amount is a dynamic "equal to ..." phrase ("deals damage equal to
+// its power to each other creature and each opponent."): everything after the
+// first "to" that follows the amount span, with a trailing period removed. The
+// plain damageRecipientTokens path fails for this wording because "damage" is
+// followed by "equal" rather than "to", so the recipient is read from the "to"
+// that introduces it after the amount. It fails closed when the amount is not a
+// dynamic phrase or no recipient "to" follows it.
+func damageRecipientTokensAfterAmount(clause []shared.Token, amount EffectAmountSyntax) ([]shared.Token, bool) {
+	if amount.DynamicKind == EffectDynamicAmountNone {
+		return nil, false
+	}
+	for i := 0; i+1 < len(clause); i++ {
+		if clause[i].Span.Start.Offset < amount.Span.End.Offset {
+			continue
+		}
+		if !equalWord(clause[i], "to") {
+			continue
+		}
+		recipient := clause[i+1:]
+		if len(recipient) > 0 && recipient[len(recipient)-1].Kind == shared.Period {
+			recipient = recipient[:len(recipient)-1]
+		}
+		if len(recipient) == 0 {
+			return nil, false
+		}
+		return recipient, true
+	}
+	return nil, false
 }
 
 // damageRecipientTokens returns the recipient tokens of a deal-damage clause:
@@ -735,6 +1797,38 @@ func damageRecipientTokens(clause []shared.Token) ([]shared.Token, bool) {
 // span) so the recipient is read from the verb clause alone. It returns None for
 // every other recipient (a target, a group, or a dual recipient), leaving those
 // to their existing paths.
+// eachSourceDamageSyntax recognizes an "each <group> deals N damage to its
+// controller/owner" effect, where every member of the subject group is the
+// damage source dealing to the player who controls (or owns) it ("Each creature
+// deals 1 damage to its controller."). It returns the parsed source-group
+// selection and the recipient role (controller or owner). It fails closed
+// (empty selection, None role) for every other shape: a non-damage effect, a
+// subject that does not begin with "each" or does not parse to a recognized
+// group, or a recipient that is not the bare "its controller"/"its owner".
+func eachSourceDamageSyntax(kind EffectKind, subject, clause []shared.Token, atoms Atoms) (SelectionSyntax, DamageRecipientReferenceKind) {
+	if kind != EffectDealDamage || len(subject) == 0 || !equalWord(subject[0], "each") {
+		return SelectionSyntax{}, DamageRecipientReferenceNone
+	}
+	recipient, ok := damageRecipientTokens(clause)
+	if !ok || len(recipient) != 2 || !equalWord(recipient[0], "its") {
+		return SelectionSyntax{}, DamageRecipientReferenceNone
+	}
+	var role DamageRecipientReferenceKind
+	switch {
+	case equalWord(recipient[1], "controller"):
+		role = DamageRecipientReferenceController
+	case equalWord(recipient[1], "owner"):
+		role = DamageRecipientReferenceOwner
+	default:
+		return SelectionSyntax{}, DamageRecipientReferenceNone
+	}
+	selection := parseSelection(subject, atoms)
+	if selection.Kind == SelectionUnknown {
+		return SelectionSyntax{}, DamageRecipientReferenceNone
+	}
+	return selection, role
+}
+
 func damageRecipientReference(effect *EffectSyntax) DamageRecipientReferenceKind {
 	if effect.Kind != EffectDealDamage {
 		return DamageRecipientReferenceNone
@@ -954,7 +2048,7 @@ func legacyExactManaBody(effect *EffectSyntax, sentence Sentence) bool {
 	if !direct && !optionalController {
 		return false
 	}
-	return effect.Mana.AnyColor || effect.Mana.CommanderIdentity || effect.Mana.LandsProduce || effect.Mana.FilterPair || len(effect.Mana.Symbols) != 0
+	return effect.Mana.AnyColor || effect.Mana.CommanderIdentity || effect.Mana.LandsProduce || effect.Mana.FilterPair || effect.Mana.ColorsAmongControlled || len(effect.Mana.Symbols) != 0
 }
 
 func legacyEffectCount(tokens []shared.Token, atoms Atoms) int {
@@ -997,6 +2091,8 @@ func legacyEffectKindAt(tokens []shared.Token, index int) EffectKind {
 	case kind == EffectEnterTapped && index+1 < len(tokens) && equalWord(tokens[index+1], "prepared"):
 		return EffectEnterPrepared
 	case kind == EffectCast && index > 0 && (equalWord(tokens[index-1], "was") || equalWord(tokens[index-1], "were")):
+		return EffectUnknown
+	case kind == EffectCast && pastCastCountPhraseAt(tokens, index):
 		return EffectUnknown
 	case kind == EffectCounter && !counterVerbAt(tokens, index):
 		return EffectUnknown
@@ -1101,6 +2197,107 @@ func entersWithCountersSyntax(kind EffectKind, clause []shared.Token) bool {
 		}
 	}
 	return false
+}
+
+// groupEntersTappedPermanentType maps a plural permanent-type noun used as the
+// subject of a static "<permanents> enter tapped" replacement to its runtime
+// card type. It reports ok=false for any word that is not a recognized
+// permanent-type plural so the caller's type list fails closed.
+func groupEntersTappedPermanentType(word string) (types.Card, bool) {
+	switch strings.ToLower(word) {
+	case "creatures":
+		return types.Creature, true
+	case "lands":
+		return types.Land, true
+	case "artifacts":
+		return types.Artifact, true
+	case "enchantments":
+		return types.Enchantment, true
+	case "planeswalkers":
+		return types.Planeswalker, true
+	default:
+		return "", false
+	}
+}
+
+// parseGroupEntersTappedEffect recognizes a static enters-tapped replacement that
+// taps a group of OTHER permanents as they enter, such as "Creatures your
+// opponents control enter tapped." (Authority of the Consuls), "Artifacts,
+// creatures, and lands your opponents control enter the battlefield tapped."
+// (Frozen Aether), or the unscoped "Permanents enter tapped." (Kismet family).
+// The subject is a list of permanent-type plurals (or the catch-all
+// "Permanents"), an optional controller scope, and the plural "enter [the
+// battlefield] tapped" verb phrase. It matches the whole sentence exactly, so
+// any other wording falls through to the generic effect grammar.
+func parseGroupEntersTappedEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+	body := semanticEffectTokens(tokens)
+	if len(body) < 4 || body[len(body)-1].Kind != shared.Period {
+		return nil, false
+	}
+	words := body[:len(body)-1]
+	index := 0
+	var cardTypes []types.Card
+	if equalWord(words[0], "permanents") {
+		index = 1
+	} else {
+		for index < len(words) {
+			cardType, ok := groupEntersTappedPermanentType(words[index].Text)
+			if !ok {
+				break
+			}
+			cardTypes = append(cardTypes, cardType)
+			index++
+			for index < len(words) && (words[index].Kind == shared.Comma || equalWord(words[index], "and")) {
+				index++
+			}
+		}
+		if len(cardTypes) == 0 {
+			return nil, false
+		}
+	}
+	scope := EntersTappedGroupControllerEach
+	switch {
+	case index+2 < len(words) && equalWord(words[index], "your") &&
+		equalWord(words[index+1], "opponents") && equalWord(words[index+2], "control"):
+		scope = EntersTappedGroupControllerOpponents
+		index += 3
+	case index+2 < len(words) && equalWord(words[index], "an") &&
+		equalWord(words[index+1], "opponent") && equalWord(words[index+2], "controls"):
+		scope = EntersTappedGroupControllerOpponents
+		index += 3
+	case index+1 < len(words) && equalWord(words[index], "you") && equalWord(words[index+1], "control"):
+		scope = EntersTappedGroupControllerYou
+		index += 2
+	default:
+	}
+	if index >= len(words) || !equalWord(words[index], "enter") {
+		return nil, false
+	}
+	index++
+	if index+1 < len(words) && equalWord(words[index], "the") && equalWord(words[index+1], "battlefield") {
+		index += 2
+	}
+	if index >= len(words) || !equalWord(words[index], "tapped") {
+		return nil, false
+	}
+	index++
+	if index != len(words) {
+		return nil, false
+	}
+	effect := EffectSyntax{
+		Kind:                   EffectEnterTapped,
+		Context:                EffectContextController,
+		Span:                   sentence.Span,
+		ClauseSpan:             sentence.Span,
+		Text:                   sentence.Text,
+		Tokens:                 append([]shared.Token(nil), tokens...),
+		EntersTapped:           true,
+		EntersTappedGroup:      true,
+		EntersTappedGroupScope: scope,
+		EntersTappedGroupTypes: cardTypes,
+	}
+	effect.Exact = exactEffectSyntax(&effect)
+	return []EffectSyntax{effect}, true
 }
 
 // entersTappedSelfSyntax recognizes a self enters-tapped instruction such as

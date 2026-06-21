@@ -91,6 +91,11 @@ func TestLowerStandaloneStaticKeywordGrants(t *testing.T) {
 			subtypes:   []types.Sub{types.Vampire},
 			keywords:   []game.Keyword{game.Exalted},
 		},
+		"controlled creatures riot": {
+			oracleText: "Creatures you control have riot.",
+			domain:     game.GroupDomainObjectControlled,
+			keywords:   []game.Keyword{game.Riot},
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -270,6 +275,66 @@ func TestLowerStaticDeclarationGroupAnthems(t *testing.T) {
 					t.Fatalf("continuous effect keywords = %#v", effect)
 				}
 			} else if effect.Layer != game.LayerPowerToughnessModify ||
+				effect.PowerDelta != test.power ||
+				effect.ToughnessDelta != test.toughness {
+				t.Fatalf("continuous effect modify = %#v", effect)
+			}
+		})
+	}
+}
+
+// TestLowerStaticDeclarationChosenTypeAnthems covers the chosen-type anthem
+// group: "creatures you control of the chosen type" buffs, whose runtime
+// Selection must carry SubtypeFromSourceEntryChoice so only permanents matching
+// the source's entry-time creature-type choice are affected (Patchwork Banner,
+// Adaptive Automaton, Obelisk of Urd).
+func TestLowerStaticDeclarationChosenTypeAnthems(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		oracleText string
+		excluded   bool
+		power      int
+		toughness  int
+	}{
+		"controlled chosen type": {
+			oracleText: "As this artifact enters, choose a creature type.\nCreatures you control of the chosen type get +1/+1.",
+			power:      1,
+			toughness:  1,
+		},
+		"other controlled chosen type": {
+			oracleText: "As this creature enters, choose a creature type.\nOther creatures you control of the chosen type get +2/+2.",
+			excluded:   true,
+			power:      2,
+			toughness:  2,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Chosen Anthem",
+				Layout:     "normal",
+				TypeLine:   "Artifact",
+				OracleText: test.oracleText,
+			})
+			if len(face.StaticAbilities) != 1 {
+				t.Fatalf("static abilities = %#v, want one", face.StaticAbilities)
+			}
+			effects := face.StaticAbilities[0].Body.ContinuousEffects
+			if len(effects) != 1 {
+				t.Fatalf("continuous effects = %#v, want one", effects)
+			}
+			effect := effects[0]
+			selection := effect.Group.Selection()
+			if effect.Group.Domain() != game.GroupDomainObjectControlled ||
+				!slices.Equal(selection.RequiredTypes, []types.Card{types.Creature}) ||
+				!selection.SubtypeFromSourceEntryChoice {
+				t.Fatalf("continuous effect group = %#v", effect)
+			}
+			if _, excluded := effect.Group.Exclusion(); excluded != test.excluded {
+				t.Fatalf("group exclusion = %v, want %v", excluded, test.excluded)
+			}
+			if effect.Layer != game.LayerPowerToughnessModify ||
 				effect.PowerDelta != test.power ||
 				effect.ToughnessDelta != test.toughness {
 				t.Fatalf("continuous effect modify = %#v", effect)

@@ -69,10 +69,23 @@ const (
 	PrimitiveImpulseExile
 	PrimitiveReorderLibraryTop
 	PrimitiveShuffleLibrary
+	PrimitiveExileFromHand
+	PrimitiveLookAtLibraryTop
+	PrimitivePutFromHand
+	PrimitiveCastForFree
+	PrimitiveReturnFromGraveyard
+	PrimitivePlayerLosesGame
+	PrimitiveAttach
+	PrimitiveMoveCommander
+	PrimitivePutPermanentOnLibrary
+	PrimitiveChooseNewTargets
+	PrimitiveGroupSourceDamage
+	PrimitiveMassReturnFromGraveyard
+	PrimitivePlayerWinsGame
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveShuffleLibrary) + 1
+const primitiveKindCount = int(PrimitivePlayerWinsGame) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -110,6 +123,17 @@ type Damage struct {
 	Divided bool
 }
 
+// GroupSourceDamage has each permanent in a battlefield group deal an amount of
+// damage to its own controller, or its owner when ToOwner is set. It models
+// "Each creature deals 1 damage to its controller.": every group member is the
+// damage source and the recipient is the player who controls (or owns) that
+// member.
+type GroupSourceDamage struct {
+	Group   GroupReference
+	Amount  Quantity
+	ToOwner bool
+}
+
 // Draw draws cards for a referenced player, or for every player in a referenced
 // group ("each player draws", "each opponent draws"). Exactly one of Player or
 // PlayerGroup is set.
@@ -126,6 +150,14 @@ type ReorderLibraryTop struct {
 	Player PlayerReference
 }
 
+// LookAtLibraryTop privately shows the top card of a player's library to that
+// player and links the exact card for later instructions. It does not reveal the
+// card or move it.
+type LookAtLibraryTop struct {
+	Player        PlayerReference
+	PublishLinked LinkedKey
+}
+
 // ShuffleLibrary randomizes a referenced player's library.
 type ShuffleLibrary struct {
 	Player PlayerReference
@@ -136,10 +168,19 @@ type ShuffleLibrary struct {
 // single referenced player chooses exactly Amount distinct cards when available,
 // or every available card when fewer remain. Exactly one of Player or
 // PlayerGroup is set.
+//
+// EntireHand marks a "discard their hand" effect ("Each player discards their
+// hand", "Discard your hand"): the affected player discards every card in hand
+// and Amount is ignored.
+//
+// AtRandom marks an "at random" discard ("Discard a card at random."): the
+// discarded cards are chosen at random rather than by the player.
 type Discard struct {
 	Amount      Quantity
 	Player      PlayerReference      // single player; zero if PlayerGroup is set
 	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
+	EntireHand  bool
+	AtRandom    bool
 }
 
 // Destroy destroys one referenced permanent or every permanent in a referenced group.
@@ -172,6 +213,18 @@ type AddMana struct {
 	// such as Path of Ancestry and restricted spell effects such as Cavern of
 	// Souls while preserving the producing mana ability (CR 605).
 	SpendRider opt.V[ManaSpendRider]
+	// Player, when present, overrides the recipient of the produced mana. It
+	// models triggered abilities that add mana to a referenced object's
+	// controller ("its controller adds an additional {G}", Wild Growth) rather
+	// than the ability's controller. When absent, mana goes to the controller.
+	Player opt.V[PlayerReference]
+	// EachControlledColor, when non-nil, makes this instruction produce Amount
+	// mana of EACH color among the permanents the recipient controls matching
+	// the Selection, rather than a single color ("For each color among
+	// permanents you control, add one mana of that color", Bloom Tender). The
+	// colors are recomputed at resolution as the union of the matching
+	// permanents' colors; an empty set produces no mana (CR 202.2, 605).
+	EachControlledColor *Selection
 }
 
 // AddCounter places counters on a referenced permanent.
@@ -252,6 +305,7 @@ type Reveal struct {
 	Player        PlayerReference
 	Recipient     opt.V[PlayerReference]
 	PublishLinked LinkedKey
+	Card          CardReference
 }
 
 // PutOnBattlefield puts a card or linked object onto the battlefield. Sources
@@ -285,6 +339,15 @@ type CreateToken struct {
 // ShufflePermanentIntoLibrary shuffles the referenced permanent into its owner's library.
 type ShufflePermanentIntoLibrary struct {
 	Object ObjectReference
+}
+
+// PutPermanentOnLibrary moves the referenced permanent from the battlefield to
+// the top of its owner's library, or to the bottom when Bottom is set. It backs
+// "put this [permanent] on top of its owner's library" (Sensei's Divining Top)
+// and the corresponding bottom wording, without shuffling.
+type PutPermanentOnLibrary struct {
+	Object ObjectReference
+	Bottom bool
 }
 
 // StartEngines starts engine effects for a player.
@@ -339,6 +402,22 @@ type LoseLife struct {
 	PlayerGroup PlayerGroupReference
 }
 
+// PlayerLosesGame causes a referenced player to lose the game (CR 104.3a). The
+// player is marked to lose; state-based actions remove them the next time they
+// are checked.
+type PlayerLosesGame struct {
+	Player PlayerReference
+}
+
+// PlayerWinsGame causes a referenced player to win the game (CR 104.2a). A
+// player winning a two-or-more-player game means every other player loses, so
+// each other still-active player is marked to lose; state-based actions remove
+// them the next time they are checked, leaving the referenced player as the
+// last one standing.
+type PlayerWinsGame struct {
+	Player PlayerReference
+}
+
 // Exile exiles one referenced permanent, every permanent in a referenced group,
 // or the resolving source spell.
 // ExileLinkedKey remembers the exiled object for later "exile it, then return it" patterns.
@@ -347,6 +426,77 @@ type Exile struct {
 	Group          GroupReference
 	SourceSpell    bool
 	ExileLinkedKey LinkedKey
+}
+
+// ExileFromHand has Player choose Amount cards from their hand that match
+// Selection and exiles them, modelling "exile a ... card from your hand." The
+// enclosing Instruction's Optional flag expresses the "you may" wrapper. When
+// PublishLinked is set, each exiled card is remembered as an object-scoped
+// linked object on the source permanent (imprint) so a later ability can read
+// it; the link follows the permanent's object identity, so a re-entered object
+// starts without an imprint. Fewer matching cards than Amount exiles all of
+// them; no matching card exiles nothing.
+type ExileFromHand struct {
+	Player        PlayerReference
+	Selection     Selection
+	Amount        Quantity
+	PublishLinked LinkedKey
+}
+
+// PutFromHand has Player choose up to Amount cards from their hand that match
+// Selection and puts each onto the battlefield under that player's control,
+// modeling "put a land card from your hand onto the battlefield" and similar
+// cheat-into-play / ramp effects. The enclosing Instruction's Optional flag
+// expresses a "you may" wrapper, so the engine gathers consent before this runs;
+// here the player chooses which matching card to put, if any. EntersTapped makes
+// each card enter the battlefield tapped. Fewer matching cards than Amount puts
+// all of them; no matching card puts nothing.
+type PutFromHand struct {
+	Player       PlayerReference
+	Selection    Selection
+	Amount       Quantity
+	EntersTapped bool
+}
+
+// CastForFree has Player cast one card matching Selection from Zone without
+// paying its mana cost, modeling "(You may) cast a spell [with mana value N or
+// less] from your hand without paying its mana cost." and similar free-cast
+// effects. The enclosing Instruction's Optional flag expresses a "you may"
+// wrapper, so the engine gathers consent before this runs; here the player
+// chooses which eligible card to cast, if any. No eligible card casts nothing.
+type CastForFree struct {
+	Player    PlayerReference
+	Selection Selection
+	Zone      zone.Type
+}
+
+// ReturnFromGraveyard has Player choose up to Amount cards from their graveyard
+// that match Selection and returns each to their hand, modeling the non-target
+// graveyard recursion wording "Return a <filter> card from your graveyard to
+// your hand" (Takenuma's "creature or planeswalker card", Grapple with the
+// Past, ...). The targeted form ("Return target creature card ...") lowers to a
+// card target instead; this primitive covers the choose-at-resolution form
+// where the returned card is selected rather than targeted. Fewer matching
+// cards than Amount returns all of them; no matching card returns nothing.
+type ReturnFromGraveyard struct {
+	Player    PlayerReference
+	Selection Selection
+	Amount    Quantity
+}
+
+// MassReturnFromGraveyard returns every card in Player's graveyard matching
+// Selection to Destination at once, modeling the non-target mass recursion
+// wording "Return all <filter> cards from your graveyard to the battlefield"
+// (Brilliant Restoration) or "... to your hand". Unlike ReturnFromGraveyard,
+// the resolving player makes no choice: all matching cards move. Destination is
+// either zone.Hand (each card returns to its owner's hand) or zone.Battlefield
+// (each card enters under Player's control, tapped when EntryTapped is set). An
+// empty or fully unmatched graveyard is a legal no-op.
+type MassReturnFromGraveyard struct {
+	Player      PlayerReference
+	Selection   Selection
+	Destination zone.Type
+	EntryTapped bool
 }
 
 // Bounce returns one referenced permanent or every permanent in a referenced
@@ -380,11 +530,26 @@ type MoveCard struct {
 	Card CardReference
 	// Player selects the player whose entire FromZone is moved. It is set only
 	// for the player-zone group form; Card must be unset when Player is set.
-	Player            PlayerReference
+	Player PlayerReference
+	// PlayerGroup selects every player whose entire FromZone is moved at once
+	// ("Exile all graveyards."). It is set only for the player-group zone form;
+	// Card and Player must be unset when PlayerGroup is set.
+	PlayerGroup       PlayerGroupReference
 	Amount            Quantity
 	FromZone          zone.Type
 	Destination       zone.Type
 	DestinationBottom bool
+}
+
+// MoveCommander moves Player's commander(s) from the command zone to
+// Destination, modeling "Put your commander into your hand from the command
+// zone." (Command Beacon, Road of Return, Netherborn Altar). Only the player's
+// own commander cards currently in their command zone move; other command-zone
+// objects are left in place. The commander-replacement effect (CR 903.9) does
+// not redirect the move, because the effect explicitly relocates the commander.
+type MoveCommander struct {
+	Player      PlayerReference
+	Destination zone.Type
 }
 
 // GrantCastPermission allows a referenced card to be cast from a specific zone
@@ -430,8 +595,21 @@ type SkipNextUntap struct {
 	Object ObjectReference
 }
 
-// CounterObject counters a referenced spell or ability on the stack.
+// CounterObject counters a referenced spell or ability on the stack. When
+// ExileInstead is set, a countered spell is exiled instead of being put into
+// its owner's graveyard (CR 614-style replacement, e.g. Force of Negation).
 type CounterObject struct {
+	Object       ObjectReference
+	ExileInstead bool
+}
+
+// ChooseNewTargets re-chooses the targets of a referenced spell or ability on
+// the stack ("You may choose new targets for target spell or ability."). The
+// resolving controller selects a new legal target for each of the referenced
+// object's target specs; the choice is bounded by that object's own targeting
+// restrictions (CR 115.7). The enclosing Instruction's Optional flag expresses
+// the "you may" wrapper.
+type ChooseNewTargets struct {
 	Object ObjectReference
 }
 
@@ -539,6 +717,15 @@ type PhaseOut struct {
 // Regenerate sets up a regeneration shield on the referenced permanent.
 type Regenerate struct {
 	Object ObjectReference
+}
+
+// Attach attaches an Aura or Equipment to a permanent without paying an Equip
+// cost, as for an enters-the-battlefield "attach it to target creature" trigger.
+// Attachment references the moving attachment (typically the source permanent)
+// and Target references the permanent it attaches to.
+type Attach struct {
+	Attachment ObjectReference
+	Target     ObjectReference
 }
 
 // SkipStep schedules a referenced player to skip a step.

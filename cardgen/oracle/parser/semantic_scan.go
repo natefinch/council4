@@ -28,20 +28,21 @@ func (a *Ability) computeSemanticKeywords() []Keyword {
 		body = tokensOutsideParserSpan(body, span)
 	}
 	tokens := eventHistorySemanticTokens(body, a.Reminders, a.Quoted)
+	tokens = stripCreatureSpellHasteRiderTokens(tokens)
 	return a.Atoms.KeywordsWithin(tokens)
 }
 
 // computeSemanticReferences returns the explicit references recognized in a modal
 // option's semantic tokens, with rendered Text.
 func (m *Mode) computeSemanticReferences() []Reference {
-	tokens := eventHistorySemanticTokens(m.Tokens, m.Reminders, m.Quoted)
+	tokens := eventHistorySemanticTokens(m.Body.Tokens, m.Reminders, m.Quoted)
 	return m.Atoms.ReferencesWithin(tokens)
 }
 
 // computeSemanticKeywords returns the keywords recognized in a modal option's
 // semantic tokens.
 func (m *Mode) computeSemanticKeywords() []Keyword {
-	tokens := eventHistorySemanticTokens(m.Tokens, m.Reminders, m.Quoted)
+	tokens := eventHistorySemanticTokens(m.Body.Tokens, m.Reminders, m.Quoted)
 	return m.Atoms.KeywordsWithin(tokens)
 }
 

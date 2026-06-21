@@ -13,6 +13,11 @@ func emitEvent(g *game.Game, event game.Event) {
 		event.TriggeredAbilities = captureEventTriggeredAbilities(g, event)
 		event.TriggeredAbilitiesCaptured = true
 	}
+	if !event.TriggeredAbilitiesCaptured {
+		if doublers := captureChosenTypeTriggerDoublers(g); len(doublers) > 0 {
+			event.ChosenTypeTriggerDoublers = &game.ChosenTypeTriggerDoublerSnapshot{Doublers: doublers}
+		}
+	}
 	g.AppendEvent(event)
 }
 
@@ -186,6 +191,19 @@ func setPermanentTapped(g *game.Game, permanent *game.Permanent, tapped bool) {
 		return
 	}
 	emitPermanentUntappedEvent(g, permanent)
+}
+
+// setPermanentTappedForMana taps a permanent and records tapped-for-mana
+// provenance on the emitted event so "is tapped for mana" triggers (Wild Growth
+// and the mana-additional aura family) can fire.
+func setPermanentTappedForMana(g *game.Game, permanent *game.Permanent) {
+	if permanent.Tapped {
+		return
+	}
+	permanent.Tapped = true
+	event := permanentTappedEvent(g, permanent, true)
+	event.TappedForMana = true
+	emitEvent(g, event)
 }
 
 func emitTargetEvents(g *game.Game, obj *game.StackObject) {

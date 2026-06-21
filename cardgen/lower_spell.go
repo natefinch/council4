@@ -162,40 +162,7 @@ func lowerContent(
 		return content, nil
 	}
 	if hasOptionalResolvingEffect(ctx.content.Effects) {
-		// Resolving optionality is lowered through two supported paths: the
-		// ordered effect-sequence path for the multi-effect "you may X. If you
-		// do, Y" flow (which wires the optional instruction and its result
-		// gate), and the single-optional-effect path for a one-effect "you may
-		// X" body (which marks the produced instruction Optional). Any other
-		// shape (modal, search, manifest, multi-instruction) fails closed.
-		if len(ctx.content.Modes) == 0 &&
-			len(ctx.content.Effects) > 1 &&
-			ctx.content.Effects[0].Kind != compiler.EffectSearch &&
-			!typedManifestDreadSequence(ctx.content) {
-			if content, diagnostic := lowerOrderedEffectSequence(cardName, ctx, syntax); diagnostic == nil {
-				return content, nil
-			}
-		}
-		if content, ok := lowerSingleOptionalEffect(cardName, ctx, syntax); ok {
-			return content, nil
-		}
-		if content, ok := lowerOptionalHaveEffect(cardName, ctx, syntax); ok {
-			return content, nil
-		}
-		if content, ok := lowerOptionalSearchSpell(ctx); ok {
-			return content, nil
-		}
-		if content, ok := lowerRemovalThenControllerSearch(cardName, ctx, syntax); ok {
-			return content, nil
-		}
-		if content, ok := lowerOptionalBlinkReturn(cardName, ctx, syntax); ok {
-			return content, nil
-		}
-		return game.AbilityContent{}, contentDiagnostic(
-			ctx,
-			"unsupported optional effect",
-			"the executable source backend does not yet lower optional resolving effects",
-		)
+		return lowerOptionalContent(cardName, ctx, syntax)
 	}
 	if len(ctx.content.Modes) > 0 {
 		return lowerModalContent(cardName, ctx, syntax)
@@ -227,6 +194,9 @@ func lowerContent(
 		return lowerOrderedEffectSequence(cardName, ctx, syntax)
 	}
 	if len(ctx.content.Effects) == 1 {
+		if content, ok := lowerStandaloneReorderLibraryTop(ctx); ok {
+			return content, nil
+		}
 		if ctx.content.Effects[0].RequiresOrderedLowering {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — single effect requires ordered lowering")
 		}
@@ -235,6 +205,9 @@ func lowerContent(
 		}
 		if ctx.content.Effects[0].Kind == compiler.EffectAddMana {
 			return lowerAddManaContent(ctx)
+		}
+		if content, ok := lowerExileFromHandContent(ctx); ok {
+			return content, nil
 		}
 		return lowerSingleEffectSpell(cardName, ctx, syntax)
 	}
@@ -245,27 +218,87 @@ func lowerContent(
 	)
 }
 
+// lowerOptionalContent lowers an ability body that carries a resolving optional
+// ("you may") effect. Optionality is supported through the ordered effect-sequence
+// path for the multi-effect "you may X. If you do, Y" flow and the
+// single-optional-effect path for a one-effect "you may X" body, plus the
+// dedicated search and removal-then-search shapes. Any other shape fails closed.
+func lowerOptionalContent(
+	cardName string,
+	ctx contentCtx,
+	syntax *parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
+	if len(ctx.content.Modes) == 0 &&
+		len(ctx.content.Effects) > 1 &&
+		ctx.content.Effects[0].Kind != compiler.EffectSearch &&
+		!typedManifestDreadSequence(ctx.content) {
+		if content, diagnostic := lowerOrderedEffectSequence(cardName, ctx, syntax); diagnostic == nil {
+			return content, nil
+		}
+	}
+	if content, ok := lowerSingleOptionalEffect(cardName, ctx, syntax); ok {
+		return content, nil
+	}
+	if content, ok := lowerOptionalHaveEffect(cardName, ctx, syntax); ok {
+		return content, nil
+	}
+	if content, ok := lowerOptionalSearchSpell(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerOptionalReferencedControllerSearch(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerRemovalThenControllerSearch(cardName, ctx, syntax); ok {
+		return content, nil
+	}
+	if content, ok := lowerOptionalBlinkReturn(cardName, ctx, syntax); ok {
+		return content, nil
+	}
+	return game.AbilityContent{}, contentDiagnostic(
+		ctx,
+		"unsupported optional effect",
+		"the executable source backend does not yet lower optional resolving effects",
+	)
+}
+
 func lowerImpulseExileContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	duration, ok := lowerImpulseExileDuration(effect.Duration)
 	if ctx.optional ||
 		!effect.Exact ||
 		effect.Negated ||
 		effect.Context != parser.EffectContextController ||
-		effect.Duration != compiler.DurationThisTurn ||
+		!ok ||
 		!effect.Amount.Known ||
-		effect.Amount.Value != 3 ||
+		effect.Amount.Value < 1 ||
 		ctx.content.Unconsumed() {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported impulse exile effect",
-			"the executable source backend supports only the exact three-card play-this-turn form",
+			"the executable source backend supports only a fixed-count top-of-library impulse exile with a this-turn or until-end-of-turn play window",
 		)
 	}
 	return game.Mode{Sequence: []game.Instruction{{Primitive: game.ImpulseExile{
 		Player:   game.ControllerReference(),
-		Amount:   game.Fixed(3),
-		Duration: game.DurationThisTurn,
+		Amount:   game.Fixed(effect.Amount.Value),
+		Duration: duration,
 	}}}}.Ability(), nil
+}
+
+// lowerImpulseExileDuration maps the supported impulse play windows to their
+// runtime durations. Both "this turn" and "until end of turn" grant play
+// permission through the end of the current turn; any other window fails closed.
+func lowerImpulseExileDuration(duration compiler.DurationKind) (game.EffectDuration, bool) {
+	switch duration {
+	case compiler.DurationThisTurn:
+		return game.DurationThisTurn, true
+	case compiler.DurationUntilEndOfTurn:
+		return game.DurationUntilEndOfTurn, true
+	case compiler.DurationUntilEndOfYourNextTurn:
+		return game.DurationUntilEndOfYourNextTurn, true
+	default:
+		return game.DurationPermanent, false
+	}
 }
 
 func hasOptionalResolvingEffect(effects []compiler.CompiledEffect) bool {
@@ -311,6 +344,13 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 		Spec:   group.Spec,
 		Amount: game.Fixed(group.Amount),
 	}}}
+	if group.RiderIndex != 0 {
+		inst, ok := lowerSearchRider(&ctx.content.Effects[group.RiderIndex])
+		if !ok {
+			return unsupported("the executable source backend supports only a fixed life-loss or random-discard rider in a library-search sequence")
+		}
+		sequence = append(sequence, inst)
+	}
 	if len(ctx.content.Effects) > group.Length {
 		if group.Spec.Destination != zone.Library ||
 			group.Spec.DestinationPosition != game.SearchPositionTop {
@@ -339,9 +379,10 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 // controller may search their library ...") share one spec builder. It returns
 // ok=false (fail closed) for any group it cannot model exactly.
 type searchGroup struct {
-	Spec   game.SearchSpec
-	Amount int
-	Length int
+	Spec       game.SearchSpec
+	Amount     int
+	Length     int
+	RiderIndex int // index of an optional rider effect lowered after the search; 0 when absent
 }
 
 func searchGroupSpec(effects []compiler.CompiledEffect) (searchGroup, bool) {
@@ -410,14 +451,14 @@ func searchGroupSpec(effects []compiler.CompiledEffect) (searchGroup, bool) {
 			Zone:         split.Second.ToZone,
 			EntersTapped: split.Second.EntersTapped,
 		})
-		return searchGroup{Spec: spec, Amount: search.Amount.Value, Length: shape.length}, true
+		return searchGroup{Spec: spec, Amount: search.Amount.Value, Length: shape.length, RiderIndex: shape.riderIndex}, true
 	}
-	if put.ToZone != zone.Hand && put.ToZone != zone.Battlefield {
+	if put.ToZone != zone.Hand && put.ToZone != zone.Battlefield && put.ToZone != zone.Graveyard {
 		return searchGroup{}, false
 	}
 	spec.Destination = put.ToZone
 	spec.EntersTapped = put.EntersTapped
-	return searchGroup{Spec: spec, Amount: search.Amount.Value, Length: shape.length}, true
+	return searchGroup{Spec: spec, Amount: search.Amount.Value, Length: shape.length, RiderIndex: shape.riderIndex}, true
 }
 
 // searchSplitSlotSupported reports whether a split-search destination slot names
@@ -427,24 +468,16 @@ func searchSplitSlotSupported(slot parser.SearchSplitSlot) bool {
 }
 
 type searchSequenceShape struct {
-	length   int
-	putIndex int
-	reveal   bool
-	top      bool
+	length     int
+	putIndex   int
+	riderIndex int // index of an optional rider effect between put and shuffle; 0 when absent
+	reveal     bool
+	top        bool
 }
 
 func exactSearchEffectSequence(effects []compiler.CompiledEffect) (searchSequenceShape, bool) {
-	if len(effects) < 3 || len(effects) > 4 || effects[0].Kind != compiler.EffectSearch {
+	if len(effects) < 3 || effects[0].Kind != compiler.EffectSearch {
 		return searchSequenceShape{}, false
-	}
-	if effects[1].Kind == compiler.EffectPut && effects[2].Kind == compiler.EffectShuffle {
-		return searchSequenceShape{length: 3, putIndex: 1}, effects[2].Connection == parser.EffectConnectionThen
-	}
-	if len(effects) == 4 &&
-		effects[1].Kind == compiler.EffectReveal &&
-		effects[2].Kind == compiler.EffectPut &&
-		effects[3].Kind == compiler.EffectShuffle {
-		return searchSequenceShape{length: 4, putIndex: 2, reveal: true}, effects[3].Connection == parser.EffectConnectionThen
 	}
 	if effects[1].Kind == compiler.EffectShuffle && effects[2].Kind == compiler.EffectPut {
 		return searchSequenceShape{length: 3, putIndex: 2, top: true}, effects[1].Connection == parser.EffectConnectionThen &&
@@ -457,7 +490,36 @@ func exactSearchEffectSequence(effects []compiler.CompiledEffect) (searchSequenc
 		return searchSequenceShape{length: 4, putIndex: 3, reveal: true, top: true}, effects[2].Connection == parser.EffectConnectionThen &&
 			effects[3].Connection == parser.EffectConnectionAnd
 	}
-	return searchSequenceShape{}, false
+	return exactSearchPutShuffleSequence(effects)
+}
+
+// exactSearchPutShuffleSequence matches the hand/battlefield destination shapes
+// "search, [reveal,] put, [rider,] then shuffle." A single optional rider effect
+// (a random discard or a fixed controller life loss) may sit between the put and
+// the trailing shuffle; lowering validates and lowers it after the search.
+func exactSearchPutShuffleSequence(effects []compiler.CompiledEffect) (searchSequenceShape, bool) {
+	idx := 1
+	reveal := false
+	if effects[idx].Kind == compiler.EffectReveal {
+		reveal = true
+		idx++
+	}
+	if idx >= len(effects) || effects[idx].Kind != compiler.EffectPut {
+		return searchSequenceShape{}, false
+	}
+	putIndex := idx
+	idx++
+	riderIndex := 0
+	if idx == len(effects)-2 {
+		riderIndex = idx
+		idx++
+	}
+	if idx != len(effects)-1 ||
+		effects[idx].Kind != compiler.EffectShuffle ||
+		effects[idx].Connection != parser.EffectConnectionThen {
+		return searchSequenceShape{}, false
+	}
+	return searchSequenceShape{length: len(effects), putIndex: putIndex, riderIndex: riderIndex, reveal: reveal}, true
 }
 
 func exactControllerLifeLoss(effect *compiler.CompiledEffect) bool {
@@ -471,6 +533,42 @@ func exactControllerLifeLoss(effect *compiler.CompiledEffect) bool {
 		effect.Duration == compiler.DurationNone &&
 		!effect.Negated &&
 		!effect.Optional
+}
+
+// lowerSearchRider lowers a supported rider effect that sits inside a
+// library-search sequence (between the put and the trailing shuffle) into the
+// instruction that runs after the search primitive. It models a fixed controller
+// life loss and a random own-hand discard, failing closed for any other effect.
+func lowerSearchRider(rider *compiler.CompiledEffect) (game.Instruction, bool) {
+	if exactControllerLifeLoss(rider) {
+		return game.Instruction{Primitive: game.LoseLife{
+			Player: game.ControllerReference(),
+			Amount: game.Fixed(rider.Amount.Value),
+		}}, true
+	}
+	if exactControllerRandomDiscard(rider) {
+		return game.Instruction{Primitive: game.Discard{
+			Player:   game.ControllerReference(),
+			Amount:   game.Fixed(rider.Amount.Value),
+			AtRandom: true,
+		}}, true
+	}
+	return game.Instruction{}, false
+}
+
+func exactControllerRandomDiscard(effect *compiler.CompiledEffect) bool {
+	return effect.Kind == compiler.EffectDiscard &&
+		effect.Context == parser.EffectContextController &&
+		effect.HandDiscard.Present &&
+		effect.HandDiscard.AtRandom &&
+		effect.Exact &&
+		effect.Amount.Known &&
+		effect.Amount.Value > 0 &&
+		effect.DelayedTiming == 0 &&
+		effect.Duration == compiler.DurationNone &&
+		!effect.Negated &&
+		!effect.Optional &&
+		len(effect.References) == 0
 }
 
 func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec, bool) {
@@ -488,10 +586,10 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 		selector.MatchPower ||
 		selector.MatchToughness ||
 		len(selector.ExcludedTypes()) != 0 ||
-		len(selector.ColorsAny()) != 0 ||
 		len(selector.ExcludedColors()) != 0 {
 		return game.SearchSpec{}, false
 	}
+	spec.ColorsAny = slices.Clone(selector.ColorsAny())
 	switch selector.Kind {
 	case compiler.SelectorCard:
 	case compiler.SelectorLand:
@@ -511,13 +609,23 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 	}
 	requiredTypesAny := selector.RequiredTypesAny()
 	if len(requiredTypesAny) > 0 {
-		if len(requiredTypesAny) < 2 ||
-			selector.Kind == compiler.SelectorPermanent ||
+		if selector.Kind == compiler.SelectorPermanent ||
 			selector.Kind == compiler.SelectorSpell {
 			return game.SearchSpec{}, false
 		}
-		spec.CardType = opt.V[types.Card]{}
-		spec.CardTypesAny = slices.Clone(requiredTypesAny)
+		if len(requiredTypesAny) == 1 {
+			// A single required card type reaches lowering only for a plain card
+			// selection (the spell types instant and sorcery, which have no
+			// dedicated selector kind). It lowers to the singular CardType filter
+			// so "a sorcery card" or "an instant card" tutor keeps its type.
+			if selector.Kind != compiler.SelectorCard {
+				return game.SearchSpec{}, false
+			}
+			spec.CardType = opt.Val(requiredTypesAny[0])
+		} else {
+			spec.CardType = opt.V[types.Card]{}
+			spec.CardTypesAny = slices.Clone(requiredTypesAny)
+		}
 	}
 	if selector.MatchManaValue {
 		// Only the "with mana value N or less" rider is modeled: a fixed upper
@@ -757,10 +865,16 @@ func lowerDealDamageSpell(cardName string, ctx contentCtx) (game.AbilityContent,
 	if content, ok := lowerInheritedPowerDamageSpell(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerSourcePowerGroupDamageSpell(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerSourcePowerDamageSpell(ctx); ok {
 		return content, nil
 	}
 	if content, ok := lowerEachOfTargetsDamageSpell(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerEachSourceDamageSpell(ctx); ok {
 		return content, nil
 	}
 	if ctx.content.Effects[0].HasSecondTargetDamageRider {
@@ -770,6 +884,41 @@ func lowerDealDamageSpell(cardName string, ctx contentCtx) (game.AbilityContent,
 		return lowerGroupDamageSpell(cardName, ctx)
 	}
 	return lowerFixedDamageSpell(cardName, ctx)
+}
+
+func lowerReturnSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	if content, ok := lowerSelfCardGraveyardReturn(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerTargetedGraveyardReturn(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerChosenCardGraveyardReturn(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerMassGraveyardReturn(ctx); ok {
+		return content, nil
+	}
+	if group, ok := exactMassBounceGroup(ctx); ok {
+		return game.Mode{
+			Sequence: []game.Instruction{{
+				Primitive: game.Bounce{Group: group},
+			}},
+		}.Ability(), nil
+	}
+	if content, ok := lowerMultiTargetBounceSpell(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerDualTargetBounceSpell(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerControlledBounceSpell(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerSpellBounce(ctx); ok {
+		return content, nil
+	}
+	return lowerFixedBounceSpell(ctx)
 }
 
 func lowerImmediateSingleEffectSpell(
@@ -819,6 +968,10 @@ func lowerImmediateSingleEffectSpell(
 	case compiler.EffectGainControl:
 		return lowerSingleControlSpell(ctx)
 	case compiler.EffectLose:
+		if len(ctx.content.Keywords) != 0 &&
+			temporaryKeywordDuration(ctx.content.Effects[0].Duration) {
+			return lowerTemporaryKeywordLossSpell(ctx)
+		}
 		if !ctx.content.Effects[0].LifeObject {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
@@ -856,11 +1009,15 @@ func lowerImmediateSingleEffectSpell(
 	case compiler.EffectFight:
 		return lowerFightSpell(ctx)
 	case compiler.EffectDiscard:
+		if ctx.content.Effects[0].DiscardEntireHand {
+			return lowerDiscardEntireHandSpell(ctx)
+		}
+		atRandom := ctx.content.Effects[0].HandDiscard.AtRandom
 		return lowerFixedCardCountPlayerSpell(
 			ctx, syntax, "discard", "discards", false, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
-				return game.Discard{Amount: amount, Player: player}
+				return game.Discard{Amount: amount, Player: player, AtRandom: atRandom}
 			}, func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive {
-				return game.Discard{Amount: amount, PlayerGroup: group}
+				return game.Discard{Amount: amount, PlayerGroup: group, AtRandom: atRandom}
 			},
 		)
 	case compiler.EffectMill:
@@ -882,45 +1039,27 @@ func lowerImmediateSingleEffectSpell(
 	case compiler.EffectExile:
 		return lowerFixedExileSpell(ctx)
 	case compiler.EffectReturn:
-		if content, ok := lowerSelfCardGraveyardReturn(ctx); ok {
-			return content, nil
-		}
-		if content, ok := lowerTargetedGraveyardReturn(ctx); ok {
-			return content, nil
-		}
-		if group, ok := exactMassBounceGroup(ctx); ok {
-			return game.Mode{
-				Sequence: []game.Instruction{{
-					Primitive: game.Bounce{Group: group},
-				}},
-			}.Ability(), nil
-		}
-		if content, ok := lowerMultiTargetBounceSpell(ctx); ok {
-			return content, nil
-		}
-		if content, ok := lowerDualTargetBounceSpell(ctx); ok {
-			return content, nil
-		}
-		if content, ok := lowerControlledBounceSpell(ctx); ok {
-			return content, nil
-		}
-		return lowerFixedBounceSpell(ctx)
+		return lowerReturnSpell(ctx)
 	case compiler.EffectPut:
-		if content, ok := lowerTargetedGraveyardReturn(ctx); ok {
-			return content, nil
-		}
-		if ctx.content.Effects[0].ToZone == zone.Library {
-			return game.AbilityContent{}, unsupportedLibraryPlacementDiagnostic(ctx)
-		}
-		return lowerCounterPlacementSpell(ctx)
+		return lowerPutEffectSpell(ctx)
 	case compiler.EffectModifyPT:
 		return lowerFixedModifyPTSpell(ctx, syntax)
+	case compiler.EffectDouble:
+		return lowerDoublePTSpell(ctx)
 	case compiler.EffectCounter:
 		return lowerCounterSpell(ctx)
+	case compiler.EffectChooseNewTargets:
+		return lowerChooseNewTargetsSpell(ctx)
 	case compiler.EffectSacrifice:
 		return lowerSacrificeSpell(ctx)
 	case compiler.EffectCreate:
 		return lowerCreateTokenSpell(ctx)
+	case compiler.EffectCast:
+		return lowerCastForFreeSpell(ctx)
+	case compiler.EffectAttach:
+		return lowerAttachSpell(ctx)
+	case compiler.EffectWinGame:
+		return lowerWinGameSpell(ctx)
 	default:
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -930,6 +1069,8 @@ func lowerImmediateSingleEffectSpell(
 	}
 }
 
+// lowerReturnEffectSpell lowers EffectReturn bodies, trying each supported
+// graveyard-return and bounce shape in turn before the fixed-bounce fallback.
 func temporaryKeywordDuration(duration compiler.DurationKind) bool {
 	return duration == compiler.DurationUntilEndOfTurn ||
 		duration == compiler.DurationUntilYourNextTurn

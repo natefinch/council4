@@ -17,6 +17,8 @@ type GameResult struct {
 	Losses           []LossLog
 	TurnCount        int
 	Turns            []TurnLog
+	// TurnLimitReached reports that a goldfish run completed its requested turns.
+	TurnLimitReached bool
 
 	// Events is the game's full event stream, copied from the game at the end of
 	// the run so reports can mine it without a live game.
@@ -115,6 +117,9 @@ const (
 	LossReasonPoisonCounters      LossReason = "10 poison counters"
 	LossReasonCommanderDamage     LossReason = "21 commander damage"
 	LossReasonStateBasedEliminate LossReason = "state-based elimination"
+	// LossReasonGameLossEffect means an effect instructed the player to lose the
+	// game (CR 104.3a), such as an unpaid Pact upkeep cost.
+	LossReasonGameLossEffect LossReason = "game-loss effect"
 )
 
 // LossLog records a player losing the game.

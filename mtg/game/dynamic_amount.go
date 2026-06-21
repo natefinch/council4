@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -61,6 +62,47 @@ const (
 	// DynamicAmountCapturedTargetManaValue reads the mana value captured for an
 	// enclosing effect's stack-object target when a delayed trigger was created.
 	DynamicAmountCapturedTargetManaValue
+	// DynamicAmountGreatestPowerInGroup is the greatest power among the
+	// permanents of Group, evaluated as the effect resolves (CR 608.2c). It
+	// backs "equal to the greatest power among <group>" amounts (Garruk, Primal
+	// Hunter; Fungal Sprouting); an empty group yields zero. Added last so
+	// existing kinds keep their wire values.
+	DynamicAmountGreatestPowerInGroup
+	// DynamicAmountGreatestToughnessInGroup is the greatest toughness among the
+	// permanents of Group, the toughness sibling of
+	// DynamicAmountGreatestPowerInGroup. An empty group yields zero.
+	DynamicAmountGreatestToughnessInGroup
+	// DynamicAmountGreatestManaValueInGroup is the greatest mana value among the
+	// permanents of Group, the mana-value sibling of
+	// DynamicAmountGreatestPowerInGroup. An empty group yields zero.
+	DynamicAmountGreatestManaValueInGroup
+	// DynamicAmountDevotion is the controller's devotion to Colors, the number
+	// of mana symbols of those colors among the mana costs of permanents the
+	// controller controls (CR 700.5). A hybrid or Phyrexian symbol counts toward
+	// every color it contains, and a symbol counts once for a multi-color
+	// devotion when it matches any listed color. Added last so existing kinds
+	// keep their wire values.
+	DynamicAmountDevotion
+	// DynamicAmountSpellsCastThisTurn is the number of spells the controller has
+	// cast this turn, counted from the turn's spell-cast events (CR 608.2c). It
+	// backs the storm-counter family such as Aetherflux Reservoir's "you gain 1
+	// life for each spell you've cast this turn." Added last so existing kinds
+	// keep their wire values.
+	DynamicAmountSpellsCastThisTurn
+	// DynamicAmountEventLifeChange is the amount of life gained or lost by the
+	// event that triggered the resolving ability ("that much life" in "Whenever
+	// you gain life, target opponent loses that much life."). It reads the
+	// triggering event's life quantity from the resolving ability's
+	// TriggerEvent, backing the life-drain mirror family (Sanguine Bond,
+	// Exquisite Blood). Added last so existing kinds keep their wire values.
+	DynamicAmountEventLifeChange
+	// DynamicAmountTotalPowerInGroup is the sum of power among the permanents of
+	// Group, evaluated as the effect resolves (CR 608.2c). It backs "the total
+	// power of <group>" amounts (Ghalta, Primal Hunger's cost reduction); an
+	// empty group yields zero. DynamicAmountTotalToughnessInGroup is the
+	// toughness sibling. Added last so existing kinds keep their wire values.
+	DynamicAmountTotalPowerInGroup
+	DynamicAmountTotalToughnessInGroup
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves
@@ -78,4 +120,14 @@ type DynamicAmount struct {
 	CardZone    zone.Type
 	Selection   *Selection
 	ResultKey   ResultKey
+	// Colors lists the colors counted by a DynamicAmountDevotion amount; empty
+	// for every other kind.
+	Colors []color.Color
+	// ColorFrom, when set on a DynamicAmountDevotion amount, names a published
+	// ResolutionChoiceMana result whose chosen color is the single devotion
+	// color, overriding Colors. It backs "Add an amount of mana of that color
+	// equal to your devotion to that color." (Nykthos, Shrine to Nyx), where the
+	// devotion color is the color chosen as the ability resolves rather than a
+	// fixed color printed in the amount.
+	ColorFrom ChoiceKey
 }

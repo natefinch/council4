@@ -16,6 +16,7 @@ type Keyword int
 const (
 	KeywordNone Keyword = iota
 	Devoid
+	Changeling
 	Deathtouch
 	Defender
 	DoubleStrike
@@ -69,6 +70,7 @@ const (
 	ReadAhead
 	Horsemanship
 	CumulativeUpkeep
+	Riot
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -77,6 +79,9 @@ const (
 var (
 	// DevoidStaticBody is the reusable StaticAbilityBody for devoid.
 	DevoidStaticBody = simpleKeywordStaticBody("Devoid", Devoid)
+
+	// ChangelingStaticBody is the reusable StaticAbilityBody for changeling.
+	ChangelingStaticBody = simpleKeywordStaticBody("Changeling", Changeling)
 
 	// DeathtouchStaticBody is the reusable StaticAbilityBody for deathtouch.
 	DeathtouchStaticBody = simpleKeywordStaticBody("Deathtouch", Deathtouch)
@@ -166,10 +171,59 @@ var (
 	// an evasion ability: a creature with horsemanship can't be blocked except by
 	// creatures with horsemanship (CR 702.31, Portal Three Kingdoms).
 	HorsemanshipStaticBody = simpleKeywordStaticBody("Horsemanship", Horsemanship)
+
+	// RiotStaticBody is the reusable StaticAbilityBody for riot. Riot is an
+	// enters-the-battlefield keyword (CR 702.137): as a permanent with riot
+	// enters, its controller chooses for it to enter with a +1/+1 counter or to
+	// gain haste. The runtime reads the riot keyword on an entering permanent and
+	// applies that modal choice; the keyword itself carries no continuous effect.
+	RiotStaticBody = simpleKeywordStaticBody("Riot", Riot)
 )
 
 func simpleKeywordStaticBody(text string, keyword Keyword) StaticAbility {
 	return StaticAbility{Text: text, KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: keyword}}}
+}
+
+// KeywordStaticBody returns the reusable StaticAbility granting the given
+// non-parameterized keyword ability. It reports ok=false for parameterized or
+// unsupported keywords (ward, protection, equip, and similar) that cannot be
+// expressed as a bare keyword grant. Use it to attach keywords granted to a
+// created copy token ("That token gains haste").
+func KeywordStaticBody(keyword Keyword) (StaticAbility, bool) {
+	switch keyword {
+	case Deathtouch:
+		return DeathtouchStaticBody, true
+	case Defender:
+		return DefenderStaticBody, true
+	case DoubleStrike:
+		return DoubleStrikeStaticBody, true
+	case FirstStrike:
+		return FirstStrikeStaticBody, true
+	case Flash:
+		return FlashStaticBody, true
+	case Flying:
+		return FlyingStaticBody, true
+	case Haste:
+		return HasteStaticBody, true
+	case Hexproof:
+		return HexproofStaticBody, true
+	case Indestructible:
+		return IndestructibleStaticBody, true
+	case Lifelink:
+		return LifelinkStaticBody, true
+	case Menace:
+		return MenaceStaticBody, true
+	case Reach:
+		return ReachStaticBody, true
+	case Shroud:
+		return ShroudStaticBody, true
+	case Trample:
+		return TrampleStaticBody, true
+	case Vigilance:
+		return VigilanceStaticBody, true
+	default:
+		return StaticAbility{}, false
+	}
 }
 
 // TriggerType classifies what kind of event triggers a triggered ability.
@@ -421,6 +475,16 @@ type TriggerPattern struct {
 	// StepPlayerSourceAttachedSelection matches a step whose active player
 	// controls the permanent the ability source is attached to.
 	StepPlayerSourceAttachedSelection Selection
+
+	// RequireTappedForMana restricts an EventPermanentTapped trigger to taps that
+	// paid a mana ability's cost ("is tapped for mana"), CR 106.11a / 605.
+	RequireTappedForMana bool
+
+	// UnionEvent joins a second event kind to Event under the pattern's shared
+	// subject and player filters, expressing "Whenever you create or sacrifice a
+	// token" (CR 603.2). When set, the trigger fires if the event kind equals
+	// Event or UnionEvent. It is EventUnknown for single-event patterns.
+	UnionEvent EventKind
 }
 
 // TimingRestriction constrains when an activated ability can be used.
@@ -509,6 +573,14 @@ type TokenCopySpec struct {
 	SetToughness  opt.V[PT]
 	NoManaCost    bool
 	NoPrintedText bool
+
+	// SetNotLegendary drops the Legendary supertype from the copy ("except the
+	// token isn't legendary"), so a copy of a legendary permanent does not force
+	// the legend rule on its original.
+	SetNotLegendary bool
+	// AddKeywords grants additional keyword abilities to the created token on top
+	// of the copied characteristics ("That token gains haste").
+	AddKeywords []Keyword
 }
 
 // EternalizeActivatedBody builds the ActivatedAbilityBody for the Eternalize
@@ -574,6 +646,12 @@ type SearchSpec struct {
 
 	SubtypesAny []types.Sub
 
+	// ColorsAny, when non-empty, restricts matches to cards having at least one
+	// of the listed colors, modeling a "<color> card" library search such as
+	// "search your library for a green creature card" (Green Sun's Zenith). It
+	// composes with CardType, Supertype, SubtypesAny, and MaxManaValue.
+	ColorsAny []color.Color
+
 	// MaxManaValue, when present, restricts matches to cards whose mana value is
 	// less than or equal to the value, modeling a "with mana value N or less"
 	// rider on a library search.
@@ -610,6 +688,7 @@ func (s SearchSpec) IsUnrestricted() bool {
 		!s.Supertype.Exists &&
 		!s.Permanent &&
 		len(s.SubtypesAny) == 0 &&
+		len(s.ColorsAny) == 0 &&
 		!s.MaxManaValue.Exists &&
 		!s.SharedSubtype
 }

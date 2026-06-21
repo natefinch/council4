@@ -305,8 +305,7 @@ func TestGenerateExecutableCardSourceLibrarySearches(t *testing.T) {
 func TestGenerateExecutableCardSourceRejectsUnsupportedLibrarySearches(t *testing.T) {
 	t.Parallel()
 	tests := []string{
-		"Search your library for a card, put that card into your graveyard, then shuffle.",
-		"Search your library for a green creature card, put it into your hand, then shuffle.",
+		"Search your library for an artifact creature card, put it into your hand, then shuffle.",
 		"Search your library for up to two basic land cards with different names, put them onto the battlefield tapped, then shuffle.",
 		"Search target opponent's library for a card, put that card into their hand, then shuffle.",
 		"Search your library for that card, reveal it, put it into your hand, then shuffle.",
@@ -415,15 +414,16 @@ func TestGenerateExecutableCardSourceEnterTriggerLibrarySearch(t *testing.T) {
 }
 
 // TestGenerateExecutableCardSourceEnterTriggerSearchFailsClosed confirms the
-// embedded lowercase search relaxes nothing else: an unmodeled color filter in a
-// triggered tutor still fails closed rather than lowering to a wrong predicate.
+// embedded lowercase search relaxes nothing else: an unmodeled multi-type-union
+// filter in a triggered tutor still fails closed rather than lowering to a wrong
+// predicate.
 func TestGenerateExecutableCardSourceEnterTriggerSearchFailsClosed(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
 		Name:       "Unsupported Trigger Search",
 		Layout:     "normal",
 		TypeLine:   "Creature — Elf",
-		OracleText: "When this creature enters, search your library for a green creature card, put it onto the battlefield, then shuffle.",
+		OracleText: "When this creature enters, search your library for an artifact creature card, put it onto the battlefield, then shuffle.",
 		Power:      new("1"),
 		Toughness:  new("1"),
 	}, "u")
@@ -818,5 +818,67 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedNonSelfEnterTriggers(t *t
 				t.Fatal("expected unsupported diagnostic")
 			}
 		})
+	}
+}
+
+func TestGenerateExecutableCardSourceEnterOrDiesUnionTrigger(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Undercellar Myconid",
+		Layout:     "normal",
+		ManaCost:   "{1}{G}",
+		TypeLine:   "Creature — Fungus",
+		OracleText: "Whenever this creature enters or dies, create a 1/1 green Saproling creature token.",
+		Colors:     []string{"G"},
+		Power:      new("1"),
+		Toughness:  new("1"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "u")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EventPermanentEnteredBattlefield",
+		"UnionEvent: game.EventPermanentDied",
+		"game.TriggerSourceSelf",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceEnterOrAttackUnionTrigger(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Sun Titan",
+		Layout:     "normal",
+		ManaCost:   "{4}{W}{W}",
+		TypeLine:   "Creature — Giant",
+		OracleText: "Vigilance\nWhenever this creature enters or attacks, you may return target permanent card with mana value 3 or less from your graveyard to the battlefield.",
+		Colors:     []string{"W"},
+		Power:      new("6"),
+		Toughness:  new("6"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EventPermanentEnteredBattlefield",
+		"UnionEvent: game.EventAttackerDeclared",
+		"game.TriggerSourceSelf",
+		"game.PutOnBattlefield",
+		"zone.Graveyard",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
 	}
 }

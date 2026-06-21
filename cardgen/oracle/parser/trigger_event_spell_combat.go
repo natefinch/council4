@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -39,10 +40,10 @@ func parseSpellCastTriggerEventClause(
 		remaining = remaining[2:]
 	}
 	selection, ok := parseTriggerEventSpellSelection(remaining)
-	filteredOrdinal := false
+	actorOrdinal := false
 	if !ok {
-		selection, ok = parseFirstFilteredSpellSelection(remaining, actor.Kind)
-		filteredOrdinal = ok
+		selection, ok = parseOrdinalSpellSelectionForActor(remaining, actor.Kind)
+		actorOrdinal = ok
 	}
 	if !ok || selection.FromZone.Kind != TriggerEventZoneNone && actor.Kind != TriggerEventActorYou {
 		return nil
@@ -51,11 +52,12 @@ func parseSpellCastTriggerEventClause(
 		return nil
 	}
 	// "your Nth spell each turn" is a controller-scoped per-turn ordinal; it is
-	// not combined with spell copies or other actors.
+	// not combined with spell copies. The "a player"/"an opponent" actors carry
+	// their own "their Nth spell each turn" ordinal via parseOrdinalSpellSelectionForActor.
 	if selection.Ordinal != 0 && matchCopy {
 		return nil
 	}
-	if selection.Ordinal != 0 && actor.Kind != TriggerEventActorYou && !filteredOrdinal {
+	if selection.Ordinal != 0 && actor.Kind != TriggerEventActorYou && !actorOrdinal {
 		return nil
 	}
 	return &TriggerEventClause{
@@ -66,25 +68,73 @@ func parseSpellCastTriggerEventClause(
 	}
 }
 
-func parseFirstFilteredSpellSelection(tokens []shared.Token, actor TriggerEventActorKind) (TriggerEventSpellSelection, bool) {
-	if actor != TriggerEventActorOpponent && actor != TriggerEventActorPlayer ||
-		len(tokens) != 6 ||
-		!syntaxWordsEqual(tokens[:2], "their", "first") ||
-		!syntaxWordsEqual(tokens[3:], "spell", "each", "turn") {
+// parseOrdinalSpellSelectionForActor resolves a non-controller "their Nth spell
+// each turn" ordinal cast trigger for the "a player"/"an opponent" actors, in
+// either the unfiltered form ("their second spell each turn") or a single-noun
+// filtered form ("their first creature spell each turn"). The controller-scoped
+// "you" actor uses the "your Nth spell each turn" production instead.
+func parseOrdinalSpellSelectionForActor(tokens []shared.Token, actor TriggerEventActorKind) (TriggerEventSpellSelection, bool) {
+	if actor != TriggerEventActorOpponent && actor != TriggerEventActorPlayer {
 		return TriggerEventSpellSelection{}, false
 	}
-	selection, ok := parseSingleNounSpellSelection(
-		TriggerEventSpellSelection{Span: shared.SpanOf(tokens)},
-		tokens[2],
-	)
+	if len(tokens) != 5 && len(tokens) != 6 {
+		return TriggerEventSpellSelection{}, false
+	}
+	if !equalWord(tokens[0], "their") {
+		return TriggerEventSpellSelection{}, false
+	}
+	ordinal, ok := OrdinalWordValue(tokens[1].Text)
 	if !ok {
 		return TriggerEventSpellSelection{}, false
 	}
-	selection.Ordinal = 1
+	if !syntaxWordsEqual(tokens[len(tokens)-3:], "spell", "each", "turn") {
+		return TriggerEventSpellSelection{}, false
+	}
+	selection := TriggerEventSpellSelection{Span: shared.SpanOf(tokens)}
+	if len(tokens) == 6 {
+		selection, ok = parseSingleNounSpellSelection(selection, tokens[2])
+		if !ok {
+			return TriggerEventSpellSelection{}, false
+		}
+	}
+	selection.Ordinal = ordinal
 	return selection, true
 }
 
 func parseTriggerEventSpellSelection(tokens []shared.Token) (TriggerEventSpellSelection, bool) {
+	full := tokens
+	fromEntryChoice := false
+	if rest, ok := cutTriggerSpellChosenTypeSuffix(tokens); ok {
+		tokens = rest
+		fromEntryChoice = true
+	}
+	selection, ok := parseTriggerEventSpellSelectionFilter(tokens)
+	if !ok {
+		return TriggerEventSpellSelection{}, false
+	}
+	if fromEntryChoice {
+		selection.SubtypeFromEntryChoice = true
+		selection.Span = shared.SpanOf(full)
+	}
+	return selection, true
+}
+
+// cutTriggerSpellChosenTypeSuffix strips a trailing "of the chosen type" phrase
+// from a spell-selection token run, reporting the remaining filter tokens. The
+// suffix ties the cast spell to the creature subtype the source permanent chose
+// as it entered (Vanquisher's Banner).
+func cutTriggerSpellChosenTypeSuffix(tokens []shared.Token) ([]shared.Token, bool) {
+	n := len(tokens)
+	if n < 4 {
+		return nil, false
+	}
+	if syntaxWordsEqual(tokens[n-4:], "of", "the", "chosen", "type") {
+		return tokens[:n-4], true
+	}
+	return nil, false
+}
+
+func parseTriggerEventSpellSelectionFilter(tokens []shared.Token) (TriggerEventSpellSelection, bool) {
 	selection := TriggerEventSpellSelection{Span: shared.SpanOf(tokens)}
 	switch {
 	case syntaxWordsEqual(tokens, "a", "spell"):
@@ -139,33 +189,11 @@ func parseTriggerEventSpellSelection(tokens []shared.Token) (TriggerEventSpellSe
 		equalWord(tokens[4], "spell"):
 		selection.ExcludedTypes = []TriggerCardType{TriggerCardTypeCreature, TriggerCardTypeLand}
 		return selection, true
-	case len(tokens) == 5 &&
+	case len(tokens) >= 5 &&
 		(equalWord(tokens[0], "a") || equalWord(tokens[0], "an")) &&
-		equalWord(tokens[2], "or") &&
-		equalWord(tokens[4], "spell"):
-		leftType, leftTypeOK := triggerCardType(tokens[1].Text)
-		rightType, rightTypeOK := triggerCardType(tokens[3].Text)
-		if leftTypeOK && rightTypeOK && leftType != TriggerCardTypeUnknown && rightType != TriggerCardTypeUnknown {
-			if leftType != TriggerCardTypeInstant && leftType != TriggerCardTypeSorcery ||
-				rightType != TriggerCardTypeInstant && rightType != TriggerCardTypeSorcery ||
-				leftType == rightType {
-				return TriggerEventSpellSelection{}, false
-			}
-			selection.TypesAny = []TriggerCardType{leftType, rightType}
-			return selection, true
-		}
-		leftSub, leftSubOK := recognizeSubtypePhrase(strings.ToLower(tokens[1].Text))
-		rightSub, rightSubOK := recognizeSubtypePhrase(strings.ToLower(tokens[3].Text))
-		if leftSubOK && rightSubOK {
-			if leftSub != "Spirit" && leftSub != "Arcane" ||
-				rightSub != "Spirit" && rightSub != "Arcane" ||
-				leftSub == rightSub {
-				return TriggerEventSpellSelection{}, false
-			}
-			selection.SubtypesAny = []TriggerSubtype{leftSub, rightSub}
-			return selection, true
-		}
-		return TriggerEventSpellSelection{}, false
+		equalWord(tokens[len(tokens)-1], "spell") &&
+		containsWord(tokens, "or"):
+		return parseSpellSelectionDisjunction(selection, tokens[1:len(tokens)-1])
 	case len(tokens) == 2 && equalWord(tokens[0], "an"):
 		cardType, ok := triggerCardType(tokens[1].Text)
 		if !ok || cardType != TriggerCardTypeInstant {
@@ -178,6 +206,93 @@ func parseTriggerEventSpellSelection(tokens []shared.Token) (TriggerEventSpellSe
 	default:
 		return TriggerEventSpellSelection{}, false
 	}
+}
+
+// parseSpellSelectionDisjunction resolves a homogeneous "<noun> or <noun>
+// spell" / "<noun>, <noun>, or <noun> spell" disjunction filter, where the nouns
+// are passed without the leading article or trailing "spell". Every noun must
+// resolve to a card type, or every noun must resolve to a card subtype; mixing
+// the two is not expressible in the runtime selection model and fails closed, as
+// do duplicate or unrecognized nouns. Card types lower to TypesAny and subtypes
+// to SubtypesAny, both of which the runtime matches as a union.
+func parseSpellSelectionDisjunction(selection TriggerEventSpellSelection, nouns []shared.Token) (TriggerEventSpellSelection, bool) {
+	words, ok := splitDisjunctionNouns(nouns)
+	if !ok || len(words) < 2 {
+		return TriggerEventSpellSelection{}, false
+	}
+	cardTypes := make([]TriggerCardType, 0, len(words))
+	allCardTypes := true
+	for _, word := range words {
+		cardType, ok := triggerCardType(word.Text)
+		if !ok || cardType == TriggerCardTypeUnknown {
+			allCardTypes = false
+			break
+		}
+		if slices.Contains(cardTypes, cardType) {
+			return TriggerEventSpellSelection{}, false
+		}
+		cardTypes = append(cardTypes, cardType)
+	}
+	if allCardTypes {
+		selection.TypesAny = cardTypes
+		return selection, true
+	}
+	subtypes := make([]TriggerSubtype, 0, len(words))
+	for _, word := range words {
+		subtype, ok := recognizeSubtypePhrase(word.Text)
+		if !ok || slices.Contains(subtypes, subtype) {
+			return TriggerEventSpellSelection{}, false
+		}
+		subtypes = append(subtypes, subtype)
+	}
+	selection.SubtypesAny = subtypes
+	return selection, true
+}
+
+// splitDisjunctionNouns extracts the noun tokens from a disjunction run such as
+// "Aura or Equipment" or "Aura, Equipment, or Vehicle", requiring exactly one
+// "or" connector that precedes the final noun. Commas separate earlier nouns.
+// Malformed runs (missing "or", trailing separators, adjacent nouns) fail
+// closed.
+func splitDisjunctionNouns(tokens []shared.Token) ([]shared.Token, bool) {
+	var nouns []shared.Token
+	sawOr := false
+	expectNoun := true
+	for _, tok := range tokens {
+		switch {
+		case tok.Kind == shared.Comma:
+			if expectNoun {
+				return nil, false
+			}
+			expectNoun = true
+		case equalWord(tok, "or"):
+			if sawOr {
+				return nil, false
+			}
+			sawOr = true
+			expectNoun = true
+		default:
+			if !expectNoun {
+				return nil, false
+			}
+			nouns = append(nouns, tok)
+			expectNoun = false
+		}
+	}
+	if !sawOr || expectNoun {
+		return nil, false
+	}
+	return nouns, true
+}
+
+// containsWord reports whether any token equals the given lowercase word.
+func containsWord(tokens []shared.Token, word string) bool {
+	for _, tok := range tokens {
+		if equalWord(tok, word) {
+			return true
+		}
+	}
+	return false
 }
 
 // parseSingleNounSpellSelection resolves the "a <noun> spell" spell-selection

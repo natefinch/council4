@@ -494,3 +494,45 @@ func actionsContain(actions []action.Action, want action.Action) bool {
 	}
 	return false
 }
+
+func landcyclingCard() *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{Name: "Landcycling Test Card",
+		Types: []types.Card{types.Land},
+		ActivatedAbilities: []game.ActivatedAbility{
+			game.LandcyclingActivatedAbility(cost.Mana{cost.O(1)}, game.SearchSpec{
+				CardType:  opt.Val(types.Land),
+				Supertype: opt.Val(types.Basic),
+			}),
+		}},
+	}
+}
+
+func TestLandcyclingSearchesBasicLandToHandOnResolution(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cardID := addCardToHand(g, game.Player1, landcyclingCard())
+	basicID := addCardToLibrary(g, game.Player1, basicLandDef(types.Forest))
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Nonbasic", Types: []types.Card{types.Land}}})
+	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
+	g.Turn.PriorityPlayer = game.Player1
+
+	if !engine.applyAction(g, game.Player1, action.ActivateAbility(cardID, 0, nil, 0)) {
+		t.Fatal("applyAction() = false, want true for landcycling")
+	}
+	if !forest.Tapped {
+		t.Fatal("landcycling mana cost did not tap available land")
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(cardID) {
+		t.Fatal("landcycled card was not discarded to graveyard")
+	}
+	assertEvent(t, g.Events, game.EventCycled, func(event game.Event) bool {
+		return event.CardID == cardID && event.Player == game.Player1
+	})
+
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &searchByNameAgent{wanted: "Forest"}}
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+	if !g.Players[game.Player1].Hand.Contains(basicID) || g.Players[game.Player1].Library.Contains(basicID) {
+		t.Fatal("landcycling did not move the searched basic land to hand")
+	}
+}

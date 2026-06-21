@@ -75,6 +75,62 @@ func TestSpellCastTriggerFiltersSubtypes(t *testing.T) {
 	}
 }
 
+func TestSpellCastTriggerFiltersChosenType(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	source.EntryChoices = map[game.ChoiceKey]game.ResolutionChoiceResult{
+		game.EntryTypeChoiceKey: {Kind: game.ResolutionChoiceSubtype, Subtype: types.Zombie},
+	}
+	pattern := &game.TriggerPattern{
+		Event:      game.EventSpellCast,
+		Controller: game.TriggerControllerYou,
+		CardSelection: game.Selection{
+			RequiredTypes:                []types.Card{types.Creature},
+			SubtypeFromSourceEntryChoice: true,
+		},
+	}
+
+	event := game.Event{
+		Kind:         game.EventSpellCast,
+		Controller:   game.Player1,
+		CardTypes:    []types.Card{types.Creature},
+		CardSubtypes: []types.Sub{types.Zombie},
+	}
+	if !triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("Zombie creature spell did not match chosen-type cast trigger")
+	}
+	event.CardSubtypes = []types.Sub{types.Elf}
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("Elf creature spell matched Zombie chosen-type cast trigger")
+	}
+	event.CardTypes = []types.Card{types.Instant}
+	event.CardSubtypes = []types.Sub{types.Zombie}
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("noncreature spell matched chosen-type creature cast trigger")
+	}
+}
+
+func TestSpellCastTriggerChosenTypeFailsWithoutEntryChoice(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	pattern := &game.TriggerPattern{
+		Event:      game.EventSpellCast,
+		Controller: game.TriggerControllerYou,
+		CardSelection: game.Selection{
+			SubtypeFromSourceEntryChoice: true,
+		},
+	}
+	event := game.Event{
+		Kind:         game.EventSpellCast,
+		Controller:   game.Player1,
+		CardTypes:    []types.Card{types.Creature},
+		CardSubtypes: []types.Sub{types.Zombie},
+	}
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("chosen-type trigger matched when the source recorded no entry choice")
+	}
+}
+
 func TestSpellCastTriggerFiltersHistoric(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	source := addCombatCreaturePermanent(g, game.Player1)
@@ -707,6 +763,51 @@ func TestSpellCastOrdinalTriggerFiresOnNthSpell(t *testing.T) {
 	}
 	if want := []int{1, 2, 3}; !slices.Equal(ordinals, want) {
 		t.Fatalf("spell-cast ordinals = %v, want %v", ordinals, want)
+	}
+}
+
+// TestSpellCastAnyPlayerOrdinalTriggerFiresOnOpponentNthSpell verifies a
+// non-controller ordinal cast trigger ("Whenever a player casts their second
+// spell each turn", TriggerControllerAny) fires on an opponent's second spell of
+// the turn, exercising the broadened actor scope for per-turn spell ordinals.
+func TestSpellCastAnyPlayerOrdinalTriggerFiresOnOpponentNthSpell(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:                      game.EventSpellCast,
+		Controller:                 game.TriggerControllerAny,
+		PlayerEventOrdinalThisTurn: 2,
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	spellIDs := make([]id.ID, 2)
+	for i := range spellIDs {
+		spellIDs[i] = addCardToHand(g, game.Player2, greenInstant())
+		addBasicLandPermanent(g, game.Player2, types.Forest)
+	}
+	g.Turn.ActivePlayer = game.Player2
+	g.Turn.PriorityPlayer = game.Player2
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	drawsAfter := make([]int, 2)
+	for i, spellID := range spellIDs {
+		if !engine.applyAction(g, game.Player2, action.CastSpell(spellID, nil, 0, nil)) {
+			t.Fatalf("cast spell %d failed", i+1)
+		}
+		engine.putTriggeredAbilitiesOnStack(g)
+		for !g.Stack.IsEmpty() {
+			engine.resolveTopOfStack(g, &TurnLog{})
+			engine.putTriggeredAbilitiesOnStack(g)
+		}
+		drawsAfter[i] = g.Players[game.Player1].Hand.Size()
+	}
+
+	if drawsAfter[0] != 0 {
+		t.Fatalf("after opponent's first spell: Player1 hand = %d, want 0", drawsAfter[0])
+	}
+	if drawsAfter[1] != 1 {
+		t.Fatalf("after opponent's second spell: Player1 hand = %d, want 1 (ordinal trigger fires)", drawsAfter[1])
 	}
 }
 

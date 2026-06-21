@@ -15,6 +15,13 @@ import (
 type CounterPlacement struct {
 	Kind   counter.Kind
 	Amount int
+	// AmountFromX places a number of counters equal to the value of X chosen for
+	// the entering permanent's spell (CR 107.3, CR 614). Amount is ignored when
+	// it is set; a permanent that entered without a cast X (a copy or a
+	// put-onto-the-battlefield effect) enters with zero such counters. It backs
+	// "This creature enters with X +1/+1 counters on it." (Walking Ballista,
+	// Hangarback Walker, Endless One).
+	AmountFromX bool
 }
 
 // PreventionShield prevents an amount of future damage to a player or
@@ -86,6 +93,27 @@ const (
 	// battlefield at resolution; an empty set leaves the ability unactivatable
 	// (CR 605.1a).
 	ResolutionChoiceColorSourceLandsProduce
+	// ResolutionChoiceColorSourceLinkedExileColors offers each color of the card
+	// linked to the source permanent under LinkID — the card imprinted by an
+	// optional enter-the-battlefield exile from hand. It models "Add one mana of
+	// any of the exiled card's colors." (Chrome Mox). The colors are recomputed
+	// from the linked card at resolution (CR 106.6): a missing, declined, or
+	// colorless imprint yields an empty set, leaving the ability unactivatable
+	// (CR 605.1a, CR 202.2), while a multicolored imprint offers exactly its
+	// colors. The link is scoped to the permanent's object identity so a
+	// re-entered object has no imprint until it imprints again.
+	ResolutionChoiceColorSourceLinkedExileColors
+	// ResolutionChoiceColorSourceControlledPermanentColors offers every color
+	// found among the colors of the permanents the choosing player controls that
+	// match Selection. It models "Add one mana of any color among <permanents>
+	// you control." (Mox Amber's "legendary creatures and planeswalkers you
+	// control", Plaza of Heroes' "legendary permanents you control"). The
+	// candidate colors are the union of the matching permanents' colors,
+	// recomputed from the battlefield at resolution; a board with no matching
+	// colored permanent yields an empty set and leaves the ability unactivatable
+	// (CR 605.1a). Colorless ({C}) is never offered because a permanent's colors
+	// are only the five colors (CR 105.2, CR 202.2).
+	ResolutionChoiceColorSourceControlledPermanentColors
 )
 
 // ResolutionChoice describes a bounded value-producing choice made during
@@ -108,6 +136,11 @@ type ResolutionChoice struct {
 	PlayerRelation PlayerRelation
 	Zone           zone.Type
 
+	// Selection constrains which permanents a dynamic color source reads. It is
+	// consulted by ResolutionChoiceColorSourceControlledPermanentColors, which
+	// offers the union of colors of the choosing player's permanents matching it.
+	Selection *Selection
+
 	// SubtypeOfType names the card type whose defined subtypes are the candidates
 	// for a ResolutionChoiceSubtype choice, as in "choose a creature type."
 	// (types.Creature). It is consulted only by ResolutionChoiceSubtype.
@@ -117,6 +150,12 @@ type ResolutionChoice struct {
 	// dynamic color source reads (CR 614.12). It is consulted by
 	// ResolutionChoiceColorSourceFixedOrEntryChosen.
 	EntryChoiceKey ChoiceKey
+
+	// LinkID names the linked object the choice's color source reads. It is
+	// consulted by ResolutionChoiceColorSourceLinkedExileColors, which offers the
+	// colors of the card linked to the source permanent under this key (the
+	// imprinted exiled card).
+	LinkID string
 
 	// IncludeColorless additionally offers colorless ({C}) for a
 	// ResolutionChoiceColorSourceLandsProduce choice when a matching land could
@@ -185,9 +224,11 @@ type ReplacementEffect struct {
 	RevealSource                  bool
 	TokenMultiplier               int
 	CounterMultiplier             int
+	CounterAddend                 int
 	MatchCounterKind              bool
 	CounterKindFilter             counter.Kind
 	CounterRecipientTypes         []types.Card
+	CounterRecipientAnyPermanent  bool
 	CounterUseRecipientController bool
 	DamageMultiplier              int
 	DamageAddend                  int
@@ -214,6 +255,25 @@ type ReplacementEffect struct {
 	// is stored on the permanent under EntryTypeChoiceKey for later abilities to
 	// read.
 	EntryTypeChoice bool
+
+	// EntersTappedOthers marks a continuous static enters-tapped replacement that
+	// taps a group of OTHER permanents as they enter (Authority of the Consuls),
+	// as opposed to the self form printed on the entering permanent. It is
+	// registered into Game.ReplacementEffects while its source is on the
+	// battlefield and matched against every entering permanent that satisfies
+	// ControllerFilter and EntersTappedTypes.
+	EntersTappedOthers bool
+
+	// EntersTappedTypes restricts an EntersTappedOthers replacement to entering
+	// permanents that have any of these card types. It is empty when every
+	// entering permanent is tapped ("Permanents ... enter tapped.").
+	EntersTappedTypes []types.Card
+
+	// CreateOneOfEachTokens replaces the creation of a token whose name matches
+	// one of these definitions with the creation of one of each listed token
+	// (Academy Manufactor: "If you would create a Clue, Food, or Treasure token,
+	// instead create one of each."). It is empty for every other replacement.
+	CreateOneOfEachTokens []*CardDef
 }
 
 // EntryTypeChoiceKey is the ChoiceKey under which an entry-time creature-type

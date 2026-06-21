@@ -323,7 +323,8 @@ func triggerEventBindsPermanent(event TriggerEvent) bool {
 		TriggerEventPermanentSacrificed,
 		TriggerEventObjectBecameTarget,
 		TriggerEventPermanentMutated,
-		TriggerEventAttackerBecameBlocked:
+		TriggerEventAttackerBecameBlocked,
+		TriggerEventTokenCreated:
 		return true
 	default:
 		return false

@@ -219,10 +219,10 @@ func TestGenerateExecutableCardSourceDyingToServe(t *testing.T) {
 func TestGenerateExecutableCardSourceTourachDreadCantor(t *testing.T) {
 	t.Parallel()
 	// Tourach, Dread Cantor: discard trigger for opponent + unsupported enter-when-kicked trigger.
-	// The discard trigger "Whenever an opponent discards a card" should lower correctly.
-	// The "+1/+1 counter on Tourach" effect is a self-name reference that is not yet supported by
-	// lowerCounterPlacementSpell, so the card will still have diagnostics — but none for the discard
-	// trigger phrase itself.
+	// The discard trigger "Whenever an opponent discards a card, put a +1/+1 counter on
+	// Tourach, Dread Cantor" lowers correctly: the self-name reference with an internal comma
+	// resolves to the source so the counter placement is recognized. The card still has a
+	// diagnostic for the unsupported enter-when-kicked trigger.
 	card := &ScryfallCard{
 		Name:       "Tourach, Dread Cantor",
 		Layout:     "normal",
@@ -238,21 +238,18 @@ func TestGenerateExecutableCardSourceTourachDreadCantor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The trigger phrase is recognized even though its self-name counter-placement
-	// body remains unsupported; the body diagnostic now propagates directly as
-	// the content-level "unsupported counter placement" diagnostic.
-	foundBodyDiagnostic := false
+	// The discard trigger phrase is recognized and its self-name counter-placement
+	// body now lowers, so neither an unrecognized-trigger diagnostic nor an
+	// unsupported-counter-placement diagnostic should appear. The remaining blocker
+	// is the enter-when-kicked trigger, which emits no authoritative event.
 	for _, d := range diagnostics {
 		if d.Summary == "unsupported draw/discard trigger" &&
 			strings.Contains(d.Detail, "unrecognized draw/discard trigger event phrase") {
 			t.Fatalf("trigger phrase unexpectedly unrecognized: %#v", d)
 		}
 		if d.Summary == "unsupported counter placement" {
-			foundBodyDiagnostic = true
+			t.Fatalf("counter placement on comma self-name unexpectedly unsupported: %#v", d)
 		}
-	}
-	if !foundBodyDiagnostic {
-		t.Fatalf("diagnostics = %#v, want unsupported counter placement", diagnostics)
 	}
 }
 

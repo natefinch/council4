@@ -340,8 +340,16 @@ func parseZoneChangeSubject(
 	_ = cardName
 	result := zoneSubjectResult{controller: ControllerAny}
 	remaining := subjectTokens
+	var subtypeFromEntryChoice bool
+	if rest, ok := stripTokenSuffix(remaining, "of", "the", "chosen", "type"); ok {
+		remaining = rest
+		subtypeFromEntryChoice = true
+	}
 	if plural {
 		if span, count, ok := parseSelfSubject(remaining, atoms); ok && count == len(remaining) {
+			if subtypeFromEntryChoice {
+				return zoneSubjectResult{}
+			}
 			result.subject = TriggerEventSubject{Kind: TriggerEventSubjectSelf, Span: span}
 			result.ok = true
 			return result
@@ -352,6 +360,9 @@ func parseZoneChangeSubject(
 		}
 	}
 	if span, count, ok := parseSelfSubject(remaining, atoms); ok && count == len(remaining) {
+		if subtypeFromEntryChoice {
+			return zoneSubjectResult{}
+		}
 		result.subject = TriggerEventSubject{Kind: TriggerEventSubjectSelf, Span: span}
 		result.ok = true
 		return result
@@ -377,6 +388,9 @@ func parseZoneChangeSubject(
 		break
 	}
 	if attached, ok := parseAttachedEventSubject(remaining); ok {
+		if subtypeFromEntryChoice {
+			return zoneSubjectResult{}
+		}
 		result.subject = attached
 		result.ok = true
 		return result
@@ -421,6 +435,7 @@ func parseZoneChangeSubject(
 		return zoneSubjectResult{}
 	}
 	selection.Controller = ControllerAny
+	selection.SubtypeFromEntryChoice = subtypeFromEntryChoice
 	result.subject = TriggerEventSubject{
 		Kind:      TriggerEventSubjectSelection,
 		Span:      shared.SpanOf(subjectTokens),

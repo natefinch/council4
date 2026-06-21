@@ -98,6 +98,18 @@ func (a Atoms) Subtypes() []SubtypeAtom {
 	return result
 }
 
+// ExcludedSubtypes returns "non"-prefixed subtype atoms in source order (a
+// "non-Human" / "non-Zombie" qualifier).
+func (a Atoms) ExcludedSubtypes() []SubtypeAtom {
+	var result []SubtypeAtom
+	for _, atom := range a.semantic {
+		if atom.Kind == atomExcludedSubtype {
+			result = append(result, SubtypeAtom{Identity: atom.Subtype, Span: atom.Span})
+		}
+	}
+	return result
+}
+
 // ObjectNouns returns object-noun atoms in source order.
 func (a Atoms) ObjectNouns() []ObjectNounAtom {
 	var result []ObjectNounAtom
@@ -304,6 +316,10 @@ func appendAtomSubtype(a *Atoms, identity types.Sub, span shared.Span) {
 	a.semantic = append(a.semantic, semanticAtom{Kind: atomSubtype, Subtype: identity, Span: span})
 }
 
+func appendAtomExcludedSubtype(a *Atoms, identity types.Sub, span shared.Span) {
+	a.semantic = append(a.semantic, semanticAtom{Kind: atomExcludedSubtype, Subtype: identity, Span: span})
+}
+
 func appendAtomObjectNoun(a *Atoms, noun ObjectNoun, span shared.Span) {
 	a.semantic = append(a.semantic, semanticAtom{Kind: atomObjectNoun, ObjectNoun: noun, Span: span})
 }
@@ -412,10 +428,33 @@ func (a Atoms) SubtypeAt(span shared.Span) (types.Sub, bool) {
 	return "", false
 }
 
+// ExcludedSubtypeAt returns the excluded-subtype atom that begins at span, when
+// present (a "non-<subtype>" qualifier).
+func (a Atoms) ExcludedSubtypeAt(span shared.Span) (types.Sub, bool) {
+	for _, atom := range a.ExcludedSubtypes() {
+		if spanEquals(atom.Span, span) {
+			return atom.Identity, true
+		}
+	}
+	return "", false
+}
+
 // SubtypesIn returns subtype identity atoms whose spans fall within span.
 func (a Atoms) SubtypesIn(span shared.Span) []types.Sub {
 	var result []types.Sub
 	for _, atom := range a.Subtypes() {
+		if spanCovers(span, atom.Span) && !slices.Contains(result, atom.Identity) {
+			result = append(result, atom.Identity)
+		}
+	}
+	return result
+}
+
+// ExcludedSubtypesIn returns excluded-subtype identity atoms whose spans fall
+// within span (the "non-<subtype>" qualifiers).
+func (a Atoms) ExcludedSubtypesIn(span shared.Span) []types.Sub {
+	var result []types.Sub
+	for _, atom := range a.ExcludedSubtypes() {
 		if spanCovers(span, atom.Span) && !slices.Contains(result, atom.Identity) {
 			result = append(result, atom.Identity)
 		}

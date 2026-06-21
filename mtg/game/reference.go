@@ -25,6 +25,11 @@ const (
 	// ObjectReferenceCapturedTargetStackObject identifies a stack-object target
 	// captured by an enclosing effect for use inside a delayed trigger.
 	ObjectReferenceCapturedTargetStackObject
+	// ObjectReferenceTargetObject references the object chosen for a target slot
+	// without committing to its kind, resolving to whichever permanent or stack
+	// object was selected. It backs combined targets that accept either a spell
+	// on the stack or a permanent ("target spell or nonland permanent").
+	ObjectReferenceTargetObject
 )
 
 // ObjectReference describes how a rules effect finds an object at resolution.
@@ -64,6 +69,12 @@ func TargetStackObjectReference(targetIndex int) ObjectReference {
 // stack-object target at targetIndex from inside a delayed trigger.
 func CapturedTargetStackObjectReference(targetIndex int) ObjectReference {
 	return ObjectReference{kind: ObjectReferenceCapturedTargetStackObject, targetIndex: targetIndex}
+}
+
+// TargetObjectReference references the object chosen for the target slot at
+// targetIndex regardless of whether it is a permanent or a stack object.
+func TargetObjectReference(targetIndex int) ObjectReference {
+	return ObjectReference{kind: ObjectReferenceTargetObject, targetIndex: targetIndex}
 }
 
 // SourcePermanentReference references the source permanent of the resolving stack
@@ -158,6 +169,13 @@ func (r ObjectReference) Validate() []string {
 		}
 		if r.targetIndex < 0 {
 			return []string{"captured target stack object reference must not use a negative TargetIndex"}
+		}
+	case ObjectReferenceTargetObject:
+		if r.linkID != "" {
+			return []string{"target object reference must not set LinkID"}
+		}
+		if r.targetIndex < 0 {
+			return []string{"target object reference must not use a negative TargetIndex"}
 		}
 	case ObjectReferenceNone:
 		return []string{"object reference has no kind"}
@@ -325,4 +343,5 @@ type CardCondition struct {
 	Types                []types.Card
 	Supertypes           []types.Super
 	SubtypesAny          []types.Sub
+	ChosenSubtypeFrom    ChoiceKey
 }

@@ -104,6 +104,10 @@ type ContinuousEffect struct {
 	SetSubtypes    []types.Sub
 	AddSubtypes    []types.Sub
 	RemoveSubtypes []types.Sub
+	// AddSubtypeFromEntryChoice adds the subtype recorded under this key on the
+	// effect's source permanent. A missing source, choice, or subtype result has
+	// no effect.
+	AddSubtypeFromEntryChoice ChoiceKey
 
 	SetColors    []color.Color
 	AddColors    []color.Color
@@ -124,4 +128,11 @@ type ContinuousEffect struct {
 	ToughnessDelta        int
 	PowerDeltaDynamic     opt.V[DynamicAmount]
 	ToughnessDeltaDynamic opt.V[DynamicAmount]
+	// DoublePower and DoubleToughness add each affected permanent's own current
+	// power/toughness (the value running through earlier layers and earlier 7c
+	// effects) back into itself at LayerPowerToughnessModify, doubling that
+	// characteristic (CR 107.16, Unnatural Growth). They are independent of the
+	// fixed and dynamic deltas above and apply after them.
+	DoublePower     bool
+	DoubleToughness bool
 }

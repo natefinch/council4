@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -43,6 +44,12 @@ type Selection struct {
 	ExcludedSupertype types.Super
 	SubtypesAny       []types.Sub
 
+	// ExcludedSubtype names a creature subtype that must be absent, the
+	// "non-<subtype>" filter ("non-Human creatures you control"). It parallels
+	// ExcludedSupertype: a matched object carrying this subtype fails the
+	// selection. The empty value means no exclusion.
+	ExcludedSubtype types.Sub
+
 	// ColorsAny matches when any listed color is present. ExcludedColors must
 	// all be absent. Colorless requires no colors; Multicolored requires at
 	// least two colors.
@@ -59,6 +66,21 @@ type Selection struct {
 	// the matched object to be a token.
 	NonToken  bool
 	TokenOnly bool
+
+	// MatchCounter, when true, requires the matched permanent to carry at least
+	// one counter of RequiredCounter's kind ("creature you control with a +1/+1
+	// counter on it"). A non-battlefield subject (a card or spell, which has no
+	// counters) never matches. A bool flag distinguishes "no counter requirement"
+	// from "requires a +1/+1 counter" because counter.Kind's zero value names the
+	// +1/+1 counter.
+	MatchCounter bool
+
+	// SubtypeFromSourceEntryChoice, when true, requires the matched permanent to
+	// share the creature subtype the predicate's source permanent chose as it
+	// entered (its EntryChoices[EntryTypeChoiceKey]), the "of the chosen type"
+	// restriction of chosen-type anthems. A missing source, choice, or subtype
+	// matches nothing.
+	SubtypeFromSourceEntryChoice bool
 
 	// Controller constrains a permanent by its controller relative to the
 	// viewing player. Player constrains a player relative to the viewing player.
@@ -77,6 +99,9 @@ type Selection struct {
 	ManaValue opt.V[compare.Int]
 	Power     opt.V[compare.Int]
 	Toughness opt.V[compare.Int]
+
+	// RequiredCounter names the counter kind required when MatchCounter is set.
+	RequiredCounter counter.Kind
 }
 
 // Empty reports whether the Selection carries no active predicate and therefore
@@ -89,6 +114,8 @@ func (s Selection) Empty() bool {
 		len(s.Supertypes) == 0 &&
 		s.ExcludedSupertype == "" &&
 		len(s.SubtypesAny) == 0 &&
+		s.ExcludedSubtype == "" &&
+		!s.SubtypeFromSourceEntryChoice &&
 		len(s.ColorsAny) == 0 &&
 		len(s.ExcludedColors) == 0 &&
 		!s.Colorless &&
@@ -102,6 +129,7 @@ func (s Selection) Empty() bool {
 		!s.ManaValue.Exists &&
 		!s.Power.Exists &&
 		!s.Toughness.Exists &&
+		!s.MatchCounter &&
 		!s.ExcludeSource &&
 		!s.NonToken &&
 		!s.TokenOnly
@@ -136,6 +164,11 @@ func (s Selection) Validate() []string {
 		return !slices.Contains(s.ExcludedColors, c)
 	}) {
 		problems = append(problems, "every any-of color is excluded")
+	}
+	for _, sub := range s.SubtypesAny {
+		if sub == s.ExcludedSubtype {
+			problems = append(problems, fmt.Sprintf("subtype %v is both required and excluded", sub))
+		}
 	}
 	if s.Colorless && s.Multicolored {
 		problems = append(problems, "selection cannot require both colorless and multicolored")

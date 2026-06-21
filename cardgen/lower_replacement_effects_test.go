@@ -12,6 +12,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -28,6 +29,59 @@ func TestLowerEntersTappedReplacement(t *testing.T) {
 	}
 	if !face.ReplacementAbilities[0].Replacement.EntersTapped {
 		t.Fatal("replacement is not an enters-tapped replacement")
+	}
+}
+
+func TestLowerGroupEntersTappedReplacement(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracle     string
+		controller game.TriggerControllerFilter
+		cardTypes  []types.Card
+	}{
+		{
+			name:       "opponent creatures",
+			oracle:     "Creatures your opponents control enter tapped.",
+			controller: game.TriggerControllerOpponent,
+			cardTypes:  []types.Card{types.Creature},
+		},
+		{
+			name:       "multi-type opponent",
+			oracle:     "Artifacts, creatures, and lands your opponents control enter the battlefield tapped.",
+			controller: game.TriggerControllerOpponent,
+			cardTypes:  []types.Card{types.Artifact, types.Creature, types.Land},
+		},
+		{
+			name:       "all permanents",
+			oracle:     "Permanents enter the battlefield tapped.",
+			controller: game.TriggerControllerAny,
+			cardTypes:  nil,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Enchantment",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: test.oracle,
+			})
+			if len(face.ReplacementAbilities) != 1 {
+				t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+			}
+			replacement := face.ReplacementAbilities[0].Replacement
+			if !replacement.EntersTapped || !replacement.EntersTappedOthers {
+				t.Fatalf("replacement is not a group enters-tapped replacement: %#v", replacement)
+			}
+			if replacement.ControllerFilter != test.controller {
+				t.Fatalf("controller filter = %v, want %v", replacement.ControllerFilter, test.controller)
+			}
+			if !slices.Equal(replacement.EntersTappedTypes, test.cardTypes) {
+				t.Fatalf("types = %v, want %v", replacement.EntersTappedTypes, test.cardTypes)
+			}
+		})
 	}
 }
 
@@ -236,6 +290,66 @@ func manaAbilityReadsEntryColorChoice(ability *game.ManaAbility) bool {
 	return false
 }
 
+func TestLowerNamedTokenSetReplacement(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Academy Manufactor",
+		Layout:     "normal",
+		TypeLine:   "Artifact Creature — Construct",
+		OracleText: "If you would create a Clue, Food, or Treasure token, instead create one of each.",
+	})
+	if len(face.ReplacementAbilities) != 1 {
+		t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+	}
+	replacement := face.ReplacementAbilities[0].Replacement
+	if replacement.MatchEvent != game.EventTokenCreated ||
+		replacement.ControllerFilter != game.TriggerControllerYou ||
+		replacement.Duration != game.DurationPermanent ||
+		len(replacement.CreateOneOfEachTokens) != 3 {
+		t.Fatalf("replacement = %+v, want one-of-each token replacement with 3 defs", replacement)
+	}
+	wantNames := map[string]bool{"Clue": false, "Food": false, "Treasure": false}
+	for _, def := range replacement.CreateOneOfEachTokens {
+		if _, ok := wantNames[def.Name]; !ok {
+			t.Fatalf("unexpected token def %q", def.Name)
+		}
+		wantNames[def.Name] = true
+	}
+	for name, seen := range wantNames {
+		if !seen {
+			t.Fatalf("missing token def %q", name)
+		}
+	}
+}
+
+func TestGenerateNamedTokenSetReplacementSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Academy Manufactor",
+		Layout:     "normal",
+		TypeLine:   "Artifact Creature — Construct",
+		OracleText: "If you would create a Clue, Food, or Treasure token, instead create one of each.",
+	}, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.NamedTokenSetReplacement",
+		"game.TriggerControllerYou",
+		"[]*game.CardDef{",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
 func TestLowerTokenCreationReplacement(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -253,6 +367,53 @@ func TestLowerTokenCreationReplacement(t *testing.T) {
 		replacement.TokenMultiplier != 2 ||
 		replacement.Duration != game.DurationPermanent {
 		t.Fatalf("replacement = %+v, want token creation doubler", replacement)
+	}
+}
+
+func TestLowerPassiveTokenCreationReplacement(t *testing.T) {
+	t.Parallel()
+	ptr := func(s string) *string { return &s }
+	tests := map[string]*ScryfallCard{
+		"Mondrak": {
+			Name:       "Mondrak, Glory Dominus",
+			Layout:     "normal",
+			TypeLine:   "Legendary Creature — Phyrexian Horror",
+			ManaCost:   "{2}{W}{W}",
+			Power:      ptr("3"),
+			Toughness:  ptr("3"),
+			OracleText: "If one or more tokens would be created under your control, twice that many of those tokens are created instead.\n{1}{W/P}{W/P}, Sacrifice two other artifacts and/or creatures: Put an indestructible counter on Mondrak.",
+		},
+		"Adrix and Nev": {
+			Name:       "Adrix and Nev, Twincasters",
+			Layout:     "normal",
+			TypeLine:   "Legendary Creature — Merfolk Wizard",
+			ManaCost:   "{2}{G}{U}",
+			Power:      ptr("2"),
+			Toughness:  ptr("3"),
+			OracleText: "Ward {2}\nIf one or more tokens would be created under your control, twice that many of those tokens are created instead.",
+		},
+	}
+	for name, card := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, card)
+			var doubler game.ReplacementEffect
+			found := false
+			for _, ability := range face.ReplacementAbilities {
+				if ability.Replacement.MatchEvent == game.EventTokenCreated {
+					doubler = ability.Replacement
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("face %+v, want a token-creation replacement", face.ReplacementAbilities)
+			}
+			if doubler.ControllerFilter != game.TriggerControllerYou ||
+				doubler.TokenMultiplier != 2 ||
+				doubler.Duration != game.DurationPermanent {
+				t.Fatalf("replacement = %+v, want token creation doubler", doubler)
+			}
+		})
 	}
 }
 
@@ -321,20 +482,39 @@ func TestLowerDamageReplacement(t *testing.T) {
 func TestLowerCounterPlacementReplacement(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name             string
-		oracleText       string
-		matchCounterKind bool
-		counterKind      counter.Kind
+		name                  string
+		oracleText            string
+		matchCounterKind      bool
+		counterKind           counter.Kind
+		multiplier            int
+		addend                int
+		recipientAnyPermanent bool
 	}{
 		{
 			name:             "specific plus one counters",
 			oracleText:       "If one or more +1/+1 counters would be put on a creature you control, twice that many +1/+1 counters are put on that creature instead.",
 			matchCounterKind: true,
 			counterKind:      counter.PlusOnePlusOne,
+			multiplier:       2,
 		},
 		{
 			name:       "any counters",
 			oracleText: "If you would put one or more counters on a permanent or player, put twice that many of each of those kinds of counters on that permanent or player instead.",
+			multiplier: 2,
+		},
+		{
+			name:                  "controlled permanent any counters doubling",
+			oracleText:            "If an effect would put one or more counters on a permanent you control, it puts twice that many of those counters on that permanent instead.",
+			multiplier:            2,
+			recipientAnyPermanent: true,
+		},
+		{
+			name:                  "controlled permanent plus one counters additive",
+			oracleText:            "If one or more +1/+1 counters would be put on a permanent you control, that many plus one +1/+1 counters are put on that permanent instead.",
+			matchCounterKind:      true,
+			counterKind:           counter.PlusOnePlusOne,
+			addend:                1,
+			recipientAnyPermanent: true,
 		},
 	}
 	for _, test := range tests {
@@ -352,11 +532,13 @@ func TestLowerCounterPlacementReplacement(t *testing.T) {
 			replacement := face.ReplacementAbilities[0].Replacement
 			if replacement.MatchEvent != game.EventCountersAdded ||
 				replacement.ControllerFilter != game.TriggerControllerYou ||
-				replacement.CounterMultiplier != 2 ||
+				replacement.CounterMultiplier != test.multiplier ||
+				replacement.CounterAddend != test.addend ||
 				replacement.MatchCounterKind != test.matchCounterKind ||
 				replacement.CounterKindFilter != test.counterKind ||
+				replacement.CounterRecipientAnyPermanent != test.recipientAnyPermanent ||
 				replacement.Duration != game.DurationPermanent {
-				t.Fatalf("replacement = %+v, want counter placement doubler", replacement)
+				t.Fatalf("replacement = %+v, want counter placement modifier", replacement)
 			}
 		})
 	}
@@ -435,6 +617,91 @@ func TestGenerateCounterPlacementReplacementSource(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"game.CounterPlacementReplacement",
+		"counter.PlusOnePlusOne",
+		"game.TriggerControllerYou",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
+func TestGenerateAdditiveCounterPlacementReplacementSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Hardened Scales",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "If one or more +1/+1 counters would be put on a creature you control, that many plus one +1/+1 counters are put on it instead.",
+	}, "h")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.CounterPlacementReplacement",
+		"counter.PlusOnePlusOne",
+		"game.TriggerControllerYou",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
+func TestGenerateDoublingSeasonSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:     "Doubling Season",
+		Layout:   "normal",
+		TypeLine: "Enchantment",
+		OracleText: "If an effect would create one or more tokens under your control, it creates twice that many of those tokens instead.\n" +
+			"If an effect would put one or more counters on a permanent you control, it puts twice that many of those counters on that permanent instead.",
+	}, "d")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.TokenCreationReplacement",
+		"game.ControlledPermanentCounterPlacementReplacement",
+		"game.TriggerControllerYou",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
+func TestGenerateControlledPermanentCounterKindReplacementSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Permanent Scales",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "If one or more +1/+1 counters would be put on a permanent you control, that many plus one +1/+1 counters are put on that permanent instead.",
+	}, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.ControlledPermanentCounterKindPlacementReplacement",
 		"counter.PlusOnePlusOne",
 		"game.TriggerControllerYou",
 	} {
@@ -534,11 +801,57 @@ func TestGenerateEntersWithCountersReplacementSource(t *testing.T) {
 	}
 }
 
+func TestLowerEntersWithXCountersReplacement(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Walking Ballista",
+		Layout:     "normal",
+		TypeLine:   "Artifact Creature — Construct",
+		OracleText: "This creature enters with X +1/+1 counters on it.",
+		Power:      new("0"),
+		Toughness:  new("0"),
+	})
+	if len(face.ReplacementAbilities) != 1 {
+		t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+	}
+	replacement := face.ReplacementAbilities[0].Replacement
+	if len(replacement.EntersWithCounters) != 1 {
+		t.Fatalf("counter placements = %#v, want one", replacement.EntersWithCounters)
+	}
+	placement := replacement.EntersWithCounters[0]
+	if placement.Kind != counter.PlusOnePlusOne || !placement.AmountFromX || placement.Amount != 0 {
+		t.Fatalf("placement = %#v, want +1/+1 from X", placement)
+	}
+}
+
+func TestGenerateEntersWithXCountersReplacementSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Walking Ballista",
+		Layout:     "normal",
+		TypeLine:   "Artifact Creature — Construct",
+		OracleText: "This creature enters with X +1/+1 counters on it.",
+		Power:      new("0"),
+		Toughness:  new("0"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	if !strings.Contains(source, "game.CounterPlacement{Kind: counter.PlusOnePlusOne, AmountFromX: true}") {
+		t.Fatalf("source missing X counter placement:\n%s", source)
+	}
+	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
 func TestLowerEntersWithCountersRejectsUnsupportedForms(t *testing.T) {
 	t.Parallel()
 	tests := map[string]string{
 		"conditional": "If a creature died this turn, this creature enters with a +1/+1 counter on it.",
-		"dynamic":     "This creature enters with X +1/+1 counters on it.",
 	}
 	for name, oracleText := range tests {
 		t.Run(name, func(t *testing.T) {

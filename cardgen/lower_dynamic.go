@@ -70,20 +70,74 @@ func lowerDynamicAmount(amount compiler.CompiledAmount, object game.ObjectRefere
 		dynamic.Kind = game.DynamicAmountObjectCounters
 		dynamic.Object = object
 		dynamic.CounterKind = amount.CounterKind
+	case compiler.DynamicAmountGreatestPower, compiler.DynamicAmountGreatestToughness, compiler.DynamicAmountGreatestManaValue:
+		selection, ok := dynamicAmountSelection(amount.Selector())
+		if !ok {
+			return game.DynamicAmount{}, false
+		}
+		dynamic.Kind = greatestInGroupKind(amount.DynamicKind)
+		dynamic.Group = game.BattlefieldGroup(selection)
+	case compiler.DynamicAmountTotalPower, compiler.DynamicAmountTotalToughness:
+		selection, ok := dynamicAmountSelection(amount.Selector())
+		if !ok {
+			return game.DynamicAmount{}, false
+		}
+		dynamic.Kind = totalInGroupKind(amount.DynamicKind)
+		dynamic.Group = game.BattlefieldGroup(selection)
+	case compiler.DynamicAmountDevotion:
+		if len(amount.Colors) == 0 {
+			return game.DynamicAmount{}, false
+		}
+		dynamic.Kind = game.DynamicAmountDevotion
+		dynamic.Colors = append([]color.Color(nil), amount.Colors...)
+	case compiler.DynamicAmountSpellsCastThisTurn:
+		dynamic.Kind = game.DynamicAmountSpellsCastThisTurn
 	default:
 		return game.DynamicAmount{}, false
 	}
 	return dynamic, true
 }
 
+// greatestInGroupKind maps a compiled greatest-characteristic amount kind to its
+// runtime "greatest <characteristic> among group" sibling.
+func greatestInGroupKind(kind compiler.DynamicAmountKind) game.DynamicAmountKind {
+	switch kind {
+	case compiler.DynamicAmountGreatestToughness:
+		return game.DynamicAmountGreatestToughnessInGroup
+	case compiler.DynamicAmountGreatestManaValue:
+		return game.DynamicAmountGreatestManaValueInGroup
+	default:
+		return game.DynamicAmountGreatestPowerInGroup
+	}
+}
+
+// totalInGroupKind maps a compiled total-characteristic amount kind to its
+// runtime "total <characteristic> across group" sibling.
+func totalInGroupKind(kind compiler.DynamicAmountKind) game.DynamicAmountKind {
+	switch kind {
+	case compiler.DynamicAmountTotalToughness:
+		return game.DynamicAmountTotalToughnessInGroup
+	default:
+		return game.DynamicAmountTotalPowerInGroup
+	}
+}
+
 func dynamicAmountSelection(selector compiler.CompiledSelector) (game.Selection, bool) {
 	if selector.Zone != zone.None {
 		return game.Selection{}, false
 	}
-	selection, ok := dynamicCountCharacteristics(selector)
+	tapped, ok := dynamicTapState(selector)
 	if !ok {
 		return game.Selection{}, false
 	}
+	filtered := selector
+	filtered.Tapped = false
+	filtered.Untapped = false
+	selection, ok := dynamicCountCharacteristics(filtered)
+	if !ok {
+		return game.Selection{}, false
+	}
+	selection.Tapped = tapped
 	requiredType, known := dynamicBattlefieldRequiredType(selector.Kind)
 	switch {
 	case known:
@@ -104,6 +158,19 @@ func dynamicAmountSelection(selector compiler.CompiledSelector) (game.Selection,
 		return game.Selection{}, false
 	}
 	return selection, true
+}
+
+func dynamicTapState(selector compiler.CompiledSelector) (game.TriState, bool) {
+	switch {
+	case selector.Tapped && selector.Untapped:
+		return game.TriAny, false
+	case selector.Tapped:
+		return game.TriTrue, true
+	case selector.Untapped:
+		return game.TriFalse, true
+	default:
+		return game.TriAny, true
+	}
 }
 
 func dynamicBattlefieldRequiredType(kind compiler.SelectorKind) (types.Card, bool) {
@@ -176,11 +243,23 @@ func dynamicZoneRequiredType(kind compiler.SelectorKind) (types.Card, bool) {
 func dynamicCountCharacteristics(selector compiler.CompiledSelector) (game.Selection, bool) {
 	if selector.All || selector.Another || selector.Other ||
 		selector.Attacking || selector.Blocking ||
-		selector.Tapped || selector.Untapped ||
-		selector.MatchManaValue || selector.MatchPower || selector.MatchToughness {
+		selector.Tapped || selector.Untapped {
 		return game.Selection{}, false
 	}
-	return selectorCharacteristics(selector)
+	selection, ok := selectorCharacteristics(selector)
+	if !ok {
+		return game.Selection{}, false
+	}
+	if selector.MatchManaValue {
+		selection.ManaValue = opt.Val(selector.ManaValue)
+	}
+	if selector.MatchPower {
+		selection.Power = opt.Val(selector.Power)
+	}
+	if selector.MatchToughness {
+		selection.Toughness = opt.Val(selector.Toughness)
+	}
+	return selection, true
 }
 
 // selectorCharacteristics maps the characteristic filters of a compiled selector
@@ -208,6 +287,10 @@ func selectorCharacteristics(selector compiler.CompiledSelector) (game.Selection
 		}
 		selection.ExcludedKeyword = keyword
 	}
+	if selector.MatchCounter {
+		selection.MatchCounter = true
+		selection.RequiredCounter = selector.RequiredCounter
+	}
 	if union := selector.RequiredTypesAny(); len(union) > 0 {
 		return game.Selection{}, false
 	}
@@ -220,11 +303,20 @@ func selectorCharacteristics(selector compiler.CompiledSelector) (game.Selection
 	if subtypes := selector.SubtypesAny(); len(subtypes) > 0 {
 		selection.SubtypesAny = append([]types.Sub(nil), subtypes...)
 	}
+	if excludedSubtypes := selector.ExcludedSubtypes(); len(excludedSubtypes) > 0 {
+		if len(excludedSubtypes) > 1 {
+			return game.Selection{}, false
+		}
+		selection.ExcludedSubtype = excludedSubtypes[0]
+	}
 	if colors := selector.ColorsAny(); len(colors) > 0 {
 		selection.ColorsAny = append([]color.Color(nil), colors...)
 	}
 	if excludedColors := selector.ExcludedColors(); len(excludedColors) > 0 {
 		selection.ExcludedColors = append([]color.Color(nil), excludedColors...)
+	}
+	if selector.SubtypeFromEntryChoice {
+		selection.SubtypeFromSourceEntryChoice = true
 	}
 	return selection, true
 }
@@ -233,7 +325,11 @@ func selectorHasCountCharacteristic(selector compiler.CompiledSelector) bool {
 	return selector.Colorless || selector.Multicolored ||
 		selector.Keyword != parser.KeywordUnknown ||
 		selector.ExcludedKeyword != parser.KeywordUnknown ||
+		selector.MatchCounter ||
+		selector.MatchManaValue || selector.MatchPower || selector.MatchToughness ||
+		selector.SubtypeFromEntryChoice ||
 		len(selector.SubtypesAny()) > 0 ||
+		len(selector.ExcludedSubtypes()) > 0 ||
 		len(selector.Supertypes()) > 0 ||
 		len(selector.ColorsAny()) > 0 ||
 		len(selector.ExcludedColors()) > 0 ||
@@ -291,6 +387,8 @@ func runtimeKeyword(keyword parser.KeywordKind) (game.Keyword, bool) {
 		return game.Undying, true
 	case parser.KeywordPersist:
 		return game.Persist, true
+	case parser.KeywordRiot:
+		return game.Riot, true
 	default:
 		return game.KeywordNone, false
 	}
@@ -310,6 +408,24 @@ func lowerEventCardCountAmount(ctx contentCtx, amount compiler.CompiledAmount) (
 	multiplier := max(amount.Multiplier, 1)
 	return game.DynamicAmount{
 		Kind:       game.DynamicAmountEventCardCount,
+		Multiplier: multiplier,
+	}, true
+}
+
+// lowerEventLifeChangeAmount lowers a "that much life" amount into a
+// DynamicAmountEventLifeChange. It succeeds only inside a life-gain or life-loss
+// triggered ability (ctx.triggerEvent records the triggering event kind),
+// keeping the amount closed in spell and non-matching contexts where no
+// triggering life quantity exists.
+func lowerEventLifeChangeAmount(ctx contentCtx, amount compiler.CompiledAmount) (game.DynamicAmount, bool) {
+	switch ctx.triggerEvent {
+	case game.EventLifeGained, game.EventLifeLost:
+	default:
+		return game.DynamicAmount{}, false
+	}
+	multiplier := max(amount.Multiplier, 1)
+	return game.DynamicAmount{
+		Kind:       game.DynamicAmountEventLifeChange,
 		Multiplier: multiplier,
 	}, true
 }
@@ -723,7 +839,6 @@ func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool
 		len(target.Selector.SubtypesAny()) != 0 ||
 		target.Selector.Keyword != parser.KeywordUnknown ||
 		target.Selector.Zone != zone.None ||
-		target.Selector.MatchManaValue ||
 		target.Selector.MatchPower ||
 		target.Selector.MatchToughness {
 		return game.TargetSpec{}, false
@@ -741,6 +856,9 @@ func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool
 	predicate := game.TargetPredicate{
 		StackObjectKinds:       []game.StackObjectKind{game.StackSpell},
 		ExcludedSpellCardTypes: append([]types.Card(nil), excluded...),
+	}
+	if target.Selector.MatchManaValue {
+		predicate.ManaValue = opt.Val(target.Selector.ManaValue)
 	}
 	if len(required) == 1 {
 		predicate.SpellCardTypes = append([]types.Card(nil), required...)

@@ -14,18 +14,24 @@ type StaticDeclarationKind string
 
 // Static declaration families recognized by the parser.
 const (
-	StaticDeclarationUnknown                      StaticDeclarationKind = ""
-	StaticDeclarationContinuousPowerToughness     StaticDeclarationKind = "StaticDeclarationContinuousPowerToughness"
-	StaticDeclarationContinuousBasePowerToughness StaticDeclarationKind = "StaticDeclarationContinuousBasePowerToughness"
-	StaticDeclarationContinuousCharacteristic     StaticDeclarationKind = "StaticDeclarationContinuousCharacteristic"
-	StaticDeclarationKeywordGrant                 StaticDeclarationKind = "StaticDeclarationKeywordGrant"
-	StaticDeclarationRule                         StaticDeclarationKind = "StaticDeclarationRule"
-	StaticDeclarationCostModifier                 StaticDeclarationKind = "StaticDeclarationCostModifier"
-	StaticDeclarationCardAbilityGrant             StaticDeclarationKind = "StaticDeclarationCardAbilityGrant"
-	StaticDeclarationPermanentAbilityGrant        StaticDeclarationKind = "StaticDeclarationPermanentAbilityGrant"
-	StaticDeclarationControlGrant                 StaticDeclarationKind = "StaticDeclarationControlGrant"
-	StaticDeclarationPlayerRule                   StaticDeclarationKind = "StaticDeclarationPlayerRule"
-	StaticDeclarationLoseAbilitiesBecome          StaticDeclarationKind = "StaticDeclarationLoseAbilitiesBecome"
+	StaticDeclarationUnknown                             StaticDeclarationKind = ""
+	StaticDeclarationContinuousPowerToughness            StaticDeclarationKind = "StaticDeclarationContinuousPowerToughness"
+	StaticDeclarationContinuousBasePowerToughness        StaticDeclarationKind = "StaticDeclarationContinuousBasePowerToughness"
+	StaticDeclarationContinuousCharacteristic            StaticDeclarationKind = "StaticDeclarationContinuousCharacteristic"
+	StaticDeclarationContinuousEntryChoiceSubtype        StaticDeclarationKind = "StaticDeclarationContinuousEntryChoiceSubtype"
+	StaticDeclarationChosenCreatureTypeTriggerMultiplier StaticDeclarationKind = "StaticDeclarationChosenCreatureTypeTriggerMultiplier"
+	StaticDeclarationKeywordGrant                        StaticDeclarationKind = "StaticDeclarationKeywordGrant"
+	StaticDeclarationRule                                StaticDeclarationKind = "StaticDeclarationRule"
+	StaticDeclarationCostModifier                        StaticDeclarationKind = "StaticDeclarationCostModifier"
+	StaticDeclarationCardAbilityGrant                    StaticDeclarationKind = "StaticDeclarationCardAbilityGrant"
+	StaticDeclarationPermanentAbilityGrant               StaticDeclarationKind = "StaticDeclarationPermanentAbilityGrant"
+	StaticDeclarationControlGrant                        StaticDeclarationKind = "StaticDeclarationControlGrant"
+	StaticDeclarationPlayerRule                          StaticDeclarationKind = "StaticDeclarationPlayerRule"
+	StaticDeclarationLoseAbilitiesBecome                 StaticDeclarationKind = "StaticDeclarationLoseAbilitiesBecome"
+	StaticDeclarationOpponentActionRestriction           StaticDeclarationKind = "StaticDeclarationOpponentActionRestriction"
+	StaticDeclarationSpellUncounterable                  StaticDeclarationKind = "StaticDeclarationSpellUncounterable"
+	StaticDeclarationEnteringTriggerMultiplier           StaticDeclarationKind = "StaticDeclarationEnteringTriggerMultiplier"
+	StaticDeclarationUntapDuringOtherUntapStep           StaticDeclarationKind = "StaticDeclarationUntapDuringOtherUntapStep"
 )
 
 // StaticDeclarationSubjectKind identifies the affected group named by a typed
@@ -49,9 +55,10 @@ type StaticDeclarationPlayerRuleKind string
 
 // Static declaration player rules recognized by the parser.
 const (
-	StaticDeclarationPlayerRuleUnknown           StaticDeclarationPlayerRuleKind = ""
-	StaticDeclarationPlayerRuleNoMaximumHandSize StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleNoMaximumHandSize"
-	StaticDeclarationPlayerRuleAttackTax         StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleAttackTax"
+	StaticDeclarationPlayerRuleUnknown             StaticDeclarationPlayerRuleKind = ""
+	StaticDeclarationPlayerRuleNoMaximumHandSize   StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleNoMaximumHandSize"
+	StaticDeclarationPlayerRuleAttackTax           StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleAttackTax"
+	StaticDeclarationPlayerRuleAdditionalLandPlays StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleAdditionalLandPlays"
 )
 
 // StaticDeclarationCardFilterKind identifies the closed card filter that a
@@ -126,6 +133,17 @@ type StaticGrantedManaAbilitySyntax struct {
 	TapCost  bool        `json:",omitempty"`
 	Amount   int         `json:",omitempty"`
 	AnyColor bool        `json:",omitempty"`
+	// Text is the exact quoted ability source text without its surrounding
+	// quotes, carried so downstream layers reproduce the granted ability's
+	// printed wording without re-deriving it from typed fields.
+	Text string `json:",omitempty"`
+	// Sacrifice marks the "Sacrifice this artifact" additional cost carried by
+	// the Treasure-style granted ability.
+	Sacrifice bool `json:",omitempty"`
+	// AnyOneColor marks the "Add <N> mana of any one color" output, where the
+	// controller chooses one color and adds Amount mana of it (Amount >= 2).
+	// It is mutually exclusive with AnyColor.
+	AnyOneColor bool `json:",omitempty"`
 }
 
 // StaticDeclarationSyntax is one composable typed static declaration. The
@@ -184,12 +202,51 @@ type StaticDeclarationSyntax struct {
 	CostReplacement     string                            `json:",omitempty"`
 	SpellType           StaticDeclarationSpellTypeKind    `json:",omitempty"`
 	SpellColor          StaticDeclarationSpellColorKind   `json:",omitempty"`
+	ChosenCreatureType  bool                              `json:",omitempty"`
 
 	// Player-rule payload: the closed player-scoped rule this declaration grants
 	// to the static ability's controller.
-	PlayerRule       StaticDeclarationPlayerRuleKind `json:",omitempty"`
-	AttackTaxGeneric int                             `json:",omitempty"`
+	PlayerRule          StaticDeclarationPlayerRuleKind `json:",omitempty"`
+	AttackTaxGeneric    int                             `json:",omitempty"`
+	AdditionalLandPlays int                             `json:",omitempty"`
+
+	// Opponent action-restriction payload: a continuous prohibition stopping the
+	// affected players from casting spells and/or activating abilities of
+	// permanents whose type is in RestrictActivateTypes. RestrictAffectsAllPlayers
+	// selects every player ("Players can't ...") rather than only opponents;
+	// RestrictDuringControllerTurn scopes the prohibition to the controller's turn.
+	RestrictCastSpells           bool       `json:",omitempty"`
+	RestrictActivateTypes        []CardType `json:"-"`
+	RestrictAffectsAllPlayers    bool       `json:",omitempty"`
+	RestrictDuringControllerTurn bool       `json:",omitempty"`
+
+	// Entering-trigger-multiplier payload: the entering permanent's card-type
+	// filter for an "If <filter> entering causes a triggered ability of a
+	// permanent you control to trigger, that ability triggers an additional
+	// time." declaration. An empty EnteringFilterTypes matches any entering
+	// permanent ("a permanent").
+	EnteringFilterTypes []CardType `json:"-"`
+
+	// Untap-during-other-players'-untap-step payload: the filtered set of the
+	// controller's permanents that gain an extra untap during each other
+	// player's (or opponent's) untap step.
+	UntapGroup StaticUntapGroupKind `json:",omitempty"`
 }
+
+// StaticUntapGroupKind identifies the closed group of the controller's
+// permanents an "Untap <group> you control during each other player's untap
+// step." declaration untaps.
+type StaticUntapGroupKind string
+
+// Static untap-step group filters recognized by the parser.
+const (
+	StaticUntapGroupNone       StaticUntapGroupKind = ""
+	StaticUntapGroupSelf       StaticUntapGroupKind = "StaticUntapGroupSelf"
+	StaticUntapGroupPermanents StaticUntapGroupKind = "StaticUntapGroupPermanents"
+	StaticUntapGroupCreatures  StaticUntapGroupKind = "StaticUntapGroupCreatures"
+	StaticUntapGroupArtifacts  StaticUntapGroupKind = "StaticUntapGroupArtifacts"
+	StaticUntapGroupLands      StaticUntapGroupKind = "StaticUntapGroupLands"
+)
 
 func emitStaticDeclarations(abilities []Ability) {
 	for i := range abilities {
@@ -204,6 +261,27 @@ func emitStaticDeclarations(abilities []Ability) {
 		declarations := parseStaticDeclarations(body, ability.Quoted, ability.Atoms, ability.ConditionClauses)
 		if len(declarations) > 0 {
 			ability.StaticDeclarations = declarations
+		}
+	}
+}
+
+// emitSelfNameStaticRules populates Sentence.StaticRule for static-rule sentences
+// whose subject is the card's own printed name ("Toski attacks each combat if
+// able.") instead of a "this creature"/"this permanent" marker. Sentence
+// splitting runs before atoms are recognized, so the self-name form is resolved
+// here once the source-name aliases are available, letting it lower through the
+// same typed static-rule path as the marker form.
+func emitSelfNameStaticRules(abilities []Ability) {
+	for i := range abilities {
+		ability := &abilities[i]
+		for j := range ability.Sentences {
+			sentence := &ability.Sentences[j]
+			if sentence.StaticRule != nil {
+				continue
+			}
+			if rule, ok := parseSelfNameStaticRuleSyntax(sentence.Tokens, ability.Atoms); ok {
+				sentence.StaticRule = rule
+			}
 		}
 	}
 }
@@ -224,10 +302,22 @@ func staticDeclarationBodyTokens(ability *Ability) []shared.Token {
 }
 
 func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms Atoms, conditions []ConditionClause) []StaticDeclarationSyntax {
+	if declaration, ok := parseChosenCreatureTypeTriggerMultiplierDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseEnteringTriggerMultiplierDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
 	if declaration, ok := parseStaticCostModifierDeclaration(tokens, atoms, conditions); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticSpellCostModifierDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticSpellUncounterableDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticUntapDuringOtherUntapStepDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticCardAbilityGrantDeclaration(tokens, atoms); ok {
@@ -242,6 +332,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 	if declaration, ok := parseStaticPlayerRuleDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
+	if declaration, ok := parseStaticOpponentActionRestrictionDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
 	if declaration, ok := parseStaticLoseAbilitiesBecomeDeclaration(tokens, atoms); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
@@ -249,6 +342,81 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 		return declarations
 	}
 	return nil
+}
+
+func parseChosenCreatureTypeTriggerMultiplierDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 21 ||
+		tokens[14].Kind != shared.Comma ||
+		tokens[20].Kind != shared.Period ||
+		!staticWordsAt(tokens, 0,
+			"if", "a", "triggered", "ability", "of", "another", "creature", "you", "control",
+			"of", "the", "chosen", "type", "triggers") ||
+		!staticWordsAt(tokens, 15, "it", "triggers", "an", "additional", "time") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationChosenCreatureTypeTriggerMultiplier,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens),
+	}, true
+}
+
+// parseEnteringTriggerMultiplierDeclaration recognizes the "triggers an
+// additional time" replacement family "If <filter> entering causes a triggered
+// ability of a permanent you control to trigger, that ability triggers an
+// additional time." (Panharmonicon, Yarok, Ancient Greenwarden). <filter> is "a
+// permanent" (matching any entering permanent) or an article followed by an
+// "or"-joined card-type list ("an artifact or creature", "a land"). The entering
+// permanent's type filter is captured in EnteringFilterTypes; an empty list
+// matches any permanent. Any deviation leaves the clause unconsumed.
+func parseEnteringTriggerMultiplierDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	const suffixLen = 20
+	if len(tokens) < suffixLen+3 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "if") {
+		return StaticDeclarationSyntax{}, false
+	}
+	enter := len(tokens) - suffixLen
+	if !staticWordsAt(tokens, enter,
+		"entering", "causes", "a", "triggered", "ability", "of", "a", "permanent",
+		"you", "control", "to", "trigger") ||
+		tokens[enter+12].Kind != shared.Comma ||
+		!staticWordsAt(tokens, enter+13, "that", "ability", "triggers", "an", "additional", "time") {
+		return StaticDeclarationSyntax{}, false
+	}
+	filterTypes, ok := parseEnteringFilter(tokens, 1, enter)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                StaticDeclarationEnteringTriggerMultiplier,
+		Span:                shared.SpanOf(tokens),
+		OperationSpan:       shared.SpanOf(tokens),
+		EnteringFilterTypes: filterTypes,
+	}, true
+}
+
+// parseEnteringFilter consumes the entering-permanent filter "a permanent" or an
+// article followed by an "or"-joined card-type list. It returns an empty slice
+// for "a permanent" (any entering permanent) and the listed card types
+// otherwise, failing closed when the region is not exactly one such filter.
+func parseEnteringFilter(tokens []shared.Token, index, end int) ([]CardType, bool) {
+	if index >= end || (!equalWord(tokens[index], "a") && !equalWord(tokens[index], "an")) {
+		return nil, false
+	}
+	index++
+	if index >= end {
+		return nil, false
+	}
+	if index+1 == end && equalWord(tokens[index], "permanent") {
+		return nil, true
+	}
+	cardTypes, next, ok := parseStaticCardTypeList(tokens, index, end)
+	if !ok || next != end {
+		return nil, false
+	}
+	return cardTypes, true
 }
 
 func parseStaticPermanentAbilityGrantDeclaration(
@@ -259,31 +427,66 @@ func parseStaticPermanentAbilityGrantDeclaration(
 	if len(conditions) != 0 ||
 		len(quoted) != 1 ||
 		len(tokens) != 4 ||
-		!staticWordsAt(tokens, 0, "lands", "you", "control", "have") {
+		!staticWordsAt(tokens, 1, "you", "control", "have") {
+		return StaticDeclarationSyntax{}, false
+	}
+	subject, ok := staticPermanentGrantSubject(tokens[0], shared.SpanOf(tokens[:3]))
+	if !ok {
 		return StaticDeclarationSyntax{}, false
 	}
 	ability, ok := parseStaticGrantedManaAbility(quoted[0])
 	if !ok {
 		return StaticDeclarationSyntax{}, false
 	}
-	subjectSpan := shared.SpanOf(tokens[:3])
 	return StaticDeclarationSyntax{
-		Kind:          StaticDeclarationPermanentAbilityGrant,
-		Span:          shared.Span{Start: tokens[0].Span.Start, End: quoted[0].Span.End},
-		OperationSpan: quoted[0].Span,
-		Subject: StaticDeclarationSubject{
-			Kind: StaticDeclarationSubjectGroup,
-			Span: subjectSpan,
-			Group: EffectStaticSubjectSyntax{
-				Kind: EffectStaticSubjectControlledLands,
-				Span: subjectSpan,
-			},
-		},
+		Kind:               StaticDeclarationPermanentAbilityGrant,
+		Span:               shared.Span{Start: tokens[0].Span.Start, End: quoted[0].Span.End},
+		OperationSpan:      quoted[0].Span,
+		Subject:            subject,
 		GrantedManaAbility: &ability,
 	}, true
 }
 
+// staticPermanentGrantSubject maps the leading "<group> you control" noun of a
+// permanent-ability grant onto a typed group subject. It recognizes the
+// controlled land, creature, and artifact groups, plus the Treasure artifact
+// subtype, and fails closed for any other group noun.
+func staticPermanentGrantSubject(noun shared.Token, span shared.Span) (StaticDeclarationSubject, bool) {
+	group := EffectStaticSubjectSyntax{Span: span}
+	switch {
+	case equalWord(noun, "lands"):
+		group.Kind = EffectStaticSubjectControlledLands
+	case equalWord(noun, "creatures"):
+		group.Kind = EffectStaticSubjectControlledCreatures
+	case equalWord(noun, "artifacts"):
+		group.Kind = EffectStaticSubjectControlledArtifacts
+	case equalWord(noun, "treasures"):
+		group.Kind = EffectStaticSubjectControlledArtifacts
+		group.Subtype = types.Treasure
+		group.SubtypeText = string(types.Treasure)
+		group.SubtypeKnown = true
+	default:
+		return StaticDeclarationSubject{}, false
+	}
+	return StaticDeclarationSubject{
+		Kind:  StaticDeclarationSubjectGroup,
+		Span:  span,
+		Group: group,
+	}, true
+}
+
+// parseStaticGrantedManaAbility recognizes one of two quoted activated mana
+// abilities a permanent-ability grant may confer: the bare tap form
+// "{T}: Add one mana of any color." and the Treasure-style sacrifice form
+// "{T}, Sacrifice this artifact: Add <N> mana of any one color." (N >= 2).
 func parseStaticGrantedManaAbility(quoted Delimited) (StaticGrantedManaAbilitySyntax, bool) {
+	if ability, ok := parseStaticGrantedAnyColorManaAbility(quoted); ok {
+		return ability, true
+	}
+	return parseStaticGrantedSacrificeManaAbility(quoted)
+}
+
+func parseStaticGrantedAnyColorManaAbility(quoted Delimited) (StaticGrantedManaAbilitySyntax, bool) {
 	tokens := quoted.Tokens
 	if len(tokens) != 11 ||
 		tokens[0].Kind != shared.Quote ||
@@ -297,10 +500,46 @@ func parseStaticGrantedManaAbility(quoted Delimited) (StaticGrantedManaAbilitySy
 	}
 	return StaticGrantedManaAbilitySyntax{
 		Span:     shared.SpanOf(tokens[1:10]),
+		Text:     staticGrantedAbilityText(quoted),
 		TapCost:  true,
 		Amount:   1,
 		AnyColor: true,
 	}, true
+}
+
+func parseStaticGrantedSacrificeManaAbility(quoted Delimited) (StaticGrantedManaAbilitySyntax, bool) {
+	tokens := quoted.Tokens
+	if len(tokens) != 16 ||
+		tokens[0].Kind != shared.Quote ||
+		tokens[1].Kind != shared.Symbol ||
+		tokens[1].Text != "{T}" ||
+		tokens[2].Kind != shared.Comma ||
+		!staticWordsAt(tokens, 3, "sacrifice", "this", "artifact") ||
+		tokens[6].Kind != shared.Colon ||
+		!staticWordsAt(tokens, 7, "add") ||
+		!staticWordsAt(tokens, 9, "mana", "of", "any", "one", "color") ||
+		tokens[14].Kind != shared.Period ||
+		tokens[15].Kind != shared.Quote {
+		return StaticGrantedManaAbilitySyntax{}, false
+	}
+	count, ok := manaAnyOneColorCount(tokens[8])
+	if !ok {
+		return StaticGrantedManaAbilitySyntax{}, false
+	}
+	return StaticGrantedManaAbilitySyntax{
+		Span:        shared.SpanOf(tokens[1:15]),
+		Text:        staticGrantedAbilityText(quoted),
+		TapCost:     true,
+		Amount:      count,
+		Sacrifice:   true,
+		AnyOneColor: true,
+	}, true
+}
+
+// staticGrantedAbilityText returns the quoted ability's source text with its
+// surrounding double quotes removed.
+func staticGrantedAbilityText(quoted Delimited) string {
+	return strings.TrimSuffix(strings.TrimPrefix(quoted.Text, `"`), `"`)
 }
 
 // parseStaticControlGrantDeclaration recognizes the static source-tied control
@@ -332,9 +571,174 @@ func parseStaticControlGrantDeclaration(tokens []shared.Token) (StaticDeclaratio
 
 type staticPlayerRuleParser func([]shared.Token) (StaticDeclarationSyntax, bool)
 
+// parseStaticOpponentActionRestrictionDeclaration recognizes the continuous
+// action prohibition family "[During your turn,] <players> can't cast spells [or
+// activate abilities of <types>] [during your turn]." (Grand Abolisher, Teferi).
+// <players> is "your opponents", "each opponent", or "players"; the trailing
+// type list (e.g. "artifacts, creatures, or enchantments") scopes the activation
+// prohibition. The passive "spells can't be cast [during your turn]." is also
+// recognized. Any deviation leaves the clause unconsumed and fails closed.
+func parseStaticOpponentActionRestrictionDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) < 4 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	end := len(tokens) - 1
+	index := 0
+	duringControllerTurn := false
+	if staticWordsAt(tokens, index, "during", "your", "turn") {
+		duringControllerTurn = true
+		index += 3
+		if index < end && tokens[index].Kind == shared.Comma {
+			index++
+		}
+	}
+	if declaration, ok := parseStaticPassiveCastProhibition(tokens, index, end, duringControllerTurn); ok {
+		return declaration, true
+	}
+	affectsAll := false
+	switch {
+	case staticWordsAt(tokens, index, "your", "opponents"):
+		index += 2
+	case staticWordsAt(tokens, index, "each", "opponent"):
+		index += 2
+	case staticWordsAt(tokens, index, "players"):
+		affectsAll = true
+		index++
+	default:
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, index, "can't") && !staticWordsAt(tokens, index, "cannot") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index++
+	actions, index, ok := parseStaticRestrictedActions(tokens, index, end)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	if staticWordsAt(tokens, index, "during", "your", "turn") {
+		duringControllerTurn = true
+		index += 3
+	}
+	if index != end {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                         StaticDeclarationOpponentActionRestriction,
+		Span:                         shared.SpanOf(tokens),
+		OperationSpan:                shared.SpanOf(tokens[:end]),
+		RestrictCastSpells:           actions.cast,
+		RestrictActivateTypes:        actions.activateTypes,
+		RestrictAffectsAllPlayers:    affectsAll,
+		RestrictDuringControllerTurn: duringControllerTurn,
+	}, true
+}
+
+// staticRestrictedActions holds the parsed actions a static prohibition forbids:
+// casting spells and/or activating abilities of the listed permanent types.
+type staticRestrictedActions struct {
+	cast          bool
+	activateTypes []CardType
+}
+
+// parseStaticPassiveCastProhibition recognizes the passive "spells can't be cast
+// [during your turn]." form, which forbids every player from casting spells.
+func parseStaticPassiveCastProhibition(tokens []shared.Token, index, end int, duringControllerTurn bool) (StaticDeclarationSyntax, bool) {
+	if !staticWordsAt(tokens, index, "spells", "can't", "be", "cast") &&
+		!staticWordsAt(tokens, index, "spells", "cannot", "be", "cast") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index += 4
+	if staticWordsAt(tokens, index, "during", "your", "turn") {
+		duringControllerTurn = true
+		index += 3
+	}
+	if index != end {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                         StaticDeclarationOpponentActionRestriction,
+		Span:                         shared.SpanOf(tokens),
+		OperationSpan:                shared.SpanOf(tokens[:end]),
+		RestrictCastSpells:           true,
+		RestrictAffectsAllPlayers:    true,
+		RestrictDuringControllerTurn: duringControllerTurn,
+	}, true
+}
+
+// parseStaticRestrictedActions consumes the "cast spells" and/or "activate
+// abilities of <types>" actions joined by "or". At least one action is required.
+func parseStaticRestrictedActions(tokens []shared.Token, index, end int) (staticRestrictedActions, int, bool) {
+	var actions staticRestrictedActions
+	for {
+		switch {
+		case staticWordsAt(tokens, index, "cast", "spells"):
+			if actions.cast {
+				return staticRestrictedActions{}, 0, false
+			}
+			actions.cast = true
+			index += 2
+		case staticWordsAt(tokens, index, "activate", "abilities", "of"):
+			if len(actions.activateTypes) != 0 {
+				return staticRestrictedActions{}, 0, false
+			}
+			cardTypes, next, ok := parseStaticCardTypeList(tokens, index+3, end)
+			if !ok {
+				return staticRestrictedActions{}, 0, false
+			}
+			actions.activateTypes = cardTypes
+			index = next
+		default:
+			return staticRestrictedActions{}, 0, false
+		}
+		if !staticWordsAt(tokens, index, "or") {
+			break
+		}
+		index++
+	}
+	if !actions.cast && len(actions.activateTypes) == 0 {
+		return staticRestrictedActions{}, 0, false
+	}
+	return actions, index, true
+}
+
+// parseStaticCardTypeList consumes a comma- and/or "or"/"and"-separated list of
+// pluralized card-type words ("artifacts, creatures, or enchantments") into typed
+// card types, returning the index after the list.
+func parseStaticCardTypeList(tokens []shared.Token, index, end int) ([]CardType, int, bool) {
+	var cardTypes []CardType
+	for index < end {
+		if tokens[index].Kind != shared.Word {
+			break
+		}
+		cardType, ok := recognizeCardTypeWord(tokens[index].Text)
+		if !ok {
+			break
+		}
+		cardTypes = append(cardTypes, cardType)
+		index++
+		separated := false
+		if index < end && tokens[index].Kind == shared.Comma {
+			index++
+			separated = true
+		}
+		if index < end && (equalWord(tokens[index], "or") || equalWord(tokens[index], "and")) {
+			index++
+			separated = true
+		}
+		if !separated {
+			break
+		}
+	}
+	if len(cardTypes) == 0 {
+		return nil, 0, false
+	}
+	return cardTypes, index, true
+}
+
 var staticPlayerRuleParsers = []staticPlayerRuleParser{
 	parseStaticNoMaximumHandSizeDeclaration,
 	parseStaticAttackTaxDeclaration,
+	parseStaticAdditionalLandPlaysDeclaration,
 }
 
 func parseStaticPlayerRuleDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
@@ -393,6 +797,43 @@ func parseStaticAttackTaxDeclaration(tokens []shared.Token) (StaticDeclarationSy
 		},
 		PlayerRule:       StaticDeclarationPlayerRuleAttackTax,
 		AttackTaxGeneric: amount,
+	}, true
+}
+
+// parseStaticAdditionalLandPlaysDeclaration recognizes the controller-scoped
+// static grant of one or more extra land plays every turn: "You may play an
+// additional land on each of your turns." and the multi-land "... two additional
+// lands ..." variant. The "you may" permission is folded into an unconditional
+// allowance; the controller still chooses whether to play the extra land.
+func parseStaticAdditionalLandPlaysDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 12 || tokens[11].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "you", "may", "play") {
+		return StaticDeclarationSyntax{}, false
+	}
+	count, ok := additionalLandCountWord(tokens[3])
+	if !ok || count <= 0 || !equalWord(tokens[4], "additional") {
+		return StaticDeclarationSyntax{}, false
+	}
+	landWord := "land"
+	if count != 1 {
+		landWord = "lands"
+	}
+	if !equalWord(tokens[5], landWord) ||
+		!staticWordsAt(tokens, 6, "on", "each", "of", "your", "turns") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens[1:11]),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: tokens[0].Span,
+		},
+		PlayerRule:          StaticDeclarationPlayerRuleAdditionalLandPlays,
+		AdditionalLandPlays: count,
 	}, true
 }
 
@@ -491,6 +932,9 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token) (StaticDecla
 	if len(tokens) == 0 || tokens[len(tokens)-1].Kind != shared.Period {
 		return StaticDeclarationSyntax{}, false
 	}
+	if declaration, ok := parseChosenCreatureTypeSpellCostReduction(tokens); ok {
+		return declaration, true
+	}
 	spellColor := staticSpellColorFilter(tokens)
 	spellType := StaticDeclarationSpellTypeAll
 	var rest []shared.Token
@@ -533,7 +977,148 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token) (StaticDecla
 	}, true
 }
 
-// staticSpellColorFilter recognizes a leading single-color filter word in a
+// parseChosenCreatureTypeSpellCostReduction recognizes the static cast-cost
+// reducer filtered by the source's entry-time chosen creature type:
+//
+//	"Creature spells of the chosen type cost {N} less to cast." (Urza's Incubator)
+//	"Creature spells you cast of the chosen type cost {N} less to cast." (Herald's Horn)
+//
+// The optional "you cast" qualifier does not change the affected group: the
+// modifier always applies to the controller's creature spells of the chosen
+// type. The trailing "cost {N} less to cast" carries the reduction amount.
+func parseChosenCreatureTypeSpellCostReduction(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if !staticWordsAt(tokens, 0, "creature", "spells") {
+		return StaticDeclarationSyntax{}, false
+	}
+	rest := tokens[2:]
+	if staticWordsAt(rest, 0, "you", "cast") {
+		rest = rest[2:]
+	}
+	if len(rest) != 10 ||
+		!staticWordsAt(rest, 0, "of", "the", "chosen", "type", "cost") ||
+		rest[5].Kind != shared.Symbol ||
+		!staticWordsAt(rest, 6, "less", "to", "cast") ||
+		rest[9].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	amount, ok := staticGenericSymbolValue(rest[5].Text)
+	if !ok || amount <= 0 {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                StaticDeclarationCostModifier,
+		Span:                shared.SpanOf(tokens),
+		OperationSpan:       shared.SpanOf(rest[4:9]),
+		CostModifier:        StaticDeclarationCostModifierSpellReduction,
+		CostReductionAmount: amount,
+		SpellType:           StaticDeclarationSpellTypeCreature,
+		ChosenCreatureType:  true,
+	}, true
+}
+
+// static "[<type filter>] spells you control can't be countered." (Rhythm of the
+// Wild, Prowling Serpopard, Cavern-style grants). The optional leading filter
+// constrains the affected spells to a single card type; a bare "Spells you
+// control ..." affects every spell the controller casts. Color filters and the
+// instant-and-sorcery filter fail closed because the runtime counter check
+// matches only the spell's card types.
+func parseStaticSpellUncounterableDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) == 0 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	spellType, rest, ok := staticSpellTypeFilter(tokens)
+	if !ok || spellType == StaticDeclarationSpellTypeInstantOrSorcery {
+		return StaticDeclarationSyntax{}, false
+	}
+	if len(rest) != 7 ||
+		!staticWordsAt(rest, 0, "spells", "you", "control") ||
+		(!staticWordsAt(rest, 3, "can't") && !staticWordsAt(rest, 3, "cannot")) ||
+		!staticWordsAt(rest, 4, "be", "countered") ||
+		rest[6].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationSpellUncounterable,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(rest[3:6]),
+		SpellType:     spellType,
+	}, true
+}
+
+// parseStaticUntapDuringOtherUntapStepDeclaration recognizes the static "Untap
+// <group> you control during each other player's untap step." (Seedborn Muse,
+// Drumbellower) and the self form "Untap this <permanent> during each other
+// player's untap step." (Unwinding Clock-style printings). The trailing timing
+// also accepts the equivalent "during each opponent's untap step" wording. The
+// group is one of a closed set of controller-scoped filters (every permanent,
+// creatures, artifacts, or lands) or the source permanent itself; color,
+// subtype, multi-type, and counter-filtered groups fail closed here because the
+// runtime untap effect filters only by card type.
+func parseStaticUntapDuringOtherUntapStepDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) == 0 ||
+		tokens[len(tokens)-1].Kind != shared.Period ||
+		!equalWord(tokens[0], "untap") {
+		return StaticDeclarationSyntax{}, false
+	}
+	group, next, ok := staticUntapGroup(tokens)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, next, "during", "each") {
+		return StaticDeclarationSyntax{}, false
+	}
+	timing := next + 2
+	switch {
+	case staticWordsAt(tokens, timing, "other", "player's", "untap", "step") &&
+		timing+4 == len(tokens)-1:
+	case staticWordsAt(tokens, timing, "opponent's", "untap", "step") &&
+		timing+3 == len(tokens)-1:
+	default:
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationUntapDuringOtherUntapStep,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens[:1]),
+		UntapGroup:    group,
+	}, true
+}
+
+// staticUntapGroup strips the affected group from an untap-during-other-untap-
+// step declaration and returns the closed group filter with the index of the
+// first token after the group. It recognizes "this <permanent>" (the source
+// itself) and "all <permanents|creatures|artifacts|lands> you control".
+func staticUntapGroup(tokens []shared.Token) (StaticUntapGroupKind, int, bool) {
+	if staticWordsAt(tokens, 1, "this") && len(tokens) > 2 {
+		switch {
+		case equalWord(tokens[2], "artifact"),
+			equalWord(tokens[2], "creature"),
+			equalWord(tokens[2], "permanent"),
+			equalWord(tokens[2], "land"),
+			equalWord(tokens[2], "enchantment"):
+			return StaticUntapGroupSelf, 3, true
+		default:
+			return StaticUntapGroupNone, 0, false
+		}
+	}
+	if !staticWordsAt(tokens, 1, "all") || len(tokens) < 6 ||
+		!staticWordsAt(tokens, 3, "you", "control") {
+		return StaticUntapGroupNone, 0, false
+	}
+	switch {
+	case equalWord(tokens[2], "permanents"):
+		return StaticUntapGroupPermanents, 5, true
+	case equalWord(tokens[2], "creatures"):
+		return StaticUntapGroupCreatures, 5, true
+	case equalWord(tokens[2], "artifacts"):
+		return StaticUntapGroupArtifacts, 5, true
+	case equalWord(tokens[2], "lands"):
+		return StaticUntapGroupLands, 5, true
+	default:
+		return StaticUntapGroupNone, 0, false
+	}
+}
+
 // "<color> spells you cast cost ..." declaration ("White", "Blue", "Black",
 // "Red", "Green", or "Colorless"). It returns the closed color filter, or
 // StaticDeclarationSpellColorNone when the first token is not a recognized color

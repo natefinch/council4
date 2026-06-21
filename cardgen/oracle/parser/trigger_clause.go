@@ -103,8 +103,14 @@ func parseRelationPhaseStep(tokens []shared.Token) (PhaseStepTriggerClause, bool
 	if !ok {
 		return PhaseStepTriggerClause{}, false
 	}
+	remainder := determiner.remainder
+	next := false
+	if rest, ok := cutSyntaxWords(remainder, "next"); ok {
+		remainder = rest
+		next = true
+	}
 	name, ok := parsePhaseStepName(
-		determiner.remainder,
+		remainder,
 		determiner.quantifier.Kind == PhaseStepQuantifierEachOf,
 	)
 	if !ok {
@@ -114,6 +120,7 @@ func parseRelationPhaseStep(tokens []shared.Token) (PhaseStepTriggerClause, bool
 		Quantifier: determiner.quantifier,
 		Player:     determiner.player,
 		Name:       name,
+		Next:       next,
 	}, true
 }
 
@@ -721,15 +728,92 @@ func equalWord(token shared.Token, word string) bool {
 
 func triggerBodyComma(tokens []shared.Token) int {
 	comma := shared.TopLevelIndex(tokens, shared.Comma)
-	for comma > 0 &&
-		comma+1 < len(tokens) &&
-		strings.EqualFold(tokens[comma-1].Text, "noncreature") &&
-		strings.EqualFold(tokens[comma+1].Text, "nonland") {
-		next := shared.TopLevelIndex(tokens[comma+1:], shared.Comma)
+	for comma > 0 {
+		end, ok := spellListComma(tokens, comma)
+		if !ok {
+			break
+		}
+		next := shared.TopLevelIndex(tokens[end:], shared.Comma)
 		if next < 0 {
 			return -1
 		}
-		comma += next + 1
+		comma = end + next
 	}
 	return comma
+}
+
+// spellListComma reports whether the comma at the given index sits inside a
+// homogeneous comma-separated spell-type/subtype list such as "noncreature,
+// nonland card" or "Aura, Equipment, or Vehicle spell", rather than separating
+// the trigger condition from its body. When it does, it returns the index just
+// past the closing "spell"/"card" noun so the caller can resume scanning for the
+// real body comma. Every list noun must share a category (all card types or all
+// subtypes); a mixed list such as "instant, sorcery, or Wizard spell" is not
+// expressible as a single union, so it fails closed and keeps the legacy first-
+// item split. The category and terminator checks also keep effect text like
+// "draw a card, counter target spell" from being mistaken for a list.
+func spellListComma(tokens []shared.Token, comma int) (int, bool) {
+	if comma <= 0 || comma+1 >= len(tokens) || !isSpellListNoun(tokens[comma-1]) {
+		return 0, false
+	}
+	start := comma - 1
+	for start > 0 && isListRunToken(tokens[start-1]) {
+		start--
+	}
+	end := comma + 1
+	for end < len(tokens) && isListRunToken(tokens[end]) {
+		end++
+	}
+	if end >= len(tokens) || !isSpellOrCardNoun(tokens[end]) {
+		return 0, false
+	}
+	if !homogeneousSpellList(tokens[start:end]) {
+		return 0, false
+	}
+	return end + 1, true
+}
+
+// isListRunToken reports whether the token can appear in the interior of a
+// spell-type list: a list noun, a comma, or an "or"/"and" connector.
+func isListRunToken(token shared.Token) bool {
+	return isSpellListNoun(token) || token.Kind == shared.Comma || isListConjunction(token)
+}
+
+// isSpellOrCardNoun reports whether the token closes a spell-type list with a
+// "spell" or "card" noun.
+func isSpellOrCardNoun(token shared.Token) bool {
+	return isSpellNoun(token) || equalWord(token, "card") || equalWord(token, "cards")
+}
+
+// homogeneousSpellList reports whether every list noun in the run shares a
+// category: all card types (optionally "non"-prefixed) or all card subtypes.
+func homogeneousSpellList(tokens []shared.Token) bool {
+	sawType, sawSubtype := false, false
+	for _, token := range tokens {
+		if !isSpellListNoun(token) {
+			continue
+		}
+		word := strings.TrimPrefix(strings.ToLower(token.Text), "non")
+		if cardType, ok := triggerCardType(word); ok && cardType != TriggerCardTypeUnknown {
+			sawType = true
+		} else {
+			sawSubtype = true
+		}
+	}
+	return sawType != sawSubtype
+}
+
+// isSpellListNoun reports whether the token is a card-type or card-subtype word
+// (optionally "non"-prefixed) that can appear as a member of a spell-type list.
+func isSpellListNoun(token shared.Token) bool {
+	if token.Kind != shared.Word {
+		return false
+	}
+	word := strings.ToLower(token.Text)
+	word = strings.TrimPrefix(word, "non")
+	if cardType, ok := triggerCardType(word); ok && cardType != TriggerCardTypeUnknown {
+		return true
+	}
+	_, ok := recognizeSubtypePhrase(word)
+	return ok
 }

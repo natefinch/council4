@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // These tests drive the static-declaration recognizers with constructed typed
@@ -109,6 +110,42 @@ func TestRecognizeStaticKeywordGrantGroupFromTypedNodes(t *testing.T) {
 	}
 }
 
+func TestRecognizeStaticChosenTypePowerToughnessGroupFromTypedNodes(t *testing.T) {
+	t.Parallel()
+	for name, subject := range map[string]StaticSubjectKind{
+		"controlled":       StaticSubjectControlledCreaturesChosenType,
+		"other controlled": StaticSubjectOtherControlledCreaturesChosenType,
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			ability := CompiledAbility{
+				Kind: AbilityStatic,
+				Content: AbilityContent{
+					Effects: []CompiledEffect{{
+						Kind:           EffectModifyPT,
+						PowerDelta:     CompiledSignedAmount{Value: 1, Known: true},
+						ToughnessDelta: CompiledSignedAmount{Value: 1, Known: true},
+						StaticSubject:  subject,
+					}},
+				},
+			}
+			statics := []parser.StaticDeclarationSyntax{{Kind: parser.StaticDeclarationContinuousPowerToughness}}
+			declarations, ok := recognizeStaticPowerToughnessDeclarations(ability, statics)
+			if !ok || len(declarations) != 1 {
+				t.Fatalf("declarations = %#v ok = %v, want one", declarations, ok)
+			}
+			if declarations[0].Group.Domain != StaticGroupSourceControllerPermanents ||
+				!declarations[0].Group.Selection.SubtypeFromEntryChoice {
+				t.Fatalf("declaration = %#v, want chosen-type controlled group", declarations[0])
+			}
+			wantExclude := subject == StaticSubjectOtherControlledCreaturesChosenType
+			if declarations[0].Group.ExcludeSource != wantExclude {
+				t.Fatalf("ExcludeSource = %v, want %v", declarations[0].Group.ExcludeSource, wantExclude)
+			}
+		})
+	}
+}
+
 func TestRecognizeStaticKeywordGrantSourceRequiresConditionFailsClosed(t *testing.T) {
 	t.Parallel()
 	ability := CompiledAbility{
@@ -154,6 +191,42 @@ func TestRecognizeStaticPermanentManaAbilityGrantFromTypedNode(t *testing.T) {
 	}
 }
 
+func TestRecognizeStaticPermanentManaAbilityGrantTreasureSacrifice(t *testing.T) {
+	t.Parallel()
+	ability := CompiledAbility{Kind: AbilityStatic}
+	statics := []parser.StaticDeclarationSyntax{{
+		Kind: parser.StaticDeclarationPermanentAbilityGrant,
+		Subject: parser.StaticDeclarationSubject{
+			Kind: parser.StaticDeclarationSubjectGroup,
+			Group: parser.EffectStaticSubjectSyntax{
+				Kind:         parser.EffectStaticSubjectControlledArtifacts,
+				Subtype:      types.Treasure,
+				SubtypeKnown: true,
+			},
+		},
+		GrantedManaAbility: &parser.StaticGrantedManaAbilitySyntax{
+			TapCost:     true,
+			Amount:      3,
+			Sacrifice:   true,
+			AnyOneColor: true,
+			Text:        "{T}, Sacrifice this artifact: Add three mana of any one color.",
+		},
+	}}
+	declaration, ok := recognizeStaticPermanentAbilityGrantDeclaration(ability, statics)
+	if !ok {
+		t.Fatal("did not recognize typed Treasure sacrifice mana-ability grant")
+	}
+	if declaration.Continuous == nil ||
+		declaration.Continuous.GrantedMana == nil ||
+		!declaration.Continuous.GrantedMana.Sacrifice ||
+		!declaration.Continuous.GrantedMana.AnyOneColor ||
+		declaration.Continuous.GrantedMana.Amount != 3 ||
+		!slices.Equal(declaration.Group.Selection.RequiredTypes, []StaticCardType{StaticCardTypeArtifact}) ||
+		!slices.Equal(declaration.Group.Selection.SubtypesAny, []types.Sub{types.Treasure}) {
+		t.Fatalf("declaration = %#v, want controlled-Treasure sacrifice mana-ability grant", declaration)
+	}
+}
+
 func TestRecognizeStaticPermanentManaAbilityGrantTypedNearMissesFailClosed(t *testing.T) {
 	t.Parallel()
 	base := parser.StaticDeclarationSyntax{
@@ -171,9 +244,9 @@ func TestRecognizeStaticPermanentManaAbilityGrantTypedNearMissesFailClosed(t *te
 		},
 	}
 	tests := map[string]parser.StaticDeclarationSyntax{
-		"nonland group": func() parser.StaticDeclarationSyntax {
+		"unsupported group": func() parser.StaticDeclarationSyntax {
 			node := base
-			node.Subject.Group.Kind = parser.EffectStaticSubjectControlledCreatures
+			node.Subject.Group.Kind = parser.EffectStaticSubjectAllCreatures
 			return node
 		}(),
 		"no tap cost": func() parser.StaticDeclarationSyntax {
@@ -187,6 +260,15 @@ func TestRecognizeStaticPermanentManaAbilityGrantTypedNearMissesFailClosed(t *te
 			node := base
 			granted := *base.GrantedManaAbility
 			granted.Amount = 2
+			node.GrantedManaAbility = &granted
+			return node
+		}(),
+		"sacrifice without any-one-color": func() parser.StaticDeclarationSyntax {
+			node := base
+			granted := *base.GrantedManaAbility
+			granted.AnyColor = false
+			granted.Sacrifice = true
+			granted.Amount = 3
 			node.GrantedManaAbility = &granted
 			return node
 		}(),
@@ -360,6 +442,26 @@ func TestRecognizeStaticSpellCostModifierFromTypedNodes(t *testing.T) {
 	}
 }
 
+func TestRecognizeStaticChosenTypeSpellCostModifierFromTypedNode(t *testing.T) {
+	node := parser.StaticDeclarationSyntax{
+		Kind:                parser.StaticDeclarationCostModifier,
+		CostModifier:        parser.StaticDeclarationCostModifierSpellReduction,
+		CostReductionAmount: 1,
+		SpellType:           parser.StaticDeclarationSpellTypeCreature,
+		ChosenCreatureType:  true,
+	}
+
+	declaration, ok := recognizeStaticSpellCostModifierDeclaration(
+		CompiledAbility{Kind: AbilityStatic},
+		[]parser.StaticDeclarationSyntax{node},
+	)
+
+	if !ok || declaration.Cost == nil ||
+		!declaration.Cost.ChosenSubtypeFromEntryChoice {
+		t.Fatalf("declaration = %#v ok = %v, want chosen subtype entry-choice provenance", declaration, ok)
+	}
+}
+
 func TestRecognizeStaticSpellCostModifierFailsClosedOnContent(t *testing.T) {
 	t.Parallel()
 	node := parser.StaticDeclarationSyntax{
@@ -457,5 +559,26 @@ func TestRecognizeStaticAttackTaxFromTypedNodeWithoutInspectingText(t *testing.T
 	node.AttackTaxGeneric = 0
 	if _, ok := recognizeStaticPlayerRuleDeclaration(CompiledAbility{Kind: AbilityStatic, Content: content}, []parser.StaticDeclarationSyntax{node}); ok {
 		t.Fatal("recognized zero attack tax, want fail closed")
+	}
+}
+
+func TestRecognizeStaticAdditionalLandPlaysFromTypedNodeWithoutInspectingText(t *testing.T) {
+	t.Parallel()
+	node := parser.StaticDeclarationSyntax{
+		Kind:                parser.StaticDeclarationPlayerRule,
+		Subject:             parser.StaticDeclarationSubject{Kind: parser.StaticDeclarationSubjectController},
+		PlayerRule:          parser.StaticDeclarationPlayerRuleAdditionalLandPlays,
+		AdditionalLandPlays: 2,
+	}
+	ability := CompiledAbility{Kind: AbilityStatic}
+	declaration, ok := recognizeStaticPlayerRuleDeclaration(ability, []parser.StaticDeclarationSyntax{node})
+	if !ok || declaration.Player == nil ||
+		declaration.Player.Kind != StaticPlayerRuleAdditionalLandPlays ||
+		declaration.Player.AdditionalLandPlays != 2 {
+		t.Fatalf("declaration = %#v, ok = %v, want typed additional land plays", declaration, ok)
+	}
+	node.AdditionalLandPlays = 0
+	if _, ok := recognizeStaticPlayerRuleDeclaration(ability, []parser.StaticDeclarationSyntax{node}); ok {
+		t.Fatal("recognized zero additional land plays, want fail closed")
 	}
 }

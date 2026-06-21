@@ -258,6 +258,53 @@ func TestParseStaticPermanentManaAbilityGrantMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticPermanentManaAbilityGrantCreatureSubject(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		`Creatures you control have "{T}: Add one mana of any color."`,
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationPermanentAbilityGrant ||
+		declaration.Subject.Kind != StaticDeclarationSubjectGroup ||
+		declaration.Subject.Group.Kind != EffectStaticSubjectControlledCreatures {
+		t.Fatalf("declaration = %#v, want controlled-creature permanent ability grant", declaration)
+	}
+	granted := declaration.GrantedManaAbility
+	if granted == nil || !granted.TapCost || granted.Amount != 1 || !granted.AnyColor {
+		t.Fatalf("granted ability = %#v, want tap for one mana of any color", granted)
+	}
+}
+
+func TestParseStaticPermanentManaAbilityGrantTreasureSacrifice(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		`Treasures you control have "{T}, Sacrifice this artifact: Add three mana of any one color."`,
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationPermanentAbilityGrant ||
+		declaration.Subject.Group.Kind != EffectStaticSubjectControlledArtifacts ||
+		declaration.Subject.Group.Subtype != types.Treasure ||
+		!declaration.Subject.Group.SubtypeKnown {
+		t.Fatalf("declaration = %#v, want controlled-Treasure permanent ability grant", declaration)
+	}
+	granted := declaration.GrantedManaAbility
+	if granted == nil || !granted.TapCost || granted.Amount != 3 ||
+		!granted.Sacrifice || !granted.AnyOneColor || granted.AnyColor ||
+		granted.Text != "{T}, Sacrifice this artifact: Add three mana of any one color." {
+		t.Fatalf("granted ability = %#v, want tap-sacrifice for three mana of any one color", granted)
+	}
+}
+
 func TestParseStaticPermanentManaAbilityGrantNearMissesFailClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
@@ -267,7 +314,8 @@ func TestParseStaticPermanentManaAbilityGrantNearMissesFailClosed(t *testing.T) 
 		`Lands you control have "{T}: Add one mana of any color." and "{T}: Add {C}."`,
 		`As long as you control an artifact, lands you control have "{T}: Add one mana of any color."`,
 		`Land cards in your hand have "{T}: Add one mana of any color."`,
-		`Creatures you control have "{T}: Add one mana of any color."`,
+		`Enchantments you control have "{T}: Add one mana of any color."`,
+		`Treasures you control have "{T}, Sacrifice this artifact: Add one mana of any one color."`,
 		`Lands your opponents control have "{T}: Add one mana of any color."`,
 	} {
 		t.Run(source, func(t *testing.T) {
@@ -298,6 +346,32 @@ func TestParseStaticPowerToughnessAndKeywordComposition(t *testing.T) {
 	}
 	if declarations[0].Dynamic {
 		t.Fatalf("composed PT declaration must not be dynamic: %#v", declarations[0])
+	}
+}
+
+func TestParseStaticRuleThenKeywordGrantComposition(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		"Equipped creature can't be blocked and has shroud.",
+		Context{},
+	)
+	if len(declarations) != 2 {
+		t.Fatalf("declarations = %#v, want two", declarations)
+	}
+	if declarations[0].Kind != StaticDeclarationRule ||
+		declarations[1].Kind != StaticDeclarationKeywordGrant {
+		t.Fatalf("declarations = %#v, want rule then keyword", declarations)
+	}
+	if declarations[0].Rule.Operation.Kind != StaticRuleOperationBlock ||
+		declarations[0].Rule.Operation.Voice != StaticRuleVoicePassive {
+		t.Fatalf("rule = %#v, want passive block prohibition", declarations[0].Rule)
+	}
+	for i, declaration := range declarations {
+		if declaration.Subject.Kind != StaticDeclarationSubjectGroup ||
+			declaration.Subject.Group.Kind != EffectStaticSubjectAttachedObject {
+			t.Fatalf("declaration %d = %#v, want attached-object subject", i, declaration)
+		}
 	}
 }
 
@@ -691,6 +765,142 @@ func TestParseStaticSpellCostModifierDeclarationMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticSpellUncounterableDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source    string
+		spellType StaticDeclarationSpellTypeKind
+	}{
+		"all spells": {
+			source:    "Spells you control can't be countered.",
+			spellType: StaticDeclarationSpellTypeAll,
+		},
+		"creature spells": {
+			source:    "Creature spells you control can't be countered.",
+			spellType: StaticDeclarationSpellTypeCreature,
+		},
+		"instant spells": {
+			source:    "Instant spells you control can't be countered.",
+			spellType: StaticDeclarationSpellTypeInstant,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.source, Context{})
+			if len(declarations) != 1 || declarations[0].Kind != StaticDeclarationSpellUncounterable {
+				t.Fatalf("declarations = %#v, want one spell uncounterable", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.SpellType != test.spellType {
+				t.Fatalf("spellType = %s, want %s", declaration.SpellType, test.spellType)
+			}
+			if declaration.Span == (shared.Span{}) || declaration.OperationSpan == (shared.Span{}) {
+				t.Fatalf("spans = declaration %#v operation %#v, want source spans", declaration.Span, declaration.OperationSpan)
+			}
+		})
+	}
+}
+
+func TestParseStaticUntapDuringOtherUntapStepDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source string
+		group  StaticUntapGroupKind
+	}{
+		"all permanents": {
+			source: "Untap all permanents you control during each other player's untap step.",
+			group:  StaticUntapGroupPermanents,
+		},
+		"all creatures": {
+			source: "Untap all creatures you control during each other player's untap step.",
+			group:  StaticUntapGroupCreatures,
+		},
+		"all artifacts": {
+			source: "Untap all artifacts you control during each other player's untap step.",
+			group:  StaticUntapGroupArtifacts,
+		},
+		"all lands": {
+			source: "Untap all lands you control during each other player's untap step.",
+			group:  StaticUntapGroupLands,
+		},
+		"opponent wording": {
+			source: "Untap all permanents you control during each opponent's untap step.",
+			group:  StaticUntapGroupPermanents,
+		},
+		"self form": {
+			source: "Untap this artifact during each other player's untap step.",
+			group:  StaticUntapGroupSelf,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.source, Context{})
+			if len(declarations) != 1 || declarations[0].Kind != StaticDeclarationUntapDuringOtherUntapStep {
+				t.Fatalf("declarations = %#v, want one untap-during-other-untap-step", declarations)
+			}
+			if declarations[0].UntapGroup != test.group {
+				t.Fatalf("untapGroup = %s, want %s", declarations[0].UntapGroup, test.group)
+			}
+		})
+	}
+}
+
+func TestParseStaticUntapDuringOtherUntapStepRejections(t *testing.T) {
+	t.Parallel()
+	sources := map[string]string{
+		"color filter":    "Untap all green creatures you control during each other player's untap step.",
+		"subtype filter":  "Untap all Archers you control during each other player's untap step.",
+		"own untap step":  "Untap all permanents you control during your untap step.",
+		"not you control": "Untap all permanents during each other player's untap step.",
+		"missing each":    "Untap all permanents you control during other player's untap step.",
+		"wrong step":      "Untap all permanents you control during each other player's upkeep.",
+	}
+	for name, source := range sources {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, source, Context{})
+			for _, declaration := range declarations {
+				if declaration.Kind == StaticDeclarationUntapDuringOtherUntapStep {
+					t.Fatalf("source %q recognized as untap-during-other-untap-step, want fail closed", source)
+				}
+			}
+		})
+	}
+}
+
+func TestParseStaticChosenTypeSpellCostModifierDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source string
+		amount int
+	}{
+		"you cast qualifier": {source: "Creature spells you cast of the chosen type cost {1} less to cast.", amount: 1},
+		"no you cast":        {source: "Creature spells of the chosen type cost {2} less to cast.", amount: 2},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.source, Context{})
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.Kind != StaticDeclarationCostModifier ||
+				declaration.CostModifier != StaticDeclarationCostModifierSpellReduction ||
+				declaration.SpellType != StaticDeclarationSpellTypeCreature ||
+				!declaration.ChosenCreatureType ||
+				declaration.CostReductionAmount != test.amount {
+				t.Fatalf("declaration = %#v, want chosen creature type spell reduction of %d", declaration, test.amount)
+			}
+			if declaration.Span == (shared.Span{}) || declaration.OperationSpan == (shared.Span{}) {
+				t.Fatalf("spans = declaration %#v operation %#v, want source spans", declaration.Span, declaration.OperationSpan)
+			}
+		})
+	}
+}
+
 func TestParseStaticSpellCostModifierDeclarationRejections(t *testing.T) {
 	t.Parallel()
 	sources := map[string]string{
@@ -875,6 +1085,160 @@ func TestParseStaticCharacteristicTypeInAdditionMeaning(t *testing.T) {
 		len(characteristic.Colors) != 0 ||
 		!slices.Equal(characteristic.Subtypes, []types.Sub{types.Bird}) {
 		t.Fatalf("characteristic = %#v, want added Bird subtype", characteristic)
+	}
+}
+
+func TestParseStaticChosenCreatureTypeAddition(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		"This creature is the chosen type in addition to its other types.",
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationContinuousEntryChoiceSubtype ||
+		declaration.Subject.Kind != StaticDeclarationSubjectSourceCreature {
+		t.Fatalf("declaration = %#v, want source chosen-subtype addition", declaration)
+	}
+}
+
+func TestParseStaticChosenCreatureTypeTriggerMultiplier(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		"If a triggered ability of another creature you control of the chosen type triggers, it triggers an additional time.",
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	if declarations[0].Kind != StaticDeclarationChosenCreatureTypeTriggerMultiplier {
+		t.Fatalf("declaration = %#v, want chosen-type trigger multiplier", declarations[0])
+	}
+}
+
+func TestParseStaticEnteringTriggerMultiplier(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		source string
+		filter []CardType
+	}{
+		"artifact or creature": {
+			source: "If an artifact or creature entering causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
+			filter: []CardType{CardTypeArtifact, CardTypeCreature},
+		},
+		"any permanent": {
+			source: "If a permanent entering causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
+			filter: nil,
+		},
+		"land": {
+			source: "If a land entering causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
+			filter: []CardType{CardTypeLand},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, tc.source, Context{})
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.Kind != StaticDeclarationEnteringTriggerMultiplier {
+				t.Fatalf("declaration kind = %v, want entering-trigger multiplier", declaration.Kind)
+			}
+			if !slices.Equal(declaration.EnteringFilterTypes, tc.filter) {
+				t.Fatalf("filter = %#v, want %#v", declaration.EnteringFilterTypes, tc.filter)
+			}
+		})
+	}
+}
+
+func TestParseStaticEnteringTriggerMultiplierFailsClosed(t *testing.T) {
+	t.Parallel()
+	for name, source := range map[string]string{
+		"subtype filter":   "If a Wizard you control entering causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
+		"twice wording":    "If an artifact or creature entering causes a triggered ability of a permanent you control to trigger, that ability triggers twice.",
+		"opponent control": "If a permanent entering causes a triggered ability of a permanent an opponent controls to trigger, that ability triggers an additional time.",
+		"missing filter":   "If entering causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			for _, declaration := range parseStaticDeclarationSyntax(t, source, Context{}) {
+				if declaration.Kind == StaticDeclarationEnteringTriggerMultiplier {
+					t.Fatalf("declaration = %#v, want fail-closed near miss", declaration)
+				}
+			}
+		})
+	}
+}
+
+func TestParseStaticChosenCreatureTypeDeclarationsFailClosedOnNearMisses(t *testing.T) {
+	t.Parallel()
+	for name, source := range map[string]string{
+		"indefinite chosen type": "This creature is a chosen type in addition to its other types.",
+		"creature types tail":    "This creature is the chosen type in addition to its other creature types.",
+		"missing another":        "If a triggered ability of a creature you control of the chosen type triggers, it triggers an additional time.",
+		"permanent source":       "If a triggered ability of another permanent you control of the chosen type triggers, it triggers an additional time.",
+		"twice wording":          "If a triggered ability of another creature you control of the chosen type triggers, it triggers twice.",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if declarations := parseStaticDeclarationSyntax(t, source, Context{}); len(declarations) != 0 {
+				t.Fatalf("declarations = %#v, want fail-closed near miss", declarations)
+			}
+		})
+	}
+}
+
+func TestParseStaticChosenTypeAnthemSubjectKinds(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		source string
+		kind   EffectStaticSubjectKind
+	}{
+		"controlled chosen type": {
+			source: "Creatures you control of the chosen type get +1/+1.",
+			kind:   EffectStaticSubjectControlledCreaturesChosenType,
+		},
+		"other controlled chosen type": {
+			source: "Other creatures you control of the chosen type get +1/+1.",
+			kind:   EffectStaticSubjectOtherControlledCreaturesChosenType,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, tc.source, Context{})
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			subject := declarations[0].Subject
+			if subject.Kind != StaticDeclarationSubjectGroup || subject.Group.Kind != tc.kind {
+				t.Fatalf("subject = %#v, want group kind %v", subject, tc.kind)
+			}
+		})
+	}
+}
+
+func TestParseStaticChosenTypeAnthemFailsClosed(t *testing.T) {
+	t.Parallel()
+	for name, source := range map[string]string{
+		"indefinite chosen type": "Creatures you control of a chosen type get +1/+1.",
+		"missing you control":    "Creatures of the chosen type get +1/+1.",
+		"plural chosen types":    "Creatures you control of the chosen types get +1/+1.",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			for _, declaration := range parseStaticDeclarationSyntax(t, source, Context{}) {
+				if declaration.Subject.Kind == StaticDeclarationSubjectGroup &&
+					(declaration.Subject.Group.Kind == EffectStaticSubjectControlledCreaturesChosenType ||
+						declaration.Subject.Group.Kind == EffectStaticSubjectOtherControlledCreaturesChosenType) {
+					t.Fatalf("source %q unexpectedly parsed as chosen-type group: %#v", source, declaration)
+				}
+			}
+		})
 	}
 }
 

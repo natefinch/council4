@@ -34,6 +34,16 @@ func lowerFixedLifeSpell(
 	switch {
 	case effect.Amount.Known:
 		amount = game.Fixed(effect.Amount.Value)
+	case effect.Amount.DynamicKind == compiler.DynamicAmountTriggeringLifeChange:
+		dynamic, ok := lowerEventLifeChangeAmount(ctx, effect.Amount)
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported life spell",
+				"the executable source backend supports only exact supported life changes",
+			)
+		}
+		amount = game.Dynamic(dynamic)
 	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
 		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
 		sourceCounterReferences := effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount &&
@@ -153,10 +163,11 @@ func lowerFixedDestroySpell(
 	}); ok {
 		return content, nil
 	}
+	colorGate, hasColorGate := targetColorGateSelection(ctx.content.Conditions)
 	if len(ctx.content.Targets) != 1 ||
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
 		ctx.content.Targets[0].Cardinality.Max != 1 ||
-		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Conditions) != 0 && !hasColorGate ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.References) != 0 ||
@@ -177,16 +188,22 @@ func lowerFixedDestroySpell(
 			"the executable source backend supports only exact destruction of one target permanent",
 		)
 	}
-	return game.Mode{
-		Targets: []game.TargetSpec{targetSpec},
-		Sequence: []game.Instruction{
-			{
-				Primitive: game.Destroy{
-					Object:              game.TargetPermanentReference(0),
-					PreventRegeneration: preventRegeneration,
-				},
-			},
+	instruction := game.Instruction{
+		Primitive: game.Destroy{
+			Object:              game.TargetPermanentReference(0),
+			PreventRegeneration: preventRegeneration,
 		},
+	}
+	if hasColorGate {
+		instruction.Condition = opt.Val(targetColorEffectCondition(
+			game.TargetPermanentReference(0),
+			colorGate,
+			ctx.content.Conditions[0].Text,
+		))
+	}
+	return game.Mode{
+		Targets:  []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{instruction},
 	}.Ability(), nil
 }
 
@@ -200,6 +217,9 @@ func lowerFixedExileSpell(
 		return content, nil
 	}
 	if content, ok := lowerPlayerGraveyardExile(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerAllGraveyardExile(ctx); ok {
 		return content, nil
 	}
 	if group, ok := exactMassExileGroup(ctx); ok {
@@ -280,6 +300,120 @@ func lowerPlayerRuleEffect(ctx contentCtx, kind game.RuleEffectKind) (game.Abili
 	}}}.Ability(), nil
 }
 
+// lowerAdditionalLandPlays lowers the controller-scoped additional-land-play
+// grant ("Play an additional land this turn.", "You may play two additional
+// lands this turn.") to an ApplyRule that raises the controller's land-play
+// allowance for the rest of the turn. The "may" is a permission, not a resolving
+// choice, so it is modeled as an unconditional allowance the player need not use.
+// It fails closed for any target, reference, condition, keyword, or mode.
+func lowerAdditionalLandPlays(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		!effect.Amount.Known ||
+		effect.Amount.Value < 1 ||
+		effect.Duration != compiler.DurationThisTurn ||
+		effect.Context != parser.EffectContextController ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported additional land play effect",
+			"the executable source backend supports only the exact controller-scoped additional-land-play grant this turn",
+		)
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.ApplyRule{
+			RuleEffects: []game.RuleEffect{{
+				Kind:                game.RuleEffectAdditionalLandPlays,
+				AffectedPlayer:      game.PlayerYou,
+				AdditionalLandPlays: effect.Amount.Value,
+			}},
+			Duration: game.DurationThisTurn,
+		},
+	}}}.Ability(), nil
+}
+
+// lowerCastAsThoughFlash lowers the controller-scoped timing permission "You may
+// cast spells this turn as though they had flash." to an ApplyRule that lets the
+// controller cast spells at instant speed for the rest of the turn. Like
+// lowerAdditionalLandPlays the "may" is a permission, not a resolving choice, so
+// it is modeled as an unconditional turn-scoped allowance. The parser's exact
+// nine-word match fixes the wording, so the inherent "flash" keyword and
+// "they"/"spells" references in the same sentence are expected; only targets,
+// conditions, modes, an amount, a negation, or a non-controller scope fail
+// closed.
+func lowerCastAsThoughFlash(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Amount.Known ||
+		effect.Duration != compiler.DurationThisTurn ||
+		effect.Context != parser.EffectContextController ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported cast-as-though-flash effect",
+			"the executable source backend supports only the exact controller-scoped cast-spells-as-though-flash grant this turn",
+		)
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.ApplyRule{
+			RuleEffects: []game.RuleEffect{{
+				Kind:           game.RuleEffectCastSpellsAsThoughFlash,
+				AffectedPlayer: game.PlayerYou,
+			}},
+			Duration: game.DurationThisTurn,
+		},
+	}}}.Ability(), nil
+}
+
+// lowerCantCastSpells lowers the one-shot, turn-scoped player cast prohibition
+// "<players> can't cast spells this turn." (Silence) to an ApplyRule that
+// forbids the affected players from casting spells for the rest of the turn. The
+// affected players are the controller's opponents ("your opponents", "each
+// opponent") or every player ("players", CantCastSpellsAllPlayers). It reuses
+// the continuous RuleEffectCantCastSpells rule effect with a this-turn duration.
+// Targets, references, conditions, modes, a negation, an amount, or a
+// non-controller scope fail closed.
+func lowerCantCastSpells(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Amount.Known ||
+		effect.Duration != compiler.DurationThisTurn ||
+		effect.Context != parser.EffectContextController ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported cant-cast-spells effect",
+			"the executable source backend supports only the exact opponents-or-all-players cast-spells prohibition this turn",
+		)
+	}
+	affected := game.PlayerOpponent
+	if effect.CantCastSpellsAllPlayers {
+		affected = game.PlayerAny
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.ApplyRule{
+			RuleEffects: []game.RuleEffect{{
+				Kind:           game.RuleEffectCantCastSpells,
+				AffectedPlayer: affected,
+			}},
+			Duration: game.DurationThisTurn,
+		},
+	}}}.Ability(), nil
+}
+
 func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic, bool) {
 	switch ctx.content.Effects[0].Kind {
 	case compiler.EffectLifeTotalCantChange:
@@ -287,6 +421,15 @@ func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.
 		return content, diagnostic, true
 	case compiler.EffectProtectionFromEverything:
 		content, diagnostic := lowerPlayerRuleEffect(ctx, game.RuleEffectPlayerProtection)
+		return content, diagnostic, true
+	case compiler.EffectAdditionalLandPlays:
+		content, diagnostic := lowerAdditionalLandPlays(ctx)
+		return content, diagnostic, true
+	case compiler.EffectCastAsThoughFlash:
+		content, diagnostic := lowerCastAsThoughFlash(ctx)
+		return content, diagnostic, true
+	case compiler.EffectCantCastSpells:
+		content, diagnostic := lowerCantCastSpells(ctx)
 		return content, diagnostic, true
 	case compiler.EffectPhaseOut:
 		content, diagnostic := lowerMassOrSinglePermanentSpell(ctx, "Phase out", func(group game.GroupReference) game.Primitive {
@@ -340,6 +483,38 @@ func lowerPlayerGraveyardExile(ctx contentCtx) (game.AbilityContent, bool) {
 		Sequence: []game.Instruction{{
 			Primitive: game.MoveCard{
 				Player:      game.TargetPlayerReference(0),
+				FromZone:    zone.Graveyard,
+				Destination: zone.Exile,
+			},
+		}},
+	}.Ability(), true
+}
+
+// lowerAllGraveyardExile lowers the non-targeted whole-graveyard wipe "Exile all
+// graveyards." (and the synonymous "Exile each player's graveyard.") to the
+// player-group form of MoveCard, which the runtime resolves by moving every card
+// in every player's graveyard to exile at once. It carries no target and reuses
+// the typed GraveyardZoneExileAll relation the parser recognized. It fails closed
+// for any extra clause, target, condition, mode, keyword, or reference so riders
+// and modal siblings stay unsupported.
+func lowerAllGraveyardExile(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if !effect.Exact || effect.Negated ||
+		effect.GraveyardZoneExile != parser.GraveyardZoneExileAll {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.MoveCard{
+				PlayerGroup: game.AllPlayersReference(),
 				FromZone:    zone.Graveyard,
 				Destination: zone.Exile,
 			},
@@ -490,7 +665,15 @@ func lowerMassOrSinglePermanentSpell(
 	return lowerFixedPermanentTargetSpell(ctx, verb, objectPrimitive)
 }
 
-func lowerBoundedLandUntapSpell(ctx contentCtx) (game.AbilityContent, bool) {
+// lowerBoundedUntapSpell lowers the "Untap up to N <permanent filter>" family
+// ("Untap up to two lands." — Snap, "Untap up to three lands." — Frantic Search,
+// "Untap up to two creatures.", "Untap up to one artifact you control.") into a
+// ChooseUpTo untap over a battlefield group. The resolving controller chooses up
+// to Maximum distinct permanents matching the selector. It accepts only the
+// untargeted "up to N" range (Minimum 0) and a selector massGroupSelection can
+// express, failing closed otherwise so targeted or unexpressible forms fall
+// through to the mass / single-target untap paths.
+func lowerBoundedUntapSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	effect := ctx.content.Effects[0]
 	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -504,23 +687,25 @@ func lowerBoundedLandUntapSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		!effect.Exact ||
 		!effect.Amount.RangeKnown ||
 		effect.Amount.Minimum != 0 ||
-		effect.Amount.Maximum != 3 ||
-		!exactUnqualifiedLandSelector(effect.Selector) {
+		effect.Amount.Maximum < 1 ||
+		effect.Selector.All {
+		return game.AbilityContent{}, false
+	}
+	selection, ok := massGroupSelection(effect.Selector)
+	if !ok {
 		return game.AbilityContent{}, false
 	}
 	return game.Mode{Sequence: []game.Instruction{{
 		Primitive: game.Untap{
-			Group: game.BattlefieldGroup(game.Selection{
-				RequiredTypes: []types.Card{types.Land},
-			}),
+			Group:      game.BattlefieldGroup(selection),
 			ChooseUpTo: true,
-			Amount:     game.Fixed(3),
+			Amount:     game.Fixed(effect.Amount.Maximum),
 		},
 	}}}.Ability(), true
 }
 
 func lowerUntapSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
-	if content, ok := lowerBoundedLandUntapSpell(ctx); ok {
+	if content, ok := lowerBoundedUntapSpell(ctx); ok {
 		return content, nil
 	}
 	return lowerMassOrSinglePermanentSpell(ctx, "Untap", func(group game.GroupReference) game.Primitive {
@@ -672,6 +857,10 @@ func massGroupSelection(selector compiler.CompiledSelector) (game.Selection, boo
 		}
 		selection.ExcludedKeyword = keyword
 	}
+	if selector.MatchCounter {
+		selection.MatchCounter = true
+		selection.RequiredCounter = selector.RequiredCounter
+	}
 	if len(selection.Validate()) != 0 {
 		return game.Selection{}, false
 	}
@@ -697,6 +886,27 @@ func massGroupRequiredType(kind compiler.SelectorKind) (types.Card, bool) {
 	}
 }
 
+// lowerControllerAndTargetDraw lowers a "You and target <player> each draw N
+// cards" body: the controller and the single player target each draw, modeled as
+// two parallel draw instructions sharing the mode's player target.
+func lowerControllerAndTargetDraw(ctx contentCtx, amount game.Quantity) (game.AbilityContent, *shared.Diagnostic) {
+	target, ok := playerTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported draw spell",
+			"the executable source backend supports only exact fixed card draw",
+		)
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{target},
+		Sequence: []game.Instruction{
+			{Primitive: game.Draw{Amount: amount, Player: game.ControllerReference()}},
+			{Primitive: game.Draw{Amount: amount, Player: game.TargetPlayerReference(0)}},
+		},
+	}.Ability(), nil
+}
+
 func lowerFixedDrawSpell(
 	ctx contentCtx,
 	_ *parser.Ability,
@@ -711,6 +921,16 @@ func lowerFixedDrawSpell(
 		effect.Context == parser.EffectContextReferencedObjectController
 	hasSourceCounterRef := effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount &&
 		singleSelfReference(ctx.content.References)
+	// "Draw a card for each creature you control with a +1/+1 counter on it."
+	// counts a counter-qualified group; the qualifier's trailing "it"/"them" is
+	// part of the counted selection, not a separate recipient, so a single such
+	// reference is tolerated rather than rejected.
+	hasCountCounterRef := effect.Amount.DynamicKind == compiler.DynamicAmountCount &&
+		effect.Amount.Selector().MatchCounter &&
+		len(ctx.content.References) == 1 &&
+		ctx.content.References[0].Kind == compiler.ReferencePronoun &&
+		(ctx.content.References[0].Pronoun == compiler.ReferencePronounIt ||
+			ctx.content.References[0].Pronoun == compiler.ReferencePronounThem)
 	if (effect.Amount.Known && effect.Amount.Value < 1) ||
 		!effect.Amount.Known && !effect.Amount.VariableX && effect.Amount.DynamicKind == compiler.DynamicAmountNone ||
 		!effect.Exact ||
@@ -720,7 +940,7 @@ func lowerFixedDrawSpell(
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		(len(ctx.content.References) != 0 && !hasEventPlayerRef && !hasReferencedControllerRef && !hasSourceCounterRef) {
+		(len(ctx.content.References) != 0 && !hasEventPlayerRef && !hasReferencedControllerRef && !hasSourceCounterRef && !hasCountCounterRef) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported draw spell",
@@ -772,6 +992,9 @@ func lowerFixedDrawSpell(
 		}
 	}
 	switch {
+	case effect.Context == parser.EffectContextControllerAndTarget &&
+		len(ctx.content.Targets) == 1 && effect.Amount.Known:
+		return lowerControllerAndTargetDraw(ctx, amount)
 	case hasEventPlayerRef && len(ctx.content.Targets) == 0 &&
 		(effect.Context == parser.EffectContextEventPlayer || effect.Context == parser.EffectContextReferencedPlayer) &&
 		effect.Amount.Known:

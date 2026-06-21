@@ -70,8 +70,18 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 			return game.Condition{}, false
 		}
 		result.OpponentsControl = opt.Val(count)
+	case compiler.ConditionPredicateControlComparison:
+		comparison, ok := lowerControlCountComparison(condition)
+		if !ok {
+			return game.Condition{}, false
+		}
+		result.ControlComparison = opt.Val(comparison)
 	case compiler.ConditionPredicateControllerHandEmpty:
 		result.ControllerHandEmpty = true
+	case compiler.ConditionPredicateEventSubjectNameUnique:
+		result.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures = true
+	case compiler.ConditionPredicateControllerCreatedTokenThisTurn:
+		result.ControllerCreatedTokenThisTurn = true
 	case compiler.ConditionPredicateControllerGraveyardCardCountAtLeast:
 		result.ControllerGraveyardCardCountAtLeast = condition.Threshold
 	case compiler.ConditionPredicateControllerGraveyardCardTypeCountAtLeast:
@@ -161,7 +171,9 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateControllerControls,
 			compiler.ConditionPredicateAnyOpponentControls,
 			compiler.ConditionPredicateOpponentsControl,
+			compiler.ConditionPredicateControlComparison,
 			compiler.ConditionPredicateControllerHandEmpty,
+			compiler.ConditionPredicateControllerCreatedTokenThisTurn,
 			compiler.ConditionPredicateControllerGraveyardCardCountAtLeast,
 			compiler.ConditionPredicateControllerGraveyardCardTypeCountAtLeast,
 			compiler.ConditionPredicateControllerCreaturePowerDiversityAtLeast,
@@ -171,6 +183,8 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			return true
 		case compiler.ConditionPredicateEventHistory:
 			return ctx == conditionContextInterveningTrigger || ctx == conditionContextActivation
+		case compiler.ConditionPredicateEventSubjectNameUnique:
+			return ctx == conditionContextInterveningTrigger
 		case compiler.ConditionPredicateControllerHandSizeExactly:
 			return ctx == conditionContextStatic || ctx == conditionContextActivation
 		default:
@@ -184,7 +198,8 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 		compiler.ConditionPredicateOpponentCountAtLeast,
 		compiler.ConditionPredicateControllerControls,
 		compiler.ConditionPredicateAnyOpponentControls,
-		compiler.ConditionPredicateOpponentsControl:
+		compiler.ConditionPredicateOpponentsControl,
+		compiler.ConditionPredicateControlComparison:
 		return true
 	default:
 		return false
@@ -207,6 +222,50 @@ func lowerConditionSelectionCount(condition compiler.CompiledCondition) (game.Se
 		})
 	}
 	return result, !selection.Empty()
+}
+
+// lowerControlCountComparison maps a typed cross-player control-count comparison
+// onto the runtime form, failing closed unless exactly one side counts the
+// controller and the counted Selection is non-empty.
+func lowerControlCountComparison(condition compiler.CompiledCondition) (game.ControlCountComparison, bool) {
+	selection, ok := lowerConditionSelection(condition.Selection)
+	if !ok || selection.Empty() {
+		return game.ControlCountComparison{}, false
+	}
+	left, ok := lowerComparisonScope(condition.ControlComparisonLeft)
+	if !ok {
+		return game.ControlCountComparison{}, false
+	}
+	right, ok := lowerComparisonScope(condition.ControlComparisonRight)
+	if !ok {
+		return game.ControlCountComparison{}, false
+	}
+	if (left == game.ControlPlayerController) == (right == game.ControlPlayerController) {
+		return game.ControlCountComparison{}, false
+	}
+	op := compare.GreaterThan
+	if !condition.ControlComparisonGreater {
+		op = compare.LessThan
+	}
+	return game.ControlCountComparison{
+		Selection: selection,
+		Left:      left,
+		Right:     right,
+		Op:        op,
+	}, true
+}
+
+func lowerComparisonScope(scope compiler.ConditionComparisonScope) (game.ControlPlayerScope, bool) {
+	switch scope {
+	case compiler.ConditionComparisonScopeController:
+		return game.ControlPlayerController, true
+	case compiler.ConditionComparisonScopeAnyOpponent:
+		return game.ControlPlayerAnyOpponent, true
+	case compiler.ConditionComparisonScopeEachOpponent:
+		return game.ControlPlayerEachOpponent, true
+	default:
+		return game.ControlPlayerController, false
+	}
 }
 
 func lowerConditionSelection(selection compiler.ConditionSelection) (game.Selection, bool) {
@@ -269,6 +328,36 @@ func lowerConditionObjectReference(binding compiler.ReferenceBinding) (game.Obje
 		AllowSource: true,
 		AllowEvent:  true,
 	})
+}
+
+// targetColorGateSelection returns the color filter of a single resolving
+// "if it's <color>" target rider (Pyroblast, Red Elemental Blast). It reports
+// false unless the conditions are exactly one ConditionPredicateTargetColor
+// clause whose color selection lowers to at least one color. The caller binds
+// the filter to the effect's own target object reference.
+func targetColorGateSelection(conditions []compiler.CompiledCondition) (game.Selection, bool) {
+	if len(conditions) != 1 || conditions[0].Predicate != compiler.ConditionPredicateTargetColor {
+		return game.Selection{}, false
+	}
+	selection, ok := lowerConditionSelection(conditions[0].Selection)
+	if !ok || len(selection.ColorsAny) == 0 {
+		return game.Selection{}, false
+	}
+	return selection, true
+}
+
+// targetColorEffectCondition builds an instruction gate that resolves the effect
+// only if the target named by ref currently has one of the colors in selection.
+func targetColorEffectCondition(ref game.ObjectReference, selection game.Selection, text string) game.EffectCondition {
+	return game.EffectCondition{
+		Text:   text,
+		Object: ref,
+		Condition: opt.Val(game.Condition{
+			Text:          text,
+			Object:        opt.Val(ref),
+			ObjectMatches: opt.Val(selection),
+		}),
+	}
 }
 
 func conditionSelectionEmpty(selection compiler.ConditionSelection) bool {

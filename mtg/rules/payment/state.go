@@ -8,6 +8,7 @@ package payment
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -26,6 +27,7 @@ type State interface {
 	stateMutations
 }
 
+//nolint:interfacebloat // The payment planner needs one read-only adapter surface for all rules-derived game-state queries.
 type stateQueries interface {
 	// Player returns the payment-eligible player, or false if the player is
 	// invalid or eliminated.
@@ -33,6 +35,13 @@ type stateQueries interface {
 
 	// CanPayLife reports whether the player may currently pay life.
 	CanPayLife(playerID game.PlayerID) bool
+
+	// ActivePlayer returns the player whose turn it currently is.
+	ActivePlayer() game.PlayerID
+
+	// AdditionalDynamicAmountValue resolves a rules-derived additional-cost
+	// amount against live game state.
+	AdditionalDynamicAmountValue(playerID game.PlayerID, kind cost.AdditionalDynamicAmount) int
 
 	// Battlefield returns all permanents in deterministic iteration order.
 	Battlefield() []*game.Permanent
@@ -98,6 +107,10 @@ type stateMutations interface {
 	// SetTapped sets the tapped state of a permanent and emits the appropriate
 	// tapped/untapped event.
 	SetTapped(p *game.Permanent, tapped bool)
+
+	// SetTappedForMana taps a permanent to pay a mana ability's cost, recording
+	// tapped-for-mana provenance on the emitted event.
+	SetTappedForMana(p *game.Permanent)
 
 	// RecordManaAbilityUse records a restricted mana ability activation.
 	RecordManaAbilityUse(p *game.Permanent, abilityIndex int, timing game.TimingRestriction)

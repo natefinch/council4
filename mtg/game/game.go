@@ -56,6 +56,9 @@ type PlayerConfig struct {
 // together all players, the shared battlefield, the stack, turn state,
 // and global game properties.
 type Game struct {
+	// Mode selects multiplayer Commander or a single-player goldfish run.
+	Mode RunMode
+
 	// Players are the four players in the game, indexed by PlayerID.
 	Players [NumPlayers]*Player
 
@@ -123,6 +126,11 @@ type Game struct {
 	// State-based actions eliminate those players the next time they are checked.
 	FailedDraws map[PlayerID]bool
 
+	// MarkedToLoseGame tracks players an effect has instructed to lose the game
+	// (CR 104.3a). State-based actions eliminate those players the next time
+	// they are checked, mirroring FailedDraws.
+	MarkedToLoseGame map[PlayerID]bool
+
 	// Combat holds the current combat state. Nil outside of the combat phase.
 	Combat *CombatState
 
@@ -180,6 +188,16 @@ type Game struct {
 	staticFrame *staticSourceFrame
 }
 
+// RunMode identifies the rules engine's player topology.
+type RunMode int
+
+const (
+	// RunModeCommander is a normal four-player Commander game.
+	RunModeCommander RunMode = iota
+	// RunModeGoldfish has one active player and no opponents.
+	RunModeGoldfish
+)
+
 // ActivatedAbilityUse identifies one activated ability on one source object.
 type ActivatedAbilityUse struct {
 	SourceID     id.ID
@@ -207,6 +225,11 @@ func NewGame(configs [NumPlayers]PlayerConfig) *Game {
 	return NewGameWithRand(configs, rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64())))
 }
 
+// NewGoldfishGame creates a single-player Commander goldfish game.
+func NewGoldfishGame(config PlayerConfig) *Game {
+	return NewGoldfishGameWithRand(config, rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64())))
+}
+
 // NewGameWithRand creates a game using rng for all setup randomness. The same
 // rng is consumed sequentially across players' library shuffles.
 func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
@@ -223,6 +246,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 		SkippedSteps:               make(map[PlayerID]map[Step]int),
 		TurnOrder:                  NewTurnOrder(),
 		FailedDraws:                make(map[PlayerID]bool),
+		MarkedToLoseGame:           make(map[PlayerID]bool),
 		StateTriggerLatches:        make(map[StateTriggerKey]bool),
 		ActivatedAbilitiesThisTurn: make(map[ActivatedAbilityUse]bool),
 		TriggeredAbilitiesThisTurn: make(map[TriggeredAbilityUse]int),
@@ -277,6 +301,22 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 	return g
 }
 
+// NewGoldfishGameWithRand creates a reproducible single-player Commander game.
+// Inactive seats remain allocated for fixed-size engine data, but are eliminated
+// before setup and never act, receive priority, count as opponents, or appear in
+// alive-player groups.
+func NewGoldfishGameWithRand(config PlayerConfig, rng *rand.Rand) *Game {
+	var configs [NumPlayers]PlayerConfig
+	configs[Player1] = config
+	g := NewGameWithRand(configs, rng)
+	g.Mode = RunModeGoldfish
+	for playerID := Player2; playerID < NumPlayers; playerID++ {
+		g.Players[playerID].Eliminated = true
+		g.TurnOrder.Eliminate(playerID)
+	}
+	return g
+}
+
 // ActivePlayer returns the player whose turn it is.
 func (g *Game) ActivePlayer() *Player {
 	return g.Players[g.Turn.ActivePlayer]
@@ -327,11 +367,17 @@ func (g *Game) AlivePlayers() []*Player {
 
 // IsGameOver reports whether the game has ended (one or fewer players remain).
 func (g *Game) IsGameOver() bool {
+	if g.Mode == RunModeGoldfish {
+		return g.Players[Player1].Eliminated
+	}
 	return g.TurnOrder.ActivePlayerCount() <= 1
 }
 
 // Winner returns the last remaining player when the game is over.
 func (g *Game) Winner() (*Player, bool) {
+	if g.Mode == RunModeGoldfish {
+		return nil, false
+	}
 	alive := g.AlivePlayers()
 	if len(alive) == 1 {
 		return alive[0], true

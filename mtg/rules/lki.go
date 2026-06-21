@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"maps"
+
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -45,13 +47,30 @@ func snapshotPermanent(g *game.Game, permanent *game.Permanent, zoneType zone.Ty
 		Power:          optionalInt(values.power, values.powerOK),
 		Toughness:      optionalInt(values.toughness, values.toughnessOK),
 		Keywords:       effectiveKeywords(values),
+		EntryChoices:   cloneChoiceResults(permanent.EntryChoices),
 		MarkedDamage:   permanent.MarkedDamage,
 		Attachments:    append([]id.ID(nil), permanent.Attachments...),
 		AttachedTo:     permanent.AttachedTo,
 		ZoneOrderIndex: -1,
 	}
 	snapshot.Counters = cloneCounters(permanent.Counters)
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.SourceObjectID == permanent.ObjectID {
+			snapshot.RuleEffectKinds = append(snapshot.RuleEffectKinds, effect.Kind)
+		}
+	}
 	return snapshot
+}
+
+func cloneChoiceResults(choices map[game.ChoiceKey]game.ResolutionChoiceResult) map[game.ChoiceKey]game.ResolutionChoiceResult {
+	if choices == nil {
+		return nil
+	}
+	cloned := make(map[game.ChoiceKey]game.ResolutionChoiceResult, len(choices))
+	maps.Copy(cloned, choices)
+	return cloned
 }
 
 func effectiveKeywords(values permanentEffectiveValues) []game.Keyword {
@@ -129,6 +148,18 @@ func linkedObjectSourceKey(g *game.Game, obj *game.StackObject, linkID string) g
 		sourceID = sourceObjectID
 	}
 	return game.LinkedObjectKey{SourceID: sourceID, LinkID: linkID}
+}
+
+// linkedObjectByObjectKey keys a linked object by the source permanent's object
+// identity rather than its card identity. It backs imprint links (Chrome Mox),
+// which must follow the specific object: a permanent keeps its card-instance ID
+// across zone changes but gets a fresh object ID each time it enters, so a
+// re-entered object resolves to a different key and finds no prior imprint. All
+// game IDs come from one monotonic generator, so an object ID never collides
+// with a card-instance-scoped key in the shared LinkedObjects map.
+func linkedObjectByObjectKey(g *game.Game, obj *game.StackObject, linkID string) game.LinkedObjectKey {
+	_, sourceObjectID := damageSourceIDs(g, obj)
+	return game.LinkedObjectKey{SourceID: sourceObjectID, LinkID: linkID}
 }
 
 func rememberLinkedObject(g *game.Game, key game.LinkedObjectKey, ref game.LinkedObjectRef) {

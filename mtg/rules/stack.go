@@ -316,6 +316,28 @@ func counterStackObject(g *game.Game, objectID id.ID) bool {
 	return moveStackCardToGraveyard(g, obj, card)
 }
 
+// bounceStackSpellToHand removes a spell from the stack and returns its card to
+// its owner's hand ("Return target spell to its owner's hand."). Only spells
+// have a card to return; spell copies cease to exist with no card moved, the
+// same way a countered copy simply disappears.
+func bounceStackSpellToHand(g *game.Game, obj *game.StackObject) bool {
+	if obj.Kind != game.StackSpell {
+		return false
+	}
+	removed, ok := g.Stack.RemoveByID(obj.ID)
+	if !ok {
+		return false
+	}
+	if removed.Copy {
+		return true
+	}
+	card, ok := g.GetCardInstance(removed.SourceID)
+	if !ok {
+		return false
+	}
+	return moveStackCardToZone(g, removed, card, zone.Hand)
+}
+
 func releaseStateTriggerLatch(g *game.Game, obj *game.StackObject) {
 	if obj.Kind != game.StackTriggeredAbility ||
 		obj.InlineTrigger == nil ||
@@ -472,12 +494,19 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 			WasCast:           !obj.Copy,
 			CastController:    obj.Controller,
 			HasCastController: !obj.Copy,
+			XValue:            obj.XValue,
 		},
 		agents,
 		log,
 	)
 	if ok && obj.Suspend && permanentHasType(g, permanent, types.Creature) {
 		permanent.SuspendHasteController = opt.Val(obj.Controller)
+	}
+	if ok && len(obj.GainsKeywordsUntilEndOfTurn) > 0 && permanentHasType(g, permanent, types.Creature) {
+		applyTypedContinuousEffects(g, obj, permanent, []game.ContinuousEffect{{
+			Layer:       game.LayerAbility,
+			AddKeywords: obj.GainsKeywordsUntilEndOfTurn,
+		}}, game.DurationUntilEndOfTurn)
 	}
 	if ok && isAttachmentPermanent(g, permanent) && len(obj.Targets) > 0 {
 		target, targetOK := effectPermanentAt(g, obj, 0)
@@ -702,10 +731,17 @@ func moveAdventureSpellToExile(g *game.Game, obj *game.StackObject, card *game.C
 }
 
 func moveStackCardToGraveyard(g *game.Game, obj *game.StackObject, card *game.CardInstance) bool {
+	return moveStackCardToZone(g, obj, card, zone.Graveyard)
+}
+
+// moveStackCardToZone moves a spell's card from the stack to intendedDestination
+// (its owner's graveyard when countered, or hand when bounced), honoring the
+// flashback/exile-on-resolution replacement that diverts the card to exile
+// instead (CR 702.34c) and the commander zone-change replacement.
+func moveStackCardToZone(g *game.Game, obj *game.StackObject, card *game.CardInstance, intendedDestination zone.Type) bool {
 	if _, ok := playerByID(g, card.Owner); !ok {
 		return false
 	}
-	intendedDestination := zone.Graveyard
 	if obj != nil && (obj.Flashback || obj.ExileOnResolution) {
 		// Flashback replaces any move from the stack to anywhere else with exile
 		// after the spell was cast from a graveyard (CR 702.34a, CR 702.34c).

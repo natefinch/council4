@@ -81,7 +81,11 @@ func compileTriggerSelection(syntax parser.TriggerSelection) (TriggerSelection, 
 		return TriggerSelection{}, false
 	}
 	selection.Toughness, ok = compileTriggerSelectionNumber(syntax.Toughness)
-	return selection, ok
+	if !ok {
+		return TriggerSelection{}, false
+	}
+	selection.SubtypeFromEntryChoice = syntax.SubtypeFromEntryChoice
+	return selection, true
 }
 
 func compileTriggerCardType(value parser.TriggerCardType) TriggerCardType {

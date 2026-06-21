@@ -69,13 +69,36 @@ const (
 // until a player would receive priority, after the source has left the
 // battlefield or changed controller.
 type EventTriggeredAbility struct {
-	Controller     PlayerID
-	SourceID       id.ID
-	SourceCardID   id.ID
-	SourceTokenDef *CardDef
-	Face           FaceIndex
-	AbilityIndex   int
-	Ability        *TriggeredAbility
+	Controller                PlayerID
+	SourceID                  id.ID
+	SourceCardID              id.ID
+	SourceTokenDef            *CardDef
+	Face                      FaceIndex
+	AbilityIndex              int
+	Ability                   *TriggeredAbility
+	AdditionalTriggers        int
+	TriggerMultiplierCaptured bool
+}
+
+// ChosenTypeTriggerDoubler is the event-time snapshot of one active
+// chosen-creature-type trigger doubler (CR 603.3; Roaming Throne). It records
+// the doubler source, its controller, and the chosen subtype as they were when
+// an event was emitted, so chosen-type trigger multiplication reflects the
+// doubler set, controller, and chosen type at the moment a triggered ability
+// triggers rather than at resolution time, even if the doubler later changes
+// controller or chosen type or leaves the battlefield.
+type ChosenTypeTriggerDoubler struct {
+	SourceID   id.ID
+	Controller PlayerID
+	Subtype    types.Sub
+}
+
+// ChosenTypeTriggerDoublerSnapshot holds the active chosen-creature-type trigger
+// doublers captured when an event was emitted. It is referenced by pointer from
+// Event so events without doublers (the common case) add no storage and keep the
+// Event value small enough to pass by value cheaply.
+type ChosenTypeTriggerDoublerSnapshot struct {
+	Doublers []ChosenTypeTriggerDoubler
 }
 
 // Event records a rules-relevant fact emitted by rules helpers as state
@@ -200,6 +223,10 @@ type Event struct {
 	// CombatDamage is true when EventDamageDealt came from combat damage.
 	CombatDamage bool
 
+	// TappedForMana is true when EventPermanentTapped recorded a tap that paid a
+	// mana ability's cost ("tapped for mana"), CR 106.11a / 605.
+	TappedForMana bool
+
 	// AttackTarget is set for EventAttackerDeclared.
 	AttackTarget AttackTarget
 
@@ -217,6 +244,13 @@ type Event struct {
 	// triggers were checked at event time, including when none matched.
 	TriggeredAbilitiesCaptured bool
 	TriggeredAbilities         []EventTriggeredAbility
+
+	// ChosenTypeTriggerDoublers snapshots the active chosen-creature-type
+	// trigger doublers at event emission, so ordinary triggered abilities this
+	// event produces are multiplied by the event-time doubler set, controller,
+	// and chosen type rather than by state observed later at resolution. It is
+	// nil when no doublers were active.
+	ChosenTypeTriggerDoublers *ChosenTypeTriggerDoublerSnapshot
 }
 
 // AppendEvent records a rules event. Unknown events are ignored.
@@ -274,5 +308,11 @@ func cloneEvent(event Event) Event {
 	event.CardSubtypes = append([]types.Sub(nil), event.CardSubtypes...)
 	event.Colors = append([]color.Color(nil), event.Colors...)
 	event.TriggeredAbilities = append([]EventTriggeredAbility(nil), event.TriggeredAbilities...)
+	if event.ChosenTypeTriggerDoublers != nil {
+		snapshot := ChosenTypeTriggerDoublerSnapshot{
+			Doublers: append([]ChosenTypeTriggerDoubler(nil), event.ChosenTypeTriggerDoublers.Doublers...),
+		}
+		event.ChosenTypeTriggerDoublers = &snapshot
+	}
 	return event
 }

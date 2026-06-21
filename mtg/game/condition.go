@@ -58,10 +58,20 @@ type Condition struct {
 	ControllerBasicLandTypeCountAtLeast     int
 	ControllerCreaturePowerDiversityAtLeast int
 
+	// ControllerCreatedTokenThisTurn requires the context controller to have
+	// created at least one token during the current turn ("Activate only if you
+	// created a token this turn").
+	ControllerCreatedTokenThisTurn bool
+
 	// AnyOpponentControls checks each opponent independently. OpponentsControl
 	// counts matching permanents controlled by all opponents collectively.
 	AnyOpponentControls opt.V[SelectionCount]
 	OpponentsControl    opt.V[SelectionCount]
+
+	// ControlComparison compares the number of permanents matching a Selection
+	// controlled by two player scopes ("an opponent controls more lands than
+	// you"). It is ignored when not present.
+	ControlComparison opt.V[ControlCountComparison]
 
 	// Object tests a referenced object in the current condition context, such as
 	// a triggering event permanent. It may use last-known information.
@@ -82,6 +92,35 @@ type Condition struct {
 	// at least one event matching the stored pattern. When Condition.Negate is
 	// true the predicate is inverted (e.g. "if no spells were cast last turn").
 	EventHistory opt.V[EventHistoryCondition]
+}
+
+// ControlPlayerScope selects which players' battlefields a control-count
+// comparison counts.
+type ControlPlayerScope uint8
+
+// Control player scope values.
+const (
+	// ControlPlayerController counts permanents controlled by the condition's
+	// controller ("you").
+	ControlPlayerController ControlPlayerScope = iota
+	// ControlPlayerAnyOpponent quantifies existentially over opponents: the
+	// comparison holds when at least one opponent satisfies it.
+	ControlPlayerAnyOpponent
+	// ControlPlayerEachOpponent quantifies universally over opponents: the
+	// comparison holds when every opponent satisfies it.
+	ControlPlayerEachOpponent
+)
+
+// ControlCountComparison compares the number of permanents matching Selection
+// controlled by two player scopes ("an opponent controls more lands than you").
+// It is satisfied when Left's count compares to Right's count under Op,
+// quantified by whichever side is an opponent scope (existential for
+// AnyOpponent, universal for EachOpponent). Exactly one side is the controller.
+type ControlCountComparison struct {
+	Selection Selection
+	Left      ControlPlayerScope
+	Right     ControlPlayerScope
+	Op        compare.Op
 }
 
 // PermanentFilter matches permanents for reusable condition predicates. Empty
@@ -135,8 +174,10 @@ func (c *Condition) Empty() bool {
 		c.ControllerGraveyardCardTypeCountAtLeast == 0 &&
 		c.ControllerBasicLandTypeCountAtLeast == 0 &&
 		c.ControllerCreaturePowerDiversityAtLeast == 0 &&
+		!c.ControllerCreatedTokenThisTurn &&
 		!c.AnyOpponentControls.Exists &&
 		!c.OpponentsControl.Exists &&
+		!c.ControlComparison.Exists &&
 		!c.Object.Exists &&
 		!c.ObjectMatches.Exists &&
 		len(c.Types) == 0 &&

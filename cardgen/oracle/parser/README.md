@@ -138,6 +138,11 @@ keyword list, and a single supported condition clause may scope the whole
 declaration. Cost-modifier and card-ability-grant declarations (cycling cost
 reductions and replacements, and "Each <land/creature/historic> card in your
 hand has cycling {N}") are recognized as their own typed families. The static
+chosen-type consumers are also exact typed families: "This creature is the chosen
+type in addition to its other types." and "If a triggered ability of another
+creature you control of the chosen type triggers, it triggers an additional
+time." Near-miss subjects, tails, and multiplier wording remain untyped.
+The static
 source-tied control grant printed on control Auras ("You control enchanted
 creature/permanent") is recognized as its own family whose affected group is the
 attached object. The fixed player-rule phrase "You have no maximum hand size." is
@@ -376,25 +381,31 @@ The same graveyard-card target reconstruction backs targeted graveyard-card exil
 ("Exile target card from a graveyard.", "Exile up to one target creature card
 from your graveyard."), which marks the `EffectExile` exact and lowers to a
 graveyard-to-exile move. The whole-graveyard form ("Exile target player's
-graveyard.", "Exile target opponent's graveyard.") is recognized separately:
+graveyard.", "Exile target opponent's graveyard.", "Exile all graveyards.",
+"Exile each player's graveyard.") is recognized separately:
 `parseGraveyardZoneExile` sets the effect's `GraveyardZoneExile` kind
-(`TargetPlayer`/`TargetOpponent`) from the "target player's/opponent's graveyard"
-object phrase, and `exactPlayerGraveyardExileEffectSyntax` gates it on a
-byte-exact canonical reconstruction of the clause before marking the
-`EffectExile` exact. "That/each player's graveyard", "all graveyards", chosen or
-"up to N" cards, multiple graveyards, and exile-then-return riders are not this
-shape and stay fail-closed.
+(`TargetPlayer`/`TargetOpponent` for the player-targeted wipes, `All` for the
+non-targeted every-graveyard wipe) from the graveyard object phrase, and
+`exactPlayerGraveyardExileEffectSyntax` gates it on a byte-exact canonical
+reconstruction of the clause before marking the `EffectExile` exact. "That
+player's graveyard", chosen or "up to N" cards, multiple targeted graveyards, and
+exile-then-return riders are not this shape and stay fail-closed.
 Library-search effects ("Search your library for … , then shuffle.") gate on a
 byte-exact canonical reconstruction of the whole clause from the typed Selection
 and count: a singular ("a"/"an") or bounded "up to N" search of your own library
 for a plain card, a single card type (land/creature/artifact/enchantment/
-planeswalker), a `permanent` card (optionally with a subtype, e.g. "Rebel
-permanent"), a `basic` or `legendary` supertype, a `" or "`/`", "`-joined subtype
+planeswalker/instant/sorcery), a `permanent` card (optionally with a subtype, e.g.
+"Rebel permanent"), a `basic` or `legendary` supertype, a `" or "`/`", "`-joined
+card-type union including the spell types ("instant or sorcery"), a
+`" or "`/`", "`-joined subtype
 union with no separate type noun (basic land subtypes like "Forest or Island", or
 other subtypes like "Sliver" and "Aura or Equipment"), or a subtype paired with a
 card type or "permanent" ("Myr creature", "Dragon creature", "Rebel permanent"),
 optionally narrowed by a `with mana value N or less` rider, moved to hand or the
-battlefield (optionally tapped) and optionally revealed first, or split across two
+battlefield (optionally tapped) and optionally revealed first, or returned to the
+top of the library after shuffling ("then shuffle and put that card on top") where
+the found card is named by an interchangeable demonstrative ("it", "that card", or
+"the card"), or split across two
 single-card destination slots by an "up to two" search whose put clause reads "put
 one onto the battlefield tapped and the other into your hand" — the parser records
 both typed slots on the `EffectPut` clause's `SearchSplit` field, requiring exactly
@@ -412,8 +423,8 @@ round-trips against the same shape and lowers identically inside the triggered
 shell. Any rider the
 runtime `SearchSpec` cannot express—extra source zones, "with different names",
 power/color filters, mana-value bounds other than a fixed "or less" (including
-variable `X` bounds), variable `X` counts, a multi-type union, instant/sorcery
-(whose required card type the compiler drops), or other destinations—fails closed.
+variable `X` bounds), variable `X` counts, a combined multi-type noun ("artifact
+creature"), or other destinations—fails closed.
 The same controller-scoped stripping generalizes to other resolving "you may"
 bodies: a direct `You may gain N life` or `You may create … token` reconstructs
 its canonical verb clause byte-exactly (the leading "you may" is dropped), so the
@@ -549,8 +560,10 @@ card types, supertypes, subtypes, object nouns, zones, counter kinds, cardinal
 and ordinal number words, selection modifiers, and plural→singular noun
 normalization, returning typed values. `keyword.go` owns the complete supported
 keyword vocabulary and emits source-spanned `Keyword` syntax with composable
-typed parameter shapes: mana costs, integers, Enchant targets, and Protection
-predicates over colors, card types, and creature/land subtypes. It also emits
+typed parameter shapes: mana costs, integers, Enchant targets (a player word,
+the any-permanent word, or a disjunctive union of singular permanent card types
+and subtypes such as "artifact or creature" or "creature or Vehicle"), and
+Protection predicates over colors, card types, and creature/land subtypes. It also emits
 typed `with`/`without` keyword-selector syntax. A keyword whose name span is
 covered by a `with`/`without` keyword-selector qualifier (e.g. the "flying" in
 "creature with flying") is excluded from the ability's semantic keywords, so it

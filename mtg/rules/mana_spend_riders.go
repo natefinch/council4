@@ -168,6 +168,13 @@ func resolveSpellCastManaSpendRiders(
 			applyManaSpendSpellRuleEffect(spellObjects[0], rider)
 			return
 		}
+		if len(rider.Rider.SpellGainsKeywords) > 0 && len(spellObjects) > 0 {
+			tagSpellGainsKeywords(spellObjects[0], rider)
+			return
+		}
+		if !rider.Rider.FiresOnSpend() {
+			return
+		}
 		fireManaSpendRider(g, rider)
 	})
 }
@@ -176,11 +183,26 @@ func manaSpendConditionSatisfied(g *game.Game, rider game.ManaRiderInstance, spe
 	switch rider.Rider.Condition {
 	case game.ManaSpendCastCommanderCreatureType:
 		return spellSatisfiesCommanderCreatureTypeRider(g, rider.Controller, spellDef)
-	case game.ManaSpendCastChosenCreatureType:
+	case game.ManaSpendCastChosenCreatureType, game.ManaSpendCastOrActivateChosenCreatureType:
 		return rider.MatchesChosenCreatureType(spellDef)
+	case game.ManaSpendCastLegendarySpell:
+		return spellDef != nil && spellDef.HasSupertype(types.Legendary)
+	case game.ManaSpendCastCreatureSpell:
+		return spellDef != nil && spellDef.HasType(types.Creature)
 	default:
 		return false
 	}
+}
+
+// tagSpellGainsKeywords records on a qualifying creature spell the keyword
+// abilities its mana-spend rider grants (Arena of Glory, Generator Servant: "it
+// gains haste until end of turn"). The keywords are applied as an until-end-of-
+// turn continuous effect to the resolved permanent in resolvePermanentSpell.
+func tagSpellGainsKeywords(obj *game.StackObject, rider game.ManaRiderInstance) {
+	if obj == nil {
+		return
+	}
+	obj.GainsKeywordsUntilEndOfTurn = append(obj.GainsKeywordsUntilEndOfTurn, rider.Rider.SpellGainsKeywords...)
 }
 
 func applyManaSpendSpellRuleEffect(obj *game.StackObject, rider game.ManaRiderInstance) {
@@ -198,13 +220,19 @@ func applyManaSpendSpellRuleEffect(obj *game.StackObject, rider game.ManaRiderIn
 
 // consumeManaSpendRidersForPayment drops the tagged mana-spend rider units whose
 // mana a just-completed non-spell payment (an activated ability, a ward or other
-// additional cost, and similar) spent. Such a payment never satisfies a rider's
-// condition, so no rider fires; consuming the units keeps rider provenance exact
-// so later same-color mana cannot inherit a stale rider. It is a no-op when the
-// player holds no riders.
+// additional cost, and similar) spent. Most such payments never satisfy a
+// rider's condition, so no rider fires; consuming the units keeps rider
+// provenance exact so later same-color mana cannot inherit a stale rider.
+//
+// The exception is the cast-or-activate chosen-type restriction (Secluded
+// Courtyard): its tagged mana may pay to activate an ability of a creature
+// source of the chosen type, so when source is such a permanent the rider's
+// condition is satisfied and its (effectless) unit is consumed as a qualifying
+// spend. It is a no-op when the player holds no riders.
 func consumeManaSpendRidersForPayment(
 	g *game.Game,
 	playerID game.PlayerID,
+	source *game.Permanent,
 	before map[mana.Unit]int,
 	spent map[mana.Unit]int,
 ) {
@@ -212,13 +240,28 @@ func consumeManaSpendRidersForPayment(
 	if !ok || len(player.ManaRiders) == 0 {
 		return
 	}
-	processManaSpendRiders(
-		player,
-		before,
-		spent,
-		func(game.ManaRiderInstance) bool { return false },
-		func(game.ManaRiderInstance) {},
-	)
+	qualifies := func(rider game.ManaRiderInstance) bool {
+		return abilityActivationSatisfiesManaSpendRider(g, source, rider)
+	}
+	processManaSpendRiders(player, before, spent, qualifies, func(rider game.ManaRiderInstance) {
+		if rider.Rider.FiresOnSpend() {
+			fireManaSpendRider(g, rider)
+		}
+	})
+}
+
+// abilityActivationSatisfiesManaSpendRider reports whether activating an ability
+// of source satisfies the rider's spend condition. Only the cast-or-activate
+// chosen-type restriction is satisfied by an activation, and only when source is
+// a creature permanent of the rider's captured chosen subtype.
+func abilityActivationSatisfiesManaSpendRider(g *game.Game, source *game.Permanent, rider game.ManaRiderInstance) bool {
+	if rider.Rider.Condition != game.ManaSpendCastOrActivateChosenCreatureType {
+		return false
+	}
+	return source != nil &&
+		types.KnownSubtypeForType(types.Creature, rider.ChosenSubtype) &&
+		permanentHasType(g, source, types.Creature) &&
+		permanentHasSubtype(g, source, rider.ChosenSubtype)
 }
 
 // drainFiredManaSpendRiders converts mana-spend riders that fired since the last

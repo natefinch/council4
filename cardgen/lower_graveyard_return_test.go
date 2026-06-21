@@ -589,3 +589,103 @@ func TestLowerTwoGraveyardReturnsAdvanceCardSlot(t *testing.T) {
 		t.Fatalf("second move = %#v, want card slot one", mode.Sequence[1].Primitive)
 	}
 }
+
+// TestLowerChosenCardGraveyardReturnToHand covers the non-target "Return a
+// <filter> card from your graveyard to your hand" recursion wording, which is
+// chosen at resolution rather than targeted and lowers to a
+// game.ReturnFromGraveyard primitive carrying the card filter.
+func TestLowerChosenCardGraveyardReturnToHand(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Recursion",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return a creature or planeswalker card from your graveyard to your hand.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 0 {
+		t.Fatalf("targets = %#v, want none", mode.Targets)
+	}
+	ret, ok := mode.Sequence[0].Primitive.(game.ReturnFromGraveyard)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.ReturnFromGraveyard", mode.Sequence[0].Primitive)
+	}
+	if ret.Player.Kind() != game.PlayerReferenceController {
+		t.Fatalf("player = %#v, want controller", ret.Player)
+	}
+	if ret.Amount.Value() != 1 {
+		t.Fatalf("amount = %#v, want fixed one", ret.Amount)
+	}
+	if !slices.Equal(ret.Selection.RequiredTypesAny, []types.Card{types.Creature, types.Planeswalker}) {
+		t.Fatalf("selection = %#v", ret.Selection)
+	}
+}
+
+// TestLowerChosenPlainCardGraveyardReturnToHand covers the unrestricted "Return
+// a card from your graveyard to your hand" form, which carries no type filter.
+func TestLowerChosenPlainCardGraveyardReturnToHand(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Salvage",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return a card from your graveyard to your hand.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	ret, ok := mode.Sequence[0].Primitive.(game.ReturnFromGraveyard)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.ReturnFromGraveyard", mode.Sequence[0].Primitive)
+	}
+	if len(ret.Selection.RequiredTypes) != 0 || len(ret.Selection.RequiredTypesAny) != 0 {
+		t.Fatalf("selection should be unrestricted, got %#v", ret.Selection)
+	}
+}
+
+// TestLowerMassGraveyardReturnToBattlefield covers the mass reanimation wording
+// "Return all <filter> cards from your graveyard to the battlefield"
+// (Brilliant Restoration, Replenish), which moves every matching graveyard card
+// at once with no choice.
+func TestLowerMassGraveyardReturnToBattlefield(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Restoration",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return all artifact and enchantment cards from your graveyard to the battlefield.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 0 {
+		t.Fatalf("targets = %#v, want none", mode.Targets)
+	}
+	mass, ok := mode.Sequence[0].Primitive.(game.MassReturnFromGraveyard)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.MassReturnFromGraveyard", mode.Sequence[0].Primitive)
+	}
+	if mass.Destination != zone.Battlefield || mass.EntryTapped {
+		t.Fatalf("mass = %#v", mass)
+	}
+	if !slices.Equal(mass.Selection.RequiredTypesAny, []types.Card{types.Artifact, types.Enchantment}) ||
+		mass.Selection.Controller != game.ControllerYou {
+		t.Fatalf("selection = %#v", mass.Selection)
+	}
+}
+
+// TestLowerMassGraveyardReturnToHand covers the same mass recursion to hand.
+func TestLowerMassGraveyardReturnToHand(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Recall",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return all creature cards from your graveyard to your hand.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	mass, ok := mode.Sequence[0].Primitive.(game.MassReturnFromGraveyard)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.MassReturnFromGraveyard", mode.Sequence[0].Primitive)
+	}
+	if mass.Destination != zone.Hand ||
+		!slices.Equal(mass.Selection.RequiredTypes, []types.Card{types.Creature}) {
+		t.Fatalf("mass = %#v", mass)
+	}
+}

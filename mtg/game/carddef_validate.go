@@ -7,9 +7,11 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // CardDefIssueCode identifies a class of structural CardDef validation issue.
@@ -108,6 +110,7 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 		v.add(faceName, path, CardDefIssueOracleWithoutAbilities, "oracle text is non-empty but no abilities or hand-written implementation are defined")
 	}
 	v.validateEntryChoiceDependencies(faceName, path, face)
+	v.validateLinkedExileColorDependencies(faceName, path, face)
 	if face.SpellAbility.Exists {
 		v.validateAbilityBody(faceName, appendPath(path, "SpellAbility"), &face.SpellAbility.Val, nil)
 	}
@@ -157,7 +160,8 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 	}
 	for i, alternative := range face.AlternativeCosts {
 		if alternative.Condition != cost.AlternativeConditionNone &&
-			alternative.Condition != cost.AlternativeConditionControlsCommander {
+			alternative.Condition != cost.AlternativeConditionControlsCommander &&
+			alternative.Condition != cost.AlternativeConditionNotYourTurn {
 			v.add(
 				faceName,
 				appendPath(path, fmt.Sprintf("AlternativeCosts[%d].Condition", i)),
@@ -190,6 +194,22 @@ func (v *cardDefValidator) validateEntryChoiceDependencies(faceName, path string
 			}
 		}
 	}
+	for i := range face.StaticAbilities {
+		for j := range face.StaticAbilities[i].RuleEffects {
+			effect := &face.StaticAbilities[i].RuleEffects[j]
+			if effect.Kind != RuleEffectCostModifier ||
+				!effect.CostModifier.ChosenSubtypeFromEntryChoice {
+				continue
+			}
+			v.add(
+				faceName,
+				appendPath(path, fmt.Sprintf("StaticAbilities[%d]", i)),
+				CardDefIssueInvalidAbilityBody,
+				"chosen-type cost modifier requires an entry-time creature-type choice",
+			)
+			return
+		}
+	}
 }
 
 func faceProvidesEntryTypeChoice(face *CardFace) bool {
@@ -199,6 +219,66 @@ func faceProvidesEntryTypeChoice(face *CardFace) bool {
 		}
 	}
 	return false
+}
+
+// validateLinkedExileColorDependencies enforces that a mana ability whose colors
+// come from a card imprinted by an exile-from-hand effect (Chrome Mox) only
+// appears alongside such an effect on the same face. The imprint mana ability is
+// useless without an ExileFromHand publishing the same link, so a face that
+// declares one without the other is a lowering error rather than a silently
+// dead ability.
+func (v *cardDefValidator) validateLinkedExileColorDependencies(faceName, path string, face *CardFace) {
+	published := map[string]bool{}
+	collectExileFromHandLinks(face, published)
+	for i := range face.ManaAbilities {
+		for _, mode := range face.ManaAbilities[i].Content.Modes {
+			for j := range mode.Sequence {
+				choose, ok := mode.Sequence[j].Primitive.(Choose)
+				if !ok || choose.Choice.Kind != ResolutionChoiceMana ||
+					choose.Choice.ColorSource != ResolutionChoiceColorSourceLinkedExileColors {
+					continue
+				}
+				if choose.Choice.LinkID == "" || !published[choose.Choice.LinkID] {
+					v.add(
+						faceName,
+						appendPath(path, fmt.Sprintf("ManaAbilities[%d]", i)),
+						CardDefIssueInvalidAbilityBody,
+						"linked-exile-color mana ability requires an exile-from-hand effect publishing its link on the same face",
+					)
+				}
+			}
+		}
+	}
+}
+
+// collectExileFromHandLinks records the link keys published by every
+// ExileFromHand primitive across the face's ability contents.
+func collectExileFromHandLinks(face *CardFace, into map[string]bool) {
+	collect := func(content AbilityContent) {
+		for _, mode := range content.Modes {
+			for i := range mode.Sequence {
+				exile, ok := mode.Sequence[i].Primitive.(ExileFromHand)
+				if ok && exile.PublishLinked != "" {
+					into[string(exile.PublishLinked)] = true
+				}
+			}
+		}
+	}
+	if face.SpellAbility.Exists {
+		collect(face.SpellAbility.Val)
+	}
+	for i := range face.ActivatedAbilities {
+		collect(face.ActivatedAbilities[i].Content)
+	}
+	for i := range face.TriggeredAbilities {
+		collect(face.TriggeredAbilities[i].Content)
+	}
+	for i := range face.ChapterAbilities {
+		collect(face.ChapterAbilities[i].Content)
+	}
+	for i := range face.LoyaltyAbilities {
+		collect(face.LoyaltyAbilities[i].Content)
+	}
 }
 
 func abilityContentHasTargets(content AbilityContent) bool {
@@ -339,6 +419,22 @@ func (v *cardDefValidator) validateAbilityContentWithLinked(
 		v.add(faceName, path, CardDefIssueInvalidAbilityBody, "ability content has no modes")
 		return
 	}
+	minModes, maxModes := content.MinModes, content.MaxModes
+	if minModes == 0 && maxModes == 0 {
+		minModes, maxModes = 1, 1
+	}
+	if minModes < 0 {
+		v.add(faceName, appendPath(path, "MinModes"), CardDefIssueInvalidAbilityBody, "minimum modes must not be negative")
+	}
+	if maxModes < 1 {
+		v.add(faceName, appendPath(path, "MaxModes"), CardDefIssueInvalidAbilityBody, "maximum modes must be at least one")
+	}
+	if maxModes < minModes {
+		v.add(faceName, appendPath(path, "MaxModes"), CardDefIssueInvalidAbilityBody, "maximum modes must not be less than minimum modes")
+	}
+	if !content.AllowDuplicateModes && maxModes > len(content.Modes) {
+		v.add(faceName, appendPath(path, "MaxModes"), CardDefIssueInvalidAbilityBody, "maximum modes exceeds available distinct modes")
+	}
 	if bonus := content.ModeChoiceBonus; bonus.Condition != ModeChoiceConditionNone || bonus.AdditionalMaxModes != 0 {
 		if bonus.Condition != ModeChoiceConditionControlsCommander {
 			v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "mode choice bonus has unsupported condition")
@@ -346,7 +442,7 @@ func (v *cardDefValidator) validateAbilityContentWithLinked(
 		if bonus.AdditionalMaxModes < 1 {
 			v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "mode choice bonus must add at least one maximum mode")
 		}
-		if !content.AllowDuplicateModes && content.MaxModes+bonus.AdditionalMaxModes > len(content.Modes) {
+		if !content.AllowDuplicateModes && maxModes+bonus.AdditionalMaxModes > len(content.Modes) {
 			v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "mode choice bonus exceeds available modes")
 		}
 	}
@@ -616,12 +712,20 @@ func (v *cardDefValidator) validateStackObjectTargetPredicate(faceName, path str
 	kinds := target.Predicate.StackObjectKinds
 	knownAllows := target.Allow & knownTargetAllows
 	allowsStackObjects := knownAllows&TargetAllowStackObject != 0
+	allowsPermanents := knownAllows&TargetAllowPermanent != 0
 	stackSelection := target.Predicate.Selection()
 	// Controller restrictions are supported for stack-object targets (e.g.
 	// "target activated ability you don't control"), so they do not count as an
 	// unsupported permanent predicate here.
 	stackSelection.Controller = ControllerAny
-	if allowsStackObjects && !stackSelection.Empty() {
+	// A mana-value comparison is a supported stack-spell qualifier ("counter
+	// target spell with mana value N"); the runtime matcher applies it to the
+	// spell choice, so it does not count as an unsupported permanent predicate.
+	stackSelection.ManaValue = opt.V[compare.Int]{}
+	// A combined "spell or permanent" target carries permanent predicates that
+	// constrain only its permanent alternative; the stack-object side is gated
+	// by StackObjectKinds and spell qualifiers, so they are not unsupported.
+	if allowsStackObjects && !allowsPermanents && !stackSelection.Empty() {
 		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "stack-object target uses unsupported predicates")
 	}
 	if allowsStackObjects && target.Selection.Exists {
@@ -699,6 +803,7 @@ func selectionHasPermanentPredicates(selection Selection) bool {
 		len(selection.Supertypes) > 0 ||
 		selection.ExcludedSupertype != "" ||
 		len(selection.SubtypesAny) > 0 ||
+		selection.ExcludedSubtype != "" ||
 		len(selection.ColorsAny) > 0 ||
 		len(selection.ExcludedColors) > 0 ||
 		selection.Colorless ||
@@ -721,8 +826,9 @@ func (v *cardDefValidator) validateContinuousEffect(faceName, path string, conti
 		abilityPath := appendPath(path, fmt.Sprintf("AddAbilities[%d]", i))
 		v.validateAbilityBody(faceName, abilityPath, continuous.AddAbilities[i], nil)
 		if manaAbility, ok := continuous.AddAbilities[i].(*ManaAbility); ok &&
-			!IsTapAnyColorManaAbility(manaAbility) {
-			v.add(faceName, abilityPath, CardDefIssueInvalidAbilityBody, "continuous effects support only the standard tap-for-one-mana-of-any-color granted mana ability")
+			!IsTapAnyColorManaAbility(manaAbility) &&
+			!IsTapSacrificeAnyOneColorManaAbility(manaAbility) {
+			v.add(faceName, abilityPath, CardDefIssueInvalidAbilityBody, "continuous effects support only the standard tap-for-one-mana-of-any-color granted mana ability or the Treasure-style sacrifice mana ability")
 		}
 	}
 	if len(continuous.AddAbilities) > 0 && continuous.Layer != LayerAbility {
@@ -733,6 +839,17 @@ func (v *cardDefValidator) validateContinuousEffect(faceName, path string, conti
 	}
 	if !continuous.Group.Empty() {
 		v.validateGroupRef(faceName, appendPath(path, "Group"), continuous.Group, targets)
+	}
+	if continuous.AddSubtypeFromEntryChoice != "" {
+		if continuous.AddSubtypeFromEntryChoice != EntryTypeChoiceKey {
+			v.add(faceName, appendPath(path, "AddSubtypeFromEntryChoice"), CardDefIssueInvalidReference, "entry-choice subtype reference must use EntryTypeChoiceKey")
+		}
+		if continuous.Layer != LayerType {
+			v.add(faceName, appendPath(path, "Layer"), CardDefIssueInvalidAbilityBody, "entry-choice subtype reference requires the type layer")
+		}
+		if !continuous.AffectedSource {
+			v.add(faceName, appendPath(path, "AffectedSource"), CardDefIssueInvalidReference, "entry-choice subtype reference must affect its source")
+		}
 	}
 }
 
@@ -770,12 +887,22 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if !reflect.DeepEqual(effect.GrantedAbility, CyclingActivatedAbility(cyclingCost)) {
 			v.add(faceName, appendPath(path, "GrantedAbility"), CardDefIssueInvalidRuleEffect, "hand-card ability grant must use the standard Cycling ability template")
 		}
-	case RuleEffectNoMaximumHandSize, RuleEffectLifeTotalCantChange:
+	case RuleEffectNoMaximumHandSize, RuleEffectLifeTotalCantChange, RuleEffectCastSpellsAsThoughFlash:
 		if effect.AffectedPlayer == PlayerAny {
 			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "player rule effects must set affected player")
 		}
 		if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "player rule effects cannot affect a permanent")
+		}
+	case RuleEffectAdditionalLandPlays:
+		if effect.AffectedPlayer == PlayerAny {
+			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "additional land plays must set affected player")
+		}
+		if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "additional land plays cannot affect a permanent")
+		}
+		if effect.AdditionalLandPlays < 1 {
+			v.add(faceName, appendPath(path, "AdditionalLandPlays"), CardDefIssueInvalidRuleEffect, "additional land plays must grant at least one extra land play")
 		}
 	case RuleEffectAttackTax:
 		v.validateAttackTaxRuleEffect(faceName, path, effect)
@@ -799,7 +926,40 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 			effect.Protection.EachColor {
 			v.add(faceName, appendPath(path, "Protection"), CardDefIssueInvalidRuleEffect, "player protection currently supports only protection from everything")
 		}
+	case RuleEffectAdditionalTriggerForChosenCreatureType:
+		payload := *effect
+		payload.Kind = RuleEffectNone
+		if !reflect.DeepEqual(payload, RuleEffect{}) {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "chosen-type trigger multiplier does not accept additional payload")
+		}
+	case RuleEffectCantCastSpells, RuleEffectCantActivateAbilities:
+		v.validateActionRestrictionRuleEffect(faceName, path, effect)
+	case RuleEffectAdditionalTriggerForEnteringPermanent:
+		payload := *effect
+		payload.Kind = RuleEffectNone
+		payload.PermanentTypes = nil
+		if !reflect.DeepEqual(payload, RuleEffect{}) {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "entering-permanent trigger multiplier accepts only a permanent-type filter")
+		}
 	default:
+	}
+}
+
+// validateActionRestrictionRuleEffect checks a cast- or activation-prohibition
+// rule effect. These prohibitions target players, never permanents, and the
+// permanent-type filter only constrains the activation prohibition.
+func (v *cardDefValidator) validateActionRestrictionRuleEffect(faceName, path string, effect *RuleEffect) {
+	if !effect.AffectedPlayer.Valid() {
+		v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "action restriction must set a recognized affected player")
+	}
+	if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "action restriction cannot affect a permanent")
+	}
+	if effect.Kind == RuleEffectCantCastSpells && len(effect.PermanentTypes) != 0 {
+		v.add(faceName, appendPath(path, "PermanentTypes"), CardDefIssueInvalidRuleEffect, "cast prohibition does not constrain permanent types")
+	}
+	if effect.Kind == RuleEffectCantActivateAbilities && len(effect.SpellTypes) != 0 {
+		v.add(faceName, appendPath(path, "SpellTypes"), CardDefIssueInvalidRuleEffect, "activation prohibition does not constrain spell types")
 	}
 }
 
@@ -843,6 +1003,13 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 	if modifier.MatchColor && modifier.MatchCardType {
 		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "cost modifier cannot match both card type and color")
 	}
+	if modifier.ChosenSubtypeFromEntryChoice &&
+		(modifier.Kind != CostModifierSpell ||
+			!modifier.MatchCardType ||
+			modifier.CardType != types.Creature ||
+			modifier.MatchColor) {
+		v.add(faceName, appendPath(path, "ChosenSubtypeFromEntryChoice"), CardDefIssueInvalidRuleEffect, "chosen subtype cost modifier must match creature spells from the entry-time creature-type choice")
+	}
 	if modifier.PerObjectReduction < 0 {
 		v.add(faceName, appendPath(path, "PerObjectReduction"), CardDefIssueInvalidRuleEffect, "per-object cost reduction cannot be negative")
 	}
@@ -850,12 +1017,49 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 		if modifier.Kind != CostModifierSpell && (!sourceAbility || modifier.Kind != CostModifierAbility) {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "per-object cost reduction requires a spell modifier or a source ability modifier")
 		}
-		if modifier.CountSelection.Empty() {
+		if modifier.CountSelection == nil || modifier.CountSelection.Empty() {
 			v.add(faceName, appendPath(path, "CountSelection"), CardDefIssueInvalidRuleEffect, "per-object cost reduction requires a count selection")
+		} else {
+			v.validateSelection(faceName, appendPath(path, "CountSelection"), *modifier.CountSelection)
 		}
-		v.validateSelection(faceName, appendPath(path, "CountSelection"), modifier.CountSelection)
-	} else if !modifier.CountSelection.Empty() {
+	} else if modifier.CountSelection != nil && !modifier.CountSelection.Empty() {
 		v.add(faceName, appendPath(path, "CountSelection"), CardDefIssueInvalidRuleEffect, "count selection requires a per-object reduction")
+	}
+	if modifier.DynamicReduction != nil {
+		if modifier.Kind != CostModifierSpell {
+			v.add(faceName, appendPath(path, "DynamicReduction"), CardDefIssueInvalidRuleEffect, "dynamic cost reduction requires a spell modifier")
+		}
+		if modifier.PerObjectReduction > 0 {
+			v.add(faceName, appendPath(path, "DynamicReduction"), CardDefIssueInvalidRuleEffect, "dynamic cost reduction cannot combine with a per-object reduction")
+		}
+		if !dynamicCostReductionKindSupported(modifier.DynamicReduction.Kind) {
+			v.add(faceName, appendPath(path, "DynamicReduction"), CardDefIssueInvalidRuleEffect, "dynamic cost reduction amount kind is unsupported")
+		}
+	}
+}
+
+// dynamicCostReductionKindSupported reports whether a dynamic amount kind can be
+// evaluated at cost time without a resolving stack object, so it may scale a
+// source-spell DynamicReduction. Only controller-aggregate and battlefield-group
+// kinds qualify; object-referencing kinds (target/source power, counters) need a
+// resolving effect and fail closed.
+func dynamicCostReductionKindSupported(kind DynamicAmountKind) bool {
+	switch kind {
+	case DynamicAmountCountSelector,
+		DynamicAmountGreatestPowerInGroup,
+		DynamicAmountGreatestToughnessInGroup,
+		DynamicAmountGreatestManaValueInGroup,
+		DynamicAmountTotalPowerInGroup,
+		DynamicAmountTotalToughnessInGroup,
+		DynamicAmountControllerLife,
+		DynamicAmountControllerHandSize,
+		DynamicAmountControllerGraveyardSize,
+		DynamicAmountControllerBasicLandTypeCount,
+		DynamicAmountOpponentCount,
+		DynamicAmountDevotion:
+		return true
+	default:
+		return false
 	}
 }
 
@@ -955,6 +1159,9 @@ func (v *cardDefValidator) validateCondition(faceName, path string, condition *C
 	if condition.OpponentsControl.Exists {
 		v.validateConditionSelectionCount(faceName, appendPath(path, "OpponentsControl"), condition.OpponentsControl.Val)
 	}
+	if condition.ControlComparison.Exists {
+		v.validateControlCountComparison(faceName, appendPath(path, "ControlComparison"), condition.ControlComparison.Val)
+	}
 	if condition.Object.Exists {
 		v.validateObjectRef(faceName, appendPath(path, "Object"), condition.Object.Val, targets)
 	}
@@ -986,6 +1193,19 @@ func (v *cardDefValidator) validateConditionSelectionCount(faceName, path string
 	}
 }
 
+func (v *cardDefValidator) validateControlCountComparison(faceName, path string, cmp ControlCountComparison) {
+	v.validateSelection(faceName, appendPath(path, "Selection"), cmp.Selection)
+	if cmp.Selection.Player != PlayerAny {
+		v.add(faceName, appendPath(path, "Selection.Player"), CardDefIssueInvalidSelection, "control-comparison Selection cannot use a player relation")
+	}
+	if (cmp.Left == ControlPlayerController) == (cmp.Right == ControlPlayerController) {
+		v.add(faceName, path, CardDefIssueInvalidCondition, "control comparison must contrast the controller with an opponent scope")
+	}
+	if cmp.Op != compare.GreaterThan && cmp.Op != compare.LessThan {
+		v.add(faceName, appendPath(path, "Op"), CardDefIssueInvalidCondition, "control comparison operator must be a strict greater/less comparison")
+	}
+}
+
 func (v *cardDefValidator) validateEventHistoryCondition(faceName, path string, hist *EventHistoryCondition) {
 	if hist.Pattern.Event == EventUnknown {
 		v.add(faceName, appendPath(path, "Pattern.Event"), CardDefIssueInvalidCondition, "EventHistoryCondition Pattern.Event must not be EventUnknown")
@@ -1011,6 +1231,7 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 		unsupported.ExcludedTypes = nil
 		unsupported.Supertypes = nil
 		unsupported.SubtypesAny = nil
+		unsupported.ExcludedSubtype = ""
 		unsupported.ColorsAny = nil
 		unsupported.ExcludedColors = nil
 		unsupported.Colorless = false
@@ -1025,6 +1246,7 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 		unsupported.Toughness.Exists = false
 		unsupported.NonToken = false
 		unsupported.TokenOnly = false
+		unsupported.SubtypeFromSourceEntryChoice = false
 		if !unsupported.Empty() {
 			v.add(faceName, appendPath(path, "SubjectSelection"), CardDefIssueInvalidSelection, "trigger subject Selection uses predicates unavailable from event data")
 		}
@@ -1047,6 +1269,8 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 		if pattern.Event == EventSpellCast {
 			unsupported.Supertypes = nil
 			unsupported.SubtypesAny = nil
+			unsupported.ExcludedSubtype = ""
+			unsupported.SubtypeFromSourceEntryChoice = false
 			unsupported.ColorsAny = nil
 			unsupported.Colorless = false
 			unsupported.Multicolored = false
@@ -1180,7 +1404,7 @@ func (v *cardDefValidator) validateObjectRef(faceName, path string, ref ObjectRe
 // that nested references are not diagnosed twice.
 func (v *cardDefValidator) validateObjectRefBounds(faceName, path string, ref ObjectReference, targets []TargetSpec) {
 	switch ref.Kind() {
-	case ObjectReferenceTargetPermanent, ObjectReferenceTargetStackObject:
+	case ObjectReferenceTargetPermanent, ObjectReferenceTargetStackObject, ObjectReferenceTargetObject:
 		v.validateTargetIndex(faceName, path, ref.TargetIndex(), targets, "object reference target")
 	case ObjectReferenceTargetAttachedPermanent:
 		v.validateTargetIndex(faceName, path, ref.TargetIndex(), targets, "attached permanent reference target")
@@ -1211,7 +1435,10 @@ func (v *cardDefValidator) validatePlayerRef(faceName, path string, ref PlayerRe
 
 func (v *cardDefValidator) validateCardCondition(faceName, path string, condition CardCondition) {
 	v.validateCardRef(faceName, appendPath(path, "Card"), condition.Card)
-	if !condition.RequirePermanentCard && len(condition.Types) == 0 && len(condition.Supertypes) == 0 && len(condition.SubtypesAny) == 0 {
+	if condition.ChosenSubtypeFrom != "" && condition.ChosenSubtypeFrom != EntryTypeChoiceKey {
+		v.add(faceName, appendPath(path, "ChosenSubtypeFrom"), CardDefIssueInvalidCondition, "chosen subtype condition must use the entry-time creature-type choice")
+	}
+	if !condition.RequirePermanentCard && len(condition.Types) == 0 && len(condition.Supertypes) == 0 && len(condition.SubtypesAny) == 0 && condition.ChosenSubtypeFrom == "" {
 		v.add(faceName, path, CardDefIssueInvalidReference, "card condition has no filters")
 	}
 }

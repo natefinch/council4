@@ -10,6 +10,9 @@ import (
 )
 
 func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	if ability.Replacement.EntersTappedOthers {
+		return r.renderGroupEntersTappedReplacement(ctx, ability)
+	}
 	if len(ability.Replacement.EntersWithCounters) > 0 {
 		if ability.UnlessPaid.Exists {
 			return "", errors.New("render: ETB counter replacement cannot also require payment")
@@ -82,6 +85,21 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 	if ability.Replacement.EntryTypeChoice {
 		return fmt.Sprintf("game.EntryTypeChoiceReplacement(%q)", ability.Text), nil
 	}
+	if ability.Replacement.ReplaceToZone != zone.None && ability.UnlessPaid.Exists {
+		if ability.Replacement.EntersTapped || ability.Replacement.Condition.Exists {
+			return "", errors.New("render: optional entry zone replacement cannot also enter tapped or have a condition")
+		}
+		payment, err := r.renderResolutionPayment(ctx, ability.UnlessPaid.Val)
+		if err != nil {
+			return "", err
+		}
+		replaceToZone, err := renderZone(ability.Replacement.ReplaceToZone)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importZone)
+		return fmt.Sprintf("game.EntersUnlessPaidElseZoneReplacement(%q, %s, %s)", ability.Text, payment, replaceToZone), nil
+	}
 	if ability.Replacement.ReplaceToZone != zone.None {
 		replacement, err := renderZoneDestinationReplacement(ctx, ability)
 		if err != nil {
@@ -103,14 +121,68 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		}
 		return replacement, nil
 	}
-	if ability.Replacement.CounterMultiplier > 0 {
+	if ability.Replacement.CounterMultiplier > 0 || ability.Replacement.CounterAddend != 0 {
 		replacement, err := renderCounterPlacementReplacement(ctx, ability)
 		if err != nil {
 			return "", err
 		}
 		return replacement, nil
 	}
+	if len(ability.Replacement.CreateOneOfEachTokens) > 0 {
+		replacement, err := r.renderNamedTokenSetReplacement(ctx, ability)
+		if err != nil {
+			return "", err
+		}
+		return replacement, nil
+	}
 	return "", fmt.Errorf("render: unsupported replacement ability %q", ability.Text)
+}
+
+// renderGroupEntersTappedReplacement renders a continuous static enters-tapped
+// replacement that taps a group of OTHER permanents as they enter (Authority of
+// the Consuls family).
+func (Renderer) renderGroupEntersTappedReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	replacement := ability.Replacement
+	if !replacement.EntersTapped ||
+		len(replacement.EntersWithCounters) != 0 ||
+		ability.UnlessPaid.Exists ||
+		replacement.Condition.Exists {
+		return "", errors.New("render: unsupported group enters-tapped replacement shape")
+	}
+	controller, err := renderGroupEntersTappedController(replacement.ControllerFilter)
+	if err != nil {
+		return "", err
+	}
+	if len(replacement.EntersTappedTypes) == 0 {
+		return fmt.Sprintf("game.EntersTappedGroupReplacement(%q, %s)", ability.Text, controller), nil
+	}
+	ctx.need(importTypes)
+	typeLiterals := make([]string, 0, len(replacement.EntersTappedTypes))
+	for _, cardType := range replacement.EntersTappedTypes {
+		literal, err := cardTypeLiteral(cardType)
+		if err != nil {
+			return "", err
+		}
+		typeLiterals = append(typeLiterals, literal)
+	}
+	return fmt.Sprintf("game.EntersTappedGroupReplacement(%q, %s, %s)",
+		ability.Text, controller, strings.Join(typeLiterals, ", ")), nil
+}
+
+// renderGroupEntersTappedController renders the trigger-controller filter for a
+// group enters-tapped replacement, including the each-player (Any) scope that the
+// strict renderTriggerController rejects.
+func renderGroupEntersTappedController(controller game.TriggerControllerFilter) (string, error) {
+	switch controller {
+	case game.TriggerControllerAny:
+		return "game.TriggerControllerAny", nil
+	case game.TriggerControllerYou:
+		return "game.TriggerControllerYou", nil
+	case game.TriggerControllerOpponent:
+		return "game.TriggerControllerOpponent", nil
+	default:
+		return "", fmt.Errorf("render: unsupported trigger controller filter %d", controller)
+	}
 }
 
 func renderDamageReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
@@ -157,17 +229,40 @@ func renderCounterPlacementReplacement(ctx *renderCtx, ability *game.Replacement
 		replacement.Condition.Exists ||
 		replacement.MatchEvent != game.EventCountersAdded ||
 		replacement.ControllerFilter == game.TriggerControllerAny ||
-		replacement.CounterMultiplier <= 1 {
+		(replacement.CounterMultiplier <= 1 && replacement.CounterAddend == 0) {
 		return "", errors.New("render: unsupported counter-placement replacement shape")
 	}
 	controller, err := renderTriggerController(replacement.ControllerFilter)
 	if err != nil {
 		return "", err
 	}
-	if !replacement.MatchCounterKind {
-		return fmt.Sprintf("game.AnyCounterPlacementReplacement(%q, %d, %s)",
+	if replacement.CounterRecipientAnyPermanent {
+		if replacement.MatchCounterKind {
+			kind, err := renderCounterKind(replacement.CounterKindFilter)
+			if err != nil {
+				return "", err
+			}
+			ctx.need(importCounter)
+			return fmt.Sprintf("game.ControlledPermanentCounterKindPlacementReplacement(%q, %d, %d, %s, %s)",
+				ability.Text,
+				replacement.CounterMultiplier,
+				replacement.CounterAddend,
+				kind,
+				controller,
+			), nil
+		}
+		return fmt.Sprintf("game.ControlledPermanentCounterPlacementReplacement(%q, %d, %d, %s)",
 			ability.Text,
 			replacement.CounterMultiplier,
+			replacement.CounterAddend,
+			controller,
+		), nil
+	}
+	if !replacement.MatchCounterKind {
+		return fmt.Sprintf("game.AnyCounterPlacementReplacement(%q, %d, %d, %s)",
+			ability.Text,
+			replacement.CounterMultiplier,
+			replacement.CounterAddend,
 			controller,
 		), nil
 	}
@@ -176,10 +271,43 @@ func renderCounterPlacementReplacement(ctx *renderCtx, ability *game.Replacement
 		return "", err
 	}
 	ctx.need(importCounter)
-	return fmt.Sprintf("game.CounterPlacementReplacement(%q, %d, %s, %s)",
+	return fmt.Sprintf("game.CounterPlacementReplacement(%q, %d, %d, %s, %s)",
 		ability.Text,
 		replacement.CounterMultiplier,
+		replacement.CounterAddend,
 		kind,
+		controller,
+	), nil
+}
+
+// renderNamedTokenSetReplacement renders Academy Manufactor's one-of-each
+// token-type replacement, emitting each replaced token definition as a shared
+// package-level var.
+func (Renderer) renderNamedTokenSetReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	replacement := ability.Replacement
+	if replacement.EntersTapped ||
+		len(replacement.EntersWithCounters) != 0 ||
+		ability.UnlessPaid.Exists ||
+		replacement.Condition.Exists ||
+		replacement.MatchEvent != game.EventTokenCreated ||
+		replacement.ControllerFilter == game.TriggerControllerAny ||
+		len(replacement.CreateOneOfEachTokens) < 2 {
+		return "", errors.New("render: unsupported one-of-each token-creation replacement shape")
+	}
+	controller, err := renderTriggerController(replacement.ControllerFilter)
+	if err != nil {
+		return "", err
+	}
+	vars := make([]string, 0, len(replacement.CreateOneOfEachTokens))
+	for _, def := range replacement.CreateOneOfEachTokens {
+		if def == nil {
+			return "", errors.New("render: one-of-each token-creation replacement has a nil token definition")
+		}
+		vars = append(vars, ctx.tokenDefVar(def))
+	}
+	return fmt.Sprintf("game.NamedTokenSetReplacement(%q, []*game.CardDef{%s}, %s)",
+		ability.Text,
+		strings.Join(vars, ", "),
 		controller,
 	), nil
 }
@@ -258,14 +386,18 @@ func renderZoneDestinationReplacement(ctx *renderCtx, ability *game.ReplacementA
 func renderCounterPlacements(ctx *renderCtx, placements []game.CounterPlacement) ([]string, error) {
 	rendered := make([]string, 0, len(placements))
 	for _, placement := range placements {
-		if placement.Amount <= 0 {
-			return nil, fmt.Errorf("render: invalid ETB counter amount %d", placement.Amount)
-		}
 		kind, err := renderCounterKind(placement.Kind)
 		if err != nil {
 			return nil, err
 		}
 		ctx.need(importCounter)
+		if placement.AmountFromX {
+			rendered = append(rendered, fmt.Sprintf("game.CounterPlacement{Kind: %s, AmountFromX: true}", kind))
+			continue
+		}
+		if placement.Amount <= 0 {
+			return nil, fmt.Errorf("render: invalid ETB counter amount %d", placement.Amount)
+		}
 		rendered = append(rendered, fmt.Sprintf("game.CounterPlacement{Kind: %s, Amount: %d}", kind, placement.Amount))
 	}
 	return rendered, nil
@@ -370,8 +502,7 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		return "", fmt.Errorf("render: %s condition has a negative threshold", context)
 	}
 	// Reject unsupported condition fields.
-	if cond.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures ||
-		cond.SourceClassLevelAtLeast != 0 ||
+	if cond.SourceClassLevelAtLeast != 0 ||
 		cond.SourceClassLevelLessThan != 0 ||
 		cond.SourceNotMonstrous ||
 		cond.ControllerHasMaxSpeed ||
@@ -440,6 +571,14 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, "ControllerHandEmpty: true,")
 		hasPredicate = true
 	}
+	if cond.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures {
+		fields = append(fields, "EventPermanentNameUniqueAmongControlledAndGraveyardCreatures: true,")
+		hasPredicate = true
+	}
+	if cond.ControllerCreatedTokenThisTurn {
+		fields = append(fields, "ControllerCreatedTokenThisTurn: true,")
+		hasPredicate = true
+	}
 	if cond.ControllerGraveyardCardCountAtLeast > 0 {
 		fields = append(fields, fmt.Sprintf("ControllerGraveyardCardCountAtLeast: %d,", cond.ControllerGraveyardCardCountAtLeast))
 		hasPredicate = true
@@ -472,6 +611,15 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		}
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("OpponentsControl: opt.Val(%s),", rendered))
+		hasPredicate = true
+	}
+	if cond.ControlComparison.Exists {
+		rendered, err := r.renderControlCountComparison(ctx, cond.ControlComparison.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("ControlComparison: opt.Val(%s),", rendered))
 		hasPredicate = true
 	}
 	if cond.EventHistory.Exists {
@@ -568,6 +716,46 @@ func (r Renderer) renderSelectionCountForCondition(ctx *renderCtx, count game.Se
 		fields = append(fields, fmt.Sprintf("TotalPower: opt.Val(%s),", cmp))
 	}
 	return structLit("game.SelectionCount", fields), nil
+}
+
+func (r Renderer) renderControlCountComparison(ctx *renderCtx, cmp game.ControlCountComparison) (string, error) {
+	selection, err := r.renderSelection(ctx, cmp.Selection)
+	if err != nil {
+		return "", err
+	}
+	left, err := renderControlPlayerScope(cmp.Left)
+	if err != nil {
+		return "", err
+	}
+	right, err := renderControlPlayerScope(cmp.Right)
+	if err != nil {
+		return "", err
+	}
+	op, err := renderCompareOp(cmp.Op)
+	if err != nil {
+		return "", err
+	}
+	ctx.need(importCompare)
+	fields := []string{
+		fmt.Sprintf("Selection: %s,", selection),
+		fmt.Sprintf("Left: %s,", left),
+		fmt.Sprintf("Right: %s,", right),
+		fmt.Sprintf("Op: %s,", op),
+	}
+	return structLit("game.ControlCountComparison", fields), nil
+}
+
+func renderControlPlayerScope(scope game.ControlPlayerScope) (string, error) {
+	switch scope {
+	case game.ControlPlayerController:
+		return "game.ControlPlayerController", nil
+	case game.ControlPlayerAnyOpponent:
+		return "game.ControlPlayerAnyOpponent", nil
+	case game.ControlPlayerEachOpponent:
+		return "game.ControlPlayerEachOpponent", nil
+	default:
+		return "", fmt.Errorf("render: unsupported control player scope %d", scope)
+	}
 }
 
 func (Renderer) renderPermanentFilterForCondition(ctx *renderCtx, filter game.PermanentFilter) (string, error) {

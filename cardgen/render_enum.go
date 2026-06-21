@@ -178,6 +178,15 @@ func renderAdditionalKind(kind cost.AdditionalKind) (string, error) {
 	}
 }
 
+func renderAdditionalDynamicAmount(kind cost.AdditionalDynamicAmount) (string, error) {
+	switch kind {
+	case cost.AdditionalDynamicCommanderColorIdentityCount:
+		return "cost.AdditionalDynamicCommanderColorIdentityCount", nil
+	default:
+		return "", fmt.Errorf("render: unsupported additional dynamic amount %d", kind)
+	}
+}
+
 func renderCounterKind(kind counter.Kind) (string, error) {
 	switch kind {
 	case counter.PlusOnePlusOne:
@@ -414,6 +423,8 @@ func renderEventKind(event game.EventKind) (string, error) {
 		return "game.EventCountersAdded", nil
 	case game.EventBeginningOfStep:
 		return "game.EventBeginningOfStep", nil
+	case game.EventTokenCreated:
+		return "game.EventTokenCreated", nil
 	default:
 		return "", fmt.Errorf("render: unsupported event kind %d", event)
 	}
@@ -515,6 +526,10 @@ func renderResolutionChoiceColorSource(source game.ResolutionChoiceColorSource) 
 		return "game.ResolutionChoiceColorSourceCommanderIdentity", nil
 	case game.ResolutionChoiceColorSourceLandsProduce:
 		return "game.ResolutionChoiceColorSourceLandsProduce", nil
+	case game.ResolutionChoiceColorSourceLinkedExileColors:
+		return "game.ResolutionChoiceColorSourceLinkedExileColors", nil
+	case game.ResolutionChoiceColorSourceControlledPermanentColors:
+		return "game.ResolutionChoiceColorSourceControlledPermanentColors", nil
 	default:
 		return "", fmt.Errorf("render: unsupported resolution choice color source %d", source)
 	}
@@ -526,6 +541,12 @@ func renderManaSpendConditionKind(kind game.ManaSpendConditionKind) (string, err
 		return "game.ManaSpendCastCommanderCreatureType", nil
 	case game.ManaSpendCastChosenCreatureType:
 		return "game.ManaSpendCastChosenCreatureType", nil
+	case game.ManaSpendCastLegendarySpell:
+		return "game.ManaSpendCastLegendarySpell", nil
+	case game.ManaSpendCastOrActivateChosenCreatureType:
+		return "game.ManaSpendCastOrActivateChosenCreatureType", nil
+	case game.ManaSpendCastCreatureSpell:
+		return "game.ManaSpendCastCreatureSpell", nil
 	default:
 		return "", fmt.Errorf("render: unsupported mana spend condition kind %d", kind)
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func (r Renderer) renderTargetSpec(ctx *renderCtx, spec *game.TargetSpec) (string, error) {
@@ -398,7 +399,7 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 		}
 		fields = append(fields, fmt.Sprintf("SubtypesAny: []types.Sub{%s},", strings.Join(literals, ", ")))
 	}
-
+	fields = appendSubtypeFromSourceEntryChoiceField(fields, selection.SubtypeFromSourceEntryChoice)
 	if len(selection.ColorsAny) > 0 {
 		colorLits, err := renderColorSlice(ctx, selection.ColorsAny)
 		if err != nil {
@@ -465,30 +466,11 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 		fields = append(fields, fmt.Sprintf("ExcludedKeyword: %s,", kw))
 	}
 
-	if selection.ManaValue.Exists {
-		ctx.need(importOpt)
-		cmp, err := renderCompareInt(ctx, selection.ManaValue.Val)
-		if err != nil {
-			return "", err
-		}
-		fields = append(fields, fmt.Sprintf("ManaValue: opt.Val(%s),", cmp))
+	compareFields, err := renderSelectionComparisons(ctx, selection)
+	if err != nil {
+		return "", err
 	}
-	if selection.Power.Exists {
-		ctx.need(importOpt)
-		cmp, err := renderCompareInt(ctx, selection.Power.Val)
-		if err != nil {
-			return "", err
-		}
-		fields = append(fields, fmt.Sprintf("Power: opt.Val(%s),", cmp))
-	}
-	if selection.Toughness.Exists {
-		ctx.need(importOpt)
-		cmp, err := renderCompareInt(ctx, selection.Toughness.Val)
-		if err != nil {
-			return "", err
-		}
-		fields = append(fields, fmt.Sprintf("Toughness: opt.Val(%s),", cmp))
-	}
+	fields = append(fields, compareFields...)
 
 	if selection.ExcludeSource {
 		fields = append(fields, "ExcludeSource: true,")
@@ -504,6 +486,50 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 		fields[i] = strings.TrimSuffix(fields[i], ",")
 	}
 	return compactStructLit("game.Selection", fields), nil
+}
+
+// renderSelectionComparisons renders the Selection fields that compare numeric
+// characteristics (mana value, power, toughness) and the counter requirement,
+// returning the rendered fields in declaration order.
+func renderSelectionComparisons(ctx *renderCtx, selection game.Selection) ([]string, error) {
+	var fields []string
+	for _, c := range []struct {
+		name  string
+		value opt.V[compare.Int]
+	}{
+		{"ManaValue", selection.ManaValue},
+		{"Power", selection.Power},
+		{"Toughness", selection.Toughness},
+	} {
+		if !c.value.Exists {
+			continue
+		}
+		ctx.need(importOpt)
+		cmp, err := renderCompareInt(ctx, c.value.Val)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("%s: opt.Val(%s),", c.name, cmp))
+	}
+	if selection.MatchCounter {
+		ctx.need(importCounter)
+		kind, err := renderCounterKind(selection.RequiredCounter)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, "MatchCounter: true,", fmt.Sprintf("RequiredCounter: %s,", kind))
+	}
+	return fields, nil
+}
+
+// appendSubtypeFromSourceEntryChoiceField appends the Selection field that ties a
+// group to the creature type chosen as the source permanent entered, leaving
+// fields untouched when the restriction is absent.
+func appendSubtypeFromSourceEntryChoiceField(fields []string, fromEntryChoice bool) []string {
+	if !fromEntryChoice {
+		return fields
+	}
+	return append(fields, "SubtypeFromSourceEntryChoice: true,")
 }
 
 func renderColorSlice(ctx *renderCtx, colors []color.Color) (string, error) {
@@ -644,6 +670,8 @@ func renderKeyword(kw game.Keyword) (string, error) {
 		return "game.Trample", nil
 	case game.Vigilance:
 		return "game.Vigilance", nil
+	case game.Riot:
+		return "game.Riot", nil
 	case game.Ward:
 		return "game.Ward", nil
 	case game.SplitSecond:

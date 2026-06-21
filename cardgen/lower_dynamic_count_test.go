@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -38,6 +39,7 @@ func TestLowerDynamicLifeBattlefieldSelectionCounts(t *testing.T) {
 		supertypes   []types.Super
 		colorless    bool
 		controller   game.ControllerRelation
+		tapped       game.TriState
 	}{
 		{
 			name:       "subtype Shrine",
@@ -45,6 +47,29 @@ func TestLowerDynamicLifeBattlefieldSelectionCounts(t *testing.T) {
 			multiplier: 2,
 			subtypes:   []types.Sub{types.Shrine},
 			controller: game.ControllerYou,
+		},
+		{
+			name:         "tapped creature you control",
+			oracleText:   "You gain 1 life for each tapped creature you control.",
+			multiplier:   1,
+			requiredType: types.Creature,
+			controller:   game.ControllerYou,
+			tapped:       game.TriTrue,
+		},
+		{
+			name:         "untapped creature you control",
+			oracleText:   "You gain 1 life for each untapped creature you control.",
+			multiplier:   1,
+			requiredType: types.Creature,
+			controller:   game.ControllerYou,
+			tapped:       game.TriFalse,
+		},
+		{
+			name:         "creature an opponent controls",
+			oracleText:   "You gain 1 life for each creature your opponents control.",
+			multiplier:   1,
+			requiredType: types.Creature,
+			controller:   game.ControllerOpponent,
 		},
 		{
 			name:         "colorless creature",
@@ -100,6 +125,65 @@ func TestLowerDynamicLifeBattlefieldSelectionCounts(t *testing.T) {
 			}
 			if selection.Colorless != test.colorless {
 				t.Fatalf("colorless = %v, want %v", selection.Colorless, test.colorless)
+			}
+			if selection.Tapped != test.tapped {
+				t.Fatalf("tapped = %v, want %v", selection.Tapped, test.tapped)
+			}
+		})
+	}
+}
+
+func TestLowerDynamicLifeCharacteristicFilteredCounts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		multiplier int
+		op         compare.Op
+		value      int
+	}{
+		{
+			name:       "power 4 or greater",
+			oracleText: "You gain 4 life for each creature you control with power 4 or greater.",
+			multiplier: 4,
+			op:         compare.GreaterOrEqual,
+			value:      4,
+		},
+		{
+			name:       "power 2 or less",
+			oracleText: "You gain 1 life for each creature you control with power 2 or less.",
+			multiplier: 1,
+			op:         compare.LessOrEqual,
+			value:      2,
+		},
+		{
+			name:       "mana value equal to N",
+			oracleText: "You gain 1 life for each creature you control with mana value equal to 3.",
+			multiplier: 1,
+			op:         compare.Equal,
+			value:      3,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerLifeFace(t, test.oracleText)
+			dynamic := gainLifeQuantity(t, face.SpellAbility.Val).DynamicAmount()
+			if !dynamic.Exists ||
+				dynamic.Val.Kind != game.DynamicAmountCountSelector ||
+				dynamic.Val.Multiplier != test.multiplier {
+				t.Fatalf("dynamic amount = %+v", dynamic)
+			}
+			selection := dynamic.Val.Group.Selection()
+			if len(selection.RequiredTypes) != 1 || selection.RequiredTypes[0] != types.Creature {
+				t.Fatalf("required types = %v, want [Creature]", selection.RequiredTypes)
+			}
+			filter := selection.Power
+			if test.name == "mana value equal to N" {
+				filter = selection.ManaValue
+			}
+			if !filter.Exists || filter.Val.Op != test.op || filter.Val.Value != test.value {
+				t.Fatalf("characteristic filter = %+v, want {Op:%v Value:%d}", filter, test.op, test.value)
 			}
 		})
 	}
@@ -171,7 +255,6 @@ func TestLowerDynamicLifeZoneCounts(t *testing.T) {
 func TestLowerDynamicLifeFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
-		"You gain 1 life for each tapped creature you control.",
 		"You gain 1 life for each attacking creature you control.",
 		"You gain 1 life for each another creature you control.",
 		"You gain 1 life for each instant card in your graveyard.",

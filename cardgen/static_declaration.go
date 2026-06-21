@@ -52,6 +52,9 @@ func lowerStaticDeclarations(
 			)
 		}
 		if declaration.Condition != nil && conditionSpan == (shared.Span{}) {
+			if declaration.Condition.SourceInGraveyard {
+				body.ZoneOfFunction = zone.Graveyard
+			}
 			condition, ok := lowerCondition(*declaration.Condition, conditionContextStatic)
 			if !ok {
 				return abilityLowering{}, true, staticDeclarationDiagnostic(
@@ -81,6 +84,14 @@ func lowerStaticDeclarations(
 				}
 			case compiler.StaticDeclarationPlayerRule:
 				ok = appendStaticPlayerRuleDeclaration(&body, declaration)
+			case compiler.StaticDeclarationOpponentActionRestriction:
+				ok = appendStaticOpponentActionRestrictionDeclaration(&body, declaration)
+			case compiler.StaticDeclarationSpellUncounterable:
+				ok = appendStaticSpellUncounterableDeclaration(&body, declaration)
+			case compiler.StaticDeclarationEnteringTriggerMultiplier:
+				ok = appendStaticEnteringTriggerMultiplierDeclaration(&body, declaration)
+			case compiler.StaticDeclarationUntapStep:
+				ok = appendStaticUntapStepDeclaration(&body, declaration)
 			default:
 				ok = false
 			}
@@ -214,6 +225,18 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.Player != nil {
 		payloads++
 	}
+	if declaration.OpponentRestriction != nil {
+		payloads++
+	}
+	if declaration.SpellUncounterable != nil {
+		payloads++
+	}
+	if declaration.EnteringMultiplier != nil {
+		payloads++
+	}
+	if declaration.Untap != nil {
+		payloads++
+	}
 	if payloads != 1 {
 		return false
 	}
@@ -228,6 +251,14 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 		return declaration.CardGrant != nil
 	case compiler.StaticDeclarationPlayerRule:
 		return declaration.Player != nil
+	case compiler.StaticDeclarationOpponentActionRestriction:
+		return declaration.OpponentRestriction != nil
+	case compiler.StaticDeclarationSpellUncounterable:
+		return declaration.SpellUncounterable != nil
+	case compiler.StaticDeclarationEnteringTriggerMultiplier:
+		return declaration.EnteringMultiplier != nil
+	case compiler.StaticDeclarationUntapStep:
+		return declaration.Untap != nil
 	default:
 		return false
 	}
@@ -291,14 +322,13 @@ func lowerStaticContinuousDeclaration(declaration compiler.StaticDeclaration) (g
 		}
 		effect.AddAbilities = []game.Ability{&ability}
 	case compiler.StaticContinuousGrantManaAbility:
-		if layer != game.LayerAbility ||
-			declaration.Continuous.GrantedMana == nil ||
-			!declaration.Continuous.GrantedMana.TapCost ||
-			declaration.Continuous.GrantedMana.Amount != 1 ||
-			!declaration.Continuous.GrantedMana.AnyColor {
+		if layer != game.LayerAbility || declaration.Continuous.GrantedMana == nil {
 			return game.ContinuousEffect{}, false
 		}
-		ability := game.TapAnyColorManaAbility()
+		ability, ok := lowerStaticGrantedManaAbility(declaration.Continuous.GrantedMana)
+		if !ok {
+			return game.ContinuousEffect{}, false
+		}
 		effect.AddAbilities = []game.Ability{&ability}
 	case compiler.StaticContinuousChangeControl:
 		if layer != game.LayerControl {
@@ -334,6 +364,11 @@ func lowerStaticContinuousDeclaration(declaration compiler.StaticDeclaration) (g
 		}
 		effect.AddTypes = cardTypes
 		effect.AddSubtypes = subtypes
+	case compiler.StaticContinuousAddSubtypeFromEntryChoice:
+		if layer != game.LayerType {
+			return game.ContinuousEffect{}, false
+		}
+		effect.AddSubtypeFromEntryChoice = game.EntryTypeChoiceKey
 	case compiler.StaticContinuousSetTypes, compiler.StaticContinuousSetSubtypes:
 		if layer != game.LayerType {
 			return game.ContinuousEffect{}, false
@@ -353,6 +388,30 @@ func lowerStaticContinuousDeclaration(declaration compiler.StaticDeclaration) (g
 		return game.ContinuousEffect{}, false
 	}
 	return effect, true
+}
+
+// lowerStaticGrantedManaAbility builds the runtime mana ability conferred by a
+// permanent-ability grant from the closed typed forms the compiler recognized:
+// the bare tap-for-one-mana-of-any-color ability and the Treasure-style
+// sacrifice ability that adds N mana of one chosen color.
+func lowerStaticGrantedManaAbility(granted *compiler.StaticGrantedManaAbility) (game.ManaAbility, bool) {
+	if !granted.TapCost {
+		return game.ManaAbility{}, false
+	}
+	switch {
+	case granted.AnyColor:
+		if granted.Amount != 1 || granted.Sacrifice || granted.AnyOneColor {
+			return game.ManaAbility{}, false
+		}
+		return game.TapAnyColorManaAbility(), true
+	case granted.AnyOneColor:
+		if granted.Amount < 2 || !granted.Sacrifice {
+			return game.ManaAbility{}, false
+		}
+		return game.TapSacrificeAnyOneColorManaAbility(granted.Text, granted.Amount), true
+	default:
+		return game.ManaAbility{}, false
+	}
 }
 
 func lowerStaticAddedTypes(continuous *compiler.StaticContinuousDeclaration) ([]types.Card, []types.Sub, bool) {
@@ -420,7 +479,7 @@ func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.
 	var affectedSource, affectedAttached bool
 	switch declaration.Group.Domain {
 	case compiler.StaticGroupSource:
-		affectedSource = true
+		affectedSource = declaration.Rule.Kind != compiler.StaticRuleAdditionalTriggerForChosenCreatureType
 	case compiler.StaticGroupAttachedObject:
 		affectedAttached = true
 	default:
@@ -468,6 +527,8 @@ func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {
 		return compiler.StaticRuleDomainAttackBlock
 	case compiler.StaticRuleDoesntUntap:
 		return compiler.StaticRuleDomainUntap
+	case compiler.StaticRuleAdditionalTriggerForChosenCreatureType:
+		return compiler.StaticRuleDomainTrigger
 	default:
 		return compiler.StaticRuleDomainUnknown
 	}
@@ -501,9 +562,136 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 			AttackTaxGeneric: declaration.Player.AttackTaxGeneric,
 		})
 		return true
+	case compiler.StaticPlayerRuleAdditionalLandPlays:
+		if declaration.Player.AdditionalLandPlays <= 0 {
+			return false
+		}
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:                game.RuleEffectAdditionalLandPlays,
+			AffectedPlayer:      game.PlayerYou,
+			AdditionalLandPlays: declaration.Player.AdditionalLandPlays,
+		})
+		return true
 	default:
 		return false
 	}
+}
+
+// appendStaticOpponentActionRestrictionDeclaration adds the continuous cast and
+// activation prohibitions described by an opponent action restriction. "Your
+// opponents"/"each opponent" affects every opponent of the controller; "players"
+// and the passive voice affect every player.
+func appendStaticOpponentActionRestrictionDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	restriction := declaration.OpponentRestriction
+	if restriction == nil || (!restriction.RestrictCastSpells && len(restriction.ActivateTypes) == 0) {
+		return false
+	}
+	affected := game.PlayerOpponent
+	if restriction.AffectsAllPlayers {
+		affected = game.PlayerAny
+	}
+	if restriction.RestrictCastSpells {
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:                           game.RuleEffectCantCastSpells,
+			AffectedPlayer:                 affected,
+			RestrictedDuringControllerTurn: restriction.DuringControllerTurn,
+		})
+	}
+	if len(restriction.ActivateTypes) > 0 {
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:                           game.RuleEffectCantActivateAbilities,
+			AffectedPlayer:                 affected,
+			PermanentTypes:                 append([]types.Card(nil), restriction.ActivateTypes...),
+			RestrictedDuringControllerTurn: restriction.DuringControllerTurn,
+		})
+	}
+	return true
+}
+
+// appendStaticSpellUncounterableDeclaration lowers a "[<type>] spells you control
+// can't be countered." declaration into a controller-scoped can't-be-countered
+// rule effect on the static ability body. The body functions on the battlefield
+// (no Stack zone), so the runtime collects it as an active rule effect and stops
+// counters targeting matching spells the controller casts.
+func appendStaticSpellUncounterableDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	if declaration.SpellUncounterable == nil ||
+		declaration.Group.Domain != compiler.StaticGroupControllerSpells {
+		return false
+	}
+	spellTypes := make([]types.Card, 0, len(declaration.SpellUncounterable.SpellTypes))
+	for _, spellType := range declaration.SpellUncounterable.SpellTypes {
+		cardType, ok := lowerStaticCardType(spellType)
+		if !ok {
+			return false
+		}
+		spellTypes = append(spellTypes, cardType)
+	}
+	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+		Kind:               game.RuleEffectCantBeCountered,
+		AffectedController: game.ControllerYou,
+		SpellTypes:         spellTypes,
+	})
+	return true
+}
+
+// appendStaticUntapStepDeclaration lowers an "Untap <group> you control during
+// each other player's untap step." declaration into a controller-scoped extra-
+// untap rule effect on the static ability body. The self form scopes the effect
+// to the source permanent; the group forms filter the controller's permanents by
+// card type. The runtime collects the body as an active rule effect (it
+// functions on the battlefield) and untaps the matching permanents during each
+// other player's untap step.
+func appendStaticUntapStepDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	if declaration.Untap == nil {
+		return false
+	}
+	if declaration.Untap.Self {
+		if declaration.Group.Domain != compiler.StaticGroupSource ||
+			len(declaration.Untap.PermanentTypes) != 0 {
+			return false
+		}
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectUntapDuringOtherPlayersUntapStep,
+			AffectedSource: true,
+		})
+		return true
+	}
+	if declaration.Group.Domain != compiler.StaticGroupSourceControllerPermanents {
+		return false
+	}
+	permanentTypes := make([]types.Card, 0, len(declaration.Untap.PermanentTypes))
+	for _, cardType := range declaration.Untap.PermanentTypes {
+		value, ok := lowerStaticCardType(cardType)
+		if !ok {
+			return false
+		}
+		permanentTypes = append(permanentTypes, value)
+	}
+	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+		Kind:               game.RuleEffectUntapDuringOtherPlayersUntapStep,
+		AffectedController: game.ControllerYou,
+		PermanentTypes:     permanentTypes,
+	})
+	return true
+}
+
+// appendStaticEnteringTriggerMultiplierDeclaration lowers an "If <filter>
+// entering causes a triggered ability of a permanent you control to trigger,
+// that ability triggers an additional time." declaration into a controller-scoped
+// trigger-multiplier rule effect on the static ability body. The runtime collects
+// it as an active rule effect and fires a matching triggered ability one extra
+// time. PermanentTypes carries the entering permanent's type filter; an empty
+// filter matches any entering permanent.
+func appendStaticEnteringTriggerMultiplierDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	if declaration.EnteringMultiplier == nil {
+		return false
+	}
+	permanentTypes := append([]types.Card(nil), declaration.EnteringMultiplier.EnteringTypes...)
+	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+		Kind:           game.RuleEffectAdditionalTriggerForEnteringPermanent,
+		PermanentTypes: permanentTypes,
+	})
+	return true
 }
 
 func lowerStaticRuleEffects(kind compiler.StaticRuleKind) ([]game.RuleEffect, bool) {
@@ -546,6 +734,8 @@ func lowerStaticRuleKind(kind compiler.StaticRuleKind) (game.RuleEffectKind, boo
 		return game.RuleEffectCantBeCountered, true
 	case compiler.StaticRuleDoesntUntap:
 		return game.RuleEffectDoesntUntap, true
+	case compiler.StaticRuleAdditionalTriggerForChosenCreatureType:
+		return game.RuleEffectAdditionalTriggerForChosenCreatureType, true
 	default:
 		return game.RuleEffectNone, false
 	}
@@ -630,6 +820,9 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 		Kind:             game.CostModifierSpell,
 		GenericReduction: cost.GenericReduction,
 		GenericIncrease:  cost.GenericIncrease,
+	}
+	if cost.ChosenSubtypeFromEntryChoice {
+		base.ChosenSubtypeFromEntryChoice = true
 	}
 	if cost.MatchSpellColor {
 		if len(cost.SpellTypes) != 0 {
@@ -783,6 +976,9 @@ func lowerStaticSelection(selection compiler.StaticSelection) (game.Selection, b
 		result.RequiredTypes = append(result.RequiredTypes, value)
 	}
 	result.SubtypesAny = append(result.SubtypesAny, selection.SubtypesAny...)
+	if selection.SubtypeFromEntryChoice {
+		result.SubtypeFromSourceEntryChoice = true
+	}
 	return result, len(result.Validate()) == 0
 }
 

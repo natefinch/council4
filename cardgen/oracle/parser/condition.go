@@ -30,34 +30,40 @@ type ConditionPredicateKind string
 
 // Condition predicates recognized by the parser.
 const (
-	ConditionPredicateUnknown                              ConditionPredicateKind = ""
-	ConditionPredicateControllerLifeAtLeast                ConditionPredicateKind = "ConditionPredicateControllerLifeAtLeast"
-	ConditionPredicateControllerHandSizeAtLeast            ConditionPredicateKind = "ConditionPredicateControllerHandSizeAtLeast"
-	ConditionPredicateControllerHandEmpty                  ConditionPredicateKind = "ConditionPredicateControllerHandEmpty"
-	ConditionPredicateAnyPlayerLifeAtMost                  ConditionPredicateKind = "ConditionPredicateAnyPlayerLifeAtMost"
-	ConditionPredicateOpponentCountAtLeast                 ConditionPredicateKind = "ConditionPredicateOpponentCountAtLeast"
-	ConditionPredicateControls                             ConditionPredicateKind = "ConditionPredicateControls"
-	ConditionPredicateGraveyardCardCountAtLeast            ConditionPredicateKind = "ConditionPredicateGraveyardCardCountAtLeast"
-	ConditionPredicateGraveyardCardTypeCountAtLeast        ConditionPredicateKind = "ConditionPredicateGraveyardCardTypeCountAtLeast"
-	ConditionPredicateCreaturePowerDiversityAtLeast        ConditionPredicateKind = "ConditionPredicateCreaturePowerDiversityAtLeast"
-	ConditionPredicateEventSubjectWasKicked                ConditionPredicateKind = "ConditionPredicateEventSubjectWasKicked"
-	ConditionPredicateEventSubjectWasCast                  ConditionPredicateKind = "ConditionPredicateEventSubjectWasCast"
-	ConditionPredicateEventSubjectWasCastByController      ConditionPredicateKind = "ConditionPredicateEventSubjectWasCastByController"
-	ConditionPredicateEventSubjectHadNoCounter             ConditionPredicateKind = "ConditionPredicateEventSubjectHadNoCounter"
-	ConditionPredicateEventSubjectHadCounters              ConditionPredicateKind = "ConditionPredicateEventSubjectHadCounters"
-	ConditionPredicatePriorInstructionNotAccepted          ConditionPredicateKind = "ConditionPredicatePriorInstructionNotAccepted"
-	ConditionPredicatePriorInstructionAccepted             ConditionPredicateKind = "ConditionPredicatePriorInstructionAccepted"
-	ConditionPredicateEventPlayerDoesNotPay                ConditionPredicateKind = "ConditionPredicateEventPlayerDoesNotPay"
-	ConditionPredicateCounterPlacementOnControlledCreature ConditionPredicateKind = "ConditionPredicateCounterPlacementOnControlledCreature"
-	ConditionPredicateControllerCounterPlacement           ConditionPredicateKind = "ConditionPredicateControllerCounterPlacement"
-	ConditionPredicateDamageByControlledSource             ConditionPredicateKind = "ConditionPredicateDamageByControlledSource"
-	ConditionPredicateTokenCreationUnderController         ConditionPredicateKind = "ConditionPredicateTokenCreationUnderController"
-	ConditionPredicateSourceWouldDie                       ConditionPredicateKind = "ConditionPredicateSourceWouldDie"
-	ConditionPredicateSourceWouldGoToGraveyard             ConditionPredicateKind = "ConditionPredicateSourceWouldGoToGraveyard"
-	ConditionPredicateObjectMatches                        ConditionPredicateKind = "ConditionPredicateObjectMatches"
-	ConditionPredicateObjectExists                         ConditionPredicateKind = "ConditionPredicateObjectExists"
-	ConditionPredicateAnyOpponentPoisonAtLeast             ConditionPredicateKind = "ConditionPredicateAnyOpponentPoisonAtLeast"
-	ConditionPredicateControllerHandSizeExactly            ConditionPredicateKind = "ConditionPredicateControllerHandSizeExactly"
+	ConditionPredicateUnknown                               ConditionPredicateKind = ""
+	ConditionPredicateControllerLifeAtLeast                 ConditionPredicateKind = "ConditionPredicateControllerLifeAtLeast"
+	ConditionPredicateControllerHandSizeAtLeast             ConditionPredicateKind = "ConditionPredicateControllerHandSizeAtLeast"
+	ConditionPredicateControllerHandEmpty                   ConditionPredicateKind = "ConditionPredicateControllerHandEmpty"
+	ConditionPredicateAnyPlayerLifeAtMost                   ConditionPredicateKind = "ConditionPredicateAnyPlayerLifeAtMost"
+	ConditionPredicateOpponentCountAtLeast                  ConditionPredicateKind = "ConditionPredicateOpponentCountAtLeast"
+	ConditionPredicateControls                              ConditionPredicateKind = "ConditionPredicateControls"
+	ConditionPredicateGraveyardCardCountAtLeast             ConditionPredicateKind = "ConditionPredicateGraveyardCardCountAtLeast"
+	ConditionPredicateGraveyardCardTypeCountAtLeast         ConditionPredicateKind = "ConditionPredicateGraveyardCardTypeCountAtLeast"
+	ConditionPredicateCreaturePowerDiversityAtLeast         ConditionPredicateKind = "ConditionPredicateCreaturePowerDiversityAtLeast"
+	ConditionPredicateEventSubjectWasKicked                 ConditionPredicateKind = "ConditionPredicateEventSubjectWasKicked"
+	ConditionPredicateEventSubjectWasCast                   ConditionPredicateKind = "ConditionPredicateEventSubjectWasCast"
+	ConditionPredicateEventSubjectWasCastByController       ConditionPredicateKind = "ConditionPredicateEventSubjectWasCastByController"
+	ConditionPredicateEventSubjectHadNoCounter              ConditionPredicateKind = "ConditionPredicateEventSubjectHadNoCounter"
+	ConditionPredicateEventSubjectHadCounters               ConditionPredicateKind = "ConditionPredicateEventSubjectHadCounters"
+	ConditionPredicatePriorInstructionNotAccepted           ConditionPredicateKind = "ConditionPredicatePriorInstructionNotAccepted"
+	ConditionPredicatePriorInstructionAccepted              ConditionPredicateKind = "ConditionPredicatePriorInstructionAccepted"
+	ConditionPredicateEventPlayerDoesNotPay                 ConditionPredicateKind = "ConditionPredicateEventPlayerDoesNotPay"
+	ConditionPredicateCounterPlacementOnControlledCreature  ConditionPredicateKind = "ConditionPredicateCounterPlacementOnControlledCreature"
+	ConditionPredicateControllerCounterPlacement            ConditionPredicateKind = "ConditionPredicateControllerCounterPlacement"
+	ConditionPredicateCounterPlacementOnControlledPermanent ConditionPredicateKind = "ConditionPredicateCounterPlacementOnControlledPermanent"
+	ConditionPredicateDamageByControlledSource              ConditionPredicateKind = "ConditionPredicateDamageByControlledSource"
+	ConditionPredicateTokenCreationUnderController          ConditionPredicateKind = "ConditionPredicateTokenCreationUnderController"
+	ConditionPredicateSourceWouldDie                        ConditionPredicateKind = "ConditionPredicateSourceWouldDie"
+	ConditionPredicateSourceWouldGoToGraveyard              ConditionPredicateKind = "ConditionPredicateSourceWouldGoToGraveyard"
+	ConditionPredicateObjectMatches                         ConditionPredicateKind = "ConditionPredicateObjectMatches"
+	ConditionPredicateObjectExists                          ConditionPredicateKind = "ConditionPredicateObjectExists"
+	ConditionPredicateAnyOpponentPoisonAtLeast              ConditionPredicateKind = "ConditionPredicateAnyOpponentPoisonAtLeast"
+	ConditionPredicateControllerHandSizeExactly             ConditionPredicateKind = "ConditionPredicateControllerHandSizeExactly"
+	ConditionPredicateCreatedTokenThisTurn                  ConditionPredicateKind = "ConditionPredicateCreatedTokenThisTurn"
+	ConditionPredicateControllerWouldCreateNamedToken       ConditionPredicateKind = "ConditionPredicateControllerWouldCreateNamedToken"
+	ConditionPredicateControlComparison                     ConditionPredicateKind = "ConditionPredicateControlComparison"
+	ConditionPredicateEventSubjectNameUnique                ConditionPredicateKind = "ConditionPredicateEventSubjectNameUnique"
+	ConditionPredicateTargetColor                           ConditionPredicateKind = "ConditionPredicateTargetColor"
 )
 
 // ConditionControlScope identifies which players' battlefields a "controls"
@@ -66,9 +72,10 @@ type ConditionControlScope string
 
 // Control scopes recognized by the parser.
 const (
-	ConditionControlScopeController  ConditionControlScope = ""
-	ConditionControlScopeAnyOpponent ConditionControlScope = "ConditionControlScopeAnyOpponent"
-	ConditionControlScopeOpponents   ConditionControlScope = "ConditionControlScopeOpponents"
+	ConditionControlScopeController   ConditionControlScope = ""
+	ConditionControlScopeAnyOpponent  ConditionControlScope = "ConditionControlScopeAnyOpponent"
+	ConditionControlScopeOpponents    ConditionControlScope = "ConditionControlScopeOpponents"
+	ConditionControlScopeEachOpponent ConditionControlScope = "ConditionControlScopeEachOpponent"
 )
 
 // ConditionComparison identifies the numeric comparison a count predicate uses.
@@ -186,6 +193,29 @@ type ConditionClause struct {
 	// compiler confirms the subject binds the source by matching this identity
 	// instead of comparing the reference span to the subject span.
 	SubjectRefID int `json:"-"`
+
+	// ControlComparison carries the typed cross-player control-count comparison
+	// for ConditionPredicateControlComparison ("an opponent controls more lands
+	// than you"). Its zero value is unused.
+	ControlComparison ConditionControlComparison `json:",omitzero"`
+
+	// SourceInGraveyard marks a condition introduced by "this card/creature is in
+	// your graveyard and ...", as on the Incarnation cycle (Anger, Wonder). It
+	// reports that the static ability functions from the graveyard zone; the
+	// remaining predicate carries the accompanying runtime condition (e.g. "you
+	// control a Mountain").
+	SourceInGraveyard bool `json:",omitempty"`
+}
+
+// ConditionControlComparison describes a cross-player control-count comparison
+// ("an opponent controls more lands than you"). LeftScope counts the subject
+// player group and RightScope the "than" reference group; Greater is true for
+// "more" and false for "fewer"/"less". The counted permanent Selection is
+// carried on the enclosing ConditionClause.
+type ConditionControlComparison struct {
+	LeftScope  ConditionControlScope `json:",omitempty"`
+	RightScope ConditionControlScope `json:",omitempty"`
+	Greater    bool                  `json:",omitempty"`
 }
 
 func emitConditionClauses(abilities []Ability) {
@@ -213,6 +243,9 @@ func parseConditionClauses(tokens []shared.Token, atoms Atoms) []ConditionClause
 	for i := 0; i < len(tokens); i++ {
 		intro, width := conditionIntroAt(tokens, i)
 		if intro == ConditionIntroUnknown {
+			continue
+		}
+		if effectWordsAt(tokens, i, creatureSpellHasteConditionWords...) {
 			continue
 		}
 		end := conditionClauseEnd(tokens, i)
@@ -282,9 +315,12 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeCounterPlacementCondition,
 		recognizeDamageSourceCondition,
 		recognizeTokenCreationCondition,
+		recognizeControlComparisonCondition,
+		recognizeGraveyardControlsCondition,
 		recognizeControlsCondition,
 		recognizeTotalPowerCondition,
 		recognizeSourceDeathCondition,
+		recognizeTargetColorCondition,
 	} {
 		if clause, ok := recognize(body, atoms); ok {
 			return clause, true
@@ -322,7 +358,28 @@ func recognizeEventSubjectCondition(body []shared.Token, atoms Atoms) (Condition
 	if clause, ok := recognizeEventSubjectCounterCondition(body, atoms); ok {
 		return clause, true
 	}
+	if clause, ok := recognizeEventSubjectNameUniqueCondition(body); ok {
+		return clause, true
+	}
 	return recognizeEventSubjectMatchCondition(body, atoms)
+}
+
+// recognizeEventSubjectNameUniqueCondition handles the name-uniqueness
+// intervening condition "it doesn't have the same name as another creature you
+// control or a creature card in your graveyard" (Guardian Project). It compares
+// the entering creature's name against the other creatures the controller
+// controls and the creature cards in their graveyard.
+func recognizeEventSubjectNameUniqueCondition(body []shared.Token) (ConditionClause, bool) {
+	if tokenWordsEqual(body,
+		"it", "doesn't", "have", "the", "same", "name", "as",
+		"another", "creature", "you", "control",
+		"or", "a", "creature", "card", "in", "your", "graveyard") {
+		return ConditionClause{
+			Predicate:     ConditionPredicateEventSubjectNameUnique,
+			ObjectBinding: ConditionObjectBindingEventPermanent,
+		}, true
+	}
+	return ConditionClause{}, false
 }
 
 // recognizeEventSubjectCounterCondition handles "it had no <counter> counters"
@@ -372,7 +429,34 @@ func recognizeEventSubjectMatchCondition(body []shared.Token, atoms Atoms) (Cond
 	}, true
 }
 
-// recognizeSourceStateCondition handles "this <selection> is <state>" forms that
+// recognizeTargetColorCondition handles the bare-color target rider "it's
+// <color>" / "it is <color>" that follows a single-target counter or destroy
+// effect (Pyroblast, Red Elemental Blast: "Counter target spell if it's blue."
+// / "Destroy target permanent if it's blue."). The "it" refers to the effect's
+// chosen target, so the predicate is bound to the target by the counter/destroy
+// lowering rather than to the source or a triggering event. Only a single bare
+// color word is accepted; any noun ("it's a creature") is handled by
+// recognizeEventSubjectMatchCondition instead.
+func recognizeTargetColorCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "it's")
+	if !ok {
+		if rest, ok = cutTokenPrefix(body, "it", "is"); !ok {
+			return ConditionClause{}, false
+		}
+	}
+	if len(rest) != 1 {
+		return ConditionClause{}, false
+	}
+	color, ok := atoms.ColorAt(rest[0].Span)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate: ConditionPredicateTargetColor,
+		Selection: ConditionSelection{ColorsAny: []TriggerColor{triggerColorFromAtom(color)}},
+	}, true
+}
+
 // inspect the source permanent.
 func recognizeSourceStateCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
 	rest, ok := cutTokenPrefix(body, "this")
@@ -545,9 +629,22 @@ func recognizeCounterPlacementCondition(body []shared.Token, atoms Atoms) (Condi
 	if tokenWordsEqual(body, "you", "would", "put", "one", "or", "more", "counters", "on", "a", "permanent", "or", "player") {
 		return ConditionClause{Predicate: ConditionPredicateControllerCounterPlacement}, true
 	}
+	if tokenWordsEqual(body, "an", "effect", "would", "put", "one", "or", "more", "counters", "on", "a", "permanent", "you", "control") {
+		return ConditionClause{Predicate: ConditionPredicateCounterPlacementOnControlledPermanent}, true
+	}
 	rest, ok := cutTokenPrefix(body, "one", "or", "more")
 	if !ok {
 		return ConditionClause{}, false
+	}
+	if tail, ok := stripTokenSuffix(rest, "counters", "would", "be", "put", "on", "a", "permanent", "you", "control"); ok && len(tail) > 0 {
+		counterKind, ok := conditionCounterAtom(shared.SpanOf(body), atoms)
+		if !ok {
+			return ConditionClause{}, false
+		}
+		return ConditionClause{
+			Predicate: ConditionPredicateCounterPlacementOnControlledPermanent,
+			Counter:   counterKind,
+		}, true
 	}
 	tail, ok := stripTokenSuffix(rest, "counters", "would", "be", "put", "on", "a", "creature", "you", "control")
 	if !ok || len(tail) == 0 {
@@ -591,10 +688,124 @@ func recognizeDamageSourceCondition(body []shared.Token, atoms Atoms) (Condition
 }
 
 func recognizeTokenCreationCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
-	if tokenWordsEqual(body, "an", "effect", "would", "create", "one", "or", "more", "tokens", "under", "your", "control") {
+	if tokenWordsEqual(body, "an", "effect", "would", "create", "one", "or", "more", "tokens", "under", "your", "control") ||
+		tokenWordsEqual(body, "one", "or", "more", "tokens", "would", "be", "created", "under", "your", "control") {
 		return ConditionClause{Predicate: ConditionPredicateTokenCreationUnderController}, true
 	}
+	if tokenWordsEqual(body, "you", "created", "a", "token", "this", "turn") {
+		return ConditionClause{Predicate: ConditionPredicateCreatedTokenThisTurn}, true
+	}
+	if _, ok := cutTokenPrefix(body, "you", "would", "create", "a"); ok {
+		return ConditionClause{Predicate: ConditionPredicateControllerWouldCreateNamedToken}, true
+	}
 	return ConditionClause{}, false
+}
+
+// recognizeControlComparisonCondition matches a cross-player control-count
+// comparison: "<subject> controls more|fewer <selection> than <reference>",
+// where subject and reference each name the controller ("you") or an opponent.
+// It fails closed unless exactly one side is the controller and the other an
+// opponent scope, so the comparison has a well-defined direction.
+func recognizeControlComparisonCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	thanIdx := tokenWordIndex(body, "than")
+	if thanIdx <= 0 || thanIdx == len(body)-1 {
+		return ConditionClause{}, false
+	}
+	leftScope, afterScope, ok := cutComparisonSubjectScope(body[:thanIdx])
+	if !ok {
+		return ConditionClause{}, false
+	}
+	greater, nounTokens, ok := cutComparisonDirection(afterScope)
+	if !ok || len(nounTokens) == 0 {
+		return ConditionClause{}, false
+	}
+	rightScope, ok := comparisonReferenceScope(body[thanIdx+1:])
+	if !ok || !validComparisonScopes(leftScope, rightScope) {
+		return ConditionClause{}, false
+	}
+	selection, ok := parseConditionSelection(nounTokens, atoms)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate: ConditionPredicateControlComparison,
+		Selection: selection,
+		ControlComparison: ConditionControlComparison{
+			LeftScope:  leftScope,
+			RightScope: rightScope,
+			Greater:    greater,
+		},
+	}, true
+}
+
+// cutComparisonSubjectScope reads the subject player scope opening a control
+// comparison: "you control" (controller) or "an opponent controls".
+func cutComparisonSubjectScope(tokens []shared.Token) (ConditionControlScope, []shared.Token, bool) {
+	if rest, ok := cutTokenPrefix(tokens, "you", "control"); ok {
+		return ConditionControlScopeController, rest, true
+	}
+	if rest, ok := cutTokenPrefix(tokens, "an", "opponent", "controls"); ok {
+		return ConditionControlScopeAnyOpponent, rest, true
+	}
+	return ConditionControlScopeController, nil, false
+}
+
+// cutComparisonDirection reads the comparison direction word: "more" (greater)
+// or "fewer"/"less" (lesser).
+func cutComparisonDirection(tokens []shared.Token) (bool, []shared.Token, bool) {
+	if rest, ok := cutTokenPrefix(tokens, "more"); ok {
+		return true, rest, true
+	}
+	if rest, ok := cutTokenPrefix(tokens, "fewer"); ok {
+		return false, rest, true
+	}
+	if rest, ok := cutTokenPrefix(tokens, "less"); ok {
+		return false, rest, true
+	}
+	return false, nil, false
+}
+
+// comparisonReferenceScope reads the "than" reference player scope, which must
+// consume every reference token: "you", "an"/"any opponent", or "each opponent".
+func comparisonReferenceScope(tokens []shared.Token) (ConditionControlScope, bool) {
+	switch {
+	case tokenWordsEqual(tokens, "you"):
+		return ConditionControlScopeController, true
+	case tokenWordsEqual(tokens, "an", "opponent"), tokenWordsEqual(tokens, "any", "opponent"):
+		return ConditionControlScopeAnyOpponent, true
+	case tokenWordsEqual(tokens, "each", "opponent"):
+		return ConditionControlScopeEachOpponent, true
+	default:
+		return ConditionControlScopeController, false
+	}
+}
+
+// validComparisonScopes requires exactly one side to be the controller so the
+// comparison contrasts the controller against an opponent scope.
+func validComparisonScopes(left, right ConditionControlScope) bool {
+	return (left == ConditionControlScopeController) != (right == ConditionControlScopeController)
+}
+
+// recognizeGraveyardControlsCondition matches the Incarnation-cycle condition
+// "this card/creature is in your graveyard and <controls condition>" (Anger,
+// Brawn, Filth, Valor, Wonder). The leading clause reports that the static
+// ability functions from the graveyard; the trailing clause is delegated to
+// recognizeControlsCondition for the accompanying "you control a <land>"
+// requirement, which becomes the runtime condition.
+func recognizeGraveyardControlsCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "this", "card", "is", "in", "your", "graveyard", "and")
+	if !ok {
+		rest, ok = cutTokenPrefix(body, "this", "creature", "is", "in", "your", "graveyard", "and")
+		if !ok {
+			return ConditionClause{}, false
+		}
+	}
+	clause, ok := recognizeControlsCondition(rest, atoms)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	clause.SourceInGraveyard = true
+	return clause, true
 }
 
 func recognizeControlsCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {

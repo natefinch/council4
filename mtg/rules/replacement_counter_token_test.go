@@ -133,6 +133,54 @@ func TestTokenCreationReplacementUsesCurrentController(t *testing.T) {
 	}
 }
 
+func TestControlledPermanentCounterReplacementDoublesAnyCounterKind(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, doublingSeasonCounterReplacementCardDef())
+	mine := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "My Permanent",
+		Types: []types.Card{types.Artifact},
+	}})
+	theirs := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Their Permanent",
+		Types: []types.Card{types.Artifact},
+	}})
+
+	if !addCountersToPermanent(g, mine, counter.Charge, 2) {
+		t.Fatal("addCountersToPermanent(charge) = false, want true")
+	}
+	if got := mine.Counters.Get(counter.Charge); got != 4 {
+		t.Fatalf("charge counters on controlled permanent = %d, want 4", got)
+	}
+	if !addCountersToPermanent(g, theirs, counter.Charge, 2) {
+		t.Fatal("addCountersToPermanent(charge, opponent) = false, want true")
+	}
+	if got := theirs.Counters.Get(counter.Charge); got != 2 {
+		t.Fatalf("charge counters on opponent permanent = %d, want 2 (not doubled)", got)
+	}
+}
+
+func TestCounterPlacementReplacementAddsToSpecificCounterKind(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, hardenedScalesReplacementCardDef())
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Counter Creature",
+		Types: []types.Card{types.Creature},
+	}})
+
+	if !addCountersToPermanent(g, creature, counter.PlusOnePlusOne, 2) {
+		t.Fatal("addCountersToPermanent(+1/+1) = false, want true")
+	}
+	if got := creature.Counters.Get(counter.PlusOnePlusOne); got != 3 {
+		t.Fatalf("+1/+1 counters = %d, want 3", got)
+	}
+	if !addCountersToPermanent(g, creature, counter.Stun, 1) {
+		t.Fatal("addCountersToPermanent(stun) = false, want true")
+	}
+	if got := creature.Counters.Get(counter.Stun); got != 1 {
+		t.Fatalf("stun counters = %d, want 1", got)
+	}
+}
+
 func TestCounterPlacementReplacementDoublesSpecificCounterKind(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addReplacementPermanent(t, g, game.Player1, counterDoublingReplacementCardDef())
@@ -430,6 +478,38 @@ func counterDoublingReplacementCardDef() *game.CardDef {
 			game.CounterPlacementReplacement(
 				"If one or more +1/+1 counters would be put on a creature you control, twice that many +1/+1 counters are put on that creature instead.",
 				2,
+				0,
+				counter.PlusOnePlusOne,
+				game.TriggerControllerYou,
+			),
+		},
+	}}
+}
+
+func doublingSeasonCounterReplacementCardDef() *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  "Doubling Season",
+		Types: []types.Card{types.Enchantment},
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.ControlledPermanentCounterPlacementReplacement(
+				"If an effect would put one or more counters on a permanent you control, it puts twice that many of those counters on that permanent instead.",
+				2,
+				0,
+				game.TriggerControllerYou,
+			),
+		},
+	}}
+}
+
+func hardenedScalesReplacementCardDef() *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  "Hardened Scales",
+		Types: []types.Card{types.Enchantment},
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.CounterPlacementReplacement(
+				"If one or more +1/+1 counters would be put on a creature you control, that many plus one +1/+1 counters are put on it instead.",
+				0,
+				1,
 				counter.PlusOnePlusOne,
 				game.TriggerControllerYou,
 			),
@@ -445,10 +525,81 @@ func anyCounterDoublingReplacementCardDef() *game.CardDef {
 			game.AnyCounterPlacementReplacement(
 				"If you would put one or more counters on a permanent or player, put twice that many of each of those kinds of counters on that permanent or player instead.",
 				2,
+				0,
 				game.TriggerControllerYou,
 			),
 		},
 	}}
+}
+
+func academyManufactorReplacementCardDef() *game.CardDef {
+	def := func(name string, sub types.Sub) *game.CardDef {
+		return &game.CardDef{CardFace: game.CardFace{
+			Name:     name,
+			Types:    []types.Card{types.Artifact},
+			Subtypes: []types.Sub{sub},
+		}}
+	}
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  "Academy Manufactor",
+		Types: []types.Card{types.Artifact, types.Creature},
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.NamedTokenSetReplacement(
+				"If you would create a Clue, Food, or Treasure token, instead create one of each.",
+				[]*game.CardDef{def("Clue", types.Clue), def("Food", types.Food), def("Treasure", types.Treasure)},
+				game.TriggerControllerYou,
+			),
+		},
+	}}
+}
+
+func TestNamedTokenSetReplacementCreatesOneOfEach(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, academyManufactorReplacementCardDef())
+	treasure := &game.CardDef{CardFace: game.CardFace{Name: "Treasure", Types: []types.Card{types.Artifact}, Subtypes: []types.Sub{types.Treasure}}}
+
+	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player1, treasure, 1, false, [game.NumPlayers]PlayerAgent{}, nil) {
+		t.Fatal("createTokenPermanentsWithChoices() = false, want true")
+	}
+	for _, name := range []string{"Clue", "Food", "Treasure"} {
+		if got := countTokenPermanentsNamed(g, name); got != 1 {
+			t.Fatalf("created %q tokens = %d, want 1", name, got)
+		}
+	}
+}
+
+func TestNamedTokenSetReplacementDoesNotAffectUnnamedTokens(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, academyManufactorReplacementCardDef())
+	soldier := &game.CardDef{CardFace: game.CardFace{Name: "Soldier Token", Types: []types.Card{types.Creature}}}
+
+	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player1, soldier, 1, false, [game.NumPlayers]PlayerAgent{}, nil) {
+		t.Fatal("createTokenPermanentsWithChoices() = false, want true")
+	}
+	if got := countTokenPermanentsNamed(g, "Soldier Token"); got != 1 {
+		t.Fatalf("created Soldier tokens = %d, want 1", got)
+	}
+	for _, name := range []string{"Clue", "Food", "Treasure"} {
+		if got := countTokenPermanentsNamed(g, name); got != 0 {
+			t.Fatalf("created %q tokens = %d, want 0", name, got)
+		}
+	}
+}
+
+func TestNamedTokenSetReplacementDoesNotAffectOpponent(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, academyManufactorReplacementCardDef())
+	treasure := &game.CardDef{CardFace: game.CardFace{Name: "Treasure", Types: []types.Card{types.Artifact}, Subtypes: []types.Sub{types.Treasure}}}
+
+	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player2, treasure, 1, false, [game.NumPlayers]PlayerAgent{}, nil) {
+		t.Fatal("createTokenPermanentsWithChoices() = false, want true")
+	}
+	if got := countTokenPermanentsNamed(g, "Treasure"); got != 1 {
+		t.Fatalf("opponent Treasure tokens = %d, want 1", got)
+	}
+	if got := countTokenPermanentsNamed(g, "Clue"); got != 0 {
+		t.Fatalf("opponent Clue tokens = %d, want 0", got)
+	}
 }
 
 func countTokenPermanentsNamed(g *game.Game, name string) int {

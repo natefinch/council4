@@ -8,6 +8,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -19,6 +20,9 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 			return "", err
 		}
 		return fmt.Sprintf("game.EquipActivatedAbility(%s)", renderedCost), nil
+	}
+	if rendered, ok, err := r.renderEquipRestrictedAbility(ctx, ability); ok {
+		return rendered, err
 	}
 	if manaCost, ok := game.ActivatedBodyCyclingCost(ability); ok &&
 		reflect.DeepEqual(*ability, game.CyclingActivatedAbility(manaCost)) {
@@ -98,6 +102,74 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 	return structLit("game.ActivatedAbility", fields), nil
 }
 
+func (r Renderer) renderEquipRestrictedAbility(
+	ctx *renderCtx,
+	ability *game.ActivatedAbility,
+) (rendered string, matched bool, err error) {
+	manaCost, ok := game.ActivatedBodyEquipCost(ability)
+	if !ok {
+		return "", false, nil
+	}
+	supertypes, subtypes, ok := equipRestrictionTypes(ability)
+	if !ok || (len(supertypes) == 0 && len(subtypes) == 0) {
+		return "", false, nil
+	}
+	if !reflect.DeepEqual(*ability, game.EquipRestrictedActivatedAbility(manaCost, supertypes, subtypes)) {
+		return "", false, nil
+	}
+	renderedCost, err := r.renderManaCost(ctx, manaCost)
+	if err != nil {
+		return "", true, err
+	}
+	superLit, err := renderSupertypeSlice(ctx, supertypes)
+	if err != nil {
+		return "", true, err
+	}
+	subLit, err := renderSubtypeSlice(ctx, subtypes)
+	if err != nil {
+		return "", true, err
+	}
+	return fmt.Sprintf(
+		"game.EquipRestrictedActivatedAbility(%s, %s, %s)",
+		renderedCost, superLit, subLit,
+	), true, nil
+}
+
+func equipRestrictionTypes(ability *game.ActivatedAbility) ([]types.Super, []types.Sub, bool) {
+	if len(ability.Content.Modes) != 1 || len(ability.Content.Modes[0].Targets) != 1 {
+		return nil, nil, false
+	}
+	predicate := ability.Content.Modes[0].Targets[0].Predicate
+	return predicate.Supertypes, predicate.Subtypes, true
+}
+
+func renderSupertypeSlice(ctx *renderCtx, supertypes []types.Super) (string, error) {
+	if len(supertypes) == 0 {
+		return "nil", nil
+	}
+	ctx.need(importTypes)
+	literals := make([]string, 0, len(supertypes))
+	for _, st := range supertypes {
+		lit, err := supertypeLiteral(st)
+		if err != nil {
+			return "", err
+		}
+		literals = append(literals, lit)
+	}
+	return fmt.Sprintf("[]types.Super{%s}", strings.Join(literals, ", ")), nil
+}
+
+func renderSubtypeSlice(ctx *renderCtx, subtypes []types.Sub) (string, error) {
+	if len(subtypes) == 0 {
+		return "nil", nil
+	}
+	arguments, err := renderSubtypeArguments(ctx, subtypes)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("[]types.Sub{%s}", arguments), nil
+}
+
 func (r Renderer) renderManaAbility(ctx *renderCtx, ability *game.ManaAbility) (string, error) {
 	for _, manaColor := range []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G, mana.C} {
 		if !reflect.DeepEqual(*ability, game.TapManaAbility(manaColor)) {
@@ -122,6 +194,19 @@ func (r Renderer) renderManaAbility(ctx *renderCtx, ability *game.ManaAbility) (
 			colorLiterals = append(colorLiterals, colorLiteral)
 		}
 		return fmt.Sprintf("game.TapManaChoiceAbility(%s)", strings.Join(colorLiterals, ", ")), nil
+	}
+	if colors, count, ok := tapManaChoiceCountColors(ability); ok &&
+		reflect.DeepEqual(*ability, game.TapManaChoiceCountAbility(ability.Text, count, colors...)) {
+		ctx.need(importMana)
+		colorLiterals := make([]string, 0, len(colors))
+		for _, manaColor := range colors {
+			colorLiteral, err := renderManaColor(manaColor)
+			if err != nil {
+				return "", err
+			}
+			colorLiterals = append(colorLiterals, colorLiteral)
+		}
+		return fmt.Sprintf("game.TapManaChoiceCountAbility(%q, %d, %s)", ability.Text, count, strings.Join(colorLiterals, ", ")), nil
 	}
 	if reflect.DeepEqual(*ability, game.TapChosenColorManaAbility(ability.Text)) {
 		return fmt.Sprintf("game.TapChosenColorManaAbility(%q)", ability.Text), nil
@@ -150,8 +235,43 @@ func (r Renderer) renderManaAbility(ctx *renderCtx, ability *game.ManaAbility) (
 			}
 		}
 	}
+	if linkID, ok := linkedExileColorManaLinkID(ability); ok &&
+		reflect.DeepEqual(*ability, game.TapLinkedExileColorManaAbility(linkID)) {
+		return fmt.Sprintf("game.TapLinkedExileColorManaAbility(%q)", linkID), nil
+	}
+	if selection, ok := amongControlledColorsSelection(ability); ok &&
+		reflect.DeepEqual(*ability, game.TapManaAmongControlledColorsAbility(ability.Text, selection)) {
+		rendered, err := r.renderSelection(ctx, selection)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.TapManaAmongControlledColorsAbility(%q, %s)", ability.Text, rendered), nil
+	}
+	if selection, ok := eachControlledColorSelection(ability); ok &&
+		reflect.DeepEqual(*ability, game.TapManaEachControlledColorAbility(ability.Text, selection)) {
+		rendered, err := r.renderSelection(ctx, selection)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.TapManaEachControlledColorAbility(%q, %s)", ability.Text, rendered), nil
+	}
+
+	if game.IsTapSacrificeAnyOneColorManaAbility(ability) {
+		_, count, ok := game.ManaAbilityChoiceOutput(ability)
+		if ok {
+			return fmt.Sprintf("game.TapSacrificeAnyOneColorManaAbility(%q, %d)", ability.Text, count), nil
+		}
+	}
 
 	var fields []string
+	if ability.ZoneOfFunction != zone.None {
+		ctx.need(importZone)
+		zoneLiteral, err := renderZone(ability.ZoneOfFunction)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ZoneOfFunction: %s,", zoneLiteral))
+	}
 	if ability.ManaCost.Exists {
 		ctx.need(importOpt)
 		manaCostLit, err := r.renderManaCost(ctx, ability.ManaCost.Val)
@@ -214,6 +334,79 @@ func renderTimingRestriction(timing game.TimingRestriction) (string, error) {
 func tapManaChoiceColors(ability *game.ManaAbility) ([]mana.Color, bool) {
 	colors, amount, ok := game.ManaAbilityChoiceOutput(ability)
 	return colors, ok && amount == 1
+}
+
+// tapManaChoiceCountColors extracts the color choices and produced count from a
+// mana ability that adds N mana (N >= 2) of a single chosen color, so the
+// ability can render back to game.TapManaChoiceCountAbility (Gilded Lotus's
+// "Add three mana of any one color."). It rejects the single-mana choice, which
+// renders to game.TapManaChoiceAbility instead.
+func tapManaChoiceCountColors(ability *game.ManaAbility) ([]mana.Color, int, bool) {
+	colors, amount, ok := game.ManaAbilityChoiceOutput(ability)
+	return colors, amount, ok && amount >= 2
+}
+
+// linkedExileColorManaLinkID extracts the imprint link identifier from a mana
+// ability whose single mana-color choice draws on a linked exiled card's colors,
+// so the ability can render back to game.TapLinkedExileColorManaAbility(linkID).
+func linkedExileColorManaLinkID(ability *game.ManaAbility) (string, bool) {
+	if len(ability.Content.Modes) != 1 {
+		return "", false
+	}
+	for i := range ability.Content.Modes[0].Sequence {
+		choose, ok := ability.Content.Modes[0].Sequence[i].Primitive.(game.Choose)
+		if !ok {
+			continue
+		}
+		if choose.Choice.Kind == game.ResolutionChoiceMana &&
+			choose.Choice.ColorSource == game.ResolutionChoiceColorSourceLinkedExileColors {
+			return choose.Choice.LinkID, true
+		}
+	}
+	return "", false
+}
+
+// amongControlledColorsSelection extracts the permanent filter from a mana
+// ability whose single mana-color choice draws on the colors of permanents the
+// controller controls, so the ability can render back to
+// game.TapManaAmongControlledColorsAbility (Mox Amber, Plaza of Heroes).
+func amongControlledColorsSelection(ability *game.ManaAbility) (game.Selection, bool) {
+	if len(ability.Content.Modes) != 1 {
+		return game.Selection{}, false
+	}
+	for i := range ability.Content.Modes[0].Sequence {
+		choose, ok := ability.Content.Modes[0].Sequence[i].Primitive.(game.Choose)
+		if !ok {
+			continue
+		}
+		if choose.Choice.Kind == game.ResolutionChoiceMana &&
+			choose.Choice.ColorSource == game.ResolutionChoiceColorSourceControlledPermanentColors &&
+			choose.Choice.Selection != nil {
+			return *choose.Choice.Selection, true
+		}
+	}
+	return game.Selection{}, false
+}
+
+// eachControlledColorSelection extracts the permanent filter from a mana ability
+// that produces one mana of each color among the controller's permanents, so the
+// ability can render back to game.TapManaEachControlledColorAbility (Bloom
+// Tender). It matches a single AddMana instruction carrying an EachControlledColor
+// selection.
+func eachControlledColorSelection(ability *game.ManaAbility) (game.Selection, bool) {
+	if len(ability.Content.Modes) != 1 {
+		return game.Selection{}, false
+	}
+	for i := range ability.Content.Modes[0].Sequence {
+		add, ok := ability.Content.Modes[0].Sequence[i].Primitive.(game.AddMana)
+		if !ok {
+			continue
+		}
+		if add.EachControlledColor != nil {
+			return *add.EachControlledColor, true
+		}
+	}
+	return game.Selection{}, false
 }
 
 func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.TriggeredAbility) (string, error) {
@@ -339,6 +532,7 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		(pattern.RequireKickerPaid && pattern.Event != game.EventSpellCast) ||
 		(pattern.RequireHistoric && pattern.Event != game.EventSpellCast) ||
 		(pattern.MatchSpellCopy && pattern.Event != game.EventSpellCast) ||
+		(pattern.RequireTappedForMana && pattern.Event != game.EventPermanentTapped) ||
 		(pattern.ExcludeManaAbility && pattern.Event != game.EventAbilityActivated) ||
 		(pattern.Event == game.EventAbilityActivated && !pattern.ExcludeManaAbility) ||
 		(pattern.PlayerEventOrdinalThisTurn > 0 &&
@@ -451,6 +645,16 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 	}
 	if pattern.MatchSpellCopy {
 		fields = append(fields, "MatchSpellCopy: true,")
+	}
+	if pattern.RequireTappedForMana {
+		fields = append(fields, "RequireTappedForMana: true,")
+	}
+	if pattern.UnionEvent != game.EventUnknown {
+		unionEvent, err := renderEventKind(pattern.UnionEvent)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("UnionEvent: %s,", unionEvent))
 	}
 	if pattern.ExcludeManaAbility {
 		fields = append(fields, "ExcludeManaAbility: true,")
@@ -638,6 +842,7 @@ func validateTriggerPatternCardSelection(pattern *game.TriggerPattern) error {
 	if pattern.Event == game.EventSpellCast {
 		unsupported.Supertypes = nil
 		unsupported.SubtypesAny = nil
+		unsupported.SubtypeFromSourceEntryChoice = false
 		unsupported.ColorsAny = nil
 		unsupported.Colorless = false
 		unsupported.Multicolored = false

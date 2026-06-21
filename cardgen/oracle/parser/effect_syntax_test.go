@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -79,6 +80,197 @@ func TestParseLifeLostThisWayAmountExactness(t *testing.T) {
 	}
 }
 
+func TestParseGreatestCharacteristicDrawAmount(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		kind   EffectDynamicAmountKind
+	}{
+		{"Draw cards equal to the greatest power among creatures you control.", EffectDynamicAmountGreatestPower},
+		{"Draw cards equal to the greatest toughness among creatures you control.", EffectDynamicAmountGreatestToughness},
+		{"Draw cards equal to the greatest mana value among permanents you control.", EffectDynamicAmountGreatestManaValue},
+		{"Draw cards equal to the greatest power among Mutants you control.", EffectDynamicAmountGreatestPower},
+		// Fixed draw stays non-dynamic (regression guard).
+		{"Draw two cards.", EffectDynamicAmountNone},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if got := effects[0].Amount.DynamicKind; got != test.kind {
+				t.Fatalf("draw dynamic kind = %v, want %v", got, test.kind)
+			}
+			if test.kind != EffectDynamicAmountNone && effects[0].Amount.Selection == nil {
+				t.Fatalf("draw amount missing group selection: %#v", effects[0].Amount)
+			}
+		})
+	}
+}
+
+func TestParseCastAsThoughFlashEffect(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		flash  bool
+	}{
+		// The exact controller-scoped, turn-scoped timing permission is recognized
+		// as a single non-optional effect (Borne Upon a Wind, Emergence Zone).
+		{"You may cast spells this turn as though they had flash.", true},
+		{"Cast spells this turn as though they had flash.", true},
+		// Variant wordings fail closed and flow through the generic effect parser.
+		{"You may cast a spell this turn as though it had flash.", false},
+		{"You may cast spells as though they had flash.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			gotFlash := len(effects) == 1 && effects[0].Kind == EffectCastAsThoughFlash
+			if gotFlash != test.flash {
+				t.Fatalf("recognized flash permission = %v, want %v (effects=%#v)", gotFlash, test.flash, effects)
+			}
+			if gotFlash && effects[0].Optional {
+				t.Fatal("flash permission should be unconditional, got Optional=true")
+			}
+		})
+	}
+}
+
+func TestParseTriggeringLifeChangeAmount(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source  string
+		dynamic bool
+	}{
+		// "that much life" names the triggering life-change quantity in the
+		// life-drain mirror family (Sanguine Bond, Exquisite Blood).
+		{"Whenever you gain life, target opponent loses that much life.", true},
+		{"Whenever you gain life, each opponent loses that much life.", true},
+		{"Whenever an opponent loses life, you gain that much life.", true},
+		// A fixed life loss is not a triggering-amount reference.
+		{"Target opponent loses 2 life.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{})
+			var found bool
+			for _, ability := range document.Abilities {
+				for _, sentence := range ability.Sentences {
+					for _, effect := range sentence.Effects {
+						if effect.Amount.DynamicKind == EffectDynamicAmountTriggeringLifeChange {
+							found = true
+						}
+					}
+				}
+			}
+			if found != test.dynamic {
+				t.Fatalf("recognized triggering-life-change amount = %v, want %v", found, test.dynamic)
+			}
+		})
+	}
+}
+
+// TestParseCantCastSpellsEffect proves the one-shot, turn-scoped player cast
+// prohibition is recognized for the opponents and all-players scopes (Silence,
+// Mandate of Peace) while targeted, referenced, and filtered wordings fail
+// closed and flow through the generic effect parser.
+func TestParseCantCastSpellsEffect(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source     string
+		recognized bool
+		allPlayers bool
+	}{
+		{"Your opponents can't cast spells this turn.", true, false},
+		{"Each opponent can't cast spells this turn.", true, false},
+		{"Players can't cast spells this turn.", true, true},
+		// Variant wordings fail closed.
+		{"Target player can't cast spells this turn.", false, false},
+		{"Your opponents can't cast noncreature spells this turn.", false, false},
+		{"Your opponents can't cast spells.", false, false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			got := len(effects) == 1 && effects[0].Kind == EffectCantCastSpells
+			if got != test.recognized {
+				t.Fatalf("recognized = %v, want %v (effects=%#v)", got, test.recognized, effects)
+			}
+			if got && effects[0].CantCastSpellsAllPlayers != test.allPlayers {
+				t.Fatalf("allPlayers = %v, want %v", effects[0].CantCastSpellsAllPlayers, test.allPlayers)
+			}
+		})
+	}
+}
+
+func TestParseDevotionDrawAmount(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		kind   EffectDynamicAmountKind
+		colors []Color
+	}{
+		{"Draw cards equal to your devotion to black.", EffectDynamicAmountDevotion, []Color{ColorBlack}},
+		{"Draw cards equal to your devotion to white and black.", EffectDynamicAmountDevotion, []Color{ColorWhite, ColorBlack}},
+		{"Draw cards equal to your devotion to green.", EffectDynamicAmountDevotion, []Color{ColorGreen}},
+		// Fixed draw stays non-dynamic (regression guard).
+		{"Draw two cards.", EffectDynamicAmountNone, nil},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if got := effects[0].Amount.DynamicKind; got != test.kind {
+				t.Fatalf("draw dynamic kind = %v, want %v", got, test.kind)
+			}
+			if !slices.Equal(effects[0].Amount.Colors, test.colors) {
+				t.Fatalf("draw amount colors = %v, want %v", effects[0].Amount.Colors, test.colors)
+			}
+		})
+	}
+}
+
+func TestParseSpellsCastThisTurnAmount(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source  string
+		dynamic bool
+	}{
+		// "for each spell you've cast this turn" is the storm-counter amount and
+		// the gain clause stays a single effect (no phantom cast effect).
+		{"You gain 1 life for each spell you've cast this turn.", true},
+		{"You gain 1 life for each spell you have cast this turn.", true},
+		// A bare fixed life gain stays non-dynamic (regression guard).
+		{"You gain 1 life.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			gotDynamic := effects[0].Amount.DynamicKind == EffectDynamicAmountSpellsCastThisTurn
+			if gotDynamic != test.dynamic {
+				t.Fatalf("gain dynamic kind = %v, want SpellsCastThisTurn=%v", effects[0].Amount.DynamicKind, test.dynamic)
+			}
+		})
+	}
+}
+
 func TestParseCreateTokenDynamicCountExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -87,6 +279,11 @@ func TestParseCreateTokenDynamicCountExactness(t *testing.T) {
 	}{
 		// Trailing "for each" iterator (the leading form was already exact).
 		{"Create a 1/1 green Elf Warrior creature token for each Elf you control.", true},
+		// Trailing "for each <card type> you control" (Avenger of Zendikar). The
+		// counted permanent's card type must not fold into the token type line.
+		{"Create a 0/1 green Plant creature token for each land you control.", true},
+		{"Create a 1/1 white Soldier creature token for each artifact you control.", true},
+		{"Create a 1/1 white Soldier creature token for each creature you control.", true},
 		// "a number of ... equal to" dynamic count, including a keyword rider.
 		{"Create a number of 1/1 white Soldier creature tokens equal to the number of opponents you have.", true},
 		{"Create a number of 3/3 green Tyranid Warrior creature tokens with trample equal to the number of opponents you have.", true},
@@ -110,6 +307,46 @@ func TestParseCreateTokenDynamicCountExactness(t *testing.T) {
 			}
 			if effects[0].Exact != test.exact {
 				t.Fatalf("effect Exact = %v, want %v", effects[0].Exact, test.exact)
+			}
+		})
+	}
+}
+
+func TestParseSacrificeChoiceFilterExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source     string
+		exact      bool
+		nonToken   bool
+		typesUnion int
+	}{
+		// Plain filters reconstruct (regression guard).
+		{"Each player sacrifices a creature of their choice.", true, false, 0},
+		// "nontoken" qualifier reconstructs and records the flag (Accursed Marauder).
+		{"Each player sacrifices a nontoken creature of their choice.", true, true, 0},
+		// "creature or planeswalker" card-type union reconstructs (Plaguecrafter).
+		{"Each player sacrifices a creature or planeswalker of their choice.", true, false, 2},
+		// "token" qualifier reconstructs.
+		{"Each player sacrifices a token creature of their choice.", true, false, 0},
+		// An unmodeled qualifier stays fail-closed.
+		{"Each player sacrifices a tapped creature of their choice.", false, false, 0},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].Exact != test.exact {
+				t.Fatalf("effect Exact = %v, want %v", effects[0].Exact, test.exact)
+			}
+			if effects[0].Selection.NonToken != test.nonToken {
+				t.Fatalf("selection NonToken = %v, want %v", effects[0].Selection.NonToken, test.nonToken)
+			}
+			if test.typesUnion != 0 && len(effects[0].Selection.RequiredTypesAny) != test.typesUnion {
+				t.Fatalf("RequiredTypesAny = %#v, want %d entries", effects[0].Selection.RequiredTypesAny, test.typesUnion)
 			}
 		})
 	}
@@ -218,6 +455,47 @@ func TestParseCreateNamedCreatureTokenExactness(t *testing.T) {
 	}
 }
 
+// TestParseCreateNamedTokenChoiceExactness verifies that a "Create a X token or
+// a Y token." choice between two predefined artifact tokens reconstructs exactly
+// and sets the TokenChoice flag, while non-predefined or single-token forms do
+// not.
+func TestParseCreateNamedTokenChoiceExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+		choice bool
+	}{
+		{"Create a Food token or a Treasure token.", true, true},
+		{"Create a Treasure token or a Clue token.", true, true},
+		// "your choice of" two-way and Oxford-comma N-way list forms.
+		{"Create your choice of a Blood token or a Food token.", true, true},
+		{"Create your choice of a Clue token, a Food token, or a Treasure token.", true, true},
+		{"Create your choice of a Blood token, a Clue token, a Food token, or a Treasure token.", true, true},
+		// Single named token (no choice) stays exact but is not a choice.
+		{"Create a Treasure token.", true, false},
+		// A non-predefined alternative fails closed.
+		{"Create a Powerstone token or a Treasure token.", false, true},
+		{"Create your choice of a Powerstone token, a Food token, or a Treasure token.", false, true},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].Exact != test.exact {
+				t.Fatalf("effect Exact = %v, want %v", effects[0].Exact, test.exact)
+			}
+			if effects[0].TokenChoice != test.choice {
+				t.Fatalf("effect TokenChoice = %v, want %v", effects[0].TokenChoice, test.choice)
+			}
+		})
+	}
+}
+
 func TestParseRegenerationRider(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -246,6 +524,36 @@ func TestParseRegenerationRider(t *testing.T) {
 			// targets, so the destroy is not credited.
 			name:     "that creature subject not credited",
 			source:   "Destroy target creature. That creature can't be regenerated.",
+			prevent:  false,
+			riders:   0,
+			excluded: false,
+		},
+		{
+			name:     "a creature destroyed this way",
+			source:   "Destroy target creature. A creature destroyed this way can't be regenerated.",
+			prevent:  true,
+			riders:   1,
+			excluded: true,
+		},
+		{
+			name:     "mass destroyed this way",
+			source:   "Destroy all creatures. A creature destroyed this way can't be regenerated.",
+			prevent:  true,
+			riders:   1,
+			excluded: true,
+		},
+		{
+			name:     "plural destroyed this way",
+			source:   "Destroy all creatures. Creatures destroyed this way can't be regenerated.",
+			prevent:  true,
+			riders:   1,
+			excluded: true,
+		},
+		{
+			// "Dealt damage this way" belongs to a damage effect, not a
+			// destroy, so it is not credited as a destroy rider.
+			name:     "dealt damage this way not a destroy rider",
+			source:   "Destroy target creature. A creature dealt damage this way can't be regenerated.",
 			prevent:  false,
 			riders:   0,
 			excluded: false,
@@ -826,6 +1134,9 @@ func TestParseMassBounceEffectExactness(t *testing.T) {
 		{"Return all artifacts you control to their owner's hand.", true},
 		{"Return all creatures you control to their owner's hand.", true},
 		{"Return all permanents you control to their owners' hands.", true},
+		// Combat-state filters route to the same group bounce (CR 614/701.x).
+		{"Return all attacking creatures to their owner's hand.", true},
+		{"Return all blocking creatures to their owners' hands.", true},
 		// Choice- and filter-based groups the executable backend cannot express stay fail-closed.
 		{"Return all permanents of the color of your choice to their owners' hands.", false},
 		{"Return all creatures to their owners' hands except for Krakens.", false},
@@ -1027,6 +1338,93 @@ func TestParseCreateCopyOfTargetToken(t *testing.T) {
 			}
 			if test.copy && !effects[0].Exact {
 				t.Fatalf("copy token effect should be exact: %#v", effects[0])
+			}
+		})
+	}
+}
+
+func TestParseCreateCopyOfReferenceToken(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		copy   bool
+	}{
+		{"Create a token that's a copy of this creature.", true},
+		{"Create a token that's a copy of this creature instead.", true},
+		{"Create a token that's a copy of target creature you control.", false},
+		{"Create a 1/1 white Soldier creature token.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{CardName: "Scute Swarm", InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].TokenCopyOfReference != test.copy {
+				t.Fatalf("TokenCopyOfReference = %v, want %v", effects[0].TokenCopyOfReference, test.copy)
+			}
+			if test.copy && !effects[0].Exact {
+				t.Fatalf("copy-of-reference token effect should be exact: %#v", effects[0])
+			}
+		})
+	}
+}
+
+func TestParseCreateCopyTokenModifiers(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		source        string
+		attached      bool
+		dropLegendary bool
+		grantKeywords int
+	}{
+		{
+			name:          "target except not legendary",
+			source:        "Create a token that's a copy of target creature you control, except it isn't legendary.",
+			dropLegendary: true,
+		},
+		{
+			name:          "attached except not legendary gains keyword",
+			source:        "Create a token that's a copy of equipped creature, except the token isn't legendary. That token gains haste.",
+			attached:      true,
+			dropLegendary: true,
+			grantKeywords: 1,
+		},
+		{
+			name:     "attached enchanted creature",
+			source:   "Create a token that's a copy of enchanted creature.",
+			attached: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{CardName: "Test Copy", InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			effect := effects[0]
+			if !effect.Exact {
+				t.Fatalf("copy token effect should be exact: %#v", effect)
+			}
+			if effect.TokenCopyOfAttached != test.attached {
+				t.Fatalf("TokenCopyOfAttached = %v, want %v", effect.TokenCopyOfAttached, test.attached)
+			}
+			if effect.TokenCopyDropLegendary != test.dropLegendary {
+				t.Fatalf("TokenCopyDropLegendary = %v, want %v", effect.TokenCopyDropLegendary, test.dropLegendary)
+			}
+			if len(effect.TokenCopyGrantKeywords) != test.grantKeywords {
+				t.Fatalf("TokenCopyGrantKeywords = %#v, want %d", effect.TokenCopyGrantKeywords, test.grantKeywords)
 			}
 		})
 	}
@@ -1237,6 +1635,56 @@ func TestParseControllerMayPaySuccessConsequence(t *testing.T) {
 	}
 }
 
+func TestParseControllerMandatoryPayOrLoseGame(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"At the beginning of your next upkeep, pay {3}{U}{U}. If you don't, you lose the game.",
+		Context{CardName: "Pact of Negation", InstantOrSorcery: true},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := document.Abilities[0]
+	if ability.Optional || len(ability.Sentences) != 2 ||
+		ability.Sentences[0].PaymentPrelude == nil {
+		t.Fatalf("payment sequence = %#v", ability)
+	}
+	effect := ability.Sentences[1].Effects[0]
+	if effect.Kind != EffectLoseGame ||
+		effect.Payment.Form != EffectPaymentFormMayPayThenIfDoesNot ||
+		effect.Payment.Payer != EffectPaymentPayerController ||
+		!slices.Equal(effect.Payment.ManaCost, cost.Mana{cost.O(3), cost.U, cost.U}) ||
+		effect.Optional || effect.Negated || effect.HasUnrecognizedSibling || !effect.Exact {
+		t.Fatalf("consequence = %#v", effect)
+	}
+}
+
+func TestParseControllerMandatoryPayOrLoseGameFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, oracle := range []string{
+		// "you may pay" is the optional form, not the mandatory pact wording.
+		"At the beginning of your next upkeep, you may pay {3}. If you don't, you lose the game.",
+		// A non-game-loss consequence must not adopt the pact payment fold.
+		"At the beginning of your next upkeep, pay {3}. If you don't, sacrifice this creature.",
+	} {
+		t.Run(oracle, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(oracle, Context{CardName: "Unsafe Pact", InstantOrSorcery: true})
+			for _, ability := range document.Abilities {
+				for _, sentence := range ability.Sentences {
+					for _, effect := range sentence.Effects {
+						if effect.Kind == EffectLoseGame &&
+							effect.Payment.Payer == EffectPaymentPayerController &&
+							effect.Payment.Form == EffectPaymentFormMayPayThenIfDoesNot {
+							t.Fatalf("unexpected mandatory pay-or-lose fold = %#v", effect)
+						}
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestParseControllerMayPaySuccessConsequenceFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, oracle := range []string{
@@ -1328,6 +1776,75 @@ func TestParseResolvingCreateForEachIterator(t *testing.T) {
 		len(effect.Amount.Selection.SubtypesAny) != 1 ||
 		effect.Amount.Selection.SubtypesAny[0] != "Shrine" {
 		t.Fatalf("for-each selection = %#v", effect.Amount.Selection)
+	}
+}
+
+func TestParseControlledPermanentCounterPlacementReplacement(t *testing.T) {
+	t.Parallel()
+	doubling, diagnostics := Parse(
+		"If an effect would put one or more counters on a permanent you control, it puts twice that many of those counters on that permanent instead.",
+		Context{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("doubling diagnostics = %#v", diagnostics)
+	}
+	cond := doubling.Abilities[0].ConditionClauses[0]
+	if cond.Predicate != ConditionPredicateCounterPlacementOnControlledPermanent || cond.Counter != ConditionCounterNone {
+		t.Fatalf("doubling condition = %#v", cond)
+	}
+
+	additive, diagnostics := Parse(
+		"If one or more +1/+1 counters would be put on a permanent you control, that many plus one +1/+1 counters are put on that permanent instead.",
+		Context{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("additive diagnostics = %#v", diagnostics)
+	}
+	cond = additive.Abilities[0].ConditionClauses[0]
+	if cond.Predicate != ConditionPredicateCounterPlacementOnControlledPermanent ||
+		cond.Counter != ConditionCounterPlusOnePlusOne {
+		t.Fatalf("additive condition = %#v", cond)
+	}
+}
+
+func TestParseAdditiveCounterPlacementReplacement(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"If one or more +1/+1 counters would be put on a creature you control, that many plus one +1/+1 counters are put on it instead.",
+		Context{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effects := document.Abilities[0].Sentences[0].Effects
+	replacement := effects[len(effects)-1].Replacement
+	if replacement.Kind != EffectReplacementThatManyPlus || replacement.Amount != 1 {
+		t.Fatalf("replacement = %#v", replacement)
+	}
+	if replacement.EachCounterKind {
+		t.Fatalf("unexpected each-counter-kind modifier: %#v", replacement)
+	}
+}
+
+func TestParseOneOfEachTokenReplacement(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"If you would create a Clue, Food, or Treasure token, instead create one of each.",
+		Context{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effects := document.Abilities[0].Sentences[0].Effects
+	if len(effects) != 2 {
+		t.Fatalf("effects = %d, want 2", len(effects))
+	}
+	if got := effects[0].Selection.SubtypesAny; len(got) != 3 ||
+		string(got[0]) != "Clue" || string(got[1]) != "Food" || string(got[2]) != "Treasure" {
+		t.Fatalf("trigger subtypes = %#v, want Clue/Food/Treasure", got)
+	}
+	if got := effects[1].Replacement.Kind; got != EffectReplacementOneOfEach {
+		t.Fatalf("replacement kind = %v, want one-of-each", got)
 	}
 }
 
@@ -1825,6 +2342,12 @@ func TestParseDualRecipientGroupDamage(t *testing.T) {
 			wantPair: []SelectionKind{SelectionCreature, SelectionPlayer},
 			exact:    true,
 		},
+		{
+			source:   "Target creature you control deals damage equal to its power to each other creature and each opponent.",
+			cardName: "Test Ignition",
+			wantPair: []SelectionKind{SelectionCreature, SelectionOpponent},
+			exact:    true,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
@@ -1982,6 +2505,236 @@ func TestParseManaValueLifeAmountExactness(t *testing.T) {
 				}
 			} else if life.Amount.DynamicKind == EffectDynamicAmountSourceManaValue {
 				t.Fatalf("amount dynamic kind = %v, want a non-mana-value kind", life.Amount.DynamicKind)
+			}
+		})
+	}
+}
+
+func TestParseGroupEntersTappedEffect(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		source    string
+		recognize bool
+		scope     EntersTappedGroupControllerScope
+		cardTypes []types.Card
+	}{
+		{
+			name:      "opponent creatures",
+			source:    "Creatures your opponents control enter tapped.",
+			recognize: true,
+			scope:     EntersTappedGroupControllerOpponents,
+			cardTypes: []types.Card{types.Creature},
+		},
+		{
+			name:      "opponent creatures battlefield wording",
+			source:    "Creatures your opponents control enter the battlefield tapped.",
+			recognize: true,
+			scope:     EntersTappedGroupControllerOpponents,
+			cardTypes: []types.Card{types.Creature},
+		},
+		{
+			name:      "multi-type opponent",
+			source:    "Artifacts, creatures, and lands your opponents control enter the battlefield tapped.",
+			recognize: true,
+			scope:     EntersTappedGroupControllerOpponents,
+			cardTypes: []types.Card{types.Artifact, types.Creature, types.Land},
+		},
+		{
+			name:      "all permanents",
+			source:    "Permanents enter the battlefield tapped.",
+			recognize: true,
+			scope:     EntersTappedGroupControllerEach,
+			cardTypes: nil,
+		},
+		{
+			name:      "you control",
+			source:    "Lands you control enter tapped.",
+			recognize: true,
+			scope:     EntersTappedGroupControllerYou,
+			cardTypes: []types.Card{types.Land},
+		},
+		{
+			// Self enters-tapped must keep flowing to the self path.
+			name:      "self form not group",
+			source:    "This land enters tapped.",
+			recognize: false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{})
+			ability := document.Abilities[0]
+			var group *EffectSyntax
+			for i := range ability.Sentences {
+				for j := range ability.Sentences[i].Effects {
+					if ability.Sentences[i].Effects[j].EntersTappedGroup {
+						group = &ability.Sentences[i].Effects[j]
+					}
+				}
+			}
+			if !test.recognize {
+				if group != nil {
+					t.Fatalf("source %q unexpectedly recognized as group enters-tapped", test.source)
+				}
+				return
+			}
+			if group == nil {
+				t.Fatalf("source %q not recognized as group enters-tapped", test.source)
+			}
+			if ability.Kind != AbilityReplacement {
+				t.Fatalf("ability kind = %v, want AbilityReplacement", ability.Kind)
+			}
+			if !group.Exact {
+				t.Fatal("group enters-tapped effect is not exact")
+			}
+			if group.EntersTappedGroupScope != test.scope {
+				t.Fatalf("scope = %v, want %v", group.EntersTappedGroupScope, test.scope)
+			}
+			if !slices.Equal(group.EntersTappedGroupTypes, test.cardTypes) {
+				t.Fatalf("types = %v, want %v", group.EntersTappedGroupTypes, test.cardTypes)
+			}
+			if len(group.Targets) != 0 || len(group.References) != 0 {
+				t.Fatalf("group effect has phantom targets/references: targets=%d references=%d", len(group.Targets), len(group.References))
+			}
+		})
+	}
+}
+
+func TestParseGreatestDiscardedThisWayDrawAmount(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		kind   EffectDynamicAmountKind
+	}{
+		{"Draw cards equal to the greatest number of cards a player discarded this way.", EffectDynamicAmountGreatestDiscardedThisWay},
+		// Fixed draw stays non-dynamic (regression guard).
+		{"Draw two cards.", EffectDynamicAmountNone},
+		// A near-miss wording fails closed.
+		{"Draw cards equal to the number of cards a player discarded this way.", EffectDynamicAmountNone},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if got := effects[0].Amount.DynamicKind; got != test.kind {
+				t.Fatalf("draw dynamic kind = %v, want %v", got, test.kind)
+			}
+		})
+	}
+}
+
+// TestParseControllerOptionalNonManaCostThenSearch verifies that a non-mana
+// optional cost paired with a multi-effect search consequence ("you may
+// sacrifice a land. If you do, search ...") folds into a controller payment: the
+// payment sentence becomes a prelude carrying the parsed additional cost, the
+// ability is no longer flagged optional, and the consequence's first effect
+// carries the payment while its sibling effects remain intact for downstream
+// search merging. A single-effect consequence is intentionally left for the
+// ordered optional path and does not fold.
+func TestParseControllerOptionalNonManaCostThenSearch(t *testing.T) {
+	t.Parallel()
+	const source = "When this creature enters, you may sacrifice a land. If you do, search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle."
+	document, _ := Parse(source, Context{})
+	ability := document.Abilities[0]
+	if ability.Optional {
+		t.Fatal("ability Optional = true, want false after the payment fold")
+	}
+	if len(ability.Sentences) != 2 {
+		t.Fatalf("sentences = %d, want 2", len(ability.Sentences))
+	}
+	prelude := ability.Sentences[0].PaymentPrelude
+	if prelude == nil {
+		t.Fatal("payment sentence PaymentPrelude = nil, want the folded payment")
+	}
+	if prelude.Form != EffectPaymentFormMayPayThenIfDo ||
+		prelude.Payer != EffectPaymentPayerController ||
+		prelude.AdditionalCost == nil {
+		t.Fatalf("prelude = %+v, want a controller additional-cost payment", prelude)
+	}
+	if len(prelude.AdditionalCost.Components) != 1 ||
+		prelude.AdditionalCost.Components[0].Kind != CostComponentSacrifice {
+		t.Fatalf("prelude cost = %+v, want one sacrifice component", prelude.AdditionalCost)
+	}
+	consequence := ability.Sentences[1].Effects
+	if len(consequence) != 3 || consequence[0].Kind != EffectSearch {
+		t.Fatalf("consequence effects = %#v, want search/put/shuffle", consequence)
+	}
+	if consequence[0].Payment.Form != EffectPaymentFormMayPayThenIfDo {
+		t.Fatalf("search effect Payment.Form = %q, want the folded payment", consequence[0].Payment.Form)
+	}
+	if !consequence[0].Exact {
+		t.Fatal("search effect Exact = false, want true after folding")
+	}
+}
+
+// TestParseControllerOptionalNonManaCostSingleEffectDoesNotFold confirms a
+// single-effect consequence with a non-mana optional cost is left unfolded
+// (optional) so the ordered optional-effect path lowers it unchanged.
+func TestParseControllerOptionalNonManaCostSingleEffectDoesNotFold(t *testing.T) {
+	t.Parallel()
+	const source = "When this creature enters, you may sacrifice a land. If you do, draw a card."
+	document, _ := Parse(source, Context{})
+	ability := document.Abilities[0]
+	if !ability.Optional {
+		t.Fatal("ability Optional = false, want true (single-effect consequence stays on the ordered path)")
+	}
+	if ability.Sentences[0].PaymentPrelude != nil {
+		t.Fatal("single-effect consequence must not fold into a payment prelude")
+	}
+}
+
+// TestParseDoublePowerToughnessObject verifies the power/toughness doubling
+// object "double the power[ and toughness] of <group>" captures the doubled
+// characteristics and resolves the affected group as a static subject.
+func TestParseDoublePowerToughnessObject(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source          string
+		doublePower     bool
+		doubleToughness bool
+		subject         EffectStaticSubjectKind
+	}{
+		{
+			"Double the power and toughness of each creature you control until end of turn.",
+			true, true, EffectStaticSubjectControlledCreatures,
+		},
+		{
+			"Double the power of each creature you control until end of turn.",
+			true, false, EffectStaticSubjectControlledCreatures,
+		},
+		{
+			"Double the toughness of creatures you control until end of turn.",
+			false, true, EffectStaticSubjectControlledCreatures,
+		},
+		{
+			"Double the power and toughness of each creature until end of turn.",
+			true, true, EffectStaticSubjectAllCreatures,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			effect := effects[0]
+			if effect.Kind != EffectDouble {
+				t.Fatalf("effect Kind = %v, want EffectDouble", effect.Kind)
+			}
+			if effect.DoublePower != test.doublePower || effect.DoubleToughness != test.doubleToughness {
+				t.Fatalf("doublePower=%v doubleToughness=%v, want %v %v",
+					effect.DoublePower, effect.DoubleToughness, test.doublePower, test.doubleToughness)
+			}
+			if effect.StaticSubject.Kind != test.subject {
+				t.Fatalf("static subject = %v, want %v", effect.StaticSubject.Kind, test.subject)
 			}
 		})
 	}

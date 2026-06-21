@@ -160,6 +160,10 @@ func resolutionChoiceMana(g *game.Game, obj *game.StackObject, playerID game.Pla
 		return fixedOrEntryChosenMana(obj, choice)
 	case game.ResolutionChoiceColorSourceLandsProduce:
 		return landsProduceMana(g, playerID, choice)
+	case game.ResolutionChoiceColorSourceLinkedExileColors:
+		return linkedExileColorsMana(g, obj, choice)
+	case game.ResolutionChoiceColorSourceControlledPermanentColors:
+		return controlledPermanentColorsMana(g, playerID, choice)
 	default:
 		colors := choice.Colors
 		if len(colors) == 0 {
@@ -229,6 +233,96 @@ func landsProduceMana(g *game.Game, playerID game.PlayerID, choice *game.Resolut
 	return manaColors
 }
 
+// linkedExileColorsMana returns, in WUBRG order, the colors of the card linked
+// to the source permanent under the choice's LinkID — the imprinted card exiled
+// from hand as the permanent entered. It models "Add one mana of any of the
+// exiled card's colors." (Chrome Mox). The link is read by the permanent's
+// object identity, so a re-entered object with no fresh imprint finds nothing.
+// A missing, declined (no link recorded), or colorless imprint yields an empty
+// set, leaving the mana ability unactivatable (CR 605.1a, CR 202.2); a
+// multicolored imprint yields exactly its colors. Colorless ({C}) is never
+// offered because a card's colors are only the five colors (CR 105.2, CR 202.2).
+func linkedExileColorsMana(g *game.Game, obj *game.StackObject, choice *game.ResolutionChoice) []mana.Color {
+	if obj == nil || choice == nil || choice.LinkID == "" {
+		return nil
+	}
+	var found colorSet
+	for _, ref := range linkedObjects(g, linkedObjectByObjectKey(g, obj, choice.LinkID)) {
+		cardID := ref.CardID
+		if cardID == 0 {
+			cardID = ref.ObjectID
+		}
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		faceDef := cardFaceOrDefault(card, game.FaceFront)
+		if faceDef == nil {
+			continue
+		}
+		for _, c := range faceDef.Colors {
+			found.add(c)
+		}
+	}
+	colors := found.ordered()
+	manaColors := make([]mana.Color, 0, len(colors))
+	for _, c := range colors {
+		manaColors = append(manaColors, cost.ManaForColor(c))
+	}
+	return manaColors
+}
+
+// controlledPermanentColorsMana returns, in WUBRG order, the union of colors of
+// the permanents the choosing playerID controls that match the choice's
+// Selection. It models "Add one mana of any color among <permanents> you
+// control." (Mox Amber's "legendary creatures and planeswalkers you control",
+// Plaza of Heroes' "legendary permanents you control"). Colors are recomputed
+// from the battlefield at resolution; a board with no matching colored permanent
+// yields an empty set, leaving the mana ability unactivatable (CR 605.1a).
+// Colorless ({C}) is never offered because a permanent's colors are only the
+// five colors (CR 105.2, CR 202.2).
+func controlledPermanentColorsMana(g *game.Game, playerID game.PlayerID, choice *game.ResolutionChoice) []mana.Color {
+	return controlledPermanentColors(g, playerID, choice.Selection)
+}
+
+// controlledPermanentColors returns, in WUBRG order, the union of colors of the
+// permanents the playerID controls that match selection. It backs both the
+// "Add one mana of any color among <permanents> you control" choice (Mox Amber,
+// Plaza of Heroes) and the "For each color among permanents you control, add
+// one mana of that color" each-color production (Bloom Tender). Colors are
+// recomputed from the battlefield at resolution; colorless ({C}) is never
+// offered because a permanent's colors are only the five colors (CR 105.2,
+// CR 202.2).
+func controlledPermanentColors(g *game.Game, playerID game.PlayerID, selection *game.Selection) []mana.Color {
+	var found colorSet
+	for _, permanent := range g.Battlefield {
+		if permanent == nil || permanent.PhasedOut {
+			continue
+		}
+		values := effectivePermanentValues(g, permanent)
+		subject := selectionSubject{
+			kind:       subjectPermanent,
+			g:          g,
+			permanent:  permanent,
+			values:     &values,
+			viewer:     playerID,
+			controller: effectiveController(g, permanent),
+		}
+		if !matchSelection(&subject, selection) {
+			continue
+		}
+		for _, c := range values.colors {
+			found.add(c)
+		}
+	}
+	colors := found.ordered()
+	manaColors := make([]mana.Color, 0, len(colors))
+	for _, c := range colors {
+		manaColors = append(manaColors, cost.ManaForColor(c))
+	}
+	return manaColors
+}
+
 func commanderColorIdentityMana(g *game.Game, playerID game.PlayerID) []mana.Color {
 	player, ok := playerByID(g, playerID)
 	if !ok || player.CommanderInstanceID == 0 {
@@ -247,6 +341,22 @@ func commanderColorIdentityMana(g *game.Game, playerID game.PlayerID) []mana.Col
 		manaColors = append(manaColors, cost.ManaForColor(c))
 	}
 	return manaColors
+}
+
+// commanderColorIdentityCount returns the number of colors in the player's
+// commander's color identity (CR 903.4), zero when the player has no modeled
+// commander or a colorless one. Partner commanders are not modeled, so it reads
+// the single commander instance.
+func commanderColorIdentityCount(g *game.Game, playerID game.PlayerID) int {
+	player, ok := playerByID(g, playerID)
+	if !ok || player.CommanderInstanceID == 0 {
+		return 0
+	}
+	card, ok := g.GetCardInstance(player.CommanderInstanceID)
+	if !ok || card.Def == nil {
+		return 0
+	}
+	return card.Def.ColorIdentity.NumColors()
 }
 
 func choicePlayerMatches(controller, candidate game.PlayerID, relation game.PlayerRelation) bool {

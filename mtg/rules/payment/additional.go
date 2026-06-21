@@ -62,6 +62,13 @@ type evidencePayment struct {
 
 //nolint:maintidx // Centralized cost dispatch keeps cross-cost reservation checks in one place.
 func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []cost.Additional, xValue int, prefs *Preferences, source *game.Permanent, sourceCardID id.ID, sourceZone zone.Type, tapReservations ...*game.Permanent) (additionalCostPlan, bool) {
+	if costsHaveChoiceGroup(costs) {
+		concrete, ok := resolveAdditionalCostChoices(s, playerID, costs, xValue, prefs, source, sourceCardID, sourceZone, tapReservations...)
+		if !ok {
+			return additionalCostPlan{player: playerID, sourceCardID: sourceCardID}, false
+		}
+		return buildAdditionalCostPlanForCosts(s, playerID, concrete, xValue, prefs, source, sourceCardID, sourceZone, tapReservations...)
+	}
 	plan := additionalCostPlan{player: playerID, sourceCardID: sourceCardID}
 	reservedTapPermanents := append([]*game.Permanent(nil), tapReservations...)
 	if source != nil && hasTapCostOf(costs) {
@@ -69,6 +76,9 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 	}
 	for i, additional := range costs {
 		amount := AdditionalCostAmountFor(additional, xValue)
+		if additional.AmountDynamic != cost.AdditionalDynamicAmountNone {
+			amount = s.AdditionalDynamicAmountValue(playerID, additional.AmountDynamic)
+		}
 		if amount < 0 {
 			return plan, false
 		}
@@ -258,6 +268,57 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 	}
 
 	return plan, true
+}
+
+// costsHaveChoiceGroup reports whether any cost belongs to a printed "or" choice
+// group whose alternatives must be resolved to a single concrete cost before
+// planning.
+func costsHaveChoiceGroup(costs []cost.Additional) bool {
+	for _, additional := range costs {
+		if additional.ChoiceGroup != 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// resolveAdditionalCostChoices collapses each printed "or" choice group into one
+// payable alternative, returning the concrete cost list to plan. Mandatory costs
+// (ChoiceGroup zero) are kept; for each choice group the first alternative that
+// is payable in context is selected. It fails closed when any group has no
+// payable alternative.
+func resolveAdditionalCostChoices(s State, playerID game.PlayerID, costs []cost.Additional, xValue int, prefs *Preferences, source *game.Permanent, sourceCardID id.ID, sourceZone zone.Type, tapReservations ...*game.Permanent) ([]cost.Additional, bool) {
+	concrete := make([]cost.Additional, 0, len(costs))
+	var groups []uint8
+	for _, additional := range costs {
+		if additional.ChoiceGroup == 0 {
+			concrete = append(concrete, additional)
+			continue
+		}
+		if !slices.Contains(groups, additional.ChoiceGroup) {
+			groups = append(groups, additional.ChoiceGroup)
+		}
+	}
+	for _, group := range groups {
+		picked := false
+		for _, additional := range costs {
+			if additional.ChoiceGroup != group {
+				continue
+			}
+			member := additional
+			member.ChoiceGroup = 0
+			trial := append(append([]cost.Additional(nil), concrete...), member)
+			if _, ok := buildAdditionalCostPlanForCosts(s, playerID, trial, xValue, prefs, source, sourceCardID, sourceZone, tapReservations...); ok {
+				concrete = append(concrete, member)
+				picked = true
+				break
+			}
+		}
+		if !picked {
+			return nil, false
+		}
+	}
+	return concrete, true
 }
 
 func plannedBattlefieldCosts(plan additionalCostPlan) []*game.Permanent {

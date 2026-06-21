@@ -373,6 +373,66 @@ func TestLowerCastTriggerAcceptsOrdinalSpell(t *testing.T) {
 	}
 }
 
+func TestLowerCastTriggerAcceptsNonControllerOrdinalSpell(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name           string
+		oracle         string
+		wantController game.TriggerControllerFilter
+		wantOrdinal    int
+		wantFiltered   bool
+	}{
+		{
+			name:           "any player second spell (Lotho)",
+			oracle:         "Whenever a player casts their second spell each turn, draw a card.",
+			wantController: game.TriggerControllerAny,
+			wantOrdinal:    2,
+		},
+		{
+			name:           "opponent third spell",
+			oracle:         "Whenever an opponent casts their third spell each turn, draw a card.",
+			wantController: game.TriggerControllerOpponent,
+			wantOrdinal:    3,
+		},
+		{
+			name:           "any player second filtered spell",
+			oracle:         "Whenever a player casts their second instant spell each turn, draw a card.",
+			wantController: game.TriggerControllerAny,
+			wantOrdinal:    2,
+			wantFiltered:   true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: tc.oracle,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			pattern := face.TriggeredAbilities[0].Trigger.Pattern
+			if pattern.Event != game.EventSpellCast {
+				t.Errorf("event = %v, want EventSpellCast", pattern.Event)
+			}
+			if pattern.Controller != tc.wantController {
+				t.Errorf("controller = %v, want %v", pattern.Controller, tc.wantController)
+			}
+			if pattern.PlayerEventOrdinalThisTurn != tc.wantOrdinal {
+				t.Errorf("PlayerEventOrdinalThisTurn = %d, want %d", pattern.PlayerEventOrdinalThisTurn, tc.wantOrdinal)
+			}
+			if pattern.CardSelection.Empty() == tc.wantFiltered {
+				t.Errorf("CardSelection empty = %v, want filtered = %v", pattern.CardSelection.Empty(), tc.wantFiltered)
+			}
+		})
+	}
+}
+
 func TestLowerCastTriggerAcceptsCastOrCopy(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

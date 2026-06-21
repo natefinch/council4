@@ -137,6 +137,15 @@ func collectReferences(tokens []shared.Token, cardName string) []Reference {
 					break
 				}
 			}
+			// "this card/creature is in your graveyard" introduces a graveyard
+			// zone-of-function condition (the Incarnation cycle). The source is
+			// named only to scope the ability to the graveyard, so it must not
+			// surface as a free object reference that would claim a later
+			// effect's subject slot.
+			if referenceContainsSequence(normalizedWords(tokens[i+2:min(i+6, len(tokens))]), "is", "in", "your", "graveyard") {
+				i++
+				break
+			}
 			phrase := tokens[i : i+2]
 			references = append(references, Reference{
 				Kind:   ReferenceThisObject,
@@ -285,11 +294,22 @@ func referencePossessiveNameAt(tokens []shared.Token, start int, nameWords []str
 	}
 	last := len(nameWords) - 1
 	for i := range last {
-		if !equalWord(tokens[start+i], nameWords[i]) {
+		if !referenceNameWordMatches(tokens[start+i], nameWords[i]) {
 			return false
 		}
 	}
 	return strings.EqualFold(tokens[start+last].Text, nameWords[last]+"'s")
+}
+
+// referenceNameWordMatches reports whether a body token matches a single
+// card-name word. An apostrophe name word (from a plural-possessive name such
+// as "Inventors'") matches an apostrophe token by kind, independent of straight
+// or curly spelling; every other word matches a like-spelled word token.
+func referenceNameWordMatches(token shared.Token, word string) bool {
+	if word == "'" {
+		return token.Kind == shared.Apostrophe
+	}
+	return equalWord(token, word)
 }
 
 func referenceTokenWordsEqual(tokens []shared.Token, words []string) bool {
@@ -297,6 +317,18 @@ func referenceTokenWordsEqual(tokens []shared.Token, words []string) bool {
 		return false
 	}
 	for i := range words {
+		if words[i] == "'" {
+			if tokens[i].Kind != shared.Apostrophe {
+				return false
+			}
+			continue
+		}
+		if words[i] == "," || words[i] == "." || words[i] == "&" || words[i] == "/" {
+			if !strings.EqualFold(tokens[i].Text, words[i]) {
+				return false
+			}
+			continue
+		}
 		normalized := strings.ToLower(strings.Trim(tokens[i].Text, ",.'\u2019"))
 		if tokens[i].Kind != shared.Word || normalized != words[i] {
 			return false
@@ -342,7 +374,7 @@ func selfNameSpanAliases(cardName string) [][]string {
 	}
 	var aliases [][]string
 	appendAlias := func(name string) {
-		words := strings.Fields(strings.ToLower(strings.TrimSpace(name)))
+		words := referenceNameWords(name)
 		if len(words) == 0 {
 			return
 		}
@@ -500,6 +532,11 @@ func referenceNameWords(name string) []string {
 		switch token.Kind {
 		case shared.Word, shared.Integer, shared.Ampersand, shared.Slash, shared.Period, shared.Comma:
 			words = append(words, strings.ToLower(token.Text))
+		case shared.Apostrophe:
+			// A trailing apostrophe in a plural-possessive name ("Inventors'
+			// Fair") lexes as its own token in both the name and the body, so it
+			// is kept as a name word and matched against an apostrophe token.
+			words = append(words, "'")
 		default:
 		}
 	}
@@ -520,6 +557,12 @@ func referenceWordsAt(tokens []shared.Token, words []string) bool {
 		return false
 	}
 	for i, word := range words {
+		if word == "'" {
+			if tokens[i].Kind != shared.Apostrophe {
+				return false
+			}
+			continue
+		}
 		if word == "&" || word == "/" || word == "." || word == "," {
 			if !strings.EqualFold(tokens[i].Text, word) {
 				return false

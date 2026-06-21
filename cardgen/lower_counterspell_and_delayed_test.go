@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -199,6 +200,59 @@ func TestLowerCounterSpellQualifiedTargets(t *testing.T) {
 	}
 }
 
+func TestLowerCounterSpellManaValueTargets(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wantManaV  compare.Int
+	}{
+		{
+			name:       "exact mana value",
+			oracleText: "Counter target spell with mana value 1.",
+			wantManaV:  compare.Int{Op: compare.Equal, Value: 1},
+		},
+		{
+			name:       "mana value or less",
+			oracleText: "Counter target spell with mana value 2 or less.",
+			wantManaV:  compare.Int{Op: compare.LessOrEqual, Value: 2},
+		},
+		{
+			name:       "mana value or greater",
+			oracleText: "Counter target spell with mana value 3 or greater.",
+			wantManaV:  compare.Int{Op: compare.GreaterOrEqual, Value: 3},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Mana Value Counter",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+			})
+			if !face.SpellAbility.Exists {
+				t.Fatal("spell ability missing")
+			}
+			mode := face.SpellAbility.Val.Modes[0]
+			if len(mode.Targets) != 1 {
+				t.Fatalf("targets = %d, want 1", len(mode.Targets))
+			}
+			predicate := mode.Targets[0].Predicate
+			if !slices.Equal(predicate.StackObjectKinds, []game.StackObjectKind{game.StackSpell}) {
+				t.Fatalf("stack object kinds = %+v, want [StackSpell]", predicate.StackObjectKinds)
+			}
+			if !predicate.ManaValue.Exists {
+				t.Fatal("mana value predicate missing")
+			}
+			if predicate.ManaValue.Val != test.wantManaV {
+				t.Fatalf("mana value = %+v, want %+v", predicate.ManaValue.Val, test.wantManaV)
+			}
+		})
+	}
+}
+
 func TestLowerCounterSpellWithDrawRider(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -384,6 +438,48 @@ func TestLowerCounterThenTargetControllerCreatesToken(t *testing.T) {
 	}
 }
 
+func TestLowerCounterThenTargetControllerCreatesTreasureToken(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "An Offer You Can't Refuse",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{U}",
+		Colors:     []string{"U"},
+		OracleText: "Counter target noncreature spell. Its controller creates two Treasure tokens. (They're artifacts with \"{T}, Sacrifice this token: Add one mana of any color.\")",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 ||
+		!slices.Equal(mode.Targets[0].Predicate.ExcludedSpellCardTypes, []types.Card{types.Creature}) {
+		t.Fatalf("targets = %#v, want noncreature spell", mode.Targets)
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want counter then create token", mode.Sequence)
+	}
+	if _, ok := mode.Sequence[0].Primitive.(game.CounterObject); !ok {
+		t.Fatalf("first primitive = %T, want game.CounterObject", mode.Sequence[0].Primitive)
+	}
+	create, ok := mode.Sequence[1].Primitive.(game.CreateToken)
+	if !ok {
+		t.Fatalf("second primitive = %T, want game.CreateToken", mode.Sequence[1].Primitive)
+	}
+	if create.Amount.Value() != 2 {
+		t.Fatalf("amount = %d, want 2", create.Amount.Value())
+	}
+	recipientObject, ok := create.Recipient.Val.Object()
+	if !create.Recipient.Exists || !ok ||
+		recipientObject.Kind() != game.ObjectReferenceTargetStackObject ||
+		recipientObject.TargetIndex() != 0 {
+		t.Fatalf("recipient = %#v, want controller of target stack object 0", create.Recipient)
+	}
+	token, ok := create.Source.TokenDefRef()
+	if !ok ||
+		token.Name != string(types.Treasure) ||
+		!slices.Equal(token.Subtypes, []types.Sub{types.Treasure}) {
+		t.Fatalf("token = %#v, want Treasure", token)
+	}
+}
+
 func TestLowerCounterThenTargetControllerTokenRejectionBoundaries(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -421,11 +517,10 @@ func TestLowerCounterThenTargetControllerTokenRejectionBoundaries(t *testing.T) 
 			},
 		},
 		{
-			name: "spell type union target",
+			name: "spell target shape",
 			mutate: func(ctx *contentCtx) {
-				selector := compiler.CompiledSelector{Kind: compiler.SelectorSpell}
-				ctx.content.Targets[0].Selector = selector
-				ctx.content.Effects[0].Targets[0].Selector = selector
+				ctx.content.Targets[0].Selector.Another = true
+				ctx.content.Effects[0].Targets[0].Selector.Another = true
 			},
 		},
 		{
@@ -1186,5 +1281,88 @@ func TestLowerCounterAbilityInEnterTrigger(t *testing.T) {
 				t.Fatalf("counter object = %+v, want target stack object 0", counter.Object)
 			}
 		})
+	}
+}
+
+func TestLowerCounterThenExileInstead(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name              string
+		oracleText        string
+		wantExcludedTypes []types.Card
+		wantSpellTypes    []types.Card
+	}{
+		{
+			name: "noncreature spell",
+			oracleText: "Counter target noncreature spell. If that spell is countered this way, " +
+				"exile it instead of putting it into its owner's graveyard.",
+			wantExcludedTypes: []types.Card{types.Creature},
+		},
+		{
+			name: "any spell",
+			oracleText: "Counter target spell. If that spell is countered this way, " +
+				"exile it instead of putting it into its owner's graveyard.",
+		},
+		{
+			name: "creature spell",
+			oracleText: "Counter target creature spell. If that spell is countered this way, " +
+				"exile it instead of putting it into its owner's graveyard.",
+			wantSpellTypes: []types.Card{types.Creature},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Counter Exile",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+			})
+			if !face.SpellAbility.Exists {
+				t.Fatal("spell ability missing")
+			}
+			mode := face.SpellAbility.Val.Modes[0]
+			if len(mode.Targets) != 1 {
+				t.Fatalf("targets = %d, want 1", len(mode.Targets))
+			}
+			target := mode.Targets[0]
+			if !slices.Equal(target.Predicate.SpellCardTypes, test.wantSpellTypes) {
+				t.Fatalf("spell types = %+v, want %+v", target.Predicate.SpellCardTypes, test.wantSpellTypes)
+			}
+			if !slices.Equal(target.Predicate.ExcludedSpellCardTypes, test.wantExcludedTypes) {
+				t.Fatalf("excluded spell types = %+v, want %+v", target.Predicate.ExcludedSpellCardTypes, test.wantExcludedTypes)
+			}
+			if len(mode.Sequence) != 1 {
+				t.Fatalf("sequence = %d, want 1", len(mode.Sequence))
+			}
+			counter, ok := mode.Sequence[0].Primitive.(game.CounterObject)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.CounterObject", mode.Sequence[0].Primitive)
+			}
+			if !counter.ExileInstead {
+				t.Fatal("ExileInstead = false, want true")
+			}
+			if counter.Object.Kind() != game.ObjectReferenceTargetStackObject || counter.Object.TargetIndex() != 0 {
+				t.Fatalf("counter object = %+v, want target stack object 0", counter.Object)
+			}
+		})
+	}
+}
+
+func TestLowerCounterPlainStillGraveyard(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Plain Counter",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Counter target spell.",
+	})
+	countered, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.CounterObject)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.CounterObject", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	if countered.ExileInstead {
+		t.Fatal("ExileInstead = true, want false for plain counter")
 	}
 }

@@ -358,8 +358,11 @@ func registerPermanentReplacementEffects(g *game.Game, permanent *game.Permanent
 		replacement := def.ReplacementAbilities[i].Replacement
 		if replacement.TokenMultiplier <= 1 &&
 			replacement.CounterMultiplier <= 1 &&
+			replacement.CounterAddend == 0 &&
 			replacement.DamageMultiplier <= 1 &&
-			replacement.DamageAddend == 0 {
+			replacement.DamageAddend == 0 &&
+			len(replacement.CreateOneOfEachTokens) == 0 &&
+			!replacement.EntersTappedOthers {
 			continue
 		}
 		replacement.ID = g.IDGen.Next()

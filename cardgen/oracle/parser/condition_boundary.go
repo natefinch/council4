@@ -93,6 +93,10 @@ func conditionBoundaries(tokens []shared.Token, triggered, ifAbleExcluded bool) 
 			i = end - 1
 			continue
 		}
+		if effectWordsAt(tokens, i, creatureSpellHasteConditionWords...) {
+			i = end - 1
+			continue
+		}
 		boundaries = append(boundaries, ConditionBoundary{
 			Start:             tokens[i].Span.Start,
 			NodeID:            len(boundaries),

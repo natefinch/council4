@@ -28,6 +28,16 @@ const (
 // Fellwar Stone; see TapManaLandsProduceAbility).
 const tapManaLandsProduceKey = ChoiceKey("oracle-lands-produce-color")
 
+// tapManaLinkedExileColorKey publishes the color chosen for a "mana of any of
+// the exiled card's colors" ability (Chrome Mox; see
+// TapLinkedExileColorManaAbility).
+const tapManaLinkedExileColorKey = ChoiceKey("oracle-linked-exile-color")
+
+// tapManaAmongControlledColorsKey publishes the color chosen for a "mana of any
+// color among <permanents> you control" ability (Mox Amber, Plaza of Heroes;
+// see TapManaAmongControlledColorsAbility).
+const tapManaAmongControlledColorsKey = ChoiceKey("oracle-among-controlled-color")
+
 // tapManaFilterFirstKey and tapManaFilterSecondKey publish the two independent
 // color choices of a filter-land mana ability (see TwoColorFilterManaAbility).
 // They are distinct so the instruction sequence publishes each choice under its
@@ -153,15 +163,7 @@ func cloneTargetSpec(source *TargetSpec) TargetSpec {
 	target.Predicate.Colors = append([]color.Color(nil), target.Predicate.Colors...)
 	target.Predicate.ExcludedColors = append([]color.Color(nil), target.Predicate.ExcludedColors...)
 	if target.Selection.Exists {
-		selection := target.Selection.Val
-		selection.RequiredTypes = append([]types.Card(nil), selection.RequiredTypes...)
-		selection.RequiredTypesAny = append([]types.Card(nil), selection.RequiredTypesAny...)
-		selection.ExcludedTypes = append([]types.Card(nil), selection.ExcludedTypes...)
-		selection.Supertypes = append([]types.Super(nil), selection.Supertypes...)
-		selection.SubtypesAny = append([]types.Sub(nil), selection.SubtypesAny...)
-		selection.ColorsAny = append([]color.Color(nil), selection.ColorsAny...)
-		selection.ExcludedColors = append([]color.Color(nil), selection.ExcludedColors...)
-		target.Selection = opt.Val(selection)
+		target.Selection = opt.Val(cloneSelection(target.Selection.Val))
 	}
 	return target
 }
@@ -331,6 +333,40 @@ func CyclingActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 	}
 }
 
+// LandcyclingActivatedAbility builds the complete activated ability for the
+// typed landcycling family (Basic landcycling, Plainscycling, and so on). It is
+// a cycling variant (CR 702.29): the discard-from-hand activation searches the
+// library for a land matching spec instead of drawing a card. The caller
+// supplies the land filter through spec; the source zone, hand destination, and
+// reveal are fixed by the template.
+func LandcyclingActivatedAbility(manaCost cost.Mana, spec SearchSpec) ActivatedAbility {
+	activationCost := append(cost.Mana(nil), manaCost...)
+	keywordCost := append(cost.Mana(nil), manaCost...)
+	spec.SourceZone = zone.Library
+	spec.Destination = zone.Hand
+	spec.Reveal = true
+	return ActivatedAbility{
+		ManaCost:       opt.Val(activationCost),
+		ZoneOfFunction: zone.Hand,
+		AdditionalCosts: []cost.Additional{{
+			Kind:   cost.AdditionalDiscard,
+			Text:   "Discard this card",
+			Amount: 1,
+			Source: zone.Hand,
+		}},
+		KeywordAbilities: []KeywordAbility{
+			CyclingKeyword{Cost: keywordCost},
+		},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: Search{
+				Player: ControllerReference(),
+				Spec:   spec,
+				Amount: Fixed(1),
+			},
+		}}}.Ability(),
+	}
+}
+
 // CumulativeUpkeepTriggeredAbility builds the complete upkeep trigger for a
 // fixed mana cost.
 func CumulativeUpkeepTriggeredAbility(manaCost cost.Mana) TriggeredAbility {
@@ -421,8 +457,23 @@ func MutateStaticAbility(manaCost cost.Mana) StaticAbility {
 // EquipActivatedAbility builds the complete activated ability for Equip with a
 // mana cost.
 func EquipActivatedAbility(manaCost cost.Mana) ActivatedAbility {
+	return EquipRestrictedActivatedAbility(manaCost, nil, nil)
+}
+
+// EquipRestrictedActivatedAbility builds the complete activated ability for a
+// restricted Equip ("Equip legendary creature {3}", "Equip Knight {2}"): the
+// Equipment may attach only to a creature you control that has every supertype
+// and at least one of the subtypes. Nil supertypes and subtypes yield the
+// unrestricted Equip.
+func EquipRestrictedActivatedAbility(manaCost cost.Mana, supertypes []types.Super, subtypes []types.Sub) ActivatedAbility {
 	activationCost := append(cost.Mana(nil), manaCost...)
 	keywordCost := append(cost.Mana(nil), manaCost...)
+	predicate := TargetPredicate{
+		PermanentTypes: []types.Card{types.Creature},
+		Controller:     ControllerYou,
+		Supertypes:     append([]types.Super(nil), supertypes...),
+	}
+	predicate.Subtypes = append([]types.Sub(nil), subtypes...)
 	return ActivatedAbility{
 		Text:           "Equip " + manaCost.String(),
 		ManaCost:       opt.Val(activationCost),
@@ -434,14 +485,30 @@ func EquipActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 		Content: Mode{Targets: []TargetSpec{{
 			MinTargets: 1,
 			MaxTargets: 1,
-			Constraint: "creature you control",
+			Constraint: equipRestrictionConstraint(supertypes, subtypes),
 			Allow:      TargetAllowPermanent,
-			Predicate: TargetPredicate{
-				PermanentTypes: []types.Card{types.Creature},
-				Controller:     ControllerYou,
-			},
+			Predicate:  predicate,
 		}}}.Ability(),
 	}
+}
+
+// equipRestrictionConstraint renders the human-readable target constraint for a
+// restricted Equip, defaulting to "creature you control".
+func equipRestrictionConstraint(supertypes []types.Super, subtypes []types.Sub) string {
+	words := make([]string, 0, len(supertypes)+2)
+	for _, supertype := range supertypes {
+		words = append(words, strings.ToLower(string(supertype)))
+	}
+	noun := "creature"
+	if len(subtypes) > 0 {
+		parts := make([]string, len(subtypes))
+		for i, subtype := range subtypes {
+			parts[i] = string(subtype)
+		}
+		noun = strings.Join(parts, " or ")
+	}
+	words = append(words, noun, "you control")
+	return strings.Join(words, " ")
 }
 
 // TapManaAbility builds the complete "{T}: Add {X}." mana ability.
@@ -495,6 +562,145 @@ func TapManaChoiceAbility(colors ...mana.Color) ManaAbility {
 			{
 				Primitive: AddMana{
 					Amount:     Fixed(1),
+					ChoiceFrom: tapManaChoiceKey,
+				},
+			},
+		}}.Ability(),
+	}
+}
+
+// TapManaChoiceCountAbility builds the tap ability for "Add <count> mana of any
+// one color." (Gilded Lotus: "Add three mana of any one color."), count >= 2.
+// The controller chooses a single color from colors as the ability resolves and
+// adds that many mana of the one chosen color. text is the ability's oracle
+// text; the renderer passes it through so the rendered ability matches the
+// lowered one regardless of the cardinal wording.
+func TapManaChoiceCountAbility(text string, count int, colors ...mana.Color) ManaAbility {
+	manaColors := append([]mana.Color(nil), colors...)
+	validateManaColorChoice(manaColors)
+	prompt := "Choose a color"
+	if containsManaColor(manaColors, mana.C) {
+		prompt = "Choose a type of mana"
+	}
+	return ManaAbility{
+		Text:            text,
+		AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalTap}},
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: Choose{
+					Choice: ResolutionChoice{
+						Kind:   ResolutionChoiceMana,
+						Prompt: prompt,
+						Colors: manaColors,
+					},
+					PublishChoice: tapManaChoiceKey,
+				},
+			},
+			{
+				Primitive: AddMana{
+					Amount:     Fixed(count),
+					ChoiceFrom: tapManaChoiceKey,
+				},
+			},
+		}}.Ability(),
+	}
+}
+
+// TapManaChosenColorDevotionAbility builds the resolving content for "Choose a
+// color. Add an amount of mana of that color equal to your devotion to that
+// color." (Nykthos, Shrine to Nyx). The controller chooses a color as the
+// ability resolves; the produced mana is that color and its amount is the
+// controller's devotion to the chosen color (CR 700.5), read from the published
+// color choice so the devotion color tracks the choice rather than a fixed
+// color.
+func TapManaChosenColorDevotionAbility(text string) ManaAbility {
+	return ManaAbility{
+		Text:            text,
+		AdditionalCosts: cost.Tap,
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: Choose{
+					Choice: ResolutionChoice{
+						Kind:   ResolutionChoiceMana,
+						Prompt: "Choose a color",
+						Colors: []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G},
+					},
+					PublishChoice: tapManaChoiceKey,
+				},
+			},
+			{
+				Primitive: AddMana{
+					Amount: Dynamic(DynamicAmount{
+						Kind:      DynamicAmountDevotion,
+						ColorFrom: tapManaChoiceKey,
+					}),
+					ChoiceFrom: tapManaChoiceKey,
+				},
+			},
+		}}.Ability(),
+	}
+}
+
+// TapManaChosenColorCountAbility builds the complete tap ability for "Choose a
+// color. Add an amount of mana of that color equal to <dynamic count>." (Three
+// Tree City: "...equal to the number of creatures you control of the chosen
+// type."). The controller chooses a color as the ability resolves; the produced
+// mana is that color and its amount is the count of battlefield permanents
+// matching selection.
+func TapManaChosenColorCountAbility(text string, selection Selection) ManaAbility {
+	return ManaAbility{
+		Text:            text,
+		AdditionalCosts: cost.Tap,
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: Choose{
+					Choice: ResolutionChoice{
+						Kind:   ResolutionChoiceMana,
+						Prompt: "Choose a color",
+						Colors: []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G},
+					},
+					PublishChoice: tapManaChoiceKey,
+				},
+			},
+			{
+				Primitive: AddMana{
+					Amount: Dynamic(DynamicAmount{
+						Kind:       DynamicAmountCountSelector,
+						Multiplier: 1,
+						Group:      BattlefieldGroup(selection),
+					}),
+					ChoiceFrom: tapManaChoiceKey,
+				},
+			},
+		}}.Ability(),
+	}
+}
+
+// TapManaChosenColorDynamicAbility builds the complete tap ability for "Add X
+// mana of any one color, where X is <dynamic amount>." (Kami of Whispered Hopes:
+// "...where X is this creature's power."). The controller chooses any one color
+// as the ability resolves; the produced mana is that color and its amount is the
+// supplied dynamic value.
+//
+//nolint:gocritic // the template owns an immutable copy of the dynamic amount.
+func TapManaChosenColorDynamicAbility(text string, amount DynamicAmount) ManaAbility {
+	return ManaAbility{
+		Text:            text,
+		AdditionalCosts: cost.Tap,
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: Choose{
+					Choice: ResolutionChoice{
+						Kind:   ResolutionChoiceMana,
+						Prompt: "Choose a color",
+						Colors: []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G},
+					},
+					PublishChoice: tapManaChoiceKey,
+				},
+			},
+			{
+				Primitive: AddMana{
+					Amount:     Dynamic(amount),
 					ChoiceFrom: tapManaChoiceKey,
 				},
 			},
@@ -631,6 +837,39 @@ func TapManaCommanderIdentityWithSpendRiderAbility(text string, rider ManaSpendR
 	}
 }
 
+// TapLinkedExileColorManaAbility builds the complete "{T}: Add one mana of any
+// of the exiled card's colors." mana ability (Chrome Mox). linkID names the
+// object-scoped linked object (the imprinted exiled card) published by the
+// source permanent's enter-the-battlefield exile. The choosable colors are
+// recomputed from that linked card at resolution; a missing, declined, or
+// colorless imprint leaves the choice empty and the ability unactivatable
+// (CR 605.1a), while a multicolored imprint offers exactly its colors.
+func TapLinkedExileColorManaAbility(linkID string) ManaAbility {
+	return ManaAbility{
+		Text:            "{T}: Add one mana of any of the exiled card's colors.",
+		AdditionalCosts: cost.Tap,
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: Choose{
+					Choice: ResolutionChoice{
+						Kind:        ResolutionChoiceMana,
+						Prompt:      "Choose a color of the exiled card",
+						ColorSource: ResolutionChoiceColorSourceLinkedExileColors,
+						LinkID:      linkID,
+					},
+					PublishChoice: tapManaLinkedExileColorKey,
+				},
+			},
+			{
+				Primitive: AddMana{
+					Amount:     Fixed(1),
+					ChoiceFrom: tapManaLinkedExileColorKey,
+				},
+			},
+		}}.Ability(),
+	}
+}
+
 // TapManaLandsProduceAbility builds the complete mana ability that adds one mana
 // of any color a land could produce, scoped to lands matching the given player
 // relation (CR 106.7, CR 605.1a). PlayerYou models Reflecting Pool
@@ -693,6 +932,61 @@ func landsProduceTexts(relation PlayerRelation, includeColorless bool) (text, pr
 			fmt.Sprintf("Choose a %s a land an opponent controls could produce", promptKind)
 	default:
 		panic(fmt.Sprintf("game: unsupported lands-produce mana scope %d", relation))
+	}
+}
+
+// TapManaAmongControlledColorsAbility builds the complete "{T}: Add one mana of
+// any color among <permanents> you control." mana ability (Mox Amber, Plaza of
+// Heroes). text is the exact oracle text. selection describes which permanents
+// the controller controls contribute their colors; the choosable colors are
+// recomputed at resolution as the union of the matching permanents' colors. When
+// no matching permanent is colored the choice is empty and the ability is
+// unactivatable (CR 605.1a).
+func TapManaAmongControlledColorsAbility(text string, selection Selection) ManaAbility {
+	return ManaAbility{
+		Text:            text,
+		AdditionalCosts: cost.Tap,
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: Choose{
+					Choice: ResolutionChoice{
+						Kind:        ResolutionChoiceMana,
+						Prompt:      "Choose a color among permanents you control",
+						ColorSource: ResolutionChoiceColorSourceControlledPermanentColors,
+						Selection:   &selection,
+					},
+					PublishChoice: tapManaAmongControlledColorsKey,
+				},
+			},
+			{
+				Primitive: AddMana{
+					Amount:     Fixed(1),
+					ChoiceFrom: tapManaAmongControlledColorsKey,
+				},
+			},
+		}}.Ability(),
+	}
+}
+
+// TapManaEachControlledColorAbility builds the complete "{T}: For each color
+// among <permanents> you control, add one mana of that color." mana ability
+// (Bloom Tender). text is the exact oracle text. selection describes which
+// permanents the controller controls contribute their colors; one mana of each
+// color in the union of the matching permanents' colors is produced at
+// resolution. When no matching permanent is colored no mana is produced and the
+// ability is unactivatable (CR 605.1a).
+func TapManaEachControlledColorAbility(text string, selection Selection) ManaAbility {
+	return ManaAbility{
+		Text:            text,
+		AdditionalCosts: cost.Tap,
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: AddMana{
+					Amount:              Fixed(1),
+					EachControlledColor: &selection,
+				},
+			},
+		}}.Ability(),
 	}
 }
 

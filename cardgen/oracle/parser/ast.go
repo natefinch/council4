@@ -78,6 +78,8 @@ type Ability struct {
 	// AlternativeCost is the typed alternative spell-cost declaration, or nil
 	// when this paragraph does not declare one.
 	AlternativeCost *SpellAlternativeCost `json:",omitempty"`
+	// ExactSequence is a parser-owned, exact-vocabulary resolving sequence.
+	ExactSequence *ExactSequenceSyntax `json:",omitempty"`
 	// Optional reports that a triggered ability's resolving body begins with the
 	// optional "you may" choice; OptionalSpan covers those two words.
 	Optional     bool        `json:",omitempty"`
@@ -145,6 +147,22 @@ type Ability struct {
 	// re-parsing the reminder wording itself. It is nil for non-reminder abilities
 	// and for reminder text that is not fully parenthesized.
 	reminderInner *reminderInner
+}
+
+// ExactSequenceKind identifies an exact multi-instruction Oracle sequence.
+type ExactSequenceKind uint8
+
+// Exact sequence kinds enumerate the recognized multi-instruction Oracle
+// sequences. ExactSequenceUnknown is the zero value for an unrecognized body.
+const (
+	ExactSequenceUnknown ExactSequenceKind = iota
+	ExactSequenceChosenTypeLibraryTopToHand
+)
+
+// ExactSequenceSyntax records an exact sequence and its resolving-body span.
+type ExactSequenceSyntax struct {
+	Kind ExactSequenceKind
+	Span shared.Span
 }
 
 // SourceAbilityCostReductionSyntax is the typed syntax for a source-local
@@ -335,6 +353,12 @@ const (
 	TriggerEventKindSacrificed       TriggerEventKind = "TriggerEventKindSacrificed"
 	TriggerEventKindMutated          TriggerEventKind = "TriggerEventKindMutated"
 	TriggerEventKindBecameTarget     TriggerEventKind = "TriggerEventKindBecameTarget"
+	TriggerEventKindTokenCreated     TriggerEventKind = "TriggerEventKindTokenCreated"
+	// TriggerEventKindDied marks the dies constituent of an event-union trigger
+	// such as "enters or dies". It is only used as a union secondary
+	// (TriggerEventClause.UnionKind); a standalone dies trigger is a zone-change
+	// clause with ZoneChange.Kind == TriggerEventZoneChangeDied.
+	TriggerEventKindDied TriggerEventKind = "TriggerEventKindDied"
 )
 
 // TriggerEventSubjectKind identifies the grammatical subject in a trigger event.
@@ -555,6 +579,12 @@ type TriggerEventSpellSelection struct {
 	// turn" wording (1 for first, 2 for second, ...). Zero means no ordinal
 	// qualifier. Recognized only with the controller-scoped "you cast" actor.
 	Ordinal int `json:",omitempty"`
+	// SubtypeFromEntryChoice records the trailing "of the chosen type"
+	// restriction ("Whenever you cast a creature spell of the chosen type"),
+	// requiring the cast spell to share the creature subtype the source
+	// permanent chose as it entered. It lowers to the runtime
+	// Selection.SubtypeFromSourceEntryChoice predicate.
+	SubtypeFromEntryChoice bool `json:",omitempty"`
 }
 
 // TriggerEventClause is composable typed syntax for a trigger event.
@@ -601,6 +631,15 @@ type TriggerEventClause struct {
 	// MatchCopy is set on a spell-cast clause whose "cast or copy" wording also
 	// matches spell copies (CR 707, magecraft).
 	MatchCopy bool `json:",omitempty"`
+	// TappedForMana restricts a becomes-tapped clause to taps that paid the cost
+	// of a mana ability ("is tapped for mana"), CR 106.11a / 605.
+	TappedForMana bool `json:",omitempty"`
+	// UnionKind names a second trigger event family whose constituent event
+	// joins Kind under a shared subject and actor, expressing "Whenever you
+	// create or sacrifice a token" (CR 603.2). The trigger fires when either the
+	// Kind event or the UnionKind event occurs. It is empty for single-event
+	// clauses.
+	UnionKind TriggerEventKind `json:",omitempty"`
 }
 
 // EventHistoryWindowKind identifies the turn window for an event-history
@@ -708,6 +747,10 @@ type PhaseStepTriggerClause struct {
 	Quantifier PhaseStepQuantifier   `json:",omitzero"`
 	Player     TriggerPlayerSelector `json:",omitzero"`
 	Name       PhaseStepName         `json:",omitzero"`
+	// Next marks a one-shot "next" occurrence ("your next upkeep", "the next end
+	// step") rather than a recurring phase/step trigger. A spell that resolves
+	// sets up such a clause as a delayed triggered ability (CR 603.7).
+	Next bool `json:",omitempty"`
 }
 
 // PlayerEventActionKind identifies an acting player's event.
@@ -800,6 +843,11 @@ type Sentence struct {
 	// effect. Reference and coverage scans treat its pronoun and tokens as
 	// belonging to that destroy rather than as an unrecognized sibling.
 	RegenerationRider bool `json:",omitempty"`
+	// TokenCopyGrantRider reports that this sentence is a credited "[That token/
+	// It] gains <keyword>." rider folded onto a preceding create-copy-token
+	// effect. Reference and coverage scans treat its tokens as belonging to that
+	// create effect rather than as an unrecognized sibling.
+	TokenCopyGrantRider bool `json:",omitempty"`
 }
 
 // StaticRuleSubjectKind identifies the source object constrained by a simple
@@ -953,8 +1001,20 @@ type Modal struct {
 	MinModes    int                    `json:",omitempty"`
 	MaxModes    int                    `json:",omitempty"`
 	ChoiceKnown bool                   `json:",omitempty"`
+	ChoiceKind  ModalChoiceKind        `json:",omitempty"`
 	ChoiceBonus ModalChoiceBonusSyntax `json:",omitzero"`
 }
+
+// ModalChoiceKind identifies exact modal header vocabulary whose range alone
+// is not sufficient to preserve fail-closed lowering.
+type ModalChoiceKind string
+
+const (
+	// ModalChoiceKindUnknown marks modal headers without special typed vocabulary.
+	ModalChoiceKindUnknown ModalChoiceKind = ""
+	// ModalChoiceKindOneOrMore marks the exact "choose one or more" header.
+	ModalChoiceKindOneOrMore ModalChoiceKind = "ModalChoiceKindOneOrMore"
+)
 
 // ModalChoiceBonusCondition identifies a cast-time condition that expands a
 // modal choice range.
@@ -973,11 +1033,36 @@ type ModalChoiceBonusSyntax struct {
 	AdditionalMaxModes int                       `json:",omitempty"`
 }
 
+// ModeLabelKind identifies an exact supported label printed before a modal
+// option's rules text.
+type ModeLabelKind string
+
+const (
+	// ModeLabelUnknown marks an unlabeled or unsupported mode label.
+	ModeLabelUnknown ModeLabelKind = ""
+	// ModeLabelSellContraband marks the exact "Sell Contraband" label.
+	ModeLabelSellContraband ModeLabelKind = "ModeLabelSellContraband"
+	// ModeLabelBuyInformation marks the exact "Buy Information" label.
+	ModeLabelBuyInformation ModeLabelKind = "ModeLabelBuyInformation"
+	// ModeLabelHireMercenary marks the exact "Hire a Mercenary" label.
+	ModeLabelHireMercenary ModeLabelKind = "ModeLabelHireMercenary"
+)
+
+// ModeLabelClause is a recognized modal option label and its separating em dash.
+type ModeLabelClause struct {
+	Kind          ModeLabelKind `json:",omitempty"`
+	Text          string        `json:",omitempty"`
+	Span          shared.Span   `json:"-"`
+	SeparatorSpan shared.Span   `json:"-"`
+}
+
 // Mode is one bullet option in a modal ability.
 type Mode struct {
 	Span                   shared.Span             `json:"-"`
 	Text                   string                  `json:",omitempty"`
 	Tokens                 []shared.Token          `json:"-"`
+	Label                  *ModeLabelClause        `json:",omitempty"`
+	Body                   Phrase                  `json:",omitzero"`
 	Sentences              []Sentence              `json:",omitempty"`
 	ConditionBoundaries    []ConditionBoundary     `json:",omitempty"`
 	EventHistoryConditions []EventHistoryCondition `json:",omitempty"`

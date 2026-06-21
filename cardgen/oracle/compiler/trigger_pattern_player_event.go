@@ -209,6 +209,7 @@ func compilePhaseStepTriggerPattern(
 	pattern.Step = step
 	pattern.Controller = controller
 	pattern.StepPlayerSourceAttachedSelection = attached
+	pattern.NextOccurrence = clause.Next
 	return pattern
 }
 

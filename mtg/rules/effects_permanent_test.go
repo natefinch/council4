@@ -457,6 +457,36 @@ func TestMassBounceYouControlReturnsOnlyControllersPermanents(t *testing.T) {
 	}
 }
 
+func TestMassBounceAttackingReturnsOnlyAttackingCreatures(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	attacker := addCreaturePermanent(g, game.Player1)
+	idle := addCreaturePermanent(g, game.Player2)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+	addEffectSpellToStack(g, game.Player1, game.Bounce{
+		Group: game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			CombatState:   game.CombatStateAttacking,
+		}),
+	}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if _, ok := permanentByObjectID(g, attacker.ObjectID); ok {
+		t.Fatal("attacking creature remained on battlefield after attacking-only mass bounce")
+	}
+	if _, ok := permanentByObjectID(g, idle.ObjectID); !ok {
+		t.Fatal("non-attacking creature was bounced by an attacking-only mass bounce")
+	}
+	if !g.Players[game.Player1].Hand.Contains(attacker.CardInstanceID) {
+		t.Fatal("attacking creature was not returned to its owner's hand")
+	}
+}
+
 func TestControlledChoiceBounceAutoChoosesWhenEligibleCountLEAmount(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -1143,6 +1173,70 @@ func TestCreateTokenCanCopySourceCardWithModifications(t *testing.T) {
 	}
 }
 
+func TestBuildTokenCopyDefDropsLegendaryAndGrantsKeyword(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	sourceID := g.IDGen.Next()
+	g.CardInstances[sourceID] = &game.CardInstance{
+		ID: sourceID,
+		Def: &game.CardDef{CardFace: game.CardFace{
+			Name:       "Legend Source",
+			Supertypes: []types.Super{types.Legendary},
+			Types:      []types.Card{types.Creature},
+			Subtypes:   []types.Sub{types.Dragon},
+			Power:      opt.Val(game.PT{Value: 4}),
+			Toughness:  opt.Val(game.PT{Value: 4}),
+		}},
+		Owner: game.Player1,
+	}
+	obj := &game.StackObject{
+		ID:           g.IDGen.Next(),
+		Kind:         game.StackActivatedAbility,
+		SourceID:     sourceID,
+		SourceCardID: sourceID,
+		Controller:   game.Player1,
+	}
+	def, ok := buildTokenCopyDef(g, obj, game.TokenCopySpec{
+		Source:          game.TokenCopySourceSourceCard,
+		SetNotLegendary: true,
+		AddKeywords:     []game.Keyword{game.Haste},
+	})
+	if !ok {
+		t.Fatal("buildTokenCopyDef returned ok=false")
+	}
+	if slices.Contains(def.Supertypes, types.Legendary) {
+		t.Fatalf("token retained Legendary supertype: %+v", def.Supertypes)
+	}
+	if len(def.StaticAbilities) != 1 {
+		t.Fatalf("token static abilities = %d, want 1 (granted haste)", len(def.StaticAbilities))
+	}
+}
+
+func TestBuildTokenCopyDefFailsClosedOnUnsupportedGrantedKeyword(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	sourceID := g.IDGen.Next()
+	g.CardInstances[sourceID] = &game.CardInstance{
+		ID: sourceID,
+		Def: &game.CardDef{CardFace: game.CardFace{
+			Name:  "Plain Source",
+			Types: []types.Card{types.Creature},
+		}},
+		Owner: game.Player1,
+	}
+	obj := &game.StackObject{
+		ID:           g.IDGen.Next(),
+		Kind:         game.StackActivatedAbility,
+		SourceID:     sourceID,
+		SourceCardID: sourceID,
+		Controller:   game.Player1,
+	}
+	if _, ok := buildTokenCopyDef(g, obj, game.TokenCopySpec{
+		Source:      game.TokenCopySourceSourceCard,
+		AddKeywords: []game.Keyword{game.Cascade},
+	}); ok {
+		t.Fatal("buildTokenCopyDef returned ok=true for an unsupported granted keyword")
+	}
+}
+
 func TestCopyCardDefPreservesCategorizedAbilitiesWithoutDuplication(t *testing.T) {
 	source := &game.CardDef{CardFace: game.CardFace{
 		Name: "Categorized Source",
@@ -1259,5 +1353,56 @@ func TestMultiTargetPumpNoOpsOnDeclinedSlot(t *testing.T) {
 	}
 	if got := effectivePower(g, untouched); got != 2 {
 		t.Fatalf("untouched effective power = %d, want 2", got)
+	}
+}
+
+func TestBounceTargetObjectReturnsSpellOnStackToOwnersHand(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	targetID := g.IDGen.Next()
+	g.CardInstances[targetID] = &game.CardInstance{
+		ID: targetID,
+		Def: &game.CardDef{CardFace: game.CardFace{Name: "Target Spell",
+			Types: []types.Card{types.Sorcery}},
+		},
+		Owner: game.Player2,
+	}
+	targetObj := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackSpell,
+		SourceID:   targetID,
+		Controller: game.Player2,
+	}
+	g.Stack.Push(targetObj)
+	addEffectSpellToStack(g, game.Player1, game.Bounce{Object: game.TargetObjectReference(0)},
+		[]game.Target{game.StackObjectTarget(targetObj.ID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if _, ok := stackObjectByID(g, targetObj.ID); ok {
+		t.Fatal("bounced spell remained on the stack")
+	}
+	if !g.Players[game.Player2].Hand.Contains(targetID) {
+		t.Fatal("bounced spell did not return to its owner's hand")
+	}
+	if g.Players[game.Player2].Graveyard.Contains(targetID) {
+		t.Fatal("bounced spell went to the graveyard instead of hand")
+	}
+}
+
+func TestBounceTargetObjectReturnsPermanentToOwnersHand(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creature := addCreaturePermanent(g, game.Player2)
+	addEffectSpellToStack(g, game.Player1, game.Bounce{Object: game.TargetObjectReference(0)},
+		[]game.Target{game.PermanentTarget(creature.ObjectID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if _, ok := permanentByObjectID(g, creature.ObjectID); ok {
+		t.Fatal("bounced permanent remained on the battlefield")
+	}
+	if !g.Players[game.Player2].Hand.Contains(creature.CardInstanceID) {
+		t.Fatal("bounced permanent did not return to its owner's hand")
 	}
 }

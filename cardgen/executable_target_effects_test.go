@@ -73,6 +73,40 @@ func TestGenerateExecutableCardSourceTargetPlayerDraw(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceControllerAndTargetDraw(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Shared Draw",
+		Layout:     "normal",
+		ManaCost:   "{2}{U}",
+		TypeLine:   "Sorcery",
+		OracleText: "You and target opponent each draw a card.",
+		Colors:     []string{"U"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	// The controller and the player target each draw: two parallel draw
+	// instructions, one for the controller and one for the target opponent.
+	for _, wanted := range []string{
+		`Constraint: "target opponent"`,
+		"game.TargetAllowPlayer",
+		"Player: game.ControllerReference()",
+		"Player: game.TargetPlayerReference(0)",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if got := strings.Count(source, "Primitive: game.Draw"); got != 2 {
+		t.Fatalf("draw instruction count = %d, want 2:\n%s", got, source)
+	}
+}
+
 func TestGenerateExecutableCardSourceDestroyCreature(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -717,6 +751,67 @@ func TestGenerateExecutableCardSourceBounceCreature(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceBounceSpell(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		text   string
+		wanted []string
+	}{
+		{
+			name: "spell only",
+			text: "Return target spell to its owner's hand.",
+			wanted: []string{
+				`Allow:      game.TargetAllowStackObject`,
+				"StackObjectKinds: []game.StackObjectKind{game.StackSpell}",
+				"Object: game.TargetObjectReference(0)",
+			},
+		},
+		{
+			name: "spell or nonland permanent an opponent controls",
+			text: "Return target spell or nonland permanent an opponent controls to its owner's hand.",
+			wanted: []string{
+				"game.TargetAllowPermanent | game.TargetAllowStackObject",
+				"types.Card{types.Land}",
+				"game.ControllerOpponent",
+				"Object: game.TargetObjectReference(0)",
+			},
+		},
+		{
+			name: "spell or creature",
+			text: "Return target spell or creature to its owner's hand.",
+			wanted: []string{
+				"game.TargetAllowPermanent | game.TargetAllowStackObject",
+				"types.Card{types.Creature}",
+				"Object: game.TargetObjectReference(0)",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Spell Bounce",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: test.text,
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range test.wanted {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceGainLife(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -916,6 +1011,19 @@ func TestGenerateExecutableCardSourceLifeLostThisWayDrain(t *testing.T) {
 				"game.DynamicAmountPreviousEffectResult",
 			},
 		},
+		{
+			name: "devotion",
+			text: "Each opponent loses X life, where X is your devotion to black. You gain life equal to the life lost this way.",
+			wanteds: []string{
+				"game.LoseLife",
+				"game.DynamicAmountDevotion",
+				"[]color.Color{color.Black}",
+				"PlayerGroup: game.OpponentsReference()",
+				`PublishResult: game.ResultKey("life-change")`,
+				"game.GainLife",
+				"game.DynamicAmountPreviousEffectResult",
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -955,11 +1063,6 @@ func TestGenerateExecutableCardSourceLifeLostThisWayFailsClosed(t *testing.T) {
 			// "two times X" is not an exact life-loss amount.
 			name: "twiceX",
 			text: "Each opponent loses two times X life. You gain life equal to the life lost this way.",
-		},
-		{
-			// "your devotion to black" is not a modeled count.
-			name: "devotion",
-			text: "Each opponent loses X life, where X is your devotion to black. You gain life equal to the life lost this way.",
 		},
 		{
 			// A standalone gain with no preceding life loss has nothing to read.
@@ -1254,6 +1357,36 @@ func TestGenerateExecutableCardSourceSelfPowerDamageToOther(t *testing.T) {
 		`Constraint: "target creature you don't control"`,
 		"game.DynamicAmountObjectPower",
 		"Recipient:    game.AnyTargetDamageRecipient(1)",
+		"DamageSource: opt.Val(game.TargetPermanentReference(0))",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceSelfPowerDamageToGroupPair(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Ignition",
+		Layout:     "normal",
+		ManaCost:   "{3}{R}{R}",
+		TypeLine:   "Sorcery",
+		OracleText: "Target creature you control deals damage equal to its power to each other creature and each opponent.",
+		Colors:     []string{"R"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		`Constraint: "target creature you control"`,
+		"game.DynamicAmountObjectPower",
+		"game.GroupDamageRecipient(game.BattlefieldGroupExcluding(game.Selection{RequiredTypes: []types.Card{types.Creature}}, game.TargetPermanentReference(0)))",
+		"game.PlayerGroupDamageRecipient(game.OpponentsReference())",
 		"DamageSource: opt.Val(game.TargetPermanentReference(0))",
 	} {
 		if !strings.Contains(source, wanted) {

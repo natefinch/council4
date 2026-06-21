@@ -108,6 +108,36 @@ func TestLowerForEachGraveyardCardCount(t *testing.T) {
 	}
 }
 
+// TestLowerTrailingForEachLandTokenCount verifies that a create-token whose
+// count is a TRAILING "for each <permanent> you control" phrase (Avenger of
+// Zendikar) lowers to a dynamic per-permanent count without folding the counted
+// permanent's type into the token's own type line.
+func TestLowerTrailingForEachLandTokenCount(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Trailing ForEach Land",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a 0/1 green Plant creature token for each land you control.",
+		Colors:     []string{"G"},
+	})
+	create := createTokenPrimitive(t, face)
+	if !create.Amount.IsDynamic() {
+		t.Fatalf("amount = %d, want a dynamic per-land count", create.Amount.Value())
+	}
+	want := game.DynamicAmount{
+		Kind:       game.DynamicAmountCountSelector,
+		Multiplier: 1,
+		Group: game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Land},
+			Controller:    game.ControllerYou,
+		}),
+	}
+	if got := create.Amount.DynamicAmount().Val; !reflect.DeepEqual(got, want) {
+		t.Fatalf("dynamic amount = %+v, want %+v", got, want)
+	}
+}
+
 func createTokenPrimitive(t *testing.T, face loweredFaceAbilities) game.CreateToken {
 	t.Helper()
 	if !face.SpellAbility.Exists {
@@ -118,6 +148,95 @@ func createTokenPrimitive(t *testing.T, face loweredFaceAbilities) game.CreateTo
 		t.Fatalf("primitive = %T, want game.CreateToken", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
 	}
 	return create
+}
+
+// TestLowerNamedTokenChoice verifies that "create a X token or a Y token" and
+// the N-way "create your choice of a X token, a Y token, or a Z token" forms
+// lower to a choose-one modal ability with one CreateToken mode per predefined
+// artifact-token alternative.
+func TestLowerNamedTokenChoice(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		oracle string
+		want   []string
+	}{
+		{
+			name:   "two-way",
+			oracle: "Create a Food token or a Treasure token.",
+			want:   []string{string(types.Food), string(types.Treasure)},
+		},
+		{
+			name:   "three-way choice of",
+			oracle: "Create your choice of a Clue token, a Food token, or a Treasure token.",
+			want:   []string{string(types.Clue), string(types.Food), string(types.Treasure)},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Provisioner",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracle,
+			})
+			if !face.SpellAbility.Exists {
+				t.Fatal("spell ability not lowered")
+			}
+			content := face.SpellAbility.Val
+			if len(content.Modes) != len(test.want) || content.MinModes != 1 || content.MaxModes != 1 {
+				t.Fatalf("modal shape = modes %d min %d max %d, want %d/1/1",
+					len(content.Modes), content.MinModes, content.MaxModes, len(test.want))
+			}
+			for i, mode := range content.Modes {
+				create, ok := mode.Sequence[0].Primitive.(game.CreateToken)
+				if !ok {
+					t.Fatalf("mode %d primitive = %T, want game.CreateToken", i, mode.Sequence[0].Primitive)
+				}
+				if create.Amount.Value() != 1 {
+					t.Fatalf("mode %d amount = %d, want 1", i, create.Amount.Value())
+				}
+				def, ok := create.Source.TokenDefRef()
+				if !ok || def.Name != test.want[i] {
+					t.Fatalf("mode %d token def = %+v, want %s", i, create.Source, test.want[i])
+				}
+			}
+		})
+	}
+}
+
+// TestLowerActivatedNamedTokenChoice verifies that an activated ability whose
+// effect is an N-way named-token choice ("{T}: Create your choice of a Blood
+// token, a Clue token, or a Food token.") lowers to a choose-one modal ability
+// body with one CreateToken mode per alternative.
+func TestLowerActivatedNamedTokenChoice(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Font",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "{T}: Create your choice of a Blood token, a Clue token, or a Food token.",
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+	}
+	content := face.ActivatedAbilities[0].Content
+	want := []string{string(types.Blood), string(types.Clue), string(types.Food)}
+	if len(content.Modes) != len(want) || content.MinModes != 1 || content.MaxModes != 1 {
+		t.Fatalf("modal shape = modes %d min %d max %d, want %d/1/1",
+			len(content.Modes), content.MinModes, content.MaxModes, len(want))
+	}
+	for i, mode := range content.Modes {
+		create, ok := mode.Sequence[0].Primitive.(game.CreateToken)
+		if !ok {
+			t.Fatalf("mode %d primitive = %T, want game.CreateToken", i, mode.Sequence[0].Primitive)
+		}
+		def, ok := create.Source.TokenDefRef()
+		if !ok || def.Name != want[i] {
+			t.Fatalf("mode %d token def = %+v, want %s", i, create.Source, want[i])
+		}
+	}
 }
 
 func TestLowerSingleCreatureToken(t *testing.T) {
@@ -353,6 +472,125 @@ func TestGenerateExecutableCardSourceCopyOfTargetCreatureToken(t *testing.T) {
 		"Source: game.TokenCopyOf(game.TokenCopySpec{",
 		"Source: game.TokenCopySourceObject,",
 		"Object: game.TargetPermanentReference(0),",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceCopyOfReferenceToken(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Self Copy",
+		Layout:     "normal",
+		ManaCost:   "{2}{G}",
+		TypeLine:   "Creature — Insect",
+		OracleText: "{T}: Create a token that's a copy of this creature.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+		Colors:     []string{"G"},
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Primitive: game.CreateToken{",
+		"Source: game.TokenCopyOf(game.TokenCopySpec{",
+		"Source: game.TokenCopySourceObject,",
+		"Object: game.SourcePermanentReference(),",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceCopyOfTargetExceptNotLegendary(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Imposter",
+		Layout:     "normal",
+		ManaCost:   "{3}{U}",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a token that's a copy of target creature you control, except it isn't legendary.",
+		Colors:     []string{"U"},
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Source: game.TokenCopyOf(game.TokenCopySpec{",
+		"Object:          game.TargetPermanentReference(0),",
+		"SetNotLegendary: true,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceCopyOfAttachedExceptNotLegendaryGainsKeyword(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:     "Helm of the Host",
+		Layout:   "normal",
+		ManaCost: "{4}",
+		TypeLine: "Artifact — Equipment",
+		OracleText: "At the beginning of combat on your turn, create a token that's a copy of equipped creature, " +
+			"except the token isn't legendary. That token gains haste.\nEquip {5}",
+	}, "h")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Source: game.TokenCopyOf(game.TokenCopySpec{",
+		"Object:          game.SourceAttachedPermanentReference(),",
+		"SetNotLegendary: true,",
+		"AddKeywords:     []game.Keyword{game.Haste},",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceConditionalCopyTokenInstead(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:     "Scute Swarm",
+		Layout:   "normal",
+		ManaCost: "{2}{G}",
+		TypeLine: "Creature — Insect",
+		OracleText: "Landfall — Whenever a land you control enters, create a 1/1 green Insect creature token. " +
+			"If you control six or more lands, create a token that's a copy of this creature instead.",
+		Power:     new("1"),
+		Toughness: new("1"),
+		Colors:    []string{"G"},
+	}, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	// The conditional "instead" form must gate the vanilla 1/1 token on the
+	// negation of the six-or-more-lands condition and the copy token on the
+	// condition, so exactly one of the two tokens is created.
+	for _, wanted := range []string{
+		"Source: game.TokenDef(scuteSwarmToken),",
+		"Negate: true,",
+		"Object: game.SourcePermanentReference(),",
+		"MinCount:  6,",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -759,6 +997,35 @@ func TestLowerNamedArtifactToken(t *testing.T) {
 	}
 }
 
+// TestLowerVariableXNamedToken verifies that "Create X Treasure tokens." lowers
+// to a Treasure CreateToken whose count is the ability's variable X, the
+// predefined-token analogue of the variable-X creature-token count. It backs
+// Treasure Vault's "{X}{X}, {T}, Sacrifice this land: Create X Treasure
+// tokens." activation.
+func TestLowerVariableXNamedToken(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test X Treasure",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create X Treasure tokens.",
+	})
+	create := createTokenPrimitive(t, face)
+	def, ok := create.Source.TokenDefRef()
+	if !ok {
+		t.Fatal("token source is not a token definition")
+	}
+	if def.Name != string(types.Treasure) {
+		t.Fatalf("token name = %q, want Treasure", def.Name)
+	}
+	if !create.Amount.IsDynamic() {
+		t.Fatalf("amount = %d, want the variable-X dynamic amount", create.Amount.Value())
+	}
+	if got := create.Amount.DynamicAmount().Val; got.Kind != game.DynamicAmountX {
+		t.Fatalf("dynamic amount kind = %v, want DynamicAmountX", got.Kind)
+	}
+}
+
 func TestGenerateExecutableCardSourceTreasureTokenCompiles(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
@@ -1148,8 +1415,6 @@ func TestLowerVariableXToken(t *testing.T) {
 func TestCreateTokenFailsClosedForUnrepresentableDynamicCount(t *testing.T) {
 	t.Parallel()
 	for _, oracle := range []string{
-		// "your devotion to white" is not a representable dynamic count.
-		"Create a number of 1/1 white Soldier creature tokens equal to your devotion to white.",
 		// "half the number of Zombies" is not a representable dynamic count.
 		"Create X 2/2 black Zombie creature tokens, where X is half the number of Zombies you control, rounded down.",
 	} {

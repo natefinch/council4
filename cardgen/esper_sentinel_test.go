@@ -77,8 +77,6 @@ func TestGenerateExecutableCardSourceEsperSentinel(t *testing.T) {
 func TestEsperSentinelFailClosedNearMisses(t *testing.T) {
 	t.Parallel()
 	for _, oracle := range []string{
-		"Whenever an opponent casts their second noncreature spell each turn, draw a card unless that player pays {X}, where X is this creature's power.",
-		"Whenever an opponent casts their first spell each turn, draw a card unless that player pays {X}, where X is this creature's power.",
 		"Whenever an opponent copies their first noncreature spell each turn, draw a card unless that player pays {X}, where X is this creature's power.",
 		"Whenever an opponent casts their first noncreature spell each turn, gain 1 life unless that player pays {X}, where X is this creature's power.",
 		"Whenever an opponent casts their first noncreature spell each turn, draw a card unless that player pays {X}, where X is this creature's toughness.",

@@ -62,6 +62,8 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		condition.Threshold = clause.Threshold
 	case parser.ConditionPredicateControls:
 		compileControlsCondition(condition, clause)
+	case parser.ConditionPredicateControlComparison:
+		compileControlComparisonCondition(condition, clause)
 	case parser.ConditionPredicateEventSubjectWasKicked:
 		condition.Predicate = ConditionPredicateEventSubjectWasKicked
 	case parser.ConditionPredicateEventSubjectWasCast:
@@ -71,6 +73,16 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 	case parser.ConditionPredicateEventSubjectHadCounters:
 		condition.Predicate = ConditionPredicateEventSubjectHadCounters
 		condition.ObjectBinding = compileConditionObjectBinding(clause.ObjectBinding)
+	case parser.ConditionPredicateEventSubjectNameUnique:
+		condition.Predicate = ConditionPredicateEventSubjectNameUnique
+		condition.ObjectBinding = compileConditionObjectBinding(clause.ObjectBinding)
+	case parser.ConditionPredicateTargetColor:
+		selection, ok := compileConditionSelection(clause.Selection)
+		if !ok {
+			return
+		}
+		condition.Predicate = ConditionPredicateTargetColor
+		condition.Selection = selection
 	case parser.ConditionPredicateEventSubjectHadNoCounter:
 		counter, ok := compileConditionCounter(clause.Counter)
 		if !ok {
@@ -93,6 +105,11 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		condition.Counter = counter
 	case parser.ConditionPredicateControllerCounterPlacement:
 		condition.Predicate = ConditionPredicateControllerCounterPlacement
+	case parser.ConditionPredicateCounterPlacementOnControlledPermanent:
+		condition.Predicate = ConditionPredicateCounterPlacementOnControlledPermanent
+		if counter, ok := compileConditionCounter(clause.Counter); ok {
+			condition.Counter = counter
+		}
 	case parser.ConditionPredicateDamageByControlledSource:
 		selection, ok := compileConditionSelection(clause.Selection)
 		if !ok {
@@ -102,6 +119,10 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		condition.Selection = selection
 	case parser.ConditionPredicateTokenCreationUnderController:
 		condition.Predicate = ConditionPredicateTokenCreationUnderController
+	case parser.ConditionPredicateControllerWouldCreateNamedToken:
+		condition.Predicate = ConditionPredicateControllerWouldCreateNamedToken
+	case parser.ConditionPredicateCreatedTokenThisTurn:
+		condition.Predicate = ConditionPredicateControllerCreatedTokenThisTurn
 	case parser.ConditionPredicateSourceWouldDie:
 		condition.Predicate = ConditionPredicateSourceWouldDie
 		condition.SubjectSpan = clause.SubjectSpan
@@ -161,6 +182,7 @@ func compileControlsCondition(condition *CompiledCondition, clause *parser.Condi
 	}
 	condition.Predicate = predicate
 	condition.Selection = selection
+	condition.SourceInGraveyard = clause.SourceInGraveyard
 }
 
 func controlScopePredicate(scope parser.ConditionControlScope) (ConditionPredicate, bool) {
@@ -173,6 +195,45 @@ func controlScopePredicate(scope parser.ConditionControlScope) (ConditionPredica
 		return ConditionPredicateOpponentsControl, true
 	default:
 		return ConditionPredicateUnsupported, false
+	}
+}
+
+// compileControlComparisonCondition maps a typed cross-player control-count
+// comparison. It fails closed unless exactly one side counts the controller and
+// the counted Selection is expressible in the closed vocabulary.
+func compileControlComparisonCondition(condition *CompiledCondition, clause *parser.ConditionClause) {
+	left, ok := comparisonScopeFromParser(clause.ControlComparison.LeftScope)
+	if !ok {
+		return
+	}
+	right, ok := comparisonScopeFromParser(clause.ControlComparison.RightScope)
+	if !ok {
+		return
+	}
+	if (left == ConditionComparisonScopeController) == (right == ConditionComparisonScopeController) {
+		return
+	}
+	selection, ok := compileConditionSelection(clause.Selection)
+	if !ok {
+		return
+	}
+	condition.Predicate = ConditionPredicateControlComparison
+	condition.Selection = selection
+	condition.ControlComparisonLeft = left
+	condition.ControlComparisonRight = right
+	condition.ControlComparisonGreater = clause.ControlComparison.Greater
+}
+
+func comparisonScopeFromParser(scope parser.ConditionControlScope) (ConditionComparisonScope, bool) {
+	switch scope {
+	case parser.ConditionControlScopeController:
+		return ConditionComparisonScopeController, true
+	case parser.ConditionControlScopeAnyOpponent:
+		return ConditionComparisonScopeAnyOpponent, true
+	case parser.ConditionControlScopeEachOpponent:
+		return ConditionComparisonScopeEachOpponent, true
+	default:
+		return ConditionComparisonScopeController, false
 	}
 }
 

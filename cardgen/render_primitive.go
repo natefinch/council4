@@ -100,13 +100,25 @@ func (r Renderer) renderMoveCard(ctx *renderCtx, value game.MoveCard) (string, e
 	}
 	ctx.need(importZone)
 	var reference string
-	if value.Player.Kind() != game.PlayerReferenceNone {
+	switch {
+	case value.PlayerGroup.Kind != game.PlayerGroupReferenceNone:
+		var group string
+		switch value.PlayerGroup.Kind {
+		case game.PlayerGroupReferenceOpponents:
+			group = "game.OpponentsReference()"
+		case game.PlayerGroupReferenceAllPlayers:
+			group = "game.AllPlayersReference()"
+		default:
+			return "", fmt.Errorf("render: unsupported player group reference kind %d", value.PlayerGroup.Kind)
+		}
+		reference = fmt.Sprintf("PlayerGroup: %s,", group)
+	case value.Player.Kind() != game.PlayerReferenceNone:
 		player, err := r.renderPlayerReference(value.Player)
 		if err != nil {
 			return "", err
 		}
 		reference = fmt.Sprintf("Player: %s,", player)
-	} else {
+	default:
 		card, err := renderCardReference(value.Card)
 		if err != nil {
 			return "", err
@@ -129,6 +141,23 @@ func (r Renderer) renderMoveCard(ctx *renderCtx, value game.MoveCard) (string, e
 		fields = append(fields, "DestinationBottom: true,")
 	}
 	return structLit("game.MoveCard", fields), nil
+}
+
+func (r Renderer) renderMoveCommander(ctx *renderCtx, value game.MoveCommander) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	destination, err := renderZone(value.Destination)
+	if err != nil {
+		return "", err
+	}
+	ctx.need(importZone)
+	fields := []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Destination: %s,", destination),
+	}
+	return structLit("game.MoveCommander", fields), nil
 }
 
 func (Renderer) renderGrantCastPermission(ctx *renderCtx, value game.GrantCastPermission) (string, error) {
@@ -288,10 +317,25 @@ func (r Renderer) renderTokenSource(ctx *renderCtx, source game.TokenSource) (st
 	if err != nil {
 		return "", err
 	}
-	return structLit("game.TokenCopyOf(game.TokenCopySpec", []string{
+	fields := []string{
 		"Source: game.TokenCopySourceObject,",
 		fmt.Sprintf("Object: %s,", object),
-	}) + ")", nil
+	}
+	if spec.SetNotLegendary {
+		fields = append(fields, "SetNotLegendary: true,")
+	}
+	if len(spec.AddKeywords) != 0 {
+		rendered := make([]string, 0, len(spec.AddKeywords))
+		for _, keyword := range spec.AddKeywords {
+			literal, err := renderKeyword(keyword)
+			if err != nil {
+				return "", err
+			}
+			rendered = append(rendered, literal)
+		}
+		fields = append(fields, fmt.Sprintf("AddKeywords: []game.Keyword{%s},", strings.Join(rendered, ", ")))
+	}
+	return structLit("game.TokenCopyOf(game.TokenCopySpec", fields) + ")", nil
 }
 
 func (r Renderer) renderAddPlayerCounter(ctx *renderCtx, value *game.AddPlayerCounter) (string, error) {
@@ -313,6 +357,29 @@ func (r Renderer) renderAddPlayerCounter(ctx *renderCtx, value *game.AddPlayerCo
 		fmt.Sprintf("Player: %s,", player),
 		fmt.Sprintf("CounterKind: %s,", kind),
 	}), nil
+}
+
+func (r Renderer) renderGroupSourceDamage(ctx *renderCtx, primitive game.Primitive) (string, error) {
+	value, ok := primitive.(game.GroupSourceDamage)
+	if !ok {
+		return "", errors.New("render: internal error: GroupSourceDamage kind has unexpected concrete type")
+	}
+	group, err := r.renderGroupReference(ctx, value.Group)
+	if err != nil {
+		return "", err
+	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Group: %s,", group),
+		fmt.Sprintf("Amount: %s,", amount),
+	}
+	if value.ToOwner {
+		fields = append(fields, "ToOwner: true,")
+	}
+	return structLit("game.GroupSourceDamage", fields), nil
 }
 
 func (r Renderer) renderDamagePrimitive(ctx *renderCtx, primitive game.Primitive) (string, error) {
@@ -364,6 +431,9 @@ func (r Renderer) renderPlayerAmountPrimitive(ctx *renderCtx, primitive game.Pri
 		value, ok := primitive.(game.Discard)
 		if !ok {
 			return "", errors.New("render: internal error: Discard kind has unexpected concrete type")
+		}
+		if value.EntireHand {
+			return r.renderDiscardEntireHand(value)
 		}
 		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 			return r.renderAmountPlayerGroup(ctx, "game.Discard", value.Amount, value.PlayerGroup)
@@ -424,6 +494,22 @@ func (r Renderer) renderPlayerAmountPrimitive(ctx *renderCtx, primitive game.Pri
 	return r.renderAmountPlayer(ctx, typeName, amount, rendered)
 }
 
+func (r Renderer) renderPlayerLosesGame(value game.PlayerLosesGame) (string, error) {
+	rendered, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.PlayerLosesGame", []string{fmt.Sprintf("Player: %s,", rendered)}), nil
+}
+
+func (r Renderer) renderPlayerWinsGame(value game.PlayerWinsGame) (string, error) {
+	rendered, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.PlayerWinsGame", []string{fmt.Sprintf("Player: %s,", rendered)}), nil
+}
+
 func (r Renderer) renderShuffleLibrary(value game.ShuffleLibrary) (string, error) {
 	player, err := r.renderPlayerReference(value.Player)
 	if err != nil {
@@ -431,6 +517,20 @@ func (r Renderer) renderShuffleLibrary(value game.ShuffleLibrary) (string, error
 	}
 	return structLit("game.ShuffleLibrary", []string{
 		fmt.Sprintf("Player: %s,", player),
+	}), nil
+}
+
+func (r Renderer) renderLookAtLibraryTop(value game.LookAtLibraryTop) (string, error) {
+	if value.PublishLinked == "" {
+		return "", errors.New("render: LookAtLibraryTop has no PublishLinked")
+	}
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.LookAtLibraryTop", []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)),
 	}), nil
 }
 
@@ -608,7 +708,23 @@ func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error
 		if !ok {
 			return "", errors.New("render: internal error: CounterObject kind has unexpected concrete type")
 		}
+		if value.ExileInstead {
+			rendered, err := r.renderObjectReference(value.Object)
+			if err != nil {
+				return "", err
+			}
+			return structLit("game.CounterObject", []string{
+				fmt.Sprintf("Object: %s,", rendered),
+				"ExileInstead: true,",
+			}), nil
+		}
 		typeName, object = "game.CounterObject", value.Object
+	case game.PrimitiveChooseNewTargets:
+		value, ok := primitive.(game.ChooseNewTargets)
+		if !ok {
+			return "", errors.New("render: internal error: ChooseNewTargets kind has unexpected concrete type")
+		}
+		typeName, object = "game.ChooseNewTargets", value.Object
 	case game.PrimitiveSacrifice:
 		value, ok := primitive.(game.Sacrifice)
 		if !ok {
@@ -650,6 +766,25 @@ func (r Renderer) renderFightPrimitive(primitive game.Primitive) (string, error)
 	}), nil
 }
 
+func (r Renderer) renderAttachPrimitive(primitive game.Primitive) (string, error) {
+	value, ok := primitive.(game.Attach)
+	if !ok {
+		return "", errors.New("render: internal error: Attach kind has unexpected concrete type")
+	}
+	attachment, err := r.renderObjectReference(value.Attachment)
+	if err != nil {
+		return "", err
+	}
+	target, err := r.renderObjectReference(value.Target)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.Attach", []string{
+		fmt.Sprintf("Attachment: %s,", attachment),
+		fmt.Sprintf("Target: %s,", target),
+	}), nil
+}
+
 func (r Renderer) renderAmountPlayer(
 	ctx *renderCtx,
 	typeName string,
@@ -662,6 +797,34 @@ func (r Renderer) renderAmountPlayer(
 	}
 	return structLit(typeName, []string{
 		fmt.Sprintf("Amount: %s,", renderedAmount),
+		fmt.Sprintf("Player: %s,", player),
+	}), nil
+}
+
+// renderDiscardEntireHand renders a "discard their hand" primitive, which sets
+// EntireHand and leaves Amount unset.
+func (r Renderer) renderDiscardEntireHand(value game.Discard) (string, error) {
+	if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		var renderedGroup string
+		switch value.PlayerGroup.Kind {
+		case game.PlayerGroupReferenceOpponents:
+			renderedGroup = "game.OpponentsReference()"
+		case game.PlayerGroupReferenceAllPlayers:
+			renderedGroup = "game.AllPlayersReference()"
+		default:
+			return "", fmt.Errorf("render: unsupported player group reference kind %d", value.PlayerGroup.Kind)
+		}
+		return structLit("game.Discard", []string{
+			"EntireHand: true,",
+			fmt.Sprintf("PlayerGroup: %s,", renderedGroup),
+		}), nil
+	}
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.Discard", []string{
+		"EntireHand: true,",
 		fmt.Sprintf("Player: %s,", player),
 	}), nil
 }
@@ -807,6 +970,14 @@ func (r Renderer) renderAddMana(ctx *renderCtx, value *game.AddMana) (string, er
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("SpendRider: opt.Val(%s),", rider))
 	}
+	if value.Player.Exists {
+		playerRef, err := r.renderPlayerReference(value.Player.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Player: opt.Val(%s),", playerRef))
+	}
 	return structLit("game.AddMana", fields), nil
 }
 
@@ -847,6 +1018,17 @@ func (r Renderer) renderManaSpendRider(ctx *renderCtx, rider game.ManaSpendRider
 		default:
 			fields = append(fields, fmt.Sprintf("ChosenSubtypeFrom: game.ChoiceKey(%q),", rider.ChosenSubtypeFrom))
 		}
+	}
+	if len(rider.SpellGainsKeywords) > 0 {
+		elements := make([]string, 0, len(rider.SpellGainsKeywords))
+		for _, keyword := range rider.SpellGainsKeywords {
+			literal, err := renderKeyword(keyword)
+			if err != nil {
+				return "", err
+			}
+			elements = append(elements, literal+",")
+		}
+		fields = append(fields, sliceField("SpellGainsKeywords", "game.Keyword", elements))
 	}
 	return structLit("game.ManaSpendRider", fields), nil
 }
@@ -924,6 +1106,13 @@ func (r Renderer) renderResolutionChoice(ctx *renderCtx, choice game.ResolutionC
 	}
 	if choice.IncludeColorless {
 		fields = append(fields, "IncludeColorless: true,")
+	}
+	if choice.Selection != nil && !choice.Selection.Empty() {
+		selection, err := r.renderSelection(ctx, *choice.Selection)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Selection: &%s,", selection))
 	}
 	if choice.Kind == game.ResolutionChoiceNumber {
 		fields = append(fields,

@@ -143,6 +143,25 @@ func TestParseSpellAdditionalCostPayXLife(t *testing.T) {
 	}
 }
 
+func TestParseActivatedCostPayLifeCommanderColorIdentity(t *testing.T) {
+	t.Parallel()
+	source := "{3}, {T}, Pay life equal to the number of colors in your commanders' color identity: Draw a card."
+	document, diagnostics := Parse(source, Context{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := document.Abilities[0]
+	if ability.CostSyntax == nil || len(ability.CostSyntax.Components) != 3 {
+		t.Fatalf("ability[0] = %#v", ability)
+	}
+	component := ability.CostSyntax.Components[2]
+	if component.Kind != CostComponentPayLife ||
+		component.AmountKnown || component.AmountFromX ||
+		component.PayLifeDynamic != PayLifeDynamicCommanderColorIdentityCount {
+		t.Fatalf("pay-life component = %#v", component)
+	}
+}
+
 func TestParseStructures(t *testing.T) {
 	t.Parallel()
 	source := "Formidable — {1}{G}, {T}: Draw a card. Then discard a card. (Do this once.)"
@@ -476,7 +495,8 @@ func assertAbilitySpans(t *testing.T, name, source string, ability *Ability) {
 		return
 	}
 	assertTextSpan(t, name+" modal header", source, ability.Modal.header.Span, ability.Modal.header.Text)
-	for _, mode := range ability.Modal.Options {
+	for i := range ability.Modal.Options {
+		mode := &ability.Modal.Options[i]
 		assertTextSpan(t, name+" mode", source, mode.Span, mode.Text)
 		assertTokensInSpan(t, name+" mode", mode.Span, mode.Tokens)
 		assertSpanContains(t, name+" mode", ability.Span, mode.Span)

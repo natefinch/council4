@@ -66,8 +66,13 @@ type Compilation struct {
 // the ability's instruction content (targets, conditions, effects, keywords,
 // references, modes) lives in Content.
 type CompiledAbility struct {
-	Kind                       AbilityKind
-	Optional                   bool
+	Kind     AbilityKind
+	Optional bool
+	// ExactSequence is a parser-recognized exact multi-instruction resolving
+	// body. When set, the normal target/condition/effect content is empty and
+	// lowering emits the fixed instruction template for the kind. It is declared
+	// next to Optional so the byte packs into existing alignment padding.
+	ExactSequence              ExactSequenceKind
 	Span                       shared.Span
 	Text                       string
 	ActivationTiming           ActivationTimingKind
@@ -100,6 +105,9 @@ type AlternativeCostCondition uint8
 const (
 	AlternativeCostConditionUnknown AlternativeCostCondition = iota
 	AlternativeCostConditionControlsCommander
+	// AlternativeCostConditionNotYourTurn gates a pitch alternative cost behind
+	// "If it's not your turn,".
+	AlternativeCostConditionNotYourTurn
 )
 
 // AlternativeCostKind identifies the semantic rules change attached to an
@@ -111,6 +119,9 @@ const (
 	AlternativeCostUnknown AlternativeCostKind = iota
 	AlternativeCostCommander
 	AlternativeCostOverload
+	// AlternativeCostPitch is the Force of Will family: exile a colored card
+	// from hand (optionally paying extra life) instead of paying mana.
+	AlternativeCostPitch
 )
 
 // CompiledAlternativeCost is text-independent semantic data for an optional
@@ -121,6 +132,15 @@ type CompiledAlternativeCost struct {
 	WithoutPayingManaCost bool
 	ManaCost              cost.Mana
 	ReplaceTargetWithEach bool
+
+	// PitchColor is the color of the card exiled from hand by a pitch cost.
+	PitchColor color.Color
+	// PitchColorKnown reports whether PitchColor was recognized.
+	PitchColorKnown bool
+	// PitchCount is the number of cards exiled from hand by a pitch cost.
+	PitchCount int
+	// PitchLife is additional life paid alongside a pitch cost, or zero.
+	PitchLife int
 }
 
 // ActivationTimingKind identifies an exact restriction on when an activated
@@ -173,8 +193,18 @@ type CompiledModeChoiceBonus struct {
 type CompiledModalSemantics struct {
 	MinModes int
 	MaxModes int
+	Kind     CompiledModalChoiceKind
 	Bonus    CompiledModeChoiceBonus
 }
+
+// CompiledModalChoiceKind identifies exact typed modal header vocabulary.
+type CompiledModalChoiceKind uint8
+
+// Compiled modal choice kinds.
+const (
+	CompiledModalChoiceUnknown CompiledModalChoiceKind = iota
+	CompiledModalChoiceOneOrMore
+)
 
 // Unconsumed reports whether any sidechannel content fields (targets,
 // conditions, keywords, modes, or references) are non-empty. Effect
@@ -189,10 +219,22 @@ func (c AbilityContent) Unconsumed() bool {
 		len(c.References) != 0
 }
 
+// CompiledModeLabel identifies an exact typed mode label.
+type CompiledModeLabel uint8
+
+// Compiled mode labels.
+const (
+	CompiledModeLabelNone CompiledModeLabel = iota
+	CompiledModeLabelSellContraband
+	CompiledModeLabelBuyInformation
+	CompiledModeLabelHireMercenary
+)
+
 // CompiledMode is one semantic option in a modal ability.
 type CompiledMode struct {
 	Span    shared.Span
 	Text    string
+	Label   CompiledModeLabel
 	Content AbilityContent
 	// Modal is populated only on the first mode of a modal ability.
 	Modal *CompiledModalSemantics
@@ -274,6 +316,16 @@ type CostComponent struct {
 	// ExcludeSource reports that the cost object excludes the ability's own
 	// source ("another"), recognized by the parser.
 	ExcludeSource bool
+
+	// ChoiceGroup tags this component as one alternative of a printed "<cost> or
+	// <cost>" choice. Zero means a mandatory standalone cost; components sharing
+	// a nonzero value are alternatives of which exactly one is paid.
+	ChoiceGroup uint8
+
+	// PayLifeAmountDynamic names a rules-derived amount for a "pay life equal
+	// to ..." cost whose value is neither fixed nor X. DynamicAmountNone means
+	// the life amount is a fixed value or X.
+	PayLifeAmountDynamic DynamicAmountKind
 
 	// Order is the component's dense source-order rank, used to test reference
 	// containment without byte offsets.
@@ -375,6 +427,37 @@ const (
 	// ConditionPredicateControllerHandSizeExactly is satisfied when the
 	// controller's hand holds exactly Threshold cards.
 	ConditionPredicateControllerHandSizeExactly
+	// ConditionPredicateControllerCreatedTokenThisTurn is satisfied when the
+	// controller created at least one token during the current turn ("Activate
+	// only if you created a token this turn").
+	ConditionPredicateControllerCreatedTokenThisTurn
+	// ConditionPredicateCounterPlacementOnControlledPermanent is satisfied when
+	// one or more counters would be put on a permanent the controller controls,
+	// as in Doubling Season's counter clause. Counter is optional: when set the
+	// replacement is restricted to that counter kind, otherwise it applies to
+	// every counter kind.
+	ConditionPredicateCounterPlacementOnControlledPermanent
+	// ConditionPredicateControllerWouldCreateNamedToken is satisfied when the
+	// controller would create a token matching a named-token replacement set, as
+	// in Academy Manufactor's "If you would create a Clue, Food, or Treasure
+	// token, instead create one of each." The replaced token types come from the
+	// owning create effect's selector.
+	ConditionPredicateControllerWouldCreateNamedToken
+	// ConditionPredicateControlComparison is satisfied when one player scope's
+	// count of permanents matching Selection compares (greater/less) against
+	// another scope's count ("if an opponent controls more lands than you").
+	ConditionPredicateControlComparison
+	// ConditionPredicateEventSubjectNameUnique is satisfied when the triggering
+	// event permanent's name differs from every other creature its controller
+	// controls and every creature card in their graveyard ("if it doesn't have
+	// the same name as another creature you control or a creature card in your
+	// graveyard", Guardian Project).
+	ConditionPredicateEventSubjectNameUnique
+	// ConditionPredicateTargetColor is satisfied when the effect's chosen target
+	// has the recognized color ("if it's blue" on Pyroblast / Red Elemental
+	// Blast). The color filter lives in Selection.ColorsAny; counter/destroy
+	// lowering binds the predicate to the effect's target object.
+	ConditionPredicateTargetColor
 )
 
 // ConditionEventHistoryWindow identifies which turn's event log to search.
@@ -459,6 +542,23 @@ const (
 	ConditionCombatStateAttackingOrBlocking
 )
 
+// ConditionComparisonScope selects which players' battlefields a control-count
+// comparison counts.
+type ConditionComparisonScope uint8
+
+// Condition comparison scope values.
+const (
+	// ConditionComparisonScopeController counts the controller's permanents
+	// ("you").
+	ConditionComparisonScopeController ConditionComparisonScope = iota
+	// ConditionComparisonScopeAnyOpponent quantifies existentially over
+	// opponents ("an opponent").
+	ConditionComparisonScopeAnyOpponent
+	// ConditionComparisonScopeEachOpponent quantifies universally over opponents
+	// ("each opponent").
+	ConditionComparisonScopeEachOpponent
+)
+
 // ConditionSelection is the source-independent Selection vocabulary used by
 // semantic conditions. Subtype names are canonicalized during recognition.
 type ConditionSelection struct {
@@ -537,6 +637,21 @@ type CompiledCondition struct {
 	// whether a reference or payment falls within the condition by comparing
 	// these ranks instead of inspecting byte offsets.
 	Order shared.SourceOrder
+
+	// ControlComparisonLeft, ControlComparisonRight, and ControlComparisonGreater
+	// describe a ConditionPredicateControlComparison: the subject and reference
+	// player scopes and whether the subject must control strictly more (true) or
+	// fewer (false) permanents matching Selection.
+	ControlComparisonLeft    ConditionComparisonScope
+	ControlComparisonRight   ConditionComparisonScope
+	ControlComparisonGreater bool
+
+	// SourceInGraveyard marks a condition introduced by "this card is in your
+	// graveyard and ...", reporting that the enclosing static ability functions
+	// from the graveyard zone. The remaining predicate carries the accompanying
+	// runtime condition; lowering reads this flag to set the ability's zone of
+	// function rather than emitting a runtime predicate for it.
+	SourceInGraveyard bool
 }
 
 // TargetCardinality is an inclusive target count range.
@@ -582,6 +697,7 @@ const (
 	SelectorTriggeredAbilityOrSpell
 	SelectorPlaneswalker
 	SelectorBattle
+	SelectorCommander
 )
 
 // ControllerKind constrains a selected object by controller.
@@ -606,7 +722,11 @@ type CompiledSelector struct {
 	Blocking   bool
 	Tapped     bool
 	Untapped   bool
-	Keyword    parser.KeywordKind
+	// NonToken records a "nontoken" selector qualifier; TokenOnly records a
+	// "token" qualifier. They lower to Selection.NonToken / Selection.TokenOnly.
+	NonToken  bool
+	TokenOnly bool
+	Keyword   parser.KeywordKind
 	// ExcludedKeyword records a "without <keyword>" selector qualifier (e.g.
 	// "each creature without flying"); it is mutually exclusive with Keyword.
 	ExcludedKeyword parser.KeywordKind
@@ -620,13 +740,22 @@ type CompiledSelector struct {
 	Colorless       bool
 	Multicolored    bool
 	BasicLandType   bool
+	// MatchCounter records whether RequiredCounter is active ("creature you
+	// control with a +1/+1 counter on it"); RequiredCounter names the counter
+	// kind the matched permanent must carry.
+	MatchCounter    bool
+	RequiredCounter counter.Kind
 	// PlayerOrPlaneswalker marks the combined "player or planeswalker" /
 	// "opponent or planeswalker" combined damage target. Kind stays
 	// SelectorPlayer or SelectorOpponent; this flag records the additional
 	// planeswalker-permanent half the merged Kind cannot express.
 	PlayerOrPlaneswalker bool
-	Alternatives         []CompiledSelector
-	atoms                *CompiledSelectorAtoms
+	// SubtypeFromEntryChoice requires each matched permanent to share the creature
+	// subtype the source permanent chose as it entered ("creatures you control of
+	// the chosen type"). It lowers to Selection.SubtypeFromSourceEntryChoice.
+	SubtypeFromEntryChoice bool
+	Alternatives           []CompiledSelector
+	atoms                  *CompiledSelectorAtoms
 }
 
 // CompiledSelectorAtoms holds parser-owned atom-derived selector filters that
@@ -640,6 +769,7 @@ type CompiledSelectorAtoms struct {
 	ColorsAny          []color.Color
 	ExcludedColors     []color.Color
 	SubtypesAny        []types.Sub
+	ExcludedSubtypes   []types.Sub
 	SourceTypes        []types.Card
 }
 
@@ -738,6 +868,17 @@ func appendSelectorSubtypesAny(selector *CompiledSelector, subtypes ...types.Sub
 	atoms.SubtypesAny = append(atoms.SubtypesAny, subtypes...)
 }
 
+// ExcludedSubtypes returns subtype filters excluded from this selector (a
+// "non-<subtype>" filter such as "non-Human creatures").
+func (s CompiledSelector) ExcludedSubtypes() []types.Sub {
+	return selectorAtoms(s).ExcludedSubtypes
+}
+
+func appendSelectorExcludedSubtypes(selector *CompiledSelector, subtypes ...types.Sub) {
+	atoms := mutableSelectorAtoms(selector)
+	atoms.ExcludedSubtypes = append(atoms.ExcludedSubtypes, subtypes...)
+}
+
 // EffectKind identifies an instruction verb recognized in Oracle text.
 type EffectKind uint8
 
@@ -799,6 +940,12 @@ const (
 	EffectProtectionFromEverything
 	EffectPhaseOut
 	EffectImpulseExile
+	EffectAdditionalLandPlays
+	EffectLoseGame
+	EffectChooseNewTargets
+	EffectCastAsThoughFlash
+	EffectCantCastSpells
+	EffectWinGame
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -826,6 +973,11 @@ const (
 	// The effect expires when the affected creature is no longer enchanted or
 	// leaves the battlefield.
 	DurationForAsLongAsControlledCreatureEnchanted
+	// DurationUntilEndOfYourNextTurn matches "until the end of your next turn",
+	// the bounded play window impulse-draw effects grant ("exile the top card …
+	// until the end of your next turn, you may play that card"). The effect
+	// expires at the end of the controller's next turn.
+	DurationUntilEndOfYourNextTurn
 )
 
 // StaticSubjectKind identifies the group affected by a static continuous effect.
@@ -861,6 +1013,9 @@ const (
 	StaticSubjectControlledNontokenCreatures
 	StaticSubjectOtherControlledNontokenCreatures
 	StaticSubjectAllLands
+	StaticSubjectControlledCreaturesChosenType
+	StaticSubjectOtherControlledCreaturesChosenType
+	StaticSubjectOpponentControlledPermanents
 )
 
 // CompiledEffect is one recognized instruction verb and the sentence containing
@@ -894,6 +1049,13 @@ type CompiledEffect struct {
 	// owner of a referenced object (the prior removal target), as in "deals 2
 	// damage to that land's controller". It is None for every other recipient.
 	DamageRecipientReference parser.DamageRecipientReferenceKind
+	// EachSourceDamageGroup is the source group of an "each <group> deals N
+	// damage to its controller/owner" effect ("Each creature deals 1 damage to
+	// its controller."), where every group member is the damage source dealing
+	// to the player who controls (or owns) it. EachSourceDamageRecipient records
+	// the per-source recipient role; it is None for every other effect.
+	EachSourceDamageGroup     CompiledSelector
+	EachSourceDamageRecipient parser.DamageRecipientReferenceKind
 	// HasSelfDamageRider reports a "... and N damage to you" rider on a
 	// single-target deal-damage clause ("deals A damage to any target and B
 	// damage to you"). SelfDamageRiderValue holds the fixed self-damage amount B
@@ -928,6 +1090,31 @@ type CompiledEffect struct {
 	// only by its subtypes.
 	TokenName         string
 	TokenCopyOfTarget bool
+	// TokenCopyOfReference reports that the created token is a copy of the
+	// effect's single explicit reference ("Create a token that's a copy of this
+	// creature[ instead]."). The copy source is the lone reference in References,
+	// not a grammatical target.
+	TokenCopyOfReference bool
+	// TokenCopyOfAttached reports that the created token is a copy of the
+	// permanent the source is attached to ("a copy of equipped creature" /
+	// "enchanted creature"). The copy source resolves at runtime to the attached
+	// permanent.
+	TokenCopyOfAttached bool
+	// TokenCopyDropLegendary reports a copy-token "except <it/the token> isn't
+	// legendary" modifier: the created token drops the Legendary supertype.
+	TokenCopyDropLegendary bool
+	// TokenCopyGrantKeywords lists keyword abilities the created copy token gains
+	// from a folded "[That token/It] gains <keyword>." rider, in source order.
+	TokenCopyGrantKeywords []parser.KeywordKind
+	// TokenCopyGrantRiderSpan covers the folded gain-keyword rider sentence so
+	// lowering credits its tokens toward source coverage.
+	TokenCopyGrantRiderSpan shared.Span
+	// TokenChoice reports a create-token effect offering a choice among two or
+	// more complete named-token specs ("create a Food token or a Treasure token",
+	// "create your choice of a Clue token, a Food token, or a Treasure token").
+	// The alternatives are the selector's SubtypesAny entries in source order;
+	// lowering emits a choose-one modal ability creating exactly one of them.
+	TokenChoice       bool
 	StaticSubject     StaticSubjectKind
 	StaticSubjectSpan shared.Span
 	Details           *CompiledEffectDetails
@@ -943,25 +1130,36 @@ type CompiledEffect struct {
 	// owner relation ("Exile target player's graveyard.") through to lowering,
 	// which builds the target-player + graveyard-group MoveCard. It is
 	// GraveyardZoneExileNone for every other effect.
-	GraveyardZoneExile       parser.GraveyardZoneExileKind
-	ToZone                   zone.Type
-	Destination              parser.EffectDestinationPosition
-	EntersTapped             bool
-	EntersTappedSelf         bool
+	GraveyardZoneExile parser.GraveyardZoneExileKind
+	ToZone             zone.Type
+	Destination        parser.EffectDestinationPosition
+	EntersTapped       bool
+	EntersTappedSelf   bool
+	// EntersTappedGroup mirrors the parser flag for a static enters-tapped
+	// replacement that taps a group of OTHER permanents as they enter (Authority
+	// of the Consuls). Lowering reads it to build a continuous controller- and
+	// type-scoped replacement; it is false for the self enters-tapped form.
+	EntersTappedGroup        bool
+	EntersTappedGroupScope   parser.EntersTappedGroupControllerScope
+	EntersTappedGroupTypes   []types.Card
 	EntersColorChoice        bool
 	EntersColorChoiceExclude mana.Color
 	EntersTypeChoice         bool
 	EntersWithCounters       bool
 	UnderYourControl         bool
 	CastAsAdventure          bool
-	Negated                  bool
-	Optional                 bool
-	Divided                  bool
-	OptionalSpan             shared.Span
-	Mana                     CompiledEffectMana
-	Replacement              parser.EffectReplacementSyntax
-	Payment                  CompiledEffectPayment
-	Exact                    bool
+	// CastWithoutPayingManaCost mirrors the parser's free-cast rider flag for a
+	// cast effect ("... without paying its mana cost"). Lowering reads it to
+	// route the cast-for-free primitive; it is false for every other effect.
+	CastWithoutPayingManaCost bool
+	Negated                   bool
+	Optional                  bool
+	Divided                   bool
+	OptionalSpan              shared.Span
+	Mana                      CompiledEffectMana
+	Replacement               parser.EffectReplacementSyntax
+	Payment                   CompiledEffectPayment
+	Exact                     bool
 	// SourceSpellCostReduction and SourceSpellCostReductionAmount carry the typed
 	// source-scoped cast cost reduction recognized by the parser ("This spell
 	// costs {N} less to cast for each <countable battlefield object>"). Amount
@@ -970,9 +1168,14 @@ type CompiledEffect struct {
 	// instead of inspecting source text.
 	SourceSpellCostReduction       bool
 	SourceSpellCostReductionAmount int
-	RequiresOrderedLowering        bool
-	HasUnrecognizedSibling         bool
-	UnsupportedDetail              string
+	// SourceSpellCostReductionDynamic carries the typed source-scoped cast cost
+	// reduction whose amount is this effect's own dynamic Amount ("This spell
+	// costs {X} less to cast, where X is <dynamic amount>"). Lowering reads the
+	// typed Amount instead of inspecting source text.
+	SourceSpellCostReductionDynamic bool
+	RequiresOrderedLowering         bool
+	HasUnrecognizedSibling          bool
+	UnsupportedDetail               string
 	// Order is the effect's dense source-order rank (of Span); VerbOrder is the
 	// rank of VerbSpan. The compiler compares these ranks to order effects and
 	// bind references relative to effect verbs without inspecting byte offsets.
@@ -1012,6 +1215,25 @@ type CompiledEffect struct {
 	// SearchDestination carries the parser-recognized ordered destination for a
 	// found card that remains in the library.
 	SearchDestination parser.EffectDestinationPosition
+	// DiscardEntireHand carries the parser-recognized "discard their hand" clause
+	// through the text-blind compiler boundary: the affected player discards
+	// every card in hand rather than a fixed count.
+	DiscardEntireHand bool
+	// CounteredSpellExileReplacement carries the parser-recognized "If that
+	// spell is countered this way, exile it instead of putting it into its
+	// owner's graveyard." rider through the text-blind compiler boundary.
+	CounteredSpellExileReplacement bool
+	// CantCastSpellsAllPlayers mirrors the parser flag for an EffectCantCastSpells
+	// clause that affects every player ("Players can't cast spells this turn.")
+	// rather than only the controller's opponents. Lowering reads it to pick the
+	// affected-player relation; it is false for the opponents-only form.
+	CantCastSpellsAllPlayers bool
+	// DoublePower and DoubleToughness mirror the parser flags for an EffectDouble
+	// whose object is "the power[ and toughness] of <group>" (Unnatural Growth).
+	// Lowering reads them together with StaticSubject to emit a power/toughness
+	// doubling continuous effect; both are false for every other double effect.
+	DoublePower     bool
+	DoubleToughness bool
 }
 
 // CompiledManaSpendRider is the typed semantic form of a mana-spend rider.
@@ -1048,9 +1270,20 @@ type CompiledEffectMana struct {
 	ChosenColor           bool
 	ChosenColorFixed      mana.Color
 	ChosenColorFixedKnown bool
-	CommanderIdentity     bool
-	DynamicColorless      bool
-	LegacyBodyExact       bool
+	// ChosenColorDevotion mirrors the parser's "an amount of mana of that color
+	// equal to your devotion to that color." body (Nykthos, Shrine to Nyx). The
+	// produced mana is the color chosen as the ability resolves; its amount is the
+	// controller's devotion to that chosen color. See
+	// parser.EffectManaSyntax.ChosenColorDevotion.
+	ChosenColorDevotion bool
+	// ChosenColorDynamic mirrors the parser's "an amount of mana of that color
+	// equal to <dynamic count>" body (Three Tree City). The produced mana is the
+	// color chosen as the ability resolves; its amount is the battlefield count
+	// carried by the effect's Amount. See parser.EffectManaSyntax.ChosenColorDynamic.
+	ChosenColorDynamic bool
+	CommanderIdentity  bool
+	DynamicColorless   bool
+	LegacyBodyExact    bool
 	// FilterPair and FilterColors mirror the parser's filter-land output body
 	// "{X}{X}, {X}{Y}, or {Y}{Y}." (FilterColors holds the pair's two distinct
 	// basic colors {X, Y}). See parser.EffectManaSyntax.FilterPair.
@@ -1062,15 +1295,52 @@ type CompiledEffectMana struct {
 	LandsProduce        bool
 	LandsProduceScope   parser.ManaLandsProduceScope
 	LandsProduceAnyType bool
+	// LinkedExileColors mirrors the parser's "one mana of any of the exiled
+	// card's colors" body (Chrome Mox). See parser.EffectManaSyntax.LinkedExileColors.
+	LinkedExileColors bool
+	// ColorsAmongControlled mirrors the parser's "one mana of any color among
+	// <permanents> you control" body (Mox Amber, Plaza of Heroes). The choosable
+	// colors are recomputed at resolution as the union of colors of the
+	// controller's permanents matching ColorsAmongSelector. See
+	// parser.EffectManaSyntax.ColorsAmongControlled.
+	ColorsAmongControlled bool
+	// ColorsAmongSelector carries the permanent filter of a ColorsAmongControlled
+	// body. It is set together with ColorsAmongControlled.
+	ColorsAmongSelector *CompiledSelector
+	// EachColorAmongControlled mirrors the parser's "For each color among
+	// <permanents> you control, add one mana of that color" body (Bloom Tender).
+	// One mana of each color in the union of the controller's permanents matching
+	// ColorsAmongSelector is produced. See
+	// parser.EffectManaSyntax.EachColorAmongControlled.
+	EachColorAmongControlled bool
+	// AnyOneColorDynamic mirrors the parser's "X mana of any one color" (or "an
+	// amount of mana of any one color") body whose quantity is a dynamic amount
+	// carried by the effect's Amount (Kami of Whispered Hopes). The produced mana
+	// is the single color chosen as the ability resolves; its amount is the
+	// dynamic value. See parser.EffectManaSyntax.AnyOneColorDynamic.
+	AnyOneColorDynamic bool
+	// AnyColorCount mirrors the parser's "<N> mana of any one color" body
+	// (Gilded Lotus: "Add three mana of any one color."), N >= 2. It is set
+	// together with AnyColor; N mana of the single chosen color are produced. See
+	// parser.EffectManaSyntax.AnyColorCount.
+	AnyColorCount int
+	// Instead mirrors the parser's trailing-"instead" flag on a conditional
+	// alternative mana production ("Add {B}{B}{B}{B}{B} instead if ...", the
+	// Threshold cycle). See parser.EffectManaSyntax.Instead.
+	Instead bool
 }
 
 // CompiledEffectPayment is a typed resolution payment embedded in an effect.
 type CompiledEffectPayment struct {
-	Span                   shared.Span
-	Form                   parser.EffectPaymentForm
-	Payer                  parser.EffectPaymentPayerKind
-	ManaCost               cost.Mana
-	GenericManaAmount      CompiledAmount
+	Span              shared.Span
+	Form              parser.EffectPaymentForm
+	Payer             parser.EffectPaymentPayerKind
+	ManaCost          cost.Mana
+	GenericManaAmount CompiledAmount
+	// AdditionalCost is a non-mana resolution payment cost (such as "sacrifice a
+	// land"). It is nil for mana-only payments; ManaCost and AdditionalCost are
+	// never both set.
+	AdditionalCost         *CompiledCost
 	SuccessConditionNodeID int
 	FailureConditionNodeID int
 	// Order is the payment's dense source-order rank, used to test condition
@@ -1090,9 +1360,10 @@ type CompiledEffectDetails struct {
 // CompiledStaticSubjectType preserves a static subject's printed subtype and its
 // parser-resolved canonical subtype when known.
 type CompiledStaticSubjectType struct {
-	Text  string
-	Sub   types.Sub
-	Known bool
+	Text     string
+	Sub      types.Sub
+	Known    bool
+	Excluded bool
 }
 
 // CompiledStaticSubjectColors preserves a static subject's optional color filter:
@@ -1112,11 +1383,11 @@ type CompiledStaticSubjectKeyword struct {
 	Excluded bool
 }
 
-func staticSubjectType(text string, sub types.Sub, known bool) *CompiledStaticSubjectType {
+func staticSubjectType(text string, sub types.Sub, known, excluded bool) *CompiledStaticSubjectType {
 	if text == "" && !known {
 		return nil
 	}
-	return &CompiledStaticSubjectType{Text: text, Sub: sub, Known: known}
+	return &CompiledStaticSubjectType{Text: text, Sub: sub, Known: known, Excluded: excluded}
 }
 
 func staticSubjectColors(colors []parser.Color, colorless, multicolored bool) *CompiledStaticSubjectColors {
@@ -1162,6 +1433,12 @@ func (e *CompiledEffect) StaticSubjectSub() types.Sub {
 // StaticSubjectSubKnown reports whether the static subject subtype was resolved.
 func (e *CompiledEffect) StaticSubjectSubKnown() bool {
 	return e.Details != nil && e.Details.StaticSubjectType != nil && e.Details.StaticSubjectType.Known
+}
+
+// StaticSubjectSubExcluded reports whether the static subject subtype is a
+// "non-<subtype>" exclusion ("Non-Human creatures you control get ...").
+func (e *CompiledEffect) StaticSubjectSubExcluded() bool {
+	return e.Details != nil && e.Details.StaticSubjectType != nil && e.Details.StaticSubjectType.Excluded
 }
 
 // StaticSubjectColorsAny returns the static subject's any-of color filter.
@@ -1247,6 +1524,56 @@ const (
 	// DynamicAmountSourceCounterCount is the number of counters of CounterKind
 	// on the referenced object.
 	DynamicAmountSourceCounterCount
+	// DynamicAmountGreatestPower is the greatest power among the selector's
+	// battlefield group ("the greatest power among <group>"). It backs the
+	// dynamic "draw cards equal to the greatest power among creatures you
+	// control" family. Added last so existing kinds keep their wire values.
+	DynamicAmountGreatestPower
+	// DynamicAmountGreatestToughness is the greatest toughness among the
+	// selector's battlefield group, the toughness sibling of
+	// DynamicAmountGreatestPower.
+	DynamicAmountGreatestToughness
+	// DynamicAmountGreatestManaValue is the greatest mana value among the
+	// selector's battlefield group, the mana-value sibling of
+	// DynamicAmountGreatestPower.
+	DynamicAmountGreatestManaValue
+	// DynamicAmountCommanderColorCount is the number of colors in the
+	// controller's commander's color identity ("the number of colors in your
+	// commanders' color identity"). It backs War Room's "pay life equal to ..."
+	// activation cost. Added last so existing kinds keep their wire values.
+	DynamicAmountCommanderColorCount
+	// DynamicAmountDevotion is the controller's devotion to the amount's Colors
+	// ("your devotion to <color>", "your devotion to <color> and <color>"), the
+	// number of mana symbols of those colors among the mana costs of permanents
+	// the controller controls (CR 700.5). It backs the devotion family such as
+	// Gray Merchant of Asphodel. Added last so existing kinds keep their wire
+	// values.
+	DynamicAmountDevotion
+	// DynamicAmountGreatestDiscardedThisWay is the greatest number of cards
+	// discarded by any one player during a preceding discard effect in the same
+	// ability ("the greatest number of cards a player discarded this way"). It
+	// backs the Windfall draw amount and is realized by a sequence lowerer that
+	// reads the maximum per-player discard count published by the preceding
+	// discard instruction. Added last so existing kinds keep their wire values.
+	DynamicAmountGreatestDiscardedThisWay
+	// DynamicAmountSpellsCastThisTurn is the number of spells the controller has
+	// cast this turn ("for each spell you've cast this turn"). It backs the
+	// storm-counter family such as Aetherflux Reservoir. Added last so existing
+	// kinds keep their wire values.
+	DynamicAmountSpellsCastThisTurn
+	// DynamicAmountTriggeringLifeChange is the amount of life gained or lost by
+	// the event that triggered the enclosing life-change trigger ("that much
+	// life"). It backs the life-drain mirror family (Sanguine Bond, Exquisite
+	// Blood). Added last so existing kinds keep their wire values.
+	DynamicAmountTriggeringLifeChange
+	// DynamicAmountTotalPower is the sum of power across the selector's
+	// battlefield group ("the total power of <group>"). It backs the dynamic
+	// "where X is the total power of creatures you control" cost reduction
+	// (Ghalta, Primal Hunger) and the matching draw and damage amounts.
+	// DynamicAmountTotalToughness is the toughness sibling. Added last so
+	// existing kinds keep their wire values.
+	DynamicAmountTotalPower
+	DynamicAmountTotalToughness
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.
@@ -1274,7 +1601,9 @@ type CompiledAmount struct {
 	ReferenceSpan shared.Span
 	CounterKind   counter.Kind
 	Text          string
-	selector      *CompiledSelector
+	// Colors carries the colors of a devotion amount; empty otherwise.
+	Colors   []color.Color
+	selector *CompiledSelector
 }
 
 // Selector returns the amount's dynamic count subject selector, when present.
@@ -1295,6 +1624,21 @@ type CompiledSignedAmount struct {
 	VariableX bool
 }
 
+// CompiledEnchantTarget is the runtime-typed object restriction following an
+// Enchant keyword, mapped from the parser's EnchantPredicate. A permanent
+// matches when it has any listed card type or any listed subtype (disjunctive).
+// Player, Opponent, and Permanent select non-type objects. Known is false when
+// the predicate is empty or names a non-permanent card type or a subtype that no
+// permanent type defines, so an unsupported Enchant target fails closed.
+type CompiledEnchantTarget struct {
+	Known     bool
+	Player    bool
+	Opponent  bool
+	Permanent bool
+	CardTypes []types.Card
+	Subtypes  []types.Sub
+}
+
 // CompiledKeyword is a recognized keyword ability.
 type CompiledKeyword struct {
 	Kind            parser.KeywordKind
@@ -1305,9 +1649,22 @@ type CompiledKeyword struct {
 	ParameterKind   parser.KeywordParameterKind
 	ManaCost        cost.Mana
 	Integer         int
-	EnchantTarget   parser.ObjectNoun
+	EnchantTarget   CompiledEnchantTarget
 	Protection      game.ProtectionKeyword
 	ProtectionKnown bool
+	// EquipRestriction is the typed quality restriction of a restricted Equip
+	// ability, or nil for an unrestricted Equip. It is set only when the parser
+	// recognized every restriction word, so an unsupported restriction fails
+	// closed upstream rather than reaching here.
+	EquipRestriction *CompiledEquipRestriction
+}
+
+// CompiledEquipRestriction is the runtime-typed quality restriction of a
+// restricted Equip ability: the Equipment may attach only to a creature with
+// every listed supertype and at least one of the listed subtypes.
+type CompiledEquipRestriction struct {
+	Supertypes []types.Super
+	Subtypes   []types.Sub
 }
 
 // ReferenceKind identifies the exact reference wording recognized before

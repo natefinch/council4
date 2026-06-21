@@ -178,6 +178,30 @@ func TestEquipActivatedAbilityBuildsCompleteMechanic(t *testing.T) {
 	}
 }
 
+func TestEquipRestrictedActivatedAbilityBuildsRestriction(t *testing.T) {
+	manaCost := cost.Mana{cost.O(3)}
+	supertypes := []types.Super{types.Legendary}
+	subtypes := []types.Sub{types.Knight}
+	ability := EquipRestrictedActivatedAbility(manaCost, supertypes, subtypes)
+	supertypes[0] = types.Snow
+	subtypes[0] = types.Sub("Mutant")
+
+	targets := BodyTargets(&ability)
+	if len(targets) != 1 {
+		t.Fatalf("targets = %+v, want one", targets)
+	}
+	predicate := targets[0].Predicate
+	if !slices.Equal(predicate.Supertypes, []types.Super{types.Legendary}) {
+		t.Fatalf("supertypes = %v, want copied [Legendary]", predicate.Supertypes)
+	}
+	if !slices.Equal(predicate.Subtypes, []types.Sub{types.Knight}) {
+		t.Fatalf("subtypes = %v, want copied [Knight]", predicate.Subtypes)
+	}
+	if targets[0].Constraint != "legendary Knight you control" {
+		t.Fatalf("constraint = %q", targets[0].Constraint)
+	}
+}
+
 func TestCantBeBlockedStaticBodyBuildsCompleteMechanic(t *testing.T) {
 	if CantBeBlockedStaticBody.Text != "This creature can't be blocked." {
 		t.Fatalf("text = %q", CantBeBlockedStaticBody.Text)
@@ -387,6 +411,30 @@ func TestTapManaAbilityUsesOracleColorlessSymbol(t *testing.T) {
 	}
 }
 
+func TestTapSacrificeAnyOneColorManaAbility(t *testing.T) {
+	text := "{T}, Sacrifice this artifact: Add three mana of any one color."
+	ability := TapSacrificeAnyOneColorManaAbility(text, 3)
+
+	if ability.Text != text {
+		t.Fatalf("text = %q, want %q", ability.Text, text)
+	}
+	if len(ability.AdditionalCosts) != 2 ||
+		ability.AdditionalCosts[0] != cost.T ||
+		ability.AdditionalCosts[1].Kind != cost.AdditionalSacrificeSource {
+		t.Fatalf("additional costs = %+v, want tap then sacrifice this artifact", ability.AdditionalCosts)
+	}
+	if !IsTapSacrificeAnyOneColorManaAbility(&ability) {
+		t.Fatal("IsTapSacrificeAnyOneColorManaAbility = false, want true")
+	}
+	if IsTapAnyColorManaAbility(&ability) {
+		t.Fatal("IsTapAnyColorManaAbility = true, want false for the sacrifice form")
+	}
+	add, ok := ability.Content.Modes[0].Sequence[1].Primitive.(AddMana)
+	if !ok || add.Amount.Value() != 3 {
+		t.Fatalf("add instruction = %+v, want three mana of the chosen color", ability.Content.Modes[0].Sequence[1])
+	}
+}
+
 func TestTapManaChoiceAbilityBuildsCompleteMechanic(t *testing.T) {
 	colors := []mana.Color{mana.B, mana.R}
 	ability := TapManaChoiceAbility(colors...)
@@ -457,6 +505,36 @@ func TestTapManaCommanderIdentityAbilityBuildsCompleteMechanic(t *testing.T) {
 	}
 }
 
+func TestTapManaChosenColorDynamicAbilityBuildsCompleteMechanic(t *testing.T) {
+	amount := DynamicAmount{Kind: DynamicAmountObjectPower, Multiplier: 1, Object: SourcePermanentReference()}
+	ability := TapManaChosenColorDynamicAbility("", amount)
+
+	if len(ability.AdditionalCosts) != 1 || ability.AdditionalCosts[0] != cost.T {
+		t.Fatalf("additional costs = %+v, want tap", ability.AdditionalCosts)
+	}
+	content := BodyContent(&ability)
+	if content.IsModal() || len(content.Modes) != 1 || len(content.Modes[0].Sequence) != 2 {
+		t.Fatalf("content = %+v, want choose then add", content)
+	}
+	choose, ok := content.Modes[0].Sequence[0].Primitive.(Choose)
+	if !ok ||
+		choose.Choice.Kind != ResolutionChoiceMana ||
+		!slices.Equal(choose.Choice.Colors, []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G}) ||
+		choose.PublishChoice == "" {
+		t.Fatalf("first instruction = %+v, want any-color mana choice", content.Modes[0].Sequence[0])
+	}
+	add, ok := content.Modes[0].Sequence[1].Primitive.(AddMana)
+	if !ok || !add.Amount.IsDynamic() || add.ChoiceFrom != choose.PublishChoice {
+		t.Fatalf("second instruction = %+v, want dynamic mana from published choice", content.Modes[0].Sequence[1])
+	}
+	if got := add.Amount.DynamicAmount().Val; got.Kind != DynamicAmountObjectPower {
+		t.Fatalf("dynamic amount kind = %v, want object power", got.Kind)
+	}
+	if err := ValidateInstructionSequence(content.Modes[0].Sequence); err != nil {
+		t.Fatalf("instruction sequence invalid: %v", err)
+	}
+}
+
 func TestBodyAccessors(t *testing.T) {
 	targets := []TargetSpec{{MinTargets: 1, MaxTargets: 1}}
 	activationCondition := opt.Val(Condition{SourceNotMonstrous: true})
@@ -512,6 +590,30 @@ func TestModalAbilityContentIsModal(t *testing.T) {
 	}
 	if !modal.IsModal() {
 		t.Fatal("multiple modes were treated as non-modal")
+	}
+}
+
+func TestCardFaceClonePreservesModalLabelsAndChoiceRange(t *testing.T) {
+	face := CardFace{
+		Name: "Modal Trigger",
+		TriggeredAbilities: []TriggeredAbility{{
+			Content: AbilityContent{
+				MinModes: 1,
+				MaxModes: 3,
+				Modes: []Mode{
+					{Text: "Sell Contraband"},
+					{Text: "Buy Information"},
+					{Text: "Hire a Mercenary"},
+				},
+			},
+		}},
+	}
+
+	cloned := face.ToCardDef(&CardDef{}).TriggeredAbilities[0].Content
+	face.TriggeredAbilities[0].Content.Modes[0].Text = "changed"
+	if cloned.MinModes != 1 || cloned.MaxModes != 3 ||
+		len(cloned.Modes) != 3 || cloned.Modes[0].Text != "Sell Contraband" {
+		t.Fatalf("cloned modal content = %#v, want independent labels and choice range", cloned)
 	}
 }
 

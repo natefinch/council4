@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -96,6 +97,15 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if len(sel.SubtypesAny) > 0 && !s.hasAnySubtype(sel.SubtypesAny) {
 		return false
 	}
+	if sel.ExcludedSubtype != "" && s.hasAnySubtype([]types.Sub{sel.ExcludedSubtype}) {
+		return false
+	}
+	if sel.SubtypeFromSourceEntryChoice {
+		subtype, ok := s.sourceEntryChoiceSubtype(game.EntryTypeChoiceKey)
+		if !ok || !s.hasAnySubtype([]types.Sub{subtype}) {
+			return false
+		}
+	}
 	if len(sel.ColorsAny) > 0 && !s.hasAnyColor(sel.ColorsAny) {
 		return false
 	}
@@ -143,6 +153,9 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 		if !ok || !sel.Toughness.Val.Matches(toughness) {
 			return false
 		}
+	}
+	if sel.MatchCounter && !s.hasCounter(sel.RequiredCounter) {
+		return false
 	}
 	if sel.ExcludeSource && s.isSource() {
 		return false
@@ -236,6 +249,21 @@ func (s *selectionSubject) hasAnySubtype(subtypes []types.Sub) bool {
 	return false
 }
 
+// sourceEntryChoiceSubtype resolves the creature subtype the predicate's source
+// permanent recorded under key as it entered the battlefield. It reports false
+// when the source permanent, the choice, or its subtype is absent.
+func (s *selectionSubject) sourceEntryChoiceSubtype(key game.ChoiceKey) (types.Sub, bool) {
+	source, ok := permanentByObjectID(s.g, s.sourceObjectID)
+	if !ok {
+		return "", false
+	}
+	choice, ok := source.EntryChoices[key]
+	if !ok || choice.Kind != game.ResolutionChoiceSubtype || choice.Subtype == "" {
+		return "", false
+	}
+	return choice.Subtype, true
+}
+
 func (s *selectionSubject) hasColor(c color.Color) bool {
 	if s.kind == subjectPermanent {
 		return slices.Contains(s.values.colors, c)
@@ -319,6 +347,25 @@ func (s *selectionSubject) tapped() bool {
 		return false
 	}
 	return s.kind == subjectPermanent && s.permanent != nil && s.permanent.Tapped
+}
+
+// hasCounter reports whether the subject permanent carries at least one counter
+// of the given kind. Counters live only on battlefield permanents, so a card or
+// cast-spell subject never matches; an event permanent reads its live or
+// last-known counters.
+func (s *selectionSubject) hasCounter(kind counter.Kind) bool {
+	if s.kind == subjectPermanent {
+		return s.permanent != nil && s.permanent.Counters.Has(kind)
+	}
+	if s.kind == subjectEventPermanent && s.event.PermanentID != 0 {
+		if permanent, ok := permanentByObjectID(s.g, s.event.PermanentID); ok {
+			return permanent.Counters.Has(kind)
+		}
+		if snapshot, ok := lastKnownObject(s.g, s.event.PermanentID); ok {
+			return snapshot.Counters.Has(kind)
+		}
+	}
+	return false
 }
 
 func (s *selectionSubject) combatStateMatches(filter game.CombatStateFilter) bool {

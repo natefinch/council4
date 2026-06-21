@@ -36,6 +36,7 @@ const (
 	TriggerEventObjectBecameTarget
 	TriggerEventPermanentMutated
 	TriggerEventAttackerBecameBlocked
+	TriggerEventTokenCreated
 )
 
 // TriggerSourceRelation identifies the event object's relationship to the
@@ -278,6 +279,10 @@ type TriggerSelection struct {
 	Power            TriggerNumberFilter
 	Toughness        TriggerNumberFilter
 	Controller       ControllerKind
+	// SubtypeFromEntryChoice requires the matched object to share the creature
+	// subtype the predicate's source permanent chose as it entered ("of the
+	// chosen type"). It lowers to Selection.SubtypeFromSourceEntryChoice.
+	SubtypeFromEntryChoice bool
 }
 
 // TriggerPattern is a source-spanned semantic description of a representable
@@ -291,6 +296,10 @@ type TriggerPattern struct {
 	Source     TriggerSourceRelation
 	Subject    TriggerSubject
 	Controller ControllerKind
+	// UnionEvent names a second event family joined to Event under the pattern's
+	// shared subject and player filters, expressing "create or sacrifice a
+	// token". It is TriggerEventUnknown for single-event patterns.
+	UnionEvent TriggerEvent
 	// CauseController identifies the controller of the spell or ability that
 	// caused an event, independently from the event subject's controller.
 	CauseController ControllerKind
@@ -345,6 +354,16 @@ type TriggerPattern struct {
 	// MatchSpellCopy widens a spell-cast pattern to also match spell-copy
 	// events ("Whenever you cast or copy ...", magecraft).
 	MatchSpellCopy bool
+
+	// TappedForMana restricts a permanent-tapped pattern to taps that paid a
+	// mana ability's cost ("is tapped for mana").
+	TappedForMana bool
+
+	// NextOccurrence marks a one-shot "next" phase/step relation ("your next
+	// upkeep") rather than a recurring trigger. Such a pattern is representable
+	// only as a delayed triggered ability created when a spell resolves
+	// (CR 603.7), so direct trigger lowering rejects it.
+	NextOccurrence bool
 
 	InterveningCondition *CompiledCondition
 }

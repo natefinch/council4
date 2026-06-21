@@ -87,6 +87,32 @@ func TestLowerSourceSpellCostReduction(t *testing.T) {
 	}
 }
 
+// TestLowerSourceSpellCostReductionDynamic proves the dynamic form ("costs {X}
+// less to cast, where X is the greatest power among creatures you control")
+// lowers to a DynamicReduction cost modifier rather than a per-object reduction.
+func TestLowerSourceSpellCostReductionDynamic(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Reducer",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "This spell costs {X} less to cast, where X is the greatest power among creatures you control.",
+	})
+	modifier := sourceSpellCostReductionModifier(t, face)
+	if modifier.Kind != game.CostModifierSpell {
+		t.Fatalf("modifier kind = %v, want spell", modifier.Kind)
+	}
+	if modifier.PerObjectReduction != 0 {
+		t.Fatalf("per-object reduction = %d, want 0 for the dynamic form", modifier.PerObjectReduction)
+	}
+	if modifier.DynamicReduction == nil {
+		t.Fatal("dynamic reduction missing; the {X} form must carry a DynamicReduction amount")
+	}
+	if got := modifier.DynamicReduction.Kind; got != game.DynamicAmountGreatestPowerInGroup {
+		t.Fatalf("dynamic reduction kind = %v, want greatest power in group", got)
+	}
+}
+
 func TestLowerSourceSpellCostReductionRejectsUnsupported(t *testing.T) {
 	t.Parallel()
 	sources := map[string]string{

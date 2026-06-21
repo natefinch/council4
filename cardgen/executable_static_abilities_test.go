@@ -223,6 +223,52 @@ func TestGenerateExecutableCardSourceSelfMustAttack(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceSelfNameMustAttack(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Toski, Bearer of Secrets",
+		Layout:     "normal",
+		ManaCost:   "{3}{G}",
+		TypeLine:   "Legendary Creature — Squirrel",
+		OracleText: "This spell can't be countered.\nIndestructible\nToski attacks each combat if able.\nWhenever a creature you control deals combat damage to a player, draw a card.",
+		Colors:     []string{"G"},
+		Power:      new("1"),
+		Toughness:  new("1"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "game.MustAttackStaticBody") {
+		t.Fatalf("source missing must-attack static body for self-name rule:\n%s", source)
+	}
+	if !strings.Contains(source, "game.CantBeCounteredStaticBody") {
+		t.Fatalf("source missing uncounterable static body:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsSelfNameUncounterable(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Certain Doom",
+		Layout:     "normal",
+		ManaCost:   "{1}{B}",
+		TypeLine:   "Sorcery",
+		OracleText: "Certain Doom can't be countered.\nDestroy target creature.",
+		Colors:     []string{"B"},
+	}
+	source, _, err := GenerateExecutableCardSource(card, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source != "" {
+		t.Fatalf("expected name-based can't-be-countered to remain unsupported, got source:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceSelfCannotAttack(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -366,6 +412,130 @@ func TestGenerateExecutableCardSourceSelfUncounterable(t *testing.T) {
 	}
 	if !strings.Contains(source, "game.CantBeCounteredStaticBody") {
 		t.Fatalf("source missing uncounterable static body:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceGroupUncounterable(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wantTypes  string
+	}{
+		{
+			name:       "creature spells",
+			oracleText: "Creature spells you control can't be countered.",
+			wantTypes:  "SpellTypes:         []types.Card{types.Creature},",
+		},
+		{
+			name:       "all spells",
+			oracleText: "Spells you control can't be countered.",
+			wantTypes:  "",
+		},
+		{
+			name:       "instant spells",
+			oracleText: "Instant spells you control can't be countered.",
+			wantTypes:  "SpellTypes:         []types.Card{types.Instant},",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Rhythm",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: test.oracleText,
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "c")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if !strings.Contains(source, "Kind:               game.RuleEffectCantBeCountered,") ||
+				!strings.Contains(source, "AffectedController: game.ControllerYou,") {
+				t.Fatalf("source missing group uncounterable rule effect:\n%s", source)
+			}
+			if test.wantTypes == "" {
+				if strings.Contains(source, "SpellTypes:") {
+					t.Fatalf("unfiltered group should not constrain spell types:\n%s", source)
+				}
+			} else if !strings.Contains(source, test.wantTypes) {
+				t.Fatalf("source missing %q:\n%s", test.wantTypes, source)
+			}
+		})
+	}
+}
+
+func TestGenerateExecutableCardSourceUntapDuringOtherUntapStep(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		typeLine   string
+		oracleText string
+		wantFields []string
+		wantAbsent []string
+	}{
+		{
+			name:       "all permanents",
+			typeLine:   "Creature — Spirit",
+			oracleText: "Untap all permanents you control during each other player's untap step.",
+			wantFields: []string{
+				"Kind:               game.RuleEffectUntapDuringOtherPlayersUntapStep,",
+				"AffectedController: game.ControllerYou,",
+			},
+			wantAbsent: []string{"PermanentTypes:", "AffectedSource:"},
+		},
+		{
+			name:       "all creatures",
+			typeLine:   "Creature — Elemental",
+			oracleText: "Untap all creatures you control during each other player's untap step.",
+			wantFields: []string{
+				"Kind:               game.RuleEffectUntapDuringOtherPlayersUntapStep,",
+				"AffectedController: game.ControllerYou,",
+				"PermanentTypes:     []types.Card{types.Creature},",
+			},
+		},
+		{
+			name:       "self form",
+			typeLine:   "Artifact",
+			oracleText: "Untap this artifact during each other player's untap step.",
+			wantFields: []string{
+				"Kind:           game.RuleEffectUntapDuringOtherPlayersUntapStep,",
+				"AffectedSource: true,",
+			},
+			wantAbsent: []string{"AffectedController:", "PermanentTypes:"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Untapper",
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracleText,
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "c")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, want := range test.wantFields {
+				if !strings.Contains(source, want) {
+					t.Fatalf("source missing %q:\n%s", want, source)
+				}
+			}
+			for _, absent := range test.wantAbsent {
+				if strings.Contains(source, absent) {
+					t.Fatalf("source unexpectedly contains %q:\n%s", absent, source)
+				}
+			}
+		})
 	}
 }
 
@@ -790,6 +960,15 @@ func TestGenerateExecutableCardSourceComposedQualifiedRule(t *testing.T) {
 			wanted: []string{
 				"game.RuleEffectCantBeBlockedByMoreThanOne",
 				"AffectedAttached: true",
+			},
+		},
+		"prohibition first then keyword grant": {
+			typeLine:   "Artifact — Equipment",
+			oracleText: "Equipped creature can't be blocked and has shroud.\nEquip {2}",
+			wanted: []string{
+				"game.RuleEffectCantBeBlocked",
+				"AffectedAttached: true",
+				"game.Shroud",
 			},
 		},
 	}

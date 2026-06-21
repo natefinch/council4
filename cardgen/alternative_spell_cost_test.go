@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -42,6 +43,46 @@ func TestLowerFierceGuardianship(t *testing.T) {
 	counter, ok := mode.Sequence[0].Primitive.(game.CounterObject)
 	if !ok || counter.Object != game.TargetStackObjectReference(0) {
 		t.Fatalf("primitive = %#v, want counter target stack object", mode.Sequence[0].Primitive)
+	}
+}
+
+const damnText = `Destroy target creature. A creature destroyed this way can't be regenerated.
+Overload {2}{W}{W} (You may cast this spell for its overload cost. If you do, change "target" in its text to "each.")`
+
+func TestLowerDamnDestroyRiderAndOverload(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Damn",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		ManaCost:   "{B}{B}",
+		OracleText: damnText,
+	})
+	// Normal form: destroy one target creature, with the regeneration rider
+	// folded onto the destroy.
+	normal := face.SpellAbility.Val.Modes[0]
+	if len(normal.Targets) != 1 {
+		t.Fatalf("normal targets = %#v, want one", normal.Targets)
+	}
+	normalDestroy, ok := normal.Sequence[0].Primitive.(game.Destroy)
+	if !ok || normalDestroy.Object != game.TargetPermanentReference(0) || !normalDestroy.PreventRegeneration {
+		t.Fatalf("normal primitive = %#v, want target destroy preventing regeneration", normal.Sequence[0].Primitive)
+	}
+	// Overload form: destroy each creature on the battlefield, still preventing
+	// regeneration.
+	if !face.Overload.Exists || !slices.Equal(face.Overload.Val.Cost, cost.Mana{cost.O(2), cost.W, cost.W}) {
+		t.Fatalf("overload = %#v", face.Overload)
+	}
+	overloaded := face.Overload.Val.SpellAbility.Modes[0]
+	if len(overloaded.Targets) != 0 {
+		t.Fatalf("overload targets = %#v, want none", overloaded.Targets)
+	}
+	overloadDestroy, ok := overloaded.Sequence[0].Primitive.(game.Destroy)
+	if !ok || !overloadDestroy.Group.Valid() || !overloadDestroy.PreventRegeneration {
+		t.Fatalf("overload primitive = %#v, want mass destroy preventing regeneration", overloaded.Sequence[0].Primitive)
+	}
+	if selection := overloadDestroy.Group.Selection(); !slices.Equal(selection.RequiredTypes, []types.Card{types.Creature}) {
+		t.Fatalf("overload selection = %#v, want creatures", overloadDestroy.Group.Selection())
 	}
 }
 
@@ -415,7 +456,7 @@ func TestCommanderAlternativeCostDoesNotHideUnsupportedBody(t *testing.T) {
 		name string
 		body string
 	}{
-		{name: "unsupported retarget", body: "You may choose new targets for target spell or ability."},
+		{name: "unsupported exile player", body: "Target player exiles a card from their hand."},
 		{name: "unbounded exile", body: "Exile any number of target creatures."},
 		{name: "nonpermanent exile", body: "Exile target spell."},
 	} {
@@ -432,5 +473,69 @@ func TestCommanderAlternativeCostDoesNotHideUnsupportedBody(t *testing.T) {
 				t.Fatalf("partially lowered unsupported card: %#v", face)
 			}
 		})
+	}
+}
+
+func TestLowerForceOfWillPitch(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Force of Will",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{3}{U}{U}",
+		OracleText: "You may pay 1 life and exile a blue card from your hand rather than pay this spell's mana cost.\nCounter target spell.",
+	})
+	if len(face.AlternativeCosts) != 1 {
+		t.Fatalf("alternative costs = %#v, want one", face.AlternativeCosts)
+	}
+	alt := face.AlternativeCosts[0]
+	if alt.ManaCost.Exists {
+		t.Fatalf("pitch alternative should carry no mana cost: %#v", alt)
+	}
+	if alt.Condition != cost.AlternativeConditionNone {
+		t.Fatalf("condition = %v, want none", alt.Condition)
+	}
+	if len(alt.AdditionalCosts) != 2 {
+		t.Fatalf("additional costs = %#v, want pay-life + exile", alt.AdditionalCosts)
+	}
+	life := alt.AdditionalCosts[0]
+	if life.Kind != cost.AdditionalPayLife || life.Amount != 1 {
+		t.Fatalf("life cost = %#v, want pay 1 life", life)
+	}
+	exile := alt.AdditionalCosts[1]
+	if exile.Kind != cost.AdditionalExile ||
+		exile.Source != zone.Hand ||
+		!exile.MatchCardColor ||
+		exile.CardColor != color.Blue ||
+		exile.Amount != 1 {
+		t.Fatalf("exile cost = %#v, want exile one blue card from hand", exile)
+	}
+}
+
+func TestLowerForceOfNegationPitchAndCounterExile(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:     "Force of Negation",
+		Layout:   "normal",
+		TypeLine: "Instant",
+		ManaCost: "{1}{U}{U}",
+		OracleText: "If it's not your turn, you may exile a blue card from your hand rather than pay this spell's mana cost.\n" +
+			"Counter target noncreature spell. If that spell is countered this way, exile it instead of putting it into its owner's graveyard.",
+	})
+	if len(face.AlternativeCosts) != 1 {
+		t.Fatalf("alternative costs = %#v, want one", face.AlternativeCosts)
+	}
+	alt := face.AlternativeCosts[0]
+	if alt.Condition != cost.AlternativeConditionNotYourTurn {
+		t.Fatalf("condition = %v, want not-your-turn", alt.Condition)
+	}
+	if len(alt.AdditionalCosts) != 1 ||
+		alt.AdditionalCosts[0].Kind != cost.AdditionalExile ||
+		alt.AdditionalCosts[0].CardColor != color.Blue {
+		t.Fatalf("additional costs = %#v, want exile one blue card", alt.AdditionalCosts)
+	}
+	counter, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.CounterObject)
+	if !ok || !counter.ExileInstead {
+		t.Fatalf("primitive = %#v, want counter with exile instead", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
 	}
 }

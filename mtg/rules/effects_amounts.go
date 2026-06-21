@@ -4,7 +4,9 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -70,25 +72,31 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 			permanent := resolved.permanent
 			amount = permanent.Counters.Get(dynamic.CounterKind)
 		}
-	case game.DynamicAmountControllerLife:
-		if player, ok := playerByID(g, controller); ok {
-			amount = player.Life
+	case game.DynamicAmountControllerLife, game.DynamicAmountControllerHandSize,
+		game.DynamicAmountControllerGraveyardSize, game.DynamicAmountControllerBasicLandTypeCount,
+		game.DynamicAmountOpponentCount:
+		amount = controllerAggregateAmount(g, controller, dynamic, before)
+	case game.DynamicAmountDevotion:
+		// ColorFrom binds devotion to the color chosen as the ability resolves
+		// (Nykthos, Shrine to Nyx's "devotion to that color"); otherwise the
+		// amount's fixed Colors apply. A missing or unreadable choice yields no
+		// colors, so devotion is zero.
+		colors := dynamic.Colors
+		if dynamic.ColorFrom != "" {
+			colors = nil
+			if result, ok := linkedResolutionChoice(obj, string(dynamic.ColorFrom)); ok {
+				if chosen, ok := manaColor(result.Color); ok {
+					colors = []color.Color{chosen}
+				}
+			}
 		}
-	case game.DynamicAmountControllerHandSize:
-		if player, ok := playerByID(g, controller); ok {
-			amount = cardInstanceCount(g, player.Hand.All())
-		}
-	case game.DynamicAmountControllerGraveyardSize:
-		if player, ok := playerByID(g, controller); ok {
-			amount = cardInstanceCount(g, player.Graveyard.All())
-		}
-	case game.DynamicAmountControllerBasicLandTypeCount:
-		amount = controllerBasicLandTypeCount(g, conditionContext{
-			controller:            controller,
-			characteristicsBefore: before,
-		})
+		amount = controllerDevotion(g, controller, colors)
 	case game.DynamicAmountCountSelector:
 		amount = countPermanentsMatchingGroup(g, obj, controller, dynamic.Group)
+	case game.DynamicAmountGreatestPowerInGroup, game.DynamicAmountGreatestToughnessInGroup, game.DynamicAmountGreatestManaValueInGroup:
+		amount = greatestCharacteristicInGroup(g, obj, controller, dynamic.Group, dynamic.Kind)
+	case game.DynamicAmountTotalPowerInGroup, game.DynamicAmountTotalToughnessInGroup:
+		amount = totalCharacteristicInGroup(g, obj, controller, dynamic.Group, dynamic.Kind)
 	case game.DynamicAmountCountCardsInZone:
 		if dynamic.Player != nil && dynamic.Selection != nil {
 			amount = countCardsInZoneMatchingSelection(g, obj, controller, *dynamic.Player, dynamic.CardZone, *dynamic.Selection)
@@ -103,9 +111,7 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		if obj != nil && key != "" {
 			amount = obj.ResolvedExcessDamage[key]
 		}
-	case game.DynamicAmountOpponentCount:
-		amount = len(aliveOpponents(g, controller))
-	case game.DynamicAmountEventDamage:
+	case game.DynamicAmountEventDamage, game.DynamicAmountEventLifeChange:
 		if obj != nil && obj.HasTriggerEvent {
 			amount = obj.TriggerEvent.Amount
 		}
@@ -145,6 +151,8 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 			choice.Kind == game.ResolutionChoiceNumber {
 			amount = choice.Number
 		}
+	case game.DynamicAmountSpellsCastThisTurn:
+		amount = spellsCastThisTurn(g, controller)
 	default:
 	}
 	multiplier := dynamic.Multiplier
@@ -152,6 +160,183 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		multiplier = 1
 	}
 	return amount * multiplier
+}
+
+// spellsCastThisTurn counts the spells the controller has cast so far this turn
+// from the turn's recorded spell-cast events (CR 608.2c). A triggered ability's
+// own triggering spell counts, because its cast event precedes the ability's
+// resolution.
+func spellsCastThisTurn(g *game.Game, controller game.PlayerID) int {
+	count := 0
+	for _, event := range g.EventsThisTurn() {
+		if event.Kind == game.EventSpellCast && event.Controller == controller {
+			count++
+		}
+	}
+	return count
+}
+
+// controllerAggregateAmount computes the player-relative dynamic amounts that
+// depend only on the controller's own board and zones (life total, hand and
+// graveyard sizes, basic land type and opponent counts, and devotion). It is
+// split out of dynamicAmountValueBeforeLayer so that large switch stays within
+// the maintainability budget; behavior is identical to the inlined cases.
+//
+//nolint:gocritic // Value semantics keep dynamic expressions immutable during evaluation.
+func controllerAggregateAmount(g *game.Game, controller game.PlayerID, dynamic game.DynamicAmount, before game.ContinuousLayer) int {
+	switch dynamic.Kind {
+	case game.DynamicAmountControllerLife:
+		if player, ok := playerByID(g, controller); ok {
+			return player.Life
+		}
+	case game.DynamicAmountControllerHandSize:
+		if player, ok := playerByID(g, controller); ok {
+			return cardInstanceCount(g, player.Hand.All())
+		}
+	case game.DynamicAmountControllerGraveyardSize:
+		if player, ok := playerByID(g, controller); ok {
+			return cardInstanceCount(g, player.Graveyard.All())
+		}
+	case game.DynamicAmountControllerBasicLandTypeCount:
+		return controllerBasicLandTypeCount(g, conditionContext{
+			controller:            controller,
+			characteristicsBefore: before,
+		})
+	case game.DynamicAmountOpponentCount:
+		return len(aliveOpponents(g, controller))
+	default:
+	}
+	return 0
+}
+
+// controllerDevotion returns the controller's devotion to colors: the number of
+// mana symbols of those colors among the mana costs of the permanents the
+// controller controls (CR 700.5). A hybrid or Phyrexian symbol counts once when
+// it matches any listed color, so multi-color devotion counts each qualifying
+// symbol a single time.
+func controllerDevotion(g *game.Game, controller game.PlayerID, colors []color.Color) int {
+	if len(colors) == 0 {
+		return 0
+	}
+	targets := make(map[mana.Color]bool, len(colors))
+	for _, c := range colors {
+		targets[mana.Color(c.Abbreviation())] = true
+	}
+	devotion := 0
+	for _, permanent := range g.Battlefield {
+		if permanent.PhasedOut || permanent.Controller != controller {
+			continue
+		}
+		def, ok := permanentCardDef(g, permanent)
+		if !ok || !def.ManaCost.Exists {
+			continue
+		}
+		for _, symbol := range def.ManaCost.Val {
+			for _, symbolColor := range symbol.Colors() {
+				if targets[symbolColor] {
+					devotion++
+					break
+				}
+			}
+		}
+	}
+	return devotion
+}
+
+// characteristic identifies a numeric permanent characteristic compared when
+// taking the greatest value across a group of permanents.
+type characteristic int
+
+const (
+	characteristicPower characteristic = iota
+	characteristicToughness
+	characteristicManaValue
+)
+
+func greatestGroupCharacteristic(kind game.DynamicAmountKind) characteristic {
+	switch kind {
+	case game.DynamicAmountGreatestToughnessInGroup:
+		return characteristicToughness
+	case game.DynamicAmountGreatestManaValueInGroup:
+		return characteristicManaValue
+	default:
+		return characteristicPower
+	}
+}
+
+// greatestCharacteristicInGroup returns the greatest value of the
+// characteristic named by kind among the permanents of group, evaluated as the
+// effect resolves (CR 608.2c). An empty group yields zero, matching the "draw
+// cards equal to the greatest power among <group>" amounts whose group is empty.
+func greatestCharacteristicInGroup(g *game.Game, obj *game.StackObject, controller game.PlayerID, group game.GroupReference, kind game.DynamicAmountKind) int {
+	resolverObj := obj
+	if resolverObj == nil {
+		resolverObj = &game.StackObject{Controller: controller}
+	}
+	which := greatestGroupCharacteristic(kind)
+	greatest := 0
+	for _, objectID := range newReferenceResolver(g, resolverObj).groupMembers(group) {
+		permanent, ok := permanentByObjectID(g, objectID)
+		if !ok {
+			continue
+		}
+		value, ok := permanentCharacteristicValue(g, permanent, which)
+		if ok && value > greatest {
+			greatest = value
+		}
+	}
+	return greatest
+}
+
+// totalGroupCharacteristic maps a total-characteristic dynamic amount kind to
+// the permanent characteristic summed across the group.
+func totalGroupCharacteristic(kind game.DynamicAmountKind) characteristic {
+	switch kind {
+	case game.DynamicAmountTotalToughnessInGroup:
+		return characteristicToughness
+	default:
+		return characteristicPower
+	}
+}
+
+// totalCharacteristicInGroup returns the sum of the characteristic named by kind
+// across the permanents of group, evaluated as the effect resolves (CR 608.2c).
+// An empty group yields zero, matching "the total power of <group>" amounts
+// (Ghalta, Primal Hunger's cost reduction) over an empty battlefield.
+func totalCharacteristicInGroup(g *game.Game, obj *game.StackObject, controller game.PlayerID, group game.GroupReference, kind game.DynamicAmountKind) int {
+	resolverObj := obj
+	if resolverObj == nil {
+		resolverObj = &game.StackObject{Controller: controller}
+	}
+	which := totalGroupCharacteristic(kind)
+	total := 0
+	for _, objectID := range newReferenceResolver(g, resolverObj).groupMembers(group) {
+		permanent, ok := permanentByObjectID(g, objectID)
+		if !ok {
+			continue
+		}
+		value, ok := permanentCharacteristicValue(g, permanent, which)
+		if ok {
+			total += value
+		}
+	}
+	return total
+}
+
+func permanentCharacteristicValue(g *game.Game, permanent *game.Permanent, which characteristic) (int, bool) {
+	switch which {
+	case characteristicPower:
+		return effectivePower(g, permanent), true
+	case characteristicToughness:
+		return effectiveToughness(g, permanent)
+	case characteristicManaValue:
+		if def, ok := permanentCardDef(g, permanent); ok {
+			return def.ManaValue(), true
+		}
+		return 0, false
+	default:
+		return 0, false
+	}
 }
 
 func dynamicObjectManaValue(g *game.Game, obj *game.StackObject, dynamic *game.DynamicAmount) int {
@@ -393,14 +578,14 @@ func cardConditionSatisfied(g *game.Game, obj *game.StackObject, condition opt.V
 			continue
 		}
 		card, ok := g.GetCardInstance(ref.CardID)
-		if ok && cardMatchesCondition(card.Def, condition) {
+		if ok && cardMatchesCondition(card.Def, condition, obj) {
 			return true
 		}
 	}
 	return false
 }
 
-func cardMatchesCondition(card *game.CardDef, condition opt.V[game.CardCondition]) bool {
+func cardMatchesCondition(card *game.CardDef, condition opt.V[game.CardCondition], obj *game.StackObject) bool {
 	if !condition.Exists {
 		return true
 	}
@@ -424,6 +609,15 @@ func cardMatchesCondition(card *game.CardDef, condition opt.V[game.CardCondition
 	}
 	if len(cond.SubtypesAny) > 0 && !slices.ContainsFunc(cond.SubtypesAny, face.HasSubtype) {
 		return false
+	}
+	if cond.ChosenSubtypeFrom != "" {
+		choice, ok := linkedResolutionChoice(obj, string(cond.ChosenSubtypeFrom))
+		if !ok ||
+			choice.Kind != game.ResolutionChoiceSubtype ||
+			!types.KnownSubtypeForType(types.Creature, choice.Subtype) ||
+			!face.HasSubtype(choice.Subtype) {
+			return false
+		}
 	}
 	return true
 }

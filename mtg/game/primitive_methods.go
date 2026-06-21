@@ -9,8 +9,23 @@ func (Draw) Kind() PrimitiveKind { return PrimitiveDraw }
 // Kind implements Primitive for ReorderLibraryTop.
 func (ReorderLibraryTop) Kind() PrimitiveKind { return PrimitiveReorderLibraryTop }
 
+// Kind implements Primitive for LookAtLibraryTop.
+func (LookAtLibraryTop) Kind() PrimitiveKind { return PrimitiveLookAtLibraryTop }
+
 // Kind implements Primitive for ShuffleLibrary.
 func (ShuffleLibrary) Kind() PrimitiveKind { return PrimitiveShuffleLibrary }
+
+// Kind implements Primitive for ExileFromHand.
+func (ExileFromHand) Kind() PrimitiveKind { return PrimitiveExileFromHand }
+
+// Kind implements Primitive for PutFromHand.
+func (PutFromHand) Kind() PrimitiveKind { return PrimitivePutFromHand }
+
+// Kind implements Primitive for CastForFree.
+func (CastForFree) Kind() PrimitiveKind { return PrimitiveCastForFree }
+
+// Kind implements Primitive for ReturnFromGraveyard.
+func (ReturnFromGraveyard) Kind() PrimitiveKind { return PrimitiveReturnFromGraveyard }
 
 // Kind implements Primitive for Discard.
 func (Discard) Kind() PrimitiveKind { return PrimitiveDiscard }
@@ -83,6 +98,12 @@ func (GainLife) Kind() PrimitiveKind { return PrimitiveGainLife }
 
 // Kind implements Primitive for LoseLife.
 func (LoseLife) Kind() PrimitiveKind { return PrimitiveLoseLife }
+
+// Kind implements Primitive for PlayerLosesGame.
+func (PlayerLosesGame) Kind() PrimitiveKind { return PrimitivePlayerLosesGame }
+
+// Kind implements Primitive for PlayerWinsGame.
+func (PlayerWinsGame) Kind() PrimitiveKind { return PrimitivePlayerWinsGame }
 
 // Kind implements Primitive for Exile.
 func (Exile) Kind() PrimitiveKind { return PrimitiveExile }
@@ -165,13 +186,36 @@ func (PreventDamage) Kind() PrimitiveKind { return PrimitivePreventDamage }
 // Kind implements Primitive for MoveCard.
 func (MoveCard) Kind() PrimitiveKind { return PrimitiveMoveCard }
 
+// Kind implements Primitive for MoveCommander.
+func (MoveCommander) Kind() PrimitiveKind { return PrimitiveMoveCommander }
+
+// Kind implements Primitive for ChooseNewTargets.
+func (ChooseNewTargets) Kind() PrimitiveKind { return PrimitiveChooseNewTargets }
+
+// Kind implements Primitive for GroupSourceDamage.
+func (GroupSourceDamage) Kind() PrimitiveKind { return PrimitiveGroupSourceDamage }
+
+// Kind implements Primitive for PutPermanentOnLibrary.
+func (PutPermanentOnLibrary) Kind() PrimitiveKind { return PrimitivePutPermanentOnLibrary }
+
 // Kind implements Primitive for GrantCastPermission.
 func (GrantCastPermission) Kind() PrimitiveKind { return PrimitiveGrantCastPermission }
+
+// Kind implements Primitive for Attach.
+func (Attach) Kind() PrimitiveKind { return PrimitiveAttach }
+
+// Kind implements Primitive for MassReturnFromGraveyard.
+func (MassReturnFromGraveyard) Kind() PrimitiveKind { return PrimitiveMassReturnFromGraveyard }
 
 func (Damage) isPrimitive()                      {}
 func (Draw) isPrimitive()                        {}
 func (ReorderLibraryTop) isPrimitive()           {}
+func (LookAtLibraryTop) isPrimitive()            {}
 func (ShuffleLibrary) isPrimitive()              {}
+func (ExileFromHand) isPrimitive()               {}
+func (PutFromHand) isPrimitive()                 {}
+func (CastForFree) isPrimitive()                 {}
+func (ReturnFromGraveyard) isPrimitive()         {}
 func (Discard) isPrimitive()                     {}
 func (Destroy) isPrimitive()                     {}
 func (AddMana) isPrimitive()                     {}
@@ -196,6 +240,8 @@ func (Pay) isPrimitive()                         {}
 func (Choose) isPrimitive()                      {}
 func (GainLife) isPrimitive()                    {}
 func (LoseLife) isPrimitive()                    {}
+func (PlayerLosesGame) isPrimitive()             {}
+func (PlayerWinsGame) isPrimitive()              {}
 func (Exile) isPrimitive()                       {}
 func (Bounce) isPrimitive()                      {}
 func (Sacrifice) isPrimitive()                   {}
@@ -223,12 +269,22 @@ func (CreateDelayedTrigger) isPrimitive()        {}
 func (CreateReplacement) isPrimitive()           {}
 func (PreventDamage) isPrimitive()               {}
 func (MoveCard) isPrimitive()                    {}
+func (MoveCommander) isPrimitive()               {}
 func (GrantCastPermission) isPrimitive()         {}
+func (ChooseNewTargets) isPrimitive()            {}
+func (PutPermanentOnLibrary) isPrimitive()       {}
+func (Attach) isPrimitive()                      {}
+func (MassReturnFromGraveyard) isPrimitive()     {}
+
+func (GroupSourceDamage) isPrimitive() {}
 
 func (p Damage) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
 func (p Draw) instructionRefs() primitiveRefs   { return quantityRefs(p.Amount) }
 func (p ReorderLibraryTop) instructionRefs() primitiveRefs {
 	return quantityRefs(p.Amount)
+}
+func (p LookAtLibraryTop) instructionRefs() primitiveRefs {
+	return primitiveRefs{publishesLinked: p.PublishLinked}
 }
 func (ShuffleLibrary) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (p Discard) instructionRefs() primitiveRefs      { return quantityRefs(p.Amount) }
@@ -274,6 +330,9 @@ func (p AddMana) instructionRefs() primitiveRefs {
 }
 
 func (p Reveal) instructionRefs() primitiveRefs {
+	if p.Card.Kind != CardReferenceNone {
+		return cardReferenceRefs(p.Card)
+	}
 	refs := quantityRefs(p.Amount)
 	refs.publishesLinked = p.PublishLinked
 	return refs
@@ -296,12 +355,23 @@ func (p Choose) instructionRefs() primitiveRefs {
 	return primitiveRefs{publishesChoice: p.PublishChoice}
 }
 
-func (p GainLife) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
-func (p LoseLife) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
+func (p GainLife) instructionRefs() primitiveRefs      { return quantityRefs(p.Amount) }
+func (p LoseLife) instructionRefs() primitiveRefs      { return quantityRefs(p.Amount) }
+func (PlayerLosesGame) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (PlayerWinsGame) instructionRefs() primitiveRefs  { return primitiveRefs{} }
 
 func (p Exile) instructionRefs() primitiveRefs {
 	return primitiveRefs{publishesLinked: p.ExileLinkedKey}
 }
+
+func (p ExileFromHand) instructionRefs() primitiveRefs {
+	refs := quantityRefs(p.Amount)
+	refs.publishesLinked = p.PublishLinked
+	return refs
+}
+func (p PutFromHand) instructionRefs() primitiveRefs         { return quantityRefs(p.Amount) }
+func (CastForFree) instructionRefs() primitiveRefs           { return primitiveRefs{} }
+func (p ReturnFromGraveyard) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
 func (p Bounce) instructionRefs() primitiveRefs              { return objectReferenceRefs(p.Object) }
 func (Sacrifice) instructionRefs() primitiveRefs             { return primitiveRefs{} }
 func (p SacrificePermanents) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
@@ -336,8 +406,21 @@ func (p MoveCard) instructionRefs() primitiveRefs {
 	}
 	return cardReferenceRefs(p.Card)
 }
+func (MoveCommander) instructionRefs() primitiveRefs       { return primitiveRefs{} }
+func (ChooseNewTargets) instructionRefs() primitiveRefs    { return primitiveRefs{} }
+func (p GroupSourceDamage) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
+func (MassReturnFromGraveyard) instructionRefs() primitiveRefs {
+	return primitiveRefs{}
+}
 func (p GrantCastPermission) instructionRefs() primitiveRefs {
 	return cardReferenceRefs(p.Card)
+}
+func (p PutPermanentOnLibrary) instructionRefs() primitiveRefs {
+	return objectReferenceRefs(p.Object)
+}
+
+func (p Attach) instructionRefs() primitiveRefs {
+	return mergePrimitiveRefs(objectReferenceRefs(p.Attachment), objectReferenceRefs(p.Target))
 }
 
 func cardReferenceRefs(reference CardReference) primitiveRefs {

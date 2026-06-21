@@ -59,6 +59,9 @@ func (r Renderer) renderModalAbilityContent(ctx *renderCtx, content game.Ability
 
 func (r Renderer) renderMode(ctx *renderCtx, mode game.Mode) (string, error) {
 	var fields []string
+	if mode.Text != "" {
+		fields = append(fields, fmt.Sprintf("Text: %q,", mode.Text))
+	}
 	if len(mode.Targets) > 0 {
 		elements := make([]string, 0, len(mode.Targets))
 		for i := range mode.Targets {
@@ -193,10 +196,24 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 	switch primitive.Kind() {
 	case game.PrimitiveDamage:
 		return r.renderDamagePrimitive(ctx, primitive)
+	case game.PrimitiveGroupSourceDamage:
+		return r.renderGroupSourceDamage(ctx, primitive)
 	case game.PrimitiveDraw, game.PrimitiveDiscard, game.PrimitiveMill,
 		game.PrimitiveScry, game.PrimitiveSurveil, game.PrimitiveGainLife,
 		game.PrimitiveLoseLife, game.PrimitiveReorderLibraryTop:
 		return r.renderPlayerAmountPrimitive(ctx, primitive)
+	case game.PrimitivePlayerLosesGame:
+		value, ok := primitive.(game.PlayerLosesGame)
+		if !ok {
+			return "", errors.New("render: internal error: PlayerLosesGame kind has unexpected concrete type")
+		}
+		return r.renderPlayerLosesGame(value)
+	case game.PrimitivePlayerWinsGame:
+		value, ok := primitive.(game.PlayerWinsGame)
+		if !ok {
+			return "", errors.New("render: internal error: PlayerWinsGame kind has unexpected concrete type")
+		}
+		return r.renderPlayerWinsGame(value)
 	case game.PrimitiveInvestigate, game.PrimitiveProliferate, game.PrimitiveManifest:
 		return r.renderStandalonePrimitive(ctx, primitive)
 	case game.PrimitiveDig:
@@ -209,8 +226,11 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		game.PrimitiveTap, game.PrimitiveExile, game.PrimitivePhaseOut:
 		return r.renderObjectOrGroupPrimitive(ctx, primitive)
 	case game.PrimitiveRegenerate, game.PrimitiveExplore,
-		game.PrimitiveCounterObject, game.PrimitiveSacrifice, game.PrimitiveSkipNextUntap:
+		game.PrimitiveCounterObject, game.PrimitiveSacrifice, game.PrimitiveSkipNextUntap,
+		game.PrimitiveChooseNewTargets:
 		return r.renderObjectPrimitive(primitive)
+	case game.PrimitiveAttach:
+		return r.renderAttachPrimitive(primitive)
 	case game.PrimitiveSearch:
 		value, ok := primitive.(game.Search)
 		if !ok {
@@ -223,24 +243,85 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: Reveal kind has unexpected concrete type")
 		}
 		return r.renderRevealPrimitive(ctx, value)
+	case game.PrimitiveExileFromHand:
+		value, ok := primitive.(game.ExileFromHand)
+		if !ok {
+			return "", errors.New("render: internal error: ExileFromHand kind has unexpected concrete type")
+		}
+		return r.renderExileFromHand(ctx, value)
+	case game.PrimitivePutFromHand:
+		value, ok := primitive.(game.PutFromHand)
+		if !ok {
+			return "", errors.New("render: internal error: PutFromHand kind has unexpected concrete type")
+		}
+		return r.renderPutFromHand(ctx, value)
+	case game.PrimitiveCastForFree:
+		value, ok := primitive.(game.CastForFree)
+		if !ok {
+			return "", errors.New("render: internal error: CastForFree kind has unexpected concrete type")
+		}
+		return r.renderCastForFree(ctx, value)
+	case game.PrimitiveReturnFromGraveyard:
+		value, ok := primitive.(game.ReturnFromGraveyard)
+		if !ok {
+			return "", errors.New("render: internal error: ReturnFromGraveyard kind has unexpected concrete type")
+		}
+		return r.renderReturnFromGraveyard(ctx, value)
+	case game.PrimitiveMassReturnFromGraveyard:
+		value, ok := primitive.(game.MassReturnFromGraveyard)
+		if !ok {
+			return "", errors.New("render: internal error: MassReturnFromGraveyard kind has unexpected concrete type")
+		}
+		return r.renderMassReturnFromGraveyard(ctx, value)
 	case game.PrimitiveShufflePermanentIntoLibrary:
 		value, ok := primitive.(game.ShufflePermanentIntoLibrary)
 		if !ok {
 			return "", errors.New("render: internal error: ShufflePermanentIntoLibrary kind has unexpected concrete type")
 		}
 		return r.renderShufflePermanentIntoLibrary(value)
+	case game.PrimitivePutPermanentOnLibrary:
+		value, ok := primitive.(game.PutPermanentOnLibrary)
+		if !ok {
+			return "", errors.New("render: internal error: PutPermanentOnLibrary kind has unexpected concrete type")
+		}
+		return r.renderPutPermanentOnLibrary(value)
 	case game.PrimitiveShuffleLibrary:
 		value, ok := primitive.(game.ShuffleLibrary)
 		if !ok {
 			return "", errors.New("render: internal error: ShuffleLibrary kind has unexpected concrete type")
 		}
 		return r.renderShuffleLibrary(value)
+	case game.PrimitiveLookAtLibraryTop:
+		value, ok := primitive.(game.LookAtLibraryTop)
+		if !ok {
+			return "", errors.New("render: internal error: LookAtLibraryTop kind has unexpected concrete type")
+		}
+		return r.renderLookAtLibraryTop(value)
+	default:
+		return r.renderPrimitiveExtra(ctx, primitive)
+	}
+}
+
+// renderPrimitiveExtra renders the remaining primitive kinds not handled by
+// renderPrimitive. The dispatch is split across two functions purely to keep
+// each function's size manageable; together they cover every primitive kind.
+func (r Renderer) renderPrimitiveExtra(ctx *renderCtx, primitive game.Primitive) (string, error) {
+	switch primitive.Kind() {
 	case game.PrimitiveAddMana:
 		value, ok := primitive.(game.AddMana)
 		if !ok {
 			return "", errors.New("render: internal error: AddMana kind has unexpected concrete type")
 		}
 		return r.renderAddMana(ctx, &value)
+	default:
+		return r.renderPrimitiveTail(ctx, primitive)
+	}
+}
+
+// renderPrimitiveTail handles the remaining primitive kinds not dispatched by
+// renderPrimitive, keeping each switch small enough to stay maintainable.
+func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) (string, error) {
+	switch primitive.Kind() {
 	case game.PrimitiveAddCounter:
 		value, ok := primitive.(game.AddCounter)
 		if !ok {
@@ -285,6 +366,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: MoveCard kind has unexpected concrete type")
 		}
 		return r.renderMoveCard(ctx, value)
+	case game.PrimitiveMoveCommander:
+		value, ok := primitive.(game.MoveCommander)
+		if !ok {
+			return "", errors.New("render: internal error: MoveCommander kind has unexpected concrete type")
+		}
+		return r.renderMoveCommander(ctx, value)
 	case game.PrimitiveGrantCastPermission:
 		value, ok := primitive.(game.GrantCastPermission)
 		if !ok {
@@ -356,10 +443,25 @@ func (Renderer) renderCardCondition(ctx *renderCtx, condition game.CardCondition
 	if len(condition.Supertypes) != 0 || len(condition.SubtypesAny) != 0 {
 		return "", errors.New("render: unsupported CardCondition supertype or subtype filters")
 	}
+	if condition.ChosenSubtypeFrom != "" {
+		switch condition.ChosenSubtypeFrom {
+		case game.EntryTypeChoiceKey:
+			fields = append(fields, "ChosenSubtypeFrom: game.EntryTypeChoiceKey,")
+		default:
+			fields = append(fields, fmt.Sprintf("ChosenSubtypeFrom: game.ChoiceKey(%q),", condition.ChosenSubtypeFrom))
+		}
+	}
 	return structLit("game.CardCondition", fields), nil
 }
 
 func (r Renderer) renderRevealPrimitive(ctx *renderCtx, value game.Reveal) (string, error) {
+	if value.Card.Kind != game.CardReferenceNone {
+		card, err := renderCardReference(value.Card)
+		if err != nil {
+			return "", err
+		}
+		return structLit("game.Reveal", []string{fmt.Sprintf("Card: %s,", card)}), nil
+	}
 	amount, err := r.renderQuantity(ctx, value.Amount)
 	if err != nil {
 		return "", err
@@ -386,6 +488,120 @@ func (r Renderer) renderRevealPrimitive(ctx *renderCtx, value game.Reveal) (stri
 	return structLit("game.Reveal", fields), nil
 }
 
+func (r Renderer) renderExileFromHand(ctx *renderCtx, value game.ExileFromHand) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	selection, err := r.renderSelection(ctx, value.Selection)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Selection: %s,", selection),
+		fmt.Sprintf("Amount: %s,", amount),
+	}
+	if value.PublishLinked != "" {
+		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
+	}
+	return structLit("game.ExileFromHand", fields), nil
+}
+
+func (r Renderer) renderPutFromHand(ctx *renderCtx, value game.PutFromHand) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	selection, err := r.renderSelection(ctx, value.Selection)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Selection: %s,", selection),
+		fmt.Sprintf("Amount: %s,", amount),
+	}
+	if value.EntersTapped {
+		fields = append(fields, "EntersTapped: true,")
+	}
+	return structLit("game.PutFromHand", fields), nil
+}
+
+func (r Renderer) renderCastForFree(ctx *renderCtx, value game.CastForFree) (string, error) {
+	ctx.need(importZone)
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	selection, err := r.renderSelection(ctx, value.Selection)
+	if err != nil {
+		return "", err
+	}
+	sourceZone, err := renderZone(value.Zone)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.CastForFree", []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Selection: %s,", selection),
+		fmt.Sprintf("Zone: %s,", sourceZone),
+	}), nil
+}
+
+func (r Renderer) renderReturnFromGraveyard(ctx *renderCtx, value game.ReturnFromGraveyard) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	selection, err := r.renderSelection(ctx, value.Selection)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Selection: %s,", selection),
+		fmt.Sprintf("Amount: %s,", amount),
+	}
+	return structLit("game.ReturnFromGraveyard", fields), nil
+}
+
+func (r Renderer) renderMassReturnFromGraveyard(ctx *renderCtx, value game.MassReturnFromGraveyard) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	selection, err := r.renderSelection(ctx, value.Selection)
+	if err != nil {
+		return "", err
+	}
+	destination, err := renderZone(value.Destination)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Selection: %s,", selection),
+		fmt.Sprintf("Destination: %s,", destination),
+	}
+	if value.EntryTapped {
+		fields = append(fields, "EntryTapped: true,")
+	}
+	return structLit("game.MassReturnFromGraveyard", fields), nil
+}
+
 func (r Renderer) renderShufflePermanentIntoLibrary(value game.ShufflePermanentIntoLibrary) (string, error) {
 	object, err := r.renderObjectReference(value.Object)
 	if err != nil {
@@ -394,6 +610,18 @@ func (r Renderer) renderShufflePermanentIntoLibrary(value game.ShufflePermanentI
 	return structLit("game.ShufflePermanentIntoLibrary", []string{
 		fmt.Sprintf("Object: %s,", object),
 	}), nil
+}
+
+func (r Renderer) renderPutPermanentOnLibrary(value game.PutPermanentOnLibrary) (string, error) {
+	object, err := r.renderObjectReference(value.Object)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Object: %s,", object)}
+	if value.Bottom {
+		fields = append(fields, "Bottom: true,")
+	}
+	return structLit("game.PutPermanentOnLibrary", fields), nil
 }
 
 func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (string, error) {
@@ -469,6 +697,14 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 			return "", err
 		}
 		specFields = append(specFields, fmt.Sprintf("SubtypesAny: []types.Sub{%s},", subtypes))
+	}
+	if len(value.Spec.ColorsAny) > 0 {
+		colorLits, err := colorValueLiterals(value.Spec.ColorsAny)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importColor)
+		specFields = append(specFields, fmt.Sprintf("ColorsAny: []color.Color{%s},", colorLits))
 	}
 	if value.Spec.MaxManaValue.Exists {
 		ctx.need(importOpt)

@@ -32,6 +32,44 @@ func TestExactCounterSpellTypeUnion(t *testing.T) {
 	}
 }
 
+func TestExactTargetColorRider(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		source string
+		kind   EffectKind
+		color  TriggerColor
+	}{
+		{"Counter target spell if it's blue.", EffectCounter, TriggerColorBlue},
+		{"Destroy target permanent if it's red.", EffectDestroy, TriggerColorRed},
+		{"Counter target spell if it is green.", EffectCounter, TriggerColorGreen},
+	}
+	for _, tc := range cases {
+		document, diagnostics := Parse(tc.source, Context{InstantOrSorcery: true})
+		if len(diagnostics) != 0 {
+			t.Fatalf("Parse(%q) diagnostics = %#v", tc.source, diagnostics)
+		}
+		ability := document.Abilities[0]
+		effects := ability.Sentences[0].Effects
+		if len(effects) != 1 || effects[0].Kind != tc.kind {
+			t.Fatalf("Parse(%q) effects = %#v", tc.source, effects)
+		}
+		if !effects[0].Exact {
+			t.Errorf("Parse(%q) effect Exact = false, want true", tc.source)
+		}
+		if len(effects[0].Targets) != 1 || !effects[0].Targets[0].Exact {
+			t.Errorf("Parse(%q) target not exact: %#v", tc.source, effects[0].Targets)
+		}
+		if len(ability.ConditionClauses) != 1 ||
+			ability.ConditionClauses[0].Predicate != ConditionPredicateTargetColor {
+			t.Fatalf("Parse(%q) condition clauses = %#v", tc.source, ability.ConditionClauses)
+		}
+		colors := ability.ConditionClauses[0].Selection.ColorsAny
+		if len(colors) != 1 || colors[0] != tc.color {
+			t.Errorf("Parse(%q) colors = %#v, want %v", tc.source, colors, tc.color)
+		}
+	}
+}
+
 func TestExactCounterSpellTypeUnionFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
@@ -166,6 +204,49 @@ func TestExactGraveyardCardTargetFailsClosed(t *testing.T) {
 		"Return target blue creature card from your graveyard to your hand.",
 		// "and/or" unions are not the canonical " or " join.
 		"Return up to two target instant and/or sorcery cards from your graveyard to your hand.",
+	}
+	for _, source := range rejected {
+		if graveyardReturnExact(t, source) {
+			t.Errorf("graveyardReturnExact(%q) = true, want false (fail closed)", source)
+		}
+	}
+}
+
+// TestExactChosenGraveyardReturnAccepts covers the non-target "Return a
+// <filter> card from your graveyard to your hand" recursion wording, chosen at
+// resolution rather than targeted. It reuses the same canonical noun-phrase
+// reconstruction as the targeted path, so the same card filters round-trip.
+func TestExactChosenGraveyardReturnAccepts(t *testing.T) {
+	t.Parallel()
+	accepted := []string{
+		"Return a card from your graveyard to your hand.",
+		"Return a creature card from your graveyard to your hand.",
+		"Return a creature or planeswalker card from your graveyard to your hand.",
+		"Return an artifact card from your graveyard to your hand.",
+		"Return a permanent card from your graveyard to your hand.",
+		"Return a green card from your graveyard to your hand.",
+		"Return a creature card with mana value 3 or less from your graveyard to your hand.",
+	}
+	for _, source := range accepted {
+		if !graveyardReturnExact(t, source) {
+			t.Errorf("graveyardReturnExact(%q) = false, want true", source)
+		}
+	}
+}
+
+// TestExactChosenGraveyardReturnFailsClosed verifies that non-target graveyard
+// returns whose filter, zone, or destination the round-trip cannot faithfully
+// reconstruct keep failing rather than lowering to a wrong predicate.
+func TestExactChosenGraveyardReturnFailsClosed(t *testing.T) {
+	t.Parallel()
+	rejected := []string{
+		// Single instant/sorcery types are not retained by the compiler.
+		"Return a sorcery card from your graveyard to your hand.",
+		// Supertype and color+type combinations are unrendered.
+		"Return a basic land card from your graveyard to your hand.",
+		"Return a blue creature card from your graveyard to your hand.",
+		// Another player's graveyard has no non-target "your" phrasing here.
+		"Return a creature card from an opponent's graveyard to your hand.",
 	}
 	for _, source := range rejected {
 		if graveyardReturnExact(t, source) {

@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -47,6 +48,9 @@ func resolvingClauseStart(tokens []shared.Token, indices []int, effectIndex int)
 }
 
 func parseEffectReplacement(tokens []shared.Token, atoms Atoms) EffectReplacementSyntax {
+	if replacement, ok := parseInsteadOneOfEachReplacement(tokens); ok {
+		return replacement
+	}
 	if len(tokens) < 2 ||
 		!equalWord(tokens[len(tokens)-2], "instead") ||
 		tokens[len(tokens)-1].Kind != shared.Period {
@@ -61,9 +65,10 @@ func parseEffectReplacement(tokens []shared.Token, atoms Atoms) EffectReplacemen
 	}
 	twiceMany := effectHasTokenWords(tokens, "twice", "that", "many")
 	thatMuchPlus := effectHasTokenWords(tokens, "that", "much", "damage", "plus")
+	thatManyPlus := effectHasTokenWords(tokens, "that", "many", "plus")
 	doubleThat := effectHasTokenWords(tokens, "double", "that", "damage") ||
 		effectHasTokenWords(tokens, "twice", "that", "damage")
-	if boolCount(twiceMany, thatMuchPlus, doubleThat) != 1 {
+	if boolCount(twiceMany, thatMuchPlus, thatManyPlus, doubleThat) != 1 {
 		return replacement
 	}
 	switch {
@@ -80,12 +85,44 @@ func parseEffectReplacement(tokens []shared.Token, atoms Atoms) EffectReplacemen
 			}
 			break
 		}
+	case thatManyPlus:
+		for i := range tokens {
+			if !equalWord(tokens[i], "plus") || i+1 >= len(tokens) {
+				continue
+			}
+			if amount, ok := effectNumber(tokens[i+1], atoms); ok {
+				replacement.Kind = EffectReplacementThatManyPlus
+				replacement.Amount = amount
+			}
+			break
+		}
 	case doubleThat:
 		replacement.Kind = EffectReplacementDoubleThat
 	default:
 	}
 	replacement.EachCounterKind = effectHasTokenWords(tokens, "each", "of", "those", "kinds", "of", "counters")
 	return replacement
+}
+
+// parseInsteadOneOfEachReplacement recognizes the "instead create one of each"
+// output of a token-type replacement (Academy Manufactor: "If you would create a
+// Clue, Food, or Treasure token, instead create one of each."). The replaced set
+// of token types is carried by the create effect that owns this clause.
+func parseInsteadOneOfEachReplacement(tokens []shared.Token) (EffectReplacementSyntax, bool) {
+	words := normalizedWords(tokens)
+	if !slices.Contains(words, "instead") {
+		return EffectReplacementSyntax{}, false
+	}
+	if len(words) < 3 ||
+		words[len(words)-3] != "one" ||
+		words[len(words)-2] != "of" ||
+		words[len(words)-1] != "each" {
+		return EffectReplacementSyntax{}, false
+	}
+	return EffectReplacementSyntax{
+		Kind: EffectReplacementOneOfEach,
+		Span: shared.SpanOf(tokens),
+	}, true
 }
 
 func replacementHasUnsupportedSelectionModifier(tokens []shared.Token, atoms Atoms) bool {
@@ -119,6 +156,24 @@ func effectHasTokenWords(tokens []shared.Token, words ...string) bool {
 	return false
 }
 
+// stripLeadingAdditionalMana drops a leading "additional" qualifier, with its
+// optional preceding article, from an add-mana body so "adds an additional {G}"
+// parses to the same typed mana as "{G}" (Wild Growth and the mana-additional
+// aura family). It is a no-op for bodies that do not begin with "additional".
+func stripLeadingAdditionalMana(body []shared.Token) []shared.Token {
+	rest := body
+	if len(rest) >= 1 && (equalWord(rest[0], "a") || equalWord(rest[0], "an")) {
+		if len(rest) >= 2 && equalWord(rest[1], "additional") {
+			return rest[2:]
+		}
+		return body
+	}
+	if len(rest) >= 1 && equalWord(rest[0], "additional") {
+		return rest[1:]
+	}
+	return body
+}
+
 func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) EffectManaSyntax {
 	if kind != EffectAddMana || len(tokens) == 0 {
 		return EffectManaSyntax{}
@@ -126,11 +181,17 @@ func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) Eff
 	body := tokens
 	if tokens[len(tokens)-1].Kind == shared.Period {
 		body = tokens[:len(tokens)-1]
-	} else if !connected {
+	} else if !connected && !equalWord(tokens[len(tokens)-1], "instead") {
 		return EffectManaSyntax{}
 	}
+	body = stripLeadingAdditionalMana(body)
 	if len(body) == 5 && effectWordsAt(body, 0, "one", "mana", "of", "any", "color") {
 		return EffectManaSyntax{Span: shared.SpanOf(body), AnyColor: true}
+	}
+	if len(body) == 6 && effectWordsAt(body, 1, "mana", "of", "any", "one", "color") {
+		if count, ok := manaAnyOneColorCount(body[0]); ok {
+			return EffectManaSyntax{Span: shared.SpanOf(body), AnyColor: true, AnyColorCount: count}
+		}
 	}
 	if len(body) == 10 &&
 		effectWordsAt(body, 0, "an", "amount", "of") &&
@@ -161,8 +222,16 @@ func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) Eff
 		effectWordsAt(body, 0, "one", "mana", "of", "any", "type", "that", "a", "land", "an", "opponent", "controls", "could", "produce") {
 		return EffectManaSyntax{Span: shared.SpanOf(body), LandsProduce: true, LandsProduceScope: ManaLandsProduceOpponent, LandsProduceAnyType: true}
 	}
+	if len(body) == 9 &&
+		effectWordsAt(body, 0, "one", "mana", "of", "any", "of", "the", "exiled", "card's", "colors") {
+		return EffectManaSyntax{Span: shared.SpanOf(body), LinkedExileColors: true}
+	}
 	if len(body) == 6 && effectWordsAt(body, 0, "one", "mana", "of", "the", "chosen", "color") {
 		return EffectManaSyntax{Span: shared.SpanOf(body), ChosenColor: true}
+	}
+	if len(body) == 14 &&
+		effectWordsAt(body, 0, "an", "amount", "of", "mana", "of", "that", "color", "equal", "to", "your", "devotion", "to", "that", "color") {
+		return EffectManaSyntax{Span: shared.SpanOf(body), ChosenColorDevotion: true}
 	}
 	if len(body) == 8 && body[0].Kind == shared.Symbol && equalWord(body[1], "or") &&
 		effectWordsAt(body, 2, "one", "mana", "of", "the", "chosen", "color") {
@@ -182,45 +251,18 @@ func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) Eff
 			FilterColors: []mana.Color{first, second},
 		}
 	}
-	var symbols []string
-	choice := false
-	expectSymbol := true
-	for i := 0; i < len(body); i++ {
-		token := body[i]
-		if expectSymbol {
-			if token.Kind != shared.Symbol {
-				return EffectManaSyntax{}
-			}
-			symbols = append(symbols, token.Text)
-			expectSymbol = false
-			continue
-		}
-		switch {
-		case token.Kind == shared.Symbol:
-			if choice {
-				return EffectManaSyntax{}
-			}
-			symbols = append(symbols, token.Text)
-		case token.Kind == shared.Comma:
-			if len(symbols) != 1 && !choice {
-				return EffectManaSyntax{}
-			}
-			choice = true
-			expectSymbol = true
-			if i+1 < len(body) && equalWord(body[i+1], "or") {
-				i++
-			}
-		case equalWord(token, "or"):
-			if len(symbols) != 1 && !choice {
-				return EffectManaSyntax{}
-			}
-			choice = true
-			expectSymbol = true
-		default:
-			return EffectManaSyntax{}
-		}
+	// A trailing "instead" marks a conditional alternative mana production
+	// ("Add {B}{B}{B}{B}{B} instead if ...", the Threshold cycle). The word
+	// itself adds no mana, so strip it from the symbol body while recording the
+	// flag and keeping it in the consumed span.
+	instead := false
+	loopBody := body
+	if n := len(loopBody); n > 0 && equalWord(loopBody[n-1], "instead") {
+		instead = true
+		loopBody = loopBody[:n-1]
 	}
-	if len(symbols) == 0 || expectSymbol || choice && len(symbols) < 2 {
+	symbols, choice, ok := parseManaSymbolBody(loopBody)
+	if !ok {
 		return EffectManaSyntax{}
 	}
 	colors, colorsKnown := effectManaColors(symbols)
@@ -230,7 +272,67 @@ func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) Eff
 		Colors:      colors,
 		ColorsKnown: colorsKnown,
 		Choice:      choice,
+		Instead:     instead,
 	}
+}
+
+// parseManaSymbolBody reads a fixed mana-symbol sequence ("{B}{B}{B}") or a
+// single-symbol choice list ("{W}, {U}, or {B}") from a body of tokens. It
+// reports the recognized symbols, whether the body is a choice among them, and
+// whether the body is a well-formed mana sequence at all.
+func parseManaSymbolBody(body []shared.Token) (symbols []string, choice, ok bool) {
+	expectSymbol := true
+	for i := 0; i < len(body); i++ {
+		token := body[i]
+		if expectSymbol {
+			if token.Kind != shared.Symbol {
+				return nil, false, false
+			}
+			symbols = append(symbols, token.Text)
+			expectSymbol = false
+			continue
+		}
+		switch {
+		case token.Kind == shared.Symbol:
+			if choice {
+				return nil, false, false
+			}
+			symbols = append(symbols, token.Text)
+		case token.Kind == shared.Comma:
+			if len(symbols) != 1 && !choice {
+				return nil, false, false
+			}
+			choice = true
+			expectSymbol = true
+			if i+1 < len(body) && equalWord(body[i+1], "or") {
+				i++
+			}
+		case equalWord(token, "or"):
+			if len(symbols) != 1 && !choice {
+				return nil, false, false
+			}
+			choice = true
+			expectSymbol = true
+		default:
+			return nil, false, false
+		}
+	}
+	if len(symbols) == 0 || expectSymbol || choice && len(symbols) < 2 {
+		return nil, false, false
+	}
+	return symbols, choice, true
+}
+
+// manaAnyOneColorCount resolves the leading count of the body "<N> mana of any
+// one color" (Gilded Lotus). It accepts an integer or cardinal-word count and
+// requires N >= 2 so the single "one mana of any color" body keeps its own
+// exact branch and "any combination of colors" wordings fail closed.
+func manaAnyOneColorCount(token shared.Token) (int, bool) {
+	count, ok := additionalLandCountWord(token)
+	if !ok || count < 2 {
+		return 0, false
+	}
+	return count, true
 }
 
 // effectManaColors maps every add-mana symbol to its typed basic mana color. It
@@ -350,10 +452,18 @@ func parseEffectDestination(tokens []shared.Token) EffectDestinationPosition {
 	words := normalizedWords(tokens)
 	switch {
 	case effectContainsWords(words, "on", "top", "of", "your", "library") ||
-		effectContainsWords(words, "on", "the", "top", "of", "your", "library"):
+		effectContainsWords(words, "on", "the", "top", "of", "your", "library") ||
+		effectContainsWords(words, "on", "top", "of", "its", "owner's", "library") ||
+		effectContainsWords(words, "on", "the", "top", "of", "its", "owner's", "library") ||
+		effectContainsWords(words, "on", "top", "of", "their", "owner's", "library") ||
+		effectContainsWords(words, "on", "the", "top", "of", "their", "owner's", "library"):
 		return EffectDestinationTop
 	case effectContainsWords(words, "on", "bottom", "of", "your", "library") ||
-		effectContainsWords(words, "on", "the", "bottom", "of", "your", "library"):
+		effectContainsWords(words, "on", "the", "bottom", "of", "your", "library") ||
+		effectContainsWords(words, "on", "bottom", "of", "its", "owner's", "library") ||
+		effectContainsWords(words, "on", "the", "bottom", "of", "its", "owner's", "library") ||
+		effectContainsWords(words, "on", "bottom", "of", "their", "owner's", "library") ||
+		effectContainsWords(words, "on", "the", "bottom", "of", "their", "owner's", "library"):
 		return EffectDestinationBottom
 	default:
 		return EffectDestinationUnspecified
@@ -374,8 +484,13 @@ func effectWordsAtAny(tokens []shared.Token, first, second string) bool {
 }
 
 func effectContextAt(tokens []shared.Token, index int, atoms Atoms) EffectContextKind {
-	start := effectSubjectStart(tokens, index)
+	start := effectSubjectStart(tokens, index, atoms.SelfNameSpans())
 	subject := tokens[start:index]
+	// "You and target <player> each <verb>" splits on its "and" so the retained
+	// subject is "target <player> each". Recognize the dropped "you and" prefix
+	// from the raw tokens before the split point to classify the compound
+	// controller-and-target recipient.
+	youAndPrefix := start >= 2 && equalWord(tokens[start-1], "and") && equalWord(tokens[start-2], "you")
 	for len(subject) > 0 && equalWord(subject[0], "then") {
 		subject = subject[1:]
 	}
@@ -406,6 +521,11 @@ func effectContextAt(tokens []shared.Token, index int, atoms Atoms) EffectContex
 		return EffectContextEachOpponent
 	case effectContainsWords(words, "each", "player"):
 		return EffectContextEachPlayer
+	case len(words) >= 2 && youAndPrefix && words[0] == "target" &&
+		words[len(words)-1] == "each":
+		// "You and target <player> each <verb>": the controller and a single
+		// player target both receive the effect.
+		return EffectContextControllerAndTarget
 	case effectContainsWords(words, "target"):
 		return EffectContextTarget
 	case len(words) >= 2 && words[len(words)-2] == "that" && words[len(words)-1] == "player":
@@ -458,19 +578,35 @@ func subjectReferencesObject(subject []shared.Token, atoms Atoms) bool {
 	return false
 }
 
-func effectHasExplicitSubject(tokens []shared.Token, index int) bool {
-	return effectSubjectStart(tokens, index) < index
+func effectHasExplicitSubject(tokens []shared.Token, index int, selfNames []shared.Span) bool {
+	return effectSubjectStart(tokens, index, selfNames) < index
 }
 
-func effectSubjectStart(tokens []shared.Token, index int) int {
+func effectSubjectStart(tokens []shared.Token, index int, selfNames []shared.Span) int {
 	start := 0
 	for i := range index {
+		if spanWithinAny(tokens[i].Span, selfNames) {
+			continue
+		}
 		if tokens[i].Kind == shared.Comma || tokens[i].Kind == shared.Period || tokens[i].Kind == shared.Semicolon ||
 			equalWord(tokens[i], "then") || equalWord(tokens[i], "and") {
 			start = i + 1
 		}
 	}
 	return start
+}
+
+// spanWithinAny reports whether span is covered by any of the given spans. It
+// lets subject-boundary detection ignore commas and conjunctions that fall
+// inside the card's own printed name (e.g. "Syr Konrad, the Grim"), which would
+// otherwise truncate the subject at the name's internal comma.
+func spanWithinAny(span shared.Span, spans []shared.Span) bool {
+	for _, outer := range spans {
+		if spanCovers(outer, span) {
+			return true
+		}
+	}
+	return false
 }
 
 func parseEffectPayment(tokens []shared.Token, atoms Atoms) EffectPaymentSyntax {
@@ -556,6 +692,23 @@ func cantBeBlockedThisTurnVerbAt(tokens []shared.Token, index int) bool {
 		equalWord(tokens[index+4], "turn")
 }
 
+// pastCastCountPhraseAt reports whether the "cast" verb at index is the past
+// participle inside a "spell[s] you've cast this turn" / "...you have cast this
+// turn" count phrase rather than a casting effect. The storm-counter dynamic
+// amount ("you gain 1 life for each spell you've cast this turn") consumes that
+// span as a count, so the bare "cast" must not also seed a separate cast effect.
+func pastCastCountPhraseAt(tokens []shared.Token, index int) bool {
+	if index == 0 {
+		return false
+	}
+	contracted := equalWord(tokens[index-1], "you've")
+	expanded := index >= 2 && equalWord(tokens[index-1], "have") && equalWord(tokens[index-2], "you")
+	if !contracted && !expanded {
+		return false
+	}
+	return effectWordsAt(tokens, index+1, "this", "turn")
+}
+
 func resolvingClauseEnd(tokens []shared.Token, indices []int, effectIndex int) int {
 	start := indices[effectIndex] + 1
 	end := len(tokens)
@@ -610,6 +763,55 @@ func gainLoseLifeObject(kind EffectKind, clause []shared.Token) bool {
 	return false
 }
 
+// loseGameObject reports whether a lose effect's grammatical object is "the
+// game" rather than life or a keyword. It scans the post-verb clause for a
+// top-level "game" word outside any quoted granted ability.
+func loseGameObject(kind EffectKind, clause []shared.Token) bool {
+	if kind != EffectLose {
+		return false
+	}
+	quoted := false
+	for _, token := range clause {
+		switch token.Kind {
+		case shared.Quote:
+			quoted = !quoted
+		case shared.Word:
+			if !quoted && equalWord(token, "game") {
+				return true
+			}
+		default:
+		}
+	}
+	return false
+}
+
+// winGameVerbAt reports whether the "win"/"wins" verb at index governs the
+// object "the game" ("you win the game"). The verb is generic, so the win
+// classification is confirmed by scanning forward to the clause's terminating
+// period for a top-level "game" word outside any quoted granted ability. This
+// anchors EffectWinGame so effectIndices treats the verb as an effect start,
+// mirroring how loseGameObject promotes the lose verb.
+func winGameVerbAt(tokens []shared.Token, index int) bool {
+	if !equalWord(tokens[index], "win") && !equalWord(tokens[index], "wins") {
+		return false
+	}
+	quoted := false
+	for i := index + 1; i < len(tokens); i++ {
+		switch tokens[i].Kind {
+		case shared.Period, shared.Semicolon:
+			return false
+		case shared.Quote:
+			quoted = !quoted
+		case shared.Word:
+			if !quoted && equalWord(tokens[i], "game") {
+				return true
+			}
+		default:
+		}
+	}
+	return false
+}
+
 func effectKindAt(tokens []shared.Token, index int) EffectKind {
 	kind := effectWordKind(tokens[index])
 	switch {
@@ -628,6 +830,11 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 			return EffectDig
 		}
 		return EffectManifestDread
+	case equalWord(tokens[index], "win") || equalWord(tokens[index], "wins"):
+		if winGameVerbAt(tokens, index) {
+			return EffectWinGame
+		}
+		return EffectUnknown
 	case cantBeBlockedThisTurnVerbAt(tokens, index):
 		return EffectCantBeBlocked
 	case kind == EffectGrantKeyword && index >= 2 &&
@@ -640,13 +847,19 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectEnterPrepared
 	case kind == EffectCast && index > 0 && (equalWord(tokens[index-1], "was") || equalWord(tokens[index-1], "were")):
 		return EffectUnknown
+	case kind == EffectCast && pastCastCountPhraseAt(tokens, index):
+		return EffectUnknown
 	case kind == EffectCounter && !counterVerbAt(tokens, index):
 		return EffectUnknown
+	case chooseNewTargetsVerbAt(tokens, index):
+		return EffectChooseNewTargets
 	case kind == EffectGain && index+1 < len(tokens) && equalWord(tokens[index+1], "control"):
 		return EffectGainControl
 	case kind == EffectDouble && index+1 < len(tokens) && equalWord(tokens[index+1], "strike"):
 		return EffectUnknown
 	case kind == EffectGrantKeyword && priorPTChange(tokens, index):
+		return EffectUnknown
+	case kind == EffectGrantKeyword && effectWordsAt(tokens, index+1, "the", "same", "name"):
 		return EffectUnknown
 	default:
 		return kind
@@ -745,6 +958,20 @@ func digLookInstruction(tokens []shared.Token) bool {
 		tokens[4].Kind == shared.Word &&
 		effectWordsAt(tokens, 5, "cards", "of", "your", "library") &&
 		tokens[9].Kind == shared.Period
+}
+
+// chooseNewTargetsVerbAt reports whether a retarget effect ("[You may] choose
+// new targets for <target spell or ability>.") begins at index. The parser owns
+// this wording: the verb "choose" is generic, so the retarget classification is
+// anchored on the exact "choose new targets for" lead-in. The copy-spell rider
+// "choose new targets for the copy" carries a non-stack ("the copy") object and
+// fails the exactness check, so it stays unsupported rather than misclassifying.
+func chooseNewTargetsVerbAt(tokens []shared.Token, index int) bool {
+	return equalWord(tokens[index], "choose") &&
+		index+3 < len(tokens) &&
+		equalWord(tokens[index+1], "new") &&
+		equalWord(tokens[index+2], "targets") &&
+		equalWord(tokens[index+3], "for")
 }
 
 func counterVerbAt(tokens []shared.Token, index int) bool {

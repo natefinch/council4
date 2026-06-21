@@ -36,6 +36,7 @@ func compileTriggerEventClause(clause *parser.TriggerEventClause) (TriggerPatter
 		DamageSourceIsStackObject: clause.DamageSourceIsStackObject,
 		MatchFaceDown:             clause.FaceDown,
 		FaceDown:                  clause.FaceDown,
+		TappedForMana:             clause.TappedForMana,
 	}
 	var ok bool
 	pattern.Controller, ok = compileTriggerController(clause.Controller)
@@ -75,13 +76,40 @@ func compileTriggerEventClause(clause *parser.TriggerEventClause) (TriggerPatter
 		ok = compilePermanentSubjectEvent(clause, &pattern, TriggerEventPermanentMutated)
 	case parser.TriggerEventKindBecameTarget:
 		ok = compileBecameTargetEvent(clause, &pattern)
+	case parser.TriggerEventKindTokenCreated:
+		ok = compileTokenCreatedEvent(clause, &pattern)
 	default:
 		return TriggerPattern{}, false
 	}
 	if !ok {
 		return TriggerPattern{}, false
 	}
+	if clause.UnionKind != parser.TriggerEventKindUnknown {
+		unionEvent, unionOK := compileUnionTriggerEvent(clause.UnionKind)
+		if !unionOK {
+			return TriggerPattern{}, false
+		}
+		pattern.UnionEvent = unionEvent
+	}
 	return pattern, true
+}
+
+// compileUnionTriggerEvent maps a union secondary event family to its trigger
+// event. The union shares the primary clause's subject and player filters, so
+// only the bare event identity is needed here.
+func compileUnionTriggerEvent(kind parser.TriggerEventKind) (TriggerEvent, bool) {
+	switch kind {
+	case parser.TriggerEventKindTokenCreated:
+		return TriggerEventTokenCreated, true
+	case parser.TriggerEventKindSacrificed:
+		return TriggerEventPermanentSacrificed, true
+	case parser.TriggerEventKindAttack:
+		return TriggerEventAttackerDeclared, true
+	case parser.TriggerEventKindDied:
+		return TriggerEventPermanentDied, true
+	default:
+		return TriggerEventUnknown, false
+	}
 }
 
 func compileZoneChangeEvent(clause *parser.TriggerEventClause, pattern *TriggerPattern) bool {
@@ -174,10 +202,6 @@ func compileSpellCastEvent(clause *parser.TriggerEventClause, pattern *TriggerPa
 			clause.MatchCopy {
 			return false
 		}
-		if controller != ControllerYou &&
-			(clause.SpellSelection.Ordinal != 1 || triggerSelectionEmpty(selection)) {
-			return false
-		}
 		pattern.PlayerEventOrdinalThisTurn = clause.SpellSelection.Ordinal
 	}
 	if clause.SpellSelection.FromZone.Kind != parser.TriggerEventZoneNone {
@@ -188,30 +212,6 @@ func compileSpellCastEvent(clause *parser.TriggerEventClause, pattern *TriggerPa
 		pattern.MatchFromZone = true
 	}
 	return true
-}
-
-func triggerSelectionEmpty(selection TriggerSelection) bool {
-	return len(selection.RequiredTypes) == 0 &&
-		len(selection.RequiredTypesAny) == 0 &&
-		len(selection.ExcludedTypes) == 0 &&
-		len(selection.Supertypes) == 0 &&
-		len(selection.SubtypesAny) == 0 &&
-		len(selection.ColorsAny) == 0 &&
-		len(selection.ExcludedColors) == 0 &&
-		!selection.Colorless &&
-		!selection.Multicolored &&
-		selection.Tapped == TriggerTriAny &&
-		selection.CombatState == TriggerCombatStateAny &&
-		selection.Keyword == TriggerKeywordUnknown &&
-		selection.ExcludedKeyword == TriggerKeywordUnknown &&
-		!selection.NonToken &&
-		!selection.TokenOnly &&
-		selection.ManaValueAtLeast == 0 &&
-		!selection.MatchManaValue &&
-		selection.ManaValue.Comparison == TriggerComparisonUnknown &&
-		selection.Power.Comparison == TriggerComparisonUnknown &&
-		selection.Toughness.Comparison == TriggerComparisonUnknown &&
-		selection.Controller == ControllerAny
 }
 
 func compileAbilityActivatedEvent(clause *parser.TriggerEventClause, pattern *TriggerPattern) bool {
@@ -355,6 +355,16 @@ func compileSacrificeEvent(clause *parser.TriggerEventClause, pattern *TriggerPa
 	return true
 }
 
+func compileTokenCreatedEvent(clause *parser.TriggerEventClause, pattern *TriggerPattern) bool {
+	player, ok := compileTriggerActorPlayer(clause.Actor.Kind)
+	if !ok || !compileEventSubject(&clause.Subject, pattern, &pattern.SubjectSelection) {
+		return false
+	}
+	pattern.Event = TriggerEventTokenCreated
+	pattern.Player = player
+	return true
+}
+
 func compileBecameTargetEvent(clause *parser.TriggerEventClause, pattern *TriggerPattern) bool {
 	if !compileEventSubject(&clause.Subject, pattern, &pattern.SubjectSelection) {
 		return false
@@ -456,6 +466,7 @@ func compileTriggerSpellSelection(syntax parser.TriggerEventSpellSelection) (Tri
 	if len(syntax.SubtypesAny) > 0 {
 		selection.SubtypesAny = append(selection.SubtypesAny, syntax.SubtypesAny...)
 	}
+	selection.SubtypeFromEntryChoice = syntax.SubtypeFromEntryChoice
 	return selection, true
 }
 

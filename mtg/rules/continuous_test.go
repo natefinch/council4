@@ -14,6 +14,33 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+func TestChangelingHasEveryCreatureSubtype(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	permanent := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Changeling",
+		Types:           []types.Card{types.Creature},
+		Subtypes:        []types.Sub{types.Shapeshifter},
+		StaticAbilities: []game.StaticAbility{game.ChangelingStaticBody},
+	}})
+
+	subtypes := effectivePermanentValues(g, permanent).subtypes
+	for _, subtype := range []types.Sub{types.Shapeshifter, types.Elf, types.Zombie} {
+		if !slices.Contains(subtypes, subtype) {
+			t.Fatalf("changeling subtypes omit %s: %#v", subtype, subtypes)
+		}
+	}
+
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		Layer:              game.LayerAbility,
+		AffectedObjectID:   permanent.ObjectID,
+		RemoveAllAbilities: true,
+	})
+	subtypes = effectivePermanentValues(g, permanent).subtypes
+	if !slices.Contains(subtypes, types.Elf) {
+		t.Fatalf("removing abilities erased Changeling's type-layer subtypes: %#v", subtypes)
+	}
+}
+
 func TestStaticPTEffectAffectsCombatDamage(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addAnthemPermanent(g, game.Player1)
@@ -531,6 +558,77 @@ func TestControlChangeEffectsAffectLegalityAndSelectors(t *testing.T) {
 	}
 }
 
+func TestContinuousEffectDoublesGroupPowerAndToughness(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	pt := game.PT{Value: 2}
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Doubled Beast",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(game.PT{Value: 3}),
+	}})
+	opponentCreature := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:         1,
+		Controller: game.Player1,
+		Layer:      game.LayerPowerToughnessModify,
+		Group: game.BattlefieldGroup(game.Selection{
+			Controller:    game.ControllerYou,
+			RequiredTypes: []types.Card{types.Creature},
+		}),
+		DoublePower:     true,
+		DoubleToughness: true,
+	})
+
+	if got := effectivePower(g, creature); got != 4 {
+		t.Fatalf("doubled power = %d, want 4", got)
+	}
+	if got, ok := effectiveToughness(g, creature); !ok || got != 6 {
+		t.Fatalf("doubled toughness = %d ok=%v, want 6 true", got, ok)
+	}
+	if got := effectivePower(g, opponentCreature); got != 2 {
+		t.Fatalf("opponent creature power = %d, want 2 (not doubled)", got)
+	}
+}
+
+// TestContinuousEffectDoublePowerStacksOnRunningValue verifies the doubling adds
+// each creature's running power (after an earlier +1/+1 anthem in the same layer)
+// back into itself, doubling the already-buffed value rather than the printed one.
+func TestContinuousEffectDoublePowerStacksOnRunningValue(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+
+	g.ContinuousEffects = append(g.ContinuousEffects,
+		game.ContinuousEffect{
+			ID:         1,
+			Controller: game.Player1,
+			Timestamp:  1,
+			Layer:      game.LayerPowerToughnessModify,
+			Group: game.BattlefieldGroup(game.Selection{
+				Controller:    game.ControllerYou,
+				RequiredTypes: []types.Card{types.Creature},
+			}),
+			PowerDelta: 1,
+		},
+		game.ContinuousEffect{
+			ID:         2,
+			Controller: game.Player1,
+			Timestamp:  2,
+			Layer:      game.LayerPowerToughnessModify,
+			Group: game.BattlefieldGroup(game.Selection{
+				Controller:    game.ControllerYou,
+				RequiredTypes: []types.Card{types.Creature},
+			}),
+			DoublePower: true,
+		},
+	)
+
+	if got := effectivePower(g, creature); got != 6 {
+		t.Fatalf("power = %d, want 6 ((2+1) doubled)", got)
+	}
+}
+
 func TestContinuousEffectBattlefieldGroupMatchesCreatures(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
@@ -817,6 +915,85 @@ func TestContinuousEffectBattlefieldGroupCombatStateMatchesAttackers(t *testing.
 
 // TestContinuousEffectBattlefieldGroupSubtypeMatchesSubtype verifies that a group
 // anthem filtered by creature subtype buffs only creatures of that subtype.
+func TestContinuousEffectChosenTypeGroupBuffsOnlyChosenSubtype(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	pt := game.PT{Value: 2}
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Chosen-Type Anthem",
+		Types: []types.Card{types.Artifact},
+	}})
+	source.EntryChoices = map[game.ChoiceKey]game.ResolutionChoiceResult{
+		game.EntryTypeChoiceKey: {Kind: game.ResolutionChoiceSubtype, Subtype: types.Elf},
+	}
+	elf := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Test Elf",
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Elf},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}})
+	goblin := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Test Goblin",
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Goblin},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}})
+
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:             1,
+		Controller:     game.Player1,
+		SourceObjectID: source.ObjectID,
+		Layer:          game.LayerPowerToughnessModify,
+		Group: game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{
+			RequiredTypes:                []types.Card{types.Creature},
+			SubtypeFromSourceEntryChoice: true,
+		}),
+		PowerDelta:     1,
+		ToughnessDelta: 1,
+	})
+
+	if got := effectivePower(g, elf); got != 3 {
+		t.Fatalf("chosen-type creature power = %d, want 3", got)
+	}
+	if got := effectivePower(g, goblin); got != 2 {
+		t.Fatalf("non-chosen-type creature power = %d, want 2 (should not be buffed)", got)
+	}
+}
+
+func TestContinuousEffectChosenTypeGroupFailsClosedWithoutChoice(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	pt := game.PT{Value: 2}
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Chosen-Type Anthem",
+		Types: []types.Card{types.Artifact},
+	}})
+	elf := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Test Elf",
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Elf},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}})
+
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:             1,
+		Controller:     game.Player1,
+		SourceObjectID: source.ObjectID,
+		Layer:          game.LayerPowerToughnessModify,
+		Group: game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{
+			RequiredTypes:                []types.Card{types.Creature},
+			SubtypeFromSourceEntryChoice: true,
+		}),
+		PowerDelta:     1,
+		ToughnessDelta: 1,
+	})
+
+	if got := effectivePower(g, elf); got != 2 {
+		t.Fatalf("creature power = %d, want 2 (no entry choice means no buff)", got)
+	}
+}
+
 func TestContinuousEffectBattlefieldGroupSubtypeMatchesSubtype(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	pt := game.PT{Value: 2}
@@ -850,6 +1027,60 @@ func TestContinuousEffectBattlefieldGroupSubtypeMatchesSubtype(t *testing.T) {
 	}
 	if got := effectivePower(g, goblin); got != 2 {
 		t.Fatalf("non-Sliver power = %d, want 2 (should not be buffed)", got)
+	}
+}
+
+func TestContinuousEffectAddsSubtypeChosenAsSourceEntered(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Choosing Creature",
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Golem},
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer:                     game.LayerType,
+				AffectedSource:            true,
+				AddSubtypeFromEntryChoice: game.EntryTypeChoiceKey,
+			}},
+		}},
+	}})
+	source.EntryChoices = map[game.ChoiceKey]game.ResolutionChoiceResult{
+		game.EntryTypeChoiceKey: {
+			Kind:    game.ResolutionChoiceSubtype,
+			Subtype: types.Elf,
+		},
+	}
+
+	if !permanentHasSubtype(g, source, types.Golem) {
+		t.Fatal("source lost its printed subtype")
+	}
+	if !permanentHasSubtype(g, source, types.Elf) {
+		t.Fatal("source did not gain the creature type chosen as it entered")
+	}
+}
+
+func TestContinuousEffectChosenSubtypeFailsClosedWithoutSubtypeChoice(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Choosing Creature",
+		Types: []types.Card{types.Creature},
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer:                     game.LayerType,
+				AffectedSource:            true,
+				AddSubtypeFromEntryChoice: game.EntryTypeChoiceKey,
+			}},
+		}},
+	}})
+	source.EntryChoices = map[game.ChoiceKey]game.ResolutionChoiceResult{
+		game.EntryTypeChoiceKey: {
+			Kind:    game.ResolutionChoiceMana,
+			Subtype: types.Elf,
+		},
+	}
+
+	if permanentHasSubtype(g, source, types.Elf) {
+		t.Fatal("non-subtype entry choice added a creature type")
 	}
 }
 

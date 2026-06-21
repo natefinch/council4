@@ -47,6 +47,7 @@ func (g *Game) Clone() *Game {
 		Turn:                       cloneTurnState(g.Turn),
 		TurnOrder:                  cloneTurnOrder(g.TurnOrder),
 		FailedDraws:                cloneComparableMap(g.FailedDraws),
+		MarkedToLoseGame:           cloneComparableMap(g.MarkedToLoseGame),
 		Combat:                     cloneCombatState(g.Combat),
 		Emblems:                    cloneSliceFunc(g.Emblems, cloneEmblem),
 		DayNight:                   cloneDayNight(g.DayNight),
@@ -194,6 +195,7 @@ func cloneStackObject(o *StackObject) *StackObject {
 		return effect
 	})
 	clone.AdditionalCostsPaid = cloneSlice(o.AdditionalCostsPaid)
+	clone.GainsKeywordsUntilEndOfTurn = cloneSlice(o.GainsKeywordsUntilEndOfTurn)
 	clone.ResolvedAmounts = cloneComparableMap(o.ResolvedAmounts)
 	clone.ResolvedExcessDamage = cloneComparableMap(o.ResolvedExcessDamage)
 	clone.ResolutionResults = cloneComparableMap(o.ResolutionResults)
@@ -267,6 +269,8 @@ func cloneObjectSnapshot(s ObjectSnapshot) ObjectSnapshot {
 	s.Keywords = cloneSlice(s.Keywords)
 	s.Attachments = cloneSlice(s.Attachments)
 	s.Counters = s.Counters.Clone()
+	s.EntryChoices = cloneComparableMap(s.EntryChoices)
+	s.RuleEffectKinds = cloneSlice(s.RuleEffectKinds)
 	// TokenDef is an immutable shared definition.
 	return s
 }

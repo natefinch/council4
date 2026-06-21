@@ -52,6 +52,8 @@ func (Renderer) renderObjectReference(reference game.ObjectReference) (string, e
 		return fmt.Sprintf("game.TargetPermanentReference(%d)", reference.TargetIndex()), nil
 	case game.ObjectReferenceTargetStackObject:
 		return fmt.Sprintf("game.TargetStackObjectReference(%d)", reference.TargetIndex()), nil
+	case game.ObjectReferenceTargetObject:
+		return fmt.Sprintf("game.TargetObjectReference(%d)", reference.TargetIndex()), nil
 	case game.ObjectReferenceCapturedTargetStackObject:
 		return fmt.Sprintf("game.CapturedTargetStackObjectReference(%d)", reference.TargetIndex()), nil
 	case game.ObjectReferenceSourcePermanent:
@@ -261,6 +263,8 @@ func (r Renderer) renderAlternativeCosts(ctx *renderCtx, alternatives []cost.Alt
 		case cost.AlternativeConditionNone:
 		case cost.AlternativeConditionControlsCommander:
 			fields = append(fields, "Condition: cost.AlternativeConditionControlsCommander,")
+		case cost.AlternativeConditionNotYourTurn:
+			fields = append(fields, "Condition: cost.AlternativeConditionNotYourTurn,")
 		default:
 			return "", fmt.Errorf("render: unsupported alternative-cost condition %d", alternative.Condition)
 		}
@@ -284,6 +288,13 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 	}
 	if additional.AmountFromX {
 		fields = append(fields, "AmountFromX: true,")
+	}
+	if additional.AmountDynamic != cost.AdditionalDynamicAmountNone {
+		dynamic, err := renderAdditionalDynamicAmount(additional.AmountDynamic)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("AmountDynamic: %s,", dynamic))
 	}
 	if additional.Source != zone.None {
 		ctx.need(importZone)
@@ -366,6 +377,9 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 		ctx.need(importCounter)
 		fields = append(fields, fmt.Sprintf("CounterKind: %s,", counterKind))
 	}
+	if additional.ChoiceGroup != 0 {
+		fields = append(fields, fmt.Sprintf("ChoiceGroup: %d,", additional.ChoiceGroup))
+	}
 	return structLit("", fields), nil
 }
 
@@ -443,6 +457,17 @@ func (r Renderer) renderDynamicAmount(ctx *renderCtx, dynamic *game.DynamicAmoun
 	if dynamic.ResultKey != "" {
 		fields = append(fields, fmt.Sprintf("ResultKey: game.ResultKey(%q),", string(dynamic.ResultKey)))
 	}
+	if len(dynamic.Colors) > 0 {
+		ctx.need(importColor)
+		colorLits, err := colorValueLiterals(dynamic.Colors)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Colors: []color.Color{%s},", colorLits))
+	}
+	if dynamic.ColorFrom != "" {
+		fields = append(fields, fmt.Sprintf("ColorFrom: game.ChoiceKey(%q),", string(dynamic.ColorFrom)))
+	}
 	return structLit("game.DynamicAmount", fields), nil
 }
 
@@ -494,6 +519,22 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountObjectCounters", nil
 	case game.DynamicAmountCapturedTargetManaValue:
 		return "game.DynamicAmountCapturedTargetManaValue", nil
+	case game.DynamicAmountGreatestPowerInGroup:
+		return "game.DynamicAmountGreatestPowerInGroup", nil
+	case game.DynamicAmountGreatestToughnessInGroup:
+		return "game.DynamicAmountGreatestToughnessInGroup", nil
+	case game.DynamicAmountGreatestManaValueInGroup:
+		return "game.DynamicAmountGreatestManaValueInGroup", nil
+	case game.DynamicAmountTotalPowerInGroup:
+		return "game.DynamicAmountTotalPowerInGroup", nil
+	case game.DynamicAmountTotalToughnessInGroup:
+		return "game.DynamicAmountTotalToughnessInGroup", nil
+	case game.DynamicAmountDevotion:
+		return "game.DynamicAmountDevotion", nil
+	case game.DynamicAmountSpellsCastThisTurn:
+		return "game.DynamicAmountSpellsCastThisTurn", nil
+	case game.DynamicAmountEventLifeChange:
+		return "game.DynamicAmountEventLifeChange", nil
 	default:
 		return "", fmt.Errorf("render: unsupported dynamic amount kind %d", kind)
 	}

@@ -24,7 +24,7 @@ func exactGraveyardReturnEffectSyntax(effect *EffectSyntax) bool {
 			strings.HasPrefix(strings.ToLower(text), "return this card from your graveyard to the battlefield tapped with "):
 			return effect.CounterKnown && effect.CounterKind == counter.PlusOnePlusOne
 		default:
-			return false
+			return exactChosenGraveyardReturnEffectSyntax(effect, text)
 		}
 	}
 	if len(effect.Targets) != 1 || !exactGraveyardCardTargetSyntax(&effect.Targets[0]) {
@@ -47,6 +47,49 @@ func exactGraveyardReturnEffectSyntax(effect *EffectSyntax) bool {
 		}
 	}
 	return false
+}
+
+// exactChosenGraveyardReturnEffectSyntax recognizes the non-target "Return a
+// <filter> card from your graveyard to your hand." recursion wording, where the
+// returned card is chosen from the controller's own graveyard at resolution
+// rather than targeted (Raise Dead targets; Takenuma's "return a creature or
+// planeswalker card" does not). It reconstructs the canonical noun phrase from
+// the effect's typed Selection the same way the targeted path does, accepting a
+// single card-type, a union of card types, a permanent card, a single color, a
+// colorless or multicolored card, a single subtype, or the plain "card" noun,
+// with an optional "with mana value N or less" qualifier, and fails closed for
+// every other selection shape so an unrepresentable filter keeps failing rather
+// than lowering to a wrong predicate.
+func exactChosenGraveyardReturnEffectSyntax(effect *EffectSyntax, text string) bool {
+	if len(effect.References) != 0 || effect.ToZone != zone.Hand {
+		return false
+	}
+	sel := effect.Selection
+	if sel.Zone != zone.Graveyard || sel.Controller != SelectionControllerYou {
+		return false
+	}
+	if sel.All || sel.Another || sel.Other || sel.Attacking || sel.Blocking ||
+		sel.Tapped || sel.Untapped || sel.MatchPower || sel.MatchToughness ||
+		sel.Keyword != KeywordUnknown || sel.ExcludedKeyword != KeywordUnknown ||
+		len(sel.ExcludedTypes) != 0 || len(sel.SourceTypes) != 0 ||
+		len(sel.Supertypes) != 0 || len(sel.ExcludedSupertypes) != 0 ||
+		len(sel.ExcludedColors) != 0 || len(sel.Alternatives) != 0 {
+		return false
+	}
+	noun, ok := graveyardCardNoun(sel)
+	if !ok {
+		return false
+	}
+	manaClause := ""
+	if sel.MatchManaValue {
+		clause, ok := graveyardManaValueClause(sel.ManaValue)
+		if !ok {
+			return false
+		}
+		manaClause = clause
+	}
+	article := indefiniteArticle(noun)
+	return strings.EqualFold(text, "Return "+article+" "+noun+manaClause+" from your graveyard to your hand.")
 }
 
 func exactChosenCardsBattlefieldReturnEffectSyntax(effect *EffectSyntax) bool {
@@ -102,11 +145,39 @@ func exactSourceSpellExileSyntax(effect *EffectSyntax) bool {
 	return effect.Text == "Exile "+reference.Text+"."
 }
 
+// exactCounteredSpellExileSyntax recognizes the exact counter rider "If that
+// spell is countered this way, exile it instead of putting it into its owner's
+// graveyard." and marks it so a preceding counter effect lowers to a single
+// counter-and-exile primitive. The parser owns this wording; any other exile
+// rider leaves the clause non-exact so lowering fails closed.
+func exactCounteredSpellExileSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectExile {
+		return false
+	}
+	if strings.EqualFold(strings.TrimSpace(effect.Text),
+		"If that spell is countered this way, exile it instead of putting it into its owner's graveyard.") {
+		effect.CounteredSpellExileReplacement = true
+		return true
+	}
+	return false
+}
+
 func parseGraveyardZoneExile(effect *EffectSyntax) GraveyardZoneExileKind {
 	if effect.Kind != EffectExile || effect.Negated {
 		return GraveyardZoneExileNone
 	}
-	if effect.FromZone != zone.None || len(effect.Targets) != 1 {
+	if effect.FromZone != zone.None {
+		return GraveyardZoneExileNone
+	}
+	if len(effect.Targets) == 0 {
+		switch {
+		case strings.EqualFold(strings.TrimSpace(effect.Text), "Exile all graveyards."),
+			strings.EqualFold(strings.TrimSpace(effect.Text), "Exile each player's graveyard."):
+			return GraveyardZoneExileAll
+		}
+		return GraveyardZoneExileNone
+	}
+	if len(effect.Targets) != 1 {
 		return GraveyardZoneExileNone
 	}
 	target := effect.Targets[0]
@@ -135,6 +206,10 @@ func exactPlayerGraveyardExileEffectSyntax(effect *EffectSyntax) bool {
 		canonical = "Exile target player's graveyard."
 	case GraveyardZoneExileTargetOpponent:
 		canonical = "Exile target opponent's graveyard."
+	case GraveyardZoneExileAll:
+		text := exactEffectClauseText(effect)
+		return strings.EqualFold(text, "Exile all graveyards.") ||
+			strings.EqualFold(text, "Exile each player's graveyard.")
 	default:
 		return false
 	}
@@ -403,6 +478,19 @@ func exactDirectTargetEffectSyntax(effect *EffectSyntax, verb string) bool {
 		strings.EqualFold(exactEffectClauseText(effect), verb+" "+effect.Targets[0].Text+".")
 }
 
+// exactChooseNewTargetsEffectSyntax recognizes the retarget effect "[You may]
+// choose new targets for <target spell or ability>." The optional "You may"
+// wrapper is carried by effect.Optional (exactEffectClauseText drops it), and
+// the single stack-object target is the spell or ability whose targets are
+// re-chosen. Any trailing rider ("choose new targets for the copy", "Then copy
+// that spell") leaves a non-stack target or extra clause text and fails closed.
+func exactChooseNewTargetsEffectSyntax(effect *EffectSyntax) bool {
+	return len(effect.Targets) == 1 &&
+		effect.Targets[0].Exact &&
+		len(effect.References) == 0 &&
+		strings.EqualFold(exactEffectClauseText(effect), "Choose new targets for "+effect.Targets[0].Text+".")
+}
+
 func exactNegatedNextUntapStepSyntax(effect *EffectSyntax) bool {
 	if !effect.Negated || effect.Context != EffectContextUnknown ||
 		len(effect.Targets) != 0 || len(effect.References) != 0 {
@@ -564,6 +652,37 @@ func exactDirectReferenceEffectSyntax(effect *EffectSyntax, verb string) bool {
 	return ok && strings.EqualFold(exactEffectClauseText(effect), verb+" "+object+".")
 }
 
+// exactBackReferenceEffectSyntax recognizes a removal verb acting on a
+// demonstrative back-reference object — "Exile that creature.", "Destroy it." —
+// where the object was introduced by a preceding clause or the triggering event.
+// Unlike exactDirectReferenceEffectSyntax it rejects self-references ("this
+// creature" / the card's own name), which name the source permanent itself and
+// are handled by the dedicated source paths; admitting them here would mislabel
+// nonsensical spell bodies such as "Exile this creature." as exact.
+func exactBackReferenceEffectSyntax(effect *EffectSyntax, verb string) bool {
+	if len(effect.Targets) != 0 || effect.Optional || effect.Duration != EffectDurationNone {
+		return false
+	}
+	object, ok := exactBackReferenceObjectText(effect.References)
+	return ok && strings.EqualFold(exactEffectClauseText(effect), verb+" "+object+".")
+}
+
+func exactBackReferenceObjectText(references []Reference) (string, bool) {
+	if len(references) != 1 {
+		return "", false
+	}
+	switch references[0].Kind {
+	case ReferenceThatObject:
+	case ReferencePronoun:
+		if references[0].Pronoun != PronounIt {
+			return "", false
+		}
+	default:
+		return "", false
+	}
+	return joinedEffectText(references[0].Tokens), true
+}
+
 func exactObjectReferenceText(references []Reference) (string, bool) {
 	if len(references) != 1 {
 		return "", false
@@ -593,6 +712,16 @@ func exactSelfSubjectReferenceText(references []Reference) (string, bool) {
 		return joinedEffectText(references[0].Tokens), true
 	}
 	return "", false
+}
+
+// exactThoseSubjectReference reports whether the effect's subject is the single
+// demonstrative back-reference "those" ("Those creatures gain …"), which names a
+// group introduced by a preceding clause. The referenced group is reconstructed
+// downstream from that clause, so only the demonstrative itself is matched here.
+func exactThoseSubjectReference(references []Reference) bool {
+	return len(references) == 1 &&
+		references[0].Kind == ReferencePronoun &&
+		references[0].Pronoun == PronounThose
 }
 
 // modifyPTSubjectReferences returns the effect's references with the dynamic
@@ -732,6 +861,7 @@ func exactMassGroupPhrase(phrase string) bool {
 	for _, prefix := range []string{
 		"other ", "tapped ", "untapped ", "nonland ", "nonartifact ", "noncreature ", "nonenchantment ",
 		"white ", "blue ", "black ", "red ", "green ", "nonwhite ", "nonblue ", "nonblack ", "nonred ", "nongreen ",
+		"attacking ", "blocking ", "attacking or blocking ",
 	} {
 		if remainder, ok := strings.CutPrefix(phrase, prefix); ok {
 			return exactMassBaseNoun(remainder)
@@ -812,6 +942,25 @@ func exactMassComparisonClause(comparison string, qualifiers []string) bool {
 	return false
 }
 
+// effectSelfNameSpans returns the source spans of the card's own name within an
+// effect clause, drawn from its self-name references. Subject-boundary detection
+// uses them so an internal comma in a legendary name ("Syr Konrad, the Grim")
+// does not truncate the subject.
+func effectSelfNameSpans(effect *EffectSyntax) []shared.Span {
+	var spans []shared.Span
+	for _, reference := range effect.References {
+		if reference.Kind == ReferenceSelfName {
+			spans = append(spans, reference.Span)
+		}
+	}
+	for _, reference := range effect.SubjectReferences {
+		if reference.Kind == ReferenceSelfName {
+			spans = append(spans, reference.Span)
+		}
+	}
+	return spans
+}
+
 func exactEffectClauseText(effect *EffectSyntax) string {
 	verb := slices.IndexFunc(effect.Tokens, func(token shared.Token) bool {
 		return token.Span == effect.VerbSpan
@@ -819,7 +968,7 @@ func exactEffectClauseText(effect *EffectSyntax) string {
 	if verb < 0 {
 		return ""
 	}
-	start := effectSubjectStart(effect.Tokens, verb)
+	start := effectSubjectStart(effect.Tokens, verb, effectSelfNameSpans(effect))
 	if effect.Optional && effectWordsAt(effect.Tokens, start, "you", "may") && start+2 == verb {
 		start = verb
 	}
@@ -847,7 +996,7 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 	if verb < 0 {
 		return false
 	}
-	subjectStart := effectSubjectStart(effect.Tokens, verb)
+	subjectStart := effectSubjectStart(effect.Tokens, verb, effectSelfNameSpans(effect))
 	subjectTokens := effect.Tokens[subjectStart:verb]
 	subject := ""
 	if len(subjectTokens) == 0 {
@@ -903,10 +1052,11 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 		return text == fmt.Sprintf("%s %s damage to %s.", prefix, amount, joinedEffectText(recipient))
 	}
 	if len(effect.Targets) == 0 {
-		// A "where X is the number of ..." dynamic count amount on a
-		// single-recipient group clause is reconstructed from the captured
+		// A "where X is the number of ..." or "equal to ..." dynamic amount on
+		// a single-recipient group clause is reconstructed from the captured
 		// amount phrase, mirroring the single-target dynamic forms.
-		if effect.Amount.DynamicForm == EffectDynamicAmountFormWhereX {
+		if effect.Amount.DynamicForm == EffectDynamicAmountFormWhereX ||
+			effect.Amount.DynamicForm == EffectDynamicAmountFormEqual {
 			return exactGroupDynamicDamageText(effect, prefix, text)
 		}
 		amount, ok := exactGroupDamageAmountText(effect.Amount)
@@ -1031,6 +1181,21 @@ func exactSourcePowerDamageEffectSyntax(effect *EffectSyntax) bool {
 		return false
 	}
 	text := exactEffectClauseText(effect)
+	if len(effect.DamageRecipientPair) == 2 {
+		if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
+			return false
+		}
+		first, ok := exactGroupDamageRecipientText(effect.DamageRecipientPair[0])
+		if !ok {
+			return false
+		}
+		second, ok := exactGroupDamageRecipientText(effect.DamageRecipientPair[1])
+		if !ok {
+			return false
+		}
+		return text == fmt.Sprintf("%s deals damage %s to %s and %s.",
+			effect.Targets[0].Text, effect.Amount.Text, first, second)
+	}
 	switch len(effect.Targets) {
 	case 1:
 		if !effect.Targets[0].Exact {
@@ -1171,28 +1336,34 @@ func exactGroupDamageAmountText(amount EffectAmountSyntax) (string, bool) {
 
 // exactGroupDynamicDamageText reconstructs the canonical single-recipient group
 // damage clause whose amount is a trailing "where X is the number of ..." count
-// phrase. The amount phrase is reproduced verbatim from the captured source so
-// the round-trip stays byte-exact, exactly as the single-target dynamic-amount
-// branches do:
+// phrase or a "equal to ..." dynamic phrase. The amount phrase is reproduced
+// verbatim from the captured source so the round-trip stays byte-exact, exactly
+// as the single-target dynamic-amount branches do:
 //
 //	"Chain Reaction deals X damage to each creature, where X is the number of creatures on the battlefield."
 //	"Gates Ablaze deals X damage to each creature, where X is the number of Gates you control."
+//	"Fanatic of Mogis deals damage to each opponent equal to your devotion to red."
 //
 // The recipient must be a single filtered group; it fails closed for the
-// two-recipient pair form and for any amount form other than WhereX, keeping the
-// dual-recipient and fixed paths unchanged and unsupported wordings rejected.
+// two-recipient pair form and for any amount form other than WhereX or Equal,
+// keeping the dual-recipient and fixed paths unchanged and unsupported wordings
+// rejected.
 func exactGroupDynamicDamageText(effect *EffectSyntax, prefix, text string) bool {
 	if len(effect.DamageRecipientPair) != 0 {
-		return false
-	}
-	if effect.Amount.DynamicForm != EffectDynamicAmountFormWhereX {
 		return false
 	}
 	recipient, ok := exactGroupDamageRecipientText(effect.Selection)
 	if !ok {
 		return false
 	}
-	return text == fmt.Sprintf("%s X damage to %s, %s.", prefix, recipient, effect.Amount.Text)
+	switch effect.Amount.DynamicForm {
+	case EffectDynamicAmountFormWhereX:
+		return text == fmt.Sprintf("%s X damage to %s, %s.", prefix, recipient, effect.Amount.Text)
+	case EffectDynamicAmountFormEqual:
+		return text == fmt.Sprintf("%s damage to %s %s.", prefix, recipient, effect.Amount.Text)
+	default:
+		return false
+	}
 }
 
 // exactGroupDamageRecipientText reconstructs the canonical Oracle recipient

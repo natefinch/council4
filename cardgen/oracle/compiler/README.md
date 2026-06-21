@@ -80,7 +80,10 @@ prefix/suffix/contains text matching, and no token-spelling interpretation.
 Controller-scoped player rules include no-maximum-hand-size and fixed-generic
 per-creature attack taxes; the latter mechanically copies the parser's typed
 positive generic amount and exact declaration shell without inspecting retained
-Oracle text.
+Oracle text. Exact chosen-creature-type declarations mechanically become a
+source type-layer entry-choice subtype operation and a trigger-domain rule
+operation; the compiler never re-reads "chosen type", "another", or "additional
+time" wording.
 Source/group asymmetries (a source keyword grant requires a condition; a group
 grant forbids one), the dynamic-amount agreement check, and the supported-rule
 table are enforced over typed nodes and compiled effects alone. A compound
@@ -144,9 +147,9 @@ adapter also copies the parser's typed source-spell cost-reduction fields
 modifier from typed data without re-reading "This spell costs {N} less …" text.
 The parser's whole-graveyard exile recognition arrives the same way: the typed
 `GraveyardZoneExile` kind (`TargetPlayer`/`TargetOpponent` for "Exile target
-player's/opponent's graveyard.") is copied verbatim onto `CompiledEffect`, so
-lowering emits the player-zone group `MoveCard` from data instead of re-reading
-the "target player's graveyard" object phrase.
+player's/opponent's graveyard.", `All` for "Exile all graveyards.") is copied
+verbatim onto `CompiledEffect`, so lowering emits the player-zone or player-group
+`MoveCard` from data instead of re-reading the graveyard object phrase.
 The parser's `HandLibraryPut` marker is copied onto `CompiledEffect` the same
 way. Combined-sequence lowering pairs it with a preceding typed draw and never
 re-reads the retained "from your hand ... in any order" text.

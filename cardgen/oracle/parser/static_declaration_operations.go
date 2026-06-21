@@ -65,6 +65,13 @@ func parseStaticDeclarationSubject(tokens []shared.Token, atoms Atoms) (StaticDe
 			Group: EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllLands, Span: span},
 		}, verbStart, true
 	}
+	if span, verbStart, ok := staticAttachedObjectSubject(tokens); ok {
+		return StaticDeclarationSubject{
+			Kind:  StaticDeclarationSubjectGroup,
+			Span:  span,
+			Group: EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAttachedObject, Span: span},
+		}, verbStart, true
+	}
 	group := parseEffectStaticSubject(tokens, atoms)
 	if group.Kind == EffectStaticSubjectNone {
 		return StaticDeclarationSubject{}, 0, false
@@ -113,6 +120,25 @@ func staticAllLandsSubject(tokens []shared.Token) (shared.Span, int, bool) {
 	default:
 		return shared.Span{}, 0, false
 	}
+}
+
+// staticAttachedObjectSubject recognizes the attached-creature subject an Aura
+// or Equipment continuous static applies to ("Equipped creature ...", "Enchanted
+// creature ..."). Unlike parseEffectStaticSubject, which only resolves this
+// subject when a "has"/"gets" verb follows, this accepts any following operation
+// (a prohibition rule, a keyword grant, etc.) so a multi-operation grant such as
+// "Equipped creature can't be blocked and has shroud." parses as one declaration
+// sequence sharing the attached-object subject. It returns the subject span and
+// the index of the verb that follows.
+func staticAttachedObjectSubject(tokens []shared.Token) (shared.Span, int, bool) {
+	if len(tokens) < 3 {
+		return shared.Span{}, 0, false
+	}
+	if !staticWordsAt(tokens, 0, "equipped", "creature") &&
+		!staticWordsAt(tokens, 0, "enchanted", "creature") {
+		return shared.Span{}, 0, false
+	}
+	return shared.SpanOf(tokens[:2]), 2, true
 }
 
 func parseStaticOperations(
@@ -185,6 +211,9 @@ func parseStaticOperation(
 	if operation, next, ok := parseStaticCharacteristicOperation(tokens, index, end, atoms); ok {
 		return operation, next, true
 	}
+	if operation, next, ok := parseStaticEntryChoiceSubtypeOperation(tokens, index, end, subject); ok {
+		return operation, next, true
+	}
 	if operation, next, ok := parseStaticKeywordGrantOperation(tokens, index, end, atoms); ok {
 		return operation, next, true
 	}
@@ -192,6 +221,24 @@ func parseStaticOperation(
 		return operation, next, true
 	}
 	return StaticDeclarationSyntax{}, 0, false
+}
+
+func parseStaticEntryChoiceSubtypeOperation(
+	tokens []shared.Token,
+	index, end int,
+	subject StaticDeclarationSubject,
+) (StaticDeclarationSyntax, int, bool) {
+	const width = 10
+	if subject.Kind != StaticDeclarationSubjectSourceCreature ||
+		index+width != end ||
+		!staticWordsAt(tokens, index,
+			"is", "the", "chosen", "type", "in", "addition", "to", "its", "other", "types") {
+		return StaticDeclarationSyntax{}, 0, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationContinuousEntryChoiceSubtype,
+		OperationSpan: shared.SpanOf(tokens[index:end]),
+	}, end, true
 }
 
 // parseStaticBasePowerToughnessOperation recognizes the characteristic-setting

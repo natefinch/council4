@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func staticHintAt(hints faceRenderHints, i int) *staticVarHint {
@@ -42,6 +43,14 @@ func (r Renderer) renderStaticAbility(ctx *renderCtx, body *game.StaticAbility, 
 		return fmt.Sprintf("game.WardStaticAbility(%s)", renderedCost), nil
 	}
 	var fields []string
+	if body.ZoneOfFunction != zone.None {
+		ctx.need(importZone)
+		zoneLiteral, err := renderZone(body.ZoneOfFunction)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ZoneOfFunction: %s,", zoneLiteral))
+	}
 	if len(body.KeywordAbilities) > 0 {
 		elements := make([]string, 0, len(body.KeywordAbilities))
 		for _, keyword := range body.KeywordAbilities {
@@ -140,9 +149,6 @@ func (Renderer) renderProtectionStaticAbility(ctx *renderCtx, body *game.StaticA
 
 func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.ContinuousEffect) (string, error) {
 	var fields []string
-	if len(effect.RemoveKeywords) > 0 {
-		return "", errors.New("render: unsupported ability-layer continuous effect fields")
-	}
 	if effect.AffectedSource && !effect.Group.Empty() {
 		return "", errors.New("render: continuous effect cannot set both AffectedSource and Group")
 	}
@@ -193,6 +199,7 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 		effect.ToughnessDelta != 0 ||
 		effect.PowerDeltaDynamic.Exists ||
 		effect.ToughnessDeltaDynamic.Exists
+	hasKeywords := len(effect.AddKeywords) > 0 || len(effect.RemoveKeywords) > 0
 	keywordOnAbility := errors.New("render: keyword fields require the ability layer")
 	ptOnNonPT := errors.New("render: power/toughness fields require a power/toughness layer")
 	switch effect.Layer {
@@ -200,7 +207,7 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 		if hasPTDelta {
 			return ptOnNonPT
 		}
-		if len(effect.AddKeywords) > 0 {
+		if hasKeywords {
 			return keywordOnAbility
 		}
 	case game.LayerAbility:
@@ -212,11 +219,11 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 			return errors.New("render: remove-all-abilities effect cannot also add abilities or keywords")
 		}
 	case game.LayerPowerToughnessModify:
-		if len(effect.AddKeywords) > 0 {
+		if hasKeywords {
 			return keywordOnAbility
 		}
 	case game.LayerPowerToughnessSet:
-		if len(effect.AddKeywords) > 0 {
+		if hasKeywords {
 			return keywordOnAbility
 		}
 		if hasPTDelta {
@@ -226,7 +233,7 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 			return errors.New("render: base power/toughness layer requires set power and toughness")
 		}
 	case game.LayerColor:
-		if len(effect.AddKeywords) > 0 {
+		if hasKeywords {
 			return keywordOnAbility
 		}
 		if len(effect.SetColors) == 0 && len(effect.AddColors) == 0 {
@@ -236,11 +243,12 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 			return errors.New("render: color layer cannot both set and add colors")
 		}
 	case game.LayerType:
-		if len(effect.AddKeywords) > 0 {
+		if hasKeywords {
 			return keywordOnAbility
 		}
 		if len(effect.AddTypes) == 0 && len(effect.AddSubtypes) == 0 &&
-			len(effect.SetTypes) == 0 && len(effect.SetSubtypes) == 0 {
+			len(effect.SetTypes) == 0 && len(effect.SetSubtypes) == 0 &&
+			effect.AddSubtypeFromEntryChoice == "" {
 			return errors.New("render: type layer requires set or added types or subtypes")
 		}
 	default:
@@ -343,6 +351,12 @@ func renderContinuousCharacteristicFields(ctx *renderCtx, effect *game.Continuou
 		}
 		fields = append(fields, fmt.Sprintf("AddSubtypes: []types.Sub{%s},", strings.Join(literals, ", ")))
 	}
+	if effect.AddSubtypeFromEntryChoice != "" {
+		if effect.AddSubtypeFromEntryChoice != game.EntryTypeChoiceKey {
+			return nil, errors.New("render: unsupported entry-choice subtype key")
+		}
+		fields = append(fields, "AddSubtypeFromEntryChoice: game.EntryTypeChoiceKey,")
+	}
 	return fields, nil
 }
 
@@ -362,6 +376,17 @@ func (r Renderer) renderContinuousAbilityFields(ctx *renderCtx, effect *game.Con
 			elements = append(elements, literal+",")
 		}
 		fields = append(fields, sliceField("AddKeywords", "game.Keyword", elements))
+	}
+	if len(effect.RemoveKeywords) > 0 {
+		elements := make([]string, 0, len(effect.RemoveKeywords))
+		for _, keyword := range effect.RemoveKeywords {
+			literal, err := renderKeyword(keyword)
+			if err != nil {
+				return nil, err
+			}
+			elements = append(elements, literal+",")
+		}
+		fields = append(fields, sliceField("RemoveKeywords", "game.Keyword", elements))
 	}
 	if len(effect.AddAbilities) > 0 {
 		elements := make([]string, 0, len(effect.AddAbilities))
@@ -429,6 +454,13 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("AffectedPlayer: %s,", player))
 	}
+	if effect.AffectedController != game.ControllerAny {
+		controller, err := renderControllerRelation(effect.AffectedController)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("AffectedController: %s,", controller))
+	}
 	if effect.DefendingPlayer != game.PlayerAny {
 		player, err := renderPlayerRelation(effect.DefendingPlayer)
 		if err != nil {
@@ -488,6 +520,29 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("AttackTaxGeneric: %d,", effect.AttackTaxGeneric))
 	}
+	if effect.Kind == game.RuleEffectAdditionalLandPlays {
+		if effect.AdditionalLandPlays < 1 {
+			return "", errors.New("render: additional land plays requires a positive count")
+		}
+		fields = append(fields, fmt.Sprintf("AdditionalLandPlays: %d,", effect.AdditionalLandPlays))
+	}
+	if len(effect.PermanentTypes) > 0 {
+		permanentTypes, err := renderTypesCardSlice(ctx, effect.PermanentTypes)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("PermanentTypes: %s,", permanentTypes))
+	}
+	if len(effect.SpellTypes) > 0 {
+		spellTypes, err := renderTypesCardSlice(ctx, effect.SpellTypes)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("SpellTypes: %s,", spellTypes))
+	}
+	if effect.RestrictedDuringControllerTurn {
+		fields = append(fields, "RestrictedDuringControllerTurn: true,")
+	}
 	return structLit("game.RuleEffect", fields), nil
 }
 
@@ -521,6 +576,20 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectAttackTax", nil
 	case game.RuleEffectLifeTotalCantChange:
 		return "game.RuleEffectLifeTotalCantChange", nil
+	case game.RuleEffectAdditionalTriggerForChosenCreatureType:
+		return "game.RuleEffectAdditionalTriggerForChosenCreatureType", nil
+	case game.RuleEffectAdditionalLandPlays:
+		return "game.RuleEffectAdditionalLandPlays", nil
+	case game.RuleEffectCantCastSpells:
+		return "game.RuleEffectCantCastSpells", nil
+	case game.RuleEffectCantActivateAbilities:
+		return "game.RuleEffectCantActivateAbilities", nil
+	case game.RuleEffectAdditionalTriggerForEnteringPermanent:
+		return "game.RuleEffectAdditionalTriggerForEnteringPermanent", nil
+	case game.RuleEffectUntapDuringOtherPlayersUntapStep:
+		return "game.RuleEffectUntapDuringOtherPlayersUntapStep", nil
+	case game.RuleEffectCastSpellsAsThoughFlash:
+		return "game.RuleEffectCastSpellsAsThoughFlash", nil
 	default:
 		return "", fmt.Errorf("render: unsupported rule effect kind %d", kind)
 	}
@@ -580,6 +649,9 @@ func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier)
 			fields = append(fields, fmt.Sprintf("Color: %s,", colorLit))
 		}
 	}
+	if modifier.ChosenSubtypeFromEntryChoice {
+		fields = append(fields, "ChosenSubtypeFromEntryChoice: true,")
+	}
 	if modifier.AbilityKeyword != game.KeywordNone {
 		keyword, err := renderKeyword(modifier.AbilityKeyword)
 		if err != nil {
@@ -614,12 +686,12 @@ func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier)
 	if modifier.PerObjectReduction != 0 {
 		fields = append(fields, fmt.Sprintf("PerObjectReduction: %d,", modifier.PerObjectReduction))
 	}
-	if !modifier.CountSelection.Empty() {
-		selection, err := r.renderSelection(ctx, modifier.CountSelection)
+	if modifier.CountSelection != nil && !modifier.CountSelection.Empty() {
+		selection, err := r.renderSelection(ctx, *modifier.CountSelection)
 		if err != nil {
 			return "", err
 		}
-		fields = append(fields, fmt.Sprintf("CountSelection: %s,", selection))
+		fields = append(fields, fmt.Sprintf("CountSelection: &%s,", selection))
 	}
 	return structLit("game.CostModifier", fields), nil
 }

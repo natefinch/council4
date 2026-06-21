@@ -36,6 +36,7 @@ type permanentCreationOptions struct {
 	HasCastController bool
 	Counters          []game.CounterPlacement
 	SimultaneousID    id.ID
+	XValue            int
 }
 
 func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone zone.Type, face game.FaceIndex, continuous []game.ContinuousEffect, options permanentCreationOptions, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
@@ -57,10 +58,18 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 	applyInitialContinuousEffects(g, permanent, continuous)
 	registerPermanentReplacementEffects(g, permanent)
 	initializeReadAhead(e, g, permanent, agents, log)
+	if optionalEntryReplacementDeclined(enterBattlefieldContext{
+		engine: e,
+		agents: agents,
+		log:    log,
+	}, g, card, permanent, faceDef, fromZone) {
+		return nil, false
+	}
 	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
 		engine: e,
 		agents: agents,
 		log:    log,
+		xValue: options.XValue,
 	}, g, permanent, fromZone)
 	if options.ForceTapped {
 		permanent.Tapped = true
@@ -133,6 +142,7 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 		engine: e,
 		agents: agents,
 		log:    log,
+		xValue: options.XValue,
 	}, g, permanent, fromZone)
 	if options.ForceTapped {
 		permanent.Tapped = true

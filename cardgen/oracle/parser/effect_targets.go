@@ -7,6 +7,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -194,19 +195,32 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 			selectionHasCounterAbilityQualifier(selection)
 	case SelectionSpellActivatedOrTriggeredAbility:
 		return strings.EqualFold(text, "target spell, activated ability, or triggered ability") ||
+			strings.EqualFold(text, "target spell or ability") ||
 			selectionHasCounterAbilityQualifier(selection)
 	case SelectionTriggeredAbilityOrSpell:
 		return selectionHasCounterAbilityQualifier(selection)
 	case SelectionSpell:
-		switch strings.ToLower(text) {
+		base := strings.ToLower(text)
+		if selection.MatchManaValue {
+			rider, ok := targetManaValueRider(selection.ManaValue)
+			if !ok {
+				return false
+			}
+			trimmed, had := strings.CutSuffix(base, rider)
+			if !had {
+				return false
+			}
+			base = trimmed
+		}
+		switch base {
 		case "target spell", "target instant spell", "target sorcery spell", "target creature spell",
 			"target artifact spell", "target noncreature spell":
 			return true
 		}
 		if len(selection.RequiredTypesAny) >= 2 {
-			return exactTypeUnionTargetSyntax(text, selection)
+			return exactTypeUnionTargetSyntax(base, selection)
 		}
-		return exactSpellColorTargetSyntax(text, selection)
+		return exactSpellColorTargetSyntax(base, selection)
 	case SelectionCreature:
 		if strings.EqualFold(text, "target creature spell") {
 			return true
@@ -239,6 +253,24 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 		return false
 	}
 	return strings.EqualFold(text, expected)
+}
+
+// targetManaValueRider reconstructs the " with mana value N", " with mana value
+// N or less", or " with mana value N or greater" filter rider on a spell or
+// permanent target from the parsed comparison. Only the exact, "or less", and
+// "or greater" bounds the printed Oracle wording uses are modeled; every other
+// comparison (less-than, greater-than, or an X-derived bound) fails closed.
+func targetManaValueRider(mv compare.Int) (string, bool) {
+	switch mv.Op {
+	case compare.Equal:
+		return " with mana value " + strconv.Itoa(mv.Value), true
+	case compare.LessOrEqual:
+		return " with mana value " + strconv.Itoa(mv.Value) + " or less", true
+	case compare.GreaterOrEqual:
+		return " with mana value " + strconv.Itoa(mv.Value) + " or greater", true
+	default:
+		return "", false
+	}
 }
 
 func exactChosenCreatureCardsInYourGraveyardTargetSyntax(
@@ -1261,6 +1293,7 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 			(end > start && cantBeBlockedThisTurnVerbAt(tokens, end)) ||
 			(end > start && equalWord(token, "each") && end+1 < len(tokens) && effectWordKind(tokens[end+1]) != EffectUnknown) ||
 			(equalWord(token, "until") && end+1 < len(tokens)) ||
+			(end > start && equalWord(token, "if")) ||
 			(equalWord(token, "for") && effectWordsAt(tokens, end, "for", "as", "long", "as")) ||
 			(equalWord(token, "as") && effectWordsAt(tokens, end, "as", "long", "as", "this")) {
 			break
@@ -1447,22 +1480,33 @@ func ambiguousZoneChoice(tokens []shared.Token, atoms Atoms, span shared.Span) b
 	return false
 }
 
+// stackObjectSelectionKind recognizes the explicit spell/ability stack-object
+// selection phrasings and reports the matching selection kind.
+func stackObjectSelectionKind(words []string) (SelectionKind, bool) {
+	switch {
+	case slices.Equal(words, []string{"activated", "ability"}):
+		return SelectionActivatedAbility, true
+	case slices.Equal(words, []string{"triggered", "ability"}):
+		return SelectionTriggeredAbility, true
+	case slices.Equal(words, []string{"activated", "or", "triggered", "ability"}):
+		return SelectionActivatedOrTriggeredAbility, true
+	case slices.Equal(words, []string{"spell", "or", "ability"}):
+		return SelectionSpellActivatedOrTriggeredAbility, true
+	case slices.Equal(words, []string{"spell", "activated", "ability", "or", "triggered", "ability"}):
+		return SelectionSpellActivatedOrTriggeredAbility, true
+	default:
+		return SelectionUnknown, false
+	}
+}
+
 func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	if recognized, ok := counterAbilitySelectionSyntax(tokens, shared.SpanOf(tokens), joinedEffectText(tokens)); ok {
 		return recognized
 	}
 	selection := SelectionSyntax{Span: shared.SpanOf(tokens), Text: joinedEffectText(tokens)}
 	words := normalizedWords(tokens)
-	switch {
-	case slices.Equal(words, []string{"activated", "ability"}):
-		selection.Kind = SelectionActivatedAbility
-	case slices.Equal(words, []string{"triggered", "ability"}):
-		selection.Kind = SelectionTriggeredAbility
-	case slices.Equal(words, []string{"activated", "or", "triggered", "ability"}):
-		selection.Kind = SelectionActivatedOrTriggeredAbility
-	case slices.Equal(words, []string{"spell", "activated", "ability", "or", "triggered", "ability"}):
-		selection.Kind = SelectionSpellActivatedOrTriggeredAbility
-	default:
+	if kind, ok := stackObjectSelectionKind(words); ok {
+		selection.Kind = kind
 	}
 	for _, token := range tokens {
 		if noun, ok := atoms.ObjectNounAt(token.Span); ok && selection.Kind == SelectionUnknown {
@@ -1518,6 +1562,7 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	}
 	span := shared.SpanOf(tokens)
 	selection.SubtypesAny = atoms.SubtypesIn(span)
+	selection.ExcludedSubtypes = atoms.ExcludedSubtypesIn(span)
 	if relation, ok := atoms.ControllerIn(span); ok {
 		switch relation {
 		case ControllerRelationYouControl:
@@ -1552,6 +1597,8 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	selection.Blocking = atoms.SelectionFlagIn(span, SelectionFlagBlocking)
 	selection.Tapped = atoms.SelectionFlagIn(span, SelectionFlagTapped)
 	selection.Untapped = atoms.SelectionFlagIn(span, SelectionFlagUntapped)
+	selection.NonToken = atoms.SelectionFlagIn(span, SelectionFlagNonToken)
+	selection.TokenOnly = atoms.SelectionFlagIn(span, SelectionFlagToken)
 	if slices.Contains(words, "any") && selection.Kind == SelectionUnknown {
 		selection.Kind = SelectionAny
 	}
@@ -1561,6 +1608,10 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	if keyword, ok := atoms.KeywordSelectorIn(span, true); ok {
 		selection.ExcludedKeyword = keyword.Keyword
 	}
+	if kind, ok := selectionCounterQualifier(tokens); ok {
+		selection.CounterRequired = true
+		selection.CounterKind = kind
+	}
 	if (selection.Kind == SelectionPlayer && slices.Equal(words, []string{"player", "or", "planeswalker"})) ||
 		(selection.Kind == SelectionOpponent && slices.Equal(words, []string{"opponent", "or", "planeswalker"})) {
 		selection.PlayerOrPlaneswalker = true
@@ -1569,6 +1620,45 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 		return SelectionSyntax{Span: span, Text: joinedEffectText(tokens)}
 	}
 	return selection
+}
+
+// counterQualifierKind detects a "with a/an <kind> counter on it/them" qualifier
+// beginning at index start and returns the required counter kind together with
+// the index just past the qualifier. It fails closed when the phrase is absent
+// so unrelated wordings keep their existing handling.
+func counterQualifierKind(tokens []shared.Token, start int) (counter.Kind, int, bool) {
+	if !effectWordsAt(tokens, start, "with", "a") && !effectWordsAt(tokens, start, "with", "an") {
+		return 0, 0, false
+	}
+	counterIndex := start + 2
+	for counterIndex < len(tokens) &&
+		!equalWord(tokens[counterIndex], "counter") && !equalWord(tokens[counterIndex], "counters") {
+		counterIndex++
+	}
+	if counterIndex >= len(tokens) || counterIndex == start+2 {
+		return 0, 0, false
+	}
+	if !effectWordsAt(tokens, counterIndex+1, "on", "it") &&
+		!effectWordsAt(tokens, counterIndex+1, "on", "them") {
+		return 0, 0, false
+	}
+	kind, _, ok := counterNameBefore(tokens, counterIndex)
+	if !ok {
+		return 0, 0, false
+	}
+	return kind, counterIndex + 3, true
+}
+
+// selectionCounterQualifier scans tokens for a "with a <kind> counter on
+// it/them" qualifier anywhere in a selection phrase and reports the counter kind
+// it requires.
+func selectionCounterQualifier(tokens []shared.Token) (counter.Kind, bool) {
+	for i := range tokens {
+		if kind, _, ok := counterQualifierKind(tokens, i); ok {
+			return kind, true
+		}
+	}
+	return 0, false
 }
 
 func parseSelectionNumbers(tokens []shared.Token, atoms Atoms, selection *SelectionSyntax) bool {
@@ -1628,25 +1718,17 @@ func parseSelectionNumberComparison(tokens []shared.Token, atoms Atoms) (compare
 
 // staticGroupVerb reports whether token introduces a resolving plural creature
 // or permanent group effect clause: "get"/"have" for a power/toughness or
-// characteristic change, or "gain" for a keyword grant ("Creatures you control
-// gain trample until end of turn."). The keyword-grant form lowers as a one-shot
-// continuous effect over the affected group, mirroring the "get" pump form.
+// characteristic change, "gain" for a keyword grant ("Creatures you control gain
+// trample until end of turn."), or "lose" for a keyword removal ("Permanents
+// your opponents control lose hexproof until end of turn."). The keyword-grant
+// and keyword-removal forms lower as one-shot continuous effects over the
+// affected group, mirroring the "get" pump form.
 func staticGroupVerb(token shared.Token) bool {
-	return equalWord(token, "get") || equalWord(token, "have") || equalWord(token, "gain")
+	return equalWord(token, "get") || equalWord(token, "have") ||
+		equalWord(token, "gain") || equalWord(token, "lose")
 }
 
 func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSubjectSyntax {
-	subtype := func(index int) (types.Sub, bool) {
-		if index >= len(tokens) {
-			return "", false
-		}
-		value, ok := atoms.SubtypeAt(tokens[index].Span)
-		return value, ok && SubtypeMatchesAnyRuntimeCardType(value, []types.Card{types.Creature, types.Kindred})
-	}
-	subtypeKnown := func(index int) bool {
-		_, ok := subtype(index)
-		return ok
-	}
 	if subject, ok := parseColoredControlledCreatureGroup(tokens); ok {
 		return subject
 	}
@@ -1657,6 +1739,9 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 		return subject
 	}
 	if subject, ok := parseTypeFilteredControlledCreatureGroupSubject(tokens); ok {
+		return subject
+	}
+	if subject, ok := parseChosenTypeControlledCreatureGroupSubject(tokens); ok {
 		return subject
 	}
 	if subject, ok := parseFilteredControlledCreatureGroupSubject(tokens); ok {
@@ -1692,6 +1777,9 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "creatures", "you", "control") &&
 		staticGroupVerb(tokens[3]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatures, Span: shared.SpanOf(tokens[:3])}
+	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "permanents", "your", "opponents", "control") &&
+		staticGroupVerb(tokens[4]):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOpponentControlledPermanents, Span: shared.SpanOf(tokens[:4])}
 	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "creatures", "your", "opponents", "control") &&
 		staticGroupVerb(tokens[4]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOpponentControlledCreatures, Span: shared.SpanOf(tokens[:4])}
@@ -1707,6 +1795,40 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "tokens", "you", "control") &&
 		staticGroupVerb(tokens[3]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledTokens, Span: shared.SpanOf(tokens[:3])}
+	default:
+		return parseControlledCreatureSubtypeSubject(tokens, atoms)
+	}
+}
+
+// parseControlledCreatureSubtypeSubject recognizes the controlled-creature group
+// subjects filtered by a creature subtype: "[Other] <Subtype> creatures you
+// control get/have ..." and the "non-<Subtype>" exclusion form ("Non-Human
+// creatures you control get ..."). It is split out of parseEffectStaticSubject
+// to keep that grammar dispatcher's maintainability within bounds.
+func parseControlledCreatureSubtypeSubject(tokens []shared.Token, atoms Atoms) EffectStaticSubjectSyntax {
+	subtype := func(index int) (types.Sub, bool) {
+		if index >= len(tokens) {
+			return "", false
+		}
+		value, ok := atoms.SubtypeAt(tokens[index].Span)
+		return value, ok && SubtypeMatchesAnyRuntimeCardType(value, []types.Card{types.Creature, types.Kindred})
+	}
+	subtypeKnown := func(index int) bool {
+		_, ok := subtype(index)
+		return ok
+	}
+	excludedSubtype := func(index int) (types.Sub, bool) {
+		if index >= len(tokens) {
+			return "", false
+		}
+		value, ok := atoms.ExcludedSubtypeAt(tokens[index].Span)
+		return value, ok && SubtypeMatchesAnyRuntimeCardType(value, []types.Card{types.Creature, types.Kindred})
+	}
+	excludedSubtypeKnown := func(index int) bool {
+		_, ok := excludedSubtype(index)
+		return ok
+	}
+	switch {
 	case len(tokens) >= 6 && equalWord(tokens[0], "other") && equalWord(tokens[2], "creatures") &&
 		effectWordsAt(tokens, 3, "you", "control") &&
 		(equalWord(tokens[5], "have") || equalWord(tokens[5], "get")) &&
@@ -1719,6 +1841,12 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 		subtypeKnown(0):
 		value, _ := subtype(0)
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatureSubtype, Span: shared.SpanOf(tokens[:4]), Subtype: value, SubtypeText: tokens[0].Text, SubtypeKnown: true}
+	case len(tokens) >= 5 && equalWord(tokens[1], "creatures") &&
+		effectWordsAt(tokens, 2, "you", "control") &&
+		(equalWord(tokens[4], "have") || equalWord(tokens[4], "get")) &&
+		excludedSubtypeKnown(0):
+		value, _ := excludedSubtype(0)
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatureSubtype, Span: shared.SpanOf(tokens[:4]), Subtype: value, SubtypeText: tokens[0].Text, SubtypeKnown: true, ExcludedSubtype: true}
 	case len(tokens) >= 5 && equalWord(tokens[0], "other") && effectWordsAt(tokens, 2, "you", "control") &&
 		(equalWord(tokens[4], "have") || equalWord(tokens[4], "get")):
 		value, ok := subtype(1)
@@ -1732,13 +1860,82 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	}
 }
 
-// parseBattlefieldCreatureGroupSubject recognizes battlefield-wide creature group
-// subjects whose affected group spans every matching permanent regardless of
-// controller: "Attacking creatures you control get/have ...", "All <Subtype>
-// creatures get/have ...", and "Other <Subtype> creatures get/have ...". It
-// returns the typed subject, or false so callers fall through to the bare
-// grammar. The subtype forms require a known creature/kindred subtype so color
-// and other qualifiers fail closed.
+// doublePTObject is the parsed object of a power/toughness doubling effect: the
+// affected group together with which characteristics double.
+type doublePTObject struct {
+	Subject         EffectStaticSubjectSyntax
+	DoublePower     bool
+	DoubleToughness bool
+}
+
+// parseDoublePTObject recognizes the object of a power/toughness doubling
+// effect: "the power and toughness of <group>", "the power of <group>", or "the
+// toughness of <group>" (with a trailing duration and period the caller already
+// scopes elsewhere). It returns the affected group as a static subject together
+// with which characteristics double. Only the controlled-creatures and
+// all-creatures groups are recognized; every other object (a player's life, a
+// counter count, a single target) returns ok=false so the doubling effect fails
+// closed.
+func parseDoublePTObject(tokens []shared.Token, atoms Atoms) (doublePTObject, bool) {
+	if len(tokens) < 2 || !equalWord(tokens[0], "the") {
+		return doublePTObject{}, false
+	}
+	var object doublePTObject
+	index := 1
+	switch {
+	case equalWord(tokens[index], "power"):
+		object.DoublePower = true
+		index++
+		if index+1 < len(tokens) && equalWord(tokens[index], "and") && equalWord(tokens[index+1], "toughness") {
+			object.DoubleToughness = true
+			index += 2
+		}
+	case equalWord(tokens[index], "toughness"):
+		object.DoubleToughness = true
+		index++
+	default:
+		return doublePTObject{}, false
+	}
+	if index >= len(tokens) || !equalWord(tokens[index], "of") {
+		return doublePTObject{}, false
+	}
+	group, groupOK := doubleGroupStaticSubject(tokens[index+1:], atoms)
+	if !groupOK {
+		return doublePTObject{}, false
+	}
+	object.Subject = group
+	return object, true
+}
+
+// doubleGroupStaticSubject recognizes the affected creature group named in a
+// doubling object's "of <group>" tail: "each creature you control" / "creatures
+// you control" (the controlled-creatures group) and "each creature" / "all
+// creatures" (every creature on the battlefield). Unlike parseEffectStaticSubject
+// these forms are not anchored to a trailing group verb and accept the singular
+// "each creature" wording, so they are recognized here rather than reused.
+func doubleGroupStaticSubject(tokens []shared.Token, atoms Atoms) (EffectStaticSubjectSyntax, bool) {
+	_ = atoms
+	start := 0
+	hasEach := false
+	if len(tokens) > 0 && (equalWord(tokens[0], "each") || equalWord(tokens[0], "all")) {
+		hasEach = true
+		start = 1
+	}
+	rest := tokens[start:]
+	switch {
+	case effectWordsAt(rest, 0, "creature", "you", "control"):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatures, Span: shared.SpanOf(tokens[:start+3])}, true
+	case effectWordsAt(rest, 0, "creatures", "you", "control"):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatures, Span: shared.SpanOf(tokens[:start+3])}, true
+	case hasEach && effectWordsAt(rest, 0, "creature"):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllCreatures, Span: shared.SpanOf(tokens[:start+1])}, true
+	case hasEach && effectWordsAt(rest, 0, "creatures"):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllCreatures, Span: shared.SpanOf(tokens[:start+1])}, true
+	default:
+		return EffectStaticSubjectSyntax{}, false
+	}
+}
+
 func parseBattlefieldCreatureGroupSubject(tokens []shared.Token, atoms Atoms) (EffectStaticSubjectSyntax, bool) {
 	subtypeAt := func(index int) (types.Sub, bool) {
 		if index >= len(tokens) {
@@ -1779,6 +1976,25 @@ func parseBattlefieldCreatureGroupSubject(tokens []shared.Token, atoms Atoms) (E
 // the source). It returns the typed subject, or false so callers fall through to
 // the bare grammar. It fails closed for "Nonlegendary"/"Tapped" battlefield-wide
 // forms that have no Selection representation.
+// parseChosenTypeControlledCreatureGroupSubject recognizes the chosen-type
+// anthem group subjects "[Other] creatures you control of the chosen type
+// get/have/gain ...", the affected group of cards that buff only the controlled
+// creatures whose type matches the source permanent's entry-time creature-type
+// choice (Patchwork Banner, Adaptive Automaton, Obelisk of Urd). It returns
+// false so callers fall through to the bare controlled-creature grammar.
+func parseChosenTypeControlledCreatureGroupSubject(tokens []shared.Token) (EffectStaticSubjectSyntax, bool) {
+	switch {
+	case len(tokens) >= 9 && effectWordsAt(tokens, 0, "other", "creatures", "you", "control", "of", "the", "chosen", "type") &&
+		staticGroupVerb(tokens[8]):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherControlledCreaturesChosenType, Span: shared.SpanOf(tokens[:8])}, true
+	case len(tokens) >= 8 && effectWordsAt(tokens, 0, "creatures", "you", "control", "of", "the", "chosen", "type") &&
+		staticGroupVerb(tokens[7]):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreaturesChosenType, Span: shared.SpanOf(tokens[:7])}, true
+	default:
+	}
+	return EffectStaticSubjectSyntax{}, false
+}
+
 func parseFilteredControlledCreatureGroupSubject(tokens []shared.Token) (EffectStaticSubjectSyntax, bool) {
 	switch {
 	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "creature", "tokens", "you", "control") &&
@@ -2022,6 +2238,8 @@ func selectionKindForNoun(noun ObjectNoun) SelectionKind {
 		return SelectionArtifact
 	case ObjectNounCard:
 		return SelectionCard
+	case ObjectNounCommander:
+		return SelectionCommander
 	case ObjectNounCreature:
 		return SelectionCreature
 	case ObjectNounEnchantment:

@@ -2,6 +2,7 @@ package cardgen
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
@@ -12,8 +13,8 @@ import (
 )
 
 // triggerContentUnsupported reports whether a triggered ability's top-level
-// content shape cannot route through the shared trigger-body lowering. Modal
-// trigger bodies are not yet composed. The ability-word label is intentionally
+// content shape cannot route through the shared trigger-body lowering. The
+// ability-word label is intentionally
 // not gated: an ability word printed before a When/Whenever/At trigger is
 // always rules-free flavor (rule 207.2c). Keyword abilities that carry rules
 // meaning (Boast, Exhaust, Cohort, Renew, ...) are printed before an activation
@@ -21,7 +22,38 @@ import (
 // to ignore. The ability-word source span is still covered for completeness by
 // lowerTriggeredAbilityKind, which spans the label-to-trigger region.
 func triggerContentUnsupported(ability compiler.CompiledAbility) bool {
-	return len(ability.Content.Modes) != 0
+	return len(ability.Content.Modes) != 0 && !exactConnectionModeLabels(ability.Content.Modes)
+}
+
+// modalTriggerBody reports whether a triggered ability's resolving body is a
+// generic modal "choose one/up to one —" choice that routes through the shared
+// modal-content lowering rather than the single-effect trigger-body path. The
+// exact labeled "first main phase" modal (Black Market Connections) keeps its
+// dedicated handling, so it is excluded here.
+func modalTriggerBody(ability compiler.CompiledAbility) bool {
+	return len(ability.Content.Modes) != 0 && !exactConnectionModeLabels(ability.Content.Modes)
+}
+
+// lowerModalTriggerBody lowers a triggered ability whose resolving body is a
+// modal choice. Each mode lowers as an independent already-supported effect; the
+// runtime presents the modes when the ability resolves. The shared modal-content
+// lowering fails closed on intervening/resolution conditions or effects shared
+// across modes, so only a bare modal trigger body is accepted.
+func lowerModalTriggerBody(
+	cardName string,
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+	triggerEvent game.EventKind,
+) (game.AbilityContent, *shared.Diagnostic) {
+	ctx := contentCtx{
+		text:                  ability.Text,
+		span:                  ability.Span,
+		content:               ability.Content,
+		enclosingKind:         compiler.AbilityTriggered,
+		triggerCardCountEvent: triggerEvent,
+		triggerEvent:          triggerEvent,
+	}
+	return lowerModalContent(cardName, ctx, syntax)
 }
 
 func lowerAtTrigger(
@@ -54,12 +86,54 @@ func lowerAtTrigger(
 			"the executable source backend does not support this intervening-if condition",
 		)
 	}
+	if ability.ExactSequence == compiler.ExactSequenceChosenTypeLibraryTopToHand {
+		return lowerChosenTypeLibraryTopTrigger(ability, &pattern, intervening)
+	}
 	if triggerContentUnsupported(ability) {
 		return game.TriggeredAbility{}, executableDiagnostic(
 			ability,
 			"unsupported phase/step trigger phrase effect",
 			"modes and ability words are not supported in phase/step triggers",
 		)
+	}
+	if len(ability.Content.Modes) != 0 {
+		if !reflect.DeepEqual(pattern, game.TriggerPattern{
+			Event:      game.EventBeginningOfStep,
+			Controller: game.TriggerControllerYou,
+			Step:       game.StepPrecombatMain,
+		}) {
+			return game.TriggeredAbility{}, executableDiagnostic(
+				ability,
+				"unsupported phase/step trigger phrase effect",
+				"the exact labeled modal body is supported only at the beginning of its controller's first main phase",
+			)
+		}
+		if ability.Optional || ability.Trigger.Condition != nil ||
+			len(ability.Content.Effects) != 0 ||
+			len(ability.Content.Targets) != 0 ||
+			len(ability.Content.Keywords) != 0 ||
+			len(ability.Content.Conditions) != 0 ||
+			len(ability.Content.References) != 0 {
+			return game.TriggeredAbility{}, executableDiagnostic(
+				ability,
+				"unsupported phase/step trigger phrase effect",
+				"the executable source backend supports only the exact labeled modal trigger body",
+			)
+		}
+		content, diagnostic := lowerAbilityContent(cardName, compiler.AbilityTriggered, ability.Content, false, syntax)
+		if diagnostic != nil {
+			return game.TriggeredAbility{}, diagnostic
+		}
+		return game.TriggeredAbility{
+			Text: ability.Text,
+			Trigger: game.TriggerCondition{
+				Type:                 game.TriggerAt,
+				Pattern:              pattern,
+				InterveningIf:        interveningIfText(ability.Trigger),
+				InterveningCondition: intervening,
+			},
+			Content: content,
+		}, nil
 	}
 	prepared, ok := prepareTriggerBody(ability, syntax)
 	if !ok {
@@ -213,6 +287,23 @@ func lowerGenericPatternTrigger(
 	if !ok {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
 			"the executable source backend does not support this semantic trigger condition")
+	}
+	if modalTriggerBody(ability) {
+		content, diagnostic := lowerModalTriggerBody(cardName, ability, syntax, pattern.Event)
+		if diagnostic != nil {
+			return game.TriggeredAbility{}, diagnostic
+		}
+		return game.TriggeredAbility{
+			Text: ability.Text,
+			Trigger: game.TriggerCondition{
+				Type:                 triggerType,
+				Pattern:              pattern,
+				InterveningIf:        interveningIfText(ability.Trigger),
+				InterveningCondition: intervening,
+			},
+			Optional: ability.Optional,
+			Content:  content,
+		}, nil
 	}
 	if triggerContentUnsupported(ability) {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",
@@ -430,6 +521,9 @@ func lowerTriggeredAbilityKind(
 	}
 	triggeredAbility.MaxTriggersPerTurn = ability.Trigger.MaxTriggersPerTurn
 	spans := []shared.Span{ability.Trigger.Span}
+	if len(ability.Content.Modes) != 0 {
+		spans = append(spans, ability.Span)
+	}
 	if ability.Trigger.MaxTriggersPerTurn > 0 {
 		spans = append(spans, ability.Trigger.MaxTriggersPerTurnSpan)
 	}
@@ -444,6 +538,9 @@ func lowerTriggeredAbilityKind(
 		if ability.Content.Effects[i].Payment.Span != (shared.Span{}) {
 			spans = append(spans, ability.Content.Effects[i].Payment.Span)
 		}
+		if len(ability.Content.Effects[i].TokenCopyGrantKeywords) != 0 {
+			spans = append(spans, ability.Content.Effects[i].TokenCopyGrantRiderSpan)
+		}
 	}
 	for _, target := range ability.Content.Targets {
 		spans = append(spans, target.Span)
@@ -455,6 +552,9 @@ func lowerTriggeredAbilityKind(
 		spans = append(spans, reference.Span)
 	}
 	spans = appendKeywordSpans(spans, ability.Content.Keywords)
+	if ability.ExactSequence != compiler.ExactSequenceUnknown {
+		spans = append(spans, ability.Content.Span)
+	}
 	for _, reminder := range syntax.Reminders {
 		spans = append(spans, reminder.Span)
 	}
@@ -463,6 +563,7 @@ func lowerTriggeredAbilityKind(
 		consumed: semanticConsumption{
 			trigger:    true,
 			optional:   ability.Optional,
+			modes:      len(ability.Content.Modes),
 			targets:    len(ability.Content.Targets),
 			conditions: len(ability.Content.Conditions),
 			effects:    len(ability.Content.Effects),

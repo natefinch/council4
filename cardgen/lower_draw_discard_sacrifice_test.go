@@ -8,6 +8,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -488,6 +489,100 @@ func TestLowerSacrificeSpellTargetPlayerTwoCreatures(t *testing.T) {
 	}
 }
 
+func TestLowerSacrificeSpellEachPlayerNonTokenCreature(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Accursed Edict",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Each player sacrifices a nontoken creature of their choice.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not found")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	prim, ok := mode.Sequence[0].Primitive.(game.SacrificePermanents)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.SacrificePermanents", mode.Sequence[0].Primitive)
+	}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceAllPlayers {
+		t.Fatalf("player group = %v, want all players", prim.PlayerGroup.Kind)
+	}
+	if !slices.Equal(prim.Selection.RequiredTypes, []types.Card{types.Creature}) {
+		t.Fatalf("selection = %#v, want creature filter", prim.Selection)
+	}
+	if !prim.Selection.NonToken {
+		t.Fatalf("selection = %#v, want NonToken", prim.Selection)
+	}
+}
+
+func TestLowerSacrificeSpellCreatureOrPlaneswalker(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Plaguecrafter Edict",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Each player sacrifices a creature or planeswalker of their choice.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not found")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	prim, ok := mode.Sequence[0].Primitive.(game.SacrificePermanents)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.SacrificePermanents", mode.Sequence[0].Primitive)
+	}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceAllPlayers {
+		t.Fatalf("player group = %v, want all players", prim.PlayerGroup.Kind)
+	}
+	if !slices.Equal(prim.Selection.RequiredTypesAny, []types.Card{types.Creature, types.Planeswalker}) {
+		t.Fatalf("selection = %#v, want creature-or-planeswalker filter", prim.Selection)
+	}
+}
+
+func TestLowerAccursedMarauderEnterTrigger(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Accursed Marauder",
+		Layout:     "normal",
+		ManaCost:   "{1}{B}",
+		TypeLine:   "Creature — Zombie",
+		OracleText: "When this creature enters, each player sacrifices a nontoken creature of their choice.",
+		Colors:     []string{"B"},
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want one", len(face.TriggeredAbilities))
+	}
+	prim, ok := face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive.(game.SacrificePermanents)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.SacrificePermanents", face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive)
+	}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceAllPlayers {
+		t.Fatalf("player group = %v, want all players", prim.PlayerGroup.Kind)
+	}
+	if !slices.Equal(prim.Selection.RequiredTypes, []types.Card{types.Creature}) || !prim.Selection.NonToken {
+		t.Fatalf("selection = %#v, want nontoken creature filter", prim.Selection)
+	}
+}
+
+func TestLowerSacrificeSpellRejectsTappedQualifier(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Tapped Edict",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Each player sacrifices a tapped creature of their choice.",
+	}, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("tapped-creature sacrifice unexpectedly lowered without diagnostic")
+	}
+}
+
 func TestLowerSacrificeSpellEachPlayerPermanent(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -703,5 +798,53 @@ func TestLowerDiscardThisWayCountRejectedInSpell(t *testing.T) {
 	}
 	if len(diagnostics) == 0 {
 		t.Fatal("draw scaled by discard count unexpectedly lowered outside a trigger")
+	}
+}
+
+func TestLowerDrawForEachCounterQualifiedCount(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Counter Scholar",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Draw a card for each creature you control with a +1/+1 counter on it.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	draw, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.Draw)
+	if !ok {
+		t.Fatalf("primitive = %+v, want game.Draw", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	dynamic := draw.Amount.DynamicAmount()
+	if !dynamic.Exists || dynamic.Val.Kind != game.DynamicAmountCountSelector || dynamic.Val.Multiplier != 1 {
+		t.Fatalf("draw.Amount dynamic = %+v, want count selector x1", dynamic)
+	}
+	selection := dynamic.Val.Group.Selection()
+	if selection.Controller != game.ControllerYou {
+		t.Fatalf("controller = %v, want ControllerYou", selection.Controller)
+	}
+	if len(selection.RequiredTypes) != 1 || selection.RequiredTypes[0] != types.Creature {
+		t.Fatalf("required types = %v, want [Creature]", selection.RequiredTypes)
+	}
+	if !selection.MatchCounter || selection.RequiredCounter != counter.PlusOnePlusOne {
+		t.Fatalf("RequiredCounter = (%v,%v), want +1/+1", selection.MatchCounter, selection.RequiredCounter)
+	}
+}
+
+func TestLowerDrawForEachPlainCountHasNoCounter(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Plain Scholar",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Draw a card for each creature you control.",
+	})
+	draw, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.Draw)
+	if !ok {
+		t.Fatalf("primitive = %+v, want game.Draw", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	if draw.Amount.DynamicAmount().Val.Group.Selection().MatchCounter {
+		t.Fatal("RequiredCounter set for a count subject without a counter qualifier")
 	}
 }

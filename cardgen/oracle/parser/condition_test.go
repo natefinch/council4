@@ -48,6 +48,9 @@ func TestParseConditionPredicateMeaning(t *testing.T) {
 		{"creature power diversity", "you control three or more creatures with different powers", ConditionPredicateCreaturePowerDiversityAtLeast, 3},
 		{"opponent poison counters", "an opponent has three or more poison counters", ConditionPredicateAnyOpponentPoisonAtLeast, 3},
 		{"controller hand size exactly", "you have exactly seven cards in hand", ConditionPredicateControllerHandSizeExactly, 7},
+		{"created token this turn", "you created a token this turn", ConditionPredicateCreatedTokenThisTurn, 0},
+		{"active token creation", "an effect would create one or more tokens under your control", ConditionPredicateTokenCreationUnderController, 0},
+		{"passive token creation", "one or more tokens would be created under your control", ConditionPredicateTokenCreationUnderController, 0},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -270,6 +273,7 @@ func TestParseConditionEventSubjectAndSourceState(t *testing.T) {
 		{"event was kicked", "it was kicked", ConditionPredicateEventSubjectWasKicked, ConditionObjectBindingNone, nil, ConditionCombatAny, 0},
 		{"event was cast", "it was cast", ConditionPredicateEventSubjectWasCast, ConditionObjectBindingNone, nil, ConditionCombatAny, 0},
 		{"event had counters", "it had counters on it", ConditionPredicateEventSubjectHadCounters, ConditionObjectBindingEventPermanent, nil, ConditionCombatAny, 0},
+		{"event name unique", "it doesn't have the same name as another creature you control or a creature card in your graveyard", ConditionPredicateEventSubjectNameUnique, ConditionObjectBindingEventPermanent, nil, ConditionCombatAny, 0},
 		{"source attacking", "this creature is attacking", ConditionPredicateObjectMatches, ConditionObjectBindingSource, nil, ConditionCombatAttacking, 0},
 		{"source blocking", "this creature is blocking", ConditionPredicateObjectMatches, ConditionObjectBindingSource, nil, ConditionCombatBlocking, 0},
 		{"source attacking or blocking", "this creature is attacking or blocking", ConditionPredicateObjectMatches, ConditionObjectBindingSource, nil, ConditionCombatAttackingOrBlocking, 0},
@@ -344,6 +348,105 @@ func TestParseConditionControlsTotalPower(t *testing.T) {
 	}
 }
 
+// TestParseConditionControlComparison covers cross-player control-count
+// comparison conditions ("an opponent controls more lands than you" and its
+// variants). The parser must record which player scope is on each side of the
+// comparison and the direction, and fail closed when neither or both sides are
+// the controller.
+func TestParseConditionControlComparison(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		condition string
+		left      ConditionControlScope
+		right     ConditionControlScope
+		greater   bool
+		cardType  TriggerCardType
+	}{
+		{
+			name:      "opponent controls more lands than you",
+			condition: "an opponent controls more lands than you",
+			left:      ConditionControlScopeAnyOpponent,
+			right:     ConditionControlScopeController,
+			greater:   true,
+			cardType:  TriggerCardTypeLand,
+		},
+		{
+			name:      "you control fewer lands than an opponent",
+			condition: "you control fewer lands than an opponent",
+			left:      ConditionControlScopeController,
+			right:     ConditionControlScopeAnyOpponent,
+			greater:   false,
+			cardType:  TriggerCardTypeLand,
+		},
+		{
+			name:      "opponent controls more creatures than you",
+			condition: "an opponent controls more creatures than you",
+			left:      ConditionControlScopeAnyOpponent,
+			right:     ConditionControlScopeController,
+			greater:   true,
+			cardType:  TriggerCardTypeCreature,
+		},
+		{
+			name:      "you control more lands than each opponent",
+			condition: "you control more lands than each opponent",
+			left:      ConditionControlScopeController,
+			right:     ConditionControlScopeEachOpponent,
+			greater:   true,
+			cardType:  TriggerCardTypeLand,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			clause := parseSingleConditionClause(t, test.condition)
+			if clause.Predicate != ConditionPredicateControlComparison {
+				t.Fatalf("clause = %#v, want control comparison predicate", clause)
+			}
+			comparison := clause.ControlComparison
+			if comparison.LeftScope != test.left ||
+				comparison.RightScope != test.right ||
+				comparison.Greater != test.greater {
+				t.Fatalf("comparison = %#v, want left %s right %s greater %t",
+					comparison, test.left, test.right, test.greater)
+			}
+			if !slices.Equal(clause.Selection.RequiredTypes, []TriggerCardType{test.cardType}) {
+				t.Fatalf("selection = %#v, want card type %s", clause.Selection, test.cardType)
+			}
+		})
+	}
+}
+
+// TestParseConditionControlComparisonNearMissFailsClosed rejects comparisons
+// whose two sides do not contrast the controller against an opponent scope, so
+// the comparison would have no well-defined direction.
+func TestParseConditionControlComparisonNearMissFailsClosed(t *testing.T) {
+	t.Parallel()
+	conditions := []string{
+		"an opponent controls more lands than each opponent",
+		"you control more lands than you",
+		"an opponent controls the same number of lands as you",
+		"an opponent controls more lands than a player",
+	}
+	for _, condition := range conditions {
+		t.Run(condition, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(
+				"When this creature enters, if "+condition+", draw a card.",
+				Context{},
+			)
+			if len(document.Abilities) != 1 {
+				t.Fatalf("abilities = %#v", document.Abilities)
+			}
+			for _, clause := range document.Abilities[0].ConditionClauses {
+				if clause.Predicate == ConditionPredicateControlComparison {
+					t.Fatalf("condition %q produced comparison clause %#v, want none", condition, clause)
+				}
+			}
+		})
+	}
+}
+
 func TestParseConditionTotalPowerNearMissFailsClosed(t *testing.T) {
 	t.Parallel()
 	// Each wording resembles the total-power qualifier but uses an unrecognized
@@ -366,6 +469,37 @@ func TestParseConditionTotalPowerNearMissFailsClosed(t *testing.T) {
 			}
 			if clauses := document.Abilities[0].ConditionClauses; len(clauses) != 0 {
 				t.Fatalf("condition %q clauses = %#v, want none", condition, clauses)
+			}
+		})
+	}
+}
+
+func TestParseConditionGraveyardControls(t *testing.T) {
+	t.Parallel()
+	// The Incarnation-cycle condition "this card is in your graveyard and you
+	// control a <land>" marks graveyard function on the clause while delegating
+	// the trailing requirement to the controls recognizer.
+	tests := []struct {
+		name      string
+		condition string
+		subtype   types.Sub
+	}{
+		{"anger", "this card is in your graveyard and you control a Mountain", types.Sub("Mountain")},
+		{"wonder", "this card is in your graveyard and you control an Island", types.Sub("Island")},
+		{"this creature", "this creature is in your graveyard and you control a Forest", types.Sub("Forest")},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			clause := parseSingleConditionClause(t, test.condition)
+			if clause.Predicate != ConditionPredicateControls {
+				t.Fatalf("clause = %#v, want controls predicate", clause)
+			}
+			if !clause.SourceInGraveyard {
+				t.Fatalf("clause = %#v, want SourceInGraveyard", clause)
+			}
+			if !slices.Equal(clause.Selection.SubtypesAny, []types.Sub{test.subtype}) {
+				t.Fatalf("selection = %#v, want subtype %s", clause.Selection, test.subtype)
 			}
 		})
 	}

@@ -101,6 +101,20 @@ func TestTypedTriggerEventsBindClosedSlots(t *testing.T) {
 			},
 		},
 		{
+			name:  "spell event binds chosen-type card Selection",
+			event: "you cast a creature spell of the chosen type",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:       TriggerWhenever,
+				Event:      TriggerEventSpellCast,
+				Controller: ControllerYou,
+				CardSelection: TriggerSelection{
+					RequiredTypes:          []TriggerCardType{TriggerCardTypeCreature},
+					SubtypeFromEntryChoice: true,
+				},
+			},
+		},
+		{
 			name:  "spell or ability target event shares self template",
 			event: "this creature becomes the target of a spell or ability",
 			kind:  TriggerWhenever,
@@ -268,10 +282,9 @@ func TestTypedTriggerEventsFailClosedOnUnsupportedSlots(t *testing.T) {
 	}{
 		{event: "two or more artifacts you control enter", kind: TriggerWhenever},
 		{event: "a creature you or an opponent controls enters", kind: TriggerWhenever},
-		{event: "you cast a creature or artifact spell", kind: TriggerWhenever},
+		{event: "you cast an instant or Wizard spell", kind: TriggerWhenever},
 		{event: "you activate a boast ability", kind: TriggerWhenever},
 		{event: "you turn a permanent face up", kind: TriggerWhenever},
-		{event: "you create or sacrifice a token", kind: TriggerWhenever},
 		{event: "you scry or surveil", kind: TriggerWhenever},
 		{event: "this creature becomes the target of an ability", kind: TriggerWhenever},
 		{event: "this creature becomes the target of a spell or ability for the first time each turn", kind: TriggerWhenever},
@@ -574,6 +587,21 @@ func TestPermanentZoneChangeTriggerPatternsBindRepresentableSlots(t *testing.T) 
 				OneOrMore:   true,
 				SubjectSelection: TriggerSelection{
 					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+				},
+			},
+		},
+		{
+			name:     "chosen-type creature enters",
+			event:    "a creature you control of the chosen type enters",
+			kind:     TriggerWhenever,
+			cardName: "Kindred Discovery",
+			want: TriggerPattern{
+				Kind:       TriggerWhenever,
+				Event:      TriggerEventPermanentEnteredBattlefield,
+				Controller: ControllerYou,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes:          []TriggerCardType{TriggerCardTypeCreature},
+					SubtypeFromEntryChoice: true,
 				},
 			},
 		},

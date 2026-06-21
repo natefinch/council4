@@ -187,10 +187,10 @@ func TestCompileKeywordParameterShapesFollowTypedParserSyntax(t *testing.T) {
 		{
 			name:      "enchant target",
 			kind:      parser.KeywordEnchant,
-			parameter: parser.NewEnchantTargetKeywordParameter(tokens[0].Span, parser.ObjectNounPlayer),
+			parameter: parser.NewEnchantTargetKeywordParameter(tokens[0].Span, parser.EnchantPredicate{Player: true}),
 			check: func(keyword CompiledKeyword) bool {
 				return keyword.ParameterKind == parser.KeywordParameterEnchantTarget &&
-					keyword.EnchantTarget == parser.ObjectNounPlayer
+					keyword.EnchantTarget.Known && keyword.EnchantTarget.Player
 			},
 		},
 	}

@@ -118,7 +118,7 @@ func validateObjectReference(ref ObjectReference, targets []TargetSpec, checkTar
 // owned by ObjectReference.Validate.
 func validateObjectReferenceTargetBounds(ref ObjectReference, targets []TargetSpec, checkTargets bool) error {
 	switch ref.Kind() {
-	case ObjectReferenceTargetPermanent, ObjectReferenceTargetStackObject, ObjectReferenceTargetAttachedPermanent:
+	case ObjectReferenceTargetPermanent, ObjectReferenceTargetStackObject, ObjectReferenceTargetAttachedPermanent, ObjectReferenceTargetObject:
 		return validateTargetReference(ref.TargetIndex(), targets, checkTargets)
 	}
 	return nil
@@ -230,6 +230,10 @@ func (p ReorderLibraryTop) validateCapturedTargetControllerReferences(targets []
 	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
 }
 
+func (p LookAtLibraryTop) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
+}
+
 func (p ShuffleLibrary) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
 }
@@ -272,6 +276,9 @@ func (p Search) validateCapturedTargetControllerReferences(targets []TargetSpec,
 }
 
 func (p Reveal) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	if p.Card.Kind != CardReferenceNone {
+		return nil
+	}
 	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
 		return err
 	}
@@ -489,7 +496,8 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 			return errors.New("object-counter count requires a valid counter kind")
 		}
 		return validateObjectReference(dynamic.Object, targets, checkTargets)
-	case DynamicAmountCountSelector:
+	case DynamicAmountCountSelector, DynamicAmountGreatestPowerInGroup, DynamicAmountGreatestToughnessInGroup, DynamicAmountGreatestManaValueInGroup,
+		DynamicAmountTotalPowerInGroup, DynamicAmountTotalToughnessInGroup:
 		return validateGroupReference(dynamic.Group, targets, checkTargets)
 	case DynamicAmountCountCardsInZone:
 		if dynamic.CardZone == zone.None || dynamic.CardZone == zone.Battlefield || dynamic.CardZone == zone.Stack {
@@ -510,6 +518,10 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 		if dynamic.ResultKey == "" {
 			return errors.New("chosen-number quantity requires a choice key")
 		}
+	case DynamicAmountDevotion:
+		if len(dynamic.Colors) == 0 && dynamic.ColorFrom == "" {
+			return errors.New("devotion quantity requires at least one color or a chosen-color source")
+		}
 	default:
 	}
 	return nil
@@ -520,6 +532,13 @@ func validatePositiveQuantity(quantity Quantity, targets []TargetSpec, checkTarg
 		return errors.New("counter amount must be positive")
 	}
 	return validateQuantity(quantity, targets, checkTargets)
+}
+
+func (p GroupSourceDamage) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateGroupReference(p.Group, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateQuantity(p.Amount, targets, checkTargets)
 }
 
 func (p Damage) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
@@ -605,11 +624,21 @@ func (p ReorderLibraryTop) validatePrimitive(targets []TargetSpec, checkTargets 
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p LookAtLibraryTop) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.PublishLinked == "" {
+		return errors.New("LookAtLibraryTop requires PublishLinked")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
 func (p ShuffleLibrary) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
 func (p Discard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.EntireHand && (p.Amount.IsDynamic() || p.Amount.Value() != 0) {
+		return errors.New("Discard with EntireHand must not set Amount")
+	}
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
@@ -632,6 +661,11 @@ func (p AddMana) validatePrimitive(targets []TargetSpec, checkTargets bool) erro
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
+	if p.Player.Exists {
+		if err := validatePlayerReference(p.Player.Val, targets, checkTargets); err != nil {
+			return err
+		}
+	}
 	if p.SpendRider.Exists {
 		if err := validateManaSpendRider(p.SpendRider.Val); err != nil {
 			return err
@@ -649,15 +683,44 @@ func validateManaSpendRider(rider ManaSpendRider) error {
 		if rider.Restriction != ManaSpendUnrestricted ||
 			rider.ChosenSubtypeFrom != "" ||
 			rider.SpellRuleEffect != RuleEffectNone ||
+			len(rider.SpellGainsKeywords) != 0 ||
 			len(rider.Effect.Sequence) == 0 {
 			return errors.New("commander-type mana spend rider has unsupported fields")
 		}
 	case ManaSpendCastChosenCreatureType:
 		if rider.Restriction != ManaSpendRestrictedToCondition ||
 			rider.ChosenSubtypeFrom != EntryTypeChoiceKey ||
-			rider.SpellRuleEffect != RuleEffectCantBeCountered ||
+			(rider.SpellRuleEffect != RuleEffectCantBeCountered && rider.SpellRuleEffect != RuleEffectNone) ||
+			len(rider.SpellGainsKeywords) != 0 ||
 			len(rider.Effect.Sequence) != 0 {
 			return errors.New("chosen-type mana spend rider has unsupported fields")
+		}
+		return nil
+	case ManaSpendCastOrActivateChosenCreatureType:
+		if rider.Restriction != ManaSpendRestrictedToCondition ||
+			rider.ChosenSubtypeFrom != EntryTypeChoiceKey ||
+			rider.SpellRuleEffect != RuleEffectNone ||
+			len(rider.SpellGainsKeywords) != 0 ||
+			len(rider.Effect.Sequence) != 0 {
+			return errors.New("chosen-type cast-or-activate mana spend rider has unsupported fields")
+		}
+		return nil
+	case ManaSpendCastLegendarySpell:
+		if rider.Restriction != ManaSpendRestrictedToCondition ||
+			rider.ChosenSubtypeFrom != "" ||
+			(rider.SpellRuleEffect != RuleEffectCantBeCountered && rider.SpellRuleEffect != RuleEffectNone) ||
+			len(rider.SpellGainsKeywords) != 0 ||
+			len(rider.Effect.Sequence) != 0 {
+			return errors.New("legendary-spell mana spend rider has unsupported fields")
+		}
+		return nil
+	case ManaSpendCastCreatureSpell:
+		if rider.Restriction != ManaSpendUnrestricted ||
+			rider.ChosenSubtypeFrom != "" ||
+			rider.SpellRuleEffect != RuleEffectNone ||
+			len(rider.Effect.Sequence) != 0 ||
+			len(rider.SpellGainsKeywords) == 0 {
+			return errors.New("creature-spell mana spend rider has unsupported fields")
 		}
 		return nil
 	default:
@@ -900,7 +963,7 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 
 func validSearchDestination(destination SearchDestination) bool {
 	switch destination.Zone {
-	case zone.Hand:
+	case zone.Hand, zone.Graveyard:
 		return destination.Position == SearchPositionUnspecified && !destination.EntersTapped
 	case zone.Battlefield:
 		return destination.Position == SearchPositionUnspecified
@@ -912,6 +975,16 @@ func validSearchDestination(destination SearchDestination) bool {
 }
 
 func (p Reveal) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Card.Kind != CardReferenceNone {
+		if p.Player.Kind() != PlayerReferenceNone ||
+			p.Recipient.Exists ||
+			p.PublishLinked != "" ||
+			p.Amount.IsDynamic() ||
+			p.Amount.Value() != 0 {
+			return errors.New("card reveal cannot set player, recipient, amount, or publish a link")
+		}
+		return validateCardReference(p.Card)
+	}
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
@@ -927,6 +1000,56 @@ func (p Reveal) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 		return errors.New("linked reveal must reveal exactly one card")
 	}
 	return nil
+}
+
+func (p ExileFromHand) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.Amount.IsDynamic() || p.Amount.Value() < 1 {
+		return errors.New("exile from hand requires a fixed positive amount")
+	}
+	if p.PublishLinked != "" && p.Amount.Value() != 1 {
+		return errors.New("linked exile from hand must exile exactly one card")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p PutFromHand) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.Amount.IsDynamic() || p.Amount.Value() < 1 {
+		return errors.New("put from hand requires a fixed positive amount")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p CastForFree) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Zone == zone.None {
+		return errors.New("cast for free requires a source zone")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p ReturnFromGraveyard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.Amount.IsDynamic() || p.Amount.Value() < 1 {
+		return errors.New("return from graveyard requires a fixed positive amount")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p MassReturnFromGraveyard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Destination != zone.Hand && p.Destination != zone.Battlefield {
+		return errors.New("mass return from graveyard requires a hand or battlefield destination")
+	}
+	if p.EntryTapped && p.Destination != zone.Battlefield {
+		return errors.New("mass return from graveyard tapped entry requires a battlefield destination")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
 func (p PutOnBattlefield) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
@@ -996,6 +1119,10 @@ func (p CreateToken) validatePrimitive(targets []TargetSpec, checkTargets bool) 
 }
 
 func (p ShufflePermanentIntoLibrary) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateObjectReference(p.Object, targets, checkTargets)
+}
+
+func (p PutPermanentOnLibrary) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validateObjectReference(p.Object, targets, checkTargets)
 }
 
@@ -1108,6 +1235,20 @@ func (p LoseLife) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p PlayerLosesGame) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Player.Kind() == PlayerReferenceNone {
+		return errors.New("PlayerLosesGame requires a Player reference")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p PlayerWinsGame) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Player.Kind() == PlayerReferenceNone {
+		return errors.New("PlayerWinsGame requires a Player reference")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
 func (p Exile) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.SourceSpell {
 		if p.Object.Kind() != ObjectReferenceNone || p.Group.Valid() || p.ExileLinkedKey != "" {
@@ -1137,10 +1278,27 @@ func (p Bounce) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 func (p MoveCard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	hasCard := p.Card.Kind != CardReferenceNone
 	hasPlayer := p.Player.Kind() != PlayerReferenceNone
-	if hasCard == hasPlayer {
-		return errors.New("move card requires exactly one of Card or Player")
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
+	set := 0
+	for _, present := range []bool{hasCard, hasPlayer, hasGroup} {
+		if present {
+			set++
+		}
 	}
-	if err := p.validateMoveReference(hasCard, targets, checkTargets); err != nil {
+	if set != 1 {
+		return errors.New("move card requires exactly one of Card, Player, or PlayerGroup")
+	}
+	if hasGroup {
+		if err := validatePlayerGroupReference(p.PlayerGroup); err != nil {
+			return err
+		}
+		if p.Amount.IsDynamic() || p.Amount.Value() != 0 {
+			return errors.New("player-group move must not set Amount")
+		}
+		if p.DestinationBottom {
+			return errors.New("player-group move must not request bottom placement")
+		}
+	} else if err := p.validateMoveReference(hasCard, targets, checkTargets); err != nil {
 		return err
 	}
 	if p.FromZone == zone.None || p.FromZone == zone.Battlefield || p.FromZone == zone.Stack {
@@ -1183,6 +1341,14 @@ func (p MoveCard) validateMoveReference(hasCard bool, targets []TargetSpec, chec
 		return errors.New("player-zone move must not request bottom placement")
 	}
 	return nil
+}
+
+func (p MoveCommander) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Destination == zone.None || p.Destination == zone.Battlefield ||
+		p.Destination == zone.Stack || p.Destination == zone.Command {
+		return errors.New("move commander requires a non-battlefield destination zone")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
 func validateTargetCardReference(ref CardReference, targets []TargetSpec, checkTargets bool) error {
@@ -1290,6 +1456,16 @@ func (p CounterObject) validatePrimitive(targets []TargetSpec, checkTargets bool
 	return validateTargetAllows(p.Object.TargetIndex(), TargetAllowStackObject, targets, checkTargets)
 }
 
+func (p ChooseNewTargets) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.Object.Kind() != ObjectReferenceTargetStackObject {
+		return errors.New("choose new targets requires a target stack object reference")
+	}
+	return validateTargetAllows(p.Object.TargetIndex(), TargetAllowStackObject, targets, checkTargets)
+}
+
 func (p Mill) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
@@ -1350,8 +1526,9 @@ func (p ImpulseExile) validatePrimitive(targets []TargetSpec, checkTargets bool)
 	if !p.Amount.IsDynamic() && p.Amount.Value() < 1 {
 		return errors.New("ImpulseExile requires a positive number of cards")
 	}
-	if p.Duration != DurationThisTurn {
-		return errors.New("ImpulseExile requires this-turn play permission")
+	if p.Duration != DurationThisTurn && p.Duration != DurationUntilEndOfTurn &&
+		p.Duration != DurationUntilEndOfYourNextTurn {
+		return errors.New("ImpulseExile requires a this-turn, until-end-of-turn, or until-end-of-your-next-turn play window")
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
@@ -1399,6 +1576,13 @@ func (p PhaseOut) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 
 func (p Regenerate) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validateObjectReference(p.Object, targets, checkTargets)
+}
+
+func (p Attach) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateObjectReference(p.Attachment, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateObjectReference(p.Target, targets, checkTargets)
 }
 
 func (p SkipStep) validatePrimitive(targets []TargetSpec, checkTargets bool) error {

@@ -228,6 +228,56 @@ func TestCompileSemanticTriggerPatterns(t *testing.T) {
 	}
 }
 
+func TestCompileSpellCastDisjunctionTriggerPatterns(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		source string
+		check  func(*testing.T, TriggerPattern)
+	}{
+		{
+			name:   "cast spell card-type disjunction",
+			source: "Whenever you cast an artifact or enchantment spell, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventSpellCast ||
+					!slices.Equal(pattern.CardSelection.RequiredTypesAny,
+						[]TriggerCardType{TriggerCardTypeArtifact, TriggerCardTypeEnchantment}) {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			name:   "cast spell subtype disjunction",
+			source: "Whenever you cast an Aura, Equipment, or Vehicle spell, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventSpellCast ||
+					!slices.Equal(pattern.CardSelection.SubtypesAny,
+						[]TriggerSubtype{types.Aura, types.Equipment, types.Vehicle}) {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(test.source, pipelineContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			trigger := compilation.Abilities[0].Trigger
+			if trigger == nil || trigger.Event == "" {
+				t.Fatalf("trigger = %#v", trigger)
+			}
+			eventText := test.source[trigger.Pattern.Span.Start.Offset:trigger.Pattern.Span.End.Offset]
+			if eventText != trigger.Event {
+				t.Fatalf("pattern span text = %q, raw diagnostic event = %q", eventText, trigger.Event)
+			}
+			test.check(t, trigger.Pattern)
+		})
+	}
+}
+
 func TestCompileSelfOrAnotherTriggerPattern(t *testing.T) {
 	t.Parallel()
 	compilation, diagnostics := compileSource(
@@ -316,6 +366,39 @@ func TestCompileActionTriggerPatterns(t *testing.T) {
 			},
 		},
 		{
+			source: "Whenever you create a token, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventTokenCreated ||
+					pattern.UnionEvent != TriggerEventUnknown ||
+					pattern.Player != TriggerPlayerYou ||
+					!pattern.SubjectSelection.TokenOnly {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			source: "Whenever you create or sacrifice a token, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventTokenCreated ||
+					pattern.UnionEvent != TriggerEventPermanentSacrificed ||
+					pattern.Player != TriggerPlayerYou ||
+					!pattern.SubjectSelection.TokenOnly {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			source: "Whenever this creature attacks or becomes the target of a spell, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventObjectBecameTarget ||
+					pattern.UnionEvent != TriggerEventAttackerDeclared ||
+					pattern.Source != TriggerSourceSelf ||
+					pattern.StackObject != TriggerStackObjectSpell {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
 			source: "Whenever an opponent activates an ability of a creature or land that isn't a mana ability, draw a card.",
 			check: func(t *testing.T, pattern TriggerPattern) {
 				if pattern.Event != TriggerEventAbilityActivated ||
@@ -347,6 +430,17 @@ func TestCompileActionTriggerPatterns(t *testing.T) {
 				}
 			},
 		},
+		{
+			source: "At the beginning of your next upkeep, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventBeginningOfStep ||
+					pattern.Step != TriggerStepUpkeep ||
+					pattern.Controller != ControllerYou ||
+					!pattern.NextOccurrence {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
@@ -360,12 +454,26 @@ func TestCompileActionTriggerPatterns(t *testing.T) {
 	}
 }
 
+func TestCompileEnterOrDiesUnionTriggerPattern(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource(
+		"When this creature enters or dies, draw a card.", pipelineContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	pattern := compilation.Abilities[0].Trigger.Pattern
+	if pattern.Event != TriggerEventPermanentEnteredBattlefield ||
+		pattern.UnionEvent != TriggerEventPermanentDied ||
+		pattern.Source != TriggerSourceSelf {
+		t.Fatalf("pattern = %#v", pattern)
+	}
+}
+
 func TestCompileSemanticTriggerPatternsFailClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
 		"Whenever this creature becomes the target of a spell or ability for the first time each turn, draw a card.",
 		"Whenever creature you control becomes tapped, draw a card.",
-		"At the beginning of your next upkeep, draw a card.",
 		"At the beginning of your declare attackers step, draw a card.",
 		"At the beginning of the upkeep of enchanted permanent's controller, draw a card.",
 	} {

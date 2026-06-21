@@ -144,6 +144,9 @@ type StackObjectView struct {
 func (o PlayerObservation) Players() []PlayerView {
 	views := make([]PlayerView, 0, len(o.g.Players))
 	for _, player := range o.g.Players {
+		if o.g.Mode == game.RunModeGoldfish && player.Eliminated {
+			continue
+		}
 		views = append(views, playerView(player))
 	}
 	return views

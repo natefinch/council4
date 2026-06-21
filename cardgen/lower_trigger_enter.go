@@ -417,6 +417,16 @@ func triggerBodySpan(
 			}
 		}
 	}
+	// A folded "That token gains <keyword>." copy-token rider sits in a sentence
+	// after the create effect, so widen the body span to cover its rider span;
+	// otherwise the granted keyword falls outside the body and the keyword-span
+	// reconciliation rejects the trigger body.
+	for i := range effects {
+		if len(effects[i].TokenCopyGrantKeywords) != 0 &&
+			effects[i].TokenCopyGrantRiderSpan.End.Offset > bodySpan.End.Offset {
+			bodySpan.End = effects[i].TokenCopyGrantRiderSpan.End
+		}
+	}
 	return bodySpan
 }
 
@@ -528,9 +538,24 @@ func prepareTriggerBody(
 			return preparedTriggerBody{}, false
 		}
 		effect := body.Content.Effects[0]
+		originalSpan := effect.Span
 		effect.Span.Start = syntax.Tokens[bodyStart].Span.Start
 		effect.Text = ability.Text[effect.Span.Start.Offset-ability.Span.Start.Offset : effect.Span.End.Offset-ability.Span.Start.Offset]
 		body.Content.Effects[0] = effect
+		// A search/tutor group ("search ..., reveal ..., put ..., then shuffle")
+		// models every grouped effect with the same single-sentence span. Moving
+		// only the leading effect's start past the intervening condition would
+		// desync the group, so move every effect that shared the leading effect's
+		// original span to keep the group's same-span invariant intact.
+		for i := 1; i < len(body.Content.Effects); i++ {
+			if body.Content.Effects[i].Span != originalSpan {
+				continue
+			}
+			grouped := body.Content.Effects[i]
+			grouped.Span.Start = effect.Span.Start
+			grouped.Text = effect.Text
+			body.Content.Effects[i] = grouped
+		}
 		body.Span.Start = effect.Span.Start
 		body.Text = titleFirst(
 			ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
@@ -623,10 +648,19 @@ func lowerPermanentZoneChangeTrigger(
 	}
 	// Enter, dies, and zone-change bodies all lower through the same shared
 	// content path, so they are gated identically here. The ability-word label
-	// (e.g. "Chainsword —") is purely cosmetic (CR 207.2c) and is excluded from
-	// the body span by lowerTriggeredAbilityKind, so any label — whitelisted or
-	// not — passes through without affecting the lowered body. Modes and empty
+	// (e.g. "Chainsword —" or "Landfall —") is purely cosmetic (CR 207.2c) and
+	// is excluded from the body span by lowerTriggeredAbilityKind, so any label
+	// — whitelisted or not — passes through without affecting the lowered body.
+	// A modal "choose one —" body routes through the shared modal-content
+	// lowering, exactly like spell-cast triggers; non-modal mode lists and empty
 	// effect lists remain unsupported and fail closed.
+	if modalTriggerBody(ability) {
+		content, diagnostic := lowerModalTriggerBody(cardName, ability, syntax, pattern.Event)
+		if diagnostic != nil {
+			return game.TriggeredAbility{}, diagnostic
+		}
+		return permanentZoneChangeTriggeredAbility(ability, ability.Optional, triggerType, &pattern, &intervening, content), nil
+	}
 	if len(ability.Content.Effects) == 0 || len(ability.Content.Modes) != 0 {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary,
 			"the executable source backend does not support this permanent zone-change trigger body")
@@ -653,7 +687,9 @@ func lowerPermanentZoneChangeInterveningCondition(
 	}
 	if trigger != nil && trigger.Condition != nil {
 		switch trigger.Condition.Predicate {
-		case compiler.ConditionPredicateObjectMatches, compiler.ConditionPredicateObjectExists:
+		case compiler.ConditionPredicateObjectMatches,
+			compiler.ConditionPredicateObjectExists,
+			compiler.ConditionPredicateEventSubjectNameUnique:
 			if condition, ok := lowerCondition(*trigger.Condition, conditionContextInterveningTrigger); ok {
 				return enterInterveningCondition{condition: opt.Val(condition)}, true
 			}
@@ -726,6 +762,23 @@ func lowerCastTrigger(
 	if !ok {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
 			"the executable source backend does not support this semantic spell-cast trigger condition")
+	}
+	if modalTriggerBody(ability) {
+		content, diagnostic := lowerModalTriggerBody(cardName, ability, syntax, pattern.Event)
+		if diagnostic != nil {
+			return game.TriggeredAbility{}, diagnostic
+		}
+		return game.TriggeredAbility{
+			Text: ability.Text,
+			Trigger: game.TriggerCondition{
+				Type:                 game.TriggerWhenever,
+				Pattern:              pattern,
+				InterveningIf:        interveningIfText(ability.Trigger),
+				InterveningCondition: intervening,
+			},
+			Optional: ability.Optional,
+			Content:  content,
+		}, nil
 	}
 	if triggerContentUnsupported(ability) {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",

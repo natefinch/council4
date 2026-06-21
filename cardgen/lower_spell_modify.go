@@ -12,6 +12,43 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+// lowerEachSourceDamageSpell lowers an "each <group> deals N damage to its
+// controller/owner" effect ("Each creature deals 1 damage to its controller.")
+// onto a GroupSourceDamage primitive: every member of the battlefield group is
+// the damage source dealing the amount to the player who controls (or owns) it.
+// It fails closed (ok=false) for every other shape, leaving the standard damage
+// paths to handle their own effects.
+func lowerEachSourceDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectDealDamage ||
+		effect.EachSourceDamageRecipient == parser.DamageRecipientReferenceNone ||
+		effect.Negated ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 {
+		return game.AbilityContent{}, false
+	}
+	amount, ok := groupDamageAmount(effect.Amount)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	group, ok := damageGroupRecipient(effect.EachSourceDamageGroup)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	primitive := game.GroupSourceDamage{
+		Group:   group,
+		Amount:  amount,
+		ToOwner: effect.EachSourceDamageRecipient == parser.DamageRecipientReferenceOwner,
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{Primitive: primitive}},
+	}.Ability(), true
+}
+
 func lowerGroupDamageSpell(
 	_ string,
 	ctx contentCtx,
@@ -111,17 +148,20 @@ func groupDamageAmount(amount compiler.CompiledAmount) (game.Quantity, bool) {
 	}
 }
 
-// groupDynamicDamageAmount resolves a dynamic count group-damage amount ("deals
-// X damage to each creature, where X is the number of creatures on the
+// groupDynamicDamageAmount resolves a dynamic group-damage amount ("deals X
+// damage to each creature, where X is the number of creatures on the
 // battlefield.", "Gates Ablaze deals X damage to each creature, where X is the
-// number of Gates you control.") onto a runtime count Quantity. The count is a
-// battlefield selector group resolved once and dealt to every recipient, so it
-// reuses lowerDynamicAmount's count lowering. It accepts only the count form
-// (DynamicAmountCount); the source-power form ("equal to its power") needs a
-// per-object reference that has no single group-wide value, and every other
-// dynamic kind stays rejected, keeping the group path fail-closed.
+// number of Gates you control.", "Fanatic of Mogis deals damage to each
+// opponent equal to your devotion to red.") onto a runtime Quantity. The amount
+// is resolved once against the game state and dealt to every recipient, so it
+// reuses lowerDynamicAmount. It accepts only group-wide amount kinds whose value
+// is shared by every recipient (count selectors, devotion, domain, controller
+// life, opponent count, and greatest-in-group); the per-object forms ("equal to
+// its power", counters on a referenced object) need a per-object reference that
+// has no single group-wide value, so they stay rejected and the group path
+// remains fail-closed.
 func groupDynamicDamageAmount(amount compiler.CompiledAmount) (game.Quantity, bool) {
-	if amount.DynamicKind != compiler.DynamicAmountCount {
+	if !groupWideDynamicAmountKind(amount.DynamicKind) {
 		return game.Quantity{}, false
 	}
 	dynamic, ok := lowerDynamicAmount(amount, game.SourcePermanentReference())
@@ -131,19 +171,52 @@ func groupDynamicDamageAmount(amount compiler.CompiledAmount) (game.Quantity, bo
 	return game.Dynamic(dynamic), true
 }
 
+// groupWideDynamicAmountKind reports whether a dynamic amount kind resolves to a
+// single game-state value that every member of a damage or life-loss group
+// shares. These amounts are computed once and reused for every recipient. It
+// fails closed for the per-object forms (source power/toughness/mana value and
+// counters on a referenced object), which have no single group-wide value.
+func groupWideDynamicAmountKind(kind compiler.DynamicAmountKind) bool {
+	switch kind {
+	case compiler.DynamicAmountCount,
+		compiler.DynamicAmountControllerLife,
+		compiler.DynamicAmountOpponentCount,
+		compiler.DynamicAmountBasicLandTypes,
+		compiler.DynamicAmountDevotion,
+		compiler.DynamicAmountGreatestPower,
+		compiler.DynamicAmountGreatestToughness,
+		compiler.DynamicAmountGreatestManaValue,
+		compiler.DynamicAmountTotalPower,
+		compiler.DynamicAmountTotalToughness:
+		return true
+	default:
+		return false
+	}
+}
+
 // groupDamageRecipientFor resolves one fixed group-damage recipient selector
 // onto a runtime DamageRecipient: the all-players and opponents player groups,
 // or a filtered battlefield permanent group. It fails closed for any selector
 // the executable backend cannot damage as a group so unsupported recipients stay
 // rejected.
 func groupDamageRecipientFor(sel compiler.CompiledSelector) (game.DamageRecipient, bool) {
+	return groupDamageRecipientForExcluding(sel, game.SourcePermanentReference())
+}
+
+// groupDamageRecipientForExcluding resolves one group-damage recipient selector
+// like groupDamageRecipientFor, but excludes the supplied object from an "other"
+// permanent group instead of the spell's own source permanent. It backs the
+// source-power group damage shape ("Target creature you control deals damage
+// equal to its power to each other creature and each opponent."), where "each
+// other creature" excludes the dealing target rather than the spell.
+func groupDamageRecipientForExcluding(sel compiler.CompiledSelector, exclude game.ObjectReference) (game.DamageRecipient, bool) {
 	switch {
 	case sel.Kind == compiler.SelectorOpponent && !sel.Other:
 		return game.PlayerGroupDamageRecipient(game.OpponentsReference()), true
 	case sel.Kind == compiler.SelectorPlayer && !sel.Other:
 		return game.PlayerGroupDamageRecipient(game.AllPlayersReference()), true
 	default:
-		group, ok := damageGroupRecipient(sel)
+		group, ok := damageGroupRecipientExcluding(sel, exclude)
 		if !ok {
 			return game.DamageRecipient{}, false
 		}
@@ -157,12 +230,19 @@ func groupDamageRecipientFor(sel compiler.CompiledSelector) (game.DamageRecipien
 // exactGroupDamagePermanentRecipientText reconstruction so the executable
 // backend and the exactness gate accept exactly the same filtered recipients.
 func damageGroupRecipient(sel compiler.CompiledSelector) (game.GroupReference, bool) {
+	return damageGroupRecipientExcluding(sel, game.SourcePermanentReference())
+}
+
+// damageGroupRecipientExcluding maps a compiled group-damage recipient selector
+// onto a battlefield group reference like damageGroupRecipient, but excludes the
+// supplied object from an "other" group instead of the spell's own source.
+func damageGroupRecipientExcluding(sel compiler.CompiledSelector, exclude game.ObjectReference) (game.GroupReference, bool) {
 	selection, ok := damageGroupSelection(sel)
 	if !ok {
 		return game.GroupReference{}, false
 	}
 	if sel.Other {
-		return game.BattlefieldGroupExcluding(selection, game.SourcePermanentReference()), true
+		return game.BattlefieldGroupExcluding(selection, exclude), true
 	}
 	return game.BattlefieldGroup(selection), true
 }
@@ -861,6 +941,7 @@ func lowerSourcePowerDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		effect.Negated ||
 		effect.Context != parser.EffectContextTarget ||
 		effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower ||
+		len(effect.DamageRecipientSelectors) != 0 ||
 		len(ctx.content.References) != 1 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
@@ -921,6 +1002,71 @@ func lowerSourcePowerDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	default:
 		return game.AbilityContent{}, false
 	}
+}
+
+// lowerSourcePowerGroupDamageSpell lowers the source-power group damage shape in
+// which a chosen target creature deals damage equal to its own power to a
+// compound group of recipients ("Target creature you control deals damage equal
+// to its power to each other creature and each opponent."). The single target is
+// the damage source; its power feeds the dynamic amount and it is the damage
+// source so its keywords (deathtouch, lifelink) apply. Each recipient group in
+// the pair becomes its own Damage instruction, and an "each other creature"
+// group excludes the dealing target rather than the spell's own source. It fails
+// closed (ok=false) for every other shape, leaving the single-target source-power
+// and group-damage paths unchanged.
+func lowerSourcePowerGroupDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectDealDamage ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextTarget ||
+		effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower ||
+		len(effect.DamageRecipientSelectors) == 0 ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.References) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 {
+		return game.AbilityContent{}, false
+	}
+	powerRef := ctx.content.References[0]
+	if powerRef.Kind != compiler.ReferencePronoun ||
+		powerRef.Pronoun != compiler.ReferencePronounIts ||
+		powerRef.Binding != compiler.ReferenceBindingTarget ||
+		powerRef.Occurrence != 0 ||
+		powerRef.Span != effect.Amount.ReferenceSpan {
+		return game.AbilityContent{}, false
+	}
+	sourceRef := game.TargetPermanentReference(0)
+	dynamic, ok := lowerDynamicAmount(effect.Amount, sourceRef)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	targetSpec, ok := damageTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	instructions := make([]game.Instruction, 0, len(effect.DamageRecipientSelectors))
+	for _, sel := range effect.DamageRecipientSelectors {
+		recipient, ok := groupDamageRecipientForExcluding(sel, sourceRef)
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		instructions = append(instructions, game.Instruction{
+			Primitive: game.Damage{
+				Amount:       game.Dynamic(dynamic),
+				Recipient:    recipient,
+				DamageSource: opt.Val(sourceRef),
+			},
+		})
+	}
+	return game.Mode{
+		Targets:  []game.TargetSpec{targetSpec},
+		Sequence: instructions,
+	}.Ability(), true
 }
 
 // lowerEachOfTargetsDamageSpell lowers "deals N damage to each of <cardinality>
@@ -1496,6 +1642,51 @@ func lowerReferencedFixedModifyPT(ctx contentCtx) (game.AbilityContent, *shared.
 	}.Ability(), nil
 }
 
+// lowerDoublePTSpell lowers a power/toughness doubling effect over a creature
+// group ("double the power and toughness of each creature you control until end
+// of turn", Unnatural Growth) into an until-end-of-turn continuous effect whose
+// DoublePower/DoubleToughness flags add each affected creature's own current
+// value back into itself (CR 107.16). Only the group form is supported; targets,
+// references, conditions, keywords, and modes fail closed.
+func lowerDoublePTSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported double power/toughness spell",
+			"the executable source backend supports only doubling the power and/or toughness of a creature group until end of turn",
+		)
+	}
+	effect := &ctx.content.Effects[0]
+	if len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		effect.Negated ||
+		effect.Duration != compiler.DurationUntilEndOfTurn ||
+		(!effect.DoublePower && !effect.DoubleToughness) {
+		return unsupported()
+	}
+	group, ok := resolvingStaticSubjectGroup(effect)
+	if !ok {
+		return unsupported()
+	}
+	continuous := game.ContinuousEffect{
+		Layer:           game.LayerPowerToughnessModify,
+		Group:           group,
+		DoublePower:     effect.DoublePower,
+		DoubleToughness: effect.DoubleToughness,
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.ApplyContinuous{
+				ContinuousEffects: []game.ContinuousEffect{continuous},
+				Duration:          game.DurationUntilEndOfTurn,
+			},
+		}},
+	}.Ability(), nil
+}
+
 func lowerFixedGroupModifyPTSpell(
 	ctx contentCtx,
 	effect *compiler.CompiledEffect,
@@ -1507,9 +1698,6 @@ func lowerFixedGroupModifyPTSpell(
 			"the executable source backend supports exact fixed group power/toughness changes and linked all-creatures -X/-X until end of turn",
 		)
 	}
-	variableX := effect.Amount.DynamicKind == compiler.DynamicAmountNone &&
-		effect.PowerDelta.VariableX &&
-		effect.ToughnessDelta.VariableX
 	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.References) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -1517,28 +1705,16 @@ func lowerFixedGroupModifyPTSpell(
 		len(ctx.content.Modes) != 0 ||
 		!effect.Exact ||
 		effect.Negated ||
-		effect.Duration != compiler.DurationUntilEndOfTurn ||
-		effect.Amount.DynamicKind != compiler.DynamicAmountNone ||
-		(!variableX && (!effect.PowerDelta.Known || !effect.ToughnessDelta.Known)) ||
-		(variableX && (effect.StaticSubject != compiler.StaticSubjectAllCreatures ||
-			!effect.PowerDelta.Negative ||
-			!effect.ToughnessDelta.Negative)) {
+		effect.Duration != compiler.DurationUntilEndOfTurn {
 		return unsupported()
 	}
 	group, ok := resolvingStaticSubjectGroup(effect)
 	if !ok {
 		return unsupported()
 	}
-	continuous := game.ContinuousEffect{
-		Layer:          game.LayerPowerToughnessModify,
-		Group:          group,
-		PowerDelta:     compiledSignedAmountValue(effect.PowerDelta),
-		ToughnessDelta: compiledSignedAmountValue(effect.ToughnessDelta),
-	}
-	if variableX {
-		dynamic := game.DynamicAmount{Kind: game.DynamicAmountX, Multiplier: -1}
-		continuous.PowerDeltaDynamic = opt.Val(dynamic)
-		continuous.ToughnessDeltaDynamic = opt.Val(dynamic)
+	continuous, ok := groupModifyPTContinuousEffect(effect, group)
+	if !ok {
+		return unsupported()
 	}
 	return game.Mode{
 		Sequence: []game.Instruction{{
@@ -1548,6 +1724,54 @@ func lowerFixedGroupModifyPTSpell(
 			},
 		}},
 	}.Ability(), nil
+}
+
+// groupModifyPTContinuousEffect builds the LayerPowerToughnessModify continuous
+// effect for a group power/toughness change over group. It models three shapes:
+// a fixed delta ("+1/+1"), the linked all-creatures -X/-X form (the variable
+// spell "X" applied to every creature), and a dynamic battlefield-counted
+// amount ("+X/+X … where X is the number of creatures you control",
+// "+X/+X … where X is the greatest power among creatures you control", or a
+// "for each" multiplier). It returns ok=false for any amount the dynamic
+// machinery cannot render, keeping inexpressible forms fail-closed.
+func groupModifyPTContinuousEffect(
+	effect *compiler.CompiledEffect,
+	group game.GroupReference,
+) (game.ContinuousEffect, bool) {
+	continuous := game.ContinuousEffect{
+		Layer: game.LayerPowerToughnessModify,
+		Group: group,
+	}
+	variableX := effect.Amount.DynamicKind == compiler.DynamicAmountNone &&
+		effect.PowerDelta.VariableX &&
+		effect.ToughnessDelta.VariableX
+	switch {
+	case variableX:
+		if effect.StaticSubject != compiler.StaticSubjectAllCreatures ||
+			!effect.PowerDelta.Negative ||
+			!effect.ToughnessDelta.Negative {
+			return game.ContinuousEffect{}, false
+		}
+		dynamic := game.DynamicAmount{Kind: game.DynamicAmountX, Multiplier: -1}
+		continuous.PowerDeltaDynamic = opt.Val(dynamic)
+		continuous.ToughnessDeltaDynamic = opt.Val(dynamic)
+	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
+		power, toughness, ok := referencedModifyPTQuantities(effect, game.SourcePermanentReference())
+		if !ok {
+			return game.ContinuousEffect{}, false
+		}
+		continuous.PowerDelta = power.Value()
+		continuous.ToughnessDelta = toughness.Value()
+		continuous.PowerDeltaDynamic = power.DynamicAmount()
+		continuous.ToughnessDeltaDynamic = toughness.DynamicAmount()
+	default:
+		if !effect.PowerDelta.Known || !effect.ToughnessDelta.Known {
+			return game.ContinuousEffect{}, false
+		}
+		continuous.PowerDelta = compiledSignedAmountValue(effect.PowerDelta)
+		continuous.ToughnessDelta = compiledSignedAmountValue(effect.ToughnessDelta)
+	}
+	return continuous, true
 }
 
 func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
@@ -1693,7 +1917,7 @@ func lowerGroupTemporaryKeywordSpell(
 		effect.Duration != compiler.DurationUntilEndOfTurn {
 		return unsupported()
 	}
-	keywords, ok := mixedStaticKeywords(ctx.content.Keywords)
+	keywords, abilities, ok := partitionTemporaryKeywords(ctx.content.Keywords)
 	if !ok {
 		return unsupported()
 	}
@@ -1705,14 +1929,122 @@ func lowerGroupTemporaryKeywordSpell(
 		Sequence: []game.Instruction{{
 			Primitive: game.ApplyContinuous{
 				ContinuousEffects: []game.ContinuousEffect{{
-					Layer:       game.LayerAbility,
-					Group:       group,
-					AddKeywords: keywords,
+					Layer:        game.LayerAbility,
+					Group:        group,
+					AddKeywords:  keywords,
+					AddAbilities: abilities,
 				}},
 				Duration: game.DurationUntilEndOfTurn,
 			},
 		}},
 	}.Ability(), nil
+}
+
+// lowerTemporaryKeywordLossSpell lowers a resolving keyword removal until end of
+// turn ("Permanents your opponents control lose hexproof and indestructible
+// until end of turn.", "Target creature loses flying until end of turn.") into a
+// single game.ApplyContinuous whose ability layer removes the named keywords from
+// the affected subject. It mirrors lowerTemporaryKeywordSpell's grant path but
+// emits RemoveKeywords. The subject may be a never-resolving creature or
+// permanent group, a single targeted permanent, a referenced object, or the
+// source permanent. It fails closed for parameterized or quoted abilities (only
+// simple keywords reduce to RemoveKeywords) and any richer shape.
+func lowerTemporaryKeywordLossSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported keyword or ability loss",
+			"the executable source backend supports only exact non-parameterized keyword removal from one target permanent or a controlled/opponent group until end of turn",
+		)
+	}
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		effect.Kind != compiler.EffectLose ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Duration != compiler.DurationUntilEndOfTurn {
+		return unsupported()
+	}
+	keywords, ok := mixedStaticKeywords(ctx.content.Keywords)
+	if !ok {
+		return unsupported()
+	}
+	continuous := game.ContinuousEffect{
+		Layer:          game.LayerAbility,
+		RemoveKeywords: keywords,
+	}
+	if effect.StaticSubject != compiler.StaticSubjectNone {
+		if len(ctx.content.Targets) != 0 || len(ctx.content.References) != 0 {
+			return unsupported()
+		}
+		group, ok := resolvingStaticSubjectGroup(&effect)
+		if !ok {
+			return unsupported()
+		}
+		continuous.Group = group
+		return game.Mode{
+			Sequence: []game.Instruction{{
+				Primitive: game.ApplyContinuous{
+					ContinuousEffects: []game.ContinuousEffect{continuous},
+					Duration:          game.DurationUntilEndOfTurn,
+				},
+			}},
+		}.Ability(), nil
+	}
+	referencedObject := len(ctx.content.Targets) == 0 &&
+		len(ctx.content.References) == 1 &&
+		ctx.content.References[0].Binding == compiler.ReferenceBindingTarget &&
+		effect.Context == parser.EffectContextReferencedObject
+	sourceSubject := len(ctx.content.Targets) == 0 &&
+		len(ctx.content.References) == 1 &&
+		ctx.content.References[0].Binding == compiler.ReferenceBindingSource &&
+		effect.Context == parser.EffectContextSource
+	targetSubject := len(ctx.content.Targets) == 1 &&
+		len(ctx.content.References) == 0 &&
+		effect.Context == parser.EffectContextTarget &&
+		temporaryKeywordTarget(ctx.content.Targets[0])
+	if !targetSubject && !referencedObject && !sourceSubject {
+		return unsupported()
+	}
+	var object game.ObjectReference
+	var target opt.V[game.TargetSpec]
+	switch {
+	case targetSubject:
+		spec, ok := permanentTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return unsupported()
+		}
+		target = opt.Val(spec)
+		object = game.TargetPermanentReference(0)
+	case sourceSubject:
+		object, ok = lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+			AllowSource:      true,
+			SourceCardObject: true,
+		})
+		if !ok {
+			return unsupported()
+		}
+	default:
+		object, ok = lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowTarget: true})
+		if !ok {
+			return unsupported()
+		}
+	}
+	mode := game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.ApplyContinuous{
+				Object:            opt.Val(object),
+				ContinuousEffects: []game.ContinuousEffect{continuous},
+				Duration:          game.DurationUntilEndOfTurn,
+			},
+		}},
+	}
+	if target.Exists {
+		mode.Targets = []game.TargetSpec{target.Val}
+	}
+	return mode.Ability(), nil
 }
 
 // lowerTemporaryPTKeywordSpell lowers the single-subject combined buff
@@ -1800,35 +2132,56 @@ func temporaryKeywordTarget(target compiler.CompiledTarget) bool {
 // deltas. It fails closed for any richer shape.
 func lowerGroupTemporaryPTKeywordSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 2 ||
-		ctx.content.Effects[0].Kind != compiler.EffectModifyPT ||
-		ctx.content.Effects[1].Kind != compiler.EffectGain ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.References) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, false
 	}
-	modifyEffect := ctx.content.Effects[0]
-	keywordEffect := ctx.content.Effects[1]
+	// The two clauses appear in either order: "creatures you control get +N/+N
+	// and gain trample …" (modify first) or "creatures you control gain trample
+	// and get +N/+N …" (keyword first). The subject-bearing clause carries the
+	// static group subject; the other inherits it as the prior subject.
+	var modifyEffect, keywordEffect compiler.CompiledEffect
+	switch {
+	case ctx.content.Effects[0].Kind == compiler.EffectModifyPT &&
+		ctx.content.Effects[1].Kind == compiler.EffectGain:
+		modifyEffect = ctx.content.Effects[0]
+		keywordEffect = ctx.content.Effects[1]
+	case ctx.content.Effects[0].Kind == compiler.EffectGain &&
+		ctx.content.Effects[1].Kind == compiler.EffectModifyPT:
+		keywordEffect = ctx.content.Effects[0]
+		modifyEffect = ctx.content.Effects[1]
+	default:
+		return game.AbilityContent{}, false
+	}
 	if !modifyEffect.Exact ||
 		!keywordEffect.Exact ||
 		modifyEffect.Negated ||
 		keywordEffect.Negated ||
-		modifyEffect.StaticSubject == compiler.StaticSubjectNone ||
-		keywordEffect.StaticSubject != compiler.StaticSubjectNone ||
-		keywordEffect.Context != parser.EffectContextPriorSubject ||
 		modifyEffect.Duration != compiler.DurationUntilEndOfTurn ||
-		keywordEffect.Duration != compiler.DurationUntilEndOfTurn ||
-		modifyEffect.Amount.DynamicKind != compiler.DynamicAmountNone ||
-		!modifyEffect.PowerDelta.Known ||
-		!modifyEffect.ToughnessDelta.Known {
+		keywordEffect.Duration != compiler.DurationUntilEndOfTurn {
+		return game.AbilityContent{}, false
+	}
+	// Exactly one clause names the affected group; the other inherits it.
+	subjectEffect := &modifyEffect
+	if modifyEffect.StaticSubject == compiler.StaticSubjectNone {
+		subjectEffect = &keywordEffect
+	}
+	if subjectEffect.StaticSubject == compiler.StaticSubjectNone ||
+		(modifyEffect.StaticSubject != compiler.StaticSubjectNone &&
+			keywordEffect.StaticSubject != compiler.StaticSubjectNone) {
 		return game.AbilityContent{}, false
 	}
 	keywords, ok := mixedStaticKeywords(ctx.content.Keywords)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
-	group, ok := resolvingStaticSubjectGroup(&modifyEffect)
+	group, ok := resolvingStaticSubjectGroup(subjectEffect)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	modifyContinuous, ok := groupModifyPTContinuousEffect(&modifyEffect, group)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
@@ -1836,12 +2189,7 @@ func lowerGroupTemporaryPTKeywordSpell(ctx contentCtx) (game.AbilityContent, boo
 		Sequence: []game.Instruction{{
 			Primitive: game.ApplyContinuous{
 				ContinuousEffects: []game.ContinuousEffect{
-					{
-						Layer:          game.LayerPowerToughnessModify,
-						Group:          group,
-						PowerDelta:     compiledSignedAmountValue(modifyEffect.PowerDelta),
-						ToughnessDelta: compiledSignedAmountValue(modifyEffect.ToughnessDelta),
-					},
+					modifyContinuous,
 					{
 						Layer:       game.LayerAbility,
 						Group:       group,
@@ -1946,7 +2294,115 @@ func lowerFixedBounceSpell(
 	}.Ability(), nil
 }
 
-// lowerMultiTargetBounceSpell lowers a battlefield bounce whose single permanent
+// lowerSpellBounce lowers "Return target spell to its owner's hand." and the
+// compound "Return target spell or <permanent filter> to its owner's hand."
+// (Sink into Stupor, Venser, Unsubstantiate, Press the Enemy). The parser folds
+// the compound into a spell selector marked inexact, carrying the permanent
+// side's card-type filter (e.g. "creature", "nonland permanent") and shared
+// controller. The spell-only form is an exact spell selector with no folded
+// permanent filter. It emits a combined stack-object/permanent target so the
+// chosen target may be either the spell on the stack or a matching permanent,
+// and one Bounce per slot returns whichever was chosen to its owner's hand.
+func lowerSpellBounce(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectReturn ||
+		effect.Negated || effect.Optional || ctx.optional ||
+		effect.Context != parser.EffectContextController ||
+		effect.ToZone != zone.Hand {
+		return game.AbilityContent{}, false
+	}
+	target := ctx.content.Targets[0]
+	if target.Selector.Kind != compiler.SelectorSpell ||
+		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0) {
+		return game.AbilityContent{}, false
+	}
+	spec, ok := spellBounceTargetSpec(target)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	instructions := make([]game.Instruction, 0, spec.MaxTargets)
+	for i := 0; i < spec.MaxTargets; i++ {
+		instructions = append(instructions, game.Instruction{
+			Primitive: game.Bounce{Object: game.TargetObjectReference(i)},
+		})
+	}
+	return game.Mode{
+		Targets:  []game.TargetSpec{spec},
+		Sequence: instructions,
+	}.Ability(), true
+}
+
+// spellBounceTargetSpec builds the combined target spec for a spell bounce. An
+// exact spell selector ("target spell") accepts only stack spells; an inexact
+// one is the "spell or <permanent>" fold whose RequiredTypesAny/ExcludedTypes
+// describe the permanent alternative, so it additionally accepts permanents
+// matching that type filter. Only the controller filter and a permanent-side
+// card-type filter are expressible; any other selector qualifier fails closed.
+func spellBounceTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
+	selector := target.Selector
+	if target.Cardinality.Max != 1 || target.Cardinality.Min < 0 || target.Cardinality.Min > 1 {
+		return game.TargetSpec{}, false
+	}
+	if selector.Another || selector.Other ||
+		selector.Attacking || selector.Blocking ||
+		selector.Tapped || selector.Untapped ||
+		selector.Colorless || selector.Multicolored ||
+		selector.BasicLandType || selector.MatchCounter ||
+		selector.MatchManaValue || selector.MatchPower || selector.MatchToughness ||
+		selector.Keyword != parser.KeywordUnknown ||
+		selector.ExcludedKeyword != parser.KeywordUnknown ||
+		selector.Zone != zone.None ||
+		len(selector.Alternatives) != 0 ||
+		len(selector.Supertypes()) != 0 ||
+		len(selector.ExcludedSupertypes()) != 0 ||
+		len(selector.SubtypesAny()) != 0 ||
+		len(selector.ExcludedSubtypes()) != 0 ||
+		len(selector.ColorsAny()) != 0 ||
+		len(selector.ExcludedColors()) != 0 {
+		return game.TargetSpec{}, false
+	}
+	required := selector.RequiredTypesAny()
+	excluded := selector.ExcludedTypes()
+	predicate := game.TargetPredicate{
+		StackObjectKinds: []game.StackObjectKind{game.StackSpell},
+	}
+	allow := game.TargetAllowStackObject
+	if target.Exact {
+		if len(required) != 0 || len(excluded) != 0 {
+			return game.TargetSpec{}, false
+		}
+	} else {
+		allow |= game.TargetAllowPermanent
+		predicate.PermanentTypes = append([]types.Card(nil), required...)
+		predicate.ExcludedTypes = append([]types.Card(nil), excluded...)
+	}
+	switch selector.Controller {
+	case compiler.ControllerAny:
+	case compiler.ControllerYou:
+		predicate.Controller = game.ControllerYou
+	case compiler.ControllerOpponent:
+		predicate.Controller = game.ControllerOpponent
+	case compiler.ControllerNotYou:
+		predicate.Controller = game.ControllerNotYou
+	default:
+		return game.TargetSpec{}, false
+	}
+	return game.TargetSpec{
+		MinTargets: target.Cardinality.Min,
+		MaxTargets: target.Cardinality.Max,
+		Allow:      allow,
+		Predicate:  predicate,
+		Constraint: lowerFirst(target.Text),
+	}, true
+}
+
 // target has a plural ("Return two target creatures to their owners' hands."),
 // optional-plural ("Return up to two target creatures to their owners' hands."),
 // or optional-singular ("Return up to one target creature to its owner's hand.")
@@ -2200,7 +2656,34 @@ func hasNoFixedPermanentSpellModifiers(ctx contentCtx) bool {
 		len(ctx.content.Conditions) == 0 &&
 		len(ctx.content.Keywords) == 0 &&
 		len(ctx.content.Modes) == 0 &&
-		len(ctx.content.References) == 0
+		referencesAreRedundantSoleTargetBackReferences(ctx.content.References)
+}
+
+// referencesAreRedundantSoleTargetBackReferences reports whether every reference
+// (if any) is a demonstrative object reference bound to the spell's sole target,
+// e.g. "exile that creature" or "destroy it" naming the permanent the spell
+// already targets. Such a reference is redundant with the target, so the fixed
+// single-target lowering can ignore it and act on the target directly. This
+// enables a sequence clause that removes the prior clause's target ("Tap target
+// creature. ... exile that creature."), where the back-reference is materialized
+// as the clause's inherited target. Possessive pronouns (its/their) name a
+// different object (the target's controller/owner) and so are rejected.
+func referencesAreRedundantSoleTargetBackReferences(references []compiler.CompiledReference) bool {
+	for _, reference := range references {
+		if reference.Binding != compiler.ReferenceBindingTarget || reference.Occurrence != 0 {
+			return false
+		}
+		switch reference.Kind {
+		case compiler.ReferenceThatObject, compiler.ReferenceThisObject:
+		case compiler.ReferencePronoun:
+			if reference.Pronoun != compiler.ReferencePronounIt {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 func lowerFixedCardCountPlayerSpell(
@@ -2307,6 +2790,68 @@ func lowerFixedCardCountPlayerSpell(
 			{
 				Primitive: primitiveFactory(amount, playerRef),
 			},
+		},
+	}.Ability(), nil
+}
+
+// lowerDiscardEntireHandSpell lowers a "discard their hand" clause to a
+// game.Discard with EntireHand set. It supports the controller, each-player,
+// each-opponent, and single-target-player subjects recognized by the parser.
+func lowerDiscardEntireHandSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported discard spell",
+			"the executable source backend supports only exact discard-their-hand by the controller, each player, each opponent, or one target player",
+		)
+	}
+	if effect.Negated ||
+		effect.Optional ||
+		ctx.optional ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return unsupported()
+	}
+	switch effect.Context {
+	case parser.EffectContextController:
+		if len(ctx.content.Targets) != 0 {
+			return unsupported()
+		}
+		return discardEntireHandAbility(game.Discard{EntireHand: true, Player: game.ControllerReference()}, nil)
+	case parser.EffectContextEachPlayer:
+		if len(ctx.content.Targets) != 0 {
+			return unsupported()
+		}
+		return discardEntireHandAbility(game.Discard{EntireHand: true, PlayerGroup: game.AllPlayersReference()}, nil)
+	case parser.EffectContextEachOpponent:
+		if len(ctx.content.Targets) != 0 {
+			return unsupported()
+		}
+		return discardEntireHandAbility(game.Discard{EntireHand: true, PlayerGroup: game.OpponentsReference()}, nil)
+	case parser.EffectContextTarget:
+		if len(ctx.content.Targets) != 1 {
+			return unsupported()
+		}
+		targetSpec, ok := playerTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return unsupported()
+		}
+		return discardEntireHandAbility(
+			game.Discard{EntireHand: true, Player: game.TargetPlayerReference(0)},
+			[]game.TargetSpec{targetSpec},
+		)
+	default:
+		return unsupported()
+	}
+}
+
+func discardEntireHandAbility(discard game.Discard, targets []game.TargetSpec) (game.AbilityContent, *shared.Diagnostic) {
+	return game.Mode{
+		Targets: targets,
+		Sequence: []game.Instruction{
+			{Primitive: discard},
 		},
 	}.Ability(), nil
 }

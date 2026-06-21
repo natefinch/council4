@@ -71,6 +71,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 		document.Abilities = append(document.Abilities, ability)
 	}
 	emitAtoms(document.Abilities, context.CardName)
+	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
 	emitConditionBoundaries(document.Abilities)
@@ -80,6 +81,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitSourceAbilityCostReduction(document.Abilities)
 	emitResolvingSyntax(document.Abilities)
 	emitSourceSpellCostReduction(document.Abilities)
+	emitSourceSpellCostReductionDynamic(document.Abilities)
 	emitStaticDeclarations(document.Abilities)
 	emitSemanticAccessors(document.Abilities)
 	stripImpulseExileSemantics(document.Abilities)
@@ -189,11 +191,15 @@ func emitAtoms(abilities []Ability, cardName string) {
 		choice := recognizeModalChoice(abilities[i].Modal.header, abilities[i].Modal.Atoms)
 		abilities[i].Modal.MinModes = choice.minModes
 		abilities[i].Modal.MaxModes = choice.maxModes
+		if choice.maxModes < 0 {
+			abilities[i].Modal.MaxModes = len(abilities[i].Modal.Options)
+		}
+		abilities[i].Modal.ChoiceKind = choice.kind
 		abilities[i].Modal.ChoiceBonus = choice.bonus
 		abilities[i].Modal.ChoiceKnown = choice.ok
 		for j := range abilities[i].Modal.Options {
 			mode := &abilities[i].Modal.Options[j]
-			mode.Atoms = collectAtoms(mode.Tokens, mode.Reminders, mode.Quoted, cardName)
+			mode.Atoms = collectAtoms(mode.Body.Tokens, mode.Reminders, mode.Quoted, cardName)
 		}
 	}
 }
@@ -407,15 +413,47 @@ func romanChapter(text string) (int, bool) {
 }
 
 func parseMode(source string, tokens []shared.Token) (Mode, []shared.Diagnostic) {
+	bodyTokens := tokens
 	mode := Mode{
 		Span:   shared.SpanOf(tokens),
 		Text:   shared.SliceSpan(source, shared.SpanOf(tokens)),
 		Tokens: cloneTokens(tokens),
 	}
-	mode.Sentences = ParseSentences(source, tokens)
+	if label, body, ok := parseModeLabel(source, tokens); ok {
+		mode.Label = label
+		bodyTokens = body
+	}
+	mode.Body = phraseFromTokens(source, bodyTokens)
+	mode.Sentences = ParseSentences(source, bodyTokens)
 	var diagnostics []shared.Diagnostic
-	mode.Reminders, mode.Quoted, diagnostics = parseDelimited(source, tokens, diagnostics)
+	mode.Reminders, mode.Quoted, diagnostics = parseDelimited(source, bodyTokens, diagnostics)
 	return mode, diagnostics
+}
+
+func parseModeLabel(source string, tokens []shared.Token) (*ModeLabelClause, []shared.Token, bool) {
+	dash := shared.TopLevelIndex(tokens, shared.EmDash)
+	if dash <= 0 || dash+1 >= len(tokens) {
+		return nil, nil, false
+	}
+	labelTokens := tokens[:dash]
+	var kind ModeLabelKind
+	switch strings.ToLower(strings.TrimSpace(joinedTokenText(labelTokens))) {
+	case "sell contraband":
+		kind = ModeLabelSellContraband
+	case "buy information":
+		kind = ModeLabelBuyInformation
+	case "hire a mercenary":
+		kind = ModeLabelHireMercenary
+	default:
+		return nil, nil, false
+	}
+	span := shared.SpanOf(labelTokens)
+	return &ModeLabelClause{
+		Kind:          kind,
+		Text:          shared.SliceSpan(source, span),
+		Span:          span,
+		SeparatorSpan: tokens[dash].Span,
+	}, tokens[dash+1:], true
 }
 
 func inlineModeTokens(tokens []shared.Token) [][]shared.Token {
@@ -500,7 +538,7 @@ func loyaltyValue(token shared.Token) bool {
 }
 
 func replacementWording(tokens []shared.Token) bool {
-	words := normalizedWords(tokens)
+	words := normalizedWords(tokensOutsideParens(tokens))
 	if len(words) >= 2 && words[0] == "as" && slices.Contains(words, "enters") {
 		return true
 	}
@@ -508,7 +546,27 @@ func replacementWording(tokens []shared.Token) bool {
 		(slices.Contains(words, "tapped") || slices.Contains(words, "with") || slices.Contains(words, "as")) {
 		return true
 	}
+	if groupEntersTappedWording(words) {
+		return true
+	}
 	return slices.Contains(words, "would") && slices.Contains(words, "instead")
+}
+
+// groupEntersTappedWording reports whether the tokens read as a static group
+// enters-tapped replacement ("Creatures your opponents control enter tapped.").
+// The plural "enter" distinguishes the group form from the self "enters tapped"
+// already handled above; the leading permanent-type plural keeps unrelated
+// "... enter ... tapped" spell text from being misclassified as a replacement.
+func groupEntersTappedWording(words []string) bool {
+	if len(words) < 3 || !slices.Contains(words, "enter") || !slices.Contains(words, "tapped") {
+		return false
+	}
+	switch words[0] {
+	case "creatures", "lands", "artifacts", "enchantments", "planeswalkers", "permanents":
+		return true
+	default:
+		return false
+	}
 }
 
 // ParseSentences parses top-level sentences from tokens. It remains available
@@ -720,6 +778,7 @@ func matchingDelimiter(tokens []shared.Token, start int, open, closeKind shared.
 type modalChoiceRecognition struct {
 	minModes int
 	maxModes int
+	kind     ModalChoiceKind
 	bonus    ModalChoiceBonusSyntax
 	ok       bool
 }
@@ -747,6 +806,27 @@ func recognizeModalChoice(header Phrase, atoms Atoms) modalChoiceRecognition {
 		tokens[3].Kind == shared.Word && strings.EqualFold(tokens[3].Text, "both") &&
 		tokens[4].Kind == shared.EmDash {
 		return modalChoiceRecognition{minModes: 1, maxModes: 2, ok: true}
+	}
+	if len(tokens) == 5 &&
+		tokens[0].Kind == shared.Word && strings.EqualFold(tokens[0].Text, "choose") &&
+		tokens[1].Kind == shared.Word && strings.EqualFold(tokens[1].Text, "one") &&
+		tokens[2].Kind == shared.Word && strings.EqualFold(tokens[2].Text, "or") &&
+		tokens[3].Kind == shared.Word && strings.EqualFold(tokens[3].Text, "more") &&
+		tokens[4].Kind == shared.EmDash {
+		return modalChoiceRecognition{minModes: 1, maxModes: -1, kind: ModalChoiceKindOneOrMore, ok: true}
+	}
+	if len(tokens) == 5 &&
+		tokens[0].Kind == shared.Word && strings.EqualFold(tokens[0].Text, "choose") &&
+		tokens[1].Kind == shared.Word && strings.EqualFold(tokens[1].Text, "up") &&
+		tokens[2].Kind == shared.Word && strings.EqualFold(tokens[2].Text, "to") &&
+		tokens[3].Kind == shared.Word &&
+		tokens[4].Kind == shared.EmDash {
+		// "Choose up to <number> —" is an optional modal choice: the controller
+		// may pick between zero and <number> distinct modes.
+		if n, numOK := atoms.CardinalAt(tokens[3].Span); numOK {
+			return modalChoiceRecognition{minModes: 0, maxModes: n, ok: true}
+		}
+		return modalChoiceRecognition{}
 	}
 	// Expected: [Word("Choose"), Word(<number>), EmDash]
 	if len(tokens) != 3 ||
@@ -799,11 +879,37 @@ func modalHeaderStart(tokens []shared.Token) int {
 	if isModalHeader(tokens) {
 		return 0
 	}
-	colon := shared.TopLevelIndex(tokens, shared.Colon)
-	if colon >= 0 && colon+1 < len(tokens) && isModalHeader(tokens[colon+1:]) {
-		return colon + 1
+	for _, separator := range []shared.Kind{shared.Colon, shared.Comma} {
+		index := shared.TopLevelIndex(tokens, separator)
+		if index >= 0 && index+1 < len(tokens) && isModalHeader(tokens[index+1:]) {
+			return index + 1
+		}
 	}
 	return -1
+}
+
+// tokensOutsideParens returns the tokens that lie outside any parenthesized
+// group, dropping the parentheses and their contents. Parenthesized spans are
+// reminder text, which carries no game meaning, so ability classification must
+// not read its wording.
+func tokensOutsideParens(tokens []shared.Token) []shared.Token {
+	outside := make([]shared.Token, 0, len(tokens))
+	depth := 0
+	for _, token := range tokens {
+		switch token.Kind {
+		case shared.LeftParen:
+			depth++
+		case shared.RightParen:
+			if depth > 0 {
+				depth--
+			}
+		default:
+			if depth == 0 {
+				outside = append(outside, token)
+			}
+		}
+	}
+	return outside
 }
 
 func matchingOuter(tokens []shared.Token, open, closeKind shared.Kind) bool {

@@ -117,7 +117,109 @@ func TestParseChosenTypeManaSpendRiderFailClosed(t *testing.T) {
 		"Spend this mana only to cast a creature spell of the chosen type and that spell can't be countered.",
 		"Spend this mana only to cast a creature spell of the chosen type, and that spell cannot be countered.",
 		"Spend this mana only to cast a creature spell of the chosen type, and that spell can't be countered by spells.",
+		"Spend this mana only to cast a creature spell of the chosen type or activate an ability of the chosen type.",
+		"Spend this mana only to cast a creature spell of the chosen type or activate an ability of a creature source of a chosen type.",
+		"Spend this mana only to cast a creature spell of the chosen type or tap a creature source of the chosen type.",
+	} {
+		if effect := riderEffect(t, chosenTypeManaSpendRiderAbility(rider)); effect != nil {
+			t.Fatalf("near-miss rider %q collapsed to EffectManaSpendRider", rider)
+		}
+	}
+}
+
+// TestParseChosenTypeManaSpendRiderBare verifies the bare restriction (Unclaimed
+// Territory, Pillar of Origins), with no can't-be-countered clause and no
+// activate clause, is recognized as a restricted chosen-type rider with no
+// effect.
+func TestParseChosenTypeManaSpendRiderBare(t *testing.T) {
+	t.Parallel()
+	effect := riderEffect(t, chosenTypeManaSpendRiderAbility(
 		"Spend this mana only to cast a creature spell of the chosen type.",
+	))
+	if effect == nil || effect.ManaSpendRider == nil {
+		t.Fatal("bare rider sentence did not collapse to EffectManaSpendRider")
+	}
+	if effect.ManaSpendRider.Condition != ManaSpendCastChosenCreatureType {
+		t.Fatalf("Condition = %q, want %q", effect.ManaSpendRider.Condition, ManaSpendCastChosenCreatureType)
+	}
+	if effect.ManaSpendRider.Effect != ManaSpendRiderEffectUnknown {
+		t.Fatalf("Effect = %q, want empty", effect.ManaSpendRider.Effect)
+	}
+	if !effect.ManaSpendRider.Restricted {
+		t.Fatal("Restricted = false, want true")
+	}
+}
+
+// TestParseChosenTypeCastOrActivateManaSpendRider verifies the cast-or-activate
+// restriction (Secluded Courtyard) is recognized with its own condition kind.
+func TestParseChosenTypeCastOrActivateManaSpendRider(t *testing.T) {
+	t.Parallel()
+	effect := riderEffect(t, chosenTypeManaSpendRiderAbility(
+		"Spend this mana only to cast a creature spell of the chosen type or activate an ability of a creature source of the chosen type.",
+	))
+	if effect == nil || effect.ManaSpendRider == nil {
+		t.Fatal("cast-or-activate rider sentence did not collapse to EffectManaSpendRider")
+	}
+	if effect.ManaSpendRider.Condition != ManaSpendCastOrActivateChosenCreatureType {
+		t.Fatalf("Condition = %q, want %q", effect.ManaSpendRider.Condition, ManaSpendCastOrActivateChosenCreatureType)
+	}
+	if effect.ManaSpendRider.Effect != ManaSpendRiderEffectUnknown {
+		t.Fatalf("Effect = %q, want empty", effect.ManaSpendRider.Effect)
+	}
+	if !effect.ManaSpendRider.Restricted {
+		t.Fatal("Restricted = false, want true")
+	}
+}
+
+func TestParseLegendaryManaSpendRiderExact(t *testing.T) {
+	t.Parallel()
+	effect := riderEffect(t, chosenTypeManaSpendRiderAbility(
+		"Spend this mana only to cast a legendary spell, and that spell can't be countered.",
+	))
+	if effect == nil || effect.ManaSpendRider == nil {
+		t.Fatal("rider sentence did not collapse to EffectManaSpendRider")
+	}
+	if effect.ManaSpendRider.Condition != ManaSpendCastLegendarySpell {
+		t.Fatalf("Condition = %q, want %q", effect.ManaSpendRider.Condition, ManaSpendCastLegendarySpell)
+	}
+	if effect.ManaSpendRider.Effect != ManaSpendRiderEffectCantBeCountered {
+		t.Fatalf("Effect = %q, want %q", effect.ManaSpendRider.Effect, ManaSpendRiderEffectCantBeCountered)
+	}
+	if !effect.ManaSpendRider.Restricted {
+		t.Fatal("Restricted = false, want true")
+	}
+}
+
+// TestParseLegendaryManaSpendRiderBare verifies the trailing can't-be-countered
+// clause is optional, so the bare restriction also collapses to the typed rider.
+func TestParseLegendaryManaSpendRiderBare(t *testing.T) {
+	t.Parallel()
+	effect := riderEffect(t, chosenTypeManaSpendRiderAbility(
+		"Spend this mana only to cast a legendary spell.",
+	))
+	if effect == nil || effect.ManaSpendRider == nil {
+		t.Fatal("rider sentence did not collapse to EffectManaSpendRider")
+	}
+	if effect.ManaSpendRider.Condition != ManaSpendCastLegendarySpell {
+		t.Fatalf("Condition = %q, want %q", effect.ManaSpendRider.Condition, ManaSpendCastLegendarySpell)
+	}
+	if effect.ManaSpendRider.Effect != ManaSpendRiderEffectUnknown {
+		t.Fatalf("Effect = %q, want empty", effect.ManaSpendRider.Effect)
+	}
+	if !effect.ManaSpendRider.Restricted {
+		t.Fatal("Restricted = false, want true")
+	}
+}
+
+func TestParseLegendaryManaSpendRiderFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, rider := range []string{
+		"Spend that mana only to cast a legendary spell.",
+		"Spend this mana to cast a legendary spell.",
+		"Spend this mana only to cast a legendary creature spell.",
+		"Spend this mana only to cast a legendary spell and that spell can't be countered.",
+		"Spend this mana only to cast a legendary spell, and that spell cannot be countered.",
+		"Spend this mana only to cast a legendary spell, and that spell can't be countered by spells.",
 	} {
 		if effect := riderEffect(t, chosenTypeManaSpendRiderAbility(rider)); effect != nil {
 			t.Fatalf("near-miss rider %q collapsed to EffectManaSpendRider", rider)
@@ -158,6 +260,47 @@ func TestParseManaSpendRiderFailClosed(t *testing.T) {
 					t.Fatalf("near-miss rider %q collapsed to EffectManaSpendRider", rider)
 				}
 			}
+		}
+	}
+}
+
+// TestParseCreatureSpellHasteManaSpendRiderExact verifies that the Arena of
+// Glory / Generator Servant bonus rider collapses into a single typed
+// EffectManaSpendRider carrying the creature-spell haste condition and effect,
+// and that it is an unrestricted rider (the tagged mana may pay for anything).
+func TestParseCreatureSpellHasteManaSpendRiderExact(t *testing.T) {
+	t.Parallel()
+	effect := riderEffect(t, chosenTypeManaSpendRiderAbility(
+		"If that mana is spent on a creature spell, it gains haste until end of turn.",
+	))
+	if effect == nil || effect.ManaSpendRider == nil {
+		t.Fatal("rider sentence did not collapse to EffectManaSpendRider")
+	}
+	if effect.ManaSpendRider.Condition != ManaSpendCastCreatureSpell {
+		t.Fatalf("Condition = %q, want %q", effect.ManaSpendRider.Condition, ManaSpendCastCreatureSpell)
+	}
+	if effect.ManaSpendRider.Effect != ManaSpendRiderEffectGainsHasteUntilEndOfTurn {
+		t.Fatalf("Effect = %q, want %q", effect.ManaSpendRider.Effect, ManaSpendRiderEffectGainsHasteUntilEndOfTurn)
+	}
+	if effect.ManaSpendRider.Restricted {
+		t.Fatal("Restricted = true, want false")
+	}
+}
+
+// TestParseCreatureSpellHasteManaSpendRiderFailClosed verifies near-miss bonus
+// riders never collapse, so a different spend subject, spell qualifier, granted
+// keyword, or duration falls back to generic effects that fail closed downstream.
+func TestParseCreatureSpellHasteManaSpendRiderFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, rider := range []string{
+		"If this mana is spent on a creature spell, it gains haste until end of turn.",
+		"If that mana is spent on a creature spell, it gains trample until end of turn.",
+		"If that mana is spent on an artifact spell, it gains haste until end of turn.",
+		"If that mana is spent on a creature spell, it gains haste.",
+		"If that mana is spent on a creature spell, it gains haste until your next turn.",
+	} {
+		if effect := riderEffect(t, chosenTypeManaSpendRiderAbility(rider)); effect != nil {
+			t.Fatalf("near-miss rider %q collapsed to EffectManaSpendRider", rider)
 		}
 	}
 }

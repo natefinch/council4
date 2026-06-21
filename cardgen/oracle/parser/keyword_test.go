@@ -33,7 +33,11 @@ func TestParseKeywordVocabularyMeaning(t *testing.T) {
 		"Protection": KeywordProtection, "Prowess": KeywordProwess, "Read ahead": KeywordReadAhead,
 		"Reach": KeywordReach, "Shroud": KeywordShroud, "Split second": KeywordSplitSecond, "Storm": KeywordStorm,
 		"Suspend": KeywordSuspend, "Toxic": KeywordToxic, "Trample": KeywordTrample, "Undying": KeywordUndying,
-		"Vigilance": KeywordVigilance, "Ward": KeywordWard, "Wither": KeywordWither,
+		"Vigilance": KeywordVigilance, "Ward": KeywordWard, "Wither": KeywordWither, "Riot": KeywordRiot,
+		"Landcycling": KeywordLandcycling, "Basic landcycling": KeywordBasicLandcycling,
+		"Plainscycling": KeywordPlainscycling, "Islandcycling": KeywordIslandcycling,
+		"Swampcycling": KeywordSwampcycling, "Mountaincycling": KeywordMountaincycling,
+		"Forestcycling": KeywordForestcycling,
 	}
 	for source, want := range tests {
 		keywords := keywordsFor(t, source)
@@ -64,7 +68,7 @@ func TestParseKeywordParameterComposition(t *testing.T) {
 	}
 	if keywords[3].Kind != KeywordEnchant ||
 		keywords[3].Parameter.Kind != KeywordParameterEnchantTarget ||
-		keywords[3].Parameter.EnchantTarget() != ObjectNounCreature {
+		!slices.Equal(keywords[3].Parameter.EnchantTarget().CardTypes, []CardType{CardTypeCreature}) {
 		t.Fatalf("enchant = %+v", keywords[3])
 	}
 	protection := keywords[4].Parameter.Protection()
@@ -152,6 +156,52 @@ func TestParseProtectionParameterFamilies(t *testing.T) {
 	}
 }
 
+func TestParseEquipRestriction(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source     string
+		supertypes []Supertype
+		subtypes   []types.Sub
+	}{
+		{source: "Equip legendary creature {3}", supertypes: []Supertype{SupertypeLegendary}},
+		{source: "Equip Knight {1}", subtypes: []types.Sub{types.Knight}},
+		{source: "Equip Shaman, Warlock, or Wizard {2}", subtypes: []types.Sub{types.Shaman, types.Warlock, types.Wizard}},
+	}
+	for _, test := range tests {
+		keywords := keywordsFor(t, test.source)
+		if len(keywords) != 1 || keywords[0].Kind != KeywordEquip {
+			t.Fatalf("%q keywords = %+v", test.source, keywords)
+		}
+		restriction := keywords[0].EquipRestriction
+		if restriction == nil {
+			t.Fatalf("%q has nil EquipRestriction", test.source)
+		}
+		if !slices.Equal(restriction.Supertypes, test.supertypes) {
+			t.Errorf("%q supertypes = %v; want %v", test.source, restriction.Supertypes, test.supertypes)
+		}
+		if !slices.Equal(restriction.Subtypes, test.subtypes) {
+			t.Errorf("%q subtypes = %v; want %v", test.source, restriction.Subtypes, test.subtypes)
+		}
+	}
+}
+
+func TestParseEquipRestrictionFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Equip commander {3}",
+		"Equip planeswalker {5}",
+		"Equip {2}",
+	} {
+		keywords := keywordsFor(t, source)
+		if len(keywords) != 1 || keywords[0].Kind != KeywordEquip {
+			t.Fatalf("%q keywords = %+v", source, keywords)
+		}
+		if keywords[0].EquipRestriction != nil {
+			t.Errorf("%q EquipRestriction = %+v; want nil", source, keywords[0].EquipRestriction)
+		}
+	}
+}
+
 func TestParseKeywordSelectorsCompose(t *testing.T) {
 	t.Parallel()
 	atoms := atomsFor(t, "cards with cycling, creatures with a flying ability, and creatures without shadow", "")
@@ -215,5 +265,31 @@ func TestKeywordManaSymbolFamilies(t *testing.T) {
 	}
 	if len(keywords) != 1 || !slices.Equal(keywords[0].Parameter.ManaCost(), want) {
 		t.Fatalf("mana = %+v; want %+v", keywords[0].Parameter.ManaCost(), want)
+	}
+}
+
+func TestParseLandcyclingKeywords(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		want   KeywordKind
+	}{
+		{"Basic landcycling {1}", KeywordBasicLandcycling},
+		{"Landcycling {2}", KeywordLandcycling},
+		{"Plainscycling {1}{W}", KeywordPlainscycling},
+		{"Forestcycling {2}", KeywordForestcycling},
+	}
+	for _, test := range tests {
+		keywords := keywordsFor(t, test.source)
+		if len(keywords) != 1 {
+			t.Fatalf("%q keywords = %+v; want one", test.source, keywords)
+		}
+		if keywords[0].Kind != test.want {
+			t.Errorf("%q kind = %v; want %v", test.source, keywords[0].Kind, test.want)
+		}
+		if keywords[0].Parameter.Kind != KeywordParameterManaCost ||
+			len(keywords[0].Parameter.ManaCost()) == 0 {
+			t.Errorf("%q parameter = %+v; want mana cost", test.source, keywords[0].Parameter)
+		}
 	}
 }

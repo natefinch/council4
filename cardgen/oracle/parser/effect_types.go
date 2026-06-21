@@ -69,6 +69,34 @@ const (
 	EffectProtectionFromEverything EffectKind = "EffectProtectionFromEverything"
 	// EffectPhaseOut models permanents phasing out.
 	EffectPhaseOut EffectKind = "EffectPhaseOut"
+	// EffectAdditionalLandPlays models the controller-scoped grant of one or more
+	// extra land plays for the turn ("Play an additional land this turn.", "You
+	// may play two additional lands this turn.").
+	EffectAdditionalLandPlays EffectKind = "EffectAdditionalLandPlays"
+	// EffectLoseGame models a player losing the game ("you lose the game"), as in
+	// the unpaid consequence of a Pact upkeep cost (CR 104.3a).
+	EffectLoseGame EffectKind = "EffectLoseGame"
+	// EffectChooseNewTargets models re-choosing the targets of a spell or
+	// ability on the stack ("You may choose new targets for target spell or
+	// ability."), the Deflecting Swat / Redirect retarget family (CR 115.7).
+	EffectChooseNewTargets EffectKind = "EffectChooseNewTargets"
+	// EffectCastAsThoughFlash models the controller-scoped, turn-scoped timing
+	// permission "You may cast spells this turn as though they had flash."
+	// (Borne Upon a Wind, Emergence Zone), letting the controller cast spells at
+	// instant speed for the rest of the turn (CR 702.8 / 601.3e).
+	EffectCastAsThoughFlash EffectKind = "EffectCastAsThoughFlash"
+	// EffectCantCastSpells models the one-shot, turn-scoped player cast
+	// prohibition "<players> can't cast spells this turn." (Silence: "Your
+	// opponents can't cast spells this turn."), forbidding the affected players
+	// from casting spells for the rest of the turn. The affected players are the
+	// controller's opponents ("your opponents", "each opponent") or every player
+	// ("players"). It reuses the same rule effect as the continuous static form
+	// (RuleEffectCantCastSpells), applied with a this-turn duration.
+	EffectCantCastSpells EffectKind = "EffectCantCastSpells"
+	// EffectWinGame models a player winning the game ("you win the game"), as in
+	// Felidar Sovereign and Thassa's Oracle (CR 104.2a). It mirrors
+	// EffectLoseGame.
+	EffectWinGame EffectKind = "EffectWinGame"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -108,11 +136,14 @@ type HandLibraryPutSyntax struct {
 	Present bool `json:",omitempty"`
 }
 
-// HandDiscardSyntax marks an exact fixed-cardinality choice of cards from the
-// resolving controller's hand to discard. Present excludes random, targeted,
-// opponent, typed-card, and variable-cardinality discard forms.
+// HandDiscardSyntax marks an exact fixed-cardinality discard of cards from the
+// resolving controller's hand. Present excludes targeted, opponent, typed-card,
+// and variable-cardinality discard forms. AtRandom marks the "at random" variant
+// ("Discard a card at random."), where the cards leave the hand by random
+// selection rather than the player's choice.
 type HandDiscardSyntax struct {
-	Present bool `json:",omitempty"`
+	Present  bool `json:",omitempty"`
+	AtRandom bool `json:",omitempty"`
 }
 
 // SearchSplitSlot is one single-card destination slot of a split-destination
@@ -146,6 +177,7 @@ const (
 	EffectDurationNone                     EffectDurationKind = ""
 	EffectDurationUntilEndOfTurn           EffectDurationKind = "EffectDurationUntilEndOfTurn"
 	EffectDurationUntilYourNextTurn        EffectDurationKind = "EffectDurationUntilYourNextTurn"
+	EffectDurationUntilEndOfYourNextTurn   EffectDurationKind = "EffectDurationUntilEndOfYourNextTurn"
 	EffectDurationThisTurn                 EffectDurationKind = "EffectDurationThisTurn"
 	EffectDurationThisCombat               EffectDurationKind = "EffectDurationThisCombat"
 	EffectDurationWhileSourceOnBattlefield EffectDurationKind = "EffectDurationWhileSourceOnBattlefield"
@@ -210,6 +242,50 @@ const (
 	// way." drain pattern, reading the amount published by the preceding
 	// life-loss instruction.
 	EffectDynamicAmountLifeLostThisWay EffectDynamicAmountKind = "EffectDynamicAmountLifeLostThisWay"
+	// EffectDynamicAmountGreatestPower is the greatest power among a battlefield
+	// group ("the greatest power among <group>"). The group is carried in the
+	// amount's Selection. EffectDynamicAmountGreatestToughness and
+	// EffectDynamicAmountGreatestManaValue are the toughness and mana-value
+	// siblings.
+	EffectDynamicAmountGreatestPower     EffectDynamicAmountKind = "EffectDynamicAmountGreatestPower"
+	EffectDynamicAmountGreatestToughness EffectDynamicAmountKind = "EffectDynamicAmountGreatestToughness"
+	EffectDynamicAmountGreatestManaValue EffectDynamicAmountKind = "EffectDynamicAmountGreatestManaValue"
+	// EffectDynamicAmountDevotion is the controller's devotion to one or two
+	// colors ("your devotion to <color>", "your devotion to <color> and
+	// <color>"), the number of mana symbols of those colors among the mana
+	// costs of permanents the controller controls (CR 700.5). The colors are
+	// carried in the amount's Colors. It backs "X is your devotion to <color>"
+	// amounts such as Gray Merchant of Asphodel.
+	EffectDynamicAmountDevotion EffectDynamicAmountKind = "EffectDynamicAmountDevotion"
+	// EffectDynamicAmountGreatestDiscardedThisWay is the greatest number of
+	// cards discarded by any one player during a preceding discard effect in the
+	// same ability ("the greatest number of cards a player discarded this way").
+	// It backs the Windfall family "Each player discards their hand, then draws
+	// cards equal to the greatest number of cards a player discarded this way.",
+	// reading the maximum per-player discard count published by the preceding
+	// discard instruction.
+	EffectDynamicAmountGreatestDiscardedThisWay EffectDynamicAmountKind = "EffectDynamicAmountGreatestDiscardedThisWay"
+	// EffectDynamicAmountSpellsCastThisTurn is the number of spells the
+	// controller has cast this turn ("for each spell you've cast this turn",
+	// "equal to the number of spells you've cast this turn"). It backs the
+	// storm-counter family such as Aetherflux Reservoir's "you gain 1 life for
+	// each spell you've cast this turn." The triggering spell counts, since its
+	// cast event precedes the resolving ability.
+	EffectDynamicAmountSpellsCastThisTurn EffectDynamicAmountKind = "EffectDynamicAmountSpellsCastThisTurn"
+	// EffectDynamicAmountTriggeringLifeChange is the amount of life gained or
+	// lost by the event that triggered the enclosing life-change trigger ("that
+	// much life" in "Whenever you gain life, target opponent loses that much
+	// life."). It backs the life-drain mirror family (Sanguine Bond, Vito,
+	// Exquisite Blood, Marauding Blight-Priest), reading the triggering event's
+	// life quantity.
+	EffectDynamicAmountTriggeringLifeChange EffectDynamicAmountKind = "EffectDynamicAmountTriggeringLifeChange"
+	// EffectDynamicAmountTotalPower is the sum of power across a battlefield
+	// group ("the total power of <group>"). The group is carried in the
+	// amount's Selection. It backs "where X is the total power of creatures you
+	// control" cost reductions (Ghalta, Primal Hunger) and the matching draw and
+	// damage amounts. EffectDynamicAmountTotalToughness is the toughness sibling.
+	EffectDynamicAmountTotalPower     EffectDynamicAmountKind = "EffectDynamicAmountTotalPower"
+	EffectDynamicAmountTotalToughness EffectDynamicAmountKind = "EffectDynamicAmountTotalToughness"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
@@ -239,6 +315,9 @@ type EffectAmountSyntax struct {
 	ReferenceSpan shared.Span             `json:"-"`
 	CounterKind   counter.Kind            `json:",omitempty"`
 	Selection     *SelectionSyntax        `json:",omitempty"`
+	// Colors carries the colors of a devotion amount ("your devotion to
+	// <color(s)>"). It is empty for every other amount kind.
+	Colors []Color `json:",omitempty"`
 }
 
 // EffectReplacementKind identifies how an instruction replaces an event.
@@ -251,6 +330,8 @@ const (
 	EffectReplacementTwiceThatMany EffectReplacementKind = "EffectReplacementTwiceThatMany"
 	EffectReplacementThatMuchPlus  EffectReplacementKind = "EffectReplacementThatMuchPlus"
 	EffectReplacementDoubleThat    EffectReplacementKind = "EffectReplacementDoubleThat"
+	EffectReplacementThatManyPlus  EffectReplacementKind = "EffectReplacementThatManyPlus"
+	EffectReplacementOneOfEach     EffectReplacementKind = "EffectReplacementOneOfEach"
 )
 
 // EffectReplacementSyntax is a source-spanned replacement modifier.
@@ -284,6 +365,20 @@ type EffectManaSyntax struct {
 	// color body.
 	ChosenColorFixed      mana.Color `json:"-"`
 	ChosenColorFixedKnown bool       `json:",omitempty"`
+	// ChosenColorDevotion reports the exact body "an amount of mana of that color
+	// equal to your devotion to that color." (Nykthos, Shrine to Nyx). The
+	// controller chooses a color as the ability resolves; the produced mana is
+	// that color and its amount is the controller's devotion to that chosen color
+	// (CR 700.5).
+	ChosenColorDevotion bool `json:",omitempty"`
+	// ChosenColorDynamic reports the body "an amount of mana of that color equal
+	// to <dynamic amount>" whose quantity is a battlefield count carried by
+	// EffectSyntax.Amount (Three Tree City: "...equal to the number of creatures
+	// you control of the chosen type."). The controller chooses a color as the
+	// ability resolves; the produced mana is that color and its amount is the
+	// dynamic count. It pairs the chosen-color output with a dynamic amount the
+	// fixed-shape ChosenColorDevotion body cannot express.
+	ChosenColorDynamic bool `json:",omitempty"`
 	// CommanderIdentity reports the exact body "one mana of any color in your
 	// commander's color identity" (CR 903.4). The choosable colors are the
 	// controller's commander color identity, resolved dynamically at activation.
@@ -313,6 +408,50 @@ type EffectManaSyntax struct {
 	// produce it; "any color" offers only colored mana. It is set together with
 	// LandsProduce.
 	LandsProduceAnyType bool `json:",omitempty"`
+	// LinkedExileColors reports the body "one mana of any of the exiled card's
+	// colors" (Chrome Mox). The choosable colors are recomputed at resolution
+	// from the colors of the card the source permanent imprinted as it entered
+	// (the card it exiled from hand); an absent or colorless imprint offers none.
+	LinkedExileColors bool `json:",omitempty"`
+	// ColorsAmongControlled reports the body "one mana of any color among
+	// <permanents> you control" (Mox Amber's "legendary creatures and
+	// planeswalkers you control", Plaza of Heroes' "legendary permanents you
+	// control"). The choosable colors are recomputed at resolution as the union
+	// of colors of the battlefield permanents the controller controls matching
+	// ColorsAmongSelection.
+	ColorsAmongControlled bool `json:",omitempty"`
+	// ColorsAmongSelection carries the permanent filter of a ColorsAmongControlled
+	// body. It is set together with ColorsAmongControlled.
+	ColorsAmongSelection *SelectionSyntax `json:",omitempty"`
+	// EachColorAmongControlled reports the body "For each color among
+	// <permanents> you control, add one mana of that color" (Bloom Tender). It
+	// produces one mana of EACH distinct color found among the permanents the
+	// controller controls matching ColorsAmongSelection, recomputed at
+	// resolution. Unlike ColorsAmongControlled, no color is chosen; one mana of
+	// every color in the union is added.
+	EachColorAmongControlled bool `json:",omitempty"`
+	// AnyOneColorDynamic reports the body "X mana of any one color" (or "an
+	// amount of mana of any one color") whose quantity is a dynamic amount
+	// carried by EffectSyntax.Amount (Kami of Whispered Hopes: "Add X mana of
+	// any one color, where X is this creature's power."). The controller chooses
+	// any one color as the ability resolves; the produced mana is that color and
+	// its amount is the dynamic value. It pairs a freely-chosen single color with
+	// a generic dynamic amount (source power/toughness, devotion, a permanent
+	// count, and so on).
+	AnyOneColorDynamic bool `json:",omitempty"`
+	// AnyColorCount reports the body "<N> mana of any one color" (Gilded Lotus:
+	// "Add three mana of any one color."), N >= 2. The controller chooses a
+	// single color as the ability resolves and adds that many mana of the one
+	// chosen color. It is set together with AnyColor; the plain "one mana of any
+	// color" body leaves it zero (one mana of the chosen color).
+	AnyColorCount int `json:",omitempty"`
+	// Instead reports a trailing "instead" on the add-mana body ("Add
+	// {B}{B}{B}{B}{B} instead if there are seven or more cards in your
+	// graveyard.", the Threshold conditional-mana cycle). It marks this mana
+	// production as the conditional alternative to a sibling base production
+	// rather than an additional output; lowering pairs the two into one ability
+	// whose larger output replaces the base when the condition holds.
+	Instead bool `json:",omitempty"`
 }
 
 // ManaLandsProduceScope identifies which battlefield lands' producible colors
@@ -353,6 +492,11 @@ const (
 	// object the subject reference resolves to.
 	EffectContextReferencedObjectController EffectContextKind = "EffectContextReferencedObjectController"
 	EffectContextPriorSubject               EffectContextKind = "EffectContextPriorSubject"
+	// EffectContextControllerAndTarget marks an effect distributed to both the
+	// controller and a single player target ("You and target opponent each draw
+	// a card"). The target player is the effect's sole target; the controller is
+	// the implicit co-recipient.
+	EffectContextControllerAndTarget EffectContextKind = "EffectContextControllerAndTarget"
 )
 
 // DamageRecipientReferenceKind identifies a damage recipient that is the
@@ -398,6 +542,10 @@ const (
 	// GraveyardZoneExileTargetOpponent is "Exile target opponent's graveyard." —
 	// the same wipe restricted to an opponent's graveyard.
 	GraveyardZoneExileTargetOpponent GraveyardZoneExileKind = "GraveyardZoneExileTargetOpponent"
+	// GraveyardZoneExileAll is "Exile all graveyards." (and the synonymous "Exile
+	// each player's graveyard.") — a non-targeted wipe of every player's
+	// graveyard at once.
+	GraveyardZoneExileAll GraveyardZoneExileKind = "GraveyardZoneExileAll"
 )
 
 // SelectionController identifies a selected object's controller.
@@ -434,24 +582,30 @@ const (
 	SelectionTriggeredAbilityOrSpell          SelectionKind = "SelectionTriggeredAbilityOrSpell"
 	SelectionPlaneswalker                     SelectionKind = "SelectionPlaneswalker"
 	SelectionBattle                           SelectionKind = "SelectionBattle"
+	SelectionCommander                        SelectionKind = "SelectionCommander"
 )
 
 // SelectionSyntax is a typed, source-spanned noun phrase.
 type SelectionSyntax struct {
-	Span          shared.Span         `json:"-"`
-	Text          string              `json:",omitempty"`
-	Kind          SelectionKind       `json:",omitempty"`
-	Controller    SelectionController `json:",omitempty"`
-	All           bool                `json:",omitempty"`
-	Another       bool                `json:",omitempty"`
-	Other         bool                `json:",omitempty"`
-	Attacking     bool                `json:",omitempty"`
-	Blocking      bool                `json:",omitempty"`
-	Tapped        bool                `json:",omitempty"`
-	Untapped      bool                `json:",omitempty"`
-	Colorless     bool                `json:",omitempty"`
-	Multicolored  bool                `json:",omitempty"`
-	BasicLandType bool                `json:",omitempty"`
+	Span       shared.Span         `json:"-"`
+	Text       string              `json:",omitempty"`
+	Kind       SelectionKind       `json:",omitempty"`
+	Controller SelectionController `json:",omitempty"`
+	All        bool                `json:",omitempty"`
+	Another    bool                `json:",omitempty"`
+	Other      bool                `json:",omitempty"`
+	Attacking  bool                `json:",omitempty"`
+	Blocking   bool                `json:",omitempty"`
+	Tapped     bool                `json:",omitempty"`
+	Untapped   bool                `json:",omitempty"`
+	// NonToken records a "nontoken" selector qualifier ("nontoken creature");
+	// TokenOnly records a "token" qualifier ("token creature"). They are mutually
+	// exclusive and lower to Selection.NonToken / Selection.TokenOnly.
+	NonToken      bool `json:",omitempty"`
+	TokenOnly     bool `json:",omitempty"`
+	Colorless     bool `json:",omitempty"`
+	Multicolored  bool `json:",omitempty"`
+	BasicLandType bool `json:",omitempty"`
 	// PlayerOrPlaneswalker marks the combined "player or planeswalker" /
 	// "opponent or planeswalker" combined damage target. Kind stays
 	// SelectionPlayer or SelectionOpponent for the player half; this flag records
@@ -476,10 +630,21 @@ type SelectionSyntax struct {
 	ColorsAny          []Color           `json:",omitempty"`
 	ExcludedColors     []Color           `json:",omitempty"`
 	SubtypesAny        []types.Sub       `json:",omitempty"`
+	ExcludedSubtypes   []types.Sub       `json:",omitempty"`
 	Alternatives       []SelectionSyntax `json:",omitempty"`
 	ManaValue          compare.Int       `json:",omitzero"`
 	Power              compare.Int       `json:",omitzero"`
 	Toughness          compare.Int       `json:",omitzero"`
+	// CounterRequired records a "with a <kind> counter on it/them" qualifier;
+	// CounterKind names the counter the matched permanent must carry.
+	CounterRequired bool         `json:",omitempty"`
+	CounterKind     counter.Kind `json:",omitempty"`
+	// SubtypeFromEntryChoice records a trailing "of the chosen type" qualifier on
+	// a count subject ("the number of creatures you control of the chosen type"),
+	// requiring each matched permanent to share the creature subtype the source
+	// permanent chose as it entered (Three Tree City). It lowers to the runtime
+	// Selection.SubtypeFromSourceEntryChoice predicate.
+	SubtypeFromEntryChoice bool `json:",omitempty"`
 }
 
 // TargetCardinalitySyntax is an inclusive target-count range.
@@ -552,8 +717,13 @@ type EffectSyntax struct {
 	// being a permanent card.
 	RequirePermanentCard bool               `json:",omitempty"`
 	Duration             EffectDurationKind `json:",omitempty"`
-	DelayedTiming        DelayedTimingKind  `json:",omitempty"`
-	Selection            SelectionSyntax    `json:",omitzero"`
+	// CantCastSpellsAllPlayers reports that an EffectCantCastSpells clause
+	// affects every player ("Players can't cast spells this turn.") rather than
+	// only the controller's opponents ("Your opponents can't cast spells this
+	// turn."). It is meaningful only when Kind is EffectCantCastSpells.
+	CantCastSpellsAllPlayers bool              `json:",omitempty"`
+	DelayedTiming            DelayedTimingKind `json:",omitempty"`
+	Selection                SelectionSyntax   `json:",omitzero"`
 	// DamageRecipientPair holds the two recipient groups of a dual-recipient
 	// fixed group-damage effect ("deals N damage to each X and each Y"). It is
 	// populated only when the recipient is exactly two "each <group>" phrases
@@ -565,6 +735,16 @@ type EffectSyntax struct {
 	// owner of a referenced object (the prior removal target), as in "deals 2
 	// damage to that land's controller". It is None for every other recipient.
 	DamageRecipientReference DamageRecipientReferenceKind `json:",omitempty"`
+	// EachSourceDamageGroup holds the source group of an "each <group> deals N
+	// damage to its controller/owner" effect ("Each creature deals 1 damage to
+	// its controller."), where every member of the group is the damage source
+	// dealing to the player who controls (or owns) it. It is populated only when
+	// the subject begins with "each", parses to a recognized group, and the
+	// recipient is exactly the bare "its controller"/"its owner"; it is empty for
+	// every other shape. EachSourceDamageRecipient records the per-source
+	// recipient role.
+	EachSourceDamageGroup     SelectionSyntax              `json:",omitzero"`
+	EachSourceDamageRecipient DamageRecipientReferenceKind `json:",omitempty"`
 	// HasSelfDamageRider reports a "... and N damage to you" rider appended to a
 	// single-target deal-damage clause ("deals A damage to any target and B
 	// damage to you"). SelfDamageRiderValue holds the fixed self-damage amount
@@ -617,10 +797,42 @@ type EffectSyntax struct {
 	// single target object ("Create a token that's a copy of target creature you
 	// control."). The copy source is the effect's lone target, captured in
 	// Targets; the token has no printed power/toughness of its own.
-	TokenCopyOfTarget bool                      `json:",omitempty"`
-	StaticSubject     EffectStaticSubjectSyntax `json:",omitzero"`
-	CounterKind       counter.Kind              `json:",omitempty"`
-	CounterKnown      bool                      `json:",omitempty"`
+	TokenCopyOfTarget bool `json:",omitempty"`
+	// TokenCopyOfReference reports that the created token is a copy of the
+	// effect's single explicit reference rather than a grammatical target
+	// ("Create a token that's a copy of this creature[ instead]."). The copy
+	// source is the effect's lone reference, captured in References; the token
+	// has no printed power/toughness of its own. An optional trailing " instead"
+	// (recorded separately in Replacement) is part of the recognized clause.
+	TokenCopyOfReference bool `json:",omitempty"`
+	// TokenCopyOfAttached reports that the created token is a copy of the
+	// permanent the source is attached to ("Create a token that's a copy of
+	// equipped creature" / "enchanted creature"), as on Equipment and Auras. The
+	// copy source resolves at runtime to the attached permanent; the token has no
+	// printed power/toughness of its own.
+	TokenCopyOfAttached bool `json:",omitempty"`
+	// TokenCopyDropLegendary reports a copy-token "except <it/the token> isn't
+	// legendary" modifier: the created token copies the source but drops the
+	// Legendary supertype so it does not force the legend rule on the original.
+	TokenCopyDropLegendary bool `json:",omitempty"`
+	// TokenCopyGrantKeywords lists keyword abilities a copy-token gains from a
+	// folded "[That token/It] gains <keyword>." rider sentence following the
+	// create effect, in source order. It is empty when no such rider is folded.
+	TokenCopyGrantKeywords []KeywordKind `json:",omitempty"`
+	// TokenCopyGrantRiderSpan covers the folded "[That token/It] gains
+	// <keyword>." rider sentence so lowering credits its tokens toward source
+	// coverage. It is set only when TokenCopyGrantKeywords is non-empty.
+	TokenCopyGrantRiderSpan shared.Span `json:"-"`
+	// TokenChoice reports a create-token effect that offers a choice among two or
+	// more complete named-token specs ("create a Food token or a Treasure token",
+	// "create your choice of a Clue token, a Food token, or a Treasure token").
+	// The alternatives are the Selection.SubtypesAny entries in source order; the
+	// effect creates exactly one of them, not a single multi-subtype token. It is
+	// false for a single-token create and for any multi-subtype creature token.
+	TokenChoice   bool                      `json:",omitempty"`
+	StaticSubject EffectStaticSubjectSyntax `json:",omitzero"`
+	CounterKind   counter.Kind              `json:",omitempty"`
+	CounterKnown  bool                      `json:",omitempty"`
 	// CounterRecipientAttached reports that a counter-placement effect places its
 	// counters on the permanent the source is attached to ("... on enchanted
 	// creature"), the Aura recipient the runtime models with its source
@@ -640,6 +852,20 @@ type EffectSyntax struct {
 	EntersTapped       bool                      `json:",omitempty"`
 	EntersTappedSelf   bool                      `json:",omitempty"`
 	EntersWithCounters bool                      `json:",omitempty"`
+	// EntersTappedGroup reports a static enters-tapped replacement that taps a
+	// group of OTHER permanents as they enter, e.g. "Creatures your opponents
+	// control enter tapped." (Authority of the Consuls). It is distinct from the
+	// self form EntersTappedSelf ("This land enters tapped."). The controller
+	// scope and affected permanent types are carried in the sibling fields.
+	EntersTappedGroup bool `json:",omitempty"`
+	// EntersTappedGroupScope identifies whose entering permanents are tapped by an
+	// EntersTappedGroup replacement. It is EntersTappedGroupControllerNone for
+	// every other effect.
+	EntersTappedGroupScope EntersTappedGroupControllerScope `json:",omitempty"`
+	// EntersTappedGroupTypes restricts an EntersTappedGroup replacement to entering
+	// permanents that have any of these card types. It is empty when the
+	// replacement taps every entering permanent ("Permanents ... enter tapped.").
+	EntersTappedGroupTypes []types.Card `json:",omitempty"`
 	// EntersColorChoice reports a self entry replacement of the form "As this
 	// <permanent> enters, choose a color." or "... choose a color other than
 	// <color>." The enters verb is shared by several entry constructs, so this is
@@ -656,8 +882,13 @@ type EffectSyntax struct {
 	EntersTypeChoice bool `json:",omitempty"`
 	UnderYourControl bool `json:",omitempty"`
 	CastAsAdventure  bool `json:",omitempty"`
-	Negated          bool `json:",omitempty"`
-	Optional         bool `json:",omitempty"`
+	// CastWithoutPayingManaCost reports a cast effect carrying the free-cast
+	// rider "... without paying its mana cost" ("(You may) cast <spell> from
+	// <zone> without paying its mana cost."). It is false for every other cast
+	// effect, including ones that pay an alternative or normal cost.
+	CastWithoutPayingManaCost bool `json:",omitempty"`
+	Negated                   bool `json:",omitempty"`
+	Optional                  bool `json:",omitempty"`
 	// Divided reports a "deals N damage divided as you choose among <targets>"
 	// effect: a fixed total split among the chosen targets, at least one each.
 	Divided      bool             `json:",omitempty"`
@@ -671,18 +902,26 @@ type EffectSyntax struct {
 	// per-object generic reduction N) together with this effect's typed Amount
 	// (the per-object battlefield count and its selection) and never inspects the
 	// source text. It is set only when the ability matches that exact shape.
-	SourceSpellCostReduction       bool                    `json:",omitempty"`
-	SourceSpellCostReductionAmount int                     `json:",omitempty"`
-	Replacement                    EffectReplacementSyntax `json:",omitzero"`
-	References                     []Reference             `json:",omitempty"`
-	SubjectReferences              []Reference             `json:",omitempty"`
-	Targets                        []TargetSyntax          `json:",omitempty"`
-	SubjectTargets                 []TargetSyntax          `json:",omitempty"`
-	Payment                        EffectPaymentSyntax     `json:",omitzero"`
-	Exact                          bool                    `json:",omitempty"`
-	RequiresOrderedLowering        bool                    `json:",omitempty"`
-	HasUnrecognizedSibling         bool                    `json:",omitempty"`
-	UnsupportedDetail              string                  `json:",omitempty"`
+	SourceSpellCostReduction       bool `json:",omitempty"`
+	SourceSpellCostReductionAmount int  `json:",omitempty"`
+	// SourceSpellCostReductionDynamic marks the EffectCast effect of the exact
+	// single-clause ability "This spell costs {X} less to cast, where X is
+	// <dynamic amount>." (e.g. The Great Henge: the greatest power among creatures
+	// you control). The reduction amount is the effect's typed Amount itself; the
+	// per-object SourceSpellCostReductionAmount is unused for this form. It is set
+	// only when the ability matches that exact shape and the dynamic amount is one
+	// lowering can evaluate at cost time.
+	SourceSpellCostReductionDynamic bool                    `json:",omitempty"`
+	Replacement                     EffectReplacementSyntax `json:",omitzero"`
+	References                      []Reference             `json:",omitempty"`
+	SubjectReferences               []Reference             `json:",omitempty"`
+	Targets                         []TargetSyntax          `json:",omitempty"`
+	SubjectTargets                  []TargetSyntax          `json:",omitempty"`
+	Payment                         EffectPaymentSyntax     `json:",omitzero"`
+	Exact                           bool                    `json:",omitempty"`
+	RequiresOrderedLowering         bool                    `json:",omitempty"`
+	HasUnrecognizedSibling          bool                    `json:",omitempty"`
+	UnsupportedDetail               string                  `json:",omitempty"`
 	// Order is the effect's dense source-order rank (of Span); VerbOrder is the
 	// rank of VerbSpan. Downstream stages compare these ranks to order effects
 	// and bind references to effect verbs without inspecting byte offsets.
@@ -737,6 +976,32 @@ type EffectSyntax struct {
 	// search whose found card stays in the library. It is currently set only for
 	// the singular "then shuffle and put that card on top" family.
 	SearchDestination EffectDestinationPosition `json:",omitempty"`
+	// DiscardEntireHand marks a "discard their hand" clause ("Each player
+	// discards their hand", "Discard your hand", "Target player discards their
+	// hand"): the affected player discards every card in hand rather than a fixed
+	// count. The discarded amount is unknown at parse time.
+	DiscardEntireHand bool `json:",omitempty"`
+	// CounteredSpellExileReplacement marks the exact counter rider "If that
+	// spell is countered this way, exile it instead of putting it into its
+	// owner's graveyard." (CR 614 replacement). It pairs with a preceding
+	// counter effect so lowering can emit a single counter-and-exile primitive.
+	CounteredSpellExileReplacement bool `json:",omitempty"`
+	// Additional marks a draw clause whose counted cards carry the "additional"
+	// qualifier ("draw two additional cards", "draw an additional card"), as on
+	// draw-step triggers like Sylvan Library. Drawing N additional cards is
+	// mechanically a plain draw of N cards, so consumers treat it as one; the
+	// flag exists only so exact reconstruction can restore the "additional"
+	// word. It is false for every plain draw.
+	Additional bool `json:",omitempty"`
+	// DoublePower and DoubleToughness mark an EffectDouble whose object is "the
+	// power[ and toughness] of <group>" ("double the power and toughness of each
+	// creature you control until end of turn", Unnatural Growth). Each affected
+	// permanent gains +X to the named characteristic, where X is its own current
+	// value, doubling it (CR 107.16). The affected group is carried in
+	// StaticSubject; both flags are false for every other double effect (double
+	// life, double counters, double mana).
+	DoublePower     bool `json:",omitempty"`
+	DoubleToughness bool `json:",omitempty"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend
@@ -752,6 +1017,16 @@ const (
 	// ManaSpendCastChosenCreatureType is "spent only to cast a creature spell of
 	// the chosen type".
 	ManaSpendCastChosenCreatureType ManaSpendConditionKind = "ManaSpendCastChosenCreatureType"
+	// ManaSpendCastLegendarySpell is "spent only to cast a legendary spell".
+	ManaSpendCastLegendarySpell ManaSpendConditionKind = "ManaSpendCastLegendarySpell"
+	// ManaSpendCastOrActivateChosenCreatureType is "spent only to cast a creature
+	// spell of the chosen type or activate an ability of a creature source of the
+	// chosen type" (Secluded Courtyard).
+	ManaSpendCastOrActivateChosenCreatureType ManaSpendConditionKind = "ManaSpendCastOrActivateChosenCreatureType"
+	// ManaSpendCastCreatureSpell is "spent on a creature spell" (Arena of Glory,
+	// Generator Servant). It is an unrestricted bonus rider that grants the spell
+	// a keyword until end of turn.
+	ManaSpendCastCreatureSpell ManaSpendConditionKind = "ManaSpendCastCreatureSpell"
 )
 
 // ManaSpendRiderEffectKind identifies the exact resolving effect of a mana-spend
@@ -765,6 +1040,9 @@ const (
 	ManaSpendRiderEffectScry ManaSpendRiderEffectKind = "ManaSpendRiderEffectScry"
 	// ManaSpendRiderEffectCantBeCountered is "that spell can't be countered".
 	ManaSpendRiderEffectCantBeCountered ManaSpendRiderEffectKind = "ManaSpendRiderEffectCantBeCountered"
+	// ManaSpendRiderEffectGainsHasteUntilEndOfTurn is "it gains haste until end of
+	// turn", granting the qualifying creature spell haste through end of turn.
+	ManaSpendRiderEffectGainsHasteUntilEndOfTurn ManaSpendRiderEffectKind = "ManaSpendRiderEffectGainsHasteUntilEndOfTurn"
 )
 
 // ManaSpendRiderSyntax is the typed syntax of a recognized mana-spend rider.
@@ -804,13 +1082,18 @@ const (
 
 // EffectPaymentSyntax is a source-spanned typed resolution payment.
 type EffectPaymentSyntax struct {
-	Span                   shared.Span            `json:"-"`
-	Form                   EffectPaymentForm      `json:",omitempty"`
-	Payer                  EffectPaymentPayerKind `json:",omitempty"`
-	ManaCost               cost.Mana              `json:",omitempty"`
-	GenericManaAmount      EffectAmountSyntax     `json:",omitzero"`
-	SuccessConditionNodeID int                    `json:"-"`
-	FailureConditionNodeID int                    `json:"-"`
+	Span              shared.Span            `json:"-"`
+	Form              EffectPaymentForm      `json:",omitempty"`
+	Payer             EffectPaymentPayerKind `json:",omitempty"`
+	ManaCost          cost.Mana              `json:",omitempty"`
+	GenericManaAmount EffectAmountSyntax     `json:",omitzero"`
+	// AdditionalCost is a non-mana resolution payment cost (such as "sacrifice a
+	// land" or "discard a card") recognized in a "you may <cost>. If you do, ..."
+	// sequence. It is nil for mana-only payments; ManaCost and AdditionalCost are
+	// never both set.
+	AdditionalCost         *Cost `json:",omitempty"`
+	SuccessConditionNodeID int   `json:"-"`
+	FailureConditionNodeID int   `json:"-"`
 	// Order is the payment's dense source-order rank, used downstream to test
 	// condition containment without byte offsets.
 	Order shared.SourceOrder `json:"-"`
@@ -819,6 +1102,18 @@ type EffectPaymentSyntax struct {
 // EffectStaticSubjectKind identifies the group affected by a static resolving
 // effect production.
 type EffectStaticSubjectKind string
+
+// EntersTappedGroupControllerScope identifies whose entering permanents a static
+// "<permanents> enter tapped" replacement taps.
+type EntersTappedGroupControllerScope string
+
+// Enters-tapped group controller scopes recognized by the replacement grammar.
+const (
+	EntersTappedGroupControllerNone      EntersTappedGroupControllerScope = ""
+	EntersTappedGroupControllerYou       EntersTappedGroupControllerScope = "EntersTappedGroupControllerYou"
+	EntersTappedGroupControllerOpponents EntersTappedGroupControllerScope = "EntersTappedGroupControllerOpponents"
+	EntersTappedGroupControllerEach      EntersTappedGroupControllerScope = "EntersTappedGroupControllerEach"
+)
 
 // Static effect subjects recognized by resolving-effect grammar.
 const (
@@ -857,6 +1152,20 @@ const (
 	// of the continuous land-type-adding statics printed on cards such as
 	// Yavimaya, Cradle of Growth and Urborg, Tomb of Yawgmoth.
 	EffectStaticSubjectAllLands EffectStaticSubjectKind = "EffectStaticSubjectAllLands"
+
+	// EffectStaticSubjectControlledCreaturesChosenType and its "other" sibling
+	// name the controlled creatures whose creature type matches the source
+	// permanent's entry-time creature-type choice ("creatures you control of the
+	// chosen type ..."), the affected group of chosen-type anthems such as
+	// Patchwork Banner and Adaptive Automaton.
+	EffectStaticSubjectControlledCreaturesChosenType      EffectStaticSubjectKind = "EffectStaticSubjectControlledCreaturesChosenType"
+	EffectStaticSubjectOtherControlledCreaturesChosenType EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledCreaturesChosenType"
+
+	// EffectStaticSubjectOpponentControlledPermanents names every permanent your
+	// opponents control ("Permanents your opponents control lose hexproof and
+	// indestructible until end of turn."), the affected group of resolving
+	// keyword removals such as Shadowspear's activated ability.
+	EffectStaticSubjectOpponentControlledPermanents EffectStaticSubjectKind = "EffectStaticSubjectOpponentControlledPermanents"
 )
 
 // EffectStaticSubjectSyntax is a source-spanned typed static-effect subject.
@@ -866,6 +1175,10 @@ type EffectStaticSubjectSyntax struct {
 	Subtype      types.Sub               `json:",omitempty"`
 	SubtypeText  string                  `json:",omitempty"`
 	SubtypeKnown bool                    `json:",omitempty"`
+	// ExcludedSubtype marks the Subtype as a "non-<subtype>" exclusion rather
+	// than a required subtype ("Non-Human creatures you control get ..."). When
+	// set, the affected group matches creatures that do NOT carry Subtype.
+	ExcludedSubtype bool `json:",omitempty"`
 
 	// Colors, Colorless, and Multicolored carry an optional color filter
 	// constraining the affected creature group ("Other red creatures you

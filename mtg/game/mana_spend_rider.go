@@ -23,6 +23,23 @@ const (
 	// the chosen type". The chosen subtype is captured from the producing
 	// permanent when the mana is created.
 	ManaSpendCastChosenCreatureType
+	// ManaSpendCastLegendarySpell is "spent only to cast a legendary spell"
+	// (Delighted Halfling). The restriction excludes nonlegendary spells from the
+	// mana's reach; a qualifying legendary spell may additionally be made
+	// uncounterable via SpellRuleEffect.
+	ManaSpendCastLegendarySpell
+	// ManaSpendCastOrActivateChosenCreatureType is "spent only to cast a creature
+	// spell of the chosen type or activate an ability of a creature source of the
+	// chosen type" (Secluded Courtyard). It extends ManaSpendCastChosenCreatureType
+	// to also admit the tagged mana to the activated-ability costs of a creature
+	// source of the chosen type. The chosen subtype is captured from the producing
+	// permanent when the mana is created.
+	ManaSpendCastOrActivateChosenCreatureType
+	// ManaSpendCastCreatureSpell is "spent on a creature spell" (Arena of Glory,
+	// Generator Servant). It is an unrestricted bonus rider: the tagged mana may
+	// be spent on anything, but a creature spell paid for with it gains the
+	// rider's SpellGainsKeywords until end of turn once it resolves.
+	ManaSpendCastCreatureSpell
 )
 
 // ManaSpendRestrictionKind identifies whether a tagged mana unit may be spent
@@ -53,6 +70,13 @@ type ManaSpendRider struct {
 	// SpellRuleEffect is applied directly to a qualifying spell paid for with
 	// this mana. RuleEffectCantBeCountered models Cavern of Souls.
 	SpellRuleEffect RuleEffectKind
+	// SpellGainsKeywords are the keyword abilities a qualifying creature spell
+	// paid for with this mana gains until end of turn once it resolves into a
+	// permanent (Arena of Glory, Generator Servant: "it gains haste until end of
+	// turn"). The grant is a layer-ability continuous effect applied to the
+	// resolved permanent, so it is empty for restriction-only and stack-rule
+	// riders.
+	SpellGainsKeywords []Keyword
 	// ChosenSubtypeFrom names the source permanent's entry-time subtype choice
 	// captured onto each produced mana unit.
 	ChosenSubtypeFrom ChoiceKey
@@ -90,6 +114,14 @@ type ManaRiderInstance struct {
 // on the stack when the rider fires.
 func (r ManaSpendRider) Ability() TriggeredAbility {
 	return TriggeredAbility{Content: r.Effect.Ability()}
+}
+
+// FiresOnSpend reports whether the rider has a triggered effect to put on the
+// stack when its tagged mana is spent on a qualifying payment. A pure
+// restriction rider (Unclaimed Territory, Secluded Courtyard) has none: its
+// tagged mana is merely consumed, with no ability triggered.
+func (r ManaSpendRider) FiresOnSpend() bool {
+	return len(r.Effect.Sequence) > 0
 }
 
 // MatchesChosenCreatureType reports whether spell is a creature spell of the
