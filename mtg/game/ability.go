@@ -73,6 +73,7 @@ const (
 	Riot
 	Embalm
 	Fear
+	Shadow
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -173,6 +174,11 @@ var (
 	// an evasion ability: a creature with horsemanship can't be blocked except by
 	// creatures with horsemanship (CR 702.31, Portal Three Kingdoms).
 	HorsemanshipStaticBody = simpleKeywordStaticBody("Horsemanship", Horsemanship)
+
+	// ShadowStaticBody is the reusable StaticAbilityBody for shadow, an evasion
+	// ability: a creature with shadow can block or be blocked by only creatures
+	// with shadow (CR 702.28).
+	ShadowStaticBody = simpleKeywordStaticBody("Shadow", Shadow)
 
 	// RiotStaticBody is the reusable StaticAbilityBody for riot. Riot is an
 	// enters-the-battlefield keyword (CR 702.137): as a permanent with riot

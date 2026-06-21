@@ -438,7 +438,7 @@ func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
 	var keywords []Keyword
 	for i := 0; i < len(tokens); i++ {
 		kind, width, ok := recognizeKeywordNameAt(tokens, i)
-		if !ok || kind == KeywordShadow {
+		if !ok {
 			continue
 		}
 		nameSpan := shared.SpanOf(tokens[i : i+width])
