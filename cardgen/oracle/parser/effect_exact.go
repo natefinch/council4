@@ -92,6 +92,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactMoveCountersEffectSyntax(effect)
 	case EffectModifyPT:
 		return exactModifyPTEffectSyntax(effect)
+	case EffectGainEnergy:
+		return exactGainEnergyEffectSyntax(effect)
 	case EffectPut:
 		return exactCounterPlacementEffectSyntax(effect) || exactGraveyardPutEffectSyntax(effect) ||
 			exactDigPutEffectSyntax(effect) || exactHandLibraryPutEffectSyntax(effect) ||
@@ -2972,4 +2974,28 @@ func effectAmountSourceText(effect *EffectSyntax) string {
 		}
 	}
 	return effect.Amount.Text
+}
+
+// exactGainEnergyEffectSyntax recognizes the controller energy-gain effect "You
+// get {E}…{E}." (with an optional "(N energy counters)" reminder the parser
+// already strips). The clause must be exactly the "get"/"gets" verb followed by N
+// energy symbols and a closing period, with no other object, target, or
+// reference, so every richer or differently-recipient form fails closed.
+func exactGainEnergyEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController ||
+		!effect.Amount.Known || effect.Amount.Value < 1 ||
+		len(effect.Targets) != 0 || len(effect.References) != 0 {
+		return false
+	}
+	verb := slices.IndexFunc(effect.Tokens, func(token shared.Token) bool {
+		return token.Span == effect.VerbSpan
+	})
+	if verb < 0 {
+		return false
+	}
+	rest := effect.Tokens[verb+1:]
+	if len(rest) > 0 && rest[len(rest)-1].Kind == shared.Period {
+		rest = rest[:len(rest)-1]
+	}
+	return len(rest) == effect.Amount.Value && allEnergySymbols(rest)
 }

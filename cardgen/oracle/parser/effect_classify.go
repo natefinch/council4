@@ -1002,9 +1002,38 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectUnknown
 	case kind == EffectGrantKeyword && effectWordsAt(tokens, index+1, "the", "same", "name"):
 		return EffectUnknown
+	case kind == EffectModifyPT && gainEnergyVerbAt(tokens, index):
+		return EffectGainEnergy
 	default:
 		return kind
 	}
+}
+
+// gainEnergyVerbAt reports whether the "get"/"gets" verb at index is followed
+// only by energy symbols ("You get {E}{E}."), i.e. an energy-gain effect rather
+// than a power/toughness modification. The recipient (controller vs other) is
+// resolved separately; this only distinguishes the verb's object as energy.
+func gainEnergyVerbAt(tokens []shared.Token, index int) bool {
+	if !equalWord(tokens[index], "get") && !equalWord(tokens[index], "gets") {
+		return false
+	}
+	symbols := energySymbolsAfter(tokens, index+1)
+	return len(symbols) > 0
+}
+
+// energySymbolsAfter returns the run of consecutive energy ({E}) symbol tokens
+// beginning at start, stopping at the first non-energy token. It is empty when
+// the run is interrupted before any energy symbol, so a "gets +1/+1" power
+// modification never matches.
+func energySymbolsAfter(tokens []shared.Token, start int) []shared.Token {
+	end := start
+	for end < len(tokens) && tokens[end].Kind == shared.Symbol && strings.EqualFold(tokens[end].Text, "{E}") {
+		end++
+	}
+	if end == start {
+		return nil
+	}
+	return tokens[start:end]
 }
 
 func effectWordKind(token shared.Token) EffectKind {

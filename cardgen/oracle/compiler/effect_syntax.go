@@ -390,6 +390,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectProtectionFromEverything
 	case parser.EffectInvestigate:
 		return EffectInvestigate
+	case parser.EffectGainEnergy:
+		return EffectGainEnergy
 	case parser.EffectImpulseExile:
 		return EffectImpulseExile
 	case parser.EffectAdditionalLandPlays:
