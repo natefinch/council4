@@ -972,6 +972,7 @@ const (
 	EffectPreventDamage
 	EffectSpellsCantBeCountered
 	EffectEnterAsCopy
+	EffectPunisherLoseLife
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1293,6 +1294,13 @@ type CompiledEffect struct {
 	// TokenCopyForEachGroup carries the controlled battlefield group a
 	// TokenCopyOfForEach create iterates, copying each member in turn.
 	TokenCopyForEachGroup CompiledSelector
+	// PunisherSacrifice and PunisherDiscard mirror the parser flags for an
+	// EffectPunisherLoseLife effect ("... unless that player sacrifices a
+	// permanent of their choice or discards a card."): they record which
+	// alternatives the affected players may pay instead of losing life. Lowering
+	// reads them with the effect's Selector for the sacrifice filter.
+	PunisherSacrifice bool
+	PunisherDiscard   bool
 }
 
 // CompiledManaSpendRider is the typed semantic form of a mana-spend rider.
