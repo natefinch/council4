@@ -204,6 +204,13 @@ func priorInstructionAntecedent(reference CompiledReference, effects []CompiledE
 	if current < 0 {
 		return 0, false
 	}
+	// "That token" / "those tokens" reads as the subject of a following clause
+	// ("That token gains ...") rather than the object of the current one, so the
+	// nearest preceding verb belongs to the antecedent effect itself. When that
+	// effect creates a token, bind the reference straight to it.
+	if effects[current].Kind == EffectCreate && reference.Kind == ReferenceThatObject {
+		return current, true
+	}
 	prior := -1
 	for i := range effects {
 		effect := &effects[i]
