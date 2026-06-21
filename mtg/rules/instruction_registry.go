@@ -83,6 +83,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleGainLife)
 	registerPrimitiveHandler(reg, handleLoseLife)
 	registerPrimitiveHandler(reg, handlePlayerLosesGame)
+	registerPrimitiveHandler(reg, handlePlayerWinsGame)
 	registerPrimitiveHandler(reg, handleExile)
 	registerPrimitiveHandler(reg, handleExileFromHand)
 	registerPrimitiveHandler(reg, handlePutFromHand)

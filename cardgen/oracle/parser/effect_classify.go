@@ -764,6 +764,33 @@ func loseGameObject(kind EffectKind, clause []shared.Token) bool {
 	return false
 }
 
+// winGameVerbAt reports whether the "win"/"wins" verb at index governs the
+// object "the game" ("you win the game"). The verb is generic, so the win
+// classification is confirmed by scanning forward to the clause's terminating
+// period for a top-level "game" word outside any quoted granted ability. This
+// anchors EffectWinGame so effectIndices treats the verb as an effect start,
+// mirroring how loseGameObject promotes the lose verb.
+func winGameVerbAt(tokens []shared.Token, index int) bool {
+	if !equalWord(tokens[index], "win") && !equalWord(tokens[index], "wins") {
+		return false
+	}
+	quoted := false
+	for i := index + 1; i < len(tokens); i++ {
+		switch tokens[i].Kind {
+		case shared.Period, shared.Semicolon:
+			return false
+		case shared.Quote:
+			quoted = !quoted
+		case shared.Word:
+			if !quoted && equalWord(tokens[i], "game") {
+				return true
+			}
+		default:
+		}
+	}
+	return false
+}
+
 func effectKindAt(tokens []shared.Token, index int) EffectKind {
 	kind := effectWordKind(tokens[index])
 	switch {
@@ -782,6 +809,11 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 			return EffectDig
 		}
 		return EffectManifestDread
+	case equalWord(tokens[index], "win") || equalWord(tokens[index], "wins"):
+		if winGameVerbAt(tokens, index) {
+			return EffectWinGame
+		}
+		return EffectUnknown
 	case cantBeBlockedThisTurnVerbAt(tokens, index):
 		return EffectCantBeBlocked
 	case kind == EffectGrantKeyword && index >= 2 &&

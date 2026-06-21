@@ -1241,6 +1241,13 @@ func (p PlayerLosesGame) validatePrimitive(targets []TargetSpec, checkTargets bo
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p PlayerWinsGame) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Player.Kind() == PlayerReferenceNone {
+		return errors.New("PlayerWinsGame requires a Player reference")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
 func (p Exile) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.SourceSpell {
 		if p.Object.Kind() != ObjectReferenceNone || p.Group.Valid() || p.ExileLinkedKey != "" {

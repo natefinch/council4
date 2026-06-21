@@ -1053,6 +1053,8 @@ func lowerImmediateSingleEffectSpell(
 		return lowerCastForFreeSpell(ctx)
 	case compiler.EffectAttach:
 		return lowerAttachSpell(ctx)
+	case compiler.EffectWinGame:
+		return lowerWinGameSpell(ctx)
 	default:
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,

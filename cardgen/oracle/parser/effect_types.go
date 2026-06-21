@@ -93,6 +93,10 @@ const (
 	// ("players"). It reuses the same rule effect as the continuous static form
 	// (RuleEffectCantCastSpells), applied with a this-turn duration.
 	EffectCantCastSpells EffectKind = "EffectCantCastSpells"
+	// EffectWinGame models a player winning the game ("you win the game"), as in
+	// Felidar Sovereign and Thassa's Oracle (CR 104.2a). It mirrors
+	// EffectLoseGame.
+	EffectWinGame EffectKind = "EffectWinGame"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."

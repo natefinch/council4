@@ -81,10 +81,11 @@ const (
 	PrimitiveChooseNewTargets
 	PrimitiveGroupSourceDamage
 	PrimitiveMassReturnFromGraveyard
+	PrimitivePlayerWinsGame
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveMassReturnFromGraveyard) + 1
+const primitiveKindCount = int(PrimitivePlayerWinsGame) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -405,6 +406,15 @@ type LoseLife struct {
 // player is marked to lose; state-based actions remove them the next time they
 // are checked.
 type PlayerLosesGame struct {
+	Player PlayerReference
+}
+
+// PlayerWinsGame causes a referenced player to win the game (CR 104.2a). A
+// player winning a two-or-more-player game means every other player loses, so
+// each other still-active player is marked to lose; state-based actions remove
+// them the next time they are checked, leaving the referenced player as the
+// last one standing.
+type PlayerWinsGame struct {
 	Player PlayerReference
 }
 
