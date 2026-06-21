@@ -86,6 +86,7 @@ const (
 	Rampage
 	LivingWeapon
 	Soulshift
+	Landwalk
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.

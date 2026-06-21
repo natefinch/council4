@@ -176,15 +176,15 @@ func TestLowerHorsemanshipKeyword(t *testing.T) {
 func TestLowerSemicolonKeywordLineFailsClosedOnUnknownKeyword(t *testing.T) {
 	t.Parallel()
 	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
-		Name:       "Bayou Dragonfly",
+		Name:       "Partial Keyword Tester",
 		Layout:     "normal",
 		TypeLine:   "Creature — Insect",
-		OracleText: "Flying; swampwalk (This creature can't be blocked as long as defending player controls a Swamp.)",
+		OracleText: "Flying; banding (Any creatures with banding, and up to one without, can block as a group.)",
 		Power:      new("1"),
 		Toughness:  new("1"),
 	})
 	if len(diagnostics) == 0 {
-		t.Fatal("expected a fail-closed diagnostic for the unmodeled swampwalk keyword")
+		t.Fatal("expected a fail-closed diagnostic for the unmodeled banding keyword")
 	}
 	if got := diagnostics[0].Summary; got != "unsupported mixed keyword ability" {
 		t.Fatalf("summary = %q, want unsupported mixed keyword ability", got)

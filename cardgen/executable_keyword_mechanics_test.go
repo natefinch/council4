@@ -733,3 +733,92 @@ func TestGenerateExecutableCardSourceDelveSpellWithEffect(t *testing.T) {
 		}
 	}
 }
+
+func TestGenerateExecutableCardSourceLandwalk(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		oracleText string
+		wantVar    string
+	}{
+		"forestwalk": {
+			oracleText: "Forestwalk (This creature can't be blocked as long as defending player controls a Forest.)",
+			wantVar:    "game.ForestwalkStaticBody",
+		},
+		"islandwalk": {
+			oracleText: "Islandwalk (This creature can't be blocked as long as defending player controls an Island.)",
+			wantVar:    "game.IslandwalkStaticBody",
+		},
+		"swampwalk": {
+			oracleText: "Swampwalk (This creature can't be blocked as long as defending player controls a Swamp.)",
+			wantVar:    "game.SwampwalkStaticBody",
+		},
+		"mountainwalk": {
+			oracleText: "Mountainwalk (This creature can't be blocked as long as defending player controls a Mountain.)",
+			wantVar:    "game.MountainwalkStaticBody",
+		},
+		"plainswalk": {
+			oracleText: "Plainswalk (This creature can't be blocked as long as defending player controls a Plains.)",
+			wantVar:    "game.PlainswalkStaticBody",
+		},
+		"desertwalk": {
+			oracleText: "Desertwalk (This creature can't be blocked as long as defending player controls a Desert.)",
+			wantVar:    "game.DesertwalkStaticBody",
+		},
+		"generic landwalk": {
+			oracleText: "Landwalk (This creature can't be blocked as long as defending player controls a land.)",
+			wantVar:    "game.LandwalkStaticBody",
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Walker",
+				Layout:     "normal",
+				TypeLine:   "Creature — Spirit",
+				ManaCost:   "{1}{G}",
+				Power:      new("1"),
+				Toughness:  new("1"),
+				OracleText: tc.oracleText,
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range []string{
+				"StaticAbilities: []game.StaticAbility",
+				tc.wantVar,
+			} {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
+// TestGenerateExecutableCardSourceQualifiedLandwalkUnsupported confirms that
+// qualified landwalk forms the backend does not model fail closed instead of
+// being silently lowered as plain landwalk.
+func TestGenerateExecutableCardSourceQualifiedLandwalkUnsupported(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Snow Walker",
+		Layout:     "normal",
+		TypeLine:   "Creature — Spirit",
+		ManaCost:   "{1}{U}",
+		Power:      new("1"),
+		Toughness:  new("1"),
+		OracleText: "Snow swampwalk (This creature can't be blocked as long as defending player controls a snow Swamp.)",
+	}
+	_, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostics for unsupported snow swampwalk, got none")
+	}
+}

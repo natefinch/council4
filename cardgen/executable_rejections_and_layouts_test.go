@@ -215,10 +215,10 @@ func TestGenerateExecutableCardSourceThenJoinedEnterTrigger(t *testing.T) {
 func TestGenerateExecutableCardSourceRejectsPartiallyRecognizedKeywordLine(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
-		Name:       "Bayou Dragonfly",
+		Name:       "Partial Keyword Tester",
 		Layout:     "normal",
 		TypeLine:   "Creature — Insect",
-		OracleText: "Flying; swampwalk (This creature can't be blocked as long as defending player controls a Swamp.)",
+		OracleText: "Flying; banding (Any creatures with banding, and up to one without, can block as a group.)",
 	}
 	source, diagnostics, err := GenerateExecutableCardSource(card, "b")
 	if err != nil {

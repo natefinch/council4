@@ -703,6 +703,11 @@ func canBlockAttacker(g *game.Game, blocker, attacker *game.Permanent) bool {
 	if permanentProtectedFromPermanentEffective(g, attacker, blocker) {
 		return false
 	}
+	// CR 702.14c: a creature with landwalk can't be blocked as long as the
+	// defending player (the blocker's controller) controls a matching land.
+	if attackerLandwalkUnblockableBy(g, attacker, blocker) {
+		return false
+	}
 	return true
 }
 
