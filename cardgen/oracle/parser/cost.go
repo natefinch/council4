@@ -577,6 +577,13 @@ func annotateSacrificeCostObject(component *CostComponent, object []shared.Token
 	if len(words) >= 2 && equalWord(words[len(words)-2], "you") && equalWord(words[len(words)-1], "control") {
 		words = words[:len(words)-2]
 	}
+	if len(words) >= 2 {
+		if colorAtom, ok := atoms.ColorAt(words[0].Span); ok && colorAtom != ColorUnknown {
+			component.ObjectColor = colorAtom
+			component.ObjectColorKnown = true
+			words = words[1:]
+		}
+	}
 	if first, second, ok := costTwoTypeUnionNouns(words); ok {
 		if annotateCostTwoTypeUnionObject(component, first, second, atoms) {
 			return
@@ -669,13 +676,15 @@ func costSubtypeMatchesNoun(sub types.Sub, noun ObjectNoun, families []types.Car
 	}
 }
 
-// clearSacrificeCostObject resets the amount and source-exclusion fields a
-// sacrifice cost object set before its noun failed recognition, so an
+// clearSacrificeCostObject resets the amount, source-exclusion, and color
+// fields a sacrifice cost object set before its noun failed recognition, so an
 // unrecognized object never lowers to a partial cost.
 func clearSacrificeCostObject(component *CostComponent) {
 	component.AmountValue = 0
 	component.AmountKnown = false
 	component.ExcludeSource = false
+	component.ObjectColor = ColorUnknown
+	component.ObjectColorKnown = false
 }
 
 // annotateCostTwoTypeUnionObject recognizes a cost object that names two
