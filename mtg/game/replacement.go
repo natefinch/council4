@@ -24,6 +24,18 @@ type CounterPlacement struct {
 	AmountFromX bool
 }
 
+// ConditionalCounterPlacement places Amount counters of Kind on an entering
+// permanent only when its (copied) card types include IfType. It backs the
+// conditional copiable counter riders of enters-as-copy replacements, such as
+// Spark Double's "it enters with an additional +1/+1 counter on it if it's a
+// creature" and "it enters with an additional loyalty counter on it if it's a
+// planeswalker".
+type ConditionalCounterPlacement struct {
+	Kind   counter.Kind
+	Amount int
+	IfType types.Card
+}
+
 // PreventionShield prevents an amount of future damage to a player or
 // permanent. When All is set the shield has no fixed capacity and prevents
 // every qualifying event for its duration; when CombatOnly is set it prevents
@@ -320,6 +332,13 @@ type ReplacementEffect struct {
 	// types to the copied values. It is empty for every other replacement and
 	// only consulted when EntersAsCopy is true.
 	EntersAsCopyAddTypes []types.Card
+
+	// EntersAsCopyConditionalCounters applies the conditional copiable counter
+	// riders of an enters-as-copy replacement, placing additional counters on the
+	// copy based on the copied card's types (Spark Double: "+1/+1 counter if it's
+	// a creature" and "loyalty counter if it's a planeswalker"). It is empty for
+	// every other replacement and only consulted when EntersAsCopy is true.
+	EntersAsCopyConditionalCounters []ConditionalCounterPlacement
 
 	// DrawCardMultiplier replaces a single "draw a card" event by the controller
 	// with drawing this many cards instead (CR 614). It backs the draw-doubling

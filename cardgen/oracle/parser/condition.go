@@ -252,6 +252,9 @@ func parseConditionClauses(tokens []shared.Token, atoms Atoms) []ConditionClause
 		if effectWordsAt(tokens, i, creatureSpellHasteConditionWords...) {
 			continue
 		}
+		if entersAsCopyCounterRiderConditionAt(tokens, i) {
+			continue
+		}
 		end := conditionClauseEnd(tokens, i)
 		if clause, ok := parseConditionClause(tokens[i:end], width, intro, atoms); ok {
 			clause.Span = shared.SpanOf(tokens[i:end])
@@ -262,6 +265,40 @@ func parseConditionClauses(tokens []shared.Token, atoms Atoms) []ConditionClause
 	return clauses
 }
 
+// entersAsCopyCounterRiderConditionAt reports whether the "if" condition intro at
+// index i belongs to an enters-as-copy conditional copiable counter rider ("...
+// counter on it if it's a creature"; Spark Double). Such an "if" is parsed into
+// the enters-as-copy effect's conditional counters, so it must not also surface
+// as a standalone intervening condition. It requires both the preceding "counter
+// on it" context and a following "if it's a <type>" predicate, so ordinary
+// conditional enters-with-counter clauses ("... counter on it if you control
+// ...", Ascendant Packleader) keep their condition.
+func entersAsCopyCounterRiderConditionAt(tokens []shared.Token, i int) bool {
+	if i < 3 || !equalWord(tokens[i], "if") {
+		return false
+	}
+	if !equalWord(tokens[i-3], "counter") || !equalWord(tokens[i-2], "on") || !equalWord(tokens[i-1], "it") {
+		return false
+	}
+	return entersAsCopyConditionalTypePrefix(normalizedWords(tokens[i:]))
+}
+
+// entersAsCopyConditionalTypePrefix reports whether words begins with the
+// "if it's a <type>" / "if it is a <type>" predicate of a conditional copiable
+// counter rider, where <type> is a recognized card type.
+func entersAsCopyConditionalTypePrefix(words []string) bool {
+	var typeWord string
+	switch {
+	case len(words) >= 4 && words[0] == "if" && words[1] == "it's" && (words[2] == "a" || words[2] == "an"):
+		typeWord = words[3]
+	case len(words) >= 5 && words[0] == "if" && words[1] == "it" && words[2] == "is" && (words[3] == "a" || words[3] == "an"):
+		typeWord = words[4]
+	default:
+		return false
+	}
+	_, ok := entersAsCopyConditionalTypeWord(typeWord)
+	return ok
+}
 func conditionIntroAt(tokens []shared.Token, index int) (kind ConditionIntroKind, width int) {
 	switch {
 	case equalWord(tokens[index], "if"):

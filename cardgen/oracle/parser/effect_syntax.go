@@ -2613,13 +2613,15 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 	filterEnd := len(body) - 1
 	var notLegendary bool
 	var addTypes []types.Card
+	var conditionalCounters []EntersAsCopyConditionalCounter
 	if exceptIndex := entersAsCopyExceptIndex(body, filterStart); exceptIndex >= 0 {
-		riderTypes, dropLegendary, ok := parseEntersAsCopyRider(body[exceptIndex+1 : len(body)-1])
+		riders, ok := parseEntersAsCopyRider(body[exceptIndex+1 : len(body)-1])
 		if !ok {
 			return nil, false
 		}
-		notLegendary = dropLegendary
-		addTypes = riderTypes
+		notLegendary = riders.notLegendary
+		addTypes = riders.addTypes
+		conditionalCounters = riders.conditionalCounters
 		filterEnd = exceptIndex
 	}
 	filter := body[filterStart:filterEnd]
@@ -2649,6 +2651,8 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 		EntersAsCopyOptional:     optional,
 		EntersAsCopyNotLegendary: notLegendary,
 		EntersAsCopyAddTypes:     addTypes,
+
+		EntersAsCopyConditionalCounters: conditionalCounters,
 	}
 	return []EffectSyntax{effect}, true
 }
@@ -2665,30 +2669,44 @@ func entersAsCopyExceptIndex(body []shared.Token, start int) int {
 	return -1
 }
 
+// entersAsCopyRiders collects the recognized copiable riders parsed from an
+// enters-as-copy "except <rider>" clause.
+type entersAsCopyRiders struct {
+	addTypes            []types.Card
+	notLegendary        bool
+	conditionalCounters []EntersAsCopyConditionalCounter
+}
+
 // parseEntersAsCopyRider parses the recognized copiable riders of an
 // enters-as-copy clause: "it isn't legendary" / "it's not legendary" sets the
-// not-legendary flag, and "it's an <type> in addition to its other types" adds
-// the named card type. Riders joined by commas or "and" are supported. Each
-// clause must match a recognized template exactly; any other wording fails
-// closed.
-func parseEntersAsCopyRider(rider []shared.Token) (addTypes []types.Card, notLegendary, ok bool) {
+// not-legendary flag, "it's an <type> in addition to its other types" adds the
+// named card type, and "it enters with an additional <kind> counter on it if
+// it's a <type>" adds a conditional copiable counter (Spark Double). Riders
+// joined by commas or "and" are supported. Each clause must match a recognized
+// template exactly; any other wording fails closed.
+func parseEntersAsCopyRider(rider []shared.Token) (entersAsCopyRiders, bool) {
 	clauses := splitEntersAsCopyRiderClauses(rider)
 	if len(clauses) == 0 {
-		return nil, false, false
+		return entersAsCopyRiders{}, false
 	}
+	var riders entersAsCopyRiders
 	for _, clause := range clauses {
 		words := normalizedWords(clause)
 		if entersAsCopyNotLegendaryClause(words) {
-			notLegendary = true
+			riders.notLegendary = true
+			continue
+		}
+		if placement, ok := entersAsCopyConditionalCounterClause(clause); ok {
+			riders.conditionalCounters = append(riders.conditionalCounters, placement)
 			continue
 		}
 		cardType, typeOK := entersAsCopyAddTypeClause(words)
 		if !typeOK {
-			return nil, false, false
+			return entersAsCopyRiders{}, false
 		}
-		addTypes = append(addTypes, cardType)
+		riders.addTypes = append(riders.addTypes, cardType)
 	}
-	return addTypes, notLegendary, true
+	return riders, true
 }
 
 // splitEntersAsCopyRiderClauses splits a copiable-rider token run into individual
@@ -2774,6 +2792,85 @@ func entersAsCopyAddTypeWord(word string) (types.Card, bool) {
 	default:
 		return "", false
 	}
+}
+
+// entersAsCopyConditionalCounterClause matches the conditional copiable counter
+// rider "it enters with an additional <kind> counter on it if it's a <type>"
+// (Spark Double) and returns a single counter placement guarded by the named
+// card type. The counter kind is read at the token level (counterNameBefore)
+// because symbol kinds such as "+1/+1" are dropped from normalized words. It
+// fails closed on any other wording.
+func entersAsCopyConditionalCounterClause(clause []shared.Token) (EntersAsCopyConditionalCounter, bool) {
+	counterIndex := entersAsCopyWordIndex(clause, "counter", 0)
+	if counterIndex < 0 {
+		return EntersAsCopyConditionalCounter{}, false
+	}
+	kind, _, ok := counterNameBefore(clause, counterIndex)
+	if !ok {
+		return EntersAsCopyConditionalCounter{}, false
+	}
+	prefix := normalizedWords(clause[:counterIndex])
+	if !slices.Contains(prefix, "enters") && !slices.Contains(prefix, "enter") {
+		return EntersAsCopyConditionalCounter{}, false
+	}
+	if !slices.Contains(prefix, "with") {
+		return EntersAsCopyConditionalCounter{}, false
+	}
+	ifIndex := entersAsCopyWordIndex(clause, "if", counterIndex)
+	if ifIndex < 0 {
+		return EntersAsCopyConditionalCounter{}, false
+	}
+	cardType, ok := entersAsCopyConditionalTypeTail(normalizedWords(clause[ifIndex:]))
+	if !ok {
+		return EntersAsCopyConditionalCounter{}, false
+	}
+	return EntersAsCopyConditionalCounter{Kind: kind, Amount: 1, IfType: cardType}, true
+}
+
+// entersAsCopyConditionalTypeTail parses the "if it's a <type>" / "if it is a
+// <type>" tail of a conditional copiable counter rider into its card type. It
+// fails closed on any other wording.
+func entersAsCopyConditionalTypeTail(words []string) (types.Card, bool) {
+	switch {
+	case len(words) == 4 && words[0] == "if" && words[1] == "it's" && (words[2] == "a" || words[2] == "an"):
+		return entersAsCopyConditionalTypeWord(words[3])
+	case len(words) == 5 && words[0] == "if" && words[1] == "it" && words[2] == "is" && (words[3] == "a" || words[3] == "an"):
+		return entersAsCopyConditionalTypeWord(words[4])
+	default:
+		return "", false
+	}
+}
+
+// entersAsCopyConditionalTypeWord maps a singular card-type word used in a
+// conditional copiable counter rider's "if it's a <type>" tail to its card
+// type, including planeswalker (loyalty rider). It fails closed on any other
+// word.
+func entersAsCopyConditionalTypeWord(word string) (types.Card, bool) {
+	switch strings.ToLower(word) {
+	case "artifact":
+		return types.Artifact, true
+	case "creature":
+		return types.Creature, true
+	case "enchantment":
+		return types.Enchantment, true
+	case "land":
+		return types.Land, true
+	case "planeswalker":
+		return types.Planeswalker, true
+	default:
+		return "", false
+	}
+}
+
+// entersAsCopyWordIndex returns the index of the first token at or after start
+// whose word equals word, or -1 when none matches.
+func entersAsCopyWordIndex(tokens []shared.Token, word string, start int) int {
+	for i := start; i < len(tokens); i++ {
+		if equalWord(tokens[i], word) {
+			return i
+		}
+	}
+	return -1
 }
 
 // entersAsCopyFilterOnBattlefield reports whether a copy-filter token run is

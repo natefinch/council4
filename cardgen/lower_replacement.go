@@ -1095,11 +1095,40 @@ func lowerEntersAsCopyReplacement(ability compiler.CompiledAbility) (game.Replac
 	if !ok {
 		return unsupported("the executable source backend does not support this enters-as-copy filter")
 	}
-	return game.EntersAsCopyReplacement(
+	var conditionalCounters []game.ConditionalCounterPlacement
+	if len(effect.EntersAsCopyConditionalCounters) > 0 {
+		placements, diagnostic := entersAsCopyConditionalCounterPlacements(ability, effect.EntersAsCopyConditionalCounters)
+		if diagnostic != nil {
+			return game.ReplacementAbility{}, true, diagnostic
+		}
+		conditionalCounters = placements
+	}
+	replacement := game.EntersAsCopyReplacement(
 		ability.Text,
 		&selection,
 		effect.EntersAsCopyOptional,
 		effect.EntersAsCopyNotLegendary,
+		conditionalCounters,
 		effect.EntersAsCopyAddTypes...,
-	), true, nil
+	)
+	return replacement, true, nil
+}
+
+// entersAsCopyConditionalCounterPlacements lowers the parsed conditional copiable
+// counter riders into runtime placements, failing closed on a non-positive
+// amount or an unset counter kind so a malformed rider keeps the card
+// unsupported rather than emitting an inert placement.
+func entersAsCopyConditionalCounterPlacements(ability compiler.CompiledAbility, riders []parser.EntersAsCopyConditionalCounter) ([]game.ConditionalCounterPlacement, *shared.Diagnostic) {
+	placements := make([]game.ConditionalCounterPlacement, 0, len(riders))
+	for _, rider := range riders {
+		if rider.Amount <= 0 || rider.IfType == "" {
+			return nil, executableDiagnostic(ability, "unsupported enters-as-copy replacement", "the executable source backend does not support this conditional copiable counter rider")
+		}
+		placements = append(placements, game.ConditionalCounterPlacement{
+			Kind:   rider.Kind,
+			Amount: rider.Amount,
+			IfType: rider.IfType,
+		})
+	}
+	return placements, nil
 }

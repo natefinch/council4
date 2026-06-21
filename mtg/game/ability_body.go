@@ -279,13 +279,14 @@ func EntryTypeChoiceReplacement(text string) ReplacementAbility {
 // copy; optional marks the "You may ..." form, notLegendary applies the "except
 // it isn't legendary" rider, and addTypes applies the "except it's an <type> in
 // addition to its other types" rider (CR 706, CR 614).
-func EntersAsCopyReplacement(text string, selection *Selection, optional, notLegendary bool, addTypes ...types.Card) ReplacementAbility {
+func EntersAsCopyReplacement(text string, selection *Selection, optional, notLegendary bool, conditionalCounters []ConditionalCounterPlacement, addTypes ...types.Card) ReplacementAbility {
 	replacement := etbReplacement(text)
 	replacement.EntersAsCopy = true
 	replacement.EntersAsCopyOptional = optional
 	replacement.EntersAsCopySelection = selection
 	replacement.EntersAsCopyNotLegendary = notLegendary
 	replacement.EntersAsCopyAddTypes = append([]types.Card(nil), addTypes...)
+	replacement.EntersAsCopyConditionalCounters = append([]ConditionalCounterPlacement(nil), conditionalCounters...)
 	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
