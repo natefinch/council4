@@ -364,6 +364,59 @@ func TestParseConditionEventSubjectAndSourceState(t *testing.T) {
 	}
 }
 
+// TestParseEnteredOrCastFromGraveyardCondition covers the enters-the-battlefield
+// intervening condition that gates on the entering object(s) having come from a
+// graveyard, in both the singular self form and the plural group form, and
+// confirms unrelated zone wording fails closed.
+func TestParseEnteredOrCastFromGraveyardCondition(t *testing.T) {
+	t.Parallel()
+	recognized := []struct {
+		name      string
+		condition string
+		predicate ConditionPredicateKind
+	}{
+		{"controller full", "it entered from your graveyard or you cast it from your graveyard", ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard},
+		{"controller plural", "they entered from your graveyard or you cast them from your graveyard", ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard},
+		{"any singular", "it entered or was cast from a graveyard", ConditionPredicateEventSubjectEnteredOrCastFromGraveyard},
+		{"any plural", "they entered or were cast from a graveyard", ConditionPredicateEventSubjectEnteredOrCastFromGraveyard},
+	}
+	for _, test := range recognized {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			clause := parseSingleConditionClause(t, test.condition)
+			if clause.Predicate != test.predicate {
+				t.Fatalf("clause = %#v, want %s", clause, test.predicate)
+			}
+		})
+	}
+	rejected := []struct {
+		name      string
+		condition string
+	}{
+		{"from exile", "it entered from exile"},
+		{"from hand", "you cast it from your hand"},
+		{"entered tapped", "it entered tapped"},
+	}
+	for _, test := range rejected {
+		t.Run("reject_"+test.name, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(
+				"When this creature enters, if "+test.condition+", draw a card.",
+				Context{},
+			)
+			if len(document.Abilities) != 1 {
+				t.Fatalf("abilities = %#v", document.Abilities)
+			}
+			for _, clause := range document.Abilities[0].ConditionClauses {
+				if clause.Predicate == ConditionPredicateEventSubjectEnteredOrCastFromGraveyard ||
+					clause.Predicate == ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard {
+					t.Fatalf("condition %q unexpectedly matched a graveyard zone-change predicate", test.condition)
+				}
+			}
+		})
+	}
+}
+
 // TestParseConditionPriorInstruction covers the affirmative "you do" and
 // negative "you don't" reflexive prior-instruction clauses used by optional
 // resolving flow ("you may X. If you do/don't, Y").

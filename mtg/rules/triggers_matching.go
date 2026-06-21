@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, ability *game.TriggeredAbility, chosenModes []int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
@@ -416,6 +417,14 @@ func triggerInterveningIf(g *game.Game, source *game.Permanent, controller game.
 			event.EnterCastController != controller) {
 		return false
 	}
+	if trigger.InterveningIfEventPermanentEnteredOrCastFromGraveyard &&
+		!eventEnteredOrCastFromGraveyard(event) {
+		return false
+	}
+	if trigger.InterveningIfEventPermanentEnteredOrCastFromControllerGraveyard &&
+		!eventEnteredOrCastFromControllerGraveyard(event, controller) {
+		return false
+	}
 	if !conditionSatisfied(g, conditionContext{
 		controller: controller,
 		source:     source,
@@ -424,6 +433,38 @@ func triggerInterveningIf(g *game.Game, source *game.Permanent, controller game.
 		return false
 	}
 	return true
+}
+
+// eventEnteredOrCastFromGraveyard reports whether the entering permanent of an
+// enter event came from any graveyard, either by entering the battlefield
+// directly from a graveyard (reanimation) or by being cast from a graveyard
+// (escape, flashback). It backs the any-graveyard "if they entered or were cast
+// from a graveyard" intervening condition.
+func eventEnteredOrCastFromGraveyard(event *game.Event) bool {
+	if event == nil {
+		return false
+	}
+	if event.FromZone == zone.Graveyard {
+		return true
+	}
+	return event.EnterWasCast && event.EnterCastFromZone == zone.Graveyard
+}
+
+// eventEnteredOrCastFromControllerGraveyard is the controller-scoped form
+// backing "if it entered from your graveyard or you cast it from your
+// graveyard". A card always rests in its owner's graveyard (CR 404.2), so the
+// source graveyard belongs to the trigger controller exactly when the entering
+// card's owner is that controller. The cast branch additionally requires the
+// controller to be the caster.
+func eventEnteredOrCastFromControllerGraveyard(event *game.Event, controller game.PlayerID) bool {
+	if event == nil || event.Player != controller {
+		return false
+	}
+	if event.FromZone == zone.Graveyard {
+		return true
+	}
+	return event.EnterWasCast && event.EnterCastFromZone == zone.Graveyard &&
+		event.EnterHasCastController && event.EnterCastController == controller
 }
 
 func triggerControllerMatches(sourceController game.PlayerID, filter game.TriggerControllerFilter, eventController game.PlayerID) bool {

@@ -34,6 +34,7 @@ type permanentCreationOptions struct {
 	WasCast           bool
 	CastController    game.PlayerID
 	HasCastController bool
+	CastFromZone      zone.Type
 	Counters          []game.CounterPlacement
 	SimultaneousID    id.ID
 	XValue            int
@@ -94,6 +95,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		EnterWasCast:           options.WasCast,
 		EnterCastController:    options.CastController,
 		EnterHasCastController: options.HasCastController,
+		EnterCastFromZone:      options.CastFromZone,
 		PermanentID:            objectID,
 		FromZone:               fromZone,
 		ToZone:                 zone.Battlefield,
@@ -191,6 +193,7 @@ func commitSimultaneousCardPermanentEntries(g *game.Game, entries []preparedCard
 			EnterWasCast:           entry.options.WasCast,
 			EnterCastController:    entry.options.CastController,
 			EnterHasCastController: entry.options.HasCastController,
+			EnterCastFromZone:      entry.options.CastFromZone,
 			PermanentID:            permanent.ObjectID,
 			FromZone:               entry.fromZone,
 			ToZone:                 zone.Battlefield,

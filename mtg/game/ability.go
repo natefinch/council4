@@ -445,6 +445,21 @@ type TriggerCondition struct {
 	// it" and additionally requires the trigger controller to be the caster.
 	InterveningIfEventPermanentWasCastByController bool
 
+	// InterveningIfEventPermanentEnteredOrCastFromGraveyard is true for the
+	// enter-trigger intervening "if" that gates on the entering object(s) having
+	// come from any graveyard, either by entering directly from a graveyard or by
+	// being cast from a graveyard ("if they entered or were cast from a
+	// graveyard").
+	InterveningIfEventPermanentEnteredOrCastFromGraveyard bool
+
+	// InterveningIfEventPermanentEnteredOrCastFromControllerGraveyard is the
+	// controller-scoped variant gating on the entering object(s) having come from
+	// the trigger controller's own graveyard ("if it entered from your graveyard
+	// or you cast it from your graveyard"). It additionally requires the entering
+	// card's owner to be the trigger controller, and the cast branch requires the
+	// controller to be the caster.
+	InterveningIfEventPermanentEnteredOrCastFromControllerGraveyard bool
+
 	// State describes a state trigger. State triggers latch while true and only
 	// trigger again after becoming false, then true again (CR 603.8).
 	State opt.V[StateTriggerCondition]
