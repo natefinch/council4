@@ -510,6 +510,12 @@ func quantityRefs(quantity Quantity) primitiveRefs {
 		if dynamic.ResultKey != "" {
 			return primitiveRefs{consumesChoices: []ChoiceKey{ChoiceKey(dynamic.ResultKey)}}
 		}
+	case DynamicAmountMaxOf:
+		refs := primitiveRefs{}
+		for i := range dynamic.Operands {
+			refs = mergePrimitiveRefs(refs, quantityRefs(Dynamic(dynamic.Operands[i])))
+		}
+		return refs
 	default:
 	}
 	return primitiveRefs{}

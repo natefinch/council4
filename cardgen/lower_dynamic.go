@@ -110,6 +110,13 @@ func lowerDynamicAmount(amount compiler.CompiledAmount, object game.ObjectRefere
 		dynamic.Kind = game.DynamicAmountLifeLostThisTurn
 	case compiler.DynamicAmountLifeGainedThisTurn:
 		dynamic.Kind = game.DynamicAmountLifeGainedThisTurn
+	case compiler.DynamicAmountMaxOf:
+		operands, ok := lowerDynamicAmountOperands(amount.Operands, object)
+		if !ok {
+			return game.DynamicAmount{}, false
+		}
+		dynamic.Kind = game.DynamicAmountMaxOf
+		dynamic.Operands = operands
 	case compiler.DynamicAmountSacrificedPower:
 		dynamic.Kind = game.DynamicAmountObjectPower
 		dynamic.Object = game.SacrificedCostReference()
@@ -123,6 +130,25 @@ func lowerDynamicAmount(amount compiler.CompiledAmount, object game.ObjectRefere
 		return game.DynamicAmount{}, false
 	}
 	return dynamic, true
+}
+
+// lowerDynamicAmountOperands lowers the operand list of a "whichever is greater"
+// max combinator, requiring at least two operands and lowering each through
+// lowerDynamicAmount so every recognized amount form composes. It fails closed
+// when any operand is unrecognized.
+func lowerDynamicAmountOperands(operands []compiler.CompiledAmount, object game.ObjectReference) ([]game.DynamicAmount, bool) {
+	if len(operands) < 2 {
+		return nil, false
+	}
+	lowered := make([]game.DynamicAmount, 0, len(operands))
+	for i := range operands {
+		dynamic, ok := lowerDynamicAmount(operands[i], object)
+		if !ok {
+			return nil, false
+		}
+		lowered = append(lowered, dynamic)
+	}
+	return lowered, true
 }
 
 // greatestInGroupKind maps a compiled greatest-characteristic amount kind to its

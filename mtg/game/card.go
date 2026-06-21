@@ -724,6 +724,13 @@ func cloneDynamicAmount(dynamic *DynamicAmount) DynamicAmount {
 		player := *dynamic.Player
 		cloned.Player = &player
 	}
+	if len(dynamic.Operands) != 0 {
+		operands := make([]DynamicAmount, len(dynamic.Operands))
+		for i := range dynamic.Operands {
+			operands[i] = cloneDynamicAmount(&dynamic.Operands[i])
+		}
+		cloned.Operands = operands
+	}
 	return cloned
 }
 

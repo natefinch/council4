@@ -478,9 +478,78 @@ func precedingEffectMultiplier(tokens []shared.Token, atoms Atoms) int {
 	return multiplier
 }
 
-func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
-	if start >= len(tokens) {
+// parseDynamicMaxSubject recognizes the "whichever is greater" combinator over
+// two rules-derived amounts: "<A> or <B>, whichever is greater" (Willowdusk,
+// Essence Seer). It produces an EffectDynamicAmountMaxOf amount carrying the two
+// operand subjects, each parsed as a complete standalone subject so it reuses
+// every recognized amount form. It splits the region before the trailing
+// "whichever is greater" at the "or" that yields two fully-recognized operands,
+// requiring the operands to agree on whether they are counts. It fails closed
+// when no trailing "whichever is greater" is present, when no split yields two
+// recognized operands, or when the operands disagree on count shape, so any
+// unrecognized combinator wording keeps the amount unrecognized.
+func parseDynamicMaxSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
+	tail := -1
+	for i := start; i+2 < len(tokens); i++ {
+		if equalWord(tokens[i], "whichever") && equalWord(tokens[i+1], "is") &&
+			equalWord(tokens[i+2], "greater") {
+			tail = i
+			break
+		}
+	}
+	if tail < 0 {
 		return dynamicAmountSubject{}, false
+	}
+	end := tail + 3
+	if !dynamicAmountBoundary(tokens, end) {
+		return dynamicAmountSubject{}, false
+	}
+	region := tail
+	if region-1 > start && tokens[region-1].Kind == shared.Comma {
+		region--
+	}
+	for split := start + 1; split < region-1; split++ {
+		if !equalWord(tokens[split], "or") {
+			continue
+		}
+		left := tokens[start:split]
+		right := tokens[split+1 : region]
+		leftSub, leftOK := parseDynamicAmountSubject(left, 0, atoms)
+		if !leftOK || leftSub.end != len(left) {
+			continue
+		}
+		rightSub, rightOK := parseDynamicAmountSubject(right, 0, atoms)
+		if !rightOK || rightSub.end != len(right) {
+			continue
+		}
+		if leftSub.count != rightSub.count || leftSub.plural != rightSub.plural {
+			continue
+		}
+		leftAmount := leftSub.amount
+		leftAmount.Multiplier = 1
+		rightAmount := rightSub.amount
+		rightAmount.Multiplier = 1
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{
+				DynamicKind: EffectDynamicAmountMaxOf,
+				Operands:    []EffectAmountSyntax{leftAmount, rightAmount},
+			},
+			end:    end,
+			count:  leftSub.count,
+			plural: leftSub.plural,
+		}, true
+	}
+	return dynamicAmountSubject{}, false
+}
+
+// parseDynamicAmountSubjectHelper runs the dedicated dynamic-amount subject
+// recognizers in priority order, returning the first that matches. It is split
+// out of parseDynamicAmountSubject so the dispatch chain stays within the
+// maintainability budget; the remaining inline switch handles the shorter
+// keyword-phrase forms.
+func parseDynamicAmountSubjectHelper(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
+	if subject, ok := parseDynamicMaxSubject(tokens, start, atoms); ok {
+		return subject, true
 	}
 	if subject, ok := parseDynamicSourceCounterCount(tokens, start, atoms); ok {
 		return subject, true
@@ -513,6 +582,16 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 		return subject, true
 	}
 	if subject, ok := parseSacrificedCreatureCharacteristic(tokens, start); ok {
+		return subject, true
+	}
+	return dynamicAmountSubject{}, false
+}
+
+func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
+	if start >= len(tokens) {
+		return dynamicAmountSubject{}, false
+	}
+	if subject, ok := parseDynamicAmountSubjectHelper(tokens, start, atoms); ok {
 		return subject, true
 	}
 	switch {

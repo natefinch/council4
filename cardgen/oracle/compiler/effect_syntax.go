@@ -531,6 +531,13 @@ func compileTypedAmount(amount parser.EffectAmountSyntax) CompiledAmount {
 		selection := compileTypedSelection(*amount.Selection)
 		compiled.selector = &selection
 	}
+	if len(amount.Operands) != 0 {
+		operands := make([]CompiledAmount, len(amount.Operands))
+		for i := range amount.Operands {
+			operands[i] = compileTypedAmount(amount.Operands[i])
+		}
+		compiled.Operands = operands
+	}
 	return compiled
 }
 
@@ -592,6 +599,8 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountLifeLostThisTurn
 	case parser.EffectDynamicAmountLifeGainedThisTurn:
 		return DynamicAmountLifeGainedThisTurn
+	case parser.EffectDynamicAmountMaxOf:
+		return DynamicAmountMaxOf
 	default:
 		return DynamicAmountNone
 	}

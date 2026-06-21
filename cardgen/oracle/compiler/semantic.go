@@ -1917,6 +1917,12 @@ const (
 	// controller-scoped. Added last so existing kinds keep their wire values.
 	DynamicAmountLifeLostThisTurn
 	DynamicAmountLifeGainedThisTurn
+	// DynamicAmountMaxOf is the greatest value among Operands, the "whichever is
+	// greater" combinator over two rules-derived amounts ("equal to the amount
+	// of life you gained this turn or the amount of life you lost this turn,
+	// whichever is greater." — Willowdusk, Essence Seer). Each operand is itself
+	// a CompiledAmount. Added last so existing kinds keep their wire values.
+	DynamicAmountMaxOf
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.
@@ -1945,7 +1951,10 @@ type CompiledAmount struct {
 	CounterKind   counter.Kind
 	Text          string
 	// Colors carries the colors of a devotion amount; empty otherwise.
-	Colors   []color.Color
+	Colors []color.Color
+	// Operands carries the sub-amounts of a DynamicAmountMaxOf combinator; empty
+	// otherwise.
+	Operands []CompiledAmount
 	selector *CompiledSelector
 }
 

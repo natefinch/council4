@@ -525,7 +525,29 @@ func (r Renderer) renderDynamicAmount(ctx *renderCtx, dynamic *game.DynamicAmoun
 	if dynamic.ColorFrom != "" {
 		fields = append(fields, fmt.Sprintf("ColorFrom: game.ChoiceKey(%q),", string(dynamic.ColorFrom)))
 	}
+	if len(dynamic.Operands) > 0 {
+		operands, err := r.renderDynamicAmountOperands(ctx, dynamic.Operands)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Operands: %s,", operands))
+	}
 	return structLit("game.DynamicAmount", fields), nil
+}
+
+// renderDynamicAmountOperands renders the operand list of a DynamicAmountMaxOf
+// combinator as a []game.DynamicAmount literal, rendering each operand with the
+// same recursion so nested dynamic amounts emit identically.
+func (r Renderer) renderDynamicAmountOperands(ctx *renderCtx, operands []game.DynamicAmount) (string, error) {
+	rendered := make([]string, 0, len(operands))
+	for i := range operands {
+		operand, err := r.renderDynamicAmount(ctx, &operands[i])
+		if err != nil {
+			return "", err
+		}
+		rendered = append(rendered, operand+",")
+	}
+	return sliceLit("game.DynamicAmount", rendered), nil
 }
 
 func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
@@ -598,6 +620,8 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountLifeLostThisTurn", nil
 	case game.DynamicAmountLifeGainedThisTurn:
 		return "game.DynamicAmountLifeGainedThisTurn", nil
+	case game.DynamicAmountMaxOf:
+		return "game.DynamicAmountMaxOf", nil
 	case game.DynamicAmountEventLifeChange:
 		return "game.DynamicAmountEventLifeChange", nil
 	default:

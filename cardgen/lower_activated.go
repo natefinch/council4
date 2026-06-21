@@ -173,6 +173,9 @@ func lowerActivatedAbilityKind(
 	}
 	for _, target := range ability.Content.Targets {
 		spans = append(spans, target.Span)
+		if target.ChoiceSpan != (shared.Span{}) {
+			spans = append(spans, target.ChoiceSpan)
+		}
 	}
 	spans = append(spans, activationConditionSourceSpans(ability)...)
 	for _, reference := range ability.Content.References {

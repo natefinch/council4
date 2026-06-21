@@ -152,6 +152,8 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 	case game.DynamicAmountSpellsCastThisTurn, game.DynamicAmountLifeLostThisTurn,
 		game.DynamicAmountLifeGainedThisTurn:
 		amount = turnEventDynamicAmount(g, controller, dynamic.Kind)
+	case game.DynamicAmountMaxOf:
+		amount = maxOfDynamicAmounts(g, obj, controller, dynamic.Operands, before)
 	default:
 	}
 	multiplier := dynamic.Multiplier
@@ -217,6 +219,21 @@ func turnEventDynamicAmount(g *game.Game, controller game.PlayerID, kind game.Dy
 	default:
 		return spellsCastThisTurn(g, controller)
 	}
+}
+
+// maxOfDynamicAmounts evaluates each operand of a DynamicAmountMaxOf combinator
+// against the same resolution context and returns the greatest value
+// (CR 608.2c). It backs the "whichever is greater" wording; an empty operand
+// list yields zero.
+func maxOfDynamicAmounts(g *game.Game, obj *game.StackObject, controller game.PlayerID, operands []game.DynamicAmount, before game.ContinuousLayer) int {
+	best := 0
+	for i := range operands {
+		value := dynamicAmountValueBeforeLayer(g, obj, controller, operands[i], before)
+		if i == 0 || value > best {
+			best = value
+		}
+	}
+	return best
 }
 
 // spellsCastThisTurn counts the spells the controller has cast so far this turn
