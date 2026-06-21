@@ -509,6 +509,9 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 	if subject, ok := parseDynamicSpellsCastThisTurnSubject(tokens, start); ok {
 		return subject, true
 	}
+	if subject, ok := parseDynamicLifeChangedThisTurnSubject(tokens, start); ok {
+		return subject, true
+	}
 	if subject, ok := parseSacrificedCreatureCharacteristic(tokens, start); ok {
 		return subject, true
 	}
@@ -719,6 +722,61 @@ func parseDynamicSpellsCastThisTurnSubject(tokens []shared.Token, start int) (dy
 	return dynamicAmountSubject{
 		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountSpellsCastThisTurn},
 		end:    end, count: true, plural: plural,
+	}, true
+}
+
+// parseDynamicLifeChangedThisTurnSubject recognizes the controller's total life
+// gained or lost so far this turn as a dynamic amount subject ("the life you've
+// lost this turn", "the (amount of )?life you (have )?(gained|lost) this turn").
+// Damage to the controller counts toward the life-lost total because dealing
+// damage to a player causes that player to lose that much life (CR 120.3). It
+// backs Children of Korlis ("You gain life equal to the life you've lost this
+// turn") and the life-tracking family. It is controller-scoped: the "you" names
+// the resolving ability's controller, so the subject attaches no referent. It
+// fails closed on any other wording.
+func parseDynamicLifeChangedThisTurnSubject(tokens []shared.Token, start int) (dynamicAmountSubject, bool) {
+	if !effectWordsAt(tokens, start, "the") {
+		return dynamicAmountSubject{}, false
+	}
+	idx := start + 1
+	switch {
+	case effectWordsAt(tokens, idx, "amount", "of", "life"):
+		idx += 3
+	case effectWordsAt(tokens, idx, "life"):
+		idx++
+	default:
+		return dynamicAmountSubject{}, false
+	}
+	switch {
+	case effectWordsAt(tokens, idx, "you've"):
+		idx++
+	case effectWordsAt(tokens, idx, "you", "have"):
+		idx += 2
+	case effectWordsAt(tokens, idx, "you"):
+		idx++
+	default:
+		return dynamicAmountSubject{}, false
+	}
+	var kind EffectDynamicAmountKind
+	switch {
+	case effectWordsAt(tokens, idx, "lost"):
+		kind = EffectDynamicAmountLifeLostThisTurn
+	case effectWordsAt(tokens, idx, "gained"):
+		kind = EffectDynamicAmountLifeGainedThisTurn
+	default:
+		return dynamicAmountSubject{}, false
+	}
+	idx++
+	if !effectWordsAt(tokens, idx, "this", "turn") {
+		return dynamicAmountSubject{}, false
+	}
+	idx += 2
+	if !dynamicAmountBoundary(tokens, idx) {
+		return dynamicAmountSubject{}, false
+	}
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: kind},
+		end:    idx,
 	}, true
 }
 

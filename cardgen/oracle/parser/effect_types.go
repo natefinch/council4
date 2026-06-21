@@ -433,6 +433,17 @@ const (
 	// so the amount carries no selection and the lowerer reads the count the
 	// destroy effect publishes. Added last so existing kinds keep their values.
 	EffectDynamicAmountDestroyedThisWay EffectDynamicAmountKind = "EffectDynamicAmountDestroyedThisWay"
+	// EffectDynamicAmountLifeLostThisTurn is the total life the controller has
+	// lost so far this turn ("equal to the life you've lost this turn", "the
+	// amount of life you lost this turn"). Damage to the controller counts,
+	// because dealing damage to a player causes that player to lose that much
+	// life (CR 120.3). It backs Children of Korlis. EffectDynamicAmount
+	// LifeGainedThisTurn is the life-gained sibling ("the life you gained this
+	// turn"). Both are controller-scoped: the "you" names the resolving
+	// ability's controller, so they attach no in-text referent. Added last so
+	// existing kinds keep their values.
+	EffectDynamicAmountLifeLostThisTurn   EffectDynamicAmountKind = "EffectDynamicAmountLifeLostThisTurn"
+	EffectDynamicAmountLifeGainedThisTurn EffectDynamicAmountKind = "EffectDynamicAmountLifeGainedThisTurn"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.

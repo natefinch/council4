@@ -1891,6 +1891,14 @@ const (
 	// sequence lowerer that reads the count published by the preceding destroy
 	// instruction. Added last so existing kinds keep their wire values.
 	DynamicAmountDestroyedThisWay
+	// DynamicAmountLifeLostThisTurn is the total life the controller has lost so
+	// far this turn ("equal to the life you've lost this turn"). Damage to the
+	// controller counts because dealing damage to a player causes that player to
+	// lose that much life (CR 120.3). It backs Children of Korlis.
+	// DynamicAmountLifeGainedThisTurn is the life-gained sibling. Both are
+	// controller-scoped. Added last so existing kinds keep their wire values.
+	DynamicAmountLifeLostThisTurn
+	DynamicAmountLifeGainedThisTurn
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

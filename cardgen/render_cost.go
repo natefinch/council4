@@ -588,6 +588,10 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountDevotion", nil
 	case game.DynamicAmountSpellsCastThisTurn:
 		return "game.DynamicAmountSpellsCastThisTurn", nil
+	case game.DynamicAmountLifeLostThisTurn:
+		return "game.DynamicAmountLifeLostThisTurn", nil
+	case game.DynamicAmountLifeGainedThisTurn:
+		return "game.DynamicAmountLifeGainedThisTurn", nil
 	case game.DynamicAmountEventLifeChange:
 		return "game.DynamicAmountEventLifeChange", nil
 	default:

@@ -151,8 +151,9 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 			choice.Kind == game.ResolutionChoiceNumber {
 			amount = choice.Number
 		}
-	case game.DynamicAmountSpellsCastThisTurn:
-		amount = spellsCastThisTurn(g, controller)
+	case game.DynamicAmountSpellsCastThisTurn, game.DynamicAmountLifeLostThisTurn,
+		game.DynamicAmountLifeGainedThisTurn:
+		amount = turnEventDynamicAmount(g, controller, dynamic.Kind)
 	default:
 	}
 	multiplier := dynamic.Multiplier
@@ -206,6 +207,22 @@ func blockingCreaturesBeyondFirst(g *game.Game, obj *game.StackObject) int {
 	return blockers - 1
 }
 
+// turnEventDynamicAmount dispatches the controller-scoped amounts derived from
+// the current turn's event log (CR 608.2c): the number of spells cast and the
+// total life gained or lost so far this turn. It is split out of
+// dynamicAmountValueBeforeLayer so that large switch stays within the
+// maintainability budget.
+func turnEventDynamicAmount(g *game.Game, controller game.PlayerID, kind game.DynamicAmountKind) int {
+	switch kind {
+	case game.DynamicAmountLifeLostThisTurn:
+		return lifeChangedThisTurn(g, controller, game.EventLifeLost)
+	case game.DynamicAmountLifeGainedThisTurn:
+		return lifeChangedThisTurn(g, controller, game.EventLifeGained)
+	default:
+		return spellsCastThisTurn(g, controller)
+	}
+}
+
 // spellsCastThisTurn counts the spells the controller has cast so far this turn
 // from the turn's recorded spell-cast events (CR 608.2c). A triggered ability's
 // own triggering spell counts, because its cast event precedes the ability's
@@ -218,6 +235,22 @@ func spellsCastThisTurn(g *game.Game, controller game.PlayerID) int {
 		}
 	}
 	return count
+}
+
+// lifeChangedThisTurn sums the life a player gained or lost so far this turn from
+// the turn's recorded life-change events (CR 608.2c). Pass game.EventLifeGained
+// for "the life you gained this turn" or game.EventLifeLost for "the life you've
+// lost this turn"; damage to the player contributes to the life-lost total
+// because dealing damage to a player causes that much life loss (CR 120.3),
+// emitted as an EventLifeLost.
+func lifeChangedThisTurn(g *game.Game, player game.PlayerID, kind game.EventKind) int {
+	total := 0
+	for _, event := range g.EventsThisTurn() {
+		if event.Kind == kind && event.Player == player {
+			total += event.Amount
+		}
+	}
+	return total
 }
 
 // controllerAggregateAmount computes the player-relative dynamic amounts that
