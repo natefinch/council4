@@ -1183,7 +1183,11 @@ func exactTemporaryKeywordList(text string) bool {
 		switch keyword {
 		case "deathtouch", "double strike", "first strike", "flying", "haste",
 			"hexproof", "indestructible", "lifelink", "menace", "reach", "shroud", "trample", "vigilance",
-			"protection from each color":
+			"protection from each color", "protection from everything",
+			"protection from monocolored", "protection from multicolored",
+			"protection from white", "protection from blue", "protection from black",
+			"protection from red", "protection from green",
+			"protection from the color of your choice", "protection from a color of your choice":
 		default:
 			return false
 		}

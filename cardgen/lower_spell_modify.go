@@ -1849,7 +1849,7 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 		effect.Duration != compiler.DurationUntilEndOfTurn {
 		return unsupported()
 	}
-	keywords, ok := mixedStaticKeywords(ctx.content.Keywords)
+	keywords, abilities, ok := partitionTemporaryKeywords(ctx.content.Keywords)
 	if !ok {
 		return unsupported()
 	}
@@ -1882,8 +1882,9 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 			Primitive: game.ApplyContinuous{
 				Object: opt.Val(object),
 				ContinuousEffects: []game.ContinuousEffect{{
-					Layer:       game.LayerAbility,
-					AddKeywords: keywords,
+					Layer:        game.LayerAbility,
+					AddKeywords:  keywords,
+					AddAbilities: abilities,
 				}},
 				Duration: game.DurationUntilEndOfTurn,
 			},

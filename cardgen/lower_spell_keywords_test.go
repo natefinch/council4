@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -327,6 +328,72 @@ func TestLowerKeywordAbilityGainLossNotLifeSpell(t *testing.T) {
 			}
 			if diagnostics[0].Summary != test.want {
 				t.Fatalf("summary = %q, want %q", diagnostics[0].Summary, test.want)
+			}
+		})
+	}
+}
+
+// TestLowerTargetProtectionGrantSpell verifies that a spell granting protection
+// from a fixed color or from a color chosen on resolution to a single target
+// creature lowers to an anchored ApplyContinuous carrying the protection static
+// ability via AddAbilities (the Gods Willing / Mother of Runes shape).
+func TestLowerTargetProtectionGrantSpell(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		oracle      string
+		chosenColor bool
+		fromColor   color.Color
+	}{
+		{
+			name:      "fixed color",
+			oracle:    "Target creature you control gains protection from red until end of turn.",
+			fromColor: color.Red,
+		},
+		{
+			name:        "chosen color",
+			oracle:      "Target creature you control gains protection from the color of your choice until end of turn.",
+			chosenColor: true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Protection Grant",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: tc.oracle,
+			})
+			mode := face.SpellAbility.Val.Modes[0]
+			if len(mode.Targets) != 1 {
+				t.Fatalf("targets = %d, want 1", len(mode.Targets))
+			}
+			apply, ok := mode.Sequence[0].Primitive.(game.ApplyContinuous)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.ApplyContinuous", mode.Sequence[0].Primitive)
+			}
+			if apply.Duration != game.DurationUntilEndOfTurn {
+				t.Fatalf("duration = %v, want until end of turn", apply.Duration)
+			}
+			effect := apply.ContinuousEffects[0]
+			if len(effect.AddAbilities) != 1 {
+				t.Fatalf("abilities = %d, want 1 granted protection ability", len(effect.AddAbilities))
+			}
+			static, ok := effect.AddAbilities[0].(*game.StaticAbility)
+			if !ok {
+				t.Fatalf("ability = %T, want *game.StaticAbility", effect.AddAbilities[0])
+			}
+			prot, ok := game.StaticBodyProtectionKeyword(static)
+			if !ok {
+				t.Fatalf("body = %+v, want protection keyword", static)
+			}
+			if tc.chosenColor {
+				if !prot.ChosenColor {
+					t.Fatalf("protection = %+v, want chosen color", prot)
+				}
+			} else if len(prot.FromColors) != 1 || prot.FromColors[0] != tc.fromColor {
+				t.Fatalf("protection = %+v, want from %v", prot, tc.fromColor)
 			}
 		})
 	}

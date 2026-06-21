@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -154,6 +155,50 @@ func TestLowerGroupKeywordGrantProtectionFromEachColor(t *testing.T) {
 	prot, ok := game.StaticBodyProtectionKeyword(static)
 	if !ok || !prot.EachColor {
 		t.Fatalf("protection = %+v ok=%v, want protection from each color", prot, ok)
+	}
+}
+
+// TestLowerGroupKeywordGrantProtectionFromColor verifies that a group grant of
+// protection from a single named color lowers the parameterized protection
+// keyword to a granted static ability carrying that color.
+func TestLowerGroupKeywordGrantProtectionFromColor(t *testing.T) {
+	t.Parallel()
+	effect := groupKeywordGrant(t,
+		"Creatures you control gain protection from red until end of turn.")
+	if len(effect.AddKeywords) != 0 {
+		t.Fatalf("keywords = %v, want none", effect.AddKeywords)
+	}
+	if len(effect.AddAbilities) != 1 {
+		t.Fatalf("abilities = %d, want 1 granted protection ability", len(effect.AddAbilities))
+	}
+	static, ok := effect.AddAbilities[0].(*game.StaticAbility)
+	if !ok {
+		t.Fatalf("ability = %T, want *game.StaticAbility", effect.AddAbilities[0])
+	}
+	prot, ok := game.StaticBodyProtectionKeyword(static)
+	if !ok || len(prot.FromColors) != 1 || prot.FromColors[0] != color.Red {
+		t.Fatalf("protection = %+v ok=%v, want protection from red", prot, ok)
+	}
+}
+
+// TestLowerGroupKeywordGrantProtectionFromChosenColor verifies that a group
+// grant of protection from a color chosen on resolution lowers to a granted
+// static ability marked ChosenColor; the rules resolve the color when the
+// effect is applied.
+func TestLowerGroupKeywordGrantProtectionFromChosenColor(t *testing.T) {
+	t.Parallel()
+	effect := groupKeywordGrant(t,
+		"Creatures you control gain protection from the color of your choice until end of turn.")
+	if len(effect.AddAbilities) != 1 {
+		t.Fatalf("abilities = %d, want 1 granted protection ability", len(effect.AddAbilities))
+	}
+	static, ok := effect.AddAbilities[0].(*game.StaticAbility)
+	if !ok {
+		t.Fatalf("ability = %T, want *game.StaticAbility", effect.AddAbilities[0])
+	}
+	prot, ok := game.StaticBodyProtectionKeyword(static)
+	if !ok || !prot.ChosenColor {
+		t.Fatalf("protection = %+v ok=%v, want protection from chosen color", prot, ok)
 	}
 }
 
