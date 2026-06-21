@@ -347,7 +347,10 @@ func selectorCharacteristics(selector compiler.CompiledSelector) (game.Selection
 		selection.ExcludedColors = append([]color.Color(nil), excludedColors...)
 	}
 	if selector.SubtypeFromEntryChoice {
-		selection.SubtypeFromSourceEntryChoice = true
+		selection.SubtypeChoice = game.SubtypeChoiceSourceEntry
+	}
+	if selector.SubtypeFromChosenType {
+		selection.SubtypeChoice = game.SubtypeChoiceResolution
 	}
 	return selection, true
 }
@@ -359,6 +362,7 @@ func selectorHasCountCharacteristic(selector compiler.CompiledSelector) bool {
 		selector.MatchCounter ||
 		selector.MatchManaValue || selector.MatchPower || selector.MatchToughness ||
 		selector.SubtypeFromEntryChoice ||
+		selector.SubtypeFromChosenType ||
 		len(selector.SubtypesAny()) > 0 ||
 		len(selector.ExcludedSubtypes()) > 0 ||
 		len(selector.Supertypes()) > 0 ||

@@ -26,6 +26,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactCopyStackObjectEffectSyntax(effect)
 	case EffectChooseNewTargets:
 		return exactChooseNewTargetsEffectSyntax(effect)
+	case EffectChooseCreatureType:
+		return strings.EqualFold(exactEffectClauseText(effect), "Choose a creature type.")
 	case EffectCreate:
 		return exactCreateTokenEffectSyntax(effect) ||
 			exactCreateNamedTokenEffectSyntax(effect) ||

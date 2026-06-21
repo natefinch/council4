@@ -524,6 +524,52 @@ func lowerChooseNewTargetsSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 	}.Ability(), nil
 }
 
+// lowerChooseCreatureTypeSpell lowers the resolution-time effect "Choose a
+// creature type." to a single Choose primitive that publishes the chosen
+// subtype under game.SpellChosenTypeChoiceKey. Later effects in the same
+// resolution read it through a count selection's SubtypeChoiceResolution ("draw a
+// card for each permanent you control of that type", Distant Melody). Any rider
+// (target, condition, mode, reference, or extra effect) leaves the body
+// unrecognized so it fails closed.
+func lowerChooseCreatureTypeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported choose effect",
+			"the executable source backend supports only exact \"Choose a creature type.\"",
+		)
+	}
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 0 {
+		return unsupported()
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectChooseCreatureType ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone {
+		return unsupported()
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.Choose{
+				Choice: game.ResolutionChoice{
+					Kind:          game.ResolutionChoiceSubtype,
+					SubtypeOfType: types.Creature,
+					Prompt:        "Choose a creature type",
+				},
+				PublishChoice: game.SpellChosenTypeChoiceKey,
+			},
+		}},
+	}.Ability(), nil
+}
+
 // lowerCopyStackObjectSpell lowers "Copy target <activated ability|triggered
 // ability|spell, activated ability, or triggered ability|instant or sorcery
 // spell|...> [you control][. You may choose new targets for the copy]." to a

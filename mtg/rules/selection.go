@@ -61,6 +61,13 @@ type selectionSubject struct {
 	event     game.Event
 	cardTypes []types.Card
 	card      *game.CardInstance
+
+	// resolutionChoices holds the resolving stack object's published choices so a
+	// SubtypeChoiceResolution predicate can read the creature type chosen earlier in
+	// the same resolution. It is set only for group-membership matching, where the
+	// resolving object is available; other callers leave it nil and a
+	// SubtypeChoiceResolution predicate matches nothing.
+	resolutionChoices map[string]game.ResolutionChoiceResult
 }
 
 // matchSelection reports whether the subject satisfies every active predicate in
@@ -100,8 +107,14 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if sel.ExcludedSubtype != "" && s.hasAnySubtype([]types.Sub{sel.ExcludedSubtype}) {
 		return false
 	}
-	if sel.SubtypeFromSourceEntryChoice {
+	if sel.SubtypeChoice == game.SubtypeChoiceSourceEntry {
 		subtype, ok := s.sourceEntryChoiceSubtype(game.EntryTypeChoiceKey)
+		if !ok || !s.hasAnySubtype([]types.Sub{subtype}) {
+			return false
+		}
+	}
+	if sel.SubtypeChoice == game.SubtypeChoiceResolution {
+		subtype, ok := s.resolutionChoiceSubtype(game.SpellChosenTypeChoiceKey)
 		if !ok || !s.hasAnySubtype([]types.Sub{subtype}) {
 			return false
 		}
@@ -261,6 +274,21 @@ func (s *selectionSubject) sourceEntryChoiceSubtype(key game.ChoiceKey) (types.S
 		return "", false
 	}
 	choice, ok := source.EntryChoices[key]
+	if !ok || choice.Kind != game.ResolutionChoiceSubtype || choice.Subtype == "" {
+		return "", false
+	}
+	return choice.Subtype, true
+}
+
+// resolutionChoiceSubtype resolves the creature subtype published under key by an
+// earlier Choose instruction in the same resolution (the "of that type"
+// back-reference). It reports false when the choice is absent, is not a subtype
+// choice, or carries no subtype.
+func (s *selectionSubject) resolutionChoiceSubtype(key game.ChoiceKey) (types.Sub, bool) {
+	if s.resolutionChoices == nil {
+		return "", false
+	}
+	choice, ok := s.resolutionChoices[string(key)]
 	if !ok || choice.Kind != game.ResolutionChoiceSubtype || choice.Subtype == "" {
 		return "", false
 	}

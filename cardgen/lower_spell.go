@@ -1167,6 +1167,8 @@ func lowerImmediateSingleEffectSpell(
 		return lowerCopyStackObjectSpell(ctx)
 	case compiler.EffectChooseNewTargets:
 		return lowerChooseNewTargetsSpell(ctx)
+	case compiler.EffectChooseCreatureType:
+		return lowerChooseCreatureTypeSpell(ctx)
 	case compiler.EffectSacrifice:
 		return lowerSacrificeSpell(ctx)
 	case compiler.EffectCreate:

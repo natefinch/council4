@@ -891,7 +891,7 @@ func validateTriggerPatternCardSelection(pattern *game.TriggerPattern) error {
 	if pattern.Event == game.EventSpellCast {
 		unsupported.Supertypes = nil
 		unsupported.SubtypesAny = nil
-		unsupported.SubtypeFromSourceEntryChoice = false
+		unsupported.SubtypeChoice = game.SubtypeChoiceWithoutEntry(unsupported.SubtypeChoice)
 		unsupported.ColorsAny = nil
 		unsupported.Colorless = false
 		unsupported.Multicolored = false

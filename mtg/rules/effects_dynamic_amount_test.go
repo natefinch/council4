@@ -82,7 +82,7 @@ func TestDynamicEffectAmountFormulasResolveSemantically(t *testing.T) {
 }
 
 // TestDynamicAmountCountsChosenTypeCreatures verifies that a controlled-creature
-// count whose selection carries SubtypeFromSourceEntryChoice counts only the
+// count whose selection carries SubtypeChoiceSourceEntry counts only the
 // controller's creatures that share the creature subtype the source permanent
 // chose as it entered (Three Tree City).
 func TestDynamicAmountCountsChosenTypeCreatures(t *testing.T) {
@@ -112,13 +112,58 @@ func TestDynamicAmountCountsChosenTypeCreatures(t *testing.T) {
 		Kind:       game.DynamicAmountCountSelector,
 		Multiplier: 1,
 		Group: game.BattlefieldGroup(game.Selection{
-			RequiredTypes:                []types.Card{types.Creature},
-			Controller:                   game.ControllerYou,
-			SubtypeFromSourceEntryChoice: true,
+			RequiredTypes: []types.Card{types.Creature},
+			Controller:    game.ControllerYou,
+			SubtypeChoice: game.SubtypeChoiceSourceEntry,
 		}),
 	}
 	if got := dynamicAmountValue(g, obj, game.Player1, count); got != 2 {
 		t.Fatalf("chosen-type creature count = %d, want 2 (only your Elves)", got)
+	}
+}
+
+// TestDynamicAmountCountsResolutionChosenTypePermanents verifies that a
+// controlled-permanent count whose selection carries SubtypeChoiceResolution counts
+// only the controller's permanents that share the creature subtype published
+// under that key earlier in the resolution ("Choose a creature type. Draw a card
+// for each permanent you control of that type." — Distant Melody).
+func TestDynamicAmountCountsResolutionChosenTypePermanents(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	for _, subtypes := range [][]types.Sub{{types.Elf}, {types.Elf}, {types.Goblin}} {
+		addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+			Name:     "Test Creature",
+			Types:    []types.Card{types.Creature},
+			Subtypes: subtypes,
+		}})
+	}
+	addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Opponent Elf",
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Elf},
+	}})
+	obj := &game.StackObject{
+		Controller: game.Player1,
+		ResolutionChoices: map[string]game.ResolutionChoiceResult{
+			string(game.SpellChosenTypeChoiceKey): {Kind: game.ResolutionChoiceSubtype, Subtype: types.Elf},
+		},
+	}
+
+	count := game.DynamicAmount{
+		Kind:       game.DynamicAmountCountSelector,
+		Multiplier: 1,
+		Group: game.BattlefieldGroup(game.Selection{
+			Controller:    game.ControllerYou,
+			SubtypeChoice: game.SubtypeChoiceResolution,
+		}),
+	}
+	if got := dynamicAmountValue(g, obj, game.Player1, count); got != 2 {
+		t.Fatalf("resolution chosen-type permanent count = %d, want 2 (only your Elves)", got)
+	}
+
+	// With no published choice the predicate matches nothing (fail closed).
+	empty := &game.StackObject{Controller: game.Player1}
+	if got := dynamicAmountValue(g, empty, game.Player1, count); got != 0 {
+		t.Fatalf("unchosen-type permanent count = %d, want 0", got)
 	}
 }
 

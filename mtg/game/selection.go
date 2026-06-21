@@ -11,6 +11,44 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+// SubtypeChoiceSource identifies where a Selection's required creature subtype
+// is chosen during play, for predicates that match permanents of a subtype
+// decided in-game rather than printed in the predicate. The zero value imposes
+// no chosen-subtype restriction. The two sources are mutually exclusive, so a
+// single field captures both at one byte, packing into Selection's bool cluster.
+type SubtypeChoiceSource uint8
+
+// SubtypeChoiceSource values name the supported in-game subtype sources.
+const (
+	// SubtypeChoiceNone imposes no chosen-subtype restriction.
+	SubtypeChoiceNone SubtypeChoiceSource = iota
+
+	// SubtypeChoiceSourceEntry requires the matched permanent to share the
+	// creature subtype the predicate's source permanent chose as it entered (its
+	// EntryChoices[EntryTypeChoiceKey]), the "of the chosen type" restriction of
+	// chosen-type anthems. A missing source, choice, or subtype matches nothing.
+	SubtypeChoiceSourceEntry
+
+	// SubtypeChoiceResolution requires the matched permanent to share the creature
+	// subtype published under SpellChosenTypeChoiceKey by an earlier Choose
+	// instruction in the same resolution (its StackObject.ResolutionChoices), the
+	// "of that type" restriction of "Choose a creature type. ... of that type."
+	// spells (Distant Melody). A missing or non-subtype choice matches nothing.
+	SubtypeChoiceResolution
+)
+
+// SubtypeChoiceWithoutEntry returns choice with the source-entry variant cleared
+// to SubtypeChoiceNone, leaving any other chosen-subtype source intact. Trigger
+// subject validators use it to permit the entry-choice predicate (whose subtype
+// the entering source supplies) while keeping other in-game subtype sources
+// failing closed in contexts where they are unavailable.
+func SubtypeChoiceWithoutEntry(choice SubtypeChoiceSource) SubtypeChoiceSource {
+	if choice == SubtypeChoiceSourceEntry {
+		return SubtypeChoiceNone
+	}
+	return choice
+}
+
 // Selection is pure rules data describing WHICH game objects share a predicate.
 // It is the single, valence-agnostic matcher description that subsumes the
 // characteristic fields formerly duplicated across TargetPredicate,
@@ -81,12 +119,9 @@ type Selection struct {
 	// matches. Placed beside MatchCounter to pack into the bool cluster.
 	MatchAnyCounter bool
 
-	// SubtypeFromSourceEntryChoice, when true, requires the matched permanent to
-	// share the creature subtype the predicate's source permanent chose as it
-	// entered (its EntryChoices[EntryTypeChoiceKey]), the "of the chosen type"
-	// restriction of chosen-type anthems. A missing source, choice, or subtype
-	// matches nothing.
-	SubtypeFromSourceEntryChoice bool
+	// SubtypeChoice constrains the matched permanent to a creature subtype chosen
+	// during play; see SubtypeChoiceSource. The zero value imposes no restriction.
+	SubtypeChoice SubtypeChoiceSource
 
 	// Controller constrains a permanent by its controller relative to the
 	// viewing player. Player constrains a player relative to the viewing player.
@@ -121,7 +156,7 @@ func (s Selection) Empty() bool {
 		s.ExcludedSupertype == "" &&
 		len(s.SubtypesAny) == 0 &&
 		s.ExcludedSubtype == "" &&
-		!s.SubtypeFromSourceEntryChoice &&
+		s.SubtypeChoice == SubtypeChoiceNone &&
 		len(s.ColorsAny) == 0 &&
 		len(s.ExcludedColors) == 0 &&
 		!s.Colorless &&

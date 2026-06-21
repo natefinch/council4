@@ -42,8 +42,8 @@ func TestLowerThreeTreeCityChosenColorCountMana(t *testing.T) {
 		t.Fatalf("dynamic amount kind = %v, want count selector", dynamic.Kind)
 	}
 	selection := dynamic.Group.Selection()
-	if !selection.SubtypeFromSourceEntryChoice {
-		t.Fatalf("count selection SubtypeFromSourceEntryChoice not set: %#v", selection)
+	if selection.SubtypeChoice != game.SubtypeChoiceSourceEntry {
+		t.Fatalf("count selection SubtypeChoice != SubtypeChoiceSourceEntry: %#v", selection)
 	}
 	if selection.Controller != game.ControllerYou {
 		t.Fatalf("count selection controller = %v, want you", selection.Controller)
