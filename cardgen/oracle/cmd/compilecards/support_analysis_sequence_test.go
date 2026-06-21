@@ -87,3 +87,87 @@ func TestWriteOrderedSequenceCategoriesEmptyWhenNoSequences(t *testing.T) {
 		t.Errorf("expected no output, got:\n%s", builder.String())
 	}
 }
+
+func TestNormalizeOrderedSequenceCategory(t *testing.T) {
+	t.Parallel()
+	cases := map[string]string{
+		orderedSequenceUnrecognizedConditionPrefix + "if this spell was kicked": orderedSequenceUnrecognizedConditionCategory,
+		orderedSequenceUnrecognizedConditionPrefix + "if you win":               orderedSequenceUnrecognizedConditionCategory,
+		"sub-effect — unsupported life spell":                                   "sub-effect — unsupported life spell",
+		"structural — per-effect condition spans multiple clauses":              "structural — per-effect condition spans multiple clauses",
+		"": "",
+	}
+	for detail, want := range cases {
+		if got := normalizeOrderedSequenceCategory(detail); got != want {
+			t.Errorf("normalizeOrderedSequenceCategory(%q) = %q, want %q", detail, got, want)
+		}
+	}
+}
+
+func unrecognizedConditionCard(name, wording string, extraSummaries ...string) unsupported {
+	diagnostics := []reportDiagnostic{{
+		Summary: orderedSequenceReasonSummary,
+		Detail:  orderedSequenceUnrecognizedConditionPrefix + wording,
+	}}
+	for _, summary := range extraSummaries {
+		diagnostics = append(diagnostics, reportDiagnostic{Summary: summary})
+	}
+	return unsupported{Name: name, Diagnostics: diagnostics}
+}
+
+func TestAnalyzeConditionRecognitionBacklogRanksWordings(t *testing.T) {
+	t.Parallel()
+	output := report{Unsupported: []unsupported{
+		unrecognizedConditionCard("Kicked1", "if this spell was kicked"),
+		unrecognizedConditionCard("Kicked2", "if this spell was kicked"),
+		// Co-blocked: a second distinct summary excludes it from sole blockers.
+		unrecognizedConditionCard("Kicked3", "if this spell was kicked", "unsupported Oracle construct"),
+		unrecognizedConditionCard("Win1", "if you win"),
+		// A recognized (gateable) detail must not appear in the backlog.
+		orderedSequenceCard("Recognized", orderedSequenceReasonSummary),
+	}}
+
+	backlog := analyzeConditionRecognitionBacklog(output)
+	if len(backlog) != 2 {
+		t.Fatalf("backlog length = %d, want 2: %+v", len(backlog), backlog)
+	}
+	kicked := backlog[0]
+	if kicked.condition != "if this spell was kicked" || kicked.affectedCards != 3 || kicked.soleBlockerCards != 2 {
+		t.Errorf("kicked entry = %+v, want condition kicked affected 3 sole 2", kicked)
+	}
+	win := backlog[1]
+	if win.condition != "if you win" || win.affectedCards != 1 || win.soleBlockerCards != 1 {
+		t.Errorf("win entry = %+v, want condition win affected 1 sole 1", win)
+	}
+}
+
+func TestWriteConditionRecognitionBacklogRendersTable(t *testing.T) {
+	t.Parallel()
+	output := report{Unsupported: []unsupported{
+		unrecognizedConditionCard("Kicked", "if this spell was kicked"),
+	}}
+	var builder strings.Builder
+	writeConditionRecognitionBacklog(&builder, output)
+	rendered := builder.String()
+	for _, wanted := range []string{
+		"## Unrecognized per-effect conditions (recognition backlog)",
+		"| Unrecognized condition | Affected cards | Sole blockers |",
+		"| if this spell was kicked | 1 | 1 |",
+	} {
+		if !strings.Contains(rendered, wanted) {
+			t.Errorf("rendered output missing %q:\n%s", wanted, rendered)
+		}
+	}
+}
+
+func TestWriteConditionRecognitionBacklogEmptyWhenNoUnrecognized(t *testing.T) {
+	t.Parallel()
+	output := report{Unsupported: []unsupported{
+		orderedSequenceCard("Sole", orderedSequenceReasonSummary),
+	}}
+	var builder strings.Builder
+	writeConditionRecognitionBacklog(&builder, output)
+	if builder.Len() != 0 {
+		t.Errorf("expected no output, got:\n%s", builder.String())
+	}
+}
