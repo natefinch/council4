@@ -77,6 +77,7 @@ const (
 	Intimidate
 	Skulk
 	Evolve
+	Unleash
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -211,6 +212,14 @@ var (
 	// triggered ability is realized at runtime from the evolve keyword; the
 	// keyword itself carries no continuous effect.
 	EvolveStaticBody = simpleKeywordStaticBody("Evolve", Evolve)
+
+	// UnleashStaticBody is the reusable StaticAbilityBody for unleash (CR
+	// 702.86): "You may have this creature enter with a +1/+1 counter on it. It
+	// can't block as long as it has a +1/+1 counter on it." The runtime reads the
+	// unleash keyword on an entering permanent to offer the optional +1/+1
+	// counter, and prohibits blocking while such a permanent has a +1/+1 counter;
+	// the keyword itself carries no continuous effect.
+	UnleashStaticBody = simpleKeywordStaticBody("Unleash", Unleash)
 )
 
 func simpleKeywordStaticBody(text string, keyword Keyword) StaticAbility {
