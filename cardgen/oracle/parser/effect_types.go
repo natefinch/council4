@@ -1016,8 +1016,18 @@ type EffectSyntax struct {
 	// counter on it if it's a creature", "... loyalty counter ... if it's a
 	// planeswalker"; Spark Double). It is empty for every other replacement.
 	EntersAsCopyConditionalCounters []EntersAsCopyConditionalCounter `json:",omitempty"`
-	UnderYourControl                bool                             `json:",omitempty"`
-	CastAsAdventure                 bool                             `json:",omitempty"`
+	// EntersAsCopyUntilEndOfTurn reports the temporary "become a copy of <filter>
+	// until end of turn" form of an EntersAsCopy replacement (Cursed Mirror),
+	// where the copy effect lasts until end of turn instead of as long as the
+	// permanent remains on the battlefield. It is false for the permanent
+	// enter-as-copy forms (Clone, Spark Double).
+	EntersAsCopyUntilEndOfTurn bool `json:",omitempty"`
+	// EntersAsCopyAddKeywords lists the keywords granted by the "except it has
+	// <keyword>" copiable rider on an EntersAsCopy replacement (Cursed Mirror's
+	// "except it has haste"). It is empty for every other replacement.
+	EntersAsCopyAddKeywords []KeywordKind `json:",omitempty"`
+	UnderYourControl        bool          `json:",omitempty"`
+	CastAsAdventure         bool          `json:",omitempty"`
 	// CastWithoutPayingManaCost reports a cast effect carrying the free-cast
 	// rider "... without paying its mana cost" ("(You may) cast <spell> from
 	// <zone> without paying its mana cost."). It is false for every other cast

@@ -340,6 +340,18 @@ type ReplacementEffect struct {
 	// every other replacement and only consulted when EntersAsCopy is true.
 	EntersAsCopyConditionalCounters []ConditionalCounterPlacement
 
+	// EntersAsCopyUntilEndOfTurn scopes an enters-as-copy replacement's copy
+	// effect to end of turn rather than as long as the permanent stays on the
+	// battlefield (Cursed Mirror's "become a copy ... until end of turn"). It is
+	// only consulted when EntersAsCopy is true.
+	EntersAsCopyUntilEndOfTurn bool
+
+	// EntersAsCopyAddKeywords lists keywords granted to the copy by the "except it
+	// has <keyword>" rider of an enters-as-copy replacement (Cursed Mirror's
+	// haste). It is empty for every other replacement and only consulted when
+	// EntersAsCopy is true.
+	EntersAsCopyAddKeywords []Keyword
+
 	// DrawCardMultiplier replaces a single "draw a card" event by the controller
 	// with drawing this many cards instead (CR 614). It backs the draw-doubling
 	// replacement "If you would draw a card, draw two cards instead." A value of

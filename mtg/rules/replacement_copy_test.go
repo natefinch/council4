@@ -9,6 +9,48 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+func TestEntersAsCopyUntilEndOfTurnGrantsHaste(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	bearPT := game.PT{Value: 2}
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Grizzly Bears",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(bearPT),
+		Toughness: opt.Val(bearPT),
+	}})
+	mirror := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Cursed Mirror",
+		Types: []types.Card{types.Artifact},
+	}})
+
+	replacement := game.EntersAsCopyReplacement(
+		"As this artifact enters, you may have it become a copy of any creature on the battlefield until end of turn, except it has haste.",
+		&game.Selection{RequiredTypes: []types.Card{types.Creature}},
+		false, false, nil, true, []game.Keyword{game.Haste},
+	)
+	applyEntersAsCopy(enterBattlefieldContext{}, g, mirror, &replacement.Replacement)
+
+	if got := permanentEffectiveName(g, mirror); got != "Grizzly Bears" {
+		t.Fatalf("effective name = %q, want Grizzly Bears", got)
+	}
+	if !hasKeyword(g, mirror, game.Haste) {
+		t.Fatal("until-end-of-turn copy did not grant the haste rider keyword")
+	}
+	var found bool
+	for i := range g.ContinuousEffects {
+		effect := &g.ContinuousEffects[i]
+		if effect.Layer == game.LayerCopy && effect.AffectedObjectID == mirror.ObjectID {
+			found = true
+			if effect.Duration != game.DurationUntilEndOfTurn {
+				t.Fatalf("copy effect duration = %v, want DurationUntilEndOfTurn", effect.Duration)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("no LayerCopy continuous effect registered for the temporary copy")
+	}
+}
+
 func TestEntersAsCopyOverlaysChosenPermanentValues(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	dragonPT := game.PT{Value: 4}
@@ -30,7 +72,7 @@ func TestEntersAsCopyOverlaysChosenPermanentValues(t *testing.T) {
 	replacement := game.EntersAsCopyReplacement(
 		"You may have Clone enter the battlefield as a copy of any creature on the battlefield.",
 		&game.Selection{RequiredTypes: []types.Card{types.Creature}},
-		true, false, nil,
+		true, false, nil, false, nil,
 	)
 	applyEntersAsCopy(enterBattlefieldContext{}, g, clone, &replacement.Replacement)
 
@@ -65,7 +107,7 @@ func TestEntersAsCopyNotLegendaryRiderDropsLegendary(t *testing.T) {
 	replacement := game.EntersAsCopyReplacement(
 		"copy text",
 		&game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou},
-		false, true, nil,
+		false, true, nil, false, nil,
 	)
 	applyEntersAsCopy(enterBattlefieldContext{}, g, clone, &replacement.Replacement)
 
@@ -102,7 +144,7 @@ func TestEntersAsCopyConditionalCounterMatchesCopiedType(t *testing.T) {
 		false, true, []game.ConditionalCounterPlacement{
 			{Kind: counter.PlusOnePlusOne, Amount: 1, IfType: types.Creature},
 			{Kind: counter.Loyalty, Amount: 1, IfType: types.Planeswalker},
-		},
+		}, false, nil,
 	)
 	applyEntersAsCopy(enterBattlefieldContext{}, g, clone, &replacement.Replacement)
 
