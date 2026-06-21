@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
@@ -159,11 +160,13 @@ func lowerFaceAbilities(
 	}
 	var unsupported []shared.Diagnostic
 	var pendingPonderPrefix *compiler.CompiledAbility
+	creatureSubtypes := eternalizeFamilyCreatureSubtypes(parsedType.Subtypes)
 	for i, ability := range compilation.Abilities {
 		syntax := &compilation.Syntax.Abilities[i]
 		lowered, diagnostic := lowerExecutableAbility(
 			face.Name,
 			slices.Contains(parsedType.Subtypes, "Saga"),
+			creatureSubtypes,
 			ability,
 			syntax,
 		)
@@ -584,13 +587,28 @@ func abilityContentEffectCount(content compiler.AbilityContent) int {
 	return count
 }
 
+// eternalizeFamilyCreatureSubtypes converts a parsed type line's subtypes to the
+// runtime creature subtypes an Eternalize/Embalm token copy re-adds, dropping any
+// printed Zombie type so the keyword's granted Zombie type is not duplicated.
+func eternalizeFamilyCreatureSubtypes(subtypes []string) []types.Sub {
+	result := make([]types.Sub, 0, len(subtypes))
+	for _, subtype := range subtypes {
+		if types.Sub(subtype) == types.Zombie {
+			continue
+		}
+		result = append(result, types.Sub(subtype))
+	}
+	return result
+}
+
 func lowerExecutableAbility(
 	cardName string,
 	saga bool,
+	creatureSubtypes []types.Sub,
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
-	if lowered, handled, diagnostic := lowerExecutableAbilitySpecialCase(cardName, ability, syntax); handled {
+	if lowered, handled, diagnostic := lowerExecutableAbilitySpecialCase(cardName, creatureSubtypes, ability, syntax); handled {
 		return lowered, diagnostic
 	}
 	switch ability.Kind {
@@ -1026,6 +1044,7 @@ func lowerSpellAdditionalCost(
 
 func lowerExecutableAbilitySpecialCase(
 	cardName string,
+	creatureSubtypes []types.Sub,
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, bool, *shared.Diagnostic) {
@@ -1047,7 +1066,7 @@ func lowerExecutableAbilitySpecialCase(
 	if diagnostic := lowerStaticDeclarationBlocker(ability); diagnostic != nil {
 		return abilityLowering{}, true, diagnostic
 	}
-	if lowered, ok, diagnostic := lowerKeywordDispatch(ability, syntax); ok {
+	if lowered, ok, diagnostic := lowerKeywordDispatch(creatureSubtypes, ability, syntax); ok {
 		return lowered, true, diagnostic
 	}
 	return abilityLowering{}, false, nil
