@@ -14,13 +14,13 @@ func handleDraw(r *effectResolver, prim game.Draw) effectResolved {
 	}
 	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
-			res.succeeded = r.engine.drawCards(r.game, playerID, res.amount, r.log) || res.succeeded
+			res.succeeded = r.engine.drawCards(r.game, playerID, res.amount, r.agents, r.log) || res.succeeded
 		}
 		return res
 	}
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
-		res.succeeded = r.engine.drawCards(r.game, playerID, res.amount, r.log)
+		res.succeeded = r.engine.drawCards(r.game, playerID, res.amount, r.agents, r.log)
 	}
 	return res
 }
@@ -1543,7 +1543,7 @@ func handlePutHandOnLibraryThenDraw(r *effectResolver, prim game.PutHandOnLibrar
 	}
 	res.amount = put + prim.DrawOffset
 	if res.amount > 0 {
-		res.succeeded = r.engine.drawCards(r.game, playerID, res.amount, r.log)
+		res.succeeded = r.engine.drawCards(r.game, playerID, res.amount, r.agents, r.log)
 	}
 	return res
 }

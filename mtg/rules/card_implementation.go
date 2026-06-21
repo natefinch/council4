@@ -18,6 +18,7 @@ type CardImplementation interface {
 type CardContext struct {
 	engine *Engine
 	g      *game.Game
+	agents [game.NumPlayers]PlayerAgent
 	log    *TurnLog
 }
 
@@ -44,7 +45,7 @@ func (c *CardContext) DrawCards(player game.PlayerID, amount int) {
 	if c == nil || c.engine == nil {
 		return
 	}
-	c.engine.drawCards(c.g, player, amount, c.log)
+	c.engine.drawCards(c.g, player, amount, c.agents, c.log)
 }
 
 // TargetPlayer returns the stack object's chosen player target at index.
@@ -96,7 +97,7 @@ func (c *CardContext) DealPermanentDamageFromStack(obj *game.StackObject, perman
 	return dealPermanentDamage(c.g, sourceID, sourceObjectID, obj.Controller, permanent, amount, false)
 }
 
-func (e *Engine) resolveCardImplementationSpell(g *game.Game, obj *game.StackObject, card *game.CardInstance, log *TurnLog) bool {
+func (e *Engine) resolveCardImplementationSpell(g *game.Game, obj *game.StackObject, card *game.CardInstance, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	spellDef := cardFaceOrDefault(card, obj.Face)
 	if spellDef.ImplementationID == "" {
 		return false
@@ -105,6 +106,6 @@ func (e *Engine) resolveCardImplementationSpell(g *game.Game, obj *game.StackObj
 	if !ok {
 		panic(fmt.Sprintf("rules: card implementation %q is not registered", spellDef.ImplementationID))
 	}
-	impl.ResolveSpell(&CardContext{engine: e, g: g, log: log}, obj, card)
+	impl.ResolveSpell(&CardContext{engine: e, g: g, agents: agents, log: log}, obj, card)
 	return true
 }

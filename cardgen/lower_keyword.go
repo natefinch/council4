@@ -228,6 +228,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordStaticLowering(&flashbackAbility, ability, syntax), true, nil
 	}
+	if dredgeAbility, ok, diag := lowerDredgeAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordStaticLowering(&dredgeAbility, ability, syntax), true, nil
+	}
 	if bloodthirstAbility, ok, diag := lowerBloodthirstAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -1028,6 +1034,40 @@ func lowerFlashbackAbility(
 		Text:             keyword.Name + " " + keyword.Parameter,
 		KeywordAbilities: []game.KeywordAbility{game.FlashbackKeyword{Cost: manaCost}},
 	}, true, nil
+}
+
+// lowerDredgeAbility lowers the Dredge N keyword (CR 702.52) to its canonical
+// graveyard-functioning static ability. While the card is in its owner's
+// graveyard, the runtime offers to replace one of that player's draws with
+// milling N cards and returning this card to hand. Only the exact keyword with a
+// fixed positive integer and no other rules text is supported; anything else
+// (the rare "Opponent dredge" variant, a non-integer parameter) fails closed.
+func lowerDredgeAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.StaticAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordDredge {
+		return game.StaticAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterInteger ||
+		keyword.Integer <= 0 ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Dredge ability",
+			"the executable source backend supports only exact \"Dredge N\" with a fixed positive amount",
+		)
+	}
+	return game.DredgeStaticAbility(keyword.Integer), true, nil
 }
 
 func simpleStaticKeyword(keyword compiler.CompiledKeyword) (game.Keyword, bool) {

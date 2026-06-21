@@ -120,6 +120,31 @@ func TestGenerateExecutableCardSourceScavenge(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceDredge(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Dredger",
+		Layout:     "normal",
+		TypeLine:   "Land",
+		OracleText: "Dredge 2 (If you would draw a card, you may mill two cards instead. If you do, return this card from your graveyard to your hand.)",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"StaticAbilities: []game.StaticAbility",
+		"game.DredgeStaticAbility(2)",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceCyclingTrigger(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

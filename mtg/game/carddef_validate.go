@@ -584,6 +584,10 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		if keyword.Count <= 0 {
 			v.add(faceName, appendPath(path, "Count"), CardDefIssueInvalidKeywordAbility, "soulshift count must be positive")
 		}
+	case DredgeKeyword:
+		if keyword.Count <= 0 {
+			v.add(faceName, appendPath(path, "Count"), CardDefIssueInvalidKeywordAbility, "dredge count must be positive")
+		}
 	case RampageKeyword:
 		if keyword.Count <= 0 {
 			v.add(faceName, appendPath(path, "Count"), CardDefIssueInvalidKeywordAbility, "rampage count must be positive")
