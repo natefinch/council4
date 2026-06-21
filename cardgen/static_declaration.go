@@ -594,13 +594,36 @@ func lowerStaticContinuousLayer(layer compiler.StaticContinuousLayer) (game.Cont
 }
 
 func lowerStaticGrantedAbility(keywords []compiler.CompiledKeyword) (game.StaticAbility, bool) {
-	if len(keywords) != 1 || keywords[0].Kind != parser.KeywordProtection {
+	if len(keywords) != 1 {
 		return game.StaticAbility{}, false
 	}
-	if !keywords[0].ProtectionKnown {
+	keyword := keywords[0]
+	if keyword.Kind == parser.KeywordProtection {
+		if !keyword.ProtectionKnown {
+			return game.StaticAbility{}, false
+		}
+		return staticAbilityFromProtectionKeyword(keyword.Protection, ""), true
+	}
+	return grantedLandwalkStaticBody(keyword)
+}
+
+// grantedLandwalkStaticBody returns the reusable landwalk StaticAbility body for
+// a granted landwalk keyword (e.g. "Equipped creature has islandwalk" or
+// "Enchanted creature has nonbasic landwalk"). The landwalk family lowers to a
+// parameterized LandwalkKeyword body rather than a simple keyword enum, so it
+// cannot flow through the simple-keyword grant path.
+func grantedLandwalkStaticBody(keyword compiler.CompiledKeyword) (game.StaticAbility, bool) {
+	if keyword.ParameterKind != parser.KeywordParameterNone {
 		return game.StaticAbility{}, false
 	}
-	return staticAbilityFromProtectionKeyword(keywords[0].Protection, ""), true
+	body, ok := keywordStaticBodies[keyword.Kind]
+	if !ok || len(body.Body.KeywordAbilities) != 1 {
+		return game.StaticAbility{}, false
+	}
+	if _, ok := body.Body.KeywordAbilities[0].(game.LandwalkKeyword); !ok {
+		return game.StaticAbility{}, false
+	}
+	return body.Body, true
 }
 
 func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {

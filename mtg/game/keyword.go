@@ -139,11 +139,13 @@ type SoulshiftKeyword struct {
 // LandwalkKeyword parameterizes the landwalk evasion family (CR 702.14). A
 // creature with landwalk can't be blocked as long as the defending player
 // controls a land matching this filter: a land with Subtype (Forest, Island,
-// Swamp, Mountain, Plains, Desert) for the typed variants, or any land when
-// AnyLand is true (generic "landwalk").
+// Swamp, Mountain, Plains, Desert) for the typed variants, any land when AnyLand
+// is true (generic "landwalk"), or a nonbasic land (a land without the Basic
+// supertype) when Nonbasic is true.
 type LandwalkKeyword struct {
-	Subtype types.Sub
-	AnyLand bool
+	Subtype  types.Sub
+	AnyLand  bool
+	Nonbasic bool
 }
 
 func (SimpleKeyword) isKeywordAbility()           {}

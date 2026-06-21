@@ -223,6 +223,9 @@ func (r Renderer) renderKeywordAbility(ctx *renderCtx, keyword game.KeywordAbili
 		if landwalk.AnyLand {
 			return "game.LandwalkKeyword{AnyLand: true}", nil
 		}
+		if landwalk.Nonbasic {
+			return "game.LandwalkKeyword{Nonbasic: true}", nil
+		}
 		ctx.need(importTypes)
 		lit := SubtypeToLiteral(string(landwalk.Subtype), []string{"Land"})
 		if strings.HasPrefix(lit, "/*") {
