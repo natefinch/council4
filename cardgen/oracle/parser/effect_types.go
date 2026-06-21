@@ -1587,6 +1587,12 @@ const (
 	// except the source ("each other attacking creature gets +1/+0 until end of
 	// turn."), the affected group of the Battle cry triggered ability.
 	EffectStaticSubjectOtherAttackingCreatures EffectStaticSubjectKind = "EffectStaticSubjectOtherAttackingCreatures"
+
+	// EffectStaticSubjectOtherControlledPermanents names every permanent you
+	// control except the source ("Other permanents you control have
+	// indestructible.", Avacyn, Angel of Hope), the self-excluded sibling of
+	// EffectStaticSubjectControlledPermanents.
+	EffectStaticSubjectOtherControlledPermanents EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledPermanents"
 )
 
 // EffectStaticSubjectSyntax is a source-spanned typed static-effect subject.
