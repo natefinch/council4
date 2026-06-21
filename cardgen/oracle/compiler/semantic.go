@@ -411,6 +411,8 @@ const (
 	ConditionPredicateEventSubjectWasKicked
 	ConditionPredicateEventSubjectWasCast
 	ConditionPredicateEventSubjectWasCastByController
+	ConditionPredicateEventSubjectEnteredOrCastFromGraveyard
+	ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard
 	ConditionPredicateEventSubjectHadNoCounter
 	ConditionPredicatePriorInstructionNotAccepted
 	// ConditionPredicatePriorInstructionAccepted is satisfied when the prior
@@ -1888,6 +1890,13 @@ const (
 	// <predefined> tokens" family (Old Gnawbone). Added last so existing kinds
 	// keep their wire values.
 	DynamicAmountTriggeringCombatDamage
+	// DynamicAmountDestroyedThisWay is the number of permanents destroyed by the
+	// immediately preceding destroy effect in the same ability ("for each
+	// permanent destroyed this way"). It backs the mass-destroy payoff family
+	// (Fumigate, Multani's Decree, Death Begets Life) and is realized by a
+	// sequence lowerer that reads the count published by the preceding destroy
+	// instruction. Added last so existing kinds keep their wire values.
+	DynamicAmountDestroyedThisWay
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.
@@ -2013,6 +2022,11 @@ const (
 	// subject. At runtime EventPlayerReference() resolves this to the player
 	// identified by the event.
 	ReferenceBindingEventPlayer
+	// ReferenceBindingEventStackObject binds "that spell"/"it" in a spell-cast
+	// trigger body to the spell that was cast. At runtime
+	// EventStackObjectReference() resolves this to the triggering event's stack
+	// object ("Whenever you cast a spell ..., copy that spell.").
+	ReferenceBindingEventStackObject
 )
 
 // CompiledReference records a source-spanned reference and its bound referent.

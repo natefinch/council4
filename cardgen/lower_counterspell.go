@@ -587,13 +587,9 @@ func lowerCopyStackObjectSpell(ctx contentCtx) (game.AbilityContent, *shared.Dia
 		)
 	}
 	if len(ctx.content.Effects) != 1 ||
-		len(ctx.content.Targets) != 1 ||
-		ctx.content.Targets[0].Cardinality.Min != 1 ||
-		ctx.content.Targets[0].Cardinality.Max != 1 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
-		len(ctx.content.Modes) != 0 ||
-		len(ctx.content.References) != 0 {
+		len(ctx.content.Modes) != 0 {
 		return unsupported()
 	}
 	effect := ctx.content.Effects[0]
@@ -608,19 +604,47 @@ func lowerCopyStackObjectSpell(ctx contentCtx) (game.AbilityContent, *shared.Dia
 		effect.Duration != compiler.DurationNone {
 		return unsupported()
 	}
-	targetSpec, ok := counterTargetSpec(ctx.content.Targets[0])
+	object, targets, ok := copyStackObjectReference(ctx)
 	if !ok {
 		return unsupported()
 	}
 	return game.Mode{
-		Targets: []game.TargetSpec{targetSpec},
+		Targets: targets,
 		Sequence: []game.Instruction{{
 			Primitive: game.CopyStackObject{
-				Object:              game.TargetStackObjectReference(0),
+				Object:              object,
 				MayChooseNewTargets: effect.CopyMayChooseNewTargets,
 			},
 		}},
 	}.Ability(), nil
+}
+
+// copyStackObjectReference resolves the stack object a copy effect copies along
+// with any target specs it needs. The targeted form ("Copy target spell.")
+// binds the single stack-object target; the reference form ("copy that spell."
+// in a spell-cast trigger) binds the triggering spell through the event and
+// needs no targets. It fails closed for any other target/reference shape.
+func copyStackObjectReference(ctx contentCtx) (game.ObjectReference, []game.TargetSpec, bool) {
+	switch {
+	case len(ctx.content.Targets) == 1 && len(ctx.content.References) == 0:
+		target := ctx.content.Targets[0]
+		if target.Cardinality.Min != 1 || target.Cardinality.Max != 1 {
+			return game.ObjectReference{}, nil, false
+		}
+		targetSpec, ok := counterTargetSpec(target)
+		if !ok {
+			return game.ObjectReference{}, nil, false
+		}
+		return game.TargetStackObjectReference(0), []game.TargetSpec{targetSpec}, true
+	case len(ctx.content.Targets) == 0 && len(ctx.content.References) == 1:
+		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowEvent: true})
+		if !ok || object.Kind() != game.ObjectReferenceEventStackObject {
+			return game.ObjectReference{}, nil, false
+		}
+		return object, nil, true
+	default:
+		return game.ObjectReference{}, nil, false
+	}
 }
 
 func lowerSacrificeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {

@@ -364,6 +364,59 @@ func TestParseConditionEventSubjectAndSourceState(t *testing.T) {
 	}
 }
 
+// TestParseEnteredOrCastFromGraveyardCondition covers the enters-the-battlefield
+// intervening condition that gates on the entering object(s) having come from a
+// graveyard, in both the singular self form and the plural group form, and
+// confirms unrelated zone wording fails closed.
+func TestParseEnteredOrCastFromGraveyardCondition(t *testing.T) {
+	t.Parallel()
+	recognized := []struct {
+		name      string
+		condition string
+		predicate ConditionPredicateKind
+	}{
+		{"controller full", "it entered from your graveyard or you cast it from your graveyard", ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard},
+		{"controller plural", "they entered from your graveyard or you cast them from your graveyard", ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard},
+		{"any singular", "it entered or was cast from a graveyard", ConditionPredicateEventSubjectEnteredOrCastFromGraveyard},
+		{"any plural", "they entered or were cast from a graveyard", ConditionPredicateEventSubjectEnteredOrCastFromGraveyard},
+	}
+	for _, test := range recognized {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			clause := parseSingleConditionClause(t, test.condition)
+			if clause.Predicate != test.predicate {
+				t.Fatalf("clause = %#v, want %s", clause, test.predicate)
+			}
+		})
+	}
+	rejected := []struct {
+		name      string
+		condition string
+	}{
+		{"from exile", "it entered from exile"},
+		{"from hand", "you cast it from your hand"},
+		{"entered tapped", "it entered tapped"},
+	}
+	for _, test := range rejected {
+		t.Run("reject_"+test.name, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(
+				"When this creature enters, if "+test.condition+", draw a card.",
+				Context{},
+			)
+			if len(document.Abilities) != 1 {
+				t.Fatalf("abilities = %#v", document.Abilities)
+			}
+			for _, clause := range document.Abilities[0].ConditionClauses {
+				if clause.Predicate == ConditionPredicateEventSubjectEnteredOrCastFromGraveyard ||
+					clause.Predicate == ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard {
+					t.Fatalf("condition %q unexpectedly matched a graveyard zone-change predicate", test.condition)
+				}
+			}
+		})
+	}
+}
+
 // TestParseConditionPriorInstruction covers the affirmative "you do" and
 // negative "you don't" reflexive prior-instruction clauses used by optional
 // resolving flow ("you may X. If you do/don't, Y").
@@ -391,6 +444,71 @@ func TestParseConditionPriorInstruction(t *testing.T) {
 			clauses := document.Abilities[0].ConditionClauses
 			if len(clauses) != 1 || clauses[0].Predicate != test.predicate {
 				t.Fatalf("clauses = %#v, want predicate %s", clauses, test.predicate)
+			}
+		})
+	}
+}
+
+// TestParseConditionDestroyedThisWay covers the outcome-worded resolving success
+// gate "If a <permanent> is destroyed this way, ..." (Noxious Gearhulk), which
+// follows a preceding optional destroy and maps to the same prior-instruction
+// success predicate as "if you do".
+func TestParseConditionDestroyedThisWay(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		body      string
+		predicate ConditionPredicateKind
+	}{
+		{
+			name:      "a creature is destroyed this way",
+			body:      "You may destroy target creature. If a creature is destroyed this way, you gain 2 life.",
+			predicate: ConditionPredicatePriorInstructionAccepted,
+		},
+		{
+			name:      "a permanent is destroyed this way",
+			body:      "You may destroy target permanent. If a permanent is destroyed this way, you gain 2 life.",
+			predicate: ConditionPredicatePriorInstructionAccepted,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.body, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if len(document.Abilities) != 1 {
+				t.Fatalf("abilities = %#v", document.Abilities)
+			}
+			clauses := document.Abilities[0].ConditionClauses
+			if len(clauses) != 1 || clauses[0].Predicate != test.predicate {
+				t.Fatalf("clauses = %#v, want predicate %s", clauses, test.predicate)
+			}
+		})
+	}
+}
+
+// TestParseConditionDestroyedThisWayRejectsOtherWording confirms the recognizer
+// fails closed on wording it does not model, leaving an unsupported condition
+// rather than a silently-wrong success gate.
+func TestParseConditionDestroyedThisWayRejectsOtherWording(t *testing.T) {
+	t.Parallel()
+	bodies := []string{
+		"You may destroy target creature. If a creature is exiled this way, you gain 2 life.",
+		"You may destroy target creature. If a spell is destroyed this way, you gain 2 life.",
+	}
+	for _, body := range bodies {
+		t.Run(body, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(body, Context{InstantOrSorcery: true})
+			if len(document.Abilities) != 1 {
+				t.Fatalf("abilities = %#v", document.Abilities)
+			}
+			for _, clause := range document.Abilities[0].ConditionClauses {
+				if clause.Predicate == ConditionPredicatePriorInstructionAccepted {
+					t.Fatalf("clause unexpectedly recognized as prior-instruction success: %#v", clause)
+				}
 			}
 		})
 	}

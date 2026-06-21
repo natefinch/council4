@@ -99,6 +99,17 @@ const (
 	KeywordFlanking         KeywordKind = "KeywordFlanking"
 	KeywordSoulshift        KeywordKind = "KeywordSoulshift"
 	KeywordRampage          KeywordKind = "KeywordRampage"
+	// KeywordLandwalk and the typed variants below are the landwalk evasion
+	// keyword family (CR 702.14). Each typed variant keys off the defending
+	// player controlling a land of its named subtype; plain Landwalk keys off
+	// any land.
+	KeywordLandwalk     KeywordKind = "KeywordLandwalk"
+	KeywordPlainswalk   KeywordKind = "KeywordPlainswalk"
+	KeywordIslandwalk   KeywordKind = "KeywordIslandwalk"
+	KeywordSwampwalk    KeywordKind = "KeywordSwampwalk"
+	KeywordMountainwalk KeywordKind = "KeywordMountainwalk"
+	KeywordForestwalk   KeywordKind = "KeywordForestwalk"
+	KeywordDesertwalk   KeywordKind = "KeywordDesertwalk"
 )
 
 var keywordNames = map[KeywordKind]string{
@@ -179,6 +190,13 @@ var keywordNames = map[KeywordKind]string{
 	KeywordFlanking:         "Flanking",
 	KeywordSoulshift:        "Soulshift",
 	KeywordRampage:          "Rampage",
+	KeywordLandwalk:         "Landwalk",
+	KeywordPlainswalk:       "Plainswalk",
+	KeywordIslandwalk:       "Islandwalk",
+	KeywordSwampwalk:        "Swampwalk",
+	KeywordMountainwalk:     "Mountainwalk",
+	KeywordForestwalk:       "Forestwalk",
+	KeywordDesertwalk:       "Desertwalk",
 }
 
 // String returns the parser-owned canonical keyword name.
@@ -286,6 +304,13 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordFlanking, Words: []string{"flanking"}},
 	{Kind: KeywordSoulshift, Words: []string{"soulshift"}},
 	{Kind: KeywordRampage, Words: []string{"rampage"}},
+	{Kind: KeywordLandwalk, Words: []string{"landwalk"}},
+	{Kind: KeywordPlainswalk, Words: []string{"plainswalk"}},
+	{Kind: KeywordIslandwalk, Words: []string{"islandwalk"}},
+	{Kind: KeywordSwampwalk, Words: []string{"swampwalk"}},
+	{Kind: KeywordMountainwalk, Words: []string{"mountainwalk"}},
+	{Kind: KeywordForestwalk, Words: []string{"forestwalk"}},
+	{Kind: KeywordDesertwalk, Words: []string{"desertwalk"}},
 }
 
 // KeywordParameterKind identifies the grammar used by a keyword parameter.

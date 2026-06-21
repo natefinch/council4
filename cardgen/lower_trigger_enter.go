@@ -71,10 +71,12 @@ func lowerEnterTrigger(
 			InterveningIf:                          interveningIfText(ability.Trigger),
 			InterveningCondition:                   intervening.condition,
 			InterveningIfEventPermanentHadCounters: intervening.hadCounters,
-			InterveningIfEventPermanentHadNoCounterKind:    intervening.hadNoCounterKind,
-			InterveningIfEventPermanentWasKicked:           intervening.wasKicked,
-			InterveningIfEventPermanentWasCast:             intervening.wasCast,
-			InterveningIfEventPermanentWasCastByController: intervening.wasCastByController,
+			InterveningIfEventPermanentHadNoCounterKind:                     intervening.hadNoCounterKind,
+			InterveningIfEventPermanentWasKicked:                            intervening.wasKicked,
+			InterveningIfEventPermanentWasCast:                              intervening.wasCast,
+			InterveningIfEventPermanentWasCastByController:                  intervening.wasCastByController,
+			InterveningIfEventPermanentEnteredOrCastFromGraveyard:           intervening.enteredOrCastFromGY,
+			InterveningIfEventPermanentEnteredOrCastFromControllerGraveyard: intervening.enteredOrCastFromCGY,
 		},
 		Optional: triggerOptional,
 		Content:  content,
@@ -238,12 +240,14 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 }
 
 type enterInterveningCondition struct {
-	condition           opt.V[game.Condition]
-	hadCounters         bool
-	hadNoCounterKind    opt.V[counter.Kind]
-	wasKicked           bool
-	wasCast             bool
-	wasCastByController bool
+	condition            opt.V[game.Condition]
+	hadCounters          bool
+	hadNoCounterKind     opt.V[counter.Kind]
+	wasKicked            bool
+	wasCast              bool
+	wasCastByController  bool
+	enteredOrCastFromGY  bool
+	enteredOrCastFromCGY bool
 }
 
 func lowerSelfInterveningCondition(
@@ -309,6 +313,10 @@ func lowerEnterInterveningCondition(trigger *compiler.CompiledTrigger) (enterInt
 		return enterInterveningCondition{wasCast: true}, true
 	case compiler.ConditionPredicateEventSubjectWasCastByController:
 		return enterInterveningCondition{wasCastByController: true}, true
+	case compiler.ConditionPredicateEventSubjectEnteredOrCastFromGraveyard:
+		return enterInterveningCondition{enteredOrCastFromGY: true}, true
+	case compiler.ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard:
+		return enterInterveningCondition{enteredOrCastFromCGY: true}, true
 	default:
 	}
 	lowered, ok := lowerCondition(*condition, conditionContextInterveningTrigger)
@@ -754,10 +762,12 @@ func permanentZoneChangeTriggeredAbility(
 			InterveningIf:                          interveningIfText(ability.Trigger),
 			InterveningCondition:                   intervening.condition,
 			InterveningIfEventPermanentHadCounters: intervening.hadCounters,
-			InterveningIfEventPermanentHadNoCounterKind:    intervening.hadNoCounterKind,
-			InterveningIfEventPermanentWasKicked:           intervening.wasKicked,
-			InterveningIfEventPermanentWasCast:             intervening.wasCast,
-			InterveningIfEventPermanentWasCastByController: intervening.wasCastByController,
+			InterveningIfEventPermanentHadNoCounterKind:                     intervening.hadNoCounterKind,
+			InterveningIfEventPermanentWasKicked:                            intervening.wasKicked,
+			InterveningIfEventPermanentWasCast:                              intervening.wasCast,
+			InterveningIfEventPermanentWasCastByController:                  intervening.wasCastByController,
+			InterveningIfEventPermanentEnteredOrCastFromGraveyard:           intervening.enteredOrCastFromGY,
+			InterveningIfEventPermanentEnteredOrCastFromControllerGraveyard: intervening.enteredOrCastFromCGY,
 		},
 		Optional: triggerOptional,
 		Content:  content,

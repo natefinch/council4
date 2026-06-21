@@ -433,6 +433,15 @@ const (
 	// many <predefined> tokens" family (Old Gnawbone), reading the triggering
 	// event's damage quantity. Added last so existing kinds keep their values.
 	EffectDynamicAmountTriggeringCombatDamage EffectDynamicAmountKind = "EffectDynamicAmountTriggeringCombatDamage"
+	// EffectDynamicAmountDestroyedThisWay is the number of permanents destroyed
+	// by the immediately preceding destroy effect in the same ability ("for each
+	// permanent destroyed this way", "for each creature destroyed this way"). It
+	// backs the mass-destroy payoff family (Fumigate, Multani's Decree, Death
+	// Begets Life) whose gain-life or draw amount scales with how many permanents
+	// the prior clause destroyed; the noun is descriptive of what was destroyed,
+	// so the amount carries no selection and the lowerer reads the count the
+	// destroy effect publishes. Added last so existing kinds keep their values.
+	EffectDynamicAmountDestroyedThisWay EffectDynamicAmountKind = "EffectDynamicAmountDestroyedThisWay"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.

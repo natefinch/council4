@@ -55,6 +55,12 @@ var roundTripCards = []*ScryfallCard{
 		OracleText: "{T}: Add {C}.\n{1}, {T}: Move a counter from target permanent you control onto a second target permanent. Activate only as a sorcery.",
 	},
 	{
+		Name:       "RT Reaver Cleaver",
+		Layout:     "normal",
+		TypeLine:   "Legendary Artifact — Equipment",
+		OracleText: "Equipped creature gets +1/+1 and has trample and \"Whenever this creature deals combat damage to a player or planeswalker, create that many Treasure tokens.\"\nEquip {3}",
+	},
+	{
 		// Exercises MassReturnFromGraveyard, whose rendered Destination zone
 		// literal requires the zone import (regression guard for #995).
 		Name:       "RT Replenish",

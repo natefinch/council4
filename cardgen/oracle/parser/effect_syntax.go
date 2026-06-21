@@ -84,6 +84,7 @@ func emitSentenceResolvingSyntax(
 		sentences[i].Targets = parseTargets(tokens, atoms)
 		sentences[i].Effects = parseEffects(sentences[i], tokens, atoms)
 		recognizeTargetOpponentHandManaSentence(&sentences[i])
+		reconcileRetargetSentenceTargets(&sentences[i])
 		collapseManaSpendRiderSentence(&sentences[i], tokens)
 		currentEffects += len(sentences[i].Effects)
 		if len(tokens) > 0 && len(sentences[i].Effects) == 0 &&
@@ -688,6 +689,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseCantCastSpellsEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseGroupMustAttackEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseSpellsCantBeCounteredEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parseChangeTargetRetargetEffect(sentence, tokens, atoms) },
 	} {
 		if effects, ok := recognize(); ok {
 			return effects, true
@@ -884,6 +886,7 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	effect.DiscardEntireHand = parseDiscardEntireHand(effect)
 	effect.SearchSplit = parseSearchSplitPut(effect)
 	effect.GraveyardZoneExile = parseGraveyardZoneExile(effect)
+	parseExileTopOfLibrary(effect)
 	effect.Additional = drawAdditionalCardsQualifier(effect)
 	effect.MoveCountersFromTarget = effect.Kind == EffectMoveCounters &&
 		!effect.MoveCountersDistribute && len(effect.Targets) == 2
@@ -2260,12 +2263,15 @@ func parseGroupMustAttackEffect(sentence Sentence, tokens []shared.Token) ([]Eff
 }
 
 // resolving buff "The next spell you cast this turn can't be countered."
-// (Mistrise Village) and the all-spells form "Spells you cast this turn can't be
-// countered." (Domri, Anarch of Bolas). The leading "The next" marks the
-// single-next-spell variant; a bare "Spells" marks the every-spell-this-turn
-// variant. The buff applies to the controller's own spells, so any other
-// subject, a type filter, a negation, or extra wording fails closed and flows
-// through the generic effect parser.
+// (Mistrise Village), the all-spells form "Spells you cast this turn can't be
+// countered." (Domri, Anarch of Bolas), and the equivalent "Spells you control
+// can't be countered this turn." (Veil of Summer). The leading "The next" marks
+// the single-next-spell variant; a bare "Spells" marks the every-spell-this-turn
+// variant. The subject verb is "cast" or "control" and the duration "this turn"
+// may precede or follow "can't be countered"; both order the same
+// controller-scoped uncounterable buff. The buff applies to the controller's own
+// spells, so any other subject, a type filter, a negation, or extra wording
+// fails closed and flows through the generic effect parser.
 func parseSpellsCantBeCounteredEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
 	words := make([]shared.Token, 0, len(tokens))
 	for _, token := range tokens {
@@ -2285,35 +2291,21 @@ func parseSpellsCantBeCounteredEffect(sentence Sentence, tokens []shared.Token) 
 	default:
 		return nil, false
 	}
-	rest := []string{"you", "cast", "this", "turn"}
-	if index+len(rest) > len(words) {
+	if index+1 >= len(words) || !equalWord(words[index], "you") {
 		return nil, false
 	}
-	for offset, want := range rest {
-		if !equalWord(words[index+offset], want) {
-			return nil, false
-		}
-	}
-	castToken := words[index+1]
-	index += len(rest)
-	if index >= len(words) || (!equalWord(words[index], "can't") && !equalWord(words[index], "cannot")) {
+	verbToken := words[index+1]
+	if !equalWord(verbToken, "cast") && !equalWord(verbToken, "control") {
 		return nil, false
 	}
-	index++
-	tail := []string{"be", "countered"}
-	if len(words)-index != len(tail) {
+	if !spellsCantBeCounteredTail(words[index+2:]) {
 		return nil, false
-	}
-	for offset, want := range tail {
-		if !equalWord(words[index+offset], want) {
-			return nil, false
-		}
 	}
 	return []EffectSyntax{{
 		Kind:                          EffectSpellsCantBeCountered,
 		Span:                          sentence.Span,
 		ClauseSpan:                    sentence.Span,
-		VerbSpan:                      castToken.Span,
+		VerbSpan:                      verbToken.Span,
 		Text:                          sentence.Text,
 		Tokens:                        append([]shared.Token(nil), tokens...),
 		Context:                       EffectContextController,
@@ -2321,6 +2313,110 @@ func parseSpellsCantBeCounteredEffect(sentence Sentence, tokens []shared.Token) 
 		SpellsCantBeCounteredNextOnly: nextOnly,
 		Exact:                         true,
 	}}, true
+}
+
+// reconcileRetargetSentenceTargets aligns the sentence's target list with the
+// single clean spell target that parseChangeTargetRetargetEffect extracted. The
+// "Change the target of target spell with a single target." wording makes
+// parseTargets manufacture several spurious targets from its "target" nouns, but
+// the redirect lowering keys off the ability's target list, so the spurious
+// entries are replaced here with the one spell target the recognizer chose.
+func reconcileRetargetSentenceTargets(sentence *Sentence) {
+	if len(sentence.Effects) != 1 ||
+		sentence.Effects[0].Kind != EffectChooseNewTargets ||
+		len(sentence.Effects[0].Targets) != 1 ||
+		len(sentence.Targets) == 1 {
+		return
+	}
+	sentence.Targets = append([]TargetSyntax(nil), sentence.Effects[0].Targets...)
+}
+
+// parseChangeTargetRetargetEffect recognizes the redirect wording "Change the
+// target[s] of target spell with a single target." (Deflection, Swerve,
+// Misdirection, Imp's Mischief) and lowers it through the same
+// EffectChooseNewTargets primitive that powers "You may choose new targets for
+// target spell." (Redirect). The generic effect parser cannot handle this
+// sentence because parseTargets manufactures a spurious target for every
+// "target" noun ("the target of", "a single target") and blanks the real spell
+// selection, so this dedicated recognizer extracts the single clean "target
+// spell" selection itself. The "with a single target" qualifier is not modeled
+// at resolution, so the lowered effect retargets any one targeted spell, which
+// is broader than the printed restriction but safe for this family. Any other
+// wording fails closed and flows through the generic effect parser.
+func parseChangeTargetRetargetEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	origin := make([]int, 0, len(tokens))
+	for index, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+		origin = append(origin, index)
+	}
+	if len(words) != 10 {
+		return nil, false
+	}
+	fixed := []struct {
+		index int
+		want  string
+	}{
+		{0, "change"}, {1, "the"}, {3, "of"}, {4, "target"},
+		{5, "spell"}, {6, "with"}, {7, "a"}, {8, "single"},
+	}
+	for _, check := range fixed {
+		if !equalWord(words[check.index], check.want) {
+			return nil, false
+		}
+	}
+	if !equalWord(words[2], "target") && !equalWord(words[2], "targets") {
+		return nil, false
+	}
+	if !equalWord(words[9], "target") && !equalWord(words[9], "targets") {
+		return nil, false
+	}
+	// Parse the real "target spell" selection from the original token stream so
+	// the spell target carries a correct selection and span; the surrounding
+	// "the target of … a single target" nouns are discarded by the recognizer.
+	if origin[5] != origin[4]+1 {
+		return nil, false
+	}
+	spellTargets := parseTargets(tokens[origin[4]:origin[5]+1], atoms)
+	if len(spellTargets) != 1 || spellTargets[0].Selection.Kind != SelectionSpell {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:       EffectChooseNewTargets,
+		Span:       sentence.Span,
+		ClauseSpan: sentence.Span,
+		VerbSpan:   words[0].Span,
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		Context:    EffectContextController,
+		Targets:    spellTargets,
+		Exact:      true,
+	}}, true
+}
+
+// spellsCantBeCounteredTail accepts the two interchangeable orderings of the
+// duration and prohibition tail that follow the "Spells you cast/control"
+// subject: "this turn can't be countered" (Domri) and "can't be countered this
+// turn" (Veil of Summer). "cannot" is accepted as a spelling of "can't".
+func spellsCantBeCounteredTail(words []shared.Token) bool {
+	cantBeCountered := func(group []shared.Token) bool {
+		return len(group) == 3 &&
+			(equalWord(group[0], "can't") || equalWord(group[0], "cannot")) &&
+			equalWord(group[1], "be") && equalWord(group[2], "countered")
+	}
+	thisTurn := func(group []shared.Token) bool {
+		return len(group) == 2 && equalWord(group[0], "this") && equalWord(group[1], "turn")
+	}
+	if len(words) != 5 {
+		return false
+	}
+	if thisTurn(words[:2]) && cantBeCountered(words[2:]) {
+		return true
+	}
+	return cantBeCountered(words[:3]) && thisTurn(words[3:])
 }
 
 // parsePreventCombatDamageEffect recognizes the one-shot, turn-scoped combat

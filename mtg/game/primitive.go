@@ -91,10 +91,11 @@ const (
 	PrimitiveAmass
 	PrimitiveRenown
 	PrimitiveShuffleSpellIntoLibrary
+	PrimitiveExileTopOfLibrary
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveShuffleSpellIntoLibrary) + 1
+const primitiveKindCount = int(PrimitiveExileTopOfLibrary) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -766,7 +767,17 @@ type CopyStackObject struct {
 // Mill puts cards from the top of a referenced player's library into their
 // graveyard, or does so for every player in a referenced group ("each player
 // mills", "each opponent mills"). Exactly one of Player or PlayerGroup is set.
+// Mill moves the top Amount cards of a referenced player's library to that
+// player's graveyard.
 type Mill struct {
+	Amount      Quantity
+	Player      PlayerReference      // single player; zero if PlayerGroup is set
+	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
+}
+
+// ExileTopOfLibrary moves the top Amount cards of a referenced player's library
+// to exile.
+type ExileTopOfLibrary struct {
 	Amount      Quantity
 	Player      PlayerReference      // single player; zero if PlayerGroup is set
 	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set

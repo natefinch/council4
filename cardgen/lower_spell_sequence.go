@@ -511,6 +511,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityC
 	if content, ok := lowerLifeLostThisWayDrain(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerDestroyedThisWaySequence(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerDiscardDrawGreatestThisWaySequence(ctx); ok {
 		return content, true
 	}
@@ -2527,6 +2530,75 @@ func lowerGroupLinkedLifeSpell(ctx contentCtx) (game.AbilityContent, bool) {
 			{
 				Primitive: game.GainLife{Player: game.ControllerReference(), Amount: gainAmount},
 			},
+		},
+	}.Ability(), true
+}
+
+// lowerDestroyedThisWaySequence handles the mass-destroy payoff pattern
+// "Destroy all <group>. <You gain N life | You lose N life | Draw a card> for
+// each <permanent> destroyed this way." (Fumigate, Multani's Decree, Paraselene,
+// Righteous Fury, Rain of Daggers, Death Begets Life). The first clause is an
+// exact untargeted mass destroy; the payoff clause's amount is the "for each
+// <noun> destroyed this way" dynamic form. It emits a group Destroy that
+// publishes the number of permanents it destroyed under "destroyed-this-way"
+// followed by the payoff instruction whose amount reads that published count
+// (scaled by the per-permanent multiplier), so the controller gains, loses, or
+// draws exactly that many. It fails closed unless every guard holds, so targeted
+// mass destroys and richer wordings keep failing the round-trip.
+func lowerDestroyedThisWaySequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 {
+		return game.AbilityContent{}, false
+	}
+	destroy := &ctx.content.Effects[0]
+	payoff := &ctx.content.Effects[1]
+	if destroy.Kind != compiler.EffectDestroy ||
+		!destroy.Exact ||
+		!destroy.Selector.All ||
+		destroy.Negated || destroy.Optional || ctx.optional ||
+		destroy.Context != parser.EffectContextController ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	if payoff.Amount.DynamicKind != compiler.DynamicAmountDestroyedThisWay ||
+		payoff.Amount.DynamicForm != compiler.DynamicAmountForEach ||
+		payoff.Amount.Multiplier < 1 ||
+		!payoff.Exact ||
+		payoff.Negated || payoff.Optional ||
+		payoff.Context != parser.EffectContextController {
+		return game.AbilityContent{}, false
+	}
+	selection, ok := massGroupSelection(destroy.Selector)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	const resultKey = game.ResultKey("destroyed-this-way")
+	amount := game.Dynamic(game.DynamicAmount{
+		Kind:       game.DynamicAmountPreviousEffectResult,
+		ResultKey:  resultKey,
+		Multiplier: payoff.Amount.Multiplier,
+	})
+	var payoffPrimitive game.Primitive
+	switch payoff.Kind {
+	case compiler.EffectGain:
+		payoffPrimitive = game.GainLife{Player: game.ControllerReference(), Amount: amount}
+	case compiler.EffectLose:
+		payoffPrimitive = game.LoseLife{Player: game.ControllerReference(), Amount: amount}
+	case compiler.EffectDraw:
+		payoffPrimitive = game.Draw{Player: game.ControllerReference(), Amount: amount}
+	default:
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{
+				Primitive:     game.Destroy{Group: game.BattlefieldGroup(selection)},
+				PublishResult: resultKey,
+			},
+			{Primitive: payoffPrimitive},
 		},
 	}.Ability(), true
 }

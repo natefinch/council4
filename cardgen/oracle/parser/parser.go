@@ -91,12 +91,45 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitSourceSpellCostReduction(document.Abilities)
 	emitSourceSpellCostReductionDynamic(document.Abilities)
 	emitStaticDeclarations(document.Abilities)
+	stripCastThisFromExileEffectSemantics(document.Abilities)
 	emitSemanticAccessors(document.Abilities)
 	stripImpulseExileSemantics(document.Abilities)
 	emitReminderInner(document.Abilities)
 	emitSourceOrder(document.Abilities)
 	stripConditionalModalHeaderSemantics(document.Abilities)
 	return document, diagnostics
+}
+
+// stripCastThisFromExileEffectSemantics suppresses the resolving-effect reading
+// of "You may cast this card from exile." (Misthollow Griffin, Eternal Scourge).
+// Because "exile" is also an effect verb, the resolving-syntax scanner mis-reads
+// the zone noun in "from exile" as an exile effect, leaving the ability with
+// spurious effects that block the text-blind compiler's empty-content
+// recognition of the cast-from-exile player rule. When the static idiom is
+// recognized, the static declaration owns the whole sentence, so its competing
+// effect and target syntax is cleared.
+func stripCastThisFromExileEffectSemantics(abilities []Ability) {
+	for i := range abilities {
+		ability := &abilities[i]
+		if !abilityHasCastThisFromExileDeclaration(ability) {
+			continue
+		}
+		for j := range ability.Sentences {
+			sentence := &ability.Sentences[j]
+			sentence.Effects = nil
+			sentence.Targets = nil
+			sentence.LegacyEffects = false
+		}
+	}
+}
+
+func abilityHasCastThisFromExileDeclaration(ability *Ability) bool {
+	for i := range ability.StaticDeclarations {
+		if ability.StaticDeclarations[i].PlayerRule == StaticDeclarationPlayerRuleCastThisFromExile {
+			return true
+		}
+	}
+	return false
 }
 
 func stripImpulseExileSemantics(abilities []Ability) {

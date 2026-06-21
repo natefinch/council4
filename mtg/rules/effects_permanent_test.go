@@ -286,6 +286,50 @@ func TestMassDestroyDeathsShareOneOrMoreTriggerBatch(t *testing.T) {
 	}
 }
 
+// TestMassDestroyPublishesDestroyedCountForThisWayPayoff proves the mass-destroy
+// payoff family (Fumigate, Multani's Decree) reads the number of permanents the
+// destroy clause destroyed: the Destroy instruction publishes that count and a
+// following GainLife reads it scaled by the per-permanent multiplier. A land and
+// an indestructible creature are excluded from the published count.
+func TestMassDestroyPublishesDestroyedCountForThisWayPayoff(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCreaturePermanent(g, game.Player1)
+	addCreaturePermanent(g, game.Player2)
+	addCreaturePermanent(g, game.Player2)
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Island",
+		Types: []types.Card{types.Land}},
+	})
+	indestructible := addCombatCreaturePermanent(g, game.Player3, game.Indestructible)
+	addInstructionSpellToStack(g, []game.Instruction{
+		{
+			Primitive:     game.Destroy{Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}})},
+			PublishResult: "destroyed-this-way",
+		},
+		{
+			Primitive: game.GainLife{
+				Player: game.ControllerReference(),
+				Amount: game.Dynamic(game.DynamicAmount{
+					Kind:       game.DynamicAmountPreviousEffectResult,
+					ResultKey:  "destroyed-this-way",
+					Multiplier: 2,
+				}),
+			},
+		},
+	})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	// Three creatures were destroyed (the indestructible creature and the land
+	// were not), so the controller gains 2 life for each of the three: +6.
+	if got := g.Players[game.Player1].Life; got != 46 {
+		t.Fatalf("controller life = %d, want 46 (gained 2 per creature destroyed, 3 destroyed)", got)
+	}
+	if _, ok := permanentByObjectID(g, indestructible.ObjectID); !ok {
+		t.Fatal("indestructible creature survived but was counted in the destroyed-this-way payoff")
+	}
+}
+
 func TestMassDestroyNonlandPermanentsLeavesLands(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

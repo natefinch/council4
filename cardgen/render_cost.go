@@ -86,6 +86,8 @@ func (Renderer) renderObjectReference(reference game.ObjectReference) (string, e
 		return "game.EventPermanentReference()", nil
 	case game.ObjectReferenceEventRelatedPermanent:
 		return "game.EventRelatedPermanentReference()", nil
+	case game.ObjectReferenceEventStackObject:
+		return "game.EventStackObjectReference()", nil
 	case game.ObjectReferenceSourceCard:
 		return "game.SourceCardPermanentReference()", nil
 	case game.ObjectReferenceSacrificedCost:
@@ -216,6 +218,17 @@ func (r Renderer) renderKeywordAbility(ctx *renderCtx, keyword game.KeywordAbili
 	}
 	if toxic, ok := keyword.(game.ToxicKeyword); ok {
 		return fmt.Sprintf("game.ToxicKeyword{Amount: %d}", toxic.Amount), nil
+	}
+	if landwalk, ok := keyword.(game.LandwalkKeyword); ok {
+		if landwalk.AnyLand {
+			return "game.LandwalkKeyword{AnyLand: true}", nil
+		}
+		ctx.need(importTypes)
+		lit := SubtypeToLiteral(string(landwalk.Subtype), []string{"Land"})
+		if strings.HasPrefix(lit, "/*") {
+			return "", fmt.Errorf("render: unsupported landwalk subtype %q", string(landwalk.Subtype))
+		}
+		return fmt.Sprintf("game.LandwalkKeyword{Subtype: %s}", lit), nil
 	}
 	return "", fmt.Errorf("render: unsupported keyword ability %T", keyword)
 }

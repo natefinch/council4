@@ -500,6 +500,9 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 	if subject, ok := parseDynamicGreatestDiscardedThisWaySubject(tokens, start); ok {
 		return subject, true
 	}
+	if subject, ok := parseDynamicDestroyedThisWaySubject(tokens, start); ok {
+		return subject, true
+	}
 	if subject, ok := parseDynamicDevotionSubject(tokens, start); ok {
 		return subject, true
 	}
@@ -938,6 +941,43 @@ func parseDynamicGreatestDiscardedThisWaySubject(tokens []shared.Token, start in
 		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountGreatestDiscardedThisWay},
 		end:    start + 10,
 	}, true
+}
+
+// parseDynamicDestroyedThisWaySubject recognizes "<permanent noun> destroyed
+// this way", the count of permanents destroyed by a preceding destroy effect in
+// the same ability ("for each creature destroyed this way", "for each permanent
+// destroyed this way"). The noun names a permanent card type or the catch-all
+// "permanent" and is descriptive of what the prior clause destroyed, so the
+// count carries no selection; the lowerer reads the count the destroy effect
+// publishes. It fails closed on any other noun or trailing text.
+func parseDynamicDestroyedThisWaySubject(tokens []shared.Token, start int) (dynamicAmountSubject, bool) {
+	plural, ok := destroyedThisWayNounPlural(tokens[start])
+	if !ok {
+		return dynamicAmountSubject{}, false
+	}
+	end := start + 1
+	if !effectWordsAt(tokens, end, "destroyed", "this", "way") || !dynamicAmountBoundary(tokens, end+3) {
+		return dynamicAmountSubject{}, false
+	}
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountDestroyedThisWay},
+		end:    end + 3, count: true, plural: plural,
+	}, true
+}
+
+// destroyedThisWayNounPlural reports whether token is a permanent-naming noun
+// admissible in a "<noun> destroyed this way" count subject and whether it is
+// the plural spelling. The recognized nouns are the permanent card types and the
+// catch-all "permanent"; any other word fails closed.
+func destroyedThisWayNounPlural(token shared.Token) (plural, ok bool) {
+	switch strings.ToLower(token.Text) {
+	case "permanent", "creature", "artifact", "enchantment", "land", "planeswalker":
+		return false, true
+	case "permanents", "creatures", "artifacts", "enchantments", "lands", "planeswalkers":
+		return true, true
+	default:
+		return false, false
+	}
 }
 
 func parseDynamicCountSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
