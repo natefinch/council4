@@ -84,6 +84,8 @@ func (Renderer) renderObjectReference(reference game.ObjectReference) (string, e
 		return fmt.Sprintf("game.LinkedObjectReference(%q)", reference.LinkID()), nil
 	case game.ObjectReferenceEventPermanent:
 		return "game.EventPermanentReference()", nil
+	case game.ObjectReferenceEventRelatedPermanent:
+		return "game.EventRelatedPermanentReference()", nil
 	case game.ObjectReferenceSourceCard:
 		return "game.SourceCardPermanentReference()", nil
 	case game.ObjectReferenceSacrificedCost:

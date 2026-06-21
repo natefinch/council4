@@ -77,6 +77,7 @@ const (
 	Intimidate
 	Skulk
 	Evolve
+	Flanking
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -233,7 +234,45 @@ var (
 	// on it." The ability carries the Persist keyword so HasKeyword(Persist)
 	// reports true.
 	PersistTriggeredBody = diesReturnWithCounterTriggeredBody("Persist", Persist, counter.MinusOneMinusOne)
+
+	// FlankingTriggeredBody is the canonical triggered ability for flanking
+	// (CR 702.25): "Whenever a creature without flanking blocks this creature,
+	// the blocking creature gets -1/-1 until end of turn." The ability carries
+	// the Flanking keyword so HasKeyword(Flanking) reports true, which lets
+	// another flanker's "without flanking" blocker filter exclude this creature.
+	// Each printed instance is its own triggered ability, so multiple instances
+	// stack to -N/-N (CR 702.25c).
+	FlankingTriggeredBody = flankingTriggeredBody()
 )
+
+// flankingTriggeredBody builds the canonical flanking triggered ability: a
+// becomes-blocked self-trigger whose blocker filter excludes creatures with
+// flanking, giving the blocking creature -1/-1 until end of turn (CR 702.25).
+func flankingTriggeredBody() TriggeredAbility {
+	return TriggeredAbility{
+		Text:             "Flanking",
+		KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: Flanking}},
+		Trigger: TriggerCondition{
+			Type: TriggerWhenever,
+			Pattern: TriggerPattern{
+				Event:  EventAttackerBecameBlocked,
+				Source: TriggerSourceSelf,
+				RelatedSubjectSelection: Selection{
+					RequiredTypes:   []types.Card{types.Creature},
+					ExcludedKeyword: Flanking,
+				},
+			},
+		},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: ModifyPT{
+				Object:         EventRelatedPermanentReference(),
+				PowerDelta:     Fixed(-1),
+				ToughnessDelta: Fixed(-1),
+				Duration:       DurationUntilEndOfTurn,
+			},
+		}}}.Ability(),
+	}
+}
 
 // diesReturnWithCounterTriggeredBody builds the canonical undying/persist
 // triggered ability: a self dies-trigger gated on the dying creature having had

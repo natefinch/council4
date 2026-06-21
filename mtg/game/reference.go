@@ -36,6 +36,11 @@ const (
 	// sacrificed permanent ("the sacrificed creature's power") on a
 	// sacrifice-cost ability (Altar of Dementia).
 	ObjectReferenceSacrificedCost
+	// ObjectReferenceEventRelatedPermanent references the secondary permanent of
+	// the triggering event (its RelatedPermanentID), such as the blocking
+	// creature of a "becomes blocked by" event. It backs flanking's penalty on
+	// the blocker (CR 702.25).
+	ObjectReferenceEventRelatedPermanent
 )
 
 // ObjectReference describes how a rules effect finds an object at resolution.
@@ -125,6 +130,13 @@ func EventPermanentReference() ObjectReference {
 	return ObjectReference{kind: ObjectReferenceEventPermanent}
 }
 
+// EventRelatedPermanentReference references the secondary permanent of the
+// resolving stack object's triggering event (its RelatedPermanentID), such as
+// the blocking creature of a "becomes blocked by" event (CR 702.25 flanking).
+func EventRelatedPermanentReference() ObjectReference {
+	return ObjectReference{kind: ObjectReferenceEventRelatedPermanent}
+}
+
 // Validate reports structural problems with an ObjectReference that represent
 // card-definition bugs. It checks kind/field consistency only; target-index
 // bounds depend on the surrounding TargetSpec list and are checked by
@@ -192,6 +204,10 @@ func (r ObjectReference) Validate() []string {
 	case ObjectReferenceSacrificedCost:
 		if r.targetIndex != 0 || r.linkID != "" {
 			return []string{"sacrificed cost reference must not set TargetIndex or LinkID"}
+		}
+	case ObjectReferenceEventRelatedPermanent:
+		if r.targetIndex != 0 || r.linkID != "" {
+			return []string{"event related permanent reference must not set TargetIndex or LinkID"}
 		}
 	case ObjectReferenceNone:
 		return []string{"object reference has no kind"}
