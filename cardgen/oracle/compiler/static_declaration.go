@@ -1030,7 +1030,6 @@ func recognizeStaticLoseAbilitiesBecomeDeclaration(ability CompiledAbility, stat
 		len(ability.Content.Modes) != 0 ||
 		len(ability.Content.Targets) != 0 ||
 		len(ability.Content.Conditions) != 0 ||
-		len(ability.Content.Keywords) != 0 ||
 		ability.AbilityWord != "" {
 		return nil, false
 	}
@@ -1085,6 +1084,9 @@ func recognizeStaticLoseAbilitiesBecomeDeclaration(ability CompiledAbility, stat
 	}
 	if node.BasePTSet {
 		declarations = append(declarations, staticBasePowerToughnessDeclaration(node.Span, node, group, nil))
+	}
+	if keywords := staticDeclarationGrantKeywords(ability.Content); len(keywords) != 0 {
+		declarations = append(declarations, staticKeywordGrantDeclaration(node.Span, group, nil, keywords))
 	}
 	return declarations, true
 }

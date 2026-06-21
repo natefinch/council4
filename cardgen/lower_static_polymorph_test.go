@@ -82,7 +82,81 @@ func TestGenerateExecutableCardSourcePolymorphBaseOnly(t *testing.T) {
 	}
 }
 
-// TestGenerateExecutableCardSourcePolymorphNameFailsClosed confirms a name-setting
+// TestGenerateExecutableCardSourcePolymorphBecomesFirst confirms the
+// "becomes-first" Aura order ("Enchanted creature is a <types> with base power
+// and toughness N/N and has <keyword>, and it loses all other abilities, card
+// types, and creature types.") lowers into the same layer-faithful continuous
+// effects as the loses-first order, additionally granting the stated keyword.
+// This is the Darksteel Mutation / Lignify near-vanilla family.
+func TestGenerateExecutableCardSourcePolymorphBecomesFirst(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:     "Darksteel Mutation",
+		Layout:   "normal",
+		ManaCost: "{1}{W}",
+		TypeLine: "Enchantment — Aura",
+		Colors:   []string{"W"},
+		OracleText: "Enchant creature\n" +
+			"Enchanted creature is an Insect artifact creature with base power and toughness 0/1 and has indestructible, and it loses all other abilities, card types, and creature types.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "d")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"RemoveAllAbilities: true,",
+		"SetTypes:    []types.Card{types.Artifact, types.Creature}",
+		"SetSubtypes: []types.Sub{types.Insect}",
+		"SetPower:     opt.Val(game.PT{Value: 0})",
+		"SetToughness: opt.Val(game.PT{Value: 1})",
+		"game.Indestructible",
+		"game.AttachedObjectGroup(game.SourcePermanentReference())",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if strings.Contains(source, "TODO") {
+		t.Fatalf("executable source contains TODO:\n%s", source)
+	}
+}
+
+// TestGenerateExecutableCardSourcePolymorphBecomesFirstSubtypeOnly confirms the
+// becomes-first order with only a subtype and no keyword grant (Lignify) lowers
+// without diagnostics, setting the subtype and base power/toughness.
+func TestGenerateExecutableCardSourcePolymorphBecomesFirstSubtypeOnly(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:     "Lignify",
+		Layout:   "normal",
+		ManaCost: "{2}{G}",
+		TypeLine: "Enchantment — Aura",
+		Colors:   []string{"G"},
+		OracleText: "Enchant creature\n" +
+			"Enchanted creature is a Treefolk with base power and toughness 0/4 and loses all abilities.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "l")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"RemoveAllAbilities: true,",
+		"SetSubtypes: []types.Sub{types.Sub(\"Treefolk\")}",
+		"SetPower:     opt.Val(game.PT{Value: 0})",
+		"SetToughness: opt.Val(game.PT{Value: 4})",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 // polymorph, which the continuous machinery cannot model, fails closed with the
 // unsupported-static diagnostic rather than emitting a partial implementation.
 func TestGenerateExecutableCardSourcePolymorphNameFailsClosed(t *testing.T) {
