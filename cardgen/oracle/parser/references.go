@@ -306,6 +306,12 @@ func referenceTokenWordsEqual(tokens []shared.Token, words []string) bool {
 		return false
 	}
 	for i := range words {
+		if words[i] == "," || words[i] == "." || words[i] == "&" || words[i] == "/" {
+			if !strings.EqualFold(tokens[i].Text, words[i]) {
+				return false
+			}
+			continue
+		}
 		normalized := strings.ToLower(strings.Trim(tokens[i].Text, ",.'\u2019"))
 		if tokens[i].Kind != shared.Word || normalized != words[i] {
 			return false
@@ -351,7 +357,7 @@ func selfNameSpanAliases(cardName string) [][]string {
 	}
 	var aliases [][]string
 	appendAlias := func(name string) {
-		words := strings.Fields(strings.ToLower(strings.TrimSpace(name)))
+		words := referenceNameWords(name)
 		if len(words) == 0 {
 			return
 		}
