@@ -413,6 +413,7 @@ const (
 	EffectReplacementThatManyPlus  EffectReplacementKind = "EffectReplacementThatManyPlus"
 	EffectReplacementOneOfEach     EffectReplacementKind = "EffectReplacementOneOfEach"
 	EffectReplacementTripleThat    EffectReplacementKind = "EffectReplacementTripleThat"
+	EffectReplacementTwiceThatMuch EffectReplacementKind = "EffectReplacementTwiceThatMuch"
 )
 
 // EffectReplacementSyntax is a source-spanned replacement modifier.

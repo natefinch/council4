@@ -69,6 +69,7 @@ const (
 	ConditionPredicateWouldDrawCard                         ConditionPredicateKind = "ConditionPredicateWouldDrawCard"
 	ConditionPredicateWouldDrawCardExceptFirstInDrawStep    ConditionPredicateKind = "ConditionPredicateWouldDrawCardExceptFirstInDrawStep"
 	ConditionPredicateCardWouldGoToGraveyard                ConditionPredicateKind = "ConditionPredicateCardWouldGoToGraveyard"
+	ConditionPredicateControllerLifeGain                    ConditionPredicateKind = "ConditionPredicateControllerLifeGain"
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -437,6 +438,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeCounterPlacementCondition,
 		recognizeDamageSourceCondition,
 		recognizeTokenCreationCondition,
+		recognizeLifeGainCondition,
 		recognizeControlComparisonCondition,
 		recognizeGraveyardControlsCondition,
 		recognizeControlsCondition,
@@ -893,6 +895,18 @@ func recognizeTokenCreationCondition(body []shared.Token, _ Atoms) (ConditionCla
 	}
 	if _, ok := cutTokenPrefix(body, "you", "would", "create", "a"); ok {
 		return ConditionClause{Predicate: ConditionPredicateControllerWouldCreateNamedToken}, true
+	}
+	return ConditionClause{}, false
+}
+
+// recognizeLifeGainCondition matches the intervening condition that gates a
+// life-gain replacement: "you would gain life" ("If you would gain life, you
+// gain twice that much life instead.", Boon Reflection, Angel of Vitality). The
+// matching replacement amount ("twice that much" / "that much plus N") is
+// recognized on the gain-life effect.
+func recognizeLifeGainCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if tokenWordsEqual(body, "you", "would", "gain", "life") {
+		return ConditionClause{Predicate: ConditionPredicateControllerLifeGain}, true
 	}
 	return ConditionClause{}, false
 }

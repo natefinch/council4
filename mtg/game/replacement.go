@@ -260,8 +260,20 @@ type ReplacementEffect struct {
 	DamageSourceTypes       []types.Card
 	DamageRecipientOpponent bool
 	DamageNoncombatOnly     bool
-	EntersTapped            bool
-	EntersWithCounters      []CounterPlacement
+
+	// LifeGainMultiplier multiplies a single "you would gain life" event by the
+	// replacement's controller before the life is gained (CR 614), backing "If
+	// you would gain life, you gain twice that much life instead." (Boon
+	// Reflection, Rhox Faithmender, Alhammarret's Archive). LifeGainAddend then
+	// adds a fixed amount, backing "you gain that much life plus N instead."
+	// (Angel of Vitality, Heron of Hope). A multiplier of zero or one with a zero
+	// addend leaves life gain unchanged. Both apply only when the gaining player
+	// is the replacement's controller.
+	LifeGainMultiplier int
+	LifeGainAddend     int
+
+	EntersTapped       bool
+	EntersWithCounters []CounterPlacement
 
 	// EntryColorChoice marks an enters-the-battlefield replacement that prompts
 	// the controller to choose a color as the permanent enters (CR 614.12), such

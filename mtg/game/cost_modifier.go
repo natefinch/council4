@@ -24,7 +24,8 @@ const (
 // MatchColor constrains a spell cost modifier to spells of a single color. When
 // MatchColor is set, Color names the required color; an empty Color is the
 // colorless sentinel, constraining the modifier to colorless spells. MatchColor
-// and MatchCardType are mutually exclusive.
+// may combine with MatchCardType ("black creature spells"). MatchSubtypes and
+// MatchColors are each mutually exclusive with MatchCardType.
 type CostModifier struct {
 	Kind             CostModifierKind
 	Controller       PlayerID
@@ -76,6 +77,12 @@ type CostModifier struct {
 	// the spell has at least one of the listed colors. It holds two or more real
 	// colors and is mutually exclusive with MatchColor and MatchCardType.
 	MatchColors []color.Color
+
+	// MatchSubtypes constrains a spell cost modifier to spells carrying any one
+	// of these subtypes ("Aura and Equipment spells ..."): the modifier applies
+	// when the spell has at least one of the listed subtypes. It may combine with
+	// MatchColor and is mutually exclusive with MatchCardType and MatchColors.
+	MatchSubtypes []types.Sub
 }
 
 // RuleEffectKind identifies non-layer continuous rules effects such as
@@ -195,6 +202,13 @@ const (
 	// TopCardOnly restricts the permission to the top card of the source zone (the
 	// top of the affected player's library).
 	RuleEffectCastSpellsFromZone
+	// RuleEffectCantCastFromZones forbids the affected players (AffectedPlayer)
+	// from casting spells from any of the zones in CantCastFromZones ("Your
+	// opponents can't cast spells from anywhere other than their hands." expands
+	// to the non-hand cast zones; "Players can't cast spells from graveyards or
+	// libraries."). A "can't" restriction overrides any casting permission, so a
+	// matching source zone makes the cast illegal regardless of other effects.
+	RuleEffectCantCastFromZones
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -227,7 +241,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectCastSpellsAsThoughFlash,
 		RuleEffectPlayLandsFromZone,
 		RuleEffectPlayWithTopCardRevealed,
-		RuleEffectCastSpellsFromZone:
+		RuleEffectCastSpellsFromZone,
+		RuleEffectCantCastFromZones:
 		return true
 	default:
 		return false
@@ -318,4 +333,9 @@ type RuleEffect struct {
 	// may play lands from the top of your library."). It is unused for every other
 	// kind and for zones without a meaningful top card.
 	TopCardOnly bool
+
+	// CantCastFromZones lists the zones a RuleEffectCantCastFromZones restriction
+	// forbids the affected players from casting spells out of. It is unused for
+	// every other kind.
+	CantCastFromZones []zone.Type
 }

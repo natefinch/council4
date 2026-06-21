@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // grandAbolisherPermanent gives controller a battlefield permanent whose static
@@ -91,5 +92,40 @@ func TestActionRestrictionWithoutTurnScopeAlwaysApplies(t *testing.T) {
 	g.Turn.ActivePlayer = game.Player2
 	if !spellCastProhibited(g, game.Player2, spell) {
 		t.Fatal("an unscoped restriction must apply on every turn")
+	}
+}
+
+// drannithPermanent gives controller a battlefield permanent whose static
+// ability stops opponents from casting spells out of any non-hand zone, mirroring
+// Drannith Magistrate.
+func drannithPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Drannith Magistrate",
+		Types: []types.Card{types.Creature},
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:              game.RuleEffectCantCastFromZones,
+				AffectedPlayer:    game.PlayerOpponent,
+				CantCastFromZones: []zone.Type{zone.Graveyard, zone.Exile, zone.Library, zone.Command},
+			}},
+		}},
+	}})
+}
+
+func TestCastFromZoneProhibitedByDrannith(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	drannithPermanent(g, game.Player1)
+
+	if !castFromZoneProhibited(g, game.Player2, zone.Graveyard) {
+		t.Fatal("opponent should not be able to cast from their graveyard")
+	}
+	if !castFromZoneProhibited(g, game.Player2, zone.Command) {
+		t.Fatal("opponent should not be able to cast from the command zone")
+	}
+	if castFromZoneProhibited(g, game.Player2, zone.Hand) {
+		t.Fatal("opponent must still be able to cast from their hand")
+	}
+	if castFromZoneProhibited(g, game.Player1, zone.Graveyard) {
+		t.Fatal("the controller is never restricted by their own Drannith Magistrate")
 	}
 }

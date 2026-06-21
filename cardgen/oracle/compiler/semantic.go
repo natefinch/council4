@@ -489,6 +489,11 @@ const (
 	// watched scope, card-type filter, and battlefield-only restriction live in
 	// the condition's Graveyard* fields.
 	ConditionPredicateCardWouldGoToGraveyard
+	// ConditionPredicateControllerLifeGain is satisfied when the controller would
+	// gain life ("if you would gain life"). It gates the life-gain replacement
+	// "you gain twice that much life instead." / "you gain that much life plus N
+	// instead." (Boon Reflection, Angel of Vitality).
+	ConditionPredicateControllerLifeGain
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard

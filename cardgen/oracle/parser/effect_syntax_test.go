@@ -2179,6 +2179,60 @@ func TestParseDrawDoublingReplacement(t *testing.T) {
 	}
 }
 
+func TestParseLifeGainReplacement(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name   string
+		text   string
+		kind   EffectReplacementKind
+		amount int
+	}{
+		{
+			name:   "double",
+			text:   "If you would gain life, you gain twice that much life instead.",
+			kind:   EffectReplacementTwiceThatMuch,
+			amount: 0,
+		},
+		{
+			name:   "plus",
+			text:   "If you would gain life, you gain that much life plus 1 instead.",
+			kind:   EffectReplacementThatMuchPlus,
+			amount: 1,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(tc.text, Context{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %d, want 1", len(effects))
+			}
+			if effects[0].Kind != EffectGain {
+				t.Fatalf("effect kind = %v, want EffectGain", effects[0].Kind)
+			}
+			if effects[0].Replacement.Kind != tc.kind {
+				t.Fatalf("replacement kind = %v, want %v", effects[0].Replacement.Kind, tc.kind)
+			}
+			if effects[0].Replacement.Amount != tc.amount {
+				t.Fatalf("replacement amount = %d, want %d", effects[0].Replacement.Amount, tc.amount)
+			}
+			found := false
+			for _, clause := range document.Abilities[0].ConditionClauses {
+				if clause.Predicate == ConditionPredicateControllerLifeGain {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("life-gain condition not recognized: %#v", document.Abilities[0].ConditionClauses)
+			}
+		})
+	}
+}
+
 func TestParseOneOfEachTokenReplacement(t *testing.T) {
 	t.Parallel()
 	document, diagnostics := Parse(

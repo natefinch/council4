@@ -85,17 +85,21 @@ func parseEffectReplacement(tokens []shared.Token, atoms Atoms) EffectReplacemen
 		return replacement
 	}
 	twiceMany := effectHasTokenWords(tokens, "twice", "that", "many")
-	thatMuchPlus := effectHasTokenWords(tokens, "that", "much", "damage", "plus")
+	twiceMuch := effectHasTokenWords(tokens, "twice", "that", "much")
+	thatMuchPlus := effectHasTokenWords(tokens, "that", "much", "damage", "plus") ||
+		effectHasTokenWords(tokens, "that", "much", "life", "plus")
 	thatManyPlus := effectHasTokenWords(tokens, "that", "many", "plus")
 	doubleThat := effectHasTokenWords(tokens, "double", "that", "damage") ||
 		effectHasTokenWords(tokens, "twice", "that", "damage")
 	tripleThat := effectHasTokenWords(tokens, "triple", "that", "damage")
-	if boolCount(twiceMany, thatMuchPlus, thatManyPlus, doubleThat, tripleThat) != 1 {
+	if boolCount(twiceMany, twiceMuch, thatMuchPlus, thatManyPlus, doubleThat, tripleThat) != 1 {
 		return replacement
 	}
 	switch {
 	case twiceMany:
 		replacement.Kind = EffectReplacementTwiceThatMany
+	case twiceMuch:
+		replacement.Kind = EffectReplacementTwiceThatMuch
 	case thatMuchPlus:
 		for i := range tokens {
 			if !equalWord(tokens[i], "plus") || i+1 >= len(tokens) {
