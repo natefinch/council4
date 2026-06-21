@@ -189,8 +189,7 @@ func (s Selection) Validate() []string {
 // predicate's backing slices rather than copying them, so callers must not
 // mutate the result.
 func (p TargetPredicate) Selection() Selection {
-	return Selection{
-		RequiredTypesAny:  p.PermanentTypes,
+	selection := Selection{
 		ExcludedTypes:     p.ExcludedTypes,
 		Supertypes:        p.Supertypes,
 		ExcludedSupertype: p.ExcludedSupertype,
@@ -208,6 +207,12 @@ func (p TargetPredicate) Selection() Selection {
 		Toughness:         p.Toughness,
 		ExcludeSource:     p.Another,
 	}
+	if p.PermanentTypesConjunctive {
+		selection.RequiredTypes = p.PermanentTypes
+	} else {
+		selection.RequiredTypesAny = p.PermanentTypes
+	}
+	return selection
 }
 
 // Selection returns the characteristic-matching portion of a PermanentFilter as
