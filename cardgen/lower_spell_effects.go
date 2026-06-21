@@ -445,6 +445,13 @@ func cardSelectionForSelector(selector compiler.CompiledSelector) (game.Selectio
 		selection.Keyword = keyword
 	}
 	if selector.MatchManaValue {
+		// game.Selection's mana-value bound is a fixed comparison; it cannot
+		// express the spell's chosen {X} ("with mana value X or less"), so an
+		// X-derived bound fails closed here rather than lowering to a wrong fixed
+		// bound. Only the dedicated library-search path models the X bound.
+		if selector.ManaValueX {
+			return game.Selection{}, false
+		}
 		selection.ManaValue = opt.Val(selector.ManaValue)
 	}
 	selection.Colorless = selector.Colorless

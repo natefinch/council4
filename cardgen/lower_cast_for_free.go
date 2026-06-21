@@ -92,6 +92,12 @@ func castForFreeSelection(selector compiler.CompiledSelector) (game.Selection, b
 	}
 	selection := game.Selection{ExcludedTypes: []types.Card{types.Land}}
 	if selector.MatchManaValue {
+		// The runtime spell filter uses a fixed mana-value comparison and cannot
+		// express the spell's chosen {X} ("a spell with mana value X or less"), so
+		// fail closed rather than lowering to a wrong fixed bound.
+		if selector.ManaValueX {
+			return game.Selection{}, false
+		}
 		selection.ManaValue = opt.Val(selector.ManaValue)
 	}
 	selection.Colorless = selector.Colorless

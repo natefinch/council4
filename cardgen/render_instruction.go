@@ -766,6 +766,9 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 		ctx.need(importOpt)
 		specFields = append(specFields, fmt.Sprintf("MaxManaValue: opt.Val(%d),", value.Spec.MaxManaValue.Val))
 	}
+	if value.Spec.MaxManaValueFromX {
+		specFields = append(specFields, "MaxManaValueFromX: true,")
+	}
 	if value.Spec.Reveal {
 		specFields = append(specFields, "Reveal: true,")
 	}
