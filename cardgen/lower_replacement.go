@@ -69,6 +69,9 @@ func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering,
 	if replacementAbility, handled, diagnostic := lowerDrawDoublingReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
+	if replacementAbility, handled, diagnostic := lowerLifeGainReplacement(ability); handled || diagnostic != nil {
+		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+	}
 	replacementAbility, diagnostic := lowerEntersTappedReplacement(ability)
 	return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 }
@@ -179,6 +182,49 @@ func lowerDrawDoublingReplacement(
 	}
 	multiplier := ability.Content.Effects[0].Amount.Value
 	return game.DrawCardMultiplierReplacement(ability.Text, multiplier, exceptFirstInDrawStep), true, nil
+}
+
+// lowerLifeGainReplacement lowers the life-gain replacement "If you would gain
+// life, you gain twice that much life instead." (multiplier two) and "you gain
+// that much life plus N instead." (additive bonus) to a persistent replacement
+// that scales the controller's life gain (Boon Reflection, Rhox Faithmender,
+// Angel of Vitality, Alhammarret's Archive's life clause).
+func lowerLifeGainReplacement(
+	ability compiler.CompiledAbility,
+) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Conditions) != 1 ||
+		ability.Content.Conditions[0].Predicate != compiler.ConditionPredicateControllerLifeGain {
+		return game.ReplacementAbility{}, false, nil
+	}
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported life-gain replacement",
+			detail,
+		)
+	}
+	if len(ability.Content.Effects) != 1 ||
+		ability.Content.Effects[0].Kind != compiler.EffectGain ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional {
+		return unsupported("the executable source backend supports only exact additive or multiplicative life-gain replacements")
+	}
+	switch ability.Content.Effects[0].Replacement.Kind {
+	case parser.EffectReplacementTwiceThatMuch:
+		return game.LifeGainReplacement(ability.Text, 2, 0), true, nil
+	case parser.EffectReplacementThatMuchPlus:
+		addend := ability.Content.Effects[0].Replacement.Amount
+		if addend <= 0 {
+			return unsupported("the executable source backend supports only positive additive life-gain replacements")
+		}
+		return game.LifeGainReplacement(ability.Text, 1, addend), true, nil
+	default:
+		return unsupported("the executable source backend supports only double or additive life-gain replacements")
+	}
 }
 
 // groupEntersTappedController maps the parsed controller scope of a group

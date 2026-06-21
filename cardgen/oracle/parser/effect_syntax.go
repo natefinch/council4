@@ -600,6 +600,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseBecomeCopyEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawDoublingReplacement(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseLifeGainReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePunisherEachLoseLifeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseLibraryTopReorderEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseGroupEntersTappedEffect(sentence, tokens) },
@@ -1195,6 +1196,70 @@ func drawDoublingConditionBody(body []shared.Token) bool {
 		"you", "would", "draw", "a", "card",
 		"except", "the", "first", "one", "you", "draw",
 		"in", "each", "of", "your", "draw", "steps")
+}
+
+// parseLifeGainReplacement recognizes the life-gain replacement "If you would
+// gain life, you gain twice that much life instead." (multiplier two) and "If
+// you would gain life, you gain that much life plus N instead." (additive
+// bonus), emitting a single gain effect carrying the replacement so the
+// would-gain condition clause does not become a spurious effect of its own. The
+// matching intervening-if condition is recognized separately by
+// recognizeLifeGainCondition.
+func parseLifeGainReplacement(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	commaIndex, replacement, ok := matchLifeGainReplacement(tokens, atoms)
+	if !ok {
+		return nil, false
+	}
+	resolving := tokens[commaIndex+1:]
+	gainIndex := commaIndex + 1
+	replacement.Span = tokens[len(tokens)-2].Span
+	return []EffectSyntax{{
+		Kind:        EffectGain,
+		Context:     EffectContextController,
+		Span:        shared.SpanOf(tokens),
+		VerbSpan:    tokens[gainIndex].Span,
+		ClauseSpan:  shared.SpanOf(tokens),
+		Text:        sentence.Text,
+		Tokens:      append([]shared.Token(nil), resolving...),
+		Replacement: replacement,
+		References:  referencesInSpan(atoms, shared.SpanOf(resolving)),
+		Exact:       true,
+	}}, true
+}
+
+// matchLifeGainReplacement reports the comma index separating the would-gain
+// condition from its "you gain ... life instead" result and the replacement
+// (twice-that-much or that-much-plus-N) when tokens spell a life-gain
+// replacement.
+func matchLifeGainReplacement(tokens []shared.Token, atoms Atoms) (commaIndex int, replacement EffectReplacementSyntax, ok bool) {
+	if len(tokens) < 6 || tokens[len(tokens)-1].Kind != shared.Period {
+		return 0, EffectReplacementSyntax{}, false
+	}
+	if !effectWordsAt(tokens, 0, "if") {
+		return 0, EffectReplacementSyntax{}, false
+	}
+	comma := -1
+	for i := range tokens {
+		if tokens[i].Kind == shared.Comma {
+			comma = i
+			break
+		}
+	}
+	if comma < 0 || !tokenWordsEqual(tokens[1:comma], "you", "would", "gain", "life") {
+		return 0, EffectReplacementSyntax{}, false
+	}
+	result := tokens[comma+1 : len(tokens)-1]
+	if tokenWordsEqual(result, "you", "gain", "twice", "that", "much", "life", "instead") {
+		return comma, EffectReplacementSyntax{Kind: EffectReplacementTwiceThatMuch}, true
+	}
+	if len(result) == 8 &&
+		tokenWordsEqual(result[:6], "you", "gain", "that", "much", "life", "plus") &&
+		equalWord(result[7], "instead") {
+		if n, valueOK := effectNumber(result[6], atoms); valueOK && n > 0 {
+			return comma, EffectReplacementSyntax{Kind: EffectReplacementThatMuchPlus, Amount: n}, true
+		}
+	}
+	return 0, EffectReplacementSyntax{}, false
 }
 
 func recognizeImpulseExileSequence(sentences []Sentence) bool {

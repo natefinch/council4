@@ -1128,6 +1128,35 @@ func drawCardMultiplier(g *game.Game, playerID game.PlayerID, firstInDrawStep bo
 	return multiplier
 }
 
+// replacementLifeGainAmount reports how much life a single "you would gain life"
+// event by playerID becomes after applying registered life-gain replacements
+// (CR 614), as on Boon Reflection ("twice that much") and Angel of Vitality
+// ("that much plus 1"). Multiple replacements compound in registration order;
+// each multiplies the running amount and then adds its addend. The result is
+// never negative.
+func replacementLifeGainAmount(g *game.Game, playerID game.PlayerID, amount int) int {
+	for i := range g.ReplacementEffects {
+		replacement := &g.ReplacementEffects[i]
+		if replacement.LifeGainMultiplier <= 1 && replacement.LifeGainAddend == 0 {
+			continue
+		}
+		if !replacementSourceIsActive(g, replacement) {
+			continue
+		}
+		if replacementCurrentController(g, replacement) != playerID {
+			continue
+		}
+		if replacement.LifeGainMultiplier > 1 {
+			amount *= replacement.LifeGainMultiplier
+		}
+		amount += replacement.LifeGainAddend
+	}
+	if amount < 0 {
+		return 0
+	}
+	return amount
+}
+
 func replacementSourceStillApplies(g *game.Game, replacement *game.ReplacementEffect) bool {
 	if replacement.Duration != game.DurationPermanent || replacement.SourceObjectID == 0 {
 		return true

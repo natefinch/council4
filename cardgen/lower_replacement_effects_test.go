@@ -370,6 +370,51 @@ func TestLowerTokenCreationReplacement(t *testing.T) {
 	}
 }
 
+func TestLowerLifeGainReplacement(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracle     string
+		multiplier int
+		addend     int
+	}{
+		{
+			name:       "double",
+			oracle:     "If you would gain life, you gain twice that much life instead.",
+			multiplier: 2,
+			addend:     0,
+		},
+		{
+			name:       "plus",
+			oracle:     "If you would gain life, you gain that much life plus 1 instead.",
+			multiplier: 1,
+			addend:     1,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Boon Reflection",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: tc.oracle,
+			})
+			if len(face.ReplacementAbilities) != 1 {
+				t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+			}
+			replacement := face.ReplacementAbilities[0].Replacement
+			if replacement.MatchEvent != game.EventLifeGained ||
+				replacement.ControllerFilter != game.TriggerControllerYou ||
+				replacement.LifeGainMultiplier != tc.multiplier ||
+				replacement.LifeGainAddend != tc.addend ||
+				replacement.Duration != game.DurationPermanent {
+				t.Fatalf("replacement = %+v, want life-gain modifier", replacement)
+			}
+		})
+	}
+}
+
 func TestLowerPassiveTokenCreationReplacement(t *testing.T) {
 	t.Parallel()
 	ptr := func(s string) *string { return &s }
@@ -565,6 +610,28 @@ func TestGenerateTokenCreationReplacementSource(t *testing.T) {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
+	}
+	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
+func TestGenerateLifeGainReplacementSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Boon Reflection",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "If you would gain life, you gain twice that much life instead.",
+	}, "b")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	if !strings.Contains(source, "game.LifeGainReplacement") {
+		t.Fatalf("source missing game.LifeGainReplacement:\n%s", source)
 	}
 	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
 		t.Fatalf("generated source does not parse: %v\n%s", err, source)

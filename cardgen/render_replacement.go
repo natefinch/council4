@@ -20,6 +20,10 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		return fmt.Sprintf("game.DrawCardMultiplierReplacement(%q, %d, %t)",
 			ability.Text, ability.Replacement.DrawCardMultiplier, ability.Replacement.DrawCardExceptFirstInDrawStep), nil
 	}
+	if ability.Replacement.LifeGainMultiplier > 1 || ability.Replacement.LifeGainAddend != 0 {
+		return fmt.Sprintf("game.LifeGainReplacement(%q, %d, %d)",
+			ability.Text, ability.Replacement.LifeGainMultiplier, ability.Replacement.LifeGainAddend), nil
+	}
 	if ability.Replacement.EntersTappedOthers {
 		return r.renderGroupEntersTappedReplacement(ctx, ability)
 	}
