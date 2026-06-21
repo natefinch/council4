@@ -450,3 +450,35 @@ func TestSelfDamageRiderHitsTargetAndController(t *testing.T) {
 		t.Fatalf("spell controller life = %d, want 38 (rider only)", got)
 	}
 }
+
+// TestDefendingPlayerReferenceSacrificesOnAttack covers Annihilator: a creature
+// with an attack-triggered ability whose effect makes the defending player
+// sacrifice permanents resolves the reference to the attack's defending player.
+func TestDefendingPlayerReferenceSacrificesOnAttack(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	first := addCreaturePermanent(g, game.Player2)
+	second := addCreaturePermanent(g, game.Player2)
+	obj := &game.StackObject{
+		Controller:      game.Player1,
+		HasTriggerEvent: true,
+		TriggerEvent:    game.Event{Kind: game.EventAttackerDeclared, Controller: game.Player1, Player: game.Player2},
+	}
+	log := TurnLog{}
+
+	resolveInstruction(engine, g, obj, game.SacrificePermanents{
+		Player: game.DefendingPlayerReference(),
+		Amount: game.Fixed(2),
+	}, &log)
+
+	if _, ok := permanentByObjectID(g, first.ObjectID); ok {
+		t.Fatal("first defending permanent was not sacrificed")
+	}
+	if _, ok := permanentByObjectID(g, second.ObjectID); ok {
+		t.Fatal("second defending permanent was not sacrificed")
+	}
+	if !g.Players[game.Player2].Graveyard.Contains(first.CardInstanceID) ||
+		!g.Players[game.Player2].Graveyard.Contains(second.CardInstanceID) {
+		t.Fatal("sacrificed permanents were not moved to defending player's graveyard")
+	}
+}

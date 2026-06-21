@@ -668,6 +668,17 @@ func lowerSacrificeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 				}},
 			}.Ability(), nil
 		}
+		if effect.Context == parser.EffectContextDefendingPlayer {
+			return game.Mode{
+				Sequence: []game.Instruction{{
+					Primitive: game.SacrificePermanents{
+						Player:    game.DefendingPlayerReference(),
+						Amount:    amount,
+						Selection: selection,
+					},
+				}},
+			}.Ability(), nil
+		}
 		var group game.PlayerGroupReference
 		switch effect.Context {
 		case parser.EffectContextEachOpponent, parser.EffectContextEachOtherPlayer:

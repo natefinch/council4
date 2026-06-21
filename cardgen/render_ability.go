@@ -436,11 +436,20 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 			return fmt.Sprintf("game.CumulativeUpkeepTriggeredAbility(%s)", renderedCost), nil
 		}
 	}
+	if keyword, ok := game.BodyKeywordAbility(ability, game.Fabricate); ok {
+		if fabricate, ok := keyword.(game.FabricateKeyword); ok &&
+			reflect.DeepEqual(*ability, game.FabricateTriggeredAbility(fabricate.Count)) {
+			return fmt.Sprintf("game.FabricateTriggeredAbility(%d)", fabricate.Count), nil
+		}
+	}
 	if reflect.DeepEqual(*ability, game.UndyingTriggeredBody) {
 		return "game.UndyingTriggeredBody", nil
 	}
 	if reflect.DeepEqual(*ability, game.PersistTriggeredBody) {
 		return "game.PersistTriggeredBody", nil
+	}
+	if reflect.DeepEqual(*ability, game.FlankingTriggeredBody) {
+		return "game.FlankingTriggeredBody", nil
 	}
 	var fields []string
 	trigger, err := r.renderTriggerCondition(ctx, &ability.Trigger)

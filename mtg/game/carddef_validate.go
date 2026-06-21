@@ -497,6 +497,8 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case NinjutsuKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+	case OutlastKeyword:
+		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case MutateKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case KickerKeyword:
@@ -573,6 +575,10 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 	case ToxicKeyword:
 		if keyword.Amount <= 0 {
 			v.add(faceName, appendPath(path, "Amount"), CardDefIssueInvalidKeywordAbility, "toxic amount must be positive")
+		}
+	case FabricateKeyword:
+		if keyword.Count <= 0 {
+			v.add(faceName, appendPath(path, "Count"), CardDefIssueInvalidKeywordAbility, "fabricate count must be positive")
 		}
 	case nil:
 		v.add(faceName, path, CardDefIssueInvalidKeywordAbility, "keyword ability is nil")

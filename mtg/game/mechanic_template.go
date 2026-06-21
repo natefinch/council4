@@ -393,6 +393,32 @@ func CyclingActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 	}
 }
 
+// OutlastActivatedAbility builds the complete activated ability for Outlast
+// with a mana cost (CR 702.105): "[cost], {T}: Put a +1/+1 counter on this
+// creature. Activate only as a sorcery." The keyword carries no continuous
+// effect; the activated ability is self-contained.
+func OutlastActivatedAbility(manaCost cost.Mana) ActivatedAbility {
+	activationCost := append(cost.Mana(nil), manaCost...)
+	keywordCost := append(cost.Mana(nil), manaCost...)
+	return ActivatedAbility{
+		Text:            "Outlast " + manaCost.String(),
+		ManaCost:        opt.Val(activationCost),
+		AdditionalCosts: cost.Tap,
+		ZoneOfFunction:  zone.Battlefield,
+		Timing:          SorceryOnly,
+		KeywordAbilities: []KeywordAbility{
+			OutlastKeyword{Cost: keywordCost},
+		},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: AddCounter{
+				Amount:      Fixed(1),
+				Object:      SourcePermanentReference(),
+				CounterKind: counter.PlusOnePlusOne,
+			},
+		}}}.Ability(),
+	}
+}
+
 // LandcyclingActivatedAbility builds the complete activated ability for the
 // typed landcycling family (Basic landcycling, Plainscycling, and so on). It is
 // a cycling variant (CR 702.29): the discard-from-hand activation searches the
@@ -477,6 +503,61 @@ func CumulativeUpkeepTriggeredAbility(manaCost cost.Mana) TriggeredAbility {
 				}),
 			},
 		}}.Ability(),
+	}
+}
+
+// fabricateServoToken is the canonical 1/1 colorless Servo artifact creature
+// token created by the Fabricate keyword.
+var fabricateServoToken = &CardDef{
+	CardFace: CardFace{
+		Name:      "Servo",
+		Types:     []types.Card{types.Artifact, types.Creature},
+		Subtypes:  []types.Sub{types.Servo},
+		Power:     opt.Val(PT{Value: 1}),
+		Toughness: opt.Val(PT{Value: 1}),
+	},
+}
+
+// FabricateTriggeredAbility builds the entry trigger for Fabricate N: a modal
+// choice to put N +1/+1 counters on this creature or create N Servo tokens.
+func FabricateTriggeredAbility(count int) TriggeredAbility {
+	return TriggeredAbility{
+		Text: fmt.Sprintf("Fabricate %d", count),
+		Trigger: TriggerCondition{
+			Type: TriggerWhen,
+			Pattern: TriggerPattern{
+				Event:  EventPermanentEnteredBattlefield,
+				Source: TriggerSourceSelf,
+			},
+		},
+		KeywordAbilities: []KeywordAbility{
+			FabricateKeyword{Count: count},
+		},
+		Content: AbilityContent{
+			Modes: []Mode{
+				{
+					Text: fmt.Sprintf("Put %d +1/+1 counters on it.", count),
+					Sequence: []Instruction{{
+						Primitive: AddCounter{
+							Amount:      Fixed(count),
+							Object:      EventPermanentReference(),
+							CounterKind: counter.PlusOnePlusOne,
+						},
+					}},
+				},
+				{
+					Text: fmt.Sprintf("Create %d 1/1 colorless Servo artifact creature tokens.", count),
+					Sequence: []Instruction{{
+						Primitive: CreateToken{
+							Amount: Fixed(count),
+							Source: TokenDef(fabricateServoToken),
+						},
+					}},
+				},
+			},
+			MinModes: 1,
+			MaxModes: 1,
+		},
 	}
 }
 

@@ -84,6 +84,8 @@ func (Renderer) renderObjectReference(reference game.ObjectReference) (string, e
 		return fmt.Sprintf("game.LinkedObjectReference(%q)", reference.LinkID()), nil
 	case game.ObjectReferenceEventPermanent:
 		return "game.EventPermanentReference()", nil
+	case game.ObjectReferenceEventRelatedPermanent:
+		return "game.EventRelatedPermanentReference()", nil
 	case game.ObjectReferenceSourceCard:
 		return "game.SourceCardPermanentReference()", nil
 	case game.ObjectReferenceSacrificedCost:
@@ -117,6 +119,8 @@ func (r Renderer) renderPlayerReference(reference game.PlayerReference) (string,
 		return "game.EventPlayerReference()", nil
 	case game.PlayerReferenceCapturedTargetController:
 		return fmt.Sprintf("game.CapturedTargetControllerReference(%d)", reference.TargetIndex()), nil
+	case game.PlayerReferenceDefendingPlayer:
+		return "game.DefendingPlayerReference()", nil
 	default:
 		return "", fmt.Errorf("render: unsupported player reference kind %d", reference.Kind())
 	}
@@ -157,6 +161,13 @@ func (r Renderer) renderKeywordAbility(ctx *renderCtx, keyword game.KeywordAbili
 			return "", err
 		}
 		return fmt.Sprintf("game.NinjutsuKeyword{Cost: %s}", ninjutsuCost), nil
+	}
+	if outlast, ok := keyword.(game.OutlastKeyword); ok {
+		outlastCost, err := r.renderManaCost(ctx, outlast.Cost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.OutlastKeyword{Cost: %s}", outlastCost), nil
 	}
 	if mutate, ok := keyword.(game.MutateKeyword); ok {
 		mutateCost, err := r.renderManaCost(ctx, mutate.Cost)

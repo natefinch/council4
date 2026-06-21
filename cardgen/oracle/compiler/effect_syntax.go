@@ -217,6 +217,8 @@ func compileStaticSubjectKind(kind parser.EffectStaticSubjectKind) StaticSubject
 		return StaticSubjectAllOtherCreatures
 	case parser.EffectStaticSubjectAttackingCreatures:
 		return StaticSubjectAttackingCreatures
+	case parser.EffectStaticSubjectOtherAttackingCreatures:
+		return StaticSubjectOtherAttackingCreatures
 	case parser.EffectStaticSubjectBlockingCreatures:
 		return StaticSubjectBlockingCreatures
 	case parser.EffectStaticSubjectControlledPermanents:
@@ -398,6 +400,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectBecomeCopy
 	case parser.EffectAmass:
 		return EffectAmass
+	case parser.EffectDevour:
+		return EffectDevour
 	case parser.EffectMassReanimationExchange:
 		return EffectMassReanimationExchange
 	case parser.EffectPunisherLoseLife:

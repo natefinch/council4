@@ -283,9 +283,9 @@ func TestGenerateExecutableCardSourceExplainsUnsupportedAbility(t *testing.T) {
 		},
 		"parameterized keyword": {
 			typeLine:   "Creature — Snake",
-			oracleText: "Annihilator 1",
+			oracleText: "Suspend 4",
 			summary:    "unsupported parameterized keyword",
-			detail:     `Annihilator with parameter "1"`,
+			detail:     `Suspend with parameter "4"`,
 		},
 		"keyword without template": {
 			typeLine:   "Creature — Dinosaur",
