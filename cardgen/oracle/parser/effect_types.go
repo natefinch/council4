@@ -1476,4 +1476,12 @@ type EffectStaticSubjectSyntax struct {
 	// downstream onto a Selection keyword predicate.
 	Keyword         KeywordKind `json:",omitempty"`
 	ExcludedKeyword KeywordKind `json:",omitempty"`
+
+	// CounterRequired records a "with a <kind> counter on it/them" qualifier
+	// constraining the affected creature group to members carrying that counter
+	// ("Each creature you control with a +1/+1 counter on it has ..."); CounterKind
+	// names the required counter. They map downstream onto a Selection
+	// MatchCounter predicate.
+	CounterRequired bool         `json:",omitempty"`
+	CounterKind     counter.Kind `json:",omitempty"`
 }
