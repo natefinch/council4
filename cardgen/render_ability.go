@@ -32,6 +32,14 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 		}
 		return fmt.Sprintf("game.CyclingActivatedAbility(%s)", renderedCost), nil
 	}
+	if manaCost, ok := game.ActivatedBodyScavengeCost(ability); ok &&
+		reflect.DeepEqual(*ability, game.ScavengeActivatedAbility(manaCost)) {
+		renderedCost, err := r.renderManaCost(ctx, manaCost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.ScavengeActivatedAbility(%s)", renderedCost), nil
+	}
 	if manaCost, subtypes, ok := game.ActivatedBodyEternalizeParams(ability); ok &&
 		reflect.DeepEqual(*ability, game.EternalizeActivatedBody(manaCost, subtypes...)) {
 		return r.renderEternalizeFamilyAbility(ctx, "game.EternalizeActivatedBody", manaCost, subtypes)
@@ -434,11 +442,20 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 			return fmt.Sprintf("game.FabricateTriggeredAbility(%d)", fabricate.Count), nil
 		}
 	}
+	if keyword, ok := game.BodyKeywordAbility(ability, game.Rampage); ok {
+		if rampage, ok := keyword.(game.RampageKeyword); ok &&
+			reflect.DeepEqual(*ability, game.RampageTriggeredAbility(rampage.Count)) {
+			return fmt.Sprintf("game.RampageTriggeredAbility(%d)", rampage.Count), nil
+		}
+	}
 	if reflect.DeepEqual(*ability, game.UndyingTriggeredBody) {
 		return "game.UndyingTriggeredBody", nil
 	}
 	if reflect.DeepEqual(*ability, game.PersistTriggeredBody) {
 		return "game.PersistTriggeredBody", nil
+	}
+	if reflect.DeepEqual(*ability, game.DethroneTriggeredBody) {
+		return "game.DethroneTriggeredBody", nil
 	}
 	if reflect.DeepEqual(*ability, game.FlankingTriggeredBody) {
 		return "game.FlankingTriggeredBody", nil

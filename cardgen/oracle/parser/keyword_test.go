@@ -40,6 +40,7 @@ func TestParseKeywordVocabularyMeaning(t *testing.T) {
 		"Swampcycling": KeywordSwampcycling, "Mountaincycling": KeywordMountaincycling,
 		"Forestcycling": KeywordForestcycling,
 		"Flanking":      KeywordFlanking,
+		"Dethrone":      KeywordDethrone,
 	}
 	for source, want := range tests {
 		keywords := keywordsFor(t, source)
@@ -96,6 +97,19 @@ func TestParseBloodthirstIntegerParameter(t *testing.T) {
 		keywords[0].Parameter.Kind != KeywordParameterInteger ||
 		keywords[0].Parameter.Integer() != 2 {
 		t.Fatalf("bloodthirst = %+v", keywords[0])
+	}
+}
+
+func TestParseRampageIntegerParameter(t *testing.T) {
+	t.Parallel()
+	keywords := keywordsFor(t, "Rampage 3")
+	if len(keywords) != 1 {
+		t.Fatalf("keywords = %+v; want one", keywords)
+	}
+	if keywords[0].Kind != KeywordRampage ||
+		keywords[0].Parameter.Kind != KeywordParameterInteger ||
+		keywords[0].Parameter.Integer() != 3 {
+		t.Fatalf("rampage = %+v", keywords[0])
 	}
 }
 
@@ -377,6 +391,44 @@ func TestExpandAnnihilatorKeyword(t *testing.T) {
 				t.Fatalf("expandAnnihilatorKeyword = %q, want %q", got, test.want)
 			}
 		})
+	}
+}
+
+func TestExpandRenownKeyword(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		source string
+		want   string
+	}{
+		{
+			"topan freeblade",
+			"Renown 1 (When this creature deals combat damage to a player, if it isn't renowned, put a +1/+1 counter on it and it becomes renowned. It's renowned as long as it has a +1/+1 counter on it.)",
+			"When this creature deals combat damage to a player, renown 1.",
+		},
+		{
+			"bare keyword six",
+			"Renown 6",
+			"When this creature deals combat damage to a player, renown 6.",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			if got := expandRenownKeyword(test.source); got != test.want {
+				t.Fatalf("expandRenownKeyword = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+func TestExpandRenownKeywordLeavesOtherTextAlone(t *testing.T) {
+	t.Parallel()
+	if got := expandRenownKeyword("Whenever Renown attacks, draw a card."); got != "Whenever Renown attacks, draw a card." {
+		t.Fatalf("rewrote unrelated line: %q", got)
+	}
+	if got := expandRenownKeyword("Renown"); got != "Renown" {
+		t.Fatalf("rewrote rankless keyword: %q", got)
 	}
 }
 

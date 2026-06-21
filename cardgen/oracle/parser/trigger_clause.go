@@ -7,8 +7,8 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 )
 
-func parseTriggerClause(source string, tokens []shared.Token) *TriggerClause {
-	end := triggerBodyComma(tokens)
+func parseTriggerClause(source string, tokens []shared.Token, cardName string) *TriggerClause {
+	end := triggerBodyComma(tokens, cardName)
 	if end < 0 {
 		end = len(tokens)
 	}
@@ -726,20 +726,51 @@ func equalWord(token shared.Token, word string) bool {
 	return token.Kind == shared.Word && strings.EqualFold(token.Text, word)
 }
 
-func triggerBodyComma(tokens []shared.Token) int {
+func triggerBodyComma(tokens []shared.Token, cardName string) int {
+	selfNameSpans := collectSelfNameSpans(tokens, cardName)
 	comma := shared.TopLevelIndex(tokens, shared.Comma)
 	for comma > 0 {
-		end, ok := spellListComma(tokens, comma)
-		if !ok {
-			break
+		if end, ok := spellListComma(tokens, comma); ok {
+			next := shared.TopLevelIndex(tokens[end:], shared.Comma)
+			if next < 0 {
+				return -1
+			}
+			comma = end + next
+			continue
 		}
-		next := shared.TopLevelIndex(tokens[end:], shared.Comma)
-		if next < 0 {
-			return -1
+		if end, ok := selfNameComma(tokens, comma, selfNameSpans); ok {
+			next := shared.TopLevelIndex(tokens[end:], shared.Comma)
+			if next < 0 {
+				return -1
+			}
+			comma = end + next
+			continue
 		}
-		comma = end + next
+		break
 	}
 	return comma
+}
+
+// selfNameComma reports whether the comma at the given index sits inside an
+// occurrence of the card's own name, such as the internal comma of a legendary
+// name like "Etali, Primal Storm", rather than separating the trigger condition
+// from its body. When it does, it returns the index of the first token past the
+// name so the caller resumes scanning for the real body comma. A comma counts as
+// interior only when the matched name span extends in source on both sides of
+// it, so a card whose name ends at the comma cannot swallow the body separator.
+func selfNameComma(tokens []shared.Token, comma int, selfNameSpans []shared.Span) (int, bool) {
+	commaSpan := tokens[comma].Span
+	for _, span := range selfNameSpans {
+		if span.Start.Offset >= commaSpan.Start.Offset || span.End.Offset <= commaSpan.End.Offset {
+			continue
+		}
+		end := comma + 1
+		for end < len(tokens) && tokens[end].Span.Start.Offset < span.End.Offset {
+			end++
+		}
+		return end, true
+	}
+	return 0, false
 }
 
 // spellListComma reports whether the comma at the given index sits inside a

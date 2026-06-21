@@ -249,6 +249,32 @@ func TestMonstrosityEffectAddsCountersOnlyOnce(t *testing.T) {
 	}
 }
 
+func TestRenownEffectAddsCountersOnlyOnce(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Hero",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2})},
+	})
+	obj := &game.StackObject{
+		Kind:         game.StackTriggeredAbility,
+		SourceID:     source.ObjectID,
+		SourceCardID: source.CardInstanceID,
+		Controller:   game.Player1,
+	}
+
+	resolveInstruction(engine, g, obj, game.Renown{Amount: game.Fixed(1), Object: game.SourcePermanentReference()}, &TurnLog{})
+	resolveInstruction(engine, g, obj, game.Renown{Amount: game.Fixed(1), Object: game.SourcePermanentReference()}, &TurnLog{})
+
+	if !source.Renowned {
+		t.Fatal("source did not become renowned")
+	}
+	if got := source.Counters.Get(counter.PlusOnePlusOne); got != 1 {
+		t.Fatalf("+1/+1 counters = %d, want 1 after repeated renown resolutions", got)
+	}
+}
+
 func TestSetClassLevelEffectAndClassInitialLevel(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

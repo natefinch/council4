@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -76,6 +77,50 @@ func TestCanCastSpellFromLibraryTopRespectsTypeFilter(t *testing.T) {
 		Name: "Top Bear", Types: []types.Card{types.Creature}}})
 	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, creatureID, zone.Library, game.FaceFront) {
 		t.Fatal("a creature spell is not castable despite the creature-only filter")
+	}
+}
+
+// castSpellsFromLibraryTopColorlessPermanent gives playerID a permanent whose
+// static lets that player cast spells matching the given card types or any
+// colorless spell from the top of their library ("You may cast artifact spells
+// and colorless spells from the top of your library.", Mystic Forge).
+func castSpellsFromLibraryTopColorlessPermanent(g *game.Game, playerID game.PlayerID, spellTypes []types.Card) *game.Permanent {
+	return addCombatPermanent(g, playerID, &game.CardDef{CardFace: game.CardFace{
+		Name: "Test Forge",
+		StaticAbilities: []game.StaticAbility{{
+			Text: "You may cast artifact spells and colorless spells from the top of your library.",
+			RuleEffects: []game.RuleEffect{{
+				Kind:           game.RuleEffectCastSpellsFromZone,
+				AffectedPlayer: game.PlayerYou,
+				CastFromZone:   zone.Library,
+				SpellTypes:     spellTypes,
+				SpellColorless: true,
+				TopCardOnly:    true,
+			}},
+		}},
+	}})
+}
+
+func TestCanCastSpellFromLibraryTopRespectsColorlessFilter(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	castSpellsFromLibraryTopColorlessPermanent(g, game.Player1, []types.Card{types.Artifact})
+
+	coloredID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Blue Sorcery", Types: []types.Card{types.Sorcery}, Colors: []color.Color{color.Blue}}})
+	if canCastSpellsFromZoneByRuleEffect(g, game.Player1, coloredID, zone.Library, game.FaceFront) {
+		t.Fatal("a colored non-artifact spell must not be castable under an artifact-or-colorless filter")
+	}
+
+	colorlessID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Eldrazi", Types: []types.Card{types.Creature}}})
+	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, colorlessID, zone.Library, game.FaceFront) {
+		t.Fatal("a colorless spell is not castable despite the colorless permission")
+	}
+
+	artifactID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Colored Artifact", Types: []types.Card{types.Artifact}, Colors: []color.Color{color.Blue}}})
+	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, artifactID, zone.Library, game.FaceFront) {
+		t.Fatal("a colored artifact spell is not castable despite the artifact permission")
 	}
 }
 

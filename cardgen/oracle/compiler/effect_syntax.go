@@ -400,6 +400,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectBecomeCopy
 	case parser.EffectAmass:
 		return EffectAmass
+	case parser.EffectRenown:
+		return EffectRenown
 	case parser.EffectDevour:
 		return EffectDevour
 	case parser.EffectTribute:
@@ -578,6 +580,8 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountSacrificedManaValue
 	case parser.EffectDynamicAmountSharedCreatureTypeCount:
 		return DynamicAmountSharedCreatureTypeCount
+	case parser.EffectDynamicAmountTriggeringCombatDamage:
+		return DynamicAmountTriggeringCombatDamage
 	default:
 		return DynamicAmountNone
 	}

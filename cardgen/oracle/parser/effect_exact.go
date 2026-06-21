@@ -69,6 +69,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactStandaloneActionEffectSyntax(effect, "Investigate")
 	case EffectAmass:
 		return exactAmassEffectSyntax(effect)
+	case EffectRenown:
+		return exactStandaloneActionEffectSyntax(effect, "renown")
 	case EffectLose:
 		return exactLifeEffectSyntax(effect, "lose", "loses") ||
 			exactTemporaryKeywordLossEffectSyntax(effect)
@@ -1431,6 +1433,9 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 		if effect.Amount.VariableX {
 			return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody("X", "tokens")+".")
 		}
+		if effect.Amount.DynamicKind == EffectDynamicAmountTriggeringCombatDamage {
+			return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody("that many", "tokens")+".")
+		}
 		if !effect.Amount.Known || effect.Amount.Value < 1 {
 			return false
 		}
@@ -1503,7 +1508,9 @@ func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 	controllerForm := effect.Context != EffectContextReferencedObjectController && !targetRecipient
 	variableCount := effect.Amount.VariableX &&
 		effect.Amount.DynamicForm == EffectDynamicAmountFormNone && controllerForm
-	if !variableCount && (!effect.Amount.Known || effect.Amount.Value < 1) {
+	dynamicCombatDamageCount := effect.Amount.DynamicKind == EffectDynamicAmountTriggeringCombatDamage &&
+		effect.Amount.DynamicForm == EffectDynamicAmountFormNone && controllerForm
+	if !variableCount && !dynamicCombatDamageCount && (!effect.Amount.Known || effect.Amount.Value < 1) {
 		return false
 	}
 	sel := effect.Selection
@@ -1528,6 +1535,8 @@ func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 	switch {
 	case variableCount:
 		countWord, noun = "X", "tokens"
+	case dynamicCombatDamageCount:
+		countWord, noun = "that many", "tokens"
 	case effect.Amount.Value != 1:
 		countWord, noun = effectAmountSourceText(effect), "tokens"
 	default:
@@ -2136,7 +2145,8 @@ func exactDigLookEffectSyntax(effect *EffectSyntax) bool {
 }
 
 // exactDigPutEffectSyntax reconstructs the impulse put clause "Put <number> <of
-// them|of those cards> into your hand and the <rest|other> into your graveyard."
+// them|of those cards> into your hand and the <rest|other> <into your
+// graveyard|on the bottom of your library [in any order|in a random order]>."
 // and compares it byte-for-byte. The structured fields come from parseDigPut; a
 // fixed take count of one to three is required so variable forms fail closed.
 func exactDigPutEffectSyntax(effect *EffectSyntax) bool {
@@ -2150,10 +2160,25 @@ func exactDigPutEffectSyntax(effect *EffectSyntax) bool {
 		remainder = "other"
 	}
 	want := fmt.Sprintf(
-		"Put %s%s into your hand and the %s into your graveyard.",
-		effectAmountSourceText(effect), source, remainder,
+		"Put %s%s into your hand and the %s %s.",
+		effectAmountSourceText(effect), source, remainder, digRemainderText(effect.Dig.Remainder),
 	)
 	return strings.EqualFold(exactEffectClauseText(effect), want)
+}
+
+// digRemainderText renders the remainder destination clause that parseDigPut
+// recorded, so the exactness gate can compare it byte-for-byte.
+func digRemainderText(remainder DigRemainderKind) string {
+	switch remainder {
+	case DigRemainderLibraryBottom:
+		return "on the bottom of your library"
+	case DigRemainderLibraryBottomAny:
+		return "on the bottom of your library in any order"
+	case DigRemainderLibraryBottomRandom:
+		return "on the bottom of your library in a random order"
+	default:
+		return "into your graveyard"
+	}
 }
 
 // digSourceText renders the connector that links the impulse take count to the

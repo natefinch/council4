@@ -705,6 +705,7 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 			AffectedPlayer: game.PlayerYou,
 			CastFromZone:   zone.Library,
 			SpellTypes:     spellTypes,
+			SpellColorless: declaration.Player.CastColorless,
 			TopCardOnly:    true,
 		})
 		if declaration.Player.AlsoPlayLands {
@@ -1262,6 +1263,10 @@ func lowerStaticSelection(selection compiler.StaticSelection) (game.Selection, b
 	result.SubtypesAny = append(result.SubtypesAny, selection.SubtypesAny...)
 	if selection.SubtypeFromEntryChoice {
 		result.SubtypeFromSourceEntryChoice = true
+	}
+	if selection.MatchCounter {
+		result.MatchCounter = true
+		result.RequiredCounter = selection.RequiredCounter
 	}
 	return result, len(result.Validate()) == 0
 }

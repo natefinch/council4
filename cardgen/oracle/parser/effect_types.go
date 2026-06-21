@@ -165,6 +165,12 @@ const (
 	// Army they control, first creating a 0/0 black Army creature token of the
 	// named subtype (AmassSubtype) if they control no Army. Amount holds N.
 	EffectAmass EffectKind = "EffectAmass"
+	// EffectRenown models the renown keyword action that the printed "Renown N"
+	// keyword expands to (CR 702.111): the source permanent gets N +1/+1 counters
+	// and becomes renowned, applied only once. Amount holds N. The runtime guard
+	// (it skips an already-renowned permanent) subsumes the printed "if it isn't
+	// renowned" intervening-if, so the expanded trigger body is the bare action.
+	EffectRenown EffectKind = "EffectRenown"
 	// EffectDevour models the Devour keyword's as-enters replacement (CR 702.81):
 	// "As this creature enters, you may sacrifice any number of creatures. It
 	// enters with N +1/+1 counters on it for each creature sacrificed." It is
@@ -193,21 +199,40 @@ const (
 	DigSourceThoseCards DigSourceKind = "DigSourceThoseCards"
 )
 
+// DigRemainderKind identifies where an impulse put clause sends the un-taken
+// cards ("the rest" / "the other"). It is recorded so the exactness recognizer
+// reconstructs the clause byte-for-byte; the library-bottom variants are kept
+// distinct from one another only to preserve their printed ordering rider, and
+// all of them lower to the same runtime library-bottom remainder.
+type DigRemainderKind string
+
+// Recognized impulse remainder destinations. DigRemainderGraveyard is the zero
+// value so existing graveyard digs keep their wire form.
+const (
+	DigRemainderGraveyard           DigRemainderKind = ""
+	DigRemainderLibraryBottom       DigRemainderKind = "DigRemainderLibraryBottom"
+	DigRemainderLibraryBottomAny    DigRemainderKind = "DigRemainderLibraryBottomAny"
+	DigRemainderLibraryBottomRandom DigRemainderKind = "DigRemainderLibraryBottomRandom"
+)
+
 // DigSyntax holds the structured fields of an impulse "Put N <source> into your
-// hand and the <rest|other> into your graveyard." clause. The parser sets it
-// only on the EffectPut clause that follows an EffectDig "Look at the top N
-// cards of your library." sentence; Put is false for every other effect. The
-// remainder destination is always the controller's graveyard: the library-bottom
-// forms carry an ordering rider ("in any order" / "in a random order") the
-// engine does not model, so they fail closed.
+// hand and the <rest|other> <remainder>." clause. The parser sets it only on the
+// EffectPut clause that follows an EffectDig "Look at the top N cards of your
+// library." sentence; Put is false for every other effect. Remainder records the
+// destination of the un-taken cards: the controller's graveyard (the default) or
+// the bottom of their library, optionally with an "in any order" / "in a random
+// order" rider that the runtime models as a single library-bottom placement.
 type DigSyntax struct {
 	// Put reports that this EffectPut clause is the put half of an impulse dig.
 	Put bool `json:",omitempty"`
 	// Source is the "of them" / "of those cards" back-reference phrasing.
 	Source DigSourceKind `json:",omitempty"`
 	// Singular reports the "the other" wording (exactly one card remains) rather
-	// than "the rest". It is cosmetic: both route the remainder to the graveyard.
+	// than "the rest". It is cosmetic: both route the remainder identically.
 	Singular bool `json:",omitempty"`
+	// Remainder is the destination of the un-taken cards. The zero value routes
+	// them to the controller's graveyard.
+	Remainder DigRemainderKind `json:",omitempty"`
 }
 
 // HandLibraryPutSyntax marks the exact clause "Put N cards from your hand on
@@ -392,6 +417,13 @@ const (
 	// It backs the shared-creature-type anthem family (Coat of Arms), a per-
 	// affected-creature dynamic power/toughness bonus.
 	EffectDynamicAmountSharedCreatureTypeCount EffectDynamicAmountKind = "EffectDynamicAmountSharedCreatureTypeCount"
+	// EffectDynamicAmountTriggeringCombatDamage is the amount of combat damage
+	// dealt by the event that triggered the enclosing combat-damage trigger
+	// ("that many" in "Whenever a creature you control deals combat damage to a
+	// player, create that many Treasure tokens."). It backs the "create that
+	// many <predefined> tokens" family (Old Gnawbone), reading the triggering
+	// event's damage quantity. Added last so existing kinds keep their values.
+	EffectDynamicAmountTriggeringCombatDamage EffectDynamicAmountKind = "EffectDynamicAmountTriggeringCombatDamage"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
@@ -1484,4 +1516,12 @@ type EffectStaticSubjectSyntax struct {
 	// downstream onto a Selection keyword predicate.
 	Keyword         KeywordKind `json:",omitempty"`
 	ExcludedKeyword KeywordKind `json:",omitempty"`
+
+	// CounterRequired records a "with a <kind> counter on it/them" qualifier
+	// constraining the affected creature group to members carrying that counter
+	// ("Each creature you control with a +1/+1 counter on it has ..."); CounterKind
+	// names the required counter. They map downstream onto a Selection
+	// MatchCounter predicate.
+	CounterRequired bool         `json:",omitempty"`
+	CounterKind     counter.Kind `json:",omitempty"`
 }

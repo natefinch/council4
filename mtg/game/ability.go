@@ -81,6 +81,9 @@ const (
 	Fabricate
 	Flanking
 	Outlast
+	Scavenge
+	Dethrone
+	Rampage
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -246,6 +249,12 @@ var (
 	// reports true.
 	PersistTriggeredBody = diesReturnWithCounterTriggeredBody("Persist", Persist, counter.MinusOneMinusOne)
 
+	// DethroneTriggeredBody is the canonical triggered ability for dethrone
+	// (CR 702.103): "Whenever this creature attacks the player with the most life
+	// or tied for most life, put a +1/+1 counter on this creature." The ability
+	// carries the Dethrone keyword so HasKeyword(Dethrone) reports true.
+	DethroneTriggeredBody = dethroneTriggeredBody()
+
 	// FlankingTriggeredBody is the canonical triggered ability for flanking
 	// (CR 702.25): "Whenever a creature without flanking blocks this creature,
 	// the blocking creature gets -1/-1 until end of turn." The ability carries
@@ -256,9 +265,29 @@ var (
 	FlankingTriggeredBody = flankingTriggeredBody()
 )
 
-// flankingTriggeredBody builds the canonical flanking triggered ability: a
-// becomes-blocked self-trigger whose blocker filter excludes creatures with
-// flanking, giving the blocking creature -1/-1 until end of turn (CR 702.25).
+func dethroneTriggeredBody() TriggeredAbility {
+	return TriggeredAbility{
+		Text:             "Dethrone",
+		KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: Dethrone}},
+		Trigger: TriggerCondition{
+			Type: TriggerWhenever,
+			Pattern: TriggerPattern{
+				Event:                     EventAttackerDeclared,
+				Source:                    TriggerSourceSelf,
+				AttackRecipient:           AttackRecipientPlayer,
+				AttackedPlayerHasMostLife: true,
+			},
+		},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: AddCounter{
+				Amount:      Fixed(1),
+				Object:      SourcePermanentReference(),
+				CounterKind: counter.PlusOnePlusOne,
+			},
+		}}}.Ability(),
+	}
+}
+
 func flankingTriggeredBody() TriggeredAbility {
 	return TriggeredAbility{
 		Text:             "Flanking",
@@ -619,6 +648,13 @@ type TriggerPattern struct {
 	// token" (CR 603.2). When set, the trigger fires if the event kind equals
 	// Event or UnionEvent. It is EventUnknown for single-event patterns.
 	UnionEvent EventKind
+
+	// AttackedPlayerHasMostLife restricts an EventAttackerDeclared trigger to
+	// attacks against a player who has the most life among non-eliminated
+	// players, or is tied for most ("attacks the player with the most life or
+	// tied for most life", dethrone CR 702.103). It is only valid with
+	// Event == EventAttackerDeclared.
+	AttackedPlayerHasMostLife bool
 }
 
 // TimingRestriction constrains when an activated ability can be used.
@@ -797,6 +833,42 @@ func EmbalmActivatedBody(manaCost cost.Mana, creatureSubtypes ...types.Sub) Acti
 		}}}.Ability(),
 
 		KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: Embalm}},
+	}
+}
+
+// ScavengeActivatedAbility builds the canonical graveyard-activated ability for
+// the Scavenge keyword (CR 702.94): exile this card from your graveyard at
+// sorcery speed to put a number of +1/+1 counters equal to this card's power on
+// target creature.
+func ScavengeActivatedAbility(manaCost cost.Mana) ActivatedAbility {
+	return ActivatedAbility{
+		Text:           "Scavenge " + manaCost.String(),
+		ManaCost:       opt.Val(append(cost.Mana(nil), manaCost...)),
+		ZoneOfFunction: zone.Graveyard,
+		Timing:         SorceryOnly,
+		AdditionalCosts: []cost.Additional{{
+			Kind: cost.AdditionalExileSource,
+			Text: "Exile this card from your graveyard",
+		}},
+		Content: Mode{
+			Targets: []TargetSpec{{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Constraint: "target creature",
+				Allow:      TargetAllowPermanent,
+				Predicate:  TargetPredicate{PermanentTypes: []types.Card{types.Creature}},
+			}},
+			Sequence: []Instruction{{
+				Primitive: AddCounter{
+					Amount: Dynamic(DynamicAmount{
+						Kind: DynamicAmountSourceCardPower,
+					}),
+					Object:      TargetPermanentReference(0),
+					CounterKind: counter.PlusOnePlusOne,
+				},
+			}},
+		}.Ability(),
+		KeywordAbilities: []KeywordAbility{ScavengeKeyword{Cost: append(cost.Mana(nil), manaCost...)}},
 	}
 }
 

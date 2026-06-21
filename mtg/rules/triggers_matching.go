@@ -209,6 +209,9 @@ func triggerCombatPatternMatches(g *game.Game, viewer game.PlayerID, source *gam
 		!damageRecipientTypesMatch(g, pattern.DamageRecipientTypes, event) {
 		return false
 	}
+	if pattern.AttackedPlayerHasMostLife && !attackedPlayerHasMostLife(g, event) {
+		return false
+	}
 	if !pattern.DamageRecipientSelection.Empty() &&
 		event.DamageRecipient == game.DamageRecipientPermanent &&
 		!triggerSelectionMatches(g, viewer, event, event.PermanentID, &pattern.DamageRecipientSelection, source.ObjectID) {
@@ -290,6 +293,31 @@ func stepPlayerSourceAttachedMatches(g *game.Game, viewer game.PlayerID, source 
 		return false
 	}
 	return triggerSelectionMatches(g, viewer, event, source.AttachedTo.Val, selection, source.ObjectID)
+}
+
+// attackedPlayerHasMostLife reports whether an attacker-declared event targets a
+// player whose life total is at least every non-eliminated player's life total
+// (dethrone CR 702.103). Attacks against planeswalkers or battles never match.
+func attackedPlayerHasMostLife(g *game.Game, event game.Event) bool {
+	if event.Kind != game.EventAttackerDeclared ||
+		event.AttackTarget.PlaneswalkerID != 0 ||
+		event.AttackTarget.BattleID != 0 {
+		return false
+	}
+	attacked, ok := playerByID(g, event.AttackTarget.Player)
+	if !ok || attacked.Eliminated {
+		return false
+	}
+	for playerID := range game.PlayerID(game.NumPlayers) {
+		other, ok := playerByID(g, playerID)
+		if !ok || other.Eliminated {
+			continue
+		}
+		if other.Life > attacked.Life {
+			return false
+		}
+	}
+	return true
 }
 
 func attackRecipientMatches(filter game.AttackRecipientKind, event game.Event) bool {

@@ -493,6 +493,8 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		v.validateTargetSpec(faceName, appendPath(path, "Target"), &keyword.Target)
 	case CyclingKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+	case ScavengeKeyword:
+		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case NinjutsuKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case OutlastKeyword:
@@ -577,6 +579,10 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 	case FabricateKeyword:
 		if keyword.Count <= 0 {
 			v.add(faceName, appendPath(path, "Count"), CardDefIssueInvalidKeywordAbility, "fabricate count must be positive")
+		}
+	case RampageKeyword:
+		if keyword.Count <= 0 {
+			v.add(faceName, appendPath(path, "Count"), CardDefIssueInvalidKeywordAbility, "rampage count must be positive")
 		}
 	case nil:
 		v.add(faceName, path, CardDefIssueInvalidKeywordAbility, "keyword ability is nil")
@@ -1409,6 +1415,9 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 	}
 	if pattern.OneOrMorePerAttackTarget && (!pattern.OneOrMore || pattern.Event != EventAttackerDeclared) {
 		v.add(faceName, path, CardDefIssueInvalidSelection, "OneOrMorePerAttackTarget requires a one-or-more attacker-declared pattern")
+	}
+	if pattern.AttackedPlayerHasMostLife && pattern.Event != EventAttackerDeclared {
+		v.add(faceName, appendPath(path, "AttackedPlayerHasMostLife"), CardDefIssueInvalidSelection, "attacked-player-has-most-life trigger filter is only supported for attacker-declared events")
 	}
 	v.validateAttackerCountRelations(faceName, path, pattern)
 	if !pattern.StepPlayerSourceAttachedSelection.Empty() {

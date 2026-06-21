@@ -124,6 +124,9 @@ type Permanent struct {
 	Monstrous           bool
 	ClassLevel          int
 	Prepared            bool
+	// Renowned records whether this permanent has become renowned (CR 702.111d).
+	// A renowned permanent's Renown trigger no longer adds counters.
+	Renowned bool
 
 	// TributePaid records that a chosen opponent paid this creature's Tribute as
 	// it entered by putting its +1/+1 counters on it (CR 702.110). It is read by

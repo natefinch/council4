@@ -561,6 +561,40 @@ func FabricateTriggeredAbility(count int) TriggeredAbility {
 	}
 }
 
+// RampageTriggeredAbility builds the canonical Rampage N triggered ability
+// (CR 702.23): "Whenever this creature becomes blocked, it gets +N/+N until end
+// of turn for each creature blocking it beyond the first." The +N/+N delta is a
+// dynamic amount counting the source's blockers beyond the first as the ability
+// resolves, scaled by N, then locked for the turn. Each printed instance is its
+// own triggered ability, so multiple instances stack (CR 702.23c).
+func RampageTriggeredAbility(n int) TriggeredAbility {
+	delta := Dynamic(DynamicAmount{
+		Kind:       DynamicAmountBlockingCreaturesBeyondFirst,
+		Multiplier: n,
+	})
+	return TriggeredAbility{
+		Text: fmt.Sprintf("Rampage %d", n),
+		Trigger: TriggerCondition{
+			Type: TriggerWhenever,
+			Pattern: TriggerPattern{
+				Event:  EventAttackerBecameBlocked,
+				Source: TriggerSourceSelf,
+			},
+		},
+		KeywordAbilities: []KeywordAbility{
+			RampageKeyword{Count: n},
+		},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: ModifyPT{
+				Object:         SourcePermanentReference(),
+				PowerDelta:     delta,
+				ToughnessDelta: delta,
+				Duration:       DurationUntilEndOfTurn,
+			},
+		}}}.Ability(),
+	}
+}
+
 // NinjutsuActivatedAbility builds the complete hand-zone activation template
 // for Ninjutsu with a mana cost.
 func NinjutsuActivatedAbility(manaCost cost.Mana) ActivatedAbility {

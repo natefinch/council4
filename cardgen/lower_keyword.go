@@ -144,6 +144,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordTriggeredLowering(&undyingPersistAbility, ability, syntax), true, nil
 	}
+	if dethroneAbility, ok, diag := lowerDethroneAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordTriggeredLowering(&dethroneAbility, ability, syntax), true, nil
+	}
 	if flankingAbility, ok, diag := lowerFlankingAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -161,6 +167,12 @@ func lowerKeywordDispatch(
 			return abilityLowering{}, true, diag
 		}
 		return keywordActivatedLowering(&cyclingAbility, ability, syntax), true, nil
+	}
+	if scavengeAbility, ok, diag := lowerScavengeAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordActivatedLowering(&scavengeAbility, ability, syntax), true, nil
 	}
 	if outlastAbility, ok, diag := lowerOutlastAbility(ability, syntax); ok {
 		if diag != nil {
@@ -209,6 +221,12 @@ func lowerKeywordDispatch(
 			return abilityLowering{}, true, diag
 		}
 		return keywordReplacementLowering(&bloodthirstAbility, ability, syntax), true, nil
+	}
+	if rampageAbility, ok, diag := lowerRampageAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordTriggeredLowering(&rampageAbility, ability, syntax), true, nil
 	}
 	return abilityLowering{}, false, nil
 }
@@ -308,6 +326,38 @@ func lowerUndyingPersistAbility(
 		)
 	}
 	return body, true, nil
+}
+
+// lowerDethroneAbility lowers a printed Dethrone (CR 702.103) keyword to its
+// canonical attacks-the-most-life-player triggered ability. Dethrone is printed
+// bare (its reminder text is stripped), so the lowering expands the keyword to
+// the reusable typed body. It supports only the exact keyword with no other
+// rules text.
+func lowerDethroneAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.TriggeredAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordDethrone {
+		return game.TriggeredAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterNone ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported "+keyword.Name+" ability",
+			"the executable source backend supports only the exact "+keyword.Name+" keyword",
+		)
+	}
+	return game.DethroneTriggeredBody, true, nil
 }
 
 // lowerFlankingAbility lowers a printed Flanking (CR 702.25) keyword to its
@@ -422,6 +472,38 @@ func lowerBloodthirstAbility(
 		)
 	}
 	return game.BloodthirstReplacement(keyword.Name+" "+keyword.Parameter, keyword.Integer), true, nil
+}
+
+// lowerRampageAbility lowers the Rampage N keyword (CR 702.23) to its canonical
+// becomes-blocked triggered ability, which gives the source +N/+N until end of
+// turn for each creature blocking it beyond the first. Only the exact keyword
+// with a fixed positive integer and no other rules text is supported.
+func lowerRampageAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.TriggeredAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordRampage {
+		return game.TriggeredAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterInteger ||
+		keyword.Integer < 1 ||
+		ability.Kind != compiler.AbilityStatic ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Rampage ability",
+			"the executable source backend supports only exact \"Rampage N\" with a fixed positive amount",
+		)
+	}
+	return game.RampageTriggeredAbility(keyword.Integer), true, nil
 }
 
 func keywordSpans(ability compiler.CompiledAbility, syntax *parser.Ability) []shared.Span {
@@ -1339,4 +1421,32 @@ func fixedKeywordManaCost(keyword compiler.CompiledKeyword) (cost.Mana, bool) {
 		}
 	}
 	return slices.Clone(keyword.ManaCost), true
+}
+
+func lowerScavengeAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.ActivatedAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordScavenge {
+		return game.ActivatedAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterManaCost ||
+		len(keyword.ManaCost) == 0 ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Scavenge ability",
+			"the executable source backend supports only exact Scavenge with a mana cost",
+		)
+	}
+	return game.ScavengeActivatedAbility(slices.Clone(keyword.ManaCost)), true, nil
 }

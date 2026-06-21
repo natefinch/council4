@@ -89,10 +89,11 @@ const (
 	PrimitiveCopyStackObject
 	PrimitiveBecomeCopy
 	PrimitiveAmass
+	PrimitiveRenown
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveAmass) + 1
+const primitiveKindCount = int(PrimitiveRenown) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -390,6 +391,15 @@ type DiscoverCards struct {
 type Amass struct {
 	Amount  Quantity
 	Subtype types.Sub
+}
+
+// Renown performs the renown keyword action (CR 702.111): if the referenced
+// permanent is not already renowned, the controller puts Amount +1/+1 counters
+// on it and it becomes renowned. A renowned permanent is left unchanged, so the
+// effect applies at most once.
+type Renown struct {
+	Object ObjectReference
+	Amount Quantity
 }
 
 // Pay prompts the controller to pay an optional cost during resolution.

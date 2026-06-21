@@ -44,7 +44,7 @@ type ConditionBoundary struct {
 // boundaries from its raw tokens. Boundaries are keyed by absolute source
 // position, so each downstream scan stream (semantic body tokens, raw trigger
 // tokens, or mode tokens) consumes exactly the boundaries whose tokens it walks.
-func emitConditionBoundaries(abilities []Ability) {
+func emitConditionBoundaries(abilities []Ability, cardName string) {
 	for i := range abilities {
 		ability := &abilities[i]
 		body := tokensWithinParserSpan(ability.Tokens, ability.BodySpan)
@@ -53,6 +53,7 @@ func emitConditionBoundaries(abilities []Ability) {
 			ability.Tokens,
 			ability.Kind == AbilityTriggered,
 			conditionForcedAttackIfAble(semantic),
+			cardName,
 		)
 		if ability.Modal == nil {
 			continue
@@ -64,6 +65,7 @@ func emitConditionBoundaries(abilities []Ability) {
 				mode.Tokens,
 				false,
 				conditionForcedAttackIfAble(semantic),
+				cardName,
 			)
 		}
 	}
@@ -75,10 +77,10 @@ func emitConditionBoundaries(abilities []Ability) {
 // able"), an introducer that opens a standalone "if able" clause is dropped,
 // because that restriction is captured structurally and must not emit a
 // condition.
-func conditionBoundaries(tokens []shared.Token, triggered, ifAbleExcluded bool) []ConditionBoundary {
+func conditionBoundaries(tokens []shared.Token, triggered, ifAbleExcluded bool, cardName string) []ConditionBoundary {
 	intervening := -1
 	if triggered {
-		if comma := triggerBodyComma(tokens); comma >= 0 {
+		if comma := triggerBodyComma(tokens, cardName); comma >= 0 {
 			intervening = comma + 1
 		}
 	}

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -1430,6 +1431,46 @@ func TestParseStaticGroupColorFilterMeaning(t *testing.T) {
 				subject.Group.Multicolored != tc.multicolored {
 				t.Fatalf("color filter = %#v, want colors %v colorless %v multicolored %v",
 					subject.Group, tc.colors, tc.colorless, tc.multicolored)
+			}
+		})
+	}
+}
+
+func TestParseStaticGroupCounterFilterMeaning(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		source string
+		kind   EffectStaticSubjectKind
+	}{
+		"singular controlled keyword grant": {
+			source: "Each creature you control with a +1/+1 counter on it has flying.",
+			kind:   EffectStaticSubjectControlledCreatures,
+		},
+		"singular other controlled keyword grant": {
+			source: "Each other creature you control with a +1/+1 counter on it has deathtouch.",
+			kind:   EffectStaticSubjectOtherControlledCreatures,
+		},
+		"plural controlled keyword grant": {
+			source: "Creatures you control with a +1/+1 counter on them have trample.",
+			kind:   EffectStaticSubjectControlledCreatures,
+		},
+		"singular controlled power toughness": {
+			source: "Each creature you control with a +1/+1 counter on it gets +1/+1.",
+			kind:   EffectStaticSubjectControlledCreatures,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, tc.source, Context{})
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			subject := declarations[0].Subject
+			if subject.Kind != StaticDeclarationSubjectGroup || subject.Group.Kind != tc.kind {
+				t.Fatalf("subject = %#v, want group kind %v", subject, tc.kind)
+			}
+			if !subject.Group.CounterRequired || subject.Group.CounterKind != counter.PlusOnePlusOne {
+				t.Fatalf("counter filter = %#v, want +1/+1 required", subject.Group)
 			}
 		})
 	}
