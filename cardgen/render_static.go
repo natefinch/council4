@@ -538,6 +538,9 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("CastFromZone: %s,", castZone))
 	}
+	if effect.TopCardOnly {
+		fields = append(fields, "TopCardOnly: true,")
+	}
 	if len(effect.PermanentTypes) > 0 {
 		permanentTypes, err := renderTypesCardSlice(ctx, effect.PermanentTypes)
 		if err != nil {
@@ -607,6 +610,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectCastSpellsAsThoughFlash", nil
 	case game.RuleEffectPlayLandsFromZone:
 		return "game.RuleEffectPlayLandsFromZone", nil
+	case game.RuleEffectPlayWithTopCardRevealed:
+		return "game.RuleEffectPlayWithTopCardRevealed", nil
 	default:
 		return "", fmt.Errorf("render: unsupported rule effect kind %d", kind)
 	}

@@ -892,7 +892,7 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if !reflect.DeepEqual(effect.GrantedAbility, CyclingActivatedAbility(cyclingCost)) {
 			v.add(faceName, appendPath(path, "GrantedAbility"), CardDefIssueInvalidRuleEffect, "hand-card ability grant must use the standard Cycling ability template")
 		}
-	case RuleEffectNoMaximumHandSize, RuleEffectLifeTotalCantChange, RuleEffectCastSpellsAsThoughFlash:
+	case RuleEffectNoMaximumHandSize, RuleEffectLifeTotalCantChange, RuleEffectCastSpellsAsThoughFlash, RuleEffectPlayWithTopCardRevealed:
 		if effect.AffectedPlayer == PlayerAny {
 			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "player rule effects must set affected player")
 		}
@@ -924,6 +924,9 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		}
 		if effect.CastFromZone == zone.None {
 			v.add(faceName, appendPath(path, "CastFromZone"), CardDefIssueInvalidRuleEffect, "play-from-zone permission must set a source zone")
+		}
+		if effect.TopCardOnly && effect.CastFromZone != zone.Library {
+			v.add(faceName, appendPath(path, "TopCardOnly"), CardDefIssueInvalidRuleEffect, "top-card-only play permission requires the library source zone")
 		}
 	case RuleEffectPlayerProtection:
 		if effect.AffectedPlayer == PlayerAny {

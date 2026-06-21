@@ -699,9 +699,39 @@ func canPlayLandFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardI
 				return true
 			}
 		case game.RuleEffectPlayLandsFromZone:
+			if effect.TopCardOnly && !cardIsTopOfLibrary(g, playerID, cardID) {
+				continue
+			}
 			return true
 		default:
 			continue
+		}
+	}
+	return false
+}
+
+// cardIsTopOfLibrary reports whether cardID is the top card of playerID's
+// library.
+func cardIsTopOfLibrary(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return false
+	}
+	top, ok := player.Library.Top()
+	return ok && top == cardID
+}
+
+// playerPlaysWithTopCardRevealed reports whether playerID plays with the top card
+// of their library revealed to all players (a visibility static).
+func playerPlaysWithTopCardRevealed(g *game.Game, playerID game.PlayerID) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectPlayWithTopCardRevealed {
+			continue
+		}
+		if playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
+			return true
 		}
 	}
 	return false

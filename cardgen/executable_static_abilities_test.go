@@ -1295,3 +1295,34 @@ func TestGenerateExecutableCardSourceAllLandsTypeAdditionFailsClosed(t *testing.
 		})
 	}
 }
+
+func TestGenerateExecutableCardSourcePlayFromLibraryTop(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Seer",
+		Layout:     "normal",
+		ManaCost:   "{2}{G}",
+		TypeLine:   "Creature — Elf",
+		OracleText: "Play with the top card of your library revealed.\nYou may play lands from the top of your library.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.PlayWithTopCardRevealedStaticBody",
+		"game.PlayLandsFromLibraryTopStaticBody",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if strings.Contains(source, "TODO") {
+		t.Fatalf("executable source contains TODO:\n%s", source)
+	}
+}

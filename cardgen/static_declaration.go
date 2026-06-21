@@ -646,6 +646,21 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 			PermanentTypes: []types.Card{types.Land},
 		})
 		return true
+	case compiler.StaticPlayerRulePlayLandsFromLibraryTop:
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectPlayLandsFromZone,
+			AffectedPlayer: game.PlayerYou,
+			CastFromZone:   zone.Library,
+			PermanentTypes: []types.Card{types.Land},
+			TopCardOnly:    true,
+		})
+		return true
+	case compiler.StaticPlayerRulePlayWithTopCardRevealed:
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectPlayWithTopCardRevealed,
+			AffectedPlayer: game.PlayerYou,
+		})
+		return true
 	default:
 		return false
 	}
@@ -1139,6 +1154,18 @@ func canonicalStaticDeclarationVarName(declaration compiler.StaticDeclaration) s
 		declaration.Player != nil &&
 		declaration.Player.Kind == compiler.StaticPlayerRulePlayLandsFromGraveyard {
 		return "game.PlayLandsFromGraveyardStaticBody"
+	}
+	if declaration.Kind == compiler.StaticDeclarationPlayerRule &&
+		declaration.Condition == nil &&
+		declaration.Player != nil &&
+		declaration.Player.Kind == compiler.StaticPlayerRulePlayLandsFromLibraryTop {
+		return "game.PlayLandsFromLibraryTopStaticBody"
+	}
+	if declaration.Kind == compiler.StaticDeclarationPlayerRule &&
+		declaration.Condition == nil &&
+		declaration.Player != nil &&
+		declaration.Player.Kind == compiler.StaticPlayerRulePlayWithTopCardRevealed {
+		return "game.PlayWithTopCardRevealedStaticBody"
 	}
 	if declaration.Kind != compiler.StaticDeclarationRule ||
 		declaration.Rule == nil ||

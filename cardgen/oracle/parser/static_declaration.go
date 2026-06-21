@@ -82,6 +82,15 @@ const (
 	// continuous permission to play land cards from their graveyard ("You may
 	// play lands from your graveyard.", Ramunap Excavator, Crucible of Worlds).
 	StaticDeclarationPlayerRulePlayLandsFromGraveyard StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRulePlayLandsFromGraveyard"
+	// StaticDeclarationPlayerRulePlayLandsFromLibraryTop grants the controller a
+	// continuous permission to play land cards from the top of their library ("You
+	// may play lands from the top of your library.", Oracle of Mul Daya, Courser of
+	// Kruphix).
+	StaticDeclarationPlayerRulePlayLandsFromLibraryTop StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRulePlayLandsFromLibraryTop"
+	// StaticDeclarationPlayerRulePlayWithTopCardRevealed makes the controller play
+	// with the top card of their library revealed ("Play with the top card of your
+	// library revealed.", Oracle of Mul Daya, Courser of Kruphix, Future Sight).
+	StaticDeclarationPlayerRulePlayWithTopCardRevealed StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRulePlayWithTopCardRevealed"
 )
 
 // StaticDeclarationCardFilterKind identifies the closed card filter that a
@@ -779,6 +788,8 @@ var staticPlayerRuleParsers = []staticPlayerRuleParser{
 	parseStaticAdditionalLandPlaysDeclaration,
 	parseStaticEachPlayerAdditionalLandPlaysDeclaration,
 	parseStaticPlayLandsFromGraveyardDeclaration,
+	parseStaticPlayLandsFromLibraryTopDeclaration,
+	parseStaticPlayWithTopCardRevealedDeclaration,
 }
 
 func parseStaticPlayerRuleDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
@@ -937,6 +948,53 @@ func parseStaticPlayLandsFromGraveyardDeclaration(tokens []shared.Token) (Static
 			CardFilter: StaticDeclarationCardFilterLand,
 		},
 		PlayerRule: StaticDeclarationPlayerRulePlayLandsFromGraveyard,
+	}, true
+}
+
+// parseStaticPlayLandsFromLibraryTopDeclaration recognizes the controller-scoped
+// continuous permission to play land cards from the top of the controller's
+// library ("You may play lands from the top of your library.", Oracle of Mul
+// Daya, Courser of Kruphix).
+func parseStaticPlayLandsFromLibraryTopDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 11 || tokens[10].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "you", "may", "play", "lands", "from", "the", "top", "of", "your", "library") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens[1:10]),
+		Subject: StaticDeclarationSubject{
+			Kind:       StaticDeclarationSubjectController,
+			Span:       tokens[0].Span,
+			CardFilter: StaticDeclarationCardFilterLand,
+		},
+		PlayerRule: StaticDeclarationPlayerRulePlayLandsFromLibraryTop,
+	}, true
+}
+
+// parseStaticPlayWithTopCardRevealedDeclaration recognizes the controller-scoped
+// visibility static that reveals the top card of the controller's library ("Play
+// with the top card of your library revealed.", Oracle of Mul Daya, Courser of
+// Kruphix, Future Sight).
+func parseStaticPlayWithTopCardRevealedDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 10 || tokens[9].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "play", "with", "the", "top", "card", "of", "your", "library", "revealed") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens[0:9]),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: tokens[6].Span,
+		},
+		PlayerRule: StaticDeclarationPlayerRulePlayWithTopCardRevealed,
 	}, true
 }
 
