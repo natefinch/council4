@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func staticHintAt(hints faceRenderHints, i int) *staticVarHint {
@@ -42,6 +43,14 @@ func (r Renderer) renderStaticAbility(ctx *renderCtx, body *game.StaticAbility, 
 		return fmt.Sprintf("game.WardStaticAbility(%s)", renderedCost), nil
 	}
 	var fields []string
+	if body.ZoneOfFunction != zone.None {
+		ctx.need(importZone)
+		zoneLiteral, err := renderZone(body.ZoneOfFunction)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ZoneOfFunction: %s,", zoneLiteral))
+	}
 	if len(body.KeywordAbilities) > 0 {
 		elements := make([]string, 0, len(body.KeywordAbilities))
 		for _, keyword := range body.KeywordAbilities {

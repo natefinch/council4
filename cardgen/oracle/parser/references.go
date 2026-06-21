@@ -137,6 +137,15 @@ func collectReferences(tokens []shared.Token, cardName string) []Reference {
 					break
 				}
 			}
+			// "this card/creature is in your graveyard" introduces a graveyard
+			// zone-of-function condition (the Incarnation cycle). The source is
+			// named only to scope the ability to the graveyard, so it must not
+			// surface as a free object reference that would claim a later
+			// effect's subject slot.
+			if referenceContainsSequence(normalizedWords(tokens[i+2:min(i+6, len(tokens))]), "is", "in", "your", "graveyard") {
+				i++
+				break
+			}
 			phrase := tokens[i : i+2]
 			references = append(references, Reference{
 				Kind:   ReferenceThisObject,

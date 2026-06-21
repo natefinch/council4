@@ -629,6 +629,13 @@ type CompiledCondition struct {
 	ControlComparisonLeft    ConditionComparisonScope
 	ControlComparisonRight   ConditionComparisonScope
 	ControlComparisonGreater bool
+
+	// SourceInGraveyard marks a condition introduced by "this card is in your
+	// graveyard and ...", reporting that the enclosing static ability functions
+	// from the graveyard zone. The remaining predicate carries the accompanying
+	// runtime condition; lowering reads this flag to set the ability's zone of
+	// function rather than emitting a runtime predicate for it.
+	SourceInGraveyard bool
 }
 
 // TargetCardinality is an inclusive target count range.

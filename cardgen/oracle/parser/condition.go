@@ -196,6 +196,13 @@ type ConditionClause struct {
 	// for ConditionPredicateControlComparison ("an opponent controls more lands
 	// than you"). Its zero value is unused.
 	ControlComparison ConditionControlComparison `json:",omitzero"`
+
+	// SourceInGraveyard marks a condition introduced by "this card/creature is in
+	// your graveyard and ...", as on the Incarnation cycle (Anger, Wonder). It
+	// reports that the static ability functions from the graveyard zone; the
+	// remaining predicate carries the accompanying runtime condition (e.g. "you
+	// control a Mountain").
+	SourceInGraveyard bool `json:",omitempty"`
 }
 
 // ConditionControlComparison describes a cross-player control-count comparison
@@ -307,6 +314,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeDamageSourceCondition,
 		recognizeTokenCreationCondition,
 		recognizeControlComparisonCondition,
+		recognizeGraveyardControlsCondition,
 		recognizeControlsCondition,
 		recognizeTotalPowerCondition,
 		recognizeSourceDeathCondition,
@@ -725,6 +733,28 @@ func comparisonReferenceScope(tokens []shared.Token) (ConditionControlScope, boo
 // comparison contrasts the controller against an opponent scope.
 func validComparisonScopes(left, right ConditionControlScope) bool {
 	return (left == ConditionControlScopeController) != (right == ConditionControlScopeController)
+}
+
+// recognizeGraveyardControlsCondition matches the Incarnation-cycle condition
+// "this card/creature is in your graveyard and <controls condition>" (Anger,
+// Brawn, Filth, Valor, Wonder). The leading clause reports that the static
+// ability functions from the graveyard; the trailing clause is delegated to
+// recognizeControlsCondition for the accompanying "you control a <land>"
+// requirement, which becomes the runtime condition.
+func recognizeGraveyardControlsCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "this", "card", "is", "in", "your", "graveyard", "and")
+	if !ok {
+		rest, ok = cutTokenPrefix(body, "this", "creature", "is", "in", "your", "graveyard", "and")
+		if !ok {
+			return ConditionClause{}, false
+		}
+	}
+	clause, ok := recognizeControlsCondition(rest, atoms)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	clause.SourceInGraveyard = true
+	return clause, true
 }
 
 func recognizeControlsCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {

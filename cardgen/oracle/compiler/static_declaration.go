@@ -1556,7 +1556,11 @@ func recognizeStaticKeywordGrantDeclarations(ability CompiledAbility, statics []
 		if condition == nil {
 			return nil, false
 		}
-	} else if condition != nil {
+	} else if condition != nil && !condition.SourceInGraveyard {
+		// A group anthem ("creatures you control have ...") may carry a condition
+		// only when the static ability functions from the graveyard, as on the
+		// Incarnation cycle ("As long as this card is in your graveyard and you
+		// control a <land>, ..."). Other conditioned group anthems fail closed.
 		return nil, false
 	}
 	return []StaticDeclaration{staticKeywordGrantDeclaration(ability.Span, group.Group, condition, ability.Content.Keywords)}, true

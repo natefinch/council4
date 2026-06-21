@@ -172,6 +172,7 @@ func compileControlsCondition(condition *CompiledCondition, clause *parser.Condi
 	}
 	condition.Predicate = predicate
 	condition.Selection = selection
+	condition.SourceInGraveyard = clause.SourceInGraveyard
 }
 
 func controlScopePredicate(scope parser.ConditionControlScope) (ConditionPredicate, bool) {

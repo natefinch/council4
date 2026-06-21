@@ -448,6 +448,34 @@ func trailingDynamicCountInClause(clause []shared.Token, amount EffectAmountSynt
 	return amount.Span.Start.Offset >= clause[0].Span.Start.Offset
 }
 
+// stripLeadingConditionClause drops a leading "As long as this card/creature is
+// in your graveyard and ..." condition clause so the subject grammar sees only
+// the effect's group subject ("creatures you control"). The first effect's
+// ownership tokens begin at the sentence start, so the graveyard zone-of-
+// function condition would otherwise prevent the group subject from being
+// recognized at token zero. The strip is restricted to graveyard conditions so
+// other leading conditions keep their existing recognition path unchanged.
+func stripLeadingConditionClause(tokens []shared.Token) []shared.Token {
+	if len(tokens) == 0 {
+		return tokens
+	}
+	intro, width := conditionIntroAt(tokens, 0)
+	if intro == ConditionIntroUnknown {
+		return tokens
+	}
+	body := tokens[width:]
+	if _, ok := cutTokenPrefix(body, "this", "card", "is", "in", "your", "graveyard", "and"); !ok {
+		if _, ok := cutTokenPrefix(body, "this", "creature", "is", "in", "your", "graveyard", "and"); !ok {
+			return tokens
+		}
+	}
+	end := conditionClauseEnd(tokens, 0)
+	if end < len(tokens) && tokens[end].Kind == shared.Comma {
+		return tokens[end+1:]
+	}
+	return tokens
+}
+
 func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []EffectSyntax {
 	if effects, ok := parsePassiveTokenDoublingEffects(sentence, tokens, atoms); ok {
 		return effects
@@ -487,7 +515,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		if ambiguousZoneChoice(ownership, atoms, span) {
 			toZone = zone.None
 		}
-		staticSubject := parseEffectStaticSubject(ownership, atoms)
+		staticSubject := parseEffectStaticSubject(stripLeadingConditionClause(ownership), atoms)
 		payment := parseEffectPayment(tokens, atoms)
 		connection, connectionSpan := effectConnection(tokens, indices, effectIndex)
 		optional, optionalSpan := effectOptional(tokens, tokenIndex)
