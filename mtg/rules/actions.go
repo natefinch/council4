@@ -152,6 +152,20 @@ func (*Engine) legalLandActions(g *game.Game, playerID game.PlayerID) []action.A
 			}
 		}
 	}
+	for _, cardID := range player.Graveyard.All() {
+		if !canPlayLandFromZoneByRuleEffect(g, playerID, cardID, zone.Graveyard) {
+			continue
+		}
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		for _, face := range card.Def.FaceIndexes() {
+			if _, ok := landCardInstanceFaceFromZone(g, player, cardID, zone.Graveyard, face); ok {
+				actions = append(actions, actionBuild.playLandFromZone(cardID, zone.Graveyard, face))
+			}
+		}
+	}
 	return actions
 }
 

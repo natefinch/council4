@@ -572,6 +572,14 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 			AdditionalLandPlays: declaration.Player.AdditionalLandPlays,
 		})
 		return true
+	case compiler.StaticPlayerRulePlayLandsFromGraveyard:
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectPlayLandsFromZone,
+			AffectedPlayer: game.PlayerYou,
+			CastFromZone:   zone.Graveyard,
+			PermanentTypes: []types.Card{types.Land},
+		})
+		return true
 	default:
 		return false
 	}
@@ -1059,6 +1067,12 @@ func canonicalStaticDeclarationVarName(declaration compiler.StaticDeclaration) s
 		declaration.Player != nil &&
 		declaration.Player.Kind == compiler.StaticPlayerRuleNoMaximumHandSize {
 		return "game.NoMaximumHandSizeStaticBody"
+	}
+	if declaration.Kind == compiler.StaticDeclarationPlayerRule &&
+		declaration.Condition == nil &&
+		declaration.Player != nil &&
+		declaration.Player.Kind == compiler.StaticPlayerRulePlayLandsFromGraveyard {
+		return "game.PlayLandsFromGraveyardStaticBody"
 	}
 	if declaration.Kind != compiler.StaticDeclarationRule ||
 		declaration.Rule == nil ||

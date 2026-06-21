@@ -530,6 +530,14 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("AdditionalLandPlays: %d,", effect.AdditionalLandPlays))
 	}
+	if effect.Kind == game.RuleEffectPlayLandsFromZone {
+		ctx.need(importZone)
+		castZone, err := renderZone(effect.CastFromZone)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("CastFromZone: %s,", castZone))
+	}
 	if len(effect.PermanentTypes) > 0 {
 		permanentTypes, err := renderTypesCardSlice(ctx, effect.PermanentTypes)
 		if err != nil {
@@ -597,6 +605,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectUntapDuringOtherPlayersUntapStep", nil
 	case game.RuleEffectCastSpellsAsThoughFlash:
 		return "game.RuleEffectCastSpellsAsThoughFlash", nil
+	case game.RuleEffectPlayLandsFromZone:
+		return "game.RuleEffectPlayLandsFromZone", nil
 	default:
 		return "", fmt.Errorf("render: unsupported rule effect kind %d", kind)
 	}

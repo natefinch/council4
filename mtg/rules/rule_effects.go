@@ -689,13 +689,20 @@ func canPlayLandFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardI
 	effects := activeRuleEffects(g)
 	for i := range effects {
 		effect := &effects[i]
-		if effect.Kind != game.RuleEffectPlayFromZone ||
-			effect.CastFromZone != sourceZone ||
-			effect.AffectedCardID != cardID ||
+		if effect.CastFromZone != sourceZone ||
 			!playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
 			continue
 		}
-		return true
+		switch effect.Kind {
+		case game.RuleEffectPlayFromZone:
+			if effect.AffectedCardID == cardID {
+				return true
+			}
+		case game.RuleEffectPlayLandsFromZone:
+			return true
+		default:
+			continue
+		}
 	}
 	return false
 }
