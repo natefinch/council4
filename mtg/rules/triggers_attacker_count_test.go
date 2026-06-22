@@ -144,3 +144,46 @@ func TestAttackerCountAtLeastTriggerDoesNotFireBelowThreshold(t *testing.T) {
 		t.Fatalf("stack size = %d, want no trigger", got)
 	}
 }
+
+// TestBattalionSelfSourceAttackerCountMatchesSourceAttackingWithOthers covers
+// the Battalion relation "Whenever this creature and at least two other
+// creatures attack": a self-source attacker-declared pattern with
+// AttackerCountAtLeast = 3 matches when the source is declared as an attacker
+// alongside at least two other creatures, and fails to match while fewer than
+// three creatures are attacking.
+func TestBattalionSelfSourceAttackerCountMatchesSourceAttackingWithOthers(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	pattern := &game.TriggerPattern{
+		Event:                game.EventAttackerDeclared,
+		Source:               game.TriggerSourceSelf,
+		AttackerCountAtLeast: 3,
+	}
+	event := game.Event{
+		Kind:           game.EventAttackerDeclared,
+		Controller:     game.Player1,
+		PermanentID:    source.ObjectID,
+		SourceObjectID: source.ObjectID,
+	}
+
+	// Source attacking alone: below threshold, no match.
+	g.Combat = &game.CombatState{Attackers: []game.AttackDeclaration{{Attacker: source.ObjectID}}}
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("battalion pattern matched with only the source attacking")
+	}
+
+	// Source plus one other: still below the three-attacker threshold.
+	second := addCombatCreaturePermanent(g, game.Player1)
+	g.Combat.Attackers = append(g.Combat.Attackers, game.AttackDeclaration{Attacker: second.ObjectID})
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("battalion pattern matched with only two attackers")
+	}
+
+	// Source plus two others: threshold met, match.
+	third := addCombatCreaturePermanent(g, game.Player1)
+	g.Combat.Attackers = append(g.Combat.Attackers, game.AttackDeclaration{Attacker: third.ObjectID})
+	if !triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("battalion pattern did not match the source attacking with two others")
+	}
+}

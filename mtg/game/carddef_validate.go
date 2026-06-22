@@ -1539,8 +1539,9 @@ func (v *cardDefValidator) validateAttackerCountRelations(faceName, path string,
 	if pattern.AttackerCountAtLeast < 2 {
 		v.add(faceName, appendPath(path, "AttackerCountAtLeast"), CardDefIssueInvalidSelection, "attacker-count trigger filter must require at least two attackers")
 	}
-	if pattern.Event != EventAttackerDeclared || !pattern.OneOrMore || pattern.AttackAlone {
-		v.add(faceName, appendPath(path, "AttackerCountAtLeast"), CardDefIssueInvalidSelection, "attacker-count trigger filter requires a one-or-more attacker-declared pattern without attacks-alone")
+	if pattern.Event != EventAttackerDeclared || pattern.AttackAlone ||
+		(!pattern.OneOrMore && pattern.Source != TriggerSourceSelf) {
+		v.add(faceName, appendPath(path, "AttackerCountAtLeast"), CardDefIssueInvalidSelection, "attacker-count trigger filter requires a one-or-more or self-source attacker-declared pattern without attacks-alone")
 	}
 }
 

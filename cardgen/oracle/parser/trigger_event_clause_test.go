@@ -770,6 +770,20 @@ func combatTriggerEventClauseTests() []triggerEventClauseTest {
 			},
 		},
 		{
+			name:   "battalion self and at least two other creatures attack",
+			source: "Whenever this creature and at least two other creatures attack, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindAttack ||
+					clause.Subject.Kind != TriggerEventSubjectSelf ||
+					clause.OneOrMore ||
+					clause.ExcludeSelf ||
+					clause.AttackerCountAtLeast != 3 {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
 			name:   "attack creature subtype",
 			source: "Whenever a Goblin you control attacks, draw a card.",
 			check: func(t *testing.T, clause *TriggerEventClause) {

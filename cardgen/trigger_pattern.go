@@ -221,14 +221,18 @@ func lowerTriggerZones(pattern *compiler.TriggerPattern, result *game.TriggerPat
 // attackerCountRelationsLowerable reports whether the attacker-count combat
 // relations (AttackAlone, AttackerCountAtLeast) are well-formed for lowering.
 // Both relations only apply to attacker-declared events; "N or more" requires
-// N >= 2, the one-or-more batching, and must not also be "attacks alone".
+// N >= 2 and must not also be "attacks alone". The count is satisfied either by
+// the controller-scoped one-or-more batching ("you attack with N or more
+// creatures") or by a self-source pattern ("this creature and at least N other
+// creatures attack", Battalion), whose single declared attacker is the source.
 func attackerCountRelationsLowerable(pattern *compiler.TriggerPattern, event game.EventKind) bool {
 	if (pattern.AttackAlone || pattern.AttackerCountAtLeast != 0) &&
 		event != game.EventAttackerDeclared {
 		return false
 	}
 	if pattern.AttackerCountAtLeast != 0 &&
-		(pattern.AttackerCountAtLeast < 2 || !pattern.OneOrMore || pattern.AttackAlone) {
+		(pattern.AttackerCountAtLeast < 2 || pattern.AttackAlone ||
+			(!pattern.OneOrMore && pattern.Source != compiler.TriggerSourceSelf)) {
 		return false
 	}
 	return true

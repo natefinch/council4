@@ -125,6 +125,16 @@ func TestLowerCombatEventTriggers(t *testing.T) {
 			},
 			wantTyp: game.TriggerWhenever,
 		},
+		{
+			name: "battalion self and at least two other creatures attack",
+			text: "Whenever this creature and at least two other creatures attack, draw a card.",
+			want: game.TriggerPattern{
+				Event:                game.EventAttackerDeclared,
+				Source:               game.TriggerSourceSelf,
+				AttackerCountAtLeast: 3,
+			},
+			wantTyp: game.TriggerWhenever,
+		},
 	}
 
 	for _, tc := range tests {
