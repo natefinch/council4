@@ -591,6 +591,14 @@ const (
 	// Mangara, the Diplomat). It gates the trigger's intervening-if condition
 	// against live combat state.
 	ConditionPredicateAttackersAttackingControllerAtLeast
+	// ConditionPredicateControllerLibrarySizeAtLeast is satisfied when the
+	// controller's library holds at least Threshold cards ("if you have 200 or
+	// more cards in your library", Battle of Wits).
+	ConditionPredicateControllerLibrarySizeAtLeast
+	// ConditionPredicateControllerLifeExactly is satisfied when the controller's
+	// life total is exactly Threshold ("if you have exactly 1 life", Near-Death
+	// Experience).
+	ConditionPredicateControllerLifeExactly
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard

@@ -1296,6 +1296,12 @@ func (v *cardDefValidator) validateCondition(faceName, path string, condition *C
 	if condition.ControllerCreaturePowerDiversityAtLeast < 0 {
 		v.add(faceName, appendPath(path, "ControllerCreaturePowerDiversityAtLeast"), CardDefIssueInvalidCondition, "creature-power-diversity threshold cannot be negative")
 	}
+	if condition.ControllerLibrarySizeAtLeast < 0 {
+		v.add(faceName, appendPath(path, "ControllerLibrarySizeAtLeast"), CardDefIssueInvalidCondition, "library-size threshold cannot be negative")
+	}
+	if condition.ControllerLifeExactly.Exists && condition.ControllerLifeExactly.Val < 0 {
+		v.add(faceName, appendPath(path, "ControllerLifeExactly"), CardDefIssueInvalidCondition, "life threshold cannot be negative")
+	}
 	if condition.ControllerControls.MinCount < 0 {
 		v.add(faceName, appendPath(path, "ControllerControls.MinCount"), CardDefIssueInvalidCondition, "permanent-count threshold cannot be negative")
 	}

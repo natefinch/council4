@@ -56,6 +56,10 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.ControllerHandSizeAtLeast = condition.Threshold
 	case compiler.ConditionPredicateControllerHandSizeExactly:
 		result.ControllerHandSizeExactly = opt.Val(condition.Threshold)
+	case compiler.ConditionPredicateControllerLibrarySizeAtLeast:
+		result.ControllerLibrarySizeAtLeast = condition.Threshold
+	case compiler.ConditionPredicateControllerLifeExactly:
+		result.ControllerLifeExactly = opt.Val(condition.Threshold)
 	case compiler.ConditionPredicateAnyOpponentPoisonAtLeast:
 		result.AnyOpponentPoisonAtLeast = condition.Threshold
 	case compiler.ConditionPredicateAnyPlayerLifeAtMost:
@@ -211,6 +215,8 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateControllerGraveyardCardTypeCountAtLeast,
 			compiler.ConditionPredicateControllerCreaturePowerDiversityAtLeast,
 			compiler.ConditionPredicateAnyOpponentPoisonAtLeast,
+			compiler.ConditionPredicateControllerLibrarySizeAtLeast,
+			compiler.ConditionPredicateControllerLifeExactly,
 			compiler.ConditionPredicateObjectMatches,
 			compiler.ConditionPredicateObjectExists:
 			return true
@@ -230,7 +236,8 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 		case compiler.ConditionPredicateControllerControlsCommander:
 			return ctx == conditionContextInterveningTrigger || ctx == conditionContextStatic
 		case compiler.ConditionPredicateControllerHandSizeExactly:
-			return ctx == conditionContextStatic || ctx == conditionContextActivation
+			return ctx == conditionContextStatic || ctx == conditionContextActivation ||
+				ctx == conditionContextInterveningTrigger
 		default:
 			return ctx == conditionContextStatic &&
 				predicate == compiler.ConditionPredicateControllerHandSizeAtLeast

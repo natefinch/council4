@@ -86,6 +86,8 @@ const (
 	ConditionPredicateSourceSaddled                                    ConditionPredicateKind = "ConditionPredicateSourceSaddled"
 	ConditionPredicateSourceNotSaddled                                 ConditionPredicateKind = "ConditionPredicateSourceNotSaddled"
 	ConditionPredicateAttackersAttackingControllerAtLeast              ConditionPredicateKind = "ConditionPredicateAttackersAttackingControllerAtLeast"
+	ConditionPredicateControllerLibrarySizeAtLeast                     ConditionPredicateKind = "ConditionPredicateControllerLibrarySizeAtLeast"
+	ConditionPredicateControllerLifeExactly                            ConditionPredicateKind = "ConditionPredicateControllerLifeExactly"
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -1162,8 +1164,11 @@ func recognizeControllerResourceCondition(body []shared.Token, atoms Atoms) (Con
 			switch count.Comparison {
 			case ConditionComparisonAtLeast:
 				switch {
-				case tokenWordsEqual(tail, "cards", "in", "hand"):
+				case tokenWordsEqual(tail, "cards", "in", "hand"),
+					tokenWordsEqual(tail, "cards", "in", "your", "hand"):
 					return ConditionClause{Predicate: ConditionPredicateControllerHandSizeAtLeast, Threshold: count.Value}, true
+				case tokenWordsEqual(tail, "cards", "in", "your", "library"):
+					return ConditionClause{Predicate: ConditionPredicateControllerLibrarySizeAtLeast, Threshold: count.Value}, true
 				case tokenWordsEqual(tail, "life"):
 					return ConditionClause{Predicate: ConditionPredicateControllerLifeAtLeast, Threshold: count.Value}, true
 				case tokenWordsEqual(tail, "opponents"):
@@ -1179,9 +1184,15 @@ func recognizeControllerResourceCondition(body []shared.Token, atoms Atoms) (Con
 		// "you have exactly <n> cards in hand" is an equality on hand size, e.g.
 		// "Activate only if you have exactly seven cards in hand".
 		if exact, ok := cutTokenPrefix(rest, "exactly"); ok && len(exact) >= 1 {
-			if value, ok := conditionNumberValue(exact[0]); ok &&
-				tokenWordsEqual(exact[1:], "cards", "in", "hand") {
-				return ConditionClause{Predicate: ConditionPredicateControllerHandSizeExactly, Threshold: value}, true
+			if value, ok := conditionNumberValue(exact[0]); ok {
+				tail := exact[1:]
+				switch {
+				case tokenWordsEqual(tail, "cards", "in", "hand"),
+					tokenWordsEqual(tail, "cards", "in", "your", "hand"):
+					return ConditionClause{Predicate: ConditionPredicateControllerHandSizeExactly, Threshold: value}, true
+				case tokenWordsEqual(tail, "life"):
+					return ConditionClause{Predicate: ConditionPredicateControllerLifeExactly, Threshold: value}, true
+				}
 			}
 		}
 	}

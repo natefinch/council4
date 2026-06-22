@@ -254,13 +254,15 @@ func TestRecognizeCardinalVocabulary(t *testing.T) {
 	cases := map[string]int{
 		"one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
 		"six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10, "TEN": 10,
+		"eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15,
+		"sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20,
 	}
 	for word, want := range cases {
 		if got, ok := CardinalWordValue(word); !ok || got != want {
 			t.Errorf("CardinalWordValue(%q) = %v, %v; want %v, true", word, got, ok, want)
 		}
 	}
-	for _, word := range []string{"eleven", "zero", "1", "", "twenty"} {
+	for _, word := range []string{"twenty-one", "zero", "1", "", "thirty"} {
 		if got, ok := CardinalWordValue(word); ok {
 			t.Errorf("CardinalWordValue(%q) = %v, true; want 0, false", word, got)
 		}

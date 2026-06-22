@@ -84,6 +84,12 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 	case parser.ConditionPredicateControllerHandSizeExactly:
 		condition.Predicate = ConditionPredicateControllerHandSizeExactly
 		condition.Threshold = clause.Threshold
+	case parser.ConditionPredicateControllerLibrarySizeAtLeast:
+		condition.Predicate = ConditionPredicateControllerLibrarySizeAtLeast
+		condition.Threshold = clause.Threshold
+	case parser.ConditionPredicateControllerLifeExactly:
+		condition.Predicate = ConditionPredicateControllerLifeExactly
+		condition.Threshold = clause.Threshold
 	case parser.ConditionPredicateAnyOpponentPoisonAtLeast:
 		condition.Predicate = ConditionPredicateAnyOpponentPoisonAtLeast
 		condition.Threshold = clause.Threshold

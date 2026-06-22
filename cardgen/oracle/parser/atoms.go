@@ -435,6 +435,26 @@ func CardinalWordValue(word string) (int, bool) {
 		return 9, true
 	case "ten":
 		return 10, true
+	case "eleven":
+		return 11, true
+	case "twelve":
+		return 12, true
+	case "thirteen":
+		return 13, true
+	case "fourteen":
+		return 14, true
+	case "fifteen":
+		return 15, true
+	case "sixteen":
+		return 16, true
+	case "seventeen":
+		return 17, true
+	case "eighteen":
+		return 18, true
+	case "nineteen":
+		return 19, true
+	case "twenty":
+		return 20, true
 	default:
 		return 0, false
 	}

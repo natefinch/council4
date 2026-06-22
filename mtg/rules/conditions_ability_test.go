@@ -473,6 +473,40 @@ func TestNegativeConditionThresholdsFailClosed(t *testing.T) {
 	}
 }
 
+func TestControllerLibrarySizeAndLifeExactlyConditions(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	ctx := conditionContext{controller: game.Player1}
+
+	// "you have N or more cards in your library" (Battle of Wits).
+	librarySize := opt.Val(game.Condition{ControllerLibrarySizeAtLeast: 2})
+	if conditionSatisfied(g, ctx, librarySize) {
+		t.Fatal("library-size condition passed with an empty library")
+	}
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Card A", Types: []types.Card{types.Land}}})
+	if conditionSatisfied(g, ctx, librarySize) {
+		t.Fatal("library-size condition passed below threshold")
+	}
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Card B", Types: []types.Card{types.Land}}})
+	if !conditionSatisfied(g, ctx, librarySize) {
+		t.Fatal("library-size condition failed at threshold")
+	}
+
+	// "you have exactly N life" (Near-Death Experience).
+	lifeExactly := opt.Val(game.Condition{ControllerLifeExactly: opt.Val(1)})
+	g.Players[game.Player1].Life = 1
+	if !conditionSatisfied(g, ctx, lifeExactly) {
+		t.Fatal("life-exactly condition failed at exact life")
+	}
+	g.Players[game.Player1].Life = 2
+	if conditionSatisfied(g, ctx, lifeExactly) {
+		t.Fatal("life-exactly condition passed above exact life")
+	}
+	g.Players[game.Player1].Life = 0
+	if conditionSatisfied(g, ctx, lifeExactly) {
+		t.Fatal("life-exactly condition passed below exact life")
+	}
+}
+
 func TestOpponentPermanentCountConditions(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	ctx := conditionContext{controller: game.Player1}
