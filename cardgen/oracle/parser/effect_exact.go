@@ -135,6 +135,7 @@ func exactEffectSyntaxTail(effect *EffectSyntax) bool {
 		return effect.EntersTribute && effect.EntersTributeCount > 0
 	case EffectSacrifice:
 		return exactDirectPronounEffectSyntax(effect, "Sacrifice it.") ||
+			exactSelfSacrificeEffectSyntax(effect) ||
 			exactSacrificeChoiceEffectSyntax(effect)
 	case EffectSearch:
 		return exactSearchEffectSyntax(effect)
@@ -288,6 +289,25 @@ func exactHandLibraryPutEffectSyntax(effect *EffectSyntax) bool {
 			noun,
 		),
 	)
+}
+
+// exactSelfSacrificeEffectSyntax recognizes the controller sacrificing the
+// source permanent itself by self-reference — "Sacrifice this creature.",
+// "Sacrifice <this card's name>." — including the optional "You may sacrifice
+// this creature." offer (exactEffectClauseText strips the "you may" prefix).
+// The pronoun form "Sacrifice it." is handled by exactDirectPronounEffectSyntax.
+func exactSelfSacrificeEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController ||
+		len(effect.Targets) != 0 ||
+		effect.Duration != EffectDurationNone ||
+		effect.Negated {
+		return false
+	}
+	object, ok := exactSelfSubjectReferenceText(effect.References)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), "Sacrifice "+object+".")
 }
 
 func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {

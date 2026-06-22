@@ -664,12 +664,17 @@ func lowerSacrificeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 	if !effect.Exact {
 		return unsupported()
 	}
-	// Source-bound or event-permanent-bound sacrifice of the direct pronoun.
+	// Source-bound or event-permanent-bound sacrifice of a self-reference: the
+	// direct pronoun ("it") or the source object named explicitly ("this
+	// creature", the card's own name).
+	selfReference := len(ctx.content.References) == 1 &&
+		(ctx.content.References[0].Kind == compiler.ReferenceThisObject ||
+			ctx.content.References[0].Kind == compiler.ReferenceSelfName ||
+			(ctx.content.References[0].Kind == compiler.ReferencePronoun &&
+				ctx.content.References[0].Pronoun == compiler.ReferencePronounIt))
 	if effect.Context == parser.EffectContextController &&
 		len(ctx.content.Targets) == 0 &&
-		len(ctx.content.References) == 1 &&
-		ctx.content.References[0].Kind == compiler.ReferencePronoun &&
-		ctx.content.References[0].Pronoun == compiler.ReferencePronounIt &&
+		selfReference &&
 		len(ctx.content.Conditions) == 0 &&
 		len(ctx.content.Keywords) == 0 &&
 		len(ctx.content.Modes) == 0 &&
