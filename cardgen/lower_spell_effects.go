@@ -1179,7 +1179,9 @@ func textWithoutDelimited(text string, span shared.Span, groups []parser.Delimit
 func lowerFightSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	if len(ctx.content.Targets) != 2 ||
 		ctx.content.Targets[0].Cardinality != (compiler.TargetCardinality{Min: 1, Max: 1}) ||
-		ctx.content.Targets[1].Cardinality != (compiler.TargetCardinality{Min: 1, Max: 1}) ||
+		ctx.content.Targets[1].Cardinality.Max != 1 ||
+		ctx.content.Targets[1].Cardinality.Min < 0 ||
+		ctx.content.Targets[1].Cardinality.Min > 1 ||
 		ctx.content.Effects[0].Negated ||
 		!ctx.content.Effects[0].Exact ||
 		ctx.content.Effects[0].Selector.Another ||
@@ -1254,7 +1256,9 @@ func lowerLookAtHandSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnost
 }
 
 func fightCreatureTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
-	if !targetCardinalityIsOne(target) ||
+	if target.Cardinality.Max != 1 ||
+		target.Cardinality.Min < 0 ||
+		target.Cardinality.Min > 1 ||
 		target.Selector.Kind != compiler.SelectorCreature ||
 		target.Selector.Another ||
 		target.Selector.Other ||
@@ -1265,7 +1269,7 @@ func fightCreatureTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, b
 		return game.TargetSpec{}, false
 	}
 	spec := game.TargetSpec{
-		MinTargets: 1,
+		MinTargets: target.Cardinality.Min,
 		MaxTargets: 1,
 		Constraint: target.Text,
 		Allow:      game.TargetAllowPermanent,

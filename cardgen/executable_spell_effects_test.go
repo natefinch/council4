@@ -1063,6 +1063,31 @@ func TestGenerateExecutableCardSourceFight(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceFightOptionalSecondTarget(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Optional Fight",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target creature you control fights up to one target creature you don't control.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.Fight") ||
+		!strings.Contains(source, "RelatedObject: game.TargetPermanentReference(1)") {
+		t.Fatalf("source missing Fight primitive:\n%s", source)
+	}
+	if !strings.Contains(source, "MinTargets: 0,") ||
+		!strings.Contains(source, "MinTargets: 1,") {
+		t.Fatalf("source missing mandatory + optional fight targets:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceFixedDamageTargets(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
