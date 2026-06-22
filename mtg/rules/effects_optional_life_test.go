@@ -193,3 +193,64 @@ func TestReflexiveWhenYouDoAcceptPerformsGatedEffect(t *testing.T) {
 		t.Fatal("accepting the optional must perform the gated draw")
 	}
 }
+
+// payLifeIfYouDoInstructions builds the runtime shape produced by lowering "You
+// may pay N life. If you do, draw a card.": paying life is losing that much life
+// (CR 119.1b), so the optional life loss publishes its result and the gated draw
+// runs only when the controller chooses to pay. The optional loses 2 life; the
+// gated effect draws a card, so both the life total and hand reveal whether each
+// step ran.
+func payLifeIfYouDoInstructions() []game.Instruction {
+	gate := opt.Val(game.InstructionResultGate{Key: game.ResultKey("if-you-do"), Succeeded: game.TriTrue})
+	return []game.Instruction{
+		{
+			Optional:      true,
+			Primitive:     game.LoseLife{Player: game.ControllerReference(), Amount: game.Fixed(2)},
+			PublishResult: game.ResultKey("if-you-do"),
+		},
+		{
+			Primitive:  game.Draw{Player: game.ControllerReference(), Amount: game.Fixed(1)},
+			ResultGate: gate,
+		},
+	}
+}
+
+// TestOptionalPayLifeIfYouDoDeclineSkips verifies that declining the optional
+// "you may pay N life" instruction loses no life and skips the gated draw.
+func TestOptionalPayLifeIfYouDoDeclineSkips(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	before := g.Players[game.Player1].Life
+	gatedDraw := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Gated Draw"}})
+	addInstructionSpellToStack(g, payLifeIfYouDoInstructions())
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: optionalMayAgent{accept: false}}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+	if got := g.Players[game.Player1].Life; got != before {
+		t.Fatalf("life = %d, want %d (declining must pay no life)", got, before)
+	}
+	if g.Players[game.Player1].Hand.Contains(gatedDraw) {
+		t.Fatal("declining the optional pay-life must skip the gated draw")
+	}
+}
+
+// TestOptionalPayLifeIfYouDoAcceptPerforms verifies that accepting the optional
+// "you may pay N life" instruction loses N life and performs the gated draw.
+func TestOptionalPayLifeIfYouDoAcceptPerforms(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	before := g.Players[game.Player1].Life
+	gatedDraw := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Gated Draw"}})
+	addInstructionSpellToStack(g, payLifeIfYouDoInstructions())
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: optionalMayAgent{accept: true}}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+	if got := g.Players[game.Player1].Life; got != before-2 {
+		t.Fatalf("life = %d, want %d (accepting must pay 2 life)", got, before-2)
+	}
+	if !g.Players[game.Player1].Hand.Contains(gatedDraw) {
+		t.Fatal("accepting the optional pay-life must perform the gated draw")
+	}
+}
