@@ -730,18 +730,20 @@ func lowerControllerDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 // whose recipient is the triggering event's player, as in "Whenever an opponent
 // draws a card, this enchantment deals 1 damage to that player." (Underworld
 // Dreams, Fate Unraveler, Megrim, Manabarbs). The "that player" reference binds
-// to the event player (ReferenceBindingEventPlayer); the amount is a fixed value
-// or X. It emits one Damage instruction with an event-player recipient and no
-// target spec, failing closed for any shape outside that template (a recipient
-// that is not the event-bound "that player", a dynamic count amount, any target,
-// recipient selector, condition, keyword, or mode).
+// to the event player (ReferenceBindingEventPlayer). The amount is a fixed
+// value, X, or a resolvable dynamic amount: "deals damage equal to its power to
+// that player" (Gleeful Arsonist) reads the source's power and deals it to the
+// event player. It emits one Damage instruction with an event-player recipient
+// and no target spec, failing closed for any shape outside that template (a
+// recipient that is not the event-bound "that player", an unresolvable amount,
+// any target, recipient selector, condition, keyword, or mode).
 func lowerEventPlayerDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported damage spell",
-			"the executable source backend supports only exact fixed or X damage to that player",
+			"the executable source backend supports only exact fixed, X, or source-power damage to that player",
 		)
 	}
 	if len(ctx.content.Effects) != 1 ||
@@ -757,32 +759,73 @@ func lowerEventPlayerDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.D
 		len(ctx.content.Modes) != 0 {
 		return unsupported()
 	}
-	if (effect.Amount.Known && effect.Amount.Value < 1) ||
-		(!effect.Amount.Known && !effect.Amount.VariableX) ||
-		effect.Amount.DynamicKind != compiler.DynamicAmountNone {
-		return unsupported()
+	// The event-player recipient ("that player") contributes its own reference;
+	// exclude it so the damage-source and amount exactness checks see only the
+	// source clause's references (the damage subject and the amount referent).
+	sourceReferences := make([]compiler.CompiledReference, 0, len(ctx.content.References))
+	for _, reference := range ctx.content.References {
+		if reference.Kind == compiler.ReferenceThatPlayer &&
+			reference.Binding == compiler.ReferenceBindingEventPlayer {
+			continue
+		}
+		sourceReferences = append(sourceReferences, reference)
 	}
 	if !damageReferencesEventPlayer(ctx.content.References) ||
-		!exactDamageSourceSyntax(ctx.content.References[:1]) {
+		len(sourceReferences) == 0 ||
+		!exactDamageSourceSyntax(sourceReferences[:1]) {
 		return unsupported()
 	}
-	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
-	if effect.Amount.Known {
-		amount = game.Fixed(effect.Amount.Value)
+	amount, ok := eventPlayerDamageAmount(effect, sourceReferences)
+	if !ok {
+		return unsupported()
 	}
 	damage := game.Damage{
 		Amount:    amount,
 		Recipient: game.PlayerDamageRecipient(game.EventPlayerReference()),
 	}
-	if damageSource, ok := lowerDamageSourceReference(ctx.content.References[:1]); ok &&
+	if damageSource, ok := lowerDamageSourceReference(sourceReferences[:1]); ok &&
 		damageSource.Kind() == game.ObjectReferenceEventPermanent {
 		damage.DamageSource = opt.Val(damageSource)
-	} else if damageSourceIsSourcePermanent(ctx.content.References[:1]) {
+	} else if damageSourceIsSourcePermanent(sourceReferences[:1]) {
 		damage.DamageSource = opt.Val(game.SourcePermanentReference())
 	}
 	return game.Mode{
 		Sequence: []game.Instruction{{Primitive: damage}},
 	}.Ability(), nil
+}
+
+// eventPlayerDamageAmount resolves the quantity an event-player damage effect
+// deals. A known fixed value (>= 1) and bare X lower directly; a dynamic amount
+// resolves through the source-power machinery, binding to the amount's own
+// referent and validating its references exactly so "deals damage equal to its
+// power to that player" reads the source's power. It fails closed for a
+// non-positive fixed value, a non-X unknown amount, or any dynamic amount the
+// shared resolver cannot represent exactly.
+func eventPlayerDamageAmount(
+	effect compiler.CompiledEffect,
+	sourceReferences []compiler.CompiledReference,
+) (game.Quantity, bool) {
+	if effect.Amount.DynamicKind != compiler.DynamicAmountNone {
+		amountObject, ok := lowerDamageAmountObject(effect.Amount, sourceReferences)
+		if !ok {
+			return game.Quantity{}, false
+		}
+		dynamic, ok := lowerDynamicAmount(effect.Amount, amountObject)
+		if !ok || !exactDamageAmountReferences(effect.Amount, sourceReferences) {
+			return game.Quantity{}, false
+		}
+		return game.Dynamic(dynamic), true
+	}
+	if effect.Amount.Known {
+		if effect.Amount.Value < 1 {
+			return game.Quantity{}, false
+		}
+		return game.Fixed(effect.Amount.Value), true
+	}
+	if !effect.Amount.VariableX {
+		return game.Quantity{}, false
+	}
+	return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), true
 }
 
 // damageReferencesEventPlayer reports whether the references carry the

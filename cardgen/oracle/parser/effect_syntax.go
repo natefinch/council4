@@ -3564,7 +3564,16 @@ func damageRecipientReference(effect *EffectSyntax) DamageRecipientReferenceKind
 	}
 	recipient, ok := damageRecipientTokens(effect.Tokens)
 	if !ok {
-		return DamageRecipientReferenceNone
+		// A dynamic "deals damage equal to ... to <recipient>" clause separates
+		// "damage" from "to" with the amount phrase, so the recipient is read
+		// from the "to" that follows the amount span instead. Word order alone
+		// gates this: only the recipient after the dynamic amount is considered,
+		// so the amount's own referent ("its power", "that creature's toughness")
+		// never bleeds into the recipient.
+		recipient, ok = damageRecipientTokensAfterAmount(effect.Tokens, effect.Amount)
+		if !ok {
+			return DamageRecipientReferenceNone
+		}
 	}
 	// "deals N damage to you" names the source's own controller. The lone "you"
 	// recipient carries no object subject, so it is recognized before the
@@ -3690,8 +3699,9 @@ func targetControllerDamageRiderTokens(effect *EffectSyntax) (int, DamageRecipie
 
 // referencedControllerOwnerRecipient reports whether the recipient tokens name
 // the controller or owner of a referenced object — "its controller", "its
-// owner", "that <noun>'s controller", or "that <noun>'s owner" — and returns
-// the matching recipient role. It fails closed (None) for any other phrase.
+// owner", "that <noun>'s controller", "that <noun>'s owner", "the <noun>'s
+// controller", or "the <noun>'s owner" — and returns the matching recipient
+// role. It fails closed (None) for any other phrase.
 func referencedControllerOwnerRecipient(recipient []shared.Token) (DamageRecipientReferenceKind, bool) {
 	if len(recipient) < 2 {
 		return DamageRecipientReferenceNone, false
@@ -3699,7 +3709,9 @@ func referencedControllerOwnerRecipient(recipient []shared.Token) (DamageRecipie
 	role := recipient[len(recipient)-1]
 	subject := recipient[:len(recipient)-1]
 	subjectIsReferencedObject := len(subject) == 1 && equalWord(subject[0], "its") ||
-		len(subject) == 2 && equalWord(subject[0], "that") && referencePossessiveObjectNoun(subject[1])
+		len(subject) == 2 &&
+			(equalWord(subject[0], "that") || equalWord(subject[0], "the")) &&
+			referencePossessiveObjectNoun(subject[1])
 	if !subjectIsReferencedObject {
 		return DamageRecipientReferenceNone, false
 	}
