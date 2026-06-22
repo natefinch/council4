@@ -212,6 +212,87 @@ func TestLowerAllGraveyardExile(t *testing.T) {
 	}
 }
 
+// TestLowerControllerGraveyardChoiceExile lowers the non-target "Exile a <filter>
+// card from your graveyard" wording to a single game.ExileFromGraveyard
+// instruction whose Selection carries the type filter and the controller scope.
+func TestLowerControllerGraveyardChoiceExile(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Reclaimer",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Exile a creature card from your graveyard.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 0 {
+		t.Fatalf("targets = %#v, want none", mode.Targets)
+	}
+	exile, ok := mode.Sequence[0].Primitive.(game.ExileFromGraveyard)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.ExileFromGraveyard", mode.Sequence[0].Primitive)
+	}
+	if exile.Player.Kind() != game.PlayerReferenceController ||
+		exile.Amount.IsDynamic() || exile.Amount.Value() != 1 {
+		t.Fatalf("exile = %#v", exile)
+	}
+	if !slices.Equal(exile.Selection.RequiredTypes, []types.Card{types.Creature}) ||
+		exile.Selection.Controller != game.ControllerYou {
+		t.Fatalf("selection = %#v", exile.Selection)
+	}
+}
+
+// TestLowerOptionalGraveyardExileThenGatedEffect lowers the "you may exile a
+// <filter> card from your graveyard. If you do, <Y>." wrapper (Masked Vandal):
+// the exile X-action is marked Optional and publishes its result, and the gated
+// Y-effect resolves only when a card was exiled.
+func TestLowerOptionalGraveyardExileThenGatedEffect(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Vandal",
+		Layout:     "normal",
+		TypeLine:   "Creature",
+		OracleText: "When this creature enters, you may exile a creature card from your graveyard. If you do, draw a card.",
+	})
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions", mode.Sequence)
+	}
+	exile, ok := mode.Sequence[0].Primitive.(game.ExileFromGraveyard)
+	if !ok {
+		t.Fatalf("primitive[0] = %T, want game.ExileFromGraveyard", mode.Sequence[0].Primitive)
+	}
+	if !slices.Equal(exile.Selection.RequiredTypes, []types.Card{types.Creature}) {
+		t.Fatalf("selection = %#v", exile.Selection)
+	}
+	if !mode.Sequence[0].Optional ||
+		mode.Sequence[0].PublishResult != game.ResultKey("if-you-do") {
+		t.Fatalf("exile instruction = %#v, want optional publishing if-you-do", mode.Sequence[0])
+	}
+	gate := mode.Sequence[1].ResultGate
+	if !gate.Exists || gate.Val.Key != game.ResultKey("if-you-do") ||
+		gate.Val.Succeeded != game.TriTrue {
+		t.Fatalf("draw gate = %#v, want gated on if-you-do success", mode.Sequence[1].ResultGate)
+	}
+}
+
+// TestLowerControllerGraveyardChoiceExileFailsClosedTargeted documents that the
+// targeted "exile target ... from your graveyard" form keeps lowering to a card
+// target (lowerTargetedGraveyardExile) rather than the choose-at-resolution
+// game.ExileFromGraveyard primitive.
+func TestLowerControllerGraveyardChoiceExileFailsClosedTargeted(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Targeter",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Exile target creature card from your graveyard.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if _, ok := mode.Sequence[0].Primitive.(game.ExileFromGraveyard); ok {
+		t.Fatal("targeted graveyard exile must not lower to game.ExileFromGraveyard")
+	}
+}
+
 // TestLowerPlayerGraveyardExileFailsClosed documents that the referenced-player
 // wording stays unsupported rather than lowering to a whole-graveyard wipe,
 // since its semantics are not represented.

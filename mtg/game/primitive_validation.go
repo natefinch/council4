@@ -1136,6 +1136,16 @@ func (p ExileFromHand) validatePrimitive(targets []TargetSpec, checkTargets bool
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p ExileFromGraveyard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.Amount.IsDynamic() || p.Amount.Value() < 1 {
+		return errors.New("exile from graveyard requires a fixed positive amount")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
 func (p PutFromHand) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
