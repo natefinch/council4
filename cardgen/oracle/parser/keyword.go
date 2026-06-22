@@ -682,6 +682,30 @@ func expandAfflictKeyword(source string) string {
 	return strings.Join(lines, "\n")
 }
 
+// expandFrenzyKeyword rewrites each printed "Frenzy N" keyword line into the
+// triggered ability it abbreviates: "Whenever this creature attacks and isn't
+// blocked, it gets +N/+0 until end of turn." (CR 702.35). Frenzy is pure
+// shorthand for that unblocked-attacker combat trigger, so expanding it to
+// canonical wording lets the standard trigger pipeline lower it. The rewrite is
+// parser-owned because it is a wording substitution; downstream stages see only
+// the expanded ability.
+func expandFrenzyKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		rank, ok := frenzyLineRank(line)
+		if !ok {
+			continue
+		}
+		lines[i] = frenzyCanonicalText(rank)
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
+
 // afflictCanonicalText is the triggered ability that the printed "Afflict N"
 // keyword abbreviates. The life-loss amount is always written as a numeral, as
 // in the printed reminder text.
@@ -697,6 +721,42 @@ func afflictCanonicalText(rank int) string {
 // untouched.
 func afflictLineRank(line string) (int, bool) {
 	const prefix = "Afflict "
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, prefix) {
+		return 0, false
+	}
+	rest := strings.TrimSpace(trimmed[len(prefix):])
+	digits := 0
+	for digits < len(rest) && rest[digits] >= '0' && rest[digits] <= '9' {
+		digits++
+	}
+	if digits == 0 {
+		return 0, false
+	}
+	rank, err := strconv.Atoi(rest[:digits])
+	if err != nil || rank <= 0 {
+		return 0, false
+	}
+	tail := strings.TrimSpace(rest[digits:])
+	if tail != "" && (!strings.HasPrefix(tail, "(") || !strings.HasSuffix(tail, ")")) {
+		return 0, false
+	}
+	return rank, true
+}
+
+// frenzyCanonicalText is the triggered ability that the printed "Frenzy N"
+// keyword abbreviates, with N spelled as its signed power bonus.
+func frenzyCanonicalText(rank int) string {
+	bonus := strconv.Itoa(rank)
+	return "Whenever this creature attacks and isn't blocked, it gets +" + bonus + "/+0 until end of turn."
+}
+
+// frenzyLineRank reports the rank N of a line that is exactly the printed
+// "Frenzy N" keyword, optionally followed only by its parenthesized reminder
+// text. Lines that merely contain the word elsewhere, or pair it with other
+// rules text, are left untouched.
+func frenzyLineRank(line string) (int, bool) {
+	const prefix = "Frenzy "
 	trimmed := strings.TrimSpace(line)
 	if !strings.HasPrefix(trimmed, prefix) {
 		return 0, false

@@ -57,6 +57,11 @@ const (
 	// found, so "whenever a player/an opponent/you searches their library"
 	// triggers fire. Event.Player is the searching player.
 	EventLibrarySearched
+	// EventAttackerBecameUnblocked marks an attacker that remained unblocked
+	// after the declare-blockers step completed (CR 509.1h). It is emitted once
+	// per unblocked attacker so "whenever this creature attacks and isn't
+	// blocked" triggers fire. SourceObjectID/PermanentID identify the attacker.
+	EventAttackerBecameUnblocked
 )
 
 // DamageRecipientKind identifies what received damage. Values are flags so a

@@ -571,6 +571,11 @@ func parseAttackBlockTriggerEventClause(
 			clause.AttackAlone = true
 			return clause
 		}
+		if syntaxWordsEqual(tokens[index+1:], "and", "isn't", "blocked") ||
+			syntaxWordsEqual(tokens[index+1:], "and", "is", "not", "blocked") {
+			clause.Kind = TriggerEventKindAttacksUnblocked
+			return clause
+		}
 		if syntaxWordsEqual(tokens[index+1:], "while", "saddled") {
 			clause.AttackWhileSaddled = true
 			return clause

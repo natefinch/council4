@@ -384,6 +384,10 @@ const (
 	// (TriggerEventClause.UnionKind); a standalone dies trigger is a zone-change
 	// clause with ZoneChange.Kind == TriggerEventZoneChangeDied.
 	TriggerEventKindDied TriggerEventKind = "TriggerEventKindDied"
+	// TriggerEventKindAttacksUnblocked marks "this creature attacks and isn't
+	// blocked" (CR 509.1h). Unlike a bare attack clause it fires after the
+	// declare-blockers step, so it compiles to its own runtime event.
+	TriggerEventKindAttacksUnblocked TriggerEventKind = "TriggerEventKindAttacksUnblocked"
 )
 
 // TriggerEventSubjectKind identifies the grammatical subject in a trigger event.

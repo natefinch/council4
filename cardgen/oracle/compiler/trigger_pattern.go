@@ -39,6 +39,7 @@ const (
 	TriggerEventAttackerBecameBlocked
 	TriggerEventTokenCreated
 	TriggerEventLibrarySearched
+	TriggerEventAttackerBecameUnblocked
 )
 
 // TriggerCastTurn restricts a spell-cast pattern by whose turn the spell was

@@ -76,7 +76,7 @@ func TestRunReportsCompilerAndBackendDiagnostics(t *testing.T) {
 			"games":["paper"],
 			"legalities":{"commander":"legal"},
 			"type_line":"Creature — Bear",
-			"oracle_text":"Dance: Draw a card.\nWhenever this creature attacks and isn't blocked, you gain 1 life.",
+			"oracle_text":"Dance: Draw a card.\nWhenever this creature attacks the player with the most life, you gain 1 life.",
 			"power":"2",
 			"toughness":"2"
 		}

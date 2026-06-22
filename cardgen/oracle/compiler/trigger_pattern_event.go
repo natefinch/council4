@@ -61,6 +61,8 @@ func compileTriggerEventClause(clause *parser.TriggerEventClause) (TriggerPatter
 		ok = compilePermanentSubjectEvent(clause, &pattern, TriggerEventBlockerDeclared)
 	case parser.TriggerEventKindBecameBlocked:
 		ok = compilePermanentSubjectEvent(clause, &pattern, TriggerEventAttackerBecameBlocked)
+	case parser.TriggerEventKindAttacksUnblocked:
+		ok = compilePermanentSubjectEvent(clause, &pattern, TriggerEventAttackerBecameUnblocked)
 	case parser.TriggerEventKindDamageDealt:
 		ok = compileDamageEvent(clause, &pattern)
 	case parser.TriggerEventKindCounterAdded:
