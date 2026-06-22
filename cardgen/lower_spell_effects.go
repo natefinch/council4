@@ -1240,7 +1240,8 @@ func lowerInvestigateSpell(
 // named counter kind, so it defaults to energy; the named word form carries the
 // recognized player counter. The recipient is resolved from the same typed
 // context the fixed-life lowering uses: controller, defending player, the
-// triggering "that player", or a lone targeted player.
+// triggering "that player", a lone targeted player, or a player group ("each
+// opponent" / "each player").
 func lowerGainPlayerCounterSpell(
 	ctx contentCtx,
 	_ *parser.Ability,
@@ -1262,6 +1263,28 @@ func lowerGainPlayerCounterSpell(
 		len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, unsupported
 	}
+	amount := game.Fixed(effect.Amount.Value)
+	if len(ctx.content.Targets) == 0 {
+		var group game.PlayerGroupReference
+		switch effect.Context {
+		case parser.EffectContextEachOpponent, parser.EffectContextEachOtherPlayer:
+			group = game.OpponentsReference()
+		case parser.EffectContextEachPlayer:
+			group = game.AllPlayersReference()
+		default:
+		}
+		if group.Kind != game.PlayerGroupReferenceNone {
+			return game.Mode{
+				Sequence: []game.Instruction{{
+					Primitive: game.AddPlayerCounter{
+						Amount:      amount,
+						PlayerGroup: group,
+						CounterKind: kind,
+					},
+				}},
+			}.Ability(), nil
+		}
+	}
 	playerRef, targets, ok := gainPlayerCounterRecipient(ctx, effect)
 	if !ok {
 		return game.AbilityContent{}, unsupported
@@ -1270,7 +1293,7 @@ func lowerGainPlayerCounterSpell(
 		Targets: targets,
 		Sequence: []game.Instruction{{
 			Primitive: game.AddPlayerCounter{
-				Amount:      game.Fixed(effect.Amount.Value),
+				Amount:      amount,
 				Player:      playerRef,
 				CounterKind: kind,
 			},

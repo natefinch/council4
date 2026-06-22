@@ -5,6 +5,72 @@ import (
 	"testing"
 )
 
+func TestGenerateGainPlayerCounterGroupRecipients(t *testing.T) {
+	t.Parallel()
+	pt := "1"
+	for _, tc := range []struct {
+		name      string
+		typeLine  string
+		oracle    string
+		reference string
+		amount    string
+	}{
+		{
+			name:      "Prologue to Phyresis",
+			typeLine:  "Sorcery",
+			oracle:    "Each opponent gets a poison counter.",
+			reference: "game.OpponentsReference()",
+			amount:    "game.Fixed(1)",
+		},
+		{
+			name:      "Mass Poison",
+			typeLine:  "Sorcery",
+			oracle:    "Each opponent gets two poison counters.",
+			reference: "game.OpponentsReference()",
+			amount:    "game.Fixed(2)",
+		},
+		{
+			name:      "Ichor Rats",
+			typeLine:  "Creature — Phyrexian Rat",
+			oracle:    "When this creature enters, each player gets a poison counter.",
+			reference: "game.AllPlayersReference()",
+			amount:    "game.Fixed(1)",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       tc.name,
+				Layout:     "normal",
+				TypeLine:   tc.typeLine,
+				OracleText: tc.oracle,
+				ManaCost:   "{1}{B}",
+				Power:      &pt,
+				Toughness:  &pt,
+			}, "g")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, want := range []string{
+				"game.AddPlayerCounter",
+				"counter.Poison",
+				"PlayerGroup: " + tc.reference,
+				tc.amount,
+			} {
+				if !strings.Contains(source, want) {
+					t.Fatalf("generated source missing %q:\n%s", want, source)
+				}
+			}
+			if strings.Contains(source, "Player: game.ControllerReference()") {
+				t.Fatalf("group recipient wrongly lowered to controller:\n%s", source)
+			}
+		})
+	}
+}
+
 func TestGenerateGainEnergySource(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {

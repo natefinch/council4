@@ -281,10 +281,12 @@ type AddCounter struct {
 	AllKinds bool
 }
 
-// AddPlayerCounter places counters on a referenced player.
+// AddPlayerCounter places counters on a referenced player or group of players.
+// Exactly one of Player or PlayerGroup must be set.
 type AddPlayerCounter struct {
 	Amount      Quantity
 	Player      PlayerReference
+	PlayerGroup PlayerGroupReference
 	CounterKind counter.Kind
 }
 

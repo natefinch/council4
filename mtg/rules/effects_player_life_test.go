@@ -8,6 +8,47 @@ import (
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
+func TestAddPlayerCounterGroupEachOpponentSkipsController(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addEffectSpellToStack(g, game.Player1, game.AddPlayerCounter{
+		Amount:      game.Fixed(1),
+		PlayerGroup: game.OpponentsReference(),
+		CounterKind: counter.Poison,
+	}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	for _, playerID := range []game.PlayerID{game.Player2, game.Player3, game.Player4} {
+		if got := g.Players[playerID].PoisonCounters; got != 1 {
+			t.Fatalf("opponent %d poison counters = %d, want 1", playerID, got)
+		}
+	}
+	if got := g.Players[game.Player1].PoisonCounters; got != 0 {
+		t.Fatalf("controller poison counters = %d, want 0", got)
+	}
+}
+
+func TestAddPlayerCounterGroupEachPlayerIncludesController(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addEffectSpellToStack(g, game.Player1, game.AddPlayerCounter{
+		Amount:      game.Fixed(2),
+		PlayerGroup: game.AllPlayersReference(),
+		CounterKind: counter.Poison,
+	}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	for _, playerID := range []game.PlayerID{game.Player1, game.Player2, game.Player3, game.Player4} {
+		if got := g.Players[playerID].PoisonCounters; got != 2 {
+			t.Fatalf("player %d poison counters = %d, want 2", playerID, got)
+		}
+	}
+}
+
 func TestDrawEffectDrawsRequestedCards(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
