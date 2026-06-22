@@ -111,6 +111,11 @@ type ContinuousEffect struct {
 	SetSubtypes    []types.Sub
 	AddSubtypes    []types.Sub
 	RemoveSubtypes []types.Sub
+	// AddEveryCreatureType adds every creature subtype to the affected object at
+	// LayerType ("[group/this creature] is/are every creature type", Maskwood
+	// Nexus, Mistform Ultimus). It mirrors the Changeling keyword's type-layer
+	// expansion (CR 702.73) without enumerating the full subtype list in data.
+	AddEveryCreatureType bool
 	// AddSubtypeFromEntryChoice adds the subtype recorded under this key on the
 	// effect's source permanent. A missing source, choice, or subtype result has
 	// no effect.

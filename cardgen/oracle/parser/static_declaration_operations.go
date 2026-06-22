@@ -856,6 +856,9 @@ func parseStaticCharacteristicOperation(
 	if operation, next, ok := parseStaticAllColorsOperation(tokens, index, cursor, end); ok {
 		return operation, next, true
 	}
+	if operation, next, ok := parseStaticEveryCreatureTypeOperation(tokens, index, cursor, end); ok {
+		return operation, next, true
+	}
 	list, next, ok := parseStaticCharacteristicList(tokens, cursor, end, atoms)
 	if !ok {
 		return StaticDeclarationSyntax{}, 0, false
@@ -883,6 +886,27 @@ func parseStaticCharacteristicOperation(
 	operation.ColorsAdd = len(list.colors) != 0
 	operation.OperationSpan = shared.SpanOf(tokens[index:tailNext])
 	return operation, tailNext, true
+}
+
+// parseStaticEveryCreatureTypeOperation recognizes the characteristic-set
+// operation "<group> is/are every creature type" (CR 702.73), spanning
+// tokens[index] ("is"/"are") through "type". It adds every creature subtype to
+// the affected object at the type layer. A trailing "in addition to ..." tail or
+// any other characteristic word fails closed: only the exact "every creature
+// type" form is representable here.
+func parseStaticEveryCreatureTypeOperation(
+	tokens []shared.Token,
+	index, cursor, end int,
+) (StaticDeclarationSyntax, int, bool) {
+	if !staticWordsAt(tokens, cursor, "every", "creature", "type") || cursor+3 > end {
+		return StaticDeclarationSyntax{}, 0, false
+	}
+	next := cursor + 3
+	return StaticDeclarationSyntax{
+		Kind:              StaticDeclarationContinuousCharacteristic,
+		OperationSpan:     shared.SpanOf(tokens[index:next]),
+		EveryCreatureType: true,
+	}, next, true
 }
 
 // staticAllColors lists every Oracle color in canonical WUBRG order; an

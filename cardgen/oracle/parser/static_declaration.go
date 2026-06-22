@@ -316,6 +316,11 @@ type StaticDeclarationSyntax struct {
 	CardTypes []CardType  `json:"-"`
 	Subtypes  []types.Sub `json:"-"`
 	ColorsAdd bool        `json:",omitempty"`
+	// EveryCreatureType marks a "<group> is/are every creature type" continuous
+	// characteristic declaration (Maskwood Nexus, Mistform Ultimus). It adds
+	// every creature subtype at the type layer (CR 702.73) and is mutually
+	// exclusive with the enumerated Colors/CardTypes/Subtypes payload.
+	EveryCreatureType bool `json:",omitempty"`
 
 	// Keyword-grant and card-ability-grant payload: the spans of the granted
 	// keyword atoms in source order.

@@ -853,6 +853,55 @@ func TestGenerateExecutableCardSourceAuraCharacteristicAddition(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceGroupEveryCreatureType(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Maskwood Nexus",
+		Layout:     "normal",
+		ManaCost:   "{4}",
+		TypeLine:   "Artifact",
+		OracleText: "Creatures you control are every creature type.\n{3}, {T}: Create a 2/2 black Shapeshifter creature token with changeling.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "m")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Layer:                game.LayerType,",
+		"AddEveryCreatureType: true,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceSelfEveryCreatureType(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Mistform Ultimus",
+		Layout:     "normal",
+		ManaCost:   "{4}{U}",
+		TypeLine:   "Creature — Illusion",
+		OracleText: "Mistform Ultimus is every creature type.",
+		Power:      new("3"),
+		Toughness:  new("3"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "u")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "AddEveryCreatureType: true,") {
+		t.Fatalf("source missing every-creature-type effect:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceAuraSetColor(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
