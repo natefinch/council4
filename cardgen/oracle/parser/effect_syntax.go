@@ -57,6 +57,9 @@ func emitResolvingSyntax(abilities []Ability) {
 }
 
 func sentencesHaveImpulseExile(sentences []Sentence) bool {
+	for len(sentences) > 2 && isReminderSentence(sentences[len(sentences)-1]) {
+		sentences = sentences[:len(sentences)-1]
+	}
 	return len(sentences) == 2 &&
 		len(sentences[0].Effects) == 1 &&
 		sentences[0].Effects[0].Kind == EffectImpulseExile
@@ -1747,14 +1750,26 @@ func matchLifeLossReplacement(tokens []shared.Token, atoms Atoms) (commaIndex in
 }
 
 func recognizeImpulseExileSequence(sentences []Sentence) bool {
+	// Trailing reminder text ("(If you cast a spell this way…)") is parsed as
+	// its own parenthesized sentence; it carries no game meaning and is excluded
+	// from coverage, so ignore it when matching the two-sentence impulse shape.
+	for len(sentences) > 2 && isReminderSentence(sentences[len(sentences)-1]) {
+		sentences = sentences[:len(sentences)-1]
+	}
 	if len(sentences) != 2 {
 		return false
 	}
-	amount, ok := matchImpulseExileClause(strings.TrimSpace(sentences[0].Text))
+	amount, variableX, ok := matchImpulseExileClause(strings.TrimSpace(sentences[0].Text))
 	if !ok {
 		return false
 	}
-	duration, ok := matchImpulsePlayPermissionClause(strings.TrimSpace(sentences[1].Text), amount)
+	// "the top X cards" agrees with the plural play-permission demonstratives
+	// ("those cards"/"them"), so resolve the object phrase as a plural.
+	objectAmount := amount
+	if variableX {
+		objectAmount = 2
+	}
+	duration, ok := matchImpulsePlayPermissionClause(strings.TrimSpace(sentences[1].Text), objectAmount)
 	if !ok {
 		return false
 	}
@@ -1766,32 +1781,45 @@ func recognizeImpulseExileSequence(sentences []Sentence) bool {
 		ClauseSpan: span,
 		Text:       sentences[0].Text + " " + sentences[1].Text,
 		Tokens:     append(append([]shared.Token(nil), sentences[0].Tokens...), sentences[1].Tokens...),
-		Amount:     EffectAmountSyntax{Value: amount, Known: true},
+		Amount:     EffectAmountSyntax{Value: amount, Known: !variableX, VariableX: variableX},
 		Duration:   duration,
 		Exact:      true,
 	}}
 	return true
 }
 
+// isReminderSentence reports whether a sentence is wholly reminder text, i.e.
+// its trimmed text is fully enclosed in parentheses ("(…)"). Such sentences
+// carry no game meaning and are excluded from coverage.
+func isReminderSentence(sentence Sentence) bool {
+	text := strings.TrimSpace(sentence.Text)
+	return strings.HasPrefix(text, "(") && strings.HasSuffix(text, ")")
+}
+
 // matchImpulseExileClause recognizes "Exile the top card of your library." and
 // its counted plural "Exile the top <N> cards of your library." (N a cardinal
-// word two..ten), returning the fixed number of cards exiled.
-func matchImpulseExileClause(text string) (int, bool) {
+// word two..ten) or variable "Exile the top X cards of your library." It returns
+// the fixed number of cards exiled and whether the count is the spell's {X}.
+func matchImpulseExileClause(text string) (amount int, variableX bool, ok bool) {
 	if strings.EqualFold(text, "Exile the top card of your library.") {
-		return 1, true
+		return 1, false, true
 	}
 	const prefix = "Exile the top "
 	const suffix = " cards of your library."
 	if len(text) <= len(prefix)+len(suffix) ||
 		!strings.EqualFold(text[:len(prefix)], prefix) ||
 		!strings.EqualFold(text[len(text)-len(suffix):], suffix) {
-		return 0, false
+		return 0, false, false
 	}
-	count, ok := CardinalWordValue(text[len(prefix) : len(text)-len(suffix)])
+	middle := text[len(prefix) : len(text)-len(suffix)]
+	if middle == "X" {
+		return 0, true, true
+	}
+	count, ok := CardinalWordValue(middle)
 	if !ok || count < 2 {
-		return 0, false
+		return 0, false, false
 	}
-	return count, true
+	return count, false, true
 }
 
 // matchImpulsePlayPermissionClause recognizes the temporary play-permission

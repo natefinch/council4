@@ -340,8 +340,8 @@ func lowerImpulseExileContent(ctx contentCtx) (game.AbilityContent, *shared.Diag
 		effect.Negated ||
 		effect.Context != parser.EffectContextController ||
 		!ok ||
-		!effect.Amount.Known ||
-		effect.Amount.Value < 1 ||
+		(!effect.Amount.Known && !effect.Amount.VariableX) ||
+		(effect.Amount.Known && effect.Amount.Value < 1) ||
 		ctx.content.Unconsumed() {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -349,9 +349,13 @@ func lowerImpulseExileContent(ctx contentCtx) (game.AbilityContent, *shared.Diag
 			"the executable source backend supports only a fixed-count top-of-library impulse exile with a this-turn or until-end-of-turn play window",
 		)
 	}
+	amount := game.Fixed(effect.Amount.Value)
+	if effect.Amount.VariableX {
+		amount = game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
+	}
 	return game.Mode{Sequence: []game.Instruction{{Primitive: game.ImpulseExile{
 		Player:   game.ControllerReference(),
-		Amount:   game.Fixed(effect.Amount.Value),
+		Amount:   amount,
 		Duration: duration,
 	}}}}.Ability(), nil
 }
