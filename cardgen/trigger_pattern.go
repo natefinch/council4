@@ -133,6 +133,7 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 		PlayerEventOrdinalThisTurn:        pattern.PlayerEventOrdinalThisTurn,
 		ExcludeFirstDrawInDrawStep:        pattern.ExcludeFirstDrawInDrawStep,
 		MatchSpellCopy:                    pattern.MatchSpellCopy,
+		SpellTargetsSource:                pattern.SpellTargetsSource,
 		RequireTappedForMana:              pattern.TappedForMana,
 		RequireProducedManaColor:          pattern.TappedForManaColor,
 	}
@@ -140,6 +141,9 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 		return game.TriggerPattern{}, false
 	}
 	if pattern.MatchSpellCopy && event != game.EventSpellCast {
+		return game.TriggerPattern{}, false
+	}
+	if pattern.SpellTargetsSource && event != game.EventSpellCast {
 		return game.TriggerPattern{}, false
 	}
 

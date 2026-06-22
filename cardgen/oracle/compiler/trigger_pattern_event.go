@@ -197,6 +197,7 @@ func compileSpellCastEvent(clause *parser.TriggerEventClause, pattern *TriggerPa
 	pattern.Controller = controller
 	pattern.CardSelection = selection
 	pattern.MatchSpellCopy = clause.MatchCopy
+	pattern.SpellTargetsSource = clause.SpellTargetsSource
 	pattern.RequireKickerPaid = clause.SpellSelection.Kicker
 	pattern.RequireHistoric = clause.SpellSelection.Historic
 	if clause.SpellSelection.Ordinal != 0 {

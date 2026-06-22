@@ -10,7 +10,7 @@ import (
 func parseSpellCastTriggerEventClause(
 	tokens []shared.Token,
 	intro TriggerIntroductionKind,
-	_ Atoms,
+	atoms Atoms,
 	_ string,
 ) *TriggerEventClause {
 	if intro != TriggerIntroductionWhenever {
@@ -39,6 +39,19 @@ func parseSpellCastTriggerEventClause(
 		matchCopy = true
 		remaining = remaining[2:]
 	}
+	// "Whenever you cast a spell that targets this creature" (Heroic) restricts
+	// the cast trigger to spells targeting the source permanent. The "that
+	// targets <self>" suffix is stripped before the spell selection is parsed so
+	// the remaining "a spell" filter parses normally; the self reference may be
+	// "this creature"/"this permanent" or the source's name.
+	spellTargetsSource := false
+	if index := syntaxWordsIndex(remaining, "that", "targets"); index > 0 {
+		targetTokens := remaining[index+2:]
+		if _, count, selfOK := parseSelfSubject(targetTokens, atoms); selfOK && count == len(targetTokens) {
+			spellTargetsSource = true
+			remaining = remaining[:index]
+		}
+	}
 	selection, ok := parseTriggerEventSpellSelection(remaining)
 	actorOrdinal := false
 	if !ok {
@@ -61,10 +74,11 @@ func parseSpellCastTriggerEventClause(
 		return nil
 	}
 	return &TriggerEventClause{
-		Kind:           TriggerEventKindSpellCast,
-		Actor:          actor,
-		SpellSelection: selection,
-		MatchCopy:      matchCopy,
+		Kind:               TriggerEventKindSpellCast,
+		Actor:              actor,
+		SpellSelection:     selection,
+		MatchCopy:          matchCopy,
+		SpellTargetsSource: spellTargetsSource,
 	}
 }
 
