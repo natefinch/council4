@@ -562,6 +562,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityC
 	if content, ok := lowerDestroyedThisWaySequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerDieRollResultSequence(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerDiscardDrawGreatestThisWaySequence(ctx); ok {
 		return content, true
 	}
@@ -2910,6 +2913,56 @@ func lowerDestroyedThisWaySequence(ctx contentCtx) (game.AbilityContent, bool) {
 			{Primitive: payoffPrimitive},
 		},
 	}.Ability(), true
+}
+
+// lowerDieRollResultSequence handles the two-effect dice pattern "Roll a d<N>.
+// <effect> equal to the result." (Ancient Copper Dragon and the Ancient Dragon
+// dice cycle). It emits a RollDie that publishes its rolled value under
+// dieRollResultKey followed by the payoff effect, whose "equal to the result"
+// amount lowers (via lowerDynamicAmount) to a previous-effect-result read of
+// that published value. The payoff is lowered through the standard token-
+// creation path so every supported token shape (predefined Treasure/Gold/etc.
+// and creature tokens) composes. It fails closed unless the first effect is an
+// exact controller-scoped die roll and the second is a controller-scoped token
+// create whose amount is the die-roll result.
+func lowerDieRollResultSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 {
+		return game.AbilityContent{}, false
+	}
+	roll := &ctx.content.Effects[0]
+	payoff := &ctx.content.Effects[1]
+	if roll.Kind != compiler.EffectRollDie ||
+		roll.DieSides < 2 ||
+		!roll.Exact ||
+		roll.Negated || roll.Optional || ctx.optional ||
+		roll.Context != parser.EffectContextController ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	if payoff.Kind != compiler.EffectCreate ||
+		payoff.Amount.DynamicKind != compiler.DynamicAmountDieRollResult {
+		return game.AbilityContent{}, false
+	}
+	// Lower only the payoff create through the token-creation path, which
+	// resolves the "equal to the result" amount to a previous-effect-result read
+	// keyed to the die roll, then prepend the publishing RollDie instruction.
+	payoffCtx := ctx
+	payoffCtx.content.Effects = ctx.content.Effects[1:]
+	payoffContent, diagnostic := lowerCreateTokenSpellLinked(payoffCtx, "")
+	if diagnostic != nil || len(payoffContent.Modes) != 1 {
+		return game.AbilityContent{}, false
+	}
+	payoffContent.Modes[0].Sequence = append(
+		[]game.Instruction{{
+			Primitive:     game.RollDie{Sides: roll.DieSides},
+			PublishResult: dieRollResultKey,
+		}},
+		payoffContent.Modes[0].Sequence...,
+	)
+	return payoffContent, true
 }
 
 // lowerLifeLostThisWayDrain handles the two-effect drain pattern

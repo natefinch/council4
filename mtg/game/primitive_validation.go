@@ -1849,6 +1849,13 @@ func (p AddExtraPhases) validatePrimitive([]TargetSpec, bool) error {
 	return nil
 }
 
+func (p RollDie) validatePrimitive([]TargetSpec, bool) error {
+	if p.Sides < 2 {
+		return errors.New("roll die requires at least two sides")
+	}
+	return nil
+}
+
 func (p CreateEmblem) validatePrimitive([]TargetSpec, bool) error {
 	if len(p.EmblemAbilities) == 0 {
 		return errors.New("create emblem requires at least one ability")

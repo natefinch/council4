@@ -217,6 +217,11 @@ const (
 	// information only and changes no game state. The targeted player is carried
 	// as a player target on the effect.
 	EffectLookAtHand EffectKind = "EffectLookAtHand"
+	// EffectRollDie models "roll a d<N>" (CR 706): it rolls a single fair die
+	// with DieSides faces and publishes the rolled value as its resolved amount.
+	// A later effect consumes the value via an "equal to the result"
+	// dynamic-amount (EffectAmountDieRollResult). DieSides carries N.
+	EffectRollDie EffectKind = "EffectRollDie"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -518,6 +523,12 @@ const (
 	// the count to the entering permanent. Added last so existing kinds keep
 	// their values.
 	EffectDynamicAmountColorsOfManaSpent EffectDynamicAmountKind = "EffectDynamicAmountColorsOfManaSpent"
+	// EffectDynamicAmountDieRollResult is the value produced by the immediately
+	// preceding die roll in the same ability ("a number of Treasure tokens equal
+	// to the result." — Ancient Copper Dragon and the Ancient Dragon dice cycle).
+	// It carries no selection; the lowerer reads the count the EffectRollDie
+	// effect publishes. Added last so existing kinds keep their values.
+	EffectDynamicAmountDieRollResult EffectDynamicAmountKind = "EffectDynamicAmountDieRollResult"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
@@ -1580,6 +1591,10 @@ type EffectSyntax struct {
 	// AdditionalMainPhase is set only together with AdditionalCombatPhase.
 	AdditionalCombatPhase bool `json:",omitempty"`
 	AdditionalMainPhase   bool `json:",omitempty"`
+	// DieSides is the number of faces of the die rolled by an EffectRollDie
+	// effect ("roll a d20" sets DieSides to 20). It is zero for every other
+	// effect kind.
+	DieSides int `json:",omitempty"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend

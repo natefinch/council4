@@ -785,6 +785,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseAdditionalLandPlaysEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseCastAsThoughFlashEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseAdditionalCombatPhaseEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parseRollDieEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseNoMaximumHandSizeForRestOfGameEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseCantCastSpellsEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseGroupMustAttackEffect(sentence, tokens) },
@@ -2478,6 +2479,44 @@ func parseAdditionalCombatPhaseEffect(sentence Sentence, tokens []shared.Token) 
 		AdditionalCombatPhase: true,
 		AdditionalMainPhase:   additionalMain,
 		Exact:                 true,
+	}}, true
+}
+
+// parseRollDieEffect recognizes "roll a d<N>" (CR 706), the die-roll mechanic
+// whose result a following effect consumes via "...equal to the result." It
+// types an EffectRollDie carrying DieSides = N. The "d<N>" lexes as a word "d"
+// followed by an integer N; any other wording fails closed and flows through the
+// generic effect parser. It backs the Ancient Dragon dice cycle (Ancient Copper
+// Dragon et al.) and other "roll a dN" cards.
+func parseRollDieEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	if len(words) != 4 ||
+		!equalWord(words[0], "roll") ||
+		!equalWord(words[1], "a") ||
+		!equalWord(words[2], "d") ||
+		words[3].Kind != shared.Integer {
+		return nil, false
+	}
+	sides, err := strconv.Atoi(words[3].Text)
+	if err != nil || sides < 2 {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:       EffectRollDie,
+		Span:       sentence.Span,
+		ClauseSpan: sentence.Span,
+		VerbSpan:   words[0].Span,
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		Context:    EffectContextController,
+		DieSides:   sides,
+		Exact:      true,
 	}}, true
 }
 

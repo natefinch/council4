@@ -98,10 +98,11 @@ const (
 	PrimitiveBecomeSaddled
 	PrimitiveAddExtraPhases
 	PrimitiveLookAtHand
+	PrimitiveRollDie
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveLookAtHand) + 1
+const primitiveKindCount = int(PrimitiveRollDie) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -1045,4 +1046,13 @@ type PreventDamage struct {
 type AddExtraPhases struct {
 	Combat bool
 	Main   bool
+}
+
+// RollDie rolls a single fair die with Sides faces and publishes the rolled
+// value (1..Sides) as the instruction's resolved amount (CR 706). It backs
+// "roll a d20" and similar dice mechanics; a later instruction consumes the
+// result via a DynamicAmountPreviousEffectResult amount keyed to this
+// instruction's PublishResult ("...equal to the result").
+type RollDie struct {
+	Sides int
 }

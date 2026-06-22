@@ -35,6 +35,11 @@ func objectCharacteristicAmount(kind compiler.DynamicAmountKind, object game.Obj
 	}
 }
 
+// dieRollResultKey is the result key under which a RollDie instruction publishes
+// its rolled value, consumed by a following "...equal to the result." amount
+// (Ancient Copper Dragon and the Ancient Dragon dice cycle).
+const dieRollResultKey = game.ResultKey("die-roll-result")
+
 func lowerDynamicAmount(amount compiler.CompiledAmount, object game.ObjectReference) (game.DynamicAmount, bool) {
 	dynamic, ok := lowerDynamicAmountKind(amount, object)
 	if !ok {
@@ -137,6 +142,9 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 	case compiler.DynamicAmountSacrificedManaValue:
 		dynamic.Kind = game.DynamicAmountObjectManaValue
 		dynamic.Object = game.SacrificedCostReference()
+	case compiler.DynamicAmountDieRollResult:
+		dynamic.Kind = game.DynamicAmountPreviousEffectResult
+		dynamic.ResultKey = dieRollResultKey
 	default:
 		return game.DynamicAmount{}, false
 	}
