@@ -674,11 +674,11 @@ func lowerDamageReplacement(
 	if !ok {
 		return unsupported("the executable source backend supports only double, triple, or additive damage replacements")
 	}
-	sourceColors, ok := lowerConditionColors(condition.Selection.ColorsAny)
+	sourceColors, ok := conditionColors(condition.Selection.ColorsAny)
 	if !ok {
 		return unsupported("the executable source backend supports only known source colors in damage replacements")
 	}
-	sourceTypes, ok := lowerConditionCardTypes(condition.Selection.RequiredTypes)
+	sourceTypes, ok := conditionCardTypes(condition.Selection.RequiredTypes)
 	if !ok {
 		return unsupported("the executable source backend supports only known source card types in damage replacements")
 	}

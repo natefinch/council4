@@ -388,22 +388,23 @@ func lowerConditionSelection(selection compiler.ConditionSelection) (game.Select
 	return result, len(result.Validate()) == 0
 }
 
-// conditionSelectionSelector translates a ConditionSelection's shared-enum
-// filter dimensions into a compiler.CompiledSelector. It reuses the per-enum
-// lower* helpers and fails closed on any clone-enum value they cannot translate.
-// The condition extras (counters, ExcludeSource, the power-at-least bound, and
-// TokenOnly) are applied by lowerConditionSelection directly because they do not
-// round-trip through CompiledSelector.
+// conditionSelectionSelector translates a ConditionSelection's filter
+// dimensions into a compiler.CompiledSelector. Its shared-typed required-type,
+// supertype, and color fields are consumed directly, failing closed on any
+// value outside the permanent-selection vocabulary. The condition extras
+// (counters, ExcludeSource, the power-at-least bound, and TokenOnly) are applied
+// by lowerConditionSelection directly because they do not round-trip through
+// CompiledSelector.
 func conditionSelectionSelector(selection compiler.ConditionSelection) (compiler.CompiledSelector, bool) {
-	required, ok := lowerConditionCardTypes(selection.RequiredTypes)
+	required, ok := conditionCardTypes(selection.RequiredTypes)
 	if !ok {
 		return compiler.CompiledSelector{}, false
 	}
-	supertypes, ok := lowerConditionSupertypes(selection.Supertypes)
+	supertypes, ok := conditionSupertypes(selection.Supertypes)
 	if !ok {
 		return compiler.CompiledSelector{}, false
 	}
-	colors, ok := lowerConditionColors(selection.ColorsAny)
+	colors, ok := conditionColors(selection.ColorsAny)
 	if !ok {
 		return compiler.CompiledSelector{}, false
 	}
@@ -535,22 +536,15 @@ func lowerConditionCombatState(value compiler.ConditionCombatState) (game.Combat
 	}
 }
 
-func lowerConditionCardTypes(values []compiler.ConditionCardType) ([]types.Card, bool) {
+// conditionCardTypes validates a condition selection's required-type filter,
+// failing closed on any value outside the permanent card types a condition may
+// select (CR 300.1) or an unset entry.
+func conditionCardTypes(values []types.Card) ([]types.Card, bool) {
 	result := make([]types.Card, 0, len(values))
 	for _, value := range values {
 		switch value {
-		case compiler.ConditionCardTypeArtifact:
-			result = append(result, types.Artifact)
-		case compiler.ConditionCardTypeBattle:
-			result = append(result, types.Battle)
-		case compiler.ConditionCardTypeCreature:
-			result = append(result, types.Creature)
-		case compiler.ConditionCardTypeEnchantment:
-			result = append(result, types.Enchantment)
-		case compiler.ConditionCardTypeLand:
-			result = append(result, types.Land)
-		case compiler.ConditionCardTypePlaneswalker:
-			result = append(result, types.Planeswalker)
+		case types.Artifact, types.Battle, types.Creature, types.Enchantment, types.Land, types.Planeswalker:
+			result = append(result, value)
 		default:
 			return nil, false
 		}
@@ -558,16 +552,15 @@ func lowerConditionCardTypes(values []compiler.ConditionCardType) ([]types.Card,
 	return result, true
 }
 
-func lowerConditionSupertypes(values []compiler.ConditionSupertype) ([]types.Super, bool) {
+// conditionSupertypes validates a condition selection's supertype filter,
+// failing closed on any value outside the supertypes a condition may select or
+// an unset entry.
+func conditionSupertypes(values []types.Super) ([]types.Super, bool) {
 	result := make([]types.Super, 0, len(values))
 	for _, value := range values {
 		switch value {
-		case compiler.ConditionSupertypeBasic:
-			result = append(result, types.Basic)
-		case compiler.ConditionSupertypeSnow:
-			result = append(result, types.Snow)
-		case compiler.ConditionSupertypeLegendary:
-			result = append(result, types.Legendary)
+		case types.Basic, types.Snow, types.Legendary:
+			result = append(result, value)
 		default:
 			return nil, false
 		}
@@ -575,20 +568,14 @@ func lowerConditionSupertypes(values []compiler.ConditionSupertype) ([]types.Sup
 	return result, true
 }
 
-func lowerConditionColors(values []compiler.ConditionColor) ([]color.Color, bool) {
+// conditionColors validates a condition selection's color filter, failing closed
+// on any value outside Magic's five colors or an unset entry.
+func conditionColors(values []color.Color) ([]color.Color, bool) {
 	result := make([]color.Color, 0, len(values))
 	for _, value := range values {
 		switch value {
-		case compiler.ConditionColorWhite:
-			result = append(result, color.White)
-		case compiler.ConditionColorBlue:
-			result = append(result, color.Blue)
-		case compiler.ConditionColorBlack:
-			result = append(result, color.Black)
-		case compiler.ConditionColorRed:
-			result = append(result, color.Red)
-		case compiler.ConditionColorGreen:
-			result = append(result, color.Green)
+		case color.White, color.Blue, color.Black, color.Red, color.Green:
+			result = append(result, value)
 		default:
 			return nil, false
 		}

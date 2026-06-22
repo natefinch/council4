@@ -500,7 +500,7 @@ func exactControllerLandCountCondition(condition compiler.CompiledCondition) boo
 		!condition.Negated &&
 		condition.Threshold == 4 &&
 		len(selection.RequiredTypes) == 1 &&
-		selection.RequiredTypes[0] == compiler.ConditionCardTypeLand &&
+		selection.RequiredTypes[0] == types.Land &&
 		len(selection.Supertypes) == 0 &&
 		len(selection.SubtypesAny) == 0 &&
 		len(selection.ColorsAny) == 0 &&

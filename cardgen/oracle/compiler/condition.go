@@ -1,6 +1,10 @@
 package compiler
 
-import "github.com/natefinch/council4/cardgen/oracle/parser"
+import (
+	"github.com/natefinch/council4/cardgen/oracle/parser"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/types"
+)
 
 // recognizeCondition maps the typed parser syntax that spans this condition onto
 // closed semantic data. It consumes typed ConditionClause and
@@ -332,11 +336,11 @@ func compileConditionSelection(syntax parser.ConditionSelection) (ConditionSelec
 		selection.SubtypesAny = append(selection.SubtypesAny, string(value))
 	}
 	for _, value := range syntax.ColorsAny {
-		color, ok := conditionColorFromTrigger(value)
+		col, ok := conditionColorFromTrigger(value)
 		if !ok {
 			return ConditionSelection{}, false
 		}
-		selection.ColorsAny = append(selection.ColorsAny, color)
+		selection.ColorsAny = append(selection.ColorsAny, col)
 	}
 	tapped, ok := conditionTriStateFromParser(syntax.Tapped)
 	if !ok {
@@ -369,52 +373,52 @@ func compileConditionSelection(syntax parser.ConditionSelection) (ConditionSelec
 	return selection, true
 }
 
-func conditionCardTypeFromTrigger(value parser.TriggerCardType) (ConditionCardType, bool) {
+func conditionCardTypeFromTrigger(value parser.TriggerCardType) (types.Card, bool) {
 	switch value {
 	case parser.TriggerCardTypeArtifact:
-		return ConditionCardTypeArtifact, true
+		return types.Artifact, true
 	case parser.TriggerCardTypeBattle:
-		return ConditionCardTypeBattle, true
+		return types.Battle, true
 	case parser.TriggerCardTypeCreature:
-		return ConditionCardTypeCreature, true
+		return types.Creature, true
 	case parser.TriggerCardTypeEnchantment:
-		return ConditionCardTypeEnchantment, true
+		return types.Enchantment, true
 	case parser.TriggerCardTypeLand:
-		return ConditionCardTypeLand, true
+		return types.Land, true
 	case parser.TriggerCardTypePlaneswalker:
-		return ConditionCardTypePlaneswalker, true
+		return types.Planeswalker, true
 	default:
-		return ConditionCardTypeUnknown, false
+		return "", false
 	}
 }
 
-func conditionSupertypeFromParser(value parser.ConditionSupertype) (ConditionSupertype, bool) {
+func conditionSupertypeFromParser(value parser.ConditionSupertype) (types.Super, bool) {
 	switch value {
 	case parser.ConditionSupertypeBasic:
-		return ConditionSupertypeBasic, true
+		return types.Basic, true
 	case parser.ConditionSupertypeSnow:
-		return ConditionSupertypeSnow, true
+		return types.Snow, true
 	case parser.ConditionSupertypeLegendary:
-		return ConditionSupertypeLegendary, true
+		return types.Legendary, true
 	default:
-		return ConditionSupertypeUnknown, false
+		return "", false
 	}
 }
 
-func conditionColorFromTrigger(value parser.TriggerColor) (ConditionColor, bool) {
+func conditionColorFromTrigger(value parser.TriggerColor) (color.Color, bool) {
 	switch value {
 	case parser.TriggerColorWhite:
-		return ConditionColorWhite, true
+		return color.White, true
 	case parser.TriggerColorBlue:
-		return ConditionColorBlue, true
+		return color.Blue, true
 	case parser.TriggerColorBlack:
-		return ConditionColorBlack, true
+		return color.Black, true
 	case parser.TriggerColorRed:
-		return ConditionColorRed, true
+		return color.Red, true
 	case parser.TriggerColorGreen:
-		return ConditionColorGreen, true
+		return color.Green, true
 	default:
-		return ConditionColorUnknown, false
+		return "", false
 	}
 }
 
