@@ -130,6 +130,8 @@ func TestParseConditionPredicateMeaning(t *testing.T) {
 		{"cast during main phase", "you cast this spell during your main phase", ConditionPredicateCastDuringControllerMainPhase, 0},
 		{"spell was kicked", "this spell was kicked", ConditionPredicateSpellWasKicked, 0},
 		{"controls commander", "you control your commander", ConditionPredicateControllerControlsCommander, 0},
+		{"spell X at least more", "X is 10 or more", ConditionPredicateSpellXAtLeast, 10},
+		{"spell X at least greater", "X is 4 or greater", ConditionPredicateSpellXAtLeast, 4},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

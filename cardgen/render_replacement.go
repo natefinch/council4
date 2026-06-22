@@ -775,6 +775,7 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		cond.ControllerGraveyardCardTypeCountAtLeast < 0 ||
 		cond.ControllerBasicLandTypeCountAtLeast < 0 ||
 		cond.ControllerLibrarySizeAtLeast < 0 ||
+		cond.SpellXAtLeast < 0 ||
 		cond.ControllerLifeExactly.Exists && cond.ControllerLifeExactly.Val < 0 ||
 		cond.ControllerCreaturePowerDiversityAtLeast < 0 ||
 		cond.ControllerGainedLifeThisTurnAtLeast < 0 {
@@ -894,6 +895,10 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	}
 	if cond.SpellWasKicked {
 		fields = append(fields, "SpellWasKicked: true,")
+		hasPredicate = true
+	}
+	if cond.SpellXAtLeast > 0 {
+		fields = append(fields, fmt.Sprintf("SpellXAtLeast: %d,", cond.SpellXAtLeast))
 		hasPredicate = true
 	}
 	if cond.ControllerGraveyardCardCountAtLeast > 0 {
