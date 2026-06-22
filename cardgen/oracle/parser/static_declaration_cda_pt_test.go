@@ -151,6 +151,7 @@ func TestParseCharacteristicDefiningPowerToughnessNewCounts(t *testing.T) {
 		card        string
 		wantValue   StaticDeclarationDynamicValueKind
 		wantSubtype TriggerSubtype
+		wantColor   Color
 	}{
 		{
 			name:      "creature cards in your graveyard",
@@ -196,14 +197,32 @@ func TestParseCharacteristicDefiningPowerToughnessNewCounts(t *testing.T) {
 			name:        "swamps you control",
 			source:      "Korlash's power and toughness are each equal to the number of Swamps you control.",
 			card:        "Korlash",
-			wantValue:   StaticDeclarationDynamicValueControllerLandSubtypeCount,
+			wantValue:   StaticDeclarationDynamicValueControllerSubtypeCount,
 			wantSubtype: "Swamp",
 		},
 		{
 			name:        "forests you control",
 			source:      "This creature's power and toughness are each equal to the number of Forests you control.",
-			wantValue:   StaticDeclarationDynamicValueControllerLandSubtypeCount,
+			wantValue:   StaticDeclarationDynamicValueControllerSubtypeCount,
 			wantSubtype: "Forest",
+		},
+		{
+			name:        "goblins you control",
+			source:      "This creature's power and toughness are each equal to the number of Goblins you control.",
+			wantValue:   StaticDeclarationDynamicValueControllerSubtypeCount,
+			wantSubtype: "Goblin",
+		},
+		{
+			name:        "spirits you control",
+			source:      "This creature's power is equal to the number of Spirits you control.",
+			wantValue:   StaticDeclarationDynamicValueControllerSubtypeCount,
+			wantSubtype: "Spirit",
+		},
+		{
+			name:      "red permanents you control",
+			source:    "This creature's power and toughness are each equal to the number of red permanents you control.",
+			wantValue: StaticDeclarationDynamicValueControllerColorPermanentCount,
+			wantColor: ColorRed,
 		},
 	}
 	for _, tc := range cases {
@@ -223,6 +242,9 @@ func TestParseCharacteristicDefiningPowerToughnessNewCounts(t *testing.T) {
 			if string(declaration.DynamicValueSubtype) != string(tc.wantSubtype) {
 				t.Fatalf("dynamic value subtype = %q, want %q", declaration.DynamicValueSubtype, tc.wantSubtype)
 			}
+			if declaration.DynamicValueColor != tc.wantColor {
+				t.Fatalf("dynamic value color = %q, want %q", declaration.DynamicValueColor, tc.wantColor)
+			}
 		})
 	}
 }
@@ -239,7 +261,7 @@ func TestParseCharacteristicDefiningPowerToughnessFailsClosed(t *testing.T) {
 		},
 		{
 			name:   "unsupported count",
-			source: "This creature's power and toughness are each equal to the number of Zombies you control.",
+			source: "This creature's power and toughness are each equal to the number of nonbasic lands you control.",
 		},
 		{
 			name:   "compound count",

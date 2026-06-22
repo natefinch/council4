@@ -317,8 +317,10 @@ func dynamicValueBase(g *game.Game, controller game.PlayerID, dynamic *game.Dyna
 		return controllerGraveyardCardCount(g, controller, graveyardCardIsPermanent)
 	case game.DynamicValueControllerCardTypesInGraveyard:
 		return controllerGraveyardCardTypeCount(g, controller)
-	case game.DynamicValueControllerLandSubtypeCount:
+	case game.DynamicValueControllerSubtypeCount:
 		return countControlledPermanentsWithSubtype(g, controller, dynamic.Subtype)
+	case game.DynamicValueControllerColorPermanentCount:
+		return countControlledPermanentsWithColor(g, controller, dynamic.Color)
 	case game.DynamicValueControllerBasicLandTypeCount:
 		return controllerBasicLandSubtypeCount(g, controller)
 	case game.DynamicValueControllerLifeTotal:
@@ -410,6 +412,24 @@ func countControlledPermanentsWithSubtype(g *game.Game, controller game.PlayerID
 			continue
 		}
 		if card, ok := permanentCardDef(g, permanent); ok && card.HasSubtype(subtype) {
+			count++
+		}
+	}
+	return count
+}
+
+// countControlledPermanentsWithColor counts the active permanents the given
+// player controls whose printed front face includes the color ("the number of
+// red permanents you control"). It reads printed colors only, so it does not
+// depend on continuous layers and cannot recurse into power/toughness
+// computation.
+func countControlledPermanentsWithColor(g *game.Game, controller game.PlayerID, c color.Color) int {
+	count := 0
+	for _, permanent := range g.Battlefield {
+		if !activeBattlefieldPermanent(permanent) || permanent.Controller != controller || permanent.FaceDown {
+			continue
+		}
+		if card, ok := permanentCardDef(g, permanent); ok && slices.Contains(card.Colors, c) {
 			count++
 		}
 	}

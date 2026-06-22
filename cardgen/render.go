@@ -126,7 +126,7 @@ func renderPTValue(pt game.PT) string {
 // renderDynamicValue renders a typed game.DynamicValue as a Go literal. It is
 // used for characteristic-defining power/toughness values ("equal to the number
 // of cards in your hand").
-func renderDynamicValue(value game.DynamicValue) string {
+func renderDynamicValue(value game.DynamicValue) (string, error) {
 	kind := dynamicValueKindLiteral(value.Kind)
 	fields := ""
 	if value.Value != 0 {
@@ -138,7 +138,14 @@ func renderDynamicValue(value game.DynamicValue) string {
 	if value.Subtype != "" {
 		fields += fmt.Sprintf(", Subtype: %s", SubtypeToLiteral(string(value.Subtype), []string{"Land"}))
 	}
-	return fmt.Sprintf("game.DynamicValue{Kind: %s%s}", kind, fields)
+	if value.Color != "" {
+		lit, err := colorValueToLiteral(value.Color)
+		if err != nil {
+			return "", err
+		}
+		fields += fmt.Sprintf(", Color: %s", lit)
+	}
+	return fmt.Sprintf("game.DynamicValue{Kind: %s%s}", kind, fields), nil
 }
 
 func dynamicValueKindLiteral(kind game.DynamicValueKind) string {
@@ -173,14 +180,16 @@ func dynamicValueKindLiteral(kind game.DynamicValueKind) string {
 		return "game.DynamicValueControllerCardTypesInGraveyard"
 	case game.DynamicValueControllerPermanentCardsInGraveyard:
 		return "game.DynamicValueControllerPermanentCardsInGraveyard"
-	case game.DynamicValueControllerLandSubtypeCount:
-		return "game.DynamicValueControllerLandSubtypeCount"
+	case game.DynamicValueControllerSubtypeCount:
+		return "game.DynamicValueControllerSubtypeCount"
 	case game.DynamicValueControllerBasicLandTypeCount:
 		return "game.DynamicValueControllerBasicLandTypeCount"
 	case game.DynamicValueControllerLifeTotal:
 		return "game.DynamicValueControllerLifeTotal"
 	case game.DynamicValueAllPlayersHandSize:
 		return "game.DynamicValueAllPlayersHandSize"
+	case game.DynamicValueControllerColorPermanentCount:
+		return "game.DynamicValueControllerColorPermanentCount"
 	default:
 		return "game.DynamicValueNone"
 	}
@@ -532,12 +541,26 @@ func (Renderer) writeFaceScalarFields(b *strings.Builder, ctx *renderCtx, face *
 	if face.DynamicPower.Exists {
 		ctx.need(importOpt)
 		ctx.need(importGame)
-		_, _ = fmt.Fprintf(b, "%sDynamicPower: opt.Val(%s),\n", indent, renderDynamicValue(face.DynamicPower.Val))
+		lit, err := renderDynamicValue(face.DynamicPower.Val)
+		if err != nil {
+			return err
+		}
+		if face.DynamicPower.Val.Color != "" {
+			ctx.need(importColor)
+		}
+		_, _ = fmt.Fprintf(b, "%sDynamicPower: opt.Val(%s),\n", indent, lit)
 	}
 	if face.DynamicToughness.Exists {
 		ctx.need(importOpt)
 		ctx.need(importGame)
-		_, _ = fmt.Fprintf(b, "%sDynamicToughness: opt.Val(%s),\n", indent, renderDynamicValue(face.DynamicToughness.Val))
+		lit, err := renderDynamicValue(face.DynamicToughness.Val)
+		if err != nil {
+			return err
+		}
+		if face.DynamicToughness.Val.Color != "" {
+			ctx.need(importColor)
+		}
+		_, _ = fmt.Fprintf(b, "%sDynamicToughness: opt.Val(%s),\n", indent, lit)
 	}
 	if face.Loyalty.Exists {
 		ctx.need(importOpt)

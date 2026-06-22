@@ -64,10 +64,11 @@ const (
 	StaticDeclarationDynamicValueControllerLandCardsInGraveyard             StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerLandCardsInGraveyard"
 	StaticDeclarationDynamicValueControllerCardTypesInGraveyard             StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerCardTypesInGraveyard"
 	StaticDeclarationDynamicValueControllerPermanentCardsInGraveyard        StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerPermanentCardsInGraveyard"
-	StaticDeclarationDynamicValueControllerLandSubtypeCount                 StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerLandSubtypeCount"
+	StaticDeclarationDynamicValueControllerSubtypeCount                     StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerSubtypeCount"
 	StaticDeclarationDynamicValueControllerBasicLandTypeCount               StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerBasicLandTypeCount"
 	StaticDeclarationDynamicValueControllerLifeTotal                        StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerLifeTotal"
 	StaticDeclarationDynamicValueAllPlayersHandSize                         StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueAllPlayersHandSize"
+	StaticDeclarationDynamicValueControllerColorPermanentCount              StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerColorPermanentCount"
 )
 
 // StaticDeclarationSubjectKind identifies the affected group named by a typed
@@ -301,10 +302,17 @@ type StaticDeclarationSyntax struct {
 	// sets the source object's power and toughness equal to.
 	DynamicValue StaticDeclarationDynamicValueKind `json:",omitempty"`
 
-	// DynamicValueSubtype carries the land subtype counted by a
-	// StaticDeclarationDynamicValueControllerLandSubtypeCount declaration ("the
-	// number of Swamps you control"). It is empty for every other count kind.
+	// DynamicValueSubtype carries the subtype counted by a
+	// StaticDeclarationDynamicValueControllerSubtypeCount declaration ("the
+	// number of Swamps you control", "the number of Goblins you control"). It is
+	// empty for every other count kind.
 	DynamicValueSubtype types.Sub `json:"-"`
+
+	// DynamicValueColor carries the color counted by a
+	// StaticDeclarationDynamicValueControllerColorPermanentCount declaration
+	// ("the number of red permanents you control"). It is empty for every other
+	// count kind.
+	DynamicValueColor Color `json:"-"`
 
 	// DynamicSetsPower and DynamicSetsToughness record which characteristics a
 	// characteristic-defining power/toughness declaration sets. "power and

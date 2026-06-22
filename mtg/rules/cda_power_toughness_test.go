@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -89,7 +90,7 @@ func TestDynamicStarToughnessOffsetTracksGraveyards(t *testing.T) {
 // lands with the named subtype and updates as lands change.
 func TestDynamicStarLandSubtypeCount(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	count := game.DynamicValue{Kind: game.DynamicValueControllerLandSubtypeCount, Subtype: types.Swamp}
+	count := game.DynamicValue{Kind: game.DynamicValueControllerSubtypeCount, Subtype: types.Swamp}
 	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
 		Name:             "Korlash",
 		Types:            []types.Card{types.Creature},
@@ -113,6 +114,97 @@ func TestDynamicStarLandSubtypeCount(t *testing.T) {
 	addLandPermanent(g, game.Player1, "Swamp", types.Swamp)
 	if got := effectivePower(g, creature); got != 3 {
 		t.Fatalf("effective power after extra Swamp = %d, want 3", got)
+	}
+}
+
+// TestDynamicStarCreatureSubtypeCount covers "the number of <Subtype> you
+// control" for a non-land creature subtype: the power/toughness equals the count
+// of controlled permanents with the named subtype and updates as they change.
+func TestDynamicStarCreatureSubtypeCount(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	count := game.DynamicValue{Kind: game.DynamicValueControllerSubtypeCount, Subtype: types.Goblin}
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:             "Goblin Anthemist",
+		Types:            []types.Card{types.Creature},
+		Subtypes:         []types.Sub{types.Goblin},
+		Power:            opt.Val(game.PT{IsStar: true}),
+		Toughness:        opt.Val(game.PT{IsStar: true}),
+		DynamicPower:     opt.Val(count),
+		DynamicToughness: opt.Val(count),
+	}})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Goblin Token",
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Goblin},
+	}})
+	addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Enemy Goblin",
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Goblin},
+	}})
+
+	if got := effectivePower(g, creature); got != 2 {
+		t.Fatalf("effective power = %d, want 2 Goblins you control", got)
+	}
+	if toughness, ok := effectiveToughness(g, creature); !ok || toughness != 2 {
+		t.Fatalf("effective toughness = %d (ok=%v), want 2", toughness, ok)
+	}
+
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Another Goblin",
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Goblin},
+	}})
+	if got := effectivePower(g, creature); got != 3 {
+		t.Fatalf("effective power after extra Goblin = %d, want 3", got)
+	}
+}
+
+// TestDynamicStarColorPermanentCount covers "the number of <color> permanents
+// you control": the power/toughness equals the count of controlled permanents
+// whose printed colors include the named color and updates as they change.
+func TestDynamicStarColorPermanentCount(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	count := game.DynamicValue{Kind: game.DynamicValueControllerColorPermanentCount, Color: color.Red}
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:             "Crimson Avatar",
+		Types:            []types.Card{types.Creature},
+		Colors:           []color.Color{color.Red},
+		Power:            opt.Val(game.PT{IsStar: true}),
+		Toughness:        opt.Val(game.PT{IsStar: true}),
+		DynamicPower:     opt.Val(count),
+		DynamicToughness: opt.Val(count),
+	}})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:   "Red Artifact",
+		Types:  []types.Card{types.Artifact},
+		Colors: []color.Color{color.Red},
+	}})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:   "Blue Creature",
+		Types:  []types.Card{types.Creature},
+		Colors: []color.Color{color.Blue},
+	}})
+	addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:   "Enemy Red",
+		Types:  []types.Card{types.Creature},
+		Colors: []color.Color{color.Red},
+	}})
+
+	if got := effectivePower(g, creature); got != 2 {
+		t.Fatalf("effective power = %d, want 2 red permanents you control", got)
+	}
+	if toughness, ok := effectiveToughness(g, creature); !ok || toughness != 2 {
+		t.Fatalf("effective toughness = %d (ok=%v), want 2", toughness, ok)
+	}
+
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:   "Red Enchantment",
+		Types:  []types.Card{types.Enchantment},
+		Colors: []color.Color{color.Red},
+	}})
+	if got := effectivePower(g, creature); got != 3 {
+		t.Fatalf("effective power after extra red permanent = %d, want 3", got)
 	}
 }
 
