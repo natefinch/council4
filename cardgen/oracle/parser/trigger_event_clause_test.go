@@ -570,6 +570,32 @@ func spellAndAbilityTriggerEventClauseTests() []triggerEventClauseTest {
 			},
 		},
 		{
+			name:   "creature spell mana value at most",
+			source: "Whenever you cast a creature spell with mana value 3 or less, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if !clause.SpellSelection.MatchManaValue || clause.SpellSelection.ManaValueAtMost != 3 {
+					t.Fatalf("clause = %#v", clause)
+				}
+				if clause.SpellSelection.ManaValueAtLeast != 0 {
+					t.Fatalf("ManaValueAtLeast = %d, want 0", clause.SpellSelection.ManaValueAtLeast)
+				}
+				if len(clause.SpellSelection.Types) != 1 || clause.SpellSelection.Types[0] != TriggerCardTypeCreature {
+					t.Fatalf("types = %#v", clause.SpellSelection.Types)
+				}
+			},
+		},
+		{
+			name:   "spell mana value at most or fewer",
+			source: "Whenever you cast a spell with mana value 5 or fewer, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if !clause.SpellSelection.MatchManaValue || clause.SpellSelection.ManaValueAtMost != 5 {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
 			name:   "spell ordinal first",
 			source: "Whenever you cast your first spell each turn, draw a card.",
 			check: func(t *testing.T, clause *TriggerEventClause) {

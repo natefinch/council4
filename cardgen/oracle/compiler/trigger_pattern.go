@@ -289,6 +289,7 @@ type TriggerSelection struct {
 	NonToken         bool
 	TokenOnly        bool
 	ManaValueAtLeast int
+	ManaValueAtMost  int
 	MatchManaValue   bool
 	ManaValue        TriggerNumberFilter
 	Power            TriggerNumberFilter

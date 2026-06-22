@@ -498,6 +498,7 @@ func compileTriggerSpellSelection(syntax parser.TriggerEventSpellSelection) (Tri
 		Colorless:        syntax.Colorless,
 		Multicolored:     syntax.Multicolored,
 		ManaValueAtLeast: syntax.ManaValueAtLeast,
+		ManaValueAtMost:  syntax.ManaValueAtMost,
 		MatchManaValue:   syntax.MatchManaValue,
 	}
 	for _, value := range syntax.Types {

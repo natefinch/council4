@@ -639,6 +639,7 @@ type TriggerEventSpellSelection struct {
 	Kicker           bool              `json:",omitempty"`
 	Historic         bool              `json:",omitempty"`
 	ManaValueAtLeast int               `json:",omitempty"`
+	ManaValueAtMost  int               `json:",omitempty"`
 	MatchManaValue   bool              `json:",omitempty"`
 	FromZone         TriggerEventZone  `json:",omitzero"`
 	// Ordinal records a per-turn spell-cast position from "your Nth spell each

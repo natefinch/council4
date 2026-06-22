@@ -585,11 +585,17 @@ func lowerTriggerSelection(selection compiler.TriggerSelection) (game.Selection,
 		if selection.ManaValue.Comparison != compiler.TriggerComparisonUnknown {
 			return game.Selection{}, false
 		}
+		op := compare.GreaterOrEqual
+		value := selection.ManaValueAtLeast
+		if selection.ManaValueAtMost != 0 {
+			op = compare.LessOrEqual
+			value = selection.ManaValueAtMost
+		}
 		result.ManaValue = opt.Val(compare.Int{
-			Op:    compare.GreaterOrEqual,
-			Value: selection.ManaValueAtLeast,
+			Op:    op,
+			Value: value,
 		})
-	} else if selection.ManaValueAtLeast != 0 {
+	} else if selection.ManaValueAtLeast != 0 || selection.ManaValueAtMost != 0 {
 		return game.Selection{}, false
 	}
 	return result, true
