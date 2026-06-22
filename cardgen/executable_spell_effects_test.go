@@ -1970,3 +1970,30 @@ func TestGenerateExecutableGreatestCharacteristicDraw(t *testing.T) {
 		})
 	}
 }
+
+func TestGenerateExecutableExileTopOfEachPlayersLibrary(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Library Raider",
+		Layout:     "normal",
+		TypeLine:   "Creature — Dinosaur",
+		ManaCost:   "{4}{R}{R}",
+		Power:      new("6"),
+		Toughness:  new("6"),
+		OracleText: "Whenever Library Raider attacks, exile the top card of each player's library.",
+	}, "l")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"Primitive: game.ExileTopOfLibrary{",
+		"PlayerGroup: game.AllPlayersReference(),",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated card missing %q:\n%s", want, source)
+		}
+	}
+}

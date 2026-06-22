@@ -48,6 +48,34 @@ func TestExactExileTopOfLibraryAccepts(t *testing.T) {
 	}
 }
 
+// TestExactExileTopOfLibraryControllerEachLibraryScope proves the
+// controller-actor "exile the top card of each player's/opponent's library."
+// spellings resolve to the player scope whose libraries are exiled, so lowering
+// emits the all-players or opponents group rather than the controller alone.
+func TestExactExileTopOfLibraryControllerEachLibraryScope(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		source string
+		want   EffectContextKind
+	}{
+		{"Exile the top card of your library.", EffectContextController},
+		{"Exile the top card of each player's library.", EffectContextEachPlayer},
+		{"Exile the top two cards of each player's library.", EffectContextEachPlayer},
+		{"Exile the top card of each opponent's library.", EffectContextEachOpponent},
+		{"Exile the top card of each other player's library.", EffectContextEachOtherPlayer},
+	}
+	for _, c := range cases {
+		effect := exileTopEffect(t, c.source)
+		if effect.CardSource != EffectCardSourceTopOfPlayerLibrary {
+			t.Errorf("exileTopEffect(%q).CardSource = %q, want %q",
+				c.source, effect.CardSource, EffectCardSourceTopOfPlayerLibrary)
+		}
+		if effect.Context != c.want {
+			t.Errorf("exileTopEffect(%q).Context = %q, want %q", c.source, effect.Context, c.want)
+		}
+	}
+}
+
 func TestExactExileTopOfLibraryRejects(t *testing.T) {
 	t.Parallel()
 	// "Exile the top card of target player's library" is a different zone owner
