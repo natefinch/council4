@@ -5055,10 +5055,15 @@ func moveCountersDistributeClause(clause []shared.Token) bool {
 }
 
 // moveThoseCountersClause reports the counter-salvage form "put those counters
-// on <destination>", where "those counters" names the counters a triggering
-// permanent had as it left a zone. It anchors on the literal "those counters"
-// run so an ordinary counter placement ("put a +1/+1 counter on ...") keeps
-// MoveThoseCounters false.
+// on <destination>" or its singular-pronoun variant "put its counters on
+// <destination>", where "those"/"its" name the counters a triggering permanent
+// had as it left a zone ("When this creature dies, put its counters on target
+// creature you control."). It anchors on the literal "those counters" or "its
+// counters" run so an ordinary counter placement ("put a +1/+1 counter on ...")
+// keeps MoveThoseCounters false. The kind-named singular form ("put its +1/+1
+// counters on ...") keeps the pronoun and the noun non-adjacent and so stays
+// out of this kind-agnostic salvage move.
 func moveThoseCountersClause(clause []shared.Token) bool {
-	return effectHasTokenWords(clause, "those", "counters")
+	return effectHasTokenWords(clause, "those", "counters") ||
+		effectHasTokenWords(clause, "its", "counters")
 }

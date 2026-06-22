@@ -3057,9 +3057,11 @@ func exactMoveCountersEffectSyntax(effect *EffectSyntax) bool {
 }
 
 // exactPutThoseCountersEffectSyntax recognizes the counter-salvage form "put
-// those counters on <destination>", where "those counters" names the counters a
+// those counters on <destination>" and its singular-pronoun variant "put its
+// counters on <destination>", where "those"/"its" name the counters a
 // triggering permanent had as it left a zone ("Whenever a creature you control
 // leaves the battlefield, if it had counters on it, put those counters on target
+// creature you control.", "When this creature dies, put its counters on target
 // creature you control."). The destination is either a single/optional exact
 // target permanent or the source permanent itself ("this <object>" or the card's
 // own name). The clause is reconstructed and matched byte-exact so any
@@ -3073,10 +3075,7 @@ func exactPutThoseCountersEffectSyntax(effect *EffectSyntax) bool {
 		if !effect.Targets[0].Exact || effect.Targets[0].Cardinality.Max != 1 {
 			return false
 		}
-		return strings.EqualFold(
-			text,
-			fmt.Sprintf("Put those counters on %s.", effect.Targets[0].Text),
-		)
+		return putThoseCountersClauseMatches(text, effect.Targets[0].Text)
 	}
 	if len(effect.Targets) != 0 {
 		return false
@@ -3085,7 +3084,21 @@ func exactPutThoseCountersEffectSyntax(effect *EffectSyntax) bool {
 	if !ok {
 		return false
 	}
-	return strings.EqualFold(text, fmt.Sprintf("Put those counters on %s.", dest))
+	return putThoseCountersClauseMatches(text, dest)
+}
+
+// putThoseCountersClauseMatches reports whether text is the kind-agnostic
+// counter-salvage placement "Put those counters on <dest>." or its
+// singular-pronoun variant "Put its counters on <dest>." Both pronouns name a
+// triggering permanent's counters for the same salvage move, so either wording
+// round-trips to the same MoveThoseCounters effect.
+func putThoseCountersClauseMatches(text, dest string) bool {
+	for _, pronoun := range []string{"those", "its"} {
+		if strings.EqualFold(text, fmt.Sprintf("Put %s counters on %s.", pronoun, dest)) {
+			return true
+		}
+	}
+	return false
 }
 
 // putThoseCountersSelfText returns the rendered text of a self destination for
