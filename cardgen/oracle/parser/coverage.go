@@ -218,6 +218,7 @@ func abilityRecognizedSpans(a *Ability) []shared.Span {
 	}
 	if len(a.Chapters) > 0 {
 		add(a.ChapterSpan)
+		add(a.ChapterFlavorSpan)
 	}
 	for i := range a.ActivationRestrictions {
 		if activationRestrictionRecognized(a.ActivationRestrictions[i].Kind) {
