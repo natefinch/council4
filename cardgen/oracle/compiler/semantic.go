@@ -737,6 +737,13 @@ type ConditionSelection struct {
 	// AnyCounter requires the matched permanent to carry at least one counter of
 	// any kind ("if this permanent has counters on it").
 	AnyCounter bool
+	// CounterKind, CounterKindKnown, and CounterCountAtLeast express a
+	// named-counter-count threshold the matched permanent must satisfy ("has
+	// seven or more quest counters on it"). CounterKindKnown marks the kind
+	// present; CounterCountAtLeast carries the minimum count.
+	CounterKind         counter.Kind
+	CounterKindKnown    bool
+	CounterCountAtLeast int
 }
 
 // CompiledCondition is a closed, source-spanned semantic condition.

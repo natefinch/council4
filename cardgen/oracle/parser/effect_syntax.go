@@ -145,7 +145,7 @@ func emitSentenceResolvingSyntax(
 			spanInsideTriggerFrequency(sentences[i].Span, triggerFrequency) {
 			continue
 		}
-		tokens := semanticEffectTokens(sentences[i].Tokens)
+		tokens := stripLeadingConditionClause(semanticEffectTokens(sentences[i].Tokens))
 		count := legacyEffectCount(tokens, atoms)
 		legacyEffects += count
 		sentences[i].LegacyEffects = count > 0
@@ -708,26 +708,22 @@ func trailingDynamicCountInClause(clause []shared.Token, amount EffectAmountSynt
 	return amount.Span.Start.Offset >= clause[0].Span.Start.Offset
 }
 
-// stripLeadingConditionClause drops a leading "As long as this card/creature is
-// in your graveyard and ..." condition clause so the subject grammar sees only
-// the effect's group subject ("creatures you control"). The first effect's
-// ownership tokens begin at the sentence start, so the graveyard zone-of-
-// function condition would otherwise prevent the group subject from being
-// recognized at token zero. The strip is restricted to graveyard conditions so
-// other leading conditions keep their existing recognition path unchanged.
+// stripLeadingConditionClause drops a leading "As long as ..." condition clause
+// so the subject grammar sees only the effect's group subject ("creatures you
+// control"). The first effect's ownership tokens begin at the sentence start, so
+// a leading "As long as <condition>, ..." gate (the Ascension cycle's "As long
+// as ~ has seven or more quest counters on it, creatures you control get +X/+X",
+// and the Incarnation cycle's graveyard zone-of-function condition) would
+// otherwise prevent the group subject from being recognized at token zero. The
+// condition clause itself is recognized separately, so removing it here only
+// affects subject recognition.
 func stripLeadingConditionClause(tokens []shared.Token) []shared.Token {
 	if len(tokens) == 0 {
 		return tokens
 	}
-	intro, width := conditionIntroAt(tokens, 0)
-	if intro == ConditionIntroUnknown {
+	intro, _ := conditionIntroAt(tokens, 0)
+	if intro != ConditionIntroAsLongAs {
 		return tokens
-	}
-	body := tokens[width:]
-	if _, ok := cutTokenPrefix(body, "this", "card", "is", "in", "your", "graveyard", "and"); !ok {
-		if _, ok := cutTokenPrefix(body, "this", "creature", "is", "in", "your", "graveyard", "and"); !ok {
-			return tokens
-		}
 	}
 	end := conditionClauseEnd(tokens, 0)
 	if end < len(tokens) && tokens[end].Kind == shared.Comma {

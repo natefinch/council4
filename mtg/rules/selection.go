@@ -182,6 +182,9 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if sel.MatchCounter && !s.hasCounter(sel.RequiredCounter) {
 		return false
 	}
+	if sel.RequiredCounterCount.Exists && !sel.RequiredCounterCount.Val.Matches(s.counterCount(sel.RequiredCounter)) {
+		return false
+	}
 	if sel.MatchAnyCounter && !s.hasAnyCounter() {
 		return false
 	}
@@ -430,6 +433,24 @@ func (s *selectionSubject) hasCounter(kind counter.Kind) bool {
 		}
 	}
 	return false
+}
+
+func (s *selectionSubject) counterCount(kind counter.Kind) int {
+	if s.kind == subjectPermanent {
+		if s.permanent == nil {
+			return 0
+		}
+		return s.permanent.Counters.Get(kind)
+	}
+	if s.kind == subjectEventPermanent && s.event.PermanentID != 0 {
+		if permanent, ok := permanentByObjectID(s.g, s.event.PermanentID); ok {
+			return permanent.Counters.Get(kind)
+		}
+		if snapshot, ok := lastKnownObject(s.g, s.event.PermanentID); ok {
+			return snapshot.Counters.Get(kind)
+		}
+	}
+	return 0
 }
 
 func (s *selectionSubject) hasAnyCounter() bool {

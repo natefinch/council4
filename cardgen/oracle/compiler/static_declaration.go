@@ -2292,8 +2292,9 @@ func staticSubjectGroupReferencesTolerated(references []CompiledReference, effec
 }
 
 func staticDeclarationEffectGroup(ability CompiledAbility, effect *CompiledEffect) (staticDeclarationEffectGroupResult, bool) {
+	freeReferences := staticFreeReferences(ability)
 	if effect.StaticSubject != StaticSubjectNone {
-		if !staticSubjectGroupReferencesTolerated(ability.Content.References, effect) {
+		if !staticSubjectGroupReferencesTolerated(freeReferences, effect) {
 			return staticDeclarationEffectGroupResult{}, false
 		}
 		keyword, excludedKeyword := staticSubjectKeywordFilter(effect)
@@ -2314,16 +2315,43 @@ func staticDeclarationEffectGroup(ability CompiledAbility, effect *CompiledEffec
 		}
 		return staticDeclarationEffectGroupResult{Group: group}, ok
 	}
-	if len(ability.Content.References) == 1 && ability.Content.References[0].Binding == ReferenceBindingSource {
+	if len(freeReferences) == 1 && freeReferences[0].Binding == ReferenceBindingSource {
 		return staticDeclarationEffectGroupResult{
 			Group: StaticGroupReference{
-				Span:   ability.Content.References[0].Span,
+				Span:   freeReferences[0].Span,
 				Domain: StaticGroupSource,
 			},
 			AffectedSource: true,
 		}, true
 	}
 	return staticDeclarationEffectGroupResult{}, false
+}
+
+// staticFreeReferences returns the ability's references that are not consumed by
+// a recognized condition clause. A condition that names the source ("as long as
+// ~ has seven or more quest counters on it") contributes source references that
+// belong to the gate rather than to the affected group, so the group derivation
+// must not treat them as free referents that bind a separate antecedent.
+func staticFreeReferences(ability CompiledAbility) []CompiledReference {
+	references := ability.Content.References
+	free := make([]CompiledReference, 0, len(references))
+	for i := range references {
+		consumed := false
+		for j := range ability.Content.Conditions {
+			condition := ability.Content.Conditions[j]
+			if condition.Predicate == ConditionPredicateUnsupported {
+				continue
+			}
+			if condition.Order.Contains(references[i].Order) {
+				consumed = true
+				break
+			}
+		}
+		if !consumed {
+			free = append(free, references[i])
+		}
+	}
+	return free
 }
 
 func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype types.Sub, subtypeKnown bool, colors staticColorFilter, keyword, excludedKeyword parser.KeywordKind, chosenColorFromEntry bool) (StaticGroupReference, bool) {

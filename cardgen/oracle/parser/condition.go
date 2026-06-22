@@ -239,6 +239,15 @@ type ConditionSelection struct {
 	// any kind ("if this permanent has counters on it"). It is the kind-agnostic
 	// companion to a named-counter requirement.
 	AnyCounter bool `json:",omitempty"`
+
+	// CounterKind, CounterKindKnown, and CounterCountAtLeast express a
+	// named-counter-count threshold the matched permanent must satisfy ("has
+	// seven or more quest counters on it"). CounterKindKnown marks the kind
+	// present; CounterCountAtLeast carries the minimum count. The compiler maps
+	// these onto the runtime counter-count selection predicate text-blind.
+	CounterKind         counter.Kind `json:",omitempty"`
+	CounterKindKnown    bool         `json:",omitempty"`
+	CounterCountAtLeast int          `json:",omitempty"`
 }
 
 // ConditionClause is composable typed syntax for a supported condition. The
@@ -1018,6 +1027,13 @@ func recognizeSourceCounterStateCondition(body []shared.Token, atoms Atoms) (Con
 	if !ok {
 		return ConditionClause{}, false
 	}
+	if selection, ok := sourceCounterCountSelection(rest, atoms); ok {
+		return ConditionClause{
+			Predicate:     ConditionPredicateObjectMatches,
+			ObjectBinding: ConditionObjectBindingSource,
+			Selection:     selection,
+		}, true
+	}
 	if !tokenWordsEqual(rest, "has", "counters", "on", "it") &&
 		!tokenWordsEqual(rest, "has", "a", "counter", "on", "it") {
 		return ConditionClause{}, false
@@ -1026,6 +1042,37 @@ func recognizeSourceCounterStateCondition(body []shared.Token, atoms Atoms) (Con
 		Predicate:     ConditionPredicateObjectMatches,
 		ObjectBinding: ConditionObjectBindingSource,
 		Selection:     ConditionSelection{AnyCounter: true},
+	}, true
+}
+
+// sourceCounterCountSelection recognizes the named-counter-count threshold state
+// "has <n> or more <kind> counters on it" ("As long as ~ has seven or more quest
+// counters on it, ...", the Ascension cycle). It returns a Selection carrying the
+// counter kind and minimum count.
+func sourceCounterCountSelection(rest []shared.Token, atoms Atoms) (ConditionSelection, bool) {
+	after, ok := cutTokenPrefix(rest, "has")
+	if !ok {
+		return ConditionSelection{}, false
+	}
+	after, ok = stripTokenSuffix(after, "on", "it")
+	if !ok {
+		return ConditionSelection{}, false
+	}
+	if !tokenSuffixWord(after, "counters") {
+		return ConditionSelection{}, false
+	}
+	count, _, ok := parseLeadingCount(after)
+	if !ok || count.Comparison != ConditionComparisonAtLeast {
+		return ConditionSelection{}, false
+	}
+	kind, _, ok := atoms.CounterIn(shared.SpanOf(after))
+	if !ok {
+		return ConditionSelection{}, false
+	}
+	return ConditionSelection{
+		CounterKind:         kind,
+		CounterKindKnown:    true,
+		CounterCountAtLeast: count.Value,
 	}, true
 }
 

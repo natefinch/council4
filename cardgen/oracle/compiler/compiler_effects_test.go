@@ -535,7 +535,7 @@ func TestCompileNamedCounterKinds(t *testing.T) {
 	}
 
 	compilation, diagnostics := compileSource(
-		"Put a quest counter on target permanent.",
+		"Put a fade counter on target permanent.",
 		pipelineContext{InstantOrSorcery: true},
 	)
 	if len(diagnostics) != 0 {
