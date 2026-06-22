@@ -387,6 +387,15 @@ type StaticDeclarationSyntax struct {
 	// controller's spells cast from any zone.
 	SpellCastZone StaticDeclarationCastZoneKind `json:",omitempty"`
 
+	// SpellPowerAtLeast carries the base-power threshold of a cast-cost modifier
+	// filtered by power ("Creature spells you cast with power 4 or greater cost
+	// {2} less to cast.", Goreclaw): a spell matches only when its printed power
+	// is greater than or equal to this value. MatchSpellPowerAtLeast marks the
+	// threshold present so a zero threshold stays expressible. It combines with
+	// the spell-type, color, subtype, and zone filters.
+	SpellPowerAtLeast      int  `json:",omitempty"`
+	MatchSpellPowerAtLeast bool `json:",omitempty"`
+
 	// SpellColors lists the colors of a cast-cost modifier's color disjunction
 	// ("Each spell you cast that's red or green ..." / "Blue spells and red
 	// spells you cast ..."): a spell matches when it has any one of these
@@ -1915,21 +1924,50 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token, atoms Atoms)
 		castZone = StaticDeclarationCastZoneGraveyard
 		rest = rest[3:]
 	}
+	powerAtLeast, next, ok := staticSpellPowerThreshold(rest)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	rest = next
 	tail, ok := staticSpellCostModifierTail(rest)
 	if !ok {
 		return StaticDeclarationSyntax{}, false
 	}
 	return StaticDeclarationSyntax{
-		Kind:                StaticDeclarationCostModifier,
-		Span:                shared.SpanOf(tokens),
-		OperationSpan:       tail.OperationSpan,
-		CostModifier:        tail.Kind,
-		CostReductionAmount: tail.Amount,
-		SpellType:           spellType,
-		SpellColor:          spellColor,
-		SpellSubtypes:       subtypes,
-		SpellCastZone:       castZone,
+		Kind:                   StaticDeclarationCostModifier,
+		Span:                   shared.SpanOf(tokens),
+		OperationSpan:          tail.OperationSpan,
+		CostModifier:           tail.Kind,
+		CostReductionAmount:    tail.Amount,
+		SpellType:              spellType,
+		SpellColor:             spellColor,
+		SpellSubtypes:          subtypes,
+		SpellCastZone:          castZone,
+		SpellPowerAtLeast:      powerAtLeast,
+		MatchSpellPowerAtLeast: powerAtLeast > 0,
 	}, true
+}
+
+// staticSpellPowerThreshold reads an optional "with power <n> or greater"
+// qualifier scoping a cast-cost modifier to spells whose base printed power
+// meets the threshold ("Creature spells you cast with power 4 or greater cost
+// {2} less to cast.", Goreclaw). It returns the threshold (zero when the
+// qualifier is absent) and the remaining tokens. A malformed qualifier fails.
+func staticSpellPowerThreshold(tokens []shared.Token) (int, []shared.Token, bool) {
+	if !staticWordsAt(tokens, 0, "with", "power") {
+		return 0, tokens, true
+	}
+	if len(tokens) < 5 {
+		return 0, nil, false
+	}
+	value, ok := conditionNumberValue(tokens[2])
+	if !ok || value <= 0 {
+		return 0, nil, false
+	}
+	if !staticWordsAt(tokens, 3, "or", "greater") {
+		return 0, nil, false
+	}
+	return value, tokens[5:], true
 }
 
 // parseChosenCreatureTypeSpellCostReduction recognizes the static cast-cost

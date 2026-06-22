@@ -575,6 +575,48 @@ func TestRecognizeStaticGraveyardZoneSpellCostModifierFromTypedNode(t *testing.T
 	}
 }
 
+func TestRecognizeStaticPowerThresholdSpellCostModifierFromTypedNode(t *testing.T) {
+	t.Parallel()
+	node := parser.StaticDeclarationSyntax{
+		Kind:                   parser.StaticDeclarationCostModifier,
+		CostModifier:           parser.StaticDeclarationCostModifierSpellReduction,
+		CostReductionAmount:    2,
+		SpellType:              parser.StaticDeclarationSpellTypeCreature,
+		SpellPowerAtLeast:      4,
+		MatchSpellPowerAtLeast: true,
+	}
+
+	declaration, ok := recognizeStaticSpellCostModifierDeclaration(
+		CompiledAbility{Kind: AbilityStatic},
+		[]parser.StaticDeclarationSyntax{node},
+	)
+
+	if !ok || declaration.Cost == nil ||
+		!declaration.Cost.MatchMinPower ||
+		declaration.Cost.MinPower != 4 ||
+		declaration.Cost.GenericReduction != 2 {
+		t.Fatalf("declaration = %#v ok = %v, want power-4 creature reduction", declaration, ok)
+	}
+}
+
+func TestRecognizeStaticZeroPowerThresholdSpellCostModifierFailsClosed(t *testing.T) {
+	t.Parallel()
+	node := parser.StaticDeclarationSyntax{
+		Kind:                   parser.StaticDeclarationCostModifier,
+		CostModifier:           parser.StaticDeclarationCostModifierSpellReduction,
+		CostReductionAmount:    2,
+		SpellType:              parser.StaticDeclarationSpellTypeCreature,
+		MatchSpellPowerAtLeast: true,
+	}
+
+	if _, ok := recognizeStaticSpellCostModifierDeclaration(
+		CompiledAbility{Kind: AbilityStatic},
+		[]parser.StaticDeclarationSyntax{node},
+	); ok {
+		t.Fatal("recognized a zero power threshold cost modifier, want fail closed")
+	}
+}
+
 func TestRecognizeStaticZoneScopedChosenTypeSpellCostModifierFailsClosed(t *testing.T) {
 	t.Parallel()
 	node := parser.StaticDeclarationSyntax{

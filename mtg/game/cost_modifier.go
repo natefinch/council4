@@ -93,6 +93,16 @@ type CostModifier struct {
 	// CostModifierSpell and combines with the card-type, color, and subtype
 	// filters.
 	SourceZone opt.V[zone.Type]
+
+	// MinPower constrains a spell cost modifier to spells whose base printed
+	// power is at least this threshold ("Creature spells you cast with power 4
+	// or greater cost {2} less to cast.", Goreclaw): the modifier applies only
+	// when the spell card has a numeric printed power greater than or equal to
+	// the threshold. A spell with no printed power, or a star (*) power, never
+	// satisfies the threshold. When the option is absent the modifier applies
+	// regardless of power. It is meaningful only on a CostModifierSpell and
+	// combines with the card-type, color, subtype, and zone filters.
+	MinPower opt.V[int]
 }
 
 // RuleEffectKind identifies non-layer continuous rules effects such as

@@ -1112,6 +1112,7 @@ func TestParseStaticSpellCostModifierDeclarationMeaning(t *testing.T) {
 		spellSubtypes []types.Sub
 		castZone      StaticDeclarationCastZoneKind
 		amount        int
+		powerAtLeast  int
 	}{
 		"all spells reduction": {
 			source:    "Spells you cast cost {1} less to cast.",
@@ -1206,6 +1207,13 @@ func TestParseStaticSpellCostModifierDeclarationMeaning(t *testing.T) {
 			castZone:  StaticDeclarationCastZoneGraveyard,
 			amount:    1,
 		},
+		"creature power threshold reduction": {
+			source:       "Creature spells you cast with power 4 or greater cost {2} less to cast.",
+			modifier:     StaticDeclarationCostModifierSpellReduction,
+			spellType:    StaticDeclarationSpellTypeCreature,
+			amount:       2,
+			powerAtLeast: 4,
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -1224,6 +1232,10 @@ func TestParseStaticSpellCostModifierDeclarationMeaning(t *testing.T) {
 			}
 			if !slices.Equal(declaration.SpellSubtypes, test.spellSubtypes) {
 				t.Fatalf("declaration subtypes = %#v, want %#v", declaration.SpellSubtypes, test.spellSubtypes)
+			}
+			if declaration.SpellPowerAtLeast != test.powerAtLeast ||
+				declaration.MatchSpellPowerAtLeast != (test.powerAtLeast > 0) {
+				t.Fatalf("declaration power threshold = %d (match %t), want %d", declaration.SpellPowerAtLeast, declaration.MatchSpellPowerAtLeast, test.powerAtLeast)
 			}
 		})
 	}

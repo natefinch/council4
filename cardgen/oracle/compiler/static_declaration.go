@@ -443,6 +443,14 @@ type StaticCostModifierDeclaration struct {
 	// The empty kind applies no zone filter, so the modifier affects spells cast
 	// from any zone. It combines with the card-type, color, and subtype filters.
 	SourceZone parser.StaticDeclarationCastZoneKind
+
+	// MinPower constrains a spell cost modifier to spells whose base printed
+	// power is at least this threshold ("Creature spells you cast with power 4
+	// or greater cost {2} less to cast.", Goreclaw). MatchMinPower marks the
+	// threshold present so a zero threshold stays expressible. It combines with
+	// the card-type, color, subtype, and zone filters.
+	MinPower      int
+	MatchMinPower bool
 }
 
 // StaticPlayerRuleKind identifies a closed player-scoped static rule.
@@ -2887,6 +2895,9 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 	if node.SpellCastZone != "" && node.ChosenCreatureType {
 		return StaticDeclaration{}, false
 	}
+	if node.MatchSpellPowerAtLeast && node.SpellPowerAtLeast <= 0 {
+		return StaticDeclaration{}, false
+	}
 	cost := StaticCostModifierDeclaration{
 		Kind:                         StaticCostModifierSpell,
 		SpellTypes:                   spellTypes,
@@ -2896,6 +2907,8 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 		SpellSubtypes:                node.SpellSubtypes,
 		ChosenSubtypeFromEntryChoice: node.ChosenCreatureType,
 		SourceZone:                   node.SpellCastZone,
+		MinPower:                     node.SpellPowerAtLeast,
+		MatchMinPower:                node.MatchSpellPowerAtLeast,
 	}
 	if node.CostModifier == parser.StaticDeclarationCostModifierSpellIncrease {
 		cost.GenericIncrease = node.CostReductionAmount

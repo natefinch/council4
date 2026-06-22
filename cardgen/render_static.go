@@ -830,6 +830,10 @@ func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier)
 		}
 		fields = append(fields, fmt.Sprintf("SourceZone: opt.Val(%s),", zoneLit))
 	}
+	if modifier.MinPower.Exists {
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("MinPower: opt.Val(%d),", modifier.MinPower.Val))
+	}
 	if modifier.AbilityKeyword != game.KeywordNone {
 		keyword, err := renderKeyword(modifier.AbilityKeyword)
 		if err != nil {

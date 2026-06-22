@@ -1379,6 +1379,9 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 	if cost.ChosenSubtypeFromEntryChoice {
 		base.ChosenSubtypeFromEntryChoice = true
 	}
+	if cost.MatchMinPower {
+		base.MinPower = opt.Val(cost.MinPower)
+	}
 	if len(cost.SpellColors) != 0 {
 		if cost.MatchSpellColor || len(cost.SpellTypes) != 0 || len(cost.SpellSubtypes) != 0 {
 			return false
