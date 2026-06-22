@@ -242,6 +242,41 @@ func payPhyrexianSymbol(player *game.Player, plan *paymentPlan, pool map[mana.Un
 	return true
 }
 
+// payPhyrexianGenericSymbol pays a "{N} or 2 life" generic Phyrexian symbol,
+// emitted for the command-zone commander tax of a spell whose static lets the
+// caster pay 2 life rather than each {2} of that tax (Liesa, Shroud of Dusk). It
+// mirrors payPhyrexianSymbol but pays the symbol's generic mana rather than a
+// color when not paying life.
+func payPhyrexianGenericSymbol(player *game.Player, plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Color][]manaSource, symbol cost.Symbol, prefs *Preferences, canPayLife bool) bool {
+	if prefs != nil && prefs.NextPhyrexianLifeChoice() {
+		if !canPayLife || player.Life-plan.lifePayment < 2 {
+			return false
+		}
+		plan.lifePayment += 2
+		plan.symbolPayments = append(plan.symbolPayments, game.SymbolPayment{
+			Symbol:   symbol,
+			Method:   game.SymbolPaymentPhyrexianLife,
+			LifePaid: 2,
+		})
+		return true
+	}
+	if trySymbolPayment(plan, pool, sources, func(trialPlan *paymentPlan, trialPool map[mana.Unit]int, trialSources map[mana.Color][]manaSource) bool {
+		return payGenericSymbol(trialPlan, trialPool, trialSources, symbol, symbol.Generic, game.SymbolPaymentPhyrexianMana)
+	}) {
+		return true
+	}
+	if !canPayLife || player.Life-plan.lifePayment < 2 {
+		return false
+	}
+	plan.lifePayment += 2
+	plan.symbolPayments = append(plan.symbolPayments, game.SymbolPayment{
+		Symbol:   symbol,
+		Method:   game.SymbolPaymentPhyrexianLife,
+		LifePaid: 2,
+	})
+	return true
+}
+
 func spendUnitFromSnapshot(plan *paymentPlan, pool map[mana.Unit]int, unit mana.Unit, amount int) bool {
 	if amount <= 0 {
 		return true

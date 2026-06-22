@@ -39,6 +39,13 @@ type CostModifier struct {
 	SetManaCost      opt.V[cost.Mana]
 	MinimumGeneric   int
 
+	// LifePayableTaxInstances, when positive on a CostModifierSpell, adds that
+	// many "{2} or 2 life" generic Phyrexian symbols to the spell's cost instead
+	// of plain generic mana. The rules layer sets it for the command-zone
+	// commander tax of a spell whose static lets the caster pay 2 life rather
+	// than each {2} of that tax (Liesa, Shroud of Dusk).
+	LifePayableTaxInstances int
+
 	MatchCardType bool
 	MatchColor    bool
 	// ChosenSubtypeFromEntryChoice constrains a creature spell cost modifier to
@@ -274,6 +281,14 @@ const (
 	// Yawgmoth). It makes every colored mana symbol of ManaColor in the affected
 	// player's costs payable like a Phyrexian symbol of that color.
 	RuleEffectPayLifeForColoredMana
+	// RuleEffectPayLifeForCommanderTax lets the caster pay 2 life rather than
+	// each {2} of the command-zone commander tax when casting the source card
+	// itself ("Rather than pay {2} for each previous time you've cast this spell
+	// from the command zone this game, pay 2 life that many times.", Liesa,
+	// Shroud of Dusk). It is a self-scoped static read from the card being cast;
+	// the rules layer emits the commander tax as generic Phyrexian symbols so
+	// each {2} instance is independently payable with 2 life.
+	RuleEffectPayLifeForCommanderTax
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -311,7 +326,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectCantCastFromZones,
 		RuleEffectCantEnterFromZones,
 		RuleEffectLookAtTopCardAnyTime,
-		RuleEffectPayLifeForColoredMana:
+		RuleEffectPayLifeForColoredMana,
+		RuleEffectPayLifeForCommanderTax:
 		return true
 	default:
 		return false

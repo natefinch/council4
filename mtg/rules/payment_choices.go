@@ -152,10 +152,16 @@ func (e *Engine) phyrexianPaymentChoices(g *game.Game, playerID game.PlayerID, m
 		availableLife = player.Life
 	}
 	for _, symbol := range effective {
-		if symbol.Kind != cost.PhyrexianSymbol {
+		var manaLabel string
+		switch symbol.Kind {
+		case cost.PhyrexianSymbol:
+			manaLabel = fmt.Sprintf("Pay %s mana", symbol.Color)
+		case cost.PhyrexianGenericSymbol:
+			manaLabel = fmt.Sprintf("Pay {%d}", symbol.Generic)
+		default:
 			continue
 		}
-		options := []game.ChoiceOption{{Index: 0, Label: fmt.Sprintf("Pay %s mana", symbol.Color)}}
+		options := []game.ChoiceOption{{Index: 0, Label: manaLabel}}
 		if availableLife >= 2 {
 			options = append(options, game.ChoiceOption{Index: 1, Label: "Pay 2 life"})
 		}

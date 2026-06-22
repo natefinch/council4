@@ -914,6 +914,14 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 			ManaColor:      declaration.Player.ManaColor,
 		})
 		return true
+	case compiler.StaticPlayerRuleLifeForCommanderTax:
+		body.ZoneOfFunction = zone.Command
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectPayLifeForCommanderTax,
+			AffectedPlayer: game.PlayerYou,
+			AffectedSource: true,
+		})
+		return true
 	case compiler.StaticPlayerRuleCastSpellsFromLibraryTop:
 		var spellTypes []types.Card
 		if len(declaration.Player.SpellTypes) > 0 {

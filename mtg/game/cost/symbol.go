@@ -26,6 +26,13 @@ const (
 	PhyrexianSymbol
 	// SnowSymbol requires mana from a snow source ({S}).
 	SnowSymbol
+	// PhyrexianGenericSymbol can be paid with Generic generic mana or 2 life. It
+	// is never printed on a card; the rules layer emits it for the command-zone
+	// commander tax of a spell whose static lets the caster pay 2 life rather
+	// than each {2} of that tax ("Rather than pay {2} for each previous time
+	// you've cast this spell from the command zone this game, pay 2 life that
+	// many times.", Liesa, Shroud of Dusk).
+	PhyrexianGenericSymbol
 )
 
 // Symbol represents a single mana symbol in a mana cost.
@@ -94,6 +101,13 @@ func PhyrexianMana(c mana.Color) Symbol {
 	return Symbol{Kind: PhyrexianSymbol, Color: c}
 }
 
+// PhyrexianGeneric creates a generic Phyrexian symbol payable with n generic
+// mana or 2 life, backing the command-zone commander tax that may be paid with
+// life (Liesa, Shroud of Dusk).
+func PhyrexianGeneric(n int) Symbol {
+	return Symbol{Kind: PhyrexianGenericSymbol, Generic: n}
+}
+
 // SnowMana creates a snow mana symbol ({S}).
 func SnowMana() Symbol {
 	return Symbol{Kind: SnowSymbol}
@@ -116,6 +130,8 @@ func (s Symbol) String() string {
 		return fmt.Sprintf("{2/%s}", s.Color)
 	case PhyrexianSymbol:
 		return fmt.Sprintf("{%s/P}", s.Color)
+	case PhyrexianGenericSymbol:
+		return fmt.Sprintf("{%d/P}", s.Generic)
 	case SnowSymbol:
 		return "{S}"
 	default:

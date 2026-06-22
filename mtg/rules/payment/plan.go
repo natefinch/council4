@@ -560,6 +560,10 @@ func buildPaymentPlanWithPreferences(s State, playerID game.PlayerID, manaCost *
 			if !payPhyrexianSymbol(player, &plan, pool, manaSources, symbol, prefs, s.CanPayLife(playerID)) {
 				return plan, false
 			}
+		case cost.PhyrexianGenericSymbol:
+			if !payPhyrexianGenericSymbol(player, &plan, pool, manaSources, symbol, prefs, s.CanPayLife(playerID)) {
+				return plan, false
+			}
 		default:
 		}
 	}
@@ -579,7 +583,8 @@ func buildPaymentPlanWithPreferences(s State, playerID game.PlayerID, manaCost *
 				symbol.Kind != cost.SnowSymbol &&
 				symbol.Kind != cost.HybridSymbol &&
 				symbol.Kind != cost.TwobridSymbol &&
-				symbol.Kind != cost.PhyrexianSymbol {
+				symbol.Kind != cost.PhyrexianSymbol &&
+				symbol.Kind != cost.PhyrexianGenericSymbol {
 				return plan, false
 			}
 		}

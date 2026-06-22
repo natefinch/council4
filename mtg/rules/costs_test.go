@@ -494,6 +494,45 @@ func TestPhyrexianCostCanBePaidWithManaOrLife(t *testing.T) {
 	})
 }
 
+func TestPhyrexianGenericCostCanBePaidWithManaOrLife(t *testing.T) {
+	t.Run("mana", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		addBasicLandPermanent(g, game.Player1, types.Forest)
+		addBasicLandPermanent(g, game.Player1, types.Island)
+		manaCost := cost.Mana{cost.PhyrexianGeneric(2)}
+
+		if !payTestGenericCost(g, game.Player1, &manaCost) {
+			t.Fatal("payCost() = false for {2/P} with two lands, want true")
+		}
+		if got := g.Players[game.Player1].Life; got != 40 {
+			t.Fatalf("life = %d, want 40", got)
+		}
+	})
+	t.Run("life", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		manaCost := cost.Mana{cost.PhyrexianGeneric(2)}
+		prefs := &payment.Preferences{PhyrexianLifeChoices: []bool{true}}
+
+		if !payTestGenericCostWithPreferences(g, game.Player1, &manaCost, prefs) {
+			t.Fatal("payCost() = false for {2/P} paid with life, want true")
+		}
+		if got := g.Players[game.Player1].Life; got != 38 {
+			t.Fatalf("life = %d, want 38", got)
+		}
+	})
+	t.Run("life fallback without mana", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		manaCost := cost.Mana{cost.PhyrexianGeneric(2)}
+
+		if !payTestGenericCost(g, game.Player1, &manaCost) {
+			t.Fatal("payCost() = false for {2/P} with no mana, want true via life")
+		}
+		if got := g.Players[game.Player1].Life; got != 38 {
+			t.Fatalf("life = %d, want 38", got)
+		}
+	})
+}
+
 func TestPayLifeForColoredManaRuleEffect(t *testing.T) {
 	payLifeForBlackPermanent := func(g *game.Game) {
 		addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{

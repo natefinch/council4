@@ -2808,3 +2808,44 @@ func TestParseStaticSpellTargetsSourceCostModifier(t *testing.T) {
 		})
 	}
 }
+
+func TestParseStaticLifeForCommanderTaxMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t,
+		"Rather than pay {2} for each previous time you've cast this spell from the command zone this game, pay 2 life that many times.",
+		Context{CardName: "Liesa, Shroud of Dusk"})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationPlayerRule {
+		t.Fatalf("kind = %v, want player rule", declaration.Kind)
+	}
+	if declaration.Subject.Kind != StaticDeclarationSubjectController {
+		t.Fatalf("subject = %#v, want controller", declaration.Subject)
+	}
+	if declaration.PlayerRule != StaticDeclarationPlayerRuleLifeForCommanderTax {
+		t.Fatalf("player rule = %v, want life for commander tax", declaration.PlayerRule)
+	}
+	if declaration.Span == (shared.Span{}) || declaration.OperationSpan == (shared.Span{}) {
+		t.Fatalf("spans = declaration %#v operation %#v, want source spans", declaration.Span, declaration.OperationSpan)
+	}
+}
+
+func TestParseStaticLifeForCommanderTaxFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Rather than pay {2} for each previous time you've cast this spell from the command zone this game, pay 3 life that many times.",
+		"Rather than pay {1} for each previous time you've cast this spell from the command zone this game, pay 2 life that many times.",
+		"Rather than pay {2} for each previous time you've cast this spell from your hand this game, pay 2 life that many times.",
+	} {
+		document, _ := Parse(source, Context{CardName: "Liesa, Shroud of Dusk"})
+		for i := range document.Abilities {
+			for _, declaration := range document.Abilities[i].StaticDeclarations {
+				if declaration.PlayerRule == StaticDeclarationPlayerRuleLifeForCommanderTax {
+					t.Fatalf("source %q produced life-for-commander-tax declaration, want fail closed", source)
+				}
+			}
+		}
+	}
+}
