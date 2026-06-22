@@ -1889,12 +1889,15 @@ func (p CreateDelayedTrigger) validatePrimitive(targets []TargetSpec, checkTarge
 	return nil
 }
 
-func (p CreateReplacement) validatePrimitive([]TargetSpec, bool) error {
+func (p CreateReplacement) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.Replacement == nil {
 		return errors.New("create replacement requires a replacement")
 	}
 	if p.Replacement.MatchEvent == EventUnknown {
 		return errors.New("create replacement requires an event")
+	}
+	if p.Object.Kind() != ObjectReferenceNone {
+		return validateObjectReference(p.Object, targets, checkTargets)
 	}
 	return nil
 }

@@ -6,7 +6,79 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
+
+func (r Renderer) renderCreateReplacement(value game.CreateReplacement) (string, error) {
+	if value.Replacement == nil {
+		return "", errors.New("render: CreateReplacement has no replacement effect")
+	}
+	replacement, err := renderCreateReplacementEffect(*value.Replacement)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Replacement: %s,", replacement),
+	}
+	if value.Object.Kind() != game.ObjectReferenceNone {
+		object, objErr := r.renderObjectReference(value.Object)
+		if objErr != nil {
+			return "", objErr
+		}
+		fields = append(fields, fmt.Sprintf("Object: %s,", object))
+	}
+	if value.Duration != game.DurationPermanent {
+		duration, durErr := renderDuration(value.Duration)
+		if durErr != nil {
+			return "", durErr
+		}
+		fields = append(fields, fmt.Sprintf("Duration: %s,", duration))
+	}
+	return structLit("game.CreateReplacement", fields), nil
+}
+
+// renderCreateReplacementEffect renders the dynamically created
+// ReplacementEffect as a pointer to a struct literal. It supports the
+// zone-change redirect shape produced for the leaves-the-battlefield exile
+// replacement (MatchEvent EventZoneChanged, a from-zone match, and a
+// ReplaceToZone redirect).
+func renderCreateReplacementEffect(replacement game.ReplacementEffect) (string, error) {
+	event, err := renderEventKind(replacement.MatchEvent)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("MatchEvent: %s,", event),
+	}
+	if replacement.MatchFromZone {
+		fromZone, zoneErr := renderZone(replacement.FromZone)
+		if zoneErr != nil {
+			return "", zoneErr
+		}
+		fields = append(fields,
+			"MatchFromZone: true,",
+			fmt.Sprintf("FromZone: %s,", fromZone),
+		)
+	}
+	if replacement.MatchToZone {
+		toZone, zoneErr := renderZone(replacement.ToZone)
+		if zoneErr != nil {
+			return "", zoneErr
+		}
+		fields = append(fields,
+			"MatchToZone: true,",
+			fmt.Sprintf("ToZone: %s,", toZone),
+		)
+	}
+	if replacement.ReplaceToZone != zone.None {
+		replaceZone, zoneErr := renderZone(replacement.ReplaceToZone)
+		if zoneErr != nil {
+			return "", zoneErr
+		}
+		fields = append(fields, fmt.Sprintf("ReplaceToZone: %s,", replaceZone))
+	}
+	return "&" + structLit("game.ReplacementEffect", fields), nil
+}
 
 func (r Renderer) renderCreateDelayedTrigger(ctx *renderCtx, value game.CreateDelayedTrigger) (string, error) {
 	timing, err := renderDelayedTriggerTiming(value.Trigger.Timing)

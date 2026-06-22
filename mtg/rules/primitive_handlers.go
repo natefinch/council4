@@ -1187,6 +1187,13 @@ func handleCreateReplacement(r *effectResolver, prim game.CreateReplacement) eff
 	if prim.Duration != game.DurationPermanent {
 		replacement.Duration = prim.Duration
 	}
+	if prim.Object.Kind() != game.ObjectReferenceNone {
+		permanent, ok := r.resolveObject(prim.Object)
+		if !ok || permanent == nil {
+			return effectResolved{accepted: true, succeeded: false}
+		}
+		replacement.AffectedObjectID = permanent.ObjectID
+	}
 	r.game.ReplacementEffects = append(r.game.ReplacementEffects, replacement)
 	return effectResolved{accepted: true, succeeded: true}
 }

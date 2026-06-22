@@ -228,6 +228,15 @@ const (
 	// and is dealt no further combat damage (CR 506.4). The creature is carried as
 	// an ordinary permanent target on the effect.
 	EffectRemoveFromCombat EffectKind = "EffectRemoveFromCombat"
+	// EffectExileIfLeaveBattlefield models the leaves-the-battlefield
+	// self-replacement "If it would leave the battlefield, exile it instead of
+	// putting it anywhere else." (Whip of Erebos, Kheru Lich Lord-adjacent). It
+	// redirects any zone change off the battlefield for the affected object to
+	// exile instead. The affected object is identified by Context: "it" refers
+	// to a back-referenced object (EffectContextReferencedObject), while "this
+	// creature" refers to the source. It lowers to a CreateReplacement bound to
+	// that object.
+	EffectExileIfLeaveBattlefield EffectKind = "EffectExileIfLeaveBattlefield"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."

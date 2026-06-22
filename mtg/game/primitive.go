@@ -1038,9 +1038,15 @@ type CreateDelayedTrigger struct {
 }
 
 // CreateReplacement creates a replacement effect that applies to a future event.
+// When Object references a permanent, the created replacement is bound to that
+// resolved permanent (its AffectedObjectID), so it matches only events about
+// that one object ("If it would leave the battlefield, exile it instead." on a
+// just-reanimated creature). When Object is absent the replacement matches by
+// its own filters alone.
 type CreateReplacement struct {
 	Replacement *ReplacementEffect
 	Duration    EffectDuration
+	Object      ObjectReference
 }
 
 // PreventDamage creates a damage-prevention shield for exactly one referenced
