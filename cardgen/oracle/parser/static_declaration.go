@@ -41,6 +41,7 @@ const (
 	StaticDeclarationAbilityCostSet                       StaticDeclarationKind = "StaticDeclarationAbilityCostSet"
 	StaticDeclarationGraveyardCardKeywordGrant            StaticDeclarationKind = "StaticDeclarationGraveyardCardKeywordGrant"
 	StaticDeclarationDrawLimit                            StaticDeclarationKind = "StaticDeclarationDrawLimit"
+	StaticDeclarationCastLimit                            StaticDeclarationKind = "StaticDeclarationCastLimit"
 )
 
 // StaticDeclarationDynamicValueKind identifies the rules-derived count a
@@ -496,6 +497,17 @@ type StaticDeclarationSyntax struct {
 	DrawLimitAffectsAllPlayers bool `json:",omitempty"`
 	DrawLimitAffectsController bool `json:",omitempty"`
 
+	// Cast-limit payload: a continuous per-turn spell cap stopping the affected
+	// players from casting more than CastLimit spells each turn ("Each player
+	// can't cast more than one spell each turn.", Rule of Law, Eidolon of
+	// Rhetoric, Arcane Laboratory). CastLimitAffectsAllPlayers selects every
+	// player ("Each player"/"Players"); CastLimitAffectsController selects only
+	// the controller ("You"). With neither flag set the cap affects only the
+	// controller's opponents.
+	CastLimit                  int  `json:",omitempty"`
+	CastLimitAffectsAllPlayers bool `json:",omitempty"`
+	CastLimitAffectsController bool `json:",omitempty"`
+
 	// Entering-trigger-multiplier payload: the entering permanent's card-type
 	// filter for an "If <filter> entering causes a triggered ability of a
 	// permanent you control to trigger, that ability triggers an additional
@@ -723,6 +735,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticDrawLimitDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticCastLimitDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticEnchantedTypeChangeDeclaration(tokens, quoted, atoms); ok {
@@ -1171,6 +1186,75 @@ func parseStaticDrawLimitDeclaration(tokens []shared.Token) (StaticDeclarationSy
 		DrawLimit:                  limit,
 		DrawLimitAffectsAllPlayers: affectsAll,
 		DrawLimitAffectsController: affectsController,
+	}, true
+}
+
+// parseStaticCastLimitDeclaration recognizes the continuous per-turn spell cap
+// "<players> can't cast more than <N> spell[s] each turn." (Rule of Law, Eidolon
+// of Rhetoric, Arcane Laboratory; Moderation). <players> is "each
+// opponent"/"your opponents" (opponents), "each player"/"players" (every
+// player), or "you" (the controller). Only the unqualified "spell" object is
+// recognized; a type-scoped object ("noncreature spell") or any other deviation
+// leaves the clause unconsumed and fails closed.
+func parseStaticCastLimitDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) < 4 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	end := len(tokens) - 1
+	index := 0
+	affectsAll := false
+	affectsController := false
+	switch {
+	case staticWordsAt(tokens, index, "each", "opponent"):
+		index += 2
+	case staticWordsAt(tokens, index, "your", "opponents"):
+		index += 2
+	case staticWordsAt(tokens, index, "each", "player"):
+		affectsAll = true
+		index += 2
+	case staticWordsAt(tokens, index, "players"):
+		affectsAll = true
+		index++
+	case staticWordsAt(tokens, index, "you"):
+		affectsController = true
+		index++
+	default:
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, index, "can't") && !staticWordsAt(tokens, index, "cannot") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index++
+	if !staticWordsAt(tokens, index, "cast", "more", "than") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index += 3
+	if index >= end || tokens[index].Kind != shared.Word {
+		return StaticDeclarationSyntax{}, false
+	}
+	limit, ok := CardinalWordValue(tokens[index].Text)
+	if !ok || limit < 1 {
+		return StaticDeclarationSyntax{}, false
+	}
+	index++
+	if !staticWordsAt(tokens, index, "spell") && !staticWordsAt(tokens, index, "spells") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index++
+	if !staticWordsAt(tokens, index, "each", "turn") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index += 2
+	if index != end {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                       StaticDeclarationCastLimit,
+		Span:                       shared.SpanOf(tokens),
+		OperationSpan:              shared.SpanOf(tokens[:end]),
+		CastLimit:                  limit,
+		CastLimitAffectsAllPlayers: affectsAll,
+		CastLimitAffectsController: affectsController,
 	}, true
 }
 func parseStaticRestrictedActions(tokens []shared.Token, index, end int) (staticRestrictedActions, int, bool) {

@@ -33,6 +33,7 @@ const (
 	StaticDeclarationCastAsThoughFlash
 	StaticDeclarationGraveyardCardKeywordGrant
 	StaticDeclarationDrawLimit
+	StaticDeclarationCastLimit
 )
 
 // StaticDeclarationBlocker identifies exact static wording whose declaration
@@ -639,6 +640,18 @@ type StaticDrawLimitDeclaration struct {
 	AffectsController bool
 }
 
+// StaticCastLimitDeclaration caps how many spells the affected players may cast
+// each turn at Limit ("Each player can't cast more than one spell each turn.",
+// Rule of Law, Eidolon of Rhetoric). AffectsAllPlayers selects every player
+// ("Each player"/"Players"); AffectsController selects only the controller
+// ("You"). With neither flag set the cap affects only the controller's
+// opponents.
+type StaticCastLimitDeclaration struct {
+	Limit             int
+	AffectsAllPlayers bool
+	AffectsController bool
+}
+
 // StaticDeclaration is source-spanned semantic data attached directly to a
 // static ability. It is not Instruction content and never resolves.
 type StaticDeclaration struct {
@@ -663,6 +676,7 @@ type StaticDeclaration struct {
 	CastAsThoughFlash   *StaticCastAsThoughFlashDeclaration
 	GraveyardGrant      *StaticGraveyardKeywordGrantDeclaration
 	DrawLimit           *StaticDrawLimitDeclaration
+	CastLimit           *StaticCastLimitDeclaration
 }
 
 // StaticCharacteristicPowerToughnessDeclaration carries the rules-derived count
@@ -798,6 +812,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticDrawLimitDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticCastLimitDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
@@ -3650,6 +3668,39 @@ func recognizeStaticDrawLimitDeclaration(ability CompiledAbility, statics []pars
 			Limit:             node.DrawLimit,
 			AffectsAllPlayers: node.DrawLimitAffectsAllPlayers,
 			AffectsController: node.DrawLimitAffectsController,
+		},
+	}, true
+}
+
+// recognizeStaticCastLimitDeclaration maps the parser-owned cast-limit syntax
+// ("Each player can't cast more than one spell each turn.", Rule of Law) onto
+// its closed semantic payload. The continuous spell cap consumes no resolving
+// content effects, so the ability must carry no cost, trigger, modes, targets,
+// keywords, or ability word.
+func recognizeStaticCastLimitDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationCastLimit) {
+		return StaticDeclaration{}, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		ability.AbilityWord != "" {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	if node.CastLimit < 1 {
+		return StaticDeclaration{}, false
+	}
+	return StaticDeclaration{
+		Kind:          StaticDeclarationCastLimit,
+		Span:          node.Span,
+		OperationSpan: node.OperationSpan,
+		CastLimit: &StaticCastLimitDeclaration{
+			Limit:             node.CastLimit,
+			AffectsAllPlayers: node.CastLimitAffectsAllPlayers,
+			AffectsController: node.CastLimitAffectsController,
 		},
 	}, true
 }

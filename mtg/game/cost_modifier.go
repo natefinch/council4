@@ -297,6 +297,15 @@ const (
 	// player has drawn DrawLimitPerTurn cards this turn, each further draw is
 	// replaced by drawing nothing.
 	RuleEffectDrawLimitPerTurn
+	// RuleEffectCastLimitPerTurn caps the number of spells the affected players
+	// (AffectedPlayer) may cast each turn at CastLimitPerTurn ("Each player can't
+	// cast more than one spell each turn.", Rule of Law, Eidolon of Rhetoric,
+	// Arcane Laboratory; "You can't cast more than one spell each turn.",
+	// Moderation). It is a continuous casting restriction: once an affected player
+	// has cast CastLimitPerTurn spells this turn, they can't begin to cast
+	// another. SpellTypes and ExcludedSpellTypes optionally narrow the cap to
+	// spells of, or other than, those card types; empty filters count every spell.
+	RuleEffectCastLimitPerTurn
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -336,7 +345,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectLookAtTopCardAnyTime,
 		RuleEffectPayLifeForColoredMana,
 		RuleEffectPayLifeForCommanderTax,
-		RuleEffectDrawLimitPerTurn:
+		RuleEffectDrawLimitPerTurn,
+		RuleEffectCastLimitPerTurn:
 		return true
 	default:
 		return false
@@ -438,6 +448,12 @@ type RuleEffect struct {
 	// one card each turn."). It is a positive count and unused for every other
 	// kind.
 	DrawLimitPerTurn int
+
+	// CastLimitPerTurn caps how many spells the affected players may cast each
+	// turn for a RuleEffectCastLimitPerTurn effect ("Each player can't cast more
+	// than one spell each turn."). It is a positive count and unused for every
+	// other kind.
+	CastLimitPerTurn int
 
 	// RestrictedDuringControllerTurn scopes a RuleEffectCantCastSpells or
 	// RuleEffectCantActivateAbilities prohibition to the source controller's turn
