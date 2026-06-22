@@ -463,6 +463,12 @@ func (e *Engine) resolveInstantOrSorcerySpell(
 		}
 		return "adventure exile"
 	}
+	if obj.SourceZone == zone.Hand && cardHasRebound(spellDef) {
+		if !e.reboundExileResolvingSpell(g, obj, card) {
+			return "invalid owner"
+		}
+		return "rebound exile"
+	}
 	if !moveStackCardToGraveyard(g, obj, card) {
 		return "invalid owner"
 	}

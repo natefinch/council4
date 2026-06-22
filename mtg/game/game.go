@@ -32,6 +32,14 @@ type SuspendedCard struct {
 	TimeCounters int
 }
 
+// ReboundCard tracks a card exiled by Rebound (CR 702.88) awaiting its owner's
+// next-upkeep free recast from exile. Controller is the player who cast the
+// rebounding spell and may recast it; Owner owns the exiled card.
+type ReboundCard struct {
+	Owner      PlayerID
+	Controller PlayerID
+}
+
 // PlayerConfig holds the configuration for a single player when setting
 // up a new game — their name, deck list, and commander.
 type PlayerConfig struct {
@@ -106,6 +114,10 @@ type Game struct {
 
 	// SuspendedCards tracks cards exiled with suspend and their time counters.
 	SuspendedCards map[id.ID]SuspendedCard
+
+	// ReboundCards tracks cards exiled by Rebound awaiting their controller's
+	// next-upkeep free recast from exile.
+	ReboundCards map[id.ID]ReboundCard
 
 	// AdventureCards tracks cards in exile that may be cast from adventure exile.
 	AdventureCards map[id.ID]bool
@@ -240,6 +252,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 		CardInstances:              make(map[id.ID]*CardInstance),
 		CommanderIDs:               make(map[id.ID]bool),
 		SuspendedCards:             make(map[id.ID]SuspendedCard),
+		ReboundCards:               make(map[id.ID]ReboundCard),
 		AdventureCards:             make(map[id.ID]bool),
 		LastKnownInformation:       make(map[id.ID]ObjectSnapshot),
 		LinkedObjects:              make(map[LinkedObjectKey][]LinkedObjectRef),

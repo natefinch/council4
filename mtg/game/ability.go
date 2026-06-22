@@ -92,6 +92,7 @@ const (
 	Unearth
 	Training
 	Saddle
+	Rebound
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -234,6 +235,14 @@ var (
 	// counter, and prohibits blocking while such a permanent has a +1/+1 counter;
 	// the keyword itself carries no continuous effect.
 	UnleashStaticBody = simpleKeywordStaticBody("Unleash", Unleash)
+
+	// ReboundStaticBody is the reusable StaticAbilityBody for rebound (CR
+	// 702.88): "If this spell was cast from your hand, instead of putting it into
+	// your graveyard as it resolves, exile it and, at the beginning of your next
+	// upkeep, you may cast this card from exile without paying its mana cost."
+	// The runtime reads the rebound keyword on a resolving spell; the keyword
+	// itself carries no continuous effect.
+	ReboundStaticBody = simpleKeywordStaticBody("Rebound", Rebound)
 )
 
 func simpleKeywordStaticBody(text string, keyword Keyword) StaticAbility {
