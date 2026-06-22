@@ -824,6 +824,43 @@ func TestGenerateExecutableCardSourceReferencedControllerDamage(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceEventPlayerDamage(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name   string
+		oracle string
+	}{
+		// "Whenever an opponent draws a card, ~ deals N damage to that player."
+		// (Underworld Dreams) targets the triggering event's player.
+		{"Test Dream Pain", "Whenever an opponent draws a card, this enchantment deals 1 damage to that player."},
+		// "Whenever an opponent discards a card, ~ deals N damage to that player."
+		// (Megrim) is the same event-player recipient shape.
+		{"Test Discard Pain", "Whenever an opponent discards a card, this enchantment deals 2 damage to that player."},
+	} {
+		source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+			Name:       tc.name,
+			Layout:     "normal",
+			ManaCost:   "{2}{B}",
+			TypeLine:   "Enchantment",
+			OracleText: tc.oracle,
+		}, "t")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(diagnostics) != 0 {
+			t.Fatalf("%q: diagnostics = %#v", tc.oracle, diagnostics)
+		}
+		for _, want := range []string{
+			"game.Damage{",
+			"game.PlayerDamageRecipient(game.EventPlayerReference())",
+		} {
+			if !strings.Contains(source, want) {
+				t.Fatalf("%q: source missing %q:\n%s", tc.oracle, want, source)
+			}
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceInheritedPronounDestroy(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{

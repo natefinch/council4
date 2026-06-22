@@ -842,6 +842,12 @@ const (
 	// DamageRecipientReferenceYou marks the source's own controller as the
 	// damage recipient, the literal "you" recipient of "deals N damage to you".
 	DamageRecipientReferenceYou
+	// DamageRecipientReferenceThatPlayer marks the triggering event's player as
+	// the damage recipient, the "that player" recipient of "Whenever an opponent
+	// draws a card, ~ deals N damage to that player." (Underworld Dreams,
+	// Megrim, Manabarbs). The "that player" reference binds to the event player
+	// (ReferenceBindingEventPlayer); lowering resolves it to EventPlayerReference.
+	DamageRecipientReferenceThatPlayer
 )
 
 // SignedAmountSyntax is one signed half of a power/toughness change.
