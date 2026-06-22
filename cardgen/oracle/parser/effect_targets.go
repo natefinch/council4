@@ -764,13 +764,17 @@ func permanentSelectionQualifierWords(selection SelectionSyntax) ([]string, bool
 // noun, reconstructing the canonical Oracle wording. A bare "permanent" noun
 // restricted to tokens prints as the single word "token" (Oracle never writes
 // "token permanent"); a typed noun takes the adjective as a prefix ("token
-// creature"). Selections without the token adjective return the noun unchanged.
+// creature"). A "nontoken" selector prefixes the noun directly ("nontoken
+// creature", "nontoken permanent"). Selections without a token adjective return
+// the noun unchanged.
 func tokenQualifiedNoun(selection SelectionSyntax, noun string) []string {
 	switch {
 	case selection.TokenOnly && selection.Kind == SelectionPermanent:
 		return []string{"token"}
 	case selection.TokenOnly:
 		return []string{"token", noun}
+	case selection.NonToken:
+		return []string{"nontoken", noun}
 	default:
 		return []string{noun}
 	}

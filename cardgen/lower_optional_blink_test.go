@@ -160,7 +160,7 @@ func TestLowerOptionalBlinkFailsClosed(t *testing.T) {
 		// An unsupported exile selector still blocks the sequence underneath the
 		// optional wrapper.
 		{"unsupported selector", "Instant",
-			"You may exile target nontoken permanent, then return it to the battlefield under its owner's control."},
+			"You may exile target multicolored permanent, then return it to the battlefield under its owner's control."},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

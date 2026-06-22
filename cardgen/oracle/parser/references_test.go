@@ -87,6 +87,21 @@ func TestParseEmitsThisSagaSelfReference(t *testing.T) {
 	}
 }
 
+// TestParseEmitsSelfTypeMarkerReferences proves the permanent type/subtype self
+// markers "this Aura", "this Vehicle", and "this Saga" are recognized as
+// source-object references (the duration anchor of an O-Ring exile-until-leaves
+// clause), the same kind as "this creature"/"this enchantment".
+func TestParseEmitsSelfTypeMarkerReferences(t *testing.T) {
+	t.Parallel()
+	for _, phrase := range []string{"this Aura", "this Vehicle", "this Saga"} {
+		source := "until " + phrase + " leaves the battlefield"
+		references := atomsFor(t, source, "").References()
+		if len(references) != 1 || references[0].Kind != ReferenceThisObject {
+			t.Fatalf("%q references = %+v; want one this-object reference", source, references)
+		}
+	}
+}
+
 func TestParseEmitsChosenCardsReference(t *testing.T) {
 	t.Parallel()
 	source := "return the chosen cards to the battlefield tapped"

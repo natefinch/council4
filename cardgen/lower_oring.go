@@ -30,7 +30,7 @@ const exileUntilLeavesKey = game.LinkedKey("exile-until-leaves")
 // that is not the source duration anchor. The "up to one target" cardinality
 // and an optional "you may" offer are accepted.
 func lowerExileUntilLeavesContent(ctx contentCtx) (game.AbilityContent, bool) {
-	if ctx.enclosingKind != compiler.AbilityTriggered ||
+	if !exileUntilLeavesEnclosingKind(ctx.enclosingKind) ||
 		ctx.optional ||
 		len(ctx.content.Effects) != 1 ||
 		len(ctx.content.Targets) != 1 ||
@@ -74,6 +74,17 @@ func lowerExileUntilLeavesContent(ctx contentCtx) (game.AbilityContent, bool) {
 			},
 		}},
 	}.Ability(), true
+}
+
+// exileUntilLeavesEnclosingKind reports whether an ability kind may host the
+// O-Ring exile-until-leaves clause. A triggered ability carries the
+// enters-the-battlefield form (Banisher Priest, Banishing Light); a Saga chapter
+// ability carries the chapter form ("I, II, III — Exile target ... until this
+// Saga leaves the battlefield.", e.g. Summon: Ixion, Trial of a Time Lord). Both
+// publish the linked exile under the source, and the face-level
+// synthesizeExileUntilLeavesReturns adds the paired return-on-leave trigger.
+func exileUntilLeavesEnclosingKind(kind compiler.AbilityKind) bool {
+	return kind == compiler.AbilityTriggered || kind == compiler.AbilityChapter
 }
 
 // referencesAreOnlySourceAnchors reports whether every reference (if any) is the
@@ -206,13 +217,24 @@ func synthesizeExileUntilLeavesReturns(result *loweredFaceAbilities) {
 
 func faceExilesUntilLeaves(result *loweredFaceAbilities) bool {
 	for abilityIndex := range result.TriggeredAbilities {
-		content := &result.TriggeredAbilities[abilityIndex].Content
-		for modeIndex := range content.Modes {
-			for instructionIndex := range content.Modes[modeIndex].Sequence {
-				exile, ok := content.Modes[modeIndex].Sequence[instructionIndex].Primitive.(game.Exile)
-				if ok && exile.ExileLinkedKey == exileUntilLeavesKey {
-					return true
-				}
+		if contentExilesUntilLeaves(&result.TriggeredAbilities[abilityIndex].Content) {
+			return true
+		}
+	}
+	for abilityIndex := range result.ChapterAbilities {
+		if contentExilesUntilLeaves(&result.ChapterAbilities[abilityIndex].Content) {
+			return true
+		}
+	}
+	return false
+}
+
+func contentExilesUntilLeaves(content *game.AbilityContent) bool {
+	for modeIndex := range content.Modes {
+		for instructionIndex := range content.Modes[modeIndex].Sequence {
+			exile, ok := content.Modes[modeIndex].Sequence[instructionIndex].Primitive.(game.Exile)
+			if ok && exile.ExileLinkedKey == exileUntilLeavesKey {
+				return true
 			}
 		}
 	}
