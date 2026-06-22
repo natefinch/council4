@@ -587,7 +587,7 @@ func (r Renderer) renderTriggerCondition(ctx *renderCtx, trigger *game.TriggerCo
 	return structLit("game.TriggerCondition", fields), nil
 }
 
-func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPattern) (string, error) {
+func (r Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPattern) (string, error) {
 	if (pattern.Event == game.EventBeginningOfStep) != (pattern.Step != game.StepNone) {
 		return "", errors.New("render: beginning-of-step trigger pattern must set exactly one supported step")
 	}
@@ -603,8 +603,7 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		(pattern.MatchToZone && pattern.ExcludeToZone) ||
 		pattern.DamageRecipientCombatState != game.CombatStateAny ||
 		(pattern.SpellTargetsSource && pattern.Event != game.EventSpellCast) ||
-		pattern.SpellTargetAllow != game.TargetAllowUnspecified ||
-		pattern.SpellTargetPattern.Exists ||
+		((pattern.SpellTargetAllow != game.TargetAllowUnspecified || pattern.SpellTargetPattern.Exists) && pattern.Event != game.EventSpellCast) ||
 		(pattern.RequireKickerPaid && pattern.Event != game.EventSpellCast) ||
 		(pattern.RequireHistoric && pattern.Event != game.EventSpellCast) ||
 		(pattern.MatchSpellCopy && pattern.Event != game.EventSpellCast) ||
@@ -654,6 +653,20 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		return "", err
 	}
 	fields = append(fields, selectionFields...)
+	if pattern.SpellTargetAllow != game.TargetAllowUnspecified {
+		fields = append(fields, fmt.Sprintf("SpellTargetAllow: %s,", renderTargetAllow(pattern.SpellTargetAllow)))
+	}
+	if pattern.SpellTargetPattern.Exists {
+		lit, ok, err := r.renderTargetPredicate(ctx, pattern.SpellTargetPattern.Val)
+		if err != nil {
+			return "", err
+		}
+		if !ok {
+			return "", errors.New("render: empty spell-target predicate")
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("SpellTargetPattern: opt.Val(%s),", lit))
+	}
 	return structLit("game.TriggerPattern", fields), nil
 }
 

@@ -679,6 +679,12 @@ type TriggerEventClause struct {
 	// spells that target the source permanent (CR 603.2e, the Heroic ability
 	// word). It is empty for unrestricted spell-cast clauses.
 	SpellTargetsSource bool `json:",omitempty"`
+	// SpellTargetSelection restricts a spell-cast clause to spells that target a
+	// permanent matching this selection ("...that targets a creature you
+	// control" / "...a creature an opponent controls"). It is nil when the clause
+	// imposes no such relation. The self-target special case is carried by
+	// SpellTargetsSource instead and never co-occurs with this field.
+	SpellTargetSelection *TriggerSelection `json:",omitempty"`
 }
 
 // EventHistoryWindowKind identifies the turn window for an event-history

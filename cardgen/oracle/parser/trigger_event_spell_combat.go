@@ -40,15 +40,20 @@ func parseSpellCastTriggerEventClause(
 		remaining = remaining[2:]
 	}
 	// "Whenever you cast a spell that targets this creature" (Heroic) restricts
-	// the cast trigger to spells targeting the source permanent. The "that
-	// targets <self>" suffix is stripped before the spell selection is parsed so
-	// the remaining "a spell" filter parses normally; the self reference may be
-	// "this creature"/"this permanent" or the source's name.
+	// the cast trigger to spells targeting the source permanent. The broader
+	// "that targets a creature you control" / "...an opponent controls" forms
+	// restrict it to spells targeting a permanent matching a selection. The
+	// "that targets <relation>" suffix is stripped before the spell selection is
+	// parsed so the remaining "a spell" filter parses normally.
 	spellTargetsSource := false
+	var spellTargetSelection *TriggerSelection
 	if index := syntaxWordsIndex(remaining, "that", "targets"); index > 0 {
 		targetTokens := remaining[index+2:]
 		if _, count, selfOK := parseSelfSubject(targetTokens, atoms); selfOK && count == len(targetTokens) {
 			spellTargetsSource = true
+			remaining = remaining[:index]
+		} else if relation, relationOK := parseSpellTargetSelection(targetTokens); relationOK {
+			spellTargetSelection = &relation
 			remaining = remaining[:index]
 		}
 	}
@@ -74,12 +79,33 @@ func parseSpellCastTriggerEventClause(
 		return nil
 	}
 	return &TriggerEventClause{
-		Kind:               TriggerEventKindSpellCast,
-		Actor:              actor,
-		SpellSelection:     selection,
-		MatchCopy:          matchCopy,
-		SpellTargetsSource: spellTargetsSource,
+		Kind:                 TriggerEventKindSpellCast,
+		Actor:                actor,
+		SpellSelection:       selection,
+		MatchCopy:            matchCopy,
+		SpellTargetsSource:   spellTargetsSource,
+		SpellTargetSelection: spellTargetSelection,
 	}
+}
+
+// parseSpellTargetSelection recognizes the permanent target relation in a "that
+// targets ..." spell-cast suffix (for example "a creature you control" or "a
+// creature an opponent controls"). It strips the leading article and defers to
+// parseTriggerSelection, which folds the controller relation into the returned
+// selection. The self-target form ("this creature") is handled by the caller
+// through parseSelfSubject; "another"-scoped relations are not recognized here
+// because the bare selection cannot carry the exclude-source restriction.
+func parseSpellTargetSelection(tokens []shared.Token) (TriggerSelection, bool) {
+	if len(tokens) < 2 {
+		return TriggerSelection{}, false
+	}
+	switch {
+	case equalWord(tokens[0], "a"), equalWord(tokens[0], "an"):
+		tokens = tokens[1:]
+	default:
+		return TriggerSelection{}, false
+	}
+	return parseTriggerSelection(tokens)
 }
 
 // parseOrdinalSpellSelectionForActor resolves a non-controller "their Nth spell
