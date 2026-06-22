@@ -1020,6 +1020,11 @@ func typedManaEffectContent(effect compiler.CompiledEffectMana) (game.AbilityCon
 	return game.AbilityContent{}, false
 }
 
+// DO-NOT-COPY(filter): routes a single typed Kind through the disjunctive
+// RequiredTypesAny union (not the canonical RequiredTypes), a representation the
+// canonical projector does not reproduce; prefer SelectionForSelectorMasked for
+// new code. (retire: #1393)
+//
 // colorsAmongControlledSelection builds the runtime permanent filter for a "one
 // mana of any color among <permanents> you control" mana ability from its
 // compiled selector. It accepts only a "you control" battlefield group and maps

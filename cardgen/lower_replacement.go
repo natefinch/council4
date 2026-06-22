@@ -1172,23 +1172,32 @@ func lowerGroupEntersWithCountersRecipient(selector compiler.CompiledSelector) (
 		len(selector.Alternatives) != 0 || selector.Zone != zone.None {
 		return nil, false
 	}
-	requiredType, ok := groupEntersWithCountersRequiredType(selector)
+	if _, ok := groupEntersWithCountersRequiredType(selector); !ok {
+		return nil, false
+	}
+	selection, ok := SelectionForSelectorMasked(selector, groupEntersWithCountersRecipientMask)
 	if !ok {
 		return nil, false
 	}
-	selection, ok := selectorCharacteristics(selector)
-	if !ok {
-		return nil, false
-	}
-	if requiredType != "" {
-		selection.RequiredTypes = append(selection.RequiredTypes, requiredType)
-	}
-	selection.Controller = game.ControllerYou
-	selection.ExcludeSource = selector.Other
-	selection.NonToken = selector.NonToken
-	selection.TokenOnly = selector.TokenOnly
 	return &selection, true
 }
+
+// groupEntersWithCountersRecipientMask drops the canonical dimensions a group
+// enters-with-counters recipient never carries: the excluded supertype,
+// kind-agnostic counter, "aren't of the chosen type" exclusion, conjunctive type
+// set, and historic disjunction. It fails closed on a source-relative power
+// comparison: an enters-with-counters group has no source permanent to compare
+// against, so the predecessor projector rejected that filter rather than dropping
+// it.
+var groupEntersWithCountersRecipientMask = SelectionMask{}.Ignoring(
+	DimExcludedSupertype,
+	DimMatchAnyCounter,
+	DimSubtypeChoiceExcluded,
+	DimConjunctiveTypes,
+	DimHistoric,
+).Rejecting(
+	DimPowerVsSource,
+)
 
 // groupEntersWithCountersRequiredType maps a group enters-with-counters
 // recipient selector kind to the runtime card type the entering permanent must

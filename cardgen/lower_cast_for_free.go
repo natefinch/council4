@@ -65,6 +65,11 @@ func lowerCastForFreeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 	}}}.Ability(), nil
 }
 
+// DO-NOT-COPY(filter): projects the "a spell" (SelectorSpell nonland card)
+// free-cast selector and delegates typed cards to cardSelectionForSelector,
+// neither of which the battlefield-only canonical projector represents; prefer
+// SelectionForSelectorMasked for new code. (retire: #1393)
+//
 // castForFreeSelection builds the runtime card filter for a free cast. A typed
 // selector ("a creature card", "an instant or sorcery card") reuses the shared
 // card-selection conversion. The bare "a spell" selector matches any nonland

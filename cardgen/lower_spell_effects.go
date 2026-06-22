@@ -396,6 +396,10 @@ func cardInZoneTargetSpec(target compiler.CompiledTarget, targetZone zone.Type) 
 	}, true
 }
 
+// DO-NOT-COPY(filter): projects card-zone (graveyard/hand/library/exile)
+// selections, including the bare "a card" (SelectorCard) noun and a zone
+// filter, which the battlefield-only canonical projector fails closed on by
+// design; prefer SelectionForSelectorMasked for new code. (retire: #1393)
 func cardSelectionForSelector(selector compiler.CompiledSelector) (game.Selection, bool) {
 	if selector.PowerLessThanSource || selector.PowerGreaterThanSource {
 		// A source-relative power comparison applies only to a targeted
