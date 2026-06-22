@@ -934,10 +934,16 @@ type SelectionSyntax struct {
 	// MatchManaValue, MatchPower, and MatchToughness record whether their paired
 	// ManaValue/Power/Toughness comparison below is active. They are grouped with
 	// the other booleans to keep the struct compact.
-	MatchManaValue bool        `json:",omitempty"`
-	MatchPower     bool        `json:",omitempty"`
-	MatchToughness bool        `json:",omitempty"`
-	Keyword        KeywordKind `json:",omitempty"`
+	MatchManaValue bool `json:",omitempty"`
+	MatchPower     bool `json:",omitempty"`
+	MatchToughness bool `json:",omitempty"`
+	// MatchTotalManaValue records whether the paired TotalManaValue comparison is
+	// active. Unlike MatchManaValue, which bounds each matched card's own mana
+	// value, this bounds the combined mana value of the whole chosen set ("Return
+	// up to two creature cards with total mana value 4 or less ..."). It is kept
+	// distinct so a set-sum constraint never lowers to a per-card filter.
+	MatchTotalManaValue bool        `json:",omitempty"`
+	Keyword             KeywordKind `json:",omitempty"`
 	// ExcludedKeyword records a "without <keyword>" selector qualifier (e.g.
 	// "each creature without flying"); it is mutually exclusive with Keyword.
 	ExcludedKeyword    KeywordKind       `json:",omitempty"`
@@ -955,6 +961,10 @@ type SelectionSyntax struct {
 	ManaValue          compare.Int       `json:",omitzero"`
 	Power              compare.Int       `json:",omitzero"`
 	Toughness          compare.Int       `json:",omitzero"`
+	// TotalManaValue holds the set-sum mana value comparison bound when
+	// MatchTotalManaValue is set ("with total mana value N or less"). It bounds
+	// the combined mana value of the chosen cards, not any individual card.
+	TotalManaValue compare.Int `json:",omitzero"`
 	// CounterRequired records a "with a <kind> counter on it/them" qualifier;
 	// CounterKind names the counter the matched permanent must carry. When the
 	// qualifier names no kind ("with a counter on it"), CounterAny is set instead

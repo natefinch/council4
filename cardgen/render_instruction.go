@@ -745,6 +745,10 @@ func (r Renderer) renderReturnFromGraveyard(ctx *renderCtx, value game.ReturnFro
 	if value.EntryTapped {
 		fields = append(fields, "EntryTapped: true,")
 	}
+	if value.MaxTotalManaValue.Exists {
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("MaxTotalManaValue: opt.Val(%d),", value.MaxTotalManaValue.Val))
+	}
 	return structLit("game.ReturnFromGraveyard", fields), nil
 }
 

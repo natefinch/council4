@@ -135,6 +135,9 @@ func choiceSelectionValid(request game.ChoiceRequest, selected []int) bool {
 	if len(selected) < request.MinChoices || len(selected) > request.MaxChoices {
 		return false
 	}
+	if request.MaxTotalManaValue.Exists && !choiceTotalManaValueValid(request, selected) {
+		return false
+	}
 	switch request.Kind {
 	case game.ChoiceOrder:
 		return orderSelectionValid(request, selected)
@@ -193,6 +196,33 @@ func choiceOptionExists(request game.ChoiceRequest, index int) bool {
 		}
 	}
 	return false
+}
+
+// choiceTotalManaValueValid reports whether the combined mana value of the
+// selected options stays within request.MaxTotalManaValue. Options without card
+// info contribute zero. Indices that name no option are rejected so an invalid
+// index can never bypass the cap by contributing nothing.
+func choiceTotalManaValueValid(request game.ChoiceRequest, selected []int) bool {
+	total := 0
+	for _, index := range selected {
+		option, ok := choiceOption(request, index)
+		if !ok {
+			return false
+		}
+		if option.Card.Exists {
+			total += option.Card.Val.ManaValue
+		}
+	}
+	return total <= request.MaxTotalManaValue.Val
+}
+
+func choiceOption(request game.ChoiceRequest, index int) (game.ChoiceOption, bool) {
+	for _, option := range request.Options {
+		if option.Index == index {
+			return option, true
+		}
+	}
+	return game.ChoiceOption{}, false
 }
 
 func mayChoiceRequest(player game.PlayerID, prompt string) game.ChoiceRequest {

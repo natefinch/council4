@@ -1169,6 +1169,9 @@ func lowerReturnSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 	if content, ok := lowerChosenCardGraveyardReturn(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerTotalManaValueGraveyardReanimation(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerMassGraveyardReturn(ctx); ok {
 		return content, nil
 	}

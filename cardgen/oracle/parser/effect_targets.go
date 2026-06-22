@@ -1899,6 +1899,18 @@ func selectionCounterQualifier(tokens []shared.Token) (kind counter.Kind, anyKin
 func parseSelectionNumbers(tokens []shared.Token, atoms Atoms, selection *SelectionSyntax) bool {
 	for i := range tokens {
 		if i+2 < len(tokens) && effectWordsAt(tokens, i, "mana", "value") {
+			if i >= 1 && equalWord(tokens[i-1], "total") {
+				// "total mana value N or less" bounds the combined mana value of
+				// the whole chosen set, not each card. Record it on the dedicated
+				// total fields so lowering never mistakes it for a per-card filter.
+				comparison, ok := parseSelectionNumberComparison(tokens[i+2:], atoms)
+				if !ok {
+					return false
+				}
+				selection.TotalManaValue = comparison
+				selection.MatchTotalManaValue = true
+				continue
+			}
 			if i+4 < len(tokens) && equalWord(tokens[i+2], "X") &&
 				equalWord(tokens[i+3], "or") && equalWord(tokens[i+4], "less") {
 				// "mana value X or less" bounds the match by the spell's chosen

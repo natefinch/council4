@@ -616,12 +616,20 @@ type CastForFree struct {
 // each to its owner's hand, while zone.Battlefield reanimates each onto the
 // battlefield under Player's control ("... to the battlefield", Tayam), tapped
 // when EntryTapped is set.
+//
+// MaxTotalManaValue, when set, caps the combined mana value of the chosen cards
+// ("Return up to two creature cards with total mana value 4 or less from your
+// graveyard to the battlefield" — Lively Dirge). Player may choose any subset of
+// matching cards whose total mana value does not exceed the cap, up to Amount
+// cards; an empty choice is always legal, so the cap also makes the choice
+// optional ("up to").
 type ReturnFromGraveyard struct {
-	Player      PlayerReference
-	Selection   Selection
-	Amount      Quantity
-	Destination zone.Type
-	EntryTapped bool
+	Player            PlayerReference
+	Selection         Selection
+	Amount            Quantity
+	Destination       zone.Type
+	EntryTapped       bool
+	MaxTotalManaValue opt.V[int]
 }
 
 // MassReturnFromGraveyard returns every card in Player's graveyard matching

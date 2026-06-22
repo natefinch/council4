@@ -458,6 +458,13 @@ func cardSelectionForSelector(selector compiler.CompiledSelector) (game.Selectio
 		}
 		selection.ManaValue = opt.Val(selector.ManaValue)
 	}
+	// A total (set-sum) mana-value bound is not a per-card filter; game.Selection
+	// cannot express it. Fail closed here so no path silently drops the
+	// constraint; the dedicated total-mana-value reanimation lowering clears this
+	// flag before building the selection and models the cap on the primitive.
+	if selector.MatchTotalManaValue {
+		return game.Selection{}, false
+	}
 	selection.Colorless = selector.Colorless
 	selection.Multicolored = selector.Multicolored
 	if selector.MatchPower || selector.MatchToughness {

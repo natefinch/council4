@@ -823,14 +823,24 @@ func handleReturnFromGraveyard(r *effectResolver, prim game.ReturnFromGraveyard)
 	if prim.Destination == zone.Battlefield {
 		prompt = "Choose a card to return to the battlefield"
 	}
+	// A total mana value cap lets the player choose any subset up to the count
+	// limit whose combined mana value stays within the cap, including none, so
+	// the minimum drops to zero and the empty choice is the safe default.
+	minChoices := amount
+	defaultSelection := firstChoiceIndices(amount)
+	if prim.MaxTotalManaValue.Exists {
+		minChoices = 0
+		defaultSelection = nil
+	}
 	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
-		Kind:             game.ChoiceResolution,
-		Player:           playerID,
-		Prompt:           prompt,
-		Options:          options,
-		MinChoices:       amount,
-		MaxChoices:       amount,
-		DefaultSelection: firstChoiceIndices(amount),
+		Kind:              game.ChoiceResolution,
+		Player:            playerID,
+		Prompt:            prompt,
+		Options:           options,
+		MinChoices:        minChoices,
+		MaxChoices:        amount,
+		DefaultSelection:  defaultSelection,
+		MaxTotalManaValue: prim.MaxTotalManaValue,
 	}, r.log)
 	if prim.Destination == zone.Battlefield {
 		resolved := make([]resolvedBattlefieldCard, 0, len(selected))

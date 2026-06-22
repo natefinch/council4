@@ -928,6 +928,12 @@ type CompiledSelector struct {
 	Zone            zone.Type
 	ManaValue       compare.Int
 	MatchManaValue  bool
+	// MatchTotalManaValue records whether TotalManaValue bounds the combined mana
+	// value of the chosen set ("with total mana value N or less") rather than each
+	// matched card's own mana value (MatchManaValue). It lowers to the runtime
+	// ReturnFromGraveyard.MaxTotalManaValue cap.
+	MatchTotalManaValue bool
+	TotalManaValue      compare.Int
 	// ManaValueX records that the MatchManaValue bound is the spell's chosen {X}
 	// ("with mana value X or less") rather than a fixed number; ManaValue then
 	// holds only the operator. It lowers to SearchSpec.MaxManaValueFromX.
