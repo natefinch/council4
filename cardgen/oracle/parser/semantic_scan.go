@@ -20,6 +20,18 @@ func (a *Ability) computeSemanticReferences() []Reference {
 			tokens = tokensOutsideParserSpan(tokens, a.StaticDeclarations[i].Span)
 		}
 	}
+	// A created attacking token's "... attacking <defender>" phrase owns any
+	// anaphoric "that player" within it; the defender-agnostic runtime ignores
+	// the defender, so remove the phrase's tokens before reference scanning to
+	// keep that pronoun from surfacing as a dangling semantic reference.
+	for i := range a.Sentences {
+		for j := range a.Sentences[i].Effects {
+			effect := &a.Sentences[i].Effects[j]
+			if effect.AttackDefender != AttackDefenderNone {
+				tokens = tokensOutsideParserSpan(tokens, effect.AttackDefenderSpan)
+			}
+		}
+	}
 	return a.Atoms.ReferencesWithin(tokens)
 }
 

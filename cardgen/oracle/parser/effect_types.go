@@ -891,6 +891,27 @@ const (
 	GraveyardZoneExileAll GraveyardZoneExileKind = "GraveyardZoneExileAll"
 )
 
+// AttackDefenderKind identifies the defender a created attacking token is
+// told to attack in the trailing "... attacking <defender>" clause (CR 508.4),
+// e.g. "create a 1/1 ... token that's tapped and attacking that player or a
+// planeswalker they control." (Adeline, Resplendent Cathar). The runtime
+// EntryAttacking model is defender-agnostic — it puts the token into combat
+// against a legal defender — so the kind records only the recognized Oracle
+// wording for byte-exact clause reconstruction; it does not change lowering.
+type AttackDefenderKind string
+
+// Created-attacking-token defender relations.
+const (
+	AttackDefenderNone AttackDefenderKind = ""
+	// AttackDefenderThatPlayerOrPlaneswalker is "... attacking that player or
+	// a planeswalker they control." — the modern per-opponent templating.
+	AttackDefenderThatPlayerOrPlaneswalker AttackDefenderKind = "AttackDefenderThatPlayerOrPlaneswalker"
+	// AttackDefenderThatPlayer is "... attacking that player."
+	AttackDefenderThatPlayer AttackDefenderKind = "AttackDefenderThatPlayer"
+	// AttackDefenderThatOpponent is "... attacking that opponent."
+	AttackDefenderThatOpponent AttackDefenderKind = "AttackDefenderThatOpponent"
+)
+
 // SelectionController identifies a selected object's controller.
 type SelectionController string
 
@@ -1254,6 +1275,20 @@ type EffectSyntax struct {
 	// the trailing "named <Name>" tail. It is empty for tokens named only by
 	// their subtypes (the default).
 	TokenName string `json:",omitempty"`
+	// AttackDefender names the defender in a created attacking token's
+	// trailing "... attacking <defender>" clause (CR 508.4), e.g. "that player or
+	// a planeswalker they control." It is set only when Selection.Attacking is
+	// true and the clause carries an explicit defender; the bare "... attacking."
+	// clause leaves it AttackDefenderNone. The runtime EntryAttacking model
+	// is defender-agnostic, so this field only drives byte-exact clause
+	// reconstruction in the create-token exactness recognizer.
+	AttackDefender AttackDefenderKind `json:",omitempty"`
+	// AttackDefenderSpan covers the trailing "... attacking <defender>"
+	// defender phrase whenever AttackDefender is set. The semantic-reference
+	// scan removes this span so an anaphoric "that player" inside the defender
+	// (which the defender-agnostic runtime ignores) does not surface as a
+	// dangling reference. It is the zero span when no defender is recognized.
+	AttackDefenderSpan shared.Span `json:"-"`
 	// TokenCopyOfTarget reports that the created token is a copy of the effect's
 	// single target object ("Create a token that's a copy of target creature you
 	// control."). The copy source is the effect's lone target, captured in

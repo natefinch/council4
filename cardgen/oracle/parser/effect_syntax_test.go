@@ -1203,6 +1203,11 @@ func TestParseCreateCreatureTokenTypeExactness(t *testing.T) {
 		{"Create two 1/1 red Human creature tokens that are tapped and attacking.", true},
 		{"Create a 1/1 white Soldier creature token that's attacking.", true},
 		{"Create a 1/1 white Cat Soldier creature token with vigilance that's attacking.", true},
+		// A trailing "... attacking <defender>" designation (CR 508.4) is
+		// representable: the defender is ignored by the defender-agnostic runtime.
+		{"Create a 1/1 white Human creature token that's tapped and attacking that player or a planeswalker they control.", true},
+		{"Create a 1/1 white Human creature token that's tapped and attacking that player.", true},
+		{"Create a 1/1 white Human creature token that's tapped and attacking that opponent.", true},
 		// A "blocking" entry remains unrepresentable and stays fail-closed.
 		{"Create a 2/2 green Boar creature token that's tapped and blocking.", false},
 		// A quoted granted ability is not representable and stays fail-closed.
