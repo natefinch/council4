@@ -1056,6 +1056,67 @@ func expandModularKeyword(source string) string {
 	return strings.Join(lines, "\n")
 }
 
+// graftLineRank reports the rank N of a line that is exactly the printed
+// "Graft N" keyword, optionally followed only by its parenthesized reminder
+// text. Lines that merely contain the word elsewhere or that pair it with other
+// rules text are left untouched.
+func graftLineRank(line string) (int, bool) {
+	const prefix = "Graft "
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, prefix) {
+		return 0, false
+	}
+	rest := strings.TrimSpace(trimmed[len(prefix):])
+	digits := 0
+	for digits < len(rest) && rest[digits] >= '0' && rest[digits] <= '9' {
+		digits++
+	}
+	if digits == 0 {
+		return 0, false
+	}
+	rank, err := strconv.Atoi(rest[:digits])
+	if err != nil || rank <= 0 {
+		return 0, false
+	}
+	tail := strings.TrimSpace(rest[digits:])
+	if tail != "" && (!strings.HasPrefix(tail, "(") || !strings.HasSuffix(tail, ")")) {
+		return 0, false
+	}
+	return rank, true
+}
+
+// expandGraftKeyword rewrites each printed "Graft N" keyword line into the two
+// abilities it abbreviates (CR 702.57): a static placing N +1/+1 counters as the
+// creature enters, and a trigger that may move a +1/+1 counter from this creature
+// onto another creature as that creature enters. Like Modular, Graft is pure
+// shorthand for fixed abilities, so expanding it to canonical wording lets the
+// standard enters-with-counters and trigger pipelines lower it; "that creature"
+// names the triggering permanent so the moved counter lands on the entering
+// creature rather than the source. The rewrite is parser-owned because it is a
+// wording substitution; downstream stages see only the expanded abilities.
+func expandGraftKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		rank, ok := graftLineRank(line)
+		if !ok {
+			continue
+		}
+		counters, ok := modularCounterPhrase(rank)
+		if !ok {
+			continue
+		}
+		lines[i] = "This creature enters with " + counters + " on it.\n" +
+			"Whenever another creature enters, you may move a +1/+1 counter " +
+			"from this creature onto that creature."
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
+
 // expandAffinityKeyword rewrites each printed "Affinity for <permanents>"
 // keyword line into the static cast cost reduction it abbreviates (CR 702.41a):
 // "This spell costs {1} less to cast for each <permanent> you control." Affinity
