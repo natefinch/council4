@@ -438,6 +438,18 @@ func cardSelectionForSelector(selector compiler.CompiledSelector) (game.Selectio
 	if len(selection.RequiredTypesAny) > 0 {
 		selection.RequiredTypes = nil
 	}
+	if selector.Historic {
+		// A historic card is an artifact, a legendary, or a Saga (CR 702.61b).
+		// That spans a card type, a supertype, and a subtype, which the flat
+		// type/supertype/subtype fields cannot OR together, so it lowers to an
+		// AnyOf disjunction. AnyOf is conjunctive with the selection's other
+		// fields, so a card-type Kind or controller filter still applies on top.
+		selection.AnyOf = append(selection.AnyOf,
+			game.Selection{RequiredTypes: []types.Card{types.Artifact}},
+			game.Selection{Supertypes: []types.Super{types.Legendary}},
+			game.Selection{SubtypesAny: []types.Sub{types.Saga}},
+		)
+	}
 	switch selector.Controller {
 	case compiler.ControllerAny:
 	case compiler.ControllerYou:

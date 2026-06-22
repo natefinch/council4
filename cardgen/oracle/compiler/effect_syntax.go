@@ -148,6 +148,7 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		Colorless:                     syntax.Colorless,
 		Multicolored:                  syntax.Multicolored,
 		BasicLandType:                 syntax.BasicLandType,
+		Historic:                      syntax.Historic,
 		MatchCounter:                  syntax.CounterRequired,
 		RequiredCounter:               syntax.CounterKind,
 		MatchAnyCounter:               syntax.CounterAny,

@@ -42,6 +42,40 @@ func TestLowerTargetedGraveyardReturnToHand(t *testing.T) {
 	}
 }
 
+func TestLowerTargetedGraveyardReturnHistoric(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Historic Return",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return target historic card from your graveyard to your hand.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %#v, want one", mode.Targets)
+	}
+	target := mode.Targets[0]
+	if target.Allow != game.TargetAllowCard || target.TargetZone != zone.Graveyard ||
+		target.Selection.Val.Controller != game.ControllerYou {
+		t.Fatalf("target = %#v", target)
+	}
+	wantAnyOf := []game.Selection{
+		{RequiredTypes: []types.Card{types.Artifact}},
+		{Supertypes: []types.Super{types.Legendary}},
+		{SubtypesAny: []types.Sub{types.Saga}},
+	}
+	if !reflect.DeepEqual(target.Selection.Val.AnyOf, wantAnyOf) {
+		t.Fatalf("AnyOf = %#v, want %#v", target.Selection.Val.AnyOf, wantAnyOf)
+	}
+	move, ok := mode.Sequence[0].Primitive.(game.MoveCard)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.MoveCard", mode.Sequence[0].Primitive)
+	}
+	if move.Card.Kind != game.CardReferenceTarget || move.FromZone != zone.Graveyard || move.Destination != zone.Hand {
+		t.Fatalf("move = %#v", move)
+	}
+}
+
 func TestLowerTargetedGraveyardReturnSingleNonpermanentType(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {

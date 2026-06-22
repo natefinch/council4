@@ -984,6 +984,12 @@ type SelectionSyntax struct {
 	Colorless     bool `json:",omitempty"`
 	Multicolored  bool `json:",omitempty"`
 	BasicLandType bool `json:",omitempty"`
+	// Historic records a "historic" card qualifier ("target historic card from
+	// your graveyard"). A historic card is an artifact, a legendary, or a Saga
+	// (CR 702.61b), a cross-category disjunction no single type/supertype/subtype
+	// field can express, so it is kept as its own flag and lowers to a
+	// Selection.AnyOf of those three alternatives.
+	Historic bool `json:",omitempty"`
 	// ConjunctiveTypes records that a multi-member RequiredTypesAny names card
 	// types the permanent must carry all at once ("artifact creature") rather
 	// than any one of them ("artifact or creature"). It lowers the type set to
