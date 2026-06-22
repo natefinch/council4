@@ -2027,6 +2027,14 @@ const (
 	// whichever is greater." — Willowdusk, Essence Seer). Each operand is itself
 	// a CompiledAmount. Added last so existing kinds keep their wire values.
 	DynamicAmountMaxOf
+	// DynamicAmountTriggeringCounterCount is the number of counters added by the
+	// event that triggered the enclosing counter-placement trigger ("that many"
+	// in "Whenever you put one or more +1/+1 counters on a creature you control,
+	// you may draw that many cards." — Terrasymbiosis). It backs the "draw that
+	// many cards" counter payoff; the lowerer accepts it only inside a
+	// counter-placement trigger. Added last so existing kinds keep their wire
+	// values.
+	DynamicAmountTriggeringCounterCount
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

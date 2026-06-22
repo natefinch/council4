@@ -108,7 +108,7 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		if obj != nil && key != "" {
 			amount = obj.ResolvedExcessDamage[key]
 		}
-	case game.DynamicAmountEventDamage, game.DynamicAmountEventLifeChange:
+	case game.DynamicAmountEventDamage, game.DynamicAmountEventLifeChange, game.DynamicAmountEventCounterCount:
 		if obj != nil && obj.HasTriggerEvent {
 			amount = obj.TriggerEvent.Amount
 		}

@@ -615,6 +615,8 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountLifeGainedThisTurn
 	case parser.EffectDynamicAmountMaxOf:
 		return DynamicAmountMaxOf
+	case parser.EffectDynamicAmountTriggeringCounterCount:
+		return DynamicAmountTriggeringCounterCount
 	default:
 		return DynamicAmountNone
 	}

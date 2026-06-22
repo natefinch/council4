@@ -996,6 +996,49 @@ func damageAndCounterTriggerEventClauseTests() []triggerEventClauseTest {
 				}
 			},
 		},
+		{
+			name:   "counter active self",
+			source: "Whenever you put one or more +1/+1 counters on this creature, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindCounterAdded ||
+					clause.Subject.Kind != TriggerEventSubjectSelf ||
+					clause.CauseController != TriggerEventActorYou ||
+					!clause.OneOrMore ||
+					clause.Counter.Kind != TriggerEventCounterPlusOnePlusOne {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "counter active controller scoped",
+			source: "Whenever you put one or more +1/+1 counters on a creature you control, you may draw that many cards.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindCounterAdded ||
+					clause.Subject.Kind != TriggerEventSubjectSelection ||
+					clause.Controller != ControllerYou ||
+					clause.CauseController != TriggerEventActorYou ||
+					!clause.OneOrMore ||
+					clause.Counter.Kind != TriggerEventCounterPlusOnePlusOne {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "counter active singular other minus one",
+			source: "Whenever you put a -1/-1 counter on a creature, create a token.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindCounterAdded ||
+					clause.Subject.Kind != TriggerEventSubjectSelection ||
+					clause.CauseController != TriggerEventActorYou ||
+					clause.OneOrMore ||
+					clause.Counter.Kind != TriggerEventCounterMinusOneMinusOne {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
 	}
 }
 

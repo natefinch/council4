@@ -315,7 +315,13 @@ func lowerGenericPatternTrigger(
 			"the executable source backend does not support this trigger body")
 	}
 	body, bodySyntax, triggerOptional := prepared.body, prepared.syntax, prepared.optional
-	content, diagnostic := lowerAbilityContent(cardName, compiler.AbilityTriggered, body.Content, body.Optional, &bodySyntax)
+	var content game.AbilityContent
+	var diagnostic *shared.Diagnostic
+	if pattern.Event == game.EventCountersAdded {
+		content, diagnostic = lowerTriggerBodyContent(cardName, body.Content, body.Optional, &bodySyntax, pattern.Event)
+	} else {
+		content, diagnostic = lowerAbilityContent(cardName, compiler.AbilityTriggered, body.Content, body.Optional, &bodySyntax)
+	}
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}

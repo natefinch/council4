@@ -334,8 +334,13 @@ func compileCounterEvent(clause *parser.TriggerEventClause, pattern *TriggerPatt
 	if !ok {
 		return false
 	}
+	causeController, ok := compileTriggerActorController(clause.CauseController)
+	if !ok {
+		return false
+	}
 	pattern.Event = TriggerEventCountersAdded
 	pattern.Counter = counterValue
+	pattern.CauseController = causeController
 	switch clause.Subject.Kind {
 	case parser.TriggerEventSubjectSelf:
 		pattern.Source = TriggerSourceSelf

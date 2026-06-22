@@ -555,6 +555,22 @@ func lowerEventLifeChangeAmount(ctx contentCtx, amount compiler.CompiledAmount) 
 	}, true
 }
 
+// lowerEventCounterCountAmount lowers a "that many" card-count amount into a
+// DynamicAmountEventCounterCount. It succeeds only inside a counter-placement
+// triggered ability (ctx.triggerEvent records the triggering event kind),
+// keeping the amount closed in spell and non-matching contexts where no
+// triggering counter quantity exists.
+func lowerEventCounterCountAmount(ctx contentCtx, amount compiler.CompiledAmount) (game.DynamicAmount, bool) {
+	if ctx.triggerEvent != game.EventCountersAdded {
+		return game.DynamicAmount{}, false
+	}
+	multiplier := max(amount.Multiplier, 1)
+	return game.DynamicAmount{
+		Kind:       game.DynamicAmountEventCounterCount,
+		Multiplier: multiplier,
+	}, true
+}
+
 func exactDamageAmountReferences(amount compiler.CompiledAmount, references []compiler.CompiledReference) bool {
 	if amount.DynamicKind != compiler.DynamicAmountSourcePower {
 		_, ok := lowerDamageSourceReference(references)
