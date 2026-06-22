@@ -224,14 +224,18 @@ func exactCounteredSpellExileSyntax(effect *EffectSyntax) bool {
 
 // exactExileUntilSourceLeavesEffectSyntax recognizes the O-Ring exile clause
 // "exile <target> until <this permanent> leaves the battlefield." (Banisher
-// Priest, Banishing Light, Fairgrounds Warden). The single target is the exiled
+// Priest, Banishing Light, Fairgrounds Warden) and its "you may exile ..."
+// optional offer (Angel of Sanctions). The single target is the exiled
 // permanent and the trailing "until <self> leaves the battlefield" names the
 // source permanent as the duration anchor, not a second object. It marks the
 // effect so lowering links the exile to the source and synthesizes the paired
-// leaves-the-battlefield return trigger. The parser owns this wording; any other
-// exile shape leaves the clause non-exact so lowering fails closed.
+// leaves-the-battlefield return trigger. The optional "you may" prefix is
+// carried by effect.Optional and stripped by exactEffectClauseText before the
+// clause-text comparison, so it surfaces later as the trigger's Optional flag.
+// The parser owns this wording; any other exile shape leaves the clause
+// non-exact so lowering fails closed.
 func exactExileUntilSourceLeavesEffectSyntax(effect *EffectSyntax) bool {
-	if effect.Kind != EffectExile || effect.Negated || effect.Optional {
+	if effect.Kind != EffectExile || effect.Negated {
 		return false
 	}
 	if effect.Duration != EffectDurationNone || effect.FromZone != zone.None || effect.ToZone != zone.None {

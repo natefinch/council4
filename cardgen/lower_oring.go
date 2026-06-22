@@ -25,8 +25,10 @@ const exileUntilLeavesKey = game.LinkedKey("exile-until-leaves")
 // same linked key.
 //
 // It returns ok=false for any shape it does not fully consume: a missing or
-// non-single target, a non-exile or optional effect, a condition, mode, or
-// keyword rider, or a reference that is not the source duration anchor.
+// non-single target, a plural (MaxTargets above one) target, a non-exile or
+// residual optional effect, a condition, mode, or keyword rider, or a reference
+// that is not the source duration anchor. The "up to one target" cardinality
+// and an optional "you may" offer are accepted.
 func lowerExileUntilLeavesContent(ctx contentCtx) (game.AbilityContent, bool) {
 	if ctx.enclosingKind != compiler.AbilityTriggered ||
 		ctx.optional ||
@@ -49,8 +51,18 @@ func lowerExileUntilLeavesContent(ctx contentCtx) (game.AbilityContent, bool) {
 	if !referencesAreOnlySourceAnchors(ctx.content.References) {
 		return game.AbilityContent{}, false
 	}
-	targetSpec, ok := permanentTargetSpec(ctx.content.Targets[0])
-	if !ok {
+	// permanentTargetSpecWithCardinality carries the target's own
+	// MinTargets/MaxTargets range, admitting the "exile up to one target ..."
+	// wording (MinTargets 0, MaxTargets 1) in addition to the single mandatory
+	// target. MaxTargets must stay 1: the exile binds a single card under the
+	// exile-until-leaves link key, so a plural ("any number of target") wording
+	// stays closed. An optional "you may" offer is recognized at the parser
+	// level (exactExileUntilSourceLeavesEffectSyntax) and surfaces as the
+	// trigger's Optional flag after prepareTriggerBody strips the "you may"
+	// prefix from the leading effect, so neither effect.Optional nor ctx.optional
+	// is set on this clause by then.
+	targetSpec, ok := permanentTargetSpecWithCardinality(ctx.content.Targets[0])
+	if !ok || targetSpec.MaxTargets != 1 {
 		return game.AbilityContent{}, false
 	}
 	return game.Mode{
