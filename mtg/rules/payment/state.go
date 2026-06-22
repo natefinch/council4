@@ -39,6 +39,10 @@ type stateQueries interface {
 	// ActivePlayer returns the player whose turn it currently is.
 	ActivePlayer() game.PlayerID
 
+	// OpponentLostLifeThisTurn reports whether any opponent of playerID has lost
+	// life so far this turn, backing the Spectacle alternative-cost condition.
+	OpponentLostLifeThisTurn(playerID game.PlayerID) bool
+
 	// AdditionalDynamicAmountValue resolves a rules-derived additional-cost
 	// amount against live game state.
 	AdditionalDynamicAmountValue(playerID game.PlayerID, kind cost.AdditionalDynamicAmount) int

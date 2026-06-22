@@ -177,4 +177,8 @@ const (
 	// AlternativeConditionNotYourTurn requires that it is not the casting
 	// player's turn, backing the Force of Negation pitch family.
 	AlternativeConditionNotYourTurn
+	// AlternativeConditionOpponentLostLifeThisTurn requires that an opponent of
+	// the casting player has lost life so far this turn, backing the Spectacle
+	// keyword (CR 702.107).
+	AlternativeConditionOpponentLostLifeThisTurn
 )

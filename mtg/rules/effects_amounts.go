@@ -275,6 +275,18 @@ func lifeChangedThisTurn(g *game.Game, player game.PlayerID, kind game.EventKind
 	return total
 }
 
+// opponentLostLifeThisTurn reports whether any opponent of playerID has lost
+// life so far this turn (CR 702.107b, Spectacle). Damage to a player is life
+// loss (CR 120.3), so both combat and noncombat damage to an opponent qualify.
+func opponentLostLifeThisTurn(g *game.Game, playerID game.PlayerID) bool {
+	for _, event := range g.EventsThisTurn() {
+		if event.Kind == game.EventLifeLost && event.Player != playerID && event.Amount > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 // controllerAggregateAmount computes the player-relative dynamic amounts that
 // depend only on the controller's own board and zones (life total, hand and
 // graveyard sizes, basic land type and opponent counts, and devotion). It is
