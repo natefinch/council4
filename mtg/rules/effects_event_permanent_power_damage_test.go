@@ -50,3 +50,45 @@ func TestEventPermanentPowerDamageReadsEnteringCreature(t *testing.T) {
 		t.Fatalf("entering creature marked damage = %d, want 0", entering.MarkedDamage)
 	}
 }
+
+// TestEventPermanentPowerDamageToEachOpponent proves the Champion-of-the-Path
+// payoff shape: "Whenever another creature you control enters, it deals damage
+// equal to its power to each opponent." The damage amount reads the power of the
+// permanent named by the triggering enters event (the entering creature) and the
+// resolved value is dealt to each opponent, while the entering creature itself
+// (the source) takes no damage.
+func TestEventPermanentPowerDamageToEachOpponent(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	entering := addCombatCreaturePermanentWithPower(g, game.Player1, 4)
+	startP1 := g.Players[game.Player1].Life
+	startP2 := g.Players[game.Player2].Life
+
+	obj := &game.StackObject{
+		ID:              g.IDGen.Next(),
+		Controller:      game.Player1,
+		SourceID:        entering.ObjectID,
+		HasTriggerEvent: true,
+		TriggerEvent: game.Event{
+			Kind:        game.EventPermanentEnteredBattlefield,
+			PermanentID: entering.ObjectID,
+		},
+	}
+
+	resolveInstruction(engine, g, obj, game.Damage{
+		Amount: game.Dynamic(game.DynamicAmount{
+			Kind:       game.DynamicAmountObjectPower,
+			Multiplier: 1,
+			Object:     game.EventPermanentReference(),
+		}),
+		Recipient:    game.PlayerGroupDamageRecipient(game.OpponentsReference()),
+		DamageSource: opt.Val(game.EventPermanentReference()),
+	}, &TurnLog{})
+
+	if got := startP2 - g.Players[game.Player2].Life; got != 4 {
+		t.Fatalf("opponent life lost = %d, want 4 (entering creature power)", got)
+	}
+	if got := g.Players[game.Player1].Life; got != startP1 {
+		t.Fatalf("controller life = %d, want %d (each opponent excludes controller)", got, startP1)
+	}
+}

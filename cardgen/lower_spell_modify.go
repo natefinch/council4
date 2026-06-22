@@ -1145,6 +1145,69 @@ func lowerSourcePowerGroupDamageSpell(ctx contentCtx) (game.AbilityContent, bool
 	}.Ability(), true
 }
 
+// lowerEventPowerGroupDamageSpell lowers the triggered-ability payoff shape in
+// which a permanent deals damage equal to a referenced object's power or
+// toughness to a group of players ("Whenever another creature you control
+// enters, it deals damage equal to its power to each opponent."). The amount
+// reads the referenced object (the entering creature) once and the resolved
+// value is dealt to every member of the recipient group, so it reuses
+// lowerDynamicAmount with the amount's own referent. The damage source is the
+// clause subject ("it" for the entering creature, "this creature" for the
+// source permanent). It fails closed (ok=false) for every other shape, leaving
+// the fixed/X group-damage and single-target source-power paths unchanged.
+func lowerEventPowerGroupDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectDealDamage ||
+		!effect.Exact ||
+		effect.Negated ||
+		(effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower &&
+			effect.Amount.DynamicKind != compiler.DynamicAmountSourceToughness) ||
+		effect.DamageRecipientReference != parser.DamageRecipientReferenceNone ||
+		effect.TargetControllerDamageRiderRecipient != parser.DamageRecipientReferenceNone ||
+		effect.HasSelfDamageRider ||
+		effect.HasSecondTargetDamageRider ||
+		len(effect.DamageRecipientSelectors) != 0 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 2 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 {
+		return game.AbilityContent{}, false
+	}
+	if !exactDamageSourceSyntax(ctx.content.References[:1]) ||
+		!exactDamageAmountReferences(effect.Amount, ctx.content.References) {
+		return game.AbilityContent{}, false
+	}
+	amountObject, ok := lowerDamageAmountObject(effect.Amount, ctx.content.References)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	dynamic, ok := lowerDynamicAmount(effect.Amount, amountObject)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	recipient, ok := groupDamageRecipientFor(effect.Selector)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	damageSourceRef := opt.Val(game.SourcePermanentReference())
+	if damageSource, sourceBound := lowerDamageSourceReference(ctx.content.References[:1]); sourceBound &&
+		damageSource.Kind() == game.ObjectReferenceEventPermanent {
+		damageSourceRef = opt.Val(damageSource)
+	}
+	damage := game.Damage{
+		Amount:       game.Dynamic(dynamic),
+		Recipient:    recipient,
+		DamageSource: damageSourceRef,
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{Primitive: damage}},
+	}.Ability(), true
+}
+
 // lowerEachOfTargetsDamageSpell lowers "deals N damage to each of <cardinality>
 // <targets>" effects, which deal the full fixed amount to each of the chosen
 // targets (unlike divided damage, which splits one total). It emits one Damage
