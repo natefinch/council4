@@ -105,6 +105,8 @@ func lowerStaticDeclarations(
 				ok = appendStaticUntapStepDeclaration(&body, declaration)
 			case compiler.StaticDeclarationCastAsThoughFlash:
 				ok = appendStaticCastAsThoughFlashDeclaration(&body, declaration)
+			case compiler.StaticDeclarationGraveyardCardKeywordGrant:
+				ok = appendStaticGraveyardCardKeywordGrantDeclaration(&body, declaration)
 			default:
 				ok = false
 			}
@@ -320,6 +322,9 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.CastAsThoughFlash != nil {
 		payloads++
 	}
+	if declaration.GraveyardGrant != nil {
+		payloads++
+	}
 	if payloads != 1 {
 		return false
 	}
@@ -348,6 +353,8 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 		return declaration.CharacteristicPT != nil
 	case compiler.StaticDeclarationCastAsThoughFlash:
 		return declaration.CastAsThoughFlash != nil
+	case compiler.StaticDeclarationGraveyardCardKeywordGrant:
+		return declaration.GraveyardGrant != nil
 	default:
 		return false
 	}
