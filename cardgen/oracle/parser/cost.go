@@ -1137,6 +1137,14 @@ func annotateExileCostObject(component *CostComponent, object []shared.Token, at
 	case len(prefix) == 2 && exileCardAmount(component, prefix[0], atoms) && costCardNoun(prefix[1], atoms):
 		component.ObjectNoun = ObjectNounCard
 		component.ObjectIsCard = true
+	case len(prefix) == 3 && exileCardAmount(component, prefix[0], atoms) &&
+		equalWord(prefix[1], "other") && costCardNoun(prefix[2], atoms):
+		// "Exile N other cards from your graveyard" (Escape): "other" excludes
+		// the escaping card itself, which is still in the graveyard while the
+		// cost is being paid and must not be exiled to satisfy its own cost.
+		component.ObjectNoun = ObjectNounCard
+		component.ObjectIsCard = true
+		component.ExcludeSource = true
 	case len(prefix) == 3 && exileCardAmount(component, prefix[0], atoms) && costCardNoun(prefix[2], atoms):
 		if noun, ok := atoms.ObjectNounAt(prefix[1].Span); ok {
 			if !costCardTypeNounAccepted(noun) {

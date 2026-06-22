@@ -14,6 +14,9 @@ import (
 // flashbackAlternativeLabel is the canonical label for flashback alternative costs.
 const flashbackAlternativeLabel = "Flashback"
 
+// escapeAlternativeLabel is the canonical label for escape alternative costs.
+const escapeAlternativeLabel = "Escape"
+
 // spellCostOption describes one payable cost option for a spell.
 type spellCostOption struct {
 	index           int
@@ -47,28 +50,40 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 			permissions[0] = SpellCastPermissionFlashback
 		}
 	}
-	nonFlashbackPermission, canCastWithoutFlashback := firstNonFlashbackPermission(permissions)
+	normalPermission, canCastNormally := firstNormalPermission(permissions)
 	canCastWithFlashback := sourceZone == zone.Graveyard &&
 		hasFlashbackAlternative &&
 		slices.Contains(permissions, SpellCastPermissionFlashback)
+	canCastWithEscape := sourceZone == zone.Graveyard &&
+		slices.Contains(permissions, SpellCastPermissionEscape)
 	var options []spellCostOption
-	if canCastWithoutFlashback {
+	if canCastNormally {
 		options = append(options, spellCostOption{
 			index:           0,
 			label:           "Normal cost",
 			card:            card,
 			manaCost:        spellManaCostWithKicker(manaCostPtr(card.ManaCost), kicker, kickerOK, kickerPaid),
 			additionalCosts: append([]cost.Additional(nil), requiredAdditional...),
-			castPermission:  nonFlashbackPermission,
+			castPermission:  normalPermission,
 		})
 	}
 	for i, alternative := range alternatives {
-		flashback := isFlashbackAlternative(alternative)
-		if flashback && !canCastWithFlashback {
-			continue
-		}
-		if !flashback && !canCastWithoutFlashback {
-			continue
+		permission := normalPermission
+		switch {
+		case isFlashbackAlternative(alternative):
+			if !canCastWithFlashback {
+				continue
+			}
+			permission = SpellCastPermissionFlashback
+		case isEscapeAlternative(alternative):
+			if !canCastWithEscape {
+				continue
+			}
+			permission = SpellCastPermissionEscape
+		default:
+			if !canCastNormally {
+				continue
+			}
 		}
 		if !alternativeCostConditionSatisfied(s, playerID, alternative.Condition) {
 			continue
@@ -85,11 +100,8 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 			card:            card,
 			manaCost:        spellManaCostWithKicker(manaCostPtr(alternative.ManaCost), kicker, kickerOK, kickerPaid),
 			additionalCosts: additional,
-			castPermission:  nonFlashbackPermission,
+			castPermission:  permission,
 		})
-		if flashback {
-			options[len(options)-1].castPermission = SpellCastPermissionFlashback
-		}
 	}
 	return options
 }
@@ -115,7 +127,7 @@ func spellCostOptionsForRequestWithoutModes(s State, req SpellRequest) []spellCo
 			permissions[0] = SpellCastPermissionFlashback
 		}
 	}
-	castPermission, ok := firstNonFlashbackPermission(permissions)
+	castPermission, ok := firstNormalPermission(permissions)
 	if !ok {
 		return nil
 	}
@@ -177,9 +189,13 @@ func spreeModeManaCost(card *game.CardDef, chosenModes []int) cost.Mana {
 	return total
 }
 
-func firstNonFlashbackPermission(permissions []SpellCastPermission) (SpellCastPermission, bool) {
+// firstNormalPermission returns the first permission that authorizes paying a
+// spell's ordinary (non-graveyard-alternative) cost. Flashback and Escape
+// permissions authorize only their graveyard alternative cost, so they are
+// skipped here.
+func firstNormalPermission(permissions []SpellCastPermission) (SpellCastPermission, bool) {
 	for _, permission := range permissions {
-		if permission != SpellCastPermissionFlashback {
+		if permission != SpellCastPermissionFlashback && permission != SpellCastPermissionEscape {
 			return permission, true
 		}
 	}
@@ -208,6 +224,10 @@ func alternativeCostConditionSatisfied(s State, playerID game.PlayerID, conditio
 
 func isFlashbackAlternative(alternative cost.Alternative) bool {
 	return strings.EqualFold(strings.TrimSpace(alternative.Label), flashbackAlternativeLabel)
+}
+
+func isEscapeAlternative(alternative cost.Alternative) bool {
+	return strings.EqualFold(strings.TrimSpace(alternative.Label), escapeAlternativeLabel)
 }
 
 func spellManaCostWithKicker(base *cost.Mana, kicker game.KickerKeyword, kickerOK, kickerPaid bool) *cost.Mana {

@@ -11,6 +11,10 @@ import (
 
 const flashbackAlternativeLabel = "Flashback"
 
+// escapeAlternativeLabel is the label carried by the Escape alternative cost so
+// the cast flow can recognize a graveyard escape cast (CR 702.139).
+const escapeAlternativeLabel = "Escape"
+
 // evokeAlternativeLabel is the label carried by the Evoke alternative cost so
 // the cast flow can recognize that a spell was cast for its Evoke cost and mark
 // the resulting permanent to be sacrificed when it enters (CR 702.74).
@@ -37,6 +41,10 @@ func manaCostPtr(manaCost opt.V[cost.Mana]) *cost.Mana {
 
 func isFlashbackAlternative(alternative cost.Alternative) bool {
 	return strings.EqualFold(strings.TrimSpace(alternative.Label), flashbackAlternativeLabel)
+}
+
+func isEscapeAlternative(alternative cost.Alternative) bool {
+	return strings.EqualFold(strings.TrimSpace(alternative.Label), escapeAlternativeLabel)
 }
 
 func spellAdditionalCosts(card *game.CardDef) []cost.Additional {

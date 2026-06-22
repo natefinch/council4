@@ -133,6 +133,11 @@ const (
 	// the spell from the graveyard by paying the cost carried on the ability's
 	// CompiledCost, then exile it.
 	AlternativeCostFlashback
+	// AlternativeCostEscape is the alternative-cost form of Escape: cast the
+	// spell from the graveyard by paying the compound escape cost carried on the
+	// ability's CompiledCost (its mana cost plus the graveyard-exile additional
+	// cost). Unlike Flashback the spell is not exiled, so it can be escaped again.
+	AlternativeCostEscape
 )
 
 // CompiledAlternativeCost is text-independent semantic data for an optional

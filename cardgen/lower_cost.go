@@ -378,9 +378,10 @@ func lowerExileCost(component compiler.CostComponent) (cost.Additional, bool) {
 		return cost.Additional{}, false
 	}
 	additional := cost.Additional{
-		Kind:   cost.AdditionalExile,
-		Text:   component.Text,
-		Source: zone.Graveyard,
+		Kind:          cost.AdditionalExile,
+		Text:          component.Text,
+		Source:        zone.Graveyard,
+		ExcludeSource: component.ExcludeSource,
 	}
 	if component.AmountFromX {
 		additional.AmountFromX = true
