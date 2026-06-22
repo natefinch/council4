@@ -22,6 +22,7 @@ type enterBattlefieldContext struct {
 	agents            [game.NumPlayers]PlayerAgent
 	log               *TurnLog
 	xValue            int
+	kickCount         int
 	colorsOfManaSpent int
 }
 
@@ -392,6 +393,7 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 					SourceCardID:            permanent.CardInstanceID,
 					Controller:              replacement.Controller,
 					ColorsOfManaSpentToCast: ctx.colorsOfManaSpent,
+					KickerCount:             ctx.kickCount,
 				}
 				amount = dynamicAmountValue(g, obj, replacement.Controller, *placement.Dynamic.Val)
 			}

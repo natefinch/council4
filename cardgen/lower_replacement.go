@@ -1100,10 +1100,13 @@ func selfEntersWithCountersReferences(references []compiler.CompiledReference, e
 		return true
 	}
 	// The Converge count "for each color of mana spent to cast it" (Crystalline
-	// Crawler) adds a third self reference for the "it" inside its count phrase,
-	// so a three-reference self replacement is accepted only for that amount.
+	// Crawler) and the Multikicker count "for each time it was kicked"
+	// (Everflowing Chalice) each add a third self reference for the "it" inside
+	// their count phrase, so a three-reference self replacement is accepted only
+	// for those amounts.
 	return len(references) == 3 &&
-		effect.Amount.DynamicKind == compiler.DynamicAmountColorsOfManaSpent
+		(effect.Amount.DynamicKind == compiler.DynamicAmountColorsOfManaSpent ||
+			effect.Amount.DynamicKind == compiler.DynamicAmountTimesKicked)
 }
 
 // lowerGroupEntersWithCountersReplacement lowers a static enters-with-counters

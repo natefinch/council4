@@ -29,7 +29,7 @@ type spellCostOption struct {
 
 // spellCostOptionsForZoneAndKicker returns the available cost options for
 // casting a spell from the given zone with the kicker flag.
-func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *game.CardDef, sourceZone zone.Type, kickerPaid bool, permissions []SpellCastPermission) []spellCostOption {
+func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *game.CardDef, sourceZone zone.Type, kickerPaid bool, kickerCount int, permissions []SpellCastPermission) []spellCostOption {
 	if card == nil {
 		return nil
 	}
@@ -62,7 +62,7 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 			index:           0,
 			label:           "Normal cost",
 			card:            card,
-			manaCost:        spellManaCostWithKicker(manaCostPtr(card.ManaCost), kicker, kickerOK, kickerPaid),
+			manaCost:        spellManaCostWithKicker(manaCostPtr(card.ManaCost), kicker, kickerOK, kickerPaid, kickerCount),
 			additionalCosts: append([]cost.Additional(nil), requiredAdditional...),
 			castPermission:  normalPermission,
 		})
@@ -98,7 +98,7 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 			index:           i + 1,
 			label:           label,
 			card:            card,
-			manaCost:        spellManaCostWithKicker(manaCostPtr(alternative.ManaCost), kicker, kickerOK, kickerPaid),
+			manaCost:        spellManaCostWithKicker(manaCostPtr(alternative.ManaCost), kicker, kickerOK, kickerPaid, kickerCount),
 			additionalCosts: additional,
 			castPermission:  permission,
 		})
@@ -114,7 +114,7 @@ func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 
 func spellCostOptionsForRequestWithoutModes(s State, req SpellRequest) []spellCostOption {
 	if !req.Alternative.Exists {
-		return spellCostOptionsForZoneAndKicker(s, req.PlayerID, req.Card, req.SourceZone, req.KickerPaid, req.CastPermissions)
+		return spellCostOptionsForZoneAndKicker(s, req.PlayerID, req.Card, req.SourceZone, req.KickerPaid, req.KickerCount, req.CastPermissions)
 	}
 	if req.Card == nil {
 		return nil
@@ -146,7 +146,7 @@ func spellCostOptionsForRequestWithoutModes(s State, req SpellRequest) []spellCo
 		index:           0,
 		label:           label,
 		card:            req.Card,
-		manaCost:        spellManaCostWithKicker(manaCostPtr(alternative.ManaCost), kicker, kickerOK, req.KickerPaid),
+		manaCost:        spellManaCostWithKicker(manaCostPtr(alternative.ManaCost), kicker, kickerOK, req.KickerPaid, req.KickerCount),
 		additionalCosts: additional,
 		castPermission:  castPermission,
 	}}
@@ -230,15 +230,18 @@ func isEscapeAlternative(alternative cost.Alternative) bool {
 	return strings.EqualFold(strings.TrimSpace(alternative.Label), escapeAlternativeLabel)
 }
 
-func spellManaCostWithKicker(base *cost.Mana, kicker game.KickerKeyword, kickerOK, kickerPaid bool) *cost.Mana {
+func spellManaCostWithKicker(base *cost.Mana, kicker game.KickerKeyword, kickerOK, kickerPaid bool, kickerCount int) *cost.Mana {
 	if !kickerPaid || !kickerOK {
 		return base
 	}
+	times := max(kickerCount, 1)
 	combined := cost.Mana{}
 	if base != nil {
 		combined = append(combined, (*base)...)
 	}
-	combined = append(combined, kicker.Cost...)
+	for range times {
+		combined = append(combined, kicker.Cost...)
+	}
 	return &combined
 }
 

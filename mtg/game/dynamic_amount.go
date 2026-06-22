@@ -180,6 +180,17 @@ const (
 	// Dragon, Excalibur, Sword of Eden cost reductions); an empty group yields
 	// zero. Added last so existing kinds keep their wire values.
 	DynamicAmountTotalManaValueInGroup
+	// DynamicAmountTimesKicked is the number of times the spell that became the
+	// resolving object was kicked (its Multikicker count, CR 702.32). It is read
+	// from the evaluating stack object's KickerCount, which the casting machinery
+	// records as the additional cost is paid and which the entering permanent's
+	// replacement carries forward. It backs "for each time it was kicked" amounts:
+	// the enters-with-counters quantity on Multikicker permanents (Everflowing
+	// Chalice, Gnarlid Pack) and the count payoff on Multikicker spells (Wolfbriar
+	// Elemental's Wolf tokens). A spell cast without Multikicker, or a permanent
+	// that did not enter from a kicked cast, yields zero. Added last so existing
+	// kinds keep their wire values.
+	DynamicAmountTimesKicked
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

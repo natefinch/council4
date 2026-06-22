@@ -157,6 +157,10 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		if obj != nil {
 			amount = obj.ColorsOfManaSpentToCast
 		}
+	case game.DynamicAmountTimesKicked:
+		if obj != nil {
+			amount = obj.KickerCount
+		}
 	case game.DynamicAmountMaxOf:
 		amount = maxOfDynamicAmounts(g, obj, controller, dynamic.Operands, before)
 	default:

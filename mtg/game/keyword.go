@@ -81,6 +81,11 @@ type MutateKeyword struct {
 type KickerKeyword struct {
 	Cost         cost.Mana
 	BonusContent AbilityContent
+	// Multi marks the keyword as Multikicker (CR 702.32): the additional cost may
+	// be paid any number of times as the spell is cast, and the number of times
+	// it was paid (the kick count) scales "for each time it was kicked" payoffs.
+	// It is false for ordinary Kicker, which may be paid at most once.
+	Multi bool
 }
 
 // MadnessKeyword parameterizes Madness alternative costs.

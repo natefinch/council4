@@ -1632,6 +1632,12 @@ func lowerParameterizedStaticKeyword(keyword compiler.CompiledKeyword) (game.Sta
 			return game.StaticAbility{}, false
 		}
 		body.KeywordAbilities = []game.KeywordAbility{game.KickerKeyword{Cost: manaCost}}
+	case parser.KeywordMultikicker:
+		manaCost, ok := fixedKeywordManaCost(keyword)
+		if !ok {
+			return game.StaticAbility{}, false
+		}
+		body.KeywordAbilities = []game.KeywordAbility{game.KickerKeyword{Cost: manaCost, Multi: true}}
 	case parser.KeywordMadness:
 		manaCost, ok := fixedKeywordManaCost(keyword)
 		if !ok {

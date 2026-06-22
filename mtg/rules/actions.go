@@ -8,10 +8,29 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
 const maxLegalXValue = 20
+
+// maxLegalMultikickCount bounds the number of times a Multikicker cost may be
+// enumerated as paid (CR 702.32), matching the X-value enumeration cap so the
+// action space stays finite.
+const maxLegalMultikickCount = 20
+
+// appendMultikickedCastActions enumerates Multikicker casts that pay the kicker
+// cost one or more times. It stops at the first count the controller cannot
+// afford, because each additional kick costs strictly more mana.
+func (e *Engine) appendMultikickedCastActions(g *game.Game, playerID game.PlayerID, actions []action.Action, actionBuild actionBuilderType, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, modes []int) []action.Action {
+	for count := 1; count <= maxLegalMultikickCount; count++ {
+		if !e.canCastSpellFaceFromZoneWithMultikick(g, playerID, cardID, sourceZone, face, targets, xValue, modes, count) {
+			break
+		}
+		actions = append(actions, actionBuild.castMultikickedSpell(cardID, sourceZone, face, targets, xValue, modes, count))
+	}
+	return actions
+}
 
 func canPayCost(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana) bool {
 	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCost})
@@ -212,7 +231,9 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 							if e.canCastSpellFaceFromZoneWithKicker(g, playerID, cardID, sourceZone, face, targets, xValue, modes, false) {
 								actions = append(actions, actionBuild.castSpell(cardID, sourceZone, face, targets, xValue, modes))
 							}
-							if spellHasKicker(spellDef) && e.canCastSpellFaceFromZoneWithKicker(g, playerID, cardID, sourceZone, face, targets, xValue, modes, true) {
+							if spellHasMultikicker(spellDef) {
+								actions = e.appendMultikickedCastActions(g, playerID, actions, actionBuild, cardID, sourceZone, face, targets, xValue, modes)
+							} else if spellHasKicker(spellDef) && e.canCastSpellFaceFromZoneWithKicker(g, playerID, cardID, sourceZone, face, targets, xValue, modes, true) {
 								actions = append(actions, actionBuild.castKickedSpell(cardID, sourceZone, face, targets, xValue, modes))
 							}
 						}
@@ -273,7 +294,9 @@ func (e *Engine) legalCommanderCastActions(g *game.Game, playerID game.PlayerID)
 					if e.canCastSpellFaceFromZoneWithKicker(g, playerID, card.ID, zone.Command, face, targets, xValue, modes, false) {
 						actions = append(actions, actionBuild.castSpell(card.ID, zone.Command, face, targets, xValue, modes))
 					}
-					if spellHasKicker(spellDef) && e.canCastSpellFaceFromZoneWithKicker(g, playerID, card.ID, zone.Command, face, targets, xValue, modes, true) {
+					if spellHasMultikicker(spellDef) {
+						actions = e.appendMultikickedCastActions(g, playerID, actions, actionBuild, card.ID, zone.Command, face, targets, xValue, modes)
+					} else if spellHasKicker(spellDef) && e.canCastSpellFaceFromZoneWithKicker(g, playerID, card.ID, zone.Command, face, targets, xValue, modes, true) {
 						actions = append(actions, actionBuild.castKickedSpell(card.ID, zone.Command, face, targets, xValue, modes))
 					}
 				}

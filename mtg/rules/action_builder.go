@@ -52,6 +52,12 @@ func (b actionBuilderType) castKickedSpell(cardID id.ID, sourceZone zone.Type, f
 	return b.mustBuild(action.CastKickedSpellFaceFromZone(cardID, sourceZone, face, targets, xValue, modes))
 }
 
+// castMultikickedSpell builds a CastSpell action whose Multikicker cost is paid
+// kickerCount times.
+func (b actionBuilderType) castMultikickedSpell(cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, modes []int, kickerCount int) action.Action {
+	return b.mustBuild(action.CastMultikickedSpellFaceFromZone(cardID, sourceZone, face, targets, xValue, modes, kickerCount))
+}
+
 func (b actionBuilderType) castOverloadedSpell(cardID id.ID, sourceZone zone.Type, face game.FaceIndex, xValue int, modes []int, kickerPaid bool) action.Action {
 	return b.mustBuild(action.CastOverloadedSpellFaceFromZoneWithOptions(cardID, sourceZone, face, xValue, modes, kickerPaid))
 }

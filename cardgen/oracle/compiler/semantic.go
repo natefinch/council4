@@ -2239,6 +2239,12 @@ const (
 	// reduction (Metalwork Colossus, Earthquake Dragon, Excalibur, Sword of Eden).
 	// Added last so existing kinds keep their wire values.
 	DynamicAmountTotalManaValue
+	// DynamicAmountTimesKicked is the number of times the source spell was kicked
+	// (its Multikicker count, "for each time it was kicked"). It backs Everflowing
+	// Chalice's enters-with-counters quantity and Wolfbriar Elemental's Wolf-token
+	// count; the runtime records the kick count as the spell is cast. Added last
+	// so existing kinds keep their wire values.
+	DynamicAmountTimesKicked
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

@@ -62,6 +62,7 @@ const (
 	KeywordMadness          KeywordKind = "KeywordMadness"
 	KeywordMenace           KeywordKind = "KeywordMenace"
 	KeywordMorph            KeywordKind = "KeywordMorph"
+	KeywordMultikicker      KeywordKind = "KeywordMultikicker"
 	KeywordMutate           KeywordKind = "KeywordMutate"
 	KeywordNinjutsu         KeywordKind = "KeywordNinjutsu"
 	KeywordOutlast          KeywordKind = "KeywordOutlast"
@@ -177,6 +178,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordMadness:          "Madness",
 	KeywordMenace:           "Menace",
 	KeywordMorph:            "Morph",
+	KeywordMultikicker:      "Multikicker",
 	KeywordMutate:           "Mutate",
 	KeywordNinjutsu:         "Ninjutsu",
 	KeywordOutlast:          "Outlast",
@@ -301,6 +303,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordMadness, Words: []string{"madness"}},
 	{Kind: KeywordMenace, Words: []string{"menace"}},
 	{Kind: KeywordMorph, Words: []string{"morph"}},
+	{Kind: KeywordMultikicker, Words: []string{"multikicker"}},
 	{Kind: KeywordMutate, Words: []string{"mutate"}},
 	{Kind: KeywordNinjutsu, Words: []string{"ninjutsu"}},
 	{Kind: KeywordOutlast, Words: []string{"outlast"}},

@@ -62,7 +62,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		return e.applyPreparedCopyWithChoices(g, playerID, cast, agents, log)
 	}
 
-	if !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, cast.Targets, cast.XValue, cast.ChosenModes, cast.KickerPaid, cast.Overloaded) {
+	if !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, cast.Targets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded) {
 		return false
 	}
 
@@ -77,7 +77,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		announcementDef = overloadSpellDef(spellDef)
 	}
 	completedTargets, ok := e.completeSpellAnnouncementTargets(g, playerID, announcementDef, cast.ChosenModes, cast.Targets, agents, log)
-	if !ok || !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, completedTargets, cast.XValue, cast.ChosenModes, cast.KickerPaid, cast.Overloaded) {
+	if !ok || !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, completedTargets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded) {
 		return false
 	}
 	cast.Targets = completedTargets
@@ -115,6 +115,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		Card:            spellDef,
 		XValue:          cast.XValue,
 		KickerPaid:      cast.KickerPaid,
+		KickerCount:     cast.KickerCount,
 		ChosenModes:     cast.ChosenModes,
 		CastPermissions: permissions,
 		Prefs:           prefs,
@@ -143,6 +144,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		ChosenModes:                   append([]int(nil), cast.ChosenModes...),
 		XValue:                        cast.XValue,
 		KickerPaid:                    cast.KickerPaid,
+		KickerCount:                   cast.KickerCount,
 		Overloaded:                    cast.Overloaded,
 		Evoked:                        !cast.Overloaded && evokeAlternativeChosen(spellDef, prefs.AlternativeIndex),
 		Flashback:                     paymentResult.CastPermission == payment.SpellCastPermissionFlashback,
@@ -472,7 +474,26 @@ func (e *Engine) canCastSpellFromZoneWithKicker(g *game.Game, playerID game.Play
 }
 
 func (e *Engine) canCastSpellFaceFromZoneWithKicker(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerPaid bool) bool {
-	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, kickerPaid, false)
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, effectiveKickerCount(kickerPaid, 0), false)
+}
+
+// canCastSpellFaceFromZoneWithMultikick validates a Multikicker cast whose
+// kicker cost is paid kickerCount times (CR 702.32).
+func (e *Engine) canCastSpellFaceFromZoneWithMultikick(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerCount int) bool {
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, kickerCount, false)
+}
+
+// effectiveKickerCount resolves the number of times the kicker cost is paid from
+// the binary kicker flag and the explicit Multikicker count: an explicit count
+// wins, otherwise a paid ordinary kicker counts once.
+func effectiveKickerCount(kickerPaid bool, kickerCount int) int {
+	if kickerCount > 0 {
+		return kickerCount
+	}
+	if kickerPaid {
+		return 1
+	}
+	return 0
 }
 
 func (e *Engine) canCastOverloadedSpellFaceFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, chosenModes []int) bool {
@@ -480,13 +501,14 @@ func (e *Engine) canCastOverloadedSpellFaceFromZone(g *game.Game, playerID game.
 }
 
 func (e *Engine) canCastOverloadedSpellFaceFromZoneWithOptions(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, xValue int, chosenModes []int, kickerPaid bool) bool {
-	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, nil, xValue, chosenModes, kickerPaid, true)
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, nil, xValue, chosenModes, effectiveKickerCount(kickerPaid, 0), true)
 }
 
-func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerPaid, overloaded bool) bool {
+func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerCount int, overloaded bool) bool {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return false
 	}
+	kickerPaid := kickerCount > 0
 	if xValue < 0 {
 		return false
 	}
@@ -554,6 +576,9 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 	if kickerPaid && !spellHasKicker(spellDef) {
 		return false
 	}
+	if kickerCount > 1 && !spellHasMultikicker(spellDef) {
+		return false
+	}
 	request := payment.SpellRequest{
 		PlayerID:        playerID,
 		CardID:          card.ID,
@@ -561,6 +586,7 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		Card:            spellDef,
 		XValue:          xValue,
 		KickerPaid:      kickerPaid,
+		KickerCount:     kickerCount,
 		ChosenModes:     chosenModes,
 		CastPermissions: castPermissionsForZone(g, playerID, card.ID, sourceZone, face),
 	}

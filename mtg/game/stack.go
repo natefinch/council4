@@ -109,6 +109,12 @@ type StackObject struct {
 	// KickerPaid is true if the kicker cost was paid.
 	KickerPaid bool
 
+	// KickerCount is the number of times the kicker cost was paid as the spell
+	// was cast (CR 702.32). For Multikicker it can exceed one; for ordinary
+	// Kicker it is zero (KickerPaid carries the paid-once state). It scales
+	// "for each time it was kicked" amounts as the spell resolves.
+	KickerCount int
+
 	// Overloaded is true if this spell was cast for its overload cost.
 	Overloaded bool
 
