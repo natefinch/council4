@@ -276,6 +276,66 @@ func TestParseStaticControlledCreaturesCantBeBlockedDeclarationMeaning(t *testin
 	}
 }
 
+// TestParseStaticEveryCreatureTypeDropsNonBattlefieldScopeRider confirms the
+// parser drops the trailing "The same is true for creature spells you control
+// and creature cards you own that aren't on the battlefield." rider (Maskwood
+// Nexus) so the leading "Creatures you control are every creature type."
+// battlefield declaration is still recognized. The rider extends the type grant
+// to non-battlefield zones, which this engine's battlefield-only continuous
+// effects cannot represent.
+func TestParseStaticEveryCreatureTypeDropsNonBattlefieldScopeRider(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t,
+		"Creatures you control are every creature type. The same is true for creature spells you control and creature cards you own that aren't on the battlefield.",
+		Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one (rider dropped)", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationContinuousCharacteristic || !declaration.EveryCreatureType {
+		t.Fatalf("declaration = %#v, want every-creature-type characteristic", declaration)
+	}
+	if declaration.Subject.Kind != StaticDeclarationSubjectGroup {
+		t.Fatalf("subject = %#v, want controlled group", declaration.Subject)
+	}
+}
+
+// TestStripNonBattlefieldScopeRiderRemovesTrailingSentence checks the strip
+// helper directly: a trailing "the same is true for ... on the battlefield"
+// sentence is removed, leaving the preceding sentence (and its period) intact.
+func TestStripNonBattlefieldScopeRiderRemovesTrailingSentence(t *testing.T) {
+	t.Parallel()
+	body := []shared.Token{
+		{Kind: shared.Word, Text: "creatures"}, {Kind: shared.Word, Text: "you"}, {Kind: shared.Word, Text: "control"}, {Kind: shared.Word, Text: "are"},
+		{Kind: shared.Word, Text: "every"}, {Kind: shared.Word, Text: "creature"}, {Kind: shared.Word, Text: "type"}, {Kind: shared.Period, Text: "."},
+		{Kind: shared.Word, Text: "the"}, {Kind: shared.Word, Text: "same"}, {Kind: shared.Word, Text: "is"}, {Kind: shared.Word, Text: "true"}, {Kind: shared.Word, Text: "for"},
+		{Kind: shared.Word, Text: "creature"}, {Kind: shared.Word, Text: "spells"}, {Kind: shared.Word, Text: "you"}, {Kind: shared.Word, Text: "control"},
+		{Kind: shared.Word, Text: "that"}, {Kind: shared.Word, Text: "aren't"}, {Kind: shared.Word, Text: "on"}, {Kind: shared.Word, Text: "the"}, {Kind: shared.Word, Text: "battlefield"},
+		{Kind: shared.Period, Text: "."},
+	}
+	got := stripNonBattlefieldScopeRider(body)
+	if len(got) != 8 || got[len(got)-1].Kind != shared.Period {
+		t.Fatalf("stripped body = %#v, want the leading 8-token sentence", got)
+	}
+}
+
+// TestStripNonBattlefieldScopeRiderKeepsKeywordCopyRider confirms the strip does
+// NOT touch the unrelated "The same is true for <keyword list>" riders (Odric,
+// Lunarch Marshal) that copy additional keywords and end in a keyword name
+// rather than "on the battlefield". Dropping those would lose game-relevant
+// keywords.
+func TestStripNonBattlefieldScopeRiderKeepsKeywordCopyRider(t *testing.T) {
+	t.Parallel()
+	body := []shared.Token{
+		{Kind: shared.Word, Text: "first"}, {Kind: shared.Word, Text: "strike"}, {Kind: shared.Period, Text: "."},
+		{Kind: shared.Word, Text: "the"}, {Kind: shared.Word, Text: "same"}, {Kind: shared.Word, Text: "is"}, {Kind: shared.Word, Text: "true"}, {Kind: shared.Word, Text: "for"},
+		{Kind: shared.Word, Text: "flying"}, {Kind: shared.Word, Text: "and"}, {Kind: shared.Word, Text: "vigilance"}, {Kind: shared.Period, Text: "."},
+	}
+	if got := stripNonBattlefieldScopeRider(body); len(got) != len(body) {
+		t.Fatalf("stripNonBattlefieldScopeRider dropped a keyword-copy rider: %d tokens, want %d", len(got), len(body))
+	}
+}
+
 func TestParseStaticControlledCreaturesColorFilteredCantBeBlockedDeclarationMeaning(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(t, "Blue creatures you control can't be blocked.", Context{})

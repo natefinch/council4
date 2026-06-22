@@ -199,6 +199,33 @@ func TestGenerateExecutableCardSourceSelfCannotBeBlocked(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceEveryCreatureTypeDropsScopeRider confirms a
+// "Creatures you control are every creature type. The same is true for creature
+// spells you control and creature cards you own that aren't on the battlefield."
+// anthem (Maskwood Nexus) generates: the non-battlefield-zone scope rider is
+// dropped and the battlefield every-creature-type continuous effect lowers.
+func TestGenerateExecutableCardSourceEveryCreatureTypeDropsScopeRider(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:     "Type Nexus",
+		Layout:   "normal",
+		ManaCost: "{4}",
+		TypeLine: "Artifact",
+		OracleText: "Creatures you control are every creature type. " +
+			"The same is true for creature spells you control and creature cards you own that aren't on the battlefield.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "AddEveryCreatureType: true") {
+		t.Fatalf("source missing every-creature-type continuous effect:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceSelfMustAttack(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

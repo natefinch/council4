@@ -540,6 +540,7 @@ func emitSelfNameStaticRules(abilities []Ability) {
 // and quoted text removed, and any ability-word label and its em dash dropped.
 func staticDeclarationBodyTokens(ability *Ability) []shared.Token {
 	tokens := eventHistorySemanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
+	tokens = stripNonBattlefieldScopeRider(tokens)
 	if ability.AbilityWord == nil {
 		return tokens
 	}
@@ -549,6 +550,50 @@ func staticDeclarationBodyTokens(ability *Ability) []shared.Token {
 		}
 	}
 	return tokens
+}
+
+// stripNonBattlefieldScopeRider removes a trailing "The same is true for <spells
+// you control and cards you own> that aren't on the battlefield." sentence from a
+// static ability's body. That rider extends a "<group> is/are <characteristic>"
+// continuous declaration (Maskwood Nexus, Arcane Adaptation, Encroaching
+// Mycosynth, Conspiracy, Celestial Dawn, Biotransference) to objects in
+// non-battlefield zones — spells on the stack and cards in hand/library/
+// graveyard. Continuous effects in this engine apply only to battlefield
+// permanents, so the rider has no representable effect; dropping it lets the
+// leading battlefield declaration lower while leaving battlefield simulation
+// outcomes unchanged. The rider is distinguished by its "the same is true for"
+// opening and "on the battlefield" close, which the keyword-copying "same is
+// true for <keyword list>" riders (Odric, Cairn Wanderer) never share.
+func stripNonBattlefieldScopeRider(tokens []shared.Token) []shared.Token {
+	end := len(tokens)
+	if end == 0 || tokens[end-1].Kind != shared.Period {
+		return tokens
+	}
+	sentenceStart := 0
+	for i := end - 2; i >= 0; i-- {
+		if tokens[i].Kind == shared.Period {
+			sentenceStart = i + 1
+			break
+		}
+	}
+	if sentenceStart == 0 {
+		return tokens
+	}
+	if !isNonBattlefieldScopeRider(tokens[sentenceStart : end-1]) {
+		return tokens
+	}
+	return tokens[:sentenceStart]
+}
+
+// isNonBattlefieldScopeRider reports whether sentence (the tokens of one
+// sentence, excluding its terminating period) is the non-battlefield-zone scope
+// extension "the same is true for ... on the battlefield".
+func isNonBattlefieldScopeRider(sentence []shared.Token) bool {
+	if len(sentence) < 8 {
+		return false
+	}
+	return staticWordsAt(sentence, 0, "the", "same", "is", "true", "for") &&
+		staticWordsAt(sentence, len(sentence)-3, "on", "the", "battlefield")
 }
 
 func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms Atoms, conditions []ConditionClause) []StaticDeclarationSyntax {
