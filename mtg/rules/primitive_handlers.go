@@ -566,6 +566,29 @@ func handleTap(r *effectResolver, prim game.Tap) effectResolved {
 	return res
 }
 
+func handleTapOrUntap(r *effectResolver, prim game.TapOrUntap) effectResolved {
+	res := effectResolved{accepted: true}
+	permanent, ok := r.resolveObject(prim.Object)
+	if !ok {
+		return res
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:   game.ChoiceResolution,
+		Player: r.obj.Controller,
+		Prompt: "Tap or untap the permanent?",
+		Options: []game.ChoiceOption{
+			{Index: 0, Label: "Tap"},
+			{Index: 1, Label: "Untap"},
+		},
+		MinChoices: 1,
+		MaxChoices: 1,
+	}, r.log)
+	tap := len(selected) != 1 || selected[0] != 1
+	setPermanentTapped(r.game, permanent, tap)
+	res.succeeded = true
+	return res
+}
+
 func handleStartEngines(r *effectResolver, prim game.StartEngines) effectResolved {
 	res := effectResolved{accepted: true}
 	playerID, ok := r.resolvePlayer(prim.Player)

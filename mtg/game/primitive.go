@@ -27,6 +27,7 @@ const (
 	PrimitiveModifyPT
 	PrimitiveFight
 	PrimitiveTap
+	PrimitiveTapOrUntap
 	PrimitiveSearch
 	PrimitiveReveal
 	PrimitivePutOnBattlefield
@@ -330,6 +331,13 @@ type Fight struct {
 type Tap struct {
 	Object ObjectReference
 	Group  GroupReference
+}
+
+// TapOrUntap lets the controller choose to tap or untap the referenced
+// permanent ("Tap or untap target creature."). The choice is made when the
+// instruction resolves.
+type TapOrUntap struct {
+	Object ObjectReference
 }
 
 // Search searches a player's library for cards matching spec. PublishLinked may

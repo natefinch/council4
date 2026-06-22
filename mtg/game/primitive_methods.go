@@ -60,6 +60,9 @@ func (Fight) Kind() PrimitiveKind { return PrimitiveFight }
 // Kind implements Primitive for Tap.
 func (Tap) Kind() PrimitiveKind { return PrimitiveTap }
 
+// Kind implements Primitive for TapOrUntap.
+func (TapOrUntap) Kind() PrimitiveKind { return PrimitiveTapOrUntap }
+
 // Kind implements Primitive for Search.
 func (Search) Kind() PrimitiveKind { return PrimitiveSearch }
 
@@ -266,6 +269,7 @@ func (ApplyRule) isPrimitive()                   {}
 func (ModifyPT) isPrimitive()                    {}
 func (Fight) isPrimitive()                       {}
 func (Tap) isPrimitive()                         {}
+func (TapOrUntap) isPrimitive()                  {}
 func (Search) isPrimitive()                      {}
 func (Reveal) isPrimitive()                      {}
 func (PutOnBattlefield) isPrimitive()            {}
@@ -359,8 +363,9 @@ func (p ModifyPT) instructionRefs() primitiveRefs {
 	refs.publishesLinked = p.PublishLinked
 	return refs
 }
-func (Fight) instructionRefs() primitiveRefs { return primitiveRefs{} }
-func (Tap) instructionRefs() primitiveRefs   { return primitiveRefs{} }
+func (Fight) instructionRefs() primitiveRefs      { return primitiveRefs{} }
+func (Tap) instructionRefs() primitiveRefs        { return primitiveRefs{} }
+func (TapOrUntap) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (p Search) instructionRefs() primitiveRefs {
 	refs := quantityRefs(p.Amount)
 	refs.publishesLinked = p.PublishLinked

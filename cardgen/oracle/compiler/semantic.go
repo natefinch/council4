@@ -1109,6 +1109,7 @@ const (
 	EffectSearch
 	EffectShuffle
 	EffectTap
+	EffectTapOrUntap
 	EffectUntap
 	EffectTransform
 	EffectLifeTotalCantChange
