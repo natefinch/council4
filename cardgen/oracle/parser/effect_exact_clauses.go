@@ -507,13 +507,21 @@ func graveyardCardNoun(sel SelectionSyntax) (string, bool) {
 		core = string(sel.SubtypesAny[0]) + " card"
 	default:
 		// The plain "card" noun requires the generic card kind, unless a color
-		// qualifier already restricts it ("green card", "colorless card").
-		if sel.Kind != SelectionCard && !hasColor {
+		// qualifier or the "historic" qualifier already restricts it ("green
+		// card", "colorless card", "historic card").
+		if sel.Kind != SelectionCard && !hasColor && !sel.Historic {
 			return "", false
 		}
 		core = "card"
 	}
-	return colorPrefix + core, true
+	// A "historic" qualifier ("historic card", "historic permanent card")
+	// precedes the core noun, after any color qualifier, in canonical Oracle
+	// order.
+	historicPrefix := ""
+	if sel.Historic {
+		historicPrefix = "historic "
+	}
+	return colorPrefix + historicPrefix + core, true
 }
 
 // graveyardColorPrefix renders the optional leading color qualifier of a

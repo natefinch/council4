@@ -994,6 +994,11 @@ type CompiledSelector struct {
 	Colorless      bool
 	Multicolored   bool
 	BasicLandType  bool
+	// Historic records a "historic" card qualifier ("target historic card from
+	// your graveyard"). A historic card is an artifact, a legendary, or a Saga
+	// (CR 702.61b); the cross-category disjunction is kept as its own flag and
+	// lowers to a Selection.AnyOf of those three alternatives.
+	Historic bool
 	// MatchCounter records whether RequiredCounter is active ("creature you
 	// control with a +1/+1 counter on it"); RequiredCounter names the counter
 	// kind the matched permanent must carry. MatchAnyCounter records the

@@ -1376,6 +1376,7 @@ func selectionGrammarWord(token shared.Token) bool {
 		"opponent", "opponent's", "opponents", "activated", "triggered", "source",
 		"mana", "value", "power", "toughness", "equal", "less", "greater", "lesser",
 		"battlefield", "graveyard", "hand", "library", "exile", "command",
+		"historic",
 	} {
 		if equalWord(token, word) {
 			return true
@@ -1863,6 +1864,7 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	default:
 	}
 	selection.All = slices.Contains(words, "all")
+	selection.Historic = slices.Contains(words, "historic")
 	selection.Another = atoms.SelectionFlagIn(span, SelectionFlagAnother)
 	selection.Other = atoms.SelectionFlagIn(span, SelectionFlagOther)
 	selection.Attacking = atoms.SelectionFlagIn(span, SelectionFlagAttacking)

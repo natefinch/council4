@@ -1039,7 +1039,8 @@ func alternativePermanentTargetSpec(target *compiler.CompiledTarget, spec *game.
 func selectorHasUnsupportedPermanentFilters(selector compiler.CompiledSelector) bool {
 	return selector.Zone != zone.None ||
 		selector.Colorless ||
-		selector.Multicolored
+		selector.Multicolored ||
+		selector.Historic
 }
 
 func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
