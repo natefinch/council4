@@ -407,11 +407,51 @@ func TestLifeAndOpponentConditions(t *testing.T) {
 	}
 }
 
+func TestControllerLifeRelativeConditions(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	ctx := conditionContext{controller: game.Player1}
+
+	// StartingLife defaults to 40; "at least 10 life more than your starting
+	// life total" needs current life >= 50.
+	aboveStarting := opt.Val(game.Condition{ControllerLifeAtLeastAboveStarting: 10})
+	g.Players[game.Player1].Life = 50
+	if !conditionSatisfied(g, ctx, aboveStarting) {
+		t.Fatal("life-above-starting condition failed at threshold")
+	}
+	g.Players[game.Player1].Life = 49
+	if conditionSatisfied(g, ctx, aboveStarting) {
+		t.Fatal("life-above-starting condition passed below threshold")
+	}
+
+	atMost := opt.Val(game.Condition{ControllerLifeAtMost: opt.Val(5)})
+	g.Players[game.Player1].Life = 5
+	if !conditionSatisfied(g, ctx, atMost) {
+		t.Fatal("life-at-most condition failed at threshold")
+	}
+	g.Players[game.Player1].Life = 6
+	if conditionSatisfied(g, ctx, atMost) {
+		t.Fatal("life-at-most condition passed above threshold")
+	}
+
+	// "0 or less life" must remain an active predicate, not be treated as empty.
+	atMostZero := opt.Val(game.Condition{ControllerLifeAtMost: opt.Val(0)})
+	g.Players[game.Player1].Life = 0
+	if !conditionSatisfied(g, ctx, atMostZero) {
+		t.Fatal("life-at-most-zero condition failed at zero life")
+	}
+	g.Players[game.Player1].Life = 1
+	if conditionSatisfied(g, ctx, atMostZero) {
+		t.Fatal("life-at-most-zero condition passed above zero life")
+	}
+}
+
 func TestNegativeConditionThresholdsFailClosed(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	ctx := conditionContext{controller: game.Player1}
 	conditions := []game.Condition{
 		{Negate: true, ControllerLifeAtLeast: -1},
+		{Negate: true, ControllerLifeAtMost: opt.Val(-1)},
+		{Negate: true, ControllerLifeAtLeastAboveStarting: -1},
 		{Negate: true, AnyPlayerLifeAtMost: -1},
 		{Negate: true, OpponentCountAtLeast: -1},
 	}

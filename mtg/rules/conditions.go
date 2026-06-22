@@ -24,6 +24,8 @@ type conditionContext struct {
 func conditionParametersNegative(cond *game.Condition) bool {
 	return cond.ControllerLifeAtLeast < 0 ||
 		cond.AnyPlayerLifeAtMost < 0 ||
+		cond.ControllerLifeAtMost.Exists && cond.ControllerLifeAtMost.Val < 0 ||
+		cond.ControllerLifeAtLeastAboveStarting < 0 ||
 		cond.AnyOpponentPoisonAtLeast < 0 ||
 		cond.ControllerHandSizeExactly.Exists && cond.ControllerHandSizeExactly.Val < 0 ||
 		cond.OpponentCountAtLeast < 0 ||
@@ -54,6 +56,14 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.ControllerLifeAtLeast > 0 {
 		player, ok := playerByID(g, ctx.controller)
 		matches = matches && ok && player.Life >= cond.ControllerLifeAtLeast
+	}
+	if cond.ControllerLifeAtMost.Exists {
+		player, ok := playerByID(g, ctx.controller)
+		matches = matches && ok && player.Life <= cond.ControllerLifeAtMost.Val
+	}
+	if cond.ControllerLifeAtLeastAboveStarting > 0 {
+		player, ok := playerByID(g, ctx.controller)
+		matches = matches && ok && player.Life >= player.StartingLife+cond.ControllerLifeAtLeastAboveStarting
 	}
 	if cond.ControllerHandSizeAtLeast > 0 {
 		player, ok := playerByID(g, ctx.controller)

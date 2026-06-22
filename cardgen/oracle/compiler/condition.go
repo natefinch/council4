@@ -70,6 +70,12 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 	case parser.ConditionPredicateControllerLifeAtLeast:
 		condition.Predicate = ConditionPredicateControllerLifeAtLeast
 		condition.Threshold = clause.Threshold
+	case parser.ConditionPredicateControllerLifeAtMost:
+		condition.Predicate = ConditionPredicateControllerLifeAtMost
+		condition.Threshold = clause.Threshold
+	case parser.ConditionPredicateControllerLifeAtLeastAboveStarting:
+		condition.Predicate = ConditionPredicateControllerLifeAtLeastAboveStarting
+		condition.Threshold = clause.Threshold
 	case parser.ConditionPredicateControllerHandSizeAtLeast:
 		condition.Predicate = ConditionPredicateControllerHandSizeAtLeast
 		condition.Threshold = clause.Threshold

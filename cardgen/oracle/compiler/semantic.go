@@ -411,6 +411,8 @@ type ConditionPredicate uint8
 const (
 	ConditionPredicateUnsupported ConditionPredicate = iota
 	ConditionPredicateControllerLifeAtLeast
+	ConditionPredicateControllerLifeAtMost
+	ConditionPredicateControllerLifeAtLeastAboveStarting
 	ConditionPredicateControllerHandSizeAtLeast
 	ConditionPredicateAnyPlayerLifeAtMost
 	ConditionPredicateOpponentCountAtLeast

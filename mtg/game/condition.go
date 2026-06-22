@@ -37,6 +37,17 @@ type Condition struct {
 	ControllerHandSizeAtLeast int
 	AnyPlayerLifeAtMost       int
 
+	// ControllerLifeAtMost requires the context controller's current life total
+	// to be at most the threshold ("you have N or less life"). It uses opt.V so
+	// a zero threshold ("0 or less life") is distinguishable from absence.
+	ControllerLifeAtMost opt.V[int]
+
+	// ControllerLifeAtLeastAboveStarting requires the context controller's
+	// current life total to be at least this many points above their starting
+	// life total ("you have at least N life more than your starting life
+	// total"). Zero disables the predicate.
+	ControllerLifeAtLeastAboveStarting int
+
 	// ControllerHandSizeExactly requires the context controller to hold exactly
 	// this many cards in hand. Negative disables it; zero is expressed via
 	// ControllerHandEmpty, so a present exact-zero predicate is not modeled here.
@@ -186,6 +197,8 @@ func (c *Condition) Empty() bool {
 	return c.ControllerControls.Empty() &&
 		!c.ControlsMatching.Exists &&
 		c.ControllerLifeAtLeast == 0 &&
+		!c.ControllerLifeAtMost.Exists &&
+		c.ControllerLifeAtLeastAboveStarting == 0 &&
 		c.ControllerHandSizeAtLeast == 0 &&
 		!c.ControllerHandSizeExactly.Exists &&
 		c.AnyOpponentPoisonAtLeast == 0 &&
