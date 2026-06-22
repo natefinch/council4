@@ -1143,11 +1143,11 @@ func exactMassGroup(ctx contentCtx) (game.GroupReference, bool) {
 	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		len(ctx.content.References) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		ctx.content.Effects[0].Negated ||
 		!ctx.content.Effects[0].Exact ||
-		!ctx.content.Effects[0].Selector.All {
+		!ctx.content.Effects[0].Selector.All ||
+		!massCounterQualifierReferencesOnly(ctx.content.References, ctx.content.Effects[0].Selector) {
 		return game.GroupReference{}, false
 	}
 	selection, ok := massGroupSelection(ctx.content.Effects[0].Selector)
@@ -1155,6 +1155,32 @@ func exactMassGroup(ctx contentCtx) (game.GroupReference, bool) {
 		return game.GroupReference{}, false
 	}
 	return game.BattlefieldGroup(selection), true
+}
+
+// massCounterQualifierReferencesOnly reports whether every reference is the
+// trailing "it"/"them" pronoun that belongs to a named counter qualifier ("each
+// creature with a +1/+1 counter on it"). That pronoun is part of the selected
+// group, not a separate object, so when the group selector matches a counter it
+// is the only reference the mass group tolerates; with no counter selector, or
+// any other reference, this fails closed. A reference-free group always passes.
+func massCounterQualifierReferencesOnly(
+	references []compiler.CompiledReference,
+	selector compiler.CompiledSelector,
+) bool {
+	if len(references) == 0 {
+		return true
+	}
+	if !selector.MatchCounter {
+		return false
+	}
+	for _, reference := range references {
+		if reference.Kind != compiler.ReferencePronoun ||
+			(reference.Pronoun != compiler.ReferencePronounIt &&
+				reference.Pronoun != compiler.ReferencePronounThem) {
+			return false
+		}
+	}
+	return true
 }
 
 // massGroupSelection projects the battlefield-group selector of a mass effect

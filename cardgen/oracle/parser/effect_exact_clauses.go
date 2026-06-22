@@ -1149,6 +1149,9 @@ func exactMassEffectSyntax(effect *EffectSyntax, prefix string) bool {
 	if base, ok := massChosenTypeBasePhrase(&effect.Selection, phrase); ok {
 		return exactMassGroupPhrase(base)
 	}
+	if base, ok := massCounterBasePhrase(&effect.Selection, phrase); ok {
+		return exactMassGroupPhrase(base) || exactMassSubtypePhrase(&effect.Selection, base)
+	}
 	return exactMassGroupPhrase(phrase) || exactMassSubtypePhrase(&effect.Selection, phrase)
 }
 
@@ -1175,6 +1178,45 @@ func massChosenTypeBasePhrase(selection *SelectionSyntax, phrase string) (string
 	return "", false
 }
 
+// massCounterBasePhrase strips a trailing counter qualifier ("with a +1/+1
+// counter on it" / "with a -1/-1 counter on them") from a mass group phrase when
+// the selection records a named counter requirement, returning the base group
+// phrase to validate and true. The base ("creatures") is then checked by the
+// shared mass group/subtype validators, so "Destroy all creatures with a +1/+1
+// counter on them." round-trips through the same machinery as the bare mass
+// group. Because stripping is driven by the modeled CounterKind (not by text),
+// an unmodeled named counter leaves CounterRequired false and the phrase fails
+// closed. The kind-agnostic "any counter" form is intentionally not accepted:
+// the runtime cannot honor it for a mass group (it would require the zero-value
+// counter kind in addition to any counter), so it stays fail closed.
+func massCounterBasePhrase(selection *SelectionSyntax, phrase string) (string, bool) {
+	if !selection.CounterRequired || selection.CounterAny {
+		return "", false
+	}
+	for _, suffix := range massCounterQualifierSuffixes(selection) {
+		if base, ok := strings.CutSuffix(phrase, suffix); ok {
+			return base, true
+		}
+	}
+	return "", false
+}
+
+// massCounterQualifierSuffixes reconstructs the recognized counter-qualifier
+// suffixes for a named-counter selection from its modeled counter kind, covering
+// both the singular ("on it") and plural ("on them") pronoun and both articles
+// ("a"/"an") so the reconstructed text matches the source.
+func massCounterQualifierSuffixes(selection *SelectionSyntax) []string {
+	pronouns := []string{"it", "them"}
+	kind := selection.CounterKind.String()
+	suffixes := make([]string, 0, 2*len(pronouns))
+	for _, article := range []string{"a", "an"} {
+		for _, pronoun := range pronouns {
+			suffixes = append(suffixes, " with "+article+" "+kind+" counter on "+pronoun)
+		}
+	}
+	return suffixes
+}
+
 // exactMassEachEffectSyntax recognizes the singular "each" mass form
 // ("Destroy each nonland permanent with mana value 2 or less.") that selects
 // every matching permanent just like the plural "all" form ("Destroy all
@@ -1192,7 +1234,11 @@ func exactMassEachEffectSyntax(effect *EffectSyntax, prefix string) bool {
 	if !strings.HasPrefix(strings.ToLower(text), strings.ToLower(prefix)) || !strings.HasSuffix(text, ".") {
 		return false
 	}
-	return exactMassEachGroupPhrase(text[len(prefix) : len(text)-1])
+	phrase := text[len(prefix) : len(text)-1]
+	if base, ok := massCounterBasePhrase(&effect.Selection, phrase); ok {
+		return exactMassEachGroupPhrase(base)
+	}
+	return exactMassEachGroupPhrase(phrase)
 }
 
 // exactMassEachGroupPhrase validates the singular group phrase that follows
@@ -1905,7 +1951,6 @@ func exactGroupDamageRecipientText(selection SelectionSyntax) (string, bool) {
 // can represent exactly, and fails closed for every other qualifier.
 func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, bool) {
 	if selection.All || selection.Another || selection.Zone != zone.None ||
-		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
 		selection.Colorless || selection.Multicolored ||
 		len(selection.Supertypes) > 1 ||
 		len(selection.ExcludedColors) != 0 ||
@@ -2028,5 +2073,72 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 	if selection.EnteredThisTurn {
 		words = append(words, "that", "entered", "this", "turn")
 	}
-	return strings.Join(words, " "), true
+	recipient := strings.Join(words, " ")
+	rider, ok := groupSelectorNumericRider(selection)
+	if !ok {
+		return "", false
+	}
+	return recipient + rider, true
+}
+
+// groupSelectorNumericRider reconstructs the canonical " with mana value N or
+// less", " with power N or greater", or " with toughness N or less" rider a
+// group recipient selector may carry, mirroring the runtime Selection numeric
+// bound. It renders at most one numeric comparison (the runtime carries a single
+// mana-value/power/toughness bound per selection), returning ok=false when more
+// than one is active or the comparison has no canonical Oracle phrasing so the
+// reconstruction fails closed instead of approximating the filter. An inactive
+// numeric filter yields the empty rider and ok=true.
+func groupSelectorNumericRider(selection SelectionSyntax) (string, bool) {
+	active := 0
+	rider := ""
+	if selection.MatchManaValue {
+		active++
+		if selection.ManaValueX {
+			rider = " with mana value X or less"
+		} else {
+			clause, ok := numericComparisonClause(selection.ManaValue)
+			if !ok {
+				return "", false
+			}
+			rider = " with mana value " + clause
+		}
+	}
+	if selection.MatchPower {
+		active++
+		clause, ok := numericComparisonClause(selection.Power)
+		if !ok {
+			return "", false
+		}
+		rider = " with power " + clause
+	}
+	if selection.MatchToughness {
+		active++
+		clause, ok := numericComparisonClause(selection.Toughness)
+		if !ok {
+			return "", false
+		}
+		rider = " with toughness " + clause
+	}
+	if active > 1 {
+		return "", false
+	}
+	return rider, true
+}
+
+// numericComparisonClause renders the canonical Oracle phrasing for a fixed
+// integer comparison ("N or less", "N or greater", "N"), mirroring the forms
+// exactMassComparisonClause accepts. It fails closed for the strict and
+// unbounded comparisons no canonical permanent-filter wording uses.
+func numericComparisonClause(bound compare.Int) (string, bool) {
+	switch bound.Op {
+	case compare.LessOrEqual:
+		return strconv.Itoa(bound.Value) + " or less", true
+	case compare.GreaterOrEqual:
+		return strconv.Itoa(bound.Value) + " or greater", true
+	case compare.Equal:
+		return strconv.Itoa(bound.Value), true
+	default:
+		return "", false
+	}
 }

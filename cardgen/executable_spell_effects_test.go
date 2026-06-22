@@ -1374,6 +1374,36 @@ func TestGenerateExecutableCardSourceFilteredGroupDamage(t *testing.T) {
 			oracleText:  "Test Bolt deals 1 damage to each creature with flying.",
 			wantedSnips: []string{"Keyword: game.Flying"},
 		},
+		{
+			name:       "mana value",
+			oracleText: "Test Bolt deals 3 damage to each creature with mana value 3 or less.",
+			wantedSnips: []string{
+				"RequiredTypes: []types.Card{types.Creature}",
+				"ManaValue: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 3})",
+			},
+		},
+		{
+			name:       "power",
+			oracleText: "Test Bolt deals 2 damage to each creature with power 2 or greater.",
+			wantedSnips: []string{
+				"Power: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 2})",
+			},
+		},
+		{
+			name:       "toughness",
+			oracleText: "Test Bolt deals 4 damage to each creature with toughness 4 or greater.",
+			wantedSnips: []string{
+				"Toughness: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4})",
+			},
+		},
+		{
+			name:       "controller you with mana value",
+			oracleText: "Test Bolt deals 2 damage to each creature you control with mana value 2 or less.",
+			wantedSnips: []string{
+				"Controller: game.ControllerYou",
+				"ManaValue: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 2})",
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
