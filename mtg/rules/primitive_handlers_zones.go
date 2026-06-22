@@ -2003,7 +2003,7 @@ func (r *effectResolver) putLinkedCardOnBattlefieldValue(linkedKey game.LinkedKe
 			continue
 		}
 		card, ok := r.game.GetCardInstance(ref.CardID)
-		if !ok || !cardMatchesCondition(card.Def, cardCondition, r.obj) {
+		if !ok || !cardConditionPredicateSatisfied(r.game, r.obj, card, cardCondition) {
 			continue
 		}
 		owner, ok := playerByID(r.game, card.Owner)

@@ -209,9 +209,9 @@ func TestRenderShuffleRevealLinkedPutSequence(t *testing.T) {
 				Source:    game.LinkedBattlefieldSource(key),
 				Recipient: opt.Val(owner),
 			},
-			CardCondition: opt.Val(game.CardCondition{
-				Card:                 game.CardReference{Kind: game.CardReferenceLinked, LinkID: string(key)},
-				RequirePermanentCard: true,
+			CardCondition: opt.Val(game.CardSelection{
+				Card:      game.CardReference{Kind: game.CardReferenceLinked, LinkID: string(key)},
+				Selection: game.Selection{RequirePermanentCard: true},
 			}),
 		},
 	}
@@ -234,7 +234,7 @@ func TestRenderShuffleRevealLinkedPutSequence(t *testing.T) {
 		"Player: game.ObjectOwnerReference(game.TargetPermanentReference(0))",
 		`PublishLinked: game.LinkedKey("revealed-card")`,
 		"game.LinkedBattlefieldSource(game.LinkedKey(\"revealed-card\"))",
-		"CardCondition: opt.Val(game.CardCondition",
+		"CardCondition: opt.Val(game.CardSelection",
 		"RequirePermanentCard: true",
 	} {
 		if !strings.Contains(joined, want) {

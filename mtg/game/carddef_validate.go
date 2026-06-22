@@ -1701,12 +1701,13 @@ func (v *cardDefValidator) validatePlayerRef(faceName, path string, ref PlayerRe
 	}
 }
 
-func (v *cardDefValidator) validateCardCondition(faceName, path string, condition CardCondition) {
+func (v *cardDefValidator) validateCardCondition(faceName, path string, condition CardSelection) {
 	v.validateCardRef(faceName, appendPath(path, "Card"), condition.Card)
-	if condition.ChosenSubtypeFrom != "" && condition.ChosenSubtypeFrom != EntryTypeChoiceKey {
-		v.add(faceName, appendPath(path, "ChosenSubtypeFrom"), CardDefIssueInvalidCondition, "chosen subtype condition must use the entry-time creature-type choice")
+	sel := condition.Selection
+	if sel.ChosenSubtypeFrom != "" && sel.ChosenSubtypeFrom != EntryTypeChoiceKey {
+		v.add(faceName, appendPath(path, "Selection.ChosenSubtypeFrom"), CardDefIssueInvalidCondition, "chosen subtype condition must use the entry-time creature-type choice")
 	}
-	if !condition.RequirePermanentCard && len(condition.Types) == 0 && len(condition.Supertypes) == 0 && len(condition.SubtypesAny) == 0 && condition.ChosenSubtypeFrom == "" {
+	if !sel.RequirePermanentCard && len(sel.RequiredTypes) == 0 && len(sel.Supertypes) == 0 && len(sel.SubtypesAny) == 0 && sel.ChosenSubtypeFrom == "" {
 		v.add(faceName, path, CardDefIssueInvalidReference, "card condition has no filters")
 	}
 }

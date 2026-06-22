@@ -76,8 +76,8 @@ func TestLowerHeraldsHornCategory(t *testing.T) {
 	}
 	condition := sequence[1].CardCondition
 	if !condition.Exists ||
-		condition.Val.ChosenSubtypeFrom != game.EntryTypeChoiceKey ||
-		len(condition.Val.Types) != 1 || condition.Val.Types[0] != types.Creature {
+		condition.Val.Selection.ChosenSubtypeFrom != game.EntryTypeChoiceKey ||
+		len(condition.Val.Selection.RequiredTypes) != 1 || condition.Val.Selection.RequiredTypes[0] != types.Creature {
 		t.Fatalf("reveal card condition = %#v, want creature of the chosen subtype", sequence[1].CardCondition)
 	}
 

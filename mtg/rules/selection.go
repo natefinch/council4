@@ -107,6 +107,12 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if sel.ExcludedSubtype != "" && s.hasAnySubtype([]types.Sub{sel.ExcludedSubtype}) {
 		return false
 	}
+	if sel.ChosenSubtypeFrom != "" {
+		subtype, ok := s.chosenSubtypeFromResolution(sel.ChosenSubtypeFrom)
+		if !ok || !s.hasAnySubtype([]types.Sub{subtype}) {
+			return false
+		}
+	}
 	if sel.SubtypeChoice == game.SubtypeChoiceSourceEntry {
 		subtype, ok := s.sourceEntryChoiceSubtype(game.EntryTypeChoiceKey)
 		if !ok || !s.hasAnySubtype([]types.Sub{subtype}) {
@@ -227,6 +233,9 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 		if !ok || name != sel.Name {
 			return false
 		}
+	}
+	if sel.RequirePermanentCard && !s.isPermanentCard() {
+		return false
 	}
 	return true
 }
@@ -354,6 +363,32 @@ func (s *selectionSubject) resolutionChoiceSubtype(key game.ChoiceKey) (types.Su
 		return "", false
 	}
 	return choice.Subtype, true
+}
+
+// chosenSubtypeFromResolution resolves the creature subtype published under key
+// in the resolving object's choices for a Selection.ChosenSubtypeFrom predicate.
+// Unlike resolutionChoiceSubtype it additionally requires the chosen value to be
+// a known creature subtype, failing closed otherwise, matching the chosen-type
+// library-top gate (Herald's Horn).
+func (s *selectionSubject) chosenSubtypeFromResolution(key game.ChoiceKey) (types.Sub, bool) {
+	if s.resolutionChoices == nil {
+		return "", false
+	}
+	choice, ok := s.resolutionChoices[string(key)]
+	if !ok || choice.Kind != game.ResolutionChoiceSubtype || !types.KnownSubtypeForType(types.Creature, choice.Subtype) {
+		return "", false
+	}
+	return choice.Subtype, true
+}
+
+// isPermanentCard reports whether the subject is a permanent card, for the
+// Selection.RequirePermanentCard gate. Only a card in a non-battlefield zone
+// carries the printed type line this predicate reads; other subjects fail closed.
+func (s *selectionSubject) isPermanentCard() bool {
+	if s.kind == subjectCard && s.card != nil && s.card.Def != nil {
+		return s.card.Def.IsPermanent()
+	}
+	return false
 }
 
 func (s *selectionSubject) hasColor(c color.Color) bool {

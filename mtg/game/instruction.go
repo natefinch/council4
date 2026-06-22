@@ -49,7 +49,7 @@ type Instruction struct {
 	Condition opt.V[EffectCondition]
 
 	// CardCondition gates the instruction on properties of a referenced card.
-	CardCondition opt.V[CardCondition]
+	CardCondition opt.V[CardSelection]
 
 	// ResultGate gates this instruction on the recorded result of a prior instruction
 	// identified by ResultGate.Key. Use this for "if you do" / "if you don't" branches.
@@ -231,7 +231,7 @@ func validateInstructionSequenceWithLinked(
 	return nil
 }
 
-func validateLinkedCardCondition(idx int, cond opt.V[CardCondition], published, siblingLinked map[LinkedKey]int) error {
+func validateLinkedCardCondition(idx int, cond opt.V[CardSelection], published, siblingLinked map[LinkedKey]int) error {
 	if !cond.Exists || cond.Val.Card.Kind != CardReferenceLinked {
 		return nil
 	}

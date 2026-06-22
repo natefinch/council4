@@ -109,7 +109,7 @@ func (r Renderer) renderInstruction(ctx *renderCtx, instruction *game.Instructio
 		fields = append(fields, fmt.Sprintf("Condition: opt.Val(%s),", condition))
 	}
 	if instruction.CardCondition.Exists {
-		condition, err := r.renderCardCondition(ctx, instruction.CardCondition.Val)
+		condition, err := r.renderCardSelection(ctx, instruction.CardCondition.Val)
 		if err != nil {
 			return "", err
 		}
@@ -569,39 +569,20 @@ func renderRollDie(value game.RollDie) string {
 	return structLit("game.RollDie", []string{fmt.Sprintf("Sides: %d,", value.Sides)})
 }
 
-func (Renderer) renderCardCondition(ctx *renderCtx, condition game.CardCondition) (string, error) {
+func (r Renderer) renderCardSelection(ctx *renderCtx, condition game.CardSelection) (string, error) {
 	card, err := renderCardReference(condition.Card)
 	if err != nil {
 		return "", err
 	}
 	fields := []string{fmt.Sprintf("Card: %s,", card)}
-	if condition.RequirePermanentCard {
-		fields = append(fields, "RequirePermanentCard: true,")
-	}
-	if len(condition.Types) != 0 {
-		typesRendered := make([]string, 0, len(condition.Types))
-		for _, cardType := range condition.Types {
-			rendered, err := cardTypeLiteral(cardType)
-			if err != nil {
-				return "", err
-			}
-			typesRendered = append(typesRendered, rendered)
+	if !condition.Selection.Empty() {
+		selection, err := r.renderSelection(ctx, condition.Selection)
+		if err != nil {
+			return "", err
 		}
-		ctx.need(importTypes)
-		fields = append(fields, fmt.Sprintf("Types: []types.Card{%s},", strings.Join(typesRendered, ", ")))
+		fields = append(fields, fmt.Sprintf("Selection: %s,", selection))
 	}
-	if len(condition.Supertypes) != 0 || len(condition.SubtypesAny) != 0 {
-		return "", errors.New("render: unsupported CardCondition supertype or subtype filters")
-	}
-	if condition.ChosenSubtypeFrom != "" {
-		switch condition.ChosenSubtypeFrom {
-		case game.EntryTypeChoiceKey:
-			fields = append(fields, "ChosenSubtypeFrom: game.EntryTypeChoiceKey,")
-		default:
-			fields = append(fields, fmt.Sprintf("ChosenSubtypeFrom: game.ChoiceKey(%q),", condition.ChosenSubtypeFrom))
-		}
-	}
-	return structLit("game.CardCondition", fields), nil
+	return structLit("game.CardSelection", fields), nil
 }
 
 func (r Renderer) renderRevealPrimitive(ctx *renderCtx, value game.Reveal) (string, error) {

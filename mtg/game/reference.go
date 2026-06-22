@@ -3,7 +3,6 @@ package game
 import (
 	"fmt"
 
-	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -398,20 +397,18 @@ type CardReference struct {
 	LinkID string
 }
 
-// CardCondition describes characteristics a referenced card must have for an
-// effect to apply.
-//
-// DO-NOT-COPY(filter): cannot collapse into game.Selection without breaking the
-// byte-identical corpus (it still renders into supported cards, e.g. Herald's
-// Horn and Chaos Warp) or changing matching semantics (RequirePermanentCard and
-// arbitrary-key ChosenSubtypeFrom, guarded by KnownSubtypeForType, have no
-// equivalent in Selection's matcher); prefer game.Selection. (retire: #1394)
-type CardCondition struct {
+// CardSelection gates an effect on a referenced card matching a Selection. It is
+// the successor to the former CardCondition shadow filter, whose duplicated
+// characteristic fields (Types/Supertypes/SubtypesAny) plus its
+// RequirePermanentCard and ChosenSubtypeFrom per-card predicates now live on
+// Selection, the single matcher description.
+type CardSelection struct {
+	// Card identifies which card the gate inspects. It is a candidate-domain
+	// concern (where the card comes from), not a per-card predicate, so it stays
+	// out of Selection, mirroring how SelectionCount keeps its counting fields
+	// beside an embedded Selection.
 	Card CardReference
 
-	RequirePermanentCard bool
-	Types                []types.Card
-	Supertypes           []types.Super
-	SubtypesAny          []types.Sub
-	ChosenSubtypeFrom    ChoiceKey
+	// Selection is the per-card predicate the referenced card must satisfy.
+	Selection Selection
 }

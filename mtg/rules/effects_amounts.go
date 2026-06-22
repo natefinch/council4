@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"slices"
-
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
@@ -859,7 +857,7 @@ func effectConditionSatisfied(g *game.Game, obj *game.StackObject, condition opt
 	return true
 }
 
-func cardConditionSatisfied(g *game.Game, obj *game.StackObject, condition opt.V[game.CardCondition]) bool {
+func cardConditionSatisfied(g *game.Game, obj *game.StackObject, condition opt.V[game.CardSelection]) bool {
 	if !condition.Exists {
 		return true
 	}
@@ -872,48 +870,41 @@ func cardConditionSatisfied(g *game.Game, obj *game.StackObject, condition opt.V
 			continue
 		}
 		card, ok := g.GetCardInstance(ref.CardID)
-		if ok && cardMatchesCondition(card.Def, condition, obj) {
+		if ok && cardMatchesSelection(g, obj, card, cond.Selection) {
 			return true
 		}
 	}
 	return false
 }
 
-func cardMatchesCondition(card *game.CardDef, condition opt.V[game.CardCondition], obj *game.StackObject) bool {
+// cardConditionPredicateSatisfied reports whether card satisfies an optional
+// CardSelection's predicate. It ignores the selection's Card reference (the
+// caller has already resolved which card to test) and matches anything when no
+// condition is present.
+func cardConditionPredicateSatisfied(g *game.Game, obj *game.StackObject, card *game.CardInstance, condition opt.V[game.CardSelection]) bool {
 	if !condition.Exists {
 		return true
 	}
-	if card == nil {
+	return cardMatchesSelection(g, obj, card, condition.Val.Selection)
+}
+
+// cardMatchesSelection matches a card in a non-battlefield zone against a
+// Selection, reading any chosen-subtype provenance from the resolving object's
+// choices.
+func cardMatchesSelection(g *game.Game, obj *game.StackObject, card *game.CardInstance, selection game.Selection) bool {
+	if card == nil || card.Def == nil {
 		return false
 	}
-	cond := condition.Val
-	if cond.RequirePermanentCard && !card.IsPermanent() {
-		return false
+	subject := &selectionSubject{
+		kind: subjectCard,
+		g:    g,
+		card: card,
 	}
-	face := card.DefaultFace()
-	for _, cardType := range cond.Types {
-		if !face.HasType(cardType) {
-			return false
-		}
+	if obj != nil {
+		subject.resolutionChoices = obj.ResolutionChoices
+		subject.viewer = obj.Controller
 	}
-	for _, supertype := range cond.Supertypes {
-		if !face.HasSupertype(supertype) {
-			return false
-		}
-	}
-	if len(cond.SubtypesAny) > 0 && !slices.ContainsFunc(cond.SubtypesAny, face.HasSubtype) {
-		return false
-	}
-	if cond.ChosenSubtypeFrom != "" {
-		choice, ok := linkedResolutionChoice(obj, string(cond.ChosenSubtypeFrom))
-		if !ok ||
-			choice.Kind != game.ResolutionChoiceSubtype ||
-			!types.KnownSubtypeForType(types.Creature, choice.Subtype) ||
-			!face.HasSubtype(choice.Subtype) {
-			return false
-		}
-	}
-	return true
+	return matchSelection(subject, &selection)
 }
 
 func instructionResultGateSatisfied(obj *game.StackObject, gate game.InstructionResultGate) bool {
