@@ -3809,7 +3809,7 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 // per-sacrificed-creature multiplier N; any other sentence fails closed.
 func parseDevourEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
 	body := semanticEffectTokens(tokens)
-	n, ok := devourSentenceMultiplier(body)
+	subject, n, ok := devourSentenceParse(body)
 	if !ok {
 		return nil, false
 	}
@@ -3822,26 +3822,49 @@ func parseDevourEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([
 		Tokens:                 append([]shared.Token(nil), body...),
 		EntersDevour:           true,
 		EntersDevourMultiplier: n,
+		EntersDevourType:       subject.cardType,
+		EntersDevourSubtype:    subject.subtype,
 	}
 	effect.Exact = exactEffectSyntax(&effect)
 	return []EffectSyntax{effect}, true
 }
 
-// devourSentenceMultiplier matches the exact canonical Devour expansion token
-// sequence and returns its +1/+1 counter multiplier N. The multiplier is the
+// devourSentenceParse matches the canonical Devour expansion token sequence and
+// returns the sacrificed-permanent subject together with its +1/+1 counter
+// multiplier N. The fixed framing words are validated and the sacrificed-noun
+// positions identify the subject (creature, artifact, land, or Food); N is the
 // integer that precedes the "+1/+1 counters" phrase. Any deviation from the
 // canonical wording fails closed.
-func devourSentenceMultiplier(body []shared.Token) (int, bool) {
+func devourSentenceParse(body []shared.Token) (devourSubject, int, bool) {
 	words := normalizedWords(body)
-	expected := []string{
-		"as", "this", "creature", "enters",
-		"you", "may", "sacrifice", "any", "number", "of", "creatures",
-		"then", "it", "enters", "with",
-		"counters", "on", "it", "for", "each", "creature", "sacrificed",
+	if len(words) != 22 {
+		return devourSubject{}, 0, false
 	}
-	if !slices.Equal(words, expected) {
-		return 0, false
+	prefix := []string{"as", "this", "creature", "enters", "you", "may", "sacrifice", "any", "number", "of"}
+	if !slices.Equal(words[:10], prefix) {
+		return devourSubject{}, 0, false
 	}
+	mid := []string{"then", "it", "enters", "with", "counters", "on", "it", "for", "each"}
+	if !slices.Equal(words[11:20], mid) {
+		return devourSubject{}, 0, false
+	}
+	if words[21] != "sacrificed" {
+		return devourSubject{}, 0, false
+	}
+	subject, ok := devourSubjectByNouns(words[10], words[20])
+	if !ok {
+		return devourSubject{}, 0, false
+	}
+	n, ok := devourSentenceMultiplier(body)
+	if !ok {
+		return devourSubject{}, 0, false
+	}
+	return subject, n, true
+}
+
+// devourSentenceMultiplier returns the +1/+1 counter multiplier N of a canonical
+// Devour expansion: the integer that precedes the "+1/+1 counters" phrase.
+func devourSentenceMultiplier(body []shared.Token) (int, bool) {
 	for i := 0; i+5 < len(body); i++ {
 		if body[i].Kind == shared.Integer &&
 			body[i+1].Kind == shared.Plus &&

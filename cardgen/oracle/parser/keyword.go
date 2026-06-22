@@ -1522,32 +1522,58 @@ func scanKeywordSelectors(tokens []shared.Token) []KeywordSelector {
 	return selectors
 }
 
-// devourCanonicalText is the canonical as-enters replacement that the printed
-// "Devour N" keyword abbreviates (CR 702.81), with the per-sacrificed-creature
-// +1/+1 counter multiplier N written as a plain integer. parseDevourEffect
-// recognizes this exact wording and recovers N.
-func devourCanonicalText(n int) string {
-	return "As this creature enters, you may sacrifice any number of creatures, " +
-		"then it enters with " + strconv.Itoa(n) + " +1/+1 counters on it for each creature sacrificed."
+// devourSubject describes one printed Devour variant: the optional permanent-type
+// word that follows "Devour" (empty for the plain creature form), the plural and
+// singular nouns its canonical as-enters wording uses, and the structured filter
+// downstream stages apply when choosing what may be sacrificed. cardType is set
+// for base card types (artifact, land); subtype is set for typed permanents named
+// by subtype (Food). Both are zero for the creature form, which keeps the
+// existing creature-only Devour lowering and rendering byte-for-byte unchanged.
+type devourSubject struct {
+	keyword  string
+	plural   string
+	singular string
+	cardType types.Card
+	subtype  types.Sub
 }
 
-// expandDevourKeyword rewrites each printed "Devour N" keyword line into the
+// devourSubjects lists the Devour variants the parser expands (CR 702.81). The
+// creature form is first and carries no structured filter; the typed forms name
+// the permanents their controller may sacrifice as the creature enters.
+var devourSubjects = []devourSubject{
+	{plural: "creatures", singular: "creature"},
+	{keyword: "artifact", plural: "artifacts", singular: "artifact", cardType: types.Artifact},
+	{keyword: "land", plural: "lands", singular: "land", cardType: types.Land},
+	{keyword: "Food", plural: "Foods", singular: "Food", subtype: types.Food},
+}
+
+// devourCanonicalText is the canonical as-enters replacement that a printed
+// Devour keyword abbreviates (CR 702.81), naming the sacrificed permanents from
+// subject and writing the per-sacrificed-permanent +1/+1 counter multiplier N as
+// a plain integer. parseDevourEffect recognizes this exact wording and recovers
+// both N and the subject.
+func devourCanonicalText(subject devourSubject, n int) string {
+	return "As this creature enters, you may sacrifice any number of " + subject.plural + ", " +
+		"then it enters with " + strconv.Itoa(n) + " +1/+1 counters on it for each " + subject.singular + " sacrificed."
+}
+
+// expandDevourKeyword rewrites each printed Devour keyword line into the
 // canonical as-enters replacement it abbreviates (CR 702.81). Like Bushido and
 // Extort, Devour is shorthand for a fixed ability, so expanding it to canonical
-// wording lets the standard replacement pipeline lower it. Only the +1/+1-counter
-// creature form ("Devour N") is expanded; the typed variants ("Devour artifact
-// N", "Devour land N", "Devour Food N") and the variable form ("Devour X ...")
-// are left untouched. The rewrite is parser-owned because it is a wording
-// substitution; downstream stages see only the expanded ability.
+// wording lets the standard replacement pipeline lower it. The creature form
+// ("Devour N") and the typed permanent forms ("Devour artifact N", "Devour land
+// N", "Devour Food N") are expanded; the variable form ("Devour X ...") is left
+// untouched. The rewrite is parser-owned because it is a wording substitution;
+// downstream stages see only the expanded ability.
 func expandDevourKeyword(source string) string {
 	lines := strings.Split(source, "\n")
 	changed := false
 	for i, line := range lines {
-		n, ok := devourLineRank(line)
+		subject, n, ok := devourLineRank(line)
 		if !ok {
 			continue
 		}
-		lines[i] = devourCanonicalText(n)
+		lines[i] = devourCanonicalText(subject, n)
 		changed = true
 	}
 	if !changed {
@@ -1556,35 +1582,67 @@ func expandDevourKeyword(source string) string {
 	return strings.Join(lines, "\n")
 }
 
-// devourLineRank reports the rank N of a line that is exactly the printed
-// "Devour N" keyword, optionally followed only by its parenthesized reminder
-// text. The word immediately after "Devour " must be the rank digits, which
-// excludes the typed "Devour artifact N"/"Devour land N"/"Devour Food N" forms
-// and the variable "Devour X ..." form. Lines that merely contain the word
-// elsewhere, or pair it with other rules text, are left untouched.
-func devourLineRank(line string) (int, bool) {
+// devourLineRank reports the subject and rank N of a line that is exactly a
+// printed Devour keyword, optionally followed only by its parenthesized reminder
+// text. The creature form begins with the rank digits; the typed forms begin
+// with the permanent-type word ("artifact"/"land"/"Food") and then the rank. The
+// variable "Devour X ..." form, lines that merely contain the word elsewhere,
+// and lines that pair it with other rules text are left untouched.
+func devourLineRank(line string) (devourSubject, int, bool) {
 	const prefix = "Devour "
 	trimmed := strings.TrimSpace(line)
 	if !strings.HasPrefix(trimmed, prefix) {
-		return 0, false
+		return devourSubject{}, 0, false
 	}
-	rest := strings.TrimSpace(trimmed[len(prefix):])
+	subject, rest, ok := devourSubjectPrefix(strings.TrimSpace(trimmed[len(prefix):]))
+	if !ok {
+		return devourSubject{}, 0, false
+	}
 	digits := 0
 	for digits < len(rest) && rest[digits] >= '0' && rest[digits] <= '9' {
 		digits++
 	}
 	if digits == 0 {
-		return 0, false
+		return devourSubject{}, 0, false
 	}
 	rank, err := strconv.Atoi(rest[:digits])
 	if err != nil || rank <= 0 {
-		return 0, false
+		return devourSubject{}, 0, false
 	}
 	tail := strings.TrimSpace(rest[digits:])
 	if tail != "" && (!strings.HasPrefix(tail, "(") || !strings.HasSuffix(tail, ")")) {
-		return 0, false
+		return devourSubject{}, 0, false
 	}
-	return rank, true
+	return subject, rank, true
+}
+
+// devourSubjectPrefix splits the text after "Devour " into its subject and the
+// remaining text that should begin with the rank digits. The creature form has
+// no type word, so text that starts with a digit yields the creature subject
+// unchanged; otherwise the leading word must name a typed Devour permanent.
+func devourSubjectPrefix(rest string) (devourSubject, string, bool) {
+	if rest != "" && rest[0] >= '0' && rest[0] <= '9' {
+		return devourSubjects[0], rest, true
+	}
+	for _, subject := range devourSubjects[1:] {
+		word := subject.keyword + " "
+		if strings.HasPrefix(rest, word) {
+			return subject, strings.TrimSpace(rest[len(word):]), true
+		}
+	}
+	return devourSubject{}, "", false
+}
+
+// devourSubjectByNouns finds the Devour subject whose canonical plural and
+// singular nouns match the given lower-cased words, recovering the structured
+// sacrifice filter from the expanded wording.
+func devourSubjectByNouns(plural, singular string) (devourSubject, bool) {
+	for _, subject := range devourSubjects {
+		if strings.ToLower(subject.plural) == plural && strings.ToLower(subject.singular) == singular {
+			return subject, true
+		}
+	}
+	return devourSubject{}, false
 }
 
 // tributeCanonicalText is the canonical as-enters replacement that the printed

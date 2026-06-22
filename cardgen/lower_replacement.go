@@ -1551,8 +1551,10 @@ func lowerConditionalEntersTappedReplacement(
 // lowerDevourReplacement lowers the Devour as-enters replacement (CR 702.81)
 // produced by the keyword expansion. It accepts only the exact unconditional
 // self replacement (a single EntersDevour effect with a positive multiplier and
-// no targets, conditions, cost, or trigger) and builds a game.DevourReplacement;
-// anything else keeps the card unsupported.
+// no targets, conditions, cost, or trigger) and builds the matching
+// game.Devour*Replacement: the typed variants ("Devour artifact N", "Devour land
+// N", "Devour Food N") carry their sacrifice filter and the creature form uses
+// the plain constructor; anything else keeps the card unsupported.
 func lowerDevourReplacement(ability compiler.CompiledAbility) (game.ReplacementAbility, bool, *shared.Diagnostic) {
 	devourIndex := -1
 	for i := range ability.Content.Effects {
@@ -1578,6 +1580,12 @@ func lowerDevourReplacement(ability compiler.CompiledAbility) (game.ReplacementA
 		effect.EntersDevourMultiplier <= 0 ||
 		!allReferencesBindToSource(ability.Content.References) {
 		return unsupported("the executable source backend supports only the exact unconditional self devour replacement")
+	}
+	if effect.EntersDevourSubtype != "" {
+		return game.DevourSubtypeReplacement(ability.Text, effect.EntersDevourMultiplier, effect.EntersDevourSubtype), true, nil
+	}
+	if effect.EntersDevourType != "" {
+		return game.DevourTypeReplacement(ability.Text, effect.EntersDevourMultiplier, effect.EntersDevourType), true, nil
 	}
 	return game.DevourReplacement(ability.Text, effect.EntersDevourMultiplier), true, nil
 }

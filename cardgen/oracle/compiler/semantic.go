@@ -1404,10 +1404,14 @@ type CompiledEffect struct {
 	// controller-scoped replacement; it is false for the self form.
 	EntersWithCountersGroup bool
 	// EntersDevour mirrors the parser's Devour as-enters replacement flag and
-	// EntersDevourMultiplier its per-sacrificed-creature +1/+1 counter count.
+	// EntersDevourMultiplier its per-sacrificed-permanent +1/+1 counter count.
+	// EntersDevourType and EntersDevourSubtype carry the typed-variant sacrifice
+	// filter (artifact, land, Food); both are zero for the creature form.
 	// Lowering reads them to build the runtime Devour replacement (CR 702.81).
 	EntersDevour           bool
 	EntersDevourMultiplier int
+	EntersDevourType       types.Card
+	EntersDevourSubtype    types.Sub
 	// EntersTribute mirrors the parser's Tribute as-enters replacement flag and
 	// EntersTributeCount its +1/+1 counter count N.
 	EntersTribute      bool

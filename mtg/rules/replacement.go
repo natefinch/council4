@@ -3,6 +3,7 @@ package rules
 import (
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/natefinch/council4/mtg/game/zone"
 
@@ -406,7 +407,7 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 			applyEntryTypeChoice(ctx, g, permanent, replacement.Controller)
 		}
 		if replacement.EntryDevourMultiplier > 0 {
-			applyEntryDevour(ctx, g, permanent, replacement.Controller, replacement.EntryDevourMultiplier)
+			applyEntryDevour(ctx, g, permanent, replacement.Controller, replacement.EntryDevourMultiplier, replacement.EntryDevourType, replacement.EntryDevourSubtype)
 		}
 		if replacement.EntryTributeCount > 0 {
 			applyEntryTribute(ctx, g, permanent, replacement.Controller, replacement.EntryTributeCount)
@@ -539,11 +540,13 @@ func applyEntryTypeChoice(ctx enterBattlefieldContext, g *game.Game, permanent *
 }
 
 // applyEntryDevour resolves the Devour keyword for an entering permanent (CR
-// 702.81): its controller may sacrifice any number of other creatures they
-// control as it enters, and it enters with multiplier +1/+1 counters on it for
-// each creature sacrificed this way. Choosing to sacrifice nothing is legal and
-// is the default.
-func applyEntryDevour(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, controller game.PlayerID, multiplier int) {
+// 702.81): its controller may sacrifice any number of other matching permanents
+// they control as it enters, and it enters with multiplier +1/+1 counters on it
+// for each one sacrificed this way. The matching permanents are creatures for the
+// plain "Devour N" form; the typed variants restrict the choice to a card type
+// (cardType, for "Devour artifact N"/"Devour land N") or a subtype (subtype, for
+// "Devour Food N"). Choosing to sacrifice nothing is legal and is the default.
+func applyEntryDevour(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, controller game.PlayerID, multiplier int, cardType types.Card, subtype types.Sub) {
 	engine := ctx.engine
 	if engine == nil {
 		engine = NewEngine(nil)
@@ -556,7 +559,7 @@ func applyEntryDevour(ctx enterBattlefieldContext, g *game.Game, permanent *game
 		if effectiveController(g, candidate) != controller {
 			continue
 		}
-		if !permanentHasType(g, candidate, types.Creature) {
+		if !devourCandidateMatches(g, candidate, cardType, subtype) {
 			continue
 		}
 		candidates = append(candidates, candidate)
@@ -571,7 +574,7 @@ func applyEntryDevour(ctx enterBattlefieldContext, g *game.Game, permanent *game
 	request := game.ChoiceRequest{
 		Kind:       game.ChoicePayment,
 		Player:     controller,
-		Prompt:     "Devour: choose any number of creatures to sacrifice.",
+		Prompt:     devourPrompt(cardType, subtype),
 		Options:    options,
 		MinChoices: 0,
 		MaxChoices: len(candidates),
@@ -588,6 +591,33 @@ func applyEntryDevour(ctx enterBattlefieldContext, g *game.Game, permanent *game
 	}
 	sacrificePermanentsSimultaneously(g, sacrificed)
 	addCountersToPermanent(g, permanent, counter.PlusOnePlusOne, multiplier*len(sacrificed))
+}
+
+// devourCandidateMatches reports whether a permanent may be sacrificed to a
+// Devour replacement. A non-empty subtype restricts the choice to permanents
+// with that subtype ("Devour Food N"); otherwise a non-empty cardType restricts
+// it to that card type ("Devour artifact N"/"Devour land N"); the plain creature
+// form ("Devour N") leaves both empty and matches creatures.
+func devourCandidateMatches(g *game.Game, candidate *game.Permanent, cardType types.Card, subtype types.Sub) bool {
+	if subtype != "" {
+		return permanentHasSubtype(g, candidate, subtype)
+	}
+	if cardType != "" {
+		return permanentHasType(g, candidate, cardType)
+	}
+	return permanentHasType(g, candidate, types.Creature)
+}
+
+// devourPrompt builds the sacrifice prompt for a Devour replacement, naming the
+// permanents that may be sacrificed for the creature form or a typed variant.
+func devourPrompt(cardType types.Card, subtype types.Sub) string {
+	noun := "creatures"
+	if subtype != "" {
+		noun = string(subtype) + "s"
+	} else if cardType != "" {
+		noun = strings.ToLower(string(cardType)) + "s"
+	}
+	return "Devour: choose any number of " + noun + " to sacrifice."
 }
 
 // applyEntryTribute resolves the Tribute keyword for an entering permanent (CR

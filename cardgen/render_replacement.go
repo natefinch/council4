@@ -13,6 +13,10 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 	if ability.Replacement.EntersAsCopy {
 		return r.renderEntersAsCopyReplacement(ctx, ability)
 	}
+	if ability.Replacement.EntryDevourMultiplier > 0 &&
+		(ability.Replacement.EntryDevourType != "" || ability.Replacement.EntryDevourSubtype != "") {
+		return renderTypedDevourReplacement(ctx, ability)
+	}
 	if rendered, handled := renderStringReplacement(ability); handled {
 		return rendered, nil
 	}
@@ -167,9 +171,12 @@ func renderLifeModifierReplacement(ability *game.ReplacementAbility) (string, bo
 }
 
 // renderStringReplacement renders the replacements that depend only on the
-// ability text plus a few scalar parameters (Devour, draw-from-empty-library
-// win, draw multiplier, and the life-modifier family), reporting handled=false
-// when the replacement is none of these.
+// ability text plus a few scalar parameters (the creature-form Devour,
+// draw-from-empty-library win, draw multiplier, and the life-modifier family),
+// reporting handled=false when the replacement is none of these. Typed Devour
+// variants are rendered separately by renderTypedDevourReplacement, which is
+// dispatched before this function so the creature form's two-argument call here
+// stays unchanged.
 func renderStringReplacement(ability *game.ReplacementAbility) (string, bool) {
 	if ability.Replacement.EntryDevourMultiplier > 0 {
 		return fmt.Sprintf("game.DevourReplacement(%q, %d)", ability.Text, ability.Replacement.EntryDevourMultiplier), true
@@ -190,6 +197,26 @@ func renderStringReplacement(ability *game.ReplacementAbility) (string, bool) {
 			renderDigRemainder(ability.Replacement.DrawCardDigRemainder)), true
 	}
 	return renderLifeModifierReplacement(ability)
+}
+
+// renderTypedDevourReplacement renders the typed Devour variants ("Devour
+// artifact N", "Devour land N", "Devour Food N") to their dedicated game
+// constructors, emitting the sacrificed permanent's card type or subtype literal
+// and requiring the types import.
+func renderTypedDevourReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	ctx.need(importTypes)
+	if ability.Replacement.EntryDevourSubtype != "" {
+		literal := SubtypeToLiteral(string(ability.Replacement.EntryDevourSubtype),
+			[]string{"Artifact", "Creature", "Land", "Enchantment", "Planeswalker", "Battle"})
+		return fmt.Sprintf("game.DevourSubtypeReplacement(%q, %d, %s)",
+			ability.Text, ability.Replacement.EntryDevourMultiplier, literal), nil
+	}
+	literal, err := cardTypeLiteral(ability.Replacement.EntryDevourType)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("game.DevourTypeReplacement(%q, %d, %s)",
+		ability.Text, ability.Replacement.EntryDevourMultiplier, literal), nil
 }
 
 // renderDigRemainder renders the DigRemainder destination constant for a
