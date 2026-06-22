@@ -90,6 +90,59 @@ func TestParseRemoveCounterAmongUnkindedRecognizedWithoutKind(t *testing.T) {
 	}
 }
 
+func TestParseRemoveCounterFromPermanentYouControl(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		source    string
+		wantNoun  ObjectNoun
+		wantKind  counter.Kind
+		wantKnown bool
+	}{
+		{
+			name:     "any counter from a permanent",
+			source:   "Remove a counter from a permanent you control: Draw a card.",
+			wantNoun: ObjectNounPermanent,
+		},
+		{
+			name:      "+1/+1 counter from a permanent",
+			source:    "Remove a +1/+1 counter from a permanent you control: Draw a card.",
+			wantNoun:  ObjectNounPermanent,
+			wantKind:  counter.PlusOnePlusOne,
+			wantKnown: true,
+		},
+		{
+			name:     "any counter from a creature",
+			source:   "Remove a counter from a creature you control: Draw a card.",
+			wantNoun: ObjectNounCreature,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			component := soleCostComponent(t, test.source)
+			if component.Kind != CostComponentRemoveCounter || !component.RemoveCounterAmong {
+				t.Fatalf("component = %#v, want among removal", component)
+			}
+			if component.SourceSelf {
+				t.Fatalf("component = %#v, want not source-self", component)
+			}
+			if !component.AmountKnown || component.AmountValue != 1 {
+				t.Fatalf("amount = (%d known %t), want 1", component.AmountValue, component.AmountKnown)
+			}
+			if component.CounterKindKnown != test.wantKnown || component.CounterKind != test.wantKind {
+				t.Fatalf("counter = (%v known %t), want %v known %t",
+					component.CounterKind, component.CounterKindKnown, test.wantKind, test.wantKnown)
+			}
+			if component.ObjectNoun != test.wantNoun ||
+				component.ObjectController != ControllerRelationYouControl {
+				t.Fatalf("object = (%v, %v), want (%v, you control)",
+					component.ObjectNoun, component.ObjectController, test.wantNoun)
+			}
+		})
+	}
+}
+
 func TestParseRemoveCounterFromSourceStillRecognized(t *testing.T) {
 	t.Parallel()
 	component := soleCostComponent(t, "Remove a +1/+1 counter from this creature: Draw a card.")
