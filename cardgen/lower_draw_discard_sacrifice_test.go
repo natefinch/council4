@@ -474,6 +474,43 @@ func TestLowerSacrificeSpellEachOtherPlayerCreature(t *testing.T) {
 	}
 }
 
+// TestLowerSacrificeSpellThatPlayerEventPlayerChoice covers the "that player
+// sacrifices ... of their choice" edict on a phase trigger (Sheoldred,
+// Whispering One): the player named by the triggering event chooses, lowered to
+// game.EventPlayerReference.
+func TestLowerSacrificeSpellThatPlayerEventPlayerChoice(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Praetor",
+		Layout:     "normal",
+		TypeLine:   "Legendary Creature — Praetor",
+		OracleText: "At the beginning of each opponent's upkeep, that player sacrifices a creature of their choice.",
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	if len(mode.Targets) != 0 {
+		t.Fatalf("targets = %d, want none", len(mode.Targets))
+	}
+	prim, ok := mode.Sequence[0].Primitive.(game.SacrificePermanents)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.SacrificePermanents", mode.Sequence[0].Primitive)
+	}
+	if prim.Player.Kind() != game.PlayerReferenceEventPlayer {
+		t.Fatalf("player = %v, want event player", prim.Player.Kind())
+	}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		t.Fatalf("player group = %v, want none", prim.PlayerGroup.Kind)
+	}
+	if prim.Amount.Value() != 1 {
+		t.Fatalf("amount = %d, want 1", prim.Amount.Value())
+	}
+	if !slices.Equal(prim.Selection.RequiredTypes, []types.Card{types.Creature}) {
+		t.Fatalf("selection = %#v, want creature filter", prim.Selection)
+	}
+}
+
 func TestLowerSacrificeSpellEachPlayerLand(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
