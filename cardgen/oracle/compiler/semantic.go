@@ -426,6 +426,14 @@ const (
 	// optional instruction was performed ("if you do"). It is the affirmative
 	// complement of ConditionPredicatePriorInstructionNotAccepted.
 	ConditionPredicatePriorInstructionAccepted
+	// ConditionPredicateDestroyedThisWay is satisfied when a permanent matching
+	// the named type was destroyed by the prior destroy effect ("if a creature is
+	// destroyed this way"). The typed condition carries no selection, so it is the
+	// resolving-success equivalent of "if you do" only when the named type matches
+	// every object the prior clause could have destroyed; the lowering treats it
+	// as an "if you do" gate solely for the optional-destroy shape and otherwise
+	// fails closed.
+	ConditionPredicateDestroyedThisWay
 	ConditionPredicateCounterPlacementOnControlledCreature
 	ConditionPredicateControllerCounterPlacement
 	ConditionPredicateDamageByControlledSource

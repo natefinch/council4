@@ -497,8 +497,8 @@ func TestParseConditionPriorInstruction(t *testing.T) {
 
 // TestParseConditionDestroyedThisWay covers the outcome-worded resolving success
 // gate "If a <permanent> is destroyed this way, ..." (Noxious Gearhulk), which
-// follows a preceding optional destroy and maps to the same prior-instruction
-// success predicate as "if you do".
+// follows a preceding optional destroy and maps to its own destroyed-this-way
+// predicate, distinct from the literal "if you do" gate.
 func TestParseConditionDestroyedThisWay(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -509,12 +509,12 @@ func TestParseConditionDestroyedThisWay(t *testing.T) {
 		{
 			name:      "a creature is destroyed this way",
 			body:      "You may destroy target creature. If a creature is destroyed this way, you gain 2 life.",
-			predicate: ConditionPredicatePriorInstructionAccepted,
+			predicate: ConditionPredicateDestroyedThisWay,
 		},
 		{
 			name:      "a permanent is destroyed this way",
 			body:      "You may destroy target permanent. If a permanent is destroyed this way, you gain 2 life.",
-			predicate: ConditionPredicatePriorInstructionAccepted,
+			predicate: ConditionPredicateDestroyedThisWay,
 		},
 	}
 	for _, test := range tests {
@@ -552,7 +552,8 @@ func TestParseConditionDestroyedThisWayRejectsOtherWording(t *testing.T) {
 				t.Fatalf("abilities = %#v", document.Abilities)
 			}
 			for _, clause := range document.Abilities[0].ConditionClauses {
-				if clause.Predicate == ConditionPredicatePriorInstructionAccepted {
+				if clause.Predicate == ConditionPredicatePriorInstructionAccepted ||
+					clause.Predicate == ConditionPredicateDestroyedThisWay {
 					t.Fatalf("clause unexpectedly recognized as prior-instruction success: %#v", clause)
 				}
 			}

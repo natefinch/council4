@@ -462,6 +462,22 @@ func triggerBodySpan(
 	return bodySpan
 }
 
+// hasMandatoryIfYouDoCondition reports whether the ability carries a residual
+// "if you do" gate (prior-instruction-accepted) condition that is distinct from
+// the intervening trigger condition. It selects the mandatory result-gate body
+// shape ("if CONDITION, exile it. If you do, create a token.") where the leading
+// effect is not optional but its success gates the trailing effect.
+func hasMandatoryIfYouDoCondition(conditions []compiler.CompiledCondition, interveningSpan shared.Span) bool {
+	for ci := range conditions {
+		condition := conditions[ci]
+		if condition.Predicate == compiler.ConditionPredicatePriorInstructionAccepted &&
+			condition.Span != interveningSpan {
+			return true
+		}
+	}
+	return false
+}
+
 // prepareTriggerBody builds the body CompiledAbility and syntax for a
 // supported triggered ability. It handles condition consistency, effect
 // filtering for intervening conditions, body span/text construction, reference
@@ -501,6 +517,17 @@ func prepareTriggerBody(
 	interveningOptionalSequence := hasInterveningCondition &&
 		((len(ability.Content.Effects) > 1 && hasOptionalResolvingEffect(ability.Content.Effects)) ||
 			hasOptionalPaymentResolvingEffect(ability.Content.Effects))
+	// A mandatory "if you do" result gate ("Whenever X, if CONDITION, exile it.
+	// If you do, create a token.") sits behind the intervening condition exactly
+	// like the optional sequence: the intervening condition gates the trigger and
+	// is removed from the body, while the residual "if you do" gate stays in the
+	// body for the shared ordered-effect-sequence path to consume. The leading
+	// effect is mandatory (not "you may"), so it is detected by the residual
+	// prior-instruction-accepted gate rather than by an optional resolving effect.
+	interveningResultSequence := hasInterveningCondition &&
+		len(ability.Content.Effects) > 1 &&
+		hasMandatoryIfYouDoCondition(ability.Content.Conditions, ability.Trigger.Condition.Span)
+	keepResidualBodyConditions := interveningOptionalSequence || interveningResultSequence
 	// A resolution condition ("Whenever X, EFFECT if CONDITION." or "Whenever
 	// X, if CONDITION, EFFECT.") is a body condition checked only when the
 	// ability resolves, not an intervening "if" re-checked at trigger time. It
@@ -515,7 +542,7 @@ func prepareTriggerBody(
 		len(ability.Content.Conditions) != 0 &&
 		!hasOptionalResolvingEffect(ability.Content.Effects)
 	eventPlayerPaymentCondition := exactEventPlayerPaymentCondition(ability)
-	if !optionalSequence && !resolutionCondition && !interveningOptionalSequence && !eventPlayerPaymentCondition {
+	if !optionalSequence && !resolutionCondition && !keepResidualBodyConditions && !eventPlayerPaymentCondition {
 		if (len(ability.Content.Conditions) != 0 && !hasInterveningCondition) ||
 			(hasInterveningCondition && (len(ability.Content.Conditions) != 1 ||
 				ability.Content.Conditions[0].Span != ability.Trigger.Condition.Span)) {
@@ -554,7 +581,7 @@ func prepareTriggerBody(
 	excludedReferenceSpans := []shared.Span{ability.Trigger.Span}
 	if hasInterveningCondition {
 		excludedReferenceSpans = append(excludedReferenceSpans, ability.Trigger.Condition.Span)
-		if interveningOptionalSequence {
+		if keepResidualBodyConditions {
 			// Keep body conditions other than the intervening one (the residual
 			// "if you do" optional-flow gate) so the shared ordered-effect
 			// sequence can consume it; drop only the intervening condition.

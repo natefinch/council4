@@ -452,6 +452,48 @@ func TestLowerWasCastEnterTriggers(t *testing.T) {
 	}
 }
 
+// TestLowerGraveyardEnterSelfExileThenCreateToken covers the conditional
+// "if it entered/was cast from your graveyard, exile it. If you do, create a
+// token." body (Archfiend's Vessel): the intervening condition gates the trigger,
+// the mandatory self-exile publishes its success, and the token creation is gated
+// on that success so no token is created when the source did not actually leave.
+func TestLowerGraveyardEnterSelfExileThenCreateToken(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Vessel",
+		Layout:     "normal",
+		ManaCost:   "{B}",
+		TypeLine:   "Creature — Demon",
+		OracleText: "When this creature enters, if it entered from your graveyard or you cast it from your graveyard, exile it. If you do, create a 5/5 black Demon creature token with flying.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	trigger := face.TriggeredAbilities[0].Trigger
+	if !trigger.InterveningIfEventPermanentEnteredOrCastFromControllerGraveyard {
+		t.Fatalf("trigger = %+v, want controller-graveyard intervening-if", trigger)
+	}
+	sequence := face.TriggeredAbilities[0].Content.Modes[0].Sequence
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %+v, want two instructions", sequence)
+	}
+	exile, ok := sequence[0].Primitive.(game.Exile)
+	if !ok || exile.Object != game.EventPermanentReference() {
+		t.Fatalf("instruction[0] = %+v, want exile of the entering object", sequence[0])
+	}
+	if sequence[0].PublishResult == "" || sequence[0].Optional {
+		t.Fatalf("instruction[0] = %+v, want mandatory exile publishing its result", sequence[0])
+	}
+	if _, ok := sequence[1].Primitive.(game.CreateToken); !ok {
+		t.Fatalf("instruction[1] = %+v, want token creation", sequence[1])
+	}
+	gate := sequence[1].ResultGate
+	if !gate.Exists ||
+		gate.Val.Key != sequence[0].PublishResult ||
+		gate.Val.Succeeded != game.TriTrue {
+		t.Fatalf("instruction[1] gate = %+v, want gate on exile success", gate)
+	}
+}
+
 func TestLowerSelfEnterTriggerSupportsCasterRelativeCondition(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
