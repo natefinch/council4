@@ -856,6 +856,9 @@ func sacrificeChoiceSelection(selector compiler.CompiledSelector) (game.Selectio
 		selection.TokenOnly = true
 	default:
 	}
+	// "Sacrifice another creature." sacrifices a permanent other than the
+	// effect's own source; the runtime selection drops the source object.
+	selection.ExcludeSource = selector.Another || selector.Other
 	return selection, true
 }
 

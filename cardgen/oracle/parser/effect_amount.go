@@ -398,10 +398,14 @@ func parseEffectAmount(kind EffectKind, tokens []shared.Token, atoms Atoms) Effe
 			}
 			return EffectAmountSyntax{Span: token.Span, Value: value, Known: true}
 		}
-		if equalWord(token, "a") || equalWord(token, "an") {
+		if equalWord(token, "a") || equalWord(token, "an") || equalWord(token, "another") {
 			if i > 0 && equalWord(tokens[i-1], "from") {
 				continue
 			}
+			// The determiner "another" denotes a single object other than the
+			// effect's source ("Sacrifice another creature."); its count is one,
+			// exactly like "a"/"an". The "another"/"other" exclusion itself rides
+			// on the selection's Another flag, consumed downstream.
 			return EffectAmountSyntax{Span: token.Span, Value: 1, Known: true}
 		}
 	}

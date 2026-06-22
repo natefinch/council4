@@ -385,3 +385,44 @@ func TestLowerOptionalFlowFailsClosed(t *testing.T) {
 		})
 	}
 }
+
+// TestLowerOptionalSacrificeAnotherIfYouDoDraw verifies that a clause-leading
+// "another" on a sacrifice ("You may sacrifice another creature. If you do, draw
+// a card.") lowers: the determiner "another" counts as one and excludes the
+// effect's own source from the sacrifice selection, while the optional flow
+// publishes its result so the draw is gated on the sacrifice being taken.
+func TestLowerOptionalSacrificeAnotherIfYouDoDraw(t *testing.T) {
+	t.Parallel()
+	sequence := lowerSpellSequence(t, "Sacrifice Another Flow",
+		"You may sacrifice another creature. If you do, draw a card.")
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions", sequence)
+	}
+	sacrifice := sequence[0]
+	prim, ok := sacrifice.Primitive.(game.SacrificePermanents)
+	if !ok {
+		t.Fatalf("instruction[0] = %T, want game.SacrificePermanents", sacrifice.Primitive)
+	}
+	if !prim.Selection.ExcludeSource {
+		t.Fatal("sacrifice selection.ExcludeSource = false, want true for \"another\"")
+	}
+	if prim.Amount.Value() != 1 {
+		t.Fatalf("sacrifice amount = %d, want 1", prim.Amount.Value())
+	}
+	if !sacrifice.Optional {
+		t.Fatal("instruction[0].Optional = false, want optional")
+	}
+	if sacrifice.PublishResult != optionalIfYouDoResultKey {
+		t.Fatalf("instruction[0].PublishResult = %q, want %q", sacrifice.PublishResult, optionalIfYouDoResultKey)
+	}
+	draw := sequence[1]
+	if _, ok := draw.Primitive.(game.Draw); !ok {
+		t.Fatalf("instruction[1] = %T, want game.Draw", draw.Primitive)
+	}
+	if !draw.ResultGate.Exists {
+		t.Fatal("instruction[1].ResultGate missing")
+	}
+	if gate := draw.ResultGate.Val; gate.Key != optionalIfYouDoResultKey || gate.Succeeded != game.TriTrue {
+		t.Fatalf("instruction[1].ResultGate = %#v, want succeeded gate on %q", gate, optionalIfYouDoResultKey)
+	}
+}
