@@ -330,8 +330,14 @@ type Tap struct {
 // Controller is set, a found card put onto the battlefield enters under that
 // player's control instead of the searching player's ("put it onto the
 // battlefield ... under target player's control", Yavimaya Dryad).
+// Search has one referenced player, or every player in a referenced group
+// ("each player searches their library"), search a library. Exactly one of
+// Player or PlayerGroup is set. When PlayerGroup is set every member searches
+// their own library and any found permanent enters under that searcher's
+// control, so Controller must be unset.
 type Search struct {
 	Player        PlayerReference
+	PlayerGroup   PlayerGroupReference
 	Spec          SearchSpec
 	Amount        Quantity
 	Controller    opt.V[PlayerReference]

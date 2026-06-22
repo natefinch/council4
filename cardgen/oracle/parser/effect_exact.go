@@ -708,6 +708,21 @@ func searchClausePrefix(effect *EffectSyntax) (prefix, text string) {
 			return controllerPrefix, controllerPrefix + normalizeThirdPersonSearchRest(rest)
 		}
 	}
+	// An each-player searcher ("Each player searches their library for ...")
+	// performs a symmetric search from every player's own library; the found
+	// card enters under each searching player's control. The clause reads in the
+	// third person ("searches", "puts", "shuffles"); normalize the searcher's
+	// verbs to the canonical controller second-person form and reconstruct
+	// against the standard "Search your library for ..." prefix so the shared
+	// recognizer validates the count, filter, and destination. Lowering resolves
+	// the searcher to the all-players group. The "may" optional form is not this
+	// shape and falls through.
+	if !effect.Optional && effect.Context == EffectContextEachPlayer {
+		const eachPlayerPrefix = "Each player searches their library for "
+		if rest, ok := strings.CutPrefix(text, eachPlayerPrefix); ok {
+			return controllerPrefix, controllerPrefix + normalizeThirdPersonSearchRest(rest)
+		}
+	}
 	// A referenced-object-controller searcher ("Its controller may search …",
 	// "That land's controller may search …") reconstructs its prefix from the
 	// subject reference's verbatim text, so any possessive object form — not just

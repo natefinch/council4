@@ -747,10 +747,6 @@ func (r Renderer) renderPutPermanentOnLibrary(value game.PutPermanentOnLibrary) 
 }
 
 func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (string, error) {
-	player, err := r.renderPlayerReference(value.Player)
-	if err != nil {
-		return "", err
-	}
 	amount, err := r.renderQuantity(ctx, value.Amount)
 	if err != nil {
 		return "", err
@@ -880,9 +876,26 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 		specFields = append(specFields, fmt.Sprintf("SplitDestination: opt.Val(%s),", structLit("game.SearchDestination", splitFields)))
 	}
 	fields := []string{
-		fmt.Sprintf("Player: %s,", player),
 		fmt.Sprintf("Spec: %s,", structLit("game.SearchSpec", specFields)),
 		fmt.Sprintf("Amount: %s,", amount),
+	}
+	if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		var group string
+		switch value.PlayerGroup.Kind {
+		case game.PlayerGroupReferenceOpponents:
+			group = "game.OpponentsReference()"
+		case game.PlayerGroupReferenceAllPlayers:
+			group = "game.AllPlayersReference()"
+		default:
+			return "", fmt.Errorf("render: unsupported player group reference kind %d", value.PlayerGroup.Kind)
+		}
+		fields = append([]string{fmt.Sprintf("PlayerGroup: %s,", group)}, fields...)
+	} else {
+		player, err := r.renderPlayerReference(value.Player)
+		if err != nil {
+			return "", err
+		}
+		fields = append([]string{fmt.Sprintf("Player: %s,", player)}, fields...)
 	}
 	if value.Controller.Exists {
 		controller, err := r.renderPlayerReference(value.Controller.Val)

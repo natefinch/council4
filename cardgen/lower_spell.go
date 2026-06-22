@@ -400,19 +400,27 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 	// target-player form contributes an ability target spec and resolves the
 	// searcher to that target; every other subject fails closed.
 	search := ctx.content.Effects[0]
-	searcher, searchTargets, ok := searchSearcher(ctx, &search)
+	subject, ok := searchSearcher(ctx, &search)
 	if !ok {
 		return unsupported("the executable source backend supports only searches of your library or a single target player's library ending with \"then shuffle\"")
 	}
+	searcher, searcherGroup, searchTargets := subject.Player, subject.Group, subject.Targets
 	// Search is one runtime primitive, but each reference still binds to the
 	// prior semantic search/reveal instruction that produced the found card, or
-	// to the searching target player ("their library").
+	// to the searching player(s) ("their library").
 	targetSearcher := len(searchTargets) != 0
+	groupSearcher := searcherGroup.Kind != game.PlayerGroupReferenceNone
 	for _, ref := range ctx.content.References {
 		if ref.Binding == compiler.ReferenceBindingPriorInstructionResult {
 			continue
 		}
 		if targetSearcher && ref.Binding == compiler.ReferenceBindingTarget && isPlayerPronoun(ref.Pronoun) {
+			continue
+		}
+		// "Each player searches their library ..." — the "their" possessive
+		// refers to each searching player and is realized by the all-players
+		// group searcher, so no per-reference lowering is required.
+		if groupSearcher && isPlayerPronoun(ref.Pronoun) {
 			continue
 		}
 		return unsupported("unexpected non-result reference in search effect")
@@ -435,11 +443,15 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 	}
 	searchTargets = append(searchTargets, controllerTargets...)
 
+	if searcherGroup.Kind != game.PlayerGroupReferenceNone && controller.Exists {
+		return unsupported("the executable source backend does not support the \"under target player's control\" rider on an each-player library search")
+	}
 	sequence := []game.Instruction{{Primitive: game.Search{
-		Player:     searcher,
-		Spec:       group.Spec,
-		Amount:     game.Fixed(group.Amount),
-		Controller: controller,
+		Player:      searcher,
+		PlayerGroup: searcherGroup,
+		Spec:        group.Spec,
+		Amount:      game.Fixed(group.Amount),
+		Controller:  controller,
 	}}}
 	if group.RiderIndex != 0 {
 		inst, ok := lowerSearchRider(&ctx.content.Effects[group.RiderIndex])
@@ -479,31 +491,46 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 	return game.Mode{Targets: searchTargets, Sequence: sequence}.Ability(), nil
 }
 
+// searchSubject captures the player or player group performing a library search
+// and any ability target specs that searcher reference requires.
+type searchSubject struct {
+	Player  game.PlayerReference
+	Group   game.PlayerGroupReference
+	Targets []game.TargetSpec
+}
+
 // searchSearcher determines the player performing a library search and any
 // ability target specs that searcher reference requires. It supports the
-// controller subject ("search your library ...") and a single target player
+// controller subject ("search your library ...") , a single target player
 // subject ("target player searches their library ..."), resolving the latter to
-// TargetPlayerReference(0) with the matching player target spec. Every other
-// subject — a referenced object's controller, each player, an unsupported target
-// shape — fails closed so lowering never invents a searcher.
-func searchSearcher(ctx contentCtx, search *compiler.CompiledEffect) (game.PlayerReference, []game.TargetSpec, bool) {
+// TargetPlayerReference(0) with the matching player target spec, and the
+// each-player subject ("each player searches their library ..."), resolving to
+// the all-players group so every player searches their own library. Every other
+// subject — a referenced object's controller, an unsupported target shape —
+// fails closed so lowering never invents a searcher.
+func searchSearcher(ctx contentCtx, search *compiler.CompiledEffect) (searchSubject, bool) {
 	switch search.Context {
 	case parser.EffectContextController:
 		if len(ctx.content.Targets) != 0 {
-			return game.PlayerReference{}, nil, false
+			return searchSubject{}, false
 		}
-		return game.ControllerReference(), nil, true
+		return searchSubject{Player: game.ControllerReference()}, true
 	case parser.EffectContextTarget:
 		if len(ctx.content.Targets) != 1 {
-			return game.PlayerReference{}, nil, false
+			return searchSubject{}, false
 		}
 		spec, ok := playerTargetSpec(ctx.content.Targets[0])
 		if !ok {
-			return game.PlayerReference{}, nil, false
+			return searchSubject{}, false
 		}
-		return game.TargetPlayerReference(0), []game.TargetSpec{spec}, true
+		return searchSubject{Player: game.TargetPlayerReference(0), Targets: []game.TargetSpec{spec}}, true
+	case parser.EffectContextEachPlayer:
+		if len(ctx.content.Targets) != 0 {
+			return searchSubject{}, false
+		}
+		return searchSubject{Group: game.AllPlayersReference()}, true
 	default:
-		return game.PlayerReference{}, nil, false
+		return searchSubject{}, false
 	}
 }
 

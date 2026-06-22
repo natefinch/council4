@@ -169,6 +169,26 @@ func TestExactLibrarySearchFailsClosed(t *testing.T) {
 	}
 }
 
+// TestExactEachPlayerLibrarySearch confirms the symmetric each-player search
+// wording ("Each player searches their library ...") round-trips to an exact
+// search effect carrying the each-player subject context, so lowering can route
+// the search to every player's own library.
+func TestExactEachPlayerLibrarySearch(t *testing.T) {
+	t.Parallel()
+	source := "Each player searches their library for a basic land card, puts it onto the battlefield, then shuffles."
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("Parse(%q) diagnostics = %#v", source, diagnostics)
+	}
+	search := document.Abilities[0].Sentences[0].Effects[0]
+	if search.Kind != EffectSearch || !search.Exact {
+		t.Fatalf("search effect = %#v, want exact EffectSearch", search)
+	}
+	if search.Context != EffectContextEachPlayer {
+		t.Fatalf("search context = %v, want EffectContextEachPlayer", search.Context)
+	}
+}
+
 func TestExactLibraryTopSearchCarriesTypedDestinationAndFilter(t *testing.T) {
 	t.Parallel()
 	document, diagnostics := Parse(
