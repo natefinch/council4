@@ -344,11 +344,11 @@ func exactGraveyardCardTargetSyntax(target *TargetSyntax) bool {
 	}
 	manaClause := ""
 	if sel.MatchManaValue {
-		// The canonical mana-value qualifier follows the singular noun; the
-		// multi-target plural noun never carries it in printed Oracle wording.
-		if plural {
-			return false
-		}
+		// The canonical mana-value qualifier follows the noun in both the
+		// singular ("creature card with mana value 3 or less") and the
+		// pluralized multi-target ("two target creature cards with mana value 2
+		// or less", Sigardian Savior) forms; every card the plural target
+		// gathers individually satisfies the per-card bound.
 		clause, ok := graveyardManaValueClause(sel.ManaValue)
 		if !ok {
 			return false

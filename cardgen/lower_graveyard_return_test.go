@@ -374,6 +374,76 @@ func TestLowerTargetedGraveyardReturnMultiTarget(t *testing.T) {
 	}
 }
 
+// TestLowerTargetedGraveyardReturnMultiTargetWithManaValue covers the plural
+// multi-target graveyard return that additionally carries a mana-value bound
+// ("Return up to two target creature cards with mana value 2 or less from your
+// graveyard to the battlefield.", Sigardian Savior). Every gathered card
+// individually satisfies the per-card bound, so the pluralized noun keeps the
+// "with mana value N or less" qualifier rather than failing closed.
+func TestLowerTargetedGraveyardReturnMultiTargetWithManaValue(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Sigardian Savior",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return up to two target creature cards with mana value 2 or less from your graveyard to the battlefield.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %#v, want one variable target spec", mode.Targets)
+	}
+	target := mode.Targets[0]
+	selection := target.Selection.Val
+	if target.MinTargets != 0 || target.MaxTargets != 2 ||
+		target.Allow != game.TargetAllowCard || target.TargetZone != zone.Graveyard ||
+		!slices.Equal(selection.RequiredTypes, []types.Card{types.Creature}) ||
+		selection.Controller != game.ControllerYou ||
+		!selection.ManaValue.Exists ||
+		selection.ManaValue.Val.Op != compare.LessOrEqual ||
+		selection.ManaValue.Val.Value != 2 {
+		t.Fatalf("target = %#v", target)
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence length = %d, want 2", len(mode.Sequence))
+	}
+	for i, instruction := range mode.Sequence {
+		put, ok := instruction.Primitive.(game.PutOnBattlefield)
+		if !ok {
+			t.Fatalf("primitive %d = %T, want game.PutOnBattlefield", i, instruction.Primitive)
+		}
+		ref, ok := put.Source.CardRef()
+		if !ok || ref.Kind != game.CardReferenceTarget || ref.TargetIndex != i {
+			t.Fatalf("put %d source = %#v", i, put.Source)
+		}
+	}
+}
+
+// TestLowerTargetedGraveyardReturnMultiTargetPermanentWithManaValue covers the
+// "permanent card" union under the same plural mana-value form, confirming the
+// disjunctive permanent-type set rides the multi-target spec with the bound.
+func TestLowerTargetedGraveyardReturnMultiTargetPermanentWithManaValue(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Mass Reclamation",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return up to two target permanent cards with mana value 2 or less from your graveyard to the battlefield.",
+	})
+	target := face.SpellAbility.Val.Modes[0].Targets[0]
+	selection := target.Selection.Val
+	if target.MinTargets != 0 || target.MaxTargets != 2 ||
+		len(selection.RequiredTypes) != 0 ||
+		!slices.Equal(selection.RequiredTypesAny, []types.Card{
+			types.Artifact, types.Creature, types.Enchantment,
+			types.Land, types.Planeswalker, types.Battle,
+		}) ||
+		!selection.ManaValue.Exists ||
+		selection.ManaValue.Val.Op != compare.LessOrEqual ||
+		selection.ManaValue.Val.Value != 2 {
+		t.Fatalf("target = %#v", target)
+	}
+}
+
 func TestLowerDynamicDamageCountsCardsWithCyclingInGraveyard(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
