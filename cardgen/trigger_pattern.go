@@ -100,6 +100,10 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 	if !ok {
 		return game.TriggerPattern{}, false
 	}
+	castDuringTurn, ok := lowerTriggerCastDuringTurn(pattern.CastDuringTurn)
+	if !ok {
+		return game.TriggerPattern{}, false
+	}
 	result := game.TriggerPattern{
 		Event:                             event,
 		UnionEvent:                        unionEvent,
@@ -134,6 +138,7 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 		ExcludeFirstDrawInDrawStep:        pattern.ExcludeFirstDrawInDrawStep,
 		MatchSpellCopy:                    pattern.MatchSpellCopy,
 		SpellTargetsSource:                pattern.SpellTargetsSource,
+		CastDuringTurn:                    castDuringTurn,
 		RequireTappedForMana:              pattern.TappedForMana,
 		RequireProducedManaColor:          pattern.TappedForManaColor,
 	}
@@ -160,6 +165,9 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 		}
 		result.SpellTargetAllow = game.TargetAllowPermanent
 		result.SpellTargetPattern = opt.Val(predicate)
+	}
+	if castDuringTurn != game.TriggerTurnAny && event != game.EventSpellCast {
+		return game.TriggerPattern{}, false
 	}
 
 	switch pattern.CombatQualifier {
@@ -418,6 +426,19 @@ func lowerTriggerDamageRecipient(recipient compiler.TriggerDamageRecipient) (gam
 		result |= game.DamageRecipientPermanent
 	}
 	return result, true
+}
+
+func lowerTriggerCastDuringTurn(relation compiler.TriggerCastTurn) (game.TriggerTurnRelation, bool) {
+	switch relation {
+	case compiler.TriggerCastTurnAny:
+		return game.TriggerTurnAny, true
+	case compiler.TriggerCastTurnYours:
+		return game.TriggerTurnYours, true
+	case compiler.TriggerCastTurnNotYours:
+		return game.TriggerTurnNotYours, true
+	default:
+		return game.TriggerTurnAny, false
+	}
 }
 
 func lowerTriggerStep(step compiler.TriggerStep) (game.Step, bool) {

@@ -205,6 +205,11 @@ func compileSpellCastEvent(clause *parser.TriggerEventClause, pattern *TriggerPa
 		}
 		pattern.SpellTargetSelection = &targetSelection
 	}
+	turn, ok := compileSpellCastTurnRelation(clause.SpellCastTurnRelation)
+	if !ok {
+		return false
+	}
+	pattern.CastDuringTurn = turn
 	pattern.RequireKickerPaid = clause.SpellSelection.Kicker
 	pattern.RequireHistoric = clause.SpellSelection.Historic
 	if clause.SpellSelection.Ordinal != 0 {
@@ -223,6 +228,19 @@ func compileSpellCastEvent(clause *parser.TriggerEventClause, pattern *TriggerPa
 		pattern.MatchFromZone = true
 	}
 	return true
+}
+
+func compileSpellCastTurnRelation(relation parser.TriggerCastTurnRelation) (TriggerCastTurn, bool) {
+	switch relation {
+	case parser.TriggerCastTurnRelationNone:
+		return TriggerCastTurnAny, true
+	case parser.TriggerCastTurnRelationYourTurn:
+		return TriggerCastTurnYours, true
+	case parser.TriggerCastTurnRelationNotYourTurn:
+		return TriggerCastTurnNotYours, true
+	default:
+		return TriggerCastTurnAny, false
+	}
 }
 
 func compileAbilityActivatedEvent(clause *parser.TriggerEventClause, pattern *TriggerPattern) bool {
