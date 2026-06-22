@@ -126,6 +126,9 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 	if pattern.MatchCounterKind && pattern.CounterKind != event.CounterKind {
 		return false
 	}
+	if pattern.ClassBecameLevel > 0 && event.Amount != pattern.ClassBecameLevel {
+		return false
+	}
 	if pattern.Event == game.EventBeginningOfStep {
 		if pattern.Step == game.StepNone || pattern.Step != event.Step {
 			return false

@@ -623,6 +623,7 @@ func (r Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatt
 		(pattern.AttackAlone && pattern.Event != game.EventAttackerDeclared) ||
 		(pattern.AttackWhileSaddled && pattern.Event != game.EventAttackerDeclared) ||
 		(pattern.ExcludeFirstDrawInDrawStep && pattern.Event != game.EventCardDrawn) ||
+		(pattern.ClassBecameLevel > 0 && pattern.Event != game.EventClassLevelGained) ||
 		(pattern.AttackerCountAtLeast != 0 &&
 			(pattern.Event != game.EventAttackerDeclared || pattern.AttackAlone || pattern.AttackerCountAtLeast < 2 ||
 				(!pattern.OneOrMore && pattern.Source != game.TriggerSourceSelf))) {
@@ -776,6 +777,9 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 	}
 	if pattern.ExcludeFirstDrawInDrawStep {
 		fields = append(fields, "ExcludeFirstDrawInDrawStep: true,")
+	}
+	if pattern.ClassBecameLevel > 0 {
+		fields = append(fields, fmt.Sprintf("ClassBecameLevel: %d,", pattern.ClassBecameLevel))
 	}
 	if pattern.MatchStackObjectKind {
 		stackObjectKind, err := renderStackObjectKind(pattern.StackObjectKind)

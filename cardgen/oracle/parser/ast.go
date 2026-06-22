@@ -402,6 +402,10 @@ const (
 	// blocked" (CR 509.1h). Unlike a bare attack clause it fires after the
 	// declare-blockers step, so it compiles to its own runtime event.
 	TriggerEventKindAttacksUnblocked TriggerEventKind = "TriggerEventKindAttacksUnblocked"
+	// TriggerEventKindClassBecameLevel marks "When this Class becomes level N"
+	// (CR 716), a self-source trigger on a Class enchantment reaching a new
+	// level. The target level is carried by TriggerEventClause.ClassBecameLevel.
+	TriggerEventKindClassBecameLevel TriggerEventKind = "TriggerEventKindClassBecameLevel"
 )
 
 // TriggerEventSubjectKind identifies the grammatical subject in a trigger event.
@@ -722,6 +726,11 @@ type TriggerEventClause struct {
 	// your turn" / "during an opponent's turn"). It is empty for spell-cast
 	// clauses with no turn restriction.
 	SpellCastTurnRelation TriggerCastTurnRelation `json:",omitempty"`
+
+	// ClassBecameLevel carries the target level of a "When this Class becomes
+	// level N" clause (TriggerEventKindClassBecameLevel). It is zero for clauses
+	// of any other kind.
+	ClassBecameLevel int `json:",omitempty"`
 }
 
 // EventHistoryWindowKind identifies the turn window for an event-history

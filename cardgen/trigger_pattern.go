@@ -141,6 +141,10 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 		CastDuringTurn:                    castDuringTurn,
 		RequireTappedForMana:              pattern.TappedForMana,
 		RequireProducedManaColor:          pattern.TappedForManaColor,
+		ClassBecameLevel:                  pattern.ClassBecameLevel,
+	}
+	if pattern.ClassBecameLevel > 0 && event != game.EventClassLevelGained {
+		return game.TriggerPattern{}, false
 	}
 	if pattern.TappedForMana && event != game.EventPermanentTapped {
 		return game.TriggerPattern{}, false
@@ -360,6 +364,8 @@ func lowerTriggerEvent(event compiler.TriggerEvent) (game.EventKind, bool) {
 		return game.EventTokenCreated, true
 	case compiler.TriggerEventLibrarySearched:
 		return game.EventLibrarySearched, true
+	case compiler.TriggerEventClassBecameLevel:
+		return game.EventClassLevelGained, true
 	default:
 		return game.EventUnknown, false
 	}

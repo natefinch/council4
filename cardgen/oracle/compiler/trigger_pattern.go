@@ -40,6 +40,7 @@ const (
 	TriggerEventTokenCreated
 	TriggerEventLibrarySearched
 	TriggerEventAttackerBecameUnblocked
+	TriggerEventClassBecameLevel
 )
 
 // TriggerCastTurn restricts a spell-cast pattern by whose turn the spell was
@@ -388,7 +389,6 @@ type TriggerPattern struct {
 	// cast on, relative to the ability's controller ("Whenever you cast a spell
 	// during your turn" / "during an opponent's turn").
 	CastDuringTurn TriggerCastTurn
-
 	// TappedForMana restricts a permanent-tapped pattern to taps that paid a
 	// mana ability's cost ("is tapped for mana").
 	TappedForMana bool
@@ -409,6 +409,11 @@ type TriggerPattern struct {
 	// first one they draw in each of their draw steps", Orcish Bowmasters). It is
 	// only meaningful for the card-draw event.
 	ExcludeFirstDrawInDrawStep bool
+
+	// ClassBecameLevel restricts a class-level-gained pattern to the level the
+	// Class became ("When this Class becomes level N"). Zero imposes no
+	// restriction.
+	ClassBecameLevel int
 
 	InterveningCondition *CompiledCondition
 }

@@ -755,6 +755,12 @@ type TriggerPattern struct {
 	// spell during your turn" / "during an opponent's turn"). TriggerTurnAny
 	// imposes no restriction. It is only valid with Event == EventSpellCast.
 	CastDuringTurn TriggerTurnRelation
+
+	// ClassBecameLevel restricts an EventClassLevelGained trigger to the level
+	// the Class became ("When this Class becomes level N"). Zero imposes no
+	// restriction; a positive value is only valid with
+	// Event == EventClassLevelGained and Source == TriggerSourceSelf.
+	ClassBecameLevel int
 }
 
 // TriggerTurnRelation restricts a trigger by whose turn the triggering event
