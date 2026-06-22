@@ -623,7 +623,8 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		(pattern.AttackWhileSaddled && pattern.Event != game.EventAttackerDeclared) ||
 		(pattern.ExcludeFirstDrawInDrawStep && pattern.Event != game.EventCardDrawn) ||
 		(pattern.AttackerCountAtLeast != 0 &&
-			(pattern.Event != game.EventAttackerDeclared || !pattern.OneOrMore || pattern.AttackAlone || pattern.AttackerCountAtLeast < 2)) {
+			(pattern.Event != game.EventAttackerDeclared || pattern.AttackAlone || pattern.AttackerCountAtLeast < 2 ||
+				(!pattern.OneOrMore && pattern.Source != game.TriggerSourceSelf))) {
 		return "", errors.New("render: unsupported trigger pattern fields")
 	}
 	if err := validateTriggerPatternCardSelection(pattern); err != nil {

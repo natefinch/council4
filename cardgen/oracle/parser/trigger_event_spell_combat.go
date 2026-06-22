@@ -512,6 +512,18 @@ func parseAttackBlockTriggerEventClause(
 		return clause
 	}
 	if index := syntaxWordsIndex(tokens, "attack"); index > 0 {
+		if subjectTokens, count, ok := attackerCountFromOtherCreaturesSuffix(tokens[:index]); ok && index+1 == len(tokens) {
+			subject := parsePermanentEventSubject(subjectTokens, false, atoms)
+			if subject.ok && !subject.oneOrMore && !subject.excludeSelf &&
+				subject.subject.Kind == TriggerEventSubjectSelf {
+				return &TriggerEventClause{
+					Kind:                 TriggerEventKindAttack,
+					Subject:              subject.subject,
+					Controller:           subject.controller,
+					AttackerCountAtLeast: count,
+				}
+			}
+		}
 		subject := parsePermanentEventSubject(tokens[:index], true, atoms)
 		if !subject.ok {
 			return nil
@@ -598,4 +610,29 @@ func attackWithCreatureCount(tokens []shared.Token) (int, bool) {
 		return 0, false
 	}
 	return count, true
+}
+
+// attackerCountFromOtherCreaturesSuffix recognizes the Battalion-style infix
+// "<subject> and at least <N> other creatures" that precedes the "attack" verb
+// and returns the subject tokens together with the total minimum attacker count
+// N+1 (the source creature plus N other creatures). It fails closed when the
+// suffix is absent or the cardinal word is out of range.
+func attackerCountFromOtherCreaturesSuffix(tokens []shared.Token) ([]shared.Token, int, bool) {
+	const suffixLen = 6 // and at least <N> other creatures
+	if len(tokens) <= suffixLen {
+		return nil, 0, false
+	}
+	suffix := tokens[len(tokens)-suffixLen:]
+	if !equalWord(suffix[0], "and") ||
+		!equalWord(suffix[1], "at") ||
+		!equalWord(suffix[2], "least") ||
+		!equalWord(suffix[4], "other") ||
+		!equalWord(suffix[5], "creatures") {
+		return nil, 0, false
+	}
+	others, ok := CardinalWordValue(suffix[3].Text)
+	if !ok || others < 1 {
+		return nil, 0, false
+	}
+	return tokens[:len(tokens)-suffixLen], others + 1, true
 }
