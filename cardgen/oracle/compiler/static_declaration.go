@@ -500,6 +500,7 @@ const (
 	StaticPlayerRuleLookAtTopCardAnyTime
 	StaticPlayerRuleCastThisFromExile
 	StaticPlayerRuleLifeForColoredMana
+	StaticPlayerRuleLifeForCommanderTax
 )
 
 // StaticPlayerRuleDeclaration is one player-scoped static rule applied to the
@@ -3390,6 +3391,10 @@ var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPla
 		usesManaColor:  true,
 		matchesContent: emptyStaticPlayerRuleContent,
 	},
+	parser.StaticDeclarationPlayerRuleLifeForCommanderTax: {
+		kind:           StaticPlayerRuleLifeForCommanderTax,
+		matchesContent: lifeForCommanderTaxStaticPlayerRuleContent,
+	},
 }
 
 // recognizeStaticPlayerRuleDeclaration maps parser-owned player-rule syntax to
@@ -3478,6 +3483,23 @@ func staticPlayerRuleSubjectAllowed(subject parser.StaticDeclarationSubjectKind,
 
 func emptyStaticPlayerRuleContent(content AbilityContent) bool {
 	return len(content.Conditions) == 0 && len(content.References) == 0
+}
+
+// lifeForCommanderTaxStaticPlayerRuleContent accepts the life-for-commander-tax
+// cost-substitution player rule ("Rather than pay {2} for each previous time
+// you've cast this spell from the command zone this game, pay 2 life that many
+// times."). The sentence carries a single "this spell" source self-reference and
+// no condition clauses.
+func lifeForCommanderTaxStaticPlayerRuleContent(content AbilityContent) bool {
+	if len(content.Conditions) != 0 {
+		return false
+	}
+	for i := range content.References {
+		if content.References[i].Binding != ReferenceBindingSource {
+			return false
+		}
+	}
+	return true
 }
 
 // compilerManaColorValid reports whether c is one of the five real colors of

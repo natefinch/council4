@@ -182,6 +182,72 @@ func TestApplyCommanderCastPaysTaxAndIncrementsCastCount(t *testing.T) {
 	})
 }
 
+func lifeForCommanderTaxCommander() *game.CardDef {
+	commander := commanderDef("Liesa, Shroud of Dusk", color.White, color.Black)
+	commander.ManaCost = opt.Val(cost.Mana{cost.G})
+	commander.StaticAbilities = []game.StaticAbility{{
+		ZoneOfFunction: zone.Command,
+		RuleEffects: []game.RuleEffect{{
+			Kind:           game.RuleEffectPayLifeForCommanderTax,
+			AffectedPlayer: game.PlayerYou,
+			AffectedSource: true,
+		}},
+	}}
+	return commander
+}
+
+func TestApplyCommanderCastPaysTaxWithLife(t *testing.T) {
+	g := newCommanderCastGame(lifeForCommanderTaxCommander())
+	engine := NewEngine(nil)
+	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
+	player := g.Players[game.Player1]
+	player.CommanderCastCount = 2
+	startLife := player.Life
+	commanderID := player.CommanderInstanceID
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	g.Turn.PriorityPlayer = game.Player1
+
+	if !engine.applyAction(g, game.Player1, action.CastCommanderSpell(commanderID, nil, 0, nil)) {
+		t.Fatal("applyAction commander cast = false, want true")
+	}
+	if player.CommanderCastCount != 3 {
+		t.Fatalf("commander cast count = %d, want 3", player.CommanderCastCount)
+	}
+	if !forest.Tapped {
+		t.Fatal("commander cast did not pay the {G} base cost with mana")
+	}
+	if got := startLife - player.Life; got != 4 {
+		t.Fatalf("life paid for tax = %d, want 4 (two {2} instances at 2 life each)", got)
+	}
+	obj, ok := g.Stack.Peek()
+	if player.CommandZone.Contains(commanderID) || !ok || obj.SourceID != commanderID {
+		t.Fatal("commander was not moved from command zone to stack")
+	}
+}
+
+func TestApplyCommanderCastPaysTaxWithManaWhenAvailable(t *testing.T) {
+	g := newCommanderCastGame(lifeForCommanderTaxCommander())
+	engine := NewEngine(nil)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
+	addBasicLandPermanent(g, game.Player1, types.Island)
+	addBasicLandPermanent(g, game.Player1, types.Mountain)
+	player := g.Players[game.Player1]
+	player.CommanderCastCount = 1
+	startLife := player.Life
+	commanderID := player.CommanderInstanceID
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	g.Turn.PriorityPlayer = game.Player1
+
+	if !engine.applyAction(g, game.Player1, action.CastCommanderSpell(commanderID, nil, 0, nil)) {
+		t.Fatal("applyAction commander cast = false, want true")
+	}
+	if got := startLife - player.Life; got != 0 {
+		t.Fatalf("life paid = %d, want 0 (tax paid with mana when available)", got)
+	}
+}
+
 func TestFailedCommanderTaxCastDoesNotMutate(t *testing.T) {
 	g := newCommanderCastGame(greenCommanderWithCost())
 	engine := NewEngine(nil)

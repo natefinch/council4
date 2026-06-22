@@ -137,10 +137,17 @@ func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *
 	if sourceZone == zone.Command && cardID != 0 {
 		player, ok := playerByID(s.g, playerID)
 		if ok && player.CommanderInstanceID == cardID && player.CommanderTax() > 0 {
-			modifiers = append(modifiers, game.CostModifier{
-				Kind:            game.CostModifierSpell,
-				GenericIncrease: player.CommanderTax(),
-			})
+			if cardPaysLifeForCommanderTax(card) {
+				modifiers = append(modifiers, game.CostModifier{
+					Kind:                    game.CostModifierSpell,
+					LifePayableTaxInstances: player.CommanderCastCount,
+				})
+			} else {
+				modifiers = append(modifiers, game.CostModifier{
+					Kind:            game.CostModifierSpell,
+					GenericIncrease: player.CommanderTax(),
+				})
+			}
 		}
 	}
 	modifiers = append(modifiers, staticCostModifiersForContext(s.g, playerID, card, sourceZone, targets)...)
@@ -195,6 +202,25 @@ func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *ga
 		}
 	}
 	return modifiers
+}
+
+// cardPaysLifeForCommanderTax reports whether the card being cast carries the
+// self-scoped static that lets its caster pay 2 life rather than each {2} of the
+// command-zone commander tax (Liesa, Shroud of Dusk). It is read straight from
+// the card being cast because the static functions while the card is in the
+// command zone, not while it is on the battlefield.
+func cardPaysLifeForCommanderTax(card *game.CardDef) bool {
+	if card == nil {
+		return false
+	}
+	for i := range card.StaticAbilities {
+		for j := range card.StaticAbilities[i].RuleEffects {
+			if card.StaticAbilities[i].RuleEffects[j].Kind == game.RuleEffectPayLifeForCommanderTax {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (s *rulesPaymentState) SetTapped(p *game.Permanent, tapped bool) {

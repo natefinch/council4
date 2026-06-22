@@ -1016,6 +1016,13 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if !manaColorValid(effect.ManaColor) {
 			v.add(faceName, appendPath(path, "ManaColor"), CardDefIssueInvalidRuleEffect, "life-for-mana payment must set a colored mana color")
 		}
+	case RuleEffectPayLifeForCommanderTax:
+		if effect.AffectedPlayer != PlayerYou {
+			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "life-for-commander-tax payment must affect the controller")
+		}
+		if !effect.AffectedSource {
+			v.add(faceName, appendPath(path, "AffectedSource"), CardDefIssueInvalidRuleEffect, "life-for-commander-tax payment must be self-scoped")
+		}
 	case RuleEffectPlayFromZone:
 		if err := validatePlayFromZoneRuleEffect(effect, false, true); err != nil {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, err.Error())

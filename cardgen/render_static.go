@@ -754,6 +754,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectNoMaximumHandSize", nil
 	case game.RuleEffectPayLifeForColoredMana:
 		return "game.RuleEffectPayLifeForColoredMana", nil
+	case game.RuleEffectPayLifeForCommanderTax:
+		return "game.RuleEffectPayLifeForCommanderTax", nil
 	default:
 		return "", fmt.Errorf("render: unsupported rule effect kind %d", kind)
 	}

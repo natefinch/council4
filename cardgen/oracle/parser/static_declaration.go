@@ -149,6 +149,12 @@ const (
 	// each {B} in a cost, you may pay 2 life rather than pay that mana.", K'rrik,
 	// Son of Yawgmoth).
 	StaticDeclarationPlayerRuleLifeForColoredMana StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleLifeForColoredMana"
+	// StaticDeclarationPlayerRuleLifeForCommanderTax lets the controller pay 2
+	// life rather than each {2} of the command-zone commander tax when casting the
+	// source card itself ("Rather than pay {2} for each previous time you've cast
+	// this spell from the command zone this game, pay 2 life that many times.",
+	// Liesa, Shroud of Dusk).
+	StaticDeclarationPlayerRuleLifeForCommanderTax StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleLifeForCommanderTax"
 )
 
 // StaticDeclarationCardFilterKind identifies the closed card filter that a
@@ -1339,6 +1345,7 @@ var staticPlayerRuleParsers = []staticPlayerRuleParser{
 	parseStaticCastSpellsFromLibraryTopDeclaration,
 	parseStaticLookAtTopCardAnyTimeDeclaration,
 	parseStaticLifeForColoredManaDeclaration,
+	parseStaticLifeForCommanderTaxDeclaration,
 }
 
 func parseStaticPlayerRuleDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
@@ -1682,6 +1689,37 @@ func parseStaticLifeForColoredManaDeclaration(tokens []shared.Token) (StaticDecl
 		},
 		PlayerRule: StaticDeclarationPlayerRuleLifeForColoredMana,
 		ManaColor:  color,
+	}, true
+}
+
+// parseStaticLifeForCommanderTaxDeclaration recognizes the exact self-scoped
+// command-zone tax substitution "Rather than pay {2} for each previous time
+// you've cast this spell from the command zone this game, pay 2 life that many
+// times." (Liesa, Shroud of Dusk), which lets the caster pay 2 life rather than
+// each {2} of the commander tax.
+func parseStaticLifeForCommanderTaxDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 26 ||
+		tokens[3].Kind != shared.Symbol || tokens[3].Text != "{2}" ||
+		tokens[18].Kind != shared.Comma ||
+		tokens[20].Kind != shared.Integer || tokens[20].Text != "2" ||
+		tokens[25].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "rather", "than", "pay") ||
+		!staticWordsAt(tokens, 4, "for", "each", "previous", "time", "you've", "cast", "this", "spell", "from", "the", "command", "zone", "this", "game") ||
+		!staticWordsAt(tokens, 19, "pay") ||
+		!staticWordsAt(tokens, 21, "life", "that", "many", "times") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: tokens[8].Span,
+		},
+		PlayerRule: StaticDeclarationPlayerRuleLifeForCommanderTax,
 	}, true
 }
 

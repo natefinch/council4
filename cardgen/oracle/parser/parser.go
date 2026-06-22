@@ -126,6 +126,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitStaticDeclarations(document.Abilities)
 	stripCastThisFromExileEffectSemantics(document.Abilities)
 	stripLifeForColoredManaEffectSemantics(document.Abilities)
+	stripLifeForCommanderTaxEffectSemantics(document.Abilities)
 	emitSemanticAccessors(document.Abilities)
 	stripImpulseExileSemantics(document.Abilities)
 	emitCoinFlipSequences(document.Abilities)
@@ -192,6 +193,38 @@ func stripLifeForColoredManaEffectSemantics(abilities []Ability) {
 func abilityHasLifeForColoredManaDeclaration(ability *Ability) bool {
 	for i := range ability.StaticDeclarations {
 		if ability.StaticDeclarations[i].PlayerRule == StaticDeclarationPlayerRuleLifeForColoredMana {
+			return true
+		}
+	}
+	return false
+}
+
+// stripLifeForCommanderTaxEffectSemantics suppresses the resolving-effect reading
+// of the life-for-commander-tax cost-substitution player rule ("Rather than pay
+// {2} for each previous time you've cast this spell from the command zone this
+// game, pay 2 life that many times."). The sentence's "pay {2}" and "pay 2 life"
+// clauses otherwise compile to spurious effects that block the text-blind
+// compiler's empty-content recognition of the player rule, so when the static
+// idiom is recognized the static declaration owns the whole sentence and its
+// competing effect and target syntax is cleared.
+func stripLifeForCommanderTaxEffectSemantics(abilities []Ability) {
+	for i := range abilities {
+		ability := &abilities[i]
+		if !abilityHasLifeForCommanderTaxDeclaration(ability) {
+			continue
+		}
+		for j := range ability.Sentences {
+			sentence := &ability.Sentences[j]
+			sentence.Effects = nil
+			sentence.Targets = nil
+			sentence.LegacyEffects = false
+		}
+	}
+}
+
+func abilityHasLifeForCommanderTaxDeclaration(ability *Ability) bool {
+	for i := range ability.StaticDeclarations {
+		if ability.StaticDeclarations[i].PlayerRule == StaticDeclarationPlayerRuleLifeForCommanderTax {
 			return true
 		}
 	}

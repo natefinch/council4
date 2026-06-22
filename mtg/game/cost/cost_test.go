@@ -34,3 +34,20 @@ func TestManaMultiplyBoundaryCounts(t *testing.T) {
 		}
 	}
 }
+
+func TestPhyrexianGenericSymbol(t *testing.T) {
+	symbol := PhyrexianGeneric(2)
+	if symbol.Kind != PhyrexianGenericSymbol {
+		t.Fatalf("kind = %v, want PhyrexianGenericSymbol", symbol.Kind)
+	}
+	if symbol.Generic != 2 {
+		t.Fatalf("generic = %d, want 2", symbol.Generic)
+	}
+	if got := symbol.String(); got != "{2/P}" {
+		t.Fatalf("String() = %q, want {2/P}", got)
+	}
+	manaCost := Mana{PhyrexianGeneric(2)}
+	if got := manaCost.ManaValue(); got != 2 {
+		t.Fatalf("ManaValue() = %d, want 2", got)
+	}
+}

@@ -44,6 +44,7 @@ func TestRuleEffectKindValid(t *testing.T) {
 		RuleEffectCantEnterFromZones,
 		RuleEffectLookAtTopCardAnyTime,
 		RuleEffectPayLifeForColoredMana,
+		RuleEffectPayLifeForCommanderTax,
 	}
 	for _, kind := range valid {
 		if !kind.Valid() {
@@ -54,7 +55,7 @@ func TestRuleEffectKindValid(t *testing.T) {
 	invalid := []RuleEffectKind{
 		RuleEffectNone,
 		-1,
-		RuleEffectPayLifeForColoredMana + 1,
+		RuleEffectPayLifeForCommanderTax + 1,
 		RuleEffectKind(1 << 20),
 	}
 	for _, kind := range invalid {
@@ -73,7 +74,7 @@ func TestValidateApplyRulePlayFromZone(t *testing.T) {
 	}
 
 	for name, kind := range map[string]RuleEffectKind{
-		"future":       RuleEffectPayLifeForColoredMana + 1,
+		"future":       RuleEffectPayLifeForCommanderTax + 1,
 		"out of range": RuleEffectKind(1 << 20),
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -97,7 +98,7 @@ func TestValidateCardDefPlayFromZone(t *testing.T) {
 	}
 
 	for name, kind := range map[string]RuleEffectKind{
-		"future":       RuleEffectPayLifeForColoredMana + 1,
+		"future":       RuleEffectPayLifeForCommanderTax + 1,
 		"out of range": RuleEffectKind(1 << 20),
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -250,4 +251,32 @@ func cardDefWithRuleEffect(effect *RuleEffect) *CardDef {
 		Name:            "Play Permission Tester",
 		StaticAbilities: []StaticAbility{{RuleEffects: []RuleEffect{*effect}}},
 	}}
+}
+
+func TestValidatePayLifeForCommanderTaxRuleEffect(t *testing.T) {
+	t.Parallel()
+
+	valid := RuleEffect{
+		Kind:           RuleEffectPayLifeForCommanderTax,
+		AffectedPlayer: PlayerYou,
+		AffectedSource: true,
+	}
+	if issues := ValidateCardDef(cardDefWithRuleEffect(&valid)); len(issues) != 0 {
+		t.Fatalf("valid life-for-commander-tax issues = %+v, want none", issues)
+	}
+
+	for name, mutate := range map[string]func(*RuleEffect){
+		"wrong player": func(e *RuleEffect) { e.AffectedPlayer = PlayerOpponent },
+		"not self":     func(e *RuleEffect) { e.AffectedSource = false },
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			effect := valid
+			mutate(&effect)
+			issues := ValidateCardDef(cardDefWithRuleEffect(&effect))
+			if !hasCardDefIssue(issues, CardDefIssueInvalidRuleEffect) {
+				t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidRuleEffect)
+			}
+		})
+	}
 }

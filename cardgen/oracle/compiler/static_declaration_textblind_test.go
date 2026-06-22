@@ -856,3 +856,41 @@ func TestRecognizeStaticEachPlayerSubjectRejectedForControllerOnlyRule(t *testin
 		t.Fatal("recognized each-player subject for a controller-only rule, want fail closed")
 	}
 }
+
+func TestRecognizeStaticLifeForCommanderTaxFromTypedNodeWithoutInspectingText(t *testing.T) {
+	t.Parallel()
+	node := parser.StaticDeclarationSyntax{
+		Kind:       parser.StaticDeclarationPlayerRule,
+		Subject:    parser.StaticDeclarationSubject{Kind: parser.StaticDeclarationSubjectController},
+		PlayerRule: parser.StaticDeclarationPlayerRuleLifeForCommanderTax,
+	}
+	content := AbilityContent{
+		References: []CompiledReference{
+			{Binding: ReferenceBindingSource, Text: "this spell"},
+		},
+	}
+	ability := CompiledAbility{Kind: AbilityStatic, Content: content}
+	declaration, ok := recognizeStaticPlayerRuleDeclaration(ability, []parser.StaticDeclarationSyntax{node})
+	if !ok || declaration.Player == nil ||
+		declaration.Player.Kind != StaticPlayerRuleLifeForCommanderTax {
+		t.Fatalf("declaration = %#v, ok = %v, want typed life-for-commander-tax", declaration, ok)
+	}
+}
+
+func TestRecognizeStaticLifeForCommanderTaxRejectsForeignReference(t *testing.T) {
+	t.Parallel()
+	node := parser.StaticDeclarationSyntax{
+		Kind:       parser.StaticDeclarationPlayerRule,
+		Subject:    parser.StaticDeclarationSubject{Kind: parser.StaticDeclarationSubjectController},
+		PlayerRule: parser.StaticDeclarationPlayerRuleLifeForCommanderTax,
+	}
+	content := AbilityContent{
+		References: []CompiledReference{
+			{Binding: ReferenceBindingEventPlayer, Text: "they"},
+		},
+	}
+	ability := CompiledAbility{Kind: AbilityStatic, Content: content}
+	if _, ok := recognizeStaticPlayerRuleDeclaration(ability, []parser.StaticDeclarationSyntax{node}); ok {
+		t.Fatal("recognized life-for-commander-tax with a non-source reference, want fail closed")
+	}
+}
