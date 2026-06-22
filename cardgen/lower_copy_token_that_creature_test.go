@@ -70,3 +70,36 @@ func TestGenerateExecutableCardSourceCopyTokenForEachThatCreature(t *testing.T) 
 		}
 	}
 }
+
+// TestGenerateExecutableCardSourceCopyTargetToken covers the bare "target
+// token" target noun ("Create a token that's a copy of target token you
+// control." — Caretaker's Talent's level-2 ability). The target must lower to a
+// permanent target restricted to tokens (TokenOnly), not an unrestricted
+// permanent.
+func TestGenerateExecutableCardSourceCopyTargetToken(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Token Copier",
+		Layout:     "normal",
+		ManaCost:   "{2}{W}",
+		TypeLine:   "Instant",
+		OracleText: "Create a token that's a copy of target token you control.",
+		Colors:     []string{"W"},
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Allow:      game.TargetAllowPermanent,",
+		"TokenOnly:  true,",
+		"Source: game.TokenCopyOf(game.TokenCopySpec{",
+		"Object: game.TargetPermanentReference(0),",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}

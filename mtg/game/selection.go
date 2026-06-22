@@ -318,6 +318,7 @@ func (p TargetPredicate) Selection() Selection {
 
 		PowerLessThanSource:    p.PowerLessThanSource,
 		PowerGreaterThanSource: p.PowerGreaterThanSource,
+		TokenOnly:              p.TokenOnly,
 	}
 	if p.PermanentTypesConjunctive {
 		selection.RequiredTypes = p.PermanentTypes

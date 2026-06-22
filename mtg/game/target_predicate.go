@@ -143,4 +143,8 @@ type TargetPredicate struct {
 	PowerGreaterThanSource bool
 
 	Another bool
+
+	// TokenOnly restricts the match to a token permanent ("target token"). It
+	// mirrors Selection.TokenOnly and is enforced through Selection().
+	TokenOnly bool
 }
