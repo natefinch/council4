@@ -193,6 +193,9 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 }
 
 func handleAddCounter(r *effectResolver, prim game.AddCounter) effectResolved {
+	if prim.AllKinds {
+		return handleDoubleAllCounterKinds(r, prim)
+	}
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	if res.amount <= 0 {
 		return res
@@ -210,6 +213,37 @@ func handleAddCounter(r *effectResolver, prim game.AddCounter) effectResolved {
 	if ok {
 		addCountersToPermanentControlledBy(r.game, placementController, permanent, prim.CounterKind, res.amount)
 		res.succeeded = true
+	}
+	return res
+}
+
+// handleDoubleAllCounterKinds doubles every kind of counter on the primitive's
+// object ("double the number of each kind of counter on <permanent>", Vorel of
+// the Hull Clade). It snapshots the counts before placing any counters so
+// doubling one kind never feeds another, then adds, for each kind present, that
+// many more counters. Kinds are visited in a deterministic order.
+func handleDoubleAllCounterKinds(r *effectResolver, prim game.AddCounter) effectResolved {
+	res := effectResolved{accepted: true}
+	permanent, ok := r.resolveObject(prim.Object)
+	if !ok {
+		return res
+	}
+	placementController := stackObjectController(r.obj)
+	counts := permanent.Counters.All()
+	kinds := make([]counter.Kind, 0, len(counts))
+	for kind := range counts {
+		kinds = append(kinds, kind)
+	}
+	slices.Sort(kinds)
+	for _, kind := range kinds {
+		amount := counts[kind]
+		if amount <= 0 {
+			continue
+		}
+		if addCountersToPermanentControlledBy(r.game, placementController, permanent, kind, amount) {
+			res.succeeded = true
+			res.amount += amount
+		}
 	}
 	return res
 }

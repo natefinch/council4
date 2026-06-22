@@ -3568,8 +3568,8 @@ func TestParseDoublePowerToughnessObject(t *testing.T) {
 }
 
 // TestParseDoubleCountersObject verifies the counter-doubling object "double the
-// number of <kind> counters on <self>" captures the doubled counter kind for the
-// self form (Mossborn Hydra) and fails closed for a targeted object or an
+// number of <kind> counters on <object>" captures the doubled counter kind, the
+// target vs self scope, and the all-kinds form, and fails closed for an
 // unrecognized counter noun.
 func TestParseDoubleCountersObject(t *testing.T) {
 	t.Parallel()
@@ -3578,21 +3578,38 @@ func TestParseDoubleCountersObject(t *testing.T) {
 		source            string
 		wantDouble        bool
 		wantCounterPlus11 bool
+		wantTarget        bool
+		wantAllKinds      bool
 	}{
 		{
 			"self this creature",
 			"Double the number of +1/+1 counters on this creature.",
-			true, true,
+			true, true, false, false,
 		},
 		{
 			"self it",
 			"Double the number of +1/+1 counters on it.",
-			true, true,
+			true, true, false, false,
 		},
 		{
-			"target creature fails closed",
+			"target creature single kind",
 			"Double the number of +1/+1 counters on target creature.",
-			false, false,
+			true, true, true, false,
+		},
+		{
+			"target each kind",
+			"Double the number of each kind of counter on target artifact, creature, or land.",
+			true, false, true, true,
+		},
+		{
+			"self each kind",
+			"Double the number of each kind of counter on this creature.",
+			true, false, false, true,
+		},
+		{
+			"unrecognized counter noun fails closed",
+			"Double the number of cards on target creature.",
+			false, false, false, false,
 		},
 	}
 	for _, test := range tests {
@@ -3612,6 +3629,12 @@ func TestParseDoubleCountersObject(t *testing.T) {
 			}
 			if test.wantCounterPlus11 && effect.DoubleSourceCounterKind != counter.PlusOnePlusOne {
 				t.Fatalf("DoubleSourceCounterKind = %v, want PlusOnePlusOne", effect.DoubleSourceCounterKind)
+			}
+			if effect.DoubleCountersTarget != test.wantTarget {
+				t.Fatalf("DoubleCountersTarget = %v, want %v", effect.DoubleCountersTarget, test.wantTarget)
+			}
+			if effect.DoubleCountersAllKinds != test.wantAllKinds {
+				t.Fatalf("DoubleCountersAllKinds = %v, want %v", effect.DoubleCountersAllKinds, test.wantAllKinds)
 			}
 		})
 	}
