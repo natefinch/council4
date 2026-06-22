@@ -252,7 +252,11 @@ func damageGroupRecipientExcluding(sel compiler.CompiledSelector, exclude game.O
 // damageGroupSelection translates the supported filters of a group-damage
 // recipient selector (controller, combat, tapped, single color/subtype/excluded
 // type, keyword) onto a runtime Selection, failing closed for any selector field
-// it cannot represent exactly so unsupported recipients stay rejected.
+// it cannot represent exactly so unsupported recipients stay rejected. The guard
+// enforces the recipient-specific accept set (single-valued color/subtype/
+// excluded-type, no supertype, color, or numeric filter, a damageable kind) that
+// no SelectionMask dimension expresses; damageGroupSelectionMask drops the
+// remaining canonical dimensions a damage group never carries.
 func damageGroupSelection(sel compiler.CompiledSelector) (game.Selection, bool) {
 	if sel.All || sel.Another || sel.Zone != zone.None ||
 		sel.MatchManaValue || sel.MatchPower || sel.MatchToughness ||
@@ -270,47 +274,34 @@ func damageGroupSelection(sel compiler.CompiledSelector) (game.Selection, bool) 
 		((sel.Tapped || sel.Untapped) && (sel.Attacking || sel.Blocking)) {
 		return game.Selection{}, false
 	}
-	requiredType, hasNoun, ok := damageGroupRequiredType(sel.Kind)
+	_, hasNoun, ok := damageGroupRequiredType(sel.Kind)
 	if !ok {
 		return game.Selection{}, false
 	}
 	if !hasNoun && len(sel.SubtypesAny()) != 1 {
 		return game.Selection{}, false
 	}
-	selection, ok := selectorCharacteristics(sel)
-	if !ok {
-		return game.Selection{}, false
-	}
-	if requiredType != "" {
-		selection.RequiredTypes = []types.Card{requiredType}
-	}
-	switch sel.Controller {
-	case compiler.ControllerAny:
-	case compiler.ControllerYou:
-		selection.Controller = game.ControllerYou
-	case compiler.ControllerOpponent:
-		selection.Controller = game.ControllerOpponent
-	case compiler.ControllerNotYou:
-		selection.Controller = game.ControllerNotYou
-	default:
-		return game.Selection{}, false
-	}
-	switch {
-	case sel.Attacking:
-		selection.CombatState = game.CombatStateAttacking
-	case sel.Blocking:
-		selection.CombatState = game.CombatStateBlocking
-	default:
-	}
-	switch {
-	case sel.Tapped:
-		selection.Tapped = game.TriTrue
-	case sel.Untapped:
-		selection.Tapped = game.TriFalse
-	default:
-	}
-	return selection, true
+	return SelectionForSelectorMasked(sel, damageGroupSelectionMask)
 }
+
+// damageGroupSelectionMask drops the canonical dimensions a group-damage
+// recipient never carries: the self-exclusion, excluded supertype, kind-agnostic
+// counter, "aren't of the chosen type" exclusion, conjunctive type set, per-object
+// token state, and historic disjunction. It fails closed on a source-relative
+// power comparison: a damage group has no source permanent to compare against, so
+// the predecessor projector rejected that filter rather than dropping it.
+var damageGroupSelectionMask = SelectionMask{}.Ignoring(
+	DimExcludeSource,
+	DimExcludedSupertype,
+	DimMatchAnyCounter,
+	DimSubtypeChoiceExcluded,
+	DimConjunctiveTypes,
+	DimNonToken,
+	DimTokenOnly,
+	DimHistoric,
+).Rejecting(
+	DimPowerVsSource,
+)
 
 // damageGroupRequiredType reports the battlefield required card type for a
 // group-damage recipient selector kind. hasNoun is false for an unqualified

@@ -1191,6 +1191,16 @@ func appendSelectorExcludedSubtypes(selector *CompiledSelector, subtypes ...type
 	atoms.ExcludedSubtypes = append(atoms.ExcludedSubtypes, subtypes...)
 }
 
+// WithAtoms returns a copy of the selector carrying the given parser-owned atom
+// filters. Production compilation populates these through the package-internal
+// append/set helpers; WithAtoms exposes the same wiring for callers and tests
+// that need to build a CompiledSelector directly from its atom-derived filters.
+func (s CompiledSelector) WithAtoms(atoms CompiledSelectorAtoms) CompiledSelector {
+	clone := atoms
+	s.atoms = &clone
+	return s
+}
+
 // EffectKind identifies an instruction verb recognized in Oracle text.
 type EffectKind uint8
 
