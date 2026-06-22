@@ -87,6 +87,9 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 	if pattern.MatchFromZone && pattern.FromZone != event.FromZone {
 		return false
 	}
+	if pattern.ExcludeFromZone && pattern.FromZone == event.FromZone {
+		return false
+	}
 	if pattern.MatchToZone && pattern.ToZone != event.ToZone {
 		return false
 	}

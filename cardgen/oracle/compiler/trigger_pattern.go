@@ -337,6 +337,8 @@ type TriggerPattern struct {
 	ToZone        TriggerZone
 	ExcludeToZone bool
 
+	ExcludeFromZone bool
+
 	MatchFaceDown bool
 	FaceDown      bool
 

@@ -214,13 +214,17 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 // reporting false (fail-closed) when a zone is unrepresentable or the from/to
 // flags are inconsistent. A to-zone may be required or excluded, never both.
 func lowerTriggerZones(pattern *compiler.TriggerPattern, result *game.TriggerPattern) bool {
-	if pattern.MatchFromZone {
+	if pattern.MatchFromZone && pattern.ExcludeFromZone {
+		return false
+	}
+	if pattern.MatchFromZone || pattern.ExcludeFromZone {
 		fromZone, ok := lowerTriggerZone(pattern.FromZone)
 		if !ok {
 			return false
 		}
 		result.FromZone = fromZone
-		result.MatchFromZone = true
+		result.MatchFromZone = pattern.MatchFromZone
+		result.ExcludeFromZone = pattern.ExcludeFromZone
 	} else if pattern.FromZone != compiler.TriggerZoneNone {
 		return false
 	}

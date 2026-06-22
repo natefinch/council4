@@ -946,3 +946,51 @@ func TestGraveyardPutIntoFromAnywhereTriggerFiresOnMillAndDeath(t *testing.T) {
 		t.Fatal("put-into-graveyard trigger did not fire for a creature death")
 	}
 }
+
+// graveyardPutIntoExcludingBattlefieldCreaturePattern models "Whenever a
+// creature card is put into a graveyard from anywhere other than the
+// battlefield, ..." — a card move into the graveyard whose origin must not be
+// the battlefield, so it fires for mills and discards but not for deaths.
+func graveyardPutIntoExcludingBattlefieldCreaturePattern() *game.TriggerPattern {
+	return &game.TriggerPattern{
+		Event:           game.EventZoneChanged,
+		MatchToZone:     true,
+		ToZone:          zone.Graveyard,
+		ExcludeFromZone: true,
+		FromZone:        zone.Battlefield,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}
+}
+
+// TestGraveyardPutIntoExcludingBattlefieldTriggerSkipsDeaths verifies the "from
+// anywhere other than the battlefield" form fires when a creature card is milled
+// (library to graveyard) but not when a creature dies (battlefield to
+// graveyard).
+func TestGraveyardPutIntoExcludingBattlefieldTriggerSkipsDeaths(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, graveyardPutIntoExcludingBattlefieldCreaturePattern(),
+		[]game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	// A creature dying (battlefield to graveyard) must NOT fire.
+	dying := addCombatCreaturePermanent(g, game.Player1)
+	destroyPermanent(g, dying.ObjectID)
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("excluding-battlefield trigger fired for a creature death")
+	}
+
+	// A creature card milled into the graveyard (library to graveyard) MUST fire.
+	creature := addCardToLibrary(g, game.Player1, greenCreature())
+	if !moveCardBetweenZones(g, game.Player1, creature, zone.Library, zone.Graveyard) {
+		t.Fatal("moveCardBetweenZones failed for milled creature")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("excluding-battlefield trigger did not fire for a milled creature card")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != source.ObjectID {
+		t.Fatalf("top of stack = %+v, want trigger from source %v", obj, source.ObjectID)
+	}
+}

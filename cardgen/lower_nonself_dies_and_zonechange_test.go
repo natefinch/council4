@@ -586,6 +586,19 @@ func TestLowerPermanentZoneChangeSemanticPatterns(t *testing.T) {
 				},
 			},
 		},
+		{
+			phrase: "Whenever a creature card is put into a graveyard from anywhere other than the battlefield, draw a card.",
+			want: game.TriggerPattern{
+				Event:           game.EventZoneChanged,
+				MatchToZone:     true,
+				ToZone:          zone.Graveyard,
+				ExcludeFromZone: true,
+				FromZone:        zone.Battlefield,
+				SubjectSelection: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.phrase, func(t *testing.T) {
@@ -599,5 +612,37 @@ func TestLowerPermanentZoneChangeSemanticPatterns(t *testing.T) {
 				t.Fatalf("pattern = %#v, %v, want %#v, true", got, ok, test.want)
 			}
 		})
+	}
+}
+
+// TestDisjunctiveTriggerSplitsIntoIndependentAbilities verifies that a single
+// triggered ability with a multi-event "A, or B, or C" condition expands into
+// one independent triggered ability per condition, each sharing the effect, and
+// that the "from anywhere other than the battlefield" condition lowers with the
+// ExcludeFromZone constraint (Syr Konrad, the Grim).
+func TestDisjunctiveTriggerSplitsIntoIndependentAbilities(t *testing.T) {
+	t.Parallel()
+	const text = "Whenever another creature dies, or a creature card is put into a graveyard from anywhere other than the battlefield, or a creature card leaves your graveyard, Akroma deals 1 damage to each opponent."
+	compilation, diagnostics := compileTestOracle(text, parser.Context{CardName: "Akroma"}, compiler.Context{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if len(compilation.Abilities) != 3 {
+		t.Fatalf("abilities = %d, want 3", len(compilation.Abilities))
+	}
+	excludeCount := 0
+	for _, ability := range compilation.Abilities {
+		if ability.Trigger == nil {
+			t.Fatalf("ability %#v has no trigger", ability)
+		}
+		if ability.Trigger.Pattern.ExcludeFromZone {
+			excludeCount++
+			if ability.Trigger.Pattern.FromZone != compiler.TriggerZoneBattlefield {
+				t.Fatalf("ExcludeFromZone pattern FromZone = %v, want battlefield", ability.Trigger.Pattern.FromZone)
+			}
+		}
+	}
+	if excludeCount != 1 {
+		t.Fatalf("ExcludeFromZone abilities = %d, want 1", excludeCount)
 	}
 }

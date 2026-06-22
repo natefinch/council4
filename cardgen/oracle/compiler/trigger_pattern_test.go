@@ -844,6 +844,20 @@ func TestPermanentZoneChangeTriggerPatternsBindExtendedSlots(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:  "card put into graveyard excluding battlefield",
+			event: "a creature card is put into a graveyard from anywhere other than the battlefield",
+			want: TriggerPattern{
+				Event:           TriggerEventZoneChanged,
+				MatchToZone:     true,
+				ToZone:          TriggerZoneGraveyard,
+				ExcludeFromZone: true,
+				FromZone:        TriggerZoneBattlefield,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+				},
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

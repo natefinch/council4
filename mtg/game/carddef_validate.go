@@ -1527,6 +1527,12 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 	if pattern.MatchToZone && pattern.ExcludeToZone {
 		v.add(faceName, appendPath(path, "ToZone"), CardDefIssueInvalidSelection, "to-zone trigger filter cannot both require and exclude its destination")
 	}
+	if pattern.ExcludeFromZone && pattern.FromZone == zone.None {
+		v.add(faceName, appendPath(path, "FromZone"), CardDefIssueInvalidSelection, "excluded from-zone trigger filter must set a source zone")
+	}
+	if pattern.MatchFromZone && pattern.ExcludeFromZone {
+		v.add(faceName, appendPath(path, "FromZone"), CardDefIssueInvalidSelection, "from-zone trigger filter cannot both require and exclude its source")
+	}
 	if pattern.FaceDown && !pattern.MatchFaceDown {
 		v.add(faceName, appendPath(path, "FaceDown"), CardDefIssueInvalidSelection, "face-down trigger filter must be enabled")
 	}

@@ -635,6 +635,10 @@ type TriggerPattern struct {
 	ToZone        zone.Type
 	ExcludeToZone bool
 
+	// ExcludeFromZone matches a zone change only when its origin is NOT FromZone,
+	// expressing "put into <zone> from anywhere other than the battlefield".
+	ExcludeFromZone bool
+
 	MatchFaceDown bool
 	FaceDown      bool
 
