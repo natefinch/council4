@@ -629,6 +629,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx, syntax *parser
 	if content, ok := lowerGroupCounterThenGroupKeywordSequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerGroupPumpThenGroupCounterSequence(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerCreateTokenThenGrantKeywordSequence(ctx); ok {
 		return content, true
 	}
@@ -768,6 +771,87 @@ func lowerGroupCounterThenGroupKeywordSequence(ctx contentCtx) (game.AbilityCont
 					AddAbilities: abilities,
 				}},
 				Duration: game.DurationUntilEndOfTurn,
+			}},
+		},
+	}.Ability(), true
+}
+
+// groupCounterBackReferencePronoun reports whether a counter-placement
+// recipient is the plural group back-reference "each of them" / "each of those
+// creatures" / "each of those" — a pronoun ("them"/"they") or demonstrative
+// ("those") that denotes the group an immediately preceding clause affected
+// rather than a self-contained selection. The single allowed reference carries
+// no antecedent target; the group is reconstructed from the preceding clause.
+func groupCounterBackReferencePronoun(references []compiler.CompiledReference) bool {
+	return len(references) == 1 &&
+		references[0].Kind == compiler.ReferencePronoun &&
+		(references[0].Pronoun == compiler.ReferencePronounThem ||
+			references[0].Pronoun == compiler.ReferencePronounThey ||
+			references[0].Pronoun == compiler.ReferencePronounThose)
+}
+
+// lowerGroupPumpThenGroupCounterSequence lowers the ordered pair "Other
+// creatures you control get +2/+2 until end of turn. Put an indestructible
+// counter on each of them." (Summon: Knights of Round's final chapter). The
+// first clause pumps a never-resolving controlled creature group until end of
+// turn; the second places one fixed counter on every member of that same group,
+// named by the plural back-reference "each of them". Because nothing between the
+// two clauses changes the board, the runtime's group continuous effect and group
+// counter placement both snapshot the same members, so the counter clause's
+// "them" resolves to the just-pumped group. It reuses the pump clause's resolved
+// group for the counter placement and fails closed for any other shape, a
+// non-group pump subject, an unsupported counter kind, or a non-back-reference
+// recipient.
+func lowerGroupPumpThenGroupCounterSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		ctx.optional {
+		return game.AbilityContent{}, false
+	}
+	pumpEffect := ctx.content.Effects[0]
+	counterEffect := ctx.content.Effects[1]
+	if pumpEffect.Kind != compiler.EffectModifyPT ||
+		counterEffect.Kind != compiler.EffectPut ||
+		!pumpEffect.Exact ||
+		pumpEffect.Negated ||
+		pumpEffect.Optional ||
+		pumpEffect.Duration != compiler.DurationUntilEndOfTurn ||
+		pumpEffect.StaticSubject == compiler.StaticSubjectNone {
+		return game.AbilityContent{}, false
+	}
+	if counterEffect.Negated ||
+		counterEffect.Optional ||
+		counterEffect.Context != parser.EffectContextController ||
+		counterEffect.Duration != compiler.DurationNone ||
+		!counterEffect.CounterKindKnown ||
+		!compiler.CounterKindPlacementSupported(counterEffect.CounterKind) ||
+		counterEffect.CounterKind.PlayerOnly() ||
+		!counterEffect.Amount.Known ||
+		counterEffect.Amount.Value < 1 ||
+		!groupCounterBackReferencePronoun(counterEffect.References) {
+		return game.AbilityContent{}, false
+	}
+	group, ok := resolvingStaticSubjectGroup(&pumpEffect)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	continuous, ok := groupModifyPTContinuousEffect(&pumpEffect, group)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{Primitive: game.ApplyContinuous{
+				ContinuousEffects: []game.ContinuousEffect{continuous},
+				Duration:          game.DurationUntilEndOfTurn,
+			}},
+			{Primitive: game.AddCounter{
+				Amount:      game.Fixed(counterEffect.Amount.Value),
+				Group:       group,
+				CounterKind: counterEffect.CounterKind,
 			}},
 		},
 	}.Ability(), true
