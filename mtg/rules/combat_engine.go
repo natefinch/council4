@@ -157,6 +157,22 @@ func (ce combatEngine) declareBlockers(g *game.Game, agents [game.NumPlayers]Pla
 	emitUnblockedAttackerEvents(g)
 }
 
+// attackerDefendingPlayer returns the defending player an attacker was declared
+// against (AttackTarget.Player holds it even when a planeswalker or battle is the
+// direct target). A blocked attacker is always a current declared attacker, so
+// the lookup succeeds; it falls back to the active player only if no declaration
+// matches.
+func attackerDefendingPlayer(g *game.Game, attackerObjectID id.ID) game.PlayerID {
+	if g.Combat != nil {
+		for _, declaration := range g.Combat.Attackers {
+			if declaration.Attacker == attackerObjectID {
+				return declaration.Target.Player
+			}
+		}
+	}
+	return g.Turn.ActivePlayer
+}
+
 // emitUnblockedAttackerEvents fires EventAttackerBecameUnblocked once for each
 // attacker that no creature blocked, after every defending player has finished
 // declaring blockers (CR 509.1h). The events share a simultaneous batch so
@@ -180,6 +196,7 @@ func emitUnblockedAttackerEvents(g *game.Game) {
 			SourceID:       attacker.CardInstanceID,
 			SourceObjectID: attacker.ObjectID,
 			Controller:     effectiveController(g, attacker),
+			Player:         declaration.Target.Player,
 			PermanentID:    attacker.ObjectID,
 			SimultaneousID: batchID,
 		})
@@ -463,6 +480,7 @@ func (combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, declare 
 					SourceID:           attacker.CardInstanceID,
 					SourceObjectID:     attacker.ObjectID,
 					Controller:         effectiveController(g, attacker),
+					Player:             attackerDefendingPlayer(g, attacker.ObjectID),
 					PermanentID:        attacker.ObjectID,
 					RelatedPermanentID: block.Blocker,
 					SimultaneousID:     g.Combat.BlockDeclarationBatchID,
