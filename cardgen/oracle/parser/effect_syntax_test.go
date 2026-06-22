@@ -2492,6 +2492,90 @@ func TestParseDrawDoublingReplacement(t *testing.T) {
 	}
 }
 
+func TestParseDrawReplacementDig(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name      string
+		text      string
+		look      int
+		take      int
+		remainder DigRemainderKind
+		singular  bool
+	}{
+		{
+			name:      "graveyard rest",
+			text:      "If you would draw a card, instead look at the top three cards of your library, then put one into your hand and the rest into your graveyard.",
+			look:      3,
+			take:      1,
+			remainder: DigRemainderGraveyard,
+		},
+		{
+			name:      "library bottom other with source",
+			text:      "If you would draw a card, instead look at the top two cards of your library, then put one of them into your hand and the other on the bottom of your library.",
+			look:      2,
+			take:      1,
+			remainder: DigRemainderLibraryBottom,
+			singular:  true,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(tc.text, Context{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %d, want 1", len(effects))
+			}
+			effect := effects[0]
+			if effect.Kind != EffectDig {
+				t.Fatalf("effect kind = %v, want EffectDig", effect.Kind)
+			}
+			if effect.Replacement.Kind != EffectReplacementInstead {
+				t.Fatalf("replacement kind = %v, want instead", effect.Replacement.Kind)
+			}
+			if effect.Amount.Value != tc.look {
+				t.Fatalf("look = %d, want %d", effect.Amount.Value, tc.look)
+			}
+			if !effect.Dig.Put {
+				t.Fatal("dig put flag not set")
+			}
+			if effect.Dig.Take != tc.take {
+				t.Fatalf("take = %d, want %d", effect.Dig.Take, tc.take)
+			}
+			if effect.Dig.Remainder != tc.remainder {
+				t.Fatalf("remainder = %v, want %v", effect.Dig.Remainder, tc.remainder)
+			}
+			if effect.Dig.Singular != tc.singular {
+				t.Fatalf("singular = %v, want %v", effect.Dig.Singular, tc.singular)
+			}
+			found := false
+			for _, clause := range document.Abilities[0].ConditionClauses {
+				if clause.Predicate == ConditionPredicateWouldDrawCard {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("would-draw condition not recognized: %#v", document.Abilities[0].ConditionClauses)
+			}
+		})
+	}
+}
+
+func TestParseDrawReplacementDigRejectsEqualTake(t *testing.T) {
+	t.Parallel()
+	// A take count not fewer than the look count is not a dig; it must fail the
+	// whole-sentence recognizer and fall back to general parsing.
+	text := "If you would draw a card, instead look at the top two cards of your library, then put two into your hand and the rest into your graveyard."
+	document, _ := Parse(text, Context{})
+	effects := document.Abilities[0].Sentences[0].Effects
+	if len(effects) == 1 && effects[0].Kind == EffectDig && effects[0].Replacement.Kind == EffectReplacementInstead {
+		t.Fatal("equal look/take wrongly recognized as a draw-replacement dig")
+	}
+}
+
 func TestParseLifeGainReplacement(t *testing.T) {
 	t.Parallel()
 	cases := []struct {

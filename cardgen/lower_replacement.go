@@ -71,6 +71,9 @@ func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering,
 	if replacementAbility, handled, diagnostic := lowerDrawEmptyLibraryWinReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
+	if replacementAbility, handled, diagnostic := lowerDrawReplacementDig(ability); handled || diagnostic != nil {
+		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+	}
 	if replacementAbility, handled, diagnostic := lowerDrawDoublingReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
@@ -149,6 +152,56 @@ func lowerDrawEmptyLibraryWinReplacement(
 		return unsupported("the executable source backend supports only the exact draw-from-empty-library win replacement")
 	}
 	return game.DrawFromEmptyLibraryWinReplacement(ability.Text), true, nil
+}
+
+// lowerDrawReplacementDig lowers the draw-replacement dig ("If you would draw a
+// card, instead look at the top N cards of your library, then put one into your
+// hand and the rest into your graveyard.", Underrealm Lich) to a persistent
+// replacement that, each time the controller would draw a card, instead looks at
+// the top N cards, puts the take count into hand, and routes the rest to the
+// recorded remainder. It reports handled=false unless a recognized
+// would-draw-card condition gates a single instead-dig effect so unrelated
+// replacements (including the plain draw-doubling form) keep flowing down the
+// chain.
+func lowerDrawReplacementDig(
+	ability compiler.CompiledAbility,
+) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Conditions) != 1 {
+		return game.ReplacementAbility{}, false, nil
+	}
+	predicate := ability.Content.Conditions[0].Predicate
+	if predicate != compiler.ConditionPredicateWouldDrawCard {
+		return game.ReplacementAbility{}, false, nil
+	}
+	if len(ability.Content.Effects) != 1 ||
+		ability.Content.Effects[0].Kind != compiler.EffectDig ||
+		!ability.Content.Effects[0].Dig.Put ||
+		ability.Content.Effects[0].Replacement.Kind != parser.EffectReplacementInstead {
+		return game.ReplacementAbility{}, false, nil
+	}
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported draw-replacement dig",
+			detail,
+		)
+	}
+	effect := ability.Content.Effects[0]
+	look := effect.Amount.Value
+	take := effect.Dig.Take
+	if !effect.Exact || effect.Optional || effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		!effect.Amount.Known || take < 1 || look <= take ||
+		len(effect.Targets) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional {
+		return unsupported("the executable source backend supports only the exact draw-replacement dig")
+	}
+	return game.DrawCardDigReplacement(ability.Text, look, take, digRemainder(effect.Dig.Remainder)), true, nil
 }
 
 // lowerDrawDoublingReplacement lowers the draw-doubling replacement ("If you

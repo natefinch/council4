@@ -460,6 +460,27 @@ type ReplacementEffect struct {
 	// DrawCardMultiplier is greater than one.
 	DrawCardExceptFirstInDrawStep bool
 
+	// DrawCardDigLook replaces a single "draw a card" event by the controller
+	// with looking at the top DrawCardDigLook cards of their library, putting
+	// DrawCardDigTake of them into their hand, and routing the rest to
+	// DrawCardDigRemainder (CR 614). It backs "If you would draw a card, instead
+	// look at the top three cards of your library, then put one into your hand
+	// and the rest into your graveyard." (Underrealm Lich). A value of zero
+	// leaves draws unchanged. It is registered while its source is on the
+	// battlefield and consulted each time the controller would draw.
+	DrawCardDigLook int
+
+	// DrawCardDigTake is the number of looked-at cards a DrawCardDigLook
+	// replacement puts into the controller's hand. It is only meaningful when
+	// DrawCardDigLook is greater than zero.
+	DrawCardDigTake int
+
+	// DrawCardDigRemainder is the destination of the un-taken cards of a
+	// DrawCardDigLook replacement: the controller's graveyard (the default) or
+	// the bottom of their library. It is only meaningful when DrawCardDigLook is
+	// greater than zero.
+	DrawCardDigRemainder DigRemainder
+
 	// ContinuousZoneRedirect marks a continuous static replacement that redirects
 	// a card (or permanent) headed for a graveyard to a different zone (CR 614),
 	// as on "If a card would be put into a graveyard from anywhere, exile it

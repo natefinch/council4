@@ -481,6 +481,27 @@ func DrawCardMultiplierReplacement(text string, multiplier int, exceptFirstInDra
 	}
 }
 
+// DrawCardDigReplacement builds the draw-replacement dig "If you would draw a
+// card, instead look at the top <look> cards of your library, then put <take>
+// into your hand and the rest into your <remainder>." (Underrealm Lich). Each
+// time the controller would draw a card, they instead look at the top look cards
+// of their library, put take of them into their hand, and route the rest to
+// remainder. It is registered while its source is on the battlefield.
+func DrawCardDigReplacement(text string, look, take int, remainder DigRemainder) ReplacementAbility {
+	return ReplacementAbility{
+		Text: text,
+		Replacement: ReplacementEffect{
+			Description:          text,
+			MatchEvent:           EventCardDrawn,
+			ControllerFilter:     TriggerControllerYou,
+			DrawCardDigLook:      look,
+			DrawCardDigTake:      take,
+			DrawCardDigRemainder: remainder,
+			Duration:             DurationPermanent,
+		},
+	}
+}
+
 // CounterPlacementReplacement creates a persistent replacement that modifies
 // placement of one specific counter kind by multiplying the count and then
 // adding a fixed amount (CR 614).
