@@ -583,7 +583,7 @@ func handleTapOrUntap(r *effectResolver, prim game.TapOrUntap) effectResolved {
 		MinChoices: 1,
 		MaxChoices: 1,
 	}, r.log)
-	tap := !(len(selected) == 1 && selected[0] == 1)
+	tap := len(selected) != 1 || selected[0] != 1
 	setPermanentTapped(r.game, permanent, tap)
 	res.succeeded = true
 	return res
