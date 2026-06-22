@@ -564,6 +564,14 @@ const (
 	// kicked ("if this spell was kicked, ... instead"). It gates the kicked
 	// effect variant against the spell's kicker-paid cast context.
 	ConditionPredicateSpellWasKicked
+	// ConditionPredicateSourceSaddled is satisfied when the source Mount is
+	// currently saddled (CR 702.166), as in "if this creature is saddled". It
+	// gates a per-effect branch on the source's runtime saddled state.
+	ConditionPredicateSourceSaddled
+	// ConditionPredicateSourceNotSaddled is satisfied when the source Mount is
+	// not currently saddled ("if this creature isn't saddled", Caustic Bronco).
+	// It is the negated complement of ConditionPredicateSourceSaddled.
+	ConditionPredicateSourceNotSaddled
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard

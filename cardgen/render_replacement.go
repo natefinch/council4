@@ -860,6 +860,10 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, "SourceTributeNotPaid: true,")
 		hasPredicate = true
 	}
+	if cond.SourceSaddled {
+		fields = append(fields, "SourceSaddled: true,")
+		hasPredicate = true
+	}
 	if cond.ControllerControlsCommander {
 		fields = append(fields, "ControllerControlsCommander: true,")
 		hasPredicate = true

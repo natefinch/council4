@@ -83,6 +83,8 @@ const (
 	ConditionPredicateSourceTributeNotPaid                             ConditionPredicateKind = "ConditionPredicateSourceTributeNotPaid"
 	ConditionPredicateControllerControlsCommander                      ConditionPredicateKind = "ConditionPredicateControllerControlsCommander"
 	ConditionPredicateSpellWasKicked                                   ConditionPredicateKind = "ConditionPredicateSpellWasKicked"
+	ConditionPredicateSourceSaddled                                    ConditionPredicateKind = "ConditionPredicateSourceSaddled"
+	ConditionPredicateSourceNotSaddled                                 ConditionPredicateKind = "ConditionPredicateSourceNotSaddled"
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -518,6 +520,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeControlsCommanderCondition,
 		recognizeDestroyedThisWayCondition,
 		recognizeEventSubjectCondition,
+		recognizeSourceSaddledCondition,
 		recognizeSourceStateCondition,
 		recognizeAttachedCreatureStateCondition,
 		recognizeSourceCounterStateCondition,
@@ -796,6 +799,30 @@ func recognizeTargetColorCondition(body []shared.Token, atoms Atoms) (ConditionC
 		Predicate: ConditionPredicateTargetColor,
 		Selection: ConditionSelection{ColorsAny: []TriggerColor{triggerColorFromAtom(color)}},
 	}, true
+}
+
+// recognizeSourceSaddledCondition matches the per-effect gate "this <noun> is
+// saddled" / "this <noun> isn't saddled", testing the source Mount's runtime
+// saddled state (CR 702.166). It gates Caustic Bronco's split life-loss effect
+// ("... if this creature isn't saddled. Otherwise, ...") and the affirmative
+// "is saddled" form. The subject noun binds the source, so the predicate alone
+// carries the meaning; the "isn't" wording maps to the negated predicate so the
+// otherwise/instead negation machinery produces the complementary branch.
+func recognizeSourceSaddledCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "this")
+	if !ok {
+		return ConditionClause{}, false
+	}
+	if len(rest) != 3 || rest[0].Kind != shared.Word || !equalWord(rest[2], "saddled") {
+		return ConditionClause{}, false
+	}
+	switch {
+	case equalWord(rest[1], "is"):
+		return ConditionClause{Predicate: ConditionPredicateSourceSaddled}, true
+	case equalWord(rest[1], "isn't"):
+		return ConditionClause{Predicate: ConditionPredicateSourceNotSaddled}, true
+	}
+	return ConditionClause{}, false
 }
 
 // inspect the source permanent.

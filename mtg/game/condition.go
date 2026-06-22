@@ -95,10 +95,14 @@ type Condition struct {
 	SourceClassLevelAtLeast                                      int
 	SourceClassLevelLessThan                                     int
 	SourceNotMonstrous                                           bool
-	SourceTributeNotPaid                                         bool
-	ControllerHasMaxSpeed                                        bool
-	TargetEnteredThisTurn                                        opt.V[int]
-	CastFromZone                                                 opt.V[zone.Type]
+	// SourceSaddled requires the condition source Mount to be saddled
+	// (CR 702.166), as in "if this creature is saddled". Negate models the
+	// "isn't saddled" wording.
+	SourceSaddled         bool
+	SourceTributeNotPaid  bool
+	ControllerHasMaxSpeed bool
+	TargetEnteredThisTurn opt.V[int]
+	CastFromZone          opt.V[zone.Type]
 
 	// CastDuringControllerMainPhase is satisfied when the resolving spell was
 	// cast during its controller's main phase ("Addendum — If you cast this
@@ -220,6 +224,7 @@ func (c *Condition) Empty() bool {
 		c.SourceClassLevelAtLeast == 0 &&
 		c.SourceClassLevelLessThan == 0 &&
 		!c.SourceNotMonstrous &&
+		!c.SourceSaddled &&
 		!c.SourceTributeNotPaid &&
 		!c.ControllerHasMaxSpeed &&
 		!c.TargetEnteredThisTurn.Exists &&
