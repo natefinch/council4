@@ -13,12 +13,13 @@ import (
 const compileCheckOutput = ".cardwork/compile-check"
 
 // CompileCheck generates the full card corpus and compiles every generated
-// package, failing if any card does not build. Card-generation unit tests cover
-// individual cards, but a renderer that emits a package reference without
-// registering its import produces source that still fails to compile; this
-// catches that class of codegen regression on the introducing change rather than
-// downstream when the corpus is regenerated. The generated packages live under
-// the module, so they build in-module without a replace directive.
+// package, failing if any card does not build or fails go vet. Card-generation
+// unit tests cover individual cards, but a renderer that emits a package
+// reference without registering its import produces source that still fails to
+// compile; this catches that class of codegen regression on the introducing
+// change rather than downstream when the corpus is regenerated. The generated
+// packages live under the module, so they build in-module without a replace
+// directive.
 func CompileCheck(ctx context.Context) error {
 	corpusPath, err := oracleCardsCachePath()
 	if err != nil {
@@ -38,5 +39,8 @@ func CompileCheck(ctx context.Context) error {
 	); err != nil {
 		return err
 	}
-	return runCommand(ctx, "go", "build", "./"+compileCheckOutput+"/...")
+	if err := runCommand(ctx, "go", "build", "./"+compileCheckOutput+"/..."); err != nil {
+		return err
+	}
+	return runCommand(ctx, "go", "vet", "./"+compileCheckOutput+"/...")
 }
