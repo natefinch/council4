@@ -119,6 +119,16 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 				amount: amount,
 			})
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
+		case cost.AdditionalRemoveCounterAmong:
+			if amount <= 0 {
+				return plan, false
+			}
+			removals, ok := planRemoveCounterAmong(s, playerID, additional, amount, plan.counterRemovals, prefs)
+			if !ok {
+				return plan, false
+			}
+			plan.counterRemovals = append(plan.counterRemovals, removals...)
+			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalExert:
 			if amount != 1 ||
 				source == nil ||
@@ -502,6 +512,8 @@ func AdditionalCostText(additional cost.Additional) string {
 		return "{Q}"
 	case cost.AdditionalRemoveCounter:
 		return "Remove a counter"
+	case cost.AdditionalRemoveCounterAmong:
+		return fmt.Sprintf("Remove %d %s counters from among permanents you control", AdditionalCostAmount(additional), additional.CounterKind)
 	default:
 		return "Additional cost"
 	}

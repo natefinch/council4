@@ -60,6 +60,12 @@ const (
 	AdditionalMill
 	AdditionalPutCounter
 	AdditionalCollectEvidence
+	// AdditionalRemoveCounterAmong removes a total of Amount counters of
+	// CounterKind spread across permanents the paying player controls that
+	// match the cost's permanent constraint, as required by "remove N +1/+1
+	// counters from among creatures you control." The payer chooses which
+	// matching permanents to remove counters from.
+	AdditionalRemoveCounterAmong
 )
 
 // Additional describes a typed non-mana cost printed on a spell, ability, or

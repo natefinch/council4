@@ -7,6 +7,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 )
 
@@ -564,4 +565,95 @@ func preferredDiscardCards(s State, playerID game.PlayerID, additional cost.Addi
 		}
 	}
 	return nil
+}
+
+// planRemoveCounterAmong plans the counter removals for an
+// AdditionalRemoveCounterAmong cost, spreading amount counters of the cost's
+// kind across permanents the player controls that match the cost constraint.
+// When the preferences carry an explicit selection it is honored strictly;
+// otherwise the removals are chosen greedily. It returns false when the player
+// cannot supply amount matching counters.
+func planRemoveCounterAmong(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyPlanned []counterRemoval, prefs *Preferences) ([]counterRemoval, bool) {
+	reserved := plannedCounterRemovalsBySource(alreadyPlanned, additional.CounterKind)
+	if prefs != nil && len(prefs.RemoveCounterChoices) > 0 {
+		return preferredRemoveCounterAmong(s, playerID, additional, amount, reserved, prefs)
+	}
+	return greedyRemoveCounterAmong(s, playerID, additional, amount, reserved)
+}
+
+// plannedCounterRemovalsBySource totals, per source permanent, the counters of
+// the given kind already reserved by earlier planned removals so the same
+// counters are not spent twice.
+func plannedCounterRemovalsBySource(planned []counterRemoval, kind counter.Kind) map[*game.Permanent]int {
+	reserved := make(map[*game.Permanent]int)
+	for _, removal := range planned {
+		if removal.kind == kind {
+			reserved[removal.source] += removal.amount
+		}
+	}
+	return reserved
+}
+
+// greedyRemoveCounterAmong removes counters from matching controlled permanents
+// in battlefield order, taking as many as available from each until amount is
+// reached.
+func greedyRemoveCounterAmong(s State, playerID game.PlayerID, additional cost.Additional, amount int, reserved map[*game.Permanent]int) ([]counterRemoval, bool) {
+	var removals []counterRemoval
+	remaining := amount
+	for _, permanent := range s.Battlefield() {
+		if remaining == 0 {
+			break
+		}
+		if s.EffectiveController(permanent) != playerID || !additionalCostMatchesPermanent(s, permanent, additional) {
+			continue
+		}
+		available := permanent.Counters.Get(additional.CounterKind) - reserved[permanent]
+		if available <= 0 {
+			continue
+		}
+		take := min(available, remaining)
+		removals = append(removals, counterRemoval{source: permanent, kind: additional.CounterKind, amount: take})
+		remaining -= take
+	}
+	if remaining > 0 {
+		return nil, false
+	}
+	return removals, true
+}
+
+// preferredRemoveCounterAmong honors an explicit per-counter selection from
+// prefs, consuming amount entries from RemoveCounterChoices. Each entry names a
+// permanent to lose one counter; repeated entries remove several counters from
+// the same permanent. It fails closed when an entry is invalid or insufficient
+// entries are supplied.
+func preferredRemoveCounterAmong(s State, playerID game.PlayerID, additional cost.Additional, amount int, reserved map[*game.Permanent]int, prefs *Preferences) ([]counterRemoval, bool) {
+	perSource := make(map[*game.Permanent]int)
+	var order []*game.Permanent
+	consumed := 0
+	for _, permanentID := range prefs.RemoveCounterChoices {
+		if consumed == amount {
+			break
+		}
+		permanent, ok := s.PermanentByObjectID(permanentID)
+		if !ok || s.EffectiveController(permanent) != playerID || !additionalCostMatchesPermanent(s, permanent, additional) {
+			return nil, false
+		}
+		if permanent.Counters.Get(additional.CounterKind) <= reserved[permanent]+perSource[permanent] {
+			return nil, false
+		}
+		if perSource[permanent] == 0 {
+			order = append(order, permanent)
+		}
+		perSource[permanent]++
+		consumed++
+	}
+	if consumed != amount {
+		return nil, false
+	}
+	prefs.RemoveCounterChoices = prefs.RemoveCounterChoices[consumed:]
+	removals := make([]counterRemoval, 0, len(order))
+	for _, permanent := range order {
+		removals = append(removals, counterRemoval{source: permanent, kind: additional.CounterKind, amount: perSource[permanent]})
+	}
+	return removals, true
 }

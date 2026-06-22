@@ -39,6 +39,8 @@ func (e *Engine) paymentPreferencesForCostFromSource(g *game.Game, playerID game
 			prefs.TapChoices = append(prefs.TapChoices, e.additionalCostPermanentChoices(g, playerID, additionalCost, amount, agents, log, tapExclusions...)...)
 		case cost.AdditionalReturnToHand:
 			prefs.ReturnChoices = append(prefs.ReturnChoices, e.additionalCostPermanentChoices(g, playerID, additionalCost, amount, agents, log)...)
+		case cost.AdditionalRemoveCounterAmong:
+			prefs.RemoveCounterChoices = append(prefs.RemoveCounterChoices, e.additionalCostRemoveCounterAmongChoices(g, playerID, additionalCost, amount, agents, log)...)
 		case cost.AdditionalDiscard:
 			prefs.DiscardChoices = append(prefs.DiscardChoices, e.additionalCostCardChoices(g, playerID, additionalCost, amount, nil, 0, 0, zone.None, agents, log)...)
 		case cost.AdditionalExile:
@@ -195,6 +197,47 @@ func (e *Engine) additionalCostPermanentChoices(g *game.Game, playerID game.Play
 	}
 	selected := e.chooseChoice(g, agents, request, log)
 	return selectedPaymentPermanentIDs(candidates, selected)
+}
+
+// additionalCostRemoveCounterAmongChoices gathers the per-counter selection for
+// an AdditionalRemoveCounterAmong cost. Each removable counter on a matching
+// controlled permanent becomes one selectable option, so the player may take
+// several counters from the same permanent. The returned slice names one
+// permanent per counter removed.
+func (e *Engine) additionalCostRemoveCounterAmongChoices(g *game.Game, playerID game.PlayerID, addCost cost.Additional, amount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []id.ID {
+	if amount <= 0 {
+		return nil
+	}
+	candidates := candidateSacrificePermanents(g, playerID, addCost, nil)
+	var expanded []id.ID
+	options := make([]game.ChoiceOption, 0, len(candidates))
+	for _, permanent := range candidates {
+		for range permanent.Counters.Get(addCost.CounterKind) {
+			options = append(options, game.ChoiceOption{Index: len(expanded), Label: permanentChoiceLabel(g, permanent), Card: permanentChoiceInfo(g, permanent)})
+			expanded = append(expanded, permanent.ObjectID)
+		}
+	}
+	if len(expanded) <= amount {
+		return expanded
+	}
+	request := game.ChoiceRequest{
+		Kind:             game.ChoicePayment,
+		Player:           playerID,
+		Prompt:           payment.AdditionalCostText(addCost),
+		Options:          options,
+		MinChoices:       amount,
+		MaxChoices:       amount,
+		DefaultSelection: firstChoiceIndices(amount),
+	}
+	selected := e.chooseChoice(g, agents, request, log)
+	result := make([]id.ID, 0, len(selected))
+	for _, index := range selected {
+		if index < 0 || index >= len(expanded) {
+			continue
+		}
+		result = append(result, expanded[index])
+	}
+	return result
 }
 
 func (e *Engine) additionalCostCardChoices(g *game.Game, playerID game.PlayerID, addCost cost.Additional, amount int, remainingCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog, excludedCardIDs ...id.ID) []id.ID {

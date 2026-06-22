@@ -37,6 +37,7 @@ func compileCostComponent(component parser.CostComponent) CostComponent {
 		SourceSelf:           component.SourceSelf,
 		CounterKind:          component.CounterKind,
 		CounterKindKnown:     component.CounterKindKnown,
+		RemoveCounterAmong:   component.RemoveCounterAmong,
 		SubtypesAny:          append([]types.Sub(nil), component.SubtypesAny...),
 		ExcludeSource:        component.ExcludeSource,
 		DiscardWholeHand:     component.DiscardWholeHand,

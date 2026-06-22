@@ -157,6 +157,8 @@ func renderAdditionalKind(kind cost.AdditionalKind) (string, error) {
 		return "cost.AdditionalUntap", nil
 	case cost.AdditionalRemoveCounter:
 		return "cost.AdditionalRemoveCounter", nil
+	case cost.AdditionalRemoveCounterAmong:
+		return "cost.AdditionalRemoveCounterAmong", nil
 	case cost.AdditionalReturnUnblockedAttacker:
 		return "cost.AdditionalReturnUnblockedAttacker", nil
 	case cost.AdditionalTapPermanents:
