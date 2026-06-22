@@ -857,6 +857,9 @@ func annotateRemoveCounterCostObject(component *CostComponent, object []shared.T
 	if annotateRemoveCounterAmongObject(component, object[0], kindTokens, rest, atoms) {
 		return
 	}
+	if annotateRemoveCounterPermanentObject(component, object[0], kindTokens, rest, atoms) {
+		return
+	}
 	annotateRemoveCounterSourceObject(component, object[0], kindTokens, rest, atoms)
 }
 
@@ -913,7 +916,47 @@ func annotateRemoveCounterAmongObject(component *CostComponent, amount shared.To
 	return true
 }
 
-// clearRemoveCounterAmongObject resets the object fields a partially recognized
+// annotateRemoveCounterPermanentObject recognizes the single-permanent cost
+// "Remove a <kind> counter from a permanent you control", which removes one
+// counter from a single permanent the payer controls. It reuses the spread
+// removal machinery with a fixed amount of one: a single-permanent removal is a
+// spread removal that happens to draw its one counter from one chosen
+// permanent. The amount must be a fixed count; the counter kind, when named,
+// must be a recognized kind, and the permanent constraint comes from the named
+// noun.
+func annotateRemoveCounterPermanentObject(component *CostComponent, amount shared.Token, kindTokens, rest []shared.Token, atoms Atoms) bool {
+	if len(rest) < 4 ||
+		equalWord(rest[0], "among") ||
+		!equalWord(rest[len(rest)-2], "you") ||
+		!equalWord(rest[len(rest)-1], "control") {
+		return false
+	}
+	body := rest[:len(rest)-2]
+	if !equalWord(body[0], "a") && !equalWord(body[0], "an") {
+		return false
+	}
+	typeTokens := body[1:]
+	if !annotateCostPermanentObject(component, typeTokens, atoms, false, sacrificeSubtypeFamilies) {
+		return false
+	}
+	if !costAmountAt(component, amount, atoms, false) || component.AmountValue != 1 {
+		clearRemoveCounterAmongObject(component)
+		return false
+	}
+	if len(kindTokens) > 0 {
+		kind, ok := exactCostCounterKind(kindTokens, atoms, removeCounterCostKinds())
+		if !ok {
+			clearRemoveCounterAmongObject(component)
+			return false
+		}
+		component.CounterKind = kind
+		component.CounterKindKnown = true
+	}
+	component.ObjectController = ControllerRelationYouControl
+	component.RemoveCounterAmong = true
+	return true
+}
+
 // among-removal cost may have set so the component falls back to bare and
 // lowering fails closed.
 func clearRemoveCounterAmongObject(component *CostComponent) {
