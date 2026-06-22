@@ -210,6 +210,9 @@ type CompiledModalSemantics struct {
 	MaxModes int
 	Kind     CompiledModalChoiceKind
 	Bonus    CompiledModeChoiceBonus
+	// Spree marks a Spree modal whose options each carry an additional mana cost
+	// (CR 702.171), recorded on each CompiledMode's SpreeCost.
+	Spree bool
 }
 
 // CompiledModalChoiceKind identifies exact typed modal header vocabulary.
@@ -251,6 +254,9 @@ type CompiledMode struct {
 	Text    string
 	Label   CompiledModeLabel
 	Content AbilityContent
+	// SpreeCost is the additional mana cost paid to choose this option on a Spree
+	// spell (CR 702.171). It is empty on non-Spree modes.
+	SpreeCost cost.Mana
 	// Modal is populated only on the first mode of a modal ability.
 	Modal *CompiledModalSemantics
 }

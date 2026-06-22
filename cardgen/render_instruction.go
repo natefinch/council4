@@ -63,6 +63,14 @@ func (r Renderer) renderMode(ctx *renderCtx, mode game.Mode) (string, error) {
 	if mode.Text != "" {
 		fields = append(fields, fmt.Sprintf("Text: %q,", mode.Text))
 	}
+	if mode.Cost.Exists {
+		renderedCost, err := r.renderManaCost(ctx, mode.Cost.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Cost: opt.Val(%s),", renderedCost))
+	}
 	if len(mode.Targets) > 0 {
 		elements := make([]string, 0, len(mode.Targets))
 		for i := range mode.Targets {
