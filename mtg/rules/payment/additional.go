@@ -513,6 +513,9 @@ func AdditionalCostText(additional cost.Additional) string {
 	case cost.AdditionalRemoveCounter:
 		return "Remove a counter"
 	case cost.AdditionalRemoveCounterAmong:
+		if additional.AnyCounterKind {
+			return fmt.Sprintf("Remove %d counters from among permanents you control", AdditionalCostAmount(additional))
+		}
 		return fmt.Sprintf("Remove %d %s counters from among permanents you control", AdditionalCostAmount(additional), additional.CounterKind)
 	default:
 		return "Additional cost"

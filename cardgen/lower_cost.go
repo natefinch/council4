@@ -333,20 +333,27 @@ func lowerRemoveCounterCost(
 }
 
 // lowerRemoveCounterAmongCost lowers "remove N <kind> counters from among
-// <permanents> you control." It requires a known counter kind and a fixed or X
-// amount; the permanent constraint is taken from the cost's object selector.
+// <permanents> you control" and the generic "remove N counters from among
+// <permanents> you control" (any counter kind). It requires a fixed or X amount;
+// the permanent constraint is taken from the cost's object selector. When the
+// printed cost names no counter kind the cost matches counters of any kind, set
+// via AnyCounterKind so the payment planner spreads the removal across whatever
+// counters the chosen permanents carry.
 func lowerRemoveCounterAmongCost(component compiler.CostComponent) (cost.Additional, bool) {
-	if !component.CounterKindKnown ||
-		component.ObjectController != compiler.ControllerYou {
+	if component.ObjectController != compiler.ControllerYou {
 		return cost.Additional{}, false
 	}
 	if !component.AmountKnown && !component.AmountFromX {
 		return cost.Additional{}, false
 	}
 	additional := cost.Additional{
-		Kind:        cost.AdditionalRemoveCounterAmong,
-		Text:        component.Text,
-		CounterKind: component.CounterKind,
+		Kind: cost.AdditionalRemoveCounterAmong,
+		Text: component.Text,
+	}
+	if component.CounterKindKnown {
+		additional.CounterKind = component.CounterKind
+	} else {
+		additional.AnyCounterKind = true
 	}
 	if component.AmountFromX {
 		additional.AmountFromX = true

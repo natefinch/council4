@@ -123,6 +123,13 @@ type Additional struct {
 	// an AdditionalRemoveCounter cost.
 	CounterKind counter.Kind
 
+	// AnyCounterKind, set only on an AdditionalRemoveCounterAmong cost, marks
+	// the generic "remove N counters from among <permanents> you control" cost
+	// that removes counters of any kind. CounterKind is ignored when it is set;
+	// the payment planner spreads the removal across whatever counters the
+	// chosen permanents carry.
+	AnyCounterKind bool
+
 	// RequireTapped constrains battlefield costs to tapped permanents.
 	RequireTapped bool
 

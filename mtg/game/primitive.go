@@ -611,10 +611,17 @@ type CastForFree struct {
 // card target instead; this primitive covers the choose-at-resolution form
 // where the returned card is selected rather than targeted. Fewer matching
 // cards than Amount returns all of them; no matching card returns nothing.
+//
+// Destination selects where the chosen cards go: zone.None or zone.Hand returns
+// each to its owner's hand, while zone.Battlefield reanimates each onto the
+// battlefield under Player's control ("... to the battlefield", Tayam), tapped
+// when EntryTapped is set.
 type ReturnFromGraveyard struct {
-	Player    PlayerReference
-	Selection Selection
-	Amount    Quantity
+	Player      PlayerReference
+	Selection   Selection
+	Amount      Quantity
+	Destination zone.Type
+	EntryTapped bool
 }
 
 // MassReturnFromGraveyard returns every card in Player's graveyard matching

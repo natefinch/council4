@@ -1152,6 +1152,12 @@ func (p ReturnFromGraveyard) validatePrimitive(targets []TargetSpec, checkTarget
 	if p.Amount.IsDynamic() || p.Amount.Value() < 1 {
 		return errors.New("return from graveyard requires a fixed positive amount")
 	}
+	if p.Destination != zone.None && p.Destination != zone.Hand && p.Destination != zone.Battlefield {
+		return errors.New("return from graveyard requires a hand or battlefield destination")
+	}
+	if p.EntryTapped && p.Destination != zone.Battlefield {
+		return errors.New("return from graveyard tapped entry requires a battlefield destination")
+	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 

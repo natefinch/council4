@@ -212,7 +212,7 @@ func (e *Engine) additionalCostRemoveCounterAmongChoices(g *game.Game, playerID 
 	var expanded []id.ID
 	options := make([]game.ChoiceOption, 0, len(candidates))
 	for _, permanent := range candidates {
-		for range permanent.Counters.Get(addCost.CounterKind) {
+		for range payment.RemovableAmongCounterCount(permanent, addCost) {
 			options = append(options, game.ChoiceOption{Index: len(expanded), Label: permanentChoiceLabel(g, permanent), Card: permanentChoiceInfo(g, permanent)})
 			expanded = append(expanded, permanent.ObjectID)
 		}
