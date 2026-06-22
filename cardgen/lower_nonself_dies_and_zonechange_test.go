@@ -574,6 +574,18 @@ func TestLowerPermanentZoneChangeSemanticPatterns(t *testing.T) {
 				},
 			},
 		},
+		{
+			phrase: "Whenever a creature card is put into your graveyard from anywhere, draw a card.",
+			want: game.TriggerPattern{
+				Event:       game.EventZoneChanged,
+				Player:      game.TriggerPlayerYou,
+				MatchToZone: true,
+				ToZone:      zone.Graveyard,
+				SubjectSelection: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.phrase, func(t *testing.T) {

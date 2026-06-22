@@ -221,6 +221,12 @@ func parseEnteredBattlefieldZoneChange(
 }
 
 func parsePutIntoZoneChange(tokens, destination []shared.Token, plural bool) zoneChangeResult {
+	// "put into <zone> from anywhere" leaves the origin unconstrained, so the
+	// trigger fires for moves from any zone into the destination (deaths, mill,
+	// discard, bounce-to-graveyard, and so on).
+	if prefix, ok := stripTokenSuffix(destination, "from", "anywhere"); ok {
+		return parsePutIntoFromAnywhereZoneChange(tokens, prefix, plural)
+	}
 	if prefix, ok := stripTokenSuffix(destination, "from", "the", "battlefield"); ok {
 		destination = prefix
 	}
@@ -237,6 +243,23 @@ func parsePutIntoZoneChange(tokens, destination []shared.Token, plural bool) zon
 			FromZone:      triggerEventZone(TriggerEventZoneBattlefield, zoneWordSpan(tokens, TriggerEventZoneBattlefield)),
 			MatchToZone:   true,
 			ToZone:        zone,
+		},
+		player: player,
+	}, plural)
+}
+
+func parsePutIntoFromAnywhereZoneChange(tokens, destination []shared.Token, plural bool) zoneChangeResult {
+	zone, player, ok := parseDestinationZone(destination)
+	if !ok || zone.Kind == TriggerEventZoneBattlefield {
+		return zoneChangeResult{}
+	}
+	span := shared.SpanOf(tokens)
+	return matchedZoneChange(&parsedZoneChange{
+		kind: TriggerEventZoneChange{Kind: TriggerEventZoneChangeMoved, Span: span},
+		zone: TriggerEventZoneContext{
+			Span:        span,
+			MatchToZone: true,
+			ToZone:      zone,
 		},
 		player: player,
 	}, plural)

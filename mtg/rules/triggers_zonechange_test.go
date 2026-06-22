@@ -879,3 +879,70 @@ func TestGraveyardLeaveCreatureCardTriggerFiresOnlyForCreatureCards(t *testing.T
 		t.Fatalf("top of stack = %+v, want trigger from source %v", obj, source.ObjectID)
 	}
 }
+
+// graveyardPutIntoFromAnywhereCreaturePattern models "Whenever a creature card
+// is put into your graveyard from anywhere, ..." — a card move into the
+// source controller's graveyard with no origin-zone constraint, so it fires for
+// deaths, mills, and discards alike.
+func graveyardPutIntoFromAnywhereCreaturePattern() *game.TriggerPattern {
+	return &game.TriggerPattern{
+		Event:       game.EventZoneChanged,
+		Player:      game.TriggerPlayerYou,
+		MatchToZone: true,
+		ToZone:      zone.Graveyard,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}
+}
+
+// TestGraveyardPutIntoFromAnywhereTriggerFiresOnMillAndDeath verifies the
+// "put into your graveyard from anywhere" form fires when a creature card is
+// milled (library to graveyard) and when a creature dies (battlefield to
+// graveyard), but not for a noncreature card or an opponent's graveyard.
+func TestGraveyardPutIntoFromAnywhereTriggerFiresOnMillAndDeath(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, graveyardPutIntoFromAnywhereCreaturePattern(),
+		[]game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	// A noncreature card milled into your graveyard must NOT fire.
+	land := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Wastes", Types: []types.Card{types.Land}}})
+	if !moveCardBetweenZones(g, game.Player1, land, zone.Library, zone.Graveyard) {
+		t.Fatal("moveCardBetweenZones failed for land")
+	}
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("put-into-graveyard creature trigger fired for a land card")
+	}
+
+	// A creature card milled into an opponent's graveyard must NOT fire.
+	oppCreature := addCardToLibrary(g, game.Player2, greenCreature())
+	if !moveCardBetweenZones(g, game.Player2, oppCreature, zone.Library, zone.Graveyard) {
+		t.Fatal("moveCardBetweenZones failed for opponent creature")
+	}
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("put-into-your-graveyard trigger fired for an opponent's graveyard")
+	}
+
+	// A creature card milled into your graveyard MUST fire.
+	creature := addCardToLibrary(g, game.Player1, greenCreature())
+	if !moveCardBetweenZones(g, game.Player1, creature, zone.Library, zone.Graveyard) {
+		t.Fatal("moveCardBetweenZones failed for creature")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("put-into-graveyard trigger did not fire for a milled creature card")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != source.ObjectID {
+		t.Fatalf("top of stack = %+v, want trigger from source %v", obj, source.ObjectID)
+	}
+	g.Stack.Pop()
+
+	// A creature dying (battlefield to your graveyard) MUST also fire.
+	dying := addCombatCreaturePermanent(g, game.Player1)
+	destroyPermanent(g, dying.ObjectID)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("put-into-graveyard trigger did not fire for a creature death")
+	}
+}
