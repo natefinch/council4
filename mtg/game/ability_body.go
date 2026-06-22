@@ -273,6 +273,23 @@ func BloodthirstReplacement(text string, n int) ReplacementAbility {
 	})
 }
 
+// BoastActivationCondition creates the activation condition for the Boast keyword
+// (CR 702.116): a Boast ability can be activated only if its source attacked this
+// turn (and only once each turn, which is modeled separately as a OncePerTurn
+// timing restriction). The condition matches the source permanent's own
+// attacker-declaration event in the current turn's event history.
+func BoastActivationCondition() Condition {
+	return Condition{
+		EventHistory: opt.Val(EventHistoryCondition{
+			Pattern: TriggerPattern{
+				Event:  EventAttackerDeclared,
+				Source: TriggerSourceSelf,
+			},
+			Window: EventHistoryCurrentTurn,
+		}),
+	}
+}
+
 // EntersTappedWithCountersReplacement creates a combined ETB replacement for
 // "This permanent enters tapped with N <kind> counters on it." (the Vivid land
 // cycle). The permanent enters tapped and with the listed counters.

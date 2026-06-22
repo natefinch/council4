@@ -38,7 +38,7 @@ func lowerActivationShell(
 			"the executable source backend requires an exact typed activation cost",
 		)
 	}
-	if !rulesFreeAbilityWordLabel(ability.AbilityWord) {
+	if !isBoastAbilityWord(ability.AbilityWord) && !rulesFreeAbilityWordLabel(ability.AbilityWord) {
 		return loweredActivationShell{}, activationDiagnostic(
 			original,
 			"unsupported activation ability word",
@@ -84,6 +84,22 @@ func lowerActivationShell(
 			"unsupported activation zone",
 			"the executable source backend cannot lower this activation zone of function",
 		)
+	}
+	if isBoastAbilityWord(ability.AbilityWord) {
+		// Boast (CR 702.116) carries its activation restrictions in the keyword
+		// itself, not in rules text: it may be activated only if its source
+		// attacked this turn and only once each turn. Reject any Boast ability
+		// that also declares an explicit timing or condition, or that does not
+		// function from the battlefield, so unexpected shapes stay unsupported.
+		if timing != game.NoTimingRestriction || activationCondition.Exists || zoneOfFunction != zone.Battlefield {
+			return loweredActivationShell{}, activationDiagnostic(
+				original,
+				"unsupported Boast ability",
+				"the executable source backend supports only a battlefield Boast ability with no other activation restriction",
+			)
+		}
+		timing = game.OncePerTurn
+		activationCondition = opt.Val(game.BoastActivationCondition())
 	}
 	if !channelActivationSupported(ability, zoneOfFunction, additionalCosts) {
 		return loweredActivationShell{}, activationDiagnostic(
@@ -205,6 +221,10 @@ func lowerActivationShell(
 		result.manaCost = opt.Val(manaCost)
 	}
 	return result, nil
+}
+
+func isBoastAbilityWord(label string) bool {
+	return strings.EqualFold(label, "Boast")
 }
 
 func channelActivationSupported(ability compiler.CompiledAbility, functionZone zone.Type, additionalCosts []cost.Additional) bool {
