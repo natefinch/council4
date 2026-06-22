@@ -19,6 +19,11 @@ const (
 	SpellCastPermissionRuleEffect
 	// SpellCastPermissionFlashback is the permission supplied by flashback.
 	SpellCastPermissionFlashback
+	// SpellCastPermissionEscape is the permission supplied by escape. Like
+	// flashback it authorizes casting only from the graveyard via the escape
+	// alternative cost, but the spell is not exiled afterward so it can be
+	// escaped again.
+	SpellCastPermissionEscape
 )
 
 // SpellRequest bundles all parameters needed to check or pay spell costs.

@@ -302,6 +302,9 @@ func parseAbility(
 		} else if flashback, costPhrase, ok := flashbackAlternativeCostClause(source, tokens, dash); ok {
 			ability.AlternativeCost = flashback
 			ability.costPhrase = &costPhrase
+		} else if escape, costPhrase, ok := escapeAlternativeCostClause(source, tokens, dash); ok {
+			ability.AlternativeCost = escape
+			ability.costPhrase = &costPhrase
 		} else {
 			phrase := phraseFromTokens(source, tokens[:dash])
 			ability.AbilityWord = &AbilityWordClause{

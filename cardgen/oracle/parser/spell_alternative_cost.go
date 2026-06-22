@@ -26,6 +26,12 @@ const (
 	// cost. The cost itself is carried through the ability's CostSyntax; this
 	// kind only marks the paragraph as granting Flashback for that cost.
 	SpellAlternativeCostFlashback
+	// SpellAlternativeCostEscape is the alternative-cost form of Escape, written
+	// "Escape—<cost>, Exile N cards from your graveyard." with an em dash before
+	// a compound cost. Like Flashback the cost is carried through the ability's
+	// CostSyntax; this kind only marks the paragraph as granting Escape for that
+	// cost (CR 702.139).
+	SpellAlternativeCostEscape
 )
 
 // SpellAlternativeCostCondition identifies a condition on an alternative spell cost.
@@ -127,6 +133,31 @@ func flashbackAlternativeCostClause(source string, tokens []shared.Token, dash i
 	return &SpellAlternativeCost{
 		Span: shared.SpanOf(tokens),
 		Kind: SpellAlternativeCostFlashback,
+	}, phraseFromTokens(source, clause), true
+}
+
+// escapeAlternativeCostClause recognizes the em-dash Escape form
+// "Escape—<cost>, Exile N cards from your graveyard.", where the pre-dash label
+// is exactly the Escape keyword and the post-dash body is the compound escape
+// cost (its mana cost plus the graveyard-exile additional cost). The cost tokens
+// become the paragraph's cost phrase so the shared cost machinery types them;
+// the returned span covers the whole paragraph so its label and dash are
+// accounted for in coverage. It returns ok=false when the label is not Escape or
+// the body is empty.
+func escapeAlternativeCostClause(source string, tokens []shared.Token, dash int) (*SpellAlternativeCost, Phrase, bool) {
+	if !slices.Equal(normalizedWords(tokens[:dash]), []string{"escape"}) {
+		return nil, Phrase{}, false
+	}
+	clause := tokens[dash+1:]
+	if period := shared.TopLevelIndex(clause, shared.Period); period >= 0 {
+		clause = clause[:period]
+	}
+	if len(clause) == 0 {
+		return nil, Phrase{}, false
+	}
+	return &SpellAlternativeCost{
+		Span: shared.SpanOf(tokens),
+		Kind: SpellAlternativeCostEscape,
 	}, phraseFromTokens(source, clause), true
 }
 

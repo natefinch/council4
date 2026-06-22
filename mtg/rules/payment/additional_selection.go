@@ -110,6 +110,9 @@ func chooseExileCards(s State, playerID game.PlayerID, additional cost.Additiona
 		if chosenIDs[cardID] {
 			continue
 		}
+		if additional.ExcludeSource && cardID == sourceCardID {
+			continue
+		}
 		card, ok := s.CardInstance(cardID)
 		if !ok || !additionalCostMatchesCard(s.CardFace(card, game.FaceFront), additional) {
 			continue
@@ -135,7 +138,7 @@ func preferredExileCards(s State, playerID game.PlayerID, additional cost.Additi
 	var consumed int
 	for _, cardID := range prefs.ExileChoices {
 		card, ok := s.CardInstance(cardID)
-		if !ok || !zoneContainsCard(s, playerID, selectionZone, cardID) || chosenIDs[cardID] || !additionalCostMatchesCard(s.CardFace(card, game.FaceFront), additional) {
+		if !ok || !zoneContainsCard(s, playerID, selectionZone, cardID) || chosenIDs[cardID] || !additionalCostMatchesCard(s.CardFace(card, game.FaceFront), additional) || (additional.ExcludeSource && cardID == sourceCardID) {
 			return nil
 		}
 		chosen = append(chosen, cardZoneSelection{cardID: cardID, zone: selectionZone})

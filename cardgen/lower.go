@@ -828,6 +828,9 @@ func lowerSpellAlternativeCost(cardName string, ability compiler.CompiledAbility
 	if ability.AlternativeCost != nil && ability.AlternativeCost.Kind == compiler.AlternativeCostFlashback {
 		return lowerFlashbackAlternativeCost(cardName, ability)
 	}
+	if ability.AlternativeCost != nil && ability.AlternativeCost.Kind == compiler.AlternativeCostEscape {
+		return lowerEscapeAlternativeCost(cardName, ability)
+	}
 	if ability.AlternativeCost != nil &&
 		ability.AlternativeCost.Kind == compiler.AlternativeCostOverload &&
 		ability.AlternativeCost.ReplaceTargetWithEach &&
@@ -940,7 +943,58 @@ func lowerFlashbackAlternativeCost(cardName string, ability compiler.CompiledAbi
 	}, nil
 }
 
-// lowerPitchAlternativeCost lowers a Force of Will pitch alternative cost into a
+// lowerEscapeAlternativeCost lowers the em-dash Escape form
+// "Escape—<cost>, Exile N cards from your graveyard." into a
+// SimpleKeyword(Escape) grant plus an Escape alternative cost carrying the
+// compound escape cost typed by the shared cost machinery (its mana cost plus
+// the graveyard-exile additional cost). The runtime gates graveyard escape
+// casting on the keyword grant and pays the alternative's mana and additional
+// costs. Unlike Flashback the spell is not exiled, so it can be escaped again.
+// It fails closed when the cost is unrecognized.
+func lowerEscapeAlternativeCost(cardName string, ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {
+	if ability.Cost == nil || len(ability.Cost.Components) == 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0 {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported alternative spell cost",
+			"the executable source backend could not recognize the escape cost",
+		)
+	}
+	manaCost, additionalCosts, ok := lowerActivationCostComponents(cardName, ability.Cost)
+	if !ok {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported alternative spell cost",
+			"the executable source backend does not yet lower this escape cost",
+		)
+	}
+	alternative := cost.Alternative{
+		Label:           "Escape",
+		AdditionalCosts: additionalCosts,
+	}
+	if len(manaCost) > 0 {
+		alternative.ManaCost = opt.Val(manaCost)
+	}
+	return abilityLowering{
+		staticAbilities: []loweredStaticAbility{{
+			Body: game.StaticAbility{
+				KeywordAbilities: []game.KeywordAbility{game.SimpleKeyword{Kind: game.Escape}},
+			},
+		}},
+		alternativeCosts: []cost.Alternative{alternative},
+		consumed: semanticConsumption{
+			cost:            true,
+			alternativeCost: true,
+			references:      len(ability.Content.References),
+		},
+		sourceSpans: []shared.Span{ability.Span},
+	}, nil
+}
+
 // free (no-mana) alternative whose additional costs exile a colored card from
 // hand and optionally pay life, gated by the optional not-your-turn condition.
 func lowerPitchAlternativeCost(ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {

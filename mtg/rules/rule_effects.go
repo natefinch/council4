@@ -814,6 +814,9 @@ func castPermissionsForZone(g *game.Game, playerID game.PlayerID, cardID id.ID, 
 	if face == game.FaceFront && cardOK && cardHasFlashbackAlternative(card) {
 		permissions = append(permissions, payment.SpellCastPermissionFlashback)
 	}
+	if face == game.FaceFront && cardOK && cardHasEscapeAlternative(card) {
+		permissions = append(permissions, payment.SpellCastPermissionEscape)
+	}
 	if hasCastFromZoneRuleEffect(g, playerID, cardID, sourceZone, face) {
 		permissions = append(permissions, payment.SpellCastPermissionRuleEffect)
 	}
@@ -1023,4 +1026,12 @@ func cardHasFlashbackAlternative(card *game.CardInstance) bool {
 		return true
 	}
 	return slices.ContainsFunc(frontDef.AlternativeCosts, isFlashbackAlternative)
+}
+
+func cardHasEscapeAlternative(card *game.CardInstance) bool {
+	frontDef := cardFaceOrDefault(card, game.FaceFront)
+	if !frontDef.HasKeyword(game.Escape) {
+		return false
+	}
+	return slices.ContainsFunc(frontDef.AlternativeCosts, isEscapeAlternative)
 }
