@@ -21,11 +21,22 @@ type ChoiceKey string
 // and by CardCondition references to linked objects.
 type LinkedKey string
 
+// IntRange is an inclusive integer interval [Min, Max].
+type IntRange struct {
+	Min int
+	Max int
+}
+
 // InstructionResultGate gates an Instruction on a previously published ResultKey.
 type InstructionResultGate struct {
 	Key       ResultKey
 	Accepted  TriState
 	Succeeded TriState
+	// AmountRange, when set, additionally requires the published result's amount
+	// to fall within the inclusive interval. It implements a die-roll outcome
+	// table ("Roll a d20. 1—9 | ...; 10—19 | ...; 20 | ...") where each row's
+	// instructions are gated on the rolled value's range.
+	AmountRange opt.V[IntRange]
 }
 
 // Instruction wraps one Primitive with sequencing envelope metadata.

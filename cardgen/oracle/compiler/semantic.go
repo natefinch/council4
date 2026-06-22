@@ -1661,6 +1661,13 @@ type CompiledEffect struct {
 	// effect ("roll a d20" sets DieSides to 20). It is zero for every other
 	// effect kind.
 	DieSides int
+	// DiceRow marks an effect that belongs to a die-roll outcome-table row. Its
+	// instruction is gated on the rolled value falling within the inclusive
+	// interval [DiceRowMin, DiceRowMax]. It is false for every effect that is not
+	// part of an outcome table.
+	DiceRow    bool
+	DiceRowMin int
+	DiceRowMax int
 }
 
 // CompiledManaSpendRider is the typed semantic form of a mana-spend rider.

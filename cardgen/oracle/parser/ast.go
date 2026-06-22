@@ -121,6 +121,13 @@ type Ability struct {
 	Reminders        []Delimited                  `json:"-"`
 	Quoted           []Delimited                  `json:"-"`
 	Modal            *Modal                       `json:",omitempty"`
+	// DiceTable is the recognized die-roll outcome table that follows this
+	// ability's "Roll a d<N>." line ("1—9 | <effect>", "10—19 | <effect>",
+	// "20 | <effect>"). It is nil for abilities without an outcome table. Each
+	// row carries its inclusive result interval and its own resolving sentences;
+	// downstream stages consume these typed values instead of re-reading the
+	// row wording or the em-dash/pipe glyphs.
+	DiceTable *DiceTable `json:",omitempty"`
 	// ReadAheadSacrificeChapter is the final lore chapter named by a recognized
 	// "Read ahead" reminder ("Sacrifice after <chapter>"), or 0 when the reminder
 	// omits the sacrifice clause. The chapter is a typed semantic value derived
@@ -1050,6 +1057,28 @@ type Modal struct {
 	ChoiceKnown bool                   `json:",omitempty"`
 	ChoiceKind  ModalChoiceKind        `json:",omitempty"`
 	ChoiceBonus ModalChoiceBonusSyntax `json:",omitzero"`
+}
+
+// DiceTable is a recognized die-roll outcome table: a "Roll a d<N>." line
+// followed by result rows that each map an inclusive interval of the rolled
+// value to a resolving effect.
+type DiceTable struct {
+	// DieSides is the number of faces of the rolled die (the N in "d<N>"). An
+	// open-ended row ("15+ |") uses DieSides as its inclusive upper bound.
+	DieSides int            `json:",omitempty"`
+	Rows     []DiceTableRow `json:",omitempty"`
+}
+
+// DiceTableRow is one outcome row of a DiceTable: an inclusive result interval
+// [Min, Max] and the resolving sentences that apply when the roll lands in it.
+type DiceTableRow struct {
+	Span      shared.Span    `json:"-"`
+	Text      string         `json:",omitempty"`
+	Tokens    []shared.Token `json:"-"`
+	Min       int            `json:",omitempty"`
+	Max       int            `json:",omitempty"`
+	Sentences []Sentence     `json:",omitempty"`
+	Atoms     Atoms          `json:",omitzero"`
 }
 
 // ModalChoiceKind identifies exact modal header vocabulary whose range alone
