@@ -60,6 +60,8 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.ControllerLibrarySizeAtLeast = condition.Threshold
 	case compiler.ConditionPredicateControllerLifeExactly:
 		result.ControllerLifeExactly = opt.Val(condition.Threshold)
+	case compiler.ConditionPredicateSpellXAtLeast:
+		result.SpellXAtLeast = condition.Threshold
 	case compiler.ConditionPredicateAnyOpponentPoisonAtLeast:
 		result.AnyOpponentPoisonAtLeast = condition.Threshold
 	case compiler.ConditionPredicateAnyPlayerLifeAtMost:
@@ -229,6 +231,7 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 				ctx == conditionContextEffectGate
 		case compiler.ConditionPredicateCastDuringControllerMainPhase,
 			compiler.ConditionPredicateSpellWasKicked,
+			compiler.ConditionPredicateSpellXAtLeast,
 			compiler.ConditionPredicateSourceSaddled,
 			compiler.ConditionPredicateSourceNotSaddled:
 			return ctx == conditionContextEffectGate

@@ -89,6 +89,7 @@ const (
 	ConditionPredicateControllerLibrarySizeAtLeast                     ConditionPredicateKind = "ConditionPredicateControllerLibrarySizeAtLeast"
 	ConditionPredicateControllerLifeExactly                            ConditionPredicateKind = "ConditionPredicateControllerLifeExactly"
 	ConditionPredicateControllerGainedLifeThisTurnAtLeast              ConditionPredicateKind = "ConditionPredicateControllerGainedLifeThisTurnAtLeast"
+	ConditionPredicateSpellXAtLeast                                    ConditionPredicateKind = "ConditionPredicateSpellXAtLeast"
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -578,10 +579,31 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeDrawCardReplacementCondition,
 		recognizeCastTimingCondition,
 		recognizeAttackersAttackingControllerCondition,
+		recognizeSpellXCondition,
 	} {
 		if clause, ok := recognize(body, atoms); ok {
 			return clause, true
 		}
+	}
+	return ConditionClause{}, false
+}
+
+// recognizeSpellXCondition matches the resolving-spell value-of-X gate "X is
+// <n> or more" / "X is <n> or greater" ("If X is 10 or more, ...", the Finale
+// cycle). It reads the chosen value of the spell's {X} cost, so it gates only a
+// per-effect branch of a resolving spell. It fails closed on any other wording.
+func recognizeSpellXCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "x", "is")
+	if !ok || len(rest) < 1 {
+		return ConditionClause{}, false
+	}
+	value, ok := conditionNumberValue(rest[0])
+	if !ok {
+		return ConditionClause{}, false
+	}
+	tail := rest[1:]
+	if tokenWordsEqual(tail, "or", "more") || tokenWordsEqual(tail, "or", "greater") {
+		return ConditionClause{Predicate: ConditionPredicateSpellXAtLeast, Threshold: value}, true
 	}
 	return ConditionClause{}, false
 }

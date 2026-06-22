@@ -29,6 +29,7 @@ func conditionParametersNegative(cond *game.Condition) bool {
 		cond.AnyOpponentPoisonAtLeast < 0 ||
 		cond.ControllerHandSizeExactly.Exists && cond.ControllerHandSizeExactly.Val < 0 ||
 		cond.ControllerLibrarySizeAtLeast < 0 ||
+		cond.SpellXAtLeast < 0 ||
 		cond.ControllerLifeExactly.Exists && cond.ControllerLifeExactly.Val < 0 ||
 		cond.OpponentCountAtLeast < 0 ||
 		cond.ControllerGraveyardCardCountAtLeast < 0 ||
@@ -80,6 +81,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.ControllerLibrarySizeAtLeast > 0 {
 		player, ok := playerByID(g, ctx.controller)
 		matches = matches && ok && cardInstanceCount(g, player.Library.All()) >= cond.ControllerLibrarySizeAtLeast
+	}
+	if cond.SpellXAtLeast > 0 {
+		matches = matches && ctx.obj != nil && ctx.obj.XValue >= cond.SpellXAtLeast
 	}
 	if cond.ControllerLifeExactly.Exists {
 		player, ok := playerByID(g, ctx.controller)

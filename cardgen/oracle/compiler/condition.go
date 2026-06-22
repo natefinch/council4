@@ -90,6 +90,9 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 	case parser.ConditionPredicateControllerLifeExactly:
 		condition.Predicate = ConditionPredicateControllerLifeExactly
 		condition.Threshold = clause.Threshold
+	case parser.ConditionPredicateSpellXAtLeast:
+		condition.Predicate = ConditionPredicateSpellXAtLeast
+		condition.Threshold = clause.Threshold
 	case parser.ConditionPredicateAnyOpponentPoisonAtLeast:
 		condition.Predicate = ConditionPredicateAnyOpponentPoisonAtLeast
 		condition.Threshold = clause.Threshold

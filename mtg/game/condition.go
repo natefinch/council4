@@ -147,6 +147,12 @@ type Condition struct {
 	// gained at least this much total life so far this turn ("if you gained 3 or
 	// more life this turn"; Angelic Accord). It is zero (disabled) otherwise.
 	ControllerGainedLifeThisTurnAtLeast int
+
+	// SpellXAtLeast requires the resolving spell's chosen value of {X} to be at
+	// least this value ("if X is N or more", the Finale cycle). It is evaluated
+	// against the resolving stack object's captured X value. Zero disables the
+	// predicate.
+	SpellXAtLeast int
 }
 
 // ControlPlayerScope selects which players' battlefields a control-count
@@ -259,7 +265,8 @@ func (c *Condition) Empty() bool {
 		c.AttackersAttackingControllerAtLeast == 0 &&
 		c.ControllerLibrarySizeAtLeast == 0 &&
 		!c.ControllerLifeExactly.Exists &&
-		c.ControllerGainedLifeThisTurnAtLeast == 0
+		c.ControllerGainedLifeThisTurnAtLeast == 0 &&
+		c.SpellXAtLeast == 0
 }
 
 // EventHistoryWindow selects which turn's event log an EventHistoryCondition
