@@ -103,6 +103,10 @@ func conditionBoundaries(tokens []shared.Token, triggered, ifAbleExcluded bool, 
 			i = end - 1
 			continue
 		}
+		if playFromTopPayLifeRiderConditionAt(tokens, i) {
+			i = end - 1
+			continue
+		}
 		if conditionLeaveBattlefieldExileReplacementAt(tokens, i) {
 			i = end - 1
 			continue

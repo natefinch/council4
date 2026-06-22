@@ -453,6 +453,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectChooseNewTargets
 	case parser.EffectCastAsThoughFlash:
 		return EffectCastAsThoughFlash
+	case parser.EffectPlayFromLibraryTop:
+		return EffectPlayFromLibraryTop
 	case parser.EffectCantCastSpells:
 		return EffectCantCastSpells
 	case parser.EffectPreventDamage:

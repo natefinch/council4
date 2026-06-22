@@ -635,6 +635,9 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 	if effect.SpellColorless {
 		fields = append(fields, "SpellColorless: true,")
 	}
+	if effect.PayLifeEqualToManaValue {
+		fields = append(fields, "PayLifeEqualToManaValue: true,")
+	}
 	fields = append(fields, renderRuleEffectChosenSubtypeField(effect)...)
 	if len(effect.SpellSubtypes) > 0 {
 		spellSubtypes, err := renderSubtypeSlice(ctx, effect.SpellSubtypes)

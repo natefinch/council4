@@ -788,6 +788,9 @@ func lowerExecutableAbility(
 			if ability.Content.Effects[i].CopyMayChooseNewTargets {
 				spans = append(spans, ability.Content.Effects[i].CopyChooseNewTargetsRiderSpan)
 			}
+			if ability.Content.Effects[i].PlayFromTopPayLife {
+				spans = append(spans, ability.Content.Effects[i].PlayFromTopPayLifeRiderSpan)
+			}
 		}
 		for _, target := range ability.Content.Targets {
 			spans = append(spans, target.Span)

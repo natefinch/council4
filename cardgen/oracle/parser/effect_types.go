@@ -88,6 +88,14 @@ const (
 	// (Borne Upon a Wind, Emergence Zone), letting the controller cast spells at
 	// instant speed for the rest of the turn (CR 702.8 / 601.3e).
 	EffectCastAsThoughFlash EffectKind = "EffectCastAsThoughFlash"
+	// EffectPlayFromLibraryTop models the controller-scoped, turn-scoped grant
+	// "until end of turn, you may look at the top card of your library any time
+	// and you may play cards from the top of your library." (Gwenom,
+	// Remorseless), letting the controller privately look at and play (lands or
+	// cast spells) the top card of their library for the rest of the turn. The
+	// optional "If you cast a spell this way, pay life equal to its mana value
+	// rather than pay its mana cost." rider sets PlayFromTopPayLife.
+	EffectPlayFromLibraryTop EffectKind = "EffectPlayFromLibraryTop"
 	// EffectCantCastSpells models the one-shot, turn-scoped player cast
 	// prohibition "<players> can't cast spells this turn." (Silence: "Your
 	// opponents can't cast spells this turn."), forbidding the affected players
@@ -1746,6 +1754,17 @@ type EffectSyntax struct {
 	// the lowerer can credit them toward source coverage. It is set only when
 	// ReturnAsEnchantment is true.
 	ReturnAsEnchantmentRiderSpan shared.Span `json:"-"`
+	// PlayFromTopPayLife reports that an EffectPlayFromLibraryTop grant is
+	// followed by the "If you cast a spell this way, pay life equal to its mana
+	// value rather than pay its mana cost." rider, so spells cast from the top of
+	// the library via the grant pay life equal to their mana value instead of
+	// their mana cost. The rider is a separate zero-effect sentence the parser
+	// folds onto the grant effect.
+	PlayFromTopPayLife bool `json:",omitempty"`
+	// PlayFromTopPayLifeRiderSpan covers the pay-life rider sentence's semantic
+	// tokens so the lowerer can credit them toward source coverage. It is set
+	// only when PlayFromTopPayLife is true.
+	PlayFromTopPayLifeRiderSpan shared.Span `json:"-"`
 	// AmassSubtype is the creature subtype named by an EffectAmass keyword action
 	// ("Amass Orcs N" -> Orc, "Amass Zombies N" -> Zombie). The amassed Army
 	// token enters as a 0/0 black creature with this subtype and Army. The older

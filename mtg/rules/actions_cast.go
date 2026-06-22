@@ -86,7 +86,9 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		panic("validated spell targets could not be segmented")
 	}
 	var prefs *payment.Preferences
-	if cast.Overloaded {
+	payLifeFromTop := sourceZone == zone.Library && castFromZoneRequiresPayLife(g, playerID, card.ID, sourceZone, cast.Face)
+	switch {
+	case cast.Overloaded:
 		overloadCost := append(cost.Mana(nil), spellDef.Overload.Val.Cost...)
 		if cast.KickerPaid {
 			kicker, _ := spellKicker(spellDef)
@@ -103,7 +105,22 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 			agents,
 			log,
 		)
-	} else {
+	case payLifeFromTop:
+		emptyMana := cost.Mana{}
+		additional := append([]cost.Additional(nil), spellDef.AdditionalCosts...)
+		additional = append(additional, payLifeManaValueAlternativeCost(spellDef, cast.XValue).AdditionalCosts...)
+		prefs = e.paymentPreferencesForCostFromSource(
+			g,
+			playerID,
+			&emptyMana,
+			additional,
+			cast.XValue,
+			card.ID,
+			sourceZone,
+			agents,
+			log,
+		)
+	default:
 		prefs = e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, cast.Face, spellDef, cast.XValue, agents, log)
 	}
 	permissions := castPermissionsForZone(g, playerID, card.ID, sourceZone, cast.Face)
@@ -123,6 +140,8 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	}
 	if cast.Overloaded {
 		request.Alternative = opt.Val(overloadAlternativeCost(spellDef.Overload.Val.Cost))
+	} else if payLifeFromTop {
+		request.Alternative = opt.Val(payLifeManaValueAlternativeCost(spellDef, cast.XValue))
 	}
 	paymentResult, ok := paymentOrch.paySpellCosts(g, request)
 	if !ok {
@@ -596,6 +615,8 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 	}
 	if overloaded {
 		request.Alternative = opt.Val(overloadAlternativeCost(spellDef.Overload.Val.Cost))
+	} else if sourceZone == zone.Library && castFromZoneRequiresPayLife(g, playerID, card.ID, sourceZone, face) {
+		request.Alternative = opt.Val(payLifeManaValueAlternativeCost(spellDef, xValue))
 	}
 	if !paymentOrch.canPaySpellCosts(g, request) {
 		return false
@@ -608,6 +629,28 @@ func overloadAlternativeCost(manaCost cost.Mana) cost.Alternative {
 		Label:    "Overload",
 		ManaCost: opt.Val(append(cost.Mana(nil), manaCost...)),
 	}
+}
+
+// payLifeManaValueAlternativeCost is the alternative cost imposed when a spell is
+// cast from the top of the library under a permission that replaces its mana cost
+// with paying life equal to its mana value ("If you cast a spell this way, pay
+// life equal to its mana value rather than pay its mana cost.", Bolas's Citadel,
+// Gwenom, Remorseless). The mana cost is emptied and a pay-life additional cost
+// equal to the cast spell's mana value (counting the announced X) takes its place;
+// the spell's own additional costs are appended by the payment planner.
+func payLifeManaValueAlternativeCost(spellDef *game.CardDef, xValue int) cost.Alternative {
+	alt := cost.Alternative{
+		Label:    "Pay life equal to mana value",
+		ManaCost: opt.Val(cost.Mana{}),
+	}
+	if manaValue := stackManaValue(spellDef, xValue); manaValue > 0 {
+		alt.AdditionalCosts = []cost.Additional{{
+			Kind:   cost.AdditionalPayLife,
+			Text:   "pay life equal to its mana value",
+			Amount: manaValue,
+		}}
+	}
+	return alt
 }
 
 func overloadSpellDef(card *game.CardDef) *game.CardDef {

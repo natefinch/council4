@@ -391,6 +391,9 @@ func parseConditionClauses(tokens []shared.Token, atoms Atoms) []ConditionClause
 		if entersAsCopyCounterRiderConditionAt(tokens, i) || punisherUnlessClauseAt(tokens, i) {
 			continue
 		}
+		if playFromTopPayLifeRiderConditionAt(tokens, i) {
+			continue
+		}
 		end := conditionClauseEnd(tokens, i)
 		if clause, ok := parseConditionClause(tokens[i:end], width, intro, atoms); ok {
 			clause.Span = shared.SpanOf(tokens[i:end])

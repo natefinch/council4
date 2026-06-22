@@ -1234,6 +1234,7 @@ const (
 	EffectLoseGame
 	EffectChooseNewTargets
 	EffectCastAsThoughFlash
+	EffectPlayFromLibraryTop
 	EffectCantCastSpells
 	EffectWinGame
 	EffectPreventDamage
@@ -1790,6 +1791,14 @@ type CompiledEffect struct {
 	// it toward source coverage.
 	ReturnAsEnchantment          bool
 	ReturnAsEnchantmentRiderSpan shared.Span
+	// PlayFromTopPayLife mirrors the parser flag for an EffectPlayFromLibraryTop
+	// grant carrying the "If you cast a spell this way, pay life equal to its
+	// mana value rather than pay its mana cost." rider, so spells cast from the
+	// top of the library via the grant pay life equal to their mana value instead
+	// of their mana cost. PlayFromTopPayLifeRiderSpan covers the rider sentence so
+	// lowering credits it toward source coverage.
+	PlayFromTopPayLife          bool
+	PlayFromTopPayLifeRiderSpan shared.Span
 	// AdditionalCombatPhase mirrors the parser flag for an "After this [main]
 	// phase, there is an additional combat phase[ followed by an additional main
 	// phase]." effect (Aggravated Assault, Aurelia the Warleader, World at War):

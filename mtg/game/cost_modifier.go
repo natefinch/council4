@@ -462,6 +462,13 @@ type RuleEffect struct {
 	// every other kind.
 	SpellChosenSubtypeFrom ChoiceKey
 
+	// PayLifeEqualToManaValue makes spells cast under a
+	// RuleEffectCastSpellsFromZone permission cost life equal to the cast spell's
+	// mana value instead of its mana cost ("If you cast a spell this way, pay life
+	// equal to its mana value rather than pay its mana cost.", Bolas's Citadel,
+	// Gwenom, Remorseless). It is unused for every other kind.
+	PayLifeEqualToManaValue bool
+
 	// AffectedSelection optionally narrows the permanents a group-scoped rule
 	// effect applies to beyond the AffectedController and PermanentTypes filters,
 	// expressing the filtered controlled-creature mass statics ("Blue creatures

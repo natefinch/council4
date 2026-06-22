@@ -967,6 +967,12 @@ type Sentence struct {
 	// copy-stack-object effect. Reference and coverage scans treat its tokens as
 	// belonging to that copy effect rather than as an unrecognized sibling.
 	CopyChooseNewTargetsRider bool `json:",omitempty"`
+	// PlayFromTopPayLifeRider reports that this sentence is a credited "If you
+	// cast a spell this way, pay life equal to its mana value rather than pay its
+	// mana cost." rider folded onto a preceding play-from-library-top grant.
+	// Reference and coverage scans treat its tokens as belonging to that grant
+	// rather than as an unrecognized sibling.
+	PlayFromTopPayLifeRider bool `json:",omitempty"`
 }
 
 // StaticRuleSubjectKind identifies the source object constrained by a simple
