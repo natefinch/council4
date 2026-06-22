@@ -791,6 +791,68 @@ func handleExileFromHand(r *effectResolver, prim game.ExileFromHand) effectResol
 	return res
 }
 
+// handleExileFromGraveyard exiles up to prim.Amount cards a player chooses from
+// their own graveyard that match prim.Selection, used for the non-target
+// graveyard wording "(you may) exile a <filter> card from your graveyard"
+// (Masked Vandal, the Imoen cycle, Aphemia, ...). A "you may" wrapper is
+// expressed by the enclosing instruction's Optional flag, so the engine has
+// already gathered consent before this runs; here the player chooses which
+// matching card to exile, if any. res.succeeded is set when at least one card is
+// exiled, so an "if you do" gate on the published result resolves only when the
+// player actually exiled a card. With no matching card, nothing is exiled.
+func handleExileFromGraveyard(r *effectResolver, prim game.ExileFromGraveyard) effectResolved {
+	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return res
+	}
+	var candidates []id.ID
+	for _, cardID := range player.Graveyard.All() {
+		card, cardOK := r.game.GetCardInstance(cardID)
+		if !cardOK {
+			continue
+		}
+		if handCardMatchesSelection(r.game, card, prim.Selection, playerID) {
+			candidates = append(candidates, cardID)
+		}
+	}
+	amount := min(res.amount, len(candidates))
+	if amount <= 0 {
+		return res
+	}
+	options := make([]game.ChoiceOption, len(candidates))
+	for i, cardID := range candidates {
+		options[i] = game.ChoiceOption{
+			Index: i,
+			Label: cardChoiceLabel(r.game, cardID),
+			Card:  cardChoiceInfo(r.game, cardID),
+		}
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           playerID,
+		Prompt:           "Choose a card to exile",
+		Options:          options,
+		MinChoices:       amount,
+		MaxChoices:       amount,
+		DefaultSelection: firstChoiceIndices(amount),
+	}, r.log)
+	for _, idx := range selected {
+		if idx < 0 || idx >= len(candidates) {
+			continue
+		}
+		cardID := candidates[idx]
+		if moveCardBetweenZones(r.game, playerID, cardID, zone.Graveyard, zone.Exile) {
+			res.succeeded = true
+		}
+	}
+	return res
+}
+
 // handlePutFromHand puts up to prim.Amount cards a player chooses from hand that
 // match prim.Selection onto the battlefield under that player's control, used for
 // ramp / cheat-into-play wording such as "put a land card from your hand onto the

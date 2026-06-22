@@ -101,10 +101,11 @@ const (
 	PrimitiveRollDie
 	PrimitiveRemoveFromCombat
 	PrimitiveChooseDiscardFromHand
+	PrimitiveExileFromGraveyard
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveChooseDiscardFromHand) + 1
+const primitiveKindCount = int(PrimitiveExileFromGraveyard) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -583,6 +584,23 @@ type ExileFromHand struct {
 	Selection     Selection
 	Amount        Quantity
 	PublishLinked LinkedKey
+}
+
+// ExileFromGraveyard has Player choose up to Amount cards from their own
+// graveyard that match Selection and exiles each, modeling the non-target
+// graveyard wording "(you may) exile a <filter> card from your graveyard"
+// (Masked Vandal, the Imoen cycle, Aphemia, ...). The targeted form ("exile
+// target ... card from your graveyard") lowers to a card target instead; this
+// primitive covers the choose-at-resolution form where the exiled card is
+// selected rather than targeted. The enclosing Instruction's Optional flag
+// expresses the "you may" wrapper, so the engine gathers consent before this
+// runs; here the player chooses which matching card to exile, if any. Fewer
+// matching cards than Amount exiles all of them; no matching card exiles
+// nothing.
+type ExileFromGraveyard struct {
+	Player    PlayerReference
+	Selection Selection
+	Amount    Quantity
 }
 
 // PutFromHand has Player choose up to Amount cards from their hand that match

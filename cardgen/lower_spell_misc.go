@@ -223,6 +223,9 @@ func lowerFixedExileSpell(
 	if content, ok := lowerTargetedGraveyardExile(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerControllerGraveyardChoiceExile(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerPlayerGraveyardExile(ctx); ok {
 		return content, nil
 	}
@@ -842,7 +845,71 @@ func lowerTargetedGraveyardExile(ctx contentCtx) (game.AbilityContent, bool) {
 	}.Ability(), true
 }
 
-// lowerMultiTargetExileSpell lowers exile abilities whose single permanent
+// lowerControllerGraveyardChoiceExile lowers the non-target "exile a <filter>
+// card from your graveyard" wording, where the exiled card is chosen from the
+// controller's own graveyard at resolution rather than targeted (Masked Vandal,
+// the Imoen cycle, Aphemia, Forgotten Harvest, ...). The targeted form ("exile
+// target ... card from your graveyard") lowers through lowerTargetedGraveyardExile
+// instead. It produces one game.ExileFromGraveyard instruction whose Selection
+// carries the same card filter the targeted and search paths reconstruct, so an
+// enclosing "you may X. If you do, Y" wrapper marks that single instruction
+// Optional and gates Y on the player having exiled a card. It is card-name-blind
+// and fails closed (ok=false) on any shape it does not fully model — a reference
+// or target, a non-graveyard source, a non-"your" controller scope, a selector
+// qualifier it cannot express, or a non-fixed amount — so an unmodeled wording
+// falls through to the generic exile path's diagnostic rather than lowering to a
+// silently-wrong instruction.
+func lowerControllerGraveyardChoiceExile(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectExile ||
+		effect.Negated ||
+		effect.Divided ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		effect.Context != parser.EffectContextController ||
+		effect.FromZone != zone.Graveyard {
+		return game.AbilityContent{}, false
+	}
+	selector := effect.Selector
+	if selector.Zone != zone.Graveyard ||
+		selector.Controller != compiler.ControllerYou ||
+		selector.All ||
+		selector.Another ||
+		selector.Other ||
+		selector.Attacking ||
+		selector.Blocking ||
+		selector.Tapped ||
+		selector.Untapped {
+		return game.AbilityContent{}, false
+	}
+	if !effect.Amount.Known ||
+		effect.Amount.RangeKnown ||
+		effect.Amount.VariableX ||
+		effect.Amount.DynamicKind != 0 ||
+		effect.Amount.Value < 1 {
+		return game.AbilityContent{}, false
+	}
+	selection, ok := cardSelectionForSelector(selector)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.ExileFromGraveyard{
+			Player:    game.ControllerReference(),
+			Selection: selection,
+			Amount:    game.Fixed(effect.Amount.Value),
+		},
+	}}}.Ability(), true
+}
+
 // target has a plural ("Exile two target creatures.") or optional ("Exile up to
 // two target artifacts.", "Exile up to one target permanent.") cardinality. It
 // emits one multi-target spec carrying the chosen MinTargets/MaxTargets range
