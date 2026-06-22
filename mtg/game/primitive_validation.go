@@ -1158,6 +1158,14 @@ func (p ReturnFromGraveyard) validatePrimitive(targets []TargetSpec, checkTarget
 	if p.EntryTapped && p.Destination != zone.Battlefield {
 		return errors.New("return from graveyard tapped entry requires a battlefield destination")
 	}
+	if p.MaxTotalManaValue.Exists {
+		if p.Destination != zone.Battlefield {
+			return errors.New("return from graveyard total mana value cap requires a battlefield destination")
+		}
+		if p.MaxTotalManaValue.Val < 0 {
+			return errors.New("return from graveyard total mana value cap must be non-negative")
+		}
+	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 

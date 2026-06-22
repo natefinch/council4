@@ -80,6 +80,11 @@ type ChoiceRequest struct {
 	// valid answer. It must contain option indices valid for this request.
 	DefaultSelection []int
 
+	// MaxTotalManaValue, when set, caps the combined mana value of the selected
+	// options. A selection is valid only when the sum of its options' card mana
+	// values does not exceed this cap. Options without card info contribute zero.
+	MaxTotalManaValue opt.V[int]
+
 	// Subject carries the public characteristics of the single card a decision
 	// concerns, when there is one — for example the card being placed by a scry
 	// or surveil prompt. It is unset for choices that are not about one specific
