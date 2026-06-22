@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestLowerCharacteristicDefiningPowerToughness(t *testing.T) {
@@ -108,6 +109,30 @@ func TestLowerCharacteristicDefiningToughnessOffset(t *testing.T) {
 	if face.DynamicToughness.Val.Kind != game.DynamicValueCardTypesAmongAllGraveyards ||
 		face.DynamicToughness.Val.Offset != 1 {
 		t.Fatalf("dynamic toughness = %+v, want card-types-among-all-graveyards plus 1", face.DynamicToughness.Val)
+	}
+}
+
+func TestLowerCharacteristicDefiningLandSubtypeCount(t *testing.T) {
+	t.Parallel()
+	star := "*"
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Korlash, Heir to Blackblade",
+		Layout:     "normal",
+		TypeLine:   "Legendary Creature — Zombie",
+		ManaCost:   "{2}{B}{B}",
+		Power:      &star,
+		Toughness:  &star,
+		OracleText: "Korlash's power and toughness are each equal to the number of Swamps you control.",
+	})
+	if !face.DynamicPower.Exists || !face.DynamicToughness.Exists {
+		t.Fatalf("dynamic power/toughness not set: %+v", face)
+	}
+	if face.DynamicPower.Val.Kind != game.DynamicValueControllerLandSubtypeCount ||
+		face.DynamicPower.Val.Subtype != types.Swamp {
+		t.Fatalf("dynamic power = %+v, want land-subtype count of Swamp", face.DynamicPower.Val)
+	}
+	if face.DynamicToughness.Val.Subtype != types.Swamp {
+		t.Fatalf("dynamic toughness subtype = %q, want Swamp", face.DynamicToughness.Val.Subtype)
 	}
 }
 

@@ -135,6 +135,9 @@ func renderDynamicValue(value game.DynamicValue) string {
 	if value.Offset != 0 {
 		fields += fmt.Sprintf(", Offset: %d", value.Offset)
 	}
+	if value.Subtype != "" {
+		fields += fmt.Sprintf(", Subtype: %s", SubtypeToLiteral(string(value.Subtype), []string{"Land"}))
+	}
 	return fmt.Sprintf("game.DynamicValue{Kind: %s%s}", kind, fields)
 }
 
@@ -160,6 +163,24 @@ func dynamicValueKindLiteral(kind game.DynamicValueKind) string {
 		return "game.DynamicValueCreatureCardsInAllGraveyards"
 	case game.DynamicValueCardTypesAmongAllGraveyards:
 		return "game.DynamicValueCardTypesAmongAllGraveyards"
+	case game.DynamicValueControllerCreatureCardsInGraveyard:
+		return "game.DynamicValueControllerCreatureCardsInGraveyard"
+	case game.DynamicValueControllerInstantOrSorceryCardsInGraveyard:
+		return "game.DynamicValueControllerInstantOrSorceryCardsInGraveyard"
+	case game.DynamicValueControllerLandCardsInGraveyard:
+		return "game.DynamicValueControllerLandCardsInGraveyard"
+	case game.DynamicValueControllerCardTypesInGraveyard:
+		return "game.DynamicValueControllerCardTypesInGraveyard"
+	case game.DynamicValueControllerPermanentCardsInGraveyard:
+		return "game.DynamicValueControllerPermanentCardsInGraveyard"
+	case game.DynamicValueControllerLandSubtypeCount:
+		return "game.DynamicValueControllerLandSubtypeCount"
+	case game.DynamicValueControllerBasicLandTypeCount:
+		return "game.DynamicValueControllerBasicLandTypeCount"
+	case game.DynamicValueControllerLifeTotal:
+		return "game.DynamicValueControllerLifeTotal"
+	case game.DynamicValueAllPlayersHandSize:
+		return "game.DynamicValueAllPlayersHandSize"
 	default:
 		return "game.DynamicValueNone"
 	}

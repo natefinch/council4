@@ -58,6 +58,16 @@ const (
 	StaticDeclarationDynamicValueAllGraveyardsSize            StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueAllGraveyardsSize"
 	StaticDeclarationDynamicValueCreatureCardsInAllGraveyards StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueCreatureCardsInAllGraveyards"
 	StaticDeclarationDynamicValueCardTypesAmongAllGraveyards  StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueCardTypesAmongAllGraveyards"
+
+	StaticDeclarationDynamicValueControllerCreatureCardsInGraveyard         StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerCreatureCardsInGraveyard"
+	StaticDeclarationDynamicValueControllerInstantOrSorceryCardsInGraveyard StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerInstantOrSorceryCardsInGraveyard"
+	StaticDeclarationDynamicValueControllerLandCardsInGraveyard             StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerLandCardsInGraveyard"
+	StaticDeclarationDynamicValueControllerCardTypesInGraveyard             StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerCardTypesInGraveyard"
+	StaticDeclarationDynamicValueControllerPermanentCardsInGraveyard        StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerPermanentCardsInGraveyard"
+	StaticDeclarationDynamicValueControllerLandSubtypeCount                 StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerLandSubtypeCount"
+	StaticDeclarationDynamicValueControllerBasicLandTypeCount               StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerBasicLandTypeCount"
+	StaticDeclarationDynamicValueControllerLifeTotal                        StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerLifeTotal"
+	StaticDeclarationDynamicValueAllPlayersHandSize                         StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueAllPlayersHandSize"
 )
 
 // StaticDeclarationSubjectKind identifies the affected group named by a typed
@@ -290,6 +300,11 @@ type StaticDeclarationSyntax struct {
 	// a "<source>'s power and toughness are each equal to <count>" declaration
 	// sets the source object's power and toughness equal to.
 	DynamicValue StaticDeclarationDynamicValueKind `json:",omitempty"`
+
+	// DynamicValueSubtype carries the land subtype counted by a
+	// StaticDeclarationDynamicValueControllerLandSubtypeCount declaration ("the
+	// number of Swamps you control"). It is empty for every other count kind.
+	DynamicValueSubtype types.Sub `json:"-"`
 
 	// DynamicSetsPower and DynamicSetsToughness record which characteristics a
 	// characteristic-defining power/toughness declaration sets. "power and

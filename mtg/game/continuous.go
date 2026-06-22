@@ -25,6 +25,15 @@ const (
 	DynamicValueAllGraveyardsSize
 	DynamicValueCreatureCardsInAllGraveyards
 	DynamicValueCardTypesAmongAllGraveyards
+	DynamicValueControllerCreatureCardsInGraveyard
+	DynamicValueControllerInstantOrSorceryCardsInGraveyard
+	DynamicValueControllerLandCardsInGraveyard
+	DynamicValueControllerCardTypesInGraveyard
+	DynamicValueControllerPermanentCardsInGraveyard
+	DynamicValueControllerLandSubtypeCount
+	DynamicValueControllerBasicLandTypeCount
+	DynamicValueControllerLifeTotal
+	DynamicValueAllPlayersHandSize
 )
 
 // DynamicValue is data for a characteristic-defining numeric value.
@@ -35,6 +44,10 @@ type DynamicValue struct {
 	// "<count> plus N" characteristic-defining toughness (CR 208.2, Tarmogoyf's
 	// "its toughness is equal to that number plus 1").
 	Offset int
+	// Subtype selects the land subtype counted by
+	// DynamicValueControllerLandSubtypeCount ("the number of Swamps you
+	// control"). It is unused by every other kind.
+	Subtype types.Sub
 }
 
 // CopyableValues records the copiable printed/effective values copied in layer

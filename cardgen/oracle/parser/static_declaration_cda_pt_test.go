@@ -143,6 +143,90 @@ func TestParseCharacteristicDefiningPowerToughnessForms(t *testing.T) {
 	}
 }
 
+func TestParseCharacteristicDefiningPowerToughnessNewCounts(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name        string
+		source      string
+		card        string
+		wantValue   StaticDeclarationDynamicValueKind
+		wantSubtype TriggerSubtype
+	}{
+		{
+			name:      "creature cards in your graveyard",
+			source:    "This creature's power and toughness are each equal to the number of creature cards in your graveyard.",
+			wantValue: StaticDeclarationDynamicValueControllerCreatureCardsInGraveyard,
+		},
+		{
+			name:      "instant and sorcery cards in your graveyard",
+			source:    "This creature's power and toughness are each equal to the number of instant and sorcery cards in your graveyard.",
+			wantValue: StaticDeclarationDynamicValueControllerInstantOrSorceryCardsInGraveyard,
+		},
+		{
+			name:      "land cards in your graveyard",
+			source:    "This creature's power is equal to the number of land cards in your graveyard.",
+			wantValue: StaticDeclarationDynamicValueControllerLandCardsInGraveyard,
+		},
+		{
+			name:      "permanent cards in your graveyard",
+			source:    "This creature's power and toughness are each equal to the number of permanent cards in your graveyard.",
+			wantValue: StaticDeclarationDynamicValueControllerPermanentCardsInGraveyard,
+		},
+		{
+			name:      "card types among cards in your graveyard",
+			source:    "This creature's power and toughness are each equal to the number of card types among cards in your graveyard.",
+			wantValue: StaticDeclarationDynamicValueControllerCardTypesInGraveyard,
+		},
+		{
+			name:      "basic land types among lands you control",
+			source:    "This creature's power and toughness are each equal to the number of basic land types among lands you control.",
+			wantValue: StaticDeclarationDynamicValueControllerBasicLandTypeCount,
+		},
+		{
+			name:      "life total",
+			source:    "This creature's power and toughness are each equal to your life total.",
+			wantValue: StaticDeclarationDynamicValueControllerLifeTotal,
+		},
+		{
+			name:      "all players hands",
+			source:    "This creature's power and toughness are each equal to the total number of cards in all players' hands.",
+			wantValue: StaticDeclarationDynamicValueAllPlayersHandSize,
+		},
+		{
+			name:        "swamps you control",
+			source:      "Korlash's power and toughness are each equal to the number of Swamps you control.",
+			card:        "Korlash",
+			wantValue:   StaticDeclarationDynamicValueControllerLandSubtypeCount,
+			wantSubtype: "Swamp",
+		},
+		{
+			name:        "forests you control",
+			source:      "This creature's power and toughness are each equal to the number of Forests you control.",
+			wantValue:   StaticDeclarationDynamicValueControllerLandSubtypeCount,
+			wantSubtype: "Forest",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, tc.source, Context{CardName: tc.card})
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want exactly one", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.Kind != StaticDeclarationCharacteristicDefiningPowerToughness {
+				t.Fatalf("kind = %q, want characteristic-defining power/toughness", declaration.Kind)
+			}
+			if declaration.DynamicValue != tc.wantValue {
+				t.Fatalf("dynamic value = %q, want %q", declaration.DynamicValue, tc.wantValue)
+			}
+			if string(declaration.DynamicValueSubtype) != string(tc.wantSubtype) {
+				t.Fatalf("dynamic value subtype = %q, want %q", declaration.DynamicValueSubtype, tc.wantSubtype)
+			}
+		})
+	}
+}
+
 func TestParseCharacteristicDefiningPowerToughnessFailsClosed(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
