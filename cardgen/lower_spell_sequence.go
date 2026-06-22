@@ -243,8 +243,11 @@ func lowerOrderedEffectSequence(
 		var diagnostic *shared.Diagnostic
 		// An "Otherwise," else branch is mutually exclusive with the conditional
 		// effect it follows, so an EventPermanent "it" inside it cannot denote a
-		// sibling clause's product and may bind the triggering permanent.
-		allowEventPronoun := effect.Connection == parser.EffectConnectionOtherwise
+		// sibling clause's product and may bind the triggering permanent. The
+		// first clause likewise has no prior instruction whose product an
+		// EventPermanent pronoun could denote, so its "it" must be the triggering
+		// permanent ("Whenever ~ attacks, put a +1/+1 counter on it, then ...").
+		allowEventPronoun := effect.Connection == parser.EffectConnectionOtherwise || i == 0
 		if delayedContent, handled, failed := lowerDelayedSequenceClause(ctx.content.Effects, i, effectAbility, sequence); handled {
 			if failed {
 				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — delayed-target sacrifice not linkable")

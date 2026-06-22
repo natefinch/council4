@@ -75,11 +75,12 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 	}
 	var recipient opt.V[game.PlayerReference]
 	var targets []game.TargetSpec
-	var counterObject game.ObjectReference
-	sourceCounterAmount := effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount
+	var amountObject game.ObjectReference
+	amountReferencesObject := effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount ||
+		effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower
 	switch {
 	case controllerRecipient:
-		if sourceCounterAmount {
+		if amountReferencesObject {
 			if len(ctx.content.References) != 1 {
 				return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 			}
@@ -88,7 +89,7 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 			if !ok {
 				return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 			}
-			counterObject = object
+			amountObject = object
 		} else if len(ctx.content.References) != 0 {
 			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 		}
@@ -124,7 +125,7 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
-	amount, ok := createTokenAmount(ctx, &effect, counterObject)
+	amount, ok := createTokenAmount(ctx, &effect, amountObject)
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
@@ -235,7 +236,7 @@ func createTokenDurationOK(duration compiler.DurationKind) bool {
 // permanent's counters (last-known information once it has died), as for
 // Chasm Skulker's death-triggered Squid tokens. Source-power counts and any
 // unrepresented dynamic kind fail closed.
-func createTokenAmount(ctx contentCtx, effect *compiler.CompiledEffect, counterObject game.ObjectReference) (game.Quantity, bool) {
+func createTokenAmount(ctx contentCtx, effect *compiler.CompiledEffect, amountObject game.ObjectReference) (game.Quantity, bool) {
 	switch {
 	case effect.Amount.Known:
 		if effect.Amount.Value < 1 {
@@ -251,12 +252,10 @@ func createTokenAmount(ctx contentCtx, effect *compiler.CompiledEffect, counterO
 		}
 		return game.Dynamic(dynamic), true
 	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
-		if effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower {
-			return game.Quantity{}, false
-		}
 		object := game.ObjectReference{}
-		if effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount {
-			object = counterObject
+		if effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount ||
+			effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower {
+			object = amountObject
 		}
 		dynamic, ok := lowerDynamicAmount(effect.Amount, object)
 		if !ok {
