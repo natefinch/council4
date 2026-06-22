@@ -95,6 +95,13 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 			}
 		}
 		targetTokens := tokens[start:end]
+		if selection.Kind == SelectionUnknown && selectionIsBareTokenTarget(selection) {
+			// A bare "target token" names any token permanent. parseSelection
+			// leaves Kind unset for the token noun (it carries no card type), so
+			// promote it to a permanent selection here, in the target-only path,
+			// without disturbing token creation which shares parseSelection.
+			selection.Kind = SelectionPermanent
+		}
 		if conjunctiveTypeTarget(selection) {
 			selection.ConjunctiveTypes = true
 		}
@@ -109,6 +116,29 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 		})
 	}
 	return targets
+}
+
+// selectionIsBareTokenTarget reports whether a target selection names a plain
+// "token" with no narrowing card type, subtype, color, supertype, or keyword
+// (e.g. "target token you control"). Such a selection denotes any token
+// permanent; controller, "another", and combat qualifiers stay compatible with
+// the permanent target it promotes to. Any type-bearing wording ("token
+// creature", "Treasure token") sets one of these fields and is excluded.
+func selectionIsBareTokenTarget(selection SelectionSyntax) bool {
+	return selection.TokenOnly &&
+		!selection.NonToken &&
+		!selection.Colorless &&
+		!selection.Multicolored &&
+		selection.Keyword == KeywordUnknown &&
+		selection.ExcludedKeyword == KeywordUnknown &&
+		len(selection.RequiredTypesAny) == 0 &&
+		len(selection.ExcludedTypes) == 0 &&
+		len(selection.Supertypes) == 0 &&
+		len(selection.ExcludedSupertypes) == 0 &&
+		len(selection.ColorsAny) == 0 &&
+		len(selection.ExcludedColors) == 0 &&
+		len(selection.SubtypesAny) == 0 &&
+		len(selection.ExcludedSubtypes) == 0
 }
 
 // isControlRiderTarget reports whether the "target" token at index i opens an
@@ -702,7 +732,7 @@ func permanentSelectionQualifierWords(selection SelectionSyntax) ([]string, bool
 	}
 	switch {
 	case hasNoun:
-		words = append(words, noun)
+		words = append(words, tokenQualifiedNoun(selection, noun)...)
 	case len(selection.SubtypesAny) == 1:
 	default:
 		return nil, false
@@ -728,6 +758,22 @@ func permanentSelectionQualifierWords(selection SelectionSyntax) ([]string, bool
 	}
 	words = append(words, numericWords...)
 	return words, true
+}
+
+// tokenQualifiedNoun applies a selection's token adjective to its permanent
+// noun, reconstructing the canonical Oracle wording. A bare "permanent" noun
+// restricted to tokens prints as the single word "token" (Oracle never writes
+// "token permanent"); a typed noun takes the adjective as a prefix ("token
+// creature"). Selections without the token adjective return the noun unchanged.
+func tokenQualifiedNoun(selection SelectionSyntax, noun string) []string {
+	switch {
+	case selection.TokenOnly && selection.Kind == SelectionPermanent:
+		return []string{"token"}
+	case selection.TokenOnly:
+		return []string{"token", noun}
+	default:
+		return []string{noun}
+	}
 }
 
 // exactControlledBounceSelectionText reconstructs the canonical Oracle phrase for

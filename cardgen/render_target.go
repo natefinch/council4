@@ -237,6 +237,9 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 	if predicate.PowerGreaterThanSource {
 		fields = append(fields, "PowerGreaterThanSource: true,")
 	}
+	if predicate.TokenOnly {
+		fields = append(fields, "TokenOnly: true,")
+	}
 	if len(fields) == 0 {
 		return "", false, nil
 	}

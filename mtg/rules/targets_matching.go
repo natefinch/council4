@@ -477,6 +477,13 @@ func permanentTypeMatchesSpec(g *game.Game, spec *game.TargetSpec, permanent *ga
 	if strings.Contains(normalized, "permanent") && !containsAnyPermanentTypeConstraint(normalized) {
 		return len(effectivePermanentValues(g, permanent).types) > 0
 	}
+	// A bare "token" target ("target token you control") carries no card-type
+	// keyword and selects any token permanent. The TokenOnly predicate has
+	// already been enforced through matchSelection, so any permanent with a type
+	// satisfies the type check here.
+	if strings.Contains(normalized, "token") && !containsAnyPermanentTypeConstraint(normalized) {
+		return len(effectivePermanentValues(g, permanent).types) > 0
+	}
 	allowedTypes := permanentTypesForConstraint(normalized)
 	if len(allowedTypes) == 0 {
 		return false
