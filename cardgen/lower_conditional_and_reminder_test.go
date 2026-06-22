@@ -433,6 +433,7 @@ func TestLowerAbilityWordConditions(t *testing.T) {
 		wants      []string
 	}{
 		{"threshold static", "Threshold Bear", "Creature — Bear", "Threshold — This creature gets +2/+2 as long as there are seven or more cards in your graveyard.", []string{"ControllerGraveyardCardCountAtLeast: 7"}},
+		{"graveyard creature-card static", "Graveyard Bear", "Creature — Bear", "This creature gets +2/+2 as long as there are six or more creature cards in your graveyard.", []string{"ControllerGraveyardCardOfTypeCountAtLeast: 6", "ControllerGraveyardCountCardType:          types.Creature"}},
 		{"delirium static", "Delirium Bear", "Creature — Bear", "Delirium — This creature gets +1/+1 and has menace as long as there are four or more card types among cards in your graveyard.", []string{"ControllerGraveyardCardTypeCountAtLeast: 4", "AffectedSource: true"}},
 		{"domain static", "Domain Bear", "Creature — Bear", "Domain — This creature gets +1/+1 for each basic land type among lands you control.", []string{"PowerDeltaDynamic: opt.Val(game.DynamicAmount{", "ToughnessDeltaDynamic: opt.Val(game.DynamicAmount{", "game.DynamicAmountControllerBasicLandTypeCount"}},
 		{"domain spell", "Tribal Flames", "Sorcery", "Domain — Tribal Flames deals X damage to any target, where X is the number of basic land types among lands you control.", []string{"game.DynamicAmountControllerBasicLandTypeCount"}},
@@ -476,7 +477,6 @@ func TestLowerAbilityWordConditions(t *testing.T) {
 
 func TestLowerAbilityWordConditionsFailClosed(t *testing.T) {
 	tests := []string{
-		"Threshold — This creature gets +2/+2 as long as there are six or more creature cards in your graveyard.",
 		"Delirium — This creature gets +2/+2 as long as there are three or more card types among cards in an opponent's graveyard.",
 		"Metalcraft — This creature gets +2/+2 as long as you control two or more artifacts with banding.",
 		"Hellbent — {1}: Draw a card. Activate only if you have one or fewer cards in hand.",

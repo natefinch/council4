@@ -102,6 +102,13 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.ControllerGraveyardCardCountAtLeast = condition.Threshold
 	case compiler.ConditionPredicateControllerGraveyardCardTypeCountAtLeast:
 		result.ControllerGraveyardCardTypeCountAtLeast = condition.Threshold
+	case compiler.ConditionPredicateControllerGraveyardCardOfTypeCountAtLeast:
+		cardTypes, ok := lowerTriggerCardTypes([]compiler.TriggerCardType{condition.GraveyardCountCardType})
+		if !ok || len(cardTypes) != 1 {
+			return game.Condition{}, false
+		}
+		result.ControllerGraveyardCardOfTypeCountAtLeast = condition.Threshold
+		result.ControllerGraveyardCountCardType = cardTypes[0]
 	case compiler.ConditionPredicateControllerCreaturePowerDiversityAtLeast:
 		result.ControllerCreaturePowerDiversityAtLeast = condition.Threshold
 	case compiler.ConditionPredicateAttackersAttackingControllerAtLeast:
@@ -217,6 +224,7 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateControllerCreatedTokenThisTurn,
 			compiler.ConditionPredicateControllerGraveyardCardCountAtLeast,
 			compiler.ConditionPredicateControllerGraveyardCardTypeCountAtLeast,
+			compiler.ConditionPredicateControllerGraveyardCardOfTypeCountAtLeast,
 			compiler.ConditionPredicateControllerCreaturePowerDiversityAtLeast,
 			compiler.ConditionPredicateAnyOpponentPoisonAtLeast,
 			compiler.ConditionPredicateControllerLibrarySizeAtLeast,

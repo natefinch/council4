@@ -114,6 +114,8 @@ func TestParseConditionPredicateMeaning(t *testing.T) {
 		{"opponent count", "you have two or more opponents", ConditionPredicateOpponentCountAtLeast, 2},
 		{"graveyard cards", "there are six or more cards in your graveyard", ConditionPredicateGraveyardCardCountAtLeast, 6},
 		{"graveyard card types", "there are three or more card types among cards in your graveyard", ConditionPredicateGraveyardCardTypeCountAtLeast, 3},
+		{"graveyard creature cards", "twenty or more creature cards are in your graveyard", ConditionPredicateGraveyardCardOfTypeCountAtLeast, 20},
+		{"graveyard land cards", "seven or more land cards are in your graveyard", ConditionPredicateGraveyardCardOfTypeCountAtLeast, 7},
 		{"creature power diversity", "you control three or more creatures with different powers", ConditionPredicateCreaturePowerDiversityAtLeast, 3},
 		{"opponent poison counters", "an opponent has three or more poison counters", ConditionPredicateAnyOpponentPoisonAtLeast, 3},
 		{"controller hand size exactly", "you have exactly seven cards in hand", ConditionPredicateControllerHandSizeExactly, 7},
@@ -141,6 +143,21 @@ func TestParseConditionPredicateMeaning(t *testing.T) {
 				t.Fatalf("clause = %#v, want predicate %s threshold %d", clause, test.predicate, test.threshold)
 			}
 		})
+	}
+}
+
+func TestParseConditionGraveyardCardOfTypeCount(t *testing.T) {
+	t.Parallel()
+	clause := parseSingleConditionClause(t,
+		"twenty or more creature cards are in your graveyard")
+	if clause.Predicate != ConditionPredicateGraveyardCardOfTypeCountAtLeast {
+		t.Fatalf("predicate = %s, want graveyard-card-of-type count", clause.Predicate)
+	}
+	if clause.Threshold != 20 {
+		t.Fatalf("threshold = %d, want 20", clause.Threshold)
+	}
+	if clause.GraveyardCountCardType != TriggerCardTypeCreature {
+		t.Fatalf("card type = %s, want creature", clause.GraveyardCountCardType)
 	}
 }
 
@@ -855,7 +872,6 @@ func TestParseConditionNearMissFailsClosed(t *testing.T) {
 		"you control a creature with deathtouch and flying",
 		"you control two or fewer creatures with the same power",
 		"you have exactly seven cards in your graveyard",
-		"there are six or more creature cards in your graveyard",
 		"there are three or more card types among cards in an opponent's graveyard",
 		"you control a creature with banding",
 		"a player has 5 or more life",

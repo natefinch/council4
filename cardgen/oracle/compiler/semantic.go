@@ -609,6 +609,11 @@ const (
 	// Finale cycle). It gates a per-effect branch against the resolving stack
 	// object's captured X value.
 	ConditionPredicateSpellXAtLeast
+	// ConditionPredicateControllerGraveyardCardOfTypeCountAtLeast is satisfied
+	// when the controller's graveyard holds at least Threshold cards of the
+	// GraveyardCountCardType card type ("if twenty or more creature cards are in
+	// your graveyard", Mortal Combat).
+	ConditionPredicateControllerGraveyardCardOfTypeCountAtLeast
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -873,6 +878,13 @@ type CompiledCondition struct {
 	// artifact or creature you control", Ozolith, the Shattered Spire). It is
 	// empty for the unrestricted "a permanent you control" form.
 	CounterRecipientTypesAny []TriggerCardType
+
+	// GraveyardCountCardType carries the single card type counted by a
+	// ConditionPredicateControllerGraveyardCardOfTypeCountAtLeast clause ("if
+	// twenty or more creature cards are in your graveyard", Mortal Combat).
+	// Threshold carries the minimum count. It is TriggerCardTypeUnknown for other
+	// clauses.
+	GraveyardCountCardType TriggerCardType
 }
 
 // TargetCardinality is an inclusive target count range.

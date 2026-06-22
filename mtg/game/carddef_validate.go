@@ -1291,6 +1291,9 @@ func (v *cardDefValidator) validateCondition(faceName, path string, condition *C
 	if condition.ControllerGraveyardCardTypeCountAtLeast < 0 {
 		v.add(faceName, appendPath(path, "ControllerGraveyardCardTypeCountAtLeast"), CardDefIssueInvalidCondition, "graveyard-card-type threshold cannot be negative")
 	}
+	if condition.ControllerGraveyardCardOfTypeCountAtLeast < 0 {
+		v.add(faceName, appendPath(path, "ControllerGraveyardCardOfTypeCountAtLeast"), CardDefIssueInvalidCondition, "graveyard-card-of-type threshold cannot be negative")
+	}
 	if condition.ControllerBasicLandTypeCountAtLeast < 0 {
 		v.add(faceName, appendPath(path, "ControllerBasicLandTypeCountAtLeast"), CardDefIssueInvalidCondition, "basic-land-type threshold cannot be negative")
 	}
