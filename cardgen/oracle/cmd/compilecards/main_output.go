@@ -271,7 +271,7 @@ func cardDefNames(file *ast.File) []string {
 		}
 		for _, specification := range general.Specs {
 			values, ok := specification.(*ast.ValueSpec)
-			if !ok || !(isCardDef(values) || isCardDefBuilderCall(values, builders)) {
+			if !ok || (!isCardDef(values) && !isCardDefBuilderCall(values, builders)) {
 				continue
 			}
 			for _, name := range values.Names {
