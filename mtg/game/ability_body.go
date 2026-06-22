@@ -347,6 +347,30 @@ func DevourReplacement(text string, multiplier int) ReplacementAbility {
 	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
+// DevourTypeReplacement creates the typed Devour as-enters replacement (CR
+// 702.81) whose controller may sacrifice any number of permanents of cardType
+// they control (such as "Devour artifact N" or "Devour land N") instead of
+// creatures, the permanent entering with multiplier +1/+1 counters on it for
+// each one sacrificed. multiplier must be positive and cardType non-empty.
+func DevourTypeReplacement(text string, multiplier int, cardType types.Card) ReplacementAbility {
+	replacement := etbReplacement(text)
+	replacement.EntryDevourMultiplier = multiplier
+	replacement.EntryDevourType = cardType
+	return ReplacementAbility{Text: text, Replacement: replacement}
+}
+
+// DevourSubtypeReplacement creates the typed Devour as-enters replacement (CR
+// 702.81) whose controller may sacrifice any number of permanents with subtype
+// they control (such as "Devour Food N") instead of creatures, the permanent
+// entering with multiplier +1/+1 counters on it for each one sacrificed.
+// multiplier must be positive and subtype non-empty.
+func DevourSubtypeReplacement(text string, multiplier int, subtype types.Sub) ReplacementAbility {
+	replacement := etbReplacement(text)
+	replacement.EntryDevourMultiplier = multiplier
+	replacement.EntryDevourSubtype = subtype
+	return ReplacementAbility{Text: text, Replacement: replacement}
+}
+
 // TributeReplacement creates the as-enters replacement that the Tribute keyword
 // abbreviates (CR 702.110): as this creature enters, an opponent of its
 // controller's choice may put count +1/+1 counters on it. If they do, the

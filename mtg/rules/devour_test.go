@@ -51,7 +51,47 @@ func TestDevourSacrificesCreaturesForCounters(t *testing.T) {
 	}
 }
 
-// TestDevourDeclineSacrifice verifies that declining to sacrifice (the default)
+// TestDevourTypedSacrificesOnlyMatchingPermanents verifies that a typed Devour
+// replacement ("Devour artifact N") only offers matching permanents to sacrifice
+// and grants its multiplier per sacrificed permanent. A creature controlled by
+// the same player must not be a valid sacrifice for an artifact Devour.
+func TestDevourTypedSacrificesOnlyMatchingPermanents(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	artifact := addCombatPermanent(g, game.Player1, artifactFodderDef("Treasure Pile"))
+	creature := addCombatPermanent(g, game.Player1, fodderCreatureDef("Bystander"))
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{0}}}}
+	permanent := enterRiotCreature(t, g, engine, devourArtifactDef(3), agents)
+	if got := permanent.Counters.Get(counter.PlusOnePlusOne); got != 3 {
+		t.Fatalf("devour counters = %d, want 3", got)
+	}
+	if _, ok := permanentByObjectID(g, artifact.ObjectID); ok {
+		t.Fatal("sacrificed artifact is still on the battlefield")
+	}
+	if _, ok := permanentByObjectID(g, creature.ObjectID); !ok {
+		t.Fatal("creature was sacrificed by an artifact devour")
+	}
+}
+
+func devourArtifactDef(multiplier int) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:      "Devourer",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 0}),
+		Toughness: opt.Val(game.PT{Value: 0}),
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.DevourTypeReplacement("As this creature enters, you may sacrifice any number of artifacts, then it enters with 3 +1/+1 counters on it for each artifact sacrificed.", multiplier, types.Artifact),
+		},
+	}}
+}
+
+func artifactFodderDef(name string) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  name,
+		Types: []types.Card{types.Artifact},
+	}}
+}
+
 // leaves the entering creature with no counters and the other creatures intact.
 func TestDevourDeclineSacrifice(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

@@ -347,6 +347,14 @@ type ReplacementEffect struct {
 	// It is zero for every non-Devour replacement.
 	EntryDevourMultiplier int
 
+	// EntryDevourType and EntryDevourSubtype refine a Devour replacement to a
+	// typed permanent variant (CR 702.81): the controller may sacrifice any
+	// number of permanents matching this card type (artifact, land) or subtype
+	// (Food) instead of creatures. Both are zero for the plain creature form,
+	// which sacrifices creatures.
+	EntryDevourType    types.Card
+	EntryDevourSubtype types.Sub
+
 	// EntryTributeCount marks a Tribute as-enters replacement (CR 702.110) and
 	// carries its +1/+1 counter count N. As the permanent enters, a chosen
 	// opponent may put N counters on it; doing so sets the permanent's TributePaid

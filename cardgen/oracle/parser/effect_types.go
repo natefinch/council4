@@ -1301,6 +1301,14 @@ type EffectSyntax struct {
 	// EntersDevourMultiplier is the per-sacrificed-creature +1/+1 counter count N
 	// of a Devour replacement ("Devour N"). It is zero for every other effect.
 	EntersDevourMultiplier int `json:",omitempty"`
+	// EntersDevourType and EntersDevourSubtype carry the structured sacrifice
+	// filter of a typed Devour replacement ("Devour artifact N", "Devour land N",
+	// "Devour Food N"): the permanents the controller may sacrifice as the
+	// creature enters. EntersDevourType names a base card type and
+	// EntersDevourSubtype a subtype; both are zero for the plain creature form,
+	// which sacrifices creatures. Set only by parseDevourEffect.
+	EntersDevourType    types.Card `json:",omitempty"`
+	EntersDevourSubtype types.Sub  `json:",omitempty"`
 	// EntersTribute reports the Tribute keyword's as-enters replacement (CR
 	// 702.110): as this creature enters, an opponent of the controller's choice
 	// may put EntersTributeCount +1/+1 counters on it. It is set only by
