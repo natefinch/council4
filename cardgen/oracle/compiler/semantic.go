@@ -2156,6 +2156,12 @@ const (
 	// EffectRollDie effect publishes. Added last so existing kinds keep their
 	// wire values.
 	DynamicAmountDieRollResult
+	// DynamicAmountTotalManaValue is the sum of mana value across the selector's
+	// battlefield group ("the total mana value of <group>"). It backs the dynamic
+	// "where X is the total mana value of noncreature artifacts you control" cost
+	// reduction (Metalwork Colossus, Earthquake Dragon, Excalibur, Sword of Eden).
+	// Added last so existing kinds keep their wire values.
+	DynamicAmountTotalManaValue
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

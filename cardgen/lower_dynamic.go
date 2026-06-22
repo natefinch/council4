@@ -91,7 +91,7 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 		}
 		dynamic.Kind = greatestInGroupKind(amount.DynamicKind)
 		dynamic.Group = game.BattlefieldGroup(selection)
-	case compiler.DynamicAmountTotalPower, compiler.DynamicAmountTotalToughness:
+	case compiler.DynamicAmountTotalPower, compiler.DynamicAmountTotalToughness, compiler.DynamicAmountTotalManaValue:
 		selection, ok := dynamicAmountSelection(amount.Selector())
 		if !ok {
 			return game.DynamicAmount{}, false
@@ -189,6 +189,8 @@ func totalInGroupKind(kind compiler.DynamicAmountKind) game.DynamicAmountKind {
 	switch kind {
 	case compiler.DynamicAmountTotalToughness:
 		return game.DynamicAmountTotalToughnessInGroup
+	case compiler.DynamicAmountTotalManaValue:
+		return game.DynamicAmountTotalManaValueInGroup
 	default:
 		return game.DynamicAmountTotalPowerInGroup
 	}

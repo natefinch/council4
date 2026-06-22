@@ -92,6 +92,7 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 	case game.DynamicAmountCountSelector, game.DynamicAmountGreatestPowerInGroup,
 		game.DynamicAmountGreatestToughnessInGroup, game.DynamicAmountGreatestManaValueInGroup,
 		game.DynamicAmountTotalPowerInGroup, game.DynamicAmountTotalToughnessInGroup,
+		game.DynamicAmountTotalManaValueInGroup,
 		game.DynamicAmountColorCountInGroup:
 		amount = groupDynamicAmount(g, obj, controller, &dynamic)
 	case game.DynamicAmountCountCardsInZone:
@@ -386,6 +387,8 @@ func totalGroupCharacteristic(kind game.DynamicAmountKind) characteristic {
 	switch kind {
 	case game.DynamicAmountTotalToughnessInGroup:
 		return characteristicToughness
+	case game.DynamicAmountTotalManaValueInGroup:
+		return characteristicManaValue
 	default:
 		return characteristicPower
 	}
@@ -500,7 +503,8 @@ func groupDynamicAmount(g *game.Game, obj *game.StackObject, controller game.Pla
 	case game.DynamicAmountGreatestPowerInGroup, game.DynamicAmountGreatestToughnessInGroup,
 		game.DynamicAmountGreatestManaValueInGroup:
 		return greatestCharacteristicInGroup(g, obj, controller, dynamic.Group, dynamic.Kind)
-	case game.DynamicAmountTotalPowerInGroup, game.DynamicAmountTotalToughnessInGroup:
+	case game.DynamicAmountTotalPowerInGroup, game.DynamicAmountTotalToughnessInGroup,
+		game.DynamicAmountTotalManaValueInGroup:
 		return totalCharacteristicInGroup(g, obj, controller, dynamic.Group, dynamic.Kind)
 	case game.DynamicAmountColorCountInGroup:
 		return colorCountInGroup(g, obj, controller, dynamic.Group)
