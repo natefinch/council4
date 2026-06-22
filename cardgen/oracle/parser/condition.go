@@ -32,6 +32,8 @@ type ConditionPredicateKind string
 const (
 	ConditionPredicateUnknown                                          ConditionPredicateKind = ""
 	ConditionPredicateControllerLifeAtLeast                            ConditionPredicateKind = "ConditionPredicateControllerLifeAtLeast"
+	ConditionPredicateControllerLifeAtMost                             ConditionPredicateKind = "ConditionPredicateControllerLifeAtMost"
+	ConditionPredicateControllerLifeAtLeastAboveStarting               ConditionPredicateKind = "ConditionPredicateControllerLifeAtLeastAboveStarting"
 	ConditionPredicateControllerHandSizeAtLeast                        ConditionPredicateKind = "ConditionPredicateControllerHandSizeAtLeast"
 	ConditionPredicateControllerHandEmpty                              ConditionPredicateKind = "ConditionPredicateControllerHandEmpty"
 	ConditionPredicateAnyPlayerLifeAtMost                              ConditionPredicateKind = "ConditionPredicateAnyPlayerLifeAtMost"
@@ -981,14 +983,34 @@ func recognizeControllerResourceCondition(body []shared.Token, atoms Atoms) (Con
 	}
 	rest, ok := cutTokenPrefix(body, "you", "have")
 	if ok {
-		if count, tail, ok := parseLeadingCount(rest); ok && count.Comparison == ConditionComparisonAtLeast {
-			switch {
-			case tokenWordsEqual(tail, "cards", "in", "hand"):
-				return ConditionClause{Predicate: ConditionPredicateControllerHandSizeAtLeast, Threshold: count.Value}, true
-			case tokenWordsEqual(tail, "life"):
-				return ConditionClause{Predicate: ConditionPredicateControllerLifeAtLeast, Threshold: count.Value}, true
-			case tokenWordsEqual(tail, "opponents"):
-				return ConditionClause{Predicate: ConditionPredicateOpponentCountAtLeast, Threshold: count.Value}, true
+		// "you have at least <n> life [more than your starting life total]".
+		if atLeast, ok := cutTokenPrefix(rest, "at", "least"); ok && len(atLeast) >= 1 {
+			if value, ok := conditionNumberValue(atLeast[0]); ok {
+				tail := atLeast[1:]
+				switch {
+				case tokenWordsEqual(tail, "life", "more", "than", "your", "starting", "life", "total"):
+					return ConditionClause{Predicate: ConditionPredicateControllerLifeAtLeastAboveStarting, Threshold: value}, true
+				case tokenWordsEqual(tail, "life"):
+					return ConditionClause{Predicate: ConditionPredicateControllerLifeAtLeast, Threshold: value}, true
+				}
+			}
+		}
+		if count, tail, ok := parseLeadingCount(rest); ok {
+			switch count.Comparison {
+			case ConditionComparisonAtLeast:
+				switch {
+				case tokenWordsEqual(tail, "cards", "in", "hand"):
+					return ConditionClause{Predicate: ConditionPredicateControllerHandSizeAtLeast, Threshold: count.Value}, true
+				case tokenWordsEqual(tail, "life"):
+					return ConditionClause{Predicate: ConditionPredicateControllerLifeAtLeast, Threshold: count.Value}, true
+				case tokenWordsEqual(tail, "opponents"):
+					return ConditionClause{Predicate: ConditionPredicateOpponentCountAtLeast, Threshold: count.Value}, true
+				}
+			case ConditionComparisonAtMost:
+				if tokenWordsEqual(tail, "life") {
+					return ConditionClause{Predicate: ConditionPredicateControllerLifeAtMost, Threshold: count.Value}, true
+				}
+			default:
 			}
 		}
 		// "you have exactly <n> cards in hand" is an equality on hand size, e.g.

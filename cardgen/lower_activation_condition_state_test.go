@@ -62,6 +62,38 @@ func TestLowerActivatedAbilityOpponentPoisonCondition(t *testing.T) {
 	}
 }
 
+func TestLowerActivatedAbilityLifeAboveStartingCondition(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Pilgrim",
+		Layout:     "normal",
+		TypeLine:   "Creature — Test",
+		OracleText: "{1}: Draw a card. Activate only if you have at least 10 life more than your starting life total.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	condition := face.ActivatedAbilities[0].ActivationCondition
+	if !condition.Exists || condition.Val.ControllerLifeAtLeastAboveStarting != 10 {
+		t.Fatalf("activation condition = %#v, want life-above-starting >= 10", condition)
+	}
+}
+
+func TestLowerActivatedAbilityLifeAtMostCondition(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Ascetic",
+		Layout:     "normal",
+		TypeLine:   "Creature — Test",
+		OracleText: "{1}: Draw a card. Activate only if you have 5 or less life.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	condition := face.ActivatedAbilities[0].ActivationCondition
+	if !condition.Exists || !condition.Val.ControllerLifeAtMost.Exists || condition.Val.ControllerLifeAtMost.Val != 5 {
+		t.Fatalf("activation condition = %#v, want life at most 5", condition)
+	}
+}
+
 func TestLowerActivatedAbilityCreatedTokenThisTurnCondition(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

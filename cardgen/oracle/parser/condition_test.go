@@ -104,6 +104,10 @@ func TestParseConditionPredicateMeaning(t *testing.T) {
 		threshold int
 	}{
 		{"controller life", "you have 7 or more life", ConditionPredicateControllerLifeAtLeast, 7},
+		{"controller life at least", "you have at least 7 life", ConditionPredicateControllerLifeAtLeast, 7},
+		{"controller life at most", "you have 5 or less life", ConditionPredicateControllerLifeAtMost, 5},
+		{"controller life at most zero", "you have 0 or less life", ConditionPredicateControllerLifeAtMost, 0},
+		{"controller life above starting", "you have at least 10 life more than your starting life total", ConditionPredicateControllerLifeAtLeastAboveStarting, 10},
 		{"controller hand size", "you have one or more cards in hand", ConditionPredicateControllerHandSizeAtLeast, 1},
 		{"controller hand empty", "you have no cards in hand", ConditionPredicateControllerHandEmpty, 0},
 		{"any player life at most", "a player has 5 or less life", ConditionPredicateAnyPlayerLifeAtMost, 5},

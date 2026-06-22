@@ -195,6 +195,8 @@ func TestValidateCardDefReportsInvalidControllerControlsSelection(t *testing.T) 
 func TestValidateCardDefReportsNegativeConditionThresholds(t *testing.T) {
 	tests := map[string]Condition{
 		"controller life":                     {ControllerLifeAtLeast: -1},
+		"controller life at most":             {ControllerLifeAtMost: opt.Val(-1)},
+		"controller life above starting":      {ControllerLifeAtLeastAboveStarting: -1},
 		"any player life":                     {AnyPlayerLifeAtMost: -1},
 		"opponent count":                      {OpponentCountAtLeast: -1},
 		"controller graveyard cards":          {ControllerGraveyardCardCountAtLeast: -1},

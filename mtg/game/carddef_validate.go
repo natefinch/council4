@@ -1268,6 +1268,12 @@ func (v *cardDefValidator) validateCondition(faceName, path string, condition *C
 	if condition.ControllerLifeAtLeast < 0 {
 		v.add(faceName, appendPath(path, "ControllerLifeAtLeast"), CardDefIssueInvalidCondition, "life threshold cannot be negative")
 	}
+	if condition.ControllerLifeAtMost.Exists && condition.ControllerLifeAtMost.Val < 0 {
+		v.add(faceName, appendPath(path, "ControllerLifeAtMost"), CardDefIssueInvalidCondition, "life threshold cannot be negative")
+	}
+	if condition.ControllerLifeAtLeastAboveStarting < 0 {
+		v.add(faceName, appendPath(path, "ControllerLifeAtLeastAboveStarting"), CardDefIssueInvalidCondition, "life threshold cannot be negative")
+	}
 	if condition.ControllerHandSizeAtLeast < 0 {
 		v.add(faceName, appendPath(path, "ControllerHandSizeAtLeast"), CardDefIssueInvalidCondition, "hand-size threshold cannot be negative")
 	}

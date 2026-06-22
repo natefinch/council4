@@ -21,6 +21,12 @@ type Player struct {
 	// Life is the player's current life total. Starts at 40 in Commander.
 	Life int
 
+	// StartingLife is the player's starting life total, captured at game setup
+	// (40 in Commander). It anchors conditions phrased relative to the starting
+	// life total, such as "you have at least N life more than your starting life
+	// total".
+	StartingLife int
+
 	// PoisonCounters tracks the player's poison counter total. A player
 	// with 10 or more poison counters loses the game (CR 704.5c).
 	PoisonCounters int
@@ -124,6 +130,7 @@ func NewPlayer(seat PlayerID, name string) *Player {
 		ID:              seat,
 		Name:            name,
 		Life:            40,
+		StartingLife:    40,
 		CommanderDamage: make(map[id.ID]int),
 		ManaPool:        mana.NewPool(),
 		Library:         zone.New(zone.Library),

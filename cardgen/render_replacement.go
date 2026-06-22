@@ -762,6 +762,8 @@ func (r Renderer) renderStaticAbilityCondition(ctx *renderCtx, cond *game.Condit
 
 func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.Condition, context string) (string, error) {
 	if cond.ControllerLifeAtLeast < 0 ||
+		cond.ControllerLifeAtMost.Exists && cond.ControllerLifeAtMost.Val < 0 ||
+		cond.ControllerLifeAtLeastAboveStarting < 0 ||
 		cond.ControllerHandSizeAtLeast < 0 ||
 		cond.AnyPlayerLifeAtMost < 0 ||
 		cond.OpponentCountAtLeast < 0 ||
@@ -814,6 +816,15 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	}
 	if cond.ControllerLifeAtLeast > 0 {
 		fields = append(fields, fmt.Sprintf("ControllerLifeAtLeast: %d,", cond.ControllerLifeAtLeast))
+		hasPredicate = true
+	}
+	if cond.ControllerLifeAtMost.Exists {
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("ControllerLifeAtMost: opt.Val(%d),", cond.ControllerLifeAtMost.Val))
+		hasPredicate = true
+	}
+	if cond.ControllerLifeAtLeastAboveStarting > 0 {
+		fields = append(fields, fmt.Sprintf("ControllerLifeAtLeastAboveStarting: %d,", cond.ControllerLifeAtLeastAboveStarting))
 		hasPredicate = true
 	}
 	if cond.ControllerHandSizeAtLeast > 0 {

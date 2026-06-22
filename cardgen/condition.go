@@ -48,6 +48,10 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 	switch condition.Predicate {
 	case compiler.ConditionPredicateControllerLifeAtLeast:
 		result.ControllerLifeAtLeast = condition.Threshold
+	case compiler.ConditionPredicateControllerLifeAtMost:
+		result.ControllerLifeAtMost = opt.Val(condition.Threshold)
+	case compiler.ConditionPredicateControllerLifeAtLeastAboveStarting:
+		result.ControllerLifeAtLeastAboveStarting = condition.Threshold
 	case compiler.ConditionPredicateControllerHandSizeAtLeast:
 		result.ControllerHandSizeAtLeast = condition.Threshold
 	case compiler.ConditionPredicateControllerHandSizeExactly:
@@ -170,6 +174,8 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 	if ctx == conditionContextEntryCounters {
 		switch predicate {
 		case compiler.ConditionPredicateControllerLifeAtLeast,
+			compiler.ConditionPredicateControllerLifeAtMost,
+			compiler.ConditionPredicateControllerLifeAtLeastAboveStarting,
 			compiler.ConditionPredicateAnyPlayerLifeAtMost,
 			compiler.ConditionPredicateOpponentCountAtLeast,
 			compiler.ConditionPredicateControllerControls,
@@ -184,6 +190,8 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 	if ctx != conditionContextReplacement {
 		switch predicate {
 		case compiler.ConditionPredicateControllerLifeAtLeast,
+			compiler.ConditionPredicateControllerLifeAtMost,
+			compiler.ConditionPredicateControllerLifeAtLeastAboveStarting,
 			compiler.ConditionPredicateAnyPlayerLifeAtMost,
 			compiler.ConditionPredicateOpponentCountAtLeast,
 			compiler.ConditionPredicateControllerControls,
@@ -220,6 +228,8 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 	}
 	switch predicate {
 	case compiler.ConditionPredicateControllerLifeAtLeast,
+		compiler.ConditionPredicateControllerLifeAtMost,
+		compiler.ConditionPredicateControllerLifeAtLeastAboveStarting,
 		compiler.ConditionPredicateAnyPlayerLifeAtMost,
 		compiler.ConditionPredicateOpponentCountAtLeast,
 		compiler.ConditionPredicateControllerControls,
