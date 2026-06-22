@@ -166,7 +166,6 @@ func TestLowerCombatEventTriggersFailClosed(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
 		"Whenever this creature attacks and isn't blocked, draw a card.",
-		"Whenever this creature attacks or blocks, draw a card.",
 	} {
 		t.Run(oracleText, func(t *testing.T) {
 			t.Parallel()
@@ -338,7 +337,7 @@ func TestCombatPhaseAndStepTriggerDiagnosticsNameMissingCapability(t *testing.T)
 		},
 		{
 			name:   "missing combat relation",
-			text:   "Whenever this creature attacks or blocks, draw a card.",
+			text:   "Whenever this creature attacks and isn't blocked, draw a card.",
 			detail: "requires a missing runtime capability",
 		},
 	} {
