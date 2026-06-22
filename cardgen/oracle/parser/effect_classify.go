@@ -995,6 +995,46 @@ func winGameVerbAt(tokens []shared.Token, index int) bool {
 	return false
 }
 
+// payLifeVerbAt reports whether the "pay"/"pays" verb at index governs a bare
+// "pay N life" life payment ("Pay 2 life."). Paying life is losing that much
+// life (CR 119.1b), so this anchors the generic "pay" verb to EffectLose. The
+// classification is confirmed by scanning forward to the clause terminator for a
+// top-level "life" word outside any quoted granted ability, with no mana Symbol
+// in the clause: a combined "pay {mana} and N life" cost carries a mana symbol
+// and is folded by the optional-payment recognizers, not treated as a resolving
+// life-loss effect.
+func payLifeVerbAt(tokens []shared.Token, index int) bool {
+	if !equalWord(tokens[index], "pay") && !equalWord(tokens[index], "pays") {
+		return false
+	}
+	// A preceding top-level "enters"/"enter" marks the "As this <permanent>
+	// enters, you may pay N life. If you don't, it enters tapped." entry-payment
+	// replacement (the dual-land cycle), where the life amount is folded onto the
+	// leading enters effect rather than parsed as a resolving life loss. Leave
+	// that shape to the optional-entry-payment recognizer.
+	for i := range index {
+		if tokens[i].Kind == shared.Word &&
+			(equalWord(tokens[i], "enters") || equalWord(tokens[i], "enter")) {
+			return false
+		}
+	}
+	quoted := false
+	for i := index + 1; i < len(tokens); i++ {
+		switch tokens[i].Kind {
+		case shared.Period, shared.Semicolon, shared.Comma, shared.Symbol:
+			return false
+		case shared.Quote:
+			quoted = !quoted
+		case shared.Word:
+			if !quoted && equalWord(tokens[i], "life") {
+				return true
+			}
+		default:
+		}
+	}
+	return false
+}
+
 func effectKindAt(tokens []shared.Token, index int) EffectKind {
 	kind := effectWordKind(tokens[index])
 	switch {
@@ -1024,6 +1064,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 			return EffectWinGame
 		}
 		return EffectUnknown
+	case payLifeVerbAt(tokens, index):
+		return EffectLose
 	case cantBeBlockedThisTurnVerbAt(tokens, index):
 		return EffectCantBeBlocked
 	case kind == EffectGrantKeyword && index >= 2 &&

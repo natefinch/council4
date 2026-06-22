@@ -79,6 +79,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactStandaloneActionEffectSyntax(effect, "renown")
 	case EffectLose:
 		return exactLifeEffectSyntax(effect, "lose", "loses") ||
+			exactLifeEffectSyntax(effect, "pay", "pays") ||
 			exactTemporaryKeywordLossEffectSyntax(effect)
 	case EffectLoseGame:
 		return strings.EqualFold(exactEffectClauseText(effect), "You lose the game.")

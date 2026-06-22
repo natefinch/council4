@@ -426,3 +426,40 @@ func TestLowerOptionalSacrificeAnotherIfYouDoDraw(t *testing.T) {
 		t.Fatalf("instruction[1].ResultGate = %#v, want succeeded gate on %q", gate, optionalIfYouDoResultKey)
 	}
 }
+
+// TestLowerOptionalPayLifeIfYouDoDraw verifies that "You may pay N life. If you
+// do, draw a card." lowers the pay-life cost as an optional life loss whose
+// taken result gates the draw: paying N life is losing that much life
+// (CR 119.1b), so the controller's yes/no choice publishes a result the benefit
+// reads.
+func TestLowerOptionalPayLifeIfYouDoDraw(t *testing.T) {
+	t.Parallel()
+	sequence := lowerSpellSequence(t, "Pay Life Flow", "You may pay 2 life. If you do, draw a card.")
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions", sequence)
+	}
+	pay := sequence[0]
+	lose, ok := pay.Primitive.(game.LoseLife)
+	if !ok {
+		t.Fatalf("instruction[0] = %T, want game.LoseLife", pay.Primitive)
+	}
+	if lose.Amount.Value() != 2 {
+		t.Fatalf("lose-life amount = %d, want 2", lose.Amount.Value())
+	}
+	if !pay.Optional {
+		t.Fatal("instruction[0].Optional = false, want optional")
+	}
+	if pay.PublishResult != optionalIfYouDoResultKey {
+		t.Fatalf("instruction[0].PublishResult = %q, want %q", pay.PublishResult, optionalIfYouDoResultKey)
+	}
+	draw := sequence[1]
+	if _, ok := draw.Primitive.(game.Draw); !ok {
+		t.Fatalf("instruction[1] = %T, want game.Draw", draw.Primitive)
+	}
+	if !draw.ResultGate.Exists {
+		t.Fatal("instruction[1].ResultGate missing")
+	}
+	if gate := draw.ResultGate.Val; gate.Key != optionalIfYouDoResultKey || gate.Succeeded != game.TriTrue {
+		t.Fatalf("instruction[1].ResultGate = %#v, want succeeded gate on %q", gate, optionalIfYouDoResultKey)
+	}
+}
