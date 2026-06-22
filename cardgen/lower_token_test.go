@@ -804,7 +804,8 @@ func TestGenerateExecutableCardSourceCreatureTokenCompiles(t *testing.T) {
 	for _, wanted := range []string{
 		"Primitive: game.CreateToken{",
 		"Source: game.TokenDef(testTokenToken)",
-		"var testTokenToken = &game.CardDef{",
+		"var testTokenToken = newTestTokenToken()",
+		"func newTestTokenToken() *game.CardDef {",
 		`Name:      "Bear",`,
 		"Subtypes:  []types.Sub{types.Bear},",
 		"Power:     opt.Val(game.PT{Value: 2}),",
@@ -1264,7 +1265,8 @@ func TestGenerateExecutableCardSourceTreasureTokenCompiles(t *testing.T) {
 	for _, wanted := range []string{
 		"Primitive: game.CreateToken{",
 		"Amount: game.Fixed(2),",
-		"var testTreasureToken = &game.CardDef{",
+		"var testTreasureToken = newTestTreasureToken()",
+		"func newTestTreasureToken() *game.CardDef {",
 		`Name:     "Treasure",`,
 		"Types:    []types.Card{types.Artifact},",
 		"Subtypes: []types.Sub{types.Treasure},",

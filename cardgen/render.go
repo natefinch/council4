@@ -343,7 +343,7 @@ func (r Renderer) writeCardDef(
 	if r.IdentifierSuffix != "" {
 		_, _ = fmt.Fprintf(b, "\n// %s is the card definition for %s.\n", varName, def.Name)
 	}
-	_, _ = fmt.Fprintf(b, "var %s = &game.CardDef{\n", varName)
+	writeCardDefBuilderOpen(b, varName)
 	if cols := def.ColorIdentity.Colors(); len(cols) > 0 {
 		ctx.need(importColor)
 		colorLits, err := colorValueLiterals(cols)
@@ -376,7 +376,7 @@ func (r Renderer) writeCardDef(
 		}
 		_, _ = b.WriteString("\t}),\n")
 	}
-	_, _ = b.WriteString("}\n")
+	writeCardDefBuilderClose(b)
 	return nil
 }
 
@@ -384,14 +384,48 @@ func (r Renderer) writeCardDef(
 // token def is a plain creature face (name, types, subtypes, colors, P/T) with no
 // abilities, referenced by a CreateToken primitive via game.TokenDef.
 func (r Renderer) writeTokenDefVar(b *strings.Builder, ctx *renderCtx, entry tokenDefEntry) error {
-	_, _ = fmt.Fprintf(b, "var %s = &game.CardDef{\n", entry.varName)
+	writeCardDefBuilderOpen(b, entry.varName)
 	_, _ = b.WriteString("\tCardFace: game.CardFace{\n")
 	if err := r.writeFaceFields(b, ctx, &entry.def.CardFace, "\t\t", tokenFaceHints(entry.def)); err != nil {
 		return err
 	}
 	_, _ = b.WriteString("\t},\n")
-	_, _ = b.WriteString("}\n")
+	writeCardDefBuilderClose(b)
 	return nil
+}
+
+// writeCardDefBuilderOpen emits the opening of a CardDef package var whose
+// construction is wrapped in a dedicated builder function, e.g.
+//
+//	var SaberAnts = newSaberAnts()
+//
+//	func newSaberAnts() *game.CardDef {
+//		return &game.CardDef{
+//
+// Wrapping each CardDef literal in its own function keeps the package-level
+// variable initializer (and thus the compiler-synthesized package init
+// function) tiny: it holds only a call, not the whole literal. This avoids the
+// WebAssembly backend's per-function limit ("function too big: init exceeds
+// 65536 blocks"), which the full generated corpus otherwise hits when a letter
+// package's many CardDef literals are inlined into one package init.
+func writeCardDefBuilderOpen(b *strings.Builder, varName string) {
+	builder := cardDefBuilderName(varName)
+	_, _ = fmt.Fprintf(b, "var %s = %s()\n\n", varName, builder)
+	_, _ = fmt.Fprintf(b, "func %s() *game.CardDef {\n", builder)
+	_, _ = b.WriteString("\treturn &game.CardDef{\n")
+}
+
+// writeCardDefBuilderClose closes the literal and the builder function opened by
+// writeCardDefBuilderOpen.
+func writeCardDefBuilderClose(b *strings.Builder) {
+	_, _ = b.WriteString("}\n}\n")
+}
+
+// cardDefBuilderName returns the unexported builder-function name for a CardDef
+// package variable, e.g. "SaberAnts" -> "newSaberAnts" and "saberAntsToken" ->
+// "newSaberAntsToken".
+func cardDefBuilderName(varName string) string {
+	return "new" + upperFirst(varName)
 }
 
 // tokenFaceHints reconstructs render hints for a synthesized token's static
@@ -429,7 +463,7 @@ func (r Renderer) writeReversibleFaceDef(b *strings.Builder, ctx *renderCtx, def
 	if r.IdentifierSuffix != "" {
 		_, _ = fmt.Fprintf(b, "\n// %s is the card definition for %s.\n", varName, def.Name)
 	}
-	_, _ = fmt.Fprintf(b, "var %s = &game.CardDef{\n", varName)
+	writeCardDefBuilderOpen(b, varName)
 	if cols := def.ColorIdentity.Colors(); len(cols) > 0 {
 		ctx.need(importColor)
 		colorLits, err := colorValueLiterals(cols)
@@ -446,7 +480,7 @@ func (r Renderer) writeReversibleFaceDef(b *strings.Builder, ctx *renderCtx, def
 	if layoutLiteral := layoutToLiteral(layout); layoutLiteral != "" {
 		_, _ = fmt.Fprintf(b, "\tLayout: %s,\n", layoutLiteral)
 	}
-	_, _ = b.WriteString("}\n")
+	writeCardDefBuilderClose(b)
 	return nil
 }
 
