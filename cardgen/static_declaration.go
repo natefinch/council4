@@ -95,6 +95,8 @@ func lowerStaticDeclarations(
 				ok = appendStaticPlayerRuleDeclaration(&body, declaration)
 			case compiler.StaticDeclarationOpponentActionRestriction:
 				ok = appendStaticOpponentActionRestrictionDeclaration(&body, declaration)
+			case compiler.StaticDeclarationDrawLimit:
+				ok = appendStaticDrawLimitDeclaration(&body, declaration)
 			case compiler.StaticDeclarationEnterBattlefieldRestriction:
 				ok = appendStaticEnterBattlefieldRestrictionDeclaration(&body, declaration)
 			case compiler.StaticDeclarationSpellUncounterable:
@@ -326,6 +328,9 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.GraveyardGrant != nil {
 		payloads++
 	}
+	if declaration.DrawLimit != nil {
+		payloads++
+	}
 	if payloads != 1 {
 		return false
 	}
@@ -342,6 +347,8 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 		return declaration.Player != nil
 	case compiler.StaticDeclarationOpponentActionRestriction:
 		return declaration.OpponentRestriction != nil
+	case compiler.StaticDeclarationDrawLimit:
+		return declaration.DrawLimit != nil
 	case compiler.StaticDeclarationEnterBattlefieldRestriction:
 		return declaration.EnterRestriction != nil
 	case compiler.StaticDeclarationSpellUncounterable:
@@ -981,6 +988,29 @@ func lowerManaColorValid(c mana.Color) bool {
 	default:
 		return false
 	}
+}
+
+// appendStaticDrawLimitDeclaration adds the continuous per-turn draw cap
+// described by a draw-limit declaration. "Each opponent"/"your opponents"
+// affects every opponent of the controller; "each player"/"players" affects
+// every player; "you" affects only the controller.
+func appendStaticDrawLimitDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	limit := declaration.DrawLimit
+	if limit == nil || limit.Limit < 1 {
+		return false
+	}
+	affected := game.PlayerOpponent
+	if limit.AffectsAllPlayers {
+		affected = game.PlayerAny
+	} else if limit.AffectsController {
+		affected = game.PlayerYou
+	}
+	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+		Kind:             game.RuleEffectDrawLimitPerTurn,
+		AffectedPlayer:   affected,
+		DrawLimitPerTurn: limit.Limit,
+	})
+	return true
 }
 
 // appendStaticOpponentActionRestrictionDeclaration adds the continuous cast and
