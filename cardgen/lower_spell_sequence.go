@@ -194,6 +194,12 @@ func lowerOrderedEffectSequence(
 		// only the effect's own references.
 		clauseRefs := referencesOutsideConditionSpans(effect.References, gateConditions)
 		ownedReferenceCount := len(clauseRefs)
+		// Combined-shape and characteristic lowerers read the resolved effect's
+		// own reference list (ctx.content.Effects[0].References) rather than the
+		// clause-level References, so strip the gate-condition references there
+		// too. Otherwise a kicked-condition's "this spell" object survives as a
+		// phantom subject reference and the per-effect lowerer fails closed.
+		effectAbility.content.Effects[0].References = slices.Clone(clauseRefs)
 		var inheritedTargets []compiler.CompiledTarget
 		if effect.Context == parser.EffectContextPriorSubject {
 			inheritedTargets = priorSubjectTargets(ctx.content.Effects, i)
@@ -1947,6 +1953,9 @@ func lowerDelayedSequenceClause(
 			sequence[len(sequence)-1].PublishResult = lowered.priorResult
 		}
 		return lowered.content, true, false
+	}
+	if content, ok := lowerThatMuchLifeBackref(ctx, effectIndex, sequence); ok {
+		return content, true, false
 	}
 	return game.AbilityContent{}, false, false
 }
