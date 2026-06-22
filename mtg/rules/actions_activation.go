@@ -665,6 +665,11 @@ func manaBodyHasAddManaEffect(body *game.ManaAbility) bool {
 				if !ok || !isSelfControllerDamageRider(damage) {
 					return false
 				}
+			case game.PrimitiveGainLife:
+				gain, ok := sequence[i].Primitive.(game.GainLife)
+				if !ok || !isSelfControllerGainLifeRider(gain) {
+					return false
+				}
 			default:
 				return false
 			}
@@ -687,6 +692,16 @@ func isSelfControllerDamageRider(damage game.Damage) bool {
 	}
 	player, ok := damage.Recipient.PlayerReference()
 	return ok && player.Kind() == game.PlayerReferenceController
+}
+
+// isSelfControllerGainLifeRider reports whether a GainLife instruction is a mana
+// source's "You gain N life" rider: a non-group amount of life gained by the
+// ability's own controller. The Great Henge carries it. CR 605.1a keeps such
+// abilities mana abilities because the rider neither targets nor stops them from
+// adding mana, so the rider must not disqualify the ability from immediate
+// resolution.
+func isSelfControllerGainLifeRider(gain game.GainLife) bool {
+	return gain.Player.Kind() == game.PlayerReferenceController
 }
 
 func manaBodyChoicesAvailable(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ManaAbility) bool {

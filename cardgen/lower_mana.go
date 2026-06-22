@@ -78,11 +78,12 @@ func lowerReminderManaAbility(
 // lowerManaAbility lowers an activated mana ability into a game.ManaAbility.
 // It accepts the same supported cost shapes as ordinary activated abilities,
 // plus supported fixed-symbol, choice, and any-color mana output bodies. A
-// single fixed self-damage rider ("<CARDNAME> deals N damage to you") may
-// accompany the add-mana effect, modelling painlands, the painland Talismans,
-// and similar self-damaging mana sources; the lowered content already carries
-// the source-dealt Damage instruction. Unrecognised costs and bodies remain
-// fail-closed.
+// single fixed self-damage rider ("<CARDNAME> deals N damage to you") or a
+// fixed life-gain rider ("You gain N life") may accompany the add-mana effect,
+// modelling painlands, the painland Talismans, and similar self-damaging or
+// life-gaining mana sources; the lowered content already carries the matching
+// source-dealt Damage or GainLife instruction. Unrecognised costs and bodies
+// remain fail-closed.
 func lowerManaAbility(
 	cardName string,
 	ability compiler.CompiledAbility,
@@ -106,11 +107,12 @@ func lowerManaAbility(
 		len(shell.semanticContent.Targets) != 0 ||
 		(len(shell.semanticContent.Effects) == 2 &&
 			!isSelfDamageToControllerRider(&shell.semanticContent.Effects[1]) &&
+			!isGainLifeToControllerRider(&shell.semanticContent.Effects[1]) &&
 			!isManaSpendRider(&shell.semanticContent.Effects[1])) {
 		return game.ManaAbility{}, executableDiagnostic(
 			ability,
 			"unsupported mana effect",
-			"the executable source backend supports only exact non-targeting add-mana content, optionally with a fixed self-damage rider, in mana abilities",
+			"the executable source backend supports only exact non-targeting add-mana content, optionally with a fixed self-damage or life-gain rider, in mana abilities",
 		)
 	}
 	if shell.semanticContent.Effects[0].HasUnrecognizedSibling {
@@ -180,6 +182,33 @@ func isSelfDamageToControllerRider(effect *compiler.CompiledEffect) bool {
 		!effect.HasSelfDamageRider &&
 		!effect.HasSecondTargetDamageRider &&
 		effect.TargetControllerDamageRiderRecipient == parser.DamageRecipientReferenceNone &&
+		effect.Duration == compiler.DurationNone &&
+		effect.DelayedTiming == 0 &&
+		effect.Amount.Known &&
+		!effect.Amount.VariableX &&
+		effect.Amount.DynamicKind == compiler.DynamicAmountNone &&
+		effect.Amount.Value >= 1
+}
+
+// isGainLifeToControllerRider reports whether effect is exactly a "You gain N
+// life" rider, the life-gaining counterpart to isSelfDamageToControllerRider and
+// the only other non-mana effect a mana ability may carry. It accepts only a
+// fixed positive amount of life gained by the ability's own controller with no
+// target, no references, and no duration, so unrelated gain-life clauses cannot
+// ride into a mana ability. This models lands and rocks that gain life when
+// tapped for mana (The Great Henge: "{T}: Add {G}{G}. You gain 2 life."), whose
+// lowered content already carries the matching controller GainLife instruction.
+func isGainLifeToControllerRider(effect *compiler.CompiledEffect) bool {
+	return effect.Kind == compiler.EffectGain &&
+		effect.LifeObject &&
+		effect.Context == parser.EffectContextController &&
+		effect.Exact &&
+		!effect.Negated &&
+		!effect.Optional &&
+		!effect.Divided &&
+		!effect.HasUnrecognizedSibling &&
+		len(effect.Targets) == 0 &&
+		len(effect.References) == 0 &&
 		effect.Duration == compiler.DurationNone &&
 		effect.DelayedTiming == 0 &&
 		effect.Amount.Known &&
