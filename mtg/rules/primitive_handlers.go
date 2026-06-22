@@ -577,6 +577,16 @@ func handleRenown(r *effectResolver, prim game.Renown) effectResolved {
 	return res
 }
 
+func handleBecomeSaddled(r *effectResolver, prim game.BecomeSaddled) effectResolved {
+	res := effectResolved{accepted: true}
+	permanent, ok := r.resolveObject(prim.Object)
+	if ok && !permanent.Saddled {
+		permanent.Saddled = true
+		res.succeeded = true
+	}
+	return res
+}
+
 func handlePay(r *effectResolver, prim game.Pay) effectResolved {
 	payment := prim.Payment
 	if payment.Prompt == "" {

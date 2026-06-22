@@ -128,6 +128,10 @@ type Permanent struct {
 	// A renowned permanent's Renown trigger no longer adds counters.
 	Renowned bool
 
+	// Saddled records whether this Mount has been saddled this turn (CR 702.166).
+	// It is set by the BecomeSaddled keyword action and cleared during cleanup.
+	Saddled bool
+
 	// TributePaid records that a chosen opponent paid this creature's Tribute as
 	// it entered by putting its +1/+1 counters on it (CR 702.110). It is read by
 	// the paired "if tribute wasn't paid" intervening-if on the creature's enters

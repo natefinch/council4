@@ -387,6 +387,80 @@ func preferredTapPermanents(s State, playerID game.PlayerID, additional cost.Add
 	return nil
 }
 
+// chooseTapPermanentsTotalPower selects untapped matching permanents the player
+// controls whose total power reaches additional.TotalPowerAtLeast, honoring
+// ExcludeSource. It prefers tapping the fewest creatures by taking the highest
+// power first, and returns nil when the threshold cannot be reached.
+func chooseTapPermanentsTotalPower(s State, playerID game.PlayerID, additional cost.Additional, alreadyChosen []*game.Permanent, source *game.Permanent) []*game.Permanent {
+	chosenIDs := make(map[id.ID]bool)
+	for _, permanent := range alreadyChosen {
+		chosenIDs[permanent.ObjectID] = true
+	}
+	var candidates []*game.Permanent
+	for _, permanent := range s.Battlefield() {
+		if permanent.Tapped || s.EffectiveController(permanent) != playerID || chosenIDs[permanent.ObjectID] {
+			continue
+		}
+		if additional.ExcludeSource && source != nil && permanent.ObjectID == source.ObjectID {
+			continue
+		}
+		if additionalCostMatchesPermanent(s, permanent, additional) {
+			candidates = append(candidates, permanent)
+		}
+	}
+	slices.SortStableFunc(candidates, func(a, b *game.Permanent) int {
+		return s.PermanentPower(b) - s.PermanentPower(a)
+	})
+	var chosen []*game.Permanent
+	total := 0
+	for _, permanent := range candidates {
+		if total >= additional.TotalPowerAtLeast {
+			break
+		}
+		chosen = append(chosen, permanent)
+		total += s.PermanentPower(permanent)
+	}
+	if total < additional.TotalPowerAtLeast {
+		return nil
+	}
+	return chosen
+}
+
+// preferredTapPermanentsTotalPower honors an explicit tap selection from prefs
+// for a total-power tap cost, falling back to chooseTapPermanentsTotalPower.
+func preferredTapPermanentsTotalPower(s State, playerID game.PlayerID, additional cost.Additional, alreadyChosen []*game.Permanent, source *game.Permanent, prefs *Preferences) []*game.Permanent {
+	if prefs == nil || len(prefs.TapChoices) == 0 {
+		return chooseTapPermanentsTotalPower(s, playerID, additional, alreadyChosen, source)
+	}
+	chosenIDs := make(map[id.ID]bool)
+	for _, permanent := range alreadyChosen {
+		chosenIDs[permanent.ObjectID] = true
+	}
+	var chosen []*game.Permanent
+	total := 0
+	var consumed int
+	for _, permanentID := range prefs.TapChoices {
+		permanent, ok := s.PermanentByObjectID(permanentID)
+		if !ok ||
+			permanent.Tapped ||
+			s.EffectiveController(permanent) != playerID ||
+			chosenIDs[permanentID] ||
+			(additional.ExcludeSource && source != nil && permanentID == source.ObjectID) ||
+			!additionalCostMatchesPermanent(s, permanent, additional) {
+			return nil
+		}
+		chosen = append(chosen, permanent)
+		chosenIDs[permanentID] = true
+		total += s.PermanentPower(permanent)
+		consumed++
+		if total >= additional.TotalPowerAtLeast {
+			prefs.TapChoices = prefs.TapChoices[consumed:]
+			return chosen
+		}
+	}
+	return nil
+}
+
 func chooseReturnPermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent) []*game.Permanent {
 	chosenIDs := make(map[id.ID]bool)
 	for _, permanent := range alreadyChosen {

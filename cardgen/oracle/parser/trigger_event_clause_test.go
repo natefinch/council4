@@ -722,6 +722,18 @@ func combatTriggerEventClauseTests() []triggerEventClauseTest {
 			},
 		},
 		{
+			name:   "attack self attacks while saddled",
+			source: "Whenever this creature attacks while saddled, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindAttack ||
+					clause.Subject.Kind != TriggerEventSubjectSelf ||
+					!clause.AttackWhileSaddled {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
 			name:   "attack selected attacks alone",
 			source: "Whenever a creature you control attacks alone, draw a card.",
 			check: func(t *testing.T, clause *TriggerEventClause) {

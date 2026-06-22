@@ -30,6 +30,12 @@ func (e *Engine) paymentPreferencesForCostFromSource(g *game.Game, playerID game
 		case cost.AdditionalSacrifice:
 			prefs.SacrificeChoices = append(prefs.SacrificeChoices, e.additionalCostPermanentChoices(g, playerID, additionalCost, amount, agents, log)...)
 		case cost.AdditionalTapPermanents:
+			if additionalCost.TotalPowerAtLeast > 0 {
+				// The payment planner greedily selects which creatures to tap to
+				// reach the Saddle power threshold; no explicit preference is
+				// gathered here.
+				continue
+			}
 			prefs.TapChoices = append(prefs.TapChoices, e.additionalCostPermanentChoices(g, playerID, additionalCost, amount, agents, log, tapExclusions...)...)
 		case cost.AdditionalReturnToHand:
 			prefs.ReturnChoices = append(prefs.ReturnChoices, e.additionalCostPermanentChoices(g, playerID, additionalCost, amount, agents, log)...)

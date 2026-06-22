@@ -275,6 +275,34 @@ func TestRenownEffectAddsCountersOnlyOnce(t *testing.T) {
 	}
 }
 
+func TestBecomeSaddledEffectSetsSaddledOnce(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Mount",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2})},
+	})
+	obj := &game.StackObject{
+		Kind:         game.StackActivatedAbility,
+		SourceID:     source.ObjectID,
+		SourceCardID: source.CardInstanceID,
+		Controller:   game.Player1,
+	}
+
+	resolveInstruction(engine, g, obj, game.BecomeSaddled{Object: game.SourcePermanentReference()}, &TurnLog{})
+
+	if !source.Saddled {
+		t.Fatal("source did not become saddled")
+	}
+
+	// Resolving again is idempotent.
+	resolveInstruction(engine, g, obj, game.BecomeSaddled{Object: game.SourcePermanentReference()}, &TurnLog{})
+	if !source.Saddled {
+		t.Fatal("source unexpectedly lost saddled state")
+	}
+}
+
 func TestSetClassLevelEffectAndClassInitialLevel(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

@@ -89,6 +89,8 @@ const (
 	Landwalk
 	Dredge
 	Unearth
+	Training
+	Saddle
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -268,7 +270,35 @@ var (
 	// Each printed instance is its own triggered ability, so multiple instances
 	// stack to -N/-N (CR 702.25c).
 	FlankingTriggeredBody = flankingTriggeredBody()
+
+	// TrainingTriggeredBody is the canonical triggered ability for training
+	// (CR 702.150): "Whenever this creature attacks with another creature with
+	// greater power, put a +1/+1 counter on this creature." The ability carries
+	// the Training keyword so HasKeyword(Training) reports true.
+	TrainingTriggeredBody = trainingTriggeredBody()
 )
+
+func trainingTriggeredBody() TriggeredAbility {
+	return TriggeredAbility{
+		Text:             "Training",
+		KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: Training}},
+		Trigger: TriggerCondition{
+			Type: TriggerWhenever,
+			Pattern: TriggerPattern{
+				Event:                           EventAttackerDeclared,
+				Source:                          TriggerSourceSelf,
+				AttacksWithGreaterPowerCreature: true,
+			},
+		},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: AddCounter{
+				Amount:      Fixed(1),
+				Object:      SourcePermanentReference(),
+				CounterKind: counter.PlusOnePlusOne,
+			},
+		}}}.Ability(),
+	}
+}
 
 func dethroneTriggeredBody() TriggeredAbility {
 	return TriggeredAbility{
@@ -675,6 +705,18 @@ type TriggerPattern struct {
 	// tied for most life", dethrone CR 702.103). It is only valid with
 	// Event == EventAttackerDeclared.
 	AttackedPlayerHasMostLife bool
+
+	// AttacksWithGreaterPowerCreature restricts an EventAttackerDeclared trigger
+	// to combats where another creature with power greater than the ability's
+	// source is also attacking ("attacks with another creature with greater
+	// power", training CR 702.150). It is only valid with
+	// Event == EventAttackerDeclared and Source == TriggerSourceSelf.
+	AttacksWithGreaterPowerCreature bool
+
+	// AttackWhileSaddled restricts an EventAttackerDeclared trigger to combats
+	// where the ability's source is saddled ("attacks while saddled", saddle
+	// CR 702.166). It is only valid with Event == EventAttackerDeclared.
+	AttackWhileSaddled bool
 }
 
 // TimingRestriction constrains when an activated ability can be used.

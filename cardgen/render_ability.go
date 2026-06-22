@@ -48,6 +48,10 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 		}
 		return fmt.Sprintf("game.UnearthActivatedAbility(%s)", renderedCost), nil
 	}
+	if power, ok := game.ActivatedBodySaddlePower(ability); ok &&
+		reflect.DeepEqual(*ability, game.SaddleActivatedAbility(power)) {
+		return fmt.Sprintf("game.SaddleActivatedAbility(%d)", power), nil
+	}
 	if manaCost, subtypes, ok := game.ActivatedBodyEternalizeParams(ability); ok &&
 		reflect.DeepEqual(*ability, game.EternalizeActivatedBody(manaCost, subtypes...)) {
 		return r.renderEternalizeFamilyAbility(ctx, "game.EternalizeActivatedBody", manaCost, subtypes)
@@ -474,6 +478,9 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 	if reflect.DeepEqual(*ability, game.FlankingTriggeredBody) {
 		return "game.FlankingTriggeredBody", nil
 	}
+	if reflect.DeepEqual(*ability, game.TrainingTriggeredBody) {
+		return "game.TrainingTriggeredBody", nil
+	}
 	if reflect.DeepEqual(*ability, game.LivingWeaponTriggeredAbility()) {
 		return "game.LivingWeaponTriggeredAbility()", nil
 	}
@@ -607,6 +614,7 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 			pattern.Event != game.EventSpellCast) ||
 		(pattern.RequireCombatDamage && pattern.RequireNonCombatDamage) ||
 		(pattern.AttackAlone && pattern.Event != game.EventAttackerDeclared) ||
+		(pattern.AttackWhileSaddled && pattern.Event != game.EventAttackerDeclared) ||
 		(pattern.AttackerCountAtLeast != 0 &&
 			(pattern.Event != game.EventAttackerDeclared || !pattern.OneOrMore || pattern.AttackAlone || pattern.AttackerCountAtLeast < 2)) {
 		return "", errors.New("render: unsupported trigger pattern fields")
@@ -757,6 +765,9 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 	}
 	if pattern.AttackAlone {
 		fields = append(fields, "AttackAlone: true,")
+	}
+	if pattern.AttackWhileSaddled {
+		fields = append(fields, "AttackWhileSaddled: true,")
 	}
 	if pattern.AttackerCountAtLeast != 0 {
 		fields = append(fields, fmt.Sprintf("AttackerCountAtLeast: %d,", pattern.AttackerCountAtLeast))

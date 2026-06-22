@@ -66,6 +66,12 @@ type OutlastKeyword struct {
 	Cost cost.Mana
 }
 
+// SaddleKeyword parameterizes the Saddle N keyword (CR 702.166). Power is the
+// total power of other creatures the controller must tap to saddle the Mount.
+type SaddleKeyword struct {
+	Power int
+}
+
 // MutateKeyword parameterizes Mutate alternative casting costs.
 type MutateKeyword struct {
 	Cost cost.Mana
@@ -188,6 +194,7 @@ func (RampageKeyword) isKeywordAbility()          {}
 func (SoulshiftKeyword) isKeywordAbility()        {}
 func (DredgeKeyword) isKeywordAbility()           {}
 func (LandwalkKeyword) isKeywordAbility()         {}
+func (SaddleKeyword) isKeywordAbility()           {}
 
 func (ability SimpleKeyword) keyword() Keyword { return ability.Kind }
 func (WardKeyword) keyword() Keyword           { return Ward }
@@ -215,6 +222,7 @@ func (RampageKeyword) keyword() Keyword    { return Rampage }
 func (SoulshiftKeyword) keyword() Keyword  { return Soulshift }
 func (DredgeKeyword) keyword() Keyword     { return Dredge }
 func (LandwalkKeyword) keyword() Keyword   { return Landwalk }
+func (SaddleKeyword) keyword() Keyword     { return Saddle }
 
 func (ability SimpleKeyword) cloneKeywordAbility() KeywordAbility { return ability }
 func (ability WardKeyword) cloneKeywordAbility() KeywordAbility {
@@ -295,6 +303,7 @@ func (ability RampageKeyword) cloneKeywordAbility() KeywordAbility   { return ab
 func (ability SoulshiftKeyword) cloneKeywordAbility() KeywordAbility { return ability }
 func (ability DredgeKeyword) cloneKeywordAbility() KeywordAbility    { return ability }
 func (ability LandwalkKeyword) cloneKeywordAbility() KeywordAbility  { return ability }
+func (ability SaddleKeyword) cloneKeywordAbility() KeywordAbility    { return ability }
 
 // SimpleKeywords returns sealed keyword variants for non-parameterized keywords.
 func SimpleKeywords(keywords ...Keyword) []KeywordAbility {
@@ -449,6 +458,20 @@ func ActivatedBodyUnearthCost(body *ActivatedAbility) (cost.Mana, bool) {
 		return nil, false
 	}
 	return unearth.Cost, true
+}
+
+// ActivatedBodySaddlePower returns the Saddle N power threshold from an
+// activated ability, used to recognize and render the Saddle template.
+func ActivatedBodySaddlePower(body *ActivatedAbility) (int, bool) {
+	ka, ok := BodyKeywordAbility(body, Saddle)
+	if !ok {
+		return 0, false
+	}
+	saddle, ok := ka.(SaddleKeyword)
+	if !ok {
+		return 0, false
+	}
+	return saddle.Power, true
 }
 
 // ActivatedBodyNinjutsuCost returns the Ninjutsu cost from an activated ability.

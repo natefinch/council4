@@ -213,6 +213,7 @@ func (e *Engine) runEndingPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 		permanent.TemporaryPowerModifier = 0
 		permanent.TemporaryToughnessModifier = 0
 		permanent.RegenerationShields = 0
+		permanent.Saddled = false
 	}
 	expireCleanupDurations(g)
 	expirePreventionShields(g)

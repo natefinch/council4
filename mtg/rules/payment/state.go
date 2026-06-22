@@ -56,6 +56,10 @@ type stateQueries interface {
 	// PermanentByObjectID looks up a permanent by its object ID.
 	PermanentByObjectID(objectID id.ID) (*game.Permanent, bool)
 
+	// PermanentPower returns the permanent's effective power, accounting for
+	// counters and continuous power-modifying effects.
+	PermanentPower(p *game.Permanent) int
+
 	// IsCommanderPermanent reports whether a permanent contains a modeled
 	// commander card.
 	IsCommanderPermanent(p *game.Permanent) bool

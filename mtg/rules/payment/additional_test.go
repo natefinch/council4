@@ -156,6 +156,7 @@ func TestPreferredReturnPermanentsRejectsInvalidPreference(t *testing.T) {
 
 type fakePaymentState struct {
 	battlefield []*game.Permanent
+	powers      map[id.ID]int
 }
 
 func (fakePaymentState) Player(playerID game.PlayerID) (*game.Player, bool) {
@@ -189,6 +190,7 @@ func (s fakePaymentState) PermanentByObjectID(objectID id.ID) (*game.Permanent, 
 }
 
 func (fakePaymentState) CardInstance(id.ID) (*game.CardInstance, bool) { return nil, false }
+func (s fakePaymentState) PermanentPower(p *game.Permanent) int        { return s.powers[p.ObjectID] }
 func (fakePaymentState) CardFace(*game.CardInstance, game.FaceIndex) *game.CardDef {
 	return nil
 }
@@ -265,5 +267,58 @@ func TestPreferredSacrificePermanentsRejectsSourcePreferenceWhenExcluded(t *test
 	chosen := preferredSacrificePermanents(state, game.Player1, additional, 1, nil, prefs, source)
 	if len(chosen) != 1 || chosen[0].ObjectID != other.ObjectID {
 		t.Fatalf("chosen = %#v, want the non-source preference honored", chosen)
+	}
+}
+
+func TestChooseTapPermanentsTotalPowerSelectsThreshold(t *testing.T) {
+	source := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	mid := &game.Permanent{ObjectID: 2, Controller: game.Player1}
+	small := &game.Permanent{ObjectID: 3, Controller: game.Player1}
+	tapped := &game.Permanent{ObjectID: 4, Controller: game.Player1, Tapped: true}
+	opp := &game.Permanent{ObjectID: 5, Controller: game.Player2}
+	state := fakePaymentState{
+		battlefield: []*game.Permanent{source, mid, small, tapped, opp},
+		powers:      map[id.ID]int{1: 5, 2: 2, 3: 1, 4: 9, 5: 9},
+	}
+	additional := cost.Additional{
+		Kind:              cost.AdditionalTapPermanents,
+		ExcludeSource:     true,
+		TotalPowerAtLeast: 3,
+	}
+	chosen := chooseTapPermanentsTotalPower(state, game.Player1, additional, nil, source)
+	got := map[id.ID]bool{}
+	total := 0
+	for _, p := range chosen {
+		got[p.ObjectID] = true
+		total += state.powers[p.ObjectID]
+	}
+	if total < additional.TotalPowerAtLeast {
+		t.Fatalf("total power = %d, want >= %d", total, additional.TotalPowerAtLeast)
+	}
+	if got[source.ObjectID] {
+		t.Fatal("source must be excluded by ExcludeSource")
+	}
+	if got[tapped.ObjectID] {
+		t.Fatal("tapped permanents must be excluded")
+	}
+	if got[opp.ObjectID] {
+		t.Fatal("opponent's permanents must be excluded")
+	}
+}
+
+func TestChooseTapPermanentsTotalPowerUnreachableReturnsNil(t *testing.T) {
+	source := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	c2 := &game.Permanent{ObjectID: 2, Controller: game.Player1}
+	state := fakePaymentState{
+		battlefield: []*game.Permanent{source, c2},
+		powers:      map[id.ID]int{1: 5, 2: 2},
+	}
+	additional := cost.Additional{
+		Kind:              cost.AdditionalTapPermanents,
+		ExcludeSource:     true,
+		TotalPowerAtLeast: 10,
+	}
+	if chosen := chooseTapPermanentsTotalPower(state, game.Player1, additional, nil, source); chosen != nil {
+		t.Fatalf("expected nil when threshold unreachable, got %v", chosen)
 	}
 }

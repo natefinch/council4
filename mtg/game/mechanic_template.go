@@ -433,6 +433,33 @@ func OutlastActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 	}
 }
 
+// SaddleActivatedAbility builds the complete activated ability for Saddle N
+// (CR 702.166): "Tap any number of other creatures you control with total power
+// N or more: This Mount becomes saddled until end of turn. Saddle only as a
+// sorcery." The ability has no mana cost; its additional cost taps other
+// creatures the controller controls with total power at least n.
+func SaddleActivatedAbility(n int) ActivatedAbility {
+	return ActivatedAbility{
+		Text: "Saddle " + strconv.Itoa(n),
+		AdditionalCosts: []cost.Additional{{
+			Kind:               cost.AdditionalTapPermanents,
+			Text:               "Tap any number of other creatures you control with total power " + strconv.Itoa(n) + " or more",
+			MatchPermanentType: true,
+			PermanentType:      types.Creature,
+			ExcludeSource:      true,
+			TotalPowerAtLeast:  n,
+		}},
+		ZoneOfFunction: zone.Battlefield,
+		Timing:         SorceryOnly,
+		KeywordAbilities: []KeywordAbility{
+			SaddleKeyword{Power: n},
+		},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: BecomeSaddled{Object: SourcePermanentReference()},
+		}}}.Ability(),
+	}
+}
+
 // LandcyclingActivatedAbility builds the complete activated ability for the
 // typed landcycling family (Basic landcycling, Plainscycling, and so on). It is
 // a cycling variant (CR 702.29): the discard-from-hand activation searches the

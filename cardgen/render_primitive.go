@@ -774,6 +774,18 @@ func (r Renderer) renderRenown(ctx *renderCtx, value game.Renown) (string, error
 	}), nil
 }
 
+// renderBecomeSaddled renders a BecomeSaddled primitive, emitting the saddled
+// Mount reference.
+func (r Renderer) renderBecomeSaddled(_ *renderCtx, value game.BecomeSaddled) (string, error) {
+	object, err := r.renderObjectReference(value.Object)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.BecomeSaddled", []string{
+		fmt.Sprintf("Object: %s,", object),
+	}), nil
+}
+
 func (r Renderer) renderDigPrimitive(ctx *renderCtx, value game.Dig) (string, error) {
 	player, err := r.renderPlayerReference(value.Player)
 	if err != nil {
