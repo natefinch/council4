@@ -1665,8 +1665,13 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 		if effect.Amount.DynamicKind == EffectDynamicAmountNone {
 			return false
 		}
-		return strings.EqualFold(exactEffectClauseText(effect),
-			"Create "+specBody("a number of", "tokens")+" "+effect.Amount.Text+".")
+		// Oracle wording for these counts retains the "You" subject ("You create
+		// a number of X tokens equal to ..."), which effectSubjectStart does not
+		// strip, so accept both the bare and "You" prefixes.
+		spec := specBody("a number of", "tokens")
+		clause := exactEffectClauseText(effect)
+		return strings.EqualFold(clause, "Create "+spec+" "+effect.Amount.Text+".") ||
+			strings.EqualFold(clause, "You create "+spec+" "+effect.Amount.Text+".")
 	case EffectDynamicAmountFormWhereX:
 		if effect.Amount.DynamicKind == EffectDynamicAmountNone && !effect.Amount.VariableX {
 			return false

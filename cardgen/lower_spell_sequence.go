@@ -53,6 +53,7 @@ func lowerLinkedCounterTokenSequence(
 func lowerOrderedSequenceSpecialCase(
 	cardName string,
 	ctx contentCtx,
+	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic, bool) {
 	if len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{},
@@ -98,7 +99,7 @@ func lowerOrderedSequenceSpecialCase(
 	// The combined-shape lowerers do not model per-effect conditions; only
 	// attempt them when the sequence carries none, so a condition can never be
 	// silently dropped.
-	if content, ok := lowerCombinedSequenceShapes(cardName, ctx); ok {
+	if content, ok := lowerCombinedSequenceShapes(cardName, ctx, syntax); ok {
 		return content, nil, true
 	}
 	if !legacyOrderedEffectSequenceExact(ctx.content.Effects) {
@@ -114,7 +115,7 @@ func lowerOrderedEffectSequence(
 	ctx contentCtx,
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
-	if content, diagnostic, handled := lowerOrderedSequenceSpecialCase(cardName, ctx); handled {
+	if content, diagnostic, handled := lowerOrderedSequenceSpecialCase(cardName, ctx, syntax); handled {
 		return content, diagnostic
 	}
 	// Resolving optionality ("you may X. If you do, Y") is realized by marking
@@ -531,7 +532,7 @@ func exactUnqualifiedLandSelector(selector compiler.CompiledSelector) bool {
 // (single continuous effects spread across two clauses) that do not model
 // per-effect conditions. It only runs when the sequence carries no conditions,
 // so a condition can never be silently dropped.
-func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityContent, bool) {
+func lowerCombinedSequenceShapes(cardName string, ctx contentCtx, syntax *parser.Ability) (game.AbilityContent, bool) {
 	if content, ok := lowerShuffleRevealPermanentSequence(ctx); ok {
 		return content, true
 	}
@@ -562,7 +563,7 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityC
 	if content, ok := lowerDestroyedThisWaySequence(ctx); ok {
 		return content, true
 	}
-	if content, ok := lowerDieRollResultSequence(ctx); ok {
+	if content, ok := lowerDieRollResultSequence(cardName, ctx, syntax); ok {
 		return content, true
 	}
 	if content, ok := lowerDiscardDrawGreatestThisWaySequence(ctx); ok {
@@ -3074,22 +3075,24 @@ func lowerDestroyedThisWaySequence(ctx contentCtx) (game.AbilityContent, bool) {
 	}.Ability(), true
 }
 
-// lowerDieRollResultSequence handles the two-effect dice pattern "Roll a d<N>.
-// <effect> equal to the result." (Ancient Copper Dragon and the Ancient Dragon
-// dice cycle). It emits a RollDie that publishes its rolled value under
-// dieRollResultKey followed by the payoff effect, whose "equal to the result"
-// amount lowers (via lowerDynamicAmount) to a previous-effect-result read of
-// that published value. The payoff is lowered through the standard token-
-// creation path so every supported token shape (predefined Treasure/Gold/etc.
-// and creature tokens) composes. It fails closed unless the first effect is an
-// exact controller-scoped die roll and the second is a controller-scoped token
-// create whose amount is the die-roll result.
-func lowerDieRollResultSequence(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 2 {
+// lowerDieRollResultSequence handles the dice pattern "Roll a d<N>. <payoff>"
+// where one or more payoff effects scale by "the result" (Ancient Copper Dragon
+// and the Ancient Dragon dice cycle). It emits a RollDie that publishes its
+// rolled value under dieRollResultKey, then lowers every effect after the roll
+// through the standard content path and prepends the publishing instruction.
+// Because the payoff is lowered by the general machinery, any supported payoff
+// composes: artifact-token creation (Treasure), creature-token creation (Faerie
+// Dragon), card draw, and riders such as "no maximum hand size". Each payoff's
+// "equal to the result" amount lowers (via lowerDynamicAmount) to a
+// previous-effect-result read of the published die value. It fails closed unless
+// the first effect is an exact controller-scoped die roll, the sequence carries
+// no content-level targets/conditions/modes/references/keywords, and at least
+// one payoff effect actually reads the die result.
+func lowerDieRollResultSequence(cardName string, ctx contentCtx, syntax *parser.Ability) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) < 2 {
 		return game.AbilityContent{}, false
 	}
 	roll := &ctx.content.Effects[0]
-	payoff := &ctx.content.Effects[1]
 	if roll.Kind != compiler.EffectRollDie ||
 		roll.DieSides < 2 ||
 		!roll.Exact ||
@@ -3098,20 +3101,22 @@ func lowerDieRollResultSequence(ctx contentCtx) (game.AbilityContent, bool) {
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		len(ctx.content.References) != 0 {
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Keywords) != 0 {
 		return game.AbilityContent{}, false
 	}
-	if payoff.Kind != compiler.EffectCreate ||
-		payoff.Amount.DynamicKind != compiler.DynamicAmountDieRollResult {
+	if !sequenceReadsDieRollResult(ctx.content.Effects[1:]) {
 		return game.AbilityContent{}, false
 	}
-	// Lower only the payoff create through the token-creation path, which
-	// resolves the "equal to the result" amount to a previous-effect-result read
-	// keyed to the die roll, then prepend the publishing RollDie instruction.
+	// Lower the payoff (every effect after the roll) through the standard content
+	// path so any supported payoff composes; its "equal to the result" amount
+	// resolves to a previous-effect-result read keyed to the die roll. Then
+	// prepend the publishing RollDie instruction.
 	payoffCtx := ctx
 	payoffCtx.content.Effects = ctx.content.Effects[1:]
-	payoffContent, diagnostic := lowerCreateTokenSpellLinked(payoffCtx, "")
-	if diagnostic != nil || len(payoffContent.Modes) != 1 {
+	payoffContent, diagnostic := lowerContent(cardName, payoffCtx, syntax)
+	if diagnostic != nil || payoffContent.IsModal() ||
+		len(payoffContent.Modes) != 1 || len(payoffContent.SharedTargets) != 0 {
 		return game.AbilityContent{}, false
 	}
 	payoffContent.Modes[0].Sequence = append(
@@ -3122,6 +3127,18 @@ func lowerDieRollResultSequence(ctx contentCtx) (game.AbilityContent, bool) {
 		payoffContent.Modes[0].Sequence...,
 	)
 	return payoffContent, true
+}
+
+// sequenceReadsDieRollResult reports whether any effect in the payoff scales by
+// the die-roll result, so a RollDie is only emitted when its published value is
+// consumed.
+func sequenceReadsDieRollResult(effects []compiler.CompiledEffect) bool {
+	for i := range effects {
+		if effects[i].Amount.DynamicKind == compiler.DynamicAmountDieRollResult {
+			return true
+		}
+	}
+	return false
 }
 
 // lowerLifeLostThisWayDrain handles the two-effect drain pattern

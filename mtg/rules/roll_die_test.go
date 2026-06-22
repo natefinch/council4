@@ -71,3 +71,68 @@ func TestRollDieResultWithinDieRange(t *testing.T) {
 		t.Fatalf("rolled d20 result = %d, want within [1,20]", rolled)
 	}
 }
+
+// TestRollDieCreatesCreatureTokensEqualToResult verifies the creature-token
+// payoff (Ancient Gold Dragon): "roll a d20. You create a number of 1/1 blue
+// Faerie Dragon creature tokens ... equal to the result." The number of Faerie
+// Dragon tokens created equals the deterministic die roll.
+func TestRollDieCreatesCreatureTokensEqualToResult(t *testing.T) {
+	const seed1, seed2 = 5, 17
+	expected := rand.New(rand.NewPCG(seed1, seed2)).IntN(20) + 1
+
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(rand.New(rand.NewPCG(seed1, seed2)))
+	faerie := &game.CardDef{CardFace: game.CardFace{
+		Name:     "Faerie Dragon",
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Faerie, types.Dragon},
+	}}
+
+	const resultKey = game.ResultKey("die-roll-result")
+	addInstructionSpellToStack(g, []game.Instruction{
+		{Primitive: game.RollDie{Sides: 20}, PublishResult: resultKey},
+		{Primitive: game.CreateToken{
+			Amount: game.Dynamic(game.DynamicAmount{
+				Kind:      game.DynamicAmountPreviousEffectResult,
+				ResultKey: resultKey,
+			}),
+			Source: game.TokenDef(faerie),
+		}},
+	})
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := countTokenPermanentsNamed(g, "Faerie Dragon"); got != expected {
+		t.Fatalf("Faerie Dragon tokens = %d, want %d (equal to the d20 result)", got, expected)
+	}
+}
+
+// TestRollDieDrawsCardsEqualToResult verifies the draw payoff (Ancient Silver
+// Dragon): "roll a d20. Draw cards equal to the result." The controller draws a
+// number of cards equal to the deterministic die roll.
+func TestRollDieDrawsCardsEqualToResult(t *testing.T) {
+	const seed1, seed2 = 3, 8
+	expected := rand.New(rand.NewPCG(seed1, seed2)).IntN(20) + 1
+
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(rand.New(rand.NewPCG(seed1, seed2)))
+	for range 20 {
+		addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Card"}})
+	}
+
+	const resultKey = game.ResultKey("die-roll-result")
+	addInstructionSpellToStack(g, []game.Instruction{
+		{Primitive: game.RollDie{Sides: 20}, PublishResult: resultKey},
+		{Primitive: game.Draw{
+			Amount: game.Dynamic(game.DynamicAmount{
+				Kind:      game.DynamicAmountPreviousEffectResult,
+				ResultKey: resultKey,
+			}),
+			Player: game.ControllerReference(),
+		}},
+	})
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := g.Players[game.Player1].Hand.Size(); got != expected {
+		t.Fatalf("hand size = %d, want %d (drew cards equal to the d20 result)", got, expected)
+	}
+}
