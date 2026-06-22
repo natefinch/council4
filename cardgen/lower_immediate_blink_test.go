@@ -172,14 +172,13 @@ func TestLowerSelfBlinkRejectsStandaloneSelfExile(t *testing.T) {
 }
 
 // TestLowerImmediateBlinkRejectsUnsupportedVariants confirms the immediate blink
-// lowerer fails closed for shapes it does not fully model, most importantly the
-// leading-position delayed wording whose timing the parser does not capture and
-// which must therefore never resolve at once.
+// lowerer fails closed for shapes it does not fully model, such as a return that
+// also adds a +1/+1 counter or an exile of a selector the sequence cannot model.
 func TestLowerImmediateBlinkRejectsUnsupportedVariants(t *testing.T) {
 	t.Parallel()
 	for _, text := range []string{
-		// Leading-position delayed return: must not be lowered as an immediate blink.
-		"Exile target creature. At the beginning of the next end step, return that card to the battlefield under its owner's control.",
+		// Leading-position delayed return that also adds a counter on return: the
+		// counter rider is unmodeled, so the body must fail closed.
 		"Exile target creature. At the beginning of the next end step, return it to the battlefield under its owner's control with a +1/+1 counter on it.",
 		// Exile of a non-supported selector still blocks the sequence.
 		"Exile target nontoken permanent, then return it to the battlefield under its owner's control.",
@@ -196,6 +195,34 @@ func TestLowerImmediateBlinkRejectsUnsupportedVariants(t *testing.T) {
 				t.Fatal("expected unsupported blink variant to fail closed")
 			}
 		})
+	}
+}
+
+// TestLowerLeadingDelayedBlinkLowersAsDelayed confirms the leading-position
+// delayed wording ("At the beginning of the next end step, return that card ...")
+// is captured by the parser and lowered as a delayed return, identical to the
+// trailing-position wording, rather than resolving the return at once.
+func TestLowerLeadingDelayedBlinkLowersAsDelayed(t *testing.T) {
+	t.Parallel()
+	face, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Leading Delayed Blink",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Exile target creature. At the beginning of the next end step, return that card to the battlefield under its owner's control.",
+	})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %v, want none", diagnostics)
+	}
+	sequence := face[0].SpellAbility.Val.Modes[0].Sequence
+	if len(sequence) != 2 {
+		t.Fatalf("sequence length = %d, want 2", len(sequence))
+	}
+	delayed, ok := sequence[1].Primitive.(game.CreateDelayedTrigger)
+	if !ok {
+		t.Fatalf("sequence[1] = %T, want CreateDelayedTrigger", sequence[1].Primitive)
+	}
+	if delayed.Trigger.Timing != game.DelayedAtBeginningOfNextEndStep {
+		t.Fatalf("timing = %v, want next end step", delayed.Trigger.Timing)
 	}
 }
 

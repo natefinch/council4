@@ -1940,6 +1940,14 @@ func lowerDelayedSequenceClause(
 		sequence[len(sequence)-1].Primitive = modify
 		return delayed, true, false
 	}
+	if publisher, delayed, ok := lowerDelayedTargetExile(effectIndex, ctx, sequence); ok {
+		sequence[len(sequence)-1].Primitive = publisher
+		return delayed, true, false
+	}
+	if publisher, grant, ok := lowerSequentialReferencedKeywordGrant(effectIndex, ctx, sequence); ok {
+		sequence[len(sequence)-1].Primitive = publisher
+		return grant, true, false
+	}
 	if exile, delayed, ok := lowerDelayedBlinkReturn(effects, effectIndex, ctx, sequence); ok {
 		sequence[len(sequence)-1].Primitive = exile
 		return delayed, true, false
@@ -2335,7 +2343,140 @@ func lowerDelayedTargetSacrifice(
 	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
 }
 
-// publishLinkedTargetPermanent rewrites a power/toughness or keyword-granting
+// isDelayedTargetExileEffect reports whether effect is a delayed "exile it/that
+// creature at the beginning of the next end step" clause whose subject is the
+// permanent targeted by an earlier effect in the same sequence (the temporary-
+// reanimation cleanup "Return target creature card ... Exile it at the beginning
+// of the next end step." — Whip of Erebos and kin).
+func isDelayedTargetExileEffect(effect *compiler.CompiledEffect) bool {
+	return effect.Kind == compiler.EffectExile &&
+		effect.DelayedTiming == game.DelayedAtBeginningOfNextEndStep &&
+		!effect.Negated &&
+		effect.Context == parser.EffectContextController &&
+		!effect.CounterKindKnown &&
+		referencesBindTo(effect.References, compiler.ReferenceBindingTarget, 0)
+}
+
+// lowerDelayedTargetExile lowers a delayed "Exile it at the beginning of the next
+// end step." clause that exiles the permanent an earlier clause put onto the
+// battlefield or pumped. It captures that permanent under a linked key (rewriting
+// the earlier publishing instruction) and schedules a delayed end-step trigger
+// that exiles the linked object, mirroring lowerDelayedTargetSacrifice. It
+// returns ok=false (so the caller lowers the clause normally) for any shape it
+// cannot link, preserving existing behavior for unlinkable predecessors.
+func lowerDelayedTargetExile(
+	effectIndex int,
+	ctx contentCtx,
+	sequence []game.Instruction,
+) (game.Primitive, game.AbilityContent, bool) {
+	if effectIndex == 0 ||
+		len(sequence) != effectIndex ||
+		len(ctx.content.Effects) != 1 ||
+		!isDelayedTargetExileEffect(&ctx.content.Effects[0]) ||
+		ctx.optional ||
+		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0) {
+		return nil, game.AbilityContent{}, false
+	}
+	key := game.LinkedKey(fmt.Sprintf("delayed-exile-%d", effectIndex))
+	publisher, ok := publishLinkedTargetPermanent(sequence[effectIndex-1].Primitive, key)
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	consumed := ctx
+	consumed.content.References = nil
+	consumed.content.Targets = nil
+	if consumed.content.Unconsumed() {
+		return nil, game.AbilityContent{}, false
+	}
+	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+		TargetLinkedKey: key,
+	})
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+		Timing: game.DelayedAtBeginningOfNextEndStep,
+		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.Exile{
+			Object: object,
+		}}}}.Ability(),
+	}}
+	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
+}
+
+// isSequentialReferencedKeywordGrantEffect reports whether effect is an exact
+// no-duration "it gains <keyword>" clause whose subject is the permanent an
+// earlier clause in the same sequence acted on (the reanimation companion grant
+// "Return target creature card ... to the battlefield. It gains haste." — Whip of
+// Erebos, Apprentice Necromancer, Puppeteer Clique). The keyword lasts as long as
+// the permanent remains on the battlefield, so the duration is absent rather than
+// until end of turn.
+func isSequentialReferencedKeywordGrantEffect(effect *compiler.CompiledEffect) bool {
+	return effect.Kind == compiler.EffectGain &&
+		effect.Exact &&
+		!effect.Negated &&
+		effect.Context == parser.EffectContextReferencedObject &&
+		effect.Duration == compiler.DurationNone &&
+		effect.StaticSubject == compiler.StaticSubjectNone &&
+		referencesBindTo(effect.References, compiler.ReferenceBindingTarget, 0)
+}
+
+// lowerSequentialReferencedKeywordGrant lowers an "it gains <keyword>." clause
+// that grants a keyword to the permanent an earlier clause in the same sequence
+// put onto the battlefield or otherwise acted on. "It" binds to that earlier
+// permanent, which (for a reanimation) is a freshly created object that the
+// targeted graveyard card became, so a plain target-permanent reference cannot
+// resolve it. The earlier publishing instruction is rewritten to record the
+// permanent under a linked key, and the keyword grant reads that linked object,
+// mirroring lowerDelayedTargetExile's capture. It returns the rewritten
+// publishing primitive and the grant content, or false to fail closed so the
+// caller lowers the clause normally.
+func lowerSequentialReferencedKeywordGrant(
+	effectIndex int,
+	ctx contentCtx,
+	sequence []game.Instruction,
+) (game.Primitive, game.AbilityContent, bool) {
+	if effectIndex == 0 ||
+		len(sequence) != effectIndex ||
+		len(ctx.content.Effects) != 1 ||
+		ctx.optional ||
+		len(ctx.content.Keywords) == 0 ||
+		!isSequentialReferencedKeywordGrantEffect(&ctx.content.Effects[0]) {
+		return nil, game.AbilityContent{}, false
+	}
+	keywords, abilities, ok := partitionTemporaryKeywords(ctx.content.Keywords)
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	key := game.LinkedKey(fmt.Sprintf("gain-keyword-%d", effectIndex))
+	publisher, ok := publishLinkedTargetPermanent(sequence[effectIndex-1].Primitive, key)
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	consumed := ctx
+	consumed.content.References = nil
+	consumed.content.Keywords = nil
+	consumed.content.Targets = nil
+	if consumed.content.Unconsumed() {
+		return nil, game.AbilityContent{}, false
+	}
+	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+		TargetLinkedKey: key,
+	})
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	grant := game.ApplyContinuous{
+		Object: opt.Val(object),
+		ContinuousEffects: []game.ContinuousEffect{{
+			Layer:        game.LayerAbility,
+			AddKeywords:  keywords,
+			AddAbilities: abilities,
+		}},
+		Duration: game.DurationPermanent,
+	}
+	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: grant}}}.Ability(), true
+}
+
 // primitive that targets a permanent so it records that permanent under key for a
 // later linked effect. It returns the rewritten primitive, or false when the
 // primitive does not target a permanent or already publishes a linked object.
@@ -2354,12 +2495,30 @@ func publishLinkedTargetPermanent(primitive game.Primitive, key game.LinkedKey) 
 		apply, ok := primitive.(game.ApplyContinuous)
 		if !ok ||
 			!apply.Object.Exists ||
-			apply.Object.Val.Kind() != game.ObjectReferenceTargetPermanent ||
+			(apply.Object.Val.Kind() != game.ObjectReferenceTargetPermanent &&
+				apply.Object.Val.Kind() != game.ObjectReferenceLinkedObject) ||
 			apply.PublishLinked != "" {
 			return nil, false
 		}
 		apply.PublishLinked = key
 		return apply, true
+	}
+	// A single-source battlefield entry (reanimation, "Return target creature
+	// card from your graveyard to the battlefield") produces one fresh permanent
+	// the linked effect can capture, so it publishes the entered permanent under
+	// key. A multi-source (Sources) entry produces several and is left unlinkable.
+	if primitive.Kind() == game.PrimitivePutOnBattlefield {
+		put, ok := primitive.(game.PutOnBattlefield)
+		if !ok ||
+			len(put.Sources) != 0 ||
+			put.PublishLinked != "" {
+			return nil, false
+		}
+		if _, ok := put.Source.CardRef(); !ok {
+			return nil, false
+		}
+		put.PublishLinked = key
+		return put, true
 	}
 	return nil, false
 }

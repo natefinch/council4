@@ -1400,6 +1400,10 @@ func lowerGainSpellEffect(ctx contentCtx) (game.AbilityContent, *shared.Diagnost
 		temporaryKeywordDuration(ctx.content.Effects[0].Duration) {
 		return lowerTemporaryKeywordSpell(ctx)
 	}
+	if len(ctx.content.Keywords) != 0 &&
+		ctx.content.Effects[0].Duration == compiler.DurationNone {
+		return lowerPermanentKeywordGrantSpell(ctx)
+	}
 	if !ctx.content.Effects[0].LifeObject {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -1412,6 +1416,60 @@ func lowerGainSpellEffect(ctx contentCtx) (game.AbilityContent, *shared.Diagnost
 	}, func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive {
 		return game.GainLife{Amount: amount, PlayerGroup: group}
 	})
+}
+
+// lowerPermanentKeywordGrantSpell lowers a no-duration keyword grant to a
+// referenced object ("Return target creature card ... to the battlefield. It
+// gains haste.") into a game.ApplyContinuous that adds the keyword for as long
+// as the object remains on the battlefield. "It" binds to the prior target, so
+// this grant composes with reanimation and similar back-referencing sequences.
+// It fails closed for any shape other than an exact, non-negated keyword grant
+// to a referenced target.
+func lowerPermanentKeywordGrantSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported keyword or ability grant",
+			"the executable source backend does not yet lower spells that grant a keyword or quoted ability",
+		)
+	}
+	effect := ctx.content.Effects[0]
+	referencedObject := len(ctx.content.Targets) == 0 &&
+		len(ctx.content.References) == 1 &&
+		ctx.content.References[0].Binding == compiler.ReferenceBindingTarget &&
+		effect.Context == parser.EffectContextReferencedObject
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		effect.Kind != compiler.EffectGain ||
+		!effect.Exact ||
+		!referencedObject ||
+		effect.Negated ||
+		effect.StaticSubject != compiler.StaticSubjectNone ||
+		effect.Duration != compiler.DurationNone {
+		return unsupported()
+	}
+	keywords, abilities, ok := partitionTemporaryKeywords(ctx.content.Keywords)
+	if !ok {
+		return unsupported()
+	}
+	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowTarget: true})
+	if !ok {
+		return unsupported()
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.ApplyContinuous{
+				Object: opt.Val(object),
+				ContinuousEffects: []game.ContinuousEffect{{
+					Layer:        game.LayerAbility,
+					AddKeywords:  keywords,
+					AddAbilities: abilities,
+				}},
+				Duration: game.DurationPermanent,
+			},
+		}},
+	}.Ability(), nil
 }
 
 // lowerLoseSpellEffect lowers an EffectLose body: either a temporary keyword

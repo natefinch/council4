@@ -1213,7 +1213,35 @@ func exactTemporaryKeywordEffectSyntax(effect *EffectSyntax) bool {
 			"You gain protection from everything until your next turn.",
 		)
 	}
-	return exactTemporaryKeywordChangeSyntax(effect, "gain", "gains")
+	return exactTemporaryKeywordChangeSyntax(effect, "gain", "gains") ||
+		exactPermanentKeywordGrantEffectSyntax(effect)
+}
+
+// exactPermanentKeywordGrantEffectSyntax recognizes a resolving keyword grant
+// with no duration to the object an earlier clause acted on ("It gains haste."),
+// the temporary-reanimation haste rider on "Return target creature card ... It
+// gains haste. Exile it at the beginning of the next end step." (Whip of Erebos
+// and the many graveyard-return cards that grant the reanimated creature haste).
+// The grant carries no "until end of turn" suffix, so it persists while the
+// object remains on the battlefield; a sibling cleanup clause exiles it at the
+// next end step. Only the singular referenced-object back-reference ("it" / "that
+// creature") is matched, so a static group anthem ("Creatures you control gain
+// trample.") never reaches this no-duration path.
+func exactPermanentKeywordGrantEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Duration != "" || effect.Context != EffectContextReferencedObject {
+		return false
+	}
+	subject, ok := exactObjectReferenceText(effect.SubjectReferences)
+	if !ok {
+		return false
+	}
+	text := strings.ToLower(exactEffectClauseText(effect))
+	middle, ok := strings.CutPrefix(text, strings.ToLower(subject)+" gains ")
+	if !ok {
+		return false
+	}
+	body, ok := strings.CutSuffix(middle, ".")
+	return ok && body != "" && exactTemporaryKeywordList(body)
 }
 
 // exactTemporaryKeywordLossEffectSyntax recognizes a resolving keyword removal
