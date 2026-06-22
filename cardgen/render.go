@@ -128,10 +128,14 @@ func renderPTValue(pt game.PT) string {
 // of cards in your hand").
 func renderDynamicValue(value game.DynamicValue) string {
 	kind := dynamicValueKindLiteral(value.Kind)
+	fields := ""
 	if value.Value != 0 {
-		return fmt.Sprintf("game.DynamicValue{Kind: %s, Value: %d}", kind, value.Value)
+		fields += fmt.Sprintf(", Value: %d", value.Value)
 	}
-	return fmt.Sprintf("game.DynamicValue{Kind: %s}", kind)
+	if value.Offset != 0 {
+		fields += fmt.Sprintf(", Offset: %d", value.Offset)
+	}
+	return fmt.Sprintf("game.DynamicValue{Kind: %s%s}", kind, fields)
 }
 
 func dynamicValueKindLiteral(kind game.DynamicValueKind) string {
@@ -150,6 +154,12 @@ func dynamicValueKindLiteral(kind game.DynamicValueKind) string {
 		return "game.DynamicValueControllerArtifactCount"
 	case game.DynamicValueAllBattlefieldCreatureCount:
 		return "game.DynamicValueAllBattlefieldCreatureCount"
+	case game.DynamicValueAllGraveyardsSize:
+		return "game.DynamicValueAllGraveyardsSize"
+	case game.DynamicValueCreatureCardsInAllGraveyards:
+		return "game.DynamicValueCreatureCardsInAllGraveyards"
+	case game.DynamicValueCardTypesAmongAllGraveyards:
+		return "game.DynamicValueCardTypesAmongAllGraveyards"
 	default:
 		return "game.DynamicValueNone"
 	}

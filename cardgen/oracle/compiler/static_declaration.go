@@ -537,9 +537,14 @@ type StaticDeclaration struct {
 // StaticCharacteristicPowerToughnessDeclaration carries the rules-derived count
 // a characteristic-defining ability sets the source object's power and toughness
 // equal to ("its power and toughness are each equal to the number of cards in
-// your hand"). It applies only to the source object.
+// your hand"). It applies only to the source object. SetsPower and SetsToughness
+// record which characteristics the declaration sets; ToughnessOffset is the
+// fixed integer added to the toughness count for the "that number plus N" form.
 type StaticCharacteristicPowerToughnessDeclaration struct {
-	Value game.DynamicValueKind
+	Value           game.DynamicValueKind
+	SetsPower       bool
+	SetsToughness   bool
+	ToughnessOffset int
 }
 
 // CompiledStaticSemantics contains declarations recognized for a static
@@ -1974,13 +1979,19 @@ func recognizeStaticCharacteristicPowerToughnessDeclaration(ability CompiledAbil
 	if !ok {
 		return StaticDeclaration{}, false
 	}
+	if !node.DynamicSetsPower && !node.DynamicSetsToughness {
+		return StaticDeclaration{}, false
+	}
 	return StaticDeclaration{
 		Kind:          StaticDeclarationCharacteristicPowerToughness,
 		Span:          ability.Span,
 		OperationSpan: node.OperationSpan,
 		Group:         StaticGroupReference{Span: node.Subject.Span, Domain: StaticGroupSource},
 		CharacteristicPT: &StaticCharacteristicPowerToughnessDeclaration{
-			Value: value,
+			Value:           value,
+			SetsPower:       node.DynamicSetsPower,
+			SetsToughness:   node.DynamicSetsToughness,
+			ToughnessOffset: node.DynamicToughnessOffset,
 		},
 	}, true
 }
@@ -2001,6 +2012,12 @@ func compileStaticDynamicValueKind(kind parser.StaticDeclarationDynamicValueKind
 		return game.DynamicValueControllerArtifactCount, true
 	case parser.StaticDeclarationDynamicValueAllBattlefieldCreatureCount:
 		return game.DynamicValueAllBattlefieldCreatureCount, true
+	case parser.StaticDeclarationDynamicValueAllGraveyardsSize:
+		return game.DynamicValueAllGraveyardsSize, true
+	case parser.StaticDeclarationDynamicValueCreatureCardsInAllGraveyards:
+		return game.DynamicValueCreatureCardsInAllGraveyards, true
+	case parser.StaticDeclarationDynamicValueCardTypesAmongAllGraveyards:
+		return game.DynamicValueCardTypesAmongAllGraveyards, true
 	default:
 		return game.DynamicValueNone, false
 	}

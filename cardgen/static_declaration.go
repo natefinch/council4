@@ -180,15 +180,13 @@ func lowerStaticCharacteristicPowerToughness(
 			"the recognized static declaration operation is not representable by the runtime static-value vocabulary",
 		)
 	}
-	value := game.DynamicValue{Kind: declaration.CharacteristicPT.Value}
+	characteristic := declaration.CharacteristicPT
 	spans := make([]shared.Span, 0, 1+len(syntax.Reminders))
 	spans = append(spans, declaration.Span)
 	for _, reminder := range syntax.Reminders {
 		spans = append(spans, reminder.Span)
 	}
-	return abilityLowering{
-		dynamicPower:     opt.Val(value),
-		dynamicToughness: opt.Val(value),
+	lowering := abilityLowering{
 		consumed: semanticConsumption{
 			conditions:   len(ability.Content.Conditions),
 			effects:      len(ability.Content.Effects),
@@ -197,7 +195,17 @@ func lowerStaticCharacteristicPowerToughness(
 			declarations: len(declarations),
 		},
 		sourceSpans: spans,
-	}, true, nil
+	}
+	if characteristic.SetsPower {
+		lowering.dynamicPower = opt.Val(game.DynamicValue{Kind: characteristic.Value})
+	}
+	if characteristic.SetsToughness {
+		lowering.dynamicToughness = opt.Val(game.DynamicValue{
+			Kind:   characteristic.Value,
+			Offset: characteristic.ToughnessOffset,
+		})
+	}
+	return lowering, true, nil
 }
 
 func lowerStaticDeclarationBlocker(ability compiler.CompiledAbility) *shared.Diagnostic {

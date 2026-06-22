@@ -48,13 +48,16 @@ type StaticDeclarationDynamicValueKind string
 // Static declaration characteristic-defining count kinds recognized by the
 // parser. Each maps onto one runtime dynamic-value kind.
 const (
-	StaticDeclarationDynamicValueNone                        StaticDeclarationDynamicValueKind = ""
-	StaticDeclarationDynamicValueControllerHandSize          StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerHandSize"
-	StaticDeclarationDynamicValueControllerGraveyardSize     StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerGraveyardSize"
-	StaticDeclarationDynamicValueControllerCreatureCount     StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerCreatureCount"
-	StaticDeclarationDynamicValueControllerLandCount         StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerLandCount"
-	StaticDeclarationDynamicValueControllerArtifactCount     StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerArtifactCount"
-	StaticDeclarationDynamicValueAllBattlefieldCreatureCount StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueAllBattlefieldCreatureCount"
+	StaticDeclarationDynamicValueNone                         StaticDeclarationDynamicValueKind = ""
+	StaticDeclarationDynamicValueControllerHandSize           StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerHandSize"
+	StaticDeclarationDynamicValueControllerGraveyardSize      StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerGraveyardSize"
+	StaticDeclarationDynamicValueControllerCreatureCount      StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerCreatureCount"
+	StaticDeclarationDynamicValueControllerLandCount          StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerLandCount"
+	StaticDeclarationDynamicValueControllerArtifactCount      StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerArtifactCount"
+	StaticDeclarationDynamicValueAllBattlefieldCreatureCount  StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueAllBattlefieldCreatureCount"
+	StaticDeclarationDynamicValueAllGraveyardsSize            StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueAllGraveyardsSize"
+	StaticDeclarationDynamicValueCreatureCardsInAllGraveyards StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueCreatureCardsInAllGraveyards"
+	StaticDeclarationDynamicValueCardTypesAmongAllGraveyards  StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueCardTypesAmongAllGraveyards"
 )
 
 // StaticDeclarationSubjectKind identifies the affected group named by a typed
@@ -287,6 +290,16 @@ type StaticDeclarationSyntax struct {
 	// a "<source>'s power and toughness are each equal to <count>" declaration
 	// sets the source object's power and toughness equal to.
 	DynamicValue StaticDeclarationDynamicValueKind `json:",omitempty"`
+
+	// DynamicSetsPower and DynamicSetsToughness record which characteristics a
+	// characteristic-defining power/toughness declaration sets. "power and
+	// toughness are each equal to" sets both; "power is equal to" sets power
+	// only (the printed toughness stands); the Tarmogoyf form "power is equal to
+	// <count> and its toughness is equal to that number plus N" sets both with a
+	// toughness offset.
+	DynamicSetsPower       bool `json:",omitempty"`
+	DynamicSetsToughness   bool `json:",omitempty"`
+	DynamicToughnessOffset int  `json:",omitempty"`
 
 	// LoseAllAbilities marks a StaticDeclarationLoseAbilitiesBecome declaration
 	// whose affected object loses all abilities ("loses all abilities"). For that

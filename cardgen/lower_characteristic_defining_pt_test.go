@@ -60,6 +60,57 @@ func TestLowerCharacteristicDefiningPowerToughness(t *testing.T) {
 	}
 }
 
+func TestLowerCharacteristicDefiningPowerOnly(t *testing.T) {
+	t.Parallel()
+	star := "*"
+	four := "4"
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Adeline, Resplendent Cathar",
+		Layout:     "normal",
+		TypeLine:   "Legendary Creature — Human Soldier",
+		ManaCost:   "{1}{W}{W}",
+		Power:      &star,
+		Toughness:  &four,
+		OracleText: "This creature's power is equal to the number of creatures you control.",
+	})
+	if !face.DynamicPower.Exists {
+		t.Fatalf("dynamic power not set: %+v", face)
+	}
+	if face.DynamicPower.Val.Kind != game.DynamicValueControllerCreatureCount {
+		t.Fatalf("dynamic power kind = %v, want creature count", face.DynamicPower.Val.Kind)
+	}
+	if face.DynamicToughness.Exists {
+		t.Fatalf("dynamic toughness must not be set for a power-only CDA: %+v", face.DynamicToughness)
+	}
+}
+
+func TestLowerCharacteristicDefiningToughnessOffset(t *testing.T) {
+	t.Parallel()
+	star := "*"
+	offsetStar := "1+*"
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:      "Tarmogoyf",
+		Layout:    "normal",
+		TypeLine:  "Creature — Lhurgoyf",
+		ManaCost:  "{1}{G}",
+		Power:     &star,
+		Toughness: &offsetStar,
+		OracleText: "Tarmogoyf's power is equal to the number of card types among cards in all graveyards " +
+			"and its toughness is equal to that number plus 1.",
+	})
+	if !face.DynamicPower.Exists || !face.DynamicToughness.Exists {
+		t.Fatalf("dynamic power/toughness not set: %+v", face)
+	}
+	if face.DynamicPower.Val.Kind != game.DynamicValueCardTypesAmongAllGraveyards ||
+		face.DynamicPower.Val.Offset != 0 {
+		t.Fatalf("dynamic power = %+v, want card-types-among-all-graveyards with no offset", face.DynamicPower.Val)
+	}
+	if face.DynamicToughness.Val.Kind != game.DynamicValueCardTypesAmongAllGraveyards ||
+		face.DynamicToughness.Val.Offset != 1 {
+		t.Fatalf("dynamic toughness = %+v, want card-types-among-all-graveyards plus 1", face.DynamicToughness.Val)
+	}
+}
+
 func TestGenerateExecutableCardSourcePsychosisCrawler(t *testing.T) {
 	t.Parallel()
 	star := "*"
