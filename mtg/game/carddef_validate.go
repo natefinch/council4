@@ -1004,6 +1004,13 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if effect.AdditionalLandPlays < 1 {
 			v.add(faceName, appendPath(path, "AdditionalLandPlays"), CardDefIssueInvalidRuleEffect, "additional land plays must grant at least one extra land play")
 		}
+	case RuleEffectDrawLimitPerTurn:
+		if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "draw limit cannot affect a permanent")
+		}
+		if effect.DrawLimitPerTurn < 1 {
+			v.add(faceName, appendPath(path, "DrawLimitPerTurn"), CardDefIssueInvalidRuleEffect, "draw limit must allow at least one card each turn")
+		}
 	case RuleEffectAttackTax:
 		v.validateAttackTaxRuleEffect(faceName, path, effect)
 	case RuleEffectPayLifeForColoredMana:

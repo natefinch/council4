@@ -32,6 +32,7 @@ const (
 	StaticDeclarationEnterBattlefieldRestriction
 	StaticDeclarationCastAsThoughFlash
 	StaticDeclarationGraveyardCardKeywordGrant
+	StaticDeclarationDrawLimit
 )
 
 // StaticDeclarationBlocker identifies exact static wording whose declaration
@@ -622,6 +623,18 @@ type StaticCastAsThoughFlashDeclaration struct {
 	SpellSubtypes []types.Sub
 }
 
+// StaticDrawLimitDeclaration caps how many cards the affected players may draw
+// each turn at Limit ("Each opponent can't draw more than one card each turn.",
+// Narset, Parter of Veils). AffectsAllPlayers selects every player ("Each player
+// can't ...", Spirit of the Labyrinth); AffectsController selects only the
+// controller ("You can't ..."). With neither flag set the cap affects only the
+// controller's opponents.
+type StaticDrawLimitDeclaration struct {
+	Limit             int
+	AffectsAllPlayers bool
+	AffectsController bool
+}
+
 // StaticDeclaration is source-spanned semantic data attached directly to a
 // static ability. It is not Instruction content and never resolves.
 type StaticDeclaration struct {
@@ -645,6 +658,7 @@ type StaticDeclaration struct {
 	CharacteristicPT    *StaticCharacteristicPowerToughnessDeclaration
 	CastAsThoughFlash   *StaticCastAsThoughFlashDeclaration
 	GraveyardGrant      *StaticGraveyardKeywordGrantDeclaration
+	DrawLimit           *StaticDrawLimitDeclaration
 }
 
 // StaticCharacteristicPowerToughnessDeclaration carries the rules-derived count
@@ -776,6 +790,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticOpponentActionRestrictionDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticDrawLimitDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
@@ -3588,6 +3606,39 @@ func recognizeStaticOpponentActionRestrictionDeclaration(ability CompiledAbility
 			CastFromZones:        append([]parser.StaticDeclarationCastZoneKind(nil), node.RestrictCastFromZones...),
 			AffectsAllPlayers:    node.RestrictAffectsAllPlayers,
 			DuringControllerTurn: node.RestrictDuringControllerTurn,
+		},
+	}, true
+}
+
+// recognizeStaticDrawLimitDeclaration maps the parser-owned draw-limit syntax
+// ("Each opponent can't draw more than one card each turn.", Narset, Parter of
+// Veils) onto its closed semantic payload. The continuous draw cap consumes no
+// resolving content effects, so the ability must carry no cost, trigger, modes,
+// targets, keywords, or ability word.
+func recognizeStaticDrawLimitDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationDrawLimit) {
+		return StaticDeclaration{}, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		ability.AbilityWord != "" {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	if node.DrawLimit < 1 {
+		return StaticDeclaration{}, false
+	}
+	return StaticDeclaration{
+		Kind:          StaticDeclarationDrawLimit,
+		Span:          node.Span,
+		OperationSpan: node.OperationSpan,
+		DrawLimit: &StaticDrawLimitDeclaration{
+			Limit:             node.DrawLimit,
+			AffectsAllPlayers: node.DrawLimitAffectsAllPlayers,
+			AffectsController: node.DrawLimitAffectsController,
 		},
 	}, true
 }

@@ -289,6 +289,14 @@ const (
 	// the rules layer emits the commander tax as generic Phyrexian symbols so
 	// each {2} instance is independently payable with 2 life.
 	RuleEffectPayLifeForCommanderTax
+	// RuleEffectDrawLimitPerTurn caps the number of cards the affected players
+	// (AffectedPlayer) may draw each turn at DrawLimitPerTurn ("Each opponent
+	// can't draw more than one card each turn.", Narset, Parter of Veils, Leovold;
+	// "Each player can't draw more than one card each turn.", Spirit of the
+	// Labyrinth). It is a continuous draw restriction (CR 120.3): once an affected
+	// player has drawn DrawLimitPerTurn cards this turn, each further draw is
+	// replaced by drawing nothing.
+	RuleEffectDrawLimitPerTurn
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -327,7 +335,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectCantEnterFromZones,
 		RuleEffectLookAtTopCardAnyTime,
 		RuleEffectPayLifeForColoredMana,
-		RuleEffectPayLifeForCommanderTax:
+		RuleEffectPayLifeForCommanderTax,
+		RuleEffectDrawLimitPerTurn:
 		return true
 	default:
 		return false
@@ -423,6 +432,12 @@ type RuleEffect struct {
 	// AdditionalLandPlays is the number of extra land plays granted by a
 	// RuleEffectAdditionalLandPlays effect. It is unused for every other kind.
 	AdditionalLandPlays int
+
+	// DrawLimitPerTurn caps how many cards the affected players may draw each turn
+	// for a RuleEffectDrawLimitPerTurn effect ("Each opponent can't draw more than
+	// one card each turn."). It is a positive count and unused for every other
+	// kind.
+	DrawLimitPerTurn int
 
 	// RestrictedDuringControllerTurn scopes a RuleEffectCantCastSpells or
 	// RuleEffectCantActivateAbilities prohibition to the source controller's turn

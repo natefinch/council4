@@ -40,6 +40,7 @@ const (
 	StaticDeclarationContinuousQuotedAbilityGrant         StaticDeclarationKind = "StaticDeclarationContinuousQuotedAbilityGrant"
 	StaticDeclarationAbilityCostSet                       StaticDeclarationKind = "StaticDeclarationAbilityCostSet"
 	StaticDeclarationGraveyardCardKeywordGrant            StaticDeclarationKind = "StaticDeclarationGraveyardCardKeywordGrant"
+	StaticDeclarationDrawLimit                            StaticDeclarationKind = "StaticDeclarationDrawLimit"
 )
 
 // StaticDeclarationDynamicValueKind identifies the rules-derived count a
@@ -484,6 +485,17 @@ type StaticDeclarationSyntax struct {
 	RestrictCastFromZones    []StaticDeclarationCastZoneKind `json:"-"`
 	RestrictCastOnlyFromHand bool                            `json:",omitempty"`
 
+	// Draw-limit payload: a continuous per-turn draw cap stopping the affected
+	// players from drawing more than DrawLimit cards each turn ("Each opponent
+	// can't draw more than one card each turn.", Narset, Parter of Veils).
+	// DrawLimitAffectsAllPlayers selects every player ("Each player can't ...",
+	// Spirit of the Labyrinth); DrawLimitAffectsController selects only the
+	// controller ("You can't ..."). With neither flag set the cap affects only the
+	// controller's opponents.
+	DrawLimit                  int  `json:",omitempty"`
+	DrawLimitAffectsAllPlayers bool `json:",omitempty"`
+	DrawLimitAffectsController bool `json:",omitempty"`
+
 	// Entering-trigger-multiplier payload: the entering permanent's card-type
 	// filter for an "If <filter> entering causes a triggered ability of a
 	// permanent you control to trigger, that ability triggers an additional
@@ -708,6 +720,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticOpponentActionRestrictionDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticDrawLimitDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticEnchantedTypeChangeDeclaration(tokens, quoted, atoms); ok {
@@ -1092,8 +1107,72 @@ func parseStaticPassiveCastProhibition(tokens []shared.Token, index, end int, du
 	}, true
 }
 
-// parseStaticRestrictedActions consumes the "cast spells" and/or "activate
-// abilities of <types>" actions joined by "or". At least one action is required.
+// parseStaticDrawLimitDeclaration recognizes the continuous per-turn draw cap
+// "<players> can't draw more than <N> card[s] each turn." (Narset, Parter of
+// Veils; Spirit of the Labyrinth; Leovold). <players> is "each opponent"/"your
+// opponents" (opponents), "each player"/"players" (every player), or "you" (the
+// controller). Any deviation leaves the clause unconsumed and fails closed.
+func parseStaticDrawLimitDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) < 4 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	end := len(tokens) - 1
+	index := 0
+	affectsAll := false
+	affectsController := false
+	switch {
+	case staticWordsAt(tokens, index, "each", "opponent"):
+		index += 2
+	case staticWordsAt(tokens, index, "your", "opponents"):
+		index += 2
+	case staticWordsAt(tokens, index, "each", "player"):
+		affectsAll = true
+		index += 2
+	case staticWordsAt(tokens, index, "players"):
+		affectsAll = true
+		index++
+	case staticWordsAt(tokens, index, "you"):
+		affectsController = true
+		index++
+	default:
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, index, "can't") && !staticWordsAt(tokens, index, "cannot") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index++
+	if !staticWordsAt(tokens, index, "draw", "more", "than") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index += 3
+	if index >= end || tokens[index].Kind != shared.Word {
+		return StaticDeclarationSyntax{}, false
+	}
+	limit, ok := CardinalWordValue(tokens[index].Text)
+	if !ok || limit < 1 {
+		return StaticDeclarationSyntax{}, false
+	}
+	index++
+	if !staticWordsAt(tokens, index, "card") && !staticWordsAt(tokens, index, "cards") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index++
+	if !staticWordsAt(tokens, index, "each", "turn") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index += 2
+	if index != end {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                       StaticDeclarationDrawLimit,
+		Span:                       shared.SpanOf(tokens),
+		OperationSpan:              shared.SpanOf(tokens[:end]),
+		DrawLimit:                  limit,
+		DrawLimitAffectsAllPlayers: affectsAll,
+		DrawLimitAffectsController: affectsController,
+	}, true
+}
 func parseStaticRestrictedActions(tokens []shared.Token, index, end int) (staticRestrictedActions, int, bool) {
 	var actions staticRestrictedActions
 	for {

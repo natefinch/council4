@@ -568,6 +568,12 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("AdditionalLandPlays: %d,", effect.AdditionalLandPlays))
 	}
+	if effect.Kind == game.RuleEffectDrawLimitPerTurn {
+		if effect.DrawLimitPerTurn < 1 {
+			return "", errors.New("render: draw limit requires a positive per-turn count")
+		}
+		fields = append(fields, fmt.Sprintf("DrawLimitPerTurn: %d,", effect.DrawLimitPerTurn))
+	}
 	if effect.Kind == game.RuleEffectPlayLandsFromZone ||
 		effect.Kind == game.RuleEffectCastSpellsFromZone ||
 		effect.Kind == game.RuleEffectCastFromZone {
@@ -756,6 +762,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectPayLifeForColoredMana", nil
 	case game.RuleEffectPayLifeForCommanderTax:
 		return "game.RuleEffectPayLifeForCommanderTax", nil
+	case game.RuleEffectDrawLimitPerTurn:
+		return "game.RuleEffectDrawLimitPerTurn", nil
 	default:
 		return "", fmt.Errorf("render: unsupported rule effect kind %d", kind)
 	}
