@@ -346,6 +346,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				Dig:                             syntax.Dig,
 				HandLibraryPut:                  syntax.HandLibraryPut,
 				HandDiscard:                     syntax.HandDiscard,
+				RevealChooseDiscard:             syntax.RevealChooseDiscard,
+				HandChoiceDiscard:               syntax.HandChoiceDiscard,
 				SearchSplit:                     syntax.SearchSplit,
 				ManaSpendRider:                  compileManaSpendRider(syntax.ManaSpendRider),
 				SearchSharedSubtype:             syntax.SearchSharedSubtype,

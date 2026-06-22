@@ -242,6 +242,10 @@ func (p LookAtHand) validateCapturedTargetControllerReferences(targets []TargetS
 	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
 }
 
+func (p ChooseDiscardFromHand) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
+}
+
 func (p Discard) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
 		return err
@@ -676,6 +680,10 @@ func (p ShuffleLibrary) validatePrimitive(targets []TargetSpec, checkTargets boo
 }
 
 func (p LookAtHand) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p ChooseDiscardFromHand) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 

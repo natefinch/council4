@@ -172,6 +172,7 @@ func emitSentenceResolvingSyntax(
 	}
 	recognizeShuffleRevealPermanentSequence(sentences)
 	recognizeRevealUntilThenPutSequence(sentences)
+	recognizeRevealChooseHandDiscardSequence(sentences)
 	if len(chooseColorCandidates) > 0 && !creditChosenColorChoice(sentences, chooseColorCandidates) {
 		unrecognizedSibling = true
 	}

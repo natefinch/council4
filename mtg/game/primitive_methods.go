@@ -18,6 +18,9 @@ func (ShuffleLibrary) Kind() PrimitiveKind { return PrimitiveShuffleLibrary }
 // Kind implements Primitive for LookAtHand.
 func (LookAtHand) Kind() PrimitiveKind { return PrimitiveLookAtHand }
 
+// Kind implements Primitive for ChooseDiscardFromHand.
+func (ChooseDiscardFromHand) Kind() PrimitiveKind { return PrimitiveChooseDiscardFromHand }
+
 // Kind implements Primitive for ExileFromHand.
 func (ExileFromHand) Kind() PrimitiveKind { return PrimitiveExileFromHand }
 
@@ -264,6 +267,7 @@ func (ReorderLibraryTop) isPrimitive()           {}
 func (LookAtLibraryTop) isPrimitive()            {}
 func (ShuffleLibrary) isPrimitive()              {}
 func (LookAtHand) isPrimitive()                  {}
+func (ChooseDiscardFromHand) isPrimitive()       {}
 func (ExileFromHand) isPrimitive()               {}
 func (PutFromHand) isPrimitive()                 {}
 func (CastForFree) isPrimitive()                 {}
@@ -357,11 +361,12 @@ func (p ReorderLibraryTop) instructionRefs() primitiveRefs {
 func (p LookAtLibraryTop) instructionRefs() primitiveRefs {
 	return primitiveRefs{publishesLinked: p.PublishLinked}
 }
-func (ShuffleLibrary) instructionRefs() primitiveRefs { return primitiveRefs{} }
-func (LookAtHand) instructionRefs() primitiveRefs     { return primitiveRefs{} }
-func (p Discard) instructionRefs() primitiveRefs      { return quantityRefs(p.Amount) }
-func (Destroy) instructionRefs() primitiveRefs        { return primitiveRefs{} }
-func (p AddCounter) instructionRefs() primitiveRefs   { return quantityRefs(p.Amount) }
+func (ShuffleLibrary) instructionRefs() primitiveRefs        { return primitiveRefs{} }
+func (LookAtHand) instructionRefs() primitiveRefs            { return primitiveRefs{} }
+func (ChooseDiscardFromHand) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (p Discard) instructionRefs() primitiveRefs             { return quantityRefs(p.Amount) }
+func (Destroy) instructionRefs() primitiveRefs               { return primitiveRefs{} }
+func (p AddCounter) instructionRefs() primitiveRefs          { return quantityRefs(p.Amount) }
 func (p AddPlayerCounter) instructionRefs() primitiveRefs {
 	return quantityRefs(p.Amount)
 }

@@ -542,6 +542,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx, syntax *parser
 	if content, ok := lowerRemovalManifestSequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerRevealChooseHandDiscardSequence(ctx); ok {
+		return content, true
+	}
 	if len(ctx.content.Conditions) != 0 {
 		return game.AbilityContent{}, false
 	}
@@ -1097,6 +1100,83 @@ func revealUntilPlayerSubject(
 		return []game.TargetSpec{targetSpec}, true
 	}
 	return nil, false
+}
+
+// lowerRevealChooseHandDiscardSequence lowers the targeted hand-disruption
+// family "Target player reveals their hand. You choose a [filter] card from it.
+// That player discards that card.[ You lose N life.]" (Coercion, Duress,
+// Thoughtseize, Inquisition of Kozilek) into a single ChooseDiscardFromHand
+// primitive (optionally followed by a controller LoseLife for the Thoughtseize
+// rider). The parser marks the reveal and discard halves with
+// RevealChooseDiscard and folds the filter onto the discard's HandChoiceDiscard;
+// this text-blind lowerer reads only those typed fields plus the lone target
+// player. Any shape mismatch fails closed so the general sequence path is
+// untouched.
+func lowerRevealChooseHandDiscardSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effects := ctx.content.Effects
+	if len(effects) != 2 && len(effects) != 3 {
+		return game.AbilityContent{}, false
+	}
+	reveal := effects[0]
+	discard := effects[1]
+	if !reveal.RevealChooseDiscard ||
+		!discard.RevealChooseDiscard ||
+		reveal.Kind != compiler.EffectReveal ||
+		discard.Kind != compiler.EffectDiscard ||
+		!discard.HandChoiceDiscard.Present ||
+		reveal.Context != parser.EffectContextTarget ||
+		discard.Context != parser.EffectContextReferencedPlayer {
+		return game.AbilityContent{}, false
+	}
+	targetSpec, ok := playerTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	primitive := game.ChooseDiscardFromHand{
+		Player:          game.TargetPlayerReference(0),
+		ExcludeCreature: discard.HandChoiceDiscard.ExcludeCreature,
+		ExcludeLand:     discard.HandChoiceDiscard.ExcludeLand,
+	}
+	if discard.HandChoiceDiscard.HasMaxManaValue {
+		primitive.MaxManaValue = opt.Val(discard.HandChoiceDiscard.MaxManaValue)
+	}
+	sequence := []game.Instruction{{Primitive: primitive}}
+	if len(effects) == 3 {
+		lose, ok := revealChooseDiscardLifeLoss(effects[2])
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		sequence = append(sequence, game.Instruction{Primitive: lose})
+	}
+	return game.Mode{
+		Targets:  []game.TargetSpec{targetSpec},
+		Sequence: sequence,
+	}.Ability(), true
+}
+
+// revealChooseDiscardLifeLoss lowers the optional trailing "You lose N life."
+// rider (Thoughtseize) into a controller LoseLife of a fixed positive amount.
+// Any non-fixed or non-controller life change fails closed.
+func revealChooseDiscardLifeLoss(effect compiler.CompiledEffect) (game.LoseLife, bool) {
+	if effect.Kind != compiler.EffectLose ||
+		effect.Context != parser.EffectContextController ||
+		!effect.LifeObject ||
+		effect.Negated ||
+		!effect.Amount.Known ||
+		effect.Amount.Value < 1 {
+		return game.LoseLife{}, false
+	}
+	return game.LoseLife{
+		Amount: game.Fixed(effect.Amount.Value),
+		Player: game.ControllerReference(),
+	}, true
 }
 
 func referencesContainBinding(references []compiler.CompiledReference, binding compiler.ReferenceBinding, prior int) bool {

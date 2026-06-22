@@ -701,6 +701,25 @@ func (r Renderer) renderLookAtHand(value game.LookAtHand) (string, error) {
 	}), nil
 }
 
+func (r Renderer) renderChooseDiscardFromHand(ctx *renderCtx, value game.ChooseDiscardFromHand) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Player: %s,", player)}
+	if value.ExcludeCreature {
+		fields = append(fields, "ExcludeCreature: true,")
+	}
+	if value.ExcludeLand {
+		fields = append(fields, "ExcludeLand: true,")
+	}
+	if value.MaxManaValue.Exists {
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("MaxManaValue: opt.Val(%d),", value.MaxManaValue.Val))
+	}
+	return structLit("game.ChooseDiscardFromHand", fields), nil
+}
+
 func (r Renderer) renderLookAtLibraryTop(value game.LookAtLibraryTop) (string, error) {
 	if value.PublishLinked == "" {
 		return "", errors.New("render: LookAtLibraryTop has no PublishLinked")
