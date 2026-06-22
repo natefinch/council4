@@ -529,6 +529,38 @@ func TestSpellCastTriggerMatchesManaValueKickerAndSourceZone(t *testing.T) {
 			event: game.Event{Kind: game.EventSpellCast, Controller: game.Player1},
 		},
 		{
+			name: "mana value at most matches lower value",
+			pattern: game.TriggerPattern{
+				Event: game.EventSpellCast,
+				CardSelection: game.Selection{
+					ManaValue: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 3}),
+				},
+			},
+			event: game.Event{Kind: game.EventSpellCast, Controller: game.Player1, ManaValue: opt.Val(2)},
+			want:  true,
+		},
+		{
+			name: "mana value at most matches equal value",
+			pattern: game.TriggerPattern{
+				Event: game.EventSpellCast,
+				CardSelection: game.Selection{
+					ManaValue: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 3}),
+				},
+			},
+			event: game.Event{Kind: game.EventSpellCast, Controller: game.Player1, ManaValue: opt.Val(3)},
+			want:  true,
+		},
+		{
+			name: "mana value at most rejects higher value",
+			pattern: game.TriggerPattern{
+				Event: game.EventSpellCast,
+				CardSelection: game.Selection{
+					ManaValue: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 3}),
+				},
+			},
+			event: game.Event{Kind: game.EventSpellCast, Controller: game.Player1, ManaValue: opt.Val(4)},
+		},
+		{
 			name:    "kicked matches",
 			pattern: game.TriggerPattern{Event: game.EventSpellCast, RequireKickerPaid: true},
 			event:   game.Event{Kind: game.EventSpellCast, Controller: game.Player1, KickerPaid: true},

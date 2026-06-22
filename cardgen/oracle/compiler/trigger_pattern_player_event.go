@@ -321,6 +321,7 @@ func phaseStepAttachedSelectionEmpty(selection TriggerSelection) bool {
 		!selection.NonToken &&
 		!selection.TokenOnly &&
 		selection.ManaValueAtLeast == 0 &&
+		selection.ManaValueAtMost == 0 &&
 		!selection.MatchManaValue &&
 		selection.ManaValue.Comparison == TriggerComparisonUnknown &&
 		selection.Power.Comparison == TriggerComparisonUnknown &&

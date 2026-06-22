@@ -195,11 +195,18 @@ func parseTriggerEventSpellSelection(tokens []shared.Token) (TriggerEventSpellSe
 		fromEntryChoice = true
 	}
 	manaValueAtLeast := 0
+	manaValueAtMost := 0
 	matchManaValue := false
+	matchManaValueAtMost := false
 	if rest, value, ok := cutTriggerSpellManaValueAtLeastSuffix(tokens); ok {
 		tokens = rest
 		manaValueAtLeast = value
 		matchManaValue = true
+	} else if rest, value, ok := cutTriggerSpellManaValueAtMostSuffix(tokens); ok {
+		tokens = rest
+		manaValueAtMost = value
+		matchManaValue = true
+		matchManaValueAtMost = true
 	}
 	selection, ok := parseTriggerEventSpellSelectionFilter(tokens)
 	if !ok {
@@ -214,7 +221,11 @@ func parseTriggerEventSpellSelection(tokens []shared.Token) (TriggerEventSpellSe
 			return TriggerEventSpellSelection{}, false
 		}
 		selection.MatchManaValue = true
-		selection.ManaValueAtLeast = manaValueAtLeast
+		if matchManaValueAtMost {
+			selection.ManaValueAtMost = manaValueAtMost
+		} else {
+			selection.ManaValueAtLeast = manaValueAtLeast
+		}
 		selection.Span = shared.SpanOf(full)
 	}
 	if fromEntryChoice {
@@ -243,6 +254,34 @@ func cutTriggerSpellManaValueAtLeastSuffix(tokens []shared.Token) ([]shared.Toke
 		tokens[n-3].Kind != shared.Integer ||
 		!equalWord(tokens[n-2], "or") ||
 		!equalWord(tokens[n-1], "greater") {
+		return nil, 0, false
+	}
+	value, ok := integerTokenValue(tokens[n-3])
+	if !ok {
+		return nil, 0, false
+	}
+	return tokens[:n-6], value, true
+}
+
+// cutTriggerSpellManaValueAtMostSuffix strips a trailing "with mana value N or
+// less" (or "or fewer") qualifier from a spell-selection token run, reporting
+// the remaining noun-phrase tokens and the integer upper bound. It is the
+// symmetric counterpart of cutTriggerSpellManaValueAtLeastSuffix: the suffix
+// lowers to the Selection mana-value-at-most filter and composes with the same
+// typed, colored, colorless, subtype, and disjunction noun phrases ("a creature
+// spell with mana value 3 or less"). It reports false when the suffix is absent
+// or malformed.
+func cutTriggerSpellManaValueAtMostSuffix(tokens []shared.Token) ([]shared.Token, int, bool) {
+	n := len(tokens)
+	if n < 6 {
+		return nil, 0, false
+	}
+	if !equalWord(tokens[n-6], "with") ||
+		!equalWord(tokens[n-5], "mana") ||
+		!equalWord(tokens[n-4], "value") ||
+		tokens[n-3].Kind != shared.Integer ||
+		!equalWord(tokens[n-2], "or") ||
+		(!equalWord(tokens[n-1], "less") && !equalWord(tokens[n-1], "fewer")) {
 		return nil, 0, false
 	}
 	value, ok := integerTokenValue(tokens[n-3])
