@@ -882,3 +882,39 @@ func TestGenerateExecutableCardSourceEnterOrAttackUnionTrigger(t *testing.T) {
 		}
 	}
 }
+
+func TestGenerateExecutableCardSourceEnterDamageEqualToThatCreaturesPower(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Terror Test",
+		Layout:     "normal",
+		ManaCost:   "{3}{R}{R}",
+		TypeLine:   "Creature — Dragon",
+		OracleText: "Flying\nWhenever another creature you control enters, this creature deals damage equal to that creature's power to any target.",
+		Colors:     []string{"R"},
+		Power:      new("5"),
+		Toughness:  new("4"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EventPermanentEnteredBattlefield",
+		"game.TriggerControllerYou",
+		"ExcludeSelf:",
+		"game.DynamicAmountObjectPower",
+		// The damage amount reads the entering (triggering) creature's power.
+		"Object:     game.EventPermanentReference()",
+		"game.AnyTargetDamageRecipient(0)",
+		// The source still deals the damage even though the amount reads another permanent.
+		"DamageSource: opt.Val(game.SourcePermanentReference())",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
