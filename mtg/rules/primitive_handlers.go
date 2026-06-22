@@ -307,15 +307,31 @@ func amassArmyTokenDef(subtype types.Sub) *game.CardDef {
 
 func handleAddPlayerCounter(r *effectResolver, prim game.AddPlayerCounter) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	if res.amount <= 0 {
+		return res
+	}
+	controller := stackObjectController(r.obj)
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		for _, playerID := range r.playerGroupMembers(prim.PlayerGroup) {
+			player, ok := playerByID(r.game, playerID)
+			if !ok || player.Eliminated {
+				continue
+			}
+			if addCountersToPlayerControlledBy(r.game, controller, player, prim.CounterKind, res.amount) {
+				res.succeeded = true
+			}
+		}
+		return res
+	}
 	playerID, ok := r.resolvePlayer(prim.Player)
-	if !ok || res.amount <= 0 {
+	if !ok {
 		return res
 	}
 	player, ok := playerByID(r.game, playerID)
 	if !ok || player.Eliminated {
 		return res
 	}
-	if addCountersToPlayerControlledBy(r.game, stackObjectController(r.obj), player, prim.CounterKind, res.amount) {
+	if addCountersToPlayerControlledBy(r.game, controller, player, prim.CounterKind, res.amount) {
 		res.succeeded = true
 	}
 	return res

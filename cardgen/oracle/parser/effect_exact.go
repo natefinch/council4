@@ -3095,8 +3095,9 @@ func effectAmountSourceText(effect *EffectSyntax) string {
 // "You get {E}…{E}." (energy symbols) or "<recipient> gets <N> <kind> counter(s)."
 // (a named player-only counter). The optional "(N energy counters)" reminder is
 // already stripped. The energy form is controller-only; the named form supports
-// the controller plus the defending player, the triggering "that player", and a
-// single targeted player, mirroring the recipients exactLifeEffectSyntax accepts.
+// the controller plus the defending player, the triggering "that player", a
+// single targeted player, and the "each opponent"/"each player" groups, mirroring
+// the recipients exactLifeEffectSyntax accepts.
 // Every other recipient or richer form fails closed; the lowering re-resolves the
 // recipient from the same typed context.
 func exactGainPlayerCounterEffectSyntax(effect *EffectSyntax) bool {
@@ -3128,14 +3129,21 @@ func exactGainPlayerCounterEffectSyntax(effect *EffectSyntax) bool {
 // exactPlayerCounterRecipientText reconstructs the named player-counter gain
 // clause "<recipient> gets <N> <singular|plural>." for each supported recipient
 // subject and reports whether the printed effect text matches byte-for-byte. The
-// recipient set matches the single-player references the lowering resolves
-// (controller, defending player, the triggering "that player"/"they", and a lone
-// targeted player); any other subject yields no prefix and fails closed.
+// recipient set matches the references the lowering resolves (controller,
+// defending player, the triggering "that player"/"they", a lone targeted player,
+// and the "each opponent"/"each player" groups); any other subject yields no
+// prefix and fails closed.
 func exactPlayerCounterRecipientText(effect *EffectSyntax, singular, plural string) bool {
 	var prefixes []string
 	switch effect.Context {
 	case EffectContextController:
 		prefixes = []string{"You get"}
+	case EffectContextEachOpponent:
+		prefixes = []string{"Each opponent gets"}
+	case EffectContextEachOtherPlayer:
+		prefixes = []string{"Each other player gets"}
+	case EffectContextEachPlayer:
+		prefixes = []string{"Each player gets"}
 	case EffectContextDefendingPlayer:
 		prefixes = []string{"Defending player gets"}
 	case EffectContextEventPlayer, EffectContextReferencedPlayer:

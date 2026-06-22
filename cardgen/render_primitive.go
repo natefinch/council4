@@ -490,10 +490,6 @@ func renderTokenCopyKeywordField(fields []string, spec game.TokenCopySpec) ([]st
 }
 
 func (r Renderer) renderAddPlayerCounter(ctx *renderCtx, value *game.AddPlayerCounter) (string, error) {
-	player, err := r.renderPlayerReference(value.Player)
-	if err != nil {
-		return "", err
-	}
 	kind, err := renderCounterKind(value.CounterKind)
 	if err != nil {
 		return "", err
@@ -503,9 +499,28 @@ func (r Renderer) renderAddPlayerCounter(ctx *renderCtx, value *game.AddPlayerCo
 	if err != nil {
 		return "", err
 	}
+	var reference string
+	if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		var group string
+		switch value.PlayerGroup.Kind {
+		case game.PlayerGroupReferenceOpponents:
+			group = "game.OpponentsReference()"
+		case game.PlayerGroupReferenceAllPlayers:
+			group = "game.AllPlayersReference()"
+		default:
+			return "", fmt.Errorf("render: unsupported player group reference kind %d", value.PlayerGroup.Kind)
+		}
+		reference = fmt.Sprintf("PlayerGroup: %s,", group)
+	} else {
+		player, err := r.renderPlayerReference(value.Player)
+		if err != nil {
+			return "", err
+		}
+		reference = fmt.Sprintf("Player: %s,", player)
+	}
 	return structLit("game.AddPlayerCounter", []string{
 		fmt.Sprintf("Amount: %s,", amount),
-		fmt.Sprintf("Player: %s,", player),
+		reference,
 		fmt.Sprintf("CounterKind: %s,", kind),
 	}), nil
 }

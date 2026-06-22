@@ -837,6 +837,14 @@ func (p AddPlayerCounter) validatePrimitive(targets []TargetSpec, checkTargets b
 	if err := validatePositiveQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
+	hasPlayer := p.Player.Kind() != PlayerReferenceNone
+	if hasGroup == hasPlayer {
+		return errors.New("AddPlayerCounter requires exactly one of Player or PlayerGroup")
+	}
+	if hasGroup {
+		return validatePlayerGroupReference(p.PlayerGroup)
+	}
 	if err := validatePlayerReference(p.Player, targets, checkTargets); err != nil {
 		return err
 	}
