@@ -5,7 +5,6 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -1091,134 +1090,26 @@ func exactMassGroup(ctx contentCtx) (game.GroupReference, bool) {
 	return game.BattlefieldGroup(selection), true
 }
 
+// massGroupSelection projects the battlefield-group selector of a mass effect
+// ("Destroy all artifacts", "Each creature you control ...") onto a Selection.
+// It is the canonical projector restricted to the dimensions a mass-effect
+// group can express: the per-object token, historic, excluded-subtype, and
+// source-relative-power qualifiers belong to other contexts and never reach a
+// mass group, so the mask drops them.
 func massGroupSelection(selector compiler.CompiledSelector) (game.Selection, bool) {
-	if selector.Zone != zone.None ||
-		selector.BasicLandType ||
-		selector.PlayerOrPlaneswalker ||
-		len(selector.SourceTypes()) != 0 ||
-		(selector.Tapped && selector.Untapped) {
-		return game.Selection{}, false
-	}
-	selection := game.Selection{
-		RequiredTypesAny: append([]types.Card(nil), selector.RequiredTypesAny()...),
-		ExcludedTypes:    append([]types.Card(nil), selector.ExcludedTypes()...),
-		Supertypes:       append([]types.Super(nil), selector.Supertypes()...),
-		SubtypesAny:      append([]types.Sub(nil), selector.SubtypesAny()...),
-		ColorsAny:        append([]color.Color(nil), selector.ColorsAny()...),
-		ExcludedColors:   append([]color.Color(nil), selector.ExcludedColors()...),
-		Colorless:        selector.Colorless,
-		Multicolored:     selector.Multicolored,
-		EnteredThisTurn:  selector.EnteredThisTurn,
-		ExcludeSource:    selector.Another || selector.Other,
-	}
-	if excludedSupertypes := selector.ExcludedSupertypes(); len(excludedSupertypes) > 1 {
-		return game.Selection{}, false
-	} else if len(excludedSupertypes) == 1 {
-		selection.ExcludedSupertype = excludedSupertypes[0]
-	}
-	for _, alternative := range selector.Alternatives {
-		lowered, ok := massGroupSelection(alternative)
-		if !ok {
-			return game.Selection{}, false
-		}
-		selection.AnyOf = append(selection.AnyOf, lowered)
-	}
-	if len(selection.RequiredTypesAny) == 0 {
-		if requiredType, ok := massGroupRequiredType(selector.Kind); ok {
-			selection.RequiredTypes = []types.Card{requiredType}
-		} else if selector.Kind == compiler.SelectorUnknown {
-			// A bare subtype noun ("Destroy all Islands.") selects any permanent
-			// carrying that subtype with no card-type restriction; the subtype
-			// filter supplies the constraint. Without one, an unrecognized mass
-			// noun has no representable predicate and fails closed.
-			if len(selection.SubtypesAny) == 0 {
-				return game.Selection{}, false
-			}
-		} else if selector.Kind != compiler.SelectorPermanent {
-			return game.Selection{}, false
-		}
-	}
-	switch selector.Controller {
-	case compiler.ControllerAny:
-	case compiler.ControllerYou:
-		selection.Controller = game.ControllerYou
-	case compiler.ControllerOpponent:
-		selection.Controller = game.ControllerOpponent
-	case compiler.ControllerNotYou:
-		selection.Controller = game.ControllerNotYou
-	default:
-		return game.Selection{}, false
-	}
-	switch {
-	case selector.Attacking && selector.Blocking:
-		selection.CombatState = game.CombatStateAttackingOrBlocking
-	case selector.Attacking:
-		selection.CombatState = game.CombatStateAttacking
-	case selector.Blocking:
-		selection.CombatState = game.CombatStateBlocking
-	default:
-	}
-	switch {
-	case selector.Tapped:
-		selection.Tapped = game.TriTrue
-	case selector.Untapped:
-		selection.Tapped = game.TriFalse
-	default:
-	}
-	if selector.MatchManaValue {
-		if selector.ManaValueX {
-			return game.Selection{}, false
-		}
-		selection.ManaValue = opt.Val(selector.ManaValue)
-	}
-	if selector.MatchPower {
-		selection.Power = opt.Val(selector.Power)
-	}
-	if selector.MatchToughness {
-		selection.Toughness = opt.Val(selector.Toughness)
-	}
-	if selector.Keyword != parser.KeywordUnknown {
-		keyword, ok := runtimeKeyword(selector.Keyword)
-		if !ok {
-			return game.Selection{}, false
-		}
-		selection.Keyword = keyword
-	}
-	if selector.ExcludedKeyword != parser.KeywordUnknown {
-		keyword, ok := runtimeKeyword(selector.ExcludedKeyword)
-		if !ok {
-			return game.Selection{}, false
-		}
-		selection.ExcludedKeyword = keyword
-	}
-	if selector.MatchCounter {
-		selection.MatchCounter = true
-		selection.RequiredCounter = selector.RequiredCounter
-	}
-	if selector.MatchAnyCounter {
-		selection.MatchAnyCounter = true
-	}
-	switch {
-	case selector.SubtypeFromChosenTypeExcluded:
-		selection.SubtypeChoice = game.SubtypeChoiceResolutionExcluded
-	case selector.SubtypeFromChosenType:
-		selection.SubtypeChoice = game.SubtypeChoiceResolution
-	case selector.SubtypeFromEntryChoice:
-		selection.SubtypeChoice = game.SubtypeChoiceSourceEntry
-	default:
-	}
-	// "each artifact creature you control" names two card types the permanent
-	// must carry at once, so its type set lowers to the conjunctive RequiredTypes
-	// (all-of) filter rather than the default any-of RequiredTypesAny union.
-	if selector.ConjunctiveTypes {
-		selection.RequiredTypes = selection.RequiredTypesAny
-		selection.RequiredTypesAny = nil
-	}
-	if len(selection.Validate()) != 0 {
-		return game.Selection{}, false
-	}
-	return selection, true
+	return SelectionForSelectorMasked(selector, massGroupSelectionMask)
 }
+
+// massGroupSelectionMask drops the canonical dimensions a mass-effect group
+// never carries: per-object token state, the historic disjunction, an excluded
+// creature subtype, and the source-relative power comparison.
+var massGroupSelectionMask = SelectionMask{}.Ignoring(
+	DimNonToken,
+	DimTokenOnly,
+	DimHistoric,
+	DimExcludedSubtype,
+	DimPowerVsSource,
+)
 
 func massGroupRequiredType(kind compiler.SelectorKind) (types.Card, bool) {
 	switch kind {

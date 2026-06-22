@@ -518,14 +518,18 @@ func copyForEachGroupSelection(selector compiler.CompiledSelector) (game.Selecti
 	if selector.Kind == compiler.SelectorUnknown && (selector.TokenOnly || selector.NonToken) {
 		adjusted.Kind = compiler.SelectorPermanent
 	}
-	selection, ok := massGroupSelection(adjusted)
-	if !ok {
-		return game.Selection{}, false
-	}
-	selection.TokenOnly = selector.TokenOnly
-	selection.NonToken = selector.NonToken
-	return selection, true
+	return SelectionForSelectorMasked(adjusted, copyForEachGroupSelectionMask)
 }
+
+// copyForEachGroupSelectionMask honors the per-object token qualifier a
+// copy-for-each iteration can scope to ("for each token you control") while
+// dropping the historic, excluded-subtype, and source-relative-power dimensions
+// the iterated battlefield group never carries.
+var copyForEachGroupSelectionMask = SelectionMask{}.Ignoring(
+	DimHistoric,
+	DimExcludedSubtype,
+	DimPowerVsSource,
+)
 
 // tokenCopyForEachModifiers builds the runtime copy spec for a per-each copy
 // over the iterated group, applying the "except <it> isn't legendary" supertype
