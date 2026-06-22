@@ -1052,6 +1052,12 @@ type Modal struct {
 	header  Phrase
 	Options []Mode `json:",omitempty"`
 	Atoms   Atoms  `json:",omitzero"`
+	// Spree marks a Spree modal (CR 702.171): a "Spree" keyword header whose
+	// options are "+ {cost} — effect" lines, each with its own additional mana
+	// cost. The controller chooses one or more options and pays each chosen
+	// option's cost. It is recognized directly from the Spree header, so its
+	// choice range is set without consulting the choose-header vocabulary.
+	Spree bool `json:",omitempty"`
 	// MinModes and MaxModes are the recognized choice range of the choose
 	// header (e.g. "Choose two —" yields 2/2 and "Choose one or both —" yields
 	// 1/2). They are populated only when ChoiceKnown is true; downstream code
@@ -1142,6 +1148,7 @@ type Mode struct {
 	Text                   string                  `json:",omitempty"`
 	Tokens                 []shared.Token          `json:"-"`
 	Label                  *ModeLabelClause        `json:",omitempty"`
+	SpreeCost              *SpreeCostClause        `json:",omitempty"`
 	Body                   Phrase                  `json:",omitzero"`
 	Sentences              []Sentence              `json:",omitempty"`
 	ConditionBoundaries    []ConditionBoundary     `json:",omitempty"`

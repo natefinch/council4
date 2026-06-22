@@ -432,6 +432,14 @@ func lowerModalContent(
 		}
 		loweredMode := content.Modes[0]
 		loweredMode.Text = mode.Text
+		if modal.Spree {
+			if len(mode.SpreeCost) == 0 {
+				return unsupported("a Spree option is missing its additional cost")
+			}
+			loweredMode.Cost = opt.Val(slices.Clone(mode.SpreeCost))
+		} else if len(mode.SpreeCost) != 0 {
+			return unsupported("a non-Spree modal option carries an additional cost")
+		}
 		modes = append(modes, loweredMode)
 	}
 	result := game.AbilityContent{
@@ -450,6 +458,9 @@ func modalOptionCompletelyRecognized(content compiler.AbilityContent, syntax *pa
 	var spans []shared.Span
 	if syntax.Label != nil {
 		spans = append(spans, syntax.Label.Span, syntax.Label.SeparatorSpan)
+	}
+	if syntax.SpreeCost != nil {
+		spans = append(spans, syntax.SpreeCost.Span, syntax.SpreeCost.SeparatorSpan)
 	}
 	for i := range content.Effects {
 		spans = append(spans, content.Effects[i].Span)

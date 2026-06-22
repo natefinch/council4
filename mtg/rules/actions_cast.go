@@ -115,6 +115,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		Card:            spellDef,
 		XValue:          cast.XValue,
 		KickerPaid:      cast.KickerPaid,
+		ChosenModes:     cast.ChosenModes,
 		CastPermissions: permissions,
 		Prefs:           prefs,
 	}
@@ -560,6 +561,7 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		Card:            spellDef,
 		XValue:          xValue,
 		KickerPaid:      kickerPaid,
+		ChosenModes:     chosenModes,
 		CastPermissions: castPermissionsForZone(g, playerID, card.ID, sourceZone, face),
 	}
 	if overloaded {

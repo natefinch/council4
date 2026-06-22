@@ -95,6 +95,12 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 }
 
 func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
+	options := spellCostOptionsForRequestWithoutModes(s, req)
+	addSpreeModeCosts(options, req.Card, req.ChosenModes)
+	return options
+}
+
+func spellCostOptionsForRequestWithoutModes(s State, req SpellRequest) []spellCostOption {
 	if !req.Alternative.Exists {
 		return spellCostOptionsForZoneAndKicker(s, req.PlayerID, req.Card, req.SourceZone, req.KickerPaid, req.CastPermissions)
 	}
@@ -132,6 +138,43 @@ func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 		additionalCosts: additional,
 		castPermission:  castPermission,
 	}}
+}
+
+// addSpreeModeCosts adds the additional mana cost of each chosen Spree mode
+// (CR 702.171) to every payable cost option. Spree modes carry their own mana
+// cost; the controller pays the base cost plus each chosen mode's cost.
+func addSpreeModeCosts(options []spellCostOption, card *game.CardDef, chosenModes []int) {
+	extra := spreeModeManaCost(card, chosenModes)
+	if len(extra) == 0 {
+		return
+	}
+	for i := range options {
+		combined := cost.Mana{}
+		if options[i].manaCost != nil {
+			combined = append(combined, (*options[i].manaCost)...)
+		}
+		combined = append(combined, extra...)
+		options[i].manaCost = &combined
+	}
+}
+
+// spreeModeManaCost sums the additional mana costs of the chosen modes of a
+// Spree spell. Modes without a cost contribute nothing.
+func spreeModeManaCost(card *game.CardDef, chosenModes []int) cost.Mana {
+	if card == nil || !card.SpellAbility.Exists {
+		return nil
+	}
+	modes := card.SpellAbility.Val.Modes
+	var total cost.Mana
+	for _, index := range chosenModes {
+		if index < 0 || index >= len(modes) {
+			continue
+		}
+		if mode := modes[index]; mode.Cost.Exists {
+			total = append(total, mode.Cost.Val...)
+		}
+	}
+	return total
 }
 
 func firstNonFlashbackPermission(permissions []SpellCastPermission) (SpellCastPermission, bool) {

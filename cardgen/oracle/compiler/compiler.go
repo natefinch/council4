@@ -88,6 +88,7 @@ func compileAbility(
 				MaxModes: ability.Modal.MaxModes,
 				Kind:     compileModalChoiceKind(ability.Modal.ChoiceKind),
 				Bonus:    compileModeChoiceBonus(ability.Modal.ChoiceBonus),
+				Spree:    ability.Modal.Spree,
 			}
 		}
 	}
@@ -433,6 +434,9 @@ func compileMode(
 			Keywords:   compileKeywords(mode.SemanticKeywords),
 			References: references,
 		},
+	}
+	if mode.SpreeCost != nil {
+		compiled.SpreeCost = slices.Clone(mode.SpreeCost.Cost)
 	}
 	applyEffectPaymentsToConditions(compiled.Content.Effects, compiled.Content.Conditions)
 	compiled.Content.Span = mode.Body.Span

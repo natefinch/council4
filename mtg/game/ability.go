@@ -1217,6 +1217,12 @@ type Mode struct {
 
 	// Sequence is the typed instruction sequence this mode produces.
 	Sequence []Instruction
+
+	// Cost is the additional mana cost paid to choose this mode when casting a
+	// Spree spell (CR 702.171). It is set only on Spree spell modes; choosing a
+	// mode adds its Cost to the spell's total cost. An empty value means the mode
+	// has no additional cost.
+	Cost opt.V[cost.Mana]
 }
 
 // Ability creates ordinary non-modal ability content from this mode.

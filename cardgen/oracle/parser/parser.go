@@ -82,6 +82,23 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 			ability.Span.End = lastRow.Span.End
 			ability.Text = shared.SliceSpan(source, ability.Span)
 			i = next
+		} else if isSpreeHeader(lines[i]) {
+			modal := &Modal{header: phraseFromTokens(source, lines[i]), Spree: true}
+			j := i + 1
+			for j < len(lines) && startsWith(lines[j], shared.Plus) {
+				mode, modeDiagnostics := parseSpreeMode(source, lines[j][1:])
+				modal.Options = append(modal.Options, mode)
+				diagnostics = append(diagnostics, modeDiagnostics...)
+				j++
+			}
+			if len(modal.Options) == 0 {
+				i++
+			} else {
+				ability.Span.End = modal.Options[len(modal.Options)-1].Span.End
+				ability.Text = shared.SliceSpan(source, ability.Span)
+				ability.Modal = modal
+				i = j
+			}
 		} else {
 			i++
 		}
@@ -244,15 +261,22 @@ func emitAtoms(abilities []Ability, cardName string) {
 			continue
 		}
 		abilities[i].Modal.Atoms = collectAtoms(abilities[i].Modal.header.Tokens, nil, nil, cardName)
-		choice := recognizeModalChoice(abilities[i].Modal.header, abilities[i].Modal.Atoms)
-		abilities[i].Modal.MinModes = choice.minModes
-		abilities[i].Modal.MaxModes = choice.maxModes
-		if choice.maxModes < 0 {
+		if abilities[i].Modal.Spree {
+			abilities[i].Modal.MinModes = 1
 			abilities[i].Modal.MaxModes = len(abilities[i].Modal.Options)
+			abilities[i].Modal.ChoiceKind = ModalChoiceKindOneOrMore
+			abilities[i].Modal.ChoiceKnown = true
+		} else {
+			choice := recognizeModalChoice(abilities[i].Modal.header, abilities[i].Modal.Atoms)
+			abilities[i].Modal.MinModes = choice.minModes
+			abilities[i].Modal.MaxModes = choice.maxModes
+			if choice.maxModes < 0 {
+				abilities[i].Modal.MaxModes = len(abilities[i].Modal.Options)
+			}
+			abilities[i].Modal.ChoiceKind = choice.kind
+			abilities[i].Modal.ChoiceBonus = choice.bonus
+			abilities[i].Modal.ChoiceKnown = choice.ok
 		}
-		abilities[i].Modal.ChoiceKind = choice.kind
-		abilities[i].Modal.ChoiceBonus = choice.bonus
-		abilities[i].Modal.ChoiceKnown = choice.ok
 		for j := range abilities[i].Modal.Options {
 			mode := &abilities[i].Modal.Options[j]
 			mode.Atoms = collectAtoms(mode.Body.Tokens, mode.Reminders, mode.Quoted, cardName)
