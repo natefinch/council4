@@ -1961,4 +1961,10 @@ type EffectStaticSubjectSyntax struct {
 	// Selection.PowerGreaterThanSource predicates.
 	PowerLessThanSource    bool `json:",omitempty"`
 	PowerGreaterThanSource bool `json:",omitempty"`
+
+	// ExcludedTypes lists card types a matched permanent must NOT carry, set by
+	// a "non-<type>" prefix on the group noun ("Nonland permanents you control
+	// are artifacts ...", Encroaching Mycosynth). It lowers onto the runtime
+	// Selection.ExcludedTypes predicate.
+	ExcludedTypes []CardType `json:",omitempty"`
 }

@@ -1689,6 +1689,29 @@ func TestParseStaticCharacteristicTypeInAdditionMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticNonlandPermanentsExcludedType(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t,
+		"Nonland permanents you control are artifacts in addition to their other types.", Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationContinuousCharacteristic {
+		t.Fatalf("kind = %s, want characteristic", declaration.Kind)
+	}
+	if declaration.Subject.Group.Kind != EffectStaticSubjectControlledPermanents {
+		t.Fatalf("group = %s, want controlled permanents", declaration.Subject.Group.Kind)
+	}
+	want := []CardType{CardTypeLand}
+	if !slices.Equal(declaration.Subject.Group.ExcludedTypes, want) {
+		t.Fatalf("excluded types = %#v, want %#v", declaration.Subject.Group.ExcludedTypes, want)
+	}
+	if len(declaration.CardTypes) != 1 || declaration.CardTypes[0] != CardTypeArtifact {
+		t.Fatalf("declaration = %#v, want one added artifact card type", declaration)
+	}
+}
+
 func TestParseStaticGroupSubtypeInAdditionMeaning(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

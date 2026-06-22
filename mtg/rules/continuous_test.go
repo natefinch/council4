@@ -156,6 +156,44 @@ func TestGroupAddSubtypeStaticKeepsOtherTypes(t *testing.T) {
 	}
 }
 
+func TestGroupAddTypeStaticExcludesLands(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	anchor := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Bear",
+		Types: []types.Card{types.Creature},
+	}})
+	land := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Forest",
+		Types: []types.Card{types.Land},
+	}})
+	opponentCreature := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:             1,
+		Controller:     game.Player1,
+		SourceObjectID: anchor.ObjectID,
+		Layer:          game.LayerType,
+		Group: game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{
+			ExcludedTypes: []types.Card{types.Land},
+		}),
+		AddTypes: []types.Card{types.Artifact},
+	})
+
+	if !permanentHasType(g, creature, types.Artifact) {
+		t.Fatal("controlled nonland permanent did not gain the added Artifact type")
+	}
+	if !permanentHasType(g, creature, types.Creature) {
+		t.Fatal("adding a type erased the creature's original Creature type")
+	}
+	if permanentHasType(g, land, types.Artifact) {
+		t.Fatal("controlled land incorrectly gained the added Artifact type")
+	}
+	if permanentHasType(g, opponentCreature, types.Artifact) {
+		t.Fatal("opponent's creature incorrectly gained the added Artifact type")
+	}
+}
+
 func TestStaticPTEffectAffectsCombatDamage(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addAnthemPermanent(g, game.Player1)
