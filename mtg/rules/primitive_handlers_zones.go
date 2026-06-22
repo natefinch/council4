@@ -797,8 +797,22 @@ func handleReturnFromGraveyard(r *effectResolver, prim game.ReturnFromGraveyard)
 	if !ok {
 		return res
 	}
+	var linkedFilter map[id.ID]bool
+	if prim.FromLinked != "" {
+		key := linkedObjectSourceKey(r.game, r.obj, string(prim.FromLinked))
+		refs := linkedObjects(r.game, key)
+		linkedFilter = make(map[id.ID]bool, len(refs))
+		for _, ref := range refs {
+			if ref.CardID != 0 {
+				linkedFilter[ref.CardID] = true
+			}
+		}
+	}
 	var candidates []id.ID
 	for _, cardID := range player.Graveyard.All() {
+		if linkedFilter != nil && !linkedFilter[cardID] {
+			continue
+		}
 		card, cardOK := r.game.GetCardInstance(cardID)
 		if !cardOK {
 			continue
@@ -1614,7 +1628,14 @@ func handleMill(r *effectResolver, prim game.Mill) effectResolved {
 	}
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
-		millCards(r.game, playerID, res.amount)
+		milled := millCards(r.game, playerID, res.amount)
+		if prim.PublishLinked != "" {
+			key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
+			clearLinkedObjects(r.game, key)
+			for _, cardID := range milled {
+				rememberLinkedObject(r.game, key, game.LinkedObjectRef{CardID: cardID})
+			}
+		}
 		res.succeeded = res.amount > 0
 	}
 	return res

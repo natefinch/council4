@@ -220,33 +220,29 @@ func lowerOptionalPaidBenefit(
 // additional cost. It fails closed when an additional cost carries a mana
 // component or no lowerable additional cost.
 func controllerPaidResolutionPayment(cardName string, payment compiler.CompiledEffectPayment) (game.ResolutionPayment, bool) {
-	if len(payment.ManaCost) != 0 {
-		return game.ResolutionPayment{
-			Prompt:   "Pay " + payment.ManaCost.String() + "?",
-			ManaCost: opt.Val(slices.Clone(payment.ManaCost)),
-		}, true
-	}
-	if payment.AdditionalCost == nil {
+	hasMana := len(payment.ManaCost) != 0
+	hasAdditional := payment.AdditionalCost != nil
+	if !hasMana && !hasAdditional {
 		return game.ResolutionPayment{}, false
 	}
-	manaCost, additionalCosts, ok := lowerActivationCostComponents(cardName, payment.AdditionalCost)
-	if !ok || manaCost != nil || len(additionalCosts) == 0 {
-		return game.ResolutionPayment{}, false
+	resolution := game.ResolutionPayment{}
+	var prompts []string
+	if hasMana {
+		resolution.ManaCost = opt.Val(slices.Clone(payment.ManaCost))
+		prompts = append(prompts, "Pay "+payment.ManaCost.String())
 	}
-	return game.ResolutionPayment{
-		Prompt:          additionalCostPrompt(additionalCosts),
-		AdditionalCosts: additionalCosts,
-	}, true
-}
-
-// additionalCostPrompt renders a player-facing prompt for an optional
-// resolution payment made of non-mana additional costs ("Sacrifice a land?").
-func additionalCostPrompt(costs []cost.Additional) string {
-	texts := make([]string, len(costs))
-	for i := range costs {
-		texts[i] = costs[i].Text
+	if hasAdditional {
+		manaCost, additionalCosts, ok := lowerActivationCostComponents(cardName, payment.AdditionalCost)
+		if !ok || manaCost != nil || len(additionalCosts) == 0 {
+			return game.ResolutionPayment{}, false
+		}
+		resolution.AdditionalCosts = additionalCosts
+		for i := range additionalCosts {
+			prompts = append(prompts, additionalCosts[i].Text)
+		}
 	}
-	return upperFirst(strings.Join(texts, ", ")) + "?"
+	resolution.Prompt = upperFirst(strings.Join(prompts, " and ")) + "?"
+	return resolution, true
 }
 
 // lowerEventPlayerTaxedControllerBenefit lowers a targetless event-player mana

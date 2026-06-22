@@ -1698,6 +1698,9 @@ func (p Mill) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 		return errors.New("Mill requires exactly one of Player or PlayerGroup")
 	}
 	if hasGroup {
+		if p.PublishLinked != "" {
+			return errors.New("Mill cannot publish linked cards for the group form")
+		}
 		return validatePlayerGroupReference(p.PlayerGroup)
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)

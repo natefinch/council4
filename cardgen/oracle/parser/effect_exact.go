@@ -99,7 +99,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectPut:
 		return exactCounterPlacementEffectSyntax(effect) || exactGraveyardPutEffectSyntax(effect) ||
 			exactDigPutEffectSyntax(effect) || exactHandLibraryPutEffectSyntax(effect) ||
-			exactPutThoseCountersEffectSyntax(effect)
+			exactPutThoseCountersEffectSyntax(effect) || exactPutThoseCardsIntoHandEffectSyntax(effect)
 	case EffectProliferate:
 		return exactStandaloneActionEffectSyntax(effect, "Proliferate")
 	case EffectRegenerate:
@@ -2478,7 +2478,28 @@ func exactDigPutEffectSyntax(effect *EffectSyntax) bool {
 	return strings.EqualFold(exactEffectClauseText(effect), want)
 }
 
-// digRemainderText renders the remainder destination clause that parseDigPut
+// exactPutThoseCardsIntoHandEffectSyntax reconstructs the "put a card from among
+// those cards into your hand." consequence (Ripples of Undeath), where "those
+// cards" denotes a card set produced by an earlier clause in the same ability
+// (such as a preceding mill). It requires a controller-context single-card put
+// into the hand carrying exactly one "those" pronoun reference, and matches the
+// canonical clause text byte-for-byte; any filter or count variation fails closed
+// so only the plain any-card form is recognized.
+func exactPutThoseCardsIntoHandEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController ||
+		effect.ToZone != zone.Hand ||
+		!effect.Amount.Known || effect.Amount.Value != 1 {
+		return false
+	}
+	if len(effect.References) != 1 ||
+		effect.References[0].Kind != ReferencePronoun ||
+		effect.References[0].Pronoun != PronounThose {
+		return false
+	}
+	return strings.EqualFold(exactEffectClauseText(effect),
+		"put a card from among those cards into your hand.")
+}
+
 // recorded, so the exactness gate can compare it byte-for-byte.
 func digRemainderText(remainder DigRemainderKind) string {
 	switch remainder {

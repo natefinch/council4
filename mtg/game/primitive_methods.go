@@ -453,9 +453,15 @@ func (p ExileFromHand) instructionRefs() primitiveRefs {
 	refs.publishesLinked = p.PublishLinked
 	return refs
 }
-func (p PutFromHand) instructionRefs() primitiveRefs         { return quantityRefs(p.Amount) }
-func (CastForFree) instructionRefs() primitiveRefs           { return primitiveRefs{} }
-func (p ReturnFromGraveyard) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
+func (p PutFromHand) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
+func (CastForFree) instructionRefs() primitiveRefs   { return primitiveRefs{} }
+func (p ReturnFromGraveyard) instructionRefs() primitiveRefs {
+	refs := quantityRefs(p.Amount)
+	if p.FromLinked != "" {
+		refs.consumesLinked = append(refs.consumesLinked, p.FromLinked)
+	}
+	return refs
+}
 func (p Bounce) instructionRefs() primitiveRefs              { return objectReferenceRefs(p.Object) }
 func (Sacrifice) instructionRefs() primitiveRefs             { return primitiveRefs{} }
 func (p SacrificePermanents) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
@@ -465,7 +471,11 @@ func (p Untap) instructionRefs() primitiveRefs {
 func (SkipNextUntap) instructionRefs() primitiveRefs    { return primitiveRefs{} }
 func (RemoveFromCombat) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (CounterObject) instructionRefs() primitiveRefs    { return primitiveRefs{} }
-func (p Mill) instructionRefs() primitiveRefs           { return quantityRefs(p.Amount) }
+func (p Mill) instructionRefs() primitiveRefs {
+	refs := quantityRefs(p.Amount)
+	refs.publishesLinked = p.PublishLinked
+	return refs
+}
 func (p ExileTopOfLibrary) instructionRefs() primitiveRefs {
 	return quantityRefs(p.Amount)
 }

@@ -10,15 +10,16 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
-func millCards(g *game.Game, playerID game.PlayerID, amount int) {
+func millCards(g *game.Game, playerID game.PlayerID, amount int) []id.ID {
 	player, ok := playerByID(g, playerID)
 	if !ok || amount <= 0 {
-		return
+		return nil
 	}
+	var milled []id.ID
 	for range amount {
 		cardID, ok := player.Library.Top()
 		if !ok {
-			return
+			return milled
 		}
 		player.Library.Remove(cardID)
 		destination := commanderReplacementDestination(g, cardID, zone.Graveyard)
@@ -28,9 +29,12 @@ func millCards(g *game.Game, playerID game.PlayerID, amount int) {
 		}
 		destinationCards, ok := destinationZone(g, zoneOwner, destination)
 		if !ok {
-			return
+			return milled
 		}
 		destinationCards.Add(cardID)
+		if destination == zone.Graveyard {
+			milled = append(milled, cardID)
+		}
 		emitZoneChangeEvent(g, game.Event{
 			Player:   playerID,
 			CardID:   cardID,
@@ -39,6 +43,7 @@ func millCards(g *game.Game, playerID game.PlayerID, amount int) {
 			Amount:   1,
 		})
 	}
+	return milled
 }
 
 // revealUntilCards reveals cards from the top of playerID's library one at a
