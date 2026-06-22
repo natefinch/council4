@@ -133,6 +133,7 @@ func compileAbility(
 			)
 		}
 		compiled.Content.Effects = appendDiceTableEffects(compiled.Content.Effects, ability.DiceTable)
+		compiled.Content.Effects = appendCoinFlipEffects(compiled.Content.Effects, ability.CoinFlip)
 	}
 	compiled.Content.References = bindActivationCostReferences(compiled.Kind, compiled.Cost, compiled.Content.References)
 	bindConditionReferences(compiled.Content.Conditions, compiled.Content.References, compiled.Trigger)

@@ -157,6 +157,18 @@ func lowerContent(
 	ctx contentCtx,
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if syntax != nil && syntax.CoinFlip != nil {
+		// A recognized coin flip must lower through its dedicated path, which
+		// gates every branch effect on the flip result. If that path fails
+		// closed (an unsupported branch effect, or a targeted branch), the
+		// whole ability fails closed rather than falling through to generic
+		// lowering, which would silently drop the flip and emit the branch
+		// effects ungated.
+		if content, ok := lowerCoinFlipSequence(cardName, ctx, syntax); ok {
+			return content, nil
+		}
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — coin flip branch not lowered")
+	}
 	if content, ok := lowerPonderSequence(ctx); ok {
 		return content, nil
 	}
