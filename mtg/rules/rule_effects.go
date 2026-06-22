@@ -798,7 +798,7 @@ func payLifeForManaColorActive(g *game.Game, playerID game.PlayerID, c mana.Colo
 	return false
 }
 
-func staticCostModifiersForContext(g *game.Game, playerID game.PlayerID, card *game.CardDef, sourceZone zone.Type) []game.CostModifier {
+func staticCostModifiersForContext(g *game.Game, playerID game.PlayerID, card *game.CardDef, sourceZone zone.Type, targets []game.Target) []game.CostModifier {
 	var modifiers []game.CostModifier
 	effects := activeRuleEffects(g)
 	for i := range effects {
@@ -822,9 +822,32 @@ func staticCostModifiersForContext(g *game.Game, playerID game.PlayerID, card *g
 		if !spellCostModifierMatchesZone(modifier, sourceZone) {
 			continue
 		}
+		if !spellCostModifierMatchesTargets(modifier, effect.SourceObjectID, targets) {
+			continue
+		}
 		modifiers = append(modifiers, modifier)
 	}
 	return modifiers
+}
+
+// spellCostModifierMatchesTargets reports whether a spell cost modifier's
+// optional targets-source filter admits the spell being cast. A modifier
+// without the filter applies regardless of the spell's targets; one with the
+// filter applies only when one of the spell's chosen targets is exactly the
+// permanent (sourceObjectID) whose static ability carries the modifier.
+func spellCostModifierMatchesTargets(modifier game.CostModifier, sourceObjectID id.ID, targets []game.Target) bool {
+	if !modifier.TargetsSource {
+		return true
+	}
+	if sourceObjectID == 0 {
+		return false
+	}
+	for _, target := range targets {
+		if target.Kind == game.TargetPermanent && target.PermanentID == sourceObjectID {
+			return true
+		}
+	}
+	return false
 }
 
 // spellCostModifierMatchesZone reports whether a spell cost modifier's optional

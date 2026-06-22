@@ -35,7 +35,7 @@ func lowerStaticDeclarations(
 	if ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
-		len(ability.Content.Targets) != 0 ||
+		(len(ability.Content.Targets) != 0 && !declarationsTargetSource(declarations)) ||
 		!rulesFreeAbilityWordLabel(ability.AbilityWord) {
 		return abilityLowering{}, true, staticDeclarationDiagnostic(
 			ability,
@@ -143,6 +143,7 @@ func lowerStaticDeclarations(
 			effects:      len(ability.Content.Effects),
 			keywords:     len(ability.Content.Keywords),
 			references:   len(ability.Content.References),
+			targets:      len(ability.Content.Targets),
 			declarations: len(declarations),
 		},
 		sourceSpans: spans,
@@ -1295,6 +1296,26 @@ func lowerStaticZone(value compiler.StaticZone) (zone.Type, bool) {
 	}
 }
 
+// declarationsTargetSource reports whether every recognized declaration is a
+// spell cast-cost modifier carrying the targets-source predicate ("Spells your
+// opponents cast that target this creature cost {N} more to cast."). That
+// wording intentionally includes a "that target <source>" phrase the compiler
+// records as an ability target, so the otherwise-empty-shell requirement admits
+// that single target. It fails closed for any other declaration mix.
+func declarationsTargetSource(declarations []compiler.StaticDeclaration) bool {
+	if len(declarations) == 0 {
+		return false
+	}
+	for _, declaration := range declarations {
+		if declaration.Kind != compiler.StaticDeclarationCostModifier ||
+			declaration.Cost == nil ||
+			!declaration.Cost.TargetsSource {
+			return false
+		}
+	}
+	return true
+}
+
 func appendStaticCostModifierDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
 	if declaration.Cost.Kind == compiler.StaticCostModifierSpell {
 		return appendStaticSpellCostModifierDeclaration(body, declaration)
@@ -1371,10 +1392,15 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 	if (cost.GenericReduction == 0) == (cost.GenericIncrease == 0) {
 		return false
 	}
+	affectedPlayer, ok := lowerSpellCaster(cost.Caster)
+	if !ok {
+		return false
+	}
 	base := game.CostModifier{
 		Kind:             game.CostModifierSpell,
 		GenericReduction: cost.GenericReduction,
 		GenericIncrease:  cost.GenericIncrease,
+		TargetsSource:    cost.TargetsSource,
 	}
 	if cost.SourceZone != "" {
 		castZone, ok := lowerCastFromZone(cost.SourceZone)
@@ -1397,7 +1423,7 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 		modifier.MatchColors = slices.Clone(cost.SpellColors)
 		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
 			Kind:           game.RuleEffectCostModifier,
-			AffectedPlayer: game.PlayerYou,
+			AffectedPlayer: affectedPlayer,
 			CostModifier:   modifier,
 		})
 		return true
@@ -1415,7 +1441,7 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 	if len(cost.SpellTypes) == 0 {
 		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
 			Kind:           game.RuleEffectCostModifier,
-			AffectedPlayer: game.PlayerYou,
+			AffectedPlayer: affectedPlayer,
 			CostModifier:   base,
 		})
 		return true
@@ -1430,11 +1456,26 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 		modifier.CardType = cardType
 		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
 			Kind:           game.RuleEffectCostModifier,
-			AffectedPlayer: game.PlayerYou,
+			AffectedPlayer: affectedPlayer,
 			CostModifier:   modifier,
 		})
 	}
 	return true
+}
+
+// lowerSpellCaster maps a compiler caster kind onto the affected-player relation
+// the runtime uses to scope a cast-cost modifier to the right casting players.
+func lowerSpellCaster(caster compiler.StaticSpellCasterKind) (game.PlayerRelation, bool) {
+	switch caster {
+	case compiler.StaticSpellCasterController:
+		return game.PlayerYou, true
+	case compiler.StaticSpellCasterOpponents:
+		return game.PlayerOpponent, true
+	case compiler.StaticSpellCasterAny:
+		return game.PlayerAny, true
+	default:
+		return game.PlayerAny, false
+	}
 }
 
 func appendStaticCardAbilityGrantDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {

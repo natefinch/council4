@@ -83,7 +83,7 @@ func canPayCostWithX(s State, playerID game.PlayerID, manaCost *cost.Mana, xValu
 
 func canPaySpellCosts(s State, req SpellRequest) bool {
 	for _, option := range spellCostOptionsForRequest(s, req) {
-		if _, ok := buildSpellCostPlanForOption(s, req.PlayerID, req.CardID, req.SourceZone, option, req.XValue, nil); ok {
+		if _, ok := buildSpellCostPlanForOption(s, req.PlayerID, req.CardID, req.SourceZone, option, req.XValue, req.Targets, nil); ok {
 			return true
 		}
 	}
@@ -143,13 +143,13 @@ func buildSpellCostPlan(s State, req SpellRequest) (spellCostPlan, bool) {
 	if req.Prefs != nil {
 		for _, option := range options {
 			if option.index == req.Prefs.AlternativeIndex {
-				return buildSpellCostPlanForOption(s, req.PlayerID, req.CardID, req.SourceZone, option, req.XValue, req.Prefs)
+				return buildSpellCostPlanForOption(s, req.PlayerID, req.CardID, req.SourceZone, option, req.XValue, req.Targets, req.Prefs)
 			}
 		}
 		return spellCostPlan{}, false
 	}
 	for _, option := range options {
-		if plan, ok := buildSpellCostPlanForOption(s, req.PlayerID, req.CardID, req.SourceZone, option, req.XValue, nil); ok {
+		if plan, ok := buildSpellCostPlanForOption(s, req.PlayerID, req.CardID, req.SourceZone, option, req.XValue, req.Targets, nil); ok {
 			return plan, true
 		}
 	}
@@ -382,8 +382,8 @@ func retryGenericCostPlanAvoidingManaTapConflict(s State, req GenericRequest, pr
 	return additional, manaPlan, true
 }
 
-func buildSpellCostPlanForOption(s State, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, option spellCostOption, xValue int, prefs *Preferences) (spellCostPlan, bool) {
-	option = applyCostModifiers(s, costModificationContext{player: playerID, card: option.card, cardID: cardID, sourceZone: sourceZone, option: option})
+func buildSpellCostPlanForOption(s State, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, option spellCostOption, xValue int, targets []game.Target, prefs *Preferences) (spellCostPlan, bool) {
+	option = applyCostModifiers(s, costModificationContext{player: playerID, card: option.card, cardID: cardID, sourceZone: sourceZone, targets: targets, option: option})
 	plan := spellCostPlan{option: option}
 	if xValue < 0 ||
 		xValue != 0 && !costHasVariableMana(option.manaCost) && !additionalCostsUseX(option.additionalCosts) {

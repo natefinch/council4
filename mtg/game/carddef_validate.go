@@ -1225,6 +1225,9 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 			v.add(faceName, appendPath(path, "SourceZone"), CardDefIssueInvalidRuleEffect, "source-zone cost modifiers require a real zone")
 		}
 	}
+	if modifier.TargetsSource && modifier.Kind != CostModifierSpell {
+		v.add(faceName, appendPath(path, "TargetsSource"), CardDefIssueInvalidRuleEffect, "targets-source cost modifiers must be spell modifiers")
+	}
 	if modifier.PerObjectReduction < 0 {
 		v.add(faceName, appendPath(path, "PerObjectReduction"), CardDefIssueInvalidRuleEffect, "per-object cost reduction cannot be negative")
 	}

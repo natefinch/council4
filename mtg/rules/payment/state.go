@@ -114,8 +114,10 @@ type stateAbilityQueries interface {
 
 	// CostModifiersForSpell returns all applicable cost modifiers for a spell
 	// being cast by the given player from the given zone. This includes global
-	// game modifiers, commander tax, and static rule-effect modifiers.
-	CostModifiersForSpell(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone zone.Type) []game.CostModifier
+	// game modifiers, commander tax, and static rule-effect modifiers. targets
+	// carries the spell's chosen targets so target-dependent modifiers ("Spells
+	// that target this creature cost {N} more to cast.") can match.
+	CostModifiersForSpell(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone zone.Type, targets []game.Target) []game.CostModifier
 }
 
 //nolint:interfacebloat // Payment plans need one adapter surface for all atomic game-state mutations.

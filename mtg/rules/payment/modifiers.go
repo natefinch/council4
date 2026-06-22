@@ -13,11 +13,12 @@ type costModificationContext struct {
 	card       *game.CardDef
 	cardID     id.ID
 	sourceZone zone.Type
+	targets    []game.Target
 	option     spellCostOption
 }
 
 func applyCostModifiers(s State, ctx costModificationContext) spellCostOption {
-	ctx.option.manaCost = applyGenericCostModifiers(ctx.option.manaCost, s.CostModifiersForSpell(ctx.player, ctx.card, ctx.cardID, ctx.sourceZone))
+	ctx.option.manaCost = applyGenericCostModifiers(ctx.option.manaCost, s.CostModifiersForSpell(ctx.player, ctx.card, ctx.cardID, ctx.sourceZone, ctx.targets))
 	return ctx.option
 }
 

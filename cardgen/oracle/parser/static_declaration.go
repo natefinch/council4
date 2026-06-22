@@ -220,6 +220,18 @@ const (
 	StaticDeclarationSpellColorColorless StaticDeclarationSpellColorKind = "StaticDeclarationSpellColorColorless"
 )
 
+// StaticDeclarationSpellCasterKind identifies which players' spells a cast-cost
+// modifier affects ("Spells you cast ..." vs "Spells your opponents cast ..."
+// vs "Spells that ..."). The empty kind is the default controller scope.
+type StaticDeclarationSpellCasterKind string
+
+// Static declaration spell-caster filters recognized by the parser.
+const (
+	StaticDeclarationSpellCasterController StaticDeclarationSpellCasterKind = ""
+	StaticDeclarationSpellCasterOpponents  StaticDeclarationSpellCasterKind = "StaticDeclarationSpellCasterOpponents"
+	StaticDeclarationSpellCasterAny        StaticDeclarationSpellCasterKind = "StaticDeclarationSpellCasterAny"
+)
+
 // StaticDeclarationCastZoneKind identifies a non-hand zone that a cast-zone
 // restriction forbids the affected players from casting spells out of.
 type StaticDeclarationCastZoneKind string
@@ -413,6 +425,15 @@ type StaticDeclarationSyntax struct {
 	// the spell-type, color, subtype, and zone filters.
 	SpellPowerAtLeast      int  `json:",omitempty"`
 	MatchSpellPowerAtLeast bool `json:",omitempty"`
+
+	// SpellCaster scopes a cast-cost modifier to a set of casting players
+	// ("Spells you cast ..." vs "Spells your opponents cast ..." vs "Spells
+	// that ..."). The empty kind is the default controller scope.
+	// SpellTargetsSource marks the "that target <source>" predicate, restricting
+	// the modifier to spells that target the source permanent ("Spells your
+	// opponents cast that target this creature cost {2} more to cast.").
+	SpellCaster        StaticDeclarationSpellCasterKind `json:",omitempty"`
+	SpellTargetsSource bool                             `json:",omitempty"`
 
 	// SpellColors lists the colors of a cast-cost modifier's color disjunction
 	// ("Each spell you cast that's red or green ..." / "Blue spells and red
@@ -1919,6 +1940,9 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token, atoms Atoms)
 	if declaration, ok := parseStaticSpellColorPairCostModifier(tokens); ok {
 		return declaration, true
 	}
+	if declaration, ok := parseStaticSpellTargetsSourceCostModifier(tokens, atoms); ok {
+		return declaration, true
+	}
 	rest := tokens
 	spellColor := staticSpellColorWord(rest[0])
 	if spellColor != StaticDeclarationSpellColorNone {
@@ -1966,6 +1990,56 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token, atoms Atoms)
 		SpellCastZone:          castZone,
 		SpellPowerAtLeast:      powerAtLeast,
 		MatchSpellPowerAtLeast: powerAtLeast > 0,
+	}, true
+}
+
+// parseStaticSpellTargetsSourceCostModifier recognizes the static cast-cost
+// modifier "Spells [your opponents cast | you cast] that target <source> cost
+// {N} less/more to cast.", a defensive tax (or a controller discount) on spells
+// that target the source permanent ("Spells your opponents cast that target
+// this creature cost {2} more to cast.", Boreal Elemental; "Spells you cast that
+// target this creature cost {2} less to cast.", Elderwood Scion). <source> is a
+// "this creature"/"this permanent" marker or the card's own printed name (Charix,
+// Syr Elenora); any other target scope (a controlled group such as "creatures
+// you control") fails closed. An absent caster phrase ("Spells that target ...")
+// applies to every player's spells.
+func parseStaticSpellTargetsSourceCostModifier(tokens []shared.Token, atoms Atoms) (StaticDeclarationSyntax, bool) {
+	if !staticWordsAt(tokens, 0, "spells") {
+		return StaticDeclarationSyntax{}, false
+	}
+	rest := tokens[1:]
+	caster := StaticDeclarationSpellCasterAny
+	switch {
+	case staticWordsAt(rest, 0, "your", "opponents", "cast"):
+		caster = StaticDeclarationSpellCasterOpponents
+		rest = rest[3:]
+	case staticWordsAt(rest, 0, "you", "cast"):
+		caster = StaticDeclarationSpellCasterController
+		rest = rest[2:]
+	default:
+	}
+	if !staticWordsAt(rest, 0, "that", "target") {
+		return StaticDeclarationSyntax{}, false
+	}
+	rest = rest[2:]
+	width, ok := sourceNameSpanWidthAt(rest, 0, atoms)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	rest = rest[width:]
+	tail, ok := staticSpellCostModifierTail(rest)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                StaticDeclarationCostModifier,
+		Span:                shared.SpanOf(tokens),
+		OperationSpan:       tail.OperationSpan,
+		CostModifier:        tail.Kind,
+		CostReductionAmount: tail.Amount,
+		SpellType:           StaticDeclarationSpellTypeAll,
+		SpellCaster:         caster,
+		SpellTargetsSource:  true,
 	}, true
 }
 
