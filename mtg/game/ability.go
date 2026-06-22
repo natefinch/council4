@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -692,6 +693,13 @@ type TriggerPattern struct {
 	// RequireTappedForMana restricts an EventPermanentTapped trigger to taps that
 	// paid a mana ability's cost ("is tapped for mana"), CR 106.11a / 605.
 	RequireTappedForMana bool
+
+	// RequireProducedManaColor restricts a RequireTappedForMana trigger to taps
+	// whose produced mana included this type ("tap a permanent for {C}" requires
+	// colorless). It is empty for the unrestricted "for mana" wording, which
+	// matches a tap producing any type. It is checked against the triggering
+	// event's ProducedManaColors.
+	RequireProducedManaColor mana.Color
 
 	// UnionEvent joins a second event kind to Event under the pattern's shared
 	// subject and player filters, expressing "Whenever you create or sacrifice a
