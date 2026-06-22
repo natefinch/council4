@@ -388,14 +388,17 @@ func TributeReplacement(text string, count int) ReplacementAbility {
 // permanent enters its controller chooses one permanent matching selection to
 // copy; optional marks the "You may ..." form, notLegendary applies the "except
 // it isn't legendary" rider, and addTypes applies the "except it's an <type> in
-// addition to its other types" rider (CR 706, CR 614).
-func EntersAsCopyReplacement(text string, selection *Selection, optional, notLegendary bool, conditionalCounters []ConditionalCounterPlacement, untilEndOfTurn bool, addKeywords []Keyword, addTypes ...types.Card) ReplacementAbility {
+// addition to its other types" rider (CR 706, CR 614). addSubtypes applies the
+// matching "except it's a <subtype> in addition to its other types" rider
+// (Mockingbird's Bird, Synth Infiltrator's Synth).
+func EntersAsCopyReplacement(text string, selection *Selection, optional, notLegendary bool, conditionalCounters []ConditionalCounterPlacement, untilEndOfTurn bool, addKeywords []Keyword, addSubtypes []types.Sub, addTypes ...types.Card) ReplacementAbility {
 	replacement := etbReplacement(text)
 	replacement.EntersAsCopy = true
 	replacement.EntersAsCopyOptional = optional
 	replacement.EntersAsCopySelection = selection
 	replacement.EntersAsCopyNotLegendary = notLegendary
 	replacement.EntersAsCopyAddTypes = append([]types.Card(nil), addTypes...)
+	replacement.EntersAsCopyAddSubtypes = append([]types.Sub(nil), addSubtypes...)
 	replacement.EntersAsCopyConditionalCounters = append([]ConditionalCounterPlacement(nil), conditionalCounters...)
 	replacement.EntersAsCopyUntilEndOfTurn = untilEndOfTurn
 	replacement.EntersAsCopyAddKeywords = append([]Keyword(nil), addKeywords...)

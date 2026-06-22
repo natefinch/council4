@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -26,7 +27,7 @@ func TestEntersAsCopyUntilEndOfTurnGrantsHaste(t *testing.T) {
 	replacement := game.EntersAsCopyReplacement(
 		"As this artifact enters, you may have it become a copy of any creature on the battlefield until end of turn, except it has haste.",
 		&game.Selection{RequiredTypes: []types.Card{types.Creature}},
-		false, false, nil, true, []game.Keyword{game.Haste},
+		false, false, nil, true, []game.Keyword{game.Haste}, nil,
 	)
 	applyEntersAsCopy(enterBattlefieldContext{}, g, mirror, &replacement.Replacement)
 
@@ -72,7 +73,7 @@ func TestEntersAsCopyOverlaysChosenPermanentValues(t *testing.T) {
 	replacement := game.EntersAsCopyReplacement(
 		"You may have Clone enter the battlefield as a copy of any creature on the battlefield.",
 		&game.Selection{RequiredTypes: []types.Card{types.Creature}},
-		true, false, nil, false, nil,
+		true, false, nil, false, nil, nil,
 	)
 	applyEntersAsCopy(enterBattlefieldContext{}, g, clone, &replacement.Replacement)
 
@@ -84,6 +85,45 @@ func TestEntersAsCopyOverlaysChosenPermanentValues(t *testing.T) {
 	}
 	if !hasKeyword(g, clone, game.Flying) {
 		t.Fatal("copy did not grant copied Flying keyword")
+	}
+}
+
+func TestEntersAsCopyAddSubtypeRiderAddsSubtype(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	dragonPT := game.PT{Value: 4}
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Shivan Dragon",
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Dragon},
+		Power:     opt.Val(dragonPT),
+		Toughness: opt.Val(dragonPT),
+	}})
+	mock := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Mockingbird",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 0}),
+		Toughness: opt.Val(game.PT{Value: 0}),
+	}})
+
+	replacement := game.EntersAsCopyReplacement(
+		"You may have this creature enter as a copy of any creature on the battlefield, except it's a Bird in addition to its other types and it has flying.",
+		&game.Selection{RequiredTypes: []types.Card{types.Creature}},
+		true, false, nil, false, []game.Keyword{game.Flying}, []types.Sub{types.Bird},
+	)
+	applyEntersAsCopy(enterBattlefieldContext{}, g, mock, &replacement.Replacement)
+
+	if got := permanentEffectiveName(g, mock); got != "Shivan Dragon" {
+		t.Fatalf("effective name = %q, want Shivan Dragon", got)
+	}
+	values := effectivePermanentValues(g, mock)
+	if !slices.Contains(values.subtypes, types.Bird) {
+		t.Errorf("subtypes = %v, want to include Bird", values.subtypes)
+	}
+	if !slices.Contains(values.subtypes, types.Dragon) {
+		t.Errorf("subtypes = %v, want to retain copied Dragon", values.subtypes)
+	}
+	if !hasKeyword(g, mock, game.Flying) {
+		t.Fatal("copy did not grant the flying rider keyword")
 	}
 }
 
@@ -107,7 +147,7 @@ func TestEntersAsCopyNotLegendaryRiderDropsLegendary(t *testing.T) {
 	replacement := game.EntersAsCopyReplacement(
 		"copy text",
 		&game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou},
-		false, true, nil, false, nil,
+		false, true, nil, false, nil, nil,
 	)
 	applyEntersAsCopy(enterBattlefieldContext{}, g, clone, &replacement.Replacement)
 
@@ -144,7 +184,7 @@ func TestEntersAsCopyConditionalCounterMatchesCopiedType(t *testing.T) {
 		false, true, []game.ConditionalCounterPlacement{
 			{Kind: counter.PlusOnePlusOne, Amount: 1, IfType: types.Creature},
 			{Kind: counter.Loyalty, Amount: 1, IfType: types.Planeswalker},
-		}, false, nil,
+		}, false, nil, nil,
 	)
 	applyEntersAsCopy(enterBattlefieldContext{}, g, clone, &replacement.Replacement)
 

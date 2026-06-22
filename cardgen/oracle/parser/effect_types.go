@@ -1353,6 +1353,11 @@ type EffectSyntax struct {
 	// <type> in addition to its other types" copiable rider on an EntersAsCopy
 	// replacement (Phyrexian Metamorph). It is empty for every other replacement.
 	EntersAsCopyAddTypes []types.Card `json:",omitempty"`
+	// EntersAsCopyAddSubtypes lists the subtypes added by the "except it's a
+	// <subtype> in addition to its other types" copiable rider on an EntersAsCopy
+	// replacement (Mockingbird's "a Bird", Synth Infiltrator's "a Synth"). It is
+	// empty for every other replacement.
+	EntersAsCopyAddSubtypes []types.Sub `json:",omitempty"`
 	// EntersAsCopyConditionalCounters lists the conditional copiable counter
 	// riders of an EntersAsCopy replacement ("it enters with an additional +1/+1
 	// counter on it if it's a creature", "... loyalty counter ... if it's a
