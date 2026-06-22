@@ -11,6 +11,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -35,6 +36,13 @@ type stateQueries interface {
 
 	// CanPayLife reports whether the player may currently pay life.
 	CanPayLife(playerID game.PlayerID) bool
+
+	// PayLifeForManaColor reports whether an active rule effect lets the player
+	// pay 2 life rather than a mana of color c for each such colored symbol in a
+	// cost ("For each {B} in a cost, you may pay 2 life rather than pay that
+	// mana.", K'rrik). It makes matching colored symbols payable like Phyrexian
+	// symbols of that color.
+	PayLifeForManaColor(playerID game.PlayerID, c mana.Color) bool
 
 	// ActivePlayer returns the player whose turn it currently is.
 	ActivePlayer() game.PlayerID

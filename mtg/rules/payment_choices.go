@@ -145,12 +145,13 @@ func (e *Engine) phyrexianPaymentChoices(g *game.Game, playerID game.PlayerID, m
 	if manaCost == nil {
 		return nil
 	}
+	effective := payment.EffectiveManaCost(&rulesPaymentState{g: g}, playerID, *manaCost)
 	var choices []bool
 	availableLife := 0
 	if player, ok := playerByID(g, playerID); ok {
 		availableLife = player.Life
 	}
-	for _, symbol := range *manaCost {
+	for _, symbol := range effective {
 		if symbol.Kind != cost.PhyrexianSymbol {
 			continue
 		}

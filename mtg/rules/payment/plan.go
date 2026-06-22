@@ -473,6 +473,42 @@ func buildPaymentPlan(s State, playerID game.PlayerID, manaCost *cost.Mana, xVal
 	return buildPaymentPlanWithPreferences(s, playerID, manaCost, xValue, exclude, spendContext{}, nil)
 }
 
+// effectiveManaSymbols rewrites the cost's colored symbols into Phyrexian symbols
+// of the same color when an active RuleEffectPayLifeForColoredMana lets playerID
+// pay 2 life rather than that mana ("For each {B} in a cost, you may pay 2 life
+// rather than pay that mana.", K'rrik). It returns manaCost unchanged when no
+// symbol is affected, so unaffected costs allocate nothing and pay exactly as
+// before.
+func effectiveManaSymbols(s State, playerID game.PlayerID, manaCost cost.Mana) []cost.Symbol {
+	converted := false
+	for i := range manaCost {
+		if manaCost[i].Kind == cost.ColoredSymbol && s.PayLifeForManaColor(playerID, manaCost[i].Color) {
+			converted = true
+			break
+		}
+	}
+	if !converted {
+		return manaCost
+	}
+	symbols := make([]cost.Symbol, len(manaCost))
+	for i := range manaCost {
+		symbol := manaCost[i]
+		if symbol.Kind == cost.ColoredSymbol && s.PayLifeForManaColor(playerID, symbol.Color) {
+			symbol = cost.PhyrexianMana(symbol.Color)
+		}
+		symbols[i] = symbol
+	}
+	return symbols
+}
+
+// EffectiveManaCost returns manaCost with each colored symbol the player may pay
+// life for instead rewritten to the equivalent Phyrexian symbol (CR for K'rrik's
+// "For each {B} in a cost, ..." static). Callers that enumerate Phyrexian payment
+// choices use it so the choice order matches the payment plan's symbol order.
+func EffectiveManaCost(s State, playerID game.PlayerID, manaCost cost.Mana) cost.Mana {
+	return effectiveManaSymbols(s, playerID, manaCost)
+}
+
 func buildPaymentPlanWithPreferences(s State, playerID game.PlayerID, manaCost *cost.Mana, xValue int, exclude map[id.ID]bool, ctx spendContext, prefs *Preferences) (paymentPlan, bool) {
 	plan := paymentPlan{poolSpend: make(map[mana.Unit]int)}
 	player, ok := s.Player(playerID)
@@ -488,7 +524,9 @@ func buildPaymentPlanWithPreferences(s State, playerID game.PlayerID, manaCost *
 		return plan, true
 	}
 
-	for _, symbol := range *manaCost {
+	symbols := effectiveManaSymbols(s, playerID, *manaCost)
+
+	for _, symbol := range symbols {
 		switch symbol.Kind {
 		case cost.ColoredSymbol:
 			if !payColoredSymbol(&plan, pool, manaSources, symbol, symbol.Color, game.SymbolPaymentMana) {
@@ -501,14 +539,14 @@ func buildPaymentPlanWithPreferences(s State, playerID game.PlayerID, manaCost *
 		default:
 		}
 	}
-	for _, symbol := range *manaCost {
+	for _, symbol := range symbols {
 		if symbol.Kind == cost.SnowSymbol {
 			if !paySnowSymbol(&plan, pool, manaSources, symbol) {
 				return plan, false
 			}
 		}
 	}
-	for _, symbol := range *manaCost {
+	for _, symbol := range symbols {
 		switch symbol.Kind {
 		case cost.HybridSymbol:
 			if !payHybridSymbol(&plan, pool, manaSources, symbol) {
@@ -525,7 +563,7 @@ func buildPaymentPlanWithPreferences(s State, playerID game.PlayerID, manaCost *
 		default:
 		}
 	}
-	for _, symbol := range *manaCost {
+	for _, symbol := range symbols {
 		switch symbol.Kind {
 		case cost.GenericSymbol:
 			if !payGenericSymbol(&plan, pool, manaSources, symbol, symbol.Generic, game.SymbolPaymentGeneric) {

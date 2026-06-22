@@ -896,6 +896,16 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 			AffectedPlayer: game.PlayerYou,
 		})
 		return true
+	case compiler.StaticPlayerRuleLifeForColoredMana:
+		if !lowerManaColorValid(declaration.Player.ManaColor) {
+			return false
+		}
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectPayLifeForColoredMana,
+			AffectedPlayer: game.PlayerYou,
+			ManaColor:      declaration.Player.ManaColor,
+		})
+		return true
 	case compiler.StaticPlayerRuleCastSpellsFromLibraryTop:
 		var spellTypes []types.Card
 		if len(declaration.Player.SpellTypes) > 0 {
@@ -940,6 +950,17 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 			CastFromZone:   zone.Exile,
 			AffectedSource: true,
 		})
+		return true
+	default:
+		return false
+	}
+}
+
+// lowerManaColorValid reports whether c is one of the five real colors of mana,
+// guarding the RuleEffectPayLifeForColoredMana color requirement at lowering.
+func lowerManaColorValid(c mana.Color) bool {
+	switch c {
+	case mana.W, mana.U, mana.B, mana.R, mana.G:
 		return true
 	default:
 		return false

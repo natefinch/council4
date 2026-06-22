@@ -989,6 +989,16 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		}
 	case RuleEffectAttackTax:
 		v.validateAttackTaxRuleEffect(faceName, path, effect)
+	case RuleEffectPayLifeForColoredMana:
+		if effect.AffectedPlayer == PlayerAny {
+			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "life-for-mana payment must set affected player")
+		}
+		if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "life-for-mana payment cannot affect a permanent")
+		}
+		if !manaColorValid(effect.ManaColor) {
+			v.add(faceName, appendPath(path, "ManaColor"), CardDefIssueInvalidRuleEffect, "life-for-mana payment must set a colored mana color")
+		}
 	case RuleEffectPlayFromZone:
 		if err := validatePlayFromZoneRuleEffect(effect, false, true); err != nil {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, err.Error())

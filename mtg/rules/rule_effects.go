@@ -8,6 +8,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/rules/payment"
 	"github.com/natefinch/council4/opt"
 )
@@ -772,6 +773,24 @@ func playerRuleEffectActive(g *game.Game, playerID game.PlayerID, kind game.Rule
 	for i := range effects {
 		effect := &effects[i]
 		if effect.Kind == kind &&
+			playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
+			return true
+		}
+	}
+	return false
+}
+
+// payLifeForManaColorActive reports whether an active RuleEffectPayLifeForColoredMana
+// effect lets playerID pay 2 life instead of a mana of color c when paying a cost
+// ("For each {B} in a cost, you may pay 2 life rather than pay that mana.", K'rrik).
+func payLifeForManaColorActive(g *game.Game, playerID game.PlayerID, c mana.Color) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectPayLifeForColoredMana {
+			continue
+		}
+		if effect.ManaColor == c &&
 			playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
 			return true
 		}

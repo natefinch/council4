@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -240,6 +241,12 @@ const (
 	// It is a private-visibility static (only the affected player sees the card)
 	// and grants no play or cast permission on its own.
 	RuleEffectLookAtTopCardAnyTime
+	// RuleEffectPayLifeForColoredMana lets the affected player pay 2 life rather
+	// than the mana for each ManaColor symbol in any cost they pay ("For each {B}
+	// in a cost, you may pay 2 life rather than pay that mana.", K'rrik, Son of
+	// Yawgmoth). It makes every colored mana symbol of ManaColor in the affected
+	// player's costs payable like a Phyrexian symbol of that color.
+	RuleEffectPayLifeForColoredMana
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -275,7 +282,19 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectCastSpellsFromZone,
 		RuleEffectCantCastFromZones,
 		RuleEffectCantEnterFromZones,
-		RuleEffectLookAtTopCardAnyTime:
+		RuleEffectLookAtTopCardAnyTime,
+		RuleEffectPayLifeForColoredMana:
+		return true
+	default:
+		return false
+	}
+}
+
+// manaColorValid reports whether c is one of the five real colors of mana
+// (colorless is rejected), backing RuleEffectPayLifeForColoredMana validation.
+func manaColorValid(c mana.Color) bool {
+	switch c {
+	case mana.W, mana.U, mana.B, mana.R, mana.G:
 		return true
 	default:
 		return false
@@ -337,6 +356,11 @@ type RuleEffect struct {
 	BlockerRestriction BlockerRestriction
 	Protection         ProtectionKeyword
 	AttackTaxGeneric   int
+
+	// ManaColor names the colored mana symbol a RuleEffectPayLifeForColoredMana
+	// effect lets the affected player pay 2 life for instead ("For each {B} in a
+	// cost, ...", K'rrik). It is unused for every other kind.
+	ManaColor mana.Color
 
 	CostModifier CostModifier
 

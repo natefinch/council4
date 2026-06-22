@@ -544,6 +544,14 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("AttackTaxGeneric: %d,", effect.AttackTaxGeneric))
 	}
+	if effect.Kind == game.RuleEffectPayLifeForColoredMana {
+		manaColor, err := renderManaColor(effect.ManaColor)
+		if err != nil {
+			return "", fmt.Errorf("render: life-for-mana payment: %w", err)
+		}
+		ctx.need(importMana)
+		fields = append(fields, fmt.Sprintf("ManaColor: %s,", manaColor))
+	}
 	if effect.Kind == game.RuleEffectAdditionalLandPlays {
 		if effect.AdditionalLandPlays < 1 {
 			return "", errors.New("render: additional land plays requires a positive count")
@@ -729,6 +737,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectCastFromZone", nil
 	case game.RuleEffectNoMaximumHandSize:
 		return "game.RuleEffectNoMaximumHandSize", nil
+	case game.RuleEffectPayLifeForColoredMana:
+		return "game.RuleEffectPayLifeForColoredMana", nil
 	default:
 		return "", fmt.Errorf("render: unsupported rule effect kind %d", kind)
 	}
