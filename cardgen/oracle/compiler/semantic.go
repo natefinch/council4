@@ -2282,6 +2282,12 @@ const (
 	// count; the runtime records the kick count as the spell is cast. Added last
 	// so existing kinds keep their wire values.
 	DynamicAmountTimesKicked
+	// DynamicAmountOpponentsAttackedThisCombat is the number of the controller's
+	// opponents being attacked this combat by creatures the controller controls
+	// ("for each opponent you attacked this combat", the Melee count). It is the
+	// combat-state sibling of DynamicAmountOpponentCount. Added last so existing
+	// kinds keep their wire values.
+	DynamicAmountOpponentsAttackedThisCombat
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

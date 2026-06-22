@@ -1283,6 +1283,48 @@ func isMentorKeywordLine(line string) bool {
 	return strings.HasPrefix(tail, "(") && strings.HasSuffix(tail, ")")
 }
 
+// meleeCanonicalText is the full Oracle wording Melee abbreviates (CR 702.72).
+const meleeCanonicalText = "Whenever this creature attacks, it gets +1/+1 until " +
+	"end of turn for each opponent you attacked this combat."
+
+// expandMeleeKeyword rewrites each bare "Melee" keyword line into its full
+// triggered-ability Oracle text so the existing attacks-trigger and dynamic
+// power/toughness pipeline lowers it. The "for each opponent you attacked this
+// combat" count resolves from the current combat's attack declarations. Parser
+// owns the wording.
+func expandMeleeKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		if !isMeleeKeywordLine(line) {
+			continue
+		}
+		lines[i] = meleeCanonicalText
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
+
+// isMeleeKeywordLine reports whether a line is exactly the printed "Melee"
+// keyword, optionally followed only by its parenthesized reminder text. Lines
+// that merely contain the word elsewhere, or pair it with other rules text, are
+// left untouched.
+func isMeleeKeywordLine(line string) bool {
+	const keyword = "Melee"
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, keyword) {
+		return false
+	}
+	tail := strings.TrimSpace(trimmed[len(keyword):])
+	if tail == "" {
+		return true
+	}
+	return strings.HasPrefix(tail, "(") && strings.HasSuffix(tail, ")")
+}
+
 func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
 	var keywords []Keyword
 	for i := 0; i < len(tokens); i++ {

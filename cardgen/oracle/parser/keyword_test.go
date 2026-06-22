@@ -583,6 +583,35 @@ func TestExpandMentorKeywordLeavesOtherTextAlone(t *testing.T) {
 	}
 }
 
+func TestExpandMeleeKeyword(t *testing.T) {
+	t.Parallel()
+	want := "Whenever this creature attacks, it gets +1/+1 until " +
+		"end of turn for each opponent you attacked this combat."
+	sources := []string{
+		"Melee (Whenever this creature attacks, it gets +1/+1 until end of turn for each opponent you attacked this combat.)",
+		"Melee",
+	}
+	for _, source := range sources {
+		if got := expandMeleeKeyword(source); got != want {
+			t.Fatalf("expandMeleeKeyword(%q) = %q, want %q", source, got, want)
+		}
+	}
+}
+
+func TestExpandMeleeKeywordLeavesOtherTextAlone(t *testing.T) {
+	t.Parallel()
+	sources := []string{
+		"Marvelous Melee deals 4 damage to each tapped creature.",
+		"Redcap Melee",
+		"{1}: Melee gains flying.",
+	}
+	for _, source := range sources {
+		if got := expandMeleeKeyword(source); got != source {
+			t.Fatalf("expandMeleeKeyword(%q) = %q, want unchanged", source, got)
+		}
+	}
+}
+
 func TestParseSelectionWithLesserPower(t *testing.T) {
 	t.Parallel()
 	doc, diags := Parse(

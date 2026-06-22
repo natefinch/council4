@@ -191,6 +191,14 @@ const (
 	// that did not enter from a kicked cast, yields zero. Added last so existing
 	// kinds keep their wire values.
 	DynamicAmountTimesKicked
+	// DynamicAmountOpponentsAttackedThisCombat is the number of the resolving
+	// ability controller's opponents being attacked this combat by creatures the
+	// controller controls, read from the current combat's attack declarations as
+	// the ability resolves (CR 506.2, CR 702.72). Each distinct opponent counts
+	// once; it is zero outside combat. It backs Melee N, whose attack trigger
+	// pumps the source "+1/+1 until end of turn for each opponent you attacked
+	// this combat." Added last so existing kinds keep their wire values.
+	DynamicAmountOpponentsAttackedThisCombat
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

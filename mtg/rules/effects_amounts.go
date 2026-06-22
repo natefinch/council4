@@ -72,7 +72,7 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		}
 	case game.DynamicAmountControllerLife, game.DynamicAmountControllerHandSize,
 		game.DynamicAmountControllerGraveyardSize, game.DynamicAmountControllerBasicLandTypeCount,
-		game.DynamicAmountOpponentCount:
+		game.DynamicAmountOpponentCount, game.DynamicAmountOpponentsAttackedThisCombat:
 		amount = controllerAggregateAmount(g, controller, dynamic, before)
 	case game.DynamicAmountDevotion:
 		// ColorFrom binds devotion to the color chosen as the ability resolves
@@ -313,9 +313,42 @@ func controllerAggregateAmount(g *game.Game, controller game.PlayerID, dynamic g
 		})
 	case game.DynamicAmountOpponentCount:
 		return len(aliveOpponents(g, controller))
+	case game.DynamicAmountOpponentsAttackedThisCombat:
+		return opponentsAttackedThisCombat(g, controller)
 	default:
 	}
 	return 0
+}
+
+// opponentsAttackedThisCombat counts the distinct opponents of controller being
+// attacked this combat by creatures controller controls, read from the current
+// combat's attack declarations as the ability resolves (CR 506.2, CR 702.72).
+// It backs the Melee count "for each opponent you attacked this combat" and is
+// zero outside combat.
+func opponentsAttackedThisCombat(g *game.Game, controller game.PlayerID) int {
+	if g.Combat == nil {
+		return 0
+	}
+	opponents := make(map[game.PlayerID]bool, game.NumPlayers)
+	for _, opponent := range aliveOpponents(g, controller) {
+		opponents[opponent] = false
+	}
+	for _, declaration := range g.Combat.Attackers {
+		attacker, ok := permanentByObjectID(g, declaration.Attacker)
+		if !ok || effectiveController(g, attacker) != controller {
+			continue
+		}
+		if _, ok := opponents[declaration.Target.Player]; ok {
+			opponents[declaration.Target.Player] = true
+		}
+	}
+	attacked := 0
+	for _, did := range opponents {
+		if did {
+			attacked++
+		}
+	}
+	return attacked
 }
 
 // controllerDevotion returns the controller's devotion to colors: the number of
