@@ -97,7 +97,137 @@ func lowerMillThenOptionalAmongOneOfEachToBattlefield(ctx contentCtx) (game.Abil
 	return game.Mode{Sequence: sequence}.Ability(), true
 }
 
-// oneOfEachCardSelections splits an inclusive one-of-each card selector ("a Saga
+// lowerMillThenPutAmongToBattlefield lowers the broadened ordered sequence "mill
+// N cards. [You may] put a <type> card from among them onto the battlefield
+// [tapped]." and "[you may] mill that many cards. Put any number of <type> cards
+// from among them onto the battlefield [tapped].". The mill is mandatory or
+// optional ("you may mill") and publishes the cards it milled; its amount is
+// either a fixed printed count (Mole Module's "mill four cards") or the
+// triggering combat damage ("mill that many cards"). The follow-up put returns
+// either exactly one ("a <type> card") or any number ("any number of <type>
+// cards") of those milled cards from the graveyard onto the battlefield,
+// restricted to the put clause's single named card type and optionally entering
+// tapped. A leading "you may" makes the put instruction itself optional.
+//
+// It keys entirely on the typed effect shape — a controller mill that publishes
+// the milled cards followed by a controller "them" put onto the battlefield
+// whose selector is a single named card type (never the inclusive one-of-each
+// union handled by lowerMillThenOptionalAmongOneOfEachToBattlefield) — so it
+// stays text-blind and fails closed on any other sequence. A dynamic mill amount
+// further requires the enclosing trigger to be a combat-damage event (enforced
+// by lowerEventCombatDamageAmount), so a non-combat context fails closed.
+func lowerMillThenPutAmongToBattlefield(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 2 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	mill := ctx.content.Effects[0]
+	put := ctx.content.Effects[1]
+	if mill.Kind != compiler.EffectMill ||
+		mill.Context != parser.EffectContextController ||
+		!mill.Exact ||
+		mill.Negated ||
+		mill.DelayedTiming != 0 ||
+		len(mill.References) != 0 ||
+		len(mill.Targets) != 0 {
+		return game.AbilityContent{}, false
+	}
+	if put.Kind != compiler.EffectPut ||
+		put.Context != parser.EffectContextController ||
+		put.Negated ||
+		put.DelayedTiming != 0 ||
+		put.ToZone != zone.Battlefield ||
+		put.UnderYourControl ||
+		put.Selector.All ||
+		put.Selector.InclusiveOneOfEach ||
+		put.Payment.Form != parser.EffectPaymentFormUnknown ||
+		put.CounterKind != 0 ||
+		len(put.Targets) != 0 ||
+		len(put.References) != 1 ||
+		put.References[0].Pronoun != compiler.ReferencePronounThem {
+		return game.AbilityContent{}, false
+	}
+	anyNumber, ok := putAmongCountForm(put.Amount)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	selection, ok := cardSelectionForSelector(put.Selector)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	millAmount, ok := millAmongAmount(ctx, mill.Amount)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	returnPrimitive := game.ReturnFromGraveyard{
+		Player:      game.ControllerReference(),
+		Destination: zone.Battlefield,
+		FromLinked:  milledCardsLinkKey,
+		Selection:   selection,
+		EntryTapped: put.EntersTapped,
+		AnyNumber:   anyNumber,
+	}
+	if !anyNumber {
+		returnPrimitive.Amount = game.Fixed(1)
+	}
+	sequence := []game.Instruction{
+		{
+			Primitive: game.Mill{
+				Amount:        millAmount,
+				Player:        game.ControllerReference(),
+				PublishLinked: milledCardsLinkKey,
+			},
+			Optional: mill.Optional,
+		},
+		{
+			Primitive: returnPrimitive,
+			Optional:  put.Optional,
+		},
+	}
+	return game.Mode{Sequence: sequence}.Ability(), true
+}
+
+// putAmongCountForm classifies a put-from-among count as either a single card
+// ("a <type> card", reported as anyNumber false) or the unbounded "any number of
+// <type> cards" form (reported as anyNumber true). It keys on the positive
+// AnyNumber marker the parser sets only for the literal "any number of" wording,
+// so the otherwise identical empty amount produced by "all", "the", or a bare
+// plural noun fails closed rather than collapsing into an optional subset put. It
+// also fails closed on any ranged ("up to two"), variable-X, or dynamic count.
+func putAmongCountForm(amount compiler.CompiledAmount) (anyNumber bool, ok bool) {
+	if amount.RangeKnown || amount.VariableX || amount.DynamicKind != compiler.DynamicAmountNone {
+		return false, false
+	}
+	if amount.AnyNumber {
+		// "Any number of <type> cards": the player chooses any subset, so a
+		// printed count must not also be present.
+		return true, !amount.Known
+	}
+	if amount.Known {
+		return false, amount.Value == 1
+	}
+	return false, false
+}
+
+// millAmongAmount lowers the mill amount that feeds a put-from-among sequence. A
+// printed count ("mill four cards") becomes a fixed quantity; the dynamic "mill
+// that many cards" becomes the triggering combat damage, which requires a
+// combat-damage trigger context and so fails closed elsewhere.
+func millAmongAmount(ctx contentCtx, amount compiler.CompiledAmount) (game.Quantity, bool) {
+	if amount.Known {
+		return cardCountQuantity(amount, false)
+	}
+	dynamic, ok := lowerEventCombatDamageAmount(ctx, amount)
+	if !ok {
+		return game.Quantity{}, false
+	}
+	return game.Dynamic(dynamic), true
+}
+
 // card and/or a land card") into one game.Selection per named type, so each can
 // drive an independent optional put. It accepts only a plain card selection that
 // is a pure union of named card types and subtypes; any other qualifier (color,

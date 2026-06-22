@@ -738,7 +738,11 @@ func (r Renderer) renderReturnFromGraveyard(ctx *renderCtx, value game.ReturnFro
 	fields := []string{
 		fmt.Sprintf("Player: %s,", player),
 		fmt.Sprintf("Selection: %s,", selection),
-		fmt.Sprintf("Amount: %s,", amount),
+	}
+	if value.AnyNumber {
+		fields = append(fields, "AnyNumber: true,")
+	} else {
+		fields = append(fields, fmt.Sprintf("Amount: %s,", amount))
 	}
 	if value.Destination != zone.None {
 		destination, err := renderZone(value.Destination)

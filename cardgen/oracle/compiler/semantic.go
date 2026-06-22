@@ -2361,12 +2361,17 @@ const (
 
 // CompiledAmount is a fixed or rules-derived amount recognized in an effect.
 type CompiledAmount struct {
-	Value         int
-	Known         bool
-	RangeKnown    bool
-	Minimum       int
-	Maximum       int
-	VariableX     bool
+	Value      int
+	Known      bool
+	RangeKnown bool
+	Minimum    int
+	Maximum    int
+	VariableX  bool
+	// AnyNumber records the unbounded "any number of <noun>" count form; see
+	// parser.EffectAmountSyntax.AnyNumber. It is the only positive signal for
+	// that form, since "all", "the", and a bare plural noun share the same empty
+	// amount shape.
+	AnyNumber     bool
 	DynamicKind   DynamicAmountKind
 	DynamicForm   DynamicAmountForm
 	Multiplier    int

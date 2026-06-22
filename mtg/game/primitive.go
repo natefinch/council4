@@ -640,6 +640,15 @@ type ReturnFromGraveyard struct {
 	EntryTapped       bool
 	MaxTotalManaValue opt.V[int]
 
+	// AnyNumber models the "put any number of <filter> cards from among them
+	// onto the battlefield" wording: the resolving player chooses any subset of
+	// the matching candidate pool, from none up to all of them, rather than a
+	// fixed count. Amount is ignored (and must be zero) when it is set, since the
+	// upper bound is the whole matching pool. It pairs naturally with FromLinked
+	// to put any number of a specific earlier-produced set (such as milled
+	// cards) onto the battlefield.
+	AnyNumber bool
+
 	// FromLinked, when set, restricts the candidate pool to the cards remembered
 	// under this key by a prior instruction (such as a Mill that published the
 	// cards it milled). Only graveyard cards whose identity was linked this way

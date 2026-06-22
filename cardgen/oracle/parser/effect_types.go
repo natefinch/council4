@@ -621,14 +621,20 @@ const (
 
 // EffectAmountSyntax is a fixed or rules-derived source-spanned amount.
 type EffectAmountSyntax struct {
-	Span        shared.Span             `json:"-"`
-	Text        string                  `json:",omitempty"`
-	Value       int                     `json:",omitempty"`
-	Known       bool                    `json:",omitempty"`
-	RangeKnown  bool                    `json:",omitempty"`
-	Minimum     int                     `json:",omitempty"`
-	Maximum     int                     `json:",omitempty"`
-	VariableX   bool                    `json:",omitempty"`
+	Span       shared.Span `json:"-"`
+	Text       string      `json:",omitempty"`
+	Value      int         `json:",omitempty"`
+	Known      bool        `json:",omitempty"`
+	RangeKnown bool        `json:",omitempty"`
+	Minimum    int         `json:",omitempty"`
+	Maximum    int         `json:",omitempty"`
+	VariableX  bool        `json:",omitempty"`
+	// AnyNumber records the unbounded "any number of <noun>" count form, where
+	// the resolving player may choose any quantity from none up to all eligible
+	// objects. It is a positive marker set only by the literal "any number of"
+	// wording, distinguishing that form from the otherwise identical empty amount
+	// produced by "all", "the", or a bare plural noun.
+	AnyNumber   bool                    `json:",omitempty"`
 	DynamicKind EffectDynamicAmountKind `json:",omitempty"`
 	DynamicForm EffectDynamicAmountForm `json:",omitempty"`
 	Multiplier  int                     `json:",omitempty"`

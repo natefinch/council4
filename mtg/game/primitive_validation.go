@@ -1154,11 +1154,20 @@ func (p CastForFree) validatePrimitive(targets []TargetSpec, checkTargets bool) 
 }
 
 func (p ReturnFromGraveyard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
-		return err
-	}
-	if p.Amount.IsDynamic() || p.Amount.Value() < 1 {
-		return errors.New("return from graveyard requires a fixed positive amount")
+	if p.AnyNumber {
+		if p.Amount.IsDynamic() || p.Amount.Value() != 0 {
+			return errors.New("return from graveyard any-number form takes no fixed amount")
+		}
+		if p.MaxTotalManaValue.Exists {
+			return errors.New("return from graveyard any-number form takes no total mana value cap")
+		}
+	} else {
+		if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+			return err
+		}
+		if p.Amount.IsDynamic() || p.Amount.Value() < 1 {
+			return errors.New("return from graveyard requires a fixed positive amount")
+		}
 	}
 	if p.Destination != zone.None && p.Destination != zone.Hand && p.Destination != zone.Battlefield {
 		return errors.New("return from graveyard requires a hand or battlefield destination")

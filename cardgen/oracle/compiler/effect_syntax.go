@@ -562,6 +562,7 @@ func compileTypedAmount(amount parser.EffectAmountSyntax) CompiledAmount {
 		Minimum:       amount.Minimum,
 		Maximum:       amount.Maximum,
 		VariableX:     amount.VariableX,
+		AnyNumber:     amount.AnyNumber,
 		DynamicKind:   compileDynamicAmountKind(amount.DynamicKind),
 		DynamicForm:   compileDynamicAmountForm(amount.DynamicForm),
 		Multiplier:    amount.Multiplier,
