@@ -896,6 +896,30 @@ func blockUnionTriggerEventClauseTests() []triggerEventClauseTest {
 				}
 			},
 		},
+		{
+			name:   "attacks or blocks union self",
+			source: "Whenever this creature attacks or blocks, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindAttack ||
+					clause.UnionKind != TriggerEventKindBlock ||
+					clause.Subject.Kind != TriggerEventSubjectSelf {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "blocks or attacks union self mirror",
+			source: "Whenever this creature blocks or attacks, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindAttack ||
+					clause.UnionKind != TriggerEventKindBlock ||
+					clause.Subject.Kind != TriggerEventSubjectSelf {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
 	}
 }
 

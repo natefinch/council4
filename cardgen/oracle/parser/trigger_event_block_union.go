@@ -45,3 +45,44 @@ func blockBecameBlockedUnionClause(prefix []shared.Token, atoms Atoms) *TriggerE
 		ExcludeSelf: subject.excludeSelf,
 	}
 }
+
+// parseAttackBlockUnionTriggerEventClause recognizes the event-union trigger
+// "<subject> attacks or blocks" (and the mirrored "<subject> blocks or
+// attacks"), e.g. "Whenever this creature attacks or blocks". Both verbs share
+// one subject, so the trigger fires when either the attacker-declared event or
+// the blocker-declared event happens. The attack event is the primary clause;
+// the block event joins it through UnionKind.
+func parseAttackBlockUnionTriggerEventClause(
+	tokens []shared.Token,
+	_ TriggerIntroductionKind,
+	atoms Atoms,
+	_ string,
+) *TriggerEventClause {
+	if index := syntaxWordsIndex(tokens, "attacks", "or", "blocks"); index > 0 {
+		if index+3 != len(tokens) {
+			return nil
+		}
+		return attackBlockUnionClause(tokens[:index], atoms)
+	}
+	if index := syntaxWordsIndex(tokens, "blocks", "or", "attacks"); index > 0 {
+		if index+3 != len(tokens) {
+			return nil
+		}
+		return attackBlockUnionClause(tokens[:index], atoms)
+	}
+	return nil
+}
+
+func attackBlockUnionClause(prefix []shared.Token, atoms Atoms) *TriggerEventClause {
+	subject := parsePermanentEventSubject(prefix, false, atoms)
+	if !subject.ok || subject.oneOrMore {
+		return nil
+	}
+	return &TriggerEventClause{
+		Kind:        TriggerEventKindAttack,
+		UnionKind:   TriggerEventKindBlock,
+		Subject:     subject.subject,
+		Controller:  subject.controller,
+		ExcludeSelf: subject.excludeSelf,
+	}
+}
