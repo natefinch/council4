@@ -217,6 +217,8 @@ func alternativeCostConditionSatisfied(s State, playerID game.PlayerID, conditio
 		return false
 	case cost.AlternativeConditionNotYourTurn:
 		return s.ActivePlayer() != playerID
+	case cost.AlternativeConditionOpponentLostLifeThisTurn:
+		return s.OpponentLostLifeThisTurn(playerID)
 	default:
 		return false
 	}

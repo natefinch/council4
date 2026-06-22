@@ -33,6 +33,10 @@ func (s *rulesPaymentState) ActivePlayer() game.PlayerID {
 	return s.g.Turn.ActivePlayer
 }
 
+func (s *rulesPaymentState) OpponentLostLifeThisTurn(playerID game.PlayerID) bool {
+	return opponentLostLifeThisTurn(s.g, playerID)
+}
+
 func (s *rulesPaymentState) AdditionalDynamicAmountValue(playerID game.PlayerID, kind cost.AdditionalDynamicAmount) int {
 	switch kind {
 	case cost.AdditionalDynamicCommanderColorIdentityCount:

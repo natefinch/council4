@@ -130,6 +130,10 @@ const (
 	// from your hand, exile it as it resolves; at the beginning of your next
 	// upkeep you may cast it from exile without paying its mana cost.
 	KeywordRebound KeywordKind = "KeywordRebound"
+	// KeywordSpectacle is the Spectacle alternative-cost keyword (CR 702.107):
+	// "Spectacle <cost>" lets the spell be cast for its spectacle cost rather
+	// than its mana cost if an opponent lost life this turn.
+	KeywordSpectacle KeywordKind = "KeywordSpectacle"
 )
 
 var keywordNames = map[KeywordKind]string{
@@ -225,6 +229,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordDesertwalk:       "Desertwalk",
 	KeywordNonbasicLandwalk: "Nonbasic landwalk",
 	KeywordRebound:          "Rebound",
+	KeywordSpectacle:        "Spectacle",
 }
 
 // String returns the parser-owned canonical keyword name.
@@ -347,6 +352,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordMountainwalk, Words: []string{"mountainwalk"}},
 	{Kind: KeywordForestwalk, Words: []string{"forestwalk"}},
 	{Kind: KeywordDesertwalk, Words: []string{"desertwalk"}},
+	{Kind: KeywordSpectacle, Words: []string{"spectacle"}},
 }
 
 // KeywordParameterKind identifies the grammar used by a keyword parameter.

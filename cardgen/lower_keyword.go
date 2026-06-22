@@ -252,6 +252,12 @@ func lowerKeywordDispatch(
 		}
 		return evokeLowering, true, nil
 	}
+	if spectacleLowering, ok, diag := lowerSpectacleAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return spectacleLowering, true, nil
+	}
 	if dredgeAbility, ok, diag := lowerDredgeAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -1168,6 +1174,48 @@ func lowerEvokeAbility(
 		alternativeCosts: []cost.Alternative{{
 			Label:    "Evoke",
 			ManaCost: opt.Val(manaCost),
+		}},
+		consumed:    semanticConsumption{keywords: 1},
+		sourceSpans: keywordSpans(ability, syntax),
+	}, true, nil
+}
+
+// lowerSpectacleAbility lowers the Spectacle keyword (CR 702.107): "Spectacle
+// <cost>" lets the spell be cast for its spectacle cost rather than its mana
+// cost if an opponent lost life this turn. It produces a single conditional
+// alternative cost; unlike Evoke there is no entry sacrifice trigger. Only the
+// exact keyword with a fixed mana cost and no other rules text is supported;
+// anything else fails closed.
+func lowerSpectacleAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (abilityLowering, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordSpectacle {
+		return abilityLowering{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	manaCost, fixed := fixedKeywordManaCost(keyword)
+	if !fixed ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return abilityLowering{}, true, executableDiagnostic(
+			ability,
+			"unsupported Spectacle ability",
+			"the executable source backend supports only exact Spectacle with a fixed mana cost",
+		)
+	}
+	return abilityLowering{
+		alternativeCosts: []cost.Alternative{{
+			Label:     "Spectacle",
+			ManaCost:  opt.Val(manaCost),
+			Condition: cost.AlternativeConditionOpponentLostLifeThisTurn,
 		}},
 		consumed:    semanticConsumption{keywords: 1},
 		sourceSpans: keywordSpans(ability, syntax),
