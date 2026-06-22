@@ -142,6 +142,7 @@ func lowerMillThenPutAmongToBattlefield(ctx contentCtx) (game.AbilityContent, bo
 		put.DelayedTiming != 0 ||
 		put.ToZone != zone.Battlefield ||
 		put.UnderYourControl ||
+		put.Selector.All ||
 		put.Selector.InclusiveOneOfEach ||
 		put.Payment.Form != parser.EffectPaymentFormUnknown ||
 		put.CounterKind != 0 ||
@@ -192,19 +193,24 @@ func lowerMillThenPutAmongToBattlefield(ctx contentCtx) (game.AbilityContent, bo
 
 // putAmongCountForm classifies a put-from-among count as either a single card
 // ("a <type> card", reported as anyNumber false) or the unbounded "any number of
-// <type> cards" form (reported as anyNumber true). It fails closed on any ranged
-// ("up to two"), variable-X, or dynamic count so an unmodeled quantity never
-// silently collapses to one of the two supported forms.
+// <type> cards" form (reported as anyNumber true). It keys on the positive
+// AnyNumber marker the parser sets only for the literal "any number of" wording,
+// so the otherwise identical empty amount produced by "all", "the", or a bare
+// plural noun fails closed rather than collapsing into an optional subset put. It
+// also fails closed on any ranged ("up to two"), variable-X, or dynamic count.
 func putAmongCountForm(amount compiler.CompiledAmount) (anyNumber bool, ok bool) {
 	if amount.RangeKnown || amount.VariableX || amount.DynamicKind != compiler.DynamicAmountNone {
 		return false, false
 	}
+	if amount.AnyNumber {
+		// "Any number of <type> cards": the player chooses any subset, so a
+		// printed count must not also be present.
+		return true, !amount.Known
+	}
 	if amount.Known {
 		return false, amount.Value == 1
 	}
-	// "Any number of <type> cards" carries no printed count: the amount is wholly
-	// unspecified (not known, not ranged, not variable, not dynamic).
-	return true, true
+	return false, false
 }
 
 // millAmongAmount lowers the mill amount that feeds a put-from-among sequence. A

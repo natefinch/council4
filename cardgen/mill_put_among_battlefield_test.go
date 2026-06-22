@@ -81,7 +81,32 @@ func TestLowerMillThenOptionalPutPermanentAmongToBattlefield(t *testing.T) {
 	}
 }
 
-// TestLowerMillThenPutAnyNumberLandsAmongToBattlefield asserts the broadened
+// TestMillThenPutAllOrThePlainCardsAmongFailsClosed asserts the broadened
+// any-number path keys on the literal "any number of" wording only: the
+// determiners "all" and "the" compile to the same empty amount but mean a
+// mandatory move, so they must fail closed rather than silently lower to a
+// player-optional subset put.
+func TestMillThenPutAllOrThePlainCardsAmongFailsClosed(t *testing.T) {
+	t.Parallel()
+	power, toughness := "2", "2"
+	mk := func(put string) *ScryfallCard {
+		return &ScryfallCard{
+			Name: "Test Closed", Layout: "normal", ManaCost: "{3}", TypeLine: "Creature — Frog",
+			OracleText: "Whenever Test Closed deals combat damage to a player, mill three cards. " + put,
+			Power:      &power, Toughness: &toughness,
+		}
+	}
+	for _, put := range []string{
+		"Put all land cards from among them onto the battlefield tapped.",
+		"Put the land cards from among them onto the battlefield tapped.",
+	} {
+		_, diagnostics := lowerExecutableFaces(mk(put))
+		if len(diagnostics) == 0 {
+			t.Fatalf("expected fail-closed diagnostics for %q, got none", put)
+		}
+	}
+}
+
 // any-number form ("you may mill that many cards. Put any number of land cards
 // from among them onto the battlefield tapped.") lowers to an optional dynamic
 // mill that publishes the milled cards followed by a mandatory any-number put of

@@ -1092,6 +1092,15 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		if kind == EffectPut && selectionJoinsCardNounsWithAndOr(selectionClause) {
 			effectSelection.InclusiveOneOfEach = true
 		}
+		// "put any number of <type> cards from among them" lets the resolving
+		// player choose any quantity from none up to all eligible cards. The
+		// literal "any number of" run is the only signal for this unbounded
+		// count: "all", "the", and a bare plural noun all compile to the same
+		// empty amount, so record the marker positively here rather than
+		// inferring it downstream from the absence of a count.
+		if kind == EffectPut && effectHasTokenWords(selectionClause, "any", "number", "of") {
+			amount.AnyNumber = true
+		}
 		effects = append(effects, EffectSyntax{
 			Kind:                      kind,
 			Context:                   context,
