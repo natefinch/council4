@@ -891,8 +891,8 @@ func (v *cardDefValidator) validateContinuousEffect(faceName, path string, conti
 		if continuous.Layer != LayerType {
 			v.add(faceName, appendPath(path, "Layer"), CardDefIssueInvalidAbilityBody, "entry-choice subtype reference requires the type layer")
 		}
-		if !continuous.AffectedSource {
-			v.add(faceName, appendPath(path, "AffectedSource"), CardDefIssueInvalidReference, "entry-choice subtype reference must affect its source")
+		if !continuous.AffectedSource && continuous.Group.Empty() {
+			v.add(faceName, appendPath(path, "AffectedSource"), CardDefIssueInvalidReference, "entry-choice subtype reference must affect its source or a group")
 		}
 	}
 }

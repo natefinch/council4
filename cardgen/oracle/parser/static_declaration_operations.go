@@ -443,11 +443,12 @@ func parseStaticDeclarationSubject(tokens []shared.Token, atoms Atoms) (StaticDe
 
 // staticLinkingVerbGroupSubject recognizes a battlefield-group subject that a
 // characteristic-defining static joins to its predicate with the linking verb
-// "is"/"are" ("Creatures you control are Slivers ...", "All creatures are ...").
-// The shared parseEffectStaticSubject only delimits these groups before an
-// action verb (get/have/gain/lose), so the linking-verb forms used by type- and
-// color-adding statics are recognized here. It returns the group subject and the
-// index of the linking verb that follows the noun phrase.
+// "is"/"are" ("Creatures you control are Slivers ...", "Each creature you
+// control is ...", "All creatures are ..."). The shared parseEffectStaticSubject
+// only delimits these groups before an action verb (get/have/gain/lose), so the
+// linking-verb forms used by type- and color-adding statics are recognized here.
+// It returns the group subject and the index of the linking verb that follows
+// the noun phrase.
 func staticLinkingVerbGroupSubject(tokens []shared.Token) (EffectStaticSubjectSyntax, int, bool) {
 	type groupForm struct {
 		words []string
@@ -455,6 +456,7 @@ func staticLinkingVerbGroupSubject(tokens []shared.Token) (EffectStaticSubjectSy
 	}
 	forms := []groupForm{
 		{[]string{"other", "creatures", "you", "control"}, EffectStaticSubjectOtherControlledCreatures},
+		{[]string{"each", "creature", "you", "control"}, EffectStaticSubjectControlledCreatures},
 		{[]string{"creatures", "you", "control"}, EffectStaticSubjectControlledCreatures},
 		{[]string{"lands", "you", "control"}, EffectStaticSubjectControlledLands},
 		{[]string{"permanents", "you", "control"}, EffectStaticSubjectControlledPermanents},
@@ -935,16 +937,37 @@ func parseStaticEntryChoiceSubtypeOperation(
 	subject StaticDeclarationSubject,
 ) (StaticDeclarationSyntax, int, bool) {
 	const width = 10
-	if subject.Kind != StaticDeclarationSubjectSourceCreature ||
+	if !entryChoiceSubtypeSubjectSupported(subject) ||
 		index+width != end ||
-		!staticWordsAt(tokens, index,
-			"is", "the", "chosen", "type", "in", "addition", "to", "its", "other", "types") {
+		!staticEntryChoiceSubtypeWords(tokens, index) {
 		return StaticDeclarationSyntax{}, 0, false
 	}
 	return StaticDeclarationSyntax{
 		Kind:          StaticDeclarationContinuousEntryChoiceSubtype,
 		OperationSpan: shared.SpanOf(tokens[index:end]),
 	}, end, true
+}
+
+// entryChoiceSubtypeSubjectSupported reports whether subject is a "chosen type"
+// grant target: the source creature itself ("This creature is the chosen type
+// ...") or a controlled-creature group ("Creatures you control are the chosen
+// type ...", "Each creature you control is the chosen type ..."). The compiler
+// maps the typed subject onto its affected group.
+func entryChoiceSubtypeSubjectSupported(subject StaticDeclarationSubject) bool {
+	return subject.Kind == StaticDeclarationSubjectSourceCreature ||
+		subject.Kind == StaticDeclarationSubjectGroup
+}
+
+// staticEntryChoiceSubtypeWords reports whether tokens[index:] spell the
+// chosen-type grant operation "<is|are> the chosen type in addition to <its|
+// their> other types", accepting either grammatical number so the source
+// ("is ... its"), plural group ("are ... their"), and distributive group
+// ("Each creature you control is ... its") wordings all match.
+func staticEntryChoiceSubtypeWords(tokens []shared.Token, index int) bool {
+	return (staticWordsAt(tokens, index, "is") || staticWordsAt(tokens, index, "are")) &&
+		staticWordsAt(tokens, index+1, "the", "chosen", "type", "in", "addition", "to") &&
+		(staticWordsAt(tokens, index+7, "its") || staticWordsAt(tokens, index+7, "their")) &&
+		staticWordsAt(tokens, index+8, "other", "types")
 }
 
 // parseStaticBasePowerToughnessOperation recognizes the characteristic-setting

@@ -1632,3 +1632,30 @@ func TestGenerateExecutableCardSourceConditionalEnchantedKeywordGrant(t *testing
 		}
 	}
 }
+
+func TestGenerateExecutableCardSourceChosenTypeGroupAnthem(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Type Shaper",
+		Layout:     "normal",
+		ManaCost:   "{4}",
+		TypeLine:   "Enchantment",
+		OracleText: "As this enchantment enters, choose a creature type.\nCreatures you control are the chosen type in addition to their other types.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Layer:                     game.LayerType,",
+		"Group:                     game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{RequiredTypes: []types.Card{types.Creature}}),",
+		"AddSubtypeFromEntryChoice: game.EntryTypeChoiceKey,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
