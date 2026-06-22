@@ -1137,6 +1137,7 @@ const (
 	EffectChooseCreatureType
 	EffectNoMaximumHandSize
 	EffectAdditionalCombatPhase
+	EffectLookAtHand
 )
 
 // DurationKind identifies common continuous-effect durations.

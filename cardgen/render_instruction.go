@@ -335,6 +335,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: ShuffleLibrary kind has unexpected concrete type")
 		}
 		return r.renderShuffleLibrary(value)
+	case game.PrimitiveLookAtHand:
+		value, ok := primitive.(game.LookAtHand)
+		if !ok {
+			return "", errors.New("render: internal error: LookAtHand kind has unexpected concrete type")
+		}
+		return r.renderLookAtHand(value)
 	case game.PrimitiveLookAtLibraryTop:
 		value, ok := primitive.(game.LookAtLibraryTop)
 		if !ok {

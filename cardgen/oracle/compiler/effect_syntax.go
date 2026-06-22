@@ -367,6 +367,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectDig
 	case parser.EffectDiscard:
 		return EffectDiscard
+	case parser.EffectLookAtHand:
+		return EffectLookAtHand
 	case parser.EffectDiscover:
 		return EffectDiscover
 	case parser.EffectDouble:

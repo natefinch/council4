@@ -146,6 +146,7 @@ func emitSentenceResolvingSyntax(
 		sentences[i].Targets = parseTargets(tokens, atoms)
 		sentences[i].Effects = parseEffects(sentences[i], tokens, atoms)
 		recognizeTargetOpponentHandManaSentence(&sentences[i])
+		recognizeLookAtTargetPlayerHandSentence(&sentences[i])
 		reconcileRetargetSentenceTargets(&sentences[i])
 		collapseManaSpendRiderSentence(&sentences[i], tokens)
 		currentEffects += len(sentences[i].Effects)
@@ -1780,6 +1781,36 @@ func recognizeTargetOpponentHandManaSentence(sentence *Sentence) {
 	target.Exact = true
 	sentence.Targets[0] = target
 	sentence.Effects[0].Targets = []TargetSyntax{target}
+}
+
+// recognizeLookAtTargetPlayerHandSentence rewrites the manufactured possessive
+// target of a "Look at target <player>'s hand." effect into a clean runtime
+// player target. The generic target parser spans the whole "target player's
+// hand" phrase with an untyped selection, which the player-target lowering
+// cannot consume. This retypes it to a "target player" (or "target opponent")
+// selection so lowering can emit a single player target. The parser owns this
+// wording; the rewrite only fires once the effect is classified EffectLookAtHand.
+func recognizeLookAtTargetPlayerHandSentence(sentence *Sentence) {
+	if len(sentence.Effects) != 1 ||
+		sentence.Effects[0].Kind != EffectLookAtHand ||
+		len(sentence.Targets) != 1 {
+		return
+	}
+	selection := SelectionSyntax{Kind: SelectionPlayer}
+	text := "target player"
+	if strings.Contains(strings.ToLower(sentence.Targets[0].Text), "opponent") {
+		selection = SelectionSyntax{Kind: SelectionOpponent}
+		text = "target opponent"
+	}
+	target := sentence.Targets[0]
+	target.Cardinality = TargetCardinalitySyntax{Min: 1, Max: 1}
+	target.Selection = selection
+	target.Text = text
+	target.Exact = true
+	sentence.Targets[0] = target
+	sentence.Effects[0].Targets = []TargetSyntax{target}
+	sentence.Effects[0].Context = EffectContextTarget
+	sentence.Effects[0].Exact = true
 }
 
 // recognizeDynamicCountMana types an add-mana body whose produced amount scales

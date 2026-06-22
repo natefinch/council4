@@ -96,10 +96,11 @@ const (
 	PrimitiveRevealUntil
 	PrimitiveBecomeSaddled
 	PrimitiveAddExtraPhases
+	PrimitiveLookAtHand
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveAddExtraPhases) + 1
+const primitiveKindCount = int(PrimitiveLookAtHand) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -174,6 +175,13 @@ type LookAtLibraryTop struct {
 
 // ShuffleLibrary randomizes a referenced player's library.
 type ShuffleLibrary struct {
+	Player PlayerReference
+}
+
+// LookAtHand lets the source's controller privately look at a referenced
+// player's hand. It conveys hidden information only and does not change game
+// state (CR 701.x look effects).
+type LookAtHand struct {
 	Player PlayerReference
 }
 

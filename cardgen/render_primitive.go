@@ -691,6 +691,16 @@ func (r Renderer) renderShuffleLibrary(value game.ShuffleLibrary) (string, error
 	}), nil
 }
 
+func (r Renderer) renderLookAtHand(value game.LookAtHand) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.LookAtHand", []string{
+		fmt.Sprintf("Player: %s,", player),
+	}), nil
+}
+
 func (r Renderer) renderLookAtLibraryTop(value game.LookAtLibraryTop) (string, error) {
 	if value.PublishLinked == "" {
 		return "", errors.New("render: LookAtLibraryTop has no PublishLinked")
