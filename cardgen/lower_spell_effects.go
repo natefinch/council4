@@ -1550,6 +1550,74 @@ func lowerWinGameSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic)
 	}}}.Ability(), nil
 }
 
+// lowerLoseGameSpell lowers an exact EffectLoseGame body to a single
+// PlayerLosesGame instruction scoped to the losing player. It mirrors
+// lowerWinGameSpell but resolves the player from the effect context, supporting
+// the controller ("You lose the game."), the referenced triggering player
+// ("Whenever this creature deals combat damage to a player, that player loses
+// the game."), and a single targeted player ("Target player loses the game.").
+// Negated, optional, durational, conditional, and group forms fail closed.
+func lowerLoseGameSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported lose-game effect",
+			"the executable source backend supports only the exact controller, referenced, or target \"loses the game\" effect",
+		)
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Negated ||
+		!effect.Exact ||
+		ctx.optional ||
+		effect.Optional ||
+		effect.Duration != compiler.DurationNone ||
+		effect.DelayedTiming != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return unsupported()
+	}
+	player, targets, ok := loseGamePlayer(ctx, effect)
+	if !ok {
+		return unsupported()
+	}
+	return game.Mode{
+		Targets: targets,
+		Sequence: []game.Instruction{{
+			Primitive: game.PlayerLosesGame{Player: player},
+		}},
+	}.Ability(), nil
+}
+
+// loseGamePlayer resolves the player who loses the game from an EffectLoseGame
+// body's typed context. It accepts the controller, the referenced triggering
+// player ("that player"), and a single targeted player, returning any target
+// spec the reference requires. Every other recipient shape fails closed.
+func loseGamePlayer(
+	ctx contentCtx,
+	effect compiler.CompiledEffect,
+) (game.PlayerReference, []game.TargetSpec, bool) {
+	switch {
+	case len(ctx.content.Targets) == 0 && len(ctx.content.References) == 0 &&
+		effect.Context == parser.EffectContextController:
+		return game.ControllerReference(), nil, true
+	case len(ctx.content.Targets) == 0 && len(ctx.content.References) == 1 &&
+		effect.Context == parser.EffectContextReferencedPlayer &&
+		ctx.content.References[0].Kind == compiler.ReferenceThatPlayer &&
+		ctx.content.References[0].Binding != compiler.ReferenceBindingTarget:
+		return game.EventPlayerReference(), nil, true
+	case len(ctx.content.Targets) == 1 && len(ctx.content.References) == 0 &&
+		effect.Context == parser.EffectContextTarget:
+		targetSpec, ok := playerTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return game.PlayerReference{}, nil, false
+		}
+		return game.TargetPlayerReference(0), []game.TargetSpec{targetSpec}, true
+	default:
+		return game.PlayerReference{}, nil, false
+	}
+}
+
 // lowerPreventDamageSpell lowers an EffectPreventDamage clause into one or two
 // PreventDamage prevention shields (one per prevented direction) that prevent
 // all combat damage to and/or from a single permanent for the turn. The

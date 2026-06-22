@@ -1419,6 +1419,9 @@ func lowerImmediateSingleEffectSpellTail(
 	case compiler.EffectWinGame:
 		content, diag := lowerWinGameSpell(ctx)
 		return content, diag, true
+	case compiler.EffectLoseGame:
+		content, diag := lowerLoseGameSpell(ctx)
+		return content, diag, true
 	case compiler.EffectMassReanimationExchange:
 		content, diag := lowerMassReanimationExchangeSpell(ctx)
 		return content, diag, true
@@ -1446,6 +1449,9 @@ func lowerGainSpellEffect(ctx contentCtx) (game.AbilityContent, *shared.Diagnost
 	if len(ctx.content.Keywords) != 0 &&
 		ctx.content.Effects[0].Duration == compiler.DurationNone {
 		return lowerPermanentKeywordGrantSpell(ctx)
+	}
+	if ctx.content.Effects[0].GainGrantedAbility != nil {
+		return lowerGainGrantedAbilitySpell(ctx)
 	}
 	if !ctx.content.Effects[0].LifeObject {
 		return game.AbilityContent{}, contentDiagnostic(

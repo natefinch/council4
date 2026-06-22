@@ -60,6 +60,9 @@ func lowerChapterAbility(
 		return abilityLowering{}, diagnostic
 	}
 	spans := []shared.Span{ability.ChapterSpan, syntax.BodySeparatorSpan}
+	if syntax.ChapterFlavorSpan != (shared.Span{}) {
+		spans = append(spans, syntax.ChapterFlavorSpan)
+	}
 	for i := range ability.Content.Effects {
 		spans = append(spans, ability.Content.Effects[i].Span)
 	}

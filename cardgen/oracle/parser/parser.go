@@ -354,6 +354,15 @@ func parseAbility(
 			}
 		}
 		body = tokens[dash+1:]
+		if len(ability.Chapters) > 0 {
+			if stripped, flavor, ok := stripChapterFlavorName(body); ok {
+				body = stripped
+				ability.ChapterFlavorSpan = shared.Span{
+					Start: tokens[dash].Span.Start,
+					End:   flavor[len(flavor)-1].Span.End,
+				}
+			}
+		}
 	}
 	if colon := shared.TopLevelIndex(body, shared.Colon); colon >= 0 {
 		phrase := phraseFromTokens(source, body[:colon])
@@ -475,6 +484,69 @@ func parseChapterHeading(tokens []shared.Token) ([]int, bool) {
 		chapters = append(chapters, chapter)
 	}
 	return chapters, len(chapters) > 0
+}
+
+// chapterFlavorFunctionWords are the lowercase function words a Saga chapter
+// flavor name may contain between its capitalized content words ("Hall of
+// Sorrow"). Every other word in a flavor name is capitalized.
+var chapterFlavorFunctionWords = map[string]bool{
+	"a": true, "an": true, "and": true, "at": true, "for": true,
+	"from": true, "in": true, "of": true, "on": true, "or": true,
+	"the": true, "to": true, "with": true,
+}
+
+// stripChapterFlavorName removes a Saga chapter's flavor-name prefix. Final
+// Fantasy "Summon:" Sagas print each chapter as "<chapter> — <Flavor Name> —
+// <effect>", where the flavor name is a Title-Case proper name set off by a
+// second em dash. When body begins with such a name followed by an em dash and
+// a non-empty effect, it returns the effect tokens, the flavor-name tokens, and
+// true so the effect classifies as if the flavor name were absent. Bodies whose
+// leading segment is not a proper name — a modal "Choose one at random" header
+// or a "faces a villainous choice" clause — return the body unchanged and false.
+func stripChapterFlavorName(body []shared.Token) (effect, flavor []shared.Token, ok bool) {
+	dash := shared.TopLevelIndex(body, shared.EmDash)
+	if dash <= 0 || dash+1 >= len(body) {
+		return body, nil, false
+	}
+	if !isChapterFlavorName(body[:dash]) {
+		return body, nil, false
+	}
+	return body[dash+1:], body[:dash], true
+}
+
+// isChapterFlavorName reports whether tokens form a Saga chapter flavor name: a
+// Title-Case proper name whose content words are all capitalized, joined only by
+// lowercase function words and trailing exclamation or question marks ("Gungnir",
+// "Hall of Sorrow", "Stampede!"). Clauses with lowercase content words ("faces a
+// villainous choice") or sentence punctuation are rejected.
+func isChapterFlavorName(tokens []shared.Token) bool {
+	capitalized := false
+	for _, token := range tokens {
+		switch token.Kind {
+		case shared.Word:
+			if isCapitalizedWord(token.Text) {
+				capitalized = true
+				continue
+			}
+			if chapterFlavorFunctionWords[strings.ToLower(token.Text)] {
+				continue
+			}
+			return false
+		case shared.Exclamation, shared.Question:
+			continue
+		default:
+			return false
+		}
+	}
+	return capitalized
+}
+
+// isCapitalizedWord reports whether text begins with an ASCII uppercase letter.
+func isCapitalizedWord(text string) bool {
+	if text == "" {
+		return false
+	}
+	return text[0] >= 'A' && text[0] <= 'Z'
 }
 
 // recognizeSagaLoreReminder reports whether text is a Saga's intrinsic

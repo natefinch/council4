@@ -70,7 +70,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactDirectPronounEffectSyntax(effect, "It explores.")
 	case EffectGain:
 		return exactLifeEffectSyntax(effect, "gain", "gains") ||
-			exactTemporaryKeywordEffectSyntax(effect)
+			exactTemporaryKeywordEffectSyntax(effect) ||
+			exactGainGrantedAbilityEffectSyntax(effect)
 	case EffectGainControl:
 		return exactGainControlEffectSyntax(effect)
 	case EffectInvestigate:
@@ -84,7 +85,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactLifeEffectSyntax(effect, "pay", "pays") ||
 			exactTemporaryKeywordLossEffectSyntax(effect)
 	case EffectLoseGame:
-		return strings.EqualFold(exactEffectClauseText(effect), "You lose the game.")
+		return exactLoseGameEffectSyntax(effect)
 	case EffectWinGame:
 		return strings.EqualFold(exactEffectClauseText(effect), "You win the game.")
 	case EffectManifest:
@@ -1200,6 +1201,64 @@ func searchSplitDestinationSupported(destination string) bool {
 		}
 	}
 	return false
+}
+
+// exactLoseGameEffectSyntax reconstructs the byte-exact "<subject> lose(s) the
+// game." clause for each supported losing player: the controller ("You lose the
+// game."), the referenced triggering player ("They lose the game.", "That player
+// loses the game."), and a single exact target ("Target player loses the
+// game."). The subject phrasing mirrors exactLifeEffectSyntax so a granted "...
+// that player loses the game." trigger and a targeted lose-game spell both
+// reconstruct without the compiler inspecting wording.
+func exactLoseGameEffectSyntax(effect *EffectSyntax) bool {
+	var prefixes []string
+	switch effect.Context {
+	case EffectContextController:
+		prefixes = []string{"You lose"}
+	case EffectContextEventPlayer, EffectContextReferencedPlayer:
+		prefixes = []string{"They lose", "That player loses"}
+	case EffectContextTarget, EffectContextPriorSubject:
+		if len(effect.Targets) == 1 && effect.Targets[0].Exact {
+			prefixes = []string{titleFirstEffectText(effect.Targets[0].Text) + " loses"}
+		}
+	default:
+	}
+	text := exactEffectClauseText(effect)
+	for _, prefix := range prefixes {
+		if strings.EqualFold(text, prefix+" the game.") {
+			return true
+		}
+	}
+	return false
+}
+
+// exactGainGrantedAbilityEffectSyntax reconstructs the byte-exact "<subject>
+// gains." head of a resolving ability grant ("This creature gains \"Whenever
+// this creature deals combat damage to a player, that player loses the
+// game.\""). The quoted body is stripped from the clause text to a bare "gains",
+// mirroring how a token's quoted rider strips to a bare "with"; its tokens are
+// recognized and covered through the parsed granted ability's own inner
+// document, so the compiler lowers the conferred ability without inspecting
+// wording. It applies only once attachGainGrantedAbilities has bound the quoted
+// ability.
+func exactGainGrantedAbilityEffectSyntax(effect *EffectSyntax) bool {
+	if effect.GainGrantedAbility == nil {
+		return false
+	}
+	verb := slices.IndexFunc(effect.Tokens, func(token shared.Token) bool {
+		return token.Span == effect.VerbSpan
+	})
+	if verb < 0 || !equalWord(effect.Tokens[verb], "gains") {
+		return false
+	}
+	subjectStart := effectSubjectStart(effect.Tokens, verb, effectSelfNameSpans(effect))
+	subjectTokens := effect.Tokens[subjectStart:verb]
+	if len(subjectTokens) == 0 {
+		return false
+	}
+	subject := joinedEffectText(subjectTokens)
+	expected := subject + " gains."
+	return strings.EqualFold(exactEffectClauseText(effect), expected)
 }
 
 func exactLifeEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVerb string) bool {

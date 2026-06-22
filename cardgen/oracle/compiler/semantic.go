@@ -1430,6 +1430,12 @@ type CompiledEffect struct {
 	// the pipeline. Lowering compiles its inner document and attaches the runtime
 	// ability to the token's definition. It is nil for tokens with no such rider.
 	TokenGrantedAbility *parser.StaticGrantedAbilitySyntax
+	// GainGrantedAbility is the quoted ability a resolving ability grant confers
+	// on its subject ("This creature gains \"Whenever this creature deals combat
+	// damage to a player, that player loses the game.\""), parsed once through the
+	// pipeline. Lowering compiles its inner document and applies the runtime
+	// ability as a continuous grant. It is nil for gain effects with no such rider.
+	GainGrantedAbility *parser.StaticGrantedAbilitySyntax
 	// TokenName is a created creature token's explicit Oracle name ("named Koma's
 	// Coil"), captured verbatim from source. It is empty when the token is named
 	// only by its subtypes.

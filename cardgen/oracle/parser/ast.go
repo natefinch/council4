@@ -61,6 +61,12 @@ type Ability struct {
 	AbilityWord *AbilityWordClause `json:",omitempty"`
 	Chapters    []int              `json:",omitempty"`
 	ChapterSpan shared.Span        `json:"-"`
+	// ChapterFlavorSpan is the source span of a Saga chapter's flavor-name prefix
+	// (the first em dash and the Title-Case proper name set off before the
+	// effect, as in "I — Gungnir — Destroy ..."), or the zero span when the
+	// chapter has no flavor name. The name is rules-free flavor; consumers account
+	// for its tokens through this span so the effect body lowers as if absent.
+	ChapterFlavorSpan shared.Span `json:"-"`
 	// costPhrase is the source cost phrase recognized before the typed cost is
 	// emitted. It is parser-internal: the compiler consumes the typed cost via
 	// CostSyntax and only ever needs the cost's presence, not its tokens.

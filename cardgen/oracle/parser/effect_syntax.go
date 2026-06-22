@@ -29,6 +29,7 @@ func emitResolvingSyntax(abilities []Ability) {
 			abilities[i].SourceAbilityCostReduction,
 		)
 		attachTokenGrantedAbilities(&abilities[i])
+		attachGainGrantedAbilities(&abilities[i])
 		recognizeControllerOptionalPaymentSequence(&abilities[i])
 		recognizeOptionalManaPaymentBenefitSequence(&abilities[i])
 		recognizeEventPlayerOptionalPaymentSequence(&abilities[i])
@@ -98,6 +99,65 @@ func attachTokenGrantedAbilities(ability *Ability) {
 		effect.TokenGrantedAbility = &stored
 		effect.Exact = exactEffectSyntax(effect)
 	}
+}
+
+// attachGainGrantedAbilities binds each quoted ability captured on the ability
+// ("This creature gains \"Whenever this creature deals combat damage to a
+// player, that player loses the game.\"") to the gain effect whose clause
+// contains it, parsing the quoted body through the same pipeline so downstream
+// layers lower it from the typed inner document. It re-evaluates the affected
+// effect's exactness so the reconstructed "gains \"...\"" rider is byte-checked.
+// A quoted body that fails to parse, or that no single gain clause contains, is
+// left unattached so the grant fails closed.
+func attachGainGrantedAbilities(ability *Ability) {
+	if len(ability.Quoted) == 0 {
+		return
+	}
+	for q := range ability.Quoted {
+		quoted := ability.Quoted[q]
+		effect := gainEffectContainingSpan(ability, quoted.Span)
+		if effect == nil || effect.GainGrantedAbility != nil {
+			continue
+		}
+		granted, ok := parseStaticGrantedAbility(quoted)
+		if !ok {
+			continue
+		}
+		// Only a quoted triggered ability ("Whenever this creature deals combat
+		// damage to a player, ...") attaches. Static, activated, and mana granted
+		// abilities stay fail-closed pending dedicated lowering support, so the
+		// grant reconstructs only when the rider is a triggered ability the
+		// downstream layers handle.
+		if len(granted.document.Abilities) != 1 ||
+			granted.document.Abilities[0].Kind != AbilityTriggered {
+			continue
+		}
+		stored := granted
+		effect.GainGrantedAbility = &stored
+		effect.Exact = exactEffectSyntax(effect)
+	}
+}
+
+// gainEffectContainingSpan returns the lone gain effect whose clause contains
+// span. It returns nil when no gain clause contains span, or when more than one
+// might, so an ambiguous granted-ability binding fails closed.
+func gainEffectContainingSpan(ability *Ability, span shared.Span) *EffectSyntax {
+	var match *EffectSyntax
+	for i := range ability.Sentences {
+		for j := range ability.Sentences[i].Effects {
+			effect := &ability.Sentences[i].Effects[j]
+			if effect.Kind != EffectGain ||
+				span.Start.Offset < effect.ClauseSpan.Start.Offset ||
+				span.End.Offset > effect.Span.End.Offset {
+				continue
+			}
+			if match != nil {
+				return nil
+			}
+			match = effect
+		}
+	}
+	return match
 }
 
 // createEffectContainingSpan returns the lone create-token effect whose clause

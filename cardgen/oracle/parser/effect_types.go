@@ -1267,6 +1267,12 @@ type EffectSyntax struct {
 	// the typed inner document. It is nil for tokens with no quoted-ability
 	// rider.
 	TokenGrantedAbility *StaticGrantedAbilitySyntax `json:"-"`
+	// GainGrantedAbility is the full quoted ability a resolving ability grant
+	// confers on its subject ("This creature gains \"Whenever this creature deals
+	// combat damage to a player, that player loses the game.\""), parsed once
+	// through the same pipeline so downstream layers lower it from the typed inner
+	// document. It is nil for gain effects that confer no quoted ability.
+	GainGrantedAbility *StaticGrantedAbilitySyntax `json:"-"`
 	// TokenKeywords lists every creature keyword a created token enters with, in
 	// source order ("with menace and reach" -> [Menace, Reach]). The first
 	// keyword is also recorded on Selection.Keyword (a "with <keyword>" selector

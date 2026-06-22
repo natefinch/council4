@@ -226,6 +226,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				TokenPTVariableX:                     syntax.TokenPTVariableX,
 				TokenPTDynamic:                       syntax.TokenPTDynamic,
 				TokenGrantedAbility:                  syntax.TokenGrantedAbility,
+				GainGrantedAbility:                   syntax.GainGrantedAbility,
 				TokenName:                            syntax.TokenName,
 				AmassSubtype:                         syntax.AmassSubtype,
 				TokenCopyOfTarget:                    syntax.TokenCopyOfTarget,
