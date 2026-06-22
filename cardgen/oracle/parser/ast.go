@@ -128,6 +128,14 @@ type Ability struct {
 	// downstream stages consume these typed values instead of re-reading the
 	// row wording or the em-dash/pipe glyphs.
 	DiceTable *DiceTable `json:",omitempty"`
+	// CoinFlip is the recognized "Flip a coin." outcome on this ability: a flip
+	// sentence followed by one or both of "If you win the flip, <effect>." and
+	// "If you lose the flip, <effect>." branches. It is nil for abilities without
+	// a recognized coin flip. Each branch carries its own freshly parsed
+	// resolving sentences so downstream stages consume typed effects rather than
+	// re-reading the condition wording; the flip itself lowers to a fair
+	// two-sided random draw whose result gates the win and lose branches.
+	CoinFlip *CoinFlip `json:",omitempty"`
 	// ReadAheadSacrificeChapter is the final lore chapter named by a recognized
 	// "Read ahead" reminder ("Sacrifice after <chapter>"), or 0 when the reminder
 	// omits the sacrifice clause. The chapter is a typed semantic value derived
@@ -1089,6 +1097,30 @@ type DiceTableRow struct {
 	Max       int            `json:",omitempty"`
 	Sentences []Sentence     `json:",omitempty"`
 	Atoms     Atoms          `json:",omitzero"`
+}
+
+// CoinFlip is a recognized "Flip a coin." outcome and its win/lose branches.
+// The flip resolves to a fair two-sided random draw (CR 705); a win branch
+// applies on heads and a lose branch applies on tails. At least one branch is
+// present. Each branch holds its own freshly parsed resolving sentences, parsed
+// from the clause after "If you win the flip," / "If you lose the flip," so the
+// condition wording carries no residual effect tokens.
+type CoinFlip struct {
+	// Win holds the resolving sentences of the "If you win the flip, ..." branch,
+	// or nil when the ability has no win branch.
+	Win []Sentence `json:",omitempty"`
+	// Lose holds the resolving sentences of the "If you lose the flip, ..."
+	// branch, or nil when the ability has no lose branch.
+	Lose []Sentence `json:",omitempty"`
+	// Spans are the source spans of every sentence the coin-flip recognizer
+	// consumed (the flip sentence and each branch sentence). Coverage credits
+	// them whole because the recognizer fully accounts for their wording.
+	Spans []shared.Span `json:"-"`
+	// ConstructSpan covers the whole coin-flip construct, from the "Flip a coin."
+	// sentence through the last branch sentence. The compiler stamps it on every
+	// branch effect so the position-blind backend's body-span machinery covers
+	// the entire construct without reasoning about source offsets itself.
+	ConstructSpan shared.Span `json:"-"`
 }
 
 // ModalChoiceKind identifies exact modal header vocabulary whose range alone

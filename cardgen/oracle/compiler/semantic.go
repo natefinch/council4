@@ -1718,7 +1718,27 @@ type CompiledEffect struct {
 	DiceRow    bool
 	DiceRowMin int
 	DiceRowMax int
+	// CoinFlipBranch marks an effect that belongs to a coin-flip branch. A
+	// CoinFlipBranchWin effect's instruction is gated on the flip coming up heads
+	// and a CoinFlipBranchLose effect's on tails. It is CoinFlipBranchNone for
+	// every effect that is not part of a coin flip.
+	CoinFlipBranch CoinFlipBranch
 }
+
+// CoinFlipBranch identifies which branch of a recognized "Flip a coin." outcome
+// an effect belongs to.
+type CoinFlipBranch int
+
+const (
+	// CoinFlipBranchNone marks an effect that is not part of a coin flip.
+	CoinFlipBranchNone CoinFlipBranch = iota
+	// CoinFlipBranchWin marks an effect resolved when the controller wins the
+	// flip (heads).
+	CoinFlipBranchWin
+	// CoinFlipBranchLose marks an effect resolved when the controller loses the
+	// flip (tails).
+	CoinFlipBranchLose
+)
 
 // CompiledManaSpendRider is the typed semantic form of a mana-spend rider.
 type CompiledManaSpendRider struct {

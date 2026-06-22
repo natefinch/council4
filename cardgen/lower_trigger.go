@@ -614,6 +614,13 @@ func (lowering *abilityLowering) complete(
 			spanCovered(span, lowering.sourceSpans) {
 			continue
 		}
+		// A recognized coin flip re-parses each branch clause, so its compiled
+		// branch effects carry spans in the branch sub-document rather than the
+		// card source. The recognizer recorded the consumed flip and branch
+		// sentence spans (card coordinates), which cover the whole coin-flip body.
+		if syntax.CoinFlip != nil && spanCovered(span, syntax.CoinFlip.Spans) {
+			continue
+		}
 		return false
 	}
 	return true

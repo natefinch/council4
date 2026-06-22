@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -402,6 +403,41 @@ func appendDiceTableEffects(effects []CompiledEffect, table *parser.DiceTable) [
 		effects = append(effects, rowEffects...)
 	}
 	return effects
+}
+
+// appendCoinFlipEffects compiles each branch of a recognized "Flip a coin."
+// outcome and appends the branch effects to effects, stamping every effect with
+// the branch it belongs to. Lowering groups the appended effects by branch and
+// gates each on the flip result. It returns effects unchanged when the ability
+// carries no coin flip.
+func appendCoinFlipEffects(effects []CompiledEffect, flip *parser.CoinFlip) []CompiledEffect {
+	if flip == nil {
+		return effects
+	}
+	effects = appendCoinFlipBranch(effects, flip.Win, CoinFlipBranchWin, flip.ConstructSpan)
+	effects = appendCoinFlipBranch(effects, flip.Lose, CoinFlipBranchLose, flip.ConstructSpan)
+	return effects
+}
+
+// appendCoinFlipBranch compiles one coin-flip branch's resolving sentences and
+// appends them to effects, stamping each with branch and the construct span the
+// parser recorded. The re-parsed branch effects carry consequence-clause spans
+// that omit the flip line and may be out of source order, so the shared
+// construct span keeps the backend's body-span machinery covering the whole
+// construct, exactly as it treats a same-span effect group.
+func appendCoinFlipBranch(
+	effects []CompiledEffect,
+	sentences []parser.Sentence,
+	branch CoinFlipBranch,
+	construct shared.Span,
+) []CompiledEffect {
+	branchEffects := compileEffects(sentences)
+	for i := range branchEffects {
+		branchEffects[i].CoinFlipBranch = branch
+		branchEffects[i].Span = construct
+		branchEffects[i].VerbSpan = construct
+	}
+	return append(effects, branchEffects...)
 }
 
 func compileStaticRuleEffect(sentence parser.Sentence) (CompiledEffect, bool) {
