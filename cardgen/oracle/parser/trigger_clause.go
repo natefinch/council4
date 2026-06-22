@@ -883,34 +883,58 @@ func isSpellOrCardNoun(token shared.Token) bool {
 }
 
 // homogeneousSpellList reports whether every list noun in the run shares a
-// category: all card types (optionally "non"-prefixed) or all card subtypes.
+// category: all card types (optionally "non"-prefixed), all colors, or all card
+// subtypes.
 func homogeneousSpellList(tokens []shared.Token) bool {
-	sawType, sawSubtype := false, false
+	sawType, sawColor, sawSubtype := false, false, false
 	for _, token := range tokens {
 		if !isSpellListNoun(token) {
 			continue
 		}
 		word := strings.TrimPrefix(strings.ToLower(token.Text), "non")
-		if cardType, ok := triggerCardType(word); ok && cardType != TriggerCardTypeUnknown {
+		switch {
+		case isTriggerCardTypeWord(word):
 			sawType = true
-		} else {
+		case isColorWord(word):
+			sawColor = true
+		default:
 			sawSubtype = true
 		}
 	}
-	return sawType != sawSubtype
+	categories := 0
+	for _, saw := range []bool{sawType, sawColor, sawSubtype} {
+		if saw {
+			categories++
+		}
+	}
+	return categories == 1
 }
 
-// isSpellListNoun reports whether the token is a card-type or card-subtype word
-// (optionally "non"-prefixed) that can appear as a member of a spell-type list.
+// isSpellListNoun reports whether the token is a card-type, color, or card-
+// subtype word (optionally "non"-prefixed) that can appear as a member of a
+// spell-type list.
 func isSpellListNoun(token shared.Token) bool {
 	if token.Kind != shared.Word {
 		return false
 	}
 	word := strings.ToLower(token.Text)
 	word = strings.TrimPrefix(word, "non")
-	if cardType, ok := triggerCardType(word); ok && cardType != TriggerCardTypeUnknown {
+	if isTriggerCardTypeWord(word) || isColorWord(word) {
 		return true
 	}
 	_, ok := recognizeSubtypePhrase(word)
+	return ok
+}
+
+// isTriggerCardTypeWord reports whether the lowercase word names a recognized
+// card type.
+func isTriggerCardTypeWord(word string) bool {
+	cardType, ok := triggerCardType(word)
+	return ok && cardType != TriggerCardTypeUnknown
+}
+
+// isColorWord reports whether the lowercase word names a single color.
+func isColorWord(word string) bool {
+	_, ok := recognizeColorWord(word)
 	return ok
 }

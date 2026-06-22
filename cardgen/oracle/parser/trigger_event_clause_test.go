@@ -384,6 +384,31 @@ func spellTypeDisjunctionTriggerEventClauseTests() []triggerEventClauseTest {
 				}
 			},
 		},
+		{
+			name:   "spell color disjunction",
+			source: "Whenever an opponent casts a blue or black spell, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if len(clause.SpellSelection.ColorsAny) != 2 ||
+					clause.SpellSelection.ColorsAny[0] != TriggerColorBlue ||
+					clause.SpellSelection.ColorsAny[1] != TriggerColorBlack {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "spell three-way color disjunction",
+			source: "Whenever you cast a blue, black, or red spell, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if len(clause.SpellSelection.ColorsAny) != 3 ||
+					clause.SpellSelection.ColorsAny[0] != TriggerColorBlue ||
+					clause.SpellSelection.ColorsAny[1] != TriggerColorBlack ||
+					clause.SpellSelection.ColorsAny[2] != TriggerColorRed {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
 	}
 }
 
@@ -1376,6 +1401,7 @@ func TestTriggerEventFailClosed(t *testing.T) {
 		{name: "ordinal beyond supported word", source: "Whenever you cast your sixth spell each turn, draw a card."},
 		{name: "ordinal opponent actor", source: "Whenever an opponent casts your second spell each turn, draw a card."},
 		{name: "unknown spell subtype noun", source: "Whenever you cast a frobnicate spell, draw a card."},
+		{name: "mixed color and subtype disjunction", source: "Whenever you cast a blue or Dragon spell, draw a card."},
 		{name: "subtype with trailing qualifier", source: "Whenever you cast a Goblin spell you control, draw a card."},
 		{name: "singular spell damage source without article", source: "Whenever instant or sorcery spell you control deals damage to an opponent, draw a card."},
 		{name: "self or non-another selection enters", source: "Whenever this creature or a creature you control enters, draw a card."},

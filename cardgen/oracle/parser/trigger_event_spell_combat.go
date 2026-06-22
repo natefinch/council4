@@ -297,10 +297,11 @@ func parseTriggerEventSpellSelectionFilter(tokens []shared.Token) (TriggerEventS
 // parseSpellSelectionDisjunction resolves a homogeneous "<noun> or <noun>
 // spell" / "<noun>, <noun>, or <noun> spell" disjunction filter, where the nouns
 // are passed without the leading article or trailing "spell". Every noun must
-// resolve to a card type, or every noun must resolve to a card subtype; mixing
-// the two is not expressible in the runtime selection model and fails closed, as
-// do duplicate or unrecognized nouns. Card types lower to TypesAny and subtypes
-// to SubtypesAny, both of which the runtime matches as a union.
+// resolve to a card type, or every noun must resolve to a color, or every noun
+// must resolve to a card subtype; mixing categories is not expressible in the
+// runtime selection model and fails closed, as do duplicate or unrecognized
+// nouns. Card types lower to TypesAny, colors to ColorsAny, and subtypes to
+// SubtypesAny, each of which the runtime matches as a union.
 func parseSpellSelectionDisjunction(selection TriggerEventSpellSelection, nouns []shared.Token) (TriggerEventSpellSelection, bool) {
 	words, ok := splitDisjunctionNouns(nouns)
 	if !ok || len(words) < 2 {
@@ -321,6 +322,23 @@ func parseSpellSelectionDisjunction(selection TriggerEventSpellSelection, nouns 
 	}
 	if allCardTypes {
 		selection.TypesAny = cardTypes
+		return selection, true
+	}
+	colors := make([]TriggerColor, 0, len(words))
+	allColors := true
+	for _, word := range words {
+		if _, ok := recognizeColorWord(word.Text); !ok {
+			allColors = false
+			break
+		}
+		colorValue := triggerColor(word.Text)
+		if colorValue == TriggerColorUnknown || slices.Contains(colors, colorValue) {
+			return TriggerEventSpellSelection{}, false
+		}
+		colors = append(colors, colorValue)
+	}
+	if allColors {
+		selection.ColorsAny = colors
 		return selection, true
 	}
 	subtypes := make([]TriggerSubtype, 0, len(words))
