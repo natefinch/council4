@@ -462,9 +462,15 @@ func (p ReturnFromGraveyard) instructionRefs() primitiveRefs {
 	}
 	return refs
 }
-func (p Bounce) instructionRefs() primitiveRefs              { return objectReferenceRefs(p.Object) }
-func (Sacrifice) instructionRefs() primitiveRefs             { return primitiveRefs{} }
-func (p SacrificePermanents) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
+func (p Bounce) instructionRefs() primitiveRefs  { return objectReferenceRefs(p.Object) }
+func (Sacrifice) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (p SacrificePermanents) instructionRefs() primitiveRefs {
+	refs := quantityRefs(p.Amount)
+	if p.PublishLinked != "" {
+		refs.publishesLinked = p.PublishLinked
+	}
+	return refs
+}
 func (p Untap) instructionRefs() primitiveRefs {
 	return mergePrimitiveRefs(objectReferenceRefs(p.Object), quantityRefs(p.Amount))
 }
@@ -557,24 +563,23 @@ func quantityRefs(quantity Quantity) primitiveRefs {
 		return primitiveRefs{}
 	}
 	dynamic := quantity.DynamicAmount().Val
+	refs := objectReferenceRefs(dynamic.Object)
 	switch dynamic.Kind {
 	case DynamicAmountPreviousEffectResult, DynamicAmountPreviousEffectExcessDamage:
 		if dynamic.ResultKey != "" {
-			return primitiveRefs{consumesResults: []ResultKey{dynamic.ResultKey}}
+			refs.consumesResults = append(refs.consumesResults, dynamic.ResultKey)
 		}
 	case DynamicAmountChosenNumber:
 		if dynamic.ResultKey != "" {
-			return primitiveRefs{consumesChoices: []ChoiceKey{ChoiceKey(dynamic.ResultKey)}}
+			refs.consumesChoices = append(refs.consumesChoices, ChoiceKey(dynamic.ResultKey))
 		}
 	case DynamicAmountMaxOf:
-		refs := primitiveRefs{}
 		for i := range dynamic.Operands {
 			refs = mergePrimitiveRefs(refs, quantityRefs(Dynamic(dynamic.Operands[i])))
 		}
-		return refs
 	default:
 	}
-	return primitiveRefs{}
+	return refs
 }
 
 func mergePrimitiveRefs(left, right primitiveRefs) primitiveRefs {
