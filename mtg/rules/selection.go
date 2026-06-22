@@ -173,6 +173,22 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 			return false
 		}
 	}
+	if sel.PowerLessThanSource || sel.PowerGreaterThanSource {
+		power, ok := s.power()
+		if !ok {
+			return false
+		}
+		sourcePower, ok := s.sourcePower()
+		if !ok {
+			return false
+		}
+		if sel.PowerLessThanSource && power >= sourcePower {
+			return false
+		}
+		if sel.PowerGreaterThanSource && power <= sourcePower {
+			return false
+		}
+	}
 	if sel.Toughness.Exists {
 		toughness, ok := s.toughness()
 		if !ok || !sel.Toughness.Val.Matches(toughness) {
@@ -568,6 +584,26 @@ func (s *selectionSubject) power() (int, bool) {
 		return 0, true
 	}
 	return s.values.power, s.values.powerOK
+}
+
+// sourcePower returns the effective power of the predicate's source permanent,
+// clamped to >= 0 to mirror the target-style power read. It backs the
+// source-relative "with lesser/greater power" filters; a missing source, a
+// source that is not a battlefield permanent, or a source with no power yields
+// no value so the relative comparison fails closed.
+func (s *selectionSubject) sourcePower() (int, bool) {
+	if s.sourceObjectID == 0 {
+		return 0, false
+	}
+	permanent, ok := permanentByObjectID(s.g, s.sourceObjectID)
+	if !ok {
+		return 0, false
+	}
+	values := effectivePermanentValues(s.g, permanent)
+	if !values.powerOK {
+		return 0, false
+	}
+	return max(0, values.power), true
 }
 
 func (s *selectionSubject) toughness() (int, bool) {

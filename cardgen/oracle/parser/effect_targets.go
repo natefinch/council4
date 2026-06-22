@@ -388,6 +388,7 @@ func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalityS
 		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
 		selection.Keyword != KeywordUnknown || selection.Zone != zone.None ||
 		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		selection.PowerLessThanSource || selection.PowerGreaterThanSource ||
 		selection.Colorless || selection.Multicolored ||
 		len(selection.ColorsAny) != 0 || len(selection.ExcludedColors) != 0 ||
 		len(selection.Supertypes) != 0 ||
@@ -559,6 +560,7 @@ func exactSpellColorTargetSyntax(text string, selection SelectionSyntax) bool {
 		selection.Controller != SelectionControllerAny ||
 		selection.Keyword != KeywordUnknown || selection.Zone != zone.None ||
 		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		selection.PowerLessThanSource || selection.PowerGreaterThanSource ||
 		len(selection.RequiredTypesAny) != 0 || len(selection.ExcludedTypes) != 0 ||
 		len(selection.Supertypes) != 0 || len(selection.SubtypesAny) != 0 {
 		return false
@@ -778,7 +780,8 @@ func permanentKeywordQualifierWords(selection SelectionSyntax) ([]string, bool) 
 	if selection.Keyword != KeywordUnknown && selection.ExcludedKeyword != KeywordUnknown {
 		return nil, false
 	}
-	if selection.MatchManaValue || selection.MatchPower || selection.MatchToughness {
+	if selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		selection.PowerLessThanSource || selection.PowerGreaterThanSource {
 		return nil, false
 	}
 	if selection.ExcludedKeyword != KeywordUnknown {
@@ -822,6 +825,20 @@ func permanentNumericQualifierWords(selection SelectionSyntax) ([]string, bool) 
 			return nil, false
 		}
 		clauses = append(clauses, clause)
+	}
+	if selection.PowerLessThanSource || selection.PowerGreaterThanSource {
+		// "with lesser power" / "with greater power" compares the match to the
+		// source permanent's power (Mentor). The adjective precedes the noun, so
+		// it cannot share the "with <noun> N" ordering of the fixed comparisons;
+		// fail closed when a fixed numeric clause is also present.
+		if len(clauses) != 0 {
+			return nil, false
+		}
+		adjective := "lesser"
+		if selection.PowerGreaterThanSource {
+			adjective = "greater"
+		}
+		return []string{"with", adjective, "power"}, true
 	}
 	if len(clauses) == 0 {
 		return nil, true
@@ -1006,6 +1023,7 @@ func exactSubtypeUnionTargetSyntax(text string, selection SelectionSyntax) bool 
 		selection.Keyword != KeywordUnknown || selection.ExcludedKeyword != KeywordUnknown ||
 		selection.Zone != zone.None || selection.Colorless || selection.Multicolored ||
 		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		selection.PowerLessThanSource || selection.PowerGreaterThanSource ||
 		len(selection.RequiredTypesAny) != 0 || len(selection.ExcludedTypes) != 0 ||
 		len(selection.Supertypes) != 0 ||
 		len(selection.ColorsAny) != 0 || len(selection.ExcludedColors) != 0 {
@@ -1171,6 +1189,7 @@ func exactExcludedColorTargetSyntax(text string, selection SelectionSyntax) bool
 		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
 		selection.Keyword != KeywordUnknown || selection.Zone != zone.None ||
 		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		selection.PowerLessThanSource || selection.PowerGreaterThanSource ||
 		selection.Colorless || selection.Multicolored ||
 		len(selection.Supertypes) != 0 ||
 		len(selection.ColorsAny) != 0 || len(selection.ExcludedTypes) != 0 ||
@@ -1254,6 +1273,7 @@ func exactExcludedSupertypeTargetSyntax(text string, selection SelectionSyntax) 
 		selection.Keyword != KeywordUnknown || selection.ExcludedKeyword != KeywordUnknown ||
 		selection.Zone != zone.None ||
 		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		selection.PowerLessThanSource || selection.PowerGreaterThanSource ||
 		selection.Colorless || selection.Multicolored ||
 		len(selection.Supertypes) != 0 || len(selection.ExcludedTypes) != 0 ||
 		len(selection.ColorsAny) != 0 || len(selection.ExcludedColors) != 0 ||
@@ -1297,7 +1317,7 @@ func selectionGrammarWord(token shared.Token) bool {
 		"a", "an", "all", "any", "number", "of", "up", "to", "or", "and",
 		"with", "without", "from", "in", "your", "you", "control", "controls", "don't",
 		"opponent", "opponent's", "opponents", "activated", "triggered", "source",
-		"mana", "value", "power", "toughness", "equal", "less", "greater",
+		"mana", "value", "power", "toughness", "equal", "less", "greater", "lesser",
 		"battlefield", "graveyard", "hand", "library", "exile", "command",
 	} {
 		if equalWord(token, word) {
@@ -1931,6 +1951,17 @@ func parseSelectionNumbers(tokens []shared.Token, atoms Atoms, selection *Select
 			continue
 		}
 		if equalWord(tokens[i], "power") {
+			if i >= 1 && equalWord(tokens[i-1], "lesser") {
+				// "with lesser power" compares the match to the source
+				// permanent's power, not a fixed number (Mentor). Record the
+				// relative qualifier and skip the fixed-comparison parse.
+				selection.PowerLessThanSource = true
+				continue
+			}
+			if i >= 1 && equalWord(tokens[i-1], "greater") {
+				selection.PowerGreaterThanSource = true
+				continue
+			}
 			comparison, ok := parseSelectionNumberComparison(tokens[i+1:], atoms)
 			if !ok {
 				return false

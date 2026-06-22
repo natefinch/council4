@@ -993,8 +993,16 @@ type CompiledSelector struct {
 	// battlefield this turn ("each green creature that entered this turn"). It
 	// lowers to Selection.EnteredThisTurn.
 	EnteredThisTurn bool
-	Alternatives    []CompiledSelector
-	atoms           *CompiledSelectorAtoms
+	// PowerLessThanSource requires each matched permanent's power to be strictly
+	// less than the ability's source permanent's power ("target attacking
+	// creature with lesser power", Mentor); PowerGreaterThanSource is the
+	// "with greater power" sibling. They are source-relative, so unlike
+	// Power/MatchPower they carry no fixed comparison and lower to
+	// Selection.PowerLessThanSource / Selection.PowerGreaterThanSource.
+	PowerLessThanSource    bool
+	PowerGreaterThanSource bool
+	Alternatives           []CompiledSelector
+	atoms                  *CompiledSelectorAtoms
 }
 
 // CompiledSelectorAtoms holds parser-owned atom-derived selector filters that

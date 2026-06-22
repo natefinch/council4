@@ -135,5 +135,12 @@ type TargetPredicate struct {
 	Power     opt.V[compare.Int]
 	Toughness opt.V[compare.Int]
 
+	// PowerLessThanSource and PowerGreaterThanSource restrict the match to a
+	// permanent whose power is strictly less / greater than the ability's source
+	// permanent's power ("target attacking creature with lesser power", Mentor).
+	// They are source-relative, so unlike Power they carry no fixed comparison.
+	PowerLessThanSource    bool
+	PowerGreaterThanSource bool
+
 	Another bool
 }

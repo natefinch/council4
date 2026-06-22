@@ -1017,6 +1017,15 @@ type SelectionSyntax struct {
 	// permanents that entered the battlefield during the current turn. It lowers
 	// to Selection.EnteredThisTurn.
 	EnteredThisTurn bool `json:",omitempty"`
+	// PowerLessThanSource records a trailing "with lesser power" relative clause
+	// ("target attacking creature with lesser power", Mentor), restricting the
+	// match to permanents whose power is strictly less than the ability's source
+	// permanent's power. PowerGreaterThanSource is the "with greater power"
+	// sibling. They are relative to the source, so unlike Power/MatchPower they
+	// carry no fixed comparison; they lower to Selection.PowerLessThanSource /
+	// Selection.PowerGreaterThanSource.
+	PowerLessThanSource    bool `json:",omitempty"`
+	PowerGreaterThanSource bool `json:",omitempty"`
 }
 
 // TargetCardinalitySyntax is an inclusive target-count range.

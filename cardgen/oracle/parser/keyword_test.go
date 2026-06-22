@@ -553,3 +553,95 @@ func TestExpandBattleCryKeyword(t *testing.T) {
 		}
 	}
 }
+
+func TestExpandMentorKeyword(t *testing.T) {
+	t.Parallel()
+	want := "Whenever this creature attacks, " +
+		"put a +1/+1 counter on target attacking creature with lesser power."
+	sources := []string{
+		"Mentor (Whenever this creature attacks, put a +1/+1 counter on target attacking creature with lesser power.)",
+		"Mentor",
+	}
+	for _, source := range sources {
+		if got := expandMentorKeyword(source); got != want {
+			t.Fatalf("expandMentorKeyword(%q) = %q, want %q", source, got, want)
+		}
+	}
+}
+
+func TestExpandMentorKeywordLeavesOtherTextAlone(t *testing.T) {
+	t.Parallel()
+	sources := []string{
+		"Mentor of the Meek",
+		"When this creature attacks, you may mentor it.",
+		"{1}: Mentor gains flying.",
+	}
+	for _, source := range sources {
+		if got := expandMentorKeyword(source); got != source {
+			t.Fatalf("expandMentorKeyword(%q) = %q, want unchanged", source, got)
+		}
+	}
+}
+
+func TestParseSelectionWithLesserPower(t *testing.T) {
+	t.Parallel()
+	doc, diags := Parse(
+		"Whenever this creature attacks, put a +1/+1 counter on target attacking creature with lesser power.",
+		Context{CardName: "Probe"})
+	if len(diags) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diags)
+	}
+	var selection SelectionSyntax
+	found := false
+	for _, ability := range doc.Abilities {
+		for s := range ability.Sentences {
+			for _, effect := range ability.Sentences[s].Effects {
+				for _, target := range effect.Targets {
+					selection = target.Selection
+					found = true
+				}
+			}
+		}
+	}
+	if !found {
+		t.Fatal("no target selection parsed")
+	}
+	if !selection.Attacking {
+		t.Error("expected Attacking selection flag")
+	}
+	if !selection.PowerLessThanSource {
+		t.Error("expected PowerLessThanSource set for \"with lesser power\"")
+	}
+	if selection.PowerGreaterThanSource {
+		t.Error("did not expect PowerGreaterThanSource")
+	}
+	if !slices.Contains(selection.RequiredTypesAny, CardTypeCreature) {
+		t.Error("expected creature card type")
+	}
+}
+
+func TestParseSelectionWithGreaterPower(t *testing.T) {
+	t.Parallel()
+	doc, diags := Parse(
+		"Whenever this creature attacks, put a +1/+1 counter on target attacking creature with greater power.",
+		Context{CardName: "Probe"})
+	if len(diags) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diags)
+	}
+	var selection SelectionSyntax
+	for _, ability := range doc.Abilities {
+		for s := range ability.Sentences {
+			for _, effect := range ability.Sentences[s].Effects {
+				for _, target := range effect.Targets {
+					selection = target.Selection
+				}
+			}
+		}
+	}
+	if !selection.PowerGreaterThanSource {
+		t.Error("expected PowerGreaterThanSource set for \"with greater power\"")
+	}
+	if selection.PowerLessThanSource {
+		t.Error("did not expect PowerLessThanSource")
+	}
+}
