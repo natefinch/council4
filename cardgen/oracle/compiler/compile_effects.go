@@ -383,6 +383,27 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 	return effects
 }
 
+// appendDiceTableEffects compiles each die-roll outcome-table row's resolving
+// sentences and appends them to effects, stamping every row effect with the
+// row's inclusive result interval. Lowering groups the appended effects by
+// interval and gates each on the rolled value. It returns effects unchanged
+// when the ability carries no outcome table.
+func appendDiceTableEffects(effects []CompiledEffect, table *parser.DiceTable) []CompiledEffect {
+	if table == nil {
+		return effects
+	}
+	for _, row := range table.Rows {
+		rowEffects := compileEffects(row.Sentences)
+		for i := range rowEffects {
+			rowEffects[i].DiceRow = true
+			rowEffects[i].DiceRowMin = row.Min
+			rowEffects[i].DiceRowMax = row.Max
+		}
+		effects = append(effects, rowEffects...)
+	}
+	return effects
+}
+
 func compileStaticRuleEffect(sentence parser.Sentence) (CompiledEffect, bool) {
 	rule, _, ok := semanticStaticRuleForSyntax(*sentence.StaticRule)
 	if !ok {

@@ -33,6 +33,12 @@ func emitResolvingSyntax(abilities []Ability) {
 		recognizeOptionalManaPaymentBenefitSequence(&abilities[i])
 		recognizeEventPlayerOptionalPaymentSequence(&abilities[i])
 		recognizeControllerMandatoryPaymentSequence(&abilities[i])
+		if abilities[i].DiceTable != nil {
+			for k := range abilities[i].DiceTable.Rows {
+				row := &abilities[i].DiceTable.Rows[k]
+				emitSentenceResolvingSyntax(row.Sentences, row.Atoms, nil, nil, nil)
+			}
+		}
 		if abilities[i].Modal == nil {
 			continue
 		}

@@ -131,6 +131,7 @@ func compileAbility(
 				compiled.Trigger,
 			)
 		}
+		compiled.Content.Effects = appendDiceTableEffects(compiled.Content.Effects, ability.DiceTable)
 	}
 	compiled.Content.References = bindActivationCostReferences(compiled.Kind, compiled.Cost, compiled.Content.References)
 	bindConditionReferences(compiled.Content.Conditions, compiled.Content.References, compiled.Trigger)

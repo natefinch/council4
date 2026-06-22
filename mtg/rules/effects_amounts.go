@@ -875,6 +875,10 @@ func instructionResultGateSatisfied(obj *game.StackObject, gate game.Instruction
 	if gate.Succeeded != game.TriAny && (gate.Succeeded == game.TriTrue) != result.Succeeded {
 		return false
 	}
+	if gate.AmountRange.Exists &&
+		(result.Amount < gate.AmountRange.Val.Min || result.Amount > gate.AmountRange.Val.Max) {
+		return false
+	}
 	return true
 }
 

@@ -186,6 +186,12 @@ func renderInstructionResultGate(gate game.InstructionResultGate) (string, error
 		}
 		fields = append(fields, fmt.Sprintf("Succeeded: %s,", succeeded))
 	}
+	if gate.AmountRange.Exists {
+		fields = append(fields, fmt.Sprintf(
+			"AmountRange: opt.Val(game.IntRange{Min: %d, Max: %d}),",
+			gate.AmountRange.Val.Min, gate.AmountRange.Val.Max,
+		))
+	}
 	return structLit("game.InstructionResultGate", fields), nil
 }
 

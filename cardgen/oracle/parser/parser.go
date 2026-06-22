@@ -2,6 +2,7 @@ package parser
 
 import (
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/lexer"
@@ -75,6 +76,12 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 				ability.Modal = modal
 			}
 			i = j
+		} else if table, next, ok := parseDiceTable(source, lines, i); ok {
+			ability.DiceTable = table
+			lastRow := table.Rows[len(table.Rows)-1]
+			ability.Span.End = lastRow.Span.End
+			ability.Text = shared.SliceSpan(source, ability.Span)
+			i = next
 		} else {
 			i++
 		}
@@ -227,6 +234,12 @@ func emitAtoms(abilities []Ability, cardName string) {
 			tokens = tokensOutsideParserSpan(tokens, abilities[i].AbilityWord.Span)
 		}
 		abilities[i].Atoms = collectAtoms(tokens, abilities[i].Reminders, abilities[i].Quoted, cardName)
+		if abilities[i].DiceTable != nil {
+			for k := range abilities[i].DiceTable.Rows {
+				row := &abilities[i].DiceTable.Rows[k]
+				row.Atoms = collectAtoms(row.Tokens, nil, nil, cardName)
+			}
+		}
 		if abilities[i].Modal == nil {
 			continue
 		}
@@ -459,6 +472,107 @@ func romanChapter(text string) (int, bool) {
 	default:
 		return 0, false
 	}
+}
+
+// lineEndsWithRollDie reports whether a line's final clause is "roll a d<N>."
+// (ignoring any trailing period) and returns N. It detects the header line of a
+// die-roll outcome table, whose result rows follow on subsequent lines.
+func lineEndsWithRollDie(tokens []shared.Token) (int, bool) {
+	end := len(tokens)
+	for end > 0 && tokens[end-1].Kind == shared.Period {
+		end--
+	}
+	if end < 4 {
+		return 0, false
+	}
+	words := tokens[end-4 : end]
+	if !equalWord(words[0], "roll") ||
+		!equalWord(words[1], "a") ||
+		!equalWord(words[2], "d") ||
+		words[3].Kind != shared.Integer {
+		return 0, false
+	}
+	sides, err := strconv.Atoi(words[3].Text)
+	if err != nil || sides < 2 {
+		return 0, false
+	}
+	return sides, true
+}
+
+// parseDiceTableRow recognizes a single outcome row "<low>[—<high>] | <body>"
+// or "<value>+ | <body>" and returns its inclusive interval and resolving
+// sentences. The em-dash, en-dash, or ASCII hyphen separate a range; a trailing
+// plus opens the interval up to dieSides. It fails closed on any other shape so
+// non-table lines flow through the ordinary ability parser.
+func parseDiceTableRow(source string, tokens []shared.Token, dieSides int) (DiceTableRow, bool) {
+	if len(tokens) == 0 || tokens[0].Kind != shared.Integer {
+		return DiceTableRow{}, false
+	}
+	low, err := strconv.Atoi(tokens[0].Text)
+	if err != nil {
+		return DiceTableRow{}, false
+	}
+	high := low
+	idx := 1
+	switch {
+	case idx < len(tokens) &&
+		(tokens[idx].Kind == shared.EmDash || tokens[idx].Kind == shared.EnDash || tokens[idx].Kind == shared.Minus):
+		if idx+1 >= len(tokens) || tokens[idx+1].Kind != shared.Integer {
+			return DiceTableRow{}, false
+		}
+		high, err = strconv.Atoi(tokens[idx+1].Text)
+		if err != nil {
+			return DiceTableRow{}, false
+		}
+		idx += 2
+	case idx < len(tokens) && tokens[idx].Kind == shared.Plus:
+		high = dieSides
+		idx++
+	default:
+	}
+	if idx >= len(tokens) || tokens[idx].Kind != shared.Glyph || tokens[idx].Text != "|" {
+		return DiceTableRow{}, false
+	}
+	idx++
+	bodyTokens := tokens[idx:]
+	if len(bodyTokens) == 0 || low > high {
+		return DiceTableRow{}, false
+	}
+	span := shared.SpanOf(tokens)
+	return DiceTableRow{
+		Span:      span,
+		Text:      shared.SliceSpan(source, span),
+		Tokens:    cloneTokens(tokens),
+		Min:       low,
+		Max:       high,
+		Sentences: ParseSentences(source, bodyTokens),
+	}, true
+}
+
+// parseDiceTable consumes a die-roll outcome table starting at line i: the
+// header line at i must end with "roll a d<N>." and line i+1 must be an outcome
+// row. It collects every consecutive outcome row and returns the table together
+// with the index of the first unconsumed line.
+func parseDiceTable(source string, lines [][]shared.Token, i int) (*DiceTable, int, bool) {
+	sides, ok := lineEndsWithRollDie(lines[i])
+	if !ok || i+1 >= len(lines) {
+		return nil, 0, false
+	}
+	firstRow, ok := parseDiceTableRow(source, lines[i+1], sides)
+	if !ok {
+		return nil, 0, false
+	}
+	table := &DiceTable{DieSides: sides, Rows: []DiceTableRow{firstRow}}
+	j := i + 2
+	for j < len(lines) {
+		row, rowOK := parseDiceTableRow(source, lines[j], sides)
+		if !rowOK {
+			break
+		}
+		table.Rows = append(table.Rows, row)
+		j++
+	}
+	return table, j, true
 }
 
 func parseMode(source string, tokens []shared.Token) (Mode, []shared.Diagnostic) {

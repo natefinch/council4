@@ -569,6 +569,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx, syntax *parser
 	if content, ok := lowerDestroyedThisWaySequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerDiceTableSequence(cardName, ctx, syntax); ok {
+		return content, true
+	}
 	if content, ok := lowerDieRollResultSequence(cardName, ctx, syntax); ok {
 		return content, true
 	}
@@ -3246,6 +3249,78 @@ func lowerDestroyedThisWaySequence(ctx contentCtx) (game.AbilityContent, bool) {
 			{Primitive: payoffPrimitive},
 		},
 	}.Ability(), true
+}
+
+// lowerDiceTableSequence handles the die-roll outcome-table form "Roll a d<N>.
+// <lo>—<hi> | <effect> ..." (Bag of Tricks et al.). The compiler flattens the
+// table into a leading exact controller-scoped EffectRollDie followed by each
+// row's effects, every row effect stamped with its inclusive result interval
+// [DiceRowMin, DiceRowMax]. This emits a RollDie that publishes its rolled value
+// under dieRollResultKey, then lowers each contiguous same-interval row group
+// through the standard content path and gates every resulting instruction on the
+// rolled value falling in that interval, so exactly the matching row resolves.
+// It fails closed unless the first effect is the exact roll, every later effect
+// belongs to a row, the content carries no shared targets/conditions/modes/
+// references, and each row lowers to a single non-modal untargeted mode whose
+// instructions carry no existing result gate.
+func lowerDiceTableSequence(cardName string, ctx contentCtx, syntax *parser.Ability) (game.AbilityContent, bool) {
+	effects := ctx.content.Effects
+	if len(effects) < 2 {
+		return game.AbilityContent{}, false
+	}
+	roll := &effects[0]
+	if roll.Kind != compiler.EffectRollDie ||
+		roll.DieSides < 2 ||
+		!roll.Exact ||
+		roll.DiceRow ||
+		roll.Negated || roll.Optional || ctx.optional ||
+		roll.Context != parser.EffectContextController ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	for i := 1; i < len(effects); i++ {
+		if !effects[i].DiceRow {
+			return game.AbilityContent{}, false
+		}
+	}
+	sequence := []game.Instruction{{
+		Primitive:     game.RollDie{Sides: roll.DieSides},
+		PublishResult: dieRollResultKey,
+	}}
+	for start := 1; start < len(effects); {
+		end := start + 1
+		for end < len(effects) &&
+			effects[end].DiceRowMin == effects[start].DiceRowMin &&
+			effects[end].DiceRowMax == effects[start].DiceRowMax {
+			end++
+		}
+		rowRange := game.IntRange{Min: effects[start].DiceRowMin, Max: effects[start].DiceRowMax}
+		rowCtx := ctx
+		rowCtx.content = compiler.AbilityContent{Effects: effects[start:end]}
+		rowContent, diagnostic := lowerContent(cardName, rowCtx, syntax)
+		if diagnostic != nil ||
+			rowContent.IsModal() ||
+			len(rowContent.SharedTargets) != 0 ||
+			len(rowContent.Modes[0].Targets) != 0 {
+			return game.AbilityContent{}, false
+		}
+		for k := range rowContent.Modes[0].Sequence {
+			instruction := rowContent.Modes[0].Sequence[k]
+			if instruction.ResultGate.Exists {
+				return game.AbilityContent{}, false
+			}
+			instruction.ResultGate = opt.Val(game.InstructionResultGate{
+				Key:         dieRollResultKey,
+				AmountRange: opt.Val(rowRange),
+			})
+			sequence = append(sequence, instruction)
+		}
+		start = end
+	}
+	return game.Mode{Sequence: sequence}.Ability(), true
 }
 
 // lowerDieRollResultSequence handles the dice pattern "Roll a d<N>. <payoff>"
