@@ -133,6 +133,27 @@ func TestLowerDynamicLifeBattlefieldSelectionCounts(t *testing.T) {
 	}
 }
 
+func TestLowerDynamicLifeOtherCreatureExcludesSource(t *testing.T) {
+	t.Parallel()
+	face := lowerLifeFace(t, "You gain 1 life for each other creature you control.")
+	dynamic := gainLifeQuantity(t, face.SpellAbility.Val).DynamicAmount()
+	if !dynamic.Exists ||
+		dynamic.Val.Kind != game.DynamicAmountCountSelector ||
+		dynamic.Val.Multiplier != 1 {
+		t.Fatalf("dynamic amount = %+v", dynamic)
+	}
+	selection := dynamic.Val.Group.Selection()
+	if !selection.ExcludeSource {
+		t.Fatal("selection.ExcludeSource = false, want true")
+	}
+	if selection.Controller != game.ControllerYou {
+		t.Fatalf("controller = %v, want %v", selection.Controller, game.ControllerYou)
+	}
+	if len(selection.RequiredTypes) != 1 || selection.RequiredTypes[0] != types.Creature {
+		t.Fatalf("required types = %v, want [Creature]", selection.RequiredTypes)
+	}
+}
+
 func TestLowerDynamicLifeCharacteristicFilteredCounts(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

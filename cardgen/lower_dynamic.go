@@ -207,17 +207,21 @@ func dynamicAmountSelection(selector compiler.CompiledSelector) (game.Selection,
 		return game.Selection{}, false
 	}
 	combatState := dynamicCombatState(selector)
+	excludeSource := selector.Other || selector.Another
 	filtered := selector
 	filtered.Tapped = false
 	filtered.Untapped = false
 	filtered.Attacking = false
 	filtered.Blocking = false
+	filtered.Other = false
+	filtered.Another = false
 	selection, ok := dynamicCountCharacteristics(filtered)
 	if !ok {
 		return game.Selection{}, false
 	}
 	selection.Tapped = tapped
 	selection.CombatState = combatState
+	selection.ExcludeSource = excludeSource
 	requiredType, known := dynamicBattlefieldRequiredType(selector.Kind)
 	switch {
 	case len(selector.RequiredTypesAny()) >= 2:

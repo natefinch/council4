@@ -85,6 +85,49 @@ func TestDynamicEffectAmountFormulasResolveSemantically(t *testing.T) {
 // count whose selection carries SubtypeChoiceSourceEntry counts only the
 // controller's creatures that share the creature subtype the source permanent
 // chose as it entered (Three Tree City).
+// TestDynamicAmountCountExcludesSourceForOtherCreatures proves that a
+// controlled-creature count whose selection carries ExcludeSource (the "for each
+// other creature you control" amount) leaves the ability's own source permanent
+// out of the tally, while an otherwise identical count without ExcludeSource
+// includes it (Speakeasy Server, Goldnight Redeemer).
+func TestDynamicAmountCountExcludesSourceForOtherCreatures(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Source Creature",
+		Types: []types.Card{types.Creature},
+	}})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Other Creature",
+		Types: []types.Card{types.Creature},
+	}})
+	addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Opponent Creature",
+		Types: []types.Card{types.Creature},
+	}})
+	obj := &game.StackObject{Controller: game.Player1, SourceID: source.ObjectID}
+
+	including := game.DynamicAmount{
+		Kind:       game.DynamicAmountCountSelector,
+		Multiplier: 1,
+		Group: game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			Controller:    game.ControllerYou,
+		}),
+	}
+	if got := dynamicAmountValue(g, obj, game.Player1, including); got != 2 {
+		t.Fatalf("controlled creature count = %d, want 2", got)
+	}
+	excluding := including
+	excluding.Group = game.BattlefieldGroup(game.Selection{
+		RequiredTypes: []types.Card{types.Creature},
+		Controller:    game.ControllerYou,
+		ExcludeSource: true,
+	})
+	if got := dynamicAmountValue(g, obj, game.Player1, excluding); got != 1 {
+		t.Fatalf("other controlled creature count = %d, want 1", got)
+	}
+}
+
 func TestDynamicAmountCountsChosenTypeCreatures(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{

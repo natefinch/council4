@@ -1401,13 +1401,20 @@ func parseDynamicEventCardCountSubject(tokens []shared.Token, start int) (dynami
 }
 
 func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
-	noun, ok := atoms.ObjectNounAt(tokens[start].Span)
+	nounStart := start
+	if equalWord(tokens[start], "other") {
+		nounStart = start + 1
+	}
+	if nounStart >= len(tokens) {
+		return dynamicAmountSubject{}, false
+	}
+	noun, ok := atoms.ObjectNounAt(tokens[nounStart].Span)
 	if !ok {
 		return dynamicAmountSubject{}, false
 	}
-	plural := strings.HasSuffix(strings.ToLower(tokens[start].Text), "s")
+	plural := strings.HasSuffix(strings.ToLower(tokens[nounStart].Text), "s")
 	if noun == ObjectNounOpponent {
-		end := start + 1
+		end := nounStart + 1
 		if effectWordsAt(tokens, end, "you", "have") {
 			end += 2
 		}
@@ -1424,7 +1431,7 @@ func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms 
 	}, noun) {
 		return dynamicAmountSubject{}, false
 	}
-	end := start + 1
+	end := nounStart + 1
 	for _, suffix := range [][]string{{"you", "control"}, {"your", "opponents", "control"}, {"on", "the", "battlefield"}} {
 		if !effectWordsAt(tokens, end, suffix...) {
 			continue
