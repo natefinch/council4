@@ -457,6 +457,9 @@ func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 	if content, ok := lowerChosenColorCountMana(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerChosenColorSourceCounterMana(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerAnyOneColorDynamicMana(ctx); ok {
 		return content, nil
 	}
@@ -706,6 +709,42 @@ func lowerChosenColorCountMana(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	return game.TapManaChosenColorCountAbility("", selection).Content, true
+}
+
+// lowerChosenColorSourceCounterMana lowers a "Choose a color. Add one mana of
+// that color for each <kind> counter on <this permanent>" body (Astral
+// Cornucopia) into a Choose-a-color plus an AddMana instruction whose color is
+// the chosen color and whose amount is the number of counters of one kind on the
+// source permanent. It accepts only a single source-counter ForEach amount that
+// lowers to an object-counter dynamic; other amounts fail closed so an unmodeled
+// wording cannot lower to a mislabeled ability.
+func lowerChosenColorSourceCounterMana(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		!singleSelfReference(ctx.content.References) {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		effect.Context != parser.EffectContextController ||
+		!effect.Mana.ChosenColorDynamic ||
+		effect.Amount.DynamicKind != compiler.DynamicAmountSourceCounterCount ||
+		effect.Amount.DynamicForm != compiler.DynamicAmountForEach {
+		return game.AbilityContent{}, false
+	}
+	dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+	if !ok || dynamic.Kind != game.DynamicAmountObjectCounters {
+		return game.AbilityContent{}, false
+	}
+	return game.TapManaChosenColorDynamicAbility("", dynamic).Content, true
 }
 
 // lowerAnyOneColorDynamicMana lowers an "Add X mana of any one color, where X is

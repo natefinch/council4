@@ -1900,6 +1900,7 @@ func recognizeLookAtTargetPlayerHandSentence(sentence *Sentence) {
 func recognizeDynamicCountMana(effect *EffectSyntax) bool {
 	return recognizeControlledCountMana(effect) ||
 		recognizeChosenColorCountMana(effect) ||
+		recognizeChosenColorSourceCounterMana(effect) ||
 		recognizeSourceCounterCountMana(effect) ||
 		recognizeAnyOneColorDynamicMana(effect)
 }
@@ -2050,6 +2051,34 @@ func recognizeSourceCounterCountMana(effect *EffectSyntax) bool {
 		return false
 	}
 	effect.Mana = parsed
+	return true
+}
+
+// recognizeChosenColorSourceCounterMana types the add-mana body "one mana of
+// that color" whose produced quantity scales with the number of counters of one
+// kind on the source permanent ("Choose a color. Add one mana of that color for
+// each charge counter on this artifact.", Astral Cornucopia). The trailing "for
+// each <kind> counter on this permanent" suffix is already typed onto
+// effect.Amount as a source-counter-count dynamic amount by parseEffectAmount;
+// the leading "one mana of that color" body is left unrecognized by
+// parseEffectMana. This credits the freely-chosen single-color output when the
+// body matches exactly and the amount is a supported source-counter count, so the
+// lowerer can produce one mana of the chosen color per counter. It fails closed
+// for any other amount.
+func recognizeChosenColorSourceCounterMana(effect *EffectSyntax) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Amount.DynamicKind != EffectDynamicAmountSourceCounterCount ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormForEach ||
+		effect.Amount.Multiplier < 1 ||
+		!effect.Amount.CounterKind.Valid() {
+		return false
+	}
+	body := manaBodyBeforeAmount(effect)
+	if len(body) != 5 ||
+		!effectWordsAt(body, 0, "one", "mana", "of", "that", "color") {
+		return false
+	}
+	effect.Mana = EffectManaSyntax{Span: shared.SpanOf(body), ChosenColor: true, ChosenColorDynamic: true}
 	return true
 }
 
