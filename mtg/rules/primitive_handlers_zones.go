@@ -114,6 +114,22 @@ func handleShuffleLibrary(r *effectResolver, prim game.ShuffleLibrary) effectRes
 	return res
 }
 
+// handleLookAtHand resolves a "look at target player's hand" effect. Looking at
+// a hand reveals hidden information to the source's controller but does not
+// change game state, so the handler resolves the player and succeeds.
+func handleLookAtHand(r *effectResolver, prim game.LookAtHand) effectResolved {
+	res := effectResolved{accepted: true}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	if _, ok := playerByID(r.game, playerID); !ok {
+		return res
+	}
+	res.succeeded = true
+	return res
+}
+
 func handleDiscard(r *effectResolver, prim game.Discard) effectResolved {
 	if prim.EntireHand {
 		return handleDiscardEntireHand(r, prim)

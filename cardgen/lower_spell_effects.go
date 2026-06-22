@@ -1131,6 +1131,44 @@ func lowerFightSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	}.Ability(), nil
 }
 
+// lowerLookAtHandSpell lowers "Look at target player's hand." to a single
+// player-targeted LookAtHand primitive. The parser retypes the possessive hand
+// phrase into a clean "target player"/"target opponent" target, so this reads
+// only the typed target and rejects any other shape (riders, conditions,
+// keywords, modes, references).
+func lowerLookAtHandSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported look-at-hand spell",
+			"the executable source backend supports only looking at one target player's hand",
+		)
+	}
+	if len(ctx.content.Targets) != 1 ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		ctx.optional ||
+		effect.Context != parser.EffectContextTarget ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 0 {
+		return unsupported()
+	}
+	targetSpec, ok := playerTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return unsupported()
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{{
+			Primitive: game.LookAtHand{Player: game.TargetPlayerReference(0)},
+		}},
+	}.Ability(), nil
+}
+
 func fightCreatureTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 	if !targetCardinalityIsOne(target) ||
 		target.Selector.Kind != compiler.SelectorCreature ||

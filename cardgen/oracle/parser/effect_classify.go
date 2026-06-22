@@ -1008,6 +1008,9 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		if lookAtTopCardAnyTimeInstruction(tokens[index:]) {
 			return EffectUnknown
 		}
+		if lookAtHandInstruction(tokens[index:]) {
+			return EffectLookAtHand
+		}
 		return EffectManifestDread
 	case equalWord(tokens[index], "win") || equalWord(tokens[index], "wins"):
 		if winGameVerbAt(tokens, index) {
@@ -1201,6 +1204,28 @@ func effectWordKind(token shared.Token) EffectKind {
 // sentence sorts them. The looked-at count is any number word; the exactness
 // recognizer rejects a variable ("X") or non-numeric word so only fixed digs
 // reach the combined lowerer.
+// lookAtHandInstruction reports whether the sentence is the private
+// hand-inspection effect "Look at <player>'s hand." (Gitaxian Probe, Peek). The
+// verb "look" is generic, so the classification is anchored on the "look at"
+// lead-in, a possessive player reference (a token ending in "'s"), and a
+// trailing "hand." clause boundary. This distinguishes it from the library
+// "look at the top ..." dig/visibility wordings handled before it.
+func lookAtHandInstruction(tokens []shared.Token) bool {
+	if len(tokens) < 5 || !effectWordsAt(tokens, 0, "look", "at") {
+		return false
+	}
+	last := len(tokens) - 1
+	if tokens[last].Kind != shared.Period || !equalWord(tokens[last-1], "hand") {
+		return false
+	}
+	for _, token := range tokens[2 : last-1] {
+		if strings.HasSuffix(token.Text, "'s") {
+			return true
+		}
+	}
+	return false
+}
+
 func digLookInstruction(tokens []shared.Token) bool {
 	return len(tokens) == 10 &&
 		effectWordsAt(tokens, 0, "look", "at", "the", "top") &&

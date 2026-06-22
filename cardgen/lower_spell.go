@@ -1255,6 +1255,8 @@ func lowerImmediateSingleEffectSpell(
 		return lowerRegenerateSpell(ctx)
 	case compiler.EffectFight:
 		return lowerFightSpell(ctx)
+	case compiler.EffectLookAtHand:
+		return lowerLookAtHandSpell(ctx)
 	case compiler.EffectDiscard:
 		if ctx.content.Effects[0].DiscardEntireHand {
 			return lowerDiscardEntireHandSpell(ctx)

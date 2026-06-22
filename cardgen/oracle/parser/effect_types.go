@@ -211,6 +211,12 @@ const (
 	// current turn, optionally followed by an additional main phase.
 	// AdditionalCombatPhase and AdditionalMainPhase carry which phases are added.
 	EffectAdditionalCombatPhase EffectKind = "EffectAdditionalCombatPhase"
+	// EffectLookAtHand models the private hand-inspection effect "Look at target
+	// player's hand." (Gitaxian Probe, Peek, Telepathy-adjacent). The source's
+	// controller looks at the targeted player's hand; it conveys hidden
+	// information only and changes no game state. The targeted player is carried
+	// as a player target on the effect.
+	EffectLookAtHand EffectKind = "EffectLookAtHand"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."

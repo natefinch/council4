@@ -15,6 +15,9 @@ func (LookAtLibraryTop) Kind() PrimitiveKind { return PrimitiveLookAtLibraryTop 
 // Kind implements Primitive for ShuffleLibrary.
 func (ShuffleLibrary) Kind() PrimitiveKind { return PrimitiveShuffleLibrary }
 
+// Kind implements Primitive for LookAtHand.
+func (LookAtHand) Kind() PrimitiveKind { return PrimitiveLookAtHand }
+
 // Kind implements Primitive for ExileFromHand.
 func (ExileFromHand) Kind() PrimitiveKind { return PrimitiveExileFromHand }
 
@@ -254,6 +257,7 @@ func (Draw) isPrimitive()                        {}
 func (ReorderLibraryTop) isPrimitive()           {}
 func (LookAtLibraryTop) isPrimitive()            {}
 func (ShuffleLibrary) isPrimitive()              {}
+func (LookAtHand) isPrimitive()                  {}
 func (ExileFromHand) isPrimitive()               {}
 func (PutFromHand) isPrimitive()                 {}
 func (CastForFree) isPrimitive()                 {}
@@ -345,6 +349,7 @@ func (p LookAtLibraryTop) instructionRefs() primitiveRefs {
 	return primitiveRefs{publishesLinked: p.PublishLinked}
 }
 func (ShuffleLibrary) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (LookAtHand) instructionRefs() primitiveRefs     { return primitiveRefs{} }
 func (p Discard) instructionRefs() primitiveRefs      { return quantityRefs(p.Amount) }
 func (Destroy) instructionRefs() primitiveRefs        { return primitiveRefs{} }
 func (p AddCounter) instructionRefs() primitiveRefs   { return quantityRefs(p.Amount) }
