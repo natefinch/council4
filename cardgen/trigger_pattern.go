@@ -146,6 +146,21 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 	if pattern.SpellTargetsSource && event != game.EventSpellCast {
 		return game.TriggerPattern{}, false
 	}
+	if pattern.SpellTargetSelection != nil {
+		if event != game.EventSpellCast {
+			return game.TriggerPattern{}, false
+		}
+		targetSelection, ok := lowerTriggerSelection(*pattern.SpellTargetSelection)
+		if !ok {
+			return game.TriggerPattern{}, false
+		}
+		predicate, ok := selectionTargetPredicate(targetSelection)
+		if !ok {
+			return game.TriggerPattern{}, false
+		}
+		result.SpellTargetAllow = game.TargetAllowPermanent
+		result.SpellTargetPattern = opt.Val(predicate)
+	}
 
 	switch pattern.CombatQualifier {
 	case compiler.TriggerCombatDamage:
@@ -545,6 +560,54 @@ func lowerTriggerSelection(selection compiler.TriggerSelection) (game.Selection,
 		return game.Selection{}, false
 	}
 	return result, true
+}
+
+// selectionTargetPredicate converts a lowered Selection into the equivalent
+// TargetPredicate used by a spell-cast trigger's SpellTargetPattern. It is the
+// inverse of TargetPredicate.Selection() and fails closed on Selection features
+// that a TargetPredicate cannot express, so unsupported target relations remain
+// unsupported rather than silently dropping a filter.
+func selectionTargetPredicate(selection game.Selection) (game.TargetPredicate, bool) {
+	if len(selection.AnyOf) > 0 ||
+		selection.ExcludedSubtype != "" ||
+		selection.Colorless ||
+		selection.Multicolored ||
+		selection.NonToken ||
+		selection.TokenOnly ||
+		selection.MatchCounter ||
+		selection.MatchAnyCounter ||
+		selection.MatchModified ||
+		selection.RequiredCounterCount.Exists ||
+		selection.EnteredThisTurn ||
+		selection.SubtypeChoice != game.SubtypeChoiceNone ||
+		selection.ColorChoice != game.ColorChoiceNone {
+		return game.TargetPredicate{}, false
+	}
+	predicate := game.TargetPredicate{
+		ExcludedTypes:     selection.ExcludedTypes,
+		Supertypes:        selection.Supertypes,
+		ExcludedSupertype: selection.ExcludedSupertype,
+		Subtypes:          selection.SubtypesAny,
+		Colors:            selection.ColorsAny,
+		ExcludedColors:    selection.ExcludedColors,
+		Controller:        selection.Controller,
+		Player:            selection.Player,
+		Tapped:            selection.Tapped,
+		CombatState:       selection.CombatState,
+		Keyword:           selection.Keyword,
+		ExcludedKeyword:   selection.ExcludedKeyword,
+		ManaValue:         selection.ManaValue,
+		Power:             selection.Power,
+		Toughness:         selection.Toughness,
+		Another:           selection.ExcludeSource,
+	}
+	if len(selection.RequiredTypes) > 0 {
+		predicate.PermanentTypes = selection.RequiredTypes
+		predicate.PermanentTypesConjunctive = true
+	} else {
+		predicate.PermanentTypes = selection.RequiredTypesAny
+	}
+	return predicate, true
 }
 
 func lowerTriggerSelectionController(controller compiler.ControllerKind) (game.ControllerRelation, bool) {

@@ -365,6 +365,11 @@ type TriggerPattern struct {
 	// creature", the Heroic ability word).
 	SpellTargetsSource bool
 
+	// SpellTargetSelection restricts a spell-cast pattern to spells that target a
+	// permanent matching this selection ("Whenever you cast a spell that targets
+	// a creature you control"). It is nil when no such relation applies.
+	SpellTargetSelection *TriggerSelection
+
 	// TappedForMana restricts a permanent-tapped pattern to taps that paid a
 	// mana ability's cost ("is tapped for mana").
 	TappedForMana bool
