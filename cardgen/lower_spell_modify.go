@@ -375,6 +375,9 @@ func lowerFixedDamageSpell(
 		if sourceBound {
 			amountObject = damageSource
 		}
+		if obj, ok := lowerDamageAmountObject(effect.Amount, ctx.content.References); ok {
+			amountObject = obj
+		}
 		dynamic, ok := lowerDynamicAmount(effect.Amount, amountObject)
 		if !ok {
 			return game.AbilityContent{}, contentDiagnostic(

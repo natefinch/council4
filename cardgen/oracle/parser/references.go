@@ -182,6 +182,24 @@ func collectReferences(tokens []shared.Token, cardName string) []Reference {
 			i++
 		case i+2 < len(tokens) && equalWord(tokens[i], "that") &&
 			referencePossessiveObjectNoun(tokens[i+1]) &&
+			(equalWord(tokens[i+2], "power") || equalWord(tokens[i+2], "toughness")):
+			// "that <object>'s power" / "that <object>'s toughness" names the
+			// power or toughness of a referenced object (the prior clause's
+			// permanent, or the triggering creature of an enters trigger). The
+			// reference spans only the possessive object phrase ("that
+			// creature's"); the trailing "power"/"toughness" is the amount
+			// derivation, recognized by the dynamic-amount grammar. It backs
+			// "deals damage equal to that creature's power" (Terror of the Peaks).
+			phrase := tokens[i : i+2]
+			references = append(references, Reference{
+				Kind:   ReferenceThatObject,
+				Span:   shared.SpanOf(phrase),
+				Tokens: phrase,
+				Text:   joinTokens(phrase),
+			})
+			i++
+		case i+2 < len(tokens) && equalWord(tokens[i], "that") &&
+			referencePossessiveObjectNoun(tokens[i+1]) &&
 			(equalWord(tokens[i+2], "controller") || equalWord(tokens[i+2], "owner")):
 			// "that <object>'s controller" / "that <object>'s owner" names the
 			// controller or owner of a referenced object (the prior removal

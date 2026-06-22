@@ -678,6 +678,30 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 		}, true
 	case start+1 < len(tokens) && equalWord(tokens[start], "that") &&
 		referencePossessiveObjectNoun(tokens[start+1]) &&
+		effectWordsAt(tokens, start+2, "power") &&
+		dynamicAmountBoundary(tokens, start+3):
+		// "that <object>'s power" names the power of a referenced permanent (the
+		// prior clause's permanent, or the triggering creature of an enters
+		// trigger). The reference spans the possessive object phrase ("that
+		// creature's"); collectReferences recognizes the same span so the
+		// amount's referent binds to the antecedent. It backs "deals damage
+		// equal to that creature's power" (Terror of the Peaks).
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountSourcePower, ReferenceSpan: shared.SpanOf(tokens[start : start+2])},
+			end:    start + 3,
+		}, true
+	case start+1 < len(tokens) && equalWord(tokens[start], "that") &&
+		referencePossessiveObjectNoun(tokens[start+1]) &&
+		effectWordsAt(tokens, start+2, "toughness") &&
+		dynamicAmountBoundary(tokens, start+3):
+		// "that <object>'s toughness" is the toughness sibling of the
+		// "that <object>'s power" referenced-object amount above.
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountSourceToughness, ReferenceSpan: shared.SpanOf(tokens[start : start+2])},
+			end:    start + 3,
+		}, true
+	case start+1 < len(tokens) && equalWord(tokens[start], "that") &&
+		referencePossessiveObjectNoun(tokens[start+1]) &&
 		effectWordsAt(tokens, start+2, "mana", "value") &&
 		dynamicAmountBoundary(tokens, start+4):
 		// "that <object>'s mana value" names the mana value of a referenced

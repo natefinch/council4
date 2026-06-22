@@ -2268,6 +2268,13 @@ func lifeRiderAmountObject(
 		if !ok {
 			return lifeRiderAmountLowering{}, false
 		}
+		// A power/toughness rider whose referent binds the target of a graveyard
+		// reanimation reads the stale graveyard card rather than the fresh
+		// permanent; only the mana-value publish path tracks the card-to-permanent
+		// move, so non-mana-value characteristics fail closed here.
+		if !manaValue && reanimationManaValueAntecedent(effects, effectIndex) {
+			return lifeRiderAmountLowering{}, false
+		}
 		return lifeRiderAmountLowering{object: obj}, true
 	case compiler.ReferenceBindingPriorInstructionResult:
 		if amountRef.PriorInstruction != effectIndex-1 {
@@ -2292,7 +2299,7 @@ func lifeRiderAmountObject(
 			return lifeRiderAmountLowering{object: obj, priorPrimitive: exile}, true
 		}
 		put, ok := sequence[effectIndex-1].Primitive.(game.PutOnBattlefield)
-		if !ok || !reanimationManaValueAntecedent(effects, effectIndex) {
+		if !ok || !manaValue || !reanimationManaValueAntecedent(effects, effectIndex) {
 			return lifeRiderAmountLowering{}, false
 		}
 		return reanimationManaValuePublish(put, amountRef, effectIndex, false)

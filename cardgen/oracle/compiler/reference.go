@@ -39,6 +39,7 @@ func bindReferences(
 
 		if trigger != nil &&
 			(reference.Kind != ReferenceThatPlayer || !triggerPatternBindsThatPlayer(&trigger.Pattern)) &&
+			!thatObjectPrefersEventPermanent(*reference, trigger) &&
 			precedingSourceReferenceAfter(bound[:i], reference.Order, trigger.Order.End) {
 			reference.Binding = ReferenceBindingSource
 			continue
@@ -336,6 +337,20 @@ func precedingSourceReferenceAfter(references []CompiledReference, order shared.
 		}
 	}
 	return false
+}
+
+// thatObjectPrefersEventPermanent reports whether a demonstrative "that
+// <object>" reference should bind to the triggering permanent rather than be
+// captured by the preceding-source heuristic. After a permanent-binding trigger
+// (e.g. "another creature you control enters"), "that creature" names the
+// triggering object, not the source permanent the effect clause also mentions
+// ("this creature deals damage equal to that creature's power"). Letting it fall
+// through to the target and event-permanent bindings keeps the demonstrative
+// pointed at the entering permanent.
+func thatObjectPrefersEventPermanent(reference CompiledReference, trigger *CompiledTrigger) bool {
+	return reference.Kind == ReferenceThatObject &&
+		!trigger.Pattern.OneOrMore &&
+		triggerEventBindsPermanent(trigger.Pattern.Event)
 }
 
 func triggerEventBindsPermanent(event TriggerEvent) bool {
