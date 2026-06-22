@@ -360,6 +360,10 @@ func lowerConditionSelection(selection compiler.ConditionSelection) (game.Select
 		CombatState:     combatState,
 		MatchAnyCounter: selection.AnyCounter,
 	}
+	if selection.CounterKindKnown {
+		result.RequiredCounter = selection.CounterKind
+		result.RequiredCounterCount = opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: selection.CounterCountAtLeast})
+	}
 	if selection.MatchPowerAtLeast {
 		result.Power = opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: selection.PowerAtLeast})
 	} else if selection.PowerAtLeast != 0 {

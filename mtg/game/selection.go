@@ -178,6 +178,13 @@ type Selection struct {
 	// RequiredCounter names the counter kind required when MatchCounter is set.
 	RequiredCounter counter.Kind
 
+	// RequiredCounterCount compares the number of counters of RequiredCounter's
+	// kind the matched permanent carries ("as long as ~ has seven or more quest
+	// counters on it"). When present it imposes the comparison independently of
+	// MatchCounter and names its kind through RequiredCounter. A non-battlefield
+	// subject, which has no counters, never matches.
+	RequiredCounterCount opt.V[compare.Int]
+
 	// EnteredThisTurn requires the matched permanent to have entered the
 	// battlefield this turn ("each green creature that entered this turn"). A
 	// non-battlefield subject never matches. Placed at the end of the struct so
@@ -218,6 +225,7 @@ func (s Selection) Empty() bool {
 		!s.Toughness.Exists &&
 		!s.MatchCounter &&
 		!s.MatchAnyCounter &&
+		!s.RequiredCounterCount.Exists &&
 		!s.EnteredThisTurn &&
 		!s.MatchModified &&
 		s.ColorChoice == ColorChoiceNone &&

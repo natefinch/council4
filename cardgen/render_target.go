@@ -517,6 +517,7 @@ func renderSelectionComparisons(ctx *renderCtx, selection game.Selection) ([]str
 		{"ManaValue", selection.ManaValue},
 		{"Power", selection.Power},
 		{"Toughness", selection.Toughness},
+		{"RequiredCounterCount", selection.RequiredCounterCount},
 	} {
 		if !c.value.Exists {
 			continue
@@ -535,6 +536,13 @@ func renderSelectionComparisons(ctx *renderCtx, selection game.Selection) ([]str
 			return nil, err
 		}
 		fields = append(fields, "MatchCounter: true,", fmt.Sprintf("RequiredCounter: %s,", kind))
+	} else if selection.RequiredCounterCount.Exists {
+		ctx.need(importCounter)
+		kind, err := renderCounterKind(selection.RequiredCounter)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("RequiredCounter: %s,", kind))
 	}
 	if selection.MatchAnyCounter {
 		fields = append(fields, "MatchAnyCounter: true,")
