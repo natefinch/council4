@@ -774,6 +774,8 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		cond.ControllerGraveyardCardCountAtLeast < 0 ||
 		cond.ControllerGraveyardCardTypeCountAtLeast < 0 ||
 		cond.ControllerBasicLandTypeCountAtLeast < 0 ||
+		cond.ControllerLibrarySizeAtLeast < 0 ||
+		cond.ControllerLifeExactly.Exists && cond.ControllerLifeExactly.Val < 0 ||
 		cond.ControllerCreaturePowerDiversityAtLeast < 0 {
 		return "", fmt.Errorf("render: %s condition has a negative threshold", context)
 	}
@@ -838,6 +840,15 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	if cond.ControllerHandSizeExactly.Exists {
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("ControllerHandSizeExactly: opt.Val(%d),", cond.ControllerHandSizeExactly.Val))
+		hasPredicate = true
+	}
+	if cond.ControllerLibrarySizeAtLeast > 0 {
+		fields = append(fields, fmt.Sprintf("ControllerLibrarySizeAtLeast: %d,", cond.ControllerLibrarySizeAtLeast))
+		hasPredicate = true
+	}
+	if cond.ControllerLifeExactly.Exists {
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("ControllerLifeExactly: opt.Val(%d),", cond.ControllerLifeExactly.Val))
 		hasPredicate = true
 	}
 	if cond.AnyOpponentPoisonAtLeast > 0 {

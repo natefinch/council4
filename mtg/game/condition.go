@@ -132,6 +132,16 @@ type Condition struct {
 	// Mangara, the Diplomat). It is evaluated against live combat state and is
 	// zero (disabled) elsewhere.
 	AttackersAttackingControllerAtLeast int
+
+	// ControllerLibrarySizeAtLeast requires the context controller's library to
+	// hold at least this many cards ("if you have N or more cards in your
+	// library", Battle of Wits). Zero disables the predicate.
+	ControllerLibrarySizeAtLeast int
+
+	// ControllerLifeExactly requires the context controller's current life total
+	// to equal this value ("if you have exactly N life", Near-Death Experience).
+	// It uses opt.V so an exact-zero threshold is distinguishable from absence.
+	ControllerLifeExactly opt.V[int]
 }
 
 // ControlPlayerScope selects which players' battlefields a control-count
@@ -241,7 +251,9 @@ func (c *Condition) Empty() bool {
 		!c.EventHistory.Exists &&
 		!c.ControllerControlsCommander &&
 		!c.SpellWasKicked &&
-		c.AttackersAttackingControllerAtLeast == 0
+		c.AttackersAttackingControllerAtLeast == 0 &&
+		c.ControllerLibrarySizeAtLeast == 0 &&
+		!c.ControllerLifeExactly.Exists
 }
 
 // EventHistoryWindow selects which turn's event log an EventHistoryCondition
