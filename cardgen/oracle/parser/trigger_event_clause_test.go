@@ -531,6 +531,45 @@ func spellAndAbilityTriggerEventClauseTests() []triggerEventClauseTest {
 			},
 		},
 		{
+			name:   "creature spell mana value",
+			source: "Whenever you cast a creature spell with mana value 6 or greater, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if !clause.SpellSelection.MatchManaValue || clause.SpellSelection.ManaValueAtLeast != 6 {
+					t.Fatalf("clause = %#v", clause)
+				}
+				if len(clause.SpellSelection.Types) != 1 || clause.SpellSelection.Types[0] != TriggerCardTypeCreature {
+					t.Fatalf("types = %#v", clause.SpellSelection.Types)
+				}
+			},
+		},
+		{
+			name:   "colorless spell mana value",
+			source: "Whenever you cast a colorless spell with mana value 7 or greater, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if !clause.SpellSelection.MatchManaValue || clause.SpellSelection.ManaValueAtLeast != 7 {
+					t.Fatalf("clause = %#v", clause)
+				}
+				if !clause.SpellSelection.Colorless {
+					t.Fatalf("colorless = false, clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "artifact spell mana value",
+			source: "Whenever you cast an artifact spell with mana value 5 or greater, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if !clause.SpellSelection.MatchManaValue || clause.SpellSelection.ManaValueAtLeast != 5 {
+					t.Fatalf("clause = %#v", clause)
+				}
+				if len(clause.SpellSelection.Types) != 1 || clause.SpellSelection.Types[0] != TriggerCardTypeArtifact {
+					t.Fatalf("types = %#v", clause.SpellSelection.Types)
+				}
+			},
+		},
+		{
 			name:   "spell ordinal first",
 			source: "Whenever you cast your first spell each turn, draw a card.",
 			check: func(t *testing.T, clause *TriggerEventClause) {
