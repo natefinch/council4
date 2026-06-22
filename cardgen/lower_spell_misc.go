@@ -1155,6 +1155,18 @@ func lowerFixedDrawSpell(
 		effect.Context == parser.EffectContextReferencedObjectController
 	hasSourceCounterRef := effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount &&
 		singleSelfReference(ctx.content.References)
+	// "When this creature leaves the battlefield, draw a card for each +1/+1
+	// counter on it." (Bloodtracker) counts the +1/+1 counters on the triggering
+	// permanent. In a zone-change/dies trigger the "it"/"them" of the counter
+	// phrase binds to the event permanent rather than the live source, so the
+	// counted amount reads that permanent's last-known counters once it has left
+	// the battlefield (CR 603.10, CR 122).
+	hasEventCounterRef := effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount &&
+		len(ctx.content.References) == 1 &&
+		ctx.content.References[0].Kind == compiler.ReferencePronoun &&
+		(ctx.content.References[0].Pronoun == compiler.ReferencePronounIt ||
+			ctx.content.References[0].Pronoun == compiler.ReferencePronounThem) &&
+		ctx.content.References[0].Binding == compiler.ReferenceBindingEventPermanent
 	// "Draw a card for each creature you control with a +1/+1 counter on it."
 	// counts a counter-qualified group; the qualifier's trailing "it"/"them" is
 	// part of the counted selection, not a separate recipient, so a single such
@@ -1174,7 +1186,7 @@ func lowerFixedDrawSpell(
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		(len(ctx.content.References) != 0 && !hasEventPlayerRef && !hasReferencedControllerRef && !hasSourceCounterRef && !hasCountCounterRef) {
+		(len(ctx.content.References) != 0 && !hasEventPlayerRef && !hasReferencedControllerRef && !hasSourceCounterRef && !hasCountCounterRef && !hasEventCounterRef) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported draw spell",
@@ -1206,7 +1218,11 @@ func lowerFixedDrawSpell(
 		}
 		amount = game.Dynamic(dynamic)
 	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
-		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+		counterObject := game.SourcePermanentReference()
+		if hasEventCounterRef {
+			counterObject = game.EventPermanentReference()
+		}
+		dynamic, ok := lowerDynamicAmount(effect.Amount, counterObject)
 		if !ok || effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
