@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
@@ -127,6 +128,69 @@ func handleLookAtHand(r *effectResolver, prim game.LookAtHand) effectResolved {
 		return res
 	}
 	res.succeeded = true
+	return res
+}
+
+// handleChooseDiscardFromHand resolves the targeted hand-disruption family
+// (Coercion / Duress / Thoughtseize / Inquisition of Kozilek): the resolving
+// controller looks at the referenced player's hand, chooses one card matching
+// the filter, and that player discards it. The hand is revealed even when no
+// card matches, so the effect succeeds whenever the player resolves.
+func handleChooseDiscardFromHand(r *effectResolver, prim game.ChooseDiscardFromHand) effectResolved {
+	res := effectResolved{accepted: true}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return res
+	}
+	res.succeeded = true
+	var candidates []id.ID
+	for _, cardID := range player.Hand.All() {
+		card, ok := r.game.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		if prim.ExcludeCreature && card.Def.HasType(types.Creature) {
+			continue
+		}
+		if prim.ExcludeLand && card.Def.HasType(types.Land) {
+			continue
+		}
+		if prim.MaxManaValue.Exists && card.Def.ManaValue() > prim.MaxManaValue.Val {
+			continue
+		}
+		candidates = append(candidates, cardID)
+	}
+	if len(candidates) == 0 {
+		return res
+	}
+	options := make([]game.ChoiceOption, len(candidates))
+	for i, cardID := range candidates {
+		options[i] = game.ChoiceOption{
+			Index: i,
+			Label: cardChoiceLabel(r.game, cardID),
+			Card:  cardChoiceInfo(r.game, cardID),
+		}
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           r.obj.Controller,
+		Prompt:           "Choose a card for that player to discard",
+		Options:          options,
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: firstChoiceIndices(1),
+	}, r.log)
+	simultaneousID := r.game.IDGen.Next()
+	for _, idx := range selected {
+		if idx < 0 || idx >= len(candidates) {
+			continue
+		}
+		discardCardFromHandInBatch(r.game, playerID, candidates[idx], simultaneousID)
+	}
 	return res
 }
 

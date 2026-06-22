@@ -1527,6 +1527,15 @@ type CompiledEffect struct {
 	// HandDiscard carries the exact fixed-cardinality own-hand discard clause
 	// through the text-blind compiler boundary.
 	HandDiscard parser.HandDiscardSyntax
+	// RevealChooseDiscard marks the reveal and discard halves of a recognized
+	// "Target player reveals their hand. You choose a [filter] card from it. That
+	// player discards that card." sequence so the text-blind lowering can pair
+	// them into a single ChooseDiscardFromHand primitive.
+	RevealChooseDiscard bool
+	// HandChoiceDiscard carries the filter and coverage span of that sequence's
+	// middle "You choose..." sentence. It is set only on the discard half
+	// (HandChoiceDiscard.Present true).
+	HandChoiceDiscard parser.HandChoiceDiscardSyntax
 	// SearchSplit carries the split-destination put clause's structured fields
 	// from the parser so the search lowerer can build a SearchSpec.SplitDestination
 	// from typed slots rather than re-reading the put text.

@@ -100,10 +100,11 @@ const (
 	PrimitiveLookAtHand
 	PrimitiveRollDie
 	PrimitiveRemoveFromCombat
+	PrimitiveChooseDiscardFromHand
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveRemoveFromCombat) + 1
+const primitiveKindCount = int(PrimitiveChooseDiscardFromHand) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -186,6 +187,20 @@ type ShuffleLibrary struct {
 // state (CR 701.x look effects).
 type LookAtHand struct {
 	Player PlayerReference
+}
+
+// ChooseDiscardFromHand makes the resolving spell's controller choose a card
+// from a referenced player's revealed hand, which that player then discards
+// (the Duress / Thoughtseize / Coercion targeted-discard family). The chooser
+// is always the controller; Player names the discarding player. ExcludeCreature
+// and ExcludeLand restrict the eligible cards ("noncreature card" /
+// "nonland card"), and MaxManaValue, when set, bounds the chosen card's mana
+// value ("with mana value N or less", Inquisition of Kozilek).
+type ChooseDiscardFromHand struct {
+	Player          PlayerReference
+	ExcludeCreature bool
+	ExcludeLand     bool
+	MaxManaValue    opt.V[int]
 }
 
 // Discard causes a referenced player, or every player in a referenced group

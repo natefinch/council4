@@ -302,6 +302,25 @@ type HandDiscardSyntax struct {
 	AtRandom bool `json:",omitempty"`
 }
 
+// HandChoiceDiscardSyntax holds the structured fields of the "You choose a
+// [filter] card from it." middle sentence of a "Target player reveals their
+// hand. You choose a [filter] card from it. That player discards that card."
+// sequence (Duress, Thoughtseize, Coercion, Inquisition of Kozilek). Present
+// marks the parsed sequence; ExcludeCreature and ExcludeLand carry the
+// "noncreature" / "nonland" filter; MaxManaValue, when HasMaxManaValue is set,
+// carries the "with mana value N or less" bound. ChooseSpan covers the middle
+// sentence so the text-blind lowering can credit its tokens toward source
+// coverage. The parser sets this only on the EffectDiscard half of the
+// sequence; it is the zero value for every other effect.
+type HandChoiceDiscardSyntax struct {
+	Present         bool        `json:",omitempty"`
+	ExcludeCreature bool        `json:",omitempty"`
+	ExcludeLand     bool        `json:",omitempty"`
+	HasMaxManaValue bool        `json:",omitempty"`
+	MaxManaValue    int         `json:",omitempty"`
+	ChooseSpan      shared.Span `json:"-"`
+}
+
 // SearchSplitSlot is one single-card destination slot of a split-destination
 // library-search put clause. ToZone is the destination zone (hand or
 // battlefield); EntersTapped reports the "tapped" rider on a battlefield slot.
@@ -1606,6 +1625,18 @@ type EffectSyntax struct {
 	// effect ("roll a d20" sets DieSides to 20). It is zero for every other
 	// effect kind.
 	DieSides int `json:",omitempty"`
+	// RevealChooseDiscard marks each effect of the recognized "Target player
+	// reveals their hand. You choose a [filter] card from it. That player
+	// discards that card." sequence: it is set on both the EffectReveal half and
+	// the EffectDiscard half. The resolving controller chooses the discarded
+	// card; the filter and the middle "You choose..." sentence's coverage span
+	// live on HandChoiceDiscard (set on the EffectDiscard half). It is false for
+	// every other effect.
+	RevealChooseDiscard bool `json:",omitempty"`
+	// HandChoiceDiscard holds the filter and coverage span of a reveal-choose-
+	// discard sequence's middle "You choose a [filter] card from it." sentence.
+	// It is set only on the EffectDiscard half (HandChoiceDiscard.Present true).
+	HandChoiceDiscard HandChoiceDiscardSyntax `json:",omitzero"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend
