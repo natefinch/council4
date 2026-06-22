@@ -847,3 +847,60 @@ func TestGenerateExecutableCardSourceQualifiedLandwalkUnsupported(t *testing.T) 
 		t.Fatal("expected diagnostics for unsupported snow swampwalk, got none")
 	}
 }
+
+func TestGenerateExecutableCardSourceTraining(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Trainee",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Soldier",
+		ManaCost:   "{W}",
+		Power:      new("1"),
+		Toughness:  new("1"),
+		OracleText: "Training (Whenever this creature attacks with another creature with greater power, put a +1/+1 counter on this creature.)",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"TriggeredAbilities: []game.TriggeredAbility",
+		"game.TrainingTriggeredBody",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceSaddle(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Mount",
+		Layout:     "normal",
+		TypeLine:   "Creature — Horse Mount",
+		ManaCost:   "{1}{R}",
+		Power:      new("2"),
+		Toughness:  new("2"),
+		OracleText: "Whenever this creature attacks while saddled, it gets +1/+0 until end of turn.\nSaddle 2 (Tap any number of other creatures you control with total power 2 or more: This Mount becomes saddled until end of turn. Saddle only as a sorcery.)",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"ActivatedAbilities: []game.ActivatedAbility",
+		"game.SaddleActivatedAbility(2)",
+		"AttackWhileSaddled: true,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}

@@ -166,6 +166,16 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			plan.sacrifices = append(plan.sacrifices, chosen...)
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalTapPermanents:
+			if additional.TotalPowerAtLeast > 0 {
+				chosen := preferredTapPermanentsTotalPower(s, playerID, additional, append(plannedBattlefieldCosts(plan), reservedTapPermanents...), source, prefs)
+				if len(chosen) == 0 {
+					return plan, false
+				}
+				plan.permanentsToTap = append(plan.permanentsToTap, chosen...)
+				reservedTapPermanents = append(reservedTapPermanents, chosen...)
+				plan.paid = append(plan.paid, AdditionalCostText(additional))
+				continue
+			}
 			chosen := preferredTapPermanents(s, playerID, additional, amount, append(plannedBattlefieldCosts(plan), reservedTapPermanents...), prefs)
 			if len(chosen) != amount && prefs != nil && len(prefs.TapChoices) > 0 {
 				chosen = chooseTapPermanents(s, playerID, additional, amount, append(plannedBattlefieldCosts(plan), reservedTapPermanents...))
@@ -481,6 +491,12 @@ func AdditionalCostText(additional cost.Additional) string {
 	case cost.AdditionalTap:
 		return "{T}"
 	case cost.AdditionalTapPermanents:
+		if additional.TotalPowerAtLeast > 0 {
+			if additional.Text != "" {
+				return additional.Text
+			}
+			return fmt.Sprintf("Tap creatures with total power %d", additional.TotalPowerAtLeast)
+		}
 		return fmt.Sprintf("Tap %d permanents", AdditionalCostAmount(additional))
 	case cost.AdditionalUntap:
 		return "{Q}"

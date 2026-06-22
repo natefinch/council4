@@ -631,6 +631,10 @@ type TriggerEventClause struct {
 	// that attacks alone, i.e. the only attacking creature this combat ("attacks
 	// alone", CR 506.5 / the Exalted wording).
 	AttackAlone bool `json:",omitempty"`
+	// AttackWhileSaddled marks an attacker-declared clause restricted to combats
+	// where the attacking source is saddled ("attacks while saddled", saddle
+	// CR 702.166).
+	AttackWhileSaddled bool `json:",omitempty"`
 	// AttackerCountAtLeast restricts a controller-scoped attack clause to combats
 	// where the controller attacks with at least this many creatures ("attack
 	// with two or more creatures"). Zero imposes no minimum.

@@ -340,6 +340,9 @@ type TriggerPattern struct {
 	// AttackAlone restricts an attacker-declared pattern to a creature that
 	// attacks alone (the only attacking creature this combat).
 	AttackAlone bool
+	// AttackWhileSaddled restricts an attacker-declared pattern to combats where
+	// the attacking source is saddled ("attacks while saddled", CR 702.166).
+	AttackWhileSaddled bool
 	// AttackerCountAtLeast restricts a controller-scoped attacker-declared
 	// pattern to combats with at least this many attacking creatures. Zero
 	// imposes no minimum.

@@ -101,6 +101,11 @@ const (
 	KeywordFlanking         KeywordKind = "KeywordFlanking"
 	KeywordSoulshift        KeywordKind = "KeywordSoulshift"
 	KeywordRampage          KeywordKind = "KeywordRampage"
+	KeywordTraining         KeywordKind = "KeywordTraining"
+	// KeywordSaddle is the Saddle N keyword (Mounts, CR 702.166). Its integer
+	// parameter is the total power of other creatures that must be tapped to
+	// make the Mount saddled until end of turn.
+	KeywordSaddle KeywordKind = "KeywordSaddle"
 	// KeywordLandwalk and the typed variants below are the landwalk evasion
 	// keyword family (CR 702.14). Each typed variant keys off the defending
 	// player controlling a land of its named subtype; plain Landwalk keys off
@@ -198,6 +203,8 @@ var keywordNames = map[KeywordKind]string{
 	KeywordFlanking:         "Flanking",
 	KeywordSoulshift:        "Soulshift",
 	KeywordRampage:          "Rampage",
+	KeywordTraining:         "Training",
+	KeywordSaddle:           "Saddle",
 	KeywordLandwalk:         "Landwalk",
 	KeywordPlainswalk:       "Plainswalk",
 	KeywordIslandwalk:       "Islandwalk",
@@ -315,6 +322,8 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordFlanking, Words: []string{"flanking"}},
 	{Kind: KeywordSoulshift, Words: []string{"soulshift"}},
 	{Kind: KeywordRampage, Words: []string{"rampage"}},
+	{Kind: KeywordTraining, Words: []string{"training"}},
+	{Kind: KeywordSaddle, Words: []string{"saddle"}},
 	{Kind: KeywordNonbasicLandwalk, Words: []string{"nonbasic", "landwalk"}},
 	{Kind: KeywordLandwalk, Words: []string{"landwalk"}},
 	{Kind: KeywordPlainswalk, Words: []string{"plainswalk"}},

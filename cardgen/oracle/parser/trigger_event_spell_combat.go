@@ -485,6 +485,10 @@ func parseAttackBlockTriggerEventClause(
 			clause.AttackAlone = true
 			return clause
 		}
+		if syntaxWordsEqual(tokens[index+1:], "while", "saddled") {
+			clause.AttackWhileSaddled = true
+			return clause
+		}
 		recipient, player, ok := parseAttackRecipient(tokens[index+1:])
 		if !ok {
 			return nil

@@ -162,6 +162,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordTriggeredLowering(&flankingAbility, ability, syntax), true, nil
 	}
+	if trainingAbility, ok, diag := lowerTrainingAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordTriggeredLowering(&trainingAbility, ability, syntax), true, nil
+	}
 	if livingWeaponAbility, ok, diag := lowerLivingWeaponAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -197,6 +203,12 @@ func lowerKeywordDispatch(
 			return abilityLowering{}, true, diag
 		}
 		return keywordActivatedLowering(&outlastAbility, ability, syntax), true, nil
+	}
+	if saddleAbility, ok, diag := lowerSaddleAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordActivatedLowering(&saddleAbility, ability, syntax), true, nil
 	}
 	if eternalizeAbility, ok, diag := lowerEternalizeAbility(creatureSubtypes, ability, syntax); ok {
 		if diag != nil {
@@ -421,6 +433,38 @@ func lowerDethroneAbility(
 // reminder text is stripped), so the lowering expands the keyword to the
 // reusable typed body. It supports only the exact keyword with no other rules
 // text.
+// lowerTrainingAbility lowers a printed Training (CR 702.150) keyword to its
+// canonical attacks-with-greater-power triggered ability. Training is printed
+// bare (its reminder text is stripped), so the lowering expands the keyword to
+// the reusable typed body. It supports only the exact keyword with no other
+// rules text.
+func lowerTrainingAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.TriggeredAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordTraining {
+		return game.TriggeredAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterNone ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported "+keyword.Name+" ability",
+			"the executable source backend supports only the exact "+keyword.Name+" keyword",
+		)
+	}
+	return game.TrainingTriggeredBody, true, nil
+}
+
 func lowerFlankingAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
@@ -883,6 +927,45 @@ func lowerOutlastAbility(
 		)
 	}
 	return game.OutlastActivatedAbility(slices.Clone(keyword.ManaCost)), true, nil
+}
+
+// lowerSaddleAbility lowers a Saddle N keyword to its canonical activated
+// ability (CR 702.166): "Tap any number of other creatures you control with
+// total power N or more: This Mount becomes saddled until end of turn. Saddle
+// only as a sorcery." It mirrors lowerOutlastAbility: only an isolated,
+// integer-parameterized Saddle keyword is supported.
+func lowerSaddleAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.ActivatedAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordSaddle {
+		return game.ActivatedAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterInteger ||
+		keyword.Integer < 1 ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Saddle ability",
+			"the executable source backend supports only exact Saddle with a positive integer",
+		)
+	}
+	if !keywordOnlyCovered(syntax, keyword) {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Saddle ability",
+			"the executable source backend supports only exact Saddle with a positive integer",
+		)
+	}
+	return game.SaddleActivatedAbility(keyword.Integer), true, nil
 }
 
 // landcyclingKeywordKinds maps each typed landcycling keyword to the library

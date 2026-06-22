@@ -94,10 +94,11 @@ const (
 	PrimitiveExileTopOfLibrary
 	PrimitivePutHandOnLibraryThenDraw
 	PrimitiveRevealUntil
+	PrimitiveBecomeSaddled
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveRevealUntil) + 1
+const primitiveKindCount = int(PrimitiveBecomeSaddled) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -448,6 +449,14 @@ type Amass struct {
 type Renown struct {
 	Object ObjectReference
 	Amount Quantity
+}
+
+// BecomeSaddled performs the Saddle keyword action (CR 702.166): the referenced
+// Mount becomes saddled until end of turn. The saddled state is cleared during
+// cleanup. The effect is idempotent; saddling an already-saddled Mount leaves it
+// unchanged.
+type BecomeSaddled struct {
+	Object ObjectReference
 }
 
 // Pay prompts the controller to pay an optional cost during resolution.

@@ -604,6 +604,10 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		if keyword.Nonbasic && (keyword.AnyLand || keyword.Subtype != "") {
 			v.add(faceName, path, CardDefIssueInvalidKeywordAbility, "landwalk must not combine Nonbasic with AnyLand or a subtype")
 		}
+	case SaddleKeyword:
+		if keyword.Power <= 0 {
+			v.add(faceName, appendPath(path, "Power"), CardDefIssueInvalidKeywordAbility, "saddle power must be positive")
+		}
 	case nil:
 		v.add(faceName, path, CardDefIssueInvalidKeywordAbility, "keyword ability is nil")
 	default:
@@ -1509,6 +1513,9 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 func (v *cardDefValidator) validateAttackerCountRelations(faceName, path string, pattern *TriggerPattern) {
 	if pattern.AttackAlone && pattern.Event != EventAttackerDeclared {
 		v.add(faceName, appendPath(path, "AttackAlone"), CardDefIssueInvalidSelection, "attacks-alone trigger filter is only supported for attacker-declared events")
+	}
+	if pattern.AttackWhileSaddled && pattern.Event != EventAttackerDeclared {
+		v.add(faceName, appendPath(path, "AttackWhileSaddled"), CardDefIssueInvalidSelection, "attacks-while-saddled trigger filter is only supported for attacker-declared events")
 	}
 	if pattern.AttackerCountAtLeast == 0 {
 		return

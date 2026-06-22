@@ -255,6 +255,7 @@ func compileAttackEvent(clause *parser.TriggerEventClause, pattern *TriggerPatte
 	pattern.AttackRecipient = recipient
 	pattern.AttackRecipientSelection = selection
 	pattern.AttackAlone = clause.AttackAlone
+	pattern.AttackWhileSaddled = clause.AttackWhileSaddled
 	pattern.AttackerCountAtLeast = clause.AttackerCountAtLeast
 	return true
 }

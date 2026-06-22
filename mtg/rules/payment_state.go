@@ -99,6 +99,10 @@ func (s *rulesPaymentState) PermanentByObjectID(objectID id.ID) (*game.Permanent
 	return permanentByObjectID(s.g, objectID)
 }
 
+func (s *rulesPaymentState) PermanentPower(p *game.Permanent) int {
+	return effectivePower(s.g, p)
+}
+
 func (s *rulesPaymentState) CardInstance(cardID id.ID) (*game.CardInstance, bool) {
 	return s.g.GetCardInstance(cardID)
 }

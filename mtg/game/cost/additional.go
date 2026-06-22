@@ -129,6 +129,13 @@ type Additional struct {
 	// another creature").
 	ExcludeSource bool
 
+	// TotalPowerAtLeast, when positive, changes an AdditionalTapPermanents cost
+	// from a fixed count to "tap any number of matching permanents with total
+	// power N or more," as required by the Saddle keyword (CR 702.166). The
+	// payer taps enough matching permanents to reach the threshold; Amount is
+	// ignored when this is set.
+	TotalPowerAtLeast int
+
 	// ChoiceGroup tags this cost as one alternative within a numbered choice
 	// group printed as "<cost> or <cost>" (e.g. "sacrifice an artifact or
 	// discard a card"). Zero means a mandatory standalone cost. Costs sharing a

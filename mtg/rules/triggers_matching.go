@@ -223,6 +223,12 @@ func triggerCombatPatternMatches(g *game.Game, viewer game.PlayerID, source *gam
 	if pattern.AttackedPlayerHasMostLife && !attackedPlayerHasMostLife(g, event) {
 		return false
 	}
+	if pattern.AttacksWithGreaterPowerCreature && !attacksWithGreaterPowerCreature(g, source, event) {
+		return false
+	}
+	if pattern.AttackWhileSaddled && !source.Saddled {
+		return false
+	}
 	if !pattern.DamageRecipientSelection.Empty() &&
 		event.DamageRecipient == game.DamageRecipientPermanent &&
 		!triggerSelectionMatches(g, viewer, event, event.PermanentID, &pattern.DamageRecipientSelection, source.ObjectID) {
@@ -329,6 +335,31 @@ func attackedPlayerHasMostLife(g *game.Game, event game.Event) bool {
 		}
 	}
 	return true
+}
+
+// attacksWithGreaterPowerCreature reports whether, in the current combat,
+// another attacking creature has power greater than the ability's source
+// (training CR 702.150). The full attacker declaration is recorded in
+// g.Combat.Attackers before any attacker-declared event is processed, so the
+// comparison is authoritative when the source's own attack triggers.
+func attacksWithGreaterPowerCreature(g *game.Game, source *game.Permanent, event game.Event) bool {
+	if event.Kind != game.EventAttackerDeclared || g.Combat == nil {
+		return false
+	}
+	sourcePower := effectivePower(g, source)
+	for _, declaration := range g.Combat.Attackers {
+		if declaration.Attacker == source.ObjectID {
+			continue
+		}
+		other, ok := permanentByObjectID(g, declaration.Attacker)
+		if !ok {
+			continue
+		}
+		if effectivePower(g, other) > sourcePower {
+			return true
+		}
+	}
+	return false
 }
 
 func attackRecipientMatches(filter game.AttackRecipientKind, event game.Event) bool {
