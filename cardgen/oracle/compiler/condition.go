@@ -179,6 +179,7 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 	case parser.ConditionPredicateCardWouldGoToGraveyard:
 		condition.Predicate = ConditionPredicateCardWouldGoToGraveyard
 		condition.GraveyardRedirectScope = compileGraveyardRedirectScope(clause.GraveyardRedirectScope)
+		condition.GraveyardRedirectControlScope = compileGraveyardRedirectControlScope(clause.GraveyardRedirectControlScope)
 		condition.GraveyardFromBattlefieldOnly = clause.GraveyardFromBattlefieldOnly
 		for _, value := range clause.GraveyardSubjectTypesAny {
 			condition.GraveyardSubjectTypesAny = append(condition.GraveyardSubjectTypesAny, compileTriggerCardType(value))
@@ -449,6 +450,17 @@ func compileGraveyardRedirectScope(value parser.GraveyardRedirectScope) Graveyar
 		return GraveyardRedirectScopeOpponent
 	default:
 		return GraveyardRedirectScopeAny
+	}
+}
+
+func compileGraveyardRedirectControlScope(value parser.GraveyardRedirectControlScope) GraveyardRedirectControlScope {
+	switch value {
+	case parser.GraveyardRedirectControlScopeYou:
+		return GraveyardRedirectControlScopeYou
+	case parser.GraveyardRedirectControlScopeOpponent:
+		return GraveyardRedirectControlScopeOpponent
+	default:
+		return GraveyardRedirectControlScopeAny
 	}
 }
 

@@ -19,7 +19,7 @@ func graveyardRedirectPermanent(
 		CardFace: game.CardFace{
 			Name: "Voidkeeper",
 			ReplacementAbilities: []game.ReplacementAbility{
-				game.GraveyardRedirectReplacement("redirect", ownerFilter, fromBattlefieldOnly, cardTypes...),
+				game.GraveyardRedirectReplacement("redirect", ownerFilter, game.TriggerControllerAny, fromBattlefieldOnly, cardTypes...),
 			},
 		},
 	}
@@ -110,5 +110,52 @@ func TestGraveyardRedirectBattlefieldOnlySparesHandDiscard(t *testing.T) {
 	}
 	if !g.Players[game.Player1].Exile.Contains(permanent.CardInstanceID) {
 		t.Fatal("battlefield-only redirect did not exile a permanent leaving the battlefield")
+	}
+}
+
+func graveyardDeathRedirectPermanent(
+	g *game.Game,
+	controller game.PlayerID,
+	controlFilter game.TriggerControllerFilter,
+	cardTypes ...types.Card,
+) *game.Permanent {
+	def := &game.CardDef{
+		CardFace: game.CardFace{
+			Name: "Voidwatcher",
+			ReplacementAbilities: []game.ReplacementAbility{
+				game.GraveyardRedirectReplacement("redirect", game.TriggerControllerAny, controlFilter, true, cardTypes...),
+			},
+		},
+	}
+	permanent := addCombatPermanent(g, controller, def)
+	registerPermanentReplacementEffects(g, permanent)
+	return permanent
+}
+
+func TestGraveyardRedirectControlScopeExilesOpponentsDyingCreature(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	graveyardDeathRedirectPermanent(g, game.Player1, game.TriggerControllerOpponent, types.Creature)
+
+	ownCreature := addCombatPermanent(g, game.Player1, &game.CardDef{
+		CardFace: game.CardFace{Name: "Mine", Types: []types.Card{types.Creature}},
+	})
+	if !movePermanentToZone(g, ownCreature, zone.Graveyard) {
+		t.Fatal("movePermanentToZone() = false, want true")
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(ownCreature.CardInstanceID) {
+		t.Fatal("opponent-control redirect wrongly exiled the controller's own dying creature")
+	}
+
+	oppCreature := addCombatPermanent(g, game.Player2, &game.CardDef{
+		CardFace: game.CardFace{Name: "Theirs", Types: []types.Card{types.Creature}},
+	})
+	if !movePermanentToZone(g, oppCreature, zone.Graveyard) {
+		t.Fatal("movePermanentToZone() = false, want true")
+	}
+	if g.Players[game.Player2].Graveyard.Contains(oppCreature.CardInstanceID) {
+		t.Fatal("opponent-control redirect did not move the dying creature away from the graveyard")
+	}
+	if !g.Players[game.Player2].Exile.Contains(oppCreature.CardInstanceID) {
+		t.Fatal("opponent-control redirect did not exile the opponent's dying creature")
 	}
 }

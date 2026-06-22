@@ -1629,6 +1629,7 @@ func TestLowerGraveyardRedirectReplacement(t *testing.T) {
 		typeLine            string
 		oracle              string
 		ownerFilter         game.TriggerControllerFilter
+		controlFilter       game.TriggerControllerFilter
 		cardTypes           []types.Card
 		fromBattlefieldOnly bool
 	}{
@@ -1658,6 +1659,23 @@ func TestLowerGraveyardRedirectReplacement(t *testing.T) {
 			ownerFilter:         game.TriggerControllerAny,
 			fromBattlefieldOnly: true,
 		},
+		{
+			name:                "creature an opponent controls would die",
+			typeLine:            "Creature — Shade",
+			oracle:              "If a creature an opponent controls would die, exile it instead.",
+			ownerFilter:         game.TriggerControllerAny,
+			controlFilter:       game.TriggerControllerOpponent,
+			cardTypes:           []types.Card{types.Creature},
+			fromBattlefieldOnly: true,
+		},
+		{
+			name:                "creature would die",
+			typeLine:            "Artifact",
+			oracle:              "If a creature would die, exile it instead.",
+			ownerFilter:         game.TriggerControllerAny,
+			cardTypes:           []types.Card{types.Creature},
+			fromBattlefieldOnly: true,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -1680,6 +1698,9 @@ func TestLowerGraveyardRedirectReplacement(t *testing.T) {
 			}
 			if replacement.RedirectOwnerFilter != test.ownerFilter {
 				t.Fatalf("owner filter = %v, want %v", replacement.RedirectOwnerFilter, test.ownerFilter)
+			}
+			if replacement.RedirectControlFilter != test.controlFilter {
+				t.Fatalf("control filter = %v, want %v", replacement.RedirectControlFilter, test.controlFilter)
 			}
 			if !slices.Equal(replacement.RedirectTypeFilter, test.cardTypes) {
 				t.Fatalf("type filter = %v, want %v", replacement.RedirectTypeFilter, test.cardTypes)

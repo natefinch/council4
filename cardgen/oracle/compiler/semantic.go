@@ -585,6 +585,17 @@ const (
 	GraveyardRedirectScopeOpponent
 )
 
+// GraveyardRedirectControlScope identifies, for a "would die" card-to-graveyard
+// replacement, who controls the dying permanent the replacement watches.
+type GraveyardRedirectControlScope uint8
+
+// Graveyard redirect control scopes recognized by the semantic compiler.
+const (
+	GraveyardRedirectControlScopeAny GraveyardRedirectControlScope = iota
+	GraveyardRedirectControlScopeYou
+	GraveyardRedirectControlScopeOpponent
+)
+
 // ConditionEventHistoryWindow identifies which turn's event log to search.
 type ConditionEventHistoryWindow uint8
 
@@ -806,6 +817,12 @@ type CompiledCondition struct {
 	GraveyardRedirectScope       GraveyardRedirectScope
 	GraveyardSubjectTypesAny     []TriggerCardType
 	GraveyardFromBattlefieldOnly bool
+
+	// GraveyardRedirectControlScope carries the control qualifier of a "would
+	// die" ConditionPredicateCardWouldGoToGraveyard clause: who controls the
+	// dying permanent the replacement watches. It is GraveyardRedirectControlScopeAny
+	// for owner-scoped "would be put into a graveyard" forms.
+	GraveyardRedirectControlScope GraveyardRedirectControlScope
 
 	// CounterRecipientTypesAny carries the type-union recipient filter of a
 	// ConditionPredicateCounterPlacementOnControlledPermanent clause ("an

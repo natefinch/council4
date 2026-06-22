@@ -518,6 +518,14 @@ type ReplacementEffect struct {
 	// ContinuousZoneRedirect is true.
 	RedirectTypeFilter []types.Card
 
+	// RedirectControlFilter restricts a ContinuousZoneRedirect replacement by the
+	// controller of the dying permanent relative to the replacement's controller,
+	// for "would die" forms ("If a creature an opponent controls would die, exile
+	// it instead."): You watches the controller's own permanents, Opponent an
+	// opponent's, and Any every controller's. It is only meaningful when
+	// ContinuousZoneRedirect is true, and applies in addition to RedirectOwnerFilter.
+	RedirectControlFilter TriggerControllerFilter
+
 	// AffectedObjectID restricts the replacement to events about a single
 	// permanent identified by its object ID. When non-zero, the replacement
 	// matches only an event whose moving permanent is exactly this object,
