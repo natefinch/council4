@@ -980,6 +980,17 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		switch {
 		case kind == EffectDealDamage && amount.DynamicForm == EffectDynamicAmountFormWhereX:
 			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
+		case kind == EffectDealDamage && amount.DynamicForm == EffectDynamicAmountFormEqual && groupDamageRecipientFollowsAmount(clause, amount):
+			// "deals damage equal to its power to each opponent" embeds the
+			// "equal to ..." amount phrase before the recipient group, so the
+			// full clause folds the amount's "its power" referent into the
+			// recipient selection. Scope the recipient Selection to the run of
+			// tokens after the amount (the "each <group>" phrase) so the amount's
+			// referent does not bleed into the recipient. The WhereX case above
+			// is the mirror image, where the count phrase trails the recipient.
+			if recipient, ok := damageRecipientTokensAfterAmount(clause, amount); ok {
+				selectionClause = recipient
+			}
 		case kind == EffectCreate && trailingDynamicCountInClause(clause, amount):
 			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
 		case hasAttackDefender:
@@ -3443,6 +3454,17 @@ func parseDamageRecipientPair(kind EffectKind, clause []shared.Token, amount Eff
 		parseSelection(left, atoms),
 		parseSelection(right, atoms),
 	}
+}
+
+// groupDamageRecipientFollowsAmount reports whether a deal-damage clause whose
+// amount is a dynamic "equal to ..." phrase is followed by an "each <group>"
+// recipient ("deals damage equal to its power to each opponent"). It gates the
+// recipient-scoping rewrite so it applies only to group recipients and never
+// disturbs the single-target form ("deals damage equal to its power to any
+// target"), whose recipient is a chosen target parsed separately.
+func groupDamageRecipientFollowsAmount(clause []shared.Token, amount EffectAmountSyntax) bool {
+	recipient, ok := damageRecipientTokensAfterAmount(clause, amount)
+	return ok && len(recipient) > 0 && equalWord(recipient[0], "each")
 }
 
 // damageRecipientTokensAfterAmount returns the recipient tokens of a deal-damage

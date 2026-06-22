@@ -1767,7 +1767,8 @@ func exactGroupDynamicDamageText(effect *EffectSyntax, prefix, text string) bool
 	case EffectDynamicAmountFormWhereX:
 		return text == fmt.Sprintf("%s X damage to %s, %s.", prefix, recipient, effect.Amount.Text)
 	case EffectDynamicAmountFormEqual:
-		return text == fmt.Sprintf("%s damage to %s %s.", prefix, recipient, effect.Amount.Text)
+		return text == fmt.Sprintf("%s damage to %s %s.", prefix, recipient, effect.Amount.Text) ||
+			text == fmt.Sprintf("%s damage %s to %s.", prefix, effect.Amount.Text, recipient)
 	default:
 		return false
 	}

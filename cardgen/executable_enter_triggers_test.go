@@ -918,3 +918,43 @@ func TestGenerateExecutableCardSourceEnterDamageEqualToThatCreaturesPower(t *tes
 		}
 	}
 }
+
+// TestGenerateExecutableCardSourceEnterDamageEqualToPowerEachOpponent proves the
+// Champion-of-the-Path payoff shape, in which the entering creature's power feeds
+// damage dealt to each opponent rather than a single chosen target.
+func TestGenerateExecutableCardSourceEnterDamageEqualToPowerEachOpponent(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Champion Test",
+		Layout:     "normal",
+		ManaCost:   "{3}{R}",
+		TypeLine:   "Creature — Elemental",
+		OracleText: "Whenever another creature you control enters, it deals damage equal to its power to each opponent.",
+		Colors:     []string{"R"},
+		Power:      new("3"),
+		Toughness:  new("3"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EventPermanentEnteredBattlefield",
+		"game.TriggerControllerYou",
+		"ExcludeSelf:",
+		"game.DynamicAmountObjectPower",
+		// The amount reads the entering (triggering) creature's power.
+		"Object:     game.EventPermanentReference()",
+		// The recipient is the group of opponents, not a chosen target.
+		"game.PlayerGroupDamageRecipient(game.OpponentsReference())",
+		// "it deals" makes the entering creature the damage source.
+		"DamageSource: opt.Val(game.EventPermanentReference())",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
