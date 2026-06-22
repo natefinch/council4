@@ -344,6 +344,20 @@ func TestParseStaticControlledCreaturesSourcePowerFilteredCantBeBlockedDeclarati
 	}
 }
 
+func TestParseStaticControlledCreaturesPossessiveSourcePowerFilteredCantBeBlockedDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t, "Creatures you control with power greater than this creature's power can't be blocked.", Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	group := declarations[0].Subject.Group
+	if group.Kind != EffectStaticSubjectControlledCreatures ||
+		!group.PowerGreaterThanSource || group.PowerLessThanSource ||
+		group.MatchPower || group.MatchToughness {
+		t.Fatalf("group = %#v, want possessive source-power-greater filtered controlled-creatures filter", group)
+	}
+}
+
 func TestParseStaticControlledCreaturesRuleFailsClosed(t *testing.T) {
 	t.Parallel()
 	// Only the unconditional and color/counter-filtered "can't be blocked"
@@ -356,7 +370,6 @@ func TestParseStaticControlledCreaturesRuleFailsClosed(t *testing.T) {
 		"Creatures you control can't be blocked by more than one creature.",
 		"Creatures you control with flying can't be blocked.",
 		"Goblins you control can't be blocked.",
-		"Creatures you control with power greater than this creature's power can't be blocked.",
 	}
 	for _, source := range rejected {
 		document, diagnostics := Parse(source, Context{})
@@ -372,6 +385,59 @@ func TestParseStaticControlledCreaturesRuleFailsClosed(t *testing.T) {
 				t.Fatalf("Parse(%q) produced a controlled-creatures rule declaration, want fail closed", source)
 			}
 		}
+	}
+}
+
+func TestParseStaticBattlefieldCreaturesCantBlockSourceDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t, "Creatures with power less than this creature's power can't block it.", Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationRule {
+		t.Fatalf("kind = %v, want rule", declaration.Kind)
+	}
+	rule := declaration.Rule
+	if rule.Subject.Kind != StaticRuleSubjectBattlefieldCreatures ||
+		rule.Constraint.Kind != StaticRuleConstraintProhibition ||
+		rule.Operation.Kind != StaticRuleOperationBlock ||
+		rule.Operation.Voice != StaticRuleVoiceActive ||
+		rule.BlockedObject != StaticRuleBlockedObjectSource {
+		t.Fatalf("rule = %#v, want battlefield-creatures can't-block-source restriction", rule)
+	}
+	if !declaration.Subject.Group.PowerLessThanSource || declaration.Subject.Group.PowerGreaterThanSource {
+		t.Fatalf("group = %#v, want power-less-than-source filtered blockers", declaration.Subject.Group)
+	}
+}
+
+func TestParseStaticBattlefieldCreaturesCantBlockControlledDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t, "Creatures with power less than this creature's power can't block creatures you control.", Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	rule := declarations[0].Rule
+	if rule.Subject.Kind != StaticRuleSubjectBattlefieldCreatures ||
+		rule.Operation.Kind != StaticRuleOperationBlock ||
+		rule.Operation.Voice != StaticRuleVoiceActive ||
+		rule.BlockedObject != StaticRuleBlockedObjectControlledCreatures {
+		t.Fatalf("rule = %#v, want battlefield-creatures can't-block-controlled restriction", rule)
+	}
+}
+
+func TestParseStaticBattlefieldCreaturesCantBlockUnconditionalDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t, "Creatures can't block.", Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	rule := declarations[0].Rule
+	if rule.Subject.Kind != StaticRuleSubjectBattlefieldCreatures ||
+		rule.Operation.Kind != StaticRuleOperationBlock ||
+		rule.Operation.Voice != StaticRuleVoiceActive ||
+		rule.BlockedObject != StaticRuleBlockedObjectNone {
+		t.Fatalf("rule = %#v, want unconditional battlefield-creatures can't-block restriction", rule)
 	}
 }
 
