@@ -650,6 +650,72 @@ func annihilatorLineRank(line string) (int, bool) {
 	return rank, true
 }
 
+// expandAfterlifeKeyword rewrites each printed "Afterlife N" keyword line into
+// the dies-triggered token creation it abbreviates: "When this creature dies,
+// create N 1/1 white and black Spirit creature tokens with flying." (CR
+// 702.135). Afterlife is pure shorthand for that death trigger, so expanding it
+// to canonical wording lets the standard trigger pipeline lower it. The rewrite
+// is parser-owned because it is a wording substitution; downstream stages see
+// only the expanded ability.
+func expandAfterlifeKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		rank, ok := afterlifeLineRank(line)
+		if !ok {
+			continue
+		}
+		lines[i] = afterlifeCanonicalText(rank)
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
+
+// afterlifeCanonicalText is the dies-triggered ability that the printed
+// "Afterlife N" keyword abbreviates, with N spelled as its Oracle wording.
+func afterlifeCanonicalText(rank int) string {
+	if rank == 1 {
+		return "When this creature dies, create a 1/1 white and black Spirit creature token with flying."
+	}
+	word, ok := cardinalWord(rank)
+	if !ok {
+		word = strconv.Itoa(rank)
+	}
+	return "When this creature dies, create " + word + " 1/1 white and black Spirit creature tokens with flying."
+}
+
+// afterlifeLineRank reports the rank N of a line that is exactly the printed
+// "Afterlife N" keyword, optionally followed only by its parenthesized reminder
+// text. Lines that merely contain the word elsewhere, or pair it with other
+// rules text, are left untouched.
+func afterlifeLineRank(line string) (int, bool) {
+	const prefix = "Afterlife "
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, prefix) {
+		return 0, false
+	}
+	rest := strings.TrimSpace(trimmed[len(prefix):])
+	digits := 0
+	for digits < len(rest) && rest[digits] >= '0' && rest[digits] <= '9' {
+		digits++
+	}
+	if digits == 0 {
+		return 0, false
+	}
+	rank, err := strconv.Atoi(rest[:digits])
+	if err != nil || rank <= 0 {
+		return 0, false
+	}
+	tail := strings.TrimSpace(rest[digits:])
+	if tail != "" && (!strings.HasPrefix(tail, "(") || !strings.HasSuffix(tail, ")")) {
+		return 0, false
+	}
+	return rank, true
+}
+
 // expandRenownKeyword rewrites each printed "Renown N" keyword line into the
 // triggered ability it abbreviates. Renown is pure shorthand for a fixed
 // triggered ability (CR 702.111), so expanding it to canonical wording lets the

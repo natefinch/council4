@@ -497,6 +497,49 @@ func TestExpandAnnihilatorKeywordLeavesOtherTextAlone(t *testing.T) {
 	}
 }
 
+func TestExpandAfterlifeKeyword(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		source string
+		want   string
+	}{
+		{
+			"ministrant of obligation",
+			"Afterlife 2 (When this creature dies, create two 1/1 white and black Spirit creature tokens with flying.)",
+			"When this creature dies, create two 1/1 white and black Spirit creature tokens with flying.",
+		},
+		{
+			"single token",
+			"Afterlife 1",
+			"When this creature dies, create a 1/1 white and black Spirit creature token with flying.",
+		},
+		{
+			"bare keyword three",
+			"Afterlife 3",
+			"When this creature dies, create three 1/1 white and black Spirit creature tokens with flying.",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			if got := expandAfterlifeKeyword(test.source); got != test.want {
+				t.Fatalf("expandAfterlifeKeyword = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+func TestExpandAfterlifeKeywordLeavesOtherTextAlone(t *testing.T) {
+	t.Parallel()
+	if got := expandAfterlifeKeyword("Whenever Afterlife dies, draw a card."); got != "Whenever Afterlife dies, draw a card." {
+		t.Fatalf("rewrote unrelated line: %q", got)
+	}
+	if got := expandAfterlifeKeyword("Afterlife"); got != "Afterlife" {
+		t.Fatalf("rewrote rankless keyword: %q", got)
+	}
+}
+
 func TestExpandBattleCryKeyword(t *testing.T) {
 	t.Parallel()
 	want := "Whenever this creature attacks, each other attacking creature gets +1/+0 until end of turn."
