@@ -497,40 +497,22 @@ func lowerTriggerZone(triggerZone compiler.TriggerZone) (zone.Type, bool) {
 	}
 }
 
+// lowerTriggerSelection projects a trigger-subject filter onto the canonical
+// game.Selection. It is a thin adapter over the shared SelectionForSelector
+// projector: triggerSelectionSelector translates the parallel TriggerSelection
+// clone enums into a compiler.CompiledSelector, SelectionForSelectorMasked maps
+// that onto the runtime Selection, and the few dimensions whose trigger enum
+// sets differ from the shared enums (the required card-type nouns, the
+// controller relation, and the keyword filters) are mapped explicitly with the
+// per-enum helpers afterward. Routing through the canonical projector lets
+// triggered abilities inherit every Selection dimension automatically instead of
+// maintaining a second hand-written projector.
 func lowerTriggerSelection(selection compiler.TriggerSelection) (game.Selection, bool) {
 	required, ok := lowerTriggerCardTypes(selection.RequiredTypes)
 	if !ok {
 		return game.Selection{}, false
 	}
 	requiredAny, ok := lowerTriggerCardTypes(selection.RequiredTypesAny)
-	if !ok {
-		return game.Selection{}, false
-	}
-	excluded, ok := lowerTriggerCardTypes(selection.ExcludedTypes)
-	if !ok {
-		return game.Selection{}, false
-	}
-	supertypes, ok := lowerTriggerSupertypes(selection.Supertypes)
-	if !ok {
-		return game.Selection{}, false
-	}
-	subtypes, ok := lowerTriggerSubtypes(selection.SubtypesAny)
-	if !ok {
-		return game.Selection{}, false
-	}
-	colors, ok := lowerTriggerColors(selection.ColorsAny)
-	if !ok {
-		return game.Selection{}, false
-	}
-	excludedColors, ok := lowerTriggerColors(selection.ExcludedColors)
-	if !ok {
-		return game.Selection{}, false
-	}
-	tapped, ok := lowerTriggerTriState(selection.Tapped)
-	if !ok {
-		return game.Selection{}, false
-	}
-	combatState, ok := lowerTriggerCombatState(selection.CombatState)
 	if !ok {
 		return game.Selection{}, false
 	}
@@ -542,48 +524,117 @@ func lowerTriggerSelection(selection compiler.TriggerSelection) (game.Selection,
 	if !ok {
 		return game.Selection{}, false
 	}
-	manaValue, ok := lowerTriggerNumberFilter(selection.ManaValue)
+	controller, ok := lowerTriggerSelectionController(selection.Controller)
 	if !ok {
 		return game.Selection{}, false
+	}
+	selector, mask, ok := triggerSelectionSelector(selection)
+	if !ok {
+		return game.Selection{}, false
+	}
+	result, ok := SelectionForSelectorMasked(selector, mask)
+	if !ok {
+		return game.Selection{}, false
+	}
+	// The trigger required-type nouns, controller, and keyword filters carry
+	// their own clone enums whose value sets differ from the shared selector
+	// enums (the trigger controller collapses "opponent" onto NotYou), so they
+	// are mapped with the per-enum helpers rather than through the selector.
+	result.RequiredTypes = required
+	result.RequiredTypesAny = requiredAny
+	result.Controller = controller
+	result.Keyword = keyword
+	result.ExcludedKeyword = excludedKeyword
+	return result, true
+}
+
+// triggerSelectionSelector translates a TriggerSelection's shared-enum filter
+// dimensions into a compiler.CompiledSelector and the mask that reproduces the
+// trigger projector's behavior. It fails closed on any clone-enum value the
+// per-enum helpers cannot translate. The required card-type nouns, controller,
+// and keyword filters are mapped by lowerTriggerSelection directly because their
+// clone enums differ from the shared selector enums.
+func triggerSelectionSelector(selection compiler.TriggerSelection) (compiler.CompiledSelector, SelectionMask, bool) {
+	excluded, ok := lowerTriggerCardTypes(selection.ExcludedTypes)
+	if !ok {
+		return compiler.CompiledSelector{}, SelectionMask{}, false
+	}
+	supertypes, ok := lowerTriggerSupertypes(selection.Supertypes)
+	if !ok {
+		return compiler.CompiledSelector{}, SelectionMask{}, false
+	}
+	subtypes, ok := lowerTriggerSubtypes(selection.SubtypesAny)
+	if !ok {
+		return compiler.CompiledSelector{}, SelectionMask{}, false
+	}
+	colors, ok := lowerTriggerColors(selection.ColorsAny)
+	if !ok {
+		return compiler.CompiledSelector{}, SelectionMask{}, false
+	}
+	excludedColors, ok := lowerTriggerColors(selection.ExcludedColors)
+	if !ok {
+		return compiler.CompiledSelector{}, SelectionMask{}, false
+	}
+	tapped, ok := lowerTriggerTriState(selection.Tapped)
+	if !ok {
+		return compiler.CompiledSelector{}, SelectionMask{}, false
+	}
+	combatState, ok := lowerTriggerCombatState(selection.CombatState)
+	if !ok {
+		return compiler.CompiledSelector{}, SelectionMask{}, false
 	}
 	power, ok := lowerTriggerNumberFilter(selection.Power)
 	if !ok {
-		return game.Selection{}, false
+		return compiler.CompiledSelector{}, SelectionMask{}, false
 	}
 	toughness, ok := lowerTriggerNumberFilter(selection.Toughness)
 	if !ok {
-		return game.Selection{}, false
+		return compiler.CompiledSelector{}, SelectionMask{}, false
 	}
-	result := game.Selection{
-		RequiredTypes:    required,
-		RequiredTypesAny: requiredAny,
-		ExcludedTypes:    excluded,
-		Supertypes:       supertypes,
-		SubtypesAny:      subtypes,
-		ColorsAny:        colors,
-		ExcludedColors:   excludedColors,
-		Colorless:        selection.Colorless,
-		Multicolored:     selection.Multicolored,
-		Tapped:           tapped,
-		CombatState:      combatState,
-		Keyword:          keyword,
-		ExcludedKeyword:  excludedKeyword,
-		ManaValue:        manaValue,
-		Power:            power,
-		Toughness:        toughness,
-		NonToken:         selection.NonToken,
-		TokenOnly:        selection.TokenOnly,
-	}
-	if selection.SubtypeFromEntryChoice {
-		result.SubtypeChoice = game.SubtypeChoiceSourceEntry
-	}
-	result.Controller, ok = lowerTriggerSelectionController(selection.Controller)
+	manaValue, ok := lowerTriggerNumberFilter(selection.ManaValue)
 	if !ok {
-		return game.Selection{}, false
+		return compiler.CompiledSelector{}, SelectionMask{}, false
 	}
-	if selection.MatchManaValue {
+
+	selector := compiler.CompiledSelector{
+		Kind:                   compiler.SelectorPermanent,
+		Colorless:              selection.Colorless,
+		Multicolored:           selection.Multicolored,
+		NonToken:               selection.NonToken,
+		TokenOnly:              selection.TokenOnly,
+		SubtypeFromEntryChoice: selection.SubtypeFromEntryChoice,
+		MatchAnyCounter:        selection.MatchAnyCounter,
+	}
+
+	switch tapped {
+	case game.TriTrue:
+		selector.Tapped = true
+	case game.TriFalse:
+		selector.Untapped = true
+	default:
+	}
+
+	switch combatState {
+	case game.CombatStateAttacking:
+		selector.Attacking = true
+	case game.CombatStateBlocking:
+		selector.Blocking = true
+	default:
+	}
+
+	if power.Exists {
+		selector.MatchPower = true
+		selector.Power = power.Val
+	}
+	if toughness.Exists {
+		selector.MatchToughness = true
+		selector.Toughness = toughness.Val
+	}
+
+	switch {
+	case selection.MatchManaValue:
 		if selection.ManaValue.Comparison != compiler.TriggerComparisonUnknown {
-			return game.Selection{}, false
+			return compiler.CompiledSelector{}, SelectionMask{}, false
 		}
 		op := compare.GreaterOrEqual
 		value := selection.ManaValueAtLeast
@@ -591,14 +642,25 @@ func lowerTriggerSelection(selection compiler.TriggerSelection) (game.Selection,
 			op = compare.LessOrEqual
 			value = selection.ManaValueAtMost
 		}
-		result.ManaValue = opt.Val(compare.Int{
-			Op:    op,
-			Value: value,
-		})
-	} else if selection.ManaValueAtLeast != 0 || selection.ManaValueAtMost != 0 {
-		return game.Selection{}, false
+		selector.MatchManaValue = true
+		selector.ManaValue = compare.Int{Op: op, Value: value}
+	case selection.ManaValueAtLeast != 0 || selection.ManaValueAtMost != 0:
+		return compiler.CompiledSelector{}, SelectionMask{}, false
+	case manaValue.Exists:
+		selector.MatchManaValue = true
+		selector.ManaValue = manaValue.Val
+	default:
 	}
-	return result, true
+
+	selector = selector.WithAtoms(compiler.CompiledSelectorAtoms{
+		ExcludedTypes:  excluded,
+		Supertypes:     supertypes,
+		SubtypesAny:    subtypes,
+		ColorsAny:      colors,
+		ExcludedColors: excludedColors,
+	})
+
+	return selector, SelectionMask{}, true
 }
 
 // selectionTargetPredicate converts a lowered Selection into the equivalent

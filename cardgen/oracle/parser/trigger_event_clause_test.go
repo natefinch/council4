@@ -1,6 +1,8 @@
 package parser
 
-import "testing"
+import (
+	"testing"
+)
 
 func selectionHasSubtype(selection TriggerSelection, name string) bool {
 	for _, sub := range selection.SubtypesAny {
@@ -52,8 +54,36 @@ func triggerEventClauseTests() []triggerEventClauseTest {
 	tests = append(tests, enterAttackUnionTriggerEventClauseTests()...)
 	tests = append(tests, chosenTypeZoneChangeTriggerEventClauseTests()...)
 	tests = append(tests, damageAndCounterTriggerEventClauseTests()...)
+	tests = append(tests, subjectQualifierTriggerEventClauseTests()...)
 	tests = append(tests, stateAndOtherTriggerEventClauseTests()...)
 	return tests
+}
+
+func subjectQualifierTriggerEventClauseTests() []triggerEventClauseTest {
+	return []triggerEventClauseTest{
+		{
+			name:   "subject base power enters",
+			source: "Whenever another creature you control with base power 1 enters, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				power := clause.Subject.Selection.Power
+				if power.Comparison != TriggerSelectionComparisonEqual || power.Value != 1 {
+					t.Fatalf("base power = %#v, want {Equal, 1}", power)
+				}
+			},
+		},
+		{
+			name:   "subject any counter combat damage",
+			source: "Whenever a creature you control with a counter on it deals combat damage to a player, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				selection := clause.DamageSource.Selection
+				if !selection.MatchAnyCounter {
+					t.Fatalf("selection = %#v, want MatchAnyCounter", selection)
+				}
+			},
+		},
+	}
 }
 
 func chosenTypeSpellTriggerEventClauseTests() []triggerEventClauseTest {

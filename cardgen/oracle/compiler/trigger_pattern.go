@@ -295,6 +295,9 @@ type TriggerSelection struct {
 	Power            TriggerNumberFilter
 	Toughness        TriggerNumberFilter
 	Controller       ControllerKind
+	// MatchAnyCounter records a kind-agnostic "with a counter on it" subject
+	// qualifier. It lowers to the matching CompiledSelector counter dimension.
+	MatchAnyCounter bool
 	// SubtypeFromEntryChoice requires the matched object to share the creature
 	// subtype the predicate's source permanent chose as it entered ("of the
 	// chosen type"). It lowers to Selection.SubtypeFromSourceEntryChoice.
