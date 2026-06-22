@@ -96,6 +96,16 @@ type StackObject struct {
 	// XValue is the chosen value of X for spells with {X} in their cost.
 	XValue int
 
+	// ColorsOfManaSpentToCast is the number of distinct colors of mana spent to
+	// cast this spell, recorded as its costs are paid (CR 202.2, CR 702.76). It
+	// backs the Converge count ("for each color of mana spent to cast it"),
+	// including the enters-with-counters quantity on the resulting permanent,
+	// where the synthetic enter-the-battlefield object carries it forward from
+	// the spell's creation options. Colorless mana contributes no color, so it
+	// is zero for a spell paid entirely with colorless or generic-from-colorless
+	// mana.
+	ColorsOfManaSpentToCast int
+
 	// KickerPaid is true if the kicker cost was paid.
 	KickerPaid bool
 

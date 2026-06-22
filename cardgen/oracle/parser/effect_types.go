@@ -497,6 +497,14 @@ const (
 	// counter-placement trigger and fails closed elsewhere. Added last so
 	// existing kinds keep their values.
 	EffectDynamicAmountTriggeringCounterCount EffectDynamicAmountKind = "EffectDynamicAmountTriggeringCounterCount"
+	// EffectDynamicAmountColorsOfManaSpent is the number of distinct colors of
+	// mana spent to cast the source spell ("for each color of mana spent to cast
+	// it" — the Converge count). It backs the Converge enters-with-counters
+	// quantity (Crystalline Crawler) and is realized by the runtime, which
+	// records the colors of mana spent as the spell's costs are paid and carries
+	// the count to the entering permanent. Added last so existing kinds keep
+	// their values.
+	EffectDynamicAmountColorsOfManaSpent EffectDynamicAmountKind = "EffectDynamicAmountColorsOfManaSpent"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.

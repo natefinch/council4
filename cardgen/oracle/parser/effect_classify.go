@@ -859,6 +859,20 @@ func castThisFromGraveyardAt(tokens []shared.Token, index int) bool {
 	return effectWordsAt(tokens, index, "cast", "this", "card", "from", "your", "graveyard")
 }
 
+// manaSpentToCastPhraseAt reports whether the "cast" verb at index is the
+// infinitive inside the Converge count phrase "mana spent to cast it" rather
+// than a casting effect. The Converge dynamic amount ("for each color of mana
+// spent to cast it") consumes that span as a count, so the bare "cast" must not
+// also seed a separate cast effect that would split the enters-with-counters
+// sentence.
+func manaSpentToCastPhraseAt(tokens []shared.Token, index int) bool {
+	return index >= 3 &&
+		equalWord(tokens[index-3], "mana") &&
+		equalWord(tokens[index-2], "spent") &&
+		equalWord(tokens[index-1], "to") &&
+		effectWordsAt(tokens, index, "cast", "it")
+}
+
 func resolvingClauseEnd(tokens []shared.Token, indices []int, effectIndex int) int {
 	start := indices[effectIndex] + 1
 	end := len(tokens)
@@ -1007,6 +1021,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 	case kind == EffectCast && castSpellsFromLibraryTopAt(tokens, index):
 		return EffectUnknown
 	case kind == EffectCast && castThisFromGraveyardAt(tokens, index):
+		return EffectUnknown
+	case kind == EffectCast && manaSpentToCastPhraseAt(tokens, index):
 		return EffectUnknown
 	case kind == EffectCounter && !counterVerbAt(tokens, index):
 		return EffectUnknown

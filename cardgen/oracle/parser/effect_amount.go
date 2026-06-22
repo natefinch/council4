@@ -614,6 +614,9 @@ func parseDynamicAmountSubjectHelper(tokens []shared.Token, start int, atoms Ato
 	if subject, ok := parseDynamicColorCountSubject(tokens, start, atoms); ok {
 		return subject, true
 	}
+	if subject, ok := parseDynamicColorsOfManaSpentSubject(tokens, start); ok {
+		return subject, true
+	}
 	if subject, ok := parseDynamicGreatestDiscardedThisWaySubject(tokens, start); ok {
 		return subject, true
 	}
@@ -1094,6 +1097,25 @@ func parseDynamicTotalCharacteristicSubject(tokens []shared.Token, start int, at
 	return dynamicAmountSubject{
 		amount: EffectAmountSyntax{DynamicKind: kind, Selection: inner.amount.Selection},
 		end:    inner.end,
+	}, true
+}
+
+// parseDynamicColorsOfManaSpentSubject recognizes the Converge amount subject
+// "color of mana spent to cast it" (Crystalline Crawler: "enters with a +1/+1
+// counter on it for each color of mana spent to cast it"), the number of
+// distinct colors of mana spent to cast the source spell. It carries no
+// selection; the runtime records the colors of mana spent as the spell is cast.
+// The singular "color" pairs with a "for each" prefix, matching the count-number
+// agreement the dynamic-amount dispatcher enforces. It fails closed on any other
+// wording so unrelated "mana spent" phrasings stay rejected.
+func parseDynamicColorsOfManaSpentSubject(tokens []shared.Token, start int) (dynamicAmountSubject, bool) {
+	if !effectWordsAt(tokens, start, "color", "of", "mana", "spent", "to", "cast", "it") ||
+		!dynamicAmountBoundary(tokens, start+7) {
+		return dynamicAmountSubject{}, false
+	}
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountColorsOfManaSpent},
+		end:    start + 7, count: true,
 	}, true
 }
 

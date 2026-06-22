@@ -115,6 +115,8 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 		dynamic.Colors = append([]color.Color(nil), amount.Colors...)
 	case compiler.DynamicAmountSpellsCastThisTurn:
 		dynamic.Kind = game.DynamicAmountSpellsCastThisTurn
+	case compiler.DynamicAmountColorsOfManaSpent:
+		dynamic.Kind = game.DynamicAmountColorsOfManaSpentToCast
 	case compiler.DynamicAmountLifeLostThisTurn:
 		dynamic.Kind = game.DynamicAmountLifeLostThisTurn
 	case compiler.DynamicAmountLifeGainedThisTurn:

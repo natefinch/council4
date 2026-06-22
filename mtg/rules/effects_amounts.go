@@ -152,6 +152,10 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 	case game.DynamicAmountSpellsCastThisTurn, game.DynamicAmountLifeLostThisTurn,
 		game.DynamicAmountLifeGainedThisTurn:
 		amount = turnEventDynamicAmount(g, controller, dynamic.Kind)
+	case game.DynamicAmountColorsOfManaSpentToCast:
+		if obj != nil {
+			amount = obj.ColorsOfManaSpentToCast
+		}
 	case game.DynamicAmountMaxOf:
 		amount = maxOfDynamicAmounts(g, obj, controller, dynamic.Operands, before)
 	default:

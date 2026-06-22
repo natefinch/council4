@@ -949,7 +949,7 @@ func lowerEntersWithCountersReplacement(
 		ability.Cost != nil ||
 		ability.Trigger != nil ||
 		ability.Optional ||
-		!selfEntersWithCountersReferences(ability.Content.References) {
+		!selfEntersWithCountersReferences(ability.Content.References, ability.Content.Effects[0]) {
 		return unsupported("the executable source backend supports only exact self enters-with-counters replacements")
 	}
 	effect := ability.Content.Effects[0]
@@ -1021,9 +1021,18 @@ func isEntersWithCountersReplacement(ability compiler.CompiledAbility) bool {
 	return effect.EntersWithCounters || effect.CounterKindKnown
 }
 
-func selfEntersWithCountersReferences(references []compiler.CompiledReference) bool {
-	return len(references) == 2 &&
-		referencesBindTo(references, compiler.ReferenceBindingSource, 0)
+func selfEntersWithCountersReferences(references []compiler.CompiledReference, effect compiler.CompiledEffect) bool {
+	if !referencesBindTo(references, compiler.ReferenceBindingSource, 0) {
+		return false
+	}
+	if len(references) == 2 {
+		return true
+	}
+	// The Converge count "for each color of mana spent to cast it" (Crystalline
+	// Crawler) adds a third self reference for the "it" inside its count phrase,
+	// so a three-reference self replacement is accepted only for that amount.
+	return len(references) == 3 &&
+		effect.Amount.DynamicKind == compiler.DynamicAmountColorsOfManaSpent
 }
 
 // lowerGroupEntersWithCountersReplacement lowers a static enters-with-counters

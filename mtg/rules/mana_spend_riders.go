@@ -2,9 +2,31 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
+
+// distinctManaColorsSpent counts the distinct colors of mana among a payment's
+// per-unit pool spend, the Converge count "for each color of mana spent to cast
+// it" (CR 202.2, CR 702.76). Colorless mana contributes no color, and snow
+// provenance is ignored so the same color produced by a snow and a non-snow
+// source counts once. It reads the exact units the payment consumed, so a
+// generic cost paid with colored mana still counts those colors.
+func distinctManaColorsSpent(poolSpend map[mana.Unit]int) int {
+	seen := make(map[color.Color]bool, len(poolSpend))
+	for unit, count := range poolSpend {
+		if count <= 0 {
+			continue
+		}
+		c, ok := manaColor(unit.Color)
+		if !ok {
+			continue
+		}
+		seen[c] = true
+	}
+	return len(seen)
+}
 
 // poolUnitsSnapshot records a player's per-unit mana pool counts. The rules
 // engine captures it immediately before paying a cost so it can measure, after

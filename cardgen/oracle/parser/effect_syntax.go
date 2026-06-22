@@ -3408,6 +3408,8 @@ func legacyEffectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectUnknown
 	case kind == EffectCast && castSpellsFromLibraryTopAt(tokens, index):
 		return EffectUnknown
+	case kind == EffectCast && manaSpentToCastPhraseAt(tokens, index):
+		return EffectUnknown
 	case kind == EffectCounter && !counterVerbAt(tokens, index):
 		return EffectUnknown
 	case kind == EffectCopyStackObject && !copyVerbAt(tokens, index):
