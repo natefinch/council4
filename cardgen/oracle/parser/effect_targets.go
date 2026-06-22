@@ -230,9 +230,34 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 		return true
 	}
 	if cardinality != (TargetCardinalitySyntax{Min: 1, Max: 1}) {
-		return exactMultiPermanentTargetSyntax(joinedEffectText(tokens), cardinality, selection)
+		text := joinedEffectText(tokens)
+		// "Up to one target <noun>" (Min 0, Max 1) is a single optional target
+		// slot, so its <noun> phrase carries the same qualifiers (tapped state,
+		// excluded card type, mana-value rider, ...) the mandatory single-target
+		// form reconstructs. Reuse that reconstruction on the phrase following
+		// the "up to one " count, falling back to the plural multi-target
+		// reconstruction for the count forms (plural, "other", type unions) it
+		// does not cover.
+		if cardinality == (TargetCardinalitySyntax{Min: 0, Max: 1}) {
+			const upToOnePrefix = "up to one "
+			if len(text) > len(upToOnePrefix) &&
+				strings.EqualFold(text[:len(upToOnePrefix)], upToOnePrefix) &&
+				exactSinglePermanentTargetSyntax(text[len(upToOnePrefix):], selection) {
+				return true
+			}
+		}
+		return exactMultiPermanentTargetSyntax(text, cardinality, selection)
 	}
-	text := joinedEffectText(tokens)
+	return exactSinglePermanentTargetSyntax(joinedEffectText(tokens), selection)
+}
+
+// exactSinglePermanentTargetSyntax reconstructs the canonical Oracle phrase for a
+// single mandatory permanent (or spell/ability/player) target ("target tapped
+// creature", "target nonland permanent", "target creature or planeswalker") and
+// reports whether it round-trips byte-for-byte against text. It owns the full
+// set of single-target qualifiers; exactRuntimeTargetSyntax also reuses it for
+// the "up to one target <noun>" optional form after stripping the count words.
+func exactSinglePermanentTargetSyntax(text string, selection SelectionSyntax) bool {
 	switch selection.Kind {
 	case SelectionAny:
 		return text == "any target"
