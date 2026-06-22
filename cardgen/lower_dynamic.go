@@ -372,6 +372,13 @@ func dynamicCountCharacteristics(selector compiler.CompiledSelector) (game.Selec
 // backend cannot represent exactly. It ignores the selector Kind, Controller,
 // combat, tapped, and "other" flags, which callers translate per context.
 func selectorCharacteristics(selector compiler.CompiledSelector) (game.Selection, bool) {
+	if selector.PowerLessThanSource || selector.PowerGreaterThanSource {
+		// A source-relative "with lesser/greater power" comparison is meaningful
+		// only for a targeted permanent (Mentor), where the target path carries
+		// the source. Group, count, and card-zone contexts have no source to
+		// compare against, so reject it rather than silently dropping the filter.
+		return game.Selection{}, false
+	}
 	selection := game.Selection{
 		Colorless:       selector.Colorless,
 		Multicolored:    selector.Multicolored,
@@ -930,6 +937,12 @@ func permanentTargetSpecWithCardinality(target compiler.CompiledTarget) (game.Ta
 	}
 	if target.Selector.MatchPower {
 		spec.Predicate.Power = opt.Val(target.Selector.Power)
+	}
+	if target.Selector.PowerLessThanSource {
+		spec.Predicate.PowerLessThanSource = true
+	}
+	if target.Selector.PowerGreaterThanSource {
+		spec.Predicate.PowerGreaterThanSource = true
 	}
 	if target.Selector.MatchToughness {
 		spec.Predicate.Toughness = opt.Val(target.Selector.Toughness)

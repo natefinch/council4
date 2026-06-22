@@ -1052,6 +1052,46 @@ func isBattleCryKeywordLine(line string) bool {
 	return strings.HasPrefix(tail, "(") && strings.HasSuffix(tail, ")")
 }
 
+// mentorCanonicalText is the full Oracle wording Mentor abbreviates (CR 702.123).
+const mentorCanonicalText = "Whenever this creature attacks, " +
+	"put a +1/+1 counter on target attacking creature with lesser power."
+
+// expandMentorKeyword rewrites each bare "Mentor" keyword line into its full
+// triggered-ability Oracle text so the existing attacks-trigger and counter
+// placement pipeline lowers it. Parser owns the wording.
+func expandMentorKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		if !isMentorKeywordLine(line) {
+			continue
+		}
+		lines[i] = mentorCanonicalText
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
+
+// isMentorKeywordLine reports whether a line is exactly the printed "Mentor"
+// keyword, optionally followed only by its parenthesized reminder text. Lines
+// that merely contain the word elsewhere, or pair it with other rules text, are
+// left untouched.
+func isMentorKeywordLine(line string) bool {
+	const keyword = "Mentor"
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, keyword) {
+		return false
+	}
+	tail := strings.TrimSpace(trimmed[len(keyword):])
+	if tail == "" {
+		return true
+	}
+	return strings.HasPrefix(tail, "(") && strings.HasSuffix(tail, ")")
+}
+
 func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
 	var keywords []Keyword
 	for i := 0; i < len(tokens); i++ {

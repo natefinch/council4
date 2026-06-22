@@ -397,6 +397,12 @@ func cardInZoneTargetSpec(target compiler.CompiledTarget, targetZone zone.Type) 
 }
 
 func cardSelectionForSelector(selector compiler.CompiledSelector) (game.Selection, bool) {
+	if selector.PowerLessThanSource || selector.PowerGreaterThanSource {
+		// A source-relative power comparison applies only to a targeted
+		// permanent (Mentor); a card-zone selection has no source to compare
+		// against, so reject it rather than silently dropping the filter.
+		return game.Selection{}, false
+	}
 	selection := game.Selection{
 		RequiredTypesAny: slices.Clone(selector.RequiredTypesAny()),
 		ExcludedTypes:    slices.Clone(selector.ExcludedTypes()),

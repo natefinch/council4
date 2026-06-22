@@ -196,6 +196,14 @@ type Selection struct {
 	// backs the "of the chosen color" group filter of chosen-color anthems
 	// (Heraldic Banner), reading the source permanent's entry-time color choice.
 	ColorChoice ColorChoiceSource
+
+	// PowerLessThanSource and PowerGreaterThanSource require the matched
+	// permanent's power to be strictly less / greater than the predicate's source
+	// permanent's power ("target attacking creature with lesser power", Mentor).
+	// They are source-relative, so a subject with no source or no power never
+	// matches. Placed at the end so the bools join no existing cluster's packing.
+	PowerLessThanSource    bool
+	PowerGreaterThanSource bool
 }
 
 // Empty reports whether the Selection carries no active predicate and therefore
@@ -231,7 +239,9 @@ func (s Selection) Empty() bool {
 		s.ColorChoice == ColorChoiceNone &&
 		!s.ExcludeSource &&
 		!s.NonToken &&
-		!s.TokenOnly
+		!s.TokenOnly &&
+		!s.PowerLessThanSource &&
+		!s.PowerGreaterThanSource
 }
 
 // Validate reports structural contradictions in the Selection that represent
@@ -305,6 +315,9 @@ func (p TargetPredicate) Selection() Selection {
 		Power:             p.Power,
 		Toughness:         p.Toughness,
 		ExcludeSource:     p.Another,
+
+		PowerLessThanSource:    p.PowerLessThanSource,
+		PowerGreaterThanSource: p.PowerGreaterThanSource,
 	}
 	if p.PermanentTypesConjunctive {
 		selection.RequiredTypes = p.PermanentTypes
