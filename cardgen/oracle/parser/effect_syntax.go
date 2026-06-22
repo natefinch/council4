@@ -773,6 +773,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseDevourEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseTributeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseBecomeCopyEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseBecomeTypeEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawDoublingReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawReplacementDig(sentence, tokens, atoms) },
@@ -4117,6 +4118,76 @@ func parseBecomeCopyEffect(sentence Sentence, tokens []shared.Token, atoms Atoms
 		BecomeCopyUntilEndOfTurn:     untilEndOfTurn,
 		BecomeCopyRetainsThisAbility: retainAbility,
 		BecomeCopyAddKeywords:        addKeywords,
+	}
+	return []EffectSyntax{effect}, true
+}
+
+// parseBecomeTypeEffect recognizes a targeted continuous type-adding effect
+// ("Target permanent becomes an artifact in addition to its other types until
+// end of turn.", Liquimetal Torque, Liquimetal Coating; CR 613.1d). The target
+// selector before "becomes" is left as an ordinary target for the target
+// machinery to extract. Only the additive "in addition to its other types" form
+// with an "until end of turn" duration is recognized; the type-setting form
+// ("becomes a <type>" without "in addition") and the permanent (no-duration)
+// form fail closed so those cards stay unsupported. Each card-type word must be
+// a recognized permanent card type; any other word fails closed.
+func parseBecomeTypeEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+	body := semanticEffectTokens(tokens)
+	if len(body) == 0 || body[len(body)-1].Kind != shared.Period {
+		return nil, false
+	}
+	words := normalizedWords(body[:len(body)-1])
+	if len(words) < 5 || words[0] != "target" {
+		return nil, false
+	}
+	becomesIndex := -1
+	for i, word := range words {
+		if word == "becomes" {
+			becomesIndex = i
+			break
+		}
+	}
+	if becomesIndex < 0 || becomesIndex+1 >= len(words) {
+		return nil, false
+	}
+	rest := words[becomesIndex+1:]
+	if rest[0] != "a" && rest[0] != "an" {
+		return nil, false
+	}
+	rest = rest[1:]
+	additive := []string{"in", "addition", "to", "its", "other", "types"}
+	duration := []string{"until", "end", "of", "turn"}
+	if len(rest) < len(additive)+len(duration)+1 {
+		return nil, false
+	}
+	if !slices.Equal(rest[len(rest)-len(duration):], duration) {
+		return nil, false
+	}
+	rest = rest[:len(rest)-len(duration)]
+	if !slices.Equal(rest[len(rest)-len(additive):], additive) {
+		return nil, false
+	}
+	typeWords := rest[:len(rest)-len(additive)]
+	if len(typeWords) == 0 {
+		return nil, false
+	}
+	addTypes := make([]types.Card, 0, len(typeWords))
+	for _, word := range typeWords {
+		cardType, ok := entersAsCopyAddTypeWord(word)
+		if !ok {
+			return nil, false
+		}
+		addTypes = append(addTypes, cardType)
+	}
+	effect := EffectSyntax{
+		Kind:                     EffectBecomeType,
+		Context:                  EffectContextController,
+		Span:                     sentence.Span,
+		ClauseSpan:               sentence.Span,
+		Text:                     sentence.Text,
+		Tokens:                   append([]shared.Token(nil), body...),
+		BecomeTypeAddTypes:       addTypes,
+		BecomeTypeUntilEndOfTurn: true,
 	}
 	return []EffectSyntax{effect}, true
 }

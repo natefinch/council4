@@ -415,6 +415,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectEnterAsCopy
 	case parser.EffectBecomeCopy:
 		return EffectBecomeCopy
+	case parser.EffectBecomeType:
+		return EffectBecomeType
 	case parser.EffectAmass:
 		return EffectAmass
 	case parser.EffectRenown:

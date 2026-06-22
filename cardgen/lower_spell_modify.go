@@ -2833,6 +2833,53 @@ func lowerBecomeCopyContent(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 	}.Ability(), nil
 }
 
+// lowerBecomeTypeContent lowers a targeted continuous type-adding effect
+// ("Target permanent becomes an artifact in addition to its other types until
+// end of turn.", Liquimetal Torque, Liquimetal Coating) into an ApplyContinuous
+// at LayerType that adds the parser-recognized card types to the single target
+// permanent until end of turn. Only the additive until-end-of-turn form reaches
+// here; any other shape (multiple targets, missing duration, riders) fails
+// closed.
+func lowerBecomeTypeContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported type-change effect",
+			"the executable source backend supports only a target permanent gaining card types until end of turn",
+		)
+	}
+	if !effect.BecomeTypeUntilEndOfTurn ||
+		len(effect.BecomeTypeAddTypes) == 0 ||
+		effect.Negated ||
+		effect.Optional ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return unsupported()
+	}
+	if len(ctx.content.Targets) != 1 || !targetCardinalityIsOne(ctx.content.Targets[0]) {
+		return unsupported()
+	}
+	targetSpec, ok := permanentTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return unsupported()
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{{
+			Primitive: game.ApplyContinuous{
+				Object: opt.Val(game.TargetPermanentReference(0)),
+				ContinuousEffects: []game.ContinuousEffect{{
+					Layer:    game.LayerType,
+					AddTypes: append([]types.Card(nil), effect.BecomeTypeAddTypes...),
+				}},
+				Duration: game.DurationUntilEndOfTurn,
+			},
+		}},
+	}.Ability(), nil
+}
+
 // becomeCopyTarget pairs a become-a-copy target spec with the reference the
 // BecomeCopy primitive uses to find the copied object: object for a battlefield
 // permanent, card for a card in a non-battlefield zone. Exactly one is set.

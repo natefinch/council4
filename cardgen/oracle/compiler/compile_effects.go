@@ -285,6 +285,9 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				BecomeCopyRetainsThisAbility: syntax.BecomeCopyRetainsThisAbility,
 				BecomeCopyAddKeywords:        slices.Clone(syntax.BecomeCopyAddKeywords),
 
+				BecomeTypeAddTypes:       slices.Clone(syntax.BecomeTypeAddTypes),
+				BecomeTypeUntilEndOfTurn: syntax.BecomeTypeUntilEndOfTurn,
+
 				EntersWithCounters:        syntax.EntersWithCounters,
 				EntersWithCountersGroup:   syntax.EntersWithCountersGroup,
 				UnderYourControl:          syntax.UnderYourControl,

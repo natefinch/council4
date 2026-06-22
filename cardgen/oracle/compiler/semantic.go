@@ -1210,6 +1210,12 @@ const (
 	// keep their wire values.
 	EffectExileIfLeaveBattlefield
 	EffectCantBlockAndCantBeBlocked
+	// EffectBecomeType adds one or more card types to a targeted permanent for a
+	// duration ("Target permanent becomes an artifact in addition to its other
+	// types until end of turn.", Liquimetal Torque). It lowers to an
+	// ApplyContinuous at LayerType. Added last so existing kinds keep their wire
+	// values.
+	EffectBecomeType
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1509,6 +1515,13 @@ type CompiledEffect struct {
 	BecomeCopyUntilEndOfTurn     bool
 	BecomeCopyRetainsThisAbility bool
 	BecomeCopyAddKeywords        []parser.KeywordKind
+	// BecomeTypeAddTypes and BecomeTypeUntilEndOfTurn mirror the parser's
+	// EffectBecomeType targeted type-change ("Target permanent becomes an
+	// artifact in addition to its other types until end of turn."). Lowering
+	// reads them to build the ApplyContinuous LayerType type addition and its
+	// duration.
+	BecomeTypeAddTypes       []types.Card
+	BecomeTypeUntilEndOfTurn bool
 	// EntersAsCopyUntilEndOfTurn mirrors the parser's temporary "become a copy
 	// ... until end of turn" copy duration (Cursed Mirror).
 	EntersAsCopyUntilEndOfTurn bool
