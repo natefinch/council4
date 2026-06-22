@@ -247,6 +247,17 @@ func renderCardReference(reference game.CardReference) (string, error) {
 }
 
 func (r Renderer) renderAddCounter(ctx *renderCtx, value *game.AddCounter) (string, error) {
+	if value.AllKinds {
+		object, err := r.renderObjectReference(value.Object)
+		if err != nil {
+			return "", err
+		}
+		fields := []string{
+			fmt.Sprintf("Object: %s,", object),
+			"AllKinds: true,",
+		}
+		return structLit("game.AddCounter", fields), nil
+	}
 	kind, err := renderCounterKind(value.CounterKind)
 	if err != nil {
 		return "", err

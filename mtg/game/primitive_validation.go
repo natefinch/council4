@@ -775,6 +775,18 @@ func validateManaSpendRider(rider ManaSpendRider) error {
 }
 
 func (p AddCounter) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.AllKinds {
+		if p.Group.Domain() != groupDomainNone {
+			return errors.New("add counter doubling every kind requires a single object, not a group")
+		}
+		if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
+			return err
+		}
+		if p.Object.Kind() == ObjectReferenceTargetPermanent {
+			return validateTargetAllows(p.Object.TargetIndex(), TargetAllowPermanent, targets, checkTargets)
+		}
+		return nil
+	}
 	if !p.CounterKind.Valid() {
 		return errors.New("add counter requires a recognized counter kind")
 	}

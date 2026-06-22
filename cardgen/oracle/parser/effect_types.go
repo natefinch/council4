@@ -1492,6 +1492,16 @@ type EffectSyntax struct {
 	// doubling it. It is false for power/toughness and other double effects.
 	DoubleSourceCounters    bool         `json:",omitempty"`
 	DoubleSourceCounterKind counter.Kind `json:",omitempty"`
+	// DoubleCountersTarget marks a counter-doubling EffectDouble whose object is
+	// a "target ..." permanent ("double the number of +1/+1 counters on target
+	// creature", Gilder Bairn) rather than the source itself, so lowering doubles
+	// the sentence's target. DoubleCountersAllKinds marks the "each kind of
+	// counter" form ("double the number of each kind of counter on target
+	// artifact, creature, or land", Vorel of the Hull Clade), doubling every
+	// counter kind present instead of the single DoubleSourceCounterKind. Both
+	// are false for the original self single-kind form.
+	DoubleCountersTarget   bool `json:",omitempty"`
+	DoubleCountersAllKinds bool `json:",omitempty"`
 	// UnderOwnersControl marks a battlefield-destination effect carrying the
 	// rider "under their owners' control" / "under its owner's control" (Open
 	// the Vaults, Planar Birth, Living Death), where each moved card enters under

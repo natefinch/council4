@@ -2189,16 +2189,36 @@ func parseDoublePTObject(tokens []shared.Token, atoms Atoms) (doublePTObject, bo
 	return object, true
 }
 
+// doubleCountersObject describes the object of a counter-doubling effect: the
+// single counter Kind to double (zero/unused when AllKinds doubles every kind),
+// whether every kind of counter is doubled (AllKinds), and whether the doubled
+// permanent is a "target ..." object (Target) rather than the source itself.
+type doubleCountersObject struct {
+	Kind     counter.Kind
+	AllKinds bool
+	Target   bool
+}
+
 // parseDoubleCountersObject recognizes the object of a counter-doubling effect:
-// "the number of <kind> counters on <self>" ("double the number of +1/+1
-// counters on this creature", Mossborn Hydra). It returns the counter kind whose
-// count on the source permanent is doubled. Only the self object ("this
-// <permanent>" / "it" / the card's own name) is recognized; a targeted or group
-// object returns ok=false so the doubling effect fails closed.
-func parseDoubleCountersObject(tokens []shared.Token, atoms Atoms) (counter.Kind, bool) {
+// "the number of <kind> counters on <object>" ("double the number of +1/+1
+// counters on this creature", Mossborn Hydra; "... on target creature", Gilder
+// Bairn) and "the number of each kind of counter on <object>" ("double the
+// number of each kind of counter on target artifact, creature, or land", Vorel
+// of the Hull Clade). The object is the source itself ("this <permanent>" / "it"
+// / the card's own name) or a "target ..." permanent whose target the sentence's
+// target scanner owns; any other object returns ok=false so the effect fails
+// closed.
+func parseDoubleCountersObject(tokens []shared.Token, atoms Atoms) (doubleCountersObject, bool) {
 	rest, ok := cutTokenPrefix(tokens, "the", "number", "of")
 	if !ok {
-		return 0, false
+		return doubleCountersObject{}, false
+	}
+	if afterOn, okAll := cutTokenPrefix(rest, "each", "kind", "of", "counter", "on"); okAll {
+		target, okScope := doubleCountersObjectScope(afterOn, atoms)
+		if !okScope {
+			return doubleCountersObject{}, false
+		}
+		return doubleCountersObject{AllKinds: true, Target: target}, true
 	}
 	for _, atom := range atoms.Counters() {
 		if len(rest) == 0 || atom.Span.Start.Offset != rest[0].Span.Start.Offset {
@@ -2213,18 +2233,37 @@ func parseDoubleCountersObject(tokens []shared.Token, atoms Atoms) (counter.Kind
 			counterNoun+1 >= len(rest) || !equalWord(rest[counterNoun+1], "on") {
 			continue
 		}
-		_, end, ok := sourceCounterReferenceSpan(rest, counterNoun+2, atoms)
-		if !ok {
+		target, okScope := doubleCountersObjectScope(rest[counterNoun+2:], atoms)
+		if !okScope {
 			continue
 		}
-		trailingOK := end == len(rest) ||
-			(end == len(rest)-1 && rest[end].Kind == shared.Period)
-		if !trailingOK {
-			continue
-		}
-		return atom.Kind, true
+		return doubleCountersObject{Kind: atom.Kind, Target: target}, true
 	}
-	return 0, false
+	return doubleCountersObject{}, false
+}
+
+// doubleCountersObjectScope reports whether the tokens after "on" name a
+// permanent the counter-doubling effect can resolve against and whether that
+// object is a target. The source itself ("this <permanent>" / "it" / the card's
+// own name, consuming the whole object) returns target=false; a "target ..."
+// object whose target the sentence's target scanner owns returns target=true.
+func doubleCountersObjectScope(object []shared.Token, atoms Atoms) (target, ok bool) {
+	if len(object) == 0 {
+		return false, false
+	}
+	if equalWord(object[0], "target") {
+		return true, true
+	}
+	_, end, okSource := sourceCounterReferenceSpan(object, 0, atoms)
+	if !okSource {
+		return false, false
+	}
+	trailingOK := end == len(object) ||
+		(end == len(object)-1 && object[end].Kind == shared.Period)
+	if !trailingOK {
+		return false, false
+	}
+	return false, true
 }
 
 // doubling object's "of <group>" tail: "each creature you control" / "creatures

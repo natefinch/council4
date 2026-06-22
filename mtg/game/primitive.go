@@ -247,6 +247,12 @@ type AddCounter struct {
 	Object      ObjectReference // single permanent; zero if Group is set
 	Group       GroupReference  // every permanent in a group; zero if Object is set
 	CounterKind counter.Kind
+	// AllKinds doubles every kind of counter already on Object: the runtime adds,
+	// for each counter kind present, that many more, ignoring Amount and
+	// CounterKind. It backs "double the number of each kind of counter on
+	// <permanent>" (Vorel of the Hull Clade) and is set only with a single
+	// Object, never a Group.
+	AllKinds bool
 }
 
 // AddPlayerCounter places counters on a referenced player.

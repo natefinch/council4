@@ -1571,6 +1571,13 @@ type CompiledEffect struct {
 	// doubling it; it is false for every other double effect.
 	DoubleSourceCounters    bool
 	DoubleSourceCounterKind counter.Kind
+	// DoubleCountersTarget and DoubleCountersAllKinds mirror the parser flags for
+	// the extended counter-doubling forms: a "target ..." object (Gilder Bairn)
+	// and the "each kind of counter" all-kinds form (Vorel of the Hull Clade).
+	// Lowering reads them to bind the doubling to the sentence's target and to
+	// double every counter kind. Both are false for the self single-kind form.
+	DoubleCountersTarget   bool
+	DoubleCountersAllKinds bool
 	// UnderOwnersControl mirrors the parser flag for a battlefield-destination
 	// effect carrying the "under their owners' control" rider (Open the Vaults,
 	// Planar Birth), where each moved card enters under its owner's control. It
