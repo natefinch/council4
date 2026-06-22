@@ -141,7 +141,7 @@ func (r *effectResolver) chooseFromZoneAcrossSet(env game.ChooseFromZone, player
 	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
 		Kind:              game.ChoiceResolution,
 		Player:            playerID,
-		Prompt:            "Choose cards",
+		Prompt:            chooseFromZonePrompt(env),
 		Options:           options,
 		MinChoices:        minChoices,
 		MaxChoices:        maxChoices,
@@ -228,7 +228,7 @@ func (r *effectResolver) chooseFromZoneSplit(env game.ChooseFromZone, playerID g
 	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
 		Kind:             game.ChoiceResolution,
 		Player:           playerID,
-		Prompt:           "Choose cards",
+		Prompt:           chooseFromZonePrompt(env),
 		Options:          options,
 		MinChoices:       min(minChoices, maxChoices),
 		MaxChoices:       maxChoices,
@@ -441,6 +441,16 @@ func (r *effectResolver) chooseFromZoneSplitPrimaryCard(playerID game.PlayerID, 
 		return selected[0]
 	}
 	return 0
+}
+
+// chooseFromZonePrompt returns the message for a ChooseFromZone's primary card
+// choice: the envelope's explicit Prompt when set, otherwise the generic
+// "Choose cards" default.
+func chooseFromZonePrompt(env game.ChooseFromZone) string {
+	if env.Prompt != "" {
+		return env.Prompt
+	}
+	return "Choose cards"
 }
 
 func chooseFromZoneOptions(g *game.Game, candidates []id.ID) []game.ChoiceOption {
