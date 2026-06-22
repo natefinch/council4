@@ -45,9 +45,11 @@ var Bushwhack = &game.CardDef{
 								Spec: game.SearchSpec{
 									SourceZone:  zone.Library,
 									Destination: zone.Hand,
-									CardType:    opt.Val(types.Land),
-									Supertype:   opt.Val(types.Basic),
-									Reveal:      true,
+									Filter: game.Selection{
+										RequiredTypes: []types.Card{types.Land},
+										Supertypes:    []types.Super{types.Basic},
+									},
+									Reveal: true,
 								},
 							},
 						},

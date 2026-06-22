@@ -215,21 +215,21 @@ func TestGenerateExecutableCardSourceLibrarySearches(t *testing.T) {
 			oracleText: "Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.",
 			wants: []string{
 				"zone.Battlefield",
-				"opt.Val(types.Land)",
-				"opt.Val(types.Basic)",
+				"RequiredTypes: []types.Card{types.Land}",
+				"Supertypes: []types.Super{types.Basic}",
 				"EntersTapped",
 			},
 		},
 		{
 			name:       "Three Visits",
 			oracleText: "Search your library for a Forest card, put it onto the battlefield, then shuffle.",
-			wants:      []string{"zone.Battlefield", "SubtypesAny: []types.Sub{types.Forest}"},
+			wants:      []string{"zone.Battlefield", `SubtypesAny: []types.Sub{types.Sub("Forest")}`},
 		},
 		{
 			name:       "Farseek",
 			oracleText: "Search your library for a Plains, Island, Swamp, or Mountain card, put it onto the battlefield tapped, then shuffle.",
 			wants: []string{
-				"[]types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain}",
+				`[]types.Sub{types.Sub("Plains"), types.Sub("Island"), types.Sub("Swamp"), types.Sub("Mountain")}`,
 				"zone.Battlefield",
 				"EntersTapped",
 			},
@@ -238,7 +238,7 @@ func TestGenerateExecutableCardSourceLibrarySearches(t *testing.T) {
 			name:       "Safewright Quest",
 			oracleText: "Search your library for a Forest or Plains card, reveal it, put it into your hand, then shuffle.",
 			wants: []string{
-				"SubtypesAny: []types.Sub{types.Forest, types.Plains}",
+				`SubtypesAny: []types.Sub{types.Sub("Forest"), types.Sub("Plains")}`,
 				"zone.Hand",
 				"Reveal",
 			},
@@ -248,9 +248,9 @@ func TestGenerateExecutableCardSourceLibrarySearches(t *testing.T) {
 			oracleText: "Search your library for a Rebel permanent card with mana value 5 or less, put it onto the battlefield, then shuffle.",
 			wants: []string{
 				"zone.Battlefield",
-				"Permanent:    true",
-				"SubtypesAny:  []types.Sub{types.Rebel}",
-				"MaxManaValue: opt.Val(5)",
+				"RequirePermanentCard: true",
+				`SubtypesAny: []types.Sub{types.Sub("Rebel")}`,
+				"ManaValue: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 5})",
 			},
 		},
 		{
@@ -258,8 +258,8 @@ func TestGenerateExecutableCardSourceLibrarySearches(t *testing.T) {
 			oracleText: "Search your library for an artifact card with mana value 1 or less, reveal it, put it into your hand, then shuffle.",
 			wants: []string{
 				"zone.Hand",
-				"opt.Val(types.Artifact)",
-				"MaxManaValue: opt.Val(1)",
+				"RequiredTypes: []types.Card{types.Artifact}",
+				"ManaValue: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 1})",
 				"Reveal",
 			},
 		},
@@ -268,8 +268,8 @@ func TestGenerateExecutableCardSourceLibrarySearches(t *testing.T) {
 			oracleText: "Search your library for a legendary creature card, reveal it, put it into your hand, then shuffle.",
 			wants: []string{
 				"zone.Hand",
-				"opt.Val(types.Creature)",
-				"opt.Val(types.Legendary)",
+				"RequiredTypes: []types.Card{types.Creature}",
+				"Supertypes: []types.Super{types.Legendary}",
 				"Reveal",
 			},
 		},
@@ -356,7 +356,7 @@ func TestGenerateExecutableCardSourceEnterTriggerLibrarySearch(t *testing.T) {
 			oracleText: "When this creature enters, search your library for a Forest card, put that card onto the battlefield, then shuffle.",
 			wants: []string{
 				"zone.Battlefield",
-				"SubtypesAny: []types.Sub{types.Forest}",
+				`SubtypesAny: []types.Sub{types.Sub("Forest")}`,
 			},
 		},
 		{
@@ -374,8 +374,8 @@ func TestGenerateExecutableCardSourceEnterTriggerLibrarySearch(t *testing.T) {
 			oracleText: "When this artifact enters, search your library for a basic Island, Mountain, or Plains card, reveal it, put it into your hand, then shuffle.",
 			wants: []string{
 				"zone.Hand",
-				"opt.Val(types.Basic)",
-				"[]types.Sub{types.Island, types.Mountain, types.Plains}",
+				"Supertypes: []types.Super{types.Basic}",
+				`[]types.Sub{types.Sub("Island"), types.Sub("Mountain"), types.Sub("Plains")}`,
 				"Reveal",
 			},
 		},

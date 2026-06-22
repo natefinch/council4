@@ -4,7 +4,7 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -207,12 +207,12 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 	if spec.MaxManaValueFromX {
 		// "with mana value X or less" bounds the search by the spell's chosen X,
 		// resolved from the resolving stack object as the search runs.
-		spec.MaxManaValue = opt.Val(obj.XValue)
+		spec.Filter.ManaValue = opt.Val(compare.Int{Op: compare.LessOrEqual, Value: obj.XValue})
 		spec.MaxManaValueFromX = false
 	}
 	var candidates []id.ID
 	for _, cardID := range player.Library.All() {
-		if searchSpecMatches(g, cardID, spec) {
+		if searchSpecMatches(g, obj, cardID, spec) {
 			candidates = append(candidates, cardID)
 		}
 	}
@@ -448,7 +448,7 @@ func searchDestinationLabel(dest game.SearchDestination) string {
 	}
 }
 
-func searchSpecMatches(g *game.Game, cardID id.ID, spec game.SearchSpec) bool {
+func searchSpecMatches(g *game.Game, obj *game.StackObject, cardID id.ID, spec game.SearchSpec) bool {
 	card, ok := g.GetCardInstance(cardID)
 	if !ok {
 		return false
@@ -456,71 +456,7 @@ func searchSpecMatches(g *game.Game, cardID id.ID, spec game.SearchSpec) bool {
 	if spec.Name != "" && card.Def.Name != spec.Name {
 		return false
 	}
-	if spec.CardType.Exists && !card.Def.HasType(spec.CardType.Val) {
-		return false
-	}
-	if len(spec.CardTypesAny) > 0 {
-		if !slices.ContainsFunc(spec.CardTypesAny, card.Def.HasType) {
-			return false
-		}
-	}
-	if spec.Permanent && !card.Def.IsPermanent() {
-		return false
-	}
-	if spec.Supertype.Exists && !card.Def.HasSupertype(spec.Supertype.Val) {
-		return false
-	}
-	if len(spec.SubtypesAny) > 0 && !card.Def.HasAnySubtype(spec.SubtypesAny...) {
-		return false
-	}
-	if len(spec.ColorsAny) > 0 {
-		cardColors := card.Def.DefaultFace().Colors
-		if !slices.ContainsFunc(spec.ColorsAny, func(c color.Color) bool {
-			return slices.Contains(cardColors, c)
-		}) {
-			return false
-		}
-	}
-	if spec.MaxManaValue.Exists && card.Def.ManaValue() > spec.MaxManaValue.Val {
-		return false
-	}
-	if !searchPowerToughnessMatches(card.Def, spec) {
-		return false
-	}
-	return true
-}
-
-// searchPowerToughnessMatches reports whether the card satisfies the search
-// spec's power and toughness bounds. A card with no defined power or toughness,
-// or one defined by a characteristic-defining ability (*), never satisfies a
-// bound on that characteristic (CR 208.2): the bound fails closed rather than
-// matching an undefined or variable value.
-func searchPowerToughnessMatches(def *game.CardDef, spec game.SearchSpec) bool {
-	if spec.MaxPower.Exists || spec.MinPower.Exists {
-		power := def.DefaultFace().Power
-		if !power.Exists || power.Val.IsStar {
-			return false
-		}
-		if spec.MaxPower.Exists && power.Val.Value > spec.MaxPower.Val {
-			return false
-		}
-		if spec.MinPower.Exists && power.Val.Value < spec.MinPower.Val {
-			return false
-		}
-	}
-	if spec.MaxToughness.Exists || spec.MinToughness.Exists {
-		toughness := def.DefaultFace().Toughness
-		if !toughness.Exists || toughness.Val.IsStar {
-			return false
-		}
-		if spec.MaxToughness.Exists && toughness.Val.Value > spec.MaxToughness.Val {
-			return false
-		}
-		if spec.MinToughness.Exists && toughness.Val.Value < spec.MinToughness.Val {
-			return false
-		}
-	}
-	return true
+	return cardMatchesSelection(g, obj, card, spec.Filter)
 }
 
 func revealCards(g *game.Game, obj *game.StackObject, playerID game.PlayerID, zoneType zone.Type, amount int) bool {

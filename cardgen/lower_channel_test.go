@@ -58,8 +58,8 @@ func TestLowerChannelActivationFromHand(t *testing.T) {
 	if !ok {
 		t.Fatalf("second primitive = %#v, want search", sequence[1].Primitive)
 	}
-	if search.Spec.Supertype.Exists ||
-		len(search.Spec.SubtypesAny) != 5 ||
+	if len(search.Spec.Filter.Supertypes) != 0 ||
+		len(search.Spec.Filter.SubtypesAny) != 5 ||
 		search.Player != game.ObjectControllerReference(game.TargetPermanentReference(0)) {
 		t.Fatalf("search = %#v, want affected controller's basic-land-type search", search)
 	}

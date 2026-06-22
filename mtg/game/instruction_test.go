@@ -116,7 +116,9 @@ func TestValidateInstructionSequenceAcceptsLinkedSearchResult(t *testing.T) {
 			Spec: SearchSpec{
 				SourceZone:  zone.Library,
 				Destination: zone.Battlefield,
-				CardType:    opt.Val(types.Land),
+				Filter: Selection{
+					RequiredTypes: []types.Card{types.Land},
+				},
 			},
 			Amount:        Fixed(1),
 			PublishLinked: key,

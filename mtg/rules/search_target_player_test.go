@@ -37,9 +37,11 @@ func TestTargetPlayerSearchEntersUnderSearcherControl(t *testing.T) {
 			Spec: game.SearchSpec{
 				SourceZone:   zone.Library,
 				Destination:  zone.Battlefield,
-				CardType:     opt.Val(types.Land),
-				Supertype:    opt.Val(types.Basic),
 				EntersTapped: true,
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Land},
+					Supertypes:    []types.Super{types.Basic},
+				},
 			},
 		},
 	}}, []game.Target{game.PlayerTarget(game.Player2)})
@@ -81,8 +83,10 @@ func TestControllerSearchEntersUnderTargetControl(t *testing.T) {
 			Spec: game.SearchSpec{
 				SourceZone:   zone.Library,
 				Destination:  zone.Battlefield,
-				SubtypesAny:  []types.Sub{types.Forest},
 				EntersTapped: true,
+				Filter: game.Selection{
+					SubtypesAny: []types.Sub{types.Forest},
+				},
 			},
 		},
 	}}, []game.Target{game.PlayerTarget(game.Player2)})

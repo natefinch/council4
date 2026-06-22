@@ -866,22 +866,23 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 		len(selector.ExcludedColors()) != 0 {
 		return game.SearchSpec{}, false
 	}
-	spec.ColorsAny = slices.Clone(selector.ColorsAny())
+	var filter game.Selection
+	filter.ColorsAny = slices.Clone(selector.ColorsAny())
 	spec.Name = selector.RequiredName
 	switch selector.Kind {
 	case compiler.SelectorCard:
 	case compiler.SelectorLand:
-		spec.CardType = opt.Val(types.Land)
+		filter.RequiredTypes = []types.Card{types.Land}
 	case compiler.SelectorCreature:
-		spec.CardType = opt.Val(types.Creature)
+		filter.RequiredTypes = []types.Card{types.Creature}
 	case compiler.SelectorArtifact:
-		spec.CardType = opt.Val(types.Artifact)
+		filter.RequiredTypes = []types.Card{types.Artifact}
 	case compiler.SelectorEnchantment:
-		spec.CardType = opt.Val(types.Enchantment)
+		filter.RequiredTypes = []types.Card{types.Enchantment}
 	case compiler.SelectorPlaneswalker:
-		spec.CardType = opt.Val(types.Planeswalker)
+		filter.RequiredTypes = []types.Card{types.Planeswalker}
 	case compiler.SelectorPermanent:
-		spec.Permanent = true
+		filter.RequirePermanentCard = true
 	default:
 		return game.SearchSpec{}, false
 	}
@@ -894,15 +895,15 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 		if len(requiredTypesAny) == 1 {
 			// A single required card type reaches lowering only for a plain card
 			// selection (the spell types instant and sorcery, which have no
-			// dedicated selector kind). It lowers to the singular CardType filter
-			// so "a sorcery card" or "an instant card" tutor keeps its type.
+			// dedicated selector kind). It lowers to the singular RequiredTypes
+			// filter so "a sorcery card" or "an instant card" tutor keeps its type.
 			if selector.Kind != compiler.SelectorCard {
 				return game.SearchSpec{}, false
 			}
-			spec.CardType = opt.Val(requiredTypesAny[0])
+			filter.RequiredTypes = []types.Card{requiredTypesAny[0]}
 		} else {
-			spec.CardType = opt.V[types.Card]{}
-			spec.CardTypesAny = slices.Clone(requiredTypesAny)
+			filter.RequiredTypes = nil
+			filter.RequiredTypesAny = slices.Clone(requiredTypesAny)
 		}
 	}
 	if selector.MatchManaValue {
@@ -916,25 +917,21 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 			if selector.ManaValue.Op != compare.LessOrEqual {
 				return game.SearchSpec{}, false
 			}
-			spec.MaxManaValue = opt.Val(selector.ManaValue.Value)
+			filter.ManaValue = opt.Val(selector.ManaValue)
 		}
 	}
 	if selector.MatchPower {
 		switch selector.Power.Op {
-		case compare.LessOrEqual:
-			spec.MaxPower = opt.Val(selector.Power.Value)
-		case compare.GreaterOrEqual:
-			spec.MinPower = opt.Val(selector.Power.Value)
+		case compare.LessOrEqual, compare.GreaterOrEqual:
+			filter.Power = opt.Val(selector.Power)
 		default:
 			return game.SearchSpec{}, false
 		}
 	}
 	if selector.MatchToughness {
 		switch selector.Toughness.Op {
-		case compare.LessOrEqual:
-			spec.MaxToughness = opt.Val(selector.Toughness.Value)
-		case compare.GreaterOrEqual:
-			spec.MinToughness = opt.Val(selector.Toughness.Value)
+		case compare.LessOrEqual, compare.GreaterOrEqual:
+			filter.Toughness = opt.Val(selector.Toughness)
 		default:
 			return game.SearchSpec{}, false
 		}
@@ -946,20 +943,20 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 	if len(supertypes) == 1 {
 		switch supertypes[0] {
 		case types.Basic:
-			spec.Supertype = opt.Val(types.Basic)
+			filter.Supertypes = []types.Super{types.Basic}
 		case types.Legendary:
-			spec.Supertype = opt.Val(types.Legendary)
+			filter.Supertypes = []types.Super{types.Legendary}
 		default:
 			return game.SearchSpec{}, false
 		}
 	}
-	spec.SubtypesAny = slices.Clone(selector.SubtypesAny())
+	filter.SubtypesAny = slices.Clone(selector.SubtypesAny())
 	if selector.BasicLandType {
-		if selector.Kind != compiler.SelectorLand || len(spec.SubtypesAny) != 0 ||
-			spec.Supertype.Exists {
+		if selector.Kind != compiler.SelectorLand || len(filter.SubtypesAny) != 0 ||
+			len(filter.Supertypes) != 0 {
 			return game.SearchSpec{}, false
 		}
-		spec.SubtypesAny = []types.Sub{
+		filter.SubtypesAny = []types.Sub{
 			types.Plains,
 			types.Island,
 			types.Swamp,
@@ -967,6 +964,7 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 			types.Forest,
 		}
 	}
+	spec.Filter = filter
 	return spec, true
 }
 

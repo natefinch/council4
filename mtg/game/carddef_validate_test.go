@@ -500,7 +500,9 @@ func TestValidateCardDefReportsTypedSearchProblems(t *testing.T) {
 			spec: SearchSpec{
 				SourceZone:  zone.Library,
 				Destination: zone.Hand,
-				Supertype:   opt.Val(types.Super("")),
+				Filter: Selection{
+					Supertypes: []types.Super{types.Super("")},
+				},
 			},
 		},
 		{
@@ -518,9 +520,11 @@ func TestValidateCardDefReportsTypedSearchProblems(t *testing.T) {
 		{
 			name: "single-item card type union",
 			spec: SearchSpec{
-				SourceZone:   zone.Library,
-				Destination:  zone.Hand,
-				CardTypesAny: []types.Card{types.Artifact},
+				SourceZone:  zone.Library,
+				Destination: zone.Hand,
+				Filter: Selection{
+					RequiredTypesAny: []types.Card{types.Artifact},
+				},
 			},
 		},
 	}
@@ -575,7 +579,9 @@ func TestValidateCardDefRejectsInvalidRequiredSearchPolicies(t *testing.T) {
 				SourceZone:       zone.Library,
 				Destination:      zone.Hand,
 				FailToFindPolicy: SearchMustFindIfAvailable,
-				CardType:         opt.Val(types.Creature),
+				Filter: Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
 			},
 		},
 		{

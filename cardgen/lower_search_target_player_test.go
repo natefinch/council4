@@ -60,9 +60,11 @@ func TestLowerFertilidTargetPlayerSearch(t *testing.T) {
 	want := game.SearchSpec{
 		SourceZone:   zone.Library,
 		Destination:  zone.Battlefield,
-		CardType:     opt.Val(types.Land),
-		Supertype:    opt.Val(types.Basic),
 		EntersTapped: true,
+		Filter: game.Selection{
+			RequiredTypes: []types.Card{types.Land},
+			Supertypes:    []types.Super{types.Basic},
+		},
 	}
 	if !reflect.DeepEqual(search.Spec, want) {
 		t.Errorf("search Spec = %#v, want %#v", search.Spec, want)

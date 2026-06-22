@@ -27,8 +27,7 @@ func TestGenerateExecutableCardSourceFieldOfRuin(t *testing.T) {
 		"Object: game.TargetPermanentReference(0),",
 		"Primitive: game.Search{",
 		"PlayerGroup: game.AllPlayersReference(),",
-		"CardType:    opt.Val(types.Land),",
-		"Supertype:   opt.Val(types.Basic),",
+		"Filter:      game.Selection{RequiredTypes: []types.Card{types.Land}, Supertypes: []types.Super{types.Basic}},",
 		"Destination: zone.Battlefield,",
 	} {
 		if !strings.Contains(source, want) {

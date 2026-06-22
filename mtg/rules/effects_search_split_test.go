@@ -69,11 +69,13 @@ func cultivateSpec() game.SearchSpec {
 	return game.SearchSpec{
 		SourceZone:       zone.Library,
 		Destination:      zone.Battlefield,
-		CardType:         opt.Val(types.Land),
-		Supertype:        opt.Val(types.Basic),
 		Reveal:           true,
 		EntersTapped:     true,
 		SplitDestination: opt.Val(game.SearchDestination{Zone: zone.Hand}),
+		Filter: game.Selection{
+			RequiredTypes: []types.Card{types.Land},
+			Supertypes:    []types.Super{types.Basic},
+		},
 	}
 }
 
@@ -85,11 +87,13 @@ func handFirstSplitSpec() game.SearchSpec {
 	return game.SearchSpec{
 		SourceZone:       zone.Library,
 		Destination:      zone.Hand,
-		CardType:         opt.Val(types.Land),
-		Supertype:        opt.Val(types.Basic),
 		Reveal:           true,
 		EntersTapped:     false,
 		SplitDestination: opt.Val(game.SearchDestination{Zone: zone.Battlefield, EntersTapped: true}),
+		Filter: game.Selection{
+			RequiredTypes: []types.Card{types.Land},
+			Supertypes:    []types.Super{types.Basic},
+		},
 	}
 }
 

@@ -12,8 +12,10 @@ func eachPlayerBasicLandSearchSpec() SearchSpec {
 	return SearchSpec{
 		SourceZone:  zone.Library,
 		Destination: zone.Battlefield,
-		CardType:    opt.Val(types.Land),
-		Supertype:   opt.Val(types.Basic),
+		Filter: Selection{
+			RequiredTypes: []types.Card{types.Land},
+			Supertypes:    []types.Super{types.Basic},
+		},
 	}
 }
 

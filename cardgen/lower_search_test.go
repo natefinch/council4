@@ -1,13 +1,14 @@
 package cardgen
 
 import (
-	"slices"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -58,9 +59,11 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 			spec: game.SearchSpec{
 				SourceZone:   zone.Library,
 				Destination:  zone.Battlefield,
-				CardType:     opt.Val(types.Land),
-				Supertype:    opt.Val(types.Basic),
 				EntersTapped: true,
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Land},
+					Supertypes:    []types.Super{types.Basic},
+				},
 			},
 		},
 		{
@@ -71,7 +74,9 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 			spec: game.SearchSpec{
 				SourceZone:  zone.Library,
 				Destination: zone.Battlefield,
-				SubtypesAny: []types.Sub{types.Forest, types.Island},
+				Filter: game.Selection{
+					SubtypesAny: []types.Sub{types.Forest, types.Island},
+				},
 			},
 		},
 		{
@@ -82,8 +87,10 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 			spec: game.SearchSpec{
 				SourceZone:  zone.Library,
 				Destination: zone.Hand,
-				CardType:    opt.Val(types.Creature),
 				Reveal:      true,
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
 			},
 		},
 		{
@@ -94,9 +101,11 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 			spec: game.SearchSpec{
 				SourceZone:   zone.Library,
 				Destination:  zone.Battlefield,
-				Supertype:    opt.Val(types.Basic),
-				SubtypesAny:  []types.Sub{types.Forest, types.Plains, types.Island},
 				EntersTapped: true,
+				Filter: game.Selection{
+					Supertypes:  []types.Super{types.Basic},
+					SubtypesAny: []types.Sub{types.Forest, types.Plains, types.Island},
+				},
 			},
 		},
 		{
@@ -107,8 +116,10 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 			spec: game.SearchSpec{
 				SourceZone:  zone.Library,
 				Destination: zone.Hand,
-				SubtypesAny: []types.Sub{types.Sliver},
 				Reveal:      true,
+				Filter: game.Selection{
+					SubtypesAny: []types.Sub{types.Sliver},
+				},
 			},
 		},
 		{
@@ -119,7 +130,9 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 			spec: game.SearchSpec{
 				SourceZone:  zone.Library,
 				Destination: zone.Battlefield,
-				SubtypesAny: []types.Sub{types.Aura, types.Equipment},
+				Filter: game.Selection{
+					SubtypesAny: []types.Sub{types.Aura, types.Equipment},
+				},
 			},
 		},
 		{
@@ -130,8 +143,10 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 			spec: game.SearchSpec{
 				SourceZone:  zone.Library,
 				Destination: zone.Battlefield,
-				CardType:    opt.Val(types.Creature),
-				SubtypesAny: []types.Sub{types.Myr},
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+					SubtypesAny:   []types.Sub{types.Myr},
+				},
 			},
 		},
 		{
@@ -142,8 +157,10 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 			spec: game.SearchSpec{
 				SourceZone:  zone.Library,
 				Destination: zone.Hand,
-				CardType:    opt.Val(types.Planeswalker),
 				Reveal:      true,
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Planeswalker},
+				},
 			},
 		},
 		{
@@ -152,11 +169,13 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 			oracleText: "Search your library for a Rebel permanent card with mana value 5 or less, put it onto the battlefield, then shuffle.",
 			amount:     1,
 			spec: game.SearchSpec{
-				SourceZone:   zone.Library,
-				Destination:  zone.Battlefield,
-				Permanent:    true,
-				SubtypesAny:  []types.Sub{types.Rebel},
-				MaxManaValue: opt.Val(5),
+				SourceZone:  zone.Library,
+				Destination: zone.Battlefield,
+				Filter: game.Selection{
+					RequirePermanentCard: true,
+					SubtypesAny:          []types.Sub{types.Rebel},
+					ManaValue:            opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 5}),
+				},
 			},
 		},
 		{
@@ -167,7 +186,9 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 			spec: game.SearchSpec{
 				SourceZone:  zone.Library,
 				Destination: zone.Battlefield,
-				Permanent:   true,
+				Filter: game.Selection{
+					RequirePermanentCard: true,
+				},
 			},
 		},
 		{
@@ -178,9 +199,11 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 			spec: game.SearchSpec{
 				SourceZone:  zone.Library,
 				Destination: zone.Battlefield,
-				Permanent:   true,
-				Supertype:   opt.Val(types.Legendary),
-				SubtypesAny: []types.Sub{types.Spirit},
+				Filter: game.Selection{
+					RequirePermanentCard: true,
+					Supertypes:           []types.Super{types.Legendary},
+					SubtypesAny:          []types.Sub{types.Spirit},
+				},
 			},
 		},
 		{
@@ -189,11 +212,13 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 			oracleText: "Search your library for an artifact card with mana value 1 or less, reveal it, put it into your hand, then shuffle.",
 			amount:     1,
 			spec: game.SearchSpec{
-				SourceZone:   zone.Library,
-				Destination:  zone.Hand,
-				CardType:     opt.Val(types.Artifact),
-				MaxManaValue: opt.Val(1),
-				Reveal:       true,
+				SourceZone:  zone.Library,
+				Destination: zone.Hand,
+				Reveal:      true,
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Artifact},
+					ManaValue:     opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 1}),
+				},
 			},
 		},
 		{
@@ -204,11 +229,13 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 			spec: game.SearchSpec{
 				SourceZone:       zone.Library,
 				Destination:      zone.Battlefield,
-				CardType:         opt.Val(types.Land),
-				Supertype:        opt.Val(types.Basic),
 				Reveal:           true,
 				EntersTapped:     true,
 				SplitDestination: opt.Val(game.SearchDestination{Zone: zone.Hand}),
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Land},
+					Supertypes:    []types.Super{types.Basic},
+				},
 			},
 		},
 		{
@@ -219,9 +246,11 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 			spec: game.SearchSpec{
 				SourceZone:       zone.Library,
 				Destination:      zone.Hand,
-				CardType:         opt.Val(types.Land),
-				Supertype:        opt.Val(types.Basic),
 				SplitDestination: opt.Val(game.SearchDestination{Zone: zone.Battlefield, EntersTapped: true}),
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Land},
+					Supertypes:    []types.Super{types.Basic},
+				},
 			},
 		},
 		{
@@ -232,9 +261,11 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 			spec: game.SearchSpec{
 				SourceZone:  zone.Library,
 				Destination: zone.Hand,
-				CardType:    opt.Val(types.Creature),
-				Supertype:   opt.Val(types.Legendary),
 				Reveal:      true,
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+					Supertypes:    []types.Super{types.Legendary},
+				},
 			},
 		},
 		{
@@ -245,10 +276,12 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 			spec: game.SearchSpec{
 				SourceZone:    zone.Library,
 				Destination:   zone.Battlefield,
-				CardType:      opt.Val(types.Land),
-				Supertype:     opt.Val(types.Basic),
 				EntersTapped:  true,
 				SharedSubtype: true,
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Land},
+					Supertypes:    []types.Super{types.Basic},
+				},
 			},
 		},
 		{
@@ -260,8 +293,10 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 				SourceZone:          zone.Library,
 				Destination:         zone.Library,
 				DestinationPosition: game.SearchPositionTop,
-				CardTypesAny:        []types.Card{types.Artifact, types.Enchantment},
 				Reveal:              true,
+				Filter: game.Selection{
+					RequiredTypesAny: []types.Card{types.Artifact, types.Enchantment},
+				},
 			},
 		},
 		{
@@ -283,7 +318,9 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 			spec: game.SearchSpec{
 				SourceZone:  zone.Library,
 				Destination: zone.Graveyard,
-				CardType:    opt.Val(types.Creature),
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
 			},
 		},
 	}
@@ -317,8 +354,10 @@ func TestLowerSearchColorFilterSpecs(t *testing.T) {
 			spec: game.SearchSpec{
 				SourceZone:  zone.Library,
 				Destination: zone.Battlefield,
-				CardType:    opt.Val(types.Creature),
-				ColorsAny:   []color.Color{color.Green},
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+					ColorsAny:     []color.Color{color.Green},
+				},
 			},
 		},
 		{
@@ -327,8 +366,10 @@ func TestLowerSearchColorFilterSpecs(t *testing.T) {
 			spec: game.SearchSpec{
 				SourceZone:  zone.Library,
 				Destination: zone.Battlefield,
-				CardType:    opt.Val(types.Creature),
-				ColorsAny:   []color.Color{color.Red, color.Green},
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+					ColorsAny:     []color.Color{color.Red, color.Green},
+				},
 			},
 		},
 	}
@@ -367,8 +408,10 @@ func TestLowerSpellTypeTutorSpecs(t *testing.T) {
 				SourceZone:          zone.Library,
 				Destination:         zone.Library,
 				DestinationPosition: game.SearchPositionTop,
-				CardTypesAny:        []types.Card{types.Instant, types.Sorcery},
 				Reveal:              true,
+				Filter: game.Selection{
+					RequiredTypesAny: []types.Card{types.Instant, types.Sorcery},
+				},
 			},
 		},
 		{
@@ -379,8 +422,10 @@ func TestLowerSpellTypeTutorSpecs(t *testing.T) {
 				SourceZone:          zone.Library,
 				Destination:         zone.Library,
 				DestinationPosition: game.SearchPositionTop,
-				CardType:            opt.Val(types.Sorcery),
 				Reveal:              true,
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Sorcery},
+				},
 			},
 		},
 		{
@@ -391,8 +436,10 @@ func TestLowerSpellTypeTutorSpecs(t *testing.T) {
 				SourceZone:          zone.Library,
 				Destination:         zone.Library,
 				DestinationPosition: game.SearchPositionTop,
-				CardType:            opt.Val(types.Creature),
 				Reveal:              true,
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
 			},
 		},
 	}
@@ -462,17 +509,11 @@ func searchSpecEqual(a, b game.SearchSpec) bool {
 		a.Destination == b.Destination &&
 		a.DestinationPosition == b.DestinationPosition &&
 		a.FailToFindPolicy == b.FailToFindPolicy &&
-		a.CardType == b.CardType &&
-		a.Supertype == b.Supertype &&
-		a.Permanent == b.Permanent &&
-		a.MaxManaValue == b.MaxManaValue &&
 		a.Reveal == b.Reveal &&
 		a.EntersTapped == b.EntersTapped &&
 		a.SplitDestination == b.SplitDestination &&
 		a.SharedSubtype == b.SharedSubtype &&
-		slices.Equal(a.CardTypesAny, b.CardTypesAny) &&
-		slices.Equal(a.SubtypesAny, b.SubtypesAny) &&
-		slices.Equal(a.ColorsAny, b.ColorsAny)
+		reflect.DeepEqual(a.Filter, b.Filter)
 }
 
 func TestLowerVampiricTutorSearchThenLoseLife(t *testing.T) {
@@ -648,7 +689,7 @@ func TestGenerateTopTutorCardSourceEndToEnd(t *testing.T) {
 			},
 			wants: []string{
 				"DestinationPosition: game.SearchPositionTop",
-				"CardTypesAny:",
+				"RequiredTypesAny:",
 				"[]types.Card{types.Artifact, types.Enchantment}",
 				"Reveal:",
 			},

@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 // selectionSubjectKind identifies which characteristic source a selectionSubject
@@ -672,6 +673,9 @@ func (s *selectionSubject) power() (int, bool) {
 		values, ok := s.eventPermanentValues()
 		return values.power, ok && values.powerOK
 	}
+	if s.kind == subjectCard {
+		return cardFacePT(s.card, func(face game.CardFace) opt.V[game.PT] { return face.Power })
+	}
 	if s.kind != subjectPermanent || s.useBase {
 		return 0, false
 	}
@@ -709,10 +713,29 @@ func (s *selectionSubject) toughness() (int, bool) {
 		values, ok := s.eventPermanentValues()
 		return values.toughness, ok && values.toughnessOK
 	}
+	if s.kind == subjectCard {
+		return cardFacePT(s.card, func(face game.CardFace) opt.V[game.PT] { return face.Toughness })
+	}
 	if s.kind != subjectPermanent || s.useBase {
 		return 0, false
 	}
 	return s.values.toughness, s.values.toughnessOK
+}
+
+// cardFacePT reads a printed power or toughness from a card's default face for a
+// card-zone Selection comparison. A card with no defined value, or one defined
+// by a characteristic-defining ability (*), yields no value so the bound fails
+// closed rather than matching an undefined or variable characteristic (CR
+// 208.2).
+func cardFacePT(card *game.CardInstance, pick func(game.CardFace) opt.V[game.PT]) (int, bool) {
+	if card == nil || card.Def == nil {
+		return 0, false
+	}
+	pt := pick(card.Def.DefaultFace())
+	if !pt.Exists || pt.Val.IsStar {
+		return 0, false
+	}
+	return pt.Val.Value, true
 }
 
 func (s *selectionSubject) eventPermanentValues() (permanentEffectiveValues, bool) {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -45,7 +46,9 @@ func TestSearchLibraryLetsPlayerChooseAmongMatchingCards(t *testing.T) {
 		Spec: game.SearchSpec{
 			SourceZone:  zone.Library,
 			Destination: zone.Hand,
-			CardType:    opt.Val(types.Creature),
+			Filter: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
 		},
 	}, nil)
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: &searchByNameAgent{wanted: "Wolf"}}
@@ -71,7 +74,9 @@ func TestSearchLibraryToGraveyardMovesChosenCard(t *testing.T) {
 		Spec: game.SearchSpec{
 			SourceZone:  zone.Library,
 			Destination: zone.Graveyard,
-			CardType:    opt.Val(types.Creature),
+			Filter: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
 		},
 	}, nil)
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: &searchByNameAgent{wanted: "Wolf"}}
@@ -96,7 +101,9 @@ func TestSearchLibraryAllowsLegalFailToFind(t *testing.T) {
 		Spec: game.SearchSpec{
 			SourceZone:  zone.Library,
 			Destination: zone.Hand,
-			CardType:    opt.Val(types.Creature),
+			Filter: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
 		},
 	}, nil)
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: &searchByNameAgent{wanted: ""}}
@@ -144,9 +151,11 @@ func TestLinkedSearchConditionalUntap(t *testing.T) {
 					Spec: game.SearchSpec{
 						SourceZone:   zone.Library,
 						Destination:  zone.Battlefield,
-						CardType:     opt.Val(types.Land),
-						Supertype:    opt.Val(types.Basic),
 						EntersTapped: true,
+						Filter: game.Selection{
+							RequiredTypes: []types.Card{types.Land},
+							Supertypes:    []types.Super{types.Basic},
+						},
 					},
 					Amount:        game.Fixed(1),
 					PublishLinked: key,
@@ -258,9 +267,11 @@ func resolveLinkedSearchActivation(
 		Spec: game.SearchSpec{
 			SourceZone:   zone.Library,
 			Destination:  zone.Battlefield,
-			CardType:     opt.Val(types.Land),
-			Supertype:    opt.Val(types.Basic),
 			EntersTapped: true,
+			Filter: game.Selection{
+				RequiredTypes: []types.Card{types.Land},
+				Supertypes:    []types.Super{types.Basic},
+			},
 		},
 		Amount:        game.Fixed(1),
 		PublishLinked: key,
@@ -324,9 +335,11 @@ func TestSearchLibraryUpToTwoBasicLandsEntersBattlefieldTapped(t *testing.T) {
 		Spec: game.SearchSpec{
 			SourceZone:   zone.Library,
 			Destination:  zone.Battlefield,
-			CardType:     opt.Val(types.Land),
-			Supertype:    opt.Val(types.Basic),
 			EntersTapped: true,
+			Filter: game.Selection{
+				RequiredTypes: []types.Card{types.Land},
+				Supertypes:    []types.Super{types.Basic},
+			},
 		},
 	}, nil)
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: selectAllAgent{}}
@@ -371,7 +384,9 @@ func TestSearchLibrarySubtypeUnionMatchesAnyNamedLand(t *testing.T) {
 		Spec: game.SearchSpec{
 			SourceZone:  zone.Library,
 			Destination: zone.Battlefield,
-			SubtypesAny: []types.Sub{types.Forest, types.Island},
+			Filter: game.Selection{
+				SubtypesAny: []types.Sub{types.Forest, types.Island},
+			},
 		},
 	}, nil)
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: &searchByNameAgent{wanted: "Island"}}
@@ -413,8 +428,10 @@ func TestSearchLibrarySubtypeWithCardTypeRequiresBoth(t *testing.T) {
 		Spec: game.SearchSpec{
 			SourceZone:  zone.Library,
 			Destination: zone.Battlefield,
-			CardType:    opt.Val(types.Creature),
-			SubtypesAny: []types.Sub{types.Myr},
+			Filter: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				SubtypesAny:   []types.Sub{types.Myr},
+			},
 		},
 	}, nil)
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: &searchByNameAgent{wanted: "Myr Servitor"}}
@@ -468,11 +485,13 @@ func TestSearchLibraryPermanentAndManaValueFilter(t *testing.T) {
 		Amount: game.Fixed(1),
 		Player: game.ControllerReference(),
 		Spec: game.SearchSpec{
-			SourceZone:   zone.Library,
-			Destination:  zone.Battlefield,
-			Permanent:    true,
-			SubtypesAny:  []types.Sub{types.Rebel},
-			MaxManaValue: opt.Val(5),
+			SourceZone:  zone.Library,
+			Destination: zone.Battlefield,
+			Filter: game.Selection{
+				RequirePermanentCard: true,
+				SubtypesAny:          []types.Sub{types.Rebel},
+				ManaValue:            opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 5}),
+			},
 		},
 	}, nil)
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: selectAllAgent{}}
@@ -527,8 +546,10 @@ func TestSearchLibraryPowerBoundFilter(t *testing.T) {
 			SourceZone:  zone.Library,
 			Destination: zone.Hand,
 			Reveal:      true,
-			CardType:    opt.Val(types.Creature),
-			MaxPower:    opt.Val(2),
+			Filter: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Power:         opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 2}),
+			},
 		},
 	}, nil)
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: &searchByNameAgent{wanted: "Weenie"}}
@@ -607,8 +628,10 @@ func TestSearchLibraryManaValueFromXBound(t *testing.T) {
 		Spec: game.SearchSpec{
 			SourceZone:        zone.Library,
 			Destination:       zone.Battlefield,
-			CardType:          opt.Val(types.Creature),
 			MaxManaValueFromX: true,
+			Filter: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
 		},
 	}, nil)
 	obj, ok := g.Stack.Peek()
@@ -638,7 +661,9 @@ func TestSearchLibraryNilAgentFindsFirstMatch(t *testing.T) {
 		Spec: game.SearchSpec{
 			SourceZone:  zone.Library,
 			Destination: zone.Hand,
-			CardType:    opt.Val(types.Creature),
+			Filter: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
 		},
 	}, nil)
 

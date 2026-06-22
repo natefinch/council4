@@ -160,8 +160,10 @@ func boseijuRuntimeTestCard() *game.CardDef {
 							Spec: game.SearchSpec{
 								SourceZone:  zone.Library,
 								Destination: zone.Battlefield,
-								CardType:    opt.Val(types.Land),
-								SubtypesAny: []types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain, types.Forest},
+								Filter: game.Selection{
+									RequiredTypes: []types.Card{types.Land},
+									SubtypesAny:   []types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain, types.Forest},
+								},
 							},
 						},
 					},

@@ -1041,17 +1041,20 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 			p.Spec.SplitDestination.Val.Zone == zone.Library) {
 		return errors.New("search has unsupported split destination")
 	}
-	if p.Spec.CardType.Exists && len(p.Spec.CardTypesAny) != 0 {
+	if len(p.Spec.Filter.RequiredTypes) != 0 && len(p.Spec.Filter.RequiredTypesAny) != 0 {
 		return errors.New("search cannot combine one required card type with a card-type union")
 	}
-	if len(p.Spec.CardTypesAny) == 1 {
+	if len(p.Spec.Filter.RequiredTypesAny) == 1 {
 		return errors.New("search card-type union requires at least two card types")
 	}
-	if slices.Contains(p.Spec.CardTypesAny, "") {
+	if slices.Contains(p.Spec.Filter.RequiredTypesAny, "") {
 		return errors.New("search card-type union cannot contain an empty type")
 	}
-	if p.Spec.Supertype.Exists && p.Spec.Supertype.Val == "" {
+	if slices.Contains(p.Spec.Filter.Supertypes, "") {
 		return errors.New("search supertype cannot be empty")
+	}
+	if problems := p.Spec.Filter.Validate(); len(problems) != 0 {
+		return errors.New("search filter: " + problems[0])
 	}
 	if p.PublishLinked != "" &&
 		(p.Amount.IsDynamic() ||

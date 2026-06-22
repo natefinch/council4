@@ -42,8 +42,10 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 			Spec: game.SearchSpec{
 				SourceZone:  zone.Library,
 				Destination: zone.Hand,
-				CardType:    opt.Val(types.Creature),
 				Reveal:      true,
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
 			},
 		}, nil)
 
@@ -73,9 +75,11 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 			Spec: game.SearchSpec{
 				SourceZone:  zone.Library,
 				Destination: zone.Hand,
-				CardType:    opt.Val(types.Land),
-				Supertype:   opt.Val(types.Basic),
 				Reveal:      true,
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Land},
+					Supertypes:    []types.Super{types.Basic},
+				},
 			},
 		}, nil)
 
@@ -104,7 +108,9 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 			Spec: game.SearchSpec{
 				SourceZone:  zone.Library,
 				Destination: zone.Hand,
-				CardType:    opt.Val(types.Land),
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Land},
+				},
 			},
 		}, nil)
 
@@ -132,9 +138,11 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 			Spec: game.SearchSpec{
 				SourceZone:   zone.Library,
 				Destination:  zone.Battlefield,
-				CardType:     opt.Val(types.Land),
-				SubtypesAny:  []types.Sub{types.Forest},
 				EntersTapped: true,
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Land},
+					SubtypesAny:   []types.Sub{types.Forest},
+				},
 			},
 		}, nil)
 

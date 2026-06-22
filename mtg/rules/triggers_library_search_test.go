@@ -6,7 +6,6 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
-	"github.com/natefinch/council4/opt"
 )
 
 func librarySearchTriggerInstructions() []game.Instruction {
@@ -23,7 +22,9 @@ func resolveLibrarySearch(t *testing.T, g *game.Game, engine *Engine, searcher g
 		Spec: game.SearchSpec{
 			SourceZone:  zone.Library,
 			Destination: zone.Hand,
-			CardType:    opt.Val(types.Creature),
+			Filter: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
 		},
 	}, nil)
 	var agents [game.NumPlayers]PlayerAgent

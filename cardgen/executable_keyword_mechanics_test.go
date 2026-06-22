@@ -229,8 +229,7 @@ func TestGenerateExecutableCardSourceBasicLandcycling(t *testing.T) {
 		"Kind:   cost.AdditionalDiscard,",
 		"game.CyclingKeyword{Cost: cost.Mana{cost.O(1)}}",
 		"Primitive: game.Search{",
-		"CardType:    opt.Val(types.Land),",
-		"Supertype:   opt.Val(types.Basic),",
+		"Filter:      game.Selection{RequiredTypes: []types.Card{types.Land}, Supertypes: []types.Super{types.Basic}},",
 		"Reveal:      true,",
 	} {
 		if !strings.Contains(source, wanted) {
@@ -260,7 +259,7 @@ func TestGenerateExecutableCardSourceTypedLandcycling(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"Primitive: game.Search{",
-		"SubtypesAny: []types.Sub{types.Swamp}",
+		`SubtypesAny: []types.Sub{types.Sub("Swamp")}`,
 		"Destination: zone.Hand,",
 	} {
 		if !strings.Contains(source, wanted) {
