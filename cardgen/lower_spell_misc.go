@@ -95,6 +95,9 @@ func lowerFixedLifeSpell(
 	case len(ctx.content.Targets) == 0 &&
 		effect.Context == parser.EffectContextController:
 	case len(ctx.content.Targets) == 0 &&
+		effect.Context == parser.EffectContextDefendingPlayer:
+		playerRef = game.DefendingPlayerReference()
+	case len(ctx.content.Targets) == 0 &&
 		len(ctx.content.References) == 1 &&
 		(effect.Context == parser.EffectContextEventPlayer &&
 			ctx.content.References[0].Kind == compiler.ReferencePronoun &&
