@@ -111,6 +111,9 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 		pattern.PlayerEventOrdinalThisTurn != event.PlayerEventOrdinalThisTurn {
 		return false
 	}
+	if pattern.ExcludeFirstDrawInDrawStep && event.FirstInDrawStep {
+		return false
+	}
 	if !triggerCombatPatternMatches(g, sourceController, source, pattern, event) {
 		return false
 	}

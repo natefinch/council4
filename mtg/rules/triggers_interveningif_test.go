@@ -16,7 +16,7 @@ func TestInterveningIfCheckedWhenTriggeringAndResolving(t *testing.T) {
 		g.Players[game.Player1].Life = 40
 		addTriggeredPermanentWithCondition(g, game.Player1, &game.TriggerPattern{Event: game.EventCardDrawn}, 41, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}})
 		addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
-		if _, ok := engine.drawCard(g, game.Player2); !ok {
+		if _, ok := engine.drawCard(g, game.Player2, false); !ok {
 			t.Fatal("drawCard() = false, want true")
 		}
 		if engine.putTriggeredAbilitiesOnStack(g) {
@@ -30,7 +30,7 @@ func TestInterveningIfCheckedWhenTriggeringAndResolving(t *testing.T) {
 		addTriggeredPermanentWithCondition(g, game.Player1, &game.TriggerPattern{Event: game.EventCardDrawn}, 41, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}})
 		addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Event Drawn"}})
 		addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Trigger Drawn"}})
-		if _, ok := engine.drawCard(g, game.Player2); !ok {
+		if _, ok := engine.drawCard(g, game.Player2, false); !ok {
 			t.Fatal("drawCard() = false, want true")
 		}
 		if !engine.putTriggeredAbilitiesOnStack(g) {
@@ -338,7 +338,7 @@ func TestInterveningIfUsesEffectiveControllerAtTriggerTime(t *testing.T) {
 	addCardToLibrary(g, game.Player3, &game.CardDef{CardFace: game.CardFace{Name: "Event Drawn"}})
 	addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Trigger Drawn"}})
 
-	if _, ok := engine.drawCard(g, game.Player3); !ok {
+	if _, ok := engine.drawCard(g, game.Player3, false); !ok {
 		t.Fatal("drawCard() = false, want true")
 	}
 	if !engine.putTriggeredAbilitiesOnStack(g) {
@@ -363,7 +363,7 @@ func TestTriggeredAbilitiesUseAPNAPStackOrder(t *testing.T) {
 	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{Event: game.EventCardDrawn}, nil, nil)
 	addTriggeredPermanent(g, game.Player2, &game.TriggerPattern{Event: game.EventCardDrawn}, nil, nil)
 
-	if _, ok := engine.drawCard(g, game.Player3); !ok {
+	if _, ok := engine.drawCard(g, game.Player3, false); !ok {
 		t.Fatal("drawCard() = false, want true")
 	}
 	if !engine.putTriggeredAbilitiesOnStack(g) {
@@ -392,7 +392,7 @@ func TestTriggeredAbilitiesUseAgentOrderWithinController(t *testing.T) {
 	}
 	log := TurnLog{}
 
-	if _, ok := engine.drawCard(g, game.Player2); !ok {
+	if _, ok := engine.drawCard(g, game.Player2, false); !ok {
 		t.Fatal("drawCard() = false, want true")
 	}
 	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &log) {
@@ -431,7 +431,7 @@ func TestSimultaneousCounterTriggerCanTargetEarlierTrigger(t *testing.T) {
 	)
 	addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
 
-	if _, ok := engine.drawCard(g, game.Player2); !ok {
+	if _, ok := engine.drawCard(g, game.Player2, false); !ok {
 		t.Fatal("drawCard() = false, want true")
 	}
 	if !engine.putTriggeredAbilitiesOnStack(g) {

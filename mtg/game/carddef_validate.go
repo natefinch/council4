@@ -1489,6 +1489,9 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 		pattern.Event != EventSpellCast {
 		v.add(faceName, appendPath(path, "PlayerEventOrdinalThisTurn"), CardDefIssueInvalidSelection, "player-event ordinal is unavailable for this event")
 	}
+	if pattern.ExcludeFirstDrawInDrawStep && pattern.Event != EventCardDrawn {
+		v.add(faceName, appendPath(path, "ExcludeFirstDrawInDrawStep"), CardDefIssueInvalidSelection, "first-draw-in-draw-step exclusion is only supported for card-drawn events")
+	}
 	if pattern.MatchFromZone && pattern.FromZone == zone.None {
 		v.add(faceName, appendPath(path, "FromZone"), CardDefIssueInvalidSelection, "from-zone trigger filter must set a source zone")
 	}

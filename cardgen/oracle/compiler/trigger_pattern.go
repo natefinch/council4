@@ -375,5 +375,11 @@ type TriggerPattern struct {
 	// (CR 603.7), so direct trigger lowering rejects it.
 	NextOccurrence bool
 
+	// ExcludeFirstDrawInDrawStep narrows a card-draw pattern to draws other than
+	// the first card a player draws during each of their draw steps ("except the
+	// first one they draw in each of their draw steps", Orcish Bowmasters). It is
+	// only meaningful for the card-draw event.
+	ExcludeFirstDrawInDrawStep bool
+
 	InterveningCondition *CompiledCondition
 }

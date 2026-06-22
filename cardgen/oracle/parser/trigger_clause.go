@@ -452,10 +452,57 @@ func parsePlayerEventModifiers(
 		}
 		rest = next
 	}
+	if action == PlayerEventActionDraw {
+		if next, ok := cutExceptFirstInDrawStep(rest, player); ok {
+			if occurrence.Kind != PlayerEventOccurrenceAny {
+				return PlayerEventCard{}, PlayerEventOccurrence{}, false
+			}
+			occurrence = PlayerEventOccurrence{
+				Kind: PlayerEventOccurrenceExceptFirstInDrawStep,
+				Span: shared.SpanOf(rest),
+			}
+			rest = next
+		}
+	}
 	if len(rest) != 0 {
 		return PlayerEventCard{}, PlayerEventOccurrence{}, false
 	}
 	return card, occurrence, true
+}
+
+// cutExceptFirstInDrawStep consumes the "except the first one they draw in each
+// of their draw steps" suffix (using "you"/"your" for the controller-scoped
+// selector), which restricts a card-draw trigger to draws other than the first
+// of each draw step (Orcish Bowmasters).
+func cutExceptFirstInDrawStep(
+	tokens []shared.Token,
+	player TriggerPlayerSelectorKind,
+) ([]shared.Token, bool) {
+	rest, ok := cutSyntaxWords(tokens, "except", "the", "first", "one")
+	if !ok {
+		return nil, false
+	}
+	if len(rest) == 0 || !subjectPronounMatches(rest[0], player) {
+		return nil, false
+	}
+	rest, ok = cutSyntaxWords(rest[1:], "draw", "in", "each", "of")
+	if !ok {
+		return nil, false
+	}
+	if len(rest) == 0 || !possessiveMatches(rest[0], player) {
+		return nil, false
+	}
+	return cutSyntaxWords(rest[1:], "draw", "steps")
+}
+
+// subjectPronounMatches reports whether token is the subject pronoun used for
+// the selector's grammatical person: "you" for the controller-scoped "you"
+// selector and "they" for the third-person "a player"/"an opponent" selectors.
+func subjectPronounMatches(token shared.Token, player TriggerPlayerSelectorKind) bool {
+	if player == TriggerPlayerSelectorYou {
+		return equalWord(token, "you")
+	}
+	return equalWord(token, "they")
 }
 
 type playerEventCardParse struct {

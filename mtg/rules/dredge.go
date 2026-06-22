@@ -24,8 +24,8 @@ func (e *Engine) drawCardWithReplacements(g *game.Game, playerID game.PlayerID, 
 	}
 	drew := false
 	count := drawCardMultiplier(g, playerID, firstInDrawStep)
-	for range count {
-		cardID, ok := e.drawCard(g, playerID)
+	for i := range count {
+		cardID, ok := e.drawCard(g, playerID, firstInDrawStep && i == 0)
 		drew = drew || ok
 		log.addDraw(DrawLog{
 			Player: playerID,
