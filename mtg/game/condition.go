@@ -124,6 +124,14 @@ type Condition struct {
 	// spell was kicked, ... instead"). It is evaluated against the resolving
 	// stack object's captured kicker-paid state and is false for copies.
 	SpellWasKicked bool
+
+	// AttackersAttackingControllerAtLeast requires at least this many of the
+	// attackers declared this combat to be attacking the context controller
+	// directly or one of the controller's planeswalkers ("if two or more of
+	// those creatures are attacking you and/or planeswalkers you control";
+	// Mangara, the Diplomat). It is evaluated against live combat state and is
+	// zero (disabled) elsewhere.
+	AttackersAttackingControllerAtLeast int
 }
 
 // ControlPlayerScope selects which players' battlefields a control-count
@@ -232,7 +240,8 @@ func (c *Condition) Empty() bool {
 		!c.CastDuringControllerMainPhase &&
 		!c.EventHistory.Exists &&
 		!c.ControllerControlsCommander &&
-		!c.SpellWasKicked
+		!c.SpellWasKicked &&
+		c.AttackersAttackingControllerAtLeast == 0
 }
 
 // EventHistoryWindow selects which turn's event log an EventHistoryCondition

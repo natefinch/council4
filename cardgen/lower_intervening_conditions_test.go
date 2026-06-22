@@ -592,6 +592,32 @@ func TestRenderGeneratedObjectInterveningConditions(t *testing.T) {
 	}
 }
 
+// TestAttackingControllerInterveningConditionLowers verifies the Mangara combat
+// intervening-if "if two or more of those creatures are attacking you and/or
+// planeswalkers you control" lowers cleanly and renders the typed condition
+// field.
+func TestAttackingControllerInterveningConditionLowers(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Mangara, the Diplomat",
+		Layout:     "normal",
+		TypeLine:   "Legendary Creature — Human Advisor",
+		OracleText: "Lifelink\nWhenever an opponent attacks with creatures, if two or more of those creatures are attacking you and/or planeswalkers you control, draw a card.",
+		ManaCost:   "{2}{W}",
+		Power:      new("1"),
+		Toughness:  new("4"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "AttackersAttackingControllerAtLeast: 2") {
+		t.Fatalf("source missing AttackersAttackingControllerAtLeast field:\n%s", source)
+	}
+}
+
 func TestTargetLoweringFollowsTypedMeaningNotText(t *testing.T) {
 	t.Parallel()
 	permanent, ok := permanentTargetSpec(compiler.CompiledTarget{

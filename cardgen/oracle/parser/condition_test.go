@@ -539,6 +539,37 @@ func TestParseConditionDestroyedThisWay(t *testing.T) {
 	}
 }
 
+// TestParseConditionAttackersAttackingController covers the Mangara combat
+// intervening-if "if two or more of those creatures are attacking you and/or
+// planeswalkers you control", which maps to its own attacker-count-by-defender
+// predicate carrying the threshold, alongside the typed opponent-attack trigger.
+func TestParseConditionAttackersAttackingController(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"Whenever an opponent attacks with creatures, if two or more of those creatures are attacking you and/or planeswalkers you control, draw a card.",
+		Context{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if len(document.Abilities) != 1 {
+		t.Fatalf("abilities = %#v", document.Abilities)
+	}
+	ability := document.Abilities[0]
+	if ability.Trigger == nil || ability.Trigger.TriggerEvent == nil {
+		t.Fatalf("trigger event not typed: %#v", ability.Trigger)
+	}
+	if ability.Trigger.TriggerEvent.Kind != TriggerEventKindAttack ||
+		ability.Trigger.TriggerEvent.Actor.Kind != TriggerEventActorOpponent {
+		t.Fatalf("trigger event = %#v, want opponent attack", ability.Trigger.TriggerEvent)
+	}
+	clauses := ability.ConditionClauses
+	if len(clauses) != 1 ||
+		clauses[0].Predicate != ConditionPredicateAttackersAttackingControllerAtLeast ||
+		clauses[0].Threshold != 2 {
+		t.Fatalf("clauses = %#v, want attackers-attacking-controller threshold 2", clauses)
+	}
+}
+
 // TestParseConditionDestroyedThisWayRejectsOtherWording confirms the recognizer
 // fails closed on wording it does not model, leaving an unsupported condition
 // rather than a silently-wrong success gate.

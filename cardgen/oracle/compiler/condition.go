@@ -102,6 +102,9 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 	case parser.ConditionPredicateCreaturePowerDiversityAtLeast:
 		condition.Predicate = ConditionPredicateControllerCreaturePowerDiversityAtLeast
 		condition.Threshold = clause.Threshold
+	case parser.ConditionPredicateAttackersAttackingControllerAtLeast:
+		condition.Predicate = ConditionPredicateAttackersAttackingControllerAtLeast
+		condition.Threshold = clause.Threshold
 	case parser.ConditionPredicateControls:
 		compileControlsCondition(condition, clause)
 	case parser.ConditionPredicateControlComparison:
