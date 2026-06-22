@@ -463,3 +463,71 @@ func TestLowerOptionalPayLifeIfYouDoDraw(t *testing.T) {
 		t.Fatalf("instruction[1].ResultGate = %#v, want succeeded gate on %q", gate, optionalIfYouDoResultKey)
 	}
 }
+
+// TestLowerOptionalIfYouDoDiscardHandDraw verifies that the optional "You may
+// discard your hand. If you do, <Y>." form lowers the entire-hand discard as an
+// optional result-publishing instruction with the benefit gated on it. The
+// controller offer reconstructs exactly once the optional "you may" prefix is
+// stripped, so the entire-hand discard flag is recognized inside the wrapper.
+func TestLowerOptionalIfYouDoDiscardHandDraw(t *testing.T) {
+	t.Parallel()
+	sequence := lowerSpellSequence(t, "Optional Hand Dump",
+		"You may discard your hand. If you do, draw a card.")
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions", sequence)
+	}
+	discard, ok := sequence[0].Primitive.(game.Discard)
+	if !ok {
+		t.Fatalf("instruction[0] = %T, want game.Discard", sequence[0].Primitive)
+	}
+	if !discard.EntireHand {
+		t.Fatalf("discard = %#v, want EntireHand", discard)
+	}
+	if !sequence[0].Optional || sequence[0].PublishResult != optionalIfYouDoResultKey {
+		t.Fatalf("discard must be optional and publish %q: %#v", optionalIfYouDoResultKey, sequence[0])
+	}
+	if _, ok := sequence[1].Primitive.(game.Draw); !ok {
+		t.Fatalf("instruction[1] = %T, want game.Draw", sequence[1].Primitive)
+	}
+	gate := sequence[1].ResultGate
+	if !gate.Exists || gate.Val.Key != optionalIfYouDoResultKey || gate.Val.Succeeded != game.TriTrue {
+		t.Fatalf("draw ResultGate = %#v, want succeeded gate on %q", gate, optionalIfYouDoResultKey)
+	}
+}
+
+// TestLowerOptionalIfYouDoSelfSacrificeDraw verifies that the optional "you may
+// sacrifice this creature. If you do, <Y>." form lowers the self-sacrifice (the
+// source permanent named by "this creature") as an optional result-publishing
+// instruction with the benefit gated on it, matching the "sacrifice it." path.
+func TestLowerOptionalIfYouDoSelfSacrificeDraw(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Self Sac Spirit",
+		Layout:     "normal",
+		TypeLine:   "Creature — Spirit",
+		ManaCost:   "{1}",
+		OracleText: "When this creature enters, you may sacrifice this creature. If you do, draw a card.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	sequence := face.TriggeredAbilities[0].Content.Modes[0].Sequence
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions", sequence)
+	}
+	if _, ok := sequence[0].Primitive.(game.Sacrifice); !ok {
+		t.Fatalf("instruction[0] = %T, want game.Sacrifice", sequence[0].Primitive)
+	}
+	if !sequence[0].Optional || sequence[0].PublishResult != optionalIfYouDoResultKey {
+		t.Fatalf("sacrifice must be optional and publish %q: %#v", optionalIfYouDoResultKey, sequence[0])
+	}
+	if _, ok := sequence[1].Primitive.(game.Draw); !ok {
+		t.Fatalf("instruction[1] = %T, want game.Draw", sequence[1].Primitive)
+	}
+	gate := sequence[1].ResultGate
+	if !gate.Exists || gate.Val.Key != optionalIfYouDoResultKey || gate.Val.Succeeded != game.TriTrue {
+		t.Fatalf("draw ResultGate = %#v, want succeeded gate on %q", gate, optionalIfYouDoResultKey)
+	}
+}
