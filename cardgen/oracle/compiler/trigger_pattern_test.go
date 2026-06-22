@@ -7,6 +7,8 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -58,7 +60,7 @@ func TestTypedTriggerEventsBindClosedSlots(t *testing.T) {
 				Event:      TriggerEventPermanentEnteredBattlefield,
 				Controller: ControllerYou,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeArtifact},
+					RequiredTypes: []types.Card{types.Artifact},
 				},
 				OneOrMore: true,
 			},
@@ -73,7 +75,7 @@ func TestTypedTriggerEventsBindClosedSlots(t *testing.T) {
 				Kind:                 TriggerWhen,
 				Event:                TriggerEventPermanentDied,
 				Source:               TriggerSourceSelf,
-				SubjectSelection:     TriggerSelection{RequiredTypes: []TriggerCardType{TriggerCardTypeCreature}},
+				SubjectSelection:     TriggerSelection{RequiredTypes: []types.Card{types.Creature}},
 				InterveningCondition: condition,
 			},
 		},
@@ -109,7 +111,7 @@ func TestTypedTriggerEventsBindClosedSlots(t *testing.T) {
 				Event:      TriggerEventSpellCast,
 				Controller: ControllerYou,
 				CardSelection: TriggerSelection{
-					RequiredTypes:          []TriggerCardType{TriggerCardTypeCreature},
+					RequiredTypes:          []types.Card{types.Creature},
 					SubtypeFromEntryChoice: true,
 				},
 			},
@@ -134,7 +136,7 @@ func TestTypedTriggerEventsBindClosedSlots(t *testing.T) {
 				Player:             TriggerPlayerOpponent,
 				ExcludeManaAbility: true,
 				SubjectSelection: TriggerSelection{
-					RequiredTypesAny: []TriggerCardType{TriggerCardTypeCreature, TriggerCardTypeLand},
+					RequiredTypesAny: []types.Card{types.Creature, types.Land},
 				},
 			},
 		},
@@ -148,7 +150,7 @@ func TestTypedTriggerEventsBindClosedSlots(t *testing.T) {
 				Controller:      ControllerYou,
 				CauseController: ControllerOpponent,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					RequiredTypes: []types.Card{types.Creature},
 				},
 			},
 		},
@@ -165,7 +167,7 @@ func TestTypedTriggerEventsBindClosedSlots(t *testing.T) {
 				CombatQualifier: TriggerCombatDamage,
 				DamageRecipient: TriggerDamageRecipientPlayer,
 				DamageSourceSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					RequiredTypes: []types.Card{types.Creature},
 				},
 			},
 		},
@@ -193,7 +195,7 @@ func TestTypedTriggerEventsBindClosedSlots(t *testing.T) {
 				OneOrMore:   true,
 				Counter:     TriggerCounterPlusOnePlusOne,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					RequiredTypes: []types.Card{types.Creature},
 				},
 			},
 		},
@@ -226,7 +228,7 @@ func TestTypedTriggerEventsBindClosedSlots(t *testing.T) {
 				Event:  TriggerEventPermanentTurnedFaceUp,
 				Source: TriggerSourceAttachedPermanent,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					RequiredTypes: []types.Card{types.Creature},
 				},
 			},
 		},
@@ -239,7 +241,7 @@ func TestTypedTriggerEventsBindClosedSlots(t *testing.T) {
 				Event:      TriggerEventPermanentTapped,
 				Controller: ControllerOpponent,
 				SubjectSelection: TriggerSelection{
-					SubtypesAny: []TriggerSubtype{types.Forest},
+					SubtypesAny: []types.Sub{types.Forest},
 				},
 			},
 		},
@@ -252,7 +254,7 @@ func TestTypedTriggerEventsBindClosedSlots(t *testing.T) {
 				Event:  TriggerEventPermanentSacrificed,
 				Player: TriggerPlayerYou,
 				SubjectSelection: TriggerSelection{
-					SubtypesAny: []TriggerSubtype{types.Clue},
+					SubtypesAny: []types.Sub{types.Clue},
 				},
 			},
 		},
@@ -329,7 +331,7 @@ func TestCombatPhaseAndStepTriggerPatternsSaturateRepresentableSlots(t *testing.
 				Event:      TriggerEventAttackerDeclared,
 				Controller: ControllerYou,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeArtifact, TriggerCardTypeCreature},
+					RequiredTypes: []types.Card{types.Artifact, types.Creature},
 				},
 				OneOrMore: true,
 			},
@@ -344,10 +346,10 @@ func TestCombatPhaseAndStepTriggerPatternsSaturateRepresentableSlots(t *testing.
 				Player:          TriggerPlayerYou,
 				AttackRecipient: TriggerAttackRecipientPlayer | TriggerAttackRecipientPlaneswalker,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					RequiredTypes: []types.Card{types.Creature},
 				},
 				AttackRecipientSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypePlaneswalker},
+					RequiredTypes: []types.Card{types.Planeswalker},
 					Controller:    ControllerYou,
 				},
 			},
@@ -386,7 +388,7 @@ func TestCombatPhaseAndStepTriggerPatternsSaturateRepresentableSlots(t *testing.
 				Controller:  ControllerYou,
 				AttackAlone: true,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					RequiredTypes: []types.Card{types.Creature},
 				},
 			},
 		},
@@ -411,8 +413,8 @@ func TestCombatPhaseAndStepTriggerPatternsSaturateRepresentableSlots(t *testing.
 				Event:  TriggerEventBlockerDeclared,
 				Source: TriggerSourceSelf,
 				RelatedSubjectSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
-					Keyword:       TriggerKeywordFlying,
+					RequiredTypes: []types.Card{types.Creature},
+					Keyword:       parser.KeywordFlying,
 				},
 			},
 		},
@@ -428,7 +430,7 @@ func TestCombatPhaseAndStepTriggerPatternsSaturateRepresentableSlots(t *testing.
 				CombatQualifier: TriggerCombatDamage,
 				DamageRecipient: TriggerDamageRecipientPlayer,
 				DamageSourceSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeArtifact, TriggerCardTypeCreature},
+					RequiredTypes: []types.Card{types.Artifact, types.Creature},
 				},
 				OneOrMore: true,
 			},
@@ -446,7 +448,7 @@ func TestCombatPhaseAndStepTriggerPatternsSaturateRepresentableSlots(t *testing.
 				StackObject:               TriggerStackObjectSpell,
 				DamageSourceIsStackObject: true,
 				DamageSourceSelection: TriggerSelection{
-					RequiredTypesAny: []TriggerCardType{TriggerCardTypeInstant, TriggerCardTypeSorcery},
+					RequiredTypesAny: []types.Card{types.Instant, types.Sorcery},
 				},
 				DamageRecipient: TriggerDamageRecipientPlayer,
 			},
@@ -476,7 +478,7 @@ func TestCombatPhaseAndStepTriggerPatternsSaturateRepresentableSlots(t *testing.
 				Subject:         TriggerSubjectDamageSource,
 				DamageRecipient: TriggerDamageRecipientPlayer | TriggerDamageRecipientPermanent,
 				DamageRecipientSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypePlaneswalker},
+					RequiredTypes: []types.Card{types.Planeswalker},
 				},
 			},
 		},
@@ -503,7 +505,7 @@ func TestCombatPhaseAndStepTriggerPatternsSaturateRepresentableSlots(t *testing.
 				CombatQualifier: TriggerCombatDamage,
 				DamageRecipient: TriggerDamageRecipientPermanent,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					RequiredTypes: []types.Card{types.Creature},
 				},
 			},
 		},
@@ -571,7 +573,7 @@ func TestPermanentZoneChangeTriggerPatternsBindRepresentableSlots(t *testing.T) 
 				MatchToZone:   true,
 				ToZone:        TriggerZoneGraveyard,
 				SubjectSelection: TriggerSelection{
-					SubtypesAny: []TriggerSubtype{types.Plains},
+					SubtypesAny: []types.Sub{types.Plains},
 				},
 			},
 		},
@@ -586,7 +588,7 @@ func TestPermanentZoneChangeTriggerPatternsBindRepresentableSlots(t *testing.T) 
 				ExcludeSelf: true,
 				OneOrMore:   true,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					RequiredTypes: []types.Card{types.Creature},
 				},
 			},
 		},
@@ -600,7 +602,7 @@ func TestPermanentZoneChangeTriggerPatternsBindRepresentableSlots(t *testing.T) 
 				Event:      TriggerEventPermanentEnteredBattlefield,
 				Controller: ControllerYou,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes:          []TriggerCardType{TriggerCardTypeCreature},
+					RequiredTypes:          []types.Card{types.Creature},
 					SubtypeFromEntryChoice: true,
 				},
 			},
@@ -615,11 +617,11 @@ func TestPermanentZoneChangeTriggerPatternsBindRepresentableSlots(t *testing.T) 
 				Controller:  ControllerYou,
 				ExcludeSelf: true,
 				SubjectSelection: TriggerSelection{
-					Supertypes:  []TriggerSupertype{TriggerSupertypeLegendary},
-					SubtypesAny: []TriggerSubtype{types.Dragon},
-					ColorsAny:   []TriggerColor{TriggerColorGreen},
+					Supertypes:  []types.Super{types.Legendary},
+					SubtypesAny: []types.Sub{types.Dragon},
+					ColorsAny:   []color.Color{color.Green},
 					NonToken:    true,
-					Power:       TriggerNumberFilter{Comparison: TriggerComparisonAtLeast, Value: 4},
+					Power:       compare.Int{Op: compare.GreaterOrEqual, Value: 4},
 				},
 			},
 		},
@@ -631,8 +633,8 @@ func TestPermanentZoneChangeTriggerPatternsBindRepresentableSlots(t *testing.T) 
 				Kind:  TriggerWhenever,
 				Event: TriggerEventPermanentDied,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
-					Keyword:       TriggerKeywordFlying,
+					RequiredTypes: []types.Card{types.Creature},
+					Keyword:       parser.KeywordFlying,
 				},
 			},
 		},
@@ -645,10 +647,10 @@ func TestPermanentZoneChangeTriggerPatternsBindRepresentableSlots(t *testing.T) 
 				Event:      TriggerEventPermanentEnteredBattlefield,
 				Controller: ControllerYou,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					RequiredTypes: []types.Card{types.Creature},
 					Tapped:        TriggerTriTrue,
-					Power:         TriggerNumberFilter{Comparison: TriggerComparisonEqual, Value: 1},
-					Toughness:     TriggerNumberFilter{Comparison: TriggerComparisonEqual, Value: 1},
+					Power:         compare.Int{Op: compare.Equal, Value: 1},
+					Toughness:     compare.Int{Op: compare.Equal, Value: 1},
 				},
 			},
 		},
@@ -661,7 +663,7 @@ func TestPermanentZoneChangeTriggerPatternsBindRepresentableSlots(t *testing.T) 
 				Event:      TriggerEventPermanentEnteredBattlefield,
 				Controller: ControllerOpponent,
 				SubjectSelection: TriggerSelection{
-					RequiredTypesAny: []TriggerCardType{TriggerCardTypeArtifact, TriggerCardTypeCreature},
+					RequiredTypesAny: []types.Card{types.Artifact, types.Creature},
 					Tapped:           TriggerTriFalse,
 				},
 			},
@@ -677,7 +679,7 @@ func TestPermanentZoneChangeTriggerPatternsBindRepresentableSlots(t *testing.T) 
 				MatchFromZone: true,
 				FromZone:      TriggerZoneGraveyard,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					RequiredTypes: []types.Card{types.Creature},
 				},
 			},
 		},
@@ -707,7 +709,7 @@ func TestPermanentZoneChangeTriggerPatternsBindRepresentableSlots(t *testing.T) 
 				MatchToZone:   true,
 				ToZone:        TriggerZoneHand,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeArtifact},
+					RequiredTypes: []types.Card{types.Artifact},
 				},
 			},
 		},
@@ -719,8 +721,8 @@ func TestPermanentZoneChangeTriggerPatternsBindRepresentableSlots(t *testing.T) 
 				Kind:  TriggerWhen,
 				Event: TriggerEventPermanentEnteredBattlefield,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes:  []TriggerCardType{TriggerCardTypeCreature},
-					ExcludedColors: []TriggerColor{TriggerColorBlack},
+					RequiredTypes:  []types.Card{types.Creature},
+					ExcludedColors: []color.Color{color.Black},
 				},
 			},
 		},
@@ -754,7 +756,7 @@ func TestPermanentZoneChangeTriggerPatternsBindExtendedSlots(t *testing.T) {
 				ExcludeToZone: true,
 				ToZone:        TriggerZoneGraveyard,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					RequiredTypes: []types.Card{types.Creature},
 				},
 			},
 		},
@@ -766,7 +768,7 @@ func TestPermanentZoneChangeTriggerPatternsBindExtendedSlots(t *testing.T) {
 				MatchFaceDown: true,
 				FaceDown:      true,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					RequiredTypes: []types.Card{types.Creature},
 				},
 			},
 		},
@@ -776,7 +778,7 @@ func TestPermanentZoneChangeTriggerPatternsBindExtendedSlots(t *testing.T) {
 			want: TriggerPattern{
 				Event: TriggerEventPermanentDied,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					RequiredTypes: []types.Card{types.Creature},
 					CombatState:   TriggerCombatStateAttacking,
 				},
 			},
@@ -787,8 +789,8 @@ func TestPermanentZoneChangeTriggerPatternsBindExtendedSlots(t *testing.T) {
 			want: TriggerPattern{
 				Event: TriggerEventPermanentDied,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
-					SubtypesAny:   []TriggerSubtype{types.Dragon},
+					RequiredTypes: []types.Card{types.Creature},
+					SubtypesAny:   []types.Sub{types.Dragon},
 				},
 			},
 		},
@@ -799,8 +801,8 @@ func TestPermanentZoneChangeTriggerPatternsBindExtendedSlots(t *testing.T) {
 				Event:      TriggerEventPermanentDied,
 				Controller: ControllerYou,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
-					SubtypesAny: []TriggerSubtype{
+					RequiredTypes: []types.Card{types.Creature},
+					SubtypesAny: []types.Sub{
 						types.Assassin, types.Mercenary, types.Pirate, types.Rogue, types.Warlock,
 					},
 				},
@@ -813,7 +815,7 @@ func TestPermanentZoneChangeTriggerPatternsBindExtendedSlots(t *testing.T) {
 				Event:      TriggerEventPermanentDied,
 				Controller: ControllerYou,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					RequiredTypes: []types.Card{types.Creature},
 					TokenOnly:     true,
 				},
 			},
@@ -826,8 +828,8 @@ func TestPermanentZoneChangeTriggerPatternsBindExtendedSlots(t *testing.T) {
 				Event:       TriggerEventPermanentDied,
 				ExcludeSelf: true,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
-					Supertypes:    []TriggerSupertype{TriggerSupertypeLegendary},
+					RequiredTypes: []types.Card{types.Creature},
+					Supertypes:    []types.Super{types.Legendary},
 				},
 			},
 		},
@@ -840,7 +842,7 @@ func TestPermanentZoneChangeTriggerPatternsBindExtendedSlots(t *testing.T) {
 				MatchToZone: true,
 				ToZone:      TriggerZoneGraveyard,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					RequiredTypes: []types.Card{types.Creature},
 				},
 			},
 		},
@@ -854,7 +856,7 @@ func TestPermanentZoneChangeTriggerPatternsBindExtendedSlots(t *testing.T) {
 				ExcludeFromZone: true,
 				FromZone:        TriggerZoneBattlefield,
 				SubjectSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					RequiredTypes: []types.Card{types.Creature},
 				},
 			},
 		},

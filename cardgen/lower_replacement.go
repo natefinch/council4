@@ -521,8 +521,7 @@ func lowerGraveyardRedirectReplacement(
 		return unsupported("the executable source backend supports only exile graveyard-redirect replacements")
 	}
 	condition := ability.Content.Conditions[0]
-	cardTypes, ok := lowerTriggerCardTypes(condition.GraveyardSubjectTypesAny)
-	if !ok {
+	if !triggerCardTypesValid(condition.GraveyardSubjectTypesAny) {
 		return unsupported("the executable source backend does not support this graveyard-redirect card-type filter")
 	}
 	ownerFilter, ok := graveyardRedirectOwnerFilter(condition.GraveyardRedirectScope)
@@ -538,8 +537,15 @@ func lowerGraveyardRedirectReplacement(
 		ownerFilter,
 		controlFilter,
 		condition.GraveyardFromBattlefieldOnly,
-		cardTypes...,
+		condition.GraveyardSubjectTypesAny...,
 	), true, nil
+}
+
+// triggerCardTypesValid reports whether every entry is a recognized card type.
+// It preserves the fail-closed guard the deleted lowerTriggerCardTypes helper
+// applied: an unset (empty) card type is rejected.
+func triggerCardTypesValid(cardTypes []types.Card) bool {
+	return !slices.Contains(cardTypes, "")
 }
 
 func graveyardRedirectOwnerFilter(scope compiler.GraveyardRedirectScope) (game.TriggerControllerFilter, bool) {
@@ -621,10 +627,10 @@ func lowerCounterPlacementReplacement(
 		condition := ability.Content.Conditions[0]
 		plusOnePlusOne := condition.Counter == compiler.ConditionCounterPlusOnePlusOne
 		if len(condition.CounterRecipientTypesAny) > 0 {
-			recipientTypes, ok := lowerTriggerCardTypes(condition.CounterRecipientTypesAny)
-			if !ok {
+			if !triggerCardTypesValid(condition.CounterRecipientTypesAny) {
 				return unsupported("the executable source backend does not support this counter-recipient card-type filter")
 			}
+			recipientTypes := condition.CounterRecipientTypesAny
 			if plusOnePlusOne {
 				return game.ControlledPermanentTypesCounterKindPlacementReplacement(ability.Text, multiplier, addend, counter.PlusOnePlusOne, recipientTypes, game.TriggerControllerYou), true, nil
 			}

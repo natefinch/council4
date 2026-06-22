@@ -843,7 +843,7 @@ type CompiledCondition struct {
 	// watched, which card types the moving object may have (empty matches any
 	// card), and whether the moving object can only leave the battlefield.
 	GraveyardRedirectScope       GraveyardRedirectScope
-	GraveyardSubjectTypesAny     []TriggerCardType
+	GraveyardSubjectTypesAny     []types.Card
 	GraveyardFromBattlefieldOnly bool
 
 	// GraveyardRedirectControlScope carries the control qualifier of a "would
@@ -856,14 +856,14 @@ type CompiledCondition struct {
 	// ConditionPredicateCounterPlacementOnControlledPermanent clause ("an
 	// artifact or creature you control", Ozolith, the Shattered Spire). It is
 	// empty for the unrestricted "a permanent you control" form.
-	CounterRecipientTypesAny []TriggerCardType
+	CounterRecipientTypesAny []types.Card
 
 	// GraveyardCountCardType carries the single card type counted by a
 	// ConditionPredicateControllerGraveyardCardOfTypeCountAtLeast clause ("if
 	// twenty or more creature cards are in your graveyard", Mortal Combat).
-	// Threshold carries the minimum count. It is TriggerCardTypeUnknown for other
+	// Threshold carries the minimum count. It is the empty card type for other
 	// clauses.
-	GraveyardCountCardType TriggerCardType
+	GraveyardCountCardType types.Card
 
 	// ControlledNames carries the card names required by a
 	// ConditionPredicateControllerControlsNamed clause ("If you control an

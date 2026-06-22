@@ -522,7 +522,7 @@ func TestCompileEventHistoryCreatureDiedHasCreatureSelection(t *testing.T) {
 		t.Fatal("EventHistoryPattern = nil, want non-nil")
 	}
 	sel := cond.EventHistoryPattern.SubjectSelection
-	if len(sel.RequiredTypes) != 1 || sel.RequiredTypes[0] != TriggerCardTypeCreature {
+	if len(sel.RequiredTypes) != 1 || sel.RequiredTypes[0] != types.Creature {
 		t.Fatalf("SubjectSelection = %#v, want creature", sel)
 	}
 }

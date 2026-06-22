@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
+	"github.com/natefinch/council4/mtg/game/compare"
 )
 
 func compilePlayerEventTriggerPattern(
@@ -151,14 +152,14 @@ func compilePlayerEventCardSelection(card parser.PlayerEventCard) (TriggerSelect
 	var selection TriggerSelection
 	for _, value := range card.RequiredTypes {
 		compiled := compileTriggerCardType(value)
-		if compiled == TriggerCardTypeUnknown {
+		if compiled == "" {
 			return TriggerSelection{}, false
 		}
 		selection.RequiredTypes = append(selection.RequiredTypes, compiled)
 	}
 	for _, value := range card.ExcludedTypes {
 		compiled := compileTriggerCardType(value)
-		if compiled == TriggerCardTypeUnknown {
+		if compiled == "" {
 			return TriggerSelection{}, false
 		}
 		selection.ExcludedTypes = append(selection.ExcludedTypes, compiled)
@@ -316,15 +317,15 @@ func phaseStepAttachedSelectionEmpty(selection TriggerSelection) bool {
 		!selection.Multicolored &&
 		selection.Tapped == TriggerTriAny &&
 		selection.CombatState == TriggerCombatStateAny &&
-		selection.Keyword == TriggerKeywordUnknown &&
-		selection.ExcludedKeyword == TriggerKeywordUnknown &&
+		selection.Keyword == parser.KeywordUnknown &&
+		selection.ExcludedKeyword == parser.KeywordUnknown &&
 		!selection.NonToken &&
 		!selection.TokenOnly &&
 		selection.ManaValueAtLeast == 0 &&
 		selection.ManaValueAtMost == 0 &&
 		!selection.MatchManaValue &&
-		selection.ManaValue.Comparison == TriggerComparisonUnknown &&
-		selection.Power.Comparison == TriggerComparisonUnknown &&
-		selection.Toughness.Comparison == TriggerComparisonUnknown &&
+		selection.ManaValue.Op == compare.Any &&
+		selection.Power.Op == compare.Any &&
+		selection.Toughness.Op == compare.Any &&
 		selection.Controller == ControllerAny
 }
