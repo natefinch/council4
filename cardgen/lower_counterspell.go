@@ -883,6 +883,12 @@ func sacrificeReferencedPlayerChoice(references []compiler.CompiledReference) bo
 	return sawSubject
 }
 
+// DO-NOT-COPY(filter): accepts the bare token noun ("a token", an unknown kind
+// whose sole constraint is the token qualifier), which the canonical projector
+// fails closed on (an unknown noun without a subtype); reproducing it would
+// require broadening the canonical core, deferred to Stage 5; prefer
+// SelectionForSelectorMasked for new code. (retire: #1393)
+//
 // sacrificeChoiceSelection maps the sacrifice effect's compiled selector to a
 // runtime Selection. It supports a single permanent card type, a card-type
 // union ("creature or planeswalker"), a single excluded card type ("nonland

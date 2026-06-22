@@ -202,86 +202,53 @@ func totalInGroupKind(kind compiler.DynamicAmountKind) game.DynamicAmountKind {
 	}
 }
 
+// dynamicAmountSelection projects the battlefield-count group selector of a
+// dynamic amount ("for each other attacking creature you control") onto a
+// Selection through the canonical projector. The guard enforces the count-group
+// accept set that no SelectionMask dimension expresses: a countable permanent
+// kind (or a multi-type union, or an unknown noun carrying a count
+// characteristic), no "all" qualifier, and a you/opponent controller. It then
+// delegates the field mapping to the canonical projector, which carries the
+// combat, tapped, self-exclusion, and characteristic filters a count group does
+// support. dynamicAmountSelectionMask drops the remaining canonical dimensions a
+// count group never carries.
 func dynamicAmountSelection(selector compiler.CompiledSelector) (game.Selection, bool) {
-	if selector.Zone != zone.None {
+	if selector.All {
 		return game.Selection{}, false
 	}
-	tapped, ok := dynamicTapState(selector)
-	if !ok {
-		return game.Selection{}, false
-	}
-	combatState := dynamicCombatState(selector)
-	excludeSource := selector.Other || selector.Another
-	filtered := selector
-	filtered.Tapped = false
-	filtered.Untapped = false
-	filtered.Attacking = false
-	filtered.Blocking = false
-	filtered.Other = false
-	filtered.Another = false
-	selection, ok := dynamicCountCharacteristics(filtered)
-	if !ok {
-		return game.Selection{}, false
-	}
-	selection.Tapped = tapped
-	selection.CombatState = combatState
-	selection.ExcludeSource = excludeSource
-	requiredType, known := dynamicBattlefieldRequiredType(selector.Kind)
+	_, known := dynamicBattlefieldRequiredType(selector.Kind)
 	switch {
 	case len(selector.RequiredTypesAny()) >= 2:
-		// A multi-type disjunction ("artifact and/or enchantment you control") is
-		// carried as the selection's RequiredTypesAny union by
-		// selectorCharacteristics; the selector Kind names only the first
-		// alternative, so do not also force it as a sole required type.
 	case known:
-		if requiredType != "" {
-			selection.RequiredTypes = []types.Card{requiredType}
-		}
 	case selector.Kind == compiler.SelectorUnknown && selectorHasCountCharacteristic(selector):
 	default:
 		return game.Selection{}, false
 	}
 	switch selector.Controller {
-	case compiler.ControllerAny:
-	case compiler.ControllerYou:
-		selection.Controller = game.ControllerYou
-	case compiler.ControllerOpponent:
-		selection.Controller = game.ControllerOpponent
+	case compiler.ControllerAny, compiler.ControllerYou, compiler.ControllerOpponent:
 	default:
 		return game.Selection{}, false
 	}
-	return selection, true
+	return SelectionForSelectorMasked(selector, dynamicAmountSelectionMask)
 }
 
-func dynamicTapState(selector compiler.CompiledSelector) (game.TriState, bool) {
-	switch {
-	case selector.Tapped && selector.Untapped:
-		return game.TriAny, false
-	case selector.Tapped:
-		return game.TriTrue, true
-	case selector.Untapped:
-		return game.TriFalse, true
-	default:
-		return game.TriAny, true
-	}
-}
-
-// dynamicCombatState maps a compiled count selector's combat-involvement flags
-// onto the runtime combat-state filter that scopes a battlefield-group count to
-// attacking and/or blocking permanents ("for each other attacking creature …").
-// The zero value (neither flag set) imposes no combat restriction.
-func dynamicCombatState(selector compiler.CompiledSelector) game.CombatStateFilter {
-	switch {
-	case selector.Attacking && selector.Blocking:
-		return game.CombatStateAttackingOrBlocking
-	case selector.Attacking:
-		return game.CombatStateAttacking
-	case selector.Blocking:
-		return game.CombatStateBlocking
-	default:
-		return game.CombatStateAny
-	}
-}
+// dynamicAmountSelectionMask drops the canonical dimensions a battlefield count
+// group never carries: the excluded supertype, kind-agnostic counter, "aren't of
+// the chosen type" exclusion, conjunctive type set, per-object token state, and
+// historic disjunction. It fails closed on a source-relative power comparison: a
+// count group has no source permanent to compare against, so the predecessor
+// projector rejected that filter rather than dropping it.
+var dynamicAmountSelectionMask = SelectionMask{}.Ignoring(
+	DimExcludedSupertype,
+	DimMatchAnyCounter,
+	DimSubtypeChoiceExcluded,
+	DimConjunctiveTypes,
+	DimNonToken,
+	DimTokenOnly,
+	DimHistoric,
+).Rejecting(
+	DimPowerVsSource,
+)
 
 func dynamicBattlefieldRequiredType(kind compiler.SelectorKind) (types.Card, bool) {
 	switch kind {
@@ -345,6 +312,11 @@ func dynamicZoneRequiredType(kind compiler.SelectorKind) (types.Card, bool) {
 	}
 }
 
+// DO-NOT-COPY(filter): wraps selectorCharacteristics for the card-zone count
+// contexts (cards in a graveyard or hand) the battlefield-only canonical
+// projector fails closed on, and defers the selector Kind and Controller to its
+// callers; prefer SelectionForSelectorMasked for new code. (retire: #1393)
+//
 // dynamicCountCharacteristics maps the characteristic filters of a compiled
 // count selector onto a runtime Selection, returning false for any filter the
 // executable backend cannot represent exactly so unsupported wordings stay
@@ -375,6 +347,12 @@ func dynamicCountCharacteristics(selector compiler.CompiledSelector) (game.Selec
 	return selection, true
 }
 
+// DO-NOT-COPY(filter): maps only a selector's characteristic filters, deferring
+// the Kind, Controller, combat, tapped, and zone dimensions to its callers
+// (including card-zone contexts), so it intentionally produces a partial
+// selection the full canonical projector cannot; prefer
+// SelectionForSelectorMasked for new code. (retire: #1393)
+//
 // selectorCharacteristics maps the characteristic filters of a compiled selector
 // (colors, colorless/multicolored, keyword, excluded types, supertypes,
 // subtypes, excluded colors, and a disjunctive required-type union) onto a
