@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/mana"
 )
 
 func parseDamageTriggerEventClause(
@@ -465,6 +466,33 @@ func parsePermanentStateTriggerEventClause(
 // controller unrestricted; the opponent form restricts it to an opponent. The
 // active-voice form accepts the source itself ("you tap this land for mana"),
 // which is equivalent to the passive self form.
+// stripTappedForManaSuffix recognizes the mana-provenance suffix of a
+// tapped-for-mana trigger. It accepts the unrestricted "for mana" (returning an
+// empty color, matching any produced type) as well as a specific mana symbol
+// such as "for {C}" or "for {G}" (returning that color, restricting the trigger
+// to taps that produced it). It returns the tokens preceding the suffix.
+func stripTappedForManaSuffix(tokens []shared.Token) ([]shared.Token, mana.Color, bool) {
+	if inner, ok := stripTokenSuffix(tokens, "for", "mana"); ok {
+		return inner, "", true
+	}
+	if len(tokens) == 0 {
+		return nil, "", false
+	}
+	last := tokens[len(tokens)-1]
+	if last.Kind != shared.Symbol {
+		return nil, "", false
+	}
+	color, ok := effectManaColor(last.Text)
+	if !ok {
+		return nil, "", false
+	}
+	inner, ok := stripTokenSuffix(tokens[:len(tokens)-1], "for")
+	if !ok {
+		return nil, "", false
+	}
+	return inner, color, true
+}
+
 func parseTappedForManaTriggerEventClause(
 	tokens []shared.Token,
 	intro TriggerIntroductionKind,
@@ -475,15 +503,16 @@ func parseTappedForManaTriggerEventClause(
 		return nil
 	}
 	if rest, ok := cutSyntaxWords(tokens, "you", "tap"); ok {
-		inner, ok := stripTokenSuffix(rest, "for", "mana")
+		inner, color, ok := stripTappedForManaSuffix(rest)
 		if !ok {
 			return nil
 		}
 		if span, count, ok := parseSelfSubject(inner, atoms); ok && count == len(inner) {
 			return &TriggerEventClause{
-				Kind:          TriggerEventKindBecomesTapped,
-				Subject:       TriggerEventSubject{Kind: TriggerEventSubjectSelf, Span: span},
-				TappedForMana: true,
+				Kind:               TriggerEventKindBecomesTapped,
+				Subject:            TriggerEventSubject{Kind: TriggerEventSubjectSelf, Span: span},
+				TappedForMana:      true,
+				TappedForManaColor: color,
 			}
 		}
 		subject := parsePermanentEventSubject(inner, false, atoms)
@@ -495,11 +524,12 @@ func parseTappedForManaTriggerEventClause(
 			return nil
 		}
 		return &TriggerEventClause{
-			Kind:          TriggerEventKindBecomesTapped,
-			Subject:       subject.subject,
-			Controller:    controller,
-			ExcludeSelf:   subject.excludeSelf,
-			TappedForMana: true,
+			Kind:               TriggerEventKindBecomesTapped,
+			Subject:            subject.subject,
+			Controller:         controller,
+			ExcludeSelf:        subject.excludeSelf,
+			TappedForMana:      true,
+			TappedForManaColor: color,
 		}
 	}
 	for _, actor := range []struct {
@@ -513,7 +543,7 @@ func parseTappedForManaTriggerEventClause(
 		if !ok {
 			continue
 		}
-		inner, ok := stripTokenSuffix(rest, "for", "mana")
+		inner, color, ok := stripTappedForManaSuffix(rest)
 		if !ok {
 			return nil
 		}
@@ -526,22 +556,28 @@ func parseTappedForManaTriggerEventClause(
 			return nil
 		}
 		return &TriggerEventClause{
-			Kind:          TriggerEventKindBecomesTapped,
-			Subject:       subject.subject,
-			Controller:    controller,
-			ExcludeSelf:   subject.excludeSelf,
-			TappedForMana: true,
+			Kind:               TriggerEventKindBecomesTapped,
+			Subject:            subject.subject,
+			Controller:         controller,
+			ExcludeSelf:        subject.excludeSelf,
+			TappedForMana:      true,
+			TappedForManaColor: color,
 		}
 	}
-	prefix, ok := stripTokenSuffix(tokens, "is", "tapped", "for", "mana")
+	afterFor, color, ok := stripTappedForManaSuffix(tokens)
+	if !ok {
+		return nil
+	}
+	prefix, ok := stripTokenSuffix(afterFor, "is", "tapped")
 	if !ok {
 		return nil
 	}
 	if span, count, ok := parseSelfSubject(prefix, atoms); ok && count == len(prefix) {
 		return &TriggerEventClause{
-			Kind:          TriggerEventKindBecomesTapped,
-			Subject:       TriggerEventSubject{Kind: TriggerEventSubjectSelf, Span: span},
-			TappedForMana: true,
+			Kind:               TriggerEventKindBecomesTapped,
+			Subject:            TriggerEventSubject{Kind: TriggerEventSubjectSelf, Span: span},
+			TappedForMana:      true,
+			TappedForManaColor: color,
 		}
 	}
 	subject := parsePermanentEventSubject(prefix, false, atoms)
@@ -549,11 +585,12 @@ func parseTappedForManaTriggerEventClause(
 		return nil
 	}
 	return &TriggerEventClause{
-		Kind:          TriggerEventKindBecomesTapped,
-		Subject:       subject.subject,
-		Controller:    subject.controller,
-		ExcludeSelf:   subject.excludeSelf,
-		TappedForMana: true,
+		Kind:               TriggerEventKindBecomesTapped,
+		Subject:            subject.subject,
+		Controller:         subject.controller,
+		ExcludeSelf:        subject.excludeSelf,
+		TappedForMana:      true,
+		TappedForManaColor: color,
 	}
 }
 

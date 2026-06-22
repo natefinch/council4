@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -362,6 +363,11 @@ type TriggerPattern struct {
 	// TappedForMana restricts a permanent-tapped pattern to taps that paid a
 	// mana ability's cost ("is tapped for mana").
 	TappedForMana bool
+
+	// TappedForManaColor narrows a TappedForMana pattern to taps that produced a
+	// specific type of mana ("tap a permanent for {C}"). It is empty for the
+	// unrestricted "for mana" wording.
+	TappedForManaColor mana.Color
 
 	// NextOccurrence marks a one-shot "next" phase/step relation ("your next
 	// upkeep") rather than a recurring trigger. Such a pattern is representable

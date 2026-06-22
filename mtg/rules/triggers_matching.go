@@ -42,6 +42,10 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 	if pattern.RequireTappedForMana && !event.TappedForMana {
 		return false
 	}
+	if pattern.RequireProducedManaColor != "" &&
+		!slices.Contains(event.ProducedManaColors, pattern.RequireProducedManaColor) {
+		return false
+	}
 
 	// Trigger patterns are checked when the triggering event is processed, and
 	// LTB/dies checks may need last-known information for the moved permanent

@@ -1,7 +1,10 @@
 // Package parser recognizes the grammatical structure of Oracle text.
 package parser
 
-import "github.com/natefinch/council4/cardgen/oracle/shared"
+import (
+	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/mana"
+)
 
 // AbilityKind is the syntactic category of an Oracle-text ability.
 type AbilityKind string
@@ -645,6 +648,11 @@ type TriggerEventClause struct {
 	// TappedForMana restricts a becomes-tapped clause to taps that paid the cost
 	// of a mana ability ("is tapped for mana"), CR 106.11a / 605.
 	TappedForMana bool `json:",omitempty"`
+	// TappedForManaColor narrows a TappedForMana clause to taps that produced a
+	// specific type of mana, e.g. "tap a permanent for {C}" restricts to taps
+	// that added colorless mana. It is empty for the unrestricted "for mana"
+	// wording, which matches a tap that produced any type.
+	TappedForManaColor mana.Color `json:"-"`
 	// UnionKind names a second trigger event family whose constituent event
 	// joins Kind under a shared subject and actor, expressing "Whenever you
 	// create or sacrifice a token" (CR 603.2). The trigger fires when either the

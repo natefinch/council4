@@ -720,6 +720,14 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 	if pattern.RequireTappedForMana {
 		fields = append(fields, "RequireTappedForMana: true,")
 	}
+	if pattern.RequireProducedManaColor != "" {
+		colorLiteral, err := renderManaColor(pattern.RequireProducedManaColor)
+		if err != nil {
+			return nil, err
+		}
+		ctx.need(importMana)
+		fields = append(fields, fmt.Sprintf("RequireProducedManaColor: %s,", colorLiteral))
+	}
 	if pattern.UnionEvent != game.EventUnknown {
 		unionEvent, err := renderEventKind(pattern.UnionEvent)
 		if err != nil {
