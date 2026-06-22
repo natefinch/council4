@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -268,6 +269,25 @@ type StaticSelection struct {
 	// control of the chosen color"). Lowering routes it to the runtime
 	// Selection.ColorChoice = ColorChoiceSourceEntry predicate.
 	ColorFromEntryChoice bool
+	// Power and Toughness carry an optional numeric power/toughness comparison
+	// constraining the group ("creatures you control with power 1 or less").
+	// MatchPower and MatchToughness mark each comparison active. PowerOrToughness
+	// marks the disjunctive "power or toughness N or less" form (Tetsuko): a
+	// member matches if EITHER its power OR its toughness satisfies the bound;
+	// lowering emits a Selection.AnyOf of the two single-characteristic
+	// alternatives rather than ANDing the two thresholds.
+	Power            compare.Int
+	MatchPower       bool
+	Toughness        compare.Int
+	MatchToughness   bool
+	PowerOrToughness bool
+	// PowerLessThanSource and PowerGreaterThanSource compare each member's power
+	// to the static's SOURCE permanent's power ("with power greater than
+	// <source>'s power", Champion of Lambholt). They are source-relative, so they
+	// carry no fixed comparison and lower to Selection.PowerLessThanSource /
+	// Selection.PowerGreaterThanSource.
+	PowerLessThanSource    bool
+	PowerGreaterThanSource bool
 }
 
 // StaticGroupReference describes WHERE a static declaration finds objects and
@@ -1982,6 +2002,15 @@ func staticGroupForParserSubject(subject parser.StaticDeclarationSubject) (Stati
 				group.Selection.MatchCounter = true
 				group.Selection.RequiredCounter = subject.Group.CounterKind
 			}
+		}
+		if ok {
+			group.Selection.Power = subject.Group.Power
+			group.Selection.MatchPower = subject.Group.MatchPower
+			group.Selection.Toughness = subject.Group.Toughness
+			group.Selection.MatchToughness = subject.Group.MatchToughness
+			group.Selection.PowerOrToughness = subject.Group.PowerOrToughness
+			group.Selection.PowerLessThanSource = subject.Group.PowerLessThanSource
+			group.Selection.PowerGreaterThanSource = subject.Group.PowerGreaterThanSource
 		}
 		return group, ok
 	default:

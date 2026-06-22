@@ -495,6 +495,12 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 	if selection.ExcludeSource {
 		fields = append(fields, "ExcludeSource: true,")
 	}
+	if selection.PowerLessThanSource {
+		fields = append(fields, "PowerLessThanSource: true,")
+	}
+	if selection.PowerGreaterThanSource {
+		fields = append(fields, "PowerGreaterThanSource: true,")
+	}
 	if selection.NonToken {
 		fields = append(fields, "NonToken: true,")
 	}

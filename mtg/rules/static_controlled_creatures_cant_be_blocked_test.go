@@ -5,8 +5,10 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 // TestControlledCreaturesCantBeBlockedStaticGrantsMassEvasion models the runtime
@@ -117,5 +119,94 @@ func TestControlledCreaturesColorFilteredCantBeBlockedStaticFiltersAffected(t *t
 	}
 	if !canBlockAttacker(g, blocker, redCreature) {
 		t.Fatal("color-filtered can't-be-blocked static blocked a non-blue creature that should stay blockable")
+	}
+}
+
+// addCombatCreatureWithPowerToughness adds a battlefield creature with the given
+// power and toughness so the power/toughness-comparison evasion filters can be
+// exercised independently on each characteristic.
+func addCombatCreatureWithPowerToughness(g *game.Game, controller game.PlayerID, power, toughness int) *game.Permanent {
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{
+		Name:      "PT Combat Creature",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: power}),
+		Toughness: opt.Val(game.PT{Value: toughness}),
+	}})
+}
+
+// TestControlledCreaturesPowerOrToughnessFilteredCantBeBlockedStaticFiltersAffected
+// models "Creatures you control with power or toughness 1 or less can't be
+// blocked." (Tetsuko Umezawa, Fugitive): a controlled creature whose power OR
+// whose toughness is 1 or less is unblockable, while a controlled creature with
+// both power and toughness greater than 1 stays blockable. The disjunction rides
+// on the rule effect's AffectedSelection.AnyOf.
+func TestControlledCreaturesPowerOrToughnessFilteredCantBeBlockedStaticFiltersAffected(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "PT Evasion Enchantment",
+		Types: []types.Card{types.Enchantment},
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:               game.RuleEffectCantBeBlocked,
+				AffectedController: game.ControllerYou,
+				PermanentTypes:     []types.Card{types.Creature},
+				AffectedSelection: game.Selection{
+					AnyOf: []game.Selection{
+						{Power: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 1})},
+						{Toughness: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 1})},
+					},
+				},
+			}},
+		}},
+	}})
+	lowPower := addCombatCreatureWithPowerToughness(g, game.Player1, 1, 5)
+	lowToughness := addCombatCreatureWithPowerToughness(g, game.Player1, 5, 1)
+	bigCreature := addCombatCreatureWithPowerToughness(g, game.Player1, 3, 3)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+
+	for _, attacker := range []*game.Permanent{lowPower, lowToughness} {
+		if canBlockAttacker(g, blocker, attacker) {
+			t.Fatal("power-or-toughness-filtered can't-be-blocked static let a creature with power or toughness 1 or less be blocked")
+		}
+	}
+	if !canBlockAttacker(g, blocker, bigCreature) {
+		t.Fatal("power-or-toughness-filtered can't-be-blocked static blocked a creature with power and toughness greater than 1 that should stay blockable")
+	}
+}
+
+// TestControlledCreaturesSourcePowerFilteredCantBeBlockedStaticFiltersAffected
+// models "Creatures you control with power greater than ~'s power can't be
+// blocked." (Champion of Lambholt): a controlled creature whose power exceeds the
+// static's source creature's power is unblockable, while a controlled creature
+// whose power does not exceed it stays blockable. The source-relative comparison
+// rides on the rule effect's AffectedSelection.PowerGreaterThanSource, read
+// against the source permanent's own power.
+func TestControlledCreaturesSourcePowerFilteredCantBeBlockedStaticFiltersAffected(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Source Power Creature",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2}),
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:               game.RuleEffectCantBeBlocked,
+				AffectedController: game.ControllerYou,
+				PermanentTypes:     []types.Card{types.Creature},
+				AffectedSelection: game.Selection{
+					PowerGreaterThanSource: true,
+				},
+			}},
+		}},
+	}})
+	stronger := addCombatCreatureWithPowerToughness(g, game.Player1, 3, 3)
+	equalPower := addCombatCreatureWithPowerToughness(g, game.Player1, 2, 2)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+
+	if canBlockAttacker(g, blocker, stronger) {
+		t.Fatal("source-power-filtered can't-be-blocked static let a creature with power greater than the source be blocked")
+	}
+	if !canBlockAttacker(g, blocker, equalPower) {
+		t.Fatal("source-power-filtered can't-be-blocked static blocked a creature with power not greater than the source that should stay blockable")
 	}
 }

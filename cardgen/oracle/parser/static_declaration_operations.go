@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -411,7 +412,7 @@ func parseStaticDeclarationSubject(tokens []shared.Token, atoms Atoms) (StaticDe
 			Group: group,
 		}, verbStart, true
 	}
-	if group, verbStart, ok := staticControlledCreaturesProhibitionSubject(tokens); ok {
+	if group, verbStart, ok := staticControlledCreaturesProhibitionSubject(tokens, atoms); ok {
 		return StaticDeclarationSubject{
 			Kind:  StaticDeclarationSubjectGroup,
 			Span:  group.Span,
@@ -480,9 +481,11 @@ func staticLinkingVerb(token shared.Token) bool {
 // here. It supports the bare "creatures you control" group, an optional leading
 // color filter ("Blue creatures you control ..."), and an optional trailing
 // "with [a] <kind> counter(s) on them" filter ("Creatures you control with +1/+1
-// counters on them ..."), attaching the recognized predicate to the returned
+// counters on them ...") or "with power/toughness <comparison>" filter ("...
+// with power or toughness 1 or less ...", "... with power greater than
+// <source>'s power ..."), attaching the recognized predicate to the returned
 // subject. It returns the group subject and the index of the prohibition verb.
-func staticControlledCreaturesProhibitionSubject(tokens []shared.Token) (EffectStaticSubjectSyntax, int, bool) {
+func staticControlledCreaturesProhibitionSubject(tokens []shared.Token, atoms Atoms) (EffectStaticSubjectSyntax, int, bool) {
 	idx := 0
 	subject := EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatures}
 	if filter, width, ok := staticColorFilterAt(tokens, idx); ok {
@@ -503,12 +506,163 @@ func staticControlledCreaturesProhibitionSubject(tokens []shared.Token) (EffectS
 			subject.CounterKind = match.Kind
 		}
 		idx = match.End
+	} else if match, ok := controlledGroupProhibitionPowerToughnessQualifier(tokens, idx, atoms); ok {
+		subject.Power = match.power
+		subject.MatchPower = match.matchPower
+		subject.Toughness = match.toughness
+		subject.MatchToughness = match.matchToughness
+		subject.PowerOrToughness = match.powerOrToughness
+		subject.PowerLessThanSource = match.powerLessThanSource
+		subject.PowerGreaterThanSource = match.powerGreaterThanSource
+		idx = match.end
 	}
 	if !staticWordsAt(tokens, idx, "can't") && !staticWordsAt(tokens, idx, "cannot") {
 		return EffectStaticSubjectSyntax{}, 0, false
 	}
 	subject.Span = shared.SpanOf(tokens[:idx])
 	return subject, idx, true
+}
+
+// controlledGroupPowerToughnessMatch carries the power/toughness predicate a
+// controlled-creature prohibition group qualifier recognizes, together with the
+// token index one past the qualifier.
+type controlledGroupPowerToughnessMatch struct {
+	power                  compare.Int
+	matchPower             bool
+	toughness              compare.Int
+	matchToughness         bool
+	powerOrToughness       bool
+	powerLessThanSource    bool
+	powerGreaterThanSource bool
+	end                    int
+}
+
+// controlledGroupProhibitionPowerToughnessQualifier recognizes a "with <power /
+// toughness comparison>" qualifier on a controlled-creature prohibition group
+// beginning at index start. It accepts the source-relative "with power
+// greater/less than <source>'s power" form (Champion of Lambholt), the
+// disjunctive "with power or toughness N or less/greater" form (Tetsuko
+// Umezawa), and the single-characteristic "with power N or less/greater" and
+// "with toughness N or less/greater" forms. It fails closed for any other
+// phrase so callers keep the unfiltered group.
+func controlledGroupProhibitionPowerToughnessQualifier(tokens []shared.Token, start int, atoms Atoms) (controlledGroupPowerToughnessMatch, bool) {
+	if !staticWordsAt(tokens, start, "with") {
+		return controlledGroupPowerToughnessMatch{}, false
+	}
+	idx := start + 1
+	if idx >= len(tokens) {
+		return controlledGroupPowerToughnessMatch{}, false
+	}
+	if equalWord(tokens[idx], "power") {
+		if match, ok := controlledGroupSourcePowerComparison(tokens, idx, atoms); ok {
+			return match, true
+		}
+		if staticWordsAt(tokens, idx+1, "or", "toughness") {
+			comparison, end, ok := numberComparisonAt(tokens, idx+3, atoms)
+			if !ok {
+				return controlledGroupPowerToughnessMatch{}, false
+			}
+			return controlledGroupPowerToughnessMatch{
+				power:            comparison,
+				matchPower:       true,
+				toughness:        comparison,
+				matchToughness:   true,
+				powerOrToughness: true,
+				end:              end,
+			}, true
+		}
+		comparison, end, ok := numberComparisonAt(tokens, idx+1, atoms)
+		if !ok {
+			return controlledGroupPowerToughnessMatch{}, false
+		}
+		return controlledGroupPowerToughnessMatch{power: comparison, matchPower: true, end: end}, true
+	}
+	if equalWord(tokens[idx], "toughness") {
+		comparison, end, ok := numberComparisonAt(tokens, idx+1, atoms)
+		if !ok {
+			return controlledGroupPowerToughnessMatch{}, false
+		}
+		return controlledGroupPowerToughnessMatch{toughness: comparison, matchToughness: true, end: end}, true
+	}
+	return controlledGroupPowerToughnessMatch{}, false
+}
+
+// controlledGroupSourcePowerComparison recognizes "power greater/less than
+// <source>'s power" beginning at powerIdx (which names the first "power"
+// token). The source possessive names the static's own source permanent (the
+// card's printed name or a "this <marker>" phrase), so the comparison is
+// source-relative. It returns the recognized predicate with its end index.
+func controlledGroupSourcePowerComparison(tokens []shared.Token, powerIdx int, atoms Atoms) (controlledGroupPowerToughnessMatch, bool) {
+	if powerIdx+2 >= len(tokens) || !equalWord(tokens[powerIdx], "power") {
+		return controlledGroupPowerToughnessMatch{}, false
+	}
+	var less, greater bool
+	switch {
+	case equalWord(tokens[powerIdx+1], "less"):
+		less = true
+	case equalWord(tokens[powerIdx+1], "greater"):
+		greater = true
+	default:
+		return controlledGroupPowerToughnessMatch{}, false
+	}
+	if !equalWord(tokens[powerIdx+2], "than") {
+		return controlledGroupPowerToughnessMatch{}, false
+	}
+	nameStart := powerIdx + 3
+	width, ok := sourceNameSpanWidthAt(tokens, nameStart, atoms)
+	if !ok {
+		return controlledGroupPowerToughnessMatch{}, false
+	}
+	powerEnd := nameStart + width
+	if powerEnd >= len(tokens) || !equalWord(tokens[powerEnd], "power") {
+		return controlledGroupPowerToughnessMatch{}, false
+	}
+	return controlledGroupPowerToughnessMatch{
+		powerLessThanSource:    less,
+		powerGreaterThanSource: greater,
+		end:                    powerEnd + 1,
+	}, true
+}
+
+// sourceNameSpanWidthAt reports the token width of a self-name or "this
+// <marker>" source phrase that begins exactly at tokens[start], or false when
+// no source phrase starts there.
+func sourceNameSpanWidthAt(tokens []shared.Token, start int, atoms Atoms) (int, bool) {
+	if start < 0 || start >= len(tokens) {
+		return 0, false
+	}
+	spans := append(append([]shared.Span(nil), atoms.SourceMarkerSpans()...), atoms.SourceNameSpans()...)
+	for _, span := range spans {
+		if span.Start.Offset != tokens[start].Span.Start.Offset {
+			continue
+		}
+		if width := tokensCoveredCount(tokens[start:], span); width > 0 {
+			return width, true
+		}
+	}
+	return 0, false
+}
+
+// numberComparisonAt parses a "<N>" / "<N> or less" / "<N> or greater" numeric
+// comparison beginning at index start, returning the comparison and the index
+// one past it. It fails closed when no number is present.
+func numberComparisonAt(tokens []shared.Token, start int, atoms Atoms) (compare.Int, int, bool) {
+	if start < 0 || start >= len(tokens) {
+		return compare.Int{}, 0, false
+	}
+	value, ok := effectNumber(tokens[start], atoms)
+	if !ok {
+		return compare.Int{}, 0, false
+	}
+	if start+2 < len(tokens) && equalWord(tokens[start+1], "or") {
+		switch {
+		case equalWord(tokens[start+2], "less"):
+			return compare.Int{Op: compare.LessOrEqual, Value: value}, start + 3, true
+		case equalWord(tokens[start+2], "greater"):
+			return compare.Int{Op: compare.GreaterOrEqual, Value: value}, start + 3, true
+		}
+	}
+	return compare.Int{Op: compare.Equal, Value: value}, start + 1, true
 }
 
 // controlledGroupProhibitionCounterQualifier recognizes a "with [a] <kind>
