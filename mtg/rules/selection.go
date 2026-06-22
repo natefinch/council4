@@ -222,6 +222,12 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if sel.TokenOnly && !s.isToken() {
 		return false
 	}
+	if sel.Name != "" {
+		name, ok := s.name()
+		if !ok || name != sel.Name {
+			return false
+		}
+	}
 	return true
 }
 
@@ -593,6 +599,37 @@ func (s *selectionSubject) manaValue() (int, bool) {
 		return 0, false
 	}
 	return def.ManaValue(), true
+}
+
+// name resolves the matched object's card name for a Selection.Name equality
+// filter. It reports false when no name is available (a face-down permanent, a
+// token without a card def, or a cast-spell subject the event does not name), so
+// a name filter fails closed rather than matching an unnamed object.
+func (s *selectionSubject) name() (string, bool) {
+	switch s.kind {
+	case subjectCard:
+		if s.card == nil || s.card.Def == nil {
+			return "", false
+		}
+		return s.card.Def.Name, true
+	case subjectPermanent:
+		if s.permanent != nil && s.permanent.FaceDown {
+			return "", false
+		}
+		def, ok := permanentCardDef(s.g, s.permanent)
+		if !ok {
+			return "", false
+		}
+		return def.Name, true
+	case subjectEventPermanent:
+		def, ok := s.eventPermanentCardDef()
+		if !ok {
+			return "", false
+		}
+		return def.Name, true
+	default:
+		return "", false
+	}
 }
 
 func (s *selectionSubject) power() (int, bool) {

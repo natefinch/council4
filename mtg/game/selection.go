@@ -209,6 +209,13 @@ type Selection struct {
 	// matches. Placed at the end so the bools join no existing cluster's packing.
 	PowerLessThanSource    bool
 	PowerGreaterThanSource bool
+
+	// Name, when non-empty, requires the matched object's name to equal it,
+	// modeling a "card named <Name>" filter (Daru Cavalier, Trustworthy Scout's
+	// library searches). It composes with the other fields but in practice stands
+	// alone on a plain "card named X" effect. A subject whose name is unavailable
+	// never matches. Placed at the end so the field joins no existing cluster.
+	Name string
 }
 
 // Empty reports whether the Selection carries no active predicate and therefore
@@ -247,7 +254,8 @@ func (s Selection) Empty() bool {
 		!s.NonToken &&
 		!s.TokenOnly &&
 		!s.PowerLessThanSource &&
-		!s.PowerGreaterThanSource
+		!s.PowerGreaterThanSource &&
+		s.Name == ""
 }
 
 // Validate reports structural contradictions in the Selection that represent
