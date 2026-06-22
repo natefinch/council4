@@ -812,6 +812,19 @@ func cantBeBlockedThisTurnVerbAt(tokens []shared.Token, index int) bool {
 		equalWord(tokens[index+4], "turn")
 }
 
+// negatedNextUntapStepVerbAt reports whether the token at index begins the
+// standalone stun predicate "doesn't/don't untap during ... next untap step"
+// that follows a leading target subject ("Target creature doesn't untap during
+// its controller's next untap step."). Unlike a forward effect verb, the negated
+// "doesn't" contraction is not itself an effect word, so target scanning would
+// otherwise absorb it into the target noun phrase. Breaking here keeps the target
+// ("Target creature") clean so it reconstructs exactly.
+func negatedNextUntapStepVerbAt(tokens []shared.Token, index int) bool {
+	return (equalWord(tokens[index], "doesn't") || equalWord(tokens[index], "don't")) &&
+		index+1 < len(tokens) &&
+		equalWord(tokens[index+1], "untap")
+}
+
 // pastCastCountPhraseAt reports whether the "cast" verb at index is the past
 // participle inside a "spell[s] you've cast this turn" / "...you have cast this
 // turn" count phrase rather than a casting effect. The storm-counter dynamic

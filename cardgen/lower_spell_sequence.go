@@ -1508,8 +1508,54 @@ func lowerTapStunSequence(ctx contentCtx) (game.AbilityContent, bool) {
 	}.Ability(), true
 }
 
-// referencesIncludeThose reports whether the reference set contains the plural
-// demonstrative "those" — the back-reference wording ("those cards") that group
+// lowerStandaloneStunEffect lowers the standalone targeted stun "Target
+// <permanent> doesn't untap during its controller's next untap step." (Sleeper
+// Dart, House Guildmage, Skyline Cascade) into a single SkipNextUntap on the
+// effect's own permanent target. Unlike the tap-down sequence, no tap precedes
+// the stun: the spell or ability only denies the target its next untap. It
+// accepts only the parser-exact single negated-untap effect carrying one
+// permanent target and one possessive "its controller's" reference that resolves
+// to that target; every other shape (added clauses, mass or plural wording, a
+// non-target reference, or a multi-step window) fails closed so the general
+// paths are untouched.
+func lowerStandaloneStunEffect(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 || ctx.optional ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Conditions) != 0 {
+		return game.AbilityContent{}, false
+	}
+	stun := ctx.content.Effects[0]
+	if stun.Kind != compiler.EffectUntap || !stun.Negated || stun.Optional || !stun.Exact ||
+		stun.Context != parser.EffectContextTarget ||
+		stun.Duration != compiler.DurationNone || stun.DelayedTiming != 0 ||
+		len(stun.Targets) != 1 {
+		return game.AbilityContent{}, false
+	}
+	// Every content reference must be the stun clause's possessive "its" pointing
+	// at the targeted permanent (target 0); reject anything else so no reference
+	// is silently dropped.
+	if len(ctx.content.References) == 0 {
+		return game.AbilityContent{}, false
+	}
+	for _, ref := range ctx.content.References {
+		if ref.Binding != compiler.ReferenceBindingTarget || ref.Occurrence != 0 {
+			return game.AbilityContent{}, false
+		}
+	}
+	targetSpec, ok := permanentTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{
+			{Primitive: game.SkipNextUntap{Object: game.TargetPermanentReference(0)}},
+		},
+	}.Ability(), true
+}
+
 // blink uses to name the several exiled cards. It distinguishes the multi-target
 // flicker from the singular "it"/"that card" single-target blink, which the
 // per-clause path lowers on its own.
