@@ -2088,16 +2088,19 @@ func copyForEachClauseText(effect *EffectSyntax, verb int) string {
 }
 
 // copyForEachSourcePhrase reports whether base names a per-each copy source that
-// refers to the iterated group member ("that permanent", "that token", or the
-// pronoun "it"), and whether the optional "tapped" entry modifier is present.
+// refers to the iterated group member ("that permanent", "that token", "that
+// creature", or the pronoun "it"), and whether the optional "tapped" entry
+// modifier is present.
 func copyForEachSourcePhrase(base string) (tapped, ok bool) {
 	switch {
 	case strings.EqualFold(base, "Create a token that's a copy of that permanent."),
 		strings.EqualFold(base, "Create a token that's a copy of that token."),
+		strings.EqualFold(base, "Create a token that's a copy of that creature."),
 		strings.EqualFold(base, "Create a token that's a copy of it."):
 		return false, true
 	case strings.EqualFold(base, "Create a tapped token that's a copy of that permanent."),
 		strings.EqualFold(base, "Create a tapped token that's a copy of that token."),
+		strings.EqualFold(base, "Create a tapped token that's a copy of that creature."),
 		strings.EqualFold(base, "Create a tapped token that's a copy of it."):
 		return true, true
 	default:
@@ -2137,13 +2140,34 @@ func normalizeApostrophes(text string) string {
 
 // copyTokenReferenceSupported reports whether a reference can name the copy
 // source of a copy-of-reference token: an explicit self reference ("this
-// creature"/"this permanent" or the card's own name) or the pronoun "it".
+// creature"/"this permanent" or the card's own name), the pronoun "it", or a
+// "that <permanent>" antecedent ("that creature", "that permanent", "that
+// token") that resolves to a single triggering permanent ("Whenever a nontoken
+// Zombie you control enters, create a token that's a copy of that creature." —
+// Necroduality). The compiler binds the "that" antecedent and the lowering fails
+// closed when it does not resolve to a supported single object.
 func copyTokenReferenceSupported(reference Reference) bool {
 	switch reference.Kind {
 	case ReferenceThisObject, ReferenceSelfName:
 		return true
+	case ReferenceThatObject:
+		return copyTokenThatAntecedentText(reference.Text)
 	case ReferencePronoun:
 		return reference.Pronoun == PronounIt
+	default:
+		return false
+	}
+}
+
+// copyTokenThatAntecedentText reports whether text is a "that <permanent>"
+// antecedent the copy-of-reference token form accepts as its copy source. Only
+// the bare permanent antecedents qualify; richer "that creature an opponent
+// controls" phrasings carry extra words and are rejected so the copy fails
+// closed.
+func copyTokenThatAntecedentText(text string) bool {
+	switch normalizeApostrophes(strings.ToLower(strings.TrimSpace(text))) {
+	case "that creature", "that permanent", "that token":
+		return true
 	default:
 		return false
 	}

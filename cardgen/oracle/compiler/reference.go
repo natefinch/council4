@@ -207,8 +207,12 @@ func priorInstructionAntecedent(reference CompiledReference, effects []CompiledE
 	// "That token" / "those tokens" reads as the subject of a following clause
 	// ("That token gains ...") rather than the object of the current one, so the
 	// nearest preceding verb belongs to the antecedent effect itself. When that
-	// effect creates a token, bind the reference straight to it.
-	if effects[current].Kind == EffectCreate && reference.Kind == ReferenceThatObject {
+	// effect creates a token, bind the reference straight to it. A "that
+	// <permanent>" reference contained within the create effect's own clause is
+	// instead that effect's copy source ("create a token that's a copy of that
+	// creature"), not a following subject, so leave it for later binding.
+	if effects[current].Kind == EffectCreate && reference.Kind == ReferenceThatObject &&
+		!effects[current].Order.Contains(reference.Order) {
 		return current, true
 	}
 	prior := -1
