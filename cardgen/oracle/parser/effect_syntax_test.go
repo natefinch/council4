@@ -728,6 +728,14 @@ func TestParseSacrificeChoiceFilterExactness(t *testing.T) {
 		{"Each player sacrifices a creature or planeswalker of their choice.", true, false, 2},
 		// "token" qualifier reconstructs.
 		{"Each player sacrifices a token creature of their choice.", true, false, 0},
+		// A single excluded card type reconstructs as a "non<type>" prefix.
+		{"Each player sacrifices a nonland permanent of their choice.", true, false, 0},
+		{"Each player sacrifices a noncreature artifact of their choice.", true, false, 0},
+		{"Each player sacrifices a nonartifact creature of their choice.", true, false, 0},
+		// A named token subtype reconstructs with the trailing "token" word.
+		{"Each player sacrifices a Blood token of their choice.", true, false, 0},
+		// The bare token noun reconstructs.
+		{"Each player sacrifices a token of their choice.", true, false, 0},
 		// An unmodeled qualifier stays fail-closed.
 		{"Each player sacrifices a tapped creature of their choice.", false, false, 0},
 	}
