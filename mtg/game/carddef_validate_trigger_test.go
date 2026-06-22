@@ -10,6 +10,71 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+func TestValidateCardDefAllowsCrossAbilityLinkedExileReturn(t *testing.T) {
+	const key LinkedKey = "exile-until-leaves"
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Banisher",
+		OracleText: "When this creature enters, exile target creature until this creature leaves the battlefield.",
+		TriggeredAbilities: []TriggeredAbility{
+			{
+				Trigger: TriggerCondition{Pattern: TriggerPattern{
+					Event:  EventPermanentEnteredBattlefield,
+					Source: TriggerSourceSelf,
+				}},
+				Content: Mode{
+					Targets: []TargetSpec{{MinTargets: 1, MaxTargets: 1, Allow: TargetAllowPermanent}},
+					Sequence: []Instruction{{Primitive: Exile{
+						Object:         TargetPermanentReference(0),
+						ExileLinkedKey: key,
+					}}},
+				}.Ability(),
+			},
+			{
+				Trigger: TriggerCondition{Pattern: TriggerPattern{
+					Event:         EventZoneChanged,
+					Source:        TriggerSourceSelf,
+					MatchFromZone: true,
+					FromZone:      zone.Battlefield,
+				}},
+				Content: Mode{
+					Sequence: []Instruction{{Primitive: PutOnBattlefield{
+						Source: LinkedBattlefieldSource(key),
+					}}},
+				}.Ability(),
+			},
+		},
+	}}
+
+	if issues := ValidateCardDef(card); len(issues) != 0 {
+		t.Fatalf("issues = %+v, want none", issues)
+	}
+}
+
+func TestValidateCardDefRejectsCrossAbilityLinkedReturnWithoutPublisher(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Bad Banisher",
+		OracleText: "When this creature leaves the battlefield, return the exiled card.",
+		TriggeredAbilities: []TriggeredAbility{{
+			Trigger: TriggerCondition{Pattern: TriggerPattern{
+				Event:         EventZoneChanged,
+				Source:        TriggerSourceSelf,
+				MatchFromZone: true,
+				FromZone:      zone.Battlefield,
+			}},
+			Content: Mode{
+				Sequence: []Instruction{{Primitive: PutOnBattlefield{
+					Source: LinkedBattlefieldSource("missing"),
+				}}},
+			}.Ability(),
+		}},
+	}}
+
+	issues := ValidateCardDef(card)
+	if !hasCardDefIssue(issues, CardDefIssueInvalidAbilityBody) {
+		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidAbilityBody)
+	}
+}
+
 func TestValidateCardDefChecksDelayedTriggerContent(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name:       "Bad Delayed Trigger",

@@ -360,6 +360,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				SearchControl:                   syntax.SearchControl,
 				DiscardEntireHand:               syntax.DiscardEntireHand,
 				CounteredSpellExileReplacement:  syntax.CounteredSpellExileReplacement,
+				ExileUntilSourceLeaves:          syntax.ExileUntilSourceLeaves,
 				CantCastSpellsAllPlayers:        syntax.CantCastSpellsAllPlayers,
 				CantCastSpellsRequiredTypes:     compilerCardTypes(syntax.CantCastSpellsRequiredTypes),
 				CantCastSpellsExcludedTypes:     compilerCardTypes(syntax.CantCastSpellsExcludedTypes),

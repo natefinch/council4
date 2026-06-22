@@ -1441,7 +1441,7 @@ func (p RepeatProcess) validatePrimitive(targets []TargetSpec, checkTargets bool
 	if len(p.Body.Modes) == 0 {
 		return errors.New("RepeatProcess requires a body")
 	}
-	return validateNestedAbilityContent(p.Body, nil, targets, checkTargets)
+	return validateNestedAbilityContent(p.Body, nil, targets, checkTargets, nil)
 }
 
 func (p Exile) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
@@ -1953,6 +1953,7 @@ func validateNestedAbilityContent(
 	inheritedLinked map[LinkedKey]int,
 	capturedTargets []TargetSpec,
 	checkCapturedTargets bool,
+	siblingLinked map[LinkedKey]int,
 ) error {
 	for i := range content.Modes {
 		targets := append([]TargetSpec(nil), content.SharedTargets...)
@@ -1964,6 +1965,7 @@ func validateNestedAbilityContent(
 			inheritedLinked,
 			capturedTargets,
 			checkCapturedTargets,
+			siblingLinked,
 		); err != nil {
 			return fmt.Errorf("mode %d: %w", i, err)
 		}

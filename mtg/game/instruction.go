@@ -127,9 +127,15 @@ func ValidateInstructionSequence(seq []Instruction, targetSpecs ...[]TargetSpec)
 	if checkTargets {
 		targets = targetSpecs[0]
 	}
-	return validateInstructionSequenceWithLinked(seq, targets, checkTargets, nil, targets, checkTargets)
+	return validateInstructionSequenceWithLinked(seq, targets, checkTargets, nil, targets, checkTargets, nil)
 }
 
+// validateInstructionSequenceWithLinked validates a sequence. siblingLinked names
+// linked keys published elsewhere on the same card face (in a different ability);
+// a primitive may consume such a key even though it is published outside this
+// sequence, because the publishing ability resolves before this one ever can.
+// siblingLinked is consulted only for consume checks and never seeds the
+// in-sequence published set, so duplicate-publish detection stays intact.
 func validateInstructionSequenceWithLinked(
 	seq []Instruction,
 	targets []TargetSpec,
@@ -137,6 +143,7 @@ func validateInstructionSequenceWithLinked(
 	inheritedLinked map[LinkedKey]int,
 	capturedTargets []TargetSpec,
 	checkCapturedTargets bool,
+	siblingLinked map[LinkedKey]int,
 ) error {
 	publishedResults := map[ResultKey]int{}
 	publishedChoices := map[ChoiceKey]int{}
@@ -166,6 +173,7 @@ func validateInstructionSequenceWithLinked(
 				publishedLinked,
 				targets,
 				checkTargets,
+				siblingLinked,
 			); err != nil {
 				return fmt.Errorf("instruction[%d]: %w", i, err)
 			}
@@ -178,7 +186,7 @@ func validateInstructionSequenceWithLinked(
 				}
 			}
 		}
-		if err := validateLinkedCardCondition(i, instr.CardCondition, publishedLinked); err != nil {
+		if err := validateLinkedCardCondition(i, instr.CardCondition, publishedLinked, siblingLinked); err != nil {
 			return err
 		}
 		refs := instr.Primitive.instructionRefs()
@@ -193,9 +201,13 @@ func validateInstructionSequenceWithLinked(
 			}
 		}
 		for _, key := range refs.consumesLinked {
-			if _, ok := publishedLinked[key]; !ok {
-				return fmt.Errorf("instruction[%d]: primitive references linked key %q not yet published", i, key)
+			if _, ok := publishedLinked[key]; ok {
+				continue
 			}
+			if _, ok := siblingLinked[key]; ok {
+				continue
+			}
+			return fmt.Errorf("instruction[%d]: primitive references linked key %q not yet published", i, key)
 		}
 		if instr.PublishResult != "" {
 			if prev, dup := publishedResults[instr.PublishResult]; dup {
@@ -219,7 +231,7 @@ func validateInstructionSequenceWithLinked(
 	return nil
 }
 
-func validateLinkedCardCondition(idx int, cond opt.V[CardCondition], published map[LinkedKey]int) error {
+func validateLinkedCardCondition(idx int, cond opt.V[CardCondition], published, siblingLinked map[LinkedKey]int) error {
 	if !cond.Exists || cond.Val.Card.Kind != CardReferenceLinked {
 		return nil
 	}
@@ -228,6 +240,9 @@ func validateLinkedCardCondition(idx int, cond opt.V[CardCondition], published m
 		return nil
 	}
 	if _, ok := published[key]; ok {
+		return nil
+	}
+	if _, ok := siblingLinked[key]; ok {
 		return nil
 	}
 	return fmt.Errorf("instruction[%d]: CardCondition references linked key %q not yet published", idx, key)

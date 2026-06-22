@@ -62,8 +62,9 @@ func ValidateCardDef(card *CardDef) []CardDefIssue {
 }
 
 type cardDefValidator struct {
-	card   *CardDef
-	issues []CardDefIssue
+	card       *CardDef
+	issues     []CardDefIssue
+	faceLinked map[LinkedKey]int
 }
 
 func (v *cardDefValidator) validate() {
@@ -94,6 +95,7 @@ func (v *cardDefValidator) validate() {
 }
 
 func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
+	v.faceLinked = collectFacePublishedLinkedKeys(face)
 	hasAbilities := face.SpellAbility.Exists ||
 		face.Overload.Exists ||
 		face.EntersPrepared ||
@@ -282,6 +284,43 @@ func collectExileFromHandLinks(face *CardFace, into map[string]bool) {
 	for i := range face.LoyaltyAbilities {
 		collect(face.LoyaltyAbilities[i].Content)
 	}
+}
+
+// collectFacePublishedLinkedKeys records the linked keys published by every
+// primitive across the face's top-level ability contents. A primitive in one
+// ability (e.g. a triggered return-on-leave) may consume a linked key that a
+// different ability on the same face publishes (e.g. an enters-the-battlefield
+// exile-until-leaves), because the publishing ability always resolves first.
+func collectFacePublishedLinkedKeys(face *CardFace) map[LinkedKey]int {
+	keys := map[LinkedKey]int{}
+	collect := func(content AbilityContent) {
+		for _, mode := range content.Modes {
+			for i := range mode.Sequence {
+				if key := mode.Sequence[i].Primitive.instructionRefs().publishesLinked; key != "" {
+					keys[key] = i
+				}
+			}
+		}
+	}
+	if face.SpellAbility.Exists {
+		collect(face.SpellAbility.Val)
+	}
+	for i := range face.ActivatedAbilities {
+		collect(face.ActivatedAbilities[i].Content)
+	}
+	for i := range face.TriggeredAbilities {
+		collect(face.TriggeredAbilities[i].Content)
+	}
+	for i := range face.ChapterAbilities {
+		collect(face.ChapterAbilities[i].Content)
+	}
+	for i := range face.LoyaltyAbilities {
+		collect(face.LoyaltyAbilities[i].Content)
+	}
+	for i := range face.ManaAbilities {
+		collect(face.ManaAbilities[i].Content)
+	}
+	return keys
 }
 
 func abilityContentHasTargets(content AbilityContent) bool {
@@ -623,7 +662,7 @@ func (v *cardDefValidator) validateInstructionSequence(
 	capturedTargets []TargetSpec,
 	inheritedLinked map[LinkedKey]int,
 ) {
-	if err := validateInstructionSequenceWithLinked(seq, targets, true, inheritedLinked, capturedTargets, true); err != nil {
+	if err := validateInstructionSequenceWithLinked(seq, targets, true, inheritedLinked, capturedTargets, true, v.faceLinked); err != nil {
 		v.add(faceName, path, CardDefIssueInvalidAbilityBody, err.Error())
 	}
 	publishedLinked := make(map[LinkedKey]int, len(inheritedLinked))

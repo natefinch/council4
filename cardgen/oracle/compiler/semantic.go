@@ -1693,6 +1693,10 @@ type CompiledEffect struct {
 	// spell is countered this way, exile it instead of putting it into its
 	// owner's graveyard." rider through the text-blind compiler boundary.
 	CounteredSpellExileReplacement bool
+	// ExileUntilSourceLeaves carries the parser-recognized O-Ring exile clause
+	// "exile <target> until <this permanent> leaves the battlefield." through the
+	// text-blind compiler boundary so lowering links the exile to the source.
+	ExileUntilSourceLeaves bool
 	// CantCastSpellsAllPlayers mirrors the parser flag for an EffectCantCastSpells
 	// clause that affects every player ("Players can't cast spells this turn.")
 	// rather than only the controller's opponents. Lowering reads it to pick the

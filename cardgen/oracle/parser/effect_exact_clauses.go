@@ -222,6 +222,39 @@ func exactCounteredSpellExileSyntax(effect *EffectSyntax) bool {
 	return false
 }
 
+// exactExileUntilSourceLeavesEffectSyntax recognizes the O-Ring exile clause
+// "exile <target> until <this permanent> leaves the battlefield." (Banisher
+// Priest, Banishing Light, Fairgrounds Warden). The single target is the exiled
+// permanent and the trailing "until <self> leaves the battlefield" names the
+// source permanent as the duration anchor, not a second object. It marks the
+// effect so lowering links the exile to the source and synthesizes the paired
+// leaves-the-battlefield return trigger. The parser owns this wording; any other
+// exile shape leaves the clause non-exact so lowering fails closed.
+func exactExileUntilSourceLeavesEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectExile || effect.Negated || effect.Optional {
+		return false
+	}
+	if effect.Duration != EffectDurationNone || effect.FromZone != zone.None || effect.ToZone != zone.None {
+		return false
+	}
+	if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
+		return false
+	}
+	if len(effect.References) != 1 {
+		return false
+	}
+	reference := effect.References[0]
+	if reference.Kind != ReferenceThisObject && reference.Kind != ReferenceSelfName {
+		return false
+	}
+	expected := "Exile " + effect.Targets[0].Text + " until " + reference.Text + " leaves the battlefield."
+	if !strings.EqualFold(exactEffectClauseText(effect), expected) {
+		return false
+	}
+	effect.ExileUntilSourceLeaves = true
+	return true
+}
+
 func parseGraveyardZoneExile(effect *EffectSyntax) GraveyardZoneExileKind {
 	if effect.Kind != EffectExile || effect.Negated {
 		return GraveyardZoneExileNone
