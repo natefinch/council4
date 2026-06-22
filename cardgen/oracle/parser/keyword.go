@@ -848,6 +848,89 @@ func expandModularKeyword(source string) string {
 	return strings.Join(lines, "\n")
 }
 
+// expandAffinityKeyword rewrites each printed "Affinity for <permanents>"
+// keyword line into the static cast cost reduction it abbreviates (CR 702.41a):
+// "This spell costs {1} less to cast for each <permanent> you control." Affinity
+// is pure shorthand for that self cost reduction, so expanding it to canonical
+// wording lets the standard source-spell cost-reduction pipeline lower it
+// without a dedicated keyword path. The rewrite is parser-owned because it is a
+// wording substitution; downstream stages see only the expanded ability. A line
+// whose noun cannot be singularized into a countable subject the downstream
+// pipeline recognizes is still rewritten and simply fails closed there, so it
+// stays unsupported rather than silently dropping the reduction.
+func expandAffinityKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		noun, ok := affinityLineNoun(line)
+		if !ok {
+			continue
+		}
+		lines[i] = "This spell costs {1} less to cast for each " +
+			affinitySingularNoun(noun) + " you control."
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
+
+// affinityLineNoun reports the plural permanent noun of a line that is exactly
+// the printed "Affinity for <noun>" keyword, optionally followed only by its
+// parenthesized reminder text. Lines that merely contain the word elsewhere, or
+// pair it with other rules text, are left untouched. The noun must be a simple
+// word phrase so a malformed line fails closed.
+func affinityLineNoun(line string) (string, bool) {
+	const prefix = "Affinity for "
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, prefix) {
+		return "", false
+	}
+	rest := strings.TrimSpace(trimmed[len(prefix):])
+	if open := strings.Index(rest, "("); open >= 0 {
+		reminder := strings.TrimSpace(rest[open:])
+		if !strings.HasPrefix(reminder, "(") || !strings.HasSuffix(reminder, ")") {
+			return "", false
+		}
+		rest = strings.TrimSpace(rest[:open])
+	}
+	if rest == "" {
+		return "", false
+	}
+	for _, r := range rest {
+		if r != ' ' && (r < 'A' || r > 'z' || (r > 'Z' && r < 'a')) {
+			return "", false
+		}
+	}
+	return rest, true
+}
+
+// affinitySingularNoun singularizes the head word of an Affinity noun phrase so
+// the canonical "for each <noun> you control" wording counts a single permanent
+// kind ("artifacts" → "artifact", "Allies" → "Ally", "Forests" → "Forest"). Only
+// the trailing head noun is singularized; any leading qualifiers ("artifact" in
+// "artifact creatures", "snow" in "snow lands") are preserved. "Plains" is both
+// singular and plural and is left unchanged.
+func affinitySingularNoun(plural string) string {
+	fields := strings.Fields(plural)
+	if len(fields) == 0 {
+		return plural
+	}
+	head := fields[len(fields)-1]
+	switch {
+	case head == "Plains":
+	case strings.HasSuffix(head, "ss"):
+	case len(head) > 4 && strings.HasSuffix(head, "ies"):
+		head = strings.TrimSuffix(head, "ies") + "y"
+	case len(head) > 1 && strings.HasSuffix(head, "s"):
+		head = strings.TrimSuffix(head, "s")
+	default:
+	}
+	fields[len(fields)-1] = head
+	return strings.Join(fields, " ")
+}
+
 // battleCryCanonicalText is the triggered ability that the printed "Battle cry"
 // keyword abbreviates (CR 702.91a).
 const battleCryCanonicalText = "Whenever this creature attacks, " +
