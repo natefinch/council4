@@ -49,6 +49,13 @@ func TestParseAttachedAndUntapStaticRuleSentences(t *testing.T) {
 			operation:  StaticRuleOperationAttackOrBlock,
 			voice:      StaticRuleVoiceActive,
 		},
+		"this creature can't block and can't be blocked": {
+			source:     "This creature can't block and can't be blocked.",
+			subject:    StaticRuleSubjectSourceCreature,
+			constraint: StaticRuleConstraintProhibition,
+			operation:  StaticRuleOperationBlockAndBeBlocked,
+			voice:      StaticRuleVoiceActive,
+		},
 		"this creature doesn't untap your step": {
 			source:     "This creature doesn't untap during your untap step.",
 			subject:    StaticRuleSubjectSourceCreature,

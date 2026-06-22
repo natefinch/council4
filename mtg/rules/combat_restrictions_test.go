@@ -154,6 +154,59 @@ func TestCantBeBlockedStaticBodyProhibitsBlockingSource(t *testing.T) {
 	}
 }
 
+// TestCantBlockAndCantBeBlockedStaticBodyProhibitsBothRoles covers the combined
+// "can't block and can't be blocked" rule (Changeling Outcast): a single static
+// ability carrying both block-domain rule effects keeps the source from blocking
+// and from being blocked, without affecting other creatures.
+func TestCantBlockAndCantBeBlockedStaticBodyProhibitsBothRoles(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	outcast := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Changeling Outcast",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+		StaticAbilities: []game.StaticAbility{{
+			Text: "Changeling Outcast can't block and can't be blocked.",
+			RuleEffects: []game.RuleEffect{
+				{Kind: game.RuleEffectCantBlock, AffectedSource: true},
+				{Kind: game.RuleEffectCantBeBlocked, AffectedSource: true},
+			},
+		}},
+	}})
+	otherBlocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+
+	if canBlockWith(g, outcast, game.Player2) {
+		t.Fatal("source with combined can't-block rule could block")
+	}
+	if !canBlockWith(g, otherBlocker, game.Player2) {
+		t.Fatal("combined can't-block rule affected another creature's blocking")
+	}
+
+	g2 := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatPermanent(g2, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Changeling Outcast",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+		StaticAbilities: []game.StaticAbility{{
+			Text: "Changeling Outcast can't block and can't be blocked.",
+			RuleEffects: []game.RuleEffect{
+				{Kind: game.RuleEffectCantBlock, AffectedSource: true},
+				{Kind: game.RuleEffectCantBeBlocked, AffectedSource: true},
+			},
+		}},
+	}})
+	otherAttacker := addCombatCreaturePermanentWithPower(g2, game.Player1, 2)
+	blocker := addCombatCreaturePermanentWithPower(g2, game.Player2, 2)
+
+	if canBlockAttacker(g2, blocker, attacker) {
+		t.Fatal("source with combined can't-be-blocked rule could be blocked")
+	}
+	if !canBlockAttacker(g2, blocker, otherAttacker) {
+		t.Fatal("combined can't-be-blocked rule affected another attacker")
+	}
+}
+
 func TestCantAttackRuleCanApplyOnlyToSpecificDefender(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)

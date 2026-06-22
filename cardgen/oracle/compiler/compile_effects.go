@@ -453,6 +453,8 @@ func effectKindForStaticRule(rule StaticRuleKind) EffectKind {
 		return EffectCantBeBlockedByMoreThanOne
 	case StaticRuleCantAttackOrBlock:
 		return EffectCantAttackOrBlock
+	case StaticRuleCantBlockAndCantBeBlocked:
+		return EffectCantBlockAndCantBeBlocked
 	case StaticRuleDoesntUntap:
 		return EffectDoesntUntap
 	default:
