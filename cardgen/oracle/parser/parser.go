@@ -20,6 +20,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	source = expandAffinityKeyword(source)
 	source = expandBattleCryKeyword(source)
 	source = expandTributeKeyword(source)
+	source = expandFusedTrigger(source)
 	tokens, diagnostics := lexAll(source)
 	lines := splitLines(tokens)
 	document := Document{
