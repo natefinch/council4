@@ -1038,6 +1038,9 @@ func applyTypeLayer(g *game.Game, values *permanentEffectiveValues, effect *game
 	if effect.AddEveryCreatureType {
 		values.subtypes = appendUniqueSubtypes(values.subtypes, types.SubtypesForType(types.Creature)...)
 	}
+	if effect.AddEveryBasicLandType {
+		values.subtypes = appendUniqueSubtypes(values.subtypes, basicLandSubtypes[:]...)
+	}
 	if effect.AddSubtypeFromEntryChoice != "" {
 		if source, ok := permanentByObjectID(g, effect.SourceObjectID); ok {
 			if choice, ok := source.EntryChoices[effect.AddSubtypeFromEntryChoice]; ok &&
@@ -1048,6 +1051,11 @@ func applyTypeLayer(g *game.Game, values *permanentEffectiveValues, effect *game
 		}
 	}
 }
+
+// basicLandSubtypes enumerates the five basic land subtypes (CR 305.6). It
+// backs both the basic-land-type count condition and the "every basic land
+// type" continuous type-grant (Dryad of the Ilysian Grove, Prismatic Omen).
+var basicLandSubtypes = [...]types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain, types.Forest}
 
 // applyAddedBasicLandManaAbilities grants the intrinsic mana ability that a
 // basic land type confers (CR 305.6) for every basic land subtype a continuous

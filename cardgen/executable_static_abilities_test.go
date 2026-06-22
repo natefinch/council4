@@ -1347,6 +1347,57 @@ func TestGenerateExecutableCardSourceAllLandsTypeAddition(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceEveryBasicLandType(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		typeLine   string
+		oracleText string
+		group      string
+	}{
+		"dryad of the ilysian grove": {
+			typeLine:   "Enchantment Creature — Dryad",
+			oracleText: "You may play an additional land on each of your turns.\nLands you control are every basic land type in addition to their other types.",
+			group:      "game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{RequiredTypes: []types.Card{types.Land}})",
+		},
+		"prismatic omen": {
+			typeLine:   "Enchantment",
+			oracleText: "Lands you control are every basic land type in addition to their other types.",
+			group:      "game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{RequiredTypes: []types.Card{types.Land}})",
+		},
+		"all lands": {
+			typeLine:   "Legendary Land",
+			oracleText: "Each land is every basic land type in addition to its other land types.",
+			group:      "game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Land}})",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Every Basic Land Static",
+				Layout:     "normal",
+				TypeLine:   tc.typeLine,
+				OracleText: tc.oracleText,
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "e")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range []string{
+				"Layer:                 game.LayerType,",
+				tc.group,
+				"AddEveryBasicLandType: true,",
+			} {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceAllLandsTypeAdditionFailsClosed(t *testing.T) {
 	t.Parallel()
 	for name, oracleText := range map[string]string{

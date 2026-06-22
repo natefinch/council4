@@ -463,6 +463,10 @@ func lowerStaticContinuousDeclaration(declaration compiler.StaticDeclaration) (g
 			effect.AddEveryCreatureType = true
 			break
 		}
+		if declaration.Continuous.AddEveryBasicLandType {
+			effect.AddEveryBasicLandType = true
+			break
+		}
 		cardTypes, subtypes, ok := lowerStaticAddedTypes(declaration.Continuous)
 		if !ok {
 			return game.ContinuousEffect{}, false

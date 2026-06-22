@@ -280,6 +280,8 @@ func compileStaticSubjectKind(kind parser.EffectStaticSubjectKind) StaticSubject
 		return StaticSubjectOtherControlledNontokenCreatures
 	case parser.EffectStaticSubjectAllLands:
 		return StaticSubjectAllLands
+	case parser.EffectStaticSubjectControlledLands:
+		return StaticSubjectControlledLands
 	case parser.EffectStaticSubjectControlledCreaturesChosenType:
 		return StaticSubjectControlledCreaturesChosenType
 	case parser.EffectStaticSubjectOtherControlledCreaturesChosenType:
