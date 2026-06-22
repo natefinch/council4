@@ -864,12 +864,28 @@ const optionalIfYouDoResultKey = game.ResultKey("if-you-do")
 // anything ("exile it. If you do, create a token"). The leading effect publishes
 // whether it succeeded (without being made Optional) and the gated tail is gated
 // on that success, exactly like the enabled optional shape.
+//
+// elseIndex marks the start of a trailing else branch in the enabled shape:
+// "you may X. If you do, Y. Otherwise, Z." or the "If you don't, Z." wording. The
+// gated "if you do" tail runs gateIndex..elseIndex-1; the else tail runs
+// elseIndex..end. Each else effect is gated on the optional result having failed
+// (the controller declined X), the exact complement of the affirmative "if you
+// do" gate on Y. elseIndex is -1 whenever there is no else branch.
+//
+// elseGateCondition is the content-condition index of the "if you don't"
+// complement gate (a ConditionPredicatePriorInstructionNotAccepted clause) when
+// the else branch uses that wording; the sequence consumes it as the else gate
+// rather than as an ordinary per-effect condition. It is -1 for the "Otherwise,"
+// wording (whose else effect carries no condition) and whenever there is no else
+// branch.
 type optionalFlowPlan struct {
 	enabled                bool
 	optionalIndex          int
 	gateIndex              int
 	gateCondition          int
 	bareIndex              int
+	elseIndex              int
+	elseGateCondition      int
 	publishWithoutOptional bool
 }
 
@@ -886,9 +902,29 @@ func (p optionalFlowPlan) marksOptional(i int) bool {
 
 // gates reports whether the optional flow gates the instructions produced by
 // effect i on the optional effect having succeeded. Every effect from gateIndex
-// through the end of the sequence belongs to the "if you do" clause.
+// through the end of the "if you do" clause belongs to it; the trailing
+// "Otherwise" else tail (elseIndex onward) is excluded — those are gated on the
+// optional effect having failed by gatesElse instead.
 func (p optionalFlowPlan) gates(i int) bool {
-	return p.enabled && i >= p.gateIndex
+	return p.enabled && i >= p.gateIndex && (p.elseIndex < 0 || i < p.elseIndex)
+}
+
+// gatesElse reports whether the optional flow gates the instructions produced by
+// effect i on the optional effect having failed: the trailing else branch
+// ("Otherwise, <Z>." or "If you don't, <Z>.") resolves only when the controller
+// declined the optional effect.
+func (p optionalFlowPlan) gatesElse(i int) bool {
+	return p.enabled && p.elseIndex >= 0 && i >= p.elseIndex
+}
+
+// clearsNegated reports whether the optional flow should drop a parser-set
+// Negated flag on effect i before lowering. The "If you don't, <Z>." wording
+// leaves the word "don't" in the else effect's clause, which the effect
+// classifier reads as a negation of the else action itself; that negation
+// belongs to the complement gate (recorded as elseGateCondition), not to Z, so
+// it is cleared on the gate-carrying else effect.
+func (p optionalFlowPlan) clearsNegated(i int) bool {
+	return p.enabled && p.elseGateCondition >= 0 && i == p.elseIndex
 }
 
 // planOptionalFlow inspects an ordered effect sequence for resolving
@@ -913,7 +949,7 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 		if plan, ok, handled := planMandatoryIfYouDoFlow(content); handled {
 			return plan, ok
 		}
-		return optionalFlowPlan{bareIndex: -1}, true
+		return optionalFlowPlan{bareIndex: -1, elseIndex: -1, elseGateCondition: -1}, true
 	}
 	// Count "if you do" (prior-instruction-accepted) conditions, including the
 	// outcome-worded "a <type> is destroyed this way" gate that the optional-
@@ -935,7 +971,7 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 			content.Effects[optionalIndex].DelayedTiming != 0 {
 			return optionalFlowPlan{}, false
 		}
-		return optionalFlowPlan{optionalIndex: optionalIndex, bareIndex: optionalIndex}, true
+		return optionalFlowPlan{optionalIndex: optionalIndex, bareIndex: optionalIndex, elseIndex: -1, elseGateCondition: -1}, true
 	}
 	gateIndex := optionalIndex + 1
 	// The optional effect must be followed by at least one gated effect and must
@@ -963,17 +999,56 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 	if gateCondition == -1 {
 		return optionalFlowPlan{}, false
 	}
-	// Every effect after the optional one must belong to the single "if you do"
-	// clause: one affirmative "if you do" may govern several and-joined trailing
-	// effects ("If you do, draw a card and put a +1/+1 counter on this
-	// creature"), each compiled as its own effect that structurally contains the
-	// gate condition. Requiring containment for every trailing effect rejects an
+	// Every effect after the optional one belongs to either the single "if you
+	// do" clause or a trailing "Otherwise, <Z>." else branch. The affirmative
+	// clause may govern several and-joined trailing effects ("If you do, draw a
+	// card and put a +1/+1 counter on this creature"), each compiled as its own
+	// effect that structurally contains the gate condition. A trailing run of
+	// "Otherwise"-connected effects forms the else branch: it resolves only when
+	// the controller declined the optional effect, so it does NOT contain the
+	// gate condition and is gated on the optional result having failed instead.
+	// Requiring containment for every non-else trailing effect rejects an
 	// independent tail ("... If you do, Y. Then Z.") whose Z does not contain the
 	// gate condition and would otherwise resolve unconditionally — silently
 	// wrong. A negated, delayed, or independently-optional trailing effect also
 	// leaves the flow unsupported.
+	// Every effect after the optional one belongs to either the single "if you
+	// do" clause or a trailing else branch. The affirmative clause may govern
+	// several and-joined trailing effects ("If you do, draw a card and put a
+	// +1/+1 counter on this creature"), each compiled as its own effect that
+	// structurally contains the gate condition. The else branch resolves only
+	// when the controller declined the optional effect, so it does NOT contain
+	// the affirmative gate condition and is gated on the optional result having
+	// failed instead. It takes one of two wordings:
+	//   - "Otherwise, <Z>." — a sentence-initial EffectConnectionOtherwise effect
+	//     carrying no condition.
+	//   - "If you don't, <Z>." — an effect carrying a complement gate condition
+	//     (ConditionPredicatePriorInstructionNotAccepted), consumed as the else
+	//     gate (elseGateCondition) like the affirmative "if you do" gate.
+	// Requiring affirmative-gate containment for every non-else trailing effect
+	// rejects an independent tail ("... If you do, Y. Then Z.") whose Z does not
+	// contain the gate condition and would otherwise resolve unconditionally —
+	// silently wrong. A negated, delayed, or independently-optional trailing
+	// effect also leaves the flow unsupported.
 	gateConditionOrder := content.Conditions[gateCondition].Order
+	elseIndex := -1
+	elseGateCondition := -1
 	for i := gateIndex; i < len(content.Effects); i++ {
+		if content.Effects[i].Connection == parser.EffectConnectionOtherwise {
+			elseIndex = i
+			break
+		}
+		if ci := elseGateConditionIndex(content, i); ci >= 0 {
+			elseIndex = i
+			elseGateCondition = ci
+			break
+		}
+	}
+	tailEnd := len(content.Effects)
+	if elseIndex >= 0 {
+		tailEnd = elseIndex
+	}
+	for i := gateIndex; i < tailEnd; i++ {
 		if content.Effects[i].Optional ||
 			content.Effects[i].Negated ||
 			content.Effects[i].DelayedTiming != 0 ||
@@ -981,13 +1056,64 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 			return optionalFlowPlan{}, false
 		}
 	}
+	if elseIndex >= 0 {
+		// The else branch requires at least one preceding gated "if you do"
+		// effect, and its own effects must be plain (not optional/delayed) and
+		// must not belong to the "if you do" clause (they are the opposite
+		// branch, so they never contain the affirmative gate condition). The
+		// "If you don't" wording leaves the word "don't" in the gate-carrying
+		// else effect, which the classifier reads as a negation of Z; that
+		// negation belongs to the complement gate and is cleared before lowering,
+		// so it is tolerated only on that one effect.
+		if elseIndex == gateIndex {
+			return optionalFlowPlan{}, false
+		}
+		for i := elseIndex; i < len(content.Effects); i++ {
+			negatedArtifact := i == elseIndex && elseGateCondition >= 0
+			if content.Effects[i].Optional ||
+				(content.Effects[i].Negated && !negatedArtifact) ||
+				content.Effects[i].DelayedTiming != 0 ||
+				content.Effects[i].Order.Contains(gateConditionOrder) {
+				return optionalFlowPlan{}, false
+			}
+		}
+	}
 	return optionalFlowPlan{
-		enabled:       true,
-		optionalIndex: optionalIndex,
-		gateIndex:     gateIndex,
-		gateCondition: gateCondition,
-		bareIndex:     -1,
+		enabled:           true,
+		optionalIndex:     optionalIndex,
+		gateIndex:         gateIndex,
+		gateCondition:     gateCondition,
+		bareIndex:         -1,
+		elseIndex:         elseIndex,
+		elseGateCondition: elseGateCondition,
 	}, true
+}
+
+// elseGateConditionIndex returns the content-condition index of the "If you
+// don't" complement gate (ConditionPredicatePriorInstructionNotAccepted)
+// contained in effect i's clause order, or -1 when effect i carries no such
+// well-formed gate. The gate must be a single non-intervening, non-negated "if"
+// condition, mirroring the affirmative "if you do" gate; any other shape returns
+// -1 so the caller leaves the flow unsupported.
+func elseGateConditionIndex(content compiler.AbilityContent, effectIndex int) int {
+	found := -1
+	for ci := range content.Conditions {
+		condition := content.Conditions[ci]
+		if condition.Predicate != compiler.ConditionPredicatePriorInstructionNotAccepted {
+			continue
+		}
+		if !content.Effects[effectIndex].Order.Contains(condition.Order) {
+			continue
+		}
+		if found != -1 ||
+			condition.Kind != compiler.ConditionIf ||
+			condition.Negated ||
+			condition.Intervening {
+			return -1
+		}
+		found = ci
+	}
+	return found
 }
 
 // isResolvingSuccessGate reports whether a condition predicate is the affirmative
@@ -1070,6 +1196,8 @@ func planMandatoryIfYouDoFlow(content compiler.AbilityContent) (plan optionalFlo
 		gateIndex:              gateIndex,
 		gateCondition:          gateCondition,
 		bareIndex:              -1,
+		elseIndex:              -1,
+		elseGateCondition:      -1,
 		publishWithoutOptional: true,
 	}, true, true
 }
@@ -1121,10 +1249,11 @@ func applyResultFlowPublish(sequence []game.Instruction) bool {
 	return true
 }
 
-// applyOptionalFlowGate gates every instruction produced by the "if you do"
-// effect on the optional effect having succeeded. It fails closed if any
-// instruction already carries a result gate.
-func applyOptionalFlowGate(sequence []game.Instruction) bool {
+// applyOptionalFlowGate gates every instruction produced by a branch effect on
+// the optional effect's published result matching succeeded: TriTrue for the
+// affirmative "if you do" clause, TriFalse for the "Otherwise" else branch. It
+// fails closed if any instruction already carries a result gate.
+func applyOptionalFlowGate(sequence []game.Instruction, succeeded game.TriState) bool {
 	if len(sequence) == 0 {
 		return false
 	}
@@ -1134,16 +1263,17 @@ func applyOptionalFlowGate(sequence []game.Instruction) bool {
 		}
 		sequence[k].ResultGate = opt.Val(game.InstructionResultGate{
 			Key:       optionalIfYouDoResultKey,
-			Succeeded: game.TriTrue,
+			Succeeded: succeeded,
 		})
 	}
 	return true
 }
 
 // optionalFlowGateConditions returns the content conditions excluding the
-// affirmative "if you do" clause, which the optional flow consumes as its gate
-// rather than as an ordinary per-effect condition. When the plan is disabled the
-// conditions are returned unchanged.
+// affirmative "if you do" clause and, when present, the "if you don't" complement
+// clause, both of which the optional flow consumes as its gates rather than as
+// ordinary per-effect conditions. When the plan is disabled the conditions are
+// returned unchanged.
 func optionalFlowGateConditions(
 	conditions []compiler.CompiledCondition,
 	plan optionalFlowPlan,
@@ -1153,7 +1283,7 @@ func optionalFlowGateConditions(
 	}
 	filtered := make([]compiler.CompiledCondition, 0, len(conditions))
 	for ci := range conditions {
-		if ci == plan.gateCondition {
+		if ci == plan.gateCondition || ci == plan.elseGateCondition {
 			continue
 		}
 		filtered = append(filtered, conditions[ci])
@@ -1176,8 +1306,11 @@ func applyOptionalFlowEnvelope(plan optionalFlowPlan, i int, sequence []game.Ins
 				return "structural — optional effect not single-instruction", false
 			}
 		}
-		if plan.gates(i) && !applyOptionalFlowGate(sequence) {
+		if plan.gates(i) && !applyOptionalFlowGate(sequence, game.TriTrue) {
 			return "structural — if-you-do gate not applicable", false
+		}
+		if plan.gatesElse(i) && !applyOptionalFlowGate(sequence, game.TriFalse) {
+			return "structural — otherwise gate not applicable", false
 		}
 	}
 	if i == plan.bareIndex && !applyBareOptional(sequence) {
@@ -1206,6 +1339,9 @@ func prepareSequenceClause(
 	}
 	if plan.marksOptional(i) {
 		resolvedEffect.Optional = false
+	}
+	if plan.clearsNegated(i) {
+		resolvedEffect.Negated = false
 	}
 	clauseAbility := clauseSyntaxes[i]
 	if clauseAbility.Span != effect.Span {

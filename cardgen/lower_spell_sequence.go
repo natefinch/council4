@@ -144,6 +144,9 @@ func lowerOrderedEffectSequence(
 	if optionalFlow.enabled {
 		consumedConditions++
 	}
+	if optionalFlow.elseGateCondition >= 0 {
+		consumedConditions++
+	}
 	// Every gate condition is consumed by the matching above (which fails closed
 	// unless all conditions matched and lowered). A single condition may gate
 	// multiple effects of a shared-sentence group, so count conditions here
@@ -162,7 +165,7 @@ func lowerOrderedEffectSequence(
 	// "Otherwise, <effect>." runs the else branch of the immediately preceding
 	// conditional effect. The preceding effect is already gated on its condition;
 	// gate the otherwise effect on the negation so exactly one branch resolves.
-	otherwiseGates, ok := sequenceOtherwiseGates(ctx.content.Effects, effectConditions)
+	otherwiseGates, ok := sequenceOtherwiseGates(ctx.content.Effects, effectConditions, optionalFlow)
 	if !ok {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — otherwise branch not gatable")
 	}
@@ -1094,7 +1097,7 @@ func lowerRevealHandLifeLossSaddledSequence(ctx contentCtx) (game.AbilityContent
 	if !gated || len(effectConditions) != 1 {
 		return game.AbilityContent{}, false
 	}
-	otherwiseGates, ok := sequenceOtherwiseGates(ctx.content.Effects, effectConditions)
+	otherwiseGates, ok := sequenceOtherwiseGates(ctx.content.Effects, effectConditions, optionalFlowPlan{elseIndex: -1})
 	if !ok {
 		return game.AbilityContent{}, false
 	}
@@ -1974,10 +1977,18 @@ func sequenceInsteadGates(
 func sequenceOtherwiseGates(
 	effects []compiler.CompiledEffect,
 	effectConditions map[int]game.EffectCondition,
+	optionalFlow optionalFlowPlan,
 ) (map[int]game.EffectCondition, bool) {
 	var gates map[int]game.EffectCondition
 	for j := range effects {
 		if effects[j].Connection != parser.EffectConnectionOtherwise {
+			continue
+		}
+		// An "Otherwise" effect that is the else branch of a resolving-optional
+		// flow ("you may X. If you do, Y. Otherwise, Z.") is gated on the optional
+		// result by the optional-flow envelope, not on a preceding effect's
+		// condition, so skip it here.
+		if optionalFlow.gatesElse(j) {
 			continue
 		}
 		if j == 0 {
