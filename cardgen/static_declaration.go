@@ -401,15 +401,17 @@ func lowerStaticContinuousDeclaration(declaration compiler.StaticDeclaration) (g
 		if layer != game.LayerAbility {
 			return game.ContinuousEffect{}, false
 		}
-		if keywords, ok := mixedStaticKeywords(declaration.Continuous.Keywords); ok && len(keywords) > 0 {
-			effect.AddKeywords = keywords
-			return effect, true
-		}
-		ability, ok := lowerStaticGrantedAbility(declaration.Continuous.Keywords)
+		keywords, abilities, ok := partitionStaticGrantKeywords(declaration.Continuous.Keywords)
 		if !ok {
 			return game.ContinuousEffect{}, false
 		}
-		effect.AddAbilities = []game.Ability{&ability}
+		if len(keywords) > 0 {
+			effect.AddKeywords = keywords
+		}
+		if len(abilities) > 0 {
+			effect.AddAbilities = abilities
+		}
+		return effect, true
 	case compiler.StaticContinuousGrantManaAbility:
 		if layer != game.LayerAbility || declaration.Continuous.GrantedMana == nil {
 			return game.ContinuousEffect{}, false
@@ -623,7 +625,14 @@ func lowerStaticGrantedAbility(keywords []compiler.CompiledKeyword) (game.Static
 	if len(keywords) != 1 {
 		return game.StaticAbility{}, false
 	}
-	keyword := keywords[0]
+	return staticGrantedAbilityForKeyword(keywords[0])
+}
+
+// staticGrantedAbilityForKeyword lowers a single granted keyword that cannot be
+// represented by a simple keyword enum (protection from a quality, ward with a
+// cost, or a landwalk variant) into the static ability body that carries its
+// full characteristics.
+func staticGrantedAbilityForKeyword(keyword compiler.CompiledKeyword) (game.StaticAbility, bool) {
 	switch keyword.Kind {
 	case parser.KeywordProtection:
 		if !keyword.ProtectionKnown {
@@ -638,6 +647,34 @@ func lowerStaticGrantedAbility(keywords []compiler.CompiledKeyword) (game.Static
 	default:
 		return grantedLandwalkStaticBody(keyword)
 	}
+}
+
+// partitionStaticGrantKeywords splits a continuous "<group> have <keywords>"
+// grant into the simple keyword enum values and the granted ability bodies
+// (protection, ward, landwalk) that carry their own characteristics. It lets a
+// single grant mix ordinary keywords with ability-backed ones — "Creatures you
+// control have flying, first strike, ... and protection from black and from
+// red." (Akroma's Memorial) — by populating both the keyword and ability lists.
+// It fails closed when any keyword reduces to neither form.
+func partitionStaticGrantKeywords(keywords []compiler.CompiledKeyword) ([]game.Keyword, []game.Ability, bool) {
+	simpleKeywords := make([]game.Keyword, 0, len(keywords))
+	var abilities []game.Ability
+	for _, keyword := range keywords {
+		if simple, ok := simpleStaticKeyword(keyword); ok {
+			simpleKeywords = append(simpleKeywords, simple)
+			continue
+		}
+		ability, ok := staticGrantedAbilityForKeyword(keyword)
+		if !ok {
+			return nil, nil, false
+		}
+		grant := ability
+		abilities = append(abilities, &grant)
+	}
+	if len(simpleKeywords) == 0 && len(abilities) == 0 {
+		return nil, nil, false
+	}
+	return simpleKeywords, abilities, true
 }
 
 // grantedLandwalkStaticBody returns the reusable landwalk StaticAbility body for
