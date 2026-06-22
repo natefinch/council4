@@ -194,6 +194,37 @@ func zoneChangeTriggerEventClauseTests() []triggerEventClauseTest {
 			},
 		},
 		{
+			name:   "zone self dies or another selection put into graveyard",
+			source: "Whenever this creature dies or another artifact you control is put into a graveyard from the battlefield, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if !clause.SelfOrAnother || clause.ExcludeSelf ||
+					clause.Subject.Kind != TriggerEventSubjectSelection ||
+					clause.Controller != ControllerYou ||
+					clause.ZoneChange.Kind != TriggerEventZoneChangeMoved ||
+					clause.Zone.FromZone.Kind != TriggerEventZoneBattlefield ||
+					clause.Zone.ToZone.Kind != TriggerEventZoneGraveyard ||
+					!selectionHasType(clause.Subject.Selection, TriggerCardTypeArtifact) {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "zone self dies or another selection dies two verbs",
+			source: "Whenever this creature dies or another creature you control dies, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if !clause.SelfOrAnother || clause.ExcludeSelf ||
+					clause.Subject.Kind != TriggerEventSubjectSelection ||
+					clause.Controller != ControllerYou ||
+					clause.Zone.FromZone.Kind != TriggerEventZoneBattlefield ||
+					clause.Zone.ToZone.Kind != TriggerEventZoneGraveyard ||
+					!selectionHasType(clause.Subject.Selection, TriggerCardTypeCreature) {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
 			name:   "zone attached noncreature dies adds creature",
 			source: "Whenever enchanted artifact dies, draw a card.",
 			check: func(t *testing.T, clause *TriggerEventClause) {

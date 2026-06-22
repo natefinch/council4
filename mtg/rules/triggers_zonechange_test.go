@@ -682,3 +682,95 @@ func TestZoneChangeTriggerChosenTypeSubjectGatesOnSourceEntryChoice(t *testing.T
 		t.Fatal("chosen-type trigger matched a creature whose subtype is not the chosen type")
 	}
 }
+
+// addArtifactPermanent adds an Artifact permanent so the self-or-another
+// battlefield-to-graveyard union tests can distinguish a matching artifact from
+// a non-artifact creature.
+func addArtifactPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Scrap Artifact",
+		Types: []types.Card{types.Artifact},
+	}})
+}
+
+// selfGraveyardOrAnotherArtifactPattern models Scrap Trawler's "Whenever this
+// creature dies or another artifact you control is put into a graveyard from the
+// battlefield, ..." as the compiler lowers it: a battlefield-to-graveyard zone
+// change filtered to artifacts the source's controller controls, widened to the
+// source itself through SubjectSelectionOrSelf.
+func selfGraveyardOrAnotherArtifactPattern() *game.TriggerPattern {
+	return &game.TriggerPattern{
+		Event:                  game.EventZoneChanged,
+		Controller:             game.TriggerControllerYou,
+		SubjectSelectionOrSelf: true,
+		MatchFromZone:          true,
+		FromZone:               zone.Battlefield,
+		MatchToZone:            true,
+		ToZone:                 zone.Graveyard,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Artifact},
+		},
+	}
+}
+
+// TestSelfGraveyardOrAnotherArtifactTriggerFiresForAnotherArtifact verifies the
+// union fires when a different artifact the controller controls is put into a
+// graveyard from the battlefield.
+func TestSelfGraveyardOrAnotherArtifactTriggerFiresForAnotherArtifact(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, selfGraveyardOrAnotherArtifactPattern(),
+		[]game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	other := addArtifactPermanent(g, game.Player1)
+	if !movePermanentToZone(g, other, zone.Graveyard) {
+		t.Fatal("movePermanentToZone failed")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("self-or-another graveyard trigger did not fire for another artifact")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != source.ObjectID || obj.TriggerEvent.PermanentID != other.ObjectID {
+		t.Fatalf("top of stack = %+v, want trigger from source %v for %v", obj, source.ObjectID, other.ObjectID)
+	}
+}
+
+// TestSelfGraveyardOrAnotherArtifactTriggerFiresForSource verifies the union
+// fires when the source itself is put into a graveyard from the battlefield
+// (i.e. dies), even though the self-excluding "another" wording would otherwise
+// reject it.
+func TestSelfGraveyardOrAnotherArtifactTriggerFiresForSource(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, selfGraveyardOrAnotherArtifactPattern(),
+		[]game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	if !movePermanentToZone(g, source, zone.Graveyard) {
+		t.Fatal("movePermanentToZone failed")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("self-or-another graveyard trigger did not fire for its own source dying")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != source.ObjectID || obj.TriggerEvent.PermanentID != source.ObjectID {
+		t.Fatalf("top of stack = %+v, want self trigger from source %v", obj, source.ObjectID)
+	}
+}
+
+// TestSelfGraveyardOrAnotherArtifactTriggerDoesNotFireForNonArtifact verifies
+// the union does not fire when a non-artifact creature the controller controls
+// dies, since it neither matches the artifact selection nor is the source.
+func TestSelfGraveyardOrAnotherArtifactTriggerDoesNotFireForNonArtifact(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, selfGraveyardOrAnotherArtifactPattern(),
+		[]game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	creature := addCombatCreaturePermanent(g, game.Player1)
+	if !movePermanentToZone(g, creature, zone.Graveyard) {
+		t.Fatal("movePermanentToZone failed")
+	}
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("self-or-another graveyard trigger fired for a non-artifact, non-source creature")
+	}
+}
