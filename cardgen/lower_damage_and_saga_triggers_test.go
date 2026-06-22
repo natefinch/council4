@@ -705,3 +705,56 @@ func TestLowerSagaChapterConsumesInlineReminderText(t *testing.T) {
 		t.Fatalf("got %d chapter abilities, want 1", len(face.ChapterAbilities))
 	}
 }
+
+// TestLowerSagaChapterDealsDamage proves a Saga chapter that deals a fixed amount
+// of damage to a target ("This Saga deals 4 damage to any target.") lowers onto a
+// Damage primitive sourced from the Saga permanent, mirroring the source-damage
+// spell shape.
+func TestLowerSagaChapterDealsDamage(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Damage Saga",
+		Layout:     "saga",
+		TypeLine:   "Enchantment — Saga",
+		OracleText: "I — This Saga deals 4 damage to any target.\nII — Draw a card.",
+	})
+	if len(face.ChapterAbilities) != 2 {
+		t.Fatalf("got %d chapter abilities, want 2", len(face.ChapterAbilities))
+	}
+	mode := face.ChapterAbilities[0].Content.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("chapter targets = %#v, want one", mode.Targets)
+	}
+	damage, ok := mode.Sequence[0].Primitive.(game.Damage)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.Damage", mode.Sequence[0].Primitive)
+	}
+	if damage.Amount != game.Fixed(4) {
+		t.Fatalf("damage amount = %#v, want 4", damage.Amount)
+	}
+	if damage.Recipient != game.AnyTargetDamageRecipient(0) {
+		t.Fatalf("damage recipient = %#v, want any-target", damage.Recipient)
+	}
+	if !damage.DamageSource.Exists || damage.DamageSource.Val != game.SourcePermanentReference() {
+		t.Fatalf("damage source = %#v, want source permanent", damage.DamageSource)
+	}
+}
+
+// TestLowerSagaChapterDealsDamageToOpponentCreature proves the opponent-controlled
+// target restriction ("This Saga deals 4 damage to target creature an opponent
+// controls.") lowers without a damage diagnostic.
+func TestLowerSagaChapterDealsDamageToOpponentCreature(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Opponent Damage Saga",
+		Layout:     "saga",
+		TypeLine:   "Enchantment — Saga",
+		OracleText: "I — This Saga deals 4 damage to target creature an opponent controls.\nII — Draw a card.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v, want none", diagnostics)
+	}
+}
