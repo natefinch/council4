@@ -367,6 +367,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				RepeatBody:                      compileEffects([]parser.Sentence{{Effects: syntax.RepeatBody}}),
 				ReturnAsEnchantment:             syntax.ReturnAsEnchantment,
 				ReturnAsEnchantmentRiderSpan:    syntax.ReturnAsEnchantmentRiderSpan,
+				AdditionalCombatPhase:           syntax.AdditionalCombatPhase,
+				AdditionalMainPhase:             syntax.AdditionalMainPhase,
 			})
 		}
 	}

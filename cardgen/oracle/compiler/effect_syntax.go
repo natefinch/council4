@@ -423,6 +423,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectChooseCreatureType
 	case parser.EffectNoMaximumHandSize:
 		return EffectNoMaximumHandSize
+	case parser.EffectAdditionalCombatPhase:
+		return EffectAdditionalCombatPhase
 	case parser.EffectMassReanimationExchange:
 		return EffectMassReanimationExchange
 	case parser.EffectPunisherLoseLife:

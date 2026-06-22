@@ -138,6 +138,15 @@ type TurnState struct {
 	// ExtraTurns is a queue of players who will take extra turns after
 	// the current turn ends. Processed LIFO (most recently added first).
 	ExtraTurns []PlayerID
+
+	// ExtraPhases is a FIFO queue of additional phases inserted into the
+	// current turn by extra-phase effects ("After this main phase, there is
+	// an additional combat phase followed by an additional main phase." —
+	// Aggravated Assault, Aurelia, World at War). The turn loop drains the
+	// queue after the postcombat main phase, running each queued phase in
+	// order; a queued phase that re-activates the source re-queues more
+	// phases, so the combo loop continues until the queue empties.
+	ExtraPhases []Phase
 }
 
 // CanPlayLand reports whether the active player can still play a land

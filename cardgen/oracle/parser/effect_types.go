@@ -203,6 +203,13 @@ const (
 	// duration. The permanent static "You have no maximum hand size." form
 	// (Reliquary Tower) is a static declaration, not this resolving effect.
 	EffectNoMaximumHandSize EffectKind = "EffectNoMaximumHandSize"
+	// EffectAdditionalCombatPhase models the extra-phase-insertion effect "After
+	// this [main] phase, there is an additional combat phase[ followed by an
+	// additional main phase]." (Aggravated Assault, Aurelia the Warleader, World
+	// at War, Combat Celebrant). It inserts an additional combat phase into the
+	// current turn, optionally followed by an additional main phase.
+	// AdditionalCombatPhase and AdditionalMainPhase carry which phases are added.
+	EffectAdditionalCombatPhase EffectKind = "EffectAdditionalCombatPhase"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -1525,6 +1532,15 @@ type EffectSyntax struct {
 	// untyped "Amass N" form names no subtype in its text and defaults to Zombie.
 	// It is empty for every other effect.
 	AmassSubtype types.Sub `json:",omitempty"`
+	// AdditionalCombatPhase reports an "After this [main] phase, there is an
+	// additional combat phase[ followed by an additional main phase]." effect
+	// (Aggravated Assault, Aurelia the Warleader, World at War): it inserts an
+	// extra combat phase into the current turn. AdditionalMainPhase reports the
+	// optional "followed by an additional main phase" tail that inserts an extra
+	// main phase after that combat phase. Both are false for every other effect;
+	// AdditionalMainPhase is set only together with AdditionalCombatPhase.
+	AdditionalCombatPhase bool `json:",omitempty"`
+	AdditionalMainPhase   bool `json:",omitempty"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend

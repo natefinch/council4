@@ -1815,6 +1815,16 @@ func (p SkipStep) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p AddExtraPhases) validatePrimitive([]TargetSpec, bool) error {
+	if !p.Combat && !p.Main {
+		return errors.New("add extra phases requires at least one phase")
+	}
+	if p.Main && !p.Combat {
+		return errors.New("add extra phases main phase must follow an extra combat phase")
+	}
+	return nil
+}
+
 func (p CreateEmblem) validatePrimitive([]TargetSpec, bool) error {
 	if len(p.EmblemAbilities) == 0 {
 		return errors.New("create emblem requires at least one ability")

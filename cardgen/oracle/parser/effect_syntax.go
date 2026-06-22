@@ -782,6 +782,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseMassReanimationExchangeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseAdditionalLandPlaysEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseCastAsThoughFlashEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parseAdditionalCombatPhaseEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseNoMaximumHandSizeForRestOfGameEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseCantCastSpellsEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseGroupMustAttackEffect(sentence, tokens) },
@@ -2264,6 +2265,68 @@ func parseCastAsThoughFlashEffect(sentence Sentence, tokens []shared.Token) ([]E
 		Context:    EffectContextController,
 		Duration:   EffectDurationThisTurn,
 		Exact:      true,
+	}}, true
+}
+
+// parseAdditionalCombatPhaseEffect recognizes the extra-phase-insertion effect
+// "After this [main/combat] phase, there is an additional combat phase[ followed
+// by an additional main phase]." (Aggravated Assault, Aurelia the Warleader,
+// World at War, Combat Celebrant). It inserts an additional combat phase into
+// the current turn, optionally followed by an additional main phase. The leading
+// "After this <phase>" reference to the current phase is descriptive; the
+// simplified runtime model drains the inserted phases after the postcombat main
+// phase. Any other wording fails closed and flows through the generic parser.
+func parseAdditionalCombatPhaseEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period || token.Kind == shared.Comma {
+			continue
+		}
+		words = append(words, token)
+	}
+	// Shortest match: "after this phase there is an additional combat phase" (9).
+	if len(words) < 9 || !equalWord(words[0], "after") || !equalWord(words[1], "this") {
+		return nil, false
+	}
+	idx := 2
+	if equalWord(words[idx], "main") || equalWord(words[idx], "combat") {
+		idx++
+	}
+	if !equalWord(words[idx], "phase") {
+		return nil, false
+	}
+	idx++
+	verbToken := words[idx]
+	for _, want := range []string{"there", "is", "an", "additional", "combat", "phase"} {
+		if idx >= len(words) || !equalWord(words[idx], want) {
+			return nil, false
+		}
+		idx++
+	}
+	additionalMain := false
+	if idx < len(words) {
+		for _, want := range []string{"followed", "by", "an", "additional", "main", "phase"} {
+			if idx >= len(words) || !equalWord(words[idx], want) {
+				return nil, false
+			}
+			idx++
+		}
+		additionalMain = true
+	}
+	if idx != len(words) {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:                  EffectAdditionalCombatPhase,
+		Span:                  sentence.Span,
+		ClauseSpan:            sentence.Span,
+		VerbSpan:              verbToken.Span,
+		Text:                  sentence.Text,
+		Tokens:                append([]shared.Token(nil), tokens...),
+		Context:               EffectContextController,
+		AdditionalCombatPhase: true,
+		AdditionalMainPhase:   additionalMain,
+		Exact:                 true,
 	}}, true
 }
 

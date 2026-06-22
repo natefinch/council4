@@ -488,9 +488,28 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", errors.New("render: internal error: PreventDamage kind has unexpected concrete type")
 		}
 		return r.renderPreventDamage(ctx, value)
+	case game.PrimitiveAddExtraPhases:
+		value, ok := primitive.(game.AddExtraPhases)
+		if !ok {
+			return "", errors.New("render: internal error: AddExtraPhases kind has unexpected concrete type")
+		}
+		return renderAddExtraPhases(value), nil
 	default:
 		return "", fmt.Errorf("render: unsupported primitive kind %d", primitive.Kind())
 	}
+}
+
+// renderAddExtraPhases renders the AddExtraPhases primitive, emitting only the
+// set phase flags so the literal matches the typed effect.
+func renderAddExtraPhases(value game.AddExtraPhases) string {
+	var fields []string
+	if value.Combat {
+		fields = append(fields, "Combat: true,")
+	}
+	if value.Main {
+		fields = append(fields, "Main: true,")
+	}
+	return structLit("game.AddExtraPhases", fields)
 }
 
 func (Renderer) renderCardCondition(ctx *renderCtx, condition game.CardCondition) (string, error) {
