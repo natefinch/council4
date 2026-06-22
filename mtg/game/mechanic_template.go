@@ -602,6 +602,30 @@ func FabricateTriggeredAbility(count int) TriggeredAbility {
 	}
 }
 
+// EvokeSacrificeTriggeredAbility builds the canonical Evoke sacrifice trigger
+// (CR 702.74): "When this permanent enters, if its evoke cost was paid,
+// sacrifice it." The intervening-if gates the sacrifice on the spell having been
+// cast for its Evoke alternative cost, preserved on the entering permanent event
+// for both trigger-time and resolution-time checks (CR 603.4).
+func EvokeSacrificeTriggeredAbility() TriggeredAbility {
+	return TriggeredAbility{
+		Text: "When this permanent enters, if its evoke cost was paid, sacrifice it.",
+		Trigger: TriggerCondition{
+			Type: TriggerWhen,
+			Pattern: TriggerPattern{
+				Event:  EventPermanentEnteredBattlefield,
+				Source: TriggerSourceSelf,
+			},
+			InterveningIfEventPermanentWasEvoked: true,
+		},
+		Content: Mode{
+			Sequence: []Instruction{{
+				Primitive: Sacrifice{Object: SourcePermanentReference()},
+			}},
+		}.Ability(),
+	}
+}
+
 // RampageTriggeredAbility builds the canonical Rampage N triggered ability
 // (CR 702.23): "Whenever this creature becomes blocked, it gets +N/+N until end
 // of turn for each creature blocking it beyond the first." The +N/+N delta is a

@@ -31,6 +31,7 @@ func createCardPermanentFaceWithContinuous(e *Engine, g *game.Game, card *game.C
 type permanentCreationOptions struct {
 	ForceTapped       bool
 	KickerPaid        bool
+	Evoked            bool
 	WasCast           bool
 	CastController    game.PlayerID
 	HasCastController bool
@@ -100,6 +101,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		CardID:                 card.ID,
 		Face:                   face,
 		KickerPaid:             options.KickerPaid,
+		EnterEvoked:            options.Evoked,
 		EnterWasCast:           options.WasCast,
 		EnterCastController:    options.CastController,
 		EnterHasCastController: options.HasCastController,
@@ -199,6 +201,7 @@ func commitSimultaneousCardPermanentEntries(g *game.Game, entries []preparedCard
 			CardID:                 entry.card.ID,
 			Face:                   permanent.Face,
 			KickerPaid:             entry.options.KickerPaid,
+			EnterEvoked:            entry.options.Evoked,
 			EnterWasCast:           entry.options.WasCast,
 			EnterCastController:    entry.options.CastController,
 			EnterHasCastController: entry.options.HasCastController,

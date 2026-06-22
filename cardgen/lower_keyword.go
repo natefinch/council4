@@ -246,6 +246,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordStaticLowering(&flashbackAbility, ability, syntax), true, nil
 	}
+	if evokeLowering, ok, diag := lowerEvokeAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return evokeLowering, true, nil
+	}
 	if dredgeAbility, ok, diag := lowerDredgeAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -1122,6 +1128,49 @@ func lowerFlashbackAbility(
 	return game.StaticAbility{
 		Text:             keyword.Name + " " + keyword.Parameter,
 		KeywordAbilities: []game.KeywordAbility{game.FlashbackKeyword{Cost: manaCost}},
+	}, true, nil
+}
+
+// lowerEvokeAbility lowers the Evoke keyword (CR 702.74) into two lowered
+// pieces: an "Evoke" alternative spell cost the payment machinery auto-offers at
+// cast, and the canonical evoke-sacrifice triggered ability that sacrifices the
+// permanent when it enters if its evoke cost was paid. Only the exact keyword
+// with a fixed mana cost and no other rules text is supported; the em-dash
+// "Evoke—<non-mana cost>" variant carries no mana parameter and stays
+// unsupported.
+func lowerEvokeAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (abilityLowering, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordEvoke {
+		return abilityLowering{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	manaCost, fixed := fixedKeywordManaCost(keyword)
+	if !fixed ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return abilityLowering{}, true, executableDiagnostic(
+			ability,
+			"unsupported Evoke ability",
+			"the executable source backend supports only exact Evoke with a fixed mana cost",
+		)
+	}
+	return abilityLowering{
+		triggeredAbility: opt.Val(game.EvokeSacrificeTriggeredAbility()),
+		alternativeCosts: []cost.Alternative{{
+			Label:    "Evoke",
+			ManaCost: opt.Val(manaCost),
+		}},
+		consumed:    semanticConsumption{keywords: 1},
+		sourceSpans: keywordSpans(ability, syntax),
 	}, true, nil
 }
 
