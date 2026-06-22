@@ -90,6 +90,7 @@ const (
 	ConditionPredicateControllerLifeExactly                            ConditionPredicateKind = "ConditionPredicateControllerLifeExactly"
 	ConditionPredicateControllerGainedLifeThisTurnAtLeast              ConditionPredicateKind = "ConditionPredicateControllerGainedLifeThisTurnAtLeast"
 	ConditionPredicateSpellXAtLeast                                    ConditionPredicateKind = "ConditionPredicateSpellXAtLeast"
+	ConditionPredicateGraveyardCardOfTypeCountAtLeast                  ConditionPredicateKind = "ConditionPredicateGraveyardCardOfTypeCountAtLeast"
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -320,6 +321,12 @@ type ConditionClause struct {
 	// artifact or creature you control", Ozolith, the Shattered Spire). It is
 	// empty for the unrestricted "a permanent you control" form.
 	CounterRecipientTypesAny []TriggerCardType `json:",omitempty"`
+
+	// GraveyardCountCardType carries the single card type counted by a
+	// ConditionPredicateGraveyardCardOfTypeCountAtLeast clause ("if twenty or
+	// more creature cards are in your graveyard", Mortal Combat). Threshold
+	// carries the minimum count. It is TriggerCardTypeUnknown for other clauses.
+	GraveyardCountCardType TriggerCardType `json:",omitempty"`
 }
 
 // ConditionControlComparison describes a cross-player control-count comparison
@@ -1258,7 +1265,7 @@ func recognizeGainedLifeThisTurnCondition(body []shared.Token, _ Atoms) (Conditi
 	return ConditionClause{Predicate: ConditionPredicateControllerGainedLifeThisTurnAtLeast, Threshold: count.Value}, true
 }
 
-func recognizeGraveyardCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+func recognizeGraveyardCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
 	rest := body
 	if trimmed, ok := cutTokenPrefix(body, "there", "are"); ok {
 		rest = trimmed
@@ -1273,9 +1280,38 @@ func recognizeGraveyardCondition(body []shared.Token, _ Atoms) (ConditionClause,
 		return ConditionClause{Predicate: ConditionPredicateGraveyardCardCountAtLeast, Threshold: count.Value}, true
 	case tokenWordsEqual(tail, "card", "types", "among", "cards", "in", "your", "graveyard"):
 		return ConditionClause{Predicate: ConditionPredicateGraveyardCardTypeCountAtLeast, Threshold: count.Value}, true
-	default:
-		return ConditionClause{}, false
 	}
+	if cardType, ok := graveyardCountCardType(tail, atoms); ok {
+		return ConditionClause{
+			Predicate:              ConditionPredicateGraveyardCardOfTypeCountAtLeast,
+			Threshold:              count.Value,
+			GraveyardCountCardType: cardType,
+		}, true
+	}
+	return ConditionClause{}, false
+}
+
+// graveyardCountCardType recognizes the tail "<card type> cards [are] in your
+// graveyard" of a graveyard card-count condition filtered by a single card type
+// ("twenty or more creature cards are in your graveyard", Mortal Combat). It
+// fails closed when the noun is not a single recognized card type.
+func graveyardCountCardType(tail []shared.Token, atoms Atoms) (TriggerCardType, bool) {
+	typeTokens, ok := stripTokenSuffix(tail, "cards", "are", "in", "your", "graveyard")
+	if !ok {
+		typeTokens, ok = stripTokenSuffix(tail, "cards", "in", "your", "graveyard")
+	}
+	if !ok || len(typeTokens) != 1 {
+		return TriggerCardTypeUnknown, false
+	}
+	cardType, ok := atoms.CardTypeAt(typeTokens[0].Span)
+	if !ok {
+		return TriggerCardTypeUnknown, false
+	}
+	mapped := triggerCardTypeFromAtom(cardType)
+	if mapped == TriggerCardTypeUnknown {
+		return TriggerCardTypeUnknown, false
+	}
+	return mapped, true
 }
 
 func recognizeCounterPlacementCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {

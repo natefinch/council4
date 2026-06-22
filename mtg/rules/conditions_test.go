@@ -371,6 +371,42 @@ func TestConditionCardCountsIgnoreTransientTokens(t *testing.T) {
 	}
 }
 
+func TestConditionGraveyardCardOfTypeCount(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	for _, cardTypes := range [][]types.Card{
+		{types.Artifact, types.Creature},
+		{types.Creature},
+		{types.Creature},
+		{types.Land},
+		{types.Instant},
+	} {
+		addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+			Name:  "Graveyard Card",
+			Types: cardTypes,
+		}})
+	}
+
+	creatureCount := opt.Val(game.Condition{
+		ControllerGraveyardCardOfTypeCountAtLeast: 3,
+		ControllerGraveyardCountCardType:          types.Creature,
+	})
+	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, creatureCount) {
+		t.Fatal("three creature cards in graveyard did not satisfy at-least-3 condition")
+	}
+
+	tooMany := opt.Val(game.Condition{
+		ControllerGraveyardCardOfTypeCountAtLeast: 4,
+		ControllerGraveyardCountCardType:          types.Creature,
+	})
+	if conditionSatisfied(g, conditionContext{controller: game.Player1}, tooMany) {
+		t.Fatal("only three creature cards present but at-least-4 condition matched")
+	}
+
+	if conditionSatisfied(g, conditionContext{controller: game.Player2}, creatureCount) {
+		t.Fatal("condition matched another player's graveyard")
+	}
+}
+
 func TestConditionDeliriumCombinesSplitCardTypesOnly(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addCardToGraveyard(g, game.Player1, &game.CardDef{

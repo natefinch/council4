@@ -288,6 +288,17 @@ func TestLowerAtTriggerInterveningIfConditions(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:      "graveyard creature cards",
+			condition: "if twenty or more creature cards are in your graveyard",
+			assert: func(t *testing.T, condition game.Condition) {
+				t.Helper()
+				if condition.ControllerGraveyardCardOfTypeCountAtLeast != 20 ||
+					condition.ControllerGraveyardCountCardType != types.Creature {
+					t.Fatalf("condition = %+v, want 20 creature cards in graveyard", condition)
+				}
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

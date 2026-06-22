@@ -108,6 +108,10 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 	case parser.ConditionPredicateGraveyardCardTypeCountAtLeast:
 		condition.Predicate = ConditionPredicateControllerGraveyardCardTypeCountAtLeast
 		condition.Threshold = clause.Threshold
+	case parser.ConditionPredicateGraveyardCardOfTypeCountAtLeast:
+		condition.Predicate = ConditionPredicateControllerGraveyardCardOfTypeCountAtLeast
+		condition.Threshold = clause.Threshold
+		condition.GraveyardCountCardType = compileTriggerCardType(clause.GraveyardCountCardType)
 	case parser.ConditionPredicateCreaturePowerDiversityAtLeast:
 		condition.Predicate = ConditionPredicateControllerCreaturePowerDiversityAtLeast
 		condition.Threshold = clause.Threshold

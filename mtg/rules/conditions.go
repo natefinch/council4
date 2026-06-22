@@ -34,6 +34,7 @@ func conditionParametersNegative(cond *game.Condition) bool {
 		cond.OpponentCountAtLeast < 0 ||
 		cond.ControllerGraveyardCardCountAtLeast < 0 ||
 		cond.ControllerGraveyardCardTypeCountAtLeast < 0 ||
+		cond.ControllerGraveyardCardOfTypeCountAtLeast < 0 ||
 		cond.ControllerBasicLandTypeCountAtLeast < 0 ||
 		cond.ControllerCreaturePowerDiversityAtLeast < 0 ||
 		cond.ControllerControls.MinCount < 0 ||
@@ -108,6 +109,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	}
 	if cond.ControllerGraveyardCardTypeCountAtLeast > 0 {
 		matches = matches && controllerGraveyardCardTypeCount(g, ctx.controller) >= cond.ControllerGraveyardCardTypeCountAtLeast
+	}
+	if cond.ControllerGraveyardCardOfTypeCountAtLeast > 0 {
+		matches = matches && controllerGraveyardCardOfTypeCount(g, ctx.controller, cond.ControllerGraveyardCountCardType) >= cond.ControllerGraveyardCardOfTypeCountAtLeast
 	}
 	if cond.ControllerBasicLandTypeCountAtLeast > 0 {
 		matches = matches && controllerBasicLandTypeCount(g, ctx) >= cond.ControllerBasicLandTypeCountAtLeast
@@ -230,6 +234,32 @@ func controllerGraveyardCardTypeCount(g *game.Game, controller game.PlayerID) in
 		}
 	}
 	return len(distinct)
+}
+
+// controllerGraveyardCardOfTypeCount counts the cards in the controller's
+// graveyard whose card types include cardType ("twenty or more creature cards
+// are in your graveyard", Mortal Combat).
+func controllerGraveyardCardOfTypeCount(g *game.Game, controller game.PlayerID, cardType types.Card) int {
+	player, ok := playerByID(g, controller)
+	if !ok {
+		return 0
+	}
+	count := 0
+	for _, cardID := range player.Graveyard.All() {
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		if slices.Contains(cardFaceOrDefault(card, game.FaceFront).Types, cardType) {
+			count++
+			continue
+		}
+		if card.Def.Layout == game.LayoutSplit && card.Def.Alternate.Exists &&
+			slices.Contains(card.Def.Alternate.Val.Types, cardType) {
+			count++
+		}
+	}
+	return count
 }
 
 func controllerBasicLandTypeCount(g *game.Game, ctx conditionContext) int {

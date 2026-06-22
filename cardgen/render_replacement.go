@@ -778,7 +778,8 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		cond.SpellXAtLeast < 0 ||
 		cond.ControllerLifeExactly.Exists && cond.ControllerLifeExactly.Val < 0 ||
 		cond.ControllerCreaturePowerDiversityAtLeast < 0 ||
-		cond.ControllerGainedLifeThisTurnAtLeast < 0 {
+		cond.ControllerGainedLifeThisTurnAtLeast < 0 ||
+		cond.ControllerGraveyardCardOfTypeCountAtLeast < 0 {
 		return "", fmt.Errorf("render: %s condition has a negative threshold", context)
 	}
 	// Reject unsupported condition fields.
@@ -907,6 +908,16 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	}
 	if cond.ControllerGraveyardCardTypeCountAtLeast > 0 {
 		fields = append(fields, fmt.Sprintf("ControllerGraveyardCardTypeCountAtLeast: %d,", cond.ControllerGraveyardCardTypeCountAtLeast))
+		hasPredicate = true
+	}
+	if cond.ControllerGraveyardCardOfTypeCountAtLeast > 0 {
+		literal, err := cardTypeLiteral(cond.ControllerGraveyardCountCardType)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importTypes)
+		fields = append(fields, fmt.Sprintf("ControllerGraveyardCardOfTypeCountAtLeast: %d,", cond.ControllerGraveyardCardOfTypeCountAtLeast))
+		fields = append(fields, fmt.Sprintf("ControllerGraveyardCountCardType: %s,", literal))
 		hasPredicate = true
 	}
 	if cond.ControllerBasicLandTypeCountAtLeast > 0 {
