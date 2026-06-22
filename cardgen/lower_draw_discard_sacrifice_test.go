@@ -1017,3 +1017,68 @@ func TestLowerSacrificeThenConditionalInsteadSearchSequence(t *testing.T) {
 		t.Error("instead search should be gated on the non-negated condition")
 	}
 }
+
+// TestLowerSacrificeSpellTokenSubtype verifies that "Sacrifice a <token
+// subtype>." (Treasure, Food, ...) lowers the controller-sacrifice choice with
+// a SubtypesAny selection filter rather than a card-type filter, so the runtime
+// edict matches only permanents carrying that artifact-token subtype.
+func TestLowerSacrificeSpellTokenSubtype(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Treasure Edict",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Sacrifice a Treasure.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not found")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	prim, ok := mode.Sequence[0].Primitive.(game.SacrificePermanents)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.SacrificePermanents", mode.Sequence[0].Primitive)
+	}
+	if prim.Amount.Value() != 1 {
+		t.Fatalf("amount = %d, want 1", prim.Amount.Value())
+	}
+	if !slices.Equal(prim.Selection.SubtypesAny, []types.Sub{types.Treasure}) {
+		t.Fatalf("selection = %#v, want Treasure subtype filter", prim.Selection)
+	}
+	if len(prim.Selection.RequiredTypes) != 0 {
+		t.Fatalf("selection RequiredTypes = %#v, want none for a subtype-only edict", prim.Selection.RequiredTypes)
+	}
+}
+
+// TestLowerOptionalSacrificeTokenSubtype verifies the token-subtype sacrifice
+// composes as the optional X action in "You may sacrifice a <token subtype>. If
+// you do, <Y>.": the sacrifice is optional and publishes its result, and the
+// benefit is gated on it.
+func TestLowerOptionalSacrificeTokenSubtype(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Optional Food Sac",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "You may sacrifice a Food. If you do, draw a card.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not found")
+	}
+	sequence := face.SpellAbility.Val.Modes[0].Sequence
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions", sequence)
+	}
+	prim, ok := sequence[0].Primitive.(game.SacrificePermanents)
+	if !ok {
+		t.Fatalf("instruction[0] = %T, want game.SacrificePermanents", sequence[0].Primitive)
+	}
+	if !slices.Equal(prim.Selection.SubtypesAny, []types.Sub{types.Food}) {
+		t.Fatalf("selection = %#v, want Food subtype filter", prim.Selection)
+	}
+	if !sequence[0].Optional || sequence[0].PublishResult == "" {
+		t.Fatalf("sacrifice must be optional and publish a result: %#v", sequence[0])
+	}
+	if !sequence[1].ResultGate.Exists || sequence[1].ResultGate.Val.Succeeded != game.TriTrue {
+		t.Fatalf("draw must be gated on the sacrifice result: %#v", sequence[1])
+	}
+}

@@ -890,24 +890,28 @@ func sacrificeReferencedPlayerChoice(references []compiler.CompiledReference) bo
 // unsupported.
 func sacrificeChoiceSelection(selector compiler.CompiledSelector) (game.Selection, bool) {
 	var selection game.Selection
-	if union := selector.RequiredTypesAny(); len(union) > 1 {
-		selection.RequiredTypesAny = union
-	} else {
-		switch selector.Kind {
-		case compiler.SelectorCreature:
-			selection.RequiredTypes = []types.Card{types.Creature}
-		case compiler.SelectorArtifact:
-			selection.RequiredTypes = []types.Card{types.Artifact}
-		case compiler.SelectorLand:
-			selection.RequiredTypes = []types.Card{types.Land}
-		case compiler.SelectorEnchantment:
-			selection.RequiredTypes = []types.Card{types.Enchantment}
-		case compiler.SelectorPermanent:
-			// zero Selection = any permanent
-		default:
-			return game.Selection{}, false
-		}
+	subtypes := selector.SubtypesAny()
+	switch {
+	case len(selector.RequiredTypesAny()) > 1:
+		selection.RequiredTypesAny = selector.RequiredTypesAny()
+	case selector.Kind == compiler.SelectorCreature:
+		selection.RequiredTypes = []types.Card{types.Creature}
+	case selector.Kind == compiler.SelectorArtifact:
+		selection.RequiredTypes = []types.Card{types.Artifact}
+	case selector.Kind == compiler.SelectorLand:
+		selection.RequiredTypes = []types.Card{types.Land}
+	case selector.Kind == compiler.SelectorEnchantment:
+		selection.RequiredTypes = []types.Card{types.Enchantment}
+	case selector.Kind == compiler.SelectorPermanent:
+		// zero Selection = any permanent
+	case len(subtypes) > 0:
+		// A named artifact-token subtype ("a Treasure", "a Food") names the
+		// permanent by its subtype alone; the SubtypesAny filter applied below
+		// is the whole constraint, so no card-type kind is required here.
+	default:
+		return game.Selection{}, false
 	}
+	selection.SubtypesAny = subtypes
 	switch {
 	case selector.NonToken:
 		selection.NonToken = true
