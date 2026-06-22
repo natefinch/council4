@@ -313,6 +313,22 @@ func zoneChangeTriggerEventClauseTests() []triggerEventClauseTest {
 			},
 		},
 		{
+			name:   "zone put into graveyard excluding battlefield",
+			source: "Whenever a creature card is put into a graveyard from anywhere other than the battlefield, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.ZoneChange.Kind != TriggerEventZoneChangeMoved ||
+					clause.Zone.MatchFromZone ||
+					!clause.Zone.ExcludeFromZone ||
+					clause.Zone.FromZone.Kind != TriggerEventZoneBattlefield ||
+					!clause.Zone.MatchToZone ||
+					clause.Zone.ToZone.Kind != TriggerEventZoneGraveyard ||
+					!selectionHasType(clause.Subject.Selection, TriggerCardTypeCreature) {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
 			name:   "zone exiled",
 			source: "Whenever an artifact is exiled from the battlefield, draw a card.",
 			check: func(t *testing.T, clause *TriggerEventClause) {

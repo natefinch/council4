@@ -169,6 +169,16 @@ func compileZoneChangeZones(clause *parser.TriggerEventClause, pattern *TriggerP
 		}
 		pattern.MatchFromZone = true
 	}
+	if clause.Zone.ExcludeFromZone {
+		pattern.FromZone, _ = compileTriggerEventZone(clause.Zone.FromZone.Kind)
+		if pattern.FromZone == TriggerZoneNone {
+			return false
+		}
+		pattern.ExcludeFromZone = true
+	}
+	if pattern.MatchFromZone && pattern.ExcludeFromZone {
+		return false
+	}
 	if pattern.Event != TriggerEventZoneChanged {
 		return true
 	}

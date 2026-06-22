@@ -492,12 +492,13 @@ type TriggerEventZoneChange struct {
 
 // TriggerEventZoneContext is composable zone-change context.
 type TriggerEventZoneContext struct {
-	Span          shared.Span      `json:"-"`
-	MatchFromZone bool             `json:",omitempty"`
-	FromZone      TriggerEventZone `json:",omitzero"`
-	MatchToZone   bool             `json:",omitempty"`
-	ToZone        TriggerEventZone `json:",omitzero"`
-	ExcludeToZone bool             `json:",omitempty"`
+	Span            shared.Span      `json:"-"`
+	MatchFromZone   bool             `json:",omitempty"`
+	FromZone        TriggerEventZone `json:",omitzero"`
+	MatchToZone     bool             `json:",omitempty"`
+	ToZone          TriggerEventZone `json:",omitzero"`
+	ExcludeToZone   bool             `json:",omitempty"`
+	ExcludeFromZone bool             `json:",omitempty"`
 }
 
 // TriggerEventTappedStateKind identifies an ETB tapped-state qualifier.
