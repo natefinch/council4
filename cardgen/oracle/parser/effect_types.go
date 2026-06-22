@@ -1027,9 +1027,17 @@ type SelectionSyntax struct {
 	SubtypesAny        []types.Sub       `json:",omitempty"`
 	ExcludedSubtypes   []types.Sub       `json:",omitempty"`
 	Alternatives       []SelectionSyntax `json:",omitempty"`
-	ManaValue          compare.Int       `json:",omitzero"`
-	Power              compare.Int       `json:",omitzero"`
-	Toughness          compare.Int       `json:",omitzero"`
+	// InclusiveOneOfEach records that the selection joined two or more singular
+	// articled card nouns with "and/or" ("a Saga card and/or a land card"),
+	// meaning the controller may choose up to one card of each named type rather
+	// than a single card matching any one of them. The merged RequiredTypesAny /
+	// SubtypesAny still carry the named types; this flag tells the lowering to
+	// realize one independent optional pick per named type. It is meaningful only
+	// for the put-from-among-onto-battlefield shape and is ignored elsewhere.
+	InclusiveOneOfEach bool        `json:",omitempty"`
+	ManaValue          compare.Int `json:",omitzero"`
+	Power              compare.Int `json:",omitzero"`
+	Toughness          compare.Int `json:",omitzero"`
 	// TotalManaValue holds the set-sum mana value comparison bound when
 	// MatchTotalManaValue is set ("with total mana value N or less"). It bounds
 	// the combined mana value of the chosen cards, not any individual card.

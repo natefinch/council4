@@ -1047,8 +1047,15 @@ type CompiledSelector struct {
 	// Selection.PowerLessThanSource / Selection.PowerGreaterThanSource.
 	PowerLessThanSource    bool
 	PowerGreaterThanSource bool
-	Alternatives           []CompiledSelector
-	atoms                  *CompiledSelectorAtoms
+	// InclusiveOneOfEach records that the selection joined two or more singular
+	// articled card nouns with "and/or" ("a Saga card and/or a land card"),
+	// meaning up to one card of each named type may be chosen rather than a
+	// single card matching any one of them. The merged RequiredTypesAny /
+	// SubtypesAny carry the named types; the lowering realizes one independent
+	// optional pick per named type for the put-from-among-onto-battlefield shape.
+	InclusiveOneOfEach bool
+	Alternatives       []CompiledSelector
+	atoms              *CompiledSelectorAtoms
 }
 
 // CompiledSelectorAtoms holds parser-owned atom-derived selector filters that
