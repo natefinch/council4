@@ -30,10 +30,11 @@ const (
 	DynamicValueControllerLandCardsInGraveyard
 	DynamicValueControllerCardTypesInGraveyard
 	DynamicValueControllerPermanentCardsInGraveyard
-	DynamicValueControllerLandSubtypeCount
+	DynamicValueControllerSubtypeCount
 	DynamicValueControllerBasicLandTypeCount
 	DynamicValueControllerLifeTotal
 	DynamicValueAllPlayersHandSize
+	DynamicValueControllerColorPermanentCount
 )
 
 // DynamicValue is data for a characteristic-defining numeric value.
@@ -44,10 +45,14 @@ type DynamicValue struct {
 	// "<count> plus N" characteristic-defining toughness (CR 208.2, Tarmogoyf's
 	// "its toughness is equal to that number plus 1").
 	Offset int
-	// Subtype selects the land subtype counted by
-	// DynamicValueControllerLandSubtypeCount ("the number of Swamps you
+	// Subtype selects the subtype counted by DynamicValueControllerSubtypeCount
+	// ("the number of Swamps you control", "the number of Goblins you
 	// control"). It is unused by every other kind.
 	Subtype types.Sub
+	// Color selects the color of permanents counted by
+	// DynamicValueControllerColorPermanentCount ("the number of red permanents
+	// you control"). It is unused by every other kind.
+	Color color.Color
 }
 
 // CopyableValues records the copiable printed/effective values copied in layer

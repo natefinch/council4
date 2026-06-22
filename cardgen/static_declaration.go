@@ -197,12 +197,17 @@ func lowerStaticCharacteristicPowerToughness(
 		sourceSpans: spans,
 	}
 	if characteristic.SetsPower {
-		lowering.dynamicPower = opt.Val(game.DynamicValue{Kind: characteristic.Value, Subtype: characteristic.Subtype})
+		lowering.dynamicPower = opt.Val(game.DynamicValue{
+			Kind:    characteristic.Value,
+			Subtype: characteristic.Subtype,
+			Color:   characteristic.Color,
+		})
 	}
 	if characteristic.SetsToughness {
 		lowering.dynamicToughness = opt.Val(game.DynamicValue{
 			Kind:    characteristic.Value,
 			Subtype: characteristic.Subtype,
+			Color:   characteristic.Color,
 			Offset:  characteristic.ToughnessOffset,
 		})
 	}

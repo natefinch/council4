@@ -656,6 +656,7 @@ func parseStaticBasePowerToughnessOperation(
 // caller already consumed.
 func parseStaticDynamicPowerToughnessOperation(
 	tokens []shared.Token,
+	atoms Atoms,
 	index, end int,
 	subject StaticDeclarationSubject,
 ) (StaticDeclarationSyntax, int, bool) {
@@ -671,7 +672,7 @@ func parseStaticDynamicPowerToughnessOperation(
 		return StaticDeclarationSyntax{}, 0, false
 	}
 	cursor += 7
-	count, ok := parseStaticDynamicValueCount(tokens, cursor, end)
+	count, ok := parseStaticDynamicValueCount(tokens, atoms, cursor, end)
 	if !ok || count.end != end {
 		return StaticDeclarationSyntax{}, 0, false
 	}
@@ -680,6 +681,7 @@ func parseStaticDynamicPowerToughnessOperation(
 		OperationSpan:       shared.SpanOf(tokens[index:count.end]),
 		DynamicValue:        count.kind,
 		DynamicValueSubtype: count.subtype,
+		DynamicValueColor:   count.color,
 	}, count.end, true
 }
 
@@ -706,7 +708,7 @@ func parseCharacteristicDefiningPowerToughnessDeclaration(tokens []shared.Token,
 	if !ok {
 		return StaticDeclarationSyntax{}, false
 	}
-	op, ok := parseCharacteristicDefiningOperation(tokens, next, period)
+	op, ok := parseCharacteristicDefiningOperation(tokens, atoms, next, period)
 	if !ok {
 		return StaticDeclarationSyntax{}, false
 	}
@@ -720,6 +722,7 @@ func parseCharacteristicDefiningPowerToughnessDeclaration(tokens []shared.Token,
 		},
 		DynamicValue:           op.kind,
 		DynamicValueSubtype:    op.subtype,
+		DynamicValueColor:      op.color,
 		DynamicSetsPower:       op.setsPower,
 		DynamicSetsToughness:   op.setsToughness,
 		DynamicToughnessOffset: op.offset,
@@ -733,6 +736,7 @@ func parseCharacteristicDefiningPowerToughnessDeclaration(tokens []shared.Token,
 type characteristicDefiningOperation struct {
 	kind          StaticDeclarationDynamicValueKind
 	subtype       types.Sub
+	color         Color
 	end           int
 	setsPower     bool
 	setsToughness bool
@@ -746,16 +750,18 @@ type characteristicDefiningOperation struct {
 // set, and the toughness offset for the "that number plus N" form.
 func parseCharacteristicDefiningOperation(
 	tokens []shared.Token,
+	atoms Atoms,
 	start, period int,
 ) (characteristicDefiningOperation, bool) {
 	if staticWordsAt(tokens, start, "power", "and", "toughness", "are", "each", "equal", "to") {
-		count, valueOK := parseStaticDynamicValueCount(tokens, start+7, period)
+		count, valueOK := parseStaticDynamicValueCount(tokens, atoms, start+7, period)
 		if !valueOK || count.end != period {
 			return characteristicDefiningOperation{}, false
 		}
 		return characteristicDefiningOperation{
 			kind:          count.kind,
 			subtype:       count.subtype,
+			color:         count.color,
 			end:           count.end,
 			setsPower:     true,
 			setsToughness: true,
@@ -764,7 +770,7 @@ func parseCharacteristicDefiningOperation(
 	if !staticWordsAt(tokens, start, "power", "is", "equal", "to") {
 		return characteristicDefiningOperation{}, false
 	}
-	count, valueOK := parseStaticDynamicValueCount(tokens, start+4, period)
+	count, valueOK := parseStaticDynamicValueCount(tokens, atoms, start+4, period)
 	if !valueOK {
 		return characteristicDefiningOperation{}, false
 	}
@@ -772,6 +778,7 @@ func parseCharacteristicDefiningOperation(
 		return characteristicDefiningOperation{
 			kind:      count.kind,
 			subtype:   count.subtype,
+			color:     count.color,
 			end:       count.end,
 			setsPower: true,
 		}, true
@@ -791,6 +798,7 @@ func parseCharacteristicDefiningOperation(
 	return characteristicDefiningOperation{
 		kind:          count.kind,
 		subtype:       count.subtype,
+		color:         count.color,
 		end:           offsetIndex + 1,
 		setsPower:     true,
 		setsToughness: true,
@@ -818,23 +826,15 @@ func characteristicDefiningSourceSubject(tokens []shared.Token, atoms Atoms) (sh
 }
 
 // staticDynamicCount is the parsed result of a characteristic-defining count
-// phrase: the matched count kind, the land subtype it counts (only for
-// StaticDeclarationDynamicValueControllerLandSubtypeCount), and the index past
-// the consumed phrase.
+// phrase: the matched count kind, the subtype it counts (only for
+// StaticDeclarationDynamicValueControllerSubtypeCount), the color it counts
+// (only for StaticDeclarationDynamicValueControllerColorPermanentCount), and the
+// index past the consumed phrase.
 type staticDynamicCount struct {
 	kind    StaticDeclarationDynamicValueKind
 	subtype types.Sub
+	color   Color
 	end     int
-}
-
-// basicLandSubtypePlurals maps the plural land-type word used in "the number of
-// <Plural> you control" to the basic land subtype it counts.
-var basicLandSubtypePlurals = map[string]types.Sub{
-	"plains":    types.Plains,
-	"islands":   types.Island,
-	"swamps":    types.Swamp,
-	"mountains": types.Mountain,
-	"forests":   types.Forest,
 }
 
 // parseStaticDynamicValueCount recognizes the supported count phrases a
@@ -842,6 +842,7 @@ var basicLandSubtypePlurals = map[string]types.Sub{
 // matched count and the index past the phrase.
 func parseStaticDynamicValueCount(
 	tokens []shared.Token,
+	atoms Atoms,
 	start, end int,
 ) (staticDynamicCount, bool) {
 	if staticWordsAt(tokens, start, "your", "life", "total") {
@@ -887,22 +888,36 @@ func parseStaticDynamicValueCount(
 	case staticWordsAt(tokens, cursor, "basic", "land", "types", "among", "lands", "you", "control"):
 		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerBasicLandTypeCount, end: cursor + 7}, true
 	default:
-		return parseStaticDynamicSubtypeCount(tokens, cursor)
+		return parseStaticDynamicSubtypeOrColorCount(tokens, atoms, cursor)
 	}
 }
 
-// parseStaticDynamicSubtypeCount recognizes "<BasicLandPlural> you control" (for
-// example "Swamps you control") at cursor, returning a land-subtype count.
-func parseStaticDynamicSubtypeCount(tokens []shared.Token, cursor int) (staticDynamicCount, bool) {
-	if cursor+2 >= len(tokens) {
+// parseStaticDynamicSubtypeOrColorCount recognizes "<SubtypePlural> you control"
+// (any creature or land subtype, for example "Swamps you control" or "Goblins
+// you control") and "<color> permanents you control" (for example "red
+// permanents you control") at cursor. Subtype recognition uses the atom layer,
+// which normalizes the plural to its singular subtype identity; the basic land
+// subtypes resolve through the same path.
+func parseStaticDynamicSubtypeOrColorCount(tokens []shared.Token, atoms Atoms, cursor int) (staticDynamicCount, bool) {
+	if cursor >= len(tokens) {
 		return staticDynamicCount{}, false
 	}
-	subtype, ok := basicLandSubtypePlurals[strings.ToLower(tokens[cursor].Text)]
+	if c, ok := atoms.ColorAt(tokens[cursor].Span); ok {
+		if !staticWordsAt(tokens, cursor+1, "permanents", "you", "control") {
+			return staticDynamicCount{}, false
+		}
+		return staticDynamicCount{
+			kind:  StaticDeclarationDynamicValueControllerColorPermanentCount,
+			color: c,
+			end:   cursor + 4,
+		}, true
+	}
+	subtype, ok := atoms.SubtypeAt(tokens[cursor].Span)
 	if !ok || !staticWordsAt(tokens, cursor+1, "you", "control") {
 		return staticDynamicCount{}, false
 	}
 	return staticDynamicCount{
-		kind:    StaticDeclarationDynamicValueControllerLandSubtypeCount,
+		kind:    StaticDeclarationDynamicValueControllerSubtypeCount,
 		subtype: subtype,
 		end:     cursor + 3,
 	}, true

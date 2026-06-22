@@ -553,6 +553,7 @@ type StaticDeclaration struct {
 type StaticCharacteristicPowerToughnessDeclaration struct {
 	Value           game.DynamicValueKind
 	Subtype         types.Sub
+	Color           color.Color
 	SetsPower       bool
 	SetsToughness   bool
 	ToughnessOffset int
@@ -1993,6 +1994,13 @@ func recognizeStaticCharacteristicPowerToughnessDeclaration(ability CompiledAbil
 	if !node.DynamicSetsPower && !node.DynamicSetsToughness {
 		return StaticDeclaration{}, false
 	}
+	var countColor color.Color
+	if node.DynamicValueColor != "" {
+		countColor, ok = compilerColor(node.DynamicValueColor)
+		if !ok {
+			return StaticDeclaration{}, false
+		}
+	}
 	return StaticDeclaration{
 		Kind:          StaticDeclarationCharacteristicPowerToughness,
 		Span:          ability.Span,
@@ -2001,6 +2009,7 @@ func recognizeStaticCharacteristicPowerToughnessDeclaration(ability CompiledAbil
 		CharacteristicPT: &StaticCharacteristicPowerToughnessDeclaration{
 			Value:           value,
 			Subtype:         node.DynamicValueSubtype,
+			Color:           countColor,
 			SetsPower:       node.DynamicSetsPower,
 			SetsToughness:   node.DynamicSetsToughness,
 			ToughnessOffset: node.DynamicToughnessOffset,
@@ -2040,14 +2049,16 @@ func compileStaticDynamicValueKind(kind parser.StaticDeclarationDynamicValueKind
 		return game.DynamicValueControllerCardTypesInGraveyard, true
 	case parser.StaticDeclarationDynamicValueControllerPermanentCardsInGraveyard:
 		return game.DynamicValueControllerPermanentCardsInGraveyard, true
-	case parser.StaticDeclarationDynamicValueControllerLandSubtypeCount:
-		return game.DynamicValueControllerLandSubtypeCount, true
+	case parser.StaticDeclarationDynamicValueControllerSubtypeCount:
+		return game.DynamicValueControllerSubtypeCount, true
 	case parser.StaticDeclarationDynamicValueControllerBasicLandTypeCount:
 		return game.DynamicValueControllerBasicLandTypeCount, true
 	case parser.StaticDeclarationDynamicValueControllerLifeTotal:
 		return game.DynamicValueControllerLifeTotal, true
 	case parser.StaticDeclarationDynamicValueAllPlayersHandSize:
 		return game.DynamicValueAllPlayersHandSize, true
+	case parser.StaticDeclarationDynamicValueControllerColorPermanentCount:
+		return game.DynamicValueControllerColorPermanentCount, true
 	default:
 		return game.DynamicValueNone, false
 	}

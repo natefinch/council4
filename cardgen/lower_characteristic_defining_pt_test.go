@@ -127,12 +127,56 @@ func TestLowerCharacteristicDefiningLandSubtypeCount(t *testing.T) {
 	if !face.DynamicPower.Exists || !face.DynamicToughness.Exists {
 		t.Fatalf("dynamic power/toughness not set: %+v", face)
 	}
-	if face.DynamicPower.Val.Kind != game.DynamicValueControllerLandSubtypeCount ||
+	if face.DynamicPower.Val.Kind != game.DynamicValueControllerSubtypeCount ||
 		face.DynamicPower.Val.Subtype != types.Swamp {
 		t.Fatalf("dynamic power = %+v, want land-subtype count of Swamp", face.DynamicPower.Val)
 	}
 	if face.DynamicToughness.Val.Subtype != types.Swamp {
 		t.Fatalf("dynamic toughness subtype = %q, want Swamp", face.DynamicToughness.Val.Subtype)
+	}
+}
+
+func TestLowerCharacteristicDefiningCreatureSubtypeCount(t *testing.T) {
+	t.Parallel()
+	star := "*"
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Goblin Warchief",
+		Layout:     "normal",
+		TypeLine:   "Creature — Goblin",
+		ManaCost:   "{1}{R}{R}",
+		Power:      &star,
+		Toughness:  &star,
+		OracleText: "Goblin Warchief's power and toughness are each equal to the number of Goblins you control.",
+	})
+	if !face.DynamicPower.Exists || !face.DynamicToughness.Exists {
+		t.Fatalf("dynamic power/toughness not set: %+v", face)
+	}
+	if face.DynamicPower.Val.Kind != game.DynamicValueControllerSubtypeCount ||
+		face.DynamicPower.Val.Subtype != types.Goblin {
+		t.Fatalf("dynamic power = %+v, want subtype count of Goblin", face.DynamicPower.Val)
+	}
+}
+
+func TestLowerCharacteristicDefiningColorPermanentCount(t *testing.T) {
+	t.Parallel()
+	star := "*"
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Crimson Avatar",
+		Layout:     "normal",
+		TypeLine:   "Creature — Avatar",
+		ManaCost:   "{3}{R}",
+		Power:      &star,
+		Toughness:  &star,
+		OracleText: "Crimson Avatar's power and toughness are each equal to the number of red permanents you control.",
+	}, "t")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	if strings.Count(source, "game.DynamicValue{Kind: game.DynamicValueControllerColorPermanentCount, Color: color.Red}") != 2 {
+		t.Fatalf("generated source missing color permanent count, got:\n%s", source)
 	}
 }
 
