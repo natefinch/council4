@@ -259,7 +259,7 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 		}
 		if len(effect.AddTypes) == 0 && len(effect.AddSubtypes) == 0 &&
 			len(effect.SetTypes) == 0 && len(effect.SetSubtypes) == 0 &&
-			effect.AddSubtypeFromEntryChoice == "" {
+			effect.AddSubtypeFromEntryChoice == "" && !effect.AddEveryCreatureType {
 			return errors.New("render: type layer requires set or added types or subtypes")
 		}
 	default:
@@ -364,6 +364,9 @@ func renderContinuousCharacteristicFields(ctx *renderCtx, effect *game.Continuou
 			literals = append(literals, SubtypeToLiteral(string(sub), cardTypeStrings))
 		}
 		fields = append(fields, fmt.Sprintf("AddSubtypes: []types.Sub{%s},", strings.Join(literals, ", ")))
+	}
+	if effect.AddEveryCreatureType {
+		fields = append(fields, "AddEveryCreatureType: true,")
 	}
 	if effect.AddSubtypeFromEntryChoice != "" {
 		if effect.AddSubtypeFromEntryChoice != game.EntryTypeChoiceKey {

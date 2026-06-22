@@ -1359,6 +1359,48 @@ func TestParseStaticCharacteristicSetAllColorsMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticCharacteristicEveryCreatureTypeMeaning(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		source  string
+		context Context
+		subject StaticDeclarationSubjectKind
+	}{
+		"this creature": {
+			source:  "This creature is every creature type.",
+			context: Context{},
+			subject: StaticDeclarationSubjectSourceCreature,
+		},
+		"named source": {
+			source:  "Mistform Ultimus is every creature type.",
+			context: Context{CardName: "Mistform Ultimus"},
+			subject: StaticDeclarationSubjectSourceNamed,
+		},
+		"controlled group": {
+			source:  "Creatures you control are every creature type.",
+			context: Context{},
+			subject: StaticDeclarationSubjectGroup,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, tc.source, tc.context)
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			characteristic := declarations[0]
+			if characteristic.Kind != StaticDeclarationContinuousCharacteristic ||
+				characteristic.Subject.Kind != tc.subject ||
+				!characteristic.EveryCreatureType ||
+				len(characteristic.Colors) != 0 ||
+				len(characteristic.CardTypes) != 0 ||
+				len(characteristic.Subtypes) != 0 {
+				t.Fatalf("characteristic = %#v, want every-creature-type for subject %s", characteristic, tc.subject)
+			}
+		})
+	}
+}
+
 func TestParseStaticCharacteristicInAdditionMeaning(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(

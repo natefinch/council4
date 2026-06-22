@@ -58,6 +58,72 @@ func TestChangelingMatchesArbitrarySubtypesSimultaneously(t *testing.T) {
 	}
 }
 
+// TestGroupEveryCreatureTypeStaticGrantsArbitrarySubtype covers the group static
+// "Creatures you control are every creature type." (Maskwood Nexus): each
+// controlled creature is treated as having any creature type, while the original
+// subtypes survive and opponents are unaffected.
+func TestGroupEveryCreatureTypeStaticGrantsArbitrarySubtype(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	anchor := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	ally := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Goblin Ally",
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Goblin},
+	}})
+	opponentCreature := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:             1,
+		Controller:     game.Player1,
+		SourceObjectID: anchor.ObjectID,
+		Layer:          game.LayerType,
+		Group: game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		}),
+		AddEveryCreatureType: true,
+	})
+
+	for _, subtype := range []types.Sub{types.Elf, types.Zombie, types.Sliver} {
+		if !permanentHasSubtype(g, ally, subtype) {
+			t.Fatalf("controlled creature not treated as %s", subtype)
+		}
+	}
+	if !permanentHasSubtype(g, ally, types.Goblin) {
+		t.Fatal("every-creature-type static erased the creature's original Goblin subtype")
+	}
+	if permanentHasSubtype(g, opponentCreature, types.Elf) {
+		t.Fatal("opponent's creature incorrectly gained every creature type")
+	}
+}
+
+func TestSelfEveryCreatureTypeStaticGrantsArbitrarySubtype(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	permanent := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Mistform Ultimus",
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Illusion},
+	}})
+
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:                   1,
+		Controller:           game.Player1,
+		SourceObjectID:       permanent.ObjectID,
+		AffectedObjectID:     permanent.ObjectID,
+		AffectedSource:       true,
+		Layer:                game.LayerType,
+		AddEveryCreatureType: true,
+	})
+
+	for _, subtype := range []types.Sub{types.Goblin, types.Elf} {
+		if !permanentHasSubtype(g, permanent, subtype) {
+			t.Fatalf("self every-creature-type static not treated as %s", subtype)
+		}
+	}
+	if !permanentHasSubtype(g, permanent, types.Illusion) {
+		t.Fatal("every-creature-type static erased the creature's original Illusion subtype")
+	}
+}
+
 func TestGroupAddSubtypeStaticKeepsOtherTypes(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	anchor := addCombatCreaturePermanentWithPower(g, game.Player1, 2)

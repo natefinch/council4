@@ -313,6 +313,11 @@ type StaticContinuousDeclaration struct {
 	AddSubtypes []types.Sub
 	SetTypes    []StaticCardType
 	SetSubtypes []types.Sub
+	// AddEveryCreatureType adds every creature subtype at the type layer
+	// (StaticContinuousAddTypes), the runtime expansion of "is/are every
+	// creature type" (CR 702.73). It is mutually exclusive with the enumerated
+	// AddTypes/AddSubtypes payload.
+	AddEveryCreatureType bool
 }
 
 // StaticGrantedManaAbility is one closed activated mana ability granted in the
@@ -2068,6 +2073,20 @@ func staticCharacteristicDeclarations(span shared.Span, node *parser.StaticDecla
 				Operation:   StaticContinuousAddTypes,
 				AddTypes:    cardTypes,
 				AddSubtypes: slices.Clone(node.Subtypes),
+			},
+		})
+	}
+	if node.EveryCreatureType {
+		declarations = append(declarations, StaticDeclaration{
+			Kind:          StaticDeclarationContinuous,
+			Span:          span,
+			OperationSpan: node.OperationSpan,
+			Group:         group,
+			Condition:     condition,
+			Continuous: &StaticContinuousDeclaration{
+				Layer:                StaticLayerType,
+				Operation:            StaticContinuousAddTypes,
+				AddEveryCreatureType: true,
 			},
 		})
 	}

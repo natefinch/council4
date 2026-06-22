@@ -936,6 +936,9 @@ func applyTypeLayer(g *game.Game, values *permanentEffectiveValues, effect *game
 	}
 	values.subtypes = removeSubtypes(values.subtypes, effect.RemoveSubtypes)
 	values.subtypes = appendUniqueSubtypes(values.subtypes, effect.AddSubtypes...)
+	if effect.AddEveryCreatureType {
+		values.subtypes = appendUniqueSubtypes(values.subtypes, types.SubtypesForType(types.Creature)...)
+	}
 	if effect.AddSubtypeFromEntryChoice != "" {
 		if source, ok := permanentByObjectID(g, effect.SourceObjectID); ok {
 			if choice, ok := source.EntryChoices[effect.AddSubtypeFromEntryChoice]; ok &&
