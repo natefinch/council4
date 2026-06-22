@@ -162,6 +162,9 @@ func handleChooseDiscardFromHand(r *effectResolver, prim game.ChooseDiscardFromH
 		if prim.MaxManaValue.Exists && card.Def.ManaValue() > prim.MaxManaValue.Val {
 			continue
 		}
+		if !handCardMatchesSelection(r.game, card, prim.Selection, playerID) {
+			continue
+		}
 		candidates = append(candidates, cardID)
 	}
 	if len(candidates) == 0 {
