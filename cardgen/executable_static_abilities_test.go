@@ -622,6 +622,36 @@ func TestGenerateExecutableCardSourceSelfCantAttackOrBlock(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceSelfCantBlockAndCantBeBlocked(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Changeling Outcast",
+		Layout:     "normal",
+		ManaCost:   "{B}",
+		TypeLine:   "Creature — Shapeshifter",
+		OracleText: "Changeling (This card is every creature type.)\nChangeling Outcast can't block and can't be blocked.",
+		Colors:     []string{"B"},
+		Power:      new("1"),
+		Toughness:  new("1"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Kind:           game.RuleEffectCantBlock,",
+		"Kind:           game.RuleEffectCantBeBlocked,",
+		"game.ChangelingStaticBody",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceSelfDoesntUntap(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

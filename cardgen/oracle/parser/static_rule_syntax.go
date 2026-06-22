@@ -169,6 +169,13 @@ func parseProhibitedStaticRuleOperation(tokens []shared.Token, start int) (Stati
 			Span:  tokens[start].Span,
 		}, start + 1, true
 	}
+	if staticRuleWordsAt(tokens, start, "block", "and", "can't", "be", "blocked") {
+		return StaticRuleOperation{
+			Kind:  StaticRuleOperationBlockAndBeBlocked,
+			Voice: StaticRuleVoiceActive,
+			Span:  shared.SpanOf(tokens[start : start+5]),
+		}, start + 5, true
+	}
 	if staticRuleWordsAt(tokens, start, "block") {
 		return StaticRuleOperation{
 			Kind:  StaticRuleOperationBlock,
@@ -437,6 +444,10 @@ func validCreatureStaticRuleOperation(rule StaticRuleSyntax) bool {
 				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierDefenderYou))) ||
 		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationAttackOrBlock &&
+			rule.Operation.Voice == StaticRuleVoiceActive &&
+			len(rule.Qualifiers) == 0) ||
+		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+			rule.Operation.Kind == StaticRuleOperationBlockAndBeBlocked &&
 			rule.Operation.Voice == StaticRuleVoiceActive &&
 			len(rule.Qualifiers) == 0) ||
 		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&

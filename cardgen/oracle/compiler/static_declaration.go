@@ -125,6 +125,10 @@ const (
 	// characteristic travels in StaticRuleDeclaration.Blocker.
 	StaticRuleCantBeBlockedByCreaturesWith
 	StaticRuleAdditionalTriggerForChosenCreatureType
+	// StaticRuleCantBlockAndCantBeBlocked combines the active "can't block" and
+	// passive "can't be blocked" prohibitions printed as one sentence; it lowers
+	// to both the can't-block and can't-be-blocked runtime rule effects.
+	StaticRuleCantBlockAndCantBeBlocked
 )
 
 // StaticBlockerRestrictionKind identifies the blocker characteristic bounding a
@@ -1016,6 +1020,13 @@ func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, 
 		len(rule.Qualifiers) == 0 {
 		return StaticRuleCantAttackOrBlock, StaticZoneBattlefield, true
 	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == parser.StaticRuleOperationBlockAndBeBlocked &&
+		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
+		len(rule.Qualifiers) == 0 {
+		return StaticRuleCantBlockAndCantBeBlocked, StaticZoneBattlefield, true
+	}
 	if isUntapRuleSubject(rule.Subject.Kind) &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
 		rule.Operation.Kind == parser.StaticRuleOperationUntap &&
@@ -1096,6 +1107,8 @@ func staticRuleForEffect(kind EffectKind) StaticRuleKind {
 		return StaticRuleCantBeBlockedByMoreThanOne
 	case EffectCantAttackOrBlock:
 		return StaticRuleCantAttackOrBlock
+	case EffectCantBlockAndCantBeBlocked:
+		return StaticRuleCantBlockAndCantBeBlocked
 	case EffectDoesntUntap:
 		return StaticRuleDoesntUntap
 	default:
@@ -1134,7 +1147,7 @@ func staticRuleDomain(rule StaticRuleKind) StaticRuleDomain {
 	case StaticRuleCantAttack, StaticRuleMustAttack, StaticRuleCantAttackYou:
 		return StaticRuleDomainAttack
 	case StaticRuleCantBlock, StaticRuleCantBeBlocked, StaticRuleMustBeBlocked, StaticRuleCantBeBlockedByMoreThanOne,
-		StaticRuleCantBeBlockedByCreaturesWith:
+		StaticRuleCantBeBlockedByCreaturesWith, StaticRuleCantBlockAndCantBeBlocked:
 		return StaticRuleDomainBlock
 	case StaticRuleCantBeCountered:
 		return StaticRuleDomainCountering

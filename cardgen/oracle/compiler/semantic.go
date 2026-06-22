@@ -1168,6 +1168,7 @@ const (
 	// for "it", or the source for "this <type>"). Added last so existing kinds
 	// keep their wire values.
 	EffectExileIfLeaveBattlefield
+	EffectCantBlockAndCantBeBlocked
 )
 
 // DurationKind identifies common continuous-effect durations.
