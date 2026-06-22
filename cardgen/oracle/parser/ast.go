@@ -428,6 +428,18 @@ const (
 	TriggerEventActorOpponent TriggerEventActorKind = "TriggerEventActorOpponent"
 )
 
+// TriggerCastTurnRelation restricts a spell-cast trigger to the caster's own
+// turn or to a turn that isn't theirs ("during your turn", "during an
+// opponent's turn").
+type TriggerCastTurnRelation string
+
+// Spell-cast turn relations recognized by the syntax parser.
+const (
+	TriggerCastTurnRelationNone        TriggerCastTurnRelation = ""
+	TriggerCastTurnRelationYourTurn    TriggerCastTurnRelation = "TriggerCastTurnRelationYourTurn"
+	TriggerCastTurnRelationNotYourTurn TriggerCastTurnRelation = "TriggerCastTurnRelationNotYourTurn"
+)
+
 // TriggerEventActor is a source-spanned acting player.
 type TriggerEventActor struct {
 	Kind TriggerEventActorKind `json:",omitempty"`
@@ -685,6 +697,12 @@ type TriggerEventClause struct {
 	// imposes no such relation. The self-target special case is carried by
 	// SpellTargetsSource instead and never co-occurs with this field.
 	SpellTargetSelection *TriggerSelection `json:",omitempty"`
+
+	// SpellCastTurnRelation restricts a spell-cast clause to the caster's own
+	// turn or to a turn that isn't theirs ("Whenever you cast a spell during
+	// your turn" / "during an opponent's turn"). It is empty for spell-cast
+	// clauses with no turn restriction.
+	SpellCastTurnRelation TriggerCastTurnRelation `json:",omitempty"`
 }
 
 // EventHistoryWindowKind identifies the turn window for an event-history

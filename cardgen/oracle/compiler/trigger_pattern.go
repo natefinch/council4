@@ -41,6 +41,17 @@ const (
 	TriggerEventLibrarySearched
 )
 
+// TriggerCastTurn restricts a spell-cast pattern by whose turn the spell was
+// cast on, relative to the ability's controller.
+type TriggerCastTurn uint8
+
+// Spell-cast turn relations.
+const (
+	TriggerCastTurnAny TriggerCastTurn = iota
+	TriggerCastTurnYours
+	TriggerCastTurnNotYours
+)
+
 // TriggerSourceRelation identifies the event object's relationship to the
 // ability source.
 type TriggerSourceRelation uint8
@@ -369,6 +380,11 @@ type TriggerPattern struct {
 	// permanent matching this selection ("Whenever you cast a spell that targets
 	// a creature you control"). It is nil when no such relation applies.
 	SpellTargetSelection *TriggerSelection
+
+	// CastDuringTurn restricts a spell-cast pattern by whose turn the spell was
+	// cast on, relative to the ability's controller ("Whenever you cast a spell
+	// during your turn" / "during an opponent's turn").
+	CastDuringTurn TriggerCastTurn
 
 	// TappedForMana restricts a permanent-tapped pattern to taps that paid a
 	// mana ability's cost ("is tapped for mana").

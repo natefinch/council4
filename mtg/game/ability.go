@@ -745,7 +745,28 @@ type TriggerPattern struct {
 	// where the ability's source is saddled ("attacks while saddled", saddle
 	// CR 702.166). It is only valid with Event == EventAttackerDeclared.
 	AttackWhileSaddled bool
+
+	// CastDuringTurn restricts an EventSpellCast trigger by whose turn the spell
+	// was cast on, relative to the ability's controller ("Whenever you cast a
+	// spell during your turn" / "during an opponent's turn"). TriggerTurnAny
+	// imposes no restriction. It is only valid with Event == EventSpellCast.
+	CastDuringTurn TriggerTurnRelation
 }
+
+// TriggerTurnRelation restricts a trigger by whose turn the triggering event
+// occurred on, relative to the ability's controller.
+type TriggerTurnRelation int
+
+const (
+	// TriggerTurnAny imposes no turn restriction.
+	TriggerTurnAny TriggerTurnRelation = iota
+	// TriggerTurnYours restricts to the controller's own turn ("during your
+	// turn").
+	TriggerTurnYours
+	// TriggerTurnNotYours restricts to a turn that is not the controller's
+	// ("during an opponent's turn").
+	TriggerTurnNotYours
+)
 
 // TimingRestriction constrains when an activated ability can be used.
 type TimingRestriction int

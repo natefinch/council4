@@ -741,6 +741,13 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 	if pattern.SpellTargetsSource {
 		fields = append(fields, "SpellTargetsSource: true,")
 	}
+	if pattern.CastDuringTurn != game.TriggerTurnAny {
+		relation, err := renderTriggerTurnRelation(pattern.CastDuringTurn)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("CastDuringTurn: %s,", relation))
+	}
 	if pattern.RequireTappedForMana {
 		fields = append(fields, "RequireTappedForMana: true,")
 	}
@@ -928,6 +935,17 @@ func renderStackObjectKind(kind game.StackObjectKind) (string, error) {
 		return "game.StackTriggeredAbility", nil
 	default:
 		return "", fmt.Errorf("render: unsupported stack object kind %d", kind)
+	}
+}
+
+func renderTriggerTurnRelation(relation game.TriggerTurnRelation) (string, error) {
+	switch relation {
+	case game.TriggerTurnYours:
+		return "game.TriggerTurnYours", nil
+	case game.TriggerTurnNotYours:
+		return "game.TriggerTurnNotYours", nil
+	default:
+		return "", fmt.Errorf("render: unsupported trigger turn relation %d", relation)
 	}
 }
 

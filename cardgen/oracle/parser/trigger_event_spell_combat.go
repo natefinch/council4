@@ -57,11 +57,23 @@ func parseSpellCastTriggerEventClause(
 			remaining = remaining[:index]
 		}
 	}
+	// "Whenever you cast a spell during your turn" / "during an opponent's turn"
+	// restricts the trigger to spells cast on the controller's own turn or on a
+	// turn that isn't theirs. The trailing timing phrase is stripped before the
+	// spell selection is parsed.
+	turnRelation, remaining := cutSpellCastTurnRelation(remaining)
 	selection, ok := parseTriggerEventSpellSelection(remaining)
 	actorOrdinal := false
 	if !ok {
 		selection, ok = parseOrdinalSpellSelectionForActor(remaining, actor.Kind)
 		actorOrdinal = ok
+	}
+	if !ok && turnRelation != TriggerCastTurnRelationNone && actor.Kind == TriggerEventActorYou {
+		// "your first spell during each opponent's turn" carries the per-turn
+		// "each turn" reset in the timing phrase, so the remaining "your Nth
+		// spell" run lacks the trailing "each turn" the ordinary ordinal form
+		// requires.
+		selection, ok = parseYourOrdinalSpell(remaining)
 	}
 	if !ok || selection.FromZone.Kind != TriggerEventZoneNone && actor.Kind != TriggerEventActorYou {
 		return nil
@@ -79,12 +91,13 @@ func parseSpellCastTriggerEventClause(
 		return nil
 	}
 	return &TriggerEventClause{
-		Kind:                 TriggerEventKindSpellCast,
-		Actor:                actor,
-		SpellSelection:       selection,
-		MatchCopy:            matchCopy,
-		SpellTargetsSource:   spellTargetsSource,
-		SpellTargetSelection: spellTargetSelection,
+		Kind:                  TriggerEventKindSpellCast,
+		Actor:                 actor,
+		SpellSelection:        selection,
+		MatchCopy:             matchCopy,
+		SpellTargetsSource:    spellTargetsSource,
+		SpellTargetSelection:  spellTargetSelection,
+		SpellCastTurnRelation: turnRelation,
 	}
 }
 
@@ -106,6 +119,39 @@ func parseSpellTargetSelection(tokens []shared.Token) (TriggerSelection, bool) {
 		return TriggerSelection{}, false
 	}
 	return parseTriggerSelection(tokens)
+}
+
+// cutSpellCastTurnRelation strips a trailing "during your turn" / "during an
+// opponent's turn" / "during each opponent's turn" timing phrase from a
+// spell-cast trigger's token run, reporting the relation and the remaining
+// tokens. It reports TriggerCastTurnRelationNone with the original tokens when
+// no timing phrase is present.
+func cutSpellCastTurnRelation(tokens []shared.Token) (TriggerCastTurnRelation, []shared.Token) {
+	if rest, ok := stripTokenSuffix(tokens, "during", "your", "turn"); ok {
+		return TriggerCastTurnRelationYourTurn, rest
+	}
+	if rest, ok := stripTokenSuffix(tokens, "during", "an", "opponent's", "turn"); ok {
+		return TriggerCastTurnRelationNotYourTurn, rest
+	}
+	if rest, ok := stripTokenSuffix(tokens, "during", "each", "opponent's", "turn"); ok {
+		return TriggerCastTurnRelationNotYourTurn, rest
+	}
+	return TriggerCastTurnRelationNone, tokens
+}
+
+// parseYourOrdinalSpell resolves a controller-scoped "your Nth spell" run that
+// lacks the trailing "each turn" because a "during each opponent's turn" timing
+// phrase supplied the per-turn reset ("your first spell during each opponent's
+// turn").
+func parseYourOrdinalSpell(tokens []shared.Token) (TriggerEventSpellSelection, bool) {
+	if len(tokens) != 3 || !equalWord(tokens[0], "your") || !equalWord(tokens[2], "spell") {
+		return TriggerEventSpellSelection{}, false
+	}
+	ordinal, ok := OrdinalWordValue(tokens[1].Text)
+	if !ok {
+		return TriggerEventSpellSelection{}, false
+	}
+	return TriggerEventSpellSelection{Span: shared.SpanOf(tokens), Ordinal: ordinal}, true
 }
 
 // parseOrdinalSpellSelectionForActor resolves a non-controller "their Nth spell
