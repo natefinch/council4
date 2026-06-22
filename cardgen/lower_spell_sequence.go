@@ -14,16 +14,19 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+// legacyOrderedEffectSequenceExact reports whether a two-effect body may flow
+// into the generic ordered-sequence lowerer. It returns false only for the
+// remaining effect-kind pairs the generic lowerer cannot yet sequence faithfully,
+// diverting them to the "non-exact legacy effect pair" diagnostic so they fail
+// closed rather than lower partially. Pairs the generic lowerer now handles
+// correctly (such as two power/toughness modifications joined by "and") are no
+// longer diverted here.
 func legacyOrderedEffectSequenceExact(effects []compiler.CompiledEffect) bool {
 	if len(effects) != 2 {
 		return true
 	}
 	first, second := effects[0], effects[1]
 	if first.Kind == compiler.EffectPut && second.Kind == compiler.EffectProliferate {
-		return false
-	}
-	if first.Kind == compiler.EffectModifyPT && second.Kind == compiler.EffectModifyPT &&
-		second.Connection == parser.EffectConnectionAnd {
 		return false
 	}
 	if first.Kind == compiler.EffectExile &&
