@@ -58,6 +58,42 @@ func TestParseImpulseExileGeneralizedForms(t *testing.T) {
 	}
 }
 
+// TestParseImpulseExileIgnoresTrailingReminder confirms that trailing reminder
+// text ("(If you cast a spell this way…)") does not block impulse recognition
+// (Act on Impulse, Dark-Dweller Oracle).
+func TestParseImpulseExileIgnoresTrailingReminder(t *testing.T) {
+	t.Parallel()
+	source := "Exile the top three cards of your library. Until end of turn, you may play those cards. (If you cast a spell this way, you still pay its costs. You can play a land this way only if you have an available land play remaining.)"
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+	if len(diagnostics) != 0 || len(document.Abilities) != 1 {
+		t.Fatalf("diagnostics = %#v, abilities = %#v", diagnostics, document.Abilities)
+	}
+	effect := document.Abilities[0].Sentences[0].Effects[0]
+	if effect.Kind != EffectImpulseExile || !effect.Exact ||
+		!effect.Amount.Known || effect.Amount.Value != 3 ||
+		effect.Duration != EffectDurationUntilEndOfTurn {
+		t.Fatalf("impulse effect = %#v", effect)
+	}
+}
+
+// TestParseImpulseExileVariableX confirms that "Exile the top X cards of your
+// library." carries the spell's {X} as the impulse amount (Commune with Lava,
+// Hugs, Grisly Guardian).
+func TestParseImpulseExileVariableX(t *testing.T) {
+	t.Parallel()
+	source := "Exile the top X cards of your library. Until the end of your next turn, you may play those cards."
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+	if len(diagnostics) != 0 || len(document.Abilities) != 1 {
+		t.Fatalf("diagnostics = %#v, abilities = %#v", diagnostics, document.Abilities)
+	}
+	effect := document.Abilities[0].Sentences[0].Effects[0]
+	if effect.Kind != EffectImpulseExile || !effect.Exact ||
+		effect.Amount.Known || !effect.Amount.VariableX ||
+		effect.Duration != EffectDurationUntilEndOfYourNextTurn {
+		t.Fatalf("impulse effect = %#v", effect)
+	}
+}
+
 func TestParseImpulseExileFailsClosed(t *testing.T) {
 	t.Parallel()
 	variants := []string{
