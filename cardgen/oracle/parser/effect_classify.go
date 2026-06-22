@@ -683,8 +683,15 @@ func effectSubjectStart(tokens []shared.Token, index int, selfNames []shared.Spa
 		if spanWithinAny(tokens[i].Span, selfNames) {
 			continue
 		}
-		if tokens[i].Kind == shared.Comma || tokens[i].Kind == shared.Period || tokens[i].Kind == shared.Semicolon ||
-			equalWord(tokens[i], "then") || equalWord(tokens[i], "and") {
+		boundary := tokens[i].Kind == shared.Comma || tokens[i].Kind == shared.Period ||
+			tokens[i].Kind == shared.Semicolon || equalWord(tokens[i], "then") || equalWord(tokens[i], "and")
+		// A clause-leading "also" ("..., also create a token") is an additive
+		// adverb that carries no subject; skip it so the controller subject and
+		// exact verb coverage are recognized. A non-leading "also" (e.g.
+		// "creatures you control also gain first strike") follows a real subject
+		// and must be retained.
+		leadingAlso := equalWord(tokens[i], "also") && i == start
+		if boundary || leadingAlso {
 			start = i + 1
 		}
 	}
