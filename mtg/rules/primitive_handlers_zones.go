@@ -951,6 +951,12 @@ func handleReturnFromGraveyard(r *effectResolver, prim game.ReturnFromGraveyard)
 		}
 	}
 	amount := min(res.amount, len(candidates))
+	if prim.AnyNumber {
+		// "Put any number of <filter> cards from among them onto the
+		// battlefield": the upper bound is the whole matching pool rather than a
+		// fixed count, so the player may choose any subset up to all of them.
+		amount = len(candidates)
+	}
 	if amount <= 0 {
 		return res
 	}
@@ -966,12 +972,12 @@ func handleReturnFromGraveyard(r *effectResolver, prim game.ReturnFromGraveyard)
 	if prim.Destination == zone.Battlefield {
 		prompt = "Choose a card to return to the battlefield"
 	}
-	// A total mana value cap lets the player choose any subset up to the count
-	// limit whose combined mana value stays within the cap, including none, so
-	// the minimum drops to zero and the empty choice is the safe default.
+	// A total mana value cap (or the unbounded "any number" form) lets the
+	// player choose any subset up to the count limit, including none, so the
+	// minimum drops to zero and the empty choice is the safe default.
 	minChoices := amount
 	defaultSelection := firstChoiceIndices(amount)
-	if prim.MaxTotalManaValue.Exists {
+	if prim.MaxTotalManaValue.Exists || prim.AnyNumber {
 		minChoices = 0
 		defaultSelection = nil
 	}

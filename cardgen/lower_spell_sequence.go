@@ -104,6 +104,9 @@ func lowerOrderedSequenceSpecialCase(
 	if content, ok := lowerMillThenOptionalAmongOneOfEachToBattlefield(ctx); ok {
 		return content, nil, true
 	}
+	if content, ok := lowerMillThenPutAmongToBattlefield(ctx); ok {
+		return content, nil, true
+	}
 	for _, target := range ctx.content.Targets {
 		if _, ok := counterAbilityTargetSpec(target); ok {
 			return game.AbilityContent{},
