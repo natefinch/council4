@@ -46,8 +46,8 @@ func TestLowerFabledPassageEndToEnd(t *testing.T) {
 		search.Spec.SourceZone != zone.Library ||
 		search.Spec.Destination != zone.Battlefield ||
 		!search.Spec.EntersTapped ||
-		!search.Spec.CardType.Exists ||
-		search.Spec.CardType.Val != types.Land {
+		len(search.Spec.Filter.RequiredTypes) != 1 ||
+		search.Spec.Filter.RequiredTypes[0] != types.Land {
 		t.Fatalf("search = %#v", search)
 	}
 	untap, ok := mode.Sequence[1].Primitive.(game.Untap)

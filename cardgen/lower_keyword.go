@@ -1026,13 +1026,13 @@ func lowerSaddleAbility(
 // Basic landcycling finds a basic land; each typed variant finds a basic land
 // of its own land type.
 var landcyclingKeywordKinds = map[parser.KeywordKind]game.SearchSpec{
-	parser.KeywordLandcycling:      {CardType: opt.Val(types.Land)},
-	parser.KeywordBasicLandcycling: {CardType: opt.Val(types.Land), Supertype: opt.Val(types.Basic)},
-	parser.KeywordPlainscycling:    {SubtypesAny: []types.Sub{types.Plains}},
-	parser.KeywordIslandcycling:    {SubtypesAny: []types.Sub{types.Island}},
-	parser.KeywordSwampcycling:     {SubtypesAny: []types.Sub{types.Swamp}},
-	parser.KeywordMountaincycling:  {SubtypesAny: []types.Sub{types.Mountain}},
-	parser.KeywordForestcycling:    {SubtypesAny: []types.Sub{types.Forest}},
+	parser.KeywordLandcycling:      {Filter: game.Selection{RequiredTypes: []types.Card{types.Land}}},
+	parser.KeywordBasicLandcycling: {Filter: game.Selection{RequiredTypes: []types.Card{types.Land}, Supertypes: []types.Super{types.Basic}}},
+	parser.KeywordPlainscycling:    {Filter: game.Selection{SubtypesAny: []types.Sub{types.Plains}}},
+	parser.KeywordIslandcycling:    {Filter: game.Selection{SubtypesAny: []types.Sub{types.Island}}},
+	parser.KeywordSwampcycling:     {Filter: game.Selection{SubtypesAny: []types.Sub{types.Swamp}}},
+	parser.KeywordMountaincycling:  {Filter: game.Selection{SubtypesAny: []types.Sub{types.Mountain}}},
+	parser.KeywordForestcycling:    {Filter: game.Selection{SubtypesAny: []types.Sub{types.Forest}}},
 }
 
 func lowerLandcyclingAbility(

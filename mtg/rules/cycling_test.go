@@ -500,8 +500,10 @@ func landcyclingCard() *game.CardDef {
 		Types: []types.Card{types.Land},
 		ActivatedAbilities: []game.ActivatedAbility{
 			game.LandcyclingActivatedAbility(cost.Mana{cost.O(1)}, game.SearchSpec{
-				CardType:  opt.Val(types.Land),
-				Supertype: opt.Val(types.Basic),
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Land},
+					Supertypes:    []types.Super{types.Basic},
+				},
 			}),
 		}},
 	}

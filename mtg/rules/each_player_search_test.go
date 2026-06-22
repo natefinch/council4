@@ -6,7 +6,6 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
-	"github.com/natefinch/council4/opt"
 )
 
 func basicIslandDef() *game.CardDef {
@@ -34,8 +33,10 @@ func TestEachPlayerSearchBasicLandToBattlefield(t *testing.T) {
 		Spec: game.SearchSpec{
 			SourceZone:  zone.Library,
 			Destination: zone.Battlefield,
-			CardType:    opt.Val(types.Land),
-			Supertype:   opt.Val(types.Basic),
+			Filter: game.Selection{
+				RequiredTypes: []types.Card{types.Land},
+				Supertypes:    []types.Super{types.Basic},
+			},
 		},
 	}, nil)
 	agents := [game.NumPlayers]PlayerAgent{

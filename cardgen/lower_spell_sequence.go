@@ -432,20 +432,18 @@ func lowerLinkedSearchUntapSequence(ctx contentCtx) (game.AbilityContent, bool) 
 		group.Spec.Destination != zone.Battlefield ||
 		!group.Spec.EntersTapped ||
 		group.Spec.SplitDestination.Exists ||
-		!group.Spec.CardType.Exists ||
-		group.Spec.CardType.Val != types.Land ||
-		group.Spec.Permanent ||
-		len(group.Spec.SubtypesAny) != 0 ||
-		group.Spec.MaxManaValue.Exists ||
+		len(group.Spec.Filter.RequiredTypes) != 1 ||
+		group.Spec.Filter.RequiredTypes[0] != types.Land ||
+		group.Spec.Filter.RequirePermanentCard ||
+		len(group.Spec.Filter.SubtypesAny) != 0 ||
+		group.Spec.Filter.ManaValue.Exists ||
 		group.Spec.MaxManaValueFromX ||
-		group.Spec.MaxPower.Exists ||
-		group.Spec.MinPower.Exists ||
-		group.Spec.MaxToughness.Exists ||
-		group.Spec.MinToughness.Exists ||
+		group.Spec.Filter.Power.Exists ||
+		group.Spec.Filter.Toughness.Exists ||
 		group.Spec.Reveal ||
 		group.Spec.SharedSubtype ||
-		!group.Spec.Supertype.Exists ||
-		group.Spec.Supertype.Val != types.Basic {
+		len(group.Spec.Filter.Supertypes) != 1 ||
+		group.Spec.Filter.Supertypes[0] != types.Basic {
 		return game.AbilityContent{}, false
 	}
 	putRef := effects[1].References[0]

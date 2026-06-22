@@ -10,7 +10,6 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
-	"github.com/natefinch/council4/opt"
 )
 
 func TestSearchLibraryTopShufflesBeforeReplacingFoundCard(t *testing.T) {
@@ -80,8 +79,10 @@ func TestSearchLibraryTopTypeUnionRevealAndFailToFind(t *testing.T) {
 					SourceZone:          zone.Library,
 					Destination:         zone.Library,
 					DestinationPosition: game.SearchPositionTop,
-					CardTypesAny:        []types.Card{types.Artifact, types.Enchantment},
 					Reveal:              test.reveal,
+					Filter: game.Selection{
+						RequiredTypesAny: []types.Card{types.Artifact, types.Enchantment},
+					},
 				},
 			}, nil)
 			agents := [game.NumPlayers]PlayerAgent{game.Player1: &searchByNameAgent{wanted: test.wanted}}
@@ -122,8 +123,10 @@ func TestSearchLibraryColorFilterOffersOnlyMatchingColor(t *testing.T) {
 		SourceZone:          zone.Library,
 		Destination:         zone.Library,
 		DestinationPosition: game.SearchPositionTop,
-		CardType:            opt.Val(types.Creature),
-		ColorsAny:           []color.Color{color.Green},
+		Filter: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			ColorsAny:     []color.Color{color.Green},
+		},
 	}
 
 	t.Run("finds the green creature, leaves off-filter cards", func(t *testing.T) {
@@ -252,7 +255,9 @@ func TestUpToSearchStillAllowsFailToFind(t *testing.T) {
 		Spec: game.SearchSpec{
 			SourceZone:  zone.Library,
 			Destination: zone.Hand,
-			CardType:    opt.Val(types.Creature),
+			Filter: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
 		},
 	}, nil)
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: &searchByNameAgent{}}

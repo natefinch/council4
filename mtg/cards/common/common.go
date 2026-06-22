@@ -5,7 +5,6 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
-	"github.com/natefinch/council4/opt"
 )
 
 // RampLand configures an ability that searches the controller's library for a land and puts it into play.
@@ -25,9 +24,12 @@ func (r RampLand) Ability() game.AbilityContent {
 
 // Instruction returns a single instruction for the ramp land ability.
 func (r RampLand) Instruction() game.Instruction {
-	var basics opt.V[types.Super]
+	filter := game.Selection{
+		RequiredTypes: []types.Card{types.Land},
+		SubtypesAny:   r.SubTypes,
+	}
 	if r.Basic {
-		basics = opt.Val(types.Basic)
+		filter.Supertypes = []types.Super{types.Basic}
 	}
 	return game.Instruction{
 		Primitive: game.Search{
@@ -35,9 +37,7 @@ func (r RampLand) Instruction() game.Instruction {
 			Spec: game.SearchSpec{
 				SourceZone:   zone.Library,
 				Destination:  zone.Battlefield,
-				SubtypesAny:  r.SubTypes,
-				CardType:     opt.Val(types.Land),
-				Supertype:    basics,
+				Filter:       filter,
 				EntersTapped: r.Tapped,
 			},
 		},

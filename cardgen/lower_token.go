@@ -1006,10 +1006,12 @@ func landerTokenDef() *game.CardDef {
 			{Primitive: game.Search{
 				Player: game.ControllerReference(),
 				Spec: game.SearchSpec{
-					SourceZone:   zone.Library,
-					Destination:  zone.Battlefield,
-					CardType:     opt.Val(types.Land),
-					Supertype:    opt.Val(types.Basic),
+					SourceZone:  zone.Library,
+					Destination: zone.Battlefield,
+					Filter: game.Selection{
+						RequiredTypes: []types.Card{types.Land},
+						Supertypes:    []types.Super{types.Basic},
+					},
 					EntersTapped: true,
 				},
 				Amount: game.Fixed(1),

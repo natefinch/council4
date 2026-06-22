@@ -3,7 +3,6 @@ package cardgen
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -891,76 +890,15 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 	default:
 		return "", errors.New("render: unsupported search fail-to-find policy")
 	}
-	if value.Spec.CardType.Exists {
-		cardType, err := cardTypeLiteral(value.Spec.CardType.Val)
+	if !value.Spec.Filter.Empty() {
+		filter, err := r.renderSelection(ctx, value.Spec.Filter)
 		if err != nil {
 			return "", err
 		}
-		ctx.need(importOpt)
-		ctx.need(importTypes)
-		specFields = append(specFields, fmt.Sprintf("CardType: opt.Val(%s),", cardType))
-	}
-	if len(value.Spec.CardTypesAny) > 0 {
-		cardTypes := make([]string, 0, len(value.Spec.CardTypesAny))
-		for _, value := range value.Spec.CardTypesAny {
-			cardType, err := cardTypeLiteral(value)
-			if err != nil {
-				return "", err
-			}
-			cardTypes = append(cardTypes, cardType)
-		}
-		ctx.need(importTypes)
-		specFields = append(specFields, fmt.Sprintf("CardTypesAny: []types.Card{%s},", strings.Join(cardTypes, ", ")))
-	}
-	if value.Spec.Permanent {
-		specFields = append(specFields, "Permanent: true,")
-	}
-	if value.Spec.Supertype.Exists {
-		supertype, err := supertypeLiteral(value.Spec.Supertype.Val)
-		if err != nil {
-			return "", err
-		}
-		ctx.need(importOpt)
-		ctx.need(importTypes)
-		specFields = append(specFields, fmt.Sprintf("Supertype: opt.Val(%s),", supertype))
-	}
-	if len(value.Spec.SubtypesAny) > 0 {
-		subtypes, err := renderSubtypeArguments(ctx, value.Spec.SubtypesAny)
-		if err != nil {
-			return "", err
-		}
-		specFields = append(specFields, fmt.Sprintf("SubtypesAny: []types.Sub{%s},", subtypes))
-	}
-	if len(value.Spec.ColorsAny) > 0 {
-		colorLits, err := colorValueLiterals(value.Spec.ColorsAny)
-		if err != nil {
-			return "", err
-		}
-		ctx.need(importColor)
-		specFields = append(specFields, fmt.Sprintf("ColorsAny: []color.Color{%s},", colorLits))
-	}
-	if value.Spec.MaxManaValue.Exists {
-		ctx.need(importOpt)
-		specFields = append(specFields, fmt.Sprintf("MaxManaValue: opt.Val(%d),", value.Spec.MaxManaValue.Val))
+		specFields = append(specFields, fmt.Sprintf("Filter: %s,", filter))
 	}
 	if value.Spec.MaxManaValueFromX {
 		specFields = append(specFields, "MaxManaValueFromX: true,")
-	}
-	if value.Spec.MaxPower.Exists {
-		ctx.need(importOpt)
-		specFields = append(specFields, fmt.Sprintf("MaxPower: opt.Val(%d),", value.Spec.MaxPower.Val))
-	}
-	if value.Spec.MinPower.Exists {
-		ctx.need(importOpt)
-		specFields = append(specFields, fmt.Sprintf("MinPower: opt.Val(%d),", value.Spec.MinPower.Val))
-	}
-	if value.Spec.MaxToughness.Exists {
-		ctx.need(importOpt)
-		specFields = append(specFields, fmt.Sprintf("MaxToughness: opt.Val(%d),", value.Spec.MaxToughness.Val))
-	}
-	if value.Spec.MinToughness.Exists {
-		ctx.need(importOpt)
-		specFields = append(specFields, fmt.Sprintf("MinToughness: opt.Val(%d),", value.Spec.MinToughness.Val))
 	}
 	if value.Spec.Name != "" {
 		specFields = append(specFields, fmt.Sprintf("Name: %q,", value.Spec.Name))

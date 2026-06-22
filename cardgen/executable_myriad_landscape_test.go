@@ -7,7 +7,6 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
-	"github.com/natefinch/council4/opt"
 )
 
 // TestLowerMyriadLandscapeEndToEnd verifies the full anchor card compiles to a
@@ -48,10 +47,12 @@ func TestLowerMyriadLandscapeEndToEnd(t *testing.T) {
 	want := game.SearchSpec{
 		SourceZone:    zone.Library,
 		Destination:   zone.Battlefield,
-		CardType:      opt.Val(types.Land),
-		Supertype:     opt.Val(types.Basic),
 		EntersTapped:  true,
 		SharedSubtype: true,
+		Filter: game.Selection{
+			RequiredTypes: []types.Card{types.Land},
+			Supertypes:    []types.Super{types.Basic},
+		},
 	}
 	if !searchSpecEqual(search.Spec, want) {
 		t.Fatalf("search spec = %#v, want %#v", search.Spec, want)

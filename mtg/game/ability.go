@@ -1089,53 +1089,22 @@ type SearchSpec struct {
 	// an unrestricted exact-card search must find one when the library is nonempty.
 	FailToFindPolicy SearchFailToFindPolicy
 
-	CardType opt.V[types.Card]
-	// CardTypesAny matches cards having any listed card type, such as an
-	// "artifact or enchantment card" tutor.
-	CardTypesAny []types.Card
-	Supertype    opt.V[types.Super]
-
-	// Permanent restricts matches to permanent cards (cards with at least one
-	// permanent card type), modeling a "permanent card" library search such as
-	// "search your library for a Rebel permanent card". It composes with
-	// Supertype and SubtypesAny but is independent of CardType, which names a
-	// single card type rather than the permanent/non-permanent distinction.
-	Permanent bool
-
-	SubtypesAny []types.Sub
-
-	// ColorsAny, when non-empty, restricts matches to cards having at least one
-	// of the listed colors, modeling a "<color> card" library search such as
-	// "search your library for a green creature card" (Green Sun's Zenith). It
-	// composes with CardType, Supertype, SubtypesAny, and MaxManaValue.
-	ColorsAny []color.Color
-
-	// MaxManaValue, when present, restricts matches to cards whose mana value is
-	// less than or equal to the value, modeling a "with mana value N or less"
-	// rider on a library search.
-	MaxManaValue opt.V[int]
+	// Filter is the canonical predicate every matched library card must satisfy.
+	// It carries the search's card-type, permanent-card, supertype, subtype,
+	// color, mana-value, power, and toughness riders as a single game.Selection,
+	// matched against a card in its library zone. An empty Filter matches every
+	// library card (a plain "search your library for a card" tutor). The
+	// dedicated MaxManaValueFromX and Name fields below carry the riders no
+	// fixed Selection field can express.
+	Filter Selection
 
 	// MaxManaValueFromX, when true, restricts matches to cards whose mana value
 	// is less than or equal to the spell's chosen {X}, modeling the "with mana
 	// value X or less" rider on an X-cost library-search tutor (Green Sun's
 	// Zenith, Chord of Calling, Wargate). The bound is resolved from the
 	// resolving stack object's X as the search runs, so it is mutually exclusive
-	// with the fixed MaxManaValue.
+	// with a fixed Filter.ManaValue bound.
 	MaxManaValueFromX bool
-
-	// MaxPower and MinPower, when present, restrict matches to cards whose power
-	// is less than or equal to (MaxPower) or greater than or equal to (MinPower)
-	// the value, modeling a "with power N or less" / "with power N or greater"
-	// rider on a creature-card library search (Imperial Recruiter, Recruiter of
-	// the Guard). A card with no defined power, or a power defined by a
-	// characteristic-defining ability (*), never matches a power bound.
-	MaxPower opt.V[int]
-	MinPower opt.V[int]
-
-	// MaxToughness and MinToughness mirror MaxPower and MinPower for the card's
-	// toughness ("with toughness N or less" / "with toughness N or greater").
-	MaxToughness opt.V[int]
-	MinToughness opt.V[int]
 
 	Reveal       bool
 	EntersTapped bool
@@ -1169,18 +1138,8 @@ type SearchSpec struct {
 
 // IsUnrestricted reports whether every library card matches the search filter.
 func (s SearchSpec) IsUnrestricted() bool {
-	return !s.CardType.Exists &&
-		len(s.CardTypesAny) == 0 &&
-		!s.Supertype.Exists &&
-		!s.Permanent &&
-		len(s.SubtypesAny) == 0 &&
-		len(s.ColorsAny) == 0 &&
-		!s.MaxManaValue.Exists &&
+	return s.Filter.Empty() &&
 		!s.MaxManaValueFromX &&
-		!s.MaxPower.Exists &&
-		!s.MinPower.Exists &&
-		!s.MaxToughness.Exists &&
-		!s.MinToughness.Exists &&
 		!s.SharedSubtype &&
 		s.Name == ""
 }

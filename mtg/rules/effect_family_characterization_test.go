@@ -41,8 +41,10 @@ func TestHighFrequencyEffectFamilyCharacterizationSnapshot(t *testing.T) {
 				Spec: game.SearchSpec{
 					SourceZone:  zone.Library,
 					Destination: zone.Hand,
-					CardType:    opt.Val(types.Creature),
 					Reveal:      true,
+					Filter: game.Selection{
+						RequiredTypes: []types.Card{types.Creature},
+					},
 				},
 			},
 		},

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -44,9 +45,11 @@ func TestLowerOptionalSearchSpell(t *testing.T) {
 	want := game.SearchSpec{
 		SourceZone:   zone.Library,
 		Destination:  zone.Battlefield,
-		CardType:     opt.Val(types.Land),
-		Supertype:    opt.Val(types.Basic),
 		EntersTapped: true,
+		Filter: game.Selection{
+			RequiredTypes: []types.Card{types.Land},
+			Supertypes:    []types.Super{types.Basic},
+		},
 	}
 	if !searchSpecEqual(search.Spec, want) {
 		t.Errorf("spec = %+v, want %+v", search.Spec, want)
@@ -79,8 +82,10 @@ func TestLowerOptionalSearchToHand(t *testing.T) {
 	want := game.SearchSpec{
 		SourceZone:  zone.Library,
 		Destination: zone.Hand,
-		CardType:    opt.Val(types.Creature),
 		Reveal:      true,
+		Filter: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
 	}
 	if !searchSpecEqual(search.Spec, want) {
 		t.Errorf("spec = %+v, want %+v", search.Spec, want)
@@ -113,8 +118,10 @@ func TestLowerOptionalSearchSubtypeToHand(t *testing.T) {
 	want := game.SearchSpec{
 		SourceZone:  zone.Library,
 		Destination: zone.Hand,
-		SubtypesAny: []types.Sub{types.Goblin},
 		Reveal:      true,
+		Filter: game.Selection{
+			SubtypesAny: []types.Sub{types.Goblin},
+		},
 	}
 	if !searchSpecEqual(search.Spec, want) {
 		t.Errorf("spec = %+v, want %+v", search.Spec, want)
@@ -167,11 +174,13 @@ func TestLowerOptionalSearchPermanentToBattlefield(t *testing.T) {
 		t.Fatalf("primitive = %#v, want game.Search", seq[0].Primitive)
 	}
 	want := game.SearchSpec{
-		SourceZone:   zone.Library,
-		Destination:  zone.Battlefield,
-		Permanent:    true,
-		SubtypesAny:  []types.Sub{types.Rebel},
-		MaxManaValue: opt.Val(3),
+		SourceZone:  zone.Library,
+		Destination: zone.Battlefield,
+		Filter: game.Selection{
+			RequirePermanentCard: true,
+			SubtypesAny:          []types.Sub{types.Rebel},
+			ManaValue:            opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 3}),
+		},
 	}
 	if !searchSpecEqual(search.Spec, want) {
 		t.Errorf("spec = %+v, want %+v", search.Spec, want)
@@ -257,9 +266,11 @@ func TestLowerControllerPaidCostThenSearch(t *testing.T) {
 	want := game.SearchSpec{
 		SourceZone:   zone.Library,
 		Destination:  zone.Battlefield,
-		CardType:     opt.Val(types.Land),
-		Supertype:    opt.Val(types.Basic),
 		EntersTapped: true,
+		Filter: game.Selection{
+			RequiredTypes: []types.Card{types.Land},
+			Supertypes:    []types.Super{types.Basic},
+		},
 	}
 	if !searchSpecEqual(search.Spec, want) {
 		t.Errorf("spec = %+v, want %+v", search.Spec, want)
