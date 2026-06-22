@@ -724,6 +724,22 @@ func lowerSacrificeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 		}.Ability(), nil
 
 	case len(ctx.content.Targets) == 0:
+		// "That player sacrifices <N> <type> of their choice." — the player
+		// named by the triggering event (e.g. each opponent's upkeep) chooses.
+		if effect.Context == parser.EffectContextReferencedPlayer {
+			if !sacrificeReferencedPlayerChoice(ctx.content.References) {
+				return unsupported()
+			}
+			return game.Mode{
+				Sequence: []game.Instruction{{
+					Primitive: game.SacrificePermanents{
+						Player:    game.EventPlayerReference(),
+						Amount:    amount,
+						Selection: selection,
+					},
+				}},
+			}.Ability(), nil
+		}
 		// "You sacrifice <N> <type>." or "Each opponent/player sacrifices <N> <type>."
 		if !sacrificeChoiceReferences(ctx.content.References) {
 			return unsupported()
@@ -782,6 +798,30 @@ func sacrificeChoiceReferences(references []compiler.CompiledReference) bool {
 		}
 	}
 	return true
+}
+
+// sacrificeReferencedPlayerChoice reports whether the references describe a
+// "that player sacrifices <type> of their choice" edict: exactly one
+// event-player "that player" subject plus zero or more "their"-choice
+// possessives. The subject resolves to game.EventPlayerReference, so the player
+// named by the triggering event (e.g. each opponent's upkeep) makes the choice.
+func sacrificeReferencedPlayerChoice(references []compiler.CompiledReference) bool {
+	sawSubject := false
+	for _, reference := range references {
+		switch {
+		case reference.Kind == compiler.ReferenceThatPlayer &&
+			reference.Binding == compiler.ReferenceBindingEventPlayer:
+			if sawSubject {
+				return false
+			}
+			sawSubject = true
+		case reference.Kind == compiler.ReferencePronoun &&
+			reference.Pronoun == compiler.ReferencePronounTheir:
+		default:
+			return false
+		}
+	}
+	return sawSubject
 }
 
 // sacrificeChoiceSelection maps the sacrifice effect's compiled selector to a

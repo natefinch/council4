@@ -316,6 +316,8 @@ func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {
 		subject = "Each player"
 	case EffectContextDefendingPlayer:
 		subject = "Defending player"
+	case EffectContextReferencedPlayer:
+		subject = "That player"
 	case EffectContextTarget:
 		if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
 			return false
