@@ -1404,6 +1404,30 @@ func TestGenerateExecutableCardSourceFilteredGroupDamage(t *testing.T) {
 				"ManaValue: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 2})",
 			},
 		},
+		{
+			name:       "excluded subtype",
+			oracleText: "Test Bolt deals 2 damage to each non-Dragon creature.",
+			wantedSnips: []string{
+				"RequiredTypes: []types.Card{types.Creature}",
+				`ExcludedSubtype: types.Sub("Dragon")`,
+			},
+		},
+		{
+			name:       "excluded planeswalker subtype",
+			oracleText: "Test Bolt deals 5 damage to each non-Bolas planeswalker.",
+			wantedSnips: []string{
+				"RequiredTypes: []types.Card{types.Planeswalker}",
+				`ExcludedSubtype: types.Sub("Bolas")`,
+			},
+		},
+		{
+			name:       "nontoken",
+			oracleText: "Test Bolt deals 3 damage to each nontoken creature.",
+			wantedSnips: []string{
+				"RequiredTypes: []types.Card{types.Creature}",
+				"NonToken: true",
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

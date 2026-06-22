@@ -1947,8 +1947,9 @@ func exactGroupDamageRecipientText(selection SelectionSyntax) (string, bool) {
 // exactGroupDamagePermanentRecipientText reconstructs the recipient phrase for a
 // group damage spell whose recipients form a single filtered permanent group. It
 // renders only the controller, combat, tapped, single-color, single-subtype,
-// single-excluded-type, keyword, and "other" qualifiers the executable backend
-// can represent exactly, and fails closed for every other qualifier.
+// single-excluded-type, single-excluded-subtype, nontoken/token, keyword, and
+// "other" qualifiers the executable backend can represent exactly, and fails
+// closed for every other qualifier.
 func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, bool) {
 	if selection.All || selection.Another || selection.Zone != zone.None ||
 		selection.Colorless || selection.Multicolored ||
@@ -1957,7 +1958,9 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 		(len(selection.RequiredTypesAny) > 1 && !selection.ConjunctiveTypes) ||
 		len(selection.ColorsAny) > 1 ||
 		len(selection.SubtypesAny) > 1 ||
-		len(selection.ExcludedTypes) > 1 {
+		len(selection.ExcludedTypes) > 1 ||
+		len(selection.ExcludedSubtypes) > 1 ||
+		(selection.NonToken && selection.TokenOnly) {
 		return "", false
 	}
 	if (selection.Attacking && selection.Blocking) ||
@@ -2005,6 +2008,11 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 		words = append(words, "untapped")
 	default:
 	}
+	if selection.NonToken {
+		words = append(words, "nontoken")
+	} else if selection.TokenOnly {
+		words = append(words, "token")
+	}
 	if len(selection.Supertypes) == 1 {
 		supertypeText, ok := supertypeWord(selection.Supertypes[0])
 		if !ok {
@@ -2031,6 +2039,12 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 			return "", false
 		}
 		words = append(words, "non"+excludedNoun)
+	}
+	if len(selection.ExcludedSubtypes) == 1 {
+		if !hasNoun {
+			return "", false
+		}
+		words = append(words, "non-"+string(selection.ExcludedSubtypes[0]))
 	}
 	if hasNoun {
 		words = append(words, noun)

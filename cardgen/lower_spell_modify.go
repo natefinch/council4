@@ -288,18 +288,18 @@ func damageGroupSelection(sel compiler.CompiledSelector) (game.Selection, bool) 
 
 // damageGroupSelectionMask drops the canonical dimensions a group-damage
 // recipient never carries: the self-exclusion, excluded supertype, kind-agnostic
-// counter, "aren't of the chosen type" exclusion, conjunctive type set, per-object
-// token state, and historic disjunction. It fails closed on a source-relative
-// power comparison: a damage group has no source permanent to compare against, so
-// the predecessor projector rejected that filter rather than dropping it.
+// counter, "aren't of the chosen type" exclusion, conjunctive type set, and
+// historic disjunction. It honors per-object token state ("each nontoken
+// creature") and the excluded creature subtype ("each non-Dragon creature"). It
+// fails closed on a source-relative power comparison: a damage group has no
+// source permanent to compare against, so the predecessor projector rejected
+// that filter rather than dropping it.
 var damageGroupSelectionMask = SelectionMask{}.Ignoring(
 	DimExcludeSource,
 	DimExcludedSupertype,
 	DimMatchAnyCounter,
 	DimSubtypeChoiceExcluded,
 	DimConjunctiveTypes,
-	DimNonToken,
-	DimTokenOnly,
 	DimHistoric,
 ).Rejecting(
 	DimPowerVsSource,
