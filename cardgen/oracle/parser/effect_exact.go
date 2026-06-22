@@ -1691,7 +1691,10 @@ func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 		effect.Amount.DynamicForm == EffectDynamicAmountFormNone && controllerForm
 	dynamicCombatDamageCount := effect.Amount.DynamicKind == EffectDynamicAmountTriggeringCombatDamage &&
 		effect.Amount.DynamicForm == EffectDynamicAmountFormNone && controllerForm
-	if !variableCount && !dynamicCombatDamageCount && (!effect.Amount.Known || effect.Amount.Value < 1) {
+	dynamicDieRollResultCount := effect.Amount.DynamicKind == EffectDynamicAmountDieRollResult &&
+		effect.Amount.DynamicForm == EffectDynamicAmountFormEqual && controllerForm
+	if !variableCount && !dynamicCombatDamageCount && !dynamicDieRollResultCount &&
+		(!effect.Amount.Known || effect.Amount.Value < 1) {
 		return false
 	}
 	sel := effect.Selection
@@ -1711,6 +1714,12 @@ func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 	tappedPart := ""
 	if sel.Tapped {
 		tappedPart = "tapped "
+	}
+	if dynamicDieRollResultCount {
+		spec := fmt.Sprintf("a number of %s%s tokens", tappedPart, string(sel.SubtypesAny[0]))
+		clause := exactEffectClauseText(effect)
+		return strings.EqualFold(clause, "Create "+spec+" "+effect.Amount.Text+".") ||
+			strings.EqualFold(clause, "You create "+spec+" "+effect.Amount.Text+".")
 	}
 	countWord, noun := "a", "token"
 	switch {

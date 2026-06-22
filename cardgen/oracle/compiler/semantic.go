@@ -1139,6 +1139,11 @@ const (
 	EffectNoMaximumHandSize
 	EffectAdditionalCombatPhase
 	EffectLookAtHand
+	// EffectRollDie rolls a single fair die with DieSides faces and publishes
+	// the rolled value as its resolved amount ("roll a d20"). A later effect
+	// consumes the value via a DynamicAmountDieRollResult amount. Added last so
+	// existing kinds keep their wire values.
+	EffectRollDie
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1623,6 +1628,10 @@ type CompiledEffect struct {
 	// set only together with AdditionalCombatPhase.
 	AdditionalCombatPhase bool
 	AdditionalMainPhase   bool
+	// DieSides is the number of faces of the die rolled by an EffectRollDie
+	// effect ("roll a d20" sets DieSides to 20). It is zero for every other
+	// effect kind.
+	DieSides int
 }
 
 // CompiledManaSpendRider is the typed semantic form of a mana-spend rider.
@@ -2073,6 +2082,12 @@ const (
 	// spell's costs are paid and carries the count to the entering permanent.
 	// Added last so existing kinds keep their wire values.
 	DynamicAmountColorsOfManaSpent
+	// DynamicAmountDieRollResult is the value produced by the immediately
+	// preceding die roll in the same ability ("a number of Treasure tokens equal
+	// to the result." — Ancient Copper Dragon). The lowerer reads the count the
+	// EffectRollDie effect publishes. Added last so existing kinds keep their
+	// wire values.
+	DynamicAmountDieRollResult
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

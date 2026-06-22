@@ -427,6 +427,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectNoMaximumHandSize
 	case parser.EffectAdditionalCombatPhase:
 		return EffectAdditionalCombatPhase
+	case parser.EffectRollDie:
+		return EffectRollDie
 	case parser.EffectMassReanimationExchange:
 		return EffectMassReanimationExchange
 	case parser.EffectPunisherLoseLife:
@@ -625,6 +627,8 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountTriggeringCounterCount
 	case parser.EffectDynamicAmountColorsOfManaSpent:
 		return DynamicAmountColorsOfManaSpent
+	case parser.EffectDynamicAmountDieRollResult:
+		return DynamicAmountDieRollResult
 	default:
 		return DynamicAmountNone
 	}

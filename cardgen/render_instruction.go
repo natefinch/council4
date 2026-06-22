@@ -500,6 +500,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", errors.New("render: internal error: AddExtraPhases kind has unexpected concrete type")
 		}
 		return renderAddExtraPhases(value), nil
+	case game.PrimitiveRollDie:
+		value, ok := primitive.(game.RollDie)
+		if !ok {
+			return "", errors.New("render: internal error: RollDie kind has unexpected concrete type")
+		}
+		return renderRollDie(value), nil
 	default:
 		return "", fmt.Errorf("render: unsupported primitive kind %d", primitive.Kind())
 	}
@@ -516,6 +522,12 @@ func renderAddExtraPhases(value game.AddExtraPhases) string {
 		fields = append(fields, "Main: true,")
 	}
 	return structLit("game.AddExtraPhases", fields)
+}
+
+// renderRollDie renders the RollDie primitive, emitting its die size so the
+// literal matches the typed effect.
+func renderRollDie(value game.RollDie) string {
+	return structLit("game.RollDie", []string{fmt.Sprintf("Sides: %d,", value.Sides)})
 }
 
 func (Renderer) renderCardCondition(ctx *renderCtx, condition game.CardCondition) (string, error) {

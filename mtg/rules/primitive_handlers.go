@@ -1149,6 +1149,14 @@ func handleAddExtraPhases(r *effectResolver, prim game.AddExtraPhases) effectRes
 	return effectResolved{accepted: true, succeeded: true}
 }
 
+func handleRollDie(r *effectResolver, prim game.RollDie) effectResolved {
+	if prim.Sides < 2 {
+		return effectResolved{accepted: true, succeeded: false}
+	}
+	roll := r.engine.rng.IntN(prim.Sides) + 1
+	return effectResolved{accepted: true, succeeded: true, amount: roll}
+}
+
 func handleCreateEmblem(r *effectResolver, prim game.CreateEmblem) effectResolved {
 	r.game.Emblems = append(r.game.Emblems, game.Emblem{
 		Owner:     r.obj.Controller,
