@@ -565,6 +565,9 @@ func renderSelectionComparisons(ctx *renderCtx, selection game.Selection) ([]str
 	if selection.MatchModified {
 		fields = append(fields, "MatchModified: true,")
 	}
+	if selection.MatchCommander {
+		fields = append(fields, "MatchCommander: true,")
+	}
 	return fields, nil
 }
 
