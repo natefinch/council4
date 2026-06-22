@@ -560,6 +560,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx, syntax *parser
 	if content, ok := lowerLifeLostThisWayDrain(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerDrainXLifeSpell(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerDestroyedThisWaySequence(ctx); ok {
 		return content, true
 	}
