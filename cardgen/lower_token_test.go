@@ -1533,6 +1533,41 @@ func TestGenerateExecutableCardSourceAttackingOnlyTokenRendersEntryAttacking(t *
 	}
 }
 
+func TestGenerateExecutableCardSourceAttackingDefenderTokenRendersEntryAttacking(t *testing.T) {
+	t.Parallel()
+	// A created attacking token with an explicit "... attacking <defender>"
+	// designation (CR 508.4) lowers to EntryAttacking; the defender-agnostic
+	// runtime ignores the named defender. Covers the modern per-opponent
+	// templating (Adeline, Resplendent Cathar) and the bare "that player" /
+	// "that opponent" forms.
+	for _, oracle := range []string{
+		"For each opponent, create a 1/1 white Human creature token that's tapped and attacking that player or a planeswalker they control.",
+		"Create a 1/1 white Human creature token that's tapped and attacking that player.",
+		"Create a 1/1 white Human creature token that's tapped and attacking that opponent.",
+	} {
+		source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+			Name:       "Test Attacking Defender",
+			Layout:     "normal",
+			ManaCost:   "{1}{W}",
+			TypeLine:   "Sorcery",
+			OracleText: oracle,
+			Colors:     []string{"W"},
+		}, "t")
+		if err != nil {
+			t.Fatalf("%q: %v", oracle, err)
+		}
+		if len(diagnostics) != 0 {
+			t.Fatalf("%q: diagnostics = %#v", oracle, diagnostics)
+		}
+		if !strings.Contains(source, "EntryAttacking: true,") {
+			t.Fatalf("%q: source missing EntryAttacking:\n%s", oracle, source)
+		}
+		if !strings.Contains(source, "EntryTapped:") {
+			t.Fatalf("%q: tapped-and-attacking token should enter tapped:\n%s", oracle, source)
+		}
+	}
+}
+
 func TestCreateTokenFailsClosedForUnsupportedShapes(t *testing.T) {
 	t.Parallel()
 	for _, oracle := range []string{

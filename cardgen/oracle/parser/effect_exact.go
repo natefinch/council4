@@ -1580,7 +1580,8 @@ func creatureTokenSpecBody(effect *EffectSyntax) (func(countWord, noun string) s
 	return func(countWord, noun string) string {
 		return fmt.Sprintf("%s %s%s %s%s %s %s%s%s%s%s",
 			countWord, tappedPart, ptPart, colorPart,
-			subtypeJoin, typeWords, noun, keywordPart, grantedPart, namePart, tokenAttackClause(sel, noun))
+			subtypeJoin, typeWords, noun, keywordPart, grantedPart, namePart,
+			tokenAttackClause(sel, noun, effect.AttackDefender))
 	}, true
 }
 
@@ -1632,8 +1633,10 @@ func tokenColorPart(sel SelectionSyntax) (string, bool) {
 // created token, or "" when the token does not enter attacking. The relative
 // pronoun matches the count noun ("that's" for a single "token", "that are" for
 // "tokens"), and the clause includes "tapped and" when the token also enters
-// tapped.
-func tokenAttackClause(sel SelectionSyntax, noun string) string {
+// tapped. An explicit attacked defender (CR 508.4) recorded in defender appends
+// the recognized "that player[ or a planeswalker they control]" / "that
+// opponent" tail so the byte-exact reconstruction covers it.
+func tokenAttackClause(sel SelectionSyntax, noun string, defender AttackDefenderKind) string {
 	if !sel.Attacking {
 		return ""
 	}
@@ -1641,10 +1644,20 @@ func tokenAttackClause(sel SelectionSyntax, noun string) string {
 	if noun == "token" {
 		relative = "that's"
 	}
+	clause := " " + relative + " attacking"
 	if sel.Tapped {
-		return " " + relative + " tapped and attacking"
+		clause = " " + relative + " tapped and attacking"
 	}
-	return " " + relative + " attacking"
+	switch defender {
+	case AttackDefenderThatPlayerOrPlaneswalker:
+		clause += " that player or a planeswalker they control"
+	case AttackDefenderThatPlayer:
+		clause += " that player"
+	case AttackDefenderThatOpponent:
+		clause += " that opponent"
+	default:
+	}
+	return clause
 }
 
 func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {

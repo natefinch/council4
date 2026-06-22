@@ -711,6 +711,75 @@ func trailingDynamicCountInClause(clause []shared.Token, amount EffectAmountSynt
 	return amount.Span.Start.Offset >= clause[0].Span.Start.Offset
 }
 
+// tokenAttackDefenderClause recognizes the trailing "... attacking <defender>"
+// relative clause of a created attacking token (CR 508.4) and returns the
+// matched defender kind together with the span of the defender tokens (the run
+// after "attacking", up to the clause-final period). It matches only the
+// create-token effect and the exact modern defender wordings; the bare
+// "... attacking." clause and every other tail leave it (None, _, false). The
+// returned span lets the build loop scope the token Selection to the tokens
+// before the defender phrase, so player/planeswalker nouns in the defender
+// ("that player or a planeswalker they control") do not fold into the token's
+// own type line.
+func tokenAttackDefenderClause(kind EffectKind, clause []shared.Token) (AttackDefenderKind, shared.Span, bool) {
+	if kind != EffectCreate {
+		return AttackDefenderNone, shared.Span{}, false
+	}
+	attackIndex := -1
+	for i := range clause {
+		if equalWord(clause[i], "attacking") {
+			attackIndex = i
+			break
+		}
+	}
+	if attackIndex < 0 {
+		return AttackDefenderNone, shared.Span{}, false
+	}
+	tail := clause[attackIndex+1:]
+	// Drop a trailing clause-final period so the defender words match exactly.
+	if len(tail) > 0 && tail[len(tail)-1].Text == "." {
+		tail = tail[:len(tail)-1]
+	}
+	if len(tail) == 0 {
+		return AttackDefenderNone, shared.Span{}, false
+	}
+	defenders := []struct {
+		kind  AttackDefenderKind
+		words []string
+	}{
+		{AttackDefenderThatPlayerOrPlaneswalker, []string{"that", "player", "or", "a", "planeswalker", "they", "control"}},
+		{AttackDefenderThatPlayer, []string{"that", "player"}},
+		{AttackDefenderThatOpponent, []string{"that", "opponent"}},
+	}
+	for _, d := range defenders {
+		if len(tail) == len(d.words) && effectWordsAt(tail, 0, d.words...) {
+			return d.kind, shared.SpanOf(tail), true
+		}
+	}
+	return AttackDefenderNone, shared.Span{}, false
+}
+
+// referencesOutsideAttackDefender drops anaphoric references (e.g. the
+// "that player" ReferenceThatPlayer in "... attacking that player or a
+// planeswalker they control") that fall inside a created attacking token's
+// defender phrase. The runtime EntryAttacking model is defender-agnostic, so
+// such a reference has no resolving meaning and would otherwise leave the
+// create-token body with an unconsumed reference and fail closed. It is a no-op
+// unless the effect carries a recognized token-attack defender.
+func referencesOutsideAttackDefender(refs []Reference, hasDefender bool, defender shared.Span) []Reference {
+	if !hasDefender {
+		return refs
+	}
+	kept := make([]Reference, 0, len(refs))
+	for _, ref := range refs {
+		if ref.Span.Start.Offset >= defender.Start.Offset && ref.Span.End.Offset <= defender.End.Offset {
+			continue
+		}
+		kept = append(kept, ref)
+	}
+	return kept
+}
+
 // stripLeadingConditionClause drops a leading "As long as ..." condition clause
 // so the subject grammar sees only the effect's group subject ("creatures you
 // control"). The first effect's ownership tokens begin at the sentence start, so
@@ -907,11 +976,17 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		// Selection to the run of tokens before the count phrase so the count
 		// subject's filters do not fold into the token's type line.
 		selectionClause := clause
+		tokenAttackDefender, tokenAttackDefenderSpan, hasAttackDefender := tokenAttackDefenderClause(kind, clause)
 		switch {
 		case kind == EffectDealDamage && amount.DynamicForm == EffectDynamicAmountFormWhereX:
 			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
 		case kind == EffectCreate && trailingDynamicCountInClause(clause, amount):
 			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
+		case hasAttackDefender:
+			// Scope the token Selection to the tokens before the trailing
+			// "... attacking <defender>" phrase so the defender's player and
+			// planeswalker nouns do not fold into the token's own type line.
+			selectionClause = tokensBeforeOffset(clause, tokenAttackDefenderSpan.Start.Offset)
 		case kind == EffectMill && trailingDynamicCountInClause(clause, amount):
 			// "mills cards equal to <dynamic>" embeds the count subject in the
 			// same clause as the milled-card noun. Scoping the selection to the
@@ -958,6 +1033,8 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			TokenPTVariableX:          tokenPTVariableX,
 			TokenKeywords:             parseTokenKeywords(kind, clause, atoms),
 			TokenName:                 parseTokenName(kind, clause),
+			AttackDefender:            tokenAttackDefender,
+			AttackDefenderSpan:        tokenAttackDefenderSpan,
 			TokenChoice:               parseTokenChoice(kind, clause),
 			StaticSubject:             staticSubject,
 			DoublePower:               doublePower,
@@ -994,7 +1071,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			Symbol:                  firstEffectSymbol(clause),
 			Mana:                    parseEffectMana(kind, clause, nextConnection != EffectConnectionNone),
 			Replacement:             parseEffectReplacement(ownership, atoms),
-			References:              referencesInSpan(atoms, ownershipSpan),
+			References:              referencesOutsideAttackDefender(referencesInSpan(atoms, ownershipSpan), hasAttackDefender, tokenAttackDefenderSpan),
 			SubjectReferences:       referencesInSpan(atoms, shared.SpanOf(tokens[ownershipStart:tokenIndex])),
 			Targets:                 targetsInSpan(sentence.Targets, ownershipSpan),
 			SubjectTargets:          targetsInSpan(sentence.Targets, shared.SpanOf(tokens[ownershipStart:tokenIndex])),
