@@ -587,6 +587,8 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountEventDamage", nil
 	case game.DynamicAmountEventCardCount:
 		return "game.DynamicAmountEventCardCount", nil
+	case game.DynamicAmountEventCounterCount:
+		return "game.DynamicAmountEventCounterCount", nil
 	case game.DynamicAmountPreviousEffectExcessDamage:
 		return "game.DynamicAmountPreviousEffectExcessDamage", nil
 	case game.DynamicAmountObjectPower:

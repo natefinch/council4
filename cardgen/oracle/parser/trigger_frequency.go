@@ -44,6 +44,13 @@ func parseTriggerFrequencyRestriction(tokens []shared.Token) (TriggerFrequencyRe
 		tokens = tokens[:len(tokens)-1]
 	}
 	rest, ok := cutSyntaxWords(tokens, "this", "ability", "triggers", "only")
+	if !ok {
+		// "Do this only once each turn." (Terrasymbiosis) caps the resolving
+		// effect to one execution per turn; for an ability whose only effect is
+		// the capped action this is observationally the once-per-turn trigger
+		// cap, so it lowers through the same typed restriction.
+		rest, ok = cutSyntaxWords(tokens, "do", "this", "only")
+	}
 	if !ok || len(rest) != 3 || !equalWord(rest[1], "each") || !equalWord(rest[2], "turn") {
 		return TriggerFrequencyRestriction{}, false
 	}

@@ -482,6 +482,14 @@ const (
 	// is itself an EffectAmountSyntax. Added last so existing kinds keep their
 	// values.
 	EffectDynamicAmountMaxOf EffectDynamicAmountKind = "EffectDynamicAmountMaxOf"
+	// EffectDynamicAmountTriggeringCounterCount is the number of counters added
+	// by the event that triggered the enclosing counter-placement trigger ("that
+	// many" in "Whenever you put one or more +1/+1 counters on a creature you
+	// control, you may draw that many cards." — Terrasymbiosis). It reads the
+	// triggering event's counter count; the lowerer accepts it only inside a
+	// counter-placement trigger and fails closed elsewhere. Added last so
+	// existing kinds keep their values.
+	EffectDynamicAmountTriggeringCounterCount EffectDynamicAmountKind = "EffectDynamicAmountTriggeringCounterCount"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.

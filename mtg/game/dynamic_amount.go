@@ -157,6 +157,12 @@ const (
 	// supported amounts; an empty operand list yields zero. Added last so
 	// existing kinds keep their wire values.
 	DynamicAmountMaxOf
+	// DynamicAmountEventCounterCount is the number of counters added in the
+	// triggering EventCountersAdded batch (CR 122, CR 700.4). It scales
+	// counter-placement triggers such as "draw that many cards" by reading the
+	// counter count recorded on the resolving ability's TriggerEvent.
+	// Added last so existing kinds keep their wire values.
+	DynamicAmountEventCounterCount
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

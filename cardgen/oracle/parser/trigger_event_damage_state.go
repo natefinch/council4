@@ -316,8 +316,11 @@ func parseCounterTriggerEventClause(
 	atoms Atoms,
 	_ string,
 ) *TriggerEventClause {
-	if intro != TriggerIntroductionWhenever {
+	if intro != TriggerIntroductionWhenever || len(tokens) == 0 {
 		return nil
+	}
+	if equalWord(tokens[0], "you") && len(tokens) > 1 && equalWord(tokens[1], "put") {
+		return parseActiveCounterTriggerEventClause(tokens, tokens[2:], atoms)
 	}
 	if index := syntaxWordsIndex(tokens, "counter", "is", "put", "on"); index > 1 && equalWord(tokens[0], "a") {
 		return buildCounterTriggerEventClause(tokens, tokens[index+4:], atoms, false)
@@ -326,6 +329,38 @@ func parseCounterTriggerEventClause(
 		return buildCounterTriggerEventClause(tokens, tokens[index+4:], atoms, true)
 	}
 	return nil
+}
+
+// parseActiveCounterTriggerEventClause recognizes the active-voice
+// counter-placement trigger "you put [one or more|a] <kind> counter[s] on
+// <subject>" (Exemplar of Light, Terrasymbiosis). The acting player is the
+// ability's controller, recorded as a "you" cause controller so the trigger
+// fires only for counters the controller places. quantifierTokens are the
+// tokens after the leading "you put".
+func parseActiveCounterTriggerEventClause(tokens, quantifierTokens []shared.Token, atoms Atoms) *TriggerEventClause {
+	oneOrMore := false
+	boundary := "counter"
+	rest, ok := cutSyntaxWords(quantifierTokens, "one", "or", "more")
+	if ok {
+		oneOrMore = true
+		boundary = "counters"
+	} else if rest, ok = cutSyntaxWords(quantifierTokens, "a"); !ok {
+		return nil
+	}
+	index := syntaxWordsIndex(rest, boundary, "on")
+	if index < 1 {
+		return nil
+	}
+	subjectTokens := rest[index+2:]
+	if len(subjectTokens) == 0 {
+		return nil
+	}
+	clause := buildCounterTriggerEventClause(tokens, subjectTokens, atoms, oneOrMore)
+	if clause == nil {
+		return nil
+	}
+	clause.CauseController = TriggerEventActorYou
+	return clause
 }
 
 func buildCounterTriggerEventClause(

@@ -1159,6 +1159,16 @@ func lowerFixedDrawSpell(
 			)
 		}
 		amount = game.Dynamic(dynamic)
+	case effect.Amount.DynamicKind == compiler.DynamicAmountTriggeringCounterCount:
+		dynamic, ok := lowerEventCounterCountAmount(ctx, effect.Amount)
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported draw spell",
+				"the executable source backend supports only exact supported card draw",
+			)
+		}
+		amount = game.Dynamic(dynamic)
 	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
 		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
 		if !ok || effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower {
