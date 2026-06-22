@@ -1793,6 +1793,28 @@ func TestParseStaticChosenCreatureTypeAddition(t *testing.T) {
 	}
 }
 
+func TestParseStaticChosenCreatureTypeGroupAddition(t *testing.T) {
+	t.Parallel()
+	for name, source := range map[string]string{
+		"controlled creatures plural": "Creatures you control are the chosen type in addition to their other types.",
+		"each controlled creature":    "Each creature you control is the chosen type in addition to its other types.",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, source, Context{})
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.Kind != StaticDeclarationContinuousEntryChoiceSubtype ||
+				declaration.Subject.Kind != StaticDeclarationSubjectGroup ||
+				declaration.Subject.Group.Kind != EffectStaticSubjectControlledCreatures {
+				t.Fatalf("declaration = %#v, want controlled-creatures chosen-subtype addition", declaration)
+			}
+		})
+	}
+}
+
 func TestParseStaticChosenCreatureTypeTriggerMultiplier(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(

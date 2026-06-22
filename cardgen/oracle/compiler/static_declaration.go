@@ -823,22 +823,31 @@ func recognizeStaticEntryChoiceSubtypeDeclaration(ability CompiledAbility, stati
 		len(ability.Content.Targets) != 0 ||
 		len(ability.Content.Conditions) != 0 ||
 		len(ability.Content.Effects) != 0 ||
-		len(ability.Content.Keywords) != 0 ||
-		!entryChoiceSubtypeContent(ability.Content) {
+		len(ability.Content.Keywords) != 0 {
 		return StaticDeclaration{}, false
 	}
 	node := statics[0]
-	if node.Subject.Kind != parser.StaticDeclarationSubjectSourceCreature {
+	group, ok := staticGroupForParserSubject(node.Subject)
+	if !ok {
+		return StaticDeclaration{}, false
+	}
+	switch node.Subject.Kind {
+	case parser.StaticDeclarationSubjectSourceCreature:
+		if !entryChoiceSubtypeContent(ability.Content) {
+			return StaticDeclaration{}, false
+		}
+	case parser.StaticDeclarationSubjectGroup:
+		if !entryChoiceSubtypeGroupContent(ability.Content) {
+			return StaticDeclaration{}, false
+		}
+	default:
 		return StaticDeclaration{}, false
 	}
 	return StaticDeclaration{
 		Kind:          StaticDeclarationContinuous,
 		Span:          ability.Span,
 		OperationSpan: node.OperationSpan,
-		Group: StaticGroupReference{
-			Span:   node.Subject.Span,
-			Domain: StaticGroupSource,
-		},
+		Group:         group,
 		Continuous: &StaticContinuousDeclaration{
 			Layer:     StaticLayerType,
 			Operation: StaticContinuousAddSubtypeFromEntryChoice,
@@ -875,6 +884,20 @@ func entryChoiceSubtypeContent(content AbilityContent) bool {
 		possessive.Kind == ReferencePronoun &&
 		possessive.Pronoun == ReferencePronounIts &&
 		possessive.Binding == ReferenceBindingSource
+}
+
+// entryChoiceSubtypeGroupContent reports whether a group "<group> is/are the
+// chosen type in addition to its/their other types" declaration leaves only its
+// trailing possessive pronoun as residual content. The group noun phrase is
+// consumed by the static-declaration subject, so the body carries a single
+// possessive pronoun ("its"/"their") and no other resolving content.
+func entryChoiceSubtypeGroupContent(content AbilityContent) bool {
+	if len(content.References) != 1 {
+		return false
+	}
+	possessive := content.References[0]
+	return possessive.Kind == ReferencePronoun &&
+		(possessive.Pronoun == ReferencePronounIts || possessive.Pronoun == ReferencePronounTheir)
 }
 
 // staticSyntaxKindsAre reports whether the parser emitted exactly the given

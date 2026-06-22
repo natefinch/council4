@@ -1242,6 +1242,50 @@ func TestContinuousEffectAddsSubtypeChosenAsSourceEntered(t *testing.T) {
 	}
 }
 
+// TestContinuousEffectGroupAddsSubtypeChosenAsSourceEntered verifies the
+// chosen-type group anthem ("Creatures you control are the chosen type in
+// addition to their other types", Arcane Adaptation/Xenograft): every creature
+// the source's controller controls gains the subtype chosen as the source
+// entered while keeping its printed subtypes, and opponents are unaffected.
+func TestContinuousEffectGroupAddsSubtypeChosenAsSourceEntered(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Type Shaper",
+		Types: []types.Card{types.Enchantment},
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer: game.LayerType,
+				Group: game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				}),
+				AddSubtypeFromEntryChoice: game.EntryTypeChoiceKey,
+			}},
+		}},
+	}})
+	source.EntryChoices = map[game.ChoiceKey]game.ResolutionChoiceResult{
+		game.EntryTypeChoiceKey: {
+			Kind:    game.ResolutionChoiceSubtype,
+			Subtype: types.Elf,
+		},
+	}
+	ally := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Goblin Ally",
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Goblin},
+	}})
+	opponentCreature := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+
+	if !permanentHasSubtype(g, ally, types.Elf) {
+		t.Fatal("controlled creature did not gain the source's entry-chosen creature type")
+	}
+	if !permanentHasSubtype(g, ally, types.Goblin) {
+		t.Fatal("chosen-type group anthem erased the creature's original Goblin subtype")
+	}
+	if permanentHasSubtype(g, opponentCreature, types.Elf) {
+		t.Fatal("opponent's creature incorrectly gained the entry-chosen creature type")
+	}
+}
+
 func TestContinuousEffectChosenSubtypeFailsClosedWithoutSubtypeChoice(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
