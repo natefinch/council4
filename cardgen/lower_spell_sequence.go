@@ -2030,6 +2030,7 @@ func lowerCharacteristicLifeRider(
 		amountRef,
 		effectIndex,
 		sequence,
+		effect.Amount.DynamicKind == compiler.DynamicAmountSourceManaValue,
 	)
 	if !ok {
 		return characteristicLifeRiderLowering{}, false
@@ -2131,9 +2132,30 @@ func lifeRiderAmountObject(
 	amountRef compiler.CompiledReference,
 	effectIndex int,
 	sequence []game.Instruction,
+	manaValue bool,
 ) (lifeRiderAmountLowering, bool) {
 	switch amountRef.Binding {
 	case compiler.ReferenceBindingTarget:
+		// "lose life equal to that card's mana value" after an exact return to the
+		// battlefield under its owner's control ("Return target creature card from
+		// your graveyard to the battlefield") binds the amount to the returned
+		// card's target. The card becomes a fresh permanent on entry, so the rider
+		// must read the entered permanent's last-known mana value rather than the
+		// stale graveyard target. Route through the reanimation publish path, which
+		// rewrites the move to record the entered permanent and gates the life
+		// change on the move reaching the battlefield. An "under your control"
+		// return binds "that card" to the prior instruction result instead and is
+		// handled below; its target-bound "its mana value" variant stays fail
+		// closed because that pronoun does not anchor the card-to-permanent move.
+		if manaValue &&
+			reanimationManaValueAntecedent(effects, effectIndex) &&
+			!effects[effectIndex-1].UnderYourControl {
+			put, ok := sequence[effectIndex-1].Primitive.(game.PutOnBattlefield)
+			if !ok {
+				return lifeRiderAmountLowering{}, false
+			}
+			return reanimationManaValuePublish(put, amountRef, effectIndex, true)
+		}
 		obj, ok := lowerObjectReference(amountRef, referenceLoweringContext{AllowTarget: true})
 		if !ok {
 			return lifeRiderAmountLowering{}, false
@@ -2162,33 +2184,53 @@ func lifeRiderAmountObject(
 			return lifeRiderAmountLowering{object: obj, priorPrimitive: exile}, true
 		}
 		put, ok := sequence[effectIndex-1].Primitive.(game.PutOnBattlefield)
-		if !ok ||
-			put.PublishLinked != "" ||
-			!reanimationManaValueAntecedent(effects, effectIndex) {
+		if !ok || !reanimationManaValueAntecedent(effects, effectIndex) {
 			return lifeRiderAmountLowering{}, false
 		}
-		card, ok := put.Source.CardRef()
-		if !ok || card.Kind != game.CardReferenceTarget {
-			return lifeRiderAmountLowering{}, false
-		}
-		key := game.LinkedKey(fmt.Sprintf("life-rider-%d", effectIndex))
-		obj, ok := lowerObjectReference(amountRef, referenceLoweringContext{
-			PriorInstruction: effectIndex - 1,
-			PriorLinkedKey:   key,
-		})
-		if !ok {
-			return lifeRiderAmountLowering{}, false
-		}
-		put.PublishLinked = key
-		resultKey := game.ResultKey(fmt.Sprintf("life-rider-move-%d", effectIndex))
-		return lifeRiderAmountLowering{
-			object:         obj,
-			priorPrimitive: put,
-			priorResult:    resultKey,
-		}, true
+		return reanimationManaValuePublish(put, amountRef, effectIndex, false)
 	default:
 		return lifeRiderAmountLowering{}, false
 	}
+}
+
+// reanimationManaValuePublish rewrites the immediately preceding reanimation
+// PutOnBattlefield so it records the entered permanent under a linked key and
+// returns the linked object whose mana value the life rider reads, gated on the
+// move reaching the battlefield. targetBound selects whether the amount
+// reference binds the move's target card ("that card's mana value") or the prior
+// instruction's published result.
+func reanimationManaValuePublish(
+	put game.PutOnBattlefield,
+	amountRef compiler.CompiledReference,
+	effectIndex int,
+	targetBound bool,
+) (lifeRiderAmountLowering, bool) {
+	if put.PublishLinked != "" {
+		return lifeRiderAmountLowering{}, false
+	}
+	card, ok := put.Source.CardRef()
+	if !ok || card.Kind != game.CardReferenceTarget {
+		return lifeRiderAmountLowering{}, false
+	}
+	key := game.LinkedKey(fmt.Sprintf("life-rider-%d", effectIndex))
+	refCtx := referenceLoweringContext{}
+	if targetBound {
+		refCtx.TargetLinkedKey = key
+	} else {
+		refCtx.PriorInstruction = effectIndex - 1
+		refCtx.PriorLinkedKey = key
+	}
+	obj, ok := lowerObjectReference(amountRef, refCtx)
+	if !ok {
+		return lifeRiderAmountLowering{}, false
+	}
+	put.PublishLinked = key
+	resultKey := game.ResultKey(fmt.Sprintf("life-rider-move-%d", effectIndex))
+	return lifeRiderAmountLowering{
+		object:         obj,
+		priorPrimitive: put,
+		priorResult:    resultKey,
+	}, true
 }
 
 func reanimationManaValueAntecedent(effects []compiler.CompiledEffect, effectIndex int) bool {
@@ -2201,7 +2243,6 @@ func reanimationManaValueAntecedent(effects []compiler.CompiledEffect, effectInd
 		effect.Negated ||
 		effect.FromZone != zone.Graveyard ||
 		effect.ToZone != zone.Battlefield ||
-		!effect.UnderYourControl ||
 		effect.EntersTapped ||
 		effect.CounterKindKnown ||
 		effect.Amount.Known ||
@@ -2221,7 +2262,17 @@ func reanimationManaValueAntecedent(effects []compiler.CompiledEffect, effectInd
 	if !slices.Equal(selection.RequiredTypes, []types.Card{types.Creature}) {
 		return false
 	}
+	// "from your graveyard" restricts the reanimation target to the controller's
+	// own graveyard, leaving Controller == ControllerYou; "from a graveyard"
+	// leaves it ControllerAny. Either ownership is a valid reanimation antecedent
+	// for the mana-value rider, which reads the entered permanent regardless of
+	// whose graveyard it came from. Clear the ownership constraint before the
+	// no-other-constraints emptiness check and fail closed for any other owner.
+	if selection.Controller != game.ControllerAny && selection.Controller != game.ControllerYou {
+		return false
+	}
 	selection.RequiredTypes = nil
+	selection.Controller = game.ControllerAny
 	return selection.Empty()
 }
 
