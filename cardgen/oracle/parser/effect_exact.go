@@ -1173,6 +1173,8 @@ func exactLifeEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVerb str
 		prefixes = []string{"Each other player " + subjectVerb}
 	case EffectContextEachPlayer:
 		prefixes = []string{"Each player " + subjectVerb}
+	case EffectContextDefendingPlayer:
+		prefixes = []string{"Defending player " + subjectVerb}
 	case EffectContextTarget, EffectContextPriorSubject:
 		if len(effect.Targets) == 1 && effect.Targets[0].Exact {
 			prefixes = []string{titleFirstEffectText(effect.Targets[0].Text) + " " + subjectVerb}

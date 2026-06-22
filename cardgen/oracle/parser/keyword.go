@@ -659,6 +659,67 @@ func annihilatorLineRank(line string) (int, bool) {
 	return rank, true
 }
 
+// expandAfflictKeyword rewrites each printed "Afflict N" keyword line into the
+// triggered ability it abbreviates: "Whenever this creature becomes blocked,
+// defending player loses N life." (CR 702.131). Afflict is pure shorthand for
+// that combat trigger, so expanding it to canonical wording lets the standard
+// trigger pipeline lower it. The rewrite is parser-owned because it is a wording
+// substitution; downstream stages see only the expanded ability.
+func expandAfflictKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		rank, ok := afflictLineRank(line)
+		if !ok {
+			continue
+		}
+		lines[i] = afflictCanonicalText(rank)
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
+
+// afflictCanonicalText is the triggered ability that the printed "Afflict N"
+// keyword abbreviates. The life-loss amount is always written as a numeral, as
+// in the printed reminder text.
+func afflictCanonicalText(rank int) string {
+	return "Whenever this creature becomes blocked, defending player loses " +
+		strconv.Itoa(rank) + " life."
+}
+
+// afflictLineRank reports the rank N of a line that is exactly the printed
+// "Afflict N" keyword, optionally followed only by its parenthesized reminder
+// text. Lines that merely contain the word elsewhere (e.g. "creatures you
+// control have afflict 2"), or pair it with other rules text, are left
+// untouched.
+func afflictLineRank(line string) (int, bool) {
+	const prefix = "Afflict "
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, prefix) {
+		return 0, false
+	}
+	rest := strings.TrimSpace(trimmed[len(prefix):])
+	digits := 0
+	for digits < len(rest) && rest[digits] >= '0' && rest[digits] <= '9' {
+		digits++
+	}
+	if digits == 0 {
+		return 0, false
+	}
+	rank, err := strconv.Atoi(rest[:digits])
+	if err != nil || rank <= 0 {
+		return 0, false
+	}
+	tail := strings.TrimSpace(rest[digits:])
+	if tail != "" && (!strings.HasPrefix(tail, "(") || !strings.HasSuffix(tail, ")")) {
+		return 0, false
+	}
+	return rank, true
+}
+
 // expandAfterlifeKeyword rewrites each printed "Afterlife N" keyword line into
 // the dies-triggered token creation it abbreviates: "When this creature dies,
 // create N 1/1 white and black Spirit creature tokens with flying." (CR

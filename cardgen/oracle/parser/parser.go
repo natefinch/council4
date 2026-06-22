@@ -16,6 +16,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	source = expandExtortKeyword(source)
 	source = expandDevourKeyword(source)
 	source = expandAnnihilatorKeyword(source)
+	source = expandAfflictKeyword(source)
 	source = expandAfterlifeKeyword(source)
 	source = expandRenownKeyword(source)
 	source = expandModularKeyword(source)
