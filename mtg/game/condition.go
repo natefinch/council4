@@ -1,7 +1,6 @@
 package game
 
 import (
-	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -19,15 +18,10 @@ type Condition struct {
 	// Negate inverts the whole condition, e.g. "unless you control...".
 	Negate bool
 
-	// ControllerControls requires the context controller to control matching
-	// permanents. It is ignored when the filter is empty.
-	ControllerControls PermanentFilter
-
-	// ControlsMatching is the Selection-based successor to ControllerControls.
-	// When present, the context controller must control at least MinCount
-	// objects matching the Selection (MinCount defaults to 1), optionally
-	// constrained by TotalPower. ControllerControls and ControlsMatching must
-	// not both be specified.
+	// ControlsMatching requires the context controller to control matching
+	// permanents. When present, the context controller must control at least
+	// MinCount objects matching the Selection (MinCount defaults to 1),
+	// optionally constrained by TotalPower. It is ignored when absent.
 	ControlsMatching opt.V[SelectionCount]
 
 	// ControllerLifeAtLeast requires the context controller's current life total
@@ -204,46 +198,9 @@ type ControlCountComparison struct {
 	Op        compare.Op
 }
 
-// PermanentFilter matches permanents for reusable condition predicates. Empty
-// fields are wildcards. Types and Supertypes are all required; SubtypesAny and
-// ColorsAny match when any listed value is present.
-type PermanentFilter struct {
-	Types          []types.Card
-	Supertypes     []types.Super
-	SubtypesAny    []types.Sub
-	ColorsAny      []color.Color
-	ExcludedColors []color.Color
-
-	// MinCount defaults to 1 when any other filter field is set.
-	MinCount int
-
-	Power      opt.V[compare.Int]
-	Toughness  opt.V[compare.Int]
-	TotalPower opt.V[compare.Int]
-
-	// ExcludeSource ignores the condition source permanent when counting
-	// matches, for conditions that ask for "another" permanent.
-	ExcludeSource bool
-}
-
-// Empty reports whether the filter contains no active predicate.
-func (f PermanentFilter) Empty() bool {
-	return len(f.Types) == 0 &&
-		len(f.Supertypes) == 0 &&
-		len(f.SubtypesAny) == 0 &&
-		len(f.ColorsAny) == 0 &&
-		len(f.ExcludedColors) == 0 &&
-		f.MinCount == 0 &&
-		!f.Power.Exists &&
-		!f.Toughness.Exists &&
-		!f.TotalPower.Exists &&
-		!f.ExcludeSource
-}
-
 // Empty reports whether the condition contains no active predicate.
 func (c *Condition) Empty() bool {
-	return c.ControllerControls.Empty() &&
-		!c.ControlsMatching.Exists &&
+	return !c.ControlsMatching.Exists &&
 		c.ControllerLifeAtLeast == 0 &&
 		!c.ControllerLifeAtMost.Exists &&
 		c.ControllerLifeAtLeastAboveStarting == 0 &&

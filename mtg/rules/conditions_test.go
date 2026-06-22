@@ -27,15 +27,17 @@ func TestConditionControllerControlsPermanentFilter(t *testing.T) {
 	})
 
 	condition := opt.Val(game.Condition{
-		ControllerControls: game.PermanentFilter{
-			Types:      []types.Card{types.Land},
-			Supertypes: []types.Super{types.Basic},
-			SubtypesAny: []types.Sub{
-				types.Swamp,
-				types.Mountain,
+		ControlsMatching: opt.Val(game.SelectionCount{
+			Selection: game.Selection{
+				RequiredTypes: []types.Card{types.Land},
+				Supertypes:    []types.Super{types.Basic},
+				SubtypesAny: []types.Sub{
+					types.Swamp,
+					types.Mountain,
+				},
 			},
 			MinCount: 1,
-		},
+		}),
 	})
 	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
 		t.Fatal("condition did not match controlled basic Mountain")
@@ -45,13 +47,15 @@ func TestConditionControllerControlsPermanentFilter(t *testing.T) {
 	}
 
 	powerCondition := opt.Val(game.Condition{
-		ControllerControls: game.PermanentFilter{
-			Types: []types.Card{types.Creature},
-			Power: opt.Val(compare.Int{
-				Op:    compare.GreaterOrEqual,
-				Value: 7,
-			}),
-		},
+		ControlsMatching: opt.Val(game.SelectionCount{
+			Selection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Power: opt.Val(compare.Int{
+					Op:    compare.GreaterOrEqual,
+					Value: 7,
+				}),
+			},
+		}),
 	})
 	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, powerCondition) {
 		t.Fatal("condition did not match controlled creature with power >= 7")
@@ -70,11 +74,13 @@ func TestConditionControllerControlsPermanentFilterCanExcludeSource(t *testing.T
 		Toughness: opt.Val(game.PT{Value: 5})},
 	})
 	condition := opt.Val(game.Condition{
-		ControllerControls: game.PermanentFilter{
-			Types:         []types.Card{types.Creature},
-			ExcludeSource: true,
-			Power:         opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4}),
-		},
+		ControlsMatching: opt.Val(game.SelectionCount{
+			Selection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				ExcludeSource: true,
+				Power:         opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4}),
+			},
+		}),
 	})
 	if conditionSatisfied(g, conditionContext{controller: game.Player1, source: source}, condition) {
 		t.Fatal("condition matched source as another creature")
@@ -493,10 +499,12 @@ func TestConditionControllerControlsTotalPower(t *testing.T) {
 	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Land", Types: []types.Card{types.Land}}})
 
 	condition := opt.Val(game.Condition{
-		ControllerControls: game.PermanentFilter{
-			Types:      []types.Card{types.Creature},
+		ControlsMatching: opt.Val(game.SelectionCount{
+			Selection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
 			TotalPower: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 8}),
-		},
+		}),
 	})
 	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
 		t.Fatal("condition did not match total creature power >= 8")

@@ -1402,17 +1402,8 @@ func (v *cardDefValidator) validateCondition(faceName, path string, condition *C
 	if condition.SpellXAtLeast < 0 {
 		v.add(faceName, appendPath(path, "SpellXAtLeast"), CardDefIssueInvalidCondition, "spell-X threshold cannot be negative")
 	}
-	if condition.ControllerControls.MinCount < 0 {
-		v.add(faceName, appendPath(path, "ControllerControls.MinCount"), CardDefIssueInvalidCondition, "permanent-count threshold cannot be negative")
-	}
-	if !condition.ControllerControls.Empty() {
-		v.validateSelection(faceName, appendPath(path, "ControllerControls"), condition.ControllerControls.Selection())
-	}
 	if condition.ControlsMatching.Exists {
 		v.validateConditionSelectionCount(faceName, appendPath(path, "ControlsMatching"), condition.ControlsMatching.Val)
-		if !condition.ControllerControls.Empty() {
-			v.add(faceName, path, CardDefIssueInvalidSelection, "Condition sets both ControllerControls and ControlsMatching")
-		}
 	}
 	if condition.AnyOpponentControls.Exists {
 		v.validateConditionSelectionCount(faceName, appendPath(path, "AnyOpponentControls"), condition.AnyOpponentControls.Val)

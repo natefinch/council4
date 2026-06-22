@@ -70,15 +70,17 @@ var GimliSRecklessMight = func() *game.CardDef {
 				InterveningIf: "creatures you control have total power 8 or greater",
 				InterveningCondition: opt.Val(game.Condition{
 					Text: "creatures you control have total power 8 or greater",
-					ControllerControls: game.PermanentFilter{
-						Types: []types.Card{
-							types.Creature,
+					ControlsMatching: opt.Val(game.SelectionCount{
+						Selection: game.Selection{
+							RequiredTypes: []types.Card{
+								types.Creature,
+							},
 						},
 						TotalPower: opt.Val(compare.Int{
 							Op:    compare.GreaterOrEqual,
 							Value: 8,
 						}),
-					},
+					}),
 				}),
 			},
 			Content: game.Mode{

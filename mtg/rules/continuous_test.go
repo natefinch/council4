@@ -241,9 +241,11 @@ func TestConditionalSourceKeywordEffectTracksCondition(t *testing.T) {
 		Toughness: opt.Val(game.PT{Value: 2}),
 		StaticAbilities: []game.StaticAbility{{
 			Condition: opt.Val(game.Condition{
-				ControllerControls: game.PermanentFilter{
-					SubtypesAny: []types.Sub{types.Mountain},
-				},
+				ControlsMatching: opt.Val(game.SelectionCount{
+					Selection: game.Selection{
+						SubtypesAny: []types.Sub{types.Mountain},
+					},
+				}),
 			}),
 			ContinuousEffects: []game.ContinuousEffect{{
 				Layer:          game.LayerAbility,
@@ -281,10 +283,12 @@ func TestConditionalSourceKeywordEffectUsesEffectiveCharacteristics(t *testing.T
 		Types: []types.Card{types.Creature},
 		StaticAbilities: []game.StaticAbility{{
 			Condition: opt.Val(game.Condition{
-				ControllerControls: game.PermanentFilter{
-					Types:     []types.Card{types.Creature},
-					ColorsAny: []color.Color{color.Red},
-				},
+				ControlsMatching: opt.Val(game.SelectionCount{
+					Selection: game.Selection{
+						RequiredTypes: []types.Card{types.Creature},
+						ColorsAny:     []color.Color{color.Red},
+					},
+				}),
 			}),
 			ContinuousEffects: []game.ContinuousEffect{{
 				Layer:          game.LayerAbility,

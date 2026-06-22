@@ -61,15 +61,17 @@ var BugenhagenWiseElder = func() *game.CardDef {
 				},
 				InterveningIf: "if you control a creature with power 7 or greater",
 				InterveningCondition: opt.Val(game.Condition{
-					ControllerControls: game.PermanentFilter{
-						Types: []types.Card{
-							types.Creature,
+					ControlsMatching: opt.Val(game.SelectionCount{
+						Selection: game.Selection{
+							RequiredTypes: []types.Card{
+								types.Creature,
+							},
+							Power: opt.Val(compare.Int{
+								Op:    compare.GreaterOrEqual,
+								Value: 7,
+							}),
 						},
-						Power: opt.Val(compare.Int{
-							Op:    compare.GreaterOrEqual,
-							Value: 7,
-						}),
-					},
+					}),
 				}),
 			},
 			Content: game.Mode{

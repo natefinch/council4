@@ -800,20 +800,6 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		return "", err
 	}
 	fields = append(fields, objectFields...)
-	if !cond.ControllerControls.Empty() {
-		filter := cond.ControllerControls
-		if filter.Power.Exists ||
-			filter.Toughness.Exists ||
-			filter.TotalPower.Exists {
-			return "", fmt.Errorf("render: unsupported PermanentFilter shape for %s condition", context)
-		}
-		filterStr, err := r.renderPermanentFilterForCondition(ctx, filter)
-		if err != nil {
-			return "", err
-		}
-		fields = append(fields, fmt.Sprintf("ControllerControls: %s,", filterStr))
-		hasPredicate = true
-	}
 	if cond.ControlsMatching.Exists {
 		rendered, err := r.renderSelectionCountForCondition(ctx, cond.ControlsMatching.Val)
 		if err != nil {
@@ -1126,65 +1112,6 @@ func renderControlPlayerScope(scope game.ControlPlayerScope) (string, error) {
 	default:
 		return "", fmt.Errorf("render: unsupported control player scope %d", scope)
 	}
-}
-
-func (Renderer) renderPermanentFilterForCondition(ctx *renderCtx, filter game.PermanentFilter) (string, error) {
-	if filter.MinCount < 0 {
-		return "", errors.New("render: condition permanent-count threshold cannot be negative")
-	}
-	var fields []string
-	if len(filter.Types) > 0 {
-		lits, err := renderTypesCardSlice(ctx, filter.Types)
-		if err != nil {
-			return "", err
-		}
-		fields = append(fields, fmt.Sprintf("Types: %s,", lits))
-	}
-	if len(filter.Supertypes) > 0 {
-		ctx.need(importTypes)
-		literals := make([]string, 0, len(filter.Supertypes))
-		for _, st := range filter.Supertypes {
-			lit, err := supertypeLiteral(st)
-			if err != nil {
-				return "", err
-			}
-			literals = append(literals, lit)
-		}
-		fields = append(fields, fmt.Sprintf("Supertypes: []types.Super{%s},", strings.Join(literals, ", ")))
-	}
-	if len(filter.SubtypesAny) > 0 {
-		ctx.need(importTypes)
-		literals := make([]string, 0, len(filter.SubtypesAny))
-		cardTypes := make([]string, 0, len(filter.Types))
-		for _, cardType := range filter.Types {
-			cardTypes = append(cardTypes, string(cardType))
-		}
-		for _, subtype := range filter.SubtypesAny {
-			literals = append(literals, SubtypeToLiteral(string(subtype), cardTypes))
-		}
-		fields = append(fields, fmt.Sprintf("SubtypesAny: []types.Sub{%s},", strings.Join(literals, ", ")))
-	}
-	if len(filter.ColorsAny) > 0 {
-		literals, err := renderColorSlice(ctx, filter.ColorsAny)
-		if err != nil {
-			return "", err
-		}
-		fields = append(fields, fmt.Sprintf("ColorsAny: %s,", literals))
-	}
-	if len(filter.ExcludedColors) > 0 {
-		literals, err := renderColorSlice(ctx, filter.ExcludedColors)
-		if err != nil {
-			return "", err
-		}
-		fields = append(fields, fmt.Sprintf("ExcludedColors: %s,", literals))
-	}
-	if filter.MinCount != 0 {
-		fields = append(fields, fmt.Sprintf("MinCount: %d,", filter.MinCount))
-	}
-	if filter.ExcludeSource {
-		fields = append(fields, "ExcludeSource: true,")
-	}
-	return structLit("game.PermanentFilter", fields), nil
 }
 
 // renderEntersAsCopyReplacement renders the self enters-as-copy replacement

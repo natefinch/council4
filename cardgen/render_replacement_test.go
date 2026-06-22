@@ -338,7 +338,7 @@ func TestRenderControlledPermanentCounterKindPlacementReplacement(t *testing.T) 
 func TestRenderConditionForETBReplacementRejectsNegativePermanentCount(t *testing.T) {
 	tests := map[string]game.Condition{
 		"controller": {
-			ControllerControls: game.PermanentFilter{MinCount: -1},
+			ControlsMatching: opt.Val(game.SelectionCount{MinCount: -1}),
 		},
 		"one opponent": {
 			AnyOpponentControls: opt.Val(game.SelectionCount{MinCount: -1}),

@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 // CinderGlade is the card definition for Cinder Glade.
@@ -36,11 +37,13 @@ var CinderGlade = func() *game.CardDef {
 	card.ReplacementAbilities = append(card.ReplacementAbilities,
 		game.EntersTappedIfReplacement("This land enters tapped unless you control two or more basic lands.", &game.Condition{
 			Negate: true,
-			ControllerControls: game.PermanentFilter{
-				Types:      []types.Card{types.Land},
-				Supertypes: []types.Super{types.Basic},
-				MinCount:   2,
-			},
+			ControlsMatching: opt.Val(game.SelectionCount{
+				Selection: game.Selection{
+					RequiredTypes: []types.Card{types.Land},
+					Supertypes:    []types.Super{types.Basic},
+				},
+				MinCount: 2,
+			}),
 		}),
 	)
 	return card
