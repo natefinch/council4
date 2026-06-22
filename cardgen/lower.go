@@ -154,6 +154,7 @@ func lowerFaceAbilities(
 		InstantOrSorcery: slices.Contains(parsedType.Types, "Instant") || slices.Contains(parsedType.Types, "Sorcery"),
 		Planeswalker:     slices.Contains(parsedType.Types, "Planeswalker"),
 		Saga:             slices.Contains(parsedType.Subtypes, "Saga"),
+		Class:            slices.Contains(parsedType.Subtypes, "Class"),
 		CardName:         face.Name,
 	})
 	compilation, compilerDiagnostics := compiler.Compile(document, compiler.Context{})
@@ -167,15 +168,25 @@ func lowerFaceAbilities(
 	var unsupported []shared.Diagnostic
 	var pendingPonderPrefix *compiler.CompiledAbility
 	creatureSubtypes := eternalizeFamilyCreatureSubtypes(parsedType.Subtypes)
+	saga := slices.Contains(parsedType.Subtypes, "Saga")
+	isClass := slices.Contains(parsedType.Subtypes, "Class")
+	classLevel := 1
 	for i, ability := range compilation.Abilities {
 		syntax := &compilation.Syntax.Abilities[i]
-		lowered, diagnostic := lowerExecutableAbility(
-			face.Name,
-			slices.Contains(parsedType.Subtypes, "Saga"),
-			creatureSubtypes,
-			ability,
-			syntax,
-		)
+		var lowered abilityLowering
+		var diagnostic *shared.Diagnostic
+		levelGain := ability.ClassLevelGain
+		if levelGain > 0 {
+			lowered, diagnostic = lowerClassLevelGain(face.Name, ability, syntax, classLevel)
+		} else {
+			lowered, diagnostic = lowerExecutableAbility(
+				face.Name,
+				saga,
+				creatureSubtypes,
+				ability,
+				syntax,
+			)
+		}
 		if diagnostic != nil {
 			unsupported = append(unsupported, *diagnostic)
 			continue
@@ -183,6 +194,15 @@ func lowerFaceAbilities(
 		if !lowered.complete(ability, syntax) {
 			unsupported = append(unsupported, *incompleteLoweringDiagnostic(ability))
 			continue
+		}
+		if isClass && levelGain == 0 && classLevel >= 2 {
+			if diagnostic := gateLoweredAbilityByClassLevel(&lowered, ability, classLevel); diagnostic != nil {
+				unsupported = append(unsupported, *diagnostic)
+				continue
+			}
+		}
+		if levelGain > 0 {
+			classLevel = levelGain
 		}
 		result.StaticAbilities = append(result.StaticAbilities, lowered.staticAbilities...)
 		appendSimpleLoweredAbilities(&result, &lowered)
@@ -812,6 +832,9 @@ func lowerExecutableAbility(
 		return lowerSpellAlternativeCost(cardName, ability)
 	case compiler.AbilityReminder:
 		if saga && syntax.SagaReminder {
+			return abilityLowering{sourceSpans: []shared.Span{ability.Span}}, nil
+		}
+		if syntax.ClassReminder {
 			return abilityLowering{sourceSpans: []shared.Span{ability.Span}}, nil
 		}
 		return lowerReminderManaAbility(ability, syntax)

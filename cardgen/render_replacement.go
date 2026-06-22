@@ -779,13 +779,13 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		cond.ControllerLifeExactly.Exists && cond.ControllerLifeExactly.Val < 0 ||
 		cond.ControllerCreaturePowerDiversityAtLeast < 0 ||
 		cond.ControllerGainedLifeThisTurnAtLeast < 0 ||
+		cond.SourceClassLevelAtLeast < 0 ||
+		cond.SourceClassLevelLessThan < 0 ||
 		cond.ControllerGraveyardCardOfTypeCountAtLeast < 0 {
 		return "", fmt.Errorf("render: %s condition has a negative threshold", context)
 	}
 	// Reject unsupported condition fields.
-	if cond.SourceClassLevelAtLeast != 0 ||
-		cond.SourceClassLevelLessThan != 0 ||
-		cond.SourceNotMonstrous ||
+	if cond.SourceNotMonstrous ||
 		cond.ControllerHasMaxSpeed ||
 		cond.TargetEnteredThisTurn.Exists ||
 		cond.CastFromZone.Exists {
@@ -847,6 +847,14 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	}
 	if cond.ControllerLibrarySizeAtLeast > 0 {
 		fields = append(fields, fmt.Sprintf("ControllerLibrarySizeAtLeast: %d,", cond.ControllerLibrarySizeAtLeast))
+		hasPredicate = true
+	}
+	if cond.SourceClassLevelAtLeast > 0 {
+		fields = append(fields, fmt.Sprintf("SourceClassLevelAtLeast: %d,", cond.SourceClassLevelAtLeast))
+		hasPredicate = true
+	}
+	if cond.SourceClassLevelLessThan > 0 {
+		fields = append(fields, fmt.Sprintf("SourceClassLevelLessThan: %d,", cond.SourceClassLevelLessThan))
 		hasPredicate = true
 	}
 	if cond.ControllerLifeExactly.Exists {

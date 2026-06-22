@@ -95,6 +95,11 @@ type CompiledAbility struct {
 	Trigger                    *CompiledTrigger
 	Content                    AbilityContent
 	Static                     *CompiledStaticSemantics
+	// ClassLevelGain is the target level of a Class enchantment's level-up
+	// activated ability ("{cost}: Level N"), or 0 when this ability is not a
+	// level-up. The compiler copies the parser's typed level so lowering emits
+	// the SetClassLevel ability without re-reading the body wording.
+	ClassLevelGain int
 }
 
 // CompiledSourceAbilityCostReduction describes a source-local activated-ability

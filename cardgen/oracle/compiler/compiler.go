@@ -76,6 +76,7 @@ func compileAbility(
 			compiled.ExactSequenceDrawOffset = uint8(offset)
 		}
 	}
+	compiled.ClassLevelGain = ability.ClassLevelGain
 	if ability.Modal != nil {
 		for i := range ability.Modal.Options {
 			compiledMode, modeDiagnostics := compileMode(&ability.Modal.Options[i], context)
@@ -159,6 +160,7 @@ func compileAbility(
 	}
 	if kind != AbilityReminder && kind != AbilitySpellAdditionalCost && kind != AbilitySpellAlternativeCost && ability.Modal == nil &&
 		compiled.ExactSequence == ExactSequenceUnknown &&
+		compiled.ClassLevelGain == 0 &&
 		len(compiled.Content.Effects) == 0 && len(compiled.Content.Keywords) == 0 &&
 		!legacyEffectsPresent(ability.Sentences) &&
 		(compiled.Static == nil || len(compiled.Static.Declarations) == 0) {
