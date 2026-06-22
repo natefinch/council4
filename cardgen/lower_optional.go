@@ -1289,6 +1289,24 @@ func lowerOptionalHaveEffect(
 	// second effect (the structural "have"); as the now-sole effect it lowers
 	// through the standard single-effect path.
 	strippedAction.RequiresOrderedLowering = false
+	if !strippedAction.Exact && causativeActionForcibleExact(&strippedAction) {
+		// The causative action's clause uses the base-verb form ("each player
+		// draw a card", "target player mill two cards") because it is governed by
+		// "have". The parser's exact reconstruction only matches the finite-verb
+		// standalone form ("Each player draws a card"), so the action stays
+		// non-exact even though every field the runtime needs — kind, fixed
+		// amount, subject context, and any target — is fully parsed. Like the
+		// RequiresOrderedLowering flag cleared above, this non-exactness is an
+		// artifact of the structural "have" sibling, not a genuinely unrecognized
+		// clause (HasUnrecognizedSibling is required to be false). Clear it and
+		// scope the body to the action's own bindings so the subject-sensitive
+		// single-effect lowerer sees exactly the standalone action it would lower
+		// for the finite form, then validates the shape from those parsed fields.
+		strippedAction.Exact = true
+		strippedCtx.content.Targets = action.Targets
+		strippedCtx.content.References = action.References
+		strippedCtx.content.Keywords = keywordsWithinSpan(ctx.content.Keywords, action.ClauseSpan)
+	}
 	strippedCtx.content.Effects = []compiler.CompiledEffect{strippedAction}
 	content, diagnostic := lowerContent(cardName, strippedCtx, syntax)
 	if diagnostic != nil {
@@ -1298,6 +1316,32 @@ func lowerOptionalHaveEffect(
 		return game.AbilityContent{}, false
 	}
 	return content, true
+}
+
+// causativeActionForcibleExact reports whether a non-exact causative "have"
+// action may have its exactness artifact cleared (see lowerOptionalHaveEffect).
+// It is restricted to action kinds whose runtime effect is fully determined by
+// the parser's structured fields (effect kind, fixed amount, subject context,
+// and target) so that clearing the base-verb-only non-exactness cannot admit an
+// unhandled clause: the corresponding single-effect lowerer re-validates every
+// one of those fields and fails closed otherwise. A genuinely unrecognized
+// sibling (HasUnrecognizedSibling) is never forcible, and only fixed amounts are
+// admitted so a dynamic or variable count cannot slip past as exact.
+func causativeActionForcibleExact(action *compiler.CompiledEffect) bool {
+	if action.HasUnrecognizedSibling || !action.Amount.Known {
+		return false
+	}
+	switch action.Kind {
+	case compiler.EffectDraw,
+		compiler.EffectMill,
+		compiler.EffectDiscard,
+		compiler.EffectGain,
+		compiler.EffectLose,
+		compiler.EffectModifyPT:
+		return true
+	default:
+		return false
+	}
 }
 
 // lowerOptionalBlinkReturn lowers the optional immediate-blink (flicker) body —
