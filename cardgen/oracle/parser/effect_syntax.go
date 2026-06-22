@@ -1048,6 +1048,14 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	if group, ok := exactCreateCopyTokenForEachEffectSyntax(effect, atoms); ok {
 		effect.TokenCopyOfForEach = true
 		effect.TokenCopyForEachGroup = group
+		// The per-each copy is the more specific shape: its "For each <group>,"
+		// prefix iterates the controlled group and its trailing "that <permanent>"
+		// pronoun names each member, not a single fixed source. Clear the
+		// single-source copy flags the reference matcher also set so the lowering
+		// dispatches to the per-each path.
+		effect.TokenCopyOfTarget = false
+		effect.TokenCopyOfReference = false
+		effect.TokenCopyOfAttached = false
 	}
 	effect.Mana.LegacyBodyExact = legacyExactManaBody(effect, sentence)
 	if effect.Kind == EffectSearch {
