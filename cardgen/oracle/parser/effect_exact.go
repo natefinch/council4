@@ -41,6 +41,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			effect.HandDiscard.AtRandom
 	case EffectDestroy:
 		return exactDirectTargetEffectSyntax(effect, "Destroy") ||
+			exactMultiDistinctTargetEffectSyntax(effect, "Destroy") ||
 			exactMassEffectSyntax(effect, "Destroy all ") ||
 			exactMassEachEffectSyntax(effect, "Destroy each ") ||
 			exactBackReferenceEffectSyntax(effect, "Destroy")
@@ -56,6 +57,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactCounteredSpellExileSyntax(effect) ||
 			exactExileTopOfLibrarySyntax(effect) ||
 			exactDirectTargetEffectSyntax(effect, "Exile") ||
+			exactMultiDistinctTargetEffectSyntax(effect, "Exile") ||
 			exactMassEffectSyntax(effect, "Exile all ") ||
 			exactBackReferenceEffectSyntax(effect, "Exile") ||
 			exactGraveyardExileEffectSyntax(effect) ||

@@ -163,6 +163,11 @@ func lowerFixedDestroySpell(
 	}); ok {
 		return content, nil
 	}
+	if content, ok := lowerMultiDistinctTargetPermanentSpell(ctx, func(object game.ObjectReference) game.Primitive {
+		return game.Destroy{Object: object, PreventRegeneration: preventRegeneration}
+	}); ok {
+		return content, nil
+	}
 	colorGate, hasColorGate := targetColorGateSelection(ctx.content.Conditions)
 	if len(ctx.content.Targets) != 1 ||
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
@@ -230,6 +235,11 @@ func lowerFixedExileSpell(
 		}.Ability(), nil
 	}
 	if content, ok := lowerMultiTargetExileSpell(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerMultiDistinctTargetPermanentSpell(ctx, func(object game.ObjectReference) game.Primitive {
+		return game.Exile{Object: object}
+	}); ok {
 		return content, nil
 	}
 	return lowerFixedPermanentTargetSpell(ctx, "Exile", func(object game.ObjectReference) game.Primitive {
@@ -783,6 +793,52 @@ func lowerMultiTargetExileSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	return lowerMultiTargetPermanentSpell(ctx, func(object game.ObjectReference) game.Primitive {
 		return game.Exile{Object: object}
 	})
+}
+
+// lowerMultiDistinctTargetPermanentSpell lowers a single permanent verb (destroy,
+// exile) applied to two or more distinct single-permanent targets, each of its
+// own type ("Destroy target artifact, target creature, target enchantment, and
+// target land." — Decimate, "Destroy target artifact and target creature." —
+// shorter heterogeneous forms). Each "target <type>" clause compiles to its own
+// {1,1} exact TargetSpec, and the verb emits one primitive per target slot.
+// Object references address chosen targets by a flat slot index across all
+// specs, so with every spec admitting one slot the slot index equals the spec
+// index, letting slot i carry the i-th distinct target. It fails closed for the
+// single-target form (handled by the single-target path) and for any optional,
+// negated, conditional, keyword, modal, or referenced shape it does not model,
+// and for any target permanentTargetSpec cannot express.
+func lowerMultiDistinctTargetPermanentSpell(
+	ctx contentCtx,
+	primitiveFactory func(object game.ObjectReference) game.Primitive,
+) (game.AbilityContent, bool) {
+	if len(ctx.content.Targets) < 2 ||
+		ctx.content.Effects[0].Negated ||
+		ctx.content.Effects[0].Optional ||
+		!ctx.content.Effects[0].Exact ||
+		ctx.optional ||
+		ctx.content.Effects[0].Context != parser.EffectContextController ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	specs := make([]game.TargetSpec, 0, len(ctx.content.Targets))
+	sequence := make([]game.Instruction, 0, len(ctx.content.Targets))
+	for i := range ctx.content.Targets {
+		spec, ok := permanentTargetSpec(ctx.content.Targets[i])
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		specs = append(specs, spec)
+		sequence = append(sequence, game.Instruction{
+			Primitive: primitiveFactory(game.TargetPermanentReference(i)),
+		})
+	}
+	return game.Mode{
+		Targets:  specs,
+		Sequence: sequence,
+	}.Ability(), true
 }
 
 // lowerMultiTargetPermanentSpell lowers a single-object permanent verb (exile,
