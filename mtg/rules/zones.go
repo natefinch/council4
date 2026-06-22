@@ -38,6 +38,13 @@ type permanentCreationOptions struct {
 	Counters          []game.CounterPlacement
 	SimultaneousID    id.ID
 	XValue            int
+	// ColorsOfManaSpentToCast carries the number of distinct colors of mana
+	// spent to cast the spell that is resolving into this permanent, so a
+	// Converge enters-with-counters replacement ("for each color of mana spent
+	// to cast it") reads the count as the permanent enters. It is zero for a
+	// permanent that did not enter from a cast spell (a token, a copy, a
+	// put-into-play effect).
+	ColorsOfManaSpentToCast int
 }
 
 func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone zone.Type, face game.FaceIndex, continuous []game.ContinuousEffect, options permanentCreationOptions, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
@@ -70,10 +77,11 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		return nil, false
 	}
 	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
-		engine: e,
-		agents: agents,
-		log:    log,
-		xValue: options.XValue,
+		engine:            e,
+		agents:            agents,
+		log:               log,
+		xValue:            options.XValue,
+		colorsOfManaSpent: options.ColorsOfManaSpentToCast,
 	}, g, permanent, fromZone)
 	if options.ForceTapped {
 		permanent.Tapped = true
@@ -147,10 +155,11 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 	initializePermanentCounters(permanent, faceDef)
 	initializeReadAhead(e, g, permanent, agents, log)
 	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
-		engine: e,
-		agents: agents,
-		log:    log,
-		xValue: options.XValue,
+		engine:            e,
+		agents:            agents,
+		log:               log,
+		xValue:            options.XValue,
+		colorsOfManaSpent: options.ColorsOfManaSpentToCast,
 	}, g, permanent, fromZone)
 	if options.ForceTapped {
 		permanent.Tapped = true

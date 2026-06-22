@@ -2060,6 +2060,13 @@ const (
 	// counter-placement trigger. Added last so existing kinds keep their wire
 	// values.
 	DynamicAmountTriggeringCounterCount
+	// DynamicAmountColorsOfManaSpent is the number of distinct colors of mana
+	// spent to cast the source spell ("for each color of mana spent to cast it"
+	// — the Converge count). It backs the Converge enters-with-counters quantity
+	// (Crystalline Crawler); the runtime records the colors of mana spent as the
+	// spell's costs are paid and carries the count to the entering permanent.
+	// Added last so existing kinds keep their wire values.
+	DynamicAmountColorsOfManaSpent
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

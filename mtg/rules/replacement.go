@@ -17,10 +17,11 @@ import (
 )
 
 type enterBattlefieldContext struct {
-	engine *Engine
-	agents [game.NumPlayers]PlayerAgent
-	log    *TurnLog
-	xValue int
+	engine            *Engine
+	agents            [game.NumPlayers]PlayerAgent
+	log               *TurnLog
+	xValue            int
+	colorsOfManaSpent int
 }
 
 type damageEvent struct {
@@ -386,9 +387,10 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 			}
 			if placement.Dynamic.Exists && placement.Dynamic.Val != nil {
 				obj := &game.StackObject{
-					SourceID:     permanent.ObjectID,
-					SourceCardID: permanent.CardInstanceID,
-					Controller:   replacement.Controller,
+					SourceID:                permanent.ObjectID,
+					SourceCardID:            permanent.CardInstanceID,
+					Controller:              replacement.Controller,
+					ColorsOfManaSpentToCast: ctx.colorsOfManaSpent,
 				}
 				amount = dynamicAmountValue(g, obj, replacement.Controller, *placement.Dynamic.Val)
 			}

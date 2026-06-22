@@ -163,6 +163,17 @@ const (
 	// counter count recorded on the resolving ability's TriggerEvent.
 	// Added last so existing kinds keep their wire values.
 	DynamicAmountEventCounterCount
+	// DynamicAmountColorsOfManaSpentToCast is the number of distinct colors of
+	// mana spent to cast the spell that became the resolving ability's source
+	// (CR 202.2, CR 702.76). It backs the Converge count ("for each color of
+	// mana spent to cast it"), most commonly the enters-with-counters quantity
+	// on a creature such as Crystalline Crawler. The count is recorded as the
+	// spell's costs are paid and read from the evaluating stack object, which
+	// carries it forward to the entering permanent's replacement; colorless mana
+	// contributes no color, so a spell paid entirely with colorless or
+	// generic-from-colorless mana yields zero. Added last so existing kinds keep
+	// their wire values.
+	DynamicAmountColorsOfManaSpentToCast
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

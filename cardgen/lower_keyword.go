@@ -1475,6 +1475,7 @@ func rulesFreeAbilityWordLabel(label string) bool {
 		"Addendum",
 		"Celebration",
 		"Channel",
+		"Converge",
 		"Corrupted",
 		"Coven",
 		"Delirium",
