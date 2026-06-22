@@ -1185,6 +1185,35 @@ func TestGenerateExecutableCardSourceControllerDiscard(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceTapOrUntapTarget(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Coral Trickster",
+		Layout:     "normal",
+		ManaCost:   "{U}",
+		TypeLine:   "Instant",
+		OracleText: "Tap or untap target creature.",
+		Colors:     []string{"U"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		`Constraint: "target creature"`,
+		"PermanentTypes: []types.Card{types.Creature}",
+		"Primitive: game.TapOrUntap",
+		"Object: game.TargetPermanentReference(0)",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceTapTarget(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

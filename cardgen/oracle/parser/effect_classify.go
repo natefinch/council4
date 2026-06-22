@@ -754,11 +754,23 @@ func effectIndices(tokens []shared.Token, atoms Atoms) []int {
 	for i := range tokens {
 		if effectKindAt(tokens, i) != EffectUnknown &&
 			!atoms.SelfNameAt(tokens[i].Span) &&
-			!effectNounAt(tokens, i) {
+			!effectNounAt(tokens, i) &&
+			!tapOrUntapInnerUntapAt(tokens, i) {
 			result = append(result, i)
 		}
 	}
 	return result
+}
+
+// tapOrUntapInnerUntapAt reports whether the "untap" at index is the second verb
+// of a "tap or untap" choice ("Tap or untap target creature."), so it is not a
+// separate untap effect. The "tap or untap" phrase lowers to one TapOrUntap
+// instruction anchored on the leading "tap" verb.
+func tapOrUntapInnerUntapAt(tokens []shared.Token, index int) bool {
+	return index >= 2 &&
+		equalWord(tokens[index], "untap") &&
+		equalWord(tokens[index-1], "or") &&
+		(equalWord(tokens[index-2], "tap") || equalWord(tokens[index-2], "taps"))
 }
 
 func effectNounAt(tokens []shared.Token, index int) bool {
@@ -1042,6 +1054,9 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectUnknown
 	case kind == EffectModifyPT && playerCounterGainVerbAt(tokens, index):
 		return EffectGainPlayerCounter
+	case kind == EffectTap && index+2 < len(tokens) &&
+		equalWord(tokens[index+1], "or") && equalWord(tokens[index+2], "untap"):
+		return EffectTapOrUntap
 	default:
 		return kind
 	}

@@ -59,6 +59,7 @@ const (
 	EffectSearch            EffectKind = "EffectSearch"
 	EffectShuffle           EffectKind = "EffectShuffle"
 	EffectTap               EffectKind = "EffectTap"
+	EffectTapOrUntap        EffectKind = "EffectTapOrUntap"
 	EffectUntap             EffectKind = "EffectUntap"
 	EffectTransform         EffectKind = "EffectTransform"
 	EffectPreventDamage     EffectKind = "EffectPreventDamage"

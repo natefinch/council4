@@ -3480,7 +3480,8 @@ func legacyEffectCount(tokens []shared.Token, atoms Atoms) int {
 	for i := range tokens {
 		if legacyEffectKindAt(tokens, i) != EffectUnknown &&
 			!atoms.SelfNameAt(tokens[i].Span) &&
-			!effectWithinCondition(tokens, i) {
+			!effectWithinCondition(tokens, i) &&
+			!tapOrUntapInnerUntapAt(tokens, i) {
 			count++
 		}
 	}

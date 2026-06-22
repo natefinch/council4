@@ -242,7 +242,7 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		}
 		return r.renderDigPrimitive(ctx, value)
 	case game.PrimitiveDestroy, game.PrimitiveBounce, game.PrimitiveUntap,
-		game.PrimitiveTap, game.PrimitiveExile, game.PrimitivePhaseOut:
+		game.PrimitiveTap, game.PrimitiveTapOrUntap, game.PrimitiveExile, game.PrimitivePhaseOut:
 		return r.renderObjectOrGroupPrimitive(ctx, primitive)
 	case game.PrimitiveRegenerate, game.PrimitiveExplore,
 		game.PrimitiveCounterObject, game.PrimitiveSacrifice, game.PrimitiveSkipNextUntap,

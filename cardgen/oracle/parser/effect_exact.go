@@ -146,6 +146,8 @@ func exactEffectSyntaxTail(effect *EffectSyntax) bool {
 		return exactDirectTargetEffectSyntax(effect, "Tap") ||
 			exactDirectReferenceEffectSyntax(effect, "Tap") ||
 			exactMassEffectSyntax(effect, "Tap all ")
+	case EffectTapOrUntap:
+		return exactDirectTargetEffectSyntax(effect, "Tap or untap")
 	case EffectUntap:
 		return exactDirectTargetEffectSyntax(effect, "Untap") ||
 			exactDirectReferenceEffectSyntax(effect, "Untap") ||

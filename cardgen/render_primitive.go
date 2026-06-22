@@ -847,6 +847,12 @@ func (r Renderer) renderObjectOrGroupPrimitive(ctx *renderCtx, primitive game.Pr
 			return "", errors.New("render: internal error: Tap kind has unexpected concrete type")
 		}
 		return r.renderObjectOrGroup(ctx, "game.Tap", value.Object, value.Group)
+	case game.PrimitiveTapOrUntap:
+		value, ok := primitive.(game.TapOrUntap)
+		if !ok {
+			return "", errors.New("render: internal error: TapOrUntap kind has unexpected concrete type")
+		}
+		return r.renderObjectOrGroup(ctx, "game.TapOrUntap", value.Object, game.GroupReference{})
 	case game.PrimitiveExile:
 		value, ok := primitive.(game.Exile)
 		if !ok {

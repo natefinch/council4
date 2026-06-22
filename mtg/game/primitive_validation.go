@@ -975,6 +975,10 @@ func (p Tap) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
 }
 
+func (p TapOrUntap) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateObjectReference(p.Object, targets, checkTargets)
+}
+
 func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err

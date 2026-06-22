@@ -1281,6 +1281,10 @@ func lowerImmediateSingleEffectSpell(
 		}, func(object game.ObjectReference) game.Primitive {
 			return game.Tap{Object: object}
 		})
+	case compiler.EffectTapOrUntap:
+		return lowerFixedPermanentTargetSpell(ctx, "Tap or untap", func(object game.ObjectReference) game.Primitive {
+			return game.TapOrUntap{Object: object}
+		})
 	case compiler.EffectUntap:
 		return lowerUntapSpell(ctx)
 	case compiler.EffectExile:
