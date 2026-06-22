@@ -151,36 +151,17 @@ func TestValidateCardDefReportsTargetSpecDualSpecification(t *testing.T) {
 	}
 }
 
-func TestValidateCardDefReportsConditionDualSpecification(t *testing.T) {
-	card := &CardDef{CardFace: CardFace{
-		Name:       "Dual Condition",
-		OracleText: "As long as you control a creature, this gets +1/+1.",
-		StaticAbilities: []StaticAbility{{
-			Condition: opt.Val(Condition{
-				ControllerControls: PermanentFilter{Types: []types.Card{types.Creature}},
-				ControlsMatching: opt.Val(SelectionCount{
-					Selection: Selection{RequiredTypes: []types.Card{types.Creature}},
-				}),
-			}),
-		}},
-	}}
-
-	issues := ValidateCardDef(card)
-
-	if !hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
-		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidSelection)
-	}
-}
-
 func TestValidateCardDefReportsInvalidControllerControlsSelection(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name: "Invalid Condition",
 		StaticAbilities: []StaticAbility{{
 			Condition: opt.Val(Condition{
-				ControllerControls: PermanentFilter{
-					ColorsAny:      []color.Color{color.Red},
-					ExcludedColors: []color.Color{color.Red},
-				},
+				ControlsMatching: opt.Val(SelectionCount{
+					Selection: Selection{
+						ColorsAny:      []color.Color{color.Red},
+						ExcludedColors: []color.Color{color.Red},
+					},
+				}),
 			}),
 		}},
 	}}

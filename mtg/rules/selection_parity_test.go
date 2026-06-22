@@ -251,56 +251,55 @@ func TestSharedMatcherTargetPredicateParity(t *testing.T) {
 }
 
 // referenceConditionFilterMatches reproduces the legacy
-// permanentMatchesConditionFilter per-permanent semantics.
-func referenceConditionFilterMatches(g *game.Game, permanent *game.Permanent, filter game.PermanentFilter, useBase bool) bool {
+// permanentMatchesConditionFilter per-permanent semantics against a Selection.
+func referenceConditionFilterMatches(g *game.Game, permanent *game.Permanent, sel game.Selection, useBase bool) bool {
 	var values permanentEffectiveValues
 	if useBase {
 		values = basePermanentValues(g, permanent)
 	} else {
 		values = effectivePermanentValues(g, permanent)
 	}
-	for _, cardType := range filter.Types {
+	for _, cardType := range sel.RequiredTypes {
 		if !slices.Contains(values.types, cardType) {
 			return false
 		}
 	}
-	for _, supertype := range filter.Supertypes {
+	for _, supertype := range sel.Supertypes {
 		if !slices.Contains(values.supertypes, supertype) {
 			return false
 		}
 	}
-	if len(filter.SubtypesAny) > 0 && !slices.ContainsFunc(filter.SubtypesAny, func(subtype types.Sub) bool {
+	if len(sel.SubtypesAny) > 0 && !slices.ContainsFunc(sel.SubtypesAny, func(subtype types.Sub) bool {
 		return slices.Contains(values.subtypes, subtype)
 	}) {
 		return false
 	}
-	if filter.Power.Exists {
+	if sel.Power.Exists {
 		if useBase {
 			return false
 		}
-		if !values.powerOK || !filter.Power.Val.Matches(values.power) {
+		if !values.powerOK || !sel.Power.Val.Matches(values.power) {
 			return false
 		}
 	}
-	if filter.Toughness.Exists {
+	if sel.Toughness.Exists {
 		if useBase {
 			return false
 		}
-		if !values.toughnessOK || !filter.Toughness.Val.Matches(values.toughness) {
+		if !values.toughnessOK || !sel.Toughness.Val.Matches(values.toughness) {
 			return false
 		}
 	}
 	return true
 }
 
-func matchConditionFilter(g *game.Game, permanent *game.Permanent, filter game.PermanentFilter, useBase bool) bool {
+func matchConditionFilter(g *game.Game, permanent *game.Permanent, sel game.Selection, useBase bool) bool {
 	var values permanentEffectiveValues
 	if useBase {
 		values = basePermanentValues(g, permanent)
 	} else {
 		values = effectivePermanentValues(g, permanent)
 	}
-	sel := filter.Selection()
 	subject := selectionSubject{
 		kind:      subjectPermanent,
 		g:         g,
@@ -316,10 +315,10 @@ func TestSharedMatcherPermanentFilterParity(t *testing.T) {
 	board := newParityBoard(t)
 	g := board.g
 
-	filters := map[string]game.PermanentFilter{
+	filters := map[string]game.Selection{
 		"empty":          {},
-		"creature":       {Types: []types.Card{types.Creature}},
-		"artifact-crea":  {Types: []types.Card{types.Artifact, types.Creature}},
+		"creature":       {RequiredTypes: []types.Card{types.Creature}},
+		"artifact-crea":  {RequiredTypes: []types.Card{types.Artifact, types.Creature}},
 		"snow-super":     {Supertypes: []types.Super{types.Basic}},
 		"forest-subtype": {SubtypesAny: []types.Sub{types.Forest}},
 		"power-ge-3":     {Power: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 3})},

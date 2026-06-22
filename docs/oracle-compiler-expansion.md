@@ -363,8 +363,8 @@ Glade, Eclipsed Steppe, Prairie Stream, Radiant Summit, Scorched Geyser,
 Smoldering Marsh, Sodden Verdure, Sunken Hollow, Vernal Fen. Wording: "This
 land enters tapped unless you control two or more basic lands." Lowered to
 `game.EntersTappedIfReplacement` with `game.Condition{Negate: true,
-ControllerControls: game.PermanentFilter{Types: []types.Card{types.Land},
-Supertypes: []types.Super{types.Basic}, MinCount: 2}}`.
+ControlsMatching: opt.Val(game.SelectionCount{Selection: game.Selection{RequiredTypes:
+[]types.Card{types.Land}, Supertypes: []types.Super{types.Basic}}, MinCount: 2})}`.
 
 **Family B — parenthesized mana ability reminder (60 cards):** Basic lands
 (Forest, Island, Mountain, Plains, Swamp, snow-covered variants), old dual

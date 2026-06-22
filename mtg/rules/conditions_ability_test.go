@@ -576,7 +576,6 @@ func TestNegativeConditionThresholdsFailClosed(t *testing.T) {
 			t.Fatalf("conditionSatisfied(%+v) = true, want false", condition)
 		}
 		countConditions := []game.Condition{
-			{Negate: true, ControllerControls: game.PermanentFilter{MinCount: -1}},
 			{Negate: true, ControlsMatching: opt.Val(game.SelectionCount{MinCount: -1})},
 			{Negate: true, AnyOpponentControls: opt.Val(game.SelectionCount{MinCount: -1})},
 			{Negate: true, OpponentsControl: opt.Val(game.SelectionCount{MinCount: -1})},
@@ -691,9 +690,11 @@ func conditionalRedManaLand() *game.CardDef {
 		ManaAbilities: []game.ManaAbility{{
 			Text: "{T}: Add {R}. Activate only if you control a Swamp or a Mountain.",
 			ActivationCondition: opt.Val(game.Condition{
-				ControllerControls: game.PermanentFilter{
-					SubtypesAny: []types.Sub{types.Swamp, types.Mountain},
-				},
+				ControlsMatching: opt.Val(game.SelectionCount{
+					Selection: game.Selection{
+						SubtypesAny: []types.Sub{types.Swamp, types.Mountain},
+					},
+				}),
 			}),
 			AdditionalCosts: cost.Tap,
 			Content: game.Mode{
@@ -718,13 +719,15 @@ func addBugenhagenLikePermanent(g *game.Game, controller game.PlayerID) *game.Pe
 				},
 				InterveningIf: "if you control a creature with power 7 or greater",
 				InterveningCondition: opt.Val(game.Condition{
-					ControllerControls: game.PermanentFilter{
-						Types: []types.Card{types.Creature},
-						Power: opt.Val(compare.Int{
-							Op:    compare.GreaterOrEqual,
-							Value: 7,
-						}),
-					},
+					ControlsMatching: opt.Val(game.SelectionCount{
+						Selection: game.Selection{
+							RequiredTypes: []types.Card{types.Creature},
+							Power: opt.Val(compare.Int{
+								Op:    compare.GreaterOrEqual,
+								Value: 7,
+							}),
+						},
+					}),
 				}),
 			},
 			Content: game.Mode{
@@ -742,9 +745,11 @@ func angerLikeCard() *game.CardDef {
 			{
 				ZoneOfFunction: zone.Graveyard,
 				Condition: opt.Val(game.Condition{
-					ControllerControls: game.PermanentFilter{
-						SubtypesAny: []types.Sub{types.Mountain},
-					},
+					ControlsMatching: opt.Val(game.SelectionCount{
+						Selection: game.Selection{
+							SubtypesAny: []types.Sub{types.Mountain},
+						},
+					}),
 				}),
 				ContinuousEffects: []game.ContinuousEffect{{
 					Layer: game.LayerAbility,
@@ -765,11 +770,13 @@ func cinderLikeLand() *game.CardDef {
 		ReplacementAbilities: []game.ReplacementAbility{
 			game.EntersTappedIfReplacement("This land enters tapped unless you control two or more basic lands.", &game.Condition{
 				Negate: true,
-				ControllerControls: game.PermanentFilter{
-					Types:      []types.Card{types.Land},
-					Supertypes: []types.Super{types.Basic},
-					MinCount:   2,
-				},
+				ControlsMatching: opt.Val(game.SelectionCount{
+					Selection: game.Selection{
+						RequiredTypes: []types.Card{types.Land},
+						Supertypes:    []types.Super{types.Basic},
+					},
+					MinCount: 2,
+				}),
 			}),
 		}},
 	}

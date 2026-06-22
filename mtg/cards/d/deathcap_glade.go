@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 // DeathcapGlade is the card definition for Deathcap Glade.
@@ -30,10 +31,12 @@ var DeathcapGlade = func() *game.CardDef {
 	card.ReplacementAbilities = append(card.ReplacementAbilities,
 		game.EntersTappedIfReplacement("This land enters tapped unless you control two or more other lands.", &game.Condition{
 			Negate: true,
-			ControllerControls: game.PermanentFilter{
-				Types:    []types.Card{types.Land},
+			ControlsMatching: opt.Val(game.SelectionCount{
+				Selection: game.Selection{
+					RequiredTypes: []types.Card{types.Land},
+				},
 				MinCount: 2,
-			},
+			}),
 		}),
 	)
 	card.ManaAbilities = append(card.ManaAbilities, game.TapManaChoiceAbility(mana.B, mana.G))

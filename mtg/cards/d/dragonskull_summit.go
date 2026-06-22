@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 // DragonskullSummit is the card definition for Dragonskull Summit.
@@ -30,9 +31,11 @@ var DragonskullSummit = func() *game.CardDef {
 	card.ReplacementAbilities = append(card.ReplacementAbilities,
 		game.EntersTappedIfReplacement("This land enters tapped unless you control a Swamp or a Mountain.", &game.Condition{
 			Negate: true,
-			ControllerControls: game.PermanentFilter{
-				SubtypesAny: []types.Sub{types.Swamp, types.Mountain},
-			},
+			ControlsMatching: opt.Val(game.SelectionCount{
+				Selection: game.Selection{
+					SubtypesAny: []types.Sub{types.Swamp, types.Mountain},
+				},
+			}),
 		}),
 	)
 	card.ManaAbilities = append(card.ManaAbilities, game.TapManaChoiceAbility(mana.B, mana.R))

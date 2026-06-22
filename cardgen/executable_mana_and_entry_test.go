@@ -289,7 +289,7 @@ func TestGenerateExecutableCardSourceEntersTappedUnlessTwoBasicLands(t *testing.
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	// gofmt aligns PermanentFilter fields; check value literals rather than
+	// gofmt aligns SelectionCount fields; check value literals rather than
 	// aligned field assignments to stay resilient to column-width changes.
 	for _, wanted := range []string{
 		"game.EntersTappedIfReplacement",

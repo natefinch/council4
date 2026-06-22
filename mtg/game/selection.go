@@ -79,9 +79,9 @@ func SubtypeChoiceWithoutEntry(choice SubtypeChoiceSource) SubtypeChoiceSource {
 
 // Selection is pure rules data describing WHICH game objects share a predicate.
 // It is the single, valence-agnostic matcher description that subsumes the
-// characteristic fields formerly duplicated across TargetPredicate,
-// PermanentFilter, the permanent/card filters of TriggerPattern, and the
-// historical mass-effect selector constants.
+// characteristic fields formerly duplicated across TargetPredicate, the
+// condition controls-matching filter, the permanent/card filters of
+// TriggerPattern, and the historical mass-effect selector constants.
 //
 // Selection describes WHAT matches, never where candidates come from. Counting,
 // total power, and candidate-domain concerns (controlled, defending, equipped,
@@ -341,22 +341,6 @@ func (p TargetPredicate) Selection() Selection {
 		selection.RequiredTypesAny = p.PermanentTypes
 	}
 	return selection
-}
-
-// Selection returns the characteristic-matching portion of a PermanentFilter as
-// a Selection. The filter's count and total-power concerns stay outside
-// Selection. The result shares the filter's backing slices.
-func (f PermanentFilter) Selection() Selection {
-	return Selection{
-		RequiredTypes:  f.Types,
-		Supertypes:     f.Supertypes,
-		SubtypesAny:    f.SubtypesAny,
-		ColorsAny:      f.ColorsAny,
-		ExcludedColors: f.ExcludedColors,
-		Power:          f.Power,
-		Toughness:      f.Toughness,
-		ExcludeSource:  f.ExcludeSource,
-	}
 }
 
 // SelectionCount pairs a Selection with the count and total-power thresholds

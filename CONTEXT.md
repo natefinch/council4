@@ -113,7 +113,7 @@ The concrete target chosen while casting a spell or activating an ability. In co
 _Avoid_: Target spec, raw target ID
 
 **Selection**:
-Pure, valence-agnostic data describing WHICH game objects share a characteristic predicate — required/excluded types, supertypes, any-of subtypes/colors, controller/player relation, tapped/combat state, keywords, mana value, and power/toughness. It describes WHAT matches, never where candidates come from; counting and candidate-domain concerns stay outside it. In code, `game.Selection` is interpreted by a single matcher in `mtg/rules` that subsumes the legacy `TargetPredicate`, `PermanentFilter`, `TriggerPattern` filters, and `EffectSelector` characteristic logic.
+Pure, valence-agnostic data describing WHICH game objects share a characteristic predicate — required/excluded types, supertypes, any-of subtypes/colors, controller/player relation, tapped/combat state, keywords, mana value, and power/toughness. It describes WHAT matches, never where candidates come from; counting and candidate-domain concerns stay outside it. In code, `game.Selection` is interpreted by a single matcher in `mtg/rules` that subsumes the legacy `TargetPredicate`, `TriggerPattern` filters, and `EffectSelector` characteristic logic.
 _Avoid_: Predicate, filter, selector, matcher (for the data itself)
 
 **Group Reference**:

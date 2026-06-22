@@ -38,7 +38,6 @@ func conditionParametersNegative(cond *game.Condition) bool {
 		cond.ControllerGraveyardCardOfTypeCountAtLeast < 0 ||
 		cond.ControllerBasicLandTypeCountAtLeast < 0 ||
 		cond.ControllerCreaturePowerDiversityAtLeast < 0 ||
-		cond.ControllerControls.MinCount < 0 ||
 		cond.ControlsMatching.Exists && cond.ControlsMatching.Val.MinCount < 0 ||
 		cond.AnyOpponentControls.Exists && cond.AnyOpponentControls.Val.MinCount < 0 ||
 		cond.OpponentsControl.Exists && cond.OpponentsControl.Val.MinCount < 0 ||
@@ -57,8 +56,6 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	matches := true
 	if cond.ControlsMatching.Exists {
 		matches = matches && controllerControlsMatchingSelection(g, ctx, cond.ControlsMatching.Val)
-	} else if !cond.ControllerControls.Empty() {
-		matches = matches && controllerControlsMatchingSelection(g, ctx, controlSelectionFromFilter(cond.ControllerControls))
 	}
 	if cond.ControllerLifeAtLeast > 0 {
 		player, ok := playerByID(g, ctx.controller)
@@ -414,14 +411,6 @@ func resolvedObjectHasType(g *game.Game, resolved *resolvedObjectReference, card
 		return permanentHasType(g, resolved.permanent, cardType)
 	}
 	return slices.Contains(resolved.snapshot.Types, cardType)
-}
-
-func controlSelectionFromFilter(filter game.PermanentFilter) game.SelectionCount {
-	return game.SelectionCount{
-		Selection:  filter.Selection(),
-		MinCount:   filter.MinCount,
-		TotalPower: filter.TotalPower,
-	}
 }
 
 func controllerControlsMatchingSelection(g *game.Game, ctx conditionContext, control game.SelectionCount) bool {

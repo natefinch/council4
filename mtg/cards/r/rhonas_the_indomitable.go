@@ -57,16 +57,18 @@ var RhonasTheIndomitable = func() *game.CardDef {
 		Condition: opt.Val(game.Condition{
 			Text:   "unless you control another creature with power 4 or greater",
 			Negate: true,
-			ControllerControls: game.PermanentFilter{
-				Types: []types.Card{
-					types.Creature,
+			ControlsMatching: opt.Val(game.SelectionCount{
+				Selection: game.Selection{
+					RequiredTypes: []types.Card{
+						types.Creature,
+					},
+					Power: opt.Val(compare.Int{
+						Op:    compare.GreaterOrEqual,
+						Value: 4,
+					}),
+					ExcludeSource: true,
 				},
-				Power: opt.Val(compare.Int{
-					Op:    compare.GreaterOrEqual,
-					Value: 4,
-				}),
-				ExcludeSource: true,
-			},
+			}),
 		}),
 		RuleEffects: []game.RuleEffect{
 			{

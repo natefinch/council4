@@ -400,6 +400,12 @@ type CardReference struct {
 
 // CardCondition describes characteristics a referenced card must have for an
 // effect to apply.
+//
+// DO-NOT-COPY(filter): cannot collapse into game.Selection without breaking the
+// byte-identical corpus (it still renders into supported cards, e.g. Herald's
+// Horn and Chaos Warp) or changing matching semantics (RequirePermanentCard and
+// arbitrary-key ChosenSubtypeFrom, guarded by KnownSubtypeForType, have no
+// equivalent in Selection's matcher); prefer game.Selection. (retire: #1394)
 type CardCondition struct {
 	Card CardReference
 
