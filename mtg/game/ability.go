@@ -474,6 +474,11 @@ type TriggerCondition struct {
 	// InterveningIfEventPermanentWasCast is true for "if it was cast" on enter
 	// triggers.
 	InterveningIfEventPermanentWasCast bool
+	// InterveningIfEventPermanentWasEvoked is true for the evoke sacrifice
+	// trigger's intervening "if its evoke cost was paid" condition (CR 702.74).
+	// The entering permanent event preserves whether the spell was cast for its
+	// Evoke alternative cost for both trigger-time and resolution-time checks.
+	InterveningIfEventPermanentWasEvoked bool
 	// InterveningIfEventPermanentWasCastByController is true for "if you cast
 	// it" and additionally requires the trigger controller to be the caster.
 	InterveningIfEventPermanentWasCastByController bool

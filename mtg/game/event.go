@@ -161,6 +161,11 @@ type Event struct {
 	// kicker cost was paid. It is false for objects that were not kicked.
 	KickerPaid bool
 
+	// EnterEvoked records whether an entering permanent resulted from a spell
+	// cast for its Evoke alternative cost (CR 702.74). It feeds the evoke
+	// sacrifice trigger's intervening "if its evoke cost was paid" condition.
+	EnterEvoked bool
+
 	// EnterWasCast records whether a permanent entered from resolving a cast,
 	// non-copy spell.
 	EnterWasCast bool

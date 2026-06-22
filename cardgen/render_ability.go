@@ -484,6 +484,9 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 	if reflect.DeepEqual(*ability, game.LivingWeaponTriggeredAbility()) {
 		return "game.LivingWeaponTriggeredAbility()", nil
 	}
+	if reflect.DeepEqual(*ability, game.EvokeSacrificeTriggeredAbility()) {
+		return "game.EvokeSacrificeTriggeredAbility()", nil
+	}
 	var fields []string
 	trigger, err := r.renderTriggerCondition(ctx, &ability.Trigger)
 	if err != nil {
@@ -568,6 +571,9 @@ func (r Renderer) renderTriggerCondition(ctx *renderCtx, trigger *game.TriggerCo
 	}
 	if trigger.InterveningIfEventPermanentWasCast {
 		fields = append(fields, "InterveningIfEventPermanentWasCast: true,")
+	}
+	if trigger.InterveningIfEventPermanentWasEvoked {
+		fields = append(fields, "InterveningIfEventPermanentWasEvoked: true,")
 	}
 	if trigger.InterveningIfEventPermanentWasCastByController {
 		fields = append(fields, "InterveningIfEventPermanentWasCastByController: true,")

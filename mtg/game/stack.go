@@ -112,6 +112,10 @@ type StackObject struct {
 	// Overloaded is true if this spell was cast for its overload cost.
 	Overloaded bool
 
+	// Evoked is true if this spell was cast for its Evoke alternative cost
+	// (CR 702.74); the resulting permanent is sacrificed when it enters.
+	Evoked bool
+
 	// Mutate records an alternative-cost creature spell and the permanent it
 	// will merge with.
 	Mutate         bool

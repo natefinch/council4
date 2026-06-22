@@ -121,6 +121,10 @@ const (
 	// creature can't be blocked as long as the defending player controls a
 	// nonbasic land (a land without the Basic supertype).
 	KeywordNonbasicLandwalk KeywordKind = "KeywordNonbasicLandwalk"
+	// KeywordEvoke is the Evoke alternative-cost keyword (CR 702.74): "Evoke
+	// <cost>" lets the spell be cast for its evoke cost, and the resulting
+	// permanent is sacrificed when it enters the battlefield.
+	KeywordEvoke KeywordKind = "KeywordEvoke"
 )
 
 var keywordNames = map[KeywordKind]string{
@@ -148,6 +152,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordEmbalm:           "Embalm",
 	KeywordExalted:          "Exalted",
 	KeywordEvolve:           "Evolve",
+	KeywordEvoke:            "Evoke",
 	KeywordFabricate:        "Fabricate",
 	KeywordFear:             "Fear",
 	KeywordFirstStrike:      "First strike",
@@ -272,6 +277,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordEmbalm, Words: []string{"embalm"}},
 	{Kind: KeywordExalted, Words: []string{"exalted"}},
 	{Kind: KeywordEvolve, Words: []string{"evolve"}},
+	{Kind: KeywordEvoke, Words: []string{"evoke"}},
 	{Kind: KeywordFabricate, Words: []string{"fabricate"}},
 	{Kind: KeywordFear, Words: []string{"fear"}},
 	{Kind: KeywordFlash, Words: []string{"flash"}},
