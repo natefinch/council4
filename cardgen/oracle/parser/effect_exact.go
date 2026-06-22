@@ -395,6 +395,21 @@ func sacrificeChoiceBaseNoun(selection *SelectionSyntax, plural bool) (string, b
 		}
 		return joinOrList(words), true
 	}
+	// A bare subtype names the permanent by its subtype alone, with no card-type
+	// kind: an artifact token ("a Treasure"/"a Food"), a land type ("a Forest"),
+	// or a creature subtype ("a Goblin"). The subtype noun is printed verbatim
+	// ("Treasure"/"Treasures"); the runtime sacrifice selection matches it
+	// through the SubtypesAny filter. Irregular plurals ("Elves") simply fail the
+	// byte-exact reconstruction and stay unsupported.
+	if selection.Kind == SelectionUnknown &&
+		len(selection.RequiredTypesAny) == 0 &&
+		len(selection.SubtypesAny) == 1 {
+		noun := string(selection.SubtypesAny[0])
+		if plural {
+			noun += "s"
+		}
+		return noun, true
+	}
 	noun := ""
 	switch selection.Kind {
 	case SelectionArtifact:
