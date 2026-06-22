@@ -978,112 +978,42 @@ func handleCastForFree(r *effectResolver, prim game.CastForFree) effectResolved 
 	return res
 }
 
+// handleReturnFromGraveyard re-expresses the graveyard-recursion choice as a thin
+// game.ChooseFromZone consumer: the resolving player chooses up to prim.Amount
+// graveyard cards matching prim.Selection (any number with prim.AnyNumber, capped
+// by prim.MaxTotalManaValue) and the chosen cards move to their owner's hand or,
+// for a battlefield destination, enter under the player's control tapped when
+// prim.EntryTapped is set. The envelope's candidate gathering (FromLinked, the
+// graveyard source, the selection filter), choice bounds, and movement match the
+// historical hand-rolled resolution exactly. res.amount preserves the requested
+// quantity (the original resolution reported the requested amount rather than the
+// number chosen).
 func handleReturnFromGraveyard(r *effectResolver, prim game.ReturnFromGraveyard) effectResolved {
-	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	playerID, ok := r.resolvePlayer(prim.Player)
-	if !ok {
-		return res
+	destination := zone.Hand
+	if prim.Destination == zone.Battlefield {
+		destination = zone.Battlefield
 	}
-	player, ok := playerByID(r.game, playerID)
-	if !ok {
-		return res
-	}
-	var linkedFilter map[id.ID]bool
-	if prim.FromLinked != "" {
-		key := linkedObjectSourceKey(r.game, r.obj, string(prim.FromLinked))
-		refs := linkedObjects(r.game, key)
-		linkedFilter = make(map[id.ID]bool, len(refs))
-		for _, ref := range refs {
-			if ref.CardID != 0 {
-				linkedFilter[ref.CardID] = true
-			}
-		}
-	}
-	var candidates []id.ID
-	for _, cardID := range player.Graveyard.All() {
-		if linkedFilter != nil && !linkedFilter[cardID] {
-			continue
-		}
-		card, cardOK := r.game.GetCardInstance(cardID)
-		if !cardOK {
-			continue
-		}
-		if handCardMatchesSelection(r.game, card, prim.Selection, playerID) {
-			candidates = append(candidates, cardID)
-		}
-	}
-	amount := min(res.amount, len(candidates))
+	count := game.ChooseExactly
 	if prim.AnyNumber {
 		// "Put any number of <filter> cards from among them onto the
 		// battlefield": the upper bound is the whole matching pool rather than a
 		// fixed count, so the player may choose any subset up to all of them.
-		amount = len(candidates)
+		count = game.ChooseAnyNumber
 	}
-	if amount <= 0 {
-		return res
-	}
-	options := make([]game.ChoiceOption, len(candidates))
-	for i, cardID := range candidates {
-		options[i] = game.ChoiceOption{
-			Index: i,
-			Label: cardChoiceLabel(r.game, cardID),
-			Card:  cardChoiceInfo(r.game, cardID),
-		}
-	}
-	prompt := "Choose a card to return to your hand"
-	if prim.Destination == zone.Battlefield {
-		prompt = "Choose a card to return to the battlefield"
-	}
-	// A total mana value cap (or the unbounded "any number" form) lets the
-	// player choose any subset up to the count limit, including none, so the
-	// minimum drops to zero and the empty choice is the safe default.
-	minChoices := amount
-	defaultSelection := firstChoiceIndices(amount)
-	if prim.MaxTotalManaValue.Exists || prim.AnyNumber {
-		minChoices = 0
-		defaultSelection = nil
-	}
-	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
-		Kind:              game.ChoiceResolution,
-		Player:            playerID,
-		Prompt:            prompt,
-		Options:           options,
-		MinChoices:        minChoices,
-		MaxChoices:        amount,
-		DefaultSelection:  defaultSelection,
-		MaxTotalManaValue: prim.MaxTotalManaValue,
-	}, r.log)
-	if prim.Destination == zone.Battlefield {
-		resolved := make([]resolvedBattlefieldCard, 0, len(selected))
-		for _, idx := range selected {
-			if idx < 0 || idx >= len(candidates) {
-				continue
-			}
-			card, cardOK := r.game.GetCardInstance(candidates[idx])
-			if !cardOK {
-				continue
-			}
-			resolved = append(resolved, resolvedBattlefieldCard{
-				card:       card,
-				fromZone:   zone.Graveyard,
-				controller: playerID,
-			})
-		}
-		res.succeeded = r.putResolvedCardsOnBattlefieldValue(resolved, nil, permanentCreationOptions{ForceTapped: prim.EntryTapped})
-		return res
-	}
-	for _, idx := range selected {
-		if idx < 0 || idx >= len(candidates) {
-			continue
-		}
-		card, cardOK := r.game.GetCardInstance(candidates[idx])
-		if !cardOK {
-			continue
-		}
-		if moveCardBetweenZonesWithPlacement(r.game, card.Owner, candidates[idx], zone.Graveyard, zone.Hand, false) {
-			res.succeeded = true
-		}
-	}
+	res := r.resolveChooseFromZone(game.ChooseFromZone{
+		Player:      prim.Player,
+		SourceZone:  zone.Graveyard,
+		Filter:      prim.Selection,
+		Quantity:    prim.Amount,
+		Count:       count,
+		Destination: game.ChooseDestination{Zone: destination},
+		Riders: game.ChooseRiders{
+			EntersTapped:      prim.EntryTapped,
+			MaxTotalManaValue: prim.MaxTotalManaValue,
+			FromLinked:        prim.FromLinked,
+		},
+	})
+	res.amount = r.quantity(prim.Amount)
 	return res
 }
 
