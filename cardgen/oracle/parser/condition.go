@@ -91,6 +91,7 @@ const (
 	ConditionPredicateControllerGainedLifeThisTurnAtLeast              ConditionPredicateKind = "ConditionPredicateControllerGainedLifeThisTurnAtLeast"
 	ConditionPredicateSpellXAtLeast                                    ConditionPredicateKind = "ConditionPredicateSpellXAtLeast"
 	ConditionPredicateGraveyardCardOfTypeCountAtLeast                  ConditionPredicateKind = "ConditionPredicateGraveyardCardOfTypeCountAtLeast"
+	ConditionPredicateControllerControlsNamed                          ConditionPredicateKind = "ConditionPredicateControllerControlsNamed"
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -327,6 +328,14 @@ type ConditionClause struct {
 	// more creature cards are in your graveyard", Mortal Combat). Threshold
 	// carries the minimum count. It is TriggerCardTypeUnknown for other clauses.
 	GraveyardCountCardType TriggerCardType `json:",omitempty"`
+
+	// ControlledNames carries the card names required by a
+	// ConditionPredicateControllerControlsNamed clause ("If you control an
+	// Urza's Mine and an Urza's Tower, ..."; the Urza tron lands). The
+	// controller must control a permanent matching each listed name. The parser
+	// reconstructs each name from the source tokens; matching is normalized
+	// downstream.
+	ControlledNames []string `json:",omitempty"`
 }
 
 // ConditionControlComparison describes a cross-player control-count comparison
@@ -581,6 +590,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeGraveyardControlsCondition,
 		recognizeControlsCondition,
 		recognizeTotalPowerCondition,
+		recognizeControlsNamedCondition,
 		recognizeCardToGraveyardReplacementCondition,
 		recognizeCreatureWouldDieReplacementCondition,
 		recognizeSourceDeathCondition,
@@ -1736,6 +1746,77 @@ func recognizeTotalPowerCondition(body []shared.Token, atoms Atoms) (ConditionCl
 		Comparison: ConditionComparisonNone,
 		Selection:  selection,
 	}, true
+}
+
+// recognizeControlsNamedCondition matches a "you control" gate whose objects
+// are named permanents rather than card types ("If you control an Urza's Mine
+// and an Urza's Tower, ..."; the Urza tron lands). It splits the noun list on
+// "and", strips each segment's "a"/"an" determiner, and records the remaining
+// tokens as a literal card name. A segment must begin with a capitalized word
+// and must not parse as a typed condition selection, so type-based "you control
+// a creature" gates fall through to recognizeControlsCondition. Name matching is
+// normalized downstream, so the printed Oracle spelling matches the card name.
+func recognizeControlsNamedCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "you", "control")
+	if !ok {
+		return ConditionClause{}, false
+	}
+	segments := splitTokensOnWord(rest, "and")
+	if len(segments) == 0 {
+		return ConditionClause{}, false
+	}
+	names := make([]string, 0, len(segments))
+	for _, segment := range segments {
+		if trimmed, cut := cutTokenPrefix(segment, "a"); cut {
+			segment = trimmed
+		} else if trimmed, cut := cutTokenPrefix(segment, "an"); cut {
+			segment = trimmed
+		}
+		if !controlledNamePhrase(segment, atoms) {
+			return ConditionClause{}, false
+		}
+		names = append(names, joinTokens(segment))
+	}
+	return ConditionClause{
+		Predicate:       ConditionPredicateControllerControlsNamed,
+		ControlledNames: names,
+	}, true
+}
+
+// controlledNamePhrase reports whether tokens name a specific card (a proper
+// noun) rather than a card type or subtype. It requires a leading capitalized
+// word and rejects any phrase that parses as a typed condition selection.
+func controlledNamePhrase(tokens []shared.Token, atoms Atoms) bool {
+	if len(tokens) == 0 {
+		return false
+	}
+	first := tokens[0].Text
+	if first == "" || first[0] < 'A' || first[0] > 'Z' {
+		return false
+	}
+	if _, ok := parseConditionSelection(tokens, atoms); ok {
+		return false
+	}
+	return true
+}
+
+// splitTokensOnWord splits tokens into the segments separated by the given
+// connector word, dropping empty segments.
+func splitTokensOnWord(tokens []shared.Token, word string) [][]shared.Token {
+	var segments [][]shared.Token
+	start := 0
+	for i := range tokens {
+		if equalWord(tokens[i], word) {
+			if i > start {
+				segments = append(segments, tokens[start:i])
+			}
+			start = i + 1
+		}
+	}
+	if start < len(tokens) {
+		segments = append(segments, tokens[start:])
+	}
+	return segments
 }
 
 func recognizeSourceDeathCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {

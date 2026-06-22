@@ -96,7 +96,13 @@ func lowerManaAbility(
 			"the Payment Planner cannot safely choose modes for a mana ability",
 		)
 	}
-	shell, diagnostic := lowerActivationShell(cardName, ability, syntax)
+	loweredAbility := ability
+	var gatedContent opt.V[game.AbilityContent]
+	if stripped, gated, ok := tronConditionalManaContent(ability); ok {
+		loweredAbility = stripped
+		gatedContent = opt.Val(gated)
+	}
+	shell, diagnostic := lowerActivationShell(cardName, loweredAbility, syntax)
 	if diagnostic != nil {
 		return game.ManaAbility{}, diagnostic
 	}
@@ -138,10 +144,14 @@ func lowerManaAbility(
 		functionZone = zone.None
 	}
 
+	content := shell.content
+	if gatedContent.Exists {
+		content = gatedContent.Val
+	}
 	return game.ManaAbility{
 		Text:                shell.text,
 		ManaCost:            shell.manaCost,
-		Content:             shell.content,
+		Content:             content,
 		Timing:              shell.timing,
 		ActivationCondition: shell.activationCondition,
 		AdditionalCosts:     shell.additionalCosts,

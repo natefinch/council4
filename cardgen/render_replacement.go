@@ -894,6 +894,14 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, "ControllerControlsCommander: true,")
 		hasPredicate = true
 	}
+	if len(cond.ControllerControlsNamed) > 0 {
+		quoted := make([]string, 0, len(cond.ControllerControlsNamed))
+		for _, name := range cond.ControllerControlsNamed {
+			quoted = append(quoted, fmt.Sprintf("%q", name))
+		}
+		fields = append(fields, fmt.Sprintf("ControllerControlsNamed: []string{%s},", strings.Join(quoted, ", ")))
+		hasPredicate = true
+	}
 	if cond.ControllerCreatedTokenThisTurn {
 		fields = append(fields, "ControllerCreatedTokenThisTurn: true,")
 		hasPredicate = true

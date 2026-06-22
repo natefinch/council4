@@ -160,6 +160,14 @@ type Condition struct {
 	// ControllerGraveyardCountCardType is the card type counted by
 	// ControllerGraveyardCardOfTypeCountAtLeast.
 	ControllerGraveyardCountCardType types.Card
+
+	// ControllerControlsNamed requires the context controller to control at
+	// least one permanent matching each listed card name ("If you control an
+	// Urza's Mine and an Urza's Tower, ..."; the Urza tron lands). Names are
+	// compared case-insensitively with hyphens and spaces treated alike, so the
+	// printed Oracle spelling ("Urza's Power-Plant") matches the canonical card
+	// name ("Urza's Power Plant"). An empty slice disables the predicate.
+	ControllerControlsNamed []string
 }
 
 // ControlPlayerScope selects which players' battlefields a control-count
@@ -274,7 +282,8 @@ func (c *Condition) Empty() bool {
 		!c.ControllerLifeExactly.Exists &&
 		c.ControllerGainedLifeThisTurnAtLeast == 0 &&
 		c.SpellXAtLeast == 0 &&
-		c.ControllerGraveyardCardOfTypeCountAtLeast == 0
+		c.ControllerGraveyardCardOfTypeCountAtLeast == 0 &&
+		len(c.ControllerControlsNamed) == 0
 }
 
 // EventHistoryWindow selects which turn's event log an EventHistoryCondition

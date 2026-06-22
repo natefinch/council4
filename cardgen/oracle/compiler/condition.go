@@ -123,6 +123,12 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		condition.Threshold = clause.Threshold
 	case parser.ConditionPredicateControls:
 		compileControlsCondition(condition, clause)
+	case parser.ConditionPredicateControllerControlsNamed:
+		if len(clause.ControlledNames) == 0 {
+			return
+		}
+		condition.Predicate = ConditionPredicateControllerControlsNamed
+		condition.ControlledNames = append(condition.ControlledNames, clause.ControlledNames...)
 	case parser.ConditionPredicateControlComparison:
 		compileControlComparisonCondition(condition, clause)
 	case parser.ConditionPredicateEventSubjectHadCounters:

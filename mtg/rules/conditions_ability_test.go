@@ -14,6 +14,98 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+func TestControllerControlsNamedCondition(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	ctx := conditionContext{controller: game.Player1}
+	// Oracle text spells the gate with a hyphen ("Urza's Power-Plant") while the
+	// printed card name uses a space; the predicate must reconcile both.
+	condition := opt.Val(game.Condition{ControllerControlsNamed: []string{"Urza's Power-Plant", "Urza's Tower"}})
+
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Urza's Mine"}})
+	if conditionSatisfied(g, ctx, condition) {
+		t.Fatal("controls-named condition passed while controlling neither named permanent")
+	}
+
+	plant := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Urza's Power Plant"}})
+	if conditionSatisfied(g, ctx, condition) {
+		t.Fatal("controls-named condition passed while controlling only the Power Plant")
+	}
+
+	tower := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Urza's Tower"}})
+	if !conditionSatisfied(g, ctx, condition) {
+		t.Fatal("controls-named condition failed while controlling both named permanents")
+	}
+
+	if conditionSatisfied(g, conditionContext{controller: game.Player2}, condition) {
+		t.Fatal("controls-named condition passed for a player controlling neither permanent")
+	}
+
+	tower.Controller = game.Player2
+	if conditionSatisfied(g, ctx, condition) {
+		t.Fatal("controls-named condition passed after the Tower changed controllers")
+	}
+	tower.Controller = game.Player1
+
+	plant.PhasedOut = true
+	if conditionSatisfied(g, ctx, condition) {
+		t.Fatal("controls-named condition passed while the Power Plant is phased out")
+	}
+}
+
+// tronManaAbility builds the Urza tron land mana ability: "{T}: Add {C}. If you
+// control an Urza's Power-Plant and an Urza's Tower, add {C}{C} instead." The
+// base {C} production is gated on NOT meeting the named-permanent condition and
+// the {C}{C} bonus on meeting it, so exactly one production resolves.
+func tronManaAbility() game.ManaAbility {
+	named := game.Condition{ControllerControlsNamed: []string{"Urza's Power-Plant", "Urza's Tower"}}
+	notNamed := named
+	notNamed.Negate = true
+	baseGate := opt.Val(game.EffectCondition{Condition: opt.Val(notNamed)})
+	bonusGate := opt.Val(game.EffectCondition{Condition: opt.Val(named)})
+	return game.ManaAbility{
+		Text:            "{T}: Add {C}. If you control an Urza's Power-Plant and an Urza's Tower, add {C}{C} instead.",
+		AdditionalCosts: cost.Tap,
+		Content: game.Mode{Sequence: []game.Instruction{
+			{Primitive: game.AddMana{Amount: game.Fixed(1), ManaColor: mana.C}, Condition: baseGate},
+			{Primitive: game.AddMana{Amount: game.Fixed(1), ManaColor: mana.C}, Condition: bonusGate},
+			{Primitive: game.AddMana{Amount: game.Fixed(1), ManaColor: mana.C}, Condition: bonusGate},
+		}}.Ability(),
+	}
+}
+
+// TestTronManaAbilityAddsBaseThenBonus proves the lowered tron mana ability
+// adds the base {C} when its named-permanent condition fails and the {C}{C}
+// bonus instead when the controller also controls an Urza's Power Plant and an
+// Urza's Tower.
+func TestTronManaAbilityAddsBaseThenBonus(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	body := tronManaAbility()
+	mine := addComplexManaAbilityPermanent(g, game.Player1,
+		&game.CardDef{CardFace: game.CardFace{Name: "Urza's Mine", Types: []types.Card{types.Land}}},
+		&body,
+	)
+
+	if !engine.applyAction(g, game.Player1, action.ActivateAbility(mine.ObjectID, 0, nil, 0)) {
+		t.Fatal("applyAction(tron mana ability, base) = false, want true")
+	}
+	if got := g.Players[game.Player1].ManaPool.Amount(mana.C); got != 1 {
+		t.Fatalf("colorless mana = %d, want 1 (base production only)", got)
+	}
+
+	mine.Tapped = false
+	g.Players[game.Player1].ManaPool = mana.Pool{}
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Urza's Power Plant", Types: []types.Card{types.Land}}})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Urza's Tower", Types: []types.Card{types.Land}}})
+
+	if !engine.applyAction(g, game.Player1, action.ActivateAbility(mine.ObjectID, 0, nil, 0)) {
+		t.Fatal("applyAction(tron mana ability, bonus) = false, want true")
+	}
+	if got := g.Players[game.Player1].ManaPool.Amount(mana.C); got != 2 {
+		t.Fatalf("colorless mana = %d, want 2 (bonus production)", got)
+	}
+}
+
 func TestControllerControlsCommanderCondition(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	ctx := conditionContext{controller: game.Player1}
