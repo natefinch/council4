@@ -661,11 +661,22 @@ func grantedLandwalkStaticBody(keyword compiler.CompiledKeyword) (game.StaticAbi
 
 func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
 	var affectedSource, affectedAttached bool
+	var affectedController game.ControllerRelation
+	var permanentTypes []types.Card
+	var affectedSelection game.Selection
 	switch declaration.Group.Domain {
 	case compiler.StaticGroupSource:
 		affectedSource = declaration.Rule.Kind != compiler.StaticRuleAdditionalTriggerForChosenCreatureType
 	case compiler.StaticGroupAttachedObject:
 		affectedAttached = true
+	case compiler.StaticGroupSourceControllerPermanents:
+		cardTypes, selection, ok := lowerControlledGroupRuleSelection(declaration.Group)
+		if !ok {
+			return false
+		}
+		affectedController = game.ControllerYou
+		permanentTypes = cardTypes
+		affectedSelection = selection
 	default:
 		return false
 	}
@@ -693,9 +704,33 @@ func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.
 	for i := range effects {
 		effects[i].AffectedSource = affectedSource
 		effects[i].AffectedAttached = affectedAttached
+		effects[i].AffectedController = affectedController
+		effects[i].PermanentTypes = permanentTypes
+		effects[i].AffectedSelection = affectedSelection
 		body.RuleEffects = append(body.RuleEffects, effects[i])
 	}
 	return true
+}
+
+// lowerControlledGroupRuleSelection lowers the affected-permanent filter of a
+// static rule scoped to the controller's permanents ("Creatures you control can't
+// be blocked.", "Blue creatures you control can't be blocked.", "Creatures you
+// control with +1/+1 counters on them can't be blocked."). The required card
+// types flow to the rule effect's PermanentTypes so the bare creatures-only form
+// keeps its simple type filter, while every richer predicate (color, subtype,
+// counter) flows to a runtime affected-permanent Selection. A source-excluding
+// group has no runtime affected-permanent predicate and fails closed.
+func lowerControlledGroupRuleSelection(group compiler.StaticGroupReference) ([]types.Card, game.Selection, bool) {
+	if group.ExcludeSource {
+		return nil, game.Selection{}, false
+	}
+	selection, ok := lowerStaticSelection(group.Selection)
+	if !ok {
+		return nil, game.Selection{}, false
+	}
+	permanentTypes := selection.RequiredTypes
+	selection.RequiredTypes = nil
+	return permanentTypes, selection, true
 }
 
 func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {

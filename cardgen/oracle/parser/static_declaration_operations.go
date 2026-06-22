@@ -411,6 +411,13 @@ func parseStaticDeclarationSubject(tokens []shared.Token, atoms Atoms) (StaticDe
 			Group: group,
 		}, verbStart, true
 	}
+	if group, verbStart, ok := staticControlledCreaturesProhibitionSubject(tokens); ok {
+		return StaticDeclarationSubject{
+			Kind:  StaticDeclarationSubjectGroup,
+			Span:  group.Span,
+			Group: group,
+		}, verbStart, true
+	}
 	group := parseEffectStaticSubject(tokens, atoms)
 	if group.Kind == EffectStaticSubjectNone {
 		return StaticDeclarationSubject{}, 0, false
@@ -463,6 +470,82 @@ func staticLinkingVerbGroupSubject(tokens []shared.Token) (EffectStaticSubjectSy
 // joins a characteristic-defining group subject to its predicate.
 func staticLinkingVerb(token shared.Token) bool {
 	return equalWord(token, "is") || equalWord(token, "are")
+}
+
+// staticControlledCreaturesProhibitionSubject recognizes the controller-creature
+// group subject of a mass-evasion prohibition ("<subject> can't be blocked.")
+// when it precedes a prohibition verb ("can't"/"cannot"). The shared
+// parseEffectStaticSubject only delimits a controlled-creatures group before an
+// action verb (get/have/gain/lose), so the prohibition boundary is recognized
+// here. It supports the bare "creatures you control" group, an optional leading
+// color filter ("Blue creatures you control ..."), and an optional trailing
+// "with [a] <kind> counter(s) on them" filter ("Creatures you control with +1/+1
+// counters on them ..."), attaching the recognized predicate to the returned
+// subject. It returns the group subject and the index of the prohibition verb.
+func staticControlledCreaturesProhibitionSubject(tokens []shared.Token) (EffectStaticSubjectSyntax, int, bool) {
+	idx := 0
+	subject := EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatures}
+	if filter, width, ok := staticColorFilterAt(tokens, idx); ok {
+		subject.Colors = filter.colors
+		subject.Colorless = filter.colorless
+		subject.Multicolored = filter.multicolored
+		idx += width
+	}
+	if !staticWordsAt(tokens, idx, "creatures", "you", "control") {
+		return EffectStaticSubjectSyntax{}, 0, false
+	}
+	idx += 3
+	if match, ok := controlledGroupProhibitionCounterQualifier(tokens, idx); ok {
+		subject.CounterRequired = true
+		if match.Any {
+			subject.CounterAny = true
+		} else {
+			subject.CounterKind = match.Kind
+		}
+		idx = match.End
+	}
+	if !staticWordsAt(tokens, idx, "can't") && !staticWordsAt(tokens, idx, "cannot") {
+		return EffectStaticSubjectSyntax{}, 0, false
+	}
+	subject.Span = shared.SpanOf(tokens[:idx])
+	return subject, idx, true
+}
+
+// controlledGroupProhibitionCounterQualifier recognizes a "with [a] <kind>
+// counter(s) on it/them" qualifier on a controlled-creature prohibition group
+// beginning at index start. It accepts both the singular article form ("with a
+// +1/+1 counter on it") and the bare plural form printed on mass-evasion statics
+// ("with +1/+1 counters on them"), naming the required counter kind or, when no
+// kind is named, matching a counter of any kind. It fails closed for any other
+// phrase so callers keep the unfiltered group.
+func controlledGroupProhibitionCounterQualifier(tokens []shared.Token, start int) (counterQualifierMatch, bool) {
+	if !staticWordsAt(tokens, start, "with") {
+		return counterQualifierMatch{}, false
+	}
+	nameStart := start + 1
+	if nameStart < len(tokens) && (equalWord(tokens[nameStart], "a") || equalWord(tokens[nameStart], "an")) {
+		nameStart++
+	}
+	counterIndex := nameStart
+	for counterIndex < len(tokens) &&
+		!equalWord(tokens[counterIndex], "counter") && !equalWord(tokens[counterIndex], "counters") {
+		counterIndex++
+	}
+	if counterIndex >= len(tokens) {
+		return counterQualifierMatch{}, false
+	}
+	if !effectWordsAt(tokens, counterIndex+1, "on", "it") &&
+		!effectWordsAt(tokens, counterIndex+1, "on", "them") {
+		return counterQualifierMatch{}, false
+	}
+	if counterIndex == nameStart {
+		return counterQualifierMatch{Any: true, End: counterIndex + 3}, true
+	}
+	kind, _, ok := counterNameBefore(tokens, counterIndex)
+	if !ok {
+		return counterQualifierMatch{}, false
+	}
+	return counterQualifierMatch{Kind: kind, End: counterIndex + 3}, true
 }
 
 // staticSourceSubjectAt returns the span and token width of a source-marker
@@ -1528,7 +1611,8 @@ func staticRuleSubjectKindAllowed(subject StaticDeclarationSubject) bool {
 		StaticDeclarationSubjectSourceNamed:
 		return true
 	case StaticDeclarationSubjectGroup:
-		return subject.Group.Kind == EffectStaticSubjectAttachedObject
+		return subject.Group.Kind == EffectStaticSubjectAttachedObject ||
+			subject.Group.Kind == EffectStaticSubjectControlledCreatures
 	default:
 		return false
 	}
@@ -1552,8 +1636,14 @@ func staticRuleSubjectForDeclaration(subject StaticDeclarationSubject, operation
 	case StaticDeclarationSubjectSourceCreature, StaticDeclarationSubjectSourceNamed:
 		return StaticRuleSubject{Kind: StaticRuleSubjectSourceCreature, Span: subject.Span}, true
 	case StaticDeclarationSubjectGroup:
-		if subject.Group.Kind == EffectStaticSubjectAttachedObject {
+		switch subject.Group.Kind {
+		case EffectStaticSubjectAttachedObject:
 			return StaticRuleSubject{Kind: StaticRuleSubjectAttachedObject, Span: subject.Span}, true
+		case EffectStaticSubjectControlledCreatures:
+			if operation.Kind == StaticRuleOperationBlock && operation.Voice == StaticRuleVoicePassive {
+				return StaticRuleSubject{Kind: StaticRuleSubjectControlledCreatures, Span: subject.Span}, true
+			}
+		default:
 		}
 	default:
 	}

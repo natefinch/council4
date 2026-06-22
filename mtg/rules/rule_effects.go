@@ -653,7 +653,32 @@ func ruleEffectMatchesPermanent(g *game.Game, effect *game.RuleEffect, permanent
 			return false
 		}
 	}
+	if !effect.AffectedSelection.Empty() && !ruleEffectAffectedSelectionMatches(g, effect, permanent) {
+		return false
+	}
 	return true
+}
+
+// ruleEffectAffectedSelectionMatches reports whether permanent satisfies a
+// group-scoped rule effect's affected-permanent Selection filter ("Blue creatures
+// you control ...", "Creatures you control with +1/+1 counters on them ..."). It
+// builds a permanent selection subject viewed from the effect's controller and
+// excluding the effect's source object, mirroring group-membership matching.
+func ruleEffectAffectedSelectionMatches(g *game.Game, effect *game.RuleEffect, permanent *game.Permanent) bool {
+	sel := &effect.AffectedSelection
+	values := effectivePermanentValues(g, permanent)
+	subject := selectionSubject{
+		kind:           subjectPermanent,
+		g:              g,
+		permanent:      permanent,
+		values:         &values,
+		viewer:         effect.Controller,
+		sourceObjectID: effect.SourceObjectID,
+	}
+	if sel.Controller != game.ControllerAny {
+		subject.controller = effectiveController(g, permanent)
+	}
+	return matchSelection(&subject, sel)
 }
 
 func controllerRelationMatches(sourceController, candidate game.PlayerID, relation game.ControllerRelation) bool {
