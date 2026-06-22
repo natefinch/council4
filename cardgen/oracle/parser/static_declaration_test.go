@@ -2751,3 +2751,60 @@ func TestParseStaticCastSpellsFromLibraryTopWithoutChosenType(t *testing.T) {
 		t.Fatalf("declaration = %#v, want no chosen creature type filter", declarations[0])
 	}
 }
+
+// TestParseStaticSpellTargetsSourceCostModifier checks the "spells that target
+// <source> cost {N} more/less" tax wording across caster scopes (your opponents
+// cast / you cast / unrestricted), threading the SpellTargetsSource predicate
+// and SpellCaster scope.
+func TestParseStaticSpellTargetsSourceCostModifier(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source   string
+		modifier StaticDeclarationCostModifierKind
+		caster   StaticDeclarationSpellCasterKind
+		amount   int
+	}{
+		"opponents tax this creature": {
+			source:   "Spells your opponents cast that target this creature cost {2} more to cast.",
+			modifier: StaticDeclarationCostModifierSpellIncrease,
+			caster:   StaticDeclarationSpellCasterOpponents,
+			amount:   2,
+		},
+		"opponents tax named source": {
+			source:   "Spells your opponents cast that target Charix, the Raging Isle cost {1} more to cast.",
+			modifier: StaticDeclarationCostModifierSpellIncrease,
+			caster:   StaticDeclarationSpellCasterOpponents,
+			amount:   1,
+		},
+		"unrestricted reduction this creature": {
+			source:   "Spells that target this creature cost {2} less to cast.",
+			modifier: StaticDeclarationCostModifierSpellReduction,
+			caster:   StaticDeclarationSpellCasterAny,
+			amount:   2,
+		},
+		"controller reduction this permanent": {
+			source:   "Spells you cast that target this permanent cost {1} less to cast.",
+			modifier: StaticDeclarationCostModifierSpellReduction,
+			caster:   StaticDeclarationSpellCasterController,
+			amount:   1,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.source, Context{CardName: "Charix, the Raging Isle"})
+			if len(declarations) != 1 || declarations[0].Kind != StaticDeclarationCostModifier {
+				t.Fatalf("declarations = %#v, want one cost modifier", declarations)
+			}
+			declaration := declarations[0]
+			if !declaration.SpellTargetsSource {
+				t.Fatalf("declaration = %#v, want SpellTargetsSource", declaration)
+			}
+			if declaration.CostModifier != test.modifier ||
+				declaration.SpellCaster != test.caster ||
+				declaration.CostReductionAmount != test.amount {
+				t.Fatalf("declaration = %#v, want modifier %s caster %q amount %d", declaration, test.modifier, test.caster, test.amount)
+			}
+		})
+	}
+}

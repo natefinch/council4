@@ -258,7 +258,7 @@ func spellKicker(card *game.CardDef) (game.KickerKeyword, bool) {
 func payableSpellOptionsFromState(s State, req SpellRequest) []SpellOptionSummary {
 	var result []SpellOptionSummary
 	for _, option := range spellCostOptionsForRequest(s, req) {
-		if _, ok := buildSpellCostPlanForOption(s, req.PlayerID, req.CardID, req.SourceZone, option, req.XValue, nil); ok {
+		if _, ok := buildSpellCostPlanForOption(s, req.PlayerID, req.CardID, req.SourceZone, option, req.XValue, req.Targets, nil); ok {
 			result = append(result, SpellOptionSummary{
 				Index:           option.index,
 				Label:           option.label,

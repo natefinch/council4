@@ -39,6 +39,11 @@ type SpellRequest struct {
 	Alternative     opt.V[cost.Alternative]
 	CastPermissions []SpellCastPermission
 	Prefs           *Preferences
+	// Targets are the spell's chosen targets, supplied so target-dependent cost
+	// modifiers ("Spells your opponents cast that target this creature cost {N}
+	// more to cast.") can match. It is empty when the spell has no targets or is
+	// being cost-checked before targets are announced.
+	Targets []game.Target
 }
 
 // AbilityRequest bundles all parameters needed to check or pay activated

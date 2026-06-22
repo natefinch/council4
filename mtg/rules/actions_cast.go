@@ -118,6 +118,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		KickerCount:     cast.KickerCount,
 		ChosenModes:     cast.ChosenModes,
 		CastPermissions: permissions,
+		Targets:         cast.Targets,
 		Prefs:           prefs,
 	}
 	if cast.Overloaded {
@@ -345,6 +346,7 @@ func canCastPreparedCopy(g *game.Game, playerID game.PlayerID, permanent *game.P
 		SourceZone: zone.Battlefield,
 		Card:       spellDef,
 		XValue:     xValue,
+		Targets:    targets,
 	})
 }
 
@@ -381,6 +383,7 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 		SourceZone: zone.Battlefield,
 		Card:       spellDef,
 		XValue:     cast.XValue,
+		Targets:    cast.Targets,
 		Prefs:      prefs,
 	})
 	if !ok {
@@ -589,6 +592,7 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		KickerCount:     kickerCount,
 		ChosenModes:     chosenModes,
 		CastPermissions: castPermissionsForZone(g, playerID, card.ID, sourceZone, face),
+		Targets:         targets,
 	}
 	if overloaded {
 		request.Alternative = opt.Val(overloadAlternativeCost(spellDef.Overload.Val.Cost))

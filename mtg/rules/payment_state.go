@@ -120,7 +120,7 @@ func (*rulesPaymentState) CardFace(card *game.CardInstance, face game.FaceIndex)
 	return cardFaceOrDefault(card, face)
 }
 
-func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone zone.Type) []game.CostModifier {
+func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone zone.Type, targets []game.Target) []game.CostModifier {
 	var modifiers []game.CostModifier
 	for _, modifier := range s.g.CostModifiers {
 		if modifier.Kind != game.CostModifierSpell {
@@ -143,7 +143,7 @@ func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *
 			})
 		}
 	}
-	modifiers = append(modifiers, staticCostModifiersForContext(s.g, playerID, card, sourceZone)...)
+	modifiers = append(modifiers, staticCostModifiersForContext(s.g, playerID, card, sourceZone, targets)...)
 	modifiers = append(modifiers, sourceSpellSelfCostModifiers(s.g, playerID, card)...)
 	return modifiers
 }

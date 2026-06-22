@@ -103,6 +103,17 @@ type CostModifier struct {
 	// regardless of power. It is meaningful only on a CostModifierSpell and
 	// combines with the card-type, color, subtype, and zone filters.
 	MinPower opt.V[int]
+
+	// TargetsSource constrains a spell cost modifier to spells that target the
+	// permanent whose static ability carries the modifier ("Spells your
+	// opponents cast that target this creature cost {2} more to cast.", Boreal
+	// Elemental; "Spells you cast that target this creature cost {2} less to
+	// cast.", Elderwood Scion). The rules layer applies the modifier only when
+	// one of the casting spell's chosen targets is exactly the source
+	// permanent. It is meaningful only on a CostModifierSpell and combines with
+	// the affected-player caster filter (PlayerOpponent for the defensive tax,
+	// PlayerYou for the controller's discount).
+	TargetsSource bool
 }
 
 // RuleEffectKind identifies non-layer continuous rules effects such as

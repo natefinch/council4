@@ -458,7 +458,30 @@ type StaticCostModifierDeclaration struct {
 	// the card-type, color, subtype, and zone filters.
 	MinPower      int
 	MatchMinPower bool
+
+	// TargetsSource constrains a spell cost modifier to spells that target the
+	// source permanent ("Spells your opponents cast that target this creature
+	// cost {2} more to cast.", Boreal Elemental). Caster identifies which
+	// players' spells the modifier affects.
+	TargetsSource bool
+	Caster        StaticSpellCasterKind
 }
+
+// StaticSpellCasterKind identifies which players' spells a cast-cost modifier
+// affects.
+type StaticSpellCasterKind uint8
+
+// Static spell caster kinds recognized by Card Generation.
+const (
+	// StaticSpellCasterController is the default: the static ability
+	// controller's own spells ("Spells you cast ...").
+	StaticSpellCasterController StaticSpellCasterKind = iota
+	// StaticSpellCasterOpponents is the controller's opponents' spells
+	// ("Spells your opponents cast ...").
+	StaticSpellCasterOpponents
+	// StaticSpellCasterAny is every player's spells ("Spells that ...").
+	StaticSpellCasterAny
+)
 
 // StaticPlayerRuleKind identifies a closed player-scoped static rule.
 type StaticPlayerRuleKind uint8
@@ -2881,10 +2904,18 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 	if ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
-		len(ability.Content.Targets) != 0 ||
-		len(ability.Content.References) != 0 ||
 		len(ability.Content.Keywords) != 0 ||
 		len(ability.Content.Conditions) != 0 {
+		return StaticDeclaration{}, false
+	}
+	// A targets-source cost modifier ("Spells your opponents cast that target
+	// this creature cost {N} more to cast.") intentionally carries the "that
+	// target <source>" phrase, which the effect machinery records as a target
+	// and a reference; the parser owns that wording and marks it via
+	// SpellTargetsSource, so those payloads are expected here. Every other
+	// cast-cost modifier must carry no targets or references.
+	if !node.SpellTargetsSource &&
+		(len(ability.Content.Targets) != 0 || len(ability.Content.References) != 0) {
 		return StaticDeclaration{}, false
 	}
 	spellTypes, ok := staticSpellTypeCardTypes(node.SpellType)
@@ -2921,6 +2952,10 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 	if node.MatchSpellPowerAtLeast && node.SpellPowerAtLeast <= 0 {
 		return StaticDeclaration{}, false
 	}
+	caster, ok := staticSpellCasterKind(node.SpellCaster)
+	if !ok {
+		return StaticDeclaration{}, false
+	}
 	cost := StaticCostModifierDeclaration{
 		Kind:                         StaticCostModifierSpell,
 		SpellTypes:                   spellTypes,
@@ -2932,6 +2967,8 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 		SourceZone:                   node.SpellCastZone,
 		MinPower:                     node.SpellPowerAtLeast,
 		MatchMinPower:                node.MatchSpellPowerAtLeast,
+		TargetsSource:                node.SpellTargetsSource,
+		Caster:                       caster,
 	}
 	if node.CostModifier == parser.StaticDeclarationCostModifierSpellIncrease {
 		cost.GenericIncrease = node.CostReductionAmount
@@ -2948,6 +2985,21 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 		},
 		Cost: &cost,
 	}, true
+}
+
+// staticSpellCasterKind maps the parser's closed caster filter onto the
+// compiler's caster kind. An unrecognized filter fails closed.
+func staticSpellCasterKind(filter parser.StaticDeclarationSpellCasterKind) (StaticSpellCasterKind, bool) {
+	switch filter {
+	case parser.StaticDeclarationSpellCasterController:
+		return StaticSpellCasterController, true
+	case parser.StaticDeclarationSpellCasterOpponents:
+		return StaticSpellCasterOpponents, true
+	case parser.StaticDeclarationSpellCasterAny:
+		return StaticSpellCasterAny, true
+	default:
+		return StaticSpellCasterController, false
+	}
 }
 
 // staticSpellTypeCardTypes maps a closed spell-type filter onto the card types
