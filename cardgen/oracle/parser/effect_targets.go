@@ -1264,7 +1264,7 @@ func exactExcludedColorTargetSyntax(text string, selection SelectionSyntax) bool
 }
 
 func exactExcludedTypeTargetSyntax(text string, selection SelectionSyntax) bool {
-	if selection.All || selection.Another || selection.Other ||
+	if selection.All ||
 		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
 		selection.Keyword != KeywordUnknown || selection.Zone != zone.None ||
 		selection.MatchPower || selection.MatchToughness ||
@@ -1287,7 +1287,18 @@ func exactExcludedTypeTargetSyntax(text string, selection SelectionSyntax) bool 
 	if !ok {
 		return false
 	}
-	expected, ok := targetControllerSuffix("target non"+excludedNoun+" "+noun, selection.Controller)
+	// "another"/"other" prepend the self-exclusion word before "target" ("exile
+	// another target nonland permanent", Oblivion Ring); the bare form keeps a
+	// leading "target". permanentTargetSpec already lowers the Another predicate.
+	prefix := "target"
+	switch {
+	case selection.Another:
+		prefix = "another target"
+	case selection.Other:
+		prefix = "other target"
+	default:
+	}
+	expected, ok := targetControllerSuffix(prefix+" non"+excludedNoun+" "+noun, selection.Controller)
 	if !ok {
 		return false
 	}

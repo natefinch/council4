@@ -1660,6 +1660,13 @@ type EffectSyntax struct {
 	// linked to the source so a paired leaves-the-battlefield trigger returns it;
 	// the trailing self-reference is the duration anchor, not a target.
 	ExileUntilSourceLeaves bool `json:",omitempty"`
+	// ReturnExiledCard marks the explicit O-Ring leaves-the-battlefield clause
+	// "return the exiled card to the battlefield under its owner's control."
+	// (Oblivion Ring, Journey to Nowhere, Fiend Hunter). The returned card is the
+	// one a sibling enters-the-battlefield exile removed, identified by the
+	// source link rather than a target. Lowering emits a linked battlefield
+	// return; it is false for every other return shape.
+	ReturnExiledCard bool `json:",omitempty"`
 	// Additional marks a draw clause whose counted cards carry the "additional"
 	// qualifier ("draw two additional cards", "draw an additional card"), as on
 	// draw-step triggers like Sylvan Library. Drawing N additional cards is

@@ -255,6 +255,34 @@ func exactExileUntilSourceLeavesEffectSyntax(effect *EffectSyntax) bool {
 	return true
 }
 
+// exactReturnExiledCardEffectSyntax recognizes the explicit O-Ring leaves-the-
+// battlefield clause "return the exiled card to the battlefield under its
+// owner's control." (Oblivion Ring, Journey to Nowhere, Fiend Hunter). The
+// returned card is the one a sibling enters-the-battlefield exile removed,
+// identified by the source link, so the effect carries no target. It marks the
+// effect so lowering emits the linked battlefield return; any other return shape
+// leaves the clause non-exact so lowering fails closed.
+func exactReturnExiledCardEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectReturn || effect.Negated || effect.Optional {
+		return false
+	}
+	if effect.Context != EffectContextController || !effect.UnderOwnersControl {
+		return false
+	}
+	if effect.ToZone != zone.Battlefield || effect.FromZone != zone.None {
+		return false
+	}
+	if len(effect.Targets) != 0 {
+		return false
+	}
+	if !strings.EqualFold(exactEffectClauseText(effect),
+		"Return the exiled card to the battlefield under its owner's control.") {
+		return false
+	}
+	effect.ReturnExiledCard = true
+	return true
+}
+
 func parseGraveyardZoneExile(effect *EffectSyntax) GraveyardZoneExileKind {
 	if effect.Kind != EffectExile || effect.Negated {
 		return GraveyardZoneExileNone

@@ -301,6 +301,7 @@ func lowerFaceAbilities(
 			}
 		}
 	}
+	linkExplicitExileReturns(&result)
 	synthesizeExileUntilLeavesReturns(&result)
 	if len(unsupported) > 0 {
 		return loweredFaceAbilities{}, append(diagnostics, unsupported...)
