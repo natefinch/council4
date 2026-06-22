@@ -39,7 +39,8 @@ func conditionParametersNegative(cond *game.Condition) bool {
 		cond.ControlsMatching.Exists && cond.ControlsMatching.Val.MinCount < 0 ||
 		cond.AnyOpponentControls.Exists && cond.AnyOpponentControls.Val.MinCount < 0 ||
 		cond.OpponentsControl.Exists && cond.OpponentsControl.Val.MinCount < 0 ||
-		cond.AttackersAttackingControllerAtLeast < 0
+		cond.AttackersAttackingControllerAtLeast < 0 ||
+		cond.ControllerGainedLifeThisTurnAtLeast < 0
 }
 
 func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game.Condition]) bool {
@@ -167,6 +168,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	}
 	if cond.AttackersAttackingControllerAtLeast > 0 {
 		matches = matches && attackersAttackingPlayerCount(g, ctx.controller) >= cond.AttackersAttackingControllerAtLeast
+	}
+	if cond.ControllerGainedLifeThisTurnAtLeast > 0 {
+		matches = matches && lifeChangedThisTurn(g, ctx.controller, game.EventLifeGained) >= cond.ControllerGainedLifeThisTurnAtLeast
 	}
 	if cond.Negate {
 		return !matches

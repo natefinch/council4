@@ -88,6 +88,7 @@ const (
 	ConditionPredicateAttackersAttackingControllerAtLeast              ConditionPredicateKind = "ConditionPredicateAttackersAttackingControllerAtLeast"
 	ConditionPredicateControllerLibrarySizeAtLeast                     ConditionPredicateKind = "ConditionPredicateControllerLibrarySizeAtLeast"
 	ConditionPredicateControllerLifeExactly                            ConditionPredicateKind = "ConditionPredicateControllerLifeExactly"
+	ConditionPredicateControllerGainedLifeThisTurnAtLeast              ConditionPredicateKind = "ConditionPredicateControllerGainedLifeThisTurnAtLeast"
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -558,6 +559,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeAttachedCreatureStateCondition,
 		recognizeSourceCounterStateCondition,
 		recognizeControllerResourceCondition,
+		recognizeGainedLifeThisTurnCondition,
 		recognizeGraveyardCondition,
 		recognizeCounterPlacementCondition,
 		recognizeDamageSourceCondition,
@@ -1213,6 +1215,25 @@ func recognizeControllerResourceCondition(body []shared.Token, atoms Atoms) (Con
 		}
 	}
 	return ConditionClause{}, false
+}
+
+// recognizeGainedLifeThisTurnCondition matches the intervening-if body
+// "you gained <n> or more life this turn", e.g. Angelic Accord's
+// "At the beginning of each end step, if you gained 3 or more life this turn,
+// create a 4/4 white Angel creature token with flying."
+func recognizeGainedLifeThisTurnCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "you", "gained")
+	if !ok {
+		return ConditionClause{}, false
+	}
+	count, tail, ok := parseLeadingCount(rest)
+	if !ok || count.Comparison != ConditionComparisonAtLeast {
+		return ConditionClause{}, false
+	}
+	if !tokenWordsEqual(tail, "life", "this", "turn") {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{Predicate: ConditionPredicateControllerGainedLifeThisTurnAtLeast, Threshold: count.Value}, true
 }
 
 func recognizeGraveyardCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {

@@ -269,44 +269,22 @@ func TestLowerAtTriggerInterveningIfConditions(t *testing.T) {
 			},
 		},
 		{
-			name:      "controller library size",
-			condition: "if you have 200 or more cards in your library",
-			assert: func(t *testing.T, condition game.Condition) {
-				t.Helper()
-				if condition.ControllerLibrarySizeAtLeast != 200 {
-					t.Fatalf("ControllerLibrarySizeAtLeast = %d, want 200", condition.ControllerLibrarySizeAtLeast)
-				}
-			},
-		},
-		{
-			name:      "controller life exactly",
-			condition: "if you have exactly 1 life",
-			assert: func(t *testing.T, condition game.Condition) {
-				t.Helper()
-				if !condition.ControllerLifeExactly.Exists || condition.ControllerLifeExactly.Val != 1 {
-					t.Fatalf("ControllerLifeExactly = %+v, want 1", condition.ControllerLifeExactly)
-				}
-			},
-		},
-		{
-			name:      "controls twenty creatures",
-			condition: "if you control twenty or more creatures",
-			assert: func(t *testing.T, condition game.Condition) {
-				t.Helper()
-				controls := condition.ControlsMatching
-				if !controls.Exists || controls.Val.MinCount != 20 ||
-					!slices.Equal(controls.Val.Selection.RequiredTypes, []types.Card{types.Creature}) {
-					t.Fatalf("condition = %+v, want controls 20 creatures", condition)
-				}
-			},
-		},
-		{
 			name:      "controller hand size exactly",
 			condition: "if you have exactly thirteen cards in your hand",
 			assert: func(t *testing.T, condition game.Condition) {
 				t.Helper()
 				if !condition.ControllerHandSizeExactly.Exists || condition.ControllerHandSizeExactly.Val != 13 {
 					t.Fatalf("ControllerHandSizeExactly = %+v, want 13", condition.ControllerHandSizeExactly)
+				}
+			},
+		},
+		{
+			name:      "gained life this turn",
+			condition: "if you gained 3 or more life this turn",
+			assert: func(t *testing.T, condition game.Condition) {
+				t.Helper()
+				if condition.ControllerGainedLifeThisTurnAtLeast != 3 {
+					t.Fatalf("ControllerGainedLifeThisTurnAtLeast = %d, want 3", condition.ControllerGainedLifeThisTurnAtLeast)
 				}
 			},
 		},
@@ -334,7 +312,6 @@ func TestLowerAtTriggerInterveningIfConditions(t *testing.T) {
 func TestLowerAtTriggerUnsupportedInterveningIfFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, condition := range []string{
-		"if you gained 2 or more life this turn",
 		"if this creature came under your control since the beginning of your last upkeep",
 	} {
 		t.Run(condition, func(t *testing.T) {

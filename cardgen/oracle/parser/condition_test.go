@@ -574,6 +574,28 @@ func TestParseConditionAttackersAttackingController(t *testing.T) {
 	}
 }
 
+// TestParseConditionGainedLifeThisTurn covers the intervening-if condition
+// "if you gained N or more life this turn" (Angelic Accord, Griffin Aerie),
+// which gates an end-step trigger on the controller's accumulated life gain.
+func TestParseConditionGainedLifeThisTurn(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"At the beginning of each end step, if you gained 4 or more life this turn, draw a card.",
+		Context{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if len(document.Abilities) != 1 {
+		t.Fatalf("abilities = %#v", document.Abilities)
+	}
+	clauses := document.Abilities[0].ConditionClauses
+	if len(clauses) != 1 ||
+		clauses[0].Predicate != ConditionPredicateControllerGainedLifeThisTurnAtLeast ||
+		clauses[0].Threshold != 4 {
+		t.Fatalf("clauses = %#v, want gained-life-this-turn threshold 4", clauses)
+	}
+}
+
 // TestParseConditionDestroyedThisWayRejectsOtherWording confirms the recognizer
 // fails closed on wording it does not model, leaving an unsupported condition
 // rather than a silently-wrong success gate.

@@ -599,6 +599,12 @@ const (
 	// life total is exactly Threshold ("if you have exactly 1 life", Near-Death
 	// Experience).
 	ConditionPredicateControllerLifeExactly
+
+	// ConditionPredicateControllerGainedLifeThisTurnAtLeast is satisfied when the
+	// context controller has gained at least Threshold total life so far this
+	// turn ("if you gained 3 or more life this turn"; Angelic Accord). It gates
+	// an intervening-if trigger against the turn's accumulated life gain.
+	ConditionPredicateControllerGainedLifeThisTurnAtLeast
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard

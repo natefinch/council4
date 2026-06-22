@@ -1302,6 +1302,9 @@ func (v *cardDefValidator) validateCondition(faceName, path string, condition *C
 	if condition.ControllerLifeExactly.Exists && condition.ControllerLifeExactly.Val < 0 {
 		v.add(faceName, appendPath(path, "ControllerLifeExactly"), CardDefIssueInvalidCondition, "life threshold cannot be negative")
 	}
+	if condition.ControllerGainedLifeThisTurnAtLeast < 0 {
+		v.add(faceName, appendPath(path, "ControllerGainedLifeThisTurnAtLeast"), CardDefIssueInvalidCondition, "gained-life-this-turn threshold cannot be negative")
+	}
 	if condition.ControllerControls.MinCount < 0 {
 		v.add(faceName, appendPath(path, "ControllerControls.MinCount"), CardDefIssueInvalidCondition, "permanent-count threshold cannot be negative")
 	}

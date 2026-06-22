@@ -201,7 +201,6 @@ func TestLowerOpponentLandfallControlComparison(t *testing.T) {
 func TestLowerEventHistoryInterveningConditionFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
-		"At the beginning of your upkeep, if you gained 2 or more life this turn, draw a card.",
 		"At the beginning of your upkeep, if no creatures attacked last turn, draw a card.",
 	} {
 		t.Run(oracleText, func(t *testing.T) {

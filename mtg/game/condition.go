@@ -142,6 +142,11 @@ type Condition struct {
 	// to equal this value ("if you have exactly N life", Near-Death Experience).
 	// It uses opt.V so an exact-zero threshold is distinguishable from absence.
 	ControllerLifeExactly opt.V[int]
+
+	// ControllerGainedLifeThisTurnAtLeast requires the context controller to have
+	// gained at least this much total life so far this turn ("if you gained 3 or
+	// more life this turn"; Angelic Accord). It is zero (disabled) otherwise.
+	ControllerGainedLifeThisTurnAtLeast int
 }
 
 // ControlPlayerScope selects which players' battlefields a control-count
@@ -253,7 +258,8 @@ func (c *Condition) Empty() bool {
 		!c.SpellWasKicked &&
 		c.AttackersAttackingControllerAtLeast == 0 &&
 		c.ControllerLibrarySizeAtLeast == 0 &&
-		!c.ControllerLifeExactly.Exists
+		!c.ControllerLifeExactly.Exists &&
+		c.ControllerGainedLifeThisTurnAtLeast == 0
 }
 
 // EventHistoryWindow selects which turn's event log an EventHistoryCondition
