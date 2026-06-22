@@ -1358,7 +1358,12 @@ func lowerGainPlayerCounterSpell(
 
 // gainPlayerCounterRecipient resolves the player who receives the counters from
 // the effect's typed context, returning any target specs the reference needs.
-// It mirrors the single-player recipients lowerFixedLifeSpell supports.
+// It mirrors the single-player recipients lowerFixedLifeSpell supports, plus the
+// referenced-object-controller recipient ("its controller gets a counter"): the
+// controller of an inherited sequence target ("Destroy target creature. Its
+// controller gets a poison counter.") or of the triggering event permanent
+// ("Whenever enchanted artifact becomes tapped, its controller gets a poison
+// counter.").
 func gainPlayerCounterRecipient(
 	ctx contentCtx,
 	effect compiler.CompiledEffect,
@@ -1386,6 +1391,15 @@ func gainPlayerCounterRecipient(
 			return game.PlayerReference{}, nil, false
 		}
 		return game.TargetPlayerReference(0), []game.TargetSpec{targetSpec}, true
+	case len(ctx.content.Targets) == 1 &&
+		effect.Context == parser.EffectContextReferencedObjectController:
+		ref, ok := referencedControllerPlayerRef(ctx)
+		return ref, nil, ok
+	case len(ctx.content.Targets) == 0 &&
+		len(ctx.content.References) == 1 &&
+		effect.Context == parser.EffectContextReferencedObjectController &&
+		ctx.content.References[0].Binding == compiler.ReferenceBindingEventPermanent:
+		return game.ObjectControllerReference(game.EventPermanentReference()), nil, true
 	default:
 		return game.PlayerReference{}, nil, false
 	}

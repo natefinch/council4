@@ -186,6 +186,7 @@ func TestGenerateGainPlayerCounterRecipients(t *testing.T) {
 }
 
 func TestGainEnergyDoesNotShadowPowerToughness(t *testing.T) {
+
 	t.Parallel()
 	// A normal "gets +1/+1" power/toughness modification must still lower as a
 	// P/T change, not as an energy gain.
@@ -203,5 +204,66 @@ func TestGainEnergyDoesNotShadowPowerToughness(t *testing.T) {
 	}
 	if strings.Contains(source, "counter.Energy") {
 		t.Fatalf("power/toughness buff wrongly lowered to energy:\n%s", source)
+	}
+}
+
+// TestGenerateGainPlayerCounterObjectControllerRecipient covers the
+// referenced-object-controller recipient: "its controller gets a counter" places
+// the counters on the controller of the referenced object — an inherited
+// sequence target (Pistus Strike) or the triggering event permanent (Relic
+// Putrescence) — rather than the spell's controller.
+func TestGenerateGainPlayerCounterObjectControllerRecipient(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name      string
+		typeLine  string
+		oracle    string
+		manaCost  string
+		reference string
+	}{
+		{
+			name:      "Pistus Strike",
+			typeLine:  "Instant",
+			oracle:    "Destroy target creature with flying. Its controller gets a poison counter.",
+			manaCost:  "{1}{G}",
+			reference: "game.ObjectControllerReference(game.TargetPermanentReference(0))",
+		},
+		{
+			name:      "Relic Putrescence",
+			typeLine:  "Enchantment — Aura",
+			oracle:    "Enchant artifact\nWhenever enchanted artifact becomes tapped, its controller gets a poison counter.",
+			manaCost:  "{2}{B}",
+			reference: "game.ObjectControllerReference(game.EventPermanentReference())",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       tc.name,
+				Layout:     "normal",
+				TypeLine:   tc.typeLine,
+				OracleText: tc.oracle,
+				ManaCost:   tc.manaCost,
+			}, "p")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, want := range []string{
+				"game.AddPlayerCounter",
+				"counter.Poison",
+				tc.reference,
+				"game.Fixed(1)",
+			} {
+				if !strings.Contains(source, want) {
+					t.Fatalf("generated source missing %q:\n%s", want, source)
+				}
+			}
+			if strings.Contains(source, "Player: game.ControllerReference()") {
+				t.Fatalf("object-controller recipient wrongly lowered to controller:\n%s", source)
+			}
+		})
 	}
 }

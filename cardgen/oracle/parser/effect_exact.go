@@ -3165,9 +3165,10 @@ func exactGainPlayerCounterEffectSyntax(effect *EffectSyntax) bool {
 // clause "<recipient> gets <N> <singular|plural>." for each supported recipient
 // subject and reports whether the printed effect text matches byte-for-byte. The
 // recipient set matches the references the lowering resolves (controller,
-// defending player, the triggering "that player"/"they", a lone targeted player,
-// and the "each opponent"/"each player" groups); any other subject yields no
-// prefix and fails closed.
+// defending player, the triggering "that player"/"they", the referenced object's
+// controller "Its controller", a lone targeted player, and the "each
+// opponent"/"each player" groups); any other subject yields no prefix and fails
+// closed.
 func exactPlayerCounterRecipientText(effect *EffectSyntax, singular, plural string) bool {
 	var prefixes []string
 	switch effect.Context {
@@ -3183,6 +3184,10 @@ func exactPlayerCounterRecipientText(effect *EffectSyntax, singular, plural stri
 		prefixes = []string{"Defending player gets"}
 	case EffectContextEventPlayer, EffectContextReferencedPlayer:
 		prefixes = []string{"They get", "That player gets"}
+	case EffectContextReferencedObjectController:
+		if subject := referencedControllerSubjectText(effect); subject != "" {
+			prefixes = []string{subject + " gets"}
+		}
 	case EffectContextTarget, EffectContextPriorSubject:
 		if len(effect.Targets) == 1 && effect.Targets[0].Exact {
 			prefixes = []string{titleFirstEffectText(effect.Targets[0].Text) + " gets"}
