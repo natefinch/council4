@@ -618,8 +618,19 @@ func handleSetClassLevel(r *effectResolver, prim game.SetClassLevel) effectResol
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	permanent, ok := r.resolveObject(prim.Object)
 	if ok && res.amount > permanent.ClassLevel {
+		previous := permanent.ClassLevel
 		permanent.ClassLevel = res.amount
 		res.succeeded = true
+		for level := previous + 1; level <= res.amount; level++ {
+			emitEvent(r.game, game.Event{
+				Kind:           game.EventClassLevelGained,
+				SourceObjectID: permanent.ObjectID,
+				PermanentID:    permanent.ObjectID,
+				SourceID:       permanent.CardInstanceID,
+				Controller:     effectiveController(r.game, permanent),
+				Amount:         level,
+			})
+		}
 	}
 	return res
 }

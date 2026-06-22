@@ -52,3 +52,36 @@ func TestRecognizeClassLevelGainRequiresClassContext(t *testing.T) {
 		}
 	}
 }
+
+func TestParseClassBecameLevelTrigger(t *testing.T) {
+	const oracle = "(Gain the next level as a sorcery to add its ability.)\n" +
+		"You have no maximum hand size.\n" +
+		"{2}{U}: Level 2\n" +
+		"When this Class becomes level 2, draw two cards.\n" +
+		"{4}{U}: Level 3\n" +
+		"Whenever you draw a card, put a +1/+1 counter on target creature you control."
+	document, diagnostics := Parse(oracle, Context{Class: true, CardName: "Wizard Class"})
+	if len(diagnostics) != 0 {
+		t.Fatalf("parse diagnostics = %v", diagnostics)
+	}
+	found := false
+	for i := range document.Abilities {
+		trigger := document.Abilities[i].Trigger
+		if trigger == nil || trigger.TriggerEvent == nil {
+			continue
+		}
+		if trigger.TriggerEvent.Kind != TriggerEventKindClassBecameLevel {
+			continue
+		}
+		found = true
+		if trigger.TriggerEvent.ClassBecameLevel != 2 {
+			t.Fatalf("ClassBecameLevel = %d, want 2", trigger.TriggerEvent.ClassBecameLevel)
+		}
+		if trigger.TriggerEvent.Subject.Kind != TriggerEventSubjectSelf {
+			t.Fatalf("subject kind = %v, want self", trigger.TriggerEvent.Subject.Kind)
+		}
+	}
+	if !found {
+		t.Fatal("no class-became-level trigger clause recognized")
+	}
+}

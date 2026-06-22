@@ -34,3 +34,52 @@ func recognizeClassLevelGain(body []shared.Token) int {
 	}
 	return level
 }
+
+// parseClassBecameLevelTriggerEventClause recognizes the self-source trigger
+// "this Class becomes level N" on a Class enchantment (CR 716). The clause's
+// subject is the ability's own source and ClassBecameLevel carries the level
+// reached.
+func parseClassBecameLevelTriggerEventClause(
+	tokens []shared.Token,
+	_ TriggerIntroductionKind,
+	atoms Atoms,
+	_ string,
+) *TriggerEventClause {
+	if len(tokens) < 5 {
+		return nil
+	}
+	last := tokens[len(tokens)-1]
+	if last.Kind != shared.Integer {
+		return nil
+	}
+	if !equalWord(tokens[len(tokens)-3], "becomes") || !equalWord(tokens[len(tokens)-2], "level") {
+		return nil
+	}
+	subjectTokens := tokens[:len(tokens)-3]
+	if !classBecameLevelSubjectIsSelf(subjectTokens, atoms) {
+		return nil
+	}
+	level, err := strconv.Atoi(last.Text)
+	if err != nil || level < 2 {
+		return nil
+	}
+	return &TriggerEventClause{
+		Span:             shared.SpanOf(tokens),
+		Kind:             TriggerEventKindClassBecameLevel,
+		Subject:          TriggerEventSubject{Kind: TriggerEventSubjectSelf, Span: shared.SpanOf(subjectTokens)},
+		ClassBecameLevel: level,
+	}
+}
+
+// classBecameLevelSubjectIsSelf reports whether the subject tokens name the
+// ability's own source, either the literal "this Class" wording or a recognized
+// self-name/source marker span.
+func classBecameLevelSubjectIsSelf(tokens []shared.Token, atoms Atoms) bool {
+	if syntaxWordsEqual(tokens, "this", "Class") {
+		return true
+	}
+	if _, count, ok := parseSelfSubject(tokens, atoms); ok && count == len(tokens) {
+		return true
+	}
+	return false
+}

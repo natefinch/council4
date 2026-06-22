@@ -81,6 +81,8 @@ func compileTriggerEventClause(clause *parser.TriggerEventClause) (TriggerPatter
 		ok = compileBecameTargetEvent(clause, &pattern)
 	case parser.TriggerEventKindTokenCreated:
 		ok = compileTokenCreatedEvent(clause, &pattern)
+	case parser.TriggerEventKindClassBecameLevel:
+		ok = compileClassBecameLevelEvent(clause, &pattern)
 	default:
 		return TriggerPattern{}, false
 	}
@@ -317,6 +319,20 @@ func compilePermanentSubjectEvent(
 	if event != TriggerEventAttackerBecameBlocked {
 		pattern.RelatedSubjectSelection = related
 	}
+	return true
+}
+
+// compileClassBecameLevelEvent compiles "When this Class becomes level N" into a
+// self-source class-level-gained pattern restricted to the level reached.
+func compileClassBecameLevelEvent(clause *parser.TriggerEventClause, pattern *TriggerPattern) bool {
+	if clause.ClassBecameLevel <= 0 {
+		return false
+	}
+	if !compileEventSubject(&clause.Subject, pattern, &pattern.SubjectSelection) {
+		return false
+	}
+	pattern.Event = TriggerEventClassBecameLevel
+	pattern.ClassBecameLevel = clause.ClassBecameLevel
 	return true
 }
 

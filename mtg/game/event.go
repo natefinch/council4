@@ -62,6 +62,12 @@ const (
 	// per unblocked attacker so "whenever this creature attacks and isn't
 	// blocked" triggers fire. SourceObjectID/PermanentID identify the attacker.
 	EventAttackerBecameUnblocked
+	// EventClassLevelGained marks a Class permanent's level rising to a new
+	// value (CR 716). It is emitted once for each level passed through so
+	// "When this Class becomes level N" triggers fire. SourceObjectID/PermanentID
+	// identify the Class, Controller is its controller, and Amount is the new
+	// level reached.
+	EventClassLevelGained
 )
 
 // DamageRecipientKind identifies what received damage. Values are flags so a
