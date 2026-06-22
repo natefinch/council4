@@ -125,6 +125,10 @@ const (
 	// <cost>" lets the spell be cast for its evoke cost, and the resulting
 	// permanent is sacrificed when it enters the battlefield.
 	KeywordEvoke KeywordKind = "KeywordEvoke"
+	// KeywordRebound is the Rebound keyword (CR 702.88): if you cast this spell
+	// from your hand, exile it as it resolves; at the beginning of your next
+	// upkeep you may cast it from exile without paying its mana cost.
+	KeywordRebound KeywordKind = "KeywordRebound"
 )
 
 var keywordNames = map[KeywordKind]string{
@@ -218,6 +222,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordForestwalk:       "Forestwalk",
 	KeywordDesertwalk:       "Desertwalk",
 	KeywordNonbasicLandwalk: "Nonbasic landwalk",
+	KeywordRebound:          "Rebound",
 }
 
 // String returns the parser-owned canonical keyword name.
@@ -331,6 +336,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordTraining, Words: []string{"training"}},
 	{Kind: KeywordSaddle, Words: []string{"saddle"}},
 	{Kind: KeywordNonbasicLandwalk, Words: []string{"nonbasic", "landwalk"}},
+	{Kind: KeywordRebound, Words: []string{"rebound"}},
 	{Kind: KeywordLandwalk, Words: []string{"landwalk"}},
 	{Kind: KeywordPlainswalk, Words: []string{"plainswalk"}},
 	{Kind: KeywordIslandwalk, Words: []string{"islandwalk"}},

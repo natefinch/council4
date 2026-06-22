@@ -188,4 +188,5 @@ var keywordStaticBodies = map[parser.KeywordKind]loweredStaticAbility{
 	parser.KeywordForestwalk:       {Body: game.ForestwalkStaticBody, VarName: "game.ForestwalkStaticBody"},
 	parser.KeywordDesertwalk:       {Body: game.DesertwalkStaticBody, VarName: "game.DesertwalkStaticBody"},
 	parser.KeywordNonbasicLandwalk: {Body: game.NonbasicLandwalkStaticBody, VarName: "game.NonbasicLandwalkStaticBody"},
+	parser.KeywordRebound:          {Body: game.ReboundStaticBody, VarName: "game.ReboundStaticBody"},
 }

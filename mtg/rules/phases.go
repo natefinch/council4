@@ -127,6 +127,7 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 	// the stack before the game advances to draw (CR 603.6c, CR 117.3b).
 	emitBeginningOfStepEvent(g, game.StepUpkeep)
 	e.processSuspendUpkeep(g, g.Turn.ActivePlayer)
+	e.processReboundUpkeep(g, g.Turn.ActivePlayer, agents, log)
 	g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 	e.runPriorityLoop(g, agents, log)
 	if g.IsGameOver() {
