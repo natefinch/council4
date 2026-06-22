@@ -35,6 +35,10 @@ type Context struct {
 	InstantOrSorcery bool `json:",omitempty"`
 	Planeswalker     bool `json:",omitempty"`
 	Saga             bool `json:",omitempty"`
+	// Class reports that the card is a Class enchantment. The parser uses it to
+	// recognize the Class level-up activated abilities ("{cost}: Level N") and
+	// the intrinsic Class reminder line, which share wording only Class cards use.
+	Class bool `json:",omitempty"`
 	// CardName is the card's own name. The parser uses it to recognize explicit
 	// self-name references so the compiler need not inspect name spelling.
 	CardName string `json:",omitempty"`
@@ -155,6 +159,16 @@ type Ability struct {
 	// fixed boilerplate; downstream stages consume this typed flag instead of
 	// re-reading the reminder wording.
 	DevoidRecognized bool `json:",omitempty"`
+	// ClassReminder reports that this ability is a Class enchantment's intrinsic
+	// level-up reminder ("(Gain the next level as a sorcery to add its
+	// ability.)"). Reminder text carries no game meaning, so downstream stages
+	// consume this typed flag instead of re-reading the reminder wording.
+	ClassReminder bool `json:",omitempty"`
+	// ClassLevelGain is the target level of a Class enchantment's level-up
+	// activated ability ("{cost}: Level N"), or 0 when this ability is not a
+	// level-up. The level number is a typed semantic value the parser reads from
+	// the ability body so downstream stages need not re-read the wording.
+	ClassLevelGain int `json:",omitempty"`
 	// Atoms holds the source-spanned typed semantic atoms recognized within this
 	// ability's semantic tokens. Downstream stages consume these typed values by
 	// span instead of re-recognizing Oracle spelling.

@@ -364,6 +364,14 @@ func parseAbility(
 	if ability.Kind == AbilityReminder && context.Saga {
 		ability.SagaReminder = recognizeSagaLoreReminder(ability.Text)
 	}
+	if context.Class {
+		if ability.Kind == AbilityReminder {
+			ability.ClassReminder = recognizeClassLevelReminder(ability.Text)
+		}
+		if ability.Kind == AbilityActivated {
+			ability.ClassLevelGain = recognizeClassLevelGain(resolvingBody)
+		}
+	}
 	ability.ReadAheadSacrificeChapter, ability.ReadAheadRecognized = recognizeReadAheadReminder(ability.Text)
 	ability.DevoidRecognized = ability.Text == "Devoid (This card has no color.)"
 	if ability.Kind == AbilityActivated {

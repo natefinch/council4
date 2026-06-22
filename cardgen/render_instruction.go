@@ -533,6 +533,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", errors.New("render: internal error: RollDie kind has unexpected concrete type")
 		}
 		return renderRollDie(value), nil
+	case game.PrimitiveSetClassLevel:
+		value, ok := primitive.(game.SetClassLevel)
+		if !ok {
+			return "", errors.New("render: internal error: SetClassLevel kind has unexpected concrete type")
+		}
+		return r.renderSetClassLevel(ctx, value)
 	default:
 		return "", fmt.Errorf("render: unsupported primitive kind %d", primitive.Kind())
 	}
@@ -804,6 +810,21 @@ func (r Renderer) renderMassReanimationExchange(ctx *renderCtx, value game.MassR
 		fmt.Sprintf("Selection: %s,", selection),
 	}
 	return structLit("game.MassReanimationExchange", fields), nil
+}
+
+func (r Renderer) renderSetClassLevel(ctx *renderCtx, value game.SetClassLevel) (string, error) {
+	object, err := r.renderObjectReference(value.Object)
+	if err != nil {
+		return "", err
+	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.SetClassLevel", []string{
+		fmt.Sprintf("Object: %s,", object),
+		fmt.Sprintf("Amount: %s,", amount),
+	}), nil
 }
 
 func (r Renderer) renderShufflePermanentIntoLibrary(value game.ShufflePermanentIntoLibrary) (string, error) {
