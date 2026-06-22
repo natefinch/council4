@@ -608,6 +608,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
 	}
+	if declarations, ok := recognizeStaticControlledGroupRuleDeclarations(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
+		return
+	}
 	if declaration, ok := recognizeStaticEntryChoiceSubtypeDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
@@ -967,17 +971,21 @@ func staticRuleGroupDomain(kind parser.StaticRuleSubjectKind) (StaticGroupDomain
 		return StaticGroupSource, true
 	case parser.StaticRuleSubjectAttachedObject:
 		return StaticGroupAttachedObject, true
+	case parser.StaticRuleSubjectControlledCreatures:
+		return StaticGroupSourceControllerPermanents, true
 	default:
 		return StaticGroupUnknown, false
 	}
 }
 
 // isCreatureRuleSubject reports whether a static rule subject scopes a creature:
-// either the source creature itself or the creature an Aura or Equipment is
-// attached to. Combat and untap rule operations apply to either.
+// either the source creature itself, the creature an Aura or Equipment is
+// attached to, or the creatures the source's controller controls. Combat and
+// untap rule operations apply to either.
 func isCreatureRuleSubject(kind parser.StaticRuleSubjectKind) bool {
 	switch kind {
-	case parser.StaticRuleSubjectSourceCreature, parser.StaticRuleSubjectAttachedObject:
+	case parser.StaticRuleSubjectSourceCreature, parser.StaticRuleSubjectAttachedObject,
+		parser.StaticRuleSubjectControlledCreatures:
 		return true
 	default:
 		return false
@@ -1609,7 +1617,54 @@ func recognizeStaticKeywordGrantRuleDeclarations(ability CompiledAbility, static
 	}, true
 }
 
-// staticKeywordGrantRuleGroup resolves the affected group shared by a keyword
+// recognizeStaticControlledGroupRuleDeclarations maps a standalone group-scoped
+// static rule onto a closed semantic declaration, e.g. "Creatures you control
+// can't be blocked." The rule has no resolving content effect, so the affected
+// group derives entirely from the typed parser rule subject: the
+// controlled-creatures subject yields a controller-permanents group restricted
+// to creatures. Costs, triggers, conditions, or any resolving content fail
+// closed because a continuous group rule carries none.
+func recognizeStaticControlledGroupRuleDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationRule) {
+		return nil, false
+	}
+	ruleNode := &statics[0]
+	group, ok := staticControlledCreaturesRuleGroup(ruleNode.Rule.Subject.Kind, ruleNode.Rule.Subject.Span)
+	if !ok {
+		return nil, false
+	}
+	rule, zone, ok := semanticStaticRuleForSyntax(ruleNode.Rule)
+	if !ok {
+		return nil, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 {
+		return nil, false
+	}
+	declaration := staticRuleDeclaration(ability.Span, group.Span, ruleNode.OperationSpan, rule, zone, group.Domain, staticBlockerRestrictionForSyntax(ruleNode.Rule), nil)
+	declaration.Group = group
+	return []StaticDeclaration{declaration}, true
+}
+
+// staticControlledCreaturesRuleGroup resolves the affected group for a standalone
+// group-scoped static rule from its typed parser subject. The controlled-creatures
+// rule subject yields the controller-permanents domain restricted to creatures;
+// any other rule subject fails closed.
+func staticControlledCreaturesRuleGroup(kind parser.StaticRuleSubjectKind, span shared.Span) (StaticGroupReference, bool) {
+	if kind != parser.StaticRuleSubjectControlledCreatures {
+		return StaticGroupReference{}, false
+	}
+	return StaticGroupReference{
+		Span:      span,
+		Domain:    StaticGroupSourceControllerPermanents,
+		Selection: StaticSelection{RequiredTypes: []StaticCardType{StaticCardTypeCreature}},
+	}, true
+}
+
 // grant and a static rule on the same subject. It prefers the compiled keyword
 // grant effect's subject, but the legacy effect drops its attached-object
 // subject when the grant is the sentence's trailing clause ("Equipped creature

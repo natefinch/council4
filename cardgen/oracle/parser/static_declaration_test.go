@@ -255,6 +255,53 @@ func TestParseStaticGroupPowerToughnessDeclarationMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticControlledCreaturesCantBeBlockedDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t, "Creatures you control can't be blocked.", Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationRule {
+		t.Fatalf("kind = %v, want rule", declaration.Kind)
+	}
+	rule := declaration.Rule
+	if rule.Subject.Kind != StaticRuleSubjectControlledCreatures ||
+		rule.Constraint.Kind != StaticRuleConstraintProhibition ||
+		rule.Operation.Kind != StaticRuleOperationBlock ||
+		rule.Operation.Voice != StaticRuleVoicePassive ||
+		len(rule.Qualifiers) != 0 {
+		t.Fatalf("rule = %#v, want controlled-creatures can't-be-blocked prohibition", rule)
+	}
+}
+
+func TestParseStaticControlledCreaturesRuleFailsClosed(t *testing.T) {
+	t.Parallel()
+	// Only the unconditional "can't be blocked" prohibition is supported for the
+	// controlled-creatures group; other operations and filtered forms must fail
+	// closed (no static declaration).
+	rejected := []string{
+		"Creatures you control can't attack.",
+		"Creatures you control can't block.",
+		"Creatures you control can't be blocked by more than one creature.",
+	}
+	for _, source := range rejected {
+		document, diagnostics := Parse(source, Context{})
+		if len(diagnostics) != 0 {
+			t.Fatalf("Parse(%q) diagnostics = %#v", source, diagnostics)
+		}
+		if len(document.Abilities) != 1 {
+			t.Fatalf("Parse(%q) abilities = %#v, want one", source, document.Abilities)
+		}
+		for _, declaration := range document.Abilities[0].StaticDeclarations {
+			if declaration.Kind == StaticDeclarationRule &&
+				declaration.Rule.Subject.Kind == StaticRuleSubjectControlledCreatures {
+				t.Fatalf("Parse(%q) produced a controlled-creatures rule declaration, want fail closed", source)
+			}
+		}
+	}
+}
+
 func TestParseStaticGroupChosenColorAnthemDeclarationMeaning(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(t, "Creatures you control of the chosen color get +1/+0.", Context{})

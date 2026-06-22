@@ -922,6 +922,11 @@ const (
 	StaticRuleSubjectSourcePermanent StaticRuleSubjectKind = "StaticRuleSubjectSourcePermanent"
 	StaticRuleSubjectSourceSpell     StaticRuleSubjectKind = "StaticRuleSubjectSourceSpell"
 	StaticRuleSubjectAttachedObject  StaticRuleSubjectKind = "StaticRuleSubjectAttachedObject"
+	// StaticRuleSubjectControlledCreatures scopes a static rule to the creatures
+	// the source's controller controls ("Creatures you control can't be
+	// blocked."). It is the only group-scoped rule subject; the compiler maps it
+	// to the controller-permanents affected group.
+	StaticRuleSubjectControlledCreatures StaticRuleSubjectKind = "StaticRuleSubjectControlledCreatures"
 )
 
 // StaticRuleConstraintKind identifies whether a rule prohibits or requires an

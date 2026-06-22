@@ -411,6 +411,13 @@ func parseStaticDeclarationSubject(tokens []shared.Token, atoms Atoms) (StaticDe
 			Group: group,
 		}, verbStart, true
 	}
+	if group, verbStart, ok := staticControlledCreaturesProhibitionSubject(tokens); ok {
+		return StaticDeclarationSubject{
+			Kind:  StaticDeclarationSubjectGroup,
+			Span:  group.Span,
+			Group: group,
+		}, verbStart, true
+	}
 	group := parseEffectStaticSubject(tokens, atoms)
 	if group.Kind == EffectStaticSubjectNone {
 		return StaticDeclarationSubject{}, 0, false
@@ -463,6 +470,26 @@ func staticLinkingVerbGroupSubject(tokens []shared.Token) (EffectStaticSubjectSy
 // joins a characteristic-defining group subject to its predicate.
 func staticLinkingVerb(token shared.Token) bool {
 	return equalWord(token, "is") || equalWord(token, "are")
+}
+
+// staticControlledCreaturesProhibitionSubject recognizes the "Creatures you
+// control" group subject when it precedes a prohibition verb ("can't"/"cannot"),
+// e.g. "Creatures you control can't be blocked." The shared
+// parseEffectStaticSubject only delimits a controlled-creatures group before an
+// action verb (get/have/gain/lose), so the prohibition boundary is recognized
+// here. It returns the group subject and the index of the prohibition verb.
+func staticControlledCreaturesProhibitionSubject(tokens []shared.Token) (EffectStaticSubjectSyntax, int, bool) {
+	const width = 3
+	if !staticWordsAt(tokens, 0, "creatures", "you", "control") || len(tokens) <= width {
+		return EffectStaticSubjectSyntax{}, 0, false
+	}
+	if !staticWordsAt(tokens, width, "can't") && !staticWordsAt(tokens, width, "cannot") {
+		return EffectStaticSubjectSyntax{}, 0, false
+	}
+	return EffectStaticSubjectSyntax{
+		Kind: EffectStaticSubjectControlledCreatures,
+		Span: shared.SpanOf(tokens[:width]),
+	}, width, true
 }
 
 // staticSourceSubjectAt returns the span and token width of a source-marker
@@ -1528,7 +1555,8 @@ func staticRuleSubjectKindAllowed(subject StaticDeclarationSubject) bool {
 		StaticDeclarationSubjectSourceNamed:
 		return true
 	case StaticDeclarationSubjectGroup:
-		return subject.Group.Kind == EffectStaticSubjectAttachedObject
+		return subject.Group.Kind == EffectStaticSubjectAttachedObject ||
+			subject.Group.Kind == EffectStaticSubjectControlledCreatures
 	default:
 		return false
 	}
@@ -1552,8 +1580,14 @@ func staticRuleSubjectForDeclaration(subject StaticDeclarationSubject, operation
 	case StaticDeclarationSubjectSourceCreature, StaticDeclarationSubjectSourceNamed:
 		return StaticRuleSubject{Kind: StaticRuleSubjectSourceCreature, Span: subject.Span}, true
 	case StaticDeclarationSubjectGroup:
-		if subject.Group.Kind == EffectStaticSubjectAttachedObject {
+		switch subject.Group.Kind {
+		case EffectStaticSubjectAttachedObject:
 			return StaticRuleSubject{Kind: StaticRuleSubjectAttachedObject, Span: subject.Span}, true
+		case EffectStaticSubjectControlledCreatures:
+			if operation.Kind == StaticRuleOperationBlock && operation.Voice == StaticRuleVoicePassive {
+				return StaticRuleSubject{Kind: StaticRuleSubjectControlledCreatures, Span: subject.Span}, true
+			}
+		default:
 		}
 	default:
 	}

@@ -661,11 +661,20 @@ func grantedLandwalkStaticBody(keyword compiler.CompiledKeyword) (game.StaticAbi
 
 func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
 	var affectedSource, affectedAttached bool
+	var affectedController game.ControllerRelation
+	var permanentTypes []types.Card
 	switch declaration.Group.Domain {
 	case compiler.StaticGroupSource:
 		affectedSource = declaration.Rule.Kind != compiler.StaticRuleAdditionalTriggerForChosenCreatureType
 	case compiler.StaticGroupAttachedObject:
 		affectedAttached = true
+	case compiler.StaticGroupSourceControllerPermanents:
+		lowered, ok := lowerControlledGroupRuleTypes(declaration.Group)
+		if !ok {
+			return false
+		}
+		affectedController = game.ControllerYou
+		permanentTypes = lowered
 	default:
 		return false
 	}
@@ -693,9 +702,53 @@ func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.
 	for i := range effects {
 		effects[i].AffectedSource = affectedSource
 		effects[i].AffectedAttached = affectedAttached
+		effects[i].AffectedController = affectedController
+		effects[i].PermanentTypes = permanentTypes
 		body.RuleEffects = append(body.RuleEffects, effects[i])
 	}
 	return true
+}
+
+// lowerControlledGroupRuleTypes lowers the affected card types of a static rule
+// scoped to the controller's permanents ("Creatures you control can't be
+// blocked."). Only a required-type filter is supported; any richer selection
+// (subtype, color, combat, tap, counter, keyword, or source exclusion) has no
+// runtime affected-permanent predicate and fails closed.
+func lowerControlledGroupRuleTypes(group compiler.StaticGroupReference) ([]types.Card, bool) {
+	selection := group.Selection
+	if group.ExcludeSource ||
+		len(selection.Supertypes) != 0 ||
+		len(selection.ExcludedSupertypes) != 0 ||
+		len(selection.SubtypesAny) != 0 ||
+		len(selection.ColorsAny) != 0 ||
+		selection.Colorless ||
+		selection.Multicolored ||
+		selection.Controller != compiler.ControllerAny ||
+		selection.CombatState != compiler.StaticCombatStateAny ||
+		selection.TapState != compiler.StaticTapStateAny ||
+		selection.Keyword != parser.KeywordUnknown ||
+		selection.ExcludedKeyword != parser.KeywordUnknown ||
+		selection.TokenOnly ||
+		selection.NonToken ||
+		selection.MatchCounter ||
+		selection.MatchAnyCounter ||
+		selection.SubtypeFromEntryChoice ||
+		selection.Modified ||
+		selection.ColorFromEntryChoice {
+		return nil, false
+	}
+	if len(selection.RequiredTypes) == 0 {
+		return nil, false
+	}
+	permanentTypes := make([]types.Card, 0, len(selection.RequiredTypes))
+	for _, cardType := range selection.RequiredTypes {
+		value, ok := lowerStaticCardType(cardType)
+		if !ok {
+			return nil, false
+		}
+		permanentTypes = append(permanentTypes, value)
+	}
+	return permanentTypes, true
 }
 
 func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {
