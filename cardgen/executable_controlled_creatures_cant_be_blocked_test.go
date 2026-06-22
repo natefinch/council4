@@ -46,7 +46,6 @@ func TestGenerateExecutableCardSourceControlledCreaturesCantBeBlocked(t *testing
 func TestGenerateExecutableCardSourceControlledCreaturesCantBeBlockedFailsClosed(t *testing.T) {
 	t.Parallel()
 	rejected := []string{
-		"Creatures you control with power greater than Test Mass Evasion's power can't be blocked.",
 		"Creatures you control with flying can't be blocked.",
 		"Goblins you control can't be blocked.",
 	}
@@ -134,6 +133,78 @@ func TestGenerateExecutableCardSourceCounterFilteredControlledCreaturesCantBeBlo
 		"AffectedController: game.ControllerYou,",
 		"PermanentTypes:     []types.Card{types.Creature},",
 		"AffectedSelection:  game.Selection{MatchCounter: true, RequiredCounter: counter.PlusOnePlusOne},",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+// TestGenerateExecutableCardSourcePowerToughnessFilteredControlledCreaturesCantBeBlocked
+// verifies that the power/toughness-filtered mass-evasion static "Creatures you
+// control with power or toughness 1 or less can't be blocked." (Tetsuko Umezawa,
+// Fugitive) lowers to a can't-be-blocked rule effect whose affected-permanent
+// Selection is a disjunction of the power and toughness thresholds.
+func TestGenerateExecutableCardSourcePowerToughnessFilteredControlledCreaturesCantBeBlocked(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Tetsuko Umezawa, Fugitive",
+		Layout:     "normal",
+		ManaCost:   "{1}{U}",
+		TypeLine:   "Legendary Creature — Human Rogue",
+		OracleText: "Creatures you control with power or toughness 1 or less can't be blocked.",
+		Power:      new("1"),
+		Toughness:  new("3"),
+		Colors:     []string{"U"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Kind:               game.RuleEffectCantBeBlocked,",
+		"AffectedController: game.ControllerYou,",
+		"PermanentTypes:     []types.Card{types.Creature},",
+		"AnyOf: []game.Selection{game.Selection{Power: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 1})}, game.Selection{Toughness: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 1})}}",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+// TestGenerateExecutableCardSourceSourcePowerFilteredControlledCreaturesCantBeBlocked
+// verifies that the source-relative power-comparison mass-evasion static
+// "Creatures you control with power greater than Champion of Lambholt's power
+// can't be blocked." lowers to a can't-be-blocked rule effect whose
+// affected-permanent Selection carries the PowerGreaterThanSource predicate.
+func TestGenerateExecutableCardSourceSourcePowerFilteredControlledCreaturesCantBeBlocked(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Champion of Lambholt",
+		Layout:     "normal",
+		ManaCost:   "{2}{G}",
+		TypeLine:   "Creature — Human Warrior",
+		OracleText: "Creatures you control with power greater than Champion of Lambholt's power can't be blocked.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+		Colors:     []string{"G"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Kind:               game.RuleEffectCantBeBlocked,",
+		"AffectedController: game.ControllerYou,",
+		"PermanentTypes:     []types.Card{types.Creature},",
+		"AffectedSelection:  game.Selection{PowerGreaterThanSource: true},",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)

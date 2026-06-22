@@ -1926,4 +1926,27 @@ type EffectStaticSubjectSyntax struct {
 	// permanent chose as it entered (Heraldic Banner). It maps downstream onto
 	// the runtime Selection.ColorChoice = ColorChoiceSourceEntry predicate.
 	ChosenColorFromEntry bool `json:",omitempty"`
+
+	// Power and Toughness carry an optional numeric power/toughness comparison
+	// constraining the affected group ("Creatures you control with power 1 or
+	// less ..."). MatchPower and MatchToughness record whether each comparison
+	// is active. PowerOrToughness marks the disjunctive "with power or toughness
+	// N or less" form (Tetsuko Umezawa), where a member matches if EITHER its
+	// power OR its toughness satisfies the bound; both Power and Toughness then
+	// carry the same comparison and lowering emits a Selection.AnyOf of the two
+	// single-characteristic alternatives.
+	Power            compare.Int `json:",omitzero"`
+	MatchPower       bool        `json:",omitempty"`
+	Toughness        compare.Int `json:",omitzero"`
+	MatchToughness   bool        `json:",omitempty"`
+	PowerOrToughness bool        `json:",omitempty"`
+
+	// PowerLessThanSource and PowerGreaterThanSource constrain the affected group
+	// by comparing each member's power to the static's SOURCE permanent's power
+	// ("Creatures you control with power greater than <source>'s power ...",
+	// Champion of Lambholt). They are source-relative, so they carry no fixed
+	// comparison and lower to the runtime Selection.PowerLessThanSource /
+	// Selection.PowerGreaterThanSource predicates.
+	PowerLessThanSource    bool `json:",omitempty"`
+	PowerGreaterThanSource bool `json:",omitempty"`
 }

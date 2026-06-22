@@ -1467,6 +1467,26 @@ func lowerStaticSelection(selection compiler.StaticSelection) (game.Selection, b
 	if selection.Modified {
 		result.MatchModified = true
 	}
+	switch {
+	case selection.PowerOrToughness:
+		result.AnyOf = []game.Selection{
+			{Power: opt.Val(selection.Power)},
+			{Toughness: opt.Val(selection.Toughness)},
+		}
+	default:
+		if selection.MatchPower {
+			result.Power = opt.Val(selection.Power)
+		}
+		if selection.MatchToughness {
+			result.Toughness = opt.Val(selection.Toughness)
+		}
+	}
+	if selection.PowerLessThanSource {
+		result.PowerLessThanSource = true
+	}
+	if selection.PowerGreaterThanSource {
+		result.PowerGreaterThanSource = true
+	}
 	return result, len(result.Validate()) == 0
 }
 

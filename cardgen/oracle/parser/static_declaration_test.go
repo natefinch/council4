@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -309,6 +310,37 @@ func TestParseStaticControlledCreaturesCounterFilteredCantBeBlockedDeclarationMe
 		!group.CounterRequired || group.CounterAny ||
 		group.CounterKind != counter.PlusOnePlusOne {
 		t.Fatalf("group = %#v, want +1/+1 counter-filtered controlled-creatures filter", group)
+	}
+}
+
+func TestParseStaticControlledCreaturesPowerToughnessFilteredCantBeBlockedDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t, "Creatures you control with power or toughness 1 or less can't be blocked.", Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	group := declarations[0].Subject.Group
+	if group.Kind != EffectStaticSubjectControlledCreatures ||
+		!group.PowerOrToughness || !group.MatchPower || !group.MatchToughness {
+		t.Fatalf("group = %#v, want power-or-toughness filtered controlled-creatures filter", group)
+	}
+	if group.Power.Op != compare.LessOrEqual || group.Power.Value != 1 ||
+		group.Toughness.Op != compare.LessOrEqual || group.Toughness.Value != 1 {
+		t.Fatalf("group power/toughness = %#v / %#v, want <=1 each", group.Power, group.Toughness)
+	}
+}
+
+func TestParseStaticControlledCreaturesSourcePowerFilteredCantBeBlockedDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t, "Creatures you control with power greater than Champion of Lambholt's power can't be blocked.", Context{CardName: "Champion of Lambholt"})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	group := declarations[0].Subject.Group
+	if group.Kind != EffectStaticSubjectControlledCreatures ||
+		!group.PowerGreaterThanSource || group.PowerLessThanSource ||
+		group.MatchPower || group.MatchToughness {
+		t.Fatalf("group = %#v, want source-power-greater filtered controlled-creatures filter", group)
 	}
 }
 
