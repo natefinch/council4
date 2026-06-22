@@ -545,6 +545,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx, syntax *parser
 	if content, ok := lowerRevealChooseHandDiscardSequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerRevealHandLifeLossSaddledSequence(ctx); ok {
+		return content, true
+	}
 	if len(ctx.content.Conditions) != 0 {
 		return game.AbilityContent{}, false
 	}
@@ -1011,6 +1014,127 @@ func lowerShuffleRevealPermanentSequence(ctx contentCtx) (game.AbilityContent, b
 					},
 					RequirePermanentCard: true,
 				}),
+			},
+		},
+	}.Ability(), true
+}
+
+// lowerRevealHandLifeLossSaddledSequence lowers the Caustic Bronco shape:
+// "reveal the top card of your library and put it into your hand. You lose life
+// equal to that card's mana value if this creature isn't saddled. Otherwise,
+// each opponent loses that much life." It reveals the controller's top library
+// card, moves it to hand, then drains life equal to that card's mana value —
+// from the controller on the gated branch and from each opponent on the
+// negated "otherwise" branch. The per-effect gate condition (the saddled-state
+// gate) is matched and lowered through the shared sequence-gate machinery, and
+// its negation gates the otherwise branch, so exactly one of the two life-loss
+// branches resolves. Both branches read the same revealed card's mana value,
+// which is the meaning of "that much life" here (the controller never loses
+// life on the saddled branch, so it cannot refer to a prior life loss).
+func lowerRevealHandLifeLossSaddledSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 4 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 1 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	reveal := ctx.content.Effects[0]
+	put := ctx.content.Effects[1]
+	loseSelf := ctx.content.Effects[2]
+	loseOpponents := ctx.content.Effects[3]
+	if reveal.Kind != compiler.EffectReveal ||
+		reveal.Context != parser.EffectContextController ||
+		reveal.Selector.Kind != compiler.SelectorCard ||
+		reveal.Optional || reveal.Negated ||
+		len(reveal.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	if put.Kind != compiler.EffectPut ||
+		put.Connection != parser.EffectConnectionAnd ||
+		put.Context != parser.EffectContextController ||
+		put.ToZone != zone.Hand ||
+		put.Optional || put.Negated ||
+		len(put.References) != 1 ||
+		!referencesBindTo(put.References, compiler.ReferenceBindingPriorInstructionResult, 0) {
+		return game.AbilityContent{}, false
+	}
+	if loseSelf.Kind != compiler.EffectLose ||
+		loseSelf.Context != parser.EffectContextController ||
+		!loseSelf.LifeObject ||
+		loseSelf.Optional || loseSelf.Negated ||
+		loseSelf.Amount.DynamicKind != compiler.DynamicAmountSourceManaValue ||
+		loseSelf.Amount.Multiplier != 1 ||
+		len(loseSelf.References) != 1 {
+		return game.AbilityContent{}, false
+	}
+	if loseOpponents.Kind != compiler.EffectLose ||
+		loseOpponents.Connection != parser.EffectConnectionOtherwise ||
+		loseOpponents.Context != parser.EffectContextEachOpponent ||
+		!loseOpponents.LifeObject ||
+		loseOpponents.Optional || loseOpponents.Negated ||
+		loseOpponents.Amount.DynamicKind != compiler.DynamicAmountTriggeringLifeChange ||
+		len(loseOpponents.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+
+	// Match and lower the per-effect gate condition (the saddled-state gate on
+	// the controller's life-loss branch) and derive its negation for the
+	// each-opponent otherwise branch. The single condition must gate exactly the
+	// controller branch; any other shape fails closed.
+	effectConditions, _, ok := matchSequenceEffectConditions(ctx.content.Effects, ctx.content.Conditions)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	selfGate, gated := effectConditions[2]
+	if !gated || len(effectConditions) != 1 {
+		return game.AbilityContent{}, false
+	}
+	otherwiseGates, ok := sequenceOtherwiseGates(ctx.content.Effects, effectConditions)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	opponentsGate, gated := otherwiseGates[3]
+	if !gated || len(otherwiseGates) != 1 {
+		return game.AbilityContent{}, false
+	}
+
+	key := game.LinkedKey("revealed-card-1")
+	linked := game.LinkedObjectReference(string(key))
+	manaValue, ok := objectCharacteristicAmount(compiler.DynamicAmountSourceManaValue, linked)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{Primitive: game.Reveal{
+				Amount:        game.Fixed(1),
+				Player:        game.ControllerReference(),
+				PublishLinked: key,
+			}},
+			{Primitive: game.MoveCard{
+				Card: game.CardReference{
+					Kind:   game.CardReferenceLinked,
+					LinkID: string(key),
+				},
+				FromZone:    zone.Library,
+				Destination: zone.Hand,
+			}},
+			{
+				Primitive: game.LoseLife{
+					Player: game.ControllerReference(),
+					Amount: game.Dynamic(manaValue),
+				},
+				Condition: opt.Val(selfGate),
+			},
+			{
+				Primitive: game.LoseLife{
+					PlayerGroup: game.OpponentsReference(),
+					Amount:      game.Dynamic(manaValue),
+				},
+				Condition: opt.Val(opponentsGate),
 			},
 		},
 	}.Ability(), true

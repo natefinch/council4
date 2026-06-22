@@ -123,6 +123,11 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.CastDuringControllerMainPhase = true
 	case compiler.ConditionPredicateSpellWasKicked:
 		result.SpellWasKicked = true
+	case compiler.ConditionPredicateSourceSaddled:
+		result.SourceSaddled = true
+	case compiler.ConditionPredicateSourceNotSaddled:
+		result.SourceSaddled = true
+		result.Negate = !result.Negate
 	case compiler.ConditionPredicateSourceTributeNotPaid:
 		result.SourceTributeNotPaid = true
 	case compiler.ConditionPredicateControllerControlsCommander:
@@ -212,7 +217,9 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 				ctx == conditionContextActivation ||
 				ctx == conditionContextEffectGate
 		case compiler.ConditionPredicateCastDuringControllerMainPhase,
-			compiler.ConditionPredicateSpellWasKicked:
+			compiler.ConditionPredicateSpellWasKicked,
+			compiler.ConditionPredicateSourceSaddled,
+			compiler.ConditionPredicateSourceNotSaddled:
 			return ctx == conditionContextEffectGate
 		case compiler.ConditionPredicateEventSubjectNameUnique,
 			compiler.ConditionPredicateSourceTributeNotPaid:
