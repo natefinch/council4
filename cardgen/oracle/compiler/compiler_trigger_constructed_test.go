@@ -282,6 +282,22 @@ func TestCompileConstructedPlayerEventTriggerClauses(t *testing.T) {
 				PlayerEventOrdinalThisTurn: 1,
 			},
 		},
+		{
+			name:   "except first draw in draw step",
+			kind:   parser.TriggerIntroductionWhenever,
+			player: parser.TriggerPlayerSelectorOpponent,
+			action: parser.PlayerEventActionDraw,
+			card:   parser.PlayerEventCardSingle,
+			occurrence: parser.PlayerEventOccurrence{
+				Kind: parser.PlayerEventOccurrenceExceptFirstInDrawStep,
+			},
+			want: TriggerPattern{
+				Kind:                       TriggerWhenever,
+				Event:                      TriggerEventCardDrawn,
+				Player:                     TriggerPlayerOpponent,
+				ExcludeFirstDrawInDrawStep: true,
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

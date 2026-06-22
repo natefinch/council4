@@ -833,6 +833,11 @@ const (
 	PlayerEventOccurrenceAny             PlayerEventOccurrenceKind = "PlayerEventOccurrenceAny"
 	PlayerEventOccurrenceFirstEachTurn   PlayerEventOccurrenceKind = "PlayerEventOccurrenceFirstEachTurn"
 	PlayerEventOccurrenceOrdinalEachTurn PlayerEventOccurrenceKind = "PlayerEventOccurrenceOrdinalEachTurn"
+
+	// PlayerEventOccurrenceExceptFirstInDrawStep matches every qualifying draw
+	// except the first card a player draws during each of their draw steps
+	// ("except the first one they draw in each of their draw steps").
+	PlayerEventOccurrenceExceptFirstInDrawStep PlayerEventOccurrenceKind = "PlayerEventOccurrenceExceptFirstInDrawStep"
 )
 
 // PlayerEventOccurrence is a source-spanned player-event occurrence modifier.

@@ -75,7 +75,7 @@ func TestInterveningConditionChecksControllerPermanentPower(t *testing.T) {
 	addBugenhagenLikePermanent(g, game.Player1)
 	addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
 
-	if _, ok := engine.drawCard(g, game.Player2); !ok {
+	if _, ok := engine.drawCard(g, game.Player2, false); !ok {
 		t.Fatal("drawCard() = false, want true")
 	}
 	if engine.putTriggeredAbilitiesOnStack(g) {
@@ -88,7 +88,7 @@ func TestInterveningConditionChecksControllerPermanentPower(t *testing.T) {
 	})
 	addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Drawn Again"}})
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Reward"}})
-	if _, ok := engine.drawCard(g, game.Player2); !ok {
+	if _, ok := engine.drawCard(g, game.Player2, false); !ok {
 		t.Fatal("drawCard() = false, want true")
 	}
 	if !engine.putTriggeredAbilitiesOnStack(g) {

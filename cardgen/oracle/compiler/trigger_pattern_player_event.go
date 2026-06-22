@@ -39,6 +39,7 @@ func compilePlayerEventTriggerPattern(
 	pattern.OneOrMore = modifiers.oneOrMore
 	pattern.ExcludeSelf = modifiers.excludeSelf
 	pattern.PlayerEventOrdinalThisTurn = modifiers.ordinal
+	pattern.ExcludeFirstDrawInDrawStep = modifiers.exceptFirstDrawInDrawStep
 	pattern.CardSelection = modifiers.cardSelection
 	return pattern
 }
@@ -80,11 +81,12 @@ func compilePlayerEventPlayer(player *parser.TriggerPlayerSelector) (TriggerPlay
 }
 
 type compiledPlayerEventModifiers struct {
-	oneOrMore     bool
-	excludeSelf   bool
-	ordinal       int
-	cardSelection TriggerSelection
-	ok            bool
+	oneOrMore                 bool
+	excludeSelf               bool
+	ordinal                   int
+	exceptFirstDrawInDrawStep bool
+	cardSelection             TriggerSelection
+	ok                        bool
 }
 
 func compilePlayerEventModifiers(
@@ -97,13 +99,14 @@ func compilePlayerEventModifiers(
 	if !compiledCard.ok {
 		return compiledPlayerEventModifiers{}
 	}
-	ordinal, ok := compilePlayerEventOccurrence(action, player, occurrence)
+	ordinal, exceptFirstDrawInDrawStep, ok := compilePlayerEventOccurrence(action, player, occurrence)
 	return compiledPlayerEventModifiers{
-		oneOrMore:     compiledCard.oneOrMore,
-		excludeSelf:   compiledCard.excludeSelf,
-		ordinal:       ordinal,
-		cardSelection: compiledCard.cardSelection,
-		ok:            ok,
+		oneOrMore:                 compiledCard.oneOrMore,
+		excludeSelf:               compiledCard.excludeSelf,
+		ordinal:                   ordinal,
+		exceptFirstDrawInDrawStep: exceptFirstDrawInDrawStep,
+		cardSelection:             compiledCard.cardSelection,
+		ok:                        ok,
 	}
 }
 
@@ -167,18 +170,20 @@ func compilePlayerEventOccurrence(
 	action parser.PlayerEventActionKind,
 	player parser.TriggerPlayerSelectorKind,
 	occurrence parser.PlayerEventOccurrence,
-) (int, bool) {
+) (ordinal int, exceptFirstDrawInDrawStep, ok bool) {
 	switch occurrence.Kind {
 	case parser.PlayerEventOccurrenceAny:
-		return 0, occurrence.Ordinal == 0
+		return 0, false, occurrence.Ordinal == 0
 	case parser.PlayerEventOccurrenceFirstEachTurn:
-		return 1, occurrence.Ordinal == 1 && playerEventFirstEachTurnAllowed(action, player)
+		return 1, false, occurrence.Ordinal == 1 && playerEventFirstEachTurnAllowed(action, player)
 	case parser.PlayerEventOccurrenceOrdinalEachTurn:
-		return occurrence.Ordinal, action == parser.PlayerEventActionDraw &&
+		return occurrence.Ordinal, false, action == parser.PlayerEventActionDraw &&
 			occurrence.Ordinal >= 1 &&
 			occurrence.Ordinal <= 5
+	case parser.PlayerEventOccurrenceExceptFirstInDrawStep:
+		return 0, true, action == parser.PlayerEventActionDraw
 	default:
-		return 0, false
+		return 0, false, false
 	}
 }
 

@@ -41,7 +41,7 @@ func TestDrawTaxTreasurePaymentOutcomes(t *testing.T) {
 				addBasicLandPermanent(g, game.Player2, types.Forest)
 			}
 
-			if _, ok := engine.drawCard(g, game.Player2); !ok {
+			if _, ok := engine.drawCard(g, game.Player2, false); !ok {
 				t.Fatal("drawCard() = false")
 			}
 			if !engine.putTriggeredAbilitiesOnStack(g) {
@@ -97,7 +97,7 @@ func TestDrawTaxCanBePaidWithGeneratedTreasures(t *testing.T) {
 	}
 	addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
 
-	if _, ok = engine.drawCard(g, game.Player2); !ok {
+	if _, ok = engine.drawCard(g, game.Player2, false); !ok {
 		t.Fatal("drawCard() = false")
 	}
 	if !engine.putTriggeredAbilitiesOnStack(g) {
@@ -143,7 +143,7 @@ func TestDrawTaxTreasureEachOpponentAndEachCard(t *testing.T) {
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Controller"}})
 
 	for _, player := range []game.PlayerID{game.Player2, game.Player2, game.Player3, game.Player1} {
-		if _, ok := engine.drawCard(g, player); !ok {
+		if _, ok := engine.drawCard(g, player, false); !ok {
 			t.Fatalf("drawCard(%v) = false", player)
 		}
 	}
@@ -172,7 +172,7 @@ func TestDrawTaxTreasureTriggersWhenSourceLeavesBeforeTriggerProcessing(t *testi
 	}, eventPlayerTaxedTreasureInstructions(cost.Mana{cost.O(2)}, token), nil)
 	addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
 
-	if _, ok := engine.drawCard(g, game.Player2); !ok {
+	if _, ok := engine.drawCard(g, game.Player2, false); !ok {
 		t.Fatal("drawCard() = false")
 	}
 	movePermanentToZone(g, source, zone.Graveyard)
@@ -204,7 +204,7 @@ func TestDrawTaxTreasureKeepsTriggerTimeControllerAndAPNAPOrder(t *testing.T) {
 	}, eventPlayerTaxedTreasureInstructions(cost.Mana{cost.O(2)}, token), nil)
 	addCardToLibrary(g, game.Player4, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
 
-	if _, ok := engine.drawCard(g, game.Player4); !ok {
+	if _, ok := engine.drawCard(g, game.Player4, false); !ok {
 		t.Fatal("drawCard() = false")
 	}
 	first.Controller = game.Player3

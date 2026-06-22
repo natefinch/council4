@@ -615,6 +615,7 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		(pattern.RequireCombatDamage && pattern.RequireNonCombatDamage) ||
 		(pattern.AttackAlone && pattern.Event != game.EventAttackerDeclared) ||
 		(pattern.AttackWhileSaddled && pattern.Event != game.EventAttackerDeclared) ||
+		(pattern.ExcludeFirstDrawInDrawStep && pattern.Event != game.EventCardDrawn) ||
 		(pattern.AttackerCountAtLeast != 0 &&
 			(pattern.Event != game.EventAttackerDeclared || !pattern.OneOrMore || pattern.AttackAlone || pattern.AttackerCountAtLeast < 2)) {
 		return "", errors.New("render: unsupported trigger pattern fields")
@@ -740,6 +741,9 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 	}
 	if pattern.PlayerEventOrdinalThisTurn > 0 {
 		fields = append(fields, fmt.Sprintf("PlayerEventOrdinalThisTurn: %d,", pattern.PlayerEventOrdinalThisTurn))
+	}
+	if pattern.ExcludeFirstDrawInDrawStep {
+		fields = append(fields, "ExcludeFirstDrawInDrawStep: true,")
 	}
 	if pattern.MatchStackObjectKind {
 		stackObjectKind, err := renderStackObjectKind(pattern.StackObjectKind)

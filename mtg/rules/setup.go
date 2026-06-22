@@ -14,12 +14,12 @@ func (e *Engine) drawOpeningHands(g *game.Game) {
 			continue
 		}
 		for range openingHandSize {
-			e.drawCard(g, player.ID)
+			e.drawCard(g, player.ID, false)
 		}
 	}
 }
 
-func (*Engine) drawCard(g *game.Game, playerID game.PlayerID) (id.ID, bool) {
+func (*Engine) drawCard(g *game.Game, playerID game.PlayerID, firstInDrawStep bool) (id.ID, bool) {
 	if playerID < 0 || int(playerID) >= len(g.Players) {
 		return 0, false
 	}
@@ -47,6 +47,7 @@ func (*Engine) drawCard(g *game.Game, playerID game.PlayerID) (id.ID, bool) {
 	event = emitZoneChangeEvent(g, event)
 	event.Kind = game.EventCardDrawn
 	event.PlayerEventOrdinalThisTurn = nextPlayerEventOrdinalThisTurn(g, game.EventCardDrawn, playerID)
+	event.FirstInDrawStep = firstInDrawStep
 	emitEvent(g, event)
 	return cardID, true
 }

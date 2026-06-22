@@ -671,6 +671,12 @@ type TriggerPattern struct {
 	// number during the current turn. Zero does not restrict the event.
 	PlayerEventOrdinalThisTurn int
 
+	// ExcludeFirstDrawInDrawStep skips an EventCardDrawn that is the drawing
+	// player's first draw during their own draw step ("except the first one they
+	// draw in each of their draw steps", Orcish Bowmasters, Xyris). It is only
+	// valid with Event == EventCardDrawn.
+	ExcludeFirstDrawInDrawStep bool
+
 	// OneOrMore coalesces matching events that happened as one batch into one
 	// trigger. The first matching event is retained as TriggerEvent.
 	OneOrMore bool

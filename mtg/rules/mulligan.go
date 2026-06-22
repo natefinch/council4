@@ -15,7 +15,7 @@ func (e *Engine) performCommanderMulligan(g *game.Game, playerID game.PlayerID) 
 	player.Library.Shuffle(e.rng)
 	// TODO: real mulligan draws should not emit normal draw events/triggers.
 	for range openingHandSize {
-		e.drawCard(g, playerID)
+		e.drawCard(g, playerID, false)
 	}
 	player.CommanderMulligansTaken++
 	bottomCount := player.CommanderMulligansTaken - 1 // first multiplayer Commander mulligan is free.

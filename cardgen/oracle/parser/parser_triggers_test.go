@@ -372,6 +372,8 @@ func TestParsePlayerEventTriggerClauses(t *testing.T) {
 		{"Whenever you search your library", TriggerPlayerSelectorYou, PlayerEventActionSearchLibrary, PlayerEventCardNone, PlayerEventOccurrenceAny, 0},
 		{"Whenever a player draws their fourth card each turn", TriggerPlayerSelectorAny, PlayerEventActionDraw, PlayerEventCardSingle, PlayerEventOccurrenceOrdinalEachTurn, 4},
 		{"When you surveil for the first time each turn", TriggerPlayerSelectorYou, PlayerEventActionSurveil, PlayerEventCardNone, PlayerEventOccurrenceFirstEachTurn, 1},
+		{"Whenever an opponent draws a card except the first one they draw in each of their draw steps", TriggerPlayerSelectorOpponent, PlayerEventActionDraw, PlayerEventCardSingle, PlayerEventOccurrenceExceptFirstInDrawStep, 0},
+		{"Whenever you draw a card except the first one you draw in each of your draw steps", TriggerPlayerSelectorYou, PlayerEventActionDraw, PlayerEventCardSingle, PlayerEventOccurrenceExceptFirstInDrawStep, 0},
 	}
 	for _, test := range tests {
 		t.Run(test.event, func(t *testing.T) {

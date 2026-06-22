@@ -382,7 +382,7 @@ func TestDrawTriggerChoosesDeterministicLegalTarget(t *testing.T) {
 		{MinTargets: 1, MaxTargets: 1, Constraint: "opponent"},
 	})
 
-	if _, ok := engine.drawCard(g, game.Player1); !ok {
+	if _, ok := engine.drawCard(g, game.Player1, false); !ok {
 		t.Fatal("drawCard() = false, want true")
 	}
 	if !engine.putTriggeredAbilitiesOnStack(g) {
@@ -410,7 +410,7 @@ func TestTriggerTargetChoiceCanBeMadeByAgent(t *testing.T) {
 	}
 	log := TurnLog{}
 
-	if _, ok := engine.drawCard(g, game.Player1); !ok {
+	if _, ok := engine.drawCard(g, game.Player1, false); !ok {
 		t.Fatal("drawCard() = false, want true")
 	}
 	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &log) {
@@ -442,7 +442,7 @@ func TestOptionalTriggeredAbilityChoiceHappensOnResolution(t *testing.T) {
 	}
 	log := TurnLog{}
 
-	if _, ok := engine.drawCard(g, game.Player2); !ok {
+	if _, ok := engine.drawCard(g, game.Player2, false); !ok {
 		t.Fatal("drawCard() = false, want true")
 	}
 	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &log) {

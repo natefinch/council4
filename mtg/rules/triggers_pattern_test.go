@@ -439,6 +439,30 @@ func TestCombatTriggerPatternTypedSelectionsAndRecipients(t *testing.T) {
 			t.Fatal("first player event matched second-event pattern")
 		}
 	})
+
+	t.Run("opponent draw except first in draw step", func(t *testing.T) {
+		pattern := game.TriggerPattern{
+			Event:                      game.EventCardDrawn,
+			Player:                     game.TriggerPlayerOpponent,
+			ExcludeFirstDrawInDrawStep: true,
+		}
+		event := game.Event{
+			Kind:   game.EventCardDrawn,
+			Player: game.Player2,
+		}
+		if !triggerMatchesEvent(g, source, &pattern, event) {
+			t.Fatal("non-draw-step opponent draw did not match")
+		}
+		event.FirstInDrawStep = true
+		if triggerMatchesEvent(g, source, &pattern, event) {
+			t.Fatal("first draw-step draw matched the exclusion pattern")
+		}
+		event.FirstInDrawStep = false
+		event.Player = game.Player1
+		if triggerMatchesEvent(g, source, &pattern, event) {
+			t.Fatal("controller draw matched opponent-scoped pattern")
+		}
+	})
 }
 
 // TestUnionAttackBecameTargetTriggerFiresOnAttackAndSpellTarget exercises the

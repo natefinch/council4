@@ -224,6 +224,12 @@ type Event struct {
 	// ordinal trigger semantics.
 	PlayerEventOrdinalThisTurn int
 
+	// FirstInDrawStep marks an EventCardDrawn as the player's first draw during
+	// their own draw step (the turn-based draw). Triggers carrying
+	// ExcludeFirstDrawInDrawStep ignore such a draw ("except the first one they
+	// draw in each of their draw steps", Orcish Bowmasters, Xyris).
+	FirstInDrawStep bool
+
 	// CounterKind and PreviousCounterAmount describe EventCountersAdded for
 	// either PermanentID or Player.
 	CounterKind           counter.Kind
