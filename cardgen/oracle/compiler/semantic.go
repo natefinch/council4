@@ -583,6 +583,14 @@ const (
 	// not currently saddled ("if this creature isn't saddled", Caustic Bronco).
 	// It is the negated complement of ConditionPredicateSourceSaddled.
 	ConditionPredicateSourceNotSaddled
+	// ConditionPredicateAttackersAttackingControllerAtLeast is satisfied when at
+	// least Threshold of the attackers declared by the triggering "an opponent
+	// attacks with creatures" event are attacking the context controller
+	// directly or one of the controller's planeswalkers ("if two or more of
+	// those creatures are attacking you and/or planeswalkers you control";
+	// Mangara, the Diplomat). It gates the trigger's intervening-if condition
+	// against live combat state.
+	ConditionPredicateAttackersAttackingControllerAtLeast
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard

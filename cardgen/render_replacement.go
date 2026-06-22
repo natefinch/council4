@@ -900,6 +900,10 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, fmt.Sprintf("ControllerCreaturePowerDiversityAtLeast: %d,", cond.ControllerCreaturePowerDiversityAtLeast))
 		hasPredicate = true
 	}
+	if cond.AttackersAttackingControllerAtLeast > 0 {
+		fields = append(fields, fmt.Sprintf("AttackersAttackingControllerAtLeast: %d,", cond.AttackersAttackingControllerAtLeast))
+		hasPredicate = true
+	}
 	if cond.AnyOpponentControls.Exists {
 		rendered, err := r.renderSelectionCountForCondition(ctx, cond.AnyOpponentControls.Val)
 		if err != nil {

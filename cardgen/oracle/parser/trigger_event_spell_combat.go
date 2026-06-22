@@ -547,10 +547,11 @@ func parsePlayerAttackTriggerEventClause(tokens []shared.Token) *TriggerEventCla
 	if len(rest) == 0 {
 		return clause
 	}
+	if tokenWordsEqual(rest, "with", "creatures") ||
+		tokenWordsEqual(rest, "with", "one", "or", "more", "creatures") {
+		return clause
+	}
 	if actor.Kind == TriggerEventActorYou {
-		if tokenWordsEqual(rest, "with", "one", "or", "more", "creatures") {
-			return clause
-		}
 		if count, ok := attackWithCreatureCount(rest); ok {
 			clause.AttackerCountAtLeast = count
 			return clause

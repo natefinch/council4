@@ -85,6 +85,7 @@ const (
 	ConditionPredicateSpellWasKicked                                   ConditionPredicateKind = "ConditionPredicateSpellWasKicked"
 	ConditionPredicateSourceSaddled                                    ConditionPredicateKind = "ConditionPredicateSourceSaddled"
 	ConditionPredicateSourceNotSaddled                                 ConditionPredicateKind = "ConditionPredicateSourceNotSaddled"
+	ConditionPredicateAttackersAttackingControllerAtLeast              ConditionPredicateKind = "ConditionPredicateAttackersAttackingControllerAtLeast"
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -572,6 +573,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeDrawFromEmptyLibraryCondition,
 		recognizeDrawCardReplacementCondition,
 		recognizeCastTimingCondition,
+		recognizeAttackersAttackingControllerCondition,
 	} {
 		if clause, ok := recognize(body, atoms); ok {
 			return clause, true
@@ -641,6 +643,36 @@ func recognizeDestroyedThisWayCondition(body []shared.Token, _ Atoms) (Condition
 // recognizeCastTimingCondition handles the Addendum cast-timing gate "you cast
 // this spell during your main phase", which restricts the gated effect to
 // spells cast while their controller is the active player in a main phase.
+// recognizeAttackersAttackingControllerCondition matches the intervening-if
+// combat gate "<N> or more of those creatures are attacking you and/or
+// planeswalkers you control" (Mangara, the Diplomat; Tomik, Wielder of Law).
+// "Those creatures" back-references the attackers declared by the trigger's
+// "an opponent attacks with creatures" event; the predicate counts how many of
+// those attackers are attacking the controller (directly or one of the
+// controller's planeswalkers) and holds when that count meets the threshold N.
+// It fails closed on any other wording.
+func recognizeAttackersAttackingControllerCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if len(body) < 1 {
+		return ConditionClause{}, false
+	}
+	count, ok := CardinalWordValue(body[0].Text)
+	if !ok || count < 1 {
+		return ConditionClause{}, false
+	}
+	rest, ok := cutTokenPrefix(body[1:],
+		"or", "more", "of", "those", "creatures", "are", "attacking", "you", "and")
+	if !ok || len(rest) == 0 || rest[0].Kind != shared.Slash {
+		return ConditionClause{}, false
+	}
+	if !tokenWordsEqual(rest[1:], "or", "planeswalkers", "you", "control") {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate: ConditionPredicateAttackersAttackingControllerAtLeast,
+		Threshold: count,
+	}, true
+}
+
 func recognizeCastTimingCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
 	if tokenWordsEqual(body, "you", "cast", "this", "spell", "during", "your", "main", "phase") {
 		return ConditionClause{Predicate: ConditionPredicateCastDuringControllerMainPhase}, true

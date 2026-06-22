@@ -36,7 +36,8 @@ func conditionParametersNegative(cond *game.Condition) bool {
 		cond.ControllerControls.MinCount < 0 ||
 		cond.ControlsMatching.Exists && cond.ControlsMatching.Val.MinCount < 0 ||
 		cond.AnyOpponentControls.Exists && cond.AnyOpponentControls.Val.MinCount < 0 ||
-		cond.OpponentsControl.Exists && cond.OpponentsControl.Val.MinCount < 0
+		cond.OpponentsControl.Exists && cond.OpponentsControl.Val.MinCount < 0 ||
+		cond.AttackersAttackingControllerAtLeast < 0
 }
 
 func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game.Condition]) bool {
@@ -154,6 +155,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.ControllerControlsCommander {
 		matches = matches && playerControlsCommander(g, ctx.controller)
 	}
+	if cond.AttackersAttackingControllerAtLeast > 0 {
+		matches = matches && attackersAttackingPlayerCount(g, ctx.controller) >= cond.AttackersAttackingControllerAtLeast
+	}
 	if cond.Negate {
 		return !matches
 	}
@@ -164,6 +168,23 @@ func cardInstanceCount(g *game.Game, objectIDs []id.ID) int {
 	count := 0
 	for _, objectID := range objectIDs {
 		if _, ok := g.GetCardInstance(objectID); ok {
+			count++
+		}
+	}
+	return count
+}
+
+// attackersAttackingPlayerCount counts the attackers declared this combat that
+// are attacking the given player directly or one of that player's planeswalkers
+// ("attacking you and/or planeswalkers you control"). Battle attacks are
+// excluded. The full attacker declaration is authoritative in g.Combat.
+func attackersAttackingPlayerCount(g *game.Game, player game.PlayerID) int {
+	if g.Combat == nil {
+		return 0
+	}
+	count := 0
+	for _, declaration := range g.Combat.Attackers {
+		if declaration.Target.Player == player && declaration.Target.BattleID == 0 {
 			count++
 		}
 	}
