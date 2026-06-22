@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // lowerSpellSequence lowers a sorcery body and returns its resolving
@@ -592,6 +593,72 @@ func TestLowerOptionalIfYouDoSelfSacrificeDraw(t *testing.T) {
 	}
 	if !sequence[0].Optional || sequence[0].PublishResult != optionalIfYouDoResultKey {
 		t.Fatalf("sacrifice must be optional and publish %q: %#v", optionalIfYouDoResultKey, sequence[0])
+	}
+	if _, ok := sequence[1].Primitive.(game.Draw); !ok {
+		t.Fatalf("instruction[1] = %T, want game.Draw", sequence[1].Primitive)
+	}
+	gate := sequence[1].ResultGate
+	if !gate.Exists || gate.Val.Key != optionalIfYouDoResultKey || gate.Val.Succeeded != game.TriTrue {
+		t.Fatalf("draw ResultGate = %#v, want succeeded gate on %q", gate, optionalIfYouDoResultKey)
+	}
+}
+
+// TestLowerFilteredControllerDiscard verifies the standalone controller filtered
+// self-discard ("Discard a creature card." / "Discard a nonland card.") lowers
+// to a ChooseDiscardFromHand whose Selection carries the typed card filter, and
+// that the bare unfiltered "Discard a card." stays on the plain Discard path.
+func TestLowerFilteredControllerDiscard(t *testing.T) {
+	t.Parallel()
+	creature := lowerSpellSequence(t, "Filtered Discard Creature", "Discard a creature card.")
+	if len(creature) != 1 {
+		t.Fatalf("sequence = %#v, want one instruction", creature)
+	}
+	choose, ok := creature[0].Primitive.(game.ChooseDiscardFromHand)
+	if !ok {
+		t.Fatalf("instruction[0] = %T, want game.ChooseDiscardFromHand", creature[0].Primitive)
+	}
+	if len(choose.Selection.RequiredTypes) != 1 || choose.Selection.RequiredTypes[0] != types.Creature {
+		t.Fatalf("Selection.RequiredTypes = %#v, want [Creature]", choose.Selection.RequiredTypes)
+	}
+
+	nonland := lowerSpellSequence(t, "Filtered Discard Nonland", "Discard a nonland card.")
+	choose, ok = nonland[0].Primitive.(game.ChooseDiscardFromHand)
+	if !ok {
+		t.Fatalf("instruction[0] = %T, want game.ChooseDiscardFromHand", nonland[0].Primitive)
+	}
+	if len(choose.Selection.ExcludedTypes) != 1 || choose.Selection.ExcludedTypes[0] != types.Land {
+		t.Fatalf("Selection.ExcludedTypes = %#v, want [Land]", choose.Selection.ExcludedTypes)
+	}
+
+	bare := lowerSpellSequence(t, "Bare Discard", "Discard a card.")
+	if _, ok := bare[0].Primitive.(game.Discard); !ok {
+		t.Fatalf("bare discard instruction[0] = %T, want game.Discard", bare[0].Primitive)
+	}
+}
+
+// TestLowerOptionalFilteredDiscardDraw verifies that a filtered self-discard as
+// the optional X-action of "You may <X>. If you do, <Y>." publishes its result
+// (Optional + PublishResult) and the "if you do" draw is gated on it, reusing
+// the optional-flow envelope around the new ChooseDiscardFromHand instruction.
+func TestLowerOptionalFilteredDiscardDraw(t *testing.T) {
+	t.Parallel()
+	sequence := lowerSpellSequence(t, "Optional Filtered Discard",
+		"You may discard a creature card. If you do, draw two cards.")
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions", sequence)
+	}
+	choose, ok := sequence[0].Primitive.(game.ChooseDiscardFromHand)
+	if !ok {
+		t.Fatalf("instruction[0] = %T, want game.ChooseDiscardFromHand", sequence[0].Primitive)
+	}
+	if len(choose.Selection.RequiredTypes) != 1 || choose.Selection.RequiredTypes[0] != types.Creature {
+		t.Fatalf("Selection.RequiredTypes = %#v, want [Creature]", choose.Selection.RequiredTypes)
+	}
+	if !sequence[0].Optional {
+		t.Fatal("instruction[0].Optional = false, want optional")
+	}
+	if sequence[0].PublishResult != optionalIfYouDoResultKey {
+		t.Fatalf("instruction[0].PublishResult = %q, want %q", sequence[0].PublishResult, optionalIfYouDoResultKey)
 	}
 	if _, ok := sequence[1].Primitive.(game.Draw); !ok {
 		t.Fatalf("instruction[1] = %T, want game.Draw", sequence[1].Primitive)

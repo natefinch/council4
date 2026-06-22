@@ -196,11 +196,18 @@ type LookAtHand struct {
 // and ExcludeLand restrict the eligible cards ("noncreature card" /
 // "nonland card"), and MaxManaValue, when set, bounds the chosen card's mana
 // value ("with mana value N or less", Inquisition of Kozilek).
+//
+// Selection further restricts the eligible cards to those matching a typed card
+// filter ("a creature card", "a land card", "a nonland card"). It is the
+// general filter used by the controller's own filtered self-discard ("you may
+// discard a creature card") and composes with the exclude flags above: a card
+// must satisfy both. The zero Selection imposes no constraint.
 type ChooseDiscardFromHand struct {
 	Player          PlayerReference
 	ExcludeCreature bool
 	ExcludeLand     bool
 	MaxManaValue    opt.V[int]
+	Selection       Selection
 }
 
 // Discard causes a referenced player, or every player in a referenced group

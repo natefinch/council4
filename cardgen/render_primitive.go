@@ -823,6 +823,13 @@ func (r Renderer) renderChooseDiscardFromHand(ctx *renderCtx, value game.ChooseD
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("MaxManaValue: opt.Val(%d),", value.MaxManaValue.Val))
 	}
+	renderedSelection, err := r.renderSelection(ctx, value.Selection)
+	if err != nil {
+		return "", err
+	}
+	if renderedSelection != "game.Selection{}" {
+		fields = append(fields, fmt.Sprintf("Selection: %s,", renderedSelection))
+	}
 	return structLit("game.ChooseDiscardFromHand", fields), nil
 }
 

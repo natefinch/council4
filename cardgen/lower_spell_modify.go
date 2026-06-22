@@ -3138,6 +3138,84 @@ func lowerFixedCardCountPlayerSpell(
 	}.Ability(), nil
 }
 
+// discardSelectorImposesCardFilter reports whether the discard clause's selector
+// carries a typed card filter that the plain game.Discard primitive cannot
+// express ("a creature card", "a land card", "a nonland card", a color/subtype/
+// keyword/mana-value filter). The bare "discard a card" selector (a generic card
+// with no filter) returns false so it stays on the plain controlled-discard path.
+func discardSelectorImposesCardFilter(selector compiler.CompiledSelector) bool {
+	return selector.Kind != compiler.SelectorCard ||
+		len(selector.ExcludedTypes()) > 0 ||
+		len(selector.RequiredTypesAny()) > 0 ||
+		len(selector.Supertypes()) > 0 ||
+		len(selector.SubtypesAny()) > 0 ||
+		len(selector.ColorsAny()) > 0 ||
+		len(selector.ExcludedColors()) > 0 ||
+		selector.Colorless ||
+		selector.Multicolored ||
+		selector.Keyword != parser.KeywordUnknown ||
+		selector.MatchManaValue
+}
+
+// lowerFilteredControllerDiscard lowers the controller's own single-card filtered
+// self-discard ("Discard a creature card.", "Discard a nonland card.", and the
+// optional "You may discard a creature card. If you do, <Y>." X-action) to a
+// game.ChooseDiscardFromHand whose Selection carries the typed card filter. The
+// runtime has the controller choose one matching card from their own hand and
+// discard it; ChooseDiscardFromHand already filters its candidate pool by the
+// Selection. The plain unfiltered "discard a card" stays on the existing
+// game.Discard path (this returns ok=false for it). It is text-blind, reading
+// only the typed effect/selector fields, and fails closed for any non-controller
+// subject, any target/reference/condition/keyword/mode, a random or
+// multi-card discard, or a selector cardSelectionForSelector cannot express, so
+// every shape it does not fully model stays unsupported.
+func lowerFilteredControllerDiscard(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectDiscard ||
+		effect.DiscardEntireHand ||
+		effect.HandDiscard.AtRandom ||
+		effect.HasUnrecognizedSibling ||
+		effect.RequiresOrderedLowering ||
+		effect.UnsupportedDetail != "" ||
+		effect.Negated ||
+		effect.Optional ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		effect.Context != parser.EffectContextController {
+		return game.AbilityContent{}, false
+	}
+	if !effect.Amount.Known ||
+		effect.Amount.RangeKnown ||
+		effect.Amount.VariableX ||
+		effect.Amount.DynamicKind != compiler.DynamicAmountNone ||
+		effect.Amount.Value != 1 {
+		return game.AbilityContent{}, false
+	}
+	if !discardSelectorImposesCardFilter(effect.Selector) {
+		return game.AbilityContent{}, false
+	}
+	selection, ok := cardSelectionForSelector(effect.Selector)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.ChooseDiscardFromHand{
+				Player:    game.ControllerReference(),
+				Selection: selection,
+			},
+		}},
+	}.Ability(), true
+}
+
 // lowerDiscardEntireHandSpell lowers a "discard their hand" clause to a
 // game.Discard with EntireHand set. It supports the controller, each-player,
 // each-opponent, and single-target-player subjects recognized by the parser.
