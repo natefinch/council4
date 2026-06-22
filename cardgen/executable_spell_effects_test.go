@@ -861,6 +861,37 @@ func TestGenerateExecutableCardSourceEventPlayerDamage(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceEventPlayerSourcePowerDamage(t *testing.T) {
+	t.Parallel()
+	// "Whenever an opponent casts a noncreature spell, this creature deals
+	// damage equal to its power to that player." (Gleeful Arsonist) reads the
+	// source creature's power and deals it to the triggering event's player.
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Spite Arsonist",
+		Layout:     "normal",
+		ManaCost:   "{1}{R}",
+		TypeLine:   "Creature — Goblin",
+		OracleText: "Whenever an opponent casts a noncreature spell, this creature deals damage equal to its power to that player.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"game.Damage{",
+		"game.PlayerDamageRecipient(game.EventPlayerReference())",
+		"Kind:       game.DynamicAmountObjectPower",
+		"Object:     game.SourcePermanentReference()",
+		"DamageSource: opt.Val(game.SourcePermanentReference())",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("source missing %q:\n%s", want, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceInheritedPronounDestroy(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{

@@ -1528,21 +1528,34 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 		return exactDividedDamageText(effect, prefix, text)
 	}
 	if effect.DamageRecipientReference != DamageRecipientReferenceNone {
-		if len(effect.Targets) != 0 ||
-			effect.Amount.DynamicForm != EffectDynamicAmountFormNone {
-			return false
-		}
-		amount := "X"
-		if effect.Amount.Known {
-			amount = strconv.Itoa(effect.Amount.Value)
-		} else if !effect.Amount.VariableX {
+		if len(effect.Targets) != 0 {
 			return false
 		}
 		recipient, ok := damageRecipientTokens(effect.Tokens)
 		if !ok {
+			recipient, ok = damageRecipientTokensAfterAmount(effect.Tokens, effect.Amount)
+			if !ok {
+				return false
+			}
+		}
+		recipientText := joinedEffectText(recipient)
+		switch effect.Amount.DynamicForm {
+		case EffectDynamicAmountFormNone:
+			amount := "X"
+			if effect.Amount.Known {
+				amount = strconv.Itoa(effect.Amount.Value)
+			} else if !effect.Amount.VariableX {
+				return false
+			}
+			return text == fmt.Sprintf("%s %s damage to %s.", prefix, amount, recipientText)
+		case EffectDynamicAmountFormEqual:
+			// "<prefix> damage equal to <referent> to <recipient>." reconstructs
+			// the dynamic amount phrase verbatim, so the recipient that follows
+			// the amount span round-trips exactly and cannot bleed into it.
+			return text == fmt.Sprintf("%s damage %s to %s.", prefix, effect.Amount.Text, recipientText)
+		default:
 			return false
 		}
-		return text == fmt.Sprintf("%s %s damage to %s.", prefix, amount, joinedEffectText(recipient))
 	}
 	if len(effect.Targets) == 0 {
 		// A "where X is the number of ..." or "equal to ..." dynamic amount on

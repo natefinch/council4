@@ -111,6 +111,31 @@ func TestDamageRecipientReferenceAccepts(t *testing.T) {
 	}
 }
 
+func TestDamageRecipientReferenceAfterDynamicAmount(t *testing.T) {
+	t.Parallel()
+	// A referenced-player recipient that follows a dynamic "equal to ..." amount
+	// is recognized from the "to" after the amount span, and the dynamic-amount
+	// clause round-trips exactly. This backs "deals damage equal to its power to
+	// that player" (Gleeful Arsonist) and the controller/owner forms.
+	tests := []struct {
+		name, source string
+		want         DamageRecipientReferenceKind
+	}{
+		{"Spite Goblin", "Spite Goblin deals damage equal to its power to that player.", DamageRecipientReferenceThatPlayer},
+		{"Bond Aura", "Bond Aura deals damage equal to its power to the creature's controller.", DamageRecipientReferenceController},
+		{"Bond Owner", "Bond Owner deals damage equal to its power to that creature's owner.", DamageRecipientReferenceOwner},
+	}
+	for _, test := range tests {
+		got, exact := damageRecipientReferenceOf(t, test.name, test.source)
+		if got != test.want {
+			t.Errorf("DamageRecipientReference(%q) = %v, want %v", test.source, got, test.want)
+		}
+		if !exact {
+			t.Errorf("damageEffectExact(%q) = false, want true", test.source)
+		}
+	}
+}
+
 func TestDamageRecipientReferenceFailsClosed(t *testing.T) {
 	t.Parallel()
 	// A possessive recipient that is neither a single controller nor owner (here a
