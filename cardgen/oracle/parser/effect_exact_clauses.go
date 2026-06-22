@@ -819,6 +819,33 @@ func exactTargetNextUntapStepSyntax(effect *EffectSyntax) bool {
 	return slices.Equal(words[verb+1:], []string{"during", "its", "controller's", "next", "untap", "step"})
 }
 
+// exactSourceNextUntapStepSyntax recognizes the standalone self-source stun
+// clause "This <permanent> doesn't untap during your next untap step." in which
+// the stunned permanent is the source itself (the dual lands Mogg Hollows /
+// Rootwater Depths and Arbalest Elite append it to a mana or damage ability so
+// the source skips its own next untap). The clause carries a single
+// "This <permanent>" self reference and no target, possessive controller
+// reference, or duration; only the single "your next untap step" window is
+// exact, so every plural, mass, or multi-step wording leaves the clause
+// non-exact and lowering fails closed.
+func exactSourceNextUntapStepSyntax(effect *EffectSyntax) bool {
+	if !effect.Negated || effect.Optional ||
+		effect.Context != EffectContextSource ||
+		len(effect.Targets) != 0 || len(effect.References) != 1 ||
+		effect.Duration != EffectDurationNone || effect.DelayedTiming != DelayedTimingNone {
+		return false
+	}
+	if effect.References[0].Kind != ReferenceThisObject {
+		return false
+	}
+	words := normalizedWords(effect.Tokens)
+	verb := slices.Index(words, "untap")
+	if verb < 1 || words[verb-1] != "doesn't" {
+		return false
+	}
+	return slices.Equal(words[verb+1:], []string{"during", "your", "next", "untap", "step"})
+}
+
 // exactPriorSubjectNextUntapStepSyntax recognizes the prior-subject "doesn't
 // untap during its controller's next untap step" clause that follows a tap
 // effect (e.g. "Tap target creature. It doesn't untap during its controller's

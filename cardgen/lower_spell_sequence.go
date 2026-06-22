@@ -1562,6 +1562,46 @@ func lowerStandaloneStunEffect(ctx contentCtx) (game.AbilityContent, bool) {
 	}.Ability(), true
 }
 
+// lowerStandaloneSourceStunEffect lowers the self-source stun "This <permanent>
+// doesn't untap during your next untap step." (the dual lands Mogg Hollows /
+// Rootwater Depths and Arbalest Elite) into a single SkipNextUntap on the
+// source itself. The stunned permanent is the resolving source — there is no
+// target and no tap — so the instruction references the source permanent
+// directly. It accepts only the parser-exact single negated-untap effect whose
+// context is the source and whose one reference binds to the source ("This
+// land"/"This creature"); every other shape (added clauses, a target, mass or
+// plural wording, a non-source reference, or a multi-step window) fails closed.
+// Multi-effect abilities reach this lowerer per clause through the ordered
+// sequence path, so "{T}: Add {R} or {G}. This land doesn't untap ..." lowers
+// the appended stun as its own instruction.
+func lowerStandaloneSourceStunEffect(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 || ctx.optional ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Conditions) != 0 {
+		return game.AbilityContent{}, false
+	}
+	stun := ctx.content.Effects[0]
+	if stun.Kind != compiler.EffectUntap || !stun.Negated || stun.Optional || !stun.Exact ||
+		stun.Context != parser.EffectContextSource ||
+		stun.Duration != compiler.DurationNone || stun.DelayedTiming != 0 ||
+		len(stun.Targets) != 0 {
+		return game.AbilityContent{}, false
+	}
+	// The clause's single reference must be the self "This <permanent>" subject
+	// binding to the source; reject anything else so no reference is dropped.
+	if len(ctx.content.References) != 1 ||
+		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingSource, 0) {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{Primitive: game.SkipNextUntap{Object: game.SourcePermanentReference()}},
+		},
+	}.Ability(), true
+}
+
 // blink uses to name the several exiled cards. It distinguishes the multi-target
 // flicker from the singular "it"/"that card" single-target blink, which the
 // per-clause path lowers on its own.
