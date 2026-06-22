@@ -670,15 +670,16 @@ func parseStaticDynamicPowerToughnessOperation(
 		return StaticDeclarationSyntax{}, 0, false
 	}
 	cursor += 7
-	value, next, ok := parseStaticDynamicValueCount(tokens, cursor, end)
-	if !ok || next != end {
+	count, ok := parseStaticDynamicValueCount(tokens, cursor, end)
+	if !ok || count.end != end {
 		return StaticDeclarationSyntax{}, 0, false
 	}
 	return StaticDeclarationSyntax{
-		Kind:          StaticDeclarationCharacteristicDefiningPowerToughness,
-		OperationSpan: shared.SpanOf(tokens[index:next]),
-		DynamicValue:  value,
-	}, next, true
+		Kind:                StaticDeclarationCharacteristicDefiningPowerToughness,
+		OperationSpan:       shared.SpanOf(tokens[index:count.end]),
+		DynamicValue:        count.kind,
+		DynamicValueSubtype: count.subtype,
+	}, count.end, true
 }
 
 // parseCharacteristicDefiningPowerToughnessDeclaration recognizes a
@@ -717,6 +718,7 @@ func parseCharacteristicDefiningPowerToughnessDeclaration(tokens []shared.Token,
 			Span: subjectSpan,
 		},
 		DynamicValue:           op.kind,
+		DynamicValueSubtype:    op.subtype,
 		DynamicSetsPower:       op.setsPower,
 		DynamicSetsToughness:   op.setsToughness,
 		DynamicToughnessOffset: op.offset,
@@ -729,6 +731,7 @@ func parseCharacteristicDefiningPowerToughnessDeclaration(tokens []shared.Token,
 // toughness offset for the "that number plus N" form.
 type characteristicDefiningOperation struct {
 	kind          StaticDeclarationDynamicValueKind
+	subtype       types.Sub
 	end           int
 	setsPower     bool
 	setsToughness bool
@@ -745,22 +748,34 @@ func parseCharacteristicDefiningOperation(
 	start, period int,
 ) (characteristicDefiningOperation, bool) {
 	if staticWordsAt(tokens, start, "power", "and", "toughness", "are", "each", "equal", "to") {
-		value, next, valueOK := parseStaticDynamicValueCount(tokens, start+7, period)
-		if !valueOK || next != period {
+		count, valueOK := parseStaticDynamicValueCount(tokens, start+7, period)
+		if !valueOK || count.end != period {
 			return characteristicDefiningOperation{}, false
 		}
-		return characteristicDefiningOperation{kind: value, end: next, setsPower: true, setsToughness: true}, true
+		return characteristicDefiningOperation{
+			kind:          count.kind,
+			subtype:       count.subtype,
+			end:           count.end,
+			setsPower:     true,
+			setsToughness: true,
+		}, true
 	}
 	if !staticWordsAt(tokens, start, "power", "is", "equal", "to") {
 		return characteristicDefiningOperation{}, false
 	}
-	value, next, valueOK := parseStaticDynamicValueCount(tokens, start+4, period)
+	count, valueOK := parseStaticDynamicValueCount(tokens, start+4, period)
 	if !valueOK {
 		return characteristicDefiningOperation{}, false
 	}
-	if next == period {
-		return characteristicDefiningOperation{kind: value, end: next, setsPower: true}, true
+	if count.end == period {
+		return characteristicDefiningOperation{
+			kind:      count.kind,
+			subtype:   count.subtype,
+			end:       count.end,
+			setsPower: true,
+		}, true
 	}
+	next := count.end
 	if !staticWordsAt(tokens, next, "and", "its", "toughness", "is", "equal", "to", "that", "number", "plus") {
 		return characteristicDefiningOperation{}, false
 	}
@@ -773,7 +788,8 @@ func parseCharacteristicDefiningOperation(
 		return characteristicDefiningOperation{}, false
 	}
 	return characteristicDefiningOperation{
-		kind:          value,
+		kind:          count.kind,
+		subtype:       count.subtype,
 		end:           offsetIndex + 1,
 		setsPower:     true,
 		setsToughness: true,
@@ -800,39 +816,95 @@ func characteristicDefiningSourceSubject(tokens []shared.Token, atoms Atoms) (sh
 	return shared.Span{}, 0, false
 }
 
-// parseStaticDynamicValueCount recognizes the supported "the number of <count>"
-// phrases a characteristic-defining power/toughness declaration counts. It
-// returns the matched count kind and the index past the phrase.
+// staticDynamicCount is the parsed result of a characteristic-defining count
+// phrase: the matched count kind, the land subtype it counts (only for
+// StaticDeclarationDynamicValueControllerLandSubtypeCount), and the index past
+// the consumed phrase.
+type staticDynamicCount struct {
+	kind    StaticDeclarationDynamicValueKind
+	subtype types.Sub
+	end     int
+}
+
+// basicLandSubtypePlurals maps the plural land-type word used in "the number of
+// <Plural> you control" to the basic land subtype it counts.
+var basicLandSubtypePlurals = map[string]types.Sub{
+	"plains":    types.Plains,
+	"islands":   types.Island,
+	"swamps":    types.Swamp,
+	"mountains": types.Mountain,
+	"forests":   types.Forest,
+}
+
+// parseStaticDynamicValueCount recognizes the supported count phrases a
+// characteristic-defining power/toughness declaration counts. It returns the
+// matched count and the index past the phrase.
 func parseStaticDynamicValueCount(
 	tokens []shared.Token,
 	start, end int,
-) (StaticDeclarationDynamicValueKind, int, bool) {
+) (staticDynamicCount, bool) {
+	if staticWordsAt(tokens, start, "your", "life", "total") {
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerLifeTotal, end: start + 3}, true
+	}
+	if staticWordsAt(tokens, start, "the", "total", "number", "of", "cards", "in", "all", "players") &&
+		start+9 < len(tokens) && tokens[start+8].Kind == shared.Apostrophe && equalWord(tokens[start+9], "hands") {
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueAllPlayersHandSize, end: start + 10}, true
+	}
 	if !staticWordsAt(tokens, start, "the", "number", "of") {
-		return StaticDeclarationDynamicValueNone, 0, false
+		return staticDynamicCount{}, false
 	}
 	cursor := start + 3
 	switch {
 	case staticWordsAt(tokens, cursor, "cards", "in", "your", "hand"):
-		return StaticDeclarationDynamicValueControllerHandSize, cursor + 4, true
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerHandSize, end: cursor + 4}, true
 	case staticWordsAt(tokens, cursor, "cards", "in", "your", "graveyard"):
-		return StaticDeclarationDynamicValueControllerGraveyardSize, cursor + 4, true
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerGraveyardSize, end: cursor + 4}, true
 	case staticWordsAt(tokens, cursor, "creatures", "you", "control"):
-		return StaticDeclarationDynamicValueControllerCreatureCount, cursor + 3, true
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerCreatureCount, end: cursor + 3}, true
 	case staticWordsAt(tokens, cursor, "lands", "you", "control"):
-		return StaticDeclarationDynamicValueControllerLandCount, cursor + 3, true
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerLandCount, end: cursor + 3}, true
 	case staticWordsAt(tokens, cursor, "artifacts", "you", "control"):
-		return StaticDeclarationDynamicValueControllerArtifactCount, cursor + 3, true
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerArtifactCount, end: cursor + 3}, true
 	case staticWordsAt(tokens, cursor, "creatures", "on", "the", "battlefield"):
-		return StaticDeclarationDynamicValueAllBattlefieldCreatureCount, cursor + 4, true
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueAllBattlefieldCreatureCount, end: cursor + 4}, true
 	case staticWordsAt(tokens, cursor, "creature", "cards", "in", "all", "graveyards"):
-		return StaticDeclarationDynamicValueCreatureCardsInAllGraveyards, cursor + 5, true
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueCreatureCardsInAllGraveyards, end: cursor + 5}, true
 	case staticWordsAt(tokens, cursor, "card", "types", "among", "cards", "in", "all", "graveyards"):
-		return StaticDeclarationDynamicValueCardTypesAmongAllGraveyards, cursor + 7, true
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueCardTypesAmongAllGraveyards, end: cursor + 7}, true
 	case staticWordsAt(tokens, cursor, "cards", "in", "all", "graveyards"):
-		return StaticDeclarationDynamicValueAllGraveyardsSize, cursor + 4, true
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueAllGraveyardsSize, end: cursor + 4}, true
+	case staticWordsAt(tokens, cursor, "creature", "cards", "in", "your", "graveyard"):
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerCreatureCardsInGraveyard, end: cursor + 5}, true
+	case staticWordsAt(tokens, cursor, "instant", "and", "sorcery", "cards", "in", "your", "graveyard"):
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerInstantOrSorceryCardsInGraveyard, end: cursor + 7}, true
+	case staticWordsAt(tokens, cursor, "land", "cards", "in", "your", "graveyard"):
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerLandCardsInGraveyard, end: cursor + 5}, true
+	case staticWordsAt(tokens, cursor, "permanent", "cards", "in", "your", "graveyard"):
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerPermanentCardsInGraveyard, end: cursor + 5}, true
+	case staticWordsAt(tokens, cursor, "card", "types", "among", "cards", "in", "your", "graveyard"):
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerCardTypesInGraveyard, end: cursor + 7}, true
+	case staticWordsAt(tokens, cursor, "basic", "land", "types", "among", "lands", "you", "control"):
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerBasicLandTypeCount, end: cursor + 7}, true
 	default:
-		return StaticDeclarationDynamicValueNone, 0, false
+		return parseStaticDynamicSubtypeCount(tokens, cursor)
 	}
+}
+
+// parseStaticDynamicSubtypeCount recognizes "<BasicLandPlural> you control" (for
+// example "Swamps you control") at cursor, returning a land-subtype count.
+func parseStaticDynamicSubtypeCount(tokens []shared.Token, cursor int) (staticDynamicCount, bool) {
+	if cursor+2 >= len(tokens) {
+		return staticDynamicCount{}, false
+	}
+	subtype, ok := basicLandSubtypePlurals[strings.ToLower(tokens[cursor].Text)]
+	if !ok || !staticWordsAt(tokens, cursor+1, "you", "control") {
+		return staticDynamicCount{}, false
+	}
+	return staticDynamicCount{
+		kind:    StaticDeclarationDynamicValueControllerLandSubtypeCount,
+		subtype: subtype,
+		end:     cursor + 3,
+	}, true
 }
 
 // parseStaticCharacteristicOperation recognizes the characteristic operations

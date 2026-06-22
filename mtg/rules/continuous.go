@@ -301,6 +301,36 @@ func dynamicValueBase(g *game.Game, controller game.PlayerID, dynamic *game.Dyna
 		return allGraveyardsCardCount(g, types.Creature, true)
 	case game.DynamicValueCardTypesAmongAllGraveyards:
 		return allGraveyardsCardTypeCount(g)
+	case game.DynamicValueControllerCreatureCardsInGraveyard:
+		return controllerGraveyardCardCount(g, controller, func(card *game.CardInstance) bool {
+			return graveyardCardHasType(card, types.Creature)
+		})
+	case game.DynamicValueControllerInstantOrSorceryCardsInGraveyard:
+		return controllerGraveyardCardCount(g, controller, func(card *game.CardInstance) bool {
+			return graveyardCardHasType(card, types.Instant) || graveyardCardHasType(card, types.Sorcery)
+		})
+	case game.DynamicValueControllerLandCardsInGraveyard:
+		return controllerGraveyardCardCount(g, controller, func(card *game.CardInstance) bool {
+			return graveyardCardHasType(card, types.Land)
+		})
+	case game.DynamicValueControllerPermanentCardsInGraveyard:
+		return controllerGraveyardCardCount(g, controller, graveyardCardIsPermanent)
+	case game.DynamicValueControllerCardTypesInGraveyard:
+		return controllerGraveyardCardTypeCount(g, controller)
+	case game.DynamicValueControllerLandSubtypeCount:
+		return countControlledPermanentsWithSubtype(g, controller, dynamic.Subtype)
+	case game.DynamicValueControllerBasicLandTypeCount:
+		return controllerBasicLandSubtypeCount(g, controller)
+	case game.DynamicValueControllerLifeTotal:
+		if player, ok := playerByID(g, controller); ok {
+			return player.Life
+		}
+	case game.DynamicValueAllPlayersHandSize:
+		count := 0
+		for _, player := range g.Players {
+			count += player.Hand.Size()
+		}
+		return count
 	default:
 	}
 	return 0
@@ -367,6 +397,75 @@ func countControlledPermanentsWithType(g *game.Game, controller game.PlayerID, c
 		}
 	}
 	return count
+}
+
+// countControlledPermanentsWithSubtype counts the active permanents the given
+// player controls whose printed front face has the subtype ("the number of
+// Swamps you control"). It reads printed subtypes only, so it does not depend on
+// continuous layers and cannot recurse into power/toughness computation.
+func countControlledPermanentsWithSubtype(g *game.Game, controller game.PlayerID, subtype types.Sub) int {
+	count := 0
+	for _, permanent := range g.Battlefield {
+		if !activeBattlefieldPermanent(permanent) || permanent.Controller != controller || permanent.FaceDown {
+			continue
+		}
+		if card, ok := permanentCardDef(g, permanent); ok && card.HasSubtype(subtype) {
+			count++
+		}
+	}
+	return count
+}
+
+// basicLandTypes lists the five basic land subtypes (CR 305.6) counted by
+// "the number of basic land types among lands you control".
+var basicLandTypes = []types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain, types.Forest}
+
+// controllerBasicLandSubtypeCount counts the distinct basic land subtypes
+// present among the active lands the given player controls, reading printed
+// subtypes only to avoid recursing into continuous layers.
+func controllerBasicLandSubtypeCount(g *game.Game, controller game.PlayerID) int {
+	count := 0
+	for _, subtype := range basicLandTypes {
+		if countControlledPermanentsWithSubtype(g, controller, subtype) > 0 {
+			count++
+		}
+	}
+	return count
+}
+
+// controllerGraveyardCardCount counts the cards in the given player's graveyard
+// that satisfy match.
+func controllerGraveyardCardCount(g *game.Game, controller game.PlayerID, match func(*game.CardInstance) bool) int {
+	player, ok := playerByID(g, controller)
+	if !ok {
+		return 0
+	}
+	count := 0
+	for _, cardID := range player.Graveyard.All() {
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		if match(card) {
+			count++
+		}
+	}
+	return count
+}
+
+// permanentCardTypes lists the card types that make a card a permanent card
+// (CR 110.4a) for "the number of permanent cards in your graveyard".
+var permanentCardTypes = []types.Card{
+	types.Artifact, types.Creature, types.Enchantment, types.Land, types.Planeswalker, types.Battle,
+}
+
+func graveyardCardIsPermanent(card *game.CardInstance) bool {
+	for _, cardType := range permanentCardTypes {
+		if graveyardCardHasType(card, cardType) {
+			return true
+		}
+	}
+	return false
 }
 
 func basePermanentHasType(g *game.Game, permanent *game.Permanent, cardType types.Card) bool {

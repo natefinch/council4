@@ -547,6 +547,7 @@ type StaticDeclaration struct {
 // fixed integer added to the toughness count for the "that number plus N" form.
 type StaticCharacteristicPowerToughnessDeclaration struct {
 	Value           game.DynamicValueKind
+	Subtype         types.Sub
 	SetsPower       bool
 	SetsToughness   bool
 	ToughnessOffset int
@@ -1994,6 +1995,7 @@ func recognizeStaticCharacteristicPowerToughnessDeclaration(ability CompiledAbil
 		Group:         StaticGroupReference{Span: node.Subject.Span, Domain: StaticGroupSource},
 		CharacteristicPT: &StaticCharacteristicPowerToughnessDeclaration{
 			Value:           value,
+			Subtype:         node.DynamicValueSubtype,
 			SetsPower:       node.DynamicSetsPower,
 			SetsToughness:   node.DynamicSetsToughness,
 			ToughnessOffset: node.DynamicToughnessOffset,
@@ -2023,6 +2025,24 @@ func compileStaticDynamicValueKind(kind parser.StaticDeclarationDynamicValueKind
 		return game.DynamicValueCreatureCardsInAllGraveyards, true
 	case parser.StaticDeclarationDynamicValueCardTypesAmongAllGraveyards:
 		return game.DynamicValueCardTypesAmongAllGraveyards, true
+	case parser.StaticDeclarationDynamicValueControllerCreatureCardsInGraveyard:
+		return game.DynamicValueControllerCreatureCardsInGraveyard, true
+	case parser.StaticDeclarationDynamicValueControllerInstantOrSorceryCardsInGraveyard:
+		return game.DynamicValueControllerInstantOrSorceryCardsInGraveyard, true
+	case parser.StaticDeclarationDynamicValueControllerLandCardsInGraveyard:
+		return game.DynamicValueControllerLandCardsInGraveyard, true
+	case parser.StaticDeclarationDynamicValueControllerCardTypesInGraveyard:
+		return game.DynamicValueControllerCardTypesInGraveyard, true
+	case parser.StaticDeclarationDynamicValueControllerPermanentCardsInGraveyard:
+		return game.DynamicValueControllerPermanentCardsInGraveyard, true
+	case parser.StaticDeclarationDynamicValueControllerLandSubtypeCount:
+		return game.DynamicValueControllerLandSubtypeCount, true
+	case parser.StaticDeclarationDynamicValueControllerBasicLandTypeCount:
+		return game.DynamicValueControllerBasicLandTypeCount, true
+	case parser.StaticDeclarationDynamicValueControllerLifeTotal:
+		return game.DynamicValueControllerLifeTotal, true
+	case parser.StaticDeclarationDynamicValueAllPlayersHandSize:
+		return game.DynamicValueAllPlayersHandSize, true
 	default:
 		return game.DynamicValueNone, false
 	}
