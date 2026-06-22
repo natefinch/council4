@@ -233,6 +233,8 @@ func lowerContent(
 			return lowerAddManaContent(ctx)
 		case compiler.EffectBecomeCopy:
 			return lowerBecomeCopyContent(ctx)
+		case compiler.EffectBecomeType:
+			return lowerBecomeTypeContent(ctx)
 		default:
 		}
 		if content, ok := lowerExileFromHandContent(ctx); ok {

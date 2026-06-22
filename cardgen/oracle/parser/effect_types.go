@@ -237,6 +237,13 @@ const (
 	// creature" refers to the source. It lowers to a CreateReplacement bound to
 	// that object.
 	EffectExileIfLeaveBattlefield EffectKind = "EffectExileIfLeaveBattlefield"
+	// EffectBecomeType models a targeted continuous type-adding effect ("Target
+	// permanent becomes an artifact in addition to its other types until end of
+	// turn.", Liquimetal Torque, Liquimetal Coating). The added card types are
+	// carried in BecomeTypeAddTypes and the targeted permanent is left as an
+	// ordinary target for the target machinery. It lowers to an ApplyContinuous
+	// at LayerType that adds the types to the target for the recorded duration.
+	EffectBecomeType EffectKind = "EffectBecomeType"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -1419,6 +1426,15 @@ type EffectSyntax struct {
 	// BecomeCopyAddKeywords lists the keywords granted by an "except it has
 	// <keyword>" copiable rider on an EffectBecomeCopy. It is empty otherwise.
 	BecomeCopyAddKeywords []KeywordKind `json:",omitempty"`
+	// BecomeTypeAddTypes lists the card types added by an EffectBecomeType
+	// targeted type-change ("Target permanent becomes an artifact in addition to
+	// its other types until end of turn.", Liquimetal Torque). The types are
+	// added to the target without removing its existing types.
+	BecomeTypeAddTypes []types.Card `json:",omitempty"`
+	// BecomeTypeUntilEndOfTurn reports the "until end of turn" duration on an
+	// EffectBecomeType targeted type-change. It is always set for the recognized
+	// Liquimetal form; a permanent form is not yet recognized.
+	BecomeTypeUntilEndOfTurn bool `json:",omitempty"`
 	// EntersAsCopyUntilEndOfTurn reports the temporary "become a copy of <filter>
 	// until end of turn" form of an EntersAsCopy replacement (Cursed Mirror),
 	// where the copy effect lasts until end of turn instead of as long as the
