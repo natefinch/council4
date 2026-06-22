@@ -108,6 +108,7 @@ func lowerManaAbility(
 		(len(shell.semanticContent.Effects) == 2 &&
 			!isSelfDamageToControllerRider(&shell.semanticContent.Effects[1]) &&
 			!isGainLifeToControllerRider(&shell.semanticContent.Effects[1]) &&
+			!isSourceStunRider(&shell.semanticContent.Effects[1]) &&
 			!isManaSpendRider(&shell.semanticContent.Effects[1])) {
 		return game.ManaAbility{}, executableDiagnostic(
 			ability,
@@ -215,6 +216,25 @@ func isGainLifeToControllerRider(effect *compiler.CompiledEffect) bool {
 		!effect.Amount.VariableX &&
 		effect.Amount.DynamicKind == compiler.DynamicAmountNone &&
 		effect.Amount.Value >= 1
+}
+
+// isSourceStunRider reports whether effect is exactly the self-source stun "This
+// <permanent> doesn't untap during your next untap step." rider that the dual
+// lands (Mogg Hollows, Rootwater Depths, and the rest of the cycle) append to a
+// mana ability so the land stays tapped through its controller's next untap
+// step. It accepts only the parser-exact negated next-untap-step clause whose
+// subject is the source itself, with no target, duration, or delayed timing, so
+// no other negated-untap clause can ride into a mana ability. The mana ability's
+// lowered content already carries the matching source SkipNextUntap instruction.
+func isSourceStunRider(effect *compiler.CompiledEffect) bool {
+	return effect.Kind == compiler.EffectUntap &&
+		effect.Negated &&
+		effect.Exact &&
+		!effect.Optional &&
+		effect.Context == parser.EffectContextSource &&
+		len(effect.Targets) == 0 &&
+		effect.Duration == compiler.DurationNone &&
+		effect.DelayedTiming == 0
 }
 
 // isManaSpendRider reports whether effect is one of the closed, fully modeled

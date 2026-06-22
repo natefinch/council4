@@ -163,6 +163,7 @@ func exactEffectSyntaxTail(effect *EffectSyntax) bool {
 			exactBoundedUntapEffectSyntax(effect) ||
 			exactNegatedNextUntapStepSyntax(effect) ||
 			exactTargetNextUntapStepSyntax(effect) ||
+			exactSourceNextUntapStepSyntax(effect) ||
 			exactPriorSubjectNextUntapStepSyntax(effect)
 	case EffectTransform:
 		return exactDirectTargetEffectSyntax(effect, "Transform")
