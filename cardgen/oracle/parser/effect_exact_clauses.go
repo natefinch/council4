@@ -599,6 +599,17 @@ func joinSerialTargetTexts(texts []string) string {
 	}
 }
 
+// exactRemoveFromCombatEffectSyntax recognizes the resolving effect "Remove
+// <target> from combat." (Reconnaissance, "Remove target attacking creature you
+// control from combat."), whose single permanent target is the creature taken
+// out of combat. The "from combat" clause is the verb's fixed suffix; any other
+// wording leaves the clause non-exact so lowering fails closed.
+func exactRemoveFromCombatEffectSyntax(effect *EffectSyntax) bool {
+	return len(effect.Targets) == 1 &&
+		effect.Targets[0].Exact &&
+		strings.EqualFold(exactEffectClauseText(effect), "Remove "+effect.Targets[0].Text+" from combat.")
+}
+
 // exactRegenerateSelfEffectSyntax recognizes the self-regeneration form
 // "Regenerate this creature." (and the "this permanent"/"this token" object
 // nouns) or "Regenerate <CardName>." where the regenerated permanent is the

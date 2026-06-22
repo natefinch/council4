@@ -159,6 +159,8 @@ func exactEffectSyntaxTail(effect *EffectSyntax) bool {
 			exactPriorSubjectNextUntapStepSyntax(effect)
 	case EffectTransform:
 		return exactDirectTargetEffectSyntax(effect, "Transform")
+	case EffectRemoveFromCombat:
+		return exactRemoveFromCombatEffectSyntax(effect)
 	default:
 		return false
 	}

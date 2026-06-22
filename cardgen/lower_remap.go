@@ -103,6 +103,10 @@ func remapTargetedPrimitive(primitive game.Primitive, localToGame []int) (game.P
 		value.Object, ok = remapObjectReference(value.Object, localToGame)
 		return value, ok
 	}
+	if value, ok := primitive.(game.RemoveFromCombat); ok {
+		value.Object, ok = remapObjectReference(value.Object, localToGame)
+		return value, ok
+	}
 	if value, ok := primitive.(game.Exile); ok {
 		if value.Group.Valid() {
 			return nil, false
@@ -348,6 +352,10 @@ func rebaseTargetedPrimitive(primitive game.Primitive, offset, cardOffset int) (
 		if value.Group.Valid() {
 			return nil, false
 		}
+		value.Object, ok = rebaseObjectReference(value.Object, offset)
+		return value, ok
+	}
+	if value, ok := primitive.(game.RemoveFromCombat); ok {
 		value.Object, ok = rebaseObjectReference(value.Object, offset)
 		return value, ok
 	}

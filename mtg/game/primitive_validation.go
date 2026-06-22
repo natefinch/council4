@@ -1628,6 +1628,10 @@ func (p SkipNextUntap) validatePrimitive(targets []TargetSpec, checkTargets bool
 	return validateObjectReference(p.Object, targets, checkTargets)
 }
 
+func (p RemoveFromCombat) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateObjectReference(p.Object, targets, checkTargets)
+}
+
 func (p CounterObject) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
 		return err

@@ -101,6 +101,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleSacrificePermanents)
 	registerPrimitiveHandler(reg, handleUntap)
 	registerPrimitiveHandler(reg, handleSkipNextUntap)
+	registerPrimitiveHandler(reg, handleRemoveFromCombat)
 	registerPrimitiveHandler(reg, handleCounterObject)
 	registerPrimitiveHandler(reg, handleChooseNewTargets)
 	registerPrimitiveHandler(reg, handleCopyStackObject)

@@ -222,6 +222,12 @@ const (
 	// A later effect consumes the value via an "equal to the result"
 	// dynamic-amount (EffectAmountDieRollResult). DieSides carries N.
 	EffectRollDie EffectKind = "EffectRollDie"
+	// EffectRemoveFromCombat models the resolving effect "Remove target <attacking
+	// or blocking> creature from combat." (Reconnaissance), taking the referenced
+	// creature out of combat so it stops being an attacker or blocker and deals
+	// and is dealt no further combat damage (CR 506.4). The creature is carried as
+	// an ordinary permanent target on the effect.
+	EffectRemoveFromCombat EffectKind = "EffectRemoveFromCombat"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."

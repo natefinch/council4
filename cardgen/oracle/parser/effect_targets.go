@@ -1402,6 +1402,7 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 		if token.Kind == shared.Comma || token.Kind == shared.Period || token.Kind == shared.Semicolon ||
 			targetDestinationStartsAt(tokens, end) ||
 			moveCounterDestinationStartsAt(tokens, end) ||
+			(equalWord(token, "from") && end+1 < len(tokens) && equalWord(tokens[end+1], "combat")) ||
 			equalWord(token, "unless") ||
 			(equalWord(token, "equal") && end+1 < len(tokens) && equalWord(tokens[end+1], "to")) ||
 			(equalWord(token, "and") && end+2 < len(tokens) && equalWord(tokens[end+1], "you") && effectWordKind(tokens[end+2]) != EffectUnknown) ||

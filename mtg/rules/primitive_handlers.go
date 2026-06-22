@@ -811,6 +811,15 @@ func handleSkipNextUntap(r *effectResolver, prim game.SkipNextUntap) effectResol
 	return res
 }
 
+func handleRemoveFromCombat(r *effectResolver, prim game.RemoveFromCombat) effectResolved {
+	res := effectResolved{accepted: true}
+	if permanent, ok := r.resolveObject(prim.Object); ok {
+		removePermanentFromCombat(r.game, permanent.ObjectID)
+		res.succeeded = true
+	}
+	return res
+}
+
 func handleProliferate(r *effectResolver, prim game.Proliferate) effectResolved {
 	amount := r.quantity(prim.Amount)
 	if amount <= 0 {

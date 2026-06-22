@@ -1060,9 +1060,36 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 	case kind == EffectTap && index+2 < len(tokens) &&
 		equalWord(tokens[index+1], "or") && equalWord(tokens[index+2], "untap"):
 		return EffectTapOrUntap
+	case removeFromCombatVerbAt(tokens, index):
+		return EffectRemoveFromCombat
 	default:
 		return kind
 	}
+}
+
+// removeFromCombatVerbAt reports whether the verb at index begins the resolving
+// effect "Remove <object> from combat." (Reconnaissance, "Remove target
+// attacking creature you control from combat."). The verb "remove" is otherwise
+// used only in counter-removal costs, so the classification is anchored on the
+// "remove"/"removes" verb followed later by the "from combat" clause.
+func removeFromCombatVerbAt(tokens []shared.Token, index int) bool {
+	if !equalWord(tokens[index], "remove") && !equalWord(tokens[index], "removes") {
+		return false
+	}
+	return removeFromCombatClauseStartsAt(tokens, index+1) >= 0
+}
+
+// removeFromCombatClauseStartsAt returns the index of the "from" token of a
+// "from combat" clause at or after start, or -1 if none precedes the sentence
+// end. It anchors both the "Remove ... from combat" verb classification and the
+// target-boundary scan that keeps "from combat" out of the target noun phrase.
+func removeFromCombatClauseStartsAt(tokens []shared.Token, start int) int {
+	for i := start; i+1 < len(tokens); i++ {
+		if equalWord(tokens[i], "from") && equalWord(tokens[i+1], "combat") {
+			return i
+		}
+	}
+	return -1
 }
 
 // playerCounterGainVerbAt reports whether the "get"/"gets" verb at index is
