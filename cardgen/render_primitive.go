@@ -428,9 +428,23 @@ func (r Renderer) renderTokenSource(ctx *renderCtx, source game.TokenSource) (st
 		return r.renderTokenCopyObjectSource(ctx, spec)
 	case game.TokenCopySourceEachInGroup:
 		return r.renderTokenCopyForEachSource(ctx, spec)
+	case game.TokenCopySourceChosenFromTriggerBatch:
+		return renderTokenCopyTriggeringSetSource(spec)
 	default:
 		return "", errors.New("render: unsupported CreateToken token source")
 	}
+}
+
+func renderTokenCopyTriggeringSetSource(spec game.TokenCopySpec) (string, error) {
+	fields := []string{
+		"Source: game.TokenCopySourceChosenFromTriggerBatch,",
+	}
+	fields = appendTokenCopyModifierFields(fields, spec)
+	rendered, err := renderTokenCopyKeywordField(fields, spec)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.TokenCopyOf(game.TokenCopySpec", rendered) + ")", nil
 }
 
 func (r Renderer) renderTokenCopyObjectSource(ctx *renderCtx, spec game.TokenCopySpec) (string, error) {

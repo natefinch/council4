@@ -1703,7 +1703,7 @@ func (v *cardDefValidator) validateTokenCopySpec(faceName, path string, spec Tok
 	switch spec.Source {
 	case TokenCopySourceObject:
 		v.validateObjectRef(faceName, appendPath(path, "Object"), spec.Object, targets)
-	case TokenCopySourceSourceCard:
+	case TokenCopySourceSourceCard, TokenCopySourceChosenFromTriggerBatch:
 	case TokenCopySourceEachInGroup:
 		if spec.Group == nil {
 			v.add(faceName, appendPath(path, "Group"), CardDefIssueInvalidReference, "token copy for-each group is nil")

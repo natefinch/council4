@@ -34,6 +34,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactCreateNamedTokenChoiceEffectSyntax(effect) ||
 			exactCreateCopyTokenEffectSyntax(effect) ||
 			exactCreateCopyTokenReferenceEffectSyntax(effect) ||
+			exactCreateCopyTokenTriggeringSetEffectSyntax(effect) ||
 			exactCreateCopyTokenAttachedEffectSyntax(effect)
 	case EffectDiscard:
 		return exactCardCountEffectSyntax(effect, "Discard", "discards", false) ||
@@ -2035,6 +2036,56 @@ func exactCreateCopyTokenReferenceEffectSyntax(effect *EffectSyntax) bool {
 	effect.TokenCopyDropLegendary = dropLegendary
 	effect.TokenCopyEntersTapped = entersTapped
 	return true
+}
+
+// exactCreateCopyTokenTriggeringSetEffectSyntax reports whether the effect is
+// "Create a token that's a copy of one of them[, except <it/the token> isn't
+// legendary]." where "them" denotes the set of permanents that triggered the
+// enclosing ability and the controller chooses one to copy ("Whenever one or
+// more other creatures you control enter, ... create a token that's a copy of
+// one of them.", Twilight Diviner). The copy source is the controller-chosen
+// member of the triggering event batch; the source phrase "one of them" is
+// fixed and the effect's references must be the "them"/"they" pronouns naming
+// that set (plus any modifier pronoun). It requires no targets, the controller
+// recipient, and a known positive count.
+func exactCreateCopyTokenTriggeringSetEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController ||
+		effect.TokenPTKnown ||
+		effect.Negated ||
+		!createCopyTokenCountKnown(effect) ||
+		len(effect.Targets) != 0 ||
+		!referencesIncludeThemPronoun(effect.References) {
+		return false
+	}
+	base, dropLegendary, ok := copyTokenExceptModifier(exactEffectClauseText(effect))
+	if !ok {
+		return false
+	}
+	entersTapped, matched := createCopyTokenClauseMatches(effect, base, "one of them")
+	if !matched {
+		return false
+	}
+	for i := range effect.References {
+		if effect.References[i].Kind != ReferencePronoun {
+			return false
+		}
+	}
+	effect.TokenCopyDropLegendary = dropLegendary
+	effect.TokenCopyEntersTapped = entersTapped
+	return true
+}
+
+// referencesIncludeThemPronoun reports whether references holds the "them" (or
+// "they") pronoun that names the triggering-event set for a "copy of one of
+// them" token create.
+func referencesIncludeThemPronoun(references []Reference) bool {
+	for i := range references {
+		if references[i].Kind == ReferencePronoun &&
+			(references[i].Pronoun == PronounThem || references[i].Pronoun == PronounThey) {
+			return true
+		}
+	}
+	return false
 }
 
 // exactCreateCopyTokenAttachedEffectSyntax reports whether the effect is "Create

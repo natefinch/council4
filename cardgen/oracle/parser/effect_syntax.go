@@ -1130,6 +1130,7 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	}
 	effect.TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(effect)
 	effect.TokenCopyOfReference = exactCreateCopyTokenReferenceEffectSyntax(effect)
+	effect.TokenCopyOfTriggeringSet = exactCreateCopyTokenTriggeringSetEffectSyntax(effect)
 	effect.TokenCopyOfAttached = exactCreateCopyTokenAttachedEffectSyntax(effect)
 	effect.RegenerateAttached = effect.Kind == EffectRegenerate && exactRegenerateAttachedEffectSyntax(effect)
 	if group, ok := exactCreateCopyTokenForEachEffectSyntax(effect, atoms); ok {
@@ -1142,6 +1143,7 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 		// dispatches to the per-each path.
 		effect.TokenCopyOfTarget = false
 		effect.TokenCopyOfReference = false
+		effect.TokenCopyOfTriggeringSet = false
 		effect.TokenCopyOfAttached = false
 	}
 	effect.Mana.LegacyBodyExact = legacyExactManaBody(effect, sentence)

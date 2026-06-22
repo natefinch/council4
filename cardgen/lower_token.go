@@ -49,6 +49,9 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 	if effect.TokenCopyOfAttached {
 		return lowerCreateCopyTokenAttachedSpell(ctx)
 	}
+	if effect.TokenCopyOfTriggeringSet {
+		return lowerCreateCopyTokenTriggeringSetSpell(ctx)
+	}
 	if effect.TokenCopyOfForEach {
 		return lowerCreateCopyTokenForEachSpell(ctx)
 	}
@@ -399,6 +402,66 @@ func lowerCreateCopyTokenAttachedSpell(ctx contentCtx) (game.AbilityContent, *sh
 			},
 		}},
 	}.Ability(), nil
+}
+
+// lowerCreateCopyTokenTriggeringSetSpell lowers "Create a token that's a copy of
+// one of them[, except <it> isn't legendary]." (Twilight Diviner) to a
+// CreateToken whose source is a controller-chosen member of the resolving
+// ability's triggering event batch. The "them"/"they" pronoun is a benign
+// reference naming that batch; only a controller recipient with supported copy
+// modifiers (legendary drop, tapped entry) is accepted here.
+func lowerCreateCopyTokenTriggeringSetSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.Effects) != 1 ||
+		effect.Context != parser.EffectContextController ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		len(ctx.content.Targets) != 0 ||
+		!tokenCopyAuxiliaryReferencesOK(ctx.content.References) ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != len(effect.TokenCopyGrantKeywords) ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	spec, ok := tokenCopyTriggeringSetModifiers(&effect)
+	if !ok {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	amount, ok := createTokenAmount(ctx, &effect, game.ObjectReference{})
+	if !ok {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.CreateToken{
+				Amount:      amount,
+				Source:      game.TokenCopyOf(spec),
+				EntryTapped: effect.TokenCopyEntersTapped,
+			},
+		}},
+	}.Ability(), nil
+}
+
+// tokenCopyTriggeringSetModifiers builds the runtime copy spec for a "copy of one
+// of them" create over the controller-chosen triggering-batch member, applying
+// the "except <it> isn't legendary" supertype drop and any folded "that token
+// gains <keyword>" rider keywords. It fails closed when a granted keyword has no
+// reusable runtime static form.
+func tokenCopyTriggeringSetModifiers(effect *compiler.CompiledEffect) (game.TokenCopySpec, bool) {
+	spec := game.TokenCopySpec{
+		Source:          game.TokenCopySourceChosenFromTriggerBatch,
+		SetNotLegendary: effect.TokenCopyDropLegendary,
+	}
+	for _, kind := range effect.TokenCopyGrantKeywords {
+		keyword, ok := runtimeKeyword(kind)
+		if !ok {
+			return game.TokenCopySpec{}, false
+		}
+		spec.AddKeywords = append(spec.AddKeywords, keyword)
+	}
+	return spec, true
 }
 
 // lowerCreateCopyTokenForEachSpell lowers a per-each copy-token create whose

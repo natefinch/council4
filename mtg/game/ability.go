@@ -856,6 +856,13 @@ const (
 	// token that's a copy of that permanent." — Second Harvest). It is the only
 	// source that reads Group; the others read Object or the source card.
 	TokenCopySourceEachInGroup
+	// TokenCopySourceChosenFromTriggerBatch copies one permanent chosen by the
+	// controller from the set of permanents that triggered the resolving ability
+	// ("create a token that's a copy of one of them." on a "Whenever one or more
+	// ... enter" trigger, Twilight Diviner). The candidate set is the resolving
+	// ability's triggering event batch filtered by its own trigger pattern; it
+	// reads neither Object nor Group.
+	TokenCopySourceChosenFromTriggerBatch
 )
 
 // TokenCopySpec describes a token that starts as a copy of another object/card,

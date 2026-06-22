@@ -103,3 +103,40 @@ func TestGenerateExecutableCardSourceCopyTargetToken(t *testing.T) {
 		}
 	}
 }
+
+// TestGenerateExecutableCardSourceCopyTokenOneOfThem covers a "one or more
+// other creatures you control enter" trigger whose body copies one of the
+// triggering creatures chosen by the controller ("create a token that's a copy
+// of one of them." — Twilight Diviner). The copy source must lower to a
+// controller-chosen member of the triggering event batch.
+func TestGenerateExecutableCardSourceCopyTokenOneOfThem(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:     "Twilight Diviner",
+		Layout:   "normal",
+		ManaCost: "{2}{B}",
+		TypeLine: "Creature — Elf Cleric",
+		OracleText: "When this creature enters, surveil 2.\n" +
+			"Whenever one or more other creatures you control enter, if they entered or " +
+			"were cast from a graveyard, create a token that's a copy of one of them. " +
+			"This ability triggers only once each turn.",
+		Colors: []string{"B"},
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Primitive: game.CreateToken{",
+		"Source: game.TokenCopyOf(game.TokenCopySpec{",
+		"Source: game.TokenCopySourceChosenFromTriggerBatch,",
+		"MaxTriggersPerTurn: 1,",
+		"Primitive: game.Surveil{",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
