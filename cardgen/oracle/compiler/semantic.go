@@ -619,6 +619,12 @@ const (
 	// GraveyardCountCardType card type ("if twenty or more creature cards are in
 	// your graveyard", Mortal Combat).
 	ConditionPredicateControllerGraveyardCardOfTypeCountAtLeast
+	// ConditionPredicateControllerDoesNotPay is satisfied when the ability's
+	// controller does not pay the cost embedded in an "unless you pay {cost}"
+	// effect ("sacrifice this creature unless you pay {U}"). It is derived from
+	// the effect's controller-payer payment by applyEffectPaymentsToConditions
+	// and gates the unless consequence on the payment being declined.
+	ConditionPredicateControllerDoesNotPay
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard

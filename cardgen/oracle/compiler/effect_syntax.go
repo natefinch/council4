@@ -38,6 +38,8 @@ func applyEffectPaymentsToConditions(effects []CompiledEffect, conditions []Comp
 			predicate = ConditionPredicateTargetControllerDoesNotPay
 		case parser.EffectPaymentPayerEventPlayer:
 			predicate = ConditionPredicateEventPlayerDoesNotPay
+		case parser.EffectPaymentPayerController:
+			predicate = ConditionPredicateControllerDoesNotPay
 		default:
 			continue
 		}

@@ -2284,7 +2284,6 @@ func TestParseEventPlayerResolutionPaymentRejectsOtherPaymentWording(t *testing.
 	t.Parallel()
 	for _, oracle := range []string{
 		"Whenever an opponent casts a spell, you may draw a card unless that player pays 2 life.",
-		"Whenever an opponent casts a spell, you may draw a card unless you pay {1}.",
 		"Whenever an opponent casts a spell, you may draw a card unless that player's controller pays {1}.",
 		"Whenever an opponent casts a spell, you may draw a card unless that player pays {1}, then discards a card.",
 	} {
@@ -2296,6 +2295,23 @@ func TestParseEventPlayerResolutionPaymentRejectsOtherPaymentWording(t *testing.
 				t.Fatalf("payment = %#v, want unsupported", effect.Payment)
 			}
 		})
+	}
+}
+
+// TestParseControllerUnlessYouPayPayment covers the "unless you pay {cost}"
+// controller-payment wording used by the "sacrifice this ~ unless you pay"
+// upkeep cycle (Phantasmal Forces, Krosan Cloudscraper, Sunken City).
+func TestParseControllerUnlessYouPayPayment(t *testing.T) {
+	t.Parallel()
+	document, _ := Parse(
+		"At the beginning of your upkeep, sacrifice Phantasmal Forces unless you pay {U}.",
+		Context{CardName: "Phantasmal Forces"},
+	)
+	effect := document.Abilities[0].Sentences[0].Effects[0]
+	if effect.Payment.Payer != EffectPaymentPayerController ||
+		effect.Payment.Form != EffectPaymentFormUnless ||
+		!slices.Equal(effect.Payment.ManaCost, cost.Mana{cost.U}) {
+		t.Fatalf("payment = %#v", effect.Payment)
 	}
 }
 

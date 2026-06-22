@@ -714,15 +714,21 @@ func spanWithinAny(span shared.Span, spans []shared.Span) bool {
 func parseEffectPayment(tokens []shared.Token, atoms Atoms) EffectPaymentSyntax {
 	for i := range tokens {
 		var payer EffectPaymentPayerKind
+		var costStart int
 		switch {
 		case effectWordsAt(tokens, i, "unless", "its", "controller", "pays"):
 			payer = EffectPaymentPayerTargetController
+			costStart = i + 4
 		case effectWordsAt(tokens, i, "unless", "that", "player", "pays"):
 			payer = EffectPaymentPayerEventPlayer
+			costStart = i + 4
+		case effectWordsAt(tokens, i, "unless", "you", "pay"):
+			payer = EffectPaymentPayerController
+			costStart = i + 3
 		default:
 			continue
 		}
-		manaCost, end, ok := parseKeywordManaCost(tokens, i+4)
+		manaCost, end, ok := parseKeywordManaCost(tokens, costStart)
 		if !ok || end >= len(tokens) {
 			return EffectPaymentSyntax{}
 		}

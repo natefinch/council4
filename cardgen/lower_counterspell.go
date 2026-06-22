@@ -656,6 +656,10 @@ func lowerSacrificeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 		)
 	}
 
+	if content, ok := lowerSacrificeSourceUnlessPaySpell(ctx); ok {
+		return content, nil
+	}
+
 	effect := ctx.content.Effects[0]
 	if !effect.Exact {
 		return unsupported()
@@ -788,6 +792,56 @@ func lowerSacrificeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 	default:
 		return unsupported()
 	}
+}
+
+// lowerSacrificeSourceUnlessPaySpell lowers "sacrifice <this permanent> unless
+// you pay {cost}." (Phantasmal Forces, Krosan Cloudscraper, Sunken City, and the
+// upkeep "pay or sacrifice" cycle). The controller is offered the fixed mana
+// payment as the ability resolves; declining (or being unable to pay) sacrifices
+// the source permanent. It is restricted to a single source-bound sacrifice with
+// a fixed, non-variable controller payment and no targets, modes, or keywords.
+func lowerSacrificeSourceUnlessPaySpell(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Conditions) != 1 ||
+		len(ctx.content.References) != 1 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	payment := effect.Payment
+	if effect.Kind != compiler.EffectSacrifice ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		payment.Form != parser.EffectPaymentFormUnless ||
+		payment.Payer != parser.EffectPaymentPayerController ||
+		len(payment.ManaCost) == 0 ||
+		manaCostHasVariableSymbol(payment.ManaCost) ||
+		payment.GenericManaAmount.DynamicKind != compiler.DynamicAmountNone ||
+		ctx.content.Conditions[0].Predicate != compiler.ConditionPredicateControllerDoesNotPay ||
+		ctx.content.References[0].Binding != compiler.ReferenceBindingSource {
+		return game.AbilityContent{}, false
+	}
+	const resultKey = game.ResultKey("sacrifice-unless-paid")
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{
+				Primitive: game.Pay{Payment: game.ResolutionPayment{
+					Prompt:   "Pay " + payment.ManaCost.String() + "?",
+					ManaCost: opt.Val(payment.ManaCost),
+				}},
+				PublishResult: resultKey,
+			},
+			{
+				Primitive: game.Sacrifice{Object: game.SourcePermanentReference()},
+				ResultGate: opt.Val(game.InstructionResultGate{
+					Key:       resultKey,
+					Succeeded: game.TriFalse,
+				}),
+			},
+		},
+	}.Ability(), true
 }
 
 func sacrificeChoiceReferences(references []compiler.CompiledReference) bool {
