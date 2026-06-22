@@ -210,6 +210,9 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if sel.MatchModified && !s.modified() {
 		return false
 	}
+	if sel.MatchCommander && !s.isCommander() {
+		return false
+	}
 	if sel.ExcludeSource && s.isSource() {
 		return false
 	}
@@ -511,6 +514,29 @@ func (s *selectionSubject) modified() bool {
 		}
 		if snapshot, ok := lastKnownObject(s.g, s.event.PermanentID); ok {
 			return !snapshot.Counters.IsEmpty() || len(snapshot.Attachments) > 0
+		}
+	}
+	return false
+}
+
+// isCommander reports whether the subject permanent is a commander. The game
+// records every commander's CardInstance ID in Game.CommanderIDs, so a
+// permanent matches when its underlying card instance is a commander. Only
+// battlefield and event permanents carry a card instance; other subjects never
+// match.
+func (s *selectionSubject) isCommander() bool {
+	if len(s.g.CommanderIDs) == 0 {
+		return false
+	}
+	if s.kind == subjectPermanent {
+		return s.permanent != nil && s.g.CommanderIDs[s.permanent.CardInstanceID]
+	}
+	if s.kind == subjectEventPermanent && s.event.PermanentID != 0 {
+		if permanent, ok := permanentByObjectID(s.g, s.event.PermanentID); ok {
+			return s.g.CommanderIDs[permanent.CardInstanceID]
+		}
+		if snapshot, ok := lastKnownObject(s.g, s.event.PermanentID); ok {
+			return s.g.CommanderIDs[snapshot.CardID]
 		}
 	}
 	return false

@@ -1994,6 +1994,19 @@ const (
 	// EffectStaticSubjectControlledLegendaryCreatures. Downstream maps it onto a
 	// Selection that excludes the Legendary supertype.
 	EffectStaticSubjectControlledNonlegendaryCreatures EffectStaticSubjectKind = "EffectStaticSubjectControlledNonlegendaryCreatures"
+
+	// EffectStaticSubjectControlledCommanderCreatures names the commander
+	// creatures you control ("Commander creatures you control get +2/+2 and have
+	// indestructible.", Bastion Protector), the affected group of commander
+	// anthems. Downstream maps it onto a Selection that requires the creature
+	// card type and that the permanent is a commander.
+	EffectStaticSubjectControlledCommanderCreatures EffectStaticSubjectKind = "EffectStaticSubjectControlledCommanderCreatures"
+
+	// EffectStaticSubjectControlledCommanders names the commander permanents you
+	// control ("Commanders you control have hexproof.", Guardian Augmenter)
+	// regardless of card type. Downstream maps it onto a Selection that requires
+	// only that the permanent is a commander.
+	EffectStaticSubjectControlledCommanders EffectStaticSubjectKind = "EffectStaticSubjectControlledCommanders"
 )
 
 // EffectStaticSubjectSyntax is a source-spanned typed static-effect subject.

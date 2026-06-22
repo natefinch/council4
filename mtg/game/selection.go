@@ -153,6 +153,11 @@ type Selection struct {
 	// subject never matches.
 	MatchModified bool
 
+	// MatchCommander, when true, requires the matched permanent to be a commander
+	// ("commander creatures you control"). A non-battlefield subject never
+	// matches. Placed beside MatchModified to pack into the bool cluster.
+	MatchCommander bool
+
 	// SubtypeChoice constrains the matched permanent to a creature subtype chosen
 	// during play; see SubtypeChoiceSource. The zero value imposes no restriction.
 	SubtypeChoice SubtypeChoiceSource
@@ -236,6 +241,7 @@ func (s Selection) Empty() bool {
 		!s.RequiredCounterCount.Exists &&
 		!s.EnteredThisTurn &&
 		!s.MatchModified &&
+		!s.MatchCommander &&
 		s.ColorChoice == ColorChoiceNone &&
 		!s.ExcludeSource &&
 		!s.NonToken &&

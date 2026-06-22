@@ -639,6 +639,7 @@ func TestCompileStaticGroupAnthemSubjects(t *testing.T) {
 		tapState           StaticTapState
 		tokenOnly          bool
 		excludeSource      bool
+		commander          bool
 	}{
 		"all creatures": {
 			source:      "All creatures get +1/+1.",
@@ -704,6 +705,12 @@ func TestCompileStaticGroupAnthemSubjects(t *testing.T) {
 			requireType:        []StaticCardType{StaticCardTypeCreature},
 			excludedSupertypes: []types.Super{types.Legendary},
 		},
+		"controlled commander creatures": {
+			source:      "Commander creatures you control get +2/+2.",
+			domain:      StaticGroupSourceControllerPermanents,
+			requireType: []StaticCardType{StaticCardTypeCreature},
+			commander:   true,
+		},
 		"controlled untapped creatures": {
 			source:      "Untapped creatures you control get +0/+2.",
 			domain:      StaticGroupSourceControllerPermanents,
@@ -748,6 +755,7 @@ func TestCompileStaticGroupAnthemSubjects(t *testing.T) {
 				group.Selection.CombatState != test.combatState ||
 				group.Selection.TapState != test.tapState ||
 				group.Selection.TokenOnly != test.tokenOnly ||
+				group.Selection.Commander != test.commander ||
 				!slices.Equal(group.Selection.RequiredTypes, test.requireType) ||
 				!slices.Equal(group.Selection.SubtypesAny, test.subtypesAny) ||
 				!slices.Equal(group.Selection.Supertypes, test.supertypes) ||
@@ -769,6 +777,7 @@ func TestCompileStaticGroupKeywordAndTypeFilterSelections(t *testing.T) {
 		excludedKeyword parser.KeywordKind
 		nonToken        bool
 		excludeSource   bool
+		commander       bool
 	}{
 		"creatures with flying": {
 			source:      "Creatures with flying get +1/+1.",
@@ -806,6 +815,11 @@ func TestCompileStaticGroupKeywordAndTypeFilterSelections(t *testing.T) {
 			requireType: []StaticCardType{StaticCardTypeCreature},
 			nonToken:    true,
 		},
+		"commanders you control": {
+			source:    "Commanders you control have hexproof.",
+			domain:    StaticGroupSourceControllerPermanents,
+			commander: true,
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -824,6 +838,7 @@ func TestCompileStaticGroupKeywordAndTypeFilterSelections(t *testing.T) {
 				group.Selection.Keyword != test.keyword ||
 				group.Selection.ExcludedKeyword != test.excludedKeyword ||
 				group.Selection.NonToken != test.nonToken ||
+				group.Selection.Commander != test.commander ||
 				!slices.Equal(group.Selection.RequiredTypes, test.requireType) {
 				t.Fatalf("group = %#v", group)
 			}

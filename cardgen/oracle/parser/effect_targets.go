@@ -2184,6 +2184,9 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "permanents", "you", "control") &&
 		staticGroupVerb(tokens[3]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledPermanents, Span: shared.SpanOf(tokens[:3])}
+	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "commanders", "you", "control") &&
+		staticGroupVerb(tokens[3]):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCommanders, Span: shared.SpanOf(tokens[:3])}
 	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "other", "creatures", "you", "control") &&
 		staticGroupVerb(tokens[4]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherControlledCreatures, Span: shared.SpanOf(tokens[:4])}
@@ -2530,6 +2533,9 @@ func parseFilteredControlledCreatureGroupSubject(tokens []shared.Token) (EffectS
 	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "nonlegendary", "creatures", "you", "control") &&
 		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledNonlegendaryCreatures, Span: shared.SpanOf(tokens[:4])}, true
+	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "commander", "creatures", "you", "control") &&
+		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCommanderCreatures, Span: shared.SpanOf(tokens[:4])}, true
 	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "untapped", "creatures", "you", "control") &&
 		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledUntappedCreatures, Span: shared.SpanOf(tokens[:4])}, true

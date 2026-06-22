@@ -1655,6 +1655,9 @@ func lowerStaticSelection(selection compiler.StaticSelection) (game.Selection, b
 	if selection.Modified {
 		result.MatchModified = true
 	}
+	if selection.Commander {
+		result.MatchCommander = true
+	}
 	switch {
 	case selection.PowerOrToughness:
 		result.AnyOf = []game.Selection{

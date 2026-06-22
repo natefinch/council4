@@ -273,6 +273,10 @@ type StaticSelection struct {
 	// creatures you control"). Lowering routes it to the runtime
 	// Selection.MatchModified predicate.
 	Modified bool
+	// Commander, when true, restricts the group to permanents that are a
+	// commander ("commander creatures you control"). Lowering routes it to the
+	// runtime Selection.MatchCommander predicate.
+	Commander bool
 	// ColorFromEntryChoice constrains the group to permanents whose color
 	// matches the source permanent's entry-time color choice ("creatures you
 	// control of the chosen color"). Lowering routes it to the runtime
@@ -2768,6 +2772,13 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
 		group.Selection.ExcludedSupertypes = []types.Super{types.Legendary}
+	case StaticSubjectControlledCommanderCreatures:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.Commander = true
+	case StaticSubjectControlledCommanders:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.Commander = true
 	case StaticSubjectControlledUntappedCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
