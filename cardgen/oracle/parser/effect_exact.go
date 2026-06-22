@@ -120,6 +120,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactSelfBounceEffectSyntax(effect) ||
 			exactGraveyardReturnEffectSyntax(effect) ||
 			exactChosenCardsBattlefieldReturnEffectSyntax(effect) ||
+			exactReturnExiledCardEffectSyntax(effect) ||
 			exactDirectPronounEffectSyntax(effect, "Return it to its owner's hand.")
 	default:
 		return exactEffectSyntaxTail(effect)

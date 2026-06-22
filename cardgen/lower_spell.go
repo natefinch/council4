@@ -226,6 +226,9 @@ func lowerContent(
 		if content, ok := lowerExileUntilLeavesContent(ctx); ok {
 			return content, nil
 		}
+		if content, ok := lowerReturnExiledCardContent(ctx); ok {
+			return content, nil
+		}
 		if ctx.content.Effects[0].RequiresOrderedLowering {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — single effect requires ordered lowering")
 		}

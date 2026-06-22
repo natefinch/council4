@@ -1703,6 +1703,11 @@ type CompiledEffect struct {
 	// "exile <target> until <this permanent> leaves the battlefield." through the
 	// text-blind compiler boundary so lowering links the exile to the source.
 	ExileUntilSourceLeaves bool
+	// ReturnExiledCard carries the parser-recognized explicit O-Ring return
+	// clause "return the exiled card to the battlefield under its owner's
+	// control." through the text-blind compiler boundary so lowering emits the
+	// linked battlefield return paired with the sibling exile.
+	ReturnExiledCard bool
 	// CantCastSpellsAllPlayers mirrors the parser flag for an EffectCantCastSpells
 	// clause that affects every player ("Players can't cast spells this turn.")
 	// rather than only the controller's opponents. Lowering reads it to pick the
