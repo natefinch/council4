@@ -792,6 +792,33 @@ func exactNegatedNextUntapStepSyntax(effect *EffectSyntax) bool {
 		slices.Equal(words[verb+1:], []string{"during", "your", "next", "untap", "step"})
 }
 
+// exactTargetNextUntapStepSyntax recognizes the standalone targeted stun spell or
+// ability "Target <permanent> doesn't untap during its controller's next untap
+// step." (Sleeper Dart, House Guildmage, Skyline Cascade), where the stunned
+// permanent is the effect's own single target rather than a just-tapped prior
+// subject. The clause carries one target and one possessive "its" reference (the
+// "its controller's" owner of the next untap step) and no duration; only the
+// single "next untap step" window is exact, so every plural, mass, or multi-step
+// wording leaves the clause non-exact and lowering fails closed.
+func exactTargetNextUntapStepSyntax(effect *EffectSyntax) bool {
+	if !effect.Negated || effect.Optional ||
+		effect.Context != EffectContextTarget ||
+		len(effect.Targets) != 1 || len(effect.References) != 1 ||
+		effect.Duration != EffectDurationNone || effect.DelayedTiming != DelayedTimingNone {
+		return false
+	}
+	possessive := effect.References[0]
+	if possessive.Kind != ReferencePronoun || possessive.Pronoun != PronounIts {
+		return false
+	}
+	words := normalizedWords(effect.Tokens)
+	verb := slices.Index(words, "untap")
+	if verb < 1 || len(words) == 0 || words[0] != "target" || words[verb-1] != "doesn't" {
+		return false
+	}
+	return slices.Equal(words[verb+1:], []string{"during", "its", "controller's", "next", "untap", "step"})
+}
+
 // exactPriorSubjectNextUntapStepSyntax recognizes the prior-subject "doesn't
 // untap during its controller's next untap step" clause that follows a tap
 // effect (e.g. "Tap target creature. It doesn't untap during its controller's
