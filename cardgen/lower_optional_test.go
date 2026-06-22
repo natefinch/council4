@@ -58,6 +58,77 @@ func TestLowerOptionalIfYouDoDiscardDraw(t *testing.T) {
 	}
 }
 
+// TestLowerOptionalIfYouDoOtherwiseElseBranch verifies the "you may X. If you
+// do, Y. Otherwise, Z." else branch: X is optional and publishes its result, Y
+// is gated on that result having succeeded, and the trailing "Otherwise" effect
+// Z is gated on the exact complement — the result having failed — so exactly one
+// of Y/Z resolves.
+func TestLowerOptionalIfYouDoOtherwiseElseBranch(t *testing.T) {
+	t.Parallel()
+	sequence := lowerSpellSequence(t, "Otherwise Flow Test",
+		"You may discard a card. If you do, draw two cards. Otherwise, draw a card.")
+	if len(sequence) != 3 {
+		t.Fatalf("sequence = %#v, want three instructions", sequence)
+	}
+	discard := sequence[0]
+	if _, ok := discard.Primitive.(game.Discard); !ok {
+		t.Fatalf("instruction[0] = %T, want game.Discard", discard.Primitive)
+	}
+	if !discard.Optional || discard.PublishResult != optionalIfYouDoResultKey {
+		t.Fatalf("instruction[0] = %#v, want optional publishing %q", discard, optionalIfYouDoResultKey)
+	}
+	if _, ok := sequence[1].Primitive.(game.Draw); !ok {
+		t.Fatalf("instruction[1] = %T, want game.Draw", sequence[1].Primitive)
+	}
+	if gate := sequence[1].ResultGate; !gate.Exists ||
+		gate.Val.Key != optionalIfYouDoResultKey || gate.Val.Succeeded != game.TriTrue {
+		t.Fatalf("instruction[1].ResultGate = %#v, want succeeded gate on %q", sequence[1].ResultGate, optionalIfYouDoResultKey)
+	}
+	if _, ok := sequence[2].Primitive.(game.Draw); !ok {
+		t.Fatalf("instruction[2] = %T, want game.Draw", sequence[2].Primitive)
+	}
+	if gate := sequence[2].ResultGate; !gate.Exists ||
+		gate.Val.Key != optionalIfYouDoResultKey || gate.Val.Succeeded != game.TriFalse {
+		t.Fatalf("instruction[2].ResultGate = %#v, want failed gate on %q", sequence[2].ResultGate, optionalIfYouDoResultKey)
+	}
+}
+
+// TestLowerOptionalIfYouDontElseBranch verifies the "you may X. If you do, Y. If
+// you don't, Z." wording lowers to the same TriTrue/TriFalse split as the
+// "Otherwise," wording, and that the parser's "don't" negation artifact on Z is
+// dropped (the lowered Z is the plain action, gated only on the optional result
+// having failed).
+func TestLowerOptionalIfYouDontElseBranch(t *testing.T) {
+	t.Parallel()
+	sequence := lowerSpellSequence(t, "If You Don't Flow Test",
+		"You may sacrifice a creature. If you do, draw a card. If you don't, you lose 2 life.")
+	if len(sequence) != 3 {
+		t.Fatalf("sequence = %#v, want three instructions", sequence)
+	}
+	if _, ok := sequence[0].Primitive.(game.SacrificePermanents); !ok {
+		t.Fatalf("instruction[0] = %T, want game.SacrificePermanents", sequence[0].Primitive)
+	}
+	if !sequence[0].Optional || sequence[0].PublishResult != optionalIfYouDoResultKey {
+		t.Fatalf("instruction[0] = %#v, want optional publishing %q", sequence[0], optionalIfYouDoResultKey)
+	}
+	if _, ok := sequence[1].Primitive.(game.Draw); !ok {
+		t.Fatalf("instruction[1] = %T, want game.Draw", sequence[1].Primitive)
+	}
+	if gate := sequence[1].ResultGate; !gate.Exists ||
+		gate.Val.Key != optionalIfYouDoResultKey || gate.Val.Succeeded != game.TriTrue {
+		t.Fatalf("instruction[1].ResultGate = %#v, want succeeded gate on %q", sequence[1].ResultGate, optionalIfYouDoResultKey)
+	}
+	loseLife, ok := sequence[2].Primitive.(game.LoseLife)
+	if !ok {
+		t.Fatalf("instruction[2] = %T, want game.LoseLife (the \"don't\" negation artifact dropped)", sequence[2].Primitive)
+	}
+	if gate := sequence[2].ResultGate; !gate.Exists ||
+		gate.Val.Key != optionalIfYouDoResultKey || gate.Val.Succeeded != game.TriFalse {
+		t.Fatalf("instruction[2].ResultGate = %#v, want failed gate on %q", sequence[2].ResultGate, optionalIfYouDoResultKey)
+	}
+	_ = loseLife
+}
+
 // TestLowerReflexiveWhenYouDoGatesOnOptional verifies that the reflexive
 // "When you do," preamble following a "you may" optional action lowers to the
 // same result-published / result-gated shape as the equivalent "If you do,"
@@ -350,7 +421,6 @@ func TestLowerOptionalFlowFailsClosed(t *testing.T) {
 		name       string
 		oracleText string
 	}{
-		{"otherwise branch", "You may discard a card. If you do, draw a card. Otherwise, draw a card."},
 		{"if you don't branch", "You may discard a card. If you don't, draw a card."},
 		{"two optional effects", "You may discard a card. If you do, you may draw a card."},
 		{"optional without if-you-do", "You may discard a card. Draw a card."},
