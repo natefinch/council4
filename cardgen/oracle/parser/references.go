@@ -265,9 +265,15 @@ func pronounKind(token shared.Token) PronounKind {
 	}
 }
 
-// referenceObjectNoun reports whether token is one of the object nouns that can
-// follow "this"/"that" in an explicit object reference.
+// referenceSelfMarkerNoun reports whether token is a noun that can follow "this"
+// in a self-reference to the source permanent. Beyond the shared object nouns,
+// a Saga refers to itself by its "Saga" subtype ("This Saga deals 4 damage to
+// any target."), so that subtype is a self marker even though it is not a
+// generic object noun valid after "that".
 func referenceSelfMarkerNoun(token shared.Token) bool {
+	if equalWord(token, "saga") {
+		return true
+	}
 	return referenceObjectNoun(token)
 }
 

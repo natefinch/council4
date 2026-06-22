@@ -76,6 +76,17 @@ func TestParseEmitsThisThatPronounReferences(t *testing.T) {
 	}
 }
 
+// TestParseEmitsThisSagaSelfReference proves a Saga's "This Saga" self-reference
+// is recognized as a ReferenceThisObject so the source permanent backs effects
+// like "This Saga deals 4 damage to any target."
+func TestParseEmitsThisSagaSelfReference(t *testing.T) {
+	t.Parallel()
+	references := atomsFor(t, "This Saga deals 4 damage to any target", "").References()
+	if len(references) != 1 || references[0].Kind != ReferenceThisObject {
+		t.Fatalf("references = %+v; want one this-object reference", references)
+	}
+}
+
 func TestParseEmitsChosenCardsReference(t *testing.T) {
 	t.Parallel()
 	source := "return the chosen cards to the battlefield tapped"
