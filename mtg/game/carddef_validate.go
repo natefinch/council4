@@ -1011,6 +1011,13 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if effect.DrawLimitPerTurn < 1 {
 			v.add(faceName, appendPath(path, "DrawLimitPerTurn"), CardDefIssueInvalidRuleEffect, "draw limit must allow at least one card each turn")
 		}
+	case RuleEffectCastLimitPerTurn:
+		if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "cast limit cannot affect a permanent")
+		}
+		if effect.CastLimitPerTurn < 1 {
+			v.add(faceName, appendPath(path, "CastLimitPerTurn"), CardDefIssueInvalidRuleEffect, "cast limit must allow at least one spell each turn")
+		}
 	case RuleEffectAttackTax:
 		v.validateAttackTaxRuleEffect(faceName, path, effect)
 	case RuleEffectPayLifeForColoredMana:
