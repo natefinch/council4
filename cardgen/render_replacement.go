@@ -184,7 +184,22 @@ func renderStringReplacement(ability *game.ReplacementAbility) (string, bool) {
 		return fmt.Sprintf("game.DrawCardMultiplierReplacement(%q, %d, %t)",
 			ability.Text, ability.Replacement.DrawCardMultiplier, ability.Replacement.DrawCardExceptFirstInDrawStep), true
 	}
+	if ability.Replacement.DrawCardDigLook > 0 {
+		return fmt.Sprintf("game.DrawCardDigReplacement(%q, %d, %d, %s)",
+			ability.Text, ability.Replacement.DrawCardDigLook, ability.Replacement.DrawCardDigTake,
+			renderDigRemainder(ability.Replacement.DrawCardDigRemainder)), true
+	}
 	return renderLifeModifierReplacement(ability)
+}
+
+// renderDigRemainder renders the DigRemainder destination constant for a
+// draw-replacement dig. The graveyard default and the library-bottom variant are
+// the only runtime placements.
+func renderDigRemainder(remainder game.DigRemainder) string {
+	if remainder == game.DigRemainderLibraryBottom {
+		return "game.DigRemainderLibraryBottom"
+	}
+	return "game.DigRemainderGraveyard"
 }
 
 // renderGroupEntersTappedReplacement renders a continuous static enters-tapped

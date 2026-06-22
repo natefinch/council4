@@ -19,6 +19,9 @@ func (e *Engine) drawCardWithReplacements(g *game.Game, playerID game.PlayerID, 
 	if e.tryDredge(g, playerID, agents, log) {
 		return false
 	}
+	if e.tryDrawCardDigReplacement(g, playerID, agents, log) {
+		return false
+	}
 	drew := false
 	count := drawCardMultiplier(g, playerID, firstInDrawStep)
 	for range count {

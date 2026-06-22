@@ -258,6 +258,12 @@ type DigSyntax struct {
 	// Remainder is the destination of the un-taken cards. The zero value routes
 	// them to the controller's graveyard.
 	Remainder DigRemainderKind `json:",omitempty"`
+	// Take is the number of cards put into the controller's hand. It is set only
+	// on the single-effect draw-replacement dig form (parseDrawReplacementDig),
+	// which folds both the look count (in the effect Amount) and this take count
+	// into one effect. The two-sentence impulse form leaves it zero and carries
+	// its take count in the EffectPut clause's own Amount.
+	Take int `json:",omitempty"`
 }
 
 // HandLibraryPutSyntax marks the exact clause "Put N cards from your hand on

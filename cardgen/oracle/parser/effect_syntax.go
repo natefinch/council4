@@ -771,6 +771,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseBecomeCopyEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawDoublingReplacement(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseDrawReplacementDig(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseLifeGainReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseLifeLossReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePunisherEachLoseLifeEffect(sentence, tokens, atoms) },
@@ -1367,6 +1368,119 @@ func parseDrawDoublingReplacement(sentence Sentence, tokens []shared.Token, atom
 		References: referencesInSpan(atoms, shared.SpanOf(resolving)),
 		Exact:      true,
 	}}, true
+}
+
+// parseDrawReplacementDig recognizes the draw-replacement dig "If you would draw
+// a card, instead look at the top <N> cards of your library, then put <M> [of
+// them|of those cards] into your hand and the <rest|other> <remainder>."
+// (Underrealm Lich) and emits a single dig effect carrying the look count N (in
+// Amount), the take count M and remainder destination (in Dig), and the instead
+// replacement. The matching intervening-if condition is recognized separately by
+// recognizeDrawCardReplacementCondition.
+func parseDrawReplacementDig(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	look, dig, ok := matchDrawReplacementDig(tokens)
+	if !ok {
+		return nil, false
+	}
+	// The would-draw condition is "if you would draw a card", so the separating
+	// comma is token index 6 and the resolving "instead ..." clause follows it.
+	const commaIndex = 6
+	resolving := tokens[commaIndex+1:]
+	return []EffectSyntax{{
+		Kind:       EffectDig,
+		Context:    EffectContextController,
+		Span:       shared.SpanOf(tokens),
+		VerbSpan:   tokens[commaIndex+2].Span,
+		ClauseSpan: shared.SpanOf(tokens),
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), resolving...),
+		Amount:     EffectAmountSyntax{Value: look, Known: true},
+		Dig:        dig,
+		Replacement: EffectReplacementSyntax{
+			Kind: EffectReplacementInstead,
+			Span: tokens[commaIndex+1].Span,
+		},
+		References: referencesInSpan(atoms, shared.SpanOf(resolving)),
+		Exact:      true,
+	}}, true
+}
+
+// matchDrawReplacementDig reports the look count and structured dig fields when
+// tokens spell the draw-replacement dig "if you would draw a card, instead look
+// at the top <N> cards of your library, then put <M> ... instead". The take
+// count must be at least one and fewer than the look count, mirroring the
+// impulse dig's look-exceeds-take requirement; every other wording fails closed.
+func matchDrawReplacementDig(tokens []shared.Token) (look int, dig DigSyntax, ok bool) {
+	if len(tokens) < 6 || tokens[len(tokens)-1].Kind != shared.Period {
+		return 0, DigSyntax{}, false
+	}
+	if !effectWordsAt(tokens, 0, "if", "you", "would", "draw", "a", "card") ||
+		len(tokens) <= 6 || tokens[6].Kind != shared.Comma {
+		return 0, DigSyntax{}, false
+	}
+	if !effectWordsAt(tokens, 7, "instead", "look", "at", "the", "top") {
+		return 0, DigSyntax{}, false
+	}
+	i := 12
+	if i >= len(tokens) {
+		return 0, DigSyntax{}, false
+	}
+	lookCount, lookOK := CardinalWordValue(tokens[i].Text)
+	if !lookOK || lookCount < 2 {
+		return 0, DigSyntax{}, false
+	}
+	i++
+	if !effectWordsAt(tokens, i, "cards", "of", "your", "library") {
+		return 0, DigSyntax{}, false
+	}
+	i += 4
+	if i >= len(tokens) || tokens[i].Kind != shared.Comma {
+		return 0, DigSyntax{}, false
+	}
+	i++
+	if !effectWordsAt(tokens, i, "then", "put") {
+		return 0, DigSyntax{}, false
+	}
+	i += 2
+	if i >= len(tokens) {
+		return 0, DigSyntax{}, false
+	}
+	takeCount, takeOK := CardinalWordValue(tokens[i].Text)
+	if !takeOK || takeCount < 1 || takeCount >= lookCount {
+		return 0, DigSyntax{}, false
+	}
+	i++
+	switch {
+	case effectWordsAt(tokens, i, "of", "them"):
+		dig.Source = DigSourceThem
+		i += 2
+	case effectWordsAt(tokens, i, "of", "those", "cards"):
+		dig.Source = DigSourceThoseCards
+		i += 3
+	default:
+		dig.Source = DigSourceNone
+	}
+	if !effectWordsAt(tokens, i, "into", "your", "hand", "and", "the") {
+		return 0, DigSyntax{}, false
+	}
+	i += 5
+	switch {
+	case effectWordsAt(tokens, i, "other"):
+		dig.Singular = true
+		i++
+	case effectWordsAt(tokens, i, "rest"):
+		i++
+	default:
+		return 0, DigSyntax{}, false
+	}
+	remainder, after, remainderOK := digRemainderAt(tokens, i)
+	if !remainderOK || after != len(tokens)-1 {
+		return 0, DigSyntax{}, false
+	}
+	dig.Remainder = remainder
+	dig.Take = takeCount
+	dig.Put = true
+	return lookCount, dig, true
 }
 
 // matchDrawDoubling reports the comma index separating the would-draw condition
