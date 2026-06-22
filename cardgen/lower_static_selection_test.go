@@ -21,7 +21,7 @@ import (
 func TestLowerStaticSelectionUnifiedRouting(t *testing.T) {
 	t.Parallel()
 	selection := compiler.StaticSelection{
-		RequiredTypes:      []compiler.StaticCardType{compiler.StaticCardTypeCreature},
+		RequiredTypes:      []types.Card{types.Creature},
 		ExcludedSupertypes: []types.Super{types.Legendary},
 		Controller:         compiler.ControllerYou,
 		TapState:           compiler.StaticTapStateTapped,

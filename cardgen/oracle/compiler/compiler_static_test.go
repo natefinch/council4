@@ -142,7 +142,7 @@ func TestCompileStaticPermanentManaAbilityGrant(t *testing.T) {
 	declaration := ability.Static.Declarations[0]
 	if declaration.Kind != StaticDeclarationContinuous ||
 		declaration.Group.Domain != StaticGroupSourceControllerPermanents ||
-		!slices.Equal(declaration.Group.Selection.RequiredTypes, []StaticCardType{StaticCardTypeLand}) ||
+		!slices.Equal(declaration.Group.Selection.RequiredTypes, []types.Card{types.Land}) ||
 		declaration.Continuous == nil ||
 		declaration.Continuous.Layer != StaticLayerAbility ||
 		declaration.Continuous.Operation != StaticContinuousGrantManaAbility {
@@ -630,7 +630,7 @@ func TestCompileStaticGroupAnthemSubjects(t *testing.T) {
 	tests := map[string]struct {
 		source             string
 		domain             StaticGroupDomain
-		requireType        []StaticCardType
+		requireType        []types.Card
 		subtypesAny        []types.Sub
 		supertypes         []types.Super
 		excludedSupertypes []types.Super
@@ -644,24 +644,24 @@ func TestCompileStaticGroupAnthemSubjects(t *testing.T) {
 		"all creatures": {
 			source:      "All creatures get +1/+1.",
 			domain:      StaticGroupBattlefield,
-			requireType: []StaticCardType{StaticCardTypeCreature},
+			requireType: []types.Card{types.Creature},
 		},
 		"all other creatures": {
 			source:        "All other creatures get -1/-1.",
 			domain:        StaticGroupBattlefield,
-			requireType:   []StaticCardType{StaticCardTypeCreature},
+			requireType:   []types.Card{types.Creature},
 			excludeSource: true,
 		},
 		"attacking creatures": {
 			source:      "Attacking creatures get -1/-0.",
 			domain:      StaticGroupBattlefield,
-			requireType: []StaticCardType{StaticCardTypeCreature},
+			requireType: []types.Card{types.Creature},
 			combatState: StaticCombatStateAttacking,
 		},
 		"blocking creatures": {
 			source:      "Blocking creatures get +0/+2.",
 			domain:      StaticGroupBattlefield,
-			requireType: []StaticCardType{StaticCardTypeCreature},
+			requireType: []types.Card{types.Creature},
 			combatState: StaticCombatStateBlocking,
 		},
 		"all subtype creatures": {
@@ -678,62 +678,62 @@ func TestCompileStaticGroupAnthemSubjects(t *testing.T) {
 		"attacking creatures you control": {
 			source:      "Attacking creatures you control get +1/+0.",
 			domain:      StaticGroupSourceControllerPermanents,
-			requireType: []StaticCardType{StaticCardTypeCreature},
+			requireType: []types.Card{types.Creature},
 			combatState: StaticCombatStateAttacking,
 		},
 		"controlled creature tokens": {
 			source:      "Creature tokens you control get +1/+1.",
 			domain:      StaticGroupSourceControllerPermanents,
-			requireType: []StaticCardType{StaticCardTypeCreature},
+			requireType: []types.Card{types.Creature},
 			tokenOnly:   true,
 		},
 		"battlefield creature tokens": {
 			source:      "Creature tokens get -1/-1.",
 			domain:      StaticGroupBattlefield,
-			requireType: []StaticCardType{StaticCardTypeCreature},
+			requireType: []types.Card{types.Creature},
 			tokenOnly:   true,
 		},
 		"controlled legendary creatures": {
 			source:      "Legendary creatures you control get +2/+2.",
 			domain:      StaticGroupSourceControllerPermanents,
-			requireType: []StaticCardType{StaticCardTypeCreature},
+			requireType: []types.Card{types.Creature},
 			supertypes:  []types.Super{types.Legendary},
 		},
 		"controlled nonlegendary creatures": {
 			source:             "Nonlegendary creatures you control get +1/+1.",
 			domain:             StaticGroupSourceControllerPermanents,
-			requireType:        []StaticCardType{StaticCardTypeCreature},
+			requireType:        []types.Card{types.Creature},
 			excludedSupertypes: []types.Super{types.Legendary},
 		},
 		"controlled commander creatures": {
 			source:      "Commander creatures you control get +2/+2.",
 			domain:      StaticGroupSourceControllerPermanents,
-			requireType: []StaticCardType{StaticCardTypeCreature},
+			requireType: []types.Card{types.Creature},
 			commander:   true,
 		},
 		"controlled untapped creatures": {
 			source:      "Untapped creatures you control get +0/+2.",
 			domain:      StaticGroupSourceControllerPermanents,
-			requireType: []StaticCardType{StaticCardTypeCreature},
+			requireType: []types.Card{types.Creature},
 			tapState:    StaticTapStateUntapped,
 		},
 		"other controlled tapped creatures": {
 			source:        "Other tapped creatures you control have hexproof.",
 			domain:        StaticGroupSourceControllerPermanents,
-			requireType:   []StaticCardType{StaticCardTypeCreature},
+			requireType:   []types.Card{types.Creature},
 			tapState:      StaticTapStateTapped,
 			excludeSource: true,
 		},
 		"battlefield color creatures": {
 			source:      "White creatures get +1/+1.",
 			domain:      StaticGroupBattlefield,
-			requireType: []StaticCardType{StaticCardTypeCreature},
+			requireType: []types.Card{types.Creature},
 			colorsAny:   []color.Color{color.White},
 		},
 		"battlefield other color creatures": {
 			source:        "Other black creatures get -1/-1.",
 			domain:        StaticGroupBattlefield,
-			requireType:   []StaticCardType{StaticCardTypeCreature},
+			requireType:   []types.Card{types.Creature},
 			colorsAny:     []color.Color{color.Black},
 			excludeSource: true,
 		},
@@ -772,7 +772,7 @@ func TestCompileStaticGroupKeywordAndTypeFilterSelections(t *testing.T) {
 	tests := map[string]struct {
 		source          string
 		domain          StaticGroupDomain
-		requireType     []StaticCardType
+		requireType     []types.Card
 		keyword         parser.KeywordKind
 		excludedKeyword parser.KeywordKind
 		nonToken        bool
@@ -782,37 +782,37 @@ func TestCompileStaticGroupKeywordAndTypeFilterSelections(t *testing.T) {
 		"creatures with flying": {
 			source:      "Creatures with flying get +1/+1.",
 			domain:      StaticGroupBattlefield,
-			requireType: []StaticCardType{StaticCardTypeCreature},
+			requireType: []types.Card{types.Creature},
 			keyword:     parser.KeywordFlying,
 		},
 		"creatures without flying": {
 			source:          "Creatures without flying get -2/-0.",
 			domain:          StaticGroupBattlefield,
-			requireType:     []StaticCardType{StaticCardTypeCreature},
+			requireType:     []types.Card{types.Creature},
 			excludedKeyword: parser.KeywordFlying,
 		},
 		"creatures you control with flying": {
 			source:      "Creatures you control with flying get +1/+1.",
 			domain:      StaticGroupSourceControllerPermanents,
-			requireType: []StaticCardType{StaticCardTypeCreature},
+			requireType: []types.Card{types.Creature},
 			keyword:     parser.KeywordFlying,
 		},
 		"other creatures you control with flying": {
 			source:        "Other creatures you control with flying get +1/+1.",
 			domain:        StaticGroupSourceControllerPermanents,
-			requireType:   []StaticCardType{StaticCardTypeCreature},
+			requireType:   []types.Card{types.Creature},
 			keyword:       parser.KeywordFlying,
 			excludeSource: true,
 		},
 		"artifact creatures you control": {
 			source:      "Artifact creatures you control get +1/+1.",
 			domain:      StaticGroupSourceControllerPermanents,
-			requireType: []StaticCardType{StaticCardTypeArtifact, StaticCardTypeCreature},
+			requireType: []types.Card{types.Artifact, types.Creature},
 		},
 		"nontoken creatures you control": {
 			source:      "Nontoken creatures you control get +1/+1.",
 			domain:      StaticGroupSourceControllerPermanents,
-			requireType: []StaticCardType{StaticCardTypeCreature},
+			requireType: []types.Card{types.Creature},
 			nonToken:    true,
 		},
 		"commanders you control": {
@@ -911,7 +911,7 @@ func TestCompileStaticDeclarationsCarryClosedGroupSelectionAndLayer(t *testing.T
 	}
 	if declaration.Group.Domain != StaticGroupBattlefield ||
 		declaration.Group.Selection.Controller != ControllerOpponent ||
-		!slices.Equal(declaration.Group.Selection.RequiredTypes, []StaticCardType{StaticCardTypeCreature}) {
+		!slices.Equal(declaration.Group.Selection.RequiredTypes, []types.Card{types.Creature}) {
 		t.Fatalf("group = %#v, want opponent-controlled battlefield creatures", declaration.Group)
 	}
 	if got := source[declaration.Group.Span.Start.Offset:declaration.Group.Span.End.Offset]; got != "Creatures your opponents control" {
@@ -1521,7 +1521,7 @@ func TestCompileStaticEnchantedTypeChangeColorlessLandWithMana(t *testing.T) {
 		}
 		if continuous.Layer == StaticLayerType {
 			for _, cardType := range continuous.SetTypes {
-				if cardType == StaticCardTypeLand {
+				if cardType == types.Land {
 					sawLandType = true
 				}
 			}
@@ -1875,7 +1875,7 @@ func TestCompileStaticLoseAbilitiesBecomeDeclaration(t *testing.T) {
 	typeDecl := declarations[2].Continuous
 	if typeDecl.Layer != StaticLayerType ||
 		typeDecl.Operation != StaticContinuousSetTypes ||
-		!slices.Equal(typeDecl.SetTypes, []StaticCardType{StaticCardTypeCreature}) ||
+		!slices.Equal(typeDecl.SetTypes, []types.Card{types.Creature}) ||
 		!slices.Equal(typeDecl.SetSubtypes, []types.Sub{types.Frog}) {
 		t.Fatalf("declarations[2] = %#v, want set creature Frog", declarations[2])
 	}

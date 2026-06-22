@@ -13,7 +13,7 @@ func TestLowerStaticGrantedAnyColorManaAbility(t *testing.T) {
 		Group: compiler.StaticGroupReference{
 			Domain: compiler.StaticGroupSourceControllerPermanents,
 			Selection: compiler.StaticSelection{
-				RequiredTypes: []compiler.StaticCardType{compiler.StaticCardTypeLand},
+				RequiredTypes: []types.Card{types.Land},
 			},
 		},
 		Continuous: &compiler.StaticContinuousDeclaration{
@@ -43,7 +43,7 @@ func TestLowerStaticGrantedTreasureSacrificeManaAbility(t *testing.T) {
 		Group: compiler.StaticGroupReference{
 			Domain: compiler.StaticGroupSourceControllerPermanents,
 			Selection: compiler.StaticSelection{
-				RequiredTypes: []compiler.StaticCardType{compiler.StaticCardTypeArtifact},
+				RequiredTypes: []types.Card{types.Artifact},
 				SubtypesAny:   []types.Sub{types.Treasure},
 			},
 		},

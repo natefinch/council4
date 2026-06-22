@@ -593,14 +593,7 @@ func lowerStaticGrantedQuotedAbility(granted *parser.StaticGrantedAbilitySyntax)
 }
 
 func lowerStaticAddedTypes(continuous *compiler.StaticContinuousDeclaration) ([]types.Card, []types.Sub, bool) {
-	cardTypes := make([]types.Card, 0, len(continuous.AddTypes))
-	for _, cardType := range continuous.AddTypes {
-		value, ok := lowerStaticCardType(cardType)
-		if !ok {
-			return nil, nil, false
-		}
-		cardTypes = append(cardTypes, value)
-	}
+	cardTypes := slices.Clone(continuous.AddTypes)
 	subtypes := slices.Clone(continuous.AddSubtypes)
 	if len(cardTypes) == 0 && len(subtypes) == 0 {
 		return nil, nil, false
@@ -609,14 +602,7 @@ func lowerStaticAddedTypes(continuous *compiler.StaticContinuousDeclaration) ([]
 }
 
 func lowerStaticSetTypes(continuous *compiler.StaticContinuousDeclaration) ([]types.Card, []types.Sub, bool) {
-	cardTypes := make([]types.Card, 0, len(continuous.SetTypes))
-	for _, cardType := range continuous.SetTypes {
-		value, ok := lowerStaticCardType(cardType)
-		if !ok {
-			return nil, nil, false
-		}
-		cardTypes = append(cardTypes, value)
-	}
+	cardTypes := slices.Clone(continuous.SetTypes)
 	subtypes := slices.Clone(continuous.SetSubtypes)
 	if len(cardTypes) == 0 && len(subtypes) == 0 {
 		return nil, nil, false
@@ -1174,14 +1160,7 @@ func appendStaticSpellUncounterableDeclaration(body *game.StaticAbility, declara
 		declaration.Group.Domain != compiler.StaticGroupControllerSpells {
 		return false
 	}
-	spellTypes := make([]types.Card, 0, len(declaration.SpellUncounterable.SpellTypes))
-	for _, spellType := range declaration.SpellUncounterable.SpellTypes {
-		cardType, ok := lowerStaticCardType(spellType)
-		if !ok {
-			return false
-		}
-		spellTypes = append(spellTypes, cardType)
-	}
+	spellTypes := slices.Clone(declaration.SpellUncounterable.SpellTypes)
 	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
 		Kind:               game.RuleEffectCantBeCountered,
 		AffectedController: game.ControllerYou,
@@ -1202,14 +1181,7 @@ func appendStaticCastAsThoughFlashDeclaration(body *game.StaticAbility, declarat
 		declaration.Group.Domain != compiler.StaticGroupControllerSpells {
 		return false
 	}
-	spellTypes := make([]types.Card, 0, len(declaration.CastAsThoughFlash.SpellTypes))
-	for _, spellType := range declaration.CastAsThoughFlash.SpellTypes {
-		cardType, ok := lowerStaticCardType(spellType)
-		if !ok {
-			return false
-		}
-		spellTypes = append(spellTypes, cardType)
-	}
+	spellTypes := slices.Clone(declaration.CastAsThoughFlash.SpellTypes)
 	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
 		Kind:           game.RuleEffectCastSpellsAsThoughFlash,
 		AffectedPlayer: game.PlayerYou,
@@ -1244,14 +1216,7 @@ func appendStaticUntapStepDeclaration(body *game.StaticAbility, declaration comp
 	if declaration.Group.Domain != compiler.StaticGroupSourceControllerPermanents {
 		return false
 	}
-	permanentTypes := make([]types.Card, 0, len(declaration.Untap.PermanentTypes))
-	for _, cardType := range declaration.Untap.PermanentTypes {
-		value, ok := lowerStaticCardType(cardType)
-		if !ok {
-			return false
-		}
-		permanentTypes = append(permanentTypes, value)
-	}
+	permanentTypes := slices.Clone(declaration.Untap.PermanentTypes)
 	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
 		Kind:               game.RuleEffectUntapDuringOtherPlayersUntapStep,
 		AffectedController: game.ControllerYou,
@@ -1515,13 +1480,9 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 		return true
 	}
 	for _, spellType := range cost.SpellTypes {
-		cardType, ok := lowerStaticCardType(spellType)
-		if !ok {
-			return false
-		}
 		modifier := base
 		modifier.MatchCardType = true
-		modifier.CardType = cardType
+		modifier.CardType = spellType
 		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
 			Kind:           game.RuleEffectCostModifier,
 			AffectedPlayer: affectedPlayer,

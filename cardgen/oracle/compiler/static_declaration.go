@@ -199,20 +199,6 @@ const (
 	StaticGroupControllerGraveyardCards
 )
 
-// StaticCardType identifies card types used by a static Selection.
-type StaticCardType uint8
-
-// Static Selection card types.
-const (
-	StaticCardTypeUnknown StaticCardType = iota
-	StaticCardTypeArtifact
-	StaticCardTypeCreature
-	StaticCardTypeLand
-	StaticCardTypeEnchantment
-	StaticCardTypeInstant
-	StaticCardTypeSorcery
-)
-
 // StaticCombatState constrains a static group's members by combat involvement.
 type StaticCombatState uint8
 
@@ -236,7 +222,7 @@ const (
 // StaticSelection is source-independent semantic data describing WHAT objects
 // in a static declaration's group match.
 type StaticSelection struct {
-	RequiredTypes []StaticCardType
+	RequiredTypes []types.Card
 	Supertypes    []types.Super
 	// ExcludedSupertypes lists supertypes a member must NOT carry (the
 	// "nonlegendary creatures you control" exclusion). Lowering routes the first
@@ -306,7 +292,7 @@ type StaticSelection struct {
 	// "non-<type>" prefix on a group noun ("Nonland permanents you control are
 	// artifacts ...", Encroaching Mycosynth). Lowering routes it onto the runtime
 	// Selection.ExcludedTypes predicate.
-	ExcludedTypes []StaticCardType
+	ExcludedTypes []types.Card
 }
 
 // StaticGroupReference describes WHERE a static declaration finds objects and
@@ -348,9 +334,9 @@ type StaticContinuousDeclaration struct {
 	// (StaticContinuousAddTypes); SetTypes/SetSubtypes replace the affected
 	// object's card types and creature types (StaticContinuousSetTypes,
 	// StaticContinuousSetSubtypes).
-	AddTypes    []StaticCardType
+	AddTypes    []types.Card
 	AddSubtypes []types.Sub
-	SetTypes    []StaticCardType
+	SetTypes    []types.Card
 	SetSubtypes []types.Sub
 	// AddEveryCreatureType adds every creature subtype at the type layer
 	// (StaticContinuousAddTypes), the runtime expansion of "is/are every
@@ -431,7 +417,7 @@ const (
 type StaticCostModifierDeclaration struct {
 	Kind                         StaticCostModifierKind
 	AbilityKeyword               parser.KeywordKind
-	SpellTypes                   []StaticCardType
+	SpellTypes                   []types.Card
 	MatchSpellColor              bool
 	SpellColor                   color.Color
 	ChosenSubtypeFromEntryChoice bool
@@ -593,7 +579,7 @@ type StaticEnterBattlefieldRestrictionDeclaration struct {
 // is the disjunction of card types the affected spells must include; an empty
 // SpellTypes affects every spell the controller casts.
 type StaticSpellUncounterableDeclaration struct {
-	SpellTypes []StaticCardType
+	SpellTypes []types.Card
 }
 
 // StaticEnteringTriggerMultiplierDeclaration makes a triggered ability of a
@@ -615,7 +601,7 @@ type StaticEnteringTriggerMultiplierDeclaration struct {
 // permanent the controller controls).
 type StaticUntapStepDeclaration struct {
 	Self           bool
-	PermanentTypes []StaticCardType
+	PermanentTypes []types.Card
 }
 
 // StaticCastAsThoughFlashDeclaration grants the controller a continuous timing
@@ -624,7 +610,7 @@ type StaticUntapStepDeclaration struct {
 // optionally narrow the grant to spells of those card types ("sorcery spells")
 // or subtypes ("Aura and Equipment spells"); empty filters permit every spell.
 type StaticCastAsThoughFlashDeclaration struct {
-	SpellTypes    []StaticCardType
+	SpellTypes    []types.Card
 	SpellSubtypes []types.Sub
 }
 
@@ -2448,8 +2434,8 @@ func staticRuntimeColors(colors []parser.Color) ([]color.Color, bool) {
 	return result, true
 }
 
-func staticCardTypesFromParser(cardTypes []parser.CardType) ([]StaticCardType, bool) {
-	result := make([]StaticCardType, 0, len(cardTypes))
+func staticCardTypesFromParser(cardTypes []parser.CardType) ([]types.Card, bool) {
+	result := make([]types.Card, 0, len(cardTypes))
 	for _, value := range cardTypes {
 		mapped, ok := staticCardTypeFromParser(value)
 		if !ok {
@@ -2460,22 +2446,22 @@ func staticCardTypesFromParser(cardTypes []parser.CardType) ([]StaticCardType, b
 	return result, true
 }
 
-func staticCardTypeFromParser(value parser.CardType) (StaticCardType, bool) {
+func staticCardTypeFromParser(value parser.CardType) (types.Card, bool) {
 	switch value {
 	case parser.CardTypeArtifact:
-		return StaticCardTypeArtifact, true
+		return types.Artifact, true
 	case parser.CardTypeCreature:
-		return StaticCardTypeCreature, true
+		return types.Creature, true
 	case parser.CardTypeLand:
-		return StaticCardTypeLand, true
+		return types.Land, true
 	case parser.CardTypeEnchantment:
-		return StaticCardTypeEnchantment, true
+		return types.Enchantment, true
 	case parser.CardTypeInstant:
-		return StaticCardTypeInstant, true
+		return types.Instant, true
 	case parser.CardTypeSorcery:
-		return StaticCardTypeSorcery, true
+		return types.Sorcery, true
 	default:
-		return StaticCardTypeUnknown, false
+		return "", false
 	}
 }
 
@@ -2701,23 +2687,23 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 		group.Domain = StaticGroupAttachedObject
 	case StaticSubjectAllCreatures:
 		group.Domain = StaticGroupBattlefield
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 	case StaticSubjectAllOtherCreatures:
 		group.Domain = StaticGroupBattlefield
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.ExcludeSource = true
 	case StaticSubjectAttackingCreatures:
 		group.Domain = StaticGroupBattlefield
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.CombatState = StaticCombatStateAttacking
 	case StaticSubjectOtherAttackingCreatures:
 		group.Domain = StaticGroupBattlefield
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.CombatState = StaticCombatStateAttacking
 		group.ExcludeSource = true
 	case StaticSubjectBlockingCreatures:
 		group.Domain = StaticGroupBattlefield
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.CombatState = StaticCombatStateBlocking
 	case StaticSubjectControlledPermanents:
 		group.Domain = StaticGroupSourceControllerPermanents
@@ -2726,23 +2712,23 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 		group.ExcludeSource = true
 	case StaticSubjectControlledCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 	case StaticSubjectOtherControlledCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.ExcludeSource = true
 	case StaticSubjectControlledWalls:
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.SubtypesAny = []types.Sub{types.Wall}
 	case StaticSubjectControlledArtifacts:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeArtifact}
+		group.Selection.RequiredTypes = []types.Card{types.Artifact}
 	case StaticSubjectControlledTokens:
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.TokenOnly = true
 	case StaticSubjectOpponentControlledCreatures:
 		group.Domain = StaticGroupBattlefield
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.Controller = ControllerOpponent
 	case StaticSubjectControlledCreatureSubtype:
 		if !subtypeKnown {
@@ -2772,73 +2758,73 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 		group.ExcludeSource = true
 	case StaticSubjectControlledAttackingCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.CombatState = StaticCombatStateAttacking
 	case StaticSubjectControlledCreatureTokens:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.TokenOnly = true
 	case StaticSubjectBattlefieldCreatureTokens:
 		group.Domain = StaticGroupBattlefield
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.TokenOnly = true
 	case StaticSubjectControlledLegendaryCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.Supertypes = []types.Super{types.Legendary}
 	case StaticSubjectControlledNonlegendaryCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.ExcludedSupertypes = []types.Super{types.Legendary}
 	case StaticSubjectControlledCommanderCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.Commander = true
 	case StaticSubjectControlledCommanders:
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.Commander = true
 	case StaticSubjectControlledUntappedCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.TapState = StaticTapStateUntapped
 	case StaticSubjectControlledModifiedCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.Modified = true
 	case StaticSubjectOtherControlledTappedCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.TapState = StaticTapStateTapped
 		group.ExcludeSource = true
 	case StaticSubjectControlledArtifactCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeArtifact, StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Artifact, types.Creature}
 	case StaticSubjectOtherControlledArtifactCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeArtifact, StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Artifact, types.Creature}
 		group.ExcludeSource = true
 	case StaticSubjectControlledNontokenCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.NonToken = true
 	case StaticSubjectOtherControlledNontokenCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.NonToken = true
 		group.ExcludeSource = true
 	case StaticSubjectAllLands:
 		group.Domain = StaticGroupBattlefield
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeLand}
+		group.Selection.RequiredTypes = []types.Card{types.Land}
 	case StaticSubjectControlledLands:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeLand}
+		group.Selection.RequiredTypes = []types.Card{types.Land}
 	case StaticSubjectControlledCreaturesChosenType:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.SubtypeFromEntryChoice = true
 	case StaticSubjectOtherControlledCreaturesChosenType:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.SubtypeFromEntryChoice = true
 		group.ExcludeSource = true
 	default:
@@ -3052,22 +3038,22 @@ func staticSpellCasterKind(filter parser.StaticDeclarationSpellCasterKind) (Stat
 
 // staticSpellTypeCardTypes maps a closed spell-type filter onto the card types
 // whose disjunction the runtime matches. An all-spells filter returns no types.
-func staticSpellTypeCardTypes(filter parser.StaticDeclarationSpellTypeKind) ([]StaticCardType, bool) {
+func staticSpellTypeCardTypes(filter parser.StaticDeclarationSpellTypeKind) ([]types.Card, bool) {
 	switch filter {
 	case parser.StaticDeclarationSpellTypeAll:
 		return nil, true
 	case parser.StaticDeclarationSpellTypeArtifact:
-		return []StaticCardType{StaticCardTypeArtifact}, true
+		return []types.Card{types.Artifact}, true
 	case parser.StaticDeclarationSpellTypeCreature:
-		return []StaticCardType{StaticCardTypeCreature}, true
+		return []types.Card{types.Creature}, true
 	case parser.StaticDeclarationSpellTypeEnchantment:
-		return []StaticCardType{StaticCardTypeEnchantment}, true
+		return []types.Card{types.Enchantment}, true
 	case parser.StaticDeclarationSpellTypeInstant:
-		return []StaticCardType{StaticCardTypeInstant}, true
+		return []types.Card{types.Instant}, true
 	case parser.StaticDeclarationSpellTypeSorcery:
-		return []StaticCardType{StaticCardTypeSorcery}, true
+		return []types.Card{types.Sorcery}, true
 	case parser.StaticDeclarationSpellTypeInstantOrSorcery:
-		return []StaticCardType{StaticCardTypeInstant, StaticCardTypeSorcery}, true
+		return []types.Card{types.Instant, types.Sorcery}, true
 	default:
 		return nil, false
 	}
@@ -3237,10 +3223,10 @@ func recognizeStaticCardAbilityGrantDeclaration(ability CompiledAbility, statics
 	var text string
 	switch node.Subject.CardFilter {
 	case parser.StaticDeclarationCardFilterLand:
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeLand}
+		group.Selection.RequiredTypes = []types.Card{types.Land}
 		text = "Each land card in your hand has cycling " + keyword.Parameter + "."
 	case parser.StaticDeclarationCardFilterCreature:
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		text = "Each creature card in your hand has cycling " + keyword.Parameter + "."
 	default:
 		return StaticDeclaration{}, false
@@ -3331,11 +3317,11 @@ func staticGrantedManaAbilityValid(granted *parser.StaticGrantedManaAbilitySynta
 func staticPermanentGrantSelection(group parser.EffectStaticSubjectSyntax) (StaticSelection, bool) {
 	switch group.Kind {
 	case parser.EffectStaticSubjectControlledLands:
-		return StaticSelection{RequiredTypes: []StaticCardType{StaticCardTypeLand}}, true
+		return StaticSelection{RequiredTypes: []types.Card{types.Land}}, true
 	case parser.EffectStaticSubjectControlledCreatures:
-		return StaticSelection{RequiredTypes: []StaticCardType{StaticCardTypeCreature}}, true
+		return StaticSelection{RequiredTypes: []types.Card{types.Creature}}, true
 	case parser.EffectStaticSubjectControlledArtifacts:
-		selection := StaticSelection{RequiredTypes: []StaticCardType{StaticCardTypeArtifact}}
+		selection := StaticSelection{RequiredTypes: []types.Card{types.Artifact}}
 		if group.SubtypeKnown {
 			selection.SubtypesAny = []types.Sub{group.Subtype}
 		}
@@ -3849,25 +3835,25 @@ func staticUntapStepPayload(group parser.StaticUntapGroupKind, span shared.Span)
 		return StaticUntapStepDeclaration{},
 			StaticGroupReference{Span: span, Domain: StaticGroupSourceControllerPermanents}, true
 	case parser.StaticUntapGroupCreatures:
-		return StaticUntapStepDeclaration{PermanentTypes: []StaticCardType{StaticCardTypeCreature}},
+		return StaticUntapStepDeclaration{PermanentTypes: []types.Card{types.Creature}},
 			StaticGroupReference{
 				Span:      span,
 				Domain:    StaticGroupSourceControllerPermanents,
-				Selection: StaticSelection{RequiredTypes: []StaticCardType{StaticCardTypeCreature}},
+				Selection: StaticSelection{RequiredTypes: []types.Card{types.Creature}},
 			}, true
 	case parser.StaticUntapGroupArtifacts:
-		return StaticUntapStepDeclaration{PermanentTypes: []StaticCardType{StaticCardTypeArtifact}},
+		return StaticUntapStepDeclaration{PermanentTypes: []types.Card{types.Artifact}},
 			StaticGroupReference{
 				Span:      span,
 				Domain:    StaticGroupSourceControllerPermanents,
-				Selection: StaticSelection{RequiredTypes: []StaticCardType{StaticCardTypeArtifact}},
+				Selection: StaticSelection{RequiredTypes: []types.Card{types.Artifact}},
 			}, true
 	case parser.StaticUntapGroupLands:
-		return StaticUntapStepDeclaration{PermanentTypes: []StaticCardType{StaticCardTypeLand}},
+		return StaticUntapStepDeclaration{PermanentTypes: []types.Card{types.Land}},
 			StaticGroupReference{
 				Span:      span,
 				Domain:    StaticGroupSourceControllerPermanents,
-				Selection: StaticSelection{RequiredTypes: []StaticCardType{StaticCardTypeLand}},
+				Selection: StaticSelection{RequiredTypes: []types.Card{types.Land}},
 			}, true
 	default:
 		return StaticUntapStepDeclaration{}, StaticGroupReference{}, false
