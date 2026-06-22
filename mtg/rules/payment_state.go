@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/mtg/rules/payment"
@@ -27,6 +28,10 @@ func (s *rulesPaymentState) Player(playerID game.PlayerID) (*game.Player, bool) 
 
 func (s *rulesPaymentState) CanPayLife(playerID game.PlayerID) bool {
 	return !playerRuleEffectActive(s.g, playerID, game.RuleEffectLifeTotalCantChange)
+}
+
+func (s *rulesPaymentState) PayLifeForManaColor(playerID game.PlayerID, c mana.Color) bool {
+	return payLifeForManaColorActive(s.g, playerID, c)
 }
 
 func (s *rulesPaymentState) ActivePlayer() game.PlayerID {

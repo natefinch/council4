@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -460,6 +461,7 @@ const (
 	StaticPlayerRuleCastThisFromGraveyard
 	StaticPlayerRuleLookAtTopCardAnyTime
 	StaticPlayerRuleCastThisFromExile
+	StaticPlayerRuleLifeForColoredMana
 )
 
 // StaticPlayerRuleDeclaration is one player-scoped static rule applied to the
@@ -484,6 +486,11 @@ type StaticPlayerRuleDeclaration struct {
 	CastColorless          bool
 	AlsoPlayLands          bool
 	CastChosenCreatureType bool
+
+	// ManaColor carries the colored mana symbol of a
+	// StaticPlayerRuleLifeForColoredMana rule ("For each {B} in a cost, ...",
+	// K'rrik). It is empty for every other kind.
+	ManaColor mana.Color
 }
 
 // StaticCardAbilityGrantDeclaration grants a keyword ability to cards in a
@@ -3241,6 +3248,7 @@ type staticPlayerRuleSpec struct {
 	kind                    StaticPlayerRuleKind
 	usesAttackTax           bool
 	usesAdditionalLandPlays bool
+	usesManaColor           bool
 	allowsAllPlayers        bool
 	matchesContent          func(AbilityContent) bool
 }
@@ -3289,6 +3297,11 @@ var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPla
 		kind:           StaticPlayerRuleLookAtTopCardAnyTime,
 		matchesContent: emptyStaticPlayerRuleContent,
 	},
+	parser.StaticDeclarationPlayerRuleLifeForColoredMana: {
+		kind:           StaticPlayerRuleLifeForColoredMana,
+		usesManaColor:  true,
+		matchesContent: emptyStaticPlayerRuleContent,
+	},
 }
 
 // recognizeStaticPlayerRuleDeclaration maps parser-owned player-rule syntax to
@@ -3315,7 +3328,9 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 		(spec.usesAttackTax && node.AttackTaxGeneric <= 0) ||
 		(!spec.usesAttackTax && node.AttackTaxGeneric != 0) ||
 		(spec.usesAdditionalLandPlays && node.AdditionalLandPlays <= 0) ||
-		(!spec.usesAdditionalLandPlays && node.AdditionalLandPlays != 0) {
+		(!spec.usesAdditionalLandPlays && node.AdditionalLandPlays != 0) ||
+		(spec.usesManaColor && !compilerManaColorValid(node.ManaColor)) ||
+		(!spec.usesManaColor && node.ManaColor != "") {
 		return StaticDeclaration{}, false
 	}
 	var spellTypes []types.Card
@@ -3353,6 +3368,7 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 			CastColorless:          node.CastColorless,
 			AlsoPlayLands:          node.AlsoPlayLands,
 			CastChosenCreatureType: node.CastChosenCreatureType,
+			ManaColor:              node.ManaColor,
 		},
 	}, true
 }
@@ -3374,6 +3390,17 @@ func staticPlayerRuleSubjectAllowed(subject parser.StaticDeclarationSubjectKind,
 
 func emptyStaticPlayerRuleContent(content AbilityContent) bool {
 	return len(content.Conditions) == 0 && len(content.References) == 0
+}
+
+// compilerManaColorValid reports whether c is one of the five real colors of
+// mana, backing the StaticPlayerRuleLifeForColoredMana color requirement.
+func compilerManaColorValid(c mana.Color) bool {
+	switch c {
+	case mana.W, mana.U, mana.B, mana.R, mana.G:
+		return true
+	default:
+		return false
+	}
 }
 
 // castThisFromGraveyardStaticPlayerRuleContent accepts the self-scoped

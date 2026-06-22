@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -137,6 +138,11 @@ const (
 	// Jwar Isle). It is a private-visibility static: only the controller may see
 	// the card.
 	StaticDeclarationPlayerRuleLookAtTopCardAnyTime StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleLookAtTopCardAnyTime"
+	// StaticDeclarationPlayerRuleLifeForColoredMana lets the controller pay 2 life
+	// rather than a mana of ManaColor for each such colored symbol in a cost ("For
+	// each {B} in a cost, you may pay 2 life rather than pay that mana.", K'rrik,
+	// Son of Yawgmoth).
+	StaticDeclarationPlayerRuleLifeForColoredMana StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleLifeForColoredMana"
 )
 
 // StaticDeclarationCardFilterKind identifies the closed card filter that a
@@ -400,6 +406,11 @@ type StaticDeclarationSyntax struct {
 	PlayerRule          StaticDeclarationPlayerRuleKind `json:",omitempty"`
 	AttackTaxGeneric    int                             `json:",omitempty"`
 	AdditionalLandPlays int                             `json:",omitempty"`
+
+	// ManaColor carries the colored mana symbol of a
+	// StaticDeclarationPlayerRuleLifeForColoredMana declaration ("For each {B} in
+	// a cost, ..."). It is empty for every other player rule.
+	ManaColor mana.Color `json:"-"`
 
 	// Opponent action-restriction payload: a continuous prohibition stopping the
 	// affected players from casting spells and/or activating abilities of
@@ -1276,6 +1287,7 @@ var staticPlayerRuleParsers = []staticPlayerRuleParser{
 	parseStaticPlayWithTopCardRevealedDeclaration,
 	parseStaticCastSpellsFromLibraryTopDeclaration,
 	parseStaticLookAtTopCardAnyTimeDeclaration,
+	parseStaticLifeForColoredManaDeclaration,
 }
 
 func parseStaticPlayerRuleDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
@@ -1575,6 +1587,50 @@ func parseStaticLookAtTopCardAnyTimeDeclaration(tokens []shared.Token) (StaticDe
 			Span: tokens[0].Span,
 		},
 		PlayerRule: StaticDeclarationPlayerRuleLookAtTopCardAnyTime,
+	}, true
+}
+
+// parseStaticLifeForColoredManaDeclaration recognizes the exact controller-scoped
+// life-for-mana substitution "For each {C} in a cost, you may pay 2 life rather
+// than pay that mana." (K'rrik, Son of Yawgmoth), where {C} is a single colored
+// mana symbol. It records the colored mana symbol so lowering can scope the
+// payment permission to that color.
+func parseStaticLifeForColoredManaDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 18 ||
+		tokens[2].Kind != shared.Symbol ||
+		tokens[6].Kind != shared.Comma ||
+		tokens[10].Kind != shared.Integer || tokens[10].Text != "2" ||
+		tokens[17].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "for", "each") ||
+		!staticWordsAt(tokens, 3, "in", "a", "cost") ||
+		!staticWordsAt(tokens, 7, "you", "may", "pay") ||
+		!staticWordsAt(tokens, 11, "life", "rather", "than", "pay", "that", "mana") {
+		return StaticDeclarationSyntax{}, false
+	}
+	inner, ok := strings.CutPrefix(tokens[2].Text, "{")
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	inner, ok = strings.CutSuffix(inner, "}")
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	color, ok := keywordManaColor(inner)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: tokens[7].Span,
+		},
+		PlayerRule: StaticDeclarationPlayerRuleLifeForColoredMana,
+		ManaColor:  color,
 	}, true
 }
 

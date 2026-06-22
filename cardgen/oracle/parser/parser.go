@@ -125,6 +125,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitSourceSpellCostReductionDynamic(document.Abilities)
 	emitStaticDeclarations(document.Abilities)
 	stripCastThisFromExileEffectSemantics(document.Abilities)
+	stripLifeForColoredManaEffectSemantics(document.Abilities)
 	emitSemanticAccessors(document.Abilities)
 	stripImpulseExileSemantics(document.Abilities)
 	emitCoinFlipSequences(document.Abilities)
@@ -160,6 +161,37 @@ func stripCastThisFromExileEffectSemantics(abilities []Ability) {
 func abilityHasCastThisFromExileDeclaration(ability *Ability) bool {
 	for i := range ability.StaticDeclarations {
 		if ability.StaticDeclarations[i].PlayerRule == StaticDeclarationPlayerRuleCastThisFromExile {
+			return true
+		}
+	}
+	return false
+}
+
+// stripLifeForColoredManaEffectSemantics suppresses the resolving-effect reading
+// of the life-for-colored-mana cost-substitution player rule ("For each {B} in a
+// cost, you may pay 2 life rather than pay that mana."). The sentence's "you may
+// pay 2 life" clause otherwise compiles to a spurious pay-life effect that blocks
+// the text-blind compiler's empty-content recognition of the player rule, so when
+// the static idiom is recognized the static declaration owns the whole sentence
+// and its competing effect and target syntax is cleared.
+func stripLifeForColoredManaEffectSemantics(abilities []Ability) {
+	for i := range abilities {
+		ability := &abilities[i]
+		if !abilityHasLifeForColoredManaDeclaration(ability) {
+			continue
+		}
+		for j := range ability.Sentences {
+			sentence := &ability.Sentences[j]
+			sentence.Effects = nil
+			sentence.Targets = nil
+			sentence.LegacyEffects = false
+		}
+	}
+}
+
+func abilityHasLifeForColoredManaDeclaration(ability *Ability) bool {
+	for i := range ability.StaticDeclarations {
+		if ability.StaticDeclarations[i].PlayerRule == StaticDeclarationPlayerRuleLifeForColoredMana {
 			return true
 		}
 	}

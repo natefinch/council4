@@ -494,6 +494,60 @@ func TestPhyrexianCostCanBePaidWithManaOrLife(t *testing.T) {
 	})
 }
 
+func TestPayLifeForColoredManaRuleEffect(t *testing.T) {
+	payLifeForBlackPermanent := func(g *game.Game) {
+		addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+			Name:  "Yawgmoth's Will",
+			Types: []types.Card{types.Enchantment},
+			StaticAbilities: []game.StaticAbility{{
+				RuleEffects: []game.RuleEffect{{
+					Kind:           game.RuleEffectPayLifeForColoredMana,
+					AffectedPlayer: game.PlayerYou,
+					ManaColor:      mana.B,
+				}},
+			}},
+		}})
+	}
+
+	t.Run("colored mana symbol payable with life", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		payLifeForBlackPermanent(g)
+		manaCost := cost.Mana{cost.B}
+		prefs := &payment.Preferences{PhyrexianLifeChoices: []bool{true}}
+
+		if !payTestGenericCostWithPreferences(g, game.Player1, &manaCost, prefs) {
+			t.Fatal("payCost() = false for {B} paid with life under rule effect, want true")
+		}
+		if got := g.Players[game.Player1].Life; got != 38 {
+			t.Fatalf("life = %d, want 38", got)
+		}
+	})
+
+	t.Run("rule effect does not affect other colors", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		payLifeForBlackPermanent(g)
+		manaCost := cost.Mana{cost.G}
+
+		if canPayCost(g, game.Player1, &manaCost) {
+			t.Fatal("canPayCost() = true for {G} with no green source and black-only rule effect, want false")
+		}
+	})
+
+	t.Run("colored mana symbol still payable with mana", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		payLifeForBlackPermanent(g)
+		addBasicLandPermanent(g, game.Player1, types.Swamp)
+		manaCost := cost.Mana{cost.B}
+
+		if !payTestGenericCost(g, game.Player1, &manaCost) {
+			t.Fatal("payCost() = false for {B} paid with Swamp, want true")
+		}
+		if got := g.Players[game.Player1].Life; got != 40 {
+			t.Fatalf("life = %d, want 40", got)
+		}
+	})
+}
+
 func TestSnowCostRequiresSnowMana(t *testing.T) {
 	t.Run("non-snow source rejected", func(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
