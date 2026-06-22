@@ -1415,6 +1415,16 @@ func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms 
 	plural := strings.HasSuffix(strings.ToLower(tokens[nounStart].Text), "s")
 	if noun == ObjectNounOpponent {
 		end := nounStart + 1
+		if effectWordsAt(tokens, end, "you", "attacked", "this", "combat") &&
+			dynamicAmountBoundary(tokens, end+4) {
+			// "opponent you attacked this combat" is the Melee count: the number
+			// of the controller's opponents being attacked this combat. It is a
+			// distinct controller-scoped, combat-state amount, not a board count.
+			return dynamicAmountSubject{
+				amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountOpponentsAttackedThisCombat},
+				end:    end + 4, count: true, plural: plural,
+			}, true
+		}
 		if effectWordsAt(tokens, end, "you", "have") {
 			end += 2
 		}

@@ -583,6 +583,15 @@ const (
 	// Wolf-token count). It carries no selection; the runtime records the kick
 	// count as the spell is cast. Added last so existing kinds keep their values.
 	EffectDynamicAmountTimesKicked EffectDynamicAmountKind = "EffectDynamicAmountTimesKicked"
+	// EffectDynamicAmountOpponentsAttackedThisCombat is the number of the
+	// controller's opponents that creatures the controller controls are
+	// attacking this combat ("for each opponent you attacked this combat" —
+	// the Melee count, CR 702.72). Distinct opponents are counted once each,
+	// read from the current combat's attack declarations as the ability
+	// resolves. It is the controller-scoped, combat-state sibling of
+	// EffectDynamicAmountOpponentCount and carries no in-text referent. Added
+	// last so existing kinds keep their values.
+	EffectDynamicAmountOpponentsAttackedThisCombat EffectDynamicAmountKind = "EffectDynamicAmountOpponentsAttackedThisCombat"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.

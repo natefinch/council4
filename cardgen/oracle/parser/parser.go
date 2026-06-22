@@ -26,6 +26,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	source = expandBattleCryKeyword(source)
 	source = expandTributeKeyword(source)
 	source = expandMentorKeyword(source)
+	source = expandMeleeKeyword(source)
 	source = expandFusedTrigger(source)
 	source = expandDisjunctiveTrigger(source)
 	tokens, diagnostics := lexAll(source)
