@@ -1450,6 +1450,12 @@ type CompiledEffect struct {
 	// "enchanted creature"). The copy source resolves at runtime to the attached
 	// permanent.
 	TokenCopyOfAttached bool
+	// TokenCopyOfTriggeringSet reports that the created token is a copy of one of
+	// the permanents that triggered this ability, chosen by the controller
+	// ("create a token that's a copy of one of them." on a "Whenever one or more
+	// ... enter" trigger). The copy source resolves at runtime to a
+	// controller-chosen member of the triggering event batch.
+	TokenCopyOfTriggeringSet bool
 	// TokenCopyDropLegendary reports a copy-token "except <it/the token> isn't
 	// legendary" modifier: the created token drops the Legendary supertype.
 	TokenCopyDropLegendary bool

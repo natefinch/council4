@@ -453,6 +453,9 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	if spec, ok := prim.Source.TokenCopy(); ok && spec.Source == game.TokenCopySourceEachInGroup {
 		return r.createCopyTokensForEach(prim, spec, recipient)
 	}
+	if spec, ok := prim.Source.TokenCopy(); ok && spec.Source == game.TokenCopySourceChosenFromTriggerBatch {
+		return r.createCopyTokenFromTriggerBatch(prim, spec, recipient)
+	}
 	token, ok := r.typedTokenDefinition(prim.Source)
 	if !ok {
 		return res
@@ -512,6 +515,129 @@ func (r *effectResolver) createCopyTokensForEach(prim game.CreateToken, spec gam
 		res.succeeded = true
 	}
 	return res
+}
+
+// createCopyTokenFromTriggerBatch creates one token copying a controller-chosen
+// member of the resolving ability's triggering event batch ("create a token
+// that's a copy of one of them.", Twilight Diviner). The candidate set is the
+// permanents that triggered the resolving ability and are still on the
+// battlefield; the controller chooses one and the token starts as a copy of it,
+// applying the spec's copy modifiers. No candidates yields no token.
+func (r *effectResolver) createCopyTokenFromTriggerBatch(prim game.CreateToken, spec game.TokenCopySpec, recipient game.PlayerID) effectResolved {
+	res := effectResolved{accepted: true}
+	candidates := r.triggeringBatchPermanents()
+	chosen := r.chooseTriggeringBatchMember(recipient, candidates)
+	if chosen == nil {
+		return res
+	}
+	source, ok := permanentCopyDef(r.game, chosen)
+	if !ok {
+		return res
+	}
+	def, ok := applyTokenCopyOverrides(source, spec)
+	if !ok {
+		return res
+	}
+	created, ok := createTokenPermanentsCollectingWithChoices(r.engine, r.game, recipient, def, 1, prim.EntryTapped, r.agents, r.log)
+	if !ok {
+		return res
+	}
+	if prim.EntryAttacking {
+		declareCreatedTokensAttacking(r.engine, r.game, recipient, created, r.agents, r.log)
+	}
+	res.amount = 1
+	res.succeeded = true
+	return res
+}
+
+// triggeringBatchPermanents returns the battlefield permanents that triggered
+// the resolving ability: the entering permanents of its triggering event batch
+// (the primary event plus every event sharing its simultaneous batch) that still
+// match the ability's own trigger pattern and remain on the battlefield. The
+// list is deduplicated and order-stable in event order.
+func (r *effectResolver) triggeringBatchPermanents() []*game.Permanent {
+	obj := r.obj
+	if obj == nil || !obj.HasTriggerEvent {
+		return nil
+	}
+	pattern, ok := resolvingTriggerPattern(r.game, obj)
+	if !ok {
+		return nil
+	}
+	source, _ := permanentByObjectID(r.game, obj.SourceID)
+	batchID := obj.TriggerEvent.SimultaneousID
+	seen := make(map[id.ID]bool)
+	var members []*game.Permanent
+	consider := func(event game.Event) {
+		if event.PermanentID == 0 || seen[event.PermanentID] {
+			return
+		}
+		if !triggerMatchesEvent(r.game, source, pattern, event) {
+			return
+		}
+		permanent, ok := permanentByObjectID(r.game, event.PermanentID)
+		if !ok || !activeBattlefieldPermanent(permanent) {
+			return
+		}
+		seen[event.PermanentID] = true
+		members = append(members, permanent)
+	}
+	consider(obj.TriggerEvent)
+	if batchID != 0 {
+		for _, event := range r.game.Events {
+			if event.SimultaneousID == batchID {
+				consider(event)
+			}
+		}
+	}
+	return members
+}
+
+// chooseTriggeringBatchMember asks chooser to pick one of the triggering-batch
+// candidates to copy. A single candidate is chosen automatically; an empty set
+// yields nil.
+func (r *effectResolver) chooseTriggeringBatchMember(chooser game.PlayerID, candidates []*game.Permanent) *game.Permanent {
+	if len(candidates) == 0 {
+		return nil
+	}
+	if len(candidates) == 1 {
+		return candidates[0]
+	}
+	options := make([]game.ChoiceOption, 0, len(candidates))
+	for i, candidate := range candidates {
+		options = append(options, game.ChoiceOption{Index: i, Label: permanentEffectiveName(r.game, candidate)})
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           chooser,
+		Prompt:           "Choose a creature to copy",
+		Options:          options,
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: []int{0},
+	}, r.log)
+	if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(candidates) {
+		return candidates[0]
+	}
+	return candidates[selected[0]]
+}
+
+// resolvingTriggerPattern returns the trigger pattern of the triggered ability
+// represented by obj, whether it is an inline-generated trigger or an ability
+// addressable on the source definition by AbilityIndex.
+func resolvingTriggerPattern(g *game.Game, obj *game.StackObject) (*game.TriggerPattern, bool) {
+	if obj.InlineTrigger != nil {
+		return &obj.InlineTrigger.Trigger.Pattern, true
+	}
+	def, ok := stackObjectSourceDef(g, obj)
+	if !ok {
+		return nil, false
+	}
+	body, ok := def.BodyAt(obj.AbilityIndex).(*game.TriggeredAbility)
+	if !ok {
+		return nil, false
+	}
+	return &body.Trigger.Pattern, true
 }
 
 func handleShufflePermanentIntoLibrary(r *effectResolver, prim game.ShufflePermanentIntoLibrary) effectResolved {

@@ -231,6 +231,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				TokenCopyOfTarget:                    syntax.TokenCopyOfTarget,
 				TokenCopyOfReference:                 syntax.TokenCopyOfReference,
 				TokenCopyOfAttached:                  syntax.TokenCopyOfAttached,
+				TokenCopyOfTriggeringSet:             syntax.TokenCopyOfTriggeringSet,
 				TokenCopyDropLegendary:               syntax.TokenCopyDropLegendary,
 				TokenCopyEntersTapped:                syntax.TokenCopyEntersTapped,
 				TokenCopyGrantKeywords:               append([]parser.KeywordKind(nil), syntax.TokenCopyGrantKeywords...),
