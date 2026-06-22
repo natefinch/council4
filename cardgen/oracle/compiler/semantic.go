@@ -625,6 +625,12 @@ const (
 	// the effect's controller-payer payment by applyEffectPaymentsToConditions
 	// and gates the unless consequence on the payment being declined.
 	ConditionPredicateControllerDoesNotPay
+	// ConditionPredicateControllerControlsNamed is satisfied when the context
+	// controller controls at least one permanent matching each card name listed
+	// in ControlledNames ("If you control an Urza's Mine and an Urza's Tower,
+	// ..."; the Urza tron lands). Names are compared case-insensitively with
+	// hyphens and spaces treated alike.
+	ConditionPredicateControllerControlsNamed
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -896,6 +902,12 @@ type CompiledCondition struct {
 	// Threshold carries the minimum count. It is TriggerCardTypeUnknown for other
 	// clauses.
 	GraveyardCountCardType TriggerCardType
+
+	// ControlledNames carries the card names required by a
+	// ConditionPredicateControllerControlsNamed clause ("If you control an
+	// Urza's Mine and an Urza's Tower, ..."). The controller must control a
+	// permanent matching each listed name.
+	ControlledNames []string
 }
 
 // TargetCardinality is an inclusive target count range.

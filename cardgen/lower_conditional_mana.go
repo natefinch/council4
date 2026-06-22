@@ -77,6 +77,17 @@ func soleFixedAddManaEffect(content compiler.AbilityContent, wantInstead bool) (
 		return compiler.CompiledEffect{}, false
 	}
 	effect := content.Effects[0]
+	if !fixedAddManaToController(effect, wantInstead) {
+		return compiler.CompiledEffect{}, false
+	}
+	return effect, true
+}
+
+// fixedAddManaToController reports whether an effect adds a fixed, known-color
+// amount of mana to its controller with no targets or references. wantInstead
+// selects the parser's Instead flag (the larger conditional alternative) versus
+// the base production.
+func fixedAddManaToController(effect compiler.CompiledEffect, wantInstead bool) bool {
 	if effect.Kind != compiler.EffectAddMana ||
 		effect.Negated ||
 		effect.Optional ||
@@ -86,17 +97,55 @@ func soleFixedAddManaEffect(content compiler.AbilityContent, wantInstead bool) (
 		effect.Payment.Form != parser.EffectPaymentFormUnknown ||
 		len(effect.Targets) != 0 ||
 		len(effect.References) != 0 {
-		return compiler.CompiledEffect{}, false
+		return false
 	}
 	manaEffect := effect.Mana
-	if manaEffect.Instead != wantInstead ||
-		!manaEffect.ColorsKnown ||
-		manaEffect.Choice ||
-		manaEffect.AnyColor ||
-		len(manaEffect.Colors) == 0 {
-		return compiler.CompiledEffect{}, false
+	return manaEffect.Instead == wantInstead &&
+		manaEffect.ColorsKnown &&
+		!manaEffect.Choice &&
+		!manaEffect.AnyColor &&
+		len(manaEffect.Colors) != 0
+}
+
+// tronConditionalManaContent detects a single activated mana ability that adds a
+// base fixed amount of mana and, gated on an effect-condition, a different fixed
+// amount "instead" (the Urza tron lands: "{T}: Add {C}. If you control an
+// Urza's Power-Plant and an Urza's Tower, add {C}{C} instead."). It returns a
+// stripped ability that produces only the base mana — for ordinary activation
+// shell lowering — and the gated content that resolves exactly one production
+// depending on whether the condition holds.
+func tronConditionalManaContent(ability compiler.CompiledAbility) (compiler.CompiledAbility, game.AbilityContent, bool) {
+	content := ability.Content
+	if len(content.Effects) != 2 ||
+		len(content.Conditions) != 1 ||
+		len(content.Targets) != 0 ||
+		len(content.Keywords) != 0 ||
+		len(content.Modes) != 0 ||
+		len(content.References) != 0 {
+		return compiler.CompiledAbility{}, game.AbilityContent{}, false
 	}
-	return effect, true
+	baseEffect := content.Effects[0]
+	altEffect := content.Effects[1]
+	if !fixedAddManaToController(baseEffect, false) || !fixedAddManaToController(altEffect, true) {
+		return compiler.CompiledAbility{}, game.AbilityContent{}, false
+	}
+	condition, ok := lowerCondition(content.Conditions[0], conditionContextEffectGate)
+	if !ok {
+		return compiler.CompiledAbility{}, game.AbilityContent{}, false
+	}
+	notCondition := condition
+	notCondition.Negate = !notCondition.Negate
+	baseSeq := gatedFixedAddMana(baseEffect.Mana.Colors, &notCondition)
+	altSeq := gatedFixedAddMana(altEffect.Mana.Colors, &condition)
+	gated := game.Mode{Sequence: append(baseSeq, altSeq...)}.Ability()
+
+	stripped := ability
+	stripped.Content = content
+	strippedBase := baseEffect
+	strippedBase.RequiresOrderedLowering = false
+	stripped.Content.Effects = []compiler.CompiledEffect{strippedBase}
+	stripped.Content.Conditions = nil
+	return stripped, gated, true
 }
 
 // gatedFixedAddMana builds one fixed-color AddMana instruction per color, each

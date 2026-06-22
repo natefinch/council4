@@ -2,6 +2,7 @@ package rules
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/compare"
@@ -179,6 +180,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	}
 	if cond.ControllerGainedLifeThisTurnAtLeast > 0 {
 		matches = matches && lifeChangedThisTurn(g, ctx.controller, game.EventLifeGained) >= cond.ControllerGainedLifeThisTurnAtLeast
+	}
+	if len(cond.ControllerControlsNamed) > 0 {
+		matches = matches && controllerControlsNamed(g, ctx, cond.ControllerControlsNamed)
 	}
 	if cond.Negate {
 		return !matches
@@ -422,6 +426,56 @@ func controlSelectionFromFilter(filter game.PermanentFilter) game.SelectionCount
 
 func controllerControlsMatchingSelection(g *game.Game, ctx conditionContext, control game.SelectionCount) bool {
 	return playersControlMatchingSelection(g, ctx, []game.PlayerID{ctx.controller}, control)
+}
+
+// controllerControlsNamed reports whether the context controller controls, for
+// each requested name, at least one active battlefield permanent whose
+// effective name matches. Names are compared case-insensitively with hyphens
+// and spaces treated alike, so the printed Oracle spelling ("Urza's
+// Power-Plant") matches the canonical card name ("Urza's Power Plant").
+func controllerControlsNamed(g *game.Game, ctx conditionContext, names []string) bool {
+	for _, name := range names {
+		want := normalizeControlledName(name)
+		if want == "" {
+			return false
+		}
+		found := false
+		for _, permanent := range g.Battlefield {
+			if !activeBattlefieldPermanent(permanent) ||
+				effectiveController(g, permanent) != ctx.controller {
+				continue
+			}
+			if normalizeControlledName(permanentEffectiveName(g, permanent)) == want {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
+// normalizeControlledName canonicalizes a permanent name for the
+// control-a-named-permanent predicate: lowercased, with every hyphen treated as
+// a space and runs of whitespace collapsed. This reconciles the Oracle-text
+// spelling used in conditions with the printed card name.
+func normalizeControlledName(name string) string {
+	var builder strings.Builder
+	lastSpace := true
+	for _, r := range strings.ToLower(name) {
+		if r == '-' || r == ' ' || r == '\t' || r == '\n' {
+			if !lastSpace {
+				_ = builder.WriteByte(' ')
+				lastSpace = true
+			}
+			continue
+		}
+		_, _ = builder.WriteRune(r)
+		lastSpace = false
+	}
+	return strings.TrimSpace(builder.String())
 }
 
 func anyOpponentControlsMatchingSelection(g *game.Game, ctx conditionContext, control game.SelectionCount) bool {
