@@ -885,9 +885,10 @@ func sacrificeReferencedPlayerChoice(references []compiler.CompiledReference) bo
 
 // sacrificeChoiceSelection maps the sacrifice effect's compiled selector to a
 // runtime Selection. It supports a single permanent card type, a card-type
-// union ("creature or planeswalker"), and the nontoken/token qualifier. It
-// fails closed for any other selector shape so unrecognized filters stay
-// unsupported.
+// union ("creature or planeswalker"), a single excluded card type ("nonland
+// permanent"), a named token subtype, the bare token noun ("a token"), and the
+// nontoken/token qualifier. It fails closed for any other selector shape so
+// unrecognized filters stay unsupported.
 func sacrificeChoiceSelection(selector compiler.CompiledSelector) (game.Selection, bool) {
 	var selection game.Selection
 	subtypes := selector.SubtypesAny()
@@ -908,10 +909,16 @@ func sacrificeChoiceSelection(selector compiler.CompiledSelector) (game.Selectio
 		// A named artifact-token subtype ("a Treasure", "a Food") names the
 		// permanent by its subtype alone; the SubtypesAny filter applied below
 		// is the whole constraint, so no card-type kind is required here.
+	case selector.TokenOnly:
+		// The bare token noun ("a token") names no type; the TokenOnly qualifier
+		// applied below is the whole constraint.
 	default:
 		return game.Selection{}, false
 	}
 	selection.SubtypesAny = subtypes
+	// A single excluded card type ("nonland permanent", "noncreature artifact")
+	// drops permanents carrying that type from the eligible set.
+	selection.ExcludedTypes = selector.ExcludedTypes()
 	switch {
 	case selector.NonToken:
 		selection.NonToken = true

@@ -668,3 +668,88 @@ func TestLowerOptionalFilteredDiscardDraw(t *testing.T) {
 		t.Fatalf("draw ResultGate = %#v, want succeeded gate on %q", gate, optionalIfYouDoResultKey)
 	}
 }
+
+// TestLowerOptionalSacrificeFilteredSelectors verifies that the optional
+// "you may sacrifice X. If you do, draw a card." flow accepts the broadened
+// sacrifice selector shapes — a single excluded card type ("nonland
+// permanent"), a named token subtype ("Blood token"), and the bare token noun
+// ("a token") — mapping each to the runtime SacrificePermanents selection.
+func TestLowerOptionalSacrificeFilteredSelectors(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		clause string
+		verify func(t *testing.T, sel game.Selection)
+	}{
+		{
+			name:   "nonland permanent",
+			clause: "sacrifice a nonland permanent",
+			verify: func(t *testing.T, sel game.Selection) {
+				if len(sel.ExcludedTypes) != 1 || sel.ExcludedTypes[0] != types.Land {
+					t.Fatalf("ExcludedTypes = %#v, want [Land]", sel.ExcludedTypes)
+				}
+			},
+		},
+		{
+			name:   "noncreature artifact",
+			clause: "sacrifice a noncreature artifact",
+			verify: func(t *testing.T, sel game.Selection) {
+				if len(sel.RequiredTypes) != 1 || sel.RequiredTypes[0] != types.Artifact {
+					t.Fatalf("RequiredTypes = %#v, want [Artifact]", sel.RequiredTypes)
+				}
+				if len(sel.ExcludedTypes) != 1 || sel.ExcludedTypes[0] != types.Creature {
+					t.Fatalf("ExcludedTypes = %#v, want [Creature]", sel.ExcludedTypes)
+				}
+			},
+		},
+		{
+			name:   "token subtype",
+			clause: "sacrifice a Blood token",
+			verify: func(t *testing.T, sel game.Selection) {
+				if !sel.TokenOnly {
+					t.Fatal("TokenOnly = false, want true")
+				}
+				if len(sel.SubtypesAny) != 1 || sel.SubtypesAny[0] != types.Blood {
+					t.Fatalf("SubtypesAny = %#v, want [Blood]", sel.SubtypesAny)
+				}
+			},
+		},
+		{
+			name:   "bare token",
+			clause: "sacrifice a token",
+			verify: func(t *testing.T, sel game.Selection) {
+				if !sel.TokenOnly {
+					t.Fatal("TokenOnly = false, want true")
+				}
+				if len(sel.RequiredTypes) != 0 || len(sel.SubtypesAny) != 0 {
+					t.Fatalf("selection = %#v, want bare token (no type/subtype)", sel)
+				}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			sequence := lowerSpellSequence(t, "Optional Sacrifice "+test.name,
+				"You may "+test.clause+". If you do, draw a card.")
+			if len(sequence) != 2 {
+				t.Fatalf("sequence = %#v, want two instructions", sequence)
+			}
+			sacrifice, ok := sequence[0].Primitive.(game.SacrificePermanents)
+			if !ok {
+				t.Fatalf("instruction[0] = %T, want game.SacrificePermanents", sequence[0].Primitive)
+			}
+			if !sequence[0].Optional || sequence[0].PublishResult != optionalIfYouDoResultKey {
+				t.Fatalf("instruction[0] = %#v, want optional publishing %q", sequence[0], optionalIfYouDoResultKey)
+			}
+			test.verify(t, sacrifice.Selection)
+			if _, ok := sequence[1].Primitive.(game.Draw); !ok {
+				t.Fatalf("instruction[1] = %T, want game.Draw", sequence[1].Primitive)
+			}
+			gate := sequence[1].ResultGate
+			if !gate.Exists || gate.Val.Key != optionalIfYouDoResultKey || gate.Val.Succeeded != game.TriTrue {
+				t.Fatalf("draw ResultGate = %#v, want succeeded gate on %q", gate, optionalIfYouDoResultKey)
+			}
+		})
+	}
+}

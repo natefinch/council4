@@ -365,22 +365,38 @@ func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {
 }
 
 // sacrificeChoiceNoun reconstructs the permanent noun phrase of a sacrifice
-// effect ("creature", "nontoken creature", "creature or planeswalker"),
-// optionally pluralized. It fails closed for selector shapes the runtime
-// sacrifice selection cannot express so the effect stays unsupported.
+// effect ("creature", "nontoken creature", "creature or planeswalker",
+// "nonland permanent", "Blood token"), optionally pluralized. It fails closed
+// for selector shapes the runtime sacrifice selection cannot express so the
+// effect stays unsupported.
 func sacrificeChoiceNoun(selection *SelectionSyntax, plural bool) (string, bool) {
 	base, ok := sacrificeChoiceBaseNoun(selection, plural)
 	if !ok {
 		return "", false
 	}
+	// The token-suffix forms ("Blood token", "a token") carry the token qualifier
+	// as a trailing word, which sacrificeChoiceBaseNoun has already appended; a
+	// card-type token ("token creature") instead leads with the qualifier.
 	switch {
 	case selection.NonToken:
 		base = "nontoken " + base
-	case selection.TokenOnly:
+	case selection.TokenOnly && !sacrificeTokenSuffixForm(selection):
 		base = "token " + base
 	default:
 	}
 	return base, true
+}
+
+// sacrificeTokenSuffixForm reports whether the selector names a token by a
+// subtype ("Blood token") or by no type at all ("a token"), where Oracle places
+// the "token" word last. A token named by a card type ("token creature") keeps
+// the qualifier leading and is excluded here.
+func sacrificeTokenSuffixForm(selection *SelectionSyntax) bool {
+	return selection.TokenOnly &&
+		selection.Kind == SelectionUnknown &&
+		len(selection.RequiredTypesAny) == 0 &&
+		len(selection.ExcludedTypes) == 0 &&
+		len(selection.SubtypesAny) <= 1
 }
 
 // sacrificeChoiceBaseNoun maps the selector kind (or a card-type union such as
@@ -401,6 +417,19 @@ func sacrificeChoiceBaseNoun(selection *SelectionSyntax, plural bool) (string, b
 		}
 		return joinOrList(words), true
 	}
+	// A token named by no type at all ("a token") or by a subtype ("a Blood
+	// token") renders the "token" word last. The bare form matches any token; the
+	// subtype form matches that token subtype through the SubtypesAny filter.
+	if sacrificeTokenSuffixForm(selection) {
+		noun := "token"
+		if len(selection.SubtypesAny) == 1 {
+			noun = string(selection.SubtypesAny[0]) + " token"
+		}
+		if plural {
+			noun += "s"
+		}
+		return noun, true
+	}
 	// A bare subtype names the permanent by its subtype alone, with no card-type
 	// kind: an artifact token ("a Treasure"/"a Food"), a land type ("a Forest"),
 	// or a creature subtype ("a Goblin"). The subtype noun is printed verbatim
@@ -409,6 +438,7 @@ func sacrificeChoiceBaseNoun(selection *SelectionSyntax, plural bool) (string, b
 	// byte-exact reconstruction and stay unsupported.
 	if selection.Kind == SelectionUnknown &&
 		len(selection.RequiredTypesAny) == 0 &&
+		len(selection.ExcludedTypes) == 0 &&
 		len(selection.SubtypesAny) == 1 {
 		noun := string(selection.SubtypesAny[0])
 		if plural {
@@ -433,6 +463,21 @@ func sacrificeChoiceBaseNoun(selection *SelectionSyntax, plural bool) (string, b
 	}
 	if plural {
 		noun += "s"
+	}
+	// A single excluded card type renders as a "non<type>" prefix ("nonland
+	// permanent", "noncreature artifact", "nonartifact creature"). The runtime
+	// sacrifice selection matches it through the ExcludedTypes filter. More than
+	// one excluded type has no canonical sacrifice wording, so it fails closed.
+	switch len(selection.ExcludedTypes) {
+	case 0:
+	case 1:
+		word, ok := searchFilterCardTypeWord(selection.ExcludedTypes[0])
+		if !ok {
+			return "", false
+		}
+		noun = "non" + word + " " + noun
+	default:
+		return "", false
 	}
 	return noun, true
 }
