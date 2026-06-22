@@ -513,7 +513,7 @@ func TestLowerObjectConditionInvalidSemanticShapesFailClosed(t *testing.T) {
 			Predicate:     compiler.ConditionPredicateObjectMatches,
 			ObjectBinding: compiler.ReferenceBindingAmbiguous,
 			Selection: compiler.ConditionSelection{
-				RequiredTypes: []compiler.ConditionCardType{compiler.ConditionCardTypeCreature},
+				RequiredTypes: []types.Card{types.Creature},
 			},
 		},
 		{
@@ -528,7 +528,7 @@ func TestLowerObjectConditionInvalidSemanticShapesFailClosed(t *testing.T) {
 			Predicate:     compiler.ConditionPredicateObjectExists,
 			ObjectBinding: compiler.ReferenceBindingSource,
 			Selection: compiler.ConditionSelection{
-				RequiredTypes: []compiler.ConditionCardType{compiler.ConditionCardTypeCreature},
+				RequiredTypes: []types.Card{types.Creature},
 			},
 		},
 		{
@@ -537,7 +537,7 @@ func TestLowerObjectConditionInvalidSemanticShapesFailClosed(t *testing.T) {
 			Predicate:     compiler.ConditionPredicateObjectMatches,
 			ObjectBinding: compiler.ReferenceBindingSource,
 			Selection: compiler.ConditionSelection{
-				RequiredTypes: []compiler.ConditionCardType{compiler.ConditionCardTypeCreature},
+				RequiredTypes: []types.Card{types.Creature},
 				Tapped:        compiler.ConditionTriState(99),
 			},
 		},

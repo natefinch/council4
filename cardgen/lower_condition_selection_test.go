@@ -38,10 +38,10 @@ func TestLowerConditionSelectionRoutesThroughCanonicalProjector(t *testing.T) {
 		{
 			name: "shared cluster plus every rider extra",
 			selection: compiler.ConditionSelection{
-				RequiredTypes:       []compiler.ConditionCardType{compiler.ConditionCardTypeCreature},
-				Supertypes:          []compiler.ConditionSupertype{compiler.ConditionSupertypeLegendary},
+				RequiredTypes:       []types.Card{types.Creature},
+				Supertypes:          []types.Super{types.Legendary},
 				SubtypesAny:         []string{"Goblin"},
-				ColorsAny:           []compiler.ConditionColor{compiler.ConditionColorRed},
+				ColorsAny:           []color.Color{color.Red},
 				Tapped:              compiler.ConditionTriTrue,
 				CombatState:         compiler.ConditionCombatStateAttacking,
 				Keyword:             parser.KeywordFlying,
@@ -72,7 +72,7 @@ func TestLowerConditionSelectionRoutesThroughCanonicalProjector(t *testing.T) {
 		{
 			name: "kind-agnostic any-counter rider",
 			selection: compiler.ConditionSelection{
-				RequiredTypes: []compiler.ConditionCardType{compiler.ConditionCardTypeArtifact},
+				RequiredTypes: []types.Card{types.Artifact},
 				AnyCounter:    true,
 			},
 			want: game.Selection{

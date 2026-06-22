@@ -668,44 +668,6 @@ const (
 	ConditionEventHistoryWindowPreviousTurn
 )
 
-// ConditionCardType identifies a card type in a semantic condition Selection.
-type ConditionCardType uint8
-
-// Condition card types.
-const (
-	ConditionCardTypeUnknown ConditionCardType = iota
-	ConditionCardTypeArtifact
-	ConditionCardTypeBattle
-	ConditionCardTypeCreature
-	ConditionCardTypeEnchantment
-	ConditionCardTypeLand
-	ConditionCardTypePlaneswalker
-)
-
-// ConditionSupertype identifies a supertype in a semantic condition Selection.
-type ConditionSupertype uint8
-
-// Condition supertypes.
-const (
-	ConditionSupertypeUnknown ConditionSupertype = iota
-	ConditionSupertypeBasic
-	ConditionSupertypeSnow
-	ConditionSupertypeLegendary
-)
-
-// ConditionColor identifies a color in a semantic condition Selection.
-type ConditionColor uint8
-
-// Condition colors.
-const (
-	ConditionColorUnknown ConditionColor = iota
-	ConditionColorWhite
-	ConditionColorBlue
-	ConditionColorBlack
-	ConditionColorRed
-	ConditionColorGreen
-)
-
 // ConditionCounter identifies a counter kind in an event-subject condition.
 type ConditionCounter uint8
 
@@ -760,10 +722,10 @@ const (
 // ConditionSelection is the source-independent Selection vocabulary used by
 // semantic conditions. Subtype names are canonicalized during recognition.
 type ConditionSelection struct {
-	RequiredTypes     []ConditionCardType
-	Supertypes        []ConditionSupertype
+	RequiredTypes     []types.Card
+	Supertypes        []types.Super
 	SubtypesAny       []string
-	ColorsAny         []ConditionColor
+	ColorsAny         []color.Color
 	Colorless         bool
 	Multicolored      bool
 	TokenOnly         bool
