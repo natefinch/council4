@@ -1153,6 +1153,13 @@ const (
 	// existing kinds keep their wire values.
 	EffectRollDie
 	EffectRemoveFromCombat
+	// EffectExileIfLeaveBattlefield models the leaves-the-battlefield exile
+	// self-replacement "If it would leave the battlefield, exile it instead of
+	// putting it anywhere else." (Whip of Erebos). It lowers to a
+	// CreateReplacement bound to the affected object (a back-referenced object
+	// for "it", or the source for "this <type>"). Added last so existing kinds
+	// keep their wire values.
+	EffectExileIfLeaveBattlefield
 )
 
 // DurationKind identifies common continuous-effect durations.

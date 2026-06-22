@@ -775,6 +775,9 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseDrawDoublingReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawReplacementDig(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseLifeGainReplacement(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) {
+			return parseLeaveBattlefieldExileReplacement(sentence, tokens, atoms)
+		},
 		func() ([]EffectSyntax, bool) { return parseLifeLossReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePunisherEachLoseLifeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseLibraryTopReorderEffect(sentence, tokens, atoms) },
@@ -1605,6 +1608,69 @@ func matchLifeGainReplacement(tokens []shared.Token, atoms Atoms) (commaIndex in
 		}
 	}
 	return 0, EffectReplacementSyntax{}, false
+}
+
+// parseLeaveBattlefieldExileReplacement recognizes the leaves-the-battlefield
+// self-replacement "If it would leave the battlefield, exile it instead of
+// putting it anywhere else." (Whip of Erebos) and its "this <type>" self-applied
+// and shorter "...exile it instead." variants, emitting a single
+// EffectExileIfLeaveBattlefield effect so the leading would-leave condition does
+// not become a spurious activation/intervening condition of its own. The
+// matching condition boundary is suppressed by
+// conditionLeaveBattlefieldExileReplacementAt.
+func parseLeaveBattlefieldExileReplacement(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	context, ok := matchLeaveBattlefieldExileReplacement(tokens)
+	if !ok {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:       EffectExileIfLeaveBattlefield,
+		Context:    context,
+		Span:       shared.SpanOf(tokens),
+		ClauseSpan: shared.SpanOf(tokens),
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		References: referencesInSpan(atoms, shared.SpanOf(tokens)),
+		Exact:      true,
+	}}, true
+}
+
+// matchLeaveBattlefieldExileReplacement reports the effect context (referenced
+// object for "it", source for "this <type>") when tokens spell the
+// leaves-the-battlefield exile replacement "If <subject> would leave the
+// battlefield, exile it instead[ of putting it anywhere else]."
+func matchLeaveBattlefieldExileReplacement(tokens []shared.Token) (EffectContextKind, bool) {
+	if len(tokens) < 9 || tokens[len(tokens)-1].Kind != shared.Period || !equalWord(tokens[0], "if") {
+		return EffectContextUnknown, false
+	}
+	rest := tokens[1:]
+	subjectWidth := leaveBattlefieldReplacementSubjectWidth(rest)
+	if subjectWidth == 0 {
+		return EffectContextUnknown, false
+	}
+	idx := 1 + subjectWidth
+	if !effectWordsAt(tokens, idx, "would", "leave", "the", "battlefield") {
+		return EffectContextUnknown, false
+	}
+	idx += 4
+	if idx >= len(tokens) || tokens[idx].Kind != shared.Comma {
+		return EffectContextUnknown, false
+	}
+	result := tokens[idx+1 : len(tokens)-1]
+	if !leaveBattlefieldReplacementResult(result) {
+		return EffectContextUnknown, false
+	}
+	if equalWord(rest[0], "it") {
+		return EffectContextReferencedObject, true
+	}
+	return EffectContextSource, true
+}
+
+// leaveBattlefieldReplacementResult reports whether result spells the redirect
+// "exile it instead" or "exile it instead of putting it anywhere else".
+func leaveBattlefieldReplacementResult(result []shared.Token) bool {
+	return tokenWordsEqual(result, "exile", "it", "instead") ||
+		tokenWordsEqual(result, "exile", "it", "instead", "of", "putting", "it", "anywhere", "else")
 }
 
 // parseLifeLossReplacement recognizes the life-loss replacement "If an opponent

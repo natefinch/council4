@@ -221,3 +221,12 @@ func validateLinkedCardCondition(idx int, cond opt.V[CardCondition], published m
 	}
 	return fmt.Errorf("instruction[%d]: CardCondition references linked key %q not yet published", idx, key)
 }
+
+// PublishedLinkedKey reports the linked key a primitive records its acted-on
+// permanent under, or the empty key when it publishes none. It lets carddef
+// builders in other packages locate the permanent an earlier instruction
+// published under a linked key (to bind a later linked effect to it) without
+// re-inspecting each primitive's concrete type.
+func PublishedLinkedKey(primitive Primitive) LinkedKey {
+	return primitive.instructionRefs().publishesLinked
+}

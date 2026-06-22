@@ -375,6 +375,41 @@ func entersAsCopyCounterRiderConditionAt(tokens []shared.Token, i int) bool {
 	return entersAsCopyConditionalTypePrefix(normalizedWords(tokens[i:]))
 }
 
+// conditionLeaveBattlefieldExileReplacementAt reports whether the "if" at index
+// opens the leaves-the-battlefield self-replacement clause "if it would leave
+// the battlefield, exile it instead [of putting it anywhere else]." (Whip of
+// Erebos). That clause is recognized as a whole-sentence replacement effect by
+// parseLeaveBattlefieldExileReplacement, so its leading "if" must not also
+// surface as a standalone condition. The subject is "it" (a back-reference) or
+// "this <type>" (the source).
+func conditionLeaveBattlefieldExileReplacementAt(tokens []shared.Token, i int) bool {
+	if !equalWord(tokens[i], "if") || i+1 >= len(tokens) {
+		return false
+	}
+	rest := tokens[i+1:]
+	subjectWidth := leaveBattlefieldReplacementSubjectWidth(rest)
+	if subjectWidth == 0 {
+		return false
+	}
+	return effectWordsAt(rest, subjectWidth, "would", "leave", "the", "battlefield")
+}
+
+// leaveBattlefieldReplacementSubjectWidth reports the token width of the subject
+// that opens a leaves-the-battlefield replacement clause ("it" → 1, "this
+// <type>" → 2), or 0 when tokens do not begin with such a subject.
+func leaveBattlefieldReplacementSubjectWidth(tokens []shared.Token) int {
+	if len(tokens) == 0 {
+		return 0
+	}
+	if equalWord(tokens[0], "it") {
+		return 1
+	}
+	if len(tokens) >= 2 && equalWord(tokens[0], "this") {
+		return 2
+	}
+	return 0
+}
+
 // entersAsCopyConditionalTypePrefix reports whether words begins with the
 // "if it's a <type>" / "if it is a <type>" predicate of a conditional copiable
 // counter rider, where <type> is a recognized card type.

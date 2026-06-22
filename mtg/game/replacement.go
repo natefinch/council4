@@ -517,6 +517,16 @@ type ReplacementEffect struct {
 	// It is empty when every card is redirected. It is only meaningful when
 	// ContinuousZoneRedirect is true.
 	RedirectTypeFilter []types.Card
+
+	// AffectedObjectID restricts the replacement to events about a single
+	// permanent identified by its object ID. When non-zero, the replacement
+	// matches only an event whose moving permanent is exactly this object,
+	// backing a dynamically created replacement bound to one specific permanent
+	// ("If it would leave the battlefield, exile it instead of putting it
+	// anywhere else." applied to a just-reanimated creature — Whip of Erebos).
+	// It is zero for every printed or unscoped replacement, which match by their
+	// other filters alone.
+	AffectedObjectID id.ID
 }
 
 // EntryTypeChoiceKey is the ChoiceKey under which an entry-time creature-type

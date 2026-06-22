@@ -429,6 +429,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectAdditionalCombatPhase
 	case parser.EffectRollDie:
 		return EffectRollDie
+	case parser.EffectExileIfLeaveBattlefield:
+		return EffectExileIfLeaveBattlefield
 	case parser.EffectMassReanimationExchange:
 		return EffectMassReanimationExchange
 	case parser.EffectPunisherLoseLife:

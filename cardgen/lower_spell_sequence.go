@@ -2032,6 +2032,10 @@ func lowerDelayedSequenceClause(
 		sequence[len(sequence)-1].Primitive = publisher
 		return grant, true, false
 	}
+	if publisher, replacement, ok := lowerSequentialLeaveBattlefieldExileReplacement(effectIndex, ctx, sequence); ok {
+		sequence[len(sequence)-1].Primitive = publisher
+		return replacement, true, false
+	}
 	if exile, delayed, ok := lowerDelayedBlinkReturn(effects, effectIndex, ctx, sequence); ok {
 		sequence[len(sequence)-1].Primitive = exile
 		return delayed, true, false
@@ -2559,6 +2563,92 @@ func lowerSequentialReferencedKeywordGrant(
 		Duration: game.DurationPermanent,
 	}
 	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: grant}}}.Ability(), true
+}
+
+// isLeaveBattlefieldExileReplacementEffect reports whether effect is the exact
+// leaves-the-battlefield exile replacement "If it would leave the battlefield,
+// exile it instead of putting it anywhere else." applied to the permanent an
+// earlier clause in the same sequence acted on (Whip of Erebos). "It" binds to
+// that earlier permanent.
+func isLeaveBattlefieldExileReplacementEffect(effect *compiler.CompiledEffect) bool {
+	return effect.Kind == compiler.EffectExileIfLeaveBattlefield &&
+		effect.Exact &&
+		!effect.Negated &&
+		effect.Context == parser.EffectContextReferencedObject &&
+		referencesBindTo(effect.References, compiler.ReferenceBindingTarget, 0)
+}
+
+// lowerSequentialLeaveBattlefieldExileReplacement lowers an "If it would leave
+// the battlefield, exile it instead of putting it anywhere else." clause that
+// redirects any zone change off the battlefield to exile for the permanent an
+// earlier clause in the same sequence put onto the battlefield or otherwise
+// acted on (Whip of Erebos's reanimated creature). "It" binds to that earlier
+// permanent, which (for a reanimation) is a freshly created object a plain
+// target-permanent reference cannot resolve, so the lowering reuses the linked
+// key under which an earlier clause already recorded the permanent, or rewrites
+// the immediately-prior instruction to publish it. The created replacement is a
+// CreateReplacement bound to that linked object. It returns the (possibly
+// rewritten) prior publishing primitive and the replacement content, or false to
+// fail closed so the caller lowers the clause normally.
+func lowerSequentialLeaveBattlefieldExileReplacement(
+	effectIndex int,
+	ctx contentCtx,
+	sequence []game.Instruction,
+) (game.Primitive, game.AbilityContent, bool) {
+	if effectIndex == 0 ||
+		len(sequence) != effectIndex ||
+		len(ctx.content.Effects) != 1 ||
+		ctx.optional ||
+		!isLeaveBattlefieldExileReplacementEffect(&ctx.content.Effects[0]) {
+		return nil, game.AbilityContent{}, false
+	}
+	key, publisher, ok := reuseOrPublishLinkedPermanent(effectIndex, sequence)
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	consumed := ctx
+	consumed.content.References = nil
+	consumed.content.Targets = nil
+	if consumed.content.Unconsumed() {
+		return nil, game.AbilityContent{}, false
+	}
+	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+		TargetLinkedKey: key,
+	})
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	create := game.CreateReplacement{
+		Object: object,
+		Replacement: &game.ReplacementEffect{
+			MatchEvent:    game.EventZoneChanged,
+			MatchFromZone: true,
+			FromZone:      zone.Battlefield,
+			ReplaceToZone: zone.Exile,
+		},
+	}
+	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: create}}}.Ability(), true
+}
+
+// reuseOrPublishLinkedPermanent locates the permanent an earlier clause in the
+// sequence recorded under a linked key so a later linked effect can bind to it.
+// It scans backward for the most recent already-published linked key and reuses
+// it (returning the immediately-prior primitive unchanged); when none exists it
+// rewrites the immediately-prior instruction to publish its acted-on permanent
+// under a fresh key. It returns the key, the primitive to store at the prior
+// instruction slot, and false when the prior instruction cannot be linked.
+func reuseOrPublishLinkedPermanent(effectIndex int, sequence []game.Instruction) (game.LinkedKey, game.Primitive, bool) {
+	for i := effectIndex - 1; i >= 0; i-- {
+		if key := game.PublishedLinkedKey(sequence[i].Primitive); key != "" {
+			return key, sequence[effectIndex-1].Primitive, true
+		}
+	}
+	key := game.LinkedKey(fmt.Sprintf("leave-bf-exile-%d", effectIndex))
+	publisher, ok := publishLinkedTargetPermanent(sequence[effectIndex-1].Primitive, key)
+	if !ok {
+		return "", nil, false
+	}
+	return key, publisher, true
 }
 
 // primitive that targets a permanent so it records that permanent under key for a

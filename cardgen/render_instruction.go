@@ -452,6 +452,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", errors.New("render: internal error: CreateDelayedTrigger kind has unexpected concrete type")
 		}
 		return r.renderCreateDelayedTrigger(ctx, value)
+	case game.PrimitiveCreateReplacement:
+		value, ok := primitive.(game.CreateReplacement)
+		if !ok {
+			return "", errors.New("render: internal error: CreateReplacement kind has unexpected concrete type")
+		}
+		return r.renderCreateReplacement(value)
 	case game.PrimitiveApplyContinuous:
 		value, ok := primitive.(game.ApplyContinuous)
 		if !ok {
