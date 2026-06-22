@@ -602,7 +602,7 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		(pattern.ExcludeToZone && !allowZoneChangeZones) ||
 		(pattern.MatchToZone && pattern.ExcludeToZone) ||
 		pattern.DamageRecipientCombatState != game.CombatStateAny ||
-		pattern.SpellTargetsSource ||
+		(pattern.SpellTargetsSource && pattern.Event != game.EventSpellCast) ||
 		pattern.SpellTargetAllow != game.TargetAllowUnspecified ||
 		pattern.SpellTargetPattern.Exists ||
 		(pattern.RequireKickerPaid && pattern.Event != game.EventSpellCast) ||
@@ -723,6 +723,9 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 	}
 	if pattern.MatchSpellCopy {
 		fields = append(fields, "MatchSpellCopy: true,")
+	}
+	if pattern.SpellTargetsSource {
+		fields = append(fields, "SpellTargetsSource: true,")
 	}
 	if pattern.RequireTappedForMana {
 		fields = append(fields, "RequireTappedForMana: true,")

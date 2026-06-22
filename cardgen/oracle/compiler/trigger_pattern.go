@@ -360,6 +360,11 @@ type TriggerPattern struct {
 	// events ("Whenever you cast or copy ...", magecraft).
 	MatchSpellCopy bool
 
+	// SpellTargetsSource restricts a spell-cast pattern to spells that target
+	// the source permanent ("Whenever you cast a spell that targets this
+	// creature", the Heroic ability word).
+	SpellTargetsSource bool
+
 	// TappedForMana restricts a permanent-tapped pattern to taps that paid a
 	// mana ability's cost ("is tapped for mana").
 	TappedForMana bool

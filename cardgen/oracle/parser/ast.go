@@ -674,6 +674,11 @@ type TriggerEventClause struct {
 	// Kind event or the UnionKind event occurs. It is empty for single-event
 	// clauses.
 	UnionKind TriggerEventKind `json:",omitempty"`
+	// SpellTargetsSource is set on a spell-cast clause whose "that targets this
+	// creature" / "that targets <source name>" wording restricts the trigger to
+	// spells that target the source permanent (CR 603.2e, the Heroic ability
+	// word). It is empty for unrestricted spell-cast clauses.
+	SpellTargetsSource bool `json:",omitempty"`
 }
 
 // EventHistoryWindowKind identifies the turn window for an event-history
