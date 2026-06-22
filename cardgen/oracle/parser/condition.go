@@ -49,6 +49,7 @@ const (
 	ConditionPredicateEventSubjectHadCounters                          ConditionPredicateKind = "ConditionPredicateEventSubjectHadCounters"
 	ConditionPredicatePriorInstructionNotAccepted                      ConditionPredicateKind = "ConditionPredicatePriorInstructionNotAccepted"
 	ConditionPredicatePriorInstructionAccepted                         ConditionPredicateKind = "ConditionPredicatePriorInstructionAccepted"
+	ConditionPredicateDestroyedThisWay                                 ConditionPredicateKind = "ConditionPredicateDestroyedThisWay"
 	ConditionPredicateEventPlayerDoesNotPay                            ConditionPredicateKind = "ConditionPredicateEventPlayerDoesNotPay"
 	ConditionPredicateCounterPlacementOnControlledCreature             ConditionPredicateKind = "ConditionPredicateCounterPlacementOnControlledCreature"
 	ConditionPredicateControllerCounterPlacement                       ConditionPredicateKind = "ConditionPredicateControllerCounterPlacement"
@@ -536,11 +537,14 @@ func recognizePriorInstructionCondition(body []shared.Token, _ Atoms) (Condition
 // <permanent noun> is destroyed this way" (and the plural "are" form) that
 // follows a preceding optional destroy effect, as in Noxious Gearhulk's "you may
 // destroy another target creature. If a creature is destroyed this way, you gain
-// life equal to its toughness." It is the outcome-worded equivalent of "if you
-// do": the gate holds exactly when the prior destroy actually moved a permanent
-// to the graveyard, so it maps to the same prior-instruction success predicate.
-// The noun is the descriptive type of what the prior clause destroyed and carries
-// no selection of its own. It fails closed on any other wording.
+// life equal to its toughness." It maps to its own predicate distinct from the
+// literal "if you do" gate: the noun names only a descriptive subset of what the
+// prior clause could have destroyed (e.g. "if an artifact is destroyed this way"
+// after "destroy target artifact or land"), so it is the resolving-success
+// equivalent of "if you do" only when that noun matches every possible destroyed
+// object. The lowering treats it as an "if you do" gate solely for the existing
+// optional-destroy shape and fails closed elsewhere. It fails closed on any other
+// wording.
 func recognizeDestroyedThisWayCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
 	rest, ok := cutTokenPrefix(body, "a")
 	if !ok {
@@ -560,7 +564,7 @@ func recognizeDestroyedThisWayCondition(body []shared.Token, _ Atoms) (Condition
 	if !tokenWordsEqual(rest[1:], copula, "destroyed", "this", "way") {
 		return ConditionClause{}, false
 	}
-	return ConditionClause{Predicate: ConditionPredicatePriorInstructionAccepted}, true
+	return ConditionClause{Predicate: ConditionPredicateDestroyedThisWay}, true
 }
 
 // recognizeCastTimingCondition handles the Addendum cast-timing gate "you cast

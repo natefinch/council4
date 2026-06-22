@@ -862,18 +862,29 @@ const optionalIfYouDoResultKey = game.ResultKey("if-you-do")
 //     shape.
 //
 // bareIndex is -1 whenever the bare shape does not apply.
+//
+// publishWithoutOptional selects a third, mandatory shape: "X. If you do, Y."
+// where the leading effect at optionalIndex is not optional but can fail to do
+// anything ("exile it. If you do, create a token"). The leading effect publishes
+// whether it succeeded (without being made Optional) and the gated tail is gated
+// on that success, exactly like the enabled optional shape.
 type optionalFlowPlan struct {
-	enabled       bool
-	optionalIndex int
-	gateIndex     int
-	gateCondition int
-	bareIndex     int
+	enabled                bool
+	optionalIndex          int
+	gateIndex              int
+	gateCondition          int
+	bareIndex              int
+	publishWithoutOptional bool
 }
 
 // marksOptional reports whether the optional flow marks the instruction produced
 // by effect i Optional: the optional effect of an "if you do" pair, or the
-// trailing bare optional effect.
+// trailing bare optional effect. The mandatory publish-without-optional shape
+// publishes its leading effect's result but never marks it Optional.
 func (p optionalFlowPlan) marksOptional(i int) bool {
+	if p.publishWithoutOptional {
+		return false
+	}
 	return (p.enabled && i == p.optionalIndex) || i == p.bareIndex
 }
 
@@ -903,14 +914,19 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 		}
 	}
 	if optionalIndex == -1 {
+		if plan, ok, handled := planMandatoryIfYouDoFlow(content); handled {
+			return plan, ok
+		}
 		return optionalFlowPlan{bareIndex: -1}, true
 	}
-	// Count "if you do" (prior-instruction-accepted) conditions. Their presence
-	// selects the gated "you may X. If you do, Y" shape; their absence selects
-	// the bare trailing-optional shape.
+	// Count "if you do" (prior-instruction-accepted) conditions, including the
+	// outcome-worded "a <type> is destroyed this way" gate that the optional-
+	// destroy shape (Noxious Gearhulk) treats identically. Their presence selects
+	// the gated "you may X. If you do, Y" shape; their absence selects the bare
+	// trailing-optional shape.
 	priorAcceptedConditions := 0
 	for ci := range content.Conditions {
-		if content.Conditions[ci].Predicate == compiler.ConditionPredicatePriorInstructionAccepted {
+		if isResolvingSuccessGate(content.Conditions[ci].Predicate) {
 			priorAcceptedConditions++
 		}
 	}
@@ -936,7 +952,7 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 	gateCondition := -1
 	for ci := range content.Conditions {
 		condition := content.Conditions[ci]
-		if condition.Predicate != compiler.ConditionPredicatePriorInstructionAccepted {
+		if !isResolvingSuccessGate(condition.Predicate) {
 			continue
 		}
 		if gateCondition != -1 ||
@@ -978,6 +994,90 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 	}, true
 }
 
+// isResolvingSuccessGate reports whether a condition predicate is the affirmative
+// "if you do" resolving-success gate, either the literal "if you do" or the
+// outcome-worded "a <type> is destroyed this way". Both gate trailing effects on
+// the immediately preceding effect having succeeded; the destroyed-this-way form
+// is accepted only in the optional-destroy shape where the destroyed type matches
+// the destroy target, and the mandatory result flow accepts only the literal form.
+func isResolvingSuccessGate(predicate compiler.ConditionPredicate) bool {
+	return predicate == compiler.ConditionPredicatePriorInstructionAccepted ||
+		predicate == compiler.ConditionPredicateDestroyedThisWay
+}
+
+// planMandatoryIfYouDoFlow detects a mandatory "X. If you do, Y." result gate,
+// where the leading effect is not optional but can fail to do anything ("exile
+// it. If you do, create a token" — the exile is mandatory yet does nothing if
+// the source already left the battlefield). The leading effect publishes whether
+// it succeeded and the trailing "if you do" effects are gated on that success,
+// exactly like the optional "you may X. If you do, Y." pair (CR 608.2c).
+//
+// handled is false when the sequence carries no "if you do" gate, so the caller
+// proceeds with normal ungated lowering. When an "if you do" gate is present but
+// does not form a supported mandatory pair, it returns handled=true with ok=false
+// so the caller fails closed rather than dropping the gate.
+func planMandatoryIfYouDoFlow(content compiler.AbilityContent) (plan optionalFlowPlan, ok bool, handled bool) {
+	gateCondition := -1
+	for ci := range content.Conditions {
+		condition := content.Conditions[ci]
+		if condition.Predicate != compiler.ConditionPredicatePriorInstructionAccepted {
+			continue
+		}
+		if gateCondition != -1 ||
+			condition.Kind != compiler.ConditionIf ||
+			condition.Negated ||
+			condition.Intervening {
+			return optionalFlowPlan{}, false, true
+		}
+		gateCondition = ci
+	}
+	if gateCondition == -1 {
+		return optionalFlowPlan{}, false, false
+	}
+	gateConditionOrder := content.Conditions[gateCondition].Order
+	// The gated "if you do" effects are the contiguous tail whose clause Order
+	// contains the gate condition; the publishing effect is the one immediately
+	// before that tail.
+	gateIndex := -1
+	for i := range content.Effects {
+		if content.Effects[i].Order.Contains(gateConditionOrder) {
+			gateIndex = i
+			break
+		}
+	}
+	if gateIndex <= 0 {
+		return optionalFlowPlan{}, false, true
+	}
+	publishIndex := gateIndex - 1
+	// The publishing effect must be a plain mandatory effect that does not itself
+	// belong to the gated clause.
+	if content.Effects[publishIndex].Optional ||
+		content.Effects[publishIndex].Negated ||
+		content.Effects[publishIndex].DelayedTiming != 0 ||
+		content.Effects[publishIndex].Order.Contains(gateConditionOrder) {
+		return optionalFlowPlan{}, false, true
+	}
+	// Every effect from the gate index onward must belong to the single "if you
+	// do" clause, mirroring planOptionalFlow's contiguous-tail requirement so an
+	// independent ungated effect cannot silently resolve as though gated.
+	for i := gateIndex; i < len(content.Effects); i++ {
+		if content.Effects[i].Optional ||
+			content.Effects[i].Negated ||
+			content.Effects[i].DelayedTiming != 0 ||
+			!content.Effects[i].Order.Contains(gateConditionOrder) {
+			return optionalFlowPlan{}, false, true
+		}
+	}
+	return optionalFlowPlan{
+		enabled:                true,
+		optionalIndex:          publishIndex,
+		gateIndex:              gateIndex,
+		gateCondition:          gateCondition,
+		bareIndex:              -1,
+		publishWithoutOptional: true,
+	}, true, true
+}
+
 // applyBareOptional marks the single instruction produced by a trailing bare
 // "you may X" effect Optional so the engine asks the controller whether to
 // perform it. It fails closed unless the effect lowered to exactly one
@@ -1006,6 +1106,21 @@ func applyOptionalFlowPublish(sequence []game.Instruction) bool {
 		return false
 	}
 	sequence[0].Optional = true
+	sequence[0].PublishResult = optionalIfYouDoResultKey
+	return true
+}
+
+// applyResultFlowPublish publishes the single instruction produced by the leading
+// effect of a mandatory "X. If you do, Y." pair under optionalIfYouDoResultKey
+// without marking it Optional. It fails closed unless the effect lowered to
+// exactly one instruction with no existing envelope wiring.
+func applyResultFlowPublish(sequence []game.Instruction) bool {
+	if len(sequence) != 1 ||
+		sequence[0].Optional ||
+		sequence[0].PublishResult != "" ||
+		sequence[0].ResultGate.Exists {
+		return false
+	}
 	sequence[0].PublishResult = optionalIfYouDoResultKey
 	return true
 }
@@ -1056,8 +1171,14 @@ func optionalFlowGateConditions(
 // sequence fail closed.
 func applyOptionalFlowEnvelope(plan optionalFlowPlan, i int, sequence []game.Instruction) (string, bool) {
 	if plan.enabled {
-		if i == plan.optionalIndex && !applyOptionalFlowPublish(sequence) {
-			return "structural — optional effect not single-instruction", false
+		if i == plan.optionalIndex {
+			if plan.publishWithoutOptional {
+				if !applyResultFlowPublish(sequence) {
+					return "structural — result effect not single-instruction", false
+				}
+			} else if !applyOptionalFlowPublish(sequence) {
+				return "structural — optional effect not single-instruction", false
+			}
 		}
 		if plan.gates(i) && !applyOptionalFlowGate(sequence) {
 			return "structural — if-you-do gate not applicable", false
