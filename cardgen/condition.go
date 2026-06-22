@@ -2,7 +2,6 @@ package cardgen
 
 import (
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
-	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
@@ -349,47 +348,34 @@ func lowerComparisonScope(scope compiler.ConditionComparisonScope) (game.Control
 	}
 }
 
+// lowerConditionSelection projects a condition-filter onto the canonical
+// game.Selection. It is a thin adapter over the shared SelectionForSelector
+// projector: conditionSelectionSelector translates the parallel
+// ConditionSelection clone enums into a compiler.CompiledSelector,
+// SelectionForSelectorMasked maps that shared dimension cluster
+// (types/supertypes/subtypes/colors/colorless/multicolored/tapped/combat/keyword)
+// onto the runtime Selection, and the genuine condition-specific extras are
+// applied as a documented rider afterward. Routing the shared cluster through
+// the canonical projector keeps condition filters in lockstep with every other
+// selector context instead of maintaining a second hand-written projector.
 func lowerConditionSelection(selection compiler.ConditionSelection) (game.Selection, bool) {
-	required, ok := lowerConditionCardTypes(selection.RequiredTypes)
+	selector, ok := conditionSelectionSelector(selection)
 	if !ok {
 		return game.Selection{}, false
 	}
-	supertypes, ok := lowerConditionSupertypes(selection.Supertypes)
+	result, ok := SelectionForSelectorMasked(selector, SelectionMask{})
 	if !ok {
 		return game.Selection{}, false
 	}
-	colors, ok := lowerConditionColors(selection.ColorsAny)
-	if !ok {
-		return game.Selection{}, false
-	}
-	tapped, ok := lowerConditionTriState(selection.Tapped)
-	if !ok {
-		return game.Selection{}, false
-	}
-	combatState, ok := lowerConditionCombatState(selection.CombatState)
-	if !ok {
-		return game.Selection{}, false
-	}
-	subtypes := make([]types.Sub, 0, len(selection.SubtypesAny))
-	for _, subtype := range selection.SubtypesAny {
-		if subtype == "" {
-			return game.Selection{}, false
-		}
-		subtypes = append(subtypes, types.Sub(subtype))
-	}
-	result := game.Selection{
-		RequiredTypes:   required,
-		Supertypes:      supertypes,
-		SubtypesAny:     subtypes,
-		ColorsAny:       colors,
-		Colorless:       selection.Colorless,
-		Multicolored:    selection.Multicolored,
-		TokenOnly:       selection.TokenOnly,
-		ExcludeSource:   selection.ExcludeSource,
-		Tapped:          tapped,
-		CombatState:     combatState,
-		MatchAnyCounter: selection.AnyCounter,
-	}
+	// Per-context extras kept on the projector result (umbrella #1414):
+	// AnyCounter (MatchAnyCounter), the named-counter count threshold
+	// (RequiredCounter + RequiredCounterCount), ExcludeSource, the power-at-least
+	// bound (Power), and TokenOnly. None of these round-trip byte-identically
+	// through CompiledSelector here (the counter-count threshold has no selector
+	// field at all), so they ride directly on the shared-core result.
+	result.MatchAnyCounter = selection.AnyCounter
+	result.ExcludeSource = selection.ExcludeSource
+	result.TokenOnly = selection.TokenOnly
 	if selection.CounterKindKnown {
 		result.RequiredCounter = selection.CounterKind
 		result.RequiredCounterCount = opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: selection.CounterCountAtLeast})
@@ -399,14 +385,84 @@ func lowerConditionSelection(selection compiler.ConditionSelection) (game.Select
 	} else if selection.PowerAtLeast != 0 {
 		return game.Selection{}, false
 	}
-	if selection.Keyword != parser.KeywordUnknown {
-		keyword, ok := runtimeKeyword(selection.Keyword)
-		if !ok {
-			return game.Selection{}, false
-		}
-		result.Keyword = keyword
-	}
 	return result, len(result.Validate()) == 0
+}
+
+// conditionSelectionSelector translates a ConditionSelection's shared-enum
+// filter dimensions into a compiler.CompiledSelector. It reuses the per-enum
+// lower* helpers and fails closed on any clone-enum value they cannot translate.
+// The condition extras (counters, ExcludeSource, the power-at-least bound, and
+// TokenOnly) are applied by lowerConditionSelection directly because they do not
+// round-trip through CompiledSelector.
+func conditionSelectionSelector(selection compiler.ConditionSelection) (compiler.CompiledSelector, bool) {
+	required, ok := lowerConditionCardTypes(selection.RequiredTypes)
+	if !ok {
+		return compiler.CompiledSelector{}, false
+	}
+	supertypes, ok := lowerConditionSupertypes(selection.Supertypes)
+	if !ok {
+		return compiler.CompiledSelector{}, false
+	}
+	colors, ok := lowerConditionColors(selection.ColorsAny)
+	if !ok {
+		return compiler.CompiledSelector{}, false
+	}
+	tapped, ok := lowerConditionTriState(selection.Tapped)
+	if !ok {
+		return compiler.CompiledSelector{}, false
+	}
+	combatState, ok := lowerConditionCombatState(selection.CombatState)
+	if !ok {
+		return compiler.CompiledSelector{}, false
+	}
+	subtypes := make([]types.Sub, 0, len(selection.SubtypesAny))
+	for _, subtype := range selection.SubtypesAny {
+		if subtype == "" {
+			return compiler.CompiledSelector{}, false
+		}
+		subtypes = append(subtypes, types.Sub(subtype))
+	}
+
+	selector := compiler.CompiledSelector{
+		Kind:         compiler.SelectorPermanent,
+		Colorless:    selection.Colorless,
+		Multicolored: selection.Multicolored,
+		// A condition's required-type nouns are conjunctive (the matched
+		// permanent must carry every named type at once), matching the legacy
+		// projector that put them in Selection.RequiredTypes. ConjunctiveTypes
+		// makes SelectionForSelectorMasked fold RequiredTypesAny into the
+		// conjunctive RequiredTypes field.
+		ConjunctiveTypes: true,
+		Keyword:          selection.Keyword,
+	}
+
+	switch tapped {
+	case game.TriTrue:
+		selector.Tapped = true
+	case game.TriFalse:
+		selector.Untapped = true
+	default:
+	}
+
+	switch combatState {
+	case game.CombatStateAttacking:
+		selector.Attacking = true
+	case game.CombatStateBlocking:
+		selector.Blocking = true
+	case game.CombatStateAttackingOrBlocking:
+		selector.Attacking = true
+		selector.Blocking = true
+	default:
+	}
+
+	selector = selector.WithAtoms(compiler.CompiledSelectorAtoms{
+		RequiredTypesAny: required,
+		Supertypes:       supertypes,
+		SubtypesAny:      subtypes,
+		ColorsAny:        colors,
+	})
+
+	return selector, true
 }
 
 func lowerConditionObjectReference(binding compiler.ReferenceBinding) (game.ObjectReference, bool) {
