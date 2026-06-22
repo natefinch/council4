@@ -93,6 +93,18 @@ func TestGenerateExecutableExileUntilLeavesTargetWordings(t *testing.T) {
 			oracleText: "When Angel of Sanctions enters, you may exile target nonland permanent an opponent controls until Angel of Sanctions leaves the battlefield.",
 			wantOpt:    true,
 		},
+		{
+			name:       "Test Nontoken Prison",
+			typeLine:   "Creature — Cleric",
+			manaCost:   "{1}{W}{W}",
+			oracleText: "When this creature enters, exile target nontoken creature an opponent controls until this creature leaves the battlefield.",
+		},
+		{
+			name:       "Test Vehicle Prison",
+			typeLine:   "Artifact — Vehicle",
+			manaCost:   "{2}{W}",
+			oracleText: "When this Vehicle enters, exile target artifact or creature an opponent controls until this Vehicle leaves the battlefield.",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -137,5 +149,47 @@ func TestGenerateExecutableExileUntilLeavesTargetWordings(t *testing.T) {
 				t.Fatalf("unexpected Optional on non-optional wording:\n%s", source)
 			}
 		})
+	}
+}
+
+// TestGenerateExecutableSagaChapterExileUntilLeaves verifies that the O-Ring
+// exile-until-leaves clause is supported inside a Saga chapter ability ("I — Exile
+// target ... until this Saga leaves the battlefield.", e.g. Summon: Ixion, Trial
+// of a Time Lord). The chapter publishes the linked exile under the source and
+// the face-level synthesis appends a paired "when this Saga leaves the
+// battlefield" return trigger that reads the same linked key.
+func TestGenerateExecutableSagaChapterExileUntilLeaves(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:     "Test Exile Saga",
+		Layout:   "normal",
+		ManaCost: "{1}{W}{W}",
+		TypeLine: "Enchantment — Saga",
+		Colors:   []string{"W"},
+		OracleText: "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\n" +
+			"I, II, III — Exile target nontoken creature an opponent controls until this Saga leaves the battlefield.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "o")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"ChapterAbilities: []game.ChapterAbility",
+		"Chapters: []int{1, 2, 3}",
+		"Primitive: game.Exile",
+		`ExileLinkedKey: game.LinkedKey("exile-until-leaves")`,
+		"nontoken creature",
+		"NonToken:",
+		"TriggeredAbilities: []game.TriggeredAbility",
+		"game.EventZoneChanged",
+		"Primitive: game.PutOnBattlefield",
+		`game.LinkedBattlefieldSource(game.LinkedKey("exile-until-leaves"))`,
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("source missing %q:\n%s", want, source)
+		}
 	}
 }

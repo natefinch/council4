@@ -240,6 +240,9 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 	if predicate.TokenOnly {
 		fields = append(fields, "TokenOnly: true,")
 	}
+	if predicate.NonToken {
+		fields = append(fields, "NonToken: true,")
+	}
 	if len(fields) == 0 {
 		return "", false, nil
 	}

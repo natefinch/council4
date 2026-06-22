@@ -181,7 +181,7 @@ func TestLowerImmediateBlinkRejectsUnsupportedVariants(t *testing.T) {
 		// counter rider is unmodeled, so the body must fail closed.
 		"Exile target creature. At the beginning of the next end step, return it to the battlefield under its owner's control with a +1/+1 counter on it.",
 		// Exile of a non-supported selector still blocks the sequence.
-		"Exile target nontoken permanent, then return it to the battlefield under its owner's control.",
+		"Exile target multicolored permanent, then return it to the battlefield under its owner's control.",
 	} {
 		t.Run(text, func(t *testing.T) {
 			t.Parallel()

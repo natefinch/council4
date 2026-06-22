@@ -147,4 +147,9 @@ type TargetPredicate struct {
 	// TokenOnly restricts the match to a token permanent ("target token"). It
 	// mirrors Selection.TokenOnly and is enforced through Selection().
 	TokenOnly bool
+
+	// NonToken restricts the match to a non-token permanent ("target nontoken
+	// creature"). It mirrors Selection.NonToken and is enforced through
+	// Selection().
+	NonToken bool
 }

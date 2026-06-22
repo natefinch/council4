@@ -965,6 +965,9 @@ func permanentTargetSpecWithCardinality(target compiler.CompiledTarget) (game.Ta
 	if target.Selector.TokenOnly {
 		spec.Predicate.TokenOnly = true
 	}
+	if target.Selector.NonToken {
+		spec.Predicate.NonToken = true
+	}
 
 	switch {
 	case target.Selector.Attacking && target.Selector.Blocking:

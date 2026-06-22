@@ -271,10 +271,27 @@ func pronounKind(token shared.Token) PronounKind {
 // any target."), so that subtype is a self marker even though it is not a
 // generic object noun valid after "that".
 func referenceSelfMarkerNoun(token shared.Token) bool {
-	if equalWord(token, "saga") {
+	if referenceObjectNoun(token) {
 		return true
 	}
-	return referenceObjectNoun(token)
+	return referenceSelfTypeNoun(token)
+}
+
+// referenceSelfTypeNoun reports whether token is a permanent card type or
+// subtype word that names the source permanent only in the "this <type>"
+// self-reference form ("this Aura", "this Vehicle", "this Saga"). These words
+// are not general object nouns (a spell never targets "an Aura"), so they are
+// matched here for self markers only, leaving ordinary target parsing untouched.
+func referenceSelfTypeNoun(token shared.Token) bool {
+	if token.Kind != shared.Word {
+		return false
+	}
+	switch strings.ToLower(token.Text) {
+	case "aura", "vehicle", "saga":
+		return true
+	default:
+		return false
+	}
 }
 
 func referenceObjectNoun(token shared.Token) bool {
