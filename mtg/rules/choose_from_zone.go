@@ -30,11 +30,11 @@ func (r *effectResolver) resolveChooseFromZone(env game.ChooseFromZone) effectRe
 		return res
 	}
 	candidates := r.chooseFromZoneCandidates(env, playerID)
+	if env.Riders.PublishLinked != "" {
+		clearLinkedObjects(r.game, r.chooseFromZonePublishKey(env))
+	}
 	if len(candidates) == 0 {
 		return res
-	}
-	if env.Riders.PublishLinked != "" {
-		clearLinkedObjects(r.game, r.chooseFromZoneLinkedKey(env.Riders.PublishLinked))
 	}
 	switch env.Grouping {
 	case game.ChooseSplitDestination:
@@ -380,7 +380,18 @@ func (r *effectResolver) chooseFromZonePublish(env game.ChooseFromZone, cardID i
 	if env.Riders.PublishLinked == "" {
 		return
 	}
-	rememberLinkedObject(r.game, r.chooseFromZoneLinkedKey(env.Riders.PublishLinked), game.LinkedObjectRef{CardID: cardID})
+	rememberLinkedObject(r.game, r.chooseFromZonePublishKey(env), game.LinkedObjectRef{CardID: cardID})
+}
+
+// chooseFromZonePublishKey derives the key under which PublishLinked remembers
+// chosen cards. PublishObjectScoped selects the source permanent's object
+// identity (imprint scoping, Chrome Mox); otherwise the card-identity source key
+// is used. FromLinked always uses the source key (chooseFromZoneLinkedKey).
+func (r *effectResolver) chooseFromZonePublishKey(env game.ChooseFromZone) game.LinkedObjectKey {
+	if env.Riders.PublishObjectScoped {
+		return linkedObjectByObjectKey(r.game, r.obj, string(env.Riders.PublishLinked))
+	}
+	return r.chooseFromZoneLinkedKey(env.Riders.PublishLinked)
 }
 
 func (r *effectResolver) chooseFromZoneLinkedKey(key game.LinkedKey) game.LinkedObjectKey {
