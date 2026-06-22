@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -294,7 +295,45 @@ func TestLowerStaticDeclarationGroupAnthems(t *testing.T) {
 	}
 }
 
-// TestLowerStaticDeclarationChosenTypeAnthems covers the chosen-type anthem
+// TestLowerStaticDeclarationMixedKeywordAndProtectionGrant covers a continuous
+// "creatures you control have <simple keywords> and protection from <colors>"
+// anthem whose grant list mixes ordinary keywords (flying, vigilance, ...) with
+// an ability-backed keyword (protection from a color). The lowering must
+// populate BOTH AddKeywords (the simple keywords) and AddAbilities (the
+// protection static ability) on a single LayerAbility effect — Akroma's
+// Memorial.
+func TestLowerStaticDeclarationMixedKeywordAndProtectionGrant(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Memorial",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "Creatures you control have flying, first strike, vigilance, trample, haste, and protection from black and from red.",
+	})
+	if len(face.StaticAbilities) != 1 {
+		t.Fatalf("static abilities = %#v, want one", face.StaticAbilities)
+	}
+	effects := face.StaticAbilities[0].Body.ContinuousEffects
+	if len(effects) != 1 {
+		t.Fatalf("continuous effects = %#v, want one", effects)
+	}
+	effect := effects[0]
+	if effect.Layer != game.LayerAbility {
+		t.Fatalf("layer = %v, want LayerAbility", effect.Layer)
+	}
+	wantKeywords := []game.Keyword{game.Flying, game.FirstStrike, game.Vigilance, game.Trample, game.Haste}
+	if !slices.Equal(effect.AddKeywords, wantKeywords) {
+		t.Fatalf("AddKeywords = %#v, want %#v", effect.AddKeywords, wantKeywords)
+	}
+	if len(effect.AddAbilities) != 1 {
+		t.Fatalf("AddAbilities = %#v, want one", effect.AddAbilities)
+	}
+	wantProtection := game.ProtectionFromColorsStaticAbility(color.Black, color.Red)
+	if !reflect.DeepEqual(effect.AddAbilities[0], &wantProtection) {
+		t.Fatalf("AddAbilities[0] = %#v, want %#v", effect.AddAbilities[0], &wantProtection)
+	}
+}
+
 // group: "creatures you control of the chosen type" buffs, whose runtime
 // Selection must carry SubtypeChoiceSourceEntry so only permanents matching
 // the source's entry-time creature-type choice are affected (Patchwork Banner,
