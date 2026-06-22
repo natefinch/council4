@@ -503,6 +503,7 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		nil,
 		permanentCreationOptions{
 			KickerPaid:              obj.KickerPaid,
+			KickCount:               obj.KickerCount,
 			Evoked:                  obj.Evoked,
 			WasCast:                 !obj.Copy,
 			CastController:          obj.Controller,

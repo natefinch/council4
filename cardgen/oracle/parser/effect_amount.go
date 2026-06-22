@@ -627,6 +627,9 @@ func parseDynamicAmountSubjectHelper(tokens []shared.Token, start int, atoms Ato
 	if subject, ok := parseDynamicColorsOfManaSpentSubject(tokens, start); ok {
 		return subject, true
 	}
+	if subject, ok := parseDynamicTimesKickedSubject(tokens, start); ok {
+		return subject, true
+	}
 	if subject, ok := parseDynamicGreatestDiscardedThisWaySubject(tokens, start); ok {
 		return subject, true
 	}
@@ -1159,6 +1162,32 @@ func parseDynamicColorsOfManaSpentSubject(tokens []shared.Token, start int) (dyn
 		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountColorsOfManaSpent},
 		end:    start + 7, count: true,
 	}, true
+}
+
+// parseDynamicTimesKickedSubject recognizes the Multikicker amount subject
+// "time it was kicked" / "time this spell was kicked" (CR 702.32), the number
+// of times the spell was kicked. It backs "for each time it was kicked" amounts
+// such as Everflowing Chalice's enters-with-counters quantity and Wolfbriar
+// Elemental's Wolf-token count. It carries no selection; the runtime records
+// the kick count as the spell is cast. The singular "time" pairs with a
+// "for each" prefix, matching the count-number agreement the dynamic-amount
+// dispatcher enforces. It fails closed on any other wording.
+func parseDynamicTimesKickedSubject(tokens []shared.Token, start int) (dynamicAmountSubject, bool) {
+	if effectWordsAt(tokens, start, "time", "it", "was", "kicked") &&
+		dynamicAmountBoundary(tokens, start+4) {
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountTimesKicked},
+			end:    start + 4, count: true,
+		}, true
+	}
+	if effectWordsAt(tokens, start, "time", "this", "spell", "was", "kicked") &&
+		dynamicAmountBoundary(tokens, start+5) {
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountTimesKicked},
+			end:    start + 5, count: true,
+		}, true
+	}
+	return dynamicAmountSubject{}, false
 }
 
 // parseDynamicColorCountSubject recognizes the "color among <group>" /

@@ -58,6 +58,7 @@ type CastSpellAction struct {
 	XValue         int
 	ChosenModes    []int
 	KickerPaid     bool
+	KickerCount    int
 	Overloaded     bool
 	Mutate         bool
 	MutateTargetID id.ID
@@ -176,6 +177,15 @@ func CastKickedSpellFromZone(cardID id.ID, sourceZone zone.Type, targets []game.
 func CastKickedSpellFaceFromZone(cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int) Action {
 	action := CastSpellFaceFromZone(cardID, sourceZone, face, targets, xValue, chosenModes)
 	action.castSpell.KickerPaid = true
+	return action
+}
+
+// CastMultikickedSpellFaceFromZone creates an action to cast a specific printed
+// face with its Multikicker cost paid kickerCount times (CR 702.32).
+func CastMultikickedSpellFaceFromZone(cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerCount int) Action {
+	action := CastSpellFaceFromZone(cardID, sourceZone, face, targets, xValue, chosenModes)
+	action.castSpell.KickerPaid = kickerCount > 0
+	action.castSpell.KickerCount = kickerCount
 	return action
 }
 

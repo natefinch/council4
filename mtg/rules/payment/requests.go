@@ -34,6 +34,7 @@ type SpellRequest struct {
 	Card            *game.CardDef
 	XValue          int
 	KickerPaid      bool
+	KickerCount     int
 	ChosenModes     []int
 	Alternative     opt.V[cost.Alternative]
 	CastPermissions []SpellCastPermission

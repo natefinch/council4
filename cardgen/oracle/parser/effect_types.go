@@ -577,6 +577,12 @@ const (
 	// Earthquake Dragon, Excalibur, Sword of Eden). Added last so existing kinds
 	// keep their values.
 	EffectDynamicAmountTotalManaValue EffectDynamicAmountKind = "EffectDynamicAmountTotalManaValue"
+	// EffectDynamicAmountTimesKicked is the number of times the spell was kicked
+	// (its Multikicker count, CR 702.32), the "for each time it was kicked" amount
+	// (Everflowing Chalice's enters-with-counters quantity, Wolfbriar Elemental's
+	// Wolf-token count). It carries no selection; the runtime records the kick
+	// count as the spell is cast. Added last so existing kinds keep their values.
+	EffectDynamicAmountTimesKicked EffectDynamicAmountKind = "EffectDynamicAmountTimesKicked"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.

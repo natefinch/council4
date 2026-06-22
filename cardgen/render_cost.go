@@ -186,6 +186,9 @@ func (r Renderer) renderKeywordAbility(ctx *renderCtx, keyword game.KeywordAbili
 		if len(kicker.BonusContent.Modes) != 0 {
 			return "", errors.New("render: Kicker bonus content must be rendered by its owning ability")
 		}
+		if kicker.Multi {
+			return fmt.Sprintf("game.KickerKeyword{Cost: %s, Multi: true}", kickerCost), nil
+		}
 		return fmt.Sprintf("game.KickerKeyword{Cost: %s}", kickerCost), nil
 	}
 	if madness, ok := keyword.(game.MadnessKeyword); ok {
@@ -629,6 +632,8 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountSpellsCastThisTurn", nil
 	case game.DynamicAmountColorsOfManaSpentToCast:
 		return "game.DynamicAmountColorsOfManaSpentToCast", nil
+	case game.DynamicAmountTimesKicked:
+		return "game.DynamicAmountTimesKicked", nil
 	case game.DynamicAmountLifeLostThisTurn:
 		return "game.DynamicAmountLifeLostThisTurn", nil
 	case game.DynamicAmountLifeGainedThisTurn:

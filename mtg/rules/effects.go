@@ -117,6 +117,11 @@ func spellHasKicker(card *game.CardDef) bool {
 	return ok
 }
 
+func spellHasMultikicker(card *game.CardDef) bool {
+	kicker, ok := spellKicker(card)
+	return ok && kicker.Multi
+}
+
 func spellKicker(card *game.CardDef) (game.KickerKeyword, bool) {
 	if card == nil {
 		return game.KickerKeyword{}, false

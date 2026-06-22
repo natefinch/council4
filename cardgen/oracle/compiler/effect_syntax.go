@@ -643,6 +643,8 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountColorsOfManaSpent
 	case parser.EffectDynamicAmountDieRollResult:
 		return DynamicAmountDieRollResult
+	case parser.EffectDynamicAmountTimesKicked:
+		return DynamicAmountTimesKicked
 	default:
 		return DynamicAmountNone
 	}

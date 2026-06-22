@@ -31,6 +31,7 @@ func createCardPermanentFaceWithContinuous(e *Engine, g *game.Game, card *game.C
 type permanentCreationOptions struct {
 	ForceTapped       bool
 	KickerPaid        bool
+	KickCount         int
 	Evoked            bool
 	WasCast           bool
 	CastController    game.PlayerID
@@ -82,6 +83,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		agents:            agents,
 		log:               log,
 		xValue:            options.XValue,
+		kickCount:         options.KickCount,
 		colorsOfManaSpent: options.ColorsOfManaSpentToCast,
 	}, g, permanent, fromZone)
 	if options.ForceTapped {
@@ -161,6 +163,7 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 		agents:            agents,
 		log:               log,
 		xValue:            options.XValue,
+		kickCount:         options.KickCount,
 		colorsOfManaSpent: options.ColorsOfManaSpentToCast,
 	}, g, permanent, fromZone)
 	if options.ForceTapped {
