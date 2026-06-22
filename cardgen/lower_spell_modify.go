@@ -726,8 +726,79 @@ func lowerControllerDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 	}.Ability(), nil
 }
 
-// removalTargetSpecForRecipient rebuilds the inherited removal target's spec for
-// the recipient-damage clause. In the ordered-sequence shared-target path the
+// lowerEventPlayerDamageSpell lowers a "deals N damage to that player" effect
+// whose recipient is the triggering event's player, as in "Whenever an opponent
+// draws a card, this enchantment deals 1 damage to that player." (Underworld
+// Dreams, Fate Unraveler, Megrim, Manabarbs). The "that player" reference binds
+// to the event player (ReferenceBindingEventPlayer); the amount is a fixed value
+// or X. It emits one Damage instruction with an event-player recipient and no
+// target spec, failing closed for any shape outside that template (a recipient
+// that is not the event-bound "that player", a dynamic count amount, any target,
+// recipient selector, condition, keyword, or mode).
+func lowerEventPlayerDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported damage spell",
+			"the executable source backend supports only exact fixed or X damage to that player",
+		)
+	}
+	if len(ctx.content.Effects) != 1 ||
+		effect.Kind != compiler.EffectDealDamage ||
+		effect.DamageRecipientReference != parser.DamageRecipientReferenceThatPlayer ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Divided ||
+		len(ctx.content.Targets) != 0 ||
+		len(effect.DamageRecipientSelectors) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return unsupported()
+	}
+	if (effect.Amount.Known && effect.Amount.Value < 1) ||
+		(!effect.Amount.Known && !effect.Amount.VariableX) ||
+		effect.Amount.DynamicKind != compiler.DynamicAmountNone {
+		return unsupported()
+	}
+	if !damageReferencesEventPlayer(ctx.content.References) ||
+		!exactDamageSourceSyntax(ctx.content.References[:1]) {
+		return unsupported()
+	}
+	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
+	if effect.Amount.Known {
+		amount = game.Fixed(effect.Amount.Value)
+	}
+	damage := game.Damage{
+		Amount:    amount,
+		Recipient: game.PlayerDamageRecipient(game.EventPlayerReference()),
+	}
+	if damageSource, ok := lowerDamageSourceReference(ctx.content.References[:1]); ok &&
+		damageSource.Kind() == game.ObjectReferenceEventPermanent {
+		damage.DamageSource = opt.Val(damageSource)
+	} else if damageSourceIsSourcePermanent(ctx.content.References[:1]) {
+		damage.DamageSource = opt.Val(game.SourcePermanentReference())
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{Primitive: damage}},
+	}.Ability(), nil
+}
+
+// damageReferencesEventPlayer reports whether the references carry the
+// event-bound "that player" recipient reference that backs "deals N damage to
+// that player." The recipient reference is a ReferenceThatPlayer whose binding
+// resolves to the triggering event's player (ReferenceBindingEventPlayer).
+func damageReferencesEventPlayer(references []compiler.CompiledReference) bool {
+	for _, reference := range references {
+		if reference.Kind == compiler.ReferenceThatPlayer &&
+			reference.Binding == compiler.ReferenceBindingEventPlayer {
+			return true
+		}
+	}
+	return false
+}
+
 // returned spec is discarded (the removal clause already contributes it); the
 // damage Mode only needs a valid, non-empty target spec so the sequence machinery
 // rebases the recipient reference. A spell target yields the stack-spell spec;

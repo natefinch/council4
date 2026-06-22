@@ -98,6 +98,7 @@ func TestDamageRecipientReferenceAccepts(t *testing.T) {
 		{"Burn Creature", "Burn Creature deals 3 damage to that creature's owner.", DamageRecipientReferenceOwner},
 		{"Burn It", "Burn It deals 1 damage to its controller.", DamageRecipientReferenceController},
 		{"Burn You", "Burn You deals 2 damage to you.", DamageRecipientReferenceYou},
+		{"Burn Player", "Burn Player deals 2 damage to that player.", DamageRecipientReferenceThatPlayer},
 	}
 	for _, test := range tests {
 		got, exact := damageRecipientReferenceOf(t, test.name, test.source)

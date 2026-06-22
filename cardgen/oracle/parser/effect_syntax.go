@@ -3441,6 +3441,13 @@ func damageRecipientReference(effect *EffectSyntax) DamageRecipientReferenceKind
 	if len(recipient) == 1 && equalWord(recipient[0], "you") {
 		return DamageRecipientReferenceYou
 	}
+	// "deals N damage to that player" names the triggering event's player, the
+	// punisher recipient of "Whenever an opponent draws a card, ~ deals N damage
+	// to that player." (Underworld Dreams, Megrim). The "that player" reference
+	// binds to the event player downstream; lowering resolves it accordingly.
+	if len(recipient) == 2 && equalWord(recipient[0], "that") && equalWord(recipient[1], "player") {
+		return DamageRecipientReferenceThatPlayer
+	}
 	if len(recipient) < 2 {
 		return DamageRecipientReferenceNone
 	}
