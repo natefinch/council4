@@ -819,15 +819,38 @@ func handleReturnFromGraveyard(r *effectResolver, prim game.ReturnFromGraveyard)
 			Card:  cardChoiceInfo(r.game, cardID),
 		}
 	}
+	prompt := "Choose a card to return to your hand"
+	if prim.Destination == zone.Battlefield {
+		prompt = "Choose a card to return to the battlefield"
+	}
 	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
 		Kind:             game.ChoiceResolution,
 		Player:           playerID,
-		Prompt:           "Choose a card to return to your hand",
+		Prompt:           prompt,
 		Options:          options,
 		MinChoices:       amount,
 		MaxChoices:       amount,
 		DefaultSelection: firstChoiceIndices(amount),
 	}, r.log)
+	if prim.Destination == zone.Battlefield {
+		resolved := make([]resolvedBattlefieldCard, 0, len(selected))
+		for _, idx := range selected {
+			if idx < 0 || idx >= len(candidates) {
+				continue
+			}
+			card, cardOK := r.game.GetCardInstance(candidates[idx])
+			if !cardOK {
+				continue
+			}
+			resolved = append(resolved, resolvedBattlefieldCard{
+				card:       card,
+				fromZone:   zone.Graveyard,
+				controller: playerID,
+			})
+		}
+		res.succeeded = r.putResolvedCardsOnBattlefieldValue(resolved, nil, permanentCreationOptions{ForceTapped: prim.EntryTapped})
+		return res
+	}
 	for _, idx := range selected {
 		if idx < 0 || idx >= len(candidates) {
 			continue

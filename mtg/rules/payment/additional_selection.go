@@ -574,30 +574,67 @@ func preferredDiscardCards(s State, playerID game.PlayerID, additional cost.Addi
 // otherwise the removals are chosen greedily. It returns false when the player
 // cannot supply amount matching counters.
 func planRemoveCounterAmong(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyPlanned []counterRemoval, prefs *Preferences) ([]counterRemoval, bool) {
-	reserved := plannedCounterRemovalsBySource(alreadyPlanned, additional.CounterKind)
+	reserved := plannedCounterRemovalsBySourceKind(alreadyPlanned)
 	if prefs != nil && len(prefs.RemoveCounterChoices) > 0 {
 		return preferredRemoveCounterAmong(s, playerID, additional, amount, reserved, prefs)
 	}
 	return greedyRemoveCounterAmong(s, playerID, additional, amount, reserved)
 }
 
-// plannedCounterRemovalsBySource totals, per source permanent, the counters of
-// the given kind already reserved by earlier planned removals so the same
-// counters are not spent twice.
-func plannedCounterRemovalsBySource(planned []counterRemoval, kind counter.Kind) map[*game.Permanent]int {
-	reserved := make(map[*game.Permanent]int)
+// counterSourceKind keys a planned counter removal by both its source permanent
+// and counter kind, so a generic any-kind among-removal can reserve counters of
+// several kinds on the same permanent without conflating their counts.
+type counterSourceKind struct {
+	source *game.Permanent
+	kind   counter.Kind
+}
+
+// plannedCounterRemovalsBySourceKind totals, per (source, kind), the counters
+// already reserved by earlier planned removals so the same counters are not
+// spent twice.
+func plannedCounterRemovalsBySourceKind(planned []counterRemoval) map[counterSourceKind]int {
+	reserved := make(map[counterSourceKind]int)
 	for _, removal := range planned {
-		if removal.kind == kind {
-			reserved[removal.source] += removal.amount
-		}
+		reserved[counterSourceKind{source: removal.source, kind: removal.kind}] += removal.amount
 	}
 	return reserved
+}
+
+// amongCounterKinds returns the counter kinds an among-removal cost may take
+// from a permanent, in a stable order. A kind-specific cost yields the single
+// named kind; the generic any-kind cost yields every kind present on the
+// permanent, sorted by kind value so selection is deterministic.
+func amongCounterKinds(permanent *game.Permanent, additional cost.Additional) []counter.Kind {
+	if !additional.AnyCounterKind {
+		return []counter.Kind{additional.CounterKind}
+	}
+	present := permanent.Counters.All()
+	kinds := make([]counter.Kind, 0, len(present))
+	for kind := range present {
+		kinds = append(kinds, kind)
+	}
+	slices.Sort(kinds)
+	return kinds
+}
+
+// RemovableAmongCounterCount reports how many counters a permanent can supply
+// toward an among-removal cost: the named kind's count for a kind-specific cost,
+// or the total of all counters for the generic any-kind cost.
+func RemovableAmongCounterCount(permanent *game.Permanent, additional cost.Additional) int {
+	if !additional.AnyCounterKind {
+		return permanent.Counters.Get(additional.CounterKind)
+	}
+	total := 0
+	for _, count := range permanent.Counters.All() {
+		total += count
+	}
+	return total
 }
 
 // greedyRemoveCounterAmong removes counters from matching controlled permanents
 // in battlefield order, taking as many as available from each until amount is
 // reached.
-func greedyRemoveCounterAmong(s State, playerID game.PlayerID, additional cost.Additional, amount int, reserved map[*game.Permanent]int) ([]counterRemoval, bool) {
+func greedyRemoveCounterAmong(s State, playerID game.PlayerID, additional cost.Additional, amount int, reserved map[counterSourceKind]int) ([]counterRemoval, bool) {
 	var removals []counterRemoval
 	remaining := amount
 	for _, permanent := range s.Battlefield() {
@@ -607,13 +644,18 @@ func greedyRemoveCounterAmong(s State, playerID game.PlayerID, additional cost.A
 		if s.EffectiveController(permanent) != playerID || !additionalCostMatchesPermanent(s, permanent, additional) {
 			continue
 		}
-		available := permanent.Counters.Get(additional.CounterKind) - reserved[permanent]
-		if available <= 0 {
-			continue
+		for _, kind := range amongCounterKinds(permanent, additional) {
+			if remaining == 0 {
+				break
+			}
+			available := permanent.Counters.Get(kind) - reserved[counterSourceKind{source: permanent, kind: kind}]
+			if available <= 0 {
+				continue
+			}
+			take := min(available, remaining)
+			removals = append(removals, counterRemoval{source: permanent, kind: kind, amount: take})
+			remaining -= take
 		}
-		take := min(available, remaining)
-		removals = append(removals, counterRemoval{source: permanent, kind: additional.CounterKind, amount: take})
-		remaining -= take
 	}
 	if remaining > 0 {
 		return nil, false
@@ -624,11 +666,12 @@ func greedyRemoveCounterAmong(s State, playerID game.PlayerID, additional cost.A
 // preferredRemoveCounterAmong honors an explicit per-counter selection from
 // prefs, consuming amount entries from RemoveCounterChoices. Each entry names a
 // permanent to lose one counter; repeated entries remove several counters from
-// the same permanent. It fails closed when an entry is invalid or insufficient
-// entries are supplied.
-func preferredRemoveCounterAmong(s State, playerID game.PlayerID, additional cost.Additional, amount int, reserved map[*game.Permanent]int, prefs *Preferences) ([]counterRemoval, bool) {
-	perSource := make(map[*game.Permanent]int)
-	var order []*game.Permanent
+// the same permanent. For an any-kind cost the kind removed from each chosen
+// permanent is the first still-available kind in stable order. It fails closed
+// when an entry is invalid or insufficient entries are supplied.
+func preferredRemoveCounterAmong(s State, playerID game.PlayerID, additional cost.Additional, amount int, reserved map[counterSourceKind]int, prefs *Preferences) ([]counterRemoval, bool) {
+	used := make(map[counterSourceKind]int)
+	var order []counterSourceKind
 	consumed := 0
 	for _, permanentID := range prefs.RemoveCounterChoices {
 		if consumed == amount {
@@ -638,13 +681,15 @@ func preferredRemoveCounterAmong(s State, playerID game.PlayerID, additional cos
 		if !ok || s.EffectiveController(permanent) != playerID || !additionalCostMatchesPermanent(s, permanent, additional) {
 			return nil, false
 		}
-		if permanent.Counters.Get(additional.CounterKind) <= reserved[permanent]+perSource[permanent] {
+		kind, ok := chooseAmongCounterKind(permanent, additional, reserved, used)
+		if !ok {
 			return nil, false
 		}
-		if perSource[permanent] == 0 {
-			order = append(order, permanent)
+		key := counterSourceKind{source: permanent, kind: kind}
+		if used[key] == 0 {
+			order = append(order, key)
 		}
-		perSource[permanent]++
+		used[key]++
 		consumed++
 	}
 	if consumed != amount {
@@ -652,8 +697,21 @@ func preferredRemoveCounterAmong(s State, playerID game.PlayerID, additional cos
 	}
 	prefs.RemoveCounterChoices = prefs.RemoveCounterChoices[consumed:]
 	removals := make([]counterRemoval, 0, len(order))
-	for _, permanent := range order {
-		removals = append(removals, counterRemoval{source: permanent, kind: additional.CounterKind, amount: perSource[permanent]})
+	for _, key := range order {
+		removals = append(removals, counterRemoval{source: key.source, kind: key.kind, amount: used[key]})
 	}
 	return removals, true
+}
+
+// chooseAmongCounterKind picks the kind to remove from a permanent for an
+// among-removal cost, returning the first kind in stable order that still has an
+// unreserved, unused counter. It fails closed when none remains.
+func chooseAmongCounterKind(permanent *game.Permanent, additional cost.Additional, reserved, used map[counterSourceKind]int) (counter.Kind, bool) {
+	for _, kind := range amongCounterKinds(permanent, additional) {
+		key := counterSourceKind{source: permanent, kind: kind}
+		if permanent.Counters.Get(kind) > reserved[key]+used[key] {
+			return kind, true
+		}
+	}
+	return 0, false
 }

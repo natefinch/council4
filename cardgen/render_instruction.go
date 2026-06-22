@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func (r Renderer) renderAbilityContent(ctx *renderCtx, content game.AbilityContent) (string, error) {
@@ -724,6 +725,17 @@ func (r Renderer) renderReturnFromGraveyard(ctx *renderCtx, value game.ReturnFro
 		fmt.Sprintf("Player: %s,", player),
 		fmt.Sprintf("Selection: %s,", selection),
 		fmt.Sprintf("Amount: %s,", amount),
+	}
+	if value.Destination != zone.None {
+		destination, err := renderZone(value.Destination)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importZone)
+		fields = append(fields, fmt.Sprintf("Destination: %s,", destination))
+	}
+	if value.EntryTapped {
+		fields = append(fields, "EntryTapped: true,")
 	}
 	return structLit("game.ReturnFromGraveyard", fields), nil
 }

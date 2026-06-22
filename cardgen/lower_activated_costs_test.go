@@ -529,19 +529,28 @@ func TestLowerActivatedRemoveCounterAmongCosts(t *testing.T) {
 	}
 }
 
-func TestLowerActivatedAbilityRejectsUnkindedRemoveCounterAmong(t *testing.T) {
+func TestLowerActivatedAbilityLowersUnkindedRemoveCounterAmong(t *testing.T) {
 	t.Parallel()
-	faces, _ := lowerExecutableFaces(&ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Test Removal",
 		Layout:     "normal",
 		TypeLine:   "Creature — Human",
 		OracleText: "Remove three counters from among creatures you control: Draw a card.",
 	})
-	if len(faces) != 1 {
-		t.Fatalf("faces = %d, want 1", len(faces))
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
 	}
-	if len(faces[0].ActivatedAbilities) != 0 {
-		t.Fatalf("activated abilities = %d, want 0 (unkinded among removal is unsupported)", len(faces[0].ActivatedAbilities))
+	costs := face.ActivatedAbilities[0].AdditionalCosts
+	if len(costs) != 1 {
+		t.Fatalf("additional costs = %#v, want 1", costs)
+	}
+	got := costs[0]
+	if got.Kind != cost.AdditionalRemoveCounterAmong ||
+		got.Amount != 3 ||
+		!got.AnyCounterKind ||
+		!got.MatchPermanentType ||
+		got.PermanentType != types.Creature {
+		t.Fatalf("additional cost = %#v, want any-kind among removal amount 3 type Creature", got)
 	}
 }
 

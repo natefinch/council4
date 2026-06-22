@@ -90,16 +90,17 @@ func lowerChosenCardGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) 
 		return game.AbilityContent{}, false
 	}
 	effect := ctx.content.Effects[0]
+	battlefield := effect.ToZone == zone.Battlefield
 	if effect.Kind != compiler.EffectReturn ||
 		!effect.Exact ||
 		effect.Negated ||
 		effect.DelayedTiming != 0 ||
 		effect.Duration != compiler.DurationNone ||
 		effect.FromZone != zone.Graveyard ||
-		effect.ToZone != zone.Hand ||
-		effect.EntersTapped ||
-		effect.CounterKindKnown ||
-		effect.UnderYourControl {
+		(effect.ToZone != zone.Hand && effect.ToZone != zone.Battlefield) ||
+		(effect.EntersTapped && !battlefield) ||
+		(effect.UnderYourControl && !battlefield) ||
+		effect.CounterKindKnown {
 		return game.AbilityContent{}, false
 	}
 	selector := effect.Selector
@@ -110,7 +111,7 @@ func lowerChosenCardGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) 
 		selector.Other ||
 		selector.Attacking ||
 		selector.Blocking ||
-		selector.Tapped ||
+		(selector.Tapped && (!battlefield || !effect.EntersTapped)) ||
 		selector.Untapped {
 		return game.AbilityContent{}, false
 	}
@@ -125,13 +126,16 @@ func lowerChosenCardGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) 
 	if !ok {
 		return game.AbilityContent{}, false
 	}
-	return game.Mode{Sequence: []game.Instruction{{
-		Primitive: game.ReturnFromGraveyard{
-			Player:    game.ControllerReference(),
-			Selection: selection,
-			Amount:    game.Fixed(1),
-		},
-	}}}.Ability(), true
+	primitive := game.ReturnFromGraveyard{
+		Player:    game.ControllerReference(),
+		Selection: selection,
+		Amount:    game.Fixed(1),
+	}
+	if battlefield {
+		primitive.Destination = zone.Battlefield
+		primitive.EntryTapped = effect.EntersTapped
+	}
+	return game.Mode{Sequence: []game.Instruction{{Primitive: primitive}}}.Ability(), true
 }
 
 // lowerMassGraveyardReturn lowers the non-target mass recursion wording "Return

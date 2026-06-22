@@ -402,3 +402,44 @@ func TestPlanRemoveCounterAmongRejectsInvalidPreference(t *testing.T) {
 		t.Fatalf("removals = %#v ok = true, want invalid preference rejected", removals)
 	}
 }
+
+func TestPlanRemoveCounterAmongAnyKindSpreadsAcrossKinds(t *testing.T) {
+	first := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	first.Counters.Add(counter.Vigilance, 1)
+	second := &game.Permanent{ObjectID: 2, Controller: game.Player1}
+	second.Counters.Add(counter.Charge, 1)
+	second.Counters.Add(counter.PlusOnePlusOne, 1)
+	state := fakePaymentState{battlefield: []*game.Permanent{first, second}}
+	additional := cost.Additional{Kind: cost.AdditionalRemoveCounterAmong, Amount: 3, AnyCounterKind: true}
+
+	removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 3, nil, nil)
+	if !ok || removeCounterAmongTotal(removals) != 3 {
+		t.Fatalf("removals = %#v ok = %t, want total 3 across any kinds", removals, ok)
+	}
+}
+
+func TestPlanRemoveCounterAmongAnyKindHonorsPreference(t *testing.T) {
+	first := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	first.Counters.Add(counter.Vigilance, 1)
+	second := &game.Permanent{ObjectID: 2, Controller: game.Player1}
+	second.Counters.Add(counter.Charge, 2)
+	state := fakePaymentState{battlefield: []*game.Permanent{first, second}}
+	additional := cost.Additional{Kind: cost.AdditionalRemoveCounterAmong, Amount: 2, AnyCounterKind: true}
+	prefs := &Preferences{RemoveCounterChoices: []id.ID{2, 2}}
+
+	removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 2, nil, prefs)
+	if !ok || len(removals) != 1 || removals[0].source != second || removals[0].kind != counter.Charge || removals[0].amount != 2 {
+		t.Fatalf("removals = %#v ok = %t, want both charge counters from permanent 2", removals, ok)
+	}
+}
+
+func TestPlanRemoveCounterAmongAnyKindFailsWhenInsufficient(t *testing.T) {
+	only := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	only.Counters.Add(counter.Charge, 1)
+	state := fakePaymentState{battlefield: []*game.Permanent{only}}
+	additional := cost.Additional{Kind: cost.AdditionalRemoveCounterAmong, Amount: 2, AnyCounterKind: true}
+
+	if removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 2, nil, nil); ok {
+		t.Fatalf("removals = %#v ok = true, want failure for insufficient counters", removals)
+	}
+}

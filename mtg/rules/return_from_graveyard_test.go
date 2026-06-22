@@ -61,6 +61,45 @@ func TestReturnFromGraveyardReturnsChosenCreature(t *testing.T) {
 	}
 }
 
+// TestReturnFromGraveyardReanimatesChosenCreatureToBattlefield verifies the
+// chosen-card reanimation path (Destination Battlefield) puts the controller's
+// chosen creature onto the battlefield under their control rather than to hand.
+func TestReturnFromGraveyardReanimatesChosenCreatureToBattlefield(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Source",
+		Types: []types.Card{types.Artifact},
+	}})
+	obj := triggeredObjFor(source)
+
+	creature := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Bear",
+		Types: []types.Card{types.Creature},
+	}})
+
+	instruction := &game.Instruction{
+		Primitive: game.ReturnFromGraveyard{
+			Player:      game.ControllerReference(),
+			Selection:   game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou},
+			Amount:      game.Fixed(1),
+			Destination: zone.Battlefield,
+		},
+	}
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: defaultChoiceAgent{}}
+	engine.resolveInstructionWithChoices(g, obj, instruction, agents, &TurnLog{})
+
+	if g.Players[game.Player1].Graveyard.Contains(creature) {
+		t.Fatal("chosen creature still in graveyard")
+	}
+	if g.Players[game.Player1].Hand.Contains(creature) {
+		t.Fatal("chosen creature went to hand instead of battlefield")
+	}
+	if !onBattlefieldByCard(g, creature) {
+		t.Fatal("chosen creature was not put onto the battlefield")
+	}
+}
+
 // TestReturnFromGraveyardWithNoMatchingCardDoesNothing verifies that with no
 // matching card in the graveyard, the effect leaves the graveyard intact and
 // returns nothing.

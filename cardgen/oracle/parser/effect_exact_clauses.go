@@ -50,7 +50,9 @@ func exactGraveyardReturnEffectSyntax(effect *EffectSyntax) bool {
 }
 
 // exactChosenGraveyardReturnEffectSyntax recognizes the non-target "Return a
-// <filter> card from your graveyard to your hand." recursion wording, where the
+// <filter> card from your graveyard to your hand." recursion wording and the
+// reanimation form "Return a <filter> card from your graveyard to the
+// battlefield." (optionally "tapped" and/or "under your control"), where the
 // returned card is chosen from the controller's own graveyard at resolution
 // rather than targeted (Raise Dead targets; Takenuma's "return a creature or
 // planeswalker card" does not). It reconstructs the canonical noun phrase from
@@ -61,15 +63,24 @@ func exactGraveyardReturnEffectSyntax(effect *EffectSyntax) bool {
 // every other selection shape so an unrepresentable filter keeps failing rather
 // than lowering to a wrong predicate.
 func exactChosenGraveyardReturnEffectSyntax(effect *EffectSyntax, text string) bool {
-	if len(effect.References) != 0 || effect.ToZone != zone.Hand {
+	if len(effect.References) != 0 {
+		return false
+	}
+	if effect.ToZone != zone.Hand && effect.ToZone != zone.Battlefield {
 		return false
 	}
 	sel := effect.Selection
 	if sel.Zone != zone.Graveyard || sel.Controller != SelectionControllerYou {
 		return false
 	}
+	// A battlefield entry-tapped rider ("... to the battlefield tapped.") leaves
+	// the entry word inside the selector span, setting sel.Tapped; graveyard
+	// cards are never tapped, so that filter is vacuous and is ignored when it
+	// coincides with the entry-tapped destination. A genuine tapped filter
+	// without entry-tapped still fails closed.
+	entryTapped := effect.ToZone == zone.Battlefield && effect.EntersTapped
 	if sel.All || sel.Another || sel.Other || sel.Attacking || sel.Blocking ||
-		sel.Tapped || sel.Untapped || sel.MatchPower || sel.MatchToughness ||
+		(sel.Tapped && !entryTapped) || sel.Untapped || sel.MatchPower || sel.MatchToughness ||
 		sel.Keyword != KeywordUnknown || sel.ExcludedKeyword != KeywordUnknown ||
 		len(sel.ExcludedTypes) != 0 || len(sel.SourceTypes) != 0 ||
 		len(sel.Supertypes) != 0 || len(sel.ExcludedSupertypes) != 0 ||
@@ -89,7 +100,25 @@ func exactChosenGraveyardReturnEffectSyntax(effect *EffectSyntax, text string) b
 		manaClause = clause
 	}
 	article := indefiniteArticle(noun)
-	return strings.EqualFold(text, "Return "+article+" "+noun+manaClause+" from your graveyard to your hand.")
+	prefix := "Return " + article + " " + noun + manaClause + " from your graveyard to "
+	switch effect.ToZone {
+	case zone.Hand:
+		if effect.EntersTapped || effect.UnderYourControl {
+			return false
+		}
+		return strings.EqualFold(text, prefix+"your hand.")
+	case zone.Battlefield:
+		destination := "the battlefield"
+		if effect.EntersTapped {
+			destination += " tapped"
+		}
+		if effect.UnderYourControl {
+			destination += " under your control"
+		}
+		return strings.EqualFold(text, prefix+destination+".")
+	default:
+		return false
+	}
 }
 
 func exactChosenCardsBattlefieldReturnEffectSyntax(effect *EffectSyntax) bool {
