@@ -1234,30 +1234,83 @@ func lowerInvestigateSpell(
 	)
 }
 
-// lowerGainPlayerCounterSpell lowers "You get {E}…{E}." or "You get <N> <kind>
-// counter(s)." to a player-counter placement of the fixed count on the
-// controller. The energy symbol form carries no named counter kind, so it
-// defaults to energy; the named word form carries the recognized player counter.
+// lowerGainPlayerCounterSpell lowers "You get {E}…{E}." / "You get <N> <kind>
+// counter(s)." and the broader "<recipient> gets <N> <kind> counter(s)." to a
+// player-counter placement of the fixed count. The energy symbol form carries no
+// named counter kind, so it defaults to energy; the named word form carries the
+// recognized player counter. The recipient is resolved from the same typed
+// context the fixed-life lowering uses: controller, defending player, the
+// triggering "that player", or a lone targeted player.
 func lowerGainPlayerCounterSpell(
 	ctx contentCtx,
-	syntax *parser.Ability,
+	_ *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
 	kind := counter.Energy
-	if effect := ctx.content.Effects[0]; effect.CounterKindKnown {
+	if effect.CounterKindKnown {
 		kind = effect.CounterKind
 	}
-	return lowerExactPrimitiveSpell(
+	unsupported := contentDiagnostic(
 		ctx,
-		syntax,
-		"gain player counter",
-		func(amount game.Quantity) game.Primitive {
-			return game.AddPlayerCounter{
-				Amount:      amount,
-				Player:      game.ControllerReference(),
-				CounterKind: kind,
-			}
-		},
+		"unsupported gain player counter spell",
+		"the executable source backend supports only exact gain player counter",
 	)
+	if effect.Negated || ctx.optional || !effect.Exact ||
+		!effect.Amount.Known || effect.Amount.Value < 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, unsupported
+	}
+	playerRef, targets, ok := gainPlayerCounterRecipient(ctx, effect)
+	if !ok {
+		return game.AbilityContent{}, unsupported
+	}
+	return game.Mode{
+		Targets: targets,
+		Sequence: []game.Instruction{{
+			Primitive: game.AddPlayerCounter{
+				Amount:      game.Fixed(effect.Amount.Value),
+				Player:      playerRef,
+				CounterKind: kind,
+			},
+		}},
+	}.Ability(), nil
+}
+
+// gainPlayerCounterRecipient resolves the player who receives the counters from
+// the effect's typed context, returning any target specs the reference needs.
+// It mirrors the single-player recipients lowerFixedLifeSpell supports.
+func gainPlayerCounterRecipient(
+	ctx contentCtx,
+	effect compiler.CompiledEffect,
+) (game.PlayerReference, []game.TargetSpec, bool) {
+	switch {
+	case len(ctx.content.Targets) == 0 && len(ctx.content.References) == 0 &&
+		effect.Context == parser.EffectContextController:
+		return game.ControllerReference(), nil, true
+	case len(ctx.content.Targets) == 0 && len(ctx.content.References) == 0 &&
+		effect.Context == parser.EffectContextDefendingPlayer:
+		return game.DefendingPlayerReference(), nil, true
+	case len(ctx.content.Targets) == 0 && len(ctx.content.References) == 1 &&
+		(effect.Context == parser.EffectContextEventPlayer &&
+			ctx.content.References[0].Kind == compiler.ReferencePronoun &&
+			ctx.content.References[0].Pronoun == compiler.ReferencePronounThey ||
+			effect.Context == parser.EffectContextReferencedPlayer &&
+				ctx.content.References[0].Kind == compiler.ReferenceThatPlayer &&
+				ctx.content.References[0].Binding != compiler.ReferenceBindingTarget):
+		return game.EventPlayerReference(), nil, true
+	case len(ctx.content.Targets) == 1 &&
+		(effect.Context == parser.EffectContextTarget ||
+			effect.Context == parser.EffectContextPriorSubject):
+		targetSpec, ok := playerTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return game.PlayerReference{}, nil, false
+		}
+		return game.TargetPlayerReference(0), []game.TargetSpec{targetSpec}, true
+	default:
+		return game.PlayerReference{}, nil, false
+	}
 }
 
 // lowerAmassContent lowers a single amass keyword-action effect ("Amass Orcs N"

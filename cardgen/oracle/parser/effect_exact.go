@@ -3090,33 +3090,67 @@ func effectAmountSourceText(effect *EffectSyntax) string {
 	return effect.Amount.Text
 }
 
-// exactGainPlayerCounterEffectSyntax recognizes the controller player-counter gain
-// effect "You get {E}…{E}." (energy symbols) or "You get <N> <kind> counter(s)."
+// exactGainPlayerCounterEffectSyntax recognizes the player-counter gain effect
+// "You get {E}…{E}." (energy symbols) or "<recipient> gets <N> <kind> counter(s)."
 // (a named player-only counter). The optional "(N energy counters)" reminder is
-// already stripped. It requires the controller recipient with a known positive
-// count and no target or reference, so every richer or differently-recipient form
-// fails closed; the lowering re-checks exact source consumption.
+// already stripped. The energy form is controller-only; the named form supports
+// the controller plus the defending player, the triggering "that player", and a
+// single targeted player, mirroring the recipients exactLifeEffectSyntax accepts.
+// Every other recipient or richer form fails closed; the lowering re-resolves the
+// recipient from the same typed context.
 func exactGainPlayerCounterEffectSyntax(effect *EffectSyntax) bool {
-	if effect.Context != EffectContextController ||
-		!effect.Amount.Known || effect.Amount.Value < 1 ||
-		len(effect.Targets) != 0 || len(effect.References) != 0 {
+	if !effect.Amount.Known || effect.Amount.Value < 1 {
 		return false
 	}
-	verb := slices.IndexFunc(effect.Tokens, func(token shared.Token) bool {
-		return token.Span == effect.VerbSpan
-	})
-	if verb < 0 {
+	if effect.Context == EffectContextController &&
+		len(effect.Targets) == 0 && len(effect.References) == 0 {
+		verb := slices.IndexFunc(effect.Tokens, func(token shared.Token) bool {
+			return token.Span == effect.VerbSpan
+		})
+		if verb >= 0 {
+			rest := effect.Tokens[verb+1:]
+			if len(rest) > 0 && rest[len(rest)-1].Kind == shared.Period {
+				rest = rest[:len(rest)-1]
+			}
+			if len(rest) == effect.Amount.Value && allEnergySymbols(rest) {
+				return true
+			}
+		}
+	}
+	if !effect.CounterKnown || !effect.CounterKind.PlayerOnly() {
 		return false
 	}
-	rest := effect.Tokens[verb+1:]
-	if len(rest) > 0 && rest[len(rest)-1].Kind == shared.Period {
-		rest = rest[:len(rest)-1]
+	noun := effect.CounterKind.String()
+	return exactPlayerCounterRecipientText(effect, noun+" counter", noun+" counters")
+}
+
+// exactPlayerCounterRecipientText reconstructs the named player-counter gain
+// clause "<recipient> gets <N> <singular|plural>." for each supported recipient
+// subject and reports whether the printed effect text matches byte-for-byte. The
+// recipient set matches the single-player references the lowering resolves
+// (controller, defending player, the triggering "that player"/"they", and a lone
+// targeted player); any other subject yields no prefix and fails closed.
+func exactPlayerCounterRecipientText(effect *EffectSyntax, singular, plural string) bool {
+	var prefixes []string
+	switch effect.Context {
+	case EffectContextController:
+		prefixes = []string{"You get"}
+	case EffectContextDefendingPlayer:
+		prefixes = []string{"Defending player gets"}
+	case EffectContextEventPlayer, EffectContextReferencedPlayer:
+		prefixes = []string{"They get", "That player gets"}
+	case EffectContextTarget, EffectContextPriorSubject:
+		if len(effect.Targets) == 1 && effect.Targets[0].Exact {
+			prefixes = []string{titleFirstEffectText(effect.Targets[0].Text) + " gets"}
+		}
+	default:
 	}
-	if len(rest) == effect.Amount.Value && allEnergySymbols(rest) {
-		return true
+	text := exactEffectClauseText(effect)
+	amountText := effectAmountSourceText(effect)
+	for _, prefix := range prefixes {
+		if exactCountedNounEffectText(text, prefix, singular, plural, effect.Amount, amountText, false) {
+			return true
+		}
 	}
-	// Named player-counter word form: the recognized counter kind must be a
-	// player-only kind; the count and noun are validated by the lowering's exact
-	// source consumption.
-	return effect.CounterKnown && effect.CounterKind.PlayerOnly()
+	return false
 }
