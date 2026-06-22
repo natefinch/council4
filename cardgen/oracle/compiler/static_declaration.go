@@ -318,6 +318,11 @@ type StaticContinuousDeclaration struct {
 	// creature type" (CR 702.73). It is mutually exclusive with the enumerated
 	// AddTypes/AddSubtypes payload.
 	AddEveryCreatureType bool
+	// AddEveryBasicLandType adds all five basic land subtypes at LayerType
+	// ("<group> is/are every basic land type", Dryad of the Ilysian Grove,
+	// Prismatic Omen). The runtime expands it rather than enumerating subtypes
+	// here.
+	AddEveryBasicLandType bool
 }
 
 // StaticGrantedManaAbility is one closed activated mana ability granted in the
@@ -2110,6 +2115,20 @@ func staticCharacteristicDeclarations(span shared.Span, node *parser.StaticDecla
 			},
 		})
 	}
+	if node.EveryBasicLandType {
+		declarations = append(declarations, StaticDeclaration{
+			Kind:          StaticDeclarationContinuous,
+			Span:          span,
+			OperationSpan: node.OperationSpan,
+			Group:         group,
+			Condition:     condition,
+			Continuous: &StaticContinuousDeclaration{
+				Layer:                 StaticLayerType,
+				Operation:             StaticContinuousAddTypes,
+				AddEveryBasicLandType: true,
+			},
+		})
+	}
 	if len(declarations) == 0 {
 		return nil, false
 	}
@@ -2501,6 +2520,9 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 		group.ExcludeSource = true
 	case StaticSubjectAllLands:
 		group.Domain = StaticGroupBattlefield
+		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeLand}
+	case StaticSubjectControlledLands:
+		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeLand}
 	case StaticSubjectControlledCreaturesChosenType:
 		group.Domain = StaticGroupSourceControllerPermanents

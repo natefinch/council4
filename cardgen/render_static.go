@@ -259,7 +259,7 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 		}
 		if len(effect.AddTypes) == 0 && len(effect.AddSubtypes) == 0 &&
 			len(effect.SetTypes) == 0 && len(effect.SetSubtypes) == 0 &&
-			effect.AddSubtypeFromEntryChoice == "" && !effect.AddEveryCreatureType {
+			effect.AddSubtypeFromEntryChoice == "" && !effect.AddEveryCreatureType && !effect.AddEveryBasicLandType {
 			return errors.New("render: type layer requires set or added types or subtypes")
 		}
 	default:
@@ -373,6 +373,9 @@ func renderContinuousCharacteristicFields(ctx *renderCtx, effect *game.Continuou
 			return nil, errors.New("render: unsupported entry-choice subtype key")
 		}
 		fields = append(fields, "AddSubtypeFromEntryChoice: game.EntryTypeChoiceKey,")
+	}
+	if effect.AddEveryBasicLandType {
+		fields = append(fields, "AddEveryBasicLandType: true,")
 	}
 	return fields, nil
 }

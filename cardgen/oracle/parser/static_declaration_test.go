@@ -1474,6 +1474,62 @@ func TestParseStaticGroupSubtypeInAdditionMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticEveryBasicLandTypeMeaning(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		group EffectStaticSubjectKind
+	}{
+		{"Lands you control are every basic land type in addition to their other types.", EffectStaticSubjectControlledLands},
+		{"Lands you control are every basic land type in addition to their other land types.", EffectStaticSubjectControlledLands},
+		{"Lands you control are every basic land type.", EffectStaticSubjectControlledLands},
+		{"Each land is every basic land type in addition to its other land types.", EffectStaticSubjectAllLands},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.name, Context{})
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.Kind != StaticDeclarationContinuousCharacteristic {
+				t.Fatalf("kind = %s, want characteristic", declaration.Kind)
+			}
+			if declaration.Subject.Group.Kind != test.group {
+				t.Fatalf("group = %s, want %s", declaration.Subject.Group.Kind, test.group)
+			}
+			if !declaration.EveryBasicLandType {
+				t.Fatalf("declaration = %#v, want EveryBasicLandType", declaration)
+			}
+			if len(declaration.Subtypes) != 0 || len(declaration.CardTypes) != 0 || len(declaration.Colors) != 0 {
+				t.Fatalf("declaration = %#v, want no enumerated characteristics", declaration)
+			}
+		})
+	}
+}
+
+func TestParseStaticEveryBasicLandTypeRejectsBadTail(t *testing.T) {
+	t.Parallel()
+	sources := []string{
+		"Lands you control are every basic land type in addition to their other colors.",
+		"Lands you control are every basic creature type in addition to their other types.",
+	}
+	for _, source := range sources {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(source, Context{})
+			for _, ability := range document.Abilities {
+				for _, declaration := range ability.StaticDeclarations {
+					if declaration.EveryBasicLandType {
+						t.Fatalf("source %q unexpectedly produced an every-basic-land-type declaration", source)
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestParseStaticChosenCreatureTypeAddition(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(

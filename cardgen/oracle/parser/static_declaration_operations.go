@@ -441,6 +441,7 @@ func staticLinkingVerbGroupSubject(tokens []shared.Token) (EffectStaticSubjectSy
 	forms := []groupForm{
 		{[]string{"other", "creatures", "you", "control"}, EffectStaticSubjectOtherControlledCreatures},
 		{[]string{"creatures", "you", "control"}, EffectStaticSubjectControlledCreatures},
+		{[]string{"lands", "you", "control"}, EffectStaticSubjectControlledLands},
 		{[]string{"permanents", "you", "control"}, EffectStaticSubjectControlledPermanents},
 		{[]string{"all", "other", "creatures"}, EffectStaticSubjectAllOtherCreatures},
 		{[]string{"all", "creatures"}, EffectStaticSubjectAllCreatures},
@@ -931,6 +932,9 @@ func parseStaticCharacteristicOperation(
 	if operation, next, ok := parseStaticEveryCreatureTypeOperation(tokens, index, cursor, end); ok {
 		return operation, next, true
 	}
+	if operation, next, ok := parseStaticEveryBasicLandTypeOperation(tokens, index, cursor, end); ok {
+		return operation, next, true
+	}
 	list, next, ok := parseStaticCharacteristicList(tokens, cursor, end, atoms)
 	if !ok {
 		return StaticDeclarationSyntax{}, 0, false
@@ -978,6 +982,34 @@ func parseStaticEveryCreatureTypeOperation(
 		Kind:              StaticDeclarationContinuousCharacteristic,
 		OperationSpan:     shared.SpanOf(tokens[index:next]),
 		EveryCreatureType: true,
+	}, next, true
+}
+
+// parseStaticEveryBasicLandTypeOperation recognizes the characteristic-add
+// operation "<group> is/are every basic land type [in addition to its/their
+// other (land types|types)]" (Dryad of the Ilysian Grove, Prismatic Omen),
+// spanning tokens[index] ("is"/"are") through the matched run. It adds all five
+// basic land subtypes via the EveryBasicLandType flag. The trailing "in
+// addition" tail is optional but, when present, must enumerate "land types" or
+// "types"; any other tail fails closed.
+func parseStaticEveryBasicLandTypeOperation(
+	tokens []shared.Token,
+	index, cursor, end int,
+) (StaticDeclarationSyntax, int, bool) {
+	if !staticWordsAt(tokens, cursor, "every", "basic", "land", "type") || cursor+4 > end {
+		return StaticDeclarationSyntax{}, 0, false
+	}
+	next := cursor + 4
+	if tail, tailNext, hasTail := parseStaticInAdditionTail(tokens, next, end); hasTail {
+		if !tail.landTypes && !tail.types {
+			return StaticDeclarationSyntax{}, 0, false
+		}
+		next = tailNext
+	}
+	return StaticDeclarationSyntax{
+		Kind:               StaticDeclarationContinuousCharacteristic,
+		OperationSpan:      shared.SpanOf(tokens[index:next]),
+		EveryBasicLandType: true,
 	}, next, true
 }
 

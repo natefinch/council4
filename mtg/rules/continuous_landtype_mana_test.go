@@ -121,7 +121,70 @@ func TestAddedForestSubtypeDoesNotDuplicatePrintedForestMana(t *testing.T) {
 	}
 }
 
-// TestForestGrantingStaticIgnoresNonLands confirms the static fails closed for
+// everyBasicLandTypeStaticPermanent adds a permanent whose static ability makes
+// every land its controller controls every basic land type in addition to its
+// other types, mirroring the group "Lands you control are every basic land type"
+// static (Dryad of the Ilysian Grove, Prismatic Omen). The source is an
+// enchantment so the static itself is not a land, isolating the effect on the
+// separately added lands under test.
+func everyBasicLandTypeStaticPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Prismatic Mantle",
+		Types: []types.Card{types.Enchantment},
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer: game.LayerType,
+				Group: game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{
+					RequiredTypes: []types.Card{types.Land},
+				}),
+				AddEveryBasicLandType: true,
+			}},
+		}},
+	}})
+}
+
+// TestEveryBasicLandTypeStaticGrantsAllFiveBasicsAndManaColors proves the group
+// "every basic land type" static end to end: an affected Plains gains all five
+// basic land subtypes (keeping its printed Plains) and the four additional
+// intrinsic mana abilities those gained subtypes confer, so it can tap for every
+// color while still tapping for its printed white.
+func TestEveryBasicLandTypeStaticGrantsAllFiveBasicsAndManaColors(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	plains := addBasicLandWithManaPermanent(g, game.Player1, "Plains", types.Plains, mana.W)
+	everyBasicLandTypeStaticPermanent(g, game.Player1)
+
+	values := effectivePermanentValues(g, plains)
+	for _, subtype := range []types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain, types.Forest} {
+		if !slices.Contains(values.subtypes, subtype) {
+			t.Fatalf("effective subtypes = %v, want to contain %s", values.subtypes, subtype)
+		}
+	}
+
+	_, colors := abilitiesManaProduction(permanentEffectiveAbilities(g, plains), nil)
+	for _, wanted := range []color.Color{color.White, color.Blue, color.Black, color.Red, color.Green} {
+		if !slices.Contains(colors, wanted) {
+			t.Fatalf("effective mana colors = %v, want to contain %v", colors, wanted)
+		}
+	}
+}
+
+// TestEveryBasicLandTypeStaticIgnoresOpponentLands confirms the group is scoped
+// to lands the source's controller controls: a land an opponent controls gains
+// neither the basic subtypes nor their mana abilities.
+func TestEveryBasicLandTypeStaticIgnoresOpponentLands(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	opponentWastes := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Wastes",
+		Types: []types.Card{types.Land},
+	}})
+	everyBasicLandTypeStaticPermanent(g, game.Player1)
+
+	values := effectivePermanentValues(g, opponentWastes)
+	if slices.Contains(values.subtypes, types.Forest) {
+		t.Fatalf("opponent land effective subtypes = %v, want no Forest", values.subtypes)
+	}
+}
+
 // permanents outside its land group: a creature gains neither the Forest subtype
 // nor a green mana ability.
 func TestForestGrantingStaticIgnoresNonLands(t *testing.T) {

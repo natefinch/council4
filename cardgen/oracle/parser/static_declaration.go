@@ -337,6 +337,13 @@ type StaticDeclarationSyntax struct {
 	// exclusive with the enumerated Colors/CardTypes/Subtypes payload.
 	EveryCreatureType bool `json:",omitempty"`
 
+	// EveryBasicLandType marks a "<group> is/are every basic land type [in
+	// addition to their other types]" declaration (Dryad of the Ilysian Grove,
+	// Prismatic Omen). The compiler expands it to a LayerType continuous effect
+	// that adds all five basic land subtypes rather than enumerating them in the
+	// characteristic list.
+	EveryBasicLandType bool `json:",omitempty"`
+
 	// Keyword-grant and card-ability-grant payload: the spans of the granted
 	// keyword atoms in source order.
 	KeywordSpans []shared.Span `json:"-"`

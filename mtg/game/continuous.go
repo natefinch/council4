@@ -129,6 +129,12 @@ type ContinuousEffect struct {
 	// Nexus, Mistform Ultimus). It mirrors the Changeling keyword's type-layer
 	// expansion (CR 702.73) without enumerating the full subtype list in data.
 	AddEveryCreatureType bool
+	// AddEveryBasicLandType adds the five basic land subtypes (Plains, Island,
+	// Swamp, Mountain, Forest) to the affected object at LayerType ("[group/this
+	// land] is/are every basic land type", Dryad of the Ilysian Grove, Prismatic
+	// Omen). Each added basic subtype also confers its intrinsic mana ability
+	// (CR 305.6) through the same path as an explicitly added basic land type.
+	AddEveryBasicLandType bool
 	// AddSubtypeFromEntryChoice adds the subtype recorded under this key on the
 	// effect's source permanent. A missing source, choice, or subtype result has
 	// no effect.

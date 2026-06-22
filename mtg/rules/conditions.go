@@ -194,7 +194,6 @@ func controllerGraveyardCardTypeCount(g *game.Game, controller game.PlayerID) in
 }
 
 func controllerBasicLandTypeCount(g *game.Game, ctx conditionContext) int {
-	basicLandTypes := [...]types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain, types.Forest}
 	distinct := make(map[types.Sub]bool)
 	for _, permanent := range g.Battlefield {
 		if permanent.PhasedOut {
@@ -204,7 +203,7 @@ func controllerBasicLandTypeCount(g *game.Game, ctx conditionContext) int {
 		if values.controller != ctx.controller || !slices.Contains(values.types, types.Land) {
 			continue
 		}
-		for _, subtype := range basicLandTypes {
+		for _, subtype := range basicLandSubtypes {
 			if slices.Contains(values.subtypes, subtype) {
 				distinct[subtype] = true
 			}
