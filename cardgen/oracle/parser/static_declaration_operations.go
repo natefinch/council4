@@ -682,36 +682,102 @@ func parseStaticDynamicPowerToughnessOperation(
 }
 
 // parseCharacteristicDefiningPowerToughnessDeclaration recognizes a
-// characteristic-defining ability that sets the source object's power and
-// toughness equal to a rules-derived count ("<source>'s power and toughness are
-// each equal to the number of cards in your hand"). The subject must be the
-// source object: the card's own possessive name or "this creature's"/"this
-// permanent's". Other subjects (an enchanted or equipped creature) fail closed
-// because the runtime models this as the source's printed characteristic only.
+// characteristic-defining ability that sets the source object's power and/or
+// toughness equal to a rules-derived count. Three forms are recognized:
+//   - "<source>'s power and toughness are each equal to <count>" (both equal);
+//   - "<source>'s power is equal to <count>" (power only; printed toughness
+//     stands);
+//   - "<source>'s power is equal to <count> and its toughness is equal to that
+//     number plus N" (power equals the count, toughness equals the count plus N
+//     — Tarmogoyf/Lhurgoyf).
+//
+// The subject must be the source object: the card's own possessive name or
+// "this creature's"/"this permanent's". Other subjects (an enchanted or equipped
+// creature) fail closed because the runtime models this as the source's printed
+// characteristic only.
 func parseCharacteristicDefiningPowerToughnessDeclaration(tokens []shared.Token, atoms Atoms) (StaticDeclarationSyntax, bool) {
-	if len(tokens) < 9 || tokens[len(tokens)-1].Kind != shared.Period {
+	period := len(tokens) - 1
+	if len(tokens) < 8 || tokens[period].Kind != shared.Period {
 		return StaticDeclarationSyntax{}, false
 	}
 	subjectSpan, next, ok := characteristicDefiningSourceSubject(tokens, atoms)
 	if !ok {
 		return StaticDeclarationSyntax{}, false
 	}
-	if !staticWordsAt(tokens, next, "power", "and", "toughness", "are", "each", "equal", "to") {
-		return StaticDeclarationSyntax{}, false
-	}
-	value, end, ok := parseStaticDynamicValueCount(tokens, next+7, len(tokens)-1)
-	if !ok || end != len(tokens)-1 {
+	op, ok := parseCharacteristicDefiningOperation(tokens, next, period)
+	if !ok {
 		return StaticDeclarationSyntax{}, false
 	}
 	return StaticDeclarationSyntax{
 		Kind:          StaticDeclarationCharacteristicDefiningPowerToughness,
 		Span:          shared.SpanOf(tokens),
-		OperationSpan: shared.SpanOf(tokens[next:end]),
+		OperationSpan: shared.SpanOf(tokens[next:op.end]),
 		Subject: StaticDeclarationSubject{
 			Kind: StaticDeclarationSubjectSourceCreature,
 			Span: subjectSpan,
 		},
-		DynamicValue: value,
+		DynamicValue:           op.kind,
+		DynamicSetsPower:       op.setsPower,
+		DynamicSetsToughness:   op.setsToughness,
+		DynamicToughnessOffset: op.offset,
+	}, true
+}
+
+// characteristicDefiningOperation captures the parsed operation clause of a
+// characteristic-defining power/toughness declaration: the matched count kind,
+// the index past the consumed operation, which characteristics are set, and the
+// toughness offset for the "that number plus N" form.
+type characteristicDefiningOperation struct {
+	kind          StaticDeclarationDynamicValueKind
+	end           int
+	setsPower     bool
+	setsToughness bool
+	offset        int
+}
+
+// parseCharacteristicDefiningOperation parses the operation clause of a
+// characteristic-defining power/toughness declaration starting at index start
+// and ending at the trailing period at index period. It returns the matched
+// count kind, the index past the consumed operation, which characteristics are
+// set, and the toughness offset for the "that number plus N" form.
+func parseCharacteristicDefiningOperation(
+	tokens []shared.Token,
+	start, period int,
+) (characteristicDefiningOperation, bool) {
+	if staticWordsAt(tokens, start, "power", "and", "toughness", "are", "each", "equal", "to") {
+		value, next, valueOK := parseStaticDynamicValueCount(tokens, start+7, period)
+		if !valueOK || next != period {
+			return characteristicDefiningOperation{}, false
+		}
+		return characteristicDefiningOperation{kind: value, end: next, setsPower: true, setsToughness: true}, true
+	}
+	if !staticWordsAt(tokens, start, "power", "is", "equal", "to") {
+		return characteristicDefiningOperation{}, false
+	}
+	value, next, valueOK := parseStaticDynamicValueCount(tokens, start+4, period)
+	if !valueOK {
+		return characteristicDefiningOperation{}, false
+	}
+	if next == period {
+		return characteristicDefiningOperation{kind: value, end: next, setsPower: true}, true
+	}
+	if !staticWordsAt(tokens, next, "and", "its", "toughness", "is", "equal", "to", "that", "number", "plus") {
+		return characteristicDefiningOperation{}, false
+	}
+	offsetIndex := next + 9
+	if offsetIndex+1 != period {
+		return characteristicDefiningOperation{}, false
+	}
+	offsetValue, offsetOK := staticUnsignedInteger(tokens[offsetIndex])
+	if !offsetOK {
+		return characteristicDefiningOperation{}, false
+	}
+	return characteristicDefiningOperation{
+		kind:          value,
+		end:           offsetIndex + 1,
+		setsPower:     true,
+		setsToughness: true,
+		offset:        offsetValue,
 	}, true
 }
 
@@ -758,6 +824,12 @@ func parseStaticDynamicValueCount(
 		return StaticDeclarationDynamicValueControllerArtifactCount, cursor + 3, true
 	case staticWordsAt(tokens, cursor, "creatures", "on", "the", "battlefield"):
 		return StaticDeclarationDynamicValueAllBattlefieldCreatureCount, cursor + 4, true
+	case staticWordsAt(tokens, cursor, "creature", "cards", "in", "all", "graveyards"):
+		return StaticDeclarationDynamicValueCreatureCardsInAllGraveyards, cursor + 5, true
+	case staticWordsAt(tokens, cursor, "card", "types", "among", "cards", "in", "all", "graveyards"):
+		return StaticDeclarationDynamicValueCardTypesAmongAllGraveyards, cursor + 7, true
+	case staticWordsAt(tokens, cursor, "cards", "in", "all", "graveyards"):
+		return StaticDeclarationDynamicValueAllGraveyardsSize, cursor + 4, true
 	default:
 		return StaticDeclarationDynamicValueNone, 0, false
 	}

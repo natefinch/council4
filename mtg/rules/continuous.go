@@ -266,6 +266,10 @@ func dynamicValue(g *game.Game, controller game.PlayerID, dynamic *game.DynamicV
 	if dynamic == nil {
 		return 0
 	}
+	return dynamicValueBase(g, controller, dynamic) + dynamic.Offset
+}
+
+func dynamicValueBase(g *game.Game, controller game.PlayerID, dynamic *game.DynamicValue) int {
 	switch dynamic.Kind {
 	case game.DynamicValueConstant:
 		return dynamic.Value
@@ -291,9 +295,66 @@ func dynamicValue(g *game.Game, controller game.PlayerID, dynamic *game.DynamicV
 			}
 		}
 		return count
+	case game.DynamicValueAllGraveyardsSize:
+		return allGraveyardsCardCount(g, types.Creature, false)
+	case game.DynamicValueCreatureCardsInAllGraveyards:
+		return allGraveyardsCardCount(g, types.Creature, true)
+	case game.DynamicValueCardTypesAmongAllGraveyards:
+		return allGraveyardsCardTypeCount(g)
 	default:
 	}
 	return 0
+}
+
+// allGraveyardsCardCount counts cards across every player's graveyard. When
+// filterByType is true, only cards whose front (or split alternate) face has
+// cardType are counted; otherwise every card is counted.
+func allGraveyardsCardCount(g *game.Game, cardType types.Card, filterByType bool) int {
+	count := 0
+	for _, player := range g.Players {
+		for _, cardID := range player.Graveyard.All() {
+			card, ok := g.GetCardInstance(cardID)
+			if !ok {
+				continue
+			}
+			if !filterByType || graveyardCardHasType(card, cardType) {
+				count++
+			}
+		}
+	}
+	return count
+}
+
+// allGraveyardsCardTypeCount counts the distinct card types among all cards in
+// every player's graveyard (CR 208.2, Tarmogoyf).
+func allGraveyardsCardTypeCount(g *game.Game) int {
+	distinct := make(map[types.Card]bool)
+	for _, player := range g.Players {
+		for _, cardID := range player.Graveyard.All() {
+			card, ok := g.GetCardInstance(cardID)
+			if !ok {
+				continue
+			}
+			for _, cardType := range graveyardCardTypes(card) {
+				distinct[cardType] = true
+			}
+		}
+	}
+	return len(distinct)
+}
+
+// graveyardCardTypes returns the card types of a graveyard card's front face,
+// including a split card's alternate face.
+func graveyardCardTypes(card *game.CardInstance) []types.Card {
+	cardTypes := append([]types.Card(nil), cardFaceOrDefault(card, game.FaceFront).Types...)
+	if card.Def.Layout == game.LayoutSplit && card.Def.Alternate.Exists {
+		cardTypes = append(cardTypes, card.Def.Alternate.Val.Types...)
+	}
+	return cardTypes
+}
+
+func graveyardCardHasType(card *game.CardInstance, cardType types.Card) bool {
+	return slices.Contains(graveyardCardTypes(card), cardType)
 }
 
 func countControlledPermanentsWithType(g *game.Game, controller game.PlayerID, cardType types.Card) int {

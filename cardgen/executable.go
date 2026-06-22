@@ -3,6 +3,7 @@ package cardgen
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
@@ -304,7 +305,7 @@ func parseColorValue(letter string) (color.Color, bool) {
 
 // parsePTValue converts a Scryfall power/toughness string into a typed game.PT.
 func parsePTValue(value string) game.PT {
-	if value == "*" {
+	if strings.Contains(value, "*") {
 		return game.PT{IsStar: true}
 	}
 	n, err := strconv.Atoi(value)

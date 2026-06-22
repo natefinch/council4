@@ -22,12 +22,19 @@ const (
 	DynamicValueControllerLandCount
 	DynamicValueControllerArtifactCount
 	DynamicValueAllBattlefieldCreatureCount
+	DynamicValueAllGraveyardsSize
+	DynamicValueCreatureCardsInAllGraveyards
+	DynamicValueCardTypesAmongAllGraveyards
 )
 
 // DynamicValue is data for a characteristic-defining numeric value.
 type DynamicValue struct {
 	Kind  DynamicValueKind
 	Value int
+	// Offset is a fixed integer added to the resolved count, modeling
+	// "<count> plus N" characteristic-defining toughness (CR 208.2, Tarmogoyf's
+	// "its toughness is equal to that number plus 1").
+	Offset int
 }
 
 // CopyableValues records the copiable printed/effective values copied in layer
