@@ -990,8 +990,10 @@ func handleCastForFree(r *effectResolver, prim game.CastForFree) effectResolved 
 // number chosen).
 func handleReturnFromGraveyard(r *effectResolver, prim game.ReturnFromGraveyard) effectResolved {
 	destination := zone.Hand
+	prompt := "Choose a card to return to your hand"
 	if prim.Destination == zone.Battlefield {
 		destination = zone.Battlefield
+		prompt = "Choose a card to return to the battlefield"
 	}
 	count := game.ChooseExactly
 	if prim.AnyNumber {
@@ -1012,6 +1014,7 @@ func handleReturnFromGraveyard(r *effectResolver, prim game.ReturnFromGraveyard)
 			MaxTotalManaValue: prim.MaxTotalManaValue,
 			FromLinked:        prim.FromLinked,
 		},
+		Prompt: prompt,
 	})
 	res.amount = r.quantity(prim.Amount)
 	return res

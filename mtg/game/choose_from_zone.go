@@ -59,6 +59,13 @@ type ChooseFromZone struct {
 	// Riders carry the optional movement modifiers applied as the chosen cards
 	// move to their destination.
 	Riders ChooseRiders
+
+	// Prompt is the message shown for the primary card choice. It is display
+	// metadata only and never affects which set is legal or chosen; the empty
+	// value uses the resolver's generic "Choose cards" prompt. A constructor
+	// supplies it to preserve a primitive's historical, wording-specific prompt
+	// (such as "Choose a card to return to your hand").
+	Prompt string
 }
 
 // ChooseCount selects how a ChooseFromZone's Quantity bounds the number of cards
