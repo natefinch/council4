@@ -767,6 +767,15 @@ type SacrificePermanents struct {
 	// matching Selection, i.e. who can't satisfy the edict ("Each player who
 	// can't discards a card."). SacrificeFallbackNone leaves no rider.
 	Fallback SacrificeFallback
+	// PublishLinked, when set, records the permanents sacrificed by this edict as
+	// linked objects under the given key so a later instruction can read them
+	// through last-known information once they have left the battlefield. It
+	// backs an optional resolving sacrifice whose follow-up effect is scaled by
+	// the sacrificed permanent ("you may sacrifice another creature. If you do,
+	// you gain X life and draw X cards, where X is that creature's power." —
+	// Disciple of Freyalise). Empty when no downstream effect reads the
+	// sacrificed permanent.
+	PublishLinked LinkedKey
 }
 
 // SacrificeFallbackKind identifies the per-player rider applied to players who

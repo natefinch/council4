@@ -1456,6 +1456,13 @@ func handleSacrificePermanents(r *effectResolver, prim game.SacrificePermanents)
 		}
 		chosen = append(chosen, r.engine.chooseSacrificePermanentsForPlayer(r.game, resolver, playerID, amount, prim.Selection, r.agents, r.log)...)
 	}
+	if prim.PublishLinked != "" {
+		key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
+		clearLinkedObjects(r.game, key)
+		for _, permanent := range chosen {
+			rememberLinkedObject(r.game, key, permanentLinkedObjectRef(permanent))
+		}
+	}
 	res.succeeded = sacrificePermanentsSimultaneously(r.game, chosen)
 	r.applySacrificeFallback(prim.Fallback, cantSacrifice)
 	return res

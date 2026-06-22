@@ -1335,6 +1335,9 @@ func (r Renderer) renderSacrificePermanents(ctx *renderCtx, value *game.Sacrific
 		}
 		fields = append(fields, fmt.Sprintf("Fallback: %s,", renderedFallback))
 	}
+	if value.PublishLinked != "" {
+		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
+	}
 	return structLit("game.SacrificePermanents", fields), nil
 }
 
