@@ -373,6 +373,39 @@ func lowerAdditionalLandPlays(ctx contentCtx) (game.AbilityContent, *shared.Diag
 	}}}.Ability(), nil
 }
 
+// lowerAdditionalCombatPhase lowers the extra-phase-insertion effect "After this
+// [main] phase, there is an additional combat phase[ followed by an additional
+// main phase]." (Aggravated Assault, Aurelia the Warleader, World at War) to an
+// AddExtraPhases primitive that queues the extra phases onto the current turn.
+// It reads only the typed AdditionalCombatPhase / AdditionalMainPhase flags and
+// fails closed for any target, reference, condition, keyword, mode, amount,
+// duration, or negation so only the bare extra-phase clause lowers.
+func lowerAdditionalCombatPhase(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		!effect.AdditionalCombatPhase ||
+		effect.Amount.Known ||
+		effect.Duration != compiler.DurationNone ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported additional combat phase effect",
+			"the executable source backend supports only the exact additional combat phase insertion this turn",
+		)
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.AddExtraPhases{
+			Combat: effect.AdditionalCombatPhase,
+			Main:   effect.AdditionalMainPhase,
+		},
+	}}}.Ability(), nil
+}
+
 // lowerCastAsThoughFlash lowers the controller-scoped timing permission "You may
 // cast spells this turn as though they had flash." to an ApplyRule that lets the
 // controller cast spells at instant speed for the rest of the turn. Like
@@ -593,6 +626,9 @@ func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.
 		return content, diagnostic, true
 	case compiler.EffectCastAsThoughFlash:
 		content, diagnostic := lowerCastAsThoughFlash(ctx)
+		return content, diagnostic, true
+	case compiler.EffectAdditionalCombatPhase:
+		content, diagnostic := lowerAdditionalCombatPhase(ctx)
 		return content, diagnostic, true
 	case compiler.EffectNoMaximumHandSize:
 		content, diagnostic := lowerNoMaximumHandSize(ctx)

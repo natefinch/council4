@@ -319,6 +319,7 @@ func cloneBlockerOrder(m map[id.ID][]id.ID) map[id.ID][]id.ID {
 
 func cloneTurnState(t TurnState) TurnState {
 	t.ExtraTurns = cloneSlice(t.ExtraTurns)
+	t.ExtraPhases = cloneSlice(t.ExtraPhases)
 	return t
 }
 

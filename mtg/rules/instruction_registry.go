@@ -137,6 +137,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleRepeatProcess)
 	registerPrimitiveHandler(reg, handleBecomeCopy)
 	registerPrimitiveHandler(reg, handleAmass)
+	registerPrimitiveHandler(reg, handleAddExtraPhases)
 	return reg
 }
 

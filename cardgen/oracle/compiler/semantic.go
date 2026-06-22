@@ -1136,6 +1136,7 @@ const (
 	EffectTribute
 	EffectChooseCreatureType
 	EffectNoMaximumHandSize
+	EffectAdditionalCombatPhase
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1600,6 +1601,15 @@ type CompiledEffect struct {
 	// it toward source coverage.
 	ReturnAsEnchantment          bool
 	ReturnAsEnchantmentRiderSpan shared.Span
+	// AdditionalCombatPhase mirrors the parser flag for an "After this [main]
+	// phase, there is an additional combat phase[ followed by an additional main
+	// phase]." effect (Aggravated Assault, Aurelia the Warleader, World at War):
+	// the effect inserts an extra combat phase into the current turn.
+	// AdditionalMainPhase mirrors the optional "followed by an additional main
+	// phase" tail. Both are false for every other effect; AdditionalMainPhase is
+	// set only together with AdditionalCombatPhase.
+	AdditionalCombatPhase bool
+	AdditionalMainPhase   bool
 }
 
 // CompiledManaSpendRider is the typed semantic form of a mana-spend rider.

@@ -95,10 +95,11 @@ const (
 	PrimitivePutHandOnLibraryThenDraw
 	PrimitiveRevealUntil
 	PrimitiveBecomeSaddled
+	PrimitiveAddExtraPhases
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveBecomeSaddled) + 1
+const primitiveKindCount = int(PrimitiveAddExtraPhases) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -1011,4 +1012,15 @@ type PreventDamage struct {
 	CombatOnly bool
 	BySource   bool
 	Global     bool
+}
+
+// AddExtraPhases inserts additional phases into the current turn (CR 505.5,
+// 506.2). It models "After this main phase, there is an additional combat
+// phase[ followed by an additional main phase]." (Aggravated Assault, Aurelia
+// the Warleader, World at War, Combat Celebrant). Combat queues an extra combat
+// phase; Main queues an extra main phase after it. The runtime appends the
+// queued phases to TurnState.ExtraPhases, which the turn loop drains in order.
+type AddExtraPhases struct {
+	Combat bool
+	Main   bool
 }

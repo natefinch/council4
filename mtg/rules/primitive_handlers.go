@@ -1082,6 +1082,16 @@ func handleSkipStep(r *effectResolver, prim game.SkipStep) effectResolved {
 	return res
 }
 
+func handleAddExtraPhases(r *effectResolver, prim game.AddExtraPhases) effectResolved {
+	if prim.Combat {
+		r.game.Turn.ExtraPhases = append(r.game.Turn.ExtraPhases, game.PhaseCombat)
+	}
+	if prim.Main {
+		r.game.Turn.ExtraPhases = append(r.game.Turn.ExtraPhases, game.PhasePostcombatMain)
+	}
+	return effectResolved{accepted: true, succeeded: true}
+}
+
 func handleCreateEmblem(r *effectResolver, prim game.CreateEmblem) effectResolved {
 	r.game.Emblems = append(r.game.Emblems, game.Emblem{
 		Owner:     r.obj.Controller,
