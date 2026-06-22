@@ -862,6 +862,9 @@ func lowerMoveCountersSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 	if effect.MoveCountersFromTarget {
 		return lowerMoveCountersFromTargetSpell(ctx)
 	}
+	if content, ok := lowerMoveCountersOntoEventPermanent(ctx); ok {
+		return content, nil
+	}
 	if !effect.Exact ||
 		effect.Negated ||
 		effect.Context != parser.EffectContextController ||
@@ -901,6 +904,58 @@ func lowerMoveCountersSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 			Primitive: move,
 		}},
 	}.Ability(), nil
+}
+
+// lowerMoveCountersOntoEventPermanent lowers the Graft-style move "move a +1/+1
+// counter from this creature onto that creature." where the destination "that
+// creature" is the permanent of the triggering enters event (CR 702.57). It
+// reads one counter of the named kind from the ability's own source
+// (CounterSourceSelf) and places it on the event permanent
+// (EventPermanentReference). It fails closed (ok=false) for any shape outside
+// exactly: a controller-context, non-negated, single named +1/+1 move of one
+// counter; no targets; exactly two references — one source-bound counter source
+// and one event-permanent-bound destination — and no conditions or modes.
+func lowerMoveCountersOntoEventPermanent(ctx contentCtx) (game.AbilityContent, bool) {
+	effect := ctx.content.Effects[0]
+	if effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		effect.MoveCountersAll ||
+		!effect.CounterKindKnown ||
+		!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
+		effect.CounterKind.PlayerOnly() ||
+		!effect.Amount.Known ||
+		effect.Amount.Value != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 2 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	sources, destinations := 0, 0
+	for _, reference := range ctx.content.References {
+		switch reference.Binding {
+		case compiler.ReferenceBindingSource:
+			sources++
+		case compiler.ReferenceBindingEventPermanent:
+			destinations++
+		default:
+			return game.AbilityContent{}, false
+		}
+	}
+	if sources != 1 || destinations != 1 {
+		return game.AbilityContent{}, false
+	}
+	move := game.MoveCounters{
+		Object:      game.EventPermanentReference(),
+		Source:      game.CounterSourceSpec{Kind: game.CounterSourceSelf},
+		Amount:      game.Fixed(effect.Amount.Value),
+		CounterKind: effect.CounterKind,
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: move,
+		}},
+	}.Ability(), true
 }
 
 // lowerPutThoseCountersSpell lowers the counter-salvage form "put those counters
