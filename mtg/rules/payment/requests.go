@@ -79,6 +79,11 @@ type Preferences struct {
 	ExileChoices         []id.ID
 	RevealChoices        []id.ID
 	EvidenceChoices      []id.ID
+	// RemoveCounterChoices lists the permanents chosen to lose counters for an
+	// AdditionalRemoveCounterAmong cost, one entry per counter removed. The same
+	// permanent may appear multiple times when several of its counters are
+	// removed.
+	RemoveCounterChoices []id.ID
 }
 
 // SpellOptionSummary is a summary of one payable spell cost option for choice presentation.
@@ -125,5 +130,6 @@ func clonePreferences(prefs *Preferences) *Preferences {
 		ExileChoices:         append([]id.ID(nil), prefs.ExileChoices...),
 		RevealChoices:        append([]id.ID(nil), prefs.RevealChoices...),
 		EvidenceChoices:      append([]id.ID(nil), prefs.EvidenceChoices...),
+		RemoveCounterChoices: append([]id.ID(nil), prefs.RemoveCounterChoices...),
 	}
 }

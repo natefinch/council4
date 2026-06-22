@@ -322,3 +322,83 @@ func TestChooseTapPermanentsTotalPowerUnreachableReturnsNil(t *testing.T) {
 		t.Fatalf("expected nil when threshold unreachable, got %v", chosen)
 	}
 }
+
+func removeCounterAmongTotal(removals []counterRemoval) int {
+	total := 0
+	for _, removal := range removals {
+		total += removal.amount
+	}
+	return total
+}
+
+func TestPlanRemoveCounterAmongGreedySpreadsAcrossPermanents(t *testing.T) {
+	first := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	first.Counters.Add(counter.PlusOnePlusOne, 1)
+	second := &game.Permanent{ObjectID: 2, Controller: game.Player1}
+	second.Counters.Add(counter.PlusOnePlusOne, 3)
+	state := fakePaymentState{battlefield: []*game.Permanent{first, second}}
+	additional := cost.Additional{Kind: cost.AdditionalRemoveCounterAmong, Amount: 2, CounterKind: counter.PlusOnePlusOne}
+
+	removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 2, nil, nil)
+	if !ok || removeCounterAmongTotal(removals) != 2 {
+		t.Fatalf("removals = %#v ok = %t, want total 2", removals, ok)
+	}
+	for _, removal := range removals {
+		if removal.kind != counter.PlusOnePlusOne {
+			t.Fatalf("removal kind = %v, want +1/+1", removal.kind)
+		}
+	}
+}
+
+func TestPlanRemoveCounterAmongHonorsPreference(t *testing.T) {
+	first := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	first.Counters.Add(counter.PlusOnePlusOne, 1)
+	second := &game.Permanent{ObjectID: 2, Controller: game.Player1}
+	second.Counters.Add(counter.PlusOnePlusOne, 3)
+	state := fakePaymentState{battlefield: []*game.Permanent{first, second}}
+	additional := cost.Additional{Kind: cost.AdditionalRemoveCounterAmong, Amount: 2, CounterKind: counter.PlusOnePlusOne}
+	prefs := &Preferences{RemoveCounterChoices: []id.ID{2, 2}}
+
+	removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 2, nil, prefs)
+	if !ok || len(removals) != 1 || removals[0].source != second || removals[0].amount != 2 {
+		t.Fatalf("removals = %#v ok = %t, want both from permanent 2", removals, ok)
+	}
+	if len(prefs.RemoveCounterChoices) != 0 {
+		t.Fatalf("remaining choices = %#v, want consumed", prefs.RemoveCounterChoices)
+	}
+}
+
+func TestPlanRemoveCounterAmongFailsWhenInsufficient(t *testing.T) {
+	only := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	only.Counters.Add(counter.PlusOnePlusOne, 1)
+	state := fakePaymentState{battlefield: []*game.Permanent{only}}
+	additional := cost.Additional{Kind: cost.AdditionalRemoveCounterAmong, Amount: 2, CounterKind: counter.PlusOnePlusOne}
+
+	if removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 2, nil, nil); ok {
+		t.Fatalf("removals = %#v ok = true, want failure for insufficient counters", removals)
+	}
+}
+
+func TestPlanRemoveCounterAmongReservesPlannedCounters(t *testing.T) {
+	only := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	only.Counters.Add(counter.PlusOnePlusOne, 2)
+	state := fakePaymentState{battlefield: []*game.Permanent{only}}
+	additional := cost.Additional{Kind: cost.AdditionalRemoveCounterAmong, Amount: 2, CounterKind: counter.PlusOnePlusOne}
+	planned := []counterRemoval{{source: only, kind: counter.PlusOnePlusOne, amount: 1}}
+
+	if removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 2, planned, nil); ok {
+		t.Fatalf("removals = %#v ok = true, want failure once reserved counters are excluded", removals)
+	}
+}
+
+func TestPlanRemoveCounterAmongRejectsInvalidPreference(t *testing.T) {
+	only := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	only.Counters.Add(counter.PlusOnePlusOne, 2)
+	state := fakePaymentState{battlefield: []*game.Permanent{only}}
+	additional := cost.Additional{Kind: cost.AdditionalRemoveCounterAmong, Amount: 1, CounterKind: counter.PlusOnePlusOne}
+	prefs := &Preferences{RemoveCounterChoices: []id.ID{999}}
+
+	if removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 1, nil, prefs); ok {
+		t.Fatalf("removals = %#v ok = true, want invalid preference rejected", removals)
+	}
+}

@@ -328,6 +328,12 @@ type CostComponent struct {
 	CounterKindKnown  bool
 	SubtypesAny       []types.Sub
 
+	// RemoveCounterAmong reports a "remove N counters from among <permanents>
+	// you control" cost, recognized by the parser. The removed counters are
+	// spread across the chosen controlled permanents named by the object
+	// selector fields rather than taken from the ability's own source.
+	RemoveCounterAmong bool
+
 	// ExcludeSource reports that the cost object excludes the ability's own
 	// source ("another"), recognized by the parser.
 	ExcludeSource bool

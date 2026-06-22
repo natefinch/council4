@@ -112,6 +112,12 @@ type CostComponent struct {
 	CounterKindKnown bool               `json:",omitempty"`
 	SubtypesAny      []types.Sub        `json:",omitempty"`
 
+	// RemoveCounterAmong reports a "remove N counters from among <permanents>
+	// you control" cost, where the removed counters are spread across the
+	// chosen controlled permanents rather than taken from the ability's own
+	// source. The object noun/controller fields carry the permanent constraint.
+	RemoveCounterAmong bool `json:",omitempty"`
+
 	// ExcludeSource reports that the cost object excludes the ability's own
 	// source, recognized from the determiner "another" (e.g. "Sacrifice another
 	// creature"). The compiler carries it onto the typed cost component.
@@ -843,20 +849,79 @@ func annotatePutCounterCostObject(component *CostComponent, object []shared.Toke
 
 func annotateRemoveCounterCostObject(component *CostComponent, object []shared.Token, atoms Atoms) {
 	counterIndex := singleCounterWordIndex(object)
-	if counterIndex <= 1 || counterIndex+2 >= len(object) || !equalWord(object[counterIndex+1], "from") {
+	if counterIndex < 1 || counterIndex+2 >= len(object) || !equalWord(object[counterIndex+1], "from") {
 		return
 	}
-	if !costAmountAt(component, object[0], atoms, false) ||
-		!costSelfReference(object[counterIndex+2:], atoms, true) {
+	kindTokens := object[1:counterIndex]
+	rest := object[counterIndex+2:]
+	if annotateRemoveCounterAmongObject(component, object[0], kindTokens, rest, atoms) {
 		return
 	}
-	kind, ok := exactCostCounterKind(object[1:counterIndex], atoms, removeCounterCostKinds())
+	annotateRemoveCounterSourceObject(component, object[0], kindTokens, rest, atoms)
+}
+
+// annotateRemoveCounterSourceObject recognizes the single-source cost "Remove N
+// <kind> counters from <this permanent>", which removes the counters from the
+// ability's own source. It requires an explicit counter kind.
+func annotateRemoveCounterSourceObject(component *CostComponent, amount shared.Token, kindTokens, rest []shared.Token, atoms Atoms) {
+	if len(kindTokens) == 0 {
+		return
+	}
+	if !costAmountAt(component, amount, atoms, false) ||
+		!costSelfReference(rest, atoms, true) {
+		return
+	}
+	kind, ok := exactCostCounterKind(kindTokens, atoms, removeCounterCostKinds())
 	if !ok {
 		return
 	}
 	component.CounterKind = kind
 	component.CounterKindKnown = true
 	component.SourceSelf = true
+}
+
+// annotateRemoveCounterAmongObject recognizes the spread cost "Remove N <kind>
+// counters from among <permanents> you control", where the removed counters are
+// distributed across the chosen controlled permanents. The amount may be a fixed
+// count or X; the counter kind, when named, must be a recognized kind.
+func annotateRemoveCounterAmongObject(component *CostComponent, amount shared.Token, kindTokens, rest []shared.Token, atoms Atoms) bool {
+	if len(rest) < 4 ||
+		!equalWord(rest[0], "among") ||
+		!equalWord(rest[len(rest)-2], "you") ||
+		!equalWord(rest[len(rest)-1], "control") {
+		return false
+	}
+	typeTokens := rest[1 : len(rest)-2]
+	if !annotateCostPermanentObject(component, typeTokens, atoms, false, sacrificeSubtypeFamilies) {
+		return false
+	}
+	if !costAmountAt(component, amount, atoms, true) {
+		clearRemoveCounterAmongObject(component)
+		return false
+	}
+	if len(kindTokens) > 0 {
+		kind, ok := exactCostCounterKind(kindTokens, atoms, removeCounterCostKinds())
+		if !ok {
+			clearRemoveCounterAmongObject(component)
+			return false
+		}
+		component.CounterKind = kind
+		component.CounterKindKnown = true
+	}
+	component.ObjectController = ControllerRelationYouControl
+	component.RemoveCounterAmong = true
+	return true
+}
+
+// clearRemoveCounterAmongObject resets the object fields a partially recognized
+// among-removal cost may have set so the component falls back to bare and
+// lowering fails closed.
+func clearRemoveCounterAmongObject(component *CostComponent) {
+	component.ObjectNoun = ObjectNounUnknown
+	component.ObjectController = ControllerRelationUnknown
+	component.SubtypesAny = nil
+	component.ObjectSupertype = ""
+	component.SupertypeKnown = false
 }
 
 func singleCounterWordIndex(tokens []shared.Token) int {

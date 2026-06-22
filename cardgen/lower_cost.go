@@ -318,6 +318,9 @@ func lowerRemoveCounterCost(
 	_ string,
 	component compiler.CostComponent,
 ) (cost.Additional, bool) {
+	if component.RemoveCounterAmong {
+		return lowerRemoveCounterAmongCost(component)
+	}
 	if !component.AmountKnown || !component.CounterKindKnown || !component.SourceSelf {
 		return cost.Additional{}, false
 	}
@@ -327,6 +330,36 @@ func lowerRemoveCounterCost(
 		Amount:      component.AmountValue,
 		CounterKind: component.CounterKind,
 	}, true
+}
+
+// lowerRemoveCounterAmongCost lowers "remove N <kind> counters from among
+// <permanents> you control." It requires a known counter kind and a fixed or X
+// amount; the permanent constraint is taken from the cost's object selector.
+func lowerRemoveCounterAmongCost(component compiler.CostComponent) (cost.Additional, bool) {
+	if !component.CounterKindKnown ||
+		component.ObjectController != compiler.ControllerYou {
+		return cost.Additional{}, false
+	}
+	if !component.AmountKnown && !component.AmountFromX {
+		return cost.Additional{}, false
+	}
+	additional := cost.Additional{
+		Kind:        cost.AdditionalRemoveCounterAmong,
+		Text:        component.Text,
+		CounterKind: component.CounterKind,
+	}
+	if component.AmountFromX {
+		additional.AmountFromX = true
+	} else {
+		if component.AmountValue <= 0 {
+			return cost.Additional{}, false
+		}
+		additional.Amount = component.AmountValue
+	}
+	if !lowerCostPermanentObject(component, &additional, false) {
+		return cost.Additional{}, false
+	}
+	return additional, true
 }
 
 func lowerExileCost(component compiler.CostComponent) (cost.Additional, bool) {
