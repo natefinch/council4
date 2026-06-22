@@ -286,6 +286,75 @@ func TestLowerCastTriggerAcceptsManaValueKickedAndZonePhrases(t *testing.T) {
 	}
 }
 
+func TestLowerCastTriggerAcceptsTypedManaValuePhrases(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		phrase    string
+		wantValue int
+		assert    func(t *testing.T, sel game.Selection)
+	}{
+		{
+			name:      "creature spell mana value",
+			phrase:    "a creature spell with mana value 6 or greater",
+			wantValue: 6,
+			assert: func(t *testing.T, sel game.Selection) {
+				t.Helper()
+				if !slices.Equal(sel.RequiredTypes, []types.Card{types.Creature}) {
+					t.Fatalf("RequiredTypes = %v, want [Creature]", sel.RequiredTypes)
+				}
+			},
+		},
+		{
+			name:      "artifact spell mana value",
+			phrase:    "an artifact spell with mana value 5 or greater",
+			wantValue: 5,
+			assert: func(t *testing.T, sel game.Selection) {
+				t.Helper()
+				if !slices.Equal(sel.RequiredTypes, []types.Card{types.Artifact}) {
+					t.Fatalf("RequiredTypes = %v, want [Artifact]", sel.RequiredTypes)
+				}
+			},
+		},
+		{
+			name:      "colorless spell mana value",
+			phrase:    "a colorless spell with mana value 7 or greater",
+			wantValue: 7,
+			assert: func(t *testing.T, sel game.Selection) {
+				t.Helper()
+				if !sel.Colorless {
+					t.Fatal("Colorless = false, want true")
+				}
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: "Whenever you cast " + tc.phrase + ", draw a card.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			pattern := face.TriggeredAbilities[0].Trigger.Pattern
+			if pattern.Event != game.EventSpellCast {
+				t.Fatalf("event = %v, want EventSpellCast", pattern.Event)
+			}
+			mv := pattern.CardSelection.ManaValue
+			if !mv.Exists || mv.Val.Op != compare.GreaterOrEqual || mv.Val.Value != tc.wantValue {
+				t.Fatalf("ManaValue = %+v, want >= %d", mv, tc.wantValue)
+			}
+			tc.assert(t, pattern.CardSelection)
+		})
+	}
+}
+
 func TestLowerCastTriggerRejectsUnsupportedForms(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

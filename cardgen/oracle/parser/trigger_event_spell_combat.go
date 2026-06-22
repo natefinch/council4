@@ -194,15 +194,75 @@ func parseTriggerEventSpellSelection(tokens []shared.Token) (TriggerEventSpellSe
 		tokens = rest
 		fromEntryChoice = true
 	}
+	manaValueAtLeast := 0
+	matchManaValue := false
+	if rest, value, ok := cutTriggerSpellManaValueAtLeastSuffix(tokens); ok {
+		tokens = rest
+		manaValueAtLeast = value
+		matchManaValue = true
+	}
 	selection, ok := parseTriggerEventSpellSelectionFilter(tokens)
 	if !ok {
 		return TriggerEventSpellSelection{}, false
+	}
+	if matchManaValue {
+		// The base filter must not already carry a mana-value, ordinal, or
+		// from-zone qualifier; those forms compose differently and fail closed.
+		if selection.MatchManaValue ||
+			selection.Ordinal != 0 ||
+			selection.FromZone.Kind != TriggerEventZoneNone {
+			return TriggerEventSpellSelection{}, false
+		}
+		selection.MatchManaValue = true
+		selection.ManaValueAtLeast = manaValueAtLeast
+		selection.Span = shared.SpanOf(full)
 	}
 	if fromEntryChoice {
 		selection.SubtypeFromEntryChoice = true
 		selection.Span = shared.SpanOf(full)
 	}
 	return selection, true
+}
+
+// cutTriggerSpellManaValueAtLeastSuffix strips a trailing "with mana value N or
+// greater" qualifier from a spell-selection token run, reporting the remaining
+// noun-phrase tokens and the integer threshold. The suffix lowers to the
+// Selection mana-value-at-least filter and composes with the typed, colored,
+// colorless, subtype, and disjunction noun phrases the remaining tokens parse
+// into ("a creature spell with mana value 6 or greater", "a colorless spell
+// with mana value 7 or greater"). It reports false when the suffix is absent or
+// malformed.
+func cutTriggerSpellManaValueAtLeastSuffix(tokens []shared.Token) ([]shared.Token, int, bool) {
+	n := len(tokens)
+	if n < 6 {
+		return nil, 0, false
+	}
+	if !equalWord(tokens[n-6], "with") ||
+		!equalWord(tokens[n-5], "mana") ||
+		!equalWord(tokens[n-4], "value") ||
+		tokens[n-3].Kind != shared.Integer ||
+		!equalWord(tokens[n-2], "or") ||
+		!equalWord(tokens[n-1], "greater") {
+		return nil, 0, false
+	}
+	value, ok := integerTokenValue(tokens[n-3])
+	if !ok {
+		return nil, 0, false
+	}
+	return tokens[:n-6], value, true
+}
+
+// integerTokenValue reads a base-ten integer literal token into its value,
+// reporting false for any non-digit character.
+func integerTokenValue(token shared.Token) (int, bool) {
+	value := 0
+	for _, r := range token.Text {
+		if r < '0' || r > '9' {
+			return 0, false
+		}
+		value = value*10 + int(r-'0')
+	}
+	return value, true
 }
 
 // cutTriggerSpellChosenTypeSuffix strips a trailing "of the chosen type" phrase
@@ -247,25 +307,6 @@ func parseTriggerEventSpellSelectionFilter(tokens []shared.Token) (TriggerEventS
 			Kind: TriggerEventZoneGraveyard,
 			Span: shared.SpanOf(tokens[3:]),
 		}
-		return selection, true
-	case len(tokens) == 8 &&
-		equalWord(tokens[0], "a") &&
-		equalWord(tokens[1], "spell") &&
-		equalWord(tokens[2], "with") &&
-		equalWord(tokens[3], "mana") &&
-		equalWord(tokens[4], "value") &&
-		tokens[5].Kind == shared.Integer &&
-		equalWord(tokens[6], "or") &&
-		equalWord(tokens[7], "greater"):
-		value := 0
-		for _, r := range tokens[5].Text {
-			if r < '0' || r > '9' {
-				return TriggerEventSpellSelection{}, false
-			}
-			value = value*10 + int(r-'0')
-		}
-		selection.MatchManaValue = true
-		selection.ManaValueAtLeast = value
 		return selection, true
 	case len(tokens) == 5 &&
 		equalWord(tokens[0], "a") &&
