@@ -901,6 +901,15 @@ func spellCostModifierBaseMatchesCard(modifier game.CostModifier, card *game.Car
 			return false
 		}
 	}
+	if modifier.MinPower.Exists {
+		if card == nil {
+			return false
+		}
+		power := card.Power
+		if !power.Exists || power.Val.IsStar || power.Val.Value < modifier.MinPower.Val {
+			return false
+		}
+	}
 	return true
 }
 

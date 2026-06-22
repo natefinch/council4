@@ -225,6 +225,30 @@ func TestLowerStaticSpellCostModifierGraveyardZone(t *testing.T) {
 	}
 }
 
+func TestLowerStaticSpellCostModifierPowerThreshold(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Goreclaw, Terror of Qal Sisma",
+		Layout:     "normal",
+		TypeLine:   "Legendary Creature — Bear",
+		Power:      new("4"),
+		Toughness:  new("4"),
+		OracleText: "Creature spells you cast with power 4 or greater cost {2} less to cast.",
+	})
+	if len(face.StaticAbilities) != 1 || len(face.StaticAbilities[0].Body.RuleEffects) != 1 {
+		t.Fatalf("static abilities = %#v, want one power-threshold cost effect", face.StaticAbilities)
+	}
+	modifier := face.StaticAbilities[0].Body.RuleEffects[0].CostModifier
+	if modifier.Kind != game.CostModifierSpell ||
+		!modifier.MatchCardType ||
+		modifier.CardType != types.Creature ||
+		modifier.GenericReduction != 2 ||
+		!modifier.MinPower.Exists ||
+		modifier.MinPower.Val != 4 {
+		t.Fatalf("modifier = %#v, want power-4 creature {2} reduction", modifier)
+	}
+}
+
 func TestLowerStaticSpellCostModifierRejectsUnsupported(t *testing.T) {
 	t.Parallel()
 	sources := map[string]string{

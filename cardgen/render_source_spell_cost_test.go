@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestRenderSourceSpellCostModifier(t *testing.T) {
@@ -45,6 +46,23 @@ func TestRenderSourceSpellCostModifier(t *testing.T) {
 				"PerObjectReduction: 2,",
 				"CountSelection:",
 				"Controller: game.ControllerOpponent",
+			},
+		},
+		{
+			name: "creature power-threshold reduction",
+			modifier: game.CostModifier{
+				Kind:             game.CostModifierSpell,
+				MatchCardType:    true,
+				CardType:         types.Creature,
+				GenericReduction: 2,
+				MinPower:         opt.Val(4),
+			},
+			wantParts: []string{
+				"Kind: game.CostModifierSpell,",
+				"MatchCardType: true,",
+				"CardType: types.Creature,",
+				"GenericReduction: 2,",
+				"MinPower: opt.Val(4),",
 			},
 		},
 	}
