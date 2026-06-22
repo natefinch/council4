@@ -776,7 +776,8 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		cond.ControllerBasicLandTypeCountAtLeast < 0 ||
 		cond.ControllerLibrarySizeAtLeast < 0 ||
 		cond.ControllerLifeExactly.Exists && cond.ControllerLifeExactly.Val < 0 ||
-		cond.ControllerCreaturePowerDiversityAtLeast < 0 {
+		cond.ControllerCreaturePowerDiversityAtLeast < 0 ||
+		cond.ControllerGainedLifeThisTurnAtLeast < 0 {
 		return "", fmt.Errorf("render: %s condition has a negative threshold", context)
 	}
 	// Reject unsupported condition fields.
@@ -913,6 +914,10 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	}
 	if cond.AttackersAttackingControllerAtLeast > 0 {
 		fields = append(fields, fmt.Sprintf("AttackersAttackingControllerAtLeast: %d,", cond.AttackersAttackingControllerAtLeast))
+		hasPredicate = true
+	}
+	if cond.ControllerGainedLifeThisTurnAtLeast > 0 {
+		fields = append(fields, fmt.Sprintf("ControllerGainedLifeThisTurnAtLeast: %d,", cond.ControllerGainedLifeThisTurnAtLeast))
 		hasPredicate = true
 	}
 	if cond.AnyOpponentControls.Exists {

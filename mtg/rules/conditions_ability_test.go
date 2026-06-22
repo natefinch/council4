@@ -39,6 +39,30 @@ func TestControllerControlsCommanderCondition(t *testing.T) {
 	}
 }
 
+func TestControllerGainedLifeThisTurnCondition(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	ctx := conditionContext{controller: game.Player1}
+	condition := opt.Val(game.Condition{ControllerGainedLifeThisTurnAtLeast: 3})
+
+	if conditionSatisfied(g, ctx, condition) {
+		t.Fatal("gained-life condition passed with no life gained this turn")
+	}
+
+	emitEvent(g, game.Event{Kind: game.EventLifeGained, Player: game.Player1, Amount: 2})
+	if conditionSatisfied(g, ctx, condition) {
+		t.Fatal("gained-life condition passed at 2 life gained, want threshold 3")
+	}
+
+	emitEvent(g, game.Event{Kind: game.EventLifeGained, Player: game.Player1, Amount: 1})
+	if !conditionSatisfied(g, ctx, condition) {
+		t.Fatal("gained-life condition failed at 3 life gained this turn")
+	}
+
+	if conditionSatisfied(g, conditionContext{controller: game.Player2}, condition) {
+		t.Fatal("gained-life condition passed for a player who gained no life this turn")
+	}
+}
+
 func TestActivationConditionRestrictsAutoMana(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

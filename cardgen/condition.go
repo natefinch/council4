@@ -104,6 +104,8 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.ControllerCreaturePowerDiversityAtLeast = condition.Threshold
 	case compiler.ConditionPredicateAttackersAttackingControllerAtLeast:
 		result.AttackersAttackingControllerAtLeast = condition.Threshold
+	case compiler.ConditionPredicateControllerGainedLifeThisTurnAtLeast:
+		result.ControllerGainedLifeThisTurnAtLeast = condition.Threshold
 	case compiler.ConditionPredicateObjectMatches:
 		object, ok := lowerConditionObjectReference(condition.ObjectBinding)
 		if !ok {
@@ -217,6 +219,7 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateAnyOpponentPoisonAtLeast,
 			compiler.ConditionPredicateControllerLibrarySizeAtLeast,
 			compiler.ConditionPredicateControllerLifeExactly,
+			compiler.ConditionPredicateControllerGainedLifeThisTurnAtLeast,
 			compiler.ConditionPredicateObjectMatches,
 			compiler.ConditionPredicateObjectExists:
 			return true
