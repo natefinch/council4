@@ -133,15 +133,64 @@ func TestLowerColorlessSelfDamageRiderAmount(t *testing.T) {
 	}
 }
 
-// TestLowerManaRiderFailsClosed confirms that only the self-damage-to-you rider
-// is accepted; every other trailing mana-ability effect fails closed.
+// manaAbilityGainLifeRider returns the GainLife instruction carried by a lowered
+// mana ability, asserting it is the controller-targeting life-gain rider that
+// The Great Henge and similar life-gaining mana sources print.
+func manaAbilityGainLifeRider(t *testing.T, ability *game.ManaAbility) game.GainLife {
+	t.Helper()
+	if len(ability.Content.Modes) != 1 {
+		t.Fatalf("mana ability content modes = %d, want 1", len(ability.Content.Modes))
+	}
+	sequence := ability.Content.Modes[0].Sequence
+	if len(sequence) == 0 {
+		t.Fatal("mana ability content has no instructions")
+	}
+	gain, ok := sequence[len(sequence)-1].Primitive.(game.GainLife)
+	if !ok {
+		t.Fatalf("last instruction = %T, want game.GainLife", sequence[len(sequence)-1].Primitive)
+	}
+	if gain.Player.Kind() != game.PlayerReferenceController {
+		t.Fatalf("gain-life player = %#v, want controller player reference", gain.Player)
+	}
+	return gain
+}
+
+// TestLowerManaSourceGainLifeRider verifies The Great Henge shape: a single mana
+// ability adding two green mana and gaining two life for the controller.
+func TestLowerManaSourceGainLifeRider(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Henge",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "{T}: Add {G}{G}. You gain 2 life.",
+		ManaCost:   "{7}",
+	})
+	if len(face.ManaAbilities) != 1 {
+		t.Fatalf("mana abilities = %d, want 1", len(face.ManaAbilities))
+	}
+	sequence := face.ManaAbilities[0].Content.Modes[0].Sequence
+	if len(sequence) != 3 {
+		t.Fatalf("sequence = %#v, want add+add+gain", sequence)
+	}
+	if _, ok := sequence[0].Primitive.(game.AddMana); !ok {
+		t.Fatalf("sequence[0] = %#v, want AddMana", sequence[0].Primitive)
+	}
+	if gain := manaAbilityGainLifeRider(t, &face.ManaAbilities[0]); gain.Amount != game.Fixed(2) {
+		t.Fatalf("rider amount = %#v, want fixed 2", gain.Amount)
+	}
+}
+
+// TestLowerManaRiderFailsClosed confirms that only the self-damage-to-you and
+// gain-life-to-you riders are accepted; every other trailing mana-ability effect
+// fails closed.
 func TestLowerManaRiderFailsClosed(t *testing.T) {
 	t.Parallel()
 	cases := []string{
 		"{T}: Add {G}. Draw a card.",
 		"{T}: Add {R}. This land deals 1 damage to each opponent.",
-		"{T}: Add {W}. You gain 1 life.",
 		"{T}: Add {B}. You lose 1 life.",
+		"{T}: Add {W}. Each opponent gains 1 life.",
 	}
 	for _, oracleText := range cases {
 		t.Run(oracleText, func(t *testing.T) {
