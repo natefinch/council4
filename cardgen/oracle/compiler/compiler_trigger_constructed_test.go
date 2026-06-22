@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestCompileConstructedPhaseStepTriggerClauses(t *testing.T) {
@@ -59,9 +61,9 @@ func TestCompileConstructedPhaseStepTriggerClauses(t *testing.T) {
 				Event: TriggerEventBeginningOfStep,
 				Step:  TriggerStepUpkeep,
 				StepPlayerSourceAttachedSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
-					Supertypes:    []TriggerSupertype{TriggerSupertypeLegendary},
-					ColorsAny:     []TriggerColor{TriggerColorWhite},
+					RequiredTypes: []types.Card{types.Creature},
+					Supertypes:    []types.Super{types.Legendary},
+					ColorsAny:     []color.Color{color.White},
 				},
 			},
 		},
@@ -190,7 +192,7 @@ func TestCompileConstructedPlayerEventTriggerClauses(t *testing.T) {
 				Kind:          TriggerWhenever,
 				Event:         TriggerEventCardDiscarded,
 				Player:        TriggerPlayerYou,
-				CardSelection: TriggerSelection{RequiredTypes: []TriggerCardType{TriggerCardTypeCreature}},
+				CardSelection: TriggerSelection{RequiredTypes: []types.Card{types.Creature}},
 			},
 		},
 		{
@@ -205,7 +207,7 @@ func TestCompileConstructedPlayerEventTriggerClauses(t *testing.T) {
 				Kind:          TriggerWhenever,
 				Event:         TriggerEventCardDiscarded,
 				Player:        TriggerPlayerYou,
-				CardSelection: TriggerSelection{ExcludedTypes: []TriggerCardType{TriggerCardTypeCreature, TriggerCardTypeLand}},
+				CardSelection: TriggerSelection{ExcludedTypes: []types.Card{types.Creature, types.Land}},
 			},
 		},
 		{

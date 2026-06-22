@@ -1,7 +1,10 @@
 package compiler
 
 import (
+	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -170,68 +173,6 @@ const (
 	TriggerCounterMinusOneMinusOne
 )
 
-// TriggerCardType identifies a card type used by a semantic trigger Selection.
-type TriggerCardType uint8
-
-// Trigger card types.
-const (
-	TriggerCardTypeUnknown TriggerCardType = iota
-	TriggerCardTypeArtifact
-	TriggerCardTypeBattle
-	TriggerCardTypeCreature
-	TriggerCardTypeEnchantment
-	TriggerCardTypeInstant
-	TriggerCardTypeLand
-	TriggerCardTypePlaneswalker
-	TriggerCardTypeSorcery
-)
-
-// TriggerColor identifies a color used by a semantic trigger Selection.
-type TriggerColor uint8
-
-// Trigger colors.
-const (
-	TriggerColorUnknown TriggerColor = iota
-	TriggerColorWhite
-	TriggerColorBlue
-	TriggerColorBlack
-	TriggerColorRed
-	TriggerColorGreen
-)
-
-// TriggerSubtype identifies a typed subtype used by a semantic trigger Selection.
-type TriggerSubtype = types.Sub
-
-// Trigger subtypes.
-const (
-	TriggerSubtypeUnknown TriggerSubtype = ""
-	TriggerSubtypeSpirit  TriggerSubtype = types.Spirit
-	TriggerSubtypeArcane  TriggerSubtype = types.Arcane
-)
-
-// TriggerSupertype identifies a supertype used by a semantic trigger Selection.
-type TriggerSupertype uint8
-
-// Trigger supertypes.
-const (
-	TriggerSupertypeUnknown TriggerSupertype = iota
-	TriggerSupertypeLegendary
-	TriggerSupertypeSnow
-)
-
-// TriggerKeyword identifies a keyword used by a semantic trigger Selection.
-type TriggerKeyword uint8
-
-// Trigger keywords.
-const (
-	TriggerKeywordUnknown TriggerKeyword = iota
-	TriggerKeywordDefender
-	TriggerKeywordFlash
-	TriggerKeywordFlying
-	TriggerKeywordHaste
-	TriggerKeywordShadow
-)
-
 // TriggerTriState is a closed semantic true/false filter.
 type TriggerTriState uint8
 
@@ -252,48 +193,31 @@ const (
 	TriggerCombatStateBlocking
 )
 
-// TriggerComparison identifies an integer-comparison relation.
-type TriggerComparison uint8
-
-// Trigger comparison relations.
-const (
-	TriggerComparisonUnknown TriggerComparison = iota
-	TriggerComparisonEqual
-	TriggerComparisonAtMost
-	TriggerComparisonAtLeast
-)
-
-// TriggerNumberFilter is a closed semantic integer predicate.
-type TriggerNumberFilter struct {
-	Comparison TriggerComparison
-	Value      int
-}
-
 // TriggerSelection is the closed semantic Selection vocabulary currently used
 // by representable event subjects and cast spells. Its zero value is a
 // wildcard.
 type TriggerSelection struct {
-	RequiredTypes    []TriggerCardType
-	RequiredTypesAny []TriggerCardType
-	ExcludedTypes    []TriggerCardType
-	Supertypes       []TriggerSupertype
-	SubtypesAny      []TriggerSubtype
-	ColorsAny        []TriggerColor
-	ExcludedColors   []TriggerColor
+	RequiredTypes    []types.Card
+	RequiredTypesAny []types.Card
+	ExcludedTypes    []types.Card
+	Supertypes       []types.Super
+	SubtypesAny      []types.Sub
+	ColorsAny        []color.Color
+	ExcludedColors   []color.Color
 	Colorless        bool
 	Multicolored     bool
 	Tapped           TriggerTriState
 	CombatState      TriggerCombatState
-	Keyword          TriggerKeyword
-	ExcludedKeyword  TriggerKeyword
+	Keyword          parser.KeywordKind
+	ExcludedKeyword  parser.KeywordKind
 	NonToken         bool
 	TokenOnly        bool
 	ManaValueAtLeast int
 	ManaValueAtMost  int
 	MatchManaValue   bool
-	ManaValue        TriggerNumberFilter
-	Power            TriggerNumberFilter
-	Toughness        TriggerNumberFilter
+	ManaValue        compare.Int
+	Power            compare.Int
+	Toughness        compare.Int
 	Controller       ControllerKind
 	// MatchAnyCounter records a kind-agnostic "with a counter on it" subject
 	// qualifier. It lowers to the matching CompiledSelector counter dimension.

@@ -503,28 +503,28 @@ func compileTriggerSpellSelection(syntax parser.TriggerEventSpellSelection) (Tri
 	}
 	for _, value := range syntax.Types {
 		compiled := compileTriggerCardType(value)
-		if compiled == TriggerCardTypeUnknown {
+		if compiled == "" {
 			return TriggerSelection{}, false
 		}
 		selection.RequiredTypes = append(selection.RequiredTypes, compiled)
 	}
 	for _, value := range syntax.TypesAny {
 		compiled := compileTriggerCardType(value)
-		if compiled == TriggerCardTypeUnknown {
+		if compiled == "" {
 			return TriggerSelection{}, false
 		}
 		selection.RequiredTypesAny = append(selection.RequiredTypesAny, compiled)
 	}
 	for _, value := range syntax.ExcludedTypes {
 		compiled := compileTriggerCardType(value)
-		if compiled == TriggerCardTypeUnknown {
+		if compiled == "" {
 			return TriggerSelection{}, false
 		}
 		selection.ExcludedTypes = append(selection.ExcludedTypes, compiled)
 	}
 	for _, value := range syntax.ColorsAny {
 		compiled := compileTriggerColor(value)
-		if compiled == TriggerColorUnknown {
+		if compiled == "" {
 			return TriggerSelection{}, false
 		}
 		selection.ColorsAny = append(selection.ColorsAny, compiled)

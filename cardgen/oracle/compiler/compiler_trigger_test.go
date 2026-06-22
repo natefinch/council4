@@ -100,7 +100,7 @@ func TestCompileSemanticTriggerPatterns(t *testing.T) {
 				if pattern.Controller != ControllerYou ||
 					!pattern.ExcludeSelf ||
 					!pattern.SubjectSelection.NonToken ||
-					!slices.Equal(pattern.SubjectSelection.RequiredTypes, []TriggerCardType{TriggerCardTypeCreature}) {
+					!slices.Equal(pattern.SubjectSelection.RequiredTypes, []types.Card{types.Creature}) {
 					t.Fatalf("pattern = %#v", pattern)
 				}
 			},
@@ -125,7 +125,7 @@ func TestCompileSemanticTriggerPatterns(t *testing.T) {
 					pattern.Subject != TriggerSubjectDamageSource ||
 					pattern.CombatQualifier != TriggerCombatDamage ||
 					pattern.DamageRecipient != TriggerDamageRecipientPermanent ||
-					!slices.Equal(pattern.DamageRecipientSelection.RequiredTypes, []TriggerCardType{TriggerCardTypeCreature}) {
+					!slices.Equal(pattern.DamageRecipientSelection.RequiredTypes, []types.Card{types.Creature}) {
 					t.Fatalf("pattern = %#v", pattern)
 				}
 			},
@@ -136,7 +136,7 @@ func TestCompileSemanticTriggerPatterns(t *testing.T) {
 			check: func(t *testing.T, pattern TriggerPattern) {
 				if !pattern.OneOrMore ||
 					pattern.Controller != ControllerYou ||
-					!slices.Equal(pattern.SubjectSelection.RequiredTypes, []TriggerCardType{TriggerCardTypeArtifact}) {
+					!slices.Equal(pattern.SubjectSelection.RequiredTypes, []types.Card{types.Artifact}) {
 					t.Fatalf("pattern = %#v", pattern)
 				}
 			},
@@ -147,7 +147,7 @@ func TestCompileSemanticTriggerPatterns(t *testing.T) {
 			check: func(t *testing.T, pattern TriggerPattern) {
 				if pattern.Event != TriggerEventAttackerDeclared ||
 					pattern.Controller != ControllerOpponent ||
-					!slices.Equal(pattern.SubjectSelection.RequiredTypes, []TriggerCardType{TriggerCardTypeCreature}) {
+					!slices.Equal(pattern.SubjectSelection.RequiredTypes, []types.Card{types.Creature}) {
 					t.Fatalf("pattern = %#v", pattern)
 				}
 			},
@@ -169,7 +169,7 @@ func TestCompileSemanticTriggerPatterns(t *testing.T) {
 				if pattern.Kind != TriggerWhenever ||
 					pattern.Event != TriggerEventPermanentDied ||
 					pattern.Source != TriggerSourceAttachedPermanent ||
-					!slices.Equal(pattern.SubjectSelection.RequiredTypes, []TriggerCardType{TriggerCardTypeCreature}) {
+					!slices.Equal(pattern.SubjectSelection.RequiredTypes, []types.Card{types.Creature}) {
 					t.Fatalf("pattern = %#v", pattern)
 				}
 			},
@@ -181,7 +181,7 @@ func TestCompileSemanticTriggerPatterns(t *testing.T) {
 				if pattern.Event != TriggerEventPermanentTapped ||
 					pattern.Controller != ControllerYou ||
 					!pattern.ExcludeSelf ||
-					!slices.Equal(pattern.SubjectSelection.RequiredTypes, []TriggerCardType{TriggerCardTypeArtifact}) {
+					!slices.Equal(pattern.SubjectSelection.RequiredTypes, []types.Card{types.Artifact}) {
 					t.Fatalf("pattern = %#v", pattern)
 				}
 			},
@@ -241,7 +241,7 @@ func TestCompileSpellCastDisjunctionTriggerPatterns(t *testing.T) {
 			check: func(t *testing.T, pattern TriggerPattern) {
 				if pattern.Event != TriggerEventSpellCast ||
 					!slices.Equal(pattern.CardSelection.RequiredTypesAny,
-						[]TriggerCardType{TriggerCardTypeArtifact, TriggerCardTypeEnchantment}) {
+						[]types.Card{types.Artifact, types.Enchantment}) {
 					t.Fatalf("pattern = %#v", pattern)
 				}
 			},
@@ -252,7 +252,7 @@ func TestCompileSpellCastDisjunctionTriggerPatterns(t *testing.T) {
 			check: func(t *testing.T, pattern TriggerPattern) {
 				if pattern.Event != TriggerEventSpellCast ||
 					!slices.Equal(pattern.CardSelection.SubtypesAny,
-						[]TriggerSubtype{types.Aura, types.Equipment, types.Vehicle}) {
+						[]types.Sub{types.Aura, types.Equipment, types.Vehicle}) {
 					t.Fatalf("pattern = %#v", pattern)
 				}
 			},
@@ -297,7 +297,7 @@ func TestCompileSelfOrAnotherTriggerPattern(t *testing.T) {
 		!pattern.SubjectSelectionOrSelf ||
 		pattern.ExcludeSelf ||
 		pattern.Source != TriggerSourceAny ||
-		!slices.Equal(pattern.SubjectSelection.SubtypesAny, []TriggerSubtype{types.Sub("Ally")}) {
+		!slices.Equal(pattern.SubjectSelection.SubtypesAny, []types.Sub{types.Sub("Ally")}) {
 		t.Fatalf("pattern = %#v", pattern)
 	}
 }
@@ -328,7 +328,7 @@ func TestCompileSelfGraveyardOrAnotherTriggerPattern(t *testing.T) {
 		pattern.Source != TriggerSourceAny ||
 		!pattern.MatchFromZone || pattern.FromZone != TriggerZoneBattlefield ||
 		!pattern.MatchToZone || pattern.ToZone != TriggerZoneGraveyard ||
-		!slices.Equal(pattern.SubjectSelection.RequiredTypes, []TriggerCardType{TriggerCardTypeArtifact}) {
+		!slices.Equal(pattern.SubjectSelection.RequiredTypes, []types.Card{types.Artifact}) {
 		t.Fatalf("pattern = %#v", pattern)
 	}
 }
@@ -344,7 +344,7 @@ func TestCompileActionTriggerPatterns(t *testing.T) {
 			check: func(t *testing.T, pattern TriggerPattern) {
 				if pattern.Event != TriggerEventPermanentTapped ||
 					pattern.Controller != ControllerOpponent ||
-					!slices.Equal(pattern.SubjectSelection.SubtypesAny, []TriggerSubtype{types.Forest}) {
+					!slices.Equal(pattern.SubjectSelection.SubtypesAny, []types.Sub{types.Forest}) {
 					t.Fatalf("pattern = %#v", pattern)
 				}
 			},
@@ -365,7 +365,7 @@ func TestCompileActionTriggerPatterns(t *testing.T) {
 				if pattern.Event != TriggerEventObjectBecameTarget ||
 					pattern.Controller != ControllerYou ||
 					pattern.CauseController != ControllerOpponent ||
-					!slices.Equal(pattern.SubjectSelection.RequiredTypes, []TriggerCardType{TriggerCardTypeCreature}) {
+					!slices.Equal(pattern.SubjectSelection.RequiredTypes, []types.Card{types.Creature}) {
 					t.Fatalf("pattern = %#v", pattern)
 				}
 			},
@@ -383,7 +383,7 @@ func TestCompileActionTriggerPatterns(t *testing.T) {
 			check: func(t *testing.T, pattern TriggerPattern) {
 				if pattern.Event != TriggerEventPermanentSacrificed ||
 					pattern.Player != TriggerPlayerYou ||
-					!slices.Equal(pattern.SubjectSelection.SubtypesAny, []TriggerSubtype{types.Clue}) {
+					!slices.Equal(pattern.SubjectSelection.SubtypesAny, []types.Sub{types.Clue}) {
 					t.Fatalf("pattern = %#v", pattern)
 				}
 			},
@@ -451,7 +451,7 @@ func TestCompileActionTriggerPatterns(t *testing.T) {
 				if pattern.Event != TriggerEventAbilityActivated ||
 					pattern.Player != TriggerPlayerOpponent ||
 					!pattern.ExcludeManaAbility ||
-					!slices.Equal(pattern.SubjectSelection.RequiredTypesAny, []TriggerCardType{TriggerCardTypeCreature, TriggerCardTypeLand}) {
+					!slices.Equal(pattern.SubjectSelection.RequiredTypesAny, []types.Card{types.Creature, types.Land}) {
 					t.Fatalf("pattern = %#v", pattern)
 				}
 			},
