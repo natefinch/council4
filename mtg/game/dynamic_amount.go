@@ -199,6 +199,13 @@ const (
 	// pumps the source "+1/+1 until end of turn for each opponent you attacked
 	// this combat." Added last so existing kinds keep their wire values.
 	DynamicAmountOpponentsAttackedThisCombat
+	// DynamicAmountControllerSpeed is the resolving ability controller's current
+	// speed (the Start your engines! subsystem, CR 702.179), read from the
+	// player's speed as the effect resolves. A player with no speed has a value
+	// of zero, and speed is capped at 4. It backs "your speed" amounts such as
+	// The Speed Demon's "you draw X cards and lose X life, where X is your
+	// speed." Added last so existing kinds keep their wire values.
+	DynamicAmountControllerSpeed
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

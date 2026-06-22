@@ -422,8 +422,14 @@ const (
 	EffectDynamicAmountNone           EffectDynamicAmountKind = ""
 	EffectDynamicAmountCount          EffectDynamicAmountKind = "EffectDynamicAmountCount"
 	EffectDynamicAmountControllerLife EffectDynamicAmountKind = "EffectDynamicAmountControllerLife"
-	EffectDynamicAmountOpponentCount  EffectDynamicAmountKind = "EffectDynamicAmountOpponentCount"
-	EffectDynamicAmountSourcePower    EffectDynamicAmountKind = "EffectDynamicAmountSourcePower"
+	// EffectDynamicAmountControllerSpeed is the resolving ability controller's
+	// current speed ("your speed"), the Start your engines! subsystem amount
+	// (CR 702.179). It is controller-scoped: "your" names the resolving
+	// ability's controller, so the subject attaches no in-text referent. It
+	// backs "where X is your speed" amounts such as The Speed Demon.
+	EffectDynamicAmountControllerSpeed EffectDynamicAmountKind = "EffectDynamicAmountControllerSpeed"
+	EffectDynamicAmountOpponentCount   EffectDynamicAmountKind = "EffectDynamicAmountOpponentCount"
+	EffectDynamicAmountSourcePower     EffectDynamicAmountKind = "EffectDynamicAmountSourcePower"
 	// EffectDynamicAmountSourceToughness is a referenced object's toughness
 	// ("its toughness"), the toughness sibling of EffectDynamicAmountSourcePower.
 	// It backs "gain/lose life equal to its toughness" riders whose subject is a

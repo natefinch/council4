@@ -72,7 +72,8 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		}
 	case game.DynamicAmountControllerLife, game.DynamicAmountControllerHandSize,
 		game.DynamicAmountControllerGraveyardSize, game.DynamicAmountControllerBasicLandTypeCount,
-		game.DynamicAmountOpponentCount, game.DynamicAmountOpponentsAttackedThisCombat:
+		game.DynamicAmountOpponentCount, game.DynamicAmountOpponentsAttackedThisCombat,
+		game.DynamicAmountControllerSpeed:
 		amount = controllerAggregateAmount(g, controller, dynamic, before)
 	case game.DynamicAmountDevotion:
 		// ColorFrom binds devotion to the color chosen as the ability resolves
@@ -315,6 +316,10 @@ func controllerAggregateAmount(g *game.Game, controller game.PlayerID, dynamic g
 		return len(aliveOpponents(g, controller))
 	case game.DynamicAmountOpponentsAttackedThisCombat:
 		return opponentsAttackedThisCombat(g, controller)
+	case game.DynamicAmountControllerSpeed:
+		if player, ok := playerByID(g, controller); ok {
+			return player.Speed
+		}
 	default:
 	}
 	return 0

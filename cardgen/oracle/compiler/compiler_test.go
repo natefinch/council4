@@ -125,7 +125,7 @@ func TestCompileArtifactAndEnchantmentEntersTappedReference(t *testing.T) {
 
 func TestCompileUnsupportedConstruct(t *testing.T) {
 	t.Parallel()
-	source := "Start your engines!"
+	source := "Daybound"
 	compilation, diagnostics := compileSource(source, pipelineContext{})
 	if len(compilation.Abilities) != 1 {
 		t.Fatalf("abilities = %#v", compilation.Abilities)

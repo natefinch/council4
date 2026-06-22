@@ -114,7 +114,16 @@ type Player struct {
 	// ExperienceCounters tracks the player's experience counter total
 	// (Commander 2015 mechanic).
 	ExperienceCounters int
-	Speed              int
+
+	// Speed tracks the player's speed for the "Start your engines!" subsystem
+	// (CR 702.179). It starts at 0 (no speed), is set to 1 when the player
+	// gains speed, increases by at most 1 on each of the player's turns the
+	// first time an opponent loses life that turn, and is capped at 4.
+	Speed int
+
+	// SpeedIncreasedTurn records the turn number on which Speed was last
+	// increased by the once-per-turn opponent-life-loss rule, so the increase
+	// happens at most once per the player's turn (CR 702.179c).
 	SpeedIncreasedTurn int
 
 	// PowerBracket and PowerLevel are optional deck metadata carried from setup

@@ -140,6 +140,12 @@ const (
 	// "Spectacle <cost>" lets the spell be cast for its spectacle cost rather
 	// than its mana cost if an opponent lost life this turn.
 	KeywordSpectacle KeywordKind = "KeywordSpectacle"
+	// KeywordStartEngines is the "Start your engines!" keyword (CR 702.179). It
+	// is printed on a permanent with reminder text and seeds the controller's
+	// speed to 1 if they have none. The recurring once-per-turn speed increase
+	// on opponent life loss and the speed cap of 4 are built-in rules keyed off
+	// the player's speed.
+	KeywordStartEngines KeywordKind = "KeywordStartEngines"
 )
 
 var keywordNames = map[KeywordKind]string{
@@ -237,6 +243,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordNonbasicLandwalk: "Nonbasic landwalk",
 	KeywordRebound:          "Rebound",
 	KeywordSpectacle:        "Spectacle",
+	KeywordStartEngines:     "Start your engines!",
 }
 
 // String returns the parser-owned canonical keyword name.
@@ -361,6 +368,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordForestwalk, Words: []string{"forestwalk"}},
 	{Kind: KeywordDesertwalk, Words: []string{"desertwalk"}},
 	{Kind: KeywordSpectacle, Words: []string{"spectacle"}},
+	{Kind: KeywordStartEngines, Words: []string{"start", "your", "engines"}},
 }
 
 // KeywordParameterKind identifies the grammar used by a keyword parameter.

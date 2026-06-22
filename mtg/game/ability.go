@@ -294,7 +294,35 @@ var (
 	// greater power, put a +1/+1 counter on this creature." The ability carries
 	// the Training keyword so HasKeyword(Training) reports true.
 	TrainingTriggeredBody = trainingTriggeredBody()
+
+	// StartEnginesTriggeredBody is the canonical triggered ability for the
+	// "Start your engines!" keyword (CR 702.179): "When this permanent enters,
+	// you get your speed. (If you have no speed, it starts at 1. ...)" Every
+	// printed instance is on a permanent, so it is modeled as an enters-the-
+	// battlefield trigger that runs the StartEngines primitive for the
+	// controller, which sets their speed to 1 if they have none. The recurring
+	// once-per-turn increase on opponent life loss is a built-in rule keyed off
+	// the player's speed, so the ability itself only seeds the starting speed.
+	StartEnginesTriggeredBody = startEnginesTriggeredBody()
 )
+
+func startEnginesTriggeredBody() TriggeredAbility {
+	return TriggeredAbility{
+		Text: "Start your engines!",
+		Trigger: TriggerCondition{
+			Type: TriggerWhen,
+			Pattern: TriggerPattern{
+				Event:  EventPermanentEnteredBattlefield,
+				Source: TriggerSourceSelf,
+			},
+		},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: StartEngines{
+				Player: ControllerReference(),
+			},
+		}}}.Ability(),
+	}
+}
 
 func trainingTriggeredBody() TriggeredAbility {
 	return TriggeredAbility{

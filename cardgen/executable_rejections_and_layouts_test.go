@@ -525,7 +525,7 @@ func TestGenerateExecutableCardSourceAdventureRejectsWhenAnyFaceUnsupported(t *t
 				Name:       "Impossible Lesson",
 				ManaCost:   "{1}{U}",
 				TypeLine:   "Sorcery — Adventure",
-				OracleText: "Start your engines!",
+				OracleText: "Daybound",
 			},
 		},
 	}
