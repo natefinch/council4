@@ -3792,6 +3792,7 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 	filterEnd := len(body) - 1
 	var notLegendary bool
 	var addTypes []types.Card
+	var addSubtypes []types.Sub
 	var addKeywords []KeywordKind
 	var conditionalCounters []EntersAsCopyConditionalCounter
 	if exceptIndex := entersAsCopyExceptIndex(body, filterStart); exceptIndex >= 0 {
@@ -3801,6 +3802,7 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 		}
 		notLegendary = riders.notLegendary
 		addTypes = riders.addTypes
+		addSubtypes = riders.addSubtypes
 		addKeywords = riders.addKeywords
 		conditionalCounters = riders.conditionalCounters
 		filterEnd = exceptIndex
@@ -3840,6 +3842,7 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 		EntersAsCopyOptional:     optional,
 		EntersAsCopyNotLegendary: notLegendary,
 		EntersAsCopyAddTypes:     addTypes,
+		EntersAsCopyAddSubtypes:  addSubtypes,
 
 		EntersAsCopyConditionalCounters: conditionalCounters,
 		EntersAsCopyUntilEndOfTurn:      untilEndOfTurn,
@@ -4146,6 +4149,7 @@ func entersAsCopyExceptIndex(body []shared.Token, start int) int {
 // enters-as-copy "except <rider>" clause.
 type entersAsCopyRiders struct {
 	addTypes            []types.Card
+	addSubtypes         []types.Sub
 	addKeywords         []KeywordKind
 	notLegendary        bool
 	conditionalCounters []EntersAsCopyConditionalCounter
@@ -4178,11 +4182,12 @@ func parseEntersAsCopyRider(rider []shared.Token, atoms Atoms) (entersAsCopyRide
 			riders.addKeywords = append(riders.addKeywords, keyword)
 			continue
 		}
-		cardType, typeOK := entersAsCopyAddTypeClause(words)
+		cardTypes, subtypes, typeOK := entersAsCopyAddTypeClause(words)
 		if !typeOK {
 			return entersAsCopyRiders{}, false
 		}
-		riders.addTypes = append(riders.addTypes, cardType)
+		riders.addTypes = append(riders.addTypes, cardTypes...)
+		riders.addSubtypes = append(riders.addSubtypes, subtypes...)
 	}
 	return riders, true
 }
@@ -4246,27 +4251,49 @@ func entersAsCopyNotLegendaryClause(words []string) bool {
 	return negation
 }
 
-// entersAsCopyAddTypeClause matches the "it's an <type> in addition to its other
-// types" copiable rider exactly and returns the single added card type. It fails
-// closed on any other wording, including subtype additions such as "a Synth
-// artifact" that this replacement cannot represent.
-func entersAsCopyAddTypeClause(words []string) (types.Card, bool) {
+// entersAsCopyAddTypeClause matches the "it's a <type...> in addition to its
+// other types" copiable rider and returns the added card types and subtypes. The
+// type run between the article and "in addition" may mix card types and
+// subtypes in any order ("an artifact" Phyrexian Metamorph, "a Bird" Mockingbird,
+// "a Synth artifact creature" Synth Infiltrator, "a Faerie Shapeshifter"
+// Malleable Impostor). Each word must classify as either a recognized card type
+// or a recognized subtype; any unrecognized word fails closed.
+func entersAsCopyAddTypeClause(words []string) (cardTypes []types.Card, subtypes []types.Sub, ok bool) {
 	switch {
-	case len(words) == 9 && words[0] == "it's":
+	case len(words) >= 2 && words[0] == "it's":
 		words = words[1:]
-	case len(words) == 10 && words[0] == "it" && (words[1] == "is" || words[1] == "'s"):
+	case len(words) >= 3 && words[0] == "it" && (words[1] == "is" || words[1] == "'s"):
 		words = words[2:]
 	default:
-		return "", false
+		return nil, nil, false
 	}
-	if words[0] != "a" && words[0] != "an" {
-		return "", false
+	if len(words) < 2 || (words[0] != "a" && words[0] != "an") {
+		return nil, nil, false
 	}
-	if words[2] != "in" || words[3] != "addition" || words[4] != "to" ||
-		words[5] != "its" || words[6] != "other" || words[7] != "types" {
-		return "", false
+	words = words[1:]
+	suffix := []string{"in", "addition", "to", "its", "other", "types"}
+	if len(words) <= len(suffix) {
+		return nil, nil, false
 	}
-	return entersAsCopyAddTypeWord(words[1])
+	typeWords := words[:len(words)-len(suffix)]
+	if !slices.Equal(words[len(words)-len(suffix):], suffix) {
+		return nil, nil, false
+	}
+	for _, word := range typeWords {
+		if cardType, typeOK := entersAsCopyAddTypeWord(word); typeOK {
+			cardTypes = append(cardTypes, cardType)
+			continue
+		}
+		if sub, subOK := recognizeSubtypePhrase(word); subOK {
+			subtypes = append(subtypes, sub)
+			continue
+		}
+		return nil, nil, false
+	}
+	if len(cardTypes) == 0 && len(subtypes) == 0 {
+		return nil, nil, false
+	}
+	return cardTypes, subtypes, true
 }
 
 // entersAsCopyAddTypeWord maps a singular card-type word used in an

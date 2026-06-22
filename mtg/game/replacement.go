@@ -435,6 +435,12 @@ type ReplacementEffect struct {
 	// only consulted when EntersAsCopy is true.
 	EntersAsCopyAddTypes []types.Card
 
+	// EntersAsCopyAddSubtypes applies the "except it's a <subtype> in addition to
+	// its other types" copiable rider (Mockingbird's Bird, Synth Infiltrator's
+	// Synth) by adding these subtypes to the copied values. It is empty for every
+	// other replacement and only consulted when EntersAsCopy is true.
+	EntersAsCopyAddSubtypes []types.Sub
+
 	// EntersAsCopyConditionalCounters applies the conditional copiable counter
 	// riders of an enters-as-copy replacement, placing additional counters on the
 	// copy based on the copied card's types (Spark Double: "+1/+1 counter if it's

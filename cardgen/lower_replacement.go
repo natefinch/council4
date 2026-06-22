@@ -1683,6 +1683,7 @@ func lowerEntersAsCopyReplacement(ability compiler.CompiledAbility) (game.Replac
 		conditionalCounters,
 		effect.EntersAsCopyUntilEndOfTurn,
 		addKeywords,
+		effect.EntersAsCopyAddSubtypes,
 		effect.EntersAsCopyAddTypes...,
 	)
 	return replacement, true, nil

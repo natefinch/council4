@@ -1169,6 +1169,11 @@ func (r Renderer) renderEntersAsCopyReplacement(ctx *renderCtx, ability *game.Re
 		addKeywords = fmt.Sprintf("[]game.Keyword{%s}", strings.Join(rendered, ", "))
 	}
 	args = append(args, addKeywords)
+	addSubtypes, err := renderSubtypeSlice(ctx, ability.Replacement.EntersAsCopyAddSubtypes)
+	if err != nil {
+		return "", err
+	}
+	args = append(args, addSubtypes)
 	if len(ability.Replacement.EntersAsCopyAddTypes) > 0 {
 		ctx.need(importTypes)
 		for _, cardType := range ability.Replacement.EntersAsCopyAddTypes {

@@ -1436,6 +1436,10 @@ type CompiledEffect struct {
 	EntersAsCopyOptional     bool
 	EntersAsCopyNotLegendary bool
 	EntersAsCopyAddTypes     []types.Card
+	// EntersAsCopyAddSubtypes mirrors the parser's "except it's a <subtype> in
+	// addition to its other types" copiable subtype riders (Mockingbird's Bird,
+	// Synth Infiltrator's Synth).
+	EntersAsCopyAddSubtypes []types.Sub
 	// EntersAsCopyConditionalCounters mirrors the parser's conditional copiable
 	// counter riders (Spark Double). Lowering builds one
 	// game.ConditionalCounterPlacement per entry.

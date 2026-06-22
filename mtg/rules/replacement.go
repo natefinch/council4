@@ -748,6 +748,11 @@ func applyEntersAsCopy(ctx enterBattlefieldContext, g *game.Game, permanent *gam
 			values.Types = append(values.Types, cardType)
 		}
 	}
+	for _, subtype := range replacement.EntersAsCopyAddSubtypes {
+		if !slices.Contains(values.Subtypes, subtype) {
+			values.Subtypes = append(values.Subtypes, subtype)
+		}
+	}
 	for _, keyword := range replacement.EntersAsCopyAddKeywords {
 		body, ok := game.KeywordStaticBody(keyword)
 		if !ok {
