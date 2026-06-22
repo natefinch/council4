@@ -455,6 +455,63 @@ func lowerCastAsThoughFlash(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 	}}}.Ability(), nil
 }
 
+// lowerPlayFromLibraryTop lowers the controller-scoped, turn-scoped grant "until
+// end of turn, you may look at the top card of your library any time and you may
+// play cards from the top of your library." (Gwenom, Remorseless) to an ApplyRule
+// that grants the controller, until end of turn, the private top-card visibility
+// plus permission to play lands and cast spells from the top of their library.
+// "Play cards" covers both playing lands and casting nonland spells, so the grant
+// emits the land-play and spell-cast permissions together. When the
+// PlayFromTopPayLife rider is present, spells cast this way pay life equal to
+// their mana value instead of their mana cost. The leading "you may" permissions
+// are unconditional allowances (like lowerCastAsThoughFlash). Targets, references,
+// conditions, keywords, modes, a negation, an amount, a non-until-end-of-turn
+// duration, or a non-controller scope fail closed.
+func lowerPlayFromLibraryTop(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Amount.Known ||
+		effect.Duration != compiler.DurationUntilEndOfTurn ||
+		effect.Context != parser.EffectContextController ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported play-from-library-top effect",
+			"the executable source backend supports only the exact controller-scoped until-end-of-turn look-at-and-play-from-library-top grant",
+		)
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.ApplyRule{
+			RuleEffects: []game.RuleEffect{
+				{
+					Kind:           game.RuleEffectLookAtTopCardAnyTime,
+					AffectedPlayer: game.PlayerYou,
+				},
+				{
+					Kind:           game.RuleEffectPlayLandsFromZone,
+					AffectedPlayer: game.PlayerYou,
+					CastFromZone:   zone.Library,
+					PermanentTypes: []types.Card{types.Land},
+					TopCardOnly:    true,
+				},
+				{
+					Kind:                    game.RuleEffectCastSpellsFromZone,
+					AffectedPlayer:          game.PlayerYou,
+					CastFromZone:            zone.Library,
+					TopCardOnly:             true,
+					PayLifeEqualToManaValue: effect.PlayFromTopPayLife,
+				},
+			},
+			Duration: game.DurationUntilEndOfTurn,
+		},
+	}}}.Ability(), nil
+}
+
 // lowerNoMaximumHandSize lowers the controller-scoped, rest-of-game continuous
 // effect "You have no maximum hand size for the rest of the game." (Sea Gate
 // Restoration) to an ApplyRule that removes the controller's maximum hand size
@@ -639,6 +696,9 @@ func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.
 		return content, diagnostic, true
 	case compiler.EffectCastAsThoughFlash:
 		content, diagnostic := lowerCastAsThoughFlash(ctx)
+		return content, diagnostic, true
+	case compiler.EffectPlayFromLibraryTop:
+		content, diagnostic := lowerPlayFromLibraryTop(ctx)
 		return content, diagnostic, true
 	case compiler.EffectAdditionalCombatPhase:
 		content, diagnostic := lowerAdditionalCombatPhase(ctx)

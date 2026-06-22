@@ -367,6 +367,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				CantCastSpellsAllPlayers:        syntax.CantCastSpellsAllPlayers,
 				CantCastSpellsRequiredTypes:     compilerCardTypes(syntax.CantCastSpellsRequiredTypes),
 				CantCastSpellsExcludedTypes:     compilerCardTypes(syntax.CantCastSpellsExcludedTypes),
+				PlayFromTopPayLife:              syntax.PlayFromTopPayLife,
+				PlayFromTopPayLifeRiderSpan:     syntax.PlayFromTopPayLifeRiderSpan,
 				PreventDamageTo:                 syntax.PreventDamageTo,
 				PreventDamageBy:                 syntax.PreventDamageBy,
 				PreventDamageGlobal:             syntax.PreventDamageGlobal,
