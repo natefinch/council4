@@ -831,6 +831,19 @@ func TestPermanentZoneChangeTriggerPatternsBindExtendedSlots(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:  "card put into your graveyard from anywhere",
+			event: "a creature card is put into your graveyard from anywhere",
+			want: TriggerPattern{
+				Event:       TriggerEventZoneChanged,
+				Player:      TriggerPlayerYou,
+				MatchToZone: true,
+				ToZone:      TriggerZoneGraveyard,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+				},
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -850,7 +863,6 @@ func TestPermanentZoneChangeTriggerPatternsRejectMissingRuntimeSlots(t *testing.
 		"a creature you control with a +1/+1 counter on it dies",
 		"a non-Human creature dies",
 		"a creature dies during your turn",
-		"a creature card is put into your graveyard from anywhere",
 	} {
 		t.Run(event, func(t *testing.T) {
 			t.Parallel()
