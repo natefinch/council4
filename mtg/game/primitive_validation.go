@@ -1026,6 +1026,17 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 			return err
 		}
 	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
+	hasPlayer := p.Player.Kind() != PlayerReferenceNone
+	if hasGroup == hasPlayer {
+		return errors.New("Search requires exactly one of Player or PlayerGroup")
+	}
+	if hasGroup {
+		if p.Controller.Exists {
+			return errors.New("Search with PlayerGroup cannot set a controller")
+		}
+		return validatePlayerGroupReference(p.PlayerGroup)
+	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 

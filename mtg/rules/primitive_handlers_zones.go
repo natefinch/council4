@@ -230,6 +230,16 @@ func handleSearch(r *effectResolver, prim game.Search) effectResolved {
 	if !searchSpecSupported(prim.Spec) {
 		return res
 	}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		// "Each player searches their library ..." — every member searches their
+		// own library and any found permanent enters under that searcher's
+		// control (no Controller rider applies to a group search).
+		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
+			succeeded, _ := r.engine.searchLibrary(r.game, r.obj, r.agents, r.log, playerID, playerID, prim.Spec, res.amount)
+			res.succeeded = succeeded || res.succeeded
+		}
+		return res
+	}
 	playerID, ok := r.resolvePlayer(prim.Player)
 	controllerID := playerID
 	if prim.Controller.Exists {
