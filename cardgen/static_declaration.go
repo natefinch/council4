@@ -677,7 +677,19 @@ func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.
 		affectedController = game.ControllerYou
 		permanentTypes = cardTypes
 		affectedSelection = selection
+	case compiler.StaticGroupBattlefield:
+		cardTypes, selection, ok := lowerControlledGroupRuleSelection(declaration.Group)
+		if !ok {
+			return false
+		}
+		affectedController = game.ControllerAny
+		permanentTypes = cardTypes
+		affectedSelection = selection
 	default:
+		return false
+	}
+	blockedSource, blockedSelection, ok := lowerStaticBlockedObject(declaration.Rule.BlockedObject)
+	if !ok {
 		return false
 	}
 	if declaration.Rule.Domain != staticRuleDomain(declaration.Rule.Kind) {
@@ -707,9 +719,31 @@ func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.
 		effects[i].AffectedController = affectedController
 		effects[i].PermanentTypes = permanentTypes
 		effects[i].AffectedSelection = affectedSelection
+		effects[i].BlockedSource = blockedSource
+		effects[i].BlockedSelection = blockedSelection
 		body.RuleEffects = append(body.RuleEffects, effects[i])
 	}
 	return true
+}
+
+// lowerStaticBlockedObject lowers the compiler's "can't block" protected-object
+// scope into the runtime rule-effect fields: the source-shield form sets
+// BlockedSource, and the "creatures you control" form yields a controller-scoped
+// creature Selection. The unconditional scope yields no protected object.
+func lowerStaticBlockedObject(kind compiler.StaticBlockedObjectKind) (bool, game.Selection, bool) {
+	switch kind {
+	case compiler.StaticBlockedObjectNone:
+		return false, game.Selection{}, true
+	case compiler.StaticBlockedObjectSource:
+		return true, game.Selection{}, true
+	case compiler.StaticBlockedObjectControlledCreatures:
+		return false, game.Selection{
+			Controller:    game.ControllerYou,
+			RequiredTypes: []types.Card{types.Creature},
+		}, true
+	default:
+		return false, game.Selection{}, false
+	}
 }
 
 // lowerControlledGroupRuleSelection lowers the affected-permanent filter of a

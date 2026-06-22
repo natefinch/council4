@@ -412,4 +412,21 @@ type RuleEffect struct {
 	// you control can't be blocked.", "Creatures you control with +1/+1 counters
 	// on them can't be blocked."). An empty Selection imposes no extra filter.
 	AffectedSelection Selection
+
+	// BlockedSelection scopes a RuleEffectCantBlock restriction to a protected
+	// group of attackers the affected blockers can't block ("Creatures with power
+	// less than this creature's power can't block creatures you control."). A
+	// non-empty Selection makes the prohibition conditional: an affected blocker
+	// may still block attackers outside the selection. The selection is matched
+	// from the effect's controller, so its controller relation resolves "you" to
+	// the source controller. An empty Selection with BlockedSource false leaves the
+	// can't-block prohibition unconditional.
+	BlockedSelection Selection
+
+	// BlockedSource scopes a RuleEffectCantBlock restriction to the effect's
+	// source permanent ("Creatures with power less than this creature's power
+	// can't block it."). When true the affected blockers can't block only the
+	// source object; they may still block any other attacker. It is mutually
+	// exclusive with a non-empty BlockedSelection.
+	BlockedSource bool
 }

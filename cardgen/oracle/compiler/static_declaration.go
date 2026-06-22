@@ -364,12 +364,32 @@ type StaticGrantedManaAbility struct {
 	Colorless bool
 }
 
+// StaticBlockedObjectKind identifies the protected object an active "can't
+// block" restriction shields. The empty value (None) is an unconditional block
+// prohibition; the others scope the prohibition to blocking a specific group.
+type StaticBlockedObjectKind uint8
+
+// Static blocked-object scopes.
+const (
+	StaticBlockedObjectNone StaticBlockedObjectKind = iota
+	// StaticBlockedObjectSource shields the source permanent itself ("can't block
+	// it", "can't block this creature").
+	StaticBlockedObjectSource
+	// StaticBlockedObjectControlledCreatures shields the source controller's
+	// creatures ("can't block creatures you control").
+	StaticBlockedObjectControlledCreatures
+)
+
 // StaticRuleDeclaration is one prohibition, requirement, or permission.
 type StaticRuleDeclaration struct {
 	Domain  StaticRuleDomain
 	Kind    StaticRuleKind
 	Zone    StaticZone
 	Blocker StaticBlockerRestriction
+	// BlockedObject scopes an active "can't block" restriction to a protected
+	// object ("can't block it", "can't block creatures you control"). It is None
+	// for an unconditional block prohibition and unused for every other rule.
+	BlockedObject StaticBlockedObjectKind
 }
 
 // StaticCostModifierKind identifies which semantic cost category is modified.
@@ -629,6 +649,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declarations, ok := recognizeStaticControlledGroupRuleDeclarations(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
+		return
+	}
+	if declarations, ok := recognizeStaticBattlefieldBlockRuleDeclarations(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
 	}
@@ -993,6 +1017,8 @@ func staticRuleGroupDomain(kind parser.StaticRuleSubjectKind) (StaticGroupDomain
 		return StaticGroupAttachedObject, true
 	case parser.StaticRuleSubjectControlledCreatures:
 		return StaticGroupSourceControllerPermanents, true
+	case parser.StaticRuleSubjectBattlefieldCreatures:
+		return StaticGroupBattlefield, true
 	default:
 		return StaticGroupUnknown, false
 	}
@@ -1005,7 +1031,7 @@ func staticRuleGroupDomain(kind parser.StaticRuleSubjectKind) (StaticGroupDomain
 func isCreatureRuleSubject(kind parser.StaticRuleSubjectKind) bool {
 	switch kind {
 	case parser.StaticRuleSubjectSourceCreature, parser.StaticRuleSubjectAttachedObject,
-		parser.StaticRuleSubjectControlledCreatures:
+		parser.StaticRuleSubjectControlledCreatures, parser.StaticRuleSubjectBattlefieldCreatures:
 		return true
 	default:
 		return false
@@ -1673,9 +1699,64 @@ func recognizeStaticControlledGroupRuleDeclarations(ability CompiledAbility, sta
 	return []StaticDeclaration{declaration}, true
 }
 
-// grant and a static rule on the same subject. It prefers the compiled keyword
-// grant effect's subject, but the legacy effect drops its attached-object
-// subject when the grant is the sentence's trailing clause ("Equipped creature
+// recognizeStaticBattlefieldBlockRuleDeclarations maps a standalone
+// battlefield-scoped "can't block" restriction onto a closed semantic
+// declaration, e.g. "Creatures with power less than this creature's power can't
+// block it." or "... can't block creatures you control." The battlefield-creatures
+// subject yields an every-creature affected group narrowed by the typed parser
+// rule subject (its source-relative power filter), and the protected object the
+// restriction shields travels in the rule declaration's BlockedObject. Costs,
+// triggers, conditions, or any resolving content fail closed because a continuous
+// group rule carries none.
+func recognizeStaticBattlefieldBlockRuleDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationRule) {
+		return nil, false
+	}
+	ruleNode := &statics[0]
+	if ruleNode.Rule.Subject.Kind != parser.StaticRuleSubjectBattlefieldCreatures {
+		return nil, false
+	}
+	group, ok := staticGroupForParserSubject(ruleNode.Subject)
+	if !ok || group.Domain != StaticGroupBattlefield {
+		return nil, false
+	}
+	rule, zone, ok := semanticStaticRuleForSyntax(ruleNode.Rule)
+	if !ok || rule != StaticRuleCantBlock {
+		return nil, false
+	}
+	blocked, ok := compileStaticBlockedObject(ruleNode.Rule.BlockedObject)
+	if !ok {
+		return nil, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 {
+		return nil, false
+	}
+	declaration := staticRuleDeclaration(ability.Span, group.Span, ruleNode.OperationSpan, rule, zone, group.Domain, staticBlockerRestrictionForSyntax(ruleNode.Rule), nil)
+	declaration.Group = group
+	declaration.Rule.BlockedObject = blocked
+	return []StaticDeclaration{declaration}, true
+}
+
+// compileStaticBlockedObject maps the parser's typed "can't block" protected
+// object onto its compiler scope. It fails closed for an unrepresentable scope.
+func compileStaticBlockedObject(kind parser.StaticRuleBlockedObjectKind) (StaticBlockedObjectKind, bool) {
+	switch kind {
+	case parser.StaticRuleBlockedObjectNone:
+		return StaticBlockedObjectNone, true
+	case parser.StaticRuleBlockedObjectSource:
+		return StaticBlockedObjectSource, true
+	case parser.StaticRuleBlockedObjectControlledCreatures:
+		return StaticBlockedObjectControlledCreatures, true
+	default:
+		return StaticBlockedObjectNone, false
+	}
+}
+
 // can't be blocked and has shroud."); in that case it recovers the group from
 // the rule node's subject, which the parser resolves independently of clause
 // order. The recovered group is limited to the attached-object domain so a

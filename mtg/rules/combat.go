@@ -662,6 +662,9 @@ func canBlockAttacker(g *game.Game, blocker, attacker *game.Permanent) bool {
 	if ruleEffectProhibitsBeingBlocked(g, attacker) {
 		return false
 	}
+	if ruleEffectProhibitsBlockingAttacker(g, blocker, attacker) {
+		return false
+	}
 	if ruleEffectRestrictsBlocker(g, attacker, blocker) {
 		return false
 	}

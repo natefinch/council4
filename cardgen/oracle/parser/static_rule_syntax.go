@@ -419,6 +419,11 @@ func validStaticRuleSyntax(rule StaticRuleSyntax) bool {
 			rule.Operation.Kind == StaticRuleOperationBlock &&
 			rule.Operation.Voice == StaticRuleVoicePassive &&
 			len(rule.Qualifiers) == 0
+	case StaticRuleSubjectBattlefieldCreatures:
+		return rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+			rule.Operation.Kind == StaticRuleOperationBlock &&
+			rule.Operation.Voice == StaticRuleVoiceActive &&
+			len(rule.Qualifiers) == 0
 	default:
 		return false
 	}

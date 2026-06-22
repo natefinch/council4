@@ -547,11 +547,73 @@ func ruleEffectProhibitsBlock(g *game.Game, blocker *game.Permanent) bool {
 	effects := activeRuleEffects(g)
 	for i := range effects {
 		effect := &effects[i]
-		if effect.Kind == game.RuleEffectCantBlock && ruleEffectMatchesPermanent(g, effect, blocker) {
+		if effect.Kind != game.RuleEffectCantBlock {
+			continue
+		}
+		if effect.BlockedSource || !effect.BlockedSelection.Empty() {
+			continue
+		}
+		if ruleEffectMatchesPermanent(g, effect, blocker) {
 			return true
 		}
 	}
 	return false
+}
+
+// ruleEffectProhibitsBlockingAttacker reports whether a conditional
+// RuleEffectCantBlock restriction stops blocker from blocking attacker because
+// blocker matches the affected (restricted) group and attacker is the protected
+// object the restriction shields ("Creatures with power less than this
+// creature's power can't block it.", "... can't block creatures you control.").
+func ruleEffectProhibitsBlockingAttacker(g *game.Game, blocker, attacker *game.Permanent) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectCantBlock {
+			continue
+		}
+		if !effect.BlockedSource && effect.BlockedSelection.Empty() {
+			continue
+		}
+		if !ruleEffectMatchesPermanent(g, effect, blocker) {
+			continue
+		}
+		if effect.BlockedSource {
+			if attacker != nil && attacker.ObjectID == effect.SourceObjectID {
+				return true
+			}
+			continue
+		}
+		if ruleEffectBlockedSelectionMatches(g, effect, attacker) {
+			return true
+		}
+	}
+	return false
+}
+
+// ruleEffectBlockedSelectionMatches reports whether attacker satisfies a
+// conditional can't-block restriction's protected-object Selection ("can't block
+// creatures you control"). It builds a permanent selection subject viewed from
+// the effect's controller so the selection's controller relation resolves "you"
+// to the source controller.
+func ruleEffectBlockedSelectionMatches(g *game.Game, effect *game.RuleEffect, attacker *game.Permanent) bool {
+	if attacker == nil {
+		return false
+	}
+	sel := &effect.BlockedSelection
+	values := effectivePermanentValues(g, attacker)
+	subject := selectionSubject{
+		kind:           subjectPermanent,
+		g:              g,
+		permanent:      attacker,
+		values:         &values,
+		viewer:         effect.Controller,
+		sourceObjectID: effect.SourceObjectID,
+	}
+	if sel.Controller != game.ControllerAny {
+		subject.controller = effectiveController(g, attacker)
+	}
+	return matchSelection(&subject, sel)
 }
 
 func ruleEffectProhibitsBeingBlocked(g *game.Game, attacker *game.Permanent) bool {

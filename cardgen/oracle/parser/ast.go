@@ -951,6 +951,28 @@ const (
 	// blocked."). It is the only group-scoped rule subject; the compiler maps it
 	// to the controller-permanents affected group.
 	StaticRuleSubjectControlledCreatures StaticRuleSubjectKind = "StaticRuleSubjectControlledCreatures"
+	// StaticRuleSubjectBattlefieldCreatures scopes a static rule to every creature
+	// on the battlefield, optionally narrowed by a source-relative power filter
+	// ("Creatures with power less than this creature's power can't block ..."). The
+	// compiler maps it to the battlefield affected group; it backs the conditional
+	// "can't block" restrictions whose restricted blockers are any creatures, not
+	// only the controller's.
+	StaticRuleSubjectBattlefieldCreatures StaticRuleSubjectKind = "StaticRuleSubjectBattlefieldCreatures"
+)
+
+// StaticRuleBlockedObjectKind identifies the protected object an active "can't
+// block" restriction shields ("can't block it", "can't block creatures you
+// control"). It is the blocked-relationship scope of a block prohibition and is
+// unused for every other operation.
+type StaticRuleBlockedObjectKind string
+
+// Static-rule blocked-object scopes.
+const (
+	StaticRuleBlockedObjectNone   StaticRuleBlockedObjectKind = ""
+	StaticRuleBlockedObjectSource StaticRuleBlockedObjectKind = "StaticRuleBlockedObjectSource"
+	// StaticRuleBlockedObjectControlledCreatures shields the source controller's
+	// creatures ("can't block creatures you control").
+	StaticRuleBlockedObjectControlledCreatures StaticRuleBlockedObjectKind = "StaticRuleBlockedObjectControlledCreatures"
 )
 
 // StaticRuleConstraintKind identifies whether a rule prohibits or requires an
@@ -1080,6 +1102,12 @@ type StaticRuleSyntax struct {
 	// Order is the rule's dense source-order rank (of Span), used downstream to
 	// order static-rule effects without byte offsets.
 	Order shared.SourceOrder `json:"-"`
+	// BlockedObject names the protected object an active "can't block" restriction
+	// shields ("Creatures with power less than this creature's power can't block
+	// it.", "... can't block creatures you control."). The empty value means the
+	// block prohibition is unconditional ("Creatures can't block."); it is unused
+	// for every non-block operation.
+	BlockedObject StaticRuleBlockedObjectKind `json:",omitempty"`
 }
 
 // Delimited is parenthesized reminder text or a quoted granted ability.

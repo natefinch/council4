@@ -419,6 +419,13 @@ func parseStaticDeclarationSubject(tokens []shared.Token, atoms Atoms) (StaticDe
 			Group: group,
 		}, verbStart, true
 	}
+	if group, verbStart, ok := staticBattlefieldCreaturesProhibitionSubject(tokens, atoms); ok {
+		return StaticDeclarationSubject{
+			Kind:  StaticDeclarationSubjectGroup,
+			Span:  group.Span,
+			Group: group,
+		}, verbStart, true
+	}
 	group := parseEffectStaticSubject(tokens, atoms)
 	if group.Kind == EffectStaticSubjectNone {
 		return StaticDeclarationSubject{}, 0, false
@@ -523,9 +530,63 @@ func staticControlledCreaturesProhibitionSubject(tokens []shared.Token, atoms At
 	return subject, idx, true
 }
 
-// controlledGroupPowerToughnessMatch carries the power/toughness predicate a
-// controlled-creature prohibition group qualifier recognizes, together with the
-// token index one past the qualifier.
+// staticBattlefieldCreaturesProhibitionSubject recognizes the battlefield-wide
+// creature group subject of a mass "can't block" restriction ("Creatures with
+// power less than this creature's power can't block ...", "Creatures can't
+// block.") when it precedes a prohibition verb ("can't"/"cannot"). Unlike
+// staticControlledCreaturesProhibitionSubject the group is every creature on the
+// battlefield, so a leading "creatures you control" routes to the controlled
+// path instead. It supports an optional trailing source-relative power filter
+// ("with power greater/less than <source>'s power"), attaching the recognized
+// predicate to the returned all-creatures subject. It returns the group subject
+// and the index of the prohibition verb.
+func staticBattlefieldCreaturesProhibitionSubject(tokens []shared.Token, atoms Atoms) (EffectStaticSubjectSyntax, int, bool) {
+	if !staticWordsAt(tokens, 0, "creatures") || staticWordsAt(tokens, 1, "you", "control") {
+		return EffectStaticSubjectSyntax{}, 0, false
+	}
+	subject := EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllCreatures}
+	idx := 1
+	if match, ok := controlledGroupProhibitionPowerToughnessQualifier(tokens, idx, atoms); ok {
+		if !match.powerLessThanSource && !match.powerGreaterThanSource {
+			return EffectStaticSubjectSyntax{}, 0, false
+		}
+		subject.PowerLessThanSource = match.powerLessThanSource
+		subject.PowerGreaterThanSource = match.powerGreaterThanSource
+		idx = match.end
+	}
+	if !staticWordsAt(tokens, idx, "can't") && !staticWordsAt(tokens, idx, "cannot") {
+		return EffectStaticSubjectSyntax{}, 0, false
+	}
+	subject.Span = shared.SpanOf(tokens[:idx])
+	return subject, idx, true
+}
+
+// parseStaticBlockedObject recognizes the protected object a "can't block"
+// restriction shields, beginning at start: "it" or "this creature" (the source
+// permanent) or "creatures you control" (the controller's creatures). It returns
+// the recognized scope and the index one past it, or false when no protected
+// object is present (an unconditional "can't block").
+func parseStaticBlockedObject(tokens []shared.Token, start, end int) (StaticRuleBlockedObjectKind, int, bool) {
+	if start < end && staticWordsAt(tokens, start, "it") {
+		return StaticRuleBlockedObjectSource, start + 1, true
+	}
+	if start+1 < end && staticWordsAt(tokens, start, "this", "creature") {
+		return StaticRuleBlockedObjectSource, start + 2, true
+	}
+	if start+2 < end && staticWordsAt(tokens, start, "creatures", "you", "control") {
+		return StaticRuleBlockedObjectControlledCreatures, start + 3, true
+	}
+	return StaticRuleBlockedObjectNone, start, false
+}
+
+// staticBattlefieldCreaturesSubject reports whether subject is the
+// battlefield-wide all-creatures group, the only subject that carries a "can't
+// block" protected-object scope.
+func staticBattlefieldCreaturesSubject(subject StaticDeclarationSubject) bool {
+	return subject.Kind == StaticDeclarationSubjectGroup &&
+		subject.Group.Kind == EffectStaticSubjectAllCreatures
+}
+
 type controlledGroupPowerToughnessMatch struct {
 	power                  compare.Int
 	matchPower             bool
@@ -640,7 +701,37 @@ func sourceNameSpanWidthAt(tokens []shared.Token, start int, atoms Atoms) (int, 
 			return width, true
 		}
 	}
+	if width, ok := sourcePossessiveMarkerWidthAt(tokens, start); ok {
+		return width, true
+	}
 	return 0, false
+}
+
+// sourcePossessiveMarkerWidthAt recognizes a "this <marker>'s" possessive source
+// phrase beginning exactly at tokens[start] ("this creature's", "this
+// permanent's"). The source-marker scan only spans the bare "this <marker>"
+// form, so the possessive printed before a characteristic ("this creature's
+// power") is recognized here. It returns the two-token width of the possessive.
+func sourcePossessiveMarkerWidthAt(tokens []shared.Token, start int) (int, bool) {
+	if start < 0 || start+1 >= len(tokens) || !equalWord(tokens[start], "this") {
+		return 0, false
+	}
+	stem, ok := possessiveStem(tokens[start+1].Text)
+	if !ok || !sourceSubjectMarkerNoun(shared.Token{Kind: shared.Word, Text: stem}) {
+		return 0, false
+	}
+	return 2, true
+}
+
+// possessiveStem strips a trailing "'s" possessive suffix (straight or curly
+// apostrophe) from text, returning the bare noun and whether a suffix was found.
+func possessiveStem(text string) (string, bool) {
+	for _, suffix := range []string{"'s", "\u2019s"} {
+		if stem, ok := strings.CutSuffix(text, suffix); ok {
+			return stem, true
+		}
+	}
+	return "", false
 }
 
 // numberComparisonAt parses a "<N>" / "<N> or less" / "<N> or greater" numeric
@@ -1615,11 +1706,23 @@ func parseStaticProhibitionRuleOperation(
 		}, qualifiers)
 	}
 	if staticWordsAt(tokens, verb, "block") {
-		return staticRuleOperation(tokens, index, verb+1, subject, constraint, StaticRuleOperation{
+		next := verb + 1
+		blocked := StaticRuleBlockedObjectNone
+		if staticBattlefieldCreaturesSubject(subject) {
+			if kind, blockedNext, ok := parseStaticBlockedObject(tokens, next, end); ok {
+				blocked = kind
+				next = blockedNext
+			}
+		}
+		declaration, declNext, ok := staticRuleOperation(tokens, index, next, subject, constraint, StaticRuleOperation{
 			Kind:  StaticRuleOperationBlock,
 			Voice: StaticRuleVoiceActive,
 			Span:  tokens[verb].Span,
 		}, nil)
+		if ok {
+			declaration.Rule.BlockedObject = blocked
+		}
+		return declaration, declNext, ok
 	}
 	if staticWordsAt(tokens, verb, "be", "blocked") {
 		next := verb + 2
@@ -1766,7 +1869,8 @@ func staticRuleSubjectKindAllowed(subject StaticDeclarationSubject) bool {
 		return true
 	case StaticDeclarationSubjectGroup:
 		return subject.Group.Kind == EffectStaticSubjectAttachedObject ||
-			subject.Group.Kind == EffectStaticSubjectControlledCreatures
+			subject.Group.Kind == EffectStaticSubjectControlledCreatures ||
+			subject.Group.Kind == EffectStaticSubjectAllCreatures
 	default:
 		return false
 	}
@@ -1796,6 +1900,10 @@ func staticRuleSubjectForDeclaration(subject StaticDeclarationSubject, operation
 		case EffectStaticSubjectControlledCreatures:
 			if operation.Kind == StaticRuleOperationBlock && operation.Voice == StaticRuleVoicePassive {
 				return StaticRuleSubject{Kind: StaticRuleSubjectControlledCreatures, Span: subject.Span}, true
+			}
+		case EffectStaticSubjectAllCreatures:
+			if operation.Kind == StaticRuleOperationBlock && operation.Voice == StaticRuleVoiceActive {
+				return StaticRuleSubject{Kind: StaticRuleSubjectBattlefieldCreatures, Span: subject.Span}, true
 			}
 		default:
 		}
