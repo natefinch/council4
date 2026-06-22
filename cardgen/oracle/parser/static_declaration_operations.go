@@ -463,15 +463,27 @@ func staticLinkingVerbGroupSubject(tokens []shared.Token) (EffectStaticSubjectSy
 		{[]string{"all", "other", "creatures"}, EffectStaticSubjectAllOtherCreatures},
 		{[]string{"all", "creatures"}, EffectStaticSubjectAllCreatures},
 	}
+	offset := 0
+	var excluded []CardType
+	if len(tokens) > 0 {
+		if cardType, ok := recognizeExcludedCardTypeWord(tokens[0].Text); ok {
+			excluded = []CardType{cardType}
+			offset = 1
+		}
+	}
 	for _, form := range forms {
 		width := len(form.words)
-		if !staticWordsAt(tokens, 0, form.words...) || len(tokens) <= width {
+		if !staticWordsAt(tokens, offset, form.words...) || len(tokens) <= offset+width {
 			continue
 		}
-		if !staticLinkingVerb(tokens[width]) {
+		if !staticLinkingVerb(tokens[offset+width]) {
 			continue
 		}
-		return EffectStaticSubjectSyntax{Kind: form.kind, Span: shared.SpanOf(tokens[:width])}, width, true
+		return EffectStaticSubjectSyntax{
+			Kind:          form.kind,
+			Span:          shared.SpanOf(tokens[:offset+width]),
+			ExcludedTypes: excluded,
+		}, offset + width, true
 	}
 	return EffectStaticSubjectSyntax{}, 0, false
 }

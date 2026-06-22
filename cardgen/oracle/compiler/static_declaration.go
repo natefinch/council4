@@ -288,6 +288,11 @@ type StaticSelection struct {
 	// Selection.PowerGreaterThanSource.
 	PowerLessThanSource    bool
 	PowerGreaterThanSource bool
+	// ExcludedTypes lists card types a member must NOT carry, set by a
+	// "non-<type>" prefix on a group noun ("Nonland permanents you control are
+	// artifacts ...", Encroaching Mycosynth). Lowering routes it onto the runtime
+	// Selection.ExcludedTypes predicate.
+	ExcludedTypes []StaticCardType
 }
 
 // StaticGroupReference describes WHERE a static declaration finds objects and
@@ -2115,6 +2120,13 @@ func staticGroupForParserSubject(subject parser.StaticDeclarationSubject) (Stati
 			group.Selection.PowerOrToughness = subject.Group.PowerOrToughness
 			group.Selection.PowerLessThanSource = subject.Group.PowerLessThanSource
 			group.Selection.PowerGreaterThanSource = subject.Group.PowerGreaterThanSource
+		}
+		if ok && len(subject.Group.ExcludedTypes) > 0 {
+			excluded, mapped := staticCardTypesFromParser(subject.Group.ExcludedTypes)
+			if !mapped {
+				return StaticGroupReference{}, false
+			}
+			group.Selection.ExcludedTypes = excluded
 		}
 		return group, ok
 	default:

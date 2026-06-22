@@ -1425,6 +1425,32 @@ func TestGenerateExecutableCardSourceEveryBasicLandType(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceNonlandPermanentsAreArtifacts(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Encroaching Mycosynth",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "Nonland permanents you control are artifacts in addition to their other types. The same is true for permanent spells you control and nonland permanent cards you own that aren't on the battlefield.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "e")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Layer:    game.LayerType,",
+		"game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{ExcludedTypes: []types.Card{types.Land}})",
+		"AddTypes: []types.Card{types.Artifact},",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceAllLandsTypeAdditionFailsClosed(t *testing.T) {
 	t.Parallel()
 	for name, oracleText := range map[string]string{

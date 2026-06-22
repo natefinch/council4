@@ -145,7 +145,17 @@ func recognizeCardTypeWord(word string) (CardType, bool) {
 	}
 }
 
-// cardTypeWord returns the singular lowercase Oracle word for a typed CardType,
+// recognizeExcludedCardTypeWord maps a "non-<type>" group prefix word (e.g.
+// "Nonland", "Nonartifact") to the excluded CardType, mirroring
+// recognizeColorOrNonColorWord at the card-type level. It fails closed for any
+// word lacking the "non" prefix or naming an unknown card type.
+func recognizeExcludedCardTypeWord(word string) (CardType, bool) {
+	if rest, ok := strings.CutPrefix(strings.ToLower(word), "non"); ok {
+		return recognizeCardTypeWord(rest)
+	}
+	return CardTypeUnknown, false
+}
+
 // the inverse of recognizeCardTypeWord across every card type (including the
 // non-permanent instant and sorcery types). It fails closed for the unknown
 // card type.

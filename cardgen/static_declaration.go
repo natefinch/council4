@@ -1521,6 +1521,13 @@ func lowerStaticSelection(selection compiler.StaticSelection) (game.Selection, b
 		}
 		result.RequiredTypes = append(result.RequiredTypes, value)
 	}
+	for _, cardType := range selection.ExcludedTypes {
+		value, ok := lowerStaticCardType(cardType)
+		if !ok {
+			return game.Selection{}, false
+		}
+		result.ExcludedTypes = append(result.ExcludedTypes, value)
+	}
 	result.SubtypesAny = append(result.SubtypesAny, selection.SubtypesAny...)
 	if selection.SubtypeFromEntryChoice {
 		result.SubtypeChoice = game.SubtypeChoiceSourceEntry
