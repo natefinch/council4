@@ -1602,6 +1602,12 @@ type EffectSyntax struct {
 	// owner's graveyard." (CR 614 replacement). It pairs with a preceding
 	// counter effect so lowering can emit a single counter-and-exile primitive.
 	CounteredSpellExileReplacement bool `json:",omitempty"`
+	// ExileUntilSourceLeaves marks the exact O-Ring exile clause "exile <target>
+	// until <this permanent> leaves the battlefield." (Banisher Priest, Banishing
+	// Light, Journey to Nowhere-style enchantments). The exiled permanent is
+	// linked to the source so a paired leaves-the-battlefield trigger returns it;
+	// the trailing self-reference is the duration anchor, not a target.
+	ExileUntilSourceLeaves bool `json:",omitempty"`
 	// Additional marks a draw clause whose counted cards carry the "additional"
 	// qualifier ("draw two additional cards", "draw an additional card"), as on
 	// draw-step triggers like Sylvan Library. Drawing N additional cards is
