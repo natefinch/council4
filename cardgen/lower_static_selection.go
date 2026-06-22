@@ -78,13 +78,15 @@ func lowerStaticSelection(selection compiler.StaticSelection) (game.Selection, b
 // staticSelectionSelector translates a StaticSelection's shared filter dimensions
 // into a compiler.CompiledSelector that SelectionForSelectorMasked projects onto
 // the runtime Selection. The clone enums are mapped with the existing per-enum
-// helpers (lowerStaticCombatState, lowerStaticTapState, lowerStaticCardType),
-// which fail closed on any value they cannot translate. The controller and
-// keyword filters share the canonical selector enums, so they pass through
-// directly and the projector reproduces their mapping (and the controller
-// fail-closed guard the prior hand-written projector enforced). The static
-// required card types are a conjunctive "all of" set, so they ride RequiredTypesAny
-// with ConjunctiveTypes set, which the projector lowers to Selection.RequiredTypes.
+// helpers (lowerStaticCombatState, lowerStaticTapState), which fail closed on any
+// value they cannot translate. The card-type filters share types.Card with the
+// canonical selector, so RequiredTypes/ExcludedTypes pass through directly. The
+// controller and keyword filters likewise share the canonical selector enums, so
+// they pass through directly and the projector reproduces their mapping (and the
+// controller fail-closed guard the prior hand-written projector enforced). The
+// static required card types are a conjunctive "all of" set, so they ride
+// RequiredTypesAny with ConjunctiveTypes set, which the projector lowers to
+// Selection.RequiredTypes.
 func staticSelectionSelector(selection compiler.StaticSelection) (compiler.CompiledSelector, bool) {
 	combatState, ok := lowerStaticCombatState(selection.CombatState)
 	if !ok {
@@ -95,22 +97,8 @@ func staticSelectionSelector(selection compiler.StaticSelection) (compiler.Compi
 		return compiler.CompiledSelector{}, false
 	}
 
-	var requiredTypes []types.Card
-	for _, cardType := range selection.RequiredTypes {
-		value, ok := lowerStaticCardType(cardType)
-		if !ok {
-			return compiler.CompiledSelector{}, false
-		}
-		requiredTypes = append(requiredTypes, value)
-	}
-	var excludedTypes []types.Card
-	for _, cardType := range selection.ExcludedTypes {
-		value, ok := lowerStaticCardType(cardType)
-		if !ok {
-			return compiler.CompiledSelector{}, false
-		}
-		excludedTypes = append(excludedTypes, value)
-	}
+	requiredTypes := slices.Clone(selection.RequiredTypes)
+	excludedTypes := slices.Clone(selection.ExcludedTypes)
 
 	selector := compiler.CompiledSelector{
 		Kind:             compiler.SelectorPermanent,
@@ -180,24 +168,5 @@ func lowerStaticTapState(state compiler.StaticTapState) (game.TriState, bool) {
 		return game.TriFalse, true
 	default:
 		return game.TriAny, false
-	}
-}
-
-func lowerStaticCardType(cardType compiler.StaticCardType) (types.Card, bool) {
-	switch cardType {
-	case compiler.StaticCardTypeArtifact:
-		return types.Artifact, true
-	case compiler.StaticCardTypeCreature:
-		return types.Creature, true
-	case compiler.StaticCardTypeLand:
-		return types.Land, true
-	case compiler.StaticCardTypeEnchantment:
-		return types.Enchantment, true
-	case compiler.StaticCardTypeInstant:
-		return types.Instant, true
-	case compiler.StaticCardTypeSorcery:
-		return types.Sorcery, true
-	default:
-		return "", false
 	}
 }

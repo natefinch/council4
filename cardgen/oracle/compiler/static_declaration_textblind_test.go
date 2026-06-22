@@ -249,7 +249,7 @@ func TestRecognizeStaticPermanentManaAbilityGrantFromTypedNode(t *testing.T) {
 	if declaration.Continuous == nil ||
 		declaration.Continuous.Operation != StaticContinuousGrantManaAbility ||
 		declaration.Group.Domain != StaticGroupSourceControllerPermanents ||
-		!slices.Equal(declaration.Group.Selection.RequiredTypes, []StaticCardType{StaticCardTypeLand}) {
+		!slices.Equal(declaration.Group.Selection.RequiredTypes, []types.Card{types.Land}) {
 		t.Fatalf("declaration = %#v, want controlled-land mana-ability grant", declaration)
 	}
 }
@@ -284,7 +284,7 @@ func TestRecognizeStaticPermanentManaAbilityGrantTreasureSacrifice(t *testing.T)
 		!declaration.Continuous.GrantedMana.Sacrifice ||
 		!declaration.Continuous.GrantedMana.AnyOneColor ||
 		declaration.Continuous.GrantedMana.Amount != 3 ||
-		!slices.Equal(declaration.Group.Selection.RequiredTypes, []StaticCardType{StaticCardTypeArtifact}) ||
+		!slices.Equal(declaration.Group.Selection.RequiredTypes, []types.Card{types.Artifact}) ||
 		!slices.Equal(declaration.Group.Selection.SubtypesAny, []types.Sub{types.Treasure}) {
 		t.Fatalf("declaration = %#v, want controlled-Treasure sacrifice mana-ability grant", declaration)
 	}
@@ -445,7 +445,7 @@ func TestRecognizeStaticSpellCostModifierFromTypedNodes(t *testing.T) {
 		node       parser.StaticDeclarationSyntax
 		reduction  int
 		increase   int
-		types      []StaticCardType
+		types      []types.Card
 		matchColor bool
 		color      color.Color
 	}{
@@ -467,7 +467,7 @@ func TestRecognizeStaticSpellCostModifierFromTypedNodes(t *testing.T) {
 				SpellType:           parser.StaticDeclarationSpellTypeCreature,
 			},
 			reduction: 2,
-			types:     []StaticCardType{StaticCardTypeCreature},
+			types:     []types.Card{types.Creature},
 		},
 		"creature spells increase": {
 			node: parser.StaticDeclarationSyntax{
@@ -477,7 +477,7 @@ func TestRecognizeStaticSpellCostModifierFromTypedNodes(t *testing.T) {
 				SpellType:           parser.StaticDeclarationSpellTypeCreature,
 			},
 			increase: 1,
-			types:    []StaticCardType{StaticCardTypeCreature},
+			types:    []types.Card{types.Creature},
 		},
 		"instant and sorcery reduction": {
 			node: parser.StaticDeclarationSyntax{
@@ -487,7 +487,7 @@ func TestRecognizeStaticSpellCostModifierFromTypedNodes(t *testing.T) {
 				SpellType:           parser.StaticDeclarationSpellTypeInstantOrSorcery,
 			},
 			reduction: 1,
-			types:     []StaticCardType{StaticCardTypeInstant, StaticCardTypeSorcery},
+			types:     []types.Card{types.Instant, types.Sorcery},
 		},
 		"red spells reduction": {
 			node: parser.StaticDeclarationSyntax{
@@ -748,7 +748,7 @@ func TestRecognizeStaticCardAbilityGrantFromTypedNodes(t *testing.T) {
 	if declaration.CardGrant == nil ||
 		declaration.CardGrant.Text != "Each land card in your hand has cycling {2}." ||
 		len(declaration.Group.Selection.RequiredTypes) != 1 ||
-		declaration.Group.Selection.RequiredTypes[0] != StaticCardTypeLand {
+		declaration.Group.Selection.RequiredTypes[0] != types.Land {
 		t.Fatalf("declaration = %#v", declaration)
 	}
 }
