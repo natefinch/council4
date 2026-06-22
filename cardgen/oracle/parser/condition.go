@@ -99,6 +99,20 @@ const (
 	GraveyardRedirectScopeOpponent GraveyardRedirectScope = "GraveyardRedirectScopeOpponent"
 )
 
+// GraveyardRedirectControlScope identifies, for a "would die" graveyard-redirect
+// replacement, whose control of the dying permanent the replacement watches
+// ("a creature" = any controller, "a creature you control" = the controller, "a
+// creature an opponent controls" = an opponent). It is distinct from
+// GraveyardRedirectScope, which watches the moving card's owner.
+type GraveyardRedirectControlScope string
+
+// Graveyard redirect control scopes recognized by the parser.
+const (
+	GraveyardRedirectControlScopeAny      GraveyardRedirectControlScope = ""
+	GraveyardRedirectControlScopeYou      GraveyardRedirectControlScope = "GraveyardRedirectControlScopeYou"
+	GraveyardRedirectControlScopeOpponent GraveyardRedirectControlScope = "GraveyardRedirectControlScopeOpponent"
+)
+
 // ConditionControlScope identifies which players' battlefields a "controls"
 // predicate counts.
 type ConditionControlScope string
@@ -278,6 +292,13 @@ type ConditionClause struct {
 	GraveyardRedirectScope       GraveyardRedirectScope `json:",omitempty"`
 	GraveyardSubjectTypesAny     []TriggerCardType      `json:",omitempty"`
 	GraveyardFromBattlefieldOnly bool                   `json:",omitempty"`
+
+	// GraveyardRedirectControlScope restricts a
+	// ConditionPredicateCardWouldGoToGraveyard clause that watches a dying
+	// permanent by who controls it ("If a creature an opponent controls would
+	// die, exile it instead."). It is empty for "would be put into a graveyard"
+	// forms, which watch the moving card's owner via GraveyardRedirectScope.
+	GraveyardRedirectControlScope GraveyardRedirectControlScope `json:",omitempty"`
 
 	// CounterRecipientTypesAny restricts a
 	// ConditionPredicateCounterPlacementOnControlledPermanent clause to a
@@ -536,6 +557,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeControlsCondition,
 		recognizeTotalPowerCondition,
 		recognizeCardToGraveyardReplacementCondition,
+		recognizeCreatureWouldDieReplacementCondition,
 		recognizeSourceDeathCondition,
 		recognizeTargetColorCondition,
 		recognizeDrawFromEmptyLibraryCondition,
@@ -1598,6 +1620,63 @@ func recognizeCardToGraveyardReplacementCondition(body []shared.Token, atoms Ato
 		GraveyardSubjectTypesAny:     subjectTypes,
 		GraveyardFromBattlefieldOnly: fromBattlefieldOnly,
 	}, true
+}
+
+// recognizeCreatureWouldDieReplacementCondition recognizes the "would die"
+// graveyard-redirect replacement condition "[a/an] <type> [you control / an
+// opponent controls] would die" (Stone of Erech, Misery's Shadow, Gisa,
+// Liesa, Nemata). "X would die" means "X would be put into a graveyard from the
+// battlefield" (CR 700.4), so it always restricts the source zone to the
+// battlefield. The optional control qualifier watches who controls the dying
+// permanent, distinct from the owner-scoped "would be put into a graveyard"
+// forms. It fails closed on self ("this creature"), exclude-self ("another
+// creature"), duration ("this turn"), and counter-conditioned subjects, leaving
+// those to other recognizers or as unsupported.
+func recognizeCreatureWouldDieReplacementCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	subject, ok := stripTokenSuffix(body, "would", "die")
+	if !ok || len(subject) == 0 {
+		return ConditionClause{}, false
+	}
+	controlScope := GraveyardRedirectControlScopeAny
+	if trimmed, trimmedOK := stripTokenSuffix(subject, "an", "opponent", "controls"); trimmedOK {
+		subject = trimmed
+		controlScope = GraveyardRedirectControlScopeOpponent
+	} else if trimmed, trimmedOK := stripTokenSuffix(subject, "you", "control"); trimmedOK {
+		subject = trimmed
+		controlScope = GraveyardRedirectControlScopeYou
+	}
+	subjectTypes, ok := parseGraveyardDeathSubject(subject, atoms)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate:                     ConditionPredicateCardWouldGoToGraveyard,
+		GraveyardSubjectTypesAny:      subjectTypes,
+		GraveyardFromBattlefieldOnly:  true,
+		GraveyardRedirectControlScope: controlScope,
+	}, true
+}
+
+// parseGraveyardDeathSubject parses the dying-object subject of a "would die"
+// graveyard-redirect condition, returning the typed card-type filter (empty for
+// "a permanent"). It accepts only "a permanent" or a single permanent card-type
+// noun ("a creature", "an artifact"); it fails closed on anything else.
+func parseGraveyardDeathSubject(subject []shared.Token, atoms Atoms) (cardTypes []TriggerCardType, ok bool) {
+	if len(subject) != 2 || (!equalWord(subject[0], "a") && !equalWord(subject[0], "an")) {
+		return nil, false
+	}
+	if equalWord(subject[1], "permanent") {
+		return nil, true
+	}
+	cardType, ok := atoms.CardTypeAt(subject[1].Span)
+	if !ok {
+		return nil, false
+	}
+	mapped := triggerCardTypeFromAtom(cardType)
+	if mapped == TriggerCardTypeUnknown {
+		return nil, false
+	}
+	return []TriggerCardType{mapped}, true
 }
 
 // graveyardRedirectDestination is the parsed destination phrase of a

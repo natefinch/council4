@@ -577,9 +577,13 @@ func (Renderer) renderGraveyardRedirectReplacement(ctx *renderCtx, ability *game
 	if err != nil {
 		return "", err
 	}
+	controlFilter, err := renderGroupEntersTappedController(replacement.RedirectControlFilter)
+	if err != nil {
+		return "", err
+	}
 	if len(replacement.RedirectTypeFilter) == 0 {
-		return fmt.Sprintf("game.GraveyardRedirectReplacement(%q, %s, %t)",
-			ability.Text, controller, fromBattlefieldOnly), nil
+		return fmt.Sprintf("game.GraveyardRedirectReplacement(%q, %s, %s, %t)",
+			ability.Text, controller, controlFilter, fromBattlefieldOnly), nil
 	}
 	ctx.need(importTypes)
 	typeLiterals := make([]string, 0, len(replacement.RedirectTypeFilter))
@@ -590,8 +594,8 @@ func (Renderer) renderGraveyardRedirectReplacement(ctx *renderCtx, ability *game
 		}
 		typeLiterals = append(typeLiterals, literal)
 	}
-	return fmt.Sprintf("game.GraveyardRedirectReplacement(%q, %s, %t, %s)",
-		ability.Text, controller, fromBattlefieldOnly, strings.Join(typeLiterals, ", ")), nil
+	return fmt.Sprintf("game.GraveyardRedirectReplacement(%q, %s, %s, %t, %s)",
+		ability.Text, controller, controlFilter, fromBattlefieldOnly, strings.Join(typeLiterals, ", ")), nil
 }
 
 func renderZoneDestinationReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {

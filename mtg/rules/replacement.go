@@ -1372,11 +1372,17 @@ func replacementCurrentController(g *game.Game, replacement *game.ReplacementEff
 // continuousZoneRedirectMatchesEvent reports whether a continuous
 // graveyard-redirect replacement (CR 614) applies to the zone-change event. The
 // watched graveyard belongs to the moving card's owner (event.Player), matched
-// relative to the replacement's controller, and the moving card must carry one
-// of the replacement's required card types when the filter is non-empty.
+// relative to the replacement's controller; a "would die" form additionally
+// restricts by the dying permanent's controller (event.Controller); and the
+// moving card must carry one of the replacement's required card types when the
+// filter is non-empty.
 func continuousZoneRedirectMatchesEvent(g *game.Game, replacement *game.ReplacementEffect, event game.Event, controller game.PlayerID) bool {
 	if replacement.RedirectOwnerFilter != game.TriggerControllerAny &&
 		!triggerControllerMatches(controller, replacement.RedirectOwnerFilter, event.Player) {
+		return false
+	}
+	if replacement.RedirectControlFilter != game.TriggerControllerAny &&
+		!triggerControllerMatches(controller, replacement.RedirectControlFilter, event.Controller) {
 		return false
 	}
 	if len(replacement.RedirectTypeFilter) == 0 {

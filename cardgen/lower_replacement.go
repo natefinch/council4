@@ -529,9 +529,14 @@ func lowerGraveyardRedirectReplacement(
 	if !ok {
 		return unsupported("the executable source backend does not support this graveyard-redirect scope")
 	}
+	controlFilter, ok := graveyardRedirectControlFilter(condition.GraveyardRedirectControlScope)
+	if !ok {
+		return unsupported("the executable source backend does not support this graveyard-redirect control scope")
+	}
 	return game.GraveyardRedirectReplacement(
 		ability.Text,
 		ownerFilter,
+		controlFilter,
 		condition.GraveyardFromBattlefieldOnly,
 		cardTypes...,
 	), true, nil
@@ -544,6 +549,19 @@ func graveyardRedirectOwnerFilter(scope compiler.GraveyardRedirectScope) (game.T
 	case compiler.GraveyardRedirectScopeYou:
 		return game.TriggerControllerYou, true
 	case compiler.GraveyardRedirectScopeOpponent:
+		return game.TriggerControllerOpponent, true
+	default:
+		return game.TriggerControllerAny, false
+	}
+}
+
+func graveyardRedirectControlFilter(scope compiler.GraveyardRedirectControlScope) (game.TriggerControllerFilter, bool) {
+	switch scope {
+	case compiler.GraveyardRedirectControlScopeAny:
+		return game.TriggerControllerAny, true
+	case compiler.GraveyardRedirectControlScopeYou:
+		return game.TriggerControllerYou, true
+	case compiler.GraveyardRedirectControlScopeOpponent:
 		return game.TriggerControllerOpponent, true
 	default:
 		return game.TriggerControllerAny, false
