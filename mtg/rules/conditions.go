@@ -129,6 +129,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.CastDuringControllerMainPhase {
 		matches = matches && ctx.obj != nil && !ctx.obj.Copy && ctx.obj.CastDuringControllerMainPhase
 	}
+	if cond.SpellWasKicked {
+		matches = matches && ctx.obj != nil && !ctx.obj.Copy && ctx.obj.KickerPaid
+	}
 	if cond.ControllerCreatedTokenThisTurn {
 		matches = matches && controllerCreatedTokenThisTurn(g, ctx.controller)
 	}

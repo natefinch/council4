@@ -544,6 +544,10 @@ const (
 	// your commander" / "as long as you control your commander"). It gates the
 	// Lieutenant ability word's intervening and static conditions.
 	ConditionPredicateControllerControlsCommander
+	// ConditionPredicateSpellWasKicked is satisfied when the resolving spell was
+	// kicked ("if this spell was kicked, ... instead"). It gates the kicked
+	// effect variant against the spell's kicker-paid cast context.
+	ConditionPredicateSpellWasKicked
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard

@@ -104,6 +104,11 @@ type Condition struct {
 	// their commander on the battlefield ("if you control your commander" / "as
 	// long as you control your commander"). It gates the Lieutenant ability word.
 	ControllerControlsCommander bool
+
+	// SpellWasKicked is satisfied when the resolving spell was kicked ("if this
+	// spell was kicked, ... instead"). It is evaluated against the resolving
+	// stack object's captured kicker-paid state and is false for copies.
+	SpellWasKicked bool
 }
 
 // ControlPlayerScope selects which players' battlefields a control-count
@@ -208,7 +213,8 @@ func (c *Condition) Empty() bool {
 		!c.CastFromZone.Exists &&
 		!c.CastDuringControllerMainPhase &&
 		!c.EventHistory.Exists &&
-		!c.ControllerControlsCommander
+		!c.ControllerControlsCommander &&
+		!c.SpellWasKicked
 }
 
 // EventHistoryWindow selects which turn's event log an EventHistoryCondition

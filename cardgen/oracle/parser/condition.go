@@ -79,6 +79,7 @@ const (
 	ConditionPredicateCounterPlacementOnAnyCreature                    ConditionPredicateKind = "ConditionPredicateCounterPlacementOnAnyCreature"
 	ConditionPredicateSourceTributeNotPaid                             ConditionPredicateKind = "ConditionPredicateSourceTributeNotPaid"
 	ConditionPredicateControllerControlsCommander                      ConditionPredicateKind = "ConditionPredicateControllerControlsCommander"
+	ConditionPredicateSpellWasKicked                                   ConditionPredicateKind = "ConditionPredicateSpellWasKicked"
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -568,6 +569,9 @@ func recognizeDestroyedThisWayCondition(body []shared.Token, _ Atoms) (Condition
 func recognizeCastTimingCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
 	if tokenWordsEqual(body, "you", "cast", "this", "spell", "during", "your", "main", "phase") {
 		return ConditionClause{Predicate: ConditionPredicateCastDuringControllerMainPhase}, true
+	}
+	if tokenWordsEqual(body, "this", "spell", "was", "kicked") {
+		return ConditionClause{Predicate: ConditionPredicateSpellWasKicked}, true
 	}
 	return ConditionClause{}, false
 }
