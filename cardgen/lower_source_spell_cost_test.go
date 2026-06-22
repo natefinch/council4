@@ -113,6 +113,34 @@ func TestLowerSourceSpellCostReductionDynamic(t *testing.T) {
 	}
 }
 
+// TestLowerSourceSpellCostReductionTotalManaValue proves the total-mana-value
+// dynamic form ("costs {X} less to cast, where X is the total mana value of
+// artifacts you control" — Metalwork Colossus) lowers to a DynamicReduction
+// cost modifier carrying the total-mana-value-in-group amount.
+func TestLowerSourceSpellCostReductionTotalManaValue(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Reducer",
+		Layout:     "normal",
+		TypeLine:   "Artifact Creature",
+		OracleText: "This spell costs {X} less to cast, where X is the total mana value of artifacts you control.",
+		ManaCost:   "{11}",
+	})
+	modifier := sourceSpellCostReductionModifier(t, face)
+	if modifier.Kind != game.CostModifierSpell {
+		t.Fatalf("modifier kind = %v, want spell", modifier.Kind)
+	}
+	if modifier.PerObjectReduction != 0 {
+		t.Fatalf("per-object reduction = %d, want 0 for the dynamic form", modifier.PerObjectReduction)
+	}
+	if modifier.DynamicReduction == nil {
+		t.Fatal("dynamic reduction missing; the {X} form must carry a DynamicReduction amount")
+	}
+	if got := modifier.DynamicReduction.Kind; got != game.DynamicAmountTotalManaValueInGroup {
+		t.Fatalf("dynamic reduction kind = %v, want total mana value in group", got)
+	}
+}
+
 func TestLowerSourceSpellCostReductionRejectsUnsupported(t *testing.T) {
 	t.Parallel()
 	sources := map[string]string{

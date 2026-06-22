@@ -563,6 +563,13 @@ const (
 	// It carries no selection; the lowerer reads the count the EffectRollDie
 	// effect publishes. Added last so existing kinds keep their values.
 	EffectDynamicAmountDieRollResult EffectDynamicAmountKind = "EffectDynamicAmountDieRollResult"
+	// EffectDynamicAmountTotalManaValue is the sum of mana value across a
+	// battlefield group ("the total mana value of <group>"). The group is carried
+	// in the amount's Selection. It backs "where X is the total mana value of
+	// noncreature artifacts you control" cost reductions (Metalwork Colossus,
+	// Earthquake Dragon, Excalibur, Sword of Eden). Added last so existing kinds
+	// keep their values.
+	EffectDynamicAmountTotalManaValue EffectDynamicAmountKind = "EffectDynamicAmountTotalManaValue"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.

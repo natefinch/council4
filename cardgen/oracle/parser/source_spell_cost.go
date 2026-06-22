@@ -92,6 +92,7 @@ func sourceSpellCostReductionDynamicKind(kind EffectDynamicAmountKind) bool {
 		EffectDynamicAmountGreatestManaValue,
 		EffectDynamicAmountTotalPower,
 		EffectDynamicAmountTotalToughness,
+		EffectDynamicAmountTotalManaValue,
 		EffectDynamicAmountControllerLife,
 		EffectDynamicAmountOpponentCount,
 		EffectDynamicAmountBasicLandTypes,

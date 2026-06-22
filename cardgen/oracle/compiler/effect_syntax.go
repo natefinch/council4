@@ -599,6 +599,8 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountTotalPower
 	case parser.EffectDynamicAmountTotalToughness:
 		return DynamicAmountTotalToughness
+	case parser.EffectDynamicAmountTotalManaValue:
+		return DynamicAmountTotalManaValue
 	case parser.EffectDynamicAmountColorCount:
 		return DynamicAmountColorCount
 	case parser.EffectDynamicAmountDevotion:

@@ -174,6 +174,12 @@ const (
 	// generic-from-colorless mana yields zero. Added last so existing kinds keep
 	// their wire values.
 	DynamicAmountColorsOfManaSpentToCast
+	// DynamicAmountTotalManaValueInGroup is the sum of mana value among the
+	// permanents of Group, evaluated as the effect resolves (CR 608.2c). It backs
+	// "the total mana value of <group>" amounts (Metalwork Colossus, Earthquake
+	// Dragon, Excalibur, Sword of Eden cost reductions); an empty group yields
+	// zero. Added last so existing kinds keep their wire values.
+	DynamicAmountTotalManaValueInGroup
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

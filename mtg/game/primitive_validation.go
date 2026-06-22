@@ -531,7 +531,7 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 		}
 		return validateObjectReference(dynamic.Object, targets, checkTargets)
 	case DynamicAmountCountSelector, DynamicAmountGreatestPowerInGroup, DynamicAmountGreatestToughnessInGroup, DynamicAmountGreatestManaValueInGroup,
-		DynamicAmountTotalPowerInGroup, DynamicAmountTotalToughnessInGroup, DynamicAmountColorCountInGroup,
+		DynamicAmountTotalPowerInGroup, DynamicAmountTotalToughnessInGroup, DynamicAmountTotalManaValueInGroup, DynamicAmountColorCountInGroup,
 		DynamicAmountSharedCreatureTypeCountInGroup:
 		return validateGroupReference(dynamic.Group, targets, checkTargets)
 	case DynamicAmountCountCardsInZone:

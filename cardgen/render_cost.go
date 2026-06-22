@@ -617,6 +617,8 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountTotalPowerInGroup", nil
 	case game.DynamicAmountTotalToughnessInGroup:
 		return "game.DynamicAmountTotalToughnessInGroup", nil
+	case game.DynamicAmountTotalManaValueInGroup:
+		return "game.DynamicAmountTotalManaValueInGroup", nil
 	case game.DynamicAmountColorCountInGroup:
 		return "game.DynamicAmountColorCountInGroup", nil
 	case game.DynamicAmountSharedCreatureTypeCountInGroup:

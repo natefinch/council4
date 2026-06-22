@@ -217,6 +217,49 @@ func TestSourceSpellDynamicCostReductionNoCreaturesNoReduction(t *testing.T) {
 	}
 }
 
+// addArtifactWithManaValue puts a vanilla artifact with the given printed mana
+// value onto the battlefield under controller, used to drive total-mana-value
+// dynamic amounts.
+func addArtifactWithManaValue(g *game.Game, controller game.PlayerID, manaValue int) *game.Permanent {
+	cardID := g.IDGen.Next()
+	g.CardInstances[cardID] = &game.CardInstance{
+		ID: cardID,
+		Def: &game.CardDef{CardFace: game.CardFace{
+			Name:     "Test Artifact",
+			Types:    []types.Card{types.Artifact},
+			ManaCost: opt.Val(cost.Mana{cost.O(manaValue)}),
+		}},
+		Owner: controller,
+	}
+	permanent := &game.Permanent{
+		ObjectID:       g.IDGen.Next(),
+		CardInstanceID: cardID,
+		Owner:          controller,
+		Controller:     controller,
+	}
+	g.Battlefield = append(g.Battlefield, permanent)
+	return permanent
+}
+
+func totalManaValueArtifactsYouControlAmount() *game.DynamicAmount {
+	return &game.DynamicAmount{
+		Kind:  game.DynamicAmountTotalManaValueInGroup,
+		Group: game.BattlefieldGroup(artifactsYouControlSelection()),
+	}
+}
+
+func TestSourceSpellDynamicCostReductionTotalManaValue(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addArtifactWithManaValue(g, game.Player1, 2)
+	addArtifactWithManaValue(g, game.Player1, 5)
+	addArtifactWithManaValue(g, game.Player2, 4)
+	card := sourceSpellDynamicReductionCard("Metalwork Colossus", cost.Mana{cost.O(11)}, totalManaValueArtifactsYouControlAmount())
+
+	if got := sourceSpellGenericReduction(g, game.Player1, card); got != 7 {
+		t.Fatalf("dynamic reduction = %d, want 7 (total mana value of controlled artifacts)", got)
+	}
+}
+
 func artifactsYouControlSelection() game.Selection {
 	return game.Selection{RequiredTypes: []types.Card{types.Artifact}, Controller: game.ControllerYou}
 }

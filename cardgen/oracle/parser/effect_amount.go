@@ -1126,6 +1126,8 @@ func parseDynamicTotalCharacteristicSubject(tokens []shared.Token, start int, at
 		kind, groupStart = EffectDynamicAmountTotalPower, start+4
 	case effectWordsAt(tokens, start+2, "toughness", "of"):
 		kind, groupStart = EffectDynamicAmountTotalToughness, start+4
+	case effectWordsAt(tokens, start+2, "mana", "value", "of"):
+		kind, groupStart = EffectDynamicAmountTotalManaValue, start+5
 	default:
 		return dynamicAmountSubject{}, false
 	}
