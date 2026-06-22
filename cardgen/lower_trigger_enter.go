@@ -286,6 +286,7 @@ func supportedSelfTriggerKind(eventKind game.EventKind, kind compiler.TriggerKin
 		return kind == compiler.TriggerWhen || kind == compiler.TriggerWhenever
 	case game.EventPermanentMutated,
 		game.EventAttackerBecameBlocked,
+		game.EventAttackerBecameUnblocked,
 		game.EventAttackerDeclared,
 		game.EventBlockerDeclared,
 		game.EventDamageDealt,

@@ -350,6 +350,8 @@ func lowerTriggerEvent(event compiler.TriggerEvent) (game.EventKind, bool) {
 		return game.EventPermanentMutated, true
 	case compiler.TriggerEventAttackerBecameBlocked:
 		return game.EventAttackerBecameBlocked, true
+	case compiler.TriggerEventAttackerBecameUnblocked:
+		return game.EventAttackerBecameUnblocked, true
 	case compiler.TriggerEventTokenCreated:
 		return game.EventTokenCreated, true
 	case compiler.TriggerEventLibrarySearched:

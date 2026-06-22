@@ -389,6 +389,8 @@ func renderEventKind(event game.EventKind) (string, error) {
 		return "game.EventCardDrawn", nil
 	case game.EventAttackerBecameBlocked:
 		return "game.EventAttackerBecameBlocked", nil
+	case game.EventAttackerBecameUnblocked:
+		return "game.EventAttackerBecameUnblocked", nil
 	case game.EventAttackerDeclared:
 		return "game.EventAttackerDeclared", nil
 	case game.EventBlockerDeclared:

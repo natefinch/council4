@@ -154,6 +154,36 @@ func (ce combatEngine) declareBlockers(g *game.Game, agents [game.NumPlayers]Pla
 		}
 		ce.e.notifyActionObservers(g, agents, playerID, chosen)
 	}
+	emitUnblockedAttackerEvents(g)
+}
+
+// emitUnblockedAttackerEvents fires EventAttackerBecameUnblocked once for each
+// attacker that no creature blocked, after every defending player has finished
+// declaring blockers (CR 509.1h). The events share a simultaneous batch so
+// "whenever this creature attacks and isn't blocked" triggers all see a single
+// declare-blockers boundary.
+func emitUnblockedAttackerEvents(g *game.Game) {
+	if g.Combat == nil || len(g.Combat.Attackers) == 0 {
+		return
+	}
+	batchID := g.IDGen.Next()
+	for _, declaration := range g.Combat.Attackers {
+		if g.Combat.BlockedAttackers[declaration.Attacker] {
+			continue
+		}
+		attacker, ok := permanentByObjectID(g, declaration.Attacker)
+		if !ok {
+			continue
+		}
+		emitEvent(g, game.Event{
+			Kind:           game.EventAttackerBecameUnblocked,
+			SourceID:       attacker.CardInstanceID,
+			SourceObjectID: attacker.ObjectID,
+			Controller:     effectiveController(g, attacker),
+			PermanentID:    attacker.ObjectID,
+			SimultaneousID: batchID,
+		})
+	}
 }
 
 // legalAttackers returns the legal declare-attackers actions for playerID.
