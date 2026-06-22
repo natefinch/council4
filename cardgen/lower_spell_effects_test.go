@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -717,6 +718,34 @@ func TestLowerMassDestroyAndExile(t *testing.T) {
 				ExcludedSupertype: types.Basic,
 			},
 		},
+		{
+			name:       "plus one counter",
+			oracleText: "Destroy all creatures with a +1/+1 counter on them.",
+			selection: game.Selection{
+				RequiredTypes:   []types.Card{types.Creature},
+				MatchCounter:    true,
+				RequiredCounter: counter.PlusOnePlusOne,
+			},
+		},
+		{
+			name:       "minus one counter exile",
+			oracleText: "Exile all creatures with a -1/-1 counter on them.",
+			selection: game.Selection{
+				RequiredTypes:   []types.Card{types.Creature},
+				MatchCounter:    true,
+				RequiredCounter: counter.MinusOneMinusOne,
+			},
+			exile: true,
+		},
+		{
+			name:       "subtype with counter",
+			oracleText: "Destroy all Goblins with a +1/+1 counter on them.",
+			selection: game.Selection{
+				SubtypesAny:     []types.Sub{types.Sub("Goblin")},
+				MatchCounter:    true,
+				RequiredCounter: counter.PlusOnePlusOne,
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -789,6 +818,15 @@ func TestLowerMassDestroyEachGroup(t *testing.T) {
 				}),
 			},
 		},
+		{
+			name:       "creature plus one counter",
+			oracleText: "Destroy each creature with a +1/+1 counter on it.",
+			selection: game.Selection{
+				RequiredTypes:   []types.Card{types.Creature},
+				MatchCounter:    true,
+				RequiredCounter: counter.PlusOnePlusOne,
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -810,6 +848,31 @@ func TestLowerMassDestroyEachGroup(t *testing.T) {
 			if selection := destroy.Group.Selection(); !reflect.DeepEqual(selection, test.selection) {
 				t.Fatalf("selection = %#v, want %#v", selection, test.selection)
 			}
+		})
+	}
+}
+
+// TestLowerMassCounterGroupFailsClosed confirms the mass-group counter unlock
+// stays fail closed on counter dimensions the runtime cannot honor for a mass
+// group: the kind-agnostic "a counter" form (the compiler would require the
+// zero-value counter kind in addition to any counter) and an unmodeled named
+// counter (no RequiredCounter kind exists, so the qualifier cannot be matched).
+func TestLowerMassCounterGroupFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Destroy all creatures with a counter on them.",
+		"Destroy each creature with a counter on it.",
+		"Destroy each creature with a glass counter on it.",
+		"Destroy all permanents with a doom counter on them.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+				Name:       "Test Counter Wipe",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: oracleText,
+			})
 		})
 	}
 }
