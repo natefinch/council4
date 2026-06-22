@@ -156,6 +156,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordTriggeredLowering(&dethroneAbility, ability, syntax), true, nil
 	}
+	if startEnginesAbility, ok, diag := lowerStartEnginesAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordTriggeredLowering(&startEnginesAbility, ability, syntax), true, nil
+	}
 	if flankingAbility, ok, diag := lowerFlankingAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -438,6 +444,41 @@ func lowerDethroneAbility(
 		)
 	}
 	return game.DethroneTriggeredBody, true, nil
+}
+
+// lowerStartEnginesAbility lowers a printed "Start your engines!" (CR 702.179)
+// keyword to its canonical enters-the-battlefield triggered ability, which runs
+// the StartEngines primitive to seed the controller's speed to 1 if they have
+// none. The keyword is printed with reminder text (stripped before lowering),
+// so the lowering expands the bare keyword to the reusable typed body. Every
+// printed instance is on a permanent, so the enters-the-battlefield trigger
+// applies universally. It supports only the exact keyword with no other rules
+// text.
+func lowerStartEnginesAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.TriggeredAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordStartEngines {
+		return game.TriggeredAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterNone ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported "+keyword.Name+" ability",
+			"the executable source backend supports only the exact "+keyword.Name+" keyword",
+		)
+	}
+	return game.StartEnginesTriggeredBody, true, nil
 }
 
 // lowerFlankingAbility lowers a printed Flanking (CR 702.25) keyword to its

@@ -578,6 +578,8 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountTargetCounters", nil
 	case game.DynamicAmountControllerLife:
 		return "game.DynamicAmountControllerLife", nil
+	case game.DynamicAmountControllerSpeed:
+		return "game.DynamicAmountControllerSpeed", nil
 	case game.DynamicAmountControllerHandSize:
 		return "game.DynamicAmountControllerHandSize", nil
 	case game.DynamicAmountControllerGraveyardSize:

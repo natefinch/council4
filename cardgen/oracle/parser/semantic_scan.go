@@ -206,7 +206,7 @@ func coverageSpans(tokens []shared.Token) []shared.Span {
 	spans := make([]shared.Span, 0, len(tokens))
 	for _, token := range tokens {
 		switch token.Kind {
-		case shared.Comma, shared.Colon, shared.Period:
+		case shared.Comma, shared.Colon, shared.Period, shared.Exclamation:
 			continue
 		default:
 			spans = append(spans, token.Span)

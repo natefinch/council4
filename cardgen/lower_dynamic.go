@@ -67,6 +67,8 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 		dynamic.Group = game.BattlefieldGroup(selection)
 	case compiler.DynamicAmountControllerLife:
 		dynamic.Kind = game.DynamicAmountControllerLife
+	case compiler.DynamicAmountControllerSpeed:
+		dynamic.Kind = game.DynamicAmountControllerSpeed
 	case compiler.DynamicAmountOpponentCount:
 		dynamic.Kind = game.DynamicAmountOpponentCount
 	case compiler.DynamicAmountBasicLandTypes:

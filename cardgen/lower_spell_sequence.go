@@ -575,6 +575,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx, syntax *parser
 	if content, ok := lowerLifeLostThisWayDrain(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerControllerDrawLoseShareXSpell(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerDrainXLifeSpell(ctx); ok {
 		return content, true
 	}

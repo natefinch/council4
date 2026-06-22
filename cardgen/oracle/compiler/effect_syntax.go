@@ -583,6 +583,8 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountCount
 	case parser.EffectDynamicAmountControllerLife:
 		return DynamicAmountControllerLife
+	case parser.EffectDynamicAmountControllerSpeed:
+		return DynamicAmountControllerSpeed
 	case parser.EffectDynamicAmountOpponentCount:
 		return DynamicAmountOpponentCount
 	case parser.EffectDynamicAmountSourcePower:

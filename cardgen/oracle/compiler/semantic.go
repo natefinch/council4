@@ -2299,6 +2299,12 @@ const (
 	// combat-state sibling of DynamicAmountOpponentCount. Added last so existing
 	// kinds keep their wire values.
 	DynamicAmountOpponentsAttackedThisCombat
+	// DynamicAmountControllerSpeed is the resolving ability controller's current
+	// speed ("your speed", the Start your engines! subsystem, CR 702.179). It is
+	// controller-scoped; a player with no speed reads zero and speed caps at 4.
+	// It backs "where X is your speed" amounts such as The Speed Demon. Added
+	// last so existing kinds keep their wire values.
+	DynamicAmountControllerSpeed
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.
