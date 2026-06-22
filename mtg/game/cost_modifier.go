@@ -405,4 +405,11 @@ type RuleEffect struct {
 	// Realmwalker). The empty key applies no chosen-type filter. It is unused for
 	// every other kind.
 	SpellChosenSubtypeFrom ChoiceKey
+
+	// AffectedSelection optionally narrows the permanents a group-scoped rule
+	// effect applies to beyond the AffectedController and PermanentTypes filters,
+	// expressing the filtered controlled-creature mass statics ("Blue creatures
+	// you control can't be blocked.", "Creatures you control with +1/+1 counters
+	// on them can't be blocked."). An empty Selection imposes no extra filter.
+	AffectedSelection Selection
 }

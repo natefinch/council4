@@ -69,3 +69,74 @@ func TestGenerateExecutableCardSourceControlledCreaturesCantBeBlockedFailsClosed
 		}
 	}
 }
+
+// TestGenerateExecutableCardSourceColorFilteredControlledCreaturesCantBeBlocked
+// verifies that the color-filtered mass-evasion static "Blue creatures you
+// control can't be blocked." (Deepchannel Mentor) lowers to a can't-be-blocked
+// rule effect carrying an affected-permanent Selection scoped to blue creatures.
+func TestGenerateExecutableCardSourceColorFilteredControlledCreaturesCantBeBlocked(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Blue Evasion",
+		Layout:     "normal",
+		ManaCost:   "{2}{U}",
+		TypeLine:   "Creature — Merfolk",
+		OracleText: "Blue creatures you control can't be blocked.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+		Colors:     []string{"U"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Kind:               game.RuleEffectCantBeBlocked,",
+		"AffectedController: game.ControllerYou,",
+		"PermanentTypes:     []types.Card{types.Creature},",
+		"AffectedSelection:  game.Selection{ColorsAny: []color.Color{color.Blue}},",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+// TestGenerateExecutableCardSourceCounterFilteredControlledCreaturesCantBeBlocked
+// verifies that the counter-filtered mass-evasion static "Creatures you control
+// with +1/+1 counters on them can't be blocked." (Herald of Secret Streams)
+// lowers to a can't-be-blocked rule effect carrying an affected-permanent
+// Selection scoped to creatures with a +1/+1 counter.
+func TestGenerateExecutableCardSourceCounterFilteredControlledCreaturesCantBeBlocked(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Counter Evasion",
+		Layout:     "normal",
+		ManaCost:   "{2}{U}",
+		TypeLine:   "Creature — Merfolk",
+		OracleText: "Creatures you control with +1/+1 counters on them can't be blocked.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+		Colors:     []string{"U"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Kind:               game.RuleEffectCantBeBlocked,",
+		"AffectedController: game.ControllerYou,",
+		"PermanentTypes:     []types.Card{types.Creature},",
+		"AffectedSelection:  game.Selection{MatchCounter: true, RequiredCounter: counter.PlusOnePlusOne},",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}

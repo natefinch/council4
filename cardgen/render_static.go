@@ -583,6 +583,13 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("PermanentTypes: %s,", permanentTypes))
 	}
+	if !effect.AffectedSelection.Empty() {
+		selection, err := r.renderSelection(ctx, effect.AffectedSelection)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("AffectedSelection: %s,", selection))
+	}
 	if len(effect.SpellTypes) > 0 {
 		spellTypes, err := renderTypesCardSlice(ctx, effect.SpellTypes)
 		if err != nil {

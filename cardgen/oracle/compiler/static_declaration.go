@@ -1629,8 +1629,11 @@ func recognizeStaticControlledGroupRuleDeclarations(ability CompiledAbility, sta
 		return nil, false
 	}
 	ruleNode := &statics[0]
-	group, ok := staticControlledCreaturesRuleGroup(ruleNode.Rule.Subject.Kind, ruleNode.Rule.Subject.Span)
-	if !ok {
+	if ruleNode.Rule.Subject.Kind != parser.StaticRuleSubjectControlledCreatures {
+		return nil, false
+	}
+	group, ok := staticGroupForParserSubject(ruleNode.Subject)
+	if !ok || group.Domain != StaticGroupSourceControllerPermanents {
 		return nil, false
 	}
 	rule, zone, ok := semanticStaticRuleForSyntax(ruleNode.Rule)
@@ -1648,21 +1651,6 @@ func recognizeStaticControlledGroupRuleDeclarations(ability CompiledAbility, sta
 	declaration := staticRuleDeclaration(ability.Span, group.Span, ruleNode.OperationSpan, rule, zone, group.Domain, staticBlockerRestrictionForSyntax(ruleNode.Rule), nil)
 	declaration.Group = group
 	return []StaticDeclaration{declaration}, true
-}
-
-// staticControlledCreaturesRuleGroup resolves the affected group for a standalone
-// group-scoped static rule from its typed parser subject. The controlled-creatures
-// rule subject yields the controller-permanents domain restricted to creatures;
-// any other rule subject fails closed.
-func staticControlledCreaturesRuleGroup(kind parser.StaticRuleSubjectKind, span shared.Span) (StaticGroupReference, bool) {
-	if kind != parser.StaticRuleSubjectControlledCreatures {
-		return StaticGroupReference{}, false
-	}
-	return StaticGroupReference{
-		Span:      span,
-		Domain:    StaticGroupSourceControllerPermanents,
-		Selection: StaticSelection{RequiredTypes: []StaticCardType{StaticCardTypeCreature}},
-	}, true
 }
 
 // grant and a static rule on the same subject. It prefers the compiled keyword

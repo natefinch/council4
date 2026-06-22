@@ -663,18 +663,20 @@ func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.
 	var affectedSource, affectedAttached bool
 	var affectedController game.ControllerRelation
 	var permanentTypes []types.Card
+	var affectedSelection game.Selection
 	switch declaration.Group.Domain {
 	case compiler.StaticGroupSource:
 		affectedSource = declaration.Rule.Kind != compiler.StaticRuleAdditionalTriggerForChosenCreatureType
 	case compiler.StaticGroupAttachedObject:
 		affectedAttached = true
 	case compiler.StaticGroupSourceControllerPermanents:
-		lowered, ok := lowerControlledGroupRuleTypes(declaration.Group)
+		cardTypes, selection, ok := lowerControlledGroupRuleSelection(declaration.Group)
 		if !ok {
 			return false
 		}
 		affectedController = game.ControllerYou
-		permanentTypes = lowered
+		permanentTypes = cardTypes
+		affectedSelection = selection
 	default:
 		return false
 	}
@@ -704,51 +706,31 @@ func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.
 		effects[i].AffectedAttached = affectedAttached
 		effects[i].AffectedController = affectedController
 		effects[i].PermanentTypes = permanentTypes
+		effects[i].AffectedSelection = affectedSelection
 		body.RuleEffects = append(body.RuleEffects, effects[i])
 	}
 	return true
 }
 
-// lowerControlledGroupRuleTypes lowers the affected card types of a static rule
-// scoped to the controller's permanents ("Creatures you control can't be
-// blocked."). Only a required-type filter is supported; any richer selection
-// (subtype, color, combat, tap, counter, keyword, or source exclusion) has no
-// runtime affected-permanent predicate and fails closed.
-func lowerControlledGroupRuleTypes(group compiler.StaticGroupReference) ([]types.Card, bool) {
-	selection := group.Selection
-	if group.ExcludeSource ||
-		len(selection.Supertypes) != 0 ||
-		len(selection.ExcludedSupertypes) != 0 ||
-		len(selection.SubtypesAny) != 0 ||
-		len(selection.ColorsAny) != 0 ||
-		selection.Colorless ||
-		selection.Multicolored ||
-		selection.Controller != compiler.ControllerAny ||
-		selection.CombatState != compiler.StaticCombatStateAny ||
-		selection.TapState != compiler.StaticTapStateAny ||
-		selection.Keyword != parser.KeywordUnknown ||
-		selection.ExcludedKeyword != parser.KeywordUnknown ||
-		selection.TokenOnly ||
-		selection.NonToken ||
-		selection.MatchCounter ||
-		selection.MatchAnyCounter ||
-		selection.SubtypeFromEntryChoice ||
-		selection.Modified ||
-		selection.ColorFromEntryChoice {
-		return nil, false
+// lowerControlledGroupRuleSelection lowers the affected-permanent filter of a
+// static rule scoped to the controller's permanents ("Creatures you control can't
+// be blocked.", "Blue creatures you control can't be blocked.", "Creatures you
+// control with +1/+1 counters on them can't be blocked."). The required card
+// types flow to the rule effect's PermanentTypes so the bare creatures-only form
+// keeps its simple type filter, while every richer predicate (color, subtype,
+// counter) flows to a runtime affected-permanent Selection. A source-excluding
+// group has no runtime affected-permanent predicate and fails closed.
+func lowerControlledGroupRuleSelection(group compiler.StaticGroupReference) ([]types.Card, game.Selection, bool) {
+	if group.ExcludeSource {
+		return nil, game.Selection{}, false
 	}
-	if len(selection.RequiredTypes) == 0 {
-		return nil, false
+	selection, ok := lowerStaticSelection(group.Selection)
+	if !ok {
+		return nil, game.Selection{}, false
 	}
-	permanentTypes := make([]types.Card, 0, len(selection.RequiredTypes))
-	for _, cardType := range selection.RequiredTypes {
-		value, ok := lowerStaticCardType(cardType)
-		if !ok {
-			return nil, false
-		}
-		permanentTypes = append(permanentTypes, value)
-	}
-	return permanentTypes, true
+	permanentTypes := selection.RequiredTypes
+	selection.RequiredTypes = nil
+	return permanentTypes, selection, true
 }
 
 func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {

@@ -275,15 +275,56 @@ func TestParseStaticControlledCreaturesCantBeBlockedDeclarationMeaning(t *testin
 	}
 }
 
+func TestParseStaticControlledCreaturesColorFilteredCantBeBlockedDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t, "Blue creatures you control can't be blocked.", Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationRule ||
+		declaration.Rule.Subject.Kind != StaticRuleSubjectControlledCreatures {
+		t.Fatalf("declaration = %#v, want controlled-creatures can't-be-blocked rule", declaration)
+	}
+	group := declaration.Subject.Group
+	if group.Kind != EffectStaticSubjectControlledCreatures ||
+		len(group.Colors) != 1 || group.Colors[0] != ColorBlue {
+		t.Fatalf("group = %#v, want blue controlled-creatures filter", group)
+	}
+}
+
+func TestParseStaticControlledCreaturesCounterFilteredCantBeBlockedDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t, "Creatures you control with +1/+1 counters on them can't be blocked.", Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationRule ||
+		declaration.Rule.Subject.Kind != StaticRuleSubjectControlledCreatures {
+		t.Fatalf("declaration = %#v, want controlled-creatures can't-be-blocked rule", declaration)
+	}
+	group := declaration.Subject.Group
+	if group.Kind != EffectStaticSubjectControlledCreatures ||
+		!group.CounterRequired || group.CounterAny ||
+		group.CounterKind != counter.PlusOnePlusOne {
+		t.Fatalf("group = %#v, want +1/+1 counter-filtered controlled-creatures filter", group)
+	}
+}
+
 func TestParseStaticControlledCreaturesRuleFailsClosed(t *testing.T) {
 	t.Parallel()
-	// Only the unconditional "can't be blocked" prohibition is supported for the
-	// controlled-creatures group; other operations and filtered forms must fail
-	// closed (no static declaration).
+	// Only the unconditional and color/counter-filtered "can't be blocked"
+	// prohibitions are supported for the controlled-creatures group; other
+	// operations and unrepresentable filtered forms must fail closed (no static
+	// declaration).
 	rejected := []string{
 		"Creatures you control can't attack.",
 		"Creatures you control can't block.",
 		"Creatures you control can't be blocked by more than one creature.",
+		"Creatures you control with flying can't be blocked.",
+		"Goblins you control can't be blocked.",
+		"Creatures you control with power greater than this creature's power can't be blocked.",
 	}
 	for _, source := range rejected {
 		document, diagnostics := Parse(source, Context{})
