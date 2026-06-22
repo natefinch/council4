@@ -1083,6 +1083,15 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		if conjunctiveTypeTarget(effectSelection) {
 			effectSelection.ConjunctiveTypes = true
 		}
+		// "put a Saga card and/or a land card from among them onto the
+		// battlefield" joins two singular articled card nouns with "and/or",
+		// meaning up to one card of each named type rather than a single card of
+		// either. Record it so the lowering realizes one optional pick per named
+		// type. The repeated singular "card" noun distinguishes it from a plural
+		// union ("artifacts, creatures, and/or lands"), which is a single match.
+		if kind == EffectPut && selectionJoinsCardNounsWithAndOr(selectionClause) {
+			effectSelection.InclusiveOneOfEach = true
+		}
 		effects = append(effects, EffectSyntax{
 			Kind:                      kind,
 			Context:                   context,

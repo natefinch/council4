@@ -1147,6 +1147,28 @@ func conjunctiveTypeTarget(selection SelectionSyntax) bool {
 	return strings.Contains(strings.ToLower(selection.Text), noun)
 }
 
+// selectionJoinsCardNounsWithAndOr reports whether a selection clause joins two
+// or more singular "card" nouns with the "and/or" conjunction ("a Saga card
+// and/or a land card"). The "and/or" token sequence marks the inclusive
+// one-of-each wording, and requiring the singular "card" noun at least twice
+// excludes a plural single-match union ("artifacts, creatures, and/or lands").
+func selectionJoinsCardNounsWithAndOr(tokens []shared.Token) bool {
+	andOr := false
+	cardNouns := 0
+	for i := range tokens {
+		if i+2 < len(tokens) &&
+			equalWord(tokens[i], "and") &&
+			tokens[i+1].Kind == shared.Slash &&
+			equalWord(tokens[i+2], "or") {
+			andOr = true
+		}
+		if equalWord(tokens[i], "card") {
+			cardNouns++
+		}
+	}
+	return andOr && cardNouns >= 2
+}
+
 // permanentSelectionNoun returns the lowercase Oracle noun for a permanent
 // selection kind. It fails closed for non-permanent selection kinds.
 func permanentSelectionNoun(kind SelectionKind) (string, bool) {
