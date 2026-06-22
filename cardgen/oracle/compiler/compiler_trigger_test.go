@@ -302,6 +302,37 @@ func TestCompileSelfOrAnotherTriggerPattern(t *testing.T) {
 	}
 }
 
+// TestCompileSelfGraveyardOrAnotherTriggerPattern verifies the two-verb
+// self-or-another battlefield-to-graveyard union "this creature dies or another
+// <Selection> you control is put into a graveyard from the battlefield" (Scrap
+// Trawler) compiles to a permanent zone-change pattern widened to the source via
+// SubjectSelectionOrSelf, identical to the single-verb shared-subject form.
+func TestCompileSelfGraveyardOrAnotherTriggerPattern(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource(
+		"Whenever this creature dies or another artifact you control is put into a graveyard from the battlefield, draw a card.",
+		pipelineContext{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	trigger := compilation.Abilities[0].Trigger
+	if trigger == nil {
+		t.Fatal("trigger = nil")
+	}
+	pattern := trigger.Pattern
+	if pattern.Event != TriggerEventZoneChanged ||
+		pattern.Controller != ControllerYou ||
+		!pattern.SubjectSelectionOrSelf ||
+		pattern.ExcludeSelf ||
+		pattern.Source != TriggerSourceAny ||
+		!pattern.MatchFromZone || pattern.FromZone != TriggerZoneBattlefield ||
+		!pattern.MatchToZone || pattern.ToZone != TriggerZoneGraveyard ||
+		!slices.Equal(pattern.SubjectSelection.RequiredTypes, []TriggerCardType{TriggerCardTypeArtifact}) {
+		t.Fatalf("pattern = %#v", pattern)
+	}
+}
+
 func TestCompileActionTriggerPatterns(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
