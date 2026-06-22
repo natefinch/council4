@@ -216,3 +216,24 @@ func TestSourceSpellDynamicCostReductionNoCreaturesNoReduction(t *testing.T) {
 		t.Fatalf("dynamic reduction with no creatures = %d, want 0", got)
 	}
 }
+
+func artifactsYouControlSelection() game.Selection {
+	return game.Selection{RequiredTypes: []types.Card{types.Artifact}, Controller: game.ControllerYou}
+}
+
+// TestSourceSpellCostReductionAffinityForArtifacts exercises the cost modifier
+// that "Affinity for artifacts" lowers to: the spell costs {1} less to cast for
+// each artifact its caster controls, counting only the caster's artifacts.
+func TestSourceSpellCostReductionAffinityForArtifacts(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addArtifactPermanent(g, game.Player1)
+	addArtifactPermanent(g, game.Player1)
+	addArtifactPermanent(g, game.Player1)
+	addArtifactPermanent(g, game.Player2)
+	addCreaturePermanent(g, game.Player1)
+	card := sourceSpellReductionCard("Thought Monitor", cost.Mana{cost.O(5), cost.U, cost.U}, artifactsYouControlSelection(), 1)
+
+	if got := sourceSpellGenericReduction(g, game.Player1, card); got != 3 {
+		t.Fatalf("Affinity reduction with three controlled artifacts = %d, want 3", got)
+	}
+}
