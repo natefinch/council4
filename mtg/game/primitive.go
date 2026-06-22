@@ -99,10 +99,11 @@ const (
 	PrimitiveAddExtraPhases
 	PrimitiveLookAtHand
 	PrimitiveRollDie
+	PrimitiveRemoveFromCombat
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveRollDie) + 1
+const primitiveKindCount = int(PrimitiveRemoveFromCombat) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -787,6 +788,15 @@ type Untap struct {
 // untap step" clause that follows a tap effect). The permanent stays tapped
 // through one of its controller's untap steps and then untaps normally.
 type SkipNextUntap struct {
+	Object ObjectReference
+}
+
+// RemoveFromCombat removes the referenced creature from combat ("Remove target
+// attacking creature you control from combat." — Reconnaissance). The permanent
+// stops being an attacker or blocker: it deals and is dealt no further combat
+// damage and its attack/block declarations are discarded. Object references the
+// creature to remove.
+type RemoveFromCombat struct {
 	Object ObjectReference
 }
 

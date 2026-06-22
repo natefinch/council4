@@ -246,7 +246,7 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		return r.renderObjectOrGroupPrimitive(ctx, primitive)
 	case game.PrimitiveRegenerate, game.PrimitiveExplore,
 		game.PrimitiveCounterObject, game.PrimitiveSacrifice, game.PrimitiveSkipNextUntap,
-		game.PrimitiveChooseNewTargets:
+		game.PrimitiveChooseNewTargets, game.PrimitiveRemoveFromCombat:
 		return r.renderObjectPrimitive(primitive)
 	case game.PrimitiveCopyStackObject:
 		value, ok := primitive.(game.CopyStackObject)

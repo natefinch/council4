@@ -489,6 +489,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectTapOrUntap
 	case parser.EffectUntap:
 		return EffectUntap
+	case parser.EffectRemoveFromCombat:
+		return EffectRemoveFromCombat
 	case parser.EffectTransform:
 		return EffectTransform
 	default:

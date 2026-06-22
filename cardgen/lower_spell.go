@@ -1289,6 +1289,10 @@ func lowerImmediateSingleEffectSpell(
 		})
 	case compiler.EffectUntap:
 		return lowerUntapSpell(ctx)
+	case compiler.EffectRemoveFromCombat:
+		return lowerFixedPermanentTargetSpell(ctx, "remove from combat", func(object game.ObjectReference) game.Primitive {
+			return game.RemoveFromCombat{Object: object}
+		})
 	case compiler.EffectExile:
 		if len(ctx.content.Effects) == 1 &&
 			ctx.content.Effects[0].CardSource == parser.EffectCardSourceTopOfPlayerLibrary {

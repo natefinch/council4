@@ -138,6 +138,9 @@ func (Untap) Kind() PrimitiveKind { return PrimitiveUntap }
 // Kind implements Primitive for SkipNextUntap.
 func (SkipNextUntap) Kind() PrimitiveKind { return PrimitiveSkipNextUntap }
 
+// Kind implements Primitive for RemoveFromCombat.
+func (RemoveFromCombat) Kind() PrimitiveKind { return PrimitiveRemoveFromCombat }
+
 // Kind implements Primitive for CounterObject.
 func (CounterObject) Kind() PrimitiveKind { return PrimitiveCounterObject }
 
@@ -301,6 +304,7 @@ func (Sacrifice) isPrimitive()                   {}
 func (SacrificePermanents) isPrimitive()         {}
 func (Untap) isPrimitive()                       {}
 func (SkipNextUntap) isPrimitive()               {}
+func (RemoveFromCombat) isPrimitive()            {}
 func (CounterObject) isPrimitive()               {}
 func (Mill) isPrimitive()                        {}
 func (ExileTopOfLibrary) isPrimitive()           {}
@@ -453,9 +457,10 @@ func (p SacrificePermanents) instructionRefs() primitiveRefs { return quantityRe
 func (p Untap) instructionRefs() primitiveRefs {
 	return mergePrimitiveRefs(objectReferenceRefs(p.Object), quantityRefs(p.Amount))
 }
-func (SkipNextUntap) instructionRefs() primitiveRefs { return primitiveRefs{} }
-func (CounterObject) instructionRefs() primitiveRefs { return primitiveRefs{} }
-func (p Mill) instructionRefs() primitiveRefs        { return quantityRefs(p.Amount) }
+func (SkipNextUntap) instructionRefs() primitiveRefs    { return primitiveRefs{} }
+func (RemoveFromCombat) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (CounterObject) instructionRefs() primitiveRefs    { return primitiveRefs{} }
+func (p Mill) instructionRefs() primitiveRefs           { return quantityRefs(p.Amount) }
 func (p ExileTopOfLibrary) instructionRefs() primitiveRefs {
 	return quantityRefs(p.Amount)
 }

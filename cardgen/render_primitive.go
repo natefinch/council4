@@ -1017,6 +1017,12 @@ func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error
 			return "", errors.New("render: internal error: SkipNextUntap kind has unexpected concrete type")
 		}
 		typeName, object = "game.SkipNextUntap", value.Object
+	case game.PrimitiveRemoveFromCombat:
+		value, ok := primitive.(game.RemoveFromCombat)
+		if !ok {
+			return "", errors.New("render: internal error: RemoveFromCombat kind has unexpected concrete type")
+		}
+		typeName, object = "game.RemoveFromCombat", value.Object
 	default:
 		return "", fmt.Errorf("render: unsupported object primitive kind %d", primitive.Kind())
 	}

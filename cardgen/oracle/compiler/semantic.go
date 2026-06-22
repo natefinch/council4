@@ -1152,6 +1152,7 @@ const (
 	// consumes the value via a DynamicAmountDieRollResult amount. Added last so
 	// existing kinds keep their wire values.
 	EffectRollDie
+	EffectRemoveFromCombat
 )
 
 // DurationKind identifies common continuous-effect durations.
