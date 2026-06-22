@@ -681,6 +681,9 @@ func (r Renderer) renderPlayerAmountPrimitive(ctx *renderCtx, primitive game.Pri
 		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 			return r.renderAmountPlayerGroup(ctx, "game.Mill", value.Amount, value.PlayerGroup)
 		}
+		if value.PublishLinked != "" {
+			return r.renderMillLinked(ctx, value)
+		}
 		typeName, amount, player = "game.Mill", value.Amount, value.Player
 	case game.PrimitiveExileTopOfLibrary:
 		value, ok := primitive.(game.ExileTopOfLibrary)
@@ -760,6 +763,22 @@ func (r Renderer) renderShuffleLibrary(value game.ShuffleLibrary) (string, error
 	}
 	return structLit("game.ShuffleLibrary", []string{
 		fmt.Sprintf("Player: %s,", player),
+	}), nil
+}
+
+func (r Renderer) renderMillLinked(ctx *renderCtx, value game.Mill) (string, error) {
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.Mill", []string{
+		fmt.Sprintf("Amount: %s,", amount),
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)),
 	}), nil
 }
 

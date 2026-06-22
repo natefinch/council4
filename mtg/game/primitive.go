@@ -630,6 +630,14 @@ type ReturnFromGraveyard struct {
 	Destination       zone.Type
 	EntryTapped       bool
 	MaxTotalManaValue opt.V[int]
+
+	// FromLinked, when set, restricts the candidate pool to the cards remembered
+	// under this key by a prior instruction (such as a Mill that published the
+	// cards it milled). Only graveyard cards whose identity was linked this way
+	// are eligible, modeling "put a card from among those cards into your hand"
+	// where "those cards" denotes a specific earlier-produced set rather than the
+	// whole graveyard. When empty, the whole graveyard is scanned as usual.
+	FromLinked LinkedKey
 }
 
 // MassReturnFromGraveyard returns every card in Player's graveyard matching
@@ -868,6 +876,13 @@ type Mill struct {
 	Amount      Quantity
 	Player      PlayerReference      // single player; zero if PlayerGroup is set
 	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
+
+	// PublishLinked, when set, remembers every card milled this way as a
+	// card-scoped linked object on the source permanent so a later instruction
+	// can act on exactly those cards ("mill three cards. ... put a card from
+	// among those cards into your hand"). It is meaningful only for the single
+	// Player form; the group form publishes nothing.
+	PublishLinked LinkedKey
 }
 
 // ExileTopOfLibrary moves the top Amount cards of a referenced player's library

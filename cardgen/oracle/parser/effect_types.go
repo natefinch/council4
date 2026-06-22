@@ -1749,9 +1749,10 @@ type EffectPaymentSyntax struct {
 	ManaCost          cost.Mana              `json:",omitempty"`
 	GenericManaAmount EffectAmountSyntax     `json:",omitzero"`
 	// AdditionalCost is a non-mana resolution payment cost (such as "sacrifice a
-	// land" or "discard a card") recognized in a "you may <cost>. If you do, ..."
-	// sequence. It is nil for mana-only payments; ManaCost and AdditionalCost are
-	// never both set.
+	// land", "discard a card", or the fixed life portion of "pay {mana} and N
+	// life") recognized in a "you may <cost>. If you do, ..." sequence. It is nil
+	// for mana-only payments. ManaCost and AdditionalCost are both set for a
+	// combined mana+life payment; otherwise exactly one is set.
 	AdditionalCost         *Cost `json:",omitempty"`
 	SuccessConditionNodeID int   `json:"-"`
 	FailureConditionNodeID int   `json:"-"`

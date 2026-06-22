@@ -749,6 +749,9 @@ func (r Renderer) renderReturnFromGraveyard(ctx *renderCtx, value game.ReturnFro
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("MaxTotalManaValue: opt.Val(%d),", value.MaxTotalManaValue.Val))
 	}
+	if value.FromLinked != "" {
+		fields = append(fields, fmt.Sprintf("FromLinked: game.LinkedKey(%q),", string(value.FromLinked)))
+	}
 	return structLit("game.ReturnFromGraveyard", fields), nil
 }
 

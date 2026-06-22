@@ -1847,8 +1847,9 @@ type CompiledEffectPayment struct {
 	ManaCost          cost.Mana
 	GenericManaAmount CompiledAmount
 	// AdditionalCost is a non-mana resolution payment cost (such as "sacrifice a
-	// land"). It is nil for mana-only payments; ManaCost and AdditionalCost are
-	// never both set.
+	// land" or the fixed life portion of "pay {mana} and N life"). It is nil for
+	// mana-only payments. ManaCost and AdditionalCost are both set for a combined
+	// mana+life payment; otherwise exactly one is set.
 	AdditionalCost         *CompiledCost
 	SuccessConditionNodeID int
 	FailureConditionNodeID int
