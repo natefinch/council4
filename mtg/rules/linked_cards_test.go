@@ -127,12 +127,12 @@ func TestLinkedNonPermanentCardStaysInLibrary(t *testing.T) {
 		Primitive: game.PutOnBattlefield{
 			Source: game.LinkedBattlefieldSource("revealed"),
 		},
-		CardCondition: opt.Val(game.CardCondition{
+		CardCondition: opt.Val(game.CardSelection{
 			Card: game.CardReference{
 				Kind:   game.CardReferenceLinked,
 				LinkID: "revealed",
 			},
-			RequirePermanentCard: true,
+			Selection: game.Selection{RequirePermanentCard: true},
 		}),
 	}
 	engine.resolveInstructionWithChoices(g, obj, &putInstr, [game.NumPlayers]PlayerAgent{}, &log)
@@ -165,9 +165,9 @@ func chaosWarpLikeInstructions() []game.Instruction {
 				Source:    game.LinkedBattlefieldSource("revealed"),
 				Recipient: ownerOfTarget,
 			},
-			CardCondition: opt.Val(game.CardCondition{
-				Card:                 game.CardReference{Kind: game.CardReferenceLinked, LinkID: "revealed"},
-				RequirePermanentCard: true,
+			CardCondition: opt.Val(game.CardSelection{
+				Card:      game.CardReference{Kind: game.CardReferenceLinked, LinkID: "revealed"},
+				Selection: game.Selection{RequirePermanentCard: true},
 			}),
 		},
 	}

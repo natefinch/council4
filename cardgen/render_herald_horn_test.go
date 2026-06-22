@@ -54,10 +54,12 @@ func TestRenderRevealOfLinkedCard(t *testing.T) {
 }
 
 func TestRenderCardConditionChosenSubtype(t *testing.T) {
-	rendered, err := (Renderer{}).renderCardCondition(newRenderCtx(), game.CardCondition{
-		Card:              game.CardReference{Kind: game.CardReferenceLinked, LinkID: "chosen-type-top"},
-		Types:             []types.Card{types.Creature},
-		ChosenSubtypeFrom: game.EntryTypeChoiceKey,
+	rendered, err := (Renderer{}).renderCardSelection(newRenderCtx(), game.CardSelection{
+		Card: game.CardReference{Kind: game.CardReferenceLinked, LinkID: "chosen-type-top"},
+		Selection: game.Selection{
+			RequiredTypes:     []types.Card{types.Creature},
+			ChosenSubtypeFrom: game.EntryTypeChoiceKey,
+		},
 	})
 	if err != nil {
 		t.Fatal(err)

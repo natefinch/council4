@@ -418,6 +418,14 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 		ctx.need(importTypes)
 		fields = append(fields, fmt.Sprintf("ExcludedSubtype: %s,", SubtypeToLiteral(string(selection.ExcludedSubtype), nil)))
 	}
+	if selection.ChosenSubtypeFrom != "" {
+		switch selection.ChosenSubtypeFrom {
+		case game.EntryTypeChoiceKey:
+			fields = append(fields, "ChosenSubtypeFrom: game.EntryTypeChoiceKey,")
+		default:
+			fields = append(fields, fmt.Sprintf("ChosenSubtypeFrom: game.ChoiceKey(%q),", selection.ChosenSubtypeFrom))
+		}
+	}
 	fields, err := appendSubtypeChoiceField(fields, selection.SubtypeChoice)
 	if err != nil {
 		return "", err
@@ -515,6 +523,9 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 	}
 	if selection.EnteredThisTurn {
 		fields = append(fields, "EnteredThisTurn: true,")
+	}
+	if selection.RequirePermanentCard {
+		fields = append(fields, "RequirePermanentCard: true,")
 	}
 
 	for i := range fields {

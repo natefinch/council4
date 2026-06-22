@@ -83,10 +83,12 @@ func TestLookedAtMatchingCreatureCanBeRevealedAndMovedByExactIdentity(t *testing
 			Primitive: game.Reveal{
 				Card: game.CardReference{Kind: game.CardReferenceLinked, LinkID: "looked"},
 			},
-			CardCondition: opt.Val(game.CardCondition{
-				Card:              game.CardReference{Kind: game.CardReferenceLinked, LinkID: "looked"},
-				Types:             []types.Card{types.Creature},
-				ChosenSubtypeFrom: game.EntryTypeChoiceKey,
+			CardCondition: opt.Val(game.CardSelection{
+				Card: game.CardReference{Kind: game.CardReferenceLinked, LinkID: "looked"},
+				Selection: game.Selection{
+					RequiredTypes:     []types.Card{types.Creature},
+					ChosenSubtypeFrom: game.EntryTypeChoiceKey,
+				},
 			}),
 			Optional:      true,
 			PublishResult: "revealed",
@@ -173,10 +175,12 @@ func chosenTypeLibraryTopSequence() []game.Instruction {
 		{Primitive: game.LookAtLibraryTop{Player: game.ControllerReference(), PublishLinked: "looked"}},
 		{
 			Primitive: game.Reveal{Card: looked},
-			CardCondition: opt.Val(game.CardCondition{
-				Card:              looked,
-				Types:             []types.Card{types.Creature},
-				ChosenSubtypeFrom: game.EntryTypeChoiceKey,
+			CardCondition: opt.Val(game.CardSelection{
+				Card: looked,
+				Selection: game.Selection{
+					RequiredTypes:     []types.Card{types.Creature},
+					ChosenSubtypeFrom: game.EntryTypeChoiceKey,
+				},
 			}),
 			Optional:      true,
 			PublishResult: "revealed",

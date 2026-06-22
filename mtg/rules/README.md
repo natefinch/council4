@@ -332,9 +332,11 @@ age counter to the same source object, then materializes its exact fixed mana
 cost multiplied by the resulting count. Decline or inability publishes payment
 failure and routes sacrifice through the normal zone-change and event helpers.
 
-`Instruction.CardCondition` gates a primitive against a typed referenced card
-before its handler runs. Linked reveal sequences use it to test the revealed card
-for permanent card types without losing the linked card ID; a passing
+`Instruction.CardCondition` (a `game.CardSelection`) gates a primitive against a
+referenced card before its handler runs: its `Card` names which linked card to
+read and its `Selection` is the per-card predicate. Linked reveal sequences use it
+to test the revealed card for permanent card types without losing the linked card
+ID; a passing
 `PutOnBattlefield` creates a fresh permanent object and applies its explicit
 recipient as controller. It may publish that object for a linked dynamic amount;
 the instruction result records success only when the card actually reaches the

@@ -1115,12 +1115,12 @@ func lowerShuffleRevealPermanentSequence(ctx contentCtx) (game.AbilityContent, b
 					Source:    game.LinkedBattlefieldSource(key),
 					Recipient: opt.Val(owner),
 				},
-				CardCondition: opt.Val(game.CardCondition{
+				CardCondition: opt.Val(game.CardSelection{
 					Card: game.CardReference{
 						Kind:   game.CardReferenceLinked,
 						LinkID: string(key),
 					},
-					RequirePermanentCard: true,
+					Selection: game.Selection{RequirePermanentCard: true},
 				}),
 			},
 		},

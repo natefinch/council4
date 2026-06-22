@@ -116,6 +116,17 @@ type Selection struct {
 	// selection. The empty value means no exclusion.
 	ExcludedSubtype types.Sub
 
+	// ChosenSubtypeFrom, when non-empty, requires the matched card to carry the
+	// creature subtype published under this resolution-choice key (the source
+	// permanent's entry-time "choose a creature type", seeded into the resolving
+	// object's ResolutionChoices). The chosen value must be a known creature
+	// subtype (KnownSubtypeForType) or the predicate fails closed. It backs the
+	// "creature card of the chosen type" gate of chosen-type library-top triggers
+	// (Herald's Horn). Unlike SubtypeChoice it names an explicit key and applies
+	// the known-subtype guard, so it is matched only against cards in a
+	// non-battlefield zone; other subjects fail it closed.
+	ChosenSubtypeFrom ChoiceKey
+
 	// ColorsAny matches when any listed color is present. ExcludedColors must
 	// all be absent. Colorless requires no colors; Multicolored requires at
 	// least two colors.
@@ -216,6 +227,13 @@ type Selection struct {
 	// alone on a plain "card named X" effect. A subject whose name is unavailable
 	// never matches. Placed at the end so the field joins no existing cluster.
 	Name string
+
+	// RequirePermanentCard requires the matched card to be a permanent card (one
+	// with at least one permanent card type), the "if it's a permanent card" gate
+	// of reveal-and-put effects (Chaos Warp). It is a card-zone predicate matched
+	// against a card's printed types; a subject that is not a card fails it
+	// closed. Placed at the end so the bool joins no existing cluster's packing.
+	RequirePermanentCard bool
 }
 
 // Empty reports whether the Selection carries no active predicate and therefore
@@ -255,7 +273,9 @@ func (s Selection) Empty() bool {
 		!s.TokenOnly &&
 		!s.PowerLessThanSource &&
 		!s.PowerGreaterThanSource &&
-		s.Name == ""
+		s.Name == "" &&
+		s.ChosenSubtypeFrom == "" &&
+		!s.RequirePermanentCard
 }
 
 // Validate reports structural contradictions in the Selection that represent

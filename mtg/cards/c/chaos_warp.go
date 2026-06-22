@@ -57,12 +57,12 @@ var ChaosWarp = &game.CardDef{
 							Source:    game.LinkedBattlefieldSource(game.LinkedKey("chaos-warp-revealed")),
 							Recipient: opt.Val(game.ObjectOwnerReference(game.TargetPermanentReference(0))),
 						},
-						CardCondition: opt.Val(game.CardCondition{
+						CardCondition: opt.Val(game.CardSelection{
 							Card: game.CardReference{
 								Kind:   game.CardReferenceLinked,
 								LinkID: "chaos-warp-revealed",
 							},
-							RequirePermanentCard: true,
+							Selection: game.Selection{RequirePermanentCard: true},
 						}),
 					},
 				},

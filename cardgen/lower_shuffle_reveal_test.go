@@ -45,7 +45,7 @@ func TestLowerShuffleRevealPermanentSequence(t *testing.T) {
 		!condition.Exists ||
 		condition.Val.Card.Kind != game.CardReferenceLinked ||
 		condition.Val.Card.LinkID != string(key) ||
-		!condition.Val.RequirePermanentCard {
+		!condition.Val.Selection.RequirePermanentCard {
 		t.Fatalf("linked put = %#v, condition = %#v", put, condition)
 	}
 	if err := game.ValidateInstructionSequence(mode.Sequence, mode.Targets); err != nil {
@@ -99,7 +99,7 @@ func TestGenerateChaosWarpEndToEnd(t *testing.T) {
 		"PublishLinked: game.LinkedKey(",
 		"game.LinkedBattlefieldSource",
 		"game.ObjectOwnerReference(game.TargetPermanentReference(0))",
-		"CardCondition: opt.Val(game.CardCondition",
+		"CardCondition: opt.Val(game.CardSelection",
 		"RequirePermanentCard: true",
 	} {
 		if !strings.Contains(source, want) {
