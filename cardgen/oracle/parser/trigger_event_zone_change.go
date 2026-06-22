@@ -97,26 +97,41 @@ func parseZoneChange(tokens []shared.Token) zoneChangeResult {
 	}
 
 	if verb := cutEventVerb(tokens, "leaves", "leave"); verb.ok {
-		if !tokenWordsEqual(verb.remaining, "the", "battlefield") &&
-			!tokenWordsEqual(verb.remaining, "the", "battlefield", "without", "dying") {
-			return zoneChangeResult{}
+		if tokenWordsEqual(verb.remaining, "the", "battlefield") ||
+			tokenWordsEqual(verb.remaining, "the", "battlefield", "without", "dying") {
+			change := parsedZoneChange{
+				kind: TriggerEventZoneChange{Kind: TriggerEventZoneChangeMoved, Span: span},
+				zone: TriggerEventZoneContext{
+					Span:          span,
+					MatchFromZone: true,
+					FromZone:      triggerEventZone(TriggerEventZoneBattlefield, zoneWordSpan(tokens, TriggerEventZoneBattlefield)),
+				},
+			}
+			if tokenWordsEqual(verb.remaining, "the", "battlefield", "without", "dying") {
+				change.zone.ExcludeToZone = true
+				change.zone.ToZone = triggerEventZone(
+					TriggerEventZoneGraveyard,
+					zoneWordSpan(tokens, TriggerEventZoneGraveyard),
+				)
+			}
+			return matchedZoneChange(&change, verb.plural)
 		}
-		change := parsedZoneChange{
-			kind: TriggerEventZoneChange{Kind: TriggerEventZoneChangeMoved, Span: span},
-			zone: TriggerEventZoneContext{
-				Span:          span,
-				MatchFromZone: true,
-				FromZone:      triggerEventZone(TriggerEventZoneBattlefield, zoneWordSpan(tokens, TriggerEventZoneBattlefield)),
-			},
+		// "leave[s] [your / a / an opponent's] graveyard" departs the graveyard
+		// for any zone, so the trigger only constrains the origin graveyard and
+		// its owner; the destination zone is unconstrained.
+		if originZone, player, ok := parseOriginZone(verb.remaining); ok && originZone.Kind == TriggerEventZoneGraveyard {
+			change := parsedZoneChange{
+				kind: TriggerEventZoneChange{Kind: TriggerEventZoneChangeMoved, Span: span},
+				zone: TriggerEventZoneContext{
+					Span:          span,
+					MatchFromZone: true,
+					FromZone:      originZone,
+				},
+				player: player,
+			}
+			return matchedZoneChange(&change, verb.plural)
 		}
-		if tokenWordsEqual(verb.remaining, "the", "battlefield", "without", "dying") {
-			change.zone.ExcludeToZone = true
-			change.zone.ToZone = triggerEventZone(
-				TriggerEventZoneGraveyard,
-				zoneWordSpan(tokens, TriggerEventZoneGraveyard),
-			)
-		}
-		return matchedZoneChange(&change, verb.plural)
+		return zoneChangeResult{}
 	}
 
 	if verb := cutEventVerb(tokens, "is", "are"); verb.ok {
@@ -426,6 +441,21 @@ func parseZoneChangeSubject(
 	}
 	if len(remaining) == 0 {
 		return zoneSubjectResult{}
+	}
+	if tokenWordsEqual(remaining, "card") || tokenWordsEqual(remaining, "cards") {
+		// A bare "card"/"cards" subject imposes no type restriction, so it
+		// resolves to an any-card selection that the runtime matches without a
+		// type filter.
+		result.subject = TriggerEventSubject{
+			Kind:      TriggerEventSubjectSelection,
+			Span:      shared.SpanOf(subjectTokens),
+			Selection: TriggerSelection{SubtypeFromEntryChoice: subtypeFromEntryChoice},
+		}
+		if result.selfOrAnother && !result.excludeSelf {
+			return zoneSubjectResult{}
+		}
+		result.ok = true
+		return result
 	}
 	selection, ok := parseTriggerSelection(remaining)
 	if !ok {

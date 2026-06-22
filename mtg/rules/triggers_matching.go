@@ -36,7 +36,7 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 	if pattern.Event == game.EventAbilityActivated && !pattern.ExcludeManaAbility {
 		return false
 	}
-	if pattern.Event == game.EventZoneChanged && event.PermanentID == 0 {
+	if pattern.Event == game.EventZoneChanged && event.PermanentID == 0 && event.CardID == 0 {
 		return false
 	}
 	if pattern.RequireTappedForMana && !event.TappedForMana {
@@ -130,6 +130,9 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 	}
 	if subjectSel := triggerSubjectSelection(pattern); !subjectSel.Empty() {
 		matched := triggerSelectionMatches(g, sourceController, event, event.PermanentID, &subjectSel, sourceObjectID)
+		if !matched && event.PermanentID == 0 && event.CardID != 0 {
+			matched = triggerCardInstanceSelectionMatches(g, sourceController, event, &subjectSel, sourceObjectID)
+		}
 		if !matched && pattern.SubjectSelectionOrSelf {
 			matched = triggerSourceMatches(g, source, game.TriggerSourceSelf, pattern.Subject, event)
 		}
@@ -431,6 +434,27 @@ func triggerSelectionMatches(g *game.Game, viewer game.PlayerID, event game.Even
 		g:              g,
 		event:          subjectEvent,
 		controller:     controller,
+		viewer:         viewer,
+		sourceObjectID: sourceObjectID,
+	}
+	return matchSelection(&subject, selection)
+}
+
+// triggerCardInstanceSelectionMatches matches a subject selection against the
+// card moved by a zone change that names a card rather than a permanent (for
+// example "one or more creature cards leave your graveyard"), reading the card's
+// printed characteristics from its instance.
+func triggerCardInstanceSelectionMatches(g *game.Game, viewer game.PlayerID, event game.Event, selection *game.Selection, sourceObjectID id.ID) bool {
+	card, ok := g.GetCardInstance(event.CardID)
+	if !ok || card.Def == nil {
+		return false
+	}
+	subject := selectionSubject{
+		kind:           subjectCard,
+		g:              g,
+		event:          event,
+		card:           card,
+		controller:     event.Player,
 		viewer:         viewer,
 		sourceObjectID: sourceObjectID,
 	}

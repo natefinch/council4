@@ -247,6 +247,35 @@ func zoneChangeTriggerEventClauseTests() []triggerEventClauseTest {
 			},
 		},
 		{
+			name:   "zone cards leave your graveyard",
+			source: "Whenever one or more cards leave your graveyard, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.ZoneChange.Kind != TriggerEventZoneChangeMoved ||
+					!clause.OneOrMore ||
+					clause.Subject.Kind != TriggerEventSubjectSelection ||
+					clause.Zone.FromZone.Kind != TriggerEventZoneGraveyard ||
+					clause.Zone.MatchToZone ||
+					clause.Player.Kind != TriggerPlayerSelectorYou {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "zone creature cards leave your graveyard",
+			source: "Whenever one or more creature cards leave your graveyard, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.ZoneChange.Kind != TriggerEventZoneChangeMoved ||
+					!clause.OneOrMore ||
+					clause.Zone.FromZone.Kind != TriggerEventZoneGraveyard ||
+					clause.Player.Kind != TriggerPlayerSelectorYou ||
+					!selectionHasType(clause.Subject.Selection, TriggerCardTypeCreature) {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
 			name:   "zone put into graveyard",
 			source: "Whenever an artifact is put into a graveyard, draw a card.",
 			check: func(t *testing.T, clause *TriggerEventClause) {
