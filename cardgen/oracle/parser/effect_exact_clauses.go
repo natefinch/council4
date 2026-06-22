@@ -557,6 +557,48 @@ func exactDirectTargetEffectSyntax(effect *EffectSyntax, verb string) bool {
 		strings.EqualFold(exactEffectClauseText(effect), verb+" "+effect.Targets[0].Text+".")
 }
 
+// exactMultiDistinctTargetEffectSyntax recognizes a verb applied to two or more
+// distinct single targets, each named by its own "target <noun>" clause:
+// "Destroy target artifact, target creature, target enchantment, and target
+// land." (Decimate), "Destroy target artifact and target creature." Every target
+// is exact with single cardinality, and the canonical list joins the target
+// texts in an Oracle serial series — "A and B" for two, "A, B, and C" for three
+// or more with the serial comma. Any other shape (a plural or optional target, a
+// non-exact target, or trailing clause text) leaves the reconstruction
+// mismatched and the clause non-exact, so lowering fails closed.
+func exactMultiDistinctTargetEffectSyntax(effect *EffectSyntax, verb string) bool {
+	if len(effect.Targets) < 2 {
+		return false
+	}
+	single := TargetCardinalitySyntax{Min: 1, Max: 1}
+	texts := make([]string, 0, len(effect.Targets))
+	for i := range effect.Targets {
+		target := effect.Targets[i]
+		if !target.Exact || target.Cardinality != single {
+			return false
+		}
+		texts = append(texts, target.Text)
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), verb+" "+joinSerialTargetTexts(texts)+".")
+}
+
+// joinSerialTargetTexts joins distinct target clause texts the way Oracle text
+// lists a verb's several targets: a single text as-is, two joined by "and", and
+// three or more in a serial-comma series ("target artifact, target creature, and
+// target land").
+func joinSerialTargetTexts(texts []string) string {
+	switch len(texts) {
+	case 0:
+		return ""
+	case 1:
+		return texts[0]
+	case 2:
+		return texts[0] + " and " + texts[1]
+	default:
+		return strings.Join(texts[:len(texts)-1], ", ") + ", and " + texts[len(texts)-1]
+	}
+}
+
 // exactRegenerateSelfEffectSyntax recognizes the self-regeneration form
 // "Regenerate this creature." (and the "this permanent"/"this token" object
 // nouns) or "Regenerate <CardName>." where the regenerated permanent is the
