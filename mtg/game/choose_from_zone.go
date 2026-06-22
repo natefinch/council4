@@ -205,6 +205,13 @@ type ChooseRiders struct {
 	// the chosen cards are remembered.
 	PublishLinked LinkedKey
 
+	// PublishObjectScoped keys the PublishLinked remembrance by the source
+	// permanent's object identity rather than its card identity, the imprint
+	// scoping (Chrome Mox): a re-entered object gets a fresh object ID and so
+	// starts without a prior imprint. It is meaningful only when PublishLinked is
+	// set and changes only the key derivation, not what is remembered.
+	PublishObjectScoped bool
+
 	// MaxTotalManaValue, when set, caps the combined mana value of the chosen
 	// cards ("with total mana value 4 or less", Lively Dirge). It also makes the
 	// choice optional, since the empty choice always satisfies the cap.

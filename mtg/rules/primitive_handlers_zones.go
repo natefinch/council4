@@ -729,65 +729,28 @@ func handleExile(r *effectResolver, prim game.Exile) effectResolved {
 // so the imprint follows that specific object and a re-entered object (new object
 // ID) finds no prior link. With no matching card, nothing is exiled and no link is
 // recorded, leaving any reader (the imprint mana ability) with an empty color set.
+// handleExileFromHand re-expresses the "exile a <filter> card from your hand"
+// choice as a thin game.ChooseFromZone consumer: the resolving player chooses up
+// to prim.Amount hand cards matching prim.Selection and each moves to exile. When
+// PublishLinked is set the chosen cards are imprinted on the source permanent
+// (object-scoped, so a re-entered object starts without an imprint — Chrome Mox).
+// The envelope's candidate gathering, choice bounds, and movement match the prior
+// hand-rolled resolution; res.amount preserves the requested quantity.
 func handleExileFromHand(r *effectResolver, prim game.ExileFromHand) effectResolved {
-	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	playerID, ok := r.resolvePlayer(prim.Player)
-	if !ok {
-		return res
-	}
-	publish := prim.PublishLinked != ""
-	var key game.LinkedObjectKey
-	if publish {
-		key = linkedObjectByObjectKey(r.game, r.obj, string(prim.PublishLinked))
-		clearLinkedObjects(r.game, key)
-	}
-	player, ok := playerByID(r.game, playerID)
-	if !ok {
-		return res
-	}
-	var candidates []id.ID
-	for _, cardID := range player.Hand.All() {
-		card, cardOK := r.game.GetCardInstance(cardID)
-		if !cardOK {
-			continue
-		}
-		if handCardMatchesSelection(r.game, card, prim.Selection, playerID) {
-			candidates = append(candidates, cardID)
-		}
-	}
-	amount := min(res.amount, len(candidates))
-	if amount <= 0 {
-		return res
-	}
-	options := make([]game.ChoiceOption, len(candidates))
-	for i, cardID := range candidates {
-		options[i] = game.ChoiceOption{
-			Index: i,
-			Label: cardChoiceLabel(r.game, cardID),
-			Card:  cardChoiceInfo(r.game, cardID),
-		}
-	}
-	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
-		Kind:             game.ChoiceResolution,
-		Player:           playerID,
-		Prompt:           "Choose a card to exile",
-		Options:          options,
-		MinChoices:       amount,
-		MaxChoices:       amount,
-		DefaultSelection: firstChoiceIndices(amount),
-	}, r.log)
-	for _, idx := range selected {
-		if idx < 0 || idx >= len(candidates) {
-			continue
-		}
-		cardID := candidates[idx]
-		if moveCardBetweenZones(r.game, playerID, cardID, zone.Hand, zone.Exile) {
-			res.succeeded = true
-			if publish {
-				rememberLinkedObject(r.game, key, game.LinkedObjectRef{CardID: cardID})
-			}
-		}
-	}
+	res := r.resolveChooseFromZone(game.ChooseFromZone{
+		Player:      prim.Player,
+		SourceZone:  zone.Hand,
+		Filter:      prim.Selection,
+		Quantity:    prim.Amount,
+		Count:       game.ChooseExactly,
+		Destination: game.ChooseDestination{Zone: zone.Exile},
+		Riders: game.ChooseRiders{
+			PublishLinked:       prim.PublishLinked,
+			PublishObjectScoped: true,
+		},
+		Prompt: "Choose a card to exile",
+	})
+	res.amount = r.quantity(prim.Amount)
 	return res
 }
 
@@ -801,55 +764,16 @@ func handleExileFromHand(r *effectResolver, prim game.ExileFromHand) effectResol
 // exiled, so an "if you do" gate on the published result resolves only when the
 // player actually exiled a card. With no matching card, nothing is exiled.
 func handleExileFromGraveyard(r *effectResolver, prim game.ExileFromGraveyard) effectResolved {
-	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	playerID, ok := r.resolvePlayer(prim.Player)
-	if !ok {
-		return res
-	}
-	player, ok := playerByID(r.game, playerID)
-	if !ok {
-		return res
-	}
-	var candidates []id.ID
-	for _, cardID := range player.Graveyard.All() {
-		card, cardOK := r.game.GetCardInstance(cardID)
-		if !cardOK {
-			continue
-		}
-		if handCardMatchesSelection(r.game, card, prim.Selection, playerID) {
-			candidates = append(candidates, cardID)
-		}
-	}
-	amount := min(res.amount, len(candidates))
-	if amount <= 0 {
-		return res
-	}
-	options := make([]game.ChoiceOption, len(candidates))
-	for i, cardID := range candidates {
-		options[i] = game.ChoiceOption{
-			Index: i,
-			Label: cardChoiceLabel(r.game, cardID),
-			Card:  cardChoiceInfo(r.game, cardID),
-		}
-	}
-	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
-		Kind:             game.ChoiceResolution,
-		Player:           playerID,
-		Prompt:           "Choose a card to exile",
-		Options:          options,
-		MinChoices:       amount,
-		MaxChoices:       amount,
-		DefaultSelection: firstChoiceIndices(amount),
-	}, r.log)
-	for _, idx := range selected {
-		if idx < 0 || idx >= len(candidates) {
-			continue
-		}
-		cardID := candidates[idx]
-		if moveCardBetweenZones(r.game, playerID, cardID, zone.Graveyard, zone.Exile) {
-			res.succeeded = true
-		}
-	}
+	res := r.resolveChooseFromZone(game.ChooseFromZone{
+		Player:      prim.Player,
+		SourceZone:  zone.Graveyard,
+		Filter:      prim.Selection,
+		Quantity:    prim.Amount,
+		Count:       game.ChooseExactly,
+		Destination: game.ChooseDestination{Zone: zone.Exile},
+		Prompt:      "Choose a card to exile",
+	})
+	res.amount = r.quantity(prim.Amount)
 	return res
 }
 
@@ -861,59 +785,17 @@ func handleExileFromGraveyard(r *effectResolver, prim game.ExileFromGraveyard) e
 // here the player chooses which matching card to put. With no matching card,
 // nothing is put.
 func handlePutFromHand(r *effectResolver, prim game.PutFromHand) effectResolved {
-	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	playerID, ok := r.resolvePlayer(prim.Player)
-	if !ok {
-		return res
-	}
-	player, ok := playerByID(r.game, playerID)
-	if !ok {
-		return res
-	}
-	var candidates []id.ID
-	for _, cardID := range player.Hand.All() {
-		card, cardOK := r.game.GetCardInstance(cardID)
-		if !cardOK {
-			continue
-		}
-		if handCardMatchesSelection(r.game, card, prim.Selection, playerID) {
-			candidates = append(candidates, cardID)
-		}
-	}
-	amount := min(res.amount, len(candidates))
-	if amount <= 0 {
-		return res
-	}
-	options := make([]game.ChoiceOption, len(candidates))
-	for i, cardID := range candidates {
-		options[i] = game.ChoiceOption{
-			Index: i,
-			Label: cardChoiceLabel(r.game, cardID),
-			Card:  cardChoiceInfo(r.game, cardID),
-		}
-	}
-	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
-		Kind:             game.ChoiceResolution,
-		Player:           playerID,
-		Prompt:           "Choose a card to put onto the battlefield",
-		Options:          options,
-		MinChoices:       amount,
-		MaxChoices:       amount,
-		DefaultSelection: firstChoiceIndices(amount),
-	}, r.log)
-	creationOptions := permanentCreationOptions{ForceTapped: prim.EntersTapped}
-	for _, idx := range selected {
-		if idx < 0 || idx >= len(candidates) {
-			continue
-		}
-		card, cardOK := r.game.GetCardInstance(candidates[idx])
-		if !cardOK {
-			continue
-		}
-		if _, putOK := r.putResolvedCardOnBattlefieldValue(card, zone.Hand, playerID, nil, creationOptions); putOK {
-			res.succeeded = true
-		}
-	}
+	res := r.resolveChooseFromZone(game.ChooseFromZone{
+		Player:      prim.Player,
+		SourceZone:  zone.Hand,
+		Filter:      prim.Selection,
+		Quantity:    prim.Amount,
+		Count:       game.ChooseExactly,
+		Destination: game.ChooseDestination{Zone: zone.Battlefield},
+		Riders:      game.ChooseRiders{EntersTapped: prim.EntersTapped},
+		Prompt:      "Choose a card to put onto the battlefield",
+	})
+	res.amount = r.quantity(prim.Amount)
 	return res
 }
 
@@ -922,6 +804,10 @@ func handlePutFromHand(r *effectResolver, prim game.PutFromHand) effectResolved 
 // with a legal cast choice; the enclosing instruction's Optional flag already
 // gathered "you may" consent, so here the player picks which eligible spell to
 // cast, casting nothing when none qualify.
+//
+// DO-NOT-COPY(zone-choice): the chosen card is cast (put on the stack) rather
+// than moved to a destination zone, so it has no game.ChooseFromZone movement to
+// reuse; prefer game.ChooseFromZone. (retire: #1396)
 func handleCastForFree(r *effectResolver, prim game.CastForFree) effectResolved {
 	res := effectResolved{accepted: true}
 	playerID, ok := r.resolvePlayer(prim.Player)
@@ -1020,6 +906,14 @@ func handleReturnFromGraveyard(r *effectResolver, prim game.ReturnFromGraveyard)
 	return res
 }
 
+// handleMassReturnFromGraveyard returns every matching graveyard card at once
+// with no player choice, optionally scanning multiple players' graveyards
+// (SourceGroup) and entering cards under their owners' control (ControlledByOwner).
+//
+// DO-NOT-COPY(zone-choice): the player makes no choice (all matching cards move)
+// and the candidate pool spans several players' graveyards, neither of which the
+// single-zone, choice-issuing game.ChooseFromZone envelope models; prefer
+// game.ChooseFromZone. (retire: #1396)
 func handleMassReturnFromGraveyard(r *effectResolver, prim game.MassReturnFromGraveyard) effectResolved {
 	res := effectResolved{accepted: true}
 	controllerID, ok := r.resolvePlayer(prim.Player)
