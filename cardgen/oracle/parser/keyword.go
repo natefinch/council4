@@ -71,22 +71,28 @@ const (
 	KeywordProwess          KeywordKind = "KeywordProwess"
 	KeywordReadAhead        KeywordKind = "KeywordReadAhead"
 	KeywordReach            KeywordKind = "KeywordReach"
-	KeywordShadow           KeywordKind = "KeywordShadow"
-	KeywordScavenge         KeywordKind = "KeywordScavenge"
-	KeywordShroud           KeywordKind = "KeywordShroud"
-	KeywordSkulk            KeywordKind = "KeywordSkulk"
-	KeywordSplitSecond      KeywordKind = "KeywordSplitSecond"
-	KeywordStorm            KeywordKind = "KeywordStorm"
-	KeywordSuspend          KeywordKind = "KeywordSuspend"
-	KeywordToxic            KeywordKind = "KeywordToxic"
-	KeywordTrample          KeywordKind = "KeywordTrample"
-	KeywordUnearth          KeywordKind = "KeywordUnearth"
-	KeywordUndying          KeywordKind = "KeywordUndying"
-	KeywordUnleash          KeywordKind = "KeywordUnleash"
-	KeywordVigilance        KeywordKind = "KeywordVigilance"
-	KeywordWard             KeywordKind = "KeywordWard"
-	KeywordWither           KeywordKind = "KeywordWither"
-	KeywordRiot             KeywordKind = "KeywordRiot"
+	// KeywordRetrace is the Retrace keyword (CR 702.81): "You may cast this card
+	// from your graveyard by discarding a land card in addition to paying its
+	// other costs." It is a non-parameterized graveyard alternative-casting
+	// permission, also conferred on other graveyard cards by "<filter> cards in
+	// your graveyard have retrace" statics (Six, Wrenn and Six Emblem).
+	KeywordRetrace     KeywordKind = "KeywordRetrace"
+	KeywordShadow      KeywordKind = "KeywordShadow"
+	KeywordScavenge    KeywordKind = "KeywordScavenge"
+	KeywordShroud      KeywordKind = "KeywordShroud"
+	KeywordSkulk       KeywordKind = "KeywordSkulk"
+	KeywordSplitSecond KeywordKind = "KeywordSplitSecond"
+	KeywordStorm       KeywordKind = "KeywordStorm"
+	KeywordSuspend     KeywordKind = "KeywordSuspend"
+	KeywordToxic       KeywordKind = "KeywordToxic"
+	KeywordTrample     KeywordKind = "KeywordTrample"
+	KeywordUnearth     KeywordKind = "KeywordUnearth"
+	KeywordUndying     KeywordKind = "KeywordUndying"
+	KeywordUnleash     KeywordKind = "KeywordUnleash"
+	KeywordVigilance   KeywordKind = "KeywordVigilance"
+	KeywordWard        KeywordKind = "KeywordWard"
+	KeywordWither      KeywordKind = "KeywordWither"
+	KeywordRiot        KeywordKind = "KeywordRiot"
 	// KeywordLandcycling and the typed variants below are the landcycling
 	// keyword family (CR 702.29). Each is a cycling ability whose
 	// discard-from-hand activation searches the library for a land matching a
@@ -191,6 +197,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordProwess:          "Prowess",
 	KeywordReadAhead:        "Read ahead",
 	KeywordReach:            "Reach",
+	KeywordRetrace:          "Retrace",
 	KeywordShadow:           "Shadow",
 	KeywordScavenge:         "Scavenge",
 	KeywordShroud:           "Shroud",
@@ -316,6 +323,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordProtection, Words: []string{"protection"}},
 	{Kind: KeywordProwess, Words: []string{"prowess"}},
 	{Kind: KeywordReach, Words: []string{"reach"}},
+	{Kind: KeywordRetrace, Words: []string{"retrace"}},
 	{Kind: KeywordShadow, Words: []string{"shadow"}},
 	{Kind: KeywordScavenge, Words: []string{"scavenge"}},
 	{Kind: KeywordShroud, Words: []string{"shroud"}},

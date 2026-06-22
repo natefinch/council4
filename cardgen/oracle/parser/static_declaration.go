@@ -39,6 +39,7 @@ const (
 	StaticDeclarationEnterBattlefieldRestriction          StaticDeclarationKind = "StaticDeclarationEnterBattlefieldRestriction"
 	StaticDeclarationContinuousQuotedAbilityGrant         StaticDeclarationKind = "StaticDeclarationContinuousQuotedAbilityGrant"
 	StaticDeclarationAbilityCostSet                       StaticDeclarationKind = "StaticDeclarationAbilityCostSet"
+	StaticDeclarationGraveyardCardKeywordGrant            StaticDeclarationKind = "StaticDeclarationGraveyardCardKeywordGrant"
 )
 
 // StaticDeclarationDynamicValueKind identifies the rules-derived count a
@@ -86,6 +87,11 @@ const (
 	StaticDeclarationSubjectControllerHand StaticDeclarationSubjectKind = "StaticDeclarationSubjectControllerHand"
 	StaticDeclarationSubjectController     StaticDeclarationSubjectKind = "StaticDeclarationSubjectController"
 	StaticDeclarationSubjectEachPlayer     StaticDeclarationSubjectKind = "StaticDeclarationSubjectEachPlayer"
+	// StaticDeclarationSubjectControllerGraveyard names the set of the
+	// controller's graveyard cards a "[During your turn,] <filter> cards in your
+	// graveyard have <keyword>." keyword-grant declaration affects (Six, Wrenn
+	// and Six Emblem). CardFilter constrains the affected cards by card type.
+	StaticDeclarationSubjectControllerGraveyard StaticDeclarationSubjectKind = "StaticDeclarationSubjectControllerGraveyard"
 )
 
 // StaticDeclarationPlayerRuleKind identifies the closed player-scoped rule a
@@ -155,6 +161,18 @@ const (
 	StaticDeclarationCardFilterLand     StaticDeclarationCardFilterKind = "StaticDeclarationCardFilterLand"
 	StaticDeclarationCardFilterCreature StaticDeclarationCardFilterKind = "StaticDeclarationCardFilterCreature"
 	StaticDeclarationCardFilterHistoric StaticDeclarationCardFilterKind = "StaticDeclarationCardFilterHistoric"
+	// StaticDeclarationCardFilterNonlandPermanent selects nonland permanent cards
+	// ("nonland permanent cards in your graveyard", Six): cards whose type line
+	// includes a permanent card type other than Land.
+	StaticDeclarationCardFilterNonlandPermanent StaticDeclarationCardFilterKind = "StaticDeclarationCardFilterNonlandPermanent"
+	// StaticDeclarationCardFilterPermanent selects permanent cards ("permanent
+	// cards in your graveyard"): cards whose type line includes any permanent
+	// card type.
+	StaticDeclarationCardFilterPermanent StaticDeclarationCardFilterKind = "StaticDeclarationCardFilterPermanent"
+	// StaticDeclarationCardFilterInstantOrSorcery selects instant and sorcery
+	// cards ("instant and sorcery cards in your graveyard", Wrenn and Six
+	// Emblem).
+	StaticDeclarationCardFilterInstantOrSorcery StaticDeclarationCardFilterKind = "StaticDeclarationCardFilterInstantOrSorcery"
 )
 
 // StaticDeclarationCostModifierKind identifies the closed cost-modifier shape a
@@ -642,6 +660,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticCardAbilityGrantDeclaration(tokens, atoms); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticGraveyardCardKeywordGrantDeclaration(tokens, atoms); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticPermanentAbilityGrantDeclaration(tokens, quoted, conditions); ok {

@@ -827,6 +827,8 @@ func renderKeyword(kw game.Keyword) (string, error) {
 		return "game.Intimidate", nil
 	case game.Landwalk:
 		return "game.Landwalk", nil
+	case game.Retrace:
+		return "game.Retrace", nil
 	default:
 		return "", fmt.Errorf("render: unsupported keyword %d", kw)
 	}

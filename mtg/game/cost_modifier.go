@@ -122,6 +122,12 @@ const (
 	RuleEffectMustBeBlocked
 	RuleEffectMustAttack
 	RuleEffectGrantHandCardAbility
+	// RuleEffectGrantGraveyardCardKeyword grants GrantedKeyword to the affected
+	// player's graveyard cards that match CardSelection ("[During your turn,]
+	// nonland permanent cards in your graveyard have retrace.", Six, Wrenn and
+	// Six Emblem). RestrictedDuringControllerTurn scopes the grant to the
+	// controller's turn.
+	RuleEffectGrantGraveyardCardKeyword
 	RuleEffectDoesntUntap
 	RuleEffectCantBeBlockedByMoreThanOne
 	// RuleEffectNoMaximumHandSize removes the maximum hand size of the affected
@@ -272,6 +278,7 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectMustBeBlocked,
 		RuleEffectMustAttack,
 		RuleEffectGrantHandCardAbility,
+		RuleEffectGrantGraveyardCardKeyword,
 		RuleEffectDoesntUntap,
 		RuleEffectCantBeBlockedByMoreThanOne,
 		RuleEffectNoMaximumHandSize,
@@ -376,6 +383,10 @@ type RuleEffect struct {
 
 	CardSelection  Selection
 	GrantedAbility ActivatedAbility
+	// GrantedKeyword is the keyword a RuleEffectGrantGraveyardCardKeyword effect
+	// confers on the affected player's matching graveyard cards. It is unused for
+	// every other kind.
+	GrantedKeyword Keyword
 
 	CastFromZone   zone.Type
 	AffectedCardID id.ID

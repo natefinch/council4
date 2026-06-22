@@ -509,6 +509,16 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("GrantedAbility: %s,", ability))
 	}
+	if effect.Kind == game.RuleEffectGrantGraveyardCardKeyword {
+		if effect.GrantedKeyword == game.KeywordNone {
+			return "", errors.New("render: graveyard-card keyword grant must grant a keyword")
+		}
+		keyword, err := renderKeyword(effect.GrantedKeyword)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("GrantedKeyword: %s,", keyword))
+	}
 	if effect.Kind == game.RuleEffectCantBeBlockedByCreaturesWith {
 		restriction, err := renderBlockerRestriction(effect.BlockerRestriction)
 		if err != nil {
@@ -701,6 +711,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectCostModifier", nil
 	case game.RuleEffectGrantHandCardAbility:
 		return "game.RuleEffectGrantHandCardAbility", nil
+	case game.RuleEffectGrantGraveyardCardKeyword:
+		return "game.RuleEffectGrantGraveyardCardKeyword", nil
 	case game.RuleEffectPlayerProtection:
 		return "game.RuleEffectPlayerProtection", nil
 	case game.RuleEffectAttackTax:

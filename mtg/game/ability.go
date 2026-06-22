@@ -93,6 +93,7 @@ const (
 	Training
 	Saddle
 	Rebound
+	Retrace
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -243,6 +244,13 @@ var (
 	// The runtime reads the rebound keyword on a resolving spell; the keyword
 	// itself carries no continuous effect.
 	ReboundStaticBody = simpleKeywordStaticBody("Rebound", Rebound)
+
+	// RetraceStaticBody is the reusable StaticAbilityBody for retrace (CR
+	// 702.81): "You may cast this card from your graveyard by discarding a land
+	// card in addition to paying its other costs." The runtime reads the retrace
+	// keyword on a card in its owner's graveyard to offer the alternative cast;
+	// the keyword itself carries no continuous effect.
+	RetraceStaticBody = simpleKeywordStaticBody("Retrace", Retrace)
 )
 
 func simpleKeywordStaticBody(text string, keyword Keyword) StaticAbility {

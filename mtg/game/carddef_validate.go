@@ -970,6 +970,23 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if !reflect.DeepEqual(effect.GrantedAbility, CyclingActivatedAbility(cyclingCost)) {
 			v.add(faceName, appendPath(path, "GrantedAbility"), CardDefIssueInvalidRuleEffect, "hand-card ability grant must use the standard Cycling ability template")
 		}
+	case RuleEffectGrantGraveyardCardKeyword:
+		if effect.AffectedPlayer == PlayerAny {
+			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "graveyard-card keyword grants must set affected player")
+		}
+		if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "graveyard-card keyword grants cannot affect a permanent")
+		}
+		v.validateSelection(faceName, appendPath(path, "CardSelection"), effect.CardSelection)
+		if effect.CardSelection.Empty() {
+			v.add(faceName, appendPath(path, "CardSelection"), CardDefIssueInvalidSelection, "graveyard-card keyword grants require a card selection")
+		}
+		if handCardSelectionHasUnsupportedPredicates(effect.CardSelection) {
+			v.add(faceName, appendPath(path, "CardSelection"), CardDefIssueInvalidSelection, "graveyard-card keyword grants support only printed card characteristics")
+		}
+		if effect.GrantedKeyword == KeywordNone {
+			v.add(faceName, appendPath(path, "GrantedKeyword"), CardDefIssueInvalidRuleEffect, "graveyard-card keyword grant must grant a keyword")
+		}
 	case RuleEffectNoMaximumHandSize, RuleEffectLifeTotalCantChange, RuleEffectCastSpellsAsThoughFlash, RuleEffectPlayWithTopCardRevealed, RuleEffectLookAtTopCardAnyTime:
 		if effect.AffectedPlayer == PlayerAny {
 			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "player rule effects must set affected player")

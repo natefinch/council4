@@ -525,6 +525,8 @@ func runtimeKeyword(keyword parser.KeywordKind) (game.Keyword, bool) {
 		return game.Skulk, true
 	case parser.KeywordIntimidate:
 		return game.Intimidate, true
+	case parser.KeywordRetrace:
+		return game.Retrace, true
 	default:
 		return game.KeywordNone, false
 	}

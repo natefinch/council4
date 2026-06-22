@@ -31,6 +31,7 @@ const (
 	StaticDeclarationCharacteristicPowerToughness
 	StaticDeclarationEnterBattlefieldRestriction
 	StaticDeclarationCastAsThoughFlash
+	StaticDeclarationGraveyardCardKeywordGrant
 )
 
 // StaticDeclarationBlocker identifies exact static wording whose declaration
@@ -188,6 +189,12 @@ const (
 	// {N}." Its members are matched at runtime by the Equip activated ability, so
 	// the lowered cost modifier targets the Equip keyword directly.
 	StaticGroupControllerEquipment
+	// StaticGroupControllerGraveyardCards is the set of the controller's
+	// graveyard cards a "[During your turn,] <filter> cards in your graveyard
+	// have <keyword>." declaration grants a keyword to (Six, Wrenn and Six
+	// Emblem). Its members are matched at runtime by the lowered rule effect's
+	// card selection.
+	StaticGroupControllerGraveyardCards
 )
 
 // StaticCardType identifies card types used by a static Selection.
@@ -508,6 +515,17 @@ type StaticCardAbilityGrantDeclaration struct {
 	Text    string
 }
 
+// StaticGraveyardKeywordGrantDeclaration grants a parameterless keyword to a
+// filtered set of the controller's graveyard cards ("[During your turn,]
+// <filter> cards in your graveyard have <keyword>.", Six, Wrenn and Six
+// Emblem). Filter constrains the affected cards by card type; DuringControllerTurn
+// scopes the grant to the controller's turn.
+type StaticGraveyardKeywordGrantDeclaration struct {
+	Keyword              CompiledKeyword
+	Filter               parser.StaticDeclarationCardFilterKind
+	DuringControllerTurn bool
+}
+
 // StaticOpponentActionRestrictionDeclaration is a continuous prohibition that
 // stops the affected players from casting spells and/or activating abilities of
 // permanents whose card type is in ActivateTypes. AffectsAllPlayers selects
@@ -602,6 +620,7 @@ type StaticDeclaration struct {
 	Untap               *StaticUntapStepDeclaration
 	CharacteristicPT    *StaticCharacteristicPowerToughnessDeclaration
 	CastAsThoughFlash   *StaticCastAsThoughFlashDeclaration
+	GraveyardGrant      *StaticGraveyardKeywordGrantDeclaration
 }
 
 // StaticCharacteristicPowerToughnessDeclaration carries the rules-derived count
@@ -713,6 +732,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticCardAbilityGrantDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticGraveyardCardKeywordGrantDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
