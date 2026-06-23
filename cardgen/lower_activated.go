@@ -54,6 +54,7 @@ func lowerChapterAbility(
 		Quoted:    syntax.Quoted,
 		Atoms:     syntax.Atoms,
 		CoinFlip:  syntax.CoinFlip,
+		Vote:      syntax.Vote,
 	}
 	content, diagnostic := lowerAbilityContent(cardName, ability.Kind, bodyContent, false, &bodySyntax)
 	if diagnostic != nil {
@@ -272,6 +273,7 @@ func lowerLoyaltyAbility(
 		Quoted:    syntax.Quoted,
 		Atoms:     syntax.Atoms,
 		CoinFlip:  syntax.CoinFlip,
+		Vote:      syntax.Vote,
 	}
 	content, diagnostic := lowerAbilityContent(cardName, ability.Kind, bodyContent, false, &bodySyntax)
 	if diagnostic != nil {

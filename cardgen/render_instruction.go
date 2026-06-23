@@ -590,6 +590,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", errors.New("render: internal error: RingTempts kind has unexpected concrete type")
 		}
 		return r.renderRingTempts(value)
+	case game.PrimitiveVote:
+		value, ok := primitive.(game.Vote)
+		if !ok {
+			return "", errors.New("render: internal error: Vote kind has unexpected concrete type")
+		}
+		return renderVote(value), nil
 	default:
 		return "", fmt.Errorf("render: unsupported primitive kind %d", primitive.Kind())
 	}
@@ -612,6 +618,16 @@ func renderAddExtraPhases(value game.AddExtraPhases) string {
 // literal matches the typed effect.
 func renderRollDie(value game.RollDie) string {
 	return structLit("game.RollDie", []string{fmt.Sprintf("Sides: %d,", value.Sides)})
+}
+
+// renderVote renders the Vote primitive, emitting its named option labels so the
+// literal matches the typed effect.
+func renderVote(value game.Vote) string {
+	options := make([]string, len(value.Options))
+	for i, option := range value.Options {
+		options[i] = fmt.Sprintf("%q,", option)
+	}
+	return structLit("game.Vote", []string{sliceField("Options", "string", options)})
 }
 
 func (r Renderer) renderCardSelection(ctx *renderCtx, condition game.CardSelection) (string, error) {

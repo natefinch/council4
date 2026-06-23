@@ -474,6 +474,29 @@ func appendCoinFlipBranch(
 	return append(effects, branchEffects...)
 }
 
+// appendVoteEffects compiles each arm of a recognized vote and appends the arm
+// effects to effects, stamping every effect with the arm's gating data (the
+// option index and tie-inclusiveness). Lowering groups the appended effects by
+// arm and gates each on the vote tally. It returns effects unchanged when the
+// ability carries no vote.
+func appendVoteEffects(effects []CompiledEffect, vote *parser.VoteClause) []CompiledEffect {
+	if vote == nil {
+		return effects
+	}
+	for _, arm := range vote.Arms {
+		armEffects := compileEffects(arm.Sentences)
+		for i := range armEffects {
+			armEffects[i].VoteArm = true
+			armEffects[i].VoteArmOption = arm.Option
+			armEffects[i].VoteArmTieInclusive = arm.TieInclusive
+			armEffects[i].Span = vote.ConstructSpan
+			armEffects[i].VerbSpan = vote.ConstructSpan
+		}
+		effects = append(effects, armEffects...)
+	}
+	return effects
+}
+
 func compileStaticRuleEffect(sentence parser.Sentence) (CompiledEffect, bool) {
 	rule, _, ok := semanticStaticRuleForSyntax(*sentence.StaticRule)
 	if !ok {
