@@ -94,6 +94,7 @@ const (
 	ConditionPredicateGraveyardCardOfTypeCountAtLeast                  ConditionPredicateKind = "ConditionPredicateGraveyardCardOfTypeCountAtLeast"
 	ConditionPredicateControllerControlsNamed                          ConditionPredicateKind = "ConditionPredicateControllerControlsNamed"
 	ConditionPredicateFirstCombatPhaseOfTurn                           ConditionPredicateKind = "ConditionPredicateFirstCombatPhaseOfTurn"
+	ConditionPredicateControlsGreatestPowerCreature                    ConditionPredicateKind = "ConditionPredicateControlsGreatestPowerCreature"
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -575,6 +576,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 	for _, recognize := range []func([]shared.Token, Atoms) (ConditionClause, bool){
 		recognizePriorInstructionCondition,
 		recognizeControlsCommanderCondition,
+		recognizeControlsGreatestPowerCondition,
 		recognizeDestroyedThisWayCondition,
 		recognizeEventSubjectCondition,
 		recognizeSourceSaddledCondition,
@@ -643,6 +645,21 @@ func recognizeSpellXCondition(body []shared.Token, _ Atoms) (ConditionClause, bo
 func recognizeControlsCommanderCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
 	if tokenWordsEqual(body, "you", "control", "your", "commander") {
 		return ConditionClause{Predicate: ConditionPredicateControllerControlsCommander}, true
+	}
+	return ConditionClause{}, false
+}
+
+// recognizeControlsGreatestPowerCondition matches the conditional-draw gate "you
+// control the creature with the greatest power or tied for the greatest power"
+// (Summon: Fenrir chapter III). The predicate holds when the controller controls
+// a creature whose power is at least as high as every other creature's power on
+// the battlefield (sole highest or tied for highest). It fails closed on any
+// other wording.
+func recognizeControlsGreatestPowerCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if tokenWordsEqual(body,
+		"you", "control", "the", "creature", "with", "the", "greatest", "power",
+		"or", "tied", "for", "the", "greatest", "power") {
+		return ConditionClause{Predicate: ConditionPredicateControlsGreatestPowerCreature}, true
 	}
 	return ConditionClause{}, false
 }

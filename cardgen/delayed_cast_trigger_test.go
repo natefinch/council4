@@ -52,11 +52,11 @@ func TestGenerateExecutableShowdownDelayedCastTrigger(t *testing.T) {
 
 // TestGenerateExecutableOneShotDelayedCastTrigger covers a synthetic one-shot
 // event delayed trigger ("When you next cast a creature spell this turn, ...")
-// that uses a counter body the lowering supports, so the OneShot flag and the
-// creature-spell pattern thread through to the rendered CardDef. Summon: Fenrir's
-// own chapter II body (a cast-creature replacement) and chapter III (greatest-
-// power draw) remain unsupported, so this exercises the one-shot path on a body
-// the pipeline can lower today.
+// whose body places a counter on a chosen target creature, exercising the
+// OneShot flag and the creature-spell pattern threading through to the rendered
+// CardDef on a body distinct from Summon: Fenrir's. Fenrir's own chapter II body
+// (a future-cast enters-with-counters replacement) and chapter III (greatest-
+// power draw) are covered end to end by TestGenerateSummonFenrir.
 func TestGenerateExecutableOneShotDelayedCastTrigger(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

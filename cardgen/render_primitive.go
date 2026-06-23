@@ -9,11 +9,11 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
-func (r Renderer) renderCreateReplacement(value game.CreateReplacement) (string, error) {
+func (r Renderer) renderCreateReplacement(ctx *renderCtx, value game.CreateReplacement) (string, error) {
 	if value.Replacement == nil {
 		return "", errors.New("render: CreateReplacement has no replacement effect")
 	}
-	replacement, err := renderCreateReplacementEffect(*value.Replacement)
+	replacement, err := r.renderCreateReplacementEffect(ctx, *value.Replacement)
 	if err != nil {
 		return "", err
 	}
@@ -41,14 +41,18 @@ func (r Renderer) renderCreateReplacement(value game.CreateReplacement) (string,
 // ReplacementEffect as a pointer to a struct literal. It supports the
 // zone-change redirect shape produced for the leaves-the-battlefield exile
 // replacement (MatchEvent EventZoneChanged, a from-zone match, and a
-// ReplaceToZone redirect).
-func renderCreateReplacementEffect(replacement game.ReplacementEffect) (string, error) {
+// ReplaceToZone redirect) and the future-cast enters-with-counters shape
+// (MatchEvent EventPermanentEnteredBattlefield with EntersWithCounters).
+func (r Renderer) renderCreateReplacementEffect(ctx *renderCtx, replacement game.ReplacementEffect) (string, error) {
 	event, err := renderEventKind(replacement.MatchEvent)
 	if err != nil {
 		return "", err
 	}
 	fields := []string{
 		fmt.Sprintf("MatchEvent: %s,", event),
+	}
+	if replacement.Description != "" {
+		fields = append(fields, fmt.Sprintf("Description: %q,", replacement.Description))
 	}
 	if replacement.MatchFromZone {
 		fromZone, zoneErr := renderZone(replacement.FromZone)
@@ -76,6 +80,13 @@ func renderCreateReplacementEffect(replacement game.ReplacementEffect) (string, 
 			return "", zoneErr
 		}
 		fields = append(fields, fmt.Sprintf("ReplaceToZone: %s,", replaceZone))
+	}
+	if len(replacement.EntersWithCounters) > 0 {
+		placements, placeErr := r.renderCounterPlacements(ctx, replacement.EntersWithCounters)
+		if placeErr != nil {
+			return "", placeErr
+		}
+		fields = append(fields, fmt.Sprintf("EntersWithCounters: []game.CounterPlacement{%s},", strings.Join(placements, ", ")))
 	}
 	return "&" + structLit("game.ReplacementEffect", fields), nil
 }
