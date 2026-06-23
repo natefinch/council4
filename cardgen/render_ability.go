@@ -66,6 +66,7 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 	}
 
 	var fields []string
+	fields = append(fields, fmt.Sprintf("Text: %s,", renderText(ability.Text)))
 	if ability.ManaCost.Exists {
 		ctx.need(importOpt)
 		manaCostLit, err := r.renderManaCost(ctx, ability.ManaCost.Val)
