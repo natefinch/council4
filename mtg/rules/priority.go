@@ -2,6 +2,7 @@ package rules
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
@@ -112,16 +113,30 @@ func recordActionSource(g *game.Game, playerID game.PlayerID, actionLog *ActionL
 	actionLog.AbilityText = activatedAbilityText(g, playerID, payload)
 }
 
-// activatedAbilityText returns the printed rules text of the ability the action
+// activatedAbilityText returns the rules text describing the ability the action
 // activates, whether it is printed on a battlefield permanent or on a card
-// activated from hand (for example cycling). It returns "" when the ability has
-// no text or cannot be resolved.
+// activated from hand (for example cycling). Generated card defs omit per-ability
+// text, so it falls back to the source's full oracle text. It returns "" when no
+// text is available.
 func activatedAbilityText(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction) string {
 	if _, body, ok := activatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex); ok {
-		return game.BodyText(body)
+		if text := strings.TrimSpace(game.BodyText(body)); text != "" {
+			return text
+		}
+		if permanent, ok := permanentByObjectID(g, activate.SourceID); ok {
+			if def, ok := permanentFaceDef(g, permanent); ok {
+				return strings.TrimSpace(def.OracleText)
+			}
+		}
+		return ""
 	}
-	if _, body, ok := handActivatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex); ok {
-		return body.Text
+	if card, body, ok := handActivatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex); ok {
+		if text := strings.TrimSpace(body.Text); text != "" {
+			return text
+		}
+		if card != nil && card.Def != nil {
+			return strings.TrimSpace(card.Def.OracleText)
+		}
 	}
 	return ""
 }
