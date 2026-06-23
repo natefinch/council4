@@ -160,6 +160,12 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 			if resolved, ok := resolvePermanentOrLastKnown(r.g, linked.ObjectID); ok {
 				return resolved, true
 			}
+			if linked.CardID != 0 {
+				return resolvedObjectReference{snapshot: game.ObjectSnapshot{
+					CardID: linked.CardID,
+					Face:   game.FaceFront,
+				}}, true
+			}
 		}
 		return resolvedObjectReference{}, false
 	case game.ObjectReferenceEventPermanent:

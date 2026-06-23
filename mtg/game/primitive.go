@@ -250,12 +250,18 @@ type ChooseDiscardFromHand struct {
 //
 // AtRandom marks an "at random" discard ("Discard a card at random."): the
 // discarded cards are chosen at random rather than by the player.
+//
+// PublishLinked, when set, remembers each discarded card under this key so a
+// later instruction can read it ("Discard a card, then ... deals damage equal
+// to that card's mana value ..."). It is meaningful only for a single-player,
+// non-entire-hand discard.
 type Discard struct {
-	Amount      Quantity
-	Player      PlayerReference      // single player; zero if PlayerGroup is set
-	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
-	EntireHand  bool
-	AtRandom    bool
+	Amount        Quantity
+	Player        PlayerReference      // single player; zero if PlayerGroup is set
+	PlayerGroup   PlayerGroupReference // opponents or all players; zero if Player is set
+	EntireHand    bool
+	AtRandom      bool
+	PublishLinked LinkedKey
 }
 
 // Destroy destroys one referenced permanent or every permanent in a referenced group.

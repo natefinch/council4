@@ -231,10 +231,15 @@ func handleDiscard(r *effectResolver, prim game.Discard) effectResolved {
 	}
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
+		var publishKey game.LinkedObjectKey
+		if prim.PublishLinked != "" {
+			publishKey = linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
+			clearLinkedObjects(r.game, publishKey)
+		}
 		if prim.AtRandom {
-			res.succeeded = r.discardCardsAtRandom(playerID, res.amount)
+			res.succeeded = r.discardCardsAtRandom(playerID, res.amount, publishKey)
 		} else {
-			res.succeeded = r.discardCardsWithChoices(playerID, res.amount)
+			res.succeeded = r.discardCardsWithChoices(playerID, res.amount, publishKey)
 		}
 	}
 	return res
@@ -263,7 +268,7 @@ func handleDiscardEntireHand(r *effectResolver, prim game.Discard) effectResolve
 	return res
 }
 
-func (r *effectResolver) discardCardsWithChoices(playerID game.PlayerID, amount int) bool {
+func (r *effectResolver) discardCardsWithChoices(playerID game.PlayerID, amount int, publishKey game.LinkedObjectKey) bool {
 	player, ok := playerByID(r.game, playerID)
 	if !ok {
 		return false
@@ -296,7 +301,12 @@ func (r *effectResolver) discardCardsWithChoices(playerID game.PlayerID, amount 
 		if idx < 0 || idx >= len(candidates) {
 			continue
 		}
-		discarded = discardCardFromHandInBatch(r.game, playerID, candidates[idx], simultaneousID) || discarded
+		if discardCardFromHandInBatch(r.game, playerID, candidates[idx], simultaneousID) {
+			discarded = true
+			if publishKey != (game.LinkedObjectKey{}) {
+				rememberLinkedObject(r.game, publishKey, game.LinkedObjectRef{CardID: candidates[idx]})
+			}
+		}
 	}
 	return discarded
 }
@@ -304,7 +314,7 @@ func (r *effectResolver) discardCardsWithChoices(playerID game.PlayerID, amount 
 // discardCardsAtRandom discards up to amount cards chosen uniformly at random
 // from the player's hand, as one simultaneous batch ("Discard a card at
 // random."). It returns whether any card was discarded.
-func (r *effectResolver) discardCardsAtRandom(playerID game.PlayerID, amount int) bool {
+func (r *effectResolver) discardCardsAtRandom(playerID game.PlayerID, amount int, publishKey game.LinkedObjectKey) bool {
 	player, ok := playerByID(r.game, playerID)
 	if !ok {
 		return false
@@ -324,7 +334,12 @@ func (r *effectResolver) discardCardsAtRandom(playerID game.PlayerID, amount int
 	simultaneousID := r.game.IDGen.Next()
 	discarded := false
 	for _, idx := range order[:amount] {
-		discarded = discardCardFromHandInBatch(r.game, playerID, candidates[idx], simultaneousID) || discarded
+		if discardCardFromHandInBatch(r.game, playerID, candidates[idx], simultaneousID) {
+			discarded = true
+			if publishKey != (game.LinkedObjectKey{}) {
+				rememberLinkedObject(r.game, publishKey, game.LinkedObjectRef{CardID: candidates[idx]})
+			}
+		}
 	}
 	return discarded
 }
@@ -1456,7 +1471,7 @@ func (r *effectResolver) applySacrificeFallback(fallback game.SacrificeFallback,
 	for _, playerID := range players {
 		switch fallback.Kind {
 		case game.SacrificeFallbackDiscard:
-			r.discardCardsWithChoices(playerID, amount)
+			r.discardCardsWithChoices(playerID, amount, game.LinkedObjectKey{})
 		case game.SacrificeFallbackLoseLife:
 			loseLife(r.game, playerID, amount)
 		default:
@@ -1552,7 +1567,7 @@ func (r *effectResolver) applyPunisherForPlayer(prim game.PunisherEachLoseLife, 
 		}
 		sacrificePermanentsSimultaneously(r.game, chosen)
 	case punisherDiscard:
-		if !r.discardCardsWithChoices(playerID, 1) {
+		if !r.discardCardsWithChoices(playerID, 1, game.LinkedObjectKey{}) {
 			loseLife(r.game, playerID, amount)
 		}
 	default:

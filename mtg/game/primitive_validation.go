@@ -711,6 +711,9 @@ func (p Discard) validatePrimitive(targets []TargetSpec, checkTargets bool) erro
 	if hasGroup == hasPlayer {
 		return errors.New("Discard requires exactly one of Player or PlayerGroup")
 	}
+	if p.PublishLinked != "" && (p.EntireHand || hasGroup) {
+		return errors.New("Discard with PublishLinked must be a single-player, non-entire-hand discard")
+	}
 	if hasGroup {
 		return validatePlayerGroupReference(p.PlayerGroup)
 	}
