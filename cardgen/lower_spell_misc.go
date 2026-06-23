@@ -732,7 +732,90 @@ func lowerGroupMustAttack(ctx contentCtx) (game.AbilityContent, *shared.Diagnost
 	}}}.Ability(), nil
 }
 
-// lowerSpellCostModifier lowers the one-shot, duration-bounded resolving spell
+// lowerDirectedTwoPlayerMustAttack lowers The Brothers' War chapter II directed
+// forced-attack effect "Choose two target players. Until your next turn, each
+// creature they control attacks the other chosen player each combat if able." to
+// two distinct player target slots plus an ApplyRule that creates a reciprocal
+// pair of directed RuleEffectMustAttack effects: each chosen player's creatures
+// must attack the other chosen player (or a planeswalker or battle they control)
+// each combat if able, until the source controller's next turn. Any other
+// duration, target shape, mode, condition, keyword, or unexpected reference fails
+// closed.
+func lowerDirectedTwoPlayerMustAttack(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported forced-attack effect",
+			"the executable source backend supports only the exact two-target-player directed forced-attack effect until your next turn",
+		)
+	}
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Amount.Known ||
+		effect.Context != parser.EffectContextController ||
+		effect.Duration != compiler.DurationUntilYourNextTurn ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		!directedMustAttackReferencesSupported(ctx.content.References) {
+		return unsupported()
+	}
+	target := ctx.content.Targets[0]
+	if target.Selector.Kind != compiler.SelectorPlayer ||
+		target.Selector.Controller != compiler.ControllerAny ||
+		target.Selector.Another ||
+		target.Selector.Other ||
+		target.Cardinality.Min != 2 ||
+		target.Cardinality.Max != 2 {
+		return unsupported()
+	}
+	playerSpec := func(distinct bool) game.TargetSpec {
+		return game.TargetSpec{
+			MinTargets:               1,
+			MaxTargets:               1,
+			Constraint:               "player",
+			Allow:                    game.TargetAllowPlayer,
+			DistinctFromPriorTargets: distinct,
+		}
+	}
+	directedEffect := func(affected, required int) game.RuleEffect {
+		return game.RuleEffect{
+			Kind:                    game.RuleEffectMustAttack,
+			PermanentTypes:          []types.Card{types.Creature},
+			AffectedPlayerRef:       game.TargetPlayerReference(affected),
+			RequiredAttackTargetRef: game.TargetPlayerReference(required),
+		}
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{playerSpec(false), playerSpec(true)},
+		Sequence: []game.Instruction{{
+			Primitive: game.ApplyRule{
+				RuleEffects: []game.RuleEffect{
+					directedEffect(0, 1),
+					directedEffect(1, 0),
+				},
+				Duration: game.DurationUntilYourNextTurn,
+			},
+		}},
+	}.Ability(), nil
+}
+
+// directedMustAttackReferencesSupported reports whether the directed
+// forced-attack effect's references are limited to the inherent "they" pronoun
+// that names the two chosen players. Any other reference fails closed.
+func directedMustAttackReferencesSupported(references []compiler.CompiledReference) bool {
+	for i := range references {
+		switch references[i].Pronoun {
+		case compiler.ReferencePronounThey, compiler.ReferencePronounTheir:
+		default:
+			return false
+		}
+	}
+	return true
+}
+
 // cost modifier "[<type filter>] spells <caster> cast cost {N} more/less to
 // cast" scoped by a recognized finite duration ("Artifact spells you cast this
 // turn cost {1} less to cast.", Armor Wars chapter II; "Until your next turn,
@@ -871,6 +954,9 @@ func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.
 		return content, diagnostic, true
 	case compiler.EffectMustAttack:
 		content, diagnostic := lowerGroupMustAttack(ctx)
+		return content, diagnostic, true
+	case compiler.EffectDirectedMustAttack:
+		content, diagnostic := lowerDirectedTwoPlayerMustAttack(ctx)
 		return content, diagnostic, true
 	case compiler.EffectPhaseOut:
 		content, diagnostic := lowerMassOrSinglePermanentSpell(ctx, "Phase out", func(group game.GroupReference) game.Primitive {

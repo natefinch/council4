@@ -1249,6 +1249,7 @@ const (
 	EffectManaSpendRider
 	EffectModifyPT
 	EffectMustAttack
+	EffectDirectedMustAttack
 	EffectMustBeBlocked
 	EffectPut
 	EffectProliferate
@@ -1484,12 +1485,18 @@ type CompiledEffect struct {
 	// the primary target damage.
 	HasSecondTargetDamageRider   bool
 	SecondTargetDamageRiderValue int
-	Amount                       CompiledAmount
-	PowerDelta                   CompiledSignedAmount
-	ToughnessDelta               CompiledSignedAmount
-	TokenPower                   int
-	TokenToughness               int
-	TokenPTKnown                 bool
+	// SecondTargetDamageRiderDynamic reports that the second-target rider amount
+	// is the variable "X" matching the clause's primary dynamic amount ("deals X
+	// damage to any target and X damage to any other target", The Brothers' War
+	// chapter III). When set, SecondTargetDamageRiderValue is unused and lowering
+	// reuses the primary dynamic amount for the rider's Damage instruction.
+	SecondTargetDamageRiderDynamic bool
+	Amount                         CompiledAmount
+	PowerDelta                     CompiledSignedAmount
+	ToughnessDelta                 CompiledSignedAmount
+	TokenPower                     int
+	TokenToughness                 int
+	TokenPTKnown                   bool
 	// TokenPTVariableX reports a created token whose printed power and toughness
 	// are both the variable "X" ("an X/X ... token"); lowering reads
 	// TokenPTDynamic to size it at creation. It is false for fixed tokens.

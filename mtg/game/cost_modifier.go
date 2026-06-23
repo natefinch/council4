@@ -566,4 +566,35 @@ type RuleEffect struct {
 	// source object; they may still block any other attacker. It is mutually
 	// exclusive with a non-empty BlockedSelection.
 	BlockedSource bool
+
+	// AffectedPlayerRef binds a group-scoped rule effect's affected permanents to
+	// a specific player chosen at resolution rather than to the AffectedController
+	// relation, expressing "each creature <a chosen target player> controls"
+	// (The Brothers' War chapter II). createRuleEffectTemplates resolves it to
+	// AffectedSpecificPlayer; a template whose reference does not resolve is
+	// dropped. It is PlayerReferenceNone for every other effect.
+	AffectedPlayerRef PlayerReference
+
+	// AffectedSpecificPlayer is the resolved player whose creatures a
+	// RuleEffectMustAttack effect affects. When set, ruleEffectMatchesPermanent
+	// matches only permanents that player controls and ignores AffectedController.
+	// It is the resolved form of AffectedPlayerRef and is unset for every other
+	// effect.
+	AffectedSpecificPlayer opt.V[PlayerID]
+
+	// RequiredAttackTargetRef binds a RuleEffectMustAttack effect's directed
+	// attack target to a specific player chosen at resolution ("attacks the other
+	// chosen player ... each combat if able", The Brothers' War chapter II).
+	// createRuleEffectTemplates resolves it to RequiredAttackTarget; a template
+	// whose reference does not resolve is dropped. It is PlayerReferenceNone for
+	// every other effect.
+	RequiredAttackTargetRef PlayerReference
+
+	// RequiredAttackTarget is the resolved player an affected creature must attack
+	// (or a planeswalker or battle that player controls) each combat if able. When
+	// set, the forced-attack requirement is directed: the creature is forced only
+	// while it can attack that player, and an attack it makes must be aimed there.
+	// It is the resolved form of RequiredAttackTargetRef and is unset for every
+	// other effect.
+	RequiredAttackTarget opt.V[PlayerID]
 }

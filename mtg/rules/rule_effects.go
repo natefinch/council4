@@ -40,6 +40,20 @@ func createRuleEffectTemplates(g *game.Game, obj *game.StackObject, object opt.V
 			}
 			ruleEffect.AffectedObjectID = resolved.permanent.ObjectID
 		}
+		if ruleEffect.AffectedPlayerRef.Kind() != game.PlayerReferenceNone {
+			affected, ok := resolvePlayerReference(g, obj, ruleEffect.AffectedPlayerRef)
+			if !ok {
+				continue
+			}
+			ruleEffect.AffectedSpecificPlayer = opt.Val(affected)
+		}
+		if ruleEffect.RequiredAttackTargetRef.Kind() != game.PlayerReferenceNone {
+			required, ok := resolvePlayerReference(g, obj, ruleEffect.RequiredAttackTargetRef)
+			if !ok {
+				continue
+			}
+			ruleEffect.RequiredAttackTarget = opt.Val(required)
+		}
 		ruleEffect.CreatedTurn = g.Turn.TurnNumber
 		if duration != game.DurationPermanent {
 			ruleEffect.Duration = duration
@@ -713,7 +727,11 @@ func ruleEffectMatchesPermanent(g *game.Game, effect *game.RuleEffect, permanent
 	if permanent == nil {
 		return false
 	}
-	if !controllerRelationMatches(effect.Controller, effectiveController(g, permanent), effect.AffectedController) {
+	if effect.AffectedSpecificPlayer.Exists {
+		if effectiveController(g, permanent) != effect.AffectedSpecificPlayer.Val {
+			return false
+		}
+	} else if !controllerRelationMatches(effect.Controller, effectiveController(g, permanent), effect.AffectedController) {
 		return false
 	}
 	if effect.AffectedObjectID != 0 && effect.AffectedObjectID != permanent.ObjectID {

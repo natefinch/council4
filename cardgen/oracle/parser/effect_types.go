@@ -173,6 +173,14 @@ const (
 	// continuous RuleEffectMustAttack rule effect, applied with a this-turn
 	// duration.
 	EffectMustAttack EffectKind = "EffectMustAttack"
+	// EffectDirectedMustAttack models The Brothers' War chapter II forced-attack
+	// effect "Until your next turn, each creature they control attacks the other
+	// chosen player each combat if able." It pairs with a preceding "Choose two
+	// target players." targeting clause: each chosen player's creatures must
+	// attack the other chosen player. The effect carries only its duration; the
+	// reciprocal directed structure is fixed, so lowering reconstructs it from the
+	// two player targets. Any other group, defender, or duration fails closed.
+	EffectDirectedMustAttack EffectKind = "EffectDirectedMustAttack"
 	// EffectRepeatProcess models a "Repeat the following process X times.
 	// <body>" loop. Amount holds the repeat count (the spell's {X} via VariableX
 	// or a fixed cardinal) and RepeatBody holds the sub-effect(s) executed each
@@ -1375,11 +1383,17 @@ type EffectSyntax struct {
 	// target player or planeswalker"). SecondTargetDamageRiderValue holds the
 	// fixed amount B; the recipient is the clause's second target. Lowering
 	// emits a second Damage instruction to that target after the primary one.
-	HasSecondTargetDamageRider   bool               `json:",omitempty"`
-	SecondTargetDamageRiderValue int                `json:",omitempty"`
-	Amount                       EffectAmountSyntax `json:",omitzero"`
-	PowerDelta                   SignedAmountSyntax `json:",omitzero"`
-	ToughnessDelta               SignedAmountSyntax `json:",omitzero"`
+	HasSecondTargetDamageRider   bool `json:",omitempty"`
+	SecondTargetDamageRiderValue int  `json:",omitempty"`
+	// SecondTargetDamageRiderDynamic reports that the second-target rider amount
+	// is the variable "X" matching the clause's primary dynamic amount ("deals X
+	// damage to any target and X damage to any other target", The Brothers' War
+	// chapter III). When set, SecondTargetDamageRiderValue is unused and lowering
+	// reuses the primary dynamic amount for the rider's Damage instruction.
+	SecondTargetDamageRiderDynamic bool               `json:",omitempty"`
+	Amount                         EffectAmountSyntax `json:",omitzero"`
+	PowerDelta                     SignedAmountSyntax `json:",omitzero"`
+	ToughnessDelta                 SignedAmountSyntax `json:",omitzero"`
 	// TokenPower/TokenToughness/TokenPTKnown hold a created token's fixed
 	// power/toughness (e.g. "1/1"). Known is false for tokens with no printed
 	// power/toughness (named artifact tokens like Treasure).

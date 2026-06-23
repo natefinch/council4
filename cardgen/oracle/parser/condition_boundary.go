@@ -170,12 +170,15 @@ func conditionActivationKeyword(tokens []shared.Token, index int, intro Conditio
 
 // conditionAttacksEachCombatIfAble reports whether the semantic tokens spell
 // "attack[s] each combat if able", the restriction whose trailing "if able" must
-// not become a standalone condition. Both the singular self form ("This creature
-// attacks each combat if able.") and the plural group form ("Creatures you
-// control attack each combat if able.") are recognized.
+// not become a standalone condition. The singular self form ("This creature
+// attacks each combat if able."), the plural group form ("Creatures you
+// control attack each combat if able."), and the directed two-player form ("each
+// creature they control attacks the other chosen player each combat if able.",
+// The Brothers' War chapter II) are recognized.
 func conditionAttacksEachCombatIfAble(semantic []shared.Token) bool {
 	return conditionContainsSequence(semantic, 0, "attacks", "each", "combat", "if", "able") ||
-		conditionContainsSequence(semantic, 0, "attack", "each", "combat", "if", "able")
+		conditionContainsSequence(semantic, 0, "attack", "each", "combat", "if", "able") ||
+		conditionContainsSequence(semantic, 0, "attacks", "the", "other", "chosen", "player", "each", "combat", "if", "able")
 }
 
 // conditionForcedAttackIfAble reports whether the semantic tokens spell a

@@ -502,6 +502,18 @@ func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalityS
 		}
 		return strings.EqualFold(text, prefix+"targets")
 	}
+	// "target players" pluralizes the bare player head with no permanent noun
+	// ("two target players", The Brothers' War chapter II). It accepts only the
+	// genuine plural cardinalities and no further qualifier so a singular,
+	// controller-scoped, "or planeswalker", or "other" wording fails closed.
+	if selection.Kind == SelectionPlayer {
+		if !plural || selection.Other || selection.PlayerOrPlaneswalker ||
+			selection.Controller != SelectionControllerAny ||
+			len(selection.RequiredTypesAny) != 0 || len(selection.ExcludedTypes) != 0 {
+			return false
+		}
+		return strings.EqualFold(text, prefix+"target players")
+	}
 	// A card-type union ("artifact or enchantment") stands in for the permanent
 	// noun and pluralizes every member ("two target artifacts or enchantments",
 	// "up to one target creature or planeswalker"). The single-noun path below
@@ -1710,13 +1722,13 @@ func targetControllerDamageRiderFollowsAt(tokens []shared.Token, atoms Atoms, i 
 // "and" token at index i. Target scanning stops before the rider so the first
 // target's noun phrase does not swallow the second clause; the two targets are
 // then parsed independently and lowering emits one Damage instruction each. It
-// matches only the bounded "and <number> damage to target/targets" lead-in, so
-// other "and ..." continuations are left to the ordinary scan.
+// matches only the bounded "and <number-or-X> damage to target/targets" lead-in,
+// so other "and ..." continuations are left to the ordinary scan.
 func secondTargetDamageRiderFollowsAt(tokens []shared.Token, atoms Atoms, i int) bool {
 	if i+4 >= len(tokens) || !equalWord(tokens[i], "and") {
 		return false
 	}
-	if _, ok := effectNumber(tokens[i+1], atoms); !ok {
+	if _, ok := effectNumber(tokens[i+1], atoms); !ok && !equalWord(tokens[i+1], "x") {
 		return false
 	}
 	if !equalWord(tokens[i+2], "damage") || !equalWord(tokens[i+3], "to") {

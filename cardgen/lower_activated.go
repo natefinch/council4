@@ -70,6 +70,9 @@ func lowerChapterAbility(
 	}
 	for _, target := range ability.Content.Targets {
 		spans = append(spans, target.Span)
+		if target.ChoiceSpan != (shared.Span{}) {
+			spans = append(spans, target.ChoiceSpan)
+		}
 	}
 	for _, reference := range ability.Content.References {
 		spans = append(spans, reference.Span)
