@@ -640,6 +640,8 @@ func compileTriggerCounter(value parser.TriggerEventCounterKind) (TriggerCounter
 		return TriggerCounterPlusOnePlusOne, true
 	case parser.TriggerEventCounterMinusOneMinusOne:
 		return TriggerCounterMinusOneMinusOne, true
+	case parser.TriggerEventCounterLore:
+		return TriggerCounterLore, true
 	default:
 		return TriggerCounterAny, false
 	}

@@ -195,6 +195,8 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 			result.CounterKind = counter.PlusOnePlusOne
 		case compiler.TriggerCounterMinusOneMinusOne:
 			result.CounterKind = counter.MinusOneMinusOne
+		case compiler.TriggerCounterLore:
+			result.CounterKind = counter.Lore
 		default:
 			return game.TriggerPattern{}, false
 		}

@@ -171,6 +171,7 @@ const (
 	TriggerCounterAny TriggerCounter = iota
 	TriggerCounterPlusOnePlusOne
 	TriggerCounterMinusOneMinusOne
+	TriggerCounterLore
 )
 
 // TriggerTriState is a closed semantic true/false filter.

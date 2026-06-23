@@ -627,6 +627,7 @@ const (
 	TriggerEventCounterAny              TriggerEventCounterKind = ""
 	TriggerEventCounterPlusOnePlusOne   TriggerEventCounterKind = "TriggerEventCounterPlusOnePlusOne"
 	TriggerEventCounterMinusOneMinusOne TriggerEventCounterKind = "TriggerEventCounterMinusOneMinusOne"
+	TriggerEventCounterLore             TriggerEventCounterKind = "TriggerEventCounterLore"
 )
 
 // TriggerEventCounter is a source-spanned counter kind.

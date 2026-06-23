@@ -406,6 +406,8 @@ func triggerEventCounterIn(tokens []shared.Token, atoms Atoms) (TriggerEventCoun
 		return TriggerEventCounterPlusOnePlusOne, span, true
 	case counter.MinusOneMinusOne:
 		return TriggerEventCounterMinusOneMinusOne, span, true
+	case counter.Lore:
+		return TriggerEventCounterLore, span, true
 	default:
 		return TriggerEventCounterAny, shared.Span{}, false
 	}
