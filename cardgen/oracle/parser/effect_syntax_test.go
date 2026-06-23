@@ -1178,6 +1178,15 @@ func TestParseCreateNamedTokenExactness(t *testing.T) {
 		// A "tapped" entry on a recognized named token is now representable.
 		{"Create a tapped Treasure token.", true},
 		{"Create a tapped Lander token.", true},
+		// A "for each <iterator>" count on a recognized named token is
+		// representable, including a trailing or leading iterator and a "tapped"
+		// entry.
+		{"Create a Treasure token for each artifact you control.", true},
+		{"For each artifact you control, create a Treasure token.", true},
+		{"Create a tapped Powerstone token for each creature you control.", true},
+		// The "for each" count on Incubator stays fail-closed because the token
+		// itself is unrepresented.
+		{"Create an Incubator token for each artifact you control.", false},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
