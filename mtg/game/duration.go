@@ -2,6 +2,7 @@ package game
 
 import (
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/opt"
 )
 
 // EffectDuration describes when a runtime continuous effect expires.
@@ -41,12 +42,38 @@ const (
 	DelayedAtBeginningOfNextMainPhase
 )
 
+// DelayedTriggerWindow bounds the lifetime of an event-based delayed trigger.
+type DelayedTriggerWindow int
+
+// Delayed trigger window values identify supported event-trigger windows.
+const (
+	// DelayedWindowNone is the zero value for fixed-phase delayed triggers.
+	DelayedWindowNone DelayedTriggerWindow = iota
+	// DelayedWindowThisTurn bounds an event-based delayed trigger to the turn it
+	// was created on ("... this turn"). It is removed during that turn's cleanup
+	// step.
+	DelayedWindowThisTurn
+)
+
 // DelayedTriggerDef is the card-definition-side data for creating a delayed
 // triggered ability.
 type DelayedTriggerDef struct {
 	Timing   DelayedTriggerTiming
 	Optional bool
 	Content  AbilityContent
+	// EventPattern, when present, makes this an event-based delayed trigger that
+	// fires when a matching game event occurs within its window, reusing the
+	// ordinary triggered-ability event matcher. Timing must be zero when
+	// EventPattern is present, and Window must be non-zero.
+	EventPattern opt.V[TriggerPattern]
+	// OneShot, valid only with EventPattern, removes the delayed trigger after it
+	// fires once ("the next time you cast ..."). When false the trigger fires on
+	// every matching event until its window ends ("whenever you cast ... this
+	// turn").
+	OneShot bool
+	// Window bounds an EventPattern delayed trigger's lifetime. It must be
+	// non-zero when EventPattern is present and zero otherwise.
+	Window DelayedTriggerWindow
 }
 
 // DelayedTrigger is a runtime delayed triggered ability waiting for its timing
@@ -60,6 +87,13 @@ type DelayedTrigger struct {
 	CreatedTurn    int
 	Timing         DelayedTriggerTiming
 	Ability        TriggeredAbility
+	// EventPattern, OneShot, and Window mirror the same fields on
+	// DelayedTriggerDef for an event-based delayed trigger. EventPattern is
+	// absent for fixed-phase delayed triggers, which fire on a step boundary via
+	// Timing instead.
+	EventPattern opt.V[TriggerPattern]
+	OneShot      bool
+	Window       DelayedTriggerWindow
 	// CapturedTargetControllerLKI preserves target-derived player references
 	// captured from the spell or ability that created this delayed trigger.
 	CapturedTargetControllerLKI map[int]PlayerID

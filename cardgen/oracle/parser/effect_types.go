@@ -254,6 +254,18 @@ const (
 	// ordinary target for the target machinery. It lowers to an ApplyContinuous
 	// at LayerType that adds the types to the target for the recorded duration.
 	EffectBecomeType EffectKind = "EffectBecomeType"
+	// EffectDelayedTrigger models an event-based delayed triggered ability
+	// created for the rest of the turn ("Whenever you cast a spell this turn,
+	// ...", Showdown of the Skalds chapter II) or for the next matching event
+	// ("When you next cast a creature spell this turn, ...", Summon: Fenrir
+	// chapter II). The preamble names a trigger event bounded by "this turn";
+	// the body after the comma is the ability that fires on each match. The
+	// whole sentence is reparsed as a nested triggered ability stored in
+	// DelayedTriggerAbility, and DelayedTriggerOneShot records the "next"
+	// surface form that fires only on the first match. It lowers to a
+	// game.CreateDelayedTrigger carrying the nested ability's trigger pattern
+	// and content, scoped to the turn.
+	EffectDelayedTrigger EffectKind = "EffectDelayedTrigger"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -1333,6 +1345,20 @@ type EffectSyntax struct {
 	// through the same pipeline so downstream layers lower it from the typed inner
 	// document. It is nil for gain effects that confer no quoted ability.
 	GainGrantedAbility *StaticGrantedAbilitySyntax `json:"-"`
+	// DelayedTriggerAbility is the nested triggered ability of an
+	// EffectDelayedTrigger effect, reparsed from the sentence with its "this
+	// turn" window stripped ("Whenever you cast a spell this turn, put a +1/+1
+	// counter on target creature you control." -> "Whenever you cast a spell,
+	// put a +1/+1 counter on target creature you control."), so downstream
+	// layers lower the delayed trigger from the typed inner document. It is nil
+	// for effects that are not event-based delayed triggers.
+	DelayedTriggerAbility *StaticGrantedAbilitySyntax `json:"-"`
+	// DelayedTriggerOneShot records that an EffectDelayedTrigger fires only on
+	// the first matching event ("When you next cast a creature spell this turn,
+	// ...", "The next time you cast ..."), as opposed to repeating on every
+	// match for the rest of the turn ("Whenever you cast a spell this turn,
+	// ..."). It is meaningful only when Kind is EffectDelayedTrigger.
+	DelayedTriggerOneShot bool `json:",omitempty"`
 	// TokenKeywords lists every creature keyword a created token enters with, in
 	// source order ("with menace and reach" -> [Menace, Reach]). The first
 	// keyword is also recorded on Selection.Keyword (a "with <keyword>" selector

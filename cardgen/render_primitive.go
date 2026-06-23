@@ -81,18 +81,34 @@ func renderCreateReplacementEffect(replacement game.ReplacementEffect) (string, 
 }
 
 func (r Renderer) renderCreateDelayedTrigger(ctx *renderCtx, value game.CreateDelayedTrigger) (string, error) {
-	timing, err := renderDelayedTriggerTiming(value.Trigger.Timing)
-	if err != nil {
-		return "", err
-	}
 	content, err := r.renderAbilityContent(ctx, value.Trigger.Content)
 	if err != nil {
 		return "", err
 	}
-	triggerFields := []string{
-		fmt.Sprintf("Timing: %s,", timing),
-		fmt.Sprintf("Content: %s,", content),
+	var triggerFields []string
+	if value.Trigger.EventPattern.Exists {
+		pattern, err := r.renderTriggerPattern(ctx, &value.Trigger.EventPattern.Val)
+		if err != nil {
+			return "", err
+		}
+		window, err := renderDelayedTriggerWindow(value.Trigger.Window)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		triggerFields = append(triggerFields, fmt.Sprintf("EventPattern: opt.Val(%s),", pattern))
+		if value.Trigger.OneShot {
+			triggerFields = append(triggerFields, "OneShot: true,")
+		}
+		triggerFields = append(triggerFields, fmt.Sprintf("Window: %s,", window))
+	} else {
+		timing, err := renderDelayedTriggerTiming(value.Trigger.Timing)
+		if err != nil {
+			return "", err
+		}
+		triggerFields = append(triggerFields, fmt.Sprintf("Timing: %s,", timing))
 	}
+	triggerFields = append(triggerFields, fmt.Sprintf("Content: %s,", content))
 	if value.Trigger.Optional {
 		triggerFields = append(triggerFields, "Optional: true,")
 	}

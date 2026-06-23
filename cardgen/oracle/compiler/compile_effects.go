@@ -227,6 +227,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				TokenPTDynamic:                       syntax.TokenPTDynamic,
 				TokenGrantedAbility:                  syntax.TokenGrantedAbility,
 				GainGrantedAbility:                   syntax.GainGrantedAbility,
+				DelayedTriggerAbility:                syntax.DelayedTriggerAbility,
+				DelayedTriggerOneShot:                syntax.DelayedTriggerOneShot,
 				TokenName:                            syntax.TokenName,
 				AmassSubtype:                         syntax.AmassSubtype,
 				TokenCopyOfTarget:                    syntax.TokenCopyOfTarget,

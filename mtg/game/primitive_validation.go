@@ -1944,10 +1944,22 @@ func (p CreateEmblem) validatePrimitive([]TargetSpec, bool) error {
 }
 
 func (p CreateDelayedTrigger) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	switch p.Trigger.Timing {
-	case DelayedAtBeginningOfNextEndStep, DelayedAtBeginningOfNextUpkeep, DelayedAtBeginningOfNextMainPhase:
-	default:
-		return errors.New("delayed trigger requires a recognized timing")
+	if p.Trigger.EventPattern.Exists {
+		if p.Trigger.Timing != 0 {
+			return errors.New("event-based delayed trigger must not set a timing")
+		}
+		if p.Trigger.Window == DelayedWindowNone {
+			return errors.New("event-based delayed trigger requires a window")
+		}
+	} else {
+		switch p.Trigger.Timing {
+		case DelayedAtBeginningOfNextEndStep, DelayedAtBeginningOfNextUpkeep, DelayedAtBeginningOfNextMainPhase:
+		default:
+			return errors.New("delayed trigger requires a recognized timing")
+		}
+		if p.Trigger.Window != DelayedWindowNone {
+			return errors.New("fixed-phase delayed trigger must not set a window")
+		}
 	}
 	if len(p.Trigger.Content.Modes) == 0 {
 		return errors.New("delayed trigger requires content")
