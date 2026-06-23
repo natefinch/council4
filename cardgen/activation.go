@@ -184,6 +184,7 @@ func lowerActivationShell(
 		Modal:     syntax.Modal,
 		Atoms:     syntax.Atoms,
 		CoinFlip:  syntax.CoinFlip,
+		Vote:      syntax.Vote,
 	}
 	content, diagnostic := lowerAbilityContent(cardName, ability.Kind, bodyContent, false, &bodySyntax)
 	if diagnostic != nil {
