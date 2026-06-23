@@ -208,7 +208,46 @@ func parseTokenName(kind EffectKind, tokens []shared.Token) string {
 	return joinedEffectText(nameTokens)
 }
 
-// parseTokenChoice reports whether a create clause offers a choice between two
+// parseLeadingTokenName captures a created token's name from the leading
+// "Create <Name>, a/an ... token ..." form ("Create Avacyn, a legendary 8/8
+// white Angel creature token with flying, vigilance, and indestructible.") used
+// by named tokens that print their name before the token description. The clause
+// arrives with its "Create"/"creates" verb already stripped, so the leading name
+// (when present) begins at the first token and runs to the comma that
+// immediately precedes the "a"/"an" token spec. It returns "" for non-create
+// clauses, for the leading-article form that names no token ("Create a ..."), and
+// for any clause whose name region holds a token noun. The create-token exactness
+// recognizer reconstructs and byte-checks the full clause, so any spurious capture
+// fails closed there.
+func parseLeadingTokenName(kind EffectKind, tokens []shared.Token) string {
+	if kind != EffectCreate || len(tokens) == 0 {
+		return ""
+	}
+	// A leading article opens the token spec directly, so no name precedes it.
+	if equalWord(tokens[0], "a") || equalWord(tokens[0], "an") {
+		return ""
+	}
+	comma := -1
+	for i := range tokens {
+		if tokens[i].Kind == shared.Comma {
+			comma = i
+			break
+		}
+		// A token noun before any comma is not the leading-name shape; fail closed
+		// so other create wordings are unaffected.
+		if equalWord(tokens[i], "token") || equalWord(tokens[i], "tokens") {
+			return ""
+		}
+	}
+	if comma <= 0 || comma+1 >= len(tokens) {
+		return ""
+	}
+	if !equalWord(tokens[comma+1], "a") && !equalWord(tokens[comma+1], "an") {
+		return ""
+	}
+	return joinedEffectText(tokens[:comma])
+}
+
 // complete token specs joined by "or" ("create a Food token or a Treasure
 // token"). The signal is a "token"/"tokens" noun on each side of an "or": each
 // alternative names its own token, so the effect creates one of the

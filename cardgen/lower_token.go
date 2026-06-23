@@ -626,6 +626,12 @@ func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect, extraKeywords [
 	if len(colors) > 2 {
 		return nil, false
 	}
+	supertypes := effect.Selector.Supertypes()
+	for _, supertype := range supertypes {
+		if supertype != types.Legendary {
+			return nil, false
+		}
+	}
 	cardTypes, ok := creatureTokenCardTypes(effect.Selector)
 	if !ok {
 		return nil, false
@@ -640,10 +646,11 @@ func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect, extraKeywords [
 	}
 	def := &game.CardDef{
 		CardFace: game.CardFace{
-			Name:     name,
-			Colors:   slices.Clone(colors),
-			Types:    cardTypes,
-			Subtypes: slices.Clone(subtypes),
+			Name:       name,
+			Colors:     slices.Clone(colors),
+			Types:      cardTypes,
+			Subtypes:   slices.Clone(subtypes),
+			Supertypes: slices.Clone(supertypes),
 		},
 	}
 	// A fixed-power/toughness token carries its printed power and toughness on

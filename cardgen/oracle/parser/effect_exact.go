@@ -1942,11 +1942,14 @@ func creatureTokenSpecBody(effect *EffectSyntax) (func(countWord, noun string) s
 	if len(sel.SubtypesAny) < 1 || len(sel.SubtypesAny) > 2 ||
 		len(sel.ColorsAny) > 2 ||
 		len(sel.ExcludedTypes) != 0 || len(sel.ExcludedColors) != 0 ||
-		len(sel.Supertypes) != 0 ||
 		sel.Multicolored ||
 		sel.MatchPower || sel.MatchToughness || sel.MatchManaValue ||
 		sel.Untapped || sel.Blocking ||
 		sel.All || sel.Another || sel.Other {
+		return nil, false
+	}
+	supertypePart, ok := tokenSupertypePart(sel)
+	if !ok {
 		return nil, false
 	}
 	typeWords, ok := tokenCreatureTypeWords(sel)
@@ -1983,8 +1986,15 @@ func creatureTokenSpecBody(effect *EffectSyntax) (func(countWord, noun string) s
 	}
 	subtypeJoin := strings.Join(subtypeWords, " ")
 	namePart := ""
-	if effect.TokenName != "" {
+	if effect.TokenName != "" && !effect.TokenNameLeading {
 		namePart = " named " + effect.TokenName
+	}
+	// The leading "Create <Name>, a ..." form prints the name as a "<Name>, "
+	// prefix on the token spec; record it so the closure renders it ahead of the
+	// count word.
+	leadingNamePart := ""
+	if effect.TokenName != "" && effect.TokenNameLeading {
+		leadingNamePart = effect.TokenName + ", "
 	}
 	// A token entering attacking carries a trailing "that's/that are [tapped
 	// and] attacking" relative clause; its "tapped" modifier lives in that clause
@@ -1995,11 +2005,33 @@ func creatureTokenSpecBody(effect *EffectSyntax) (func(countWord, noun string) s
 		tappedPart = "tapped "
 	}
 	return func(countWord, noun string) string {
-		return fmt.Sprintf("%s %s%s %s%s %s %s%s%s%s%s",
-			countWord, tappedPart, ptPart, colorPart,
+		return fmt.Sprintf("%s%s %s%s%s %s%s %s %s%s%s%s%s",
+			leadingNamePart, countWord, tappedPart, supertypePart, ptPart, colorPart,
 			subtypeJoin, typeWords, noun, keywordPart, grantedPart, namePart,
 			tokenAttackClause(sel, noun, effect.AttackDefender))
 	}, true
+}
+
+// tokenSupertypePart renders a created creature token's canonical supertype words
+// ("legendary "), or "" when the token has no supertype. It accepts only the
+// Legendary supertype the named-token forms print; any other supertype fails
+// closed.
+func tokenSupertypePart(sel SelectionSyntax) (string, bool) {
+	if len(sel.Supertypes) == 0 {
+		return "", true
+	}
+	words := make([]string, 0, len(sel.Supertypes))
+	for _, supertype := range sel.Supertypes {
+		if supertype != SupertypeLegendary {
+			return "", false
+		}
+		word, ok := supertypeWord(supertype)
+		if !ok {
+			return "", false
+		}
+		words = append(words, word)
+	}
+	return strings.Join(words, " ") + " ", true
 }
 
 // tokenKeywordPart renders the canonical "with <keyword>[ and <keyword>]" rider
