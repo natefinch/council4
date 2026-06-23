@@ -429,6 +429,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				SpellCostModifierIncrease:              syntax.SpellCostModifierIncrease,
 				SpellCostModifierRequiredTypes:         compilerCardTypes(syntax.SpellCostModifierRequiredTypes),
 				SpellCostModifierExcludedTypes:         compilerCardTypes(syntax.SpellCostModifierExcludedTypes),
+				AttackTaxGeneric:                       syntax.AttackTaxGeneric,
 				PlayFromTopPayLife:                     syntax.PlayFromTopPayLife,
 				PlayFromTopPayLifeRiderSpan:            syntax.PlayFromTopPayLifeRiderSpan,
 				PreventDamageTo:                        syntax.PreventDamageTo,

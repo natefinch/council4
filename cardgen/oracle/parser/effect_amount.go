@@ -1489,6 +1489,9 @@ func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms 
 				end:    end, count: true, plural: plural,
 			}, true
 		}
+		if subject, ok := parseOpponentControllingCountSubject(tokens, nounStart+1, plural, atoms); ok {
+			return subject, true
+		}
 		return dynamicAmountSubject{}, false
 	}
 	if !slices.Contains([]ObjectNoun{
@@ -1527,6 +1530,49 @@ func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms 
 		}, true
 	}
 	return dynamicAmountSubject{}, false
+}
+
+// parseOpponentControllingCountSubject recognizes the per-opponent control
+// predicate "opponents who control <selection>" ("opponents who control a
+// creature with power 4 or greater", Summon: Yojimbo chapter IV), counting the
+// controller's opponents that control at least one matching permanent. start is
+// the token index just past "opponents". The controlled selection is an
+// optionally articled permanent noun with an optional trailing characteristic
+// qualifier, parsed by parseSelection and scoped to "you control" so it resolves
+// relative to each counted opponent. It fails closed for any other trailing
+// wording.
+func parseOpponentControllingCountSubject(tokens []shared.Token, start int, plural bool, atoms Atoms) (dynamicAmountSubject, bool) {
+	if !effectWordsAt(tokens, start, "who", "control") {
+		return dynamicAmountSubject{}, false
+	}
+	selStart := start + 2
+	nounIdx := selStart
+	if effectWordsAt(tokens, nounIdx, "a") || effectWordsAt(tokens, nounIdx, "an") {
+		nounIdx++
+	}
+	if nounIdx >= len(tokens) {
+		return dynamicAmountSubject{}, false
+	}
+	noun, ok := atoms.ObjectNounAt(tokens[nounIdx].Span)
+	if !ok || !slices.Contains([]ObjectNoun{
+		ObjectNounArtifact, ObjectNounCreature, ObjectNounEnchantment, ObjectNounLand, ObjectNounPermanent,
+	}, noun) {
+		return dynamicAmountSubject{}, false
+	}
+	selEnd := nounIdx + 1
+	if !dynamicAmountBoundary(tokens, selEnd) {
+		cEnd, ok := dynamicCharacteristicQualifierEnd(tokens, selEnd, atoms)
+		if !ok || !dynamicAmountBoundary(tokens, cEnd) {
+			return dynamicAmountSubject{}, false
+		}
+		selEnd = cEnd
+	}
+	selection := parseSelection(tokens[selStart:selEnd], atoms)
+	selection.Controller = SelectionControllerYou
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountOpponentControllingCount, Selection: &selection},
+		end:    selEnd, count: true, plural: plural,
+	}, true
 }
 
 // dynamicCharacteristicQualifierEnd recognizes a trailing "with <characteristic>

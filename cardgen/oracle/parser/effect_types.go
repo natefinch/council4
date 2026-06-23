@@ -181,6 +181,14 @@ const (
 	// reciprocal directed structure is fixed, so lowering reconstructs it from the
 	// two player targets. Any other group, defender, or duration fails closed.
 	EffectDirectedMustAttack EffectKind = "EffectDirectedMustAttack"
+	// EffectAttackTax models the resolving, duration-bounded attack-tax effect
+	// "Until your next turn, creatures can't attack you unless their controller
+	// pays {N} for each of those creatures." (Summon: Yojimbo chapters II/III).
+	// Unlike the continuous Propaganda-style static attack tax, this is a
+	// one-shot resolving effect that installs a RuleEffectAttackTax for the
+	// recognized duration; AttackTaxGeneric carries the per-attacker generic
+	// mana N.
+	EffectAttackTax EffectKind = "EffectAttackTax"
 	// EffectRepeatProcess models a "Repeat the following process X times.
 	// <body>" loop. Amount holds the repeat count (the spell's {X} via VariableX
 	// or a fixed cardinal) and RepeatBody holds the sub-effect(s) executed each
@@ -498,7 +506,14 @@ const (
 	// backs "where X is your speed" amounts such as The Speed Demon.
 	EffectDynamicAmountControllerSpeed EffectDynamicAmountKind = "EffectDynamicAmountControllerSpeed"
 	EffectDynamicAmountOpponentCount   EffectDynamicAmountKind = "EffectDynamicAmountOpponentCount"
-	EffectDynamicAmountSourcePower     EffectDynamicAmountKind = "EffectDynamicAmountSourcePower"
+	// EffectDynamicAmountOpponentControllingCount is the number of the resolving
+	// ability controller's opponents who control at least one permanent matching
+	// the amount's Selection ("the number of opponents who control a creature
+	// with power 4 or greater", Summon: Yojimbo chapter IV). The Selection is the
+	// per-opponent control predicate, resolved relative to each opponent; it is a
+	// player count, not a board count.
+	EffectDynamicAmountOpponentControllingCount EffectDynamicAmountKind = "EffectDynamicAmountOpponentControllingCount"
+	EffectDynamicAmountSourcePower              EffectDynamicAmountKind = "EffectDynamicAmountSourcePower"
 	// EffectDynamicAmountSourceToughness is a referenced object's toughness
 	// ("its toughness"), the toughness sibling of EffectDynamicAmountSourcePower.
 	// It backs "gain/lose life equal to its toughness" riders whose subject is a
@@ -1320,6 +1335,10 @@ type EffectSyntax struct {
 	// EffectSpellCostModifier.
 	SpellCostModifierRequiredTypes []CardType `json:",omitempty"`
 	SpellCostModifierExcludedTypes []CardType `json:",omitempty"`
+	// AttackTaxGeneric is the per-attacker generic mana an EffectAttackTax clause
+	// charges ("... pays {N} for each of those creatures."). It is positive and
+	// meaningful only when Kind is EffectAttackTax.
+	AttackTaxGeneric int `json:",omitempty"`
 	// PreventDamageTo and PreventDamageBy mark an EffectPreventDamage clause
 	// that prevents all combat damage for the turn to and/or from a single
 	// referenced or targeted permanent ("Prevent all combat damage that would
