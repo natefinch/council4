@@ -113,10 +113,12 @@ const (
 	PrimitiveConditionalDestinationPlace
 	PrimitiveExileForEachPlayer
 	PrimitiveReturnLinkedExiledCardsToBattlefield
+	PrimitiveDestroyForEachPlayer
+	PrimitiveCreateTokenForEachDestroyed
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveReturnLinkedExiledCardsToBattlefield) + 1
+const primitiveKindCount = int(PrimitiveCreateTokenForEachDestroyed) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -707,6 +709,33 @@ type ReturnLinkedExiledCardsToBattlefield struct {
 	LinkedKey           LinkedKey
 	Amount              Quantity
 	RestToLibraryBottom bool
+}
+
+// DestroyForEachPlayer walks every player in the game and, for each, has Chooser
+// pick up to one permanent that player controls matching Selection and destroys
+// it, remembering each destroyed permanent under LinkedKey keyed by the source
+// permanent. It models the distributive Saga chapter "For each player, destroy
+// up to one target creature that player controls." (The Curse of Fenric, chapter
+// I). Each player's permanents are an independent candidate pool, so the chapter
+// destroys at most one per player. The destroyed permanents are linked so a
+// paired CreateTokenForEachDestroyed clause creates one token for each, under
+// that permanent's last-known controller. LinkedKey must be set; the destroyed
+// permanents are otherwise unrecoverable for the token payoff.
+type DestroyForEachPlayer struct {
+	Chooser   PlayerReference
+	Selection Selection
+	LinkedKey LinkedKey
+}
+
+// CreateTokenForEachDestroyed creates one token defined by Source for each
+// permanent a sibling DestroyForEachPlayer recorded under LinkedKey, giving each
+// token to that destroyed permanent's last-known controller. It models the per-
+// controller Saga payoff "For each creature destroyed this way, its controller
+// creates a <token>." (The Curse of Fenric, chapter I). It consumes and clears
+// the link after resolving. LinkedKey must be set and Source must be valid.
+type CreateTokenForEachDestroyed struct {
+	Source    TokenSource
+	LinkedKey LinkedKey
 }
 
 // ExileFromGraveyard has Player choose up to Amount cards from their own

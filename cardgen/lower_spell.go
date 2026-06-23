@@ -258,6 +258,9 @@ func lowerContent(
 		if content, ok := lowerReturnLinkedExiledPartialContent(ctx); ok {
 			return content, nil
 		}
+		if content, ok := lowerDestroyForEachPlayerTokenChainContent(ctx); ok {
+			return content, nil
+		}
 		return lowerOrderedEffectSequence(cardName, ctx, syntax)
 	}
 	if len(ctx.content.Effects) == 1 {
