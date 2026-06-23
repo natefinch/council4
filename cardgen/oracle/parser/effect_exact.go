@@ -1531,7 +1531,7 @@ func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singula
 		if !ok {
 			return false
 		}
-		middle, ok = strings.CutSuffix(middle, " until end of turn.")
+		middle, ok = cutTemporaryKeywordDurationSuffix(effect, middle)
 		return ok && exactTemporaryKeywordList(middle)
 	}
 	if effect.Context == EffectContextReferencedObject {
@@ -1593,6 +1593,24 @@ func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singula
 		return false
 	}
 	return exactTemporaryKeywordList(middle)
+}
+
+// cutTemporaryKeywordDurationSuffix strips the until-end-of-turn duration suffix
+// from a keyword-change clause body. A plain grant ends "… until end of turn.";
+// a grant that shares a "+X/+X … where X is …" pump's amount carries the trailing
+// "where X is …" clause bound to this keyword effect (The Weatherseed Treaty
+// chapter III: "gains trample until end of turn, where X is the number of basic
+// land types …"), so the suffix becomes "… until end of turn, <amount>.". The
+// combined +N/+N-and-gain lowering reads that shared amount to resolve the pump's
+// X; here it is consumed so the clause reconstructs byte-exactly.
+func cutTemporaryKeywordDurationSuffix(effect *EffectSyntax, body string) (string, bool) {
+	if effect.Amount.DynamicForm == EffectDynamicAmountFormWhereX && effect.Amount.Text != "" {
+		suffix := " until end of turn, " + strings.ToLower(effect.Amount.Text) + "."
+		if middle, ok := strings.CutSuffix(body, suffix); ok {
+			return middle, true
+		}
+	}
+	return strings.CutSuffix(body, " until end of turn.")
 }
 
 // exactGroupTemporaryKeywordEffectSyntax recognizes a resolving keyword grant to

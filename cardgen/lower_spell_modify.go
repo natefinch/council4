@@ -2414,10 +2414,11 @@ func lowerTemporaryPTKeywordSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		modifyEffect.StaticSubject != compiler.StaticSubjectNone ||
 		keywordEffect.StaticSubject != compiler.StaticSubjectNone ||
 		modifyEffect.Duration != compiler.DurationUntilEndOfTurn ||
-		keywordEffect.Duration != compiler.DurationUntilEndOfTurn ||
-		modifyEffect.Amount.DynamicKind != compiler.DynamicAmountNone ||
-		!modifyEffect.PowerDelta.Known ||
-		!modifyEffect.ToughnessDelta.Known {
+		keywordEffect.Duration != compiler.DurationUntilEndOfTurn {
+		return game.AbilityContent{}, false
+	}
+	powerDelta, toughnessDelta, ok := temporaryPTKeywordDeltas(modifyEffect, keywordEffect)
+	if !ok {
 		return game.AbilityContent{}, false
 	}
 	keywords, ok := mixedStaticKeywords(ctx.content.Keywords)
@@ -2435,9 +2436,11 @@ func lowerTemporaryPTKeywordSpell(ctx contentCtx) (game.AbilityContent, bool) {
 				Object: opt.Val(game.TargetPermanentReference(i)),
 				ContinuousEffects: []game.ContinuousEffect{
 					{
-						Layer:          game.LayerPowerToughnessModify,
-						PowerDelta:     compiledSignedAmountValue(modifyEffect.PowerDelta),
-						ToughnessDelta: compiledSignedAmountValue(modifyEffect.ToughnessDelta),
+						Layer:                 game.LayerPowerToughnessModify,
+						PowerDelta:            powerDelta.Value(),
+						ToughnessDelta:        toughnessDelta.Value(),
+						PowerDeltaDynamic:     powerDelta.DynamicAmount(),
+						ToughnessDeltaDynamic: toughnessDelta.DynamicAmount(),
 					},
 					{
 						Layer:       game.LayerAbility,
@@ -2452,6 +2455,39 @@ func lowerTemporaryPTKeywordSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		Targets:  []game.TargetSpec{target},
 		Sequence: sequence,
 	}.Ability(), true
+}
+
+// temporaryPTKeywordDeltas computes the power and toughness deltas for the
+// combined "<target> gets <deltas> and gains <keyword> until end of turn" pump.
+// A fixed pump ("+1/+1") yields fixed deltas; a self-counted dynamic pump
+// ("+X/+X … for each …") resolves through referencedModifyPTQuantities. The
+// "+X/+X … where X is the number of basic land types …" domain form (The
+// Weatherseed Treaty chapter III) is special: the trailing "where X is …"
+// clause attaches to the gain effect, not the pump effect, so X is resolved
+// from keywordEffect's dynamic amount and applied to the pump's variable sides.
+// It returns ok=false for any shape the dynamic machinery cannot render.
+func temporaryPTKeywordDeltas(modifyEffect, keywordEffect compiler.CompiledEffect) (power, toughness game.Quantity, ok bool) {
+	if modifyEffect.Amount.DynamicKind != compiler.DynamicAmountNone {
+		return referencedModifyPTQuantities(&modifyEffect, game.SourcePermanentReference())
+	}
+	if modifyEffect.PowerDelta.Known && modifyEffect.ToughnessDelta.Known {
+		return game.Fixed(compiledSignedAmountValue(modifyEffect.PowerDelta)),
+			game.Fixed(compiledSignedAmountValue(modifyEffect.ToughnessDelta)), true
+	}
+	if !modifyEffect.PowerDelta.VariableX && !modifyEffect.ToughnessDelta.VariableX {
+		return game.Quantity{}, game.Quantity{}, false
+	}
+	if keywordEffect.Amount.DynamicForm != compiler.DynamicAmountWhereX ||
+		keywordEffect.Amount.DynamicKind == compiler.DynamicAmountNone ||
+		keywordEffect.Amount.DynamicKind == compiler.DynamicAmountSourcePower {
+		return game.Quantity{}, game.Quantity{}, false
+	}
+	dynamic, ok := lowerDynamicAmount(keywordEffect.Amount, game.SourcePermanentReference())
+	if !ok {
+		return game.Quantity{}, game.Quantity{}, false
+	}
+	return whereXSignedQuantity(&dynamic, modifyEffect.PowerDelta),
+		whereXSignedQuantity(&dynamic, modifyEffect.ToughnessDelta), true
 }
 
 // temporaryKeywordTarget reports whether a permanent target is one the temporary
