@@ -1458,9 +1458,10 @@ func lowerGainSpellEffect(ctx contentCtx) (game.AbilityContent, *shared.Diagnost
 		temporaryKeywordDuration(ctx.content.Effects[0].Duration) {
 		return lowerTemporaryKeywordSpell(ctx)
 	}
-	if len(ctx.content.Keywords) != 0 &&
-		ctx.content.Effects[0].Duration == compiler.DurationNone {
-		return lowerPermanentKeywordGrantSpell(ctx)
+	if len(ctx.content.Keywords) != 0 {
+		if _, ok := permanentKeywordGrantDuration(ctx.content.Effects[0].Duration); ok {
+			return lowerPermanentKeywordGrantSpell(ctx)
+		}
 	}
 	if ctx.content.Effects[0].GainGrantedAbility != nil {
 		return lowerGainGrantedAbilitySpell(ctx)
@@ -1479,13 +1480,34 @@ func lowerGainSpellEffect(ctx contentCtx) (game.AbilityContent, *shared.Diagnost
 	})
 }
 
-// lowerPermanentKeywordGrantSpell lowers a no-duration keyword grant to a
-// referenced object ("Return target creature card ... to the battlefield. It
-// gains haste.") into a game.ApplyContinuous that adds the keyword for as long
-// as the object remains on the battlefield. "It" binds to the prior target, so
-// this grant composes with reanimation and similar back-referencing sequences.
-// It fails closed for any shape other than an exact, non-negated keyword grant
-// to a referenced target.
+// permanentKeywordGrantDuration maps the compiled duration of a resolving keyword
+// grant to its runtime EffectDuration. A no-duration grant lasts as long as the
+// subject remains on the battlefield (DurationPermanent); the "for as long as you
+// control this <noun>" form expires when the source leaves the controller's
+// control. It returns ok=false for any other duration so richer grants stay
+// fail-closed.
+func permanentKeywordGrantDuration(duration compiler.DurationKind) (game.EffectDuration, bool) {
+	switch duration {
+	case compiler.DurationNone:
+		return game.DurationPermanent, true
+	case compiler.DurationForAsLongAsYouControlSource:
+		return game.DurationForAsLongAsYouControlSource, true
+	default:
+		return game.DurationPermanent, false
+	}
+}
+
+// lowerPermanentKeywordGrantSpell lowers a keyword grant to a referenced object
+// ("Return target creature card ... to the battlefield. It gains haste.") or to a
+// single targeted permanent ("Target creature you control gains indestructible
+// for as long as you control this Saga.") into a game.ApplyContinuous that adds
+// the keyword for the grant's lifetime. A no-duration grant persists for as long
+// as the object remains on the battlefield (DurationPermanent); the "for as long
+// as you control this <noun>" form expires when its controller loses the source.
+// "It" binds to the prior target, so the no-duration grant composes with
+// reanimation and similar back-referencing sequences. It fails closed for any
+// shape other than an exact, non-negated keyword grant with a supported duration
+// to a referenced or single targeted permanent.
 func lowerPermanentKeywordGrantSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
@@ -1503,6 +1525,7 @@ func lowerPermanentKeywordGrantSpell(ctx contentCtx) (game.AbilityContent, *shar
 		len(ctx.content.References) == 0 &&
 		effect.Context == parser.EffectContextTarget &&
 		temporaryKeywordTarget(ctx.content.Targets[0])
+	duration, durationOK := permanentKeywordGrantDuration(effect.Duration)
 	if len(ctx.content.Effects) != 1 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
@@ -1511,7 +1534,7 @@ func lowerPermanentKeywordGrantSpell(ctx contentCtx) (game.AbilityContent, *shar
 		(!referencedObject && !targetSubject) ||
 		effect.Negated ||
 		effect.StaticSubject != compiler.StaticSubjectNone ||
-		effect.Duration != compiler.DurationNone {
+		!durationOK {
 		return unsupported()
 	}
 	keywords, abilities, ok := partitionTemporaryKeywords(ctx.content.Keywords)
@@ -1535,6 +1558,9 @@ func lowerPermanentKeywordGrantSpell(ctx contentCtx) (game.AbilityContent, *shar
 		}
 	}
 	if effect.KeywordGrantChoice {
+		if duration != game.DurationPermanent {
+			return unsupported()
+		}
 		return lowerPermanentKeywordChoiceGrant(keywords, abilities, object, target)
 	}
 	mode := game.Mode{
@@ -1546,7 +1572,7 @@ func lowerPermanentKeywordGrantSpell(ctx contentCtx) (game.AbilityContent, *shar
 					AddKeywords:  keywords,
 					AddAbilities: abilities,
 				}},
-				Duration: game.DurationPermanent,
+				Duration: duration,
 			},
 		}},
 	}
