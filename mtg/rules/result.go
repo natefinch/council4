@@ -163,6 +163,11 @@ type ResolveLog struct {
 	Controller    game.PlayerID
 	Kind          game.StackObjectKind
 	Result        string
+
+	// SourceName is the display name of the spell, ability source, or token
+	// that resolved, so a report can name an ability's source even though its
+	// SourceID is a permanent object ID rather than a card instance ID.
+	SourceName string
 }
 
 // CombatDamageLog records combat damage dealt to a player.
