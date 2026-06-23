@@ -965,6 +965,22 @@ func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier)
 		}
 		fields = append(fields, fmt.Sprintf("CountSelection: &%s,", selection))
 	}
+	if modifier.CountZone.Exists {
+		ctx.need(importZone)
+		ctx.need(importOpt)
+		zoneLit, err := renderZone(modifier.CountZone.Val)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("CountZone: opt.Val(%s),", zoneLit))
+	}
+	if modifier.DynamicReduction != nil {
+		dynamic, err := r.renderDynamicAmount(ctx, modifier.DynamicReduction)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("DynamicReduction: &%s,", dynamic))
+	}
 	return structLit("game.CostModifier", fields), nil
 }
 

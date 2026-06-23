@@ -1656,6 +1656,13 @@ func isDynamicCountSelectionToken(token shared.Token, atoms Atoms) bool {
 		atoms.SelectionFlagIn(token.Span, SelectionFlagUntapped) {
 		return true
 	}
+	// "historic" (artifact, legendary, or Saga; CR 702.61b) is a bare card
+	// qualifier the lexer does not atomize, so recognize the word directly. It
+	// lets a count subject such as "historic card in your graveyard" carry the
+	// Historic flag that parseSelection sets from the same word.
+	if equalWord(token, "historic") {
+		return true
+	}
 	if noun, ok := atoms.ObjectNounAt(token.Span); ok {
 		return slices.Contains([]ObjectNoun{
 			ObjectNounArtifact, ObjectNounCreature, ObjectNounEnchantment,

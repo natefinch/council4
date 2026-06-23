@@ -234,10 +234,12 @@ func dynamicAmountSelection(selector compiler.CompiledSelector) (game.Selection,
 
 // dynamicAmountSelectionMask drops the canonical dimensions a battlefield count
 // group never carries: the excluded supertype, kind-agnostic counter, "aren't of
-// the chosen type" exclusion, conjunctive type set, per-object token state, and
-// historic disjunction. It fails closed on a source-relative power comparison: a
-// count group has no source permanent to compare against, so the predecessor
-// projector rejected that filter rather than dropping it.
+// the chosen type" exclusion, conjunctive type set, and per-object token state.
+// It fails closed on a source-relative power comparison (a count group has no
+// source permanent to compare against, so the predecessor projector rejected
+// that filter rather than dropping it) and on a historic disjunction, which a
+// battlefield count cannot represent through the count lowering and must not
+// silently drop.
 var dynamicAmountSelectionMask = SelectionMask{}.Ignoring(
 	DimExcludedSupertype,
 	DimMatchAnyCounter,
@@ -245,10 +247,10 @@ var dynamicAmountSelectionMask = SelectionMask{}.Ignoring(
 	DimConjunctiveTypes,
 	DimNonToken,
 	DimTokenOnly,
-	DimHistoric,
 ).Rejecting(
 	DimPowerVsSource,
 	DimRequiredName,
+	DimHistoric,
 )
 
 func dynamicBattlefieldRequiredType(kind compiler.SelectorKind) (types.Card, bool) {
@@ -344,6 +346,9 @@ func dynamicCountCharacteristics(selector compiler.CompiledSelector) (game.Selec
 	}
 	if selector.MatchToughness {
 		selection.Toughness = opt.Val(selector.Toughness)
+	}
+	if selector.Historic {
+		selection.AnyOf = append(selection.AnyOf, historicSelectionAlternatives()...)
 	}
 	return selection, true
 }
