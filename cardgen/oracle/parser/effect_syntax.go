@@ -3204,6 +3204,8 @@ func parseResolvingCostModifierEffect(sentence Sentence, tokens []shared.Token, 
 	case len(words) >= 2 && equalWord(words[0], "you") && equalWord(words[1], "cast"):
 		caster = ResolvingCostModifierCasterController
 		words = words[2:]
+	default:
+		// No explicit caster clause: the modifier affects all players.
 	}
 	if duration == EffectDurationNone && len(words) >= 2 && equalWord(words[0], "this") && equalWord(words[1], "turn") {
 		duration = EffectDurationThisTurn
@@ -3246,6 +3248,9 @@ func parseResolvingCostModifierEffect(sentence Sentence, tokens []shared.Token, 
 		case len(words) == 2 && effectWordsAt(words, 0, "this", "turn"):
 			duration = EffectDurationThisTurn
 			words = words[2:]
+		default:
+			// No trailing duration clause: handled by the empty-duration
+			// rejection below.
 		}
 	}
 	if len(words) != 0 || duration == EffectDurationNone {

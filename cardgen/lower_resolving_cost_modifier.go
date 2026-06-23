@@ -38,7 +38,7 @@ func lowerResolvingCostModifier(ctx contentCtx) (game.AbilityContent, *shared.Di
 			"the executable source backend supports only the exact duration-bounded spell cost-increase or cost-reduction effect",
 		)
 	}
-	affected := game.PlayerAny
+	var affected game.PlayerRelation
 	switch effect.ResolvingCostModifierCaster {
 	case parser.ResolvingCostModifierCasterOpponents:
 		affected = game.PlayerOpponent

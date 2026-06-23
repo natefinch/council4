@@ -99,7 +99,7 @@ func TestLowerGraveyardReturnThenCounterChoice(t *testing.T) {
 		t.Fatalf("instruction[0] = %T, want PutOnBattlefield", seq[0].Primitive)
 	}
 	if put.PublishLinked == "" {
-		t.Fatalf("PutOnBattlefield must publish a link key, got empty")
+		t.Fatal("PutOnBattlefield must publish a link key, got empty")
 	}
 	add, ok := seq[1].Primitive.(game.AddCounter)
 	if !ok {
