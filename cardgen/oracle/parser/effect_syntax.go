@@ -392,7 +392,27 @@ func parseCounterPlacementScopedToCount(clause []shared.Token, amount EffectAmou
 	if amount.DynamicForm == EffectDynamicAmountFormWhereX && amount.Span != (shared.Span{}) {
 		counterClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
 	}
+	counterClause = placedCounterTokens(counterClause)
 	return parseCounterPlacement(counterClause, atoms)
+}
+
+// placedCounterTokens narrows a "Put <amount> <kind> counter(s) on <recipient>"
+// clause to the placed-counter noun phrase that precedes the placement
+// preposition "on". The recipient that follows may itself name a counter ("each
+// creature you control with a +1/+1 counter on it") or join subtypes with "and"
+// ("each Pest, Bat, and Spider you control"); either would make
+// parseCounterPlacement see a second counter atom or an "and" and fail closed,
+// so they are excluded here. The placed-counter portion keeps any "and" before
+// the preposition so a genuine compound placement ("a +1/+1 counter and a
+// shield counter on …") still fails closed. A clause with no "on" is returned
+// unchanged.
+func placedCounterTokens(tokens []shared.Token) []shared.Token {
+	for i := range tokens {
+		if equalWord(tokens[i], "on") {
+			return tokens[:i]
+		}
+	}
+	return tokens
 }
 
 // isChooseTargetPreambleTokens reports whether the sentence is a bare

@@ -1202,6 +1202,8 @@ var massGroupSelectionMask = SelectionMask{}.Ignoring(
 	DimHistoric,
 	DimExcludedSubtype,
 	DimPowerVsSource,
+).Rejecting(
+	DimRequiredName,
 )
 
 func massGroupRequiredType(kind compiler.SelectorKind) (types.Card, bool) {

@@ -529,6 +529,8 @@ var copyForEachGroupSelectionMask = SelectionMask{}.Ignoring(
 	DimHistoric,
 	DimExcludedSubtype,
 	DimPowerVsSource,
+).Rejecting(
+	DimRequiredName,
 )
 
 // tokenCopyForEachModifiers builds the runtime copy spec for a per-each copy

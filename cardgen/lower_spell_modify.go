@@ -250,16 +250,16 @@ func damageGroupRecipientExcluding(sel compiler.CompiledSelector, exclude game.O
 }
 
 // damageGroupSelection translates the supported filters of a group-damage
-// recipient selector (controller, combat, tapped, single color/subtype/excluded
-// type, keyword, mana-value/power/toughness comparison) onto a runtime
-// Selection, failing closed for any selector field it cannot represent exactly so
-// unsupported recipients stay rejected. The guard enforces the recipient-specific
-// accept set (single-valued color/subtype/excluded-type, no supertype or color
-// filter, a damageable kind) that no SelectionMask dimension expresses; the
-// numeric mana-value/power/toughness comparison reaches the canonical projector,
-// which honors a fixed bound and fails closed on a chosen-{X} bound;
-// damageGroupSelectionMask drops the remaining canonical dimensions a damage
-// group never carries.
+// recipient selector (controller, combat, tapped, single color, a subtype union,
+// single excluded type, keyword, named card, mana-value/power/toughness
+// comparison) onto a runtime Selection, failing closed for any selector field it
+// cannot represent exactly so unsupported recipients stay rejected. The guard
+// enforces the recipient-specific accept set (single-valued color/excluded-type,
+// a subtype union, no supertype or color filter, a damageable kind) that no
+// SelectionMask dimension expresses; the numeric mana-value/power/toughness
+// comparison reaches the canonical projector, which honors a fixed bound and
+// fails closed on a chosen-{X} bound; damageGroupSelectionMask drops the
+// remaining canonical dimensions a damage group never carries.
 func damageGroupSelection(sel compiler.CompiledSelector) (game.Selection, bool) {
 	if sel.All || sel.Another || sel.Zone != zone.None ||
 		sel.Colorless || sel.Multicolored ||
@@ -267,7 +267,6 @@ func damageGroupSelection(sel compiler.CompiledSelector) (game.Selection, bool) 
 		len(sel.Supertypes()) != 0 ||
 		len(sel.ExcludedColors()) != 0 ||
 		len(sel.ColorsAny()) > 1 ||
-		len(sel.SubtypesAny()) > 1 ||
 		len(sel.ExcludedTypes()) > 1 {
 		return game.Selection{}, false
 	}
@@ -280,7 +279,7 @@ func damageGroupSelection(sel compiler.CompiledSelector) (game.Selection, bool) 
 	if !ok {
 		return game.Selection{}, false
 	}
-	if !hasNoun && len(sel.SubtypesAny()) != 1 {
+	if !hasNoun && len(sel.SubtypesAny()) == 0 {
 		return game.Selection{}, false
 	}
 	return SelectionForSelectorMasked(sel, damageGroupSelectionMask)
@@ -290,8 +289,9 @@ func damageGroupSelection(sel compiler.CompiledSelector) (game.Selection, bool) 
 // recipient never carries: the self-exclusion, excluded supertype, kind-agnostic
 // counter, "aren't of the chosen type" exclusion, conjunctive type set, and
 // historic disjunction. It honors per-object token state ("each nontoken
-// creature") and the excluded creature subtype ("each non-Dragon creature"). It
-// fails closed on a source-relative power comparison: a damage group has no
+// creature"), the excluded creature subtype ("each non-Dragon creature"), and
+// the named-card filter ("each other creature you control named Charmed Stray").
+// It fails closed on a source-relative power comparison: a damage group has no
 // source permanent to compare against, so the predecessor projector rejected
 // that filter rather than dropping it.
 var damageGroupSelectionMask = SelectionMask{}.Ignoring(

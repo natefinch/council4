@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -1985,7 +1986,6 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 		len(selection.ExcludedColors) != 0 ||
 		(len(selection.RequiredTypesAny) > 1 && !selection.ConjunctiveTypes) ||
 		len(selection.ColorsAny) > 1 ||
-		len(selection.SubtypesAny) > 1 ||
 		len(selection.ExcludedTypes) > 1 ||
 		len(selection.ExcludedSubtypes) > 1 ||
 		(selection.NonToken && selection.TokenOnly) {
@@ -2055,9 +2055,15 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 		}
 		words = append(words, colorText)
 	}
-	if len(selection.SubtypesAny) == 1 {
-		words = append(words, string(selection.SubtypesAny[0]))
+	if len(selection.SubtypesAny) > 1 {
+		// A multi-subtype union ("each Pest, Bat, Insect, Snake, and Spider you
+		// control") carries no card-type noun: the subtype list is the recipient
+		// noun. The single-subtype redundancy ("each Goblin") is handled below.
+		if hasNoun {
+			return "", false
+		}
 	}
+	words = append(words, groupSubtypeListWords(selection.SubtypesAny)...)
 	if len(selection.ExcludedTypes) == 1 {
 		if !hasNoun {
 			return "", false
@@ -2076,7 +2082,7 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 	}
 	if hasNoun {
 		words = append(words, noun)
-	} else if len(selection.SubtypesAny) != 1 {
+	} else if len(selection.SubtypesAny) == 0 {
 		return "", false
 	}
 	// The canonical Oracle ordering places the controller clause immediately
@@ -2095,6 +2101,12 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 	default:
 		return "", false
 	}
+	// A "named <Name>" filter ("each other creature you control named Charmed
+	// Stray") follows the controller clause in canonical Oracle wording. The
+	// verbatim name carries its own internal spacing, so it joins as one word.
+	if selection.RequiredName != "" {
+		words = append(words, "named", selection.RequiredName)
+	}
 	if selection.Keyword != KeywordUnknown {
 		keywordWord, ok := selection.Keyword.OracleWord()
 		if !ok {
@@ -2112,6 +2124,11 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 		}
 		words = append(words, "without", keywordWord)
 	}
+	counterWords, ok := groupSelectorCounterWords(selection)
+	if !ok {
+		return "", false
+	}
+	words = append(words, counterWords...)
 	if selection.EnteredThisTurn {
 		words = append(words, "that", "entered", "this", "turn")
 	}
@@ -2121,6 +2138,55 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 		return "", false
 	}
 	return recipient + rider, true
+}
+
+// groupSubtypeListWords renders a recipient's subtype noun list. A single
+// subtype is its own noun ("each Goblin you control"). Two subtypes join with
+// "and/or" ("each Merfolk and/or Knight you control"); three or more form a
+// comma-separated list closed by "and" ("each Pest, Bat, Insect, Snake, and
+// Spider you control"). The reconstruction is compared byte-for-byte against the
+// source, so a recipient written with a different joiner fails closed instead of
+// matching an approximation.
+func groupSubtypeListWords(subtypes []types.Sub) []string {
+	switch len(subtypes) {
+	case 0:
+		return nil
+	case 1:
+		return []string{string(subtypes[0])}
+	case 2:
+		return []string{string(subtypes[0]), "and/or", string(subtypes[1])}
+	default:
+		words := make([]string, 0, len(subtypes)+1)
+		for i, sub := range subtypes {
+			if i == len(subtypes)-1 {
+				words = append(words, "and", string(sub))
+			} else {
+				words = append(words, string(sub)+",")
+			}
+		}
+		return words
+	}
+}
+
+// groupSelectorCounterWords reconstructs the canonical "with a <kind> counter on
+// it" / "with a counter on it" qualifier a group recipient selector may carry,
+// mirroring the runtime Selection.MatchCounter / MatchAnyCounter predicate. The
+// kind-specific form names the counter ("with a +1/+1 counter on it"); the
+// kind-agnostic form omits it ("with a counter on it"). A selector with neither
+// flag yields no words. The two flags are mutually exclusive, so a selector that
+// sets both fails closed rather than rendering an ambiguous qualifier.
+func groupSelectorCounterWords(selection SelectionSyntax) ([]string, bool) {
+	if selection.CounterRequired && selection.CounterAny {
+		return nil, false
+	}
+	switch {
+	case selection.CounterRequired:
+		return []string{"with", "a", selection.CounterKind.String(), "counter", "on", "it"}, true
+	case selection.CounterAny:
+		return []string{"with", "a", "counter", "on", "it"}, true
+	default:
+		return nil, true
+	}
 }
 
 // groupSelectorNumericRider reconstructs the canonical " with mana value N or

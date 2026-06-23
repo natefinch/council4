@@ -1203,6 +1203,7 @@ var groupEntersWithCountersRecipientMask = SelectionMask{}.Ignoring(
 	DimHistoric,
 ).Rejecting(
 	DimPowerVsSource,
+	DimRequiredName,
 )
 
 // groupEntersWithCountersRequiredType maps a group enters-with-counters
