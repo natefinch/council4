@@ -42,7 +42,24 @@ func (e *Engine) resolveTopOfStackWithChoices(g *game.Game, agents [game.NumPlay
 		Controller:    obj.Controller,
 		Kind:          obj.Kind,
 		Result:        result,
+		SourceName:    stackObjectSourceName(g, obj),
 	})
+}
+
+// stackObjectSourceName resolves the display name of a stack object's source —
+// a token definition, the source card instance for an activated or triggered
+// ability, or the card instance a spell was cast from.
+func stackObjectSourceName(g *game.Game, obj *game.StackObject) string {
+	if obj.SourceTokenDef != nil {
+		return obj.SourceTokenDef.Name
+	}
+	if instance, ok := g.CardInstances[obj.SourceCardID]; ok && instance.Def != nil {
+		return instance.Def.Name
+	}
+	if instance, ok := g.CardInstances[obj.SourceID]; ok && instance.Def != nil {
+		return instance.Def.Name
+	}
+	return ""
 }
 
 func (e *Engine) resolveStackObject(g *game.Game, obj *game.StackObject, log *TurnLog) string {
