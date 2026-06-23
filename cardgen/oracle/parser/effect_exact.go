@@ -3077,6 +3077,12 @@ func exactRemoveCounterEffectSyntax(effect *EffectSyntax) bool {
 		effect.Amount.Value < 1 {
 		return false
 	}
+	// The kind-unspecified "a counter" form removes one counter of a single
+	// controller-chosen kind, so a plural unspecified count ("two counters") has
+	// no single-choice resolution and is left non-exact to fail closed.
+	if !effect.CounterKnown && effect.Amount.Value != 1 {
+		return false
+	}
 	noun := "counters"
 	if effect.Amount.Value == 1 {
 		noun = "counter"

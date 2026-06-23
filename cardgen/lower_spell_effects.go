@@ -1072,6 +1072,13 @@ func lowerRemoveCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 		}
 		remove.CounterKind = effect.CounterKind
 	} else {
+		// The kind-unspecified form removes one counter of a single
+		// controller-chosen kind; a plural unspecified count has no
+		// single-choice resolution, so fail closed rather than removing the
+		// whole amount from one kind.
+		if effect.Amount.Value != 1 {
+			return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+		}
 		remove.ChooseKind = true
 	}
 	return game.Mode{

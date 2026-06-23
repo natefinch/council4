@@ -115,6 +115,19 @@ func TestLowerRemoveCounterNonlandTarget(t *testing.T) {
 	}
 }
 
+// TestLowerRemoveCounterUnsupportedPluralChosenKind proves the kind-unspecified
+// plural form ("remove two counters from target permanent") fails closed: it has
+// no single-choice resolution, so it must not lower to a one-kind removal.
+func TestLowerRemoveCounterUnsupportedPluralChosenKind(t *testing.T) {
+	t.Parallel()
+	lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+		Name:       "Test Twin Drain",
+		Layout:     "normal",
+		TypeLine:   "Creature — Horror",
+		OracleText: "{T}: Remove two counters from target permanent.",
+	})
+}
+
 // TestLowerRemoveCounterUnsupportedDynamicAmount proves a non-fixed removal
 // amount ("remove X counters") fails closed rather than lowering.
 func TestLowerRemoveCounterUnsupportedDynamicAmount(t *testing.T) {
