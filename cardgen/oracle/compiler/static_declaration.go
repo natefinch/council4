@@ -27,6 +27,7 @@ const (
 	StaticDeclarationOpponentActionRestriction
 	StaticDeclarationSpellUncounterable
 	StaticDeclarationEnteringTriggerMultiplier
+	StaticDeclarationControlledTriggerMultiplier
 	StaticDeclarationUntapStep
 	StaticDeclarationCharacteristicPowerToughness
 	StaticDeclarationEnterBattlefieldRestriction
@@ -648,21 +649,22 @@ type StaticDeclaration struct {
 	Condition     *CompiledCondition
 
 	// Exactly one variant payload matching Kind is non-nil.
-	Continuous          *StaticContinuousDeclaration
-	Rule                *StaticRuleDeclaration
-	Cost                *StaticCostModifierDeclaration
-	CardGrant           *StaticCardAbilityGrantDeclaration
-	Player              *StaticPlayerRuleDeclaration
-	OpponentRestriction *StaticOpponentActionRestrictionDeclaration
-	EnterRestriction    *StaticEnterBattlefieldRestrictionDeclaration
-	SpellUncounterable  *StaticSpellUncounterableDeclaration
-	EnteringMultiplier  *StaticEnteringTriggerMultiplierDeclaration
-	Untap               *StaticUntapStepDeclaration
-	CharacteristicPT    *StaticCharacteristicPowerToughnessDeclaration
-	CastAsThoughFlash   *StaticCastAsThoughFlashDeclaration
-	GraveyardGrant      *StaticGraveyardKeywordGrantDeclaration
-	DrawLimit           *StaticDrawLimitDeclaration
-	CastLimit           *StaticCastLimitDeclaration
+	Continuous           *StaticContinuousDeclaration
+	Rule                 *StaticRuleDeclaration
+	Cost                 *StaticCostModifierDeclaration
+	CardGrant            *StaticCardAbilityGrantDeclaration
+	Player               *StaticPlayerRuleDeclaration
+	OpponentRestriction  *StaticOpponentActionRestrictionDeclaration
+	EnterRestriction     *StaticEnterBattlefieldRestrictionDeclaration
+	SpellUncounterable   *StaticSpellUncounterableDeclaration
+	EnteringMultiplier   *StaticEnteringTriggerMultiplierDeclaration
+	ControlledMultiplier *StaticControlledTriggerMultiplierDeclaration
+	Untap                *StaticUntapStepDeclaration
+	CharacteristicPT     *StaticCharacteristicPowerToughnessDeclaration
+	CastAsThoughFlash    *StaticCastAsThoughFlashDeclaration
+	GraveyardGrant       *StaticGraveyardKeywordGrantDeclaration
+	DrawLimit            *StaticDrawLimitDeclaration
+	CastLimit            *StaticCastLimitDeclaration
 }
 
 // StaticCharacteristicPowerToughnessDeclaration carries the rules-derived count
@@ -746,6 +748,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticEnteringTriggerMultiplier(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticControlledTriggerMultiplier(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
@@ -890,10 +896,70 @@ func recognizeStaticEnteringTriggerMultiplier(ability CompiledAbility, statics [
 	}, true
 }
 
+// StaticControlledTriggerMultiplierDeclaration makes a triggered ability of a
+// permanent the controller controls trigger one additional time when that
+// permanent matches the source-permanent filter ("If a triggered ability of a
+// legendary creature you control triggers, that ability triggers an additional
+// time.", Annie Joins Up; Katara, the Fearless; Splinter, Radical Rat). Types
+// and Supertypes are conjunctive; Subtypes is disjunctive. Unlike the
+// chosen-type and entering-permanent doublers this family includes the doubler's
+// own triggers ("a ... you control", not "another").
+type StaticControlledTriggerMultiplierDeclaration struct {
+	Types      []types.Card
+	Supertypes []types.Super
+	Subtypes   []types.Sub
+}
+
+// recognizeStaticControlledTriggerMultiplier maps the parser-owned
+// controlled-trigger multiplier syntax onto its closed semantic payload. The
+// source permanent's type, supertype, and subtype filter travels in Types,
+// Supertypes, and Subtypes.
+func recognizeStaticControlledTriggerMultiplier(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationControlledTriggerMultiplier) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		!enteringTriggerMultiplierContent(ability.Content) {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	cardTypes := make([]types.Card, 0, len(node.ControlledFilterTypes))
+	for _, cardType := range node.ControlledFilterTypes {
+		converted, ok := compilerCardType(cardType)
+		if !ok {
+			return StaticDeclaration{}, false
+		}
+		cardTypes = append(cardTypes, converted)
+	}
+	supertypes := make([]types.Super, 0, len(node.ControlledFilterSupertypes))
+	for _, supertype := range node.ControlledFilterSupertypes {
+		converted, ok := compilerSupertype(supertype)
+		if !ok {
+			return StaticDeclaration{}, false
+		}
+		supertypes = append(supertypes, converted)
+	}
+	subtypes := append([]types.Sub(nil), node.ControlledFilterSubtypes...)
+	if len(cardTypes) == 0 && len(supertypes) == 0 && len(subtypes) == 0 {
+		return StaticDeclaration{}, false
+	}
+	return StaticDeclaration{
+		Kind:          StaticDeclarationControlledTriggerMultiplier,
+		Span:          node.Span,
+		OperationSpan: node.OperationSpan,
+		ControlledMultiplier: &StaticControlledTriggerMultiplierDeclaration{
+			Types:      cardTypes,
+			Supertypes: supertypes,
+			Subtypes:   subtypes,
+		},
+	}, true
+}
+
 // enteringTriggerMultiplierContent reports whether the leftover content matches
 // the entering-trigger multiplier shape: a single unsupported "if ... causes ...
 // to trigger" condition and no other content the static declaration would
-// otherwise own.
+// otherwise own. The controlled-permanent multiplier shares this leftover shape.
 func enteringTriggerMultiplierContent(content AbilityContent) bool {
 	if len(content.Conditions) != 1 ||
 		len(content.Effects) != 0 ||
