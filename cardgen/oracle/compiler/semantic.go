@@ -1313,6 +1313,12 @@ const (
 	// game.CreateDelayedTrigger carrying the nested ability's trigger pattern and
 	// content. Added last so existing kinds keep their wire values.
 	EffectDelayedTrigger
+	// EffectRingTempts models the fixed designation effect "The Ring tempts
+	// you." (CR 701.51): the resolving controller gets the Ring emblem, advances
+	// it to its next level, and chooses a creature they control as their
+	// Ring-bearer. It lowers to a game.RingTempts primitive scoped to the
+	// controller. Added last so existing kinds keep their wire values.
+	EffectRingTempts
 )
 
 // DurationKind identifies common continuous-effect durations.

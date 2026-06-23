@@ -584,6 +584,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", errors.New("render: internal error: BecomeMonarch kind has unexpected concrete type")
 		}
 		return r.renderBecomeMonarch(value)
+	case game.PrimitiveRingTempts:
+		value, ok := primitive.(game.RingTempts)
+		if !ok {
+			return "", errors.New("render: internal error: RingTempts kind has unexpected concrete type")
+		}
+		return r.renderRingTempts(value)
 	default:
 		return "", fmt.Errorf("render: unsupported primitive kind %d", primitive.Kind())
 	}

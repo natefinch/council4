@@ -1314,6 +1314,8 @@ func lowerImmediateSingleEffectSpell(
 		return lowerGainPlayerCounterSpell(ctx, syntax)
 	case compiler.EffectBecomeMonarch:
 		return lowerBecomeMonarchSpell(ctx)
+	case compiler.EffectRingTempts:
+		return lowerRingTemptsSpell(ctx)
 	case compiler.EffectAmass:
 		return lowerAmassContent(ctx, syntax)
 	case compiler.EffectRenown:

@@ -266,6 +266,13 @@ const (
 	// game.CreateDelayedTrigger carrying the nested ability's trigger pattern
 	// and content, scoped to the turn.
 	EffectDelayedTrigger EffectKind = "EffectDelayedTrigger"
+	// EffectRingTempts models the fixed designation effect "The Ring tempts
+	// you." (CR 701.51). The resolving controller gets the Ring emblem if they
+	// don't already have it, advances it to the next of its four levels, and
+	// chooses a creature they control to become (or remain) their Ring-bearer.
+	// The wording is fully fixed, so the parser recognizes the whole sentence
+	// and the effect carries no targets or amounts.
+	EffectRingTempts EffectKind = "EffectRingTempts"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
