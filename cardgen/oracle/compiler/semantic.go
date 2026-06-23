@@ -631,6 +631,12 @@ const (
 	// ..."; the Urza tron lands). Names are compared case-insensitively with
 	// hyphens and spaces treated alike.
 	ConditionPredicateControllerControlsNamed
+	// ConditionPredicateFirstCombatPhaseOfTurn is satisfied while the current
+	// turn is still in its first combat phase ("if it's the first combat phase of
+	// the turn"; Raiyuu, Storm's Edge, Karlach, Fury of Avernus). It gates an
+	// extra-combat insertion against TurnState.CombatPhasesThisTurn so the loop
+	// fires once per turn.
+	ConditionPredicateFirstCombatPhaseOfTurn
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard

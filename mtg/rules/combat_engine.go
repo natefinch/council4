@@ -29,6 +29,7 @@ type combatEngine struct {
 // g.Combat; callers must not touch g.Combat while this is running.
 func (ce combatEngine) runPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	g.Turn.Phase = game.PhaseCombat
+	g.Turn.CombatPhasesThisTurn++
 	g.Combat = &game.CombatState{}
 	defer func() {
 		g.Combat = nil
