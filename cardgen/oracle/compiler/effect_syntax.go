@@ -476,6 +476,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectPlayFromLibraryTop
 	case parser.EffectCantCastSpells:
 		return EffectCantCastSpells
+	case parser.EffectSpellCostModifier:
+		return EffectSpellCostModifier
 	case parser.EffectPreventDamage:
 		return EffectPreventDamage
 	case parser.EffectSpellsCantBeCountered:

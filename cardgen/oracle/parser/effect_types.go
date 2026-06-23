@@ -107,6 +107,17 @@ const (
 	// ("players"). It reuses the same rule effect as the continuous static form
 	// (RuleEffectCantCastSpells), applied with a this-turn duration.
 	EffectCantCastSpells EffectKind = "EffectCantCastSpells"
+	// EffectSpellCostModifier models a one-shot, duration-bounded cost-increase
+	// or cost-reduction continuous effect created by a resolved ability
+	// ("Artifact spells you cast this turn cost {1} less to cast.", Armor Wars
+	// chapter II; "Until your next turn, spells your opponents cast cost {1}
+	// more to cast.", Tax Collector). The affected caster is the controller
+	// ("you cast"), the controller's opponents ("your opponents cast"), or every
+	// player (no caster phrase). The recognized duration becomes the rule
+	// effect's lifetime. It reuses the continuous RuleEffectCostModifier rule
+	// effect created by an ApplyRule primitive, the same data the static cost
+	// modifiers use, but with a finite duration rather than a battlefield static.
+	EffectSpellCostModifier EffectKind = "EffectSpellCostModifier"
 	// EffectWinGame models a player winning the game ("you win the game"), as in
 	// Felidar Sovereign and Thassa's Oracle (CR 104.2a). It mirrors
 	// EffectLoseGame.
@@ -416,6 +427,17 @@ const (
 	// attachment-dependent wording "for as long as that creature is enchanted".
 	// The effect expires when the affected creature is no longer enchanted.
 	EffectDurationWhileControlledCreatureEnchanted EffectDurationKind = "EffectDurationWhileControlledCreatureEnchanted"
+)
+
+// SpellCostCasterKind names which player's spells a resolving spell cost
+// modifier affects.
+type SpellCostCasterKind string
+
+// Spell cost modifier casters recognized by the parser.
+const (
+	SpellCostCasterAll        SpellCostCasterKind = ""
+	SpellCostCasterController SpellCostCasterKind = "SpellCostCasterController"
+	SpellCostCasterOpponents  SpellCostCasterKind = "SpellCostCasterOpponents"
 )
 
 // DelayedTimingKind identifies a delayed resolving instruction suffix.
@@ -1264,6 +1286,26 @@ type EffectSyntax struct {
 	// and are mutually exclusive.
 	CantCastSpellsRequiredTypes []CardType `json:",omitempty"`
 	CantCastSpellsExcludedTypes []CardType `json:",omitempty"`
+	// SpellCostModifierCaster names which player's spells an
+	// EffectSpellCostModifier clause affects: the controller
+	// (SpellCostCasterController, "spells you cast"), the controller's opponents
+	// (SpellCostCasterOpponents, "spells your opponents cast"), or every player
+	// (SpellCostCasterAll, an absent caster phrase such as "noncreature spells
+	// cost {2} more"). It is meaningful only when Kind is EffectSpellCostModifier.
+	SpellCostModifierCaster SpellCostCasterKind `json:",omitempty"`
+	// SpellCostModifierAmount is the generic mana the affected spells cost more
+	// (SpellCostModifierIncrease true) or less (false) to cast. It is positive
+	// and meaningful only when Kind is EffectSpellCostModifier.
+	SpellCostModifierAmount   int  `json:",omitempty"`
+	SpellCostModifierIncrease bool `json:",omitempty"`
+	// SpellCostModifierRequiredTypes narrows an EffectSpellCostModifier clause to
+	// spells of the named card type ("Artifact spells you cast ...");
+	// SpellCostModifierExcludedTypes exempts spells of the named card type
+	// ("Noncreature spells your opponents cast ..."). Both hold at most one type,
+	// are mutually exclusive, and are meaningful only when Kind is
+	// EffectSpellCostModifier.
+	SpellCostModifierRequiredTypes []CardType `json:",omitempty"`
+	SpellCostModifierExcludedTypes []CardType `json:",omitempty"`
 	// PreventDamageTo and PreventDamageBy mark an EffectPreventDamage clause
 	// that prevents all combat damage for the turn to and/or from a single
 	// referenced or targeted permanent ("Prevent all combat damage that would
