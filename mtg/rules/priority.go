@@ -57,7 +57,7 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 			Player: playerID,
 			Action: chosen,
 		}
-		recordActionSource(g, actionLog, chosen)
+		recordActionSource(g, playerID, actionLog, chosen)
 		log.addAction(actionLog)
 
 		if !e.applyActionWithChoices(g, playerID, chosen, agents, log) {
@@ -91,16 +91,19 @@ func observe(g *game.Game, playerID game.PlayerID) PlayerObservation {
 }
 
 // recordActionSource snapshots the permanent that is the source of an action so
-// the turn log can attribute the action to a named card. Only activated
-// abilities need this: their source is a battlefield permanent identified by
-// object ID, whereas a land played or spell cast from hand is already
-// identified by its card instance ID in the action payload. The snapshot is a
-// no-op when the source is not a battlefield permanent (for example an ability
-// activated from a card in hand).
-func recordActionSource(g *game.Game, actionLog *ActionLog, a action.Action) {
-	if payload, ok := a.ActivateAbilityPayload(); ok {
-		actionLog.addPermanentSnapshot(g, payload.SourceID)
+// the turn log can attribute the action to a named card, and flags activations
+// of mana abilities. Only activated abilities need the source snapshot: their
+// source is a battlefield permanent identified by object ID, whereas a land
+// played or spell cast from hand is already identified by its card instance ID
+// in the action payload. The snapshot is a no-op when the source is not a
+// battlefield permanent (for example an ability activated from a card in hand).
+func recordActionSource(g *game.Game, playerID game.PlayerID, actionLog *ActionLog, a action.Action) {
+	payload, ok := a.ActivateAbilityPayload()
+	if !ok {
+		return
 	}
+	actionLog.addPermanentSnapshot(g, payload.SourceID)
+	actionLog.ManaAbility = isManaAbilityActivation(g, playerID, payload)
 }
 
 func agentFor(agents [game.NumPlayers]PlayerAgent, playerID game.PlayerID) PlayerAgent {
