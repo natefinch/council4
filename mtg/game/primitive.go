@@ -111,10 +111,12 @@ const (
 	PrimitiveReturnExiledCardsToHand
 	PrimitivePutLinkedExiledCardsInLibrary
 	PrimitiveConditionalDestinationPlace
+	PrimitiveExileForEachPlayer
+	PrimitiveReturnLinkedExiledCardsToBattlefield
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveConditionalDestinationPlace) + 1
+const primitiveKindCount = int(PrimitiveReturnLinkedExiledCardsToBattlefield) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -669,6 +671,42 @@ type ExileEntireHand struct {
 // in exile are skipped. LinkedKey must be set.
 type ReturnExiledCardsToHand struct {
 	LinkedKey LinkedKey
+}
+
+// ExileForEachPlayer walks every player in the game and, for each, has Chooser
+// pick up to one permanent that player controls matching Selection and exiles
+// it, remembering each chosen permanent under LinkedKey (an exile-until-leaves
+// link) keyed by the source permanent. It models the distributive Saga chapter
+// "For each player, exile up to one [other] target <permanent> that player
+// controls until this Saga leaves the battlefield." (Vault 13: Dweller's
+// Journey, Battle at the Helvault). Each player's permanents are an independent
+// candidate pool, so the chapter exiles at most one per player. The chosen
+// permanents accumulate under the same key across chapters, so the paired return
+// — synthesized on the source leaving, or an explicit later chapter — brings
+// back exactly the set this exiled. Selection's ExcludeSource models the "other"
+// qualifier so the Saga never exiles itself. LinkedKey must be set; the exiled
+// permanents are otherwise unrecoverable.
+type ExileForEachPlayer struct {
+	Chooser   PlayerReference
+	Selection Selection
+	LinkedKey LinkedKey
+}
+
+// ReturnLinkedExiledCardsToBattlefield returns up to Amount cards a sibling
+// exile-until-leaves clause exiled under LinkedKey to the battlefield under
+// their owners' control; Chooser picks which cards return when more than Amount
+// remain in exile. When RestToLibraryBottom is set, every remaining linked card
+// moves to the bottom of its owner's library. It models the partial Saga payoff
+// "Return N cards exiled with this Saga to the battlefield under their owners'
+// control and put the rest on the bottom of their owners' libraries." (Vault 13:
+// Dweller's Journey). It consumes and clears the link after resolving, so the
+// synthesized leaves-the-battlefield safety-net return finds nothing left.
+// LinkedKey must be set.
+type ReturnLinkedExiledCardsToBattlefield struct {
+	Chooser             PlayerReference
+	LinkedKey           LinkedKey
+	Amount              Quantity
+	RestToLibraryBottom bool
 }
 
 // ExileFromGraveyard has Player choose up to Amount cards from their own

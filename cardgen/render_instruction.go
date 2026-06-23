@@ -337,6 +337,18 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: ReturnExiledCardsToHand kind has unexpected concrete type")
 		}
 		return r.renderReturnExiledCardsToHand(value)
+	case game.PrimitiveExileForEachPlayer:
+		value, ok := primitive.(game.ExileForEachPlayer)
+		if !ok {
+			return "", errors.New("render: internal error: ExileForEachPlayer kind has unexpected concrete type")
+		}
+		return r.renderExileForEachPlayer(ctx, value)
+	case game.PrimitiveReturnLinkedExiledCardsToBattlefield:
+		value, ok := primitive.(game.ReturnLinkedExiledCardsToBattlefield)
+		if !ok {
+			return "", errors.New("render: internal error: ReturnLinkedExiledCardsToBattlefield kind has unexpected concrete type")
+		}
+		return r.renderReturnLinkedExiledCardsToBattlefield(ctx, value)
 	case game.PrimitivePutFromHand:
 		value, ok := primitive.(game.PutFromHand)
 		if !ok {
@@ -770,6 +782,42 @@ func (Renderer) renderReturnExiledCardsToHand(value game.ReturnExiledCardsToHand
 	return structLit("game.ReturnExiledCardsToHand", []string{
 		fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)),
 	}), nil
+}
+
+func (r Renderer) renderExileForEachPlayer(ctx *renderCtx, value game.ExileForEachPlayer) (string, error) {
+	chooser, err := r.renderPlayerReference(value.Chooser)
+	if err != nil {
+		return "", err
+	}
+	selection, err := r.renderSelection(ctx, value.Selection)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.ExileForEachPlayer", []string{
+		fmt.Sprintf("Chooser: %s,", chooser),
+		fmt.Sprintf("Selection: %s,", selection),
+		fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)),
+	}), nil
+}
+
+func (r Renderer) renderReturnLinkedExiledCardsToBattlefield(ctx *renderCtx, value game.ReturnLinkedExiledCardsToBattlefield) (string, error) {
+	chooser, err := r.renderPlayerReference(value.Chooser)
+	if err != nil {
+		return "", err
+	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Chooser: %s,", chooser),
+		fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)),
+		fmt.Sprintf("Amount: %s,", amount),
+	}
+	if value.RestToLibraryBottom {
+		fields = append(fields, "RestToLibraryBottom: true,")
+	}
+	return structLit("game.ReturnLinkedExiledCardsToBattlefield", fields), nil
 }
 
 func (r Renderer) renderPutFromHand(ctx *renderCtx, value game.PutFromHand) (string, error) {

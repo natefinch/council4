@@ -1263,6 +1263,29 @@ func (p ReturnExiledCardsToHand) validatePrimitive([]TargetSpec, bool) error {
 	return nil
 }
 
+func (p ExileForEachPlayer) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.LinkedKey == "" {
+		return errors.New("exile for each player requires a linked key")
+	}
+	if err := firstProblem(p.Selection.Validate()); err != nil {
+		return err
+	}
+	return validatePlayerReference(p.Chooser, targets, checkTargets)
+}
+
+func (p ReturnLinkedExiledCardsToBattlefield) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.LinkedKey == "" {
+		return errors.New("return linked exiled cards to battlefield requires a linked key")
+	}
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.Amount.IsDynamic() || p.Amount.Value() < 1 {
+		return errors.New("return linked exiled cards to battlefield requires a fixed positive Amount")
+	}
+	return validatePlayerReference(p.Chooser, targets, checkTargets)
+}
+
 func (p PutFromHand) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err

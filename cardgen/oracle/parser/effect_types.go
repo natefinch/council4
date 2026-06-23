@@ -1865,6 +1865,27 @@ type EffectSyntax struct {
 	// linked to the source so a paired leaves-the-battlefield trigger returns it;
 	// the trailing self-reference is the duration anchor, not a target.
 	ExileUntilSourceLeaves bool `json:",omitempty"`
+	// ExileForEachPlayerUntilSourceLeaves marks the exact distributive Saga
+	// exile clause "For each player, exile up to one [other] target <permanent>
+	// that player controls until this Saga leaves the battlefield." (Vault 13:
+	// Dweller's Journey, Battle at the Helvault). Each player's permanents are an
+	// independent "up to one" pool and the exiled permanents are linked to the
+	// source so a paired return brings the set back; the "that player" and source
+	// references are the distributive and duration anchors, not targets.
+	ExileForEachPlayerUntilSourceLeaves bool `json:",omitempty"`
+	// ReturnLinkedExiledToBattlefieldPartial marks the exact partial Saga payoff
+	// "Return N cards exiled with this Saga to the battlefield under their
+	// owners' control." (Vault 13: Dweller's Journey, chapter III). The returned
+	// cards are chosen from the source-linked exiled set rather than targeted;
+	// the count is the effect amount and the paired "put the rest" clause sends
+	// the remainder elsewhere.
+	ReturnLinkedExiledToBattlefieldPartial bool `json:",omitempty"`
+	// PutLinkedExiledRestOnLibraryBottom marks the exact remainder disposal "put
+	// the rest on the bottom of their owners' libraries." (Vault 13: Dweller's
+	// Journey, chapter III). It pairs with a preceding
+	// ReturnLinkedExiledToBattlefieldPartial clause so lowering routes the rest
+	// of the linked exiled set to the bottom of its owners' libraries.
+	PutLinkedExiledRestOnLibraryBottom bool `json:",omitempty"`
 	// ReturnExiledCard marks the explicit O-Ring leaves-the-battlefield clause
 	// "return the exiled card to the battlefield under its owner's control."
 	// (Oblivion Ring, Journey to Nowhere, Fiend Hunter). The returned card is the

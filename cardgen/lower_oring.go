@@ -311,8 +311,11 @@ func faceExilesUntilLeaves(result *loweredFaceAbilities) bool {
 func contentExilesUntilLeaves(content *game.AbilityContent) bool {
 	for modeIndex := range content.Modes {
 		for instructionIndex := range content.Modes[modeIndex].Sequence {
-			exile, ok := content.Modes[modeIndex].Sequence[instructionIndex].Primitive.(game.Exile)
-			if ok && exile.ExileLinkedKey == exileUntilLeavesKey {
+			primitive := content.Modes[modeIndex].Sequence[instructionIndex].Primitive
+			if exile, ok := primitive.(game.Exile); ok && exile.ExileLinkedKey == exileUntilLeavesKey {
+				return true
+			}
+			if exile, ok := primitive.(game.ExileForEachPlayer); ok && exile.LinkedKey == exileUntilLeavesKey {
 				return true
 			}
 		}

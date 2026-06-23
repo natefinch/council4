@@ -59,6 +59,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactSourceSpellExileSyntax(effect) ||
 			exactCounteredSpellExileSyntax(effect) ||
 			exactExileUntilSourceLeavesEffectSyntax(effect) ||
+			exactExileForEachPlayerUntilLeavesEffectSyntax(effect) ||
 			exactExileTopOfLibrarySyntax(effect) ||
 			exactExileEntireHandEffectSyntax(effect) ||
 			exactDirectTargetEffectSyntax(effect, "Exile") ||
@@ -113,6 +114,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactDigPutEffectSyntax(effect) || exactHandLibraryPutEffectSyntax(effect) ||
 			exactPutThoseCountersEffectSyntax(effect) || exactPutThoseCardsIntoHandEffectSyntax(effect) ||
 			exactBottomLinkedExiledCardsEffectSyntax(effect) ||
+			exactPutLinkedExiledRestOnLibraryBottomEffectSyntax(effect) ||
 			exactCounterExiledCardManaValueEffectSyntax(effect)
 	case EffectProliferate:
 		return exactStandaloneActionEffectSyntax(effect, "Proliferate")
@@ -134,6 +136,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactGraveyardReturnEffectSyntax(effect) ||
 			exactChosenCardsBattlefieldReturnEffectSyntax(effect) ||
 			exactReturnExiledCardEffectSyntax(effect) ||
+			exactReturnLinkedExiledToBattlefieldPartialEffectSyntax(effect) ||
 			exactReturnExiledCardsToHandEffectSyntax(effect) ||
 			exactReturnSourceAndExiledCardToHandEffectSyntax(effect) ||
 			exactDirectPronounEffectSyntax(effect, "Return it to its owner's hand.")
