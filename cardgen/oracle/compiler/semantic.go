@@ -1910,6 +1910,14 @@ type CompiledEffect struct {
 	// and a CoinFlipBranchLose effect's on tails. It is CoinFlipBranchNone for
 	// every effect that is not part of a coin flip.
 	CoinFlipBranch CoinFlipBranch
+	// VoteArm marks an effect that belongs to a vote arm. A marked effect's
+	// instruction is gated on the vote tally satisfying the arm: VoteArmOption is
+	// the option index whose votes the arm depends on, and VoteArmTieInclusive
+	// reports whether a tied vote also satisfies it. VoteArm is false for every
+	// effect that is not part of a vote.
+	VoteArm             bool
+	VoteArmOption       int
+	VoteArmTieInclusive bool
 }
 
 // CoinFlipBranch identifies which branch of a recognized "Flip a coin." outcome

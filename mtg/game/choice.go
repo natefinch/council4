@@ -40,6 +40,12 @@ const (
 	// indices of the cards taken. MinChoices and MaxChoices both equal the number
 	// of cards taken, bounded by the number of cards actually seen.
 	ChoiceDig
+	// ChoiceVote asks one player to cast their vote in a "Starting with you,
+	// each player votes for <A> or <B>." voting interaction (CR 701.32). Each
+	// option corresponds to one named choice; the returned selection is the
+	// single option index the player votes for. MinChoices and MaxChoices both
+	// equal one.
+	ChoiceVote
 )
 
 // ChoiceCardInfo carries the public characteristics of a card or permanent that

@@ -190,6 +190,17 @@ func lowerContent(
 		}
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — coin flip branch not lowered")
 	}
+	if syntax != nil && syntax.Vote != nil {
+		// A recognized vote must lower through its dedicated path, which gates
+		// every arm effect on the vote tally. If that path fails closed (an
+		// unsupported arm effect, or a targeted arm), the whole ability fails
+		// closed rather than falling through to generic lowering, which would
+		// silently drop the vote and emit the arm effects ungated.
+		if content, ok := lowerVoteSequence(cardName, ctx, syntax); ok {
+			return content, nil
+		}
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — vote arm not lowered")
+	}
 	if content, ok := lowerPonderSequence(ctx); ok {
 		return content, nil
 	}

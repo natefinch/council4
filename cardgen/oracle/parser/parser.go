@@ -149,6 +149,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitSemanticAccessors(document.Abilities)
 	stripImpulseExileSemantics(document.Abilities)
 	emitCoinFlipSequences(document.Abilities)
+	emitVoteSequences(document.Abilities)
 	emitReminderInner(document.Abilities)
 	emitSourceOrder(document.Abilities)
 	stripConditionalModalHeaderSemantics(document.Abilities)

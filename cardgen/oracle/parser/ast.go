@@ -155,6 +155,13 @@ type Ability struct {
 	// re-reading the condition wording; the flip itself lowers to a fair
 	// two-sided random draw whose result gates the win and lose branches.
 	CoinFlip *CoinFlip `json:",omitempty"`
+	// Vote is the recognized "Starting with you, each player votes for <A> or
+	// <B>." voting construct (CR 701.32), or nil when the ability holds no vote.
+	// Like CoinFlip, the recognizer re-parses each "If <option> gets more
+	// votes[ or the vote is tied], ..." arm clause in isolation and sheds the
+	// consumed sentences' effects and condition wording, so the construct lowers
+	// to a Vote interaction whose tally gates each arm.
+	Vote *VoteClause `json:",omitempty"`
 	// ReadAheadSacrificeChapter is the final lore chapter named by a recognized
 	// "Read ahead" reminder ("Sacrifice after <chapter>"), or 0 when the reminder
 	// omits the sacrifice clause. The chapter is a typed semantic value derived
@@ -1252,6 +1259,34 @@ type CoinFlip struct {
 	// branch effect so the position-blind backend's body-span machinery covers
 	// the entire construct without reasoning about source offsets itself.
 	ConstructSpan shared.Span `json:"-"`
+}
+
+// VoteClause is the recognized "Starting with you, each player votes for <A> or
+// <B>." voting construct and its majority-gated arms (CR 701.32). Options holds
+// the two printed choice labels in printed order; Arms holds one entry per "If
+// <option> gets more votes[ or the vote is tied], <effect>." consequence, each
+// naming the option index it depends on and whether a tie also satisfies it.
+type VoteClause struct {
+	// Options are the two named choice labels in printed order.
+	Options []string `json:",omitempty"`
+	// Arms are the majority-gated consequences, in printed order.
+	Arms []VoteArm `json:",omitempty"`
+	// Spans are the source spans of every sentence the recognizer consumed (the
+	// voting sentence and each arm sentence). Coverage credits them whole.
+	Spans []shared.Span `json:"-"`
+	// ConstructSpan covers the whole construct, from the voting sentence through
+	// the last arm sentence. The compiler stamps it on every arm effect so the
+	// position-blind backend's body-span machinery covers the entire construct.
+	ConstructSpan shared.Span `json:"-"`
+}
+
+// VoteArm is one majority-gated consequence of a VoteClause. Option is the index
+// into VoteClause.Options whose vote count the arm depends on; TieInclusive
+// reports whether a tied vote also satisfies the arm ("or the vote is tied").
+type VoteArm struct {
+	Option       int        `json:",omitempty"`
+	TieInclusive bool       `json:",omitempty"`
+	Sentences    []Sentence `json:",omitempty"`
 }
 
 // ModalChoiceKind identifies exact modal header vocabulary whose range alone
