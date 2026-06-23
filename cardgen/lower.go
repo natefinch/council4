@@ -125,8 +125,16 @@ func hasAdventureCastPermission(faces []loweredFaceAbilities) bool {
 				mode := &ability.Content.Modes[modeIndex]
 				for instructionIndex := range mode.Sequence {
 					instruction := &mode.Sequence[instructionIndex]
-					if instruction.Primitive != nil &&
-						instruction.Primitive.Kind() == game.PrimitiveGrantCastPermission {
+					if instruction.Primitive == nil ||
+						instruction.Primitive.Kind() != game.PrimitiveGrantCastPermission {
+						continue
+					}
+					// Only an alternate-face cast permission is Adventure-specific
+					// and requires the Adventure layout. A front-face graveyard
+					// cast permission (Norika Yamazaki, the Poet) casts the card
+					// normally and is valid on any layout.
+					permission, ok := instruction.Primitive.(game.GrantCastPermission)
+					if ok && permission.Face == game.FaceAlternate {
 						return true
 					}
 				}

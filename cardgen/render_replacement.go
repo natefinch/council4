@@ -787,8 +787,7 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	// Reject unsupported condition fields.
 	if cond.SourceNotMonstrous ||
 		cond.ControllerHasMaxSpeed ||
-		cond.TargetEnteredThisTurn.Exists ||
-		cond.CastFromZone.Exists {
+		cond.TargetEnteredThisTurn.Exists {
 		return "", fmt.Errorf("render: unsupported condition shape for %s", context)
 	}
 	var fields []string
@@ -902,6 +901,16 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	}
 	if cond.SpellWasKicked {
 		fields = append(fields, "SpellWasKicked: true,")
+		hasPredicate = true
+	}
+	if cond.CastFromZone.Exists {
+		castZone, err := renderZone(cond.CastFromZone.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importZone)
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("CastFromZone: opt.Val(%s),", castZone))
 		hasPredicate = true
 	}
 	if cond.SpellXAtLeast > 0 {

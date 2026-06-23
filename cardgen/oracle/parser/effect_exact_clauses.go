@@ -841,19 +841,25 @@ func exactCopyStackObjectEffectSyntax(effect *EffectSyntax) bool {
 }
 
 // exactCopyReferencedSpellEffectSyntax recognizes the resolving effect "Copy
-// that spell." / "Copy it.", whose copy source is a back-reference to the
-// triggering spell rather than a chosen target ("Whenever you cast a spell ...,
-// copy that spell.", Reflections of Littjara). It requires no targets and a
-// single "that spell"/"it" reference; the compiler binds that reference to the
-// triggering spell and lowering copies it. The optional "You may choose new
-// targets for the copy." rider folds separately once this clause is exact.
+// that spell." / "Copy it." / "Copy this spell.", whose copy source is a
+// back-reference to the triggering spell ("Whenever you cast a spell ..., copy
+// that spell.", Reflections of Littjara) or to the resolving spell itself
+// ("Copy this spell.", Sevinne's Reclamation). It requires no targets and a
+// single "that spell"/"it"/"this spell" reference; the compiler binds that
+// reference to the triggering or resolving spell and lowering copies it. The
+// optional "You may choose new targets for the copy." rider folds separately
+// once this clause is exact.
 func exactCopyReferencedSpellEffectSyntax(effect *EffectSyntax) bool {
-	if len(effect.Targets) != 0 || len(effect.References) != 1 {
+	if len(effect.Targets) != 0 {
 		return false
 	}
-	reference := effect.References[0]
+	references := effectClauseReferences(effect)
+	if len(references) != 1 {
+		return false
+	}
+	reference := references[0]
 	switch reference.Kind {
-	case ReferenceThatObject:
+	case ReferenceThatObject, ReferenceThisObject:
 	case ReferencePronoun:
 		if reference.Pronoun != PronounIt {
 			return false
@@ -862,6 +868,22 @@ func exactCopyReferencedSpellEffectSyntax(effect *EffectSyntax) bool {
 		return false
 	}
 	return strings.EqualFold(exactEffectClauseText(effect), "Copy "+reference.Text+".")
+}
+
+// effectClauseReferences returns the effect's references that fall at or after
+// its verb, dropping references that belong to a leading condition clause ("If
+// this spell was cast from a graveyard, ...") which the parser records on the
+// gated effect. Exact recognizers that constrain reference count read the
+// clause's own references through this helper so a condition's back-reference
+// does not defeat the match.
+func effectClauseReferences(effect *EffectSyntax) []Reference {
+	var clause []Reference
+	for _, reference := range effect.References {
+		if reference.Span.Start.Offset >= effect.VerbSpan.Start.Offset {
+			clause = append(clause, reference)
+		}
+	}
+	return clause
 }
 
 // exactChooseNewTargetsEffectSyntax recognizes the retarget effect "[You may]

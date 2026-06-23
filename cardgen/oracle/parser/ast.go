@@ -3,6 +3,7 @@ package parser
 
 import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 )
 
@@ -1169,6 +1170,18 @@ type Modal struct {
 	// option's cost. It is recognized directly from the Spree header, so its
 	// choice range is set without consulting the choose-header vocabulary.
 	Spree bool `json:",omitempty"`
+	// Escalate marks an Escalate modal (CR 702.121): a "Escalate <cost>" keyword
+	// header printed above an ordinary choose-one-or-more modal whose controller
+	// pays EscalateCost once for each mode chosen beyond the first. Unlike Spree,
+	// every option shares the single escalate cost rather than carrying its own,
+	// so the cost lives on the modal rather than on each Mode.
+	Escalate bool `json:",omitempty"`
+	// EscalateCost is the additional mana cost paid for each mode chosen beyond
+	// the first on an Escalate modal. It is set only when Escalate is true.
+	EscalateCost cost.Mana `json:",omitempty"`
+	// EscalateSpan covers the recognized "Escalate <cost>" keyword header so
+	// coverage and rendering can credit its source tokens.
+	EscalateSpan shared.Span `json:"-"`
 	// MinModes and MaxModes are the recognized choice range of the choose
 	// header (e.g. "Choose two —" yields 2/2 and "Choose one or both —" yields
 	// 1/2). They are populated only when ChoiceKnown is true; downstream code

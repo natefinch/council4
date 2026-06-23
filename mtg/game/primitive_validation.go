@@ -1633,7 +1633,7 @@ func (p GrantCastPermission) validatePrimitive([]TargetSpec, bool) error {
 	if p.FromZone != zone.Graveyard {
 		return errors.New("cast permission requires graveyard as its source zone")
 	}
-	if p.Duration != DurationUntilEndOfYourNextTurn {
+	if p.Duration != DurationUntilEndOfTurn && p.Duration != DurationUntilEndOfYourNextTurn {
 		return errors.New("cast permission requires a supported bounded duration")
 	}
 	return nil
@@ -1738,10 +1738,10 @@ func (p CopyStackObject) validatePrimitive(targets []TargetSpec, checkTargets bo
 	switch p.Object.Kind() {
 	case ObjectReferenceTargetStackObject:
 		return validateTargetAllows(p.Object.TargetIndex(), TargetAllowStackObject, targets, checkTargets)
-	case ObjectReferenceEventStackObject:
+	case ObjectReferenceEventStackObject, ObjectReferenceResolvingStackObject:
 		return nil
 	default:
-		return errors.New("copy stack object requires a target or event stack object reference")
+		return errors.New("copy stack object requires a target, event, or resolving stack object reference")
 	}
 }
 

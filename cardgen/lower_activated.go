@@ -453,6 +453,12 @@ func lowerModalContent(
 		MaxModes:        maxModes,
 		ModeChoiceBonus: bonus,
 	}
+	if modal.Escalate {
+		if len(modal.EscalateCost) == 0 {
+			return unsupported("an Escalate modal is missing its escalate cost")
+		}
+		result.EscalateCost = opt.Val(slices.Clone(modal.EscalateCost))
+	}
 	if labeledModal(ctx.content.Modes) && !exactConnectionModes(ctx.content.Modes, result) {
 		return unsupported("the labeled modal options do not match the supported exact mode vocabulary and bodies")
 	}

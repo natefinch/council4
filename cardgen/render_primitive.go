@@ -269,16 +269,31 @@ func (Renderer) renderGrantCastPermission(ctx *renderCtx, value game.GrantCastPe
 	if err != nil {
 		return "", err
 	}
-	if value.Face != game.FaceAlternate {
-		return "", fmt.Errorf("render: unsupported cast-permission face %d", value.Face)
+	face, err := renderFaceIndex(value.Face)
+	if err != nil {
+		return "", err
 	}
 	ctx.need(importZone)
 	return structLit("game.GrantCastPermission", []string{
 		fmt.Sprintf("Card: %s,", card),
 		fmt.Sprintf("FromZone: %s,", fromZone),
-		"Face: game.FaceAlternate,",
+		fmt.Sprintf("Face: %s,", face),
 		fmt.Sprintf("Duration: %s,", duration),
 	}), nil
+}
+
+// renderFaceIndex renders a card face index to its game enum literal. Only the
+// front and alternate faces appear in lowered cast permissions (a normal
+// graveyard cast vs. an Adventure cast); any other face is unsupported.
+func renderFaceIndex(face game.FaceIndex) (string, error) {
+	switch face {
+	case game.FaceFront:
+		return "game.FaceFront", nil
+	case game.FaceAlternate:
+		return "game.FaceAlternate", nil
+	default:
+		return "", fmt.Errorf("render: unsupported cast-permission face %d", face)
+	}
 }
 
 func (r Renderer) renderImpulseExile(ctx *renderCtx, value game.ImpulseExile) (string, error) {

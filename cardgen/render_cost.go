@@ -88,6 +88,8 @@ func (Renderer) renderObjectReference(reference game.ObjectReference) (string, e
 		return "game.EventRelatedPermanentReference()", nil
 	case game.ObjectReferenceEventStackObject:
 		return "game.EventStackObjectReference()", nil
+	case game.ObjectReferenceResolvingStackObject:
+		return "game.ResolvingStackObjectReference()", nil
 	case game.ObjectReferenceSourceCard:
 		return "game.SourceCardPermanentReference()", nil
 	case game.ObjectReferenceSacrificedCost:

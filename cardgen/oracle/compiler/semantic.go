@@ -223,6 +223,12 @@ type CompiledModalSemantics struct {
 	// Spree marks a Spree modal whose options each carry an additional mana cost
 	// (CR 702.171), recorded on each CompiledMode's SpreeCost.
 	Spree bool
+	// Escalate marks an Escalate modal (CR 702.121) whose controller pays
+	// EscalateCost once for each mode chosen beyond the first.
+	Escalate bool
+	// EscalateCost is the shared per-extra-mode cost of an Escalate modal. It is
+	// set only when Escalate is true.
+	EscalateCost cost.Mana
 }
 
 // CompiledModalChoiceKind identifies exact typed modal header vocabulary.
@@ -580,6 +586,11 @@ const (
 	// kicked ("if this spell was kicked, ... instead"). It gates the kicked
 	// effect variant against the spell's kicker-paid cast context.
 	ConditionPredicateSpellWasKicked
+	// ConditionPredicateSpellWasCastFromGraveyard is satisfied when the resolving
+	// spell was cast from a graveyard ("if this spell was cast from a graveyard,
+	// ..."). It gates a per-effect branch against the spell's source zone and is
+	// false for copies. It backs Sevinne's Reclamation's conditional self-copy.
+	ConditionPredicateSpellWasCastFromGraveyard
 	// ConditionPredicateSourceSaddled is satisfied when the source Mount is
 	// currently saddled (CR 702.166), as in "if this creature is saddled". It
 	// gates a per-effect branch on the source's runtime saddled state.

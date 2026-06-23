@@ -1455,6 +1455,9 @@ func lowerImmediateSingleEffectSpellTail(
 		content, diag := lowerCreateTokenSpell(ctx)
 		return content, diag, true
 	case compiler.EffectCast:
+		if content, diag, ok := lowerCastFromGraveyardPermission(ctx); ok {
+			return content, diag, true
+		}
 		content, diag := lowerCastForFreeSpell(ctx)
 		return content, diag, true
 	case compiler.EffectAttach:
