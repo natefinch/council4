@@ -109,6 +109,21 @@ func recordActionSource(g *game.Game, playerID game.PlayerID, actionLog *ActionL
 	}
 	actionLog.addPermanentSnapshot(g, payload.SourceID)
 	actionLog.ManaAbility = isManaAbilityActivation(g, playerID, payload)
+	actionLog.AbilityText = activatedAbilityText(g, playerID, payload)
+}
+
+// activatedAbilityText returns the printed rules text of the ability the action
+// activates, whether it is printed on a battlefield permanent or on a card
+// activated from hand (for example cycling). It returns "" when the ability has
+// no text or cannot be resolved.
+func activatedAbilityText(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction) string {
+	if _, body, ok := activatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex); ok {
+		return game.BodyText(body)
+	}
+	if _, body, ok := handActivatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex); ok {
+		return body.Text
+	}
+	return ""
 }
 
 // lastEntryIndex returns the index of the most recently appended turn-log entry,

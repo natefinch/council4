@@ -804,6 +804,50 @@ func BodyContent(body Ability) AbilityContent {
 	}
 }
 
+// BodyText returns the printed rules text of a sealed ability body, or "" for
+// variants that carry none (AbilityContent).
+func BodyText(body Ability) string {
+	switch b := body.(type) {
+	case *ActivatedAbility:
+		if b == nil {
+			return ""
+		}
+		return b.Text
+	case *ManaAbility:
+		if b == nil {
+			return ""
+		}
+		return b.Text
+	case *LoyaltyAbility:
+		if b == nil {
+			return ""
+		}
+		return b.Text
+	case *TriggeredAbility:
+		if b == nil {
+			return ""
+		}
+		return b.Text
+	case *ChapterAbility:
+		if b == nil {
+			return ""
+		}
+		return b.Text
+	case *ReplacementAbility:
+		if b == nil {
+			return ""
+		}
+		return b.Text
+	case *StaticAbility:
+		if b == nil {
+			return ""
+		}
+		return b.Text
+	default:
+		return ""
+	}
+}
+
 // BodyTargets returns the target specs for a sealed ability body's content.
 // Non-modal content uses its sole mode's targets; modal content uses shared targets.
 func BodyTargets(body Ability) []TargetSpec {
