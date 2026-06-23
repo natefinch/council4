@@ -189,6 +189,22 @@ func TestExactGraveyardCardTargetAccepts(t *testing.T) {
 		"Return up to three target permanent cards from your graveyard to your hand.",
 		"Return up to two target Zombie cards from your graveyard to the battlefield.",
 		"Return up to two target cards with cycling from your graveyard to your hand.",
+		// Three-or-more type unions render with the serial-comma "X, Y, or Z"
+		// form for a single target and the "X, Y, and/or Z" form for plural
+		// multi-target counts.
+		"Return target artifact, creature, or enchantment card from your graveyard to the battlefield.",
+		"Return target instant, sorcery, or creature card from your graveyard to your hand.",
+		"Return up to two target artifact, creature, and/or enchantment cards from your graveyard to your hand.",
+		// Plural multi-target type unions join with "and/or" rather than "or".
+		"Return up to two target instant and/or sorcery cards from your graveyard to your hand.",
+		// "one or two"/"one, two, or three" target counts are exact cardinalities.
+		"Return one or two target creature cards from your graveyard to your hand.",
+		"Return one, two, or three target creature cards from your graveyard to your hand.",
+		// Owner-relative hand destinations lower identically to "to your hand"
+		// because returned cards always move to their owner's hand.
+		"Return target creature card from your graveyard to its owner's hand.",
+		"Return up to two target creature cards from your graveyard to their hand.",
+		"Return up to three target creature cards from your graveyard to their owners' hands.",
 	}
 	for _, source := range accepted {
 		if !graveyardReturnExact(t, source) {
@@ -206,8 +222,6 @@ func TestExactGraveyardCardTargetFailsClosed(t *testing.T) {
 		// Supertype and excluded-type combinations are unrendered.
 		"Return target basic land card from your graveyard to the battlefield.",
 		"Return target nonland permanent card from your graveyard to the battlefield.",
-		// "and/or" unions are not the canonical " or " join.
-		"Return up to two target instant and/or sorcery cards from your graveyard to your hand.",
 	}
 	for _, source := range rejected {
 		if graveyardReturnExact(t, source) {
