@@ -196,6 +196,8 @@ func compileModalChoiceKind(kind parser.ModalChoiceKind) CompiledModalChoiceKind
 	switch kind {
 	case parser.ModalChoiceKindOneOrMore:
 		return CompiledModalChoiceOneOrMore
+	case parser.ModalChoiceKindOneAtRandom:
+		return CompiledModalChoiceOneAtRandom
 	default:
 		return CompiledModalChoiceUnknown
 	}

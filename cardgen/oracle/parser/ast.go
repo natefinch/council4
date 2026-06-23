@@ -1298,6 +1298,12 @@ const (
 	ModalChoiceKindUnknown ModalChoiceKind = ""
 	// ModalChoiceKindOneOrMore marks the exact "choose one or more" header.
 	ModalChoiceKindOneOrMore ModalChoiceKind = "ModalChoiceKindOneOrMore"
+	// ModalChoiceKindOneAtRandom marks the exact "choose one at random" header,
+	// where the single mode is selected at random rather than by the controller
+	// (CR 700.2). Its range stays one/one; the kind preserves that the choice is
+	// not made by a player so downstream lowering can fail closed where random
+	// selection is unsupported.
+	ModalChoiceKindOneAtRandom ModalChoiceKind = "ModalChoiceKindOneAtRandom"
 )
 
 // ModalChoiceBonusCondition identifies a cast-time condition that expands a
@@ -1342,11 +1348,18 @@ type ModeLabelClause struct {
 
 // Mode is one bullet option in a modal ability.
 type Mode struct {
-	Span                   shared.Span             `json:"-"`
-	Text                   string                  `json:",omitempty"`
-	Tokens                 []shared.Token          `json:"-"`
-	Label                  *ModeLabelClause        `json:",omitempty"`
-	SpreeCost              *SpreeCostClause        `json:",omitempty"`
+	Span      shared.Span      `json:"-"`
+	Text      string           `json:",omitempty"`
+	Tokens    []shared.Token   `json:"-"`
+	Label     *ModeLabelClause `json:",omitempty"`
+	SpreeCost *SpreeCostClause `json:",omitempty"`
+	// FlavorSpan covers a Final Fantasy "Summon:" Saga modal option's flavor-name
+	// prefix ("Combine Powers! — Put three +1/+1 counters..."), a Title-Case
+	// proper name set off by an em dash. The name carries no rules meaning (CR
+	// 207.2c) and is stripped from the option body, so it lowers as if absent;
+	// the span is retained only so coverage credits the flavor tokens.
+	FlavorSpan             shared.Span             `json:"-"`
+	FlavorSeparatorSpan    shared.Span             `json:"-"`
 	Body                   Phrase                  `json:",omitzero"`
 	Sentences              []Sentence              `json:",omitempty"`
 	ConditionBoundaries    []ConditionBoundary     `json:",omitempty"`

@@ -67,14 +67,22 @@ func (e *Engine) triggerModes(g *game.Game, controller game.PlayerID, ability *g
 	if len(content.SharedTargets) != 0 {
 		return nil, false
 	}
-	for i := range content.Modes {
-		if len(content.Modes[i].Targets) != 0 {
-			return nil, false
-		}
-	}
 	minModes, maxModes := modeChoiceRangeFromContent(content)
 	if !modeChoiceRangeValid(content, minModes, maxModes) {
 		return nil, false
+	}
+	if content.RandomModes {
+		// "Choose one at random" selects the single mode with the game's random
+		// source rather than prompting the controller (CR 700.2). The lowering
+		// guarantees a one/one range, so exactly one mode is selected.
+		if minModes != 1 || maxModes != 1 || len(content.Modes) == 0 {
+			return nil, false
+		}
+		selected := []int{e.rng.IntN(len(content.Modes))}
+		if !modesValidForContent(content, selected) {
+			return nil, false
+		}
+		return selected, true
 	}
 	options := make([]game.ChoiceOption, len(content.Modes))
 	for i := range content.Modes {

@@ -56,7 +56,11 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 		}
 		ability, abilityDiagnostics := parseAbility(source, lines[i], context)
 		diagnostics = append(diagnostics, abilityDiagnostics...)
-		if modalStart := modalHeaderStart(lines[i]); modalStart >= 0 {
+		modalStart := modalHeaderStart(lines[i])
+		if modalStart < 0 && context.Saga && len(ability.Chapters) > 0 {
+			modalStart = chapterModalHeaderStart(lines[i])
+		}
+		if modalStart >= 0 {
 			modalTokens := lines[i][modalStart:]
 			dash := shared.TopLevelIndex(modalTokens, shared.EmDash)
 			headerTokens := modalTokens
@@ -786,6 +790,10 @@ func parseMode(source string, tokens []shared.Token) (Mode, []shared.Diagnostic)
 	if label, body, ok := parseModeLabel(source, tokens); ok {
 		mode.Label = label
 		bodyTokens = body
+	} else if effect, flavor, ok := stripChapterFlavorName(tokens); ok {
+		mode.FlavorSpan = shared.SpanOf(flavor)
+		mode.FlavorSeparatorSpan = tokens[len(flavor)].Span
+		bodyTokens = effect
 	}
 	mode.Body = phraseFromTokens(source, bodyTokens)
 	mode.Sentences = ParseSentences(source, bodyTokens)
@@ -1185,6 +1193,14 @@ func recognizeModalChoice(header Phrase, atoms Atoms) modalChoiceRecognition {
 	}
 	if len(tokens) == 5 &&
 		tokens[0].Kind == shared.Word && strings.EqualFold(tokens[0].Text, "choose") &&
+		tokens[1].Kind == shared.Word && strings.EqualFold(tokens[1].Text, "one") &&
+		tokens[2].Kind == shared.Word && strings.EqualFold(tokens[2].Text, "at") &&
+		tokens[3].Kind == shared.Word && strings.EqualFold(tokens[3].Text, "random") &&
+		tokens[4].Kind == shared.EmDash {
+		return modalChoiceRecognition{minModes: 1, maxModes: 1, kind: ModalChoiceKindOneAtRandom, ok: true}
+	}
+	if len(tokens) == 5 &&
+		tokens[0].Kind == shared.Word && strings.EqualFold(tokens[0].Text, "choose") &&
 		tokens[1].Kind == shared.Word && strings.EqualFold(tokens[1].Text, "up") &&
 		tokens[2].Kind == shared.Word && strings.EqualFold(tokens[2].Text, "to") &&
 		tokens[3].Kind == shared.Word &&
@@ -1254,6 +1270,26 @@ func modalHeaderStart(tokens []shared.Token) int {
 		}
 	}
 	return -1
+}
+
+// chapterModalHeaderStart reports the index at which a modal choose header begins
+// within a Saga chapter line whose body is itself a modal ("I, II, III — Choose
+// one at random — • ..."). The chapter numbers precede the first em dash; the
+// remainder is a modal header whose bullet options follow on subsequent lines.
+// It returns -1 when the line is not a chapter heading or its body is not a modal
+// header, so non-chapter ability-word lines are unaffected.
+func chapterModalHeaderStart(tokens []shared.Token) int {
+	dash := shared.TopLevelIndex(tokens, shared.EmDash)
+	if dash <= 0 || dash+1 >= len(tokens) {
+		return -1
+	}
+	if _, ok := parseChapterHeading(tokens[:dash]); !ok {
+		return -1
+	}
+	if !isModalHeader(tokens[dash+1:]) {
+		return -1
+	}
+	return dash + 1
 }
 
 // tokensOutsideParens returns the tokens that lie outside any parenthesized
