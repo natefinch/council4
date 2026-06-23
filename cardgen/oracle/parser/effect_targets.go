@@ -1410,7 +1410,11 @@ func exactExcludedSupertypeTargetSyntax(text string, selection SelectionSyntax) 
 }
 
 func targetSelectionHasUnsupportedQualifier(tokens []shared.Token, atoms Atoms) bool {
-	for _, token := range tokens {
+	dynStart, dynEnd, hasDyn := selectionManaValueDynamicSpan(tokens)
+	for idx, token := range tokens {
+		if hasDyn && idx >= dynStart && idx < dynEnd {
+			continue
+		}
 		if token.Kind == shared.Integer || token.Kind == shared.Comma || token.Kind == shared.Slash ||
 			selectionGrammarWord(token) || selectionAtomCoversToken(atoms, token) {
 			continue
@@ -1533,7 +1537,8 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 			moveCounterDestinationStartsAt(tokens, end) ||
 			(equalWord(token, "from") && end+1 < len(tokens) && equalWord(tokens[end+1], "combat")) ||
 			equalWord(token, "unless") ||
-			(equalWord(token, "equal") && end+1 < len(tokens) && equalWord(tokens[end+1], "to")) ||
+			(equalWord(token, "equal") && end+1 < len(tokens) && equalWord(tokens[end+1], "to") &&
+				(end < 2 || !equalWord(tokens[end-1], "or") || !equalWord(tokens[end-2], "than"))) ||
 			(equalWord(token, "and") && end+2 < len(tokens) && equalWord(tokens[end+1], "you") && effectWordKind(tokens[end+2]) != EffectUnknown) ||
 			selfDamageRiderFollowsAt(tokens, atoms, end) ||
 			targetControllerDamageRiderFollowsAt(tokens, atoms, end) ||
@@ -2053,6 +2058,15 @@ func parseSelectionNumbers(tokens []shared.Token, atoms Atoms, selection *Select
 				selection.ManaValueX = true
 				continue
 			}
+			if kind, _, ok := parseSelectionManaValueDynamic(tokens, i+2); ok {
+				// "mana value less than or equal to the amount of life you
+				// (lost|gained) this turn" bounds the match by a turn-event life
+				// total (Betor, Ancestor's Voice). Record the dynamic kind on its
+				// own field; only the graveyard-card target reconstruction renders
+				// it, so other contexts keep failing closed.
+				selection.ManaValueDynamic = kind
+				continue
+			}
 			comparison, ok := parseSelectionNumberComparison(tokens[i+2:], atoms)
 			if !ok {
 				return false
@@ -2091,6 +2105,72 @@ func parseSelectionNumbers(tokens []shared.Token, atoms Atoms, selection *Select
 		}
 	}
 	return true
+}
+
+// parseSelectionManaValueDynamic recognizes the "less than or equal to the
+// amount of life you (lost|gained) this turn" upper bound that follows "mana
+// value" in a graveyard-card target ("creature card with mana value less than or
+// equal to the amount of life you lost this turn" — Betor, Ancestor's Voice),
+// returning the dynamic life-total kind. It fails closed for any other operator
+// or operand so the fixed and X-derived bounds keep their own paths.
+func parseSelectionManaValueDynamic(tokens []shared.Token, start int) (EffectDynamicAmountKind, int, bool) {
+	if !effectWordsAt(tokens, start, "less", "than", "or", "equal", "to") {
+		return "", 0, false
+	}
+	idx := start + 5
+	if !effectWordsAt(tokens, idx, "the") {
+		return "", 0, false
+	}
+	idx++
+	switch {
+	case effectWordsAt(tokens, idx, "amount", "of", "life"):
+		idx += 3
+	case effectWordsAt(tokens, idx, "life"):
+		idx++
+	default:
+		return "", 0, false
+	}
+	switch {
+	case effectWordsAt(tokens, idx, "you've"):
+		idx++
+	case effectWordsAt(tokens, idx, "you", "have"):
+		idx += 2
+	case effectWordsAt(tokens, idx, "you"):
+		idx++
+	default:
+		return "", 0, false
+	}
+	var kind EffectDynamicAmountKind
+	switch {
+	case effectWordsAt(tokens, idx, "lost"):
+		kind = EffectDynamicAmountLifeLostThisTurn
+	case effectWordsAt(tokens, idx, "gained"):
+		kind = EffectDynamicAmountLifeGainedThisTurn
+	default:
+		return "", 0, false
+	}
+	idx++
+	if !effectWordsAt(tokens, idx, "this", "turn") {
+		return "", 0, false
+	}
+	idx += 2
+	return kind, idx, true
+}
+
+// selectionManaValueDynamicSpan reports the token span of a "mana value less
+// than or equal to the amount of life you (lost|gained) this turn" rider, so the
+// unsupported-qualifier gate can treat the dynamic life words ("amount", "life",
+// "lost", ...) as a recognized qualifier rather than rejecting the whole
+// selection. It returns the half-open [start, end) index range over tokens.
+func selectionManaValueDynamicSpan(tokens []shared.Token) (start, end int, ok bool) {
+	for i := range tokens {
+		if i+2 < len(tokens) && effectWordsAt(tokens, i, "mana", "value") {
+			if _, end, ok := parseSelectionManaValueDynamic(tokens, i+2); ok {
+				return i, end, true
+			}
+		}
+	}
+	return 0, 0, false
 }
 
 func parseSelectionNumberComparison(tokens []shared.Token, atoms Atoms) (compare.Int, bool) {

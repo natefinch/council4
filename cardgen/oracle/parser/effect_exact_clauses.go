@@ -420,6 +420,19 @@ func exactGraveyardCardTargetSyntax(target *TargetSyntax) bool {
 		}
 		manaClause = clause
 	}
+	if sel.ManaValueDynamic != "" {
+		// A dynamic "less than or equal to the amount of life you (lost|gained)
+		// this turn" bound (Betor, Ancestor's Voice) is independent of the fixed
+		// MatchManaValue path and never combines with it on a printed card.
+		if sel.MatchManaValue {
+			return false
+		}
+		clause, ok := graveyardManaValueDynamicClause(sel.ManaValueDynamic)
+		if !ok {
+			return false
+		}
+		manaClause = clause
+	}
 	return strings.EqualFold(target.Text, prefix+noun+manaClause+" "+owner)
 }
 
@@ -610,6 +623,21 @@ func graveyardManaValueClause(manaValue compare.Int) (string, bool) {
 		return "", false
 	}
 	return " with mana value " + strconv.Itoa(manaValue.Value) + " or less", true
+}
+
+// graveyardManaValueDynamicClause renders the canonical " with mana value less
+// than or equal to the amount of life you (lost|gained) this turn" qualifier from
+// a dynamic mana-value bound (Betor, Ancestor's Voice). It fails closed for any
+// other dynamic amount.
+func graveyardManaValueDynamicClause(kind EffectDynamicAmountKind) (string, bool) {
+	switch kind {
+	case EffectDynamicAmountLifeLostThisTurn:
+		return " with mana value less than or equal to the amount of life you lost this turn", true
+	case EffectDynamicAmountLifeGainedThisTurn:
+		return " with mana value less than or equal to the amount of life you gained this turn", true
+	default:
+		return "", false
+	}
 }
 
 func titleFirstEffectText(text string) string {

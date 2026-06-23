@@ -191,6 +191,16 @@ type Selection struct {
 	Power     opt.V[compare.Int]
 	Toughness opt.V[compare.Int]
 
+	// ManaValueDynamic, when set, bounds the matched card's mana value by a value
+	// computed as the predicate is evaluated rather than by a fixed number,
+	// modeling "with mana value less than or equal to the amount of life you
+	// (lost|gained) this turn" (Betor, Ancestor's Voice). The comparison is
+	// always less-than-or-equal and the bound is controller-relative: the "you"
+	// names the viewing player. Only the turn-event life totals
+	// (DynamicAmountLifeLostThisTurn, DynamicAmountLifeGainedThisTurn) are
+	// modeled; any other dynamic amount is rejected by Validate.
+	ManaValueDynamic opt.V[ManaValueDynamicBound]
+
 	// RequiredCounter names the counter kind required when MatchCounter is set.
 	RequiredCounter counter.Kind
 
@@ -236,6 +246,17 @@ type Selection struct {
 	RequirePermanentCard bool
 }
 
+// ManaValueDynamicBound bounds a card's mana value by a controller-relative
+// value computed as the predicate is evaluated rather than a fixed number. Only
+// the turn-event life totals are modeled and the comparison is always
+// less-than-or-equal; Multiplier and Addend scale and shift the evaluated amount
+// (CR 608.2c). It backs Selection.ManaValueDynamic.
+type ManaValueDynamicBound struct {
+	Kind       DynamicAmountKind
+	Multiplier int
+	Addend     int
+}
+
 // Empty reports whether the Selection carries no active predicate and therefore
 // matches anything.
 func (s Selection) Empty() bool {
@@ -261,6 +282,7 @@ func (s Selection) Empty() bool {
 		!s.ManaValue.Exists &&
 		!s.Power.Exists &&
 		!s.Toughness.Exists &&
+		!s.ManaValueDynamic.Exists &&
 		!s.MatchCounter &&
 		!s.MatchAnyCounter &&
 		!s.RequiredCounterCount.Exists &&
@@ -324,6 +346,13 @@ func (s Selection) Validate() []string {
 	}
 	if s.NonToken && s.TokenOnly {
 		problems = append(problems, "selection cannot require both token and non-token objects")
+	}
+	if s.ManaValueDynamic.Exists {
+		switch s.ManaValueDynamic.Val.Kind {
+		case DynamicAmountLifeLostThisTurn, DynamicAmountLifeGainedThisTurn:
+		default:
+			problems = append(problems, fmt.Sprintf("dynamic mana-value bound uses unsupported amount %v", s.ManaValueDynamic.Val.Kind))
+		}
 	}
 	return problems
 }

@@ -143,6 +143,7 @@ func SelectionForSelectorMasked(selector compiler.CompiledSelector, mask Selecti
 		selector.BasicLandType ||
 		selector.PlayerOrPlaneswalker ||
 		selector.MatchTotalManaValue ||
+		selector.ManaValueDynamic != compiler.DynamicAmountNone ||
 		selector.InclusiveOneOfEach ||
 		selector.RequiredName != "" ||
 		len(selector.SourceTypes()) != 0 ||

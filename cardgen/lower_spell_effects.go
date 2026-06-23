@@ -396,6 +396,20 @@ func cardInZoneTargetSpec(target compiler.CompiledTarget, targetZone zone.Type) 
 	}, true
 }
 
+// lowerManaValueDynamicBound maps a compiled dynamic mana-value bound kind to a
+// runtime ManaValueDynamicBound. Only the turn-event life totals are modeled
+// (matching the runtime predicate); any other kind fails closed.
+func lowerManaValueDynamicBound(kind compiler.DynamicAmountKind) (game.ManaValueDynamicBound, bool) {
+	switch kind {
+	case compiler.DynamicAmountLifeLostThisTurn:
+		return game.ManaValueDynamicBound{Kind: game.DynamicAmountLifeLostThisTurn, Multiplier: 1}, true
+	case compiler.DynamicAmountLifeGainedThisTurn:
+		return game.ManaValueDynamicBound{Kind: game.DynamicAmountLifeGainedThisTurn, Multiplier: 1}, true
+	default:
+		return game.ManaValueDynamicBound{}, false
+	}
+}
+
 // DO-NOT-COPY(filter): projects card-zone (graveyard/hand/library/exile)
 // selections, including the bare "a card" (SelectorCard) noun and a zone
 // filter, which the battlefield-only canonical projector fails closed on by
@@ -479,6 +493,13 @@ func cardSelectionForSelector(selector compiler.CompiledSelector) (game.Selectio
 			return game.Selection{}, false
 		}
 		selection.ManaValue = opt.Val(selector.ManaValue)
+	}
+	if selector.ManaValueDynamic != compiler.DynamicAmountNone {
+		bound, ok := lowerManaValueDynamicBound(selector.ManaValueDynamic)
+		if !ok {
+			return game.Selection{}, false
+		}
+		selection.ManaValueDynamic = opt.Val(bound)
 	}
 	// A total (set-sum) mana-value bound is not a per-card filter; game.Selection
 	// cannot express it. Fail closed here so no path silently drops the
@@ -621,18 +642,21 @@ func lowerAttachedCounterPlacement(ctx contentCtx) (game.AbilityContent, bool) {
 	}.Ability(), true
 }
 
-// lowerMultiTargetCounterPlacement lowers an exact fixed counter placement that
-// puts a counter on each of several targets ("Put a +1/+1 counter on each of up
-// to two target creatures.") or on an optional single target ("Put a +1/+1
-// counter on up to one target creature."). The runtime models this as a single
-// target spec with one AddCounter instruction per target index, mirroring the
-// per-target instruction fan-out of multi-target graveyard return; resolution
-// skips instructions whose optional target was not chosen. It is restricted to
-// fixed positive amounts of a supported permanent counter kind on a plain
-// permanent target, failing closed for player counters, dynamic amounts, and any
-// referenced or conditional shape. The plain single target ("Put a +1/+1 counter
-// on target creature") is handled by the dedicated single-target branch in
-// lowerCounterPlacementSpell, not here.
+// lowerMultiTargetCounterPlacement lowers an exact counter placement that puts
+// counters on each of several targets ("Put a +1/+1 counter on each of up to two
+// target creatures.") or on an optional single target ("Put a number of +1/+1
+// counters on up to one other target creature you control equal to the amount of
+// life you gained this turn." — Betor, Ancestor's Voice). The runtime models
+// this as a single target spec with one AddCounter instruction per target index,
+// mirroring the per-target instruction fan-out of multi-target graveyard return;
+// resolution skips instructions whose optional target was not chosen. The
+// per-target count is a fixed positive amount or a life-changed-this-turn
+// dynamic amount (the amount of life you gained/lost this turn), applied
+// identically to every chosen target. It is restricted to a supported permanent
+// counter kind on a plain permanent target, failing closed for player counters
+// and any referenced or conditional shape. The plain single target ("Put a
+// +1/+1 counter on target creature") is handled by the dedicated single-target
+// branch in lowerCounterPlacementSpell, not here.
 func lowerMultiTargetCounterPlacement(ctx contentCtx) (game.AbilityContent, bool) {
 	effect := ctx.content.Effects[0]
 	if len(ctx.content.Targets) != 1 ||
@@ -644,9 +668,11 @@ func lowerMultiTargetCounterPlacement(ctx contentCtx) (game.AbilityContent, bool
 		effect.Context != parser.EffectContextController ||
 		!effect.CounterKindKnown ||
 		!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
-		effect.CounterKind.PlayerOnly() ||
-		!effect.Amount.Known ||
-		effect.Amount.Value < 1 {
+		effect.CounterKind.PlayerOnly() {
+		return game.AbilityContent{}, false
+	}
+	amount, ok := multiTargetCounterAmount(effect.Amount)
+	if !ok {
 		return game.AbilityContent{}, false
 	}
 	target := ctx.content.Targets[0]
@@ -664,7 +690,7 @@ func lowerMultiTargetCounterPlacement(ctx contentCtx) (game.AbilityContent, bool
 	sequence := make([]game.Instruction, 0, spec.MaxTargets)
 	for i := range spec.MaxTargets {
 		sequence = append(sequence, game.Instruction{Primitive: game.AddCounter{
-			Amount:      game.Fixed(effect.Amount.Value),
+			Amount:      amount,
 			Object:      game.TargetPermanentReference(i),
 			CounterKind: effect.CounterKind,
 		}})
@@ -673,6 +699,33 @@ func lowerMultiTargetCounterPlacement(ctx contentCtx) (game.AbilityContent, bool
 		Targets:  []game.TargetSpec{spec},
 		Sequence: sequence,
 	}.Ability(), true
+}
+
+// multiTargetCounterAmount resolves the per-target count for a fan-out counter
+// placement, accepting a fixed positive amount or a life-changed-this-turn
+// dynamic amount ("a number of +1/+1 counters ... equal to the amount of life
+// you gained this turn" — Betor, Ancestor's Voice). Those turn-event totals are
+// computed once for the controller and apply identically to every chosen target.
+// It fails closed for non-positive fixed amounts, the variable X, and every
+// other dynamic amount, whose per-target or distribution semantics this fan-out
+// does not model.
+func multiTargetCounterAmount(amount compiler.CompiledAmount) (game.Quantity, bool) {
+	switch {
+	case amount.Known:
+		if amount.Value < 1 {
+			return game.Quantity{}, false
+		}
+		return game.Fixed(amount.Value), true
+	case amount.DynamicKind == compiler.DynamicAmountLifeGainedThisTurn ||
+		amount.DynamicKind == compiler.DynamicAmountLifeLostThisTurn:
+		dynamic, ok := lowerDynamicAmount(amount, game.SourcePermanentReference())
+		if !ok {
+			return game.Quantity{}, false
+		}
+		return game.Dynamic(dynamic), true
+	default:
+		return game.Quantity{}, false
+	}
 }
 
 // counterPlacementKeywordsBenign reports whether every semantic keyword on a

@@ -174,6 +174,16 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 			return false
 		}
 	}
+	if sel.ManaValueDynamic.Exists {
+		bound, ok := dynamicManaValueBound(s.g, s.viewer, sel.ManaValueDynamic.Val)
+		if !ok {
+			return false
+		}
+		manaValue, ok := s.manaValue()
+		if !ok || manaValue > bound {
+			return false
+		}
+	}
 	if sel.Power.Exists {
 		power, ok := s.power()
 		if !ok || !sel.Power.Val.Matches(power) {
@@ -239,6 +249,21 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 		return false
 	}
 	return true
+}
+
+// dynamicManaValueBound evaluates the controller-relative upper bound for a
+// Selection.ManaValueDynamic predicate (CR 608.2c). It supports only the
+// turn-event life totals, applying the amount's multiplier and addend; any other
+// dynamic amount fails closed so a card-definition bug never silently widens the
+// bound.
+func dynamicManaValueBound(g *game.Game, controller game.PlayerID, bound game.ManaValueDynamicBound) (int, bool) {
+	switch bound.Kind {
+	case game.DynamicAmountLifeLostThisTurn, game.DynamicAmountLifeGainedThisTurn:
+		multiplier := max(bound.Multiplier, 1)
+		return turnEventDynamicAmount(g, controller, bound.Kind)*multiplier + bound.Addend, true
+	default:
+		return 0, false
+	}
 }
 
 func (s *selectionSubject) hasType(cardType types.Card) bool {

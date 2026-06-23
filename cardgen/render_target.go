@@ -558,6 +558,21 @@ func renderSelectionComparisons(ctx *renderCtx, selection game.Selection) ([]str
 		}
 		fields = append(fields, fmt.Sprintf("%s: opt.Val(%s),", c.name, cmp))
 	}
+	if selection.ManaValueDynamic.Exists {
+		ctx.need(importOpt)
+		kind, err := renderDynamicAmountKind(selection.ManaValueDynamic.Val.Kind)
+		if err != nil {
+			return nil, err
+		}
+		boundFields := []string{fmt.Sprintf("Kind: %s", kind)}
+		if selection.ManaValueDynamic.Val.Multiplier != 0 {
+			boundFields = append(boundFields, fmt.Sprintf("Multiplier: %d", selection.ManaValueDynamic.Val.Multiplier))
+		}
+		if selection.ManaValueDynamic.Val.Addend != 0 {
+			boundFields = append(boundFields, fmt.Sprintf("Addend: %d", selection.ManaValueDynamic.Val.Addend))
+		}
+		fields = append(fields, fmt.Sprintf("ManaValueDynamic: opt.Val(game.ManaValueDynamicBound{%s}),", strings.Join(boundFields, ", ")))
+	}
 	if selection.MatchCounter {
 		ctx.need(importCounter)
 		kind, err := renderCounterKind(selection.RequiredCounter)
