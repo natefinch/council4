@@ -102,3 +102,34 @@ func TestNamedBecomeTriggersLegendRule(t *testing.T) {
 		t.Fatalf("death logs = %+v, want newer duplicate legend-rule death", deaths)
 	}
 }
+
+// TestNamedBecomeNameMatchesSelection verifies that a Selection.Name filter
+// matches a permanent by its effective (continuous-layer) name, so a creature
+// renamed Fenric by a named-become effect is found by a "named Fenric" target
+// predicate even though its printed name differs (The Curse of Fenric III).
+func TestNamedBecomeNameMatchesSelection(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	creature := addPermanentForSBA(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Grizzly Bears",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2}),
+	}})
+
+	fenricSelection := game.Selection{Name: "Fenric"}
+	if matchSelectionForPermanent(g, game.Player1, fenricSelection, creature) {
+		t.Fatal("creature matched the Fenric name filter before being renamed")
+	}
+
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:               1,
+		AffectedObjectID: creature.ObjectID,
+		Layer:            game.LayerText,
+		Duration:         game.DurationPermanent,
+		SetName:          "Fenric",
+	})
+
+	if !matchSelectionForPermanent(g, game.Player1, fenricSelection, creature) {
+		t.Fatal("renamed creature did not match the Fenric name filter")
+	}
+}

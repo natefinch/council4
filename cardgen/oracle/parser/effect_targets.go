@@ -93,7 +93,15 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 			nameUnique = true
 		}
 		selection := parseSelection(selectionTokens, atoms)
-		if targetSelectionHasUnsupportedQualifier(selectionTokens, atoms) {
+		qualifierTokens := selectionTokens
+		if _, head, ok := splitSelectionNamedTail(selectionTokens); ok {
+			// parseSelection has already captured the "named <Name>" tail as
+			// RequiredName; scan only the head for unsupported qualifiers so a
+			// supported noun ("creature named Fenric") survives instead of being
+			// wiped by the unrecognized name tokens (The Curse of Fenric III).
+			qualifierTokens = head
+		}
+		if targetSelectionHasUnsupportedQualifier(qualifierTokens, atoms) {
 			selection = SelectionSyntax{Span: selection.Span, Text: selection.Text}
 		}
 		selection.NameUniqueAmongControlled = nameUnique
@@ -270,6 +278,13 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 // set of single-target qualifiers; exactRuntimeTargetSyntax also reuses it for
 // the "up to one target <noun>" optional form after stripping the count words.
 func exactSinglePermanentTargetSyntax(text string, selection SelectionSyntax) bool {
+	if selection.RequiredName != "" {
+		trimmed, had := strings.CutSuffix(text, " named "+selection.RequiredName)
+		if !had {
+			return false
+		}
+		text = trimmed
+	}
 	if selection.NameUniqueAmongControlled {
 		trimmed, had := strings.CutSuffix(text, " "+nameUniqueAmongControlledClauseText)
 		if !had {

@@ -1560,7 +1560,7 @@ func fightCreatureTargetSpec(target compiler.CompiledTarget, allowAnother bool) 
 	if target.Cardinality.Max != 1 ||
 		target.Cardinality.Min < 0 ||
 		target.Cardinality.Min > 1 ||
-		target.Selector.Kind != compiler.SelectorCreature ||
+		!fightTargetSelectsCreature(target.Selector) ||
 		(target.Selector.Another && !allowAnother) ||
 		target.Selector.Other ||
 		target.Selector.Attacking ||
@@ -1577,6 +1577,8 @@ func fightCreatureTargetSpec(target compiler.CompiledTarget, allowAnother bool) 
 		DistinctFromPriorTargets: target.Selector.Another,
 		Predicate: game.TargetPredicate{
 			PermanentTypes: []types.Card{types.Creature},
+			Subtypes:       slices.Clone(target.Selector.SubtypesAny()),
+			RequiredName:   target.Selector.RequiredName,
 		},
 	}
 	switch target.Selector.Controller {
@@ -1591,6 +1593,38 @@ func fightCreatureTargetSpec(target compiler.CompiledTarget, allowAnother bool) 
 		return game.TargetSpec{}, false
 	}
 	return spec, true
+}
+
+// fightTargetSelectsCreature reports whether a fight target's selector denotes a
+// creature. The plain "target creature" selection compiles to SelectorCreature;
+// a bare creature-subtype selection ("Target Mutant", The Curse of Fenric III)
+// carries no card-type word, so it compiles to SelectorUnknown with only the
+// subtype recorded. A subtype defined for the creature type (CR 205.3m) denotes
+// a creature, so that subtype-only shape is accepted while every other Unknown
+// selection, and any selector carrying additional type, color, or supertype
+// filters the fight spec cannot represent, fails closed.
+func fightTargetSelectsCreature(selector compiler.CompiledSelector) bool {
+	if selector.Kind == compiler.SelectorCreature {
+		return true
+	}
+	if selector.Kind != compiler.SelectorUnknown || len(selector.SubtypesAny()) == 0 {
+		return false
+	}
+	if len(selector.RequiredTypesAny()) != 0 ||
+		len(selector.ExcludedTypes()) != 0 ||
+		len(selector.ColorsAny()) != 0 ||
+		len(selector.ExcludedColors()) != 0 ||
+		len(selector.Supertypes()) != 0 ||
+		len(selector.ExcludedSupertypes()) != 0 ||
+		len(selector.ExcludedSubtypes()) != 0 {
+		return false
+	}
+	for _, subtype := range selector.SubtypesAny() {
+		if !parser.SubtypeMatchesCardType(subtype, parser.CardTypeCreature) {
+			return false
+		}
+	}
+	return true
 }
 
 func lowerInvestigateSpell(
