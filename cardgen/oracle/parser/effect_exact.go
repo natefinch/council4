@@ -72,6 +72,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactLifeEffectSyntax(effect, "gain", "gains") ||
 			exactTemporaryKeywordEffectSyntax(effect) ||
 			exactDirectTargetKeywordGrantEffectSyntax(effect) ||
+			exactControlledSourceKeywordGrantEffectSyntax(effect) ||
 			exactBackReferenceTargetKeywordGrantEffectSyntax(effect) ||
 			exactGainGrantedAbilityEffectSyntax(effect)
 	case EffectGainControl:
@@ -1496,6 +1497,48 @@ func exactDirectTargetKeywordGrantEffectSyntax(effect *EffectSyntax) bool {
 	return exactTemporaryKeywordList(body) || exactKeywordChoiceList(body)
 }
 
+// exactControlledSourceKeywordGrantEffectSyntax recognizes a resolving keyword
+// grant to a single targeted permanent that lasts as long as the source remains
+// under its controller's control ("Target creature you control gains
+// indestructible for as long as you control this Saga.", Tale of Tinúviel
+// chapter I). It mirrors exactDirectTargetKeywordGrantEffectSyntax for the
+// no-duration grant but matches the "for as long as you control this <noun>"
+// duration suffix instead of a bare period, so the grant reconstructs
+// byte-exactly. Both a conjunctive keyword list and a disjunctive keyword choice
+// are recognized.
+func exactControlledSourceKeywordGrantEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextTarget ||
+		len(effect.Targets) != 1 || !effect.Targets[0].Exact {
+		return false
+	}
+	if effect.Duration != EffectDurationWhileYouControlSource {
+		return false
+	}
+	text := strings.ToLower(exactEffectClauseText(effect))
+	middle, ok := strings.CutPrefix(text, strings.ToLower(effect.Targets[0].Text)+" gains ")
+	if !ok {
+		return false
+	}
+	return exactKeywordControlledSourceDurationBody(middle)
+}
+
+// exactKeywordControlledSourceDurationBody validates the keyword list preceding a
+// "for as long as you control this <noun>." suffix on a keyword grant, mirroring
+// exactGainControlControlledSourceDuration's named-source acceptance.
+func exactKeywordControlledSourceDurationBody(middle string) bool {
+	const suffix = " for as long as you control this "
+	index := strings.Index(middle, suffix)
+	if index <= 0 {
+		return false
+	}
+	noun, ok := strings.CutSuffix(middle[index+len(suffix):], ".")
+	if !ok || noun == "" || strings.ContainsRune(noun, ' ') {
+		return false
+	}
+	body := middle[:index]
+	return exactTemporaryKeywordList(body) || exactKeywordChoiceList(body)
+}
+
 // until end of turn ("Permanents your opponents control lose hexproof and
 // indestructible until end of turn.", "Target creature loses flying until end of
 // turn."). It mirrors exactTemporaryKeywordEffectSyntax with the "lose"/"loses"
@@ -1577,6 +1620,25 @@ func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singula
 	}
 	if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
 		return false
+	}
+	// A plural ("two target creatures") or optional-multi ("up to two target
+	// creatures") target distributes the change with "each <pluralVerb>": "Up to
+	// two target creatures each gain lifelink until end of turn." and the
+	// combined "Up to two target creatures each get +N/+N and gain trample until
+	// end of turn." pump form. The singular "<target> <singularVerb>" path below
+	// owns the one-target cardinality.
+	if effect.Targets[0].Cardinality.Max >= 2 {
+		if prefix, suffix, ok := strings.Cut(text, " and "+pluralVerb+" "); ok &&
+			strings.HasPrefix(prefix, strings.ToLower(effect.Targets[0].Text)+" each get ") {
+			middle, suffixOK := strings.CutSuffix(suffix, " until end of turn.")
+			return suffixOK && exactTemporaryKeywordList(middle)
+		}
+		eachMiddle, ok := strings.CutPrefix(text, strings.ToLower(effect.Targets[0].Text)+" each "+pluralVerb+" ")
+		if !ok {
+			return false
+		}
+		body, suffixOK := strings.CutSuffix(eachMiddle, " until end of turn.")
+		return suffixOK && body != "" && exactTemporaryKeywordList(body)
 	}
 	if prefix, suffix, ok := strings.Cut(text, " and "+singularVerb+" "); ok &&
 		strings.HasPrefix(prefix, strings.ToLower(effect.Targets[0].Text)+" gets ") {
