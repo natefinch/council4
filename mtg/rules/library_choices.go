@@ -16,6 +16,7 @@ func millCards(g *game.Game, playerID game.PlayerID, amount int) []id.ID {
 		return nil
 	}
 	var milled []id.ID
+	batchID := g.IDGen.Next()
 	for range amount {
 		cardID, ok := player.Library.Top()
 		if !ok {
@@ -36,11 +37,12 @@ func millCards(g *game.Game, playerID game.PlayerID, amount int) []id.ID {
 			milled = append(milled, cardID)
 		}
 		emitZoneChangeEvent(g, game.Event{
-			Player:   playerID,
-			CardID:   cardID,
-			FromZone: zone.Library,
-			ToZone:   destination,
-			Amount:   1,
+			Player:         playerID,
+			CardID:         cardID,
+			FromZone:       zone.Library,
+			ToZone:         destination,
+			Amount:         1,
+			SimultaneousID: batchID,
 		})
 	}
 	return milled

@@ -460,6 +460,40 @@ func SaddleActivatedAbility(n int) ActivatedAbility {
 	}
 }
 
+// CrewActivatedAbility builds the complete activated ability for Crew N
+// (CR 702.122): "Tap any number of creatures you control with total power N or
+// more: This Vehicle becomes an artifact creature until end of turn." The
+// ability has no mana cost and is activated at instant speed; its additional
+// cost taps creatures the controller controls with total power at least n. The
+// Vehicle keeps its printed power and toughness, which become relevant once it
+// is a creature.
+func CrewActivatedAbility(n int) ActivatedAbility {
+	return ActivatedAbility{
+		Text: "Crew " + strconv.Itoa(n),
+		AdditionalCosts: []cost.Additional{{
+			Kind:               cost.AdditionalTapPermanents,
+			Text:               "Tap any number of creatures you control with total power " + strconv.Itoa(n) + " or more",
+			MatchPermanentType: true,
+			PermanentType:      types.Creature,
+			TotalPowerAtLeast:  n,
+		}},
+		ZoneOfFunction: zone.Battlefield,
+		KeywordAbilities: []KeywordAbility{
+			CrewKeyword{Power: n},
+		},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: ApplyContinuous{
+				Object: opt.Val(SourcePermanentReference()),
+				ContinuousEffects: []ContinuousEffect{{
+					Layer:    LayerType,
+					AddTypes: []types.Card{types.Creature},
+				}},
+				Duration: DurationUntilEndOfTurn,
+			},
+		}}}.Ability(),
+	}
+}
+
 // LandcyclingActivatedAbility builds the complete activated ability for the
 // typed landcycling family (Basic landcycling, Plainscycling, and so on). It is
 // a cycling variant (CR 702.29): the discard-from-hand activation searches the

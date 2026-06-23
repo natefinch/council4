@@ -46,6 +46,16 @@ type contentCtx struct {
 	// outside a triggered ability. It lets typed event-player references lower
 	// only where the resolving stack object retains an authoritative event.
 	triggerEvent game.EventKind
+	// triggerOneOrMore reports whether the enclosing trigger coalesces its
+	// simultaneous batch into a single trigger ("Whenever one or more ..."). It
+	// gates the batch reanimation of the triggering cards ("put them onto the
+	// battlefield") so the plural "them" resolves to the whole batch rather than
+	// a single event card.
+	triggerOneOrMore bool
+	// triggerToZone is the destination zone of the enclosing zone-change
+	// trigger, or zone.None outside one. It confirms the triggering cards rest
+	// in a graveyard before a batch reanimation recurses them.
+	triggerToZone zone.Type
 	// allowPonderPrefix permits the first spell paragraph of Ponder to lower
 	// temporarily. Face lowering rejects it unless the following spell paragraph
 	// is the exact typed draw suffix.
@@ -138,7 +148,7 @@ func lowerTriggerBodyContent(
 	content compiler.AbilityContent,
 	optional bool,
 	bodySyntax *parser.Ability,
-	triggerEvent game.EventKind,
+	pattern game.TriggerPattern,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	ctx := contentCtx{
 		text:                  bodySyntax.Text,
@@ -146,10 +156,21 @@ func lowerTriggerBodyContent(
 		optional:              optional,
 		content:               content,
 		enclosingKind:         compiler.AbilityTriggered,
-		triggerCardCountEvent: triggerEvent,
-		triggerEvent:          triggerEvent,
+		triggerCardCountEvent: pattern.Event,
+		triggerEvent:          pattern.Event,
+		triggerOneOrMore:      pattern.OneOrMore,
+		triggerToZone:         triggerPatternToZone(pattern),
 	}
 	return lowerContent(cardName, ctx, bodySyntax)
+}
+
+// triggerPatternToZone reports the destination zone a zone-change trigger
+// matches, or zone.None when the pattern does not constrain its destination.
+func triggerPatternToZone(pattern game.TriggerPattern) zone.Type {
+	if pattern.MatchToZone {
+		return pattern.ToZone
+	}
+	return zone.None
 }
 
 func lowerContent(
@@ -189,6 +210,9 @@ func lowerContent(
 	}
 	if len(ctx.content.Modes) > 0 {
 		return lowerModalContent(cardName, ctx, syntax)
+	}
+	if content, ok := lowerEventCardBatchReanimation(ctx); ok {
+		return content, nil
 	}
 	if content, ok := lowerEventCardEffect(ctx); ok {
 		return content, nil

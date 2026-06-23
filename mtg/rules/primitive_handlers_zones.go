@@ -967,6 +967,16 @@ func handleMassReturnFromGraveyard(r *effectResolver, prim game.MassReturnFromGr
 			}
 		}
 	}
+	if prim.FromTriggerBatch {
+		batch := triggerBatchCardIDs(r.game, r.obj)
+		filtered := candidates[:0]
+		for _, candidate := range candidates {
+			if batch[candidate.cardID] {
+				filtered = append(filtered, candidate)
+			}
+		}
+		candidates = filtered
+	}
 	if len(candidates) == 0 {
 		return res
 	}
@@ -1000,6 +1010,43 @@ func handleMassReturnFromGraveyard(r *effectResolver, prim game.MassReturnFromGr
 		}
 	}
 	return res
+}
+
+// triggerBatchCardIDs returns the card IDs that triggered the resolving
+// one-or-more zone-change ability: the cards whose simultaneous zone-change
+// events (the retained trigger event plus every event sharing its
+// SimultaneousID) match the resolving trigger's pattern. Filtering by the
+// pattern keeps "put them onto the battlefield" restricted to the cards the
+// trigger actually fired for (e.g. only the land cards of "one or more land
+// cards"), mirroring triggeringBatchPermanents for graveyard-bound cards.
+func triggerBatchCardIDs(g *game.Game, obj *game.StackObject) map[id.ID]bool {
+	if obj == nil || !obj.HasTriggerEvent {
+		return nil
+	}
+	pattern, ok := resolvingTriggerPattern(g, obj)
+	if !ok {
+		return nil
+	}
+	source, _ := permanentByObjectID(g, obj.SourceID)
+	ids := make(map[id.ID]bool)
+	consider := func(event game.Event) {
+		if event.CardID == 0 || ids[event.CardID] {
+			return
+		}
+		if !triggerMatchesEvent(g, source, pattern, event) {
+			return
+		}
+		ids[event.CardID] = true
+	}
+	consider(obj.TriggerEvent)
+	if obj.TriggerEvent.SimultaneousID != 0 {
+		for _, event := range g.Events {
+			if event.SimultaneousID == obj.TriggerEvent.SimultaneousID {
+				consider(event)
+			}
+		}
+	}
+	return ids
 }
 
 // handleMassReanimationExchange resolves "Each player exiles all <type> cards

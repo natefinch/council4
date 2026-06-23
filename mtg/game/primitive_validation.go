@@ -1229,6 +1229,14 @@ func (p MassReturnFromGraveyard) validatePrimitive(targets []TargetSpec, checkTa
 			return errors.New(problems[0])
 		}
 	}
+	if p.FromTriggerBatch {
+		if p.Destination != zone.Battlefield {
+			return errors.New("mass return from graveyard trigger batch requires a battlefield destination")
+		}
+		if p.SourceGroup.Kind != PlayerGroupReferenceNone {
+			return errors.New("mass return from graveyard trigger batch cannot widen source graveyards")
+		}
+	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 

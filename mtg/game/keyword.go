@@ -72,6 +72,13 @@ type SaddleKeyword struct {
 	Power int
 }
 
+// CrewKeyword parameterizes the Crew N keyword (CR 702.122). Power is the total
+// power of creatures the controller must tap to make the Vehicle become an
+// artifact creature until end of turn.
+type CrewKeyword struct {
+	Power int
+}
+
 // MutateKeyword parameterizes Mutate alternative casting costs.
 type MutateKeyword struct {
 	Cost cost.Mana
@@ -200,6 +207,7 @@ func (SoulshiftKeyword) isKeywordAbility()        {}
 func (DredgeKeyword) isKeywordAbility()           {}
 func (LandwalkKeyword) isKeywordAbility()         {}
 func (SaddleKeyword) isKeywordAbility()           {}
+func (CrewKeyword) isKeywordAbility()             {}
 
 func (ability SimpleKeyword) keyword() Keyword { return ability.Kind }
 func (WardKeyword) keyword() Keyword           { return Ward }
@@ -228,6 +236,7 @@ func (SoulshiftKeyword) keyword() Keyword  { return Soulshift }
 func (DredgeKeyword) keyword() Keyword     { return Dredge }
 func (LandwalkKeyword) keyword() Keyword   { return Landwalk }
 func (SaddleKeyword) keyword() Keyword     { return Saddle }
+func (CrewKeyword) keyword() Keyword       { return Crew }
 
 func (ability SimpleKeyword) cloneKeywordAbility() KeywordAbility { return ability }
 func (ability WardKeyword) cloneKeywordAbility() KeywordAbility {
@@ -309,6 +318,7 @@ func (ability SoulshiftKeyword) cloneKeywordAbility() KeywordAbility { return ab
 func (ability DredgeKeyword) cloneKeywordAbility() KeywordAbility    { return ability }
 func (ability LandwalkKeyword) cloneKeywordAbility() KeywordAbility  { return ability }
 func (ability SaddleKeyword) cloneKeywordAbility() KeywordAbility    { return ability }
+func (ability CrewKeyword) cloneKeywordAbility() KeywordAbility      { return ability }
 
 // SimpleKeywords returns sealed keyword variants for non-parameterized keywords.
 func SimpleKeywords(keywords ...Keyword) []KeywordAbility {
@@ -477,6 +487,20 @@ func ActivatedBodySaddlePower(body *ActivatedAbility) (int, bool) {
 		return 0, false
 	}
 	return saddle.Power, true
+}
+
+// ActivatedBodyCrewPower returns the Crew N power threshold from an activated
+// ability, used to recognize and render the Crew template.
+func ActivatedBodyCrewPower(body *ActivatedAbility) (int, bool) {
+	ka, ok := BodyKeywordAbility(body, Crew)
+	if !ok {
+		return 0, false
+	}
+	crew, ok := ka.(CrewKeyword)
+	if !ok {
+		return 0, false
+	}
+	return crew.Power, true
 }
 
 // ActivatedBodyNinjutsuCost returns the Ninjutsu cost from an activated ability.

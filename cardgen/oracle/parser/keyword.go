@@ -114,6 +114,10 @@ const (
 	// parameter is the total power of other creatures that must be tapped to
 	// make the Mount saddled until end of turn.
 	KeywordSaddle KeywordKind = "KeywordSaddle"
+	// KeywordCrew is the Crew N keyword (Vehicles, CR 702.122). Its integer
+	// parameter is the total power of creatures that must be tapped to make the
+	// Vehicle become an artifact creature until end of turn.
+	KeywordCrew KeywordKind = "KeywordCrew"
 	// KeywordLandwalk and the typed variants below are the landwalk evasion
 	// keyword family (CR 702.14). Each typed variant keys off the defending
 	// player controlling a land of its named subtype; plain Landwalk keys off
@@ -235,6 +239,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordRampage:          "Rampage",
 	KeywordTraining:         "Training",
 	KeywordSaddle:           "Saddle",
+	KeywordCrew:             "Crew",
 	KeywordLandwalk:         "Landwalk",
 	KeywordPlainswalk:       "Plainswalk",
 	KeywordIslandwalk:       "Islandwalk",
@@ -361,6 +366,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordRampage, Words: []string{"rampage"}},
 	{Kind: KeywordTraining, Words: []string{"training"}},
 	{Kind: KeywordSaddle, Words: []string{"saddle"}},
+	{Kind: KeywordCrew, Words: []string{"crew"}},
 	{Kind: KeywordNonbasicLandwalk, Words: []string{"nonbasic", "landwalk"}},
 	{Kind: KeywordRebound, Words: []string{"rebound"}},
 	{Kind: KeywordLandwalk, Words: []string{"landwalk"}},
