@@ -326,6 +326,12 @@ type AddCounter struct {
 	// is set only with a Group and an empty Object; when no group member exists
 	// the effect does nothing.
 	ChooseOne bool
+	// KindChoices, when non-empty, lets the resolving controller choose one
+	// counter kind from this list to place, ignoring CounterKind ("Put a +1/+1
+	// counter or a loyalty counter on it.", Elspeth Conquers Death chapter III).
+	// It holds two or more distinct, permanent-placeable kinds and is set only
+	// with a single Object, never a Group or AllKinds.
+	KindChoices []counter.Kind
 }
 
 // AddPlayerCounter places counters on a referenced player or group of players.

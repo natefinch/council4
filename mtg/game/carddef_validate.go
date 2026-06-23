@@ -1258,6 +1258,17 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 			}
 		}
 	}
+	if modifier.MatchExcludedCardType {
+		if modifier.Kind != CostModifierSpell {
+			v.add(faceName, appendPath(path, "MatchExcludedCardType"), CardDefIssueInvalidRuleEffect, "excluded card-type cost modifiers must be spell modifiers")
+		}
+		if modifier.MatchCardType {
+			v.add(faceName, appendPath(path, "MatchExcludedCardType"), CardDefIssueInvalidRuleEffect, "cost modifier cannot both match and exclude a card type")
+		}
+		if modifier.ExcludedCardType == "" {
+			v.add(faceName, appendPath(path, "ExcludedCardType"), CardDefIssueInvalidRuleEffect, "excluded card-type cost modifiers require a real card type")
+		}
+	}
 	if modifier.ChosenSubtypeFromEntryChoice &&
 		(modifier.Kind != CostModifierSpell ||
 			!modifier.MatchCardType ||

@@ -48,6 +48,13 @@ type CostModifier struct {
 
 	MatchCardType bool
 	MatchColor    bool
+	// MatchExcludedCardType narrows a spell cost modifier to spells that do NOT
+	// have ExcludedCardType ("Noncreature spells your opponents cast cost {2}
+	// more to cast ...", Elspeth Conquers Death chapter II). It is meaningful
+	// only on a CostModifierSpell and is mutually exclusive with the positive
+	// card-type match (MatchCardType).
+	MatchExcludedCardType bool
+	ExcludedCardType      types.Card
 	// ChosenSubtypeFromEntryChoice constrains a creature spell cost modifier to
 	// spells whose subtype matches the source permanent's entry-time
 	// creature-type choice (see EntryTypeChoiceKey). It is meaningful only on a

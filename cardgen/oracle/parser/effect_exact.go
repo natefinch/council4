@@ -3604,7 +3604,7 @@ func exactMoveCountersDistributeGroupText(selection SelectionSyntax) (string, bo
 }
 
 func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
-	if !effect.CounterKnown {
+	if !effect.CounterKnown && len(effect.CounterKindChoices) < 2 {
 		return false
 	}
 	objects := []string{}
@@ -3663,8 +3663,29 @@ func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
 		if counterPlacementTextMatches(effect, object) {
 			return true
 		}
+		if len(effect.CounterKindChoices) >= 2 && counterPlacementChoiceTextMatches(effect, object) {
+			return true
+		}
 	}
 	return false
+}
+
+// counterPlacementChoiceTextMatches reconstructs the controller-choice counter
+// placement clause "Put a <X> counter or a <Y> counter on <object>." from the
+// recognized choice kinds and reports whether the printed effect text matches it
+// byte-for-byte. Each named kind is a single counter ("a <kind> counter") and the
+// kinds are joined with " or " in source order; any richer amount or wording
+// fails closed because the canonical text would not match.
+func counterPlacementChoiceTextMatches(effect *EffectSyntax, object string) bool {
+	if !effect.Amount.Known || effect.Amount.Value != 1 {
+		return false
+	}
+	parts := make([]string, 0, len(effect.CounterKindChoices))
+	for _, kind := range effect.CounterKindChoices {
+		parts = append(parts, "a "+kind.String()+" counter")
+	}
+	prefix := "Put " + strings.Join(parts, " or ") + " on " + object
+	return strings.EqualFold(exactEffectClauseText(effect), prefix+".")
 }
 
 // counterPlacementSingleChoiceRecipient reports whether an exact non-target

@@ -1560,6 +1560,12 @@ type CompiledEffect struct {
 	Details           *CompiledEffectDetails
 	CounterKind       counter.Kind
 	CounterKindKnown  bool
+	// CounterKindChoices lists the counter kinds a placement effect lets the
+	// resolving controller choose between ("a +1/+1 counter or a loyalty counter
+	// on it.", Elspeth Conquers Death chapter III). It holds two or more distinct
+	// kinds and is set only when CounterKindKnown is false. Lowering emits an
+	// AddCounter that prompts the controller for one of these kinds.
+	CounterKindChoices []counter.Kind
 	// CounterRecipientAttached reports that a counter-placement effect places its
 	// counters on the permanent the source Aura is attached to ("... on enchanted
 	// creature"). Lowering routes it to the runtime's source attached-permanent

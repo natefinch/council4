@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
@@ -812,6 +813,37 @@ func (p AddCounter) validatePrimitive(targets []TargetSpec, checkTargets bool) e
 	if p.AllKinds {
 		if p.Group.Domain() != groupDomainNone {
 			return errors.New("add counter doubling every kind requires a single object, not a group")
+		}
+		if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
+			return err
+		}
+		if p.Object.Kind() == ObjectReferenceTargetPermanent {
+			return validateTargetAllows(p.Object.TargetIndex(), TargetAllowPermanent, targets, checkTargets)
+		}
+		return nil
+	}
+	if len(p.KindChoices) != 0 {
+		if p.Group.Domain() != groupDomainNone {
+			return errors.New("add counter with a kind choice requires a single object, not a group")
+		}
+		if len(p.KindChoices) < 2 {
+			return errors.New("add counter kind choice requires two or more kinds")
+		}
+		seen := make(map[counter.Kind]bool, len(p.KindChoices))
+		for _, kind := range p.KindChoices {
+			if !kind.Valid() {
+				return errors.New("add counter kind choice requires recognized counter kinds")
+			}
+			if kind.PlayerOnly() {
+				return errors.New("player-only counter kind cannot be placed on a permanent")
+			}
+			if seen[kind] {
+				return errors.New("add counter kind choice has duplicate kinds")
+			}
+			seen[kind] = true
+		}
+		if err := validatePositiveQuantity(p.Amount, targets, checkTargets); err != nil {
+			return err
 		}
 		if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
 			return err
