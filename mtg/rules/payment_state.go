@@ -163,9 +163,11 @@ func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *
 // applies only while this exact spell is being cast, so it is read straight from
 // the card being cast rather than from the global active rule effects, and is
 // resolved into a plain generic reduction by counting the matching battlefield
-// permanents or evaluating the dynamic amount now. Generic mana may fall to zero
-// but colored requirements are never touched, because the resolved reduction
-// flows through the shared generic cost modifier path.
+// permanents (or, when the modifier carries a CountZone, the matching cards in
+// the caster's own graveyard or hand) or evaluating the dynamic amount now.
+// Generic mana may fall to zero but colored requirements are never touched,
+// because the resolved reduction flows through the shared generic cost modifier
+// path.
 func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *game.CardDef) []game.CostModifier {
 	if card == nil {
 		return nil
@@ -185,7 +187,12 @@ func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *ga
 			reduction := 0
 			switch {
 			case modifier.PerObjectReduction > 0:
-				count := countPermanentsMatchingGroup(g, nil, playerID, game.BattlefieldGroup(*modifier.CountSelection))
+				var count int
+				if modifier.CountZone.Exists {
+					count = countCardsInZoneForPlayer(g, playerID, playerID, modifier.CountZone.Val, *modifier.CountSelection)
+				} else {
+					count = countPermanentsMatchingGroup(g, nil, playerID, game.BattlefieldGroup(*modifier.CountSelection))
+				}
 				reduction = count * modifier.PerObjectReduction
 			case modifier.DynamicReduction != nil:
 				reduction = dynamicAmountValue(g, nil, playerID, *modifier.DynamicReduction)

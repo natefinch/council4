@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // sourceSpellCostReductionModifier extracts the single AffectedSource spell cost
@@ -141,14 +142,75 @@ func TestLowerSourceSpellCostReductionTotalManaValue(t *testing.T) {
 	}
 }
 
+// TestLowerSourceSpellCostReductionCardZone proves the card-zone count forms
+// ("costs {N} less to cast for each <card> in your graveyard/hand") lower to a
+// per-object reduction whose CountZone scopes the count to the caster's own
+// graveyard or hand rather than to the battlefield.
+func TestLowerSourceSpellCostReductionCardZone(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		oracleText string
+		perObject  int
+		zone       zone.Type
+		required   types.Card
+	}{
+		"land card in your graveyard": {
+			oracleText: "This spell costs {1} less to cast for each land card in your graveyard.",
+			perObject:  1,
+			zone:       zone.Graveyard,
+			required:   types.Land,
+		},
+		"creature card in your graveyard": {
+			oracleText: "This spell costs {2} less to cast for each creature card in your graveyard.",
+			perObject:  2,
+			zone:       zone.Graveyard,
+			required:   types.Creature,
+		},
+		"artifact card in your hand": {
+			oracleText: "This spell costs {1} less to cast for each artifact card in your hand.",
+			perObject:  1,
+			zone:       zone.Hand,
+			required:   types.Artifact,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Reducer",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracleText,
+			})
+			modifier := sourceSpellCostReductionModifier(t, face)
+			if modifier.Kind != game.CostModifierSpell {
+				t.Fatalf("modifier kind = %v, want spell", modifier.Kind)
+			}
+			if modifier.PerObjectReduction != test.perObject {
+				t.Fatalf("per-object reduction = %d, want %d", modifier.PerObjectReduction, test.perObject)
+			}
+			if !modifier.CountZone.Exists || modifier.CountZone.Val != test.zone {
+				t.Fatalf("count zone = %#v, want %v", modifier.CountZone, test.zone)
+			}
+			if modifier.DynamicReduction != nil {
+				t.Fatal("card-zone reduction must use a per-object reduction, not a dynamic reduction")
+			}
+			if modifier.CountSelection == nil || len(modifier.CountSelection.RequiredTypes) != 1 ||
+				modifier.CountSelection.RequiredTypes[0] != test.required {
+				t.Fatalf("count selection required types = %#v, want [%v]", modifier.CountSelection, test.required)
+			}
+		})
+	}
+}
+
 func TestLowerSourceSpellCostReductionRejectsUnsupported(t *testing.T) {
 	t.Parallel()
 	sources := map[string]string{
-		"graveyard count":   "This spell costs {1} less to cast for each creature card in your graveyard.",
-		"variable amount":   "This spell costs {X} less to cast for each creature on the battlefield.",
-		"opponent count":    "This spell costs {1} less to cast for each opponent you have.",
-		"increase wording":  "This spell costs {1} more to cast for each creature on the battlefield.",
-		"sacrifice subject": "This spell costs {2} less to cast for each creature that died this turn.",
+		"variable amount":        "This spell costs {X} less to cast for each creature on the battlefield.",
+		"opponent count":         "This spell costs {1} less to cast for each opponent you have.",
+		"increase wording":       "This spell costs {1} more to cast for each creature on the battlefield.",
+		"sacrifice subject":      "This spell costs {2} less to cast for each creature that died this turn.",
+		"permanent in graveyard": "This spell costs {1} less to cast for each permanent card in your graveyard.",
 	}
 	for name, source := range sources {
 		t.Run(name, func(t *testing.T) {

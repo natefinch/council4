@@ -652,6 +652,14 @@ func countCardsInZoneMatchingSelection(g *game.Game, obj *game.StackObject, cont
 	if !ok {
 		return 0
 	}
+	return countCardsInZoneForPlayer(g, playerID, controller, cardZone, selection)
+}
+
+// countCardsInZoneForPlayer counts the cards a player owns in a card zone that
+// match selection, viewed by controller. It is the player-id core shared by the
+// reference-resolving dynamic-amount path and the cost-time self cost reductions
+// that count cards in the caster's own zone without a resolving stack object.
+func countCardsInZoneForPlayer(g *game.Game, playerID game.PlayerID, viewer game.PlayerID, cardZone zone.Type, selection game.Selection) int {
 	player, ok := playerByID(g, playerID)
 	if !ok {
 		return 0
@@ -671,7 +679,7 @@ func countCardsInZoneMatchingSelection(g *game.Game, obj *game.StackObject, cont
 			g:          g,
 			card:       card,
 			controller: card.Owner,
-			viewer:     controller,
+			viewer:     viewer,
 		}
 		if matchSelection(&subject, &selection) {
 			count++

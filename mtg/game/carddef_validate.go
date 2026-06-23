@@ -1290,7 +1290,8 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 	if modifier.PerObjectReduction < 0 {
 		v.add(faceName, appendPath(path, "PerObjectReduction"), CardDefIssueInvalidRuleEffect, "per-object cost reduction cannot be negative")
 	}
-	if modifier.PerObjectReduction > 0 {
+	switch {
+	case modifier.PerObjectReduction > 0:
 		if modifier.Kind != CostModifierSpell && (!sourceAbility || modifier.Kind != CostModifierAbility) {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "per-object cost reduction requires a spell modifier or a source ability modifier")
 		}
@@ -1299,8 +1300,19 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 		} else {
 			v.validateSelection(faceName, appendPath(path, "CountSelection"), *modifier.CountSelection)
 		}
-	} else if modifier.CountSelection != nil && !modifier.CountSelection.Empty() {
+		if modifier.CountZone.Exists {
+			if modifier.Kind != CostModifierSpell {
+				v.add(faceName, appendPath(path, "CountZone"), CardDefIssueInvalidRuleEffect, "card-zone count reductions must be spell modifiers")
+			}
+			if modifier.CountZone.Val != zone.Graveyard && modifier.CountZone.Val != zone.Hand {
+				v.add(faceName, appendPath(path, "CountZone"), CardDefIssueInvalidRuleEffect, "card-zone count reductions require the graveyard or hand zone")
+			}
+		}
+	case modifier.CountSelection != nil && !modifier.CountSelection.Empty():
 		v.add(faceName, appendPath(path, "CountSelection"), CardDefIssueInvalidRuleEffect, "count selection requires a per-object reduction")
+	case modifier.CountZone.Exists:
+		v.add(faceName, appendPath(path, "CountZone"), CardDefIssueInvalidRuleEffect, "card-zone count requires a per-object reduction")
+	default:
 	}
 	if modifier.DynamicReduction != nil {
 		if modifier.Kind != CostModifierSpell {

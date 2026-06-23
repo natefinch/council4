@@ -76,6 +76,13 @@ type CostModifier struct {
 	// is non-zero. It is a pointer so CostModifier stays cheap to copy; a nil
 	// pointer means the modifier counts nothing.
 	CountSelection *Selection
+	// CountZone, when present, scopes a PerObjectReduction count to the caster's
+	// cards in this zone matching CountSelection rather than to battlefield
+	// permanents ("This spell costs {N} less to cast for each <card> in your
+	// graveyard."). It names a real card zone the caster owns (graveyard or
+	// hand). It is meaningful only when PerObjectReduction is non-zero on a
+	// CostModifierSpell; when absent the count is over battlefield permanents.
+	CountZone opt.V[zone.Type]
 	// DynamicReduction is a generic cost reduction whose amount is evaluated as
 	// the spell is cast ("This spell costs {X} less to cast, where X is <dynamic
 	// amount>", e.g. the greatest power among creatures you control, or the number
