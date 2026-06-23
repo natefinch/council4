@@ -348,7 +348,11 @@ func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) Eff
 	}
 	symbols, choice, ok := parseManaSymbolBody(loopBody)
 	if !ok {
-		return EffectManaSyntax{}
+		counted, cok := countedSingleManaSymbols(loopBody)
+		if !cok {
+			return EffectManaSyntax{}
+		}
+		symbols, choice = counted, false
 	}
 	colors, colorsKnown := effectManaColors(symbols)
 	return EffectManaSyntax{
@@ -406,6 +410,26 @@ func parseManaSymbolBody(body []shared.Token) (symbols []string, choice, ok bool
 		return nil, false, false
 	}
 	return symbols, choice, true
+}
+
+// countedSingleManaSymbols expands a counted single-symbol add-mana body
+// ("Add six {R}", The Flux; "Add seven {R}", Irencrag Feat) into N copies of the
+// lone mana symbol. It requires a leading cardinal count of two or more followed
+// by exactly one mana symbol, so ordinary single- and multi-symbol bodies keep
+// their own branch and any other shape fails closed.
+func countedSingleManaSymbols(body []shared.Token) ([]string, bool) {
+	if len(body) != 2 || body[1].Kind != shared.Symbol {
+		return nil, false
+	}
+	count, ok := additionalLandCountWord(body[0])
+	if !ok || count < 2 {
+		return nil, false
+	}
+	symbols := make([]string, count)
+	for i := range symbols {
+		symbols[i] = body[1].Text
+	}
+	return symbols, true
 }
 
 // manaAnyOneColorCount resolves the leading count of the body "<N> mana of any
