@@ -54,6 +54,12 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 					equalWord(tokens[i-1], "another") ||
 					equalWord(tokens[i-1], "other") {
 					start = i - 1
+					// "any other target" carries both the "any" determiner and
+					// the "other" distinctness qualifier; keep "any" in the noun
+					// phrase so the selection reconstructs as an "any target".
+					if equalWord(tokens[i-1], "other") && i >= 2 && equalWord(tokens[i-2], "any") {
+						start = i - 2
+					}
 				}
 			default:
 			}
@@ -273,6 +279,9 @@ func exactSinglePermanentTargetSyntax(text string, selection SelectionSyntax) bo
 	}
 	switch selection.Kind {
 	case SelectionAny:
+		if selection.Other {
+			return text == "any other target"
+		}
 		return text == "any target"
 	case SelectionPlayer:
 		if selection.PlayerOrPlaneswalker {
@@ -1694,7 +1703,16 @@ func secondTargetDamageRiderFollowsAt(tokens []shared.Token, atoms Atoms, i int)
 	if !equalWord(tokens[i+2], "damage") || !equalWord(tokens[i+3], "to") {
 		return false
 	}
-	return equalWord(tokens[i+4], "target") || equalWord(tokens[i+4], "targets")
+	// The second target opens with "target"/"targets" ("... and 2 damage to
+	// target player") or with "any other" ("... and 1 damage to any other
+	// target"), whose "other" distinctness qualifier precedes its own "target"
+	// noun. Recognizing these openers stops the first target's noun phrase at
+	// this rider instead of greedily absorbing the second clause. A bare "any
+	// target" second clause is intentionally excluded; it stays unrepresented.
+	if equalWord(tokens[i+4], "target") || equalWord(tokens[i+4], "targets") {
+		return true
+	}
+	return equalWord(tokens[i+4], "any") && i+5 < len(tokens) && equalWord(tokens[i+5], "other")
 }
 
 // permanentUnionListEnd recognizes a permanent target whose noun phrase is a

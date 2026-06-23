@@ -1981,6 +1981,46 @@ func TestGenerateExecutableCardSourceTwoTargetDamageRider(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceTwoTargetAnyOtherDamage covers the "deals A
+// damage to any target and B damage to any other target" wording (Boulder Dash,
+// Arc Trail). Both targets are "any target" slots; the second carries the
+// "other" distinctness qualifier, so its TargetSpec must require a different
+// object from the first.
+func TestGenerateExecutableCardSourceTwoTargetAnyOtherDamage(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Bolt",
+		Layout:     "normal",
+		ManaCost:   "{1}{R}",
+		TypeLine:   "Sorcery",
+		OracleText: "Test Bolt deals 2 damage to any target and 1 damage to any other target.",
+		Colors:     []string{"R"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if got := strings.Count(source, "Primitive: game.Damage"); got != 2 {
+		t.Fatalf("expected 2 damage instructions, got %d:\n%s", got, source)
+	}
+	for _, wanted := range []string{
+		"game.AnyTargetDamageRecipient(0)",
+		"game.AnyTargetDamageRecipient(1)",
+		"DistinctFromPriorTargets: true",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	// Only the second ("other") target slot is distinct from the first.
+	if got := strings.Count(source, "DistinctFromPriorTargets: true"); got != 1 {
+		t.Fatalf("expected exactly one distinct target slot, got %d:\n%s", got, source)
+	}
+}
+
 // TestGenerateExecutableCardSourceTwoTargetDamageRiderFailsClosed asserts that
 // two-target damage shapes the backend cannot represent exactly stay rejected. A
 // variable primary or rider amount, and an "any target" second clause (whose

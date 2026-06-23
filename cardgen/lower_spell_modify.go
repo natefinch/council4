@@ -547,15 +547,33 @@ func lowerTwoTargetDamageSpell(
 		}
 	}
 	target0, ok0 := damageTargetSpec(ctx.content.Targets[0])
-	target1, ok1 := damageTargetSpec(ctx.content.Targets[1])
+	// "... and B damage to any other target" names a second "any target" slot
+	// whose "other" qualifier requires a different object from the first slot.
+	// damageTargetSpec rejects the bare "other"/"another" any-target form (its
+	// single-target meaning excludes the source, not a prior target), so the
+	// distinctness is applied here, scoped to this prior-target context.
+	second := ctx.content.Targets[1]
+	secondDistinct := false
+	if second.Selector.Kind == compiler.SelectorAny &&
+		(second.Selector.Other || second.Selector.Another) {
+		second.Selector.Other = false
+		second.Selector.Another = false
+		secondDistinct = true
+	}
+	target1, ok1 := damageTargetSpec(second)
 	sourceReferences := ctx.content.References
 	if len(sourceReferences) > 1 {
 		sourceReferences = sourceReferences[:1]
 	}
 	if !ok0 || !ok1 ||
+		ctx.content.Targets[0].Selector.Other ||
+		ctx.content.Targets[0].Selector.Another ||
 		!exactDamageSourceSyntax(sourceReferences) ||
 		!exactDamageAmountReferences(effect.Amount, sourceReferences) {
 		return unsupported()
+	}
+	if secondDistinct {
+		target1.DistinctFromPriorTargets = true
 	}
 	var damageSource opt.V[game.ObjectReference]
 	if damageSourceIsSourcePermanent(sourceReferences) {
