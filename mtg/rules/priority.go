@@ -5,6 +5,8 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 )
 
 func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
@@ -59,10 +61,13 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 		}
 		recordActionSource(g, playerID, actionLog, chosen)
 		log.addAction(actionLog)
+		entryIndex := lastEntryIndex(log)
+		eventsBefore := len(g.Events)
 
 		if !e.applyActionWithChoices(g, playerID, chosen, agents, log) {
 			panic("applyAction failed for validated action")
 		}
+		recordActionManaTaps(g, log, entryIndex, eventsBefore)
 		if chosen.Kind != action.ActionPass {
 			e.notifyActionObservers(g, agents, playerID, chosen)
 		}
@@ -104,6 +109,64 @@ func recordActionSource(g *game.Game, playerID game.PlayerID, actionLog *ActionL
 	}
 	actionLog.addPermanentSnapshot(g, payload.SourceID)
 	actionLog.ManaAbility = isManaAbilityActivation(g, playerID, payload)
+}
+
+// lastEntryIndex returns the index of the most recently appended turn-log entry,
+// or -1 when there is none (for example when log is nil and addAction was a
+// no-op).
+func lastEntryIndex(log *TurnLog) int {
+	if log == nil {
+		return -1
+	}
+	return len(log.Entries) - 1
+}
+
+// recordActionManaTaps attributes the permanents tapped for mana while applying
+// an action to that action's log entry, so a report can show how a spell or
+// ability was paid for, including lands tapped during cost payment. It scans the
+// events emitted since eventsBefore for tapped-for-mana taps.
+func recordActionManaTaps(g *game.Game, log *TurnLog, entryIndex, eventsBefore int) {
+	if log == nil || entryIndex < 0 || entryIndex >= len(log.Entries) {
+		return
+	}
+	var taps []ManaTap
+	for i := eventsBefore; i < len(g.Events); i++ {
+		event := g.Events[i]
+		if event.Kind != game.EventPermanentTapped || !event.TappedForMana {
+			continue
+		}
+		taps = append(taps, ManaTap{
+			Source: tappedManaSourceName(g, event.PermanentID),
+			Colors: manaColorCodes(event.ProducedManaColors),
+		})
+	}
+	if len(taps) > 0 {
+		log.Entries[entryIndex].Action.ManaTaps = taps
+	}
+}
+
+// tappedManaSourceName resolves the display name of a tapped mana source.
+func tappedManaSourceName(g *game.Game, permanentID id.ID) string {
+	permanent, ok := permanentByObjectID(g, permanentID)
+	if !ok {
+		return ""
+	}
+	if permanent.Token {
+		return permanentTokenName(permanent)
+	}
+	return permanentEffectiveName(g, permanent)
+}
+
+// manaColorCodes converts produced mana colors to their string codes.
+func manaColorCodes(colors []mana.Color) []string {
+	if len(colors) == 0 {
+		return nil
+	}
+	codes := make([]string, 0, len(colors))
+	for _, c := range colors {
+		codes = append(codes, string(c))
+	}
+	return codes
 }
 
 func agentFor(agents [game.NumPlayers]PlayerAgent, playerID game.PlayerID) PlayerAgent {
