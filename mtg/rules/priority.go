@@ -53,10 +53,12 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 			chosen = actionBuild.pass()
 		}
 
-		log.addAction(&ActionLog{
+		actionLog := &ActionLog{
 			Player: playerID,
 			Action: chosen,
-		})
+		}
+		recordActionSource(g, actionLog, chosen)
+		log.addAction(actionLog)
 
 		if !e.applyActionWithChoices(g, playerID, chosen, agents, log) {
 			panic("applyAction failed for validated action")
@@ -86,6 +88,19 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 
 func observe(g *game.Game, playerID game.PlayerID) PlayerObservation {
 	return NewObservation(g, playerID)
+}
+
+// recordActionSource snapshots the permanent that is the source of an action so
+// the turn log can attribute the action to a named card. Only activated
+// abilities need this: their source is a battlefield permanent identified by
+// object ID, whereas a land played or spell cast from hand is already
+// identified by its card instance ID in the action payload. The snapshot is a
+// no-op when the source is not a battlefield permanent (for example an ability
+// activated from a card in hand).
+func recordActionSource(g *game.Game, actionLog *ActionLog, a action.Action) {
+	if payload, ok := a.ActivateAbilityPayload(); ok {
+		actionLog.addPermanentSnapshot(g, payload.SourceID)
+	}
 }
 
 func agentFor(agents [game.NumPlayers]PlayerAgent, playerID game.PlayerID) PlayerAgent {
