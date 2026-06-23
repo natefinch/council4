@@ -123,6 +123,7 @@ func multiplyAdditionalTriggers(g *game.Game, pending []pendingTriggeredAbility)
 			additional = capturedChosenCreatureTypeAdditionalTriggerCount(g, &trigger)
 		}
 		additional += enteringPermanentAdditionalTriggerCount(g, &trigger)
+		additional += controlledPermanentAdditionalTriggerCount(g, &trigger)
 		for range additional {
 			multiplied = append(multiplied, trigger)
 		}
@@ -156,6 +157,106 @@ func enteringPermanentAdditionalTriggerCount(g *game.Game, trigger *pendingTrigg
 		}
 	}
 	return count
+}
+
+// controlledPermanentAdditionalTriggerCount counts the additional occurrences an
+// ordinary triggered ability gains from active controlled-permanent trigger
+// doublers ("If a triggered ability of a legendary creature you control
+// triggers, that ability triggers an additional time.", Annie Joins Up; Katara,
+// the Fearless; Splinter, Radical Rat). It applies when the triggered ability's
+// source is a permanent the doubler's controller controls and that permanent
+// matches the doubler's source-permanent selection filter. Unlike the
+// chosen-type and entering-permanent doublers this family includes the doubler's
+// own triggers ("a ... you control", not "another"). The count is read from the
+// live rule effects; the source permanent's type, supertype, and subtype are
+// taken from its current state, falling back to last-known information once it
+// has left the battlefield (so a dying creature's leaves-the-battlefield trigger
+// still doubles).
+func controlledPermanentAdditionalTriggerCount(g *game.Game, trigger *pendingTriggeredAbility) int {
+	if !trigger.ordinaryTrigger || !trigger.hasEvent {
+		return 0
+	}
+	count := 0
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectAdditionalTriggerForControlledPermanent ||
+			effect.SourceObjectID == 0 ||
+			effect.Controller != trigger.controller {
+			continue
+		}
+		if controlledTriggerSourceMatches(g, effect, trigger.sourceID) {
+			count++
+		}
+	}
+	return count
+}
+
+// controlledTriggerSourceMatches reports whether the triggered ability's source
+// is a permanent controlled by the doubler's controller that satisfies the
+// doubler's source-permanent selection filter. It checks the live permanent
+// first and falls back to last-known information for a source that has left the
+// battlefield.
+func controlledTriggerSourceMatches(g *game.Game, effect *game.RuleEffect, sourceID id.ID) bool {
+	if permanent, ok := permanentByObjectID(g, sourceID); ok {
+		return effectiveController(g, permanent) == effect.Controller &&
+			permanentMatchesTriggerSourceFilter(g, &effect.AffectedSelection, permanent)
+	}
+	snapshot, ok := lastKnownObject(g, sourceID)
+	return ok &&
+		snapshot.Controller == effect.Controller &&
+		snapshotMatchesTriggerSourceFilter(&effect.AffectedSelection, &snapshot)
+}
+
+// permanentMatchesTriggerSourceFilter reports whether a live permanent satisfies
+// the type, supertype, and subtype filter carried by a controlled-permanent
+// trigger doubler's selection. RequiredTypes and Supertypes are conjunctive;
+// SubtypesAny is disjunctive. An empty selection matches any permanent.
+func permanentMatchesTriggerSourceFilter(g *game.Game, selection *game.Selection, permanent *game.Permanent) bool {
+	for _, cardType := range selection.RequiredTypes {
+		if !permanentHasType(g, permanent, cardType) {
+			return false
+		}
+	}
+	for _, supertype := range selection.Supertypes {
+		if !permanentHasSupertype(g, permanent, supertype) {
+			return false
+		}
+	}
+	if len(selection.SubtypesAny) == 0 {
+		return true
+	}
+	for _, subtype := range selection.SubtypesAny {
+		if permanentHasSubtype(g, permanent, subtype) {
+			return true
+		}
+	}
+	return false
+}
+
+// snapshotMatchesTriggerSourceFilter mirrors permanentMatchesTriggerSourceFilter
+// against last-known information for a source permanent that has left the
+// battlefield.
+func snapshotMatchesTriggerSourceFilter(selection *game.Selection, snapshot *game.ObjectSnapshot) bool {
+	for _, cardType := range selection.RequiredTypes {
+		if !slices.Contains(snapshot.Types, cardType) {
+			return false
+		}
+	}
+	for _, supertype := range selection.Supertypes {
+		if !slices.Contains(snapshot.Supertypes, supertype) {
+			return false
+		}
+	}
+	if len(selection.SubtypesAny) == 0 {
+		return true
+	}
+	for _, subtype := range selection.SubtypesAny {
+		if slices.Contains(snapshot.Subtypes, subtype) {
+			return true
+		}
+	}
+	return false
 }
 
 func eventEntersBattlefield(event *game.Event) bool {

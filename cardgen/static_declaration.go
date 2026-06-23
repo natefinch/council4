@@ -105,6 +105,8 @@ func lowerStaticDeclarations(
 				ok = appendStaticSpellUncounterableDeclaration(&body, declaration)
 			case compiler.StaticDeclarationEnteringTriggerMultiplier:
 				ok = appendStaticEnteringTriggerMultiplierDeclaration(&body, declaration)
+			case compiler.StaticDeclarationControlledTriggerMultiplier:
+				ok = appendStaticControlledTriggerMultiplierDeclaration(&body, declaration)
 			case compiler.StaticDeclarationUntapStep:
 				ok = appendStaticUntapStepDeclaration(&body, declaration)
 			case compiler.StaticDeclarationCastAsThoughFlash:
@@ -318,6 +320,9 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.EnteringMultiplier != nil {
 		payloads++
 	}
+	if declaration.ControlledMultiplier != nil {
+		payloads++
+	}
 	if declaration.Untap != nil {
 		payloads++
 	}
@@ -362,6 +367,8 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 		return declaration.SpellUncounterable != nil
 	case compiler.StaticDeclarationEnteringTriggerMultiplier:
 		return declaration.EnteringMultiplier != nil
+	case compiler.StaticDeclarationControlledTriggerMultiplier:
+		return declaration.ControlledMultiplier != nil
 	case compiler.StaticDeclarationUntapStep:
 		return declaration.Untap != nil
 	case compiler.StaticDeclarationCharacteristicPowerToughness:
@@ -1240,6 +1247,33 @@ func appendStaticEnteringTriggerMultiplierDeclaration(body *game.StaticAbility, 
 	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
 		Kind:           game.RuleEffectAdditionalTriggerForEnteringPermanent,
 		PermanentTypes: permanentTypes,
+	})
+	return true
+}
+
+// appendStaticControlledTriggerMultiplierDeclaration lowers an "If a triggered
+// ability of <filter> you control triggers, that ability triggers an additional
+// time." declaration into a controller-scoped trigger-multiplier rule effect on
+// the static ability body. The source-permanent filter is carried in
+// AffectedSelection (RequiredTypes and Supertypes conjunctive, SubtypesAny
+// disjunctive); the runtime fires a matching triggered ability one extra time
+// when its source is a permanent the controller controls that satisfies the
+// filter.
+func appendStaticControlledTriggerMultiplierDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	if declaration.ControlledMultiplier == nil {
+		return false
+	}
+	multiplier := declaration.ControlledMultiplier
+	if len(multiplier.Types) == 0 && len(multiplier.Supertypes) == 0 && len(multiplier.Subtypes) == 0 {
+		return false
+	}
+	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+		Kind: game.RuleEffectAdditionalTriggerForControlledPermanent,
+		AffectedSelection: game.Selection{
+			RequiredTypes: append([]types.Card(nil), multiplier.Types...),
+			Supertypes:    append([]types.Super(nil), multiplier.Supertypes...),
+			SubtypesAny:   append([]types.Sub(nil), multiplier.Subtypes...),
+		},
 	})
 	return true
 }

@@ -748,6 +748,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectCantActivateAbilities", nil
 	case game.RuleEffectAdditionalTriggerForEnteringPermanent:
 		return "game.RuleEffectAdditionalTriggerForEnteringPermanent", nil
+	case game.RuleEffectAdditionalTriggerForControlledPermanent:
+		return "game.RuleEffectAdditionalTriggerForControlledPermanent", nil
 	case game.RuleEffectUntapDuringOtherPlayersUntapStep:
 		return "game.RuleEffectUntapDuringOtherPlayersUntapStep", nil
 	case game.RuleEffectCastSpellsAsThoughFlash:

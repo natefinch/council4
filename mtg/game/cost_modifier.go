@@ -306,6 +306,18 @@ const (
 	// another. SpellTypes and ExcludedSpellTypes optionally narrow the cap to
 	// spells of, or other than, those card types; empty filters count every spell.
 	RuleEffectCastLimitPerTurn
+	// RuleEffectAdditionalTriggerForControlledPermanent makes a triggered ability
+	// of a permanent controlled by this effect's controller trigger one
+	// additional time when that permanent matches AffectedSelection ("If a
+	// triggered ability of a legendary creature you control triggers, that
+	// ability triggers an additional time.", Annie Joins Up; "... of an Ally you
+	// control ...", Katara, the Fearless; "... of a Ninja creature you control
+	// ...", Splinter, Radical Rat). AffectedSelection carries the source
+	// permanent's type, supertype, and subtype filter; unlike the chosen-type and
+	// entering-permanent doublers it includes the source object itself ("a ... you
+	// control", not "another"). An empty AffectedSelection matches any controlled
+	// permanent.
+	RuleEffectAdditionalTriggerForControlledPermanent
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -346,7 +358,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectPayLifeForColoredMana,
 		RuleEffectPayLifeForCommanderTax,
 		RuleEffectDrawLimitPerTurn,
-		RuleEffectCastLimitPerTurn:
+		RuleEffectCastLimitPerTurn,
+		RuleEffectAdditionalTriggerForControlledPermanent:
 		return true
 	default:
 		return false
