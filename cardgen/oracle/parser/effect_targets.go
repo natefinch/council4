@@ -2356,6 +2356,9 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "artifacts", "you", "control") &&
 		staticGroupVerb(tokens[3]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledArtifacts, Span: shared.SpanOf(tokens[:3])}
+	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "sagas", "you", "control") &&
+		staticGroupVerb(tokens[3]):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledSagas, Span: shared.SpanOf(tokens[:3]), Subtype: types.Saga, SubtypeText: string(types.Saga), SubtypeKnown: true}
 	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "tokens", "you", "control") &&
 		staticGroupVerb(tokens[3]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledTokens, Span: shared.SpanOf(tokens[:3])}

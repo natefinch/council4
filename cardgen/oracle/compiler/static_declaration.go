@@ -2835,6 +2835,9 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 	case StaticSubjectControlledArtifacts:
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.RequiredTypes = []types.Card{types.Artifact}
+	case StaticSubjectControlledSagas:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.SubtypesAny = []types.Sub{types.Saga}
 	case StaticSubjectControlledTokens:
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.TokenOnly = true

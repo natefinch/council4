@@ -1473,7 +1473,8 @@ func mixedStaticKeywordImplemented(keyword game.Keyword) bool {
 		game.Unleash,
 		game.Fear,
 		game.Skulk,
-		game.Intimidate:
+		game.Intimidate,
+		game.ReadAhead:
 		return true
 	default:
 		return false
@@ -1670,6 +1671,7 @@ func rulesFreeAbilityWordLabel(label string) bool {
 		"Flurry",
 		"Formidable",
 		"Hellbent",
+		"History Teacher",
 		"Inspired",
 		"Kinship",
 		"Lieutenant",

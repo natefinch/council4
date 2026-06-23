@@ -1369,6 +1369,7 @@ const (
 	StaticSubjectOtherControlledCreatures
 	StaticSubjectControlledWalls
 	StaticSubjectControlledArtifacts
+	StaticSubjectControlledSagas
 	StaticSubjectControlledTokens
 	StaticSubjectOpponentControlledCreatures
 	StaticSubjectControlledCreatureSubtype
