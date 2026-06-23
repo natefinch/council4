@@ -18,6 +18,7 @@ func (e *Engine) runTurn(g *game.Game, agents [game.NumPlayers]PlayerAgent) Turn
 		return log
 	}
 	e.runMainPhase(g, agents, game.PhasePrecombatMain, &log)
+	recordManaDevelopment(g, &log)
 	if g.IsGameOver() {
 		return log
 	}

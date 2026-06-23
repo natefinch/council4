@@ -67,6 +67,24 @@ type TurnLog struct {
 	CombatDamage   []CombatDamageLog
 	CreatureDamage []CreatureDamageLog
 	Deaths         []PermanentDeathLog
+
+	// LandsPlayed is the number of lands the active player played during this
+	// turn. Zero on a turn the active player could have played a land but did
+	// not is a missed land drop.
+	LandsPlayed int
+	// ManaAvailable is the active player's total mana available for the turn,
+	// measured at the end of their first precombat main phase (after their land
+	// drop). Each mana source the player controls and could tap for mana this
+	// turn counts once — lands, mana rocks, and non-summoning-sick mana dorks —
+	// approximating open mana the way the engine's own heuristic does (one mana
+	// per source). Rituals are excluded because they are spells, not permanents.
+	// A source that entered tapped this turn (a tapland) is still counted even
+	// though it cannot tap until next turn, so the figure can overstate a
+	// tapland turn by one.
+	ManaAvailable int
+	// ManaColors lists the distinct colors those sources can produce, as
+	// single-letter codes (W, U, B, R, G).
+	ManaColors []string
 }
 
 // TurnLogEntryKind identifies the kind of chronological turn log entry.
