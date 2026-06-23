@@ -270,6 +270,16 @@ var (
 	// modeled as a simple keyword purely so cards that have or grant banding are
 	// representable.
 	BandingStaticBody = simpleKeywordStaticBody("Banding", Banding)
+
+	// CompanionStaticBody is the reusable StaticAbilityBody for companion (CR
+	// 702.139): "Companion — <deckbuilding condition>." Companion is a static
+	// ability that functions from outside the game: it lets a player begin with
+	// the card in their sideboard as a designated companion and, once per game,
+	// pay {3} to put it into their hand. Both halves are deck-construction and
+	// sideboard mechanics the deterministic playtester does not simulate, so the
+	// keyword carries no continuous in-game effect; it is modeled as a simple
+	// keyword purely so companion cards are representable.
+	CompanionStaticBody = simpleKeywordStaticBody("Companion", Companion)
 )
 
 func simpleKeywordStaticBody(text string, keyword Keyword) StaticAbility {
