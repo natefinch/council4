@@ -181,6 +181,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if len(cond.ControllerControlsNamed) > 0 {
 		matches = matches && controllerControlsNamed(g, ctx, cond.ControllerControlsNamed)
 	}
+	if cond.FirstCombatPhaseOfTurn {
+		matches = matches && g.Turn.CombatPhasesThisTurn <= 1
+	}
 	if cond.Negate {
 		return !matches
 	}

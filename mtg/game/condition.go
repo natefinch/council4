@@ -162,6 +162,13 @@ type Condition struct {
 	// printed Oracle spelling ("Urza's Power-Plant") matches the canonical card
 	// name ("Urza's Power Plant"). An empty slice disables the predicate.
 	ControllerControlsNamed []string
+
+	// FirstCombatPhaseOfTurn is satisfied while the current turn is still in its
+	// first combat phase ("if it's the first combat phase of the turn"; Raiyuu,
+	// Storm's Edge, Karlach, Fury of Avernus). It is evaluated against
+	// TurnState.CombatPhasesThisTurn, holding only while that count is 1, so the
+	// extra-combat insertion it gates fires once per turn rather than looping.
+	FirstCombatPhaseOfTurn bool
 }
 
 // ControlPlayerScope selects which players' battlefields a control-count
@@ -240,7 +247,8 @@ func (c *Condition) Empty() bool {
 		c.ControllerGainedLifeThisTurnAtLeast == 0 &&
 		c.SpellXAtLeast == 0 &&
 		c.ControllerGraveyardCardOfTypeCountAtLeast == 0 &&
-		len(c.ControllerControlsNamed) == 0
+		len(c.ControllerControlsNamed) == 0 &&
+		!c.FirstCombatPhaseOfTurn
 }
 
 // EventHistoryWindow selects which turn's event log an EventHistoryCondition

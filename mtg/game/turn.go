@@ -147,6 +147,13 @@ type TurnState struct {
 	// order; a queued phase that re-activates the source re-queues more
 	// phases, so the combo loop continues until the queue empties.
 	ExtraPhases []Phase
+
+	// CombatPhasesThisTurn counts how many combat phases have begun this turn,
+	// incremented as each combat phase starts (the normal phase and every extra
+	// one queued via ExtraPhases). It backs the "if it's the first combat phase
+	// of the turn" gate (Raiyuu, Storm's Edge; Karlach, Fury of Avernus), which
+	// holds while the count is 1. It resets to zero at the start of each turn.
+	CombatPhasesThisTurn int
 }
 
 // CanPlayLand reports whether the active player can still play a land

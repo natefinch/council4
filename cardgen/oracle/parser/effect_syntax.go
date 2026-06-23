@@ -2761,51 +2761,39 @@ func parseCastAsThoughFlashEffect(sentence Sentence, tokens []shared.Token) ([]E
 }
 
 // parseAdditionalCombatPhaseEffect recognizes the extra-phase-insertion effect
-// "After this [main/combat] phase, there is an additional combat phase[ followed
-// by an additional main phase]." (Aggravated Assault, Aurelia the Warleader,
-// World at War, Combat Celebrant). It inserts an additional combat phase into
-// the current turn, optionally followed by an additional main phase. The leading
-// "After this <phase>" reference to the current phase is descriptive; the
-// simplified runtime model drains the inserted phases after the postcombat main
-// phase. Any other wording fails closed and flows through the generic parser.
+// in both clause orders: the leading "After this [main/combat] phase, there is
+// an additional combat phase[ followed by an additional main phase]."
+// (Aggravated Assault, Aurelia the Warleader, World at War, Combat Celebrant)
+// and the trailing "There is an additional combat phase after this phase."
+// (Raiyuu, Storm's Edge; Moraug, Fury of Akoum, which prints "there's"). It
+// inserts an additional combat phase into the current turn, optionally followed
+// by an additional main phase. The "after this <phase>" reference to the current
+// phase is descriptive; the simplified runtime model drains the inserted phases
+// after the postcombat main phase. A leading condition clause ("If it's the
+// first combat phase of the turn, ...") is stripped here so the extra-phase
+// grammar matches; that condition is recognized separately and re-associated by
+// the compiler through this effect's sentence-wide ClauseSpan. Any other wording
+// fails closed and flows through the generic parser.
 func parseAdditionalCombatPhaseEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
-	words := make([]shared.Token, 0, len(tokens))
-	for _, token := range tokens {
+	effectTokens := tokens
+	if len(tokens) > 0 {
+		if intro, _ := conditionIntroAt(tokens, 0); intro != ConditionIntroUnknown {
+			end := conditionClauseEnd(tokens, 0)
+			if end >= len(tokens) || tokens[end].Kind != shared.Comma {
+				return nil, false
+			}
+			effectTokens = tokens[end+1:]
+		}
+	}
+	words := make([]shared.Token, 0, len(effectTokens))
+	for _, token := range effectTokens {
 		if token.Kind == shared.Period || token.Kind == shared.Comma {
 			continue
 		}
 		words = append(words, token)
 	}
-	// Shortest match: "after this phase there is an additional combat phase" (9).
-	if len(words) < 9 || !equalWord(words[0], "after") || !equalWord(words[1], "this") {
-		return nil, false
-	}
-	idx := 2
-	if equalWord(words[idx], "main") || equalWord(words[idx], "combat") {
-		idx++
-	}
-	if !equalWord(words[idx], "phase") {
-		return nil, false
-	}
-	idx++
-	verbToken := words[idx]
-	for _, want := range []string{"there", "is", "an", "additional", "combat", "phase"} {
-		if idx >= len(words) || !equalWord(words[idx], want) {
-			return nil, false
-		}
-		idx++
-	}
-	additionalMain := false
-	if idx < len(words) {
-		for _, want := range []string{"followed", "by", "an", "additional", "main", "phase"} {
-			if idx >= len(words) || !equalWord(words[idx], want) {
-				return nil, false
-			}
-			idx++
-		}
-		additionalMain = true
-	}
-	if idx != len(words) {
+	verbToken, additionalMain, ok := matchAdditionalCombatPhaseWords(words)
+	if !ok {
 		return nil, false
 	}
 	return []EffectSyntax{{
@@ -2820,6 +2808,83 @@ func parseAdditionalCombatPhaseEffect(sentence Sentence, tokens []shared.Token) 
 		AdditionalMainPhase:   additionalMain,
 		Exact:                 true,
 	}}, true
+}
+
+// matchAdditionalCombatPhaseWords matches the punctuation-stripped words of an
+// additional-combat-phase clause in either order and reports the "there is"
+// verb token and whether an additional main phase follows. It fails closed for
+// any other wording.
+func matchAdditionalCombatPhaseWords(words []shared.Token) (verb shared.Token, additionalMain bool, ok bool) {
+	if verb, main, ok := matchLeadingAdditionalCombatPhaseWords(words); ok {
+		return verb, main, true
+	}
+	return matchTrailingAdditionalCombatPhaseWords(words)
+}
+
+// matchLeadingAdditionalCombatPhaseWords matches "after this [main|combat] phase
+// there is an additional combat phase[ followed by an additional main phase]".
+func matchLeadingAdditionalCombatPhaseWords(words []shared.Token) (verb shared.Token, additionalMain bool, ok bool) {
+	rest, ok := cutTokenPrefix(words, "after", "this")
+	if !ok || len(rest) == 0 {
+		return shared.Token{}, false, false
+	}
+	if equalWord(rest[0], "main") || equalWord(rest[0], "combat") {
+		rest = rest[1:]
+	}
+	rest, ok = cutTokenPrefix(rest, "phase")
+	if !ok || len(rest) == 0 {
+		return shared.Token{}, false, false
+	}
+	verb = rest[0]
+	rest, ok = cutTokenPrefix(rest, "there", "is", "an", "additional", "combat", "phase")
+	if !ok {
+		return shared.Token{}, false, false
+	}
+	main, ok := matchAdditionalMainPhaseTail(rest)
+	if !ok {
+		return shared.Token{}, false, false
+	}
+	return verb, main, true
+}
+
+// matchTrailingAdditionalCombatPhaseWords matches "there is an additional combat
+// phase after this [phase|one][ followed by an additional main phase]", also
+// accepting the "there's" contraction.
+func matchTrailingAdditionalCombatPhaseWords(words []shared.Token) (verb shared.Token, additionalMain bool, ok bool) {
+	if len(words) == 0 {
+		return shared.Token{}, false, false
+	}
+	verb = words[0]
+	rest, ok := cutTokenPrefix(words, "there's", "an", "additional", "combat", "phase")
+	if !ok {
+		rest, ok = cutTokenPrefix(words, "there", "is", "an", "additional", "combat", "phase")
+	}
+	if !ok {
+		return shared.Token{}, false, false
+	}
+	rest, ok = cutTokenPrefix(rest, "after", "this")
+	if !ok || len(rest) == 0 || (!equalWord(rest[0], "phase") && !equalWord(rest[0], "one")) {
+		return shared.Token{}, false, false
+	}
+	main, ok := matchAdditionalMainPhaseTail(rest[1:])
+	if !ok {
+		return shared.Token{}, false, false
+	}
+	return verb, main, true
+}
+
+// matchAdditionalMainPhaseTail consumes an optional "followed by an additional
+// main phase" tail, reporting whether it was present. It fails closed if any
+// other tokens remain.
+func matchAdditionalMainPhaseTail(words []shared.Token) (additionalMain bool, ok bool) {
+	if len(words) == 0 {
+		return false, true
+	}
+	rest, ok := cutTokenPrefix(words, "followed", "by", "an", "additional", "main", "phase")
+	if !ok || len(rest) != 0 {
+		return false, false
+	}
+	return true, true
 }
 
 // parseRollDieEffect recognizes "roll a d<N>" (CR 706), the die-roll mechanic

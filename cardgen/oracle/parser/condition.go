@@ -92,6 +92,7 @@ const (
 	ConditionPredicateSpellXAtLeast                                    ConditionPredicateKind = "ConditionPredicateSpellXAtLeast"
 	ConditionPredicateGraveyardCardOfTypeCountAtLeast                  ConditionPredicateKind = "ConditionPredicateGraveyardCardOfTypeCountAtLeast"
 	ConditionPredicateControllerControlsNamed                          ConditionPredicateKind = "ConditionPredicateControllerControlsNamed"
+	ConditionPredicateFirstCombatPhaseOfTurn                           ConditionPredicateKind = "ConditionPredicateFirstCombatPhaseOfTurn"
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -598,6 +599,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeDrawFromEmptyLibraryCondition,
 		recognizeDrawCardReplacementCondition,
 		recognizeCastTimingCondition,
+		recognizeFirstCombatPhaseCondition,
 		recognizeAttackersAttackingControllerCondition,
 		recognizeSpellXCondition,
 	} {
@@ -697,6 +699,19 @@ func recognizeDestroyedThisWayCondition(body []shared.Token, _ Atoms) (Condition
 // those attackers are attacking the controller (directly or one of the
 // controller's planeswalkers) and holds when that count meets the threshold N.
 // It fails closed on any other wording.
+// recognizeFirstCombatPhaseCondition matches the turn-structure gate "it's the
+// first combat phase of the turn" ("if it's the first combat phase of the turn,
+// there is an additional combat phase after this phase"; Raiyuu, Storm's Edge,
+// Karlach, Fury of Avernus). It gates the extra-combat insertion so the loop
+// fires only once per turn. It fails closed on any other wording.
+func recognizeFirstCombatPhaseCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if tokenWordsEqual(body, "it's", "the", "first", "combat", "phase", "of", "the", "turn") ||
+		tokenWordsEqual(body, "it", "is", "the", "first", "combat", "phase", "of", "the", "turn") {
+		return ConditionClause{Predicate: ConditionPredicateFirstCombatPhaseOfTurn}, true
+	}
+	return ConditionClause{}, false
+}
+
 func recognizeAttackersAttackingControllerCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
 	if len(body) < 1 {
 		return ConditionClause{}, false

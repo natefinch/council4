@@ -70,3 +70,47 @@ func TestLowerAdditionalCombatPhaseCombatOnly(t *testing.T) {
 		t.Fatalf("extra phases = %#v, want Combat only", extra)
 	}
 }
+
+// TestLowerAdditionalCombatPhaseRaiyuu proves Raiyuu, Storm's Edge lowers its
+// "untap it. If it's the first combat phase of the turn, there is an additional
+// combat phase after this phase." triggered ability into a two-instruction
+// sequence: an ungated untap of the triggering attacker, followed by an
+// AddExtraPhases gated by the FirstCombatPhaseOfTurn condition. The trailing
+// "after this phase" word order and the leading condition clause are the
+// Raiyuu-specific wordings exercised here.
+func TestLowerAdditionalCombatPhaseRaiyuu(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Raiyuu, Storm's Edge",
+		Layout:     "normal",
+		TypeLine:   "Legendary Creature — Human Samurai",
+		ManaCost:   "{1}{R}{R}",
+		OracleText: "First strike\nWhenever a Samurai or Warrior you control attacks alone, untap it. If it's the first combat phase of the turn, there is an additional combat phase after this phase.",
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	seq := face.TriggeredAbilities[0].Content.Modes[0].Sequence
+	if len(seq) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions", seq)
+	}
+	if _, ok := seq[0].Primitive.(game.Untap); !ok {
+		t.Fatalf("first primitive = %T, want game.Untap", seq[0].Primitive)
+	}
+	if seq[0].Condition.Exists {
+		t.Fatalf("untap must be ungated, got condition %#v", seq[0].Condition.Val)
+	}
+	extra, ok := seq[1].Primitive.(game.AddExtraPhases)
+	if !ok {
+		t.Fatalf("second primitive = %T, want game.AddExtraPhases", seq[1].Primitive)
+	}
+	if !extra.Combat || extra.Main {
+		t.Fatalf("extra phases = %#v, want Combat only", extra)
+	}
+	if !seq[1].Condition.Exists {
+		t.Fatal("additional combat phase must be gated by a condition")
+	}
+	if !seq[1].Condition.Val.Condition.Val.FirstCombatPhaseOfTurn {
+		t.Fatalf("gate condition = %#v, want FirstCombatPhaseOfTurn", seq[1].Condition.Val)
+	}
+}
