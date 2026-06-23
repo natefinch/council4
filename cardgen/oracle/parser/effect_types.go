@@ -2297,6 +2297,12 @@ type EffectStaticSubjectSyntax struct {
 	Subtype      types.Sub               `json:",omitempty"`
 	SubtypeText  string                  `json:",omitempty"`
 	SubtypeKnown bool                    `json:",omitempty"`
+	// SubtypesAny carries a disjunctive list of creature subtypes when the
+	// affected group names more than one ("Each other creature you control
+	// that's a Wolf or a Werewolf gets ..."). A permanent matches if it has any
+	// one of them. When set it supersedes the single Subtype slot; Subtype still
+	// holds the first entry for callers that read a single subtype.
+	SubtypesAny []types.Sub `json:",omitempty"`
 	// ExcludedSubtype marks the Subtype as a "non-<subtype>" exclusion rather
 	// than a required subtype ("Non-Human creatures you control get ..."). When
 	// set, the affected group matches creatures that do NOT carry Subtype.

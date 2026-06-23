@@ -2299,7 +2299,7 @@ func staticGroupForParserSubject(subject parser.StaticDeclarationSubject) (Stati
 		if kind == StaticSubjectNone {
 			return StaticGroupReference{}, false
 		}
-		group, ok := staticGroupForSubject(kind, subject.Group.Span, subject.Group.Subtype, subject.Group.SubtypeKnown, staticColorFilter{
+		group, ok := staticGroupForSubject(kind, subject.Group.Span, subject.Group.Subtype, subject.Group.SubtypeKnown, subject.Group.SubtypesAny, staticColorFilter{
 			Colors:       subject.Group.Colors,
 			Colorless:    subject.Group.Colorless,
 			Multicolored: subject.Group.Multicolored,
@@ -2736,7 +2736,7 @@ func staticDeclarationEffectGroup(ability CompiledAbility, effect *CompiledEffec
 			return staticDeclarationEffectGroupResult{}, false
 		}
 		keyword, excludedKeyword := staticSubjectKeywordFilter(effect)
-		group, ok := staticGroupForSubject(effect.StaticSubject, effect.StaticSubjectSpan, effect.StaticSubjectSub(), effect.StaticSubjectSubKnown(), staticColorFilter{
+		group, ok := staticGroupForSubject(effect.StaticSubject, effect.StaticSubjectSpan, effect.StaticSubjectSub(), effect.StaticSubjectSubKnown(), effect.StaticSubjectSubsAny(), staticColorFilter{
 			Colors:       effect.StaticSubjectColorsAny(),
 			Colorless:    effect.StaticSubjectColorless(),
 			Multicolored: effect.StaticSubjectMulticolored(),
@@ -2792,7 +2792,18 @@ func staticFreeReferences(ability CompiledAbility) []CompiledReference {
 	return free
 }
 
-func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype types.Sub, subtypeKnown bool, colors staticColorFilter, keyword, excludedKeyword parser.KeywordKind, chosenColorFromEntry bool) (StaticGroupReference, bool) {
+// staticGroupSubtypes returns the affected-group subtype filter, using the
+// disjunctive SubsAny list when the subject named more than one creature subtype
+// ("... that's a Wolf or a Werewolf") and falling back to the single subtype
+// otherwise. A permanent matches if it carries any one of the returned subtypes.
+func staticGroupSubtypes(subtype types.Sub, subsAny []types.Sub) []types.Sub {
+	if len(subsAny) > 0 {
+		return slices.Clone(subsAny)
+	}
+	return []types.Sub{subtype}
+}
+
+func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype types.Sub, subtypeKnown bool, subsAny []types.Sub, colors staticColorFilter, keyword, excludedKeyword parser.KeywordKind, chosenColorFromEntry bool) (StaticGroupReference, bool) {
 	group := StaticGroupReference{Span: span}
 	switch subject {
 	case StaticSubjectAttachedObject:
@@ -2850,26 +2861,26 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 			return StaticGroupReference{}, false
 		}
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.SubtypesAny = []types.Sub{subtype}
+		group.Selection.SubtypesAny = staticGroupSubtypes(subtype, subsAny)
 	case StaticSubjectOtherControlledCreatureSubtype:
 		if !subtypeKnown {
 			return StaticGroupReference{}, false
 		}
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.SubtypesAny = []types.Sub{subtype}
+		group.Selection.SubtypesAny = staticGroupSubtypes(subtype, subsAny)
 		group.ExcludeSource = true
 	case StaticSubjectAllCreatureSubtype:
 		if !subtypeKnown {
 			return StaticGroupReference{}, false
 		}
 		group.Domain = StaticGroupBattlefield
-		group.Selection.SubtypesAny = []types.Sub{subtype}
+		group.Selection.SubtypesAny = staticGroupSubtypes(subtype, subsAny)
 	case StaticSubjectOtherCreatureSubtype:
 		if !subtypeKnown {
 			return StaticGroupReference{}, false
 		}
 		group.Domain = StaticGroupBattlefield
-		group.Selection.SubtypesAny = []types.Sub{subtype}
+		group.Selection.SubtypesAny = staticGroupSubtypes(subtype, subsAny)
 		group.ExcludeSource = true
 	case StaticSubjectControlledAttackingCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents

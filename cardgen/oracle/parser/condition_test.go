@@ -337,6 +337,13 @@ func TestParseConditionControlsComposition(t *testing.T) {
 			requiredTypes: []TriggerCardType{TriggerCardTypeCreature},
 			subtypes:      []types.Sub{types.Griffin},
 		},
+		{
+			name:          "multi subtype disjunction",
+			condition:     "you control another Wolf or Werewolf",
+			comparison:    ConditionComparisonNone,
+			subtypes:      []types.Sub{types.Wolf, types.Werewolf},
+			excludeSource: true,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
