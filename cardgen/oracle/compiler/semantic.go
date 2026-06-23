@@ -1801,6 +1801,16 @@ type CompiledEffect struct {
 	// control." through the text-blind compiler boundary so lowering emits the
 	// linked battlefield return paired with the sibling exile.
 	ReturnExiledCard bool
+	// ExileEntireHand carries the parser-recognized whole-hand exile clause
+	// "Exile all cards from your hand." (Wormfang Behemoth) through the
+	// text-blind compiler boundary so lowering emits the linked entire-hand
+	// exile paired with the sibling return-to-hand trigger.
+	ExileEntireHand bool
+	// ReturnExiledCardsToHand carries the parser-recognized return clause
+	// "Return the exiled cards to their owner's hand." (Wormfang Behemoth)
+	// through the text-blind compiler boundary so lowering emits the linked
+	// return to hand of the set the sibling entire-hand exile removed.
+	ReturnExiledCardsToHand bool
 	// CantCastSpellsAllPlayers mirrors the parser flag for an EffectCantCastSpells
 	// clause that affects every player ("Players can't cast spells this turn.")
 	// rather than only the controller's opponents. Lowering reads it to pick the

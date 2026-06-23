@@ -322,6 +322,18 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: ExileFromGraveyard kind has unexpected concrete type")
 		}
 		return r.renderExileFromGraveyard(ctx, value)
+	case game.PrimitiveExileEntireHand:
+		value, ok := primitive.(game.ExileEntireHand)
+		if !ok {
+			return "", errors.New("render: internal error: ExileEntireHand kind has unexpected concrete type")
+		}
+		return r.renderExileEntireHand(value)
+	case game.PrimitiveReturnExiledCardsToHand:
+		value, ok := primitive.(game.ReturnExiledCardsToHand)
+		if !ok {
+			return "", errors.New("render: internal error: ReturnExiledCardsToHand kind has unexpected concrete type")
+		}
+		return r.renderReturnExiledCardsToHand(value)
 	case game.PrimitivePutFromHand:
 		value, ok := primitive.(game.PutFromHand)
 		if !ok {
@@ -723,6 +735,23 @@ func (r Renderer) renderExileFromGraveyard(ctx *renderCtx, value game.ExileFromG
 		fmt.Sprintf("Amount: %s,", amount),
 	}
 	return structLit("game.ExileFromGraveyard", fields), nil
+}
+
+func (r Renderer) renderExileEntireHand(value game.ExileEntireHand) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.ExileEntireHand", []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)),
+	}), nil
+}
+
+func (Renderer) renderReturnExiledCardsToHand(value game.ReturnExiledCardsToHand) (string, error) {
+	return structLit("game.ReturnExiledCardsToHand", []string{
+		fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)),
+	}), nil
 }
 
 func (r Renderer) renderPutFromHand(ctx *renderCtx, value game.PutFromHand) (string, error) {
