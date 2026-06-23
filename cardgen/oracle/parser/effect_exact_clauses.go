@@ -269,6 +269,98 @@ func exactExileUntilSourceLeavesEffectSyntax(effect *EffectSyntax) bool {
 	return true
 }
 
+// exactExileForEachPlayerUntilLeavesEffectSyntax recognizes the distributive
+// Saga exile clause "For each player, exile up to one [other] target
+// <permanent> that player controls until <this Saga> leaves the battlefield."
+// (Vault 13: Dweller's Journey). The leading "For each player," distributes a
+// single "up to one" target pool across every player; the controller chooses
+// one eligible permanent per player at resolution and the exiled permanents are
+// linked to the source so a paired chapter returns them. The "that player"
+// reference is the distributive anchor and the trailing self-reference is the
+// duration anchor, neither a second object.
+//
+// effectSubjectStart drops the "For each player," prefix from the reconstructed
+// clause text, so the recognizer confirms that prefix on the raw effect text and
+// rebuilds the remainder from the single target and source anchor. The trailing
+// "until this Saga leaves the battlefield" contributes the source's own "Saga"
+// subtype to the parsed selection; because the clause is matched by exact
+// wording, that spurious subtype is removed so the candidate filter is the
+// printed "[other] <permanent>" rather than "Saga". Any other exile shape leaves
+// the clause non-exact so lowering fails closed.
+func exactExileForEachPlayerUntilLeavesEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectExile || effect.Negated || effect.Optional {
+		return false
+	}
+	if effect.Context != EffectContextController {
+		return false
+	}
+	if effect.Duration != EffectDurationNone || effect.FromZone != zone.None || effect.ToZone != zone.None {
+		return false
+	}
+	if len(effect.Targets) != 1 {
+		return false
+	}
+	if effect.Targets[0].Cardinality.Min != 0 || effect.Targets[0].Cardinality.Max != 1 {
+		return false
+	}
+	sourceRef, ok := exileForEachPlayerReferences(effect.References)
+	if !ok {
+		return false
+	}
+	if !strings.HasPrefix(strings.ToLower(strings.TrimSpace(effect.Text)), "for each player, ") {
+		return false
+	}
+	expected := "Exile " + effect.Targets[0].Text + " until " + sourceRef.Text + " leaves the battlefield."
+	if !strings.EqualFold(exactEffectClauseText(effect), expected) {
+		return false
+	}
+	stripSourceSubtypeContamination(&effect.Selection, sourceRef)
+	effect.ExileForEachPlayerUntilSourceLeaves = true
+	return true
+}
+
+// exileForEachPlayerReferences confirms the distributive exile clause carries
+// exactly the two anchors its wording requires: a "that player" reference (the
+// per-player distribution anchor) and a self reference (the duration anchor). It
+// returns the source reference so the caller can rebuild and compare the
+// trailing "until <self> leaves the battlefield" phrase.
+func exileForEachPlayerReferences(references []Reference) (Reference, bool) {
+	if len(references) != 2 {
+		return Reference{}, false
+	}
+	var thatPlayer, sourceRef *Reference
+	for index := range references {
+		switch references[index].Kind {
+		case ReferenceThatPlayer:
+			thatPlayer = &references[index]
+		case ReferenceThisObject, ReferenceSelfName:
+			sourceRef = &references[index]
+		default:
+		}
+	}
+	if thatPlayer == nil || sourceRef == nil {
+		return Reference{}, false
+	}
+	return *sourceRef, true
+}
+
+// stripSourceSubtypeContamination removes the source permanent's own printed
+// subtypes from a parsed selection's any-of subtype filter. The distributive
+// exile clause ends with "until this Saga leaves the battlefield", which leaks
+// the source's "Saga" subtype into the exile selection; once the clause is
+// matched by exact wording the leaked subtype is dropped so the candidate filter
+// reflects the printed "[other] <permanent>" wording rather than the duration
+// phrase. Only subtypes named verbatim in the source reference text are removed.
+func stripSourceSubtypeContamination(selection *SelectionSyntax, sourceRef Reference) {
+	if len(selection.SubtypesAny) == 0 {
+		return
+	}
+	sourceWords := strings.Fields(strings.ToLower(sourceRef.Text))
+	selection.SubtypesAny = slices.DeleteFunc(selection.SubtypesAny, func(subtype types.Sub) bool {
+		return slices.Contains(sourceWords, strings.ToLower(string(subtype)))
+	})
+}
+
 // exactReturnExiledCardEffectSyntax recognizes the explicit O-Ring leaves-the-
 // battlefield clause "return the exiled card to the battlefield under its
 // owner's control." (Oblivion Ring, Journey to Nowhere, Fiend Hunter). The
@@ -376,6 +468,93 @@ func exactBottomLinkedExiledCardsEffectSyntax(effect *EffectSyntax) bool {
 		return false
 	}
 	effect.BottomLinkedExiledCards = true
+	return true
+}
+
+// exactReturnLinkedExiledToBattlefieldPartialEffectSyntax recognizes the Saga
+// chapter clause "Return <count> cards exiled with <this Saga> to the
+// battlefield under their owners' control." (Vault 13: Dweller's Journey). The
+// returned cards are a fixed-size subset, chosen at resolution, of the set a
+// sibling distributive exile clause linked to the source, so the effect carries
+// no target and reads its source through the link rather than a printed object.
+// The spelled count is rebuilt from the parsed amount so only the exact printed
+// number matches. It marks the effect so lowering emits the partial linked
+// battlefield return; any other return shape leaves the clause non-exact so
+// lowering fails closed.
+func exactReturnLinkedExiledToBattlefieldPartialEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectReturn || effect.Negated || effect.Optional {
+		return false
+	}
+	if effect.Context != EffectContextController || !effect.UnderOwnersControl {
+		return false
+	}
+	if effect.ToZone != zone.Battlefield || effect.FromZone != zone.None {
+		return false
+	}
+	if len(effect.Targets) != 0 {
+		return false
+	}
+	if !effect.Amount.Known || effect.Amount.Value < 1 {
+		return false
+	}
+	count, ok := cardinalWord(effect.Amount.Value)
+	if !ok {
+		return false
+	}
+	anchor, ok := linkedExiledSourceAnchorText(effect)
+	if !ok {
+		return false
+	}
+	canonical := "Return " + count + " cards exiled with " + anchor +
+		" to the battlefield under their owners' control."
+	if !strings.EqualFold(exactEffectClauseText(effect), canonical) {
+		return false
+	}
+	effect.ReturnLinkedExiledToBattlefieldPartial = true
+	return true
+}
+
+// linkedExiledSourceAnchorText returns the self-reference text ("this Saga")
+// that names the source link of a linked-exile return or disposal clause,
+// scanning both the effect's references and subject references because the
+// anchor may appear in either set depending on the surrounding sentence.
+func linkedExiledSourceAnchorText(effect *EffectSyntax) (string, bool) {
+	for _, references := range [][]Reference{effect.References, effect.SubjectReferences} {
+		for _, reference := range references {
+			if reference.Kind != ReferenceThisObject && reference.Kind != ReferenceSelfName {
+				continue
+			}
+			if text := strings.TrimSpace(reference.Text); text != "" {
+				return text, true
+			}
+		}
+	}
+	return "", false
+}
+
+// exactPutLinkedExiledRestOnLibraryBottomEffectSyntax recognizes the Saga
+// chapter disposal clause "put the rest on the bottom of their owners'
+// libraries." (Vault 13: Dweller's Journey). The disposed cards are the linked
+// exiled set a sibling partial-return clause did not bring back, identified by
+// the source link, so the effect carries no target. It marks the effect so
+// lowering routes the unreturned remainder to the bottom of their owners'
+// libraries; any other put shape leaves the clause non-exact so lowering fails
+// closed.
+func exactPutLinkedExiledRestOnLibraryBottomEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectPut || effect.Negated || effect.Optional {
+		return false
+	}
+	if effect.Context != EffectContextController {
+		return false
+	}
+	if len(effect.Targets) != 0 {
+		return false
+	}
+	if !strings.EqualFold(exactEffectClauseText(effect),
+		"put the rest on the bottom of their owners' libraries.") {
+		return false
+	}
+	effect.PutLinkedExiledRestOnLibraryBottom = true
 	return true
 }
 

@@ -1848,6 +1848,24 @@ type CompiledEffect struct {
 	// text-blind compiler boundary so lowering emits the linked library-bottom
 	// disposal paired with the sibling exile.
 	BottomLinkedExiledCards bool
+	// ExileForEachPlayerUntilSourceLeaves carries the parser-recognized
+	// distributive Saga exile clause "For each player, exile up to one [other]
+	// target <permanent> that player controls until <this Saga> leaves the
+	// battlefield." (Vault 13: Dweller's Journey) through the text-blind compiler
+	// boundary so lowering links each player's chosen permanent to the source.
+	ExileForEachPlayerUntilSourceLeaves bool
+	// ReturnLinkedExiledToBattlefieldPartial carries the parser-recognized
+	// partial payoff clause "Return <count> cards exiled with <this Saga> to the
+	// battlefield under their owners' control." (Vault 13: Dweller's Journey)
+	// through the text-blind compiler boundary so lowering returns a fixed-size
+	// subset of the linked exiled set.
+	ReturnLinkedExiledToBattlefieldPartial bool
+	// PutLinkedExiledRestOnLibraryBottom carries the parser-recognized remainder
+	// disposal clause "put the rest on the bottom of their owners' libraries."
+	// (Vault 13: Dweller's Journey) through the text-blind compiler boundary so
+	// lowering routes the unreturned remainder of the linked exiled set to the
+	// bottom of their owners' libraries.
+	PutLinkedExiledRestOnLibraryBottom bool
 	// CounterExiledCardManaValue carries the parser-recognized chapter II counter
 	// clause "Put a number of +1/+1 counters on target creature you control equal
 	// to the mana value of the exiled card." (The Aesir Escape Valhalla) through
