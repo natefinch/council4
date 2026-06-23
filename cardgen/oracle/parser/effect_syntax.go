@@ -954,7 +954,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseRingTemptsEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseNoMaximumHandSizeForRestOfGameEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseCantCastSpellsEffect(sentence, tokens) },
-		func() ([]EffectSyntax, bool) { return parseGroupMustAttackEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parseGroupMustAttackEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseSpellsCantBeCounteredEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseChangeTargetRetargetEffect(sentence, tokens, atoms) },
 	} {
@@ -3099,17 +3099,21 @@ func cantCastSpellsFilterType(word string) (required, excluded CardType, ok bool
 	return CardTypeUnknown, CardTypeUnknown, false
 }
 
-// parseGroupMustAttackEffect recognizes the one-shot, turn-scoped forced-attack
-// effect "<group> attack this turn if able." (Bident of Thassa: "Creatures your
+// parseGroupMustAttackEffect recognizes the one-shot forced-attack effect
+// "<group> attack this turn if able." (Bident of Thassa: "Creatures your
 // opponents control attack this turn if able."; "Creatures you control attack
-// this turn if able."; "All creatures attack this turn if able."). The affected
-// creature group is recorded in StaticSubject so lowering can scope the
-// continuous must-attack rule effect by controller. Any other subject,
-// duration, or trailing clause fails closed and flows through the generic effect
-// parser.
-func parseGroupMustAttackEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
-	words := make([]shared.Token, 0, len(tokens))
-	for _, token := range tokens {
+// this turn if able."; "All creatures attack this turn if able.") and its
+// duration-scoped variant "Until your next turn, <group> attack each combat if
+// able." (The Akroan War chapter II: "Until your next turn, creatures your
+// opponents control attack each combat if able."). The affected creature group
+// is recorded in StaticSubject so lowering can scope the continuous must-attack
+// rule effect by controller, and the recognized duration becomes the rule
+// effect's lifetime. Any other subject, duration, or trailing clause fails
+// closed and flows through the generic effect parser.
+func parseGroupMustAttackEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	remaining, leadingDuration := stripLeadingDurationClause(tokens, atoms)
+	words := make([]shared.Token, 0, len(remaining))
+	for _, token := range remaining {
 		if token.Kind == shared.Period {
 			continue
 		}
@@ -3132,7 +3136,18 @@ func parseGroupMustAttackEffect(sentence Sentence, tokens []shared.Token) ([]Eff
 	default:
 		return nil, false
 	}
-	rest := []string{"attack", "this", "turn", "if", "able"}
+	var rest []string
+	var duration EffectDurationKind
+	switch leadingDuration {
+	case EffectDurationNone:
+		rest = []string{"attack", "this", "turn", "if", "able"}
+		duration = EffectDurationThisTurn
+	case EffectDurationUntilYourNextTurn:
+		rest = []string{"attack", "each", "combat", "if", "able"}
+		duration = EffectDurationUntilYourNextTurn
+	default:
+		return nil, false
+	}
 	if len(words)-index != len(rest) {
 		return nil, false
 	}
@@ -3149,7 +3164,7 @@ func parseGroupMustAttackEffect(sentence Sentence, tokens []shared.Token) ([]Eff
 		Text:          sentence.Text,
 		Tokens:        append([]shared.Token(nil), tokens...),
 		Context:       EffectContextController,
-		Duration:      EffectDurationThisTurn,
+		Duration:      duration,
 		StaticSubject: EffectStaticSubjectSyntax{Kind: subject, Span: shared.SpanOf(words[:index])},
 		Exact:         true,
 	}}, true
