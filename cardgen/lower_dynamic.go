@@ -793,6 +793,13 @@ func damageTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 	}
 	switch target.Selector.Kind {
 	case compiler.SelectorAny:
+		// "any other target"/"any another target" as a lone target excludes the
+		// ability's source, a meaning the bare "any target" spec cannot express;
+		// reject it so single-target damage stays faithful. The two-target damage
+		// rider handles its own "other" (distinct-from-prior-target) separately.
+		if target.Selector.Other || target.Selector.Another {
+			return game.TargetSpec{}, false
+		}
 		spec.Allow = game.TargetAllowPermanent | game.TargetAllowPlayer
 	case compiler.SelectorCreature, compiler.SelectorPlaneswalker, compiler.SelectorBattle:
 		permanent, ok := permanentTargetSpec(target)
