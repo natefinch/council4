@@ -1523,16 +1523,27 @@ func (p MoveCard) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 	hasCard := p.Card.Kind != CardReferenceNone
 	hasPlayer := p.Player.Kind() != PlayerReferenceNone
 	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
+	hasLinked := p.FromLinked != ""
 	set := 0
-	for _, present := range []bool{hasCard, hasPlayer, hasGroup} {
+	for _, present := range []bool{hasCard, hasPlayer, hasGroup, hasLinked} {
 		if present {
 			set++
 		}
 	}
 	if set != 1 {
-		return errors.New("move card requires exactly one of Card, Player, or PlayerGroup")
+		return errors.New("move card requires exactly one of Card, Player, PlayerGroup, or FromLinked")
 	}
-	if hasGroup {
+	if p.PublishLinked != "" && !hasPlayer {
+		return errors.New("move card PublishLinked requires the player-zone group form")
+	}
+	if hasLinked {
+		if p.Amount.IsDynamic() || p.Amount.Value() != 0 {
+			return errors.New("linked-set move must not set Amount")
+		}
+		if p.DestinationBottom {
+			return errors.New("linked-set move must not request bottom placement")
+		}
+	} else if hasGroup {
 		if err := validatePlayerGroupReference(p.PlayerGroup); err != nil {
 			return err
 		}

@@ -197,6 +197,8 @@ func (r Renderer) renderMoveCard(ctx *renderCtx, value game.MoveCard) (string, e
 	ctx.need(importZone)
 	var reference string
 	switch {
+	case value.FromLinked != "":
+		reference = fmt.Sprintf("FromLinked: game.LinkedKey(%q),", string(value.FromLinked))
 	case value.PlayerGroup.Kind != game.PlayerGroupReferenceNone:
 		var group string
 		switch value.PlayerGroup.Kind {
@@ -232,6 +234,9 @@ func (r Renderer) renderMoveCard(ctx *renderCtx, value game.MoveCard) (string, e
 			return "", err
 		}
 		fields = append(fields, fmt.Sprintf("Amount: %s,", amount))
+	}
+	if value.PublishLinked != "" {
+		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
 	}
 	if value.DestinationBottom {
 		fields = append(fields, "DestinationBottom: true,")

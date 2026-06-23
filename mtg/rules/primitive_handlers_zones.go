@@ -1180,6 +1180,9 @@ func (r *effectResolver) chooseControlledBouncePermanents(prim game.Bounce) []*g
 }
 
 func handleMoveCard(r *effectResolver, prim game.MoveCard) effectResolved {
+	if prim.FromLinked != "" {
+		return handleMoveCardLinkedSet(r, prim)
+	}
 	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 		return handleMoveCardPlayerGroup(r, prim)
 	}
@@ -1247,14 +1250,55 @@ func handleMoveCardZoneGroup(r *effectResolver, prim game.MoveCard) effectResolv
 		return res
 	}
 	simultaneousID := r.game.IDGen.Next()
+	publishKey := game.LinkedObjectKey{}
+	if prim.PublishLinked != "" {
+		publishKey = linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
+	}
 	for _, cardID := range cardIDs {
 		card, ok := r.game.GetCardInstance(cardID)
 		if !ok {
 			continue
 		}
 		moved := moveCardBetweenZonesInBatch(r.game, card.Owner, cardID, prim.FromZone, prim.Destination, false, simultaneousID)
+		if moved {
+			res.succeeded = true
+			if prim.PublishLinked != "" {
+				rememberLinkedObject(r.game, publishKey, game.LinkedObjectRef{CardID: cardID})
+			}
+		}
+	}
+	return res
+}
+
+// handleMoveCardLinkedSet resolves the linked-set form of MoveCard, returning
+// every card remembered under prim.FromLinked from prim.FromZone to its owner's
+// Destination zone, then clearing the set. It is the back-reference half of an
+// exiled-card link: an earlier exile published the set (e.g. Wormfang Behemoth's
+// "exile all cards from your hand"), and this leaves-the-battlefield trigger
+// returns exactly those cards ("return the exiled cards to their owner's hand.").
+// Cards that have since left FromZone are skipped, so a stolen or already-moved
+// card is a legal no-op. All moves share one SimultaneousID so they emit as a
+// single zone-change batch.
+func handleMoveCardLinkedSet(r *effectResolver, prim game.MoveCard) effectResolved {
+	res := effectResolved{accepted: true}
+	key := linkedObjectSourceKey(r.game, r.obj, string(prim.FromLinked))
+	simultaneousID := r.game.IDGen.Next()
+	for _, ref := range linkedObjects(r.game, key) {
+		if ref.CardID == 0 {
+			continue
+		}
+		card, ok := r.game.GetCardInstance(ref.CardID)
+		if !ok {
+			continue
+		}
+		currentZone, ok := cardZone(r.game, ref.CardID)
+		if !ok || currentZone != prim.FromZone {
+			continue
+		}
+		moved := moveCardBetweenZonesInBatch(r.game, card.Owner, ref.CardID, prim.FromZone, prim.Destination, false, simultaneousID)
 		res.succeeded = moved || res.succeeded
 	}
+	clearLinkedObjects(r.game, key)
 	return res
 }
 
