@@ -20,6 +20,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactDamageEffectSyntax(effect) || exactSourcePowerDamageEffectSyntax(effect)
 	case EffectCantBeBlocked:
 		return exactCantBeBlockedEffectSyntax(effect)
+	case EffectCantBlock:
+		return exactCantBlockEffectSyntax(effect)
 	case EffectCounter:
 		return exactCounterEffectSyntax(effect)
 	case EffectCopyStackObject:
@@ -1798,6 +1800,31 @@ func exactCantBeBlockedEffectSyntax(effect *EffectSyntax) bool {
 		strings.EqualFold(
 			exactEffectClauseText(effect),
 			effect.Targets[0].Text+" can't be blocked this turn.",
+		)
+}
+
+// exactCantBlockEffectSyntax recognizes the temporary combat-restriction
+// resolving effect "<targets> can't block this turn." that grants the targeted
+// creature(s) a "can't block" restriction until end of turn. Unlike the
+// single-target can't-be-blocked recognizer it accepts the multi-target and
+// optional cardinalities ("Up to three target creatures can't block this turn.",
+// "One or two target creatures can't block this turn.") the lowering applies
+// per target. The clause is reconstructed byte-exactly from the target's own
+// text so every deviation fails closed: a different duration (the trailing "this
+// turn" is fixed), a "can't block creatures you control" protected-object
+// qualifier, an "except" rider, or any "can't be blocked" / "can't attack"
+// wording leaves the clause non-exact.
+func exactCantBlockEffectSyntax(effect *EffectSyntax) bool {
+	return effect.Duration == EffectDurationThisTurn &&
+		effect.Context == EffectContextTarget &&
+		len(effect.Targets) == 1 &&
+		effect.Targets[0].Exact &&
+		effect.Targets[0].Cardinality.Min >= 0 &&
+		effect.Targets[0].Cardinality.Max >= 1 &&
+		effect.Targets[0].Cardinality.Min <= effect.Targets[0].Cardinality.Max &&
+		strings.EqualFold(
+			exactEffectClauseText(effect),
+			effect.Targets[0].Text+" can't block this turn.",
 		)
 }
 

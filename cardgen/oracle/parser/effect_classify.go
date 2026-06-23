@@ -838,6 +838,26 @@ func cantBeBlockedThisTurnVerbAt(tokens []shared.Token, index int) bool {
 		equalWord(tokens[index+4], "turn")
 }
 
+// cantBlockThisTurnVerbAt reports whether the temporary prohibition "can't block
+// this turn" / "cannot block this turn" begins at index. It anchors the
+// temporary can't-block resolving effect ("Target creature can't block this
+// turn.", "Up to three target creatures can't block this turn.") on the negated
+// "can't"/"cannot" so the subject is the targeted creature(s). The "this turn"
+// tail distinguishes this resolving, until-end-of-turn effect from the
+// continuous static prohibitions ("Creatures can't block.", "Creatures with
+// power less than this creature's power can't block it.") that carry no turn
+// duration, so those keep flowing through the static-declaration path. The
+// exactness recognizer reconstructs the full clause, so any other wording (a
+// "can't block creatures you control" qualifier, an "except" rider) still fails
+// closed.
+func cantBlockThisTurnVerbAt(tokens []shared.Token, index int) bool {
+	return (equalWord(tokens[index], "can't") || equalWord(tokens[index], "cannot")) &&
+		index+3 < len(tokens) &&
+		equalWord(tokens[index+1], "block") &&
+		equalWord(tokens[index+2], "this") &&
+		equalWord(tokens[index+3], "turn")
+}
+
 // negatedNextUntapStepVerbAt reports whether the token at index begins the
 // standalone stun predicate "doesn't/don't untap during ... next untap step"
 // that follows a leading target subject ("Target creature doesn't untap during
@@ -1113,6 +1133,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectLose
 	case cantBeBlockedThisTurnVerbAt(tokens, index):
 		return EffectCantBeBlocked
+	case cantBlockThisTurnVerbAt(tokens, index):
+		return EffectCantBlock
 	case kind == EffectGrantKeyword && index >= 2 &&
 		(equalWord(tokens[index-2], "opponent") || equalWord(tokens[index-2], "opponents")) &&
 		equalWord(tokens[index-1], "you"):

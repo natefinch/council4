@@ -4082,6 +4082,9 @@ func legacyEffectKindAt(tokens []shared.Token, index int) EffectKind {
 	if cantBeBlockedThisTurnVerbAt(tokens, index) {
 		return EffectCantBeBlocked
 	}
+	if cantBlockThisTurnVerbAt(tokens, index) {
+		return EffectCantBlock
+	}
 	kind := effectWordKind(tokens[index])
 	switch {
 	case kind == EffectGrantKeyword && index >= 2 &&

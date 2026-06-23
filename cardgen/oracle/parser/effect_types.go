@@ -20,6 +20,7 @@ const (
 	EffectAddMana           EffectKind = "EffectAddMana"
 	EffectAttach            EffectKind = "EffectAttach"
 	EffectCantBeBlocked     EffectKind = "EffectCantBeBlocked"
+	EffectCantBlock         EffectKind = "EffectCantBlock"
 	EffectCast              EffectKind = "EffectCast"
 	EffectCounter           EffectKind = "EffectCounter"
 	EffectCreate            EffectKind = "EffectCreate"
