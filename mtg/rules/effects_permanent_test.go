@@ -1638,3 +1638,51 @@ func TestBounceTargetObjectReturnsPermanentToOwnersHand(t *testing.T) {
 		t.Fatal("bounced permanent did not return to its owner's hand")
 	}
 }
+
+// TestAddCounterKindChoiceHonorsControllerSelection proves the binary counter
+// kind choice produced by Elspeth Conquers Death chapter III ("Put a +1/+1
+// counter or a loyalty counter on it.") prompts the resolving controller and
+// places exactly the chosen kind.
+func TestAddCounterKindChoiceHonorsControllerSelection(t *testing.T) {
+	tests := map[string]struct {
+		choice int
+		want   counter.Kind
+		other  counter.Kind
+	}{
+		"chooses plus one": {choice: 0, want: counter.PlusOnePlusOne, other: counter.Loyalty},
+		"chooses loyalty":  {choice: 1, want: counter.Loyalty, other: counter.PlusOnePlusOne},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			permanent := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Walker",
+				Types: []types.Card{types.Planeswalker}},
+			})
+			addEffectSpellToStack(g, game.Player1, game.AddCounter{
+				Object:      game.TargetPermanentReference(0),
+				Amount:      game.Fixed(1),
+				KindChoices: []counter.Kind{counter.PlusOnePlusOne, counter.Loyalty},
+			}, []game.Target{game.PermanentTarget(permanent.ObjectID)})
+			agents := [game.NumPlayers]PlayerAgent{
+				game.Player1: &choiceOnlyAgent{choices: [][]int{{test.choice}}},
+			}
+
+			log := TurnLog{}
+			engine.resolveTopOfStackWithChoices(g, agents, &log)
+
+			if len(log.Choices) != 1 || log.Choices[0].Request.Kind != game.ChoiceResolution {
+				t.Fatalf("choices = %+v, want one ChoiceResolution prompt", log.Choices)
+			}
+			if len(log.Choices[0].Request.Options) != 2 {
+				t.Fatalf("options = %d, want 2 (one per counter kind)", len(log.Choices[0].Request.Options))
+			}
+			if got := permanent.Counters.Get(test.want); got != 1 {
+				t.Fatalf("%v counters = %d, want 1", test.want, got)
+			}
+			if got := permanent.Counters.Get(test.other); got != 0 {
+				t.Fatalf("%v counters = %d, want 0 (unchosen kind)", test.other, got)
+			}
+		})
+	}
+}
