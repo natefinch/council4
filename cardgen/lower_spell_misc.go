@@ -747,6 +747,9 @@ func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.
 	case compiler.EffectSpellsCantBeCountered:
 		content, diagnostic := lowerSpellsCantBeCountered(ctx)
 		return content, diagnostic, true
+	case compiler.EffectResolvingCostModifier:
+		content, diagnostic := lowerResolvingCostModifier(ctx)
+		return content, diagnostic, true
 	case compiler.EffectMustAttack:
 		content, diagnostic := lowerGroupMustAttack(ctx)
 		return content, diagnostic, true

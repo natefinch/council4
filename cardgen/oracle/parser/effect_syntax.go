@@ -954,6 +954,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseRingTemptsEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseNoMaximumHandSizeForRestOfGameEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseCantCastSpellsEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parseResolvingCostModifierEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseGroupMustAttackEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseSpellsCantBeCounteredEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseChangeTargetRetargetEffect(sentence, tokens, atoms) },
@@ -3099,6 +3100,130 @@ func cantCastSpellsFilterType(word string) (required, excluded CardType, ok bool
 	return CardTypeUnknown, CardTypeUnknown, false
 }
 
+// parseResolvingCostModifierEffect recognizes the one-shot, duration-bounded
+// resolved cost modifier "[Until your next turn,] [<type>] spells [<caster>
+// cast] cost {N} more/less to cast [until your next turn | this turn]." (Elspeth
+// Conquers Death chapter II: "Noncreature spells your opponents cast cost {2}
+// more to cast until your next turn."; Tax Collector: "Until your next turn,
+// spells your opponents cast cost {1} more to cast."; The Five Stages of Grief:
+// "Until your next turn, noncreature spells cost {2} more to cast."). It creates
+// a continuous cost-increase/reduction effect on the affected casters' spells
+// that lasts for the stated duration. The optional leading single card-type word
+// filters the affected spells (a bare type restricts, a "non"-prefixed word
+// exempts). The caster phrase scopes the affected spells to the controller's
+// opponents ("your opponents cast"), the controller ("you cast"), or every
+// player (no caster phrase). Only the generic {N} amount, a "more"/"less"
+// direction, and an until-your-next-turn or this-turn duration are accepted;
+// colored amounts, multi-type filters, and any other duration fail closed.
+func parseResolvingCostModifierEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	duration := EffectDurationNone
+	if len(words) > 0 && equalWord(words[0], "until") {
+		rest, leading := stripLeadingDurationClause(words, atoms)
+		if leading == EffectDurationNone {
+			return nil, false
+		}
+		if leading != EffectDurationUntilYourNextTurn && leading != EffectDurationThisTurn {
+			return nil, false
+		}
+		duration = leading
+		words = rest
+	}
+	var requiredTypes, excludedTypes []CardType
+	if len(words) >= 2 && !equalWord(words[0], "spells") {
+		requiredType, excludedType, ok := cantCastSpellsFilterType(words[0].Text)
+		if !ok {
+			return nil, false
+		}
+		if requiredType != CardTypeUnknown {
+			requiredTypes = []CardType{requiredType}
+		} else {
+			excludedTypes = []CardType{excludedType}
+		}
+		words = words[1:]
+	}
+	if len(words) == 0 || !equalWord(words[0], "spells") {
+		return nil, false
+	}
+	words = words[1:]
+	caster := ResolvingCostModifierCasterAllPlayers
+	switch {
+	case len(words) >= 3 && equalWord(words[0], "your") && equalWord(words[1], "opponents") && equalWord(words[2], "cast"):
+		caster = ResolvingCostModifierCasterOpponents
+		words = words[3:]
+	case len(words) >= 2 && equalWord(words[0], "you") && equalWord(words[1], "cast"):
+		caster = ResolvingCostModifierCasterController
+		words = words[2:]
+	}
+	if duration == EffectDurationNone && len(words) >= 2 && equalWord(words[0], "this") && equalWord(words[1], "turn") {
+		duration = EffectDurationThisTurn
+		words = words[2:]
+	}
+	if len(words) == 0 || (!equalWord(words[0], "cost") && !equalWord(words[0], "costs")) {
+		return nil, false
+	}
+	words = words[1:]
+	if len(words) == 0 || words[0].Kind != shared.Symbol {
+		return nil, false
+	}
+	amount, ok := staticGenericSymbolValue(words[0].Text)
+	if !ok || amount <= 0 {
+		return nil, false
+	}
+	words = words[1:]
+	var increase bool
+	switch {
+	case len(words) >= 1 && equalWord(words[0], "more"):
+		increase = true
+	case len(words) >= 1 && equalWord(words[0], "less"):
+		increase = false
+	default:
+		return nil, false
+	}
+	words = words[1:]
+	if len(words) < 2 || !equalWord(words[0], "to") || !equalWord(words[1], "cast") {
+		return nil, false
+	}
+	words = words[2:]
+	if duration == EffectDurationNone {
+		switch {
+		case len(words) == 7 && effectWordsAt(words, 0, "until", "the", "end", "of", "your", "next", "turn"):
+			duration = EffectDurationUntilYourNextTurn
+			words = words[7:]
+		case len(words) == 4 && effectWordsAt(words, 0, "until", "your", "next", "turn"):
+			duration = EffectDurationUntilYourNextTurn
+			words = words[4:]
+		case len(words) == 2 && effectWordsAt(words, 0, "this", "turn"):
+			duration = EffectDurationThisTurn
+			words = words[2:]
+		}
+	}
+	if len(words) != 0 || duration == EffectDurationNone {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:                               EffectResolvingCostModifier,
+		Span:                               sentence.Span,
+		ClauseSpan:                         sentence.Span,
+		Text:                               sentence.Text,
+		Tokens:                             append([]shared.Token(nil), tokens...),
+		Context:                            EffectContextController,
+		Duration:                           duration,
+		ResolvingCostModifierCaster:        caster,
+		ResolvingCostModifierIncrease:      increase,
+		ResolvingCostModifierAmount:        amount,
+		ResolvingCostModifierRequiredTypes: requiredTypes,
+		ResolvingCostModifierExcludedTypes: excludedTypes,
+		Exact:                              true,
+	}}, true
+}
+
 // parseGroupMustAttackEffect recognizes the one-shot, turn-scoped forced-attack
 // effect "<group> attack this turn if able." (Bident of Thassa: "Creatures your
 // opponents control attack this turn if able."; "Creatures you control attack
@@ -4033,6 +4158,9 @@ func legacyExactManaBody(effect *EffectSyntax, sentence Sentence) bool {
 
 func legacyEffectCount(tokens []shared.Token, atoms Atoms) int {
 	if _, ok := massReanimationExchangeWords(tokens); ok {
+		return 1
+	}
+	if _, ok := parseResolvingCostModifierEffect(Sentence{Tokens: tokens}, tokens, atoms); ok {
 		return 1
 	}
 	count := 0

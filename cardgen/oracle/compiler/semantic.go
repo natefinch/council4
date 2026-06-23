@@ -1319,6 +1319,12 @@ const (
 	// Ring-bearer. It lowers to a game.RingTempts primitive scoped to the
 	// controller. Added last so existing kinds keep their wire values.
 	EffectRingTempts
+	// EffectResolvingCostModifier models the one-shot, duration-bounded resolved
+	// cost modifier "<type> spells <caster> cast cost {N} more/less to cast until
+	// your next turn." (Elspeth Conquers Death chapter II). It lowers to an
+	// ApplyRule carrying a RuleEffectCostModifier with a duration. Added last so
+	// existing kinds keep their wire values.
+	EffectResolvingCostModifier
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1795,6 +1801,18 @@ type CompiledEffect struct {
 	// ExcludedSpellTypes filters; both are empty for the unfiltered form.
 	CantCastSpellsRequiredTypes []types.Card
 	CantCastSpellsExcludedTypes []types.Card
+	// ResolvingCostModifierCaster, ResolvingCostModifierIncrease,
+	// ResolvingCostModifierAmount, ResolvingCostModifierRequiredTypes, and
+	// ResolvingCostModifierExcludedTypes mirror the parser fields for an
+	// EffectResolvingCostModifier clause: the affected caster scope, the direction
+	// (true for "more"), the generic amount, and the optional single card-type
+	// required/excluded filter. Lowering reads them to build the
+	// RuleEffectCostModifier; the type lists are empty for the unfiltered form.
+	ResolvingCostModifierCaster        parser.ResolvingCostModifierCasterKind
+	ResolvingCostModifierIncrease      bool
+	ResolvingCostModifierAmount        int
+	ResolvingCostModifierRequiredTypes []types.Card
+	ResolvingCostModifierExcludedTypes []types.Card
 	// PreventDamageTo and PreventDamageBy mirror the parser flags for an
 	// EffectPreventDamage clause, recording whether all combat damage dealt to
 	// and/or dealt by the referenced permanent is prevented for the turn.

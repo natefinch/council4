@@ -115,6 +115,17 @@ const (
 	// (Mistrise Village) and the all-spells form "Spells you cast this turn
 	// can't be countered." (Domri, Anarch of Bolas).
 	EffectSpellsCantBeCountered EffectKind = "EffectSpellsCantBeCountered"
+	// EffectResolvingCostModifier models the one-shot, duration-bounded resolved
+	// cost modifier "<type> spells <caster> cast cost {N} more/less to cast until
+	// your next turn." (Elspeth Conquers Death chapter II: "Noncreature spells
+	// your opponents cast cost {2} more to cast until your next turn."), which
+	// creates a continuous cost-increase/reduction effect that lasts for a stated
+	// duration. The affected casters are the controller's opponents ("your
+	// opponents cast"), the controller ("you cast"), or every player (no caster
+	// phrase). An optional single card-type word filters the affected spells. It
+	// reuses the same RuleEffectCostModifier rule effect as the continuous static
+	// form, applied with a duration.
+	EffectResolvingCostModifier EffectKind = "EffectResolvingCostModifier"
 	// EffectEnterAsCopy models a self enters-the-battlefield replacement that has
 	// the permanent enter as a copy of another permanent chosen as it enters
 	// ("You may have this creature enter the battlefield as a copy of any creature
@@ -417,6 +428,20 @@ const (
 	DelayedTimingNextEndStep DelayedTimingKind = "DelayedTimingNextEndStep"
 	DelayedTimingNextUpkeep  DelayedTimingKind = "DelayedTimingNextUpkeep"
 	DelayedTimingNextMain    DelayedTimingKind = "DelayedTimingNextMain"
+)
+
+// ResolvingCostModifierCasterKind identifies which players' spells a
+// duration-bounded resolving cost modifier affects ("<type> spells <caster> cast
+// cost {N} more/less to cast ..."). The empty kind is the default all-players
+// scope, used when the wording names no caster ("noncreature spells cost {2}
+// more to cast").
+type ResolvingCostModifierCasterKind string
+
+// Resolving cost-modifier caster scopes recognized by the parser.
+const (
+	ResolvingCostModifierCasterAllPlayers ResolvingCostModifierCasterKind = ""
+	ResolvingCostModifierCasterOpponents  ResolvingCostModifierCasterKind = "ResolvingCostModifierCasterOpponents"
+	ResolvingCostModifierCasterController ResolvingCostModifierCasterKind = "ResolvingCostModifierCasterController"
 )
 
 // EffectDestinationPosition identifies an ordered position in a destination
@@ -1254,6 +1279,20 @@ type EffectSyntax struct {
 	// and are mutually exclusive.
 	CantCastSpellsRequiredTypes []CardType `json:",omitempty"`
 	CantCastSpellsExcludedTypes []CardType `json:",omitempty"`
+	// ResolvingCostModifierCaster identifies whose spells an
+	// EffectResolvingCostModifier clause taxes or discounts. ResolvingCostModifier
+	// Increase reports the direction (true for "more", false for "less"), and
+	// ResolvingCostModifierAmount carries the generic amount {N}.
+	// ResolvingCostModifierRequiredTypes narrows the clause to spells of one named
+	// card type ("Artifact spells you cast ..."); ResolvingCostModifierExcludedTypes
+	// exempts spells of one named card type ("Noncreature spells ..."). All five are
+	// meaningful only when Kind is EffectResolvingCostModifier; the required and
+	// excluded type lists hold at most one type and are mutually exclusive.
+	ResolvingCostModifierCaster        ResolvingCostModifierCasterKind `json:",omitempty"`
+	ResolvingCostModifierIncrease      bool                            `json:",omitempty"`
+	ResolvingCostModifierAmount        int                             `json:",omitempty"`
+	ResolvingCostModifierRequiredTypes []CardType                      `json:",omitempty"`
+	ResolvingCostModifierExcludedTypes []CardType                      `json:",omitempty"`
 	// PreventDamageTo and PreventDamageBy mark an EffectPreventDamage clause
 	// that prevents all combat damage for the turn to and/or from a single
 	// referenced or targeted permanent ("Prevent all combat damage that would

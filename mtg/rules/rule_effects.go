@@ -861,8 +861,20 @@ func spellCostModifierMatchesZone(modifier game.CostModifier, sourceZone zone.Ty
 // spellCostModifierMatchesCard reports whether a spell cost modifier's card-type
 // and color filters admit the given spell card. A nil card fails any active
 // filter. The colorless sentinel (MatchColor with an empty Color) matches spells
-// that have no colors; otherwise the spell must carry the named color.
+// that have no colors; otherwise the spell must carry the named color. The rule
+// effect's SpellTypes and ExcludedSpellTypes lists carry the duration-bounded
+// resolved cost modifier's optional single card-type filter (Elspeth Conquers
+// Death's "Noncreature spells ..."): a non-empty SpellTypes list restricts the
+// modifier to spells carrying one of those types, and a non-empty
+// ExcludedSpellTypes list exempts spells carrying one of those types. Static cost
+// modifiers leave both lists empty and rely on the CostModifier's own filters.
 func spellCostModifierEffectMatchesCard(g *game.Game, effect *game.RuleEffect, card *game.CardDef) bool {
+	if len(effect.SpellTypes) > 0 && (card == nil || !cardDefHasAnyType(card, effect.SpellTypes)) {
+		return false
+	}
+	if len(effect.ExcludedSpellTypes) > 0 && card != nil && cardDefHasAnyType(card, effect.ExcludedSpellTypes) {
+		return false
+	}
 	modifier := effect.CostModifier
 	if !spellCostModifierBaseMatchesCard(modifier, card) {
 		return false

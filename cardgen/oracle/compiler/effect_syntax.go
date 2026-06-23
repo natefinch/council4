@@ -474,6 +474,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectPreventDamage
 	case parser.EffectSpellsCantBeCountered:
 		return EffectSpellsCantBeCountered
+	case parser.EffectResolvingCostModifier:
+		return EffectResolvingCostModifier
 	case parser.EffectManifest:
 		return EffectManifest
 	case parser.EffectManifestDread:
