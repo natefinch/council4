@@ -1003,6 +1003,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseSpellCostModifierEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseGroupMustAttackEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDirectedMustAttackEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseAttackTaxEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseSpellsCantBeCounteredEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseChangeTargetRetargetEffect(sentence, tokens, atoms) },
 	} {
@@ -3277,6 +3278,62 @@ func parseDirectedMustAttackEffect(sentence Sentence, tokens []shared.Token, ato
 		Context:    EffectContextController,
 		Duration:   EffectDurationUntilYourNextTurn,
 		Exact:      true,
+	}}, true
+}
+
+// parseAttackTaxEffect recognizes the resolving, duration-bounded attack-tax
+// effect "Until your next turn, creatures can't attack you unless their
+// controller pays {N} for each of those creatures." (Summon: Yojimbo chapters
+// II/III). The leading "Until your next turn," duration clause distinguishes this
+// resolving installation from the continuous Propaganda-style static attack tax,
+// which the static-declaration parser handles. Lowering applies a
+// RuleEffectAttackTax for the recognized duration. Any other duration, defending
+// scope ("or planeswalkers you control"), or trailing wording fails closed and
+// flows through the generic effect parser.
+func parseAttackTaxEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	remaining, leadingDuration := stripLeadingDurationClause(tokens, atoms)
+	if leadingDuration != EffectDurationUntilYourNextTurn {
+		return nil, false
+	}
+	words := make([]shared.Token, 0, len(remaining))
+	for _, token := range remaining {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	if len(words) != 14 ||
+		words[8].Kind != shared.Symbol ||
+		!equalWord(words[0], "creatures") ||
+		!equalWord(words[1], "can't") ||
+		!equalWord(words[2], "attack") ||
+		!equalWord(words[3], "you") ||
+		!equalWord(words[4], "unless") ||
+		!equalWord(words[5], "their") ||
+		!equalWord(words[6], "controller") ||
+		!equalWord(words[7], "pays") ||
+		!equalWord(words[9], "for") ||
+		!equalWord(words[10], "each") ||
+		!equalWord(words[11], "of") ||
+		!equalWord(words[12], "those") ||
+		!equalWord(words[13], "creatures") {
+		return nil, false
+	}
+	amount, ok := staticGenericSymbolValue(words[8].Text)
+	if !ok || amount <= 0 {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:             EffectAttackTax,
+		Span:             sentence.Span,
+		ClauseSpan:       sentence.Span,
+		VerbSpan:         words[2].Span,
+		Text:             sentence.Text,
+		Tokens:           append([]shared.Token(nil), tokens...),
+		Context:          EffectContextController,
+		Duration:         EffectDurationUntilYourNextTurn,
+		AttackTaxGeneric: amount,
+		Exact:            true,
 	}}, true
 }
 

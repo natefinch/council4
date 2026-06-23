@@ -469,6 +469,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectMustAttack
 	case parser.EffectDirectedMustAttack:
 		return EffectDirectedMustAttack
+	case parser.EffectAttackTax:
+		return EffectAttackTax
 	case parser.EffectRepeatProcess:
 		return EffectRepeatProcess
 	case parser.EffectChooseNewTargets:
@@ -616,6 +618,8 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountControllerSpeed
 	case parser.EffectDynamicAmountOpponentCount:
 		return DynamicAmountOpponentCount
+	case parser.EffectDynamicAmountOpponentControllingCount:
+		return DynamicAmountOpponentControllingCount
 	case parser.EffectDynamicAmountSourcePower:
 		return DynamicAmountSourcePower
 	case parser.EffectDynamicAmountSourceToughness:

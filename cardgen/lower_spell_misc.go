@@ -958,6 +958,9 @@ func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.
 	case compiler.EffectDirectedMustAttack:
 		content, diagnostic := lowerDirectedTwoPlayerMustAttack(ctx)
 		return content, diagnostic, true
+	case compiler.EffectAttackTax:
+		content, diagnostic := lowerAttackTaxSpell(ctx)
+		return content, diagnostic, true
 	case compiler.EffectPhaseOut:
 		content, diagnostic := lowerMassOrSinglePermanentSpell(ctx, "Phase out", func(group game.GroupReference) game.Primitive {
 			return game.PhaseOut{Group: group}

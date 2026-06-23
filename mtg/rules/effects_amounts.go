@@ -73,6 +73,12 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		game.DynamicAmountOpponentCount, game.DynamicAmountOpponentsAttackedThisCombat,
 		game.DynamicAmountControllerSpeed:
 		amount = controllerAggregateAmount(g, controller, dynamic, before)
+	case game.DynamicAmountOpponentControllingCount:
+		for _, opponent := range aliveOpponents(g, controller) {
+			if countPermanentsMatchingGroup(g, nil, opponent, dynamic.Group) > 0 {
+				amount++
+			}
+		}
 	case game.DynamicAmountDevotion:
 		// ColorFrom binds devotion to the color chosen as the ability resolves
 		// (Nykthos, Shrine to Nyx's "devotion to that color"); otherwise the

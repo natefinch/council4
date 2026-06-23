@@ -206,6 +206,15 @@ const (
 	// The Speed Demon's "you draw X cards and lose X life, where X is your
 	// speed." Added last so existing kinds keep their wire values.
 	DynamicAmountControllerSpeed
+	// DynamicAmountOpponentControllingCount is the number of the resolving ability
+	// controller's opponents who control at least one permanent matching Group
+	// ("the number of opponents who control a creature with power 4 or greater",
+	// Summon: Yojimbo chapter IV). Group's selection is evaluated relative to each
+	// opponent (its controller relation is "you control" read from that
+	// opponent's perspective); each qualifying opponent counts once. It is a
+	// player count, not a board count. Added last so existing kinds keep their
+	// wire values.
+	DynamicAmountOpponentControllingCount
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

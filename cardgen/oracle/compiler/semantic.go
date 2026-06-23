@@ -1344,6 +1344,13 @@ const (
 	// power/toughness layers. Added last so existing kinds keep their wire
 	// values.
 	EffectPolymorph
+	// EffectAttackTax is the resolving, duration-bounded attack-tax effect
+	// "Until your next turn, creatures can't attack you unless their controller
+	// pays {N} for each of those creatures." (Summon: Yojimbo chapters II/III).
+	// AttackTaxGeneric carries the per-attacker generic mana N; lowering installs
+	// a RuleEffectAttackTax for the recognized duration. Added last so existing
+	// kinds keep their wire values.
+	EffectAttackTax
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1918,6 +1925,11 @@ type CompiledEffect struct {
 	SpellCostModifierIncrease      bool
 	SpellCostModifierRequiredTypes []types.Card
 	SpellCostModifierExcludedTypes []types.Card
+	// AttackTaxGeneric mirrors the parser field for an EffectAttackTax clause: the
+	// per-attacker generic mana the "... pays {N} for each of those creatures."
+	// resolving attack tax charges. Lowering reads it to build the
+	// duration-bounded RuleEffectAttackTax rule effect.
+	AttackTaxGeneric int
 	// PreventDamageTo and PreventDamageBy mirror the parser flags for an
 	// EffectPreventDamage clause, recording whether all combat damage dealt to
 	// and/or dealt by the referenced permanent is prevented for the turn.
@@ -2518,6 +2530,14 @@ const (
 	// It backs "where X is your speed" amounts such as The Speed Demon. Added
 	// last so existing kinds keep their wire values.
 	DynamicAmountControllerSpeed
+	// DynamicAmountOpponentControllingCount is the number of the resolving ability
+	// controller's opponents who control at least one permanent matching the
+	// amount's selector ("the number of opponents who control a creature with
+	// power 4 or greater", Summon: Yojimbo chapter IV). The selector is the
+	// per-opponent control predicate, evaluated relative to each opponent; it is a
+	// player count, not a board count. Added last so existing kinds keep their
+	// wire values.
+	DynamicAmountOpponentControllingCount
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.
