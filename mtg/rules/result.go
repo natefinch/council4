@@ -163,6 +163,12 @@ type ActionLog struct {
 	// ActionActivateAbility actions.
 	ManaAbility bool
 
+	// AbilityText is the printed rules text of the activated ability, captured
+	// when the action is recorded. It is set only for ActionActivateAbility
+	// actions whose ability carries text, so a report can show what the ability
+	// does.
+	AbilityText string
+
 	// ManaTaps lists the permanents tapped for mana while applying this action,
 	// in tap order, so a report can show how a spell or ability was paid for.
 	// It includes lands and other sources tapped during cost payment.
