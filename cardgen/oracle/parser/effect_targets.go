@@ -74,6 +74,10 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 			targets = append(targets, target)
 			continue
 		}
+		if target, ok := parseQualifiedDisjunctivePermanentTarget(tokens, atoms, start, i, cardinality); ok {
+			targets = append(targets, target)
+			continue
+		}
 		// "under target player's control" / "under target opponent's control" is a
 		// control rider on a put destination (Yavimaya Dryad, Evil Presents): the
 		// target player is the permanent's new controller, not a target the

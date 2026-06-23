@@ -429,11 +429,11 @@ func TestExactDestroyTypeUnionManaValueAccepts(t *testing.T) {
 
 func TestExactDestroyTypeUnionManaValueFailsClosed(t *testing.T) {
 	t.Parallel()
-	// Power and toughness on a type union would silently drop the union members
-	// that never carry that characteristic, and a controller clause combined
-	// with a mana-value qualifier is an unreconstructed word order.
+	// A mana-value qualifier on a comma-free two-member union ("creature or
+	// planeswalker ... with mana value 3 or less") applies to the whole union in
+	// a word order the round-trip does not reconstruct; the qualified Oxford-list
+	// disjunction (handled elsewhere) is a distinct, supported shape.
 	rejected := []string{
-		"Destroy target artifact, enchantment, or creature with power 4 or greater.",
 		"Destroy target creature or planeswalker you control with mana value 3 or less.",
 	}
 	for _, source := range rejected {
@@ -561,13 +561,13 @@ func TestExactSubtypeUnionAccepts(t *testing.T) {
 }
 
 // TestExactOxfordUnionFailsClosed keeps unions the runtime predicate cannot
-// faithfully reconstruct outside the exact envelope: a per-member keyword or
-// power qualifier, and a union that mixes a card type with a subtype.
+// faithfully reconstruct outside the exact envelope: a union that mixes a card
+// type with a subtype. A per-member keyword or power qualifier on an
+// Oxford-comma list is a distinct, supported shape handled by the qualified
+// disjunctive permanent target.
 func TestExactOxfordUnionFailsClosed(t *testing.T) {
 	t.Parallel()
 	rejected := []string{
-		"Exile target artifact, enchantment, or creature with flying.",
-		"Exile target artifact, enchantment, or creature with power 4 or greater.",
 		"Exile target creature or Spacecraft.",
 	}
 	for _, source := range rejected {
