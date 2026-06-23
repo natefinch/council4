@@ -1873,8 +1873,18 @@ type CompiledEffect struct {
 	// lowering routes the unreturned remainder of the linked exiled set to the
 	// bottom of their owners' libraries.
 	PutLinkedExiledRestOnLibraryBottom bool
-	// CounterExiledCardManaValue carries the parser-recognized chapter II counter
-	// clause "Put a number of +1/+1 counters on target creature you control equal
+	// DestroyForEachPlayer carries the parser-recognized distributive Saga destroy
+	// clause "For each player, destroy up to one target creature that player
+	// controls." (The Curse of Fenric, chapter I) through the text-blind compiler
+	// boundary so lowering destroys up to one creature each player controls and
+	// links each destroyed creature for the paired token payoff.
+	DestroyForEachPlayer bool
+	// CreateTokenForEachDestroyedThisWay carries the parser-recognized per-
+	// controller payoff "For each creature destroyed this way, its controller
+	// creates a <token>." (The Curse of Fenric, chapter I) through the text-blind
+	// compiler boundary so lowering creates one token for each creature a sibling
+	// DestroyForEachPlayer destroyed, controlled by that creature's controller.
+	CreateTokenForEachDestroyedThisWay bool
 	// to the mana value of the exiled card." (The Aesir Escape Valhalla) through
 	// the text-blind compiler boundary so lowering scales the placement by the
 	// linked exiled card's mana value.

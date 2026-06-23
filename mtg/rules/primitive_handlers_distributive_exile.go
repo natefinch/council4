@@ -23,8 +23,8 @@ func handleExileForEachPlayer(r *effectResolver, prim game.ExileForEachPlayer) e
 	resolver := newReferenceResolver(r.game, r.obj)
 	key := linkedObjectSourceKey(r.game, r.obj, string(prim.LinkedKey))
 	for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(game.AllPlayersReference())) {
-		candidates := exileForEachPlayerCandidates(r.game, resolver, source, playerID, prim.Selection)
-		permanent, chosen := r.engine.chooseOnePermanentToExile(r.game, candidates, chooser, r.agents, r.log)
+		candidates := playerControlledSelectionCandidates(r.game, resolver, source, playerID, prim.Selection)
+		permanent, chosen := r.engine.chooseUpToOnePermanent(r.game, candidates, chooser, "Choose a permanent to exile", r.agents, r.log)
 		if !chosen {
 			continue
 		}
@@ -35,55 +35,6 @@ func handleExileForEachPlayer(r *effectResolver, prim game.ExileForEachPlayer) e
 		}
 	}
 	return res
-}
-
-// exileForEachPlayerCandidates gathers the active battlefield permanents
-// controlled by playerID that satisfy sel, the candidate pool the chooser picks
-// from for one player. Passing source honors sel.ExcludeSource, the "other"
-// qualifier that keeps the Saga from exiling itself.
-func exileForEachPlayerCandidates(g *game.Game, resolver referenceResolver, source *game.Permanent, playerID game.PlayerID, sel game.Selection) []*game.Permanent {
-	var candidates []*game.Permanent
-	for _, permanent := range g.Battlefield {
-		if !activeBattlefieldPermanent(permanent) || effectiveController(g, permanent) != playerID {
-			continue
-		}
-		if !resolver.permanentMatchesGroupSelection(&sel, source, permanent) {
-			continue
-		}
-		candidates = append(candidates, permanent)
-	}
-	return candidates
-}
-
-// chooseOnePermanentToExile has chooser pick up to one permanent from candidates
-// to exile, modeling the "up to one target ... that player controls" cardinality
-// of the distributive exile. An empty pool exiles nothing; a single candidate is
-// taken without a prompt; otherwise the chooser selects which one, and may
-// decline because the choice allows zero.
-func (e *Engine) chooseOnePermanentToExile(g *game.Game, candidates []*game.Permanent, chooser game.PlayerID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
-	if len(candidates) == 0 {
-		return nil, false
-	}
-	options := make([]game.ChoiceOption, len(candidates))
-	for i, permanent := range candidates {
-		options[i] = game.ChoiceOption{Index: i, Label: permanentChoiceLabel(g, permanent), Card: permanentChoiceInfo(g, permanent)}
-	}
-	request := game.ChoiceRequest{
-		Kind:             game.ChoicePayment,
-		Player:           chooser,
-		Prompt:           "Choose a permanent to exile",
-		Options:          options,
-		MinChoices:       0,
-		MaxChoices:       1,
-		DefaultSelection: firstChoiceIndices(1),
-	}
-	selected := e.chooseChoice(g, agents, request, log)
-	for _, idx := range selected {
-		if idx >= 0 && idx < len(candidates) {
-			return candidates[idx], true
-		}
-	}
-	return nil, false
 }
 
 // handleReturnLinkedExiledCardsToBattlefield resolves the partial Saga payoff

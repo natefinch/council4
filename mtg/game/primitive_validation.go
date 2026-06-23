@@ -1286,6 +1286,26 @@ func (p ReturnLinkedExiledCardsToBattlefield) validatePrimitive(targets []Target
 	return validatePlayerReference(p.Chooser, targets, checkTargets)
 }
 
+func (p DestroyForEachPlayer) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.LinkedKey == "" {
+		return errors.New("destroy for each player requires a linked key")
+	}
+	if err := firstProblem(p.Selection.Validate()); err != nil {
+		return err
+	}
+	return validatePlayerReference(p.Chooser, targets, checkTargets)
+}
+
+func (p CreateTokenForEachDestroyed) validatePrimitive([]TargetSpec, bool) error {
+	if p.LinkedKey == "" {
+		return errors.New("create token for each destroyed requires a linked key")
+	}
+	if !p.Source.Valid() {
+		return errors.New("create token for each destroyed requires a valid source")
+	}
+	return nil
+}
+
 func (p PutFromHand) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err

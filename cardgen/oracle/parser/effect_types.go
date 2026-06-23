@@ -1908,6 +1908,20 @@ type EffectSyntax struct {
 	// ReturnLinkedExiledToBattlefieldPartial clause so lowering routes the rest
 	// of the linked exiled set to the bottom of its owners' libraries.
 	PutLinkedExiledRestOnLibraryBottom bool `json:",omitempty"`
+	// DestroyForEachPlayer marks the exact distributive Saga destroy clause "For
+	// each player, destroy up to one target creature that player controls." (The
+	// Curse of Fenric, chapter I). Each player's creatures are an independent "up
+	// to one" pool; the "that player" reference is the distributive anchor rather
+	// than a target. A paired CreateTokenForEachDestroyedThisWay clause creates a
+	// token for each creature destroyed this way.
+	DestroyForEachPlayer bool `json:",omitempty"`
+	// CreateTokenForEachDestroyedThisWay marks the exact per-controller payoff
+	// "For each creature destroyed this way, its controller creates a <token>."
+	// (The Curse of Fenric, chapter I). It pairs with a preceding
+	// DestroyForEachPlayer clause: each creature destroyed this way has its
+	// controller create one token, so the count is one per destroyed creature
+	// rather than a multiplier on the create.
+	CreateTokenForEachDestroyedThisWay bool `json:",omitempty"`
 	// ReturnExiledCard marks the explicit O-Ring leaves-the-battlefield clause
 	// "return the exiled card to the battlefield under its owner's control."
 	// (Oblivion Ring, Journey to Nowhere, Fiend Hunter). The returned card is the

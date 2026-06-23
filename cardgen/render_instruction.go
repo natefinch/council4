@@ -349,6 +349,18 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: ReturnLinkedExiledCardsToBattlefield kind has unexpected concrete type")
 		}
 		return r.renderReturnLinkedExiledCardsToBattlefield(ctx, value)
+	case game.PrimitiveDestroyForEachPlayer:
+		value, ok := primitive.(game.DestroyForEachPlayer)
+		if !ok {
+			return "", errors.New("render: internal error: DestroyForEachPlayer kind has unexpected concrete type")
+		}
+		return r.renderDestroyForEachPlayer(ctx, value)
+	case game.PrimitiveCreateTokenForEachDestroyed:
+		value, ok := primitive.(game.CreateTokenForEachDestroyed)
+		if !ok {
+			return "", errors.New("render: internal error: CreateTokenForEachDestroyed kind has unexpected concrete type")
+		}
+		return r.renderCreateTokenForEachDestroyed(ctx, value)
 	case game.PrimitivePutFromHand:
 		value, ok := primitive.(game.PutFromHand)
 		if !ok {
@@ -818,6 +830,33 @@ func (r Renderer) renderReturnLinkedExiledCardsToBattlefield(ctx *renderCtx, val
 		fields = append(fields, "RestToLibraryBottom: true,")
 	}
 	return structLit("game.ReturnLinkedExiledCardsToBattlefield", fields), nil
+}
+
+func (r Renderer) renderDestroyForEachPlayer(ctx *renderCtx, value game.DestroyForEachPlayer) (string, error) {
+	chooser, err := r.renderPlayerReference(value.Chooser)
+	if err != nil {
+		return "", err
+	}
+	selection, err := r.renderSelection(ctx, value.Selection)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.DestroyForEachPlayer", []string{
+		fmt.Sprintf("Chooser: %s,", chooser),
+		fmt.Sprintf("Selection: %s,", selection),
+		fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)),
+	}), nil
+}
+
+func (r Renderer) renderCreateTokenForEachDestroyed(ctx *renderCtx, value game.CreateTokenForEachDestroyed) (string, error) {
+	source, err := r.renderTokenSource(ctx, value.Source)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.CreateTokenForEachDestroyed", []string{
+		fmt.Sprintf("Source: %s,", source),
+		fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)),
+	}), nil
 }
 
 func (r Renderer) renderPutFromHand(ctx *renderCtx, value game.PutFromHand) (string, error) {

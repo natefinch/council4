@@ -32,6 +32,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return strings.EqualFold(exactEffectClauseText(effect), "Choose a creature type.")
 	case EffectCreate:
 		return exactCreateTokenEffectSyntax(effect) ||
+			exactCreateTokenForEachDestroyedThisWayEffectSyntax(effect) ||
 			exactCreateNamedTokenEffectSyntax(effect) ||
 			exactCreateNamedTokenChoiceEffectSyntax(effect) ||
 			exactCreateCopyTokenEffectSyntax(effect) ||
@@ -47,6 +48,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactMultiDistinctTargetEffectSyntax(effect, "Destroy") ||
 			exactMassEffectSyntax(effect, "Destroy all ") ||
 			exactMassEachEffectSyntax(effect, "Destroy each ") ||
+			exactDestroyForEachPlayerEffectSyntax(effect) ||
 			exactBackReferenceEffectSyntax(effect, "Destroy")
 	case EffectDig:
 		return exactDigLookEffectSyntax(effect)
