@@ -7,11 +7,17 @@ import (
 
 const maximumHandSize = 7
 
-func (e *Engine) runTurn(g *game.Game, agents [game.NumPlayers]PlayerAgent) TurnLog {
-	log := TurnLog{
+func (e *Engine) runTurn(g *game.Game, agents [game.NumPlayers]PlayerAgent) (log TurnLog) {
+	log = TurnLog{
 		TurnNumber:   g.Turn.TurnNumber,
 		ActivePlayer: g.Turn.ActivePlayer,
 	}
+
+	activePlayer := log.ActivePlayer
+	manaSpentBefore := g.Players[activePlayer].ManaPool.Spent()
+	defer func() {
+		log.ManaSpent = g.Players[activePlayer].ManaPool.Spent() - manaSpentBefore
+	}()
 
 	e.runBeginningPhase(g, agents, &log)
 	if g.IsGameOver() {

@@ -85,6 +85,11 @@ type TurnLog struct {
 	// ManaColors lists the distinct colors those sources can produce, as
 	// single-letter codes (W, U, B, R, G).
 	ManaColors []string
+	// ManaSpent is the total mana the active player removed from their mana pool
+	// to pay costs during this turn — spell and ability mana costs, including
+	// mana produced by rituals and then spent. Mana that was produced but left
+	// unspent (and emptied at end of step) is not counted.
+	ManaSpent int
 }
 
 // TurnLogEntryKind identifies the kind of chronological turn log entry.
