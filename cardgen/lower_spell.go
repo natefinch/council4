@@ -250,6 +250,8 @@ func lowerContent(
 			return lowerBecomeCopyContent(ctx)
 		case compiler.EffectBecomeType:
 			return lowerBecomeTypeContent(ctx)
+		case compiler.EffectDelayedTrigger:
+			return lowerDelayedTriggerContent(ctx)
 		default:
 		}
 		if content, ok := lowerExileFromHandContent(ctx); ok {

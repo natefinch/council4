@@ -118,7 +118,7 @@ func filterContinuousEffects(effects []game.ContinuousEffect, expired func(*game
 }
 
 func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.DelayedTriggerDef) bool {
-	if obj == nil || def == nil || def.Timing == 0 {
+	if obj == nil || def == nil || (def.Timing == 0 && !def.EventPattern.Exists) {
 		return false
 	}
 	sourceID, sourceObjectID := damageSourceIDs(g, obj)
@@ -135,10 +135,92 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 		CreatedTurn:                 g.Turn.TurnNumber,
 		Timing:                      def.Timing,
 		Ability:                     ability,
+		EventPattern:                def.EventPattern,
+		OneShot:                     def.OneShot,
+		Window:                      def.Window,
 		CapturedTargetControllerLKI: clonePlayerIDMap(obj.TargetControllerLKI),
 		CapturedTargetManaValueLKI:  cloneIntMap(obj.TargetManaValueLKI),
 	})
 	return true
+}
+
+// drainReadyEventDelayedTriggers fires event-based delayed triggers whose stored
+// event pattern matches one of the freshly emitted events, reusing the ordinary
+// triggered-ability matcher bound to the trigger's stored controller. A one-shot
+// trigger ("the next time you cast ...") is removed once it fires; a repeating
+// trigger ("whenever you cast ... this turn") stays until its window ends. Each
+// trigger fires at most once per drain even if several matching events occurred,
+// retaining the first matching event as its triggering event.
+func drainReadyEventDelayedTriggers(g *game.Game, events []game.Event) []pendingTriggeredAbility {
+	if len(g.DelayedTriggers) == 0 || len(events) == 0 {
+		return nil
+	}
+	remaining := g.DelayedTriggers[:0]
+	var pending []pendingTriggeredAbility
+	for i := range g.DelayedTriggers {
+		trigger := &g.DelayedTriggers[i]
+		if !trigger.EventPattern.Exists {
+			remaining = append(remaining, *trigger)
+			continue
+		}
+		matched, matchEvent := matchEventDelayedTrigger(g, trigger, events)
+		if !matched {
+			remaining = append(remaining, *trigger)
+			continue
+		}
+		ability := trigger.Ability
+		pending = append(pending, pendingTriggeredAbility{
+			controller:                  trigger.Controller,
+			sourceID:                    trigger.SourceObjectID,
+			sourceCardID:                trigger.SourceID,
+			sourceToken:                 trigger.SourceTokenDef,
+			inline:                      &ability,
+			event:                       matchEvent,
+			hasEvent:                    true,
+			capturedTargetControllerLKI: clonePlayerIDMap(trigger.CapturedTargetControllerLKI),
+			capturedTargetManaValueLKI:  cloneIntMap(trigger.CapturedTargetManaValueLKI),
+		})
+		if !trigger.OneShot {
+			remaining = append(remaining, *trigger)
+		}
+	}
+	g.DelayedTriggers = remaining
+	return pending
+}
+
+// matchEventDelayedTrigger reports whether any freshly emitted event satisfies an
+// event-based delayed trigger's pattern, returning the first match. The trigger's
+// stored controller drives controller-relative pattern filters so "you cast a
+// spell" stays bound to the trigger's controller regardless of the creating
+// permanent's current state. The source permanent, when still present, supplies
+// object identity for self-referential filters.
+func matchEventDelayedTrigger(g *game.Game, trigger *game.DelayedTrigger, events []game.Event) (bool, game.Event) {
+	pattern := trigger.EventPattern.Val
+	source, _ := permanentByObjectID(g, trigger.SourceObjectID)
+	for i := range events {
+		if triggerMatchesEventForController(g, source, trigger.Controller, &pattern, events[i]) {
+			return true, events[i]
+		}
+	}
+	return false, game.Event{}
+}
+
+// expireEventDelayedTriggers removes event-based delayed triggers whose
+// this-turn window has ended. It runs during the cleanup step, so a "whenever
+// you cast a spell this turn" rider stops firing once its turn is over.
+func expireEventDelayedTriggers(g *game.Game) {
+	if len(g.DelayedTriggers) == 0 {
+		return
+	}
+	kept := g.DelayedTriggers[:0]
+	for i := range g.DelayedTriggers {
+		trigger := &g.DelayedTriggers[i]
+		if trigger.EventPattern.Exists && trigger.Window == game.DelayedWindowThisTurn {
+			continue
+		}
+		kept = append(kept, *trigger)
+	}
+	g.DelayedTriggers = kept
 }
 
 func drainReadyDelayedTriggers(g *game.Game, events []game.Event) []pendingTriggeredAbility {

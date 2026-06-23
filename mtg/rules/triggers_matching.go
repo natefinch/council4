@@ -28,6 +28,26 @@ func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *
 }
 
 func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.TriggerPattern, event game.Event) bool {
+	// Trigger patterns are checked when the triggering event is processed, and
+	// LTB/dies checks may need last-known information for the moved permanent
+	// (CR 603.2, CR 603.6c, CR 603.10). A nil source has no controller; that
+	// only reaches here for source-agnostic event-history conditions evaluated
+	// during a spell's resolution, where source-relative filters fail closed via
+	// the out-of-range controller sentinel below.
+	sourceController := game.PlayerID(-1)
+	if source != nil {
+		sourceController = effectiveController(g, source)
+	}
+	return triggerMatchesEventForController(g, source, sourceController, pattern, event)
+}
+
+// triggerMatchesEventForController matches a trigger pattern against an event
+// using an explicit controller, decoupling controller-relative filters from the
+// source permanent's live controller. Event-based delayed triggers reuse it so
+// "you cast a spell this turn" stays bound to the trigger's controller even
+// after the creating permanent has left the battlefield (CR 603.7e). An
+// out-of-range controller fails closed for "you"/"an opponent" filters.
+func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sourceController game.PlayerID, pattern *game.TriggerPattern, event game.Event) bool {
 	if pattern.Event == game.EventUnknown || !patternMatchesEventKind(pattern, event.Kind) {
 		return false
 	}
@@ -47,16 +67,6 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 		return false
 	}
 
-	// Trigger patterns are checked when the triggering event is processed, and
-	// LTB/dies checks may need last-known information for the moved permanent
-	// (CR 603.2, CR 603.6c, CR 603.10). A nil source has no controller; that
-	// only reaches here for source-agnostic event-history conditions evaluated
-	// during a spell's resolution, where source-relative filters fail closed via
-	// the out-of-range controller sentinel below.
-	sourceController := game.PlayerID(-1)
-	if source != nil {
-		sourceController = effectiveController(g, source)
-	}
 	var sourceObjectID id.ID
 	if source != nil {
 		sourceObjectID = source.ObjectID

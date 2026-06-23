@@ -690,6 +690,22 @@ func (v *cardDefValidator) validateInstructionSequence(
 			)
 		}
 		if delayed, ok := seq[i].Primitive.(CreateDelayedTrigger); ok {
+			if delayed.Trigger.EventPattern.Exists {
+				pattern := delayed.Trigger.EventPattern.Val
+				v.validateTriggerPattern(
+					faceName,
+					appendPath(instructionPath, "Primitive.Trigger.EventPattern"),
+					&pattern,
+				)
+				if delayed.Trigger.Timing != 0 {
+					v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "delayed trigger sets both Timing and EventPattern")
+				}
+				if delayed.Trigger.Window == DelayedWindowNone {
+					v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "event delayed trigger has no Window")
+				}
+			} else if delayed.Trigger.Window != DelayedWindowNone {
+				v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "fixed-phase delayed trigger sets Window without EventPattern")
+			}
 			v.validateAbilityContentWithLinked(
 				faceName,
 				appendPath(instructionPath, "Primitive.Trigger.Content"),

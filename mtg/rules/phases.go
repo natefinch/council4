@@ -250,6 +250,7 @@ func (e *Engine) runEndingPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 		permanent.Saddled = false
 	}
 	expireCleanupDurations(g)
+	expireEventDelayedTriggers(g)
 	expirePreventionShields(g)
 	expireReplacementEffects(g)
 	expireRuleEffects(g)

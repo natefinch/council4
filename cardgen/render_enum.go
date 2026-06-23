@@ -515,6 +515,15 @@ func renderDelayedTriggerTiming(timing game.DelayedTriggerTiming) (string, error
 	}
 }
 
+func renderDelayedTriggerWindow(window game.DelayedTriggerWindow) (string, error) {
+	switch window {
+	case game.DelayedWindowThisTurn:
+		return "game.DelayedWindowThisTurn", nil
+	default:
+		return "", fmt.Errorf("render: unsupported delayed trigger window %d", window)
+	}
+}
+
 func renderResolutionChoiceKind(kind game.ResolutionChoiceKind) (string, error) {
 	switch kind {
 	case game.ResolutionChoiceMana:

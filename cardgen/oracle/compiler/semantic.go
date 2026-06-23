@@ -1291,6 +1291,13 @@ const (
 	// last so existing kinds keep their wire values.
 	EffectRemoveCounter
 	EffectBecomeMonarch
+	// EffectDelayedTrigger creates an event-based delayed triggered ability that
+	// fires on a matching game event within a bounded window ("Whenever you cast
+	// a spell this turn, ...", Showdown of the Skalds; "When you next cast a
+	// creature spell this turn, ...", Summon: Fenrir). It lowers to a
+	// game.CreateDelayedTrigger carrying the nested ability's trigger pattern and
+	// content. Added last so existing kinds keep their wire values.
+	EffectDelayedTrigger
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1456,6 +1463,16 @@ type CompiledEffect struct {
 	// pipeline. Lowering compiles its inner document and applies the runtime
 	// ability as a continuous grant. It is nil for gain effects with no such rider.
 	GainGrantedAbility *parser.StaticGrantedAbilitySyntax
+	// DelayedTriggerAbility is the nested triggered ability of an
+	// EffectDelayedTrigger effect, reparsed from the sentence with its "this
+	// turn" window stripped. Lowering compiles its inner document and emits a
+	// game.CreateDelayedTrigger carrying the inner trigger pattern and content.
+	// It is nil for effects that are not event-based delayed triggers.
+	DelayedTriggerAbility *parser.StaticGrantedAbilitySyntax
+	// DelayedTriggerOneShot records that an EffectDelayedTrigger fires only on
+	// the first matching event ("the next time you cast ..."). It is meaningful
+	// only when Kind is EffectDelayedTrigger.
+	DelayedTriggerOneShot bool
 	// TokenName is a created creature token's explicit Oracle name ("named Koma's
 	// Coil"), captured verbatim from source. It is empty when the token is named
 	// only by its subtypes.

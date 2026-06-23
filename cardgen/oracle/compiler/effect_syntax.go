@@ -432,6 +432,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectBecomeCopy
 	case parser.EffectBecomeType:
 		return EffectBecomeType
+	case parser.EffectDelayedTrigger:
+		return EffectDelayedTrigger
 	case parser.EffectAmass:
 		return EffectAmass
 	case parser.EffectRenown:
