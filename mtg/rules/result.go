@@ -30,6 +30,10 @@ type GameResult struct {
 	// name and owner, so event and end-state consumers can attribute cards by
 	// name and to the deck that owns them.
 	Cards map[id.ID]CardInfo
+	// OpeningHand lists the goldfish player's (seat one's) cards immediately
+	// after the opening hands are drawn, in hand order, so a report can show the
+	// hand the game started from.
+	OpeningHand []id.ID
 }
 
 // CardInfo is the public identity of a card instance used by reports.
@@ -38,6 +42,11 @@ type CardInfo struct {
 	Owner     game.PlayerID
 	ManaValue int
 	Types     []types.Card
+	// Faces maps each non-front printed face (FaceBack, FaceAlternate) to its
+	// name, so a report can name a card by the face that was actually played or
+	// cast — for example the back side of a modal double-faced card. It is nil
+	// for ordinary single-faced cards, whose name is Name.
+	Faces map[game.FaceIndex]string
 }
 
 // EndState is the final state of every seat at the end of a game.

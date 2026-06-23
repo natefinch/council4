@@ -45,6 +45,7 @@ func (e *Engine) NewGoldfishGame(config game.PlayerConfig) *game.Game {
 func (e *Engine) RunGame(g *game.Game, agents [game.NumPlayers]PlayerAgent) *GameResult {
 	result := &GameResult{}
 	e.drawOpeningHands(g)
+	result.OpeningHand = append([]id.ID(nil), g.Players[game.Player1].Hand.All()...)
 	markCurrentTurnEventStart(g)
 	result.addLosses(e.applyStateBasedActions(g))
 	if winner, ok := g.Winner(); ok {
@@ -81,6 +82,7 @@ func (e *Engine) RunGoldfish(g *game.Game, agent PlayerAgent, turnLimit int) *Ga
 	agents[game.Player1] = agent
 	result := &GameResult{}
 	e.drawOpeningHands(g)
+	result.OpeningHand = append([]id.ID(nil), g.Players[game.Player1].Hand.All()...)
 	markCurrentTurnEventStart(g)
 	result.addLosses(e.applyStateBasedActions(g))
 	for !g.IsGameOver() && len(result.Turns) < turnLimit {
@@ -106,6 +108,7 @@ func foldFinalState(g *game.Game, result *GameResult) {
 			info.Name = instance.Def.Name
 			info.ManaValue = instance.Def.ManaValue()
 			info.Types = append([]types.Card(nil), instance.Def.Types...)
+			info.Faces = nonFrontFaceNames(instance.Def)
 		}
 		result.Cards[cardID] = info
 	}
@@ -120,4 +123,25 @@ func foldFinalState(g *game.Game, result *GameResult) {
 			CommanderCasts: player.CommanderCastCount,
 		}
 	}
+}
+
+// nonFrontFaceNames returns the name of each non-front printed face of a card,
+// keyed by face index, so a report can name the card by the face actually
+// played or cast. It returns nil for single-faced cards.
+func nonFrontFaceNames(def *game.CardDef) map[game.FaceIndex]string {
+	var names map[game.FaceIndex]string
+	for _, index := range def.FaceIndexes() {
+		if index == game.FaceFront {
+			continue
+		}
+		face, ok := def.Face(index)
+		if !ok || face.Name == "" {
+			continue
+		}
+		if names == nil {
+			names = make(map[game.FaceIndex]string)
+		}
+		names[index] = face.Name
+	}
+	return names
 }
