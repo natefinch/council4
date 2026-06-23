@@ -1400,7 +1400,7 @@ func lowerFightSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 		ctx.content.Targets[1].Cardinality.Min > 1 ||
 		ctx.content.Effects[0].Negated ||
 		!ctx.content.Effects[0].Exact ||
-		ctx.content.Effects[0].Selector.Another ||
+		ctx.content.Targets[0].Selector.Another ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
@@ -1413,8 +1413,8 @@ func lowerFightSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 			"the executable source backend supports only exact fights between two target creatures",
 		)
 	}
-	first, firstOK := fightCreatureTargetSpec(ctx.content.Targets[0])
-	second, secondOK := fightCreatureTargetSpec(ctx.content.Targets[1])
+	first, firstOK := fightCreatureTargetSpec(ctx.content.Targets[0], false)
+	second, secondOK := fightCreatureTargetSpec(ctx.content.Targets[1], true)
 	if !firstOK || !secondOK {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -1463,7 +1463,7 @@ func lowerSourceFightSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 		len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, unsupported
 	}
-	target, ok := fightCreatureTargetSpec(ctx.content.Targets[0])
+	target, ok := fightCreatureTargetSpec(ctx.content.Targets[0], false)
 	if !ok {
 		return game.AbilityContent{}, unsupported
 	}
@@ -1523,12 +1523,17 @@ func lowerLookAtHandSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnost
 	}.Ability(), nil
 }
 
-func fightCreatureTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
+// fightCreatureTargetSpec lowers one fight target. allowAnother permits the
+// "another target creature" determiner on the second target, lowering it to a
+// DistinctFromPriorTargets spec so the chosen creature must differ from the
+// first fighter; "the other" (Selector.Other) and the directional combat
+// qualifiers remain unsupported.
+func fightCreatureTargetSpec(target compiler.CompiledTarget, allowAnother bool) (game.TargetSpec, bool) {
 	if target.Cardinality.Max != 1 ||
 		target.Cardinality.Min < 0 ||
 		target.Cardinality.Min > 1 ||
 		target.Selector.Kind != compiler.SelectorCreature ||
-		target.Selector.Another ||
+		(target.Selector.Another && !allowAnother) ||
 		target.Selector.Other ||
 		target.Selector.Attacking ||
 		target.Selector.Blocking ||
@@ -1537,10 +1542,11 @@ func fightCreatureTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, b
 		return game.TargetSpec{}, false
 	}
 	spec := game.TargetSpec{
-		MinTargets: target.Cardinality.Min,
-		MaxTargets: 1,
-		Constraint: target.Text,
-		Allow:      game.TargetAllowPermanent,
+		MinTargets:               target.Cardinality.Min,
+		MaxTargets:               1,
+		Constraint:               target.Text,
+		Allow:                    game.TargetAllowPermanent,
+		DistinctFromPriorTargets: target.Selector.Another,
 		Predicate: game.TargetPredicate{
 			PermanentTypes: []types.Card{types.Creature},
 		},

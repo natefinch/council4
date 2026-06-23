@@ -135,7 +135,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "surveil with unrecognized sibling", cardName: "Test Vision", typeLine: "Sorcery", oracleText: "Surveil 1, then celebrate."},
 		{name: "investigate with unrecognized sibling", cardName: "Test Clue", typeLine: "Sorcery", oracleText: "Investigate, then celebrate."},
 		{name: "proliferate with unrecognized sibling", cardName: "Test Counter", typeLine: "Sorcery", oracleText: "Proliferate, then celebrate."},
-		{name: "another fight target", cardName: "Test Fight", typeLine: "Sorcery", oracleText: "Target creature fights another target creature."},
 		{name: "conditional destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "If it is tapped, destroy target creature."},
 		{name: "regeneration destroy with non-pronoun subject", cardName: "Test Doom", typeLine: "Instant", oracleText: "Destroy target creature. That creature can't be regenerated."},
 		{name: "restricted destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "Destroy target nonblack nonred creature."},

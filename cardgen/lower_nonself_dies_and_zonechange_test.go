@@ -84,6 +84,56 @@ func TestLowerGainControlForAsLongAsYouControlThis(t *testing.T) {
 	checkGainControlPrimitive(t, mode, 0, game.DurationForAsLongAsYouControlSource)
 }
 
+// TestLowerGainControlForAsLongAsSourceOnBattlefield checks the modern "for as
+// long as this [type] remains on the battlefield" templating (with the leading
+// "for") for an enters trigger, the form Sower of Temptation uses. The duration
+// phrase restates the source as a back-reference, which the gain-control
+// lowering accepts without an independent instruction.
+func TestLowerGainControlForAsLongAsSourceOnBattlefield(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Sower of Temptation",
+		Layout:     "normal",
+		TypeLine:   "Creature — Faerie Wizard",
+		OracleText: "Flying\nWhen this creature enters, gain control of target creature for as long as this creature remains on the battlefield.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("sequence len = %d, want 1", len(mode.Sequence))
+	}
+	checkGainControlPrimitive(t, mode, 0, game.DurationForAsLongAsSourceOnBattlefield)
+}
+
+// TestLowerGainControlForAsLongAsSagaRemains checks that the source self-type
+// noun in "for as long as this [type] remains on the battlefield" is not limited
+// to a fixed permanent-type vocabulary: a Saga chapter that restates "this Saga"
+// lowers to the same source-on-battlefield duration.
+func TestLowerGainControlForAsLongAsSagaRemains(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:     "Control Saga",
+		Layout:   "saga",
+		TypeLine: "Enchantment — Saga",
+		OracleText: "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\n" +
+			"I — Gain control of target creature for as long as this Saga remains on the battlefield.\n" +
+			"II — Draw a card.\n" +
+			"III — Draw a card.",
+	})
+	if len(face.ChapterAbilities) != 3 {
+		t.Fatalf("chapter abilities = %d, want 3", len(face.ChapterAbilities))
+	}
+	mode := face.ChapterAbilities[0].Content.Modes[0]
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("chapter I sequence len = %d, want 1", len(mode.Sequence))
+	}
+	checkGainControlPrimitive(t, mode, 0, game.DurationForAsLongAsSourceOnBattlefield)
+}
+
 // TestLowerGainControlAsLongAsSourceOnBattlefield checks the "as long as this
 // [type] remains on the battlefield" variant for single-effect spells.
 func TestLowerGainControlAsLongAsSourceOnBattlefield(t *testing.T) {

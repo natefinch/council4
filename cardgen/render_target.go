@@ -44,6 +44,9 @@ func (r Renderer) renderTargetSpec(ctx *renderCtx, spec *game.TargetSpec) (strin
 	} else if ok {
 		fields = append(fields, fmt.Sprintf("Predicate: %s,", predicate))
 	}
+	if spec.DistinctFromPriorTargets {
+		fields = append(fields, "DistinctFromPriorTargets: true,")
+	}
 	return structLit("game.TargetSpec", fields), nil
 }
 
