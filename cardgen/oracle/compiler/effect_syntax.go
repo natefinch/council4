@@ -247,6 +247,8 @@ func compileStaticSubjectKind(kind parser.EffectStaticSubjectKind) StaticSubject
 		return StaticSubjectControlledWalls
 	case parser.EffectStaticSubjectControlledArtifacts:
 		return StaticSubjectControlledArtifacts
+	case parser.EffectStaticSubjectControlledSagas:
+		return StaticSubjectControlledSagas
 	case parser.EffectStaticSubjectControlledTokens:
 		return StaticSubjectControlledTokens
 	case parser.EffectStaticSubjectOpponentControlledCreatures:

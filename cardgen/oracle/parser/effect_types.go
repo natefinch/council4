@@ -2025,6 +2025,7 @@ const (
 	EffectStaticSubjectOtherControlledCreatures       EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledCreatures"
 	EffectStaticSubjectControlledWalls                EffectStaticSubjectKind = "EffectStaticSubjectControlledWalls"
 	EffectStaticSubjectControlledArtifacts            EffectStaticSubjectKind = "EffectStaticSubjectControlledArtifacts"
+	EffectStaticSubjectControlledSagas                EffectStaticSubjectKind = "EffectStaticSubjectControlledSagas"
 	EffectStaticSubjectControlledTokens               EffectStaticSubjectKind = "EffectStaticSubjectControlledTokens"
 	EffectStaticSubjectOpponentControlledCreatures    EffectStaticSubjectKind = "EffectStaticSubjectOpponentControlledCreatures"
 	EffectStaticSubjectControlledCreatureSubtype      EffectStaticSubjectKind = "EffectStaticSubjectControlledCreatureSubtype"
