@@ -263,6 +263,11 @@ func (GroupSelfPowerDamage) Kind() PrimitiveKind { return PrimitiveGroupSelfPowe
 // Kind implements Primitive for PutPermanentOnLibrary.
 func (PutPermanentOnLibrary) Kind() PrimitiveKind { return PrimitivePutPermanentOnLibrary }
 
+// Kind implements Primitive for PutLinkedExiledCardsInLibrary.
+func (PutLinkedExiledCardsInLibrary) Kind() PrimitiveKind {
+	return PrimitivePutLinkedExiledCardsInLibrary
+}
+
 // Kind implements Primitive for GrantCastPermission.
 func (GrantCastPermission) Kind() PrimitiveKind { return PrimitiveGrantCastPermission }
 
@@ -281,94 +286,95 @@ func (AddExtraPhases) Kind() PrimitiveKind { return PrimitiveAddExtraPhases }
 // Kind implements Primitive for RollDie.
 func (RollDie) Kind() PrimitiveKind { return PrimitiveRollDie }
 
-func (Damage) isPrimitive()                      {}
-func (Draw) isPrimitive()                        {}
-func (ReorderLibraryTop) isPrimitive()           {}
-func (LookAtLibraryTop) isPrimitive()            {}
-func (ShuffleLibrary) isPrimitive()              {}
-func (ShuffleGraveyardIntoLibrary) isPrimitive() {}
-func (LookAtHand) isPrimitive()                  {}
-func (ChooseDiscardFromHand) isPrimitive()       {}
-func (ExileFromHand) isPrimitive()               {}
-func (ExileFromGraveyard) isPrimitive()          {}
-func (ExileEntireHand) isPrimitive()             {}
-func (ReturnExiledCardsToHand) isPrimitive()     {}
-func (PutFromHand) isPrimitive()                 {}
-func (CastForFree) isPrimitive()                 {}
-func (ReturnFromGraveyard) isPrimitive()         {}
-func (Discard) isPrimitive()                     {}
-func (Destroy) isPrimitive()                     {}
-func (AddMana) isPrimitive()                     {}
-func (AddCounter) isPrimitive()                  {}
-func (AddPlayerCounter) isPrimitive()            {}
-func (MoveCounters) isPrimitive()                {}
-func (ApplyContinuous) isPrimitive()             {}
-func (ApplyRule) isPrimitive()                   {}
-func (ModifyPT) isPrimitive()                    {}
-func (Fight) isPrimitive()                       {}
-func (Tap) isPrimitive()                         {}
-func (TapOrUntap) isPrimitive()                  {}
-func (Search) isPrimitive()                      {}
-func (Reveal) isPrimitive()                      {}
-func (PutOnBattlefield) isPrimitive()            {}
-func (CreateToken) isPrimitive()                 {}
-func (ShufflePermanentIntoLibrary) isPrimitive() {}
-func (StartEngines) isPrimitive()                {}
-func (BecomeMonarch) isPrimitive()               {}
-func (SetClassLevel) isPrimitive()               {}
-func (Monstrosity) isPrimitive()                 {}
-func (DiscoverCards) isPrimitive()               {}
-func (Pay) isPrimitive()                         {}
-func (Choose) isPrimitive()                      {}
-func (GainLife) isPrimitive()                    {}
-func (LoseLife) isPrimitive()                    {}
-func (PlayerLosesGame) isPrimitive()             {}
-func (PlayerWinsGame) isPrimitive()              {}
-func (PunisherEachLoseLife) isPrimitive()        {}
-func (RepeatProcess) isPrimitive()               {}
-func (CopyStackObject) isPrimitive()             {}
-func (Exile) isPrimitive()                       {}
-func (Bounce) isPrimitive()                      {}
-func (Sacrifice) isPrimitive()                   {}
-func (SacrificePermanents) isPrimitive()         {}
-func (Untap) isPrimitive()                       {}
-func (SkipNextUntap) isPrimitive()               {}
-func (RemoveFromCombat) isPrimitive()            {}
-func (CounterObject) isPrimitive()               {}
-func (Mill) isPrimitive()                        {}
-func (ExileTopOfLibrary) isPrimitive()           {}
-func (PutHandOnLibraryThenDraw) isPrimitive()    {}
-func (RevealUntil) isPrimitive()                 {}
-func (Scry) isPrimitive()                        {}
-func (Surveil) isPrimitive()                     {}
-func (Dig) isPrimitive()                         {}
-func (ImpulseExile) isPrimitive()                {}
-func (Investigate) isPrimitive()                 {}
-func (Proliferate) isPrimitive()                 {}
-func (Explore) isPrimitive()                     {}
-func (Manifest) isPrimitive()                    {}
-func (Goad) isPrimitive()                        {}
-func (RemoveCounter) isPrimitive()               {}
-func (Transform) isPrimitive()                   {}
-func (PhaseOut) isPrimitive()                    {}
-func (Regenerate) isPrimitive()                  {}
-func (BecomeCopy) isPrimitive()                  {}
-func (Amass) isPrimitive()                       {}
-func (Renown) isPrimitive()                      {}
-func (BecomeSaddled) isPrimitive()               {}
-func (ShuffleSpellIntoLibrary) isPrimitive()     {}
-func (SkipStep) isPrimitive()                    {}
-func (CreateEmblem) isPrimitive()                {}
-func (CreateDelayedTrigger) isPrimitive()        {}
-func (CreateReplacement) isPrimitive()           {}
-func (PreventDamage) isPrimitive()               {}
-func (MoveCard) isPrimitive()                    {}
-func (MoveCommander) isPrimitive()               {}
-func (GrantCastPermission) isPrimitive()         {}
-func (ChooseNewTargets) isPrimitive()            {}
-func (PutPermanentOnLibrary) isPrimitive()       {}
-func (Attach) isPrimitive()                      {}
-func (MassReturnFromGraveyard) isPrimitive()     {}
+func (Damage) isPrimitive()                        {}
+func (Draw) isPrimitive()                          {}
+func (ReorderLibraryTop) isPrimitive()             {}
+func (LookAtLibraryTop) isPrimitive()              {}
+func (ShuffleLibrary) isPrimitive()                {}
+func (ShuffleGraveyardIntoLibrary) isPrimitive()   {}
+func (LookAtHand) isPrimitive()                    {}
+func (ChooseDiscardFromHand) isPrimitive()         {}
+func (ExileFromHand) isPrimitive()                 {}
+func (ExileFromGraveyard) isPrimitive()            {}
+func (ExileEntireHand) isPrimitive()               {}
+func (ReturnExiledCardsToHand) isPrimitive()       {}
+func (PutFromHand) isPrimitive()                   {}
+func (CastForFree) isPrimitive()                   {}
+func (ReturnFromGraveyard) isPrimitive()           {}
+func (Discard) isPrimitive()                       {}
+func (Destroy) isPrimitive()                       {}
+func (AddMana) isPrimitive()                       {}
+func (AddCounter) isPrimitive()                    {}
+func (AddPlayerCounter) isPrimitive()              {}
+func (MoveCounters) isPrimitive()                  {}
+func (ApplyContinuous) isPrimitive()               {}
+func (ApplyRule) isPrimitive()                     {}
+func (ModifyPT) isPrimitive()                      {}
+func (Fight) isPrimitive()                         {}
+func (Tap) isPrimitive()                           {}
+func (TapOrUntap) isPrimitive()                    {}
+func (Search) isPrimitive()                        {}
+func (Reveal) isPrimitive()                        {}
+func (PutOnBattlefield) isPrimitive()              {}
+func (CreateToken) isPrimitive()                   {}
+func (ShufflePermanentIntoLibrary) isPrimitive()   {}
+func (StartEngines) isPrimitive()                  {}
+func (BecomeMonarch) isPrimitive()                 {}
+func (SetClassLevel) isPrimitive()                 {}
+func (Monstrosity) isPrimitive()                   {}
+func (DiscoverCards) isPrimitive()                 {}
+func (Pay) isPrimitive()                           {}
+func (Choose) isPrimitive()                        {}
+func (GainLife) isPrimitive()                      {}
+func (LoseLife) isPrimitive()                      {}
+func (PlayerLosesGame) isPrimitive()               {}
+func (PlayerWinsGame) isPrimitive()                {}
+func (PunisherEachLoseLife) isPrimitive()          {}
+func (RepeatProcess) isPrimitive()                 {}
+func (CopyStackObject) isPrimitive()               {}
+func (Exile) isPrimitive()                         {}
+func (Bounce) isPrimitive()                        {}
+func (Sacrifice) isPrimitive()                     {}
+func (SacrificePermanents) isPrimitive()           {}
+func (Untap) isPrimitive()                         {}
+func (SkipNextUntap) isPrimitive()                 {}
+func (RemoveFromCombat) isPrimitive()              {}
+func (CounterObject) isPrimitive()                 {}
+func (Mill) isPrimitive()                          {}
+func (ExileTopOfLibrary) isPrimitive()             {}
+func (PutHandOnLibraryThenDraw) isPrimitive()      {}
+func (RevealUntil) isPrimitive()                   {}
+func (Scry) isPrimitive()                          {}
+func (Surveil) isPrimitive()                       {}
+func (Dig) isPrimitive()                           {}
+func (ImpulseExile) isPrimitive()                  {}
+func (Investigate) isPrimitive()                   {}
+func (Proliferate) isPrimitive()                   {}
+func (Explore) isPrimitive()                       {}
+func (Manifest) isPrimitive()                      {}
+func (Goad) isPrimitive()                          {}
+func (RemoveCounter) isPrimitive()                 {}
+func (Transform) isPrimitive()                     {}
+func (PhaseOut) isPrimitive()                      {}
+func (Regenerate) isPrimitive()                    {}
+func (BecomeCopy) isPrimitive()                    {}
+func (Amass) isPrimitive()                         {}
+func (Renown) isPrimitive()                        {}
+func (BecomeSaddled) isPrimitive()                 {}
+func (ShuffleSpellIntoLibrary) isPrimitive()       {}
+func (SkipStep) isPrimitive()                      {}
+func (CreateEmblem) isPrimitive()                  {}
+func (CreateDelayedTrigger) isPrimitive()          {}
+func (CreateReplacement) isPrimitive()             {}
+func (PreventDamage) isPrimitive()                 {}
+func (MoveCard) isPrimitive()                      {}
+func (MoveCommander) isPrimitive()                 {}
+func (GrantCastPermission) isPrimitive()           {}
+func (ChooseNewTargets) isPrimitive()              {}
+func (PutPermanentOnLibrary) isPrimitive()         {}
+func (PutLinkedExiledCardsInLibrary) isPrimitive() {}
+func (Attach) isPrimitive()                        {}
+func (MassReturnFromGraveyard) isPrimitive()       {}
 
 func (GroupSourceDamage) isPrimitive() {}
 
@@ -577,6 +583,13 @@ func (p GrantCastPermission) instructionRefs() primitiveRefs {
 }
 func (p PutPermanentOnLibrary) instructionRefs() primitiveRefs {
 	return objectReferenceRefs(p.Object)
+}
+
+func (p PutLinkedExiledCardsInLibrary) instructionRefs() primitiveRefs {
+	if p.LinkedKey == "" {
+		return primitiveRefs{}
+	}
+	return primitiveRefs{consumesLinked: []LinkedKey{p.LinkedKey}}
 }
 
 func (p Attach) instructionRefs() primitiveRefs {

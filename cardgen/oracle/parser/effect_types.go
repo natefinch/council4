@@ -1862,6 +1862,13 @@ type EffectSyntax struct {
 	// the source link rather than a target; lowering emits the linked return to
 	// hand. It is false for every other return shape.
 	ReturnExiledCardsToHand bool `json:",omitempty"`
+	// BottomLinkedExiledCards marks the disposal clause "The owner of each card
+	// exiled with <this permanent> puts that card on the bottom of their
+	// library." (Trial of a Time Lord). The disposed cards are the ones a sibling
+	// exile-until-leaves clause removed, identified by the source link rather than
+	// a target. Lowering emits a linked library-bottom disposal; it is false for
+	// every other put shape.
+	BottomLinkedExiledCards bool `json:",omitempty"`
 	// Additional marks a draw clause whose counted cards carry the "additional"
 	// qualifier ("draw two additional cards", "draw an additional card"), as on
 	// draw-step triggers like Sylvan Library. Drawing N additional cards is

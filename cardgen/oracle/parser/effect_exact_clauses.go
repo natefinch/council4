@@ -348,6 +348,53 @@ func exactReturnExiledCardsToHandEffectSyntax(effect *EffectSyntax) bool {
 	return true
 }
 
+// exactBottomLinkedExiledCardsEffectSyntax reports whether a put-into-library
+// effect is the linked disposal clause "The owner of each card exiled with
+// <this permanent> puts that card on the bottom of their library." (Trial of a
+// Time Lord). The disposed cards are the ones a sibling exile-until-leaves
+// clause removed, identified by the source link, so the effect carries no
+// target. It marks the effect so lowering emits the linked library-bottom
+// disposal; any other put shape leaves the clause non-exact so lowering fails
+// closed.
+func exactBottomLinkedExiledCardsEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectPut || effect.Negated || effect.Optional {
+		return false
+	}
+	if effect.Context != EffectContextSource || effect.ToZone != zone.Library {
+		return false
+	}
+	if len(effect.Targets) != 0 {
+		return false
+	}
+	anchor, ok := exiledWithSelfAnchorText(effect)
+	if !ok {
+		return false
+	}
+	canonical := "The owner of each card exiled with " + anchor +
+		" puts that card on the bottom of their library."
+	if !strings.EqualFold(exactEffectClauseText(effect), canonical) {
+		return false
+	}
+	effect.BottomLinkedExiledCards = true
+	return true
+}
+
+// exiledWithSelfAnchorText returns the source-anchor wording ("this Saga") that
+// the linked disposal clause names as the exile source, drawn from a subject
+// this-object or self-name reference. It reports false when no such anchor is
+// present so the recognizer cannot match an unanchored clause.
+func exiledWithSelfAnchorText(effect *EffectSyntax) (string, bool) {
+	for _, reference := range effect.SubjectReferences {
+		if reference.Kind != ReferenceThisObject && reference.Kind != ReferenceSelfName {
+			continue
+		}
+		if text := strings.TrimSpace(reference.Text); text != "" {
+			return text, true
+		}
+	}
+	return "", false
+}
+
 func parseGraveyardZoneExile(effect *EffectSyntax) GraveyardZoneExileKind {
 	if effect.Kind != EffectExile || effect.Negated {
 		return GraveyardZoneExileNone

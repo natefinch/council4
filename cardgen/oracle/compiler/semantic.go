@@ -1812,6 +1812,12 @@ type CompiledEffect struct {
 	// through the text-blind compiler boundary so lowering emits the linked
 	// return to hand of the set the sibling entire-hand exile removed.
 	ReturnExiledCardsToHand bool
+	// BottomLinkedExiledCards carries the parser-recognized linked disposal
+	// clause "The owner of each card exiled with <this permanent> puts that card
+	// on the bottom of their library." (Trial of a Time Lord) through the
+	// text-blind compiler boundary so lowering emits the linked library-bottom
+	// disposal paired with the sibling exile.
+	BottomLinkedExiledCards bool
 	// CantCastSpellsAllPlayers mirrors the parser flag for an EffectCantCastSpells
 	// clause that affects every player ("Players can't cast spells this turn.")
 	// rather than only the controller's opponents. Lowering reads it to pick the

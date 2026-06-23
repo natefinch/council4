@@ -383,6 +383,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: PutPermanentOnLibrary kind has unexpected concrete type")
 		}
 		return r.renderPutPermanentOnLibrary(value)
+	case game.PrimitivePutLinkedExiledCardsInLibrary:
+		value, ok := primitive.(game.PutLinkedExiledCardsInLibrary)
+		if !ok {
+			return "", errors.New("render: internal error: PutLinkedExiledCardsInLibrary kind has unexpected concrete type")
+		}
+		return renderPutLinkedExiledCardsInLibrary(value), nil
 	case game.PrimitiveShuffleLibrary:
 		value, ok := primitive.(game.ShuffleLibrary)
 		if !ok {
@@ -952,6 +958,17 @@ func (r Renderer) renderPutPermanentOnLibrary(value game.PutPermanentOnLibrary) 
 		fields = append(fields, "Bottom: true,")
 	}
 	return structLit("game.PutPermanentOnLibrary", fields), nil
+}
+
+// renderPutLinkedExiledCardsInLibrary renders the linked disposal primitive,
+// emitting the consumed link key and the bottom flag when set so the literal
+// matches the typed effect.
+func renderPutLinkedExiledCardsInLibrary(value game.PutLinkedExiledCardsInLibrary) string {
+	fields := []string{fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey))}
+	if value.Bottom {
+		fields = append(fields, "Bottom: true,")
+	}
+	return structLit("game.PutLinkedExiledCardsInLibrary", fields)
 }
 
 func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (string, error) {
