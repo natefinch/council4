@@ -1360,6 +1360,8 @@ func lowerImmediateSingleEffectSpell(
 		return lowerPutEffectSpell(ctx)
 	case compiler.EffectMoveCounters:
 		return lowerMoveCountersSpell(ctx)
+	case compiler.EffectRemoveCounter:
+		return lowerRemoveCounterSpell(ctx)
 	default:
 		if content, diag, ok := lowerImmediateSingleEffectSpellTail(cardName, ctx, syntax); ok {
 			return content, diag

@@ -49,6 +49,7 @@ const (
 	EffectGainPlayerCounter EffectKind = "EffectGainPlayerCounter"
 	EffectPut               EffectKind = "EffectPut"
 	EffectProliferate       EffectKind = "EffectProliferate"
+	EffectRemoveCounter     EffectKind = "EffectRemoveCounter"
 	EffectRegenerate        EffectKind = "EffectRegenerate"
 	EffectReorderLibraryTop EffectKind = "EffectReorderLibraryTop"
 	EffectReturn            EffectKind = "EffectReturn"

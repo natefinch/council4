@@ -106,6 +106,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactPutThoseCountersEffectSyntax(effect) || exactPutThoseCardsIntoHandEffectSyntax(effect)
 	case EffectProliferate:
 		return exactStandaloneActionEffectSyntax(effect, "Proliferate")
+	case EffectRemoveCounter:
+		return exactRemoveCounterEffectSyntax(effect)
 	case EffectRegenerate:
 		return exactDirectTargetEffectSyntax(effect, "Regenerate") ||
 			exactRegenerateSelfEffectSyntax(effect) ||
@@ -3053,6 +3055,45 @@ func exactMoveCountersEffectSyntax(effect *EffectSyntax) bool {
 		text,
 		fmt.Sprintf("Move %s %s counter from %s onto %s.",
 			effectAmountSourceText(effect), effect.CounterKind.String(), source, dest),
+	)
+}
+
+// exactRemoveCounterEffectSyntax recognizes the resolving counter-removal effect
+// "Remove <amount> [<kind> ]counter(s) from <object>." (Ferropede, "remove a
+// counter from target permanent."; Thrull Parasite, "Remove a counter from
+// target nonland permanent."; "Remove two +1/+1 counters from target creature").
+// The object is a single recognized target permanent (single or "up to one"
+// cardinality). The count is a fixed positive amount; the counter is either a
+// named recognized kind or, in the kind-unspecified "a counter" form, a counter
+// of any kind the controller chooses at resolution. The clause is reconstructed
+// and matched byte-exact, so the mass "all counters" form, dynamic counts, and
+// any referenced or pronoun-object shape stay non-exact and fail closed.
+func exactRemoveCounterEffectSyntax(effect *EffectSyntax) bool {
+	if len(effect.Targets) != 1 ||
+		len(effect.References) != 0 ||
+		!effect.Targets[0].Exact ||
+		effect.Targets[0].Cardinality.Max != 1 ||
+		!effect.Amount.Known ||
+		effect.Amount.Value < 1 {
+		return false
+	}
+	noun := "counters"
+	if effect.Amount.Value == 1 {
+		noun = "counter"
+	}
+	object := effect.Targets[0].Text
+	text := exactEffectClauseText(effect)
+	if effect.CounterKnown {
+		return strings.EqualFold(
+			text,
+			fmt.Sprintf("Remove %s %s %s from %s.",
+				effectAmountSourceText(effect), effect.CounterKind.String(), noun, object),
+		)
+	}
+	return strings.EqualFold(
+		text,
+		fmt.Sprintf("Remove %s %s from %s.",
+			effectAmountSourceText(effect), noun, object),
 	)
 }
 

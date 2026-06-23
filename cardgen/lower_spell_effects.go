@@ -1034,6 +1034,54 @@ func lowerMoveCountersSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 	}.Ability(), nil
 }
 
+// lowerRemoveCounterSpell lowers the "remove a counter from target permanent"
+// family (Ferropede, Cemetery Desecrator, Mutated Cultist, Thrull Parasite,
+// Medicine Runner) into a single RemoveCounter instruction acting on one target
+// permanent. The kind-unspecified "a counter" wording leaves the kind to the
+// resolving controller (ChooseKind); a named, placeable kind removes that kind
+// directly. It fails closed for any non-controller or negated effect, a wrong
+// target count or cardinality, a non-permanent target, a non-positive or
+// dynamic amount, a non-placeable named kind, and any reference, conditional, or
+// modal content.
+func lowerRemoveCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		len(ctx.content.Targets) != 1 ||
+		ctx.content.Targets[0].Cardinality.Max != 1 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		!effect.Amount.Known ||
+		effect.Amount.Value < 1 {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	target, ok := permanentTargetSpecWithCardinality(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	remove := game.RemoveCounter{
+		Amount: game.Fixed(effect.Amount.Value),
+		Object: game.TargetPermanentReference(0),
+	}
+	if effect.CounterKindKnown {
+		if !compiler.CounterKindPlacementSupported(effect.CounterKind) ||
+			effect.CounterKind.PlayerOnly() {
+			return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+		}
+		remove.CounterKind = effect.CounterKind
+	} else {
+		remove.ChooseKind = true
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{target},
+		Sequence: []game.Instruction{{
+			Primitive: remove,
+		}},
+	}.Ability(), nil
+}
+
 // lowerMoveCountersOntoEventPermanent lowers the Graft-style move "move a +1/+1
 // counter from this creature onto that creature." where the destination "that
 // creature" is the permanent of the triggering enters event (CR 702.57). It

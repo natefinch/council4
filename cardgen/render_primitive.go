@@ -605,6 +605,36 @@ func (r Renderer) renderMoveCounters(ctx *renderCtx, value *game.MoveCounters) (
 	return structLit("game.MoveCounters", fields), nil
 }
 
+// renderRemoveCounter renders a RemoveCounter primitive: a fixed amount removed
+// from one referenced object, of either a named CounterKind or a controller-
+// chosen kind (ChooseKind), modeling the "remove a counter from target
+// permanent" family (Ferropede).
+func (r Renderer) renderRemoveCounter(ctx *renderCtx, value *game.RemoveCounter) (string, error) {
+	object, err := r.renderObjectReference(value.Object)
+	if err != nil {
+		return "", err
+	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Amount: %s,", amount),
+		fmt.Sprintf("Object: %s,", object),
+	}
+	if value.ChooseKind {
+		fields = append(fields, "ChooseKind: true,")
+		return structLit("game.RemoveCounter", fields), nil
+	}
+	kind, err := renderCounterKind(value.CounterKind)
+	if err != nil {
+		return "", err
+	}
+	ctx.need(importCounter)
+	fields = append(fields, fmt.Sprintf("CounterKind: %s,", kind))
+	return structLit("game.RemoveCounter", fields), nil
+}
+
 func (r Renderer) renderCounterSourceSpec(source game.CounterSourceSpec) (string, error) {
 	switch source.Kind {
 	case game.CounterSourceSelf:
