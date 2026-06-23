@@ -536,8 +536,13 @@ func (CreateDelayedTrigger) instructionRefs() primitiveRefs    { return primitiv
 func (p CreateReplacement) instructionRefs() primitiveRefs     { return objectReferenceRefs(p.Object) }
 func (p PreventDamage) instructionRefs() primitiveRefs         { return quantityRefs(p.Amount) }
 func (p MoveCard) instructionRefs() primitiveRefs {
+	if p.FromLinked != "" {
+		return primitiveRefs{consumesLinked: []LinkedKey{p.FromLinked}}
+	}
 	if p.Player.Kind() != PlayerReferenceNone {
-		return quantityRefs(p.Amount)
+		refs := quantityRefs(p.Amount)
+		refs.publishesLinked = p.PublishLinked
+		return refs
 	}
 	return cardReferenceRefs(p.Card)
 }

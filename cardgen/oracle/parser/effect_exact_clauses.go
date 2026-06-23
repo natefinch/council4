@@ -269,6 +269,29 @@ func exactExileUntilSourceLeavesEffectSyntax(effect *EffectSyntax) bool {
 	return true
 }
 
+// exactExileEntireHandEffectSyntax recognizes the exact clause "Exile all cards
+// from your hand." (Wormfang Behemoth). It marks the effect so lowering moves
+// the controller's whole hand to exile as a linked set; matching the exact
+// wording keeps a narrowed "exile all <filter> cards from your hand" from
+// reaching the whole-zone lowering, so any other exile shape stays non-exact and
+// lowering fails closed.
+func exactExileEntireHandEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectExile || effect.Negated || effect.Optional {
+		return false
+	}
+	if effect.Context != EffectContextController {
+		return false
+	}
+	if len(effect.Targets) != 0 {
+		return false
+	}
+	if !strings.EqualFold(exactEffectClauseText(effect), "Exile all cards from your hand.") {
+		return false
+	}
+	effect.ExileEntireHand = true
+	return true
+}
+
 // exactReturnExiledCardEffectSyntax recognizes the explicit O-Ring leaves-the-
 // battlefield clause "return the exiled card to the battlefield under its
 // owner's control." (Oblivion Ring, Journey to Nowhere, Fiend Hunter). The
@@ -294,6 +317,35 @@ func exactReturnExiledCardEffectSyntax(effect *EffectSyntax) bool {
 		return false
 	}
 	effect.ReturnExiledCard = true
+	return true
+}
+
+// exactReturnExiledCardToHandEffectSyntax recognizes the explicit leaves-the-
+// battlefield clause "Return the exiled card to its owner's hand." and its
+// plural "Return the exiled cards to their owner's hand." (Wormfang Behemoth).
+// The returned cards are the ones a sibling exile removed, identified by the
+// source link, so the effect carries no target. It marks the effect so lowering
+// emits the linked hand return; any other return shape leaves the clause
+// non-exact so lowering fails closed.
+func exactReturnExiledCardToHandEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectReturn || effect.Negated || effect.Optional {
+		return false
+	}
+	if effect.Context != EffectContextController || effect.UnderOwnersControl {
+		return false
+	}
+	if effect.ToZone != zone.Hand || effect.FromZone != zone.None {
+		return false
+	}
+	if len(effect.Targets) != 0 {
+		return false
+	}
+	clause := exactEffectClauseText(effect)
+	if !strings.EqualFold(clause, "Return the exiled card to its owner's hand.") &&
+		!strings.EqualFold(clause, "Return the exiled cards to their owner's hand.") {
+		return false
+	}
+	effect.ReturnExiledCardToHand = true
 	return true
 }
 

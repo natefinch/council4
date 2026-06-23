@@ -57,6 +57,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactSourceSpellExileSyntax(effect) ||
 			exactCounteredSpellExileSyntax(effect) ||
 			exactExileUntilSourceLeavesEffectSyntax(effect) ||
+			exactExileEntireHandEffectSyntax(effect) ||
 			exactExileTopOfLibrarySyntax(effect) ||
 			exactDirectTargetEffectSyntax(effect, "Exile") ||
 			exactMultiDistinctTargetEffectSyntax(effect, "Exile") ||
@@ -129,6 +130,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactGraveyardReturnEffectSyntax(effect) ||
 			exactChosenCardsBattlefieldReturnEffectSyntax(effect) ||
 			exactReturnExiledCardEffectSyntax(effect) ||
+			exactReturnExiledCardToHandEffectSyntax(effect) ||
 			exactDirectPronounEffectSyntax(effect, "Return it to its owner's hand.")
 	default:
 		return exactEffectSyntaxTail(effect)

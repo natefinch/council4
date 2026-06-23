@@ -794,7 +794,21 @@ type MoveCard struct {
 	// PlayerGroup selects every player whose entire FromZone is moved at once
 	// ("Exile all graveyards."). It is set only for the player-group zone form;
 	// Card and Player must be unset when PlayerGroup is set.
-	PlayerGroup       PlayerGroupReference
+	PlayerGroup PlayerGroupReference
+	// FromLinked selects the linked-set form: every card remembered under this
+	// key (published by an earlier exile, e.g. "exile all cards from your hand")
+	// moves from FromZone to Destination at once, then the set is cleared. It is
+	// the back-reference half of an exiled-card link ("return the exiled cards to
+	// their owner's hand."), so Card, Player, and PlayerGroup must all be unset
+	// when FromLinked is set. Each card returns to its own owner's Destination
+	// zone.
+	FromLinked LinkedKey
+	// PublishLinked, when set on the player-zone group form, remembers every card
+	// the move relocates under the controller's source link, so a later ability
+	// on the same face (a return-on-leave trigger) can act on exactly that set
+	// via FromLinked. It mirrors Mill.PublishLinked; the empty key publishes
+	// nothing.
+	PublishLinked     LinkedKey
 	Amount            Quantity
 	FromZone          zone.Type
 	Destination       zone.Type

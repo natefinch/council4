@@ -1781,6 +1781,21 @@ type EffectSyntax struct {
 	// source link rather than a target. Lowering emits a linked battlefield
 	// return; it is false for every other return shape.
 	ReturnExiledCard bool `json:",omitempty"`
+	// ReturnExiledCardToHand marks the explicit leaves-the-battlefield clause
+	// "Return the exiled card(s) to its/their owner's hand." (Wormfang Behemoth,
+	// Hostage Taker-style hand returns). Like ReturnExiledCard it identifies the
+	// returned cards by the source's exile link rather than a target, but moves
+	// the whole linked set to its owner's hand instead of the battlefield.
+	// Lowering emits a linked hand return paired with the sibling exile; it is
+	// false for every other return shape.
+	ReturnExiledCardToHand bool `json:",omitempty"`
+	// ExileEntireHand marks the exact clause "Exile all cards from your hand."
+	// (Wormfang Behemoth's enters-the-battlefield trigger). The whole hand moves
+	// to exile as a linked set the sibling leaves-the-battlefield return reads;
+	// recognizing the exact wording at the parser level keeps a narrowed "exile
+	// all <filter> cards from your hand" wording from reaching the whole-zone
+	// lowering. It is false for every other exile shape.
+	ExileEntireHand bool `json:",omitempty"`
 	// Additional marks a draw clause whose counted cards carry the "additional"
 	// qualifier ("draw two additional cards", "draw an additional card"), as on
 	// draw-step triggers like Sylvan Library. Drawing N additional cards is
