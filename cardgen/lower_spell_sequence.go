@@ -672,6 +672,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx, syntax *parser
 	if content, ok := lowerDiscardDrawGreatestThisWaySequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerDiscardDrawThenManaValueDamageSequence(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerWheelDiscardDrawSequence(ctx); ok {
 		return content, true
 	}
@@ -3861,6 +3864,139 @@ func lowerLifeLostThisWayDrain(ctx contentCtx) (game.AbilityContent, bool) {
 			},
 		},
 	}.Ability(), true
+}
+
+// lowerDiscardDrawThenManaValueDamageSequence handles Summon: Kujata chapter III
+// "Discard a card, then draw two cards. When you discard a card this way, this
+// creature deals damage equal to that card's mana value to each opponent." The
+// parser leaves the reflexive "When you discard a card this way" preamble
+// in-sentence, so the chapter flattens to four effects: the controller's
+// single-card discard, a fixed draw chained with "then", the reflexive
+// restatement of that same discard, and the source-dealt damage to each opponent
+// whose amount equals "that card's mana value". The restatement effect carries no
+// independent action — the controller discards exactly once — so it is collapsed.
+//
+// It emits a Discard that publishes the discarded card under a linked key,
+// followed by the fixed Draw, followed by a source Damage to each opponent whose
+// amount reads the published card's mana value. With an empty hand nothing is
+// discarded, the linked key stays empty, and the mana-value amount resolves to
+// zero, matching the reflexive trigger that never fires. It fails closed unless
+// every guard holds.
+func lowerDiscardDrawThenManaValueDamageSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 4 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	discard := &ctx.content.Effects[0]
+	draw := &ctx.content.Effects[1]
+	restatement := &ctx.content.Effects[2]
+	damage := &ctx.content.Effects[3]
+	if !singleCardControllerDiscardAction(discard) || !reflexiveDiscardRestatement(restatement) {
+		return game.AbilityContent{}, false
+	}
+	if draw.Kind != compiler.EffectDraw ||
+		(draw.Context != parser.EffectContextController && draw.Context != parser.EffectContextPriorSubject) ||
+		draw.Connection != parser.EffectConnectionThen ||
+		draw.Negated || draw.Optional ||
+		!draw.Exact ||
+		!draw.Amount.Known || draw.Amount.Value < 1 ||
+		draw.Amount.DynamicKind != compiler.DynamicAmountNone ||
+		draw.Amount.VariableX || draw.Amount.RangeKnown ||
+		len(draw.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	if damage.Kind != compiler.EffectDealDamage ||
+		damage.Context != parser.EffectContextSource ||
+		damage.Negated || damage.Optional || damage.Divided ||
+		damage.Amount.DynamicKind != compiler.DynamicAmountSourceManaValue ||
+		damage.Amount.DynamicForm != compiler.DynamicAmountEqual ||
+		damage.Amount.Multiplier != 1 ||
+		damage.Selector.Kind != compiler.SelectorOpponent || damage.Selector.Other ||
+		len(damage.DamageRecipientSelectors) != 0 {
+		return game.AbilityContent{}, false
+	}
+	if !damageSourceIsSourcePermanent(damage.References) ||
+		len(damage.References) != 2 ||
+		damage.References[1].Kind != compiler.ReferenceThatObject {
+		return game.AbilityContent{}, false
+	}
+
+	const linkKey = game.LinkedKey("discarded-card-mana-value")
+	manaValue, ok := objectCharacteristicAmount(
+		compiler.DynamicAmountSourceManaValue,
+		game.LinkedObjectReference(string(linkKey)),
+	)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{Primitive: game.Discard{
+				Amount:        game.Fixed(1),
+				Player:        game.ControllerReference(),
+				PublishLinked: linkKey,
+			}},
+			{Primitive: game.Draw{
+				Amount: game.Fixed(draw.Amount.Value),
+				Player: game.ControllerReference(),
+			}},
+			{Primitive: game.Damage{
+				Amount:       game.Dynamic(manaValue),
+				Recipient:    game.PlayerGroupDamageRecipient(game.OpponentsReference()),
+				DamageSource: opt.Val(game.SourcePermanentReference()),
+			}},
+		},
+	}.Ability(), true
+}
+
+// singleCardControllerDiscardAction reports whether the effect is the
+// controller's own unfiltered single-card discard action ("Discard a card."): an
+// exact one-card discard from hand with no typed card filter, no entire-hand or
+// at-random rider, no target/reference, and no delayed timing or duration. It is
+// the discard whose discarded card
+// lowerDiscardDrawThenManaValueDamageSequence remembers under a linked key.
+func singleCardControllerDiscardAction(effect *compiler.CompiledEffect) bool {
+	return singleCardControllerDiscard(effect) &&
+		effect.HandDiscard.Present &&
+		effect.Exact
+}
+
+// reflexiveDiscardRestatement reports whether the effect is the reflexive
+// restatement of the discard action that the parser leaves in-sentence ("When
+// you discard a card this way, ..."). It is a controller single-card discard
+// that, unlike the action itself, carries neither the HandDiscard structure nor
+// the exact flag, so it never matches a genuine "Discard a card." action and is
+// safely collapsed.
+func reflexiveDiscardRestatement(effect *compiler.CompiledEffect) bool {
+	return singleCardControllerDiscard(effect) &&
+		!effect.HandDiscard.Present &&
+		!effect.Exact
+}
+
+// singleCardControllerDiscard reports whether the effect is the controller's own
+// unfiltered single-card discard ("Discard a card."): a one-card discard with no
+// typed card filter, no entire-hand or at-random rider, no target/reference, and
+// no delayed timing or duration.
+func singleCardControllerDiscard(effect *compiler.CompiledEffect) bool {
+	return effect.Kind == compiler.EffectDiscard &&
+		effect.Context == parser.EffectContextController &&
+		!effect.DiscardEntireHand &&
+		!effect.HandDiscard.AtRandom &&
+		!effect.Negated &&
+		!effect.Optional &&
+		effect.DelayedTiming == 0 &&
+		effect.Duration == compiler.DurationNone &&
+		effect.Amount.Known &&
+		effect.Amount.Value == 1 &&
+		!effect.Amount.RangeKnown &&
+		!effect.Amount.VariableX &&
+		effect.Amount.DynamicKind == compiler.DynamicAmountNone &&
+		!discardSelectorImposesCardFilter(effect.Selector) &&
+		len(effect.References) == 0
 }
 
 // lowerDiscardDrawGreatestThisWaySequence handles the Windfall pattern

@@ -400,9 +400,13 @@ func (ShuffleGraveyardIntoLibrary) instructionRefs() primitiveRefs {
 }
 func (LookAtHand) instructionRefs() primitiveRefs            { return primitiveRefs{} }
 func (ChooseDiscardFromHand) instructionRefs() primitiveRefs { return primitiveRefs{} }
-func (p Discard) instructionRefs() primitiveRefs             { return quantityRefs(p.Amount) }
-func (Destroy) instructionRefs() primitiveRefs               { return primitiveRefs{} }
-func (p AddCounter) instructionRefs() primitiveRefs          { return quantityRefs(p.Amount) }
+func (p Discard) instructionRefs() primitiveRefs {
+	refs := quantityRefs(p.Amount)
+	refs.publishesLinked = p.PublishLinked
+	return refs
+}
+func (Destroy) instructionRefs() primitiveRefs      { return primitiveRefs{} }
+func (p AddCounter) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
 func (p AddPlayerCounter) instructionRefs() primitiveRefs {
 	return quantityRefs(p.Amount)
 }
