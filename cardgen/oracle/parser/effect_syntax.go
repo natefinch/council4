@@ -1227,6 +1227,7 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	effect.MoveCountersAnyKind = effect.Kind == EffectMoveCounters &&
 		!effect.MoveCountersDistribute && !effect.MoveCountersAll && !effect.CounterKnown
 	effect.Exact = exactEffectSyntax(effect)
+	effect.KeywordGrantChoice = keywordGrantIsChoice(effect)
 	if recognizeTargetOpponentHandMana(effect) {
 		effect.Exact = true
 	}

@@ -71,6 +71,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectGain:
 		return exactLifeEffectSyntax(effect, "gain", "gains") ||
 			exactTemporaryKeywordEffectSyntax(effect) ||
+			exactDirectTargetKeywordGrantEffectSyntax(effect) ||
+			exactBackReferenceTargetKeywordGrantEffectSyntax(effect) ||
 			exactGainGrantedAbilityEffectSyntax(effect)
 	case EffectGainControl:
 		return exactGainControlEffectSyntax(effect)
@@ -1407,10 +1409,93 @@ func exactPermanentKeywordGrantEffectSyntax(effect *EffectSyntax) bool {
 		return false
 	}
 	body, ok := strings.CutSuffix(middle, ".")
-	return ok && body != "" && exactTemporaryKeywordList(body)
+	return ok && body != "" && (exactTemporaryKeywordList(body) || exactKeywordChoiceList(body))
 }
 
-// exactTemporaryKeywordLossEffectSyntax recognizes a resolving keyword removal
+// keywordGrantIsChoice reports whether a gain effect grants a disjunctive
+// keyword choice ("gains banding, first strike, or trample") rather than a
+// conjunctive list. It extracts the keyword body after the "gains " verb (for a
+// direct target, a referenced object, the source, or a prior subject) and tests
+// it against the disjunctive keyword-choice grammar. It returns false for any
+// effect that is not a recognized keyword-choice grant.
+func keywordGrantIsChoice(effect *EffectSyntax) bool {
+	if effect.Kind != EffectGain {
+		return false
+	}
+	text := strings.ToLower(exactEffectClauseText(effect))
+	_, after, ok := strings.Cut(text, " gains ")
+	if !ok {
+		// A prior-subject grant reads "gains <keywords> ..." with no subject noun.
+		after, ok = strings.CutPrefix(text, "gains ")
+		if !ok {
+			return false
+		}
+	}
+	body, ok := strings.CutSuffix(after, ".")
+	if !ok {
+		body, ok = strings.CutSuffix(after, " until end of turn.")
+		if !ok {
+			return false
+		}
+	}
+	return exactKeywordChoiceList(body)
+}
+
+// exactBackReferenceTargetKeywordGrantEffectSyntax recognizes a resolving
+// keyword grant with no duration whose subject is a back-reference to the
+// ability's target ("... or that creature gains banding, first strike, or
+// trample."). The compiler binds "that creature" to the target, so the effect
+// carries EffectContextTarget with a subject reference and no target noun phrase
+// of its own (the targeted noun is owned by the sibling alternative clause).
+// Both a conjunctive keyword list (grant all) and a disjunctive keyword choice
+// (grant one chosen at resolution) are recognized; the lowering distinguishes
+// them from the connective recorded on the effect. The own-target form ("Target
+// creature gains ...") is handled by exactDirectTargetKeywordGrantEffectSyntax.
+func exactBackReferenceTargetKeywordGrantEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Duration != "" || effect.Context != EffectContextTarget || len(effect.Targets) != 0 {
+		return false
+	}
+	subject, ok := exactObjectReferenceText(effect.SubjectReferences)
+	if !ok {
+		return false
+	}
+	text := strings.ToLower(exactEffectClauseText(effect))
+	middle, ok := strings.CutPrefix(text, strings.ToLower(subject)+" gains ")
+	if !ok {
+		return false
+	}
+	body, ok := strings.CutSuffix(middle, ".")
+	return ok && body != "" && (exactTemporaryKeywordList(body) || exactKeywordChoiceList(body))
+}
+
+// exactDirectTargetKeywordGrantEffectSyntax recognizes a resolving keyword grant
+// with no duration to a single targeted creature ("Target creature gains first
+// strike.", "Target creature gains banding, first strike, or trample."). The
+// grant carries no "until end of turn" suffix, so it persists indefinitely while
+// the creature remains on the battlefield (the runtime applies it with
+// DurationPermanent). Both a conjunctive keyword list ("first strike and
+// trample", grant all) and a disjunctive keyword choice ("banding, first strike,
+// or trample", grant one chosen at resolution) are recognized; the lowering
+// distinguishes them from the connective recorded on the effect.
+func exactDirectTargetKeywordGrantEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Duration != "" || effect.Context != EffectContextTarget {
+		return false
+	}
+	if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
+		return false
+	}
+	text := strings.ToLower(exactEffectClauseText(effect))
+	middle, ok := strings.CutPrefix(text, strings.ToLower(effect.Targets[0].Text)+" gains ")
+	if !ok {
+		return false
+	}
+	body, ok := strings.CutSuffix(middle, ".")
+	if !ok || body == "" {
+		return false
+	}
+	return exactTemporaryKeywordList(body) || exactKeywordChoiceList(body)
+}
+
 // until end of turn ("Permanents your opponents control lose hexproof and
 // indestructible until end of turn.", "Target creature loses flying until end of
 // turn."). It mirrors exactTemporaryKeywordEffectSyntax with the "lose"/"loses"
@@ -1579,19 +1664,52 @@ func exactTemporaryKeywordList(text string) bool {
 	text = strings.ReplaceAll(strings.ToLower(text), ", and ", ", ")
 	text = strings.ReplaceAll(text, " and ", ", ")
 	for keyword := range strings.SplitSeq(text, ", ") {
-		switch keyword {
-		case "deathtouch", "double strike", "fear", "first strike", "flying", "haste",
-			"hexproof", "indestructible", "intimidate", "lifelink", "menace", "reach", "shadow", "shroud", "trample", "vigilance",
-			"protection from each color", "protection from everything",
-			"protection from monocolored", "protection from multicolored",
-			"protection from white", "protection from blue", "protection from black",
-			"protection from red", "protection from green",
-			"protection from the color of your choice", "protection from a color of your choice":
-		default:
+		if !grantableKeywordWord(keyword) {
 			return false
 		}
 	}
 	return true
+}
+
+// exactKeywordChoiceList recognizes a disjunctive list of two or more grantable
+// keywords joined by "or" ("first strike or trample", "banding, first strike, or
+// trample"). The disjunction means the controller chooses exactly one of the
+// listed keywords at resolution, distinct from the conjunctive list recognized by
+// exactTemporaryKeywordList where every keyword is granted. It requires at least
+// one "or" connective so a single keyword or an "and" list never matches here.
+func exactKeywordChoiceList(text string) bool {
+	text = strings.ToLower(text)
+	if !strings.Contains(text, " or ") {
+		return false
+	}
+	text = strings.ReplaceAll(text, ", or ", ", ")
+	text = strings.ReplaceAll(text, " or ", ", ")
+	count := 0
+	for keyword := range strings.SplitSeq(text, ", ") {
+		if !grantableKeywordWord(keyword) {
+			return false
+		}
+		count++
+	}
+	return count >= 2
+}
+
+// grantableKeywordWord reports whether a lowercase Oracle phrase names a
+// non-parameterized keyword (or a fully-specified protection variant) the
+// executable backend can grant.
+func grantableKeywordWord(keyword string) bool {
+	switch keyword {
+	case "deathtouch", "double strike", "fear", "first strike", "flying", "haste",
+		"banding", "hexproof", "indestructible", "intimidate", "lifelink", "menace", "reach", "shadow", "shroud", "trample", "vigilance",
+		"protection from each color", "protection from everything",
+		"protection from monocolored", "protection from multicolored",
+		"protection from white", "protection from blue", "protection from black",
+		"protection from red", "protection from green",
+		"protection from the color of your choice", "protection from a color of your choice":
+		return true
+	default:
+		return false
+	}
 }
 
 // exactCreateTokenEffectSyntax recognizes vanilla creature-token creation:

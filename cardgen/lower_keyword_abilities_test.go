@@ -179,12 +179,12 @@ func TestLowerSemicolonKeywordLineFailsClosedOnUnknownKeyword(t *testing.T) {
 		Name:       "Partial Keyword Tester",
 		Layout:     "normal",
 		TypeLine:   "Creature — Insect",
-		OracleText: "Flying; banding (Any creatures with banding, and up to one without, can block as a group.)",
+		OracleText: "Flying; phasing (This permanent phases in or out before you untap during each of your untap steps.)",
 		Power:      new("1"),
 		Toughness:  new("1"),
 	})
 	if len(diagnostics) == 0 {
-		t.Fatal("expected a fail-closed diagnostic for the unmodeled banding keyword")
+		t.Fatal("expected a fail-closed diagnostic for the unmodeled phasing keyword")
 	}
 	if got := diagnostics[0].Summary; got != "unsupported mixed keyword ability" {
 		t.Fatalf("summary = %q, want unsupported mixed keyword ability", got)

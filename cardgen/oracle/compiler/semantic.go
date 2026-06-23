@@ -1634,6 +1634,11 @@ type CompiledEffect struct {
 	Replacement         parser.EffectReplacementSyntax
 	Payment             CompiledEffectPayment
 	Exact               bool
+	// KeywordGrantChoice marks a keyword grant whose listed keywords are a
+	// disjunctive runtime choice ("gains banding, first strike, or trample")
+	// rather than a conjunctive grant of every listed keyword. Lowering keys on
+	// it to emit a choose-one keyword grant instead of granting all keywords.
+	KeywordGrantChoice bool
 	// RevealUntilThenPut carries the parser's typed marker for the closed
 	// "reveal from the top of a library until a <type> card, then put those
 	// cards into <zone>" sequence. It is set on each of the three effects of

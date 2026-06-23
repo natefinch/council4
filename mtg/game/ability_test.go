@@ -727,3 +727,16 @@ func TestKeywordBodyHelpers(t *testing.T) {
 		t.Fatalf("BodyToxicAmount = %d/%v, want 2/true", amount, ok)
 	}
 }
+
+// TestBandingStaticBodyCarriesKeyword confirms the banding keyword is modeled as
+// a simple static keyword whose reusable body reports the Banding keyword, so a
+// permanent that has banding (printed or granted) is recognized as such.
+func TestBandingStaticBodyCarriesKeyword(t *testing.T) {
+	body := BandingStaticBody
+	if !BodyHasKeyword(&body, Banding) {
+		t.Fatal("BandingStaticBody does not carry the Banding keyword")
+	}
+	if BodyHasKeyword(&body, Flying) {
+		t.Fatal("BandingStaticBody unexpectedly carries the Flying keyword")
+	}
+}

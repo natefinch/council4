@@ -22,7 +22,7 @@ func TestParseTemporaryKeywordSubjectExactness(t *testing.T) {
 		{"This creature gains trample and haste until end of turn.", true},
 		{"Target creature gains flying until end of turn.", true},
 		// Unknown keyword stays fail-closed.
-		{"This creature gains banding until end of turn.", false},
+		{"This creature gains phasing until end of turn.", false},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {

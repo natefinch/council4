@@ -94,6 +94,14 @@ const (
 	Saddle
 	Rebound
 	Retrace
+	// Banding (CR 702.22) is a static combat keyword. It is modeled as a
+	// recognized, grantable simple keyword so cards that have or grant banding
+	// are representable. Banding's combat damage-assignment-control nuance is not
+	// simulated by the deterministic combat engine (which has no per-player
+	// damage-assignment choice point); the keyword is therefore inert in combat
+	// rather than silently mis-assigning damage. Appended at the end of the enum
+	// so existing keyword ordinals are unchanged.
+	Banding
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -251,6 +259,14 @@ var (
 	// keyword on a card in its owner's graveyard to offer the alternative cast;
 	// the keyword itself carries no continuous effect.
 	RetraceStaticBody = simpleKeywordStaticBody("Retrace", Retrace)
+
+	// BandingStaticBody is the reusable StaticAbilityBody for banding (CR
+	// 702.22). It carries the Banding keyword so HasKeyword(Banding) reports
+	// true. Banding's combat damage-assignment-control rule is not simulated by
+	// the deterministic combat engine, so the keyword is inert in combat; it is
+	// modeled as a simple keyword purely so cards that have or grant banding are
+	// representable.
+	BandingStaticBody = simpleKeywordStaticBody("Banding", Banding)
 )
 
 func simpleKeywordStaticBody(text string, keyword Keyword) StaticAbility {

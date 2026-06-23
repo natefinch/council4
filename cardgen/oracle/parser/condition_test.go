@@ -873,7 +873,7 @@ func TestParseConditionNearMissFailsClosed(t *testing.T) {
 		"you control two or fewer creatures with the same power",
 		"you have exactly seven cards in your graveyard",
 		"there are three or more card types among cards in an opponent's graveyard",
-		"you control a creature with banding",
+		"you control a creature with phasing",
 		"a player has 5 or more life",
 		"you gain control of a creature",
 		"you control a creature creature",
