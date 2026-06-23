@@ -267,6 +267,12 @@ func lowerContent(
 		if content, ok := lowerReturnExiledCardContent(ctx); ok {
 			return content, nil
 		}
+		if content, ok := lowerExileEntireHandContent(ctx); ok {
+			return content, nil
+		}
+		if content, ok := lowerReturnExiledCardsToHandContent(ctx); ok {
+			return content, nil
+		}
 		if content, ok := lowerStandaloneStunEffect(ctx); ok {
 			return content, nil
 		}

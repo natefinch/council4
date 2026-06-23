@@ -389,6 +389,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				CounteredSpellExileReplacement:  syntax.CounteredSpellExileReplacement,
 				ExileUntilSourceLeaves:          syntax.ExileUntilSourceLeaves,
 				ReturnExiledCard:                syntax.ReturnExiledCard,
+				ExileEntireHand:                 syntax.ExileEntireHand,
+				ReturnExiledCardsToHand:         syntax.ReturnExiledCardsToHand,
 				CantCastSpellsAllPlayers:        syntax.CantCastSpellsAllPlayers,
 				CantCastSpellsRequiredTypes:     compilerCardTypes(syntax.CantCastSpellsRequiredTypes),
 				CantCastSpellsExcludedTypes:     compilerCardTypes(syntax.CantCastSpellsExcludedTypes),

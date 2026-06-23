@@ -32,6 +32,12 @@ func (ExileFromHand) Kind() PrimitiveKind { return PrimitiveExileFromHand }
 // Kind implements Primitive for ExileFromGraveyard.
 func (ExileFromGraveyard) Kind() PrimitiveKind { return PrimitiveExileFromGraveyard }
 
+// Kind implements Primitive for ExileEntireHand.
+func (ExileEntireHand) Kind() PrimitiveKind { return PrimitiveExileEntireHand }
+
+// Kind implements Primitive for ReturnExiledCardsToHand.
+func (ReturnExiledCardsToHand) Kind() PrimitiveKind { return PrimitiveReturnExiledCardsToHand }
+
 // Kind implements Primitive for PutFromHand.
 func (PutFromHand) Kind() PrimitiveKind { return PrimitivePutFromHand }
 
@@ -285,6 +291,8 @@ func (LookAtHand) isPrimitive()                  {}
 func (ChooseDiscardFromHand) isPrimitive()       {}
 func (ExileFromHand) isPrimitive()               {}
 func (ExileFromGraveyard) isPrimitive()          {}
+func (ExileEntireHand) isPrimitive()             {}
+func (ReturnExiledCardsToHand) isPrimitive()     {}
 func (PutFromHand) isPrimitive()                 {}
 func (CastForFree) isPrimitive()                 {}
 func (ReturnFromGraveyard) isPrimitive()         {}
@@ -477,8 +485,14 @@ func (p ExileFromHand) instructionRefs() primitiveRefs {
 	return refs
 }
 func (p ExileFromGraveyard) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
-func (p PutFromHand) instructionRefs() primitiveRefs        { return quantityRefs(p.Amount) }
-func (CastForFree) instructionRefs() primitiveRefs          { return primitiveRefs{} }
+func (p ExileEntireHand) instructionRefs() primitiveRefs {
+	return primitiveRefs{publishesLinked: p.LinkedKey}
+}
+func (p ReturnExiledCardsToHand) instructionRefs() primitiveRefs {
+	return primitiveRefs{consumesLinked: []LinkedKey{p.LinkedKey}}
+}
+func (p PutFromHand) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
+func (CastForFree) instructionRefs() primitiveRefs   { return primitiveRefs{} }
 func (p ReturnFromGraveyard) instructionRefs() primitiveRefs {
 	refs := quantityRefs(p.Amount)
 	if p.FromLinked != "" {

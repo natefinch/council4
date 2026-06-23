@@ -107,10 +107,12 @@ const (
 	PrimitiveBecomeMonarch
 	PrimitiveRingTempts
 	PrimitiveVote
+	PrimitiveExileEntireHand
+	PrimitiveReturnExiledCardsToHand
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveVote) + 1
+const primitiveKindCount = int(PrimitiveReturnExiledCardsToHand) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -622,6 +624,26 @@ type ExileFromHand struct {
 	Selection     Selection
 	Amount        Quantity
 	PublishLinked LinkedKey
+}
+
+// ExileEntireHand exiles every card in Player's hand at once with no choice,
+// modeling the involuntary whole-hand wording "exile all cards from your hand."
+// (Wormfang Behemoth). Each exiled card is remembered under LinkedKey, keyed by
+// the source permanent's card identity, so a paired ReturnExiledCardsToHand on
+// the same face returns exactly that set when the source leaves. LinkedKey must
+// be set; the exiled cards are otherwise unrecoverable.
+type ExileEntireHand struct {
+	Player    PlayerReference
+	LinkedKey LinkedKey
+}
+
+// ReturnExiledCardsToHand returns the cards an earlier ExileEntireHand exiled
+// under LinkedKey to their owners' hands, modeling "return the exiled cards to
+// their owner's hand." (Wormfang Behemoth). It consumes the source-keyed linked
+// set the paired exile published and clears it after returning; cards no longer
+// in exile are skipped. LinkedKey must be set.
+type ReturnExiledCardsToHand struct {
+	LinkedKey LinkedKey
 }
 
 // ExileFromGraveyard has Player choose up to Amount cards from their own

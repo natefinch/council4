@@ -1164,6 +1164,20 @@ func (p ExileFromGraveyard) validatePrimitive(targets []TargetSpec, checkTargets
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p ExileEntireHand) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.LinkedKey == "" {
+		return errors.New("exile entire hand requires a linked key")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p ReturnExiledCardsToHand) validatePrimitive([]TargetSpec, bool) error {
+	if p.LinkedKey == "" {
+		return errors.New("return exiled cards to hand requires a linked key")
+	}
+	return nil
+}
+
 func (p PutFromHand) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err

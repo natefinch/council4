@@ -297,6 +297,57 @@ func exactReturnExiledCardEffectSyntax(effect *EffectSyntax) bool {
 	return true
 }
 
+// exactExileEntireHandEffectSyntax recognizes the involuntary whole-hand exile
+// clause "Exile all cards from your hand." (Wormfang Behemoth). The whole hand
+// moves to exile with no choice, and the exiled set is linked to the source so a
+// paired leaves-the-battlefield "return the exiled cards" trigger returns it; the
+// clause carries no target. It marks the effect so lowering emits the linked
+// entire-hand exile; any other exile shape leaves the clause non-exact so
+// lowering fails closed.
+func exactExileEntireHandEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectExile || effect.Negated || effect.Optional {
+		return false
+	}
+	if effect.Context != EffectContextController || effect.FromZone != zone.Hand {
+		return false
+	}
+	if len(effect.Targets) != 0 {
+		return false
+	}
+	if !strings.EqualFold(exactEffectClauseText(effect), "Exile all cards from your hand.") {
+		return false
+	}
+	effect.ExileEntireHand = true
+	return true
+}
+
+// exactReturnExiledCardsToHandEffectSyntax recognizes the leaves-the-battlefield
+// clause "Return the exiled cards to their owner's hand." (Wormfang Behemoth).
+// The returned cards are the set a sibling entire-hand exile removed, identified
+// by the source link rather than a target, so the effect carries no target. It
+// marks the effect so lowering emits the linked return to hand; any other return
+// shape leaves the clause non-exact so lowering fails closed.
+func exactReturnExiledCardsToHandEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectReturn || effect.Negated || effect.Optional {
+		return false
+	}
+	if effect.Context != EffectContextController {
+		return false
+	}
+	if effect.ToZone != zone.Hand || effect.FromZone != zone.None {
+		return false
+	}
+	if len(effect.Targets) != 0 {
+		return false
+	}
+	if !strings.EqualFold(exactEffectClauseText(effect),
+		"Return the exiled cards to their owner's hand.") {
+		return false
+	}
+	effect.ReturnExiledCardsToHand = true
+	return true
+}
+
 func parseGraveyardZoneExile(effect *EffectSyntax) GraveyardZoneExileKind {
 	if effect.Kind != EffectExile || effect.Negated {
 		return GraveyardZoneExileNone

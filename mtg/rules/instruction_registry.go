@@ -95,6 +95,8 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleExile)
 	registerPrimitiveHandler(reg, handleExileFromHand)
 	registerPrimitiveHandler(reg, handleExileFromGraveyard)
+	registerPrimitiveHandler(reg, handleExileEntireHand)
+	registerPrimitiveHandler(reg, handleReturnExiledCardsToHand)
 	registerPrimitiveHandler(reg, handlePutFromHand)
 	registerPrimitiveHandler(reg, handleCastForFree)
 	registerPrimitiveHandler(reg, handleReturnFromGraveyard)
