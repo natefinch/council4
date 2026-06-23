@@ -1898,6 +1898,9 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 			selection.Controller = SelectionControllerYou
 		case ControllerRelationOpponentControls:
 			selection.Controller = SelectionControllerOpponent
+		case ControllerRelationEachOpponentControls:
+			selection.Controller = SelectionControllerOpponent
+			selection.OpponentEach = true
 		case ControllerRelationYouDontControl:
 			selection.Controller = SelectionControllerNotYou
 		default:

@@ -537,8 +537,14 @@ const (
 	ControllerRelationYouControl       ControllerRelation = "ControllerRelationYouControl"
 	ControllerRelationYouDontControl   ControllerRelation = "ControllerRelationYouDontControl"
 	ControllerRelationOpponentControls ControllerRelation = "ControllerRelationOpponentControls"
-	ControllerRelationYouOwn           ControllerRelation = "ControllerRelationYouOwn"
-	ControllerRelationOpponentOwns     ControllerRelation = "ControllerRelationOpponentOwns"
+	// ControllerRelationEachOpponentControls is the distributive opponent
+	// wording ("each creature each opponent controls"). It denotes the same
+	// opponent-controlled set as ControllerRelationOpponentControls but a
+	// different verbatim phrasing, so the byte-exact recipient reconstruction can
+	// rebuild it while lowering treats both as the opponent controller.
+	ControllerRelationEachOpponentControls ControllerRelation = "ControllerRelationEachOpponentControls"
+	ControllerRelationYouOwn               ControllerRelation = "ControllerRelationYouOwn"
+	ControllerRelationOpponentOwns         ControllerRelation = "ControllerRelationOpponentOwns"
 )
 
 // SingularNounForms returns the candidate singular spellings for a possibly

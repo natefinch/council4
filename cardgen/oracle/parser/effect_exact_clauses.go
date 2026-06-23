@@ -2095,7 +2095,11 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 	case SelectionControllerYou:
 		words = append(words, "you", "control")
 	case SelectionControllerOpponent:
-		words = append(words, "your", "opponents", "control")
+		if selection.OpponentEach {
+			words = append(words, "each", "opponent", "controls")
+		} else {
+			words = append(words, "your", "opponents", "control")
+		}
 	case SelectionControllerNotYou:
 		words = append(words, "you", "don't", "control")
 	default:

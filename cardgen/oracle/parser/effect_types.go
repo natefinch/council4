@@ -975,13 +975,20 @@ type SelectionSyntax struct {
 	Text       string              `json:",omitempty"`
 	Kind       SelectionKind       `json:",omitempty"`
 	Controller SelectionController `json:",omitempty"`
-	All        bool                `json:",omitempty"`
-	Another    bool                `json:",omitempty"`
-	Other      bool                `json:",omitempty"`
-	Attacking  bool                `json:",omitempty"`
-	Blocking   bool                `json:",omitempty"`
-	Tapped     bool                `json:",omitempty"`
-	Untapped   bool                `json:",omitempty"`
+	// OpponentEach records that an opponent-controlled selection used the
+	// distributive "each opponent controls" wording rather than the plural "your
+	// opponents control". It is meaningful only when Controller is
+	// SelectionControllerOpponent and exists solely so the byte-exact recipient
+	// reconstruction can rebuild the verbatim phrasing; both wordings lower to
+	// the same opponent controller.
+	OpponentEach bool `json:",omitempty"`
+	All          bool `json:",omitempty"`
+	Another      bool `json:",omitempty"`
+	Other        bool `json:",omitempty"`
+	Attacking    bool `json:",omitempty"`
+	Blocking     bool `json:",omitempty"`
+	Tapped       bool `json:",omitempty"`
+	Untapped     bool `json:",omitempty"`
 	// NonToken records a "nontoken" selector qualifier ("nontoken creature");
 	// TokenOnly records a "token" qualifier ("token creature"). They are mutually
 	// exclusive and lower to Selection.NonToken / Selection.TokenOnly.
