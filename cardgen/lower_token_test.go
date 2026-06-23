@@ -211,6 +211,71 @@ func TestLowerForEachTokenCount(t *testing.T) {
 	}
 }
 
+func TestLowerForEachNamedArtifactTokenCount(t *testing.T) {
+	t.Parallel()
+	t.Run("treasure for each artifact you control", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, &ScryfallCard{
+			Name:       "Test Treasure ForEach",
+			Layout:     "normal",
+			TypeLine:   "Sorcery",
+			OracleText: "Create a Treasure token for each artifact you control.",
+		})
+		create := createTokenPrimitive(t, face)
+		if create.EntryTapped {
+			t.Fatal("EntryTapped = true, want false")
+		}
+		def, ok := create.Source.TokenDefRef()
+		if !ok || def.Name != string(types.Treasure) {
+			t.Fatalf("token def = %#v, want a Treasure token", create.Source)
+		}
+		want := game.DynamicAmount{
+			Kind:       game.DynamicAmountCountSelector,
+			Multiplier: 1,
+			Group: game.BattlefieldGroup(game.Selection{
+				RequiredTypes: []types.Card{types.Artifact},
+				Controller:    game.ControllerYou,
+			}),
+		}
+		if got := create.Amount.DynamicAmount().Val; !reflect.DeepEqual(got, want) {
+			t.Fatalf("dynamic amount = %+v, want %+v", got, want)
+		}
+	})
+	t.Run("tapped powerstone for each other creature you control", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, &ScryfallCard{
+			Name:       "Test Powerstone ForEach",
+			Layout:     "normal",
+			TypeLine:   "Creature — Human Artificer",
+			OracleText: "When this creature enters, create a tapped Powerstone token for each other creature you control. (They're artifacts with \"{T}: Add {C}. This mana can't be spent to cast a nonartifact spell.\")",
+			Colors:     []string{"W"},
+		})
+		create, ok := face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive.(game.CreateToken)
+		if !ok {
+			t.Fatalf("primitive = %T, want game.CreateToken", face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive)
+		}
+		if !create.EntryTapped {
+			t.Fatal("EntryTapped = false, want true")
+		}
+		def, ok := create.Source.TokenDefRef()
+		if !ok || def.Name != string(types.Powerstone) {
+			t.Fatalf("token def = %#v, want a Powerstone token", create.Source)
+		}
+		want := game.DynamicAmount{
+			Kind:       game.DynamicAmountCountSelector,
+			Multiplier: 1,
+			Group: game.BattlefieldGroup(game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Controller:    game.ControllerYou,
+				ExcludeSource: true,
+			}),
+		}
+		if got := create.Amount.DynamicAmount().Val; !reflect.DeepEqual(got, want) {
+			t.Fatalf("dynamic amount = %+v, want %+v", got, want)
+		}
+	})
+}
+
 func TestLowerForEachGraveyardCardCount(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

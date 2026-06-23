@@ -2139,22 +2139,22 @@ func namedArtifactTokenSubtype(sub types.Sub) bool {
 // for a predefined artifact token that carries no printed power/toughness
 // (Treasure, Food, Clue, Blood), including a fixed count ("Create two Treasure
 // tokens."), an optional "tapped" entry modifier ("Create a tapped Treasure
-// token."), the referenced-controller form ("Its controller creates a Treasure
-// token."), and the targeted-player form ("Target opponent creates two Treasure
-// tokens."). It fails closed for every richer shape (colored, keyworded,
-// per-each, or any other named token).
+// token."), a "for each <iterator>" count ("Create a Treasure token for each
+// artifact you control."), the referenced-controller form ("Its controller
+// creates a Treasure token."), and the targeted-player form ("Target opponent
+// creates two Treasure tokens."). It fails closed for every richer shape
+// (colored, keyworded, or any other named token).
 func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 	targetRecipient, ok := exactCreateTokenRecipientContext(effect)
 	if !ok ||
 		effect.TokenPTKnown || effect.TokenCopyOfTarget ||
-		effect.Negated ||
-		effect.Amount.DynamicForm == EffectDynamicAmountFormForEach {
+		effect.Negated {
 		return false
 	}
-	// The spell's variable X count ("Create X Treasure tokens.") attaches only
-	// to the controller form; the referenced-object-controller and
-	// targeted-player forms accept fixed counts only, mirroring the
-	// creature-token path.
+	// The spell's variable X count ("Create X Treasure tokens.") and the
+	// "for each <iterator>" count attach only to the controller form; the
+	// referenced-object-controller and targeted-player forms accept fixed
+	// counts only, mirroring the creature-token path.
 	controllerForm := effect.Context != EffectContextReferencedObjectController && !targetRecipient
 	variableCount := effect.Amount.VariableX &&
 		effect.Amount.DynamicForm == EffectDynamicAmountFormNone && controllerForm
@@ -2162,7 +2162,10 @@ func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 		effect.Amount.DynamicForm == EffectDynamicAmountFormNone && controllerForm
 	dynamicDieRollResultCount := effect.Amount.DynamicKind == EffectDynamicAmountDieRollResult &&
 		effect.Amount.DynamicForm == EffectDynamicAmountFormEqual && controllerForm
-	if !variableCount && !dynamicCombatDamageCount && !dynamicDieRollResultCount &&
+	forEachCount := effect.Amount.DynamicForm == EffectDynamicAmountFormForEach &&
+		effect.Amount.DynamicKind != EffectDynamicAmountNone &&
+		effect.Amount.Multiplier == 1 && controllerForm
+	if !variableCount && !dynamicCombatDamageCount && !dynamicDieRollResultCount && !forEachCount &&
 		(!effect.Amount.Known || effect.Amount.Value < 1) {
 		return false
 	}
@@ -2189,6 +2192,12 @@ func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 		clause := exactEffectClauseText(effect)
 		return strings.EqualFold(clause, "Create "+spec+" "+effect.Amount.Text+".") ||
 			strings.EqualFold(clause, "You create "+spec+" "+effect.Amount.Text+".")
+	}
+	if forEachCount {
+		spec := fmt.Sprintf("a %s%s token", tappedPart, string(sel.SubtypesAny[0]))
+		full := fullEffectClauseText(effect)
+		return strings.EqualFold(full, effect.Amount.Text+", create "+spec+".") ||
+			strings.EqualFold(full, "Create "+spec+" "+effect.Amount.Text+".")
 	}
 	countWord, noun := "a", "token"
 	switch {
