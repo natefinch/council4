@@ -7,6 +7,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/lexer"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/cost"
 )
 
 // Parse builds a lossless syntax tree for source. It returns a partial tree
@@ -40,8 +41,16 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 		},
 	}
 
+	var pendingEscalateCost cost.Mana
+	var pendingEscalateSpan shared.Span
 	for i := 0; i < len(lines); {
 		if len(lines[i]) == 0 {
+			i++
+			continue
+		}
+		if manaCost, span, ok := escalateHeader(lines[i]); ok && nextNonEmptyLineIsModalHeader(lines, i) {
+			pendingEscalateCost = manaCost
+			pendingEscalateSpan = span
 			i++
 			continue
 		}
@@ -55,6 +64,15 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 				headerTokens = modalTokens[:dash+1]
 			}
 			modal := &Modal{header: phraseFromTokens(source, headerTokens)}
+			if pendingEscalateCost != nil {
+				modal.Escalate = true
+				modal.EscalateCost = pendingEscalateCost
+				modal.EscalateSpan = pendingEscalateSpan
+				ability.Span.Start = pendingEscalateSpan.Start
+				ability.Text = shared.SliceSpan(source, ability.Span)
+				pendingEscalateCost = nil
+				pendingEscalateSpan = shared.Span{}
+			}
 			j := i + 1
 			if dash >= 0 && dash+1 < len(modalTokens) {
 				for _, modeTokens := range inlineModeTokens(modalTokens[dash+1:]) {

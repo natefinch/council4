@@ -1572,6 +1572,8 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 			(end > start && negatedNextUntapStepVerbAt(tokens, end)) ||
 			(end > start && equalWord(token, "each") && end+1 < len(tokens) && effectWordKind(tokens[end+1]) != EffectUnknown) ||
 			(equalWord(token, "until") && end+1 < len(tokens)) ||
+			(equalWord(token, "this") && end+1 < len(tokens) && equalWord(tokens[end+1], "turn") &&
+				thisTurnIsTrailingDuration(tokens, end)) ||
 			(end > start && equalWord(token, "if")) ||
 			(equalWord(token, "for") && effectWordsAt(tokens, end, "for", "as", "long", "as")) ||
 			(equalWord(token, "as") && effectWordsAt(tokens, end, "as", "long", "as", "this")) {
@@ -1584,7 +1586,24 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 	return end
 }
 
-// selfDamageRiderFollowsAt reports whether a "... and N damage to you"
+// thisTurnIsTrailingDuration reports whether the "this turn" beginning at index i
+// is a trailing duration suffix on the target (e.g. "cast target ... card from
+// your graveyard this turn") rather than part of an embedded amount clause (e.g.
+// "the amount of life you lost this turn from your graveyard"). It is a trailing
+// duration only when nothing of substance follows "turn": the next token is the
+// clause boundary, the end of input, or a new effect verb.
+func thisTurnIsTrailingDuration(tokens []shared.Token, i int) bool {
+	after := i + 2
+	if after >= len(tokens) {
+		return true
+	}
+	next := tokens[after]
+	if next.Kind == shared.Comma || next.Kind == shared.Period || next.Kind == shared.Semicolon {
+		return true
+	}
+	return effectWordKind(next) != EffectUnknown
+}
+
 // self-damage rider begins at the "and" token at index i. Target scanning stops
 // before the rider so the rider stays attached to the deal-damage clause (where
 // the exactness gate reconstructs it and lowering emits a second damage to the

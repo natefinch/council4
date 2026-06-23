@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -138,6 +139,8 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.CastDuringControllerMainPhase = true
 	case compiler.ConditionPredicateSpellWasKicked:
 		result.SpellWasKicked = true
+	case compiler.ConditionPredicateSpellWasCastFromGraveyard:
+		result.CastFromZone = opt.Val(zone.Graveyard)
 	case compiler.ConditionPredicateSourceSaddled:
 		result.SourceSaddled = true
 	case compiler.ConditionPredicateSourceNotSaddled:
@@ -244,6 +247,7 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 				ctx == conditionContextEffectGate
 		case compiler.ConditionPredicateCastDuringControllerMainPhase,
 			compiler.ConditionPredicateSpellWasKicked,
+			compiler.ConditionPredicateSpellWasCastFromGraveyard,
 			compiler.ConditionPredicateSpellXAtLeast,
 			compiler.ConditionPredicateSourceSaddled,
 			compiler.ConditionPredicateSourceNotSaddled,

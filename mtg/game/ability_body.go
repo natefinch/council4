@@ -25,6 +25,11 @@ type AbilityContent struct {
 	MaxModes            int
 	ModeChoiceBonus     ModeChoiceBonus
 	AllowDuplicateModes bool
+	// EscalateCost is the additional mana cost paid once for each mode chosen
+	// beyond the first on an Escalate spell (CR 702.121). It is set only on the
+	// spell ability of an Escalate modal spell; an empty value means the modal
+	// has no escalate cost.
+	EscalateCost opt.V[cost.Mana]
 }
 
 // ModeChoiceCondition identifies a cast-time condition that expands the

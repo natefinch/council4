@@ -45,6 +45,11 @@ const (
 	// a spell-cast trigger. It backs "Whenever you cast a spell ..., copy that
 	// spell." copy-the-triggering-spell effects (Reflections of Littjara).
 	ObjectReferenceEventStackObject
+	// ObjectReferenceResolvingStackObject references the resolving stack object
+	// itself — the spell or ability currently resolving. It backs "copy this
+	// spell" self-copy effects (Sevinne's Reclamation, Chain Lightning), where
+	// the resolving spell copies itself onto the stack.
+	ObjectReferenceResolvingStackObject
 )
 
 // ObjectReference describes how a rules effect finds an object at resolution.
@@ -148,6 +153,12 @@ func EventStackObjectReference() ObjectReference {
 	return ObjectReference{kind: ObjectReferenceEventStackObject}
 }
 
+// ResolvingStackObjectReference references the resolving stack object itself,
+// the spell or ability currently resolving ("copy this spell").
+func ResolvingStackObjectReference() ObjectReference {
+	return ObjectReference{kind: ObjectReferenceResolvingStackObject}
+}
+
 // Validate reports structural problems with an ObjectReference that represent
 // card-definition bugs. It checks kind/field consistency only; target-index
 // bounds depend on the surrounding TargetSpec list and are checked by
@@ -223,6 +234,10 @@ func (r ObjectReference) Validate() []string {
 	case ObjectReferenceEventStackObject:
 		if r.targetIndex != 0 || r.linkID != "" {
 			return []string{"event stack object reference must not set TargetIndex or LinkID"}
+		}
+	case ObjectReferenceResolvingStackObject:
+		if r.targetIndex != 0 || r.linkID != "" {
+			return []string{"resolving stack object reference must not set TargetIndex or LinkID"}
 		}
 	case ObjectReferenceNone:
 		return []string{"object reference has no kind"}

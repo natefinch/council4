@@ -637,7 +637,11 @@ func copyStackObjectReference(ctx contentCtx) (game.ObjectReference, []game.Targ
 		}
 		return game.TargetStackObjectReference(0), []game.TargetSpec{targetSpec}, true
 	case len(ctx.content.Targets) == 0 && len(ctx.content.References) == 1:
-		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowEvent: true})
+		reference := ctx.content.References[0]
+		if reference.Kind == compiler.ReferenceThisObject || reference.Kind == compiler.ReferenceSelfName {
+			return game.ResolvingStackObjectReference(), nil, true
+		}
+		object, ok := lowerObjectReference(reference, referenceLoweringContext{AllowEvent: true})
 		if !ok || object.Kind() != game.ObjectReferenceEventStackObject {
 			return game.ObjectReference{}, nil, false
 		}

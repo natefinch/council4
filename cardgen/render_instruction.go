@@ -66,6 +66,14 @@ func (r Renderer) renderModalAbilityContent(ctx *renderCtx, content game.Ability
 			content.ModeChoiceBonus.AdditionalMaxModes,
 		))
 	}
+	if content.EscalateCost.Exists {
+		renderedCost, err := r.renderManaCost(ctx, content.EscalateCost.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("EscalateCost: opt.Val(%s),", renderedCost))
+	}
 	return structLit("game.AbilityContent", fields), nil
 }
 

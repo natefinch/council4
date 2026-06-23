@@ -109,6 +109,7 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 	options := spellCostOptionsForRequestWithoutModes(s, req)
 	addSpreeModeCosts(options, req.Card, req.ChosenModes)
+	addEscalateModeCosts(options, req.Card, req.ChosenModes)
 	return options
 }
 
@@ -185,6 +186,42 @@ func spreeModeManaCost(card *game.CardDef, chosenModes []int) cost.Mana {
 		if mode := modes[index]; mode.Cost.Exists {
 			total = append(total, mode.Cost.Val...)
 		}
+	}
+	return total
+}
+
+// addEscalateModeCosts adds the escalate cost of an Escalate spell (CR 702.121)
+// to every payable cost option. The controller pays the spell's base cost plus
+// the escalate cost once for each chosen mode beyond the first.
+func addEscalateModeCosts(options []spellCostOption, card *game.CardDef, chosenModes []int) {
+	extra := escalateModeManaCost(card, chosenModes)
+	if len(extra) == 0 {
+		return
+	}
+	for i := range options {
+		combined := cost.Mana{}
+		if options[i].manaCost != nil {
+			combined = append(combined, (*options[i].manaCost)...)
+		}
+		combined = append(combined, extra...)
+		options[i].manaCost = &combined
+	}
+}
+
+// escalateModeManaCost returns the escalate cost repeated once for each chosen
+// mode beyond the first. A spell with no escalate cost, or with one or fewer
+// chosen modes, adds nothing.
+func escalateModeManaCost(card *game.CardDef, chosenModes []int) cost.Mana {
+	if card == nil || !card.SpellAbility.Exists {
+		return nil
+	}
+	escalate := card.SpellAbility.Val.EscalateCost
+	if !escalate.Exists || len(chosenModes) <= 1 {
+		return nil
+	}
+	var total cost.Mana
+	for range chosenModes[1:] {
+		total = append(total, escalate.Val...)
 	}
 	return total
 }

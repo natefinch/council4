@@ -1582,11 +1582,7 @@ func handleChooseNewTargets(r *effectResolver, prim game.ChooseNewTargets) effec
 // independently of the original; when the effect allows it, the resolving
 // controller may choose new targets for the copy (CR 707.10c).
 func handleCopyStackObject(r *effectResolver, prim game.CopyStackObject) effectResolved {
-	stackObjectID, ok := copyStackObjectSourceID(r.obj, prim.Object)
-	if !ok {
-		return effectResolved{accepted: true}
-	}
-	original, ok := stackObjectByID(r.game, stackObjectID)
+	original, ok := copyStackObjectSource(r, prim.Object)
 	if !ok {
 		return effectResolved{accepted: true}
 	}
@@ -1598,11 +1594,27 @@ func handleCopyStackObject(r *effectResolver, prim game.CopyStackObject) effectR
 	return effectResolved{accepted: true, succeeded: true}
 }
 
-// copyStackObjectSourceID resolves the stack object a CopyStackObject effect
-// copies. It supports a chosen stack-object target ("Copy target spell.") and
-// the triggering spell of a spell-cast trigger ("Whenever you cast a spell ...,
-// copy that spell.", Reflections of Littjara), read from the event's
-// StackObjectID.
+// copyStackObjectSource resolves the stack object a CopyStackObject effect
+// copies. It supports a chosen stack-object target ("Copy target spell."), the
+// triggering spell of a spell-cast trigger ("Whenever you cast a spell ...,
+// copy that spell.", Reflections of Littjara), and the resolving spell itself
+// ("copy this spell", Sevinne's Reclamation). The resolving spell has already
+// been popped from the stack when its effects run, so the resolving case copies
+// the resolving object directly rather than looking it up by ID.
+func copyStackObjectSource(r *effectResolver, ref game.ObjectReference) (*game.StackObject, bool) {
+	if ref.Kind() == game.ObjectReferenceResolvingStackObject {
+		return r.obj, true
+	}
+	stackObjectID, ok := copyStackObjectSourceID(r.obj, ref)
+	if !ok {
+		return nil, false
+	}
+	return stackObjectByID(r.game, stackObjectID)
+}
+
+// copyStackObjectSourceID resolves the stack object id a CopyStackObject effect
+// copies for references read from the stack ("Copy target spell." and the
+// triggering spell of a spell-cast trigger).
 func copyStackObjectSourceID(obj *game.StackObject, ref game.ObjectReference) (id.ID, bool) {
 	switch ref.Kind() {
 	case game.ObjectReferenceTargetStackObject:
