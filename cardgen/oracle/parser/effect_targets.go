@@ -1999,7 +1999,146 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	if !parseSelectionNumbers(tokens, atoms, &selection) {
 		return SelectionSyntax{Span: span, Text: joinedEffectText(tokens)}
 	}
+	if alts, ok := disjunctiveSelectionAlternatives(tokens, atoms); ok {
+		selection.Alternatives = alts
+		selection.Kind = SelectionUnknown
+		selection.RequiredTypesAny = nil
+		selection.ExcludedTypes = nil
+		selection.Supertypes = nil
+		selection.ExcludedSupertypes = nil
+		selection.SubtypesAny = nil
+		selection.ExcludedSubtypes = nil
+		selection.ColorsAny = nil
+		selection.ExcludedColors = nil
+		selection.Colorless = false
+		selection.Multicolored = false
+	}
 	return selection
+}
+
+// disjunctiveSelectionAlternatives splits a selection phrase joined by a single
+// top-level "or" into two type-dimension alternatives, but only when flattening
+// the two sides into one selection would lose meaning. parseSelection otherwise
+// merges every card type, supertype, and subtype across the whole phrase into a
+// single selection. That flattening is correct for a pure type or subtype union
+// ("artifact or creature", "Forest or Plains") because the runtime treats those
+// dimensions as any-of, but it is lossy when the two sides carry different
+// supertypes ("creature or basic land card", "basic land card or Gate card"):
+// the runtime treats supertypes as all-of, so the flattened selection would
+// force every match to satisfy both sides' supertypes at once. Only in that
+// supertype-mismatch case does each side become its own alternative so the
+// lowering can build a Selection.AnyOf. It fails closed for any phrase that is
+// not exactly two supertype-divergent sides, leaving every other selection's
+// existing flattened parse unchanged.
+func disjunctiveSelectionAlternatives(tokens []shared.Token, atoms Atoms) ([]SelectionSyntax, bool) {
+	if shared.TopLevelIndex(tokens, shared.Comma) >= 0 {
+		return nil, false
+	}
+	orIndex := -1
+	for i, token := range tokens {
+		if !equalWord(token, "or") {
+			continue
+		}
+		if i > 0 && tokens[i-1].Kind == shared.Slash {
+			// "and/or" lexes as "and", "/", "or" and forms an InclusiveOneOfEach
+			// union, not a single-choice disjunction; leave it to that handling.
+			return nil, false
+		}
+		if orIndex >= 0 {
+			return nil, false
+		}
+		orIndex = i
+	}
+	if orIndex <= 0 || orIndex >= len(tokens)-1 {
+		return nil, false
+	}
+	left, ok := disjunctSelectionSide(tokens[:orIndex], atoms)
+	if !ok {
+		return nil, false
+	}
+	right, ok := disjunctSelectionSide(tokens[orIndex+1:], atoms)
+	if !ok {
+		return nil, false
+	}
+	if slices.Equal(left.Supertypes, right.Supertypes) {
+		return nil, false
+	}
+	// A differing supertype is lossy only when it cannot distribute across both
+	// sides. When neither side names a genuine card type ("basic Forest or
+	// Plains [card]"), both sides are subtype-only and the leading supertype
+	// belongs to the whole card, so the flattened "basic" + subtype-union parse
+	// is correct and must be left intact. Splitting is required only when at
+	// least one side carries a real card-type kind ("creature or basic land
+	// card", "basic land card or Gate card"), where flattening would force every
+	// type alternative to satisfy the other's supertype.
+	if !disjunctSideTypedKind(left) && !disjunctSideTypedKind(right) {
+		return nil, false
+	}
+	return []SelectionSyntax{left, right}, true
+}
+
+// disjunctSideTypedKind reports whether a disjunction side names a real card
+// type kind (rather than a card matched purely by subtype), the signal that a
+// differing supertype across the disjunction cannot distribute and the
+// flattened parse would be lossy.
+func disjunctSideTypedKind(side SelectionSyntax) bool {
+	switch side.Kind {
+	case SelectionCreature, SelectionLand, SelectionArtifact,
+		SelectionEnchantment, SelectionPlaneswalker, SelectionPermanent:
+		return true
+	default:
+		return false
+	}
+}
+
+// disjunctSelectionSide parses one side of a disjunctive selection into a
+// type-dimension-only SelectionSyntax, dropping any leading article so "a Gate
+// card" parses like "Gate card". A subtype-only side ("Bird", "Gate") implies a
+// card matched by its subtype, so its kind becomes SelectionCard. It fails
+// closed unless the side names a card-type or permanent kind the search lowering
+// can express, so an alternative never lowers to an empty match.
+func disjunctSelectionSide(tokens []shared.Token, atoms Atoms) (SelectionSyntax, bool) {
+	for len(tokens) > 0 &&
+		(equalWord(tokens[0], "a") || equalWord(tokens[0], "an") || equalWord(tokens[0], "the")) {
+		tokens = tokens[1:]
+	}
+	if len(tokens) == 0 {
+		return SelectionSyntax{}, false
+	}
+	parsed := parseSelection(tokens, atoms)
+	side := SelectionSyntax{
+		Kind:               parsed.Kind,
+		RequiredTypesAny:   parsed.RequiredTypesAny,
+		ExcludedTypes:      parsed.ExcludedTypes,
+		Supertypes:         parsed.Supertypes,
+		ExcludedSupertypes: parsed.ExcludedSupertypes,
+		SubtypesAny:        parsed.SubtypesAny,
+		ExcludedSubtypes:   parsed.ExcludedSubtypes,
+		ColorsAny:          parsed.ColorsAny,
+		ExcludedColors:     parsed.ExcludedColors,
+		Colorless:          parsed.Colorless,
+		Multicolored:       parsed.Multicolored,
+	}
+	if side.Kind == SelectionUnknown && len(side.SubtypesAny) > 0 && len(side.RequiredTypesAny) == 0 {
+		side.Kind = SelectionCard
+	}
+	if !disjunctSideExpressible(side) {
+		return SelectionSyntax{}, false
+	}
+	return side, true
+}
+
+// disjunctSideExpressible reports whether a disjunction side names a card-type
+// or permanent kind the search filter can carry, the precondition for splitting
+// a selection into alternatives.
+func disjunctSideExpressible(side SelectionSyntax) bool {
+	switch side.Kind {
+	case SelectionCard, SelectionCreature, SelectionLand, SelectionArtifact,
+		SelectionEnchantment, SelectionPlaneswalker, SelectionPermanent:
+		return true
+	default:
+		return false
+	}
 }
 
 // parseSelectionChosenTypeQualifier records a trailing "of the chosen type" /
