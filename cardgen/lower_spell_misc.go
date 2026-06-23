@@ -665,14 +665,16 @@ func lowerSpellsCantBeCountered(ctx contentCtx) (game.AbilityContent, *shared.Di
 	}}}.Ability(), nil
 }
 
-// lowerGroupMustAttack lowers the one-shot, turn-scoped forced-attack effect
-// "<group> attack this turn if able." (Bident of Thassa: "Creatures your
-// opponents control attack this turn if able.") to an ApplyRule that forces the
-// affected creatures to attack for the rest of the turn. The affected creature
-// group is read from the parser-recognized StaticSubject and mapped to a
-// controller relation; the rule reuses the continuous RuleEffectMustAttack rule
-// effect with a this-turn duration. Targets, references, conditions, modes, a
-// negation, an amount, or an unsupported group subject fail closed.
+// lowerGroupMustAttack lowers the one-shot forced-attack effect "<group> attack
+// this turn if able." (Bident of Thassa: "Creatures your opponents control
+// attack this turn if able.") and its duration-scoped variant "Until your next
+// turn, <group> attack each combat if able." (The Akroan War chapter II) to an
+// ApplyRule that forces the affected creatures to attack for the recognized
+// duration. The affected creature group is read from the parser-recognized
+// StaticSubject and mapped to a controller relation; the rule reuses the
+// continuous RuleEffectMustAttack rule effect. Targets, references, conditions,
+// modes, a negation, an amount, an unsupported duration, or an unsupported
+// group subject fail closed.
 func lowerGroupMustAttack(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	var controller game.ControllerRelation
@@ -687,13 +689,25 @@ func lowerGroupMustAttack(ctx contentCtx) (game.AbilityContent, *shared.Diagnost
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported forced-attack effect",
-			"the executable source backend supports only the exact you/opponents/all creatures forced-attack effect this turn",
+			"the executable source backend supports only the exact you/opponents/all creatures forced-attack effect this turn or until your next turn",
+		)
+	}
+	var duration game.EffectDuration
+	switch effect.Duration {
+	case compiler.DurationThisTurn:
+		duration = game.DurationThisTurn
+	case compiler.DurationUntilYourNextTurn:
+		duration = game.DurationUntilYourNextTurn
+	default:
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported forced-attack effect",
+			"the executable source backend supports only the exact you/opponents/all creatures forced-attack effect this turn or until your next turn",
 		)
 	}
 	if !effect.Exact ||
 		effect.Negated ||
 		effect.Amount.Known ||
-		effect.Duration != compiler.DurationThisTurn ||
 		effect.Context != parser.EffectContextController ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.References) != 0 ||
@@ -703,7 +717,7 @@ func lowerGroupMustAttack(ctx contentCtx) (game.AbilityContent, *shared.Diagnost
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported forced-attack effect",
-			"the executable source backend supports only the exact you/opponents/all creatures forced-attack effect this turn",
+			"the executable source backend supports only the exact you/opponents/all creatures forced-attack effect this turn or until your next turn",
 		)
 	}
 	return game.Mode{Sequence: []game.Instruction{{
@@ -713,7 +727,7 @@ func lowerGroupMustAttack(ctx contentCtx) (game.AbilityContent, *shared.Diagnost
 				AffectedController: controller,
 				PermanentTypes:     []types.Card{types.Creature},
 			}},
-			Duration: game.DurationThisTurn,
+			Duration: duration,
 		},
 	}}}.Ability(), nil
 }

@@ -98,6 +98,51 @@ func TestLowerGroupMustAttackAll(t *testing.T) {
 	}
 }
 
+// TestLowerGroupMustAttackUntilYourNextTurn proves that the duration-scoped
+// chapter effect "Until your next turn, creatures your opponents control attack
+// each combat if able." (The Akroan War chapter II) lowers to an ApplyRule
+// carrying RuleEffectMustAttack scoped to the opponents' creatures with an
+// until-your-next-turn duration.
+func TestLowerGroupMustAttackUntilYourNextTurn(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:     "Test Akroan",
+		Layout:   "saga",
+		TypeLine: "Enchantment — Saga",
+		OracleText: "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\n" +
+			"I — Draw a card.\n" +
+			"II — Draw a card.\n" +
+			"III — Until your next turn, creatures your opponents control attack each combat if able.",
+	})
+	if len(face.ChapterAbilities) != 3 {
+		t.Fatalf("chapter abilities = %d, want 3", len(face.ChapterAbilities))
+	}
+	mode := face.ChapterAbilities[2].Content.Modes[0]
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("chapter III sequence len = %d, want 1", len(mode.Sequence))
+	}
+	apply, ok := mode.Sequence[0].Primitive.(game.ApplyRule)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.ApplyRule", mode.Sequence[0].Primitive)
+	}
+	if apply.Duration != game.DurationUntilYourNextTurn {
+		t.Fatalf("duration = %v, want DurationUntilYourNextTurn", apply.Duration)
+	}
+	if len(apply.RuleEffects) != 1 {
+		t.Fatalf("rule effects = %#v, want one", apply.RuleEffects)
+	}
+	effect := apply.RuleEffects[0]
+	if effect.Kind != game.RuleEffectMustAttack {
+		t.Fatalf("kind = %v, want RuleEffectMustAttack", effect.Kind)
+	}
+	if effect.AffectedController != game.ControllerOpponent {
+		t.Fatalf("affected controller = %v, want ControllerOpponent", effect.AffectedController)
+	}
+	if len(effect.PermanentTypes) != 1 || effect.PermanentTypes[0] != types.Creature {
+		t.Fatalf("permanent types = %v, want [Creature]", effect.PermanentTypes)
+	}
+}
+
 // staticMustAttackEffect extracts the single RuleEffectMustAttack carried by a
 // face's single static ability, failing the test if the shape differs.
 func staticMustAttackEffect(t *testing.T, face loweredFaceAbilities) game.RuleEffect {

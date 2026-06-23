@@ -415,25 +415,33 @@ func cardTypeSlicesEqual(a, b []CardType) bool {
 	return true
 }
 
-// TestParseGroupMustAttackEffect proves the one-shot, turn-scoped forced-attack
-// effect is recognized for the you/opponents/all creature group scopes (Bident
-// of Thassa) and records the affected group in StaticSubject, while filtered,
-// each-combat, and non-creature wordings fail closed and flow through the
-// generic effect parser.
+// TestParseGroupMustAttackEffect proves the one-shot forced-attack effect is
+// recognized for the you/opponents/all creature group scopes in both its
+// turn-scoped wording (Bident of Thassa: "... attack this turn if able.") and
+// its until-your-next-turn duration-scoped wording (The Akroan War chapter II:
+// "Until your next turn, ... attack each combat if able."), records the
+// affected group in StaticSubject and the recognized duration, while filtered,
+// undurationed each-combat, and non-creature wordings fail closed and flow
+// through the generic effect parser.
 func TestParseGroupMustAttackEffect(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		source     string
 		recognized bool
 		subject    EffectStaticSubjectKind
+		duration   EffectDurationKind
 	}{
-		{"Creatures your opponents control attack this turn if able.", true, EffectStaticSubjectOpponentControlledCreatures},
-		{"Creatures you control attack this turn if able.", true, EffectStaticSubjectControlledCreatures},
-		{"All creatures attack this turn if able.", true, EffectStaticSubjectAllCreatures},
+		{"Creatures your opponents control attack this turn if able.", true, EffectStaticSubjectOpponentControlledCreatures, EffectDurationThisTurn},
+		{"Creatures you control attack this turn if able.", true, EffectStaticSubjectControlledCreatures, EffectDurationThisTurn},
+		{"All creatures attack this turn if able.", true, EffectStaticSubjectAllCreatures, EffectDurationThisTurn},
+		{"Until your next turn, creatures your opponents control attack each combat if able.", true, EffectStaticSubjectOpponentControlledCreatures, EffectDurationUntilYourNextTurn},
+		{"Until your next turn, creatures you control attack each combat if able.", true, EffectStaticSubjectControlledCreatures, EffectDurationUntilYourNextTurn},
+		{"Until your next turn, all creatures attack each combat if able.", true, EffectStaticSubjectAllCreatures, EffectDurationUntilYourNextTurn},
 		// Variant wordings fail closed.
-		{"Creatures your opponents control attack each combat if able.", false, EffectStaticSubjectNone},
-		{"Goblins you control attack this turn if able.", false, EffectStaticSubjectNone},
-		{"Creatures you control attack this turn.", false, EffectStaticSubjectNone},
+		{"Creatures your opponents control attack each combat if able.", false, EffectStaticSubjectNone, EffectDurationNone},
+		{"Until your next turn, creatures your opponents control attack this turn if able.", false, EffectStaticSubjectNone, EffectDurationNone},
+		{"Goblins you control attack this turn if able.", false, EffectStaticSubjectNone, EffectDurationNone},
+		{"Creatures you control attack this turn.", false, EffectStaticSubjectNone, EffectDurationNone},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
@@ -446,6 +454,9 @@ func TestParseGroupMustAttackEffect(t *testing.T) {
 			}
 			if got && effects[0].StaticSubject.Kind != test.subject {
 				t.Fatalf("subject = %v, want %v", effects[0].StaticSubject.Kind, test.subject)
+			}
+			if got && effects[0].Duration != test.duration {
+				t.Fatalf("duration = %v, want %v", effects[0].Duration, test.duration)
 			}
 		})
 	}
