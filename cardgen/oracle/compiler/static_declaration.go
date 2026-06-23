@@ -739,6 +739,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
 	}
+	if declarations, ok := recognizeStaticGroupMustAttackDeclarations(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
+		return
+	}
 	if declaration, ok := recognizeStaticEntryChoiceSubtypeDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
@@ -1213,7 +1217,8 @@ func staticRuleGroupDomain(kind parser.StaticRuleSubjectKind) (StaticGroupDomain
 func isCreatureRuleSubject(kind parser.StaticRuleSubjectKind) bool {
 	switch kind {
 	case parser.StaticRuleSubjectSourceCreature, parser.StaticRuleSubjectAttachedObject,
-		parser.StaticRuleSubjectControlledCreatures, parser.StaticRuleSubjectBattlefieldCreatures:
+		parser.StaticRuleSubjectControlledCreatures, parser.StaticRuleSubjectBattlefieldCreatures,
+		parser.StaticRuleSubjectOpponentControlledCreatures:
 		return true
 	default:
 		return false
@@ -1921,6 +1926,47 @@ func recognizeStaticBattlefieldBlockRuleDeclarations(ability CompiledAbility, st
 	declaration := staticRuleDeclaration(ability.Span, group.Span, ruleNode.OperationSpan, rule, zone, group.Domain, staticBlockerRestrictionForSyntax(ruleNode.Rule), nil)
 	declaration.Group = group
 	declaration.Rule.BlockedObject = blocked
+	return []StaticDeclaration{declaration}, true
+}
+
+// recognizeStaticGroupMustAttackDeclarations maps a standalone battlefield- or
+// opponent-scoped forced-attack requirement onto a closed semantic declaration,
+// e.g. "All creatures attack each combat if able." or "Creatures your opponents
+// control attack each combat if able." The affected group derives entirely from
+// the typed parser subject: the all-creatures subject yields an every-creature
+// group and the opponent-controlled subject yields a battlefield group whose
+// affected-permanent Selection scopes the controller to the opponent relation.
+// The controller-scoped "Creatures you control" form is handled by
+// recognizeStaticControlledGroupRuleDeclarations. Costs, triggers, conditions, or
+// any resolving content fail closed because a continuous group rule carries none.
+func recognizeStaticGroupMustAttackDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationRule) {
+		return nil, false
+	}
+	ruleNode := &statics[0]
+	switch ruleNode.Rule.Subject.Kind {
+	case parser.StaticRuleSubjectBattlefieldCreatures, parser.StaticRuleSubjectOpponentControlledCreatures:
+	default:
+		return nil, false
+	}
+	rule, zone, ok := semanticStaticRuleForSyntax(ruleNode.Rule)
+	if !ok || rule != StaticRuleMustAttack {
+		return nil, false
+	}
+	group, ok := staticGroupForParserSubject(ruleNode.Subject)
+	if !ok || group.Domain != StaticGroupBattlefield {
+		return nil, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 {
+		return nil, false
+	}
+	declaration := staticRuleDeclaration(ability.Span, group.Span, ruleNode.OperationSpan, rule, zone, group.Domain, staticBlockerRestrictionForSyntax(ruleNode.Rule), nil)
+	declaration.Group = group
 	return []StaticDeclaration{declaration}, true
 }
 

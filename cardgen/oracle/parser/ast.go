@@ -1000,6 +1000,12 @@ const (
 	// "can't block" restrictions whose restricted blockers are any creatures, not
 	// only the controller's.
 	StaticRuleSubjectBattlefieldCreatures StaticRuleSubjectKind = "StaticRuleSubjectBattlefieldCreatures"
+	// StaticRuleSubjectOpponentControlledCreatures scopes a static rule to the
+	// creatures the source's controller's opponents control ("Creatures your
+	// opponents control attack each combat if able."). The compiler maps it to a
+	// battlefield affected group whose affected-permanent Selection scopes the
+	// controller to the opponent relation.
+	StaticRuleSubjectOpponentControlledCreatures StaticRuleSubjectKind = "StaticRuleSubjectOpponentControlledCreatures"
 )
 
 // StaticRuleBlockedObjectKind identifies the protected object an active "can't
