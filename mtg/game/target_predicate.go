@@ -152,4 +152,11 @@ type TargetPredicate struct {
 	// creature"). It mirrors Selection.NonToken and is enforced through
 	// Selection().
 	NonToken bool
+
+	// NameUniqueAmongControlled restricts the match to a permanent whose name
+	// differs from every other permanent its controller controls ("target
+	// enchantment you control that doesn't have the same name as another
+	// permanent you control", Yenna, Redtooth Regent). It mirrors
+	// Selection.NameUniqueAmongControlled and is enforced through Selection().
+	NameUniqueAmongControlled bool
 }

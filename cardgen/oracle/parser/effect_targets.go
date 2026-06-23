@@ -81,10 +81,16 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 		end := targetSyntaxEnd(tokens, atoms, i+1)
 		selectionTokens := append([]shared.Token(nil), tokens[start:i]...)
 		selectionTokens = append(selectionTokens, tokens[i+1:end]...)
+		nameUnique := false
+		if head, ok := splitSelectionNameUniqueTail(selectionTokens); ok {
+			selectionTokens = head
+			nameUnique = true
+		}
 		selection := parseSelection(selectionTokens, atoms)
 		if targetSelectionHasUnsupportedQualifier(selectionTokens, atoms) {
 			selection = SelectionSyntax{Span: selection.Span, Text: selection.Text}
 		}
+		selection.NameUniqueAmongControlled = nameUnique
 		if plural {
 			// "targets" with no following noun means "any target" — a permanent
 			// or a player (CR 115.4).
@@ -258,6 +264,13 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 // set of single-target qualifiers; exactRuntimeTargetSyntax also reuses it for
 // the "up to one target <noun>" optional form after stripping the count words.
 func exactSinglePermanentTargetSyntax(text string, selection SelectionSyntax) bool {
+	if selection.NameUniqueAmongControlled {
+		trimmed, had := strings.CutSuffix(text, " "+nameUniqueAmongControlledClauseText)
+		if !had {
+			return false
+		}
+		text = trimmed
+	}
 	switch selection.Kind {
 	case SelectionAny:
 		return text == "any target"
@@ -1551,6 +1564,14 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 	}
 	for end < len(tokens) {
 		token := tokens[end]
+		// The same-name restriction clause embeds "have ... you control", whose
+		// "have" would otherwise terminate the target as an effect verb. Skip the
+		// whole clause so the target noun phrase keeps it; parseTargets records
+		// the restriction and strips the clause before parseSelection.
+		if end > start && nameUniqueClauseStartsAt(tokens, end) {
+			end += len(nameUniqueAmongControlledClause)
+			continue
+		}
 		if token.Kind == shared.Comma || token.Kind == shared.Period || token.Kind == shared.Semicolon ||
 			targetDestinationStartsAt(tokens, end) ||
 			moveCounterDestinationStartsAt(tokens, end) ||
@@ -1863,6 +1884,50 @@ func splitSelectionNamedTail(tokens []shared.Token) (name string, head []shared.
 		return "", nil, false
 	}
 	return joinedEffectText(nameTokens), tokens[:named], true
+}
+
+// splitSelectionNameUniqueTail captures a trailing "that doesn't have the same
+// name as another permanent you control" relative clause from a selection's
+// tokens, returning the tokens preceding the clause and true when the clause is
+// present (Yenna, Redtooth Regent). Splitting the clause off keeps its words
+// from being misread by parseSelection or rejected as an unsupported qualifier;
+// the caller records the restriction on SelectionSyntax.NameUniqueAmongControlled.
+func splitSelectionNameUniqueTail(tokens []shared.Token) (head []shared.Token, ok bool) {
+	if len(tokens) <= len(nameUniqueAmongControlledClause) {
+		return nil, false
+	}
+	offset := len(tokens) - len(nameUniqueAmongControlledClause)
+	if !nameUniqueClauseStartsAt(tokens, offset) {
+		return nil, false
+	}
+	return tokens[:offset], true
+}
+
+// nameUniqueAmongControlledClause is the relative clause that restricts a target
+// to a permanent whose name is unique among the controller's permanents
+// (Yenna, Redtooth Regent: "that doesn't have the same name as another
+// permanent you control").
+var nameUniqueAmongControlledClause = []string{
+	"that", "doesn't", "have", "the", "same", "name",
+	"as", "another", "permanent", "you", "control",
+}
+
+// nameUniqueAmongControlledClauseText is the canonical spelling of the
+// name-uniqueness clause, used to reconstruct the exact target phrase.
+const nameUniqueAmongControlledClauseText = "that doesn't have the same name as another permanent you control"
+
+// nameUniqueClauseStartsAt reports whether nameUniqueAmongControlledClause
+// begins at index i in tokens.
+func nameUniqueClauseStartsAt(tokens []shared.Token, i int) bool {
+	if i < 0 || i+len(nameUniqueAmongControlledClause) > len(tokens) {
+		return false
+	}
+	for j, word := range nameUniqueAmongControlledClause {
+		if !equalWord(tokens[i+j], word) {
+			return false
+		}
+	}
+	return true
 }
 
 func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {

@@ -67,6 +67,11 @@ const (
 	// recipient honors it ("each other creature you control named Charmed
 	// Stray").
 	DimRequiredName
+
+	// DimNameUniqueAmongControlled is the "that doesn't have the same name as
+	// another permanent you control" restriction (Yenna, Redtooth Regent),
+	// carried by Selection.NameUniqueAmongControlled.
+	DimNameUniqueAmongControlled
 )
 
 // SelectionMask records the optional CompiledSelector dimensions a calling
@@ -349,6 +354,12 @@ func SelectionForSelectorMasked(selector compiler.CompiledSelector, mask Selecti
 	} else if honor {
 		selection.PowerLessThanSource = selector.PowerLessThanSource
 		selection.PowerGreaterThanSource = selector.PowerGreaterThanSource
+	}
+
+	if honor, ok := mask.dimension(selector.NameUniqueAmongControlled, DimNameUniqueAmongControlled); !ok {
+		return game.Selection{}, false
+	} else if honor {
+		selection.NameUniqueAmongControlled = true
 	}
 
 	if len(selection.Validate()) != 0 {
