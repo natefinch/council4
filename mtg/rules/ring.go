@@ -59,7 +59,7 @@ func (r *effectResolver) designateRingBearer(player *game.Player) {
 			Label: permanentEffectiveName(r.game, permanent),
 			Card:  permanentChoiceInfo(r.game, permanent),
 		}
-		if permanent.CardInstanceID == player.RingBearerID {
+		if permanent.ObjectID == player.RingBearerID {
 			defaultIndex = i
 		}
 	}
@@ -76,7 +76,7 @@ func (r *effectResolver) designateRingBearer(player *game.Player) {
 	if len(selected) == 1 && selected[0] >= 0 && selected[0] < len(candidates) {
 		choice = selected[0]
 	}
-	player.RingBearerID = candidates[choice].CardInstanceID
+	player.RingBearerID = candidates[choice].ObjectID
 }
 
 // ringBearerCandidates returns the creatures the player controls, in battlefield
@@ -98,7 +98,7 @@ func isRingBearer(g *game.Game, permanent *game.Permanent) bool {
 	if !ok {
 		return false
 	}
-	return controller.RingBearerID != id.ID(0) && controller.RingBearerID == permanent.CardInstanceID
+	return controller.RingBearerID != id.ID(0) && controller.RingBearerID == permanent.ObjectID
 }
 
 // applyRingBearerCombatDamageToPlayer applies the Ring's fourth ability: when a

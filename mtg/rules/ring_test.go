@@ -43,8 +43,8 @@ func TestRingTemptsGrantsEmblemDesignatesBearerAndAdvancesLevel(t *testing.T) {
 	if player.RingTemptedCount != 1 {
 		t.Fatalf("RingTemptedCount = %d, want 1", player.RingTemptedCount)
 	}
-	if player.RingBearerID != bearer.CardInstanceID {
-		t.Fatalf("RingBearerID = %v, want the only controlled creature %v", player.RingBearerID, bearer.CardInstanceID)
+	if player.RingBearerID != bearer.ObjectID {
+		t.Fatalf("RingBearerID = %v, want the only controlled creature %v", player.RingBearerID, bearer.ObjectID)
 	}
 }
 
@@ -88,8 +88,8 @@ func TestRingTemptsLetsControllerChooseBearer(t *testing.T) {
 		Primitive: game.RingTempts{Player: game.ControllerReference()},
 	}, agents, &TurnLog{})
 
-	if got := g.Players[game.Player1].RingBearerID; got != second.CardInstanceID {
-		t.Fatalf("RingBearerID = %v, want chosen creature %v", got, second.CardInstanceID)
+	if got := g.Players[game.Player1].RingBearerID; got != second.ObjectID {
+		t.Fatalf("RingBearerID = %v, want chosen creature %v", got, second.ObjectID)
 	}
 }
 
@@ -113,6 +113,41 @@ func TestRingTemptsWithNoCreaturesAdvancesWithoutBearer(t *testing.T) {
 	}
 }
 
+// TestRingTemptsDesignatesTokenBearerByObjectID confirms a token creature can be
+// the Ring-bearer: tokens have a zero CardInstanceID, so the designation tracks
+// the permanent's ObjectID and the level-4 drain still fires for a token bearer.
+func TestRingTemptsDesignatesTokenBearerByObjectID(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	token, ok := createTokenPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Soldier",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2}),
+	}})
+	if !ok {
+		t.Fatal("token was not created")
+	}
+	obj := ringTemptsObj(g, game.Player1)
+
+	resolveInstruction(engine, g, obj, game.RingTempts{Player: game.ControllerReference()}, &TurnLog{})
+
+	if got := g.Players[game.Player1].RingBearerID; got != token.ObjectID {
+		t.Fatalf("RingBearerID = %v, want token ObjectID %v", got, token.ObjectID)
+	}
+	if !isRingBearer(g, token) {
+		t.Fatal("token is not recognized as the Ring-bearer")
+	}
+
+	g.Players[game.Player1].RingLevel = ringMaxLevel
+	before := g.Players[game.Player2].Life
+	markPlayerCombatDamage(g, token, game.Player3, 2, &TurnLog{})
+	if got := before - g.Players[game.Player2].Life; got != ringBearerLoseLifeOnDamage {
+		t.Fatalf("opponent lost %d life from token Ring-bearer combat damage, want %d", got, ringBearerLoseLifeOnDamage)
+	}
+}
+
 // TestRingBearerCombatDamageDrainsOpponentsAtLevelFour covers the Ring's fourth
 // ability: when a level-4 Ring-bearer deals combat damage to a player, each
 // opponent loses 3 life.
@@ -126,7 +161,7 @@ func TestRingBearerCombatDamageDrainsOpponentsAtLevelFour(t *testing.T) {
 		Toughness: opt.Val(game.PT{Value: 2}),
 	}})
 	g.Players[game.Player1].RingLevel = ringMaxLevel
-	g.Players[game.Player1].RingBearerID = bearer.CardInstanceID
+	g.Players[game.Player1].RingBearerID = bearer.ObjectID
 	before := [game.NumPlayers]int{}
 	for i := range g.Players {
 		before[i] = g.Players[i].Life
@@ -161,7 +196,7 @@ func TestRingBearerCombatDamageNoDrainBelowLevelFour(t *testing.T) {
 		Toughness: opt.Val(game.PT{Value: 2}),
 	}})
 	g.Players[game.Player1].RingLevel = 3
-	g.Players[game.Player1].RingBearerID = bearer.CardInstanceID
+	g.Players[game.Player1].RingBearerID = bearer.ObjectID
 	thirdBefore := g.Players[game.Player3].Life
 
 	markPlayerCombatDamage(g, bearer, game.Player2, 2, &TurnLog{})
