@@ -62,6 +62,24 @@ func TestParseSourceSpellCostReductionExactness(t *testing.T) {
 			context: Context{InstantOrSorcery: true, CardName: "Draco"},
 			amount:  1,
 		},
+		{
+			name:    "creature card in your graveyard",
+			source:  "This spell costs {1} less to cast for each creature card in your graveyard.",
+			context: Context{InstantOrSorcery: true},
+			amount:  1,
+		},
+		{
+			name:    "land card in your graveyard",
+			source:  "This spell costs {1} less to cast for each land card in your graveyard.",
+			context: Context{InstantOrSorcery: true},
+			amount:  1,
+		},
+		{
+			name:    "artifact card in your hand",
+			source:  "This spell costs {2} less to cast for each artifact card in your hand.",
+			context: Context{InstantOrSorcery: true},
+			amount:  2,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -89,8 +107,8 @@ func TestParseSourceSpellCostReductionFailsClosed(t *testing.T) {
 		context Context
 	}{
 		{
-			name:    "graveyard count",
-			source:  "This spell costs {1} less to cast for each creature card in your graveyard.",
+			name:    "library count",
+			source:  "This spell costs {1} less to cast for each creature card in your library.",
 			context: Context{InstantOrSorcery: true},
 		},
 		{

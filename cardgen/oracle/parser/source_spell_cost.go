@@ -142,9 +142,10 @@ func sourceSpellCostReductionDynamicFrame(tokens []shared.Token, atoms Atoms) bo
 // sourceSpellCostReductionAmount validates the exact "This spell costs {N} less
 // to cast for each <count subject>." wording and returns the per-object generic
 // reduction N. The subject phrase must be the spell itself ("This spell" or the
-// card's own name) and the counted objects must be battlefield permanents the
-// existing typed count machinery represents; graveyard, hand, variable {X}, and
-// any other shape fail closed by returning false.
+// card's own name) and the counted objects must be battlefield permanents, or
+// cards in the caster's own graveyard or hand, that the typed count machinery
+// represents; library, exile, variable {X}, and any other shape fail closed by
+// returning false.
 func sourceSpellCostReductionAmount(tokens []shared.Token, atoms Atoms) (int, bool) {
 	if len(tokens) == 0 || tokens[len(tokens)-1].Kind != shared.Period {
 		return 0, false
@@ -182,7 +183,9 @@ func sourceSpellCostReductionAmount(tokens []shared.Token, atoms Atoms) (int, bo
 	if subject.amount.DynamicKind != EffectDynamicAmountCount || subject.amount.Selection == nil {
 		return 0, false
 	}
-	if subject.amount.Selection.Zone != zone.None {
+	switch subject.amount.Selection.Zone {
+	case zone.None, zone.Graveyard, zone.Hand:
+	default:
 		return 0, false
 	}
 	return amount, true

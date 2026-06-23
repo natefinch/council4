@@ -49,6 +49,63 @@ func anyCreatureSelection() game.Selection {
 	return game.Selection{RequiredTypes: []types.Card{types.Creature}}
 }
 
+// sourceSpellZoneReductionCard models a spell that costs perObject generic less
+// to cast for each card in the caster's own zone matching selection, encoded as
+// the AffectedSource spell cost modifier the cardgen backend emits for the
+// "This spell costs {N} less to cast for each <card> in your graveyard/hand"
+// ability.
+func sourceSpellZoneReductionCard(name string, manaCost cost.Mana, selection game.Selection, perObject int, cardZone zone.Type) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:     name,
+		Types:    []types.Card{types.Sorcery},
+		ManaCost: opt.Val(manaCost),
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:           game.RuleEffectCostModifier,
+				AffectedSource: true,
+				CostModifier: game.CostModifier{
+					Kind:               game.CostModifierSpell,
+					PerObjectReduction: perObject,
+					CountSelection:     &selection,
+					CountZone:          opt.Val(cardZone),
+				},
+			}},
+		}},
+	}}
+}
+
+func graveyardCreatureCard(g *game.Game, playerID game.PlayerID) {
+	cardID := addCardToHand(g, playerID, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Graveyard Creature",
+		Types: []types.Card{types.Creature},
+	}})
+	g.Players[playerID].Hand.Remove(cardID)
+	g.Players[playerID].Graveyard.Add(cardID)
+}
+
+func TestSourceSpellCostReductionCountsGraveyardCards(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	graveyardCreatureCard(g, game.Player1)
+	graveyardCreatureCard(g, game.Player1)
+	graveyardCreatureCard(g, game.Player2)
+	// A battlefield creature must not be counted: only the caster's graveyard.
+	addCreaturePermanent(g, game.Player1)
+	card := sourceSpellZoneReductionCard("Hollow Marauder", cost.Mana{cost.O(6), cost.B}, anyCreatureSelection(), 1, zone.Graveyard)
+
+	if got := sourceSpellGenericReduction(g, game.Player1, card); got != 2 {
+		t.Fatalf("reduction for each creature card in your graveyard = %d, want 2", got)
+	}
+}
+
+func TestSourceSpellCostReductionZeroGraveyardCardsNoReduction(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	card := sourceSpellZoneReductionCard("Hollow Marauder", cost.Mana{cost.O(6), cost.B}, anyCreatureSelection(), 1, zone.Graveyard)
+
+	if got := sourceSpellGenericReduction(g, game.Player1, card); got != 0 {
+		t.Fatalf("reduction with an empty graveyard = %d, want 0", got)
+	}
+}
+
 func TestSourceSpellCostReductionZeroCreaturesNoReduction(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	card := sourceSpellReductionCard("Blasphemous Act", cost.Mana{cost.O(8), cost.R}, anyCreatureSelection(), 1)
