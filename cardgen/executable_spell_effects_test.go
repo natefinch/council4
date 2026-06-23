@@ -1088,6 +1088,51 @@ func TestGenerateExecutableCardSourceFightOptionalSecondTarget(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceReferencedFightEventPermanent(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Indrik",
+		Layout:     "normal",
+		TypeLine:   "Creature — Beast",
+		OracleText: "When this creature enters, it fights target creature you don't control.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.Fight") ||
+		!strings.Contains(source, "Object:        game.EventPermanentReference()") ||
+		!strings.Contains(source, "RelatedObject: game.TargetPermanentReference(0)") {
+		t.Fatalf("source missing event-permanent fight primitive:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceReferencedFightSourcePermanent(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Mammoth",
+		Layout:     "normal",
+		TypeLine:   "Creature — Elephant",
+		OracleText: "Whenever this creature or another creature you control enters, this creature fights up to one target creature you don't control.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.Fight") ||
+		!strings.Contains(source, "Object:        game.SourcePermanentReference()") ||
+		!strings.Contains(source, "RelatedObject: game.TargetPermanentReference(0)") ||
+		!strings.Contains(source, "MinTargets: 0,") {
+		t.Fatalf("source missing source-permanent fight primitive:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceFixedDamageTargets(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

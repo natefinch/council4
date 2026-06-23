@@ -1294,6 +1294,9 @@ func lowerImmediateSingleEffectSpell(
 	case compiler.EffectRegenerate:
 		return lowerRegenerateSpell(ctx)
 	case compiler.EffectFight:
+		if len(ctx.content.Targets) == 1 {
+			return lowerSourceFightSpell(ctx)
+		}
 		return lowerFightSpell(ctx)
 	case compiler.EffectLookAtHand:
 		return lowerLookAtHandSpell(ctx)

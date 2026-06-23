@@ -1433,6 +1433,58 @@ func lowerFightSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	}.Ability(), nil
 }
 
+// lowerSourceFightSpell lowers the source-referenced fight family, where the
+// fighting permanent is the source pronoun rather than a second target:
+// "it fights target creature" (the event permanent of an enters trigger) and
+// "this creature fights up to one target creature an opponent controls" (the
+// source permanent). The parser leaves a single subject reference bound to the
+// event or source permanent and a single creature target; this emits a Fight
+// with the resolved source object against the lone target, reusing the shared
+// fight target spec so controller and "up to one" optionality carry through.
+func lowerSourceFightSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := contentDiagnostic(
+		ctx,
+		"unsupported fight spell",
+		"the executable source backend supports only a source permanent fighting one target creature",
+	)
+	effect := ctx.content.Effects[0]
+	if effect.Negated ||
+		effect.Optional ||
+		ctx.optional ||
+		effect.Selector.Another ||
+		(effect.Context != parser.EffectContextReferencedObject &&
+			effect.Context != parser.EffectContextSource) ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.References) != 1 ||
+		(ctx.content.References[0].Binding != compiler.ReferenceBindingSource &&
+			ctx.content.References[0].Binding != compiler.ReferenceBindingEventPermanent) ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, unsupported
+	}
+	target, ok := fightCreatureTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, unsupported
+	}
+	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+		AllowSource: true,
+		AllowEvent:  true,
+	})
+	if !ok {
+		return game.AbilityContent{}, unsupported
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{target},
+		Sequence: []game.Instruction{{
+			Primitive: game.Fight{
+				Object:        object,
+				RelatedObject: game.TargetPermanentReference(0),
+			},
+		}},
+	}.Ability(), nil
+}
+
 // lowerLookAtHandSpell lowers "Look at target player's hand." to a single
 // player-targeted LookAtHand primitive. The parser retypes the possessive hand
 // phrase into a clean "target player"/"target opponent" target, so this reads
