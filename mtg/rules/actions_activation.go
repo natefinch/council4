@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -272,6 +273,23 @@ func activatedAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID
 		return nil, nil, false
 	}
 	return permanent, abilities[abilityIndex], true
+}
+
+// isManaAbilityActivation reports whether activate selects a mana ability —
+// one that produces mana and resolves without using the stack — whether printed
+// on a battlefield permanent or on a card activated from hand. It mirrors the
+// mana-ability dispatch in applyActivateAbility so the turn log can flag the
+// action without re-running it.
+func isManaAbilityActivation(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction) bool {
+	if _, body, ok := activatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex); ok {
+		if _, isMana := body.(*game.ManaAbility); isMana {
+			return true
+		}
+	}
+	if _, _, ok := handManaAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex); ok {
+		return true
+	}
+	return false
 }
 
 func cyclingAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID, abilityIndex int) (*game.CardInstance, game.ActivatedAbility, bool) {

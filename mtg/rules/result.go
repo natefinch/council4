@@ -134,6 +134,11 @@ type ActionLog struct {
 	Action              action.Action
 	PermanentSources    map[id.ID]id.ID
 	PermanentTokenNames map[id.ID]string
+
+	// ManaAbility reports that this action activated a mana ability (one that
+	// produces mana and resolves without using the stack). It is set only for
+	// ActionActivateAbility actions.
+	ManaAbility bool
 }
 
 // ResolveLog records a stack object resolving.
