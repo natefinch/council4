@@ -100,6 +100,10 @@ type CompiledAbility struct {
 	// level-up. The compiler copies the parser's typed level so lowering emits
 	// the SetClassLevel ability without re-reading the body wording.
 	ClassLevelGain int
+	// Companion reports that the parser recognized this paragraph as a companion
+	// keyword ability (CR 702.139). Its content is otherwise empty; lowering
+	// emits the inert companion static keyword.
+	Companion bool
 }
 
 // CompiledSourceAbilityCostReduction describes a source-local activated-ability

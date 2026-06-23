@@ -109,6 +109,14 @@ type Ability struct {
 	ConditionClauses []ConditionClause `json:",omitempty"`
 	// StaticDeclarations are the ability's typed static declarations.
 	StaticDeclarations []StaticDeclarationSyntax `json:",omitempty"`
+	// Companion is the recognized companion keyword ability (CR 702.139), or nil
+	// when this paragraph is not a companion ability. The parser owns the
+	// companion wording (the standard "Companion — <deckbuilding condition>" form
+	// and the "<X>'s companion" partner variant, as on Barbara Wright's "Doctor's
+	// companion"); when it is set the paragraph's competing effect, keyword, and
+	// declaration semantics are cleared so downstream stages consume only the
+	// companion identity.
+	Companion *CompanionClause `json:",omitempty"`
 	// ConditionSegments are the ability's condition clauses, pre-segmented over
 	// the same semantic token stream the compiler historically scanned.
 	ConditionSegments []ConditionSegment `json:",omitempty"`

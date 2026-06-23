@@ -689,6 +689,20 @@ func keywordOnlyContent(content compiler.AbilityContent) bool {
 // lowerStaticKeywordLowering lowers a keyword-only ability to its reusable
 // static keyword bodies, accumulating the keyword, ability-word, reminder, and
 // keyword-list separator source spans the ability consumes.
+// lowerCompanionAbility lowers a recognized companion keyword ability (CR
+// 702.139) to the inert companion static keyword. The companion deckbuilding
+// condition and the from-outside-the-game put-into-hand permission are sideboard
+// and deck-construction mechanics the deterministic playtester does not simulate,
+// so the keyword carries no in-game effect; the whole paragraph span is consumed.
+func lowerCompanionAbility(ability compiler.CompiledAbility) abilityLowering {
+	return abilityLowering{
+		staticAbilities: []loweredStaticAbility{
+			{Body: game.CompanionStaticBody, VarName: "game.CompanionStaticBody"},
+		},
+		sourceSpans: []shared.Span{ability.Span},
+	}
+}
+
 func lowerStaticKeywordLowering(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
@@ -1236,6 +1250,9 @@ func lowerExecutableAbilitySpecialCase(
 		ability.Kind != compiler.AbilityTriggered {
 		lowered, diagnostic := lowerModalAbility(cardName, ability, syntax)
 		return lowered, true, diagnostic
+	}
+	if ability.Companion {
+		return lowerCompanionAbility(ability), true, nil
 	}
 	if lowered, handled, diagnostic := lowerSourceSpellCostReduction(ability, syntax); handled {
 		return lowered, true, diagnostic

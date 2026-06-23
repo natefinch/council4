@@ -107,6 +107,10 @@ func linkConditionSegments(
 func emitSemanticAccessors(abilities []Ability) {
 	for i := range abilities {
 		ability := &abilities[i]
+		if ability.Companion != nil {
+			ability.ContentSpan = ability.computeContentSpan()
+			continue
+		}
 		ability.SemanticReferences = ability.computeSemanticReferences()
 		ability.SemanticKeywords = ability.computeSemanticKeywords()
 		ability.ContentSpan = ability.computeContentSpan()
