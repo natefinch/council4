@@ -80,6 +80,12 @@ func TestParseSourceSpellCostReductionExactness(t *testing.T) {
 			context: Context{InstantOrSorcery: true},
 			amount:  2,
 		},
+		{
+			name:    "historic card in your graveyard",
+			source:  "This spell costs {1} less to cast for each historic card in your graveyard.",
+			context: Context{InstantOrSorcery: true},
+			amount:  1,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -233,6 +239,45 @@ func TestParseSourceSpellCostReductionDynamicFailsClosed(t *testing.T) {
 			t.Parallel()
 			if effect := sourceSpellReductionDynamicEffect(t, test.source, test.context); effect != nil {
 				t.Fatalf("source %q was recognized as a dynamic source-spell cost reduction", test.source)
+			}
+		})
+	}
+}
+
+// TestParseSourceSpellCostReductionHistoric covers the "historic" count
+// qualifier (artifact, legendary, or Saga) on a graveyard count, including The
+// Capitoline Triad's shape where the reduction carries an ability-word prefix and
+// a reminder-text sentence.
+func TestParseSourceSpellCostReductionHistoric(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		source  string
+		context Context
+	}{
+		{
+			name:    "plain historic graveyard count",
+			source:  "This spell costs {1} less to cast for each historic card in your graveyard.",
+			context: Context{InstantOrSorcery: true},
+		},
+		{
+			name:    "ability word and reminder text",
+			source:  "Those Who Came Before — This spell costs {1} less to cast for each historic card in your graveyard. (Artifacts, legendaries, and Sagas are historic.)",
+			context: Context{InstantOrSorcery: true},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			effect := sourceSpellReductionEffect(t, test.source, test.context)
+			if effect == nil {
+				t.Fatalf("source %q did not yield a source-spell cost reduction", test.source)
+			}
+			if effect.Amount.Selection == nil {
+				t.Fatalf("count selection missing for %q", test.source)
+			}
+			if !effect.Amount.Selection.Historic {
+				t.Fatalf("historic flag not set for %q", test.source)
 			}
 		})
 	}

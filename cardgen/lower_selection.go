@@ -342,11 +342,7 @@ func SelectionForSelectorMasked(selector compiler.CompiledSelector, mask Selecti
 		// That spans a card type, a supertype, and a subtype, which the flat
 		// type/supertype/subtype fields cannot OR together, so it lowers to an
 		// AnyOf disjunction conjunctive with the selection's other fields.
-		selection.AnyOf = append(selection.AnyOf,
-			game.Selection{RequiredTypes: []types.Card{types.Artifact}},
-			game.Selection{Supertypes: []types.Super{types.Legendary}},
-			game.Selection{SubtypesAny: []types.Sub{types.Saga}},
-		)
+		selection.AnyOf = append(selection.AnyOf, historicSelectionAlternatives()...)
 	}
 
 	if honor, ok := mask.dimension(selector.PowerLessThanSource || selector.PowerGreaterThanSource, DimPowerVsSource); !ok {
@@ -388,5 +384,18 @@ func selectorSubtypeChoice(selector compiler.CompiledSelector, mask SelectionMas
 		return game.SubtypeChoiceSourceEntry, true
 	default:
 		return game.SubtypeChoiceNone, true
+	}
+}
+
+// historicSelectionAlternatives returns the three AnyOf alternatives that define
+// a historic card (an artifact, a legendary, or a Saga; CR 702.61b). A historic
+// qualifier spans a card type, a supertype, and a subtype, which the flat
+// type/supertype/subtype fields cannot OR together, so callers append these as a
+// Selection.AnyOf disjunction conjunctive with the selection's other fields.
+func historicSelectionAlternatives() []game.Selection {
+	return []game.Selection{
+		{RequiredTypes: []types.Card{types.Artifact}},
+		{Supertypes: []types.Super{types.Legendary}},
+		{SubtypesAny: []types.Sub{types.Saga}},
 	}
 }
