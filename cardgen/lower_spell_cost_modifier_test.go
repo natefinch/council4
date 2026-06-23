@@ -81,21 +81,43 @@ func TestLowerSpellCostModifierControllerReductionFiltered(t *testing.T) {
 	}
 }
 
-// TestLowerSpellCostModifierNoncreatureFailsClosed proves the noncreature
-// exclusion filter (Elspeth Conquers Death chapter II) fails closed: the runtime
-// spell cost modifier has no negative card-type filter, so the ability is not
-// lowered to a spell.
-func TestLowerSpellCostModifierNoncreatureFailsClosed(t *testing.T) {
+// TestLowerSpellCostModifierNoncreatureExcluded proves the noncreature
+// exclusion filter (Elspeth Conquers Death chapter II, "Noncreature spells your
+// opponents cast cost {2} more to cast until your next turn.") lowers to a
+// resolving, duration-bounded tax that raises the generic cost of opponents'
+// spells, restricted to spells that are not creatures via the negative
+// card-type filter.
+func TestLowerSpellCostModifierNoncreatureExcluded(t *testing.T) {
 	t.Parallel()
-	face := lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Test Noncreature Tax",
 		Layout:     "normal",
 		TypeLine:   "Sorcery",
 		ManaCost:   "{2}{W}",
 		OracleText: "Noncreature spells your opponents cast cost {2} more to cast until your next turn.",
 	})
-	if face.SpellAbility.Exists {
-		t.Fatal("expected the noncreature exclusion filter to fail closed")
+	if !face.SpellAbility.Exists {
+		t.Fatal("expected a spell ability")
+	}
+	apply := requireApplyRule(t, face.SpellAbility.Val.Modes[0])
+	if apply.Duration != game.DurationUntilYourNextTurn {
+		t.Fatalf("duration = %v, want DurationUntilYourNextTurn", apply.Duration)
+	}
+	effect := apply.RuleEffects[0]
+	if effect.AffectedPlayer != game.PlayerOpponent {
+		t.Fatalf("affected player = %v, want PlayerOpponent", effect.AffectedPlayer)
+	}
+	if effect.CostModifier.Kind != game.CostModifierSpell {
+		t.Fatalf("modifier kind = %v, want CostModifierSpell", effect.CostModifier.Kind)
+	}
+	if effect.CostModifier.GenericIncrease != 2 {
+		t.Fatalf("generic increase = %d, want 2", effect.CostModifier.GenericIncrease)
+	}
+	if effect.CostModifier.MatchCardType {
+		t.Fatal("unexpected required card-type filter on noncreature tax")
+	}
+	if !effect.CostModifier.MatchExcludedCardType || effect.CostModifier.ExcludedCardType != types.Creature {
+		t.Fatalf("excluded card-type filter = (%v, %v), want (true, Creature)", effect.CostModifier.MatchExcludedCardType, effect.CostModifier.ExcludedCardType)
 	}
 }
 

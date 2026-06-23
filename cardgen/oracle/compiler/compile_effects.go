@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -266,6 +267,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				),
 				CounterKind:                  syntax.CounterKind,
 				CounterKindKnown:             syntax.CounterKnown,
+				CounterKindChoices:           append([]counter.Kind(nil), syntax.CounterKindChoices...),
 				CounterRecipientAttached:     syntax.CounterRecipientAttached,
 				CounterRecipientSingleChoice: syntax.CounterRecipientSingleChoice,
 				RegenerateAttached:           syntax.RegenerateAttached,

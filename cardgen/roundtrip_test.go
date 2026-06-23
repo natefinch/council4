@@ -82,6 +82,20 @@ var roundTripCards = []*ScryfallCard{
 		TypeLine:   "Artifact — Equipment",
 		OracleText: "Equipped creature has ward {2}, is an Assassin in addition to its other types, and can't be blocked.\nEquip legendary creature {1}\nEquip {3}",
 	},
+	{
+		// Exercises the noncreature-exclusion spell cost modifier (chapter II)
+		// and the reanimation counter-kind choice (chapter III) introduced for
+		// Elspeth Conquers Death (#1500). The chapter III AddCounter renders a
+		// KindChoices literal on a linked object, requiring the counter import.
+		Name:     "RT Elspeth Conquers Death",
+		Layout:   "saga",
+		TypeLine: "Enchantment — Saga",
+		ManaCost: "{3}{W}{W}",
+		OracleText: "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\n" +
+			"I — Exile target permanent an opponent controls with mana value 3 or greater.\n" +
+			"II — Noncreature spells your opponents cast cost {2} more to cast until your next turn.\n" +
+			"III — Return target creature or planeswalker card from your graveyard to the battlefield. Put a +1/+1 counter or a loyalty counter on it.",
+	},
 }
 
 // writeRoundTripPackage generates source for roundTripCards into a fresh package

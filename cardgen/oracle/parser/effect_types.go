@@ -1504,6 +1504,12 @@ type EffectSyntax struct {
 	StaticSubject EffectStaticSubjectSyntax `json:",omitzero"`
 	CounterKind   counter.Kind              `json:",omitempty"`
 	CounterKnown  bool                      `json:",omitempty"`
+	// CounterKindChoices lists the counter kinds a placement effect lets the
+	// resolving controller choose between ("a +1/+1 counter or a loyalty counter
+	// on it.", Elspeth Conquers Death chapter III). It holds two or more distinct
+	// kinds and is set only when CounterKnown is false because no single kind is
+	// fixed. Lowering emits a controller kind choice.
+	CounterKindChoices []counter.Kind `json:",omitempty"`
 	// CounterRecipientAttached reports that a counter-placement effect places its
 	// counters on the permanent the source is attached to ("... on enchanted
 	// creature"), the Aura recipient the runtime models with its source

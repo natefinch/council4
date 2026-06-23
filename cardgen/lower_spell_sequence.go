@@ -2435,6 +2435,10 @@ func lowerDelayedSequenceClause(
 		sequence[len(sequence)-1].Primitive = publisher
 		return replacement, true, false
 	}
+	if publisher, placement, ok := lowerSequentialReanimationCounterPlacement(effectIndex, ctx, sequence); ok {
+		sequence[len(sequence)-1].Primitive = publisher
+		return placement, true, false
+	}
 	if exile, delayed, ok := lowerDelayedBlinkReturn(effects, effectIndex, ctx, sequence); ok {
 		sequence[len(sequence)-1].Primitive = exile
 		return delayed, true, false
@@ -3036,8 +3040,82 @@ func lowerSequentialLeaveBattlefieldExileReplacement(
 	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: create}}}.Ability(), true
 }
 
+// lowerSequentialReanimationCounterPlacement lowers a counter-placement clause
+// ("Put a +1/+1 counter on it." / "Put a +1/+1 counter or a loyalty counter on
+// it.", Elspeth Conquers Death chapter III) whose "it" denotes the permanent a
+// preceding reanimation clause in the same sequence returned to the battlefield.
+// A reanimated permanent is a fresh object a plain target-permanent reference
+// cannot resolve, so the clause binds to the linked key under which the
+// immediately-prior battlefield-entry instruction publishes the entered
+// permanent. It returns the rewritten publishing primitive and the AddCounter
+// content, or false to fail closed so the caller lowers the clause normally. It
+// applies only when the prior instruction is a single-source battlefield entry,
+// where the generic target-permanent reference would be invalid; every other
+// prior shape is left to the generic referenced-counter path.
+func lowerSequentialReanimationCounterPlacement(
+	effectIndex int,
+	ctx contentCtx,
+	sequence []game.Instruction,
+) (game.Primitive, game.AbilityContent, bool) {
+	if effectIndex == 0 ||
+		len(sequence) != effectIndex ||
+		ctx.optional ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.References) != 1 {
+		return nil, game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectPut ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		!effect.Amount.Known ||
+		effect.Amount.Value <= 0 ||
+		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0) {
+		return nil, game.AbilityContent{}, false
+	}
+	if sequence[effectIndex-1].Primitive.Kind() != game.PrimitivePutOnBattlefield {
+		return nil, game.AbilityContent{}, false
+	}
+	kindChoices, ok := referencedCounterKindChoices(effect)
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	consumed := ctx
+	consumed.content.References = nil
+	consumed.content.Targets = nil
+	if consumed.content.Unconsumed() {
+		return nil, game.AbilityContent{}, false
+	}
+	key, publisher, ok := reuseOrPublishLinkedPermanent(effectIndex, sequence)
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+		TargetLinkedKey: key,
+	})
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	add := game.AddCounter{
+		Amount: game.Fixed(effect.Amount.Value),
+		Object: object,
+	}
+	if len(kindChoices) != 0 {
+		add.KindChoices = kindChoices
+	} else {
+		add.CounterKind = effect.CounterKind
+	}
+	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: add}}}.Ability(), true
+}
+
 // reuseOrPublishLinkedPermanent locates the permanent an earlier clause in the
 // sequence recorded under a linked key so a later linked effect can bind to it.
+// It scans backward for the most recent already-published linked key and reuses
+// it (returning the immediately-prior primitive unchanged); when none exists it
+// rewrites the immediately-prior instruction to publish its acted-on permanent
+// under a fresh key. It returns the key, the primitive to store at the prior
+// instruction slot, and false when the prior instruction cannot be linked.
 // It scans backward for the most recent already-published linked key and reuses
 // it (returning the immediately-prior primitive unchanged); when none exists it
 // rewrites the immediately-prior instruction to publish its acted-on permanent

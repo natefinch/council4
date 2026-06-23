@@ -397,6 +397,50 @@ func parseCounterPlacementScopedToCount(clause []shared.Token, amount EffectAmou
 	return parseCounterPlacement(counterClause, atoms)
 }
 
+// parseCounterPlacementChoices recognizes a placed-counter noun phrase that lets
+// the resolving controller choose between two or more counter kinds ("a +1/+1
+// counter or a loyalty counter", Elspeth Conquers Death chapter III). It returns
+// the distinct kinds in source order. The phrase must join its kinds with "or"
+// (never "and", which is a compound placement), each kind must be a real,
+// permanent-placeable kind, and the phrase must carry no other counter
+// alternative collapsing to a single atom. Any other shape returns nil so the
+// single-kind path and the fail-closed path stay unchanged.
+func parseCounterPlacementChoices(clause []shared.Token, atoms Atoms) []counter.Kind {
+	tokens := placedCounterTokens(clause)
+	hasOr := false
+	for _, token := range tokens {
+		if equalWord(token, "and") {
+			return nil
+		}
+		if equalWord(token, "or") {
+			hasOr = true
+		}
+	}
+	if !hasOr {
+		return nil
+	}
+	span := shared.SpanOf(tokens)
+	var kinds []counter.Kind
+	seen := make(map[counter.Kind]bool)
+	for _, atom := range atoms.Counters() {
+		if !spanCovers(span, atom.Span) {
+			continue
+		}
+		if !atom.Kind.Valid() || atom.Kind == counter.Finality || atom.Kind.PlayerOnly() {
+			return nil
+		}
+		if seen[atom.Kind] {
+			return nil
+		}
+		seen[atom.Kind] = true
+		kinds = append(kinds, atom.Kind)
+	}
+	if len(kinds) < 2 {
+		return nil
+	}
+	return kinds
+}
+
 // placedCounterTokens narrows a "Put <amount> <kind> counter(s) on <recipient>"
 // clause to the placed-counter noun phrase that precedes the placement
 // preposition "on". The recipient that follows may itself name a counter ("each
@@ -1046,6 +1090,10 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			amount = forEach
 		}
 		counterKind, counterKnown := parseCounterPlacementScopedToCount(clause, amount, atoms)
+		var counterKindChoices []counter.Kind
+		if kind == EffectPut && !counterKnown {
+			counterKindChoices = parseCounterPlacementChoices(clause, atoms)
+		}
 		// A deal-damage clause whose amount is a trailing "where X is the number
 		// of ..." count phrase ("deals X damage to each creature, where X is the
 		// number of Gates you control.") embeds the counted-subject selector in
@@ -1171,6 +1219,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			DoubleCountersAllKinds:    doubleCountersAllKinds,
 			CounterKind:               counterKind,
 			CounterKnown:              counterKnown,
+			CounterKindChoices:        counterKindChoices,
 			CounterRecipientAttached:  counterRecipientAttached(kind, counterKnown, clause),
 			MoveCountersAll:           kind == EffectMoveCounters && moveAllCountersClause(clause),
 			MoveCountersDistribute:    kind == EffectMoveCounters && moveCountersDistributeClause(clause),

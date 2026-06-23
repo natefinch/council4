@@ -738,18 +738,20 @@ func lowerGroupMustAttack(ctx contentCtx) (game.AbilityContent, *shared.Diagnost
 // turn cost {1} less to cast.", Armor Wars chapter II; "Until your next turn,
 // spells your opponents cast cost {1} more to cast.", Tax Collector) to an
 // ApplyRule that creates a RuleEffectCostModifier rule effect for that lifetime.
-// The caster phrase selects the affected-player relation; the optional single
-// card-type required filter narrows the modifier to that spell type. An excluded
-// card-type filter ("noncreature") fails closed because the runtime spell cost
-// modifier has no negative card-type filter. Targets, references, conditions,
-// modes, keywords, a negation, or an unsupported duration fail closed.
+// The caster phrase selects the affected-player relation; an optional single
+// card-type filter narrows the modifier to that spell type, or a single excluded
+// card-type filter narrows it to spells that lack that type ("Noncreature spells
+// ...", Elspeth Conquers Death chapter II). A required and an excluded filter
+// never combine. Targets, references, conditions, modes, keywords, a negation, or
+// an unsupported duration fail closed.
 func lowerSpellCostModifier(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	if !effect.Exact ||
 		effect.Negated ||
 		effect.SpellCostModifierAmount <= 0 ||
-		len(effect.SpellCostModifierExcludedTypes) != 0 ||
+		len(effect.SpellCostModifierExcludedTypes) > 1 ||
 		len(effect.SpellCostModifierRequiredTypes) > 1 ||
+		(len(effect.SpellCostModifierExcludedTypes) != 0 && len(effect.SpellCostModifierRequiredTypes) != 0) ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.References) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -774,6 +776,10 @@ func lowerSpellCostModifier(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 	if len(effect.SpellCostModifierRequiredTypes) == 1 {
 		modifier.MatchCardType = true
 		modifier.CardType = effect.SpellCostModifierRequiredTypes[0]
+	}
+	if len(effect.SpellCostModifierExcludedTypes) == 1 {
+		modifier.MatchExcludedCardType = true
+		modifier.ExcludedCardType = effect.SpellCostModifierExcludedTypes[0]
 	}
 	return game.Mode{Sequence: []game.Instruction{{
 		Primitive: game.ApplyRule{

@@ -822,6 +822,14 @@ func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier)
 		}
 		fields = append(fields, "MatchCardType: true,", fmt.Sprintf("CardType: %s,", cardType))
 	}
+	if modifier.MatchExcludedCardType {
+		cardType, err := cardTypeLiteral(modifier.ExcludedCardType)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importTypes)
+		fields = append(fields, "MatchExcludedCardType: true,", fmt.Sprintf("ExcludedCardType: %s,", cardType))
+	}
 	if modifier.MatchColor {
 		fields = append(fields, "MatchColor: true,")
 		if modifier.Color != "" {

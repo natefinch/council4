@@ -897,6 +897,9 @@ func spellCostModifierBaseMatchesCard(modifier game.CostModifier, card *game.Car
 	if modifier.MatchCardType && (card == nil || !card.HasType(modifier.CardType)) {
 		return false
 	}
+	if modifier.MatchExcludedCardType && (card == nil || card.HasType(modifier.ExcludedCardType)) {
+		return false
+	}
 	if modifier.MatchColor {
 		if card == nil {
 			return false

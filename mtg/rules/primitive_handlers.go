@@ -218,10 +218,45 @@ func handleAddCounter(r *effectResolver, prim game.AddCounter) effectResolved {
 	}
 	permanent, ok := r.resolveObject(prim.Object)
 	if ok {
-		addCountersToPermanentControlledBy(r.game, placementController, permanent, prim.CounterKind, res.amount)
+		counterKind := prim.CounterKind
+		if len(prim.KindChoices) != 0 {
+			counterKind = r.chooseCounterKindToPlace(prim.KindChoices)
+		}
+		addCountersToPermanentControlledBy(r.game, placementController, permanent, counterKind, res.amount)
 		res.succeeded = true
 	}
 	return res
+}
+
+// chooseCounterKindToPlace resolves which counter kind an "Put a <X> counter or a
+// <Y> counter on it" effect places: the resolving controller chooses one of the
+// listed kinds ("Put a +1/+1 counter or a loyalty counter on it.", Elspeth
+// Conquers Death chapter III). The kinds are presented in listed order so the
+// prompt is deterministic. An empty or unexpected selection falls back to the
+// first kind.
+func (r *effectResolver) chooseCounterKindToPlace(kinds []counter.Kind) counter.Kind {
+	if len(kinds) == 0 {
+		return 0
+	}
+	options := make([]game.ChoiceOption, len(kinds))
+	for i, kind := range kinds {
+		options[i] = game.ChoiceOption{
+			Index: i,
+			Label: kind.String() + " counter",
+		}
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:       game.ChoiceResolution,
+		Player:     r.obj.Controller,
+		Prompt:     "Choose a kind of counter",
+		Options:    options,
+		MinChoices: 1,
+		MaxChoices: 1,
+	}, r.log)
+	if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(kinds) {
+		return kinds[0]
+	}
+	return kinds[selected[0]]
 }
 
 // handleDoubleAllCounterKinds doubles every kind of counter on the primitive's

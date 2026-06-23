@@ -990,12 +990,13 @@ func lowerReferencedCounterPlacement(ctx contentCtx) (game.AbilityContent, *shar
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		!effect.Amount.Known || effect.Amount.Value <= 0 ||
-		!effect.CounterKindKnown ||
-		!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
-		effect.CounterKind.PlayerOnly() ||
 		!effect.Exact ||
 		effect.Negated ||
 		effect.Context != parser.EffectContextController {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	kindChoices, ok := referencedCounterKindChoices(effect)
+	if !ok {
 		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
 	}
 	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
@@ -1006,15 +1007,42 @@ func lowerReferencedCounterPlacement(ctx contentCtx) (game.AbilityContent, *shar
 	if !ok {
 		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
 	}
+	add := game.AddCounter{
+		Amount: game.Fixed(effect.Amount.Value),
+		Object: object,
+	}
+	if len(kindChoices) != 0 {
+		add.KindChoices = kindChoices
+	} else {
+		add.CounterKind = effect.CounterKind
+	}
 	return game.Mode{
 		Sequence: []game.Instruction{{
-			Primitive: game.AddCounter{
-				Amount:      game.Fixed(effect.Amount.Value),
-				Object:      object,
-				CounterKind: effect.CounterKind,
-			},
+			Primitive: add,
 		}},
 	}.Ability(), nil
+}
+
+// referencedCounterKindChoices resolves the counter kind(s) a referenced counter
+// placement applies. A single recognized, placeable kind yields no choice list; a
+// two-or-more-kind choice ("a +1/+1 counter or a loyalty counter", Elspeth
+// Conquers Death chapter III) yields the list of placeable kinds. Any
+// unrecognized, player-only, or otherwise unplaceable kind fails closed.
+func referencedCounterKindChoices(effect compiler.CompiledEffect) ([]counter.Kind, bool) {
+	if len(effect.CounterKindChoices) >= 2 {
+		for _, kind := range effect.CounterKindChoices {
+			if !compiler.CounterKindPlacementSupported(kind) || kind.PlayerOnly() {
+				return nil, false
+			}
+		}
+		return append([]counter.Kind(nil), effect.CounterKindChoices...), true
+	}
+	if effect.CounterKindKnown &&
+		compiler.CounterKindPlacementSupported(effect.CounterKind) &&
+		!effect.CounterKind.PlayerOnly() {
+		return nil, true
+	}
+	return nil, false
 }
 
 // lowerMoveCountersSpell lowers the counter-movement family ("Move a +1/+1
