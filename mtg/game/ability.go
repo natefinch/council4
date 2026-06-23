@@ -1138,6 +1138,17 @@ type SearchSpec struct {
 	Reveal       bool
 	EntersTapped bool
 
+	// RevealOnly, when true, makes the search find and reveal a single matching
+	// card but leave it in the library with no destination move, publishing the
+	// found card under PublishLinked so a following ConditionalDestinationPlace
+	// can route it. It backs the search half of "Search your library for a Plains
+	// card and reveal it. ... you may put that card onto the battlefield ..."
+	// (Scholar of New Horizons), where the placement and the closing shuffle are
+	// separate instructions. RevealOnly requires Destination zone.None, Reveal
+	// true, a single searching player, and no split destination, tapped entry, or
+	// controller rider.
+	RevealOnly bool
+
 	// SplitDestination, when present, makes the search distribute the found
 	// cards across two distinct single-card destination slots instead of sending
 	// every found card to Destination. The primary slot is (Destination,

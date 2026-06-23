@@ -422,6 +422,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: LookAtLibraryTop kind has unexpected concrete type")
 		}
 		return r.renderLookAtLibraryTop(value)
+	case game.PrimitiveConditionalDestinationPlace:
+		value, ok := primitive.(game.ConditionalDestinationPlace)
+		if !ok {
+			return "", errors.New("render: internal error: ConditionalDestinationPlace kind has unexpected concrete type")
+		}
+		return r.renderConditionalDestinationPlace(ctx, value)
 	default:
 		return r.renderPrimitiveExtra(ctx, primitive)
 	}
@@ -986,14 +992,16 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 	if err != nil {
 		return "", err
 	}
-	destination, err := renderZone(value.Spec.Destination)
-	if err != nil {
-		return "", err
-	}
 	ctx.need(importZone)
 	specFields := []string{
 		fmt.Sprintf("SourceZone: %s,", source),
-		fmt.Sprintf("Destination: %s,", destination),
+	}
+	if value.Spec.Destination != zone.None {
+		destination, destErr := renderZone(value.Spec.Destination)
+		if destErr != nil {
+			return "", destErr
+		}
+		specFields = append(specFields, fmt.Sprintf("Destination: %s,", destination))
 	}
 	if value.Spec.DestinationPosition == game.SearchPositionTop {
 		specFields = append(specFields, "DestinationPosition: game.SearchPositionTop,")
@@ -1022,6 +1030,9 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 	}
 	if value.Spec.Reveal {
 		specFields = append(specFields, "Reveal: true,")
+	}
+	if value.Spec.RevealOnly {
+		specFields = append(specFields, "RevealOnly: true,")
 	}
 	if value.Spec.EntersTapped {
 		specFields = append(specFields, "EntersTapped: true,")
