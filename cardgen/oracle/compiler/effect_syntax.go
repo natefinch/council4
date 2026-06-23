@@ -162,6 +162,7 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		EnteredThisTurn:               syntax.EnteredThisTurn,
 		PowerLessThanSource:           syntax.PowerLessThanSource,
 		PowerGreaterThanSource:        syntax.PowerGreaterThanSource,
+		NameUniqueAmongControlled:     syntax.NameUniqueAmongControlled,
 		InclusiveOneOfEach:            syntax.InclusiveOneOfEach,
 	}
 	// A required card-type union is always kept. A single required card type is

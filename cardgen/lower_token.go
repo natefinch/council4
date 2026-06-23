@@ -330,13 +330,29 @@ func lowerCreateCopyTokenReferenceSpell(ctx contentCtx) (game.AbilityContent, *s
 		effect.Negated ||
 		effect.DelayedTiming != 0 ||
 		effect.Duration != compiler.DurationNone ||
-		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Targets) > 1 ||
 		len(ctx.content.References) < 1 ||
 		!tokenCopyAuxiliaryReferencesOK(ctx.content.References[1:]) ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != len(effect.TokenCopyGrantKeywords) ||
 		len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	// "Choose target <permanent>. Create a token that's a copy of it." (Yenna,
+	// Redtooth Regent) chooses the copied permanent with a separate targeting
+	// sentence, so the "it" copy source binds an ability-level target. Emit that
+	// target's spec and require the leading reference to bind it; the copy of an
+	// inline "target <permanent>" instead goes through lowerCreateCopyTokenSpell.
+	var targets []game.TargetSpec
+	if len(ctx.content.Targets) == 1 {
+		if !referencesBindTo(ctx.content.References[:1], compiler.ReferenceBindingTarget, 0) {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		targetSpec, ok := permanentTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		targets = []game.TargetSpec{targetSpec}
 	}
 	object, ok := lowerObjectReference(
 		ctx.content.References[0],
@@ -354,6 +370,7 @@ func lowerCreateCopyTokenReferenceSpell(ctx contentCtx) (game.AbilityContent, *s
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
 	return game.Mode{
+		Targets: targets,
 		Sequence: []game.Instruction{{
 			Primitive: game.CreateToken{
 				Amount:      amount,

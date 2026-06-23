@@ -365,7 +365,51 @@ func lowerOrderedEffectSequence(
 	if !sequenceCountsConsumed(ctx, consumedTargets, consumedKeywords, consumedReferences, consumedConditions) {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — unconsumed targets/references/keywords")
 	}
+	if !publishCreatedTokenLink(sequence, gateConditions) {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — created-token gate not linkable")
+	}
 	return game.Mode{Targets: targets, Sequence: sequence}.Ability(), nil
+}
+
+// publishCreatedTokenLink wires a resolving "If the token is ..." gate (Yenna,
+// Redtooth Regent) to the token a prior clause created. When a gate condition
+// binds ReferenceBindingCreatedToken its lowered object reference points at the
+// createdTokenLinkKey linked object, so the creating CreateToken instruction must
+// publish that link. It sets PublishLinked on the sequence's single CreateToken
+// instruction. It returns false (fail closed) when the sequence has no
+// CreateToken, more than one CreateToken, or a CreateToken that already
+// publishes a different link.
+func publishCreatedTokenLink(sequence []game.Instruction, conditions []compiler.CompiledCondition) bool {
+	gated := false
+	for ci := range conditions {
+		if conditions[ci].ObjectBinding == compiler.ReferenceBindingCreatedToken {
+			gated = true
+			break
+		}
+	}
+	if !gated {
+		return true
+	}
+	createIndex := -1
+	for si := range sequence {
+		if sequence[si].Primitive.Kind() != game.PrimitiveCreateToken {
+			continue
+		}
+		if createIndex >= 0 {
+			return false
+		}
+		createIndex = si
+	}
+	if createIndex < 0 {
+		return false
+	}
+	create, ok := sequence[createIndex].Primitive.(game.CreateToken)
+	if !ok || (create.PublishLinked != "" && create.PublishLinked != createdTokenLinkKey) {
+		return false
+	}
+	create.PublishLinked = createdTokenLinkKey
+	sequence[createIndex].Primitive = create
+	return true
 }
 
 // conditionReferenceCount counts the references whose span falls within one of

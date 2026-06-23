@@ -248,6 +248,9 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if sel.RequirePermanentCard && !s.isPermanentCard() {
 		return false
 	}
+	if sel.NameUniqueAmongControlled && !s.nameUniqueAmongControlled() {
+		return false
+	}
 	return true
 }
 
@@ -691,6 +694,35 @@ func (s *selectionSubject) name() (string, bool) {
 	default:
 		return "", false
 	}
+}
+
+// nameUniqueAmongControlled reports whether the subject permanent's name differs
+// from every other permanent its controller controls, the runtime side of
+// Selection.NameUniqueAmongControlled ("... that doesn't have the same name as
+// another permanent you control"). A non-permanent subject, an unavailable name,
+// or any other permanent sharing the name fails it closed.
+func (s *selectionSubject) nameUniqueAmongControlled() bool {
+	if s.kind != subjectPermanent || s.permanent == nil {
+		return false
+	}
+	name, ok := s.name()
+	if !ok {
+		return false
+	}
+	controller := effectiveController(s.g, s.permanent)
+	for _, other := range s.g.Battlefield {
+		if other == nil || other.ObjectID == s.permanent.ObjectID || other.FaceDown {
+			continue
+		}
+		if effectiveController(s.g, other) != controller {
+			continue
+		}
+		def, ok := permanentCardDef(s.g, other)
+		if ok && def.Name == name {
+			return false
+		}
+	}
+	return true
 }
 
 func (s *selectionSubject) power() (int, bool) {

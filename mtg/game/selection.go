@@ -244,6 +244,14 @@ type Selection struct {
 	// against a card's printed types; a subject that is not a card fails it
 	// closed. Placed at the end so the bool joins no existing cluster's packing.
 	RequirePermanentCard bool
+
+	// NameUniqueAmongControlled requires the matched permanent's name to differ
+	// from every other permanent its controller controls ("target enchantment
+	// you control that doesn't have the same name as another permanent you
+	// control", Yenna, Redtooth Regent). A subject whose name is unavailable, or
+	// that is not an on-battlefield permanent, fails it closed. Placed at the end
+	// so the bool joins no existing cluster's packing.
+	NameUniqueAmongControlled bool
 }
 
 // ManaValueDynamicBound bounds a card's mana value by a controller-relative
@@ -297,7 +305,8 @@ func (s Selection) Empty() bool {
 		!s.PowerGreaterThanSource &&
 		s.Name == "" &&
 		s.ChosenSubtypeFrom == "" &&
-		!s.RequirePermanentCard
+		!s.RequirePermanentCard &&
+		!s.NameUniqueAmongControlled
 }
 
 // Validate reports structural contradictions in the Selection that represent
@@ -383,6 +392,8 @@ func (p TargetPredicate) Selection() Selection {
 		PowerGreaterThanSource: p.PowerGreaterThanSource,
 		TokenOnly:              p.TokenOnly,
 		NonToken:               p.NonToken,
+
+		NameUniqueAmongControlled: p.NameUniqueAmongControlled,
 	}
 	if p.PermanentTypesConjunctive {
 		selection.RequiredTypes = p.PermanentTypes

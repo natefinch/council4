@@ -475,6 +475,9 @@ func conditionSelectionSelector(selection compiler.ConditionSelection) (compiler
 }
 
 func lowerConditionObjectReference(binding compiler.ReferenceBinding) (game.ObjectReference, bool) {
+	if binding == compiler.ReferenceBindingCreatedToken {
+		return game.LinkedObjectReference(createdTokenLinkKey), true
+	}
 	return lowerObjectReference(compiler.CompiledReference{Binding: binding}, referenceLoweringContext{
 		AllowSource: true,
 		AllowEvent:  true,

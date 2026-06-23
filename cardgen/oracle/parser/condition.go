@@ -201,6 +201,7 @@ const (
 	ConditionObjectBindingSource         ConditionObjectBinding = "ConditionObjectBindingSource"
 	ConditionObjectBindingEventPermanent ConditionObjectBinding = "ConditionObjectBindingEventPermanent"
 	ConditionObjectBindingSourceAttached ConditionObjectBinding = "ConditionObjectBindingSourceAttached"
+	ConditionObjectBindingCreatedToken   ConditionObjectBinding = "ConditionObjectBindingCreatedToken"
 )
 
 // ConditionSelection is the source-independent permanent selection used by typed
@@ -603,6 +604,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeFirstCombatPhaseCondition,
 		recognizeAttackersAttackingControllerCondition,
 		recognizeSpellXCondition,
+		recognizeCreatedTokenMatchCondition,
 	} {
 		if clause, ok := recognize(body, atoms); ok {
 			return clause, true
@@ -782,7 +784,31 @@ func recognizeEventSubjectCondition(body []shared.Token, atoms Atoms) (Condition
 	return recognizeEventSubjectMatchCondition(body, atoms)
 }
 
-// recognizeEnteredOrCastFromGraveyardCondition handles the enters-the-battlefield
+// recognizeCreatedTokenMatchCondition handles the resolving gate "the token is a
+// <selection>" that inspects the characteristics of a token a prior effect in
+// the same ability just created (Yenna, Redtooth Regent: "If the token is an
+// Aura, untap Yenna, then scry 2."). The "the token" subject binds the
+// just-created token, so the clause carries a permanent selection matched
+// against that object. Only the singular "the token" subject is recognized; any
+// other subject falls through to the remaining recognizers.
+func recognizeCreatedTokenMatchCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "the", "token", "is", "a")
+	if !ok {
+		if rest, ok = cutTokenPrefix(body, "the", "token", "is", "an"); !ok {
+			return ConditionClause{}, false
+		}
+	}
+	selection, ok := parseConditionSelection(rest, atoms)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate:     ConditionPredicateObjectMatches,
+		ObjectBinding: ConditionObjectBindingCreatedToken,
+		Selection:     selection,
+	}, true
+}
+
 // intervening condition that gates a trigger on the entering object(s) having
 // come from a graveyard, either by entering directly from a graveyard or by
 // being cast from a graveyard. Two oracle wordings carry different ownership

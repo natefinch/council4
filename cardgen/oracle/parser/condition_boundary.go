@@ -127,10 +127,25 @@ func conditionBoundaries(tokens []shared.Token, triggered, ifAbleExcluded bool, 
 }
 
 func conditionIsResolvingThenIf(tokens []shared.Token, index int, intro ConditionIntroKind) bool {
-	return intro == ConditionIntroIf &&
-		index > 0 &&
-		equalWord(tokens[index-1], "then") &&
-		(index == 1 || tokenEndsSentence(tokens[index-2]))
+	if intro != ConditionIntroIf || index < 0 {
+		return false
+	}
+	if index > 0 && equalWord(tokens[index-1], "then") &&
+		(index == 1 || tokenEndsSentence(tokens[index-2])) {
+		return true
+	}
+	return conditionIsResolvingCreatedToken(tokens, index)
+}
+
+// conditionIsResolvingCreatedToken reports whether a sentence-leading "If the
+// token ..." introduces a resolving condition that inspects a token a prior
+// effect in the same ability created (Yenna, Redtooth Regent: "If the token is
+// an Aura, ..."). The token only exists during resolution, so the gate is
+// evaluated then rather than as an activation restriction.
+func conditionIsResolvingCreatedToken(tokens []shared.Token, index int) bool {
+	sentenceLeading := index == 0 || tokenEndsSentence(tokens[index-1])
+	return sentenceLeading && index+2 < len(tokens) &&
+		equalWord(tokens[index+1], "the") && equalWord(tokens[index+2], "token")
 }
 
 func tokenEndsSentence(token shared.Token) bool {

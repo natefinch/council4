@@ -1179,6 +1179,12 @@ type SelectionSyntax struct {
 	// Selection.PowerGreaterThanSource.
 	PowerLessThanSource    bool `json:",omitempty"`
 	PowerGreaterThanSource bool `json:",omitempty"`
+	// NameUniqueAmongControlled records a trailing "that doesn't have the same
+	// name as another permanent you control" relative clause (Yenna, Redtooth
+	// Regent), restricting the match to a permanent whose name differs from every
+	// other permanent its controller controls. It lowers to
+	// Selection.NameUniqueAmongControlled.
+	NameUniqueAmongControlled bool `json:",omitempty"`
 }
 
 // TargetCardinalitySyntax is an inclusive target-count range.

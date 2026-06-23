@@ -1049,6 +1049,12 @@ type CompiledSelector struct {
 	// Selection.PowerLessThanSource / Selection.PowerGreaterThanSource.
 	PowerLessThanSource    bool
 	PowerGreaterThanSource bool
+	// NameUniqueAmongControlled requires the matched permanent's name to differ
+	// from every other permanent its controller controls ("target enchantment
+	// you control that doesn't have the same name as another permanent you
+	// control", Yenna, Redtooth Regent). It lowers to
+	// Selection.NameUniqueAmongControlled.
+	NameUniqueAmongControlled bool
 	// InclusiveOneOfEach records that the selection joined two or more singular
 	// articled card nouns with "and/or" ("a Saga card and/or a land card"),
 	// meaning up to one card of each named type may be chosen rather than a
@@ -2587,6 +2593,11 @@ const (
 	// is legendary, ..."). At runtime SourceAttachedPermanentReference() resolves
 	// this through the source's AttachedTo link.
 	ReferenceBindingSourceAttached
+	// ReferenceBindingCreatedToken binds "the token" in a resolving condition to
+	// a token a prior effect in the same ability just created (Yenna, Redtooth
+	// Regent: "If the token is an Aura, ..."). At runtime the lowering resolves
+	// this through the linked object the creating effect published.
+	ReferenceBindingCreatedToken
 )
 
 // CompiledReference records a source-spanned reference and its bound referent.
