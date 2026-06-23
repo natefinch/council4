@@ -909,6 +909,9 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 		return game.SearchSpec{}, false
 	}
 	var filter game.Selection
+	if len(selector.Alternatives) > 0 {
+		return searchSpecForAlternatives(selector)
+	}
 	filter.ColorsAny = slices.Clone(selector.ColorsAny())
 	filter.Colorless = selector.Colorless
 	spec.Name = selector.RequiredName
@@ -1006,6 +1009,45 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 			types.Mountain,
 			types.Forest,
 		}
+	}
+	spec.Filter = filter
+	return spec, true
+}
+
+// searchSpecForAlternatives lowers a disjunctive search selector (one whose
+// sides parsed into Alternatives) into a SearchSpec whose filter is a
+// Selection.AnyOf of the per-side filters. The parent selector carries only the
+// alternatives, so it must bear no flat type, supertype, subtype, color, name,
+// or numeric constraint that AnyOf could not preserve, and each side must lower
+// to a plain filter with no name or X-bounded mana value. It fails closed
+// otherwise so an unrepresentable disjunction is never silently dropped.
+func searchSpecForAlternatives(selector compiler.CompiledSelector) (game.SearchSpec, bool) {
+	if selector.Kind != compiler.SelectorUnknown ||
+		len(selector.RequiredTypesAny()) != 0 ||
+		len(selector.Supertypes()) != 0 ||
+		len(selector.ExcludedSupertypes()) != 0 ||
+		len(selector.SubtypesAny()) != 0 ||
+		len(selector.ExcludedSubtypes()) != 0 ||
+		len(selector.ColorsAny()) != 0 ||
+		selector.Colorless ||
+		selector.RequiredName != "" ||
+		selector.BasicLandType ||
+		selector.MatchManaValue ||
+		selector.MatchPower ||
+		selector.MatchToughness {
+		return game.SearchSpec{}, false
+	}
+	var spec game.SearchSpec
+	var filter game.Selection
+	for i := range selector.Alternatives {
+		altSpec, ok := searchSpecForSelector(selector.Alternatives[i])
+		if !ok {
+			return game.SearchSpec{}, false
+		}
+		if altSpec.Name != "" || altSpec.MaxManaValueFromX {
+			return game.SearchSpec{}, false
+		}
+		filter.AnyOf = append(filter.AnyOf, altSpec.Filter)
 	}
 	spec.Filter = filter
 	return spec, true

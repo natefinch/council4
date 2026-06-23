@@ -76,6 +76,9 @@ func lowerChapterAbility(
 	for _, keyword := range ability.Content.Keywords {
 		spans = append(spans, keyword.Span)
 	}
+	for i := range ability.Content.Conditions {
+		spans = append(spans, ability.Content.Conditions[i].Span)
+	}
 	for _, reminder := range syntax.Reminders {
 		spans = append(spans, reminder.Span)
 	}
@@ -90,6 +93,7 @@ func lowerChapterAbility(
 			effects:    len(ability.Content.Effects),
 			keywords:   len(ability.Content.Keywords),
 			references: len(ability.Content.References),
+			conditions: len(ability.Content.Conditions),
 		},
 		sourceSpans: spans,
 	}, nil

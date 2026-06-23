@@ -576,7 +576,8 @@ func analyzeSearchClause(effect *EffectSyntax) searchClauseAnalysis {
 	rest = rest[len(consumed):]
 
 	noun := ""
-	if strings.HasPrefix(rest, "land card with a basic land type") {
+	switch {
+	case strings.HasPrefix(rest, "land card with a basic land type"):
 		if effect.Selection.Kind != SelectionLand {
 			return searchClauseAnalysis{detail: unsupportedSearchFilterDetail(rest), sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 		}
@@ -591,7 +592,16 @@ func analyzeSearchClause(effect *EffectSyntax) searchClauseAnalysis {
 			return searchClauseAnalysis{detail: unsupportedSearchFilterDetail(rest), sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 		}
 		noun = "land card with a basic land type"
-	} else {
+		if plural {
+			noun += "s"
+		}
+	case len(effect.Selection.Alternatives) > 0:
+		disjunction, ok := canonicalSearchDisjunctionNoun(effect.Selection, rest, plural)
+		if !ok {
+			return searchClauseAnalysis{detail: unsupportedSearchFilterDetail(rest), sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
+		}
+		noun = disjunction
+	default:
 		filter, ok := canonicalSearchFilter(effect.Selection)
 		if !ok {
 			return searchClauseAnalysis{detail: unsupportedSearchFilterDetail(rest), sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
@@ -600,9 +610,9 @@ func analyzeSearchClause(effect *EffectSyntax) searchClauseAnalysis {
 		if filter != "" {
 			noun = filter + " card"
 		}
-	}
-	if plural {
-		noun += "s"
+		if plural {
+			noun += "s"
+		}
 	}
 	if effect.Selection.RequiredName != "" {
 		noun += " named " + effect.Selection.RequiredName
@@ -988,6 +998,44 @@ func searchCharacteristicRider(characteristic string, bound compare.Int) (string
 // creature", "Dragon creature", "Rebel permanent"). An optional "with mana value
 // N or less" or "with power/toughness N or less/greater" rider is reconstructed
 // by the caller, not here.
+// canonicalSearchDisjunctionNoun reconstructs the noun phrase of a two-sided
+// disjunctive search filter ("creature or basic land card", "basic land card or
+// a Gate card") whose sides parsed into Selection.Alternatives. Each side
+// reconstructs through canonicalSearchFilter; the two are joined by "or" with
+// the trailing "card[s]" placed after one or both sides, matching the variant
+// Oracle wordings. The candidate whose joined form prefixes the source text is
+// returned so the reconstruction stays byte-exact; it fails closed when no
+// candidate matches or a side is not an expressible filter.
+func canonicalSearchDisjunctionNoun(sel SelectionSyntax, rest string, plural bool) (string, bool) {
+	if len(sel.Alternatives) != 2 {
+		return "", false
+	}
+	first, ok := canonicalSearchFilter(sel.Alternatives[0])
+	if !ok || first == "" {
+		return "", false
+	}
+	second, ok := canonicalSearchFilter(sel.Alternatives[1])
+	if !ok || second == "" {
+		return "", false
+	}
+	card := "card"
+	if plural {
+		card = "cards"
+	}
+	candidates := []string{
+		first + " or " + second + " " + card,
+		first + " " + card + " or " + second + " " + card,
+		first + " " + card + " or a " + second + " " + card,
+		first + " " + card + " or an " + second + " " + card,
+	}
+	for _, candidate := range candidates {
+		if strings.HasPrefix(rest, candidate) {
+			return candidate, true
+		}
+	}
+	return "", false
+}
+
 func canonicalSearchFilter(sel SelectionSyntax) (string, bool) {
 	if sel.Controller != SelectionControllerAny ||
 		sel.All || sel.Another || sel.Other || sel.Attacking || sel.Blocking ||
