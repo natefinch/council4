@@ -679,6 +679,10 @@ func (p ShuffleLibrary) validatePrimitive(targets []TargetSpec, checkTargets boo
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p ShuffleGraveyardIntoLibrary) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
 func (p LookAtHand) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
@@ -791,6 +795,9 @@ func validateManaSpendRider(rider ManaSpendRider) error {
 }
 
 func (p AddCounter) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.ChooseOne && p.Group.Domain() == groupDomainNone {
+		return errors.New("add counter choosing one recipient requires a group")
+	}
 	if p.AllKinds {
 		if p.Group.Domain() != groupDomainNone {
 			return errors.New("add counter doubling every kind requires a single object, not a group")

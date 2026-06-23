@@ -348,6 +348,9 @@ func (r Renderer) renderAddCounter(ctx *renderCtx, value *game.AddCounter) (stri
 			return "", err
 		}
 		fields = append(fields, fmt.Sprintf("Group: %s,", group))
+		if value.ChooseOne {
+			fields = append(fields, "ChooseOne: true,")
+		}
 	} else {
 		object, err := r.renderObjectReference(value.Object)
 		if err != nil {
@@ -821,6 +824,16 @@ func (r Renderer) renderShuffleLibrary(value game.ShuffleLibrary) (string, error
 		return "", err
 	}
 	return structLit("game.ShuffleLibrary", []string{
+		fmt.Sprintf("Player: %s,", player),
+	}), nil
+}
+
+func (r Renderer) renderShuffleGraveyardIntoLibrary(value game.ShuffleGraveyardIntoLibrary) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.ShuffleGraveyardIntoLibrary", []string{
 		fmt.Sprintf("Player: %s,", player),
 	}), nil
 }

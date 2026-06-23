@@ -307,6 +307,39 @@ func lowerSourceSpellShuffleIntoLibrary(ctx contentCtx) (game.AbilityContent, bo
 	}}}.Ability(), true
 }
 
+// isExactControllerGraveyardShuffleIntoLibrary recognizes the exact "Shuffle
+// your graveyard into your library." resolution clause: a controller-scoped
+// shuffle whose graveyard source and library destination are typed and which
+// carries no targets or referents.
+func isExactControllerGraveyardShuffleIntoLibrary(effect *compiler.CompiledEffect) bool {
+	return effect.Exact &&
+		!effect.Negated &&
+		effect.Duration == compiler.DurationNone &&
+		effect.Kind == compiler.EffectShuffle &&
+		effect.Context == parser.EffectContextController &&
+		effect.FromZone == zone.Graveyard &&
+		effect.ToZone == zone.Library &&
+		len(effect.Targets) == 0 &&
+		len(effect.References) == 0
+}
+
+// lowerControllerGraveyardShuffleIntoLibrary lowers "Shuffle your graveyard into
+// your library." (The Mending of Dominaria chapter III) to a single
+// shuffle-graveyard-into-library instruction targeting the controller.
+func lowerControllerGraveyardShuffleIntoLibrary(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		!isExactControllerGraveyardShuffleIntoLibrary(&ctx.content.Effects[0]) {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.ShuffleGraveyardIntoLibrary{Player: game.ControllerReference()},
+	}}}.Ability(), true
+}
+
 func lowerPlayerRuleEffect(ctx contentCtx, kind game.RuleEffectKind) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	keywordsValid := len(ctx.content.Keywords) == 0

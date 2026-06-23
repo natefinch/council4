@@ -2144,7 +2144,47 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 	return recipient + rider, true
 }
 
-// groupSubtypeListWords renders a recipient's subtype noun list. A single
+// exactSingularChosenPermanentRecipientText reconstructs the recipient text for a
+// non-target single-choice counter recipient ("a creature you control",
+// "another creature you control", Ajani Fells the Godsire chapter II). It reuses
+// the group recipient assembly and swaps the "each" determiner for the singular
+// article, so every filter the group form supports (types, colors, controller,
+// keyword qualifiers) is supported here too. A genuine group ("each …", All set)
+// is left to exactGroupDamagePermanentRecipientText.
+func exactSingularChosenPermanentRecipientText(selection SelectionSyntax) (string, bool) {
+	if selection.All {
+		return "", false
+	}
+	singular := selection.Another || selection.Other
+	probe := selection
+	probe.Another = false
+	probe.Other = false
+	group, ok := exactGroupDamagePermanentRecipientText(probe)
+	if !ok {
+		return "", false
+	}
+	rest, ok := strings.CutPrefix(group, "each ")
+	if !ok {
+		return "", false
+	}
+	if singular {
+		return "another " + rest, true
+	}
+	return singularArticleFor(rest) + " " + rest, true
+}
+
+func singularArticleFor(phrase string) string {
+	if phrase == "" {
+		return "a"
+	}
+	switch phrase[0] {
+	case 'a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U':
+		return "an"
+	default:
+		return "a"
+	}
+}
+
 // subtype is its own noun ("each Goblin you control"). Two subtypes join with
 // "and/or" ("each Merfolk and/or Knight you control"); three or more form a
 // comma-separated list closed by "and" ("each Pest, Bat, Insect, Snake, and

@@ -1171,7 +1171,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			MoveCountersAll:           kind == EffectMoveCounters && moveAllCountersClause(clause),
 			MoveCountersDistribute:    kind == EffectMoveCounters && moveCountersDistributeClause(clause),
 			MoveThoseCounters:         kind == EffectPut && moveThoseCountersClause(clause),
-			FromZone:                  firstZone(atoms, span, ZoneRoleFrom),
+			FromZone:                  effectFromZone(kind, clause, atoms, span, toZone),
 			ToZone:                    toZone,
 			Destination:               parseEffectDestination(ownership),
 			EntersTapped:              effectWordsAtAny(ownership, "battlefield", "tapped"),
@@ -1250,6 +1250,7 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	if effect.Kind == EffectDestroy && exactMassEachEffectSyntax(effect, "Destroy each ") {
 		effect.Selection.All = true
 	}
+	effect.CounterRecipientSingleChoice = effect.Exact && counterPlacementSingleChoiceRecipient(effect)
 	effect.TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(effect)
 	effect.TokenCopyOfReference = exactCreateCopyTokenReferenceEffectSyntax(effect)
 	effect.TokenCopyOfTriggeringSet = exactCreateCopyTokenTriggeringSetEffectSyntax(effect)

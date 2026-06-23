@@ -624,6 +624,7 @@ func TestExactSourceSpellShuffleIntoLibraryAccepts(t *testing.T) {
 	}{
 		{"Green Sun's Zenith", "Shuffle Green Sun's Zenith into its owner's library."},
 		{"Beacon of Destruction", "Shuffle Beacon of Destruction into its owner's library."},
+		{"The Mending of Dominaria", "Shuffle your graveyard into your library."},
 	}
 	for _, tc := range cases {
 		if !shuffleSelfIntoLibraryExact(t, tc.cardName, tc.source) {
@@ -639,7 +640,6 @@ func TestExactSourceSpellShuffleIntoLibraryFailsClosed(t *testing.T) {
 		source   string
 	}{
 		{"Foo", "Shuffle target creature into its owner's library."},
-		{"Foo", "Shuffle your graveyard into your library."},
 	}
 	for _, tc := range cases {
 		if shuffleSelfIntoLibraryExact(t, tc.cardName, tc.source) {

@@ -1868,6 +1868,21 @@ func firstZone(atoms Atoms, span shared.Span, role ZoneRole) zone.Type {
 	return result
 }
 
+// effectFromZone resolves an effect's origin zone. It prefers an explicit "from
+// <zone>" atom. When none exists, a shuffle whose direct object is a graveyard
+// and whose destination is a library ("shuffle your graveyard into your
+// library") draws its source from the graveyard, which carries no "from"
+// preposition and is therefore not tagged as a ZoneRoleFrom atom.
+func effectFromZone(kind EffectKind, clause []shared.Token, atoms Atoms, span shared.Span, toZone zone.Type) zone.Type {
+	if from := firstZone(atoms, span, ZoneRoleFrom); from != zone.None {
+		return from
+	}
+	if kind == EffectShuffle && toZone == zone.Library && graveyardZonePhrase(clause) {
+		return zone.Graveyard
+	}
+	return zone.None
+}
+
 func firstEffectSymbol(tokens []shared.Token) string {
 	for _, token := range tokens {
 		if token.Kind == shared.Symbol {
