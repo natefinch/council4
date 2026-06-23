@@ -118,6 +118,12 @@ type ContinuousEffect struct {
 	TextFrom string
 	TextTo   string
 
+	// SetName replaces the affected object's name at LayerText ("becomes a ...
+	// creature named Fenric", CR 613.1c). An empty value leaves the name
+	// unchanged. The legend rule and name-matching predicates read the resulting
+	// effective name.
+	SetName string
+
 	SetSupertypes    []types.Super
 	AddSupertypes    []types.Super
 	RemoveSupertypes []types.Super

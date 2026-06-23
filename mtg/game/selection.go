@@ -394,6 +394,7 @@ func (p TargetPredicate) Selection() Selection {
 		NonToken:               p.NonToken,
 
 		NameUniqueAmongControlled: p.NameUniqueAmongControlled,
+		Name:                      p.RequiredName,
 	}
 	if p.PermanentTypesConjunctive {
 		selection.RequiredTypes = p.PermanentTypes

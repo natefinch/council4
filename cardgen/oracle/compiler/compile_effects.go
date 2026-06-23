@@ -148,6 +148,22 @@ func polymorphColors(colors []parser.Color) []color.Color {
 	return result
 }
 
+// polymorphSupertypes converts the parser's added polymorph supertypes
+// ("legendary") to runtime supertypes, dropping any unrecognized supertype. The
+// parser only yields supertypes recognized from atoms, so a well-formed
+// named-become polymorph never drops a supertype here.
+func polymorphSupertypes(supertypes []parser.Supertype) []types.Super {
+	result := make([]types.Super, 0, len(supertypes))
+	for _, parserSupertype := range supertypes {
+		runtimeSupertype, ok := compilerSupertype(parserSupertype)
+		if !ok {
+			continue
+		}
+		result = append(result, runtimeSupertype)
+	}
+	return result
+}
+
 // compileConditions builds the semantic conditions for an ability or mode from
 // the parser's pre-segmented condition clauses. The parser owns introducer
 // recognition, clause segmentation, and rendering; the compiler consumes each
@@ -316,6 +332,9 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				PolymorphSubtypes:      slices.Clone(syntax.PolymorphSubtypes),
 				PolymorphBasePower:     syntax.PolymorphBasePower,
 				PolymorphBaseToughness: syntax.PolymorphBaseToughness,
+				PolymorphName:          syntax.PolymorphName,
+				PolymorphSupertypes:    polymorphSupertypes(syntax.PolymorphSupertypes),
+				PolymorphPermanent:     syntax.PolymorphPermanent,
 
 				EntersWithCounters:        syntax.EntersWithCounters,
 				EntersWithCountersGroup:   syntax.EntersWithCountersGroup,

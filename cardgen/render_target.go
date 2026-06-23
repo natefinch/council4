@@ -249,6 +249,9 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 	if predicate.NameUniqueAmongControlled {
 		fields = append(fields, "NameUniqueAmongControlled: true,")
 	}
+	if predicate.RequiredName != "" {
+		fields = append(fields, fmt.Sprintf("RequiredName: %q,", predicate.RequiredName))
+	}
 	if len(fields) == 0 {
 		return "", false, nil
 	}

@@ -680,11 +680,10 @@ func (s *selectionSubject) name() (string, bool) {
 		if s.permanent != nil && s.permanent.FaceDown {
 			return "", false
 		}
-		def, ok := permanentCardDef(s.g, s.permanent)
-		if !ok {
+		if _, ok := permanentCardDef(s.g, s.permanent); !ok {
 			return "", false
 		}
-		return def.Name, true
+		return permanentEffectiveName(s.g, s.permanent), true
 	case subjectEventPermanent:
 		def, ok := s.eventPermanentCardDef()
 		if !ok {

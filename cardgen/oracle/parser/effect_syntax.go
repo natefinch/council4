@@ -975,6 +975,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseTributeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseBecomeCopyEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePolymorphEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseNamedBecomePolymorphEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseBecomeTypeEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawDoublingReplacement(sentence, tokens, atoms) },
@@ -4749,6 +4750,112 @@ func parsePolymorphEffect(sentence Sentence, tokens []shared.Token, atoms Atoms)
 		PolymorphSubtypes:      list.subtypes,
 		PolymorphBasePower:     basePT.power,
 		PolymorphBaseToughness: basePT.toughness,
+	}
+	return []EffectSyntax{effect}, true
+}
+
+// parseNamedBecomePolymorphEffect recognizes the permanent named-become
+// polymorph "<target subject> becomes a N/N [legendary] [<color>*] <subtype>
+// creature named <Name> and loses all abilities." (The Curse of Fenric II). The
+// subject selector before "becomes" is left in the sentence for the target
+// machinery to extract. The body must set a literal base power/toughness, at
+// least one creature subtype, an explicit name, and lose all abilities; the
+// change is permanent. Any other shape — a leading duration, no name, no
+// power/toughness, an "in addition" rider, a non-creature card type, or a
+// quoted granted ability — fails closed so unrelated "becomes" wordings keep
+// their own recognizers.
+func parseNamedBecomePolymorphEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	body := semanticEffectTokens(tokens)
+	if len(body) == 0 || body[len(body)-1].Kind != shared.Period {
+		return nil, false
+	}
+	inner := body[:len(body)-1]
+	becomeIndex := -1
+	for i := 1; i < len(inner); i++ {
+		if equalWord(inner[i], "becomes") {
+			becomeIndex = i
+			break
+		}
+	}
+	if becomeIndex < 1 {
+		return nil, false
+	}
+	if len(inner) < becomeIndex+5 ||
+		!equalWord(inner[len(inner)-4], "and") ||
+		!equalWord(inner[len(inner)-3], "loses") ||
+		!equalWord(inner[len(inner)-2], "all") ||
+		!equalWord(inner[len(inner)-1], "abilities") {
+		return nil, false
+	}
+	mid := inner[becomeIndex+1 : len(inner)-4]
+	cursor := 0
+	if staticWordsAt(mid, cursor, "a") || staticWordsAt(mid, cursor, "an") {
+		cursor++
+	}
+	if cursor+3 > len(mid) ||
+		mid[cursor].Kind != shared.Integer ||
+		mid[cursor+1].Kind != shared.Slash ||
+		mid[cursor+2].Kind != shared.Integer {
+		return nil, false
+	}
+	power, err := strconv.Atoi(mid[cursor].Text)
+	if err != nil {
+		return nil, false
+	}
+	toughness, err := strconv.Atoi(mid[cursor+2].Text)
+	if err != nil {
+		return nil, false
+	}
+	cursor += 3
+	var supertypes []Supertype
+	for cursor < len(mid) {
+		super, ok := atoms.SupertypeAt(mid[cursor].Span)
+		if !ok {
+			break
+		}
+		supertypes = append(supertypes, super)
+		cursor++
+	}
+	list, next, ok := parseStaticCharacteristicList(mid, cursor, len(mid), atoms)
+	if !ok || len(list.subtypes) == 0 {
+		return nil, false
+	}
+	for _, cardType := range list.cardTypes {
+		if cardType != CardTypeCreature {
+			return nil, false
+		}
+	}
+	cursor = next
+	if cursor >= len(mid) || !equalWord(mid[cursor], "named") {
+		return nil, false
+	}
+	nameTokens := mid[cursor+1:]
+	if len(nameTokens) == 0 {
+		return nil, false
+	}
+	for _, token := range nameTokens {
+		if equalWord(token, "with") {
+			return nil, false
+		}
+	}
+	name := joinedEffectText(nameTokens)
+	if name == "" {
+		return nil, false
+	}
+	effect := EffectSyntax{
+		Kind:                   EffectPolymorph,
+		Context:                EffectContextController,
+		Span:                   sentence.Span,
+		ClauseSpan:             sentence.Span,
+		Text:                   sentence.Text,
+		Tokens:                 append([]shared.Token(nil), body...),
+		PolymorphColors:        list.colors,
+		PolymorphSubtypes:      list.subtypes,
+		PolymorphBasePower:     power,
+		PolymorphBaseToughness: toughness,
+		PolymorphName:          name,
+		PolymorphSupertypes:    supertypes,
+		PolymorphPermanent:     true,
 	}
 	return []EffectSyntax{effect}, true
 }

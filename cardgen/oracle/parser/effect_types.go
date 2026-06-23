@@ -1697,6 +1697,15 @@ type EffectSyntax struct {
 	PolymorphSubtypes      []types.Sub `json:"-"`
 	PolymorphBasePower     int         `json:",omitempty"`
 	PolymorphBaseToughness int         `json:",omitempty"`
+	// PolymorphName, PolymorphSupertypes, and PolymorphPermanent carry the extra
+	// payload of the permanent named-become polymorph "<target> becomes a N/N
+	// [legendary] <subtype> creature named <Name> and loses all abilities." (The
+	// Curse of Fenric II). PolymorphName sets the creature's name, the supertypes
+	// are added (legendary), and the change is permanent rather than until end of
+	// turn. They are zero for the until-end-of-turn polymorph forms.
+	PolymorphName       string      `json:",omitempty"`
+	PolymorphSupertypes []Supertype `json:"-"`
+	PolymorphPermanent  bool        `json:",omitempty"`
 	// EntersAsCopyUntilEndOfTurn reports the temporary "become a copy of <filter>
 	// until end of turn" form of an EntersAsCopy replacement (Cursed Mirror),
 	// where the copy effect lasts until end of turn instead of as long as the

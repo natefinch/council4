@@ -159,4 +159,10 @@ type TargetPredicate struct {
 	// permanent you control", Yenna, Redtooth Regent). It mirrors
 	// Selection.NameUniqueAmongControlled and is enforced through Selection().
 	NameUniqueAmongControlled bool
+
+	// RequiredName, when non-empty, restricts the match to a permanent whose
+	// effective name equals it ("another target creature named Fenric", The
+	// Curse of Fenric III). It mirrors Selection.Name and is enforced through
+	// Selection().
+	RequiredName string
 }

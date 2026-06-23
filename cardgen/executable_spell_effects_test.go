@@ -1091,6 +1091,63 @@ func TestGenerateExecutableCardSourceFightAnotherTarget(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceFightSubtypeTarget covers a bare
+// creature-subtype fight target ("Target Mutant"): the subtype names a creature
+// even without the "creature" word, so the first fighter lowers to a creature
+// target carrying the subtype filter (The Curse of Fenric III).
+func TestGenerateExecutableCardSourceFightSubtypeTarget(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Mutant Brawl",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target Mutant fights target creature you don't control.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.Fight") {
+		t.Fatalf("source missing Fight primitive:\n%s", source)
+	}
+	if !strings.Contains(source, `Subtypes:       []types.Sub{types.Sub("Mutant")},`) {
+		t.Fatalf("source missing Mutant subtype filter:\n%s", source)
+	}
+}
+
+// TestGenerateExecutableCardSourceFightNamedTarget covers a "named <Name>" fight
+// target ("another target creature named Fenric"): the name lowers to a
+// RequiredName predicate so the second fighter must be the named creature (The
+// Curse of Fenric III).
+func TestGenerateExecutableCardSourceFightNamedTarget(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Named Brawl",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target creature you control fights another target creature named Fenric.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.Fight") {
+		t.Fatalf("source missing Fight primitive:\n%s", source)
+	}
+	if !strings.Contains(source, `RequiredName:   "Fenric",`) {
+		t.Fatalf("source missing RequiredName predicate:\n%s", source)
+	}
+	if !strings.Contains(source, "DistinctFromPriorTargets: true,") {
+		t.Fatalf("source missing distinct second target:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceFightOptionalSecondTarget(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

@@ -56,14 +56,24 @@ func lowerPolymorphContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 	default:
 	}
 	continuousEffects = append(continuousEffects, game.ContinuousEffect{
-		Layer:       game.LayerType,
-		SetTypes:    []types.Card{types.Creature},
-		SetSubtypes: slices.Clone(effect.PolymorphSubtypes),
+		Layer:         game.LayerType,
+		SetTypes:      []types.Card{types.Creature},
+		SetSubtypes:   slices.Clone(effect.PolymorphSubtypes),
+		AddSupertypes: slices.Clone(effect.PolymorphSupertypes),
 	})
+	if effect.PolymorphName != "" {
+		continuousEffects = append(continuousEffects, game.ContinuousEffect{
+			Layer:   game.LayerText,
+			SetName: effect.PolymorphName,
+		})
+	}
 	continuousEffects = append(continuousEffects, game.ContinuousEffect{
 		Layer:        game.LayerPowerToughnessSet,
 		SetPower:     opt.Val(game.PT{Value: effect.PolymorphBasePower}),
 		SetToughness: opt.Val(game.PT{Value: effect.PolymorphBaseToughness}),
 	})
+	if effect.PolymorphPermanent {
+		return continuousTargetMode(ctx.content.Targets[0], continuousEffects, game.DurationPermanent, unsupported)
+	}
 	return temporaryKeywordTargetMode(ctx.content.Targets[0], continuousEffects, unsupported)
 }
