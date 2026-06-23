@@ -34,6 +34,15 @@ func exactGraveyardReturnEffectSyntax(effect *EffectSyntax) bool {
 	prefix := "Return " + effect.Targets[0].Text
 	for _, suffix := range []string{
 		" to your hand.",
+		// An owner-relative hand destination ("to its owner's hand", the plural
+		// "to their owners' hands", or the opponent-graveyard "to their hand")
+		// returns a graveyard card the controller does not own (a card targeted
+		// "from a graveyard" or "from an opponent's graveyard"). The runtime
+		// MoveCard handler always routes a returned card to its own owner's hand,
+		// so these lower identically to the "to your hand." form.
+		" to its owner's hand.",
+		" to their owners' hands.",
+		" to their hand.",
 		" to the battlefield.",
 		" to the battlefield tapped.",
 		" to the battlefield under your control.",
@@ -88,7 +97,7 @@ func exactChosenGraveyardReturnEffectSyntax(effect *EffectSyntax, text string) b
 		len(sel.ExcludedColors) != 0 || len(sel.Alternatives) != 0 {
 		return false
 	}
-	noun, ok := graveyardCardNoun(sel)
+	noun, ok := graveyardCardNoun(sel, false)
 	if !ok {
 		return false
 	}
@@ -401,7 +410,7 @@ func exactGraveyardCardTargetSyntax(target *TargetSyntax) bool {
 	if !ok {
 		return false
 	}
-	noun, ok := graveyardCardNoun(sel)
+	noun, ok := graveyardCardNoun(sel, plural)
 	if !ok {
 		return false
 	}
@@ -458,9 +467,10 @@ func graveyardOwnerSuffix(controller SelectionController) (string, bool) {
 // graveyard-card noun, whether that noun is plural, and whether the cardinality
 // is one the round-trip represents. Single targets render "target " (or
 // "another target " for a self-exclusion); optional and multi-target counts reuse
-// multiTargetCardinalityPrefix for "up to one ", "up to <N> ", and "<N> ". It
-// fails closed for a self-exclusion combined with a multi-target count, which has
-// no canonical phrasing.
+// multiTargetCardinalityPrefix for "up to one ", "up to <N> ", and "<N> ". The
+// enumerated lower-bounded ranges "one or two" and "one, two, or three" render
+// their explicit count words. It fails closed for a self-exclusion combined with
+// a multi-target count, which has no canonical phrasing.
 func graveyardCardCardinalityPrefix(c TargetCardinalitySyntax, another bool) (prefix string, plural, ok bool) {
 	if c == (TargetCardinalitySyntax{Min: 1, Max: 1}) {
 		if another {
@@ -470,6 +480,12 @@ func graveyardCardCardinalityPrefix(c TargetCardinalitySyntax, another bool) (pr
 	}
 	if another {
 		return "", false, false
+	}
+	switch c {
+	case TargetCardinalitySyntax{Min: 1, Max: 2}:
+		return "one or two target ", true, true
+	case TargetCardinalitySyntax{Min: 1, Max: 3}:
+		return "one, two, or three target ", true, true
 	}
 	countPrefix, plural, ok := multiTargetCardinalityPrefix(c)
 	if !ok {
@@ -485,8 +501,10 @@ func graveyardCardCardinalityPrefix(c TargetCardinalitySyntax, another bool) (pr
 // accepts an optional single color qualifier (a single color, "colorless", or
 // "multicolored") followed by at most one type/subtype/permanent core, rendered
 // in canonical Oracle order, and fails closed for any combination it could not
-// reconstruct.
-func graveyardCardNoun(sel SelectionSyntax) (string, bool) {
+// reconstruct. A plural multi-target return joins a card-type union with the
+// "and/or" conjunction the Oracle templating uses for plural counts ("instant
+// and/or sorcery cards") rather than the singular "or".
+func graveyardCardNoun(sel SelectionSyntax, plural bool) (string, bool) {
 	colorPrefix, hasColor, ok := graveyardColorPrefix(sel)
 	if !ok {
 		return "", false
@@ -508,7 +526,7 @@ func graveyardCardNoun(sel SelectionSyntax) (string, bool) {
 	var core string
 	switch {
 	case hasTypes:
-		core, ok = graveyardCardTypeNoun(sel)
+		core, ok = graveyardCardTypeNoun(sel, plural)
 		if !ok {
 			return "", false
 		}
@@ -582,8 +600,9 @@ func graveyardColorPrefix(sel SelectionSyntax) (prefix string, hasColor, ok bool
 // arrives as a generic SelectionCard whose RequiredTypesAny retains the exact
 // type, which lowering reproduces as a type-restricted card target. A union of
 // two or more types is carried explicitly by the compiler, so each member is
-// rendered from its card-type word and joined with " or ".
-func graveyardCardTypeNoun(sel SelectionSyntax) (string, bool) {
+// rendered from its card-type word and joined with " or " for a singular target
+// or " and/or " for a plural multi-target return.
+func graveyardCardTypeNoun(sel SelectionSyntax, plural bool) (string, bool) {
 	if len(sel.RequiredTypesAny) == 1 {
 		word, ok := cardTypeWord(sel.RequiredTypesAny[0])
 		if !ok {
@@ -613,7 +632,29 @@ func graveyardCardTypeNoun(sel SelectionSyntax) (string, bool) {
 		}
 		words = append(words, word)
 	}
-	return strings.Join(words, " or ") + " card", true
+	conjunction := "or"
+	if plural {
+		conjunction = "and/or"
+	}
+	return serialList(words, conjunction) + " card", true
+}
+
+// serialList renders a list of words with the canonical Oracle conjunction: two
+// words join as "A <conj> B", and three or more use the serial-comma form
+// "A, B, <conj> C". The conjunction is "or" for a singular target or "and/or"
+// for a plural multi-target count.
+func serialList(words []string, conjunction string) string {
+	switch len(words) {
+	case 0:
+		return ""
+	case 1:
+		return words[0]
+	case 2:
+		return words[0] + " " + conjunction + " " + words[1]
+	default:
+		head := strings.Join(words[:len(words)-1], ", ")
+		return head + ", " + conjunction + " " + words[len(words)-1]
+	}
 }
 
 // graveyardManaValueClause renders the canonical " with mana value N or less"
