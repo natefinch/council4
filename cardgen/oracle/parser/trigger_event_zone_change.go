@@ -233,6 +233,32 @@ func parsePutIntoZoneChange(tokens, destination []shared.Token, plural bool) zon
 	if prefix, ok := stripTokenSuffix(destination, "from", "anywhere"); ok {
 		return parsePutIntoFromAnywhereZoneChange(tokens, prefix, plural)
 	}
+	// "put into <zone> from <origin zone>" constrains both endpoints, e.g.
+	// "into your graveyard from your library" (a mill that puts land cards into
+	// your graveyard). The origin zone is parsed by parseOriginZone; only
+	// recognized origins (graveyard, hand, exile, library) reach this branch,
+	// so an unrecognized origin like "the battlefield" falls through to the
+	// default battlefield handling below.
+	if before, after, ok := splitTokensOnFirstWord(destination, "from"); ok && len(before) > 0 && len(after) > 0 {
+		if originZone, _, ok := parseOriginZone(after); ok {
+			destZone, player, ok := parseDestinationZone(before)
+			if !ok || destZone.Kind == TriggerEventZoneBattlefield {
+				return zoneChangeResult{}
+			}
+			span := shared.SpanOf(tokens)
+			return matchedZoneChange(&parsedZoneChange{
+				kind: TriggerEventZoneChange{Kind: TriggerEventZoneChangeMoved, Span: span},
+				zone: TriggerEventZoneContext{
+					Span:          span,
+					MatchFromZone: true,
+					FromZone:      originZone,
+					MatchToZone:   true,
+					ToZone:        destZone,
+				},
+				player: player,
+			}, plural)
+		}
+	}
 	if prefix, ok := stripTokenSuffix(destination, "from", "the", "battlefield"); ok {
 		destination = prefix
 	}
@@ -358,6 +384,14 @@ func parseOriginZone(tokens []shared.Token) (TriggerEventZone, TriggerPlayerSele
 			playerSelectorFromKind(TriggerPlayerSelectorYou, shared.SpanOf(tokens)), true
 	case tokenWordsEqual(tokens, "exile"):
 		return sourceSpannedZone(TriggerEventZoneExile, tokens), TriggerPlayerSelector{}, true
+	case tokenWordsEqual(tokens, "your", "library"):
+		return sourceSpannedZone(TriggerEventZoneLibrary, tokens),
+			playerSelectorFromKind(TriggerPlayerSelectorYou, shared.SpanOf(tokens)), true
+	case tokenWordsEqual(tokens, "a", "library"):
+		return sourceSpannedZone(TriggerEventZoneLibrary, tokens), TriggerPlayerSelector{}, true
+	case tokenWordsEqual(tokens, "an", "opponent's", "library"):
+		return sourceSpannedZone(TriggerEventZoneLibrary, tokens),
+			playerSelectorFromKind(TriggerPlayerSelectorOpponent, shared.SpanOf(tokens)), true
 	default:
 		return TriggerEventZone{}, TriggerPlayerSelector{}, false
 	}
@@ -392,6 +426,15 @@ func parseDestinationZone(tokens []shared.Token) (TriggerEventZone, TriggerPlaye
 
 func sourceSpannedZone(kind TriggerEventZoneKind, tokens []shared.Token) TriggerEventZone {
 	return triggerEventZone(kind, shared.SpanOf(tokens))
+}
+
+func splitTokensOnFirstWord(tokens []shared.Token, word string) (before, after []shared.Token, found bool) {
+	for i := range tokens {
+		if equalWord(tokens[i], word) {
+			return tokens[:i], tokens[i+1:], true
+		}
+	}
+	return nil, nil, false
 }
 
 func parseZoneChangeSubject(

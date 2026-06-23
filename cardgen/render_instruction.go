@@ -841,6 +841,9 @@ func (r Renderer) renderMassReturnFromGraveyard(ctx *renderCtx, value game.MassR
 	if value.ControlledByOwner {
 		fields = append(fields, "ControlledByOwner: true,")
 	}
+	if value.FromTriggerBatch {
+		fields = append(fields, "FromTriggerBatch: true,")
+	}
 	return structLit("game.MassReturnFromGraveyard", fields), nil
 }
 

@@ -648,6 +648,10 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		if keyword.Power <= 0 {
 			v.add(faceName, appendPath(path, "Power"), CardDefIssueInvalidKeywordAbility, "saddle power must be positive")
 		}
+	case CrewKeyword:
+		if keyword.Power <= 0 {
+			v.add(faceName, appendPath(path, "Power"), CardDefIssueInvalidKeywordAbility, "crew power must be positive")
+		}
 	case nil:
 		v.add(faceName, path, CardDefIssueInvalidKeywordAbility, "keyword ability is nil")
 	default:

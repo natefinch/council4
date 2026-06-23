@@ -55,7 +55,7 @@ func lowerEnterTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary, detail)
 	}
 	body, bodySyntax, triggerOptional := prepared.body, prepared.syntax, prepared.optional
-	content, diagnostic := lowerTriggerBodyContent(cardName, body.Content, body.Optional, &bodySyntax, pattern.Event)
+	content, diagnostic := lowerTriggerBodyContent(cardName, body.Content, body.Optional, &bodySyntax, pattern)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}
@@ -130,7 +130,7 @@ func lowerLifeDamageTrigger(
 		body.Content,
 		body.Optional,
 		&bodySyntax,
-		pattern.Event,
+		pattern,
 	)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
@@ -150,6 +150,9 @@ func lowerLifeDamageTrigger(
 
 func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 1 {
+		return game.AbilityContent{}, false
+	}
+	if ctx.triggerOneOrMore {
 		return game.AbilityContent{}, false
 	}
 	if !referencesBindTo(ctx.content.References, compiler.ReferenceBindingEventCard, 0) {
@@ -179,6 +182,10 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 			return game.AbilityContent{}, false
 		}
 	case compiler.EffectExile:
+	case compiler.EffectPut:
+		if effect.ToZone != zone.Battlefield || ctx.optional {
+			return game.AbilityContent{}, false
+		}
 	case compiler.EffectCast:
 		if effect.FromZone != zone.Graveyard ||
 			effect.Duration != compiler.DurationUntilYourNextTurn ||
@@ -226,6 +233,13 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 				Duration: game.DurationUntilEndOfYourNextTurn,
 			},
 		}}}.Ability(), true
+	case compiler.EffectPut:
+		return game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.PutOnBattlefield{
+				Source:      game.CardBattlefieldSource(eventCard),
+				EntryTapped: effect.EntersTapped,
+			},
+		}}}.Ability(), true
 	case compiler.EffectExile:
 		return game.Mode{Sequence: []game.Instruction{{
 			Primitive: game.MoveCard{
@@ -237,6 +251,52 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 	default:
 		return game.AbilityContent{}, false
 	}
+}
+
+// lowerEventCardBatchReanimation lowers a coalesced one-or-more zone-change
+// trigger's "put/return them onto the battlefield" clause into a batch
+// reanimation of exactly the triggering cards. The plural "them" binds to the
+// whole simultaneous batch (ReferenceBindingEventCard under a OneOrMore
+// trigger), which the singular CardReferenceEvent of lowerEventCardEffect cannot
+// represent, so it emits a MassReturnFromGraveyard restricted to the trigger
+// batch (Hedge Shredder).
+func lowerEventCardBatchReanimation(ctx contentCtx) (game.AbilityContent, bool) {
+	if !ctx.triggerOneOrMore || ctx.triggerToZone != zone.Graveyard || ctx.optional {
+		return game.AbilityContent{}, false
+	}
+	if len(ctx.content.Effects) != 1 {
+		return game.AbilityContent{}, false
+	}
+	if !referencesBindTo(ctx.content.References, compiler.ReferenceBindingEventCard, 0) {
+		return game.AbilityContent{}, false
+	}
+	reference := ctx.content.References[0]
+	if reference.Kind != compiler.ReferencePronoun ||
+		reference.Pronoun != compiler.ReferencePronounThem {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Negated || effect.DelayedTiming != 0 || effect.ToZone != zone.Battlefield {
+		return game.AbilityContent{}, false
+	}
+	switch effect.Kind {
+	case compiler.EffectPut, compiler.EffectReturn:
+	default:
+		return game.AbilityContent{}, false
+	}
+	consumed := ctx
+	consumed.content.References = nil
+	if consumed.content.Unconsumed() {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.MassReturnFromGraveyard{
+			Player:           game.ControllerReference(),
+			Destination:      zone.Battlefield,
+			EntryTapped:      effect.EntersTapped,
+			FromTriggerBatch: true,
+		},
+	}}}.Ability(), true
 }
 
 type enterInterveningCondition struct {
@@ -737,7 +797,7 @@ func lowerPermanentZoneChangeTrigger(
 			"the executable source backend does not support this permanent zone-change trigger body")
 	}
 	body, bodySyntax, triggerOptional := prepared.body, prepared.syntax, prepared.optional
-	content, diagnostic := lowerTriggerBodyContent(cardName, body.Content, body.Optional, &bodySyntax, pattern.Event)
+	content, diagnostic := lowerTriggerBodyContent(cardName, body.Content, body.Optional, &bodySyntax, pattern)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}
@@ -864,7 +924,7 @@ func lowerCastTrigger(
 		body.Content,
 		body.Optional,
 		&bodySyntax,
-		pattern.Event,
+		pattern,
 	)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic

@@ -382,11 +382,10 @@ func triggerReferenceBindsEventCard(
 	reference CompiledReference,
 	effects []CompiledEffect,
 ) bool {
-	if trigger.OneOrMore ||
-		(trigger.Event != TriggerEventPermanentDied &&
-			(trigger.Event != TriggerEventZoneChanged ||
-				!trigger.MatchToZone ||
-				trigger.ToZone != TriggerZoneGraveyard)) {
+	if trigger.Event != TriggerEventPermanentDied &&
+		(trigger.Event != TriggerEventZoneChanged ||
+			!trigger.MatchToZone ||
+			trigger.ToZone != TriggerZoneGraveyard) {
 		return false
 	}
 	for i := range effects {
@@ -395,8 +394,19 @@ func triggerReferenceBindsEventCard(
 			continue
 		}
 		switch effect.Kind {
-		case EffectReturn, EffectExile, EffectCast:
+		case EffectPut:
+			// "Put it/them onto the battlefield" reanimates the triggering
+			// card(s); a coalesced one-or-more trigger binds the whole batch.
+			return effect.ToZone == zone.Battlefield
+		case EffectReturn:
+			// "Return them to the battlefield" likewise reanimates the batch;
+			// any other singular return binds the lone event card.
+			if trigger.OneOrMore {
+				return effect.ToZone == zone.Battlefield
+			}
 			return true
+		case EffectExile, EffectCast:
+			return !trigger.OneOrMore
 		default:
 			return false
 		}

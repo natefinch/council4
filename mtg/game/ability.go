@@ -98,10 +98,13 @@ const (
 	// recognized, grantable simple keyword so cards that have or grant banding
 	// are representable. Banding's combat damage-assignment-control nuance is not
 	// simulated by the deterministic combat engine (which has no per-player
-	// damage-assignment choice point); the keyword is therefore inert in combat
-	// rather than silently mis-assigning damage. Appended at the end of the enum
-	// so existing keyword ordinals are unchanged.
+	// Appended at the end of the enum so existing keyword ordinals are unchanged.
 	Banding
+	// Crew (CR 702.122) is the Vehicles activated keyword. It is modeled as a
+	// grantable keyword identity carried by CrewKeyword inside the activated
+	// ability built by CrewActivatedAbility. Appended at the end of the enum so
+	// existing keyword ordinals are unchanged.
+	Crew
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.

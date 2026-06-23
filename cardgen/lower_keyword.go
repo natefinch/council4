@@ -216,6 +216,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordActivatedLowering(&saddleAbility, ability, syntax), true, nil
 	}
+	if crewAbility, ok, diag := lowerCrewAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordActivatedLowering(&crewAbility, ability, syntax), true, nil
+	}
 	if eternalizeAbility, ok, diag := lowerEternalizeAbility(creatureSubtypes, ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -1019,6 +1025,45 @@ func lowerSaddleAbility(
 		)
 	}
 	return game.SaddleActivatedAbility(keyword.Integer), true, nil
+}
+
+// lowerCrewAbility lowers a Crew N keyword to its canonical activated ability
+// (CR 702.122): "Tap any number of creatures you control with total power N or
+// more: This Vehicle becomes an artifact creature until end of turn." It mirrors
+// lowerSaddleAbility: only an isolated, integer-parameterized Crew keyword is
+// supported.
+func lowerCrewAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.ActivatedAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordCrew {
+		return game.ActivatedAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterInteger ||
+		keyword.Integer < 1 ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Crew ability",
+			"the executable source backend supports only exact Crew with a positive integer",
+		)
+	}
+	if !keywordOnlyCovered(syntax, keyword) {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Crew ability",
+			"the executable source backend supports only exact Crew with a positive integer",
+		)
+	}
+	return game.CrewActivatedAbility(keyword.Integer), true, nil
 }
 
 // landcyclingKeywordKinds maps each typed landcycling keyword to the library

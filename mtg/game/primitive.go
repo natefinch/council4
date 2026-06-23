@@ -727,6 +727,13 @@ type ReturnFromGraveyard struct {
 // When ControlledByOwner is set, each card entering the battlefield does so
 // under its own owner's control rather than Player's ("... under their owners'
 // control").
+//
+// FromTriggerBatch restricts the moved cards to those that triggered the
+// enclosing one-or-more zone-change ability, modeling "Whenever one or more
+// <filter> cards are put into your graveyard ..., put them onto the
+// battlefield" (Hedge Shredder). "Them" denotes exactly the coalesced batch
+// of triggering cards rather than the whole graveyard, so only cards still in
+// the graveyard whose IDs appear in that batch move.
 type MassReturnFromGraveyard struct {
 	Player            PlayerReference
 	Selection         Selection
@@ -734,6 +741,7 @@ type MassReturnFromGraveyard struct {
 	EntryTapped       bool
 	SourceGroup       PlayerGroupReference
 	ControlledByOwner bool
+	FromTriggerBatch  bool
 }
 
 // MassReanimationExchange resolves the symmetric mass-reanimation exchange "Each

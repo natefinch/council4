@@ -52,6 +52,10 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 		reflect.DeepEqual(*ability, game.SaddleActivatedAbility(power)) {
 		return fmt.Sprintf("game.SaddleActivatedAbility(%d)", power), nil
 	}
+	if power, ok := game.ActivatedBodyCrewPower(ability); ok &&
+		reflect.DeepEqual(*ability, game.CrewActivatedAbility(power)) {
+		return fmt.Sprintf("game.CrewActivatedAbility(%d)", power), nil
+	}
 	if manaCost, subtypes, ok := game.ActivatedBodyEternalizeParams(ability); ok &&
 		reflect.DeepEqual(*ability, game.EternalizeActivatedBody(manaCost, subtypes...)) {
 		return r.renderEternalizeFamilyAbility(ctx, "game.EternalizeActivatedBody", manaCost, subtypes)
