@@ -105,10 +105,11 @@ const (
 	PrimitiveShuffleGraveyardIntoLibrary
 	PrimitiveGroupSelfPowerDamage
 	PrimitiveBecomeMonarch
+	PrimitiveRingTempts
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveBecomeMonarch) + 1
+const primitiveKindCount = int(PrimitiveRingTempts) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount

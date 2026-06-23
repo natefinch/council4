@@ -176,7 +176,7 @@ func TestActivatedAbilityCapabilityDiagnostics(t *testing.T) {
 		{name: "cost reference to prior object", oracleText: "Tap an untapped creature you control, Remove a +1/+1 counter from it: Draw a card.", summary: "unsupported activation references"},
 		{name: "cost reference after source and prior object", oracleText: "Remove a charge counter from this artifact, Tap an untapped creature you control, Remove a +1/+1 counter from it: Draw a card.", summary: "unsupported activation references"},
 		{name: "modes", oracleText: "{1}: Choose any number —\n• Draw a card.\n• You gain 3 life.", summary: "unsupported activation modes"},
-		{name: "partially understood mode", oracleText: "{1}: Choose one —\n• Gain control of target creature until end of turn. The Ring tempts you.\n• You gain 3 life.", summary: "unsupported gain-control spell"},
+		{name: "partially understood mode", oracleText: "{1}: Choose one —\n• Gain control of target creature until end of turn. Goad that creature.\n• You gain 3 life.", summary: "unsupported gain-control spell"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

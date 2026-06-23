@@ -107,6 +107,19 @@ type Player struct {
 	// (0 = not tempted, 1–4 = ring levels).
 	RingLevel int
 
+	// RingBearerID is the ObjectID of the permanent this player has designated
+	// as their Ring-bearer (CR 701.51), or the zero ID when they have no
+	// Ring-bearer. ObjectID identifies the specific battlefield permanent (it is
+	// unique per game object and nonzero for tokens), so the designation does not
+	// carry across zone changes. The Ring's level abilities apply to this
+	// permanent.
+	RingBearerID id.ID
+
+	// RingTemptedCount is the number of times the Ring has tempted this player
+	// this game. Cards reference it ("the Ring has tempted you two or more times
+	// this game").
+	RingTemptedCount int
+
 	// EnergyCounters tracks the player's energy counter total (Kaladesh
 	// mechanic).
 	EnergyCounters int

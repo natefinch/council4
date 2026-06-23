@@ -951,6 +951,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parsePlayFromLibraryTopEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseAdditionalCombatPhaseEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseRollDieEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parseRingTemptsEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseNoMaximumHandSizeForRestOfGameEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseCantCastSpellsEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseGroupMustAttackEffect(sentence, tokens) },
@@ -2922,6 +2923,42 @@ func parseRollDieEffect(sentence Sentence, tokens []shared.Token) ([]EffectSynta
 		Tokens:     append([]shared.Token(nil), tokens...),
 		Context:    EffectContextController,
 		DieSides:   sides,
+		Exact:      true,
+	}}, true
+}
+
+// parseRingTemptsEffect recognizes the fixed designation effect "The Ring
+// tempts you." (CR 701.51). The wording is fully fixed — the resolving
+// controller gets the Ring emblem, advances it one level, and chooses a
+// creature they control as their Ring-bearer — so the recognizer matches the
+// whole sentence and emits a controller-scoped EffectRingTempts carrying no
+// targets or amounts. Any other wording fails closed and flows through the
+// general effect parser.
+func parseRingTemptsEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	expected := []string{"the", "ring", "tempts", "you"}
+	if len(words) != len(expected) {
+		return nil, false
+	}
+	for i, word := range expected {
+		if !equalWord(words[i], word) {
+			return nil, false
+		}
+	}
+	return []EffectSyntax{{
+		Kind:       EffectRingTempts,
+		Span:       sentence.Span,
+		ClauseSpan: sentence.Span,
+		VerbSpan:   words[2].Span,
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		Context:    EffectContextController,
 		Exact:      true,
 	}}, true
 }
