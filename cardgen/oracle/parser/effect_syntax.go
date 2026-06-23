@@ -955,6 +955,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseRingTemptsEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseNoMaximumHandSizeForRestOfGameEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseCantCastSpellsEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parseSpellCostModifierEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseGroupMustAttackEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseSpellsCantBeCounteredEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseChangeTargetRetargetEffect(sentence, tokens, atoms) },
@@ -4102,6 +4103,8 @@ func legacyEffectKindAt(tokens []shared.Token, index int) EffectKind {
 	case kind == EffectCast && castSpellsFromLibraryTopAt(tokens, index):
 		return EffectUnknown
 	case kind == EffectCast && manaSpentToCastPhraseAt(tokens, index):
+		return EffectUnknown
+	case kind == EffectCast && spellCostModifierCastAt(tokens, index):
 		return EffectUnknown
 	case kind == EffectCounter && !counterVerbAt(tokens, index):
 		return EffectUnknown

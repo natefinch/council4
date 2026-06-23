@@ -1260,6 +1260,7 @@ const (
 	EffectCastAsThoughFlash
 	EffectPlayFromLibraryTop
 	EffectCantCastSpells
+	EffectSpellCostModifier
 	EffectWinGame
 	EffectPreventDamage
 	EffectSpellsCantBeCountered
@@ -1824,6 +1825,18 @@ type CompiledEffect struct {
 	// ExcludedSpellTypes filters; both are empty for the unfiltered form.
 	CantCastSpellsRequiredTypes []types.Card
 	CantCastSpellsExcludedTypes []types.Card
+	// SpellCostModifierCaster, SpellCostModifierAmount, SpellCostModifierIncrease,
+	// SpellCostModifierRequiredTypes, and SpellCostModifierExcludedTypes mirror
+	// the parser fields for an EffectSpellCostModifier clause: which player's
+	// spells are affected, the generic amount they cost more or less, whether the
+	// modifier is an increase, and the optional single-card-type required/excluded
+	// filter. Lowering reads them to build the duration-bounded
+	// RuleEffectCostModifier rule effect.
+	SpellCostModifierCaster        parser.SpellCostCasterKind
+	SpellCostModifierAmount        int
+	SpellCostModifierIncrease      bool
+	SpellCostModifierRequiredTypes []types.Card
+	SpellCostModifierExcludedTypes []types.Card
 	// PreventDamageTo and PreventDamageBy mirror the parser flags for an
 	// EffectPreventDamage clause, recording whether all combat damage dealt to
 	// and/or dealt by the referenced permanent is prevented for the turn.

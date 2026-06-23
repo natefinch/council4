@@ -732,6 +732,105 @@ func lowerGroupMustAttack(ctx contentCtx) (game.AbilityContent, *shared.Diagnost
 	}}}.Ability(), nil
 }
 
+// lowerSpellCostModifier lowers the one-shot, duration-bounded resolving spell
+// cost modifier "[<type filter>] spells <caster> cast cost {N} more/less to
+// cast" scoped by a recognized finite duration ("Artifact spells you cast this
+// turn cost {1} less to cast.", Armor Wars chapter II; "Until your next turn,
+// spells your opponents cast cost {1} more to cast.", Tax Collector) to an
+// ApplyRule that creates a RuleEffectCostModifier rule effect for that lifetime.
+// The caster phrase selects the affected-player relation; the optional single
+// card-type required filter narrows the modifier to that spell type. An excluded
+// card-type filter ("noncreature") fails closed because the runtime spell cost
+// modifier has no negative card-type filter. Targets, references, conditions,
+// modes, keywords, a negation, or an unsupported duration fail closed.
+func lowerSpellCostModifier(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.SpellCostModifierAmount <= 0 ||
+		len(effect.SpellCostModifierExcludedTypes) != 0 ||
+		len(effect.SpellCostModifierRequiredTypes) > 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, unsupportedSpellCostModifierDiagnostic(ctx)
+	}
+	duration, ok := resolvingSpellCostModifierDuration(effect.Duration)
+	if !ok {
+		return game.AbilityContent{}, unsupportedSpellCostModifierDiagnostic(ctx)
+	}
+	affected, ok := spellCostModifierAffectedPlayer(effect.SpellCostModifierCaster)
+	if !ok {
+		return game.AbilityContent{}, unsupportedSpellCostModifierDiagnostic(ctx)
+	}
+	modifier := game.CostModifier{Kind: game.CostModifierSpell}
+	if effect.SpellCostModifierIncrease {
+		modifier.GenericIncrease = effect.SpellCostModifierAmount
+	} else {
+		modifier.GenericReduction = effect.SpellCostModifierAmount
+	}
+	if len(effect.SpellCostModifierRequiredTypes) == 1 {
+		modifier.MatchCardType = true
+		modifier.CardType = effect.SpellCostModifierRequiredTypes[0]
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.ApplyRule{
+			RuleEffects: []game.RuleEffect{{
+				Kind:           game.RuleEffectCostModifier,
+				AffectedPlayer: affected,
+				CostModifier:   modifier,
+			}},
+			Duration: duration,
+		},
+	}}}.Ability(), nil
+}
+
+// resolvingSpellCostModifierDuration maps the supported finite durations of a
+// resolving spell cost modifier to their runtime effect durations. A permanent
+// or otherwise unsupported duration fails closed: a resolving cost modifier is
+// always temporary.
+func resolvingSpellCostModifierDuration(duration compiler.DurationKind) (game.EffectDuration, bool) {
+	switch duration {
+	case compiler.DurationThisTurn:
+		return game.DurationThisTurn, true
+	case compiler.DurationUntilEndOfTurn:
+		return game.DurationUntilEndOfTurn, true
+	case compiler.DurationUntilYourNextTurn:
+		return game.DurationUntilYourNextTurn, true
+	case compiler.DurationUntilEndOfYourNextTurn:
+		return game.DurationUntilEndOfYourNextTurn, true
+	default:
+		return game.DurationPermanent, false
+	}
+}
+
+// spellCostModifierAffectedPlayer maps a resolving spell cost modifier's caster
+// phrase to the rule effect's affected-player relation: the controller's spells
+// ("you cast"), the controller's opponents' spells ("your opponents cast"), or
+// every player's spells (an absent caster phrase).
+func spellCostModifierAffectedPlayer(caster parser.SpellCostCasterKind) (game.PlayerRelation, bool) {
+	switch caster {
+	case parser.SpellCostCasterController:
+		return game.PlayerYou, true
+	case parser.SpellCostCasterOpponents:
+		return game.PlayerOpponent, true
+	case parser.SpellCostCasterAll:
+		return game.PlayerAny, true
+	default:
+		return game.PlayerAny, false
+	}
+}
+
+func unsupportedSpellCostModifierDiagnostic(ctx contentCtx) *shared.Diagnostic {
+	return contentDiagnostic(
+		ctx,
+		"unsupported spell cost modifier",
+		"the executable source backend supports only a duration-bounded resolving spell cost modifier with at most one required card-type filter",
+	)
+}
+
 func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic, bool) {
 	switch ctx.content.Effects[0].Kind {
 	case compiler.EffectLifeTotalCantChange:
@@ -757,6 +856,9 @@ func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.
 		return content, diagnostic, true
 	case compiler.EffectCantCastSpells:
 		content, diagnostic := lowerCantCastSpells(ctx)
+		return content, diagnostic, true
+	case compiler.EffectSpellCostModifier:
+		content, diagnostic := lowerSpellCostModifier(ctx)
 		return content, diagnostic, true
 	case compiler.EffectSpellsCantBeCountered:
 		content, diagnostic := lowerSpellsCantBeCountered(ctx)
