@@ -382,9 +382,10 @@ func handleMoveCounters(r *effectResolver, prim game.MoveCounters) effectResolve
 }
 
 // chooseCounterKindToMove resolves which single counter kind a "Move a counter"
-// effect moves: the lone kind present on the source, or the controller's choice
-// when the source carries counters of more than one kind. The candidate kinds
-// are presented in counter-kind order so the prompt is deterministic.
+// or "Remove a counter" effect acts on: the lone kind present on the source, or
+// the controller's choice when the source carries counters of more than one
+// kind. The candidate kinds are presented in counter-kind order so the prompt is
+// deterministic.
 func (r *effectResolver) chooseCounterKindToMove(counters counter.Set) (counter.Kind, bool) {
 	var kinds []counter.Kind
 	for kind, amount := range counters.All() {
@@ -409,7 +410,7 @@ func (r *effectResolver) chooseCounterKindToMove(counters counter.Set) (counter.
 	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
 		Kind:       game.ChoiceResolution,
 		Player:     r.obj.Controller,
-		Prompt:     "Choose a kind of counter to move",
+		Prompt:     "Choose a kind of counter",
 		Options:    options,
 		MinChoices: 1,
 		MaxChoices: 1,
@@ -896,7 +897,15 @@ func handleRemoveCounter(r *effectResolver, prim game.RemoveCounter) effectResol
 		return res
 	}
 	if permanent, ok := r.resolveObject(prim.Object); ok {
-		permanent.Counters.Remove(prim.CounterKind, res.amount)
+		kind := prim.CounterKind
+		if prim.ChooseKind {
+			chosen, ok := r.chooseCounterKindToMove(permanent.Counters)
+			if !ok {
+				return res
+			}
+			kind = chosen
+		}
+		permanent.Counters.Remove(kind, res.amount)
 		res.succeeded = true
 	}
 	return res

@@ -1130,9 +1130,45 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectTapOrUntap
 	case removeFromCombatVerbAt(tokens, index):
 		return EffectRemoveFromCombat
+	case removeCounterVerbAt(tokens, index):
+		return EffectRemoveCounter
 	default:
 		return kind
 	}
+}
+
+// removeCounterVerbAt reports whether the verb at index begins the resolving
+// effect "Remove <amount> [<kind> ]counter(s) from <object>." (Ferropede,
+// "Whenever this creature deals combat damage to a player, you may remove a
+// counter from target permanent."). The verb "remove" is otherwise used only in
+// counter-removal costs (parsed before the colon) and the "Remove ... from
+// combat" effect, so the classification is anchored on the "remove"/"removes"
+// verb followed by a "counter"/"counters" word and a "from" clause that is not
+// "from combat". The exact-syntax matcher reconstructs the supported single
+// recognized-target forms; richer shapes (mass "all counters", dynamic counts)
+// stay non-exact and fail closed.
+func removeCounterVerbAt(tokens []shared.Token, index int) bool {
+	if !equalWord(tokens[index], "remove") && !equalWord(tokens[index], "removes") {
+		return false
+	}
+	if removeFromCombatClauseStartsAt(tokens, index+1) >= 0 {
+		return false
+	}
+	sawCounter := false
+	for i := index + 1; i < len(tokens); i++ {
+		if equalWord(tokens[i], "counter") || equalWord(tokens[i], "counters") {
+			sawCounter = true
+		}
+	}
+	if !sawCounter {
+		return false
+	}
+	for i := index + 1; i+1 < len(tokens); i++ {
+		if equalWord(tokens[i], "from") {
+			return true
+		}
+	}
+	return false
 }
 
 // removeFromCombatVerbAt reports whether the verb at index begins the resolving

@@ -1049,6 +1049,11 @@ type RemoveCounter struct {
 	Object      ObjectReference
 	Group       GroupReference
 	CounterKind counter.Kind
+	// ChooseKind removes a counter of a kind the resolving controller chooses
+	// from among the kinds present on the object, modeling the kind-unspecified
+	// "remove a counter from <permanent>" wording (Ferropede). When false the
+	// fixed CounterKind is removed. It is ignored for Group removals.
+	ChooseKind bool
 }
 
 // Transform transforms the referenced permanent.

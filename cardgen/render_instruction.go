@@ -416,6 +416,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", errors.New("render: internal error: MoveCounters kind has unexpected concrete type")
 		}
 		return r.renderMoveCounters(ctx, &value)
+	case game.PrimitiveRemoveCounter:
+		value, ok := primitive.(game.RemoveCounter)
+		if !ok {
+			return "", errors.New("render: internal error: RemoveCounter kind has unexpected concrete type")
+		}
+		return r.renderRemoveCounter(ctx, &value)
 	case game.PrimitiveModifyPT:
 		value, ok := primitive.(game.ModifyPT)
 		if !ok {

@@ -486,6 +486,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectPhaseOut
 	case parser.EffectProliferate:
 		return EffectProliferate
+	case parser.EffectRemoveCounter:
+		return EffectRemoveCounter
 	case parser.EffectRegenerate:
 		return EffectRegenerate
 	case parser.EffectReorderLibraryTop:

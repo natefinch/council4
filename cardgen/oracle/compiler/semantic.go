@@ -1277,6 +1277,13 @@ const (
 	// ApplyContinuous at LayerType. Added last so existing kinds keep their wire
 	// values.
 	EffectBecomeType
+	// EffectRemoveCounter removes a fixed number of counters from a single
+	// recognized target permanent ("Remove a counter from target permanent.",
+	// Ferropede; "Remove a counter from target nonland permanent.", Thrull
+	// Parasite). It lowers to a RemoveCounter primitive; the kind-unspecified "a
+	// counter" form removes a counter of a kind the controller chooses. Added
+	// last so existing kinds keep their wire values.
+	EffectRemoveCounter
 )
 
 // DurationKind identifies common continuous-effect durations.
