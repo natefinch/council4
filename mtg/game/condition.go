@@ -169,6 +169,14 @@ type Condition struct {
 	// TurnState.CombatPhasesThisTurn, holding only while that count is 1, so the
 	// extra-combat insertion it gates fires once per turn rather than looping.
 	FirstCombatPhaseOfTurn bool
+
+	// ControllerControlsGreatestPowerCreature is satisfied when the context
+	// controller controls a creature whose power is greater than or equal to
+	// every creature's power on the battlefield ("if you control the creature
+	// with the greatest power or tied for the greatest power"; Summon: Fenrir
+	// chapter III). It holds when the controller has the sole highest-power
+	// creature or is tied for highest, and is false when no creatures exist.
+	ControllerControlsGreatestPowerCreature bool
 }
 
 // ControlPlayerScope selects which players' battlefields a control-count
@@ -248,7 +256,8 @@ func (c *Condition) Empty() bool {
 		c.SpellXAtLeast == 0 &&
 		c.ControllerGraveyardCardOfTypeCountAtLeast == 0 &&
 		len(c.ControllerControlsNamed) == 0 &&
-		!c.FirstCombatPhaseOfTurn
+		!c.FirstCombatPhaseOfTurn &&
+		!c.ControllerControlsGreatestPowerCreature
 }
 
 // EventHistoryWindow selects which turn's event log an EventHistoryCondition

@@ -535,6 +535,18 @@ type ReplacementEffect struct {
 	// It is zero for every printed or unscoped replacement, which match by their
 	// other filters alone.
 	AffectedObjectID id.ID
+
+	// AffectedCardID restricts the replacement to events about the permanent
+	// created when a single card instance enters the battlefield, identified by
+	// the card's stable instance ID. A permanent spell gains a fresh object ID as
+	// it resolves onto the battlefield, so an object-ID binding taken from the
+	// stack object cannot match the entering permanent; the card instance ID is
+	// preserved across the stack-to-battlefield move and identifies it. It backs a
+	// one-shot replacement created for a future-cast spell ("When you next cast a
+	// creature spell this turn, that creature enters with an additional +1/+1
+	// counter on it." — Summon: Fenrir chapter II). It is zero for every
+	// replacement that is not bound to one specific card instance.
+	AffectedCardID id.ID
 }
 
 // EntryTypeChoiceKey is the ChoiceKey under which an entry-time creature-type

@@ -1339,6 +1339,9 @@ func replacementEffectMatchesEventWithSource(g *game.Game, replacement *game.Rep
 	if replacement.AffectedObjectID != 0 && replacement.AffectedObjectID != event.PermanentID {
 		return false
 	}
+	if replacement.AffectedCardID != 0 && replacement.AffectedCardID != event.CardID {
+		return false
+	}
 	controller := replacementCurrentController(g, replacement)
 	if replacement.ControllerFilter != game.TriggerControllerAny && !triggerControllerMatches(controller, replacement.ControllerFilter, event.Controller) {
 		return false

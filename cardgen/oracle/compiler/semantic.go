@@ -653,6 +653,14 @@ const (
 	// extra-combat insertion against TurnState.CombatPhasesThisTurn so the loop
 	// fires once per turn.
 	ConditionPredicateFirstCombatPhaseOfTurn
+	// ConditionPredicateControlsGreatestPowerCreature is satisfied when the
+	// context controller controls a creature whose power is greater than or equal
+	// to every other creature's power on the battlefield ("if you control the
+	// creature with the greatest power or tied for the greatest power"; Summon:
+	// Fenrir chapter III). It holds when the controller has the sole
+	// highest-power creature or is tied for highest, and is false when no
+	// creatures exist.
+	ConditionPredicateControlsGreatestPowerCreature
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard

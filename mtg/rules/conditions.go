@@ -184,6 +184,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.FirstCombatPhaseOfTurn {
 		matches = matches && g.Turn.CombatPhasesThisTurn <= 1
 	}
+	if cond.ControllerControlsGreatestPowerCreature {
+		matches = matches && controllerControlsGreatestPowerCreature(g, ctx)
+	}
 	if cond.Negate {
 		return !matches
 	}
@@ -299,6 +302,36 @@ func controllerCreaturePowerDiversity(g *game.Game, ctx conditionContext) int {
 		}
 	}
 	return len(distinct)
+}
+
+// controllerControlsGreatestPowerCreature reports whether the context controller
+// controls a creature whose power equals the greatest power among all creatures
+// on the battlefield ("you control the creature with the greatest power or tied
+// for the greatest power"). It is false when no creatures with a defined power
+// exist.
+func controllerControlsGreatestPowerCreature(g *game.Game, ctx conditionContext) bool {
+	greatest := 0
+	haveGreatest := false
+	controllerGreatest := 0
+	haveControllerGreatest := false
+	for _, permanent := range g.Battlefield {
+		if permanent.PhasedOut {
+			continue
+		}
+		values := permanentValuesForCondition(g, permanent, ctx)
+		if !slices.Contains(values.types, types.Creature) || !values.powerOK {
+			continue
+		}
+		if !haveGreatest || values.power > greatest {
+			greatest = values.power
+			haveGreatest = true
+		}
+		if values.controller == ctx.controller && (!haveControllerGreatest || values.power > controllerGreatest) {
+			controllerGreatest = values.power
+			haveControllerGreatest = true
+		}
+	}
+	return haveGreatest && haveControllerGreatest && controllerGreatest >= greatest
 }
 
 func permanentValuesForCondition(g *game.Game, permanent *game.Permanent, ctx conditionContext) permanentEffectiveValues {

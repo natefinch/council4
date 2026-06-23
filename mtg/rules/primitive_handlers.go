@@ -1298,7 +1298,13 @@ func handleCreateReplacement(r *effectResolver, prim game.CreateReplacement) eff
 	if prim.Duration != game.DurationPermanent {
 		replacement.Duration = prim.Duration
 	}
-	if prim.Object.Kind() != game.ObjectReferenceNone {
+	if prim.Object.Kind() == game.ObjectReferenceEventStackObject {
+		cardID, ok := triggeringSpellCardID(r, prim.Object)
+		if !ok {
+			return effectResolved{accepted: true, succeeded: false}
+		}
+		replacement.AffectedCardID = cardID
+	} else if prim.Object.Kind() != game.ObjectReferenceNone {
 		permanent, ok := r.resolveObject(prim.Object)
 		if !ok || permanent == nil {
 			return effectResolved{accepted: true, succeeded: false}
@@ -1307,6 +1313,25 @@ func handleCreateReplacement(r *effectResolver, prim game.CreateReplacement) eff
 	}
 	r.game.ReplacementEffects = append(r.game.ReplacementEffects, replacement)
 	return effectResolved{accepted: true, succeeded: true}
+}
+
+// triggeringSpellCardID resolves the stable card instance ID of the spell named
+// by an event-stack-object reference ("that creature"/"that spell") on a
+// spell-cast trigger. A future-cast enters-with-counters replacement binds to
+// this card ID rather than an object ID because a permanent spell gains a fresh
+// object ID as it resolves onto the battlefield, so only the preserved card
+// instance ID identifies the entering permanent. It fails closed when the
+// reference does not denote a card-backed spell still on the stack.
+func triggeringSpellCardID(r *effectResolver, ref game.ObjectReference) (id.ID, bool) {
+	stackObjectID, ok := copyStackObjectSourceID(r.obj, ref)
+	if !ok {
+		return 0, false
+	}
+	stackObject, ok := stackObjectByID(r.game, stackObjectID)
+	if !ok || stackObject.Kind != game.StackSpell || stackObject.SourceID == 0 {
+		return 0, false
+	}
+	return stackObject.SourceID, true
 }
 
 func applyTypedContinuousEffects(g *game.Game, obj *game.StackObject, permanent *game.Permanent, templates []game.ContinuousEffect, duration game.EffectDuration) bool {

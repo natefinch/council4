@@ -258,6 +258,9 @@ func lowerContent(
 		return lowerOrderedEffectSequence(cardName, ctx, syntax)
 	}
 	if len(ctx.content.Effects) == 1 {
+		if content, ok := lowerNextCastEntersWithCountersReplacement(ctx); ok {
+			return content, nil
+		}
 		if content, ok := lowerStandaloneReorderLibraryTop(ctx); ok {
 			return content, nil
 		}
