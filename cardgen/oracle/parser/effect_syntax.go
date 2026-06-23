@@ -930,6 +930,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseDevourEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseTributeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseBecomeCopyEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parsePolymorphEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseBecomeTypeEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawDoublingReplacement(sentence, tokens, atoms) },
@@ -4614,6 +4615,85 @@ func parseBecomeTypeEffect(sentence Sentence, tokens []shared.Token) ([]EffectSy
 		Tokens:                   append([]shared.Token(nil), body...),
 		BecomeTypeAddTypes:       addTypes,
 		BecomeTypeUntilEndOfTurn: true,
+	}
+	return []EffectSyntax{effect}, true
+}
+
+// parsePolymorphEffect recognizes the targeted resolving polymorph effect
+// "Until end of turn, target <creature> loses all abilities and becomes a
+// [colorless] <color>* <subtype> [creature] with base power and toughness N/N."
+// (Turn to Frog, Snakeform, Gift of Tusks; CR 613). The leading "until end of
+// turn" duration is required; the target selector before "loses" is left in the
+// sentence for the target machinery to extract. The body must lose all
+// abilities and set both a creature subtype and a literal base power/toughness;
+// any other shape (no duration, a no-type "has base power and toughness" body,
+// trailing riders such as "and gains flying", a permanent duration, or a
+// non-creature card type) fails closed so those cards stay unsupported.
+func parsePolymorphEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	body := semanticEffectTokens(tokens)
+	if len(body) == 0 || body[len(body)-1].Kind != shared.Period {
+		return nil, false
+	}
+	inner := body[:len(body)-1]
+	remaining, duration := stripLeadingDurationClause(inner, atoms)
+	if duration != EffectDurationUntilEndOfTurn {
+		return nil, false
+	}
+	if len(remaining) == 0 || !equalWord(remaining[0], "target") {
+		return nil, false
+	}
+	loseIndex := -1
+	for i := 1; i+2 < len(remaining); i++ {
+		if equalWord(remaining[i], "loses") && equalWord(remaining[i+1], "all") &&
+			equalWord(remaining[i+2], "abilities") {
+			loseIndex = i
+			break
+		}
+	}
+	if loseIndex < 1 {
+		return nil, false
+	}
+	cursor := loseIndex + 3
+	if !staticWordsAt(remaining, cursor, "and", "becomes") {
+		return nil, false
+	}
+	cursor += 2
+	if staticWordsAt(remaining, cursor, "a") || staticWordsAt(remaining, cursor, "an") {
+		cursor++
+	}
+	var colorless bool
+	if staticWordsAt(remaining, cursor, "colorless") {
+		colorless = true
+		cursor++
+	}
+	list, next, ok := parseStaticCharacteristicList(remaining, cursor, len(remaining), atoms)
+	if !ok || len(list.subtypes) == 0 {
+		return nil, false
+	}
+	for _, cardType := range list.cardTypes {
+		if cardType != CardTypeCreature {
+			return nil, false
+		}
+	}
+	if !staticWordsAt(remaining, next, "with") {
+		return nil, false
+	}
+	basePT, ok := parseStaticBasePowerToughnessAt(remaining, next+1)
+	if !ok || basePT.next != len(remaining) {
+		return nil, false
+	}
+	effect := EffectSyntax{
+		Kind:                   EffectPolymorph,
+		Context:                EffectContextController,
+		Span:                   sentence.Span,
+		ClauseSpan:             sentence.Span,
+		Text:                   sentence.Text,
+		Tokens:                 append([]shared.Token(nil), body...),
+		PolymorphColors:        list.colors,
+		PolymorphColorless:     colorless,
+		PolymorphSubtypes:      list.subtypes,
+		PolymorphBasePower:     basePT.power,
+		PolymorphBaseToughness: basePT.toughness,
 	}
 	return []EffectSyntax{effect}, true
 }

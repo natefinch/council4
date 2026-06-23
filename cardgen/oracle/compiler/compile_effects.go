@@ -132,6 +132,21 @@ func runtimeColorFromParser(colorValue parser.Color) (color.Color, bool) {
 	}
 }
 
+// polymorphColors converts the parser's set polymorph colors to runtime colors,
+// dropping any unrecognized color. The parser only yields colors recognized from
+// atoms, so a well-formed EffectPolymorph never drops a color here.
+func polymorphColors(colors []parser.Color) []color.Color {
+	result := make([]color.Color, 0, len(colors))
+	for _, parserColor := range colors {
+		runtimeColor, ok := runtimeColorFromParser(parserColor)
+		if !ok {
+			continue
+		}
+		result = append(result, runtimeColor)
+	}
+	return result
+}
+
 // compileConditions builds the semantic conditions for an ability or mode from
 // the parser's pre-segmented condition clauses. The parser owns introducer
 // recognition, clause segmentation, and rendering; the compiler consumes each
@@ -293,6 +308,12 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 
 				BecomeTypeAddTypes:       slices.Clone(syntax.BecomeTypeAddTypes),
 				BecomeTypeUntilEndOfTurn: syntax.BecomeTypeUntilEndOfTurn,
+
+				PolymorphColors:        polymorphColors(syntax.PolymorphColors),
+				PolymorphColorless:     syntax.PolymorphColorless,
+				PolymorphSubtypes:      slices.Clone(syntax.PolymorphSubtypes),
+				PolymorphBasePower:     syntax.PolymorphBasePower,
+				PolymorphBaseToughness: syntax.PolymorphBaseToughness,
 
 				EntersWithCounters:        syntax.EntersWithCounters,
 				EntersWithCountersGroup:   syntax.EntersWithCountersGroup,

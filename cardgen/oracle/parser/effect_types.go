@@ -254,6 +254,15 @@ const (
 	// ordinary target for the target machinery. It lowers to an ApplyContinuous
 	// at LayerType that adds the types to the target for the recorded duration.
 	EffectBecomeType EffectKind = "EffectBecomeType"
+	// EffectPolymorph models a targeted resolving polymorph effect ("Until end of
+	// turn, target creature loses all abilities and becomes a <color> <subtype>
+	// with base power and toughness N/N.", Turn to Frog, Snakeform, Gift of
+	// Tusks). The set colors, creature subtype, and base power/toughness are
+	// carried in the Polymorph* fields; the targeted creature is left as an
+	// ordinary target for the target machinery. It lowers to an ApplyContinuous
+	// that removes all abilities and sets the creature's color, types, and base
+	// power/toughness until end of turn.
+	EffectPolymorph EffectKind = "EffectPolymorph"
 	// EffectDelayedTrigger models an event-based delayed triggered ability
 	// created for the rest of the turn ("Whenever you cast a spell this turn,
 	// ...", Showdown of the Skalds chapter II) or for the next matching event
@@ -1622,6 +1631,17 @@ type EffectSyntax struct {
 	// EffectBecomeType targeted type-change. It is always set for the recognized
 	// Liquimetal form; a permanent form is not yet recognized.
 	BecomeTypeUntilEndOfTurn bool `json:",omitempty"`
+	// Polymorph* carry the structured payload of an EffectPolymorph resolving
+	// polymorph ("Until end of turn, target creature loses all abilities and
+	// becomes a <color> <subtype> with base power and toughness N/N."). The
+	// effect always removes all abilities and sets the base power/toughness; the
+	// colors and subtypes SET the creature's color and creature type. The
+	// duration is always until end of turn for the recognized form.
+	PolymorphColors        []Color     `json:"-"`
+	PolymorphColorless     bool        `json:",omitempty"`
+	PolymorphSubtypes      []types.Sub `json:"-"`
+	PolymorphBasePower     int         `json:",omitempty"`
+	PolymorphBaseToughness int         `json:",omitempty"`
 	// EntersAsCopyUntilEndOfTurn reports the temporary "become a copy of <filter>
 	// until end of turn" form of an EntersAsCopy replacement (Cursed Mirror),
 	// where the copy effect lasts until end of turn instead of as long as the
