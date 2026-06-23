@@ -249,15 +249,15 @@ func TestLowerCounterAddedMinusOneTrigger(t *testing.T) {
 func TestLowerCounterAddedUnsupportedKindFailsClosed(t *testing.T) {
 	t.Parallel()
 	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
-		Name:       "Lore Watcher",
+		Name:       "Charge Watcher",
 		Layout:     "normal",
 		TypeLine:   "Creature — Human",
-		OracleText: "Whenever one or more lore counters are put on this creature, draw a card.",
+		OracleText: "Whenever one or more charge counters are put on this creature, draw a card.",
 		Power:      new("1"),
 		Toughness:  new("1"),
 	})
 	if len(diagnostics) == 0 {
-		t.Fatal("expected unsupported diagnostic for lore counter trigger")
+		t.Fatal("expected unsupported diagnostic for charge counter trigger")
 	}
 	if !strings.Contains(diagnostics[0].Summary, "unsupported") {
 		t.Fatalf("diagnostic summary = %q, want 'unsupported'", diagnostics[0].Summary)

@@ -1565,6 +1565,7 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 			(equalWord(token, "and") && end+1 < len(tokens) &&
 				(equalWord(tokens[end+1], "target") || equalWord(tokens[end+1], "targets"))) ||
 			(equalWord(token, "or") && end+1 < len(tokens) && orBackReferenceClauseFollowsAt(tokens, end+1)) ||
+			(equalWord(token, "or") && end+1 < len(tokens) && (equalWord(tokens[end+1], "remove") || equalWord(tokens[end+1], "removes"))) ||
 			(equalWord(token, "and") && end+1 < len(tokens) && effectWordKind(tokens[end+1]) != EffectUnknown) ||
 			(end > start && effectWordKind(token) != EffectUnknown) ||
 			(end > start && equalWord(token, "becomes")) ||

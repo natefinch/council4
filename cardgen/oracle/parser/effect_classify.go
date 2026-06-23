@@ -1160,6 +1160,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectRemoveFromCombat
 	case removeCounterVerbAt(tokens, index):
 		return EffectRemoveCounter
+	case ellipticalOrRemoveCounterAt(tokens, index):
+		return EffectRemoveCounter
 	default:
 		return kind
 	}
@@ -1197,6 +1199,51 @@ func removeCounterVerbAt(tokens []shared.Token, index int) bool {
 		}
 	}
 	return false
+}
+
+// ellipticalOrRemoveCounterAt reports whether the "remove" verb at index begins
+// the kind-elided counter removal alternative "...or remove <amount> from
+// <it/them>." that follows a counter-placement alternative in the same sentence
+// ("Put a lore counter on target Saga you control or remove one from it.",
+// Sigurd, Jarl of Ravensthorpe; "...put a charge counter on it or remove one
+// from it.", Immard). The placed counter's noun is elided after "remove", so the
+// ordinary removeCounterVerbAt — which anchors on an explicit "counter" noun —
+// does not classify it. The verb is recognized only as the second arm of an
+// "or" choice whose first arm already named a "counter", and only when a "from"
+// clause (not "from combat") follows without its own "counter" noun, so a
+// removal that does spell out its counter noun keeps flowing through
+// removeCounterVerbAt and no unrelated "remove" wording is captured.
+func ellipticalOrRemoveCounterAt(tokens []shared.Token, index int) bool {
+	if !equalWord(tokens[index], "remove") && !equalWord(tokens[index], "removes") {
+		return false
+	}
+	if index == 0 || !equalWord(tokens[index-1], "or") {
+		return false
+	}
+	priorCounter := false
+	for i := range index {
+		if equalWord(tokens[i], "counter") || equalWord(tokens[i], "counters") {
+			priorCounter = true
+			break
+		}
+	}
+	if !priorCounter {
+		return false
+	}
+	if removeFromCombatClauseStartsAt(tokens, index+1) >= 0 {
+		return false
+	}
+	fromIndex := -1
+	for i := index + 1; i+1 < len(tokens); i++ {
+		if equalWord(tokens[i], "counter") || equalWord(tokens[i], "counters") {
+			return false
+		}
+		if equalWord(tokens[i], "from") {
+			fromIndex = i
+			break
+		}
+	}
+	return fromIndex >= 0
 }
 
 // removeFromCombatVerbAt reports whether the verb at index begins the resolving

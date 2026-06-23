@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
 )
 
 // lowerOrAlternativeModal lowers a sentence-level "do A or B" body into a modal
@@ -93,6 +94,20 @@ func lowerOrBranchModes(
 	// held two effects; lowered in isolation it is a genuine standalone effect,
 	// so clear the flag as the other split-effect lowerers do.
 	effect.RequiresOrderedLowering = false
+	// A counter-removal alternative removes a counter "from it", where "it" is
+	// the single shared target the put alternative places a counter on. Its
+	// elided agent leaves it in a back-reference shape the standalone
+	// remove-counter lowerer does not model (it expects an explicit controller
+	// subject and its own target), so it is lowered directly here onto the shared
+	// target. The put alternative carries an explicit subject and lowers through
+	// the ordinary single-effect path.
+	if effect.Kind == compiler.EffectRemoveCounter {
+		mode, diagnostic := lowerOrRemoveCounterBranch(ctx, effect)
+		if diagnostic != nil {
+			return nil, diagnostic
+		}
+		return []game.Mode{mode}, nil
+	}
 	branchContent := ctx.content
 	branchContent.Effects = []compiler.CompiledEffect{effect}
 	branchContent.Targets = append([]compiler.CompiledTarget(nil), ctx.content.Targets...)
@@ -129,4 +144,71 @@ func lowerOrBranchModes(
 		modes[i].Targets = nil
 	}
 	return modes, nil
+}
+
+// lowerOrRemoveCounterBranch lowers the counter-removal alternative of a
+// put-or-remove counter modal ("...or remove one from it.") into a single
+// RemoveCounter instruction acting on the shared target (target permanent
+// reference 0). It reads the counter kind and amount from the compiled effect:
+// a named placeable kind removes that kind; the kind-elided "one" form removes
+// one counter of a controller-chosen kind. The per-mode target is declared so
+// the enclosing modal's shared-target stripping reattaches it, mirroring the put
+// alternative. It fails closed for a negated removal, a non-positive or dynamic
+// amount, a player-only or unsupported named kind, and the kind-elided plural
+// that has no single-choice resolution.
+func lowerOrRemoveCounterBranch(ctx contentCtx, effect compiler.CompiledEffect) (game.Mode, *shared.Diagnostic) {
+	if effect.Negated ||
+		!effect.Amount.Known ||
+		effect.Amount.Value < 1 {
+		return game.Mode{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	sharedSpec, ok := permanentTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.Mode{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	remove := game.RemoveCounter{
+		Amount: game.Fixed(effect.Amount.Value),
+		Object: game.TargetPermanentReference(0),
+	}
+	if effect.CounterKindKnown {
+		if !compiler.CounterKindPlacementSupported(effect.CounterKind) ||
+			effect.CounterKind.PlayerOnly() {
+			return game.Mode{}, unsupportedCounterPlacementDiagnostic(ctx)
+		}
+		remove.CounterKind = effect.CounterKind
+	} else if inherited, ok := ellipticalRemovedCounterKind(ctx); ok {
+		remove.CounterKind = inherited
+	} else {
+		if effect.Amount.Value != 1 {
+			return game.Mode{}, unsupportedCounterPlacementDiagnostic(ctx)
+		}
+		remove.ChooseKind = true
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{sharedSpec},
+		Sequence: []game.Instruction{{
+			Primitive: remove,
+		}},
+	}, nil
+}
+
+// ellipticalRemovedCounterKind returns the counter kind the put alternative
+// places when the remove alternative elides its counter noun ("...put a lore
+// counter on target Saga you control or remove one from it."). The elided "one"
+// denotes a counter of the kind just placed, so the removal inherits that kind
+// rather than offering the controller a choice. It returns ok=false when the put
+// alternative is not a single recognized, placeable, permanent counter kind, in
+// which case the caller falls back to the controller-chosen removal.
+func ellipticalRemovedCounterKind(ctx contentCtx) (counter.Kind, bool) {
+	if len(ctx.content.Effects) != 2 {
+		return counter.Kind(0), false
+	}
+	put := ctx.content.Effects[0]
+	if put.Kind != compiler.EffectPut ||
+		!put.CounterKindKnown ||
+		!compiler.CounterKindPlacementSupported(put.CounterKind) ||
+		put.CounterKind.PlayerOnly() {
+		return counter.Kind(0), false
+	}
+	return put.CounterKind, true
 }
