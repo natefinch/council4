@@ -315,6 +315,17 @@ func lowerOrderedEffectSequence(
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, sequenceClauseCategory(diagnostic))
 		}
 		mode := content.Modes[0]
+		// An inherited target that no prior clause owned (a bare "Choose target
+		// ..." sentence with no effect of its own) is first materialized here, so
+		// this clause consumes it. Inherited targets already recorded in
+		// oracleSpanToGameIdx were owned and counted by an earlier clause.
+		if allSharedTargets {
+			for _, t := range inheritedTargets {
+				if _, owned := oracleSpanToGameIdx[t.Span]; !owned {
+					consumedTargets++
+				}
+			}
+		}
 		newTargets, ok := applyTargetRemapping(
 			mode, allSharedTargets, mixedTargets,
 			inheritedTargets, clauseTargets,
@@ -3344,10 +3355,30 @@ func applyTargetRemapping(
 	m := mode
 	switch {
 	case len(m.Targets) > 0 && allSharedTargets:
-		rebaseOffset, ok := sharedTargetRebaseOffset(inherited, spanToIdx)
-		if !ok || !rebaseTargetedSequence(m.Sequence, rebaseOffset, cardTargetSpecsBefore(accum, rebaseOffset)) {
+		if rebaseOffset, ok := sharedTargetRebaseOffset(inherited, spanToIdx); ok {
+			if !rebaseTargetedSequence(m.Sequence, rebaseOffset, cardTargetSpecsBefore(accum, rebaseOffset)) {
+				return nil, false
+			}
+			break
+		}
+		// The inherited target is declared by a bare "Choose target ..."
+		// sentence that owns no effect of its own, so this clause is the first
+		// to materialize it ("Choose target creature you control. It deals
+		// damage equal to its power to each other creature."). Treat the clause
+		// as the target's owner: rebase its sequence to the next accumulated
+		// index, append its target specs, and record their indices so any later
+		// shared clause rebases to the same target.
+		if len(m.Targets) != len(inherited) {
 			return nil, false
 		}
+		gameStartIdx := len(accum)
+		if !rebaseTargetedSequence(m.Sequence, gameStartIdx, cardTargetSpecsBefore(accum, gameStartIdx)) {
+			return nil, false
+		}
+		for j, t := range inherited {
+			spanToIdx[t.Span] = gameStartIdx + j
+		}
+		accum = append(accum, m.Targets...)
 	case len(m.Targets) == 0 && allSharedTargets:
 		// A shared-target clause that owns no target spec still embeds the
 		// inherited antecedent's clause-local index in its primitives (e.g. a
