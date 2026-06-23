@@ -54,10 +54,10 @@ func TestManaSpentMatchesSpellsCast(t *testing.T) {
 	}}
 
 	deck := make([]*game.CardDef, 0, 99)
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		deck = append(deck, forest)
 	}
-	for i := 0; i < 49; i++ {
+	for range 49 {
 		deck = append(deck, bear)
 	}
 	config := game.PlayerConfig{Name: "Goldfish", Commander: commander, Deck: deck}
