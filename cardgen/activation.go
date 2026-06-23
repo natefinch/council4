@@ -249,6 +249,12 @@ func channelActivationSupported(ability compiler.CompiledAbility, functionZone z
 }
 
 func activationReferencesSupported(content compiler.AbilityContent) bool {
+	if _, ok := recognizeConditionalDestination(content); ok {
+		// The conditional-destination lowering binds the searched card through a
+		// linked key and consumes every "it"/"that card" pronoun in the routing
+		// sequence, so these references need no external antecedent resolution.
+		return true
+	}
 	for i := range content.Effects {
 		if content.Effects[i].Kind == compiler.EffectManifestDread && !content.Effects[i].Exact &&
 			len(content.References) != 0 {

@@ -1059,6 +1059,9 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
+	if p.Spec.RevealOnly {
+		return p.validateRevealOnlySearch(targets, checkTargets)
+	}
 	if p.Spec.SourceZone == zone.None || p.Spec.Destination == zone.None {
 		return errors.New("search requires source and destination zones")
 	}
@@ -1146,6 +1149,53 @@ func validSearchDestination(destination SearchDestination) bool {
 	default:
 		return false
 	}
+}
+
+// validateRevealOnlySearch validates the search-and-reveal-only slice that leaves
+// the found card in the library for a following ConditionalDestinationPlace to
+// route. It requires a single searching player, a library source, no destination,
+// a reveal, exactly one found card, and none of the placement riders.
+func (p Search) validateRevealOnlySearch(targets []TargetSpec, checkTargets bool) error {
+	if p.Spec.SourceZone != zone.Library {
+		return errors.New("reveal-only search must source from the library")
+	}
+	if p.Spec.Destination != zone.None {
+		return errors.New("reveal-only search leaves the card in the library and has no destination")
+	}
+	if !p.Spec.Reveal {
+		return errors.New("reveal-only search must reveal the found card")
+	}
+	if p.Amount.IsDynamic() || p.Amount.Value() != 1 {
+		return errors.New("reveal-only search must find exactly one card")
+	}
+	if p.Spec.SplitDestination.Exists ||
+		p.Spec.EntersTapped ||
+		p.Spec.MaxManaValueFromX ||
+		p.Spec.SharedSubtype ||
+		p.Spec.DestinationPosition != SearchPositionUnspecified {
+		return errors.New("reveal-only search does not support split destination, tapped entry, X bound, shared-subtype, or library-position riders")
+	}
+	if p.Controller.Exists {
+		return errors.New("reveal-only search does not support a controller rider")
+	}
+	if p.PlayerGroup.Kind != PlayerGroupReferenceNone {
+		return errors.New("reveal-only search requires a single searching player")
+	}
+	switch p.Spec.FailToFindPolicy {
+	case SearchFailToFindDefault, SearchMayFailToFind:
+	default:
+		return errors.New("reveal-only search supports only the default or may-fail-to-find policy")
+	}
+	if len(p.Spec.Filter.RequiredTypes) != 0 && len(p.Spec.Filter.RequiredTypesAny) != 0 {
+		return errors.New("search cannot combine one required card type with a card-type union")
+	}
+	if len(p.Spec.Filter.RequiredTypesAny) == 1 {
+		return errors.New("search card-type union requires at least two card types")
+	}
+	if problems := p.Spec.Filter.Validate(); len(problems) != 0 {
+		return errors.New("search filter: " + problems[0])
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
 func (p Reveal) validatePrimitive(targets []TargetSpec, checkTargets bool) error {

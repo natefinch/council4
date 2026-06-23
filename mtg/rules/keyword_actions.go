@@ -159,12 +159,18 @@ func discardEntireHand(g *game.Game, playerID game.PlayerID) int {
 }
 
 func searchSpecSupported(spec game.SearchSpec) bool {
+	if spec.SourceZone != zone.Library {
+		return false
+	}
+	if spec.RevealOnly {
+		return spec.Destination == zone.None && spec.Reveal && !spec.SplitDestination.Exists
+	}
 	primary := game.SearchDestination{
 		Zone:         spec.Destination,
 		Position:     spec.DestinationPosition,
 		EntersTapped: spec.EntersTapped,
 	}
-	if spec.SourceZone != zone.Library || !searchDestinationSupported(primary) {
+	if !searchDestinationSupported(primary) {
 		return false
 	}
 	if spec.SplitDestination.Exists &&
@@ -288,6 +294,46 @@ func searchMustFindIfAvailable(spec game.SearchSpec, amount int) bool {
 	default:
 		return amount == 1 && spec.IsUnrestricted()
 	}
+}
+
+// searchLibraryRevealOnly searches a player's library for a single matching card,
+// reveals it, and leaves it in the library, returning the chosen card. It backs a
+// RevealOnly search whose found card a following ConditionalDestinationPlace will
+// route and whose closing shuffle is a separate instruction, so it neither moves
+// the card nor shuffles. The searching player may decline to find a card unless
+// the spec requires finding one.
+func (e *Engine) searchLibraryRevealOnly(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, spec game.SearchSpec, amount int) (id.ID, bool) {
+	if amount <= 0 {
+		amount = 1
+	}
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return 0, false
+	}
+	emitEvent(g, game.Event{
+		Kind:       game.EventLibrarySearched,
+		Controller: playerID,
+		Player:     playerID,
+	})
+	var candidates []id.ID
+	for _, cardID := range player.Library.All() {
+		if searchSpecMatches(g, obj, cardID, spec) {
+			candidates = append(candidates, cardID)
+		}
+	}
+	minChoices := 0
+	if searchMustFindIfAvailable(spec, amount) {
+		minChoices = 1
+	}
+	found := e.chooseSearchMatches(g, agents, log, playerID, candidates, 1, minChoices)
+	if len(found) == 0 {
+		return 0, false
+	}
+	cardID := found[0]
+	if spec.Reveal {
+		emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
+	}
+	return cardID, true
 }
 
 // placeFoundCard moves a found library card into a single-card search

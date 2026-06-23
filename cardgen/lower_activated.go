@@ -661,6 +661,13 @@ func prepareActivationCondition(ability *compiler.CompiledAbility, syntax *parse
 		return opt.V[game.Condition]{}, false
 	}
 	if len(ability.Content.Conditions) != 1 {
+		if recognized, ok := recognizeConditionalDestination(ability.Content); ok && recognized.search != nil {
+			// The conditional-destination body keeps its gate and else-marker
+			// conditions in the body, where the dedicated content lowerer reads
+			// the gate. Leave them in place instead of failing closed on the
+			// two-condition shape.
+			return opt.V[game.Condition]{}, true
+		}
 		return opt.V[game.Condition]{}, false
 	}
 	condition, ok := lowerCondition(ability.Content.Conditions[0], conditionContextActivation)

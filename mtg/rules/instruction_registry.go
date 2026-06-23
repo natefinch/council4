@@ -78,6 +78,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleShuffleSpellIntoLibrary)
 	registerPrimitiveHandler(reg, handlePutPermanentOnLibrary)
 	registerPrimitiveHandler(reg, handlePutLinkedExiledCardsInLibrary)
+	registerPrimitiveHandler(reg, handleConditionalDestinationPlace)
 	registerPrimitiveHandler(reg, handleStartEngines)
 	registerPrimitiveHandler(reg, handleBecomeMonarch)
 	registerPrimitiveHandler(reg, handleRingTempts)

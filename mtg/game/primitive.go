@@ -110,10 +110,11 @@ const (
 	PrimitiveExileEntireHand
 	PrimitiveReturnExiledCardsToHand
 	PrimitivePutLinkedExiledCardsInLibrary
+	PrimitiveConditionalDestinationPlace
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitivePutLinkedExiledCardsInLibrary) + 1
+const primitiveKindCount = int(PrimitiveConditionalDestinationPlace) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount

@@ -371,6 +371,9 @@ func lowerOptionalContent(
 	ctx contentCtx,
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if content, ok := lowerConditionalDestinationPlace(ctx); ok {
+		return content, nil
+	}
 	if len(ctx.content.Modes) == 0 &&
 		len(ctx.content.Effects) > 1 &&
 		ctx.content.Effects[0].Kind != compiler.EffectSearch &&

@@ -349,6 +349,9 @@ func handleSearch(r *effectResolver, prim game.Search) effectResolved {
 	if !searchSpecSupported(prim.Spec) {
 		return res
 	}
+	if prim.Spec.RevealOnly {
+		return handleSearchRevealOnly(r, prim)
+	}
 	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 		// "Each player searches their library ..." — every member searches their
 		// own library and any found permanent enters under that searcher's
@@ -379,6 +382,29 @@ func handleSearch(r *effectResolver, prim game.Search) effectResolved {
 		if prim.PublishLinked != "" && permanent != nil {
 			rememberLinkedObject(r.game, key, permanentLinkedObjectRef(permanent))
 		}
+	}
+	return res
+}
+
+func handleSearchRevealOnly(r *effectResolver, prim game.Search) effectResolved {
+	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	var key game.LinkedObjectKey
+	if prim.PublishLinked != "" {
+		key = linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
+		clearLinkedObjects(r.game, key)
+	}
+	cardID, found := r.engine.searchLibraryRevealOnly(r.game, r.obj, r.agents, r.log, playerID, prim.Spec, res.amount)
+	if !found {
+		return res
+	}
+	res.succeeded = true
+	res.amount = 1
+	if prim.PublishLinked != "" {
+		rememberLinkedObject(r.game, key, game.LinkedObjectRef{CardID: cardID})
 	}
 	return res
 }
