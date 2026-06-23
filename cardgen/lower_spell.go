@@ -871,6 +871,7 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 	}
 	var filter game.Selection
 	filter.ColorsAny = slices.Clone(selector.ColorsAny())
+	filter.Colorless = selector.Colorless
 	spec.Name = selector.RequiredName
 	switch selector.Kind {
 	case compiler.SelectorCard:
