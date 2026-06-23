@@ -1452,6 +1452,14 @@ type EffectSyntax struct {
 	// the trailing "named <Name>" tail. It is empty for tokens named only by
 	// their subtypes (the default).
 	TokenName string `json:",omitempty"`
+	// TokenNameLeading reports that TokenName was captured from the leading
+	// "Create <Name>, a ... token ..." form (the named legendary tokens such as
+	// "Create Avacyn, a legendary 8/8 white Angel creature token ...") rather than
+	// the trailing "named <Name>" form. The create-token exactness recognizer uses
+	// it to reconstruct the name as a leading "<Name>, " prefix instead of a
+	// trailing "named <Name>" tail. It is false for the trailing form and for
+	// unnamed tokens.
+	TokenNameLeading bool `json:",omitempty"`
 	// AttackDefender names the defender in a created attacking token's
 	// trailing "... attacking <defender>" clause (CR 508.4), e.g. "that player or
 	// a planeswalker they control." It is set only when Selection.Attacking is

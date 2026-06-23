@@ -1612,6 +1612,15 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 			end += len(nameUniqueAmongControlledClause)
 			continue
 		}
+		// A comma joining two negated card-type or subtype qualifiers ("non-Saga,
+		// nonland permanent") is internal to the target's noun phrase, not a clause
+		// boundary, so scanning continues past it to keep the whole filter on the
+		// target. Requiring a negated qualifier immediately on both sides leaves an
+		// ordinary comma terminating the target.
+		if token.Kind == shared.Comma && negatedTypeListCommaAt(tokens, atoms, end, start) {
+			end++
+			continue
+		}
 		if token.Kind == shared.Comma || token.Kind == shared.Period || token.Kind == shared.Semicolon ||
 			targetDestinationStartsAt(tokens, end) ||
 			moveCounterDestinationStartsAt(tokens, end) ||
@@ -1649,7 +1658,31 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 	return end
 }
 
-// thisTurnIsTrailingDuration reports whether the "this turn" beginning at index i
+// negatedTypeListCommaAt reports whether the comma at index i joins two negated
+// card-type or subtype qualifiers within a single target noun phrase (e.g. the
+// comma in "non-Saga, nonland permanent"). Such a comma is internal to the noun
+// phrase rather than a clause boundary, so target scanning continues past it. It
+// requires a negated qualifier immediately on both sides, leaving an ordinary
+// comma to terminate the target.
+func negatedTypeListCommaAt(tokens []shared.Token, atoms Atoms, i, start int) bool {
+	if i <= start || i+1 >= len(tokens) {
+		return false
+	}
+	return isNegatedTypeQualifier(tokens[i-1], atoms) && isNegatedTypeQualifier(tokens[i+1], atoms)
+}
+
+// isNegatedTypeQualifier reports whether the token begins a "non-<type>" or
+// "non-<subtype>" exclusion qualifier ("nonland", "non-Saga").
+func isNegatedTypeQualifier(token shared.Token, atoms Atoms) bool {
+	if _, ok := atoms.ExcludedCardTypeAt(token.Span); ok {
+		return true
+	}
+	if _, ok := atoms.ExcludedSubtypeAt(token.Span); ok {
+		return true
+	}
+	return false
+}
+
 // is a trailing duration suffix on the target (e.g. "cast target ... card from
 // your graveyard this turn") rather than part of an embedded amount clause (e.g.
 // "the amount of life you lost this turn from your graveyard"). It is a trailing

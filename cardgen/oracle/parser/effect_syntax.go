@@ -1183,6 +1183,16 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		if kind == EffectPut && effectHasTokenWords(selectionClause, "any", "number", "of") {
 			amount.AnyNumber = true
 		}
+		// A created token's name is printed either as a leading "Create <Name>, a
+		// ..." prefix (named legendary tokens) or as a trailing "named <Name>"
+		// tail. Prefer the leading form when present and record its placement so
+		// the exactness recognizer reconstructs the name in the right position.
+		tokenName := parseTokenName(kind, clause)
+		tokenNameLeading := false
+		if leading := parseLeadingTokenName(kind, clause); leading != "" {
+			tokenName = leading
+			tokenNameLeading = true
+		}
 		effects = append(effects, EffectSyntax{
 			Kind:                      kind,
 			Context:                   context,
@@ -1208,7 +1218,8 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			TokenPTKnown:              tokenPTKnown,
 			TokenPTVariableX:          tokenPTVariableX,
 			TokenKeywords:             parseTokenKeywords(kind, clause, atoms),
-			TokenName:                 parseTokenName(kind, clause),
+			TokenName:                 tokenName,
+			TokenNameLeading:          tokenNameLeading,
 			AttackDefender:            tokenAttackDefender,
 			AttackDefenderSpan:        tokenAttackDefenderSpan,
 			TokenChoice:               parseTokenChoice(kind, clause),
