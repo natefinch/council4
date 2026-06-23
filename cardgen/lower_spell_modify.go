@@ -2350,6 +2350,20 @@ func temporaryKeywordTargetMode(
 	continuousEffects []game.ContinuousEffect,
 	unsupported func() (game.AbilityContent, *shared.Diagnostic),
 ) (game.AbilityContent, *shared.Diagnostic) {
+	return continuousTargetMode(target, continuousEffects, game.DurationUntilEndOfTurn, unsupported)
+}
+
+// continuousTargetMode builds an ApplyContinuous mode that applies the given
+// continuous effects to each targeted permanent for the given duration. It backs
+// both the until-end-of-turn keyword/polymorph forms and the permanent
+// named-become polymorph. It fails closed when the target cannot reduce to a
+// permanent target spec.
+func continuousTargetMode(
+	target compiler.CompiledTarget,
+	continuousEffects []game.ContinuousEffect,
+	duration game.EffectDuration,
+	unsupported func() (game.AbilityContent, *shared.Diagnostic),
+) (game.AbilityContent, *shared.Diagnostic) {
 	spec, ok := permanentTargetSpecWithCardinality(target)
 	if !ok || spec.MaxTargets < 1 {
 		return unsupported()
@@ -2360,7 +2374,7 @@ func temporaryKeywordTargetMode(
 			Primitive: game.ApplyContinuous{
 				Object:            opt.Val(game.TargetPermanentReference(i)),
 				ContinuousEffects: continuousEffects,
-				Duration:          game.DurationUntilEndOfTurn,
+				Duration:          duration,
 			},
 		})
 	}

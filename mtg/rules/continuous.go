@@ -937,6 +937,9 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 			recalculateDynamicPT(g, values)
 		}
 	case game.LayerText:
+		if effect.SetName != "" {
+			values.name = effect.SetName
+		}
 		if effect.TextFrom != "" {
 			values.oracleText = strings.ReplaceAll(values.oracleText, effect.TextFrom, effect.TextTo)
 		}

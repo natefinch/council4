@@ -259,8 +259,19 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 		}
 		if len(effect.AddTypes) == 0 && len(effect.AddSubtypes) == 0 &&
 			len(effect.SetTypes) == 0 && len(effect.SetSubtypes) == 0 &&
+			len(effect.AddSupertypes) == 0 && len(effect.SetSupertypes) == 0 &&
 			effect.AddSubtypeFromEntryChoice == "" && !effect.AddEveryCreatureType && !effect.AddEveryBasicLandType {
 			return errors.New("render: type layer requires set or added types or subtypes")
+		}
+	case game.LayerText:
+		if hasPTDelta {
+			return ptOnNonPT
+		}
+		if hasKeywords {
+			return keywordOnAbility
+		}
+		if effect.SetName == "" && effect.TextFrom == "" && effect.TextTo == "" {
+			return errors.New("render: text layer requires a name or text change")
 		}
 	default:
 	}
@@ -300,6 +311,9 @@ func (r Renderer) renderContinuousPowerToughnessFields(ctx *renderCtx, effect *g
 // and type characteristic fields in canonical order.
 func renderContinuousCharacteristicFields(ctx *renderCtx, effect *game.ContinuousEffect) ([]string, error) {
 	var fields []string
+	if effect.SetName != "" {
+		fields = append(fields, fmt.Sprintf("SetName: %q,", effect.SetName))
+	}
 	if effect.SetPower.Exists {
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("SetPower: opt.Val(%s),", renderPTValue(effect.SetPower.Val)))
@@ -326,6 +340,20 @@ func renderContinuousCharacteristicFields(ctx *renderCtx, effect *game.Continuou
 	}
 	if effect.SetColorless {
 		fields = append(fields, "SetColorless: true,")
+	}
+	if len(effect.SetSupertypes) > 0 {
+		literal, err := renderSupertypeSlice(ctx, effect.SetSupertypes)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("SetSupertypes: %s,", literal))
+	}
+	if len(effect.AddSupertypes) > 0 {
+		literal, err := renderSupertypeSlice(ctx, effect.AddSupertypes)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("AddSupertypes: %s,", literal))
 	}
 	if len(effect.SetTypes) > 0 {
 		literal, err := renderTypesCardSlice(ctx, effect.SetTypes)
@@ -444,6 +472,8 @@ func renderContinuousLayer(layer game.ContinuousLayer) (string, error) {
 	switch layer {
 	case game.LayerControl:
 		return "game.LayerControl", nil
+	case game.LayerText:
+		return "game.LayerText", nil
 	case game.LayerAbility:
 		return "game.LayerAbility", nil
 	case game.LayerPowerToughnessModify:

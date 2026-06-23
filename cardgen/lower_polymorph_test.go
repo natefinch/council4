@@ -75,3 +75,44 @@ func TestLowerPolymorphSpellInSequence(t *testing.T) {
 		}
 	}
 }
+
+// TestLowerNamedBecomePolymorphSpell covers the permanent named-become polymorph
+// ("Target nontoken creature becomes a 6/6 legendary Horror creature named
+// Fenric and loses all abilities.", The Curse of Fenric II): the creature is
+// renamed, made legendary, set to a fixed type/subtype and power/toughness, and
+// loses all abilities permanently.
+func TestLowerNamedBecomePolymorphSpell(t *testing.T) {
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Named Become Test",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{1}{U}",
+		OracleText: "Target nontoken creature becomes a 6/6 legendary Horror creature named Fenric and loses all abilities.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	if _, err := goparser.ParseFile(token.NewFileSet(), "named_become.go", source, goparser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+	for _, want := range []string{
+		"game.ApplyContinuous{",
+		"RemoveAllAbilities: true,",
+		"game.LayerType,",
+		"AddSupertypes: []types.Super{types.Legendary},",
+		"SetTypes:      []types.Card{types.Creature},",
+		"SetSubtypes:   []types.Sub{types.Horror},",
+		"game.LayerText,",
+		"SetName: \"Fenric\",",
+		"SetPower:     opt.Val(game.PT{Value: 6}),",
+		"SetToughness: opt.Val(game.PT{Value: 6}),",
+		"Duration: game.DurationPermanent,",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+}

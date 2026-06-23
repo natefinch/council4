@@ -1688,6 +1688,15 @@ type CompiledEffect struct {
 	PolymorphSubtypes      []types.Sub
 	PolymorphBasePower     int
 	PolymorphBaseToughness int
+	// PolymorphName, PolymorphSupertypes, and PolymorphPermanent mirror the
+	// parser's permanent named-become polymorph payload ("Target nontoken
+	// creature becomes a 6/6 legendary Horror creature named Fenric and loses all
+	// abilities."). Lowering reads them to add a LayerText name change, the added
+	// supertypes, and a permanent duration on top of the shared polymorph
+	// continuous effects. They are zero for the until-end-of-turn polymorph forms.
+	PolymorphName       string
+	PolymorphSupertypes []types.Super
+	PolymorphPermanent  bool
 	// EntersAsCopyUntilEndOfTurn mirrors the parser's temporary "become a copy
 	// ... until end of turn" copy duration (Cursed Mirror).
 	EntersAsCopyUntilEndOfTurn bool
