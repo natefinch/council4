@@ -1351,6 +1351,8 @@ func lowerImmediateSingleEffectSpell(
 		return lowerDealDamageSpell(cardName, ctx)
 	case compiler.EffectCantBeBlocked:
 		return lowerCantBeBlockedSpell(ctx)
+	case compiler.EffectCantBlock:
+		return lowerCantBlockSpell(ctx)
 	case compiler.EffectDraw:
 		return lowerFixedDrawSpell(ctx, syntax)
 	case compiler.EffectDestroy:

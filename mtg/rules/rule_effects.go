@@ -18,6 +18,7 @@ func createRuleEffectTemplates(g *game.Game, obj *game.StackObject, object opt.V
 		return false
 	}
 	sourceID, sourceObjectID := damageSourceIDs(g, obj)
+	appended := false
 	for i := range templates {
 		ruleEffect := templates[i]
 		ruleEffect.ID = g.IDGen.Next()
@@ -26,12 +27,18 @@ func createRuleEffectTemplates(g *game.Game, obj *game.StackObject, object opt.V
 		ruleEffect.SourceObjectID = sourceObjectID
 		if ruleEffect.AffectedSource {
 			ruleEffect.AffectedObjectID = sourceObjectID
-		} else if ruleEffect.AffectedObjectID == 0 {
-			if object.Exists {
-				if resolved, ok := resolveObjectReference(g, obj, object.Val); ok && resolved.permanent != nil {
-					ruleEffect.AffectedObjectID = resolved.permanent.ObjectID
-				}
+		} else if ruleEffect.AffectedObjectID == 0 && object.Exists {
+			// An object-scoped rule effect that names a target slot must apply
+			// only to that resolved permanent. When the slot is unfilled (an "up
+			// to N" target the controller declined) or its target became
+			// illegal, the reference does not resolve; skip the template rather
+			// than appending an AffectedObjectID==0 effect, which would otherwise
+			// match every permanent on the battlefield.
+			resolved, ok := resolveObjectReference(g, obj, object.Val)
+			if !ok || resolved.permanent == nil {
+				continue
 			}
+			ruleEffect.AffectedObjectID = resolved.permanent.ObjectID
 		}
 		ruleEffect.CreatedTurn = g.Turn.TurnNumber
 		if duration != game.DurationPermanent {
@@ -42,8 +49,9 @@ func createRuleEffectTemplates(g *game.Game, obj *game.StackObject, object opt.V
 			ruleEffect.ExpiresFor = obj.Controller
 		}
 		g.RuleEffects = append(g.RuleEffects, ruleEffect)
+		appended = true
 	}
-	return true
+	return appended
 }
 
 func activeRuleEffects(g *game.Game) []game.RuleEffect {

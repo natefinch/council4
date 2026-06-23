@@ -368,6 +368,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectAttach
 	case parser.EffectCantBeBlocked:
 		return EffectCantBeBlocked
+	case parser.EffectCantBlock:
+		return EffectCantBlock
 	case parser.EffectCast:
 		return EffectCast
 	case parser.EffectCounter:
