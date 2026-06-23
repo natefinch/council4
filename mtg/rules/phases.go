@@ -223,6 +223,12 @@ func (e *Engine) runEndingPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	// next-end-step triggers before the end-step priority window (CR 603.6c,
 	// CR 603.7b).
 	emitBeginningOfStepEvent(g, game.StepEnd)
+	// The monarch draws a card at the beginning of their end step (CR 720.5).
+	// End steps occur only on the active player's turn, so this is the monarch's
+	// end step exactly when the active player is the monarch.
+	if monarch, ok := playerByID(g, g.Turn.ActivePlayer); ok && monarch.IsMonarch {
+		e.drawCards(g, g.Turn.ActivePlayer, 1, agents, nil)
+	}
 	if e.putTriggeredAbilitiesOnStackWithChoices(g, agents, nil) || !g.Stack.IsEmpty() {
 		g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 		e.runPriorityLoop(g, agents, nil)

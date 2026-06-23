@@ -729,6 +729,21 @@ func exactDirectTargetEffectSyntax(effect *EffectSyntax, verb string) bool {
 		strings.EqualFold(exactEffectClauseText(effect), verb+" "+effect.Targets[0].Text+".")
 }
 
+// exactBecomeMonarchEffectSyntax recognizes the monarch-designation effect
+// (CR 720) in its controller form "You become the monarch." and its single
+// player-target form "Target player becomes the monarch." / "Target opponent
+// becomes the monarch.". Any other subject leaves the clause non-exact so
+// lowering fails closed.
+func exactBecomeMonarchEffectSyntax(effect *EffectSyntax) bool {
+	text := exactEffectClauseText(effect)
+	if len(effect.Targets) == 0 {
+		return strings.EqualFold(text, "You become the monarch.")
+	}
+	return len(effect.Targets) == 1 &&
+		effect.Targets[0].Exact &&
+		strings.EqualFold(text, effect.Targets[0].Text+" becomes the monarch.")
+}
+
 // exactMultiDistinctTargetEffectSyntax recognizes a verb applied to two or more
 // distinct single targets, each named by its own "target <noun>" clause:
 // "Destroy target artifact, target creature, target enchantment, and target

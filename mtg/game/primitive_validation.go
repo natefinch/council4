@@ -314,6 +314,10 @@ func (p StartEngines) validateCapturedTargetControllerReferences(targets []Targe
 	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
 }
 
+func (p BecomeMonarch) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
+}
+
 func (p SetClassLevel) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
 }
@@ -1310,6 +1314,10 @@ func (p PutPermanentOnLibrary) validatePrimitive(targets []TargetSpec, checkTarg
 }
 
 func (p StartEngines) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p BecomeMonarch) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 

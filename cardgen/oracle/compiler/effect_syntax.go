@@ -402,6 +402,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectGain
 	case parser.EffectGainControl:
 		return EffectGainControl
+	case parser.EffectBecomeMonarch:
+		return EffectBecomeMonarch
 	case parser.EffectGrantKeyword:
 		return EffectGrantKeyword
 	case parser.EffectLifeTotalCantChange:

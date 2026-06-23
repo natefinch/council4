@@ -27,7 +27,6 @@ func TestSourceAbilityCostReductionPreservesUnsupportedMainSentence(t *testing.T
 	t.Parallel()
 
 	for _, source := range []string{
-		"{1}: Draw a card, then you become the monarch. This ability costs {1} less to activate for each legendary creature you control.",
 		"{1}: Draw a card, then venture into the dungeon. This ability costs {1} less to activate for each legendary creature you control.",
 	} {
 		t.Run(source, func(t *testing.T) {
