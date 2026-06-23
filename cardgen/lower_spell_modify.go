@@ -2172,52 +2172,73 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 	if !ok {
 		return unsupported()
 	}
+	continuousEffects := []game.ContinuousEffect{{
+		Layer:        game.LayerAbility,
+		AddKeywords:  keywords,
+		AddAbilities: abilities,
+	}}
+	if targetSubject {
+		return temporaryKeywordTargetMode(ctx.content.Targets[0], continuousEffects, unsupported)
+	}
 	var object game.ObjectReference
-	var target opt.V[game.TargetSpec]
 	switch {
-	case targetSubject:
-		spec, ok := permanentTargetSpec(ctx.content.Targets[0])
-		if !ok {
-			return unsupported()
-		}
-		target = opt.Val(spec)
-		object = game.TargetPermanentReference(0)
 	case sourceSubject:
 		object, ok = lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
 			AllowSource:      true,
 			SourceCardObject: true,
 		})
-		if !ok {
-			return unsupported()
-		}
 	case eventPermanentSubject:
 		object, ok = lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowEvent: true})
-		if !ok {
-			return unsupported()
-		}
 	default:
 		object, ok = lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowTarget: true})
-		if !ok {
-			return unsupported()
-		}
 	}
-	mode := game.Mode{
+	if !ok {
+		return unsupported()
+	}
+	return game.Mode{
 		Sequence: []game.Instruction{{
 			Primitive: game.ApplyContinuous{
-				Object: opt.Val(object),
-				ContinuousEffects: []game.ContinuousEffect{{
-					Layer:        game.LayerAbility,
-					AddKeywords:  keywords,
-					AddAbilities: abilities,
-				}},
-				Duration: game.DurationUntilEndOfTurn,
+				Object:            opt.Val(object),
+				ContinuousEffects: continuousEffects,
+				Duration:          game.DurationUntilEndOfTurn,
 			},
 		}},
+	}.Ability(), nil
+}
+
+// temporaryKeywordTargetMode builds the until-end-of-turn ApplyContinuous mode
+// for a keyword grant or loss applied to one permanent target slot per chosen
+// target. The target may be single ("Target creature gains flying…"), optional
+// ("up to one target creature gains…"), or multi-cardinality; a declined "up to"
+// slot leaves an unresolved target index the runtime ApplyContinuous no-ops, so
+// only chosen permanents are affected. The target's filter is validated by the
+// canonical permanentTargetSpecWithCardinality, so the same subtype, card-type,
+// color, and tapped restrictions destroy and exile already target (e.g. "target
+// Human", "target artifact", "target black creature") apply here too. It fails
+// closed for any target permanentTargetSpecWithCardinality cannot express.
+func temporaryKeywordTargetMode(
+	target compiler.CompiledTarget,
+	continuousEffects []game.ContinuousEffect,
+	unsupported func() (game.AbilityContent, *shared.Diagnostic),
+) (game.AbilityContent, *shared.Diagnostic) {
+	spec, ok := permanentTargetSpecWithCardinality(target)
+	if !ok || spec.MaxTargets < 1 {
+		return unsupported()
 	}
-	if target.Exists {
-		mode.Targets = []game.TargetSpec{target.Val}
+	sequence := make([]game.Instruction, 0, spec.MaxTargets)
+	for i := range spec.MaxTargets {
+		sequence = append(sequence, game.Instruction{
+			Primitive: game.ApplyContinuous{
+				Object:            opt.Val(game.TargetPermanentReference(i)),
+				ContinuousEffects: continuousEffects,
+				Duration:          game.DurationUntilEndOfTurn,
+			},
+		})
 	}
-	return mode.Ability(), nil
+	return game.Mode{
+		Targets:  []game.TargetSpec{spec},
+		Sequence: sequence,
+	}.Ability(), nil
 }
 
 // lowerGroupTemporaryKeywordSpell lowers a resolving keyword grant to a
@@ -2333,43 +2354,32 @@ func lowerTemporaryKeywordLossSpell(ctx contentCtx) (game.AbilityContent, *share
 	if !targetSubject && !referencedObject && !sourceSubject {
 		return unsupported()
 	}
+	continuousEffects := []game.ContinuousEffect{continuous}
+	if targetSubject {
+		return temporaryKeywordTargetMode(ctx.content.Targets[0], continuousEffects, unsupported)
+	}
 	var object game.ObjectReference
-	var target opt.V[game.TargetSpec]
 	switch {
-	case targetSubject:
-		spec, ok := permanentTargetSpec(ctx.content.Targets[0])
-		if !ok {
-			return unsupported()
-		}
-		target = opt.Val(spec)
-		object = game.TargetPermanentReference(0)
 	case sourceSubject:
 		object, ok = lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
 			AllowSource:      true,
 			SourceCardObject: true,
 		})
-		if !ok {
-			return unsupported()
-		}
 	default:
 		object, ok = lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowTarget: true})
-		if !ok {
-			return unsupported()
-		}
 	}
-	mode := game.Mode{
+	if !ok {
+		return unsupported()
+	}
+	return game.Mode{
 		Sequence: []game.Instruction{{
 			Primitive: game.ApplyContinuous{
 				Object:            opt.Val(object),
-				ContinuousEffects: []game.ContinuousEffect{continuous},
+				ContinuousEffects: continuousEffects,
 				Duration:          game.DurationUntilEndOfTurn,
 			},
 		}},
-	}
-	if target.Exists {
-		mode.Targets = []game.TargetSpec{target.Val}
-	}
-	return mode.Ability(), nil
+	}.Ability(), nil
 }
 
 // lowerTemporaryPTKeywordSpell lowers the single-subject combined buff
@@ -2444,9 +2454,16 @@ func lowerTemporaryPTKeywordSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	}.Ability(), true
 }
 
+// temporaryKeywordTarget reports whether a permanent target is one the temporary
+// keyword grant, loss, and combined +N/+N-and-gain lowerings can act on. It
+// defers entirely to the canonical permanentTargetSpecWithCardinality, so any
+// target that destroy, exile, or tap already accept — a bare subtype ("target
+// Human"), a card type ("target artifact"), a color ("target black creature"),
+// or a tapped/attacking qualifier — is accepted here too, including the optional
+// and multi-target cardinalities those specs carry.
 func temporaryKeywordTarget(target compiler.CompiledTarget) bool {
-	return target.Selector.Kind == compiler.SelectorCreature ||
-		target.Selector.Kind == compiler.SelectorPermanent
+	spec, ok := permanentTargetSpecWithCardinality(target)
+	return ok && spec.MaxTargets >= 1
 }
 
 // lowerGroupTemporaryPTKeywordSpell lowers the Overrun-style group buff
