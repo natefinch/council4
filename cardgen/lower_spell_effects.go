@@ -526,6 +526,9 @@ func lowerCounterPlacementSpell(
 	if content, ok := lowerGroupCounterPlacement(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerSingleChoiceCounterPlacement(ctx); ok {
+		return content, nil
+	}
 	if len(ctx.content.Targets) == 0 &&
 		len(ctx.content.References) == 1 &&
 		(ctx.content.References[0].Binding == compiler.ReferenceBindingSource ||
@@ -796,7 +799,8 @@ func lowerGroupCounterPlacement(ctx contentCtx) (game.AbilityContent, bool) {
 		effect.Context != parser.EffectContextController ||
 		!effect.CounterKindKnown ||
 		!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
-		effect.CounterKind.PlayerOnly() {
+		effect.CounterKind.PlayerOnly() ||
+		effect.CounterRecipientSingleChoice {
 		return game.AbilityContent{}, false
 	}
 	// A "with a <kind> counter on it/them" group filter carries a trailing
@@ -829,7 +833,48 @@ func lowerGroupCounterPlacement(ctx contentCtx) (game.AbilityContent, bool) {
 	}.Ability(), true
 }
 
-// groupCounterPlacementAmount validates the references accompanying a group
+// lowerSingleChoiceCounterPlacement lowers an exact fixed counter placement whose
+// non-target recipient is a single chosen member of a battlefield group ("put a
+// vigilance counter on a creature you control", Ajani Fells the Godsire chapter
+// II; "another creature you control"). The resolving controller chooses one
+// matching permanent at resolution, so the placement carries the group and the
+// ChooseOne flag rather than a target. It reuses the group recipient projection,
+// so every filter the group form supports is supported here too, and is
+// restricted to fixed positive amounts of a supported permanent counter kind
+// with no references, targets, conditions, or modes.
+func lowerSingleChoiceCounterPlacement(ctx contentCtx) (game.AbilityContent, bool) {
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		!counterPlacementKeywordsBenign(ctx.content.Keywords, effect.CounterKind) ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		!effect.CounterKindKnown ||
+		!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
+		effect.CounterKind.PlayerOnly() ||
+		!effect.CounterRecipientSingleChoice ||
+		!effect.Amount.Known || effect.Amount.Value < 1 {
+		return game.AbilityContent{}, false
+	}
+	group, ok := groupCounterRecipient(effect.Selector)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.AddCounter{
+				Amount:      game.Fixed(effect.Amount.Value),
+				Group:       group,
+				CounterKind: effect.CounterKind,
+				ChooseOne:   true,
+			},
+		}},
+	}.Ability(), true
+}
+
 // counter placement and reconstructs its count: a fixed positive amount accepts
 // no references, while a recognized dynamic amount accepts either no references
 // or source-bound referents (such as "this creature" in "where X is the number

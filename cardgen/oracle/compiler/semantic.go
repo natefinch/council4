@@ -1503,8 +1503,13 @@ type CompiledEffect struct {
 	// creature"). Lowering routes it to the runtime's source attached-permanent
 	// reference; it is false for every other recipient.
 	CounterRecipientAttached bool
-	// RegenerateAttached reports that an EffectRegenerate effect regenerates the
-	// permanent the source Aura or Equipment is attached to ("Regenerate
+	// CounterRecipientSingleChoice reports that a non-target counter-placement
+	// effect places its counters on a single permanent the controller chooses
+	// from a battlefield group ("put a vigilance counter on a creature you
+	// control"), rather than on every member of an "each <group>" recipient.
+	// Lowering emits a single-choice placement; it is false for the distributive
+	// group form, which compiles to an identical selector.
+	CounterRecipientSingleChoice bool
 	// enchanted creature." / "Regenerate equipped creature."). Lowering routes it
 	// to the runtime's source attached-permanent reference; it is false for every
 	// other regenerate recipient.

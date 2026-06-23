@@ -202,6 +202,13 @@ func handleAddCounter(r *effectResolver, prim game.AddCounter) effectResolved {
 	}
 	placementController := stackObjectController(r.obj)
 	if prim.Group.Valid() {
+		if prim.ChooseOne {
+			if permanent, ok := r.chooseOneGroupPermanent(prim.Group); ok {
+				addCountersToPermanentControlledBy(r.game, placementController, permanent, prim.CounterKind, res.amount)
+				res.succeeded = true
+			}
+			return res
+		}
 		for _, permanent := range r.groupPermanents(prim.Group) {
 			if addCountersToPermanentControlledBy(r.game, placementController, permanent, prim.CounterKind, res.amount) {
 				res.succeeded = true
@@ -792,6 +799,39 @@ func handleUntap(r *effectResolver, prim game.Untap) effectResolved {
 		res.succeeded = true
 	}
 	return res
+}
+
+// chooseOneGroupPermanent prompts the resolving controller to choose exactly one
+// permanent from the group ("a creature you control"). It returns false when the
+// group has no member.
+func (r *effectResolver) chooseOneGroupPermanent(group game.GroupReference) (*game.Permanent, bool) {
+	candidates := r.groupPermanents(group)
+	if len(candidates) == 0 {
+		return nil, false
+	}
+	options := make([]game.ChoiceOption, len(candidates))
+	for i, permanent := range candidates {
+		options[i] = game.ChoiceOption{
+			Index: i,
+			Label: permanentChoiceLabel(r.game, permanent),
+			Card:  permanentChoiceInfo(r.game, permanent),
+		}
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           r.obj.Controller,
+		Prompt:           "Choose a permanent",
+		Options:          options,
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: firstChoiceIndices(1),
+	}, r.log)
+	for _, idx := range selected {
+		if idx >= 0 && idx < len(candidates) {
+			return candidates[idx], true
+		}
+	}
+	return nil, false
 }
 
 func (r *effectResolver) chooseUntapPermanents(prim game.Untap) []*game.Permanent {

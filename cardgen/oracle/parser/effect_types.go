@@ -1406,6 +1406,15 @@ type EffectSyntax struct {
 	// creature" recipient; any other wording leaves it false so lowering fails
 	// closed.
 	CounterRecipientAttached bool `json:",omitempty"`
+	// CounterRecipientSingleChoice reports that a non-target counter-placement
+	// effect places its counters on a single permanent the controller chooses
+	// from a battlefield group ("put a vigilance counter on a creature you
+	// control", Ajani Fells the Godsire), rather than on every member of an
+	// "each <group>" recipient. The distributive "each" and singular "a"/"an"/
+	// "another" forms compile to identical selectors, so this flag carries the
+	// determiner distinction to lowering. It is set only when the exact singular
+	// recipient reconstruction matches the source text.
+	CounterRecipientSingleChoice bool `json:",omitempty"`
 	// RegenerateAttached reports that an EffectRegenerate effect regenerates the
 	// permanent the source is attached to ("Regenerate enchanted creature." /
 	// "Regenerate equipped creature."), the Aura or Equipment recipient the

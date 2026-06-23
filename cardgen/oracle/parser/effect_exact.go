@@ -151,7 +151,8 @@ func exactEffectSyntaxTail(effect *EffectSyntax) bool {
 		return exactControllerAmountEffectSyntax(effect, "Surveil")
 	case EffectShuffle:
 		return exactOptionalControllerShuffleEffectSyntax(effect) ||
-			exactSourceSpellShuffleIntoLibrarySyntax(effect)
+			exactSourceSpellShuffleIntoLibrarySyntax(effect) ||
+			exactControllerGraveyardShuffleIntoLibrarySyntax(effect)
 	case EffectTap:
 		return exactDirectTargetEffectSyntax(effect, "Tap") ||
 			exactDirectReferenceEffectSyntax(effect, "Tap") ||
@@ -183,6 +184,20 @@ func exactOptionalControllerShuffleEffectSyntax(effect *EffectSyntax) bool {
 	text := exactEffectClauseText(effect)
 	return strings.EqualFold(text, "Shuffle.") ||
 		strings.EqualFold(text, "Shuffle your library.")
+}
+
+// exactControllerGraveyardShuffleIntoLibrarySyntax recognizes the verbatim
+// "Shuffle your graveyard into your library." (The Mending of Dominaria
+// chapter III), a controller-scoped, non-optional shuffle whose graveyard
+// source is carried by FromZone (see effectFromZone).
+func exactControllerGraveyardShuffleIntoLibrarySyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController || effect.Optional {
+		return false
+	}
+	if effect.FromZone != zone.Graveyard || effect.ToZone != zone.Library {
+		return false
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), "Shuffle your graveyard into your library.")
 }
 
 func exactLibraryTopReorderEffectSyntax(effect *EffectSyntax) bool {
@@ -3288,10 +3303,10 @@ func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
 	if !effect.CounterKnown {
 		return false
 	}
-	object := ""
+	objects := []string{}
 	switch {
 	case len(effect.Targets) == 1 && effect.Targets[0].Exact:
-		object = effect.Targets[0].Text
+		object := effect.Targets[0].Text
 		// "Put a +1/+1 counter on each of up to two target creatures." places one
 		// counter on each of several targets, so the canonical object reads "each
 		// of <target>" for any genuine multi-target cardinality (Max >= 2). The
@@ -3299,10 +3314,10 @@ func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
 		if effect.Targets[0].Cardinality.Max >= 2 {
 			object = "each of " + object
 		}
+		objects = append(objects, object)
 	case len(effect.Targets) == 0:
-		var ok bool
 		if effect.CounterRecipientAttached {
-			object = "enchanted creature"
+			objects = append(objects, "enchanted creature")
 			break
 		}
 		// A trailing dynamic count ("… where X is the number of +1/+1 counters
@@ -3319,21 +3334,55 @@ func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
 		if effect.Selection.CounterRequired || effect.Selection.CounterAny {
 			recipientRefs = referencesOutsideSpan(recipientRefs, effect.Selection.Span)
 		}
-		object, ok = exactObjectReferenceText(recipientRefs)
-		if !ok {
-			object, ok = exactSelfSubjectReferenceText(recipientRefs)
+		if object, ok := exactObjectReferenceText(recipientRefs); ok {
+			objects = append(objects, object)
+		} else if object, ok := exactSelfSubjectReferenceText(recipientRefs); ok {
+			objects = append(objects, object)
+		} else if len(recipientRefs) == 0 {
+			// A non-target recipient is either a group ("each creature you
+			// control") or a single chooser ("a creature you control"); try both
+			// reconstructions and accept whichever matches the source text.
+			if object, ok := exactGroupDamagePermanentRecipientText(effect.Selection); ok {
+				objects = append(objects, object)
+			}
+			if object, ok := exactSingularChosenPermanentRecipientText(effect.Selection); ok {
+				objects = append(objects, object)
+			}
 		}
-		if !ok && len(recipientRefs) == 0 {
-			// "Put a +1/+1 counter on each creature you control." — a group of
-			// permanents rather than a single object.
-			object, ok = exactGroupDamagePermanentRecipientText(effect.Selection)
-		}
-		if !ok {
+		if len(objects) == 0 {
 			return false
 		}
 	default:
 		return false
 	}
+	for _, object := range objects {
+		if counterPlacementTextMatches(effect, object) {
+			return true
+		}
+	}
+	return false
+}
+
+// counterPlacementSingleChoiceRecipient reports whether an exact non-target
+// counter placement names a single chosen group member ("a creature you
+// control") rather than a distributive group ("each creature you control"). The
+// two forms compile to identical selectors, so lowering relies on this flag to
+// emit a single-choice placement instead of a group placement.
+func counterPlacementSingleChoiceRecipient(effect *EffectSyntax) bool {
+	if effect.Kind != EffectPut || !effect.CounterKnown || len(effect.Targets) != 0 {
+		return false
+	}
+	if effect.CounterRecipientAttached {
+		return false
+	}
+	object, ok := exactSingularChosenPermanentRecipientText(effect.Selection)
+	if !ok {
+		return false
+	}
+	return counterPlacementTextMatches(effect, object)
+}
+
+func counterPlacementTextMatches(effect *EffectSyntax, object string) bool {
 	noun := "counters"
 	if effect.Amount.Known && effect.Amount.Value == 1 {
 		noun = "counter"

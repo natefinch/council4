@@ -102,10 +102,11 @@ const (
 	PrimitiveRemoveFromCombat
 	PrimitiveChooseDiscardFromHand
 	PrimitiveExileFromGraveyard
+	PrimitiveShuffleGraveyardIntoLibrary
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveExileFromGraveyard) + 1
+const primitiveKindCount = int(PrimitiveShuffleGraveyardIntoLibrary) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -180,6 +181,14 @@ type LookAtLibraryTop struct {
 
 // ShuffleLibrary randomizes a referenced player's library.
 type ShuffleLibrary struct {
+	Player PlayerReference
+}
+
+// ShuffleGraveyardIntoLibrary moves every card in a referenced player's
+// graveyard into that player's library and then shuffles it ("shuffle your
+// graveyard into your library", The Mending of Dominaria). The library is
+// shuffled even when the graveyard is empty (CR 701.x shuffle).
+type ShuffleGraveyardIntoLibrary struct {
 	Player PlayerReference
 }
 
@@ -287,6 +296,12 @@ type AddCounter struct {
 	// <permanent>" (Vorel of the Hull Clade) and is set only with a single
 	// Object, never a Group.
 	AllKinds bool
+	// ChooseOne makes the resolving controller choose exactly one permanent from
+	// Group to receive the counters, rather than every member ("put a vigilance
+	// counter on a creature you control", Ajani Fells the Godsire chapter II). It
+	// is set only with a Group and an empty Object; when no group member exists
+	// the effect does nothing.
+	ChooseOne bool
 }
 
 // AddPlayerCounter places counters on a referenced player or group of players.
