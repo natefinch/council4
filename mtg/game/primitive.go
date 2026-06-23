@@ -681,10 +681,19 @@ type ReturnExiledCardsToHand struct {
 // runs; here the player chooses which matching card to exile, if any. Fewer
 // matching cards than Amount exiles all of them; no matching card exiles
 // nothing.
+//
+// When PublishLinked is set, each exiled card is remembered under the
+// source-keyed linked set it names (keyed by the source permanent's card
+// identity, like ExileEntireHand), so a later ability on the same source can
+// read the exiled card's characteristics through a LinkedObjectReference or
+// return it with ReturnExiledCardsToHand. The set survives the source leaving
+// the battlefield, which a Saga relies on when an early chapter exiles the card
+// and a later chapter references it (The Aesir Escape Valhalla).
 type ExileFromGraveyard struct {
-	Player    PlayerReference
-	Selection Selection
-	Amount    Quantity
+	Player        PlayerReference
+	Selection     Selection
+	Amount        Quantity
+	PublishLinked LinkedKey
 }
 
 // PutFromHand has Player choose up to Amount cards from their hand that match

@@ -252,6 +252,9 @@ func lowerContent(
 				ctx.content.Effects[1].Kind == compiler.EffectGainControl) {
 			return lowerControlSpellSequence(cardName, ctx, syntax)
 		}
+		if content, ok := lowerAesirExileGraveyardScaledGain(ctx); ok {
+			return content, nil
+		}
 		return lowerOrderedEffectSequence(cardName, ctx, syntax)
 	}
 	if len(ctx.content.Effects) == 1 {
@@ -274,6 +277,12 @@ func lowerContent(
 			return content, nil
 		}
 		if content, ok := lowerBottomLinkedExiledCardsContent(ctx); ok {
+			return content, nil
+		}
+		if content, ok := lowerAesirCounterFromExiledCard(ctx); ok {
+			return content, nil
+		}
+		if content, ok := lowerAesirReturnSourceAndExiledCard(ctx); ok {
 			return content, nil
 		}
 		if content, ok := lowerStandaloneStunEffect(ctx); ok {

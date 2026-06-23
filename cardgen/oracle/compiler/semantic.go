@@ -1831,7 +1831,17 @@ type CompiledEffect struct {
 	// text-blind compiler boundary so lowering emits the linked library-bottom
 	// disposal paired with the sibling exile.
 	BottomLinkedExiledCards bool
-	// CantCastSpellsAllPlayers mirrors the parser flag for an EffectCantCastSpells
+	// CounterExiledCardManaValue carries the parser-recognized chapter II counter
+	// clause "Put a number of +1/+1 counters on target creature you control equal
+	// to the mana value of the exiled card." (The Aesir Escape Valhalla) through
+	// the text-blind compiler boundary so lowering scales the placement by the
+	// linked exiled card's mana value.
+	CounterExiledCardManaValue bool
+	// ReturnSourceAndExiledCardToHand carries the parser-recognized chapter III
+	// clause "Return this Saga and the exiled card to their owner's hand." (The
+	// Aesir Escape Valhalla) through the text-blind compiler boundary so lowering
+	// emits a source bounce paired with a linked return to hand.
+	ReturnSourceAndExiledCardToHand bool
 	// clause that affects every player ("Players can't cast spells this turn.")
 	// rather than only the controller's opponents. Lowering reads it to pick the
 	// affected-player relation; it is false for the opponents-only form.

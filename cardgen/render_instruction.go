@@ -743,6 +743,9 @@ func (r Renderer) renderExileFromGraveyard(ctx *renderCtx, value game.ExileFromG
 		fmt.Sprintf("Selection: %s,", selection),
 		fmt.Sprintf("Amount: %s,", amount),
 	}
+	if value.PublishLinked != "" {
+		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
+	}
 	return structLit("game.ExileFromGraveyard", fields), nil
 }
 

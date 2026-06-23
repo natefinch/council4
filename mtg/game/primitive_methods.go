@@ -494,7 +494,11 @@ func (p ExileFromHand) instructionRefs() primitiveRefs {
 	refs.publishesLinked = p.PublishLinked
 	return refs
 }
-func (p ExileFromGraveyard) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
+func (p ExileFromGraveyard) instructionRefs() primitiveRefs {
+	refs := quantityRefs(p.Amount)
+	refs.publishesLinked = p.PublishLinked
+	return refs
+}
 func (p ExileEntireHand) instructionRefs() primitiveRefs {
 	return primitiveRefs{publishesLinked: p.LinkedKey}
 }
