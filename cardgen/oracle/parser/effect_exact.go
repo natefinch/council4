@@ -111,7 +111,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectPut:
 		return exactCounterPlacementEffectSyntax(effect) || exactGraveyardPutEffectSyntax(effect) ||
 			exactDigPutEffectSyntax(effect) || exactHandLibraryPutEffectSyntax(effect) ||
-			exactPutThoseCountersEffectSyntax(effect) || exactPutThoseCardsIntoHandEffectSyntax(effect)
+			exactPutThoseCountersEffectSyntax(effect) || exactPutThoseCardsIntoHandEffectSyntax(effect) ||
+			exactBottomLinkedExiledCardsEffectSyntax(effect)
 	case EffectProliferate:
 		return exactStandaloneActionEffectSyntax(effect, "Proliferate")
 	case EffectRemoveCounter:

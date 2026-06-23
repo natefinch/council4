@@ -145,6 +145,45 @@ func lowerReturnExiledCardContent(ctx contentCtx) (game.AbilityContent, bool) {
 	}}}.Ability(), true
 }
 
+// lowerBottomLinkedExiledCardsContent lowers the linked disposal clause "The
+// owner of each card exiled with <this permanent> puts that card on the bottom
+// of their library." (Trial of a Time Lord's guilty verdict) into a linked
+// library-bottom disposal reading the exile-until-leaves key. The disposed cards
+// are the ones the Saga's earlier exile-until-leaves chapters removed, identified
+// by the source link rather than a target, so the clause carries no target. It
+// is hosted inside a Saga chapter, typically as a vote arm, and clears the link
+// so the synthesized leaves-the-battlefield return finds nothing to bring back.
+//
+// It returns ok=false for any shape it does not fully consume: a target, a
+// condition, mode, or keyword rider, an optional or negated effect, or a
+// non-source context.
+func lowerBottomLinkedExiledCardsContent(ctx contentCtx) (game.AbilityContent, bool) {
+	if !exileUntilLeavesEnclosingKind(ctx.enclosingKind) ||
+		ctx.optional ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectPut ||
+		!effect.BottomLinkedExiledCards ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		effect.Context != parser.EffectContextSource {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.PutLinkedExiledCardsInLibrary{
+			LinkedKey: exileUntilLeavesKey,
+			Bottom:    true,
+		},
+	}}}.Ability(), true
+}
+
 // linkExplicitExileReturns binds an O-Ring face's two explicit clauses (Oblivion
 // Ring, Journey to Nowhere, Fiend Hunter): an enters-the-battlefield exile of a
 // target permanent and a separate leaves-the-battlefield "return the exiled card"

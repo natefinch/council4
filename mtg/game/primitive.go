@@ -109,10 +109,11 @@ const (
 	PrimitiveVote
 	PrimitiveExileEntireHand
 	PrimitiveReturnExiledCardsToHand
+	PrimitivePutLinkedExiledCardsInLibrary
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveReturnExiledCardsToHand) + 1
+const primitiveKindCount = int(PrimitivePutLinkedExiledCardsInLibrary) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -498,6 +499,17 @@ type ShuffleSpellIntoLibrary struct{}
 type PutPermanentOnLibrary struct {
 	Object ObjectReference
 	Bottom bool
+}
+
+// PutLinkedExiledCardsInLibrary moves every card a sibling clause exiled under
+// LinkedKey from exile to its owner's library, to the bottom when Bottom is set.
+// It backs the linked disposal "The owner of each card exiled with <this
+// permanent> puts that card on the bottom of their library." (Trial of a Time
+// Lord), consuming the link the paired exile-until-leaves clause published so
+// the runtime clears it and the synthesized leaves trigger returns nothing.
+type PutLinkedExiledCardsInLibrary struct {
+	LinkedKey LinkedKey
+	Bottom    bool
 }
 
 // StartEngines starts engine effects for a player.

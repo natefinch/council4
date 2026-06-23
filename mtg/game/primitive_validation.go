@@ -1335,6 +1335,10 @@ func (p PutPermanentOnLibrary) validatePrimitive(targets []TargetSpec, checkTarg
 	return validateObjectReference(p.Object, targets, checkTargets)
 }
 
+func (PutLinkedExiledCardsInLibrary) validatePrimitive([]TargetSpec, bool) error {
+	return nil
+}
+
 func (p StartEngines) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
