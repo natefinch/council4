@@ -138,6 +138,69 @@ func TestLowerGroupCounterOpponentControlled(t *testing.T) {
 	}
 }
 
+// TestLowerGroupCounterEachOpponentControlled exercises the distributive "each
+// opponent controls" opponent wording (Aku Djinn). It denotes the same
+// opponent-controlled group as the plural "your opponents control" form and
+// lowers identically to ControllerOpponent.
+func TestLowerGroupCounterEachOpponentControlled(t *testing.T) {
+	t.Parallel()
+	add := groupCounterAddCounter(t, &ScryfallCard{
+		Name:       "Test Each Opponent Group",
+		Layout:     "normal",
+		TypeLine:   "Creature — Djinn",
+		OracleText: "At the beginning of your upkeep, put a +1/+1 counter on each creature each opponent controls.",
+	})
+	selection := add.Group.Selection()
+	if selection.Controller != game.ControllerOpponent {
+		t.Fatalf("controller = %v, want ControllerOpponent", selection.Controller)
+	}
+}
+
+// TestLowerGroupCounterDynamicSourcePower exercises a dynamic-X group counter
+// placement whose count is the source permanent's power (Ouroboroid). The "where
+// X is this creature's power" count phrase trails the recipient group, so the
+// recipient must lower to the plain "each creature you control" group without
+// folding the count subject into its filter.
+func TestLowerGroupCounterDynamicSourcePower(t *testing.T) {
+	t.Parallel()
+	add := groupCounterAddCounter(t, &ScryfallCard{
+		Name:       "Test Dynamic Source Power Group",
+		Layout:     "normal",
+		TypeLine:   "Creature — Ooze",
+		OracleText: "At the beginning of combat on your turn, put X +1/+1 counters on each creature you control, where X is this creature's power.",
+	})
+	if !add.Amount.IsDynamic() {
+		t.Fatalf("amount = %+v, want a dynamic count", add.Amount)
+	}
+	if selection := add.Group.Selection(); selection.Controller != game.ControllerYou {
+		t.Fatalf("controller = %v, want ControllerYou", selection.Controller)
+	}
+}
+
+// TestLowerGroupCounterDynamicCountSubtype exercises a dynamic-X group counter
+// placement whose count names a subtype ("the number of Shrines you control",
+// Southern Air Temple). The subtype in the count phrase must not bleed into the
+// recipient group, which stays the plain "each creature you control" group.
+func TestLowerGroupCounterDynamicCountSubtype(t *testing.T) {
+	t.Parallel()
+	add := groupCounterAddCounter(t, &ScryfallCard{
+		Name:       "Southern Air Temple",
+		Layout:     "normal",
+		TypeLine:   "Enchantment — Shrine",
+		OracleText: "When Southern Air Temple enters, put X +1/+1 counters on each creature you control, where X is the number of Shrines you control.",
+	})
+	if !add.Amount.IsDynamic() {
+		t.Fatalf("amount = %+v, want a dynamic count", add.Amount)
+	}
+	selection := add.Group.Selection()
+	if selection.Controller != game.ControllerYou {
+		t.Fatalf("controller = %v, want ControllerYou", selection.Controller)
+	}
+	if len(selection.SubtypesAny) != 0 {
+		t.Fatalf("subtypes = %+v, want none (the count subtype must not fold into the recipient)", selection.SubtypesAny)
+	}
+}
+
 // TestLowerGroupCounterTargetPlayerControlledRejected confirms a group whose
 // controller is a runtime-chosen target player ("each creature target player
 // controls") fails closed: the recipient has no static controller relation and

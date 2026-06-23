@@ -1090,6 +1090,14 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			// the amount (e.g. "the sacrificed creature's power") from folding
 			// into the milled-card selection.
 			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
+		case kind == EffectPut && amount.DynamicForm == EffectDynamicAmountFormWhereX:
+			// "put X +1/+1 counters on each creature you control, where X is the
+			// number of Shrines you control" trails the count phrase after the
+			// recipient group. Like the deal-damage WhereX case above, scope the
+			// recipient Selection to the tokens before the count phrase so the
+			// count subject's subtype or referent ("Shrines", "this creature's
+			// power") does not fold into the recipient group's type line.
+			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
 		default:
 		}
 		eachSourceDamageGroup, eachSourceDamageRecipient := eachSourceDamageSyntax(kind, tokens[ownershipStart:tokenIndex], clause, atoms)
