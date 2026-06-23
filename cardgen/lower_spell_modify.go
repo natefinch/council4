@@ -25,6 +25,7 @@ func lowerEachSourceDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	effect := ctx.content.Effects[0]
 	if effect.Kind != compiler.EffectDealDamage ||
 		effect.EachSourceDamageRecipient == parser.DamageRecipientReferenceNone ||
+		effect.EachSourceDamageRecipient == parser.DamageRecipientReferenceItself ||
 		effect.Negated ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -46,6 +47,42 @@ func lowerEachSourceDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	}
 	return game.Mode{
 		Sequence: []game.Instruction{{Primitive: primitive}},
+	}.Ability(), true
+}
+
+// lowerEachSelfPowerDamageSpell lowers the group self-power damage shape in which
+// every member of an "each <group>" subject deals damage to itself equal to its
+// own power ("Each creature deals damage to itself equal to its power.", Wave of
+// Reckoning; "Each tapped creature deals damage to itself equal to its power.",
+// The Akroan War chapter III). The subject group is recorded as
+// EachSourceDamageGroup with the per-member self recipient, and the per-member
+// power is the amount, so the group reuses the same SelectionForSelector-backed
+// damage group recipient as fixed group damage. The dealing entity must have a
+// power, so the group is restricted to creatures. It fails closed (ok=false) for
+// every other recipient role, amount, or shape, leaving the fixed/X and source-
+// power damage paths unchanged.
+func lowerEachSelfPowerDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectDealDamage ||
+		effect.EachSourceDamageRecipient != parser.DamageRecipientReferenceItself ||
+		effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower ||
+		effect.Negated ||
+		effect.EachSourceDamageGroup.Kind != compiler.SelectorCreature ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 {
+		return game.AbilityContent{}, false
+	}
+	group, ok := damageGroupRecipient(effect.EachSourceDamageGroup)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{Primitive: game.GroupSelfPowerDamage{Group: group}}},
 	}.Ability(), true
 }
 

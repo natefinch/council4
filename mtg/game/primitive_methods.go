@@ -248,6 +248,9 @@ func (ChooseNewTargets) Kind() PrimitiveKind { return PrimitiveChooseNewTargets 
 // Kind implements Primitive for GroupSourceDamage.
 func (GroupSourceDamage) Kind() PrimitiveKind { return PrimitiveGroupSourceDamage }
 
+// Kind implements Primitive for GroupSelfPowerDamage.
+func (GroupSelfPowerDamage) Kind() PrimitiveKind { return PrimitiveGroupSelfPowerDamage }
+
 // Kind implements Primitive for PutPermanentOnLibrary.
 func (PutPermanentOnLibrary) Kind() PrimitiveKind { return PrimitivePutPermanentOnLibrary }
 
@@ -356,6 +359,8 @@ func (Attach) isPrimitive()                      {}
 func (MassReturnFromGraveyard) isPrimitive()     {}
 
 func (GroupSourceDamage) isPrimitive() {}
+
+func (GroupSelfPowerDamage) isPrimitive() {}
 
 func (MassReanimationExchange) isPrimitive() {}
 
@@ -531,10 +536,11 @@ func (p MoveCard) instructionRefs() primitiveRefs {
 	}
 	return cardReferenceRefs(p.Card)
 }
-func (MoveCommander) instructionRefs() primitiveRefs       { return primitiveRefs{} }
-func (ChooseNewTargets) instructionRefs() primitiveRefs    { return primitiveRefs{} }
-func (CopyStackObject) instructionRefs() primitiveRefs     { return primitiveRefs{} }
-func (p GroupSourceDamage) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
+func (MoveCommander) instructionRefs() primitiveRefs        { return primitiveRefs{} }
+func (ChooseNewTargets) instructionRefs() primitiveRefs     { return primitiveRefs{} }
+func (CopyStackObject) instructionRefs() primitiveRefs      { return primitiveRefs{} }
+func (p GroupSourceDamage) instructionRefs() primitiveRefs  { return quantityRefs(p.Amount) }
+func (GroupSelfPowerDamage) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (MassReturnFromGraveyard) instructionRefs() primitiveRefs {
 	return primitiveRefs{}
 }

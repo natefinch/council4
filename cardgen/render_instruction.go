@@ -224,6 +224,8 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		return r.renderDamagePrimitive(ctx, primitive)
 	case game.PrimitiveGroupSourceDamage:
 		return r.renderGroupSourceDamage(ctx, primitive)
+	case game.PrimitiveGroupSelfPowerDamage:
+		return r.renderGroupSelfPowerDamage(ctx, primitive)
 	case game.PrimitiveDraw, game.PrimitiveDiscard, game.PrimitiveMill,
 		game.PrimitiveScry, game.PrimitiveSurveil, game.PrimitiveGainLife,
 		game.PrimitiveLoseLife, game.PrimitiveReorderLibraryTop,

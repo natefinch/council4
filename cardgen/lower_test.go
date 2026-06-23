@@ -38,6 +38,34 @@ func lowerSingleFaceExpectingUnsupported(t *testing.T, card *ScryfallCard) lower
 	return faces[0]
 }
 
+// TestLowerSagaChapterEachSelfPowerDamage proves the group self-power damage
+// chapter sub-effect lowers inside a Saga's ordered chapter sequence, the form
+// The Akroan War chapter III uses ("Each tapped creature deals damage to itself
+// equal to its power."). The chapter lowers to the GroupSelfPowerDamage
+// primitive over the filtered tapped-creature group.
+func TestLowerSagaChapterEachSelfPowerDamage(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:     "Damage Saga",
+		Layout:   "saga",
+		TypeLine: "Enchantment — Saga",
+		OracleText: "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\n" +
+			"I — Draw a card.\n" +
+			"II — Draw a card.\n" +
+			"III — Each tapped creature deals damage to itself equal to its power.",
+	})
+	if len(face.ChapterAbilities) != 3 {
+		t.Fatalf("chapter abilities = %d, want 3", len(face.ChapterAbilities))
+	}
+	mode := face.ChapterAbilities[2].Content.Modes[0]
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("chapter III sequence len = %d, want 1", len(mode.Sequence))
+	}
+	if _, ok := mode.Sequence[0].Primitive.(game.GroupSelfPowerDamage); !ok {
+		t.Fatalf("chapter III primitive = %#v, want GroupSelfPowerDamage", mode.Sequence[0].Primitive)
+	}
+}
+
 func TestLowerEventPlayerCoordinatedSubjectInTrigger(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

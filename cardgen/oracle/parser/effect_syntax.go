@@ -1100,7 +1100,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
 		default:
 		}
-		eachSourceDamageGroup, eachSourceDamageRecipient := eachSourceDamageSyntax(kind, tokens[ownershipStart:tokenIndex], clause, atoms)
+		eachSourceDamageGroup, eachSourceDamageRecipient := eachSourceDamageSyntax(kind, tokens[ownershipStart:tokenIndex], clause, amount, atoms)
 		fallbackOnInability := effectFallbackOnInability(tokens, ownershipStart, tokenIndex)
 		effectSelection := parseSelection(selectionClause, atoms)
 		// A group selection naming a creature conjoined with one other permanent
@@ -3647,20 +3647,26 @@ func damageRecipientTokens(clause []shared.Token) ([]shared.Token, bool) {
 // (empty selection, None role) for every other shape: a non-damage effect, a
 // subject that does not begin with "each" or does not parse to a recognized
 // group, or a recipient that is not the bare "its controller"/"its owner".
-func eachSourceDamageSyntax(kind EffectKind, subject, clause []shared.Token, atoms Atoms) (SelectionSyntax, DamageRecipientReferenceKind) {
+func eachSourceDamageSyntax(kind EffectKind, subject, clause []shared.Token, amount EffectAmountSyntax, atoms Atoms) (SelectionSyntax, DamageRecipientReferenceKind) {
 	if kind != EffectDealDamage || len(subject) == 0 || !equalWord(subject[0], "each") {
 		return SelectionSyntax{}, DamageRecipientReferenceNone
 	}
 	recipient, ok := damageRecipientTokens(clause)
-	if !ok || len(recipient) != 2 || !equalWord(recipient[0], "its") {
+	if !ok || len(recipient) == 0 {
 		return SelectionSyntax{}, DamageRecipientReferenceNone
 	}
 	var role DamageRecipientReferenceKind
 	switch {
-	case equalWord(recipient[1], "controller"):
+	case len(recipient) == 2 && equalWord(recipient[0], "its") && equalWord(recipient[1], "controller"):
 		role = DamageRecipientReferenceController
-	case equalWord(recipient[1], "owner"):
+	case len(recipient) == 2 && equalWord(recipient[0], "its") && equalWord(recipient[1], "owner"):
 		role = DamageRecipientReferenceOwner
+	case equalWord(recipient[0], "itself") && eachSelfPowerDamageAmount(amount):
+		// "Each creature deals damage to itself equal to its power." The
+		// recipient run begins with "itself" and is followed by the source-power
+		// amount phrase; the per-member power is the amount, so the recipient is
+		// the bare "itself" rather than a player.
+		role = DamageRecipientReferenceItself
 	default:
 		return SelectionSyntax{}, DamageRecipientReferenceNone
 	}
@@ -3669,6 +3675,16 @@ func eachSourceDamageSyntax(kind EffectKind, subject, clause []shared.Token, ato
 		return SelectionSyntax{}, DamageRecipientReferenceNone
 	}
 	return selection, role
+}
+
+// eachSelfPowerDamageAmount reports whether amount is the source-power "equal to
+// its power" form that pairs with the per-member "itself" recipient. It fails
+// closed for every other amount so the self recipient stays unrecognized unless
+// the per-member power amount accompanies it.
+func eachSelfPowerDamageAmount(amount EffectAmountSyntax) bool {
+	return amount.DynamicKind == EffectDynamicAmountSourcePower &&
+		amount.DynamicForm == EffectDynamicAmountFormEqual &&
+		amount.Multiplier == 1
 }
 
 func damageRecipientReference(effect *EffectSyntax) DamageRecipientReferenceKind {
