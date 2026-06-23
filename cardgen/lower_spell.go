@@ -274,6 +274,8 @@ func lowerContent(
 			return lowerBecomeCopyContent(ctx)
 		case compiler.EffectBecomeType:
 			return lowerBecomeTypeContent(ctx)
+		case compiler.EffectPolymorph:
+			return lowerPolymorphContent(ctx)
 		case compiler.EffectDelayedTrigger:
 			return lowerDelayedTriggerContent(ctx)
 		default:

@@ -1319,6 +1319,14 @@ const (
 	// Ring-bearer. It lowers to a game.RingTempts primitive scoped to the
 	// controller. Added last so existing kinds keep their wire values.
 	EffectRingTempts
+	// EffectPolymorph sets a targeted creature's color, creature type, and base
+	// power/toughness while removing all of its abilities until end of turn
+	// ("Until end of turn, target creature loses all abilities and becomes a
+	// <color> <subtype> with base power and toughness N/N.", Turn to Frog). It
+	// lowers to an ApplyContinuous across the ability, color, type, and
+	// power/toughness layers. Added last so existing kinds keep their wire
+	// values.
+	EffectPolymorph
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1656,6 +1664,16 @@ type CompiledEffect struct {
 	// duration.
 	BecomeTypeAddTypes       []types.Card
 	BecomeTypeUntilEndOfTurn bool
+	// Polymorph* mirror the parser's EffectPolymorph payload ("Until end of turn,
+	// target creature loses all abilities and becomes a <color> <subtype> with
+	// base power and toughness N/N."). Lowering reads them to build the
+	// ApplyContinuous that removes all abilities and SETS the creature's color,
+	// type, and base power/toughness until end of turn.
+	PolymorphColors        []color.Color
+	PolymorphColorless     bool
+	PolymorphSubtypes      []types.Sub
+	PolymorphBasePower     int
+	PolymorphBaseToughness int
 	// EntersAsCopyUntilEndOfTurn mirrors the parser's temporary "become a copy
 	// ... until end of turn" copy duration (Cursed Mirror).
 	EntersAsCopyUntilEndOfTurn bool
