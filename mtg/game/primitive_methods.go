@@ -388,7 +388,9 @@ func (LookAtHand) instructionRefs() primitiveRefs            { return primitiveR
 func (ChooseDiscardFromHand) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (p Discard) instructionRefs() primitiveRefs             { return quantityRefs(p.Amount) }
 func (Destroy) instructionRefs() primitiveRefs               { return primitiveRefs{} }
-func (p AddCounter) instructionRefs() primitiveRefs          { return quantityRefs(p.Amount) }
+func (p AddCounter) instructionRefs() primitiveRefs {
+	return mergePrimitiveRefs(quantityRefs(p.Amount), objectReferenceRefs(p.Object))
+}
 func (p AddPlayerCounter) instructionRefs() primitiveRefs {
 	return quantityRefs(p.Amount)
 }

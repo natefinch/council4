@@ -985,6 +985,9 @@ func groupCounterRecipient(sel compiler.CompiledSelector) (game.GroupReference, 
 // supported permanent counter kind.
 func lowerReferencedCounterPlacement(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	if len(effect.CounterKindChoices) > 0 {
+		return lowerReferencedCounterKindChoice(ctx)
+	}
 	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.References) != 1 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -1012,6 +1015,50 @@ func lowerReferencedCounterPlacement(ctx contentCtx) (game.AbilityContent, *shar
 				Amount:      game.Fixed(effect.Amount.Value),
 				Object:      object,
 				CounterKind: effect.CounterKind,
+			},
+		}},
+	}.Ability(), nil
+}
+
+// lowerReferencedCounterKindChoice lowers a "Put a <X> counter or a <Y> counter
+// on <ref>" placement whose resolving controller chooses which single kind to
+// place (Elspeth Conquers Death chapter III). The object is the same referenced
+// permanent the single-kind placement accepts; the two recorded kinds become the
+// AddCounter's KindChoices. Every kind must be a supported, placeable, non-player
+// counter, and the amount a fixed positive count.
+func lowerReferencedCounterKindChoice(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		!effect.Amount.Known || effect.Amount.Value <= 0 ||
+		effect.CounterKindKnown ||
+		len(effect.CounterKindChoices) < 2 ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	for _, kind := range effect.CounterKindChoices {
+		if !compiler.CounterKindPlacementSupported(kind) || kind.PlayerOnly() {
+			return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+		}
+	}
+	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+		AllowSource: true,
+		AllowTarget: true,
+		AllowEvent:  !ctx.sequenceClause || ctx.allowEventPronoun,
+	})
+	if !ok {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.AddCounter{
+				Amount:      game.Fixed(effect.Amount.Value),
+				Object:      object,
+				KindChoices: slices.Clone(effect.CounterKindChoices),
 			},
 		}},
 	}.Ability(), nil

@@ -218,10 +218,41 @@ func handleAddCounter(r *effectResolver, prim game.AddCounter) effectResolved {
 	}
 	permanent, ok := r.resolveObject(prim.Object)
 	if ok {
-		addCountersToPermanentControlledBy(r.game, placementController, permanent, prim.CounterKind, res.amount)
+		kind := prim.CounterKind
+		if len(prim.KindChoices) > 0 {
+			kind = r.chooseCounterKindToPlace(prim.KindChoices)
+		}
+		addCountersToPermanentControlledBy(r.game, placementController, permanent, kind, res.amount)
 		res.succeeded = true
 	}
 	return res
+}
+
+// chooseCounterKindToPlace asks the resolving controller which single counter
+// kind to place from a binary (or wider) "put a <X> counter or a <Y> counter on
+// it" choice (Elspeth Conquers Death chapter III). The kinds are presented in
+// the order the parser recorded them; an out-of-range or empty selection falls
+// back to the first kind so resolution always places a counter.
+func (r *effectResolver) chooseCounterKindToPlace(kinds []counter.Kind) counter.Kind {
+	options := make([]game.ChoiceOption, len(kinds))
+	for i, kind := range kinds {
+		options[i] = game.ChoiceOption{
+			Index: i,
+			Label: kind.String() + " counter",
+		}
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:       game.ChoiceResolution,
+		Player:     r.obj.Controller,
+		Prompt:     "Choose a kind of counter",
+		Options:    options,
+		MinChoices: 1,
+		MaxChoices: 1,
+	}, r.log)
+	if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(kinds) {
+		return kinds[0]
+	}
+	return kinds[selected[0]]
 }
 
 // handleDoubleAllCounterKinds doubles every kind of counter on the primitive's

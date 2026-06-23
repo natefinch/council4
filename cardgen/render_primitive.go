@@ -361,6 +361,31 @@ func (r Renderer) renderAddCounter(ctx *renderCtx, value *game.AddCounter) (stri
 		}
 		return structLit("game.AddCounter", fields), nil
 	}
+	if len(value.KindChoices) > 0 {
+		ctx.need(importCounter)
+		amount, err := r.renderQuantity(ctx, value.Amount)
+		if err != nil {
+			return "", err
+		}
+		object, err := r.renderObjectReference(value.Object)
+		if err != nil {
+			return "", err
+		}
+		choices := make([]string, len(value.KindChoices))
+		for i, choice := range value.KindChoices {
+			rendered, err := renderCounterKind(choice)
+			if err != nil {
+				return "", err
+			}
+			choices[i] = rendered
+		}
+		fields := []string{
+			fmt.Sprintf("Amount: %s,", amount),
+			fmt.Sprintf("Object: %s,", object),
+			fmt.Sprintf("KindChoices: []counter.Kind{%s},", strings.Join(choices, ", ")),
+		}
+		return structLit("game.AddCounter", fields), nil
+	}
 	kind, err := renderCounterKind(value.CounterKind)
 	if err != nil {
 		return "", err

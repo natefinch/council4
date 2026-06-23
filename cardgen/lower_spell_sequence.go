@@ -661,6 +661,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx, syntax *parser
 	if content, ok := lowerCreateTokenThenGrantKeywordSequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerGraveyardReturnThenCounterPlacement(ctx); ok {
+		return content, true
+	}
 	return game.AbilityContent{}, false
 }
 

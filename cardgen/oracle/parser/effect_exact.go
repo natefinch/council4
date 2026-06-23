@@ -106,7 +106,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectGainPlayerCounter:
 		return exactGainPlayerCounterEffectSyntax(effect)
 	case EffectPut:
-		return exactCounterPlacementEffectSyntax(effect) || exactGraveyardPutEffectSyntax(effect) ||
+		return exactCounterPlacementEffectSyntax(effect) || exactCounterKindChoicePlacementEffectSyntax(effect) ||
+			exactGraveyardPutEffectSyntax(effect) ||
 			exactDigPutEffectSyntax(effect) || exactHandLibraryPutEffectSyntax(effect) ||
 			exactPutThoseCountersEffectSyntax(effect) || exactPutThoseCardsIntoHandEffectSyntax(effect)
 	case EffectProliferate:
@@ -3580,7 +3581,38 @@ func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
 	return false
 }
 
-// counterPlacementSingleChoiceRecipient reports whether an exact non-target
+// exactCounterKindChoicePlacementEffectSyntax recognizes the binary counter-kind
+// choice "Put a <X> counter or a <Y> counter on <ref>." (Elspeth Conquers Death
+// chapter III), whose resolving controller places one counter of one of two
+// named kinds on a referenced permanent. It accepts only the singular "a … or a
+// …" determiner form (exactly one counter) on a referenced-object recipient ("it"
+// / "this creature"), and verifies the reconstructed text matches byte-for-byte
+// so the lowering can place the choice from the same typed context.
+func exactCounterKindChoicePlacementEffectSyntax(effect *EffectSyntax) bool {
+	if effect.CounterKnown ||
+		len(effect.CounterKindChoices) != 2 ||
+		!effect.Amount.Known || effect.Amount.Value != 1 ||
+		len(effect.Targets) != 0 ||
+		effect.CounterRecipientAttached {
+		return false
+	}
+	recipientRefs := referencesOutsideSpan(effect.References, effect.Amount.Span)
+	var object string
+	if text, ok := exactObjectReferenceText(recipientRefs); ok {
+		object = text
+	} else if text, ok := exactSelfSubjectReferenceText(recipientRefs); ok {
+		object = text
+	} else {
+		return false
+	}
+	prefix := fmt.Sprintf("Put %s %s counter or a %s counter on %s",
+		effectAmountSourceText(effect),
+		effect.CounterKindChoices[0].String(),
+		effect.CounterKindChoices[1].String(),
+		object)
+	return strings.EqualFold(exactEffectClauseText(effect), prefix+".")
+}
+
 // counter placement names a single chosen group member ("a creature you
 // control") rather than a distributive group ("each creature you control"). The
 // two forms compile to identical selectors, so lowering relies on this flag to

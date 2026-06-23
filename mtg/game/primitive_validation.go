@@ -818,6 +818,32 @@ func (p AddCounter) validatePrimitive(targets []TargetSpec, checkTargets bool) e
 		}
 		return nil
 	}
+	if len(p.KindChoices) > 0 {
+		if p.Group.Domain() != groupDomainNone {
+			return errors.New("add counter choosing a kind requires a single object, not a group")
+		}
+		if len(p.KindChoices) < 2 {
+			return errors.New("add counter choosing a kind requires at least two kinds")
+		}
+		for _, kind := range p.KindChoices {
+			if !kind.Valid() {
+				return errors.New("add counter requires a recognized counter kind")
+			}
+			if kind.PlayerOnly() {
+				return errors.New("player-only counter kind cannot be placed on a permanent")
+			}
+		}
+		if err := validatePositiveQuantity(p.Amount, targets, checkTargets); err != nil {
+			return err
+		}
+		if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
+			return err
+		}
+		if p.Object.Kind() == ObjectReferenceTargetPermanent {
+			return validateTargetAllows(p.Object.TargetIndex(), TargetAllowPermanent, targets, checkTargets)
+		}
+		return nil
+	}
 	if !p.CounterKind.Valid() {
 		return errors.New("add counter requires a recognized counter kind")
 	}

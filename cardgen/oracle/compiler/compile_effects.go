@@ -251,6 +251,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				),
 				CounterKind:                  syntax.CounterKind,
 				CounterKindKnown:             syntax.CounterKnown,
+				CounterKindChoices:           syntax.CounterKindChoices,
 				CounterRecipientAttached:     syntax.CounterRecipientAttached,
 				CounterRecipientSingleChoice: syntax.CounterRecipientSingleChoice,
 				RegenerateAttached:           syntax.RegenerateAttached,
