@@ -112,7 +112,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactCounterPlacementEffectSyntax(effect) || exactGraveyardPutEffectSyntax(effect) ||
 			exactDigPutEffectSyntax(effect) || exactHandLibraryPutEffectSyntax(effect) ||
 			exactPutThoseCountersEffectSyntax(effect) || exactPutThoseCardsIntoHandEffectSyntax(effect) ||
-			exactBottomLinkedExiledCardsEffectSyntax(effect)
+			exactBottomLinkedExiledCardsEffectSyntax(effect) ||
+			exactCounterExiledCardManaValueEffectSyntax(effect)
 	case EffectProliferate:
 		return exactStandaloneActionEffectSyntax(effect, "Proliferate")
 	case EffectRemoveCounter:
@@ -134,6 +135,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactChosenCardsBattlefieldReturnEffectSyntax(effect) ||
 			exactReturnExiledCardEffectSyntax(effect) ||
 			exactReturnExiledCardsToHandEffectSyntax(effect) ||
+			exactReturnSourceAndExiledCardToHandEffectSyntax(effect) ||
 			exactDirectPronounEffectSyntax(effect, "Return it to its owner's hand.")
 	default:
 		return exactEffectSyntaxTail(effect)

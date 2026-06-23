@@ -160,6 +160,16 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 			if resolved, ok := resolvePermanentOrLastKnown(r.g, linked.ObjectID); ok {
 				return resolved, true
 			}
+			// A card-only linked reference (ObjectID zero) names a card that was
+			// never a battlefield permanent, such as a card exiled straight from a
+			// graveyard (The Aesir Escape Valhalla). It carries no object snapshot,
+			// so resolve it to a card snapshot the printed-characteristic readers
+			// (mana value) consult through the card instance.
+			if linked.ObjectID == 0 && linked.CardID != 0 {
+				if _, ok := r.g.GetCardInstance(linked.CardID); ok {
+					return resolvedObjectReference{snapshot: game.ObjectSnapshot{CardID: linked.CardID}}, true
+				}
+			}
 			if linked.CardID != 0 {
 				return resolvedObjectReference{snapshot: game.ObjectSnapshot{
 					CardID: linked.CardID,

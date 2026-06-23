@@ -1881,6 +1881,21 @@ type EffectSyntax struct {
 	// a target. Lowering emits a linked library-bottom disposal; it is false for
 	// every other put shape.
 	BottomLinkedExiledCards bool `json:",omitempty"`
+	// CounterExiledCardManaValue marks the exact counter clause "Put a number of
+	// +1/+1 counters on target creature you control equal to the mana value of
+	// the exiled card." (The Aesir Escape Valhalla chapter II). The amount is the
+	// mana value of the card a sibling chapter exiled under the source link, read
+	// through that link rather than a printed number. Lowering emits a counter
+	// placement scaled by the linked exiled card's mana value; it is false for
+	// every other counter shape.
+	CounterExiledCardManaValue bool `json:",omitempty"`
+	// ReturnSourceAndExiledCardToHand marks the exact clause "Return this Saga
+	// and the exiled card to their owner's hand." (The Aesir Escape Valhalla
+	// chapter III). It returns both the source permanent and the card a sibling
+	// chapter exiled under the source link to their owners' hands. Lowering emits
+	// a source bounce paired with a linked return to hand; it is false for every
+	// other return shape.
+	ReturnSourceAndExiledCardToHand bool `json:",omitempty"`
 	// Additional marks a draw clause whose counted cards carry the "additional"
 	// qualifier ("draw two additional cards", "draw an additional card"), as on
 	// draw-step triggers like Sylvan Library. Drawing N additional cards is

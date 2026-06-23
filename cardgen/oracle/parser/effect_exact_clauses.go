@@ -379,6 +379,88 @@ func exactBottomLinkedExiledCardsEffectSyntax(effect *EffectSyntax) bool {
 	return true
 }
 
+// exactCounterExiledCardManaValueEffectSyntax recognizes the chapter II clause
+// "Put a number of +1/+1 counters on target creature you control equal to the
+// mana value of the exiled card." (The Aesir Escape Valhalla). The count is the
+// mana value of the card a sibling chapter exiled under the source link, read
+// through that link rather than a printed number, so the parser drops the amount
+// span and the generic counter recognizer cannot match. The target is kept; the
+// effect is marked so lowering scales the placement by the linked exiled card's
+// mana value. Any other counter shape leaves the clause non-exact so lowering
+// fails closed.
+func exactCounterExiledCardManaValueEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectPut || effect.Negated || effect.Optional {
+		return false
+	}
+	if !effect.CounterKnown {
+		return false
+	}
+	if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
+		return false
+	}
+	target := effect.Targets[0]
+	if target.Cardinality.Min != 1 || target.Cardinality.Max != 1 {
+		return false
+	}
+	canonical := "Put a number of " + effect.CounterKind.String() + " counters on " +
+		target.Text + " equal to the mana value of the exiled card."
+	if !strings.EqualFold(exactEffectClauseText(effect), canonical) {
+		return false
+	}
+	effect.CounterExiledCardManaValue = true
+	return true
+}
+
+// exactReturnSourceAndExiledCardToHandEffectSyntax recognizes the chapter III
+// clause "Return this Saga and the exiled card to their owner's hand." (The
+// Aesir Escape Valhalla). It returns both the source permanent and the card a
+// sibling chapter exiled under the source link, identified by the link rather
+// than a target, so the effect carries no target. It marks the effect so
+// lowering emits a source bounce paired with a linked return to hand; any other
+// return shape leaves the clause non-exact so lowering fails closed.
+func exactReturnSourceAndExiledCardToHandEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectReturn || effect.Negated || effect.Optional {
+		return false
+	}
+	if effect.Context != EffectContextController {
+		return false
+	}
+	if effect.ToZone != zone.Hand || effect.FromZone != zone.None {
+		return false
+	}
+	if len(effect.Targets) != 0 {
+		return false
+	}
+	anchor, ok := selfReferenceAnchorText(effect)
+	if !ok {
+		return false
+	}
+	canonical := "Return " + anchor + " and the exiled card to their owner's hand."
+	if !strings.EqualFold(exactEffectClauseText(effect), canonical) {
+		return false
+	}
+	effect.ReturnSourceAndExiledCardToHand = true
+	return true
+}
+
+// selfReferenceAnchorText returns the source-anchor wording ("this Saga") that a
+// clause names as its own permanent, drawn from a this-object or self-name
+// reference in either the subject or the effect references. It reports false
+// when no such anchor is present.
+func selfReferenceAnchorText(effect *EffectSyntax) (string, bool) {
+	for _, group := range [][]Reference{effect.SubjectReferences, effect.References} {
+		for _, reference := range group {
+			if reference.Kind != ReferenceThisObject && reference.Kind != ReferenceSelfName {
+				continue
+			}
+			if text := strings.TrimSpace(reference.Text); text != "" {
+				return text, true
+			}
+		}
+	}
+	return "", false
+}
+
 // exiledWithSelfAnchorText returns the source-anchor wording ("this Saga") that
 // the linked disposal clause names as the exile source, drawn from a subject
 // this-object or self-name reference. It reports false when no such anchor is

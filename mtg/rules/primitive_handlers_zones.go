@@ -807,6 +807,7 @@ func handleExileFromGraveyard(r *effectResolver, prim game.ExileFromGraveyard) e
 		Quantity:    prim.Amount,
 		Count:       game.ChooseExactly,
 		Destination: game.ChooseDestination{Zone: zone.Exile},
+		Riders:      game.ChooseRiders{PublishLinked: prim.PublishLinked},
 		Prompt:      "Choose a card to exile",
 	})
 	res.amount = r.quantity(prim.Amount)
