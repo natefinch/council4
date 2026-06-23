@@ -989,7 +989,7 @@ func searchCharacteristicRider(characteristic string, bound compare.Int) (string
 func canonicalSearchFilter(sel SelectionSyntax) (string, bool) {
 	if sel.Controller != SelectionControllerAny ||
 		sel.All || sel.Another || sel.Other || sel.Attacking || sel.Blocking ||
-		sel.Tapped || sel.Untapped || sel.Colorless || sel.Multicolored ||
+		sel.Tapped || sel.Untapped || sel.Multicolored ||
 		sel.Keyword != KeywordUnknown || sel.Zone != zone.None ||
 		len(sel.ExcludedTypes) != 0 || len(sel.SourceTypes) != 0 ||
 		len(sel.ExcludedColors) != 0 {
@@ -1006,6 +1006,12 @@ func canonicalSearchFilter(sel SelectionSyntax) (string, bool) {
 			words = append(words, word)
 		}
 		colorStr = joinOrList(words)
+	}
+	if sel.Colorless {
+		if colorStr != "" {
+			return "", false
+		}
+		colorStr = "colorless"
 	}
 	basic, legendary := false, false
 	switch len(sel.Supertypes) {
@@ -1099,6 +1105,9 @@ func canonicalSearchFilter(sel SelectionSyntax) (string, bool) {
 		return "", false
 	}
 	if colorStr != "" {
+		if base == "" {
+			return prefix + colorStr, true
+		}
 		return prefix + colorStr + " " + base, true
 	}
 	return prefix + base, true
