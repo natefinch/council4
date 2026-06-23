@@ -242,6 +242,7 @@ type CompiledModalChoiceKind uint8
 const (
 	CompiledModalChoiceUnknown CompiledModalChoiceKind = iota
 	CompiledModalChoiceOneOrMore
+	CompiledModalChoiceOneAtRandom
 )
 
 // Unconsumed reports whether any sidechannel content fields (targets,

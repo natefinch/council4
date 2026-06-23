@@ -1247,7 +1247,8 @@ func lowerExecutableAbilitySpecialCase(
 ) (abilityLowering, bool, *shared.Diagnostic) {
 	if len(ability.Content.Modes) > 0 &&
 		ability.Kind != compiler.AbilityActivated &&
-		ability.Kind != compiler.AbilityTriggered {
+		ability.Kind != compiler.AbilityTriggered &&
+		ability.Kind != compiler.AbilityChapter {
 		lowered, diagnostic := lowerModalAbility(cardName, ability, syntax)
 		return lowered, true, diagnostic
 	}

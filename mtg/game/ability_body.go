@@ -25,6 +25,11 @@ type AbilityContent struct {
 	MaxModes            int
 	ModeChoiceBonus     ModeChoiceBonus
 	AllowDuplicateModes bool
+	// RandomModes reports that the single required mode is chosen at random
+	// rather than by the controller ("Choose one at random —", CR 700.2). It is
+	// set only on one/one modal content; mode resolution picks the mode with the
+	// game's random source instead of prompting the controller.
+	RandomModes bool
 	// EscalateCost is the additional mana cost paid once for each mode chosen
 	// beyond the first on an Escalate spell (CR 702.121). It is set only on the
 	// spell ability of an Escalate modal spell; an empty value means the modal

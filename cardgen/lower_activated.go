@@ -55,6 +55,7 @@ func lowerChapterAbility(
 		Atoms:     syntax.Atoms,
 		CoinFlip:  syntax.CoinFlip,
 		Vote:      syntax.Vote,
+		Modal:     syntax.Modal,
 	}
 	content, diagnostic := lowerAbilityContent(cardName, ability.Kind, bodyContent, false, &bodySyntax)
 	if diagnostic != nil {
@@ -82,20 +83,31 @@ func lowerChapterAbility(
 	for _, reminder := range syntax.Reminders {
 		spans = append(spans, reminder.Span)
 	}
+	chapterSpans := spans
+	consumed := semanticConsumption{
+		targets:    len(ability.Content.Targets),
+		effects:    len(ability.Content.Effects),
+		keywords:   len(ability.Content.Keywords),
+		references: len(ability.Content.References),
+		conditions: len(ability.Content.Conditions),
+	}
+	if len(ability.Content.Modes) > 0 {
+		// A modal chapter ("I, II, III — Choose one at random — • ...") carries its
+		// targets and effects inside each mode, which lowerModalContent verifies
+		// for complete per-option coverage. Credit the whole chapter span so the
+		// modal header and bullet tokens count as consumed, mirroring the modal
+		// spell shell.
+		consumed.modes = len(ability.Content.Modes)
+		chapterSpans = append(chapterSpans, ability.Span)
+	}
 	return abilityLowering{
 		chapterAbility: opt.Val(game.ChapterAbility{
 			Text:     ability.Text,
 			Chapters: slices.Clone(ability.Chapters),
 			Content:  content,
 		}),
-		consumed: semanticConsumption{
-			targets:    len(ability.Content.Targets),
-			effects:    len(ability.Content.Effects),
-			keywords:   len(ability.Content.Keywords),
-			references: len(ability.Content.References),
-			conditions: len(ability.Content.Conditions),
-		},
-		sourceSpans: spans,
+		consumed:    consumed,
+		sourceSpans: chapterSpans,
 	}, nil
 }
 
@@ -382,6 +394,20 @@ func lowerModalContent(
 		(minModes == 1 && maxModes == 2 && len(ctx.content.Modes) != 2) {
 		return unsupported("the modal choice range does not match the number of modes")
 	}
+	randomModes := modal.Kind == compiler.CompiledModalChoiceOneAtRandom
+	if randomModes {
+		// "Choose one at random" selects the single mode with the game's random
+		// source rather than letting the controller choose. Only the triggered
+		// and Saga-chapter resolution paths honor that random selection, so a
+		// random modal in any other context (a modal spell) fails closed rather
+		// than silently letting a player pick.
+		if minModes != 1 || maxModes != 1 {
+			return unsupported("an at-random modal must choose exactly one mode")
+		}
+		if ctx.enclosingKind != compiler.AbilityChapter && ctx.enclosingKind != compiler.AbilityTriggered {
+			return unsupported("the executable source backend lowers at-random modes only in triggered or Saga-chapter abilities")
+		}
+	}
 	var bonus game.ModeChoiceBonus
 	switch modal.Bonus.Condition {
 	case compiler.ModeChoiceBonusConditionNone:
@@ -458,6 +484,7 @@ func lowerModalContent(
 		MinModes:        minModes,
 		MaxModes:        maxModes,
 		ModeChoiceBonus: bonus,
+		RandomModes:     randomModes,
 	}
 	if modal.Escalate {
 		if len(modal.EscalateCost) == 0 {
@@ -475,6 +502,9 @@ func modalOptionCompletelyRecognized(content compiler.AbilityContent, syntax *pa
 	var spans []shared.Span
 	if syntax.Label != nil {
 		spans = append(spans, syntax.Label.Span, syntax.Label.SeparatorSpan)
+	}
+	if syntax.FlavorSpan != (shared.Span{}) {
+		spans = append(spans, syntax.FlavorSpan, syntax.FlavorSeparatorSpan)
 	}
 	if syntax.SpreeCost != nil {
 		spans = append(spans, syntax.SpreeCost.Span, syntax.SpreeCost.SeparatorSpan)

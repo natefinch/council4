@@ -46,6 +46,9 @@ func (r Renderer) renderModalAbilityContent(ctx *renderCtx, content game.Ability
 		fields = append(fields, sliceField("SharedTargets", "game.TargetSpec", sharedElements))
 	}
 	fields = append(fields, sliceField("Modes", "game.Mode", modeElements))
+	if content.RandomModes {
+		fields = append(fields, "RandomModes: true,")
+	}
 	if content.MinModes != 0 {
 		fields = append(fields, fmt.Sprintf("MinModes: %d,", content.MinModes))
 	}
