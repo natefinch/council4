@@ -799,7 +799,18 @@ func lowerGroupCounterPlacement(ctx contentCtx) (game.AbilityContent, bool) {
 		effect.CounterKind.PlayerOnly() {
 		return game.AbilityContent{}, false
 	}
-	amount, ok := groupCounterPlacementAmount(effect.Amount, ctx.content.References)
+	// A "with a <kind> counter on it/them" group filter carries a trailing
+	// pronoun referent ("it"/"them") that names the filtered permanent, not a
+	// placement count subject. The runtime represents that filter through the
+	// group selection's counter requirement, so drop the qualifier pronoun
+	// before validating the placement amount; otherwise its stray reference
+	// makes the fixed-amount shape look reference-bearing and the group fails to
+	// reconstruct.
+	references := ctx.content.References
+	if effect.Selector.MatchCounter || effect.Selector.MatchAnyCounter {
+		references = counterQualifierFilteredReferences(references)
+	}
+	amount, ok := groupCounterPlacementAmount(effect.Amount, references)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
@@ -845,6 +856,54 @@ func groupCounterPlacementAmount(
 		return game.Quantity{}, false
 	}
 	return game.Dynamic(dynamic), true
+}
+
+// counterQualifierFilteredReferences drops the pronoun referent a
+// "with a <kind> counter on it/them" group filter introduces ("it", "them"),
+// leaving the references that genuinely bind a placement count. The caller
+// applies it only when the recipient selector carries a counter requirement, so
+// the only pronoun present names the filtered permanent rather than a placement
+// recipient or count subject.
+func counterQualifierFilteredReferences(references []compiler.CompiledReference) []compiler.CompiledReference {
+	filtered := make([]compiler.CompiledReference, 0, len(references))
+	for _, reference := range references {
+		if reference.Kind == compiler.ReferencePronoun && counterQualifierPronoun(reference.Pronoun) {
+			continue
+		}
+		filtered = append(filtered, reference)
+	}
+	return filtered
+}
+
+func counterQualifierPronoun(pronoun compiler.ReferencePronounKind) bool {
+	switch pronoun {
+	case compiler.ReferencePronounIt,
+		compiler.ReferencePronounIts,
+		compiler.ReferencePronounThem,
+		compiler.ReferencePronounThose,
+		compiler.ReferencePronounThey,
+		compiler.ReferencePronounTheir:
+		return true
+	default:
+		return false
+	}
+}
+
+// groupCounterQualifierClause reports whether an ordered-sequence effect is an
+// exact counter placement on a filtered battlefield group whose filter requires
+// group members to carry a counter ("each creature you control with a +1/+1
+// counter on it"). Such a clause carries a qualifier pronoun ("it"/"them")
+// naming each filtered member rather than a prior clause's target, so the
+// sequence lowerer drops that pronoun before antecedent target binding.
+func groupCounterQualifierClause(effect *compiler.CompiledEffect) bool {
+	if !effect.Exact ||
+		!effect.CounterKindKnown ||
+		effect.Context != parser.EffectContextController ||
+		(!effect.Selector.MatchCounter && !effect.Selector.MatchAnyCounter) {
+		return false
+	}
+	_, ok := groupCounterRecipient(effect.Selector)
+	return ok
 }
 
 // groupCounterRecipient reconstructs the battlefield group a counter placement

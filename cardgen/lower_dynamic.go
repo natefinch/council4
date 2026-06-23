@@ -248,6 +248,7 @@ var dynamicAmountSelectionMask = SelectionMask{}.Ignoring(
 	DimHistoric,
 ).Rejecting(
 	DimPowerVsSource,
+	DimRequiredName,
 )
 
 func dynamicBattlefieldRequiredType(kind compiler.SelectorKind) (types.Card, bool) {

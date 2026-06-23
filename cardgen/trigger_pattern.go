@@ -615,7 +615,7 @@ func triggerSelectionSelector(selection compiler.TriggerSelection) (compiler.Com
 		ExcludedColors: selection.ExcludedColors,
 	})
 
-	return selector, SelectionMask{}, true
+	return selector, SelectionMask{}.Rejecting(DimRequiredName), true
 }
 
 // selectionTargetPredicate converts a lowered Selection into the equivalent

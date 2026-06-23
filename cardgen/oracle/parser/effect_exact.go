@@ -3263,6 +3263,15 @@ func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
 		// that referent names the counted subject, not the placement recipient,
 		// so exclude it before reconstructing the recipient.
 		recipientRefs := referencesOutsideSpan(effect.References, effect.Amount.Span)
+		// A filtered group recipient with a "with a <kind> counter on it/them"
+		// qualifier ("each creature you control with a +1/+1 counter on it")
+		// carries a trailing pronoun referent inside its own selection span that
+		// names the filtered permanent, not the recipient. Exclude it only for
+		// that qualifier so a recipient that genuinely is a referenced object
+		// ("Put a +1/+1 counter on this creature.") keeps its referent.
+		if effect.Selection.CounterRequired || effect.Selection.CounterAny {
+			recipientRefs = referencesOutsideSpan(recipientRefs, effect.Selection.Span)
+		}
 		object, ok = exactObjectReferenceText(recipientRefs)
 		if !ok {
 			object, ok = exactSelfSubjectReferenceText(recipientRefs)

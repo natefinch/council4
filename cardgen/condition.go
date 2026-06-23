@@ -362,7 +362,7 @@ func lowerConditionSelection(selection compiler.ConditionSelection) (game.Select
 	if !ok {
 		return game.Selection{}, false
 	}
-	result, ok := SelectionForSelectorMasked(selector, SelectionMask{})
+	result, ok := SelectionForSelectorMasked(selector, SelectionMask{}.Rejecting(DimRequiredName))
 	if !ok {
 		return game.Selection{}, false
 	}

@@ -148,6 +148,11 @@ func TestRenderSelection(t *testing.T) {
 			wantParts: []string{"NonToken: true"},
 		},
 		{
+			name:      "named filter",
+			selection: game.Selection{RequiredTypes: []types.Card{types.Creature}, Name: "Charmed Stray"},
+			wantParts: []string{"RequiredTypes:", "types.Creature", `Name: "Charmed Stray"`},
+		},
+		{
 			name: "combined selection",
 			selection: game.Selection{
 				RequiredTypesAny: []types.Card{types.Creature},

@@ -216,6 +216,17 @@ func lowerOrderedEffectSequence(
 		// only the effect's own references.
 		clauseRefs := referencesOutsideConditionSpans(effect.References, gateConditions)
 		ownedReferenceCount := len(clauseRefs)
+		// A group counter-placement clause whose group filter carries a "with a
+		// <kind> counter on it/them" qualifier introduces a pronoun naming each
+		// filtered group member, not the prior clause's target. Drop it before
+		// antecedent target binding so it does not bind to a prior target and
+		// force the clause onto the single-target placement path; the group
+		// lowerer represents the filter through the group selection's counter
+		// requirement. ownedReferenceCount above still credits the dropped
+		// pronoun as consumed.
+		if groupCounterQualifierClause(effect) {
+			clauseRefs = counterQualifierFilteredReferences(clauseRefs)
+		}
 		// Combined-shape and characteristic lowerers read the resolved effect's
 		// own reference list (ctx.content.Effects[0].References) rather than the
 		// clause-level References, so strip the gate-condition references there

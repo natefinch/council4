@@ -34,6 +34,11 @@ func TestSelectionForSelectorDimensions(t *testing.T) {
 		want game.Selection
 	}{
 		{
+			name: "required name",
+			sel:  compiler.CompiledSelector{Kind: compiler.SelectorCreature, RequiredName: "Charmed Stray"},
+			want: game.Selection{RequiredTypes: []types.Card{types.Creature}, Name: "Charmed Stray"},
+		},
+		{
 			name: "bare permanent",
 			sel:  permanentSelector(),
 			want: game.Selection{},
@@ -330,10 +335,6 @@ func TestSelectionForSelectorHardRejects(t *testing.T) {
 		{
 			name: "inclusive one of each",
 			sel:  compiler.CompiledSelector{Kind: compiler.SelectorPermanent, InclusiveOneOfEach: true},
-		},
-		{
-			name: "required name",
-			sel:  compiler.CompiledSelector{Kind: compiler.SelectorPermanent, RequiredName: "Trustworthy Scout"},
 		},
 		{
 			name: "source types",

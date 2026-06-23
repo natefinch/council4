@@ -60,6 +60,13 @@ const (
 	// DimPowerVsSource is the source-relative "with lesser/greater power"
 	// comparison (Selection.PowerLessThanSource / PowerGreaterThanSource).
 	DimPowerVsSource
+
+	// DimRequiredName is the "named <Name>" filter that requires the matched
+	// object's card name to equal a verbatim name (Selection.Name). Most
+	// contexts cannot represent it and reject it; the battlefield group
+	// recipient honors it ("each other creature you control named Charmed
+	// Stray").
+	DimRequiredName
 )
 
 // SelectionMask records the optional CompiledSelector dimensions a calling
@@ -123,11 +130,12 @@ func (m SelectionMask) dimension(active bool, dim SelectionDim) (honor, ok bool)
 //
 // It returns false when the selector carries a predicate the backend cannot
 // represent (a zone, basic-land-type, source-type, or total-mana-value filter,
-// a player-or-planeswalker target, a named-card filter, an inclusive
-// one-of-each set, a chosen-{X} mana-value bound, a contradictory tapped state,
-// more than one excluded supertype or subtype, or a structurally invalid
-// combination) so unsupported wordings stay unsupported rather than silently
-// dropping a constraint.
+// a player-or-planeswalker target, an inclusive one-of-each set, a chosen-{X}
+// mana-value bound, a contradictory tapped state, more than one excluded
+// supertype or subtype, or a structurally invalid combination) so unsupported
+// wordings stay unsupported rather than silently dropping a constraint. The
+// named-card filter (Selection.Name) is honored as a dimension; a context that
+// cannot represent it rejects DimRequiredName through its mask.
 func SelectionForSelector(selector compiler.CompiledSelector) (game.Selection, bool) {
 	return SelectionForSelectorMasked(selector, SelectionMask{})
 }
@@ -145,7 +153,6 @@ func SelectionForSelectorMasked(selector compiler.CompiledSelector, mask Selecti
 		selector.MatchTotalManaValue ||
 		selector.ManaValueDynamic != compiler.DynamicAmountNone ||
 		selector.InclusiveOneOfEach ||
-		selector.RequiredName != "" ||
 		len(selector.SourceTypes()) != 0 ||
 		(selector.Tapped && selector.Untapped) {
 		return game.Selection{}, false
@@ -167,6 +174,12 @@ func SelectionForSelectorMasked(selector compiler.CompiledSelector, mask Selecti
 		return game.Selection{}, false
 	} else if honor {
 		selection.ExcludeSource = true
+	}
+
+	if honor, ok := mask.dimension(selector.RequiredName != "", DimRequiredName); !ok {
+		return game.Selection{}, false
+	} else if honor {
+		selection.Name = selector.RequiredName
 	}
 
 	if excludedSupertypes := selector.ExcludedSupertypes(); len(excludedSupertypes) > 0 {
