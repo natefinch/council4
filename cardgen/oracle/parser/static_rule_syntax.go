@@ -415,18 +415,31 @@ func validStaticRuleSyntax(rule StaticRuleSyntax) bool {
 			rule.Operation.Voice == StaticRuleVoicePassive &&
 			len(rule.Qualifiers) == 0
 	case StaticRuleSubjectControlledCreatures:
-		return rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+		return (rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationBlock &&
 			rule.Operation.Voice == StaticRuleVoicePassive &&
-			len(rule.Qualifiers) == 0
+			len(rule.Qualifiers) == 0) ||
+			validGroupMustAttackRule(rule)
 	case StaticRuleSubjectBattlefieldCreatures:
-		return rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+		return (rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationBlock &&
 			rule.Operation.Voice == StaticRuleVoiceActive &&
-			len(rule.Qualifiers) == 0
+			len(rule.Qualifiers) == 0) ||
+			validGroupMustAttackRule(rule)
+	case StaticRuleSubjectOpponentControlledCreatures:
+		return validGroupMustAttackRule(rule)
 	default:
 		return false
 	}
+}
+
+// validGroupMustAttackRule reports whether a group-scoped static rule is the
+// forced-attack requirement "<group> attack[s] each combat if able."
+func validGroupMustAttackRule(rule StaticRuleSyntax) bool {
+	return rule.Constraint.Kind == StaticRuleConstraintRequirement &&
+		rule.Operation.Kind == StaticRuleOperationAttack &&
+		rule.Operation.Voice == StaticRuleVoiceActive &&
+		staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierEachCombat, StaticRuleQualifierIfAble)
 }
 
 // validCreatureStaticRuleOperation reports whether a creature-scoped static rule

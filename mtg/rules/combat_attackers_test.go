@@ -255,6 +255,56 @@ func TestMustAttackStaticBodyRequiresSourceToAttackIfAble(t *testing.T) {
 	}
 }
 
+// TestOpponentControlledStaticMustAttackForcesOpponentCreatures proves the
+// continuous opponent-scoped forced-attack static the lowering emits for
+// "Creatures your opponents control attack each combat if able." (Angler Turtle)
+// — a RuleEffectMustAttack whose affected-permanent Selection scopes the
+// controller to the opponent relation — forces an opponent's creature to attack
+// while leaving the source controller's own creatures free not to attack.
+func TestOpponentControlledStaticMustAttackForcesOpponentCreatures(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Angler Turtle",
+		Types: []types.Card{types.Creature},
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:              game.RuleEffectMustAttack,
+				PermanentTypes:    []types.Card{types.Creature},
+				AffectedSelection: game.Selection{Controller: game.ControllerOpponent},
+			}},
+		}},
+	}})
+	forced := addCombatCreaturePermanent(g, game.Player1)
+	ownTurtleSide := addCombatCreaturePermanent(g, game.Player2)
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Combat = &game.CombatState{}
+
+	// The turtle's controller's opponent (Player1) is forced to attack; the
+	// turtle's controller's own creature is not, because the affected-permanent
+	// Selection scopes the rule to the opponent of the static's source.
+	if !attackerMustAttack(g, forced) {
+		t.Fatalf("opponent creature %d was not forced to attack", forced.ObjectID)
+	}
+	if attackerMustAttack(g, ownTurtleSide) {
+		t.Fatalf("source controller's creature %d was wrongly forced to attack", ownTurtleSide.ObjectID)
+	}
+
+	g.Turn.ActivePlayer = game.Player1
+	legal := legalDeclareAttackersActions(g, game.Player1)
+	if len(legal) == 0 {
+		t.Fatal("no legal declare-attackers actions")
+	}
+	for _, act := range legal {
+		declarations := mustDeclareAttackersPayload(t, act)
+		if !slices.ContainsFunc(declarations.Attackers, func(declaration game.AttackDeclaration) bool {
+			return declaration.Attacker == forced.ObjectID
+		}) {
+			t.Fatalf("legal action omitted forced opponent attacker: %+v", declarations.Attackers)
+		}
+	}
+}
+
 func TestConditionalMixedStaticValuesAffectCharacteristicsAndAttackLegality(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{

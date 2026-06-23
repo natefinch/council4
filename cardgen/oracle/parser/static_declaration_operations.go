@@ -426,6 +426,13 @@ func parseStaticDeclarationSubject(tokens []shared.Token, atoms Atoms) (StaticDe
 			Group: group,
 		}, verbStart, true
 	}
+	if group, verbStart, ok := staticGroupMustAttackSubject(tokens); ok {
+		return StaticDeclarationSubject{
+			Kind:  StaticDeclarationSubjectGroup,
+			Span:  group.Span,
+			Group: group,
+		}, verbStart, true
+	}
 	group := parseEffectStaticSubject(tokens, atoms)
 	if group.Kind == EffectStaticSubjectNone {
 		return StaticDeclarationSubject{}, 0, false
@@ -573,6 +580,38 @@ func staticBattlefieldCreaturesProhibitionSubject(tokens []shared.Token, atoms A
 	}
 	subject.Span = shared.SpanOf(tokens[:idx])
 	return subject, idx, true
+}
+
+// staticGroupMustAttackSubject recognizes the bare creature-group subject of a
+// mass forced-attack requirement ("Creatures you control attack each combat if
+// able.", "Creatures your opponents control attack each combat if able.", "All
+// creatures attack each combat if able.") when it precedes the requirement verb
+// ("attack", "attacks", or "must"). parseEffectStaticSubject only delimits these
+// groups before a get/have/gain/lose verb, so the requirement boundary is
+// recognized here. Only the unfiltered group forms are supported; any leading or
+// trailing filter fails closed.
+func staticGroupMustAttackSubject(tokens []shared.Token) (EffectStaticSubjectSyntax, int, bool) {
+	forms := []struct {
+		words []string
+		kind  EffectStaticSubjectKind
+	}{
+		{[]string{"creatures", "your", "opponents", "control"}, EffectStaticSubjectOpponentControlledCreatures},
+		{[]string{"creatures", "you", "control"}, EffectStaticSubjectControlledCreatures},
+		{[]string{"all", "creatures"}, EffectStaticSubjectAllCreatures},
+	}
+	for _, form := range forms {
+		if !staticWordsAt(tokens, 0, form.words...) {
+			continue
+		}
+		width := len(form.words)
+		if !staticWordsAt(tokens, width, "attack") &&
+			!staticWordsAt(tokens, width, "attacks") &&
+			!staticWordsAt(tokens, width, "must") {
+			return EffectStaticSubjectSyntax{}, 0, false
+		}
+		return EffectStaticSubjectSyntax{Kind: form.kind, Span: shared.SpanOf(tokens[:width])}, width, true
+	}
+	return EffectStaticSubjectSyntax{}, 0, false
 }
 
 // parseStaticBlockedObject recognizes the protected object a "can't block"
@@ -1821,8 +1860,12 @@ func parseStaticAttackRuleOperation(
 		operationStart++
 	}
 	explicit := operationStart != constraintStart
+	// The bare requirement uses the verb agreeing with its subject: the singular
+	// "This creature attacks ..." and the plural "Creatures you control attack
+	// ...". The explicit "must" form always takes the bare "attack".
 	if (explicit && !staticWordsAt(tokens, operationStart, "attack")) ||
-		(!explicit && !staticWordsAt(tokens, operationStart, "attacks")) {
+		(!explicit && !staticWordsAt(tokens, operationStart, "attacks") &&
+			!staticWordsAt(tokens, operationStart, "attack")) {
 		return StaticDeclarationSyntax{}, 0, false
 	}
 	qualifierStart := operationStart + 1
@@ -1905,6 +1948,7 @@ func staticRuleSubjectKindAllowed(subject StaticDeclarationSubject) bool {
 	case StaticDeclarationSubjectGroup:
 		return subject.Group.Kind == EffectStaticSubjectAttachedObject ||
 			subject.Group.Kind == EffectStaticSubjectControlledCreatures ||
+			subject.Group.Kind == EffectStaticSubjectOpponentControlledCreatures ||
 			subject.Group.Kind == EffectStaticSubjectAllCreatures
 	default:
 		return false
@@ -1936,8 +1980,18 @@ func staticRuleSubjectForDeclaration(subject StaticDeclarationSubject, operation
 			if operation.Kind == StaticRuleOperationBlock && operation.Voice == StaticRuleVoicePassive {
 				return StaticRuleSubject{Kind: StaticRuleSubjectControlledCreatures, Span: subject.Span}, true
 			}
+			if operation.Kind == StaticRuleOperationAttack && operation.Voice == StaticRuleVoiceActive {
+				return StaticRuleSubject{Kind: StaticRuleSubjectControlledCreatures, Span: subject.Span}, true
+			}
+		case EffectStaticSubjectOpponentControlledCreatures:
+			if operation.Kind == StaticRuleOperationAttack && operation.Voice == StaticRuleVoiceActive {
+				return StaticRuleSubject{Kind: StaticRuleSubjectOpponentControlledCreatures, Span: subject.Span}, true
+			}
 		case EffectStaticSubjectAllCreatures:
 			if operation.Kind == StaticRuleOperationBlock && operation.Voice == StaticRuleVoiceActive {
+				return StaticRuleSubject{Kind: StaticRuleSubjectBattlefieldCreatures, Span: subject.Span}, true
+			}
+			if operation.Kind == StaticRuleOperationAttack && operation.Voice == StaticRuleVoiceActive {
 				return StaticRuleSubject{Kind: StaticRuleSubjectBattlefieldCreatures, Span: subject.Span}, true
 			}
 		default:
