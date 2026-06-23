@@ -1404,6 +1404,7 @@ func spanContains(outer, inner shared.Span) bool {
 func mixedStaticKeywordImplemented(keyword game.Keyword) bool {
 	switch keyword {
 	case game.Deathtouch,
+		game.Banding,
 		game.Defender,
 		game.DoubleStrike,
 		game.FirstStrike,

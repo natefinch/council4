@@ -1158,6 +1158,12 @@ const (
 	// put two +1/+1 counters on it."). The lowering gates this effect on the
 	// negation of the preceding effect's condition so exactly one branch runs.
 	EffectConnectionOtherwise EffectConnectionKind = "EffectConnectionOtherwise"
+	// EffectConnectionOr marks a resolving effect joined to the preceding effect
+	// by a sentence-level "or" ("Put a +1/+1 counter on target creature or that
+	// creature gains trample."). The two effects are alternatives: the
+	// controller chooses exactly one to carry out. Lowering realizes the choice
+	// as a modal ability whose modes are the alternative effects.
+	EffectConnectionOr EffectConnectionKind = "EffectConnectionOr"
 )
 
 // EffectPlayerKind identifies the player who performs an effect and whose zone
@@ -1630,6 +1636,13 @@ type EffectSyntax struct {
 	SubjectTargets                  []TargetSyntax          `json:",omitempty"`
 	Payment                         EffectPaymentSyntax     `json:",omitzero"`
 	Exact                           bool                    `json:",omitempty"`
+	// KeywordGrantChoice marks an EffectGain keyword grant whose keyword list is a
+	// disjunction ("gains banding, first strike, or trample") rather than a
+	// conjunction. The disjunction means the controller chooses exactly one of the
+	// listed keywords at resolution; lowering reads this to emit a keyword-choice
+	// grant instead of granting every listed keyword. It is set only for gain
+	// effects whose body is a recognized disjunctive keyword list.
+	KeywordGrantChoice bool `json:",omitempty"`
 	// RevealUntilThenPut marks each effect of the recognized closed "reveal
 	// cards from the top of <library> until <player> reveal a <type> card, then
 	// put those cards into <zone>" sequence. The parser keeps the three-effect

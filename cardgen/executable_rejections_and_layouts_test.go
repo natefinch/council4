@@ -218,7 +218,7 @@ func TestGenerateExecutableCardSourceRejectsPartiallyRecognizedKeywordLine(t *te
 		Name:       "Partial Keyword Tester",
 		Layout:     "normal",
 		TypeLine:   "Creature — Insect",
-		OracleText: "Flying; banding (Any creatures with banding, and up to one without, can block as a group.)",
+		OracleText: "Flying; phasing (This permanent phases in or out before you untap during each of your untap steps.)",
 	}
 	source, diagnostics, err := GenerateExecutableCardSource(card, "b")
 	if err != nil {

@@ -33,7 +33,19 @@ func (r Renderer) renderModalAbilityContent(ctx *renderCtx, content game.Ability
 		}
 		modeElements = append(modeElements, rendered+",")
 	}
-	fields := []string{sliceField("Modes", "game.Mode", modeElements)}
+	var fields []string
+	if len(content.SharedTargets) > 0 {
+		sharedElements := make([]string, 0, len(content.SharedTargets))
+		for i := range content.SharedTargets {
+			rendered, err := r.renderTargetSpec(ctx, &content.SharedTargets[i])
+			if err != nil {
+				return "", err
+			}
+			sharedElements = append(sharedElements, rendered+",")
+		}
+		fields = append(fields, sliceField("SharedTargets", "game.TargetSpec", sharedElements))
+	}
+	fields = append(fields, sliceField("Modes", "game.Mode", modeElements))
 	if content.MinModes != 0 {
 		fields = append(fields, fmt.Sprintf("MinModes: %d,", content.MinModes))
 	}

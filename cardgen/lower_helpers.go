@@ -142,6 +142,7 @@ func mixedKeywordDiagnostic(ctx contentCtx) *shared.Diagnostic {
 // keywordStaticBodies maps a typed keyword to its reusable typed StaticAbility and
 // the package-level variable reference the Renderer emits for it.
 var keywordStaticBodies = map[parser.KeywordKind]loweredStaticAbility{
+	parser.KeywordBanding:          {Body: game.BandingStaticBody, VarName: "game.BandingStaticBody"},
 	parser.KeywordDevoid:           {Body: game.DevoidStaticBody, VarName: "game.DevoidStaticBody"},
 	parser.KeywordDeathtouch:       {Body: game.DeathtouchStaticBody, VarName: "game.DeathtouchStaticBody"},
 	parser.KeywordDefender:         {Body: game.DefenderStaticBody, VarName: "game.DefenderStaticBody"},

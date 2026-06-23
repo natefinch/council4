@@ -1517,6 +1517,25 @@ func selectionAtomCoversToken(atoms Atoms, token shared.Token) bool {
 	return false
 }
 
+// orBackReferenceClauseFollowsAt reports whether the token at index i opens an
+// anaphoric back-reference clause ("that creature", "that permanent", "it",
+// "them", "those") that follows a sentence-level "or". Such a clause is a second
+// alternative effect acting on the already-named target, not a member of a
+// card-type union target ("target artifact or creature"), which always names a
+// type noun rather than a demonstrative. Target scanning stops before it so the
+// first effect's target noun phrase does not swallow the alternative clause.
+func orBackReferenceClauseFollowsAt(tokens []shared.Token, i int) bool {
+	if i >= len(tokens) {
+		return false
+	}
+	return equalWord(tokens[i], "that") ||
+		equalWord(tokens[i], "it") ||
+		equalWord(tokens[i], "this") ||
+		equalWord(tokens[i], "those") ||
+		equalWord(tokens[i], "them") ||
+		equalWord(tokens[i], "they")
+}
+
 func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 	if end, ok := counterAbilityListEnd(tokens, start); ok {
 		return end
@@ -1545,6 +1564,7 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 			secondTargetDamageRiderFollowsAt(tokens, atoms, end) ||
 			(equalWord(token, "and") && end+1 < len(tokens) &&
 				(equalWord(tokens[end+1], "target") || equalWord(tokens[end+1], "targets"))) ||
+			(equalWord(token, "or") && end+1 < len(tokens) && orBackReferenceClauseFollowsAt(tokens, end+1)) ||
 			(equalWord(token, "and") && end+1 < len(tokens) && effectWordKind(tokens[end+1]) != EffectUnknown) ||
 			(end > start && effectWordKind(token) != EffectUnknown) ||
 			(end > start && equalWord(token, "becomes")) ||

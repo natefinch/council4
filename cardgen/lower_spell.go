@@ -203,6 +203,9 @@ func lowerContent(
 		return lowerSearchSpell(ctx)
 	}
 	if len(ctx.content.Effects) > 1 {
+		if content, diagnostic, handled := lowerOrAlternativeModal(cardName, ctx, syntax); handled {
+			return content, diagnostic
+		}
 		if len(ctx.content.Effects) == 2 &&
 			ctx.content.Effects[0].Kind == compiler.EffectAddMana &&
 			isManaSpendRider(&ctx.content.Effects[1]) {
@@ -1493,12 +1496,16 @@ func lowerPermanentKeywordGrantSpell(ctx contentCtx) (game.AbilityContent, *shar
 		len(ctx.content.References) == 1 &&
 		ctx.content.References[0].Binding == compiler.ReferenceBindingTarget &&
 		effect.Context == parser.EffectContextReferencedObject
+	targetSubject := len(ctx.content.Targets) == 1 &&
+		len(ctx.content.References) == 0 &&
+		effect.Context == parser.EffectContextTarget &&
+		temporaryKeywordTarget(ctx.content.Targets[0])
 	if len(ctx.content.Effects) != 1 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		effect.Kind != compiler.EffectGain ||
 		!effect.Exact ||
-		!referencedObject ||
+		(!referencedObject && !targetSubject) ||
 		effect.Negated ||
 		effect.StaticSubject != compiler.StaticSubjectNone ||
 		effect.Duration != compiler.DurationNone {
@@ -1508,11 +1515,26 @@ func lowerPermanentKeywordGrantSpell(ctx contentCtx) (game.AbilityContent, *shar
 	if !ok {
 		return unsupported()
 	}
-	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowTarget: true})
-	if !ok {
-		return unsupported()
+	var object game.ObjectReference
+	var target opt.V[game.TargetSpec]
+	switch {
+	case targetSubject:
+		spec, ok := permanentTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return unsupported()
+		}
+		target = opt.Val(spec)
+		object = game.TargetPermanentReference(0)
+	default:
+		object, ok = lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowTarget: true})
+		if !ok {
+			return unsupported()
+		}
 	}
-	return game.Mode{
+	if effect.KeywordGrantChoice {
+		return lowerPermanentKeywordChoiceGrant(keywords, abilities, object, target)
+	}
+	mode := game.Mode{
 		Sequence: []game.Instruction{{
 			Primitive: game.ApplyContinuous{
 				Object: opt.Val(object),
@@ -1524,7 +1546,58 @@ func lowerPermanentKeywordGrantSpell(ctx contentCtx) (game.AbilityContent, *shar
 				Duration: game.DurationPermanent,
 			},
 		}},
-	}.Ability(), nil
+	}
+	if target.Exists {
+		mode.Targets = []game.TargetSpec{target.Val}
+	}
+	return mode.Ability(), nil
+}
+
+// lowerPermanentKeywordChoiceGrant lowers a disjunctive keyword grant ("that
+// creature gains banding, first strike, or trample") into a modal ability whose
+// modes each grant one of the listed keywords indefinitely. The controller picks
+// exactly one mode at resolution, which realizes the "choose one of the listed
+// keywords" semantics with the existing modal machinery. The single grant target
+// is shared across every mode. Abilities (such as a granted protection static
+// body) are never produced by a choice list, so a non-empty abilities slice is
+// rejected as unrepresentable.
+func lowerPermanentKeywordChoiceGrant(
+	keywords []game.Keyword,
+	abilities []game.Ability,
+	object game.ObjectReference,
+	target opt.V[game.TargetSpec],
+) (game.AbilityContent, *shared.Diagnostic) {
+	if len(keywords) < 2 || len(abilities) != 0 {
+		return game.AbilityContent{}, &shared.Diagnostic{
+			Severity: shared.SeverityWarning,
+			Summary:  "unsupported keyword choice grant",
+			Detail:   "the executable source backend supports only a choice among two or more simple grantable keywords",
+		}
+	}
+	modes := make([]game.Mode, 0, len(keywords))
+	for _, keyword := range keywords {
+		modes = append(modes, game.Mode{
+			Sequence: []game.Instruction{{
+				Primitive: game.ApplyContinuous{
+					Object: opt.Val(object),
+					ContinuousEffects: []game.ContinuousEffect{{
+						Layer:       game.LayerAbility,
+						AddKeywords: []game.Keyword{keyword},
+					}},
+					Duration: game.DurationPermanent,
+				},
+			}},
+		})
+	}
+	content := game.AbilityContent{
+		Modes:    modes,
+		MinModes: 1,
+		MaxModes: 1,
+	}
+	if target.Exists {
+		content.SharedTargets = []game.TargetSpec{target.Val}
+	}
+	return content, nil
 }
 
 // lowerLoseSpellEffect lowers an EffectLose body: either a temporary keyword

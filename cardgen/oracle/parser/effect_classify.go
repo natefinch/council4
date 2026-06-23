@@ -40,7 +40,7 @@ func resolvingClauseStart(tokens []shared.Token, indices []int, effectIndex int)
 	}
 	for i := indices[effectIndex] - 1; i > indices[effectIndex-1]; i-- {
 		if tokens[i].Kind == shared.Comma || tokens[i].Kind == shared.Semicolon ||
-			equalWord(tokens[i], "then") || equalWord(tokens[i], "and") {
+			equalWord(tokens[i], "then") || equalWord(tokens[i], "and") || equalWord(tokens[i], "or") {
 			return i + 1
 		}
 	}
@@ -518,6 +518,8 @@ func effectConnection(tokens []shared.Token, indices []int, effectIndex int) (Ef
 			return EffectConnectionThen, tokens[i].Span
 		case equalWord(tokens[i], "and"):
 			return EffectConnectionAnd, tokens[i].Span
+		case equalWord(tokens[i], "or"):
+			return EffectConnectionOr, tokens[i].Span
 		}
 	}
 	return EffectConnectionNone, shared.Span{}
@@ -920,7 +922,7 @@ func resolvingClauseEnd(tokens []shared.Token, indices []int, effectIndex int) i
 				end = i
 				break
 			}
-			if equalWord(tokens[i], "then") || equalWord(tokens[i], "and") {
+			if equalWord(tokens[i], "then") || equalWord(tokens[i], "and") || equalWord(tokens[i], "or") {
 				end = i
 				if i > start && tokens[i-1].Kind == shared.Comma {
 					end--
