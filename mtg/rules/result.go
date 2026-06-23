@@ -139,6 +139,21 @@ type ActionLog struct {
 	// produces mana and resolves without using the stack). It is set only for
 	// ActionActivateAbility actions.
 	ManaAbility bool
+
+	// ManaTaps lists the permanents tapped for mana while applying this action,
+	// in tap order, so a report can show how a spell or ability was paid for.
+	// It includes lands and other sources tapped during cost payment.
+	ManaTaps []ManaTap
+}
+
+// ManaTap records one permanent tapped for mana while paying for an action.
+type ManaTap struct {
+	// Source is the display name of the tapped permanent.
+	Source string
+	// Colors lists the mana colors the tap produced, in production order, as
+	// single-letter codes (W, U, B, R, G) or the colorless symbol. It may be
+	// empty when the produced color was not recorded.
+	Colors []string
 }
 
 // ResolveLog records a stack object resolving.
