@@ -244,6 +244,20 @@ func referencesTargetZero(references []compiler.CompiledReference) bool {
 		references[0].Occurrence == 0
 }
 
+// referencesSourceSelfOnly reports whether every reference (if any) binds to the
+// source permanent. Self-relative gain-control durations restate the source
+// ("this creature remains on the battlefield") as a back-reference that carries
+// no independent action, so the gain-control lowering accepts those references
+// without a corresponding instruction.
+func referencesSourceSelfOnly(references []compiler.CompiledReference) bool {
+	for i := range references {
+		if references[i].Binding != compiler.ReferenceBindingSource {
+			return false
+		}
+	}
+	return true
+}
+
 // lowerSingleControlSpell lowers a single EffectGainControl spell with no
 // Untap or keyword grant (e.g. "Gain control of target permanent." or the
 // DurationUntilEndOfTurn variant).
@@ -287,16 +301,25 @@ func lowerSingleControlSpell(
 	default:
 		return unsupported()
 	}
-	// The "for as long as that creature is enchanted" wording carries a single
-	// back-reference to the controlled creature (the lone target). It needs no
-	// lowering action of its own, so accept it for that duration only; every
-	// other supported duration requires no references.
-	if duration == game.DurationForAsLongAsControlledCreatureEnchanted {
+	// Self-relative durations ("for as long as this creature remains on the
+	// battlefield" / "for as long as you control this creature" / "for as long
+	// as that creature is enchanted") may carry a single back-reference to the
+	// source or the controlled creature. The duration enum already encodes the
+	// boundary, so the reference needs no lowering action of its own; accept it
+	// for these durations only. Every other duration requires no references.
+	switch duration {
+	case game.DurationForAsLongAsControlledCreatureEnchanted:
 		if len(ctx.content.References) != 0 && !referencesTargetZero(ctx.content.References) {
 			return unsupported()
 		}
-	} else if len(ctx.content.References) != 0 {
-		return unsupported()
+	case game.DurationForAsLongAsSourceOnBattlefield, game.DurationForAsLongAsYouControlSource:
+		if !referencesSourceSelfOnly(ctx.content.References) {
+			return unsupported()
+		}
+	default:
+		if len(ctx.content.References) != 0 {
+			return unsupported()
+		}
 	}
 	return game.Mode{
 		Targets: []game.TargetSpec{targetSpec},

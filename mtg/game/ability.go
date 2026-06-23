@@ -1242,6 +1242,13 @@ type TargetSpec struct {
 	// choosers, structured "you" predicates are evaluated relative to the
 	// choosing player.
 	Chooser TargetChooser
+
+	// DistinctFromPriorTargets requires every object chosen for this spec to
+	// differ from every object already chosen for the preceding target specs of
+	// the same spell or ability ("... fights another target creature"). It is
+	// meaningful only for specs after the first; the default false preserves the
+	// ordinary rule that distinct target specs may otherwise overlap.
+	DistinctFromPriorTargets bool
 }
 
 // TargetChooser identifies who chooses a target slot during announcement.

@@ -2786,14 +2786,22 @@ func exactGainControlControlledSourceDuration(text, prefix string) bool {
 }
 
 func exactGainControlBattlefieldSourceDuration(text, prefix string) bool {
-	for _, noun := range []string{"artifact", "creature", "enchantment", "land", "permanent", "planeswalker"} {
-		for _, verb := range []string{"is", "remains"} {
-			if strings.EqualFold(text, prefix+" as long as this "+noun+" "+verb+" on the battlefield.") {
-				return true
-			}
-		}
+	lower := strings.ToLower(text)
+	suffix, ok := strings.CutPrefix(lower, strings.ToLower(prefix)+" for as long as this ")
+	if !ok {
+		suffix, ok = strings.CutPrefix(lower, strings.ToLower(prefix)+" as long as this ")
 	}
-	return false
+	if !ok {
+		return false
+	}
+	self, rest, ok := strings.Cut(suffix, " ")
+	if !ok || self == "" {
+		return false
+	}
+	// "this <type>" is a single-word self reference (e.g. "creature", "saga",
+	// "aura"); the runtime already carries the source-on-battlefield duration,
+	// so only the trailing battlefield phrase needs verbatim confirmation.
+	return rest == "remains on the battlefield." || rest == "is on the battlefield."
 }
 
 func exactControllerAmountEffectSyntax(effect *EffectSyntax, verb string) bool {

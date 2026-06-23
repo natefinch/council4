@@ -1063,6 +1063,34 @@ func TestGenerateExecutableCardSourceFight(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceFightAnotherTarget covers the "fights another
+// target creature" templating: the second target lowers to a
+// DistinctFromPriorTargets spec so the chosen creature must differ from the
+// first fighter.
+func TestGenerateExecutableCardSourceFightAnotherTarget(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Prey",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target creature you control fights another target creature.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.Fight") ||
+		!strings.Contains(source, "RelatedObject: game.TargetPermanentReference(1)") {
+		t.Fatalf("source missing Fight primitive:\n%s", source)
+	}
+	if !strings.Contains(source, "DistinctFromPriorTargets: true,") {
+		t.Fatalf("source missing distinct second target:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceFightOptionalSecondTarget(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
