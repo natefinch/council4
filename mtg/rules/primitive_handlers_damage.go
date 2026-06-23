@@ -316,6 +316,23 @@ func handleGroupSourceDamage(r *effectResolver, prim game.GroupSourceDamage) eff
 	return res
 }
 
+// handleGroupSelfPowerDamage has each member of the group deal damage to itself
+// equal to its own power, computed per member (Wave of Reckoning). Each member
+// is both the damage source and the recipient; a member with zero or negative
+// power deals no damage.
+func handleGroupSelfPowerDamage(r *effectResolver, prim game.GroupSelfPowerDamage) effectResolved {
+	res := effectResolved{accepted: true}
+	for _, permanent := range r.groupPermanents(prim.Group) {
+		power := effectivePower(r.game, permanent)
+		if power <= 0 {
+			continue
+		}
+		dealt := dealPermanentDamage(r.game, permanent.CardInstanceID, permanent.ObjectID, effectiveController(r.game, permanent), permanent, power, false)
+		res.succeeded = dealt > 0 || res.succeeded
+	}
+	return res
+}
+
 func typedDamageResultAmount(kind game.EffectResultAmountKind, dealt, excess int) int {
 	if kind == game.EffectResultAmountExcessDamage {
 		return excess

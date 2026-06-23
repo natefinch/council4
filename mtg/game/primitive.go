@@ -103,10 +103,11 @@ const (
 	PrimitiveChooseDiscardFromHand
 	PrimitiveExileFromGraveyard
 	PrimitiveShuffleGraveyardIntoLibrary
+	PrimitiveGroupSelfPowerDamage
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveShuffleGraveyardIntoLibrary) + 1
+const primitiveKindCount = int(PrimitiveGroupSelfPowerDamage) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -153,6 +154,17 @@ type GroupSourceDamage struct {
 	Group   GroupReference
 	Amount  Quantity
 	ToOwner bool
+}
+
+// GroupSelfPowerDamage has each permanent in a battlefield group deal damage to
+// itself equal to its own power, evaluated per member ("Each creature deals
+// damage to itself equal to its power.", Wave of Reckoning; "Each tapped
+// creature deals damage to itself equal to its power.", The Akroan War chapter
+// III). Every group member is both the damage source and the recipient, and the
+// amount is that member's power computed individually rather than a single
+// group-wide value.
+type GroupSelfPowerDamage struct {
+	Group GroupReference
 }
 
 // Draw draws cards for a referenced player, or for every player in a referenced

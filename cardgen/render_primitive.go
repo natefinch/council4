@@ -678,6 +678,20 @@ func (r Renderer) renderGroupSourceDamage(ctx *renderCtx, primitive game.Primiti
 	return structLit("game.GroupSourceDamage", fields), nil
 }
 
+func (r Renderer) renderGroupSelfPowerDamage(ctx *renderCtx, primitive game.Primitive) (string, error) {
+	value, ok := primitive.(game.GroupSelfPowerDamage)
+	if !ok {
+		return "", errors.New("render: internal error: GroupSelfPowerDamage kind has unexpected concrete type")
+	}
+	group, err := r.renderGroupReference(ctx, value.Group)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.GroupSelfPowerDamage", []string{
+		fmt.Sprintf("Group: %s,", group),
+	}), nil
+}
+
 func (r Renderer) renderDamagePrimitive(ctx *renderCtx, primitive game.Primitive) (string, error) {
 	value, ok := primitive.(game.Damage)
 	if !ok {

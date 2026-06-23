@@ -878,6 +878,13 @@ const (
 	// Megrim, Manabarbs). The "that player" reference binds to the event player
 	// (ReferenceBindingEventPlayer); lowering resolves it to EventPlayerReference.
 	DamageRecipientReferenceThatPlayer
+	// DamageRecipientReferenceItself marks every member of an "each <group>"
+	// subject as dealing damage to itself, the per-member self recipient of
+	// "Each creature deals damage to itself equal to its power." (Wave of
+	// Reckoning). It is recorded only as EachSourceDamageRecipient, paired with
+	// the subject group in EachSourceDamageGroup; lowering deals each member its
+	// own power.
+	DamageRecipientReferenceItself
 )
 
 // SignedAmountSyntax is one signed half of a power/toughness change.

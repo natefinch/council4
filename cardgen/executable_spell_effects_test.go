@@ -1254,6 +1254,64 @@ func TestGenerateExecutableCardSourceEachSourceDamage(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceEachSelfPowerDamage covers the group self-power
+// damage shape "Each <group> deals damage to itself equal to its power." (Wave of
+// Reckoning), where every group member deals its own power to itself, lowered
+// onto a GroupSelfPowerDamage primitive. The filtered "each tapped creature"
+// variant reuses the SelectionForSelector-backed damage group, so the lowering
+// records the tapped filter.
+func TestGenerateExecutableCardSourceEachSelfPowerDamage(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		oracleText  string
+		wantedSnips []string
+	}{
+		{
+			name:       "each creature",
+			oracleText: "Each creature deals damage to itself equal to its power.",
+			wantedSnips: []string{
+				"Primitive: game.GroupSelfPowerDamage",
+				"game.BattlefieldGroup(",
+				"types.Creature",
+			},
+		},
+		{
+			name:       "each tapped creature",
+			oracleText: "Each tapped creature deals damage to itself equal to its power.",
+			wantedSnips: []string{
+				"Primitive: game.GroupSelfPowerDamage",
+				"Tapped:",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Reckoning",
+				Layout:     "normal",
+				ManaCost:   "{4}{W}",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracleText,
+				Colors:     []string{"W"},
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range test.wantedSnips {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceGroupDamage(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

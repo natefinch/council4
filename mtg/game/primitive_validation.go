@@ -585,6 +585,10 @@ func (p GroupSourceDamage) validatePrimitive(targets []TargetSpec, checkTargets 
 	return validateQuantity(p.Amount, targets, checkTargets)
 }
 
+func (p GroupSelfPowerDamage) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateGroupReference(p.Group, targets, checkTargets)
+}
+
 func (p Damage) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if !p.Recipient.Valid() {
 		return errors.New("damage requires a valid recipient")
