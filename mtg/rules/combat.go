@@ -187,6 +187,7 @@ func markPlayerCombatDamage(g *game.Game, source *game.Permanent, defendingPlaye
 		DefendingPlayer: defendingPlayer,
 		Damage:          dealt,
 	})
+	stealMonarchByCombatDamage(g, sourceController, defendingPlayer)
 }
 
 func applyToxic(g *game.Game, source *game.Permanent, defendingPlayer game.PlayerID, dealt int) {

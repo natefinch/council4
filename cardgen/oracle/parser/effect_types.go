@@ -36,6 +36,7 @@ const (
 	EffectFight             EffectKind = "EffectFight"
 	EffectGain              EffectKind = "EffectGain"
 	EffectGainControl       EffectKind = "EffectGainControl"
+	EffectBecomeMonarch     EffectKind = "EffectBecomeMonarch"
 	EffectGrantKeyword      EffectKind = "EffectGrantKeyword"
 	EffectInvestigate       EffectKind = "EffectInvestigate"
 	EffectImpulseExile      EffectKind = "EffectImpulseExile"

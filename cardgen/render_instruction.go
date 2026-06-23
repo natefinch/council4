@@ -570,6 +570,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", errors.New("render: internal error: SetClassLevel kind has unexpected concrete type")
 		}
 		return r.renderSetClassLevel(ctx, value)
+	case game.PrimitiveBecomeMonarch:
+		value, ok := primitive.(game.BecomeMonarch)
+		if !ok {
+			return "", errors.New("render: internal error: BecomeMonarch kind has unexpected concrete type")
+		}
+		return r.renderBecomeMonarch(value)
 	default:
 		return "", fmt.Errorf("render: unsupported primitive kind %d", primitive.Kind())
 	}

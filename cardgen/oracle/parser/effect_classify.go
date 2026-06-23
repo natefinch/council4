@@ -1151,6 +1151,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectUnknown
 	case kind == EffectModifyPT && playerCounterGainVerbAt(tokens, index):
 		return EffectGainPlayerCounter
+	case becomeMonarchVerbAt(tokens, index):
+		return EffectBecomeMonarch
 	case kind == EffectTap && index+2 < len(tokens) &&
 		equalWord(tokens[index+1], "or") && equalWord(tokens[index+2], "untap"):
 		return EffectTapOrUntap
@@ -1233,6 +1235,20 @@ func playerCounterGainVerbAt(tokens []shared.Token, index int) bool {
 	}
 	return len(energySymbolsAfter(tokens, index+1)) > 0 ||
 		playerCounterWordAfter(tokens, index+1)
+}
+
+// becomeMonarchVerbAt reports whether the "become"/"becomes" verb at index heads
+// a "<subject> become(s) the monarch" designation effect (CR 720). The object is
+// the fixed "the monarch" noun phrase that ends the sentence; any other object
+// leaves the verb unclassified so unrelated "becomes" wordings ("becomes a
+// copy", "becomes an artifact") keep their own whole-sentence recognizers.
+func becomeMonarchVerbAt(tokens []shared.Token, index int) bool {
+	if !equalWord(tokens[index], "become") && !equalWord(tokens[index], "becomes") {
+		return false
+	}
+	return index+3 < len(tokens) &&
+		effectWordsAt(tokens, index+1, "the", "monarch") &&
+		tokens[index+3].Kind == shared.Period
 }
 
 // playerCounterWordAfter reports whether the tokens beginning at start name a

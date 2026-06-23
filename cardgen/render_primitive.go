@@ -832,6 +832,14 @@ func (r Renderer) renderPlayerWinsGame(value game.PlayerWinsGame) (string, error
 	return structLit("game.PlayerWinsGame", []string{fmt.Sprintf("Player: %s,", rendered)}), nil
 }
 
+func (r Renderer) renderBecomeMonarch(value game.BecomeMonarch) (string, error) {
+	rendered, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.BecomeMonarch", []string{fmt.Sprintf("Player: %s,", rendered)}), nil
+}
+
 func (r Renderer) renderShuffleLibrary(value game.ShuffleLibrary) (string, error) {
 	player, err := r.renderPlayerReference(value.Player)
 	if err != nil {

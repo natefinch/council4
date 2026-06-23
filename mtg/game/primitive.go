@@ -104,10 +104,11 @@ const (
 	PrimitiveExileFromGraveyard
 	PrimitiveShuffleGraveyardIntoLibrary
 	PrimitiveGroupSelfPowerDamage
+	PrimitiveBecomeMonarch
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveGroupSelfPowerDamage) + 1
+const primitiveKindCount = int(PrimitiveBecomeMonarch) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -497,6 +498,14 @@ type PutPermanentOnLibrary struct {
 
 // StartEngines starts engine effects for a player.
 type StartEngines struct {
+	Player PlayerReference
+}
+
+// BecomeMonarch makes the referenced player the monarch (CR 720). At most one
+// player is the monarch at a time, so the runtime clears any prior monarch when
+// it applies this primitive. It backs "you become the monarch" and "target
+// player becomes the monarch".
+type BecomeMonarch struct {
 	Player PlayerReference
 }
 

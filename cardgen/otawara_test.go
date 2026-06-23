@@ -137,7 +137,6 @@ func TestGenerateChannelVariantsFailClosed(t *testing.T) {
 func TestGenerateActivationCostReductionPreservesUnsupportedMainSentenceContent(t *testing.T) {
 	t.Parallel()
 	tests := []string{
-		"{1}: Draw a card, then you become the monarch. This ability costs {1} less to activate for each legendary creature you control.",
 		"{1}: Draw a card, then venture into the dungeon. This ability costs {1} less to activate for each legendary creature you control.",
 	}
 	for _, text := range tests {

@@ -1290,6 +1290,7 @@ const (
 	// counter" form removes a counter of a kind the controller chooses. Added
 	// last so existing kinds keep their wire values.
 	EffectRemoveCounter
+	EffectBecomeMonarch
 )
 
 // DurationKind identifies common continuous-effect durations.
