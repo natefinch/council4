@@ -1218,6 +1218,80 @@ func lowerSourcePowerGroupDamageSpell(ctx contentCtx) (game.AbilityContent, bool
 	}.Ability(), true
 }
 
+// lowerInheritedPowerGroupDamageSpell lowers the inherited-subject source-power
+// group damage shape in which a creature carried from a prior clause ("it",
+// bound to that clause's target) deals damage equal to its own power to a single
+// group of recipients ("Choose target creature you control. It deals damage
+// equal to its power to each other creature.", Nibelheim Aflame). The inherited
+// target is the damage source: its power feeds the dynamic amount and it is the
+// damage source so its keywords (deathtouch, lifelink) apply. The lone recipient
+// group lives in effect.Selector (single-recipient damage, so
+// DamageRecipientSelectors is empty), and an "each other creature" group
+// excludes the dealing target rather than the spell's own source. It fails
+// closed (ok=false) for every other shape, leaving the two-target inherited and
+// dual-recipient source-power paths unchanged.
+func lowerInheritedPowerGroupDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectDealDamage ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextReferencedObject ||
+		effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower ||
+		len(effect.DamageRecipientSelectors) != 0 ||
+		effect.DamageRecipientReference != parser.DamageRecipientReferenceNone ||
+		effect.TargetControllerDamageRiderRecipient != parser.DamageRecipientReferenceNone ||
+		effect.HasSelfDamageRider ||
+		effect.HasSecondTargetDamageRider ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.References) != 2 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 {
+		return game.AbilityContent{}, false
+	}
+	source := ctx.content.References[0]
+	amountRef := ctx.content.References[1]
+	if source.Kind != compiler.ReferencePronoun ||
+		source.Pronoun != compiler.ReferencePronounIt ||
+		source.Binding != compiler.ReferenceBindingTarget ||
+		source.Occurrence != 0 {
+		return game.AbilityContent{}, false
+	}
+	if amountRef.Kind != compiler.ReferencePronoun ||
+		amountRef.Pronoun != compiler.ReferencePronounIts ||
+		amountRef.Binding != compiler.ReferenceBindingTarget ||
+		amountRef.Occurrence != 0 ||
+		amountRef.Span != effect.Amount.ReferenceSpan {
+		return game.AbilityContent{}, false
+	}
+	sourceRef := game.TargetPermanentReference(0)
+	dynamic, ok := lowerDynamicAmount(effect.Amount, sourceRef)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	targetSpec, ok := damageTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	recipient, ok := groupDamageRecipientForExcluding(effect.Selector, sourceRef)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{{
+			Primitive: game.Damage{
+				Amount:       game.Dynamic(dynamic),
+				Recipient:    recipient,
+				DamageSource: opt.Val(sourceRef),
+			},
+		}},
+	}.Ability(), true
+}
+
 // lowerEventPowerGroupDamageSpell lowers the triggered-ability payoff shape in
 // which a permanent deals damage equal to a referenced object's power or
 // toughness to a group of players ("Whenever another creature you control

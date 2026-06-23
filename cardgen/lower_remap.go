@@ -528,7 +528,58 @@ func rebaseDamageRecipient(recipient game.DamageRecipient, offset int) (game.Dam
 		rebased, valid := rebasePlayerReference(player, offset)
 		return game.PlayerDamageRecipient(rebased), valid
 	}
+	if group, ok := recipient.GroupReference(); ok {
+		rebased, valid := rebaseGroupReference(group, offset)
+		return game.GroupDamageRecipient(rebased), valid
+	}
+	if _, ok := recipient.PlayerGroupReference(); ok {
+		// An opponents/all-players group carries no target index to rebase.
+		return recipient, true
+	}
 	return game.DamageRecipient{}, false
+}
+
+// rebaseGroupReference rebases the anchor and exclusion object references of a
+// battlefield or object-controlled group by offset, leaving its characteristic
+// Selection (which carries no target index) unchanged. It backs the inherited
+// source-power group damage shape ("It deals damage equal to its power to each
+// other creature."), whose recipient group excludes the dealing target. It fails
+// closed for any other group domain.
+func rebaseGroupReference(group game.GroupReference, offset int) (game.GroupReference, bool) {
+	selection := group.Selection()
+	var anchor opt.V[game.ObjectReference]
+	if a, ok := group.Anchor(); ok {
+		rebased, valid := rebaseObjectReference(a, offset)
+		if !valid {
+			return game.GroupReference{}, false
+		}
+		anchor = opt.Val(rebased)
+	}
+	var exclude opt.V[game.ObjectReference]
+	if e, ok := group.Exclusion(); ok {
+		rebased, valid := rebaseObjectReference(e, offset)
+		if !valid {
+			return game.GroupReference{}, false
+		}
+		exclude = opt.Val(rebased)
+	}
+	switch group.Domain() {
+	case game.GroupDomainBattlefield:
+		if exclude.Exists {
+			return game.BattlefieldGroupExcluding(selection, exclude.Val), true
+		}
+		return game.BattlefieldGroup(selection), true
+	case game.GroupDomainObjectControlled:
+		if !anchor.Exists {
+			return game.GroupReference{}, false
+		}
+		if exclude.Exists {
+			return game.ObjectControlledGroupExcluding(anchor.Val, selection, exclude.Val), true
+		}
+		return game.ObjectControlledGroup(anchor.Val, selection), true
+	default:
+		return game.GroupReference{}, false
+	}
 }
 
 // rebaseDamageAmount rebases a damage Quantity whose dynamic formula reads a

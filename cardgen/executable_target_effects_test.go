@@ -1484,6 +1484,38 @@ func TestGenerateExecutableCardSourceEachOfUpToTwoTargetCreatures(t *testing.T) 
 	}
 }
 
+func TestGenerateExecutableCardSourceInheritedSourcePowerGroupDamageSequence(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Aflame",
+		Layout:     "normal",
+		ManaCost:   "{2}{R}{R}",
+		TypeLine:   "Sorcery",
+		OracleText: "Choose target creature you control. It deals damage equal to its power to each other creature. If this spell was cast from a graveyard, discard your hand and draw four cards.\nFlashback {5}{R}{R} (You may cast this card from your graveyard for its flashback cost. Then exile it.)",
+		Colors:     []string{"R"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		`Constraint: "target creature you control"`,
+		"game.DynamicAmountObjectPower",
+		"game.GroupDamageRecipient(game.BattlefieldGroupExcluding(game.Selection{RequiredTypes: []types.Card{types.Creature}}, game.TargetPermanentReference(0)))",
+		"DamageSource: opt.Val(game.TargetPermanentReference(0))",
+		"CastFromZone: opt.Val(zone.Graveyard)",
+		"EntireHand: true",
+		"game.Draw{",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceMultiTargetUnionDestroy(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
