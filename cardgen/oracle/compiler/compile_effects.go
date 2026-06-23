@@ -249,6 +249,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				TargetControllerDamageRiderValue:     syntax.TargetControllerDamageRiderValue,
 				HasSecondTargetDamageRider:           syntax.HasSecondTargetDamageRider,
 				SecondTargetDamageRiderValue:         syntax.SecondTargetDamageRiderValue,
+				SecondTargetDamageRiderDynamic:       syntax.SecondTargetDamageRiderDynamic,
 				Amount:                               compileTypedAmount(syntax.Amount),
 				PowerDelta:                           compileSignedAmount(syntax.PowerDelta),
 				ToughnessDelta:                       compileSignedAmount(syntax.ToughnessDelta),

@@ -515,6 +515,20 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("AffectedController: %s,", controller))
 	}
+	if effect.AffectedPlayerRef.Kind() != game.PlayerReferenceNone {
+		reference, err := r.renderPlayerReference(effect.AffectedPlayerRef)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("AffectedPlayerRef: %s,", reference))
+	}
+	if effect.RequiredAttackTargetRef.Kind() != game.PlayerReferenceNone {
+		reference, err := r.renderPlayerReference(effect.RequiredAttackTargetRef)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("RequiredAttackTargetRef: %s,", reference))
+	}
 	if effect.DefendingPlayer != game.PlayerAny {
 		player, err := renderPlayerRelation(effect.DefendingPlayer)
 		if err != nil {

@@ -2171,14 +2171,26 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 // exactSecondTargetDamageEffectSyntax reconstructs the canonical two-target
 // damage clause "<prefix> A damage to <target0> and B damage to <target1>." in
 // which each target is chosen independently. Both targets must reconstruct
-// exactly from their own captured phrases and the primary amount must be a fixed
-// value, keeping the round-trip exact for this bounded shape.
+// exactly from their own captured phrases. The fixed form requires a known
+// primary amount and fixed rider value; the dynamic form ("<prefix> X damage to
+// <target0> and X damage to <target1>, where X is ...", The Brothers' War chapter
+// III) shares one "where X" dynamic amount across both targets. Either keeps the
+// round-trip exact for its bounded shape.
 func exactSecondTargetDamageEffectSyntax(effect *EffectSyntax, prefix, text string) bool {
 	if len(effect.Targets) != 2 ||
 		!effect.Targets[0].Exact || !effect.Targets[1].Exact ||
-		!effect.Amount.Known ||
-		effect.Amount.DynamicForm != EffectDynamicAmountFormNone ||
 		effect.Targets[0].Cardinality.Max != 1 {
+		return false
+	}
+	if effect.SecondTargetDamageRiderDynamic {
+		if effect.Amount.DynamicForm != EffectDynamicAmountFormWhereX {
+			return false
+		}
+		return text == fmt.Sprintf("%s X damage to %s and X damage to %s, %s.",
+			prefix, effect.Targets[0].Text, effect.Targets[1].Text, effect.Amount.Text)
+	}
+	if !effect.Amount.Known ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormNone {
 		return false
 	}
 	return text == fmt.Sprintf("%s %d damage to %s and %d damage to %s.",

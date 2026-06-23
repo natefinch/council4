@@ -1002,6 +1002,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseCantCastSpellsEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseSpellCostModifierEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseGroupMustAttackEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseDirectedMustAttackEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseSpellsCantBeCounteredEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseChangeTargetRetargetEffect(sentence, tokens, atoms) },
 	} {
@@ -1267,7 +1268,7 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	effect.DamageRecipientReference = damageRecipientReference(effect)
 	effect.SelfDamageRiderValue, effect.HasSelfDamageRider = damageSelfRider(effect)
 	effect.TargetControllerDamageRiderValue, effect.TargetControllerDamageRiderRecipient = damageTargetControllerRider(effect)
-	effect.SecondTargetDamageRiderValue, effect.HasSecondTargetDamageRider = damageSecondTargetRider(effect)
+	effect.SecondTargetDamageRiderValue, effect.SecondTargetDamageRiderDynamic, effect.HasSecondTargetDamageRider = damageSecondTargetRider(effect)
 	effect.Dig = parseDigPut(effect)
 	effect.HandLibraryPut = parseHandLibraryPut(effect)
 	effect.HandDiscard = parseHandDiscard(effect)
@@ -3222,7 +3223,52 @@ func parseGroupMustAttackEffect(sentence Sentence, tokens []shared.Token, atoms 
 	}}, true
 }
 
-// resolving buff "The next spell you cast this turn can't be countered."
+// parseDirectedMustAttackEffect recognizes The Brothers' War chapter II directed
+// forced-attack effect "Until your next turn, each creature they control attacks
+// the other chosen player each combat if able." It pairs with the preceding
+// "Choose two target players." clause: "they" are the two chosen players and "the
+// other chosen player" is the reciprocal defender. The recognizer emits a single
+// EffectDirectedMustAttack carrying the until-your-next-turn duration; lowering
+// reconstructs the reciprocal directed structure from the two player targets. Any
+// other group, defender, duration, or trailing clause fails closed.
+func parseDirectedMustAttackEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	remaining, leadingDuration := stripLeadingDurationClause(tokens, atoms)
+	if leadingDuration != EffectDurationUntilYourNextTurn {
+		return nil, false
+	}
+	words := make([]shared.Token, 0, len(remaining))
+	for _, token := range remaining {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	want := []string{
+		"each", "creature", "they", "control",
+		"attacks", "the", "other", "chosen", "player",
+		"each", "combat", "if", "able",
+	}
+	if len(words) != len(want) {
+		return nil, false
+	}
+	for i, word := range want {
+		if !equalWord(words[i], word) {
+			return nil, false
+		}
+	}
+	return []EffectSyntax{{
+		Kind:       EffectDirectedMustAttack,
+		Span:       sentence.Span,
+		ClauseSpan: sentence.Span,
+		VerbSpan:   words[4].Span,
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		Context:    EffectContextController,
+		Duration:   EffectDurationUntilYourNextTurn,
+		Exact:      true,
+	}}, true
+}
+
 // (Mistrise Village), the all-spells form "Spells you cast this turn can't be
 // countered." (Domri, Anarch of Bolas), and the equivalent "Spells you control
 // can't be countered this turn." (Veil of Summer). The leading "The next" marks
@@ -4030,11 +4076,14 @@ func referencedControllerOwnerRecipient(recipient []shared.Token) (DamageRecipie
 // damage to target player or planeswalker." It requires the clause to carry
 // exactly two parsed targets and the rider suffix "and <number> damage to" to
 // land immediately before the second target's span. It returns the fixed rider
-// amount B (>= 1) and ok=true, failing closed for every other shape so single-
-// target and group-recipient clauses keep their existing paths.
-func damageSecondTargetRider(effect *EffectSyntax) (int, bool) {
+// amount B (>= 1), whether the rider amount is the variable "X" matching the
+// primary dynamic amount ("deals X damage to any target and X damage to any
+// other target", The Brothers' War chapter III), and ok=true, failing closed for
+// every other shape so single-target and group-recipient clauses keep their
+// existing paths.
+func damageSecondTargetRider(effect *EffectSyntax) (value int, dynamic, ok bool) {
 	if effect.Kind != EffectDealDamage || len(effect.Targets) != 2 {
-		return 0, false
+		return 0, false, false
 	}
 	tokens := effect.Tokens
 	if len(tokens) > 0 && tokens[len(tokens)-1].Kind == shared.Period {
@@ -4045,18 +4094,20 @@ func damageSecondTargetRider(effect *EffectSyntax) (int, bool) {
 		if !equalWord(tokens[i], "and") {
 			continue
 		}
-		value, ok := damageRiderAmountValue(tokens[i+1])
-		if !ok || value < 1 {
+		if !equalWord(tokens[i+2], "damage") || !equalWord(tokens[i+3], "to") ||
+			tokens[i+4].Span.Start.Offset != secondStart {
 			continue
 		}
-		if !equalWord(tokens[i+2], "damage") || !equalWord(tokens[i+3], "to") {
+		if equalWord(tokens[i+1], "x") {
+			return 0, true, true
+		}
+		amount, valueOK := damageRiderAmountValue(tokens[i+1])
+		if !valueOK || amount < 1 {
 			continue
 		}
-		if tokens[i+4].Span.Start.Offset == secondStart {
-			return value, true
-		}
+		return amount, false, true
 	}
-	return 0, false
+	return 0, false, false
 }
 
 // splitEachAndEach splits recipient tokens at a single top-level "and" into two

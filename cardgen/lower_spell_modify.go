@@ -508,9 +508,12 @@ func lowerFixedDamageSpell(
 // damage to <target1>" spell that names two independently chosen single targets,
 // as in "Hungry Flames deals 3 damage to target creature and 2 damage to target
 // player or planeswalker." Both amounts are fixed (>= 1); it emits one Damage
-// instruction per target keyed to occurrence 0 and 1 respectively. It fails
-// closed for any shape outside that template (a missing rider, a dynamic amount,
-// a non-single-target cardinality, or any condition, keyword, or mode).
+// instruction per target keyed to occurrence 0 and 1 respectively. The variable
+// form "<source> deals X damage to any target and X damage to any other target,
+// where X is ..." (The Brothers' War chapter III) shares one dynamic amount
+// across both instructions. It fails closed for any shape outside those templates
+// (a missing rider, an unrecognized amount, a non-single-target cardinality, or
+// any condition, keyword, or mode).
 func lowerTwoTargetDamageSpell(
 	_ string,
 	ctx contentCtx,
@@ -530,14 +533,24 @@ func lowerTwoTargetDamageSpell(
 		(effect.Context != parser.EffectContextSource &&
 			effect.Context != parser.EffectContextReferencedObject &&
 			effect.Context != parser.EffectContextPriorSubject) ||
-		!effect.Amount.Known || effect.Amount.Value < 1 ||
-		effect.SecondTargetDamageRiderValue < 1 ||
 		effect.Negated ||
 		effect.Divided ||
 		len(ctx.content.Targets) != 2 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
 		len(ctx.content.Modes) != 0 {
+		return unsupported()
+	}
+	// The rider amount is either a fixed value B (>= 1) shared with a known
+	// primary amount A (>= 1), or the variable "X" that reuses the clause's
+	// single dynamic amount for both targets (The Brothers' War chapter III).
+	dynamicRider := effect.SecondTargetDamageRiderDynamic
+	if dynamicRider {
+		if effect.Amount.DynamicKind == compiler.DynamicAmountNone {
+			return unsupported()
+		}
+	} else if !effect.Amount.Known || effect.Amount.Value < 1 ||
+		effect.SecondTargetDamageRiderValue < 1 {
 		return unsupported()
 	}
 	for i := range ctx.content.Targets {
@@ -579,13 +592,27 @@ func lowerTwoTargetDamageSpell(
 	if damageSourceIsSourcePermanent(sourceReferences) {
 		damageSource = opt.Val(game.SourcePermanentReference())
 	}
+	primaryAmount := game.Fixed(effect.Amount.Value)
+	riderAmount := game.Fixed(effect.SecondTargetDamageRiderValue)
+	if dynamicRider {
+		amountObject := game.SourcePermanentReference()
+		if obj, ok := lowerDamageAmountObject(effect.Amount, ctx.content.References); ok {
+			amountObject = obj
+		}
+		dynamic, ok := lowerDynamicAmount(effect.Amount, amountObject)
+		if !ok {
+			return unsupported()
+		}
+		primaryAmount = game.Dynamic(dynamic)
+		riderAmount = game.Dynamic(dynamic)
+	}
 	primary := game.Damage{
-		Amount:       game.Fixed(effect.Amount.Value),
+		Amount:       primaryAmount,
 		Recipient:    game.AnyTargetDamageRecipient(0),
 		DamageSource: damageSource,
 	}
 	rider := game.Damage{
-		Amount:       game.Fixed(effect.SecondTargetDamageRiderValue),
+		Amount:       riderAmount,
 		Recipient:    game.AnyTargetDamageRecipient(1),
 		DamageSource: damageSource,
 	}
