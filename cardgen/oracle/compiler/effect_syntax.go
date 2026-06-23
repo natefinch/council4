@@ -141,6 +141,7 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		MatchTotalManaValue:           syntax.MatchTotalManaValue,
 		TotalManaValue:                syntax.TotalManaValue,
 		ManaValueX:                    syntax.ManaValueX,
+		ManaValueDynamic:              compileDynamicAmountKind(syntax.ManaValueDynamic),
 		Power:                         syntax.Power,
 		MatchPower:                    syntax.MatchPower,
 		Toughness:                     syntax.Toughness,

@@ -960,14 +960,21 @@ type CompiledSelector struct {
 	// ManaValueX records that the MatchManaValue bound is the spell's chosen {X}
 	// ("with mana value X or less") rather than a fixed number; ManaValue then
 	// holds only the operator. It lowers to SearchSpec.MaxManaValueFromX.
-	ManaValueX     bool
-	Power          compare.Int
-	MatchPower     bool
-	Toughness      compare.Int
-	MatchToughness bool
-	Colorless      bool
-	Multicolored   bool
-	BasicLandType  bool
+	ManaValueX bool
+	// ManaValueDynamic records a "with mana value less than or equal to the
+	// amount of life you (lost|gained) this turn" bound (Betor, Ancestor's
+	// Voice), whose upper bound is a turn-event life total rather than a fixed
+	// number. It is independent of MatchManaValue/ManaValueX and lowers to the
+	// runtime Selection.ManaValueDynamic predicate. DynamicAmountNone means no
+	// dynamic bound.
+	ManaValueDynamic DynamicAmountKind
+	Power            compare.Int
+	MatchPower       bool
+	Toughness        compare.Int
+	MatchToughness   bool
+	Colorless        bool
+	Multicolored     bool
+	BasicLandType    bool
 	// Historic records a "historic" card qualifier ("target historic card from
 	// your graveyard"). A historic card is an artifact, a legendary, or a Saga
 	// (CR 702.61b); the cross-category disjunction is kept as its own flag and

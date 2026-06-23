@@ -1083,6 +1083,16 @@ type SelectionSyntax struct {
 	// X-bounded library-search tutors (Green Sun's Zenith, Chord of Calling,
 	// Wargate).
 	ManaValueX bool `json:",omitempty"`
+	// ManaValueDynamic records a "with mana value less than or equal to the
+	// amount of life you (lost|gained) this turn" bound (Betor, Ancestor's
+	// Voice), whose upper bound is a turn-event life total rather than a fixed
+	// number. It is independent of MatchManaValue/ManaValue (which model fixed
+	// and X bounds): only the dedicated graveyard-card target reconstruction
+	// renders it, so every other selection context fails closed. The recognized
+	// kinds are EffectDynamicAmountLifeLostThisTurn and
+	// EffectDynamicAmountLifeGainedThisTurn; the empty value means no dynamic
+	// bound.
+	ManaValueDynamic EffectDynamicAmountKind `json:",omitempty"`
 	// RequiredName carries the verbatim card name of a "named <Name>" selector
 	// qualifier ("a card named Trustworthy Scout"). It is captured from the
 	// source tokens after "named" so the byte-exact search reconstruction can
