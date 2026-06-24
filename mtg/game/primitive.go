@@ -118,10 +118,11 @@ const (
 	PrimitiveAdapt
 	PrimitiveConnive
 	PrimitivePayRepeatedly
+	PrimitiveExileForPlay
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitivePayRepeatedly) + 1
+const primitiveKindCount = int(PrimitiveExileForPlay) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -1003,6 +1004,19 @@ type GrantCastPermission struct {
 	FromZone zone.Type
 	Face     FaceIndex
 	Duration EffectDuration
+}
+
+// ExileForPlay exiles a referenced card from a specific zone and grants the
+// resolving controller permission to play (or, when Cast is set, cast) it for a
+// bounded duration. The move and the permission grant happen atomically: the
+// card identity is captured before the move so the permission binds by identity
+// rather than through the pre-exile event reference, which the move would
+// otherwise invalidate by advancing the card's zone version.
+type ExileForPlay struct {
+	Card     CardReference
+	FromZone zone.Type
+	Duration EffectDuration
+	Cast     bool
 }
 
 // Sacrifice sacrifices the referenced permanent. When no object is set, the

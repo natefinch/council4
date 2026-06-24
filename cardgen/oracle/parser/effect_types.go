@@ -101,6 +101,16 @@ const (
 	// optional "If you cast a spell this way, pay life equal to its mana value
 	// rather than pay its mana cost." rider sets PlayFromTopPayLife.
 	EffectPlayFromLibraryTop EffectKind = "EffectPlayFromLibraryTop"
+	// EffectPlay models the controller-scoped, turn-scoped permission "you may
+	// play that card this turn." referring back to a just-exiled object (the card
+	// a discard trigger references, exiled by the preceding clause). It is the
+	// land-inclusive sibling of the "you may cast it this turn." cast permission:
+	// "play" grants both a land play and a spell cast of the referenced card from
+	// exile. The back-reference (a "that card"/"it" pronoun) and the play window
+	// duration ("this turn", "until end of turn") are carried on the effect; the
+	// preceding exile clause and this permission lower together into a single
+	// exile-for-play primitive.
+	EffectPlay EffectKind = "EffectPlay"
 	// EffectCantCastSpells models the one-shot, turn-scoped player cast
 	// prohibition "<players> can't cast spells this turn." (Silence: "Your
 	// opponents can't cast spells this turn."), forbidding the affected players

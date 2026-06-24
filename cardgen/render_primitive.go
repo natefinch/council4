@@ -307,6 +307,31 @@ func renderFaceIndex(face game.FaceIndex) (string, error) {
 	}
 }
 
+func (Renderer) renderExileForPlay(ctx *renderCtx, value game.ExileForPlay) (string, error) {
+	card, err := renderCardReference(value.Card)
+	if err != nil {
+		return "", err
+	}
+	fromZone, err := renderZone(value.FromZone)
+	if err != nil {
+		return "", err
+	}
+	duration, err := renderDuration(value.Duration)
+	if err != nil {
+		return "", err
+	}
+	ctx.need(importZone)
+	fields := []string{
+		fmt.Sprintf("Card: %s,", card),
+		fmt.Sprintf("FromZone: %s,", fromZone),
+		fmt.Sprintf("Duration: %s,", duration),
+	}
+	if value.Cast {
+		fields = append(fields, "Cast: true,")
+	}
+	return structLit("game.ExileForPlay", fields), nil
+}
+
 func (r Renderer) renderImpulseExile(ctx *renderCtx, value game.ImpulseExile) (string, error) {
 	player, err := r.renderPlayerReference(value.Player)
 	if err != nil {
