@@ -99,6 +99,11 @@ type TurnLog struct {
 	// mana produced by rituals and then spent. Mana that was produced but left
 	// unspent (and emptied at end of step) is not counted.
 	ManaSpent int
+
+	// LifeTotals is each player's life total at the start of this turn, in seat
+	// order, captured before the turn's actions so a report can show how the
+	// table's life changed turn over turn.
+	LifeTotals [game.NumPlayers]int
 }
 
 // TurnLogEntryKind identifies the kind of chronological turn log entry.
