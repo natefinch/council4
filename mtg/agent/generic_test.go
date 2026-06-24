@@ -181,6 +181,68 @@ func sacrificeDestroyArtifact(name string, sacCount int) *game.CardDef {
 	}}
 }
 
+func modalDrawOrLoseLifeArtifact(name string) *game.CardDef {
+	you := game.ControllerReference()
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  name,
+		Types: []types.Card{types.Artifact},
+		ActivatedAbilities: []game.ActivatedAbility{{
+			Content: game.AbilityContent{
+				MinModes: 1,
+				MaxModes: 1,
+				Modes: []game.Mode{
+					{Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: you}}}},
+					{Sequence: []game.Instruction{{Primitive: game.LoseLife{Amount: game.Fixed(8), Player: you}}}},
+				},
+			},
+		}},
+	}}
+}
+
+func drawXArtifact(name string) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  name,
+		Types: []types.Card{types.Artifact},
+		ActivatedAbilities: []game.ActivatedAbility{{
+			Content: game.Mode{Sequence: []game.Instruction{{
+				Primitive: game.Draw{Amount: game.Dynamic(game.DynamicAmount{}), Player: game.ControllerReference()},
+			}}}.Ability(),
+		}},
+	}}
+}
+
+func TestGenericStrategyScoresModalAbilityByChosenMode(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	artifact := addObservedPermanent(g, game.Player1, modalDrawOrLoseLifeArtifact("Oracle"))
+	obs := rules.NewObservation(g, game.Player1)
+	strategy := GenericStrategy{}
+
+	pass := strategy.ScoreAction(obs, action.Pass())
+	drawMode := strategy.ScoreAction(obs, action.ActivateAbilityWithModes(artifact.ObjectID, 0, nil, 0, []int{0}))
+	lifeMode := strategy.ScoreAction(obs, action.ActivateAbilityWithModes(artifact.ObjectID, 0, nil, 0, []int{1}))
+
+	if drawMode <= pass {
+		t.Fatalf("draw-mode activation scored %v, want above pass %v", drawMode, pass)
+	}
+	if lifeMode >= pass {
+		t.Fatalf("lose-life-mode activation scored %v, want below pass %v", lifeMode, pass)
+	}
+}
+
+func TestGenericStrategyScoresDynamicDrawByAnnouncedX(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	artifact := addObservedPermanent(g, game.Player1, drawXArtifact("Engine"))
+	obs := rules.NewObservation(g, game.Player1)
+	strategy := GenericStrategy{}
+
+	smallX := strategy.ScoreAction(obs, action.ActivateAbilityWithModes(artifact.ObjectID, 0, nil, 0, nil))
+	largeX := strategy.ScoreAction(obs, action.ActivateAbilityWithModes(artifact.ObjectID, 0, nil, 5, nil))
+
+	if largeX <= smallX {
+		t.Fatalf("draw-X with X=5 scored %v, want above X=0 score %v", largeX, smallX)
+	}
+}
+
 func TestGenericStrategyActivatesFetchlandStyleSearch(t *testing.T) {
 	// A fetchland pays by sacrificing its own source (not another permanent), so
 	// its land-search effect must keep it worth activating.

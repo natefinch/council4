@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/opt"
 )
 
 func contentOf(primitives ...game.Primitive) game.AbilityContent {
@@ -82,5 +83,60 @@ func TestScorableEffectFlagsDynamicAmount(t *testing.T) {
 func TestScorableEffectIgnoresUnmodeledPrimitive(t *testing.T) {
 	if atoms := ScorableEffect(contentOf(game.Scry{})); len(atoms) != 0 {
 		t.Fatalf("unmodeled primitive produced atoms %#v, want none", atoms)
+	}
+}
+
+func TestScorableEffectModesScoresOnlyChosenMode(t *testing.T) {
+	you := game.ControllerReference()
+	content := game.AbilityContent{
+		MinModes: 1,
+		MaxModes: 1,
+		Modes: []game.Mode{
+			{Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(2), Player: you}}}},
+			{Sequence: []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(5), Player: you}}}},
+		},
+	}
+
+	chosen := ScorableEffectModes(content, []int{1})
+	if len(chosen) != 1 || chosen[0].Kind != EffectLifeGained || chosen[0].Amount != 5 {
+		t.Fatalf("chosen-mode atoms = %#v, want a single gain-life-5 atom", chosen)
+	}
+
+	unioned := ScorableEffectModes(content, nil)
+	if len(unioned) != 2 {
+		t.Fatalf("mode-unaware atoms = %#v, want both modes unioned", unioned)
+	}
+}
+
+func TestScorableEffectFlagsConditionalInstructionDynamic(t *testing.T) {
+	you := game.ControllerReference()
+	content := game.AbilityContent{Modes: []game.Mode{{Sequence: []game.Instruction{
+		{Primitive: game.Draw{Amount: game.Fixed(2), Player: you}},
+		{
+			Primitive: game.GainLife{Amount: game.Fixed(3), Player: you},
+			Condition: opt.Val(game.EffectCondition{}),
+		},
+	}}}}
+
+	atoms := ScorableEffectModes(content, nil)
+	if len(atoms) != 2 {
+		t.Fatalf("atoms = %#v, want draw + conditional gain-life", atoms)
+	}
+	if atoms[0].IsDynamic {
+		t.Fatalf("unconditional draw atom %#v should not be dynamic", atoms[0])
+	}
+	if !atoms[1].IsDynamic {
+		t.Fatalf("conditional gain-life atom %#v should be flagged dynamic", atoms[1])
+	}
+}
+
+func TestScorableEffectFlagsOptionalInstructionDynamic(t *testing.T) {
+	content := game.AbilityContent{Modes: []game.Mode{{Sequence: []game.Instruction{
+		{Primitive: game.AddMana{Amount: game.Fixed(2)}, Optional: true},
+	}}}}
+
+	atoms := ScorableEffectModes(content, nil)
+	if len(atoms) != 1 || !atoms[0].IsDynamic {
+		t.Fatalf("optional atom = %#v, want IsDynamic", atoms)
 	}
 }
