@@ -32,13 +32,17 @@ func compilePlayerEventTriggerPattern(
 		clause.Card,
 		clause.Occurrence,
 	)
-	if !modifiers.ok || occurrenceRequiresWhenever(clause.Occurrence.Kind) && kind != TriggerWhenever {
+	if !modifiers.ok ||
+		(occurrenceRequiresWhenever(clause.Occurrence.Kind) && kind != TriggerWhenever && !modifiers.self) {
 		return pattern
 	}
 	pattern.Event = event
 	pattern.Player = player
 	pattern.OneOrMore = modifiers.oneOrMore
 	pattern.ExcludeSelf = modifiers.excludeSelf
+	if modifiers.self {
+		pattern.Source = TriggerSourceSelf
+	}
 	pattern.PlayerEventOrdinalThisTurn = modifiers.ordinal
 	pattern.ExcludeFirstDrawInDrawStep = modifiers.exceptFirstDrawInDrawStep
 	pattern.CardSelection = modifiers.cardSelection
@@ -86,6 +90,7 @@ func compilePlayerEventPlayer(player *parser.TriggerPlayerSelector) (TriggerPlay
 type compiledPlayerEventModifiers struct {
 	oneOrMore                 bool
 	excludeSelf               bool
+	self                      bool
 	ordinal                   int
 	exceptFirstDrawInDrawStep bool
 	cardSelection             TriggerSelection
@@ -106,6 +111,7 @@ func compilePlayerEventModifiers(
 	return compiledPlayerEventModifiers{
 		oneOrMore:                 compiledCard.oneOrMore,
 		excludeSelf:               compiledCard.excludeSelf,
+		self:                      compiledCard.self,
 		ordinal:                   ordinal,
 		exceptFirstDrawInDrawStep: exceptFirstDrawInDrawStep,
 		cardSelection:             compiledCard.cardSelection,
@@ -116,6 +122,7 @@ func compilePlayerEventModifiers(
 type compiledPlayerEventCard struct {
 	oneOrMore     bool
 	excludeSelf   bool
+	self          bool
 	cardSelection TriggerSelection
 	ok            bool
 }
@@ -139,6 +146,10 @@ func compilePlayerEventCard(action parser.PlayerEventActionKind, card parser.Pla
 			action == parser.PlayerEventActionCycle ||
 			action == parser.PlayerEventActionCycleOrDiscard
 		return compiledPlayerEventCard{excludeSelf: ok, ok: ok}
+	case parser.PlayerEventCardThis:
+		ok := action == parser.PlayerEventActionCycle ||
+			action == parser.PlayerEventActionCycleOrDiscard
+		return compiledPlayerEventCard{self: ok, ok: ok}
 	default:
 		return compiledPlayerEventCard{}
 	}

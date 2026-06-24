@@ -919,6 +919,10 @@ const (
 	PlayerEventCardSingle    PlayerEventCardKind = "PlayerEventCardSingle"
 	PlayerEventCardOneOrMore PlayerEventCardKind = "PlayerEventCardOneOrMore"
 	PlayerEventCardAnother   PlayerEventCardKind = "PlayerEventCardAnother"
+
+	// PlayerEventCardThis is the self-referential card object "this card",
+	// naming the ability's own source ("When you cycle this card", CR 702.29e).
+	PlayerEventCardThis PlayerEventCardKind = "PlayerEventCardThis"
 )
 
 // PlayerEventCard is a source-spanned player-event card-object modifier.
