@@ -95,6 +95,7 @@ const (
 	ConditionPredicateControllerControlsNamed                          ConditionPredicateKind = "ConditionPredicateControllerControlsNamed"
 	ConditionPredicateFirstCombatPhaseOfTurn                           ConditionPredicateKind = "ConditionPredicateFirstCombatPhaseOfTurn"
 	ConditionPredicateControlsGreatestPowerCreature                    ConditionPredicateKind = "ConditionPredicateControlsGreatestPowerCreature"
+	ConditionPredicateSubjectSharesCreatureTypeWithSource              ConditionPredicateKind = "ConditionPredicateSubjectSharesCreatureTypeWithSource"
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -607,6 +608,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeAttackersAttackingControllerCondition,
 		recognizeSpellXCondition,
 		recognizeCreatedTokenMatchCondition,
+		recognizeSharesCreatureTypeCondition,
 	} {
 		if clause, ok := recognize(body, atoms); ok {
 			return clause, true
@@ -670,6 +672,18 @@ func recognizePriorInstructionCondition(body []shared.Token, _ Atoms) (Condition
 	}
 	if tokenWordsEqual(body, "you", "do") {
 		return ConditionClause{Predicate: ConditionPredicatePriorInstructionAccepted}, true
+	}
+	return ConditionClause{}, false
+}
+
+// recognizeSharesCreatureTypeCondition matches the Kinship resolving gate "it
+// shares a creature type with this creature", where "it" is the just-looked-at
+// top card of the controller's library and "this creature" is the source
+// permanent. The predicate holds when the looked-at card and the source share at
+// least one creature type. It fails closed on any other wording.
+func recognizeSharesCreatureTypeCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if tokenWordsEqual(body, "it", "shares", "a", "creature", "type", "with", "this", "creature") {
+		return ConditionClause{Predicate: ConditionPredicateSubjectSharesCreatureTypeWithSource}, true
 	}
 	return ConditionClause{}, false
 }

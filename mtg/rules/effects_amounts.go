@@ -917,6 +917,7 @@ func cardMatchesSelection(g *game.Game, obj *game.StackObject, card *game.CardIn
 	if obj != nil {
 		subject.resolutionChoices = obj.ResolutionChoices
 		subject.viewer = obj.Controller
+		subject.sourceObjectID = obj.SourceID
 	}
 	return matchSelection(subject, &selection)
 }

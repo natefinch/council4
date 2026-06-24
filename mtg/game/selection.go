@@ -259,6 +259,15 @@ type Selection struct {
 	// that is not an on-battlefield permanent, fails it closed. Placed at the end
 	// so the bool joins no existing cluster's packing.
 	NameUniqueAmongControlled bool
+
+	// SharesCreatureTypeWithSource requires the matched card to share at least
+	// one creature type (subtype that is a creature type) with the predicate's
+	// source permanent ("if it shares a creature type with this creature", the
+	// Kinship ability word). It reads the source permanent's effective creature
+	// subtypes, so a subject with no source, a source that is not a permanent, or
+	// a source with no creature types never matches. Placed at the end so the
+	// bool joins no existing cluster's packing.
+	SharesCreatureTypeWithSource bool
 }
 
 // ManaValueDynamicBound bounds a card's mana value by a controller-relative
@@ -314,7 +323,8 @@ func (s Selection) Empty() bool {
 		s.Name == "" &&
 		s.ChosenSubtypeFrom == "" &&
 		!s.RequirePermanentCard &&
-		!s.NameUniqueAmongControlled
+		!s.NameUniqueAmongControlled &&
+		!s.SharesCreatureTypeWithSource
 }
 
 // Validate reports structural contradictions in the Selection that represent

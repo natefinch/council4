@@ -536,6 +536,9 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 	if selection.RequirePermanentCard {
 		fields = append(fields, "RequirePermanentCard: true,")
 	}
+	if selection.SharesCreatureTypeWithSource {
+		fields = append(fields, "SharesCreatureTypeWithSource: true,")
+	}
 	if selection.Name != "" {
 		fields = append(fields, fmt.Sprintf("Name: %q,", selection.Name))
 	}
