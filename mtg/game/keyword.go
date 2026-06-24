@@ -1,6 +1,8 @@
 package game
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -18,9 +20,14 @@ type SimpleKeyword struct {
 	Kind Keyword
 }
 
-// WardKeyword parameterizes Ward for mana-valued ward costs.
+// WardKeyword parameterizes Ward for mana-valued ward costs. AdditionalCosts
+// carries the non-mana components of a composite or non-mana ward cost
+// ("Ward—Pay 2 life.", "Ward—{2}, Pay 2 life.", "Ward—Sacrifice a creature.").
+// An opponent must pay every component of Cost and AdditionalCosts together, or
+// the spell or ability that targeted this permanent is countered (CR 702.21).
 type WardKeyword struct {
-	Cost cost.Mana
+	Cost            cost.Mana
+	AdditionalCosts []cost.Additional
 }
 
 // CumulativeUpkeepKeyword parameterizes cumulative upkeep for fixed mana costs.
@@ -241,6 +248,7 @@ func (CrewKeyword) keyword() Keyword       { return Crew }
 func (ability SimpleKeyword) cloneKeywordAbility() KeywordAbility { return ability }
 func (ability WardKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	ability.AdditionalCosts = slices.Clone(ability.AdditionalCosts)
 	return ability
 }
 func (ability CumulativeUpkeepKeyword) cloneKeywordAbility() KeywordAbility {
@@ -409,6 +417,20 @@ func BodyWardCost(body *TriggeredAbility) (cost.Mana, bool) {
 	return ward.Cost, true
 }
 
+// BodyWardKeyword returns the full Ward keyword (mana plus any non-mana
+// additional cost components) from a triggered ability's keywords.
+func BodyWardKeyword(body *TriggeredAbility) (WardKeyword, bool) {
+	ka, ok := BodyKeywordAbility(body, Ward)
+	if !ok {
+		return WardKeyword{}, false
+	}
+	ward, ok := ka.(WardKeyword)
+	if !ok {
+		return WardKeyword{}, false
+	}
+	return ward, true
+}
+
 // StaticBodyWardCost returns the Ward cost from a static ability.
 func StaticBodyWardCost(body *StaticAbility) (cost.Mana, bool) {
 	ka, ok := BodyKeywordAbility(body, Ward)
@@ -420,6 +442,23 @@ func StaticBodyWardCost(body *StaticAbility) (cost.Mana, bool) {
 		return nil, false
 	}
 	return ward.Cost, true
+}
+
+// StaticBodyWardCosts returns the mana and additional payment of a static
+// ability's Ward keyword, or (nil, nil, false) when the body has no Ward
+// keyword. It carries the composite and non-mana Ward payment ("Ward—{2}, Pay 2
+// life.", "Ward—Sacrifice a creature.") that StaticBodyWardCost cannot express
+// with mana alone.
+func StaticBodyWardCosts(body *StaticAbility) (cost.Mana, []cost.Additional, bool) {
+	ka, ok := BodyKeywordAbility(body, Ward)
+	if !ok {
+		return nil, nil, false
+	}
+	ward, ok := ka.(WardKeyword)
+	if !ok {
+		return nil, nil, false
+	}
+	return ward.Cost, ward.AdditionalCosts, true
 }
 
 // StaticBodyDredgeCount returns the Dredge mill count carried by a static

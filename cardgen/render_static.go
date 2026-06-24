@@ -34,6 +34,19 @@ func (r Renderer) renderStaticAbility(ctx *renderCtx, body *game.StaticAbility, 
 		}
 		return fmt.Sprintf("game.EnchantStaticAbility(&%s)", renderedTarget), nil
 	}
+	if manaCost, additionalCosts, ok := game.StaticBodyWardCosts(body); ok &&
+		len(additionalCosts) > 0 &&
+		reflect.DeepEqual(*body, game.WardStaticAbilityWithCosts(manaCost, additionalCosts)) {
+		renderedMana, err := r.renderManaCost(ctx, manaCost)
+		if err != nil {
+			return "", err
+		}
+		renderedAdditional, err := r.renderAdditionalCosts(ctx, additionalCosts)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.WardStaticAbilityWithCosts(%s, %s)", renderedMana, renderedAdditional), nil
+	}
 	if manaCost, ok := game.StaticBodyWardCost(body); ok &&
 		reflect.DeepEqual(*body, game.WardStaticAbility(manaCost)) {
 		renderedCost, err := r.renderManaCost(ctx, manaCost)

@@ -25,6 +25,10 @@ func compileKeywords(syntaxKeywords []parser.Keyword) []CompiledKeyword {
 		if keyword.Parameter.Kind == parser.KeywordParameterProtection {
 			compiled.Protection, compiled.ProtectionKnown = compileProtectionKeyword(keyword.Parameter.Protection())
 		}
+		if keyword.WardCost != nil {
+			cost := compileCost(*keyword.WardCost)
+			compiled.WardCost = &cost
+		}
 		if keyword.EquipRestriction != nil {
 			compiled.EquipRestriction = compileEquipRestriction(keyword.EquipRestriction)
 		}

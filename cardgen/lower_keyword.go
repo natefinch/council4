@@ -1604,7 +1604,7 @@ func lowerKeywordAbility(
 	}
 	bodies := make([]loweredStaticAbility, 0, len(ability.Content.Keywords))
 	for _, keyword := range ability.Content.Keywords {
-		if keyword.ParameterKind != parser.KeywordParameterNone {
+		if keyword.ParameterKind != parser.KeywordParameterNone || keyword.WardCost != nil {
 			if body, ok, diag := lowerParameterizedKeywordToStaticAbility(ability, keyword); ok {
 				if diag != nil {
 					return nil, diag
@@ -1747,8 +1747,8 @@ func lowerParameterizedKeywordToStaticAbility(
 ) (game.StaticAbility, bool, *shared.Diagnostic) {
 	switch keyword.Kind {
 	case parser.KeywordWard:
-		if keyword.ParameterKind == parser.KeywordParameterManaCost && len(keyword.ManaCost) > 0 {
-			return game.WardStaticAbility(slices.Clone(keyword.ManaCost)), true, nil
+		if body, ok := lowerWardKeyword(keyword); ok {
+			return body, true, nil
 		}
 	case parser.KeywordProtection:
 		if keyword.ProtectionKnown {
@@ -1760,6 +1760,25 @@ func lowerParameterizedKeywordToStaticAbility(
 		return body, true, nil
 	}
 	return game.StaticAbility{}, false, nil
+}
+
+// lowerWardKeyword lowers a Ward keyword into its runtime static ability. A
+// composite or non-mana Ward carries its payment in WardCost, which lowers
+// through the shared activation-cost kernel into the ward's mana and additional
+// costs; a mana-only Ward uses its mana parameter. It fails closed when the
+// cost has no recognized component so an unsupported Ward stays unsupported.
+func lowerWardKeyword(keyword compiler.CompiledKeyword) (game.StaticAbility, bool) {
+	if keyword.WardCost != nil {
+		manaCost, additionalCosts, ok := lowerActivationCostComponents("", keyword.WardCost)
+		if !ok || (len(manaCost) == 0 && len(additionalCosts) == 0) {
+			return game.StaticAbility{}, false
+		}
+		return game.WardStaticAbilityWithCosts(manaCost, additionalCosts), true
+	}
+	if keyword.ParameterKind == parser.KeywordParameterManaCost && len(keyword.ManaCost) > 0 {
+		return game.WardStaticAbility(slices.Clone(keyword.ManaCost)), true
+	}
+	return game.StaticAbility{}, false
 }
 
 func lowerParameterizedStaticKeyword(keyword compiler.CompiledKeyword) (game.StaticAbility, bool) {

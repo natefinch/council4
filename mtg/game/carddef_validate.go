@@ -524,7 +524,7 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 			v.add(faceName, path, CardDefIssueInvalidKeywordAbility, "simple keyword must set Kind")
 		}
 	case WardKeyword:
-		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+		v.validateWardKeywordCost(faceName, path, keyword)
 	case CumulativeUpkeepKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case EquipKeyword:
@@ -747,6 +747,15 @@ func (v *cardDefValidator) validateInstructionSequence(
 func (v *cardDefValidator) validateManaKeywordCost(faceName, path string, manaCost cost.Mana) {
 	if len(manaCost) == 0 {
 		v.add(faceName, appendPath(path, "Cost"), CardDefIssueInvalidKeywordAbility, "mana-valued keyword cost must be explicit")
+	}
+}
+
+// validateWardKeywordCost accepts a Ward cost composed of a mana component, one
+// or more non-mana additional components ("Ward—Pay 2 life."), or both
+// ("Ward—{2}, Pay 2 life."). At least one component must be present.
+func (v *cardDefValidator) validateWardKeywordCost(faceName, path string, ward WardKeyword) {
+	if len(ward.Cost) == 0 && len(ward.AdditionalCosts) == 0 {
+		v.add(faceName, appendPath(path, "Cost"), CardDefIssueInvalidKeywordAbility, "ward cost must be explicit")
 	}
 }
 

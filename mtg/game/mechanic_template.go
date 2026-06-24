@@ -194,6 +194,23 @@ func WardStaticAbility(manaCost cost.Mana) StaticAbility {
 	}
 }
 
+// WardStaticAbilityWithCosts builds the complete static ability for Ward with a
+// composite or non-mana cost ("Ward—Pay 2 life.", "Ward—{2}, Pay 2 life.",
+// "Ward—Sacrifice a creature."). manaCost may be empty when the ward cost has no
+// mana component; additionalCosts carries the non-mana components an opponent
+// must pay alongside the mana to avoid having their spell or ability countered.
+func WardStaticAbilityWithCosts(manaCost cost.Mana, additionalCosts []cost.Additional) StaticAbility {
+	return StaticAbility{
+		Text: "Ward",
+		KeywordAbilities: []KeywordAbility{
+			WardKeyword{
+				Cost:            append(cost.Mana(nil), manaCost...),
+				AdditionalCosts: slices.Clone(additionalCosts),
+			},
+		},
+	}
+}
+
 // DredgeStaticAbility builds the complete static ability for the Dredge N
 // keyword (CR 702.52). It functions from its owner's graveyard, where it offers
 // to replace one of that player's draws with milling n cards and returning this

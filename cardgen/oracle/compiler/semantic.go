@@ -2810,13 +2810,18 @@ type CompiledEnchantTarget struct {
 
 // CompiledKeyword is a recognized keyword ability.
 type CompiledKeyword struct {
-	Kind            parser.KeywordKind
-	Name            string
-	Span            shared.Span
-	Text            string
-	Parameter       string
-	ParameterKind   parser.KeywordParameterKind
-	ManaCost        cost.Mana
+	Kind          parser.KeywordKind
+	Name          string
+	Span          shared.Span
+	Text          string
+	Parameter     string
+	ParameterKind parser.KeywordParameterKind
+	ManaCost      cost.Mana
+	// WardCost is the typed non-mana or composite payment of a "Ward—<cost>"
+	// keyword, or nil for a mana-only Ward whose cost is ManaCost. Its components
+	// are lowered through the shared activation-cost kernel into the runtime
+	// ward's mana and additional costs.
+	WardCost        *CompiledCost
 	Integer         int
 	EnchantTarget   CompiledEnchantTarget
 	Protection      game.ProtectionKeyword

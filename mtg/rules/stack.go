@@ -258,14 +258,17 @@ func (e *Engine) resolveWardTriggeredAbilityWithChoices(g *game.Game, obj *game.
 		return "resolved"
 	}
 	payer := targetObj.Controller
-	wardCost, ok := game.BodyWardCost(ability)
+	wardKeyword, ok := game.BodyWardKeyword(ability)
 	if !ok {
 		return "resolved"
 	}
+	wardCost := wardKeyword.Cost
 	cost := &wardCost
-	if paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: payer, Cost: cost}) && e.chooseMay(g, agents, payer, "Pay ward cost?", log) {
-		prefs := e.paymentPreferencesForCost(g, payer, cost, nil, 0, agents, log)
-		if paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: payer, Cost: cost, Prefs: prefs}) {
+	request := payment.GenericRequest{PlayerID: payer, Cost: cost, AdditionalCosts: wardKeyword.AdditionalCosts}
+	if paymentOrch.canPayGenericCost(g, request) && e.chooseMay(g, agents, payer, "Pay ward cost?", log) {
+		prefs := e.paymentPreferencesForCost(g, payer, cost, wardKeyword.AdditionalCosts, 0, agents, log)
+		request.Prefs = prefs
+		if paymentOrch.payGenericCost(g, request) {
 			return "resolved"
 		}
 	}
