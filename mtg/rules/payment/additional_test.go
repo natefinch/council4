@@ -454,15 +454,28 @@ func TestPlanRemoveCounterAmongReservesPlannedCounters(t *testing.T) {
 	}
 }
 
-func TestPlanRemoveCounterAmongRejectsInvalidPreference(t *testing.T) {
+func TestPlanRemoveCounterAmongInvalidPreferenceFallsBack(t *testing.T) {
 	only := &game.Permanent{ObjectID: 1, Controller: game.Player1}
 	only.Counters.Add(counter.PlusOnePlusOne, 2)
 	state := fakePaymentState{battlefield: []*game.Permanent{only}}
 	additional := cost.Additional{Kind: cost.AdditionalRemoveCounterAmong, Amount: 1, CounterKind: counter.PlusOnePlusOne}
-	prefs := &Preferences{RemoveCounterChoices: []id.ID{999}}
 
-	if removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 1, nil, prefs); ok {
-		t.Fatalf("removals = %#v ok = true, want invalid preference rejected", removals)
+	// Default policy: a stale preference falls back to a deterministic legal
+	// removal rather than rejecting the payment.
+	prefs := &Preferences{RemoveCounterChoices: []id.ID{999}}
+	removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 1, nil, prefs)
+	if !ok {
+		t.Fatal("planRemoveCounterAmong with stale preference = !ok, want fallback to deterministic removal")
+	}
+	if len(removals) != 1 || removals[0].source != only || removals[0].amount != 1 {
+		t.Fatalf("removals = %#v, want one counter removed from the only matching permanent", removals)
+	}
+
+	// Strict replay: a stale preference rejects the payment instead of
+	// substituting a different choice.
+	strict := &Preferences{RemoveCounterChoices: []id.ID{999}, StrictReplay: true}
+	if removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 1, nil, strict); ok {
+		t.Fatalf("removals = %#v ok = true, want strict replay to reject invalid preference", removals)
 	}
 }
 

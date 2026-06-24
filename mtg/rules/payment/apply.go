@@ -9,10 +9,16 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
-func applyPaymentPlan(s State, playerID game.PlayerID, plan paymentPlan) bool {
+// applyPaymentPlan applies a prevalidated mana payment plan. The caller MUST
+// have confirmed the plan against current state (paymentApplicationReady or
+// paymentPlanStillValid) before calling, so every check here guards an
+// invariant: a violation panics as an internal error rather than returning
+// after partial mutation, guaranteeing a clean payment failure never leaves the
+// game state half-applied.
+func applyPaymentPlan(s State, playerID game.PlayerID, plan paymentPlan) {
 	player, ok := s.Player(playerID)
 	if !ok || !paymentPlanStillValid(s, player, plan) {
-		return false
+		panic("payment plan was not prevalidated before application")
 	}
 	for _, tap := range plan.manaTaps {
 		if !activateManaForPayment(s, playerID, tap) {
@@ -54,11 +60,10 @@ func applyPaymentPlan(s State, playerID game.PlayerID, plan paymentPlan) bool {
 	}
 	if plan.lifePayment > 0 {
 		if player.Life < plan.lifePayment || !s.CanPayLife(playerID) {
-			return false
+			panic("payment plan became invalid while paying life")
 		}
 		s.LoseLife(playerID, plan.lifePayment)
 	}
-	return true
 }
 
 func activateManaForPayment(s State, playerID game.PlayerID, activation manaTap) bool {

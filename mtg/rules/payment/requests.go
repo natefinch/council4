@@ -96,6 +96,14 @@ type Preferences struct {
 	// permanent may appear multiple times when several of its counters are
 	// removed.
 	RemoveCounterChoices []id.ID
+	// StrictReplay selects the strict invalid-preference policy. By default an
+	// additional cost whose recorded preference is stale or now illegal falls
+	// back to a deterministic legal selection so play continues; under strict
+	// replay that fallback is disabled and an unsatisfiable preference rejects
+	// the whole payment, so a recorded game replays exactly or not at all. The
+	// policy applies uniformly to sacrifice, tap, return, discard, exile,
+	// reveal, evidence, and counter-removal preferences.
+	StrictReplay bool
 }
 
 // SpellOptionSummary is a summary of one payable spell cost option for choice presentation.
@@ -143,5 +151,6 @@ func clonePreferences(prefs *Preferences) *Preferences {
 		RevealChoices:        append([]id.ID(nil), prefs.RevealChoices...),
 		EvidenceChoices:      append([]id.ID(nil), prefs.EvidenceChoices...),
 		RemoveCounterChoices: append([]id.ID(nil), prefs.RemoveCounterChoices...),
+		StrictReplay:         prefs.StrictReplay,
 	}
 }

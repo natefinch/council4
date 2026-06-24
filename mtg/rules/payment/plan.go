@@ -96,15 +96,11 @@ func paySpellCosts(s State, req SpellRequest) (SpellPaymentResult, bool) {
 		return SpellPaymentResult{}, false
 	}
 	player, ok := s.Player(req.PlayerID)
-	if !ok || !additionalCostPlanStillValid(s, player, plan.additional) || !paymentPlanStillValid(s, player, plan.mana) {
+	if !ok || !paymentApplicationReady(s, player, plan.mana, plan.additional) {
 		return SpellPaymentResult{}, false
 	}
-	if !applyPaymentPlan(s, req.PlayerID, plan.mana) {
-		return SpellPaymentResult{}, false
-	}
-	if !applyAdditionalCostPlan(s, plan.additional) {
-		panic("spell cost plan became invalid while paying additional costs")
-	}
+	applyPaymentPlan(s, req.PlayerID, plan.mana)
+	applyAdditionalCostPlan(s, plan.additional)
 	return SpellPaymentResult{
 		AdditionalCostsPaid: plan.additional.paid,
 		PoolSpend:           clonePoolSpend(plan.mana.poolSpend),
@@ -271,17 +267,11 @@ func payAbilityCosts(s State, req AbilityRequest) (poolSpend map[mana.Unit]int, 
 	if !ok || !abilityCostPlanStillValid(s, player, req.Source, plan) {
 		return nil, nil, false
 	}
-	if !applyPaymentPlan(s, req.PlayerID, plan.mana) {
-		return nil, nil, false
+	applyPaymentPlan(s, req.PlayerID, plan.mana)
+	if plan.tapSource && !tapForAbility(s, req.Source, req.ForMana) {
+		panic("ability source became untappable after prevalidation")
 	}
-	if plan.tapSource {
-		if !tapForAbility(s, req.Source, req.ForMana) {
-			return nil, nil, false
-		}
-	}
-	if !applyAdditionalCostPlan(s, plan.additional) {
-		panic("ability cost plan became invalid while paying additional costs")
-	}
+	applyAdditionalCostPlan(s, plan.additional)
 	return clonePoolSpend(plan.mana.poolSpend), sacrificedPermanentIDs(plan.additional), true
 }
 
@@ -320,15 +310,11 @@ func payGenericCost(s State, req GenericRequest) (poolSpend map[mana.Unit]int, o
 			return nil, false
 		}
 		player, ok := s.Player(req.PlayerID)
-		if !ok || !additionalCostPlanStillValid(s, player, plan.additional) || !paymentPlanStillValid(s, player, plan.mana) {
+		if !ok || !paymentApplicationReady(s, player, plan.mana, plan.additional) {
 			return nil, false
 		}
-		if !applyPaymentPlan(s, req.PlayerID, plan.mana) {
-			return nil, false
-		}
-		if !applyAdditionalCostPlan(s, plan.additional) {
-			panic("generic cost plan became invalid while paying additional costs")
-		}
+		applyPaymentPlan(s, req.PlayerID, plan.mana)
+		applyAdditionalCostPlan(s, plan.additional)
 		return clonePoolSpend(plan.mana.poolSpend), true
 	}
 	plan, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, req.Exclude, spendContext{spell: req.Spell}, req.Prefs)
@@ -339,9 +325,7 @@ func payGenericCost(s State, req GenericRequest) (poolSpend map[mana.Unit]int, o
 	if !ok || !paymentPlanStillValid(s, player, plan) {
 		return nil, false
 	}
-	if !applyPaymentPlan(s, req.PlayerID, plan) {
-		return nil, false
-	}
+	applyPaymentPlan(s, req.PlayerID, plan)
 	return clonePoolSpend(plan.poolSpend), true
 }
 
@@ -640,12 +624,28 @@ func paymentPlanStillValid(s State, player *game.Player, plan paymentPlan) bool 
 	return player.Life >= plan.lifePayment && (plan.lifePayment == 0 || s.CanPayLife(player.ID))
 }
 
+// paymentApplicationReady reports whether a fully built mana + additional cost
+// plan can be applied without any post-mutation failure. It re-checks every
+// resource the appliers consume and, crucially, the player's combined life cost
+// across both plans (a Phyrexian mana symbol and an additional "pay N life" cost
+// can each draw from the same life total, yet each plan's own validity check
+// only sees its own share). Establishing readiness before any mutation lets
+// applyPaymentPlan and applyAdditionalCostPlan treat the plan as a validated
+// contract and panic on any inconsistency, so a clean failure here leaves game
+// state byte-for-byte unchanged.
+func paymentApplicationReady(s State, player *game.Player, manaPlan paymentPlan, additionalPlan additionalCostPlan) bool {
+	if !additionalCostPlanStillValid(s, player, additionalPlan) || !paymentPlanStillValid(s, player, manaPlan) {
+		return false
+	}
+	totalLife := manaPlan.lifePayment + additionalPlan.lifePaid
+	return totalLife == 0 || (player.Life >= totalLife && s.CanPayLife(player.ID))
+}
+
 func abilityCostPlanStillValid(s State, player *game.Player, source *game.Permanent, plan abilityCostPlan) bool {
 	if plan.tapSource && !canTapForAbility(s, source) {
 		return false
 	}
-	return additionalCostPlanStillValid(s, player, plan.additional) &&
-		paymentPlanStillValid(s, player, plan.mana)
+	return paymentApplicationReady(s, player, plan.mana, plan.additional)
 }
 
 func clonePaymentPlan(plan paymentPlan) paymentPlan {
