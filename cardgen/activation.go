@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
@@ -262,7 +263,19 @@ func channelActivationSupported(ability compiler.CompiledAbility, functionZone z
 	}
 	for i := range ability.Content.Effects {
 		effect := &ability.Content.Effects[i]
-		if effect.Kind == compiler.EffectSearch && !effect.Selector.BasicLandType {
+		if effect.Kind != compiler.EffectSearch || effect.Selector.BasicLandType {
+			continue
+		}
+		// Beyond Boseiju's opponent-redirected "land card with a basic land type"
+		// search, allow the controller's own basic-land fetch — the Kamigawa
+		// Channel land cycle (Greater Tanuki et al.): "Search your library for a
+		// basic land card, put it onto the battlefield[ tapped], then shuffle."
+		// That shape carries no targets and selects a Basic-supertype land; the
+		// downstream body lowering validates the full search sequence and fails
+		// closed on anything else, so this stays bounded.
+		if len(ability.Content.Targets) != 0 ||
+			effect.Selector.Kind != compiler.SelectorLand ||
+			!slices.Contains(effect.Selector.Supertypes(), types.Basic) {
 			return false
 		}
 	}
