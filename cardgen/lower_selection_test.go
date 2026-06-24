@@ -293,6 +293,25 @@ func TestSelectionForSelectorDimensions(t *testing.T) {
 			sel:  compiler.CompiledSelector{Kind: compiler.SelectorPermanent, PowerGreaterThanSource: true},
 			want: game.Selection{PowerGreaterThanSource: true},
 		},
+		{
+			name: "name unique among controlled",
+			sel:  compiler.CompiledSelector{Kind: compiler.SelectorPermanent, NameUniqueAmongControlled: true},
+			want: game.Selection{NameUniqueAmongControlled: true},
+		},
+		{
+			name: "match no counters",
+			sel:  compiler.CompiledSelector{Kind: compiler.SelectorPermanent, MatchNoCounters: true},
+			want: game.Selection{MatchNoCounters: true},
+		},
+		{
+			name: "match excluded counter",
+			sel: compiler.CompiledSelector{
+				Kind:                 compiler.SelectorPermanent,
+				MatchExcludedCounter: true,
+				ExcludedCounter:      counter.Charge,
+			},
+			want: game.Selection{MatchExcludedCounter: true, ExcludedCounter: counter.Charge},
+		},
 	}
 
 	for _, tc := range cases {
@@ -464,6 +483,34 @@ func maskableDims() []maskableDim {
 			dim:  DimPowerVsSource,
 			sel:  compiler.CompiledSelector{Kind: compiler.SelectorPermanent, PowerLessThanSource: true},
 			want: game.Selection{PowerLessThanSource: true},
+		},
+		{
+			name: "required name",
+			dim:  DimRequiredName,
+			sel:  compiler.CompiledSelector{Kind: compiler.SelectorPermanent, RequiredName: "Charmed Stray"},
+			want: game.Selection{Name: "Charmed Stray"},
+		},
+		{
+			name: "name unique among controlled",
+			dim:  DimNameUniqueAmongControlled,
+			sel:  compiler.CompiledSelector{Kind: compiler.SelectorPermanent, NameUniqueAmongControlled: true},
+			want: game.Selection{NameUniqueAmongControlled: true},
+		},
+		{
+			name: "match no counters",
+			dim:  DimMatchNoCounters,
+			sel:  compiler.CompiledSelector{Kind: compiler.SelectorPermanent, MatchNoCounters: true},
+			want: game.Selection{MatchNoCounters: true},
+		},
+		{
+			name: "match excluded counter",
+			dim:  DimMatchExcludedCounter,
+			sel: compiler.CompiledSelector{
+				Kind:                 compiler.SelectorPermanent,
+				MatchExcludedCounter: true,
+				ExcludedCounter:      counter.Charge,
+			},
+			want: game.Selection{MatchExcludedCounter: true, ExcludedCounter: counter.Charge},
 		},
 	}
 }
