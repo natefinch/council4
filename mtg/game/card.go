@@ -683,6 +683,9 @@ func clonePrimitive(primitive Primitive) Primitive {
 	case Pay:
 		value.Payment = cloneResolutionPayment(value.Payment)
 		return value
+	case PayRepeatedly:
+		value.Payment = cloneResolutionPayment(value.Payment)
+		return value
 	case PutOnBattlefield:
 		value.Sources = slices.Clone(value.Sources)
 		value.ContinuousEffects = slices.Clone(value.ContinuousEffects)

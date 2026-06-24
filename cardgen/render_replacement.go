@@ -749,6 +749,21 @@ func (r Renderer) renderPay(ctx *renderCtx, pay game.Pay) (string, error) {
 	return structLit("game.Pay", fields), nil
 }
 
+func (r Renderer) renderPayRepeatedly(ctx *renderCtx, pay game.PayRepeatedly) (string, error) {
+	payment, err := r.renderResolutionPayment(ctx, pay.Payment)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Payment: %s,", payment)}
+	if pay.PublishCount != "" {
+		fields = append(fields, fmt.Sprintf("PublishCount: %q,", string(pay.PublishCount)))
+	}
+	if pay.Prompt != "" {
+		fields = append(fields, fmt.Sprintf("Prompt: %q,", pay.Prompt))
+	}
+	return structLit("game.PayRepeatedly", fields), nil
+}
+
 // renderConditionForETBReplacement renders a game.Condition for use in a
 // conditional enters-tapped replacement. Only the exact supported shape is
 // accepted; any other combination returns an error.

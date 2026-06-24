@@ -117,10 +117,11 @@ const (
 	PrimitiveCreateTokenForEachDestroyed
 	PrimitiveAdapt
 	PrimitiveConnive
+	PrimitivePayRepeatedly
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveConnive) + 1
+const primitiveKindCount = int(PrimitivePayRepeatedly) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -612,6 +613,25 @@ type BecomeSaddled struct {
 type Pay struct {
 	Payment ResolutionPayment
 	Prompt  string
+}
+
+// PayRepeatedly prompts the controller to pay an optional cost any number of
+// times during resolution and records how many times it was paid ("you may pay
+// {1}{G} any number of times.", the Adversary cycle; "you may pay {2} any number
+// of times.", Squad; "you may pay {1}{G} any number of times.", Taste of
+// Paradise). The controller is offered Payment repeatedly; each accepted and
+// successful payment increases the recorded count by one, and the loop stops the
+// first time the controller declines or can no longer pay. The final count is
+// published under PublishCount as a ResolutionChoiceNumber result so a later
+// instruction reads it through DynamicAmountChosenNumber ("put that many +1/+1
+// counters on this creature", "create that many tokens"). A count of zero is
+// published when the controller never pays, which lets a gated reflexive payoff
+// resolve to nothing. The loop is bounded by an internal cap so a free or
+// fully-affordable cost cannot iterate without limit.
+type PayRepeatedly struct {
+	Payment      ResolutionPayment
+	PublishCount ResultKey
+	Prompt       string
 }
 
 // Choose makes a resolution-time choice and publishes it via PublishChoice.

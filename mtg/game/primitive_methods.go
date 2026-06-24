@@ -132,6 +132,9 @@ func (DiscoverCards) Kind() PrimitiveKind { return PrimitiveDiscoverCards }
 // Kind implements Primitive for Pay.
 func (Pay) Kind() PrimitiveKind { return PrimitivePay }
 
+// Kind implements Primitive for PayRepeatedly.
+func (PayRepeatedly) Kind() PrimitiveKind { return PrimitivePayRepeatedly }
+
 // Kind implements Primitive for Choose.
 func (Choose) Kind() PrimitiveKind { return PrimitiveChoose }
 
@@ -350,6 +353,7 @@ func (SetClassLevel) isPrimitive()                        {}
 func (Monstrosity) isPrimitive()                          {}
 func (DiscoverCards) isPrimitive()                        {}
 func (Pay) isPrimitive()                                  {}
+func (PayRepeatedly) isPrimitive()                        {}
 func (Choose) isPrimitive()                               {}
 func (GainLife) isPrimitive()                             {}
 func (LoseLife) isPrimitive()                             {}
@@ -471,6 +475,10 @@ func (p SetClassLevel) instructionRefs() primitiveRefs             { return quan
 func (p Monstrosity) instructionRefs() primitiveRefs               { return quantityRefs(p.Amount) }
 func (p DiscoverCards) instructionRefs() primitiveRefs             { return quantityRefs(p.Amount) }
 func (Pay) instructionRefs() primitiveRefs                         { return primitiveRefs{} }
+
+func (p PayRepeatedly) instructionRefs() primitiveRefs {
+	return primitiveRefs{publishesChoice: ChoiceKey(p.PublishCount)}
+}
 
 func (p AddMana) instructionRefs() primitiveRefs {
 	refs := quantityRefs(p.Amount)

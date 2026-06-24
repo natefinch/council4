@@ -534,6 +534,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", errors.New("render: internal error: Pay kind has unexpected concrete type")
 		}
 		return r.renderPay(ctx, value)
+	case game.PrimitivePayRepeatedly:
+		value, ok := primitive.(game.PayRepeatedly)
+		if !ok {
+			return "", errors.New("render: internal error: PayRepeatedly kind has unexpected concrete type")
+		}
+		return r.renderPayRepeatedly(ctx, value)
 	case game.PrimitivePutOnBattlefield:
 		value, ok := primitive.(game.PutOnBattlefield)
 		if !ok {

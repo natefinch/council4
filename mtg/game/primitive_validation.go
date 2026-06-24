@@ -1558,6 +1558,13 @@ func (p Pay) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validateResolutionPayment(p.Payment, targets, checkTargets)
 }
 
+func (p PayRepeatedly) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.PublishCount == "" {
+		return errors.New("PayRepeatedly requires a published count key")
+	}
+	return validateResolutionPayment(p.Payment, targets, checkTargets)
+}
+
 func validateResolutionPayment(payment ResolutionPayment, targets []TargetSpec, checkTargets bool) error {
 	if payment.Payer.Exists {
 		if err := validatePlayerReference(payment.Payer.Val, targets, checkTargets); err != nil {

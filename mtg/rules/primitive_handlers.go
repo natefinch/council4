@@ -735,6 +735,31 @@ func handlePay(r *effectResolver, prim game.Pay) effectResolved {
 	return effectResolved{accepted: accepted, succeeded: succeeded}
 }
 
+// maxResolutionPayRepeatCount bounds how many times a PayRepeatedly cost may be
+// paid in one resolution, matching the Multikicker enumeration cap so a free or
+// fully-affordable cost cannot iterate without limit.
+const maxResolutionPayRepeatCount = 20
+
+func handlePayRepeatedly(r *effectResolver, prim game.PayRepeatedly) effectResolved {
+	count := 0
+	for count < maxResolutionPayRepeatCount {
+		payment := prim.Payment
+		if payment.Prompt == "" {
+			payment.Prompt = prim.Prompt
+		}
+		accepted, succeeded := r.engine.resolveResolutionPaymentValue(r.game, r.obj, &payment, r.agents, r.log)
+		if !accepted || !succeeded {
+			break
+		}
+		count++
+	}
+	rememberResolutionChoice(r.obj, string(prim.PublishCount), game.ResolutionChoiceResult{
+		Kind:   game.ResolutionChoiceNumber,
+		Number: count,
+	})
+	return effectResolved{accepted: true, succeeded: count > 0, amount: count}
+}
+
 func handleChoose(r *effectResolver, prim game.Choose) effectResolved {
 	succeeded := r.engine.resolveResolutionChoiceValue(r.game, r.obj, &prim.Choice, string(prim.PublishChoice), r.agents, r.log)
 	return effectResolved{accepted: true, succeeded: succeeded}
