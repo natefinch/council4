@@ -220,6 +220,13 @@ const (
 	// counter) subsumes the printed "if this creature has no +1/+1 counters on
 	// it" reminder, so the lowered action is the bare keyword action.
 	EffectAdapt EffectKind = "EffectAdapt"
+	// EffectConnive models the connive keyword action (CR 702.154): the
+	// conniving permanent's controller draws N cards, then discards N cards, and
+	// for each nonland card discarded this way a +1/+1 counter is placed on that
+	// permanent ("this creature connives"). Amount holds N (default one). The
+	// parenthetical reminder text that spells the action out is reminder text and
+	// excluded from the parsed body.
+	EffectConnive EffectKind = "EffectConnive"
 	// EffectDevour models the Devour keyword's as-enters replacement (CR 702.81):
 	// "As this creature enters, you may sacrifice any number of creatures. It
 	// enters with N +1/+1 counters on it for each creature sacrificed." It is

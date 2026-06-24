@@ -1101,6 +1101,29 @@ func (r Renderer) renderAdapt(ctx *renderCtx, value game.Adapt) (string, error) 
 	}), nil
 }
 
+// renderConnive renders a Connive primitive, emitting the conniving permanent's
+// object reference, the drawing/discarding player reference, and the fixed
+// connive count.
+func (r Renderer) renderConnive(ctx *renderCtx, value game.Connive) (string, error) {
+	object, err := r.renderObjectReference(value.Object)
+	if err != nil {
+		return "", err
+	}
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.Connive", []string{
+		fmt.Sprintf("Object: %s,", object),
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Amount: %s,", amount),
+	}), nil
+}
+
 // renderBecomeSaddled renders a BecomeSaddled primitive, emitting the saddled
 // Mount reference.
 func (r Renderer) renderBecomeSaddled(_ *renderCtx, value game.BecomeSaddled) (string, error) {

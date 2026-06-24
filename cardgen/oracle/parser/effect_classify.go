@@ -1401,6 +1401,8 @@ func effectWordKind(token shared.Token) EffectKind {
 		return EffectCounter
 	case "copy", "copies":
 		return EffectCopyStackObject
+	case "connive", "connives":
+		return EffectConnive
 	case "create", "creates":
 		return EffectCreate
 	case "deal", "deals":

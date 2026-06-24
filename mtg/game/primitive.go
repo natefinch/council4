@@ -116,10 +116,11 @@ const (
 	PrimitiveDestroyForEachPlayer
 	PrimitiveCreateTokenForEachDestroyed
 	PrimitiveAdapt
+	PrimitiveConnive
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveAdapt) + 1
+const primitiveKindCount = int(PrimitiveConnive) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -583,6 +584,17 @@ type Renown struct {
 // unchanged, so the effect applies only while the creature is uncountered.
 type Adapt struct {
 	Object ObjectReference
+	Amount Quantity
+}
+
+// Connive performs the connive keyword action (CR 702.154): the controller of
+// the conniving permanent draws Amount cards, then discards Amount cards, and a
+// +1/+1 counter is placed on Object for each nonland card discarded this way.
+// Player draws and discards (the conniving permanent's controller) and Object is
+// the conniving permanent that receives the counters.
+type Connive struct {
+	Object ObjectReference
+	Player PlayerReference
 	Amount Quantity
 }
 

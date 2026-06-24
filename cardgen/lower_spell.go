@@ -1417,6 +1417,8 @@ func lowerImmediateSingleEffectSpell(
 		return lowerRenownContent(ctx, syntax)
 	case compiler.EffectAdapt:
 		return lowerAdaptContent(ctx, syntax)
+	case compiler.EffectConnive:
+		return lowerConniveContent(ctx)
 	case compiler.EffectProliferate:
 		return lowerExactPrimitiveSpell(ctx, syntax, "proliferate", func(amount game.Quantity) game.Primitive {
 			return game.Proliferate{Amount: amount}
