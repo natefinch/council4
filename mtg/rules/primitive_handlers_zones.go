@@ -1979,12 +1979,23 @@ func handleManifest(r *effectResolver, prim game.Manifest) effectResolved {
 		}
 		playerID = resolved
 	}
-	if prim.Dread {
-		res.succeeded = r.engine.manifestDread(r.game, r.agents, r.log, playerID)
-		return res
+	if prim.PublishLinked != "" {
+		clearLinkedObjects(r.game, linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked)))
 	}
-	if r.engine.manifestTopCard(r.game, r.agents, r.log, playerID) {
-		res.succeeded = true
+	var manifested *game.Permanent
+	var ok bool
+	if prim.Dread {
+		manifested, ok = r.engine.manifestDread(r.game, r.agents, r.log, playerID)
+	} else {
+		manifested, ok = r.engine.manifestTopCard(r.game, r.agents, r.log, playerID)
+	}
+	res.succeeded = ok
+	if ok && prim.PublishLinked != "" && manifested != nil {
+		rememberLinkedObject(
+			r.game,
+			linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked)),
+			permanentLinkedObjectRef(manifested),
+		)
 	}
 	return res
 }

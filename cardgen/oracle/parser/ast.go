@@ -428,6 +428,10 @@ const (
 	// (CR 716), a self-source trigger on a Class enchantment reaching a new
 	// level. The target level is carried by TriggerEventClause.ClassBecameLevel.
 	TriggerEventKindClassBecameLevel TriggerEventKind = "TriggerEventKindClassBecameLevel"
+	// TriggerEventKindDoorUnlocked marks "When you unlock this door" (CR 715),
+	// the self-source trigger on a Room enchantment half that fires as that
+	// door becomes unlocked. Its subject is the ability's own source.
+	TriggerEventKindDoorUnlocked TriggerEventKind = "TriggerEventKindDoorUnlocked"
 )
 
 // TriggerEventSubjectKind identifies the grammatical subject in a trigger event.

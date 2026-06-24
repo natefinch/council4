@@ -1221,6 +1221,11 @@ type Explore struct {
 type Manifest struct {
 	Dread  bool
 	Player PlayerReference
+	// PublishLinked, when set, remembers the manifested permanent as an
+	// object-scoped linked object so a later instruction can reference it ("put
+	// three +1/+1 counters on that creature", Weight Room). It is empty when no
+	// later instruction references the manifested creature.
+	PublishLinked LinkedKey
 }
 
 // Goad goads the referenced creature.

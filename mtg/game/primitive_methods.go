@@ -584,8 +584,10 @@ func (p ImpulseExile) instructionRefs() primitiveRefs           { return quantit
 func (p Investigate) instructionRefs() primitiveRefs            { return quantityRefs(p.Amount) }
 func (p Proliferate) instructionRefs() primitiveRefs            { return quantityRefs(p.Amount) }
 func (Explore) instructionRefs() primitiveRefs                  { return primitiveRefs{} }
-func (Manifest) instructionRefs() primitiveRefs                 { return primitiveRefs{} }
-func (Goad) instructionRefs() primitiveRefs                     { return primitiveRefs{} }
+func (p Manifest) instructionRefs() primitiveRefs {
+	return primitiveRefs{publishesLinked: p.PublishLinked}
+}
+func (Goad) instructionRefs() primitiveRefs { return primitiveRefs{} }
 
 func (p RemoveCounter) instructionRefs() primitiveRefs         { return quantityRefs(p.Amount) }
 func (Transform) instructionRefs() primitiveRefs               { return primitiveRefs{} }

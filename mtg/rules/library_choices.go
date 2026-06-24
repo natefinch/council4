@@ -307,31 +307,31 @@ func (e *Engine) chooseDigCards(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	return taken
 }
 
-func (e *Engine) manifestTopCard(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID) bool {
+func (e *Engine) manifestTopCard(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID) (*game.Permanent, bool) {
 	player, ok := playerByID(g, playerID)
 	if !ok {
-		return false
+		return nil, false
 	}
 	cardID, ok := player.Library.Top()
 	if !ok {
-		return false
+		return nil, false
 	}
 	card, ok := g.GetCardInstance(cardID)
 	if !ok || !player.Library.Remove(cardID) {
-		return false
+		return nil, false
 	}
-	_, ok = createCardPermanentFaceDownWithChoices(e, g, card, playerID, zone.Library, game.FaceFront, game.FaceDownManifest, false, agents, log)
-	return ok
+	permanent, ok := createCardPermanentFaceDownWithChoices(e, g, card, playerID, zone.Library, game.FaceFront, game.FaceDownManifest, false, agents, log)
+	return permanent, ok
 }
 
-func (e *Engine) manifestDread(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID) bool {
+func (e *Engine) manifestDread(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID) (*game.Permanent, bool) {
 	player, ok := playerByID(g, playerID)
 	if !ok {
-		return false
+		return nil, false
 	}
 	cards := peekLibrary(player, 2)
 	if len(cards) == 0 {
-		return false
+		return nil, false
 	}
 	chosenIndex := 0
 	if len(cards) > 1 {
@@ -343,10 +343,11 @@ func (e *Engine) manifestDread(g *game.Game, agents [game.NumPlayers]PlayerAgent
 	chosenID := cards[chosenIndex]
 	chosen, ok := g.GetCardInstance(chosenID)
 	if !ok || !player.Library.Remove(chosenID) {
-		return false
+		return nil, false
 	}
-	if _, ok := createCardPermanentFaceDownWithChoices(e, g, chosen, playerID, zone.Library, game.FaceFront, game.FaceDownManifest, false, agents, log); !ok {
-		return false
+	manifested, ok := createCardPermanentFaceDownWithChoices(e, g, chosen, playerID, zone.Library, game.FaceFront, game.FaceDownManifest, false, agents, log)
+	if !ok {
+		return nil, false
 	}
 	for _, cardID := range cards {
 		if cardID == chosenID {
@@ -373,7 +374,7 @@ func (e *Engine) manifestDread(g *game.Game, agents [game.NumPlayers]PlayerAgent
 			Amount:   1,
 		})
 	}
-	return true
+	return manifested, true
 }
 
 func manifestDreadChoiceRequest(g *game.Game, playerID game.PlayerID, cards []id.ID) game.ChoiceRequest {
