@@ -357,14 +357,27 @@ func hasDuplicateCardZoneSelections(selections []cardZoneSelection) bool {
 	return false
 }
 
+// chooseRevealCards deterministically selects amount cards to reveal for a
+// reveal cost, drawing from the cost's source zone (defaulting to the hand) and
+// honoring the cost filter. It backs both the no-preference path and the
+// invalid-preference fallback so a stale reveal preference degrades to a legal
+// reveal rather than rejecting the payment.
+func chooseRevealCards(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []cardZoneSelection) []cardZoneSelection {
+	sourceZone := additional.Source
+	if sourceZone == zone.None {
+		sourceZone = zone.Hand
+	}
+	additional.Source = sourceZone
+	return chooseExileCards(s, playerID, additional, amount, alreadyChosen, nil, 0, 0, zone.None)
+}
+
 func preferredRevealCards(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []cardZoneSelection, prefs *Preferences) []cardZoneSelection {
 	sourceZone := additional.Source
 	if sourceZone == zone.None {
 		sourceZone = zone.Hand
 	}
 	if prefs == nil || len(prefs.RevealChoices) == 0 {
-		additional.Source = sourceZone
-		return chooseExileCards(s, playerID, additional, amount, alreadyChosen, nil, 0, 0, zone.None)
+		return chooseRevealCards(s, playerID, additional, amount, alreadyChosen)
 	}
 	chosenIDs := make(map[id.ID]bool, len(alreadyChosen))
 	for _, chosen := range alreadyChosen {
@@ -682,13 +695,21 @@ func preferredDiscardCards(s State, playerID game.PlayerID, additional cost.Addi
 // planRemoveCounterAmong plans the counter removals for an
 // AdditionalRemoveCounterAmong cost, spreading amount counters of the cost's
 // kind across permanents the player controls that match the cost constraint.
-// When the preferences carry an explicit selection it is honored strictly;
-// otherwise the removals are chosen greedily. It returns false when the player
-// cannot supply amount matching counters.
+// When the preferences carry an explicit selection it is honored; if that
+// selection is stale or illegal it falls back to the greedy choice (unless
+// strict replay is demanded), matching the engine's uniform invalid-preference
+// policy. With no preference the removals are chosen greedily. It returns false
+// when the player cannot supply amount matching counters.
 func planRemoveCounterAmong(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyPlanned []counterRemoval, prefs *Preferences) ([]counterRemoval, bool) {
 	reserved := plannedCounterRemovalsBySourceKind(alreadyPlanned)
-	if prefs != nil && len(prefs.RemoveCounterChoices) > 0 {
-		return preferredRemoveCounterAmong(s, playerID, additional, amount, reserved, prefs)
+	hadPreference := prefs != nil && len(prefs.RemoveCounterChoices) > 0
+	if hadPreference {
+		if removals, ok := preferredRemoveCounterAmong(s, playerID, additional, amount, reserved, prefs); ok {
+			return removals, true
+		}
+		if !preferenceFallbackAllowed(prefs, hadPreference) {
+			return nil, false
+		}
 	}
 	return greedyRemoveCounterAmong(s, playerID, additional, amount, reserved)
 }
