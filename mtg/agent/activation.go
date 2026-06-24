@@ -97,6 +97,8 @@ func activationEffectValue(obs rules.PlayerObservation, targets []game.Target, a
 			value += atomMagnitude(atom, dynamicEstimate) * scoreTokenValue * personality.boardValueScale()
 		case eval.EffectCardTutored:
 			value += atomMagnitude(atom, dynamicEstimate) * scoreTutorValue
+		case eval.EffectLandRamp:
+			value += atomMagnitude(atom, dynamicEstimate) * scoreRampLand
 		case eval.EffectCounterAdded:
 			value += atomMagnitude(atom, dynamicEstimate) * scoreCounterValue
 		default:

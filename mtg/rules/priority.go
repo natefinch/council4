@@ -70,6 +70,7 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 			panic("applyAction failed for validated action")
 		}
 		recordActionManaTaps(g, log, entryIndex, eventsBefore)
+		recordLandEnteredTapped(g, actionLog, chosen)
 		if chosen.Kind != action.ActionPass {
 			e.notifyActionObservers(g, agents, playerID, chosen)
 		}
@@ -113,6 +114,24 @@ func recordActionSource(g *game.Game, playerID game.PlayerID, actionLog *ActionL
 	actionLog.ManaAbility = isManaAbilityActivation(g, playerID, payload)
 	actionLog.AbilityText = activatedAbilityText(g, playerID, payload)
 	actionLog.AbilityEffectSummary = activatedAbilityEffectSummary(g, playerID, payload)
+}
+
+// recordLandEnteredTapped flags a play-land action whose land entered the
+// battlefield tapped. It is called just after the land enters, before the
+// controller taps it for mana, so the permanent's tapped state reflects entry
+// (for example a tapland or a conditional "enters tapped unless ..."). It is a
+// no-op for any other action.
+func recordLandEnteredTapped(g *game.Game, actionLog *ActionLog, a action.Action) {
+	payload, ok := a.PlayLandPayload()
+	if !ok {
+		return
+	}
+	for _, permanent := range g.Battlefield {
+		if permanent.CardInstanceID == payload.CardID {
+			actionLog.LandEnteredTapped = permanent.Tapped
+			return
+		}
+	}
 }
 
 // activatedAbilityEffectSummary returns a short value-oriented gloss of what the

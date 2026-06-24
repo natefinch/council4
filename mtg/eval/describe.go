@@ -55,6 +55,8 @@ func describeEffect(atom EffectAtom) string {
 		return "put " + countNoun(atom, "counter")
 	case EffectCardTutored:
 		return "search your library"
+	case EffectLandRamp:
+		return "search for a land"
 	default:
 		return ""
 	}

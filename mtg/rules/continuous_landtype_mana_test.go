@@ -50,7 +50,7 @@ func greenManaAbilityIndex(g *game.Game, permanent *game.Permanent) (int, bool) 
 		if !ok {
 			continue
 		}
-		_, colors := abilitiesManaProduction([]game.Ability{body}, nil)
+		_, colors := abilitiesManaProduction([]game.Ability{body}, nil, nil)
 		if slices.Contains(colors, color.Green) {
 			return idx, true
 		}
@@ -77,7 +77,7 @@ func TestAddedForestSubtypeGrantsGreenManaAbility(t *testing.T) {
 		t.Fatalf("effective subtypes = %v, want to retain Plains", values.subtypes)
 	}
 
-	_, colors := abilitiesManaProduction(permanentEffectiveAbilities(g, plains), nil)
+	_, colors := abilitiesManaProduction(permanentEffectiveAbilities(g, plains), nil, nil)
 	if !slices.Contains(colors, color.White) {
 		t.Fatalf("effective mana colors = %v, want to retain white", colors)
 	}
@@ -160,7 +160,7 @@ func TestEveryBasicLandTypeStaticGrantsAllFiveBasicsAndManaColors(t *testing.T) 
 		}
 	}
 
-	_, colors := abilitiesManaProduction(permanentEffectiveAbilities(g, plains), nil)
+	_, colors := abilitiesManaProduction(permanentEffectiveAbilities(g, plains), nil, nil)
 	for _, wanted := range []color.Color{color.White, color.Blue, color.Black, color.Red, color.Green} {
 		if !slices.Contains(colors, wanted) {
 			t.Fatalf("effective mana colors = %v, want to contain %v", colors, wanted)

@@ -172,6 +172,11 @@ type ActionLog struct {
 	// ActionActivateAbility actions.
 	ManaAbility bool
 
+	// LandEnteredTapped reports that the land this action played entered the
+	// battlefield tapped. It is set only for ActionPlayLand actions, captured
+	// just after the land enters, so a report can note a tapped land drop.
+	LandEnteredTapped bool
+
 	// AbilityText is the printed rules text of the activated ability, captured
 	// when the action is recorded. It is set only for ActionActivateAbility
 	// actions whose ability carries text, so a report can show what the ability
