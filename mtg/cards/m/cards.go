@@ -11,8 +11,11 @@ var Cards = []*game.CardDef{
 	MarthaJones,
 	MasterSRebuke,
 	MorbidOpportunist,
+	MortalObstinacy,
 	MossfireValley,
 	MosswortBridge,
 	Mountain,
 	MrOrfeoTheBoulder,
+	MurderInvestigation,
+	MysticMight,
 }

@@ -30,6 +30,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	source = expandMeleeKeyword(source)
 	source = expandFusedTrigger(source)
 	source = expandDisjunctiveTrigger(source)
+	source = expandDiesOrExileTrigger(source)
 	tokens, diagnostics := lexAll(source)
 	lines := splitLines(tokens)
 	document := Document{

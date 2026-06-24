@@ -72,9 +72,10 @@ func compileEnchantTarget(predicate parser.EnchantPredicate) CompiledEnchantTarg
 		return CompiledEnchantTarget{}
 	}
 	target := CompiledEnchantTarget{
-		Player:    predicate.Player,
-		Opponent:  predicate.Opponent,
-		Permanent: predicate.Permanent,
+		Player:     predicate.Player,
+		Opponent:   predicate.Opponent,
+		Permanent:  predicate.Permanent,
+		YouControl: predicate.YouControl,
 	}
 	for _, cardType := range predicate.CardTypes {
 		runtime, ok := compilerCardType(cardType)

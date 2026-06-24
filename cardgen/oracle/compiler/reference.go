@@ -399,7 +399,7 @@ func triggerReferenceBindsEventCard(
 	if trigger.Event != TriggerEventPermanentDied &&
 		(trigger.Event != TriggerEventZoneChanged ||
 			!trigger.MatchToZone ||
-			trigger.ToZone != TriggerZoneGraveyard) {
+			(trigger.ToZone != TriggerZoneGraveyard && trigger.ToZone != TriggerZoneExile)) {
 		return false
 	}
 	for i := range effects {

@@ -2867,6 +2867,10 @@ type CompiledEnchantTarget struct {
 	Permanent bool
 	CardTypes []types.Card
 	Subtypes  []types.Sub
+	// YouControl restricts the permanent target to one the enchanting player
+	// controls ("Enchant creature or planeswalker you control"). It is set only
+	// alongside a card-type/subtype predicate, never with Player or Opponent.
+	YouControl bool
 }
 
 // CompiledKeyword is a recognized keyword ability.
