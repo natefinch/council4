@@ -287,3 +287,97 @@ func TestGenerateExecutableCardSourceManaSpendRiderFailsClosed(t *testing.T) {
 		t.Fatalf("unrecognized rider wrongly lowered to a spend rider:\n%s", source)
 	}
 }
+
+// TestGenerateExecutableCardSourceBeastcallerSavant covers Beastcaller Savant: a
+// tap-for-any-color mana ability whose produced mana may be spent only to cast a
+// creature spell. The bare restricted creature-spell rider carries no further
+// qualifier or rule effect.
+func TestGenerateExecutableCardSourceBeastcallerSavant(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Beastcaller Savant",
+		Layout:     "normal",
+		TypeLine:   "Creature — Elf Shaman Ally",
+		ManaCost:   "{1}{G}",
+		Colors:     []string{"G"},
+		Power:      new("1"),
+		Toughness:  new("1"),
+		OracleText: "Haste\n{T}: Add one mana of any color. Spend this mana only to cast a creature spell.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "b")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"SpendRider: opt.Val(",
+		"game.ManaSpendCastCreatureSpell",
+		"game.ManaSpendRestrictedToCondition",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if strings.Contains(source, "SpellGainsKeywords") {
+		t.Fatalf("restricted creature-spell rider must not grant keywords:\n%s", source)
+	}
+}
+
+// TestGenerateExecutableCardSourceFixedColorCreatureSpellRider covers a
+// fixed-color add-mana producer (Dwynen's Elite style) carrying the restricted
+// creature-spell spend rider, exercising the attach-rider path rather than the
+// any-color choice helper.
+func TestGenerateExecutableCardSourceFixedColorCreatureSpellRider(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Restricted Rock",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "{T}: Add {G}. Spend this mana only to cast a creature spell.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"SpendRider: opt.Val(",
+		"game.ManaSpendCastCreatureSpell",
+		"game.ManaSpendRestrictedToCondition",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+// TestGenerateExecutableCardSourceInvigoratingHotSpring covers the conjoined
+// "Activate only as a sorcery and only once each turn." timing restriction on a
+// counter-removal activated ability.
+func TestGenerateExecutableCardSourceInvigoratingHotSpring(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:     "Invigorating Hot Spring",
+		Layout:   "normal",
+		TypeLine: "Enchantment",
+		ManaCost: "{1}{R}{G}",
+		Colors:   []string{"R", "G"},
+		OracleText: "This enchantment enters with four +1/+1 counters on it.\n" +
+			"Modified creatures you control have haste. (Equipment, Auras you control, and counters are modifications.)\n" +
+			"Remove a +1/+1 counter from this enchantment: Put a +1/+1 counter on target creature you control. Activate only as a sorcery and only once each turn.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "i")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "game.SorceryOncePerTurn") {
+		t.Fatalf("source missing conjoined sorcery-once-per-turn timing:\n%s", source)
+	}
+}

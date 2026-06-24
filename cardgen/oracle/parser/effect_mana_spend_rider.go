@@ -47,7 +47,14 @@ var legendaryManaSpendConditionWords = []string{
 	"spend", "this", "mana", "only", "to", "cast", "a", "legendary", "spell",
 }
 
-// creatureSpellHasteConditionWords is the leading condition of the unrestricted
+// creatureSpellRestrictedConditionWords is the bare restricted spend condition
+// "Spend this mana only to cast a creature spell" (Beastcaller Savant, Dwynen's
+// Elite). It restricts the tagged mana to creature spells with no further
+// qualifier or rider effect.
+var creatureSpellRestrictedConditionWords = []string{
+	"spend", "this", "mana", "only", "to", "cast", "a", "creature", "spell",
+}
+
 // creature-spell haste bonus rider (Arena of Glory, Generator Servant).
 var creatureSpellHasteConditionWords = []string{
 	"if", "that", "mana", "is", "spent", "on", "a", "creature", "spell",
@@ -245,6 +252,32 @@ func recognizeCreatureSpellHasteManaSpendRider(tokens []shared.Token) (ManaSpend
 	}, true
 }
 
+// recognizeCreatureSpellRestrictedManaSpendRider reports whether the sentence
+// tokens are exactly "Spend this mana only to cast a creature spell." and, if
+// so, returns its typed syntax. It is the bare restricted creature-spell spend
+// rider (Beastcaller Savant, Dwynen's Elite): the tagged mana may be spent only
+// on creature spells. Any trailing qualifier ("of the chosen type", "or activate
+// …") is handled by other recognizers, so any extra content here fails closed.
+func recognizeCreatureSpellRestrictedManaSpendRider(tokens []shared.Token) (ManaSpendRiderSyntax, bool) {
+	conditionEnd := len(creatureSpellRestrictedConditionWords)
+	if len(tokens) < conditionEnd ||
+		!effectWordsAt(tokens, 0, creatureSpellRestrictedConditionWords...) {
+		return ManaSpendRiderSyntax{}, false
+	}
+	for i := conditionEnd; i < len(tokens); i++ {
+		if tokens[i].Kind != shared.Period {
+			return ManaSpendRiderSyntax{}, false
+		}
+	}
+	return ManaSpendRiderSyntax{
+		Span:          shared.SpanOf(tokens),
+		ConditionSpan: shared.SpanOf(tokens[:conditionEnd]),
+		Condition:     ManaSpendCastCreatureSpell,
+		Effect:        ManaSpendRiderEffectUnknown,
+		Restricted:    true,
+	}, true
+}
+
 // collapseManaSpendRiderSentence replaces a recognized mana-spend rider
 // sentence's generic effects with a single typed EffectManaSpendRider effect
 // that spans the whole sentence, so the rider rides on the preceding add-mana
@@ -261,6 +294,9 @@ func collapseManaSpendRiderSentence(sentence *Sentence, tokens []shared.Token) b
 	}
 	if !ok {
 		rider, ok = recognizeCreatureSpellHasteManaSpendRider(tokens)
+	}
+	if !ok {
+		rider, ok = recognizeCreatureSpellRestrictedManaSpendRider(tokens)
 	}
 	if !ok {
 		return false
