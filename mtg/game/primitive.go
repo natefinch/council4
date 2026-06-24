@@ -760,6 +760,11 @@ type CreateTokenForEachDestroyed struct {
 // matching cards than Amount exiles all of them; no matching card exiles
 // nothing.
 //
+// When AllOwners is set the candidate pool spans every player's graveyard
+// rather than only Player's own ("exile a card from a graveyard", Cemetery
+// Prowler): Player still makes the choice, but any player's graveyard card may
+// be exiled. Each chosen card is removed from its own owner's graveyard.
+//
 // When PublishLinked is set, each exiled card is remembered under the
 // source-keyed linked set it names (keyed by the source permanent's card
 // identity, like ExileEntireHand), so a later ability on the same source can
@@ -771,6 +776,7 @@ type ExileFromGraveyard struct {
 	Player        PlayerReference
 	Selection     Selection
 	Amount        Quantity
+	AllOwners     bool
 	PublishLinked LinkedKey
 }
 

@@ -467,6 +467,14 @@ type StaticCostModifierDeclaration struct {
 	// players' spells the modifier affects.
 	TargetsSource bool
 	Caster        StaticSpellCasterKind
+
+	// SharedExiledCardTypeReduction, when positive, is the per-shared-type
+	// generic discount of a dynamic controller cast-cost modifier whose amount
+	// scales with the card types the spell shares with the cards exiled with the
+	// source permanent ("Spells you cast cost {N} less to cast for each card type
+	// they share with cards exiled with this creature.", Cemetery Prowler). It is
+	// mutually exclusive with GenericReduction and GenericIncrease.
+	SharedExiledCardTypeReduction int
 }
 
 // StaticSpellCasterKind identifies which players' spells a cast-cost modifier
@@ -3086,7 +3094,8 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 	}
 	node := statics[0]
 	if node.CostModifier != parser.StaticDeclarationCostModifierSpellReduction &&
-		node.CostModifier != parser.StaticDeclarationCostModifierSpellIncrease {
+		node.CostModifier != parser.StaticDeclarationCostModifierSpellIncrease &&
+		node.CostModifier != parser.StaticDeclarationCostModifierSpellSharedExiledTypeReduction {
 		return StaticDeclaration{}, false
 	}
 	if ability.Cost != nil ||
@@ -3100,9 +3109,14 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 	// this creature cost {N} more to cast.") intentionally carries the "that
 	// target <source>" phrase, which the effect machinery records as a target
 	// and a reference; the parser owns that wording and marks it via
-	// SpellTargetsSource, so those payloads are expected here. Every other
-	// cast-cost modifier must carry no targets or references.
-	if !node.SpellTargetsSource &&
+	// SpellTargetsSource, so those payloads are expected here. The shared-exiled-
+	// type discount ("... for each card type they share with cards exiled with
+	// this creature.") likewise carries "they"/"this creature" references the
+	// parser owns. Every other cast-cost modifier must carry no targets or
+	// references.
+	parserOwnsReferences := node.SpellTargetsSource ||
+		node.CostModifier == parser.StaticDeclarationCostModifierSpellSharedExiledTypeReduction
+	if !parserOwnsReferences &&
 		(len(ability.Content.Targets) != 0 || len(ability.Content.References) != 0) {
 		return StaticDeclaration{}, false
 	}
@@ -3158,9 +3172,12 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 		TargetsSource:                node.SpellTargetsSource,
 		Caster:                       caster,
 	}
-	if node.CostModifier == parser.StaticDeclarationCostModifierSpellIncrease {
+	switch node.CostModifier {
+	case parser.StaticDeclarationCostModifierSpellIncrease:
 		cost.GenericIncrease = node.CostReductionAmount
-	} else {
+	case parser.StaticDeclarationCostModifierSpellSharedExiledTypeReduction:
+		cost.SharedExiledCardTypeReduction = node.CostReductionAmount
+	default:
 		cost.GenericReduction = node.CostReductionAmount
 	}
 	return StaticDeclaration{

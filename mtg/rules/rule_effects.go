@@ -877,9 +877,66 @@ func staticCostModifiersForContext(g *game.Game, playerID game.PlayerID, card *g
 		if !spellCostModifierMatchesTargets(modifier, effect.SourceObjectID, targets) {
 			continue
 		}
+		if modifier.SharedExiledCardTypeReduction > 0 {
+			reduction := sharedExiledCardTypeReduction(g, effect.SourceObjectID, modifier, card)
+			if reduction <= 0 {
+				continue
+			}
+			modifiers = append(modifiers, game.CostModifier{Kind: game.CostModifierSpell, GenericReduction: reduction})
+			continue
+		}
 		modifiers = append(modifiers, modifier)
 	}
 	return modifiers
+}
+
+// sharedExiledCardTypeReduction resolves the concrete generic reduction for a
+// SharedExiledCardTypeReduction spell modifier ("Spells you cast cost {N} less
+// to cast for each card type they share with cards exiled with this creature.",
+// Cemetery Prowler). It reads the source permanent's linked-exile set named by
+// the modifier's ExiledLinkKey, gathers the distinct card types among the cards
+// still exiled with the source, counts how many of those types the casting card
+// also has, and multiplies that shared count by the per-type amount.
+func sharedExiledCardTypeReduction(g *game.Game, sourceObjectID id.ID, modifier game.CostModifier, card *game.CardDef) int {
+	if card == nil {
+		return 0
+	}
+	source, ok := permanentByObjectID(g, sourceObjectID)
+	if !ok {
+		return 0
+	}
+	key := game.LinkedObjectKey{SourceID: source.CardInstanceID, LinkID: string(modifier.ExiledLinkKey)}
+	shared := 0
+	for cardType := range exiledLinkedCardTypes(g, key) {
+		if card.HasType(cardType) {
+			shared++
+		}
+	}
+	return shared * modifier.SharedExiledCardTypeReduction
+}
+
+// exiledLinkedCardTypes returns the set of distinct card types among the cards
+// still exiled under key. A linked card whose instance is gone or that has left
+// its owner's exile zone is skipped, so the count tracks only cards currently
+// exiled with the source. The links are recorded by card identity (a graveyard
+// exile publishes a card, not a permanent), so membership is checked against the
+// owner's exile zone rather than last-known object information.
+func exiledLinkedCardTypes(g *game.Game, key game.LinkedObjectKey) map[types.Card]bool {
+	distinct := make(map[types.Card]bool)
+	for _, ref := range linkedObjects(g, key) {
+		card, ok := g.GetCardInstance(ref.CardID)
+		if !ok {
+			continue
+		}
+		owner, ok := playerByID(g, card.Owner)
+		if !ok || !owner.Exile.Contains(card.ID) {
+			continue
+		}
+		for _, cardType := range graveyardCardTypes(card) {
+			distinct[cardType] = true
+		}
+	}
+	return distinct
 }
 
 // spellCostModifierMatchesTargets reports whether a spell cost modifier's

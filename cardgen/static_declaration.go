@@ -1461,6 +1461,9 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 		return false
 	}
 	cost := declaration.Cost
+	if cost.SharedExiledCardTypeReduction > 0 {
+		return appendStaticSpellSharedExiledTypeCostModifier(body, declaration)
+	}
 	if (cost.GenericReduction == 0) == (cost.GenericIncrease == 0) {
 		return false
 	}
@@ -1528,6 +1531,44 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 			CostModifier:   modifier,
 		})
 	}
+	return true
+}
+
+// appendStaticSpellSharedExiledTypeCostModifier lowers the dynamic controller
+// cast-cost discount that scales with the card types a spell shares with the
+// cards exiled with the source permanent ("Spells you cast cost {N} less to cast
+// for each card type they share with cards exiled with this creature.", Cemetery
+// Prowler). It affects all the controller's spells (no type, color, subtype,
+// zone, power, or targets filter is expressible for this shape) and reads the
+// source's linked-exile set named by exiledWithSourceKey, the same key the
+// source's exile trigger publishes under. Any other shape fails closed.
+func appendStaticSpellSharedExiledTypeCostModifier(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	cost := declaration.Cost
+	if cost.GenericReduction != 0 ||
+		cost.GenericIncrease != 0 ||
+		cost.TargetsSource ||
+		cost.ChosenSubtypeFromEntryChoice ||
+		cost.MatchSpellColor ||
+		cost.MatchMinPower ||
+		cost.SourceZone != "" ||
+		len(cost.SpellTypes) != 0 ||
+		len(cost.SpellColors) != 0 ||
+		len(cost.SpellSubtypes) != 0 {
+		return false
+	}
+	affectedPlayer, ok := lowerSpellCaster(cost.Caster)
+	if !ok || affectedPlayer != game.PlayerYou {
+		return false
+	}
+	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+		Kind:           game.RuleEffectCostModifier,
+		AffectedPlayer: affectedPlayer,
+		CostModifier: game.CostModifier{
+			Kind:                          game.CostModifierSpell,
+			SharedExiledCardTypeReduction: cost.SharedExiledCardTypeReduction,
+			ExiledLinkKey:                 exiledWithSourceKey,
+		},
+	})
 	return true
 }
 
