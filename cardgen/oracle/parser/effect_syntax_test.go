@@ -648,6 +648,38 @@ func TestParseSpellsCastThisTurnAmount(t *testing.T) {
 	}
 }
 
+// TestParseCardsDrawnThisTurnAmount covers the "the number of cards you've drawn
+// this turn" amount (Thundering Djinn's attack-trigger damage): it parses to the
+// controller-scoped EffectDynamicAmountCardsDrawnThisTurn, accepting both the
+// "you've" contraction and the "you have" form.
+func TestParseCardsDrawnThisTurnAmount(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source  string
+		dynamic bool
+	}{
+		{"You gain 1 life for each card you've drawn this turn.", true},
+		{"You gain life equal to the number of cards you've drawn this turn.", true},
+		{"You gain life equal to the number of cards you have drawn this turn.", true},
+		// A bare fixed life gain stays non-dynamic (regression guard).
+		{"You gain 1 life.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			gotDynamic := effects[0].Amount.DynamicKind == EffectDynamicAmountCardsDrawnThisTurn
+			if gotDynamic != test.dynamic {
+				t.Fatalf("gain dynamic kind = %v, want CardsDrawnThisTurn=%v", effects[0].Amount.DynamicKind, test.dynamic)
+			}
+		})
+	}
+}
+
 func TestParseLifeChangedThisTurnAmount(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

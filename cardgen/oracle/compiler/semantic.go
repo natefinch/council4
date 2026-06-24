@@ -2690,6 +2690,14 @@ const (
 	// trigger whose event publishes such a quantity. Added last so existing
 	// kinds keep their wire values.
 	DynamicAmountTriggeringEventAmount
+	// DynamicAmountCardsDrawnThisTurn is the number of cards the resolving
+	// ability's controller has drawn so far this turn ("the number of cards
+	// you've drawn this turn"). It backs the draw-payoff family (Thundering
+	// Djinn's attack-trigger damage, Duelist of the Mind's characteristic-defining
+	// power); the triggering or just-resolved draw counts, since its draw event
+	// precedes the resolving ability. It is controller-scoped and carries no
+	// in-text referent. Added last so existing kinds keep their wire values.
+	DynamicAmountCardsDrawnThisTurn
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

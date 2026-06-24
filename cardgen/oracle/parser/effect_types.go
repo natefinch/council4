@@ -747,6 +747,15 @@ const (
 	// matching per-event amount, failing closed outside a measuring trigger.
 	// Added last so existing kinds keep their values.
 	EffectDynamicAmountTriggeringEventAmount EffectDynamicAmountKind = "EffectDynamicAmountTriggeringEventAmount"
+	// EffectDynamicAmountCardsDrawnThisTurn is the number of cards the controller
+	// has drawn so far this turn ("equal to the number of cards you've drawn this
+	// turn"). It backs the draw-payoff family (Thundering Djinn's attack-trigger
+	// damage, Duelist of the Mind's characteristic-defining power) and is
+	// controller-scoped: the "you" names the resolving ability's controller, so
+	// it attaches no in-text referent. The triggering or just-resolved draw
+	// counts, since its draw event precedes the resolving ability. Added last so
+	// existing kinds keep their values.
+	EffectDynamicAmountCardsDrawnThisTurn EffectDynamicAmountKind = "EffectDynamicAmountCardsDrawnThisTurn"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.

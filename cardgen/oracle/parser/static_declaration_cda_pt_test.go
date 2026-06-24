@@ -46,6 +46,12 @@ func TestParseCharacteristicDefiningPowerToughnessDeclarationMeaning(t *testing.
 			card:   "Psychosis Crawler",
 			want:   StaticDeclarationDynamicValueControllerHandSize,
 		},
+		{
+			name:   "self name cards drawn this turn",
+			source: "Duelist of the Mind's power is equal to the number of cards you've drawn this turn.",
+			card:   "Duelist of the Mind",
+			want:   StaticDeclarationDynamicValueControllerCardsDrawnThisTurn,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

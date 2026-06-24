@@ -215,6 +215,15 @@ const (
 	// player count, not a board count. Added last so existing kinds keep their
 	// wire values.
 	DynamicAmountOpponentControllingCount
+	// DynamicAmountCardsDrawnThisTurn is the number of cards Player has drawn so
+	// far this turn, counted from the turn's EventCardDrawn events for that
+	// player (CR 608.2c). The triggering or just-resolved draw counts, because
+	// its draw event precedes the resolving ability. It reads the resolving
+	// ability's controller and backs the draw-payoff family: Thundering Djinn's
+	// attack-trigger damage "equal to the number of cards you've drawn this turn"
+	// and the characteristic-defining power sibling DynamicValueControllerCardsDrawnThisTurn.
+	// Added last so existing kinds keep their wire values.
+	DynamicAmountCardsDrawnThisTurn
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves
