@@ -1061,6 +1061,9 @@ const (
 	StaticRuleOperationCounter       StaticRuleOperationKind = "StaticRuleOperationCounter"
 	StaticRuleOperationAttackOrBlock StaticRuleOperationKind = "StaticRuleOperationAttackOrBlock"
 	StaticRuleOperationUntap         StaticRuleOperationKind = "StaticRuleOperationUntap"
+	// StaticRuleOperationTransform constrains transforming the subject ("...
+	// can't transform").
+	StaticRuleOperationTransform StaticRuleOperationKind = "StaticRuleOperationTransform"
 	// StaticRuleOperationBlockAndBeBlocked combines the active "block" and
 	// passive "be blocked" prohibitions printed as a single sentence ("can't
 	// block and can't be blocked"); it lowers to both block-domain rule effects.

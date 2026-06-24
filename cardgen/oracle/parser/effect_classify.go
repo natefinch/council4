@@ -1159,6 +1159,12 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectUnknown
 	case kind == EffectCopyStackObject && !copyVerbAt(tokens, index):
 		return EffectUnknown
+	case kind == EffectTransform && index > 0 &&
+		(equalWord(tokens[index-1], "can't") || equalWord(tokens[index-1], "cannot")):
+		// "<subject> can't transform." is a continuous transform prohibition, not
+		// a resolving transform effect; it is owned by the static-rule
+		// declaration path, so it carries no resolving effect.
+		return EffectUnknown
 	case chooseNewTargetsVerbAt(tokens, index):
 		return EffectChooseNewTargets
 	case chooseCreatureTypeVerbAt(tokens, index):

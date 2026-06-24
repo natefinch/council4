@@ -770,6 +770,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectAssignCombatDamageAsThoughUnblocked", nil
 	case game.RuleEffectDoesntUntap:
 		return "game.RuleEffectDoesntUntap", nil
+	case game.RuleEffectCantTransform:
+		return "game.RuleEffectCantTransform", nil
 	case game.RuleEffectCostModifier:
 		return "game.RuleEffectCostModifier", nil
 	case game.RuleEffectGrantHandCardAbility:

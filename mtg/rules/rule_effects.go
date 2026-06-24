@@ -746,6 +746,21 @@ func ruleEffectPreventsUntap(g *game.Game, permanent *game.Permanent) bool {
 	return false
 }
 
+// ruleEffectPreventsTransform reports whether an active rule effect forbids
+// permanent from transforming ("Non-Human Werewolves you control can't
+// transform.", Immerwolf). A matching prohibition stops the transform (CR
+// 701.28), so transformPermanent does nothing.
+func ruleEffectPreventsTransform(g *game.Game, permanent *game.Permanent) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind == game.RuleEffectCantTransform && ruleEffectMatchesPermanent(g, effect, permanent) {
+			return true
+		}
+	}
+	return false
+}
+
 func ruleEffectMatchesPermanent(g *game.Game, effect *game.RuleEffect, permanent *game.Permanent) bool {
 	if effect == nil {
 		return false

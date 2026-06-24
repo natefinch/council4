@@ -2335,6 +2335,14 @@ type EffectStaticSubjectSyntax struct {
 	// set, the affected group matches creatures that do NOT carry Subtype.
 	ExcludedSubtype bool `json:",omitempty"`
 
+	// ExcludedSubtypes lists creature subtypes the affected group must NOT carry,
+	// set by a "non-<subtype>" prefix on a subtyped group noun ("Non-Human
+	// Werewolves you control can't transform.", Immerwolf). Unlike ExcludedSubtype
+	// (which negates the single required Subtype slot) these are excluded
+	// alongside a separately required Subtype/SubtypesAny. They lower onto the
+	// runtime Selection.ExcludedSubtype predicate.
+	ExcludedSubtypes []types.Sub `json:",omitempty"`
+
 	// Colors, Colorless, and Multicolored carry an optional color filter
 	// constraining the affected creature group ("Other red creatures you
 	// control ..."). Colors lists single-color words matched disjunctively;

@@ -540,6 +540,10 @@ func validStaticRuleSyntax(rule StaticRuleSyntax) bool {
 			rule.Operation.Kind == StaticRuleOperationBlock &&
 			rule.Operation.Voice == StaticRuleVoicePassive &&
 			len(rule.Qualifiers) == 0) ||
+			(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+				rule.Operation.Kind == StaticRuleOperationTransform &&
+				rule.Operation.Voice == StaticRuleVoiceActive &&
+				len(rule.Qualifiers) == 0) ||
 			validGroupMustAttackRule(rule)
 	case StaticRuleSubjectBattlefieldCreatures:
 		return (rule.Constraint.Kind == StaticRuleConstraintProhibition &&
@@ -596,6 +600,10 @@ func validCreatureStaticRuleOperation(rule StaticRuleSyntax) bool {
 			len(rule.Qualifiers) == 0) ||
 		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationUntap &&
+			rule.Operation.Voice == StaticRuleVoiceActive &&
+			len(rule.Qualifiers) == 0) ||
+		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+			rule.Operation.Kind == StaticRuleOperationTransform &&
 			rule.Operation.Voice == StaticRuleVoiceActive &&
 			len(rule.Qualifiers) == 0) ||
 		(rule.Constraint.Kind == StaticRuleConstraintRequirement &&

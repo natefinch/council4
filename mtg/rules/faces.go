@@ -61,6 +61,9 @@ func transformPermanent(g *game.Game, permanent *game.Permanent) bool {
 	if !def.IsTransformingDoubleFaced() || !def.Back.Exists {
 		return false
 	}
+	if ruleEffectPreventsTransform(g, permanent) {
+		return false
+	}
 	if permanent.Face == game.FaceFront {
 		permanent.Face = game.FaceBack
 		permanent.Transformed = true
