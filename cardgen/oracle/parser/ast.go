@@ -81,7 +81,13 @@ type Ability struct {
 	// emitted. It is parser-internal: the compiler consumes the typed cost via
 	// CostSyntax and only ever needs the cost's presence, not its tokens.
 	costPhrase *Phrase
-	Trigger    *TriggerClause `json:",omitempty"`
+	// wardCostPhrase is the source cost phrase of a "Ward—<cost>" keyword whose
+	// payment is a non-mana or composite cost (e.g. "Ward—{2}, Pay 2 life.",
+	// "Ward—Pay 3 life.", "Ward—Sacrifice a creature."). It is parser-internal;
+	// emitWardKeywordCost parses it into the typed WardCost carried on the Ward
+	// keyword so the compiler consumes the cost components there.
+	wardCostPhrase *Phrase
+	Trigger        *TriggerClause `json:",omitempty"`
 	// BodySpan is the source span of the ability's resolving body: the tokens
 	// after the activated/loyalty cost colon or the triggered event comma (and
 	// after any ability-word or chapter prefix). It is the zero span when the

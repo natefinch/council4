@@ -114,7 +114,7 @@ func lowerKinshipPayoff(
 		clauseSyntax := clauseSyntaxes[i]
 		content, diagnostic := lowerSequenceClauseContent(
 			cardName,
-			ctx.enclosingKind,
+			ctx,
 			effectCtx.content,
 			effect.Optional,
 			&clauseSyntax,

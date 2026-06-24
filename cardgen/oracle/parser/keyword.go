@@ -551,6 +551,13 @@ type Keyword struct {
 	Span      shared.Span      `json:"-"`
 	Text      string           `json:",omitempty"`
 	Parameter KeywordParameter `json:",omitzero"`
+	// WardCost is the typed non-mana or composite payment of a "Ward—<cost>"
+	// ability (CR 702.21), or nil for a mana-only Ward whose cost is carried by
+	// Parameter. It models the em-dash forms "Ward—Pay N life.", "Ward—Sacrifice
+	// a creature.", "Ward—Discard a card.", and the composite "Ward—{2}, Pay 2
+	// life." Its components are the same comma-separated cost operations the
+	// activated-ability cost parser recognizes.
+	WardCost *Cost `json:",omitempty"`
 	// EquipRestriction is the typed quality restriction on a restricted Equip
 	// ability ("Equip legendary creature {3}", "Equip Knight {2}"), or nil for an
 	// unrestricted Equip. The mana cost is still carried by Parameter.
@@ -1410,6 +1417,9 @@ func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
 		}
 		parameter, parameterEnd := parseKeywordParameter(kind, tokens, end, atoms)
 		end = parameterEnd
+		if kind == KeywordWard {
+			end = wardEmDashCostEnd(tokens, end)
+		}
 		keywords = append(keywords, Keyword{
 			Kind:             kind,
 			NameSpan:         nameSpan,
@@ -1421,6 +1431,26 @@ func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
 		i = end - 1
 	}
 	return keywords
+}
+
+// wardEmDashCostEnd extends a Ward keyword atom past the em dash and the
+// non-mana or composite cost clause that follows it ("Ward—Pay N life.",
+// "Ward—{2}, Pay 2 life."), returning the token index after the cost so the
+// keyword span covers its whole printed cost (CR 702.21). It stops before the
+// trailing top-level period and is a no-op when no em dash follows the keyword
+// name, leaving the mana-only "Ward {N}" form untouched.
+func wardEmDashCostEnd(tokens []shared.Token, start int) int {
+	if start >= len(tokens) || tokens[start].Kind != shared.EmDash {
+		return start
+	}
+	end := start + 1
+	for end < len(tokens) && tokens[end].Kind != shared.Period {
+		end++
+	}
+	if end == start+1 {
+		return start
+	}
+	return end
 }
 
 func recognizeKeywordNameAt(tokens []shared.Token, start int) (KeywordKind, int, bool) {

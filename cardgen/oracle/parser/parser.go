@@ -159,6 +159,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitCompanionAbility(document.Abilities)
 	emitPartnerWithAbility(document.Abilities)
 	emitSemanticAccessors(document.Abilities)
+	emitWardKeywordCost(document.Abilities)
 	stripImpulseExileSemantics(document.Abilities)
 	stripPayRepeatedlyAnimateSemantics(document.Abilities)
 	emitCoinFlipSequences(document.Abilities)
@@ -412,6 +413,8 @@ func parseAbility(
 		} else if escape, costPhrase, ok := escapeAlternativeCostClause(source, tokens, dash); ok {
 			ability.AlternativeCost = escape
 			ability.costPhrase = &costPhrase
+		} else if costPhrase, ok := wardKeywordCostClause(source, tokens, dash); ok {
+			ability.wardCostPhrase = &costPhrase
 		} else {
 			phrase := phraseFromTokens(source, tokens[:dash])
 			ability.AbilityWord = &AbilityWordClause{
@@ -421,6 +424,9 @@ func parseAbility(
 			}
 		}
 		body = tokens[dash+1:]
+		if ability.wardCostPhrase != nil {
+			body = nil
+		}
 		if len(ability.Chapters) > 0 {
 			if stripped, flavor, ok := stripChapterFlavorName(body); ok {
 				body = stripped
@@ -440,6 +446,8 @@ func parseAbility(
 		ability.Kind = AbilityChapter
 	case ability.AlternativeCost != nil:
 		ability.Kind = AbilitySpellAlternativeCost
+	case ability.wardCostPhrase != nil:
+		ability.Kind = AbilityStatic
 	default:
 		ability.Kind = classifyAbility(body, context)
 	}

@@ -1822,7 +1822,13 @@ func lowerFixedModifyPTSpell(
 	powerDelta := game.Fixed(compiledSignedAmountValue(effect.PowerDelta))
 	toughnessDelta := game.Fixed(compiledSignedAmountValue(effect.ToughnessDelta))
 	if dynamicPT {
-		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+		var dynamic game.DynamicAmount
+		var ok bool
+		if triggeringEventQuantityKind(effect.Amount.DynamicKind) {
+			dynamic, ok = lowerTriggeringEventQuantityAmount(ctx, effect.Amount)
+		} else {
+			dynamic, ok = lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+		}
 		if !ok || effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,

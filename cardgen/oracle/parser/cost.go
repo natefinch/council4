@@ -175,6 +175,49 @@ func emitCost(abilities []Ability) {
 	}
 }
 
+// wardKeywordCostClause recognizes the cost clause of a "Ward—<cost>" keyword
+// ability, whose payment is a non-mana or composite cost set off by an em dash
+// (CR 702.21). It returns the source-spanned cost phrase after the em dash (the
+// trailing period excluded) when the pre-dash phrase is exactly the Ward
+// keyword, so the cost lowers through the same component grammar as an
+// activated-ability cost. Mana-only Ward ("Ward {2}") keeps its space-delimited
+// mana parameter and never reaches this clause.
+func wardKeywordCostClause(source string, tokens []shared.Token, dash int) (Phrase, bool) {
+	if !slices.Equal(normalizedWords(tokens[:dash]), []string{"ward"}) {
+		return Phrase{}, false
+	}
+	clause := tokens[dash+1:]
+	if period := shared.TopLevelIndex(clause, shared.Period); period >= 0 {
+		clause = clause[:period]
+	}
+	if len(clause) == 0 {
+		return Phrase{}, false
+	}
+	return phraseFromTokens(source, clause), true
+}
+
+// emitWardKeywordCost parses each recognized "Ward—<cost>" cost phrase into a
+// typed Cost and attaches it to the ability's Ward keyword(s). It runs after the
+// semantic keywords are computed so the cost rides on the same Keyword the
+// compiler reads, and after the atoms exist so the cost components recognize
+// their typed objects.
+func emitWardKeywordCost(abilities []Ability) {
+	for i := range abilities {
+		ability := &abilities[i]
+		if ability.wardCostPhrase == nil {
+			continue
+		}
+		cost := parseCost(*ability.wardCostPhrase, AbilityStatic, ability.Atoms)
+		for k := range ability.SemanticKeywords {
+			if ability.SemanticKeywords[k].Kind != KeywordWard {
+				continue
+			}
+			clone := cost
+			ability.SemanticKeywords[k].WardCost = &clone
+		}
+	}
+}
+
 // parseCost recognizes the typed cost components of a cost phrase. Loyalty
 // abilities carry a single signed/variable loyalty amount; every other ability
 // splits its cost on top-level commas and recognizes each component's verb and

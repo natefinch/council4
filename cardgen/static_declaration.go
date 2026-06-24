@@ -655,10 +655,7 @@ func staticGrantedAbilityForKeyword(keyword compiler.CompiledKeyword) (game.Stat
 		}
 		return staticAbilityFromProtectionKeyword(keyword.Protection, ""), true
 	case parser.KeywordWard:
-		if keyword.ParameterKind != parser.KeywordParameterManaCost || len(keyword.ManaCost) == 0 {
-			return game.StaticAbility{}, false
-		}
-		return game.WardStaticAbility(slices.Clone(keyword.ManaCost)), true
+		return lowerWardKeyword(keyword)
 	default:
 		return grantedLandwalkStaticBody(keyword)
 	}

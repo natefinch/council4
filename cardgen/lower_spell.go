@@ -118,23 +118,30 @@ func lowerSpellAbilityContent(
 // bindings (such as EventPermanent "it"/"that creature" counter placement) that
 // are only trustworthy for a standalone effect: within a sequence the compiler
 // may bind a pronoun whose antecedent is a prior instruction's product to the
-// triggering event permanent.
+// triggering event permanent. It carries the parent's enclosing kind and
+// triggering-event context forward so a clause that reads the triggering event's
+// quantity ("draw that many cards", "+2/+0 for each card discarded this way")
+// still resolves against the enclosing trigger.
 func lowerSequenceClauseContent(
 	cardName string,
-	enclosingKind compiler.AbilityKind,
+	parent contentCtx,
 	content compiler.AbilityContent,
 	optional bool,
 	bodySyntax *parser.Ability,
 	allowEventPronoun bool,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	ctx := contentCtx{
-		text:              bodySyntax.Text,
-		span:              bodySyntax.Span,
-		optional:          optional,
-		content:           content,
-		enclosingKind:     enclosingKind,
-		sequenceClause:    true,
-		allowEventPronoun: allowEventPronoun,
+		text:                  bodySyntax.Text,
+		span:                  bodySyntax.Span,
+		optional:              optional,
+		content:               content,
+		enclosingKind:         parent.enclosingKind,
+		sequenceClause:        true,
+		allowEventPronoun:     allowEventPronoun,
+		triggerCardCountEvent: parent.triggerCardCountEvent,
+		triggerEvent:          parent.triggerEvent,
+		triggerOneOrMore:      parent.triggerOneOrMore,
+		triggerToZone:         parent.triggerToZone,
 	}
 	return lowerContent(cardName, ctx, bodySyntax)
 }

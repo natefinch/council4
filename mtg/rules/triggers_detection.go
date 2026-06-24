@@ -792,7 +792,7 @@ func wardTriggerForEvent(permanent *game.Permanent, controller game.PlayerID, wa
 	}
 	return &game.TriggeredAbility{
 		Text:             "Ward",
-		KeywordAbilities: []game.KeywordAbility{game.WardKeyword{Cost: ward.Cost}},
+		KeywordAbilities: []game.KeywordAbility{game.WardKeyword{Cost: ward.Cost, AdditionalCosts: ward.AdditionalCosts}},
 	}, true
 }
 
