@@ -251,6 +251,24 @@ func TestCompileConstructedPlayerEventTriggerClauses(t *testing.T) {
 			},
 		},
 		{
+			name:   "first discard one or more each turn",
+			kind:   parser.TriggerIntroductionWhenever,
+			player: parser.TriggerPlayerSelectorYou,
+			action: parser.PlayerEventActionDiscard,
+			card:   parser.PlayerEventCardOneOrMore,
+			occurrence: parser.PlayerEventOccurrence{
+				Kind:    parser.PlayerEventOccurrenceFirstEachTurn,
+				Ordinal: 1,
+			},
+			want: TriggerPattern{
+				Kind:                       TriggerWhenever,
+				Event:                      TriggerEventCardDiscarded,
+				Player:                     TriggerPlayerYou,
+				PlayerEventOrdinalThisTurn: 1,
+				OneOrMore:                  true,
+			},
+		},
+		{
 			name:   "ordinal draw",
 			kind:   parser.TriggerIntroductionWhenever,
 			player: parser.TriggerPlayerSelectorYou,
@@ -373,9 +391,11 @@ func TestCompileConstructedPlayerEventTriggerClausesFailClosed(t *testing.T) {
 			clause.Card.Kind = parser.PlayerEventCardOneOrMore
 			return clause
 		}()},
-		{name: "discard first time", kind: parser.TriggerIntroductionWhenever, clause: func() parser.PlayerEventTriggerClause {
+		{name: "discard first time any player", kind: parser.TriggerIntroductionWhenever, clause: func() parser.PlayerEventTriggerClause {
 			clause := valid
+			clause.Player.Kind = parser.TriggerPlayerSelectorAny
 			clause.Action.Kind = parser.PlayerEventActionDiscard
+			clause.Card.Kind = parser.PlayerEventCardOneOrMore
 			clause.Occurrence = parser.PlayerEventOccurrence{Kind: parser.PlayerEventOccurrenceFirstEachTurn, Ordinal: 1}
 			return clause
 		}()},

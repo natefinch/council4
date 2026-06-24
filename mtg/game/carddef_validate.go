@@ -1663,6 +1663,8 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 	}
 	if pattern.PlayerEventOrdinalThisTurn > 0 &&
 		pattern.Event != EventCardDrawn &&
+		pattern.Event != EventCardDiscarded &&
+		pattern.Event != EventCycled &&
 		pattern.Event != EventLifeGained &&
 		pattern.Event != EventLifeLost &&
 		pattern.Event != EventScry &&

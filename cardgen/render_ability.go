@@ -624,6 +624,8 @@ func (r Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatt
 		(pattern.Event == game.EventAbilityActivated && !pattern.ExcludeManaAbility) ||
 		(pattern.PlayerEventOrdinalThisTurn > 0 &&
 			pattern.Event != game.EventCardDrawn &&
+			pattern.Event != game.EventCardDiscarded &&
+			pattern.Event != game.EventCycled &&
 			pattern.Event != game.EventLifeGained &&
 			pattern.Event != game.EventLifeLost &&
 			pattern.Event != game.EventScry &&

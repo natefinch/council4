@@ -538,3 +538,66 @@ func TestLandcyclingSearchesBasicLandToHandOnResolution(t *testing.T) {
 		t.Fatal("landcycling did not move the searched basic land to hand")
 	}
 }
+
+// firstCycleTriggerPattern matches "Whenever you cycle another card for the
+// first time each turn" (Valiant Rescuer): a cycle trigger gated on the first
+// cycle occurrence of the turn.
+func firstCycleTriggerPattern() *game.TriggerPattern {
+	return &game.TriggerPattern{
+		Event:                      game.EventCycled,
+		Player:                     game.TriggerPlayerYou,
+		PlayerEventOrdinalThisTurn: 1,
+		ExcludeSelf:                true,
+	}
+}
+
+// TestCycleOrdinalThreadsOccurrences confirms successive cycles by the same
+// player are numbered 1, 2, ... within a turn and the count resets next turn.
+func TestCycleOrdinalThreadsOccurrences(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+
+	emitEvent(g, game.Event{Kind: game.EventCycled, Controller: game.Player1, Player: game.Player1, CardID: id.ID(1)})
+	emitEvent(g, game.Event{Kind: game.EventCycled, Controller: game.Player1, Player: game.Player1, CardID: id.ID(2)})
+	assertCycleOrdinal(t, g, id.ID(1), 1)
+	assertCycleOrdinal(t, g, id.ID(2), 2)
+
+	g.Turn.TurnNumber++
+	markCurrentTurnEventStart(g)
+	emitEvent(g, game.Event{Kind: game.EventCycled, Controller: game.Player1, Player: game.Player1, CardID: id.ID(3)})
+	assertCycleOrdinal(t, g, id.ID(3), 1)
+}
+
+// TestFirstCycleEachTurnTriggerGatesOnFirstOccurrence confirms a
+// first-cycle-each-turn trigger fires for the first cycle of the turn and not a
+// later cycle the same turn.
+func TestFirstCycleEachTurnTriggerGatesOnFirstOccurrence(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, firstCycleTriggerPattern(),
+		[]game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	firstCard := g.IDGen.Next()
+	emitEvent(g, game.Event{Kind: game.EventCycled, Controller: game.Player1, Player: game.Player1, CardID: firstCard})
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("first-cycle trigger did not fire for the first cycle of the turn")
+	}
+
+	secondCard := g.IDGen.Next()
+	emitEvent(g, game.Event{Kind: game.EventCycled, Controller: game.Player1, Player: game.Player1, CardID: secondCard})
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("first-cycle trigger fired for a later cycle the same turn")
+	}
+}
+
+func assertCycleOrdinal(t *testing.T, g *game.Game, cardID id.ID, want int) {
+	t.Helper()
+	for _, event := range g.Events {
+		if event.Kind == game.EventCycled && event.CardID == cardID {
+			if event.PlayerEventOrdinalThisTurn != want {
+				t.Fatalf("cycle ordinal for %v = %d, want %d", cardID, event.PlayerEventOrdinalThisTurn, want)
+			}
+			return
+		}
+	}
+	t.Fatalf("no cycle event found for card %v", cardID)
+}

@@ -311,6 +311,8 @@ func playerEventFirstEachTurnAllowed(action parser.PlayerEventActionKind, player
 		parser.PlayerEventActionScry,
 		parser.PlayerEventActionSurveil:
 		return true
+	case parser.PlayerEventActionDiscard, parser.PlayerEventActionCycle:
+		return player == parser.TriggerPlayerSelectorYou
 	case parser.PlayerEventActionGainLife, parser.PlayerEventActionLoseLife:
 		return player != parser.TriggerPlayerSelectorAny
 	default:
