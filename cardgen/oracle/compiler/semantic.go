@@ -1677,6 +1677,12 @@ type CompiledEffect struct {
 	// the first matching event ("the next time you cast ..."). It is meaningful
 	// only when Kind is EffectDelayedTrigger.
 	DelayedTriggerOneShot bool
+	// DelayedTriggerBindDamageSource records that an EffectDelayedTrigger's
+	// combat-damage event source binds to the permanent an earlier clause in the
+	// same resolution acted on ("... target creature ... Whenever that creature
+	// deals combat damage to a player this turn, ..."). It is meaningful only
+	// when Kind is EffectDelayedTrigger.
+	DelayedTriggerBindDamageSource bool
 	// TokenName is a created creature token's explicit Oracle name ("named Koma's
 	// Coil"), captured verbatim from source. It is empty when the token is named
 	// only by its subtypes.

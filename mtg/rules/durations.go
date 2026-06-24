@@ -4,6 +4,7 @@ import (
 	"maps"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/id"
 )
 
 func untilEndOfTurnPTContinuousEffect(g *game.Game, obj *game.StackObject, permanent *game.Permanent, powerDelta, toughnessDelta int) game.ContinuousEffect {
@@ -140,8 +141,32 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 		Window:                      def.Window,
 		CapturedTargetControllerLKI: clonePlayerIDMap(obj.TargetControllerLKI),
 		CapturedTargetManaValueLKI:  cloneIntMap(obj.TargetManaValueLKI),
+		BoundDamageSourceObjectID:   capturedDamageSourceObjectID(g, obj, def),
 	})
 	return true
+}
+
+// capturedDamageSourceObjectID resolves the permanent a combat-damage delayed
+// trigger binds to from the creating ability's DamageSourceObject reference, so
+// the scheduled trigger fires only on combat damage dealt by that specific
+// object ("... target creature ... Whenever that creature deals combat damage to
+// a player this turn, ..."). It returns zero when the definition carries no such
+// reference or the captured permanent is already gone, in which case the trigger
+// never fires.
+func capturedDamageSourceObjectID(g *game.Game, obj *game.StackObject, def *game.DelayedTriggerDef) id.ID {
+	if !def.DamageSourceObject.Exists {
+		return 0
+	}
+	reference := def.DamageSourceObject.Val
+	if reference.Kind() != game.ObjectReferenceLinkedObject {
+		return 0
+	}
+	for _, linked := range linkedObjects(g, linkedObjectSourceKey(g, obj, reference.LinkID())) {
+		if linked.ObjectID != 0 {
+			return linked.ObjectID
+		}
+	}
+	return 0
 }
 
 // drainReadyEventDelayedTriggers fires event-based delayed triggers whose stored
@@ -198,6 +223,11 @@ func matchEventDelayedTrigger(g *game.Game, trigger *game.DelayedTrigger, events
 	pattern := trigger.EventPattern.Val
 	source, _ := permanentByObjectID(g, trigger.SourceObjectID)
 	for i := range events {
+		if pattern.DamageSourceCaptured &&
+			(trigger.BoundDamageSourceObjectID == 0 ||
+				events[i].SourceObjectID != trigger.BoundDamageSourceObjectID) {
+			continue
+		}
 		if triggerMatchesEventForController(g, source, trigger.Controller, &pattern, events[i]) {
 			return true, events[i]
 		}

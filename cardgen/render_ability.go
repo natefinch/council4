@@ -1072,5 +1072,8 @@ func renderTriggerPatternDamageFields(ctx *renderCtx, pattern *game.TriggerPatte
 		}
 		fields = append(fields, fmt.Sprintf("DamageRecipientSelection: %s,", selection))
 	}
+	if pattern.DamageSourceCaptured {
+		fields = append(fields, "DamageSourceCaptured: true,")
+	}
 	return fields, nil
 }

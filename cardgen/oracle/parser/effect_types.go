@@ -1557,6 +1557,15 @@ type EffectSyntax struct {
 	// match for the rest of the turn ("Whenever you cast a spell this turn,
 	// ..."). It is meaningful only when Kind is EffectDelayedTrigger.
 	DelayedTriggerOneShot bool `json:",omitempty"`
+	// DelayedTriggerBindDamageSource records that an EffectDelayedTrigger's
+	// combat-damage event source binds to the permanent an earlier clause in the
+	// same resolution acted on, named here by a back-reference ("... target
+	// creature ... Whenever that creature deals combat damage to a player this
+	// turn, ..."). The inner ability is reparsed in the self ("this creature")
+	// form so it carries the combat-damage pattern; lowering rebinds that
+	// pattern's source to the captured object. It is meaningful only when Kind is
+	// EffectDelayedTrigger.
+	DelayedTriggerBindDamageSource bool `json:",omitempty"`
 	// TokenKeywords lists every creature keyword a created token enters with, in
 	// source order ("with menace and reach" -> [Menace, Reach]). The first
 	// keyword is also recorded on Selection.Keyword (a "with <keyword>" selector

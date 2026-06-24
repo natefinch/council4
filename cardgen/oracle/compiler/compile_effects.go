@@ -264,6 +264,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				DelayedTriggerAbility:                syntax.DelayedTriggerAbility,
 				PayRepeatedlyAnimate:                 syntax.PayRepeatedlyAnimate,
 				DelayedTriggerOneShot:                syntax.DelayedTriggerOneShot,
+				DelayedTriggerBindDamageSource:       syntax.DelayedTriggerBindDamageSource,
 				TokenName:                            syntax.TokenName,
 				TokenPredefinedName:                  syntax.TokenPredefinedName,
 				AmassSubtype:                         syntax.AmassSubtype,

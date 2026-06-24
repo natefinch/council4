@@ -2192,6 +2192,16 @@ func (p CreateDelayedTrigger) validatePrimitive(targets []TargetSpec, checkTarge
 	if len(p.Trigger.Content.Modes) == 0 {
 		return errors.New("delayed trigger requires content")
 	}
+	if p.Trigger.DamageSourceObject.Exists {
+		if !p.Trigger.EventPattern.Exists || !p.Trigger.EventPattern.Val.DamageSourceCaptured {
+			return errors.New("delayed trigger DamageSourceObject requires a DamageSourceCaptured event pattern")
+		}
+		if err := validateObjectReference(p.Trigger.DamageSourceObject.Val, targets, checkTargets); err != nil {
+			return err
+		}
+	} else if p.Trigger.EventPattern.Exists && p.Trigger.EventPattern.Val.DamageSourceCaptured {
+		return errors.New("delayed trigger DamageSourceCaptured pattern requires a DamageSourceObject")
+	}
 	return nil
 }
 
