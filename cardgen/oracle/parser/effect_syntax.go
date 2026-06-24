@@ -271,7 +271,7 @@ func emitSentenceResolvingSyntax(
 			continue
 		}
 		tokens := stripLeadingConditionClause(semanticEffectTokens(sentences[i].Tokens), atoms)
-		count := legacyEffectCount(tokens, atoms)
+		count := orderedEffectCount(tokens, atoms)
 		legacyEffects += count
 		sentences[i].LegacyEffects = count > 0
 		sentences[i].Targets = parseTargets(tokens, atoms)
@@ -653,7 +653,7 @@ func creditTokenCopyGrantRider(sentences []Sentence, atoms Atoms) (foldedLegacy,
 		create.TokenCopyGrantRiderSpan = sentences[i].Span
 		foldedEffects = len(sentences[i].Effects)
 		if sentences[i].LegacyEffects {
-			foldedLegacy = legacyEffectCount(tokens, atoms)
+			foldedLegacy = orderedEffectCount(tokens, atoms)
 		}
 		sentences[i].Effects = nil
 		sentences[i].TokenCopyGrantRider = true
@@ -686,7 +686,7 @@ func creditCopyChooseNewTargetsRider(sentences []Sentence, atoms Atoms) (foldedL
 		copyEffect.CopyChooseNewTargetsRiderSpan = sentences[i].Span
 		foldedEffects = len(sentences[i].Effects)
 		if sentences[i].LegacyEffects {
-			foldedLegacy = legacyEffectCount(tokens, atoms)
+			foldedLegacy = orderedEffectCount(tokens, atoms)
 		}
 		sentences[i].Effects = nil
 		sentences[i].LegacyEffects = false
@@ -1101,7 +1101,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		return effects
 	}
 	indices := effectIndices(tokens, atoms)
-	requiresOrderedLowering := legacyEffectCount(tokens, atoms) > 1
+	requiresOrderedLowering := orderedEffectCount(tokens, atoms) > 1
 	effects := make([]EffectSyntax, 0, len(indices))
 	_, leadingDuration := stripLeadingDurationClause(tokens, atoms)
 	for effectIndex, tokenIndex := range indices {
@@ -4572,23 +4572,6 @@ func legacyExactManaBody(effect *EffectSyntax, sentence Sentence) bool {
 	return effect.Mana.AnyColor || effect.Mana.CommanderIdentity || effect.Mana.LandsProduce || effect.Mana.FilterPair || effect.Mana.ColorsAmongControlled || len(effect.Mana.Symbols) != 0
 }
 
-func legacyEffectCount(tokens []shared.Token, atoms Atoms) int {
-	if _, ok := massReanimationExchangeWords(tokens); ok {
-		return 1
-	}
-	count := 0
-	for i := range tokens {
-		if legacyEffectKindAt(tokens, i) != EffectUnknown &&
-			!atoms.SelfNameAt(tokens[i].Span) &&
-			!effectWithinCondition(tokens, i) &&
-			!tapOrUntapInnerUntapAt(tokens, i) &&
-			!copyTokenExceptRiderBoundaryAt(tokens, i) {
-			count++
-		}
-	}
-	return count
-}
-
 func effectWithinCondition(tokens []shared.Token, index int) bool {
 	for i := index - 1; i >= 0; i-- {
 		if tokens[i].Kind == shared.Comma || tokens[i].Kind == shared.Period || tokens[i].Kind == shared.Semicolon {
@@ -4599,53 +4582,6 @@ func effectWithinCondition(tokens []shared.Token, index int) bool {
 		}
 	}
 	return false
-}
-
-func legacyEffectKindAt(tokens []shared.Token, index int) EffectKind {
-	if equalWord(tokens[index], "look") {
-		return EffectManifestDread
-	}
-	if cantBeBlockedThisTurnVerbAt(tokens, index) {
-		return EffectCantBeBlocked
-	}
-	if cantBlockThisTurnVerbAt(tokens, index) {
-		return EffectCantBlock
-	}
-	kind := effectWordKind(tokens[index])
-	switch {
-	case kind == EffectGrantKeyword && index >= 2 &&
-		(equalWord(tokens[index-2], "opponent") || equalWord(tokens[index-2], "opponents")) &&
-		equalWord(tokens[index-1], "you"):
-		return EffectUnknown
-	case kind == EffectEnterTapped && index+1 < len(tokens) && equalWord(tokens[index+1], "prepared"):
-		return EffectEnterPrepared
-	case kind == EffectCast && index > 0 && (equalWord(tokens[index-1], "was") || equalWord(tokens[index-1], "were")):
-		return EffectUnknown
-	case kind == EffectCast && pastCastCountPhraseAt(tokens, index):
-		return EffectUnknown
-	case kind == EffectCast && castDuringMainPhaseConditionAt(tokens, index):
-		return EffectUnknown
-	case kind == EffectCast && castSpellsFromLibraryTopAt(tokens, index):
-		return EffectUnknown
-	case kind == EffectCast && manaSpentToCastPhraseAt(tokens, index):
-		return EffectUnknown
-	case kind == EffectCast && spellCostModifierCastAt(tokens, index):
-		return EffectUnknown
-	case kind == EffectCounter && !counterVerbAt(tokens, index):
-		return EffectUnknown
-	case kind == EffectCopyStackObject && !copyVerbAt(tokens, index):
-		return EffectUnknown
-	case kind == EffectGain && index+1 < len(tokens) && equalWord(tokens[index+1], "control"):
-		return EffectGainControl
-	case kind == EffectGain && everyCreatureTypeGainRiderAt(tokens, index) && priorBasePowerToughnessSet(tokens, index):
-		return EffectUnknown
-	case kind == EffectDouble && index+1 < len(tokens) && equalWord(tokens[index+1], "strike"):
-		return EffectUnknown
-	case kind == EffectGrantKeyword && priorPTChange(tokens, index):
-		return EffectUnknown
-	default:
-		return kind
-	}
 }
 
 // entersColorChoiceSyntax recognizes the self entry color-choice clause "choose
