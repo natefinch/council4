@@ -145,6 +145,8 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 		dynamic.Kind = game.DynamicAmountLifeLostThisTurn
 	case compiler.DynamicAmountLifeGainedThisTurn:
 		dynamic.Kind = game.DynamicAmountLifeGainedThisTurn
+	case compiler.DynamicAmountCardsDrawnThisTurn:
+		dynamic.Kind = game.DynamicAmountCardsDrawnThisTurn
 	case compiler.DynamicAmountMaxOf:
 		operands, ok := lowerDynamicAmountOperands(amount.Operands, object)
 		if !ok {

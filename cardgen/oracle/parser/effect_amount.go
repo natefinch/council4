@@ -1442,6 +1442,9 @@ func parseDynamicCountSubject(tokens []shared.Token, start int, atoms Atoms) (dy
 		if subject, ok := parseDynamicEventCardCountSubject(tokens, start); ok {
 			return subject, true
 		}
+		if subject, ok := parseDynamicCardsDrawnThisTurnSubject(tokens, start); ok {
+			return subject, true
+		}
 		if subject, ok := parseDynamicCardCountSubject(tokens, start, atoms); ok {
 			return subject, true
 		}
@@ -1553,6 +1556,41 @@ func parseDynamicEventCardCountSubject(tokens []shared.Token, start int) (dynami
 	return dynamicAmountSubject{
 		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountEventCardCount},
 		end:    end, count: true, plural: strings.EqualFold(tokens[start].Text, "cards"),
+	}, true
+}
+
+// parseDynamicCardsDrawnThisTurnSubject recognizes the controller's total cards
+// drawn so far this turn as a count subject ("card[s] you've drawn this turn",
+// "card[s] you have drawn this turn"). It backs "the number of cards you've
+// drawn this turn" amounts (Thundering Djinn's attack-trigger damage). It is
+// controller-scoped: the "you" names the resolving ability's controller, so the
+// subject attaches no referent. The triggering or just-resolved draw counts,
+// since its draw event precedes the resolving ability. It fails closed on any
+// other wording (an opponent's draws, a trailing qualifier).
+func parseDynamicCardsDrawnThisTurnSubject(tokens []shared.Token, start int) (dynamicAmountSubject, bool) {
+	plural := false
+	switch {
+	case equalWord(tokens[start], "card"):
+	case equalWord(tokens[start], "cards"):
+		plural = true
+	default:
+		return dynamicAmountSubject{}, false
+	}
+	end := start + 1
+	switch {
+	case effectWordsAt(tokens, end, "you've", "drawn", "this", "turn"):
+		end += 4
+	case effectWordsAt(tokens, end, "you", "have", "drawn", "this", "turn"):
+		end += 5
+	default:
+		return dynamicAmountSubject{}, false
+	}
+	if !dynamicAmountBoundary(tokens, end) {
+		return dynamicAmountSubject{}, false
+	}
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountCardsDrawnThisTurn},
+		end:    end, count: true, plural: plural,
 	}, true
 }
 

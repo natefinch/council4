@@ -333,6 +333,8 @@ func dynamicValueBase(g *game.Game, controller game.PlayerID, dynamic *game.Dyna
 			count += player.Hand.Size()
 		}
 		return count
+	case game.DynamicValueControllerCardsDrawnThisTurn:
+		return cardsDrawnThisTurn(g, controller)
 	default:
 	}
 	return 0

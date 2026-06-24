@@ -35,6 +35,11 @@ const (
 	DynamicValueControllerLifeTotal
 	DynamicValueAllPlayersHandSize
 	DynamicValueControllerColorPermanentCount
+	// DynamicValueControllerCardsDrawnThisTurn is the number of cards the
+	// controller has drawn so far this turn ("its power is equal to the number
+	// of cards you've drawn this turn", Duelist of the Mind), counted from the
+	// turn's EventCardDrawn events for that player (CR 608.2c).
+	DynamicValueControllerCardsDrawnThisTurn
 )
 
 // DynamicValue is data for a characteristic-defining numeric value.

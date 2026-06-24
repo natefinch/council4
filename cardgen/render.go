@@ -190,6 +190,8 @@ func dynamicValueKindLiteral(kind game.DynamicValueKind) string {
 		return "game.DynamicValueAllPlayersHandSize"
 	case game.DynamicValueControllerColorPermanentCount:
 		return "game.DynamicValueControllerColorPermanentCount"
+	case game.DynamicValueControllerCardsDrawnThisTurn:
+		return "game.DynamicValueControllerCardsDrawnThisTurn"
 	default:
 		return "game.DynamicValueNone"
 	}

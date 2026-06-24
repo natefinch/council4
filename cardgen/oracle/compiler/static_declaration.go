@@ -2507,6 +2507,8 @@ func compileStaticDynamicValueKind(kind parser.StaticDeclarationDynamicValueKind
 		return game.DynamicValueAllPlayersHandSize, true
 	case parser.StaticDeclarationDynamicValueControllerColorPermanentCount:
 		return game.DynamicValueControllerColorPermanentCount, true
+	case parser.StaticDeclarationDynamicValueControllerCardsDrawnThisTurn:
+		return game.DynamicValueControllerCardsDrawnThisTurn, true
 	default:
 		return game.DynamicValueNone, false
 	}

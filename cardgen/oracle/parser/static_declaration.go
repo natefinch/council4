@@ -74,6 +74,7 @@ const (
 	StaticDeclarationDynamicValueControllerLifeTotal                        StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerLifeTotal"
 	StaticDeclarationDynamicValueAllPlayersHandSize                         StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueAllPlayersHandSize"
 	StaticDeclarationDynamicValueControllerColorPermanentCount              StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerColorPermanentCount"
+	StaticDeclarationDynamicValueControllerCardsDrawnThisTurn               StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerCardsDrawnThisTurn"
 )
 
 // StaticDeclarationSubjectKind identifies the affected group named by a typed

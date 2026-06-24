@@ -156,7 +156,7 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 			amount = choice.Number
 		}
 	case game.DynamicAmountSpellsCastThisTurn, game.DynamicAmountLifeLostThisTurn,
-		game.DynamicAmountLifeGainedThisTurn:
+		game.DynamicAmountLifeGainedThisTurn, game.DynamicAmountCardsDrawnThisTurn:
 		amount = turnEventDynamicAmount(g, controller, dynamic.Kind)
 	case game.DynamicAmountColorsOfManaSpentToCast:
 		if obj != nil {
@@ -220,16 +220,18 @@ func blockingCreaturesBeyondFirst(g *game.Game, obj *game.StackObject) int {
 }
 
 // turnEventDynamicAmount dispatches the controller-scoped amounts derived from
-// the current turn's event log (CR 608.2c): the number of spells cast and the
-// total life gained or lost so far this turn. It is split out of
-// dynamicAmountValueBeforeLayer so that large switch stays within the
-// maintainability budget.
+// the current turn's event log (CR 608.2c): the number of spells cast, the
+// number of cards drawn, and the total life gained or lost so far this turn. It
+// is split out of dynamicAmountValueBeforeLayer so that large switch stays
+// within the maintainability budget.
 func turnEventDynamicAmount(g *game.Game, controller game.PlayerID, kind game.DynamicAmountKind) int {
 	switch kind {
 	case game.DynamicAmountLifeLostThisTurn:
 		return lifeChangedThisTurn(g, controller, game.EventLifeLost)
 	case game.DynamicAmountLifeGainedThisTurn:
 		return lifeChangedThisTurn(g, controller, game.EventLifeGained)
+	case game.DynamicAmountCardsDrawnThisTurn:
+		return cardsDrawnThisTurn(g, controller)
 	default:
 		return spellsCastThisTurn(g, controller)
 	}

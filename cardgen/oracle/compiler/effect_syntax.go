@@ -701,6 +701,8 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountOpponentsAttackedThisCombat
 	case parser.EffectDynamicAmountTriggeringEventAmount:
 		return DynamicAmountTriggeringEventAmount
+	case parser.EffectDynamicAmountCardsDrawnThisTurn:
+		return DynamicAmountCardsDrawnThisTurn
 	default:
 		return DynamicAmountNone
 	}
