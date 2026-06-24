@@ -576,6 +576,23 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", errors.New("render: internal error: ImpulseExile kind has unexpected concrete type")
 		}
 		return r.renderImpulseExile(ctx, value)
+	case game.PrimitiveHideawayExile:
+		value, ok := primitive.(game.HideawayExile)
+		if !ok {
+			return "", errors.New("render: internal error: HideawayExile kind has unexpected concrete type")
+		}
+		amount, err := r.renderQuantity(ctx, value.Amount)
+		if err != nil {
+			return "", err
+		}
+		return structLit("game.HideawayExile", []string{
+			fmt.Sprintf("Amount: %s,", amount),
+		}), nil
+	case game.PrimitivePlayHideawayCard:
+		if _, ok := primitive.(game.PlayHideawayCard); !ok {
+			return "", errors.New("render: internal error: PlayHideawayCard kind has unexpected concrete type")
+		}
+		return "game.PlayHideawayCard{}", nil
 	case game.PrimitiveCreateDelayedTrigger:
 		value, ok := primitive.(game.CreateDelayedTrigger)
 		if !ok {

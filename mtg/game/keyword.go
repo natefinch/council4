@@ -153,6 +153,14 @@ type ProtectionKeyword struct {
 	ChosenColor bool
 }
 
+// HideawayKeyword parameterizes the Hideaway N keyword (CR 702.75). Amount is
+// the number of cards looked at from the top of the library when the permanent
+// enters; one of them is exiled face down and linked to the source, and the
+// rest are put on the bottom of the library in a random order.
+type HideawayKeyword struct {
+	Amount int
+}
+
 // ToxicKeyword parameterizes the number of poison counters given after combat
 // damage to a player.
 type ToxicKeyword struct {
@@ -215,6 +223,7 @@ func (DisguiseKeyword) isKeywordAbility()         {}
 func (SuspendKeyword) isKeywordAbility()          {}
 func (ProtectionKeyword) isKeywordAbility()       {}
 func (ToxicKeyword) isKeywordAbility()            {}
+func (HideawayKeyword) isKeywordAbility()         {}
 func (ScavengeKeyword) isKeywordAbility()         {}
 func (UnearthKeyword) isKeywordAbility()          {}
 func (FabricateKeyword) isKeywordAbility()        {}
@@ -247,6 +256,7 @@ func (DisguiseKeyword) keyword() Keyword   { return Disguise }
 func (SuspendKeyword) keyword() Keyword    { return Suspend }
 func (ProtectionKeyword) keyword() Keyword { return Protection }
 func (ToxicKeyword) keyword() Keyword      { return Toxic }
+func (HideawayKeyword) keyword() Keyword   { return Hideaway }
 func (ScavengeKeyword) keyword() Keyword   { return Scavenge }
 func (UnearthKeyword) keyword() Keyword    { return Unearth }
 func (FabricateKeyword) keyword() Keyword  { return Fabricate }
@@ -328,7 +338,8 @@ func (ability ProtectionKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.FromSubtypes = append([]types.Sub(nil), ability.FromSubtypes...)
 	return ability
 }
-func (ability ToxicKeyword) cloneKeywordAbility() KeywordAbility { return ability }
+func (ability ToxicKeyword) cloneKeywordAbility() KeywordAbility    { return ability }
+func (ability HideawayKeyword) cloneKeywordAbility() KeywordAbility { return ability }
 func (ability ScavengeKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.Cost = append(cost.Mana(nil), ability.Cost...)
 	return ability

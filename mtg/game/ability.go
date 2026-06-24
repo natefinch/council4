@@ -158,6 +158,16 @@ const (
 	// reports true and partner cards are representable. Appended at the end of the
 	// enum so existing keyword ordinals are unchanged.
 	Partner
+	// Hideaway N (CR 702.75) is the land keyword printed on the "Hideaway lands":
+	// "When this permanent enters, look at the top N cards of your library, exile
+	// one face down, then put the rest on the bottom in a random order." A later
+	// activated ability lets the controller play that exiled card without paying
+	// its mana cost when a condition is met. It is modeled as a parameterized
+	// keyword carried by HideawayKeyword inside the enters-the-battlefield
+	// triggered ability built by HideawayTriggeredAbility, so HasKeyword(Hideaway)
+	// reports true and the rules layer runs the look/exile body. Appended at the
+	// end of the enum so existing keyword ordinals are unchanged.
+	Hideaway
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.

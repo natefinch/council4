@@ -1950,7 +1950,13 @@ type CompiledEffect struct {
 	// cast effect ("... without paying its mana cost"). Lowering reads it to
 	// route the cast-for-free primitive; it is false for every other effect.
 	CastWithoutPayingManaCost bool
-	Negated                   bool
+	// PlayHideawayExiledCard mirrors the parser flag for the Hideaway activated
+	// ability effect "(you may) play the exiled card without paying its mana
+	// cost" (CR 702.75c). Lowering reads it to emit the play-hideaway-card
+	// primitive gated by the ability's activation condition; it is false for
+	// every other effect.
+	PlayHideawayExiledCard bool
+	Negated                bool
 	// FallbackOnInability mirrors the parser flag for a "who can't" relative
 	// clause effect ("Each player who can't discards a card."): it applies only
 	// to players who couldn't satisfy the immediately preceding required action.

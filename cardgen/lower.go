@@ -1442,6 +1442,9 @@ func lowerExecutableAbilitySpecialCase(
 	if diagnostic := lowerStaticDeclarationBlocker(ability); diagnostic != nil {
 		return abilityLowering{}, true, diagnostic
 	}
+	if lowered, ok, diagnostic := lowerHideawayPlayAbility(cardName, ability, syntax); ok {
+		return lowered, true, diagnostic
+	}
 	if lowered, ok, diagnostic := lowerKeywordDispatch(creatureSubtypes, ability, syntax); ok {
 		return lowered, true, diagnostic
 	}

@@ -2075,6 +2075,18 @@ func (p ImpulseExile) validatePrimitive(targets []TargetSpec, checkTargets bool)
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p HideawayExile) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if !p.Amount.IsDynamic() && p.Amount.Value() < 1 {
+		return errors.New("HideawayExile requires a positive number of cards")
+	}
+	return nil
+}
+
+func (PlayHideawayCard) validatePrimitive([]TargetSpec, bool) error { return nil }
+
 func (p Investigate) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err

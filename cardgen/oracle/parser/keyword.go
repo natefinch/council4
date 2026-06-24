@@ -86,15 +86,20 @@ const (
 	KeywordSplitSecond KeywordKind = "KeywordSplitSecond"
 	KeywordStorm       KeywordKind = "KeywordStorm"
 	KeywordSuspend     KeywordKind = "KeywordSuspend"
-	KeywordToxic       KeywordKind = "KeywordToxic"
-	KeywordTrample     KeywordKind = "KeywordTrample"
-	KeywordUnearth     KeywordKind = "KeywordUnearth"
-	KeywordUndying     KeywordKind = "KeywordUndying"
-	KeywordUnleash     KeywordKind = "KeywordUnleash"
-	KeywordVigilance   KeywordKind = "KeywordVigilance"
-	KeywordWard        KeywordKind = "KeywordWard"
-	KeywordWither      KeywordKind = "KeywordWither"
-	KeywordRiot        KeywordKind = "KeywordRiot"
+	// KeywordHideaway is the Hideaway N land keyword (CR 702.75). Its integer
+	// parameter is the number of cards looked at from the top of the library
+	// when the permanent enters, one of which is exiled face down to be played
+	// later by the source's activated ability.
+	KeywordHideaway  KeywordKind = "KeywordHideaway"
+	KeywordToxic     KeywordKind = "KeywordToxic"
+	KeywordTrample   KeywordKind = "KeywordTrample"
+	KeywordUnearth   KeywordKind = "KeywordUnearth"
+	KeywordUndying   KeywordKind = "KeywordUndying"
+	KeywordUnleash   KeywordKind = "KeywordUnleash"
+	KeywordVigilance KeywordKind = "KeywordVigilance"
+	KeywordWard      KeywordKind = "KeywordWard"
+	KeywordWither    KeywordKind = "KeywordWither"
+	KeywordRiot      KeywordKind = "KeywordRiot"
 	// KeywordLandcycling and the typed variants below are the landcycling
 	// keyword family (CR 702.29). Each is a cycling ability whose
 	// discard-from-hand activation searches the library for a land matching a
@@ -247,6 +252,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordSplitSecond:       "Split second",
 	KeywordStorm:             "Storm",
 	KeywordSuspend:           "Suspend",
+	KeywordHideaway:          "Hideaway",
 	KeywordToxic:             "Toxic",
 	KeywordTrample:           "Trample",
 	KeywordUnearth:           "Unearth",
@@ -382,6 +388,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordSkulk, Words: []string{"skulk"}},
 	{Kind: KeywordStorm, Words: []string{"storm"}},
 	{Kind: KeywordSuspend, Words: []string{"suspend"}},
+	{Kind: KeywordHideaway, Words: []string{"hideaway"}},
 	{Kind: KeywordToxic, Words: []string{"toxic"}},
 	{Kind: KeywordTrample, Words: []string{"trample"}},
 	{Kind: KeywordUnearth, Words: []string{"unearth"}},
