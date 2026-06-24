@@ -734,6 +734,20 @@ func lowerCompanionAbility(ability compiler.CompiledAbility) abilityLowering {
 	}
 }
 
+// lowerPartnerWithAbility lowers a recognized "Partner with <name>" keyword
+// ability (CR 702.124e) to the inert partner-with static keyword. The "partner
+// commander" deck-construction permission and the pair-fetch enters trigger are
+// mechanics the deterministic playtester does not simulate, so the keyword
+// carries no in-game effect; the whole paragraph span is consumed.
+func lowerPartnerWithAbility(ability compiler.CompiledAbility) abilityLowering {
+	return abilityLowering{
+		staticAbilities: []loweredStaticAbility{
+			{Body: game.PartnerWithStaticBody, VarName: "game.PartnerWithStaticBody"},
+		},
+		sourceSpans: []shared.Span{ability.Span},
+	}
+}
+
 func lowerStaticKeywordLowering(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
@@ -1376,6 +1390,9 @@ func lowerExecutableAbilitySpecialCase(
 	}
 	if ability.Companion {
 		return lowerCompanionAbility(ability), true, nil
+	}
+	if ability.PartnerWith {
+		return lowerPartnerWithAbility(ability), true, nil
 	}
 	if lowered, handled, diagnostic := lowerSourceSpellCostReduction(ability, syntax); handled {
 		return lowered, true, diagnostic

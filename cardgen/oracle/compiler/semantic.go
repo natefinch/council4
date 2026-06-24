@@ -115,6 +115,10 @@ type CompiledAbility struct {
 	// keyword ability (CR 702.139). Its content is otherwise empty; lowering
 	// emits the inert companion static keyword.
 	Companion bool
+	// PartnerWith reports that the parser recognized this paragraph as a
+	// "Partner with <name>" keyword ability (CR 702.124e). Its content is
+	// otherwise empty; lowering emits the inert partner-with static keyword.
+	PartnerWith bool
 }
 
 // CompiledLevelBand is a leveler card's "LEVEL lo-hi" / "LEVEL lo+" band

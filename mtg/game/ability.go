@@ -121,6 +121,15 @@ const (
 	// card on resolution. Appended at the end of the enum so existing keyword
 	// ordinals are unchanged.
 	JumpStart
+	// PartnerWith (CR 702.124e) is the "Partner with <name>" keyword. It is
+	// modeled as a recognized simple keyword carried on the card so
+	// HasKeyword(PartnerWith) reports true. The "partner commander"
+	// deck-construction permission and the pair-fetch enters trigger are not
+	// simulated by the deterministic playtester, so the keyword is inert; it is
+	// modeled as a simple keyword purely so partner-with cards are
+	// representable. Appended at the end of the enum so existing keyword ordinals
+	// are unchanged.
+	PartnerWith
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -296,6 +305,16 @@ var (
 	// keyword carries no continuous in-game effect; it is modeled as a simple
 	// keyword purely so companion cards are representable.
 	CompanionStaticBody = simpleKeywordStaticBody("Companion", Companion)
+
+	// PartnerWithStaticBody is the reusable StaticAbilityBody for the "Partner
+	// with <name>" keyword (CR 702.124e). Partner with names a specific partner
+	// card, grants the two cards the "partner commander" deck-construction
+	// permission, and gives each an enters trigger that lets the chosen player
+	// tutor the named partner into hand. Both halves are deck-construction and
+	// pair-fetch mechanics the deterministic playtester does not simulate, so the
+	// keyword carries no continuous in-game effect; it is modeled as a simple
+	// keyword purely so partner-with cards are representable.
+	PartnerWithStaticBody = simpleKeywordStaticBody("Partner with", PartnerWith)
 
 	// FuseStaticBody is the reusable StaticAbility for fuse (CR 702.102). It
 	// carries the Fuse keyword so HasKeyword(Fuse) reports true on each half of a
