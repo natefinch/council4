@@ -20,5 +20,5 @@ func (o PlayerObservation) ScorableActivatedAbility(act action.Action) (eval.Sco
 	if !ok {
 		return eval.ScorableAbility{}, false
 	}
-	return eval.ScorableAbilityOf(body), true
+	return eval.ScorableAbilityOfModes(body, payload.ChosenModes), true
 }

@@ -3,27 +3,85 @@ package eval
 import "github.com/natefinch/council4/mtg/game"
 
 // ScorableAbilityOf reduces a sealed ability body to its scorable cost and
-// effect terms.
+// effect terms. For a modal ability it unions every mode (an over-approximation);
+// callers that know which modes were chosen should use ScorableAbilityOfModes.
 func ScorableAbilityOf(body game.Ability) ScorableAbility {
+	return ScorableAbilityOfModes(body, nil)
+}
+
+// ScorableAbilityOfModes reduces a sealed ability body to its scorable cost and
+// effect terms, scoring only the chosen modes. An empty chosenModes scores the
+// sole mode of a non-modal ability, or unions all modes of a modal ability whose
+// choice is unknown.
+func ScorableAbilityOfModes(body game.Ability, chosenModes []int) ScorableAbility {
 	return ScorableAbility{
 		Costs:  game.BodyAdditionalCosts(body),
-		Effect: ScorableEffect(game.BodyContent(body)),
+		Effect: ScorableEffectModes(game.BodyContent(body), chosenModes),
 	}
 }
 
-// ScorableEffect summarizes an ability's effect content as value-relevant
-// atoms. It unions the atoms of every mode, so a modal effect is summarized by
-// the combined consequences of its options; refining modal handling is tracked
-// separately. Primitives the translator does not model contribute no atom,
-// which a scorer reads as value-neutral.
+// ScorableEffect summarizes an ability's effect content as value-relevant atoms,
+// unioning the atoms of every mode. It is the mode-unaware form; see
+// ScorableEffectModes to score only the chosen modes of a modal ability.
 func ScorableEffect(content game.AbilityContent) []EffectAtom {
+	return ScorableEffectModes(content, nil)
+}
+
+// ScorableEffectModes summarizes an ability's effect content as value-relevant
+// atoms, scoring only the modes the controller chose. When chosenModes is empty
+// it scores the sole mode of non-modal content, and unions all modes of modal
+// content whose choice is unknown (an over-approximation). Atoms produced by a
+// conditional or optional instruction are marked dynamic, so a scorer treats
+// their magnitude as uncertain rather than trusting an effect that may not
+// happen. Primitives the translator does not model contribute no atom, which a
+// scorer reads as value-neutral.
+func ScorableEffectModes(content game.AbilityContent, chosenModes []int) []EffectAtom {
 	var atoms []EffectAtom
-	for m := range content.Modes {
-		for i := range content.Modes[m].Sequence {
-			atoms = appendPrimitiveAtoms(atoms, content.Modes[m].Sequence[i].Primitive)
+	for _, m := range scorableModeIndices(content, chosenModes) {
+		mode := content.Modes[m]
+		for i := range mode.Sequence {
+			instruction := mode.Sequence[i]
+			before := len(atoms)
+			atoms = appendPrimitiveAtoms(atoms, instruction.Primitive)
+			if instructionUncertain(instruction) {
+				for j := before; j < len(atoms); j++ {
+					atoms[j].IsDynamic = true
+				}
+			}
 		}
 	}
 	return atoms
+}
+
+// scorableModeIndices returns the mode indices to score. Chosen modes win;
+// otherwise a single-mode (non-modal) ability scores its one mode, and a modal
+// ability with no known choice falls back to every mode.
+func scorableModeIndices(content game.AbilityContent, chosenModes []int) []int {
+	if len(chosenModes) > 0 {
+		valid := make([]int, 0, len(chosenModes))
+		for _, m := range chosenModes {
+			if m >= 0 && m < len(content.Modes) {
+				valid = append(valid, m)
+			}
+		}
+		return valid
+	}
+	indices := make([]int, len(content.Modes))
+	for m := range content.Modes {
+		indices[m] = m
+	}
+	return indices
+}
+
+// instructionUncertain reports whether an instruction's effect may not happen or
+// happen in an amount the static body does not fix: a gating condition, a
+// referenced-card condition, an "if you do/don't" result gate, or an optional
+// instruction the controller may decline.
+func instructionUncertain(instruction game.Instruction) bool {
+	return instruction.Condition.Exists ||
+		instruction.CardCondition.Exists ||
+		instruction.ResultGate.Exists ||
+		instruction.Optional
 }
 
 // appendPrimitiveAtoms is the single place that maps the engine's resolution

@@ -10,10 +10,11 @@ import (
 	"github.com/natefinch/council4/mtg/rules"
 )
 
-// dynamicAmountEstimate is the conservative magnitude assumed for an effect or
-// cost whose amount is derived from game state ({X}, "for each ...") and so is
-// not known statically. One keeps a dynamic effect from dominating the score
-// while still letting it register.
+// dynamicAmountEstimate is the conservative magnitude assumed for an effect
+// whose amount is derived from game state ("for each ...") and so is not known
+// statically and has no announced {X}. One keeps a dynamic effect from
+// dominating the score while still letting it register; an ability with an
+// announced X uses that X instead (see dynamicEstimateFor).
 const dynamicAmountEstimate = 1
 
 // scoreActivateAbility scores activating an ability as the value of what it does
@@ -32,7 +33,8 @@ func scoreActivateAbility(obs rules.PlayerObservation, act action.Action, person
 		return scoreActivate
 	}
 	targets := activationTargets(act)
-	return activationEffectValue(obs, targets, ability.Effect, personality) -
+	dynamicEstimate := dynamicEstimateFor(activationXValue(act))
+	return activationEffectValue(obs, targets, ability.Effect, personality, dynamicEstimate) -
 		activationCostValue(obs, ability.Costs)
 }
 
@@ -44,13 +46,33 @@ func activationTargets(act action.Action) []game.Target {
 	return payload.Targets
 }
 
+func activationXValue(act action.Action) int {
+	payload, ok := act.ActivateAbilityPayload()
+	if !ok {
+		return 0
+	}
+	return payload.XValue
+}
+
+// dynamicEstimateFor picks the magnitude to assume for a dynamic ({X} or
+// "for each") effect: the announced X when the agent paid one, since an X
+// ability's dynamic amounts are dominated by X, and otherwise the conservative
+// floor.
+func dynamicEstimateFor(xValue int) float64 {
+	if xValue > dynamicAmountEstimate {
+		return float64(xValue)
+	}
+	return dynamicAmountEstimate
+}
+
 // activationEffectValue sums the value of an ability's modeled effects. Targeted
 // removal, damage, and tapping are valued once by the chosen targets' threat
 // (reusing targetingScore), while card, life, mana, token, tutor, and counter
 // effects are valued by magnitude. Effects whose audience is not clearly the
 // controller are left unvalued so the scorer never credits the agent for an
-// opponent's gain.
-func activationEffectValue(obs rules.PlayerObservation, targets []game.Target, atoms []eval.EffectAtom, personality Personality) float64 {
+// opponent's gain. dynamicEstimate is the magnitude assumed for atoms whose
+// amount is not statically known.
+func activationEffectValue(obs rules.PlayerObservation, targets []game.Target, atoms []eval.EffectAtom, personality Personality, dynamicEstimate float64) float64 {
 	var value float64
 	targetingScored := false
 	for i := range atoms {
@@ -62,21 +84,21 @@ func activationEffectValue(obs rules.PlayerObservation, targets []game.Target, a
 				targetingScored = true
 			}
 		case eval.EffectCardsDrawn:
-			value += controllerValue(atom, scoreCardValue)
+			value += controllerValue(atom, scoreCardValue, dynamicEstimate)
 		case eval.EffectCardsLost:
-			value -= controllerValue(atom, scoreCardValue)
+			value -= controllerValue(atom, scoreCardValue, dynamicEstimate)
 		case eval.EffectLifeGained:
-			value += controllerValue(atom, scoreLifeValue)
+			value += controllerValue(atom, scoreLifeValue, dynamicEstimate)
 		case eval.EffectLifeLost:
-			value -= controllerValue(atom, scoreLifeValue)
+			value -= controllerValue(atom, scoreLifeValue, dynamicEstimate)
 		case eval.EffectManaAdded:
-			value += atomMagnitude(atom) * scoreManaValue
+			value += atomMagnitude(atom, dynamicEstimate) * scoreManaValue
 		case eval.EffectTokenCreated:
-			value += atomMagnitude(atom) * scoreTokenValue
+			value += atomMagnitude(atom, dynamicEstimate) * scoreTokenValue
 		case eval.EffectCardTutored:
-			value += atomMagnitude(atom) * scoreTutorValue
+			value += atomMagnitude(atom, dynamicEstimate) * scoreTutorValue
 		case eval.EffectCounterAdded:
-			value += atomMagnitude(atom) * scoreCounterValue
+			value += atomMagnitude(atom, dynamicEstimate) * scoreCounterValue
 		default:
 		}
 	}
@@ -86,16 +108,16 @@ func activationEffectValue(obs rules.PlayerObservation, targets []game.Target, a
 // controllerValue values an atom only when it clearly affects the ability's
 // controller, returning zero otherwise. It is used for card and life effects,
 // where crediting the wrong player would invert the sign.
-func controllerValue(atom eval.EffectAtom, unit float64) float64 {
+func controllerValue(atom eval.EffectAtom, unit, dynamicEstimate float64) float64 {
 	if atom.Affected != eval.AffectedYou {
 		return 0
 	}
-	return atomMagnitude(atom) * unit
+	return atomMagnitude(atom, dynamicEstimate) * unit
 }
 
-func atomMagnitude(atom eval.EffectAtom) float64 {
+func atomMagnitude(atom eval.EffectAtom, dynamicEstimate float64) float64 {
 	if atom.IsDynamic {
-		return dynamicAmountEstimate
+		return dynamicEstimate
 	}
 	if atom.Amount <= 0 {
 		return 1
