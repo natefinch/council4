@@ -1,6 +1,7 @@
 package payment
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -17,6 +18,17 @@ type typeMatchState struct {
 
 func (s typeMatchState) PermanentHasType(permanent *game.Permanent, cardType types.Card) bool {
 	return cardType == types.Land && s.landTypes[permanent.ObjectID]
+}
+
+func (s typeMatchState) PermanentMatchesSelection(permanent *game.Permanent, sel game.Selection) bool {
+	if len(sel.RequiredTypesAny) > 0 && !slices.ContainsFunc(sel.RequiredTypesAny, func(t types.Card) bool {
+		return s.PermanentHasType(permanent, t)
+	}) {
+		return false
+	}
+	return !slices.ContainsFunc(sel.ExcludedTypes, func(t types.Card) bool {
+		return s.PermanentHasType(permanent, t)
+	})
 }
 
 // TestAdditionalCostExcludesPermanentType verifies that the

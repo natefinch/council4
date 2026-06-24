@@ -95,6 +95,14 @@ func (s *rulesPaymentState) PermanentEffectiveColors(p *game.Permanent) []color.
 	return permanentEffectiveColors(s.g, p)
 }
 
+func (s *rulesPaymentState) PermanentMatchesSelection(p *game.Permanent, sel game.Selection) bool {
+	return permanentMatchesCostSelection(s.g, p, sel)
+}
+
+func (s *rulesPaymentState) CardMatchesSelection(card *game.CardDef, sel game.Selection) bool {
+	return cardDefMatchesCostSelection(s.g, card, sel)
+}
+
 func (s *rulesPaymentState) ActivationConditionSatisfied(playerID game.PlayerID, permanent *game.Permanent, condition opt.V[game.Condition]) bool {
 	return activationConditionSatisfied(s.g, playerID, permanent, condition)
 }

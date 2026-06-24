@@ -287,7 +287,7 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 				return plan, false
 			}
 			card, ok := s.CardInstance(sourceCardID)
-			if !ok || !additionalCostMatchesCard(s.CardFace(card, game.FaceFront), additional) {
+			if !ok || !additionalCostMatchesCard(s, s.CardFace(card, game.FaceFront), additional) {
 				return plan, false
 			}
 			plan.exiles = append(plan.exiles, cardZoneSelection{cardID: sourceCardID, zone: sourceZone})
@@ -379,72 +379,68 @@ func permanentsInclude(permanents []*game.Permanent, target *game.Permanent) boo
 }
 
 func additionalCostMatchesPermanent(s State, permanent *game.Permanent, additional cost.Additional) bool {
-	if additional.RequireTapped && !permanent.Tapped {
+	sel, ok := SelectionForAdditionalCost(additional)
+	if !ok {
 		return false
 	}
-	if additional.RequireToken && !permanent.Token {
-		return false
-	}
-	if additional.RequireSupertype != "" && !s.PermanentHasSupertype(permanent, additional.RequireSupertype) {
-		return false
-	}
-	if additional.MatchPermanentType && !s.PermanentHasType(permanent, additional.PermanentType) &&
-		(additional.PermanentTypeAlt == "" || !s.PermanentHasType(permanent, additional.PermanentTypeAlt)) {
-		return false
-	}
-	if additional.ExcludePermanentType != "" && s.PermanentHasType(permanent, additional.ExcludePermanentType) {
-		return false
-	}
-	if additional.MatchHistoric &&
-		!s.PermanentHasType(permanent, types.Artifact) &&
-		!s.PermanentHasSupertype(permanent, types.Legendary) &&
-		!s.PermanentHasSubtype(permanent, types.Saga) {
-		return false
-	}
-	if additional.MatchCardColor && !slices.Contains(s.PermanentEffectiveColors(permanent), additional.CardColor) {
-		return false
-	}
-	if additional.SubtypesAny != (cost.SubtypeSet{}) {
-		for _, subtype := range additional.SubtypesAny {
-			if subtype != "" && s.PermanentHasSubtype(permanent, subtype) {
-				return true
-			}
-		}
-		return false
-	}
-	return true
+	return s.PermanentMatchesSelection(permanent, sel)
 }
 
-func additionalCostMatchesCard(card *game.CardDef, additional cost.Additional) bool {
-	if card == nil {
+func additionalCostMatchesCard(s State, card *game.CardDef, additional cost.Additional) bool {
+	sel, ok := SelectionForAdditionalCost(additional)
+	if !ok {
 		return false
 	}
-	if additional.MatchCardType && !card.HasType(additional.CardType) {
-		return false
-	}
-	if additional.MatchHistoric && !cardDefIsHistoric(card) {
-		return false
-	}
-	if additional.MatchCardColor && !slices.Contains(card.Colors, additional.CardColor) {
-		return false
-	}
-	if additional.SubtypesAny != (cost.SubtypeSet{}) {
-		for _, subtype := range additional.SubtypesAny {
-			if subtype != "" && card.HasSubtype(subtype) {
-				return true
-			}
-		}
-		return false
-	}
-	return true
+	return s.CardMatchesSelection(card, sel)
 }
 
-// cardDefIsHistoric reports whether a card is historic: an artifact, a
-// legendary, or a Saga (CR 702.61b).
-func cardDefIsHistoric(card *game.CardDef) bool {
-	return card.HasType(types.Artifact) ||
-		card.HasSupertype(types.Legendary) ||
-		card.HasSubtype(types.Saga)
+// SelectionForAdditionalCost converts an additional cost's object constraint
+// into a game.Selection so the choice layer and the payment planner evaluate one
+// eligibility predicate over the same objects (CR 601.2b). It maps only the
+// object-filter fields; cost-specific concerns (ExcludeSource, source-only
+// kinds, the required amount/threshold, and the tapped-for-tap-cost dedup) stay
+// with the planner where they already live. The bool reports whether the
+// constraint is representable as a Selection; callers must fail closed when it
+// is false so an unmodeled filter never silently widens the eligible set.
+func SelectionForAdditionalCost(additional cost.Additional) (game.Selection, bool) {
+	var sel game.Selection
+	if additional.MatchPermanentType {
+		sel.RequiredTypesAny = append(sel.RequiredTypesAny, additional.PermanentType)
+		if additional.PermanentTypeAlt != "" {
+			sel.RequiredTypesAny = append(sel.RequiredTypesAny, additional.PermanentTypeAlt)
+		}
+	}
+	if additional.MatchCardType {
+		sel.RequiredTypes = append(sel.RequiredTypes, additional.CardType)
+	}
+	if additional.ExcludePermanentType != "" {
+		sel.ExcludedTypes = append(sel.ExcludedTypes, additional.ExcludePermanentType)
+	}
+	if additional.RequireSupertype != "" {
+		sel.Supertypes = append(sel.Supertypes, additional.RequireSupertype)
+	}
+	if additional.MatchCardColor {
+		sel.ColorsAny = append(sel.ColorsAny, additional.CardColor)
+	}
+	for _, subtype := range additional.SubtypesAny {
+		if subtype != "" {
+			sel.SubtypesAny = append(sel.SubtypesAny, subtype)
+		}
+	}
+	if additional.RequireTapped {
+		sel.Tapped = game.TriTrue
+	}
+	if additional.RequireToken {
+		sel.TokenOnly = true
+	}
+	if additional.MatchHistoric {
+		sel.AnyOf = []game.Selection{
+			{RequiredTypes: []types.Card{types.Artifact}},
+			{Supertypes: []types.Super{types.Legendary}},
+			{SubtypesAny: []types.Sub{types.Saga}},
+		}
+	}
+	return sel, true
 }
 
 func evidenceCardManaValue(s State, cardID id.ID) (int, bool) {

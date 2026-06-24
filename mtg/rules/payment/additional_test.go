@@ -1,6 +1,7 @@
 package payment
 
 import (
+	"reflect"
 	"slices"
 	"testing"
 
@@ -39,65 +40,65 @@ func TestAdditionalCostSourceZone(t *testing.T) {
 	}
 }
 
-func TestAdditionalCostMatchesAnyCardSubtype(t *testing.T) {
-	additional := cost.Additional{
-		Kind:        cost.AdditionalReveal,
-		SubtypesAny: cost.SubtypeSet{types.Forest, types.Mountain},
-	}
-	forest := &game.CardDef{CardFace: game.CardFace{
-		Types:    []types.Card{types.Land},
-		Subtypes: []types.Sub{types.Forest},
-	}}
-	if !additionalCostMatchesCard(forest, additional) {
-		t.Fatal("Forest did not match Forest-or-Mountain reveal cost")
-	}
-	creature := &game.CardDef{CardFace: game.CardFace{
-		Types:    []types.Card{types.Creature},
-		Subtypes: []types.Sub{types.Elf},
-	}}
-	if additionalCostMatchesCard(creature, additional) {
-		t.Fatal("Elf matched Forest-or-Mountain reveal cost")
-	}
-}
-
-func TestAdditionalCostMatchesCardHistoric(t *testing.T) {
-	additional := cost.Additional{Kind: cost.AdditionalExile, MatchHistoric: true}
+func TestSelectionForAdditionalCost(t *testing.T) {
 	tests := []struct {
 		name string
-		card *game.CardDef
-		want bool
+		cost cost.Additional
+		want game.Selection
 	}{
 		{
-			name: "artifact is historic",
-			card: &game.CardDef{CardFace: game.CardFace{Types: []types.Card{types.Artifact}}},
-			want: true,
+			name: "single permanent type",
+			cost: cost.Additional{Kind: cost.AdditionalSacrifice, MatchPermanentType: true, PermanentType: types.Creature},
+			want: game.Selection{RequiredTypesAny: []types.Card{types.Creature}},
 		},
 		{
-			name: "legendary is historic",
-			card: &game.CardDef{CardFace: game.CardFace{
-				Supertypes: []types.Super{types.Legendary},
-				Types:      []types.Card{types.Creature},
+			name: "permanent type union",
+			cost: cost.Additional{Kind: cost.AdditionalSacrifice, MatchPermanentType: true, PermanentType: types.Artifact, PermanentTypeAlt: types.Creature},
+			want: game.Selection{RequiredTypesAny: []types.Card{types.Artifact, types.Creature}},
+		},
+		{
+			name: "card type",
+			cost: cost.Additional{Kind: cost.AdditionalDiscard, MatchCardType: true, CardType: types.Creature},
+			want: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+		},
+		{
+			name: "permanent color",
+			cost: cost.Additional{Kind: cost.AdditionalSacrifice, MatchCardColor: true, CardColor: color.Black},
+			want: game.Selection{ColorsAny: []color.Color{color.Black}},
+		},
+		{
+			name: "supertype and subtype",
+			cost: cost.Additional{Kind: cost.AdditionalSacrifice, RequireSupertype: types.Legendary, SubtypesAny: cost.SubtypeSet{types.Goblin, types.Orc}},
+			want: game.Selection{Supertypes: []types.Super{types.Legendary}, SubtypesAny: []types.Sub{types.Goblin, types.Orc}},
+		},
+		{
+			name: "exclude permanent type and token",
+			cost: cost.Additional{Kind: cost.AdditionalSacrifice, ExcludePermanentType: types.Land, RequireToken: true},
+			want: game.Selection{ExcludedTypes: []types.Card{types.Land}, TokenOnly: true},
+		},
+		{
+			name: "tapped",
+			cost: cost.Additional{Kind: cost.AdditionalTapPermanents, RequireTapped: true},
+			want: game.Selection{Tapped: game.TriTrue},
+		},
+		{
+			name: "historic disjunction",
+			cost: cost.Additional{Kind: cost.AdditionalExile, MatchHistoric: true},
+			want: game.Selection{AnyOf: []game.Selection{
+				{RequiredTypes: []types.Card{types.Artifact}},
+				{Supertypes: []types.Super{types.Legendary}},
+				{SubtypesAny: []types.Sub{types.Saga}},
 			}},
-			want: true,
-		},
-		{
-			name: "saga is historic",
-			card: &game.CardDef{CardFace: game.CardFace{
-				Types:    []types.Card{types.Enchantment},
-				Subtypes: []types.Sub{types.Saga},
-			}},
-			want: true,
-		},
-		{
-			name: "plain creature is not historic",
-			card: &game.CardDef{CardFace: game.CardFace{Types: []types.Card{types.Creature}}},
-			want: false,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if got := additionalCostMatchesCard(test.card, additional); got != test.want {
-				t.Fatalf("additionalCostMatchesCard(%s) = %v, want %v", test.name, got, test.want)
+			got, ok := SelectionForAdditionalCost(test.cost)
+			if !ok {
+				t.Fatalf("SelectionForAdditionalCost(%s) returned ok=false", test.name)
+			}
+			if !reflect.DeepEqual(got, test.want) {
+				t.Fatalf("SelectionForAdditionalCost(%s) = %#v, want %#v", test.name, got, test.want)
 			}
 		})
 	}
@@ -125,8 +126,13 @@ type subtypeMatchState struct {
 	subtypes map[id.ID][]types.Sub
 }
 
-func (s subtypeMatchState) PermanentHasSubtype(permanent *game.Permanent, sub types.Sub) bool {
-	return slices.Contains(s.subtypes[permanent.ObjectID], sub)
+func (s subtypeMatchState) PermanentMatchesSelection(permanent *game.Permanent, sel game.Selection) bool {
+	if len(sel.SubtypesAny) == 0 {
+		return true
+	}
+	return slices.ContainsFunc(sel.SubtypesAny, func(sub types.Sub) bool {
+		return slices.Contains(s.subtypes[permanent.ObjectID], sub)
+	})
 }
 
 type colorMatchState struct {
@@ -135,8 +141,13 @@ type colorMatchState struct {
 	colors map[id.ID][]color.Color
 }
 
-func (s colorMatchState) PermanentEffectiveColors(permanent *game.Permanent) []color.Color {
-	return s.colors[permanent.ObjectID]
+func (s colorMatchState) PermanentMatchesSelection(permanent *game.Permanent, sel game.Selection) bool {
+	if len(sel.ColorsAny) == 0 {
+		return true
+	}
+	return slices.ContainsFunc(sel.ColorsAny, func(c color.Color) bool {
+		return slices.Contains(s.colors[permanent.ObjectID], c)
+	})
 }
 
 func TestAdditionalCostMatchesPermanentColor(t *testing.T) {
@@ -246,6 +257,10 @@ func (fakePaymentState) PermanentHasType(*game.Permanent, types.Card) bool      
 func (fakePaymentState) PermanentHasSupertype(*game.Permanent, types.Super) bool { return false }
 func (fakePaymentState) PermanentHasSubtype(*game.Permanent, types.Sub) bool     { return false }
 func (fakePaymentState) PermanentEffectiveColors(*game.Permanent) []color.Color  { return nil }
+func (fakePaymentState) PermanentMatchesSelection(*game.Permanent, game.Selection) bool {
+	return true
+}
+func (fakePaymentState) CardMatchesSelection(*game.CardDef, game.Selection) bool { return true }
 func (fakePaymentState) PermanentEffectiveAbilities(*game.Permanent) []game.Ability {
 	return nil
 }

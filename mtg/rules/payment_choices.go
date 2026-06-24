@@ -424,7 +424,7 @@ func remainingGraveyardPreferenceCostsPayable(g *game.Game, playerID game.Player
 				return false
 			}
 			card, ok := g.GetCardInstance(sourceCardID)
-			if !ok || !g.Players[playerID].Graveyard.Contains(sourceCardID) || !localAdditionalCostMatchesCard(cardFaceOrDefault(card, game.FaceFront), additional) {
+			if !ok || !g.Players[playerID].Graveyard.Contains(sourceCardID) || !localAdditionalCostMatchesCard(g, cardFaceOrDefault(card, game.FaceFront), additional) {
 				return false
 			}
 			nextReserved := cardIDSet(reservedCardIDs(reserved)...)
@@ -506,21 +506,11 @@ func candidateSacrificePermanents(g *game.Game, playerID game.PlayerID, addCost 
 }
 
 func localAdditionalCostMatchesPermanent(g *game.Game, permanent *game.Permanent, addCost cost.Additional) bool {
-	if addCost.MatchPermanentType && !permanentHasType(g, permanent, addCost.PermanentType) {
+	sel, ok := payment.SelectionForAdditionalCost(addCost)
+	if !ok {
 		return false
 	}
-	if addCost.RequireSupertype != "" && !permanentHasSupertype(g, permanent, addCost.RequireSupertype) {
-		return false
-	}
-	if addCost.SubtypesAny != (cost.SubtypeSet{}) {
-		for _, subtype := range addCost.SubtypesAny {
-			if subtype != "" && permanentHasSubtype(g, permanent, subtype) {
-				return true
-			}
-		}
-		return false
-	}
-	return true
+	return permanentMatchesCostSelection(g, permanent, sel)
 }
 
 func candidateAdditionalCostCards(g *game.Game, playerID game.PlayerID, addCost cost.Additional, excludedCardIDs ...id.ID) []id.ID {
@@ -552,32 +542,51 @@ func candidateAdditionalCostCards(g *game.Game, playerID game.PlayerID, addCost 
 			continue
 		}
 		card, ok := g.GetCardInstance(cardID)
-		if ok && localAdditionalCostMatchesCard(cardFaceOrDefault(card, game.FaceFront), addCost) {
+		if ok && localAdditionalCostMatchesCard(g, cardFaceOrDefault(card, game.FaceFront), addCost) {
 			candidates = append(candidates, cardID)
 		}
 	}
 	return candidates
 }
 
-func localAdditionalCostMatchesCard(face *game.CardDef, addCost cost.Additional) bool {
+func localAdditionalCostMatchesCard(g *game.Game, face *game.CardDef, addCost cost.Additional) bool {
+	sel, ok := payment.SelectionForAdditionalCost(addCost)
+	if !ok {
+		return false
+	}
+	return cardDefMatchesCostSelection(g, face, sel)
+}
+
+// permanentMatchesCostSelection reports whether a battlefield permanent
+// satisfies a cost's converted Selection. It builds the same subjectPermanent
+// the effect side uses so additional-cost candidate filtering and the payment
+// planner share one matcher.
+func permanentMatchesCostSelection(g *game.Game, permanent *game.Permanent, sel game.Selection) bool {
+	values := effectivePermanentValues(g, permanent)
+	subject := selectionSubject{
+		kind:      subjectPermanent,
+		g:         g,
+		permanent: permanent,
+		values:    &values,
+	}
+	if sel.Controller != game.ControllerAny {
+		subject.controller = effectiveController(g, permanent)
+	}
+	return matchSelection(&subject, &sel)
+}
+
+// cardDefMatchesCostSelection reports whether a card face satisfies a cost's
+// converted Selection, reading printed characteristics through the same
+// subjectCard the effect side uses.
+func cardDefMatchesCostSelection(g *game.Game, face *game.CardDef, sel game.Selection) bool {
 	if face == nil {
 		return false
 	}
-	if addCost.MatchCardType && !face.HasType(addCost.CardType) {
-		return false
-	}
-	if addCost.MatchCardColor && !slices.Contains(face.Colors, addCost.CardColor) {
-		return false
-	}
-	if addCost.SubtypesAny != (cost.SubtypeSet{}) {
-		for _, subtype := range addCost.SubtypesAny {
-			if subtype != "" && face.HasSubtype(subtype) {
-				return true
-			}
-		}
-		return false
-	}
-	return true
+	return matchSelection(&selectionSubject{
+		kind: subjectCard,
+		g:    g,
+		card: &game.CardInstance{Def: face},
+	}, &sel)
 }
 
 func paymentPermanentIDs(permanents []*game.Permanent) []id.ID {
