@@ -412,44 +412,28 @@ func additionalCostSourceZone(source zone.Type) zone.Type {
 }
 
 func chooseSacrificePermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent, source *game.Permanent) []*game.Permanent {
-	chosenIDs := make(map[id.ID]bool)
-	for _, permanent := range alreadyChosen {
-		chosenIDs[permanent.ObjectID] = true
+	choice, ok := objectCostChoiceForCost(additional)
+	if !ok {
+		return nil
 	}
-	var chosen []*game.Permanent
-	for _, permanent := range s.Battlefield() {
-		if s.EffectiveController(permanent) != playerID || chosenIDs[permanent.ObjectID] {
-			continue
-		}
-		if additional.ExcludeSource && source != nil && permanent.ObjectID == source.ObjectID {
-			continue
-		}
-		if additionalCostMatchesPermanent(s, permanent, additional) {
-			chosen = append(chosen, permanent)
-			if len(chosen) == amount {
-				return chosen
-			}
-		}
-	}
-	return chosen
+	candidates := candidatePermanentsForObjectCost(s, playerID, choice, source, reservedPermanentIDs(alreadyChosen))
+	return truncatePermanents(candidates, amount)
 }
 
 func preferredSacrificePermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent, prefs *Preferences, source *game.Permanent) []*game.Permanent {
 	if prefs == nil || len(prefs.SacrificeChoices) == 0 {
 		return chooseSacrificePermanents(s, playerID, additional, amount, alreadyChosen, source)
 	}
-	chosenIDs := make(map[id.ID]bool)
-	for _, permanent := range alreadyChosen {
-		chosenIDs[permanent.ObjectID] = true
+	choice, ok := objectCostChoiceForCost(additional)
+	if !ok {
+		return nil
 	}
+	chosenIDs := reservedPermanentIDs(alreadyChosen)
 	var chosen []*game.Permanent
 	var consumed int
 	for _, permanentID := range prefs.SacrificeChoices {
 		permanent, ok := s.PermanentByObjectID(permanentID)
-		if !ok || s.EffectiveController(permanent) != playerID || chosenIDs[permanentID] || !additionalCostMatchesPermanent(s, permanent, additional) {
-			return nil
-		}
-		if additional.ExcludeSource && source != nil && permanentID == source.ObjectID {
+		if !ok || chosenIDs[permanentID] || !permanentSatisfiesObjectCost(s, playerID, permanent, choice, source) {
 			return nil
 		}
 		chosen = append(chosen, permanent)
@@ -464,42 +448,28 @@ func preferredSacrificePermanents(s State, playerID game.PlayerID, additional co
 }
 
 func chooseTapPermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent) []*game.Permanent {
-	chosenIDs := make(map[id.ID]bool)
-	for _, permanent := range alreadyChosen {
-		chosenIDs[permanent.ObjectID] = true
+	choice, ok := objectCostChoiceForCost(additional)
+	if !ok {
+		return nil
 	}
-	var chosen []*game.Permanent
-	for _, permanent := range s.Battlefield() {
-		if permanent.Tapped || s.EffectiveController(permanent) != playerID || chosenIDs[permanent.ObjectID] {
-			continue
-		}
-		if additionalCostMatchesPermanent(s, permanent, additional) {
-			chosen = append(chosen, permanent)
-			if len(chosen) == amount {
-				return chosen
-			}
-		}
-	}
-	return chosen
+	candidates := candidatePermanentsForObjectCost(s, playerID, choice, nil, reservedPermanentIDs(alreadyChosen))
+	return truncatePermanents(candidates, amount)
 }
 
 func preferredTapPermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent, prefs *Preferences) []*game.Permanent {
 	if prefs == nil || len(prefs.TapChoices) == 0 {
 		return chooseTapPermanents(s, playerID, additional, amount, alreadyChosen)
 	}
-	chosenIDs := make(map[id.ID]bool)
-	for _, permanent := range alreadyChosen {
-		chosenIDs[permanent.ObjectID] = true
+	choice, ok := objectCostChoiceForCost(additional)
+	if !ok {
+		return nil
 	}
+	chosenIDs := reservedPermanentIDs(alreadyChosen)
 	var chosen []*game.Permanent
 	var consumed int
 	for _, permanentID := range prefs.TapChoices {
 		permanent, ok := s.PermanentByObjectID(permanentID)
-		if !ok ||
-			permanent.Tapped ||
-			s.EffectiveController(permanent) != playerID ||
-			chosenIDs[permanentID] ||
-			!additionalCostMatchesPermanent(s, permanent, additional) {
+		if !ok || chosenIDs[permanentID] || !permanentSatisfiesObjectCost(s, playerID, permanent, choice, nil) {
 			return nil
 		}
 		chosen = append(chosen, permanent)
@@ -518,22 +488,11 @@ func preferredTapPermanents(s State, playerID game.PlayerID, additional cost.Add
 // ExcludeSource. It prefers tapping the fewest creatures by taking the highest
 // power first, and returns nil when the threshold cannot be reached.
 func chooseTapPermanentsTotalPower(s State, playerID game.PlayerID, additional cost.Additional, alreadyChosen []*game.Permanent, source *game.Permanent) []*game.Permanent {
-	chosenIDs := make(map[id.ID]bool)
-	for _, permanent := range alreadyChosen {
-		chosenIDs[permanent.ObjectID] = true
+	choice, ok := objectCostChoiceForCost(additional)
+	if !ok {
+		return nil
 	}
-	var candidates []*game.Permanent
-	for _, permanent := range s.Battlefield() {
-		if permanent.Tapped || s.EffectiveController(permanent) != playerID || chosenIDs[permanent.ObjectID] {
-			continue
-		}
-		if additional.ExcludeSource && source != nil && permanent.ObjectID == source.ObjectID {
-			continue
-		}
-		if additionalCostMatchesPermanent(s, permanent, additional) {
-			candidates = append(candidates, permanent)
-		}
-	}
+	candidates := candidatePermanentsForObjectCost(s, playerID, choice, source, reservedPermanentIDs(alreadyChosen))
 	slices.SortStableFunc(candidates, func(a, b *game.Permanent) int {
 		return s.PermanentPower(b) - s.PermanentPower(a)
 	})
@@ -558,21 +517,17 @@ func preferredTapPermanentsTotalPower(s State, playerID game.PlayerID, additiona
 	if prefs == nil || len(prefs.TapChoices) == 0 {
 		return chooseTapPermanentsTotalPower(s, playerID, additional, alreadyChosen, source)
 	}
-	chosenIDs := make(map[id.ID]bool)
-	for _, permanent := range alreadyChosen {
-		chosenIDs[permanent.ObjectID] = true
+	choice, ok := objectCostChoiceForCost(additional)
+	if !ok {
+		return nil
 	}
+	chosenIDs := reservedPermanentIDs(alreadyChosen)
 	var chosen []*game.Permanent
 	total := 0
 	var consumed int
 	for _, permanentID := range prefs.TapChoices {
 		permanent, ok := s.PermanentByObjectID(permanentID)
-		if !ok ||
-			permanent.Tapped ||
-			s.EffectiveController(permanent) != playerID ||
-			chosenIDs[permanentID] ||
-			(additional.ExcludeSource && source != nil && permanentID == source.ObjectID) ||
-			!additionalCostMatchesPermanent(s, permanent, additional) {
+		if !ok || chosenIDs[permanentID] || !permanentSatisfiesObjectCost(s, playerID, permanent, choice, source) {
 			return nil
 		}
 		chosen = append(chosen, permanent)
@@ -588,41 +543,28 @@ func preferredTapPermanentsTotalPower(s State, playerID game.PlayerID, additiona
 }
 
 func chooseReturnPermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent) []*game.Permanent {
-	chosenIDs := make(map[id.ID]bool)
-	for _, permanent := range alreadyChosen {
-		chosenIDs[permanent.ObjectID] = true
+	choice, ok := objectCostChoiceForCost(additional)
+	if !ok {
+		return nil
 	}
-	var chosen []*game.Permanent
-	for _, permanent := range s.Battlefield() {
-		if s.EffectiveController(permanent) != playerID || chosenIDs[permanent.ObjectID] {
-			continue
-		}
-		if additionalCostMatchesPermanent(s, permanent, additional) {
-			chosen = append(chosen, permanent)
-			if len(chosen) == amount {
-				return chosen
-			}
-		}
-	}
-	return chosen
+	candidates := candidatePermanentsForObjectCost(s, playerID, choice, nil, reservedPermanentIDs(alreadyChosen))
+	return truncatePermanents(candidates, amount)
 }
 
 func preferredReturnPermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent, prefs *Preferences) []*game.Permanent {
 	if prefs == nil || len(prefs.ReturnChoices) == 0 {
 		return chooseReturnPermanents(s, playerID, additional, amount, alreadyChosen)
 	}
-	chosenIDs := make(map[id.ID]bool)
-	for _, permanent := range alreadyChosen {
-		chosenIDs[permanent.ObjectID] = true
+	choice, ok := objectCostChoiceForCost(additional)
+	if !ok {
+		return nil
 	}
+	chosenIDs := reservedPermanentIDs(alreadyChosen)
 	var chosen []*game.Permanent
 	var consumed int
 	for _, permanentID := range prefs.ReturnChoices {
 		permanent, ok := s.PermanentByObjectID(permanentID)
-		if !ok ||
-			s.EffectiveController(permanent) != playerID ||
-			chosenIDs[permanentID] ||
-			!additionalCostMatchesPermanent(s, permanent, additional) {
+		if !ok || chosenIDs[permanentID] || !permanentSatisfiesObjectCost(s, playerID, permanent, choice, nil) {
 			return nil
 		}
 		chosen = append(chosen, permanent)
@@ -768,14 +710,15 @@ func RemovableAmongCounterCount(permanent *game.Permanent, additional cost.Addit
 // in battlefield order, taking as many as available from each until amount is
 // reached.
 func greedyRemoveCounterAmong(s State, playerID game.PlayerID, additional cost.Additional, amount int, reserved map[counterSourceKind]int) ([]counterRemoval, bool) {
+	choice, ok := objectCostChoiceForCost(additional)
+	if !ok {
+		return nil, false
+	}
 	var removals []counterRemoval
 	remaining := amount
-	for _, permanent := range s.Battlefield() {
+	for _, permanent := range candidatePermanentsForObjectCost(s, playerID, choice, nil, nil) {
 		if remaining == 0 {
 			break
-		}
-		if s.EffectiveController(permanent) != playerID || !additionalCostMatchesPermanent(s, permanent, additional) {
-			continue
 		}
 		for _, kind := range amongCounterKinds(permanent, additional) {
 			if remaining == 0 {
@@ -803,6 +746,10 @@ func greedyRemoveCounterAmong(s State, playerID game.PlayerID, additional cost.A
 // permanent is the first still-available kind in stable order. It fails closed
 // when an entry is invalid or insufficient entries are supplied.
 func preferredRemoveCounterAmong(s State, playerID game.PlayerID, additional cost.Additional, amount int, reserved map[counterSourceKind]int, prefs *Preferences) ([]counterRemoval, bool) {
+	choice, ok := objectCostChoiceForCost(additional)
+	if !ok {
+		return nil, false
+	}
 	used := make(map[counterSourceKind]int)
 	var order []counterSourceKind
 	consumed := 0
@@ -811,7 +758,7 @@ func preferredRemoveCounterAmong(s State, playerID game.PlayerID, additional cos
 			break
 		}
 		permanent, ok := s.PermanentByObjectID(permanentID)
-		if !ok || s.EffectiveController(permanent) != playerID || !additionalCostMatchesPermanent(s, permanent, additional) {
+		if !ok || !permanentSatisfiesObjectCost(s, playerID, permanent, choice, nil) {
 			return nil, false
 		}
 		kind, ok := chooseAmongCounterKind(permanent, additional, reserved, used)
