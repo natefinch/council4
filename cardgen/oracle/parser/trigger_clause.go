@@ -700,6 +700,8 @@ func playerEventFirstEachTurnAllowed(action PlayerEventActionKind, player Trigge
 		PlayerEventActionScry,
 		PlayerEventActionSurveil:
 		return true
+	case PlayerEventActionDiscard, PlayerEventActionCycle:
+		return player == TriggerPlayerSelectorYou
 	case PlayerEventActionGainLife, PlayerEventActionLoseLife:
 		return player != TriggerPlayerSelectorAny
 	default:

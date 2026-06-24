@@ -11,6 +11,12 @@ func emitEvent(g *game.Game, event game.Event) {
 	if event.Kind == game.EventSpellCast && event.PlayerEventOrdinalThisTurn == 0 {
 		event.PlayerEventOrdinalThisTurn = nextSpellCastOrdinalThisTurn(g, event.Controller)
 	}
+	if event.Kind == game.EventCardDiscarded && event.PlayerEventOrdinalThisTurn == 0 {
+		event.PlayerEventOrdinalThisTurn = discardBatchOrdinalThisTurn(g, event.Player, event.SimultaneousID)
+	}
+	if event.Kind == game.EventCycled && event.PlayerEventOrdinalThisTurn == 0 {
+		event.PlayerEventOrdinalThisTurn = nextPlayerEventOrdinalThisTurn(g, game.EventCycled, event.Player)
+	}
 	if event.Kind == game.EventCardDrawn || event.Kind == game.EventBeginningOfStep {
 		event.TriggeredAbilities = captureEventTriggeredAbilities(g, event)
 		event.TriggeredAbilitiesCaptured = true
@@ -36,6 +42,39 @@ func nextPlayerEventOrdinalThisTurn(g *game.Game, kind game.EventKind, playerID 
 		}
 	}
 	return ordinal
+}
+
+// discardBatchOrdinalThisTurn reports the per-turn ordinal position of the
+// discard occurrence the event about to be emitted belongs to, counting
+// distinct discard "batches" by the same player this turn (CR 701.8e; "the
+// first time you discard one or more cards each turn", Rielle). Cards discarded
+// together share a nonzero SimultaneousID and form one occurrence; a single
+// discard carries SimultaneousID 0 and is its own occurrence. The first
+// occurrence each turn is ordinal 1, so a first-each-turn discard trigger gates
+// on PlayerEventOrdinalThisTurn == 1 regardless of how many cards it includes.
+func discardBatchOrdinalThisTurn(g *game.Game, playerID game.PlayerID, simultaneousID id.ID) int {
+	start := 0
+	index := g.Turn.TurnNumber - 1
+	if index >= 0 && index < len(g.EventTurnStarts) {
+		start = g.EventTurnStarts[index]
+	}
+	batches := 0
+	seen := make(map[id.ID]bool)
+	for _, event := range g.Events[start:] {
+		if event.Kind != game.EventCardDiscarded || event.Player != playerID {
+			continue
+		}
+		if simultaneousID != 0 && event.SimultaneousID == simultaneousID {
+			return event.PlayerEventOrdinalThisTurn
+		}
+		if event.SimultaneousID == 0 || !seen[event.SimultaneousID] {
+			if event.SimultaneousID != 0 {
+				seen[event.SimultaneousID] = true
+			}
+			batches++
+		}
+	}
+	return batches + 1
 }
 
 // nextSpellCastOrdinalThisTurn reports the per-turn ordinal position of the
