@@ -77,6 +77,11 @@ const (
 	EventCrimeCommitted
 )
 
+// EventKindCount is the number of EventKind values, including EventUnknown. It
+// is appended at the end of the const block so existing wire values are
+// preserved; new kinds must be added immediately before this sentinel.
+const EventKindCount = int(EventCrimeCommitted) + 1
+
 // DamageRecipientKind identifies what received damage. Values are flags so a
 // trigger pattern can match either kind.
 type DamageRecipientKind int
