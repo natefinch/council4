@@ -110,7 +110,7 @@ func creditPlayFromTopPayLifeRider(sentences []Sentence, atoms Atoms) (foldedLeg
 		grant.PlayFromTopPayLifeRiderSpan = sentences[i].Span
 		foldedEffects = len(sentences[i].Effects)
 		if sentences[i].LegacyEffects {
-			foldedLegacy = legacyEffectCount(tokens, atoms)
+			foldedLegacy = orderedEffectCount(tokens, atoms)
 		}
 		sentences[i].Effects = nil
 		sentences[i].LegacyEffects = false

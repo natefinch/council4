@@ -811,18 +811,71 @@ func fixedGenericManaCost(manaCost cost.Mana) bool {
 	return len(manaCost) == 1 && manaCost[0].Kind == cost.GenericSymbol
 }
 
+// classifiedVerb is one candidate effect verb produced by the single
+// effect-classification pass: its token index, the authoritative effect kind
+// from effectKindAt, and whether it sits inside a leading if/unless condition
+// clause. Both the real effect segmentation (effectIndices) and the
+// ordered-lowering count (orderedEffectCount) derive from the same records so a
+// sentence's parsed effect list and its ordered-lowering metadata cannot
+// classify a verb differently.
+type classifiedVerb struct {
+	Index           int
+	Kind            EffectKind
+	WithinCondition bool
+}
+
+// classifyEffectVerbs returns one classifiedVerb per token that the authoritative
+// effectKindAt classifier recognizes as an effect verb, after applying the
+// exclusions shared by every consumer: a self-name reference, the inner "untap"
+// of a "tap or untap" choice, and a copy-token "except" rider boundary. The
+// per-consumer exclusions (the noun-form "next untap step" for segmentation, the
+// leading-condition membership for the ordered count) are left to the callers so
+// this single pass owns all verb-kind overrides in one place.
+func classifyEffectVerbs(tokens []shared.Token, atoms Atoms) []classifiedVerb {
+	var result []classifiedVerb
+	for i := range tokens {
+		kind := effectKindAt(tokens, i)
+		if kind == EffectUnknown ||
+			atoms.SelfNameAt(tokens[i].Span) ||
+			tapOrUntapInnerUntapAt(tokens, i) ||
+			copyTokenExceptRiderBoundaryAt(tokens, i) {
+			continue
+		}
+		result = append(result, classifiedVerb{
+			Index:           i,
+			Kind:            kind,
+			WithinCondition: effectWithinCondition(tokens, i),
+		})
+	}
+	return result
+}
+
 func effectIndices(tokens []shared.Token, atoms Atoms) []int {
 	var result []int
-	for i := range tokens {
-		if effectKindAt(tokens, i) != EffectUnknown &&
-			!atoms.SelfNameAt(tokens[i].Span) &&
-			!effectNounAt(tokens, i) &&
-			!tapOrUntapInnerUntapAt(tokens, i) &&
-			!copyTokenExceptRiderBoundaryAt(tokens, i) {
-			result = append(result, i)
+	for _, verb := range classifyEffectVerbs(tokens, atoms) {
+		if !effectNounAt(tokens, verb.Index) {
+			result = append(result, verb.Index)
 		}
 	}
 	return result
+}
+
+// orderedEffectCount returns the number of effect verbs that make a sentence
+// drive the ordered-lowering path. It derives from the same classifyEffectVerbs
+// pass as the real effect segmentation, excluding verbs inside a leading
+// condition clause (an "if"/"unless" guard is not a sequenced effect) and
+// collapsing a mass reanimation/exchange to a single effect.
+func orderedEffectCount(tokens []shared.Token, atoms Atoms) int {
+	if _, ok := massReanimationExchangeWords(tokens); ok {
+		return 1
+	}
+	count := 0
+	for _, verb := range classifyEffectVerbs(tokens, atoms) {
+		if !verb.WithinCondition {
+			count++
+		}
+	}
+	return count
 }
 
 // copyTokenExceptRiderBoundaryAt reports whether the effect-boundary verb at
@@ -1244,6 +1297,12 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectUnknown
 	case kind == EffectCast && manaSpentToCastPhraseAt(tokens, index):
 		return EffectUnknown
+	case kind == EffectCast && spellCostModifierCastAt(tokens, index):
+		// A resolving spell-cost-modifier sentence carries two "cast" tokens
+		// ("spells you cast ... cost {N} less to cast"); its dedicated recognizer
+		// produces a single effect, so neither the effect segmentation nor the
+		// ordered-lowering count may treat the casts as separate effects.
+		return EffectUnknown
 	case kind == EffectCounter && !counterVerbAt(tokens, index):
 		return EffectUnknown
 	case kind == EffectCopyStackObject && !copyVerbAt(tokens, index):
@@ -1260,6 +1319,11 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectChooseCreatureType
 	case kind == EffectGain && index+1 < len(tokens) && equalWord(tokens[index+1], "control"):
 		return EffectGainControl
+	case kind == EffectGain && everyCreatureTypeGainRiderAt(tokens, index) && priorBasePowerToughnessSet(tokens, index):
+		// "gain all/every creature type(s)" folded onto a base power/toughness set
+		// (Mirror Entity) is a rider on that set, not a standalone effect, so it
+		// is suppressed from both segmentation and the ordered-lowering count.
+		return EffectUnknown
 	case kind == EffectDouble && index+1 < len(tokens) && equalWord(tokens[index+1], "strike"):
 		return EffectUnknown
 	case kind == EffectGrantKeyword && priorPTChange(tokens, index):
