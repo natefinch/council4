@@ -382,6 +382,9 @@ func registerPermanentReplacementEffects(g *game.Game, permanent *game.Permanent
 		replacement.Controller = effectiveController(g, permanent)
 		replacement.Duration = game.DurationPermanent
 		replacement.CreatedTurn = g.Turn.TurnNumber
+		if replacement.CounterRecipientSelf {
+			replacement.AffectedObjectID = permanent.ObjectID
+		}
 		g.ReplacementEffects = append(g.ReplacementEffects, replacement)
 	}
 }

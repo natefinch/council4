@@ -166,6 +166,13 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		}
 		condition.Predicate = ConditionPredicateCounterPlacementOnControlledCreature
 		condition.Counter = counter
+	case parser.ConditionPredicateCounterPlacementOnSelf:
+		counter, ok := compileConditionCounter(clause.Counter)
+		if !ok {
+			return
+		}
+		condition.Predicate = ConditionPredicateCounterPlacementOnSelf
+		condition.Counter = counter
 	case parser.ConditionPredicateCounterPlacementOnAnyCreature:
 		counter, ok := compileConditionCounter(clause.Counter)
 		if !ok {

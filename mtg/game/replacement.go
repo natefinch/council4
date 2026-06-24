@@ -282,10 +282,17 @@ type ReplacementEffect struct {
 	CounterRecipientTypesAny      []types.Card
 	CounterRecipientAnyPermanent  bool
 	CounterUseRecipientController bool
-	DamageMultiplier              int
-	DamageAddend                  int
-	DamageSourceColors            []color.Color
-	DamageExcludeSource           bool
+	// CounterRecipientSelf restricts the recipient to the replacement's own
+	// source permanent ("If one or more +1/+1 counters would be put on Mowu, ...",
+	// Mowu, Loyal Companion). When set, registration binds the replacement's
+	// AffectedObjectID to the source's object ID so it matches only counters that
+	// would be put on that one permanent. It is false for every group or broad
+	// counter-placement replacement.
+	CounterRecipientSelf bool
+	DamageMultiplier     int
+	DamageAddend         int
+	DamageSourceColors   []color.Color
+	DamageExcludeSource  bool
 	// DamageSourceTypes restricts a damage replacement to sources that have all
 	// of the listed card types ("a creature you control"). DamageRecipientOpponent
 	// restricts it to damage dealt to an opponent of the replacement's controller

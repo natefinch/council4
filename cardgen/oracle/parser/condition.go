@@ -54,6 +54,7 @@ const (
 	ConditionPredicateDestroyedThisWay                                 ConditionPredicateKind = "ConditionPredicateDestroyedThisWay"
 	ConditionPredicateEventPlayerDoesNotPay                            ConditionPredicateKind = "ConditionPredicateEventPlayerDoesNotPay"
 	ConditionPredicateCounterPlacementOnControlledCreature             ConditionPredicateKind = "ConditionPredicateCounterPlacementOnControlledCreature"
+	ConditionPredicateCounterPlacementOnSelf                           ConditionPredicateKind = "ConditionPredicateCounterPlacementOnSelf"
 	ConditionPredicateControllerCounterPlacement                       ConditionPredicateKind = "ConditionPredicateControllerCounterPlacement"
 	ConditionPredicateCounterPlacementOnControlledPermanent            ConditionPredicateKind = "ConditionPredicateCounterPlacementOnControlledPermanent"
 	ConditionPredicateDamageByControlledSource                         ConditionPredicateKind = "ConditionPredicateDamageByControlledSource"
@@ -1442,6 +1443,9 @@ func recognizeCounterPlacementCondition(body []shared.Token, atoms Atoms) (Condi
 	if !ok {
 		return ConditionClause{}, false
 	}
+	if clause, ok := recognizeSelfCounterPlacement(rest, body, atoms); ok {
+		return clause, true
+	}
 	if tail, ok := stripTokenSuffix(rest, "counters", "would", "be", "put", "on", "a", "permanent", "you", "control"); ok && len(tail) > 0 {
 		counterKind, ok := conditionCounterAtom(shared.SpanOf(body), atoms)
 		if !ok {
@@ -1475,6 +1479,31 @@ func recognizeCounterPlacementCondition(body []shared.Token, atoms Atoms) (Condi
 	}
 	return ConditionClause{
 		Predicate: ConditionPredicateCounterPlacementOnAnyCreature,
+		Counter:   counterKind,
+	}, true
+}
+
+// recognizeSelfCounterPlacement recognizes the self recipient of a
+// counter-placement replacement, as on Mowu, Loyal Companion ("If one or more
+// +1/+1 counters would be put on Mowu, that many plus one +1/+1 counters are put
+// on it instead."). The recipient after "would be put on" must be a self
+// reference (the card's own name, "this creature", or "it"). It fails closed
+// when the counter kind is unknown.
+func recognizeSelfCounterPlacement(rest, body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	split := tokenSubsequenceIndex(rest, "counters", "would", "be", "put", "on")
+	if split < 1 {
+		return ConditionClause{}, false
+	}
+	recipient := rest[split+5:]
+	if len(recipient) == 0 || !costSelfReference(recipient, atoms, true) {
+		return ConditionClause{}, false
+	}
+	counterKind, ok := conditionCounterAtom(shared.SpanOf(body), atoms)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate: ConditionPredicateCounterPlacementOnSelf,
 		Counter:   counterKind,
 	}, true
 }

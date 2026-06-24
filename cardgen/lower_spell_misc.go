@@ -44,10 +44,22 @@ func lowerFixedLifeSpell(
 		}
 		amount = game.Dynamic(dynamic)
 	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
+		if effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower {
+			dynamic, ok := lifeSourcePowerAmount(ctx, effect)
+			if !ok {
+				return game.AbilityContent{}, contentDiagnostic(
+					ctx,
+					"unsupported life spell",
+					"the executable source backend supports only exact supported life changes",
+				)
+			}
+			amount = game.Dynamic(dynamic)
+			break
+		}
 		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
 		sourceCounterReferences := effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount &&
 			singleSelfReference(ctx.content.References)
-		if !ok || effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower ||
+		if !ok ||
 			len(ctx.content.References) != 0 && !sourceCounterReferences {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
@@ -142,6 +154,44 @@ func lowerFixedLifeSpell(
 			Primitive: primitiveFactory(amount, playerRef),
 		}},
 	}.Ability(), nil
+}
+
+// lifeSourcePowerAmount lowers "gain/lose life equal to its power" by binding the
+// amount to the power of the object its referent names — the source permanent in
+// a static or non-trigger context, or the triggering permanent's last-known
+// power in a leaves/dies trigger where "its" binds to the event ("When this
+// creature dies, you gain life equal to its power.", Conclave Mentor). Every
+// reference in the ability must bind to a source or event object so the form
+// stays exact and fails closed on any foreign referent.
+func lifeSourcePowerAmount(ctx contentCtx, effect compiler.CompiledEffect) (game.DynamicAmount, bool) {
+	object, ok := referencedSourceOrEventPowerObject(effect.Amount, ctx.content.References)
+	if !ok {
+		return game.DynamicAmount{}, false
+	}
+	return lowerDynamicAmount(effect.Amount, object)
+}
+
+// referencedSourceOrEventPowerObject returns the object whose power feeds a
+// source-power amount, found by matching the amount's referent span. It requires
+// every reference to lower as a source or event object so trigger subjects
+// ("this creature") and the amount referent ("its") are both accounted for.
+func referencedSourceOrEventPowerObject(amount compiler.CompiledAmount, references []compiler.CompiledReference) (game.ObjectReference, bool) {
+	var object game.ObjectReference
+	found := false
+	for i := range references {
+		resolved, ok := lowerObjectReference(references[i], referenceLoweringContext{
+			AllowSource: true,
+			AllowEvent:  true,
+		})
+		if !ok {
+			return game.ObjectReference{}, false
+		}
+		if references[i].Span == amount.ReferenceSpan {
+			object = resolved
+			found = true
+		}
+	}
+	return object, found
 }
 
 func lowerFixedDestroySpell(

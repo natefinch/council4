@@ -262,15 +262,15 @@ func TestLowerEntryTypeChoiceReplacement(t *testing.T) {
 
 func TestLowerEntryTypeChoiceWithReferencingAbilityFailsClosed(t *testing.T) {
 	t.Parallel()
-	// A full creature-type-choice card (Metallic Mimic) also references "the
-	// chosen type" in abilities the runtime cannot yet model; the card must fail
-	// closed rather than generate a partial face. #554 stays fail-closed for
-	// referencing abilities.
+	// An entry creature-type-choice card may also reference "the chosen type" in
+	// abilities the runtime cannot yet model, such as a chosen-type spell cost
+	// reduction (Herald's Horn). Those cards must fail closed rather than generate
+	// a partial face. #554 stays fail-closed for unsupported referencing abilities.
 	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
-		Name:       "Metallic Mimic",
+		Name:       "Test Horn",
 		Layout:     "normal",
-		TypeLine:   "Artifact Creature — Shapeshifter",
-		OracleText: "As this creature enters, choose a creature type.\nThis creature is the chosen type in addition to its other types.\nEach other creature you control of the chosen type enters with an additional +1/+1 counter on it.",
+		TypeLine:   "Artifact",
+		OracleText: "As this artifact enters, choose a creature type.\nSpells you cast of the chosen type cost {1} less to cast.",
 	})
 	if len(diagnostics) == 0 {
 		t.Fatal("expected fail-closed diagnostics for referencing abilities, got none")
