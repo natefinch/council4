@@ -12,6 +12,9 @@ func (e *Engine) runTurn(g *game.Game, agents [game.NumPlayers]PlayerAgent) (log
 		TurnNumber:   g.Turn.TurnNumber,
 		ActivePlayer: g.Turn.ActivePlayer,
 	}
+	for seat := range g.Players {
+		log.LifeTotals[seat] = g.Players[seat].Life
+	}
 
 	activePlayer := log.ActivePlayer
 	manaSpentBefore := g.Players[activePlayer].ManaPool.Spent()
