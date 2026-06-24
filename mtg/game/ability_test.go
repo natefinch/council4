@@ -728,6 +728,19 @@ func TestKeywordBodyHelpers(t *testing.T) {
 	}
 }
 
+// TestPartnerWithStaticBodyCarriesKeyword confirms the partner-with keyword is
+// modeled as a simple static keyword whose reusable body reports the PartnerWith
+// keyword, so a card that has "Partner with <name>" is recognized as such.
+func TestPartnerWithStaticBodyCarriesKeyword(t *testing.T) {
+	body := PartnerWithStaticBody
+	if !BodyHasKeyword(&body, PartnerWith) {
+		t.Fatal("PartnerWithStaticBody does not carry the PartnerWith keyword")
+	}
+	if BodyHasKeyword(&body, Flying) {
+		t.Fatal("PartnerWithStaticBody unexpectedly carries the Flying keyword")
+	}
+}
+
 // TestBandingStaticBodyCarriesKeyword confirms the banding keyword is modeled as
 // a simple static keyword whose reusable body reports the Banding keyword, so a
 // permanent that has banding (printed or granted) is recognized as such.

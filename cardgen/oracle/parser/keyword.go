@@ -158,6 +158,14 @@ const (
 	// alternative permission to cast both halves as a single fused split spell.
 	// It is appended at the end so the existing keyword block stays aligned.
 	KeywordFuse KeywordKind = "KeywordFuse"
+	// KeywordPartnerWith is the "Partner with <name>" keyword (CR 702.124e). It
+	// names a specific partner card and grants an enters trigger that lets the
+	// chosen player tutor the named partner into hand. Both the deck-construction
+	// "partner commander" permission and the pair-fetch ETB are mechanics the
+	// deterministic playtester does not simulate, so the keyword is recognized
+	// and represented but not simulated. It is appended at the end so the
+	// existing keyword block stays aligned.
+	KeywordPartnerWith KeywordKind = "KeywordPartnerWith"
 )
 
 var keywordNames = map[KeywordKind]string{
@@ -260,6 +268,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordSpectacle:        "Spectacle",
 	KeywordStartEngines:     "Start your engines!",
 	KeywordFuse:             "Fuse",
+	KeywordPartnerWith:      "Partner with",
 }
 
 // String returns the parser-owned canonical keyword name.
@@ -296,6 +305,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordLivingWeapon, Words: []string{"living", "weapon"}},
 	{Kind: KeywordReadAhead, Words: []string{"read", "ahead"}},
 	{Kind: KeywordSplitSecond, Words: []string{"split", "second"}},
+	{Kind: KeywordPartnerWith, Words: []string{"partner", "with"}},
 	{Kind: KeywordBasicLandcycling, Words: []string{"basic", "landcycling"}},
 	{Kind: KeywordAffinity, Words: []string{"affinity"}},
 	{Kind: KeywordAnnihilator, Words: []string{"annihilator"}},

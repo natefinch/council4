@@ -126,6 +126,12 @@ type Ability struct {
 	// declaration semantics are cleared so downstream stages consume only the
 	// companion identity.
 	Companion *CompanionClause `json:",omitempty"`
+	// PartnerWith is the recognized "Partner with <name>" keyword ability (CR
+	// 702.124e), or nil when this paragraph is not a partner-with ability. The
+	// parser owns the "Partner with <name>" wording; when it is set the
+	// paragraph's competing effect, keyword, and declaration semantics are
+	// cleared so downstream stages consume only the partner-with identity.
+	PartnerWith *PartnerWithClause `json:",omitempty"`
 	// ConditionSegments are the ability's condition clauses, pre-segmented over
 	// the same semantic token stream the compiler historically scanned.
 	ConditionSegments []ConditionSegment `json:",omitempty"`
