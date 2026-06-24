@@ -84,6 +84,7 @@ func compileAbility(
 		if offset := ability.ExactSequence.DrawOffset; offset >= 0 && offset <= math.MaxUint8 {
 			compiled.ExactSequenceDrawOffset = uint8(offset)
 		}
+		compiled.ExactSequenceLookAtTopTypes = compilerCardTypes(ability.ExactSequence.LookAtTopCardTypes)
 	}
 	compiled.ClassLevelGain = ability.ClassLevelGain
 	compiled.LevelUpRecognized = ability.LevelUpRecognized

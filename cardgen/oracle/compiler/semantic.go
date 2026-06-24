@@ -80,23 +80,28 @@ type CompiledAbility struct {
 	// and the fixed offset added to the "draw that many cards" count. They are
 	// zero for all other exact sequences. Both are declared next to Optional and
 	// ExactSequence so the bytes pack into existing alignment padding.
-	ExactSequenceBottom        bool
-	ExactSequenceDrawOffset    uint8
-	Span                       shared.Span
-	Text                       string
-	ActivationTiming           ActivationTimingKind
-	ActivationTimingSpan       shared.Span
-	ActivationZone             zone.Type
-	AbilityWord                string
-	Chapters                   []int
-	ChapterSpan                shared.Span
-	OptionalSpan               shared.Span
-	Cost                       *CompiledCost
-	SourceAbilityCostReduction *CompiledSourceAbilityCostReduction
-	AlternativeCost            *CompiledAlternativeCost
-	Trigger                    *CompiledTrigger
-	Content                    AbilityContent
-	Static                     *CompiledStaticSemantics
+	ExactSequenceBottom     bool
+	ExactSequenceDrawOffset uint8
+	// ExactSequenceLookAtTopTypes carries the disjunctive card types of
+	// ExactSequenceConditionalLookAtTopReveal: the reveal succeeds only when the
+	// looked-at card matches one of these types. It is nil for all other exact
+	// sequences. The parser owns the wording; this holds only the typed values.
+	ExactSequenceLookAtTopTypes []types.Card
+	Span                        shared.Span
+	Text                        string
+	ActivationTiming            ActivationTimingKind
+	ActivationTimingSpan        shared.Span
+	ActivationZone              zone.Type
+	AbilityWord                 string
+	Chapters                    []int
+	ChapterSpan                 shared.Span
+	OptionalSpan                shared.Span
+	Cost                        *CompiledCost
+	SourceAbilityCostReduction  *CompiledSourceAbilityCostReduction
+	AlternativeCost             *CompiledAlternativeCost
+	Trigger                     *CompiledTrigger
+	Content                     AbilityContent
+	Static                      *CompiledStaticSemantics
 	// ClassLevelGain is the target level of a Class enchantment's level-up
 	// activated ability ("{cost}: Level N"), or 0 when this ability is not a
 	// level-up. The compiler copies the parser's typed level so lowering emits

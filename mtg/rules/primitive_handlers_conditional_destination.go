@@ -2,6 +2,7 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // handleConditionalDestinationPlace resolves a ConditionalDestinationPlace: it
@@ -23,11 +24,21 @@ func handleConditionalDestinationPlace(r *effectResolver, prim game.ConditionalD
 	}
 	gateHolds := cardConditionPredicateSatisfied(r.game, r.obj, card, prim.CardCondition) &&
 		effectConditionSatisfied(r.game, r.obj, prim.Condition)
-	if gateHolds && r.engine.chooseMay(r.game, r.agents, r.obj.Controller, "Put the card onto the battlefield?", r.log) {
-		options := permanentCreationOptions{ForceTapped: prim.EntryTapped}
-		if _, placed := r.putReferencedCardOnBattlefieldValue(prim.Card, game.PlayerReference{}, nil, options); placed {
-			res.succeeded = true
-			return res
+	if gateHolds && r.engine.chooseMay(r.game, r.agents, r.obj.Controller, conditionalDestinationThenPrompt(prim), r.log) {
+		if prim.Then == zone.None {
+			options := permanentCreationOptions{ForceTapped: prim.EntryTapped}
+			if _, placed := r.putReferencedCardOnBattlefieldValue(prim.Card, game.PlayerReference{}, nil, options); placed {
+				res.succeeded = true
+				return res
+			}
+		} else {
+			if prim.ThenReveal {
+				emitCardRevealEvent(r.game, r.obj, card.Owner, cardID, fromZone)
+			}
+			if moveCardBetweenZonesWithPlacement(r.game, card.Owner, cardID, fromZone, prim.Then, false) {
+				res.succeeded = true
+				return res
+			}
 		}
 	}
 	if prim.ElseOptional && !r.engine.chooseMay(r.game, r.agents, r.obj.Controller, conditionalDestinationElsePrompt(prim), r.log) {
@@ -37,9 +48,28 @@ func handleConditionalDestinationPlace(r *effectResolver, prim game.ConditionalD
 	return res
 }
 
+func conditionalDestinationThenPrompt(prim game.ConditionalDestinationPlace) string {
+	switch prim.Then {
+	case zone.None:
+		return "Put the card onto the battlefield?"
+	case zone.Hand:
+		if prim.ThenReveal {
+			return "Reveal the card and put it into your hand?"
+		}
+		return "Put the card into your hand?"
+	default:
+		return "Put the card into the chosen zone?"
+	}
+}
+
 func conditionalDestinationElsePrompt(prim game.ConditionalDestinationPlace) string {
 	if prim.ElseBottom {
 		return "Put the card on the bottom of your library?"
 	}
-	return "Put the card into your hand?"
+	switch prim.Else {
+	case zone.Graveyard:
+		return "Put the card into your graveyard?"
+	default:
+		return "Put the card into your hand?"
+	}
 }
