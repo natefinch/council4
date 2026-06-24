@@ -9,6 +9,7 @@ var Cards = []*game.CardDef{
 	ChandraSIgnition,
 	ChaosWarp,
 	CinderGlade,
+	CliveSHideaway,
 	CommandTower,
 	ContestOfClaws,
 	CosmicHunger,

@@ -1479,6 +1479,31 @@ var livingWeaponGermToken = &CardDef{
 // self-attach so Living weapon attaches the Equipment to that exact token.
 const livingWeaponGermLinkKey = LinkedKey("living-weapon-germ")
 
+// HideawayTriggeredAbility builds the canonical Hideaway N enters-the-battlefield
+// triggered ability (CR 702.75a): "When this permanent enters, look at the top N
+// cards of your library, exile one of them face down, then put the rest on the
+// bottom of your library in a random order." The exiled card is played later by
+// the source's Hideaway activated ability. amount is the number of cards looked
+// at (4 on every printed Hideaway land).
+func HideawayTriggeredAbility(amount int) TriggeredAbility {
+	return TriggeredAbility{
+		Text: fmt.Sprintf("Hideaway %d", amount),
+		Trigger: TriggerCondition{
+			Type: TriggerWhen,
+			Pattern: TriggerPattern{
+				Event:  EventPermanentEnteredBattlefield,
+				Source: TriggerSourceSelf,
+			},
+		},
+		KeywordAbilities: []KeywordAbility{
+			HideawayKeyword{Amount: amount},
+		},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: HideawayExile{Amount: Fixed(amount)},
+		}}}.Ability(),
+	}
+}
+
 // LivingWeaponTriggeredAbility builds the entry trigger for Living weapon
 // (CR 702.91): when this Equipment enters, create a 0/0 black Phyrexian Germ
 // creature token, then attach this Equipment to it.

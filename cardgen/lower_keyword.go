@@ -138,6 +138,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordTriggeredLowering(&fabricateAbility, ability, syntax), true, nil
 	}
+	if hideawayAbility, ok, diag := lowerHideawayAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordTriggeredLowering(&hideawayAbility, ability, syntax), true, nil
+	}
 	if soulshiftAbility, ok, diag := lowerSoulshiftAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag

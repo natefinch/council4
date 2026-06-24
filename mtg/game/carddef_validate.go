@@ -624,6 +624,10 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		if keyword.Count <= 0 {
 			v.add(faceName, appendPath(path, "Count"), CardDefIssueInvalidKeywordAbility, "fabricate count must be positive")
 		}
+	case HideawayKeyword:
+		if keyword.Amount <= 0 {
+			v.add(faceName, appendPath(path, "Amount"), CardDefIssueInvalidKeywordAbility, "hideaway amount must be positive")
+		}
 	case SoulshiftKeyword:
 		if keyword.Count <= 0 {
 			v.add(faceName, appendPath(path, "Count"), CardDefIssueInvalidKeywordAbility, "soulshift count must be positive")

@@ -358,6 +358,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				TokenCopyForEachGroup:     compileTokenCopyForEachGroup(syntax.TokenCopyForEachGroup),
 				CastAsAdventure:           syntax.CastAsAdventure,
 				CastWithoutPayingManaCost: syntax.CastWithoutPayingManaCost,
+				PlayHideawayExiledCard:    syntax.PlayHideawayExiledCard,
 				Negated:                   syntax.Negated,
 				FallbackOnInability:       syntax.FallbackOnInability,
 				Optional:                  syntax.Optional,

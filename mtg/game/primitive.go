@@ -119,10 +119,16 @@ const (
 	PrimitiveConnive
 	PrimitivePayRepeatedly
 	PrimitiveExileForPlay
+	// PrimitiveHideawayExile is the Hideaway N enters action (look at top N,
+	// exile one face down linked to the source, rest to bottom in random order).
+	PrimitiveHideawayExile
+	// PrimitivePlayHideawayCard plays the source's hidden-away exiled card
+	// without paying its mana cost, gated by the enclosing instruction condition.
+	PrimitivePlayHideawayCard
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveExileForPlay) + 1
+const primitiveKindCount = int(PrimitivePlayHideawayCard) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -1260,6 +1266,25 @@ type ImpulseExile struct {
 	Amount   Quantity
 	Duration EffectDuration
 }
+
+// HideawayExile implements the Hideaway N enters-the-battlefield action (CR
+// 702.75a): the resolving controller looks at the top Amount cards of their
+// library, exiles one of them face down linked to the source permanent, and
+// puts the rest on the bottom of their library in a random order. The exiled
+// card is played later by the source permanent's Hideaway activated ability
+// through PlayHideawayCard, which reads the same source-scoped link.
+type HideawayExile struct {
+	Amount Quantity
+}
+
+// PlayHideawayCard implements the "you may play the exiled card without paying
+// its mana cost" half of the Hideaway mechanic (CR 702.75c). The resolving
+// controller may play the card the source permanent exiled face down with its
+// HideawayExile action, casting it as a spell or putting it onto the
+// battlefield as a land without paying its mana cost. The enclosing
+// instruction's Condition gates the play on the printed Hideaway condition and
+// its Optional flag carries the "may".
+type PlayHideawayCard struct{}
 
 // Investigate creates Clue tokens for the recipient (controller by default).
 type Investigate struct {

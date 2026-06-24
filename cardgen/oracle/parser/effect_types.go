@@ -1928,7 +1928,13 @@ type EffectSyntax struct {
 	// <zone> without paying its mana cost."). It is false for every other cast
 	// effect, including ones that pay an alternative or normal cost.
 	CastWithoutPayingManaCost bool `json:",omitempty"`
-	Negated                   bool `json:",omitempty"`
+	// PlayHideawayExiledCard marks the Hideaway activated-ability effect "(you
+	// may) play the exiled card without paying its mana cost" (CR 702.75c). The
+	// effect plays the card the source permanent hid away with its Hideaway
+	// enters action; any trailing "if <condition>" gate is parsed separately as
+	// the ability's activation condition. It is false for every other effect.
+	PlayHideawayExiledCard bool `json:",omitempty"`
+	Negated                bool `json:",omitempty"`
 	// FallbackOnInability marks an effect whose subject is a "who can't" relative
 	// clause ("Each player who can't discards a card."): it applies only to
 	// players who couldn't satisfy the immediately preceding required action. It
