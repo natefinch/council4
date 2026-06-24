@@ -329,6 +329,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				BecomeCopyAddKeywords:        slices.Clone(syntax.BecomeCopyAddKeywords),
 
 				BecomeTypeAddTypes:       slices.Clone(syntax.BecomeTypeAddTypes),
+				BecomeTypeAddColors:      polymorphColors(syntax.BecomeTypeAddColors),
 				BecomeTypeUntilEndOfTurn: syntax.BecomeTypeUntilEndOfTurn,
 
 				PolymorphColors:        polymorphColors(syntax.PolymorphColors),

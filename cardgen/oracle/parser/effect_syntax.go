@@ -1048,7 +1048,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseSetBasePowerToughnessEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseSwitchPowerToughnessEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseNamedBecomePolymorphEffect(sentence, tokens, atoms) },
-		func() ([]EffectSyntax, bool) { return parseBecomeTypeEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parseBecomeTypeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawDoublingReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawReplacementDig(sentence, tokens, atoms) },
@@ -4847,19 +4847,28 @@ func parseBecomeCopyEffect(sentence Sentence, tokens []shared.Token, atoms Atoms
 
 // parseBecomeTypeEffect recognizes a targeted continuous type-adding effect
 // ("Target permanent becomes an artifact in addition to its other types until
-// end of turn.", Liquimetal Torque, Liquimetal Coating; CR 613.1d). The target
+// end of turn.", Liquimetal Torque, Liquimetal Coating; CR 613.1d). It also
+// recognizes the additive color-and-type form ("Until end of turn, target
+// creature you control becomes a blue artifact in addition to its other colors
+// and types.", Unctus, Grand Metatect), where one or more leading color words
+// precede the card-type words and the additive tail names "colors and types".
+// The "until end of turn" duration may appear as a leading clause or a trailing
+// phrase, but exactly one of the two; both or neither fail closed. The target
 // selector before "becomes" is left as an ordinary target for the target
-// machinery to extract. Only the additive "in addition to its other types" form
-// with an "until end of turn" duration is recognized; the type-setting form
-// ("becomes a <type>" without "in addition") and the permanent (no-duration)
-// form fail closed so those cards stay unsupported. Each card-type word must be
-// a recognized permanent card type; any other word fails closed.
-func parseBecomeTypeEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+// machinery to extract. Only the additive "in addition to its other [colors
+// and] types" form is recognized; the type-setting form ("becomes a <type>"
+// without "in addition") and the permanent (no-duration) form fail closed so
+// those cards stay unsupported. Each card-type word must be a recognized
+// permanent card type and each color word a recognized color; any other word
+// fails closed.
+func parseBecomeTypeEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
 	body := semanticEffectTokens(tokens)
 	if len(body) == 0 || body[len(body)-1].Kind != shared.Period {
 		return nil, false
 	}
-	words := normalizedWords(body[:len(body)-1])
+	remaining, leadingDuration := stripLeadingDurationClause(body[:len(body)-1], atoms)
+	leadingUntilEndOfTurn := leadingDuration == EffectDurationUntilEndOfTurn
+	words := normalizedWords(remaining)
 	if len(words) < 5 || words[0] != "target" {
 		return nil, false
 	}
@@ -4873,25 +4882,59 @@ func parseBecomeTypeEffect(sentence Sentence, tokens []shared.Token) ([]EffectSy
 	if becomesIndex < 0 || becomesIndex+1 >= len(words) {
 		return nil, false
 	}
+	// The words between "target" and "becomes" must be only the target noun
+	// phrase. A connector or pump/grant verb there marks a compound effect
+	// ("target nonartifact creature gets +1/+0 and becomes an artifact ...",
+	// Thran Forge) whose other clause this recognizer cannot represent, so it
+	// fails closed rather than silently dropping that clause.
+	for _, word := range words[1:becomesIndex] {
+		switch word {
+		case "and", "then", "gets", "get", "gains", "gain", "loses", "lose":
+			return nil, false
+		}
+	}
 	rest := words[becomesIndex+1:]
 	if rest[0] != "a" && rest[0] != "an" {
 		return nil, false
 	}
 	rest = rest[1:]
-	additive := []string{"in", "addition", "to", "its", "other", "types"}
 	duration := []string{"until", "end", "of", "turn"}
-	if len(rest) < len(additive)+len(duration)+1 {
+	trailingUntilEndOfTurn := false
+	if len(rest) >= len(duration) && slices.Equal(rest[len(rest)-len(duration):], duration) {
+		trailingUntilEndOfTurn = true
+		rest = rest[:len(rest)-len(duration)]
+	}
+	if leadingUntilEndOfTurn == trailingUntilEndOfTurn {
 		return nil, false
 	}
-	if !slices.Equal(rest[len(rest)-len(duration):], duration) {
+	additiveTypes := []string{"in", "addition", "to", "its", "other", "types"}
+	additiveColorsTypes := []string{"in", "addition", "to", "its", "other", "colors", "and", "types"}
+	addsColors := false
+	switch {
+	case len(rest) >= len(additiveColorsTypes)+1 &&
+		slices.Equal(rest[len(rest)-len(additiveColorsTypes):], additiveColorsTypes):
+		addsColors = true
+		rest = rest[:len(rest)-len(additiveColorsTypes)]
+	case len(rest) >= len(additiveTypes)+1 &&
+		slices.Equal(rest[len(rest)-len(additiveTypes):], additiveTypes):
+		rest = rest[:len(rest)-len(additiveTypes)]
+	default:
 		return nil, false
 	}
-	rest = rest[:len(rest)-len(duration)]
-	if !slices.Equal(rest[len(rest)-len(additive):], additive) {
-		return nil, false
+	addColors := make([]Color, 0)
+	for len(rest) > 0 {
+		parsedColor, ok := recognizeColorWord(rest[0])
+		if !ok {
+			break
+		}
+		addColors = append(addColors, parsedColor)
+		rest = rest[1:]
 	}
-	typeWords := rest[:len(rest)-len(additive)]
+	typeWords := rest
 	if len(typeWords) == 0 {
+		return nil, false
+	}
+	if addsColors != (len(addColors) > 0) {
 		return nil, false
 	}
 	addTypes := make([]types.Card, 0, len(typeWords))
@@ -4910,6 +4953,7 @@ func parseBecomeTypeEffect(sentence Sentence, tokens []shared.Token) ([]EffectSy
 		Text:                     sentence.Text,
 		Tokens:                   append([]shared.Token(nil), body...),
 		BecomeTypeAddTypes:       addTypes,
+		BecomeTypeAddColors:      addColors,
 		BecomeTypeUntilEndOfTurn: true,
 	}
 	return []EffectSyntax{effect}, true
