@@ -242,7 +242,14 @@ func lowerContent(
 		return content, nil
 	}
 	if len(ctx.content.Effects) > 0 && ctx.content.Effects[0].Kind == compiler.EffectSearch {
-		return lowerSearchSpell(ctx)
+		content, diagnostic := lowerSearchSpell(ctx)
+		if diagnostic == nil {
+			return content, nil
+		}
+		if trailing, ok := lowerSearchThenTrailingSequence(cardName, ctx, syntax); ok {
+			return trailing, nil
+		}
+		return content, diagnostic
 	}
 	if len(ctx.content.Effects) > 1 {
 		if content, diagnostic, handled := lowerOrAlternativeModal(cardName, ctx, syntax); handled {
