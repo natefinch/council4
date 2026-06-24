@@ -1013,6 +1013,9 @@ func parseStaticGrantedManaAbility(quoted Delimited) (StaticGrantedManaAbilitySy
 	if ability, ok := parseStaticGrantedColorlessManaAbility(quoted); ok {
 		return ability, true
 	}
+	if ability, ok := parseStaticGrantedSacrificeAnyColorManaAbility(quoted); ok {
+		return ability, true
+	}
 	return parseStaticGrantedSacrificeManaAbility(quoted)
 }
 
@@ -1064,6 +1067,35 @@ func parseStaticGrantedAnyColorManaAbility(quoted Delimited) (StaticGrantedManaA
 		TapCost:  true,
 		Amount:   1,
 		AnyColor: true,
+	}, true
+}
+
+// parseStaticGrantedSacrificeAnyColorManaAbility recognizes the count-1 quoted
+// ability "{T}, Sacrifice this artifact: Add one mana of any color." (Ninja
+// Pizza): tap and sacrifice the host artifact to add one mana of any color the
+// controller chooses. It is the any-color, count-1 counterpart of the
+// Treasure-style "Add <N> mana of any one color." sacrifice ability.
+func parseStaticGrantedSacrificeAnyColorManaAbility(quoted Delimited) (StaticGrantedManaAbilitySyntax, bool) {
+	tokens := quoted.Tokens
+	if len(tokens) != 15 ||
+		tokens[0].Kind != shared.Quote ||
+		tokens[1].Kind != shared.Symbol ||
+		tokens[1].Text != "{T}" ||
+		tokens[2].Kind != shared.Comma ||
+		!staticWordsAt(tokens, 3, "sacrifice", "this", "artifact") ||
+		tokens[6].Kind != shared.Colon ||
+		!staticWordsAt(tokens, 7, "add", "one", "mana", "of", "any", "color") ||
+		tokens[13].Kind != shared.Period ||
+		tokens[14].Kind != shared.Quote {
+		return StaticGrantedManaAbilitySyntax{}, false
+	}
+	return StaticGrantedManaAbilitySyntax{
+		Span:      shared.SpanOf(tokens[1:14]),
+		Text:      staticGrantedAbilityText(quoted),
+		TapCost:   true,
+		Amount:    1,
+		AnyColor:  true,
+		Sacrifice: true,
 	}, true
 }
 

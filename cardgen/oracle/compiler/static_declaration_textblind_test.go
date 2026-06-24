@@ -290,6 +290,40 @@ func TestRecognizeStaticPermanentManaAbilityGrantTreasureSacrifice(t *testing.T)
 	}
 }
 
+func TestRecognizeStaticPermanentManaAbilityGrantSacrificeAnyColor(t *testing.T) {
+	t.Parallel()
+	ability := CompiledAbility{Kind: AbilityStatic}
+	statics := []parser.StaticDeclarationSyntax{{
+		Kind: parser.StaticDeclarationPermanentAbilityGrant,
+		Subject: parser.StaticDeclarationSubject{
+			Kind: parser.StaticDeclarationSubjectGroup,
+			Group: parser.EffectStaticSubjectSyntax{
+				Kind: parser.EffectStaticSubjectControlledArtifacts,
+			},
+		},
+		GrantedManaAbility: &parser.StaticGrantedManaAbilitySyntax{
+			TapCost:   true,
+			Amount:    1,
+			AnyColor:  true,
+			Sacrifice: true,
+			Text:      "{T}, Sacrifice this artifact: Add one mana of any color.",
+		},
+	}}
+	declaration, ok := recognizeStaticPermanentAbilityGrantDeclaration(ability, statics)
+	if !ok {
+		t.Fatal("did not recognize typed sacrifice any-color mana-ability grant")
+	}
+	if declaration.Continuous == nil ||
+		declaration.Continuous.GrantedMana == nil ||
+		!declaration.Continuous.GrantedMana.Sacrifice ||
+		!declaration.Continuous.GrantedMana.AnyColor ||
+		declaration.Continuous.GrantedMana.AnyOneColor ||
+		declaration.Continuous.GrantedMana.Amount != 1 ||
+		!slices.Equal(declaration.Group.Selection.RequiredTypes, []types.Card{types.Artifact}) {
+		t.Fatalf("declaration = %#v, want controlled-artifact sacrifice any-color mana-ability grant", declaration)
+	}
+}
+
 func TestRecognizeStaticPermanentManaAbilityGrantTypedNearMissesFailClosed(t *testing.T) {
 	t.Parallel()
 	base := parser.StaticDeclarationSyntax{
