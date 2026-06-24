@@ -416,6 +416,36 @@ func TestParseConditionEventSubjectAndSourceState(t *testing.T) {
 	}
 }
 
+// TestParseSelfNamePossessivePowerCondition covers the source-power activation
+// condition written with a possessive self-name subject ("Kitsa's power is 3 or
+// greater") rather than "this creature's power ...". The possessive self-name
+// binds the source permanent, so it must produce the same source power-threshold
+// predicate as the "this creature" spelling.
+func TestParseSelfNamePossessivePowerCondition(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"{2}, {T}: Draw a card. Activate only if Kitsa's power is 3 or greater.",
+		Context{CardName: "Kitsa, Otterball Elite"},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if len(document.Abilities) != 1 {
+		t.Fatalf("abilities = %#v", document.Abilities)
+	}
+	clauses := document.Abilities[0].ConditionClauses
+	if len(clauses) != 1 {
+		t.Fatalf("clauses = %#v, want exactly one", clauses)
+	}
+	clause := clauses[0]
+	if clause.Predicate != ConditionPredicateObjectMatches ||
+		clause.ObjectBinding != ConditionObjectBindingSource ||
+		!clause.Selection.MatchPowerAtLeast ||
+		clause.Selection.PowerAtLeast != 3 {
+		t.Fatalf("clause = %#v", clause)
+	}
+}
+
 // TestParseAttachedCreatureStateCondition covers the conditional-grant gate
 // "equipped/enchanted creature is <state>" used by Equipment and Auras
 // ("As long as equipped creature is legendary, it has hexproof."). The subject

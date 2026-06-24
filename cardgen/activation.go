@@ -38,7 +38,9 @@ func lowerActivationShell(
 			"the executable source backend requires an exact typed activation cost",
 		)
 	}
-	if !isBoastAbilityWord(ability.AbilityWord) && !rulesFreeAbilityWordLabel(ability.AbilityWord) {
+	if !isBoastAbilityWord(ability.AbilityWord) &&
+		!isMaxSpeedAbilityWord(ability.AbilityWord) &&
+		!rulesFreeAbilityWordLabel(ability.AbilityWord) {
 		return loweredActivationShell{}, activationDiagnostic(
 			original,
 			"unsupported activation ability word",
@@ -100,6 +102,21 @@ func lowerActivationShell(
 		}
 		timing = game.OncePerTurn
 		activationCondition = opt.Val(game.BoastActivationCondition())
+	}
+	if isMaxSpeedAbilityWord(ability.AbilityWord) {
+		// The "Max speed" ability word (CR 702.179, the Start your engines! speed
+		// subsystem) gates activation on the controller having maximum speed. It
+		// imposes no timing of its own, so reject any Max speed ability that also
+		// declares an explicit timing or rules-text condition, or that does not
+		// function from the battlefield, so unexpected shapes stay unsupported.
+		if timing != game.NoTimingRestriction || activationCondition.Exists || zoneOfFunction != zone.Battlefield {
+			return loweredActivationShell{}, activationDiagnostic(
+				original,
+				"unsupported Max speed ability",
+				"the executable source backend supports only a battlefield Max speed ability with no other activation restriction",
+			)
+		}
+		activationCondition = opt.Val(game.MaxSpeedActivationCondition())
 	}
 	if !channelActivationSupported(ability, zoneOfFunction, additionalCosts) {
 		return loweredActivationShell{}, activationDiagnostic(
@@ -226,6 +243,10 @@ func lowerActivationShell(
 
 func isBoastAbilityWord(label string) bool {
 	return strings.EqualFold(label, "Boast")
+}
+
+func isMaxSpeedAbilityWord(label string) bool {
+	return strings.EqualFold(label, "Max speed")
 }
 
 func channelActivationSupported(ability compiler.CompiledAbility, functionZone zone.Type, additionalCosts []cost.Additional) bool {
