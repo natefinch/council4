@@ -728,6 +728,16 @@ const (
 	// EffectDynamicAmountOpponentCount and carries no in-text referent. Added
 	// last so existing kinds keep their values.
 	EffectDynamicAmountOpponentsAttackedThisCombat EffectDynamicAmountKind = "EffectDynamicAmountOpponentsAttackedThisCombat"
+	// EffectDynamicAmountTriggeringEventAmount is the quantity carried by the
+	// event that triggered the enclosing trigger ("that many" in "Whenever you
+	// discard one or more cards, put that many +1/+1 counters on this creature.",
+	// "Whenever a creature you control deals combat damage to a player, put that
+	// many +1/+1 counters on it.", "Whenever you gain life, put that many +1/+1
+	// counters on this creature."). The parser cannot see the trigger, so it
+	// records the generic "that many" reference and lowering resolves it to the
+	// matching per-event amount, failing closed outside a measuring trigger.
+	// Added last so existing kinds keep their values.
+	EffectDynamicAmountTriggeringEventAmount EffectDynamicAmountKind = "EffectDynamicAmountTriggeringEventAmount"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.

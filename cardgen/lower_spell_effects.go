@@ -989,10 +989,13 @@ func lowerReferencedCounterPlacement(ctx contentCtx) (game.AbilityContent, *shar
 		len(ctx.content.References) != 1 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		!effect.Amount.Known || effect.Amount.Value <= 0 ||
 		!effect.Exact ||
 		effect.Negated ||
 		effect.Context != parser.EffectContextController {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	amount, ok := referencedCounterPlacementAmount(ctx, effect.Amount)
+	if !ok {
 		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
 	}
 	kindChoices, ok := referencedCounterKindChoices(effect)
@@ -1008,7 +1011,7 @@ func lowerReferencedCounterPlacement(ctx contentCtx) (game.AbilityContent, *shar
 		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
 	}
 	add := game.AddCounter{
-		Amount: game.Fixed(effect.Amount.Value),
+		Amount: amount,
 		Object: object,
 	}
 	if len(kindChoices) != 0 {
@@ -1023,7 +1026,58 @@ func lowerReferencedCounterPlacement(ctx contentCtx) (game.AbilityContent, *shar
 	}.Ability(), nil
 }
 
-// referencedCounterKindChoices resolves the counter kind(s) a referenced counter
+// referencedCounterPlacementAmount lowers the count of a referenced counter
+// placement ("Put a +1/+1 counter on this creature.", "Whenever you discard one
+// or more cards, put that many +1/+1 counters on this creature."). It accepts a
+// fixed positive amount or the generic quantity the enclosing trigger measured
+// (DynamicAmountTriggeringEventAmount), which lowerTriggeringEventQuantity keeps
+// closed outside a measuring trigger. Every other shape, including X and
+// unrecognized dynamic amounts, fails closed.
+func referencedCounterPlacementAmount(
+	ctx contentCtx,
+	amount compiler.CompiledAmount,
+) (game.Quantity, bool) {
+	if amount.Known {
+		if amount.Value <= 0 {
+			return game.Quantity{}, false
+		}
+		return game.Fixed(amount.Value), true
+	}
+	if amount.DynamicKind == compiler.DynamicAmountTriggeringEventAmount {
+		dynamic, ok := lowerTriggeringEventQuantity(ctx, amount)
+		if !ok {
+			return game.Quantity{}, false
+		}
+		return game.Dynamic(dynamic), true
+	}
+	return game.Quantity{}, false
+}
+
+// lowerTriggeringEventQuantity resolves a generic "that many" triggering-event
+// amount to the per-event quantity its enclosing trigger measured: combat damage
+// dealt, life gained or lost, counters added, or cards drawn or discarded. Each
+// candidate lowerer is already gated on its own trigger event kind, and the
+// event kinds are mutually exclusive, so at most one matches. It fails closed in
+// a spell context or any trigger whose event publishes no such quantity.
+func lowerTriggeringEventQuantity(
+	ctx contentCtx,
+	amount compiler.CompiledAmount,
+) (game.DynamicAmount, bool) {
+	if dynamic, ok := lowerEventCombatDamageAmount(ctx, amount); ok {
+		return dynamic, true
+	}
+	if dynamic, ok := lowerEventLifeChangeAmount(ctx, amount); ok {
+		return dynamic, true
+	}
+	if dynamic, ok := lowerEventCounterCountAmount(ctx, amount); ok {
+		return dynamic, true
+	}
+	if dynamic, ok := lowerEventCardCountAmount(ctx, amount); ok {
+		return dynamic, true
+	}
+	return game.DynamicAmount{}, false
+}
+
 // placement applies. A single recognized, placeable kind yields no choice list; a
 // two-or-more-kind choice ("a +1/+1 counter or a loyalty counter", Elspeth
 // Conquers Death chapter III) yields the list of placeable kinds. Any

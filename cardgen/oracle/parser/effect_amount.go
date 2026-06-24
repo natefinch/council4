@@ -457,6 +457,27 @@ func parseEffectAmount(kind EffectKind, tokens []shared.Token, atoms Atoms) Effe
 			}
 		}
 	}
+	if kind == EffectPut {
+		// "put that many <kind> counters" in a triggered ability reads the
+		// quantity the trigger measured ("Whenever you discard one or more cards,
+		// put that many +1/+1 counters on this creature." — Marauding Mako;
+		// "Whenever a creature you control deals combat damage to a player, put
+		// that many +1/+1 counters on it." — Necropolis Regent; "Whenever you gain
+		// life, put that many +1/+1 counters on this creature." — Ageless Entity).
+		// The generic scan below would otherwise misread the "+1" of "+1/+1" as a
+		// fixed amount of one. The parser cannot see the trigger, so it records a
+		// generic triggering-event amount that lowering resolves per event kind,
+		// failing closed outside a measuring trigger.
+		for i := 0; i+1 < len(tokens); i++ {
+			if equalWord(tokens[i], "that") && equalWord(tokens[i+1], "many") {
+				return EffectAmountSyntax{
+					Span:        shared.SpanOf(tokens[i : i+2]),
+					Text:        joinedEffectText(tokens[i : i+2]),
+					DynamicKind: EffectDynamicAmountTriggeringEventAmount,
+				}
+			}
+		}
+	}
 	if kind == EffectDealDamage {
 		// "deals that much damage" in a counter-placement trigger reads the
 		// number of counters added by the triggering event (Shalai and Hallar).
