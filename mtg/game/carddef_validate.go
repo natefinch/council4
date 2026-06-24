@@ -1141,6 +1141,12 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if !reflect.DeepEqual(payload, RuleEffect{}) {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "controlled-permanent trigger multiplier accepts only a source-permanent selection filter")
 		}
+	case RuleEffectSuppressOpponentEnteringTriggers:
+		payload := *effect
+		payload.Kind = RuleEffectNone
+		if !reflect.DeepEqual(payload, RuleEffect{}) {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "opponent entering-trigger suppression does not accept additional payload")
+		}
 	default:
 	}
 }

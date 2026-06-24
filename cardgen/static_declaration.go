@@ -113,6 +113,10 @@ func lowerStaticDeclarations(
 				ok = appendStaticCastAsThoughFlashDeclaration(&body, declaration)
 			case compiler.StaticDeclarationGraveyardCardKeywordGrant:
 				ok = appendStaticGraveyardCardKeywordGrantDeclaration(&body, declaration)
+			case compiler.StaticDeclarationOpeningHandPlay:
+				ok = appendStaticOpeningHandPlayDeclaration(&body, declaration)
+			case compiler.StaticDeclarationOpponentEnteringTriggerSuppression:
+				ok = appendStaticOpponentEnteringTriggerSuppressionDeclaration(&body, declaration)
 			default:
 				ok = false
 			}
@@ -341,6 +345,12 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.CastLimit != nil {
 		payloads++
 	}
+	if declaration.OpeningHandPlay != nil {
+		payloads++
+	}
+	if declaration.OpponentEnteringSuppression != nil {
+		payloads++
+	}
 	if payloads != 1 {
 		return false
 	}
@@ -377,6 +387,10 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 		return declaration.CastAsThoughFlash != nil
 	case compiler.StaticDeclarationGraveyardCardKeywordGrant:
 		return declaration.GraveyardGrant != nil
+	case compiler.StaticDeclarationOpeningHandPlay:
+		return declaration.OpeningHandPlay != nil
+	case compiler.StaticDeclarationOpponentEnteringTriggerSuppression:
+		return declaration.OpponentEnteringSuppression != nil
 	default:
 		return false
 	}
@@ -1278,6 +1292,32 @@ func appendStaticControlledTriggerMultiplierDeclaration(body *game.StaticAbility
 			Supertypes:    append([]types.Super(nil), multiplier.Supertypes...),
 			SubtypesAny:   append([]types.Sub(nil), multiplier.Subtypes...),
 		},
+	})
+	return true
+}
+
+// appendStaticOpeningHandPlayDeclaration lowers the pre-game permission "If this
+// card is in your opening hand, you may begin the game with it on the
+// battlefield." (the Leyline cycle) to an inert static ability. The permission
+// is a special action taken before the game begins; this engine never models
+// opening hands, so the declaration contributes no runtime effect and the static
+// body keeps only its printed text.
+func appendStaticOpeningHandPlayDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	return declaration.OpeningHandPlay != nil
+}
+
+// appendStaticOpponentEnteringTriggerSuppressionDeclaration lowers "Permanents
+// entering don't cause abilities of permanents your opponents control to
+// trigger." (Elesh Norn, Mother of Machines) into a controller-scoped
+// suppression rule effect. The runtime collects it as an active rule effect and
+// drops a pending entering-caused triggered ability whose source permanent is
+// controlled by one of the effect controller's opponents.
+func appendStaticOpponentEnteringTriggerSuppressionDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	if declaration.OpponentEnteringSuppression == nil {
+		return false
+	}
+	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+		Kind: game.RuleEffectSuppressOpponentEnteringTriggers,
 	})
 	return true
 }

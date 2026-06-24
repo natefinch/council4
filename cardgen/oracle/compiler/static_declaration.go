@@ -35,6 +35,8 @@ const (
 	StaticDeclarationGraveyardCardKeywordGrant
 	StaticDeclarationDrawLimit
 	StaticDeclarationCastLimit
+	StaticDeclarationOpeningHandPlay
+	StaticDeclarationOpponentEnteringTriggerSuppression
 )
 
 // StaticDeclarationBlocker identifies exact static wording whose declaration
@@ -678,23 +680,40 @@ type StaticDeclaration struct {
 	Condition     *CompiledCondition
 
 	// Exactly one variant payload matching Kind is non-nil.
-	Continuous           *StaticContinuousDeclaration
-	Rule                 *StaticRuleDeclaration
-	Cost                 *StaticCostModifierDeclaration
-	CardGrant            *StaticCardAbilityGrantDeclaration
-	Player               *StaticPlayerRuleDeclaration
-	OpponentRestriction  *StaticOpponentActionRestrictionDeclaration
-	EnterRestriction     *StaticEnterBattlefieldRestrictionDeclaration
-	SpellUncounterable   *StaticSpellUncounterableDeclaration
-	EnteringMultiplier   *StaticEnteringTriggerMultiplierDeclaration
-	ControlledMultiplier *StaticControlledTriggerMultiplierDeclaration
-	Untap                *StaticUntapStepDeclaration
-	CharacteristicPT     *StaticCharacteristicPowerToughnessDeclaration
-	CastAsThoughFlash    *StaticCastAsThoughFlashDeclaration
-	GraveyardGrant       *StaticGraveyardKeywordGrantDeclaration
-	DrawLimit            *StaticDrawLimitDeclaration
-	CastLimit            *StaticCastLimitDeclaration
+	Continuous                  *StaticContinuousDeclaration
+	Rule                        *StaticRuleDeclaration
+	Cost                        *StaticCostModifierDeclaration
+	CardGrant                   *StaticCardAbilityGrantDeclaration
+	Player                      *StaticPlayerRuleDeclaration
+	OpponentRestriction         *StaticOpponentActionRestrictionDeclaration
+	EnterRestriction            *StaticEnterBattlefieldRestrictionDeclaration
+	SpellUncounterable          *StaticSpellUncounterableDeclaration
+	EnteringMultiplier          *StaticEnteringTriggerMultiplierDeclaration
+	ControlledMultiplier        *StaticControlledTriggerMultiplierDeclaration
+	Untap                       *StaticUntapStepDeclaration
+	CharacteristicPT            *StaticCharacteristicPowerToughnessDeclaration
+	CastAsThoughFlash           *StaticCastAsThoughFlashDeclaration
+	GraveyardGrant              *StaticGraveyardKeywordGrantDeclaration
+	DrawLimit                   *StaticDrawLimitDeclaration
+	CastLimit                   *StaticCastLimitDeclaration
+	OpeningHandPlay             *StaticOpeningHandPlayDeclaration
+	OpponentEnteringSuppression *StaticOpponentEnteringTriggerSuppressionDeclaration
 }
+
+// StaticOpeningHandPlayDeclaration marks the pre-game permission "If this card
+// is in your opening hand, you may begin the game with it on the battlefield."
+// (the Leyline cycle). The permission is a special action taken before the game
+// begins; this engine starts every game from a fixed setup and never models
+// opening hands, so the declaration carries no payload and lowers to an inert
+// static ability.
+type StaticOpeningHandPlayDeclaration struct{}
+
+// StaticOpponentEnteringTriggerSuppressionDeclaration marks the static
+// "Permanents entering don't cause abilities of permanents your opponents
+// control to trigger." (Elesh Norn, Mother of Machines). It suppresses the
+// entering-caused triggered abilities of permanents the controller's opponents
+// control. The semantics are fixed, so the declaration carries no payload.
+type StaticOpponentEnteringTriggerSuppressionDeclaration struct{}
 
 // StaticCharacteristicPowerToughnessDeclaration carries the rules-derived count
 // a characteristic-defining ability sets the source object's power and toughness
@@ -773,6 +792,14 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticEntryChoiceSubtypeDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticOpeningHandPlayDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticOpponentEnteringTriggerSuppressionDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
