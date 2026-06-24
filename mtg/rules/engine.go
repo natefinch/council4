@@ -43,6 +43,19 @@ func (e *Engine) NewGoldfishGame(config game.PlayerConfig) *game.Game {
 
 // RunGame runs a game to completion and returns its structured result.
 func (e *Engine) RunGame(g *game.Game, agents [game.NumPlayers]PlayerAgent) *GameResult {
+	return e.RunGameWithTurnLimit(g, agents, maxGameTurns)
+}
+
+// RunGameWithTurnLimit plays a full multiplayer game like RunGame but stops
+// after at most turnLimit turns, so a caller in a constrained environment (for
+// example a browser running the engine in WebAssembly) can bound a game that
+// would otherwise durdle toward the 1000-turn safety cap and exhaust memory. A
+// turnLimit of zero or less, or above maxGameTurns, uses the maxGameTurns safety
+// cap. When the limit is reached with no winner the result has HasWinner false.
+func (e *Engine) RunGameWithTurnLimit(g *game.Game, agents [game.NumPlayers]PlayerAgent, turnLimit int) *GameResult {
+	if turnLimit <= 0 || turnLimit > maxGameTurns {
+		turnLimit = maxGameTurns
+	}
 	result := &GameResult{}
 	e.drawOpeningHands(g)
 	result.OpeningHand = append([]id.ID(nil), g.Players[game.Player1].Hand.All()...)
@@ -55,7 +68,7 @@ func (e *Engine) RunGame(g *game.Game, agents [game.NumPlayers]PlayerAgent) *Gam
 		return result
 	}
 
-	for !g.IsGameOver() && len(result.Turns) < maxGameTurns {
+	for !g.IsGameOver() && len(result.Turns) < turnLimit {
 		turnLog := e.runTurn(g, agents)
 		result.addLosses(turnLog.Losses)
 		result.Turns = append(result.Turns, turnLog)
