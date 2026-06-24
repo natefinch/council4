@@ -478,6 +478,21 @@ func validateMassObjectOrGroup(object ObjectReference, group GroupReference, tar
 	return validateGroupReference(group, targets, checkTargets)
 }
 
+// validateMassPlayerOrGroup is the player twin of validateMassObjectOrGroup: it
+// enforces that exactly one of a primitive's Player or PlayerGroup reference is
+// set. name is the owning primitive's name so each call site keeps its existing
+// error message verbatim. Reference dispatch (validatePlayerReference /
+// validatePlayerGroupReference) stays at the call sites because the surrounding
+// per-primitive checks differ.
+func validateMassPlayerOrGroup(name string, player PlayerReference, group PlayerGroupReference) error {
+	hasGroup := group.Kind != PlayerGroupReferenceNone
+	hasPlayer := player.Kind() != PlayerReferenceNone
+	if hasGroup == hasPlayer {
+		return fmt.Errorf("%s requires exactly one of Player or PlayerGroup", name)
+	}
+	return nil
+}
+
 func validateCardReference(ref CardReference) error {
 	switch ref.Kind {
 	case CardReferenceLinked:
@@ -667,11 +682,10 @@ func (p Draw) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
-	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
-	hasPlayer := p.Player.Kind() != PlayerReferenceNone
-	if hasGroup == hasPlayer {
-		return errors.New("Draw requires exactly one of Player or PlayerGroup")
+	if err := validateMassPlayerOrGroup("Draw", p.Player, p.PlayerGroup); err != nil {
+		return err
 	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
 	if hasGroup {
 		return validatePlayerGroupReference(p.PlayerGroup)
 	}
@@ -718,11 +732,10 @@ func (p Discard) validatePrimitive(targets []TargetSpec, checkTargets bool) erro
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
-	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
-	hasPlayer := p.Player.Kind() != PlayerReferenceNone
-	if hasGroup == hasPlayer {
-		return errors.New("Discard requires exactly one of Player or PlayerGroup")
+	if err := validateMassPlayerOrGroup("Discard", p.Player, p.PlayerGroup); err != nil {
+		return err
 	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
 	if p.PublishLinked != "" && (p.EntireHand || hasGroup) {
 		return errors.New("Discard with PublishLinked must be a single-player, non-entire-hand discard")
 	}
@@ -912,11 +925,10 @@ func (p AddPlayerCounter) validatePrimitive(targets []TargetSpec, checkTargets b
 	if err := validatePositiveQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
-	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
-	hasPlayer := p.Player.Kind() != PlayerReferenceNone
-	if hasGroup == hasPlayer {
-		return errors.New("AddPlayerCounter requires exactly one of Player or PlayerGroup")
+	if err := validateMassPlayerOrGroup("AddPlayerCounter", p.Player, p.PlayerGroup); err != nil {
+		return err
 	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
 	if hasGroup {
 		return validatePlayerGroupReference(p.PlayerGroup)
 	}
@@ -1158,11 +1170,10 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 			return err
 		}
 	}
-	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
-	hasPlayer := p.Player.Kind() != PlayerReferenceNone
-	if hasGroup == hasPlayer {
-		return errors.New("Search requires exactly one of Player or PlayerGroup")
+	if err := validateMassPlayerOrGroup("Search", p.Player, p.PlayerGroup); err != nil {
+		return err
 	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
 	if hasGroup {
 		if p.Controller.Exists {
 			return errors.New("Search with PlayerGroup cannot set a controller")
@@ -1631,11 +1642,10 @@ func (p GainLife) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
-	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
-	hasPlayer := p.Player.Kind() != PlayerReferenceNone
-	if hasGroup == hasPlayer {
-		return errors.New("GainLife requires exactly one of Player or PlayerGroup")
+	if err := validateMassPlayerOrGroup("GainLife", p.Player, p.PlayerGroup); err != nil {
+		return err
 	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
 	if hasGroup {
 		return validatePlayerGroupReference(p.PlayerGroup)
 	}
@@ -1646,11 +1656,10 @@ func (p LoseLife) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
-	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
-	hasPlayer := p.Player.Kind() != PlayerReferenceNone
-	if hasGroup == hasPlayer {
-		return errors.New("LoseLife requires exactly one of Player or PlayerGroup")
+	if err := validateMassPlayerOrGroup("LoseLife", p.Player, p.PlayerGroup); err != nil {
+		return err
 	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
 	if hasGroup {
 		return validatePlayerGroupReference(p.PlayerGroup)
 	}
@@ -1873,14 +1882,13 @@ func (p SacrificePermanents) validatePrimitive(targets []TargetSpec, checkTarget
 	if err := firstProblem(p.Selection.Validate()); err != nil {
 		return err
 	}
-	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
-	hasPlayer := p.Player.Kind() != PlayerReferenceNone
-	if hasGroup == hasPlayer {
-		return errors.New("SacrificePermanents requires exactly one of Player or PlayerGroup")
+	if err := validateMassPlayerOrGroup("SacrificePermanents", p.Player, p.PlayerGroup); err != nil {
+		return err
 	}
 	if err := p.Fallback.validate(targets, checkTargets); err != nil {
 		return err
 	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
 	if hasGroup {
 		return validatePlayerGroupReference(p.PlayerGroup)
 	}
@@ -1969,11 +1977,10 @@ func (p Mill) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
-	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
-	hasPlayer := p.Player.Kind() != PlayerReferenceNone
-	if hasGroup == hasPlayer {
-		return errors.New("Mill requires exactly one of Player or PlayerGroup")
+	if err := validateMassPlayerOrGroup("Mill", p.Player, p.PlayerGroup); err != nil {
+		return err
 	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
 	if hasGroup {
 		if p.PublishLinked != "" {
 			return errors.New("Mill cannot publish linked cards for the group form")
@@ -1987,11 +1994,10 @@ func (p ExileTopOfLibrary) validatePrimitive(targets []TargetSpec, checkTargets 
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
-	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
-	hasPlayer := p.Player.Kind() != PlayerReferenceNone
-	if hasGroup == hasPlayer {
-		return errors.New("ExileTopOfLibrary requires exactly one of Player or PlayerGroup")
+	if err := validateMassPlayerOrGroup("ExileTopOfLibrary", p.Player, p.PlayerGroup); err != nil {
+		return err
 	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
 	if hasGroup {
 		return validatePlayerGroupReference(p.PlayerGroup)
 	}
@@ -2012,11 +2018,10 @@ func (p RevealUntil) validatePrimitive(targets []TargetSpec, checkTargets bool) 
 	if err := firstProblem(p.Until.Validate()); err != nil {
 		return err
 	}
-	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
-	hasPlayer := p.Player.Kind() != PlayerReferenceNone
-	if hasGroup == hasPlayer {
-		return errors.New("RevealUntil requires exactly one of Player or PlayerGroup")
+	if err := validateMassPlayerOrGroup("RevealUntil", p.Player, p.PlayerGroup); err != nil {
+		return err
 	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
 	if hasGroup {
 		return validatePlayerGroupReference(p.PlayerGroup)
 	}
