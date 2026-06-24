@@ -1628,6 +1628,19 @@ func recognizeTokenCreationCondition(body []shared.Token, _ Atoms) (ConditionCla
 		tokenWordsEqual(body, "one", "or", "more", "tokens", "would", "be", "created") {
 		return ConditionClause{Predicate: ConditionPredicateTokenCreationAnyController}, true
 	}
+	// The passive would-create wording may carry a card-type filter ("one or
+	// more artifact tokens would be created under your control"). The type word
+	// is tolerated here and carried downstream by the would-create group's
+	// selector, mirroring the active "you would create one or more <type>
+	// tokens" form handled just below.
+	if rest, ok := cutTokenPrefix(body, "one", "or", "more"); ok {
+		if _, ok := stripTokenSuffix(rest, "tokens", "would", "be", "created", "under", "your", "control"); ok {
+			return ConditionClause{Predicate: ConditionPredicateTokenCreationUnderController}, true
+		}
+		if _, ok := stripTokenSuffix(rest, "tokens", "would", "be", "created"); ok {
+			return ConditionClause{Predicate: ConditionPredicateTokenCreationAnyController}, true
+		}
+	}
 	if rest, ok := cutTokenPrefix(body, "you", "would", "create", "one", "or", "more"); ok {
 		if _, ok := stripTokenSuffix(rest, "tokens"); ok {
 			return ConditionClause{Predicate: ConditionPredicateTokenCreationUnderController}, true

@@ -1096,6 +1096,9 @@ func matchingTokenCreationReplacementEffects(g *game.Game, event game.Event, tok
 		if !tokenHasAllSubtypes(token, replacement.TokenRequiredSubtypes) {
 			continue
 		}
+		if !tokenHasAllTypes(token, replacement.TokenRequiredTypes) {
+			continue
+		}
 		if applied[replacement.ID] || !replacementEffectMatchesEvent(g, replacement, event) {
 			continue
 		}
@@ -1116,6 +1119,24 @@ func tokenHasAllSubtypes(token *game.CardDef, required []types.Sub) bool {
 	}
 	for _, sub := range required {
 		if !slices.Contains(token.Subtypes, sub) {
+			return false
+		}
+	}
+	return true
+}
+
+// tokenHasAllTypes reports whether the created token carries every card type in
+// the replacement's filter. An empty filter matches any token; a nil token never
+// satisfies a non-empty filter.
+func tokenHasAllTypes(token *game.CardDef, required []types.Card) bool {
+	if len(required) == 0 {
+		return true
+	}
+	if token == nil {
+		return false
+	}
+	for _, cardType := range required {
+		if !slices.Contains(token.Types, cardType) {
 			return false
 		}
 	}

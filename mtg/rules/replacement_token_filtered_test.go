@@ -158,3 +158,61 @@ func TestTokenAddendCreatesDifferentPredefinedTokenType(t *testing.T) {
 		t.Fatalf("created Food tokens = %d, want 1 (cross-type addend)", got)
 	}
 }
+
+func mapTokenCardDef() *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:     "Map",
+		Types:    []types.Card{types.Artifact},
+		Subtypes: []types.Sub{types.Map},
+	}}
+}
+
+func artifactTypeAddendReplacementCardDef() *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  "Worldwalker Helm",
+		Types: []types.Card{types.Artifact},
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.TokenCreationReplacementFiltered(
+				"If you would create one or more artifact tokens, instead create those tokens plus an additional Map token.",
+				&game.TokenCreationReplacementSpec{
+					Multiplier: 1,
+					Addend:     1,
+					Types:      []types.Card{types.Artifact},
+					Filter:     game.TriggerControllerYou,
+					AddendDef:  mapTokenCardDef(),
+				},
+			),
+		},
+	}}
+}
+
+func TestTokenTypeFilterAppliesToMatchingType(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, artifactTypeAddendReplacementCardDef())
+
+	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player1, treasureTokenCardDef(), 1, false, [game.NumPlayers]PlayerAgent{}, nil) {
+		t.Fatal("createTokenPermanentsWithChoices() = false, want true")
+	}
+	if got := countTokenPermanentsNamed(g, "Treasure"); got != 1 {
+		t.Fatalf("created Treasure tokens = %d, want 1", got)
+	}
+	if got := countTokenPermanentsNamed(g, "Map"); got != 1 {
+		t.Fatalf("created Map addend tokens = %d, want 1 (artifact filter must match an artifact token)", got)
+	}
+}
+
+func TestTokenTypeFilterIgnoresOtherTypes(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, artifactTypeAddendReplacementCardDef())
+	token := &game.CardDef{CardFace: game.CardFace{Name: "Soldier", Types: []types.Card{types.Creature}}}
+
+	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player1, token, 1, false, [game.NumPlayers]PlayerAgent{}, nil) {
+		t.Fatal("createTokenPermanentsWithChoices() = false, want true")
+	}
+	if got := countTokenPermanentsNamed(g, "Soldier"); got != 1 {
+		t.Fatalf("created Soldier tokens = %d, want 1", got)
+	}
+	if got := countTokenPermanentsNamed(g, "Map"); got != 0 {
+		t.Fatalf("created Map addend tokens = %d, want 0 (artifact filter must not match a creature token)", got)
+	}
+}

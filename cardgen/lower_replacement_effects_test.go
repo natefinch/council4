@@ -434,6 +434,98 @@ func TestLowerFilteredTokenCreationReplacement(t *testing.T) {
 			t.Fatalf("replacement = %+v, want cross-type Food addend", replacement)
 		}
 	})
+	t.Run("passive food addend", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, &ScryfallCard{
+			Name:       "Peregrin Took",
+			Layout:     "normal",
+			TypeLine:   "Legendary Creature — Halfling",
+			OracleText: "If one or more tokens would be created under your control, those tokens plus an additional Food token are created instead.",
+		})
+		if len(face.ReplacementAbilities) != 1 {
+			t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+		}
+		replacement := face.ReplacementAbilities[0].Replacement
+		if replacement.MatchEvent != game.EventTokenCreated ||
+			replacement.ControllerFilter != game.TriggerControllerYou ||
+			replacement.TokenMultiplier != 1 ||
+			replacement.TokenAddend != 1 ||
+			len(replacement.TokenRequiredSubtypes) != 0 ||
+			len(replacement.TokenRequiredTypes) != 0 ||
+			replacement.TokenAddendDef == nil ||
+			replacement.TokenAddendDef.Name != "Food" {
+			t.Fatalf("replacement = %+v, want passive Food addend", replacement)
+		}
+	})
+	t.Run("passive non-additional article addend", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, &ScryfallCard{
+			Name:       "Donatello, the Brains",
+			Layout:     "normal",
+			TypeLine:   "Legendary Artifact Creature — Turtle Warrior",
+			OracleText: "If one or more tokens would be created under your control, those tokens plus a Mutagen token are created instead.",
+		})
+		if len(face.ReplacementAbilities) != 1 {
+			t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+		}
+		replacement := face.ReplacementAbilities[0].Replacement
+		if replacement.MatchEvent != game.EventTokenCreated ||
+			replacement.ControllerFilter != game.TriggerControllerYou ||
+			replacement.TokenMultiplier != 1 ||
+			replacement.TokenAddend != 1 ||
+			replacement.TokenAddendDef == nil ||
+			replacement.TokenAddendDef.Name != "Mutagen" {
+			t.Fatalf("replacement = %+v, want passive Mutagen addend", replacement)
+		}
+	})
+	t.Run("typed artifact filter addend", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, &ScryfallCard{
+			Name:       "Worldwalker Helm",
+			Layout:     "normal",
+			TypeLine:   "Artifact",
+			OracleText: "If you would create one or more artifact tokens, instead create those tokens plus an additional Map token.",
+		})
+		if len(face.ReplacementAbilities) != 1 {
+			t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+		}
+		replacement := face.ReplacementAbilities[0].Replacement
+		if replacement.MatchEvent != game.EventTokenCreated ||
+			replacement.ControllerFilter != game.TriggerControllerYou ||
+			replacement.TokenMultiplier != 1 ||
+			replacement.TokenAddend != 1 ||
+			len(replacement.TokenRequiredTypes) != 1 ||
+			replacement.TokenRequiredTypes[0] != types.Artifact ||
+			replacement.TokenAddendDef == nil ||
+			replacement.TokenAddendDef.Name != "Map" {
+			t.Fatalf("replacement = %+v, want artifact-filtered Map addend", replacement)
+		}
+	})
+	t.Run("typed passive creature-spec addend", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, &ScryfallCard{
+			Name:       "Stridehangar Automaton",
+			Layout:     "normal",
+			TypeLine:   "Artifact Creature — Construct",
+			OracleText: "If one or more artifact tokens would be created under your control, those tokens plus an additional 1/1 colorless Thopter artifact creature token with flying are created instead.",
+		})
+		if len(face.ReplacementAbilities) != 1 {
+			t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+		}
+		replacement := face.ReplacementAbilities[0].Replacement
+		if replacement.MatchEvent != game.EventTokenCreated ||
+			replacement.ControllerFilter != game.TriggerControllerYou ||
+			replacement.TokenMultiplier != 1 ||
+			replacement.TokenAddend != 1 ||
+			len(replacement.TokenRequiredTypes) != 1 ||
+			replacement.TokenRequiredTypes[0] != types.Artifact ||
+			replacement.TokenAddendDef == nil ||
+			replacement.TokenAddendDef.Name != "Thopter" ||
+			!replacement.TokenAddendDef.Power.Exists ||
+			replacement.TokenAddendDef.Power.Val.Value != 1 {
+			t.Fatalf("replacement = %+v, want artifact-filtered Thopter creature addend", replacement)
+		}
+	})
 }
 
 func TestLowerLifeGainReplacement(t *testing.T) {

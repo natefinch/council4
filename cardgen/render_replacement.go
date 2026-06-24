@@ -536,6 +536,7 @@ func renderTokenCreationReplacement(ctx *renderCtx, ability *game.ReplacementAbi
 	if replacement.ControllerFilter != game.TriggerControllerAny &&
 		replacement.TokenAddend == 0 &&
 		len(replacement.TokenRequiredSubtypes) == 0 &&
+		len(replacement.TokenRequiredTypes) == 0 &&
 		replacement.TokenMultiplier > 1 {
 		controller, err := renderTriggerController(replacement.ControllerFilter)
 		if err != nil {
@@ -571,6 +572,13 @@ func renderFilteredTokenCreationReplacement(ctx *renderCtx, ability *game.Replac
 			return "", err
 		}
 		fields = append(fields, fmt.Sprintf("Subtypes: %s,", subtypes))
+	}
+	if len(replacement.TokenRequiredTypes) != 0 {
+		cardTypes, err := renderTypesCardSlice(ctx, replacement.TokenRequiredTypes)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Types: %s,", cardTypes))
 	}
 	if replacement.TokenAddendDef != nil {
 		fields = append(fields, fmt.Sprintf("AddendDef: %s,", ctx.tokenDefVar(replacement.TokenAddendDef)))

@@ -1040,6 +1040,7 @@ func stripLeadingDurationClause(tokens []shared.Token, atoms Atoms) ([]shared.To
 func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
 	for _, recognize := range []func() ([]EffectSyntax, bool){
 		func() ([]EffectSyntax, bool) { return parsePassiveTokenDoublingEffects(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parsePassiveTokenAdditiveEffects(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseEntersAsCopyEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDevourEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseTributeEffect(sentence, tokens, atoms) },
@@ -1535,6 +1536,172 @@ func matchPassiveTokenDoubling(tokens []shared.Token) (commaIndex int, anyContro
 		return 8, true, true
 	}
 	return 0, false, false
+}
+
+// parsePassiveTokenAdditiveEffects recognizes the passive-voice additive
+// token-creation replacement "If one or more [type] tokens would be created
+// under your control, those tokens plus <addend> are created instead."
+// (Peregrin Took: "... plus an additional Food token ..."; Donatello, the
+// Brains: "... plus a Mutagen token ..."; Stridehangar Automaton: "If one or
+// more artifact tokens would be created under your control, those tokens plus an
+// additional 1/1 colorless Thopter artifact creature token with flying are
+// created instead."). Its active-voice equivalent "If you would create one or
+// more [type] tokens, instead create those tokens plus an additional <addend>."
+// (Worldwalker Helm, Xorn) parses through the ordinary create-verb path. The
+// passive wording carries no active "create" verb, so it is recognized here and
+// emitted as the same two EffectCreate instructions the active form produces:
+// the would-create group (carrying the optional card-type filter in its
+// selector) and the addend output marked EffectReplacementPlusAdditional. The
+// matching intervening-if condition is recognized separately by
+// recognizeTokenCreationCondition.
+func parsePassiveTokenAdditiveEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	commaIndex, anyController, ok := matchPassiveTokenAdditive(tokens)
+	if !ok {
+		return nil, false
+	}
+	condition := tokens[:commaIndex]
+	resolving := tokens[commaIndex+1:]
+	addendAmount, ok := passiveTokenAddendAmount(resolving, atoms)
+	if !ok {
+		return nil, false
+	}
+	// The would-create noun phrase ("one or more [type] tokens") is the
+	// condition with its leading "if" and trailing "would be created [under your
+	// control]" stripped. parseSelection over just the noun phrase keeps the
+	// "would be created" verb words and the controller clause out of the
+	// selection, leaving the optional card-type filter the lowering reads.
+	nounPhrase := condition
+	if len(nounPhrase) > 0 && equalWord(nounPhrase[0], "if") {
+		nounPhrase = nounPhrase[1:]
+	}
+	if trimmed, stripped := stripTokenSuffix(nounPhrase, "would", "be", "created", "under", "your", "control"); stripped {
+		nounPhrase = trimmed
+	} else if trimmed, stripped := stripTokenSuffix(nounPhrase, "would", "be", "created"); stripped {
+		nounPhrase = trimmed
+	}
+	createdIndex := commaIndex - 1
+	for i := range condition {
+		if equalWord(condition[i], "created") {
+			createdIndex = i
+			break
+		}
+	}
+	createEffect := EffectSyntax{
+		Kind:             EffectCreate,
+		Context:          EffectContextController,
+		Span:             shared.SpanOf(condition),
+		VerbSpan:         tokens[createdIndex].Span,
+		ClauseSpan:       shared.SpanOf(condition),
+		Text:             sentence.Text,
+		Tokens:           append([]shared.Token(nil), condition...),
+		Selection:        parseSelection(nounPhrase, atoms),
+		Amount:           EffectAmountSyntax{Value: 1, Known: true},
+		UnderYourControl: !anyController,
+	}
+	if conjunctiveTypeTarget(createEffect.Selection) {
+		createEffect.Selection.ConjunctiveTypes = true
+	}
+	// The addend clause ("those tokens plus <addend>") is the resolving clause
+	// with its trailing "are created instead ." stripped. It is parsed by the
+	// same token-characteristic helpers the active create-verb path uses, so the
+	// addend's subtypes, colors, power/toughness, keyword, and name match the
+	// active form exactly.
+	addendClause := resolving[:len(resolving)-4]
+	tokenPower, tokenToughness, tokenPTKnown := parseTokenPowerToughness(EffectCreate, addendClause)
+	plusSpan := resolving[0].Span
+	for i := range resolving {
+		if equalWord(resolving[i], "plus") {
+			plusSpan = resolving[i].Span
+			break
+		}
+	}
+	createdResolvingIndex := len(resolving) - 3
+	addendEffect := EffectSyntax{
+		Kind:                EffectCreate,
+		Context:             EffectContextReferencedObject,
+		Span:                shared.SpanOf(resolving),
+		VerbSpan:            resolving[createdResolvingIndex].Span,
+		ClauseSpan:          shared.SpanOf(resolving),
+		Text:                sentence.Text,
+		Tokens:              append([]shared.Token(nil), resolving...),
+		Selection:           parseSelection(addendClause, atoms),
+		Amount:              EffectAmountSyntax{Value: 1, Known: true},
+		TokenPower:          tokenPower,
+		TokenToughness:      tokenToughness,
+		TokenPTKnown:        tokenPTKnown,
+		TokenKeywords:       parseTokenKeywords(EffectCreate, addendClause, atoms),
+		TokenName:           parseTokenName(EffectCreate, addendClause),
+		TokenPredefinedName: parsePredefinedTokenName(EffectCreate, addendClause),
+		Replacement: EffectReplacementSyntax{
+			Kind:   EffectReplacementPlusAdditional,
+			Amount: addendAmount,
+			Span:   plusSpan,
+		},
+		References: referencesInSpan(atoms, shared.SpanOf(resolving)),
+	}
+	if conjunctiveTypeTarget(addendEffect.Selection) {
+		addendEffect.Selection.ConjunctiveTypes = true
+	}
+	return []EffectSyntax{createEffect, addendEffect}, true
+}
+
+// matchPassiveTokenAdditive reports the index of the comma separating the
+// would-create condition clause from the additive output clause when tokens
+// spell the passive additive token-creation replacement. The controller-only
+// wording ("...under your control, ...") and the controller-agnostic wording
+// ("...would be created, ...") are distinguished by anyController. The optional
+// card-type word(s) between "more" and "tokens" are tolerated here and carried
+// downstream by the would-create group's selector, mirroring the active form.
+func matchPassiveTokenAdditive(tokens []shared.Token) (commaIndex int, anyController, ok bool) {
+	if !effectWordsAt(tokens, 0, "if", "one", "or", "more") {
+		return 0, false, false
+	}
+	for i := range tokens {
+		if tokens[i].Kind != shared.Comma || !effectWordsAt(tokens, i+1, "those", "tokens", "plus") {
+			continue
+		}
+		body := tokens[1:i]
+		controllerOnly := false
+		if _, stripped := stripTokenSuffix(body, "tokens", "would", "be", "created", "under", "your", "control"); stripped {
+			controllerOnly = true
+		} else if _, stripped := stripTokenSuffix(body, "tokens", "would", "be", "created"); !stripped {
+			continue
+		}
+		if !effectWordsAt(body, 0, "one", "or", "more") {
+			continue
+		}
+		resolving := tokens[i+1:]
+		n := len(resolving)
+		if n < 4 ||
+			!effectWordsAt(resolving, n-4, "are", "created", "instead") ||
+			resolving[n-1].Kind != shared.Period {
+			continue
+		}
+		return i, !controllerOnly, true
+	}
+	return 0, false, false
+}
+
+// passiveTokenAddendAmount returns the number of additional tokens an additive
+// token-creation replacement creates, read from the "those tokens plus <amount>
+// ..." clause. The "a"/"an" article and the "an additional" rider both denote a
+// single extra token; an explicit number ("two additional ...") denotes that
+// many. Any other wording fails closed.
+func passiveTokenAddendAmount(tokens []shared.Token, atoms Atoms) (int, bool) {
+	for i := range tokens {
+		if !equalWord(tokens[i], "plus") || i+1 >= len(tokens) {
+			continue
+		}
+		next := tokens[i+1]
+		if equalWord(next, "a") || equalWord(next, "an") {
+			return 1, true
+		}
+		if amount, ok := effectNumber(next, atoms); ok {
+			return amount, true
+		}
+		return 0, false
+	}
+	return 0, false
 }
 
 // parseDrawEmptyLibraryWinReplacement recognizes the draw-from-empty-library win
