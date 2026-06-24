@@ -1429,6 +1429,41 @@ func handleGrantCastPermission(r *effectResolver, prim game.GrantCastPermission)
 	return res
 }
 
+func handleExileForPlay(r *effectResolver, prim game.ExileForPlay) effectResolved {
+	res := effectResolved{accepted: true}
+	cardID, fromZone, ok := resolveCardReference(r.game, r.obj, prim.Card)
+	if !ok || fromZone != prim.FromZone {
+		return res
+	}
+	card, ok := r.game.GetCardInstance(cardID)
+	if !ok {
+		return res
+	}
+	simultaneousID := r.game.IDGen.Next()
+	if !moveCardBetweenZonesInBatch(r.game, card.Owner, cardID, prim.FromZone, zone.Exile, false, simultaneousID) {
+		return res
+	}
+	kind := game.RuleEffectPlayFromZone
+	if prim.Cast {
+		kind = game.RuleEffectCastFromZone
+	}
+	r.game.RuleEffects = append(r.game.RuleEffects, game.RuleEffect{
+		ID:             r.game.IDGen.Next(),
+		Kind:           kind,
+		Controller:     r.obj.Controller,
+		SourceCardID:   r.obj.SourceCardID,
+		SourceObjectID: r.obj.SourceID,
+		AffectedPlayer: game.PlayerYou,
+		Duration:       prim.Duration,
+		CreatedTurn:    r.game.Turn.TurnNumber,
+		CastFromZone:   zone.Exile,
+		AffectedCardID: cardID,
+		ExpiresFor:     r.obj.Controller,
+	})
+	res.succeeded = true
+	return res
+}
+
 func handleSacrifice(r *effectResolver, prim game.Sacrifice) effectResolved {
 	res := effectResolved{accepted: true}
 	permanent, ok := r.resolveObject(prim.Object)

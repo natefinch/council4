@@ -564,6 +564,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", errors.New("render: internal error: GrantCastPermission kind has unexpected concrete type")
 		}
 		return r.renderGrantCastPermission(ctx, value)
+	case game.PrimitiveExileForPlay:
+		value, ok := primitive.(game.ExileForPlay)
+		if !ok {
+			return "", errors.New("render: internal error: ExileForPlay kind has unexpected concrete type")
+		}
+		return r.renderExileForPlay(ctx, value)
 	case game.PrimitiveImpulseExile:
 		value, ok := primitive.(game.ImpulseExile)
 		if !ok {

@@ -296,6 +296,9 @@ func (PutLinkedExiledCardsInLibrary) Kind() PrimitiveKind {
 // Kind implements Primitive for GrantCastPermission.
 func (GrantCastPermission) Kind() PrimitiveKind { return PrimitiveGrantCastPermission }
 
+// Kind implements Primitive for ExileForPlay.
+func (ExileForPlay) Kind() PrimitiveKind { return PrimitiveExileForPlay }
+
 // Kind implements Primitive for Attach.
 func (Attach) Kind() PrimitiveKind { return PrimitiveAttach }
 
@@ -402,6 +405,7 @@ func (PreventDamage) isPrimitive()                        {}
 func (MoveCard) isPrimitive()                             {}
 func (MoveCommander) isPrimitive()                        {}
 func (GrantCastPermission) isPrimitive()                  {}
+func (ExileForPlay) isPrimitive()                         {}
 func (ChooseNewTargets) isPrimitive()                     {}
 func (PutPermanentOnLibrary) isPrimitive()                {}
 func (PutLinkedExiledCardsInLibrary) isPrimitive()        {}
@@ -643,6 +647,9 @@ func (RollDie) instructionRefs() primitiveRefs {
 	return primitiveRefs{}
 }
 func (p GrantCastPermission) instructionRefs() primitiveRefs {
+	return cardReferenceRefs(p.Card)
+}
+func (p ExileForPlay) instructionRefs() primitiveRefs {
 	return cardReferenceRefs(p.Card)
 }
 func (p PutPermanentOnLibrary) instructionRefs() primitiveRefs {

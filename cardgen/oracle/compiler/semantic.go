@@ -1350,6 +1350,7 @@ const (
 	EffectChooseNewTargets
 	EffectCastAsThoughFlash
 	EffectPlayFromLibraryTop
+	EffectPlay
 	EffectCantCastSpells
 	EffectSpellCostModifier
 	EffectWinGame

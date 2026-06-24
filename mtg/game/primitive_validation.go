@@ -1843,6 +1843,20 @@ func (p GrantCastPermission) validatePrimitive([]TargetSpec, bool) error {
 	return nil
 }
 
+func (p ExileForPlay) validatePrimitive([]TargetSpec, bool) error {
+	if err := validateCardReference(p.Card); err != nil {
+		return err
+	}
+	if p.FromZone != zone.Graveyard {
+		return errors.New("ExileForPlay requires graveyard as its source zone")
+	}
+	if p.Duration != DurationThisTurn && p.Duration != DurationUntilEndOfTurn &&
+		p.Duration != DurationUntilEndOfYourNextTurn && p.Duration != DurationUntilYourNextEndStep {
+		return errors.New("ExileForPlay requires a this-turn, until-end-of-turn, until-end-of-your-next-turn, or until-your-next-end-step play window")
+	}
+	return nil
+}
+
 func (p Sacrifice) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.Object.Kind() == ObjectReferenceNone {
 		return nil
