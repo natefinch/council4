@@ -397,6 +397,22 @@ func TestCompileActionTriggerPatterns(t *testing.T) {
 			},
 		},
 		{
+			source: "Whenever you commit a crime, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventCrimeCommitted || pattern.Player != TriggerPlayerYou {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			source: "Whenever an opponent commits a crime, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventCrimeCommitted || pattern.Player != TriggerPlayerOpponent {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
 			source: "Whenever an opponent searches their library, you gain 1 life and draw a card.",
 			check: func(t *testing.T, pattern TriggerPattern) {
 				if pattern.Event != TriggerEventLibrarySearched || pattern.Player != TriggerPlayerOpponent {

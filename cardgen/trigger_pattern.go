@@ -370,6 +370,8 @@ func lowerTriggerEvent(event compiler.TriggerEvent) (game.EventKind, bool) {
 		return game.EventLibrarySearched, true
 	case compiler.TriggerEventClassBecameLevel:
 		return game.EventClassLevelGained, true
+	case compiler.TriggerEventCrimeCommitted:
+		return game.EventCrimeCommitted, true
 	default:
 		return game.EventUnknown, false
 	}
