@@ -159,7 +159,8 @@ func compilePlayerEventCard(action parser.PlayerEventActionKind, card parser.Pla
 // TriggerSelection. A filter is representable only for discard, where
 // card-type-filtered discard triggers occur (CR 603.2).
 func compilePlayerEventCardSelection(card parser.PlayerEventCard) (TriggerSelection, bool) {
-	if len(card.RequiredTypes) == 0 && len(card.ExcludedTypes) == 0 {
+	if len(card.RequiredTypes) == 0 && len(card.ExcludedTypes) == 0 &&
+		len(card.RequiredTypesAny) == 0 && len(card.RequiredSubtypesAny) == 0 {
 		return TriggerSelection{}, true
 	}
 	var selection TriggerSelection
@@ -177,6 +178,14 @@ func compilePlayerEventCardSelection(card parser.PlayerEventCard) (TriggerSelect
 		}
 		selection.ExcludedTypes = append(selection.ExcludedTypes, compiled)
 	}
+	for _, value := range card.RequiredTypesAny {
+		compiled := compileTriggerCardType(value)
+		if compiled == "" {
+			return TriggerSelection{}, false
+		}
+		selection.RequiredTypesAny = append(selection.RequiredTypesAny, compiled)
+	}
+	selection.SubtypesAny = append(selection.SubtypesAny, card.RequiredSubtypesAny...)
 	return selection, true
 }
 

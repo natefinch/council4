@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestParsePhaseStepTriggerClauses(t *testing.T) {
@@ -442,6 +443,45 @@ func TestParsePlayerEventDiscardCardTypeFilters(t *testing.T) {
 			}
 			if !slices.Equal(card.ExcludedTypes, test.excluded) {
 				t.Fatalf("excluded types = %#v, want %#v", card.ExcludedTypes, test.excluded)
+			}
+		})
+	}
+}
+
+func TestParsePlayerEventDiscardSubtypeUnionFilters(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		event        string
+		card         PlayerEventCardKind
+		subtypesAny  []TriggerSubtype
+		requiredTAny []TriggerCardType
+	}{
+		{"you discard an Island, Pirate, or Vehicle card", PlayerEventCardSingle, []TriggerSubtype{types.Island, types.Pirate, types.Vehicle}, nil},
+		{"you discard a Pirate or Vehicle card", PlayerEventCardSingle, []TriggerSubtype{types.Pirate, types.Vehicle}, nil},
+		{"you discard an artifact or creature card", PlayerEventCardSingle, nil, []TriggerCardType{TriggerCardTypeArtifact, TriggerCardTypeCreature}},
+		{"you discard an artifact card", PlayerEventCardSingle, nil, nil},
+	}
+	for _, test := range tests {
+		t.Run(test.event, func(t *testing.T) {
+			t.Parallel()
+			source := "Whenever " + test.event + ", draw a card."
+			document, diagnostics := Parse(source, Context{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			trigger := document.Abilities[0].Trigger
+			if trigger == nil || trigger.PlayerEvent == nil {
+				t.Fatalf("trigger = %#v, want typed player-event clause", trigger)
+			}
+			card := trigger.PlayerEvent.Card
+			if card.Kind != test.card {
+				t.Fatalf("card kind = %q, want %q", card.Kind, test.card)
+			}
+			if !slices.Equal(card.RequiredSubtypesAny, test.subtypesAny) {
+				t.Fatalf("required subtypes any = %#v, want %#v", card.RequiredSubtypesAny, test.subtypesAny)
+			}
+			if !slices.Equal(card.RequiredTypesAny, test.requiredTAny) {
+				t.Fatalf("required types any = %#v, want %#v", card.RequiredTypesAny, test.requiredTAny)
 			}
 		})
 	}

@@ -963,6 +963,15 @@ type PlayerEventCard struct {
 	// card object, such as "a creature card" or "a noncreature, nonland card".
 	RequiredTypes []TriggerCardType `json:",omitempty"`
 	ExcludedTypes []TriggerCardType `json:",omitempty"`
+
+	// RequiredTypesAny and RequiredSubtypesAny record a disjunctive union on the
+	// event's card object: a card matching any one of the listed card types
+	// ("an artifact or creature card") or subtypes ("an Island, Pirate, or
+	// Vehicle card"). The two union dimensions are mutually exclusive because the
+	// runtime selection conjoins them, so a mixed type/subtype union fails
+	// closed in the parser.
+	RequiredTypesAny    []TriggerCardType `json:",omitempty"`
+	RequiredSubtypesAny []TriggerSubtype  `json:",omitempty"`
 }
 
 // PlayerEventOccurrenceKind identifies an event's supported turn-relative

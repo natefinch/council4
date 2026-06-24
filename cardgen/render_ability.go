@@ -977,16 +977,17 @@ func renderTriggerTurnRelation(relation game.TriggerTurnRelation) (string, error
 
 // validateTriggerPatternCardSelection validates CardSelection constraints for a
 // TriggerPattern and returns an error if they are unsupported. Spell-cast
-// triggers read full card characteristics from the event, while discard
-// triggers can only filter the discarded card's types (CR 603.2).
+// triggers read full card characteristics from the event, while draw, discard,
+// and cycle triggers read the moved card's types, supertypes, subtypes, and
+// colors from the moved card instance (CR 603.2).
 func validateTriggerPatternCardSelection(pattern *game.TriggerPattern) error {
 	if pattern.CardSelection.Empty() {
 		return nil
 	}
 	switch pattern.Event {
-	case game.EventSpellCast, game.EventCardDiscarded:
+	case game.EventSpellCast, game.EventCardDiscarded, game.EventCardDrawn, game.EventCycled:
 	default:
-		return errors.New("render: CardSelection is only supported for EventSpellCast and EventCardDiscarded trigger patterns")
+		return errors.New("render: CardSelection is only supported for EventSpellCast, EventCardDiscarded, EventCardDrawn, and EventCycled trigger patterns")
 	}
 	unsupported := pattern.CardSelection
 	unsupported.RequiredTypes = nil
@@ -1000,6 +1001,14 @@ func validateTriggerPatternCardSelection(pattern *game.TriggerPattern) error {
 		unsupported.Colorless = false
 		unsupported.Multicolored = false
 		unsupported.ManaValue.Exists = false
+	}
+	if pattern.Event == game.EventCardDiscarded || pattern.Event == game.EventCardDrawn || pattern.Event == game.EventCycled {
+		unsupported.Supertypes = nil
+		unsupported.SubtypesAny = nil
+		unsupported.ExcludedSubtype = ""
+		unsupported.ColorsAny = nil
+		unsupported.Colorless = false
+		unsupported.Multicolored = false
 	}
 	if !unsupported.Empty() {
 		return errors.New("render: unsupported CardSelection fields in trigger pattern")
