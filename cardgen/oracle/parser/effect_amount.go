@@ -457,6 +457,28 @@ func parseEffectAmount(kind EffectKind, tokens []shared.Token, atoms Atoms) Effe
 			}
 		}
 	}
+	if kind == EffectDealDamage {
+		// "deals that much damage" in a counter-placement trigger reads the
+		// number of counters added by the triggering event (Shalai and Hallar).
+		// The "that much damage plus N" damage-increase replacement is a distinct
+		// construct parsed elsewhere, so a trailing "plus" excludes it here. The
+		// counter-placement gate lives in lowering (lowerEventCounterCountAmount),
+		// keeping the amount closed for every other trigger event.
+		for i := 0; i+2 < len(tokens); i++ {
+			if !equalWord(tokens[i], "that") || !equalWord(tokens[i+1], "much") ||
+				!equalWord(tokens[i+2], "damage") {
+				continue
+			}
+			if i+3 < len(tokens) && equalWord(tokens[i+3], "plus") {
+				break
+			}
+			return EffectAmountSyntax{
+				Span:        shared.SpanOf(tokens[i : i+2]),
+				Text:        joinedEffectText(tokens[i : i+2]),
+				DynamicKind: EffectDynamicAmountTriggeringCounterCount,
+			}
+		}
+	}
 	if kind == EffectDraw || kind == EffectUntap {
 		for i, token := range tokens {
 			value, ok := effectNumber(token, atoms)
