@@ -27,14 +27,30 @@ const (
 
 	// Effect- and cost-value units for scoring an activated ability by what it
 	// does and what it spends (see activation.go). They are expressed in the same
-	// currency as targetingScore (threatScoreUnit × threat) so a sacrifice cost
-	// and a removal effect net against each other directly. They are deliberately
-	// coarse first-pass estimates; calibration is tracked separately.
-	scoreCardValue    = 12.0
-	scoreLifeValue    = 1.0
-	scoreManaValue    = 7.0
-	scoreTokenValue   = 12.0
-	scoreTutorValue   = 14.0
+	// currency as targetingScore, where threatScoreUnit (3) × a permanent's
+	// threat values removing it: a 1/1 (threat 2) is worth 6, a 3/3 (threat 4) is
+	// worth 12, a 5/5 (threat 6) is worth 18. The per-kind values are calibrated
+	// against that scale and justified individually below.
+	//
+	// scoreCardValue: a card is worth about a mid-sized creature (a 3/3 ≈ 12),
+	// reflecting that card advantage is roughly one average permanent.
+	scoreCardValue = 12.0
+	// scoreLifeValue: one life point is minor; eight life ≈ two thirds of a card.
+	scoreLifeValue = 1.0
+	// scoreManaValue: mana added by a non-mana ability (the rare ability that
+	// adds mana yet still targets, so it is not a mana ability handled by the
+	// payment system) is incidental — unspent mana empties — so it is valued well
+	// below a card.
+	scoreManaValue = 3.0
+	// scoreTokenValue: a token is board presence worth roughly a small creature.
+	// The IR carries the token count but not its size, so this is a deliberately
+	// modest per-token estimate rather than a precise creature value.
+	scoreTokenValue = 8.0
+	// scoreTutorValue: tutoring a card to hand is a drawn card the agent chooses,
+	// so it is worth slightly more than a raw draw.
+	scoreTutorValue = 14.0
+	// scoreCounterValue: a +1/+1 counter is about one point of power, which the
+	// threat model values at roughly targetingScore of a single power point.
 	scoreCounterValue = 4.0
 
 	// scoreSelfTargetPenalty discourages aiming a spell at the agent's own
