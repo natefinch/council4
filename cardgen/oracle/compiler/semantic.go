@@ -532,6 +532,12 @@ const (
 	// fails closed.
 	ConditionPredicateDestroyedThisWay
 	ConditionPredicateCounterPlacementOnControlledCreature
+	// ConditionPredicateCounterPlacementOnSelf is satisfied when one or more
+	// counters would be put on the source permanent itself ("If one or more
+	// +1/+1 counters would be put on Mowu, that many plus one +1/+1 counters are
+	// put on it instead.", Mowu, Loyal Companion). Counter restricts the
+	// replacement to a single counter kind.
+	ConditionPredicateCounterPlacementOnSelf
 	ConditionPredicateControllerCounterPlacement
 	ConditionPredicateDamageByControlledSource
 	ConditionPredicateTokenCreationUnderController

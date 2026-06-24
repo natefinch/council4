@@ -579,6 +579,20 @@ func DrawCardDigReplacement(text string, look, take int, remainder DigRemainder)
 	}
 }
 
+// SelfCounterPlacementReplacement creates a persistent replacement that modifies
+// placement of one specific counter kind on the source permanent itself by
+// multiplying the count and then adding a fixed amount, as in Mowu, Loyal
+// Companion ("If one or more +1/+1 counters would be put on Mowu, that many plus
+// one +1/+1 counters are put on it instead.", CR 614). Registration binds the
+// replacement to the source's object ID so it matches only that one permanent.
+func SelfCounterPlacementReplacement(text string, multiplier, addend int, kindFilter counter.Kind) ReplacementAbility {
+	replacement := AnyCounterPlacementReplacement(text, multiplier, addend, TriggerControllerAny)
+	replacement.Replacement.MatchCounterKind = true
+	replacement.Replacement.CounterKindFilter = kindFilter
+	replacement.Replacement.CounterRecipientSelf = true
+	return replacement
+}
+
 // CounterPlacementReplacement creates a persistent replacement that modifies
 // placement of one specific counter kind by multiplying the count and then
 // adding a fixed amount (CR 614).

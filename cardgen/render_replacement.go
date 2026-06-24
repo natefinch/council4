@@ -398,6 +398,22 @@ func renderCounterPlacementReplacement(ctx *renderCtx, ability *game.Replacement
 	if err != nil {
 		return "", err
 	}
+	if replacement.CounterRecipientSelf {
+		if !replacement.MatchCounterKind {
+			return "", errors.New("render: self counter-placement replacement requires a counter kind")
+		}
+		kind, err := renderCounterKind(replacement.CounterKindFilter)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importCounter)
+		return fmt.Sprintf("game.SelfCounterPlacementReplacement(%q, %d, %d, %s)",
+			ability.Text,
+			replacement.CounterMultiplier,
+			replacement.CounterAddend,
+			kind,
+		), nil
+	}
 	if len(replacement.CounterRecipientTypesAny) > 0 {
 		ctx.need(importTypes)
 		typeLiterals := make([]string, 0, len(replacement.CounterRecipientTypesAny))

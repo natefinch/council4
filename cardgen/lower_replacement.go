@@ -629,6 +629,12 @@ func lowerCounterPlacementReplacement(
 			return unsupported("the executable source backend supports only +1/+1 counter-doubling or additive replacement amounts")
 		}
 		return game.CounterPlacementReplacement(ability.Text, multiplier, addend, counter.PlusOnePlusOne, game.TriggerControllerYou), true, nil
+	case compiler.ConditionPredicateCounterPlacementOnSelf:
+		multiplier, addend, ok := controlledCreatureCounterReplacementAmount(ability.Content.Effects)
+		if !ok {
+			return unsupported("the executable source backend supports only +1/+1 counter-doubling or additive replacement amounts")
+		}
+		return game.SelfCounterPlacementReplacement(ability.Text, multiplier, addend, counter.PlusOnePlusOne), true, nil
 	case compiler.ConditionPredicateCounterPlacementOnAnyCreature:
 		multiplier, addend, ok := controlledCreatureCounterReplacementAmount(ability.Content.Effects)
 		if !ok {
@@ -769,6 +775,8 @@ func counterPlacementReplacementCandidate(ability compiler.CompiledAbility) bool
 	condition := ability.Content.Conditions[0]
 	return condition.Predicate == compiler.ConditionPredicateControllerCounterPlacement ||
 		condition.Predicate == compiler.ConditionPredicateCounterPlacementOnControlledPermanent ||
+		(condition.Predicate == compiler.ConditionPredicateCounterPlacementOnSelf &&
+			condition.Counter == compiler.ConditionCounterPlusOnePlusOne) ||
 		(condition.Predicate == compiler.ConditionPredicateCounterPlacementOnControlledCreature ||
 			condition.Predicate == compiler.ConditionPredicateCounterPlacementOnAnyCreature) &&
 			condition.Counter == compiler.ConditionCounterPlusOnePlusOne
@@ -1207,7 +1215,7 @@ func lowerGroupEntersWithCountersRecipient(selector compiler.CompiledSelector) (
 		selector.Tapped || selector.Untapped || selector.MatchCounter ||
 		selector.MatchManaValue || selector.MatchPower || selector.MatchToughness ||
 		selector.BasicLandType || selector.PlayerOrPlaneswalker ||
-		selector.SubtypeFromEntryChoice || selector.SubtypeFromChosenType ||
+		selector.SubtypeFromChosenType ||
 		len(selector.Alternatives) != 0 || selector.Zone != zone.None {
 		return nil, false
 	}

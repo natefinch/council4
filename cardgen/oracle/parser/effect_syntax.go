@@ -5632,6 +5632,13 @@ func parseGroupEntersWithCountersEffect(sentence Sentence, tokens []shared.Token
 	if len(recipient) == 0 {
 		return nil, false
 	}
+	chosenEntryType := false
+	if base, ok := cutChosenTypeQualifierSuffix(recipient); ok {
+		recipient, chosenEntryType = base, true
+	}
+	if len(recipient) == 0 {
+		return nil, false
+	}
 	if recipientHasRelativeClause(recipient) {
 		return nil, false
 	}
@@ -5644,6 +5651,7 @@ func parseGroupEntersWithCountersEffect(sentence Sentence, tokens []shared.Token
 	if selection.Controller != SelectionControllerYou {
 		return nil, false
 	}
+	selection.SubtypeFromEntryChoice = chosenEntryType
 	effect := EffectSyntax{
 		Kind:                    EffectEnterTapped,
 		Context:                 EffectContextController,
@@ -5756,6 +5764,19 @@ func recipientHasRelativeClause(recipient []shared.Token) bool {
 		}
 	}
 	return false
+}
+
+// cutChosenTypeQualifierSuffix strips a trailing "of the chosen type" qualifier
+// from a group recipient phrase ("each other creature you control of the chosen
+// type") and returns the bare recipient with ok=true. The matched permanents
+// must share the creature subtype the source permanent chose as it entered
+// (Metallic Mimic); the caller records that as Selection.SubtypeFromEntryChoice.
+func cutChosenTypeQualifierSuffix(recipient []shared.Token) ([]shared.Token, bool) {
+	n := len(recipient)
+	if n >= 4 && effectWordsAt(recipient, n-4, "of", "the", "chosen", "type") {
+		return recipient[:n-4], true
+	}
+	return recipient, false
 }
 
 // entersTappedSelfSyntax recognizes a plain self enters-tapped clause. "This
