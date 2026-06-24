@@ -25,6 +25,13 @@ const (
 	scoreKeywordPlay = 10.0
 	scoreCreature    = 15.0
 
+	// scoreActivateSpendsResources keeps the agent from speculatively activating
+	// an ability whose cost spends its own cards or board (sacrificing another
+	// permanent, discarding, or exiling) — the "randomly sacrifices a creature
+	// to draw" plays. It is below scorePass so the agent passes instead, unless
+	// some other productive action outscores passing anyway.
+	scoreActivateSpendsResources = -10.0
+
 	// scoreSelfTargetPenalty discourages aiming a spell at the agent's own
 	// permanents or face, a cheap prune of obviously bad targeting. Interaction
 	// aimed at opponents is rewarded by the threat model (see threat.go), so the
@@ -70,7 +77,7 @@ func (s GenericStrategy) baseScore(obs rules.PlayerObservation, act action.Actio
 	case action.ActionCastSpell:
 		return scoreCastSpell(obs, act, s.Personality)
 	case action.ActionActivateAbility:
-		return scoreActivate
+		return scoreActivateAbility(obs, act)
 	case action.ActionDeclareAttackers:
 		return scoreAttackDeclarations(obs, act, s.Personality)
 	case action.ActionDeclareBlockers:
@@ -80,6 +87,18 @@ func (s GenericStrategy) baseScore(obs rules.PlayerObservation, act action.Actio
 		// activated abilities without payloads) rank above passing.
 		return scoreKeywordPlay
 	}
+}
+
+// scoreActivateAbility scores activating an ability. A generic agent prefers to
+// pass rather than spend its own cards or board on a speculative activation
+// (sacrificing another permanent, discarding, or exiling) — the plays that read
+// as "randomly activating abilities for no reason". Activations with no such
+// self-spending cost keep the routine activate score.
+func scoreActivateAbility(obs rules.PlayerObservation, act action.Action) float64 {
+	if profile, ok := obs.ActivatedAbilityProfile(act); ok && profile.SpendsOwnResources {
+		return scoreActivateSpendsResources
+	}
+	return scoreActivate
 }
 
 func scoreCastSpell(obs rules.PlayerObservation, act action.Action, personality Personality) float64 {
