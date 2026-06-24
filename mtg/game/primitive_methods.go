@@ -620,9 +620,14 @@ func (BecomeSaddled) instructionRefs() primitiveRefs           { return primitiv
 func (ShuffleSpellIntoLibrary) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (SkipStep) instructionRefs() primitiveRefs                { return primitiveRefs{} }
 func (CreateEmblem) instructionRefs() primitiveRefs            { return primitiveRefs{} }
-func (CreateDelayedTrigger) instructionRefs() primitiveRefs    { return primitiveRefs{} }
-func (p CreateReplacement) instructionRefs() primitiveRefs     { return objectReferenceRefs(p.Object) }
-func (p PreventDamage) instructionRefs() primitiveRefs         { return quantityRefs(p.Amount) }
+func (p CreateDelayedTrigger) instructionRefs() primitiveRefs {
+	if !p.Trigger.DamageSourceObject.Exists {
+		return primitiveRefs{}
+	}
+	return objectReferenceRefs(p.Trigger.DamageSourceObject.Val)
+}
+func (p CreateReplacement) instructionRefs() primitiveRefs { return objectReferenceRefs(p.Object) }
+func (p PreventDamage) instructionRefs() primitiveRefs     { return quantityRefs(p.Amount) }
 func (p MoveCard) instructionRefs() primitiveRefs {
 	if p.Player.Kind() != PlayerReferenceNone {
 		return quantityRefs(p.Amount)

@@ -788,6 +788,15 @@ type TriggerPattern struct {
 	// DamageSourceSelection restricts the permanent that dealt damage.
 	DamageSourceSelection Selection
 
+	// DamageSourceCaptured restricts an EventDamageDealt pattern to combat damage
+	// dealt by a specific permanent captured when the trigger was created, rather
+	// than by a static filter. It is only meaningful on an event-based delayed
+	// trigger whose DelayedTriggerDef carries a DamageSourceObject reference; the
+	// delayed-trigger matcher resolves that reference at schedule time and
+	// enforces the captured object identity. It must not be combined with a
+	// Source filter, Subject, or DamageSourceSelection.
+	DamageSourceCaptured bool
+
 	// AttackRecipient restricts attacker-declared events by what was attacked.
 	AttackRecipient AttackRecipientKind
 	// AttackRecipientSelection restricts attacked planeswalkers and battles.

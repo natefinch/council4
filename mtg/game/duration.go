@@ -78,6 +78,15 @@ type DelayedTriggerDef struct {
 	// Window bounds an EventPattern delayed trigger's lifetime. It must be
 	// non-zero when EventPattern is present and zero otherwise.
 	Window DelayedTriggerWindow
+	// DamageSourceObject, when present, binds an EventPattern combat-damage
+	// delayed trigger to the specific permanent this object reference resolves
+	// to at schedule time (the creature an earlier clause in the same resolution
+	// targeted and published as a linked object). The scheduled trigger fires
+	// only on combat damage dealt by that captured permanent ("... target
+	// creature ... Whenever that creature deals combat damage to a player this
+	// turn, ..."). It is only valid with EventPattern whose DamageSourceCaptured
+	// flag is set.
+	DamageSourceObject opt.V[ObjectReference]
 }
 
 // DelayedTrigger is a runtime delayed triggered ability waiting for its timing
@@ -104,4 +113,10 @@ type DelayedTrigger struct {
 	// CapturedTargetManaValueLKI preserves target spell mana values captured
 	// from the spell or ability that created this delayed trigger.
 	CapturedTargetManaValueLKI map[int]int
+	// BoundDamageSourceObjectID restricts an EventPattern combat-damage delayed
+	// trigger whose pattern sets DamageSourceCaptured to events whose damage
+	// source is this captured permanent. It is resolved from the creating
+	// ability's DamageSourceObject reference when the trigger is scheduled. Zero
+	// means the captured permanent was already gone, so the trigger never fires.
+	BoundDamageSourceObjectID id.ID
 }

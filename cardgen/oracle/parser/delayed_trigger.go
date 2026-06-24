@@ -19,7 +19,125 @@ import (
 func emitDelayedTriggerEffects(abilities []Ability) {
 	for i := range abilities {
 		rewriteDelayedTriggerAbility(&abilities[i])
+		rewriteCapturedCombatDamageDelayedTrigger(&abilities[i])
 	}
+}
+
+// rewriteCapturedCombatDamageDelayedTrigger rewrites a trailing "Whenever that
+// creature deals combat damage to a player this turn, <body>" rider sentence
+// into one EffectDelayedTrigger whose source binds to the permanent an earlier
+// clause in the same ability acted on ("... target creature ... Whenever that
+// creature deals combat damage to a player this turn, you draw a card."). The
+// back-reference subject ("that creature") otherwise reads as a spurious
+// resolving combat-damage effect that blocks lowering. The rider is reparsed in
+// the self ("this creature") form so it carries an ordinary combat-damage
+// trigger pattern; lowering rebinds that pattern's source to the captured
+// object via the ability's preserved back-reference. The ability's earlier
+// sentences and its semantic references are left untouched so the reference
+// still resolves to the antecedent target. It fails closed: any ability whose
+// trailing sentence the recognizer does not match, or whose reparsed self-form
+// is not exactly one triggered ability, is left unchanged.
+func rewriteCapturedCombatDamageDelayedTrigger(ability *Ability) {
+	if len(ability.Sentences) < 2 {
+		return
+	}
+	last := &ability.Sentences[len(ability.Sentences)-1]
+	tokens := semanticEffectTokens(last.Tokens)
+	comma := shared.TopLevelIndex(tokens, shared.Comma)
+	if comma <= 0 {
+		return
+	}
+	lead := tokens[:comma]
+	if !isDelayedThisTurnPreamble(lead) || !leadBindsThatCombatDamageToPlayer(lead) {
+		return
+	}
+	inner, ok := capturedCombatDamageInnerText(last.Text)
+	if !ok {
+		return
+	}
+	granted, ok := parseDelayedTriggerAbility(inner)
+	if !ok {
+		return
+	}
+	var references, subjectReferences []Reference
+	for i := range last.Effects {
+		references = append(references, last.Effects[i].References...)
+		subjectReferences = append(subjectReferences, last.Effects[i].SubjectReferences...)
+	}
+	last.Effects = []EffectSyntax{{
+		Kind:                           EffectDelayedTrigger,
+		Span:                           last.Span,
+		VerbSpan:                       last.Span,
+		ClauseSpan:                     last.Span,
+		Text:                           last.Text,
+		References:                     references,
+		SubjectReferences:              subjectReferences,
+		DelayedTriggerAbility:          &granted,
+		DelayedTriggerBindDamageSource: true,
+	}}
+	last.Targets = nil
+	last.LegacyEffects = false
+}
+
+// leadBindsThatCombatDamageToPlayer reports whether a delayed-trigger preamble
+// names a back-referenced permanent ("that creature") that deals combat damage
+// to a player, the captured-object combat-damage shape the rider rewriter binds.
+func leadBindsThatCombatDamageToPlayer(lead []shared.Token) bool {
+	if len(lead) < 2 || !equalWord(lead[1], "that") {
+		return false
+	}
+	hasCombatDamage := false
+	hasPlayer := false
+	for i := range lead {
+		if i+2 < len(lead) &&
+			equalWord(lead[i], "deals") &&
+			equalWord(lead[i+1], "combat") &&
+			equalWord(lead[i+2], "damage") {
+			hasCombatDamage = true
+		}
+		if equalWord(lead[i], "player") {
+			hasPlayer = true
+		}
+	}
+	return hasCombatDamage && hasPlayer
+}
+
+// capturedCombatDamageInnerText reconstructs the self-form triggered-ability
+// source of a captured-object combat-damage rider by stripping the "this turn"
+// window and rewriting the "that <noun>" back-reference subject to "this
+// <noun>" so the result is an ordinary source-self combat-damage trigger
+// ("Whenever that creature deals combat damage to a player this turn, you draw
+// a card." -> "Whenever this creature deals combat damage to a player, you draw
+// a card."). Lowering rebinds the resulting pattern's source to the captured
+// object, so the self form supplies only the combat-damage event shape. It
+// fails closed on any other preamble.
+func capturedCombatDamageInnerText(text string) (inner string, ok bool) {
+	trimmed := strings.TrimSpace(text)
+	comma := strings.Index(trimmed, ",")
+	if comma <= 0 {
+		return "", false
+	}
+	preamble := strings.TrimSpace(trimmed[:comma])
+	body := trimmed[comma:]
+	lowered := strings.ToLower(preamble)
+	if !strings.HasSuffix(lowered, "this turn") {
+		return "", false
+	}
+	preamble = strings.TrimSpace(preamble[:len(preamble)-len("this turn")])
+	lowered = strings.ToLower(preamble)
+	var rest string
+	switch {
+	case strings.HasPrefix(lowered, "whenever that "):
+		rest = preamble[len("whenever that "):]
+	case strings.HasPrefix(lowered, "when that "):
+		rest = preamble[len("when that "):]
+	default:
+		return "", false
+	}
+	if !strings.Contains(strings.ToLower(rest), "deals combat damage") {
+		return "", false
+	}
+	return "Whenever this " + rest + body, true
 }
 
 func rewriteDelayedTriggerAbility(ability *Ability) {

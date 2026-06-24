@@ -2426,6 +2426,10 @@ func lowerDelayedSequenceClause(
 		sequence[len(sequence)-1].Primitive = modify
 		return delayed, true, false
 	}
+	if modify, delayed, ok := lowerDelayedCombatDamageDrawTrigger(effectIndex, ctx, sequence); ok {
+		sequence[len(sequence)-1].Primitive = modify
+		return delayed, true, false
+	}
 	if publisher, delayed, ok := lowerDelayedTargetExile(effectIndex, ctx, sequence); ok {
 		sequence[len(sequence)-1].Primitive = publisher
 		return delayed, true, false

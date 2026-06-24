@@ -112,6 +112,13 @@ func (r Renderer) renderCreateDelayedTrigger(ctx *renderCtx, value game.CreateDe
 			triggerFields = append(triggerFields, "OneShot: true,")
 		}
 		triggerFields = append(triggerFields, fmt.Sprintf("Window: %s,", window))
+		if value.Trigger.DamageSourceObject.Exists {
+			object, err := r.renderObjectReference(value.Trigger.DamageSourceObject.Val)
+			if err != nil {
+				return "", err
+			}
+			triggerFields = append(triggerFields, fmt.Sprintf("DamageSourceObject: opt.Val(%s),", object))
+		}
 	} else {
 		timing, err := renderDelayedTriggerTiming(value.Trigger.Timing)
 		if err != nil {
