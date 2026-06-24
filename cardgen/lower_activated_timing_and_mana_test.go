@@ -32,6 +32,11 @@ func TestLowerActivatedAbilityTiming(t *testing.T) {
 			"{1}: Draw a card. Activate only as a sorcery. Activate only once each turn.",
 			game.SorceryOncePerTurn,
 		},
+		{
+			"sorcery once per turn conjoined",
+			"{1}: Draw a card. Activate only as a sorcery and only once each turn.",
+			game.SorceryOncePerTurn,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

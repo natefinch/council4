@@ -753,6 +753,74 @@ func TestPowerstoneManaPaysForArtifactSpell(t *testing.T) {
 	}
 }
 
+// TestBeastcallerManaCannotPayForNoncreatureSpell covers the bare restricted
+// creature-spell spend rider (Beastcaller Savant): the tagged mana cannot pay
+// for a noncreature spell, and a rejected cast leaves the mana and rider intact.
+func TestBeastcallerManaCannotPayForNoncreatureSpell(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	player := g.Players[game.Player1]
+	player.ManaPool.Add(mana.G, 1)
+	player.ManaRiders = append(player.ManaRiders, game.ManaRiderInstance{
+		Unit:       mana.Unit{Color: mana.G},
+		Controller: game.Player1,
+		Rider: game.ManaSpendRider{
+			Condition:   game.ManaSpendCastCreatureSpell,
+			Restriction: game.ManaSpendRestrictedToCondition,
+		},
+	})
+
+	bauble := &game.CardDef{CardFace: game.CardFace{
+		Name:     "Bauble",
+		Types:    []types.Card{types.Artifact},
+		ManaCost: opt.Val(cost.Mana{cost.O(1)}),
+	}}
+	spellID := addCardToHand(g, game.Player1, bauble)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("cast noncreature spell with creature-restricted mana succeeded")
+	}
+	if player.ManaPool.Amount(mana.G) != 1 || len(player.ManaRiders) != 1 {
+		t.Fatalf("restricted mana changed after rejected cast: pool=%d riders=%d", player.ManaPool.Amount(mana.G), len(player.ManaRiders))
+	}
+}
+
+// TestBeastcallerManaPaysForCreatureSpell confirms the restricted creature-spell
+// spend rider permits paying for a creature spell.
+func TestBeastcallerManaPaysForCreatureSpell(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	player := g.Players[game.Player1]
+	player.ManaPool.Add(mana.G, 1)
+	player.ManaRiders = append(player.ManaRiders, game.ManaRiderInstance{
+		Unit:       mana.Unit{Color: mana.G},
+		Controller: game.Player1,
+		Rider: game.ManaSpendRider{
+			Condition:   game.ManaSpendCastCreatureSpell,
+			Restriction: game.ManaSpendRestrictedToCondition,
+		},
+	})
+
+	goblin := creatureSpellDef("Goblin", types.Goblin)
+	goblin.ManaCost = opt.Val(cost.Mana{cost.O(1)})
+	goblin.Power = opt.Val(game.PT{Value: 1})
+	goblin.Toughness = opt.Val(game.PT{Value: 1})
+	spellID := addCardToHand(g, game.Player1, goblin)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("cast creature spell with creature-restricted mana failed")
+	}
+	if player.ManaPool.Amount(mana.G) != 0 {
+		t.Fatalf("creature-restricted mana not spent on creature spell: pool=%d", player.ManaPool.Amount(mana.G))
+	}
+}
+
 // TestCreatureSpellHasteManaSpendRiderGrantsHaste covers the unrestricted Arena
 // of Glory / Generator Servant bonus rider: a creature spell paid for with the
 // tagged mana resolves with haste until end of turn, and the haste is cleared at

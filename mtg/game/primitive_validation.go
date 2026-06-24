@@ -783,11 +783,25 @@ func validateManaSpendRider(rider ManaSpendRider) error {
 		}
 		return nil
 	case ManaSpendCastCreatureSpell:
-		if rider.Restriction != ManaSpendUnrestricted ||
-			rider.ChosenSubtypeFrom != "" ||
+		// Two modeled shapes share this condition: the unrestricted haste bonus
+		// rider (Arena of Glory: spendable on anything, a creature spell paid
+		// with it gains haste) and the bare restricted spend rider (Beastcaller
+		// Savant: spendable only on creature spells, no further effect).
+		if rider.ChosenSubtypeFrom != "" ||
 			rider.SpellRuleEffect != RuleEffectNone ||
-			len(rider.Effect.Sequence) != 0 ||
-			len(rider.SpellGainsKeywords) == 0 {
+			len(rider.Effect.Sequence) != 0 {
+			return errors.New("creature-spell mana spend rider has unsupported fields")
+		}
+		switch rider.Restriction {
+		case ManaSpendUnrestricted:
+			if len(rider.SpellGainsKeywords) == 0 {
+				return errors.New("creature-spell mana spend rider has unsupported fields")
+			}
+		case ManaSpendRestrictedToCondition:
+			if len(rider.SpellGainsKeywords) != 0 {
+				return errors.New("creature-spell mana spend rider has unsupported fields")
+			}
+		default:
 			return errors.New("creature-spell mana spend rider has unsupported fields")
 		}
 		return nil

@@ -754,6 +754,11 @@ func restrictedManaCanPay(s State, rider game.ManaRiderInstance, ctx spendContex
 		// Powerstone: usable for anything except a nonartifact spell cast. A
 		// non-spell payment (ability cost; ctx.spell is nil) is always allowed.
 		return ctx.spell == nil || ctx.spell.HasType(types.Artifact)
+	case game.ManaSpendCastCreatureSpell:
+		// Beastcaller Savant: spendable only to cast a creature spell. A
+		// non-spell payment (ability cost; ctx.spell is nil) is not a creature
+		// spell, so the tagged mana cannot pay for it.
+		return ctx.spell != nil && ctx.spell.HasType(types.Creature)
 	default:
 		return false
 	}

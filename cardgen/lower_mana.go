@@ -262,6 +262,7 @@ func isManaSpendRider(effect *compiler.CompiledEffect) bool {
 		isChosenTypeManaSpendRider(effect.ManaSpendRider) ||
 		isChosenTypeCastOrActivateManaSpendRider(effect.ManaSpendRider) ||
 		isLegendarySpellManaSpendRider(effect.ManaSpendRider) ||
+		isCreatureSpellRestrictedManaSpendRider(effect.ManaSpendRider) ||
 		isCreatureSpellHasteManaSpendRider(effect.ManaSpendRider)
 }
 
@@ -302,6 +303,17 @@ func isLegendarySpellManaSpendRider(rider *compiler.CompiledManaSpendRider) bool
 	return rider.Condition == parser.ManaSpendCastLegendarySpell &&
 		(rider.Effect == parser.ManaSpendRiderEffectCantBeCountered ||
 			rider.Effect == parser.ManaSpendRiderEffectUnknown) &&
+		rider.Restricted &&
+		rider.ScryAmount == 0
+}
+
+// isCreatureSpellRestrictedManaSpendRider reports whether rider is the bare
+// restricted "spend this mana only to cast a creature spell" rider (Beastcaller
+// Savant, Dwynen's Elite). It restricts the tagged mana to creature spells with
+// no further qualifier or rider effect.
+func isCreatureSpellRestrictedManaSpendRider(rider *compiler.CompiledManaSpendRider) bool {
+	return rider.Condition == parser.ManaSpendCastCreatureSpell &&
+		rider.Effect == parser.ManaSpendRiderEffectUnknown &&
 		rider.Restricted &&
 		rider.ScryAmount == 0
 }
@@ -416,6 +428,35 @@ func lowerManaSpendRiderContent(ctx contentCtx) (game.AbilityContent, *shared.Di
 			rider,
 			mana.W, mana.U, mana.B, mana.R, mana.G,
 		).Content, nil
+	}
+	if isCreatureSpellRestrictedManaSpendRider(riderEffect) {
+		rider := game.ManaSpendRider{
+			Condition:   game.ManaSpendCastCreatureSpell,
+			Restriction: game.ManaSpendRestrictedToCondition,
+		}
+		if manaEffect.Mana.AnyColor && manaEffect.Mana.AnyColorCount < 2 {
+			return game.TapManaChoiceWithSpendRiderAbility(
+				ctx.text,
+				rider,
+				mana.W, mana.U, mana.B, mana.R, mana.G,
+			).Content, nil
+		}
+		content, ok := typedManaEffectContent(manaEffect.Mana)
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported mana effect",
+				"the restricted creature-spell rider requires an exact modeled add-mana effect",
+			)
+		}
+		if !attachManaSpendRider(&content, rider) {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported mana effect",
+				"the restricted creature-spell rider requires an exact add-mana instruction to tag",
+			)
+		}
+		return content, nil
 	}
 	if isCreatureSpellHasteManaSpendRider(riderEffect) {
 		content, ok := typedManaEffectContent(manaEffect.Mana)
