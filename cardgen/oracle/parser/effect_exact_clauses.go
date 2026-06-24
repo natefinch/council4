@@ -2724,7 +2724,34 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 	if !ok {
 		return "", false
 	}
+	if !selectionPhraseVerifiesGroupRecipient(selection, recipient, rider, counterWords) {
+		return "", false
+	}
 	return recipient + rider, true
+}
+
+// selectionPhraseVerifiesGroupRecipient soft-gates the group damage recipient
+// reconstruction through the canonical selectionPhrase renderer. When the
+// renderer can model the selection's noun phrase, the bespoke recipient must
+// match its "each"-determiner rendering exactly, so the two reconstructions
+// cannot silently drift; when the renderer cannot model the selection
+// (ok=false), the bespoke reconstruction stands alone. The cross-check is
+// skipped when the recipient carries a trailing numeric rider or a counter
+// clause, because selectionPhrase orders the numeric qualifier ahead of the
+// controller clause and does not render counter qualifiers, so its rendering
+// is intentionally not comparable to the recipient in those forms.
+func selectionPhraseVerifiesGroupRecipient(selection SelectionSyntax, recipient, rider string, counterWords []string) bool {
+	if rider != "" || len(counterWords) != 0 {
+		return true
+	}
+	rendered, ok := selectionPhrase(selection, selectionPhraseOptions{
+		Number:     numberSingular,
+		Determiner: determinerEach,
+	})
+	if !ok {
+		return true
+	}
+	return strings.EqualFold(rendered, recipient)
 }
 
 // exactSingularChosenPermanentRecipientText reconstructs the recipient text for a

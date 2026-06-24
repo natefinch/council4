@@ -27,6 +27,10 @@ type determinerKind int
 const (
 	// determinerNone renders no leading determiner; the caller owns it.
 	determinerNone determinerKind = iota
+	// determinerEach renders the leading "each" determiner of a distributive
+	// group ("each creature you control"), used by the group damage recipient
+	// family. New determiner forms must be appended at the end of this block.
+	determinerEach
 )
 
 // selectionPhraseOptions configures how selectionPhrase renders a noun phrase
@@ -52,10 +56,15 @@ type selectionPhraseOptions struct {
 //
 // It is the one canonical renderer the mass/all/each group family uses to verify
 // that the typed selection matches the source text, rather than only validating
-// the text shape. Subtype-noun and keyword forms remain owned by their existing
-// family validators for now and fail closed here.
+// the text shape, and the group damage recipient family uses with the "each"
+// determiner to verify its recipient phrase. Subtype-noun and keyword forms
+// remain owned by their existing family validators for now and fail closed here.
 func selectionPhrase(selection SelectionSyntax, opts selectionPhraseOptions) (string, bool) {
-	if opts.Determiner != determinerNone || opts.ZoneNoun || opts.CardNoun {
+	if opts.ZoneNoun || opts.CardNoun {
+		return "", false
+	}
+	determiner, ok := selectionPhraseDeterminerWords(opts.Determiner)
+	if !ok {
 		return "", false
 	}
 	if !selectionPhraseRepresentable(selection) {
@@ -69,7 +78,8 @@ func selectionPhrase(selection SelectionSyntax, opts selectionPhraseOptions) (st
 	if !ok {
 		return "", false
 	}
-	words := make([]string, 0, len(prefix)+len(noun))
+	words := make([]string, 0, len(determiner)+len(prefix)+len(noun))
+	words = append(words, determiner...)
 	words = append(words, prefix...)
 	words = append(words, noun...)
 	numericWords, ok := permanentNumericQualifierWords(selection)
@@ -83,6 +93,21 @@ func selectionPhrase(selection SelectionSyntax, opts selectionPhraseOptions) (st
 	}
 	words = append(words, controllerSuffix...)
 	return strings.Join(words, " "), true
+}
+
+// selectionPhraseDeterminerWords renders the leading determiner words a caller
+// requested. The default determinerNone yields no words (the caller owns any
+// determiner); determinerEach yields the distributive "each" of a group damage
+// recipient. It fails closed for any determiner value it does not render.
+func selectionPhraseDeterminerWords(determiner determinerKind) ([]string, bool) {
+	switch determiner {
+	case determinerNone:
+		return nil, true
+	case determinerEach:
+		return []string{"each"}, true
+	default:
+		return nil, false
+	}
 }
 
 // selectionPhraseRepresentable reports whether every selection qualifier the
