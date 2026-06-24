@@ -887,6 +887,11 @@ type optionalFlowPlan struct {
 	elseIndex              int
 	elseGateCondition      int
 	publishWithoutOptional bool
+	// extraOptionalIndex is the index of a second optional effect nested inside
+	// the affirmative gated tail ("you may X. If you do, you may Y"): Y is gated
+	// on X having succeeded and is itself performed only if the controller then
+	// chooses to. It is -1 whenever no nested optional is present.
+	extraOptionalIndex int
 }
 
 // marksOptional reports whether the optional flow marks the instruction produced
@@ -894,6 +899,9 @@ type optionalFlowPlan struct {
 // trailing bare optional effect. The mandatory publish-without-optional shape
 // publishes its leading effect's result but never marks it Optional.
 func (p optionalFlowPlan) marksOptional(i int) bool {
+	if p.enabled && p.extraOptionalIndex >= 0 && i == p.extraOptionalIndex {
+		return true
+	}
 	if p.publishWithoutOptional {
 		return false
 	}
@@ -936,20 +944,32 @@ func (p optionalFlowPlan) clearsNegated(i int) bool {
 // supported shapes, so the caller rejects rather than lowering a silently-wrong
 // sequence.
 func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) {
+	// The primary optional is the first "you may X" effect; it is the one a
+	// following "if/when you do" gate keys on. A nested "you may X. If you do,
+	// you may Y" body carries a second optional in the gated tail (Y), which the
+	// gated path below admits and lowers as its own optional, gated instruction.
+	// Any optional outside the affirmative gated tail (a second independent
+	// optional, or one in an else branch) is not modeled and fails closed.
 	optionalIndex := -1
+	extraOptional := -1
 	for i := range content.Effects {
-		if content.Effects[i].Optional {
-			if optionalIndex != -1 {
-				return optionalFlowPlan{}, false
-			}
+		if !content.Effects[i].Optional {
+			continue
+		}
+		switch {
+		case optionalIndex == -1:
 			optionalIndex = i
+		case extraOptional == -1:
+			extraOptional = i
+		default:
+			return optionalFlowPlan{}, false
 		}
 	}
 	if optionalIndex == -1 {
 		if plan, ok, handled := planMandatoryIfYouDoFlow(content); handled {
 			return plan, ok
 		}
-		return optionalFlowPlan{bareIndex: -1, elseIndex: -1, elseGateCondition: -1}, true
+		return optionalFlowPlan{bareIndex: -1, elseIndex: -1, elseGateCondition: -1, extraOptionalIndex: -1}, true
 	}
 	// Count "if you do" (prior-instruction-accepted) conditions, including the
 	// outcome-worded "a <type> is destroyed this way" gate that the optional-
@@ -965,15 +985,32 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 	if priorAcceptedConditions == 0 {
 		// Bare trailing optional: the optional effect must be the final effect so
 		// no later mandatory effect silently resolves as though gated on the
-		// optional's result. A negated or delayed optional is left unsupported.
-		if optionalIndex != len(content.Effects)-1 ||
+		// optional's result. A negated or delayed optional is left unsupported. A
+		// second optional with no gate has no modeled relationship and fails
+		// closed.
+		if extraOptional != -1 ||
+			optionalIndex != len(content.Effects)-1 ||
 			content.Effects[optionalIndex].Negated ||
 			content.Effects[optionalIndex].DelayedTiming != 0 {
 			return optionalFlowPlan{}, false
 		}
-		return optionalFlowPlan{optionalIndex: optionalIndex, bareIndex: optionalIndex, elseIndex: -1, elseGateCondition: -1}, true
+		return optionalFlowPlan{optionalIndex: optionalIndex, bareIndex: optionalIndex, elseIndex: -1, elseGateCondition: -1, extraOptionalIndex: -1}, true
 	}
 	gateIndex := optionalIndex + 1
+	// When the single optional effect is itself the gated consequence of a
+	// preceding mandatory effect ("put a +1/+1 counter on it. When you do, you
+	// may remove a counter from target permanent"), the optional is not the gate
+	// source: a mandatory effect publishes the gate and the optional rides in the
+	// gated tail. The mandatory-publish flow models that shape, marking the gated
+	// optional Y both gated and Optional. Only a lone optional qualifies; a body
+	// that already carries a leading optional gate source ("you may X. If you do,
+	// you may Y") keeps the source-optional interpretation below.
+	if extraOptional == -1 && optionalEffectIsGatedConsequence(content, optionalIndex) {
+		if plan, ok, handled := planMandatoryIfYouDoFlow(content); handled {
+			return plan, ok
+		}
+		return optionalFlowPlan{}, false
+	}
 	// The optional effect must be followed by at least one gated effect and must
 	// not itself be negated or delayed.
 	if gateIndex >= len(content.Effects) ||
@@ -1049,12 +1086,44 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 		tailEnd = elseIndex
 	}
 	for i := gateIndex; i < tailEnd; i++ {
-		if content.Effects[i].Optional ||
-			content.Effects[i].Negated ||
-			content.Effects[i].DelayedTiming != 0 ||
-			!content.Effects[i].Order.Contains(gateConditionOrder) {
+		effect := content.Effects[i]
+		if effect.Negated ||
+			effect.DelayedTiming != 0 {
 			return optionalFlowPlan{}, false
 		}
+		// An optional gated effect realizes the nested "you may X. If you do, you
+		// may Y" body: Y is performed optionally and gated on X having succeeded.
+		// Only the single recognized second optional may appear, and it must be
+		// the gate-anchored consequence (it structurally contains the gate
+		// condition), never a free-floating optional that would resolve outside
+		// the gate.
+		if effect.Optional {
+			if i != extraOptional || !effect.Order.Contains(gateConditionOrder) {
+				return optionalFlowPlan{}, false
+			}
+			continue
+		}
+		if effect.Order.Contains(gateConditionOrder) {
+			continue
+		}
+		// A trailing effect that does not itself contain the gate condition is
+		// allowed only when it is a prior-subject continuation of an earlier
+		// gated effect ("... put a +1/+1 counter on target attacking creature.
+		// It gains trample until end of turn."). Such a continuation depends on a
+		// subject introduced inside the gated tail, so it belongs to the gated
+		// consequence even though its own sentence does not repeat the "If/When
+		// you do" gate. The first gated effect must still anchor the gate, and an
+		// independent new-subject tail ("... If you do, Y. Then Z.") does not
+		// qualify and stays rejected as silently-wrong.
+		if i == gateIndex || !isGatedSubjectContinuation(effect) {
+			return optionalFlowPlan{}, false
+		}
+	}
+	// A recognized second optional must have been consumed inside the affirmative
+	// gated tail above. One outside that range (in the else branch or before the
+	// gate) has no modeled relationship to the primary optional and fails closed.
+	if extraOptional != -1 && (extraOptional < gateIndex || extraOptional >= tailEnd) {
+		return optionalFlowPlan{}, false
 	}
 	if elseIndex >= 0 {
 		// The else branch requires at least one preceding gated "if you do"
@@ -1079,14 +1148,51 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 		}
 	}
 	return optionalFlowPlan{
-		enabled:           true,
-		optionalIndex:     optionalIndex,
-		gateIndex:         gateIndex,
-		gateCondition:     gateCondition,
-		bareIndex:         -1,
-		elseIndex:         elseIndex,
-		elseGateCondition: elseGateCondition,
+		enabled:            true,
+		optionalIndex:      optionalIndex,
+		gateIndex:          gateIndex,
+		gateCondition:      gateCondition,
+		bareIndex:          -1,
+		elseIndex:          elseIndex,
+		elseGateCondition:  elseGateCondition,
+		extraOptionalIndex: extraOptional,
 	}, true
+}
+
+// optionalEffectIsGatedConsequence reports whether the optional effect at
+// optionalIndex is the gated consequence of a preceding "if/when you do" gate
+// rather than the gate source: its clause order contains a resolving-success
+// gate condition. A source optional ("you may X. If you do, Y") never contains
+// the gate (the gate lives on the following Y), so this distinguishes the
+// mandatory-publish shape ("X. When you do, you may Y") from the source-optional
+// shape.
+func optionalEffectIsGatedConsequence(content compiler.AbilityContent, optionalIndex int) bool {
+	for ci := range content.Conditions {
+		condition := content.Conditions[ci]
+		if !isResolvingSuccessGate(condition.Predicate) {
+			continue
+		}
+		if content.Effects[optionalIndex].Order.Contains(condition.Order) {
+			return true
+		}
+	}
+	return false
+}
+
+// isGatedSubjectContinuation reports whether an effect grammatically continues a
+// prior effect's subject ("It gains trample until end of turn." after "... put a
+// +1/+1 counter on target attacking creature."). Such an effect names no subject
+// of its own; it back-references the most recent subject, so when it trails a
+// gated effect it belongs to the same gated consequence. Only the prior-subject
+// and referenced-object continuation contexts qualify; every independent subject
+// context is excluded so an unrelated trailing effect is never silently gated.
+func isGatedSubjectContinuation(effect compiler.CompiledEffect) bool {
+	switch effect.Context {
+	case parser.EffectContextReferencedObject, parser.EffectContextPriorSubject:
+		return true
+	default:
+		return false
+	}
 }
 
 // elseGateConditionIndex returns the content-condition index of the "If you
@@ -1181,13 +1287,24 @@ func planMandatoryIfYouDoFlow(content compiler.AbilityContent) (plan optionalFlo
 	}
 	// Every effect from the gate index onward must belong to the single "if you
 	// do" clause, mirroring planOptionalFlow's contiguous-tail requirement so an
-	// independent ungated effect cannot silently resolve as though gated.
+	// independent ungated effect cannot silently resolve as though gated. A
+	// single nested optional effect realizes the "X. When you do, you may Y"
+	// reflexive body: Y is gated on X having happened and performed only if the
+	// controller then chooses to. Any further optional, or one that does not
+	// itself anchor the gate, fails closed.
+	extraOptional := -1
 	for i := gateIndex; i < len(content.Effects); i++ {
-		if content.Effects[i].Optional ||
-			content.Effects[i].Negated ||
-			content.Effects[i].DelayedTiming != 0 ||
-			!content.Effects[i].Order.Contains(gateConditionOrder) {
+		effect := content.Effects[i]
+		if effect.Negated ||
+			effect.DelayedTiming != 0 ||
+			!effect.Order.Contains(gateConditionOrder) {
 			return optionalFlowPlan{}, false, true
+		}
+		if effect.Optional {
+			if extraOptional != -1 {
+				return optionalFlowPlan{}, false, true
+			}
+			extraOptional = i
 		}
 	}
 	return optionalFlowPlan{
@@ -1199,7 +1316,30 @@ func planMandatoryIfYouDoFlow(content compiler.AbilityContent) (plan optionalFlo
 		elseIndex:              -1,
 		elseGateCondition:      -1,
 		publishWithoutOptional: true,
+		extraOptionalIndex:     extraOptional,
 	}, true, true
+}
+
+// applyGatedOptionalFlow wires the single instruction produced by a nested
+// "you may Y" effect that follows an "If you do" gate ("you may X. If you do,
+// you may Y"): it is gated on X having succeeded (ResultGate TriTrue) and is
+// itself Optional so the engine asks the controller whether to perform Y only
+// when X happened. The runtime evaluates the result gate before the optional
+// prompt, so a declined or failed X skips the prompt entirely. It fails closed
+// unless Y lowered to exactly one instruction with no existing envelope wiring.
+func applyGatedOptionalFlow(sequence []game.Instruction) bool {
+	if len(sequence) != 1 ||
+		sequence[0].Optional ||
+		sequence[0].PublishResult != "" ||
+		sequence[0].ResultGate.Exists {
+		return false
+	}
+	sequence[0].Optional = true
+	sequence[0].ResultGate = opt.Val(game.InstructionResultGate{
+		Key:       optionalIfYouDoResultKey,
+		Succeeded: game.TriTrue,
+	})
+	return true
 }
 
 // applyBareOptional marks the single instruction produced by a trailing bare
@@ -1306,8 +1446,14 @@ func applyOptionalFlowEnvelope(plan optionalFlowPlan, i int, sequence []game.Ins
 				return "structural — optional effect not single-instruction", false
 			}
 		}
-		if plan.gates(i) && !applyOptionalFlowGate(sequence, game.TriTrue) {
-			return "structural — if-you-do gate not applicable", false
+		if plan.gates(i) {
+			if plan.extraOptionalIndex >= 0 && i == plan.extraOptionalIndex {
+				if !applyGatedOptionalFlow(sequence) {
+					return "structural — gated optional not single-instruction", false
+				}
+			} else if !applyOptionalFlowGate(sequence, game.TriTrue) {
+				return "structural — if-you-do gate not applicable", false
+			}
 		}
 		if plan.gatesElse(i) && !applyOptionalFlowGate(sequence, game.TriFalse) {
 			return "structural — otherwise gate not applicable", false
