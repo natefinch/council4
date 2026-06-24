@@ -178,6 +178,14 @@ type ActionLog struct {
 	// does.
 	AbilityText string
 
+	// AbilityEffectSummary is a short, value-oriented gloss of what the activated
+	// ability costs and does, derived from the scorable-effect IR (for example
+	// "sacrifice a creature, draw a card"). It is set only for
+	// ActionActivateAbility actions whose ability has modeled effects, so a
+	// report can summarize an ability whose oracle text is long or covers several
+	// abilities. It is empty when the IR models none of the ability's effects.
+	AbilityEffectSummary string
+
 	// ManaTaps lists the permanents tapped for mana while applying this action,
 	// in tap order, so a report can show how a spell or ability was paid for.
 	// It includes lands and other sources tapped during cost payment.
