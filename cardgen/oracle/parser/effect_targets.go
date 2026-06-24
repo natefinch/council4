@@ -96,7 +96,16 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 			selectionTokens = head
 			nameUnique = true
 		}
+		otherThanSource := false
+		if head, ok := splitSelectionOtherThanSelfTail(selectionTokens, atoms); ok {
+			selectionTokens = head
+			otherThanSource = true
+		}
 		selection := parseSelection(selectionTokens, atoms)
+		if otherThanSource {
+			selection.Another = true
+			selection.OtherThanSource = true
+		}
 		qualifierTokens := selectionTokens
 		if _, head, ok := splitSelectionNamedTail(selectionTokens); ok {
 			// parseSelection has already captured the "named <Name>" tail as
@@ -295,6 +304,13 @@ func exactSinglePermanentTargetSyntax(text string, selection SelectionSyntax) bo
 			return false
 		}
 		text = trimmed
+	}
+	if selection.OtherThanSource {
+		index := strings.Index(strings.ToLower(text), " other than ")
+		if index < 0 {
+			return false
+		}
+		text = text[:index]
 	}
 	switch selection.Kind {
 	case SelectionAny:
@@ -722,6 +738,8 @@ func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
 	}
 	var words []string
 	switch {
+	case selection.OtherThanSource:
+		words = append(words, "target")
 	case selection.Another:
 		words = append(words, "another", "target")
 	case selection.Other:
@@ -2001,6 +2019,27 @@ func splitSelectionNameUniqueTail(tokens []shared.Token) (head []shared.Token, o
 		return nil, false
 	}
 	return tokens[:offset], true
+}
+
+// splitSelectionOtherThanSelfTail strips a trailing "other than <source name>"
+// self-exclusion clause from a target's selection tokens ("target creature you
+// control other than Rosie Cotton"), returning the head tokens that name the
+// permanent. The excluded object must be the card's own name, matched through the
+// atom self-name spans so the parser owns the name spelling, and must run to the
+// end of the selection. It fails closed for any other trailing wording.
+func splitSelectionOtherThanSelfTail(tokens []shared.Token, atoms Atoms) (head []shared.Token, ok bool) {
+	for i := 0; i+2 < len(tokens); i++ {
+		if !equalWord(tokens[i], "other") || !equalWord(tokens[i+1], "than") {
+			continue
+		}
+		nameTokens := tokens[i+2:]
+		span, found := atoms.SelfNameSpanStartingAt(nameTokens[0].Span)
+		if !found || tokenCountForSpan(nameTokens, span) != len(nameTokens) {
+			return nil, false
+		}
+		return tokens[:i], true
+	}
+	return nil, false
 }
 
 // nameUniqueAmongControlledClause is the relative clause that restricts a target

@@ -140,7 +140,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 		}
 		document.Abilities = append(document.Abilities, ability)
 	}
-	emitAtoms(document.Abilities, context.CardName)
+	emitAtoms(document.Abilities, context.CardName, context.Legendary)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -354,23 +354,23 @@ func emitOptional(abilities []Ability) {
 
 // emitAtoms fills each ability's and modal option's typed atom collection from
 // its semantic tokens.
-func emitAtoms(abilities []Ability, cardName string) {
+func emitAtoms(abilities []Ability, cardName string, legendary bool) {
 	for i := range abilities {
 		tokens := abilities[i].Tokens
 		if abilities[i].AbilityWord != nil {
 			tokens = tokensOutsideParserSpan(tokens, abilities[i].AbilityWord.Span)
 		}
-		abilities[i].Atoms = collectAtoms(tokens, abilities[i].Reminders, abilities[i].Quoted, cardName)
+		abilities[i].Atoms = collectAtoms(tokens, abilities[i].Reminders, abilities[i].Quoted, cardName, legendary)
 		if abilities[i].DiceTable != nil {
 			for k := range abilities[i].DiceTable.Rows {
 				row := &abilities[i].DiceTable.Rows[k]
-				row.Atoms = collectAtoms(row.Tokens, nil, nil, cardName)
+				row.Atoms = collectAtoms(row.Tokens, nil, nil, cardName, legendary)
 			}
 		}
 		if abilities[i].Modal == nil {
 			continue
 		}
-		abilities[i].Modal.Atoms = collectAtoms(abilities[i].Modal.header.Tokens, nil, nil, cardName)
+		abilities[i].Modal.Atoms = collectAtoms(abilities[i].Modal.header.Tokens, nil, nil, cardName, legendary)
 		if abilities[i].Modal.Spree {
 			abilities[i].Modal.MinModes = 1
 			abilities[i].Modal.MaxModes = len(abilities[i].Modal.Options)
@@ -389,7 +389,7 @@ func emitAtoms(abilities []Ability, cardName string) {
 		}
 		for j := range abilities[i].Modal.Options {
 			mode := &abilities[i].Modal.Options[j]
-			mode.Atoms = collectAtoms(mode.Body.Tokens, mode.Reminders, mode.Quoted, cardName)
+			mode.Atoms = collectAtoms(mode.Body.Tokens, mode.Reminders, mode.Quoted, cardName, legendary)
 		}
 	}
 }

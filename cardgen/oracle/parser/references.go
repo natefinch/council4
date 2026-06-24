@@ -64,9 +64,9 @@ type Reference struct {
 // cardName so the parser, not the compiler, owns recognition of the source
 // name's spelling. Source-tied duration subjects ("for as long as you control
 // [CardName]"/"this [type]") are intentionally not reported as references.
-func collectReferences(tokens []shared.Token, cardName string) []Reference {
+func collectReferences(tokens []shared.Token, cardName string, legendary bool) []Reference {
 	var references []Reference
-	for _, nameWords := range selfNameReferenceAliases(cardName) {
+	for _, nameWords := range selfNameReferenceAliases(cardName, legendary) {
 		for i := 0; i+len(nameWords) <= len(tokens); i++ {
 			if i >= 6 {
 				pre := normalizedWords(tokens[i-6 : i])
@@ -80,6 +80,15 @@ func collectReferences(tokens []shared.Token, cardName string) []Reference {
 				// filter's required card name, not a free object reference. The
 				// filter name is captured separately, so it must not surface as a
 				// reference that would claim an effect subject slot.
+				i += len(nameWords) - 1
+				continue
+			}
+			if i >= 2 && equalWord(tokens[i-2], "other") && equalWord(tokens[i-1], "than") {
+				// "target creature you control other than [CardName]" names the
+				// source only to exclude it from the target selection (an
+				// exclude-source qualifier the target carries). The name is
+				// consumed by the target clause, so it must not surface as a free
+				// object reference that would claim an effect subject slot.
 				i += len(nameWords) - 1
 				continue
 			}
@@ -400,9 +409,9 @@ func referenceContainsSequence(words []string, expected ...string) bool {
 // matching the compiler historically applied. Unlike collectReferences it does
 // not skip duration-context occurrences: callers that filter card-name tokens
 // out of effect, duration, and amount grammar need every occurrence.
-func collectSelfNameSpans(tokens []shared.Token, cardName string) []shared.Span {
+func collectSelfNameSpans(tokens []shared.Token, cardName string, legendary bool) []shared.Span {
 	var spans []shared.Span
-	for _, nameWords := range selfNameSpanAliases(cardName) {
+	for _, nameWords := range selfNameSpanAliases(cardName, legendary) {
 		for start := 0; start+len(nameWords) <= len(tokens); start++ {
 			phrase := tokens[start : start+len(nameWords)]
 			if referenceWordsAt(phrase, nameWords) || referencePossessiveNameAt(tokens, start, nameWords) {
@@ -416,7 +425,7 @@ func collectSelfNameSpans(tokens []shared.Token, cardName string) []shared.Span 
 	return spans
 }
 
-func selfNameSpanAliases(cardName string) [][]string {
+func selfNameSpanAliases(cardName string, legendary bool) [][]string {
 	cardName = strings.TrimSpace(cardName)
 	if cardName == "" {
 		return nil
@@ -438,15 +447,20 @@ func selfNameSpanAliases(cardName string) [][]string {
 	if shortName, _, ok := strings.Cut(cardName, ","); ok {
 		appendAlias(shortName)
 	}
+	if legendary {
+		if shortName := legendaryOfShortName(cardName); shortName != "" {
+			appendAlias(shortName)
+		}
+	}
 	if frontName, _, ok := strings.Cut(cardName, " // "); ok {
 		appendAlias(frontName)
 	}
 	return aliases
 }
 
-func collectSourceNameSpans(tokens []shared.Token, cardName string) []shared.Span {
+func collectSourceNameSpans(tokens []shared.Token, cardName string, legendary bool) []shared.Span {
 	var spans []shared.Span
-	for _, nameWords := range selfNameSubjectAliases(cardName) {
+	for _, nameWords := range selfNameSubjectAliases(cardName, legendary) {
 		for start := 0; start+len(nameWords) <= len(tokens); start++ {
 			phrase := tokens[start : start+len(nameWords)]
 			if referenceWordsAt(phrase, nameWords) || referencePossessiveNameAt(tokens, start, nameWords) {
@@ -506,15 +520,44 @@ func spansOverlap(left, right shared.Span) bool {
 	return left.Start.Offset < right.End.Offset && right.Start.Offset < left.End.Offset
 }
 
+// legendaryOfShortName returns the pre-"of" short name of a legendary "<short
+// name> of <place>" name ("Rosie Cotton" for "Rosie Cotton of South Lane",
+// "Gimli" for "Gimli of the Glittering Caves"), or the empty string when the
+// name has no qualifying " of " segment. Only legendary names (CR 205.4) denote
+// a single object unambiguously, so callers gate this short name on the card
+// being legendary, mirroring the pre-comma legend short name.
+//
+// A single-word pre-"of" segment is allowed, matching how the pre-comma legend
+// short name accepts single-word proper nouns ("Kamahl" for "Kamahl, Pit
+// Fighter"): a legendary name's leading segment is a proper noun denoting that
+// specific legend, and the alias only ever binds when that exact spelling
+// appears standalone in the card's own body. A comma in the segment ("Reki, the
+// History of Kamigawa") signals a comma-form legend whose short name is derived
+// from the pre-comma split instead, so the " of " split is rejected here to
+// avoid a spurious second alias.
+func legendaryOfShortName(cardName string) string {
+	index := strings.Index(cardName, " of ")
+	if index <= 0 {
+		return ""
+	}
+	short := strings.TrimSpace(cardName[:index])
+	if strings.Contains(short, ",") {
+		return ""
+	}
+	return short
+}
+
 // selfNameReferenceAliases returns the card-name spellings that count as an
 // explicit self reference in a rules-text body: the full printed name, the
-// pre-comma legend short name ("Kamahl" for "Kamahl, Pit Fighter"), and the
-// double-faced front-face name. These are proper-noun spellings that always
-// denote the same object. The bare first word of a multi-word non-legendary
-// name is deliberately excluded here (unlike selfNameSubjectAliases) because a
-// generic first word ("Goblin", "Fire") can recur in a body meaning something
-// other than the source, and a body reference must not match those.
-func selfNameReferenceAliases(cardName string) [][]string {
+// pre-comma legend short name ("Kamahl" for "Kamahl, Pit Fighter"), the
+// legendary pre-"of" short name ("Rosie Cotton" for "Rosie Cotton of South
+// Lane") when legendary, and the double-faced front-face name. These are
+// proper-noun spellings that always denote the same object. The bare first word
+// of a multi-word non-legendary name is deliberately excluded here (unlike
+// selfNameSubjectAliases) because a generic first word ("Goblin", "Fire") can
+// recur in a body meaning something other than the source, and a body reference
+// must not match those.
+func selfNameReferenceAliases(cardName string, legendary bool) [][]string {
 	cardName = strings.TrimSpace(cardName)
 	if cardName == "" {
 		return nil
@@ -535,6 +578,11 @@ func selfNameReferenceAliases(cardName string) [][]string {
 	appendAlias(cardName)
 	if shortName, _, ok := strings.Cut(cardName, ","); ok {
 		appendAlias(shortName)
+	}
+	if legendary {
+		if shortName := legendaryOfShortName(cardName); shortName != "" {
+			appendAlias(shortName)
+		}
 	}
 	if frontName, _, ok := strings.Cut(cardName, " // "); ok {
 		appendAlias(frontName)
@@ -542,7 +590,7 @@ func selfNameReferenceAliases(cardName string) [][]string {
 	return aliases
 }
 
-func selfNameSubjectAliases(cardName string) [][]string {
+func selfNameSubjectAliases(cardName string, legendary bool) [][]string {
 	cardName = strings.TrimSpace(cardName)
 	if cardName == "" {
 		return nil
@@ -563,6 +611,11 @@ func selfNameSubjectAliases(cardName string) [][]string {
 	appendAlias(cardName)
 	if shortName, _, ok := strings.Cut(cardName, ","); ok {
 		appendAlias(shortName)
+	}
+	if legendary {
+		if shortName := legendaryOfShortName(cardName); shortName != "" {
+			appendAlias(shortName)
+		}
 	}
 	if frontName, _, ok := strings.Cut(cardName, " // "); ok {
 		appendAlias(frontName)

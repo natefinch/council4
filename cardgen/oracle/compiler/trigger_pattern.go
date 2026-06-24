@@ -237,6 +237,9 @@ type TriggerSelection struct {
 	// subtype the predicate's source permanent chose as it entered ("of the
 	// chosen type"). It lowers to Selection.SubtypeFromSourceEntryChoice.
 	SubtypeFromEntryChoice bool
+	// Modified requires the matched permanent to be modified (a counter, Aura, or
+	// Equipment, CR 701.50). It lowers to Selection.MatchModified.
+	Modified bool
 }
 
 // TriggerPattern is a source-spanned semantic description of a representable
