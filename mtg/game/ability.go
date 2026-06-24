@@ -138,6 +138,16 @@ const (
 	// are representable. Appended at the end of the enum so existing keyword
 	// ordinals are unchanged.
 	ChooseABackground
+	// Reconfigure (CR 702.151) is the Equipment-creature attach keyword:
+	// "Reconfigure <cost>" is a sorcery-speed activated ability that attaches the
+	// source to target creature you control (and may unattach it). It is modeled
+	// as a recognized keyword identity carried by ReconfigureKeyword inside the
+	// activated ability built by ReconfigureActivatedAbility; the rules layer
+	// treats it like Equip for attachment activation and resolution. The
+	// "or unattach" mode and the "while attached, this isn't a creature"
+	// type-change are not yet simulated. Appended at the end of the enum so
+	// existing keyword ordinals are unchanged.
+	Reconfigure
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.

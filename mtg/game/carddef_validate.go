@@ -529,6 +529,8 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case EquipKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+	case ReconfigureKeyword:
+		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case EnchantKeyword:
 		v.validateTargetSpec(faceName, appendPath(path, "Target"), &keyword.Target)
 	case CyclingKeyword:

@@ -186,6 +186,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordActivatedLowering(&equipAbility, ability, syntax), true, nil
 	}
+	if reconfigureAbility, ok, diag := lowerReconfigureAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordActivatedLowering(&reconfigureAbility, ability, syntax), true, nil
+	}
 	if cyclingAbility, ok, diag := lowerCyclingAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag

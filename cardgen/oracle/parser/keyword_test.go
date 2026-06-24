@@ -32,7 +32,7 @@ func TestParseKeywordVocabularyMeaning(t *testing.T) {
 		"Lifelink": KeywordLifelink, "Madness": KeywordMadness, "Menace": KeywordMenace, "Morph": KeywordMorph,
 		"Mutate": KeywordMutate, "Ninjutsu": KeywordNinjutsu, "Outlast": KeywordOutlast, "Persist": KeywordPersist,
 		"Protection": KeywordProtection, "Prowess": KeywordProwess, "Read ahead": KeywordReadAhead,
-		"Reach": KeywordReach, "Shroud": KeywordShroud, "Skulk": KeywordSkulk, "Split second": KeywordSplitSecond, "Storm": KeywordStorm,
+		"Reach": KeywordReach, "Reconfigure": KeywordReconfigure, "Shroud": KeywordShroud, "Skulk": KeywordSkulk, "Split second": KeywordSplitSecond, "Storm": KeywordStorm,
 		"Suspend": KeywordSuspend, "Toxic": KeywordToxic, "Trample": KeywordTrample, "Undying": KeywordUndying,
 		"Unleash":   KeywordUnleash,
 		"Vigilance": KeywordVigilance, "Ward": KeywordWard, "Wither": KeywordWither, "Riot": KeywordRiot,

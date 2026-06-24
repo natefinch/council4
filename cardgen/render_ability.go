@@ -24,6 +24,14 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 	if rendered, ok, err := r.renderEquipRestrictedAbility(ctx, ability); ok {
 		return rendered, err
 	}
+	if manaCost, ok := game.ActivatedBodyReconfigureCost(ability); ok &&
+		reflect.DeepEqual(*ability, game.ReconfigureActivatedAbility(manaCost)) {
+		renderedCost, err := r.renderManaCost(ctx, manaCost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.ReconfigureActivatedAbility(%s)", renderedCost), nil
+	}
 	if manaCost, ok := game.ActivatedBodyCyclingCost(ability); ok &&
 		reflect.DeepEqual(*ability, game.CyclingActivatedAbility(manaCost)) {
 		renderedCost, err := r.renderManaCost(ctx, manaCost)

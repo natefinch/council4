@@ -142,7 +142,7 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 		}
 		return "resolved"
 	}
-	if permanentOK && activatedOK && isEquipmentPermanent(g, permanent) && game.BodyHasKeyword(activatedBody, game.Equip) {
+	if permanentOK && activatedOK && isEquipmentPermanent(g, permanent) && bodyAttachesLikeEquip(activatedBody) {
 		sourceObjectID := obj.SourceID
 		if !permanentOK {
 			sourceObjectID = 0
