@@ -773,6 +773,13 @@ func lowerExecutableAbility(
 				sourceSpans:  []shared.Span{body.Content.Span},
 			}, nil
 		}
+		if body.ExactSequence == compiler.ExactSequenceDiscardHandThenDraw {
+			spellAbility := lowerDiscardHandThenDrawSequence(body)
+			return abilityLowering{
+				spellAbility: opt.Val(spellAbility),
+				sourceSpans:  []shared.Span{body.Content.Span},
+			}, nil
+		}
 		if len(body.Content.Effects) == 1 &&
 			body.Content.Effects[0].Kind == compiler.EffectAddMana &&
 			(body.Content.Effects[0].Mana.AnyColor || body.Content.Effects[0].Mana.FilterPair) {
@@ -851,6 +858,10 @@ func lowerExecutableAbility(
 		if diagnostic == nil {
 			for i := range syntax.Reminders {
 				lowered.sourceSpans = append(lowered.sourceSpans, syntax.Reminders[i].Span)
+			}
+			if syntax.AbilityWord != nil && replacementAbilityWordConsumed(lowered) {
+				lowered.sourceSpans = append(lowered.sourceSpans,
+					syntax.AbilityWord.Span, syntax.AbilityWord.SeparatorSpan)
 			}
 		}
 		return lowered, diagnostic

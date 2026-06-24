@@ -242,6 +242,17 @@ func lowerDrawDoublingReplacement(
 		return unsupported("the executable source backend supports only the exact draw-doubling replacement")
 	}
 	multiplier := ability.Content.Effects[0].Amount.Value
+	if isMaxSpeedAbilityWord(ability.AbilityWord) {
+		// "Max speed — If you would draw a card, draw N cards instead." (Vnwxt,
+		// Verbose Host) gates the draw-doubling replacement on the controller
+		// having maximum speed (CR 702.179). The runtime evaluates the condition
+		// against the in-flight draw event, so the multiplier applies only while
+		// the controller is at max speed.
+		return game.MaxSpeedDrawCardMultiplierReplacement(ability.Text, multiplier, exceptFirstInDrawStep), true, nil
+	}
+	if ability.AbilityWord != "" {
+		return unsupported("the executable source backend supports only the exact draw-doubling replacement")
+	}
 	return game.DrawCardMultiplierReplacement(ability.Text, multiplier, exceptFirstInDrawStep), true, nil
 }
 
@@ -396,6 +407,17 @@ func appendKeywordSpans(spans []shared.Span, keywords []compiler.CompiledKeyword
 		spans = append(spans, keyword.Span)
 	}
 	return spans
+}
+
+// replacementAbilityWordConsumed reports whether a lowered replacement ability
+// absorbed its leading ability word into a rules-bearing gate that the lowerer
+// recognized. The only such case today is the "Max speed —" draw-doubling
+// replacement (Vnwxt, Verbose Host), which gates the replacement on the
+// controller having maximum speed; its ability word span is therefore covered.
+func replacementAbilityWordConsumed(lowered abilityLowering) bool {
+	return lowered.replacementAbility.Exists &&
+		lowered.replacementAbility.Val.Replacement.Condition.Exists &&
+		lowered.replacementAbility.Val.Replacement.Condition.Val.ControllerHasMaxSpeed
 }
 
 func replacementSourceSpans(ability compiler.CompiledAbility) []shared.Span {

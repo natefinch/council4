@@ -188,6 +188,13 @@ func renderStringReplacement(ability *game.ReplacementAbility) (string, bool) {
 		return fmt.Sprintf("game.DrawFromEmptyLibraryWinReplacement(%q)", ability.Text), true
 	}
 	if ability.Replacement.DrawCardMultiplier > 1 {
+		if ability.Replacement.Condition.Exists {
+			if ability.Replacement.Condition.Val.ControllerHasMaxSpeed {
+				return fmt.Sprintf("game.MaxSpeedDrawCardMultiplierReplacement(%q, %d, %t)",
+					ability.Text, ability.Replacement.DrawCardMultiplier, ability.Replacement.DrawCardExceptFirstInDrawStep), true
+			}
+			return "", false
+		}
 		return fmt.Sprintf("game.DrawCardMultiplierReplacement(%q, %d, %t)",
 			ability.Text, ability.Replacement.DrawCardMultiplier, ability.Replacement.DrawCardExceptFirstInDrawStep), true
 	}

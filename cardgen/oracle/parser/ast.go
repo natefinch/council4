@@ -212,6 +212,7 @@ const (
 	ExactSequenceUnknown ExactSequenceKind = iota
 	ExactSequenceChosenTypeLibraryTopToHand
 	ExactSequenceBottomHandThenDraw
+	ExactSequenceDiscardHandThenDraw
 )
 
 // ExactSequenceSyntax records an exact sequence and its resolving-body span.

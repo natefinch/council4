@@ -1103,7 +1103,6 @@ func selectorHasUnsupportedPermanentFilters(selector compiler.CompiledSelector) 
 func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 	if !targetCardinalityIsOne(target) ||
 		target.Selector.Another || target.Selector.Other ||
-		target.Selector.Controller != compiler.ControllerAny ||
 		target.Selector.Attacking || target.Selector.Blocking ||
 		target.Selector.Tapped || target.Selector.Untapped ||
 		len(target.Selector.Supertypes()) != 0 ||
@@ -1117,6 +1116,10 @@ func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool
 	if target.Selector.Kind != compiler.SelectorSpell {
 		return game.TargetSpec{}, false
 	}
+	controller, ok := counterAbilityController(target.Selector.Controller)
+	if !ok {
+		return game.TargetSpec{}, false
+	}
 	required := target.Selector.RequiredTypesAny()
 	excluded := target.Selector.ExcludedTypes()
 	colors := target.Selector.ColorsAny()
@@ -1126,6 +1129,7 @@ func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool
 	}
 	predicate := game.TargetPredicate{
 		StackObjectKinds:       []game.StackObjectKind{game.StackSpell},
+		Controller:             controller,
 		ExcludedSpellCardTypes: append([]types.Card(nil), excluded...),
 	}
 	if target.Selector.MatchManaValue {
