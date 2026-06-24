@@ -1,6 +1,12 @@
 package eval
 
-import "github.com/natefinch/council4/mtg/game"
+import (
+	"slices"
+
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
+)
 
 // ScorableAbilityOf reduces a sealed ability body to its scorable cost and
 // effect terms. For a modal ability it unions every mode (an over-approximation);
@@ -121,6 +127,9 @@ func appendPrimitiveAtoms(atoms []EffectAtom, primitive game.Primitive) []Effect
 	case game.AddCounter:
 		return append(atoms, quantityAtom(EffectCounterAdded, p.Amount, AffectedUnknown))
 	case game.Search:
+		if isLandRampSearch(p) {
+			return append(atoms, quantityAtom(EffectLandRamp, p.Amount, AffectedYou))
+		}
 		return append(atoms, quantityAtom(EffectCardTutored, p.Amount, AffectedYou))
 	default:
 		return atoms
@@ -144,4 +153,14 @@ func affectedFromPlayer(ref game.PlayerReference) Affected {
 		return AffectedYou
 	}
 	return AffectedUnknown
+}
+
+// isLandRampSearch reports whether a search puts a land onto the battlefield —
+// land ramp (Rampant Growth, Cultivate, Farseek) — as opposed to a tutor that
+// moves a card to hand or another zone. It matches a battlefield destination
+// with a land-typed filter.
+func isLandRampSearch(p game.Search) bool {
+	return p.Spec.Destination == zone.Battlefield &&
+		(slices.Contains(p.Spec.Filter.RequiredTypes, types.Land) ||
+			slices.Contains(p.Spec.Filter.RequiredTypesAny, types.Land))
 }

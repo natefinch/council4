@@ -23,6 +23,12 @@ const (
 	// a creature's deployment value, so a high-impact play still overrides it and
 	// the agent never simply refuses to develop.
 	scoreHoldUp = 30.0
+
+	// scoreTapLandTiming sequences an unconditional tapland: it is added when the
+	// agent does not need the land's mana this turn (drop the tapland now) and
+	// subtracted when it does (prefer an untapped source). It is well below
+	// scoreColorFix so fixing a needed colour still wins over tap timing.
+	scoreTapLandTiming = 15.0
 )
 
 // manaAvailability summarises the mana the agent could produce right now from
@@ -63,7 +69,8 @@ func availableMana(obs rules.PlayerObservation) manaAvailability {
 }
 
 // scoreLandPlay scores a land drop, rewarding a land that fixes a colour the
-// agent's hand needs but cannot yet produce, so it avoids colour screw.
+// agent's hand needs but cannot yet produce, and sequencing taplands into turns
+// the agent does not need the mana, so it avoids colour screw and wasted tempo.
 func scoreLandPlay(obs rules.PlayerObservation, act action.Action) float64 {
 	score := scorePlayLand
 	play, ok := act.PlayLandPayload()
@@ -71,7 +78,11 @@ func scoreLandPlay(obs rules.PlayerObservation, act action.Action) float64 {
 		return score
 	}
 	land, ok := handCard(obs, play.CardID)
-	if !ok || len(land.ProducesColors) == 0 {
+	if !ok {
+		return score
+	}
+	score += tapTimingScore(obs, land)
+	if len(land.ProducesColors) == 0 {
 		return score
 	}
 	needs := handColorNeeds(obs)
@@ -85,6 +96,42 @@ func scoreLandPlay(obs rules.PlayerObservation, act action.Action) float64 {
 		}
 	}
 	return score
+}
+
+// tapTimingScore sequences an unconditional tapland against whether the agent
+// needs this land's mana this turn. When the extra untapped mana would enable a
+// play this turn, a tapland is penalised so the agent prefers an untapped source
+// and keeps the play available; when the mana is not needed this turn, a tapland
+// is rewarded so the agent drops it now and saves its untapped lands for a turn
+// the mana matters. Untapped lands are the baseline and unaffected.
+func tapTimingScore(obs rules.PlayerObservation, land rules.CardView) float64 {
+	if !land.EntersTapped {
+		return 0
+	}
+	if needsMoreManaThisTurn(obs) {
+		return -scoreTapLandTiming
+	}
+	return scoreTapLandTiming
+}
+
+// needsMoreManaThisTurn reports whether one more untapped mana would let the
+// agent cast a nonland card from hand it cannot afford right now — the case where
+// an untapped land beats a tapland this turn. It compares each held nonland
+// card's mana value against the agent's current untapped mana, looking for one
+// that becomes affordable with exactly one more mana.
+func needsMoreManaThisTurn(obs rules.PlayerObservation) bool {
+	available := availableMana(obs).total
+	hand := obs.Hand()
+	for i := range hand {
+		card := hand[i]
+		if slices.Contains(card.Types, types.Land) {
+			continue
+		}
+		if card.ManaValue > available && card.ManaValue <= available+1 {
+			return true
+		}
+	}
+	return false
 }
 
 // handColorNeeds is the set of colours the agent's non-land hand cards require

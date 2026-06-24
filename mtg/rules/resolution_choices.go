@@ -215,7 +215,7 @@ func landsProduceMana(g *game.Game, playerID game.PlayerID, choice *game.Resolut
 			continue
 		}
 		values := effectivePermanentValues(g, permanent)
-		_, colors := abilitiesManaProduction(values.abilities, permanent.EntryChoices)
+		_, colors := abilitiesManaProduction(values.abilities, permanent.EntryChoices, commanderIdentityColors(g, effectiveController(g, permanent)))
 		for _, c := range colors {
 			found.add(c)
 		}

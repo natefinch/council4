@@ -53,6 +53,15 @@ const (
 	// threat model values at roughly targetingScore of a single power point.
 	scoreCounterValue = 4.0
 
+	// Ramp incentives bias the agent toward accelerating its mana early. A mana
+	// source (rock or dork) is prized over a land-fetch because it also fixes and
+	// survives; both bonuses decay linearly to zero once the agent already has
+	// scoreRampDecayFrom untapped mana sources, so ramp is preferred on the early
+	// turns where it compounds and ignored once the mana base is developed.
+	scoreRampSource    = 30.0
+	scoreRampLand      = 20.0
+	scoreRampDecayFrom = 6.0
+
 	// scoreSelfTargetPenalty discourages aiming a spell at the agent's own
 	// permanents or face, a cheap prune of obviously bad targeting. Interaction
 	// aimed at opponents is rewarded by the threat model (see threat.go), so the
@@ -127,10 +136,45 @@ func scoreCastSpell(obs rules.PlayerObservation, act action.Action, personality 
 		if isCreature(card) {
 			score += scoreCreature + personality.deployBonus()
 		}
+		score += rampBonus(obs, card)
 		score -= holdUpPenalty(obs, card, personality)
 	}
 	score += targetingScore(obs, cast.Targets, personality)
 	return score
+}
+
+// rampBonus rewards casting ramp — a mana rock or dork, or a spell that puts a
+// land onto the battlefield — early, when the extra mana most accelerates the
+// agent's development. The bonus fades as the agent's available mana grows, so a
+// ramp spell is prized on turn two and ignorable late, and a mana source is
+// valued more than a land-fetch because it also fixes and survives.
+func rampBonus(obs rules.PlayerObservation, card rules.CardView) float64 {
+	if !card.ProducesMana && !card.RampsLand {
+		return 0
+	}
+	bonus := scoreRampLand
+	if card.ProducesMana {
+		bonus = scoreRampSource
+	}
+	available := availableManaSources(obs)
+	if decay := scoreRampDecayFrom - available; decay > 0 {
+		return bonus * float64(decay) / scoreRampDecayFrom
+	}
+	return 0
+}
+
+// availableManaSources counts the untapped mana sources the agent controls, a
+// coarse proxy for how developed its mana is, used to fade the ramp bonus.
+func availableManaSources(obs rules.PlayerObservation) int {
+	battlefield := obs.Battlefield()
+	count := 0
+	for i := range battlefield {
+		permanent := battlefield[i]
+		if permanent.Controller == obs.Player && permanent.ProducesMana && !permanent.Tapped {
+			count++
+		}
+	}
+	return count
 }
 
 // targetingScore rewards aiming a spell at the most dangerous opponent

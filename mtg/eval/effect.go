@@ -43,6 +43,10 @@ const (
 	EffectCounterAdded
 	// EffectCardTutored is a library search moving cards to hand or battlefield.
 	EffectCardTutored
+	// EffectLandRamp is a search that puts a land onto the battlefield (Rampant
+	// Growth, Cultivate), increasing available mana — ramp, distinct from a tutor
+	// to hand.
+	EffectLandRamp
 )
 
 // Affected identifies who or what a consequence affects, which carries its value

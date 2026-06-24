@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -138,5 +140,33 @@ func TestScorableEffectFlagsOptionalInstructionDynamic(t *testing.T) {
 	atoms := ScorableEffectModes(content, nil)
 	if len(atoms) != 1 || !atoms[0].IsDynamic {
 		t.Fatalf("optional atom = %#v, want IsDynamic", atoms)
+	}
+}
+
+func TestScorableEffectClassifiesLandRampSearch(t *testing.T) {
+	ramp := game.Search{
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:  zone.Library,
+			Destination: zone.Battlefield,
+			Filter:      game.Selection{RequiredTypes: []types.Card{types.Land}},
+		},
+	}
+	atoms := ScorableEffect(contentOf(ramp))
+	if len(atoms) != 1 || atoms[0].Kind != EffectLandRamp {
+		t.Fatalf("land-fetch search atoms = %#v, want a single EffectLandRamp", atoms)
+	}
+
+	tutor := game.Search{
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:  zone.Library,
+			Destination: zone.Hand,
+			Filter:      game.Selection{RequiredTypes: []types.Card{types.Creature}},
+		},
+	}
+	atoms = ScorableEffect(contentOf(tutor))
+	if len(atoms) != 1 || atoms[0].Kind != EffectCardTutored {
+		t.Fatalf("creature tutor atoms = %#v, want a single EffectCardTutored", atoms)
 	}
 }
