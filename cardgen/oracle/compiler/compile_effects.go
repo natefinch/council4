@@ -264,6 +264,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				DelayedTriggerAbility:                syntax.DelayedTriggerAbility,
 				DelayedTriggerOneShot:                syntax.DelayedTriggerOneShot,
 				TokenName:                            syntax.TokenName,
+				TokenPredefinedName:                  syntax.TokenPredefinedName,
 				AmassSubtype:                         syntax.AmassSubtype,
 				TokenCopyOfTarget:                    syntax.TokenCopyOfTarget,
 				TokenCopyOfReference:                 syntax.TokenCopyOfReference,

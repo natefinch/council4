@@ -125,6 +125,9 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 	if !ok && len(extraKeywords) == 0 {
 		def, ok = synthesizeNamedArtifactTokenDef(&effect)
 	}
+	if !ok && len(extraKeywords) == 0 {
+		def, ok = synthesizePredefinedTokenDef(&effect)
+	}
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
@@ -793,6 +796,62 @@ func synthesizeNamedArtifactTokenDef(effect *compiler.CompiledEffect) (*game.Car
 		return nil, false
 	}
 	return namedArtifactTokenDef(subtypes[0])
+}
+
+// synthesizePredefinedTokenDef builds a token CardDef for a predefined named
+// token whose name is a card name rather than a card subtype (Mutavault). The
+// create clause carries only the name, so the token's full definition — its
+// types, mana ability, and activated abilities — is fixed here, mirroring the
+// printed token's reminder text. Any name with no fixed definition fails closed.
+func synthesizePredefinedTokenDef(effect *compiler.CompiledEffect) (*game.CardDef, bool) {
+	if effect.TokenPredefinedName == "" || effect.TokenPTKnown {
+		return nil, false
+	}
+	switch effect.TokenPredefinedName {
+	case "Mutavault":
+		return mutavaultTokenDef(), true
+	default:
+		return nil, false
+	}
+}
+
+// mutavaultTokenDef builds the Mutavault token: a colorless land with the
+// intrinsic colorless mana ability "{T}: Add {C}." and the self-animation
+// ability "{1}: This token becomes a 2/2 creature with all creature types until
+// end of turn. It's still a land." The animation adds the creature type and every
+// creature subtype, and sets the token to 2/2, for the rest of the turn while
+// leaving the land type intact (CR 613: the type layer adds rather than replaces).
+func mutavaultTokenDef() *game.CardDef {
+	manaAbility := game.TapManaAbility(mana.C)
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:          "Mutavault",
+			Types:         []types.Card{types.Land},
+			ManaAbilities: []game.ManaAbility{manaAbility},
+			ActivatedAbilities: []game.ActivatedAbility{{
+				Text:     "{1}: This token becomes a 2/2 creature with all creature types until end of turn. It's still a land.",
+				ManaCost: opt.Val(cost.Mana{cost.O(1)}),
+				Content: game.Mode{Sequence: []game.Instruction{{
+					Primitive: game.ApplyContinuous{
+						Object: opt.Val(game.SourcePermanentReference()),
+						ContinuousEffects: []game.ContinuousEffect{
+							{
+								Layer:                game.LayerType,
+								AddTypes:             []types.Card{types.Creature},
+								AddEveryCreatureType: true,
+							},
+							{
+								Layer:        game.LayerPowerToughnessSet,
+								SetPower:     opt.Val(game.PT{Value: 2}),
+								SetToughness: opt.Val(game.PT{Value: 2}),
+							},
+						},
+						Duration: game.DurationUntilEndOfTurn,
+					},
+				}}}.Ability(),
+			}},
+		},
+	}
 }
 
 // namedArtifactTokenDef returns the synthesized CardDef for a recognized
