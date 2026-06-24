@@ -262,6 +262,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				GainGrantedAbility:                   syntax.GainGrantedAbility,
 				EmblemAbilities:                      syntax.EmblemAbilities,
 				DelayedTriggerAbility:                syntax.DelayedTriggerAbility,
+				PayRepeatedlyAnimate:                 syntax.PayRepeatedlyAnimate,
 				DelayedTriggerOneShot:                syntax.DelayedTriggerOneShot,
 				TokenName:                            syntax.TokenName,
 				TokenPredefinedName:                  syntax.TokenPredefinedName,

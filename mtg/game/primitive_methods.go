@@ -444,7 +444,9 @@ func (p AddPlayerCounter) instructionRefs() primitiveRefs {
 }
 func (p MoveCounters) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
 func (p ApplyContinuous) instructionRefs() primitiveRefs {
-	return primitiveRefs{publishesLinked: p.PublishLinked}
+	refs := quantityRefs(p.ChooseUpTo)
+	refs.publishesLinked = p.PublishLinked
+	return refs
 }
 func (ApplyRule) instructionRefs() primitiveRefs { return primitiveRefs{} }
 

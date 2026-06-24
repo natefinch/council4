@@ -694,6 +694,9 @@ func clonePrimitive(primitive Primitive) Primitive {
 	case SacrificePermanents:
 		value.Selection = cloneSelection(value.Selection)
 		return value
+	case ApplyContinuous:
+		value.ChooseFrom = cloneGroupReference(value.ChooseFrom)
+		return value
 	default:
 		return primitive
 	}

@@ -1411,6 +1411,15 @@ const (
 	// and, when riding the every-creature-type grant, the type layer. Added last
 	// so existing kinds keep their wire values.
 	EffectSetBasePT
+	// EffectPayRepeatedlyAnimate is the kicker-on-resolution land-animation
+	// trigger of Primal Adversary: the controller may pay a repeatable mana cost
+	// any number of times, then puts that many +1/+1 counters on the source and
+	// animates up to that many lands they control into creatures with a set
+	// power/toughness, added subtype(s), and keyword(s) while they remain lands.
+	// It lowers to a PayRepeatedly publishing the payment count, an AddCounter
+	// sized by the count, and an ApplyContinuous that chooses up to that many
+	// controlled lands. Added last so existing kinds keep their wire values.
+	EffectPayRepeatedlyAnimate
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1595,6 +1604,12 @@ type CompiledEffect struct {
 	// game.CreateDelayedTrigger carrying the inner trigger pattern and content.
 	// It is nil for effects that are not event-based delayed triggers.
 	DelayedTriggerAbility *parser.StaticGrantedAbilitySyntax
+	// PayRepeatedlyAnimate is the typed payload of an EffectPayRepeatedlyAnimate
+	// effect (Primal Adversary's enters trigger): the repeatable mana cost, the
+	// +N/+N counter dimensions, the animated lands' base power/toughness, the
+	// added creature subtype(s), and the granted keyword(s). It is nil for every
+	// other effect.
+	PayRepeatedlyAnimate *parser.PayRepeatedlyAnimateSyntax
 	// DelayedTriggerOneShot records that an EffectDelayedTrigger fires only on
 	// the first matching event ("the next time you cast ..."). It is meaningful
 	// only when Kind is EffectDelayedTrigger.

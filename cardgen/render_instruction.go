@@ -1234,6 +1234,21 @@ func (r Renderer) renderApplyContinuousPrimitive(ctx *renderCtx, value game.Appl
 	if value.PublishLinked != "" {
 		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
 	}
+	if value.ChooseFrom.Valid() {
+		group, err := r.renderGroupReference(ctx, value.ChooseFrom)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ChooseFrom: %s,", group))
+		amount, err := r.renderQuantity(ctx, value.ChooseUpTo)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ChooseUpTo: %s,", amount))
+	}
+	if value.Prompt != "" {
+		fields = append(fields, fmt.Sprintf("Prompt: %q,", value.Prompt))
+	}
 	return structLit("game.ApplyContinuous", fields), nil
 }
 

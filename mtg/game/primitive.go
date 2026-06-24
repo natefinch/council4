@@ -384,11 +384,22 @@ type MoveCounters struct {
 // ApplyContinuous applies continuous effects to a target (or globally).
 // PublishLinked remembers the affected permanent for a later linked effect, such
 // as a delayed "sacrifice it" trigger that must resolve the earlier target.
+//
+// When ChooseFrom is set, the resolving controller instead chooses up to
+// ChooseUpTo distinct permanents from that group at resolution and the
+// continuous effects are applied to each chosen permanent ("up to that many
+// target lands you control become 3/3 creatures ...", Primal Adversary). The
+// ChooseUpTo amount may be dynamic, so a payment-count or other resolution
+// number can bound the selection. Object and ChooseFrom are mutually exclusive.
 type ApplyContinuous struct {
 	Object            opt.V[ObjectReference]
 	ContinuousEffects []ContinuousEffect
 	Duration          EffectDuration
 	PublishLinked     LinkedKey
+
+	ChooseFrom GroupReference
+	ChooseUpTo Quantity
+	Prompt     string
 }
 
 // ApplyRule creates rule effects for a target (or globally).
