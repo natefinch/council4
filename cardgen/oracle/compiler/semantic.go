@@ -1376,6 +1376,13 @@ const (
 	// a RuleEffectAttackTax for the recognized duration. Added last so existing
 	// kinds keep their wire values.
 	EffectAttackTax
+	// EffectAdapt models the Adapt keyword action (CR 701.43) written out as an
+	// activated ability effect ("Adapt N."): if the source creature has no
+	// +1/+1 counters on it, it gets N +1/+1 counters. It lowers to a game.Adapt
+	// primitive scoped to the source permanent; the runtime guard subsumes the
+	// printed "if it has no +1/+1 counters" reminder. Added last so existing
+	// kinds keep their wire values.
+	EffectAdapt
 )
 
 // DurationKind identifies common continuous-effect durations.

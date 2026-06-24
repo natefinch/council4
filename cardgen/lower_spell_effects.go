@@ -1793,6 +1793,25 @@ func lowerRenownContent(
 	)
 }
 
+// lowerAdaptContent lowers the Adapt keyword action written out as an activated
+// ability effect ("Adapt N."). It produces a game.Adapt primitive targeting the
+// source permanent and carrying the fixed counter count. The runtime guard adds
+// the counters only when the source has no +1/+1 counters on it, subsuming the
+// printed "if it has no +1/+1 counters" reminder.
+func lowerAdaptContent(
+	ctx contentCtx,
+	syntax *parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
+	return lowerExactPrimitiveSpell(
+		ctx,
+		syntax,
+		"adapt",
+		func(amount game.Quantity) game.Primitive {
+			return game.Adapt{Object: game.SourcePermanentReference(), Amount: amount}
+		},
+	)
+}
+
 func lowerExploreSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupportedExplore := contentDiagnostic(
 		ctx,

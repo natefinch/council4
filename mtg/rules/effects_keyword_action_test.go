@@ -283,6 +283,29 @@ func TestRenownEffectAddsCountersOnlyOnce(t *testing.T) {
 	}
 }
 
+func TestAdaptEffectAddsCountersOnlyWhenUncountered(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Adapter",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 0}),
+		Toughness: opt.Val(game.PT{Value: 2})},
+	})
+	obj := &game.StackObject{
+		Kind:         game.StackActivatedAbility,
+		SourceID:     source.ObjectID,
+		SourceCardID: source.CardInstanceID,
+		Controller:   game.Player1,
+	}
+
+	resolveInstruction(engine, g, obj, game.Adapt{Amount: game.Fixed(3), Object: game.SourcePermanentReference()}, &TurnLog{})
+	resolveInstruction(engine, g, obj, game.Adapt{Amount: game.Fixed(3), Object: game.SourcePermanentReference()}, &TurnLog{})
+
+	if got := source.Counters.Get(counter.PlusOnePlusOne); got != 3 {
+		t.Fatalf("+1/+1 counters = %d, want 3 after repeated adapt resolutions (second is a no-op while countered)", got)
+	}
+}
+
 func TestBecomeSaddledEffectSetsSaddledOnce(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

@@ -1081,6 +1081,23 @@ func (r Renderer) renderRenown(ctx *renderCtx, value game.Renown) (string, error
 	}), nil
 }
 
+// renderAdapt renders an Adapt primitive, emitting the adapted-creature
+// reference and the fixed +1/+1 counter count.
+func (r Renderer) renderAdapt(ctx *renderCtx, value game.Adapt) (string, error) {
+	object, err := r.renderObjectReference(value.Object)
+	if err != nil {
+		return "", err
+	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.Adapt", []string{
+		fmt.Sprintf("Object: %s,", object),
+		fmt.Sprintf("Amount: %s,", amount),
+	}), nil
+}
+
 // renderBecomeSaddled renders a BecomeSaddled primitive, emitting the saddled
 // Mount reference.
 func (r Renderer) renderBecomeSaddled(_ *renderCtx, value game.BecomeSaddled) (string, error) {
