@@ -115,10 +115,11 @@ const (
 	PrimitiveReturnLinkedExiledCardsToBattlefield
 	PrimitiveDestroyForEachPlayer
 	PrimitiveCreateTokenForEachDestroyed
+	PrimitiveAdapt
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveCreateTokenForEachDestroyed) + 1
+const primitiveKindCount = int(PrimitiveAdapt) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -572,6 +573,15 @@ type Amass struct {
 // on it and it becomes renowned. A renowned permanent is left unchanged, so the
 // effect applies at most once.
 type Renown struct {
+	Object ObjectReference
+	Amount Quantity
+}
+
+// Adapt performs the Adapt keyword action (CR 701.43): if the referenced
+// creature has no +1/+1 counters on it, the controller puts Amount +1/+1
+// counters on it. A creature that already has a +1/+1 counter is left
+// unchanged, so the effect applies only while the creature is uncountered.
+type Adapt struct {
 	Object ObjectReference
 	Amount Quantity
 }

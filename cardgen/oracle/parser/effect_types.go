@@ -212,6 +212,13 @@ const (
 	// (it skips an already-renowned permanent) subsumes the printed "if it isn't
 	// renowned" intervening-if, so the expanded trigger body is the bare action.
 	EffectRenown EffectKind = "EffectRenown"
+	// EffectAdapt models the Adapt keyword action (CR 701.43) written out as an
+	// activated ability's effect ("Adapt N."): if the source creature has no
+	// +1/+1 counters on it, the controller puts N +1/+1 counters on it. Amount
+	// holds N. The runtime guard (it skips a creature that already has a +1/+1
+	// counter) subsumes the printed "if this creature has no +1/+1 counters on
+	// it" reminder, so the lowered action is the bare keyword action.
+	EffectAdapt EffectKind = "EffectAdapt"
 	// EffectDevour models the Devour keyword's as-enters replacement (CR 702.81):
 	// "As this creature enters, you may sacrifice any number of creatures. It
 	// enters with N +1/+1 counters on it for each creature sacrificed." It is

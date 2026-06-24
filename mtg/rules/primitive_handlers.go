@@ -704,6 +704,18 @@ func handleRenown(r *effectResolver, prim game.Renown) effectResolved {
 	return res
 }
 
+func handleAdapt(r *effectResolver, prim game.Adapt) effectResolved {
+	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	permanent, ok := r.resolveObject(prim.Object)
+	if ok && permanent.Counters.Get(counter.PlusOnePlusOne) == 0 {
+		if res.amount > 0 {
+			addCountersToPermanentControlledBy(r.game, stackObjectController(r.obj), permanent, counter.PlusOnePlusOne, res.amount)
+		}
+		res.succeeded = true
+	}
+	return res
+}
+
 func handleBecomeSaddled(r *effectResolver, prim game.BecomeSaddled) effectResolved {
 	res := effectResolved{accepted: true}
 	permanent, ok := r.resolveObject(prim.Object)

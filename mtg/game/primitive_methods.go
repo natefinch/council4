@@ -240,6 +240,9 @@ func (Amass) Kind() PrimitiveKind { return PrimitiveAmass }
 // Kind implements Primitive for Renown.
 func (Renown) Kind() PrimitiveKind { return PrimitiveRenown }
 
+// Kind implements Primitive for Adapt.
+func (Adapt) Kind() PrimitiveKind { return PrimitiveAdapt }
+
 // Kind implements Primitive for BecomeSaddled.
 func (BecomeSaddled) Kind() PrimitiveKind { return PrimitiveBecomeSaddled }
 
@@ -380,6 +383,7 @@ func (Regenerate) isPrimitive()                           {}
 func (BecomeCopy) isPrimitive()                           {}
 func (Amass) isPrimitive()                                {}
 func (Renown) isPrimitive()                               {}
+func (Adapt) isPrimitive()                                {}
 func (BecomeSaddled) isPrimitive()                        {}
 func (ShuffleSpellIntoLibrary) isPrimitive()              {}
 func (SkipStep) isPrimitive()                             {}
@@ -590,6 +594,7 @@ func (Regenerate) instructionRefs() primitiveRefs              { return primitiv
 func (BecomeCopy) instructionRefs() primitiveRefs              { return primitiveRefs{} }
 func (p Amass) instructionRefs() primitiveRefs                 { return quantityRefs(p.Amount) }
 func (p Renown) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }
+func (p Adapt) instructionRefs() primitiveRefs                 { return quantityRefs(p.Amount) }
 func (BecomeSaddled) instructionRefs() primitiveRefs           { return primitiveRefs{} }
 func (ShuffleSpellIntoLibrary) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (SkipStep) instructionRefs() primitiveRefs                { return primitiveRefs{} }
