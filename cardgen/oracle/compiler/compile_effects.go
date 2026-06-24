@@ -339,6 +339,12 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				PolymorphSupertypes:    polymorphSupertypes(syntax.PolymorphSupertypes),
 				PolymorphPermanent:     syntax.PolymorphPermanent,
 
+				SetBasePower:               syntax.SetBasePower,
+				SetBaseToughness:           syntax.SetBaseToughness,
+				SetBasePTVariableX:         syntax.SetBasePTVariableX,
+				SetBasePTEveryCreatureType: syntax.SetBasePTEveryCreatureType,
+				SetBasePTSource:            syntax.SetBasePTSource,
+
 				EntersWithCounters:        syntax.EntersWithCounters,
 				EntersWithCountersGroup:   syntax.EntersWithCountersGroup,
 				UnderYourControl:          syntax.UnderYourControl,

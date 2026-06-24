@@ -1402,6 +1402,15 @@ const (
 	// this way. It lowers to a game.Connive primitive scoped to the source
 	// permanent. Added last so existing kinds keep their wire values.
 	EffectConnive
+	// EffectSetBasePT is the one-shot continuous base power/toughness SET on a
+	// group, single target, or the source, optionally adding every creature type,
+	// until end of turn ("{X}: Until end of turn, creatures you control have base
+	// power and toughness X/X and gain all creature types.", Mirror Entity;
+	// "Target creature has base power and toughness 4/4 until end of turn.",
+	// Square Up). It lowers to an ApplyContinuous at the power/toughness set layer
+	// and, when riding the every-creature-type grant, the type layer. Added last
+	// so existing kinds keep their wire values.
+	EffectSetBasePT
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1781,6 +1790,20 @@ type CompiledEffect struct {
 	PolymorphName       string
 	PolymorphSupertypes []types.Super
 	PolymorphPermanent  bool
+	// SetBasePower, SetBaseToughness, SetBasePTVariableX,
+	// SetBasePTEveryCreatureType, and SetBasePTSource mirror the parser's
+	// EffectSetBasePT payload ("{X}: Until end of turn, creatures you control have
+	// base power and toughness X/X and gain all creature types.", Mirror Entity).
+	// Lowering reads them to build the ApplyContinuous that SETS base
+	// power/toughness at LayerPowerToughnessSet (a fixed value or the cost's X)
+	// and, when SetBasePTEveryCreatureType is set, adds every creature type at
+	// LayerType. The affected group is carried in the effect's Selector via
+	// StaticSubject; SetBasePTSource marks the source-affecting form.
+	SetBasePower               int
+	SetBaseToughness           int
+	SetBasePTVariableX         bool
+	SetBasePTEveryCreatureType bool
+	SetBasePTSource            bool
 	// EntersAsCopyUntilEndOfTurn mirrors the parser's temporary "become a copy
 	// ... until end of turn" copy duration (Cursed Mirror).
 	EntersAsCopyUntilEndOfTurn bool

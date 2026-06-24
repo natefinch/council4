@@ -973,9 +973,19 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 			values.powerPT = ptPtr(effect.SetPower)
 			values.dynamicPower = nil
 			values.power, values.powerOK = ptValue(g, values.controller, values.powerPT, nil)
+		} else if effect.SetPowerDynamic.Exists {
+			set := game.PT{Value: dynamicAmountValueForPermanent(g, permanent, effect.Controller, effect.SetPowerDynamic.Val, effect.Layer)}
+			values.powerPT = &set
+			values.dynamicPower = nil
+			values.power, values.powerOK = ptValue(g, values.controller, values.powerPT, nil)
 		}
 		if effect.SetToughness.Exists {
 			values.toughnessPT = ptPtr(effect.SetToughness)
+			values.dynamicToughness = nil
+			values.toughness, values.toughnessOK = ptValue(g, values.controller, values.toughnessPT, nil)
+		} else if effect.SetToughnessDynamic.Exists {
+			set := game.PT{Value: dynamicAmountValueForPermanent(g, permanent, effect.Controller, effect.SetToughnessDynamic.Val, effect.Layer)}
+			values.toughnessPT = &set
 			values.dynamicToughness = nil
 			values.toughness, values.toughnessOK = ptValue(g, values.controller, values.toughnessPT, nil)
 		}

@@ -168,8 +168,19 @@ type ContinuousEffect struct {
 	// applies at LayerAbility before this effect's own ability additions.
 	RemoveAllAbilities bool
 
-	SetPower              opt.V[PT]
-	SetToughness          opt.V[PT]
+	SetPower     opt.V[PT]
+	SetToughness opt.V[PT]
+	// SetPowerDynamic and SetToughnessDynamic set base power/toughness to a
+	// rules-derived amount evaluated as the effect resolves at
+	// LayerPowerToughnessSet (CR 613.4b, CR 608.2c). They back the one-shot
+	// dynamic base-P/T set such as Mirror Entity's "creatures you control have
+	// base power and toughness X/X until end of turn", where X is the cost paid.
+	// The amount is locked when the effect resolves (see snapshotContinuousX),
+	// folding into the fixed SetPower/SetToughness so the layer reads a frozen
+	// value; an amount that survives unfrozen is evaluated per layer pass like a
+	// group count. SetPower/SetToughness take precedence when both are present.
+	SetPowerDynamic       opt.V[DynamicAmount]
+	SetToughnessDynamic   opt.V[DynamicAmount]
 	PowerDelta            int
 	ToughnessDelta        int
 	PowerDeltaDynamic     opt.V[DynamicAmount]

@@ -1615,6 +1615,26 @@ func priorPTChange(tokens []shared.Token, index int) bool {
 	return false
 }
 
+// everyCreatureTypeGainRiderAt reports whether the tokens at index begin a "gain
+// all creature types" / "gain every creature type" rider, the all-creature-type
+// grant folded onto a base power/toughness set (Mirror Entity).
+func everyCreatureTypeGainRiderAt(tokens []shared.Token, index int) bool {
+	return staticWordsAt(tokens, index+1, "all", "creature", "types") ||
+		staticWordsAt(tokens, index+1, "every", "creature", "type")
+}
+
+// priorBasePowerToughnessSet reports whether a "base power and toughness" set
+// phrase precedes index in the same sentence, marking the gain-every-creature
+// rider as folded onto that set rather than a standalone effect.
+func priorBasePowerToughnessSet(tokens []shared.Token, index int) bool {
+	for i := 0; i+3 < index; i++ {
+		if staticWordsAt(tokens, i, "base", "power", "and", "toughness") {
+			return true
+		}
+	}
+	return false
+}
+
 // effectFallbackOnInability reports whether an effect's subject is a "who can't"
 // relative clause naming the players who couldn't satisfy a preceding required
 // action ("Each player who can't discards a card."). It detects "who"
