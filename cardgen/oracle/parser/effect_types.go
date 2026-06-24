@@ -307,6 +307,21 @@ const (
 	// that removes all abilities and sets the creature's color, types, and base
 	// power/toughness until end of turn.
 	EffectPolymorph EffectKind = "EffectPolymorph"
+	// EffectSetBasePT models a one-shot continuous base power/toughness SET on a
+	// group, single target, or the source itself, optionally riding a grant of
+	// every creature type, for a duration ("{X}: Until end of turn, creatures you
+	// control have base power and toughness X/X and gain all creature types.",
+	// Mirror Entity; "Target creature has base power and toughness 4/4 until end
+	// of turn.", Square Up; "Creatures you control have base power and toughness
+	// X/X until end of turn.", Biomass Mutation). The base power/toughness are
+	// carried in SetBasePower/SetBaseToughness (literal) or marked variable by
+	// SetBasePTVariableX (the cost's X). SetBasePTEveryCreatureType records the
+	// "gain all creature types"/"become every creature type" rider. The affected
+	// group is carried in StaticSubject; a single target is left for the target
+	// machinery; the source form is marked by SetBasePTSource. It lowers to an
+	// ApplyContinuous setting base power/toughness at LayerPowerToughnessSet and,
+	// when the rider is present, adding every creature type at LayerType.
+	EffectSetBasePT EffectKind = "EffectSetBasePT"
 	// EffectDelayedTrigger models an event-based delayed triggered ability
 	// created for the rest of the turn ("Whenever you cast a spell this turn,
 	// ...", Showdown of the Skalds chapter II) or for the next matching event
@@ -1782,6 +1797,21 @@ type EffectSyntax struct {
 	PolymorphName       string      `json:",omitempty"`
 	PolymorphSupertypes []Supertype `json:"-"`
 	PolymorphPermanent  bool        `json:",omitempty"`
+	// SetBasePower, SetBaseToughness, SetBasePTVariableX,
+	// SetBasePTEveryCreatureType, and SetBasePTSource carry the EffectSetBasePT
+	// one-shot base-power/toughness SET payload. SetBasePower/SetBaseToughness
+	// hold the literal N/N value; SetBasePTVariableX marks the variable "X/X"
+	// form whose value is the cost's X. SetBasePTEveryCreatureType records the
+	// "gain all creature types"/"become every creature type" rider, and
+	// SetBasePTSource marks the source-affecting form ("This creature has base
+	// power and toughness N/N until end of turn."). The affected group, when
+	// present, is carried in StaticSubject; a single targeted creature is left to
+	// the target machinery.
+	SetBasePower               int  `json:",omitempty"`
+	SetBaseToughness           int  `json:",omitempty"`
+	SetBasePTVariableX         bool `json:",omitempty"`
+	SetBasePTEveryCreatureType bool `json:",omitempty"`
+	SetBasePTSource            bool `json:",omitempty"`
 	// EntersAsCopyUntilEndOfTurn reports the temporary "become a copy of <filter>
 	// until end of turn" form of an EntersAsCopy replacement (Cursed Mirror),
 	// where the copy effect lasts until end of turn instead of as long as the

@@ -317,6 +317,8 @@ func lowerContent(
 			return lowerBecomeTypeContent(ctx)
 		case compiler.EffectPolymorph:
 			return lowerPolymorphContent(ctx)
+		case compiler.EffectSetBasePT:
+			return lowerSetBasePTContent(ctx)
 		case compiler.EffectDelayedTrigger:
 			return lowerDelayedTriggerContent(ctx)
 		case compiler.EffectCreateEmblem:

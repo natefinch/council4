@@ -237,8 +237,16 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 		if hasPTDelta {
 			return errors.New("render: power/toughness delta fields require the modify layer")
 		}
-		if !effect.SetPower.Exists || !effect.SetToughness.Exists {
+		setsPower := effect.SetPower.Exists || effect.SetPowerDynamic.Exists
+		setsToughness := effect.SetToughness.Exists || effect.SetToughnessDynamic.Exists
+		if !setsPower || !setsToughness {
 			return errors.New("render: base power/toughness layer requires set power and toughness")
+		}
+		if effect.SetPower.Exists && effect.SetPowerDynamic.Exists {
+			return errors.New("render: base power layer cannot set both a fixed and dynamic power")
+		}
+		if effect.SetToughness.Exists && effect.SetToughnessDynamic.Exists {
+			return errors.New("render: base toughness layer cannot set both a fixed and dynamic toughness")
 		}
 	case game.LayerColor:
 		if hasKeywords {
@@ -303,6 +311,22 @@ func (r Renderer) renderContinuousPowerToughnessFields(ctx *renderCtx, effect *g
 		}
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("ToughnessDeltaDynamic: opt.Val(%s),", dynamic))
+	}
+	if effect.SetPowerDynamic.Exists {
+		dynamic, err := r.renderDynamicAmount(ctx, &effect.SetPowerDynamic.Val)
+		if err != nil {
+			return nil, err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("SetPowerDynamic: opt.Val(%s),", dynamic))
+	}
+	if effect.SetToughnessDynamic.Exists {
+		dynamic, err := r.renderDynamicAmount(ctx, &effect.SetToughnessDynamic.Val)
+		if err != nil {
+			return nil, err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("SetToughnessDynamic: opt.Val(%s),", dynamic))
 	}
 	return fields, nil
 }
