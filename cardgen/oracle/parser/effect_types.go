@@ -341,6 +341,21 @@ const (
 	// The wording is fully fixed, so the parser recognizes the whole sentence
 	// and the effect carries no targets or amounts.
 	EffectRingTempts EffectKind = "EffectRingTempts"
+	// EffectPayRepeatedlyAnimate models the kicker-on-resolution land-animation
+	// trigger of the Adversary creature cycle's Primal Adversary form: "When this
+	// creature enters, you may pay {1}{G} any number of times. When you pay this
+	// cost one or more times, put that many +1/+1 counters on this creature, then
+	// up to that many target lands you control become 3/3 Wolf creatures with
+	// haste that are still lands." The whole two-sentence body collapses onto one
+	// typed effect whose PayRepeatedlyAnimate payload carries the repeatable mana
+	// cost, the +N/+N counter dimensions, the animated lands' set power/toughness,
+	// their added creature subtype(s), and their granted keyword(s). It lowers to
+	// a PayRepeatedly that publishes the payment count, an AddCounter sized by the
+	// count, and an ApplyContinuous that lets the controller choose up to that
+	// many lands they control and adds creature/subtype/keyword/PT to each while
+	// they remain lands. The number paid drives both the counter amount and the
+	// land-selection maximum.
+	EffectPayRepeatedlyAnimate EffectKind = "EffectPayRepeatedlyAnimate"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -1491,6 +1506,12 @@ type EffectSyntax struct {
 	// layers lower the delayed trigger from the typed inner document. It is nil
 	// for effects that are not event-based delayed triggers.
 	DelayedTriggerAbility *StaticGrantedAbilitySyntax `json:"-"`
+	// PayRepeatedlyAnimate is the typed payload of an EffectPayRepeatedlyAnimate
+	// effect (Primal Adversary's enters trigger): the repeatable mana cost, the
+	// +N/+N counter dimensions, the animated lands' base power/toughness, the
+	// added creature subtype(s), and the granted keyword(s). It is nil for every
+	// other effect.
+	PayRepeatedlyAnimate *PayRepeatedlyAnimateSyntax `json:"-"`
 	// DelayedTriggerOneShot records that an EffectDelayedTrigger fires only on
 	// the first matching event ("When you next cast a creature spell this turn,
 	// ...", "The next time you cast ..."), as opposed to repeating on every

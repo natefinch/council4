@@ -448,6 +448,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectSetBasePT
 	case parser.EffectDelayedTrigger:
 		return EffectDelayedTrigger
+	case parser.EffectPayRepeatedlyAnimate:
+		return EffectPayRepeatedlyAnimate
 	case parser.EffectAmass:
 		return EffectAmass
 	case parser.EffectRenown:

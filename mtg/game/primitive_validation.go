@@ -958,6 +958,15 @@ func (p ApplyContinuous) validatePrimitive(targets []TargetSpec, checkTargets bo
 	if len(p.ContinuousEffects) == 0 {
 		return errors.New("continuous effect instruction has no declarations")
 	}
+	if p.ChooseFrom.Valid() {
+		if p.Object.Exists {
+			return errors.New("continuous effect instruction cannot both choose from a group and target an object")
+		}
+		if p.PublishLinked != "" {
+			return errors.New("group-choosing continuous effect cannot publish a single linked object")
+		}
+		return nil
+	}
 	if p.PublishLinked != "" &&
 		(!p.Object.Exists ||
 			(p.Object.Val.Kind() != ObjectReferenceTargetPermanent &&
@@ -1555,6 +1564,13 @@ func (ShuffleSpellIntoLibrary) validatePrimitive(_ []TargetSpec, _ bool) error {
 }
 
 func (p Pay) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateResolutionPayment(p.Payment, targets, checkTargets)
+}
+
+func (p PayRepeatedly) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.PublishCount == "" {
+		return errors.New("PayRepeatedly requires a published count key")
+	}
 	return validateResolutionPayment(p.Payment, targets, checkTargets)
 }
 

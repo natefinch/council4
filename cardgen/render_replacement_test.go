@@ -70,6 +70,42 @@ func TestRenderApplyContinuousTemporaryEffects(t *testing.T) {
 	}
 }
 
+func TestRenderApplyContinuousChooseFromGroup(t *testing.T) {
+	t.Parallel()
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.ApplyContinuous{
+		ChooseFrom: game.ObjectControlledGroup(
+			game.SourcePermanentReference(),
+			game.Selection{RequiredTypes: []types.Card{types.Land}},
+		),
+		ChooseUpTo: game.Dynamic(game.DynamicAmount{
+			Kind:      game.DynamicAmountChosenNumber,
+			ResultKey: game.ResultKey("primal-pay"),
+		}),
+		Prompt: "Choose lands to animate",
+		ContinuousEffects: []game.ContinuousEffect{{
+			Layer:    game.LayerType,
+			AddTypes: []types.Card{types.Creature},
+		}},
+		Duration: game.DurationPermanent,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.ApplyContinuous",
+		"ChooseFrom:",
+		"game.ObjectControlledGroup",
+		"ChooseUpTo:",
+		"DynamicAmountChosenNumber",
+		`Prompt: "Choose lands to animate"`,
+		"game.DurationPermanent",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered choose-from group missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
 func TestRenderReplacementAbilityGroupEntersTapped(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

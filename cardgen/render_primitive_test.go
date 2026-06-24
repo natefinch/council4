@@ -169,6 +169,30 @@ func TestRenderPutPermanentOnLibraryPrimitive(t *testing.T) {
 	}
 }
 
+func TestRenderPayRepeatedlyPrimitive(t *testing.T) {
+	t.Parallel()
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.PayRepeatedly{
+		Payment: game.ResolutionPayment{
+			ManaCost: opt.Val(cost.Mana{cost.O(1), cost.G}),
+		},
+		PublishCount: game.ResultKey("paid-count"),
+		Prompt:       "Pay {1}{G}?",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.PayRepeatedly",
+		"PublishCount: \"paid-count\"",
+		"Prompt: \"Pay {1}{G}?\"",
+		"game.ResolutionPayment",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered PayRepeatedly missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
 func TestRenderBoundedUntapPrimitive(t *testing.T) {
 	t.Parallel()
 	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.Untap{

@@ -152,6 +152,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitCompanionAbility(document.Abilities)
 	emitSemanticAccessors(document.Abilities)
 	stripImpulseExileSemantics(document.Abilities)
+	stripPayRepeatedlyAnimateSemantics(document.Abilities)
 	emitCoinFlipSequences(document.Abilities)
 	emitVoteSequences(document.Abilities)
 	emitReminderInner(document.Abilities)

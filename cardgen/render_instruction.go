@@ -534,6 +534,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", errors.New("render: internal error: Pay kind has unexpected concrete type")
 		}
 		return r.renderPay(ctx, value)
+	case game.PrimitivePayRepeatedly:
+		value, ok := primitive.(game.PayRepeatedly)
+		if !ok {
+			return "", errors.New("render: internal error: PayRepeatedly kind has unexpected concrete type")
+		}
+		return r.renderPayRepeatedly(ctx, value)
 	case game.PrimitivePutOnBattlefield:
 		value, ok := primitive.(game.PutOnBattlefield)
 		if !ok {
@@ -1227,6 +1233,21 @@ func (r Renderer) renderApplyContinuousPrimitive(ctx *renderCtx, value game.Appl
 	fields = append(fields, fmt.Sprintf("Duration: %s,", duration))
 	if value.PublishLinked != "" {
 		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
+	}
+	if value.ChooseFrom.Valid() {
+		group, err := r.renderGroupReference(ctx, value.ChooseFrom)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ChooseFrom: %s,", group))
+		amount, err := r.renderQuantity(ctx, value.ChooseUpTo)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ChooseUpTo: %s,", amount))
+	}
+	if value.Prompt != "" {
+		fields = append(fields, fmt.Sprintf("Prompt: %q,", value.Prompt))
 	}
 	return structLit("game.ApplyContinuous", fields), nil
 }

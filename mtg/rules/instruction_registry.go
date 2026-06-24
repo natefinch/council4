@@ -91,6 +91,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleBecomeSaddled)
 	registerPrimitiveHandler(reg, handleDiscoverCards)
 	registerPrimitiveHandler(reg, handlePay)
+	registerPrimitiveHandler(reg, handlePayRepeatedly)
 	registerPrimitiveHandler(reg, handleChoose)
 	registerPrimitiveHandler(reg, handleGainLife)
 	registerPrimitiveHandler(reg, handleLoseLife)

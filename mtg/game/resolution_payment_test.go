@@ -66,3 +66,40 @@ func TestValidateMultipliedManaResolutionPayment(t *testing.T) {
 		t.Fatalf("combined dynamic payment error = %v", err)
 	}
 }
+
+func TestValidatePayRepeatedlyPublishesConsumableCount(t *testing.T) {
+	t.Parallel()
+	const countKey = ResultKey("paid-count")
+	sequence := []Instruction{
+		{Primitive: PayRepeatedly{
+			Payment:      ResolutionPayment{ManaCost: opt.Val(cost.Mana{cost.O(1), cost.G})},
+			PublishCount: countKey,
+		}},
+		{Primitive: AddCounter{
+			Amount:      Dynamic(DynamicAmount{Kind: DynamicAmountChosenNumber, ResultKey: countKey}),
+			Object:      SourcePermanentReference(),
+			CounterKind: counter.PlusOnePlusOne,
+		}},
+	}
+	if err := ValidateInstructionSequence(sequence); err != nil {
+		t.Fatalf("pay-repeatedly publish/consume validation error = %v", err)
+	}
+}
+
+func TestValidatePayRepeatedlyRequiresPublishedCount(t *testing.T) {
+	t.Parallel()
+	if err := ValidateInstructionSequence([]Instruction{{Primitive: PayRepeatedly{
+		Payment: ResolutionPayment{ManaCost: opt.Val(cost.Mana{cost.O(1), cost.G})},
+	}}}); err == nil || !strings.Contains(err.Error(), "published count key") {
+		t.Fatalf("missing published count error = %v", err)
+	}
+}
+
+func TestValidatePayRepeatedlyRequiresCost(t *testing.T) {
+	t.Parallel()
+	if err := ValidateInstructionSequence([]Instruction{{Primitive: PayRepeatedly{
+		PublishCount: ResultKey("paid-count"),
+	}}}); err == nil || !strings.Contains(err.Error(), "no cost") {
+		t.Fatalf("missing cost error = %v", err)
+	}
+}

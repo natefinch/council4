@@ -515,6 +515,15 @@ func (r *effectResolver) distributeMoveCounters(prim game.MoveCounters) effectRe
 
 func handleApplyContinuous(r *effectResolver, prim game.ApplyContinuous) effectResolved {
 	res := effectResolved{accepted: true}
+	if prim.ChooseFrom.Valid() {
+		effects := r.resolveChosenColorProtection(prim.ContinuousEffects)
+		for _, permanent := range r.chooseApplyContinuousPermanents(prim) {
+			if applyTypedContinuousEffects(r.game, r.obj, permanent, effects, prim.Duration) {
+				res.succeeded = true
+			}
+		}
+		return res
+	}
 	var permanent *game.Permanent
 	if prim.Object.Exists {
 		permanent, _ = r.resolveObject(prim.Object.Val)
@@ -529,6 +538,51 @@ func handleApplyContinuous(r *effectResolver, prim game.ApplyContinuous) effectR
 		)
 	}
 	return res
+}
+
+// chooseApplyContinuousPermanents prompts the resolving controller to choose up
+// to the primitive's dynamic amount of distinct permanents from its candidate
+// group ("up to that many target lands you control", Primal Adversary). It
+// returns the chosen permanents, or nil when the amount or candidate set is
+// empty, so the continuous effect applies to nothing.
+func (r *effectResolver) chooseApplyContinuousPermanents(prim game.ApplyContinuous) []*game.Permanent {
+	amount := r.quantity(prim.ChooseUpTo)
+	if amount <= 0 {
+		return nil
+	}
+	candidates := r.groupPermanents(prim.ChooseFrom)
+	maxChoices := min(amount, len(candidates))
+	if maxChoices == 0 {
+		return nil
+	}
+	options := make([]game.ChoiceOption, len(candidates))
+	for i, permanent := range candidates {
+		options[i] = game.ChoiceOption{
+			Index: i,
+			Label: permanentChoiceLabel(r.game, permanent),
+			Card:  permanentChoiceInfo(r.game, permanent),
+		}
+	}
+	prompt := prim.Prompt
+	if prompt == "" {
+		prompt = "Choose permanents"
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           r.obj.Controller,
+		Prompt:           prompt,
+		Options:          options,
+		MinChoices:       0,
+		MaxChoices:       maxChoices,
+		DefaultSelection: firstChoiceIndices(maxChoices),
+	}, r.log)
+	chosen := make([]*game.Permanent, 0, len(selected))
+	for _, idx := range selected {
+		if idx >= 0 && idx < len(candidates) {
+			chosen = append(chosen, candidates[idx])
+		}
+	}
+	return chosen
 }
 
 // resolveChosenColorProtection rewrites any granted "protection from the color
@@ -733,6 +787,31 @@ func handlePay(r *effectResolver, prim game.Pay) effectResolved {
 	}
 	accepted, succeeded := r.engine.resolveResolutionPaymentValue(r.game, r.obj, &payment, r.agents, r.log)
 	return effectResolved{accepted: accepted, succeeded: succeeded}
+}
+
+// maxResolutionPayRepeatCount bounds how many times a PayRepeatedly cost may be
+// paid in one resolution, matching the Multikicker enumeration cap so a free or
+// fully-affordable cost cannot iterate without limit.
+const maxResolutionPayRepeatCount = 20
+
+func handlePayRepeatedly(r *effectResolver, prim game.PayRepeatedly) effectResolved {
+	count := 0
+	for count < maxResolutionPayRepeatCount {
+		payment := prim.Payment
+		if payment.Prompt == "" {
+			payment.Prompt = prim.Prompt
+		}
+		accepted, succeeded := r.engine.resolveResolutionPaymentValue(r.game, r.obj, &payment, r.agents, r.log)
+		if !accepted || !succeeded {
+			break
+		}
+		count++
+	}
+	rememberResolutionChoice(r.obj, string(prim.PublishCount), game.ResolutionChoiceResult{
+		Kind:   game.ResolutionChoiceNumber,
+		Number: count,
+	})
+	return effectResolved{accepted: true, succeeded: count > 0, amount: count}
 }
 
 func handleChoose(r *effectResolver, prim game.Choose) effectResolved {

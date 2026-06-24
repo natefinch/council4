@@ -321,6 +321,8 @@ func lowerContent(
 			return lowerSetBasePTContent(ctx)
 		case compiler.EffectDelayedTrigger:
 			return lowerDelayedTriggerContent(ctx)
+		case compiler.EffectPayRepeatedlyAnimate:
+			return lowerPayRepeatedlyAnimateContent(ctx)
 		case compiler.EffectCreateEmblem:
 			return lowerCreateEmblemContent(ctx)
 		default:
