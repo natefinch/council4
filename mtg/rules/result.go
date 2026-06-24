@@ -116,6 +116,7 @@ const (
 	TurnLogEntryCombatDamage
 	TurnLogEntryCreatureDamage
 	TurnLogEntryDeath
+	TurnLogEntryEnter
 )
 
 // TurnLogEntry records one event in the order it happened during the turn.
@@ -129,6 +130,7 @@ type TurnLogEntry struct {
 	CombatDamage   CombatDamageLog
 	CreatureDamage CreatureDamageLog
 	Death          PermanentDeathLog
+	Enter          PermanentEnterLog
 }
 
 // DrawLog records a player draw during a game.
@@ -219,6 +221,25 @@ type ResolveLog struct {
 	// that resolved, so a report can name an ability's source even though its
 	// SourceID is a permanent object ID rather than a card instance ID.
 	SourceName string
+
+	// StartEntry is the number of turn-log entries that existed before this
+	// resolution's effects ran, so a report can group the entries in
+	// [StartEntry, this resolve entry) as the effects this resolution caused.
+	// Resolution spans never overlap (a stack object resolves fully before the
+	// next is put on the stack and resolved), so these ranges are disjoint.
+	StartEntry int
+}
+
+// PermanentEnterLog records a permanent entering the battlefield as the effect
+// of a resolving spell or ability (for example a fetched land or a created
+// token), so a report can show it nested under the resolution that caused it.
+// Land drops and other priority-time entries are not logged here because they
+// are already reported by their own action.
+type PermanentEnterLog struct {
+	Permanent  id.ID
+	SourceID   id.ID
+	TokenName  string
+	Controller game.PlayerID
 }
 
 // CombatDamageLog records combat damage dealt to a player.
@@ -328,6 +349,23 @@ func (log *TurnLog) addDeath(death PermanentDeathLog) {
 	}
 	log.Deaths = append(log.Deaths, death)
 	log.Entries = append(log.Entries, TurnLogEntry{Kind: TurnLogEntryDeath, Death: death})
+}
+
+func (log *TurnLog) addEnter(enter PermanentEnterLog) {
+	if log == nil {
+		return
+	}
+	log.Entries = append(log.Entries, TurnLogEntry{Kind: TurnLogEntryEnter, Enter: enter})
+}
+
+// entryCount reports how many chronological entries the log holds, treating a
+// nil log as empty so callers can capture a resolution's start boundary without
+// a nil check.
+func (log *TurnLog) entryCount() int {
+	if log == nil {
+		return 0
+	}
+	return len(log.Entries)
 }
 
 func (r *GameResult) addLosses(losses []LossLog) {
