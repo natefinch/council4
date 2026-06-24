@@ -652,6 +652,44 @@ func TestLowerCounterSpellUnlessPays(t *testing.T) {
 	}
 }
 
+func TestLowerCounterSpellUnlessPaysDynamicCount(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Circular Logic",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{2}{U}",
+		OracleText: "Counter target spell unless its controller pays {1} for each card in your graveyard.\nMadness {U} (If you discard this card, discard it into exile. When you do, cast it for its madness cost or put it into your graveyard.)",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability missing")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %d, want pay then counter", len(mode.Sequence))
+	}
+	pay, ok := mode.Sequence[0].Primitive.(game.Pay)
+	if !ok {
+		t.Fatalf("first primitive = %T, want game.Pay", mode.Sequence[0].Primitive)
+	}
+	if !pay.Payment.ManaCost.Exists || !slices.Equal(pay.Payment.ManaCost.Val, cost.Mana{cost.O(1)}) {
+		t.Fatalf("payment mana = %+v, want {1}", pay.Payment.ManaCost)
+	}
+	if !pay.Payment.ManaCostMultiplier.Exists || pay.Payment.ManaCostMultiplier.Val == nil {
+		t.Fatalf("payment multiplier = %+v, want dynamic count", pay.Payment.ManaCostMultiplier)
+	}
+	multiplier := pay.Payment.ManaCostMultiplier.Val
+	if multiplier.Kind != game.DynamicAmountCountCardsInZone || multiplier.CardZone != zone.Graveyard {
+		t.Fatalf("multiplier = %+v, want count of cards in graveyard", multiplier)
+	}
+	if _, ok := mode.Sequence[1].Primitive.(game.CounterObject); !ok {
+		t.Fatalf("second primitive = %T, want game.CounterObject", mode.Sequence[1].Primitive)
+	}
+	if len(face.StaticAbilities) != 1 {
+		t.Fatalf("static abilities = %d, want one (Madness)", len(face.StaticAbilities))
+	}
+}
+
 func TestLowerCounterSpellColorTargets(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

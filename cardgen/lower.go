@@ -3,6 +3,7 @@ package cardgen
 import (
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
@@ -904,6 +905,9 @@ func lowerSpellAlternativeCost(cardName string, ability compiler.CompiledAbility
 	if ability.AlternativeCost != nil && ability.AlternativeCost.Kind == compiler.AlternativeCostPitch {
 		return lowerPitchAlternativeCost(ability)
 	}
+	if ability.AlternativeCost != nil && ability.AlternativeCost.Kind == compiler.AlternativeCostDiscard {
+		return lowerDiscardAlternativeCost(ability)
+	}
 	if ability.AlternativeCost == nil ||
 		(ability.AlternativeCost.Kind != compiler.AlternativeCostUnknown &&
 			ability.AlternativeCost.Kind != compiler.AlternativeCostCommander) ||
@@ -1095,6 +1099,83 @@ func lowerPitchAlternativeCost(ability compiler.CompiledAbility) (abilityLowerin
 		},
 		sourceSpans: []shared.Span{ability.Span},
 	}, nil
+}
+
+// lowerDiscardAlternativeCost lowers the Foil/Outbreak family: a free (no-mana)
+// alternative whose additional costs discard one or more cards from hand,
+// optionally constrained by subtype, rather than paying the printed mana cost.
+func lowerDiscardAlternativeCost(ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {
+	alternative := ability.AlternativeCost
+	unsupported := alternative == nil ||
+		len(alternative.DiscardCards) == 0 ||
+		alternative.WithoutPayingManaCost ||
+		len(alternative.ManaCost) != 0 ||
+		alternative.PitchColorKnown ||
+		ability.Cost != nil ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0
+	condition, conditionOK := lowerAlternativeCostCondition(alternative)
+	if unsupported || !conditionOK {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported alternative spell cost",
+			"the executable source backend could not recognize the spell's alternative cost",
+		)
+	}
+	var additionalCosts []cost.Additional
+	for _, card := range alternative.DiscardCards {
+		additional := cost.Additional{
+			Kind:   cost.AdditionalDiscard,
+			Amount: 1,
+			Source: zone.Hand,
+		}
+		if card.HasSubtype {
+			additional.SubtypesAny = cost.SubtypeSet{card.Subtype}
+		}
+		additionalCosts = append(additionalCosts, additional)
+	}
+	return abilityLowering{
+		alternativeCosts: []cost.Alternative{{
+			Label:           discardAlternativeLabel(alternative.DiscardCards),
+			AdditionalCosts: additionalCosts,
+			Condition:       condition,
+		}},
+		consumed: semanticConsumption{
+			alternativeCost: true,
+			references:      len(ability.Content.References),
+		},
+		sourceSpans: []shared.Span{ability.Span},
+	}, nil
+}
+
+func discardAlternativeLabel(cards []compiler.CompiledAlternativeDiscardCard) string {
+	parts := make([]string, 0, len(cards))
+	for i, card := range cards {
+		switch {
+		case card.HasSubtype:
+			parts = append(parts, indefiniteArticle(string(card.Subtype))+" "+string(card.Subtype)+" card")
+		case i > 0:
+			parts = append(parts, "another card")
+		default:
+			parts = append(parts, "a card")
+		}
+	}
+	return "Discard " + strings.Join(parts, " and ")
+}
+
+func indefiniteArticle(word string) string {
+	if word == "" {
+		return "a"
+	}
+	switch word[0] {
+	case 'A', 'E', 'I', 'O', 'U', 'a', 'e', 'i', 'o', 'u':
+		return "an"
+	default:
+		return "a"
+	}
 }
 
 func lowerAlternativeCostCondition(alternative *compiler.CompiledAlternativeCost) (cost.AlternativeCondition, bool) {

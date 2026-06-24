@@ -774,6 +774,22 @@ func parseEffectPayment(tokens []shared.Token, atoms Atoms) EffectPaymentSyntax 
 			}
 			genericAmount = amount
 			paymentEnd = len(tokens) - 1
+		// "{N} for each <count subject>" repeats the fixed generic payment per
+		// counted object ("pays {1} for each card in your graveyard.", Circular
+		// Logic). The fixed mana cost stays in ManaCost and the trailing for-each
+		// count rides in GenericManaAmount; lowering repeats the cost by the count.
+		case fixedGenericManaCost(manaCost) &&
+			effectWordsAt(tokens, end, "for", "each") &&
+			tokens[len(tokens)-1].Kind == shared.Period:
+			amount, attempted, amountOK := parseDynamicEffectAmount(tokens[end:len(tokens)-1], atoms)
+			if !attempted || !amountOK ||
+				amount.DynamicForm != EffectDynamicAmountFormForEach ||
+				amount.Multiplier != 1 ||
+				amount.Span.End != tokens[len(tokens)-1].Span.Start {
+				return EffectPaymentSyntax{}
+			}
+			genericAmount = amount
+			paymentEnd = len(tokens) - 1
 		default:
 			return EffectPaymentSyntax{}
 		}
@@ -786,6 +802,13 @@ func parseEffectPayment(tokens []shared.Token, atoms Atoms) EffectPaymentSyntax 
 		}
 	}
 	return EffectPaymentSyntax{}
+}
+
+// fixedGenericManaCost reports whether a parsed payment mana cost is a single
+// fixed generic symbol such as {1}. It backs the "{N} for each <subject>"
+// resolution-payment form, where the generic cost is repeated per counted object.
+func fixedGenericManaCost(manaCost cost.Mana) bool {
+	return len(manaCost) == 1 && manaCost[0].Kind == cost.GenericSymbol
 }
 
 func effectIndices(tokens []shared.Token, atoms Atoms) []int {

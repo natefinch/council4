@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // SpellAlternativeCostKind identifies the rules change attached to an
@@ -32,6 +33,10 @@ const (
 	// CostSyntax; this kind only marks the paragraph as granting Escape for that
 	// cost (CR 702.139).
 	SpellAlternativeCostEscape
+	// SpellAlternativeCostDiscard is the Foil/Outbreak family: discard one or
+	// more cards (each an optional subtype filter) from hand rather than pay the
+	// spell's mana cost. The discarded cards ride in DiscardCards.
+	SpellAlternativeCostDiscard
 )
 
 // SpellAlternativeCostCondition identifies a condition on an alternative spell cost.
@@ -63,6 +68,19 @@ type SpellAlternativeCost struct {
 	PitchCount int
 	// PitchLife is additional life paid alongside the exile, or zero.
 	PitchLife int
+
+	// DiscardCards lists the cards discarded from hand by a
+	// SpellAlternativeCostDiscard cost, in printed order. Each entry carries an
+	// optional subtype filter ("an Island card"); a bare "another card" or "a
+	// card" entry imposes no filter.
+	DiscardCards []AlternativeDiscardCard
+}
+
+// AlternativeDiscardCard is one card discarded by a discard alternative spell
+// cost, optionally constrained to a card subtype ("an Island card").
+type AlternativeDiscardCard struct {
+	Subtype    types.Sub
+	HasSubtype bool
 }
 
 func spellAlternativeCostClause(body []shared.Token) (*SpellAlternativeCost, bool) {
@@ -70,6 +88,9 @@ func spellAlternativeCostClause(body []shared.Token) (*SpellAlternativeCost, boo
 		return alternative, true
 	}
 	if alternative, ok := pitchAlternativeCostClause(body); ok {
+		return alternative, true
+	}
+	if alternative, ok := discardAlternativeCostClause(body); ok {
 		return alternative, true
 	}
 	words := []string{
@@ -159,6 +180,73 @@ func escapeAlternativeCostClause(source string, tokens []shared.Token, dash int)
 		Span: shared.SpanOf(tokens),
 		Kind: SpellAlternativeCostEscape,
 	}, phraseFromTokens(source, clause), true
+}
+
+// discardAlternativeCostClause recognizes the Foil/Outbreak discard pitch
+// family: "you may discard <card>[ and <card>] rather than pay this spell's mana
+// cost", where each card is "a/an [<subtype>] card" or "another card". The cards
+// are discarded from hand; an optional subtype constrains a card to that subtype
+// ("an Island card").
+func discardAlternativeCostClause(body []shared.Token) (*SpellAlternativeCost, bool) {
+	if !equalWordSequence(body, 0, "you", "may", "discard") {
+		return nil, false
+	}
+	cursor := 3
+	var cards []AlternativeDiscardCard
+	for {
+		card, next, ok := matchDiscardCardSpec(body, cursor)
+		if !ok {
+			return nil, false
+		}
+		cards = append(cards, card)
+		cursor = next
+		if cursor < len(body) && equalWord(body[cursor], "and") {
+			cursor++
+			continue
+		}
+		break
+	}
+	if !equalWordSequence(body, cursor,
+		"rather", "than", "pay", "this", "spell's", "mana", "cost") {
+		return nil, false
+	}
+	cursor += 7
+	if cursor != len(body)-1 || body[cursor].Kind != shared.Period {
+		return nil, false
+	}
+	return &SpellAlternativeCost{
+		Span:         shared.SpanOf(body),
+		Kind:         SpellAlternativeCostDiscard,
+		DiscardCards: cards,
+	}, true
+}
+
+// matchDiscardCardSpec parses one "a/an [<subtype>] card" or "another card"
+// discard target starting at start, returning the parsed card and the index
+// immediately after the matched "card" noun.
+func matchDiscardCardSpec(body []shared.Token, start int) (AlternativeDiscardCard, int, bool) {
+	cursor := start
+	if cursor >= len(body) || body[cursor].Kind != shared.Word ||
+		(!equalWord(body[cursor], "a") && !equalWord(body[cursor], "an") &&
+			!equalWord(body[cursor], "another")) {
+		return AlternativeDiscardCard{}, 0, false
+	}
+	cursor++
+	var card AlternativeDiscardCard
+	if cursor < len(body) && body[cursor].Kind == shared.Word && !equalWord(body[cursor], "card") {
+		sub, ok := recognizeSubtypePhrase(body[cursor].Text)
+		if !ok {
+			return AlternativeDiscardCard{}, 0, false
+		}
+		card.Subtype = sub
+		card.HasSubtype = true
+		cursor++
+	}
+	if cursor >= len(body) || !equalWord(body[cursor], "card") {
+		return AlternativeDiscardCard{}, 0, false
+	}
+	cursor++
+	return card, cursor, true
 }
 
 func overloadAlternativeCostClause(body []shared.Token) (*SpellAlternativeCost, bool) {

@@ -64,6 +64,15 @@ func compileAbility(
 			compiled.AlternativeCost.PitchColor = mapped
 			compiled.AlternativeCost.PitchColorKnown = true
 		}
+		for _, card := range ability.AlternativeCost.DiscardCards {
+			compiled.AlternativeCost.DiscardCards = append(
+				compiled.AlternativeCost.DiscardCards,
+				CompiledAlternativeDiscardCard{
+					Subtype:    card.Subtype,
+					HasSubtype: card.HasSubtype,
+				},
+			)
+		}
 	}
 	if kind == AbilityTriggered {
 		trigger := compileTrigger(ability, context)
@@ -274,6 +283,8 @@ func compileAlternativeCostKind(kind parser.SpellAlternativeCostKind) Alternativ
 		return AlternativeCostFlashback
 	case parser.SpellAlternativeCostEscape:
 		return AlternativeCostEscape
+	case parser.SpellAlternativeCostDiscard:
+		return AlternativeCostDiscard
 	default:
 		return AlternativeCostUnknown
 	}

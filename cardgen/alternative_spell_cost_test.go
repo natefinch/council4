@@ -567,3 +567,45 @@ func TestLowerForceOfNegationPitchAndCounterExile(t *testing.T) {
 		t.Fatalf("primitive = %#v, want counter with exile instead", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
 	}
 }
+
+func TestLowerFoilDiscardAlternativeCost(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:     "Foil",
+		Layout:   "normal",
+		TypeLine: "Instant",
+		ManaCost: "{2}{U}{U}",
+		OracleText: "You may discard an Island card and another card rather than pay this spell's mana cost.\n" +
+			"Counter target spell.",
+	})
+	if len(face.AlternativeCosts) != 1 {
+		t.Fatalf("alternative costs = %#v, want one", face.AlternativeCosts)
+	}
+	alt := face.AlternativeCosts[0]
+	if alt.ManaCost.Exists {
+		t.Fatalf("discard alternative should carry no mana cost: %#v", alt)
+	}
+	if alt.Condition != cost.AlternativeConditionNone {
+		t.Fatalf("condition = %v, want none", alt.Condition)
+	}
+	if len(alt.AdditionalCosts) != 2 {
+		t.Fatalf("additional costs = %#v, want two discards", alt.AdditionalCosts)
+	}
+	island := alt.AdditionalCosts[0]
+	if island.Kind != cost.AdditionalDiscard ||
+		island.Source != zone.Hand ||
+		island.Amount != 1 ||
+		island.SubtypesAny != (cost.SubtypeSet{types.Island}) {
+		t.Fatalf("first discard = %#v, want discard one Island card from hand", island)
+	}
+	other := alt.AdditionalCosts[1]
+	if other.Kind != cost.AdditionalDiscard ||
+		other.Source != zone.Hand ||
+		other.Amount != 1 ||
+		other.SubtypesAny != (cost.SubtypeSet{}) {
+		t.Fatalf("second discard = %#v, want discard one unfiltered card from hand", other)
+	}
+	if _, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.CounterObject); !ok {
+		t.Fatalf("primitive = %#v, want counter object", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+}

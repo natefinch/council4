@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -967,16 +969,25 @@ func lowerCounterUnlessPaysSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	if !ok {
 		return game.AbilityContent{}, false
 	}
+	resolutionPayment := game.ResolutionPayment{
+		Prompt:   "Pay " + payment.ManaCost.String() + "?",
+		Payer:    opt.Val(game.ObjectControllerReference(game.TargetStackObjectReference(0))),
+		ManaCost: opt.Val(slices.Clone(payment.ManaCost)),
+	}
+	if payment.GenericManaAmount.DynamicKind != compiler.DynamicAmountNone {
+		multiplier, ok := lowerDynamicAmount(payment.GenericManaAmount, game.SourcePermanentReference())
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		resolutionPayment.Prompt = "Pay " + payment.ManaCost.String() + " " + payment.GenericManaAmount.Text + "?"
+		resolutionPayment.ManaCostMultiplier = opt.Val(&multiplier)
+	}
 	const resultKey = game.ResultKey("unless-paid")
 	return game.Mode{
 		Targets: []game.TargetSpec{targetSpec},
 		Sequence: []game.Instruction{
 			{
-				Primitive: game.Pay{Payment: game.ResolutionPayment{
-					Prompt:   "Pay " + payment.ManaCost.String() + "?",
-					Payer:    opt.Val(game.ObjectControllerReference(game.TargetStackObjectReference(0))),
-					ManaCost: opt.Val(payment.ManaCost),
-				}},
+				Primitive:     game.Pay{Payment: resolutionPayment},
 				PublishResult: resultKey,
 			},
 			{
