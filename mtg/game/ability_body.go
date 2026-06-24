@@ -887,6 +887,26 @@ func BodyFunctionZone(body Ability) zone.Type {
 	}
 }
 
+// BodyAdditionalCosts returns the non-mana additional costs paid to use the
+// body (sacrifice, pay life, discard, exile, tap), or nil for bodies that have
+// none.
+func BodyAdditionalCosts(body Ability) []cost.Additional {
+	switch b := body.(type) {
+	case *ActivatedAbility:
+		if b == nil {
+			return nil
+		}
+		return b.AdditionalCosts
+	case *ManaAbility:
+		if b == nil {
+			return nil
+		}
+		return b.AdditionalCosts
+	default:
+		return nil
+	}
+}
+
 // BodyTimingRestriction returns the timing restriction for the body, if any.
 func BodyTimingRestriction(body Ability) TimingRestriction {
 	switch b := body.(type) {

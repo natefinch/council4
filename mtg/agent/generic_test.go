@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules"
@@ -138,5 +139,39 @@ func TestGenericStrategyDeterministic(t *testing.T) {
 		if again := strategy.ScoreAction(obs, act); again != first {
 			t.Fatalf("ScoreAction not deterministic: %v vs %v", again, first)
 		}
+	}
+}
+
+func activatedArtifact(name string, costs []cost.Additional) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  name,
+		Types: []types.Card{types.Artifact},
+		ActivatedAbilities: []game.ActivatedAbility{{
+			AdditionalCosts: costs,
+			Content: game.Mode{Sequence: []game.Instruction{{
+				Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()},
+			}}}.Ability(),
+		}},
+	}}
+}
+
+func TestGenericStrategyAvoidsResourceSpendingActivations(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	sacCosts := append(append([]cost.Additional(nil), cost.Tap...),
+		cost.Additional{Kind: cost.AdditionalSacrifice, Amount: 1})
+	sac := addObservedPermanent(g, game.Player1, activatedArtifact("Altar", sacCosts))
+	tap := addObservedPermanent(g, game.Player1, activatedArtifact("Engine", cost.Tap))
+	obs := rules.NewObservation(g, game.Player1)
+	strategy := GenericStrategy{}
+
+	pass := strategy.ScoreAction(obs, action.Pass())
+	sacScore := strategy.ScoreAction(obs, action.ActivateAbility(sac.ObjectID, 0, nil, 0))
+	tapScore := strategy.ScoreAction(obs, action.ActivateAbility(tap.ObjectID, 0, nil, 0))
+
+	if sacScore >= pass {
+		t.Fatalf("resource-spending activation scored %v, want below pass %v", sacScore, pass)
+	}
+	if tapScore <= pass {
+		t.Fatalf("plain activation scored %v, want above pass %v", tapScore, pass)
 	}
 }
