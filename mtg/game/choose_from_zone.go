@@ -27,6 +27,14 @@ type ChooseFromZone struct {
 	// SourceZone is the zone whose cards are the candidate pool for the choice.
 	SourceZone zone.Type
 
+	// AllOwners widens the candidate pool of SourceZone from Player's own copy
+	// of the zone to every player's copy ("exile a card from a graveyard",
+	// Cemetery Prowler). Player still makes the choice; each chosen card moves
+	// from its own owner's zone. It is meaningful only for a per-owner zone such
+	// as the graveyard, hand, or library; the zero value scopes the pool to
+	// Player alone.
+	AllOwners bool
+
 	// Filter is the canonical predicate every chosen card must satisfy. The zero
 	// Selection matches every card in SourceZone.
 	Filter Selection

@@ -829,6 +829,7 @@ func handleExileFromGraveyard(r *effectResolver, prim game.ExileFromGraveyard) e
 	res := r.resolveChooseFromZone(game.ChooseFromZone{
 		Player:      prim.Player,
 		SourceZone:  zone.Graveyard,
+		AllOwners:   prim.AllOwners,
 		Filter:      prim.Selection,
 		Quantity:    prim.Amount,
 		Count:       game.ChooseExactly,

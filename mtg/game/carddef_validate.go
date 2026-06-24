@@ -1325,6 +1325,33 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 			v.add(faceName, appendPath(path, "DynamicReduction"), CardDefIssueInvalidRuleEffect, "dynamic cost reduction amount kind is unsupported")
 		}
 	}
+	v.validateSharedExiledCardTypeReduction(faceName, path, modifier)
+}
+
+// validateSharedExiledCardTypeReduction checks the shared-exiled-card-type
+// generic reduction ("Spells you cast cost {N} less to cast for each card type
+// they share with cards exiled with this creature.", Cemetery Prowler). The
+// reduction is a spell modifier whose amount scales per shared card type, so it
+// must name the linked-exile key it reads, cannot be negative, and is mutually
+// exclusive with the per-object and dynamic reductions. An empty key without a
+// positive amount is the inert zero value.
+func (v *cardDefValidator) validateSharedExiledCardTypeReduction(faceName string, path string, modifier CostModifier) {
+	if modifier.SharedExiledCardTypeReduction < 0 {
+		v.add(faceName, appendPath(path, "SharedExiledCardTypeReduction"), CardDefIssueInvalidRuleEffect, "shared-exiled-card-type cost reduction cannot be negative")
+	}
+	if modifier.SharedExiledCardTypeReduction > 0 {
+		if modifier.Kind != CostModifierSpell {
+			v.add(faceName, appendPath(path, "SharedExiledCardTypeReduction"), CardDefIssueInvalidRuleEffect, "shared-exiled-card-type cost reduction requires a spell modifier")
+		}
+		if modifier.ExiledLinkKey == "" {
+			v.add(faceName, appendPath(path, "ExiledLinkKey"), CardDefIssueInvalidRuleEffect, "shared-exiled-card-type cost reduction requires a linked-exile key")
+		}
+		if modifier.PerObjectReduction > 0 || modifier.DynamicReduction != nil {
+			v.add(faceName, appendPath(path, "SharedExiledCardTypeReduction"), CardDefIssueInvalidRuleEffect, "shared-exiled-card-type cost reduction cannot combine with another dynamic reduction")
+		}
+	} else if modifier.ExiledLinkKey != "" {
+		v.add(faceName, appendPath(path, "ExiledLinkKey"), CardDefIssueInvalidRuleEffect, "linked-exile key requires a shared-exiled-card-type cost reduction")
+	}
 }
 
 // dynamicCostReductionKindSupported reports whether a dynamic amount kind can be

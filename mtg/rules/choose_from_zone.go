@@ -77,11 +77,24 @@ func chooseFromZoneSupported(env game.ChooseFromZone) bool {
 // chooseFromZoneCandidates collects the cards in env.SourceZone that match the
 // filter, narrowed by the optional FromLinked set and the X-bound mana-value
 // rider. The candidate order follows the zone order so a fallback choice is
-// deterministic.
+// deterministic. When env.AllOwners is set the pool spans every player's copy
+// of the zone rather than only playerID's own.
 func (r *effectResolver) chooseFromZoneCandidates(env game.ChooseFromZone, playerID game.PlayerID) []id.ID {
-	source, ok := destinationZone(r.game, playerID, env.SourceZone)
-	if !ok {
-		return nil
+	var sourceCardIDs []id.ID
+	if env.AllOwners {
+		for _, player := range r.game.Players {
+			zoneCards, ok := destinationZone(r.game, player.ID, env.SourceZone)
+			if !ok {
+				continue
+			}
+			sourceCardIDs = append(sourceCardIDs, zoneCards.All()...)
+		}
+	} else {
+		source, ok := destinationZone(r.game, playerID, env.SourceZone)
+		if !ok {
+			return nil
+		}
+		sourceCardIDs = source.All()
 	}
 	var linkedFilter map[id.ID]bool
 	if env.Riders.FromLinked != "" {
@@ -98,7 +111,7 @@ func (r *effectResolver) chooseFromZoneCandidates(env game.ChooseFromZone, playe
 		maxManaValue = r.obj.XValue
 	}
 	var candidates []id.ID
-	for _, cardID := range source.All() {
+	for _, cardID := range sourceCardIDs {
 		if linkedFilter != nil && !linkedFilter[cardID] {
 			continue
 		}

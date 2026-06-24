@@ -135,6 +135,24 @@ type CostModifier struct {
 	// the affected-player caster filter (PlayerOpponent for the defensive tax,
 	// PlayerYou for the controller's discount).
 	TargetsSource bool
+
+	// SharedExiledCardTypeReduction, when positive on a CostModifierSpell,
+	// reduces the affected spell's generic cost by this much for each card type
+	// the spell shares with the cards exiled with the source permanent ("Spells
+	// you cast cost {N} less to cast for each card type they share with cards
+	// exiled with this creature.", Cemetery Prowler). The rules layer reads the
+	// source permanent's linked-exile set named by ExiledLinkKey, takes the
+	// distinct card types among those exiled cards, intersects them with the
+	// casting spell's card types, and resolves the shared count times this
+	// amount into a plain generic reduction, which never touches colored
+	// requirements and never drops a cost below zero. It is meaningful only on a
+	// CostModifierSpell supplied by another permanent's static (not
+	// AffectedSource) and pairs with a non-empty ExiledLinkKey.
+	SharedExiledCardTypeReduction int
+	// ExiledLinkKey names the linked-exile set whose exiled cards a
+	// SharedExiledCardTypeReduction reads, keyed by the source permanent's card
+	// identity. It is meaningful only when that reduction is positive.
+	ExiledLinkKey LinkedKey
 }
 
 // RuleEffectKind identifies non-layer continuous rules effects such as

@@ -226,6 +226,9 @@ func lowerFixedExileSpell(
 	if content, ok := lowerControllerGraveyardChoiceExile(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerLinkedAnyGraveyardChoiceExile(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerPlayerGraveyardExile(ctx); ok {
 		return content, nil
 	}

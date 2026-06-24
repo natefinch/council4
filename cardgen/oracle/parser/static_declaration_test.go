@@ -1258,6 +1258,12 @@ func TestParseStaticSpellCostModifierDeclarationMeaning(t *testing.T) {
 			amount:       2,
 			powerAtLeast: 4,
 		},
+		"shared exiled card type reduction": {
+			source:    "Spells you cast cost {1} less to cast for each card type they share with cards exiled with this creature.",
+			modifier:  StaticDeclarationCostModifierSpellSharedExiledTypeReduction,
+			spellType: StaticDeclarationSpellTypeAll,
+			amount:    1,
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {

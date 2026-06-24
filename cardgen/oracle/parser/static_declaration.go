@@ -196,6 +196,13 @@ const (
 	StaticDeclarationCostModifierReplaceFirstCost StaticDeclarationCostModifierKind = "StaticDeclarationCostModifierReplaceFirstCost"
 	StaticDeclarationCostModifierSpellReduction   StaticDeclarationCostModifierKind = "StaticDeclarationCostModifierSpellReduction"
 	StaticDeclarationCostModifierSpellIncrease    StaticDeclarationCostModifierKind = "StaticDeclarationCostModifierSpellIncrease"
+	// StaticDeclarationCostModifierSpellSharedExiledTypeReduction is the dynamic
+	// controller cast-cost discount that scales with the card types the spell
+	// shares with the cards exiled with the source permanent ("Spells you cast
+	// cost {N} less to cast for each card type they share with cards exiled with
+	// this creature.", Cemetery Prowler). CostReductionAmount carries the per-
+	// shared-type amount.
+	StaticDeclarationCostModifierSpellSharedExiledTypeReduction StaticDeclarationCostModifierKind = "StaticDeclarationCostModifierSpellSharedExiledTypeReduction"
 )
 
 // StaticDeclarationSpellTypeKind identifies the closed spell-type filter a
@@ -2237,6 +2244,9 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token, atoms Atoms)
 	if declaration, ok := parseChosenCreatureTypeSpellCostReduction(tokens); ok {
 		return declaration, true
 	}
+	if declaration, ok := parseStaticSpellSharedExiledTypeCostReduction(tokens); ok {
+		return declaration, true
+	}
 	if declaration, ok := parseStaticSpellColorDisjunctionCostModifier(tokens); ok {
 		return declaration, true
 	}
@@ -2366,6 +2376,40 @@ func staticSpellPowerThreshold(tokens []shared.Token) (int, []shared.Token, bool
 		return 0, nil, false
 	}
 	return value, tokens[5:], true
+}
+
+// parseStaticSpellSharedExiledTypeCostReduction recognizes the dynamic
+// controller cast-cost discount whose amount scales with the card types the
+// spell shares with the cards exiled with the source permanent:
+//
+//	"Spells you cast cost {N} less to cast for each card type they share with cards exiled with this creature." (Cemetery Prowler)
+//
+// The affected spells are all the controller's spells; the trailing "for each
+// card type they share with cards exiled with this creature" marks the per-
+// shared-type scaling. Any other tail falls through to the fixed-amount forms.
+func parseStaticSpellSharedExiledTypeCostReduction(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if !staticWordsAt(tokens, 0, "spells", "you", "cast", "cost") {
+		return StaticDeclarationSyntax{}, false
+	}
+	rest := tokens[4:]
+	if len(rest) != 17 ||
+		rest[0].Kind != shared.Symbol ||
+		!staticWordsAt(rest, 1, "less", "to", "cast", "for", "each", "card", "type", "they", "share", "with", "cards", "exiled", "with", "this", "creature") ||
+		rest[16].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	amount, ok := staticGenericSymbolValue(rest[0].Text)
+	if !ok || amount <= 0 {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                StaticDeclarationCostModifier,
+		Span:                shared.SpanOf(tokens),
+		OperationSpan:       shared.SpanOf(rest[0:4]),
+		CostModifier:        StaticDeclarationCostModifierSpellSharedExiledTypeReduction,
+		CostReductionAmount: amount,
+		SpellType:           StaticDeclarationSpellTypeAll,
+	}, true
 }
 
 // parseChosenCreatureTypeSpellCostReduction recognizes the static cast-cost

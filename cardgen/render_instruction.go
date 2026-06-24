@@ -786,6 +786,9 @@ func (r Renderer) renderExileFromGraveyard(ctx *renderCtx, value game.ExileFromG
 		fmt.Sprintf("Selection: %s,", selection),
 		fmt.Sprintf("Amount: %s,", amount),
 	}
+	if value.AllOwners {
+		fields = append(fields, "AllOwners: true,")
+	}
 	if value.PublishLinked != "" {
 		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
 	}
