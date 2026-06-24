@@ -834,6 +834,8 @@ func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {
 		return compiler.StaticRuleDomainAttackBlock
 	case compiler.StaticRuleDoesntUntap:
 		return compiler.StaticRuleDomainUntap
+	case compiler.StaticRuleCantTransform:
+		return compiler.StaticRuleDomainTransform
 	case compiler.StaticRuleAdditionalTriggerForChosenCreatureType:
 		return compiler.StaticRuleDomainTrigger
 	default:
@@ -1328,6 +1330,8 @@ func lowerStaticRuleKind(kind compiler.StaticRuleKind) (game.RuleEffectKind, boo
 		return game.RuleEffectCantBeCountered, true
 	case compiler.StaticRuleDoesntUntap:
 		return game.RuleEffectDoesntUntap, true
+	case compiler.StaticRuleCantTransform:
+		return game.RuleEffectCantTransform, true
 	case compiler.StaticRuleAdditionalTriggerForChosenCreatureType:
 		return game.RuleEffectAdditionalTriggerForChosenCreatureType, true
 	default:

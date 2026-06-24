@@ -368,6 +368,14 @@ const (
 	// to the blockers. AffectedSource scopes it to the source creature;
 	// AffectedAttached scopes it to the attached creature.
 	RuleEffectAssignCombatDamageAsThoughUnblocked
+	// RuleEffectCantTransform prevents the affected permanents from transforming
+	// ("Non-Human Werewolves you control can't transform.", Immerwolf). Like the
+	// other group prohibitions it scopes the affected permanents with
+	// AffectedController, PermanentTypes, and AffectedSelection (or AffectedSource
+	// / AffectedAttached for a self- or attached-scoped form). A matching
+	// permanent's transform is prevented (CR 701.28), so any attempt to transform
+	// it does nothing.
+	RuleEffectCantTransform
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -411,7 +419,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectCastLimitPerTurn,
 		RuleEffectAdditionalTriggerForControlledPermanent,
 		RuleEffectMustBeBlockedByAllAble,
-		RuleEffectAssignCombatDamageAsThoughUnblocked:
+		RuleEffectAssignCombatDamageAsThoughUnblocked,
+		RuleEffectCantTransform:
 		return true
 	default:
 		return false

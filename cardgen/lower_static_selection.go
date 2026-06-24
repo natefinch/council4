@@ -139,6 +139,7 @@ func staticSelectionSelector(selection compiler.StaticSelection) (compiler.Compi
 		Supertypes:         slices.Clone(selection.Supertypes),
 		ExcludedSupertypes: excludedSupertypes,
 		SubtypesAny:        slices.Clone(selection.SubtypesAny),
+		ExcludedSubtypes:   slices.Clone(selection.ExcludedSubtypes),
 		ColorsAny:          slices.Clone(selection.ColorsAny),
 	})
 

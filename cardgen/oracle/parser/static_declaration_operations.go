@@ -419,6 +419,13 @@ func parseStaticDeclarationSubject(tokens []shared.Token, atoms Atoms) (StaticDe
 			Group: group,
 		}, verbStart, true
 	}
+	if group, verbStart, ok := staticSubtypeControlledCreaturesProhibitionSubject(tokens, atoms); ok {
+		return StaticDeclarationSubject{
+			Kind:  StaticDeclarationSubjectGroup,
+			Span:  group.Span,
+			Group: group,
+		}, verbStart, true
+	}
 	if group, verbStart, ok := staticBattlefieldCreaturesProhibitionSubject(tokens, atoms); ok {
 		return StaticDeclarationSubject{
 			Kind:  StaticDeclarationSubjectGroup,
@@ -551,7 +558,58 @@ func staticControlledCreaturesProhibitionSubject(tokens []shared.Token, atoms At
 	return subject, idx, true
 }
 
-// staticBattlefieldCreaturesProhibitionSubject recognizes the battlefield-wide
+// staticSubtypeControlledCreaturesProhibitionSubject recognizes a
+// controller-creature group named by a creature subtype plural ("Werewolves you
+// control ...") optionally carrying a "non-<subtype>" exclusion ("Non-Human
+// Werewolves you control ...", Immerwolf) when it precedes a prohibition verb
+// ("can't"/"cannot"). The required subtype rides Subtype (so downstream maps the
+// group onto a subtype-filtered controlled-creatures Selection) and any leading
+// excluded subtype rides ExcludedSubtypes. It returns the group subject and the
+// index of the prohibition verb.
+func staticSubtypeControlledCreaturesProhibitionSubject(tokens []shared.Token, atoms Atoms) (EffectStaticSubjectSyntax, int, bool) {
+	creatureSubtypeAt := func(index int) (types.Sub, bool) {
+		if index >= len(tokens) {
+			return "", false
+		}
+		value, ok := atoms.SubtypeAt(tokens[index].Span)
+		return value, ok && SubtypeMatchesAnyRuntimeCardType(value, []types.Card{types.Creature, types.Kindred})
+	}
+	excludedCreatureSubtypeAt := func(index int) (types.Sub, bool) {
+		if index >= len(tokens) {
+			return "", false
+		}
+		value, ok := atoms.ExcludedSubtypeAt(tokens[index].Span)
+		return value, ok && SubtypeMatchesAnyRuntimeCardType(value, []types.Card{types.Creature, types.Kindred})
+	}
+	idx := 0
+	var excluded []types.Sub
+	if value, ok := excludedCreatureSubtypeAt(idx); ok {
+		excluded = append(excluded, value)
+		idx++
+	}
+	subtype, ok := creatureSubtypeAt(idx)
+	if !ok {
+		return EffectStaticSubjectSyntax{}, 0, false
+	}
+	subtypeText := tokens[idx].Text
+	idx++
+	if !staticWordsAt(tokens, idx, "you", "control") {
+		return EffectStaticSubjectSyntax{}, 0, false
+	}
+	idx += 2
+	if !staticWordsAt(tokens, idx, "can't") && !staticWordsAt(tokens, idx, "cannot") {
+		return EffectStaticSubjectSyntax{}, 0, false
+	}
+	return EffectStaticSubjectSyntax{
+		Kind:             EffectStaticSubjectControlledCreatureSubtype,
+		Span:             shared.SpanOf(tokens[:idx]),
+		Subtype:          subtype,
+		SubtypeText:      subtypeText,
+		SubtypeKnown:     true,
+		ExcludedSubtypes: excluded,
+	}, idx, true
+}
+
 // creature group subject of a mass "can't block" restriction ("Creatures with
 // power less than this creature's power can't block ...", "Creatures can't
 // block.") when it precedes a prohibition verb ("can't"/"cannot"). Unlike
@@ -1821,6 +1879,13 @@ func parseStaticProhibitionRuleOperation(
 			Span:  shared.SpanOf(tokens[verb : verb+2]),
 		}, nil)
 	}
+	if staticWordsAt(tokens, verb, "transform") {
+		return staticRuleOperation(tokens, index, verb+1, subject, constraint, StaticRuleOperation{
+			Kind:  StaticRuleOperationTransform,
+			Voice: StaticRuleVoiceActive,
+			Span:  tokens[verb].Span,
+		}, nil)
+	}
 	return StaticDeclarationSyntax{}, 0, false
 }
 
@@ -1948,6 +2013,7 @@ func staticRuleSubjectKindAllowed(subject StaticDeclarationSubject) bool {
 	case StaticDeclarationSubjectGroup:
 		return subject.Group.Kind == EffectStaticSubjectAttachedObject ||
 			subject.Group.Kind == EffectStaticSubjectControlledCreatures ||
+			subject.Group.Kind == EffectStaticSubjectControlledCreatureSubtype ||
 			subject.Group.Kind == EffectStaticSubjectOpponentControlledCreatures ||
 			subject.Group.Kind == EffectStaticSubjectAllCreatures
 	default:
@@ -1981,6 +2047,13 @@ func staticRuleSubjectForDeclaration(subject StaticDeclarationSubject, operation
 				return StaticRuleSubject{Kind: StaticRuleSubjectControlledCreatures, Span: subject.Span}, true
 			}
 			if operation.Kind == StaticRuleOperationAttack && operation.Voice == StaticRuleVoiceActive {
+				return StaticRuleSubject{Kind: StaticRuleSubjectControlledCreatures, Span: subject.Span}, true
+			}
+			if operation.Kind == StaticRuleOperationTransform && operation.Voice == StaticRuleVoiceActive {
+				return StaticRuleSubject{Kind: StaticRuleSubjectControlledCreatures, Span: subject.Span}, true
+			}
+		case EffectStaticSubjectControlledCreatureSubtype:
+			if operation.Kind == StaticRuleOperationTransform && operation.Voice == StaticRuleVoiceActive {
 				return StaticRuleSubject{Kind: StaticRuleSubjectControlledCreatures, Span: subject.Span}, true
 			}
 		case EffectStaticSubjectOpponentControlledCreatures:

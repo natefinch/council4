@@ -106,6 +106,9 @@ const (
 	StaticRuleDomainAttackBlock
 	StaticRuleDomainUntap
 	StaticRuleDomainTrigger
+	// StaticRuleDomainTransform constrains transforming a permanent ("... can't
+	// transform").
+	StaticRuleDomainTransform
 )
 
 // Static rule declarations currently recognized by Card Generation.
@@ -144,6 +147,10 @@ const (
 	// Wolf, Thorn Elemental): the subject attacker may deal its combat damage to
 	// its attack target rather than to its blockers.
 	StaticRuleAssignDamageAsUnblocked
+	// StaticRuleCantTransform prohibits transforming the subject ("Non-Human
+	// Werewolves you control can't transform.", Immerwolf); it lowers to the
+	// can't-transform runtime rule effect.
+	StaticRuleCantTransform
 )
 
 // StaticBlockerRestrictionKind identifies the blocker characteristic bounding a
@@ -239,16 +246,21 @@ type StaticSelection struct {
 	// entry onto the runtime Selection.ExcludedSupertype scalar.
 	ExcludedSupertypes []types.Super
 	SubtypesAny        []types.Sub
-	ColorsAny          []color.Color
-	Colorless          bool
-	Multicolored       bool
-	Controller         ControllerKind
-	CombatState        StaticCombatState
-	TapState           StaticTapState
-	Keyword            parser.KeywordKind
-	ExcludedKeyword    parser.KeywordKind
-	TokenOnly          bool
-	NonToken           bool
+	// ExcludedSubtypes lists creature subtypes a member must NOT carry (the
+	// "non-<subtype>" exclusion on a subtyped group, "Non-Human Werewolves you
+	// control"). Lowering routes the first entry onto the runtime
+	// Selection.ExcludedSubtype scalar.
+	ExcludedSubtypes []types.Sub
+	ColorsAny        []color.Color
+	Colorless        bool
+	Multicolored     bool
+	Controller       ControllerKind
+	CombatState      StaticCombatState
+	TapState         StaticTapState
+	Keyword          parser.KeywordKind
+	ExcludedKeyword  parser.KeywordKind
+	TokenOnly        bool
+	NonToken         bool
 	// MatchCounter, when true, restricts the group to permanents carrying a
 	// counter of RequiredCounter's kind ("creature you control with a +1/+1
 	// counter on it"). A bool flag distinguishes "no counter requirement" from
@@ -1302,6 +1314,13 @@ func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, 
 		len(rule.Qualifiers) == 0 {
 		return StaticRuleCantBlockAndCantBeBlocked, StaticZoneBattlefield, true
 	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == parser.StaticRuleOperationTransform &&
+		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
+		len(rule.Qualifiers) == 0 {
+		return StaticRuleCantTransform, StaticZoneBattlefield, true
+	}
 	if isUntapRuleSubject(rule.Subject.Kind) &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
 		rule.Operation.Kind == parser.StaticRuleOperationUntap &&
@@ -1449,6 +1468,8 @@ func staticRuleDomain(rule StaticRuleKind) StaticRuleDomain {
 		return StaticRuleDomainAttackBlock
 	case StaticRuleDoesntUntap:
 		return StaticRuleDomainUntap
+	case StaticRuleCantTransform:
+		return StaticRuleDomainTransform
 	default:
 		return StaticRuleDomainUnknown
 	}
@@ -2363,6 +2384,9 @@ func staticGroupForParserSubject(subject parser.StaticDeclarationSubject) (Stati
 				return StaticGroupReference{}, false
 			}
 			group.Selection.ExcludedTypes = excluded
+		}
+		if ok && len(subject.Group.ExcludedSubtypes) > 0 {
+			group.Selection.ExcludedSubtypes = slices.Clone(subject.Group.ExcludedSubtypes)
 		}
 		return group, ok
 	default:
