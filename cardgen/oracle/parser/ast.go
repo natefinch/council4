@@ -52,6 +52,11 @@ type Context struct {
 	// CardName is the card's own name. The parser uses it to recognize explicit
 	// self-name references so the compiler need not inspect name spelling.
 	CardName string `json:",omitempty"`
+	// Legendary reports that the card is legendary. The parser uses it to admit
+	// the legend's "<short name> of <place>" pre-"of" short name as an additional
+	// self-name spelling (e.g. "Rosie Cotton" for "Rosie Cotton of South Lane"),
+	// a proper-noun self reference only legendary names denote unambiguously.
+	Legendary bool `json:",omitempty"`
 }
 
 // Document is a lossless syntax tree for one card face's Oracle text.

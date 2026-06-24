@@ -166,6 +166,7 @@ func lowerFaceAbilities(
 		Class:            slices.Contains(parsedType.Subtypes, "Class"),
 		Leveler:          face.Layout == "leveler",
 		CardName:         face.Name,
+		Legendary:        slices.Contains(parsedType.Supertypes, "Legendary"),
 	})
 	compilation, compilerDiagnostics := compiler.Compile(document, compiler.Context{})
 	diagnostics = append(diagnostics, compilerDiagnostics...)

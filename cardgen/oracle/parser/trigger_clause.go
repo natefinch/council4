@@ -911,7 +911,9 @@ func equalWord(token shared.Token, word string) bool {
 }
 
 func triggerBodyComma(tokens []shared.Token, cardName string) int {
-	selfNameSpans := collectSelfNameSpans(tokens, cardName)
+	// The legendary pre-"of" short name carries no comma, so it never changes
+	// which comma ends the trigger clause; the non-legendary name spans suffice.
+	selfNameSpans := collectSelfNameSpans(tokens, cardName, false)
 	comma := shared.TopLevelIndex(tokens, shared.Comma)
 	for comma > 0 {
 		if end, ok := spellListComma(tokens, comma); ok {

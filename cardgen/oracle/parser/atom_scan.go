@@ -14,12 +14,12 @@ import (
 // syntax node and returns them with their source spans. Reminder and quoted
 // spans are excluded so that recognized meaning matches the semantic tokens the
 // compiler consumes.
-func collectAtoms(tokens []shared.Token, reminders, quoted []Delimited, cardName string) Atoms {
+func collectAtoms(tokens []shared.Token, reminders, quoted []Delimited, cardName string, legendary bool) Atoms {
 	tokens = atomSemanticTokens(tokens, reminders, quoted)
 	atoms := Atoms{
-		references:        collectReferences(tokens, cardName),
-		selfNameSpans:     collectSelfNameSpans(tokens, cardName),
-		sourceNameSpans:   collectSourceNameSpans(tokens, cardName),
+		references:        collectReferences(tokens, cardName, legendary),
+		selfNameSpans:     collectSelfNameSpans(tokens, cardName, legendary),
+		sourceNameSpans:   collectSourceNameSpans(tokens, cardName, legendary),
 		sourceMarkerSpans: collectSourceMarkerSpans(tokens),
 	}
 	for _, token := range tokens {

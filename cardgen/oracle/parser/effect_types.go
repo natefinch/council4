@@ -1153,10 +1153,18 @@ type SelectionSyntax struct {
 	All          bool `json:",omitempty"`
 	Another      bool `json:",omitempty"`
 	Other        bool `json:",omitempty"`
-	Attacking    bool `json:",omitempty"`
-	Blocking     bool `json:",omitempty"`
-	Tapped       bool `json:",omitempty"`
-	Untapped     bool `json:",omitempty"`
+	// OtherThanSource records that a single-permanent target's self-exclusion was
+	// spelled as a trailing "other than <source name>" clause ("target creature
+	// you control other than Rosie Cotton") rather than the "another" determiner.
+	// It sets Another for the shared exclude-source semantics while telling the
+	// byte-exact reconstruction to print the plain "target" determiner and strip
+	// the trailing self-name clause. It is parser-internal and not consumed by the
+	// compiler, which reads Another for the exclude-source predicate.
+	OtherThanSource bool `json:",omitempty"`
+	Attacking       bool `json:",omitempty"`
+	Blocking        bool `json:",omitempty"`
+	Tapped          bool `json:",omitempty"`
+	Untapped        bool `json:",omitempty"`
 	// NonToken records a "nontoken" selector qualifier ("nontoken creature");
 	// TokenOnly records a "token" qualifier ("token creature"). They are mutually
 	// exclusive and lower to Selection.NonToken / Selection.TokenOnly.

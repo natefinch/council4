@@ -127,6 +127,11 @@ type TriggerSelection struct {
 	// information for a subject, so that form must stay unsupported (fail closed).
 	MatchAnyCounter bool `json:",omitempty"`
 
+	// Modified records a "modified" subject qualifier ("a modified creature you
+	// control"): the matched permanent must carry a counter or have an Aura or
+	// Equipment attached (CR 701.50). It compiles to Selection.MatchModified.
+	Modified bool `json:",omitempty"`
+
 	// SubtypeFromEntryChoice records a trailing "of the chosen type" qualifier
 	// ("a creature you control of the chosen type"), tying the matched permanent
 	// to the creature subtype the trigger's source permanent chose as it entered.
@@ -256,6 +261,8 @@ func consumeTriggerSelectionModifiers(words []string, selection *TriggerSelectio
 			selection.CombatState = TriggerSelectionAttacking
 		case "blocking":
 			selection.CombatState = TriggerSelectionBlocking
+		case "modified":
+			selection.Modified = true
 		default:
 			return words
 		}

@@ -532,6 +532,7 @@ func lowerTriggerSelection(selection compiler.TriggerSelection) (game.Selection,
 	result.RequiredTypes = selection.RequiredTypes
 	result.RequiredTypesAny = selection.RequiredTypesAny
 	result.Controller = controller
+	result.MatchModified = selection.Modified
 	return result, true
 }
 
