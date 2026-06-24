@@ -28,7 +28,7 @@ func TestParseKeywordVocabularyMeaning(t *testing.T) {
 		"Fuse":  KeywordFuse,
 		"Haste": KeywordHaste, "Hexproof": KeywordHexproof, "Improvise": KeywordImprovise,
 		"Horsemanship":   KeywordHorsemanship,
-		"Indestructible": KeywordIndestructible, "Infect": KeywordInfect, "Intimidate": KeywordIntimidate, "Kicker": KeywordKicker,
+		"Indestructible": KeywordIndestructible, "Infect": KeywordInfect, "Intimidate": KeywordIntimidate, "Jump-start": KeywordJumpStart, "Kicker": KeywordKicker,
 		"Lifelink": KeywordLifelink, "Madness": KeywordMadness, "Menace": KeywordMenace, "Morph": KeywordMorph,
 		"Mutate": KeywordMutate, "Ninjutsu": KeywordNinjutsu, "Outlast": KeywordOutlast, "Persist": KeywordPersist,
 		"Protection": KeywordProtection, "Prowess": KeywordProwess, "Read ahead": KeywordReadAhead,

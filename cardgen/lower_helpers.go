@@ -162,6 +162,7 @@ var keywordStaticBodies = map[parser.KeywordKind]loweredStaticAbility{
 	parser.KeywordIndestructible:   {Body: game.IndestructibleStaticBody, VarName: "game.IndestructibleStaticBody"},
 	parser.KeywordInfect:           {Body: game.InfectStaticBody, VarName: "game.InfectStaticBody"},
 	parser.KeywordIntimidate:       {Body: game.IntimidateStaticBody, VarName: "game.IntimidateStaticBody"},
+	parser.KeywordJumpStart:        {Body: game.JumpStartStaticBody, VarName: "game.JumpStartStaticBody"},
 	parser.KeywordLifelink:         {Body: game.LifelinkStaticBody, VarName: "game.LifelinkStaticBody"},
 	parser.KeywordMenace:           {Body: game.MenaceStaticBody, VarName: "game.MenaceStaticBody"},
 	parser.KeywordPersist:          {Body: game.PersistStaticBody, VarName: "game.PersistStaticBody"},

@@ -112,6 +112,15 @@ const (
 	// HasKeyword(Fuse). Appended at the end of the enum so existing keyword
 	// ordinals are unchanged.
 	Fuse
+	// JumpStart (CR 702.134) is printed on instants and sorceries: "Jump-start
+	// (You may cast this card from your graveyard by discarding a card in
+	// addition to paying its other costs. Then exile this card.)" It is modeled
+	// as a recognized simple keyword carried on the card so HasKeyword(JumpStart)
+	// reports true; the rules layer reads it on a card in its owner's graveyard
+	// to offer the graveyard cast with a discard additional cost and exile the
+	// card on resolution. Appended at the end of the enum so existing keyword
+	// ordinals are unchanged.
+	JumpStart
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -293,6 +302,15 @@ var (
 	// fuse split card. The fused-casting permission itself is granted by the
 	// rules layer when it detects this keyword on a split card's faces.
 	FuseStaticBody = simpleKeywordStaticBody("Fuse", Fuse)
+
+	// JumpStartStaticBody is the reusable StaticAbility for jump-start (CR
+	// 702.134): "Jump-start (You may cast this card from your graveyard by
+	// discarding a card in addition to paying its other costs. Then exile this
+	// card.)" It carries the JumpStart keyword so HasKeyword(JumpStart) reports
+	// true on the card. The graveyard cast permission, the discard additional
+	// cost, and the exile-on-resolution are supplied by the rules layer when it
+	// detects this keyword on a card in its owner's graveyard.
+	JumpStartStaticBody = simpleKeywordStaticBody("Jump-start", JumpStart)
 )
 
 func simpleKeywordStaticBody(text string, keyword Keyword) StaticAbility {
