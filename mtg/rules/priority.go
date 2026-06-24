@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/natefinch/council4/mtg/eval"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -111,6 +112,21 @@ func recordActionSource(g *game.Game, playerID game.PlayerID, actionLog *ActionL
 	actionLog.addPermanentSnapshot(g, payload.SourceID)
 	actionLog.ManaAbility = isManaAbilityActivation(g, playerID, payload)
 	actionLog.AbilityText = activatedAbilityText(g, playerID, payload)
+	actionLog.AbilityEffectSummary = activatedAbilityEffectSummary(g, playerID, payload)
+}
+
+// activatedAbilityEffectSummary returns a short value-oriented gloss of what the
+// activated ability costs and does, derived from the scorable-effect IR, or an
+// empty string when the ability cannot be resolved or the IR models none of its
+// effects.
+func activatedAbilityEffectSummary(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction) string {
+	if _, body, ok := activatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex); ok {
+		return eval.Describe(eval.ScorableAbilityOfModes(body, activate.ChosenModes))
+	}
+	if _, body, ok := handActivatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex); ok {
+		return eval.Describe(eval.ScorableAbilityOfModes(&body, activate.ChosenModes))
+	}
+	return ""
 }
 
 // activatedAbilityText returns the rules text describing the ability the action

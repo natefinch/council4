@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestRecordActionSourceCapturesAbilityText(t *testing.T) {
@@ -29,6 +30,32 @@ func TestRecordActionSourceCapturesAbilityText(t *testing.T) {
 	}
 	if actionLog.ManaAbility {
 		t.Fatal("non-mana activated ability flagged as a mana ability")
+	}
+	if actionLog.AbilityEffectSummary != "gain 1 life" {
+		t.Fatalf("AbilityEffectSummary = %q, want the IR gloss", actionLog.AbilityEffectSummary)
+	}
+}
+
+func TestRecordActionSourceSummarizesCostAndEffect(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		Text: "Sacrifice a creature: Draw a card.",
+		AdditionalCosts: []cost.Additional{
+			{Kind: cost.AdditionalSacrifice, MatchPermanentType: true, PermanentType: types.Creature},
+		},
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}},
+		}.Ability(),
+	}))
+	source.SummoningSick = false
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	actionLog := &ActionLog{Player: game.Player1}
+	recordActionSource(g, game.Player1, actionLog, action.ActivateAbility(source.ObjectID, 0, nil, 0))
+
+	if actionLog.AbilityEffectSummary != "sacrifice a creature, draw a card" {
+		t.Fatalf("AbilityEffectSummary = %q, want cost-then-effect gloss", actionLog.AbilityEffectSummary)
 	}
 }
 
