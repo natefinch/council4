@@ -705,6 +705,88 @@ func TestParseStaticQuotedAbilityGrantNamedCounterGroupFilterMeaning(t *testing.
 	}
 }
 
+func TestParseStaticQuotedAbilityGrantCreatureSubtypeSubjectMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		`Sliver creatures you control have "Whenever this creature attacks, it deals 1 damage to any target."`,
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	grant := declarations[0]
+	if grant.Kind != StaticDeclarationContinuousQuotedAbilityGrant ||
+		grant.Subject.Kind != StaticDeclarationSubjectGroup ||
+		grant.Subject.Group.Kind != EffectStaticSubjectControlledCreatureSubtype ||
+		grant.GrantedAbility == nil {
+		t.Fatalf("declaration = %#v, want controlled-creature-subtype quoted ability grant", grant)
+	}
+	if grant.Subject.Group.Subtype != types.Sliver {
+		t.Fatalf("subtype = %q, want Sliver", grant.Subject.Group.Subtype)
+	}
+}
+
+func TestParseStaticQuotedAbilityGrantOtherCreatureSubtypeSubjectMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		`Other Goblins you control have "{T}: Draw a card, then discard a card."`,
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	grant := declarations[0]
+	if grant.Kind != StaticDeclarationContinuousQuotedAbilityGrant ||
+		grant.Subject.Kind != StaticDeclarationSubjectGroup ||
+		grant.Subject.Group.Kind != EffectStaticSubjectOtherControlledCreatureSubtype ||
+		grant.GrantedAbility == nil {
+		t.Fatalf("declaration = %#v, want other-controlled-creature-subtype quoted ability grant", grant)
+	}
+	if grant.Subject.Group.Subtype != types.Goblin {
+		t.Fatalf("subtype = %q, want Goblin", grant.Subject.Group.Subtype)
+	}
+}
+
+func TestParseStaticQuotedAbilityGrantControlledArtifactSubjectMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		`Artifacts you control have "{1}, {T}: Draw a card."`,
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	grant := declarations[0]
+	if grant.Kind != StaticDeclarationContinuousQuotedAbilityGrant ||
+		grant.Subject.Kind != StaticDeclarationSubjectGroup ||
+		grant.Subject.Group.Kind != EffectStaticSubjectControlledArtifacts ||
+		grant.GrantedAbility == nil {
+		t.Fatalf("declaration = %#v, want controlled-artifact quoted ability grant", grant)
+	}
+}
+
+func TestParseStaticQuotedAbilityGrantOtherControlledPermanentSubjectMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		`Other permanents you control have "{T}: Add one mana of any color."`,
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	grant := declarations[0]
+	if grant.Kind != StaticDeclarationContinuousQuotedAbilityGrant ||
+		grant.Subject.Kind != StaticDeclarationSubjectGroup ||
+		grant.Subject.Group.Kind != EffectStaticSubjectOtherControlledPermanents ||
+		grant.GrantedAbility == nil {
+		t.Fatalf("declaration = %#v, want other-controlled-permanent quoted ability grant", grant)
+	}
+}
+
 func TestParseStaticPermanentManaAbilityGrantMeaning(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(
