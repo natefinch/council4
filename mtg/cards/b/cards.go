@@ -13,6 +13,7 @@ var Cards = []*game.CardDef{
 	BiteDown,
 	BlazemireVerge,
 	BlazingSunsteel,
+	BolasSCitadel,
 	BridgeworksBattle,
 	BugenhagenWiseElder,
 	Bushwhack,

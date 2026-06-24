@@ -405,14 +405,21 @@ type CostComponent struct {
 	ObjectNonToken    bool
 	ObjectTokenOnly   bool
 	PermanentModifier bool
-	RequireTapped     bool
-	RequireUntapped   bool
-	SourceZone        zone.Type
-	ToZone            zone.Type
-	SourceSelf        bool
-	CounterKind       counter.Kind
-	CounterKindKnown  bool
-	SubtypesAny       []types.Sub
+
+	// ObjectExcludedType constrains a permanent cost object to permanents that
+	// are not of the named card type ("nonland permanents"), recognized by the
+	// parser. ObjectExcludedTypeKnown reports its presence.
+	ObjectExcludedType      types.Card
+	ObjectExcludedTypeKnown bool
+
+	RequireTapped    bool
+	RequireUntapped  bool
+	SourceZone       zone.Type
+	ToZone           zone.Type
+	SourceSelf       bool
+	CounterKind      counter.Kind
+	CounterKindKnown bool
+	SubtypesAny      []types.Sub
 
 	// RemoveCounterAmong reports a "remove N counters from among <permanents>
 	// you control" cost, recognized by the parser. The removed counters are

@@ -549,6 +549,12 @@ type StaticPlayerRuleDeclaration struct {
 	CastColorless          bool
 	AlsoPlayLands          bool
 	CastChosenCreatureType bool
+	// CastPayLifeManaValue records the "If you cast a spell this way, pay life
+	// equal to its mana value rather than pay its mana cost." rider on a
+	// StaticPlayerRuleCastSpellsFromLibraryTop permission (Bolas's Citadel), so
+	// lowering makes spells cast from the top pay life equal to their mana value
+	// instead of their mana cost. It is unused for every other kind.
+	CastPayLifeManaValue bool
 
 	// ManaColor carries the colored mana symbol of a
 	// StaticPlayerRuleLifeForColoredMana rule ("For each {B} in a cost, ...",
@@ -3695,7 +3701,7 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 			}
 			spellTypes = append(spellTypes, converted)
 		}
-	} else if len(node.CastSpellTypes) != 0 || node.CastColorless || node.AlsoPlayLands || node.CastChosenCreatureType {
+	} else if len(node.CastSpellTypes) != 0 || node.CastColorless || node.AlsoPlayLands || node.CastChosenCreatureType || node.CastPayLifeManaValue {
 		return StaticDeclaration{}, false
 	}
 	var condition *CompiledCondition
@@ -3720,6 +3726,7 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 			CastColorless:          node.CastColorless,
 			AlsoPlayLands:          node.AlsoPlayLands,
 			CastChosenCreatureType: node.CastChosenCreatureType,
+			CastPayLifeManaValue:   node.CastPayLifeManaValue,
 			ManaColor:              node.ManaColor,
 		},
 	}, true

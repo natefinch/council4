@@ -561,6 +561,14 @@ type StaticDeclarationSyntax struct {
 	CastColorless          bool       `json:",omitempty"`
 	AlsoPlayLands          bool       `json:",omitempty"`
 	CastChosenCreatureType bool       `json:",omitempty"`
+	// CastPayLifeManaValue records a trailing "If you cast a spell this way, pay
+	// life equal to its mana value rather than pay its mana cost." rider on a
+	// cast-from-library-top declaration ("You may play lands and cast spells from
+	// the top of your library. If you cast a spell this way, pay life equal to its
+	// mana value rather than pay its mana cost.", Bolas's Citadel), so lowering
+	// makes spells cast this way pay life equal to their mana value instead of
+	// their mana cost.
+	CastPayLifeManaValue bool `json:",omitempty"`
 
 	// FlashSpellType and FlashSpellSubtypes carry the optional spell filter of a
 	// StaticDeclarationCastAsThoughFlash declaration ("You may cast sorcery
@@ -622,7 +630,41 @@ func emitStaticDeclarations(abilities []Ability) {
 		declarations := parseStaticDeclarations(body, ability.Quoted, ability.Atoms, ability.ConditionClauses)
 		if len(declarations) > 0 {
 			ability.StaticDeclarations = declarations
+			foldStaticCastFromTopPayLifeRider(ability, declarations)
 		}
+	}
+}
+
+// foldStaticCastFromTopPayLifeRider clears the effects of the "If you cast a
+// spell this way, pay life equal to its mana value rather than pay its mana
+// cost." rider sentence when the ability recognized a cast-from-library-top
+// static permission carrying that rider (Bolas's Citadel). The rider's life
+// payment is already captured on the static declaration, so clearing the
+// sentence's effects keeps the static permission free of a stray standalone
+// effect and lets reference and coverage scans credit the rider text.
+func foldStaticCastFromTopPayLifeRider(ability *Ability, declarations []StaticDeclarationSyntax) {
+	credited := false
+	for i := range declarations {
+		if declarations[i].PlayerRule == StaticDeclarationPlayerRuleCastSpellsFromLibraryTop &&
+			declarations[i].CastPayLifeManaValue {
+			credited = true
+			break
+		}
+	}
+	if !credited {
+		return
+	}
+	for i := range ability.Sentences {
+		if len(ability.Sentences[i].Effects) == 0 && !ability.Sentences[i].LegacyEffects {
+			continue
+		}
+		if !isPlayFromTopPayLifeRiderTokens(semanticEffectTokens(ability.Sentences[i].Tokens)) {
+			continue
+		}
+		ability.Sentences[i].Effects = nil
+		ability.Sentences[i].LegacyEffects = false
+		ability.Sentences[i].PlayFromTopPayLifeRider = true
+		return
 	}
 }
 
@@ -2052,6 +2094,15 @@ func parseStaticCastSpellsFromLibraryTopDeclaration(tokens []shared.Token) (Stat
 	if len(tokens) < 11 || tokens[len(tokens)-1].Kind != shared.Period {
 		return StaticDeclarationSyntax{}, false
 	}
+	core, payLife, ok := splitStaticCastFromTopPayLifeRider(tokens)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	fullSpan := shared.SpanOf(tokens)
+	tokens = core
+	if len(tokens) < 11 {
+		return StaticDeclarationSyntax{}, false
+	}
 	if !staticWordsAt(tokens, 0, "you", "may") {
 		return StaticDeclarationSyntax{}, false
 	}
@@ -2082,7 +2133,7 @@ func parseStaticCastSpellsFromLibraryTopDeclaration(tokens []shared.Token) (Stat
 	}
 	return StaticDeclarationSyntax{
 		Kind:          StaticDeclarationPlayerRule,
-		Span:          shared.SpanOf(tokens),
+		Span:          fullSpan,
 		OperationSpan: shared.SpanOf(tokens[1 : len(tokens)-1]),
 		Subject: StaticDeclarationSubject{
 			Kind: StaticDeclarationSubjectController,
@@ -2093,7 +2144,38 @@ func parseStaticCastSpellsFromLibraryTopDeclaration(tokens []shared.Token) (Stat
 		CastColorless:          filter.colorless,
 		AlsoPlayLands:          alsoPlayLands,
 		CastChosenCreatureType: chosenCreatureType,
+		CastPayLifeManaValue:   payLife,
 	}, true
+}
+
+// splitStaticCastFromTopPayLifeRider separates the leading cast-from-library-top
+// sentence of a static cast permission from an optional trailing "If you cast a
+// spell this way, pay life equal to its mana value rather than pay its mana
+// cost." rider (Bolas's Citadel). The leading sentence carries no internal
+// period, so it ends at the first period; any remaining tokens must form exactly
+// the pay-life rider sentence. It returns the leading sentence's tokens, whether
+// the rider was present, and false when trailing tokens exist that are not the
+// recognized rider so the declaration fails closed rather than dropping text.
+func splitStaticCastFromTopPayLifeRider(tokens []shared.Token) (core []shared.Token, payLife, ok bool) {
+	first := -1
+	for i := range tokens {
+		if tokens[i].Kind == shared.Period {
+			first = i
+			break
+		}
+	}
+	if first < 0 {
+		return nil, false, false
+	}
+	core = tokens[:first+1]
+	rest := tokens[first+1:]
+	if len(rest) == 0 {
+		return core, false, true
+	}
+	if isPlayFromTopPayLifeRiderTokens(rest) {
+		return core, true, true
+	}
+	return nil, false, false
 }
 
 // castSpellFilter is the parsed card-type and color filter of a
