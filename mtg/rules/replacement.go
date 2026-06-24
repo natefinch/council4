@@ -388,9 +388,21 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 				amount = ctx.xValue
 			}
 			if placement.Dynamic.Exists && placement.Dynamic.Val != nil {
+				// A group enters-with-counters replacement ("Each other creature
+				// you control enters with ... equal to <source>'s toughness." —
+				// Arwen, Weaver of Hope) scales by a characteristic of the
+				// replacement's source permanent, not the entering one, so the
+				// dynamic amount resolves against the source object. A self
+				// replacement reads the entering permanent itself.
+				sourceID := permanent.ObjectID
+				sourceCardID := permanent.CardInstanceID
+				if replacement.EntersWithCountersOthers {
+					sourceID = replacement.SourceObjectID
+					sourceCardID = replacement.SourceCardID
+				}
 				obj := &game.StackObject{
-					SourceID:                permanent.ObjectID,
-					SourceCardID:            permanent.CardInstanceID,
+					SourceID:                sourceID,
+					SourceCardID:            sourceCardID,
 					Controller:              replacement.Controller,
 					ColorsOfManaSpentToCast: ctx.colorsOfManaSpent,
 					KickerCount:             ctx.kickCount,
