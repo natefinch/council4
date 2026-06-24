@@ -319,6 +319,8 @@ func lowerContent(
 			return lowerPolymorphContent(ctx)
 		case compiler.EffectDelayedTrigger:
 			return lowerDelayedTriggerContent(ctx)
+		case compiler.EffectCreateEmblem:
+			return lowerCreateEmblemContent(ctx)
 		default:
 		}
 		if content, ok := lowerExileFromHandContent(ctx); ok {

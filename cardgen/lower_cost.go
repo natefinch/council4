@@ -374,19 +374,27 @@ func lowerExileCost(component compiler.CostComponent) (cost.Additional, bool) {
 		component.ObjectKind != compiler.SelectorCard {
 		return cost.Additional{}, false
 	}
-	if !component.AmountKnown && !component.AmountFromX {
-		return cost.Additional{}, false
-	}
 	additional := cost.Additional{
 		Kind:          cost.AdditionalExile,
 		Text:          component.Text,
 		Source:        zone.Graveyard,
 		ExcludeSource: component.ExcludeSource,
+		MatchHistoric: component.ObjectHistoric,
 	}
-	if component.AmountFromX {
-		additional.AmountFromX = true
+	if component.AnyNumber {
+		if component.TotalManaValueAtLeast <= 0 {
+			return cost.Additional{}, false
+		}
+		additional.TotalManaValueAtLeast = component.TotalManaValueAtLeast
 	} else {
-		additional.Amount = component.AmountValue
+		if !component.AmountKnown && !component.AmountFromX {
+			return cost.Additional{}, false
+		}
+		if component.AmountFromX {
+			additional.AmountFromX = true
+		} else {
+			additional.Amount = component.AmountValue
+		}
 	}
 	if component.ObjectTypeKnown {
 		additional.MatchCardType = true

@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 type additionalCostPlan struct {
@@ -240,6 +241,15 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			plan.energyPaid += amount
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalExile:
+			if additional.TotalManaValueAtLeast > 0 {
+				chosen := preferredThresholdExileCards(s, playerID, additional, plannedEvidenceCards(plan), costs[i+1:], xValue, sourceCardID, sourceZone, prefs)
+				if len(chosen) == 0 {
+					return plan, false
+				}
+				plan.exiles = append(plan.exiles, chosen...)
+				plan.paid = append(plan.paid, AdditionalCostText(additional))
+				continue
+			}
 			chosen := preferredExileCards(s, playerID, additional, amount, plannedEvidenceCards(plan), costs[i+1:], xValue, sourceCardID, sourceZone, prefs)
 			if len(chosen) != amount {
 				return plan, false
@@ -379,6 +389,12 @@ func additionalCostMatchesPermanent(s State, permanent *game.Permanent, addition
 		(additional.PermanentTypeAlt == "" || !s.PermanentHasType(permanent, additional.PermanentTypeAlt)) {
 		return false
 	}
+	if additional.MatchHistoric &&
+		!s.PermanentHasType(permanent, types.Artifact) &&
+		!s.PermanentHasSupertype(permanent, types.Legendary) &&
+		!s.PermanentHasSubtype(permanent, types.Saga) {
+		return false
+	}
 	if additional.MatchCardColor && !slices.Contains(s.PermanentEffectiveColors(permanent), additional.CardColor) {
 		return false
 	}
@@ -400,6 +416,9 @@ func additionalCostMatchesCard(card *game.CardDef, additional cost.Additional) b
 	if additional.MatchCardType && !card.HasType(additional.CardType) {
 		return false
 	}
+	if additional.MatchHistoric && !cardDefIsHistoric(card) {
+		return false
+	}
 	if additional.MatchCardColor && !slices.Contains(card.Colors, additional.CardColor) {
 		return false
 	}
@@ -412,6 +431,14 @@ func additionalCostMatchesCard(card *game.CardDef, additional cost.Additional) b
 		return false
 	}
 	return true
+}
+
+// cardDefIsHistoric reports whether a card is historic: an artifact, a
+// legendary, or a Saga (CR 702.61b).
+func cardDefIsHistoric(card *game.CardDef) bool {
+	return card.HasType(types.Artifact) ||
+		card.HasSupertype(types.Legendary) ||
+		card.HasSubtype(types.Saga)
 }
 
 func evidenceCardManaValue(s State, cardID id.ID) (int, bool) {

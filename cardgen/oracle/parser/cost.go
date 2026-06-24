@@ -139,6 +139,25 @@ type CostComponent struct {
 	// compiler maps it onto its typed dynamic-amount vocabulary.
 	PayLifeDynamic PayLifeDynamicAmount `json:",omitempty"`
 
+	// AnyNumber reports a variable-cardinality card cost object printed as "any
+	// number of <cards>" (e.g. "Exile any number of historic cards from your
+	// graveyard with total mana value 30 or greater"). The payer chooses how
+	// many matching cards to exile rather than a fixed count; pairs with a
+	// constraint such as TotalManaValueAtLeast that bounds the choice.
+	AnyNumber bool `json:",omitempty"`
+
+	// ObjectHistoric reports that the cost object is constrained to historic
+	// cards (artifacts, legendaries, or Sagas; CR 702.61b), recognized from the
+	// "historic" qualifier on the card noun.
+	ObjectHistoric bool `json:",omitempty"`
+
+	// TotalManaValueAtLeast, when positive, constrains a variable-cardinality
+	// card cost to "<cards> with total mana value N or greater": the payer
+	// exiles enough matching cards for their mana values to total at least N.
+	// It is recognized from the trailing "with total mana value N or
+	// greater/more" clause and pairs with AnyNumber.
+	TotalManaValueAtLeast int `json:",omitempty"`
+
 	// Order is the component's dense source-order rank, used downstream to test
 	// reference containment without byte offsets.
 	Order shared.SourceOrder `json:"-"`
@@ -1147,6 +1166,7 @@ func annotateCostSupertypeObject(component *CostComponent, supertype Supertype, 
 }
 
 func annotateExileCostObject(component *CostComponent, object []shared.Token, atoms Atoms) {
+	object = annotateExileTotalManaValueClause(component, object)
 	if len(object) < 5 ||
 		!equalWord(object[len(object)-3], "from") ||
 		!equalWord(object[len(object)-2], "your") {
@@ -1171,6 +1191,9 @@ func annotateExileCostObject(component *CostComponent, object []shared.Token, at
 	// below does not classify as a card selector.
 	component.SourceZone = sourceZone
 	prefix := object[:len(object)-3]
+	if annotateExileAnyNumberPrefix(component, prefix, atoms) {
+		return
+	}
 	switch {
 	case len(prefix) == 2 && equalWord(prefix[0], "this") && costSelfExileNoun(prefix[1], atoms):
 		// "Exile this card/creature from your hand or graveyard" exiles the
@@ -1210,9 +1233,58 @@ func annotateExileCostObject(component *CostComponent, object []shared.Token, at
 	}
 }
 
-// exileCardSubtypeFamilies lists the card-type families whose subtypes a
-// graveyard exile cost object may name, e.g. "Exile an Elf card from your
-// graveyard." A named subtype must belong to one of these families to be
+// annotateExileTotalManaValueClause recognizes the trailing "with total mana
+// value N or greater/more" constraint on a variable-cardinality exile cost
+// object and records the threshold on the component. It returns the object
+// tokens with the recognized clause removed so the remaining "<cards> from your
+// <zone>" suffix recognition proceeds unchanged; the object is returned intact
+// when no such clause is present.
+func annotateExileTotalManaValueClause(component *CostComponent, object []shared.Token) []shared.Token {
+	const clauseLen = 7
+	if len(object) < clauseLen {
+		return object
+	}
+	clause := object[len(object)-clauseLen:]
+	if !equalWord(clause[0], "with") ||
+		!equalWord(clause[1], "total") ||
+		!equalWord(clause[2], "mana") ||
+		!equalWord(clause[3], "value") ||
+		!equalWord(clause[5], "or") ||
+		(!equalWord(clause[6], "greater") && !equalWord(clause[6], "more")) {
+		return object
+	}
+	threshold, err := strconv.Atoi(clause[4].Text)
+	if err != nil || threshold <= 0 {
+		return object
+	}
+	component.TotalManaValueAtLeast = threshold
+	return object[:len(object)-clauseLen]
+}
+
+// annotateExileAnyNumberPrefix recognizes a variable-cardinality exile cost
+// object prefix printed as "any number of [historic] cards" and records the
+// AnyNumber and ObjectHistoric flags. It reports whether the prefix matched so
+// the caller skips the fixed-count prefix recognition.
+func annotateExileAnyNumberPrefix(component *CostComponent, prefix []shared.Token, atoms Atoms) bool {
+	if len(prefix) < 4 || !startsWords(normalizedWords(prefix), "any", "number", "of") {
+		return false
+	}
+	rest := prefix[3:]
+	historic := false
+	if equalWord(rest[0], "historic") {
+		historic = true
+		rest = rest[1:]
+	}
+	if len(rest) != 1 || !costCardNoun(rest[0], atoms) {
+		return false
+	}
+	component.AnyNumber = true
+	component.ObjectHistoric = historic
+	component.ObjectNoun = ObjectNounCard
+	component.ObjectIsCard = true
+	return true
+}
+
 // recognized as an exile constraint.
 var exileCardSubtypeFamilies = []types.Card{
 	types.Artifact,

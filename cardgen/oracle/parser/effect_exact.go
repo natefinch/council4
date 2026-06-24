@@ -39,6 +39,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactCreateCopyTokenReferenceEffectSyntax(effect) ||
 			exactCreateCopyTokenTriggeringSetEffectSyntax(effect) ||
 			exactCreateCopyTokenAttachedEffectSyntax(effect)
+	case EffectCreateEmblem:
+		return exactCreateEmblemEffectSyntax(effect)
 	case EffectDiscard:
 		return exactCardCountEffectSyntax(effect, "Discard", "discards", false) ||
 			effect.DiscardEntireHand ||
@@ -1383,6 +1385,18 @@ func exactLoseGameEffectSyntax(effect *EffectSyntax) bool {
 // document, so the compiler lowers the conferred ability without inspecting
 // wording. It applies only once attachGainGrantedAbilities has bound the quoted
 // ability.
+// exactCreateEmblemEffectSyntax reconstructs an "You get an emblem with
+// \"...\"" clause from its typed emblem abilities. The quoted ability text is
+// recognized and covered through each parsed inner document, so the clause
+// strips to a bare "You get an emblem with" the way a gain rider strips to
+// "gains". It applies only once attachEmblemEffects has bound the abilities.
+func exactCreateEmblemEffectSyntax(effect *EffectSyntax) bool {
+	if len(effect.EmblemAbilities) == 0 {
+		return false
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), "You get an emblem with.")
+}
+
 func exactGainGrantedAbilityEffectSyntax(effect *EffectSyntax) bool {
 	if effect.GainGrantedAbility == nil {
 		return false

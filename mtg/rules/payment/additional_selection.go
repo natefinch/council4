@@ -95,6 +95,109 @@ func preferredEvidenceCards(s State, playerID game.PlayerID, threshold int, alre
 	return nil
 }
 
+// chooseThresholdExileCards selects a set of cards from the cost's source zone
+// matching the cost filter whose mana values total at least
+// additional.TotalManaValueAtLeast, backing "exile any number of historic cards
+// from your graveyard with total mana value N or greater" (The Capitoline
+// Triad). It generalizes chooseEvidenceCards to an arbitrary card filter and is
+// payable only when a satisfying set also leaves later graveyard costs payable.
+func chooseThresholdExileCards(s State, playerID game.PlayerID, additional cost.Additional, alreadyChosen []cardZoneSelection, remainingCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type) []cardZoneSelection {
+	player, ok := s.Player(playerID)
+	if !ok {
+		return nil
+	}
+	selectionZone := additionalCostSourceZone(additional.Source)
+	chosenIDs := make(map[id.ID]bool, len(alreadyChosen))
+	for _, chosen := range alreadyChosen {
+		chosenIDs[chosen.cardID] = true
+	}
+	type thresholdCandidate struct {
+		cardID    id.ID
+		manaValue int
+	}
+	var candidates []thresholdCandidate
+	for _, cardID := range cardIDsInZone(player, selectionZone) {
+		if chosenIDs[cardID] || (additional.ExcludeSource && cardID == sourceCardID) {
+			continue
+		}
+		card, ok := s.CardInstance(cardID)
+		if !ok || !additionalCostMatchesCard(s.CardFace(card, game.FaceFront), additional) {
+			continue
+		}
+		manaValue, ok := evidenceCardManaValue(s, cardID)
+		if !ok || manaValue <= 0 {
+			continue
+		}
+		candidates = append(candidates, thresholdCandidate{cardID: cardID, manaValue: manaValue})
+	}
+	slices.SortStableFunc(candidates, func(a, b thresholdCandidate) int {
+		switch {
+		case a.manaValue > b.manaValue:
+			return -1
+		case a.manaValue < b.manaValue:
+			return 1
+		default:
+			return 0
+		}
+	})
+	threshold := additional.TotalManaValueAtLeast
+	var search func(start int, total int, chosen []cardZoneSelection) []cardZoneSelection
+	search = func(start int, total int, chosen []cardZoneSelection) []cardZoneSelection {
+		if total >= threshold {
+			reserved := appendCardZoneSelections(alreadyChosen, chosen...)
+			if remainingGraveyardCostsPayable(s, playerID, remainingCosts, xValue, reserved, sourceCardID, sourceZone) {
+				return append([]cardZoneSelection(nil), chosen...)
+			}
+			return nil
+		}
+		for i := start; i < len(candidates); i++ {
+			candidate := candidates[i]
+			next := slices.Clone(chosen)
+			next = append(next, cardZoneSelection{cardID: candidate.cardID, zone: selectionZone})
+			if selected := search(i+1, total+candidate.manaValue, next); len(selected) > 0 {
+				return selected
+			}
+		}
+		return nil
+	}
+	return search(0, 0, nil)
+}
+
+func preferredThresholdExileCards(s State, playerID game.PlayerID, additional cost.Additional, alreadyChosen []cardZoneSelection, remainingCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type, prefs *Preferences) []cardZoneSelection {
+	if prefs == nil || len(prefs.ExileChoices) == 0 {
+		return chooseThresholdExileCards(s, playerID, additional, alreadyChosen, remainingCosts, xValue, sourceCardID, sourceZone)
+	}
+	selectionZone := additionalCostSourceZone(additional.Source)
+	chosenIDs := make(map[id.ID]bool, len(alreadyChosen))
+	for _, chosen := range alreadyChosen {
+		chosenIDs[chosen.cardID] = true
+	}
+	var chosen []cardZoneSelection
+	total := 0
+	var consumed int
+	for _, cardID := range prefs.ExileChoices {
+		card, ok := s.CardInstance(cardID)
+		if !ok || !zoneContainsCard(s, playerID, selectionZone, cardID) || chosenIDs[cardID] ||
+			!additionalCostMatchesCard(s.CardFace(card, game.FaceFront), additional) ||
+			(additional.ExcludeSource && cardID == sourceCardID) {
+			return nil
+		}
+		manaValue, ok := evidenceCardManaValue(s, cardID)
+		if !ok {
+			return nil
+		}
+		chosen = append(chosen, cardZoneSelection{cardID: cardID, zone: selectionZone})
+		chosenIDs[cardID] = true
+		total += manaValue
+		consumed++
+		if total >= additional.TotalManaValueAtLeast {
+			prefs.ExileChoices = prefs.ExileChoices[consumed:]
+			return chosen
+		}
+	}
+	return nil
+}
+
 func chooseExileCards(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []cardZoneSelection, remainingCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type) []cardZoneSelection {
 	player, ok := s.Player(playerID)
 	if !ok {
@@ -193,6 +296,12 @@ func remainingGraveyardCostsPayable(s State, playerID game.PlayerID, remainingCo
 			}
 			return len(chooseEvidenceCards(s, playerID, amount, alreadyChosen, remainingCosts[i+1:], xValue, sourceCardID, sourceZone)) > 0
 		case cost.AdditionalExile:
+			if additional.TotalManaValueAtLeast > 0 {
+				if additionalCostSourceZone(additional.Source) != zone.Graveyard {
+					continue
+				}
+				return len(chooseThresholdExileCards(s, playerID, additional, alreadyChosen, remainingCosts[i+1:], xValue, sourceCardID, sourceZone)) > 0
+			}
 			if amount == 0 || additionalCostSourceZone(additional.Source) != zone.Graveyard {
 				continue
 			}

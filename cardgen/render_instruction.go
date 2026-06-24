@@ -564,6 +564,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", errors.New("render: internal error: CreateReplacement kind has unexpected concrete type")
 		}
 		return r.renderCreateReplacement(ctx, value)
+	case game.PrimitiveCreateEmblem:
+		value, ok := primitive.(game.CreateEmblem)
+		if !ok {
+			return "", errors.New("render: internal error: CreateEmblem kind has unexpected concrete type")
+		}
+		return r.renderCreateEmblem(ctx, value)
 	case game.PrimitiveApplyContinuous:
 		value, ok := primitive.(game.ApplyContinuous)
 		if !ok {

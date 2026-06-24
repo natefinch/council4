@@ -41,6 +41,7 @@ const (
 	EffectGrantKeyword      EffectKind = "EffectGrantKeyword"
 	EffectInvestigate       EffectKind = "EffectInvestigate"
 	EffectImpulseExile      EffectKind = "EffectImpulseExile"
+	EffectCreateEmblem      EffectKind = "EffectCreateEmblem"
 	EffectExplore           EffectKind = "EffectExplore"
 	EffectLose              EffectKind = "EffectLose"
 	EffectManifest          EffectKind = "EffectManifest"
@@ -1446,6 +1447,12 @@ type EffectSyntax struct {
 	// through the same pipeline so downstream layers lower it from the typed inner
 	// document. It is nil for gain effects that confer no quoted ability.
 	GainGrantedAbility *StaticGrantedAbilitySyntax `json:"-"`
+	// EmblemAbilities are the quoted abilities of an EffectCreateEmblem effect
+	// ("You get an emblem with \"Creatures you control have base power and
+	// toughness 9/9.\""), each parsed once through the same pipeline so
+	// downstream layers lower the emblem from the typed inner documents. It is
+	// nil for every effect that creates no emblem.
+	EmblemAbilities []StaticGrantedAbilitySyntax `json:"-"`
 	// DelayedTriggerAbility is the nested triggered ability of an
 	// EffectDelayedTrigger effect, reparsed from the sentence with its "this
 	// turn" window stripped ("Whenever you cast a spell this turn, put a +1/+1

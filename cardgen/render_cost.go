@@ -397,6 +397,12 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 			fmt.Sprintf("CardType: %s,", cardType),
 		)
 	}
+	if additional.MatchHistoric {
+		fields = append(fields, "MatchHistoric: true,")
+	}
+	if additional.TotalManaValueAtLeast != 0 {
+		fields = append(fields, fmt.Sprintf("TotalManaValueAtLeast: %d,", additional.TotalManaValueAtLeast))
+	}
 	if additional.MatchCardColor {
 		colorLiteral, err := colorValueToLiteral(additional.CardColor)
 		if err != nil {

@@ -369,6 +369,20 @@ type CostComponent struct {
 	// the parser. The payer discards every card in their hand.
 	DiscardWholeHand bool
 
+	// AnyNumber reports a variable-cardinality card cost object ("any number of
+	// <cards>"), recognized by the parser. The payer chooses how many matching
+	// cards to take, bounded by a constraint such as TotalManaValueAtLeast.
+	AnyNumber bool
+
+	// ObjectHistoric reports that the cost object is constrained to historic
+	// cards (artifacts, legendaries, or Sagas), recognized by the parser.
+	ObjectHistoric bool
+
+	// TotalManaValueAtLeast, when positive, constrains a variable-cardinality
+	// card cost to "<cards> with total mana value N or greater," recognized by
+	// the parser. The payer takes enough matching cards to total at least N.
+	TotalManaValueAtLeast int
+
 	// ChoiceGroup tags this component as one alternative of a printed "<cost> or
 	// <cost>" choice. Zero means a mandatory standalone cost; components sharing
 	// a nonzero value are alternatives of which exactly one is paid.
@@ -1273,6 +1287,7 @@ const (
 	EffectProtectionFromEverything
 	EffectPhaseOut
 	EffectImpulseExile
+	EffectCreateEmblem
 	EffectAdditionalLandPlays
 	EffectLoseGame
 	EffectChooseNewTargets
@@ -1526,6 +1541,12 @@ type CompiledEffect struct {
 	// pipeline. Lowering compiles its inner document and applies the runtime
 	// ability as a continuous grant. It is nil for gain effects with no such rider.
 	GainGrantedAbility *parser.StaticGrantedAbilitySyntax
+	// EmblemAbilities are the quoted abilities of an EffectCreateEmblem effect
+	// ("You get an emblem with \"Creatures you control have base power and
+	// toughness 9/9.\""), each parsed once through the pipeline. Lowering
+	// compiles each inner document and emits a game.CreateEmblem carrying the
+	// runtime abilities. It is nil for every effect that creates no emblem.
+	EmblemAbilities []parser.StaticGrantedAbilitySyntax
 	// DelayedTriggerAbility is the nested triggered ability of an
 	// EffectDelayedTrigger effect, reparsed from the sentence with its "this
 	// turn" window stripped. Lowering compiles its inner document and emits a

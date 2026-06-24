@@ -424,6 +424,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectGainPlayerCounter
 	case parser.EffectImpulseExile:
 		return EffectImpulseExile
+	case parser.EffectCreateEmblem:
+		return EffectCreateEmblem
 	case parser.EffectAdditionalLandPlays:
 		return EffectAdditionalLandPlays
 	case parser.EffectExplore:

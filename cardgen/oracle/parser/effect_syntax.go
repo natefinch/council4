@@ -30,6 +30,7 @@ func emitResolvingSyntax(abilities []Ability) {
 		)
 		attachTokenGrantedAbilities(&abilities[i])
 		attachGainGrantedAbilities(&abilities[i])
+		attachEmblemEffects(&abilities[i])
 		recognizeControllerOptionalPaymentSequence(&abilities[i])
 		recognizeOptionalManaPaymentBenefitSequence(&abilities[i])
 		recognizeEventPlayerOptionalPaymentSequence(&abilities[i])
@@ -138,7 +139,61 @@ func attachGainGrantedAbilities(ability *Ability) {
 	}
 }
 
-// gainEffectContainingSpan returns the lone gain effect whose clause contains
+// attachEmblemEffects reclassifies an "You get an emblem with \"...\"" effect,
+// which the sentence pipeline first models as a generic clause, into an
+// EffectCreateEmblem carrying each quoted ability parsed through the same
+// pipeline so downstream layers lower the emblem from the typed inner
+// documents. Every quoted ability contained in the emblem clause must parse, or
+// the clause is left unchanged so the emblem fails closed.
+func attachEmblemEffects(ability *Ability) {
+	if len(ability.Quoted) == 0 {
+		return
+	}
+	effect := emblemEffectClause(ability)
+	if effect == nil {
+		return
+	}
+	var grants []StaticGrantedAbilitySyntax
+	for q := range ability.Quoted {
+		quoted := ability.Quoted[q]
+		if quoted.Span.Start.Offset < effect.ClauseSpan.Start.Offset ||
+			quoted.Span.End.Offset > effect.Span.End.Offset {
+			continue
+		}
+		granted, ok := parseStaticGrantedAbility(quoted)
+		if !ok {
+			return
+		}
+		grants = append(grants, granted)
+	}
+	if len(grants) == 0 {
+		return
+	}
+	effect.Kind = EffectCreateEmblem
+	effect.EmblemAbilities = grants
+	effect.Exact = exactEffectSyntax(effect)
+}
+
+// emblemEffectClause returns the lone effect whose clause begins "You get an
+// emblem with". It returns nil when no clause or more than one clause begins
+// that way, so an ambiguous emblem binding fails closed.
+func emblemEffectClause(ability *Ability) *EffectSyntax {
+	var match *EffectSyntax
+	for i := range ability.Sentences {
+		for j := range ability.Sentences[i].Effects {
+			effect := &ability.Sentences[i].Effects[j]
+			if _, ok := cutTokenPrefix(effect.Tokens, "you", "get", "an", "emblem", "with"); !ok {
+				continue
+			}
+			if match != nil {
+				return nil
+			}
+			match = effect
+		}
+	}
+	return match
+}
+
 // span. It returns nil when no gain clause contains span, or when more than one
 // might, so an ambiguous granted-ability binding fails closed.
 func gainEffectContainingSpan(ability *Ability, span shared.Span) *EffectSyntax {
