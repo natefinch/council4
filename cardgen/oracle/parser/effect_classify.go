@@ -1139,6 +1139,9 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		if lookAtTopCardAnyTimeInstruction(tokens[index:]) {
 			return EffectUnknown
 		}
+		if lookAtLibraryTopInstruction(tokens[index:]) {
+			return EffectLookAtLibraryTop
+		}
 		if lookAtHandInstruction(tokens[index:]) {
 			return EffectLookAtHand
 		}
@@ -1512,6 +1515,18 @@ func lookAtTopCardAnyTimeInstruction(tokens []shared.Token) bool {
 	return len(tokens) == 11 &&
 		effectWordsAt(tokens, 0, "look", "at", "the", "top", "card", "of", "your", "library", "any", "time") &&
 		tokens[10].Kind == shared.Period
+}
+
+// lookAtLibraryTopInstruction reports whether the sentence is the one-shot peek
+// "look at the top card of your library." (the Kinship ability word's leading
+// instruction). It is the resolving-effect counterpart of
+// lookAtTopCardAnyTimeInstruction's continuous "any time" permission: the player
+// privately sees the top card once as the ability resolves, conveying hidden
+// information without moving the card.
+func lookAtLibraryTopInstruction(tokens []shared.Token) bool {
+	return len(tokens) == 9 &&
+		effectWordsAt(tokens, 0, "look", "at", "the", "top", "card", "of", "your", "library") &&
+		tokens[8].Kind == shared.Period
 }
 
 // chooseNewTargetsVerbAt reports whether a retarget effect ("[You may] choose

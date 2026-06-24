@@ -254,6 +254,9 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if sel.NameUniqueAmongControlled && !s.nameUniqueAmongControlled() {
 		return false
 	}
+	if sel.SharesCreatureTypeWithSource && !s.sharesCreatureTypeWithSource() {
+		return false
+	}
 	return true
 }
 
@@ -365,6 +368,29 @@ func (s *selectionSubject) sourceEntryChoiceSubtype(key game.ChoiceKey) (types.S
 		return "", false
 	}
 	return choice.Subtype, true
+}
+
+// sharesCreatureTypeWithSource reports whether the subject shares at least one
+// creature type with the predicate's source permanent, the "if it shares a
+// creature type with this creature" Kinship gate. It reads the source
+// permanent's effective subtypes, keeps only those that are creature types, and
+// matches the subject against them. It reports false when the source permanent
+// is absent or has no creature types.
+func (s *selectionSubject) sharesCreatureTypeWithSource() bool {
+	source, ok := permanentByObjectID(s.g, s.sourceObjectID)
+	if !ok {
+		return false
+	}
+	var creatureSubtypes []types.Sub
+	for _, subtype := range effectivePermanentValues(s.g, source).subtypes {
+		if types.KnownSubtypeForType(types.Creature, subtype) {
+			creatureSubtypes = append(creatureSubtypes, subtype)
+		}
+	}
+	if len(creatureSubtypes) == 0 {
+		return false
+	}
+	return s.hasAnySubtype(creatureSubtypes)
 }
 
 // sourceEntryChoiceColor resolves the color the predicate's source permanent

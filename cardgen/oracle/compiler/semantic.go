@@ -675,6 +675,13 @@ const (
 	// highest-power creature or is tied for highest, and is false when no
 	// creatures exist.
 	ConditionPredicateControlsGreatestPowerCreature
+	// ConditionPredicateSubjectSharesCreatureTypeWithSource is satisfied when the
+	// condition's subject card (the just-looked-at top card of the controller's
+	// library) shares at least one creature type with the source permanent ("if
+	// it shares a creature type with this creature", the Kinship ability word).
+	// It carries no selection parameters; the lowering binds it to the looked-at
+	// card and the source permanent.
+	ConditionPredicateSubjectSharesCreatureTypeWithSource
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -1383,6 +1390,12 @@ const (
 	// printed "if it has no +1/+1 counters" reminder. Added last so existing
 	// kinds keep their wire values.
 	EffectAdapt
+	// EffectLookAtLibraryTop models the one-shot peek "look at the top card of
+	// your library." (the Kinship ability word's leading instruction). The
+	// controller privately sees the top card as the ability resolves, conveying
+	// hidden information without moving it. It lowers to a game.LookAtLibraryTop
+	// primitive. Added last so existing kinds keep their wire values.
+	EffectLookAtLibraryTop
 )
 
 // DurationKind identifies common continuous-effect durations.
