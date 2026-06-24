@@ -138,6 +138,16 @@ func recognizeControllerOptionalPaymentSequence(ability *Ability) {
 		manaCost, lifeCostCombined, _ := controllerPayManaAndLifeCost(paymentSentence, paymentTokens)
 		payment.ManaCost = manaCost
 		payment.AdditionalCost = lifeCostCombined
+	case combinedPayManaAndAdditionalCostOK(paymentSentence, paymentTokens, ability):
+		// "you may pay {mana} and <non-mana cost>." (such as Conspiracy
+		// Theorist's "pay {1} and discard a card.") pays a combined mana +
+		// non-mana resolution cost, with the mana captured in ManaCost and the
+		// trailing cost phrase ("discard a card") as the AdditionalCost. This
+		// generalizes the combined mana + life case above to any non-mana cost
+		// the resolution payment can carry.
+		manaCost, additionalCost, _ := controllerPayManaAndAdditionalCost(paymentSentence, paymentTokens, ability)
+		payment.ManaCost = manaCost
+		payment.AdditionalCost = additionalCost
 	case lifeOK:
 		// "you may pay X life, where X is <dynamic>" pays a rules-derived amount
 		// of life as a resolution cost. The same dynamic sizes a variable "X/X"
@@ -315,6 +325,39 @@ func controllerPayManaAndLifeCost(sentence *Sentence, paymentTokens []shared.Tok
 		}},
 	}
 	return manaCost, lifeCost, true
+}
+
+// combinedPayManaAndAdditionalCostOK reports whether an optional-payment offer's
+// tokens form the combined "you may pay {mana} and <non-mana cost>." cost.
+func combinedPayManaAndAdditionalCostOK(sentence *Sentence, paymentTokens []shared.Token, ability *Ability) bool {
+	_, _, ok := controllerPayManaAndAdditionalCost(sentence, paymentTokens, ability)
+	return ok
+}
+
+// controllerPayManaAndAdditionalCost recognizes the combined "pay {mana} and
+// <non-mana cost>" resolution cost of an optional payment offer (such as
+// Conspiracy Theorist's "you may pay {1} and discard a card."). paymentTokens are
+// the offer's semantic tokens beginning at "you may", so "pay" is at index 2 and
+// the keyword mana cost at index 3. It returns the mana portion as a cost.Mana
+// plus the parsed non-mana Cost for the phrase after "and" (reusing the same
+// activated-cost grammar that already lowers "discard a card", "sacrifice a
+// land", and similar resolution payments), or ok=false for any other shape (a
+// missing mana part, a missing "and" connector, an empty trailing phrase, or a
+// trailing phrase that parses to a mana, loyalty, or tap/untap component).
+func controllerPayManaAndAdditionalCost(sentence *Sentence, paymentTokens []shared.Token, ability *Ability) (cost.Mana, *Cost, bool) {
+	if !effectWordsAt(paymentTokens, 2, "pay") {
+		return nil, nil, false
+	}
+	manaCost, idx, ok := parseKeywordManaCost(paymentTokens, 3)
+	if !ok || idx >= len(paymentTokens)-1 || !equalWord(paymentTokens[idx], "and") {
+		return nil, nil, false
+	}
+	costTokens := paymentTokens[idx+1 : len(paymentTokens)-1]
+	additionalCost, ok := parseControllerPaymentAdditionalCost(sentence, costTokens, ability)
+	if !ok {
+		return nil, nil, false
+	}
+	return manaCost, additionalCost, true
 }
 
 // controllerPayLifeDynamicCost recognizes a "pay X life, where X is <dynamic>"

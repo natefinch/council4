@@ -1431,8 +1431,8 @@ func handleGrantCastPermission(r *effectResolver, prim game.GrantCastPermission)
 
 func handleExileForPlay(r *effectResolver, prim game.ExileForPlay) effectResolved {
 	res := effectResolved{accepted: true}
-	cardID, fromZone, ok := resolveCardReference(r.game, r.obj, prim.Card)
-	if !ok || fromZone != prim.FromZone {
+	cardID, ok := exileForPlayCardID(r, prim)
+	if !ok {
 		return res
 	}
 	card, ok := r.game.GetCardInstance(cardID)
@@ -1462,6 +1462,87 @@ func handleExileForPlay(r *effectResolver, prim game.ExileForPlay) effectResolve
 	})
 	res.succeeded = true
 	return res
+}
+
+// exileForPlayCardID resolves which card an ExileForPlay exiles. In the default
+// mode it reads prim.Card and confirms it rests in FromZone. In SelectFromBatch
+// mode it gathers the triggering batch's cards still in FromZone ("one of them"
+// over a "discard one or more cards" batch) and has the resolving controller
+// choose one; with a single eligible card the choice is made automatically.
+func exileForPlayCardID(r *effectResolver, prim game.ExileForPlay) (id.ID, bool) {
+	if !prim.SelectFromBatch {
+		cardID, fromZone, ok := resolveCardReference(r.game, r.obj, prim.Card)
+		if !ok || fromZone != prim.FromZone {
+			return 0, false
+		}
+		return cardID, true
+	}
+	pool := exileForPlayBatchCards(r.game, r.obj, prim.FromZone)
+	switch len(pool) {
+	case 0:
+		return 0, false
+	case 1:
+		return pool[0], true
+	default:
+		return r.chooseExileForPlayBatchCard(pool)
+	}
+}
+
+// exileForPlayBatchCards returns the cards from the resolving object's triggering
+// batch event that currently rest in fromZone, in event order with duplicates
+// removed. A "discard one or more cards" trigger coalesces its simultaneous batch
+// into one trigger and retains the first matching event, so the batch is the set
+// of events sharing the trigger event's SimultaneousID, Kind, and affected player
+// (CR 603.3a). A trigger with no batch (SimultaneousID zero) yields the lone
+// triggering card.
+func exileForPlayBatchCards(g *game.Game, obj *game.StackObject, fromZone zone.Type) []id.ID {
+	if obj == nil || !obj.HasTriggerEvent {
+		return nil
+	}
+	trigger := obj.TriggerEvent
+	var pool []id.ID
+	seen := make(map[id.ID]bool)
+	consider := func(cardID id.ID) {
+		if cardID == 0 || seen[cardID] {
+			return
+		}
+		if cardZoneType, ok := cardZone(g, cardID); !ok || cardZoneType != fromZone {
+			return
+		}
+		seen[cardID] = true
+		pool = append(pool, cardID)
+	}
+	if trigger.SimultaneousID == 0 {
+		consider(trigger.CardID)
+		return pool
+	}
+	for _, event := range g.Events {
+		if event.SimultaneousID == trigger.SimultaneousID &&
+			event.Kind == trigger.Kind &&
+			event.Player == trigger.Player {
+			consider(event.CardID)
+		}
+	}
+	return pool
+}
+
+// chooseExileForPlayBatchCard asks the resolving controller which of the batch's
+// eligible cards to exile. The caller has already accepted the optional "you may
+// exile" offer, so the selection itself is mandatory.
+func (r *effectResolver) chooseExileForPlayBatchCard(pool []id.ID) (id.ID, bool) {
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           r.obj.Controller,
+		Prompt:           "Choose a card to exile",
+		Options:          chooseFromZoneOptions(r.game, pool),
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: []int{0},
+	}, r.log)
+	if len(selected) == 1 && selected[0] >= 0 && selected[0] < len(pool) {
+		return pool[selected[0]], true
+	}
+	return 0, false
 }
 
 func handleSacrifice(r *effectResolver, prim game.Sacrifice) effectResolved {

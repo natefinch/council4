@@ -308,10 +308,6 @@ func renderFaceIndex(face game.FaceIndex) (string, error) {
 }
 
 func (Renderer) renderExileForPlay(ctx *renderCtx, value game.ExileForPlay) (string, error) {
-	card, err := renderCardReference(value.Card)
-	if err != nil {
-		return "", err
-	}
 	fromZone, err := renderZone(value.FromZone)
 	if err != nil {
 		return "", err
@@ -321,11 +317,19 @@ func (Renderer) renderExileForPlay(ctx *renderCtx, value game.ExileForPlay) (str
 		return "", err
 	}
 	ctx.need(importZone)
-	fields := []string{
-		fmt.Sprintf("Card: %s,", card),
-		fmt.Sprintf("FromZone: %s,", fromZone),
-		fmt.Sprintf("Duration: %s,", duration),
+	var fields []string
+	if value.SelectFromBatch {
+		fields = append(fields, "SelectFromBatch: true,")
+	} else {
+		card, err := renderCardReference(value.Card)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Card: %s,", card))
 	}
+	fields = append(fields,
+		fmt.Sprintf("FromZone: %s,", fromZone),
+		fmt.Sprintf("Duration: %s,", duration))
 	if value.Cast {
 		fields = append(fields, "Cast: true,")
 	}

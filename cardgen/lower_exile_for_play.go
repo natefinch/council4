@@ -26,10 +26,12 @@ import (
 // event reference; the combined ExileForPlay primitive captures the card
 // identity once and performs both atomically.
 //
-// The lowerer is gated to a discard-triggered body whose exile back-references a
-// single "that card" (ReferenceThatObject), which selects the lone discarded
-// card the runtime CardReferenceEvent resolves. A plural "one of them" exile
-// over several discarded cards binds differently and is not lowered here.
+// The lowerer accepts two back-reference shapes. The single "that card"
+// (ReferenceThatObject) shape selects the lone discarded card the runtime
+// resolves through CardReferenceEvent. The plural "one of them"
+// (ReferencePronoun/ReferencePronounThem, Amount 1) shape over a "discard one
+// or more cards" batch sets SelectFromBatch, letting the runtime reconstruct
+// the batch and have the controller choose which card to exile.
 func lowerExileForPlay(ctx contentCtx) (game.AbilityContent, bool) {
 	if ctx.enclosingKind != compiler.AbilityTriggered ||
 		ctx.triggerEvent != game.EventCardDiscarded ||
@@ -44,8 +46,15 @@ func lowerExileForPlay(ctx contentCtx) (game.AbilityContent, bool) {
 		!exile.Optional ||
 		exile.Negated ||
 		exile.Context != parser.EffectContextController ||
-		exile.FromZone != zone.Graveyard ||
-		!exileBackReferencesSingleObject(exile) {
+		exile.FromZone != zone.Graveyard {
+		return game.AbilityContent{}, false
+	}
+	selectFromBatch := false
+	switch {
+	case exileBackReferencesSingleObject(exile):
+	case exileBackReferencesBatchSelection(exile, ctx):
+		selectFromBatch = true
+	default:
 		return game.AbilityContent{}, false
 	}
 	grant := ctx.content.Effects[1]
@@ -65,12 +74,34 @@ func lowerExileForPlay(ctx contentCtx) (game.AbilityContent, bool) {
 	return game.Mode{Sequence: []game.Instruction{{
 		Optional: true,
 		Primitive: game.ExileForPlay{
-			Card:     game.CardReference{Kind: game.CardReferenceEvent},
-			FromZone: zone.Graveyard,
-			Duration: duration,
-			Cast:     cast,
+			Card:            game.CardReference{Kind: game.CardReferenceEvent},
+			FromZone:        zone.Graveyard,
+			Duration:        duration,
+			Cast:            cast,
+			SelectFromBatch: selectFromBatch,
 		},
 	}}}.Ability(), true
+}
+
+// exileBackReferencesBatchSelection reports whether an exile effect selects
+// "one of them" from a coalesced discard batch: a single plural "them" pronoun
+// (ReferencePronoun/ReferencePronounThem) that exiles exactly one card
+// (Amount 1) inside a "discard one or more cards" trigger (triggerOneOrMore).
+// The runtime reconstructs the batch from the triggering events and has the
+// controller choose which card to exile, so the back-reference need not resolve
+// to a single CardReferenceEvent card.
+func exileBackReferencesBatchSelection(effect compiler.CompiledEffect, ctx contentCtx) bool {
+	if !ctx.triggerOneOrMore {
+		return false
+	}
+	if !effect.Amount.Known || effect.Amount.Value != 1 {
+		return false
+	}
+	if len(effect.References) != 1 {
+		return false
+	}
+	ref := effect.References[0]
+	return ref.Kind == compiler.ReferencePronoun && ref.Pronoun == compiler.ReferencePronounThem
 }
 
 // exileBackReferencesSingleObject reports whether an exile effect's references

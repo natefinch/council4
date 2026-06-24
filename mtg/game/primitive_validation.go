@@ -1844,8 +1844,10 @@ func (p GrantCastPermission) validatePrimitive([]TargetSpec, bool) error {
 }
 
 func (p ExileForPlay) validatePrimitive([]TargetSpec, bool) error {
-	if err := validateCardReference(p.Card); err != nil {
-		return err
+	if !p.SelectFromBatch {
+		if err := validateCardReference(p.Card); err != nil {
+			return err
+		}
 	}
 	if p.FromZone != zone.Graveyard {
 		return errors.New("ExileForPlay requires graveyard as its source zone")
