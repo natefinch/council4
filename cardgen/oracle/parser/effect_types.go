@@ -1481,6 +1481,16 @@ type EffectSyntax struct {
 	// the trailing "named <Name>" tail. It is empty for tokens named only by
 	// their subtypes (the default).
 	TokenName string `json:",omitempty"`
+	// TokenPredefinedName holds the name of a created predefined named token whose
+	// name is not a card subtype ("create a tapped Mutavault token." ->
+	// "Mutavault"). Such a token's printed characteristics and abilities are not
+	// spelled out in the create clause (they live in the token's own definition,
+	// here described only by reminder text), so the name alone identifies it. Only
+	// names the parser recognizes as predefined tokens are captured; the
+	// create-token exactness recognizer reconstructs the "<Name> token" noun
+	// phrase, and lowering maps the name to the token's fixed definition. It is
+	// empty for tokens identified by their subtypes or printed in full.
+	TokenPredefinedName string `json:",omitempty"`
 	// TokenNameLeading reports that TokenName was captured from the leading
 	// "Create <Name>, a ... token ..." form (the named legendary tokens such as
 	// "Create Avacyn, a legendary 8/8 white Angel creature token ...") rather than

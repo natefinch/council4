@@ -34,6 +34,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactCreateTokenEffectSyntax(effect) ||
 			exactCreateTokenForEachDestroyedThisWayEffectSyntax(effect) ||
 			exactCreateNamedTokenEffectSyntax(effect) ||
+			exactCreatePredefinedTokenEffectSyntax(effect) ||
 			exactCreateNamedTokenChoiceEffectSyntax(effect) ||
 			exactCreateCopyTokenEffectSyntax(effect) ||
 			exactCreateCopyTokenReferenceEffectSyntax(effect) ||
@@ -2313,6 +2314,46 @@ func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 		}
 		return strings.EqualFold(exactEffectClauseText(effect), subject+" creates "+specBody+".")
 	}
+	return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody+".")
+}
+
+// exactCreatePredefinedTokenEffectSyntax recognizes "Create a [tapped] <Name>
+// token." for a predefined named token whose name is a card name rather than a
+// card subtype (Mutavault). Such a token carries no printed power/toughness,
+// color, subtype, keyword, or count modifier in its create clause; the name
+// alone identifies it (its characteristics live in its own definition). It
+// accepts only the controller recipient form with a single fixed count and an
+// optional leading "tapped" adjective, and byte-checks the reconstructed
+// "Create a [tapped] <Name> token." clause. Every richer shape (a count other
+// than one, a non-controller recipient, or any selection qualifier beyond
+// "tapped") fails closed.
+func exactCreatePredefinedTokenEffectSyntax(effect *EffectSyntax) bool {
+	if effect.TokenPredefinedName == "" ||
+		effect.Context != EffectContextController ||
+		effect.TokenPTKnown || effect.TokenCopyOfTarget ||
+		effect.TokenChoice || effect.Negated ||
+		len(effect.Targets) != 0 ||
+		!effect.Amount.Known || effect.Amount.Value != 1 {
+		return false
+	}
+	sel := effect.Selection
+	if sel.Kind != SelectionUnknown ||
+		len(sel.SubtypesAny) != 0 ||
+		sel.Keyword != KeywordUnknown ||
+		len(sel.ColorsAny) != 0 || len(sel.ExcludedColors) != 0 ||
+		len(sel.RequiredTypesAny) != 0 || len(sel.ExcludedTypes) != 0 ||
+		len(sel.SourceTypes) != 0 || len(sel.Supertypes) != 0 ||
+		sel.MatchPower || sel.MatchToughness || sel.MatchManaValue ||
+		sel.Untapped || sel.Attacking || sel.Blocking ||
+		sel.All || sel.Another || sel.Other ||
+		sel.Colorless || sel.Multicolored {
+		return false
+	}
+	tappedPart := ""
+	if sel.Tapped {
+		tappedPart = "tapped "
+	}
+	specBody := fmt.Sprintf("a %s%s token", tappedPart, effect.TokenPredefinedName)
 	return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody+".")
 }
 

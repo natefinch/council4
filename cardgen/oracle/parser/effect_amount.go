@@ -158,6 +158,45 @@ func parseTokenKeywords(kind EffectKind, tokens []shared.Token, atoms Atoms) []K
 	return kinds
 }
 
+// predefinedTokenNames lists the named tokens whose identity is a card name
+// rather than a card subtype, so the create clause spells out neither their
+// printed characteristics nor their abilities ("create a tapped Mutavault
+// token."). Each name maps to a fixed token definition in lowering; the parser
+// captures only these recognized names so other capitalized words in a create
+// clause are unaffected. The map key is the lowercased source word; the value is
+// the canonical token name.
+var predefinedTokenNames = map[string]string{
+	"mutavault": "Mutavault",
+}
+
+// parsePredefinedTokenName captures a created predefined named token's name from
+// the noun slot of a create clause ("create a tapped Mutavault token." ->
+// "Mutavault"). The name must be one of the recognized predefined-token names
+// (predefinedTokenNames) and must sit immediately before the "token"/"tokens"
+// noun. It returns "" for non-create clauses and for any clause whose pre-noun
+// word is not a recognized predefined-token name. The create-token exactness
+// recognizer reconstructs and byte-checks the "<Name> token" noun phrase, so a
+// spurious capture fails closed there.
+func parsePredefinedTokenName(kind EffectKind, tokens []shared.Token) string {
+	if kind != EffectCreate {
+		return ""
+	}
+	noun := -1
+	for i, token := range tokens {
+		if equalWord(token, "token") || equalWord(token, "tokens") {
+			noun = i
+			break
+		}
+	}
+	if noun < 1 {
+		return ""
+	}
+	if name, ok := predefinedTokenNames[strings.ToLower(tokens[noun-1].Text)]; ok {
+		return name
+	}
+	return ""
+}
+
 // parseTokenName captures a created creature token's explicit Oracle name from
 // the trailing "named <Name>" tail of a create clause ("... Serpent creature
 // tokens named Koma's Coil." -> "Koma's Coil"). It returns the name joined

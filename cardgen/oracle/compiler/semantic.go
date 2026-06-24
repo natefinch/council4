@@ -1560,8 +1560,13 @@ type CompiledEffect struct {
 	// TokenName is a created creature token's explicit Oracle name ("named Koma's
 	// Coil"), captured verbatim from source. It is empty when the token is named
 	// only by its subtypes.
-	TokenName         string
-	TokenCopyOfTarget bool
+	TokenName string
+	// TokenPredefinedName is a created predefined named token's name when that
+	// name is a card name rather than a card subtype ("create a tapped Mutavault
+	// token." -> "Mutavault"). Lowering maps the name to the token's fixed
+	// definition. It is empty for tokens identified by their subtypes.
+	TokenPredefinedName string
+	TokenCopyOfTarget   bool
 	// AmassSubtype is the creature subtype named by an EffectAmass keyword action
 	// ("Amass Orcs N" -> Orc, "Amass Zombies N" -> Zombie). The untyped "Amass N"
 	// form defaults to Zombie. Lowering carries it onto game.Amass so the runtime

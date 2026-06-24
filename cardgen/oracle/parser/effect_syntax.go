@@ -1275,6 +1275,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			TokenPTVariableX:          tokenPTVariableX,
 			TokenKeywords:             parseTokenKeywords(kind, clause, atoms),
 			TokenName:                 tokenName,
+			TokenPredefinedName:       parsePredefinedTokenName(kind, clause),
 			TokenNameLeading:          tokenNameLeading,
 			AttackDefender:            tokenAttackDefender,
 			AttackDefenderSpan:        tokenAttackDefenderSpan,
