@@ -399,9 +399,20 @@ func lowerFixedDamageSpell(
 	if len(ctx.content.References) > 0 {
 		damageSource, sourceBound = lowerDamageSourceReference(ctx.content.References[:1])
 	}
-	if effect.Amount.Known {
+	switch {
+	case effect.Amount.Known:
 		amount = game.Fixed(effect.Amount.Value)
-	} else if effect.Amount.DynamicKind != compiler.DynamicAmountNone {
+	case effect.Amount.DynamicKind == compiler.DynamicAmountTriggeringCounterCount:
+		dynamic, ok := lowerEventCounterCountAmount(ctx, effect.Amount)
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported damage spell",
+				"the executable source backend supports only exact supported damage amounts to one target",
+			)
+		}
+		amount = game.Dynamic(dynamic)
+	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
 		amountObject := game.SourcePermanentReference()
 		if sourceBound {
 			amountObject = damageSource
@@ -418,6 +429,8 @@ func lowerFixedDamageSpell(
 			)
 		}
 		amount = game.Dynamic(dynamic)
+	default:
+		// No amount override: the damage defaults to X (DynamicAmountX).
 	}
 	if effect.DamageRecipientReference != parser.DamageRecipientReferenceNone {
 		return lowerReferencedPlayerDamageSpell(ctx, effect.DamageRecipientReference, amount, damageSource, sourceBound)

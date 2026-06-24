@@ -2156,9 +2156,16 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 	switch effect.Amount.DynamicForm {
 	case EffectDynamicAmountFormNone:
 		amount := "X"
-		if effect.Amount.Known {
+		switch {
+		case effect.Amount.Known:
 			amount = strconv.Itoa(effect.Amount.Value)
-		} else if !effect.Amount.VariableX {
+		case effect.Amount.VariableX:
+		case effect.Amount.DynamicKind == EffectDynamicAmountTriggeringCounterCount:
+			// "deals that much damage" reads the triggering counter count; the
+			// amount word reconstructs as the literal "that much" (Shalai and
+			// Hallar).
+			amount = "that much"
+		default:
 			return false
 		}
 		// "<prefix> <amount> damage to each of <target>." deals the full amount
