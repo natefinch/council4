@@ -2201,6 +2201,7 @@ func recognizeDynamicCountMana(effect *EffectSyntax) bool {
 		recognizeChosenColorCountMana(effect) ||
 		recognizeChosenColorSourceCounterMana(effect) ||
 		recognizeSourceCounterCountMana(effect) ||
+		recognizeSingleColorDynamicMana(effect) ||
 		recognizeAnyOneColorDynamicMana(effect)
 }
 
@@ -2244,6 +2245,44 @@ func recognizeTargetColorIfRider(effect *EffectSyntax, atoms Atoms) bool {
 	}
 	_, ok = atoms.ColorAt(rest[0].Span)
 	return ok
+}
+
+// recognizeSingleColorDynamicMana types the add-mana body "an amount of
+// <symbol> equal to <dynamic>" (Marwyn, the Nurturer: "Add an amount of {G}
+// equal to Marwyn's power."), the fixed-color sibling of
+// recognizeAnyOneColorDynamicMana. The produced quantity is the dynamic amount
+// already typed onto effect.Amount by parseEffectAmount ("equal to <dynamic>" or
+// "where X is <dynamic>"); the leading "an amount of <symbol>" body is left
+// unrecognized by parseEffectMana because the trailing amount phrase trips its
+// fixed-symbol parsing. This re-parses just the lone produced symbol and records
+// it as one fixed color, so the lowerer can emit that color scaled by the
+// dynamic amount. It fires only for a single fixed produced color, so choice,
+// any-color, and multi-symbol outputs stay fail-closed.
+func recognizeSingleColorDynamicMana(effect *EffectSyntax) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Amount.DynamicKind == EffectDynamicAmountNone {
+		return false
+	}
+	switch effect.Amount.DynamicForm {
+	case EffectDynamicAmountFormWhereX, EffectDynamicAmountFormEqual:
+	default:
+		return false
+	}
+	body := manaBodyBeforeAmount(effect)
+	for len(body) > 0 && body[len(body)-1].Kind == shared.Comma {
+		body = body[:len(body)-1]
+	}
+	if len(body) != 4 || !effectWordsAt(body, 0, "an", "amount", "of") {
+		return false
+	}
+	parsed := parseEffectMana(EffectAddMana, body[3:], true)
+	if !parsed.ColorsKnown || len(parsed.Colors) != 1 ||
+		parsed.Choice || parsed.AnyColor || parsed.Colors[0] == mana.C {
+		return false
+	}
+	parsed.Span = shared.SpanOf(body)
+	effect.Mana = parsed
+	return true
 }
 
 // recognizeAnyOneColorDynamicMana types the add-mana body "X mana of any one
@@ -5435,15 +5474,16 @@ func parseGroupEntersTappedEffect(sentence Sentence, tokens []shared.Token) ([]E
 }
 
 // parseGroupEntersWithCountersEffect recognizes a static enters-with-counters
-// replacement that adds a single counter to a group of the controller's
-// permanents as they enter, e.g. "Each other creature you control enters with
-// an additional vigilance counter on it." (Tayam, Luminous Enigma) or "Each
-// planeswalker you control enters with an additional loyalty counter on it."
-// (Oath of Gideon). The subject is an "Each <group> you control" noun phrase
-// recognized by parseSelection; the predicate is exactly "enters with an
-// additional <kind> counter on it." Dynamic forms ("... for each ...", "a
-// number of additional ... counters ... equal to ...") and multi-counter or
-// numeric quantities fail closed so the card stays unsupported.
+// replacement that adds counters to a group of the controller's permanents as
+// they enter, e.g. "Each other creature you control enters with an additional
+// vigilance counter on it." (Tayam, Luminous Enigma) or "Each planeswalker you
+// control enters with an additional loyalty counter on it." (Oath of Gideon).
+// The subject is an "Each <group> you control" noun phrase recognized by
+// parseSelection; the predicate is parsed by
+// parseGroupEntersWithCountersPredicate, which accepts both the fixed single-
+// counter form and the dynamic "a number of additional <kind> counters on it
+// equal to <amount>" form (Arwen, Weaver of Hope). Multi-counter and "X"
+// quantities fail closed so the card stays unsupported.
 func parseGroupEntersWithCountersEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
 	body := semanticEffectTokens(tokens)
 	if len(body) < 8 || body[len(body)-1].Kind != shared.Period {
@@ -5471,27 +5511,8 @@ func parseGroupEntersWithCountersEffect(sentence Sentence, tokens []shared.Token
 		return nil, false
 	}
 	predicate := words[entersIndex+1:]
-	if len(predicate) < 5 ||
-		!equalWord(predicate[0], "with") ||
-		!equalWord(predicate[1], "an") ||
-		!equalWord(predicate[2], "additional") ||
-		!equalWord(predicate[len(predicate)-2], "on") ||
-		!equalWord(predicate[len(predicate)-1], "it") {
-		return nil, false
-	}
-	counterClause := predicate[3 : len(predicate)-2]
-	if len(counterClause) < 2 {
-		return nil, false
-	}
-	last := counterClause[len(counterClause)-1]
-	if !equalWord(last, "counter") && !equalWord(last, "counters") {
-		return nil, false
-	}
-	if equalWord(counterClause[0], "x") {
-		return nil, false
-	}
-	counterKind, counterKnown := parseCounterPlacement(counterClause, atoms)
-	if !counterKnown {
+	placement, ok := parseGroupEntersWithCountersPredicate(predicate, atoms)
+	if !ok || !placement.CounterKnown {
 		return nil, false
 	}
 	selection := parseSelection(recipient, atoms)
@@ -5508,11 +5529,91 @@ func parseGroupEntersWithCountersEffect(sentence Sentence, tokens []shared.Token
 		EntersWithCounters:      true,
 		EntersWithCountersGroup: true,
 		Selection:               selection,
-		CounterKind:             counterKind,
-		CounterKnown:            counterKnown,
+		CounterKind:             placement.CounterKind,
+		CounterKnown:            placement.CounterKnown,
+		Amount:                  placement.Amount,
 	}
 	effect.Exact = exactEffectSyntax(&effect)
 	return []EffectSyntax{effect}, true
+}
+
+// groupEntersWithCountersPlacement is the parsed counter placement of a group
+// enters-with-counters predicate: the counter kind, whether it was recognized,
+// and the optional dynamic amount (empty for a fixed single counter).
+type groupEntersWithCountersPlacement struct {
+	CounterKind  counter.Kind
+	CounterKnown bool
+	Amount       EffectAmountSyntax
+}
+
+// parseGroupEntersWithCountersPredicate parses the predicate of a group
+// enters-with-counters replacement ("... enters <predicate>.") into a counter
+// kind and placement amount. It accepts the fixed single-counter form ("with an
+// additional <kind> counter on it" — Tayam, Luminous Enigma) and the dynamic
+// form ("with a number of additional <kind> counters on it equal to <amount>" —
+// Arwen, Weaver of Hope). The dynamic amount is parsed by the shared
+// dynamic-amount recognizer so every supported amount form unlocks. An empty
+// returned amount means a fixed single counter. Any other shape, an "X" count,
+// or an unrecognized counter kind fails closed.
+func parseGroupEntersWithCountersPredicate(predicate []shared.Token, atoms Atoms) (groupEntersWithCountersPlacement, bool) {
+	if len(predicate) < 5 || !equalWord(predicate[0], "with") {
+		return groupEntersWithCountersPlacement{}, false
+	}
+	if equalWord(predicate[1], "a") && effectWordsAt(predicate, 2, "number", "of", "additional") {
+		return parseGroupDynamicEntersWithCounters(predicate[5:], atoms)
+	}
+	if !equalWord(predicate[1], "an") ||
+		!equalWord(predicate[2], "additional") ||
+		!equalWord(predicate[len(predicate)-2], "on") ||
+		!equalWord(predicate[len(predicate)-1], "it") {
+		return groupEntersWithCountersPlacement{}, false
+	}
+	counterClause := predicate[3 : len(predicate)-2]
+	if len(counterClause) < 2 {
+		return groupEntersWithCountersPlacement{}, false
+	}
+	last := counterClause[len(counterClause)-1]
+	if !equalWord(last, "counter") && !equalWord(last, "counters") {
+		return groupEntersWithCountersPlacement{}, false
+	}
+	if equalWord(counterClause[0], "x") {
+		return groupEntersWithCountersPlacement{}, false
+	}
+	counterKind, counterKnown := parseCounterPlacement(counterClause, atoms)
+	return groupEntersWithCountersPlacement{CounterKind: counterKind, CounterKnown: counterKnown}, true
+}
+
+// parseGroupDynamicEntersWithCounters parses the tail "<kind> counters on it
+// <amount>" of a dynamic group enters-with-counters predicate, after the leading
+// "with a number of additional" prefix has been consumed. The counter kind
+// precedes "counters on it" and the trailing dynamic amount is parsed by the
+// shared dynamic-amount recognizer. It fails closed on an "X" count, an
+// unrecognized counter kind, or a missing or unrecognized amount.
+func parseGroupDynamicEntersWithCounters(tokens []shared.Token, atoms Atoms) (groupEntersWithCountersPlacement, bool) {
+	onIndex := -1
+	for i := 1; i+2 < len(tokens); i++ {
+		if equalWord(tokens[i], "counters") &&
+			equalWord(tokens[i+1], "on") && equalWord(tokens[i+2], "it") {
+			onIndex = i
+			break
+		}
+	}
+	if onIndex < 1 {
+		return groupEntersWithCountersPlacement{}, false
+	}
+	counterClause := tokens[:onIndex+1]
+	if equalWord(counterClause[0], "x") {
+		return groupEntersWithCountersPlacement{}, false
+	}
+	counterKind, counterKnown := parseCounterPlacement(counterClause, atoms)
+	if !counterKnown {
+		return groupEntersWithCountersPlacement{}, false
+	}
+	amount, _, ok := parseDynamicEffectAmount(tokens[onIndex+3:], atoms)
+	if !ok || amount.DynamicKind == EffectDynamicAmountNone {
+		return groupEntersWithCountersPlacement{}, false
+	}
+	return groupEntersWithCountersPlacement{CounterKind: counterKind, CounterKnown: counterKnown, Amount: amount}, true
 }
 
 // recipientHasRelativeClause reports whether a group enters-with-counters

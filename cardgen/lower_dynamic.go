@@ -86,6 +86,12 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 		}
 		dynamic.Kind = game.DynamicAmountObjectPower
 		dynamic.Object = object
+	case compiler.DynamicAmountSourceToughness:
+		if len(object.Validate()) != 0 {
+			return game.DynamicAmount{}, false
+		}
+		dynamic.Kind = game.DynamicAmountObjectToughness
+		dynamic.Object = object
 	case compiler.DynamicAmountSourceCounterCount:
 		if len(object.Validate()) != 0 || !amount.CounterKind.Valid() {
 			return game.DynamicAmount{}, false

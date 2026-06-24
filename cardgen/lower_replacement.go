@@ -1153,11 +1153,22 @@ func lowerGroupEntersWithCountersReplacement(
 	if !ok {
 		return unsupported("the executable source backend does not support this group enters-with-counters recipient")
 	}
-	amount := effect.Amount.Value
-	if amount <= 0 {
-		amount = 1
+	placement := game.CounterPlacement{Kind: effect.CounterKind, Amount: 1}
+	if effect.Amount.DynamicKind != compiler.DynamicAmountNone {
+		// "Each other creature you control enters with a number of additional
+		// +1/+1 counters on it equal to <amount>." (Arwen, Weaver of Hope) scales
+		// the placement by a rules-derived amount read from the replacement's
+		// source permanent at resolution; reuse the shared dynamic-amount
+		// lowering so every supported amount form works.
+		lowered, dynamicOK := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+		if !dynamicOK {
+			return unsupported("the executable source backend does not support this dynamic group enters-with-counters quantity")
+		}
+		placement.Amount = 0
+		placement.Dynamic = opt.Val(&lowered)
+	} else if effect.Amount.Value > 0 {
+		placement.Amount = effect.Amount.Value
 	}
-	placement := game.CounterPlacement{Kind: effect.CounterKind, Amount: amount}
 	return game.EntersWithCountersGroupReplacement(ability.Text, recipient, placement), true, nil
 }
 

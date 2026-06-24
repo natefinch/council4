@@ -827,21 +827,40 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 	for end < len(tokens) && tokens[end].Span.End.Offset <= nameSpan.End.Offset {
 		end++
 	}
-	if end < len(tokens) && equalWord(tokens[end], "power") && dynamicAmountBoundary(tokens, end+1) {
-		return dynamicAmountSubject{
-			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountSourcePower, ReferenceSpan: nameSpan},
-			end:    end + 1,
-		}, true
+	if end < len(tokens) && dynamicAmountBoundary(tokens, end+1) {
+		if kind, ok := selfNameCharacteristicKind(tokens[end]); ok {
+			return dynamicAmountSubject{
+				amount: EffectAmountSyntax{DynamicKind: kind, ReferenceSpan: nameSpan},
+				end:    end + 1,
+			}, true
+		}
 	}
 	if end+2 < len(tokens) && tokens[end].Kind == shared.Apostrophe &&
-		equalWord(tokens[end+1], "s") && equalWord(tokens[end+2], "power") &&
-		dynamicAmountBoundary(tokens, end+3) {
-		return dynamicAmountSubject{
-			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountSourcePower, ReferenceSpan: nameSpan},
-			end:    end + 3,
-		}, true
+		equalWord(tokens[end+1], "s") && dynamicAmountBoundary(tokens, end+3) {
+		if kind, ok := selfNameCharacteristicKind(tokens[end+2]); ok {
+			return dynamicAmountSubject{
+				amount: EffectAmountSyntax{DynamicKind: kind, ReferenceSpan: nameSpan},
+				end:    end + 3,
+			}, true
+		}
 	}
 	return dynamicAmountSubject{}, false
+}
+
+// selfNameCharacteristicKind maps the characteristic noun following a card's own
+// name in a possessive amount ("<Name>'s power", "<Name>'s toughness") to its
+// dynamic-amount kind. Power backs counter-scaled mana like Marwyn, the
+// Nurturer; toughness backs group enters-with-counters quantities like Arwen,
+// Weaver of Hope. Any other noun fails closed.
+func selfNameCharacteristicKind(token shared.Token) (EffectDynamicAmountKind, bool) {
+	switch {
+	case equalWord(token, "power"):
+		return EffectDynamicAmountSourcePower, true
+	case equalWord(token, "toughness"):
+		return EffectDynamicAmountSourceToughness, true
+	default:
+		return EffectDynamicAmountNone, false
+	}
 }
 
 // parseSacrificedCreatureCharacteristic recognizes "the sacrificed creature's

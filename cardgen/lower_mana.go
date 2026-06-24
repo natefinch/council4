@@ -484,6 +484,9 @@ func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 	if content, ok := lowerSourceCounterCountMana(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerSingleColorDynamicMana(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerChosenColorCountMana(ctx); ok {
 		return content, nil
 	}
@@ -694,6 +697,51 @@ func lowerSourceCounterCountMana(ctx contentCtx) (game.AbilityContent, bool) {
 	}
 	dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
 	if !ok || dynamic.Kind != game.DynamicAmountObjectCounters {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{Primitive: game.AddMana{
+			Amount:    game.Dynamic(dynamic),
+			ManaColor: effect.Mana.Colors[0],
+		}}},
+	}.Ability(), true
+}
+
+// lowerSingleColorDynamicMana lowers an "Add an amount of <color> equal to
+// <dynamic>" body (Marwyn, the Nurturer: "...equal to Marwyn's power.") into an
+// AddMana instruction that produces a fixed color scaled by a dynamic amount. It
+// is the fixed-color sibling of lowerAnyOneColorDynamicMana: the dynamic amount
+// is lowered generically (source power/toughness, a permanent or counter count,
+// devotion, and so on), so any amount lowerDynamicAmount supports unlocks this
+// mana ability. It fires only for a single known produced color with a present
+// dynamic amount, so plain fixed-amount, choice, and any-color outputs stay
+// handled by their own paths or fail closed.
+func lowerSingleColorDynamicMana(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		(len(ctx.content.References) != 0 && !singleSelfReference(ctx.content.References)) {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		effect.Context != parser.EffectContextController ||
+		effect.Amount.DynamicKind == compiler.DynamicAmountNone ||
+		!effect.Mana.ColorsKnown ||
+		len(effect.Mana.Colors) != 1 ||
+		effect.Mana.Choice ||
+		effect.Mana.AnyColor {
+		return game.AbilityContent{}, false
+	}
+	dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+	if !ok {
 		return game.AbilityContent{}, false
 	}
 	return game.Mode{
