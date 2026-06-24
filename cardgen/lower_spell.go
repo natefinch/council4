@@ -459,8 +459,10 @@ func lowerImpulseExileContent(ctx contentCtx) (game.AbilityContent, *shared.Diag
 }
 
 // lowerImpulseExileDuration maps the supported impulse play windows to their
-// runtime durations. Both "this turn" and "until end of turn" grant play
-// permission through the end of the current turn; any other window fails closed.
+// runtime durations. "this turn" and "until end of turn" grant play permission
+// through the end of the current turn; "until the end of your next turn" and
+// "until your next end step" carry their own runtime durations. Any other window
+// fails closed.
 func lowerImpulseExileDuration(duration compiler.DurationKind) (game.EffectDuration, bool) {
 	switch duration {
 	case compiler.DurationThisTurn:
@@ -469,6 +471,8 @@ func lowerImpulseExileDuration(duration compiler.DurationKind) (game.EffectDurat
 		return game.DurationUntilEndOfTurn, true
 	case compiler.DurationUntilEndOfYourNextTurn:
 		return game.DurationUntilEndOfYourNextTurn, true
+	case compiler.DurationUntilYourNextEndStep:
+		return game.DurationUntilYourNextEndStep, true
 	default:
 		return game.DurationPermanent, false
 	}

@@ -2169,8 +2169,10 @@ func matchImpulseExileClause(text string) (amount int, variableX bool, ok bool) 
 // matchImpulsePlayPermissionClause recognizes the temporary play-permission
 // sentence that follows an impulse exile: "You may play <object> this turn.",
 // the "until end of turn" variants (trailing or leading "Until end of turn,"),
-// where <object> agrees in number with the count exiled ("it"/"that card" for a
-// single card, "them"/"those cards" for several). It returns the play window.
+// the "until the end of your next turn" variants, and the "until your next end
+// step" variants (Inti, Seneschal of the Sun), where <object> agrees in number
+// with the count exiled ("it"/"that card" for a single card, "them"/"those
+// cards" for several). It returns the play window.
 func matchImpulsePlayPermissionClause(text string, amount int) (EffectDurationKind, bool) {
 	for _, object := range impulsePlayObjects(amount) {
 		switch {
@@ -2182,6 +2184,9 @@ func matchImpulsePlayPermissionClause(text string, amount int) (EffectDurationKi
 		case strings.EqualFold(text, "You may play "+object+" until the end of your next turn."),
 			strings.EqualFold(text, "Until the end of your next turn, you may play "+object+"."):
 			return EffectDurationUntilEndOfYourNextTurn, true
+		case strings.EqualFold(text, "You may play "+object+" until your next end step."),
+			strings.EqualFold(text, "Until your next end step, you may play "+object+"."):
+			return EffectDurationUntilYourNextEndStep, true
 		}
 	}
 	return EffectDurationNone, false

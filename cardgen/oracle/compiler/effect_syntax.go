@@ -563,6 +563,8 @@ func compileEffectDuration(duration parser.EffectDurationKind) DurationKind {
 		return DurationUntilYourNextTurn
 	case parser.EffectDurationUntilEndOfYourNextTurn:
 		return DurationUntilEndOfYourNextTurn
+	case parser.EffectDurationUntilYourNextEndStep:
+		return DurationUntilYourNextEndStep
 	case parser.EffectDurationThisTurn:
 		return DurationThisTurn
 	case parser.EffectDurationThisCombat:

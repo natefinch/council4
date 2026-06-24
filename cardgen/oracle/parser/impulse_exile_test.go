@@ -40,6 +40,18 @@ func TestParseImpulseExileGeneralizedForms(t *testing.T) {
 			amount:   3,
 			duration: EffectDurationUntilEndOfYourNextTurn,
 		},
+		{
+			name:     "single card it until your next end step",
+			text:     "Exile the top card of your library. Until your next end step, you may play it.",
+			amount:   1,
+			duration: EffectDurationUntilYourNextEndStep,
+		},
+		{
+			name:     "single card that card until your next end step",
+			text:     "Exile the top card of your library. You may play that card until your next end step.",
+			amount:   1,
+			duration: EffectDurationUntilYourNextEndStep,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
