@@ -1,9 +1,64 @@
 package cardgen
 
 import (
+	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
 )
+
+// TestLowerMassRegenerateGroup confirms the "Regenerate all/each <group>." mass
+// forms lower to a single battlefield-group game.Regenerate, the same machinery
+// the destroy/exile/tap/untap mass forms share.
+func TestLowerMassRegenerateGroup(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		selection  game.Selection
+	}{
+		{
+			name:       "all creatures you control",
+			oracleText: "Regenerate all creatures you control.",
+			selection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Controller:    game.ControllerYou,
+			},
+		},
+		{
+			name:       "each creature you control",
+			oracleText: "Regenerate each creature you control.",
+			selection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Controller:    game.ControllerYou,
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Mass Regenerate",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+			})
+			primitive := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive
+			regenerate, ok := primitive.(game.Regenerate)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.Regenerate", primitive)
+			}
+			if regenerate.Group.Domain() != game.GroupDomainBattlefield {
+				t.Fatalf("group domain = %v, want battlefield", regenerate.Group.Domain())
+			}
+			if selection := regenerate.Group.Selection(); !reflect.DeepEqual(selection, test.selection) {
+				t.Fatalf("selection = %#v, want %#v", selection, test.selection)
+			}
+		})
+	}
+}
 
 func TestGenerateRegenerateRecipients(t *testing.T) {
 	cases := []struct {

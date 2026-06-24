@@ -1645,17 +1645,30 @@ func massChosenTypeBasePhrase(selection *SelectionSyntax, phrase string) (string
 }
 
 // massCounterBasePhrase strips a trailing counter qualifier ("with a +1/+1
-// counter on it" / "with a -1/-1 counter on them") from a mass group phrase when
-// the selection records a named counter requirement, returning the base group
-// phrase to validate and true. The base ("creatures") is then checked by the
-// shared mass group/subtype validators, so "Destroy all creatures with a +1/+1
-// counter on them." round-trips through the same machinery as the bare mass
-// group. Because stripping is driven by the modeled CounterKind (not by text),
-// an unmodeled named counter leaves CounterRequired false and the phrase fails
-// closed. The kind-agnostic "any counter" form is intentionally not accepted:
-// the runtime cannot honor it for a mass group (it would require the zero-value
-// counter kind in addition to any counter), so it stays fail closed.
+// counter on it" / "with a -1/-1 counter on them", or the negated "with no
+// counters on them") from a mass group phrase when the selection records the
+// matching counter requirement, returning the base group phrase to validate and
+// true. The base ("creatures") is then checked by the shared mass group/subtype
+// validators, so "Destroy all creatures with a +1/+1 counter on them." and
+// "Destroy all creatures with no counters on them." round-trip through the same
+// machinery as the bare mass group. Because stripping is driven by the modeled
+// CounterKind/CounterAbsent (not by text), an unmodeled named counter leaves
+// CounterRequired false and the phrase fails closed. The kind-agnostic "any
+// counter" form is intentionally not accepted: the runtime cannot honor it for a
+// mass group (it would require the zero-value counter kind in addition to any
+// counter), so it stays fail closed.
 func massCounterBasePhrase(selection *SelectionSyntax, phrase string) (string, bool) {
+	if selection.CounterAbsent {
+		for _, suffix := range []string{
+			" with no counters on it", " with no counters on them",
+			" with no counter on it", " with no counter on them",
+		} {
+			if base, ok := strings.CutSuffix(phrase, suffix); ok {
+				return base, true
+			}
+		}
+		return "", false
+	}
 	if !selection.CounterRequired || selection.CounterAny {
 		return "", false
 	}
@@ -1681,6 +1694,30 @@ func massCounterQualifierSuffixes(selection *SelectionSyntax) []string {
 		}
 	}
 	return suffixes
+}
+
+// massEachGroupVerbEffectSyntax reports whether the effect is a recognized
+// "<verb> each <group>" mass form for one of the group verbs that share the
+// battlefield-group machinery (destroy, exile, tap, untap, regenerate). The
+// singular "each" wording selects the whole matching group exactly like the
+// plural "all" form, so its caller flags the selection All to lower to a group
+// effect. Every other effect kind fails closed so per-player "each" distributive
+// effects and "each creature" damage recipients keep their own handling.
+func massEachGroupVerbEffectSyntax(effect *EffectSyntax) bool {
+	switch effect.Kind {
+	case EffectDestroy:
+		return exactMassEachEffectSyntax(effect, "Destroy each ")
+	case EffectExile:
+		return exactMassEachEffectSyntax(effect, "Exile each ")
+	case EffectTap:
+		return exactMassEachEffectSyntax(effect, "Tap each ")
+	case EffectUntap:
+		return exactMassEachEffectSyntax(effect, "Untap each ")
+	case EffectRegenerate:
+		return exactMassEachEffectSyntax(effect, "Regenerate each ")
+	default:
+		return false
+	}
 }
 
 // exactMassEachEffectSyntax recognizes the singular "each" mass form

@@ -6,6 +6,15 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 )
 
+// exactMassRegenerateGroup resolves the battlefield group of an exact mass
+// regenerate ("Regenerate all creatures you control." / "Regenerate each
+// creature you control."). The regenerate verb carries no destination,
+// reference, or possessive suffix, so the bare mass-group constraints apply just
+// as they do for destroy and exile; it reuses exactMassGroup unchanged.
+func exactMassRegenerateGroup(ctx contentCtx) (game.GroupReference, bool) {
+	return exactMassGroup(ctx)
+}
+
 // lowerRegenerateSpell lowers the regeneration family into a single Regenerate
 // instruction that sets up a regeneration shield on one permanent. It supports
 // three recipients, each reusing the existing regeneration-shield runtime:
@@ -24,6 +33,11 @@ import (
 // effect, conditional or modal content, or an unrepresentable recipient — fails
 // closed with the shared unsupported-regenerate diagnostic.
 func lowerRegenerateSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	if group, ok := exactMassRegenerateGroup(ctx); ok {
+		return game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.Regenerate{Group: group}}},
+		}.Ability(), nil
+	}
 	if len(ctx.content.Targets) > 0 {
 		return lowerFixedPermanentTargetSpell(ctx, "Regenerate", func(object game.ObjectReference) game.Primitive {
 			return game.Regenerate{Object: object}

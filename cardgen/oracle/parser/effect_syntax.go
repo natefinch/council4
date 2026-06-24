@@ -1310,12 +1310,13 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	if recognizeTargetColorIfRider(effect, atoms) {
 		effect.Exact = true
 	}
-	// "Destroy each <permanent group>" selects every matching permanent like the
+	// "<verb> each <permanent group>" selects every matching permanent like the
 	// plural "all" form, so flag its selection as a mass group to lower to a
-	// battlefield-group destroy. Scoped to the recognized destroy mass form so
-	// "each creature" damage recipients and "each player" distributive effects on
-	// other effect kinds are untouched.
-	if effect.Kind == EffectDestroy && exactMassEachEffectSyntax(effect, "Destroy each ") {
+	// battlefield-group effect. Scoped to the recognized mass-each forms of the
+	// group verbs (destroy, exile, tap, untap, regenerate) so "each creature"
+	// damage recipients and "each player" distributive effects on other effect
+	// kinds are untouched.
+	if massEachGroupVerbEffectSyntax(effect) {
 		effect.Selection.All = true
 	}
 	effect.CounterRecipientSingleChoice = effect.Exact && counterPlacementSingleChoiceRecipient(effect)

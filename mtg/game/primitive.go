@@ -1237,9 +1237,13 @@ type PhaseOut struct {
 	Group  GroupReference
 }
 
-// Regenerate sets up a regeneration shield on the referenced permanent.
+// Regenerate sets up a regeneration shield on one referenced permanent
+// ("Regenerate target creature.") or on every permanent in a referenced group
+// ("Regenerate each creature you control."). Exactly one of Object or Group is
+// set.
 type Regenerate struct {
 	Object ObjectReference
+	Group  GroupReference
 }
 
 // BecomeCopy makes the source permanent become a copy of the referenced target

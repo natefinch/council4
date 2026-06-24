@@ -1402,11 +1402,12 @@ func exactMassGroup(ctx contentCtx) (game.GroupReference, bool) {
 }
 
 // massCounterQualifierReferencesOnly reports whether every reference is the
-// trailing "it"/"them" pronoun that belongs to a named counter qualifier ("each
-// creature with a +1/+1 counter on it"). That pronoun is part of the selected
-// group, not a separate object, so when the group selector matches a counter it
-// is the only reference the mass group tolerates; with no counter selector, or
-// any other reference, this fails closed. A reference-free group always passes.
+// trailing "it"/"them" pronoun that belongs to a counter qualifier ("each
+// creature with a +1/+1 counter on it", "all creatures with no counters on
+// them"). That pronoun is part of the selected group, not a separate object, so
+// when the group selector carries a counter qualifier it is the only reference
+// the mass group tolerates; with no counter selector, or any other reference,
+// this fails closed. A reference-free group always passes.
 func massCounterQualifierReferencesOnly(
 	references []compiler.CompiledReference,
 	selector compiler.CompiledSelector,
@@ -1414,7 +1415,7 @@ func massCounterQualifierReferencesOnly(
 	if len(references) == 0 {
 		return true
 	}
-	if !selector.MatchCounter {
+	if !selector.MatchCounter && !selector.MatchNoCounters {
 		return false
 	}
 	for _, reference := range references {

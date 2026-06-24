@@ -3817,8 +3817,11 @@ func TestParseRegenerateRecipientExactness(t *testing.T) {
 		{name: "target restricted", source: "Regenerate target creature you control.", wantExact: true},
 		{name: "enchanted creature", source: "Regenerate enchanted creature.", wantExact: true, wantAttached: true},
 		{name: "equipped creature", source: "Regenerate equipped creature.", wantExact: true, wantAttached: true},
-		// Fail-closed: mass and pronoun forms stay non-exact.
-		{name: "mass each", source: "Regenerate each creature you control.", wantExact: false},
+		// The "each"/"all" mass forms lower to a battlefield-group regenerate, so
+		// they round-trip exactly like the destroy/exile/tap/untap mass forms.
+		{name: "mass each", source: "Regenerate each creature you control.", wantExact: true},
+		{name: "mass all", source: "Regenerate all creatures you control.", wantExact: true},
+		// Fail-closed: the destruction-replacement pronoun form stays non-exact.
 		{name: "pronoun it", source: "If this creature would be destroyed, regenerate it.", wantExact: false},
 	}
 	for _, test := range tests {

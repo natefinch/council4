@@ -158,6 +158,13 @@ type Selection struct {
 	// matches. Placed beside MatchCounter to pack into the bool cluster.
 	MatchAnyCounter bool
 
+	// MatchNoCounters, when true, requires the matched permanent to carry no
+	// counters of any kind ("all creatures with no counters on them"). It is the
+	// kind-agnostic negation of MatchAnyCounter. A non-battlefield subject, which
+	// has no counters to inspect, never matches. Placed beside MatchAnyCounter to
+	// pack into the bool cluster.
+	MatchNoCounters bool
+
 	// MatchModified, when true, requires the matched permanent to be modified: it
 	// carries one or more counters, or has one or more Auras or Equipment
 	// attached to it ("modified creatures you control"). A non-battlefield
@@ -293,6 +300,7 @@ func (s Selection) Empty() bool {
 		!s.ManaValueDynamic.Exists &&
 		!s.MatchCounter &&
 		!s.MatchAnyCounter &&
+		!s.MatchNoCounters &&
 		!s.RequiredCounterCount.Exists &&
 		!s.EnteredThisTurn &&
 		!s.MatchModified &&
@@ -355,6 +363,9 @@ func (s Selection) Validate() []string {
 	}
 	if s.NonToken && s.TokenOnly {
 		problems = append(problems, "selection cannot require both token and non-token objects")
+	}
+	if s.MatchNoCounters && (s.MatchAnyCounter || s.MatchCounter || s.RequiredCounterCount.Exists) {
+		problems = append(problems, "selection cannot require both no counters and a counter")
 	}
 	if s.ManaValueDynamic.Exists {
 		switch s.ManaValueDynamic.Val.Kind {

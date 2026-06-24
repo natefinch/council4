@@ -2046,7 +2046,7 @@ func (p PhaseOut) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 }
 
 func (p Regenerate) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	return validateObjectReference(p.Object, targets, checkTargets)
+	return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
 }
 
 func (p BecomeCopy) validatePrimitive(targets []TargetSpec, checkTargets bool) error {

@@ -221,6 +221,9 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if sel.MatchAnyCounter && !s.hasAnyCounter() {
 		return false
 	}
+	if sel.MatchNoCounters && !s.hasNoCounters() {
+		return false
+	}
 	if sel.EnteredThisTurn && !s.enteredThisTurn() {
 		return false
 	}
@@ -552,6 +555,26 @@ func (s *selectionSubject) hasAnyCounter() bool {
 		}
 		if snapshot, ok := lastKnownObject(s.g, s.event.PermanentID); ok {
 			return !snapshot.Counters.IsEmpty()
+		}
+	}
+	return false
+}
+
+// hasNoCounters reports whether the subject is a battlefield (or event)
+// permanent that carries no counters of any kind ("with no counters on them").
+// It is the negation of hasAnyCounter restricted to permanents: a card, spell,
+// or player subject has no counters to inspect and fails closed rather than
+// matching, mirroring hasAnyCounter's non-battlefield handling.
+func (s *selectionSubject) hasNoCounters() bool {
+	if s.kind == subjectPermanent {
+		return s.permanent != nil && s.permanent.Counters.IsEmpty()
+	}
+	if s.kind == subjectEventPermanent && s.event.PermanentID != 0 {
+		if permanent, ok := permanentByObjectID(s.g, s.event.PermanentID); ok {
+			return permanent.Counters.IsEmpty()
+		}
+		if snapshot, ok := lastKnownObject(s.g, s.event.PermanentID); ok {
+			return snapshot.Counters.IsEmpty()
 		}
 	}
 	return false

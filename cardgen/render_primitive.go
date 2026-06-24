@@ -1161,6 +1161,12 @@ func (r Renderer) renderObjectOrGroupPrimitive(ctx *renderCtx, primitive game.Pr
 			return "", errors.New("render: internal error: PhaseOut kind has unexpected concrete type")
 		}
 		return r.renderObjectOrGroup(ctx, "game.PhaseOut", value.Object, value.Group)
+	case game.PrimitiveRegenerate:
+		value, ok := primitive.(game.Regenerate)
+		if !ok {
+			return "", errors.New("render: internal error: Regenerate kind has unexpected concrete type")
+		}
+		return r.renderObjectOrGroup(ctx, "game.Regenerate", value.Object, value.Group)
 	default:
 		return "", fmt.Errorf("render: unsupported object or group primitive kind %d", primitive.Kind())
 	}
@@ -1256,12 +1262,6 @@ func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error
 	fieldName := "Object"
 	var object game.ObjectReference
 	switch primitive.Kind() {
-	case game.PrimitiveRegenerate:
-		value, ok := primitive.(game.Regenerate)
-		if !ok {
-			return "", errors.New("render: internal error: Regenerate kind has unexpected concrete type")
-		}
-		typeName, object = "game.Regenerate", value.Object
 	case game.PrimitiveExplore:
 		value, ok := primitive.(game.Explore)
 		if !ok {
