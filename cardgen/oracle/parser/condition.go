@@ -1014,7 +1014,15 @@ func recognizeSourceSaddledCondition(body []shared.Token, _ Atoms) (ConditionCla
 func recognizeSourceStateCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
 	rest, ok := cutTokenPrefix(body, "this")
 	if !ok {
-		return ConditionClause{}, false
+		// A possessive self-name subject ("Kitsa's power is 3 or greater") names
+		// the source permanent directly rather than through "this <type>". Keep
+		// the possessive name token in rest so the shared "is" split treats
+		// "<name>'s power" as the subject, exactly as "this creature's power"
+		// does. Any non-self-name body still fails closed here.
+		if _, named := atoms.SelfNameSpanStartingAt(body[0].Span); !named {
+			return ConditionClause{}, false
+		}
+		rest = body
 	}
 	isIndex := tokenWordIndex(rest, "is")
 	if isIndex < 1 {

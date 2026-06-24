@@ -283,6 +283,15 @@ func BloodthirstReplacement(text string, n int) ReplacementAbility {
 	})
 }
 
+// MaxSpeedActivationCondition creates the activation condition for the "Max
+// speed" ability word (CR 702.179, the Start your engines! speed subsystem): the
+// ability can be activated only while its controller has maximum speed (a speed
+// of 4). The runtime evaluates ControllerHasMaxSpeed against the controller's
+// current speed.
+func MaxSpeedActivationCondition() Condition {
+	return Condition{ControllerHasMaxSpeed: true}
+}
+
 // BoastActivationCondition creates the activation condition for the Boast keyword
 // (CR 702.116): a Boast ability can be activated only if its source attacked this
 // turn (and only once each turn, which is modeled separately as a OncePerTurn

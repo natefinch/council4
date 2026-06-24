@@ -801,7 +801,6 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	}
 	// Reject unsupported condition fields.
 	if cond.SourceNotMonstrous ||
-		cond.ControllerHasMaxSpeed ||
 		cond.TargetEnteredThisTurn.Exists {
 		return "", fmt.Errorf("render: unsupported condition shape for %s", context)
 	}
@@ -884,6 +883,10 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	}
 	if cond.SourceTributeNotPaid {
 		fields = append(fields, "SourceTributeNotPaid: true,")
+		hasPredicate = true
+	}
+	if cond.ControllerHasMaxSpeed {
+		fields = append(fields, "ControllerHasMaxSpeed: true,")
 		hasPredicate = true
 	}
 	if cond.SourceSaddled {
