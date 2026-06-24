@@ -1436,6 +1436,14 @@ const (
 	// sized by the count, and an ApplyContinuous that chooses up to that many
 	// controlled lands. Added last so existing kinds keep their wire values.
 	EffectPayRepeatedlyAnimate
+	// EffectSwitchPT is the one-shot continuous "switch power and toughness until
+	// end of turn" effect (CR 613.4e, layer 7e) on the source or a single target
+	// creature ("Switch this creature's power and toughness until end of turn.",
+	// Aeromoeba; "Switch target creature's power and toughness until end of
+	// turn.", Twisted Image). It lowers to an ApplyContinuous at
+	// LayerPowerToughnessSwitch until end of turn. Added last so existing kinds
+	// keep their wire values.
+	EffectSwitchPT
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1835,6 +1843,10 @@ type CompiledEffect struct {
 	SetBasePTVariableX         bool
 	SetBasePTEveryCreatureType bool
 	SetBasePTSource            bool
+	// SwitchPTSource mirrors the parser's EffectSwitchPT source-affecting form
+	// ("Switch this creature's power and toughness until end of turn."). When
+	// false and the effect carries a target, the single-target switch applies.
+	SwitchPTSource bool
 	// EntersAsCopyUntilEndOfTurn mirrors the parser's temporary "become a copy
 	// ... until end of turn" copy duration (Cursed Mirror).
 	EntersAsCopyUntilEndOfTurn bool

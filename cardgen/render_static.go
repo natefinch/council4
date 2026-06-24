@@ -281,6 +281,17 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 		if effect.SetName == "" && effect.TextFrom == "" && effect.TextTo == "" {
 			return errors.New("render: text layer requires a name or text change")
 		}
+	case game.LayerPowerToughnessSwitch:
+		if hasPTDelta {
+			return errors.New("render: power/toughness delta fields require the modify layer")
+		}
+		if hasKeywords {
+			return keywordOnAbility
+		}
+		if effect.SetPower.Exists || effect.SetToughness.Exists ||
+			effect.SetPowerDynamic.Exists || effect.SetToughnessDynamic.Exists {
+			return errors.New("render: power/toughness switch layer cannot set power or toughness")
+		}
 	default:
 	}
 	return nil
@@ -504,6 +515,8 @@ func renderContinuousLayer(layer game.ContinuousLayer) (string, error) {
 		return "game.LayerPowerToughnessModify", nil
 	case game.LayerPowerToughnessSet:
 		return "game.LayerPowerToughnessSet", nil
+	case game.LayerPowerToughnessSwitch:
+		return "game.LayerPowerToughnessSwitch", nil
 	case game.LayerColor:
 		return "game.LayerColor", nil
 	case game.LayerType:

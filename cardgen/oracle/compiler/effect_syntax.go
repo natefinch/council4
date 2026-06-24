@@ -446,6 +446,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectPolymorph
 	case parser.EffectSetBasePT:
 		return EffectSetBasePT
+	case parser.EffectSwitchPT:
+		return EffectSwitchPT
 	case parser.EffectDelayedTrigger:
 		return EffectDelayedTrigger
 	case parser.EffectPayRepeatedlyAnimate:

@@ -319,6 +319,8 @@ func lowerContent(
 			return lowerPolymorphContent(ctx)
 		case compiler.EffectSetBasePT:
 			return lowerSetBasePTContent(ctx)
+		case compiler.EffectSwitchPT:
+			return lowerSwitchPTContent(ctx)
 		case compiler.EffectDelayedTrigger:
 			return lowerDelayedTriggerContent(ctx)
 		case compiler.EffectPayRepeatedlyAnimate:
