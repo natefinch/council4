@@ -2399,8 +2399,16 @@ func dividedPlainCreatureSelection(selection SelectionSyntax) bool {
 // group damage path reconstructs separately or not at all, so those wordings
 // keep failing the round-trip.
 func exactGroupDamageAmountText(amount EffectAmountSyntax) (string, bool) {
-	if amount.DynamicForm != EffectDynamicAmountFormNone ||
-		amount.DynamicKind != EffectDynamicAmountNone {
+	if amount.DynamicForm != EffectDynamicAmountFormNone {
+		return "", false
+	}
+	if amount.DynamicKind == EffectDynamicAmountTriggeringCounterCount {
+		// "<source> deals that much damage to <group>." reads the triggering
+		// event's quantity; the amount word reconstructs as the literal "that
+		// much", mirroring the single-target branch (Magmakin Artillerist).
+		return "that much", true
+	}
+	if amount.DynamicKind != EffectDynamicAmountNone {
 		return "", false
 	}
 	switch {
