@@ -82,6 +82,12 @@ type stateQueries interface {
 	// CardFace returns the requested face of a card instance, falling back to
 	// the base definition when the face does not exist.
 	CardFace(card *game.CardInstance, face game.FaceIndex) *game.CardDef
+
+	// CardMatchesSelection reports whether the card face satisfies the
+	// selection's printed-characteristic predicates. The planner uses it so an
+	// additional card cost (discard/exile/reveal) tests the same eligibility
+	// predicate as the choice layer.
+	CardMatchesSelection(card *game.CardDef, sel game.Selection) bool
 }
 
 type statePermanentQueries interface {
@@ -97,6 +103,12 @@ type statePermanentQueries interface {
 
 	// PermanentEffectiveColors returns the effective colors of the permanent.
 	PermanentEffectiveColors(p *game.Permanent) []color.Color
+
+	// PermanentMatchesSelection reports whether the permanent satisfies the
+	// selection's characteristic predicates, evaluated against live continuous
+	// effects. The planner uses it so additional-cost candidate filtering matches
+	// the choice layer's eligible set exactly.
+	PermanentMatchesSelection(p *game.Permanent, sel game.Selection) bool
 }
 
 type stateAbilityQueries interface {
