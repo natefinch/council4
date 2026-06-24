@@ -1941,8 +1941,11 @@ type CompiledEffect struct {
 	// EntersAsCopyAddKeywords mirrors the parser's "except it has <keyword>"
 	// copiable keyword riders (Cursed Mirror's haste).
 	EntersAsCopyAddKeywords []parser.KeywordKind
-	UnderYourControl        bool
-	CastAsAdventure         bool
+	// EntersAsCopyTapped mirrors the parser's "enter tapped as a copy" form
+	// (Vesuva), where the permanent enters tapped as its chosen copy.
+	EntersAsCopyTapped bool
+	UnderYourControl   bool
+	CastAsAdventure    bool
 	// CastWithoutPayingManaCost mirrors the parser's free-cast rider flag for a
 	// cast effect ("... without paying its mana cost"). Lowering reads it to
 	// route the cast-for-free primitive; it is false for every other effect.

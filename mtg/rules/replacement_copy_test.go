@@ -197,3 +197,61 @@ func TestEntersAsCopyConditionalCounterMatchesCopiedType(t *testing.T) {
 		t.Fatalf("loyalty counters = %d, want 0", got)
 	}
 }
+
+// TestEntersTappedAsCopyEntersTapped verifies the "enter tapped as a copy" form
+// (Vesuva) overlays the chosen permanent's copiable values and also taps the
+// entering permanent once the copy choice is confirmed.
+func TestEntersTappedAsCopyEntersTapped(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Ancient Tomb",
+		Types: []types.Card{types.Land},
+	}})
+	vesuva := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Vesuva",
+		Types: []types.Card{types.Land},
+	}})
+
+	replacement := game.EntersTappedAsCopy(game.EntersAsCopyReplacement(
+		"You may have this land enter tapped as a copy of any land on the battlefield.",
+		&game.Selection{RequiredTypes: []types.Card{types.Land}},
+		true, false, nil, false, nil, nil,
+	))
+	applyEntersAsCopy(enterBattlefieldContext{}, g, vesuva, &replacement.Replacement)
+
+	if got := permanentEffectiveName(g, vesuva); got != "Ancient Tomb" {
+		t.Fatalf("effective name = %q, want Ancient Tomb", got)
+	}
+	if !vesuva.Tapped {
+		t.Fatal("enter-tapped-as-copy did not tap the entering permanent")
+	}
+}
+
+// TestEntersAsCopyWithoutTappedStaysUntapped verifies the plain enters-as-copy
+// replacement (Clone) leaves the entering permanent untapped, so the tapped
+// rider is scoped to the EntersTappedAsCopy form only.
+func TestEntersAsCopyWithoutTappedStaysUntapped(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Ancient Tomb",
+		Types: []types.Card{types.Land},
+	}})
+	clone := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Clone Land",
+		Types: []types.Card{types.Land},
+	}})
+
+	replacement := game.EntersAsCopyReplacement(
+		"You may have this land enter as a copy of any land on the battlefield.",
+		&game.Selection{RequiredTypes: []types.Card{types.Land}},
+		true, false, nil, false, nil, nil,
+	)
+	applyEntersAsCopy(enterBattlefieldContext{}, g, clone, &replacement.Replacement)
+
+	if got := permanentEffectiveName(g, clone); got != "Ancient Tomb" {
+		t.Fatalf("effective name = %q, want Ancient Tomb", got)
+	}
+	if clone.Tapped {
+		t.Fatal("plain enters-as-copy must not tap the entering permanent")
+	}
+}

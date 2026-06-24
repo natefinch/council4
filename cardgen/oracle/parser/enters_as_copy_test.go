@@ -152,11 +152,32 @@ func TestParseEntersAsCopyFailsClosed(t *testing.T) {
 	cases := []struct{ name, text string }{
 		{"Essence of the Wild", "Creatures you control enter as a copy of this creature."},
 		{"Body Double", "You may have this creature enter as a copy of any creature card in a graveyard."},
-		{"Vesuva", "You may have this land enter tapped as a copy of any land on the battlefield."},
 	}
 	for _, tc := range cases {
 		if hasEntersAsCopyEffect(t, tc.name, tc.text) {
 			t.Errorf("%s: expected enters-as-copy to fail closed", tc.name)
 		}
+	}
+}
+
+func TestParseEntersTappedAsCopy(t *testing.T) {
+	effect := entersAsCopyEffect(t, "Vesuva",
+		"You may have this land enter tapped as a copy of any land on the battlefield.")
+	if !effect.EntersAsCopyOptional {
+		t.Error("expected optional copy")
+	}
+	if !effect.EntersAsCopyTapped {
+		t.Error("expected enters-tapped rider")
+	}
+	if len(effect.Selection.RequiredTypesAny) != 1 || effect.Selection.RequiredTypesAny[0] != CardTypeLand {
+		t.Errorf("selection required types = %v, want [Land]", effect.Selection.RequiredTypesAny)
+	}
+}
+
+func TestParseEntersAsCopyNotTappedByDefault(t *testing.T) {
+	effect := entersAsCopyEffect(t, "Clone",
+		"You may have Clone enter the battlefield as a copy of any creature on the battlefield.")
+	if effect.EntersAsCopyTapped {
+		t.Error("plain enters-as-copy must not set the enters-tapped rider")
 	}
 }

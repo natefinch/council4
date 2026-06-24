@@ -471,6 +471,12 @@ type ReplacementEffect struct {
 	// EntersAsCopy is true.
 	EntersAsCopyAddKeywords []Keyword
 
+	// EntersAsCopyTapped taps the permanent as it enters the battlefield as its
+	// chosen copy (Vesuva's "enter tapped as a copy of any land"). It is only
+	// consulted when EntersAsCopy is true, and applies after the optional copy
+	// choice is confirmed so a declined copy enters untapped.
+	EntersAsCopyTapped bool
+
 	// DrawCardMultiplier replaces a single "draw a card" event by the controller
 	// with drawing this many cards instead (CR 614). It backs the draw-doubling
 	// replacement "If you would draw a card, draw two cards instead." A value of

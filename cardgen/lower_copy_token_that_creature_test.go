@@ -175,3 +175,58 @@ func TestGenerateExecutableCardSourceCopyTargetArtifactToken(t *testing.T) {
 		}
 	}
 }
+
+// TestGenerateExecutableCardSourceCopyTokenExceptKeywordRider covers the inline
+// copy-token "except <the token> has <keyword> and it isn't legendary" rider
+// (Irenicus's Vile Duplication). The keyword-grant rider verb must fold into the
+// copy create rather than stranding a separate keyword-grant effect, producing a
+// token copy that drops legendary and adds the granted keyword.
+func TestGenerateExecutableCardSourceCopyTokenExceptKeywordRider(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Irenicus's Vile Duplication",
+		Layout:     "normal",
+		ManaCost:   "{2}{U}",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a token that's a copy of target creature you control, except the token has flying and it isn't legendary.",
+		Colors:     []string{"U"},
+	}, "i")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Source: game.TokenCopyOf(game.TokenCopySpec{",
+		"SetNotLegendary: true,",
+		"[]game.Keyword{game.Flying}",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+// TestGenerateExecutableCardSourceCopyTokenExceptQuotedAbilityFailsClosed covers
+// a copy-token "except it has <keyword> and \"<quoted ability>\"" rider
+// (Electroduplicate, Heat Shimmer). The quoted granted ability cannot be
+// represented, so the card must fail closed rather than silently dropping the
+// ability and keeping only the keyword.
+func TestGenerateExecutableCardSourceCopyTokenExceptQuotedAbilityFailsClosed(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Electroduplicate",
+		Layout:     "normal",
+		ManaCost:   "{2}{R}",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a token that's a copy of target creature you control, except it has haste and \"At the beginning of the end step, sacrifice this token.\"",
+		Colors:     []string{"R"},
+	}, "e")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source != "" || len(diagnostics) == 0 {
+		t.Fatalf("want fail-closed (empty source, diagnostics); got source=%q diagnostics=%#v", source, diagnostics)
+	}
+}

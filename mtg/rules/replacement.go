@@ -800,6 +800,9 @@ func applyEntersAsCopy(ctx enterBattlefieldContext, g *game.Game, permanent *gam
 			addCountersToPermanent(g, permanent, placement.Kind, placement.Amount)
 		}
 	}
+	if replacement.EntersAsCopyTapped {
+		setPermanentTapped(g, permanent, true)
+	}
 }
 
 // copyableValuesFromDef snapshots a card definition's copiable characteristics
