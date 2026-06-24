@@ -158,6 +158,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	stripLifeForCommanderTaxEffectSemantics(document.Abilities)
 	emitCompanionAbility(document.Abilities)
 	emitPartnerWithAbility(document.Abilities)
+	emitChooseABackgroundAbility(document.Abilities)
 	emitSemanticAccessors(document.Abilities)
 	emitWardKeywordCost(document.Abilities)
 	stripImpulseExileSemantics(document.Abilities)

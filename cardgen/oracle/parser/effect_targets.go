@@ -2703,7 +2703,55 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 		staticGroupVerb(tokens[3]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledTokens, Span: shared.SpanOf(tokens[:3])}
 	default:
+		if subject := parseControlledPermanentSubtypeSubject(tokens, atoms); subject.Kind != EffectStaticSubjectNone {
+			return subject
+		}
 		return parseControlledCreatureSubtypeSubject(tokens, atoms)
+	}
+}
+
+// parseControlledPermanentSubtypeSubject recognizes a controlled-permanent group
+// named directly by a single non-creature permanent subtype noun ("Foods you
+// control have ...", "Other Clues you control have ..."). The subtype must
+// resolve to an artifact, enchantment, land, planeswalker, or battle subtype and
+// must not be a creature subtype, so the controlled-creature subtype productions
+// keep owning every creature-typed group noun. The leading "Other" maps to the
+// source-excluding subject kind. It returns the zero subject for any other shape.
+func parseControlledPermanentSubtypeSubject(tokens []shared.Token, atoms Atoms) EffectStaticSubjectSyntax {
+	permanentSubtype := func(index int) (types.Sub, bool) {
+		if index >= len(tokens) {
+			return "", false
+		}
+		value, ok := atoms.SubtypeAt(tokens[index].Span)
+		if !ok {
+			return "", false
+		}
+		if SubtypeMatchesAnyRuntimeCardType(value, []types.Card{types.Creature, types.Kindred}) {
+			return "", false
+		}
+		if !SubtypeMatchesAnyRuntimeCardType(value, []types.Card{types.Artifact, types.Enchantment, types.Land, types.Planeswalker, types.Battle}) {
+			return "", false
+		}
+		return value, true
+	}
+	switch {
+	case len(tokens) >= 5 && equalWord(tokens[0], "other") &&
+		effectWordsAt(tokens, 2, "you", "control") &&
+		(equalWord(tokens[4], "have") || equalWord(tokens[4], "get")):
+		value, ok := permanentSubtype(1)
+		if !ok {
+			return EffectStaticSubjectSyntax{}
+		}
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherControlledPermanentSubtype, Span: shared.SpanOf(tokens[:4]), Subtype: value, SubtypeText: tokens[1].Text, SubtypeKnown: true}
+	case len(tokens) >= 4 && effectWordsAt(tokens, 1, "you", "control") &&
+		(equalWord(tokens[3], "have") || equalWord(tokens[3], "get")):
+		value, ok := permanentSubtype(0)
+		if !ok {
+			return EffectStaticSubjectSyntax{}
+		}
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledPermanentSubtype, Span: shared.SpanOf(tokens[:3]), Subtype: value, SubtypeText: tokens[0].Text, SubtypeKnown: true}
+	default:
+		return EffectStaticSubjectSyntax{}
 	}
 }
 

@@ -2424,6 +2424,17 @@ const (
 	// regardless of card type. Downstream maps it onto a Selection that requires
 	// only that the permanent is a commander.
 	EffectStaticSubjectControlledCommanders EffectStaticSubjectKind = "EffectStaticSubjectControlledCommanders"
+
+	// EffectStaticSubjectControlledPermanentSubtype and its "other" sibling name
+	// the permanents you control whose subtype is a single non-creature permanent
+	// subtype used directly as the group noun ("Foods you control have ...",
+	// "Clues you control have ..."). They are the non-creature analogue of
+	// EffectStaticSubjectControlledCreatureSubtype: the named subtype rides the
+	// Subtype slot and downstream maps it onto a controlled-permanents Selection
+	// narrowed to that subtype. They are distinct from the creature-subtype
+	// kinds so the controlled-creature group productions stay creature-only.
+	EffectStaticSubjectControlledPermanentSubtype      EffectStaticSubjectKind = "EffectStaticSubjectControlledPermanentSubtype"
+	EffectStaticSubjectOtherControlledPermanentSubtype EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledPermanentSubtype"
 )
 
 // EffectStaticSubjectSyntax is a source-spanned typed static-effect subject.

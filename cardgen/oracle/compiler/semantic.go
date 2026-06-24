@@ -119,6 +119,11 @@ type CompiledAbility struct {
 	// "Partner with <name>" keyword ability (CR 702.124e). Its content is
 	// otherwise empty; lowering emits the inert partner-with static keyword.
 	PartnerWith bool
+	// ChooseABackground reports that the parser recognized this paragraph as a
+	// "Choose a Background" keyword ability (CR 702.124f). Its content is
+	// otherwise empty; lowering emits the inert choose-a-background static
+	// keyword.
+	ChooseABackground bool
 }
 
 // CompiledLevelBand is a leveler card's "LEVEL lo-hi" / "LEVEL lo+" band
@@ -1554,6 +1559,8 @@ const (
 	StaticSubjectControlledLands
 	StaticSubjectControlledCommanderCreatures
 	StaticSubjectControlledCommanders
+	StaticSubjectControlledPermanentSubtype
+	StaticSubjectOtherControlledPermanentSubtype
 )
 
 // CompiledEffect is one recognized instruction verb and the sentence containing
