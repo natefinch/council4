@@ -1833,6 +1833,12 @@ type EffectSyntax struct {
 	// its other types until end of turn.", Liquimetal Torque). The types are
 	// added to the target without removing its existing types.
 	BecomeTypeAddTypes []types.Card `json:",omitempty"`
+	// BecomeTypeAddColors lists the colors added by an EffectBecomeType targeted
+	// type-change that also adds colors ("Until end of turn, target creature you
+	// control becomes a blue artifact in addition to its other colors and types.",
+	// Unctus, Grand Metatect). The colors are added to the target without removing
+	// its existing colors. It is empty for the color-free form.
+	BecomeTypeAddColors []Color `json:",omitempty"`
 	// BecomeTypeUntilEndOfTurn reports the "until end of turn" duration on an
 	// EffectBecomeType targeted type-change. It is always set for the recognized
 	// Liquimetal form; a permanent form is not yet recognized.

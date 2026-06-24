@@ -1839,8 +1839,12 @@ type CompiledEffect struct {
 	// EffectBecomeType targeted type-change ("Target permanent becomes an
 	// artifact in addition to its other types until end of turn."). Lowering
 	// reads them to build the ApplyContinuous LayerType type addition and its
-	// duration.
+	// duration. BecomeTypeAddColors carries the colors added by the additive
+	// color-and-type form ("becomes a blue artifact in addition to its other
+	// colors and types"); it is empty for the color-free form and drives a
+	// LayerColor color addition during lowering.
 	BecomeTypeAddTypes       []types.Card
+	BecomeTypeAddColors      []color.Color
 	BecomeTypeUntilEndOfTurn bool
 	// Polymorph* mirror the parser's EffectPolymorph payload ("Until end of turn,
 	// target creature loses all abilities and becomes a <color> <subtype> with

@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -3290,16 +3291,23 @@ func lowerBecomeTypeContent(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 	if !ok {
 		return unsupported()
 	}
+	continuousEffects := []game.ContinuousEffect{{
+		Layer:    game.LayerType,
+		AddTypes: append([]types.Card(nil), effect.BecomeTypeAddTypes...),
+	}}
+	if len(effect.BecomeTypeAddColors) != 0 {
+		continuousEffects = append(continuousEffects, game.ContinuousEffect{
+			Layer:     game.LayerColor,
+			AddColors: append([]color.Color(nil), effect.BecomeTypeAddColors...),
+		})
+	}
 	return game.Mode{
 		Targets: []game.TargetSpec{targetSpec},
 		Sequence: []game.Instruction{{
 			Primitive: game.ApplyContinuous{
-				Object: opt.Val(game.TargetPermanentReference(0)),
-				ContinuousEffects: []game.ContinuousEffect{{
-					Layer:    game.LayerType,
-					AddTypes: append([]types.Card(nil), effect.BecomeTypeAddTypes...),
-				}},
-				Duration: game.DurationUntilEndOfTurn,
+				Object:            opt.Val(game.TargetPermanentReference(0)),
+				ContinuousEffects: continuousEffects,
+				Duration:          game.DurationUntilEndOfTurn,
 			},
 		}},
 	}.Ability(), nil
