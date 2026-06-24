@@ -208,8 +208,9 @@ func counterConditionalMultiplierManaContent(ability compiler.CompiledAbility) (
 // runtime content. The base production may be any typed mana body the backend can
 // lower (a fixed color, a choice, or a lands-produce choice); the counter rider
 // multiplies whatever single mana it produces. It fails closed on a negated,
-// optional, delayed, lasting, targeted, referenced, paid, instead, or
-// non-unit-amount add-mana effect.
+// optional, delayed, lasting, targeted, referenced, paid, replacement, or
+// non-unit-amount add-mana effect — including one that itself carries an
+// "instead" replacement, which only the rider may.
 func baseSingleManaProductionContent(effect compiler.CompiledEffect) (game.AbilityContent, bool) {
 	if effect.Kind != compiler.EffectAddMana ||
 		effect.Negated ||
@@ -220,6 +221,7 @@ func baseSingleManaProductionContent(effect compiler.CompiledEffect) (game.Abili
 		effect.Payment.Form != parser.EffectPaymentFormUnknown ||
 		effect.HasUnrecognizedSibling ||
 		effect.Mana.Instead ||
+		effect.Replacement.Kind != parser.EffectReplacementNone ||
 		len(effect.Targets) != 0 ||
 		len(effect.References) != 0 {
 		return game.AbilityContent{}, false
@@ -236,9 +238,13 @@ func baseSingleManaProductionContent(effect compiler.CompiledEffect) (game.Abili
 // manaTypeMultiplierRiderAmount reports the multiplied amount of a counter rider
 // "add <n> mana of that type instead" — an add-mana effect to the controller
 // whose mana body is the empty same-type backref (no symbols, colors, choice, or
-// typed production of its own) and whose fixed amount is two or more. The empty
-// body marks it as multiplying the base production's chosen type rather than
-// adding a distinct one. It fails closed on any other add-mana shape.
+// typed production of its own), that carries the "instead" replacement marker,
+// and whose fixed amount is two or more. The empty body marks it as multiplying
+// the base production's chosen type rather than adding a distinct one, and the
+// "instead" marker confirms the rider replaces the base production rather than
+// stacking with it (so the mutually exclusive gating is well-defined). It fails
+// closed on any other add-mana shape, including an additive "add <n> mana of that
+// type" with no "instead".
 func manaTypeMultiplierRiderAmount(effect compiler.CompiledEffect) (int, bool) {
 	if effect.Kind != compiler.EffectAddMana ||
 		effect.Negated ||
@@ -249,6 +255,7 @@ func manaTypeMultiplierRiderAmount(effect compiler.CompiledEffect) (int, bool) {
 			effect.Context != parser.EffectContextPriorSubject) ||
 		effect.Payment.Form != parser.EffectPaymentFormUnknown ||
 		effect.HasUnrecognizedSibling ||
+		effect.Replacement.Kind != parser.EffectReplacementInstead ||
 		len(effect.Targets) != 0 ||
 		len(effect.References) != 0 {
 		return 0, false

@@ -205,3 +205,24 @@ func TestCounterMultiplierManaFailsClosedOnNonSelfCondition(t *testing.T) {
 		t.Fatalf("mana abilities = %d, want 0 (fail closed)", len(face.ManaAbilities))
 	}
 }
+
+// TestCounterMultiplierManaFailsClosedWithoutInstead proves the multiplier
+// requires the rider to genuinely replace the base production: an additive
+// "add three mana of that type" rider (no "instead") would, if mistaken for a
+// replacement, be gated mutually exclusively and wrongly drop the base mana, so
+// it fails closed rather than producing a partial mana ability.
+func TestCounterMultiplierManaFailsClosedWithoutInstead(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+		Name:      "Test Additive Druid",
+		Layout:    "normal",
+		TypeLine:  "Creature — Elf Druid",
+		Power:     new("0"),
+		Toughness: new("2"),
+		OracleText: "{T}: Add one mana of any type that a land you control could produce. " +
+			"If this creature has a +1/+1 counter on it, add three mana of that type.",
+	})
+	if len(face.ManaAbilities) != 0 {
+		t.Fatalf("mana abilities = %d, want 0 (fail closed)", len(face.ManaAbilities))
+	}
+}
