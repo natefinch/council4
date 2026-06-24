@@ -48,6 +48,8 @@ func TestRuleEffectKindValid(t *testing.T) {
 		RuleEffectDrawLimitPerTurn,
 		RuleEffectCastLimitPerTurn,
 		RuleEffectAdditionalTriggerForControlledPermanent,
+		RuleEffectMustBeBlockedByAllAble,
+		RuleEffectAssignCombatDamageAsThoughUnblocked,
 	}
 	for _, kind := range valid {
 		if !kind.Valid() {
@@ -58,7 +60,7 @@ func TestRuleEffectKindValid(t *testing.T) {
 	invalid := []RuleEffectKind{
 		RuleEffectNone,
 		-1,
-		RuleEffectAdditionalTriggerForControlledPermanent + 1,
+		RuleEffectAssignCombatDamageAsThoughUnblocked + 1,
 		RuleEffectKind(1 << 20),
 	}
 	for _, kind := range invalid {
@@ -77,7 +79,7 @@ func TestValidateApplyRulePlayFromZone(t *testing.T) {
 	}
 
 	for name, kind := range map[string]RuleEffectKind{
-		"future":       RuleEffectAdditionalTriggerForControlledPermanent + 1,
+		"future":       RuleEffectAssignCombatDamageAsThoughUnblocked + 1,
 		"out of range": RuleEffectKind(1 << 20),
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -101,7 +103,7 @@ func TestValidateCardDefPlayFromZone(t *testing.T) {
 	}
 
 	for name, kind := range map[string]RuleEffectKind{
-		"future":       RuleEffectAdditionalTriggerForControlledPermanent + 1,
+		"future":       RuleEffectAssignCombatDamageAsThoughUnblocked + 1,
 		"out of range": RuleEffectKind(1 << 20),
 	} {
 		t.Run(name, func(t *testing.T) {

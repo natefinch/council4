@@ -661,6 +661,32 @@ func ruleEffectRequiresBeingBlocked(g *game.Game, attacker *game.Permanent) bool
 	return false
 }
 
+// ruleEffectRequiresBeingBlockedByAllAble reports whether attacker carries a
+// true-lure requirement (every creature able to block it must do so, CR 509.1c).
+func ruleEffectRequiresBeingBlockedByAllAble(g *game.Game, attacker *game.Permanent) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind == game.RuleEffectMustBeBlockedByAllAble && ruleEffectMatchesPermanent(g, effect, attacker) {
+			return true
+		}
+	}
+	return false
+}
+
+// ruleEffectAssignsCombatDamageAsThoughUnblocked reports whether attacker may
+// assign its combat damage to its attack target as though it weren't blocked.
+func ruleEffectAssignsCombatDamageAsThoughUnblocked(g *game.Game, attacker *game.Permanent) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind == game.RuleEffectAssignCombatDamageAsThoughUnblocked && ruleEffectMatchesPermanent(g, effect, attacker) {
+			return true
+		}
+	}
+	return false
+}
+
 func ruleEffectLimitsBlockersToOne(g *game.Game, attacker *game.Permanent) bool {
 	effects := activeRuleEffects(g)
 	for i := range effects {

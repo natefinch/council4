@@ -332,6 +332,24 @@ const (
 	// control", not "another"). An empty AffectedSelection matches any controlled
 	// permanent.
 	RuleEffectAdditionalTriggerForControlledPermanent
+	// RuleEffectMustBeBlockedByAllAble is the true-lure requirement: every
+	// creature able to block the affected attacker must do so ("All creatures
+	// able to block this creature do so.", Taunting Elf; "All creatures able to
+	// block enchanted creature do so.", Lure; "... equipped creature ...",
+	// Nemesis Mask). Unlike RuleEffectMustBeBlocked, which only forces at least
+	// one blocker, this forces every able blocker onto the attacker (CR 509.1c).
+	// AffectedSource scopes it to the source creature; AffectedAttached scopes it
+	// to the creature an Aura or Equipment is attached to.
+	RuleEffectMustBeBlockedByAllAble
+	// RuleEffectAssignCombatDamageAsThoughUnblocked lets the affected attacker
+	// assign its combat damage to the player, planeswalker, or battle it is
+	// attacking as though it weren't blocked ("You may have this creature assign
+	// its combat damage as though it weren't blocked.", Lone Wolf, Thorn
+	// Elemental, Rhox). While blocked, the attacker still takes its blockers'
+	// damage, but it deals its own combat damage to its attack target rather than
+	// to the blockers. AffectedSource scopes it to the source creature;
+	// AffectedAttached scopes it to the attached creature.
+	RuleEffectAssignCombatDamageAsThoughUnblocked
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -373,7 +391,9 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectPayLifeForCommanderTax,
 		RuleEffectDrawLimitPerTurn,
 		RuleEffectCastLimitPerTurn,
-		RuleEffectAdditionalTriggerForControlledPermanent:
+		RuleEffectAdditionalTriggerForControlledPermanent,
+		RuleEffectMustBeBlockedByAllAble,
+		RuleEffectAssignCombatDamageAsThoughUnblocked:
 		return true
 	default:
 		return false

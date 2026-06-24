@@ -1268,6 +1268,13 @@ const (
 	EffectMustAttack
 	EffectDirectedMustAttack
 	EffectMustBeBlocked
+	// EffectMustBeBlockedByAllAble is the true-lure requirement ("All creatures
+	// able to block this creature do so.").
+	EffectMustBeBlockedByAllAble
+	// EffectAssignDamageAsUnblocked is the permission to assign combat damage as
+	// though unblocked ("You may have this creature assign its combat damage as
+	// though it weren't blocked.").
+	EffectAssignDamageAsUnblocked
 	EffectPut
 	EffectProliferate
 	EffectRegenerate

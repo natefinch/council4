@@ -764,6 +764,10 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectMustAttack", nil
 	case game.RuleEffectMustBeBlocked:
 		return "game.RuleEffectMustBeBlocked", nil
+	case game.RuleEffectMustBeBlockedByAllAble:
+		return "game.RuleEffectMustBeBlockedByAllAble", nil
+	case game.RuleEffectAssignCombatDamageAsThoughUnblocked:
+		return "game.RuleEffectAssignCombatDamageAsThoughUnblocked", nil
 	case game.RuleEffectDoesntUntap:
 		return "game.RuleEffectDoesntUntap", nil
 	case game.RuleEffectCostModifier:
