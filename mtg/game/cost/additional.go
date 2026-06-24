@@ -104,6 +104,12 @@ type Additional struct {
 	MatchCardType bool
 	CardType      types.Card
 
+	// MatchHistoric constrains card costs (and battlefield permanent costs) to
+	// historic objects, i.e. artifacts, legendaries, or Sagas (CR 702.61b), as
+	// required by "exile any number of historic cards from your graveyard." It
+	// is independent of MatchCardType.
+	MatchHistoric bool
+
 	// MatchCardColor constrains card costs to cards with the listed color, and
 	// battlefield permanent costs (such as "sacrifice a black creature") to
 	// permanents with the listed color.
@@ -148,6 +154,14 @@ type Additional struct {
 	// payer taps enough matching permanents to reach the threshold; Amount is
 	// ignored when this is set.
 	TotalPowerAtLeast int
+
+	// TotalManaValueAtLeast, when positive, changes an AdditionalExile cost from
+	// a fixed count to "exile any number of matching cards with total mana value
+	// N or greater" (The Capitoline Triad). The payer exiles enough matching
+	// cards from the cost's Source zone for their mana values to total at least
+	// N; Amount is ignored when this is set. It generalizes the collect-evidence
+	// payment to arbitrary card filters such as MatchHistoric.
+	TotalManaValueAtLeast int
 
 	// ChoiceGroup tags this cost as one alternative within a numbered choice
 	// group printed as "<cost> or <cost>" (e.g. "sacrifice an artifact or

@@ -60,6 +60,49 @@ func TestAdditionalCostMatchesAnyCardSubtype(t *testing.T) {
 	}
 }
 
+func TestAdditionalCostMatchesCardHistoric(t *testing.T) {
+	additional := cost.Additional{Kind: cost.AdditionalExile, MatchHistoric: true}
+	tests := []struct {
+		name string
+		card *game.CardDef
+		want bool
+	}{
+		{
+			name: "artifact is historic",
+			card: &game.CardDef{CardFace: game.CardFace{Types: []types.Card{types.Artifact}}},
+			want: true,
+		},
+		{
+			name: "legendary is historic",
+			card: &game.CardDef{CardFace: game.CardFace{
+				Supertypes: []types.Super{types.Legendary},
+				Types:      []types.Card{types.Creature},
+			}},
+			want: true,
+		},
+		{
+			name: "saga is historic",
+			card: &game.CardDef{CardFace: game.CardFace{
+				Types:    []types.Card{types.Enchantment},
+				Subtypes: []types.Sub{types.Saga},
+			}},
+			want: true,
+		},
+		{
+			name: "plain creature is not historic",
+			card: &game.CardDef{CardFace: game.CardFace{Types: []types.Card{types.Creature}}},
+			want: false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := additionalCostMatchesCard(test.card, additional); got != test.want {
+				t.Fatalf("additionalCostMatchesCard(%s) = %v, want %v", test.name, got, test.want)
+			}
+		})
+	}
+}
+
 func TestAdditionalCostMatchesAnyPermanentSubtype(t *testing.T) {
 	additional := cost.Additional{
 		Kind:        cost.AdditionalSacrifice,
