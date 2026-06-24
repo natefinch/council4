@@ -137,6 +137,46 @@ func TestGenerateExecutableCardSourceCantBeBlockedThisTurnUpToOne(t *testing.T) 
 	}
 }
 
+// TestGenerateExecutableCardSourceCantBeBlockedThisTurnSourceAndTarget covers the
+// compound "<source> and up to one other target creature can't be blocked this
+// turn." subject (Martha Jones), lowering to two ApplyRule instructions: the
+// source permanent and the up-to-one chosen target, with the "other" qualifier
+// excluding the source from being chosen twice.
+func TestGenerateExecutableCardSourceCantBeBlockedThisTurnSourceAndTarget(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Martha Jones",
+		Layout:     "normal",
+		ManaCost:   "{2}{U}",
+		TypeLine:   "Legendary Creature — Human Cleric",
+		Colors:     []string{"U"},
+		Power:      new("2"),
+		Toughness:  new("3"),
+		OracleText: "Whenever you sacrifice a Clue, Martha Jones and up to one other target creature can't be blocked this turn.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "m")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"TriggeredAbilities:",
+		"MinTargets: 0,",
+		"MaxTargets: 1,",
+		"Another:        true,",
+		"Object: opt.Val(game.SourcePermanentReference()),",
+		"Object: opt.Val(game.TargetPermanentReference(0)),",
+		"Kind: game.RuleEffectCantBeBlocked,",
+		"Duration: game.DurationThisTurn,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceCantBeBlockedThisTurnFailsClosed(t *testing.T) {
 	t.Parallel()
 	// Each wording deviates from the exact "Target creature can't be blocked this

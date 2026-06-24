@@ -9,5 +9,6 @@ var Cards = []*game.CardDef{
 	GigglingSkitterspike,
 	GimliSRecklessMight,
 	GravenCairns,
+	GreaterTanuki,
 	GuardianProject,
 }
