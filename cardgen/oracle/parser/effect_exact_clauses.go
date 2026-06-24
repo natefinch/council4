@@ -1613,12 +1613,12 @@ func exactMassEffectSyntax(effect *EffectSyntax, prefix string) bool {
 	}
 	phrase := text[len(prefix) : len(text)-1]
 	if base, ok := massChosenTypeBasePhrase(&effect.Selection, phrase); ok {
-		return exactMassGroupPhrase(base)
+		return exactMassGroupPhrase(&effect.Selection, base)
 	}
 	if base, ok := massCounterBasePhrase(&effect.Selection, phrase); ok {
-		return exactMassGroupPhrase(base) || exactMassSubtypePhrase(&effect.Selection, base)
+		return exactMassGroupPhrase(&effect.Selection, base) || exactMassSubtypePhrase(&effect.Selection, base)
 	}
-	return exactMassGroupPhrase(phrase) || exactMassSubtypePhrase(&effect.Selection, phrase)
+	return exactMassGroupPhrase(&effect.Selection, phrase) || exactMassSubtypePhrase(&effect.Selection, phrase)
 }
 
 // massChosenTypeBasePhrase strips a trailing chosen-type qualifier ("of the
@@ -1751,18 +1751,30 @@ func exactMassEachEffectSyntax(effect *EffectSyntax, prefix string) bool {
 	}
 	phrase := text[len(prefix) : len(text)-1]
 	if base, ok := massCounterBasePhrase(&effect.Selection, phrase); ok {
-		return exactMassEachGroupPhrase(base)
+		return exactMassEachGroupPhrase(&effect.Selection, base)
 	}
-	return exactMassEachGroupPhrase(phrase)
+	return exactMassEachGroupPhrase(&effect.Selection, phrase)
 }
 
-// exactMassEachGroupPhrase validates the singular group phrase that follows
-// "Destroy each ". It mirrors exactMassGroupPhrase's excluded-type/color
+// exactMassEachGroupPhrase validates the singular "each" mass group phrase both
+// as text shape and against the typed selection: massEachGroupPhraseTextShape
+// recognizes the canonical wording, and selectionPhraseVerifiesMassGroup proves
+// the typed SelectionSyntax renders to that same singular phrase (closing the
+// soundness gap where text shape alone could accept a divergent selection).
+func exactMassEachGroupPhrase(selection *SelectionSyntax, phrase string) bool {
+	if !massEachGroupPhraseTextShape(phrase) {
+		return false
+	}
+	return selectionPhraseVerifiesMassGroup(selection, phrase, numberSingular)
+}
+
+// massEachGroupPhraseTextShape validates the singular group phrase that follows
+// "Destroy each ". It mirrors massGroupPhraseTextShape's excluded-type/color
 // prefixes, base nouns, and numeric comparison clauses, but in the singular
 // ("nonland permanent with mana value 2 or less" rather than the plural
 // "nonland permanents ..."), so an "each" mass clause round-trips to the same
 // group selection the plural form lowers.
-func exactMassEachGroupPhrase(phrase string) bool {
+func massEachGroupPhraseTextShape(phrase string) bool {
 	if phrase == "" || strings.TrimSpace(phrase) != phrase {
 		return false
 	}
@@ -1888,7 +1900,7 @@ func exactMassBounceEffectSyntax(effect *EffectSyntax) bool {
 	}
 	for _, suffix := range []string{" to their owners' hands.", " to their owner's hand."} {
 		if remainder, ok := strings.CutSuffix(text, suffix); ok {
-			return exactMassGroupPhrase(remainder[len(prefix):])
+			return exactMassGroupPhrase(&effect.Selection, remainder[len(prefix):])
 		}
 	}
 	return false
@@ -1918,14 +1930,41 @@ func exactMassEachBounceEffectSyntax(effect *EffectSyntax) bool {
 		}
 		phrase := remainder[len(prefix):]
 		if base, ok := massCounterBasePhrase(&effect.Selection, phrase); ok {
-			return exactMassEachGroupPhrase(base)
+			return exactMassEachGroupPhrase(&effect.Selection, base)
 		}
-		return exactMassEachGroupPhrase(phrase)
+		return exactMassEachGroupPhrase(&effect.Selection, phrase)
 	}
 	return false
 }
 
-func exactMassGroupPhrase(phrase string) bool {
+// exactMassGroupPhrase validates the plural "all" mass group phrase both as text
+// shape and against the typed selection: massGroupPhraseTextShape recognizes the
+// canonical wording, and selectionPhraseVerifiesMassGroup proves the typed
+// SelectionSyntax renders to that same plural phrase (closing the soundness gap
+// where text shape alone could accept a divergent selection).
+func exactMassGroupPhrase(selection *SelectionSyntax, phrase string) bool {
+	if !massGroupPhraseTextShape(phrase) {
+		return false
+	}
+	return selectionPhraseVerifiesMassGroup(selection, phrase, numberPlural)
+}
+
+// selectionPhraseVerifiesMassGroup confirms the typed selection renders to the
+// validated mass group phrase through the canonical selectionPhrase renderer.
+// When selectionPhrase reports it cannot represent the selection's noun-phrase
+// shape (ok=false) — for the subtype-noun and keyword group forms still owned by
+// their dedicated validators — the text-shape validation stands alone, so this
+// verification narrows nothing it does not yet model while making every shape it
+// does model fail closed on a selection that disagrees with the source text.
+func selectionPhraseVerifiesMassGroup(selection *SelectionSyntax, phrase string, number grammaticalNumber) bool {
+	rendered, ok := selectionPhrase(*selection, selectionPhraseOptions{Number: number})
+	if !ok {
+		return true
+	}
+	return strings.EqualFold(rendered, phrase)
+}
+
+func massGroupPhraseTextShape(phrase string) bool {
 	if phrase == "" || strings.TrimSpace(phrase) != phrase {
 		return false
 	}
