@@ -263,7 +263,7 @@ func emitSentenceResolvingSyntax(
 			spanInsideTriggerFrequency(sentences[i].Span, triggerFrequency) {
 			continue
 		}
-		tokens := stripLeadingConditionClause(semanticEffectTokens(sentences[i].Tokens))
+		tokens := stripLeadingConditionClause(semanticEffectTokens(sentences[i].Tokens), atoms)
 		count := legacyEffectCount(tokens, atoms)
 		legacyEffects += count
 		sentences[i].LegacyEffects = count > 0
@@ -970,20 +970,31 @@ func referencesOutsideAttackDefender(refs []Reference, hasDefender bool, defende
 // a leading "As long as <condition>, ..." gate (the Ascension cycle's "As long
 // as ~ has seven or more quest counters on it, creatures you control get +X/+X",
 // and the Incarnation cycle's graveyard zone-of-function condition) would
-// otherwise prevent the group subject from being recognized at token zero. The
-// condition clause itself is recognized separately, so removing it here only
-// affects subject recognition.
-func stripLeadingConditionClause(tokens []shared.Token) []shared.Token {
+// otherwise prevent the group subject from being recognized at token zero. A
+// leading "If <source> has [a <kind>] counter[s] on it, ..." gate is likewise
+// dropped: it is the counter-conditional mana multiplier rider's condition
+// (Incubation Druid's "If this creature has a +1/+1 counter on it, add three
+// mana of that type instead."), whose "has" verb would otherwise seed a spurious
+// keyword-grant effect from the gate. The condition clause itself is recognized
+// separately, so removing it here only affects subject and effect-verb
+// recognition of the gated body.
+func stripLeadingConditionClause(tokens []shared.Token, atoms Atoms) []shared.Token {
 	if len(tokens) == 0 {
 		return tokens
 	}
-	intro, _ := conditionIntroAt(tokens, 0)
-	if intro != ConditionIntroAsLongAs {
+	intro, introWidth := conditionIntroAt(tokens, 0)
+	end := conditionClauseEnd(tokens, 0)
+	if end >= len(tokens) || tokens[end].Kind != shared.Comma {
 		return tokens
 	}
-	end := conditionClauseEnd(tokens, 0)
-	if end < len(tokens) && tokens[end].Kind == shared.Comma {
+	switch intro {
+	case ConditionIntroAsLongAs:
 		return tokens[end+1:]
+	case ConditionIntroIf:
+		if _, ok := recognizeSourceCounterStateCondition(tokens[introWidth:end], atoms); ok {
+			return tokens[end+1:]
+		}
+	default:
 	}
 	return tokens
 }
@@ -1096,7 +1107,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		if ambiguousZoneChoice(ownership, atoms, span) {
 			toZone = zone.None
 		}
-		subjectTokens := stripLeadingConditionClause(ownership)
+		subjectTokens := stripLeadingConditionClause(ownership, atoms)
 		subjectTokens, _ = stripLeadingDurationClause(subjectTokens, atoms)
 		staticSubject := parseEffectStaticSubject(subjectTokens, atoms)
 		payment := parseEffectPayment(tokens, atoms)
