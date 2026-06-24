@@ -84,9 +84,9 @@ func activationEffectValue(obs rules.PlayerObservation, targets []game.Target, a
 				targetingScored = true
 			}
 		case eval.EffectCardsDrawn:
-			value += controllerValue(atom, scoreCardValue, dynamicEstimate)
+			value += controllerValue(atom, scoreCardValue, dynamicEstimate) * personality.cardValueScale()
 		case eval.EffectCardsLost:
-			value -= controllerValue(atom, scoreCardValue, dynamicEstimate)
+			value -= controllerValue(atom, scoreCardValue, dynamicEstimate) * personality.cardValueScale()
 		case eval.EffectLifeGained:
 			value += controllerValue(atom, scoreLifeValue, dynamicEstimate)
 		case eval.EffectLifeLost:
@@ -94,7 +94,7 @@ func activationEffectValue(obs rules.PlayerObservation, targets []game.Target, a
 		case eval.EffectManaAdded:
 			value += atomMagnitude(atom, dynamicEstimate) * scoreManaValue
 		case eval.EffectTokenCreated:
-			value += atomMagnitude(atom, dynamicEstimate) * scoreTokenValue
+			value += atomMagnitude(atom, dynamicEstimate) * scoreTokenValue * personality.boardValueScale()
 		case eval.EffectCardTutored:
 			value += atomMagnitude(atom, dynamicEstimate) * scoreTutorValue
 		case eval.EffectCounterAdded:

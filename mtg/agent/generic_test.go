@@ -211,6 +211,51 @@ func drawXArtifact(name string) *game.CardDef {
 	}}
 }
 
+func tokenArtifact(name string) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  name,
+		Types: []types.Card{types.Artifact},
+		ActivatedAbilities: []game.ActivatedAbility{{
+			Content: game.Mode{Sequence: []game.Instruction{{
+				Primitive: game.CreateToken{Amount: game.Fixed(1)},
+			}}}.Ability(),
+		}},
+	}}
+}
+
+func drawArtifact(name string) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  name,
+		Types: []types.Card{types.Artifact},
+		ActivatedAbilities: []game.ActivatedAbility{{
+			Content: game.Mode{Sequence: []game.Instruction{{
+				Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()},
+			}}}.Ability(),
+		}},
+	}}
+}
+
+func TestPersonalityWeightsBoardAndCardValue(t *testing.T) {
+	aggressive := GenericStrategy{Personality: Personality{Aggression: 2}}
+	neutral := GenericStrategy{}
+
+	tokenGame := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	token := addObservedPermanent(tokenGame, game.Player1, tokenArtifact("Factory"))
+	tokenObs := rules.NewObservation(tokenGame, game.Player1)
+	tokenAct := action.ActivateAbility(token.ObjectID, 0, nil, 0)
+	if aggressive.ScoreAction(tokenObs, tokenAct) <= neutral.ScoreAction(tokenObs, tokenAct) {
+		t.Fatal("aggressive personality should value a token ability above neutral")
+	}
+
+	drawGame := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	draw := addObservedPermanent(drawGame, game.Player1, drawArtifact("Lens"))
+	drawObs := rules.NewObservation(drawGame, game.Player1)
+	drawAct := action.ActivateAbility(draw.ObjectID, 0, nil, 0)
+	if aggressive.ScoreAction(drawObs, drawAct) >= neutral.ScoreAction(drawObs, drawAct) {
+		t.Fatal("aggressive personality should value a draw ability below neutral")
+	}
+}
+
 func TestGenericStrategyScoresModalAbilityByChosenMode(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	artifact := addObservedPermanent(g, game.Player1, modalDrawOrLoseLifeArtifact("Oracle"))
