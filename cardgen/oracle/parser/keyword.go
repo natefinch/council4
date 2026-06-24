@@ -151,6 +151,12 @@ const (
 	// on opponent life loss and the speed cap of 4 are built-in rules keyed off
 	// the player's speed.
 	KeywordStartEngines KeywordKind = "KeywordStartEngines"
+	// KeywordFuse is the Fuse keyword (CR 702.102), printed on both halves of a
+	// fuse split card: "You may cast one or both halves of this card from your
+	// hand." It is a static ability of the card in any zone granting the
+	// alternative permission to cast both halves as a single fused split spell.
+	// It is appended at the end so the existing keyword block stays aligned.
+	KeywordFuse KeywordKind = "KeywordFuse"
 )
 
 var keywordNames = map[KeywordKind]string{
@@ -251,6 +257,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordRebound:          "Rebound",
 	KeywordSpectacle:        "Spectacle",
 	KeywordStartEngines:     "Start your engines!",
+	KeywordFuse:             "Fuse",
 }
 
 // String returns the parser-owned canonical keyword name.
@@ -378,6 +385,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordDesertwalk, Words: []string{"desertwalk"}},
 	{Kind: KeywordSpectacle, Words: []string{"spectacle"}},
 	{Kind: KeywordStartEngines, Words: []string{"start", "your", "engines"}},
+	{Kind: KeywordFuse, Words: []string{"fuse"}},
 }
 
 // KeywordParameterKind identifies the grammar used by a keyword parameter.

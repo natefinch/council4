@@ -760,6 +760,8 @@ func renderKeyword(kw game.Keyword) (string, error) {
 		return "game.FirstStrike", nil
 	case game.Flash:
 		return "game.Flash", nil
+	case game.Fuse:
+		return "game.Fuse", nil
 	case game.Flying:
 		return "game.Flying", nil
 	case game.Haste:
