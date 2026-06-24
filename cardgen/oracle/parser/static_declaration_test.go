@@ -630,6 +630,44 @@ func TestParseStaticQuotedAbilityGrantOnlyMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticQuotedAbilityGrantEnchantedLandSubjectMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		`Enchanted land has "{T}, Discard a card: Gain control of target creature until end of turn."`,
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	grant := declarations[0]
+	if grant.Kind != StaticDeclarationContinuousQuotedAbilityGrant ||
+		grant.Subject.Kind != StaticDeclarationSubjectGroup ||
+		grant.Subject.Group.Kind != EffectStaticSubjectAttachedObject ||
+		grant.GrantedAbility == nil {
+		t.Fatalf("declaration = %#v, want attached-object quoted ability grant", grant)
+	}
+}
+
+func TestParseStaticQuotedAbilityGrantEnchantedPermanentSubjectMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		`Enchanted permanent has "{T}: Add {C}."`,
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	grant := declarations[0]
+	if grant.Kind != StaticDeclarationContinuousQuotedAbilityGrant ||
+		grant.Subject.Kind != StaticDeclarationSubjectGroup ||
+		grant.Subject.Group.Kind != EffectStaticSubjectAttachedObject ||
+		grant.GrantedAbility == nil {
+		t.Fatalf("declaration = %#v, want attached-object quoted ability grant", grant)
+	}
+}
+
 func TestParseStaticQuotedAbilityGrantAnyCounterGroupFilterMeaning(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(
