@@ -101,6 +101,9 @@ func lowerManaAbility(
 	if stripped, gated, ok := tronConditionalManaContent(ability); ok {
 		loweredAbility = stripped
 		gatedContent = opt.Val(gated)
+	} else if stripped, gated, ok := counterConditionalMultiplierManaContent(ability); ok {
+		loweredAbility = stripped
+		gatedContent = opt.Val(gated)
 	}
 	shell, diagnostic := lowerActivationShell(cardName, loweredAbility, syntax)
 	if diagnostic != nil {

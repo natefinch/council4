@@ -1199,10 +1199,13 @@ func recognizeSourceCounterStateCondition(body []shared.Token, atoms Atoms) (Con
 	}, true
 }
 
-// sourceCounterCountSelection recognizes the named-counter-count threshold state
-// "has <n> or more <kind> counters on it" ("As long as ~ has seven or more quest
-// counters on it, ...", the Ascension cycle). It returns a Selection carrying the
-// counter kind and minimum count.
+// sourceCounterCountSelection recognizes a kind-specific source counter-state
+// body. It accepts the named-counter-count threshold "has <n> or more <kind>
+// counters on it" ("As long as ~ has seven or more quest counters on it, ...",
+// the Ascension cycle) and the singular kind-specific presence "has a <kind>
+// counter on it" ("If this creature has a +1/+1 counter on it, ...", Incubation
+// Druid), which means one or more counters of that kind. It returns a Selection
+// carrying the counter kind and minimum count.
 func sourceCounterCountSelection(rest []shared.Token, atoms Atoms) (ConditionSelection, bool) {
 	after, ok := cutTokenPrefix(rest, "has")
 	if !ok {
@@ -1212,11 +1215,8 @@ func sourceCounterCountSelection(rest []shared.Token, atoms Atoms) (ConditionSel
 	if !ok {
 		return ConditionSelection{}, false
 	}
-	if !tokenSuffixWord(after, "counters") {
-		return ConditionSelection{}, false
-	}
-	count, _, ok := parseLeadingCount(after)
-	if !ok || count.Comparison != ConditionComparisonAtLeast {
+	atLeast, ok := sourceCounterThreshold(after)
+	if !ok {
 		return ConditionSelection{}, false
 	}
 	kind, _, ok := atoms.CounterIn(shared.SpanOf(after))
@@ -1226,8 +1226,28 @@ func sourceCounterCountSelection(rest []shared.Token, atoms Atoms) (ConditionSel
 	return ConditionSelection{
 		CounterKind:         kind,
 		CounterKindKnown:    true,
-		CounterCountAtLeast: count.Value,
+		CounterCountAtLeast: atLeast,
 	}, true
+}
+
+// sourceCounterThreshold reads the minimum count of a kind-specific source
+// counter-state body whose tokens follow "has" and precede "on it". It accepts
+// the plural threshold "<n> or more <kind> counters" (n or more of that kind)
+// and the singular presence "a <kind> counter" (one or more of that kind). It
+// fails closed on any other shape.
+func sourceCounterThreshold(after []shared.Token) (int, bool) {
+	if tokenSuffixWord(after, "counters") {
+		count, _, ok := parseLeadingCount(after)
+		if !ok || count.Comparison != ConditionComparisonAtLeast {
+			return 0, false
+		}
+		return count.Value, true
+	}
+	if tokenSuffixWord(after, "counter") &&
+		startsWithWord(after, "a", "an") {
+		return 1, true
+	}
+	return 0, false
 }
 
 // cutSourceSubjectTokens consumes a leading source self-subject — the card's own
