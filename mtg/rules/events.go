@@ -274,6 +274,75 @@ func emitTargetEvents(g *game.Game, obj *game.StackObject) {
 		}
 		emitEvent(g, event)
 	}
+	emitCrimeEvent(g, obj)
+}
+
+// emitCrimeEvent emits an EventCrimeCommitted when putting obj on the stack
+// constitutes committing a crime (CR 700.15). A crime is committed once per
+// spell or ability put on the stack, regardless of how many qualifying targets
+// it has, so this fires at most one event per push.
+func emitCrimeEvent(g *game.Game, obj *game.StackObject) {
+	if !committedCrime(g, obj) {
+		return
+	}
+	sourceID, sourceObjectID := damageSourceIDs(g, obj)
+	emitEvent(g, game.Event{
+		Kind:           game.EventCrimeCommitted,
+		SourceID:       sourceID,
+		SourceObjectID: sourceObjectID,
+		StackObjectID:  obj.ID,
+		Controller:     obj.Controller,
+		Player:         obj.Controller,
+	})
+}
+
+// committedCrime reports whether obj targets one or more opponents of its
+// controller, objects an opponent controls (permanents or spells/abilities on
+// the stack), or cards in an opponent's graveyard (CR 700.15a). Targets that no
+// longer resolve to a known object are ignored.
+func committedCrime(g *game.Game, obj *game.StackObject) bool {
+	for _, target := range obj.Targets {
+		switch target.Kind {
+		case game.TargetPlayer:
+			if target.PlayerID != obj.Controller {
+				return true
+			}
+		case game.TargetPermanent:
+			if permanent, ok := permanentByObjectID(g, target.PermanentID); ok &&
+				permanent.Controller != obj.Controller {
+				return true
+			}
+		case game.TargetStackObject:
+			if stackObj, ok := stackObjectByID(g, target.StackObjectID); ok &&
+				stackObj.Controller != obj.Controller {
+				return true
+			}
+		case game.TargetCard:
+			if cardInOpponentGraveyard(g, obj.Controller, target.CardID) {
+				return true
+			}
+		default:
+		}
+	}
+	return false
+}
+
+// cardInOpponentGraveyard reports whether cardID currently sits in the
+// graveyard of a player other than controller.
+func cardInOpponentGraveyard(g *game.Game, controller game.PlayerID, cardID id.ID) bool {
+	for opponent := range game.PlayerID(game.NumPlayers) {
+		if opponent == controller {
+			continue
+		}
+		player, ok := playerByID(g, opponent)
+		if !ok {
+			continue
+		}
+		if player.Graveyard.Contains(cardID) {
+			return true
+		}
+	}
+	return false
 }
 
 func emitAbilityActivatedEvent(g *game.Game, obj *game.StackObject, permanentID game.ObjectID, manaAbility bool) {

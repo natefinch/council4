@@ -63,6 +63,8 @@ func compilePlayerEventAction(action parser.PlayerEventActionKind) (TriggerEvent
 		return TriggerEventLifeLost, true
 	case parser.PlayerEventActionSearchLibrary:
 		return TriggerEventLibrarySearched, true
+	case parser.PlayerEventActionCommitCrime:
+		return TriggerEventCrimeCommitted, true
 	default:
 		return TriggerEventUnknown, false
 	}

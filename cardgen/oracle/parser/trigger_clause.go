@@ -385,6 +385,15 @@ func parsePlayerEventAction(
 			Span: shared.SpanOf(tokens[:3]),
 		}, tokens[3:], true
 	}
+	if len(tokens) >= 3 &&
+		verbMatches(tokens[0], "commit", "commits") &&
+		equalWord(tokens[1], "a") &&
+		equalWord(tokens[2], "crime") {
+		return PlayerEventAction{
+			Kind: PlayerEventActionCommitCrime,
+			Span: shared.SpanOf(tokens[:3]),
+		}, tokens[3:], true
+	}
 	for _, form := range []struct {
 		kind       PlayerEventActionKind
 		second     string

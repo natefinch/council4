@@ -49,6 +49,11 @@ const (
 	// the cast-door unlock that happens as the Room enters; lowering maps it onto
 	// the permanent-entered-battlefield event for that half.
 	TriggerEventDoorUnlocked
+	// TriggerEventCrimeCommitted is the acting-player "commit a crime" event
+	// (CR 700.15): a player puts a spell or ability on the stack that targets an
+	// opponent, an object an opponent controls, or a card in an opponent's
+	// graveyard.
+	TriggerEventCrimeCommitted
 )
 
 // TriggerCastTurn restricts a spell-cast pattern by whose turn the spell was
