@@ -856,6 +856,29 @@ func TestParseStaticPermanentManaAbilityGrantTreasureSacrifice(t *testing.T) {
 	}
 }
 
+func TestParseStaticPermanentManaAbilityGrantSacrificeAnyColor(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		`Artifacts you control have "{T}, Sacrifice this artifact: Add one mana of any color."`,
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationPermanentAbilityGrant ||
+		declaration.Subject.Group.Kind != EffectStaticSubjectControlledArtifacts {
+		t.Fatalf("declaration = %#v, want controlled-artifact permanent ability grant", declaration)
+	}
+	granted := declaration.GrantedManaAbility
+	if granted == nil || !granted.TapCost || granted.Amount != 1 ||
+		!granted.Sacrifice || !granted.AnyColor || granted.AnyOneColor ||
+		granted.Text != "{T}, Sacrifice this artifact: Add one mana of any color." {
+		t.Fatalf("granted ability = %#v, want tap-sacrifice for one mana of any color", granted)
+	}
+}
+
 func TestParseStaticPermanentManaAbilityGrantNearMissesFailClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
@@ -2233,6 +2256,14 @@ func TestParseStaticGroupCounterFilterMeaning(t *testing.T) {
 		},
 		"plural controlled keyword grant": {
 			source: "Creatures you control with a +1/+1 counter on them have trample.",
+			kind:   EffectStaticSubjectControlledCreatures,
+		},
+		"plural article-less controlled keyword grant": {
+			source: "Creatures you control with +1/+1 counters on them have trample.",
+			kind:   EffectStaticSubjectControlledCreatures,
+		},
+		"plural article-less controlled power toughness": {
+			source: "Creatures you control with +1/+1 counters on them get +1/+1.",
 			kind:   EffectStaticSubjectControlledCreatures,
 		},
 		"singular controlled power toughness": {

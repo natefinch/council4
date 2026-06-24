@@ -1155,7 +1155,8 @@ func recognizedStaticAbilityWord(word string) bool {
 		"Ferocious",
 		"Hellbent",
 		"Metalcraft",
-		"Threshold":
+		"Threshold",
+		"Unlock Ability":
 		return true
 	default:
 		return false
@@ -3491,13 +3492,14 @@ func recognizeStaticPermanentAbilityGrantDeclaration(ability CompiledAbility, st
 }
 
 // staticGrantedManaAbilityValid reports whether the parsed granted mana ability
-// is one of the two closed shapes the runtime can confer: the bare
-// tap-for-one-mana-of-any-color ability, and the Treasure-style sacrifice
-// ability that adds N mana (N >= 2) of one chosen color.
+// is one of the closed shapes the runtime can confer: the bare
+// tap-for-one-mana-of-any-color ability, the Treasure-style sacrifice ability
+// that adds N mana (N >= 2) of one chosen color, and the count-1 sacrifice
+// ability that adds one mana of any color (Ninja Pizza).
 func staticGrantedManaAbilityValid(granted *parser.StaticGrantedManaAbilitySyntax) bool {
 	switch {
 	case granted.AnyColor:
-		return granted.Amount == 1 && !granted.Sacrifice && !granted.AnyOneColor && !granted.Colorless
+		return granted.Amount == 1 && !granted.AnyOneColor && !granted.Colorless
 	case granted.AnyOneColor:
 		return granted.Amount >= 2 && granted.Sacrifice
 	case granted.Colorless:

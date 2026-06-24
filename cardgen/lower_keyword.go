@@ -1692,6 +1692,7 @@ func rulesFreeAbilityWordLabel(label string) bool {
 		"Survival",
 		"Threshold",
 		"Those Who Came Before",
+		"Unlock Ability",
 		"Vivid",
 		"Void",
 		"Will of the council":

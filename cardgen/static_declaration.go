@@ -537,16 +537,20 @@ func lowerStaticContinuousDeclaration(declaration compiler.StaticDeclaration) (g
 
 // lowerStaticGrantedManaAbility builds the runtime mana ability conferred by a
 // permanent-ability grant from the closed typed forms the compiler recognized:
-// the bare tap-for-one-mana-of-any-color ability and the Treasure-style
-// sacrifice ability that adds N mana of one chosen color.
+// the bare tap-for-one-mana-of-any-color ability, the Treasure-style sacrifice
+// ability that adds N mana of one chosen color, and the count-1 sacrifice
+// ability that adds one mana of any color (Ninja Pizza).
 func lowerStaticGrantedManaAbility(granted *compiler.StaticGrantedManaAbility) (game.ManaAbility, bool) {
 	if !granted.TapCost {
 		return game.ManaAbility{}, false
 	}
 	switch {
 	case granted.AnyColor:
-		if granted.Amount != 1 || granted.Sacrifice || granted.AnyOneColor {
+		if granted.Amount != 1 || granted.AnyOneColor {
 			return game.ManaAbility{}, false
+		}
+		if granted.Sacrifice {
+			return game.TapSacrificeAnyColorManaAbility(granted.Text), true
 		}
 		return game.TapAnyColorManaAbility(), true
 	case granted.AnyOneColor:

@@ -2349,11 +2349,13 @@ type counterQualifierMatch struct {
 	End        int
 }
 
-// counterQualifierKind detects a "with a/an <kind> counter on it/them" qualifier
-// or the negated "with no counters on it/them" qualifier beginning at index start
-// and returns the parsed qualifier together with whether the phrase matched. It
-// fails closed when the phrase is absent so unrelated wordings keep their
-// existing handling.
+// counterQualifierKind detects a "with [a/an] <kind> counter(s) on it/them"
+// qualifier or the negated "with no counters on it/them" qualifier beginning at
+// index start and returns the parsed qualifier together with whether the phrase
+// matched. The article is optional so the plural group form "with +1/+1
+// counters on them" (Sphere Grid) matches alongside the singular "with a +1/+1
+// counter on it". It fails closed when the phrase is absent so unrelated
+// wordings keep their existing handling.
 func counterQualifierKind(tokens []shared.Token, start int) (counterQualifierMatch, bool) {
 	if effectWordsAt(tokens, start, "with", "no") {
 		return noCounterQualifier(tokens, start)
@@ -2361,10 +2363,14 @@ func counterQualifierKind(tokens []shared.Token, start int) (counterQualifierMat
 	if effectWordsAt(tokens, start, "without", "a") || effectWordsAt(tokens, start, "without", "an") {
 		return excludedCounterQualifier(tokens, start)
 	}
-	if !effectWordsAt(tokens, start, "with", "a") && !effectWordsAt(tokens, start, "with", "an") {
+	if !effectWordsAt(tokens, start, "with") {
 		return counterQualifierMatch{}, false
 	}
-	counterIndex := start + 2
+	counterStart := start + 1
+	if effectWordsAt(tokens, start, "with", "a") || effectWordsAt(tokens, start, "with", "an") {
+		counterStart = start + 2
+	}
+	counterIndex := counterStart
 	for counterIndex < len(tokens) &&
 		!equalWord(tokens[counterIndex], "counter") && !equalWord(tokens[counterIndex], "counters") {
 		counterIndex++
@@ -2376,7 +2382,7 @@ func counterQualifierKind(tokens []shared.Token, start int) (counterQualifierMat
 		!effectWordsAt(tokens, counterIndex+1, "on", "them") {
 		return counterQualifierMatch{}, false
 	}
-	if counterIndex == start+2 {
+	if counterIndex == counterStart {
 		// "with a counter on it/them" names no counter kind, so the qualifier
 		// matches a permanent carrying a counter of any kind (Rishkar's "Each
 		// creature you control with a counter on it has ...").
