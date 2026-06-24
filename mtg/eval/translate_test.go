@@ -1,0 +1,86 @@
+package eval
+
+import (
+	"testing"
+
+	"github.com/natefinch/council4/mtg/game"
+)
+
+func contentOf(primitives ...game.Primitive) game.AbilityContent {
+	sequence := make([]game.Instruction, 0, len(primitives))
+	for _, primitive := range primitives {
+		sequence = append(sequence, game.Instruction{Primitive: primitive})
+	}
+	return game.AbilityContent{Modes: []game.Mode{{Sequence: sequence}}}
+}
+
+func TestScorableEffectClassifiesValueDominantPrimitives(t *testing.T) {
+	you := game.ControllerReference()
+	cases := []struct {
+		name      string
+		primitive game.Primitive
+		want      EffectAtom
+	}{
+		{"draw", game.Draw{Amount: game.Fixed(2), Player: you}, EffectAtom{Kind: EffectCardsDrawn, Amount: 2, Affected: AffectedYou}},
+		{"discard", game.Discard{Amount: game.Fixed(3), Player: you}, EffectAtom{Kind: EffectCardsLost, Amount: 3, Affected: AffectedYou}},
+		{"mill", game.Mill{Amount: game.Fixed(2), Player: you}, EffectAtom{Kind: EffectCardsLost, Amount: 2, Affected: AffectedYou}},
+		{"gain life", game.GainLife{Amount: game.Fixed(4), Player: you}, EffectAtom{Kind: EffectLifeGained, Amount: 4, Affected: AffectedYou}},
+		{"lose life", game.LoseLife{Amount: game.Fixed(1), Player: you}, EffectAtom{Kind: EffectLifeLost, Amount: 1, Affected: AffectedYou}},
+		{"damage", game.Damage{Amount: game.Fixed(3)}, EffectAtom{Kind: EffectDamageDealt, Amount: 3, Affected: AffectedTarget}},
+		{"destroy", game.Destroy{}, EffectAtom{Kind: EffectPermanentRemoved, Affected: AffectedTarget}},
+		{"exile", game.Exile{}, EffectAtom{Kind: EffectPermanentRemoved, Affected: AffectedTarget}},
+		{"bounce", game.Bounce{}, EffectAtom{Kind: EffectPermanentRemoved, Affected: AffectedTarget}},
+		{"tap", game.Tap{}, EffectAtom{Kind: EffectPermanentTapped, Affected: AffectedTarget}},
+		{"add mana", game.AddMana{Amount: game.Fixed(2)}, EffectAtom{Kind: EffectManaAdded, Amount: 2, Affected: AffectedYou}},
+		{"create token", game.CreateToken{Amount: game.Fixed(1)}, EffectAtom{Kind: EffectTokenCreated, Amount: 1, Affected: AffectedYou}},
+		{"search", game.Search{Amount: game.Fixed(1)}, EffectAtom{Kind: EffectCardTutored, Amount: 1, Affected: AffectedYou}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			atoms := ScorableEffect(contentOf(c.primitive))
+			if len(atoms) != 1 || atoms[0] != c.want {
+				t.Fatalf("ScorableEffect(%s) = %#v, want [%#v]", c.name, atoms, c.want)
+			}
+		})
+	}
+}
+
+func TestScorableEffectSummarizesBazaarAsNetCardLoss(t *testing.T) {
+	you := game.ControllerReference()
+	atoms := ScorableEffect(contentOf(
+		game.Draw{Amount: game.Fixed(2), Player: you},
+		game.Discard{Amount: game.Fixed(3), Player: you},
+	))
+	if len(atoms) != 2 {
+		t.Fatalf("atoms = %#v, want draw + discard", atoms)
+	}
+	drawn, lost := 0, 0
+	for _, atom := range atoms {
+		if atom.Affected != AffectedYou {
+			t.Fatalf("atom %#v not affecting you", atom)
+		}
+		switch atom.Kind {
+		case EffectCardsDrawn:
+			drawn += atom.Amount
+		case EffectCardsLost:
+			lost += atom.Amount
+		default:
+		}
+	}
+	if drawn-lost != -1 {
+		t.Fatalf("net cards = %d, want -1 (draw 2, discard 3)", drawn-lost)
+	}
+}
+
+func TestScorableEffectFlagsDynamicAmount(t *testing.T) {
+	atoms := ScorableEffect(contentOf(game.Draw{Amount: game.Dynamic(game.DynamicAmount{}), Player: game.ControllerReference()}))
+	if len(atoms) != 1 || !atoms[0].IsDynamic || atoms[0].Amount != 0 {
+		t.Fatalf("dynamic draw atom = %#v, want IsDynamic with zero amount", atoms)
+	}
+}
+
+func TestScorableEffectIgnoresUnmodeledPrimitive(t *testing.T) {
+	if atoms := ScorableEffect(contentOf(game.Scry{})); len(atoms) != 0 {
+		t.Fatalf("unmodeled primitive produced atoms %#v, want none", atoms)
+	}
+}
