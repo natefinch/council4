@@ -215,9 +215,24 @@ func lowerDrawDiscardTrigger(
 ) (game.TriggeredAbility, *shared.Diagnostic) {
 	const summary = "unsupported draw/discard trigger"
 	const effectSummary = "unsupported draw/discard trigger effect"
-	if ability.Trigger == nil || ability.Trigger.Pattern.Kind != compiler.TriggerWhenever {
+	if ability.Trigger == nil {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
+			"the executable source backend requires a semantic trigger pattern")
+	}
+	// Draw and discard triggers are recurring ("Whenever you ..."). The
+	// self-source cycle trigger "When you cycle this card" fires once from the
+	// cycled card itself (CR 702.29e) and is the only one introduced by "When".
+	kind := ability.Trigger.Pattern.Kind
+	selfCycle := ability.Trigger.Pattern.Source == compiler.TriggerSourceSelf &&
+		ability.Trigger.Pattern.Event == compiler.TriggerEventCycled
+	if kind != compiler.TriggerWhenever && (kind != compiler.TriggerWhen || !selfCycle) {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
 			"the executable source backend supports only TriggerWhenever draw and discard triggers")
+	}
+	triggerType, ok := lowerTriggerKind(kind)
+	if !ok {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
+			"the executable source backend does not support this semantic trigger kind")
 	}
 	pattern, ok := lowerTriggerPattern(&ability.Trigger.Pattern)
 	if !ok ||
@@ -249,7 +264,7 @@ func lowerDrawDiscardTrigger(
 	return game.TriggeredAbility{
 		Text: ability.Text,
 		Trigger: game.TriggerCondition{
-			Type:                 game.TriggerWhenever,
+			Type:                 triggerType,
 			Pattern:              pattern,
 			InterveningIf:        interveningIfText(ability.Trigger),
 			InterveningCondition: intervening,

@@ -342,7 +342,9 @@ func parsePlayerEventTriggerClause(tokens []shared.Token, introduction TriggerIn
 	}
 	card, occurrence, ok := parsePlayerEventModifiers(rest, action.Kind, parsedPlayer.player.Kind)
 	if !ok ||
-		occurrence.Kind == PlayerEventOccurrenceAny && introduction != TriggerIntroductionWhenever {
+		(occurrence.Kind == PlayerEventOccurrenceAny &&
+			introduction != TriggerIntroductionWhenever &&
+			card.Kind != PlayerEventCardThis) {
 		return nil
 	}
 	return &PlayerEventTriggerClause{
@@ -561,6 +563,15 @@ func parsePlayerEventCard(
 			action == PlayerEventActionCycleOrDiscard) {
 		return playerEventCardParse{
 			card:       PlayerEventCard{Kind: PlayerEventCardAnother, Span: shared.SpanOf(tokens[:2])},
+			occurrence: occurrence,
+			remainder:  rest,
+			ok:         true,
+		}
+	}
+	if rest, ok := cutSyntaxWords(tokens, "this", "card"); ok &&
+		(action == PlayerEventActionCycle || action == PlayerEventActionCycleOrDiscard) {
+		return playerEventCardParse{
+			card:       PlayerEventCard{Kind: PlayerEventCardThis, Span: shared.SpanOf(tokens[:2])},
 			occurrence: occurrence,
 			remainder:  rest,
 			ok:         true,

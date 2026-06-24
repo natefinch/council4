@@ -44,6 +44,20 @@ func bindReferences(
 			reference.Binding = ReferenceBindingSource
 			continue
 		}
+		// In a self-source cycle trigger ("When you cycle this card, it deals 1
+		// damage to each opponent.", CR 702.29e) the cycled card is the ability's
+		// own source, so the object pronoun "it"/"that card" in the body names
+		// the source. This is scoped to the self-source cycle event, which has no
+		// event permanent of its own, so it never reinterprets other triggers.
+		if trigger != nil &&
+			trigger.Pattern.Source == TriggerSourceSelf &&
+			trigger.Pattern.Event == TriggerEventCycled &&
+			reference.Order.Start >= trigger.Order.Start &&
+			(reference.Kind == ReferenceThatObject ||
+				(reference.Kind == ReferencePronoun && reference.Pronoun == ReferencePronounIt)) {
+			reference.Binding = ReferenceBindingSource
+			continue
+		}
 		if prior, ok := priorInstructionAntecedent(*reference, effects); ok {
 			if precedingSourceReferenceAfter(
 				bound[:i],

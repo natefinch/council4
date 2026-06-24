@@ -513,6 +513,7 @@ func (*Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []pen
 		if source, ok := leftBattlefieldTriggerSource(g, event); ok {
 			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
+		pending = append(pending, cycledCardSelfTriggers(g, event)...)
 		for _, source := range simultaneousLeftBattlefieldTriggerSources(g, event, events) {
 			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
@@ -946,6 +947,57 @@ func stateTriggerConditionSatisfied(g *game.Game, controller game.PlayerID, cond
 		}
 	}
 	return true
+}
+
+// cycledCardSelfTriggers detects a cycled card's own "When you cycle this card"
+// triggered abilities (CR 702.29e). These abilities function from the graveyard
+// the card is put into as it is cycled, so the ordinary battlefield scan in
+// detectTriggeredAbilities never sees them. Only the cycled card's self-source
+// cycle triggers are considered; its other abilities do not function from the
+// graveyard.
+func cycledCardSelfTriggers(g *game.Game, event game.Event) []pendingTriggeredAbility {
+	if event.Kind != game.EventCycled || event.CardID == 0 {
+		return nil
+	}
+	card, ok := g.GetCardInstance(event.CardID)
+	if !ok {
+		return nil
+	}
+	def, ok := cardFaceDef(card, game.FaceFront)
+	if !ok {
+		return nil
+	}
+	source := &game.Permanent{
+		ObjectID:       event.SourceID,
+		CardInstanceID: card.ID,
+		Owner:          card.Owner,
+		Controller:     event.Controller,
+		Face:           game.FaceFront,
+	}
+	var pending []pendingTriggeredAbility
+	for i := range def.TriggeredAbilities {
+		triggered := &def.TriggeredAbilities[i]
+		pattern := &triggered.Trigger.Pattern
+		if pattern.Event != game.EventCycled || pattern.Source != game.TriggerSourceSelf {
+			continue
+		}
+		if !triggerMatchesEventForController(g, source, event.Controller, pattern, event) ||
+			!triggerInterveningIf(g, source, event.Controller, &triggered.Trigger, &event) {
+			continue
+		}
+		pending = append(pending, pendingTriggeredAbility{
+			controller:      event.Controller,
+			sourceID:        event.SourceID,
+			sourceCardID:    card.ID,
+			face:            game.FaceFront,
+			abilityIndex:    i,
+			inline:          triggered,
+			event:           event,
+			hasEvent:        true,
+			ordinaryTrigger: true,
+		})
+	}
+	return pending
 }
 
 func leftBattlefieldTriggerSource(g *game.Game, event game.Event) (*game.Permanent, bool) {

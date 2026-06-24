@@ -71,6 +71,70 @@ func TestLowerCyclingTriggers(t *testing.T) {
 	}
 }
 
+func TestLowerCycleThisCardSelfTrigger(t *testing.T) {
+	t.Parallel()
+	// Magmakin Artillerist shape: a self-source "When you cycle this card"
+	// trigger whose body uses the pronoun "it" for the cycled card.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Artillerist",
+		Layout:     "normal",
+		TypeLine:   "Creature — Elemental",
+		OracleText: "Cycling {1}{R} ({1}{R}, Discard this card: Draw a card.)\nWhen you cycle this card, it deals 1 damage to each opponent.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	trigger := face.TriggeredAbilities[0].Trigger
+	if trigger.Type != game.TriggerWhen {
+		t.Errorf("trigger type = %v, want TriggerWhen", trigger.Type)
+	}
+	if trigger.Pattern.Event != game.EventCycled {
+		t.Errorf("event = %v, want EventCycled", trigger.Pattern.Event)
+	}
+	if trigger.Pattern.Player != game.TriggerPlayerYou {
+		t.Errorf("player = %v, want TriggerPlayerYou", trigger.Pattern.Player)
+	}
+	if trigger.Pattern.Source != game.TriggerSourceSelf {
+		t.Errorf("source = %v, want TriggerSourceSelf", trigger.Pattern.Source)
+	}
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("got %d activated abilities, want 1 (Cycling)", len(face.ActivatedAbilities))
+	}
+}
+
+func TestGenerateExecutableCardSourceMagmakinArtillerist(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Magmakin Artillerist",
+		Layout:     "normal",
+		TypeLine:   "Creature — Elemental Pirate",
+		ManaCost:   "{2}{R}",
+		OracleText: "Whenever you discard one or more cards, this creature deals that much damage to each opponent.\nCycling {1}{R} ({1}{R}, Discard this card: Draw a card.)\nWhen you cycle this card, it deals 1 damage to each opponent.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	if _, err := goparser.ParseFile(token.NewFileSet(), "magmakin.go", source, goparser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+	for _, want := range []string{
+		"game.EventCycled",
+		"game.TriggerSourceSelf",
+		"game.CyclingActivatedAbility",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+}
+
 func TestLowerHandCyclingGrants(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
