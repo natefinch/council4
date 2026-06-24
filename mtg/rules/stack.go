@@ -25,6 +25,8 @@ func (e *Engine) resolveTopOfStackWithChoices(g *game.Game, agents [game.NumPlay
 		snapshot := snapshotStackSpell(g, obj)
 		rememberLastKnown(g, &snapshot)
 	}
+	startEntry := log.entryCount()
+	eventsBefore := len(g.Events)
 	result := e.resolveStackObjectWithChoices(g, obj, agents, log)
 	releaseStateTriggerLatch(g, obj)
 	if obj.Kind == game.StackSpell && spellResolved(result) {
@@ -36,6 +38,7 @@ func (e *Engine) resolveTopOfStackWithChoices(g *game.Game, agents [game.NumPlay
 			CardID:        obj.SourceID,
 		})
 	}
+	recordEnteredBattlefield(g, log, eventsBefore)
 	log.addResolve(ResolveLog{
 		StackObjectID: obj.ID,
 		SourceID:      obj.SourceID,
@@ -43,7 +46,32 @@ func (e *Engine) resolveTopOfStackWithChoices(g *game.Game, agents [game.NumPlay
 		Kind:          obj.Kind,
 		Result:        result,
 		SourceName:    stackObjectSourceName(g, obj),
+		StartEntry:    startEntry,
 	})
+}
+
+// recordEnteredBattlefield logs each permanent that entered the battlefield while
+// the just-resolved stack object was resolving, scanning the events emitted since
+// eventsBefore. These entries fall in the resolution's [StartEntry, resolve)
+// range, so a report can show a fetched land or created token nested under the
+// spell or ability that caused it. Priority-time entries (a land drop) are not
+// scanned here, so they are not double-reported.
+func recordEnteredBattlefield(g *game.Game, log *TurnLog, eventsBefore int) {
+	if log == nil {
+		return
+	}
+	for i := eventsBefore; i < len(g.Events); i++ {
+		event := g.Events[i]
+		if event.Kind != game.EventPermanentEnteredBattlefield {
+			continue
+		}
+		log.addEnter(PermanentEnterLog{
+			Permanent:  event.PermanentID,
+			SourceID:   event.CardID,
+			TokenName:  event.TokenName,
+			Controller: event.Controller,
+		})
+	}
 }
 
 // stackObjectSourceName resolves the display name of a stack object's source —
