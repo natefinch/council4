@@ -19,6 +19,10 @@ const (
 	// your hand on the bottom (or top) of your library, then draw that many
 	// cards[ plus N]" sequence.
 	ExactSequenceBottomHandThenDraw
+	// ExactSequenceDiscardHandThenDraw is the spell "Discard {your hand | all
+	// the cards in your hand}, then draw that many cards." sequence: the
+	// controller discards their whole hand, then draws that many cards.
+	ExactSequenceDiscardHandThenDraw
 )
 
 func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
@@ -27,6 +31,8 @@ func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
 		return ExactSequenceChosenTypeLibraryTopToHand
 	case parser.ExactSequenceBottomHandThenDraw:
 		return ExactSequenceBottomHandThenDraw
+	case parser.ExactSequenceDiscardHandThenDraw:
+		return ExactSequenceDiscardHandThenDraw
 	default:
 		return ExactSequenceUnknown
 	}

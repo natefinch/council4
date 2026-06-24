@@ -690,6 +690,14 @@ func prepareActivationCondition(ability *compiler.CompiledAbility, syntax *parse
 	}
 	ability.Content.Effects = effects
 	ability.Content.Conditions = nil
+	// References bound inside the extracted condition (for example the "this
+	// creature" of "Activate only if this creature is attacking") belong to the
+	// activation gate, not the resolving body. Drop them so body lowerers that
+	// reject stray references — like the fixed-card draw lowerer — see only the
+	// references their effect actually uses.
+	ability.Content.References = slices.DeleteFunc(append([]compiler.CompiledReference(nil), ability.Content.References...), func(reference compiler.CompiledReference) bool {
+		return spanCovered(reference.Span, conditionSpan)
+	})
 	*syntax = syntaxWithoutAbilityWord(syntax)
 	lastEffectEnd := bodyEffects[0].Span.End.Offset
 	for i := 1; i < len(bodyEffects); i++ {

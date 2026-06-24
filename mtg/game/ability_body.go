@@ -546,6 +546,18 @@ func DrawCardMultiplierReplacement(text string, multiplier int, exceptFirstInDra
 	}
 }
 
+// MaxSpeedDrawCardMultiplierReplacement builds the "Max speed —" gated
+// draw-doubling replacement "Max speed — If you would draw a card, draw
+// <multiplier> cards instead." (Vnwxt, Verbose Host). It is a
+// DrawCardMultiplierReplacement whose effect applies only while the controller
+// has maximum speed (CR 702.179); the runtime evaluates ControllerHasMaxSpeed
+// against each in-flight draw event.
+func MaxSpeedDrawCardMultiplierReplacement(text string, multiplier int, exceptFirstInDrawStep bool) ReplacementAbility {
+	ability := DrawCardMultiplierReplacement(text, multiplier, exceptFirstInDrawStep)
+	ability.Replacement.Condition = opt.Val(MaxSpeedActivationCondition())
+	return ability
+}
+
 // DrawCardDigReplacement builds the draw-replacement dig "If you would draw a
 // card, instead look at the top <look> cards of your library, then put <take>
 // into your hand and the rest into your <remainder>." (Underrealm Lich). Each

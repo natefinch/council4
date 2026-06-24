@@ -1035,8 +1035,7 @@ func exactTypeUnionTargetSyntax(text string, selection SelectionSyntax) bool {
 	spellUnion := selection.Kind == SelectionSpell
 	cardTypeNoun := permanentCardTypeNoun
 	if spellUnion {
-		if selection.Controller != SelectionControllerAny || selection.MatchManaValue ||
-			len(selection.ExcludedTypes) != 0 {
+		if selection.MatchManaValue || len(selection.ExcludedTypes) != 0 {
 			return false
 		}
 		cardTypeNoun = cardTypeWord
