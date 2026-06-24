@@ -40,6 +40,12 @@ type Config struct {
 	// the worker count. A NewAgents factory must therefore be safe to call from
 	// multiple goroutines.
 	Workers int
+
+	// TurnLimit caps the number of turns each game plays, so a caller in a
+	// constrained environment (a browser running the engine in WebAssembly) can
+	// bound a game that would otherwise durdle toward the engine's 1000-turn
+	// safety cap and exhaust memory. Zero (the default) uses that safety cap.
+	TurnLimit int
 }
 
 // Run plays cfg.Games games over the four configs and returns a SimulationResult
@@ -146,7 +152,7 @@ func RunOne(cfg Config, index int) rules.GameResult {
 	engine := rules.NewEngine(NewRand(gameSeed))
 	g := engine.NewGame(cfg.Configs)
 	agents := newAgents(cfg)(gameSeed)
-	return *engine.RunGame(g, agents)
+	return *engine.RunGameWithTurnLimit(g, agents, cfg.TurnLimit)
 }
 
 // GameSeed derives the seed for the index-th game from a master seed. Successive
