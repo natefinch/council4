@@ -139,6 +139,10 @@ type Additional struct {
 	// RequireTapped constrains battlefield costs to tapped permanents.
 	RequireTapped bool
 
+	// RequireToken constrains a battlefield cost to token permanents (CR 111),
+	// as required by "sacrifice an artifact token" or a bare "sacrifice a token."
+	RequireToken bool
+
 	// RequireSupertype constrains battlefield costs to permanents with a
 	// particular supertype, such as Snow.
 	RequireSupertype types.Super

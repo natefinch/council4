@@ -251,6 +251,7 @@ func lowerCostPermanentObject(component compiler.CostComponent, additional *cost
 	if component.ObjectNonToken {
 		return false
 	}
+	additional.RequireToken = component.ObjectTokenOnly
 	if component.ObjectColorKnown {
 		additional.MatchCardColor = true
 		additional.CardColor = component.ObjectColor

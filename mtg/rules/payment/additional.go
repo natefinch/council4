@@ -382,6 +382,9 @@ func additionalCostMatchesPermanent(s State, permanent *game.Permanent, addition
 	if additional.RequireTapped && !permanent.Tapped {
 		return false
 	}
+	if additional.RequireToken && !permanent.Token {
+		return false
+	}
 	if additional.RequireSupertype != "" && !s.PermanentHasSupertype(permanent, additional.RequireSupertype) {
 		return false
 	}

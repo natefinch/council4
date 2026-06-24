@@ -1015,11 +1015,7 @@ func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.
 		content, diagnostic := lowerAttackTaxSpell(ctx)
 		return content, diagnostic, true
 	case compiler.EffectPhaseOut:
-		content, diagnostic := lowerMassOrSinglePermanentSpell(ctx, "Phase out", func(group game.GroupReference) game.Primitive {
-			return game.PhaseOut{Group: group}
-		}, func(object game.ObjectReference) game.Primitive {
-			return game.PhaseOut{Object: object}
-		})
+		content, diagnostic := lowerPhaseOutSpell(ctx)
 		return content, diagnostic, true
 	default:
 		return game.AbilityContent{}, nil, false
@@ -1356,6 +1352,64 @@ func lowerMassOrSinglePermanentSpell(
 		}.Ability(), nil
 	}
 	return lowerFixedPermanentTargetSpell(ctx, verb, objectPrimitive)
+}
+
+// lowerPhaseOutSpell lowers the "phases out"/"phase out" family (CR 702.26) into
+// a single PhaseOut instruction. It supports three recipients, each reusing the
+// existing phase-out runtime:
+//
+//   - every permanent in an exact mass group ("All permanents you control phase
+//     out.", Teferi's Protection's effect shape);
+//   - a chosen target permanent ("Target creature phases out.", with any
+//     supported target restriction), including multi-target forms; and
+//   - the ability's own source ("This creature phases out." / "This permanent
+//     phases out." / "<CardName> phases out."), which lowers to the source
+//     permanent reference and needs no target.
+//
+// Any other phase-out shape — a negated or non-controller effect, conditional or
+// modal content, or an unrepresentable recipient — fails closed.
+func lowerPhaseOutSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	if group, ok := exactMassGroup(ctx); ok {
+		return game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.PhaseOut{Group: group}}},
+		}.Ability(), nil
+	}
+	if len(ctx.content.Targets) > 0 {
+		return lowerFixedPermanentTargetSpell(ctx, "Phase out", func(object game.ObjectReference) game.Primitive {
+			return game.PhaseOut{Object: object}
+		})
+	}
+	if object, ok := lowerSourcePhaseOutObject(ctx); ok {
+		return game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.PhaseOut{Object: object}}},
+		}.Ability(), nil
+	}
+	return game.AbilityContent{}, contentDiagnostic(
+		ctx,
+		"unsupported phase out effect",
+		"the executable source backend supports only exact phase out of one target, source, or mass group",
+	)
+}
+
+// lowerSourcePhaseOutObject resolves the non-target phase-out recipient: the
+// ability's own source ("This creature phases out." / "<CardName> phases out.").
+// It requires a single exact controller effect with no conditional or modal
+// content and a single source reference, and fails closed for every other shape.
+func lowerSourcePhaseOutObject(ctx contentCtx) (game.ObjectReference, bool) {
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		ctx.optional {
+		return game.ObjectReference{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if !effect.Exact || effect.Negated || effect.Optional {
+		return game.ObjectReference{}, false
+	}
+	if len(ctx.content.References) != 1 {
+		return game.ObjectReference{}, false
+	}
+	return lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowSource: true})
 }
 
 // lowerBoundedUntapSpell lowers the "Untap up to N <permanent filter>" family

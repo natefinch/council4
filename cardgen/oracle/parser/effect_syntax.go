@@ -1064,6 +1064,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseGroupEntersWithCountersEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePlayerProtectionEffects(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseGroupPhaseOutEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parsePhaseOutEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseMassReanimationExchangeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseAdditionalLandPlaysEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseCastAsThoughFlashEffect(sentence, tokens) },
@@ -3000,6 +3001,40 @@ func parseGroupPhaseOutEffect(sentence Sentence, tokens []shared.Token, atoms At
 		Selection:  parseSelection(tokens, atoms),
 		Exact:      true,
 	}}, true
+}
+
+// parsePhaseOutEffect recognizes the singular-subject "<subject> phases out."
+// effect (CR 702.26), such as "This creature phases out." (Blink Dog) and
+// "Target creature phases out." The plural mass form "All permanents you control
+// phase out." is handled separately by parseGroupPhaseOutEffect; this recognizer
+// keys on the singular "phases out" verb that closes the sentence, so the two
+// never overlap. The subject's self reference or target is scanned by the shared
+// reference and target passes, so the recognizer only identifies the verb and
+// covers the sentence; lowering fails closed for any subject it cannot represent.
+func parsePhaseOutEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	if !sentenceClosesWithPhasesOut(tokens) {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:       EffectPhaseOut,
+		Span:       sentence.Span,
+		ClauseSpan: sentence.Span,
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		Selection:  parseSelection(tokens, atoms),
+		Exact:      true,
+	}}, true
+}
+
+// sentenceClosesWithPhasesOut reports whether the sentence's meaningful tokens
+// end with the singular "phases out" verb immediately before the closing period.
+// It requires a subject before the verb so the bare verb alone never matches.
+func sentenceClosesWithPhasesOut(tokens []shared.Token) bool {
+	period := shared.TopLevelIndex(tokens, shared.Period)
+	if period < 3 {
+		return false
+	}
+	return equalWord(tokens[period-2], "phases") && equalWord(tokens[period-1], "out")
 }
 
 // parseMassReanimationExchangeEffect recognizes the symmetric mass-reanimation

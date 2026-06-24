@@ -762,6 +762,21 @@ func lowerChooseABackgroundAbility(ability compiler.CompiledAbility) abilityLowe
 	}
 }
 
+// lowerPartnerAbility lowers a recognized "Partner" keyword ability (CR
+// 702.124a) and its "Partner—<quality>" restricted variants (CR 702.124f) to
+// the inert partner static keyword. The "partner commander" deck-construction
+// permission and the variant pairing restrictions are mechanics the
+// deterministic playtester does not simulate, so the keyword carries no in-game
+// effect; the whole paragraph span is consumed.
+func lowerPartnerAbility(ability compiler.CompiledAbility) abilityLowering {
+	return abilityLowering{
+		staticAbilities: []loweredStaticAbility{
+			{Body: game.PartnerStaticBody, VarName: "game.PartnerStaticBody"},
+		},
+		sourceSpans: []shared.Span{ability.Span},
+	}
+}
+
 func lowerStaticKeywordLowering(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
@@ -1410,6 +1425,9 @@ func lowerExecutableAbilitySpecialCase(
 	}
 	if ability.ChooseABackground {
 		return lowerChooseABackgroundAbility(ability), true, nil
+	}
+	if ability.Partner {
+		return lowerPartnerAbility(ability), true, nil
 	}
 	if lowered, handled, diagnostic := lowerSourceSpellCostReduction(ability, syntax); handled {
 		return lowered, true, diagnostic

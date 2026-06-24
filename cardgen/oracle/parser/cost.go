@@ -151,6 +151,12 @@ type CostComponent struct {
 	// "historic" qualifier on the card noun.
 	ObjectHistoric bool `json:",omitempty"`
 
+	// ObjectTokenOnly reports that the cost object is constrained to token
+	// permanents (CR 111), recognized from a "token" noun qualifier such as
+	// "an artifact token" or a bare "a token". The "<subtype> token" form (e.g.
+	// "a Blood token") constrains by subtype alone and does not set this flag.
+	ObjectTokenOnly bool `json:",omitempty"`
+
 	// TotalManaValueAtLeast, when positive, constrains a variable-cardinality
 	// card cost to "<cards> with total mana value N or greater": the payer
 	// exiles enough matching cards for their mana values to total at least N.
@@ -671,6 +677,27 @@ func annotateSacrificeCostObject(component *CostComponent, object []shared.Token
 			component.ObjectColor = colorAtom
 			component.ObjectColorKnown = true
 			words = words[1:]
+		}
+	}
+	// "<type> token" / "token" restricts the sacrifice to token permanents
+	// (CR 111), e.g. "an artifact token" (Sophia, Dogged Detective) or a bare "a
+	// token". The "<subtype> token" form (e.g. "a Blood token") is left for
+	// annotateCostSubtypeWithNoun below, which constrains by subtype alone.
+	if len(words) >= 1 {
+		if last, ok := atoms.ObjectNounAt(words[len(words)-1].Span); ok && last == ObjectNounToken {
+			switch {
+			case len(words) == 1:
+				component.ObjectTokenOnly = true
+				component.ObjectNoun = ObjectNounPermanent
+				return
+			case len(words) == 2:
+				if noun, ok := atoms.ObjectNounAt(words[0].Span); ok && costObjectNounAccepted(noun) {
+					component.ObjectTokenOnly = true
+					component.ObjectNoun = noun
+					return
+				}
+			default:
+			}
 		}
 	}
 	if first, second, ok := costTwoTypeUnionNouns(words); ok {

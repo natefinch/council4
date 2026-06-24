@@ -124,6 +124,11 @@ type CompiledAbility struct {
 	// otherwise empty; lowering emits the inert choose-a-background static
 	// keyword.
 	ChooseABackground bool
+	// Partner reports that the parser recognized this paragraph as a "Partner"
+	// keyword ability or one of its "Partner—<quality>" restricted variants
+	// (CR 702.124a, 702.124f). Its content is otherwise empty; lowering emits the
+	// inert partner static keyword.
+	Partner bool
 }
 
 // CompiledLevelBand is a leveler card's "LEVEL lo-hi" / "LEVEL lo+" band
@@ -393,6 +398,7 @@ type CostComponent struct {
 	ObjectColorKnown  bool
 	ObjectController  ControllerKind
 	ObjectNonToken    bool
+	ObjectTokenOnly   bool
 	PermanentModifier bool
 	RequireTapped     bool
 	RequireUntapped   bool
