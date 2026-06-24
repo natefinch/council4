@@ -9,4 +9,5 @@ var Cards = []*game.CardDef{
 	RampantGrowth,
 	RancorousArchaic,
 	RhonasTheIndomitable,
+	RiteOfOblivion,
 }

@@ -392,6 +392,9 @@ func additionalCostMatchesPermanent(s State, permanent *game.Permanent, addition
 		(additional.PermanentTypeAlt == "" || !s.PermanentHasType(permanent, additional.PermanentTypeAlt)) {
 		return false
 	}
+	if additional.ExcludePermanentType != "" && s.PermanentHasType(permanent, additional.ExcludePermanentType) {
+		return false
+	}
 	if additional.MatchHistoric &&
 		!s.PermanentHasType(permanent, types.Artifact) &&
 		!s.PermanentHasSupertype(permanent, types.Legendary) &&

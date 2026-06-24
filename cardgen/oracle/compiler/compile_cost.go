@@ -55,6 +55,12 @@ func compileCostComponent(component parser.CostComponent) CostComponent {
 			compiled.ObjectColorKnown = true
 		}
 	}
+	if component.ObjectExcludedTypeKnown {
+		if mapped, ok := compilerCardType(component.ObjectExcludedType); ok {
+			compiled.ObjectExcludedType = mapped
+			compiled.ObjectExcludedTypeKnown = true
+		}
+	}
 	applyCostObjectNoun(&compiled, component)
 	return compiled
 }

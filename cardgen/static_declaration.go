@@ -953,12 +953,13 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 			spellTypes = append([]types.Card(nil), declaration.Player.SpellTypes...)
 		}
 		effect := game.RuleEffect{
-			Kind:           game.RuleEffectCastSpellsFromZone,
-			AffectedPlayer: game.PlayerYou,
-			CastFromZone:   zone.Library,
-			SpellTypes:     spellTypes,
-			SpellColorless: declaration.Player.CastColorless,
-			TopCardOnly:    true,
+			Kind:                    game.RuleEffectCastSpellsFromZone,
+			AffectedPlayer:          game.PlayerYou,
+			CastFromZone:            zone.Library,
+			SpellTypes:              spellTypes,
+			SpellColorless:          declaration.Player.CastColorless,
+			TopCardOnly:             true,
+			PayLifeEqualToManaValue: declaration.Player.CastPayLifeManaValue,
 		}
 		if declaration.Player.CastChosenCreatureType {
 			effect.SpellChosenSubtypeFrom = game.EntryTypeChoiceKey

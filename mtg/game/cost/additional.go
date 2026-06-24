@@ -99,6 +99,12 @@ type Additional struct {
 	// true; an empty value constrains the cost to PermanentType alone.
 	PermanentTypeAlt types.Card
 
+	// ExcludePermanentType constrains a battlefield cost to permanents that are
+	// not of the named card type, as required by "sacrifice ten nonland
+	// permanents" (Bolas's Citadel). An empty value imposes no exclusion. It is
+	// independent of MatchPermanentType.
+	ExcludePermanentType types.Card
+
 	// MatchCardType constrains card costs such as "discard a creature card."
 	// When false, any card in the relevant zone is allowed for card costs.
 	MatchCardType bool

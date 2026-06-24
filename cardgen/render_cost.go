@@ -393,6 +393,14 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 			fields = append(fields, fmt.Sprintf("PermanentTypeAlt: %s,", altType))
 		}
 	}
+	if additional.ExcludePermanentType != "" {
+		excludedType, err := cardTypeLiteral(additional.ExcludePermanentType)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importTypes)
+		fields = append(fields, fmt.Sprintf("ExcludePermanentType: %s,", excludedType))
+	}
 	if additional.MatchCardType {
 		cardType, err := cardTypeLiteral(additional.CardType)
 		if err != nil {

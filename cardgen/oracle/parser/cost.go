@@ -93,6 +93,14 @@ type CostComponent struct {
 	ObjectNoun   ObjectNoun `json:",omitempty"`
 	ObjectIsCard bool       `json:",omitempty"`
 
+	// ObjectExcludedType constrains a permanent cost object to permanents that
+	// are not of the named card type, recognized from a "non-<type>" qualifier
+	// such as "nonland" in "Sacrifice ten nonland permanents." (Bolas's
+	// Citadel). ObjectExcludedTypeKnown reports its presence; the compiler maps
+	// the excluded type onto its runtime card type.
+	ObjectExcludedType      CardType `json:",omitempty"`
+	ObjectExcludedTypeKnown bool     `json:",omitempty"`
+
 	// SecondObjectNoun is the second permanent-type noun of a two-type cost
 	// union such as "sacrifice an artifact or creature." It is empty unless the
 	// object names two permanent types joined by "or".
@@ -677,6 +685,19 @@ func annotateSacrificeCostObject(component *CostComponent, object []shared.Token
 			component.ObjectColor = colorAtom
 			component.ObjectColorKnown = true
 			words = words[1:]
+		}
+	}
+	// "<excluded type> permanent(s)" restricts the sacrifice to permanents that
+	// are not of the named card type, e.g. "ten nonland permanents" (Bolas's
+	// Citadel). The "non-<type>" prefix is a typed excluded-card-type atom.
+	if len(words) == 2 {
+		if excluded, ok := atoms.ExcludedCardTypeAt(words[0].Span); ok {
+			if noun, ok := atoms.ObjectNounAt(words[1].Span); ok && noun == ObjectNounPermanent {
+				component.ObjectNoun = ObjectNounPermanent
+				component.ObjectExcludedType = excluded
+				component.ObjectExcludedTypeKnown = true
+				return
+			}
 		}
 	}
 	// "<type> token" / "token" restricts the sacrifice to token permanents
