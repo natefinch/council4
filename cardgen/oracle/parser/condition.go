@@ -2283,12 +2283,24 @@ func parseConditionAlternativeNoun(tokens []shared.Token, orIndex int, atoms Ato
 	} else if trimmed, ok := cutTokenPrefix(right, "an"); ok {
 		right = trimmed
 	}
-	leftSub, leftOK := conditionSubtypeAtom(shared.SpanOf(left), atoms, CardTypeLand)
-	rightSub, rightOK := conditionSubtypeAtom(shared.SpanOf(right), atoms, CardTypeLand)
+	// Land subtype disjunction ("a Forest or an Island") carries the Land card
+	// type so the matched permanent must be a land of either basic type.
+	leftLand, leftLandOK := conditionSubtypeAtom(shared.SpanOf(left), atoms, CardTypeLand)
+	rightLand, rightLandOK := conditionSubtypeAtom(shared.SpanOf(right), atoms, CardTypeLand)
+	if leftLandOK && rightLandOK {
+		selection.RequiredTypes = append(selection.RequiredTypes, TriggerCardTypeLand)
+		selection.SubtypesAny = append(selection.SubtypesAny, leftLand, rightLand)
+		return selection, true
+	}
+	// Generic subtype disjunction ("another Wolf or Werewolf"). Each side names a
+	// subtype of any card type and the match constrains only the subtype, exactly
+	// like the single-subtype noun production, so a permanent matches if it has
+	// either named subtype.
+	leftSub, leftOK := atoms.SubtypeAt(shared.SpanOf(left))
+	rightSub, rightOK := atoms.SubtypeAt(shared.SpanOf(right))
 	if !leftOK || !rightOK {
 		return ConditionSelection{}, false
 	}
-	selection.RequiredTypes = append(selection.RequiredTypes, TriggerCardTypeLand)
 	selection.SubtypesAny = append(selection.SubtypesAny, leftSub, rightSub)
 	return selection, true
 }

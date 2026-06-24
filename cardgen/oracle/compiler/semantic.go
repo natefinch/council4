@@ -2179,10 +2179,14 @@ type CompiledEffectDetails struct {
 }
 
 // CompiledStaticSubjectType preserves a static subject's printed subtype and its
-// parser-resolved canonical subtype when known.
+// parser-resolved canonical subtype when known. SubsAny carries a disjunctive
+// list of subtypes when the subject names more than one ("... that's a Wolf or a
+// Werewolf"); a permanent matches if it has any one of them. When SubsAny is set
+// it supersedes the single Sub slot, which still holds the first entry.
 type CompiledStaticSubjectType struct {
 	Text     string
 	Sub      types.Sub
+	SubsAny  []types.Sub
 	Known    bool
 	Excluded bool
 }
@@ -2219,11 +2223,11 @@ type CompiledStaticSubjectCounter struct {
 	Any  bool
 }
 
-func staticSubjectType(text string, sub types.Sub, known, excluded bool) *CompiledStaticSubjectType {
+func staticSubjectType(text string, sub types.Sub, subsAny []types.Sub, known, excluded bool) *CompiledStaticSubjectType {
 	if text == "" && !known {
 		return nil
 	}
-	return &CompiledStaticSubjectType{Text: text, Sub: sub, Known: known, Excluded: excluded}
+	return &CompiledStaticSubjectType{Text: text, Sub: sub, SubsAny: append([]types.Sub(nil), subsAny...), Known: known, Excluded: excluded}
 }
 
 func staticSubjectColors(colors []parser.Color, colorless, multicolored, chosenColorFromEntry bool) *CompiledStaticSubjectColors {
@@ -2271,6 +2275,16 @@ func (e *CompiledEffect) StaticSubjectSub() types.Sub {
 		return ""
 	}
 	return e.Details.StaticSubjectType.Sub
+}
+
+// StaticSubjectSubsAny returns the static subject's disjunctive subtype list when
+// the subject names more than one creature subtype ("... that's a Wolf or a
+// Werewolf"). It is empty for the single-subtype subjects.
+func (e *CompiledEffect) StaticSubjectSubsAny() []types.Sub {
+	if e.Details == nil || e.Details.StaticSubjectType == nil {
+		return nil
+	}
+	return e.Details.StaticSubjectType.SubsAny
 }
 
 // StaticSubjectSubKnown reports whether the static subject subtype was resolved.

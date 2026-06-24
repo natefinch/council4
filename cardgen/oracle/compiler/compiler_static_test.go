@@ -737,6 +737,17 @@ func TestCompileStaticGroupAnthemSubjects(t *testing.T) {
 			colorsAny:     []color.Color{color.Black},
 			excludeSource: true,
 		},
+		"controlled multi-subtype creatures": {
+			source:      "Each creature you control that's a Wolf or a Werewolf gets +1/+1.",
+			domain:      StaticGroupSourceControllerPermanents,
+			subtypesAny: []types.Sub{types.Wolf, types.Werewolf},
+		},
+		"other controlled multi-subtype creatures": {
+			source:        "Each other creature you control that's a Wolf or a Werewolf gets +1/+1.",
+			domain:        StaticGroupSourceControllerPermanents,
+			subtypesAny:   []types.Sub{types.Wolf, types.Werewolf},
+			excludeSource: true,
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {

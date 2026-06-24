@@ -2573,6 +2573,9 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	if subject, ok := parseFilteredControlledCreatureGroupSubject(tokens); ok {
 		return subject
 	}
+	if subject, ok := parseRelativeClauseControlledSubtypeSubject(tokens, atoms); ok {
+		return subject
+	}
 	if subject, ok := parseBattlefieldCreatureGroupSubject(tokens, atoms); ok {
 		return subject
 	}
@@ -2712,6 +2715,95 @@ func parseControlledCreatureSubtypeSubject(tokens []shared.Token, atoms Atoms) E
 	default:
 		return EffectStaticSubjectSyntax{}
 	}
+}
+
+// parseRelativeClauseControlledSubtypeSubject recognizes a controlled-creature
+// group narrowed by a relative-clause disjunction of creature subtypes:
+// "[Each] [other] creature[s] you control that's a <Subtype> [or [a]
+// <Subtype>]...". Tribal anthems that name more than one creature type ("Each
+// other creature you control that's a Wolf or a Werewolf gets +1/+1.") use this
+// form. Every named subtype rides SubtypesAny so the affected group matches a
+// permanent that has any one of them, exactly like the single-subtype "Other
+// <Sub> creatures you control" group. A leading "other" maps to the
+// source-excluding subject kind. Only the multi-subtype disjunction is accepted;
+// the single-subtype relative clause keeps falling through to the existing
+// subject productions.
+func parseRelativeClauseControlledSubtypeSubject(tokens []shared.Token, atoms Atoms) (EffectStaticSubjectSyntax, bool) {
+	idx := 0
+	excluded := false
+	if idx < len(tokens) && equalWord(tokens[idx], "each") {
+		idx++
+	}
+	if idx < len(tokens) && equalWord(tokens[idx], "other") {
+		excluded = true
+		idx++
+	}
+	if idx >= len(tokens) || (!equalWord(tokens[idx], "creature") && !equalWord(tokens[idx], "creatures")) {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	idx++
+	if !effectWordsAt(tokens, idx, "you", "control") {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	idx += 2
+	switch {
+	case idx < len(tokens) && equalWord(tokens[idx], "that's"):
+		idx++
+	case effectWordsAt(tokens, idx, "that", "is"), effectWordsAt(tokens, idx, "that", "are"):
+		idx += 2
+	default:
+		return EffectStaticSubjectSyntax{}, false
+	}
+	subs, end, ok := parseControlledCreatureSubtypeOrList(tokens, idx, atoms)
+	if !ok {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	kind := EffectStaticSubjectControlledCreatureSubtype
+	if excluded {
+		kind = EffectStaticSubjectOtherControlledCreatureSubtype
+	}
+	return EffectStaticSubjectSyntax{
+		Kind:         kind,
+		Span:         shared.SpanOf(tokens[:end]),
+		Subtype:      subs[0],
+		SubtypeText:  string(subs[0]),
+		SubtypeKnown: true,
+		SubtypesAny:  subs,
+	}, true
+}
+
+// parseControlledCreatureSubtypeOrList parses a disjunctive list of creature
+// subtypes beginning at start ("a Wolf or a Werewolf"). Each alternative is a
+// single subtype atom optionally preceded by "a"/"an" and separated by "or". It
+// returns the resolved subtypes and the token index just past the list, failing
+// closed unless every alternative resolves to a creature or kindred subtype and
+// at least two are named.
+func parseControlledCreatureSubtypeOrList(tokens []shared.Token, start int, atoms Atoms) ([]types.Sub, int, bool) {
+	var subs []types.Sub
+	idx := start
+	for {
+		if idx < len(tokens) && (equalWord(tokens[idx], "a") || equalWord(tokens[idx], "an")) {
+			idx++
+		}
+		if idx >= len(tokens) {
+			return nil, 0, false
+		}
+		value, ok := atoms.SubtypeAt(tokens[idx].Span)
+		if !ok || !SubtypeMatchesAnyRuntimeCardType(value, []types.Card{types.Creature, types.Kindred}) {
+			return nil, 0, false
+		}
+		subs = append(subs, value)
+		idx++
+		if idx < len(tokens) && equalWord(tokens[idx], "or") {
+			idx++
+			continue
+		}
+		break
+	}
+	if len(subs) < 2 {
+		return nil, 0, false
+	}
+	return subs, idx, true
 }
 
 // doublePTObject is the parsed object of a power/toughness doubling effect: the

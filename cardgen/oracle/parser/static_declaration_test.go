@@ -251,6 +251,42 @@ func TestParseStaticGroupAnthemSubjectKinds(t *testing.T) {
 	}
 }
 
+func TestParseStaticGroupMultiSubtypeAnthemSubject(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source      string
+		kind        EffectStaticSubjectKind
+		subtypesAny []types.Sub
+	}{
+		"other controlled multi-subtype": {
+			source:      "Each other creature you control that's a Wolf or a Werewolf gets +1/+1.",
+			kind:        EffectStaticSubjectOtherControlledCreatureSubtype,
+			subtypesAny: []types.Sub{types.Wolf, types.Werewolf},
+		},
+		"controlled multi-subtype": {
+			source:      "Each creature you control that's a Wolf or a Werewolf gets +1/+1.",
+			kind:        EffectStaticSubjectControlledCreatureSubtype,
+			subtypesAny: []types.Sub{types.Wolf, types.Werewolf},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.source, Context{})
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			subject := declarations[0].Subject
+			if subject.Kind != StaticDeclarationSubjectGroup || subject.Group.Kind != test.kind {
+				t.Fatalf("subject = %#v, want group %s", subject, test.kind)
+			}
+			if !slices.Equal(subject.Group.SubtypesAny, test.subtypesAny) {
+				t.Fatalf("subtypesAny = %#v, want %#v", subject.Group.SubtypesAny, test.subtypesAny)
+			}
+		})
+	}
+}
+
 func TestParseStaticGroupPowerToughnessDeclarationMeaning(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(t, "Creatures you control get +1/+1.", Context{})
