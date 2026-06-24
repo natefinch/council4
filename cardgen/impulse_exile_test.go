@@ -32,6 +32,12 @@ func TestLowerImpulseExileGeneralized(t *testing.T) {
 			amount:   2,
 			duration: game.DurationUntilEndOfYourNextTurn,
 		},
+		{
+			name:     "single card until your next end step",
+			oracle:   "Exile the top card of your library. Until your next end step, you may play that card.",
+			amount:   1,
+			duration: game.DurationUntilYourNextEndStep,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

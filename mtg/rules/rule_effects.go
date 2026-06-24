@@ -268,6 +268,15 @@ func expireRuleEffects(g *game.Game) {
 		if effect.Duration == game.DurationUntilEndOfTurn || effect.Duration == game.DurationThisTurn {
 			continue
 		}
+		// "Until your next end step" expires at the cleanup that follows the
+		// controller's next end step. expireRuleEffects runs at every cleanup, so
+		// the effect is removed on the first cleanup whose turn belongs to the
+		// player it expires for: the creating turn when made during that player's
+		// own turn, otherwise their next turn.
+		if effect.Duration == game.DurationUntilYourNextEndStep &&
+			effect.ExpiresFor == g.Turn.ActivePlayer {
+			continue
+		}
 		if !ruleEffectSourceStillApplies(g, effect) {
 			continue
 		}

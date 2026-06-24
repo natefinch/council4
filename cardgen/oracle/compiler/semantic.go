@@ -1476,6 +1476,10 @@ const (
 	// until the end of your next turn, you may play that card"). The effect
 	// expires at the end of the controller's next turn.
 	DurationUntilEndOfYourNextTurn
+	// DurationUntilYourNextEndStep matches "until your next end step", the
+	// bounded play window Inti, Seneschal of the Sun grants its impulse-exiled
+	// card. The effect expires at the controller's next end step.
+	DurationUntilYourNextEndStep
 )
 
 // StaticSubjectKind identifies the group affected by a static continuous effect.

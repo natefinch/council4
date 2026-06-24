@@ -2053,8 +2053,8 @@ func (p ImpulseExile) validatePrimitive(targets []TargetSpec, checkTargets bool)
 		return errors.New("ImpulseExile requires a positive number of cards")
 	}
 	if p.Duration != DurationThisTurn && p.Duration != DurationUntilEndOfTurn &&
-		p.Duration != DurationUntilEndOfYourNextTurn {
-		return errors.New("ImpulseExile requires a this-turn, until-end-of-turn, or until-end-of-your-next-turn play window")
+		p.Duration != DurationUntilEndOfYourNextTurn && p.Duration != DurationUntilYourNextEndStep {
+		return errors.New("ImpulseExile requires a this-turn, until-end-of-turn, until-end-of-your-next-turn, or until-your-next-end-step play window")
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }

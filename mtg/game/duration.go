@@ -30,6 +30,10 @@ const (
 	// "for as long as that creature is enchanted". Use object identity
 	// (AffectedObjectID), never card name.
 	DurationForAsLongAsControlledCreatureEnchanted
+	// DurationUntilYourNextEndStep expires at the controller's next end step
+	// ("until your next end step", Inti, Seneschal of the Sun). It is removed at
+	// the cleanup following that end step.
+	DurationUntilYourNextEndStep
 )
 
 // DelayedTriggerTiming describes when a delayed triggered ability should fire.
