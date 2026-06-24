@@ -1012,11 +1012,17 @@ type GrantCastPermission struct {
 // card identity is captured before the move so the permission binds by identity
 // rather than through the pre-exile event reference, which the move would
 // otherwise invalidate by advancing the card's zone version.
+//
+// When SelectFromBatch is set the exiled card is not read from Card; instead the
+// resolving controller chooses one card from the triggering batch event still in
+// FromZone ("you may exile one of them from your graveyard" over a "discard one
+// or more cards" batch). Card is ignored in that mode.
 type ExileForPlay struct {
-	Card     CardReference
-	FromZone zone.Type
-	Duration EffectDuration
-	Cast     bool
+	Card            CardReference
+	FromZone        zone.Type
+	Duration        EffectDuration
+	Cast            bool
+	SelectFromBatch bool
 }
 
 // Sacrifice sacrifices the referenced permanent. When no object is set, the

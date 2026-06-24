@@ -65,7 +65,7 @@ func lowerControllerPaidEffect(
 		effect.DelayedTiming != 0 ||
 		payment.Form != parser.EffectPaymentFormMayPayThenIfDo ||
 		payment.Payer != parser.EffectPaymentPayerController ||
-		hasMana == hasAdditional ||
+		(!hasMana && !hasAdditional) ||
 		(hasMana && manaCostHasVariableSymbol(payment.ManaCost)) ||
 		payment.GenericManaAmount.DynamicKind != compiler.DynamicAmountNone ||
 		condition.Kind != compiler.ConditionIf ||
@@ -98,6 +98,16 @@ func lowerControllerPaidEffect(
 		restEffects[i].Span = alignedSpan
 	}
 	strippedCtx.content.Effects = append(strippedCtx.content.Effects, restEffects...)
+	// The dropped prefix cost effects (a non-mana payment such as "discard a
+	// card" parses to its own effect in the payment sentence) inflate the
+	// ability's legacy-effect count, which marks every sibling effect
+	// RequiresOrderedLowering. Now that those cost effects are captured by the
+	// resolution payment and removed, the isolated consequence stands alone, so
+	// clear the flag: a single consequence effect lowers directly and a
+	// multi-effect consequence still routes through ordered lowering by count.
+	for i := range strippedCtx.content.Effects {
+		strippedCtx.content.Effects[i].RequiresOrderedLowering = false
+	}
 	content, diagnostic := lowerContent(cardName, strippedCtx, &strippedSyntax)
 	if diagnostic != nil ||
 		content.IsModal() ||
