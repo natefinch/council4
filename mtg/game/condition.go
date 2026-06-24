@@ -185,6 +185,14 @@ type Condition struct {
 	// chapter III). It holds when the controller has the sole highest-power
 	// creature or is tied for highest, and is false when no creatures exist.
 	ControllerControlsGreatestPowerCreature bool
+
+	// ControllerControlsGreatestToughnessCreature is satisfied when the context
+	// controller controls a creature whose toughness is greater than or equal to
+	// every creature's toughness on the battlefield ("if you control the creature
+	// with the greatest toughness or tied for the greatest toughness"; Abzan
+	// Beastmaster). It holds when the controller has the sole highest-toughness
+	// creature or is tied for highest, and is false when no creatures exist.
+	ControllerControlsGreatestToughnessCreature bool
 }
 
 // ControlPlayerScope selects which players' battlefields a control-count
@@ -267,7 +275,8 @@ func (c *Condition) Empty() bool {
 		c.ControllerGraveyardCardOfTypeCountAtLeast == 0 &&
 		len(c.ControllerControlsNamed) == 0 &&
 		!c.FirstCombatPhaseOfTurn &&
-		!c.ControllerControlsGreatestPowerCreature
+		!c.ControllerControlsGreatestPowerCreature &&
+		!c.ControllerControlsGreatestToughnessCreature
 }
 
 // EventHistoryWindow selects which turn's event log an EventHistoryCondition

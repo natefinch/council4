@@ -1689,8 +1689,10 @@ func TestParseMassBounceEffectExactness(t *testing.T) {
 		// "Return a permanent you control" is a controlled-choice bounce (the
 		// resolving controller chooses one permanent they control), now exact.
 		{"Return a permanent you control to its owner's hand.", true},
-		// "each" stays fail-closed; the compiler cannot distinguish it from "a".
-		{"Return each creature to its owner's hand.", false},
+		// "Return each <group> to its owner's hand" returns every matching
+		// permanent, lowering to the same group bounce as the plural "all" form.
+		{"Return each creature to its owner's hand.", true},
+		{"Return each creature without a +1/+1 counter on it to its owner's hand.", true},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {

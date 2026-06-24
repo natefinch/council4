@@ -77,7 +77,9 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectFight:
 		return exactFightEffectSyntax(effect)
 	case EffectExplore:
-		return exactDirectPronounEffectSyntax(effect, "It explores.")
+		return exactDirectPronounEffectSyntax(effect, "It explores.") ||
+			exactSourceExploresEffectSyntax(effect) ||
+			exactTargetExploresEffectSyntax(effect)
 	case EffectGain:
 		return exactLifeEffectSyntax(effect, "gain", "gains") ||
 			exactTemporaryKeywordEffectSyntax(effect) ||
@@ -143,6 +145,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactMultiBounceEffectSyntax(effect) ||
 			exactDualBounceEffectSyntax(effect) ||
 			exactMassBounceEffectSyntax(effect) ||
+			exactMassEachBounceEffectSyntax(effect) ||
 			exactControlledBounceEffectSyntax(effect) ||
 			exactSelfBounceEffectSyntax(effect) ||
 			exactGraveyardReturnEffectSyntax(effect) ||
@@ -3211,6 +3214,44 @@ func exactConniveEffectSyntax(effect *EffectSyntax) bool {
 		return false
 	}
 	return strings.EqualFold(text, fmt.Sprintf("%s connives %s.", subject, effectAmountSourceText(effect)))
+}
+
+// exactSourceExploresEffectSyntax recognizes the explore keyword action whose
+// subject is the source permanent itself ("This creature explores." / "<name>
+// explores."), the counterpart to the pronoun form "It explores." handled by
+// exactDirectPronounEffectSyntax. The reminder text is excluded upstream. Only a
+// bare explore is exact here; the repeated form ("explores, then it explores
+// again.") and the variable form ("explores X times.") fail closed.
+func exactSourceExploresEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextSource ||
+		len(effect.Targets) != 0 ||
+		effect.Duration != EffectDurationNone {
+		return false
+	}
+	subject, ok := exactSelfSubjectReferenceText(effect.SubjectReferences)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), subject+" explores.")
+}
+
+// exactTargetExploresEffectSyntax recognizes the explore keyword action whose
+// subject is a single target permanent ("Target creature you control
+// explores."), the counterpart to the source forms handled by
+// exactSourceExploresEffectSyntax. The reminder text is excluded upstream. Only
+// a bare explore is exact; the repeated form ("explores, then it explores
+// again.") fails closed.
+func exactTargetExploresEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextTarget ||
+		effect.Duration != EffectDurationNone ||
+		len(effect.Targets) != 1 ||
+		!effect.Targets[0].Exact {
+		return false
+	}
+	return strings.EqualFold(
+		exactEffectClauseText(effect),
+		effect.Targets[0].Text+" explores.",
+	)
 }
 
 func exactStandaloneActionEffectSyntax(effect *EffectSyntax, verb string) bool {

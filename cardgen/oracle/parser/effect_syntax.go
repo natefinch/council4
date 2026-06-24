@@ -1393,6 +1393,12 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	if massEachGroupVerbEffectSyntax(effect) {
 		effect.Selection.All = true
 	}
+	// "Return each <group> to its owner's hand" selects every matching permanent
+	// like the plural "all" mass bounce, so flag its selection as a mass group to
+	// lower to a single group Bounce.
+	if exactMassEachBounceEffectSyntax(effect) {
+		effect.Selection.All = true
+	}
 	effect.CounterRecipientSingleChoice = effect.Exact && counterPlacementSingleChoiceRecipient(effect)
 	effect.TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(effect)
 	effect.TokenCopyOfReference = exactCreateCopyTokenReferenceEffectSyntax(effect)

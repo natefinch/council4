@@ -42,6 +42,35 @@ func TestLowerDrawTriggerYou(t *testing.T) {
 	}
 }
 
+// TestLowerUpkeepDrawIfGreatestToughness verifies that Abzan Beastmaster's
+// "draw a card if you control the creature with the greatest toughness or tied
+// for the greatest toughness" gates the upkeep draw on the greatest-toughness
+// condition.
+func TestLowerUpkeepDrawIfGreatestToughness(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Beastmaster",
+		Layout:     "normal",
+		ManaCost:   "{2}{G}",
+		TypeLine:   "Creature — Dog Shaman",
+		OracleText: "At the beginning of your upkeep, draw a card if you control the creature with the greatest toughness or tied for the greatest toughness.",
+		Colors:     []string{"G"},
+		Power:      new("2"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	instruction := face.TriggeredAbilities[0].Content.Modes[0].Sequence[0]
+	if _, ok := instruction.Primitive.(game.Draw); !ok {
+		t.Fatalf("primitive = %#v, want Draw", instruction.Primitive)
+	}
+	if !instruction.Condition.Exists ||
+		!instruction.Condition.Val.Condition.Val.ControllerControlsGreatestToughnessCreature {
+		t.Fatalf("draw was not gated on the greatest-toughness condition: %#v", instruction.Condition)
+	}
+}
+
 func TestLowerDrawTriggerOpponent(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

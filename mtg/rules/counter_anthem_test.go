@@ -75,3 +75,41 @@ func TestContinuousEffectAnyCounterFilteredGroupGrantsAbilityOnlyToCounterHolder
 		t.Fatal("opponent's counter-bearing creature should not have flying")
 	}
 }
+
+// TestContinuousEffectExcludedCounterFilteredGroupGrantsOnlyToNonCounterHolders
+// proves the kind-specific negated counter filter ("each creature without a
+// +1/+1 counter on it") matches only permanents that do not bear a +1/+1
+// counter: a creature without that counter qualifies, one bearing it does not,
+// and a creature bearing a different counter kind still qualifies because the
+// exclusion is kind-specific.
+func TestContinuousEffectExcludedCounterFilteredGroupGrantsOnlyToNonCounterHolders(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	withPlusOne := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	withPlusOne.Counters.Add(counter.PlusOnePlusOne, 1)
+	withoutCounter := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	withChargeCounter := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	withChargeCounter.Counters.Add(counter.Charge, 1)
+
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:             1,
+		Controller:     game.Player1,
+		SourceObjectID: withoutCounter.ObjectID,
+		Layer:          game.LayerAbility,
+		Group: game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{
+			RequiredTypes:        []types.Card{types.Creature},
+			MatchExcludedCounter: true,
+			ExcludedCounter:      counter.PlusOnePlusOne,
+		}),
+		AddKeywords: []game.Keyword{game.Flying},
+	})
+
+	if hasKeyword(g, withPlusOne, game.Flying) {
+		t.Fatal("creature with a +1/+1 counter should not match the exclusion")
+	}
+	if !hasKeyword(g, withoutCounter, game.Flying) {
+		t.Fatal("creature without a +1/+1 counter should match the exclusion")
+	}
+	if !hasKeyword(g, withChargeCounter, game.Flying) {
+		t.Fatal("creature with only a charge counter should match the +1/+1 exclusion")
+	}
+}

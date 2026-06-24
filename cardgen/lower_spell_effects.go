@@ -1934,23 +1934,44 @@ func lowerExploreSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic)
 	unsupportedExplore := contentDiagnostic(
 		ctx,
 		"unsupported explore spell",
-		"the executable source backend supports only the source permanent pattern \"it explores\"",
+		"the executable source backend supports only the source permanent patterns \"it explores\" and \"this creature explores\" and a single target creature",
 	)
-	if ctx.content.Effects[0].Negated ||
-		!ctx.content.Effects[0].Exact ||
-		ctx.content.Effects[0].Context != parser.EffectContextReferencedObject ||
-		len(ctx.content.References) != 1 ||
-		(ctx.content.References[0].Binding != compiler.ReferenceBindingSource &&
-			ctx.content.References[0].Binding != compiler.ReferenceBindingEventPermanent) {
+	effect := ctx.content.Effects[0]
+	if effect.Negated || !effect.Exact {
 		return game.AbilityContent{}, unsupportedExplore
 	}
-	// Reference validated as "it" pronoun — clear before the fail-closed check.
+	// "Target creature you control explores." names a single target permanent as
+	// the explore subject.
+	if effect.Context == parser.EffectContextTarget {
+		return lowerTargetExploreSpell(ctx)
+	}
+	if len(ctx.content.References) != 1 {
+		return game.AbilityContent{}, unsupportedExplore
+	}
+	reference := ctx.content.References[0]
+	// "It explores." binds the explore subject to a referenced object pronoun
+	// (the source or the triggering permanent); "This creature explores." /
+	// "<name> explores." names the source permanent directly.
+	switch effect.Context {
+	case parser.EffectContextReferencedObject:
+		if reference.Binding != compiler.ReferenceBindingSource &&
+			reference.Binding != compiler.ReferenceBindingEventPermanent {
+			return game.AbilityContent{}, unsupportedExplore
+		}
+	case parser.EffectContextSource:
+		if reference.Binding != compiler.ReferenceBindingSource {
+			return game.AbilityContent{}, unsupportedExplore
+		}
+	default:
+		return game.AbilityContent{}, unsupportedExplore
+	}
+	// Reference validated as the explore subject — clear before the fail-closed check.
 	consumed := ctx
 	consumed.content.References = nil
 	if consumed.content.Unconsumed() {
 		return game.AbilityContent{}, unsupportedExplore
 	}
-	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+	object, ok := lowerObjectReference(reference, referenceLoweringContext{
 		AllowSource: true,
 		AllowEvent:  true,
 	})
@@ -1960,6 +1981,36 @@ func lowerExploreSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic)
 	return game.Mode{Sequence: []game.Instruction{{
 		Primitive: game.Explore{Creature: object},
 	}}}.Ability(), nil
+}
+
+// lowerTargetExploreSpell lowers "Target creature you control explores." into a
+// single-target explore. The target plumbing rejects any restriction the
+// permanent target spec cannot express (e.g. "target creature that crewed it
+// this turn"), so such forms fail closed.
+func lowerTargetExploreSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	unsupportedExplore := contentDiagnostic(
+		ctx,
+		"unsupported explore spell",
+		"the executable source backend supports only the source permanent patterns \"it explores\" and \"this creature explores\" and a single target creature",
+	)
+	if len(ctx.content.Targets) != 1 || len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, unsupportedExplore
+	}
+	consumed := ctx
+	consumed.content.Targets = nil
+	if consumed.content.Unconsumed() {
+		return game.AbilityContent{}, unsupportedExplore
+	}
+	spec, ok := permanentTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, unsupportedExplore
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{spec},
+		Sequence: []game.Instruction{{
+			Primitive: game.Explore{Creature: game.TargetPermanentReference(0)},
+		}},
+	}.Ability(), nil
 }
 
 func lowerManifestSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {

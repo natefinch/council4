@@ -102,6 +102,16 @@ func TestLowerMassBounceSpellToGroup(t *testing.T) {
 			oracleText: "Return all blocking creatures to their owners' hands.",
 			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, CombatState: game.CombatStateBlocking}),",
 		},
+		{
+			name:       "each creature without a +1/+1 counter",
+			oracleText: "Return each creature without a +1/+1 counter on it to its owner's hand.",
+			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, MatchExcludedCounter: true, ExcludedCounter: counter.PlusOnePlusOne}),",
+		},
+		{
+			name:       "each permanent",
+			oracleText: "Return each permanent to its owner's hand.",
+			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{}),",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

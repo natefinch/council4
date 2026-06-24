@@ -196,6 +196,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.ControllerControlsGreatestPowerCreature {
 		matches = matches && controllerControlsGreatestPowerCreature(g, ctx)
 	}
+	if cond.ControllerControlsGreatestToughnessCreature {
+		matches = matches && controllerControlsGreatestToughnessCreature(g, ctx)
+	}
 	if cond.Negate {
 		return !matches
 	}
@@ -337,6 +340,36 @@ func controllerControlsGreatestPowerCreature(g *game.Game, ctx conditionContext)
 		}
 		if values.controller == ctx.controller && (!haveControllerGreatest || values.power > controllerGreatest) {
 			controllerGreatest = values.power
+			haveControllerGreatest = true
+		}
+	}
+	return haveGreatest && haveControllerGreatest && controllerGreatest >= greatest
+}
+
+// controllerControlsGreatestToughnessCreature reports whether the context
+// controller controls a creature whose toughness equals the greatest toughness
+// among all creatures on the battlefield ("you control the creature with the
+// greatest toughness or tied for the greatest toughness"). It is false when no
+// creatures with a defined toughness exist.
+func controllerControlsGreatestToughnessCreature(g *game.Game, ctx conditionContext) bool {
+	greatest := 0
+	haveGreatest := false
+	controllerGreatest := 0
+	haveControllerGreatest := false
+	for _, permanent := range g.Battlefield {
+		if permanent.PhasedOut {
+			continue
+		}
+		values := permanentValuesForCondition(g, permanent, ctx)
+		if !slices.Contains(values.types, types.Creature) || !values.toughnessOK {
+			continue
+		}
+		if !haveGreatest || values.toughness > greatest {
+			greatest = values.toughness
+			haveGreatest = true
+		}
+		if values.controller == ctx.controller && (!haveControllerGreatest || values.toughness > controllerGreatest) {
+			controllerGreatest = values.toughness
 			haveControllerGreatest = true
 		}
 	}

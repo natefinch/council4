@@ -3166,24 +3166,6 @@ func bounceDestinationPronounReferencesOnly(references []compiler.CompiledRefere
 	return true
 }
 
-// bounceDestinationPossessiveReferencesOnly reports whether every reference is
-// the plural "their" possessive pronoun that names the bounce destination
-// ("their owners' hands"). The compiler cannot bind a possessive pronoun to a
-// multi-target permanent so it leaves it ambiguous; the mass group bounce
-// addresses the group directly rather than through the reference, so the
-// destination possessive is the only reference the lowering tolerates. Any
-// other reference fails closed.
-func bounceDestinationPossessiveReferencesOnly(references []compiler.CompiledReference) bool {
-	for _, reference := range references {
-		if reference.Kind != compiler.ReferencePronoun ||
-			reference.Pronoun != compiler.ReferencePronounTheir ||
-			reference.Binding != compiler.ReferenceBindingAmbiguous {
-			return false
-		}
-	}
-	return true
-}
-
 func lowerFixedPermanentTargetSpell(
 	ctx contentCtx,
 	verb string,
