@@ -1658,6 +1658,18 @@ func massChosenTypeBasePhrase(selection *SelectionSyntax, phrase string) (string
 // mass group (it would require the zero-value counter kind in addition to any
 // counter), so it stays fail closed.
 func massCounterBasePhrase(selection *SelectionSyntax, phrase string) (string, bool) {
+	if selection.CounterKindAbsent {
+		kind := selection.CounterKind.String()
+		for _, article := range []string{"a", "an"} {
+			for _, pronoun := range []string{"it", "them"} {
+				suffix := " without " + article + " " + kind + " counter on " + pronoun
+				if base, ok := strings.CutSuffix(phrase, suffix); ok {
+					return base, true
+				}
+			}
+		}
+		return "", false
+	}
 	if selection.CounterAbsent {
 		for _, suffix := range []string{
 			" with no counters on it", " with no counters on them",
@@ -1878,6 +1890,37 @@ func exactMassBounceEffectSyntax(effect *EffectSyntax) bool {
 		if remainder, ok := strings.CutSuffix(text, suffix); ok {
 			return exactMassGroupPhrase(remainder[len(prefix):])
 		}
+	}
+	return false
+}
+
+// exactMassEachBounceEffectSyntax recognizes the singular "each" mass return
+// "Return each <group> to its owner's hand." (Wave Goodbye's "Return each
+// creature without a +1/+1 counter on it to its owner's hand."). It is the
+// "each" sibling of exactMassBounceEffectSyntax: the singular wording selects
+// every matching permanent just like the plural "all" form, so it validates the
+// group phrase in the singular through exactMassEachGroupPhrase while stripping a
+// recognized counter qualifier first. It fails closed for every other return
+// wording so the single- and multi-target bounce paths are untouched.
+func exactMassEachBounceEffectSyntax(effect *EffectSyntax) bool {
+	if effect.ToZone != zone.Hand {
+		return false
+	}
+	const prefix = "Return each "
+	text := exactEffectClauseText(effect)
+	if !strings.HasPrefix(strings.ToLower(text), strings.ToLower(prefix)) {
+		return false
+	}
+	for _, suffix := range []string{" to its owner's hand.", " to their owner's hand.", " to their owners' hands."} {
+		remainder, ok := strings.CutSuffix(text, suffix)
+		if !ok {
+			continue
+		}
+		phrase := remainder[len(prefix):]
+		if base, ok := massCounterBasePhrase(&effect.Selection, phrase); ok {
+			return exactMassEachGroupPhrase(base)
+		}
+		return exactMassEachGroupPhrase(phrase)
 	}
 	return false
 }

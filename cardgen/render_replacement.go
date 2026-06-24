@@ -938,6 +938,10 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, "ControllerControlsGreatestPowerCreature: true,")
 		hasPredicate = true
 	}
+	if cond.ControllerControlsGreatestToughnessCreature {
+		fields = append(fields, "ControllerControlsGreatestToughnessCreature: true,")
+		hasPredicate = true
+	}
 	if len(cond.ControllerControlsNamed) > 0 {
 		quoted := make([]string, 0, len(cond.ControllerControlsNamed))
 		for _, name := range cond.ControllerControlsNamed {

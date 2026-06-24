@@ -609,6 +609,14 @@ func renderSelectionComparisons(ctx *renderCtx, selection game.Selection) ([]str
 	if selection.MatchNoCounters {
 		fields = append(fields, "MatchNoCounters: true,")
 	}
+	if selection.MatchExcludedCounter {
+		ctx.need(importCounter)
+		kind, err := renderCounterKind(selection.ExcludedCounter)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, "MatchExcludedCounter: true,", fmt.Sprintf("ExcludedCounter: %s,", kind))
+	}
 	if selection.MatchModified {
 		fields = append(fields, "MatchModified: true,")
 	}

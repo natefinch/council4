@@ -96,6 +96,7 @@ const (
 	ConditionPredicateControllerControlsNamed                          ConditionPredicateKind = "ConditionPredicateControllerControlsNamed"
 	ConditionPredicateFirstCombatPhaseOfTurn                           ConditionPredicateKind = "ConditionPredicateFirstCombatPhaseOfTurn"
 	ConditionPredicateControlsGreatestPowerCreature                    ConditionPredicateKind = "ConditionPredicateControlsGreatestPowerCreature"
+	ConditionPredicateControlsGreatestToughnessCreature                ConditionPredicateKind = "ConditionPredicateControlsGreatestToughnessCreature"
 	ConditionPredicateSubjectSharesCreatureTypeWithSource              ConditionPredicateKind = "ConditionPredicateSubjectSharesCreatureTypeWithSource"
 )
 
@@ -579,6 +580,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizePriorInstructionCondition,
 		recognizeControlsCommanderCondition,
 		recognizeControlsGreatestPowerCondition,
+		recognizeControlsGreatestToughnessCondition,
 		recognizeDestroyedThisWayCondition,
 		recognizeEventSubjectCondition,
 		recognizeSourceSaddledCondition,
@@ -663,6 +665,21 @@ func recognizeControlsGreatestPowerCondition(body []shared.Token, _ Atoms) (Cond
 		"you", "control", "the", "creature", "with", "the", "greatest", "power",
 		"or", "tied", "for", "the", "greatest", "power") {
 		return ConditionClause{Predicate: ConditionPredicateControlsGreatestPowerCreature}, true
+	}
+	return ConditionClause{}, false
+}
+
+// recognizeControlsGreatestToughnessCondition matches the conditional-draw gate
+// "you control the creature with the greatest toughness or tied for the greatest
+// toughness" (Abzan Beastmaster). The predicate holds when the controller
+// controls a creature whose toughness is at least as high as every other
+// creature's toughness on the battlefield (sole highest or tied for highest). It
+// fails closed on any other wording.
+func recognizeControlsGreatestToughnessCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if tokenWordsEqual(body,
+		"you", "control", "the", "creature", "with", "the", "greatest", "toughness",
+		"or", "tied", "for", "the", "greatest", "toughness") {
+		return ConditionClause{Predicate: ConditionPredicateControlsGreatestToughnessCreature}, true
 	}
 	return ConditionClause{}, false
 }

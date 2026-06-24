@@ -165,6 +165,14 @@ type Selection struct {
 	// pack into the bool cluster.
 	MatchNoCounters bool
 
+	// MatchExcludedCounter, when true, requires the matched permanent to carry no
+	// counter of ExcludedCounter's kind ("each creature without a +1/+1 counter
+	// on it"). Unlike MatchNoCounters it is kind-specific: counters of other
+	// kinds do not disqualify the permanent. A non-battlefield subject, which has
+	// no counters to inspect, never matches. Placed beside MatchNoCounters to
+	// pack into the bool cluster.
+	MatchExcludedCounter bool
+
 	// MatchModified, when true, requires the matched permanent to be modified: it
 	// carries one or more counters, or has one or more Auras or Equipment
 	// attached to it ("modified creatures you control"). A non-battlefield
@@ -210,6 +218,10 @@ type Selection struct {
 
 	// RequiredCounter names the counter kind required when MatchCounter is set.
 	RequiredCounter counter.Kind
+
+	// ExcludedCounter names the counter kind forbidden when MatchExcludedCounter
+	// is set ("without a +1/+1 counter on it").
+	ExcludedCounter counter.Kind
 
 	// RequiredCounterCount compares the number of counters of RequiredCounter's
 	// kind the matched permanent carries ("as long as ~ has seven or more quest
@@ -310,6 +322,7 @@ func (s Selection) Empty() bool {
 		!s.MatchCounter &&
 		!s.MatchAnyCounter &&
 		!s.MatchNoCounters &&
+		!s.MatchExcludedCounter &&
 		!s.RequiredCounterCount.Exists &&
 		!s.EnteredThisTurn &&
 		!s.MatchModified &&
@@ -376,6 +389,9 @@ func (s Selection) Validate() []string {
 	}
 	if s.MatchNoCounters && (s.MatchAnyCounter || s.MatchCounter || s.RequiredCounterCount.Exists) {
 		problems = append(problems, "selection cannot require both no counters and a counter")
+	}
+	if s.MatchExcludedCounter && s.MatchCounter && s.ExcludedCounter == s.RequiredCounter {
+		problems = append(problems, "selection cannot both require and exclude the same counter kind")
 	}
 	if s.ManaValueDynamic.Exists {
 		switch s.ManaValueDynamic.Val.Kind {

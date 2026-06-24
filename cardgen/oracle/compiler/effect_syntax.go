@@ -154,6 +154,8 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		RequiredCounter:               syntax.CounterKind,
 		MatchAnyCounter:               syntax.CounterAny,
 		MatchNoCounters:               syntax.CounterAbsent,
+		MatchExcludedCounter:          syntax.CounterKindAbsent,
+		ExcludedCounter:               syntax.CounterKind,
 		PlayerOrPlaneswalker:          syntax.PlayerOrPlaneswalker,
 		SubtypeFromEntryChoice:        syntax.SubtypeFromEntryChoice,
 		SubtypeFromChosenType:         syntax.SubtypeFromChosenType,

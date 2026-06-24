@@ -1409,12 +1409,14 @@ func lowerUntapSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 }
 
 // exactMassBounceGroup mirrors exactMassGroup for the mass return-to-hand
-// "Return all <group> to their owners' hands." The return wording differs from
-// the bare destroy/exile mass clause only by its "to their owners' hands"
-// destination suffix, which the compiler records as a single ambiguous "their"
-// possessive pronoun reference. The bounced objects come from the group, not
-// that reference, so the possessive is the only reference tolerated; every other
-// reference (and any target, condition, or mode) fails closed.
+// "Return all <group> to their owners' hands." and the singular "each" form
+// "Return each <group> to its owner's hand." The return wording differs from the
+// bare destroy/exile mass clause only by its destination suffix, which the
+// compiler records as an ambiguous "their"/"its" possessive pronoun reference. A
+// counter-qualifier ("without a +1/+1 counter on it") adds a further "it"/"them"
+// pronoun that belongs to the group, not a separate object. Those reference
+// pronouns are the only ones tolerated; every other reference (and any target,
+// condition, or mode) fails closed.
 func exactMassBounceGroup(ctx contentCtx) (game.GroupReference, bool) {
 	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -1423,7 +1425,7 @@ func exactMassBounceGroup(ctx contentCtx) (game.GroupReference, bool) {
 		!ctx.content.Effects[0].Exact ||
 		!ctx.content.Effects[0].Selector.All ||
 		ctx.content.Effects[0].ToZone != zone.Hand ||
-		!bounceDestinationPossessiveReferencesOnly(ctx.content.References) {
+		!massBounceReferencesOnly(ctx.content.References, ctx.content.Effects[0].Selector) {
 		return game.GroupReference{}, false
 	}
 	if len(ctx.content.Keywords) != 0 {
@@ -1434,6 +1436,38 @@ func exactMassBounceGroup(ctx contentCtx) (game.GroupReference, bool) {
 		return game.GroupReference{}, false
 	}
 	return game.BattlefieldGroup(selection), true
+}
+
+// massBounceReferencesOnly reports whether every reference of a mass return is
+// one the group bounce addresses directly rather than through the reference. The
+// destination possessive ("their owners' hands", "its owner's hand") is always
+// tolerated because the compiler cannot bind a possessive to a group. When the
+// group selector carries a counter qualifier ("without a +1/+1 counter on it"),
+// the qualifier's trailing "it"/"them" pronoun is part of the selected group and
+// is tolerated too. Every other reference fails closed. A reference-free group
+// always passes.
+func massBounceReferencesOnly(
+	references []compiler.CompiledReference,
+	selector compiler.CompiledSelector,
+) bool {
+	hasCounterQualifier := selector.MatchCounter || selector.MatchNoCounters ||
+		selector.MatchAnyCounter || selector.MatchExcludedCounter
+	for _, reference := range references {
+		if reference.Kind != compiler.ReferencePronoun ||
+			reference.Binding != compiler.ReferenceBindingAmbiguous {
+			return false
+		}
+		switch reference.Pronoun {
+		case compiler.ReferencePronounTheir, compiler.ReferencePronounIts:
+		case compiler.ReferencePronounIt, compiler.ReferencePronounThem:
+			if !hasCounterQualifier {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 func exactMassGroup(ctx contentCtx) (game.GroupReference, bool) {

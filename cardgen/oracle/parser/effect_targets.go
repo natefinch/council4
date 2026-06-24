@@ -2151,6 +2151,9 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	}
 	if match, ok := selectionCounterQualifier(tokens); ok {
 		switch {
+		case match.KindAbsent:
+			selection.CounterKindAbsent = true
+			selection.CounterKind = match.Kind
 		case match.Absent:
 			selection.CounterAbsent = true
 		case match.Any:
@@ -2334,13 +2337,16 @@ func parseSelectionChosenTypeQualifier(words []string, selection *SelectionSynta
 // qualifier: Kind names the required counter, Any marks the kind-agnostic "with
 // a counter on it" form (Rishkar) where any counter satisfies the filter, Absent
 // marks the negated "with no counters on it/them" form (Damning Verdict) where
-// the permanent must carry no counters, and End is the token index just past the
-// qualifier.
+// the permanent must carry no counters, KindAbsent marks the kind-specific
+// negated "without a <kind> counter on it/them" form (Wave Goodbye) where the
+// permanent must carry no counter of Kind, and End is the token index just past
+// the qualifier.
 type counterQualifierMatch struct {
-	Kind   counter.Kind
-	Any    bool
-	Absent bool
-	End    int
+	Kind       counter.Kind
+	Any        bool
+	Absent     bool
+	KindAbsent bool
+	End        int
 }
 
 // counterQualifierKind detects a "with a/an <kind> counter on it/them" qualifier
@@ -2351,6 +2357,9 @@ type counterQualifierMatch struct {
 func counterQualifierKind(tokens []shared.Token, start int) (counterQualifierMatch, bool) {
 	if effectWordsAt(tokens, start, "with", "no") {
 		return noCounterQualifier(tokens, start)
+	}
+	if effectWordsAt(tokens, start, "without", "a") || effectWordsAt(tokens, start, "without", "an") {
+		return excludedCounterQualifier(tokens, start)
 	}
 	if !effectWordsAt(tokens, start, "with", "a") && !effectWordsAt(tokens, start, "with", "an") {
 		return counterQualifierMatch{}, false
@@ -2397,6 +2406,32 @@ func noCounterQualifier(tokens []shared.Token, start int) (counterQualifierMatch
 		return counterQualifierMatch{}, false
 	}
 	return counterQualifierMatch{Absent: true, End: counterIndex + 3}, true
+}
+
+// excludedCounterQualifier detects the kind-specific negated "without a/an
+// <kind> counter on it/them" qualifier beginning at index start ("Return each
+// creature without a +1/+1 counter on it to its owner's hand."). It requires a
+// named counter kind: the kind-agnostic "without a counter" form names no kind
+// and fails closed rather than dropping the restriction. It mirrors
+// counterQualifierKind's "on it"/"on them" pronoun handling.
+func excludedCounterQualifier(tokens []shared.Token, start int) (counterQualifierMatch, bool) {
+	counterIndex := start + 2
+	for counterIndex < len(tokens) &&
+		!equalWord(tokens[counterIndex], "counter") && !equalWord(tokens[counterIndex], "counters") {
+		counterIndex++
+	}
+	if counterIndex >= len(tokens) || counterIndex == start+2 {
+		return counterQualifierMatch{}, false
+	}
+	if !effectWordsAt(tokens, counterIndex+1, "on", "it") &&
+		!effectWordsAt(tokens, counterIndex+1, "on", "them") {
+		return counterQualifierMatch{}, false
+	}
+	kind, _, ok := counterNameBefore(tokens, counterIndex)
+	if !ok {
+		return counterQualifierMatch{}, false
+	}
+	return counterQualifierMatch{Kind: kind, KindAbsent: true, End: counterIndex + 3}, true
 }
 
 // selectionCounterQualifier scans tokens for a "with a <kind> counter on

@@ -729,6 +729,14 @@ const (
 	// highest-power creature or is tied for highest, and is false when no
 	// creatures exist.
 	ConditionPredicateControlsGreatestPowerCreature
+	// ConditionPredicateControlsGreatestToughnessCreature is satisfied when the
+	// context controller controls a creature whose toughness is greater than or
+	// equal to every other creature's toughness on the battlefield ("if you
+	// control the creature with the greatest toughness or tied for the greatest
+	// toughness"; Abzan Beastmaster). It holds when the controller has the sole
+	// highest-toughness creature or is tied for highest, and is false when no
+	// creatures exist.
+	ConditionPredicateControlsGreatestToughnessCreature
 	// ConditionPredicateSubjectSharesCreatureTypeWithSource is satisfied when the
 	// condition's subject card (the just-looked-at top card of the controller's
 	// library) shares at least one creature type with the source permanent ("if
@@ -1096,6 +1104,13 @@ type CompiledSelector struct {
 	RequiredCounter counter.Kind
 	MatchAnyCounter bool
 	MatchNoCounters bool
+	// MatchExcludedCounter records the kind-specific negated "without a <kind>
+	// counter on it/them" qualifier ("each creature without a +1/+1 counter on
+	// it"); ExcludedCounter names the counter the matched permanent must not
+	// carry. Unlike MatchNoCounters it is kind-specific rather than
+	// kind-agnostic.
+	MatchExcludedCounter bool
+	ExcludedCounter      counter.Kind
 	// PlayerOrPlaneswalker marks the combined "player or planeswalker" /
 	// "opponent or planeswalker" combined damage target. Kind stays
 	// SelectorPlayer or SelectorOpponent; this flag records the additional
