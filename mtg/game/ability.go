@@ -148,6 +148,16 @@ const (
 	// type-change are not yet simulated. Appended at the end of the enum so
 	// existing keyword ordinals are unchanged.
 	Reconfigure
+	// Partner (CR 702.124a) is the "Partner" keyword and its "Partner—<quality>"
+	// restricted variants (CR 702.124f). It grants the "partner commander"
+	// deck-construction permission; the restricted variants only narrow which
+	// other partner cards a card may pair with. Both the permission and the
+	// pairing restrictions are deck-construction mechanics the deterministic
+	// playtester does not simulate, so the keyword is inert; it is modeled as a
+	// recognized simple keyword carried on the card so HasKeyword(Partner)
+	// reports true and partner cards are representable. Appended at the end of the
+	// enum so existing keyword ordinals are unchanged.
+	Partner
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -341,6 +351,17 @@ var (
 	// continuous in-game effect; it is modeled as a simple keyword purely so
 	// choose-a-background cards are representable.
 	ChooseABackgroundStaticBody = simpleKeywordStaticBody("Choose a Background", ChooseABackground)
+
+	// PartnerStaticBody is the reusable StaticAbilityBody for the "Partner"
+	// keyword (CR 702.124a) and its "Partner—<quality>" restricted variants (CR
+	// 702.124f, e.g. "Partner—Survivors", "Partner—Character select"). Partner
+	// grants the two cards the "partner commander" deck-construction permission;
+	// the restricted variants only narrow which other partner cards a card may
+	// pair with. Both the permission and the pairing restrictions are
+	// deck-construction mechanics the deterministic playtester does not simulate,
+	// so the keyword carries no continuous in-game effect; it is modeled as a
+	// simple keyword purely so partner cards are representable.
+	PartnerStaticBody = simpleKeywordStaticBody("Partner", Partner)
 
 	// FuseStaticBody is the reusable StaticAbility for fuse (CR 702.102). It
 	// carries the Fuse keyword so HasKeyword(Fuse) reports true on each half of a

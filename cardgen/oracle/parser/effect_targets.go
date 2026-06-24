@@ -856,16 +856,16 @@ func selectionCombatStateWords(selection SelectionSyntax) ([]string, bool) {
 // tokenQualifiedNoun applies a selection's token adjective to its permanent
 // noun, reconstructing the canonical Oracle wording. A bare "permanent" noun
 // restricted to tokens prints as the single word "token" (Oracle never writes
-// "token permanent"); a typed noun takes the adjective as a prefix ("token
-// creature"). A "nontoken" selector prefixes the noun directly ("nontoken
-// creature", "nontoken permanent"). Selections without a token adjective return
-// the noun unchanged.
+// "token permanent"); a typed noun takes "token" as a trailing suffix ("artifact
+// token", "creature token"), matching the printed Oracle order. A "nontoken"
+// selector prefixes the noun directly ("nontoken creature", "nontoken
+// permanent"). Selections without a token adjective return the noun unchanged.
 func tokenQualifiedNoun(selection SelectionSyntax, noun string) []string {
 	switch {
 	case selection.TokenOnly && selection.Kind == SelectionPermanent:
 		return []string{"token"}
 	case selection.TokenOnly:
-		return []string{"token", noun}
+		return []string{noun, "token"}
 	case selection.NonToken:
 		return []string{"nontoken", noun}
 	default:

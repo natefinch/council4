@@ -140,3 +140,38 @@ func TestGenerateExecutableCardSourceCopyTokenOneOfThem(t *testing.T) {
 		}
 	}
 }
+
+// TestGenerateExecutableCardSourceCopyTargetArtifactToken covers a typed
+// token-qualified target noun ("Create a token that's a copy of target artifact
+// token you control." — Worldwalker Helm's activated ability). The "<type>
+// token" target must round-trip and lower to a permanent target restricted to
+// artifact tokens (PermanentTypes + TokenOnly), copying that target object.
+func TestGenerateExecutableCardSourceCopyTargetArtifactToken(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Artifact Token Copier",
+		Layout:     "normal",
+		ManaCost:   "{1}{U}",
+		TypeLine:   "Artifact",
+		OracleText: "{1}{U}, {T}: Create a token that's a copy of target artifact token you control.",
+	}, "a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Constraint: \"target artifact token you control\",",
+		"Allow:      game.TargetAllowPermanent,",
+		"PermanentTypes: []types.Card{types.Artifact},",
+		"TokenOnly:      true,",
+		"Source: game.TokenCopyOf(game.TokenCopySpec{",
+		"Source: game.TokenCopySourceObject,",
+		"Object: game.TargetPermanentReference(0),",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}

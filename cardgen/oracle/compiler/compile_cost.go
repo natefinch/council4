@@ -43,6 +43,7 @@ func compileCostComponent(component parser.CostComponent) CostComponent {
 		DiscardWholeHand:      component.DiscardWholeHand,
 		AnyNumber:             component.AnyNumber,
 		ObjectHistoric:        component.ObjectHistoric,
+		ObjectTokenOnly:       component.ObjectTokenOnly,
 		TotalManaValueAtLeast: component.TotalManaValueAtLeast,
 		ChoiceGroup:           component.ChoiceGroup,
 		PayLifeAmountDynamic:  compilePayLifeDynamic(component.PayLifeDynamic),

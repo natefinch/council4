@@ -424,6 +424,9 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 	if additional.RequireTapped {
 		fields = append(fields, "RequireTapped: true,")
 	}
+	if additional.RequireToken {
+		fields = append(fields, "RequireToken: true,")
+	}
 	if additional.ExcludeSource {
 		fields = append(fields, "ExcludeSource: true,")
 	}

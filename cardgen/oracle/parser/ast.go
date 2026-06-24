@@ -144,6 +144,13 @@ type Ability struct {
 	// the paragraph's competing effect, keyword, and declaration semantics are
 	// cleared so downstream stages consume only the choose-a-background identity.
 	ChooseABackground *ChooseABackgroundClause `json:",omitempty"`
+	// Partner is the recognized "Partner" keyword ability (CR 702.124a) and its
+	// "Partner—<quality>" restricted variants (CR 702.124f), or nil when this
+	// paragraph is not a partner ability. The parser owns the "Partner" and
+	// "Partner—<quality>" wording; when it is set the paragraph's competing
+	// effect, keyword, declaration, and ability-word semantics are cleared so
+	// downstream stages consume only the partner identity.
+	Partner *PartnerClause `json:",omitempty"`
 	// ConditionSegments are the ability's condition clauses, pre-segmented over
 	// the same semantic token stream the compiler historically scanned.
 	ConditionSegments []ConditionSegment `json:",omitempty"`

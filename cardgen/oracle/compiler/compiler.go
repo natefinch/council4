@@ -100,6 +100,7 @@ func compileAbility(
 	compiled.Companion = ability.Companion != nil
 	compiled.PartnerWith = ability.PartnerWith != nil
 	compiled.ChooseABackground = ability.ChooseABackground != nil
+	compiled.Partner = ability.Partner != nil
 	if ability.Modal != nil {
 		for i := range ability.Modal.Options {
 			compiledMode, modeDiagnostics := compileMode(&ability.Modal.Options[i], context)
@@ -191,6 +192,7 @@ func compileAbility(
 		!compiled.Companion &&
 		!compiled.PartnerWith &&
 		!compiled.ChooseABackground &&
+		!compiled.Partner &&
 		len(compiled.Content.Effects) == 0 && len(compiled.Content.Keywords) == 0 &&
 		!legacyEffectsPresent(ability.Sentences) &&
 		(compiled.Static == nil || len(compiled.Static.Declarations) == 0) {
