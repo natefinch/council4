@@ -1141,10 +1141,13 @@ type SelectionSyntax struct {
 	// CounterRequired records a "with a <kind> counter on it/them" qualifier;
 	// CounterKind names the counter the matched permanent must carry. When the
 	// qualifier names no kind ("with a counter on it"), CounterAny is set instead
-	// and the match requires a counter of any kind.
+	// and the match requires a counter of any kind. CounterAbsent records the
+	// negated "with no counters on it/them" qualifier, requiring the matched
+	// permanent to carry no counters of any kind.
 	CounterRequired bool         `json:",omitempty"`
 	CounterKind     counter.Kind `json:",omitempty"`
 	CounterAny      bool         `json:",omitempty"`
+	CounterAbsent   bool         `json:",omitempty"`
 	// SubtypeFromEntryChoice records a trailing "of the chosen type" qualifier on
 	// a count subject ("the number of creatures you control of the chosen type"),
 	// requiring each matched permanent to share the creature subtype the source

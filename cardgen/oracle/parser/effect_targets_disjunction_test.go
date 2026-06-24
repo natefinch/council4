@@ -85,6 +85,27 @@ func TestParseBareTypeUnionStaysFlattened(t *testing.T) {
 	}
 }
 
+// TestParseAttackingSubtypeUnionTargetIsExact proves a combat-qualified
+// subtype-union target ("target attacking Wolf or Werewolf") round-trips to an
+// exact production: the subtype-union reconstruction now carries the leading
+// "attacking" combat-state qualifier (Ulrich's Kindred). Both subtypes and the
+// Attacking flag survive so the keyword-grant lowering can act on the target.
+func TestParseAttackingSubtypeUnionTargetIsExact(t *testing.T) {
+	t.Parallel()
+	target := singleTarget(t, "Destroy target attacking Wolf or Werewolf.")
+	if !target.Exact {
+		t.Fatalf("target Exact = false, want true: %#v", target)
+	}
+	if !target.Selection.Attacking {
+		t.Fatalf("target Attacking = false, want true: %#v", target.Selection)
+	}
+	if len(target.Selection.SubtypesAny) != 2 ||
+		target.Selection.SubtypesAny[0] != "Wolf" ||
+		target.Selection.SubtypesAny[1] != "Werewolf" {
+		t.Fatalf("target SubtypesAny = %#v, want [Wolf Werewolf]", target.Selection.SubtypesAny)
+	}
+}
+
 func singleTarget(t *testing.T, source string) TargetSyntax {
 	t.Helper()
 	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})

@@ -1127,6 +1127,15 @@ func collectPhaseOutPermanentTree(
 
 func handleRegenerate(r *effectResolver, prim game.Regenerate) effectResolved {
 	res := effectResolved{accepted: true}
+	if prim.Group.Valid() {
+		permanents := r.groupPermanents(prim.Group)
+		for _, permanent := range permanents {
+			permanent.RegenerationShields++
+		}
+		res.succeeded = len(permanents) > 0
+		res.amount = len(permanents)
+		return res
+	}
 	if permanent, ok := r.resolveObject(prim.Object); ok {
 		permanent.RegenerationShields++
 		res.succeeded = true

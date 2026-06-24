@@ -67,6 +67,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactDirectTargetEffectSyntax(effect, "Exile") ||
 			exactMultiDistinctTargetEffectSyntax(effect, "Exile") ||
 			exactMassEffectSyntax(effect, "Exile all ") ||
+			exactMassEachEffectSyntax(effect, "Exile each ") ||
 			exactBackReferenceEffectSyntax(effect, "Exile") ||
 			exactGraveyardExileEffectSyntax(effect) ||
 			exactPlayerGraveyardExileEffectSyntax(effect)
@@ -125,7 +126,9 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectRegenerate:
 		return exactDirectTargetEffectSyntax(effect, "Regenerate") ||
 			exactRegenerateSelfEffectSyntax(effect) ||
-			exactRegenerateAttachedEffectSyntax(effect)
+			exactRegenerateAttachedEffectSyntax(effect) ||
+			exactMassEffectSyntax(effect, "Regenerate all ") ||
+			exactMassEachEffectSyntax(effect, "Regenerate each ")
 	case EffectReorderLibraryTop:
 		return exactLibraryTopReorderEffectSyntax(effect)
 	case EffectReturn:
@@ -173,13 +176,15 @@ func exactEffectSyntaxTail(effect *EffectSyntax) bool {
 	case EffectTap:
 		return exactDirectTargetEffectSyntax(effect, "Tap") ||
 			exactDirectReferenceEffectSyntax(effect, "Tap") ||
-			exactMassEffectSyntax(effect, "Tap all ")
+			exactMassEffectSyntax(effect, "Tap all ") ||
+			exactMassEachEffectSyntax(effect, "Tap each ")
 	case EffectTapOrUntap:
 		return exactDirectTargetEffectSyntax(effect, "Tap or untap")
 	case EffectUntap:
 		return exactDirectTargetEffectSyntax(effect, "Untap") ||
 			exactDirectReferenceEffectSyntax(effect, "Untap") ||
 			exactMassEffectSyntax(effect, "Untap all ") ||
+			exactMassEachEffectSyntax(effect, "Untap each ") ||
 			exactBoundedUntapEffectSyntax(effect) ||
 			exactNegatedNextUntapStepSyntax(effect) ||
 			exactTargetNextUntapStepSyntax(effect) ||

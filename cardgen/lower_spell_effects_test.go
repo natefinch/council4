@@ -746,6 +746,23 @@ func TestLowerMassDestroyAndExile(t *testing.T) {
 				RequiredCounter: counter.PlusOnePlusOne,
 			},
 		},
+		{
+			name:       "no counters",
+			oracleText: "Destroy all creatures with no counters on them.",
+			selection: game.Selection{
+				RequiredTypes:   []types.Card{types.Creature},
+				MatchNoCounters: true,
+			},
+		},
+		{
+			name:       "no counters exile",
+			oracleText: "Exile all creatures with no counters on them.",
+			selection: game.Selection{
+				RequiredTypes:   []types.Card{types.Creature},
+				MatchNoCounters: true,
+			},
+			exile: true,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -825,6 +842,14 @@ func TestLowerMassDestroyEachGroup(t *testing.T) {
 				RequiredTypes:   []types.Card{types.Creature},
 				MatchCounter:    true,
 				RequiredCounter: counter.PlusOnePlusOne,
+			},
+		},
+		{
+			name:       "creature no counters",
+			oracleText: "Destroy each creature with no counters on it.",
+			selection: game.Selection{
+				RequiredTypes:   []types.Card{types.Creature},
+				MatchNoCounters: true,
 			},
 		},
 	}
@@ -929,6 +954,16 @@ func TestLowerMassTapAndUntap(t *testing.T) {
 			selection: game.Selection{
 				RequiredTypes: []types.Card{types.Land},
 				Controller:    game.ControllerYou,
+			},
+			untap: true,
+		},
+		{
+			name:       "untap each other creature you control",
+			oracleText: "Untap each other creature you control.",
+			selection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Controller:    game.ControllerYou,
+				ExcludeSource: true,
 			},
 			untap: true,
 		},

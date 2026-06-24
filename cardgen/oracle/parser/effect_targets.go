@@ -752,8 +752,8 @@ func permanentSelectionQualifierWords(selection SelectionSyntax) ([]string, bool
 		len(selection.Supertypes) > 1 {
 		return nil, false
 	}
-	if (selection.Tapped && selection.Untapped) ||
-		((selection.Tapped || selection.Untapped) && (selection.Attacking || selection.Blocking)) {
+	combatWords, ok := selectionCombatStateWords(selection)
+	if !ok {
 		return nil, false
 	}
 	noun, hasNoun := permanentSelectionNoun(selection.Kind)
@@ -772,20 +772,7 @@ func permanentSelectionQualifierWords(selection SelectionSyntax) ([]string, bool
 			return nil, false
 		}
 	}
-	var words []string
-	switch {
-	case selection.Attacking && selection.Blocking:
-		words = append(words, "attacking", "or", "blocking")
-	case selection.Attacking:
-		words = append(words, "attacking")
-	case selection.Blocking:
-		words = append(words, "blocking")
-	case selection.Tapped:
-		words = append(words, "tapped")
-	case selection.Untapped:
-		words = append(words, "untapped")
-	default:
-	}
+	words := append([]string(nil), combatWords...)
 	if len(selection.Supertypes) == 1 {
 		supertypeText, ok := supertypeWord(selection.Supertypes[0])
 		if !ok {
@@ -836,6 +823,34 @@ func permanentSelectionQualifierWords(selection SelectionSyntax) ([]string, bool
 	}
 	words = append(words, numericWords...)
 	return words, true
+}
+
+// selectionCombatStateWords reconstructs the canonical Oracle combat/state
+// qualifier words ("attacking", "blocking", "attacking or blocking", "tapped",
+// "untapped") that precede a permanent noun. The mutually exclusive states are
+// validated together: a permanent cannot be both tapped and untapped, nor carry
+// a tapped/untapped state alongside a combat state. It is shared by the
+// single-permanent reconstruction and the subtype-union reconstruction so both
+// render the same prefix byte-exactly.
+func selectionCombatStateWords(selection SelectionSyntax) ([]string, bool) {
+	if (selection.Tapped && selection.Untapped) ||
+		((selection.Tapped || selection.Untapped) && (selection.Attacking || selection.Blocking)) {
+		return nil, false
+	}
+	switch {
+	case selection.Attacking && selection.Blocking:
+		return []string{"attacking", "or", "blocking"}, true
+	case selection.Attacking:
+		return []string{"attacking"}, true
+	case selection.Blocking:
+		return []string{"blocking"}, true
+	case selection.Tapped:
+		return []string{"tapped"}, true
+	case selection.Untapped:
+		return []string{"untapped"}, true
+	default:
+		return nil, true
+	}
 }
 
 // tokenQualifiedNoun applies a selection's token adjective to its permanent
@@ -1147,7 +1162,6 @@ func joinUnionNounsSep(nouns []string, conjunction string) string {
 func exactSubtypeUnionTargetSyntax(text string, selection SelectionSyntax) bool {
 	if selection.Kind != SelectionUnknown ||
 		selection.All || selection.Another || selection.Other ||
-		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
 		selection.Keyword != KeywordUnknown || selection.ExcludedKeyword != KeywordUnknown ||
 		selection.Zone != zone.None || selection.Colorless || selection.Multicolored ||
 		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
@@ -1157,11 +1171,16 @@ func exactSubtypeUnionTargetSyntax(text string, selection SelectionSyntax) bool 
 		len(selection.ColorsAny) != 0 || len(selection.ExcludedColors) != 0 {
 		return false
 	}
+	combatWords, ok := selectionCombatStateWords(selection)
+	if !ok {
+		return false
+	}
 	nouns := make([]string, 0, len(selection.SubtypesAny))
 	for _, subtype := range selection.SubtypesAny {
 		nouns = append(nouns, string(subtype))
 	}
-	expected := "target " + joinUnionNouns(nouns)
+	words := append([]string{"target"}, combatWords...)
+	expected := strings.Join(append(words, joinUnionNouns(nouns)), " ")
 	switch selection.Controller {
 	case SelectionControllerAny:
 	case SelectionControllerYou:
@@ -2131,12 +2150,16 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	if keyword, ok := atoms.KeywordSelectorIn(span, true); ok {
 		selection.ExcludedKeyword = keyword.Keyword
 	}
-	if kind, anyKind, ok := selectionCounterQualifier(tokens); ok {
-		selection.CounterRequired = true
-		if anyKind {
+	if match, ok := selectionCounterQualifier(tokens); ok {
+		switch {
+		case match.Absent:
+			selection.CounterAbsent = true
+		case match.Any:
+			selection.CounterRequired = true
 			selection.CounterAny = true
-		} else {
-			selection.CounterKind = kind
+		default:
+			selection.CounterRequired = true
+			selection.CounterKind = match.Kind
 		}
 	}
 	if (selection.Kind == SelectionPlayer && slices.Equal(words, []string{"player", "or", "planeswalker"})) ||
@@ -2310,19 +2333,26 @@ func parseSelectionChosenTypeQualifier(words []string, selection *SelectionSynta
 
 // counterQualifierMatch records a parsed "with a/an <kind> counter on it/them"
 // qualifier: Kind names the required counter, Any marks the kind-agnostic "with
-// a counter on it" form (Rishkar) where any counter satisfies the filter, and
-// End is the token index just past the qualifier.
+// a counter on it" form (Rishkar) where any counter satisfies the filter, Absent
+// marks the negated "with no counters on it/them" form (Damning Verdict) where
+// the permanent must carry no counters, and End is the token index just past the
+// qualifier.
 type counterQualifierMatch struct {
-	Kind counter.Kind
-	Any  bool
-	End  int
+	Kind   counter.Kind
+	Any    bool
+	Absent bool
+	End    int
 }
 
 // counterQualifierKind detects a "with a/an <kind> counter on it/them" qualifier
-// beginning at index start and returns the parsed qualifier together with whether
-// the phrase matched. It fails closed when the phrase is absent so unrelated
-// wordings keep their existing handling.
+// or the negated "with no counters on it/them" qualifier beginning at index start
+// and returns the parsed qualifier together with whether the phrase matched. It
+// fails closed when the phrase is absent so unrelated wordings keep their
+// existing handling.
 func counterQualifierKind(tokens []shared.Token, start int) (counterQualifierMatch, bool) {
+	if effectWordsAt(tokens, start, "with", "no") {
+		return noCounterQualifier(tokens, start)
+	}
 	if !effectWordsAt(tokens, start, "with", "a") && !effectWordsAt(tokens, start, "with", "an") {
 		return counterQualifierMatch{}, false
 	}
@@ -2351,16 +2381,37 @@ func counterQualifierKind(tokens []shared.Token, start int) (counterQualifierMat
 	return counterQualifierMatch{Kind: kind, End: counterIndex + 3}, true
 }
 
+// noCounterQualifier detects the negated "with no counter(s) on it/them"
+// qualifier beginning at index start ("Destroy all creatures with no counters on
+// them."). Only the bare, kind-agnostic negation is recognized: a named "with no
+// <kind> counters" form is left unmatched so it fails closed rather than dropping
+// the counter kind. It mirrors counterQualifierKind's "on it"/"on them" pronoun
+// handling.
+func noCounterQualifier(tokens []shared.Token, start int) (counterQualifierMatch, bool) {
+	counterIndex := start + 2
+	if counterIndex >= len(tokens) ||
+		(!equalWord(tokens[counterIndex], "counter") && !equalWord(tokens[counterIndex], "counters")) {
+		return counterQualifierMatch{}, false
+	}
+	if !effectWordsAt(tokens, counterIndex+1, "on", "it") &&
+		!effectWordsAt(tokens, counterIndex+1, "on", "them") {
+		return counterQualifierMatch{}, false
+	}
+	return counterQualifierMatch{Absent: true, End: counterIndex + 3}, true
+}
+
 // selectionCounterQualifier scans tokens for a "with a <kind> counter on
-// it/them" qualifier anywhere in a selection phrase and reports the counter kind
-// it requires, or whether the qualifier names no kind (any counter).
-func selectionCounterQualifier(tokens []shared.Token) (kind counter.Kind, anyKind, ok bool) {
+// it/them" qualifier (or its negated "with no counters on it/them" form) anywhere
+// in a selection phrase and returns the parsed qualifier (its counter kind, the
+// kind-agnostic "any counter" flag, or the "no counters" absence flag) together
+// with whether any such qualifier matched.
+func selectionCounterQualifier(tokens []shared.Token) (counterQualifierMatch, bool) {
 	for i := range tokens {
 		if match, found := counterQualifierKind(tokens, i); found {
-			return match.Kind, match.Any, true
+			return match, true
 		}
 	}
-	return 0, false, false
+	return counterQualifierMatch{}, false
 }
 
 func parseSelectionNumbers(tokens []shared.Token, atoms Atoms, selection *SelectionSyntax) bool {
@@ -3167,7 +3218,10 @@ func parseCounterFilteredCreatureGroupSubject(tokens []shared.Token) (EffectStat
 	}
 	idx += 2
 	match, ok := counterQualifierKind(tokens, idx)
-	if !ok {
+	if !ok || match.Absent {
+		// The negated "with no counters" qualifier has no modeled
+		// counter-filtered group subject; fail closed so it is not mistaken for a
+		// required-counter group.
 		return EffectStaticSubjectSyntax{}, false
 	}
 	if !counterGroupVerbAt(tokens, match.End, head.singular) {

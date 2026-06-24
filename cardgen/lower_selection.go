@@ -72,6 +72,10 @@ const (
 	// another permanent you control" restriction (Yenna, Redtooth Regent),
 	// carried by Selection.NameUniqueAmongControlled.
 	DimNameUniqueAmongControlled
+
+	// DimMatchNoCounters is the negated "with no counters on it/them" qualifier
+	// (Selection.MatchNoCounters), matching a permanent that carries no counters.
+	DimMatchNoCounters
 )
 
 // SelectionMask records the optional CompiledSelector dimensions a calling
@@ -293,6 +297,11 @@ func SelectionForSelectorMasked(selector compiler.CompiledSelector, mask Selecti
 		return game.Selection{}, false
 	} else if honor {
 		selection.MatchAnyCounter = true
+	}
+	if honor, ok := mask.dimension(selector.MatchNoCounters, DimMatchNoCounters); !ok {
+		return game.Selection{}, false
+	} else if honor {
+		selection.MatchNoCounters = true
 	}
 
 	choice, choiceOK := selectorSubtypeChoice(selector, mask)

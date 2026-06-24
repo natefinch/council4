@@ -1014,10 +1014,13 @@ type CompiledSelector struct {
 	// control with a +1/+1 counter on it"); RequiredCounter names the counter
 	// kind the matched permanent must carry. MatchAnyCounter records the
 	// kind-agnostic "with a counter on it" qualifier, matching a permanent
-	// carrying a counter of any kind.
+	// carrying a counter of any kind. MatchNoCounters records the kind-agnostic
+	// "with no counters on it/them" qualifier, matching a permanent carrying no
+	// counters of any kind.
 	MatchCounter    bool
 	RequiredCounter counter.Kind
 	MatchAnyCounter bool
+	MatchNoCounters bool
 	// PlayerOrPlaneswalker marks the combined "player or planeswalker" /
 	// "opponent or planeswalker" combined damage target. Kind stays
 	// SelectorPlayer or SelectorOpponent; this flag records the additional
