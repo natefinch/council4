@@ -45,6 +45,7 @@ func parseFaceDocument(face scryfallFaceFields) parser.Document {
 		InstantOrSorcery: slices.Contains(parsedType.Types, "Instant") || slices.Contains(parsedType.Types, "Sorcery"),
 		Planeswalker:     slices.Contains(parsedType.Types, "Planeswalker"),
 		Saga:             slices.Contains(parsedType.Subtypes, "Saga"),
+		Leveler:          face.Layout == "leveler",
 		CardName:         face.Name,
 	})
 	return document

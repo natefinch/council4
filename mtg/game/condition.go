@@ -88,7 +88,15 @@ type Condition struct {
 	EventPermanentNameUniqueAmongControlledAndGraveyardCreatures bool
 	SourceClassLevelAtLeast                                      int
 	SourceClassLevelLessThan                                     int
-	SourceNotMonstrous                                           bool
+	// SourceLevelCountersAtLeast and SourceLevelCountersLessThan gate an ability
+	// by the number of level counters on the condition source (CR 711.2),
+	// modeling a leveler card's "LEVEL lo-hi" / "LEVEL lo+" band. AtLeast applies
+	// the band's lower bound; LessThan applies a non-final band's exclusive upper
+	// bound (hi+1) and is zero for the open-ended final band. Zero disables each
+	// predicate.
+	SourceLevelCountersAtLeast  int
+	SourceLevelCountersLessThan int
+	SourceNotMonstrous          bool
 	// SourceSaddled requires the condition source Mount to be saddled
 	// (CR 702.166), as in "if this creature is saddled". Negate models the
 	// "isn't saddled" wording.
@@ -239,6 +247,8 @@ func (c *Condition) Empty() bool {
 		!c.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures &&
 		c.SourceClassLevelAtLeast == 0 &&
 		c.SourceClassLevelLessThan == 0 &&
+		c.SourceLevelCountersAtLeast == 0 &&
+		c.SourceLevelCountersLessThan == 0 &&
 		!c.SourceNotMonstrous &&
 		!c.SourceSaddled &&
 		!c.SourceTributeNotPaid &&

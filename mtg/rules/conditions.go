@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -42,6 +43,8 @@ func conditionParametersNegative(cond *game.Condition) bool {
 		cond.AnyOpponentControls.Exists && cond.AnyOpponentControls.Val.MinCount < 0 ||
 		cond.OpponentsControl.Exists && cond.OpponentsControl.Val.MinCount < 0 ||
 		cond.AttackersAttackingControllerAtLeast < 0 ||
+		cond.SourceLevelCountersAtLeast < 0 ||
+		cond.SourceLevelCountersLessThan < 0 ||
 		cond.ControllerGainedLifeThisTurnAtLeast < 0
 }
 
@@ -137,6 +140,12 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	}
 	if cond.SourceClassLevelLessThan > 0 {
 		matches = matches && ctx.source != nil && ctx.source.ClassLevel < cond.SourceClassLevelLessThan
+	}
+	if cond.SourceLevelCountersAtLeast > 0 {
+		matches = matches && ctx.source != nil && ctx.source.Counters.Get(counter.Level) >= cond.SourceLevelCountersAtLeast
+	}
+	if cond.SourceLevelCountersLessThan > 0 {
+		matches = matches && ctx.source != nil && ctx.source.Counters.Get(counter.Level) < cond.SourceLevelCountersLessThan
 	}
 	if cond.SourceNotMonstrous {
 		matches = matches && ctx.source != nil && !ctx.source.Monstrous
