@@ -81,6 +81,12 @@ func parseSpellCastTriggerEventClause(
 	if matchCopy && selection.FromZone.Kind != TriggerEventZoneNone {
 		return nil
 	}
+	// A spell copy is not cast, so the "cast or copy" magecraft form does not
+	// compose with the "from anywhere other than their hand" cast-provenance
+	// restriction.
+	if matchCopy && selection.CastNotFromHand {
+		return nil
+	}
 	// "your Nth spell each turn" is a controller-scoped per-turn ordinal; it is
 	// not combined with spell copies. The "a player"/"an opponent" actors carry
 	// their own "their Nth spell each turn" ordinal via parseOrdinalSpellSelectionForActor.
@@ -194,6 +200,11 @@ func parseTriggerEventSpellSelection(tokens []shared.Token) (TriggerEventSpellSe
 		tokens = rest
 		fromEntryChoice = true
 	}
+	castNotFromHand := false
+	if rest, ok := cutTriggerSpellNotFromHandSuffix(tokens); ok {
+		tokens = rest
+		castNotFromHand = true
+	}
 	manaValueAtLeast := 0
 	manaValueAtMost := 0
 	matchManaValue := false
@@ -232,7 +243,39 @@ func parseTriggerEventSpellSelection(tokens []shared.Token) (TriggerEventSpellSe
 		selection.SubtypeFromEntryChoice = true
 		selection.Span = shared.SpanOf(full)
 	}
+	if castNotFromHand {
+		// The cast-provenance restriction does not compose with a mana-value,
+		// ordinal, or from-zone qualifier; those forms fail closed.
+		if selection.MatchManaValue ||
+			selection.Ordinal != 0 ||
+			selection.FromZone.Kind != TriggerEventZoneNone {
+			return TriggerEventSpellSelection{}, false
+		}
+		selection.CastNotFromHand = true
+		selection.Span = shared.SpanOf(full)
+	}
 	return selection, true
+}
+
+// cutTriggerSpellNotFromHandSuffix strips a trailing "from anywhere other than
+// their hand" / "from anywhere other than your hand" cast-provenance phrase from
+// a spell-selection token run, reporting the remaining filter tokens. The suffix
+// restricts the spell-cast trigger to spells cast from a zone other than the
+// caster's hand (Ghostly Pilferer). It reports false when the suffix is absent.
+func cutTriggerSpellNotFromHandSuffix(tokens []shared.Token) ([]shared.Token, bool) {
+	n := len(tokens)
+	if n < 6 {
+		return nil, false
+	}
+	if !equalWord(tokens[n-6], "from") ||
+		!equalWord(tokens[n-5], "anywhere") ||
+		!equalWord(tokens[n-4], "other") ||
+		!equalWord(tokens[n-3], "than") ||
+		(!equalWord(tokens[n-2], "their") && !equalWord(tokens[n-2], "your")) ||
+		!equalWord(tokens[n-1], "hand") {
+		return nil, false
+	}
+	return tokens[:n-6], true
 }
 
 // cutTriggerSpellManaValueAtLeastSuffix strips a trailing "with mana value N or

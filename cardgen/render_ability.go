@@ -603,13 +603,15 @@ func (r Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatt
 	allowFromZone := pattern.MatchFromZone &&
 		(pattern.Event == game.EventSpellCast || pattern.Event == game.EventPermanentEnteredBattlefield || allowZoneChangeZones) &&
 		!pattern.MatchToZone
+	allowExcludeFromZone := pattern.ExcludeFromZone &&
+		(pattern.Event == game.EventSpellCast || allowZoneChangeZones)
 	if len(pattern.RequireCardTypes) != 0 ||
 		len(pattern.ExcludeCardTypes) != 0 ||
 		(pattern.MatchFromZone && !allowFromZone && !allowZoneChangeZones) ||
 		(pattern.MatchToZone && !allowZoneChangeZones) ||
 		(pattern.ExcludeToZone && !allowZoneChangeZones) ||
 		(pattern.MatchToZone && pattern.ExcludeToZone) ||
-		(pattern.ExcludeFromZone && !allowZoneChangeZones) ||
+		(pattern.ExcludeFromZone && !allowExcludeFromZone) ||
 		(pattern.MatchFromZone && pattern.ExcludeFromZone) ||
 		pattern.DamageRecipientCombatState != game.CombatStateAny ||
 		(pattern.SpellTargetsSource && pattern.Event != game.EventSpellCast) ||

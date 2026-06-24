@@ -673,6 +673,13 @@ type TriggerEventSpellSelection struct {
 	// permanent chose as it entered. It lowers to the runtime
 	// Selection.SubtypeFromSourceEntryChoice predicate.
 	SubtypeFromEntryChoice bool `json:",omitempty"`
+	// CastNotFromHand records the trailing "from anywhere other than their hand"
+	// (or "your hand") cast-provenance restriction ("Whenever an opponent casts
+	// a spell from anywhere other than their hand"). It fires only for spells
+	// cast from a zone other than the caster's hand and lowers to the runtime
+	// ExcludeFromZone filter against the hand. Unlike FromZone, it is recognized
+	// for every caster actor, not only the controller-scoped "you".
+	CastNotFromHand bool `json:",omitempty"`
 }
 
 // TriggerEventClause is composable typed syntax for a trigger event.

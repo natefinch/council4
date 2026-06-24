@@ -67,6 +67,76 @@ func TestGenerateExecutableCardSourceCantBeBlockedThisTurnActivatedAbility(t *te
 	}
 }
 
+// TestGenerateExecutableCardSourceCantBeBlockedThisTurnSelf covers a self grant
+// "<source> can't be blocked this turn." on an activated ability with a discard
+// cost (Ghostly Pilferer's evasion ability), lowering to an ApplyRule on the
+// source permanent.
+func TestGenerateExecutableCardSourceCantBeBlockedThisTurnSelf(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Pilferer",
+		Layout:     "normal",
+		ManaCost:   "{1}{U}",
+		TypeLine:   "Creature — Spirit Rogue",
+		Colors:     []string{"U"},
+		OracleText: "Discard a card: This creature can't be blocked this turn.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"ActivatedAbilities:",
+		"Primitive: game.ApplyRule{",
+		"Object: opt.Val(game.SourcePermanentReference()),",
+		"Kind: game.RuleEffectCantBeBlocked,",
+		"Duration: game.DurationThisTurn,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+// TestGenerateExecutableCardSourceCantBeBlockedThisTurnUpToOne covers the
+// up-to-one target form "Up to one target creature can't be blocked this turn."
+// (Key to the City), lowering to a min-zero, max-one permanent target spec.
+func TestGenerateExecutableCardSourceCantBeBlockedThisTurnUpToOne(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Key",
+		Layout:     "normal",
+		ManaCost:   "{2}",
+		TypeLine:   "Artifact",
+		OracleText: "{T}, Discard a card: Up to one target creature can't be blocked this turn.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"ActivatedAbilities:",
+		"Kind: cost.AdditionalTap,",
+		"Kind:   cost.AdditionalDiscard,",
+		"MinTargets: 0,",
+		"MaxTargets: 1,",
+		"Primitive: game.ApplyRule{",
+		"Object: opt.Val(game.TargetPermanentReference(0)),",
+		"Kind: game.RuleEffectCantBeBlocked,",
+		"Duration: game.DurationThisTurn,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceCantBeBlockedThisTurnFailsClosed(t *testing.T) {
 	t.Parallel()
 	// Each wording deviates from the exact "Target creature can't be blocked this
@@ -76,7 +146,6 @@ func TestGenerateExecutableCardSourceCantBeBlockedThisTurnFailsClosed(t *testing
 		"Target creature can't be blocked.",
 		"Target creature can't be blocked until end of turn.",
 		"Target creature can't be blocked this turn except by Walls.",
-		"Up to two target creatures can't be blocked this turn.",
 		"Target creature can't attack this turn.",
 		"Target creature can't be blocked this turn if it's tapped.",
 	}

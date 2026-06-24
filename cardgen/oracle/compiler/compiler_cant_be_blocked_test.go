@@ -39,7 +39,6 @@ func TestCompileCantBeBlockedThisTurnFailsClosed(t *testing.T) {
 		"Target creature can't be blocked.",
 		"Target creature can't be blocked until end of turn.",
 		"Target creature can't be blocked this turn except by Walls.",
-		"Up to two target creatures can't be blocked this turn.",
 		"Target creature can't block this turn.",
 		"Target creature can't attack this turn.",
 	}

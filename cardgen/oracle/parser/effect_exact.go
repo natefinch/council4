@@ -1813,26 +1813,45 @@ func exactGroupTemporaryKeywordEffectSyntax(effect *EffectSyntax, text, pluralVe
 }
 
 // exactCantBeBlockedEffectSyntax recognizes the temporary combat-evasion
-// resolving effect "Target creature can't be blocked this turn." that grants the
-// single targeted creature a "can't be blocked" restriction until end of turn.
-// The clause is reconstructed byte-exactly from the target's own text so the
-// broader family ("target creature you control can't be blocked this turn.",
-// "target creature an opponent controls can't be blocked this turn.") is
-// recognized while every deviation fails closed: a different duration (the
+// resolving effect "<subject> can't be blocked this turn." that grants the
+// subject creature(s) a "can't be blocked" restriction until end of turn. Three
+// subject shapes are recognized, each reconstructed byte-exactly so every
+// deviation fails closed:
+//
+//   - a target noun phrase ("Target creature can't be blocked this turn.",
+//     "Up to one target creature can't be blocked this turn.") with single,
+//     plural, or optional cardinality, like the sibling can't-block recognizer;
+//   - the source itself ("This creature can't be blocked this turn." / the
+//     card's own name), a self grant on an activated ability; and
+//   - a prior-subject sequence clause ("... and can't be blocked this turn.")
+//     whose subject noun is inherited from the preceding clause and so carries
+//     only the bare predicate here.
+//
+// Every other deviation leaves the clause non-exact: a different duration (the
 // trailing "this turn" is fixed), a "can't be blocked except by ..." qualifier,
-// a group recipient (more or fewer than one target), or any "can't block" /
-// "can't attack" wording leaves the clause non-exact.
+// a "by more than one creature" rider, or any "can't block" / "can't attack"
+// wording.
 func exactCantBeBlockedEffectSyntax(effect *EffectSyntax) bool {
-	return effect.Duration == EffectDurationThisTurn &&
-		effect.Context == EffectContextTarget &&
-		len(effect.Targets) == 1 &&
-		effect.Targets[0].Exact &&
-		effect.Targets[0].Cardinality.Min == 1 &&
-		effect.Targets[0].Cardinality.Max == 1 &&
-		strings.EqualFold(
-			exactEffectClauseText(effect),
-			effect.Targets[0].Text+" can't be blocked this turn.",
-		)
+	if effect.Duration != EffectDurationThisTurn {
+		return false
+	}
+	clause := exactEffectClauseText(effect)
+	switch effect.Context {
+	case EffectContextTarget:
+		return len(effect.Targets) == 1 &&
+			effect.Targets[0].Exact &&
+			effect.Targets[0].Cardinality.Min >= 0 &&
+			effect.Targets[0].Cardinality.Max >= 1 &&
+			effect.Targets[0].Cardinality.Min <= effect.Targets[0].Cardinality.Max &&
+			strings.EqualFold(clause, effect.Targets[0].Text+" can't be blocked this turn.")
+	case EffectContextSource:
+		subject, ok := exactSelfSubjectReferenceText(effect.SubjectReferences)
+		return ok && strings.EqualFold(clause, subject+" can't be blocked this turn.")
+	case EffectContextPriorSubject:
+		return strings.EqualFold(clause, "can't be blocked this turn.")
+	default:
+		return false
+	}
 }
 
 // exactCantBlockEffectSyntax recognizes the temporary combat-restriction

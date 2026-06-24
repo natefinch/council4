@@ -245,6 +245,15 @@ func compileSpellCastEvent(clause *parser.TriggerEventClause, pattern *TriggerPa
 		}
 		pattern.MatchFromZone = true
 	}
+	if clause.SpellSelection.CastNotFromHand {
+		// "from anywhere other than their hand" excludes spells cast from the
+		// caster's hand; the runtime fires only when the cast-from zone differs.
+		if pattern.MatchFromZone {
+			return false
+		}
+		pattern.FromZone = TriggerZoneHand
+		pattern.ExcludeFromZone = true
+	}
 	return true
 }
 
