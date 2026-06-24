@@ -266,17 +266,22 @@ const (
 	ExactSequenceChosenTypeLibraryTopToHand
 	ExactSequenceBottomHandThenDraw
 	ExactSequenceDiscardHandThenDraw
+	ExactSequenceConditionalLookAtTopReveal
 )
 
 // ExactSequenceSyntax records an exact sequence and its resolving-body span.
 // Bottom and DrawOffset are only meaningful for ExactSequenceBottomHandThenDraw:
 // Bottom selects the library end the hand cards move to, and DrawOffset is the
 // fixed number added to the "draw that many cards" count ("plus one" => 1).
+// LookAtTopCardTypes is only meaningful for
+// ExactSequenceConditionalLookAtTopReveal: it lists the card types whose
+// disjunction satisfies the "If it's a <type> card" gate before revealing.
 type ExactSequenceSyntax struct {
-	Kind       ExactSequenceKind
-	Span       shared.Span
-	Bottom     bool
-	DrawOffset int
+	Kind               ExactSequenceKind
+	Span               shared.Span
+	Bottom             bool
+	DrawOffset         int
+	LookAtTopCardTypes []CardType
 }
 
 // SourceAbilityCostReductionSyntax is the typed syntax for a source-local

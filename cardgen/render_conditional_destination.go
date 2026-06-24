@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func (r Renderer) renderConditionalDestinationPlace(ctx *renderCtx, value game.ConditionalDestinationPlace) (string, error) {
@@ -42,6 +43,16 @@ func (r Renderer) renderConditionalDestinationPlace(ctx *renderCtx, value game.C
 	}
 	if value.EntryTapped {
 		fields = append(fields, "EntryTapped: true,")
+	}
+	if value.Then != zone.None {
+		thenZone, thenErr := renderZone(value.Then)
+		if thenErr != nil {
+			return "", thenErr
+		}
+		fields = append(fields, fmt.Sprintf("Then: %s,", thenZone))
+	}
+	if value.ThenReveal {
+		fields = append(fields, "ThenReveal: true,")
 	}
 	fields = append(fields, fmt.Sprintf("Else: %s,", elseZone))
 	if value.ElseBottom {

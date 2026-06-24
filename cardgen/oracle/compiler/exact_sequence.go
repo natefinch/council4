@@ -23,6 +23,12 @@ const (
 	// the cards in your hand}, then draw that many cards." sequence: the
 	// controller discards their whole hand, then draws that many cards.
 	ExactSequenceDiscardHandThenDraw
+	// ExactSequenceConditionalLookAtTopReveal is the triggered "look at the top
+	// card of your library; if it's a card of one of the recorded types, you may
+	// reveal it and put it into your hand; if you don't, you may put it into your
+	// graveyard" sequence. The recorded card types travel on the compiled
+	// ability so lowering filters the reveal without reading Oracle words.
+	ExactSequenceConditionalLookAtTopReveal
 )
 
 func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
@@ -33,6 +39,8 @@ func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
 		return ExactSequenceBottomHandThenDraw
 	case parser.ExactSequenceDiscardHandThenDraw:
 		return ExactSequenceDiscardHandThenDraw
+	case parser.ExactSequenceConditionalLookAtTopReveal:
+		return ExactSequenceConditionalLookAtTopReveal
 	default:
 		return ExactSequenceUnknown
 	}
