@@ -154,6 +154,7 @@ var keywordStaticBodies = map[parser.KeywordKind]loweredStaticAbility{
 	parser.KeywordFirstStrike:      {Body: game.FirstStrikeStaticBody, VarName: "game.FirstStrikeStaticBody"},
 	parser.KeywordFlash:            {Body: game.FlashStaticBody, VarName: "game.FlashStaticBody"},
 	parser.KeywordFlying:           {Body: game.FlyingStaticBody, VarName: "game.FlyingStaticBody"},
+	parser.KeywordFuse:             {Body: game.FuseStaticBody, VarName: "game.FuseStaticBody"},
 	parser.KeywordHaste:            {Body: game.HasteStaticBody, VarName: "game.HasteStaticBody"},
 	parser.KeywordHexproof:         {Body: game.HexproofStaticBody, VarName: "game.HexproofStaticBody"},
 	parser.KeywordHorsemanship:     {Body: game.HorsemanshipStaticBody, VarName: "game.HorsemanshipStaticBody"},

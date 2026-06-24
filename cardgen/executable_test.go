@@ -49,6 +49,57 @@ func TestGenerateExecutableCardSourceSplit(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceFuse(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:          "Wear // Tear",
+		Layout:        "split",
+		ColorIdentity: []string{"R", "W"},
+		CardFaces: []ScryfallCardFace{
+			{
+				Name:       "Wear",
+				ManaCost:   "{1}{R}",
+				TypeLine:   "Instant",
+				OracleText: "Destroy target artifact.\nFuse (You may cast one or both halves of this card from your hand.)",
+			},
+			{
+				Name:       "Tear",
+				ManaCost:   "{W}",
+				TypeLine:   "Instant",
+				OracleText: "Destroy target enchantment.\nFuse (You may cast one or both halves of this card from your hand.)",
+			},
+		},
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "w")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if source == "" {
+		t.Fatal("source = empty, want generated card")
+	}
+	// Both halves carry the Fuse keyword static body, and the split layout keeps
+	// Tear as the alternate face.
+	if strings.Count(source, "game.FuseStaticBody") != 2 {
+		t.Fatalf("expected Fuse static body on both halves:\n%s", source)
+	}
+	for _, wanted := range []string{
+		`Name: "Wear",`,
+		`Name: "Tear",`,
+		"Layout: game.LayoutSplit,",
+		"Alternate: opt.Val(game.CardFace{",
+		"PermanentTypes: []types.Card{types.Artifact}",
+		"PermanentTypes: []types.Card{types.Enchantment}",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceSplitRejectsUnsupported(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

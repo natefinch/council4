@@ -105,6 +105,13 @@ const (
 	// ability built by CrewActivatedAbility. Appended at the end of the enum so
 	// existing keyword ordinals are unchanged.
 	Crew
+	// Fuse (CR 702.102) is printed on both halves of a fuse split card: "You may
+	// cast one or both halves of this card from your hand." It is modeled as a
+	// recognized simple keyword carried on each split face so fuse split cards
+	// are representable and the rules layer can detect the fuse permission via
+	// HasKeyword(Fuse). Appended at the end of the enum so existing keyword
+	// ordinals are unchanged.
+	Fuse
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -280,6 +287,12 @@ var (
 	// keyword carries no continuous in-game effect; it is modeled as a simple
 	// keyword purely so companion cards are representable.
 	CompanionStaticBody = simpleKeywordStaticBody("Companion", Companion)
+
+	// FuseStaticBody is the reusable StaticAbility for fuse (CR 702.102). It
+	// carries the Fuse keyword so HasKeyword(Fuse) reports true on each half of a
+	// fuse split card. The fused-casting permission itself is granted by the
+	// rules layer when it detects this keyword on a split card's faces.
+	FuseStaticBody = simpleKeywordStaticBody("Fuse", Fuse)
 )
 
 func simpleKeywordStaticBody(text string, keyword Keyword) StaticAbility {
