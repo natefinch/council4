@@ -343,6 +343,13 @@ func (p Adapt) validateCapturedTargetControllerReferences(targets []TargetSpec, 
 	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
 }
 
+func (p Connive) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
 func (p Pay) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	return validateCapturedTargetControllerOptionalReference(p.Payment.Payer, targets, checkTargets)
 }
@@ -1524,6 +1531,16 @@ func (p Renown) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 
 func (p Adapt) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateObjectReference(p.Object, targets, checkTargets)
+}
+
+func (p Connive) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if err := validatePlayerReference(p.Player, targets, checkTargets); err != nil {
 		return err
 	}
 	return validateObjectReference(p.Object, targets, checkTargets)

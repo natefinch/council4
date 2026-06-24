@@ -97,6 +97,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactStandaloneActionEffectSyntax(effect, "renown")
 	case EffectAdapt:
 		return exactStandaloneActionEffectSyntax(effect, "Adapt")
+	case EffectConnive:
+		return exactConniveEffectSyntax(effect)
 	case EffectLose:
 		return exactLifeEffectSyntax(effect, "lose", "loses") ||
 			exactLifeEffectSyntax(effect, "pay", "pays") ||
@@ -3166,6 +3168,30 @@ func digSourceText(source DigSourceKind) string {
 	default:
 		return ""
 	}
+}
+
+// exactConniveEffectSyntax reconstructs a connive keyword-action clause whose
+// subject is the conniving permanent itself ("this creature connives.",
+// "<this card's name> connives.", and the rarer numeric "<subject> connives N."
+// form). It requires the source-scoped self subject and, when a count is
+// printed, a fixed count of at least one; the variable form fails closed. The
+// parenthetical reminder text is excluded from the parsed clause upstream.
+func exactConniveEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextSource {
+		return false
+	}
+	subject, ok := exactSelfSubjectReferenceText(effect.SubjectReferences)
+	if !ok {
+		return false
+	}
+	text := exactEffectClauseText(effect)
+	if !effect.Amount.Known {
+		return strings.EqualFold(text, subject+" connives.")
+	}
+	if effect.Amount.Value < 1 {
+		return false
+	}
+	return strings.EqualFold(text, fmt.Sprintf("%s connives %s.", subject, effectAmountSourceText(effect)))
 }
 
 func exactStandaloneActionEffectSyntax(effect *EffectSyntax, verb string) bool {

@@ -1396,6 +1396,12 @@ const (
 	// hidden information without moving it. It lowers to a game.LookAtLibraryTop
 	// primitive. Added last so existing kinds keep their wire values.
 	EffectLookAtLibraryTop
+	// EffectConnive models the connive keyword action (CR 702.154): the
+	// conniving permanent's controller draws N cards, then discards N cards, and
+	// a +1/+1 counter is placed on that permanent for each nonland card discarded
+	// this way. It lowers to a game.Connive primitive scoped to the source
+	// permanent. Added last so existing kinds keep their wire values.
+	EffectConnive
 )
 
 // DurationKind identifies common continuous-effect durations.

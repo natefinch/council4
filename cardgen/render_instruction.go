@@ -274,6 +274,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: Adapt kind has unexpected concrete type")
 		}
 		return r.renderAdapt(ctx, value)
+	case game.PrimitiveConnive:
+		value, ok := primitive.(game.Connive)
+		if !ok {
+			return "", errors.New("render: internal error: Connive kind has unexpected concrete type")
+		}
+		return r.renderConnive(ctx, value)
 	case game.PrimitiveBecomeSaddled:
 		value, ok := primitive.(game.BecomeSaddled)
 		if !ok {

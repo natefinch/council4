@@ -1812,6 +1812,70 @@ func lowerAdaptContent(
 	)
 }
 
+// lowerConniveContent lowers the connive keyword action whose subject is the
+// source permanent ("this creature connives."). It produces a game.Connive
+// primitive whose controller draws and discards and whose source permanent
+// receives a +1/+1 counter for each nonland card discarded. A bare "connives"
+// is connive 1; an explicit numeric count must be a fixed value of at least one.
+// The references the trigger context contributes ("their", "this creature")
+// carry no additional instruction data, so they are consumed here; any leftover
+// targets, conditions, keywords, or modes fail closed.
+func lowerConniveContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := contentDiagnostic(
+		ctx,
+		"unsupported connive effect",
+		"the executable source backend supports only the source permanent connive keyword action",
+	)
+	effect := ctx.content.Effects[0]
+	if effect.Negated ||
+		!effect.Exact ||
+		effect.Context != parser.EffectContextSource {
+		return game.AbilityContent{}, unsupported
+	}
+	amount := 1
+	if effect.Amount.Known {
+		if effect.Amount.Value < 1 {
+			return game.AbilityContent{}, unsupported
+		}
+		amount = effect.Amount.Value
+	}
+	if !conniveReferencesBenign(ctx.content.References) {
+		return game.AbilityContent{}, unsupported
+	}
+	consumed := ctx
+	consumed.content.References = nil
+	if consumed.content.Unconsumed() {
+		return game.AbilityContent{}, unsupported
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.Connive{
+			Object: game.SourcePermanentReference(),
+			Player: game.ControllerReference(),
+			Amount: game.Fixed(amount),
+		},
+	}}}.Ability(), nil
+}
+
+// conniveReferencesBenign reports whether every reference in a source-scoped
+// connive body is one the connive keyword action fully determines on its own:
+// the source subject itself or a trigger-context player/permanent the action
+// does not read. Any other binding (a target, a prior-instruction result) fails
+// closed so an unexpected connive subject is not silently dropped.
+func conniveReferencesBenign(references []compiler.CompiledReference) bool {
+	for _, reference := range references {
+		switch reference.Binding {
+		case compiler.ReferenceBindingSource,
+			compiler.ReferenceBindingEventPlayer,
+			compiler.ReferenceBindingEventPermanent,
+			compiler.ReferenceBindingEventStackObject,
+			compiler.ReferenceBindingEventCard:
+		default:
+			return false
+		}
+	}
+	return true
+}
+
 func lowerExploreSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupportedExplore := contentDiagnostic(
 		ctx,
