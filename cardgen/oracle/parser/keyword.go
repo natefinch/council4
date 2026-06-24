@@ -172,6 +172,13 @@ const (
 	// recognized and represented but not simulated. It is appended at the end so
 	// the existing keyword block stays aligned.
 	KeywordChooseABackground KeywordKind = "KeywordChooseABackground"
+	// KeywordReconfigure is the Reconfigure keyword (CR 702.151), printed on
+	// Equipment creatures: "Reconfigure <cost>" is a mana-cost activated ability
+	// that attaches the source to target creature you control, or unattaches it,
+	// only as a sorcery; while attached the source isn't a creature. The mana
+	// cost is carried by Parameter exactly like Equip. It is appended at the end
+	// so the existing keyword block stays aligned.
+	KeywordReconfigure KeywordKind = "KeywordReconfigure"
 )
 
 var keywordNames = map[KeywordKind]string{
@@ -231,6 +238,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordProwess:           "Prowess",
 	KeywordReadAhead:         "Read ahead",
 	KeywordReach:             "Reach",
+	KeywordReconfigure:       "Reconfigure",
 	KeywordRetrace:           "Retrace",
 	KeywordShadow:            "Shadow",
 	KeywordScavenge:          "Scavenge",
@@ -366,6 +374,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordProtection, Words: []string{"protection"}},
 	{Kind: KeywordProwess, Words: []string{"prowess"}},
 	{Kind: KeywordReach, Words: []string{"reach"}},
+	{Kind: KeywordReconfigure, Words: []string{"reconfigure"}},
 	{Kind: KeywordRetrace, Words: []string{"retrace"}},
 	{Kind: KeywordShadow, Words: []string{"shadow"}},
 	{Kind: KeywordScavenge, Words: []string{"scavenge"}},

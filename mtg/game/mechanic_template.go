@@ -783,6 +783,36 @@ func EquipRestrictedActivatedAbility(manaCost cost.Mana, supertypes []types.Supe
 	}
 }
 
+// ReconfigureActivatedAbility builds the complete activated ability for
+// Reconfigure with a mana cost (CR 702.151). Like Equip, it is a sorcery-speed
+// activation that attaches the source Equipment to target creature you control;
+// the rules layer dispatches the attachment on resolution by recognizing the
+// Reconfigure keyword. The unattach mode and the "while attached, this isn't a
+// creature" type-change are not yet simulated.
+func ReconfigureActivatedAbility(manaCost cost.Mana) ActivatedAbility {
+	activationCost := append(cost.Mana(nil), manaCost...)
+	keywordCost := append(cost.Mana(nil), manaCost...)
+	return ActivatedAbility{
+		Text:           "Reconfigure " + manaCost.String(),
+		ManaCost:       opt.Val(activationCost),
+		ZoneOfFunction: zone.Battlefield,
+		Timing:         SorceryOnly,
+		KeywordAbilities: []KeywordAbility{
+			ReconfigureKeyword{Cost: keywordCost},
+		},
+		Content: Mode{Targets: []TargetSpec{{
+			MinTargets: 1,
+			MaxTargets: 1,
+			Constraint: "creature you control",
+			Allow:      TargetAllowPermanent,
+			Predicate: TargetPredicate{
+				PermanentTypes: []types.Card{types.Creature},
+				Controller:     ControllerYou,
+			},
+		}}}.Ability(),
+	}
+}
+
 // equipRestrictionConstraint renders the human-readable target constraint for a
 // restricted Equip, defaulting to "creature you control".
 func equipRestrictionConstraint(supertypes []types.Super, subtypes []types.Sub) string {

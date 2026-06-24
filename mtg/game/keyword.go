@@ -40,6 +40,14 @@ type EquipKeyword struct {
 	Cost cost.Mana
 }
 
+// ReconfigureKeyword parameterizes Reconfigure activation costs (CR 702.151).
+// It carries the Reconfigure keyword identity inside the activated ability built
+// by ReconfigureActivatedAbility so the rules layer can dispatch the attachment
+// like Equip.
+type ReconfigureKeyword struct {
+	Cost cost.Mana
+}
+
 // EnchantKeyword parameterizes Enchant attachment legality.
 type EnchantKeyword struct {
 	Target TargetSpec
@@ -193,6 +201,7 @@ func (SimpleKeyword) isKeywordAbility()           {}
 func (WardKeyword) isKeywordAbility()             {}
 func (CumulativeUpkeepKeyword) isKeywordAbility() {}
 func (EquipKeyword) isKeywordAbility()            {}
+func (ReconfigureKeyword) isKeywordAbility()      {}
 func (EnchantKeyword) isKeywordAbility()          {}
 func (CyclingKeyword) isKeywordAbility()          {}
 func (NinjutsuKeyword) isKeywordAbility()         {}
@@ -221,7 +230,10 @@ func (WardKeyword) keyword() Keyword           { return Ward }
 func (CumulativeUpkeepKeyword) keyword() Keyword {
 	return CumulativeUpkeep
 }
-func (EquipKeyword) keyword() Keyword      { return Equip }
+func (EquipKeyword) keyword() Keyword { return Equip }
+func (ReconfigureKeyword) keyword() Keyword {
+	return Reconfigure
+}
 func (EnchantKeyword) keyword() Keyword    { return Enchant }
 func (CyclingKeyword) keyword() Keyword    { return Cycling }
 func (NinjutsuKeyword) keyword() Keyword   { return Ninjutsu }
@@ -256,6 +268,11 @@ func (ability CumulativeUpkeepKeyword) cloneKeywordAbility() KeywordAbility {
 	return ability
 }
 func (ability EquipKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
+
+func (ability ReconfigureKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.Cost = append(cost.Mana(nil), ability.Cost...)
 	return ability
 }
@@ -579,6 +596,20 @@ func ActivatedBodyEquipCost(body *ActivatedAbility) (cost.Mana, bool) {
 		return nil, false
 	}
 	return equip.Cost, true
+}
+
+// ActivatedBodyReconfigureCost returns the Reconfigure cost from an activated
+// ability.
+func ActivatedBodyReconfigureCost(body *ActivatedAbility) (cost.Mana, bool) {
+	ka, ok := BodyKeywordAbility(body, Reconfigure)
+	if !ok {
+		return nil, false
+	}
+	reconfigure, ok := ka.(ReconfigureKeyword)
+	if !ok {
+		return nil, false
+	}
+	return reconfigure.Cost, true
 }
 
 // BodyMadnessCost returns the Madness cost from a TriggeredAbilityBody's keywords.

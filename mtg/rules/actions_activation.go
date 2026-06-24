@@ -473,7 +473,7 @@ func canActivateEquipAbilityWithModes(g *game.Game, playerID game.PlayerID, perm
 	if xValue != 0 || !bodyFunctionsOnBattlefield(body) || !isEquipmentPermanent(g, permanent) {
 		return false
 	}
-	if !game.BodyHasKeyword(body, game.Equip) && body.Timing != game.SorceryOnly {
+	if !bodyAttachesLikeEquip(body) && body.Timing != game.SorceryOnly {
 		return false
 	}
 	if !isSorcerySpeed(g, playerID) || abilityHasNonTapAdditionalCosts(body.AdditionalCosts) || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, body.Timing) {
@@ -509,7 +509,7 @@ func canActivateGeneralAbilityWithModes(g *game.Game, playerID game.PlayerID, pe
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent.PhasedOut || effectiveController(g, permanent) != playerID {
 		return false
 	}
-	if game.BodyHasKeyword(body, game.Equip) || !bodyFunctionsOnBattlefield(body) {
+	if bodyAttachesLikeEquip(body) || !bodyFunctionsOnBattlefield(body) {
 		return false
 	}
 	if !activatedAbilityTimingAllows(g, playerID, body.Timing) || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, body.Timing) {
