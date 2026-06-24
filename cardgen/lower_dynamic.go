@@ -599,6 +599,51 @@ func lowerEventCounterCountAmount(ctx contentCtx, amount compiler.CompiledAmount
 	}, true
 }
 
+// triggeringEventQuantityKind reports whether a compiled dynamic amount kind is
+// a "that much"/"that many" anaphor that reads a quantity from the triggering
+// event. The parser pins each such phrase to one historically chosen kind
+// (EventCardCount, TriggeringLifeChange, TriggeringCombatDamage, or
+// TriggeringCounterCount) without knowing which event actually fired, so every
+// one of these kinds denotes the same idea: the triggering event's quantity. The
+// enclosing trigger event resolves it at lowering time
+// (lowerTriggeringEventQuantityAmount), keeping the parser text-blind.
+func triggeringEventQuantityKind(kind compiler.DynamicAmountKind) bool {
+	switch kind {
+	case compiler.DynamicAmountEventCardCount,
+		compiler.DynamicAmountTriggeringLifeChange,
+		compiler.DynamicAmountTriggeringCombatDamage,
+		compiler.DynamicAmountTriggeringCounterCount:
+		return true
+	default:
+		return false
+	}
+}
+
+// lowerTriggeringEventQuantityAmount resolves a "that much"/"that many"
+// triggering-event anaphor onto the runtime DynamicAmount for whichever event
+// actually fired, independent of which historical kind the parser pinned. A
+// draw, discard, or cycle trigger reads its card count; a damage trigger reads
+// the damage dealt; a life-change trigger reads the life gained or lost; a
+// counter trigger reads the counters added. Outside one of those triggered
+// contexts the anaphor has no source and stays rejected (ok=false).
+func lowerTriggeringEventQuantityAmount(ctx contentCtx, amount compiler.CompiledAmount) (game.DynamicAmount, bool) {
+	multiplier := max(amount.Multiplier, 1)
+	switch ctx.triggerCardCountEvent {
+	case game.EventCardDrawn, game.EventCardDiscarded, game.EventCycled:
+		return game.DynamicAmount{Kind: game.DynamicAmountEventCardCount, Multiplier: multiplier}, true
+	}
+	switch ctx.triggerEvent {
+	case game.EventDamageDealt:
+		return game.DynamicAmount{Kind: game.DynamicAmountEventDamage, Multiplier: multiplier}, true
+	case game.EventLifeGained, game.EventLifeLost:
+		return game.DynamicAmount{Kind: game.DynamicAmountEventLifeChange, Multiplier: multiplier}, true
+	case game.EventCountersAdded:
+		return game.DynamicAmount{Kind: game.DynamicAmountEventCounterCount, Multiplier: multiplier}, true
+	default:
+		return game.DynamicAmount{}, false
+	}
+}
+
 func exactDamageAmountReferences(amount compiler.CompiledAmount, references []compiler.CompiledReference) bool {
 	if amount.DynamicKind != compiler.DynamicAmountSourcePower {
 		_, ok := lowerDamageSourceReference(references)

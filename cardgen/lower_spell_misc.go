@@ -1550,18 +1550,8 @@ func lowerFixedDrawSpell(
 	switch {
 	case effect.Amount.Known:
 		amount = game.Fixed(effect.Amount.Value)
-	case effect.Amount.DynamicKind == compiler.DynamicAmountEventCardCount:
-		dynamic, ok := lowerEventCardCountAmount(ctx, effect.Amount)
-		if !ok {
-			return game.AbilityContent{}, contentDiagnostic(
-				ctx,
-				"unsupported draw spell",
-				"the executable source backend supports only exact supported card draw",
-			)
-		}
-		amount = game.Dynamic(dynamic)
-	case effect.Amount.DynamicKind == compiler.DynamicAmountTriggeringCounterCount:
-		dynamic, ok := lowerEventCounterCountAmount(ctx, effect.Amount)
+	case triggeringEventQuantityKind(effect.Amount.DynamicKind):
+		dynamic, ok := lowerTriggeringEventQuantityAmount(ctx, effect.Amount)
 		if !ok {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,

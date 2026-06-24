@@ -322,6 +322,15 @@ const (
 	// ApplyContinuous setting base power/toughness at LayerPowerToughnessSet and,
 	// when the rider is present, adding every creature type at LayerType.
 	EffectSetBasePT EffectKind = "EffectSetBasePT"
+	// EffectSwitchPT models the one-shot continuous "switch power and toughness
+	// until end of turn" effect (CR 613.4e, layer 7e), which exchanges the
+	// affected creature's power and toughness for the turn ("Switch this
+	// creature's power and toughness until end of turn.", Aeromoeba; "Switch
+	// target creature's power and toughness until end of turn.", Twisted Image).
+	// The source-affecting form is marked by SwitchPTSource; a single targeted
+	// creature is left for the target machinery. It lowers to an ApplyContinuous
+	// at LayerPowerToughnessSwitch until end of turn.
+	EffectSwitchPT EffectKind = "EffectSwitchPT"
 	// EffectDelayedTrigger models an event-based delayed triggered ability
 	// created for the rest of the turn ("Whenever you cast a spell this turn,
 	// ...", Showdown of the Skalds chapter II) or for the next matching event
@@ -1843,6 +1852,11 @@ type EffectSyntax struct {
 	SetBasePTVariableX         bool `json:",omitempty"`
 	SetBasePTEveryCreatureType bool `json:",omitempty"`
 	SetBasePTSource            bool `json:",omitempty"`
+	// SwitchPTSource marks the EffectSwitchPT source-affecting form ("Switch this
+	// creature's power and toughness until end of turn."). When false and the
+	// effect carries a target, the single-target form applies; any other subject
+	// fails closed.
+	SwitchPTSource bool `json:",omitempty"`
 	// EntersAsCopyUntilEndOfTurn reports the temporary "become a copy of <filter>
 	// until end of turn" form of an EntersAsCopy replacement (Cursed Mirror),
 	// where the copy effect lasts until end of turn instead of as long as the

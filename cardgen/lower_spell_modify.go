@@ -91,7 +91,7 @@ func lowerGroupDamageSpell(
 	ctx contentCtx,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
-	amount, amountOK := groupDamageAmount(effect.Amount)
+	amount, amountOK := groupDamageAmountForContext(ctx, effect.Amount)
 	if len(ctx.content.Effects) != 1 ||
 		effect.Kind != compiler.EffectDealDamage ||
 		!amountOK ||
@@ -156,6 +156,25 @@ func lowerGroupDamageSpell(
 	return game.Mode{
 		Sequence: instructions,
 	}.Ability(), nil
+}
+
+// groupDamageAmountForContext resolves a group-damage amount, additionally
+// accepting a "that much"/"that many" triggering-event anaphor ("deals that much
+// damage to each opponent.") and binding it to whichever event fired the
+// enclosing triggered ability. The quantity is a single value shared by every
+// recipient (CR 603.3e resolves the triggering event's quantity once), so it
+// lowers to the same group-wide Quantity path as the other dynamic amounts.
+// Outside a triggered context the anaphor has no source and stays rejected, so
+// the helper falls back to groupDamageAmount.
+func groupDamageAmountForContext(ctx contentCtx, amount compiler.CompiledAmount) (game.Quantity, bool) {
+	if triggeringEventQuantityKind(amount.DynamicKind) {
+		dynamic, ok := lowerTriggeringEventQuantityAmount(ctx, amount)
+		if !ok {
+			return game.Quantity{}, false
+		}
+		return game.Dynamic(dynamic), true
+	}
+	return groupDamageAmount(amount)
 }
 
 // groupDamageAmount resolves the supported group-damage amounts onto a runtime
@@ -402,8 +421,8 @@ func lowerFixedDamageSpell(
 	switch {
 	case effect.Amount.Known:
 		amount = game.Fixed(effect.Amount.Value)
-	case effect.Amount.DynamicKind == compiler.DynamicAmountTriggeringCounterCount:
-		dynamic, ok := lowerEventCounterCountAmount(ctx, effect.Amount)
+	case triggeringEventQuantityKind(effect.Amount.DynamicKind):
+		dynamic, ok := lowerTriggeringEventQuantityAmount(ctx, effect.Amount)
 		if !ok {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
