@@ -155,23 +155,128 @@ func activatedArtifact(name string, costs []cost.Additional) *game.CardDef {
 	}}
 }
 
-func TestGenericStrategyAvoidsResourceSpendingActivations(t *testing.T) {
+func sacrificeDrawArtifact(name string, sacCount int) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  name,
+		Types: []types.Card{types.Artifact},
+		ActivatedAbilities: []game.ActivatedAbility{{
+			AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalSacrifice, Amount: sacCount}},
+			Content: game.Mode{Sequence: []game.Instruction{{
+				Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()},
+			}}}.Ability(),
+		}},
+	}}
+}
+
+func sacrificeDestroyArtifact(name string, sacCount int) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  name,
+		Types: []types.Card{types.Artifact},
+		ActivatedAbilities: []game.ActivatedAbility{{
+			AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalSacrifice, Amount: sacCount}},
+			Content: game.Mode{Sequence: []game.Instruction{{
+				Primitive: game.Destroy{},
+			}}}.Ability(),
+		}},
+	}}
+}
+
+func TestGenericStrategyActivatesFetchlandStyleSearch(t *testing.T) {
+	// A fetchland pays by sacrificing its own source (not another permanent), so
+	// its land-search effect must keep it worth activating.
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	sacCosts := append(append([]cost.Additional(nil), cost.Tap...),
-		cost.Additional{Kind: cost.AdditionalSacrifice, Amount: 1})
-	sac := addObservedPermanent(g, game.Player1, activatedArtifact("Altar", sacCosts))
+	fetch := addObservedPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Fetchland",
+		Types: []types.Card{types.Land},
+		ActivatedAbilities: []game.ActivatedAbility{{
+			AdditionalCosts: []cost.Additional{
+				{Kind: cost.AdditionalSacrificeSource},
+				{Kind: cost.AdditionalPayLife, Amount: 1},
+			},
+			Content: game.Mode{Sequence: []game.Instruction{{
+				Primitive: game.Search{Amount: game.Fixed(1), Player: game.ControllerReference()},
+			}}}.Ability(),
+		}},
+	}})
+	obs := rules.NewObservation(g, game.Player1)
+	strategy := GenericStrategy{}
+
+	pass := strategy.ScoreAction(obs, action.Pass())
+	fetchScore := strategy.ScoreAction(obs, action.ActivateAbility(fetch.ObjectID, 0, nil, 0))
+	if fetchScore <= pass {
+		t.Fatalf("fetchland search scored %v, want above pass %v", fetchScore, pass)
+	}
+}
+
+func TestGenericStrategyValuesFreeActivationAbovePass(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	tap := addObservedPermanent(g, game.Player1, activatedArtifact("Engine", cost.Tap))
 	obs := rules.NewObservation(g, game.Player1)
 	strategy := GenericStrategy{}
 
 	pass := strategy.ScoreAction(obs, action.Pass())
-	sacScore := strategy.ScoreAction(obs, action.ActivateAbility(sac.ObjectID, 0, nil, 0))
 	tapScore := strategy.ScoreAction(obs, action.ActivateAbility(tap.ObjectID, 0, nil, 0))
 
-	if sacScore >= pass {
-		t.Fatalf("resource-spending activation scored %v, want below pass %v", sacScore, pass)
-	}
 	if tapScore <= pass {
-		t.Fatalf("plain activation scored %v, want above pass %v", tapScore, pass)
+		t.Fatalf("free draw activation scored %v, want above pass %v", tapScore, pass)
+	}
+}
+
+func TestGenericStrategySacrificeValuedAgainstEffect(t *testing.T) {
+	// "Sacrifice a creature: Draw a card." is worth chumping a useless creature
+	// but not feeding a real one.
+	weak := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addObservedPermanent(weak, game.Player1, creatureCardDef("Goblin", 0, 1))
+	weakAltar := addObservedPermanent(weak, game.Player1, sacrificeDrawArtifact("Altar", 1))
+	weakObs := rules.NewObservation(weak, game.Player1)
+	strategy := GenericStrategy{}
+	weakPass := strategy.ScoreAction(weakObs, action.Pass())
+	weakScore := strategy.ScoreAction(weakObs, action.ActivateAbility(weakAltar.ObjectID, 0, nil, 0))
+	if weakScore <= weakPass {
+		t.Fatalf("sacrificing a 0/1 to draw scored %v, want above pass %v", weakScore, weakPass)
+	}
+
+	strong := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addObservedPermanent(strong, game.Player1, creatureCardDef("Wurm", 10, 10))
+	strongAltar := addObservedPermanent(strong, game.Player1, sacrificeDrawArtifact("Altar", 1))
+	strongObs := rules.NewObservation(strong, game.Player1)
+	strongPass := strategy.ScoreAction(strongObs, action.Pass())
+	strongScore := strategy.ScoreAction(strongObs, action.ActivateAbility(strongAltar.ObjectID, 0, nil, 0))
+	if strongScore >= strongPass {
+		t.Fatalf("sacrificing a 10/10 to draw scored %v, want below pass %v", strongScore, strongPass)
+	}
+}
+
+func TestGenericStrategySacrificesWeakToRemoveThreat(t *testing.T) {
+	// "Sacrifice three creatures: Destroy target creature." Worth three useless
+	// 1/1s to kill a 10/10, but not three 5/5s to kill a 1/1.
+	strategy := GenericStrategy{}
+
+	worth := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	for range 3 {
+		addObservedPermanent(worth, game.Player1, creatureCardDef("Soldier", 1, 1))
+	}
+	bigThreat := addObservedPermanent(worth, game.Player2, creatureCardDef("Wurm", 10, 10))
+	worthAltar := addObservedPermanent(worth, game.Player1, sacrificeDestroyArtifact("Altar", 3))
+	worthObs := rules.NewObservation(worth, game.Player1)
+	worthPass := strategy.ScoreAction(worthObs, action.Pass())
+	worthTargets := []game.Target{{Kind: game.TargetPermanent, PermanentID: bigThreat.ObjectID}}
+	worthScore := strategy.ScoreAction(worthObs, action.ActivateAbility(worthAltar.ObjectID, 0, worthTargets, 0))
+	if worthScore <= worthPass {
+		t.Fatalf("sacrificing three 1/1s to kill a 10/10 scored %v, want above pass %v", worthScore, worthPass)
+	}
+
+	wasteful := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	for range 3 {
+		addObservedPermanent(wasteful, game.Player1, creatureCardDef("Bear", 5, 5))
+	}
+	smallThreat := addObservedPermanent(wasteful, game.Player2, creatureCardDef("Mouse", 1, 1))
+	wastefulAltar := addObservedPermanent(wasteful, game.Player1, sacrificeDestroyArtifact("Altar", 3))
+	wastefulObs := rules.NewObservation(wasteful, game.Player1)
+	wastefulPass := strategy.ScoreAction(wastefulObs, action.Pass())
+	wastefulTargets := []game.Target{{Kind: game.TargetPermanent, PermanentID: smallThreat.ObjectID}}
+	wastefulScore := strategy.ScoreAction(wastefulObs, action.ActivateAbility(wastefulAltar.ObjectID, 0, wastefulTargets, 0))
+	if wastefulScore >= wastefulPass {
+		t.Fatalf("sacrificing three 5/5s to kill a 1/1 scored %v, want below pass %v", wastefulScore, wastefulPass)
 	}
 }
