@@ -65,6 +65,10 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 	if len(pending) == 0 {
 		return false
 	}
+	pending = suppressOpponentEnteringTriggers(g, pending)
+	if len(pending) == 0 {
+		return false
+	}
 	pending = multiplyAdditionalTriggers(g, pending)
 	pending = limitPendingTriggeredAbilities(g, pending)
 	if len(pending) == 0 {
@@ -106,6 +110,50 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 		placed = true
 	}
 	return placed
+}
+
+// suppressOpponentEnteringTriggers drops the pending entering-caused triggered
+// abilities of permanents controlled by an opponent of an active opponent-
+// entering-trigger suppressor's controller ("Permanents entering don't cause
+// abilities of permanents your opponents control to trigger.", Elesh Norn,
+// Mother of Machines). A trigger is suppressed when it is an ordinary triggered
+// ability whose triggering event is a permanent entering the battlefield and the
+// triggered ability's controller is an opponent of a suppressor's controller.
+// The suppressor's own controller's entering triggers are unaffected.
+func suppressOpponentEnteringTriggers(g *game.Game, pending []pendingTriggeredAbility) []pendingTriggeredAbility {
+	suppressors := make([]game.PlayerID, 0)
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		if effects[i].Kind == game.RuleEffectSuppressOpponentEnteringTriggers {
+			suppressors = append(suppressors, effects[i].Controller)
+		}
+	}
+	if len(suppressors) == 0 {
+		return pending
+	}
+	kept := pending[:0]
+	for i := range pending {
+		trigger := &pending[i]
+		if triggerSuppressedByOpponentEntering(trigger, suppressors) {
+			continue
+		}
+		kept = append(kept, *trigger)
+	}
+	return kept
+}
+
+// triggerSuppressedByOpponentEntering reports whether an entering-caused trigger
+// belongs to an opponent of any suppressor's controller.
+func triggerSuppressedByOpponentEntering(trigger *pendingTriggeredAbility, suppressors []game.PlayerID) bool {
+	if !trigger.ordinaryTrigger || !trigger.hasEvent || !eventEntersBattlefield(&trigger.event) {
+		return false
+	}
+	for _, controller := range suppressors {
+		if controller != trigger.controller {
+			return true
+		}
+	}
+	return false
 }
 
 // multiplyAdditionalTriggers expands the pending triggered abilities by the extra

@@ -376,6 +376,16 @@ const (
 	// permanent's transform is prevented (CR 701.28), so any attempt to transform
 	// it does nothing.
 	RuleEffectCantTransform
+	// RuleEffectSuppressOpponentEnteringTriggers prevents a permanent entering the
+	// battlefield from causing triggered abilities of permanents controlled by
+	// the effect controller's opponents to trigger ("Permanents entering don't
+	// cause abilities of permanents your opponents control to trigger.", Elesh
+	// Norn, Mother of Machines). A pending triggered ability is suppressed when
+	// its triggering event is a permanent entering the battlefield and its source
+	// permanent is controlled by a player the effect controller treats as an
+	// opponent (CR 614 / the entering-trigger interaction). The effect is global;
+	// it carries no filters.
+	RuleEffectSuppressOpponentEnteringTriggers
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -420,7 +430,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectAdditionalTriggerForControlledPermanent,
 		RuleEffectMustBeBlockedByAllAble,
 		RuleEffectAssignCombatDamageAsThoughUnblocked,
-		RuleEffectCantTransform:
+		RuleEffectCantTransform,
+		RuleEffectSuppressOpponentEnteringTriggers:
 		return true
 	default:
 		return false

@@ -43,6 +43,8 @@ const (
 	StaticDeclarationGraveyardCardKeywordGrant            StaticDeclarationKind = "StaticDeclarationGraveyardCardKeywordGrant"
 	StaticDeclarationDrawLimit                            StaticDeclarationKind = "StaticDeclarationDrawLimit"
 	StaticDeclarationCastLimit                            StaticDeclarationKind = "StaticDeclarationCastLimit"
+	StaticDeclarationOpeningHandPlay                      StaticDeclarationKind = "StaticDeclarationOpeningHandPlay"
+	StaticDeclarationOpponentEnteringTriggerSuppression   StaticDeclarationKind = "StaticDeclarationOpponentEnteringTriggerSuppression"
 )
 
 // StaticDeclarationDynamicValueKind identifies the rules-derived count a
@@ -706,6 +708,12 @@ func isNonBattlefieldScopeRider(sentence []shared.Token) bool {
 }
 
 func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms Atoms, conditions []ConditionClause) []StaticDeclarationSyntax {
+	if declaration, ok := parseStaticOpeningHandPlayDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticOpponentEnteringTriggerSuppressionDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
 	if declaration, ok := parseChosenCreatureTypeTriggerMultiplierDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
