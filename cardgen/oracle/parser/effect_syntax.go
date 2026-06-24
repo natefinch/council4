@@ -3742,11 +3742,15 @@ func reconcileRetargetSentenceTargets(sentence *Sentence) {
 // target spell." (Redirect). The generic effect parser cannot handle this
 // sentence because parseTargets manufactures a spurious target for every
 // "target" noun ("the target of", "a single target") and blanks the real spell
-// selection, so this dedicated recognizer extracts the single clean "target
-// spell" selection itself. The "with a single target" qualifier is not modeled
-// at resolution, so the lowered effect retargets any one targeted spell, which
-// is broader than the printed restriction but safe for this family. Any other
-// wording fails closed and flows through the generic effect parser.
+// selection, so this dedicated recognizer extracts the single clean target
+// selection itself. The selection between the fixed "Change the target[s] of"
+// lead-in and the trailing "with a single target" qualifier may be either
+// "target spell" or "target spell or ability" (Bolt Bend, Redirect Lightning),
+// both of which the EffectChooseNewTargets lowering retargets. The "with a
+// single target" qualifier is not modeled at resolution, so the lowered effect
+// retargets any one targeted spell or ability, which is broader than the printed
+// restriction but safe for this family. Any other wording fails closed and flows
+// through the generic effect parser.
 func parseChangeTargetRetargetEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
 	words := make([]shared.Token, 0, len(tokens))
 	origin := make([]int, 0, len(tokens))
@@ -3757,17 +3761,18 @@ func parseChangeTargetRetargetEffect(sentence Sentence, tokens []shared.Token, a
 		words = append(words, token)
 		origin = append(origin, index)
 	}
-	if len(words) != 10 {
+	// The fixed lead-in is four words ("change the target[s] of"), the trailing
+	// qualifier is four words ("with a single target[s]"), and at least two words
+	// of selection ("target spell") sit between them.
+	if len(words) < 10 {
 		return nil, false
 	}
-	fixed := []struct {
+	end := len(words)
+	lead := []struct {
 		index int
 		want  string
-	}{
-		{0, "change"}, {1, "the"}, {3, "of"}, {4, "target"},
-		{5, "spell"}, {6, "with"}, {7, "a"}, {8, "single"},
-	}
-	for _, check := range fixed {
+	}{{0, "change"}, {1, "the"}, {3, "of"}}
+	for _, check := range lead {
 		if !equalWord(words[check.index], check.want) {
 			return nil, false
 		}
@@ -3775,17 +3780,36 @@ func parseChangeTargetRetargetEffect(sentence Sentence, tokens []shared.Token, a
 	if !equalWord(words[2], "target") && !equalWord(words[2], "targets") {
 		return nil, false
 	}
-	if !equalWord(words[9], "target") && !equalWord(words[9], "targets") {
+	tail := []struct {
+		offset int
+		want   string
+	}{{4, "with"}, {3, "a"}, {2, "single"}}
+	for _, check := range tail {
+		if !equalWord(words[end-check.offset], check.want) {
+			return nil, false
+		}
+	}
+	if !equalWord(words[end-1], "target") && !equalWord(words[end-1], "targets") {
 		return nil, false
 	}
-	// Parse the real "target spell" selection from the original token stream so
-	// the spell target carries a correct selection and span; the surrounding
-	// "the target of … a single target" nouns are discarded by the recognizer.
-	if origin[5] != origin[4]+1 {
+	// Parse the real target selection from the original token stream so the
+	// target carries a correct selection and span; the surrounding "the target
+	// of … a single target" nouns are discarded by the recognizer. The selection
+	// words span words[4 : end-4] and must be contiguous in the original tokens
+	// (no intervening period) so the slice is exactly the selection phrase.
+	selEnd := end - 5
+	if selEnd < 5 {
 		return nil, false
 	}
-	spellTargets := parseTargets(tokens[origin[4]:origin[5]+1], atoms)
-	if len(spellTargets) != 1 || spellTargets[0].Selection.Kind != SelectionSpell {
+	for i := 4; i <= selEnd; i++ {
+		if origin[i] != origin[4]+(i-4) {
+			return nil, false
+		}
+	}
+	spellTargets := parseTargets(tokens[origin[4]:origin[selEnd]+1], atoms)
+	if len(spellTargets) != 1 ||
+		(spellTargets[0].Selection.Kind != SelectionSpell &&
+			spellTargets[0].Selection.Kind != SelectionSpellActivatedOrTriggeredAbility) {
 		return nil, false
 	}
 	return []EffectSyntax{{

@@ -128,6 +128,71 @@ func TestLowerCounterSpellTargets(t *testing.T) {
 	}
 }
 
+func TestLowerCounterSpellUnionTypeTargets(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name              string
+		oracleText        string
+		wantSpellTypesAny []types.Card
+		wantExileInstead  bool
+	}{
+		{
+			name:              "instant or sorcery",
+			oracleText:        "Counter target instant or sorcery spell.",
+			wantSpellTypesAny: []types.Card{types.Instant, types.Sorcery},
+		},
+		{
+			name:              "artifact or enchantment",
+			oracleText:        "Counter target artifact or enchantment spell.",
+			wantSpellTypesAny: []types.Card{types.Artifact, types.Enchantment},
+		},
+		{
+			name:              "creature or planeswalker exile instead",
+			oracleText:        "Counter target creature or planeswalker spell. If that spell is countered this way, exile it instead of putting it into its owner's graveyard.",
+			wantSpellTypesAny: []types.Card{types.Creature, types.Planeswalker},
+			wantExileInstead:  true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Counter Union",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+			})
+			if !face.SpellAbility.Exists {
+				t.Fatal("spell ability missing")
+			}
+			mode := face.SpellAbility.Val.Modes[0]
+			if len(mode.Targets) != 1 {
+				t.Fatalf("targets = %d, want 1", len(mode.Targets))
+			}
+			target := mode.Targets[0]
+			if target.Allow != game.TargetAllowStackObject {
+				t.Fatalf("target allow = %v, want stack object", target.Allow)
+			}
+			if !slices.Equal(target.Predicate.SpellCardTypesAny, test.wantSpellTypesAny) {
+				t.Fatalf("spell card types any = %+v, want %+v", target.Predicate.SpellCardTypesAny, test.wantSpellTypesAny)
+			}
+			if len(target.Predicate.SpellCardTypes) != 0 {
+				t.Fatalf("spell card types = %+v, want none", target.Predicate.SpellCardTypes)
+			}
+			if len(mode.Sequence) != 1 {
+				t.Fatalf("sequence = %d, want 1", len(mode.Sequence))
+			}
+			counter, ok := mode.Sequence[0].Primitive.(game.CounterObject)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.CounterObject", mode.Sequence[0].Primitive)
+			}
+			if counter.ExileInstead != test.wantExileInstead {
+				t.Fatalf("exile instead = %v, want %v", counter.ExileInstead, test.wantExileInstead)
+			}
+		})
+	}
+}
+
 func TestLowerCounterSpellQualifiedTargets(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -765,7 +830,6 @@ func TestLowerCounterSpellRejectsUnsupportedForms(t *testing.T) {
 	for _, oracleText := range []string{
 		"Counter target monocolored spell.",
 		"Counter target blue creature spell.",
-		"Counter target artifact or enchantment spell.",
 		"Counter target spell unless its controller pays {X}.",
 		"Counter target activated ability unless its controller pays {1}.",
 		"Counter target activated ability. Draw a card.",

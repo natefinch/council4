@@ -781,6 +781,12 @@ func resolvedObjectManaValue(g *game.Game, resolved *resolvedObjectReference) in
 		}
 		return 0
 	}
+	if resolved.stack != nil {
+		if manaValue, ok := stackObjectManaValue(g, resolved.stack); ok {
+			return manaValue
+		}
+		return 0
+	}
 	if resolved.snapshot.CardID != 0 {
 		if card, ok := g.GetCardInstance(resolved.snapshot.CardID); ok {
 			return cardFaceOrDefault(card, resolved.snapshot.Face).ManaValue()
