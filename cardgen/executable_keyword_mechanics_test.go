@@ -442,6 +442,59 @@ func TestGenerateExecutableCardSourceEnchantSubtype(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceEnchantYouControl(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Aura",
+		Layout:     "normal",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant creature you control",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EnchantStaticAbility(&game.TargetSpec{",
+		`Constraint: "creature you control"`,
+		"PermanentTypes: []types.Card{types.Creature}",
+		"Controller:     game.ControllerYou",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceEnchantSubtypeYouControl(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Aura",
+		Layout:     "normal",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant Mountain you control",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		`Constraint: "mountain you control"`,
+		`Subtypes:   []types.Sub{types.Sub("Mountain")}`,
+		"Controller: game.ControllerYou",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceEnchantOpponent(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -505,13 +558,11 @@ func TestGenerateExecutableCardSourceEnchantMixedUnion(t *testing.T) {
 func TestGenerateExecutableCardSourceEnchantUnsupportedTargets(t *testing.T) {
 	t.Parallel()
 	for _, oracle := range []string{
-		"Enchant creature you control",             // controller qualifier
-		"Enchant artifact or creature you control", // controller-qualified union
-		"Enchant creature or",                      // dangling separator
-		"Enchant artifact creature",                // conjunctive type line, no separator
-		"Enchant nonland permanent",                // negated type qualifier
-		"Enchant creatures",                        // plural form
-		"Enchant instant",                          // non-permanent card type
+		"Enchant creature or",       // dangling separator
+		"Enchant artifact creature", // conjunctive type line, no separator
+		"Enchant nonland permanent", // negated type qualifier
+		"Enchant creatures",         // plural form
+		"Enchant instant",           // non-permanent card type
 	} {
 		card := &ScryfallCard{
 			Name:       "Test Aura",

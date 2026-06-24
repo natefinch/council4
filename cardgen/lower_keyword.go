@@ -771,9 +771,15 @@ func enchantTargetSpec(target compiler.CompiledEnchantTarget) (game.TargetSpec, 
 	case len(target.Subtypes) == 0:
 		spec.Constraint = enchantConstraintText(target)
 		spec.Predicate.PermanentTypes = slices.Clone(target.CardTypes)
+		if target.YouControl {
+			spec.Predicate.Controller = game.ControllerYou
+		}
 	case len(target.CardTypes) == 0:
 		spec.Constraint = enchantConstraintText(target)
 		spec.Predicate.Subtypes = slices.Clone(target.Subtypes)
+		if target.YouControl {
+			spec.Predicate.Controller = game.ControllerYou
+		}
 	default:
 		// A union mixing card types and subtypes ("creature or Vehicle") is a
 		// disjunction across two characteristic families, which a single
@@ -782,12 +788,16 @@ func enchantTargetSpec(target compiler.CompiledEnchantTarget) (game.TargetSpec, 
 		// runtime permanent-type matcher re-parses a non-empty Constraint and
 		// cannot recognize a subtype as a card type, so an empty Constraint keeps
 		// the Selection authoritative for attachment legality.
-		spec.Selection = opt.Val(game.Selection{
+		selection := game.Selection{
 			AnyOf: []game.Selection{
 				{RequiredTypesAny: slices.Clone(target.CardTypes)},
 				{SubtypesAny: slices.Clone(target.Subtypes)},
 			},
-		})
+		}
+		if target.YouControl {
+			selection.Controller = game.ControllerYou
+		}
+		spec.Selection = opt.Val(selection)
 	}
 	return spec, true
 }
@@ -803,7 +813,11 @@ func enchantConstraintText(target compiler.CompiledEnchantTarget) string {
 	for _, subtype := range target.Subtypes {
 		words = append(words, strings.ToLower(string(subtype)))
 	}
-	return strings.Join(words, " or ")
+	text := strings.Join(words, " or ")
+	if target.YouControl {
+		text += " you control"
+	}
+	return text
 }
 
 func lowerEquipAbility(

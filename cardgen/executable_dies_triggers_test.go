@@ -418,3 +418,47 @@ func TestGenerateExecutableCardSourceDiesMultipleEffectTrigger(t *testing.T) {
 		t.Fatalf("trigger sequence is not draw then gain life:\n%s", source)
 	}
 }
+
+// TestGenerateExecutableCardSourceDiesOrExileReanimationAura covers a
+// reanimation Aura (Kaya's Ghostform) whose recursion trigger fires on the
+// enchanted permanent's "dies or is put into exile" verb disjunction. The
+// parser splits the disjunction into independent death and exile triggers, each
+// returning the leaving card to the battlefield.
+func TestGenerateExecutableCardSourceDiesOrExileReanimationAura(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:     "Test Ghostform",
+		Layout:   "normal",
+		ManaCost: "{B}",
+		TypeLine: "Enchantment — Aura",
+		OracleText: "Enchant creature or planeswalker you control\n" +
+			"When enchanted permanent dies or is put into exile, return that card to the battlefield under your control.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EnchantStaticAbility(&game.TargetSpec{",
+		"PermanentTypes: []types.Card{types.Creature, types.Planeswalker}",
+		"Controller:     game.ControllerYou",
+		"game.EventPermanentDied",
+		"game.EventZoneChanged",
+		"game.TriggerSourceAttachedPermanent",
+		"ToZone:        zone.Exile",
+		"Primitive: game.PutOnBattlefield",
+		"game.CardReferenceEvent",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	died := strings.Index(source, "game.EventPermanentDied")
+	exiled := strings.Index(source, "game.EventZoneChanged")
+	if died < 0 || exiled < 0 || died >= exiled {
+		t.Fatalf("expected death trigger before exile trigger:\n%s", source)
+	}
+}

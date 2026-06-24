@@ -463,9 +463,15 @@ type EnchantPredicate struct {
 	Permanent bool        `json:",omitempty"`
 	CardTypes []CardType  `json:",omitempty"`
 	Subtypes  []types.Sub `json:",omitempty"`
+	// YouControl restricts a permanent target to one the enchanting player
+	// controls ("Enchant creature or planeswalker you control"). It applies only
+	// to the card-type/subtype predicate; it is never set with Player or Opponent.
+	YouControl bool `json:",omitempty"`
 }
 
-// Empty reports whether the predicate carries no recognized restriction.
+// Empty reports whether the predicate carries no recognized restriction. A bare
+// "you control" controller restriction is not a recognized object class on its
+// own, so it does not make a predicate non-empty.
 func (p EnchantPredicate) Empty() bool {
 	return !p.Player && !p.Opponent && !p.Permanent &&
 		len(p.CardTypes) == 0 && len(p.Subtypes) == 0
@@ -1631,6 +1637,16 @@ func parseEnchantTargetPredicate(tokens []shared.Token, start int, atoms Atoms) 
 	if predicate.Empty() {
 		return EnchantPredicate{}, start, false
 	}
+	// A trailing "you control" controller restriction narrows the permanent
+	// predicate to the enchanting player's own permanents ("Enchant creature or
+	// planeswalker you control"). It is consumed only after a recognized
+	// card-type/subtype predicate so the keyword span covers the whole
+	// restriction; an unrecognized trailing qualifier is left uncovered to fail
+	// closed downstream.
+	if end+1 < len(tokens) && equalWord(tokens[end], "you") && equalWord(tokens[end+1], "control") {
+		predicate.YouControl = true
+		end += 2
+	}
 	return predicate, end, true
 }
 
@@ -1654,7 +1670,11 @@ func enchantTargetName(predicate EnchantPredicate) string {
 	for _, subtype := range predicate.Subtypes {
 		words = append(words, strings.ToLower(string(subtype)))
 	}
-	return strings.Join(words, " or ")
+	name := strings.Join(words, " or ")
+	if predicate.YouControl {
+		name += " you control"
+	}
+	return name
 }
 
 func parseKeywordManaCost(tokens []shared.Token, start int) (cost.Mana, int, bool) {
