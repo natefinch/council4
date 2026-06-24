@@ -1100,12 +1100,31 @@ func payLifeVerbAt(tokens []shared.Token, index int) bool {
 	return false
 }
 
+// manifestDreadClauseBoundary reports whether the token following "manifest
+// dread" ends that keyword-action clause: end of the token run, a sentence
+// terminator, or a clause separator such as the comma before "then put ...
+// counters on that creature" (Weight Room). "manifest dread" is a fixed
+// keyword action with no "manifest dread <noun>" phrasing, so recognizing it
+// before a continuation lets a following clause reference the manifested
+// creature instead of misreading the verb as a plain "manifest the top card".
+func manifestDreadClauseBoundary(tokens []shared.Token, index int) bool {
+	if index >= len(tokens) {
+		return true
+	}
+	switch tokens[index].Kind {
+	case shared.Period, shared.Comma, shared.Semicolon:
+		return true
+	default:
+		return equalWord(tokens[index], "then")
+	}
+}
+
 func effectKindAt(tokens []shared.Token, index int) EffectKind {
 	kind := effectWordKind(tokens[index])
 	switch {
 	case equalWord(tokens[index], "manifest") || equalWord(tokens[index], "manifests"):
 		switch {
-		case effectWordsAt(tokens, index+1, "dread") && len(tokens) == index+3 && tokens[index+2].Kind == shared.Period:
+		case effectWordsAt(tokens, index+1, "dread") && manifestDreadClauseBoundary(tokens, index+2):
 			return EffectManifestDread
 		case effectWordsAt(tokens, index+1, "the", "top", "card", "of", "your", "library") &&
 			len(tokens) == index+8 && tokens[index+7].Kind == shared.Period:

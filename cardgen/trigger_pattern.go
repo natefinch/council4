@@ -313,7 +313,10 @@ func lowerTriggerEvent(event compiler.TriggerEvent) (game.EventKind, bool) {
 	switch event {
 	case compiler.TriggerEventSpellCast:
 		return game.EventSpellCast, true
-	case compiler.TriggerEventPermanentEnteredBattlefield:
+	case compiler.TriggerEventPermanentEnteredBattlefield, compiler.TriggerEventDoorUnlocked:
+		// A Room half's door unlocks as the half enters the battlefield from
+		// being cast, so the runtime fires the door-unlock trigger off the same
+		// permanent-entered-battlefield event as an ordinary self-enters trigger.
 		return game.EventPermanentEnteredBattlefield, true
 	case compiler.TriggerEventPermanentDied:
 		return game.EventPermanentDied, true

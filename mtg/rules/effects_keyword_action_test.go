@@ -908,3 +908,41 @@ func TestAmassGrowsExistingArmy(t *testing.T) {
 		t.Fatalf("+1/+1 counters = %d, want 2 added to the existing Army", got)
 	}
 }
+
+func TestManifestDreadPublishedLinkReceivesCounters(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	onlyCard := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Only Card",
+		Types: []types.Card{types.Instant},
+	}})
+	addInstructionSpellToStack(g, []game.Instruction{
+		{Primitive: game.Manifest{Dread: true, PublishLinked: game.LinkedKey("manifested-creature")}},
+		{Primitive: game.AddCounter{
+			Amount:      game.Fixed(3),
+			Object:      game.LinkedObjectReference("manifested-creature"),
+			CounterKind: counter.PlusOnePlusOne,
+		}},
+	})
+	log := TurnLog{}
+
+	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &log)
+
+	var manifested *game.Permanent
+	for _, permanent := range g.Battlefield {
+		if permanent.CardInstanceID == onlyCard {
+			manifested = permanent
+			break
+		}
+	}
+	if manifested == nil {
+		t.Fatal("manifest dread did not manifest the only card")
+	}
+	if !manifested.FaceDown || manifested.FaceDownKind != game.FaceDownManifest {
+		t.Fatalf("manifested face-down state = %+v", manifested)
+	}
+	if got := manifested.Counters.Get(counter.PlusOnePlusOne); got != 3 {
+		t.Fatalf("+1/+1 counters on manifested creature = %d, want 3", got)
+	}
+}

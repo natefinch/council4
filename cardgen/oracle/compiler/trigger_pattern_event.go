@@ -83,6 +83,8 @@ func compileTriggerEventClause(clause *parser.TriggerEventClause) (TriggerPatter
 		ok = compileTokenCreatedEvent(clause, &pattern)
 	case parser.TriggerEventKindClassBecameLevel:
 		ok = compileClassBecameLevelEvent(clause, &pattern)
+	case parser.TriggerEventKindDoorUnlocked:
+		ok = compileDoorUnlockEvent(clause, &pattern)
 	default:
 		return TriggerPattern{}, false
 	}
@@ -333,6 +335,20 @@ func compileClassBecameLevelEvent(clause *parser.TriggerEventClause, pattern *Tr
 	}
 	pattern.Event = TriggerEventClassBecameLevel
 	pattern.ClassBecameLevel = clause.ClassBecameLevel
+	return true
+}
+
+// compileDoorUnlockEvent compiles the self-source "you unlock this door"
+// trigger of a Room half. The subject is the ability's own source, so it sets
+// Source to self and carries the door-unlock event identity.
+func compileDoorUnlockEvent(clause *parser.TriggerEventClause, pattern *TriggerPattern) bool {
+	if clause.Subject.Kind != parser.TriggerEventSubjectSelf {
+		return false
+	}
+	if !compileEventSubject(&clause.Subject, pattern, &pattern.SubjectSelection) {
+		return false
+	}
+	pattern.Event = TriggerEventDoorUnlocked
 	return true
 }
 

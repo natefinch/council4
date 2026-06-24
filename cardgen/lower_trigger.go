@@ -195,7 +195,8 @@ func lowerTriggeredAbility(
 		return lowerLifeDamageTrigger(cardName, ability, syntax)
 	case compiler.TriggerEventPermanentEnteredBattlefield,
 		compiler.TriggerEventPermanentDied,
-		compiler.TriggerEventZoneChanged:
+		compiler.TriggerEventZoneChanged,
+		compiler.TriggerEventDoorUnlocked:
 		return lowerPermanentZoneChangeTrigger(cardName, ability, syntax)
 	case compiler.TriggerEventSpellCast:
 		return lowerCastTrigger(cardName, ability, syntax)

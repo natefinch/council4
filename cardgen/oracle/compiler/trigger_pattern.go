@@ -44,6 +44,11 @@ const (
 	TriggerEventLibrarySearched
 	TriggerEventAttackerBecameUnblocked
 	TriggerEventClassBecameLevel
+	// TriggerEventDoorUnlocked is the self-source door-unlock trigger of a Room
+	// enchantment half ("When you unlock this door", CR 715). The runtime models
+	// the cast-door unlock that happens as the Room enters; lowering maps it onto
+	// the permanent-entered-battlefield event for that half.
+	TriggerEventDoorUnlocked
 )
 
 // TriggerCastTurn restricts a spell-cast pattern by whose turn the spell was

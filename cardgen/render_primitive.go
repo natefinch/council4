@@ -1039,6 +1039,9 @@ func (r Renderer) renderStandalonePrimitive(ctx *renderCtx, primitive game.Primi
 			}
 			fields = append(fields, fmt.Sprintf("Player: %s,", player))
 		}
+		if value.PublishLinked != "" {
+			fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
+		}
 		return structLit("game.Manifest", fields), nil
 	default:
 		return "", fmt.Errorf("render: unsupported standalone primitive kind %d", primitive.Kind())
