@@ -1452,6 +1452,9 @@ func parseDynamicCountSubject(tokens []shared.Token, start int, atoms Atoms) (dy
 	if subject, ok := parseDynamicTypeUnionCountSubject(tokens, start, atoms); ok {
 		return subject, true
 	}
+	if subject, ok := parseDynamicInstantSorceryCountSubject(tokens, start, atoms); ok {
+		return subject, true
+	}
 	if subject, ok := parseDynamicObjectNounCountSubject(tokens, start, atoms); ok {
 		return subject, true
 	}
@@ -1502,6 +1505,67 @@ func parseDynamicTypeUnionCountSubject(tokens []shared.Token, start int, atoms A
 		}, true
 	}
 	return dynamicAmountSubject{}, false
+}
+
+// parseDynamicInstantSorceryCountSubject recognizes a "for each instant and
+// sorcery card[s] in your graveyard/hand" count subject. "Instant and sorcery
+// cards" is a fixed idiom for cards that are instants or sorceries (no card is
+// both), so the bare "and" denotes a disjunction the runtime counts once per
+// matching card through a RequiredTypesAny union. Only the controller's own
+// graveyard and hand, where instant and sorcery cards exist, are recognized;
+// other zones, type pairs, and connectors fail closed.
+func parseDynamicInstantSorceryCountSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
+	if start+3 >= len(tokens) {
+		return dynamicAmountSubject{}, false
+	}
+	first, ok := atoms.CardTypeAt(tokens[start].Span)
+	if !ok || !equalWord(tokens[start+1], "and") {
+		return dynamicAmountSubject{}, false
+	}
+	second, ok := atoms.CardTypeAt(tokens[start+2].Span)
+	if !ok {
+		return dynamicAmountSubject{}, false
+	}
+	if !instantSorceryPair(first, second) {
+		return dynamicAmountSubject{}, false
+	}
+	headIndex := start + 3
+	if headIndex >= len(tokens) ||
+		(!equalWord(tokens[headIndex], "card") && !equalWord(tokens[headIndex], "cards")) {
+		return dynamicAmountSubject{}, false
+	}
+	plural := strings.EqualFold(tokens[headIndex].Text, "cards")
+	end := headIndex + 1
+	for _, zoneSuffix := range []struct {
+		words []string
+		kind  zone.Type
+	}{
+		{[]string{"in", "your", "graveyard"}, zone.Graveyard},
+		{[]string{"in", "your", "hand"}, zone.Hand},
+	} {
+		if !effectWordsAt(tokens, end, zoneSuffix.words...) || !dynamicAmountBoundary(tokens, end+len(zoneSuffix.words)) {
+			continue
+		}
+		subjectEnd := end + len(zoneSuffix.words)
+		selection := buildDynamicCountSelection(tokens, start, subjectEnd, atoms)
+		if len(selection.RequiredTypesAny) != 2 {
+			return dynamicAmountSubject{}, false
+		}
+		selection.Controller = SelectionControllerYou
+		selection.Zone = zoneSuffix.kind
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountCount, Selection: &selection},
+			end:    subjectEnd, count: true, plural: plural,
+		}, true
+	}
+	return dynamicAmountSubject{}, false
+}
+
+// instantSorceryPair reports whether the two card types are exactly the instant
+// and sorcery pair (in either order).
+func instantSorceryPair(a, b CardType) bool {
+	return (a == CardTypeInstant && b == CardTypeSorcery) ||
+		(a == CardTypeSorcery && b == CardTypeInstant)
 }
 
 // dynamicUnionCardTypeAt returns the counting card type beginning at index when
