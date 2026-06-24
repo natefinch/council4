@@ -1228,6 +1228,38 @@ func TestGenerateExecutableCardSourceReferencedFightSourcePermanent(t *testing.T
 	}
 }
 
+// TestGenerateExecutableCardSourceFightAnotherExcludesSource covers "this
+// creature fights another target creature" (Brash Taunter): the fighter is the
+// source permanent, so "another" excludes the source via a Predicate.Another
+// (ExcludeSource) target rather than a DistinctFromPriorTargets second target.
+func TestGenerateExecutableCardSourceFightAnotherExcludesSource(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Taunter",
+		Layout:     "normal",
+		TypeLine:   "Creature — Goblin",
+		OracleText: "{2}{R}, {T}: This creature fights another target creature.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.Fight") ||
+		!strings.Contains(source, "Object:        game.SourcePermanentReference()") ||
+		!strings.Contains(source, "RelatedObject: game.TargetPermanentReference(0)") {
+		t.Fatalf("source missing source-permanent fight primitive:\n%s", source)
+	}
+	if !strings.Contains(source, "Another:        true,") {
+		t.Fatalf("source missing source-excluding Another predicate:\n%s", source)
+	}
+	if strings.Contains(source, "DistinctFromPriorTargets: true,") {
+		t.Fatalf("single source fight target must not use DistinctFromPriorTargets:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceFixedDamageTargets(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

@@ -1495,8 +1495,8 @@ func lowerFightSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 			"the executable source backend supports only exact fights between two target creatures",
 		)
 	}
-	first, firstOK := fightCreatureTargetSpec(ctx.content.Targets[0], false)
-	second, secondOK := fightCreatureTargetSpec(ctx.content.Targets[1], true)
+	first, firstOK := fightCreatureTargetSpec(ctx.content.Targets[0], fightAnotherReject)
+	second, secondOK := fightCreatureTargetSpec(ctx.content.Targets[1], fightAnotherPriorTarget)
 	if !firstOK || !secondOK {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -1530,10 +1530,18 @@ func lowerSourceFightSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 		"the executable source backend supports only a source permanent fighting one target creature",
 	)
 	effect := ctx.content.Effects[0]
+	// "another target creature" excludes the source fighter. It is only sound to
+	// drop the fighter from the target pool when the fighting object is the
+	// source permanent itself, so the "another" determiner is accepted only for
+	// the source-object shape and stays unsupported for the event-permanent
+	// ("it fights ...") shape, where ExcludeSource would exclude the wrong object.
+	isSourceObject := effect.Context == parser.EffectContextSource &&
+		len(ctx.content.References) == 1 &&
+		ctx.content.References[0].Binding == compiler.ReferenceBindingSource
 	if effect.Negated ||
 		effect.Optional ||
 		ctx.optional ||
-		effect.Selector.Another ||
+		(effect.Selector.Another && !isSourceObject) ||
 		(effect.Context != parser.EffectContextReferencedObject &&
 			effect.Context != parser.EffectContextSource) ||
 		len(ctx.content.Targets) != 1 ||
@@ -1545,7 +1553,11 @@ func lowerSourceFightSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 		len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, unsupported
 	}
-	target, ok := fightCreatureTargetSpec(ctx.content.Targets[0], false)
+	anotherKind := fightAnotherReject
+	if isSourceObject {
+		anotherKind = fightAnotherExcludeSource
+	}
+	target, ok := fightCreatureTargetSpec(ctx.content.Targets[0], anotherKind)
 	if !ok {
 		return game.AbilityContent{}, unsupported
 	}
@@ -1605,17 +1617,33 @@ func lowerLookAtHandSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnost
 	}.Ability(), nil
 }
 
-// fightCreatureTargetSpec lowers one fight target. allowAnother permits the
-// "another target creature" determiner on the second target, lowering it to a
-// DistinctFromPriorTargets spec so the chosen creature must differ from the
-// first fighter; "the other" (Selector.Other) and the directional combat
+// fightAnotherKind selects how a fight target's "another" determiner lowers.
+type fightAnotherKind int
+
+const (
+	// fightAnotherReject fails closed on "another target creature".
+	fightAnotherReject fightAnotherKind = iota
+	// fightAnotherPriorTarget lowers "another" to DistinctFromPriorTargets so the
+	// chosen creature must differ from an earlier fight target (the second target
+	// of a two-target "X fights another target creature" spell).
+	fightAnotherPriorTarget
+	// fightAnotherExcludeSource lowers "another" to a source-excluding predicate
+	// so the chosen creature must differ from the source fighter ("this creature
+	// fights another target creature", Brash Taunter, Rhonas-style activations).
+	fightAnotherExcludeSource
+)
+
+// fightCreatureTargetSpec lowers one fight target. The another parameter selects
+// how the "another target creature" determiner lowers: rejected, distinct from a
+// prior fight target (two-target fights), or distinct from the source fighter
+// (source fights). "the other" (Selector.Other) and the directional combat
 // qualifiers remain unsupported.
-func fightCreatureTargetSpec(target compiler.CompiledTarget, allowAnother bool) (game.TargetSpec, bool) {
+func fightCreatureTargetSpec(target compiler.CompiledTarget, another fightAnotherKind) (game.TargetSpec, bool) {
 	if target.Cardinality.Max != 1 ||
 		target.Cardinality.Min < 0 ||
 		target.Cardinality.Min > 1 ||
 		!fightTargetSelectsCreature(target.Selector) ||
-		(target.Selector.Another && !allowAnother) ||
+		(target.Selector.Another && another == fightAnotherReject) ||
 		target.Selector.Other ||
 		target.Selector.Attacking ||
 		target.Selector.Blocking ||
@@ -1628,11 +1656,12 @@ func fightCreatureTargetSpec(target compiler.CompiledTarget, allowAnother bool) 
 		MaxTargets:               1,
 		Constraint:               target.Text,
 		Allow:                    game.TargetAllowPermanent,
-		DistinctFromPriorTargets: target.Selector.Another,
+		DistinctFromPriorTargets: target.Selector.Another && another == fightAnotherPriorTarget,
 		Predicate: game.TargetPredicate{
 			PermanentTypes: []types.Card{types.Creature},
 			Subtypes:       slices.Clone(target.Selector.SubtypesAny()),
 			RequiredName:   target.Selector.RequiredName,
+			Another:        target.Selector.Another && another == fightAnotherExcludeSource,
 		},
 	}
 	switch target.Selector.Controller {
