@@ -164,6 +164,7 @@ func lowerFaceAbilities(
 		Planeswalker:     slices.Contains(parsedType.Types, "Planeswalker"),
 		Saga:             slices.Contains(parsedType.Subtypes, "Saga"),
 		Class:            slices.Contains(parsedType.Subtypes, "Class"),
+		Leveler:          face.Layout == "leveler",
 		CardName:         face.Name,
 	})
 	compilation, compilerDiagnostics := compiler.Compile(document, compiler.Context{})
@@ -179,9 +180,32 @@ func lowerFaceAbilities(
 	creatureSubtypes := eternalizeFamilyCreatureSubtypes(parsedType.Subtypes)
 	saga := slices.Contains(parsedType.Subtypes, "Saga")
 	isClass := slices.Contains(parsedType.Subtypes, "Class")
+	isLeveler := face.Layout == "leveler"
 	classLevel := 1
+	var currentBand *compiler.CompiledLevelBand
 	for i, ability := range compilation.Abilities {
 		syntax := &compilation.Syntax.Abilities[i]
+		if isLeveler && ability.LevelUpRecognized {
+			activated, diagnostic := lowerLevelUpAbility(face.Name, ability)
+			if diagnostic != nil {
+				unsupported = append(unsupported, *diagnostic)
+				continue
+			}
+			result.ActivatedAbilities = append(result.ActivatedAbilities, activated)
+			continue
+		}
+		if isLeveler && ability.Kind == compiler.AbilityLevelBand {
+			currentBand = ability.LevelBand
+			static, diagnostic, emit := lowerLevelBandPowerToughness(ability)
+			if diagnostic != nil {
+				unsupported = append(unsupported, *diagnostic)
+				continue
+			}
+			if emit {
+				result.StaticAbilities = append(result.StaticAbilities, static)
+			}
+			continue
+		}
 		var lowered abilityLowering
 		var diagnostic *shared.Diagnostic
 		levelGain := ability.ClassLevelGain
@@ -206,6 +230,12 @@ func lowerFaceAbilities(
 		}
 		if isClass && levelGain == 0 && classLevel >= 2 {
 			if diagnostic := gateLoweredAbilityByClassLevel(&lowered, ability, classLevel); diagnostic != nil {
+				unsupported = append(unsupported, *diagnostic)
+				continue
+			}
+		}
+		if isLeveler && currentBand != nil {
+			if diagnostic := gateLoweredAbilityByLevelBand(&lowered, ability, currentBand); diagnostic != nil {
 				unsupported = append(unsupported, *diagnostic)
 				continue
 			}

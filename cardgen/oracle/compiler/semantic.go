@@ -32,6 +32,7 @@ const (
 	AbilityReminder
 	AbilitySpellAdditionalCost
 	AbilitySpellAlternativeCost
+	AbilityLevelBand
 )
 
 var abilityKindNames = [...]string{
@@ -46,6 +47,7 @@ var abilityKindNames = [...]string{
 	AbilityReminder:             "reminder",
 	AbilitySpellAdditionalCost:  "spell additional cost",
 	AbilitySpellAlternativeCost: "spell alternative cost",
+	AbilityLevelBand:            "level band",
 }
 
 func (k AbilityKind) String() string {
@@ -100,10 +102,31 @@ type CompiledAbility struct {
 	// level-up. The compiler copies the parser's typed level so lowering emits
 	// the SetClassLevel ability without re-reading the body wording.
 	ClassLevelGain int
+	// LevelUpRecognized reports that the parser recognized this paragraph as a
+	// leveler card's "Level up {cost}" activated ability (CR 711.2). LevelUpCost
+	// carries its mana cost. Lowering emits a sorcery-speed ability that puts a
+	// level counter on the source.
+	LevelUpRecognized bool
+	LevelUpCost       cost.Mana
+	// LevelBand carries a leveler card's "LEVEL lo-hi" / "LEVEL lo+" band header
+	// with its printed base power/toughness. It is nil for non-band abilities.
+	LevelBand *CompiledLevelBand
 	// Companion reports that the parser recognized this paragraph as a companion
 	// keyword ability (CR 702.139). Its content is otherwise empty; lowering
 	// emits the inert companion static keyword.
 	Companion bool
+}
+
+// CompiledLevelBand is a leveler card's "LEVEL lo-hi" / "LEVEL lo+" band
+// (CR 711.4) with its printed base power/toughness. Low is the band's first
+// level; High is its last level, or 0 for the open-ended final band. Power and
+// Toughness hold the printed base P/T when HasPowerToughness is true.
+type CompiledLevelBand struct {
+	Low               int
+	High              int
+	Power             int
+	Toughness         int
+	HasPowerToughness bool
 }
 
 // CompiledSourceAbilityCostReduction describes a source-local activated-ability

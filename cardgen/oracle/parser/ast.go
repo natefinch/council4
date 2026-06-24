@@ -29,6 +29,10 @@ const (
 	// AbilitySpellAlternativeCost is a spell paragraph that declares an
 	// optional alternative to its printed mana cost.
 	AbilitySpellAlternativeCost AbilityKind = "AbilitySpellAlternativeCost"
+	// AbilityLevelBand is a leveler card's "LEVEL lo-hi" / "LEVEL lo+" band
+	// header (CR 711). It carries the band's level range and printed P/T through
+	// Ability.LevelBand and has no resolving body of its own.
+	AbilityLevelBand AbilityKind = "AbilityLevelBand"
 )
 
 // Context supplies card-face facts that Oracle text alone cannot express.
@@ -40,6 +44,11 @@ type Context struct {
 	// recognize the Class level-up activated abilities ("{cost}: Level N") and
 	// the intrinsic Class reminder line, which share wording only Class cards use.
 	Class bool `json:",omitempty"`
+	// Leveler reports that the card is a leveler card (CR 711, layout "leveler").
+	// The parser uses it to recognize the "Level up {cost}" activated ability and
+	// the "LEVEL lo-hi" / "LEVEL lo+" band headers with their printed P/T, which
+	// share wording only leveler cards use.
+	Leveler bool `json:",omitempty"`
 	// CardName is the card's own name. The parser uses it to recognize explicit
 	// self-name references so the compiler need not inspect name spelling.
 	CardName string `json:",omitempty"`
@@ -191,6 +200,20 @@ type Ability struct {
 	// level-up. The level number is a typed semantic value the parser reads from
 	// the ability body so downstream stages need not re-read the wording.
 	ClassLevelGain int `json:",omitempty"`
+	// LevelUpCost is the mana cost of a leveler card's "Level up {cost}" ability
+	// (CR 711), set only when LevelUpRecognized is true. The leveler activated
+	// ability puts a level counter on the source at sorcery speed; the cost is a
+	// typed semantic value the parser reads so downstream stages need not re-read
+	// the wording.
+	LevelUpCost cost.Mana `json:",omitempty"`
+	// LevelUpRecognized reports that this ability is a leveler card's intrinsic
+	// "Level up {cost}" activated ability line.
+	LevelUpRecognized bool `json:",omitempty"`
+	// LevelBand carries a leveler card's "LEVEL lo-hi" / "LEVEL lo+" band header
+	// with its printed base power/toughness. It is nil for non-band abilities.
+	// The abilities printed below a band header belong to that band until the
+	// next band header; downstream stages gate them by level-counter count.
+	LevelBand *LevelBand `json:",omitempty"`
 	// Atoms holds the source-spanned typed semantic atoms recognized within this
 	// ability's semantic tokens. Downstream stages consume these typed values by
 	// span instead of re-recognizing Oracle spelling.

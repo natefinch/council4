@@ -803,6 +803,8 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		cond.ControllerGainedLifeThisTurnAtLeast < 0 ||
 		cond.SourceClassLevelAtLeast < 0 ||
 		cond.SourceClassLevelLessThan < 0 ||
+		cond.SourceLevelCountersAtLeast < 0 ||
+		cond.SourceLevelCountersLessThan < 0 ||
 		cond.ControllerGraveyardCardOfTypeCountAtLeast < 0 {
 		return "", fmt.Errorf("render: %s condition has a negative threshold", context)
 	}
@@ -861,6 +863,14 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	}
 	if cond.SourceClassLevelLessThan > 0 {
 		fields = append(fields, fmt.Sprintf("SourceClassLevelLessThan: %d,", cond.SourceClassLevelLessThan))
+		hasPredicate = true
+	}
+	if cond.SourceLevelCountersAtLeast > 0 {
+		fields = append(fields, fmt.Sprintf("SourceLevelCountersAtLeast: %d,", cond.SourceLevelCountersAtLeast))
+		hasPredicate = true
+	}
+	if cond.SourceLevelCountersLessThan > 0 {
+		fields = append(fields, fmt.Sprintf("SourceLevelCountersLessThan: %d,", cond.SourceLevelCountersLessThan))
 		hasPredicate = true
 	}
 	if cond.ControllerLifeExactly.Exists {

@@ -54,6 +54,13 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 			i++
 			continue
 		}
+		if context.Leveler {
+			if band, next, ok := parseLevelBand(source, lines, i); ok {
+				document.Abilities = append(document.Abilities, band)
+				i = next
+				continue
+			}
+		}
 		ability, abilityDiagnostics := parseAbility(source, lines[i], context)
 		diagnostics = append(diagnostics, abilityDiagnostics...)
 		modalStart := modalHeaderStart(lines[i])
@@ -472,6 +479,12 @@ func parseAbility(
 		}
 		if ability.Kind == AbilityActivated {
 			ability.ClassLevelGain = recognizeClassLevelGain(resolvingBody)
+		}
+	}
+	if context.Leveler {
+		if manaCost, ok := recognizeLevelUpAbility(tokens); ok {
+			ability.LevelUpCost = manaCost
+			ability.LevelUpRecognized = true
 		}
 	}
 	ability.ReadAheadSacrificeChapter, ability.ReadAheadRecognized = recognizeReadAheadReminder(ability.Text)

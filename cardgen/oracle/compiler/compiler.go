@@ -86,6 +86,17 @@ func compileAbility(
 		}
 	}
 	compiled.ClassLevelGain = ability.ClassLevelGain
+	compiled.LevelUpRecognized = ability.LevelUpRecognized
+	compiled.LevelUpCost = slices.Clone(ability.LevelUpCost)
+	if ability.LevelBand != nil {
+		compiled.LevelBand = &CompiledLevelBand{
+			Low:               ability.LevelBand.Low,
+			High:              ability.LevelBand.High,
+			Power:             ability.LevelBand.Power,
+			Toughness:         ability.LevelBand.Toughness,
+			HasPowerToughness: ability.LevelBand.HasPowerToughness,
+		}
+	}
 	compiled.Companion = ability.Companion != nil
 	if ability.Modal != nil {
 		for i := range ability.Modal.Options {
@@ -171,9 +182,10 @@ func compileAbility(
 			diagnostics = append(diagnostics, unsupportedDiagnostic(mode.Span, mode.Text))
 		}
 	}
-	if kind != AbilityReminder && kind != AbilitySpellAdditionalCost && kind != AbilitySpellAlternativeCost && ability.Modal == nil &&
+	if kind != AbilityReminder && kind != AbilitySpellAdditionalCost && kind != AbilitySpellAlternativeCost && kind != AbilityLevelBand && ability.Modal == nil &&
 		compiled.ExactSequence == ExactSequenceUnknown &&
 		compiled.ClassLevelGain == 0 &&
+		!compiled.LevelUpRecognized &&
 		!compiled.Companion &&
 		len(compiled.Content.Effects) == 0 && len(compiled.Content.Keywords) == 0 &&
 		!legacyEffectsPresent(ability.Sentences) &&
@@ -266,6 +278,8 @@ func compileAbilityKind(kind parser.AbilityKind) AbilityKind {
 		return AbilitySpellAdditionalCost
 	case parser.AbilitySpellAlternativeCost:
 		return AbilitySpellAlternativeCost
+	case parser.AbilityLevelBand:
+		return AbilityLevelBand
 	default:
 		return AbilityUnknown
 	}
