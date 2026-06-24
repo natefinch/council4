@@ -443,6 +443,16 @@ func EntersAsCopyReplacement(text string, selection *Selection, optional, notLeg
 	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
+// EntersTappedAsCopy marks an enters-as-copy replacement so the permanent also
+// enters the battlefield tapped when it enters as its chosen copy (Vesuva's
+// "enter tapped as a copy of any land on the battlefield"). It wraps an
+// EntersAsCopyReplacement value rather than extending that constructor, so only
+// the tapped form carries the flag.
+func EntersTappedAsCopy(ability ReplacementAbility) ReplacementAbility {
+	ability.Replacement.EntersAsCopyTapped = true
+	return ability
+}
+
 // TokenCreationReplacement creates a persistent replacement that multiplies
 // token creation events matching controller.
 func TokenCreationReplacement(text string, multiplier int, filter TriggerControllerFilter) ReplacementAbility {

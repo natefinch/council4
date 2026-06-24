@@ -4580,7 +4580,8 @@ func legacyEffectCount(tokens []shared.Token, atoms Atoms) int {
 		if legacyEffectKindAt(tokens, i) != EffectUnknown &&
 			!atoms.SelfNameAt(tokens[i].Span) &&
 			!effectWithinCondition(tokens, i) &&
-			!tapOrUntapInnerUntapAt(tokens, i) {
+			!tapOrUntapInnerUntapAt(tokens, i) &&
+			!copyTokenExceptRiderBoundaryAt(tokens, i) {
 			count++
 		}
 	}
@@ -4803,11 +4804,13 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 		return nil, false
 	}
 	enters := viaAsEnters
+	entersTapped := false
 	for i := 0; i < copyIndex; i++ {
 		if equalWord(body[i], "tapped") {
-			// "enter tapped as a copy" (Vesuva) also overrides the enters-tapped
-			// state, which this replacement does not model; fail closed.
-			return nil, false
+			// "enter tapped as a copy" (Vesuva) also taps the permanent as it
+			// enters the battlefield as its chosen copy; record it so the copy
+			// applies the tapped state after the optional choice is confirmed.
+			entersTapped = true
 		}
 		if equalWord(body[i], "enter") || equalWord(body[i], "enters") {
 			enters = true
@@ -4875,6 +4878,7 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 		EntersAsCopyConditionalCounters: conditionalCounters,
 		EntersAsCopyUntilEndOfTurn:      untilEndOfTurn,
 		EntersAsCopyAddKeywords:         addKeywords,
+		EntersAsCopyTapped:              entersTapped,
 	}
 	return []EffectSyntax{effect}, true
 }

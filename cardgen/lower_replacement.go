@@ -1818,6 +1818,9 @@ func lowerEntersAsCopyReplacement(ability compiler.CompiledAbility) (game.Replac
 		effect.EntersAsCopyAddSubtypes,
 		effect.EntersAsCopyAddTypes...,
 	)
+	if effect.EntersAsCopyTapped {
+		replacement = game.EntersTappedAsCopy(replacement)
+	}
 	return replacement, true, nil
 }
 

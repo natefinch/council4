@@ -2481,7 +2481,7 @@ func exactCreateCopyTokenEffectSyntax(effect *EffectSyntax) bool {
 		!effect.Targets[0].Exact {
 		return false
 	}
-	base, dropLegendary, ok := copyTokenExceptModifier(exactEffectClauseText(effect))
+	base, rider, ok := copyTokenExceptModifier(effect, exactEffectClauseText(effect))
 	if !ok {
 		return false
 	}
@@ -2489,7 +2489,8 @@ func exactCreateCopyTokenEffectSyntax(effect *EffectSyntax) bool {
 	if !matched {
 		return false
 	}
-	effect.TokenCopyDropLegendary = dropLegendary
+	effect.TokenCopyDropLegendary = rider.dropLegendary
+	effect.TokenCopyGrantKeywords = rider.grantKeywords
 	effect.TokenCopyEntersTapped = entersTapped
 	return true
 }
@@ -2556,7 +2557,7 @@ func exactCreateCopyTokenReferenceEffectSyntax(effect *EffectSyntax) bool {
 		len(effect.References) == 0 {
 		return false
 	}
-	base, dropLegendary, ok := copyTokenExceptModifier(exactEffectClauseText(effect))
+	base, rider, ok := copyTokenExceptModifier(effect, exactEffectClauseText(effect))
 	if !ok {
 		return false
 	}
@@ -2586,7 +2587,8 @@ func exactCreateCopyTokenReferenceEffectSyntax(effect *EffectSyntax) bool {
 			return false
 		}
 	}
-	effect.TokenCopyDropLegendary = dropLegendary
+	effect.TokenCopyDropLegendary = rider.dropLegendary
+	effect.TokenCopyGrantKeywords = rider.grantKeywords
 	effect.TokenCopyEntersTapped = entersTapped
 	return true
 }
@@ -2610,7 +2612,7 @@ func exactCreateCopyTokenTriggeringSetEffectSyntax(effect *EffectSyntax) bool {
 		!referencesIncludeThemPronoun(effect.References) {
 		return false
 	}
-	base, dropLegendary, ok := copyTokenExceptModifier(exactEffectClauseText(effect))
+	base, rider, ok := copyTokenExceptModifier(effect, exactEffectClauseText(effect))
 	if !ok {
 		return false
 	}
@@ -2623,7 +2625,8 @@ func exactCreateCopyTokenTriggeringSetEffectSyntax(effect *EffectSyntax) bool {
 			return false
 		}
 	}
-	effect.TokenCopyDropLegendary = dropLegendary
+	effect.TokenCopyDropLegendary = rider.dropLegendary
+	effect.TokenCopyGrantKeywords = rider.grantKeywords
 	effect.TokenCopyEntersTapped = entersTapped
 	return true
 }
@@ -2654,7 +2657,7 @@ func exactCreateCopyTokenAttachedEffectSyntax(effect *EffectSyntax) bool {
 		len(effect.Targets) != 0 {
 		return false
 	}
-	base, dropLegendary, ok := copyTokenExceptModifier(exactEffectClauseText(effect))
+	base, rider, ok := copyTokenExceptModifier(effect, exactEffectClauseText(effect))
 	if !ok {
 		return false
 	}
@@ -2668,7 +2671,8 @@ func exactCreateCopyTokenAttachedEffectSyntax(effect *EffectSyntax) bool {
 			return false
 		}
 	}
-	effect.TokenCopyDropLegendary = dropLegendary
+	effect.TokenCopyDropLegendary = rider.dropLegendary
+	effect.TokenCopyGrantKeywords = rider.grantKeywords
 	effect.TokenCopyEntersTapped = equippedTapped || enchantedTapped
 	return true
 }
@@ -2702,7 +2706,7 @@ func exactCreateCopyTokenForEachEffectSyntax(effect *EffectSyntax, atoms Atoms) 
 	if !ok {
 		return nil, false
 	}
-	base, dropLegendary, ok := copyTokenExceptModifier(copyForEachClauseText(effect, verb))
+	base, rider, ok := copyTokenExceptModifier(effect, copyForEachClauseText(effect, verb))
 	if !ok {
 		return nil, false
 	}
@@ -2710,7 +2714,8 @@ func exactCreateCopyTokenForEachEffectSyntax(effect *EffectSyntax, atoms Atoms) 
 	if !matched {
 		return nil, false
 	}
-	effect.TokenCopyDropLegendary = dropLegendary
+	effect.TokenCopyDropLegendary = rider.dropLegendary
+	effect.TokenCopyGrantKeywords = rider.grantKeywords
 	effect.TokenCopyEntersTapped = entersTapped
 	return group, true
 }
@@ -2771,27 +2776,142 @@ func copyForEachSourcePhrase(base string) (tapped, ok bool) {
 	}
 }
 
+// copyTokenExceptRider holds the recognized copiable modifiers of a copy-token
+// "except <rider>" clause: whether the copy drops its legendary supertype and
+// the keyword abilities it gains.
+type copyTokenExceptRider struct {
+	dropLegendary bool
+	grantKeywords []KeywordKind
+}
+
 // copyTokenExceptModifier splits a copy-token clause into its base "Create a
-// token that's a copy of <source>." text and a recognized trailing modifier. The
-// only supported modifier is "except <it/the token> isn't legendary"; a clause
-// with no ", except" suffix returns the clause unchanged with dropLegendary
-// false. Any other except modifier (power/toughness, added types, quoted
+// token that's a copy of <source>." text and the recognized trailing copiable
+// modifiers. A clause with no ", except" suffix returns the clause unchanged
+// with no modifiers. The bare "except <it/the token> isn't legendary" form is
+// recognized directly. A richer "except <the token/it> has <keyword>[ and ...][,
+// and] <it/the token> isn't legendary" rider (Irenicus's Vile Duplication) is
+// recognized from the effect's rider tokens, returning the granted copiable
+// keywords. Any other except modifier (power/toughness, added types, quoted
 // abilities) is unrecognized and returns ok=false so the copy fails closed.
-func copyTokenExceptModifier(clause string) (base string, dropLegendary, ok bool) {
+func copyTokenExceptModifier(effect *EffectSyntax, clause string) (base string, rider copyTokenExceptRider, ok bool) {
 	body, hadPeriod := strings.CutSuffix(clause, ".")
 	if !hadPeriod {
-		return clause, false, true
+		return clause, copyTokenExceptRider{}, true
 	}
 	head, except, found := strings.Cut(body, ", except ")
 	if !found {
-		return clause, false, true
+		return clause, copyTokenExceptRider{}, true
 	}
 	switch normalizeApostrophes(strings.ToLower(strings.TrimSpace(except))) {
 	case "it isn't legendary", "it is not legendary", "it's not legendary",
 		"the token isn't legendary", "the token is not legendary":
-		return head + ".", true, true
+		return head + ".", copyTokenExceptRider{dropLegendary: true}, true
+	}
+	drop, keywords, riderOK := copyTokenExceptRiderTokens(effect)
+	if !riderOK {
+		return "", copyTokenExceptRider{}, false
+	}
+	return head + ".", copyTokenExceptRider{dropLegendary: drop, grantKeywords: keywords}, true
+}
+
+// copyTokenExceptRiderTokens parses the copiable rider that follows a copy-token
+// "except" clause from the effect's tokens. It splits the rider after the final
+// "except" word into "and"/comma-separated sub-clauses and accepts only the
+// "<it/the token> isn't legendary" drop-legendary clause and one or more
+// "<it/the token> has <keyword>" keyword-grant clauses. A quoted granted ability
+// or parenthetical in the rider ("...except it has haste and \"At the beginning
+// of the end step, sacrifice this token.\"", Electroduplicate/Heat Shimmer)
+// carries semantics the keyword/legendary recognizer cannot represent, so it
+// fails closed rather than silently dropping it. It also fails closed when any
+// sub-clause is unrecognized or when no modifier at all is recognized, so the
+// copy stays unsupported rather than silently dropping rider semantics.
+func copyTokenExceptRiderTokens(effect *EffectSyntax) (dropLegendary bool, grantKeywords []KeywordKind, ok bool) {
+	raw := effect.Tokens
+	exceptIndex := -1
+	for i := range raw {
+		if equalWord(raw[i], "except") {
+			exceptIndex = i
+		}
+	}
+	if exceptIndex < 0 {
+		return false, nil, false
+	}
+	rider := raw[exceptIndex+1:]
+	for _, token := range rider {
+		if token.Kind == shared.Quote || token.Kind == shared.LeftParen {
+			return false, nil, false
+		}
+	}
+	for len(rider) > 0 && rider[len(rider)-1].Kind == shared.Period {
+		rider = rider[:len(rider)-1]
+	}
+	// A rider that ends in a dangling conjunction or comma signals that trailing
+	// content (a quoted granted ability that the clause builder dropped from the
+	// effect tokens) was elided, so fail closed rather than recognizing only the
+	// surviving prefix.
+	if len(rider) > 0 {
+		last := rider[len(rider)-1]
+		if last.Kind == shared.Comma || equalWord(last, "and") || equalWord(last, "or") {
+			return false, nil, false
+		}
+	}
+	clauses := splitEntersAsCopyRiderClauses(rider)
+	if len(clauses) == 0 {
+		return false, nil, false
+	}
+	for _, clause := range clauses {
+		if copyTokenNotLegendaryClause(normalizedWords(clause)) {
+			dropLegendary = true
+			continue
+		}
+		if keyword, kok := copyTokenHasKeywordClause(clause); kok {
+			grantKeywords = append(grantKeywords, keyword)
+			continue
+		}
+		return false, nil, false
+	}
+	if !dropLegendary && len(grantKeywords) == 0 {
+		return false, nil, false
+	}
+	return dropLegendary, grantKeywords, true
+}
+
+// copyTokenNotLegendaryClause reports whether the rider sub-clause words are an
+// "<it/the token> isn't legendary" copiable rider. The "the token" subject is
+// normalized to the "it" subject the shared enters-as-copy recognizer accepts.
+func copyTokenNotLegendaryClause(words []string) bool {
+	if len(words) >= 2 && words[0] == "the" && words[1] == "token" {
+		words = append([]string{"it"}, words[2:]...)
+	}
+	return entersAsCopyNotLegendaryClause(words)
+}
+
+// copyTokenHasKeywordClause recognizes an "<it/the token> has <keyword>" copiable
+// rider sub-clause and returns the single granted keyword. The keyword name must
+// consume the entire remainder of the clause so trailing words (parameters or
+// extra text) fail closed.
+func copyTokenHasKeywordClause(clause []shared.Token) (KeywordKind, bool) {
+	rest, ok := copyTokenHasSubject(clause)
+	if !ok {
+		return KeywordUnknown, false
+	}
+	kind, width, ok := recognizeKeywordNameAt(rest, 0)
+	if !ok || width != len(rest) {
+		return KeywordUnknown, false
+	}
+	return kind, true
+}
+
+// copyTokenHasSubject strips a leading "it has" or "the token has" subject from a
+// rider sub-clause, returning the remaining keyword-name tokens.
+func copyTokenHasSubject(clause []shared.Token) ([]shared.Token, bool) {
+	switch {
+	case len(clause) >= 3 && equalWord(clause[0], "it") && equalWord(clause[1], "has"):
+		return clause[2:], true
+	case len(clause) >= 4 && equalWord(clause[0], "the") && equalWord(clause[1], "token") && equalWord(clause[2], "has"):
+		return clause[3:], true
 	default:
-		return "", false, false
+		return nil, false
 	}
 }
 

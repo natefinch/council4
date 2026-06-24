@@ -817,11 +817,55 @@ func effectIndices(tokens []shared.Token, atoms Atoms) []int {
 		if effectKindAt(tokens, i) != EffectUnknown &&
 			!atoms.SelfNameAt(tokens[i].Span) &&
 			!effectNounAt(tokens, i) &&
-			!tapOrUntapInnerUntapAt(tokens, i) {
+			!tapOrUntapInnerUntapAt(tokens, i) &&
+			!copyTokenExceptRiderBoundaryAt(tokens, i) {
 			result = append(result, i)
 		}
 	}
 	return result
+}
+
+// copyTokenExceptRiderBoundaryAt reports whether the effect-boundary verb at
+// index lies inside a copy-token "Create ... a copy of <source>, except <rider>"
+// clause, where the rider modifies the created copy rather than starting a new
+// effect. A keyword-grant rider verb ("the token has flying", Irenicus's Vile
+// Duplication) would otherwise split the rider into a stranded EffectGrantKeyword
+// sibling; keeping it inside the create clause lets the copy-token recognizer
+// fold the copiable rider into the create (or fail closed for an unrecognized
+// rider). The guard requires a copy-token create head ("Create ... a copy of")
+// before a ", except" that precedes the verb, so only copy-token create riders
+// are affected; every such card with a verb rider is multi-effect unsupported
+// today, so folding it strands no existing output.
+func copyTokenExceptRiderBoundaryAt(tokens []shared.Token, index int) bool {
+	if index == 0 {
+		return false
+	}
+	exceptIndex := -1
+	for i := 1; i < index; i++ {
+		if equalWord(tokens[i], "except") && tokens[i-1].Kind == shared.Comma {
+			exceptIndex = i
+		}
+	}
+	if exceptIndex < 0 {
+		return false
+	}
+	return createCopyTokenHead(tokens[:exceptIndex])
+}
+
+// createCopyTokenHead reports whether the head tokens begin a copy-token creation
+// clause: a leading "Create" verb followed by an "a copy of" phrase. It anchors
+// the copy-token "except" rider guard so unrelated "Create" clauses without a
+// copy-of phrase, and non-creation clauses, are never affected.
+func createCopyTokenHead(head []shared.Token) bool {
+	if len(head) == 0 || !equalWord(head[0], "create") {
+		return false
+	}
+	for i := 1; i+1 < len(head); i++ {
+		if equalWord(head[i], "copy") && equalWord(head[i-1], "a") && equalWord(head[i+1], "of") {
+			return true
+		}
+	}
+	return false
 }
 
 // tapOrUntapInnerUntapAt reports whether the "untap" at index is the second verb

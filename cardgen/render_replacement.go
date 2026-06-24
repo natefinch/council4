@@ -1252,6 +1252,9 @@ func (r Renderer) renderEntersAsCopyReplacement(ctx *renderCtx, ability *game.Re
 		}
 	}
 	rendered := fmt.Sprintf("game.EntersAsCopyReplacement(%s)", strings.Join(args, ", "))
+	if ability.Replacement.EntersAsCopyTapped {
+		rendered = fmt.Sprintf("game.EntersTappedAsCopy(%s)", rendered)
+	}
 	return rendered, nil
 }
 

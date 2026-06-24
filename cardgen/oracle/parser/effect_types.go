@@ -1916,8 +1916,13 @@ type EffectSyntax struct {
 	// <keyword>" copiable rider on an EntersAsCopy replacement (Cursed Mirror's
 	// "except it has haste"). It is empty for every other replacement.
 	EntersAsCopyAddKeywords []KeywordKind `json:",omitempty"`
-	UnderYourControl        bool          `json:",omitempty"`
-	CastAsAdventure         bool          `json:",omitempty"`
+	// EntersAsCopyTapped reports the "enter tapped as a copy of <filter>" form of
+	// an EntersAsCopy replacement (Vesuva), where the permanent also enters the
+	// battlefield tapped when it enters as the chosen copy. It is false for every
+	// other enters-as-copy form (Clone, Spark Double, Cursed Mirror).
+	EntersAsCopyTapped bool `json:",omitempty"`
+	UnderYourControl   bool `json:",omitempty"`
+	CastAsAdventure    bool `json:",omitempty"`
 	// CastWithoutPayingManaCost reports a cast effect carrying the free-cast
 	// rider "... without paying its mana cost" ("(You may) cast <spell> from
 	// <zone> without paying its mana cost."). It is false for every other cast
