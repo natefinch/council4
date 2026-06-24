@@ -748,6 +748,20 @@ func lowerPartnerWithAbility(ability compiler.CompiledAbility) abilityLowering {
 	}
 }
 
+// lowerChooseABackgroundAbility lowers a recognized "Choose a Background" keyword
+// ability (CR 702.124f) to the inert choose-a-background static keyword. The
+// "Background as a second commander" permission is a deck-construction mechanic
+// the deterministic playtester does not simulate, so the keyword carries no
+// in-game effect; the whole paragraph span is consumed.
+func lowerChooseABackgroundAbility(ability compiler.CompiledAbility) abilityLowering {
+	return abilityLowering{
+		staticAbilities: []loweredStaticAbility{
+			{Body: game.ChooseABackgroundStaticBody, VarName: "game.ChooseABackgroundStaticBody"},
+		},
+		sourceSpans: []shared.Span{ability.Span},
+	}
+}
+
 func lowerStaticKeywordLowering(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
@@ -1393,6 +1407,9 @@ func lowerExecutableAbilitySpecialCase(
 	}
 	if ability.PartnerWith {
 		return lowerPartnerWithAbility(ability), true, nil
+	}
+	if ability.ChooseABackground {
+		return lowerChooseABackgroundAbility(ability), true, nil
 	}
 	if lowered, handled, diagnostic := lowerSourceSpellCostReduction(ability, syntax); handled {
 		return lowered, true, diagnostic

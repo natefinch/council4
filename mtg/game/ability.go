@@ -130,6 +130,14 @@ const (
 	// representable. Appended at the end of the enum so existing keyword ordinals
 	// are unchanged.
 	PartnerWith
+	// ChooseABackground (CR 702.124f) is the "Choose a Background" keyword: "You
+	// can have a Background as a second commander." It is a deck-construction
+	// permission the deterministic playtester does not simulate, so the keyword
+	// is inert; it is modeled as a recognized simple keyword carried on the card
+	// so HasKeyword(ChooseABackground) reports true and choose-a-background cards
+	// are representable. Appended at the end of the enum so existing keyword
+	// ordinals are unchanged.
+	ChooseABackground
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -315,6 +323,14 @@ var (
 	// keyword carries no continuous in-game effect; it is modeled as a simple
 	// keyword purely so partner-with cards are representable.
 	PartnerWithStaticBody = simpleKeywordStaticBody("Partner with", PartnerWith)
+
+	// ChooseABackgroundStaticBody is the reusable StaticAbilityBody for the
+	// "Choose a Background" keyword (CR 702.124f): "You can have a Background as a
+	// second commander." The permission is a deck-construction mechanic the
+	// deterministic playtester does not simulate, so the keyword carries no
+	// continuous in-game effect; it is modeled as a simple keyword purely so
+	// choose-a-background cards are representable.
+	ChooseABackgroundStaticBody = simpleKeywordStaticBody("Choose a Background", ChooseABackground)
 
 	// FuseStaticBody is the reusable StaticAbility for fuse (CR 702.102). It
 	// carries the Fuse keyword so HasKeyword(Fuse) reports true on each half of a

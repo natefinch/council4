@@ -115,6 +115,10 @@ func emitSemanticAccessors(abilities []Ability) {
 			ability.ContentSpan = ability.computeContentSpan()
 			continue
 		}
+		if ability.ChooseABackground != nil {
+			ability.ContentSpan = ability.computeContentSpan()
+			continue
+		}
 		ability.SemanticReferences = ability.computeSemanticReferences()
 		ability.SemanticKeywords = ability.computeSemanticKeywords()
 		ability.ContentSpan = ability.computeContentSpan()

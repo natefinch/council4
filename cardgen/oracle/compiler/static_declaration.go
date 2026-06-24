@@ -2918,13 +2918,13 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 		group.Domain = StaticGroupBattlefield
 		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.Controller = ControllerOpponent
-	case StaticSubjectControlledCreatureSubtype:
+	case StaticSubjectControlledCreatureSubtype, StaticSubjectControlledPermanentSubtype:
 		if !subtypeKnown {
 			return StaticGroupReference{}, false
 		}
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.SubtypesAny = staticGroupSubtypes(subtype, subsAny)
-	case StaticSubjectOtherControlledCreatureSubtype:
+	case StaticSubjectOtherControlledCreatureSubtype, StaticSubjectOtherControlledPermanentSubtype:
 		if !subtypeKnown {
 			return StaticGroupReference{}, false
 		}

@@ -273,6 +273,8 @@ func staticQuotedGrantSubjectSupported(subject StaticDeclarationSubject) bool {
 		EffectStaticSubjectOtherControlledCreatureSubtype,
 		EffectStaticSubjectControlledArtifacts,
 		EffectStaticSubjectControlledTokens,
+		EffectStaticSubjectControlledPermanentSubtype,
+		EffectStaticSubjectOtherControlledPermanentSubtype,
 		EffectStaticSubjectOtherControlledPermanents,
 		EffectStaticSubjectControlledPermanents:
 		return true
