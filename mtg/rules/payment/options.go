@@ -44,6 +44,10 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 		})
 		hasFlashbackAlternative = true
 	}
+	if card.HasKeyword(game.JumpStart) && !hasFlashbackAlternative {
+		alternatives = append(slices.Clone(alternatives), jumpStartAlternativeCost(card))
+		hasFlashbackAlternative = true
+	}
 	if len(permissions) == 0 {
 		permissions = []SpellCastPermission{SpellCastPermissionDefault}
 		if sourceZone == zone.Graveyard && hasFlashbackAlternative {
@@ -263,6 +267,26 @@ func alternativeCostConditionSatisfied(s State, playerID game.PlayerID, conditio
 
 func isFlashbackAlternative(alternative cost.Alternative) bool {
 	return strings.EqualFold(strings.TrimSpace(alternative.Label), flashbackAlternativeLabel)
+}
+
+// jumpStartAlternativeCost builds the Flashback-style alternative cost a
+// Jump-start card (CR 702.134) offers from the graveyard: pay the card's printed
+// mana cost and discard a card. It reuses the Flashback label so the graveyard
+// cast carries the Flashback permission and is exiled on resolution, and adds
+// the discard-a-card additional cost that distinguishes Jump-start.
+func jumpStartAlternativeCost(card *game.CardDef) cost.Alternative {
+	alternative := cost.Alternative{
+		Label: flashbackAlternativeLabel,
+		AdditionalCosts: []cost.Additional{{
+			Kind:   cost.AdditionalDiscard,
+			Amount: 1,
+			Text:   "Discard a card",
+		}},
+	}
+	if card.ManaCost.Exists {
+		alternative.ManaCost = opt.Val(slices.Clone(card.ManaCost.Val))
+	}
+	return alternative
 }
 
 func isEscapeAlternative(alternative cost.Alternative) bool {

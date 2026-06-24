@@ -57,6 +57,7 @@ const (
 	KeywordIndestructible   KeywordKind = "KeywordIndestructible"
 	KeywordInfect           KeywordKind = "KeywordInfect"
 	KeywordIntimidate       KeywordKind = "KeywordIntimidate"
+	KeywordJumpStart        KeywordKind = "KeywordJumpStart"
 	KeywordKicker           KeywordKind = "KeywordKicker"
 	KeywordLifelink         KeywordKind = "KeywordLifelink"
 	KeywordLivingWeapon     KeywordKind = "KeywordLivingWeapon"
@@ -200,6 +201,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordIndestructible:   "Indestructible",
 	KeywordInfect:           "Infect",
 	KeywordIntimidate:       "Intimidate",
+	KeywordJumpStart:        "Jump-start",
 	KeywordKicker:           "Kicker",
 	KeywordLifelink:         "Lifelink",
 	KeywordLivingWeapon:     "Living weapon",
@@ -332,6 +334,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordIndestructible, Words: []string{"indestructible"}},
 	{Kind: KeywordInfect, Words: []string{"infect"}},
 	{Kind: KeywordIntimidate, Words: []string{"intimidate"}},
+	{Kind: KeywordJumpStart, Words: []string{"jump-start"}},
 	{Kind: KeywordKicker, Words: []string{"kicker"}},
 	{Kind: KeywordLifelink, Words: []string{"lifelink"}},
 	{Kind: KeywordMadness, Words: []string{"madness"}},

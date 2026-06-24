@@ -1079,6 +1079,9 @@ func castPermissionsForZone(g *game.Game, playerID game.PlayerID, cardID id.ID, 
 	if face == game.FaceFront && cardOK && cardHasFlashbackAlternative(card) {
 		permissions = append(permissions, payment.SpellCastPermissionFlashback)
 	}
+	if face == game.FaceFront && cardOK && cardHasJumpStartAlternative(card) {
+		permissions = append(permissions, payment.SpellCastPermissionFlashback)
+	}
 	if face == game.FaceFront && cardOK && cardHasEscapeAlternative(card) {
 		permissions = append(permissions, payment.SpellCastPermissionEscape)
 	}
@@ -1318,4 +1321,14 @@ func cardHasEscapeAlternative(card *game.CardInstance) bool {
 		return false
 	}
 	return slices.ContainsFunc(frontDef.AlternativeCosts, isEscapeAlternative)
+}
+
+// cardHasJumpStartAlternative reports whether the card's front face has the
+// Jump-start keyword (CR 702.134), which grants a graveyard cast paying the
+// card's other costs plus discarding a card, then exiling the card on
+// resolution. The graveyard cast reuses the Flashback permission and
+// exile-on-resolution; the discard additional cost is synthesized by the
+// payment planner.
+func cardHasJumpStartAlternative(card *game.CardInstance) bool {
+	return cardFaceOrDefault(card, game.FaceFront).HasKeyword(game.JumpStart)
 }
