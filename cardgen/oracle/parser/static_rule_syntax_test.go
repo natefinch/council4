@@ -123,6 +123,57 @@ func TestParseCantAttackOrBlockUnlessLandsStaticRuleSentence(t *testing.T) {
 	}
 }
 
+func TestParseTrueLureAndAssignDamageStaticRuleSentences(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source    string
+		subject   StaticRuleSubjectKind
+		operation StaticRuleOperationKind
+	}{
+		"taunting elf true lure": {
+			source:    "All creatures able to block this creature do so.",
+			subject:   StaticRuleSubjectSourceCreature,
+			operation: StaticRuleOperationBlockedByAll,
+		},
+		"lure enchanted true lure": {
+			source:    "All creatures able to block enchanted creature do so.",
+			subject:   StaticRuleSubjectAttachedObject,
+			operation: StaticRuleOperationBlockedByAll,
+		},
+		"nemesis mask equipped true lure": {
+			source:    "All creatures able to block equipped creature do so.",
+			subject:   StaticRuleSubjectAttachedObject,
+			operation: StaticRuleOperationBlockedByAll,
+		},
+		"lone wolf assign damage as unblocked": {
+			source:    "You may have this creature assign its combat damage as though it weren't blocked.",
+			subject:   StaticRuleSubjectSourceCreature,
+			operation: StaticRuleOperationAssignDamageAsUnblocked,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			rule := parseStaticRuleSentence(t, test.source)
+			if rule == nil {
+				t.Fatalf("StaticRule = nil, want a static rule for %q", test.source)
+			}
+			if rule.Subject.Kind != test.subject {
+				t.Fatalf("subject = %s, want %s", rule.Subject.Kind, test.subject)
+			}
+			if rule.Constraint.Kind != StaticRuleConstraintRequirement {
+				t.Fatalf("constraint = %s, want %s", rule.Constraint.Kind, StaticRuleConstraintRequirement)
+			}
+			if rule.Operation.Kind != test.operation || rule.Operation.Voice != StaticRuleVoicePassive {
+				t.Fatalf("operation = %#v, want %s voice %s", rule.Operation, test.operation, StaticRuleVoicePassive)
+			}
+			if len(rule.Qualifiers) != 0 {
+				t.Fatalf("qualifiers = %#v, want none", rule.Qualifiers)
+			}
+		})
+	}
+}
+
 func TestParseSelfCantBeBlockedByMoreThanOneStaticRuleSentence(t *testing.T) {
 	t.Parallel()
 	rule := parseStaticRuleSentence(t, "This creature can't be blocked by more than one creature.")

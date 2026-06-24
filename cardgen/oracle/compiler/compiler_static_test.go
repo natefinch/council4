@@ -154,6 +154,58 @@ func TestCompileStaticPermanentManaAbilityGrant(t *testing.T) {
 	}
 }
 
+func TestCompileTrueLureAndAssignDamageStaticRules(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source string
+		rule   StaticRuleKind
+		group  StaticGroupDomain
+	}{
+		"taunting elf true lure": {
+			source: "All creatures able to block this creature do so.",
+			rule:   StaticRuleMustBeBlockedByAllAble,
+			group:  StaticGroupSource,
+		},
+		"lure enchanted true lure": {
+			source: "All creatures able to block enchanted creature do so.",
+			rule:   StaticRuleMustBeBlockedByAllAble,
+			group:  StaticGroupAttachedObject,
+		},
+		"nemesis mask equipped true lure": {
+			source: "All creatures able to block equipped creature do so.",
+			rule:   StaticRuleMustBeBlockedByAllAble,
+			group:  StaticGroupAttachedObject,
+		},
+		"lone wolf assign damage as unblocked": {
+			source: "You may have this creature assign its combat damage as though it weren't blocked.",
+			rule:   StaticRuleAssignDamageAsUnblocked,
+			group:  StaticGroupSource,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(test.source, pipelineContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := compilation.Abilities[0]
+			if ability.Static == nil || len(ability.Static.Declarations) != 1 {
+				t.Fatalf("static semantics = %#v, want one declaration", ability.Static)
+			}
+			declaration := ability.Static.Declarations[0]
+			if declaration.Rule == nil ||
+				declaration.Rule.Kind != test.rule ||
+				declaration.Rule.Zone != StaticZoneBattlefield ||
+				declaration.Rule.Domain != StaticRuleDomainBlock ||
+				declaration.Rule.Domain != staticRuleDomain(test.rule) ||
+				declaration.Group.Domain != test.group {
+				t.Fatalf("declaration = %#v, want rule %v group %v", declaration, test.rule, test.group)
+			}
+		})
+	}
+}
+
 func TestCompileAttachedAndUntapStaticRules(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {

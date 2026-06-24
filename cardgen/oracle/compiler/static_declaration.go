@@ -135,6 +135,15 @@ const (
 	// passive "can't be blocked" prohibitions printed as one sentence; it lowers
 	// to both the can't-block and can't-be-blocked runtime rule effects.
 	StaticRuleCantBlockAndCantBeBlocked
+	// StaticRuleMustBeBlockedByAllAble is the true-lure requirement printed as
+	// "All creatures able to block <subject> do so." (Taunting Elf, Lure, Nemesis
+	// Mask): every creature able to block the subject attacker must do so.
+	StaticRuleMustBeBlockedByAllAble
+	// StaticRuleAssignDamageAsUnblocked is the permission printed as "You may have
+	// <subject> assign its combat damage as though it weren't blocked." (Lone
+	// Wolf, Thorn Elemental): the subject attacker may deal its combat damage to
+	// its attack target rather than to its blockers.
+	StaticRuleAssignDamageAsUnblocked
 )
 
 // StaticBlockerRestrictionKind identifies the blocker characteristic bounding a
@@ -1306,6 +1315,20 @@ func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, 
 		staticRuleQualifiersAre(rule.Qualifiers, parser.StaticRuleQualifierIfAble) {
 		return StaticRuleMustBeBlocked, StaticZoneBattlefield, true
 	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintRequirement &&
+		rule.Operation.Kind == parser.StaticRuleOperationBlockedByAll &&
+		rule.Operation.Voice == parser.StaticRuleVoicePassive &&
+		len(rule.Qualifiers) == 0 {
+		return StaticRuleMustBeBlockedByAllAble, StaticZoneBattlefield, true
+	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintRequirement &&
+		rule.Operation.Kind == parser.StaticRuleOperationAssignDamageAsUnblocked &&
+		rule.Operation.Voice == parser.StaticRuleVoicePassive &&
+		len(rule.Qualifiers) == 0 {
+		return StaticRuleAssignDamageAsUnblocked, StaticZoneBattlefield, true
+	}
 	if rule.Subject.Kind == parser.StaticRuleSubjectSourceSpell &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
 		rule.Operation.Kind == parser.StaticRuleOperationCounter &&
@@ -1357,6 +1380,10 @@ func staticRuleForEffect(kind EffectKind) StaticRuleKind {
 		return StaticRuleMustAttack
 	case EffectMustBeBlocked:
 		return StaticRuleMustBeBlocked
+	case EffectMustBeBlockedByAllAble:
+		return StaticRuleMustBeBlockedByAllAble
+	case EffectAssignDamageAsUnblocked:
+		return StaticRuleAssignDamageAsUnblocked
 	case EffectCantBeCountered:
 		return StaticRuleCantBeCountered
 	case EffectCantBeBlockedByCreaturesWith:
@@ -1405,7 +1432,8 @@ func staticRuleDomain(rule StaticRuleKind) StaticRuleDomain {
 	case StaticRuleCantAttack, StaticRuleMustAttack, StaticRuleCantAttackYou:
 		return StaticRuleDomainAttack
 	case StaticRuleCantBlock, StaticRuleCantBeBlocked, StaticRuleMustBeBlocked, StaticRuleCantBeBlockedByMoreThanOne,
-		StaticRuleCantBeBlockedByCreaturesWith, StaticRuleCantBlockAndCantBeBlocked:
+		StaticRuleCantBeBlockedByCreaturesWith, StaticRuleCantBlockAndCantBeBlocked,
+		StaticRuleMustBeBlockedByAllAble, StaticRuleAssignDamageAsUnblocked:
 		return StaticRuleDomainBlock
 	case StaticRuleCantBeCountered:
 		return StaticRuleDomainCountering

@@ -92,6 +92,10 @@ func resolveUnblockedCombatDamage(g *game.Game, attacker *game.Permanent, target
 }
 
 func resolveBlockedCombatDamage(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent, target game.AttackTarget, pass combatDamagePass, log *TurnLog) {
+	if ruleEffectAssignsCombatDamageAsThoughUnblocked(g, attacker) {
+		resolveCombatDamageAsThoughUnblocked(g, attacker, blockers, target, pass, log)
+		return
+	}
 	if len(blockers) == 0 && (!dealsCombatDamageInPass(g, attacker, pass) || !hasKeyword(g, attacker, game.Trample)) {
 		return
 	}
@@ -111,6 +115,28 @@ func resolveBlockedCombatDamage(g *game.Game, attacker *game.Permanent, blockers
 	for i, blocker := range blockers {
 		if blockerDamage[i] > 0 {
 			markCreatureCombatDamage(g, blocker, attacker, blockerDamage[i], log)
+		}
+	}
+}
+
+// resolveCombatDamageAsThoughUnblocked assigns a blocked attacker's combat damage
+// to the player, planeswalker, or battle it is attacking as though it weren't
+// blocked (Lone Wolf, Thorn Elemental). The attacker still receives its blockers'
+// combat damage; it simply deals its own damage to its attack target rather than
+// to the blocking creatures. The controller's optional "you may have" choice is
+// modeled as always taken because the ability is purely beneficial and the
+// combat-damage step has no agent decision point.
+func resolveCombatDamageAsThoughUnblocked(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent, target game.AttackTarget, pass combatDamagePass, log *TurnLog) {
+	if dealsCombatDamageInPass(g, attacker, pass) {
+		if damage := effectivePower(g, attacker); damage > 0 && isLegalAttackTarget(g, effectiveController(g, attacker), target) {
+			markAttackTargetCombatDamage(g, attacker, target, damage, log)
+		}
+	}
+	for _, blocker := range blockers {
+		if dealsCombatDamageInPass(g, blocker, pass) {
+			if damage := effectivePower(g, blocker); damage > 0 {
+				markCreatureCombatDamage(g, blocker, attacker, damage, log)
+			}
 		}
 	}
 }

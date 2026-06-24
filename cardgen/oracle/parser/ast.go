@@ -1065,6 +1065,17 @@ const (
 	// passive "be blocked" prohibitions printed as a single sentence ("can't
 	// block and can't be blocked"); it lowers to both block-domain rule effects.
 	StaticRuleOperationBlockAndBeBlocked StaticRuleOperationKind = "StaticRuleOperationBlockAndBeBlocked"
+	// StaticRuleOperationBlockedByAll is the true-lure requirement printed as
+	// "All creatures able to block <subject> do so." Every creature able to block
+	// the subject attacker must do so (CR 509.1c). It always pairs with a
+	// requirement constraint and passive voice.
+	StaticRuleOperationBlockedByAll StaticRuleOperationKind = "StaticRuleOperationBlockedByAll"
+	// StaticRuleOperationAssignDamageAsUnblocked is the permission printed as "You
+	// may have <subject> assign its combat damage as though it weren't blocked."
+	// The subject attacker may deal its combat damage to its attack target rather
+	// than to its blockers. It always pairs with a requirement constraint and
+	// passive voice.
+	StaticRuleOperationAssignDamageAsUnblocked StaticRuleOperationKind = "StaticRuleOperationAssignDamageAsUnblocked"
 )
 
 // StaticRuleVoice identifies the grammatical role the subject has in an

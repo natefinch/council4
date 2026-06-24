@@ -825,7 +825,8 @@ func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {
 		return compiler.StaticRuleDomainAttack
 	case compiler.StaticRuleCantBlock, compiler.StaticRuleCantBeBlocked, compiler.StaticRuleMustBeBlocked,
 		compiler.StaticRuleCantBeBlockedByMoreThanOne, compiler.StaticRuleCantBeBlockedByCreaturesWith,
-		compiler.StaticRuleCantBlockAndCantBeBlocked:
+		compiler.StaticRuleCantBlockAndCantBeBlocked,
+		compiler.StaticRuleMustBeBlockedByAllAble, compiler.StaticRuleAssignDamageAsUnblocked:
 		return compiler.StaticRuleDomainBlock
 	case compiler.StaticRuleCantBeCountered:
 		return compiler.StaticRuleDomainCountering
@@ -1319,6 +1320,10 @@ func lowerStaticRuleKind(kind compiler.StaticRuleKind) (game.RuleEffectKind, boo
 		return game.RuleEffectMustAttack, true
 	case compiler.StaticRuleMustBeBlocked:
 		return game.RuleEffectMustBeBlocked, true
+	case compiler.StaticRuleMustBeBlockedByAllAble:
+		return game.RuleEffectMustBeBlockedByAllAble, true
+	case compiler.StaticRuleAssignDamageAsUnblocked:
+		return game.RuleEffectAssignCombatDamageAsThoughUnblocked, true
 	case compiler.StaticRuleCantBeCountered:
 		return game.RuleEffectCantBeCountered, true
 	case compiler.StaticRuleDoesntUntap:
