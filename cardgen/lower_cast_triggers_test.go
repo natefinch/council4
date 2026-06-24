@@ -228,6 +228,29 @@ func TestLowerCastTriggerAcceptsSubtypeAndHistoricPhrases(t *testing.T) {
 	}
 }
 
+func TestLowerCastTriggerAcceptsNotFromHandProvenance(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Pilferer",
+		Layout:     "normal",
+		TypeLine:   "Creature — Spirit Rogue",
+		ManaCost:   "{1}{U}",
+		OracleText: "Whenever an opponent casts a spell from anywhere other than their hand, draw a card.",
+		Power:      new("1"),
+		Toughness:  new("2"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	pattern := face.TriggeredAbilities[0].Trigger.Pattern
+	if !pattern.ExcludeFromZone || pattern.FromZone != zone.Hand {
+		t.Fatalf("from-zone exclusion = (%v, %v), want exclude hand", pattern.ExcludeFromZone, pattern.FromZone)
+	}
+	if pattern.MatchFromZone {
+		t.Fatal("MatchFromZone = true, want false")
+	}
+}
+
 func TestLowerCastTriggerAcceptsManaValueKickedAndZonePhrases(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
