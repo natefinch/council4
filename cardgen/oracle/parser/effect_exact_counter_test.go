@@ -282,3 +282,25 @@ func TestExactAttachedCounterPlacementFailsClosed(t *testing.T) {
 		}
 	}
 }
+
+// TestThatManyCounterPlacementAmount proves that "put that many <kind> counters"
+// records a generic triggering-event amount rather than misreading the "+1" of
+// "+1/+1" as a fixed amount of one. The trigger that supplies the quantity is
+// resolved later in lowering.
+func TestThatManyCounterPlacementAmount(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Put that many +1/+1 counters on this creature.",
+		"Put that many +1/+1 counters on it.",
+		"Put that many charge counters on this artifact.",
+	} {
+		effect := counterPlacementEffect(t, source)
+		if effect.Amount.Known {
+			t.Errorf("counterPlacement(%q) amount Known = true, want unknown dynamic", source)
+		}
+		if effect.Amount.DynamicKind != EffectDynamicAmountTriggeringEventAmount {
+			t.Errorf("counterPlacement(%q) DynamicKind = %q, want %q",
+				source, effect.Amount.DynamicKind, EffectDynamicAmountTriggeringEventAmount)
+		}
+	}
+}

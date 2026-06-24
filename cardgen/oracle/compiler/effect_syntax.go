@@ -697,6 +697,8 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountTimesKicked
 	case parser.EffectDynamicAmountOpponentsAttackedThisCombat:
 		return DynamicAmountOpponentsAttackedThisCombat
+	case parser.EffectDynamicAmountTriggeringEventAmount:
+		return DynamicAmountTriggeringEventAmount
 	default:
 		return DynamicAmountNone
 	}

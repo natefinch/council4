@@ -2652,6 +2652,16 @@ const (
 	// player count, not a board count. Added last so existing kinds keep their
 	// wire values.
 	DynamicAmountOpponentControllingCount
+	// DynamicAmountTriggeringEventAmount is the quantity carried by the event
+	// that triggered the enclosing trigger, resolved by lowering to the matching
+	// per-event amount: combat damage dealt, life gained or lost, counters
+	// added, or cards drawn or discarded. It backs the "put that many <kind>
+	// counters on <this creature|it>" counter-placement payoff family (Marauding
+	// Mako, Necropolis Regent, Ageless Entity, Bioessence Hydra), where "that
+	// many" reads whatever the trigger measured. Lowering fails closed outside a
+	// trigger whose event publishes such a quantity. Added last so existing
+	// kinds keep their wire values.
+	DynamicAmountTriggeringEventAmount
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.
