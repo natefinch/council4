@@ -361,6 +361,41 @@ func parseStaticGrantedAbility(quoted Delimited) (StaticGrantedAbilitySyntax, bo
 	}, true
 }
 
+// ParseGrantedStaticAbility parses one quoted static ability clause (a Delimited
+// whose tokens are a fully quoted static ability such as "Equipped creature gets
+// +3/+3") into a typed granted-ability syntax for downstream layers that lower a
+// static ability a resolving effect grants directly from an effect's quoted
+// syntax rather than from an attached typed grant. Unlike a quoted triggered or
+// activated ability, the static-declaration recognizers require a
+// sentence-terminating period, which a printed quoted static ability omits, so
+// this helper terminates the quoted body before running it through the same
+// pipeline. The carried Text keeps the printed wording without the synthesized
+// terminator. It fails closed for any Delimited that is not a single fully
+// quoted ability body or that does not parse to exactly one ability.
+func ParseGrantedStaticAbility(quoted Delimited) (StaticGrantedAbilitySyntax, bool) {
+	tokens := quoted.Tokens
+	if len(tokens) < 3 ||
+		tokens[0].Kind != shared.Quote ||
+		tokens[len(tokens)-1].Kind != shared.Quote {
+		return StaticGrantedAbilitySyntax{}, false
+	}
+	text := staticGrantedAbilityText(quoted)
+	parsed := text
+	if !strings.HasSuffix(parsed, ".") {
+		parsed += "."
+	}
+	document, diagnostics := Parse(parsed, Context{})
+	if len(document.Abilities) != 1 {
+		return StaticGrantedAbilitySyntax{}, false
+	}
+	return StaticGrantedAbilitySyntax{
+		Span:        quoted.Span,
+		Text:        text,
+		document:    document,
+		diagnostics: diagnostics,
+	}, true
+}
+
 // staticAttachedPronounSubject recognizes the pronoun subject "it"/"them" that
 // co-refers with the attached creature named by a leading "As long as
 // equipped/enchanted creature is <state>" condition ("..., it has hexproof.").

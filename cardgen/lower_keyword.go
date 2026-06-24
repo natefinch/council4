@@ -798,12 +798,13 @@ func lowerEquipAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (game.ActivatedAbility, bool, *shared.Diagnostic) {
-	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordEquip {
+	if len(ability.Content.Keywords) != 1 ||
+		ability.Content.Keywords[0].Kind != parser.KeywordEquip ||
+		ability.Kind != compiler.AbilityStatic {
 		return game.ActivatedAbility{}, false, nil
 	}
 	keyword := ability.Content.Keywords[0]
 	if keyword.ParameterKind != parser.KeywordParameterManaCost ||
-		ability.Kind != compiler.AbilityStatic ||
 		ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Targets) != 0 ||
