@@ -532,10 +532,12 @@ func parsePlayerEventCard(
 	if rest, filter, ok := cutPlayerEventCardNoun(tokens, action, "a", "card"); ok {
 		return playerEventCardParse{
 			card: PlayerEventCard{
-				Kind:          PlayerEventCardSingle,
-				Span:          shared.SpanOf(tokens[:len(tokens)-len(rest)]),
-				RequiredTypes: filter.required,
-				ExcludedTypes: filter.excluded,
+				Kind:                PlayerEventCardSingle,
+				Span:                shared.SpanOf(tokens[:len(tokens)-len(rest)]),
+				RequiredTypes:       filter.required,
+				ExcludedTypes:       filter.excluded,
+				RequiredTypesAny:    filter.requiredAny,
+				RequiredSubtypesAny: filter.subtypesAny,
 			},
 			occurrence: occurrence,
 			remainder:  rest,
@@ -546,10 +548,12 @@ func parsePlayerEventCard(
 		if rest, filter, ok := cutPlayerEventCardNoun(tokens, action, "one", "or", "more", "cards"); ok {
 			return playerEventCardParse{
 				card: PlayerEventCard{
-					Kind:          PlayerEventCardOneOrMore,
-					Span:          shared.SpanOf(tokens[:len(tokens)-len(rest)]),
-					RequiredTypes: filter.required,
-					ExcludedTypes: filter.excluded,
+					Kind:                PlayerEventCardOneOrMore,
+					Span:                shared.SpanOf(tokens[:len(tokens)-len(rest)]),
+					RequiredTypes:       filter.required,
+					ExcludedTypes:       filter.excluded,
+					RequiredTypesAny:    filter.requiredAny,
+					RequiredSubtypesAny: filter.subtypesAny,
 				},
 				occurrence: occurrence,
 				remainder:  rest,
@@ -612,8 +616,10 @@ func parsePlayerEventCard(
 // playerEventCardFilter holds the card-type filter parsed from a player-event
 // card object, such as "a creature card" or "a noncreature, nonland card".
 type playerEventCardFilter struct {
-	required []TriggerCardType
-	excluded []TriggerCardType
+	required    []TriggerCardType
+	excluded    []TriggerCardType
+	requiredAny []TriggerCardType
+	subtypesAny []TriggerSubtype
 }
 
 // cutPlayerEventCardNoun matches a card object that opens with the prefix words
@@ -628,7 +634,7 @@ func cutPlayerEventCardNoun(
 ) (rest []shared.Token, filter playerEventCardFilter, ok bool) {
 	prefix := words[:len(words)-1]
 	noun := words[len(words)-1]
-	after, ok := cutSyntaxWords(tokens, prefix...)
+	after, ok := cutPlayerEventCardPrefix(tokens, prefix)
 	if !ok {
 		return nil, playerEventCardFilter{}, false
 	}
@@ -649,12 +655,31 @@ func cutPlayerEventCardNoun(
 	return after[nounIndex+1:], filter, true
 }
 
+// cutPlayerEventCardPrefix consumes a card object's leading prefix words. When
+// the prefix is the singular article "a", it also accepts "an" so a filtered
+// card object such as "an artifact card" or "an Island, Pirate, or Vehicle
+// card" matches the same way the unfiltered "a card" form does.
+func cutPlayerEventCardPrefix(tokens []shared.Token, prefix []string) ([]shared.Token, bool) {
+	if len(prefix) == 1 && prefix[0] == "a" {
+		if len(tokens) == 0 || (!equalWord(tokens[0], "a") && !equalWord(tokens[0], "an")) {
+			return nil, false
+		}
+		return tokens[1:], true
+	}
+	return cutSyntaxWords(tokens, prefix...)
+}
+
 // parsePlayerEventCardTypes reads one or more comma-separated card-type words,
 // each optionally negated with the "non" prefix, into required and excluded
-// type filters. It fails closed on any unrecognized or duplicated word.
+// type filters. A disjunctive union joined by "or" ("an Island, Pirate, or
+// Vehicle card") instead lowers to an any-of subtype or card-type union. It
+// fails closed on any unrecognized or duplicated word.
 func parsePlayerEventCardTypes(tokens []shared.Token) (playerEventCardFilter, bool) {
 	if len(tokens) == 0 {
 		return playerEventCardFilter{}, false
+	}
+	if filter, ok := parsePlayerEventCardUnion(tokens); ok {
+		return filter, true
 	}
 	var filter playerEventCardFilter
 	for _, token := range tokens {
@@ -680,6 +705,77 @@ func parsePlayerEventCardTypes(tokens []shared.Token) (playerEventCardFilter, bo
 		return playerEventCardFilter{}, false
 	}
 	return filter, true
+}
+
+// parsePlayerEventCardUnion recognizes a disjunctive card-object union joined by
+// "or" with optional Oxford comma, such as "an Island, Pirate, or Vehicle card"
+// or "an artifact or creature card". Every member must resolve to the same
+// dimension: all subtypes lower to an any-of subtype union and all card types
+// to an any-of card-type union. A mixed union fails closed because the runtime
+// selection conjoins the two dimensions rather than disjoining them.
+func parsePlayerEventCardUnion(tokens []shared.Token) (playerEventCardFilter, bool) {
+	members, hasOr, ok := splitPlayerEventCardUnion(tokens)
+	if !ok || !hasOr || len(members) < 2 {
+		return playerEventCardFilter{}, false
+	}
+	var subtypes []TriggerSubtype
+	var cardTypes []TriggerCardType
+	for _, member := range members {
+		if sub, ok := recognizeSubtypePhrase(member); ok && looksLikeTriggerSubtype(member) {
+			if slices.Contains(subtypes, sub) {
+				return playerEventCardFilter{}, false
+			}
+			subtypes = append(subtypes, sub)
+			continue
+		}
+		if cardType, ok := triggerCardType(member); ok && cardType != TriggerCardTypeUnknown {
+			if slices.Contains(cardTypes, cardType) {
+				return playerEventCardFilter{}, false
+			}
+			cardTypes = append(cardTypes, cardType)
+			continue
+		}
+		return playerEventCardFilter{}, false
+	}
+	if len(subtypes) > 0 && len(cardTypes) > 0 {
+		return playerEventCardFilter{}, false
+	}
+	if len(subtypes) > 0 {
+		return playerEventCardFilter{subtypesAny: subtypes}, true
+	}
+	return playerEventCardFilter{requiredAny: cardTypes}, true
+}
+
+// splitPlayerEventCardUnion splits a card-object filter into its comma- and
+// "or"-separated members, lowercasing and joining each member's words. It
+// reports whether an "or" connector was present and fails closed on any
+// non-word, non-comma token.
+func splitPlayerEventCardUnion(tokens []shared.Token) (members []string, hasOr, ok bool) {
+	var current []string
+	flush := func() {
+		if len(current) > 0 {
+			members = append(members, strings.Join(current, " "))
+			current = nil
+		}
+	}
+	for _, token := range tokens {
+		if token.Kind == shared.Comma {
+			flush()
+			continue
+		}
+		if token.Kind != shared.Word {
+			return nil, false, false
+		}
+		word := strings.ToLower(token.Text)
+		if word == "or" {
+			hasOr = true
+			flush()
+			continue
+		}
+		current = append(current, word)
+	}
+	flush()
+	return members, hasOr, true
 }
 
 func playerEventActionHasCard(action PlayerEventActionKind) bool {

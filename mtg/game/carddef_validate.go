@@ -1605,6 +1605,14 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 			unsupported.Multicolored = false
 			unsupported.ManaValue.Exists = false
 		}
+		if eventCarriesMovedCardCharacteristics(pattern.Event) {
+			unsupported.Supertypes = nil
+			unsupported.SubtypesAny = nil
+			unsupported.ExcludedSubtype = ""
+			unsupported.ColorsAny = nil
+			unsupported.Colorless = false
+			unsupported.Multicolored = false
+		}
 		if !unsupported.Empty() {
 			v.add(faceName, appendPath(path, "CardSelection"), CardDefIssueInvalidSelection, "trigger card Selection uses predicates unavailable from event data")
 		}
@@ -1695,6 +1703,20 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 	}
 	if pattern.FaceDown && !pattern.MatchFaceDown {
 		v.add(faceName, appendPath(path, "FaceDown"), CardDefIssueInvalidSelection, "face-down trigger filter must be enabled")
+	}
+}
+
+// eventCarriesMovedCardCharacteristics reports whether a player-card event
+// carries the moved card's printed characteristics, so a trigger card Selection
+// may filter on supertypes, subtypes, and colors in addition to card types. The
+// draw, discard, and cycle events reference the moved card instance, from which
+// the runtime reads those characteristics.
+func eventCarriesMovedCardCharacteristics(event EventKind) bool {
+	switch event {
+	case EventCardDrawn, EventCardDiscarded, EventCycled:
+		return true
+	default:
+		return false
 	}
 }
 

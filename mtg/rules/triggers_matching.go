@@ -157,6 +157,7 @@ func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sour
 		}
 	}
 	if !cardSel.Empty() {
+		event = eventWithCardCharacteristics(g, event)
 		subject := selectionSubject{
 			kind:           subjectCastSpell,
 			g:              g,
@@ -757,6 +758,35 @@ func eventSpellHistoric(event game.Event) bool {
 	return slices.Contains(event.CardTypes, types.Artifact) ||
 		slices.Contains(event.CardSupertypes, types.Legendary) ||
 		slices.Contains(event.CardSubtypes, types.Saga)
+}
+
+// eventWithCardCharacteristics fills a card-filter event's printed characteristic
+// slices from its card instance's front face when the event does not already
+// carry them, so subtype, supertype, and color filters on draw, discard, and
+// cycle triggers read the moved card. Spell-cast events already record these, so
+// the populated-field guard leaves them unchanged.
+func eventWithCardCharacteristics(g *game.Game, event game.Event) game.Event {
+	if event.CardID == 0 {
+		return event
+	}
+	card, ok := g.GetCardInstance(event.CardID)
+	if !ok {
+		return event
+	}
+	face := cardFaceOrDefault(card, game.FaceFront)
+	if len(event.CardTypes) == 0 {
+		event.CardTypes = face.Types
+	}
+	if len(event.CardSupertypes) == 0 {
+		event.CardSupertypes = face.Supertypes
+	}
+	if len(event.CardSubtypes) == 0 {
+		event.CardSubtypes = face.Subtypes
+	}
+	if len(event.Colors) == 0 {
+		event.Colors = face.Colors
+	}
+	return event
 }
 
 // eventSpellCardTypes resolves the card types a spell-cast event matches against,

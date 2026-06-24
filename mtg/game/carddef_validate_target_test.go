@@ -466,12 +466,12 @@ func TestValidateCardDefRejectsSelectionFieldsUnavailableInContext(t *testing.T)
 			}}},
 		},
 		{
-			name: "non-cast trigger card with color",
+			name: "non-cast trigger card with power",
 			face: CardFace{TriggeredAbilities: []TriggeredAbility{{
 				Content: Mode{}.Ability(),
 				Trigger: TriggerCondition{Pattern: TriggerPattern{
 					Event:         EventCardDrawn,
-					CardSelection: Selection{ColorsAny: []color.Color{color.Blue}},
+					CardSelection: Selection{Power: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 2})},
 				}},
 			}}},
 		},

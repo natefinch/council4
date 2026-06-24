@@ -740,15 +740,33 @@ func TestRenderTriggerPatternRejectsUnsupportedCardSelectionFields(t *testing.T)
 	}
 }
 
-func TestRenderTriggerPatternRejectsNonTypeCardSelectionOnDiscardEvent(t *testing.T) {
+func TestRenderTriggerPatternAllowsSubtypeCardSelectionOnDiscardEvent(t *testing.T) {
+	t.Parallel()
+	pattern := game.TriggerPattern{
+		Event:  game.EventCardDiscarded,
+		Player: game.TriggerPlayerYou,
+		CardSelection: game.Selection{
+			SubtypesAny: []types.Sub{types.Island, types.Pirate, types.Vehicle},
+		},
+	}
+	rendered, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern)
+	if err != nil {
+		t.Fatalf("rendering subtype-union discard CardSelection: %v", err)
+	}
+	if !strings.Contains(rendered, "SubtypesAny:") {
+		t.Fatalf("rendered discard trigger missing subtype filter:\n%s", rendered)
+	}
+}
+
+func TestRenderTriggerPatternRejectsUnavailableCardSelectionOnDiscardEvent(t *testing.T) {
 	t.Parallel()
 	pattern := game.TriggerPattern{
 		Event:         game.EventCardDiscarded,
 		Player:        game.TriggerPlayerYou,
-		CardSelection: game.Selection{ColorsAny: []color.Color{color.Blue}},
+		CardSelection: game.Selection{Power: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 2})},
 	}
 	if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
-		t.Fatal("expected error: discard CardSelection only supports card-type filters")
+		t.Fatal("expected error: discard CardSelection cannot filter on power")
 	}
 }
 
