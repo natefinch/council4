@@ -394,7 +394,7 @@ func lowerCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic)
 		return unsupported()
 	}
 	targetSpec, ok := counterTargetSpec(ctx.content.Targets[0])
-	if !ok || len(targetSpec.Predicate.SpellCardTypesAny) != 0 {
+	if !ok {
 		return unsupported()
 	}
 	instruction := game.Instruction{
@@ -446,7 +446,7 @@ func lowerCounterThenExileInstead(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	targetSpec, ok := counterTargetSpec(target)
-	if !ok || len(targetSpec.Predicate.SpellCardTypesAny) != 0 {
+	if !ok {
 		return game.AbilityContent{}, false
 	}
 	return game.Mode{

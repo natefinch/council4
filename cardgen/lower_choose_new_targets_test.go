@@ -35,6 +35,14 @@ func TestLowerChooseNewTargetsSpell(t *testing.T) {
 			wantKinds:    []game.StackObjectKind{game.StackSpell},
 			wantOptional: false,
 		},
+		{
+			name:       "change the target of target spell or ability",
+			oracleText: "Change the target of target spell or ability with a single target.",
+			wantKinds: []game.StackObjectKind{
+				game.StackSpell, game.StackActivatedAbility, game.StackTriggeredAbility,
+			},
+			wantOptional: false,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -78,5 +86,53 @@ func TestLowerChooseNewTargetsSpell(t *testing.T) {
 				t.Fatalf("retarget object = %+v, want target stack object 0", retarget.Object)
 			}
 		})
+	}
+}
+
+// TestLowerImpsMischiefRetargetThenLoseLife proves the two-effect redirect body
+// "Change the target of target spell with a single target. You lose life equal
+// to that spell's mana value." (Imp's Mischief) lowers to a ChooseNewTargets
+// over the targeted spell followed by a controller life loss whose amount reads
+// that spell's live mana value through DynamicAmountObjectManaValue.
+func TestLowerImpsMischiefRetargetThenLoseLife(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Imp's Mischief",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{1}{B}",
+		OracleText: "Change the target of target spell with a single target. You lose life equal to that spell's mana value.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability missing")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 || mode.Targets[0].Allow != game.TargetAllowStackObject {
+		t.Fatalf("targets = %#v, want one stack-object target", mode.Targets)
+	}
+	if !slices.Equal(mode.Targets[0].Predicate.StackObjectKinds, []game.StackObjectKind{game.StackSpell}) {
+		t.Fatalf("stack object kinds = %+v, want spell", mode.Targets[0].Predicate.StackObjectKinds)
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %d, want 2", len(mode.Sequence))
+	}
+	retarget, ok := mode.Sequence[0].Primitive.(game.ChooseNewTargets)
+	if !ok || retarget.Object != game.TargetStackObjectReference(0) {
+		t.Fatalf("first primitive = %#v, want ChooseNewTargets over target 0", mode.Sequence[0].Primitive)
+	}
+	loseLife, ok := mode.Sequence[1].Primitive.(game.LoseLife)
+	if !ok {
+		t.Fatalf("second primitive = %T, want game.LoseLife", mode.Sequence[1].Primitive)
+	}
+	if loseLife.Player != game.ControllerReference() {
+		t.Fatalf("lose life player = %#v, want controller", loseLife.Player)
+	}
+	dynamic := loseLife.Amount.DynamicAmount()
+	if !dynamic.Exists {
+		t.Fatalf("lose life amount = %#v, want dynamic", loseLife.Amount)
+	}
+	if dynamic.Val.Kind != game.DynamicAmountObjectManaValue ||
+		dynamic.Val.Object != game.TargetStackObjectReference(0) {
+		t.Fatalf("lose life dynamic = %#v, want object mana value of target stack object 0", dynamic.Val)
 	}
 }
