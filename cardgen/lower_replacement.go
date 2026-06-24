@@ -855,17 +855,31 @@ func lowerTokenCreationReplacement(
 	if ability.Content.Conditions[0].Predicate == compiler.ConditionPredicateTokenCreationAnyController {
 		filter = game.TriggerControllerAny
 	}
+	requiredTypes, ok := tokenCreationReplacementRequiredTypes(ability.Content.Effects[0].Selector)
+	if !ok {
+		return unsupported("the executable source backend supports only an artifact, creature, or untyped would-create filter")
+	}
 	output := ability.Content.Effects[1]
 	switch output.Replacement.Kind {
 	case parser.EffectReplacementTwiceThatMany:
 		if replacementSelectorHasUnsupportedQualifier(output.Selector) {
 			return unsupported("the executable source backend supports only token-doubling replacement amounts")
 		}
-		if filter == game.TriggerControllerYou {
+		// The doubling spec carries a card-type filter but no subtype filter, so
+		// a subtype-restricted would-create group ("one or more Treasure tokens
+		// ... twice that many") must fail closed rather than lower to a
+		// subtype-blind doubler. The additive branch below threads the
+		// would-create subtypes through explicitly, so it has no such gap.
+		if len(ability.Content.Effects[0].Selector.SubtypesAny()) != 0 ||
+			len(ability.Content.Effects[0].Selector.ExcludedSubtypes()) != 0 {
+			return unsupported("the executable source backend supports only type-filtered token-doubling replacements")
+		}
+		if filter == game.TriggerControllerYou && len(requiredTypes) == 0 {
 			return game.TokenCreationReplacement(ability.Text, 2, filter), true, nil
 		}
 		return game.TokenCreationReplacementFiltered(ability.Text, &game.TokenCreationReplacementSpec{
 			Multiplier: 2,
+			Types:      requiredTypes,
 			Filter:     filter,
 		}), true, nil
 	case parser.EffectReplacementPlusAdditional:
@@ -878,23 +892,63 @@ func lowerTokenCreationReplacement(
 				Multiplier: 1,
 				Addend:     output.Replacement.Amount,
 				Subtypes:   addendSubtypes,
+				Types:      requiredTypes,
 				Filter:     filter,
 			}), true, nil
 		}
 		addendDef, ok := synthesizeNamedArtifactTokenDef(&output)
 		if !ok {
-			return unsupported("the executable source backend supports only same-token or predefined-token additive token-creation replacements")
+			addendDef, ok = synthesizeCreatureTokenDef(&output, nil)
+		}
+		if !ok {
+			return unsupported("the executable source backend supports only same-token, predefined-token, or fixed creature additive token-creation replacements")
 		}
 		return game.TokenCreationReplacementFiltered(ability.Text, &game.TokenCreationReplacementSpec{
 			Multiplier: 1,
 			Addend:     output.Replacement.Amount,
 			Subtypes:   ability.Content.Effects[0].Selector.SubtypesAny(),
+			Types:      requiredTypes,
 			Filter:     filter,
 			AddendDef:  addendDef,
 		}), true, nil
 	default:
 		return unsupported("the executable source backend supports only token-doubling or additive replacement amounts")
 	}
+}
+
+// tokenCreationReplacementRequiredTypes derives the card-type filter restricting
+// which token-creation events a replacement matches from the would-create
+// group's selector ("one or more artifact tokens", "one or more creature
+// tokens"). The artifact/creature/enchantment/land typed selections carry their
+// type in the selector kind; an untyped, "permanent", or unparsed-noun selection
+// imposes no type filter ("one or more tokens"). It fails closed for a
+// would-create group carrying any other qualifier so an unmodeled restriction
+// never lowers to a broader replacement.
+func tokenCreationReplacementRequiredTypes(selector compiler.CompiledSelector) ([]types.Card, bool) {
+	if selector.Controller != compiler.ControllerAny ||
+		selector.Another || selector.Other || selector.Attacking || selector.Blocking ||
+		selector.Tapped || selector.Untapped || selector.Keyword != parser.KeywordUnknown ||
+		selector.MatchManaValue || selector.MatchPower || selector.MatchToughness ||
+		len(selector.ExcludedTypes()) != 0 || len(selector.Supertypes()) != 0 ||
+		len(selector.ColorsAny()) != 0 || len(selector.ExcludedColors()) != 0 {
+		return nil, false
+	}
+	var cardTypes []types.Card
+	switch selector.Kind {
+	case compiler.SelectorUnknown, compiler.SelectorAny, compiler.SelectorPermanent:
+	case compiler.SelectorArtifact:
+		cardTypes = append(cardTypes, types.Artifact)
+	case compiler.SelectorCreature:
+		cardTypes = append(cardTypes, types.Creature)
+	case compiler.SelectorEnchantment:
+		cardTypes = append(cardTypes, types.Enchantment)
+	case compiler.SelectorLand:
+		cardTypes = append(cardTypes, types.Land)
+	default:
+		return nil, false
+	}
+	cardTypes = append(cardTypes, selector.RequiredTypesAny()...)
+	return cardTypes, true
 }
 
 func replacementSelectorHasUnsupportedQualifier(selector compiler.CompiledSelector) bool {

@@ -462,13 +462,16 @@ func TokenCreationReplacement(text string, multiplier int, filter TriggerControl
 // replacement (CR 614). Multiplier multiplies the created token count (1 leaves
 // it unchanged) and Addend then adds a fixed number of extra tokens. Subtypes,
 // when non-empty, restricts the replacement to tokens carrying all listed
-// subtypes. Filter scopes which player's creations are affected. AddendDef, when
-// non-nil, makes the Addend create copies of that predefined token rather than
-// of the triggering token (Tippy-Toe's additional Food token).
+// subtypes; Types, when non-empty, additionally restricts it to tokens carrying
+// all listed card types ("one or more artifact tokens", Worldwalker Helm).
+// Filter scopes which player's creations are affected. AddendDef, when non-nil,
+// makes the Addend create copies of that predefined token rather than of the
+// triggering token (Tippy-Toe's additional Food token).
 type TokenCreationReplacementSpec struct {
 	Multiplier int
 	Addend     int
 	Subtypes   []types.Sub
+	Types      []types.Card
 	Filter     TriggerControllerFilter
 	AddendDef  *CardDef
 }
@@ -487,6 +490,7 @@ func TokenCreationReplacementFiltered(text string, spec *TokenCreationReplacemen
 			TokenMultiplier:       spec.Multiplier,
 			TokenAddend:           spec.Addend,
 			TokenRequiredSubtypes: append([]types.Sub(nil), spec.Subtypes...),
+			TokenRequiredTypes:    append([]types.Card(nil), spec.Types...),
 			TokenAddendDef:        spec.AddendDef,
 			Duration:              DurationPermanent,
 		},
