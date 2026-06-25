@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestCastByControllerInterveningCondition(t *testing.T) {
@@ -79,14 +80,14 @@ func TestObjectCounterAmountUsesLiveStateAndLKI(t *testing.T) {
 		Object:      game.SourcePermanentReference(),
 		CounterKind: counter.Burden,
 	}
-	if got := dynamicAmountValueBeforeLayer(g, obj, game.Player1, dynamic, 0); got != 3 {
+	if got := dynamicAmountValueBeforeLayer(g, opt.Val(obj), game.Player1, dynamic, 0); got != 3 {
 		t.Fatalf("live counter amount = %d, want 3", got)
 	}
 
 	snapshot := snapshotPermanent(g, source, zone.Battlefield)
 	rememberLastKnown(g, &snapshot)
 	g.Battlefield = nil
-	if got := dynamicAmountValueBeforeLayer(g, obj, game.Player1, dynamic, 0); got != 3 {
+	if got := dynamicAmountValueBeforeLayer(g, opt.Val(obj), game.Player1, dynamic, 0); got != 3 {
 		t.Fatalf("LKI counter amount = %d, want 3", got)
 	}
 }
