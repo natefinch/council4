@@ -1047,6 +1047,75 @@ const (
 	DamageRecipientReferenceItself
 )
 
+// DamageRiderRecipientKind identifies the recipient of a follow-on "... and N
+// damage to <recipient>" damage instruction appended to a deal-damage clause.
+// Each value names one supported rider wording so the parser, exactness,
+// compiler, and lowering can carry every rider as one typed output instead of a
+// dedicated field pair per variant. It is None for non-rider damage.
+type DamageRiderRecipientKind uint8
+
+// Damage rider recipient kinds.
+const (
+	DamageRiderRecipientNone DamageRiderRecipientKind = iota
+	// DamageRiderRecipientYou is the self rider "... and N damage to you",
+	// dealing the fixed rider amount to the source's own controller.
+	DamageRiderRecipientYou
+	// DamageRiderRecipientTargetController is the "... and N damage to that
+	// creature's controller/owner" rider, dealing the fixed rider amount to the
+	// primary target's controller or owner; the rider's ReferenceRole names
+	// which one.
+	DamageRiderRecipientTargetController
+	// DamageRiderRecipientSecondTarget is the "... and N damage to <second
+	// target>" rider, dealing the rider amount to the clause's independently
+	// chosen second target (occurrence 1).
+	DamageRiderRecipientSecondTarget
+)
+
+// DamageRiderSyntax is one follow-on "... and N damage to <recipient>" damage
+// instruction appended to a deal-damage clause. Expressing every rider wording
+// as one typed output lets downstream layers iterate a single ordered list of
+// riders rather than carrying a dedicated field pair for each variant.
+type DamageRiderSyntax struct {
+	// Recipient names which supported rider wording this output expresses.
+	Recipient DamageRiderRecipientKind
+	// ReferenceRole names controller vs owner for the target-controller rider;
+	// it is None for every other recipient.
+	ReferenceRole DamageRecipientReferenceKind
+	// Value is the fixed rider amount (>= 1) dealt when Dynamic is false.
+	Value int `json:",omitempty"`
+	// Dynamic reports a rider amount that reuses the clause's primary dynamic
+	// amount (the variable "X" second-target form, "deals X damage to any
+	// target and X damage to any other target"). When true, Value is unused.
+	Dynamic bool `json:",omitempty"`
+}
+
+// SelfDamageRider returns the self-damage rider ("... and N damage to you") in
+// riders, if present.
+func SelfDamageRider(riders []DamageRiderSyntax) (DamageRiderSyntax, bool) {
+	return findDamageRider(riders, DamageRiderRecipientYou)
+}
+
+// TargetControllerDamageRider returns the "... and N damage to that creature's
+// controller/owner" rider in riders, if present.
+func TargetControllerDamageRider(riders []DamageRiderSyntax) (DamageRiderSyntax, bool) {
+	return findDamageRider(riders, DamageRiderRecipientTargetController)
+}
+
+// SecondTargetDamageRider returns the "... and N damage to <second target>"
+// rider in riders, if present.
+func SecondTargetDamageRider(riders []DamageRiderSyntax) (DamageRiderSyntax, bool) {
+	return findDamageRider(riders, DamageRiderRecipientSecondTarget)
+}
+
+func findDamageRider(riders []DamageRiderSyntax, kind DamageRiderRecipientKind) (DamageRiderSyntax, bool) {
+	for _, rider := range riders {
+		if rider.Recipient == kind {
+			return rider, true
+		}
+	}
+	return DamageRiderSyntax{}, false
+}
+
 // SignedAmountSyntax is one signed half of a power/toughness change.
 type SignedAmountSyntax struct {
 	Span     shared.Span `json:"-"`
@@ -1481,40 +1550,18 @@ type EffectSyntax struct {
 	// recipient role.
 	EachSourceDamageGroup     SelectionSyntax              `json:",omitzero"`
 	EachSourceDamageRecipient DamageRecipientReferenceKind `json:",omitempty"`
-	// HasSelfDamageRider reports a "... and N damage to you" rider appended to a
-	// single-target deal-damage clause ("deals A damage to any target and B
-	// damage to you"). SelfDamageRiderValue holds the fixed self-damage amount
-	// B; the recipient is the source's own controller. Lowering emits a second
-	// Damage instruction to that controller after the primary target damage.
-	HasSelfDamageRider   bool `json:",omitempty"`
-	SelfDamageRiderValue int  `json:",omitempty"`
-	// TargetControllerDamageRiderRecipient marks a "... and B damage to that
-	// creature's controller/owner" rider appended to a single-target deal-damage
-	// clause ("deals A damage to target creature and B damage to that creature's
-	// controller"). It names whether the rider hits the primary target's
-	// controller or owner and is None when no such rider is present.
-	// TargetControllerDamageRiderValue holds the fixed rider amount B. Lowering
-	// emits a second Damage instruction to that player after the primary target
-	// damage.
-	TargetControllerDamageRiderRecipient DamageRecipientReferenceKind `json:",omitempty"`
-	TargetControllerDamageRiderValue     int                          `json:",omitempty"`
-	// HasSecondTargetDamageRider reports a "... and B damage to <second target>"
-	// rider appended to a single-target deal-damage clause whose second clause
-	// names its own target ("deals A damage to target creature and B damage to
-	// target player or planeswalker"). SecondTargetDamageRiderValue holds the
-	// fixed amount B; the recipient is the clause's second target. Lowering
-	// emits a second Damage instruction to that target after the primary one.
-	HasSecondTargetDamageRider   bool `json:",omitempty"`
-	SecondTargetDamageRiderValue int  `json:",omitempty"`
-	// SecondTargetDamageRiderDynamic reports that the second-target rider amount
-	// is the variable "X" matching the clause's primary dynamic amount ("deals X
-	// damage to any target and X damage to any other target", The Brothers' War
-	// chapter III). When set, SecondTargetDamageRiderValue is unused and lowering
-	// reuses the primary dynamic amount for the rider's Damage instruction.
-	SecondTargetDamageRiderDynamic bool               `json:",omitempty"`
-	Amount                         EffectAmountSyntax `json:",omitzero"`
-	PowerDelta                     SignedAmountSyntax `json:",omitzero"`
-	ToughnessDelta                 SignedAmountSyntax `json:",omitzero"`
+	// DamageRiders holds the ordered follow-on "... and N damage to <recipient>"
+	// damage instructions of a deal-damage clause, in Oracle order: the self
+	// rider ("... and N damage to you"), the target-controller/owner rider
+	// ("... and N damage to that creature's controller"), and the second-target
+	// rider ("... and N damage to <second target>"). Each is a typed output, so
+	// adding a new supported rider recipient extends this list instead of adding
+	// another Effect field pair. It is empty for clauses with no rider, and
+	// lowering emits one Damage instruction per rider after the primary damage.
+	DamageRiders   []DamageRiderSyntax `json:",omitempty"`
+	Amount         EffectAmountSyntax  `json:",omitzero"`
+	PowerDelta     SignedAmountSyntax  `json:",omitzero"`
+	ToughnessDelta SignedAmountSyntax  `json:",omitzero"`
 	// TokenPower/TokenToughness/TokenPTKnown hold a created token's fixed
 	// power/toughness (e.g. "1/1"). Known is false for tokens with no printed
 	// power/toughness (named artifact tokens like Treasure).

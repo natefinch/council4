@@ -1640,41 +1640,18 @@ type CompiledEffect struct {
 	// the per-source recipient role; it is None for every other effect.
 	EachSourceDamageGroup     CompiledSelector
 	EachSourceDamageRecipient parser.DamageRecipientReferenceKind
-	// HasSelfDamageRider reports a "... and N damage to you" rider on a
-	// single-target deal-damage clause ("deals A damage to any target and B
-	// damage to you"). SelfDamageRiderValue holds the fixed self-damage amount B
-	// dealt to the source's own controller; lowering emits a second Damage
-	// instruction after the primary target damage.
-	HasSelfDamageRider   bool
-	SelfDamageRiderValue int
-	// TargetControllerDamageRiderRecipient marks a "... and B damage to that
-	// creature's controller/owner" rider on a single-target deal-damage clause
-	// ("deals A damage to target creature and B damage to that creature's
-	// controller"). TargetControllerDamageRiderValue holds the fixed rider
-	// amount B; lowering emits a second Damage instruction to the primary
-	// target's controller or owner after the primary target damage.
-	TargetControllerDamageRiderRecipient parser.DamageRecipientReferenceKind
-	TargetControllerDamageRiderValue     int
-	// HasSecondTargetDamageRider reports a "... and B damage to <second target>"
-	// rider on a single-target deal-damage clause ("deals A damage to target
-	// creature and B damage to target player or planeswalker").
-	// SecondTargetDamageRiderValue holds the fixed rider amount B dealt to the
-	// clause's second target; lowering emits a second Damage instruction after
-	// the primary target damage.
-	HasSecondTargetDamageRider   bool
-	SecondTargetDamageRiderValue int
-	// SecondTargetDamageRiderDynamic reports that the second-target rider amount
-	// is the variable "X" matching the clause's primary dynamic amount ("deals X
-	// damage to any target and X damage to any other target", The Brothers' War
-	// chapter III). When set, SecondTargetDamageRiderValue is unused and lowering
-	// reuses the primary dynamic amount for the rider's Damage instruction.
-	SecondTargetDamageRiderDynamic bool
-	Amount                         CompiledAmount
-	PowerDelta                     CompiledSignedAmount
-	ToughnessDelta                 CompiledSignedAmount
-	TokenPower                     int
-	TokenToughness                 int
-	TokenPTKnown                   bool
+	// DamageRiders holds the ordered follow-on "... and N damage to <recipient>"
+	// damage instructions of a deal-damage clause, in Oracle order: the self
+	// rider, the target-controller/owner rider, then the second-target rider.
+	// Lowering iterates the list and emits one Damage instruction per rider
+	// after the primary damage. It is empty for clauses with no rider.
+	DamageRiders   []parser.DamageRiderSyntax
+	Amount         CompiledAmount
+	PowerDelta     CompiledSignedAmount
+	ToughnessDelta CompiledSignedAmount
+	TokenPower     int
+	TokenToughness int
+	TokenPTKnown   bool
 	// TokenPTVariableX reports a created token whose printed power and toughness
 	// are both the variable "X" ("an X/X ... token"); lowering reads
 	// TokenPTDynamic to size it at creation. It is false for fixed tokens.

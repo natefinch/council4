@@ -462,7 +462,7 @@ func lowerFixedDamageSpell(
 	// own source reference (references[0]), so exclude the trailing rider
 	// reference from them; it is validated separately by the rider lowering.
 	sourceReferences := ctx.content.References
-	if effect.TargetControllerDamageRiderRecipient != parser.DamageRecipientReferenceNone {
+	if _, ok := parser.TargetControllerDamageRider(effect.DamageRiders); ok {
 		if len(sourceReferences) != 2 ||
 			sourceReferences[1].Binding != compiler.ReferenceBindingTarget {
 			return game.AbilityContent{}, contentDiagnostic(
@@ -496,8 +496,8 @@ func lowerFixedDamageSpell(
 	instructions := []game.Instruction{{Primitive: damage}}
 	// "deals A damage to <target> and B damage to you" appends a second Damage
 	// instruction dealing the fixed rider amount to the source's own controller.
-	if effect.HasSelfDamageRider {
-		if !effect.Amount.Known || effect.SelfDamageRiderValue < 1 {
+	if selfRider, ok := parser.SelfDamageRider(effect.DamageRiders); ok {
+		if !effect.Amount.Known || selfRider.Value < 1 {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
 				"unsupported damage spell",
@@ -505,7 +505,7 @@ func lowerFixedDamageSpell(
 			)
 		}
 		rider := game.Damage{
-			Amount:       game.Fixed(effect.SelfDamageRiderValue),
+			Amount:       game.Fixed(selfRider.Value),
 			Recipient:    game.PlayerDamageRecipient(game.ControllerReference()),
 			DamageSource: damage.DamageSource,
 		}
@@ -514,10 +514,10 @@ func lowerFixedDamageSpell(
 	// "deals A damage to target creature and B damage to that creature's
 	// controller/owner" appends a second Damage instruction dealing the fixed
 	// rider amount to the primary target's controller or owner.
-	if effect.TargetControllerDamageRiderRecipient != parser.DamageRecipientReferenceNone {
+	if tcRider, ok := parser.TargetControllerDamageRider(effect.DamageRiders); ok {
 		riderRecipient, ok := targetControllerRiderRecipient(
-			ctx.content.Targets[0], effect.TargetControllerDamageRiderRecipient)
-		if !ok || !effect.Amount.Known || effect.TargetControllerDamageRiderValue < 1 {
+			ctx.content.Targets[0], tcRider.ReferenceRole)
+		if !ok || !effect.Amount.Known || tcRider.Value < 1 {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
 				"unsupported damage spell",
@@ -525,7 +525,7 @@ func lowerFixedDamageSpell(
 			)
 		}
 		rider := game.Damage{
-			Amount:       game.Fixed(effect.TargetControllerDamageRiderValue),
+			Amount:       game.Fixed(tcRider.Value),
 			Recipient:    game.PlayerDamageRecipient(riderRecipient),
 			DamageSource: damage.DamageSource,
 		}
@@ -559,10 +559,11 @@ func lowerTwoTargetDamageSpell(
 			"the executable source backend supports only exact supported damage amounts to one target",
 		)
 	}
+	secondRider, hasSecondRider := parser.SecondTargetDamageRider(effect.DamageRiders)
 	if len(ctx.content.Effects) != 1 ||
 		effect.Kind != compiler.EffectDealDamage ||
 		!effect.Exact ||
-		!effect.HasSecondTargetDamageRider ||
+		!hasSecondRider ||
 		(effect.Context != parser.EffectContextSource &&
 			effect.Context != parser.EffectContextReferencedObject &&
 			effect.Context != parser.EffectContextPriorSubject) ||
@@ -577,13 +578,13 @@ func lowerTwoTargetDamageSpell(
 	// The rider amount is either a fixed value B (>= 1) shared with a known
 	// primary amount A (>= 1), or the variable "X" that reuses the clause's
 	// single dynamic amount for both targets (The Brothers' War chapter III).
-	dynamicRider := effect.SecondTargetDamageRiderDynamic
+	dynamicRider := secondRider.Dynamic
 	if dynamicRider {
 		if effect.Amount.DynamicKind == compiler.DynamicAmountNone {
 			return unsupported()
 		}
 	} else if !effect.Amount.Known || effect.Amount.Value < 1 ||
-		effect.SecondTargetDamageRiderValue < 1 {
+		secondRider.Value < 1 {
 		return unsupported()
 	}
 	for i := range ctx.content.Targets {
@@ -626,7 +627,7 @@ func lowerTwoTargetDamageSpell(
 		damageSource = opt.Val(game.SourcePermanentReference())
 	}
 	primaryAmount := game.Fixed(effect.Amount.Value)
-	riderAmount := game.Fixed(effect.SecondTargetDamageRiderValue)
+	riderAmount := game.Fixed(secondRider.Value)
 	if dynamicRider {
 		amountObject := game.SourcePermanentReference()
 		if obj, ok := lowerDamageAmountObject(effect.Amount, ctx.content.References); ok {
@@ -1320,9 +1321,7 @@ func lowerInheritedPowerGroupDamageSpell(ctx contentCtx) (game.AbilityContent, b
 		effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower ||
 		len(effect.DamageRecipientSelectors) != 0 ||
 		effect.DamageRecipientReference != parser.DamageRecipientReferenceNone ||
-		effect.TargetControllerDamageRiderRecipient != parser.DamageRecipientReferenceNone ||
-		effect.HasSelfDamageRider ||
-		effect.HasSecondTargetDamageRider ||
+		len(effect.DamageRiders) != 0 ||
 		len(ctx.content.Targets) != 1 ||
 		len(ctx.content.References) != 2 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -1391,9 +1390,7 @@ func lowerEventPowerGroupDamageSpell(ctx contentCtx) (game.AbilityContent, bool)
 		(effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower &&
 			effect.Amount.DynamicKind != compiler.DynamicAmountSourceToughness) ||
 		effect.DamageRecipientReference != parser.DamageRecipientReferenceNone ||
-		effect.TargetControllerDamageRiderRecipient != parser.DamageRecipientReferenceNone ||
-		effect.HasSelfDamageRider ||
-		effect.HasSecondTargetDamageRider ||
+		len(effect.DamageRiders) != 0 ||
 		len(effect.DamageRecipientSelectors) != 0 ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.References) != 2 ||
