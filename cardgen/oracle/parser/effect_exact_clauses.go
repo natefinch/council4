@@ -1380,6 +1380,18 @@ func exactPriorSubjectNextUntapStepSyntax(effect *EffectSyntax) bool {
 	return words[verb-1] == negation && slices.Equal(words[verb+1:], tail)
 }
 
+// The bounce-to-hand destination possessive is the only part of a return clause
+// shared verbatim across every battlefield bounce scope. Naming the three
+// possessive renderings once lets the single-, multi-, dual-, controlled-choice,
+// self-, and mass-group exactness branches reconstruct the same destination
+// instead of each spelling out the literal, keeping the typed destination in one
+// place.
+const (
+	bounceHandDestSingular   = "to its owner's hand."
+	bounceHandDestPlural     = "to their owners' hands."
+	bounceHandDestTheirOwner = "to their owner's hand."
+)
+
 // exactControlledBounceEffectSyntax recognizes the controlled-choice battlefield
 // bounce "Return a/an/another <permanent> you control to its owner's hand." that
 // lowers to a Bounce whose resolving controller chooses one permanent they
@@ -1395,13 +1407,13 @@ func exactControlledBounceEffectSyntax(effect *EffectSyntax) bool {
 	if !ok {
 		return false
 	}
-	return strings.EqualFold(exactEffectClauseText(effect), "Return "+phrase+" to its owner's hand.")
+	return strings.EqualFold(exactEffectClauseText(effect), "Return "+phrase+" "+bounceHandDestSingular)
 }
 
 func exactBounceEffectSyntax(effect *EffectSyntax) bool {
 	return len(effect.Targets) == 1 &&
 		effect.Targets[0].Exact &&
-		strings.EqualFold(exactEffectClauseText(effect), "Return "+effect.Targets[0].Text+" to its owner's hand.")
+		strings.EqualFold(exactEffectClauseText(effect), "Return "+effect.Targets[0].Text+" "+bounceHandDestSingular)
 }
 
 // exactDualBounceEffectSyntax recognizes the dual-target battlefield bounce
@@ -1422,7 +1434,7 @@ func exactDualBounceEffectSyntax(effect *EffectSyntax) bool {
 			return false
 		}
 	}
-	reconstruction := "Return " + effect.Targets[0].Text + " and " + effect.Targets[1].Text + " to their owners' hands."
+	reconstruction := "Return " + effect.Targets[0].Text + " and " + effect.Targets[1].Text + " " + bounceHandDestPlural
 	return strings.EqualFold(exactEffectClauseText(effect), reconstruction)
 }
 
@@ -1436,7 +1448,7 @@ func exactMultiBounceEffectSyntax(effect *EffectSyntax) bool {
 	return len(effect.Targets) == 1 &&
 		effect.Targets[0].Exact &&
 		effect.Targets[0].Cardinality.Max >= 2 &&
-		strings.EqualFold(exactEffectClauseText(effect), "Return "+effect.Targets[0].Text+" to their owners' hands.")
+		strings.EqualFold(exactEffectClauseText(effect), "Return "+effect.Targets[0].Text+" "+bounceHandDestPlural)
 }
 
 // exactSelfBounceEffectSyntax recognizes "Return <subject> to its owner's hand."
@@ -1456,7 +1468,7 @@ func exactSelfBounceEffectSyntax(effect *EffectSyntax) bool {
 		return false
 	}
 	subject := joinedEffectText(effect.References[0].Tokens)
-	return strings.EqualFold(exactEffectClauseText(effect), "Return "+subject+" to its owner's hand.")
+	return strings.EqualFold(exactEffectClauseText(effect), "Return "+subject+" "+bounceHandDestSingular)
 }
 
 func exactDirectPronounEffectSyntax(effect *EffectSyntax, exact string) bool {
@@ -1898,7 +1910,7 @@ func exactMassBounceEffectSyntax(effect *EffectSyntax) bool {
 	if !strings.HasPrefix(strings.ToLower(text), strings.ToLower(prefix)) {
 		return false
 	}
-	for _, suffix := range []string{" to their owners' hands.", " to their owner's hand."} {
+	for _, suffix := range []string{" " + bounceHandDestPlural, " " + bounceHandDestTheirOwner} {
 		if remainder, ok := strings.CutSuffix(text, suffix); ok {
 			return exactMassGroupPhrase(&effect.Selection, remainder[len(prefix):])
 		}
@@ -1923,7 +1935,7 @@ func exactMassEachBounceEffectSyntax(effect *EffectSyntax) bool {
 	if !strings.HasPrefix(strings.ToLower(text), strings.ToLower(prefix)) {
 		return false
 	}
-	for _, suffix := range []string{" to its owner's hand.", " to their owner's hand.", " to their owners' hands."} {
+	for _, suffix := range []string{" " + bounceHandDestSingular, " " + bounceHandDestTheirOwner, " " + bounceHandDestPlural} {
 		remainder, ok := strings.CutSuffix(text, suffix)
 		if !ok {
 			continue

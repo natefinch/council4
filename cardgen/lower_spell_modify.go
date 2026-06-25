@@ -2809,17 +2809,33 @@ func selfSourceBounceReferences(references []compiler.CompiledReference) bool {
 	return true
 }
 
+// plainControllerBounceToHand reports whether the content is the shared
+// precondition every battlefield bounce-to-hand scope requires before it
+// inspects its own subject: a non-negated, non-optional, controller-context
+// EffectReturn whose typed destination is the hand, carrying no attached
+// conditions, keywords, or modes. The repeated destination (ToZone), context,
+// and flag checks that each return scope used to spell out inline live here once,
+// so a scope only adds its subject-specific checks (target cardinality, group
+// selection, self-reference, or stack-target union) on top. Exactness is left to
+// the caller because the spell-or-permanent target fold is recorded inexact while
+// every other bounce scope requires an exact effect.
+func plainControllerBounceToHand(ctx contentCtx) bool {
+	effect := ctx.content.Effects[0]
+	return !effect.Negated && !effect.Optional && !ctx.optional &&
+		effect.Context == parser.EffectContextController &&
+		effect.ToZone == zone.Hand &&
+		len(ctx.content.Conditions) == 0 &&
+		len(ctx.content.Keywords) == 0 &&
+		len(ctx.content.Modes) == 0
+}
+
 func lowerFixedBounceSpell(
 	ctx contentCtx,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	if len(ctx.content.Targets) == 0 &&
-		!effect.Negated && !effect.Optional && effect.Exact && !ctx.optional &&
-		effect.Context == parser.EffectContextController &&
-		effect.ToZone == zone.Hand &&
-		len(ctx.content.Conditions) == 0 &&
-		len(ctx.content.Keywords) == 0 &&
-		len(ctx.content.Modes) == 0 &&
+		effect.Exact &&
+		plainControllerBounceToHand(ctx) &&
 		selfSourceBounceReferences(ctx.content.References) {
 		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowSource: true})
 		if ok {
@@ -2833,15 +2849,8 @@ func lowerFixedBounceSpell(
 	if len(ctx.content.Targets) != 1 ||
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
 		ctx.content.Targets[0].Cardinality.Max != 1 ||
-		ctx.content.Effects[0].Negated ||
-		ctx.content.Effects[0].Optional ||
 		!ctx.content.Effects[0].Exact ||
-		ctx.optional ||
-		ctx.content.Effects[0].Context != parser.EffectContextController ||
-		ctx.content.Effects[0].ToZone != zone.Hand ||
-		len(ctx.content.Conditions) != 0 ||
-		len(ctx.content.Keywords) != 0 ||
-		len(ctx.content.Modes) != 0 ||
+		!plainControllerBounceToHand(ctx) ||
 		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -2889,17 +2898,12 @@ func lowerFixedBounceSpell(
 // and one Bounce per slot returns whichever was chosen to its owner's hand.
 func lowerSpellBounce(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 1 ||
-		len(ctx.content.Targets) != 1 ||
-		len(ctx.content.Conditions) != 0 ||
-		len(ctx.content.Keywords) != 0 ||
-		len(ctx.content.Modes) != 0 {
+		len(ctx.content.Targets) != 1 {
 		return game.AbilityContent{}, false
 	}
 	effect := ctx.content.Effects[0]
 	if effect.Kind != compiler.EffectReturn ||
-		effect.Negated || effect.Optional || ctx.optional ||
-		effect.Context != parser.EffectContextController ||
-		effect.ToZone != zone.Hand {
+		!plainControllerBounceToHand(ctx) {
 		return game.AbilityContent{}, false
 	}
 	target := ctx.content.Targets[0]
@@ -3007,15 +3011,8 @@ func lowerMultiTargetBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	target := ctx.content.Targets[0]
 	effect := ctx.content.Effects[0]
 	if targetCardinalityIsOne(target) ||
-		effect.Negated ||
-		effect.Optional ||
 		!effect.Exact ||
-		ctx.optional ||
-		effect.Context != parser.EffectContextController ||
-		effect.ToZone != zone.Hand ||
-		len(ctx.content.Conditions) != 0 ||
-		len(ctx.content.Keywords) != 0 ||
-		len(ctx.content.Modes) != 0 ||
+		!plainControllerBounceToHand(ctx) ||
 		!bounceDestinationPronounReferencesOnly(ctx.content.References) {
 		return game.AbilityContent{}, false
 	}
@@ -3040,15 +3037,8 @@ func lowerMultiTargetBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
 func lowerDualTargetBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	effect := ctx.content.Effects[0]
 	if len(ctx.content.Targets) != 2 ||
-		effect.Negated ||
-		effect.Optional ||
 		!effect.Exact ||
-		ctx.optional ||
-		effect.Context != parser.EffectContextController ||
-		effect.ToZone != zone.Hand ||
-		len(ctx.content.Conditions) != 0 ||
-		len(ctx.content.Keywords) != 0 ||
-		len(ctx.content.Modes) != 0 ||
+		!plainControllerBounceToHand(ctx) ||
 		!choiceBounceDestinationReferencesOnly(ctx.content.References) {
 		return game.AbilityContent{}, false
 	}
@@ -3082,17 +3072,10 @@ func lowerDualTargetBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
 func lowerControlledBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	effect := ctx.content.Effects[0]
 	if len(ctx.content.Targets) != 0 ||
-		effect.Negated ||
-		effect.Optional ||
 		!effect.Exact ||
-		ctx.optional ||
-		effect.Context != parser.EffectContextController ||
-		effect.ToZone != zone.Hand ||
+		!plainControllerBounceToHand(ctx) ||
 		effect.Selector.All ||
 		effect.Selector.Controller != compiler.ControllerYou ||
-		len(ctx.content.Conditions) != 0 ||
-		len(ctx.content.Keywords) != 0 ||
-		len(ctx.content.Modes) != 0 ||
 		!choiceBounceDestinationReferencesOnly(ctx.content.References) {
 		return game.AbilityContent{}, false
 	}
