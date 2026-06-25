@@ -997,7 +997,7 @@ func spellCostModifierMatchesZone(modifier game.CostModifier, sourceZone zone.Ty
 // that have no colors; otherwise the spell must carry the named color.
 func spellCostModifierEffectMatchesCard(g *game.Game, effect *game.RuleEffect, card *game.CardDef) bool {
 	modifier := effect.CostModifier
-	if !spellCostModifierBaseMatchesCard(modifier, card) {
+	if !spellCostModifierBaseMatchesCard(g, modifier, card) {
 		return false
 	}
 	if !modifier.ChosenSubtypeFromEntryChoice {
@@ -1014,62 +1014,22 @@ func spellCostModifierEffectMatchesCard(g *game.Game, effect *game.RuleEffect, c
 		card.HasSubtype(choice.Subtype)
 }
 
-func spellCostModifierMatchesCard(modifier game.CostModifier, card *game.CardDef) bool {
-	return !modifier.ChosenSubtypeFromEntryChoice && spellCostModifierBaseMatchesCard(modifier, card)
+func spellCostModifierMatchesCard(g *game.Game, modifier game.CostModifier, card *game.CardDef) bool {
+	return !modifier.ChosenSubtypeFromEntryChoice && spellCostModifierBaseMatchesCard(g, modifier, card)
 }
 
-func spellCostModifierBaseMatchesCard(modifier game.CostModifier, card *game.CardDef) bool {
-	if modifier.MatchCardType && (card == nil || !card.HasType(modifier.CardType)) {
-		return false
+// spellCostModifierBaseMatchesCard reports whether a spell cost modifier's
+// card-subject filter admits the given spell card. It converts the modifier's
+// card filters into the canonical card-subject Selection and matches through the
+// shared matchSelection so cost modifiers describe their spells the same way
+// triggers and additional costs do. A modifier with no card filter matches any
+// card (including a nil card); any active filter fails a nil card.
+func spellCostModifierBaseMatchesCard(g *game.Game, modifier game.CostModifier, card *game.CardDef) bool {
+	sel := modifier.CardSubjectSelection()
+	if sel.Empty() {
+		return true
 	}
-	if modifier.MatchExcludedCardType && (card == nil || card.HasType(modifier.ExcludedCardType)) {
-		return false
-	}
-	if modifier.MatchColor {
-		if card == nil {
-			return false
-		}
-		if modifier.Color == "" {
-			if len(card.Colors) != 0 {
-				return false
-			}
-		} else if !slices.Contains(card.Colors, modifier.Color) {
-			return false
-		}
-	}
-	if len(modifier.MatchColors) != 0 {
-		if card == nil {
-			return false
-		}
-		matched := false
-		for _, c := range modifier.MatchColors {
-			if slices.Contains(card.Colors, c) {
-				matched = true
-				break
-			}
-		}
-		if !matched {
-			return false
-		}
-	}
-	if len(modifier.MatchSubtypes) != 0 {
-		if card == nil {
-			return false
-		}
-		if !slices.ContainsFunc(modifier.MatchSubtypes, card.HasSubtype) {
-			return false
-		}
-	}
-	if modifier.MinPower.Exists {
-		if card == nil {
-			return false
-		}
-		power := card.Power
-		if !power.Exists || power.Val.IsStar || power.Val.Value < modifier.MinPower.Val {
-			return false
-		}
-	}
-	return true
+	return cardDefMatchesCostSelection(g, card, sel)
 }
 
 func canCastFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
