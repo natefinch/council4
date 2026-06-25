@@ -414,6 +414,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				SearchSharedSubtype:                    syntax.SearchSharedSubtype,
 				SearchDestination:                      syntax.SearchDestination,
 				SearchControl:                          syntax.SearchControl,
+				SearchSlots:                            syntax.SearchSlots,
 				DiscardEntireHand:                      syntax.DiscardEntireHand,
 				CounteredSpellExileReplacement:         syntax.CounteredSpellExileReplacement,
 				ExileUntilSourceLeaves:                 syntax.ExileUntilSourceLeaves,

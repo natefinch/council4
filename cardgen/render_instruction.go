@@ -1159,6 +1159,17 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 	if value.Spec.SharedSubtype {
 		specFields = append(specFields, "SharedSubtype: true,")
 	}
+	if len(value.Spec.SlotFilters) != 0 {
+		slotLits := make([]string, 0, len(value.Spec.SlotFilters))
+		for _, slot := range value.Spec.SlotFilters {
+			slotLit, slotErr := r.renderSelection(ctx, slot)
+			if slotErr != nil {
+				return "", slotErr
+			}
+			slotLits = append(slotLits, slotLit+",")
+		}
+		specFields = append(specFields, fmt.Sprintf("SlotFilters: %s,", sliceLit("game.Selection", slotLits)))
+	}
 	if value.Spec.SplitDestination.Exists {
 		splitZone, err := renderZone(value.Spec.SplitDestination.Val.Zone)
 		if err != nil {

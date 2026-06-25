@@ -542,6 +542,53 @@ func searchUnsupportedDetail(effect *EffectSyntax) string {
 	return analyzeSearchClause(effect).detail
 }
 
+// searchHeterogeneousSlotSubtypes recognizes a search-and-put clause whose noun
+// phrase names two distinct singular card slots joined by a plain "and" — "a
+// Forest card and a Plains card" (Krosan Verge). Each slot is one basic land
+// subtype, and the searching player finds one card matching each slot. It
+// reconstructs the canonical "a <Sub0> card and a <Sub1> card" noun phrase
+// byte-for-byte from the parsed subtype union and the source text, returning the
+// per-slot subtypes only on an exact match. It fails closed (returns nil) for
+// every other count, filter, supertype, name, mana-value rider, optional or
+// non-controller searcher, "or" union, "and/or" inclusive join, repeated
+// subtype, or non-basic-land subtype, so an ordinary single-filter search is
+// never reinterpreted as a multi-slot one.
+func searchHeterogeneousSlotSubtypes(effect *EffectSyntax) []types.Sub {
+	if effect.Optional || effect.Context != EffectContextController {
+		return nil
+	}
+	if !effect.Amount.Known || effect.Amount.Value != 1 {
+		return nil
+	}
+	sel := effect.Selection
+	if sel.Kind != SelectionCard ||
+		len(sel.SubtypesAny) != 2 ||
+		sel.BasicLandType ||
+		len(sel.Alternatives) != 0 ||
+		len(sel.RequiredTypesAny) != 0 ||
+		len(sel.Supertypes) != 0 ||
+		len(sel.ColorsAny) != 0 ||
+		len(sel.ExcludedSubtypes) != 0 ||
+		sel.RequiredName != "" ||
+		sel.MatchManaValue || sel.MatchPower || sel.MatchToughness ||
+		sel.Colorless || sel.Multicolored {
+		return nil
+	}
+	if !allBasicLandSubtypes(sel.SubtypesAny) || sel.SubtypesAny[0] == sel.SubtypesAny[1] {
+		return nil
+	}
+	prefix, text := searchClausePrefix(effect)
+	if !strings.HasPrefix(text, prefix) {
+		return nil
+	}
+	rest := strings.TrimPrefix(text, prefix)
+	noun := "a " + string(sel.SubtypesAny[0]) + " card and a " + string(sel.SubtypesAny[1]) + " card"
+	if !strings.HasPrefix(rest, noun+", ") {
+		return nil
+	}
+	return slices.Clone(sel.SubtypesAny)
+}
+
 // searchSharedSubtypeRider reports whether a library-search clause carries the
 // supported "that share a land type" correlation rider, requiring every found
 // card to share a land subtype with the others. It is the structured companion
