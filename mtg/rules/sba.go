@@ -10,6 +10,19 @@ import (
 
 const maxStateBasedActionPasses = 1000
 
+// The state-based actions in CR 704.5 / 704.6 that this engine does not yet
+// implement, recorded so the conformance gap is explicit:
+//   - CR 704.5e: spell/card copies in the wrong zone cease to exist. Copies are
+//     instead cleaned up where they are created and resolved (stack.go,
+//     storm.go) rather than by a dedicated SBA check.
+//   - CR 704.5k: the world rule (no Commander-legal cards have the world
+//     supertype).
+//   - CR 704.5r: removing counters beyond a "can't have more than N" cap.
+//   - CR 704.5t/u/w/x/z: dungeon venture, space sculptor, battle protector, and
+//     start-your-engines speed actions.
+//   - CR 704.5y: keeping only the most recent of multiple same-controller Roles.
+//   - CR 704.6a/b/e/f: Two-Headed Giant, Archenemy, and Planechase variant SBAs.
+
 func (e *Engine) applyStateBasedActions(g *game.Game) []LossLog {
 	losses, _ := e.applyStateBasedActionsWithDeaths(g)
 	return losses
@@ -26,6 +39,18 @@ func (e *Engine) applyStateBasedActionsWithLog(g *game.Game, log *TurnLog) []Los
 	return losses
 }
 
+// applyStateBasedActionsWithDeaths performs all applicable state-based actions
+// and returns the player losses and permanent deaths they caused (CR 704).
+//
+// CR 704.3: whenever a player would get priority, the game checks the SBA
+// conditions and performs every applicable action simultaneously as a single
+// event; if any were performed, the check repeats. This loop reproduces that
+// "check, perform, repeat until stable" cycle. The pass cap is a safety net
+// against a non-converging board (a rules bug), not a rules limit.
+//
+// CR 704.8: a permanent leaving as part of an SBA derives its last known
+// information from the game state before any of that pass's actions were
+// performed, which is why each check snapshots a permanent before moving it.
 func (e *Engine) applyStateBasedActionsWithDeaths(g *game.Game) ([]LossLog, []PermanentDeathLog) {
 	var losses []LossLog
 	var deaths []PermanentDeathLog
@@ -65,6 +90,18 @@ func newPassBatchID(g *game.Game) func() id.ID {
 	}
 }
 
+// checkStateBasedActions performs the player-loss state-based actions:
+//   - CR 704.5a: a player with 0 or less life loses.
+//   - CR 704.5b: a player who attempted to draw from an empty library loses
+//     (tracked in FailedDraws since the last SBA check).
+//   - CR 704.5c: a player with ten or more poison counters loses
+//     (HasLethalPoison).
+//   - CR 704.6c (Commander): a player dealt 21+ combat damage by one commander
+//     loses (HasLethalCommanderDamage).
+//
+// MarkedToLoseGame covers effects that directly state a player loses the game.
+// CR 104.3a: a player who loses leaves the game; eliminatePlayer applies the
+// CR 800.4 departure cleanup.
 func (e *Engine) checkStateBasedActions(g *game.Game) (bool, []LossLog) {
 	changed := false
 	var losses []LossLog
@@ -94,6 +131,13 @@ func (e *Engine) checkStateBasedActions(g *game.Game) (bool, []LossLog) {
 	return changed, losses
 }
 
+// checkPermanentStateBasedActions destroys or moves the battlefield permanents
+// that meet a state-based-action condition (see permanentDeathReason for the
+// per-rule mapping). CR 704.3: every permanent that dies this pass shares one
+// simultaneous event ID so "another creature dies" / "one or more creatures
+// die" triggers see the whole set at once. CR 704.8: each permanent is
+// snapshotted before any move so its last known information reflects the board
+// before this pass's actions.
 func (*Engine) checkPermanentStateBasedActions(g *game.Game, batchID func() id.ID) (bool, []PermanentDeathLog) {
 	type pendingDeath struct {
 		objectID id.ID
@@ -163,6 +207,14 @@ func (*Engine) checkPermanentStateBasedActions(g *game.Game, batchID func() id.I
 	return len(deaths) > 0, deaths
 }
 
+// checkAttachmentStateBasedActions handles the attachment state-based actions.
+// CR 704.5m: an Aura attached to an illegal object/player, or attached to
+// nothing, is put into its owner's graveyard. CR 704.5n: an Equipment or
+// Fortification attached to an illegal permanent or to a player becomes
+// unattached but stays on the battlefield. CR 704.5p: any other non-Aura,
+// non-Equipment, non-Fortification permanent attached to something likewise
+// becomes unattached and remains. detachPermanent covers the 704.5n/704.5p
+// cases; illegal Auras are collected and moved to the graveyard.
 func checkAttachmentStateBasedActions(g *game.Game, batchID func() id.ID) (bool, []PermanentDeathLog) {
 	var illegalAuras []id.ID
 	changed := false
@@ -229,6 +281,12 @@ type legendaryKey struct {
 	name       string
 }
 
+// checkLegendaryRuleStateBasedActions enforces the legend rule. CR 704.5j: if a
+// player controls two or more legendary permanents with the same name, they
+// choose one to keep and the rest are put into their owners' graveyards. The
+// keeper here is chosen deterministically (oldest timestamp) rather than by a
+// player choice, which is a simplification of the "that player chooses" wording
+// but yields a legal resulting board.
 func checkLegendaryRuleStateBasedActions(g *game.Game, batchID func() id.ID) (bool, []PermanentDeathLog) {
 	pending := legendaryRuleStateBasedActionCandidates(g)
 	if len(pending) == 0 {
@@ -315,6 +373,9 @@ func permanentOlderThan(left, right *game.Permanent) bool {
 	return left.ObjectID < right.ObjectID
 }
 
+// checkCounterStateBasedActions removes paired +1/+1 and -1/-1 counters.
+// CR 704.5q: if a permanent has both a +1/+1 and a -1/-1 counter, N of each are
+// removed, where N is the smaller of the two counts (CancelOpposites).
 func checkCounterStateBasedActions(g *game.Game) bool {
 	changed := false
 	for _, permanent := range g.Battlefield {
@@ -328,6 +389,11 @@ func checkCounterStateBasedActions(g *game.Game) bool {
 	return changed
 }
 
+// removeTokensFromNonBattlefieldZones makes tokens that have left the
+// battlefield cease to exist. CR 704.5d: a token in a zone other than the
+// battlefield ceases to exist. A token that has moved out of play leaves a
+// dangling card ID in its new zone with no backing CardInstance, so any such ID
+// in a non-battlefield zone is removed here.
 func removeTokensFromNonBattlefieldZones(g *game.Game) bool {
 	changed := false
 	for _, player := range g.Players {
@@ -352,6 +418,24 @@ func permanentTokenName(permanent *game.Permanent) string {
 	return permanent.TokenDef.Name
 }
 
+// permanentDeathReason reports whether a permanent meets a state-based-action
+// condition that removes it, and which one. The checks follow CR 704.5 in the
+// order the rules list them so a permanent that qualifies under multiple rules
+// is reported under the first:
+//   - CR 704.5s: a Saga at or past its final chapter number, not awaiting a
+//     chapter ability still on the stack, is sacrificed.
+//   - CR 704.5i: a planeswalker with 0 loyalty is put into its graveyard.
+//   - CR 704.5v: a battle with 0 defense (not the source of an unresolved
+//     ability) is put into its graveyard.
+//   - CR 704.5f: a creature with toughness 0 or less is put into its graveyard.
+//     This is checked before indestructible and regeneration because neither
+//     can replace it.
+//   - CR 704.5h: a creature dealt damage by a deathtouch source is destroyed.
+//   - CR 704.5g: a creature with lethal marked damage (>= its toughness) is
+//     destroyed.
+//
+// Indestructible exempts a creature from the destroy-based rules (704.5g/h) but
+// not from the toughness-0 rule (704.5f), matching the ordering above.
 func permanentDeathReason(g *game.Game, permanent *game.Permanent) (PermanentDeathReason, bool) {
 	if permanentHasSubtype(g, permanent, types.Saga) {
 		final := finalSagaChapter(g, permanent)
@@ -391,6 +475,13 @@ func permanentDeathReason(g *game.Game, permanent *game.Permanent) (PermanentDea
 	return "", false
 }
 
+// permanentDeathBypassesDestroy reports whether a death reason puts the
+// permanent directly into the graveyard rather than destroying it. The
+// CR 704.5 actions that move a permanent without destroying it can't be
+// replaced by regeneration or a destruction-replacement (toughness 0 per
+// CR 704.5f, 0 loyalty per 704.5i, 0 defense per 704.5v, illegal Aura per
+// 704.5m, completed Saga per 704.5s); lethal and deathtouch damage (704.5g/h)
+// destroy and therefore route through the regeneration-aware destroy path.
 func permanentDeathBypassesDestroy(reason PermanentDeathReason) bool {
 	switch reason {
 	case PermanentDeathReasonZeroToughness, PermanentDeathReasonZeroLoyalty, PermanentDeathReasonZeroDefense, PermanentDeathReasonIllegalAura, PermanentDeathReasonSagaComplete:
@@ -417,6 +508,12 @@ func (*Engine) eliminatePlayer(g *game.Game, playerID game.PlayerID) bool {
 	return true
 }
 
+// cleanupEliminatedPlayer applies the consequences of a player leaving the game
+// (CR 800.4). CR 800.4a: all objects owned by the departing player leave the
+// game and any spells/abilities they control cease to exist; here their stack
+// objects are removed and their permanents are exiled. CR 800.4c/800.4e: control
+// of objects they controlled but didn't own reverts to the owner, and they are
+// removed from combat.
 func cleanupEliminatedPlayer(g *game.Game, playerID game.PlayerID) {
 	g.Stack.RemoveControlledBy(playerID)
 	cleanupEliminatedPlayerPermanents(g, playerID)
