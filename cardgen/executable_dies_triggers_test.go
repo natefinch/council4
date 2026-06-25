@@ -56,6 +56,11 @@ func TestGenerateExecutableCardSourcePermanentZoneChangeTriggerPatterns(t *testi
 			oracleText: "Whenever another legendary green Human you control dies, draw a card.",
 			wants:      []string{"game.EventPermanentDied", "SubtypesAny: []types.Sub{types.Sub(\"Human\")}", "Supertypes: []types.Super{types.Legendary}", "ColorsAny: []color.Color{color.Green}", "ExcludeSelf:"},
 		},
+		{
+			name:       "self enters or put into graveyard union",
+			oracleText: "When this artifact enters or is put into a graveyard from the battlefield, draw a card.",
+			wants:      []string{"game.EventPermanentEnteredBattlefield", "game.TriggerSourceSelf", "UnionEvent: game.EventPermanentDied"},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

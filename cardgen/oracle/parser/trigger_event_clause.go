@@ -45,6 +45,7 @@ func parseTriggerEventClause(
 		parseTokenCreatedTriggerEventClause,
 		parseTokenCreateSacrificeUnionTriggerEventClause,
 		parseEnterAttackUnionTriggerEventClause,
+		parseEnterGraveyardUnionTriggerEventClause,
 		parseAttackBecameTargetUnionTriggerEventClause,
 		parseBlockBecameBlockedUnionTriggerEventClause,
 		parseAttackBlockUnionTriggerEventClause,

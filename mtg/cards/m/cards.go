@@ -10,6 +10,7 @@ var Cards = []*game.CardDef{
 	MalametBattleGlyph,
 	MarthaJones,
 	MasterSRebuke,
+	MephiticDraught,
 	MorbidOpportunist,
 	MortalObstinacy,
 	MossfireValley,
@@ -17,5 +18,6 @@ var Cards = []*game.CardDef{
 	Mountain,
 	MrOrfeoTheBoulder,
 	MurderInvestigation,
+	MycosynthWellspring,
 	MysticMight,
 }

@@ -798,6 +798,19 @@ func enterAttackUnionTriggerEventClauseTests() []triggerEventClauseTest {
 			},
 		},
 		{
+			name:   "enter or put into graveyard union self",
+			source: "When this artifact enters or is put into a graveyard from the battlefield, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindZoneChange ||
+					clause.ZoneChange.Kind != TriggerEventZoneChangeEnteredBattlefield ||
+					clause.UnionKind != TriggerEventKindDied ||
+					clause.Subject.Kind != TriggerEventSubjectSelf {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
 			name:   "enter or attack union selection",
 			source: "Whenever a creature you control enters or attacks, draw a card.",
 			check: func(t *testing.T, clause *TriggerEventClause) {
