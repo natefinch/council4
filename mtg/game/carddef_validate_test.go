@@ -166,29 +166,22 @@ func TestValidateCardDefColorDisjunctionCostModifier(t *testing.T) {
 	valid := CostModifier{
 		Kind:             CostModifierSpell,
 		GenericReduction: 1,
-		MatchColors:      []color.Color{color.Red, color.Green},
+		CardSelection:    Selection{ColorsAny: []color.Color{color.Red, color.Green}},
 	}
 	if issues := ValidateCardDef(makeCard(valid)); len(issues) != 0 {
 		t.Fatalf("valid color-disjunction cost modifier issues = %+v, want none", issues)
 	}
 
-	singleColor := valid
-	singleColor.MatchColors = []color.Color{color.Red}
-	if issues := ValidateCardDef(makeCard(singleColor)); !hasCardDefIssue(issues, CardDefIssueInvalidRuleEffect) {
-		t.Fatalf("single-color disjunction issues = %+v, want %s", issues, CardDefIssueInvalidRuleEffect)
+	nonSpell := valid
+	nonSpell.Kind = CostModifierAbility
+	if issues := ValidateCardDef(makeCard(nonSpell)); !hasCardDefIssue(issues, CardDefIssueInvalidRuleEffect) {
+		t.Fatalf("card-subject modifier on non-spell kind issues = %+v, want %s", issues, CardDefIssueInvalidRuleEffect)
 	}
 
-	withSingleMatch := valid
-	withSingleMatch.MatchColor = true
-	withSingleMatch.Color = color.Red
-	if issues := ValidateCardDef(makeCard(withSingleMatch)); !hasCardDefIssue(issues, CardDefIssueInvalidRuleEffect) {
-		t.Fatalf("disjunction combined with single color issues = %+v, want %s", issues, CardDefIssueInvalidRuleEffect)
-	}
-
-	emptyColor := valid
-	emptyColor.MatchColors = []color.Color{color.Red, ""}
-	if issues := ValidateCardDef(makeCard(emptyColor)); !hasCardDefIssue(issues, CardDefIssueInvalidRuleEffect) {
-		t.Fatalf("disjunction with empty color issues = %+v, want %s", issues, CardDefIssueInvalidRuleEffect)
+	contradictory := valid
+	contradictory.CardSelection = Selection{Colorless: true, ColorsAny: []color.Color{color.Red}}
+	if issues := ValidateCardDef(makeCard(contradictory)); !hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
+		t.Fatalf("contradictory selection issues = %+v, want %s", issues, CardDefIssueInvalidSelection)
 	}
 }
 
@@ -200,8 +193,7 @@ func TestValidateCardDefChosenSubtypeCostModifierRequiresEntryChoice(t *testing.
 				Kind: RuleEffectCostModifier,
 				CostModifier: CostModifier{
 					Kind:                         CostModifierSpell,
-					MatchCardType:                true,
-					CardType:                     types.Creature,
+					CardSelection:                Selection{RequiredTypes: []types.Card{types.Creature}},
 					ChosenSubtypeFromEntryChoice: true,
 					GenericReduction:             1,
 				},
@@ -227,8 +219,7 @@ func TestValidateCardDefChosenSubtypeCostModifierRequiresCreatureSpells(t *testi
 				Kind: RuleEffectCostModifier,
 				CostModifier: CostModifier{
 					Kind:                         CostModifierSpell,
-					MatchCardType:                true,
-					CardType:                     types.Artifact,
+					CardSelection:                Selection{RequiredTypes: []types.Card{types.Artifact}},
 					ChosenSubtypeFromEntryChoice: true,
 					GenericReduction:             1,
 				},

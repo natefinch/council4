@@ -910,12 +910,10 @@ func lowerSpellCostModifier(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 		modifier.GenericReduction = effect.SpellCostModifierAmount
 	}
 	if len(effect.SpellCostModifierRequiredTypes) == 1 {
-		modifier.MatchCardType = true
-		modifier.CardType = effect.SpellCostModifierRequiredTypes[0]
+		modifier.CardSelection.RequiredTypes = []types.Card{effect.SpellCostModifierRequiredTypes[0]}
 	}
 	if len(effect.SpellCostModifierExcludedTypes) == 1 {
-		modifier.MatchExcludedCardType = true
-		modifier.ExcludedCardType = effect.SpellCostModifierExcludedTypes[0]
+		modifier.CardSelection.ExcludedTypes = []types.Card{effect.SpellCostModifierExcludedTypes[0]}
 	}
 	return game.Mode{Sequence: []game.Instruction{{
 		Primitive: game.ApplyRule{

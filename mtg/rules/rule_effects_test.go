@@ -12,7 +12,7 @@ func TestSpellCostModifierColorDisjunctionMatches(t *testing.T) {
 	modifier := game.CostModifier{
 		Kind:             game.CostModifierSpell,
 		GenericReduction: 1,
-		MatchColors:      []color.Color{color.Red, color.Green},
+		CardSelection:    game.Selection{ColorsAny: []color.Color{color.Red, color.Green}},
 	}
 	tests := map[string]struct {
 		colors []color.Color

@@ -92,8 +92,7 @@ func TestResolvingSpellCostModifierThisTurnExpiresAtCleanup(t *testing.T) {
 		CreatedTurn:    g.Turn.TurnNumber,
 		CostModifier: game.CostModifier{
 			Kind:             game.CostModifierSpell,
-			MatchCardType:    true,
-			CardType:         types.Artifact,
+			CardSelection:    game.Selection{RequiredTypes: []types.Card{types.Artifact}},
 			GenericReduction: 1,
 		},
 	})

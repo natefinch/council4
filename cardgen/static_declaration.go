@@ -8,6 +8,8 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -1534,14 +1536,14 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 		base.ChosenSubtypeFromEntryChoice = true
 	}
 	if cost.MatchMinPower {
-		base.MinPower = opt.Val(cost.MinPower)
+		base.CardSelection.Power = opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: cost.MinPower})
 	}
 	if len(cost.SpellColors) != 0 {
 		if cost.MatchSpellColor || len(cost.SpellTypes) != 0 || len(cost.SpellSubtypes) != 0 {
 			return false
 		}
 		modifier := base
-		modifier.MatchColors = slices.Clone(cost.SpellColors)
+		modifier.CardSelection.ColorsAny = slices.Clone(cost.SpellColors)
 		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
 			Kind:           game.RuleEffectCostModifier,
 			AffectedPlayer: affectedPlayer,
@@ -1553,11 +1555,14 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 		if len(cost.SpellTypes) != 0 {
 			return false
 		}
-		base.MatchSubtypes = slices.Clone(cost.SpellSubtypes)
+		base.CardSelection.SubtypesAny = slices.Clone(cost.SpellSubtypes)
 	}
 	if cost.MatchSpellColor {
-		base.MatchColor = true
-		base.Color = cost.SpellColor
+		if cost.SpellColor == "" {
+			base.CardSelection.Colorless = true
+		} else {
+			base.CardSelection.ColorsAny = []color.Color{cost.SpellColor}
+		}
 	}
 	if len(cost.SpellTypes) == 0 {
 		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
@@ -1569,8 +1574,7 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 	}
 	for _, spellType := range cost.SpellTypes {
 		modifier := base
-		modifier.MatchCardType = true
-		modifier.CardType = spellType
+		modifier.CardSelection.RequiredTypes = []types.Card{spellType}
 		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
 			Kind:           game.RuleEffectCostModifier,
 			AffectedPlayer: affectedPlayer,

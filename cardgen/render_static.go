@@ -917,51 +917,12 @@ func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier)
 		return "", err
 	}
 	fields := []string{fmt.Sprintf("Kind: %s,", kind)}
-	if modifier.MatchCardType {
-		cardType, err := cardTypeLiteral(modifier.CardType)
+	if !modifier.CardSelection.Empty() {
+		selection, err := r.renderSelection(ctx, modifier.CardSelection)
 		if err != nil {
 			return "", err
 		}
-		fields = append(fields, "MatchCardType: true,", fmt.Sprintf("CardType: %s,", cardType))
-	}
-	if modifier.MatchExcludedCardType {
-		cardType, err := cardTypeLiteral(modifier.ExcludedCardType)
-		if err != nil {
-			return "", err
-		}
-		ctx.need(importTypes)
-		fields = append(fields, "MatchExcludedCardType: true,", fmt.Sprintf("ExcludedCardType: %s,", cardType))
-	}
-	if modifier.MatchColor {
-		fields = append(fields, "MatchColor: true,")
-		if modifier.Color != "" {
-			colorLit, err := colorValueToLiteral(modifier.Color)
-			if err != nil {
-				return "", err
-			}
-			ctx.need(importColor)
-			fields = append(fields, fmt.Sprintf("Color: %s,", colorLit))
-		}
-	}
-	if len(modifier.MatchColors) != 0 {
-		colorLits, err := colorValueLiterals(modifier.MatchColors)
-		if err != nil {
-			return "", err
-		}
-		ctx.need(importColor)
-		fields = append(fields, fmt.Sprintf("MatchColors: []color.Color{%s},", colorLits))
-	}
-	if len(modifier.MatchSubtypes) != 0 {
-		ctx.need(importTypes)
-		cardTypeStrings := make([]string, 0, len(subtypeLiteralTypes))
-		for typ := range subtypeLiteralTypes {
-			cardTypeStrings = append(cardTypeStrings, typ)
-		}
-		literals := make([]string, 0, len(modifier.MatchSubtypes))
-		for _, sub := range modifier.MatchSubtypes {
-			literals = append(literals, SubtypeToLiteral(string(sub), cardTypeStrings))
-		}
-		fields = append(fields, fmt.Sprintf("MatchSubtypes: []types.Sub{%s},", strings.Join(literals, ", ")))
+		fields = append(fields, fmt.Sprintf("CardSelection: %s,", selection))
 	}
 	if modifier.ChosenSubtypeFromEntryChoice {
 		fields = append(fields, "ChosenSubtypeFromEntryChoice: true,")
@@ -974,10 +935,6 @@ func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier)
 			return "", err
 		}
 		fields = append(fields, fmt.Sprintf("SourceZone: opt.Val(%s),", zoneLit))
-	}
-	if modifier.MinPower.Exists {
-		ctx.need(importOpt)
-		fields = append(fields, fmt.Sprintf("MinPower: opt.Val(%d),", modifier.MinPower.Val))
 	}
 	if modifier.TargetsSource {
 		fields = append(fields, "TargetsSource: true,")

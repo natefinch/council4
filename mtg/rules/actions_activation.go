@@ -78,8 +78,8 @@ func costModifierAppliesToAbility(g *game.Game, modifier game.CostModifier, play
 	if modifier.AbilityKeyword != game.KeywordNone && !game.BodyHasKeyword(body, modifier.AbilityKeyword) {
 		return false
 	}
-	if modifier.MatchCardType {
-		if card == nil || card.Def == nil || !card.Def.HasType(modifier.CardType) {
+	if !modifier.CardSelection.Empty() {
+		if card == nil || !cardDefMatchesCostSelection(g, card.Def, modifier.CardSelection) {
 			return false
 		}
 	}

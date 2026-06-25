@@ -1025,7 +1025,7 @@ func spellCostModifierMatchesCard(g *game.Game, modifier game.CostModifier, card
 // triggers and additional costs do. A modifier with no card filter matches any
 // card (including a nil card); any active filter fails a nil card.
 func spellCostModifierBaseMatchesCard(g *game.Game, modifier game.CostModifier, card *game.CardDef) bool {
-	sel := modifier.CardSubjectSelection()
+	sel := modifier.CardSelection
 	if sel.Empty() {
 		return true
 	}

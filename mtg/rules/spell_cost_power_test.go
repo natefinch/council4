@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -21,10 +22,11 @@ func goreclawPowerReductionEffect(g *game.Game, minPower, reduction int) game.Ru
 		Controller:     game.Player1,
 		AffectedPlayer: game.PlayerYou,
 		CostModifier: game.CostModifier{
-			Kind:             game.CostModifierSpell,
-			MatchCardType:    true,
-			CardType:         types.Creature,
-			MinPower:         opt.Val(minPower),
+			Kind: game.CostModifierSpell,
+			CardSelection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Power:         opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: minPower}),
+			},
 			GenericReduction: reduction,
 		},
 	}
