@@ -256,15 +256,17 @@ func (v *cardDefValidator) validateLinkedExileColorDependencies(faceName, path s
 	}
 }
 
-// collectExileFromHandLinks records the link keys published by every
-// ExileFromHand primitive across the face's ability contents.
+// collectExileFromHandLinks records the link keys published by every exile-from-
+// hand choose-from-zone primitive (the imprint family: a hand source, an exile
+// destination, an object-scoped publish) across the face's ability contents.
 func collectExileFromHandLinks(face *CardFace, into map[string]bool) {
 	collect := func(content AbilityContent) {
 		for _, mode := range content.Modes {
 			for i := range mode.Sequence {
-				exile, ok := mode.Sequence[i].Primitive.(ExileFromHand)
-				if ok && exile.PublishLinked != "" {
-					into[string(exile.PublishLinked)] = true
+				choose, ok := mode.Sequence[i].Primitive.(ChooseFromZone)
+				if ok && choose.SourceZone == zone.Hand && choose.Destination.Zone == zone.Exile &&
+					choose.Riders.PublishObjectScoped && choose.Riders.PublishLinked != "" {
+					into[string(choose.Riders.PublishLinked)] = true
 				}
 			}
 		}

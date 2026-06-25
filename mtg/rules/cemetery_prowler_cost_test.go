@@ -38,12 +38,13 @@ func cemeteryProwlerDef() *game.CardDef {
 // lowered trigger instruction.
 func exileCardWithProwler(g *game.Game, obj *game.StackObject) {
 	engine := NewEngine(nil)
-	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.ExileFromGraveyard{
-		Player:        game.ControllerReference(),
-		Amount:        game.Fixed(1),
-		AllOwners:     true,
-		PublishLinked: game.LinkedKey("exiled-with-source"),
-	}}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.ExileFromGraveyardChoice(
+		game.ControllerReference(),
+		game.Selection{},
+		game.Fixed(1),
+		true,
+		game.LinkedKey("exiled-with-source"),
+	)}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 }
 
 func spellGenericReductionForCaster(g *game.Game, caster game.PlayerID, card *game.CardDef) int {

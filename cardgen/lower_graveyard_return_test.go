@@ -794,7 +794,7 @@ func TestLowerTwoGraveyardReturnsAdvanceCardSlot(t *testing.T) {
 // TestLowerChosenCardGraveyardReturnToHand covers the non-target "Return a
 // <filter> card from your graveyard to your hand" recursion wording, which is
 // chosen at resolution rather than targeted and lowers to a
-// game.ReturnFromGraveyard primitive carrying the card filter.
+// game.ChooseFromZone primitive carrying the card filter.
 func TestLowerChosenCardGraveyardReturnToHand(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -807,18 +807,18 @@ func TestLowerChosenCardGraveyardReturnToHand(t *testing.T) {
 	if len(mode.Targets) != 0 {
 		t.Fatalf("targets = %#v, want none", mode.Targets)
 	}
-	ret, ok := mode.Sequence[0].Primitive.(game.ReturnFromGraveyard)
+	ret, ok := mode.Sequence[0].Primitive.(game.ChooseFromZone)
 	if !ok {
-		t.Fatalf("primitive = %T, want game.ReturnFromGraveyard", mode.Sequence[0].Primitive)
+		t.Fatalf("primitive = %T, want game.ChooseFromZone", mode.Sequence[0].Primitive)
 	}
 	if ret.Player.Kind() != game.PlayerReferenceController {
 		t.Fatalf("player = %#v, want controller", ret.Player)
 	}
-	if ret.Amount.Value() != 1 {
-		t.Fatalf("amount = %#v, want fixed one", ret.Amount)
+	if ret.Quantity.Value() != 1 {
+		t.Fatalf("amount = %#v, want fixed one", ret.Quantity)
 	}
-	if !slices.Equal(ret.Selection.RequiredTypesAny, []types.Card{types.Creature, types.Planeswalker}) {
-		t.Fatalf("selection = %#v", ret.Selection)
+	if !slices.Equal(ret.Filter.RequiredTypesAny, []types.Card{types.Creature, types.Planeswalker}) {
+		t.Fatalf("selection = %#v", ret.Filter)
 	}
 }
 
@@ -833,12 +833,12 @@ func TestLowerChosenPlainCardGraveyardReturnToHand(t *testing.T) {
 		OracleText: "Return a card from your graveyard to your hand.",
 	})
 	mode := face.SpellAbility.Val.Modes[0]
-	ret, ok := mode.Sequence[0].Primitive.(game.ReturnFromGraveyard)
+	ret, ok := mode.Sequence[0].Primitive.(game.ChooseFromZone)
 	if !ok {
-		t.Fatalf("primitive = %T, want game.ReturnFromGraveyard", mode.Sequence[0].Primitive)
+		t.Fatalf("primitive = %T, want game.ChooseFromZone", mode.Sequence[0].Primitive)
 	}
-	if len(ret.Selection.RequiredTypes) != 0 || len(ret.Selection.RequiredTypesAny) != 0 {
-		t.Fatalf("selection should be unrestricted, got %#v", ret.Selection)
+	if len(ret.Filter.RequiredTypes) != 0 || len(ret.Filter.RequiredTypesAny) != 0 {
+		t.Fatalf("selection should be unrestricted, got %#v", ret.Filter)
 	}
 }
 
@@ -858,18 +858,18 @@ func TestLowerChosenCardGraveyardReturnToBattlefield(t *testing.T) {
 	if len(mode.Targets) != 0 {
 		t.Fatalf("targets = %#v, want none", mode.Targets)
 	}
-	ret, ok := mode.Sequence[0].Primitive.(game.ReturnFromGraveyard)
+	ret, ok := mode.Sequence[0].Primitive.(game.ChooseFromZone)
 	if !ok {
-		t.Fatalf("primitive = %T, want game.ReturnFromGraveyard", mode.Sequence[0].Primitive)
+		t.Fatalf("primitive = %T, want game.ChooseFromZone", mode.Sequence[0].Primitive)
 	}
-	if ret.Destination != zone.Battlefield || ret.EntryTapped {
+	if ret.Destination.Zone != zone.Battlefield || ret.Riders.EntersTapped {
 		t.Fatalf("return = %#v, want battlefield destination not tapped", ret)
 	}
-	if ret.Selection.ManaValue.Val.Op != compare.LessOrEqual || ret.Selection.ManaValue.Val.Value != 3 {
-		t.Fatalf("selection mana value = %#v, want <= 3", ret.Selection.ManaValue)
+	if ret.Filter.ManaValue.Val.Op != compare.LessOrEqual || ret.Filter.ManaValue.Val.Value != 3 {
+		t.Fatalf("selection mana value = %#v, want <= 3", ret.Filter.ManaValue)
 	}
-	if !slices.Equal(ret.Selection.RequiredTypesAny, []types.Card{types.Artifact, types.Creature, types.Enchantment, types.Land, types.Planeswalker, types.Battle}) {
-		t.Fatalf("selection = %#v, want permanent-card union", ret.Selection)
+	if !slices.Equal(ret.Filter.RequiredTypesAny, []types.Card{types.Artifact, types.Creature, types.Enchantment, types.Land, types.Planeswalker, types.Battle}) {
+		t.Fatalf("selection = %#v, want permanent-card union", ret.Filter)
 	}
 }
 
@@ -884,15 +884,15 @@ func TestLowerChosenCardGraveyardReturnToBattlefieldTapped(t *testing.T) {
 		OracleText: "Return a land card from your graveyard to the battlefield tapped.",
 	})
 	mode := face.SpellAbility.Val.Modes[0]
-	ret, ok := mode.Sequence[0].Primitive.(game.ReturnFromGraveyard)
+	ret, ok := mode.Sequence[0].Primitive.(game.ChooseFromZone)
 	if !ok {
-		t.Fatalf("primitive = %T, want game.ReturnFromGraveyard", mode.Sequence[0].Primitive)
+		t.Fatalf("primitive = %T, want game.ChooseFromZone", mode.Sequence[0].Primitive)
 	}
-	if ret.Destination != zone.Battlefield || !ret.EntryTapped {
+	if ret.Destination.Zone != zone.Battlefield || !ret.Riders.EntersTapped {
 		t.Fatalf("return = %#v, want battlefield destination tapped", ret)
 	}
-	if !slices.Equal(ret.Selection.RequiredTypes, []types.Card{types.Land}) {
-		t.Fatalf("selection = %#v, want land", ret.Selection)
+	if !slices.Equal(ret.Filter.RequiredTypes, []types.Card{types.Land}) {
+		t.Fatalf("selection = %#v, want land", ret.Filter)
 	}
 }
 
@@ -916,9 +916,9 @@ func TestLowerMillThenChosenGraveyardReanimateSequence(t *testing.T) {
 	if !ok || mill.Amount.Value() != 3 {
 		t.Fatalf("first instruction = %#v, want Mill 3", mode.Sequence[0].Primitive)
 	}
-	ret, ok := mode.Sequence[1].Primitive.(game.ReturnFromGraveyard)
-	if !ok || ret.Destination != zone.Battlefield {
-		t.Fatalf("second instruction = %#v, want battlefield ReturnFromGraveyard", mode.Sequence[1].Primitive)
+	ret, ok := mode.Sequence[1].Primitive.(game.ChooseFromZone)
+	if !ok || ret.Destination.Zone != zone.Battlefield {
+		t.Fatalf("second instruction = %#v, want battlefield ChooseFromZone", mode.Sequence[1].Primitive)
 	}
 }
 

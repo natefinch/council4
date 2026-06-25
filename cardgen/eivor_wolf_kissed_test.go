@@ -41,10 +41,10 @@ func TestGenerateExecutableCardSourceEivorWolfKissed(t *testing.T) {
 		"game.Mill{",
 		"Kind:       game.DynamicAmountEventDamage",
 		"PublishLinked: game.LinkedKey(\"milled-cards\")",
-		"Selection:   game.Selection{SubtypesAny: []types.Sub{types.Sub(\"Saga\")}}",
-		"Selection:   game.Selection{RequiredTypes: []types.Card{types.Land}}",
-		"FromLinked:  game.LinkedKey(\"milled-cards\")",
-		"Destination: zone.Battlefield",
+		"Filter:     game.Selection{SubtypesAny: []types.Sub{types.Sub(\"Saga\")}}",
+		"Filter:     game.Selection{RequiredTypes: []types.Card{types.Land}}",
+		"FromLinked: game.LinkedKey(\"milled-cards\")",
+		"Zone: zone.Battlefield",
 		"Optional: true",
 	} {
 		if !strings.Contains(source, want) {
@@ -91,22 +91,22 @@ func TestLowerEivorMillsThatManyThenOptionalOneOfEachToBattlefield(t *testing.T)
 		{RequiredTypes: []types.Card{types.Land}},
 	}
 	for i, want := range wantSelections {
-		put, ok := sequence[i+1].Primitive.(game.ReturnFromGraveyard)
+		put, ok := sequence[i+1].Primitive.(game.ChooseFromZone)
 		if !ok {
-			t.Fatalf("sequence[%d] = %#v, want ReturnFromGraveyard", i+1, sequence[i+1].Primitive)
+			t.Fatalf("sequence[%d] = %#v, want ChooseFromZone", i+1, sequence[i+1].Primitive)
 		}
 		if !sequence[i+1].Optional {
 			t.Fatalf("put %d is not optional", i)
 		}
-		if put.Destination != zone.Battlefield {
-			t.Fatalf("put %d destination = %v, want Battlefield", i, put.Destination)
+		if put.Destination.Zone != zone.Battlefield {
+			t.Fatalf("put %d destination = %v, want Battlefield", i, put.Destination.Zone)
 		}
-		if put.FromLinked != milledCardsLinkKey {
-			t.Fatalf("put %d FromLinked = %q", i, put.FromLinked)
+		if put.Riders.FromLinked != milledCardsLinkKey {
+			t.Fatalf("put %d FromLinked = %q", i, put.Riders.FromLinked)
 		}
-		if len(put.Selection.SubtypesAny) != len(want.SubtypesAny) ||
-			len(put.Selection.RequiredTypes) != len(want.RequiredTypes) {
-			t.Fatalf("put %d selection = %#v, want %#v", i, put.Selection, want)
+		if len(put.Filter.SubtypesAny) != len(want.SubtypesAny) ||
+			len(put.Filter.RequiredTypes) != len(want.RequiredTypes) {
+			t.Fatalf("put %d selection = %#v, want %#v", i, put.Filter, want)
 		}
 	}
 }

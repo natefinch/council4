@@ -33,7 +33,7 @@ func TestGenerateExecutableCardSourceAesirEscapeValhalla(t *testing.T) {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	for _, wanted := range []string{
-		"Primitive: game.ExileFromGraveyard{",
+		"Primitive: game.ChooseFromZone{",
 		`PublishLinked: game.LinkedKey("exile-graveyard-card"),`,
 		"Primitive: game.GainLife{",
 		"Kind:       game.DynamicAmountObjectManaValue,",

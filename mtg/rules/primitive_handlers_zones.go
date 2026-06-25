@@ -782,84 +782,17 @@ func handleExile(r *effectResolver, prim game.Exile) effectResolved {
 	return res
 }
 
-// handleExileFromHand exiles up to prim.Amount cards a player chooses from hand
-// that match prim.Selection, used for "you may exile a nonartifact, nonland card
-// from your hand" (Chrome Mox's imprint). The whole instruction is optional, so
-// the engine has already gathered the player's consent before this runs; here the
-// player chooses which matching card to exile, if any. When prim.PublishLinked is
-// set, the exiled card is linked to the source permanent by its object identity,
-// so the imprint follows that specific object and a re-entered object (new object
-// ID) finds no prior link. With no matching card, nothing is exiled and no link is
-// recorded, leaving any reader (the imprint mana ability) with an empty color set.
-// handleExileFromHand re-expresses the "exile a <filter> card from your hand"
-// choice as a thin game.ChooseFromZone consumer: the resolving player chooses up
-// to prim.Amount hand cards matching prim.Selection and each moves to exile. When
-// PublishLinked is set the chosen cards are imprinted on the source permanent
-// (object-scoped, so a re-entered object starts without an imprint — Chrome Mox).
-// The envelope's candidate gathering, choice bounds, and movement match the prior
-// hand-rolled resolution; res.amount preserves the requested quantity.
-func handleExileFromHand(r *effectResolver, prim game.ExileFromHand) effectResolved {
-	res := r.resolveChooseFromZone(game.ChooseFromZone{
-		Player:      prim.Player,
-		SourceZone:  zone.Hand,
-		Filter:      prim.Selection,
-		Quantity:    prim.Amount,
-		Count:       game.ChooseExactly,
-		Destination: game.ChooseDestination{Zone: zone.Exile},
-		Riders: game.ChooseRiders{
-			PublishLinked:       prim.PublishLinked,
-			PublishObjectScoped: true,
-		},
-		Prompt: "Choose a card to exile",
-	})
-	res.amount = r.quantity(prim.Amount)
-	return res
-}
-
-// handleExileFromGraveyard exiles up to prim.Amount cards a player chooses from
-// their own graveyard that match prim.Selection, used for the non-target
-// graveyard wording "(you may) exile a <filter> card from your graveyard"
-// (Masked Vandal, the Imoen cycle, Aphemia, ...). A "you may" wrapper is
-// expressed by the enclosing instruction's Optional flag, so the engine has
-// already gathered consent before this runs; here the player chooses which
-// matching card to exile, if any. res.succeeded is set when at least one card is
-// exiled, so an "if you do" gate on the published result resolves only when the
-// player actually exiled a card. With no matching card, nothing is exiled.
-func handleExileFromGraveyard(r *effectResolver, prim game.ExileFromGraveyard) effectResolved {
-	res := r.resolveChooseFromZone(game.ChooseFromZone{
-		Player:      prim.Player,
-		SourceZone:  zone.Graveyard,
-		AllOwners:   prim.AllOwners,
-		Filter:      prim.Selection,
-		Quantity:    prim.Amount,
-		Count:       game.ChooseExactly,
-		Destination: game.ChooseDestination{Zone: zone.Exile},
-		Riders:      game.ChooseRiders{PublishLinked: prim.PublishLinked},
-		Prompt:      "Choose a card to exile",
-	})
-	res.amount = r.quantity(prim.Amount)
-	return res
-}
-
-// handlePutFromHand puts up to prim.Amount cards a player chooses from hand that
-// match prim.Selection onto the battlefield under that player's control, used for
-// ramp / cheat-into-play wording such as "put a land card from your hand onto the
-// battlefield". A "you may" wrapper is expressed by the enclosing instruction's
-// Optional flag, so the engine has already gathered consent before this runs;
-// here the player chooses which matching card to put. With no matching card,
-// nothing is put.
-func handlePutFromHand(r *effectResolver, prim game.PutFromHand) effectResolved {
-	res := r.resolveChooseFromZone(game.ChooseFromZone{
-		Player:      prim.Player,
-		SourceZone:  zone.Hand,
-		Filter:      prim.Selection,
-		Quantity:    prim.Amount,
-		Count:       game.ChooseExactly,
-		Destination: game.ChooseDestination{Zone: zone.Battlefield},
-		Riders:      game.ChooseRiders{EntersTapped: prim.EntersTapped},
-		Prompt:      "Choose a card to put onto the battlefield",
-	})
-	res.amount = r.quantity(prim.Amount)
+// handleChooseFromZone resolves the canonical choose-from-zone primitive: the
+// resolving player chooses cards from prim.SourceZone matching prim.Filter, and
+// each chosen card moves to prim.Destination with prim.Riders applied. It is the
+// single runtime handler for the retired per-family wrappers (exile from hand /
+// graveyard, put from hand, return from graveyard), all of which now lower to a
+// game.ChooseFromZone envelope. res.amount preserves the requested quantity (the
+// historical resolution reported the requested amount rather than the number
+// chosen).
+func handleChooseFromZone(r *effectResolver, prim game.ChooseFromZone) effectResolved {
+	res := r.resolveChooseFromZone(prim)
+	res.amount = r.quantity(prim.Quantity)
 	return res
 }
 
@@ -925,48 +858,6 @@ func handleCastForFree(r *effectResolver, prim game.CastForFree) effectResolved 
 			res.succeeded = true
 		}
 	}
-	return res
-}
-
-// handleReturnFromGraveyard re-expresses the graveyard-recursion choice as a thin
-// game.ChooseFromZone consumer: the resolving player chooses up to prim.Amount
-// graveyard cards matching prim.Selection (any number with prim.AnyNumber, capped
-// by prim.MaxTotalManaValue) and the chosen cards move to their owner's hand or,
-// for a battlefield destination, enter under the player's control tapped when
-// prim.EntryTapped is set. The envelope's candidate gathering (FromLinked, the
-// graveyard source, the selection filter), choice bounds, and movement match the
-// historical hand-rolled resolution exactly. res.amount preserves the requested
-// quantity (the original resolution reported the requested amount rather than the
-// number chosen).
-func handleReturnFromGraveyard(r *effectResolver, prim game.ReturnFromGraveyard) effectResolved {
-	destination := zone.Hand
-	prompt := "Choose a card to return to your hand"
-	if prim.Destination == zone.Battlefield {
-		destination = zone.Battlefield
-		prompt = "Choose a card to return to the battlefield"
-	}
-	count := game.ChooseExactly
-	if prim.AnyNumber {
-		// "Put any number of <filter> cards from among them onto the
-		// battlefield": the upper bound is the whole matching pool rather than a
-		// fixed count, so the player may choose any subset up to all of them.
-		count = game.ChooseAnyNumber
-	}
-	res := r.resolveChooseFromZone(game.ChooseFromZone{
-		Player:      prim.Player,
-		SourceZone:  zone.Graveyard,
-		Filter:      prim.Selection,
-		Quantity:    prim.Amount,
-		Count:       count,
-		Destination: game.ChooseDestination{Zone: destination},
-		Riders: game.ChooseRiders{
-			EntersTapped:      prim.EntryTapped,
-			MaxTotalManaValue: prim.MaxTotalManaValue,
-			FromLinked:        prim.FromLinked,
-		},
-		Prompt: prompt,
-	})
-	res.amount = r.quantity(prim.Amount)
 	return res
 }
 

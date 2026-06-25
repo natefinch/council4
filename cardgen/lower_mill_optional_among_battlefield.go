@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // lowerMillThenOptionalAmongOneOfEachToBattlefield lowers the ordered sequence
@@ -84,13 +85,16 @@ func lowerMillThenOptionalAmongOneOfEachToBattlefield(ctx contentCtx) (game.Abil
 	}
 	for _, selection := range selections {
 		sequence = append(sequence, game.Instruction{
-			Primitive: game.ReturnFromGraveyard{
-				Player:      game.ControllerReference(),
-				Amount:      game.Fixed(1),
-				Destination: zone.Battlefield,
-				FromLinked:  milledCardsLinkKey,
-				Selection:   selection,
-			},
+			Primitive: game.ReturnFromGraveyardChoice(
+				game.ControllerReference(),
+				selection,
+				game.Fixed(1),
+				zone.Battlefield,
+				false,
+				opt.V[int]{},
+				false,
+				milledCardsLinkKey,
+			),
 			Optional: true,
 		})
 	}
@@ -163,17 +167,20 @@ func lowerMillThenPutAmongToBattlefield(ctx contentCtx) (game.AbilityContent, bo
 	if !ok {
 		return game.AbilityContent{}, false
 	}
-	returnPrimitive := game.ReturnFromGraveyard{
-		Player:      game.ControllerReference(),
-		Destination: zone.Battlefield,
-		FromLinked:  milledCardsLinkKey,
-		Selection:   selection,
-		EntryTapped: put.EntersTapped,
-		AnyNumber:   anyNumber,
-	}
+	amount := game.Quantity{}
 	if !anyNumber {
-		returnPrimitive.Amount = game.Fixed(1)
+		amount = game.Fixed(1)
 	}
+	returnPrimitive := game.ReturnFromGraveyardChoice(
+		game.ControllerReference(),
+		selection,
+		amount,
+		zone.Battlefield,
+		put.EntersTapped,
+		opt.V[int]{},
+		anyNumber,
+		milledCardsLinkKey,
+	)
 	sequence := []game.Instruction{
 		{
 			Primitive: game.Mill{

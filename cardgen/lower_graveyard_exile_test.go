@@ -227,17 +227,17 @@ func TestLowerControllerGraveyardChoiceExile(t *testing.T) {
 	if len(mode.Targets) != 0 {
 		t.Fatalf("targets = %#v, want none", mode.Targets)
 	}
-	exile, ok := mode.Sequence[0].Primitive.(game.ExileFromGraveyard)
+	exile, ok := mode.Sequence[0].Primitive.(game.ChooseFromZone)
 	if !ok {
-		t.Fatalf("primitive = %T, want game.ExileFromGraveyard", mode.Sequence[0].Primitive)
+		t.Fatalf("primitive = %T, want game.ChooseFromZone", mode.Sequence[0].Primitive)
 	}
 	if exile.Player.Kind() != game.PlayerReferenceController ||
-		exile.Amount.IsDynamic() || exile.Amount.Value() != 1 {
+		exile.Quantity.IsDynamic() || exile.Quantity.Value() != 1 {
 		t.Fatalf("exile = %#v", exile)
 	}
-	if !slices.Equal(exile.Selection.RequiredTypes, []types.Card{types.Creature}) ||
-		exile.Selection.Controller != game.ControllerYou {
-		t.Fatalf("selection = %#v", exile.Selection)
+	if !slices.Equal(exile.Filter.RequiredTypes, []types.Card{types.Creature}) ||
+		exile.Filter.Controller != game.ControllerYou {
+		t.Fatalf("selection = %#v", exile.Filter)
 	}
 }
 
@@ -257,12 +257,12 @@ func TestLowerOptionalGraveyardExileThenGatedEffect(t *testing.T) {
 	if len(mode.Sequence) != 2 {
 		t.Fatalf("sequence = %#v, want two instructions", mode.Sequence)
 	}
-	exile, ok := mode.Sequence[0].Primitive.(game.ExileFromGraveyard)
+	exile, ok := mode.Sequence[0].Primitive.(game.ChooseFromZone)
 	if !ok {
-		t.Fatalf("primitive[0] = %T, want game.ExileFromGraveyard", mode.Sequence[0].Primitive)
+		t.Fatalf("primitive[0] = %T, want game.ChooseFromZone", mode.Sequence[0].Primitive)
 	}
-	if !slices.Equal(exile.Selection.RequiredTypes, []types.Card{types.Creature}) {
-		t.Fatalf("selection = %#v", exile.Selection)
+	if !slices.Equal(exile.Filter.RequiredTypes, []types.Card{types.Creature}) {
+		t.Fatalf("selection = %#v", exile.Filter)
 	}
 	if !mode.Sequence[0].Optional ||
 		mode.Sequence[0].PublishResult != game.ResultKey("if-you-do") {
@@ -288,8 +288,8 @@ func TestLowerControllerGraveyardChoiceExileFailsClosedTargeted(t *testing.T) {
 		OracleText: "Exile target creature card from your graveyard.",
 	})
 	mode := face.SpellAbility.Val.Modes[0]
-	if _, ok := mode.Sequence[0].Primitive.(game.ExileFromGraveyard); ok {
-		t.Fatal("targeted graveyard exile must not lower to game.ExileFromGraveyard")
+	if _, ok := mode.Sequence[0].Primitive.(game.ChooseFromZone); ok {
+		t.Fatal("targeted graveyard exile must not lower to game.ChooseFromZone")
 	}
 }
 

@@ -46,12 +46,13 @@ func TestExileFromGraveyardPublishesLinkedManaValue(t *testing.T) {
 	resolver := newEffectResolver(engine, g, obj,
 		[game.NumPlayers]PlayerAgent{game.Player1: defaultChoiceAgent{}}, &TurnLog{})
 
-	resolver.resolveInstruction(&game.Instruction{Primitive: game.ExileFromGraveyard{
-		Player:        game.ControllerReference(),
-		Selection:     game.Selection{},
-		Amount:        game.Fixed(1),
-		PublishLinked: aesirExileLink,
-	}})
+	resolver.resolveInstruction(&game.Instruction{Primitive: game.ExileFromGraveyardChoice(
+		game.ControllerReference(),
+		game.Selection{},
+		game.Fixed(1),
+		false,
+		aesirExileLink,
+	)})
 
 	if !g.Players[game.Player1].Exile.Contains(gyCard) {
 		t.Fatalf("graveyard card was not exiled: exile=%v", g.Players[game.Player1].Exile.All())

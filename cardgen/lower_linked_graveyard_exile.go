@@ -18,7 +18,7 @@ const exiledWithSourceKey = game.LinkedKey("exiled-with-source")
 // lowerLinkedAnyGraveyardChoiceExile lowers the non-target, any-graveyard exile
 // "exile a <filter> card from a graveyard" (Cemetery Prowler's enter-or-attack
 // trigger), where the controller chooses one card from any player's graveyard at
-// resolution. It produces one game.ExileFromGraveyard whose AllOwners flag widens
+// resolution. It produces one game.ChooseFromZone whose AllOwners flag widens
 // the candidate pool to every player's graveyard and whose PublishLinked records
 // each exiled card under exiledWithSourceKey, so a sibling static on the same
 // source can read the cards exiled with it.
@@ -73,12 +73,12 @@ func lowerLinkedAnyGraveyardChoiceExile(ctx contentCtx) (game.AbilityContent, bo
 		return game.AbilityContent{}, false
 	}
 	return game.Mode{Sequence: []game.Instruction{{
-		Primitive: game.ExileFromGraveyard{
-			Player:        game.ControllerReference(),
-			Selection:     selection,
-			Amount:        game.Fixed(effect.Amount.Value),
-			AllOwners:     true,
-			PublishLinked: exiledWithSourceKey,
-		},
+		Primitive: game.ExileFromGraveyardChoice(
+			game.ControllerReference(),
+			selection,
+			game.Fixed(effect.Amount.Value),
+			true,
+			exiledWithSourceKey,
+		),
 	}}}.Ability(), true
 }

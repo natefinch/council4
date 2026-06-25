@@ -35,13 +35,16 @@ func creatureWithManaValue(name string, value int) *game.CardDef {
 
 func totalManaValueReanimationInstruction(amount, maxTotal int) *game.Instruction {
 	return &game.Instruction{
-		Primitive: game.ReturnFromGraveyard{
-			Player:            game.ControllerReference(),
-			Selection:         game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou},
-			Amount:            game.Fixed(amount),
-			Destination:       zone.Battlefield,
-			MaxTotalManaValue: opt.Val(maxTotal),
-		},
+		Primitive: game.ReturnFromGraveyardChoice(
+			game.ControllerReference(),
+			game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou},
+			game.Fixed(amount),
+			zone.Battlefield,
+			false,
+			opt.Val(maxTotal),
+			false,
+			"",
+		),
 	}
 }
 

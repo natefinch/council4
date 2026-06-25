@@ -22,11 +22,12 @@ func (defaultChoiceAgent) ChooseChoice(_ PlayerObservation, request game.ChoiceR
 
 func putLandFromHandInstruction() *game.Instruction {
 	return &game.Instruction{
-		Primitive: game.PutFromHand{
-			Player:    game.ControllerReference(),
-			Selection: game.Selection{RequiredTypes: []types.Card{types.Land}},
-			Amount:    game.Fixed(1),
-		},
+		Primitive: game.PutFromHandChoice(
+			game.ControllerReference(),
+			game.Selection{RequiredTypes: []types.Card{types.Land}},
+			game.Fixed(1),
+			false,
+		),
 	}
 }
 

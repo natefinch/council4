@@ -36,8 +36,8 @@ func TestGenerateExecutableCemeteryProwler(t *testing.T) {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	for _, wanted := range []string{
-		"Primitive: game.ExileFromGraveyard{",
-		"AllOwners:     true,",
+		"Primitive: game.ChooseFromZone{",
+		"AllOwners:  true,",
 		`PublishLinked: game.LinkedKey("exiled-with-source"),`,
 		"Kind:           game.RuleEffectCostModifier,",
 		"AffectedPlayer: game.PlayerYou,",

@@ -10,11 +10,13 @@ import (
 
 func exileCreatureFromGraveyardInstruction() *game.Instruction {
 	return &game.Instruction{
-		Primitive: game.ExileFromGraveyard{
-			Player:    game.ControllerReference(),
-			Selection: game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou},
-			Amount:    game.Fixed(1),
-		},
+		Primitive: game.ExileFromGraveyardChoice(
+			game.ControllerReference(),
+			game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou},
+			game.Fixed(1),
+			false,
+			"",
+		),
 	}
 }
 
@@ -102,11 +104,13 @@ func TestExileFromGraveyardExilesMultipleChosenCards(t *testing.T) {
 	}})
 
 	instruction := &game.Instruction{
-		Primitive: game.ExileFromGraveyard{
-			Player:    game.ControllerReference(),
-			Selection: game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou},
-			Amount:    game.Fixed(2),
-		},
+		Primitive: game.ExileFromGraveyardChoice(
+			game.ControllerReference(),
+			game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou},
+			game.Fixed(2),
+			false,
+			"",
+		),
 	}
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: defaultChoiceAgent{}}
 	engine.resolveInstructionWithChoices(g, obj, instruction, agents, &TurnLog{})

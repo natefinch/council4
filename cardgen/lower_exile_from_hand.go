@@ -10,7 +10,7 @@ import (
 // lowerExileFromHandContent lowers "exile a <filter> card from your hand" — the
 // imprint effect of Chrome Mox ("you may exile a nonartifact, nonland card from
 // your hand"), reached after its "you may" prefix is stripped to the mandatory
-// core. It produces one game.ExileFromHand instruction that has the controller
+// core. It produces one game.ChooseFromZone instruction that has the controller
 // exile one matching card from their own hand and publishes the imprint link by
 // object identity, so a sibling "one mana of any of the exiled card's colors"
 // mana ability on the same face can read the imprinted card's colors.
@@ -65,11 +65,11 @@ func lowerExileFromHandContent(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	return game.Mode{Sequence: []game.Instruction{{
-		Primitive: game.ExileFromHand{
-			Player:        game.ControllerReference(),
-			Selection:     selection,
-			Amount:        game.Fixed(1),
-			PublishLinked: game.LinkedKey(imprintLinkKey),
-		},
+		Primitive: game.ExileFromHandChoice(
+			game.ControllerReference(),
+			selection,
+			game.Fixed(1),
+			game.LinkedKey(imprintLinkKey),
+		),
 	}}}.Ability(), true
 }
