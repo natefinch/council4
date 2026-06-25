@@ -10,15 +10,71 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// remapping to all target references in sequence. Unlike rebaseTargetedSequence
-// which adds a uniform offset, this function looks up each local target index
-// in localToGame and replaces it with the corresponding accumulated game index.
-// This is needed for mixed inherited+owned target clauses where inherited
-// targets live at their original accumulated indices while newly-owned targets
-// start at a later position.
+// targetIndexKind identifies the numbering domain of a clause-local target
+// index so a transform can map it correctly. Object, player, stack, and
+// attached-permanent target references share the stack object's global target
+// list (targetIndexObject); card-reference target indices are numbered among
+// card targets only (targetIndexCard).
+type targetIndexKind uint8
+
+const (
+	targetIndexObject targetIndexKind = iota
+	targetIndexCard
+)
+
+// targetIndexTransform maps a clause-local target index in the given numbering
+// domain to its accumulated game position, returning false if it cannot be
+// expressed (the carrying primitive then fails closed).
+type targetIndexTransform func(kind targetIndexKind, old int) (int, bool)
+
+// remapTargetedSequence rewrites every target reference in a clause's primitives
+// by looking each clause-local index up in localToGame. Unlike
+// rebaseTargetedSequence, which adds a uniform offset, this replaces each local
+// target index with the corresponding accumulated game index. This is needed for
+// mixed inherited+owned target clauses where inherited targets live at their
+// original accumulated indices while newly-owned targets start at a later
+// position. Card-reference target indices are numbered among card targets only,
+// which the global localToGame table cannot express, so a card-moving primitive
+// in a mixed clause fails closed rather than risk a wrong slot.
 func remapTargetedSequence(sequence []game.Instruction, localToGame []int) bool {
+	transform := func(kind targetIndexKind, old int) (int, bool) {
+		if kind != targetIndexObject {
+			return 0, false
+		}
+		if old < 0 || old >= len(localToGame) {
+			return 0, false
+		}
+		return localToGame[old], true
+	}
+	return transformTargetedSequence(sequence, transform)
+}
+
+// rebaseTargetedSequence shifts every target reference in a clause's primitives
+// to its accumulated game position. offset is the number of preceding
+// accumulated target specs (the base for object/player target indices, which are
+// global positions in the stack object's target list). cardOffset is the number
+// of preceding accumulated card target specs (the base for card-reference target
+// indices, which the runtime counts among card targets only). The two bases
+// coincide unless a non-card target spec precedes a card reference.
+func rebaseTargetedSequence(sequence []game.Instruction, offset, cardOffset int) bool {
+	return transformTargetedSequence(sequence, rebaseTransform(offset, cardOffset))
+}
+
+// rebaseTransform builds the uniform-offset transform shared by the rebase entry
+// points: object-domain indices shift by offset, card-domain indices by
+// cardOffset, and both always succeed.
+func rebaseTransform(offset, cardOffset int) targetIndexTransform {
+	return func(kind targetIndexKind, old int) (int, bool) {
+		if kind == targetIndexCard {
+			return old + cardOffset, true
+		}
+		return old + offset, true
+	}
+}
+
+func transformTargetedSequence(sequence []game.Instruction, transform targetIndexTransform) bool {
 	for i := range sequence {
-		primitive, ok := remapTargetedPrimitive(sequence[i].Primitive, localToGame)
+		primitive, ok := transformPrimitiveTargetIndices(sequence[i].Primitive, transform)
 		if !ok {
 			return false
 		}
@@ -27,26 +83,38 @@ func remapTargetedSequence(sequence []game.Instruction, localToGame []int) bool 
 	return true
 }
 
-func remapTargetedPrimitive(primitive game.Primitive, localToGame []int) (game.Primitive, bool) {
-	// Explicit allowlist. The card-moving primitives game.MoveCard and
-	// game.PutOnBattlefield are intentionally excluded here: their card-target
-	// references are numbered among card targets only, which the global
-	// localToGame remap used by the mixed inherited+owned path cannot express, so
-	// a mixed-target card-moving clause fails closed rather than risk a wrong slot.
+// rebaseTargetedPrimitive rebases a single primitive's target references by a
+// uniform offset. It is a thin adapter over the shared
+// transformPrimitiveTargetIndices walker, retained for targeted tests.
+func rebaseTargetedPrimitive(primitive game.Primitive, offset, cardOffset int) (game.Primitive, bool) {
+	return transformPrimitiveTargetIndices(primitive, rebaseTransform(offset, cardOffset))
+}
+
+// transformPrimitiveTargetIndices is the single target-index traversal shared by
+// the remap (lookup-table) and rebase (uniform-offset) paths. It walks every
+// target-bearing primitive variant — including nested damage recipients and
+// amounts, prevent-damage shields, continuous-effect and token recipients, and
+// zone-movement card/player references — applying transform to each clause-local
+// target index in its proper numbering domain. This is the ONE place to extend
+// when a new target-bearing primitive kind is added; the completeness test in
+// lower_remap_test.go guards every variant so a new primitive cannot silently
+// omit transform support. Keep it as an explicit allowlist so an unhandled
+// target-bearing primitive fails closed rather than retain a clause-local index.
+func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetIndexTransform) (game.Primitive, bool) {
 	if value, ok := primitive.(game.Damage); ok {
-		recipient, ok := remapDamageRecipient(value.Recipient, localToGame)
+		recipient, ok := transformDamageRecipient(value.Recipient, transform)
 		if !ok {
 			return nil, false
 		}
 		value.Recipient = recipient
 		if value.DamageSource.Exists {
-			source, ok := remapObjectReference(value.DamageSource.Val, localToGame)
+			source, ok := transformObjectReference(value.DamageSource.Val, transform)
 			if !ok {
 				return nil, false
 			}
 			value.DamageSource = opt.Val(source)
 		}
-		amount, ok := remapDamageAmount(value.Amount, localToGame)
+		amount, ok := transformDamageAmount(value.Amount, transform)
 		if !ok {
 			return nil, false
 		}
@@ -57,134 +125,221 @@ func remapTargetedPrimitive(primitive game.Primitive, localToGame []int) (game.P
 		if value.Group.Valid() {
 			return nil, false
 		}
-		value.Object, ok = remapObjectReference(value.Object, localToGame)
+		value.Object, ok = transformObjectReference(value.Object, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.AddCounter); ok {
-		value.Object, ok = remapObjectReference(value.Object, localToGame)
+		value.Object, ok = transformObjectReference(value.Object, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.AddPlayerCounter); ok {
-		value.Player, ok = remapPlayerReference(value.Player, localToGame)
+		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.ModifyPT); ok {
-		value.Object, ok = remapObjectReference(value.Object, localToGame)
+		value.Object, ok = transformObjectReference(value.Object, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.Fight); ok {
 		var ok bool
-		value.Object, ok = remapObjectReference(value.Object, localToGame)
+		value.Object, ok = transformObjectReference(value.Object, transform)
 		if !ok {
 			return nil, false
 		}
-		value.RelatedObject, ok = remapObjectReference(value.RelatedObject, localToGame)
+		value.RelatedObject, ok = transformObjectReference(value.RelatedObject, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.Tap); ok {
-		value.Object, ok = remapObjectReference(value.Object, localToGame)
+		value.Object, ok = transformObjectReference(value.Object, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.PreventDamage); ok {
-		if value.Global {
-			return value, true
-		}
-		if value.Player.Kind() != game.PlayerReferenceNone {
-			value.Player, ok = remapPlayerReference(value.Player, localToGame)
-			return value, ok
-		}
-		value.Object, ok = remapObjectReference(value.Object, localToGame)
-		return value, ok
+		return transformPreventDamage(value, transform)
 	}
 	if value, ok := primitive.(game.Untap); ok {
 		if value.Group.Valid() {
 			return nil, false
 		}
-		value.Object, ok = remapObjectReference(value.Object, localToGame)
+		value.Object, ok = transformObjectReference(value.Object, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.RemoveFromCombat); ok {
-		value.Object, ok = remapObjectReference(value.Object, localToGame)
+		value.Object, ok = transformObjectReference(value.Object, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.Exile); ok {
 		if value.Group.Valid() {
 			return nil, false
 		}
-		value.Object, ok = remapObjectReference(value.Object, localToGame)
+		value.Object, ok = transformObjectReference(value.Object, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.Bounce); ok {
 		if value.Group.Valid() {
 			return nil, false
 		}
-		value.Object, ok = remapObjectReference(value.Object, localToGame)
+		value.Object, ok = transformObjectReference(value.Object, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.CounterObject); ok {
-		value.Object, ok = remapObjectReference(value.Object, localToGame)
+		value.Object, ok = transformObjectReference(value.Object, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.Regenerate); ok {
-		value.Object, ok = remapObjectReference(value.Object, localToGame)
+		value.Object, ok = transformObjectReference(value.Object, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.Draw); ok {
-		value.Player, ok = remapPlayerReference(value.Player, localToGame)
+		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.Discard); ok {
-		value.Player, ok = remapPlayerReference(value.Player, localToGame)
+		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.Mill); ok {
-		value.Player, ok = remapPlayerReference(value.Player, localToGame)
+		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.ExileTopOfLibrary); ok {
-		value.Player, ok = remapPlayerReference(value.Player, localToGame)
+		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.RevealUntil); ok {
-		value.Player, ok = remapPlayerReference(value.Player, localToGame)
+		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.GainLife); ok {
-		value.Player, ok = remapPlayerReference(value.Player, localToGame)
+		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.LoseLife); ok {
-		value.Player, ok = remapPlayerReference(value.Player, localToGame)
+		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.CreateDelayedTrigger); ok {
 		return value, true
 	}
+	if value, ok := primitive.(game.ApplyContinuous); ok {
+		if value.Object.Exists {
+			transformed, ok := transformObjectReference(value.Object.Val, transform)
+			if !ok {
+				return nil, false
+			}
+			value.Object = opt.Val(transformed)
+		}
+		return value, true
+	}
+	if value, ok := primitive.(game.CreateToken); ok {
+		if value.Recipient.Exists {
+			transformed, ok := transformPlayerReference(value.Recipient.Val, transform)
+			if !ok {
+				return nil, false
+			}
+			value.Recipient = opt.Val(transformed)
+		}
+		return value, true
+	}
+	return transformZonePrimitiveTargetIndices(primitive, transform)
+}
+
+// transformZonePrimitiveTargetIndices handles the zone-movement primitives whose
+// target references span players and cards, split out of
+// transformPrimitiveTargetIndices to keep that allowlist's maintainability index
+// within bounds.
+func transformZonePrimitiveTargetIndices(primitive game.Primitive, transform targetIndexTransform) (game.Primitive, bool) {
+	if value, ok := primitive.(game.MoveCard); ok {
+		// The player-zone group form ("Exile target player's graveyard.") carries
+		// a target-bearing Player reference; transform it against the accumulated
+		// target list and fail closed if it cannot be expressed. The single-card
+		// form leaves Player unset and transforms its Card slot instead.
+		if value.Player.Kind() != game.PlayerReferenceNone {
+			transformed, ok := transformPlayerReference(value.Player, transform)
+			if !ok {
+				return nil, false
+			}
+			value.Player = transformed
+			return value, true
+		}
+		card, ok := transformCardReference(value.Card, transform)
+		if !ok {
+			return nil, false
+		}
+		value.Card = card
+		return value, true
+	}
+	if value, ok := primitive.(game.PutOnBattlefield); ok {
+		// Entry counters and continuous effects may embed their own target
+		// references; transforming those is not modeled, so fail closed rather
+		// than leave a clause-local index pointing at the wrong accumulated
+		// target.
+		if len(value.EntryCounters) != 0 || len(value.ContinuousEffects) != 0 {
+			return nil, false
+		}
+		source, ok := transformBattlefieldSource(value.Source, transform)
+		if !ok {
+			return nil, false
+		}
+		value.Source = source
+		if value.Recipient.Exists {
+			recipient, ok := transformPlayerReference(value.Recipient.Val, transform)
+			if !ok {
+				return nil, false
+			}
+			value.Recipient = opt.Val(recipient)
+		}
+		return value, true
+	}
 	return nil, false
 }
 
-func remapDamageRecipient(recipient game.DamageRecipient, localToGame []int) (game.DamageRecipient, bool) {
+// transformPreventDamage transforms a prevent-damage primitive's target
+// reference. The shield can reference either a target player or a target object;
+// only one is set, so transform whichever the primitive carries. A global shield
+// carries no target index and passes through.
+func transformPreventDamage(value game.PreventDamage, transform targetIndexTransform) (game.Primitive, bool) {
+	if value.Global {
+		return value, true
+	}
+	var ok bool
+	if value.Player.Kind() != game.PlayerReferenceNone {
+		value.Player, ok = transformPlayerReference(value.Player, transform)
+		return value, ok
+	}
+	value.Object, ok = transformObjectReference(value.Object, transform)
+	return value, ok
+}
+
+func transformDamageRecipient(recipient game.DamageRecipient, transform targetIndexTransform) (game.DamageRecipient, bool) {
 	if object, ok := recipient.AnyTargetObjectReference(); ok {
-		idx := object.TargetIndex()
-		if idx < 0 || idx >= len(localToGame) {
+		idx, ok := transform(targetIndexObject, object.TargetIndex())
+		if !ok {
 			return game.DamageRecipient{}, false
 		}
-		return game.AnyTargetDamageRecipient(localToGame[idx]), true
+		return game.AnyTargetDamageRecipient(idx), true
 	}
 	if object, ok := recipient.ObjectReference(); ok {
-		remapped, valid := remapObjectReference(object, localToGame)
-		return game.ObjectDamageRecipient(remapped), valid
+		transformed, valid := transformObjectReference(object, transform)
+		return game.ObjectDamageRecipient(transformed), valid
 	}
 	if player, ok := recipient.PlayerReference(); ok {
-		remapped, valid := remapPlayerReference(player, localToGame)
-		return game.PlayerDamageRecipient(remapped), valid
+		transformed, valid := transformPlayerReference(player, transform)
+		return game.PlayerDamageRecipient(transformed), valid
+	}
+	if group, ok := recipient.GroupReference(); ok {
+		transformed, valid := transformGroupReference(group, transform)
+		return game.GroupDamageRecipient(transformed), valid
+	}
+	if _, ok := recipient.PlayerGroupReference(); ok {
+		// An opponents/all-players group carries no target index to transform.
+		return recipient, true
 	}
 	return game.DamageRecipient{}, false
 }
 
 // objectReferenceCarriesTargetIndex reports whether an object reference embeds a
-// clause-local target index that must be remapped/rebased when a primitive moves
-// into an accumulated sequence target list.
+// clause-local target index that must be transformed when a primitive moves into
+// an accumulated sequence target list.
 func objectReferenceCarriesTargetIndex(reference game.ObjectReference) bool {
 	switch reference.Kind() {
 	case game.ObjectReferenceTargetPermanent,
@@ -197,16 +352,16 @@ func objectReferenceCarriesTargetIndex(reference game.ObjectReference) bool {
 	}
 }
 
-// remapDamageAmount remaps a damage Quantity whose dynamic formula reads a
-// target's value (e.g. DynamicAmountObjectPower for "equal to its power"). Fixed
-// amounts and dynamic formulas that do not reference a target are returned
+// transformDamageAmount transforms a damage Quantity whose dynamic formula reads
+// a target's value (e.g. DynamicAmountObjectPower for "equal to its power").
+// Fixed amounts and dynamic formulas that do not reference a target are returned
 // unchanged so non-inherited damage stays byte-identical.
-func remapDamageAmount(amount game.Quantity, localToGame []int) (game.Quantity, bool) {
+func transformDamageAmount(amount game.Quantity, transform targetIndexTransform) (game.Quantity, bool) {
 	dynamic := amount.DynamicAmount()
 	if !dynamic.Exists || !objectReferenceCarriesTargetIndex(dynamic.Val.Object) {
 		return amount, true
 	}
-	object, ok := remapObjectReference(dynamic.Val.Object, localToGame)
+	object, ok := transformObjectReference(dynamic.Val.Object, transform)
 	if !ok {
 		return game.Quantity{}, false
 	}
@@ -215,51 +370,51 @@ func remapDamageAmount(amount game.Quantity, localToGame []int) (game.Quantity, 
 	return game.Dynamic(value), true
 }
 
-func remapObjectReference(reference game.ObjectReference, localToGame []int) (game.ObjectReference, bool) {
+func transformObjectReference(reference game.ObjectReference, transform targetIndexTransform) (game.ObjectReference, bool) {
 	switch reference.Kind() {
 	case game.ObjectReferenceTargetPermanent:
-		idx := reference.TargetIndex()
-		if idx < 0 || idx >= len(localToGame) {
+		idx, ok := transform(targetIndexObject, reference.TargetIndex())
+		if !ok {
 			return game.ObjectReference{}, false
 		}
-		return game.TargetPermanentReference(localToGame[idx]), true
+		return game.TargetPermanentReference(idx), true
 	case game.ObjectReferenceTargetStackObject:
-		idx := reference.TargetIndex()
-		if idx < 0 || idx >= len(localToGame) {
+		idx, ok := transform(targetIndexObject, reference.TargetIndex())
+		if !ok {
 			return game.ObjectReference{}, false
 		}
-		return game.TargetStackObjectReference(localToGame[idx]), true
+		return game.TargetStackObjectReference(idx), true
 	case game.ObjectReferenceTargetObject:
-		idx := reference.TargetIndex()
-		if idx < 0 || idx >= len(localToGame) {
+		idx, ok := transform(targetIndexObject, reference.TargetIndex())
+		if !ok {
 			return game.ObjectReference{}, false
 		}
-		return game.TargetObjectReference(localToGame[idx]), true
+		return game.TargetObjectReference(idx), true
 	case game.ObjectReferenceTargetAttachedPermanent:
-		idx := reference.TargetIndex()
-		if idx < 0 || idx >= len(localToGame) {
+		idx, ok := transform(targetIndexObject, reference.TargetIndex())
+		if !ok {
 			return game.ObjectReference{}, false
 		}
-		return game.TargetAttachedPermanentReference(localToGame[idx]), true
+		return game.TargetAttachedPermanentReference(idx), true
 	default:
 		return reference, len(reference.Validate()) == 0
 	}
 }
 
-func remapPlayerReference(reference game.PlayerReference, localToGame []int) (game.PlayerReference, bool) {
+func transformPlayerReference(reference game.PlayerReference, transform targetIndexTransform) (game.PlayerReference, bool) {
 	switch reference.Kind() {
 	case game.PlayerReferenceTargetPlayer:
-		idx := reference.TargetIndex()
-		if idx < 0 || idx >= len(localToGame) {
+		idx, ok := transform(targetIndexObject, reference.TargetIndex())
+		if !ok {
 			return game.PlayerReference{}, false
 		}
-		return game.TargetPlayerReference(localToGame[idx]), true
+		return game.TargetPlayerReference(idx), true
 	case game.PlayerReferenceObjectController, game.PlayerReferenceObjectOwner:
 		object, ok := reference.Object()
 		if !ok {
 			return game.PlayerReference{}, false
 		}
-		object, ok = remapObjectReference(object, localToGame)
+		object, ok = transformObjectReference(object, transform)
 		if !ok {
 			return game.PlayerReference{}, false
 		}
@@ -272,296 +427,58 @@ func remapPlayerReference(reference game.PlayerReference, localToGame []int) (ga
 	}
 }
 
-// rebaseTargetedSequence shifts every target reference in a clause's primitives
-// to its accumulated game position. offset is the number of preceding
-// accumulated target specs (the base for object/player target indices, which are
-// global positions in the stack object's target list). cardOffset is the number
-// of preceding accumulated card target specs (the base for card-reference target
-// indices, which the runtime counts among card targets only). The two bases
-// coincide unless a non-card target spec precedes a card reference.
-func rebaseTargetedSequence(sequence []game.Instruction, offset, cardOffset int) bool {
-	for i := range sequence {
-		primitive, ok := rebaseTargetedPrimitive(sequence[i].Primitive, offset, cardOffset)
-		if !ok {
-			return false
-		}
-		sequence[i].Primitive = primitive
+// transformCardReference transforms a target-card reference's slot in the card
+// numbering domain. Non-target card references (source, event, linked) carry no
+// target index and pass through unchanged.
+func transformCardReference(reference game.CardReference, transform targetIndexTransform) (game.CardReference, bool) {
+	if reference.Kind != game.CardReferenceTarget {
+		return reference, true
 	}
-	return true
+	idx, ok := transform(targetIndexCard, reference.TargetIndex)
+	if !ok {
+		return game.CardReference{}, false
+	}
+	reference.TargetIndex = idx
+	return reference, true
 }
 
-func rebaseTargetedPrimitive(primitive game.Primitive, offset, cardOffset int) (game.Primitive, bool) {
-	// Keep this as an explicit allowlist so a new target-bearing primitive cannot
-	// silently retain a clause-local target index.
-	if value, ok := primitive.(game.Damage); ok {
-		recipient, ok := rebaseDamageRecipient(value.Recipient, offset)
-		if !ok {
-			return nil, false
-		}
-		value.Recipient = recipient
-		if value.DamageSource.Exists {
-			source, ok := rebaseObjectReference(value.DamageSource.Val, offset)
-			if !ok {
-				return nil, false
-			}
-			value.DamageSource = opt.Val(source)
-		}
-		amount, ok := rebaseDamageAmount(value.Amount, offset)
-		if !ok {
-			return nil, false
-		}
-		value.Amount = amount
-		return value, true
-	}
-	if value, ok := primitive.(game.Destroy); ok {
-		if value.Group.Valid() {
-			return nil, false
-		}
-		value.Object, ok = rebaseObjectReference(value.Object, offset)
-		return value, ok
-	}
-	if value, ok := primitive.(game.AddCounter); ok {
-		value.Object, ok = rebaseObjectReference(value.Object, offset)
-		return value, ok
-	}
-	if value, ok := primitive.(game.AddPlayerCounter); ok {
-		value.Player, ok = rebasePlayerReference(value.Player, offset)
-		return value, ok
-	}
-	if value, ok := primitive.(game.ModifyPT); ok {
-		value.Object, ok = rebaseObjectReference(value.Object, offset)
-		return value, ok
-	}
-	if value, ok := primitive.(game.Fight); ok {
-		var ok bool
-		value.Object, ok = rebaseObjectReference(value.Object, offset)
-		if !ok {
-			return nil, false
-		}
-		value.RelatedObject, ok = rebaseObjectReference(value.RelatedObject, offset)
-		return value, ok
-	}
-	if value, ok := primitive.(game.Tap); ok {
-		value.Object, ok = rebaseObjectReference(value.Object, offset)
-		return value, ok
-	}
-	if value, ok := primitive.(game.PreventDamage); ok {
-		return rebasePreventDamage(value, offset)
-	}
-	if value, ok := primitive.(game.Untap); ok {
-		if value.Group.Valid() {
-			return nil, false
-		}
-		value.Object, ok = rebaseObjectReference(value.Object, offset)
-		return value, ok
-	}
-	if value, ok := primitive.(game.RemoveFromCombat); ok {
-		value.Object, ok = rebaseObjectReference(value.Object, offset)
-		return value, ok
-	}
-	if value, ok := primitive.(game.Exile); ok {
-		if value.Group.Valid() {
-			return nil, false
-		}
-		value.Object, ok = rebaseObjectReference(value.Object, offset)
-		return value, ok
-	}
-	if value, ok := primitive.(game.Bounce); ok {
-		if value.Group.Valid() {
-			return nil, false
-		}
-		value.Object, ok = rebaseObjectReference(value.Object, offset)
-		return value, ok
-	}
-	if value, ok := primitive.(game.CounterObject); ok {
-		value.Object, ok = rebaseObjectReference(value.Object, offset)
-		return value, ok
-	}
-	if value, ok := primitive.(game.Regenerate); ok {
-		value.Object, ok = rebaseObjectReference(value.Object, offset)
-		return value, ok
-	}
-	if value, ok := primitive.(game.Draw); ok {
-		value.Player, ok = rebasePlayerReference(value.Player, offset)
-		return value, ok
-	}
-	if value, ok := primitive.(game.Discard); ok {
-		value.Player, ok = rebasePlayerReference(value.Player, offset)
-		return value, ok
-	}
-	if value, ok := primitive.(game.Mill); ok {
-		value.Player, ok = rebasePlayerReference(value.Player, offset)
-		return value, ok
-	}
-	if value, ok := primitive.(game.ExileTopOfLibrary); ok {
-		value.Player, ok = rebasePlayerReference(value.Player, offset)
-		return value, ok
-	}
-	if value, ok := primitive.(game.RevealUntil); ok {
-		value.Player, ok = rebasePlayerReference(value.Player, offset)
-		return value, ok
-	}
-	if value, ok := primitive.(game.GainLife); ok {
-		value.Player, ok = rebasePlayerReference(value.Player, offset)
-		return value, ok
-	}
-	if value, ok := primitive.(game.LoseLife); ok {
-		value.Player, ok = rebasePlayerReference(value.Player, offset)
-		return value, ok
-	}
-	if value, ok := primitive.(game.CreateDelayedTrigger); ok {
-		return value, true
-	}
-	if value, ok := primitive.(game.ApplyContinuous); ok {
-		if value.Object.Exists {
-			rebased, ok := rebaseObjectReference(value.Object.Val, offset)
-			if !ok {
-				return nil, false
-			}
-			value.Object = opt.Val(rebased)
-		}
-		return value, true
-	}
-	if value, ok := primitive.(game.CreateToken); ok {
-		if value.Recipient.Exists {
-			rebased, ok := rebasePlayerReference(value.Recipient.Val, offset)
-			if !ok {
-				return nil, false
-			}
-			value.Recipient = opt.Val(rebased)
-		}
-		return value, true
-	}
-	return rebaseTargetedZonePrimitive(primitive, offset, cardOffset)
-}
-
-// rebaseTargetedZonePrimitive handles the zone-movement primitives whose target
-// references span players and cards, split out of rebaseTargetedPrimitive to keep
-// that allowlist's maintainability index within bounds.
-func rebaseTargetedZonePrimitive(primitive game.Primitive, offset, cardOffset int) (game.Primitive, bool) {
-	if value, ok := primitive.(game.MoveCard); ok {
-		// The player-zone group form ("Exile target player's graveyard.") carries
-		// a target-bearing Player reference; rebase it against the accumulated
-		// target list and fail closed if it cannot be rebased. The single-card
-		// form leaves Player unset and rebases its Card slot as before.
-		if value.Player.Kind() != game.PlayerReferenceNone {
-			rebased, ok := rebasePlayerReference(value.Player, offset)
-			if !ok {
-				return nil, false
-			}
-			value.Player = rebased
-			return value, true
-		}
-		value.Card = rebaseCardReference(value.Card, cardOffset)
-		return value, true
-	}
-	if value, ok := primitive.(game.PutOnBattlefield); ok {
-		// Entry counters and continuous effects may embed their own target
-		// references; rebasing those is not modeled, so fail closed rather than
-		// leave a clause-local index pointing at the wrong accumulated target.
-		if len(value.EntryCounters) != 0 || len(value.ContinuousEffects) != 0 {
-			return nil, false
-		}
-		source, ok := rebaseBattlefieldSource(value.Source, cardOffset)
-		if !ok {
-			return nil, false
-		}
-		value.Source = source
-		if value.Recipient.Exists {
-			recipient, ok := rebasePlayerReference(value.Recipient.Val, offset)
-			if !ok {
-				return nil, false
-			}
-			value.Recipient = opt.Val(recipient)
-		}
-		return value, true
-	}
-	return nil, false
-}
-
-// rebasePreventDamage shifts a prevent-damage primitive's target reference by
-// offset. The shield can reference either a target player or a target object;
-// only one is set, so rebase whichever the primitive carries.
-func rebasePreventDamage(value game.PreventDamage, offset int) (game.Primitive, bool) {
-	if value.Global {
-		return value, true
-	}
-	var ok bool
-	if value.Player.Kind() != game.PlayerReferenceNone {
-		value.Player, ok = rebasePlayerReference(value.Player, offset)
-		return value, ok
-	}
-	value.Object, ok = rebaseObjectReference(value.Object, offset)
-	return value, ok
-}
-
-// rebaseCardReference shifts a target-card reference's slot by cardOffset, the
-// number of card targets accumulated before this clause. The runtime counts card
-// target references among card targets only, so this base differs from the global
-// target offset used for object/player references. Non-target card references
-// (source, event, linked) carry no target index and pass through.
-func rebaseCardReference(reference game.CardReference, cardOffset int) game.CardReference {
-	if reference.Kind == game.CardReferenceTarget {
-		reference.TargetIndex += cardOffset
-	}
-	return reference
-}
-
-// rebaseBattlefieldSource shifts the card slot of a card-backed battlefield
-// source by cardOffset. Linked sources carry no target index and pass through.
-func rebaseBattlefieldSource(source game.BattlefieldSource, cardOffset int) (game.BattlefieldSource, bool) {
+// transformBattlefieldSource transforms the card slot of a card-backed
+// battlefield source in the card numbering domain. Linked sources carry no
+// target index and pass through.
+func transformBattlefieldSource(source game.BattlefieldSource, transform targetIndexTransform) (game.BattlefieldSource, bool) {
 	if card, ok := source.CardRef(); ok {
-		return game.CardBattlefieldSource(rebaseCardReference(card, cardOffset)), true
+		transformed, ok := transformCardReference(card, transform)
+		if !ok {
+			return game.BattlefieldSource{}, false
+		}
+		return game.CardBattlefieldSource(transformed), true
 	}
 	return source, source.Valid()
 }
 
-func rebaseDamageRecipient(recipient game.DamageRecipient, offset int) (game.DamageRecipient, bool) {
-	if object, ok := recipient.AnyTargetObjectReference(); ok {
-		return game.AnyTargetDamageRecipient(object.TargetIndex() + offset), true
-	}
-	if object, ok := recipient.ObjectReference(); ok {
-		rebased, valid := rebaseObjectReference(object, offset)
-		return game.ObjectDamageRecipient(rebased), valid
-	}
-	if player, ok := recipient.PlayerReference(); ok {
-		rebased, valid := rebasePlayerReference(player, offset)
-		return game.PlayerDamageRecipient(rebased), valid
-	}
-	if group, ok := recipient.GroupReference(); ok {
-		rebased, valid := rebaseGroupReference(group, offset)
-		return game.GroupDamageRecipient(rebased), valid
-	}
-	if _, ok := recipient.PlayerGroupReference(); ok {
-		// An opponents/all-players group carries no target index to rebase.
-		return recipient, true
-	}
-	return game.DamageRecipient{}, false
-}
-
-// rebaseGroupReference rebases the anchor and exclusion object references of a
-// battlefield or object-controlled group by offset, leaving its characteristic
+// transformGroupReference transforms the anchor and exclusion object references
+// of a battlefield or object-controlled group, leaving its characteristic
 // Selection (which carries no target index) unchanged. It backs the inherited
 // source-power group damage shape ("It deals damage equal to its power to each
 // other creature."), whose recipient group excludes the dealing target. It fails
 // closed for any other group domain.
-func rebaseGroupReference(group game.GroupReference, offset int) (game.GroupReference, bool) {
+func transformGroupReference(group game.GroupReference, transform targetIndexTransform) (game.GroupReference, bool) {
 	selection := group.Selection()
 	var anchor opt.V[game.ObjectReference]
 	if a, ok := group.Anchor(); ok {
-		rebased, valid := rebaseObjectReference(a, offset)
+		transformed, valid := transformObjectReference(a, transform)
 		if !valid {
 			return game.GroupReference{}, false
 		}
-		anchor = opt.Val(rebased)
+		anchor = opt.Val(transformed)
 	}
 	var exclude opt.V[game.ObjectReference]
 	if e, ok := group.Exclusion(); ok {
-		rebased, valid := rebaseObjectReference(e, offset)
+		transformed, valid := transformObjectReference(e, transform)
 		if !valid {
 			return game.GroupReference{}, false
 		}
-		exclude = opt.Val(rebased)
+		exclude = opt.Val(transformed)
 	}
 	switch group.Domain() {
 	case game.GroupDomainBattlefield:
@@ -579,60 +496,6 @@ func rebaseGroupReference(group game.GroupReference, offset int) (game.GroupRefe
 		return game.ObjectControlledGroup(anchor.Val, selection), true
 	default:
 		return game.GroupReference{}, false
-	}
-}
-
-// rebaseDamageAmount rebases a damage Quantity whose dynamic formula reads a
-// target's value by a fixed offset. Fixed amounts and dynamic formulas without a
-// target object reference are returned unchanged.
-func rebaseDamageAmount(amount game.Quantity, offset int) (game.Quantity, bool) {
-	dynamic := amount.DynamicAmount()
-	if !dynamic.Exists || !objectReferenceCarriesTargetIndex(dynamic.Val.Object) {
-		return amount, true
-	}
-	object, ok := rebaseObjectReference(dynamic.Val.Object, offset)
-	if !ok {
-		return game.Quantity{}, false
-	}
-	value := dynamic.Val
-	value.Object = object
-	return game.Dynamic(value), true
-}
-
-func rebaseObjectReference(reference game.ObjectReference, offset int) (game.ObjectReference, bool) {
-	switch reference.Kind() {
-	case game.ObjectReferenceTargetPermanent:
-		return game.TargetPermanentReference(reference.TargetIndex() + offset), true
-	case game.ObjectReferenceTargetStackObject:
-		return game.TargetStackObjectReference(reference.TargetIndex() + offset), true
-	case game.ObjectReferenceTargetObject:
-		return game.TargetObjectReference(reference.TargetIndex() + offset), true
-	case game.ObjectReferenceTargetAttachedPermanent:
-		return game.TargetAttachedPermanentReference(reference.TargetIndex() + offset), true
-	default:
-		return reference, len(reference.Validate()) == 0
-	}
-}
-
-func rebasePlayerReference(reference game.PlayerReference, offset int) (game.PlayerReference, bool) {
-	switch reference.Kind() {
-	case game.PlayerReferenceTargetPlayer:
-		return game.TargetPlayerReference(reference.TargetIndex() + offset), true
-	case game.PlayerReferenceObjectController, game.PlayerReferenceObjectOwner:
-		object, ok := reference.Object()
-		if !ok {
-			return game.PlayerReference{}, false
-		}
-		object, ok = rebaseObjectReference(object, offset)
-		if !ok {
-			return game.PlayerReference{}, false
-		}
-		if reference.Kind() == game.PlayerReferenceObjectController {
-			return game.ObjectControllerReference(object), true
-		}
-		return game.ObjectOwnerReference(object), true
-	default:
-		return reference, len(reference.Validate()) == 0
 	}
 }
 
