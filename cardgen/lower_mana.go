@@ -523,6 +523,9 @@ func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 	if content, ok := lowerControlledCountMana(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerCardsNamedSelfInGraveyardsMana(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerSourceCounterCountMana(ctx); ok {
 		return content, nil
 	}
@@ -673,8 +676,49 @@ func lowerControlledCountMana(ctx contentCtx) (game.AbilityContent, bool) {
 	}.Ability(), true
 }
 
-// lowerEachColorAmongControlledMana lowers a "For each color among <permanents>
-// you control, add one mana of that color" body (Bloom Tender) into an AddMana
+// lowerCardsNamedSelfInGraveyardsMana lowers an "Add <mana> for each card named
+// <this card> in each graveyard" body (Rite of Flame) into an AddMana
+// instruction whose amount is the number of self-named cards across every
+// graveyard. It accepts only a single fixed produced color scaled by the
+// self-named graveyard count; choice, any-color, and other reference shapes fail
+// closed so an unmodeled wording cannot lower to a mislabeled ability.
+func lowerCardsNamedSelfInGraveyardsMana(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		effect.Context != parser.EffectContextController ||
+		effect.Amount.DynamicKind != compiler.DynamicAmountCardsNamedSelfInGraveyards ||
+		effect.Amount.DynamicForm != compiler.DynamicAmountForEach ||
+		!effect.Mana.ColorsKnown ||
+		len(effect.Mana.Colors) != 1 ||
+		effect.Mana.Choice ||
+		effect.Mana.AnyColor {
+		return game.AbilityContent{}, false
+	}
+	dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+	if !ok || dynamic.Kind != game.DynamicAmountCardsNamedSourceInGraveyards {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{Primitive: game.AddMana{
+			Amount:    game.Dynamic(dynamic),
+			ManaColor: effect.Mana.Colors[0],
+		}}},
+	}.Ability(), true
+}
+
 // instruction that produces one mana of each color among the controller's
 // matching permanents. It reuses the among-controlled permanent filter, which
 // accepts a bare "permanents you control" group as well as a narrowed one, and

@@ -20,51 +20,51 @@ func permanentIsSnow(g *game.Game, permanent *game.Permanent) bool {
 }
 
 func dynamicAmountValue(g *game.Game, obj *game.StackObject, controller game.PlayerID, dynamic game.DynamicAmount) int {
-	return dynamicAmountValueBeforeLayer(g, obj, controller, dynamic, 0)
+	return dynamicAmountValueBeforeLayer(g, opt.Val(obj), controller, dynamic, 0)
 }
 
-func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controller game.PlayerID, dynamic game.DynamicAmount, before game.ContinuousLayer) int {
+func dynamicAmountValueBeforeLayer(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, dynamic game.DynamicAmount, before game.ContinuousLayer) int {
 	amount := 0
 	switch dynamic.Kind {
 	case game.DynamicAmountConstant:
 		amount = dynamic.Constant
 	case game.DynamicAmountX:
-		if obj != nil {
-			amount = obj.XValue
+		if obj.Exists {
+			amount = obj.Val.XValue
 		}
 	case game.DynamicAmountTargetPower:
-		if obj == nil {
+		if !obj.Exists {
 			break
 		}
-		if resolved, ok := resolveObjectReference(g, obj, dynamic.Object); ok && resolved.permanent != nil {
+		if resolved, ok := resolveObjectReference(g, obj.Val, dynamic.Object); ok && resolved.permanent != nil {
 			permanent := resolved.permanent
 			amount = effectivePower(g, permanent)
 		}
 	case game.DynamicAmountTargetToughness:
-		if obj == nil {
+		if !obj.Exists {
 			break
 		}
-		if resolved, ok := resolveObjectReference(g, obj, dynamic.Object); ok && resolved.permanent != nil {
+		if resolved, ok := resolveObjectReference(g, obj.Val, dynamic.Object); ok && resolved.permanent != nil {
 			permanent := resolved.permanent
 			if toughness, ok := effectiveToughness(g, permanent); ok {
 				amount = toughness
 			}
 		}
 	case game.DynamicAmountTargetManaValue:
-		if obj == nil {
+		if !obj.Exists {
 			break
 		}
-		if resolved, ok := resolveObjectReference(g, obj, dynamic.Object); ok && resolved.permanent != nil {
+		if resolved, ok := resolveObjectReference(g, obj.Val, dynamic.Object); ok && resolved.permanent != nil {
 			permanent := resolved.permanent
 			if def, ok := permanentCardDef(g, permanent); ok {
 				amount = def.ManaValue()
 			}
 		}
 	case game.DynamicAmountTargetCounters:
-		if obj == nil {
+		if !obj.Exists {
 			break
 		}
-		if resolved, ok := resolveObjectReference(g, obj, dynamic.Object); ok && resolved.permanent != nil {
+		if resolved, ok := resolveObjectReference(g, obj.Val, dynamic.Object); ok && resolved.permanent != nil {
 			permanent := resolved.permanent
 			amount = permanent.Counters.Get(dynamic.CounterKind)
 		}
@@ -87,7 +87,7 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		colors := dynamic.Colors
 		if dynamic.ColorFrom != "" {
 			colors = nil
-			if result, ok := linkedResolutionChoice(obj, string(dynamic.ColorFrom)); ok {
+			if result, ok := linkedResolutionChoice(obj.Val, string(dynamic.ColorFrom)); ok {
 				if chosen, ok := manaColor(result.Color); ok {
 					colors = []color.Color{chosen}
 				}
@@ -106,44 +106,44 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		}
 	case game.DynamicAmountPreviousEffectResult:
 		key := dynamicResultKey(dynamic)
-		if obj != nil && key != "" {
-			amount = obj.ResolvedAmounts[key]
+		if obj.Exists && key != "" {
+			amount = obj.Val.ResolvedAmounts[key]
 		}
 	case game.DynamicAmountPreviousEffectExcessDamage:
 		key := dynamicResultKey(dynamic)
-		if obj != nil && key != "" {
-			amount = obj.ResolvedExcessDamage[key]
+		if obj.Exists && key != "" {
+			amount = obj.Val.ResolvedExcessDamage[key]
 		}
 	case game.DynamicAmountEventDamage, game.DynamicAmountEventLifeChange, game.DynamicAmountEventCounterCount:
-		if obj != nil && obj.HasTriggerEvent {
-			amount = obj.TriggerEvent.Amount
+		if obj.Exists && obj.Val.HasTriggerEvent {
+			amount = obj.Val.TriggerEvent.Amount
 		}
 	case game.DynamicAmountEventCardCount:
-		if obj != nil && obj.HasTriggerEvent {
-			amount = triggerEventCardCount(g, obj.TriggerEvent)
+		if obj.Exists && obj.Val.HasTriggerEvent {
+			amount = triggerEventCardCount(g, obj.Val.TriggerEvent)
 		}
 	case game.DynamicAmountObjectPower:
-		if obj == nil {
+		if !obj.Exists {
 			break
 		}
-		if resolved, ok := resolveObjectReference(g, obj, dynamic.Object); ok {
+		if resolved, ok := resolveObjectReference(g, obj.Val, dynamic.Object); ok {
 			amount = resolvedObjectPower(g, &resolved)
 		}
 	case game.DynamicAmountObjectToughness:
-		if obj == nil {
+		if !obj.Exists {
 			break
 		}
-		if resolved, ok := resolveObjectReference(g, obj, dynamic.Object); ok {
+		if resolved, ok := resolveObjectReference(g, obj.Val, dynamic.Object); ok {
 			amount = resolvedObjectToughness(g, &resolved)
 		}
 	case game.DynamicAmountSourceCardPower, game.DynamicAmountBlockingCreaturesBeyondFirst,
 		game.DynamicAmountObjectManaValue, game.DynamicAmountCapturedTargetManaValue:
 		amount = sourceDerivedDynamicAmount(g, obj, dynamic)
 	case game.DynamicAmountObjectCounters:
-		if obj == nil {
+		if !obj.Exists {
 			break
 		}
-		if resolved, ok := resolveObjectReference(g, obj, dynamic.Object); ok {
+		if resolved, ok := resolveObjectReference(g, obj.Val, dynamic.Object); ok {
 			if resolved.permanent != nil {
 				amount = resolved.permanent.Counters.Get(dynamic.CounterKind)
 			} else {
@@ -151,20 +151,24 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 			}
 		}
 	case game.DynamicAmountChosenNumber:
-		if choice, ok := linkedResolutionChoice(obj, string(dynamic.ResultKey)); ok &&
+		if choice, ok := linkedResolutionChoice(obj.Val, string(dynamic.ResultKey)); ok &&
 			choice.Kind == game.ResolutionChoiceNumber {
 			amount = choice.Number
 		}
 	case game.DynamicAmountSpellsCastThisTurn, game.DynamicAmountLifeLostThisTurn,
 		game.DynamicAmountLifeGainedThisTurn, game.DynamicAmountCardsDrawnThisTurn:
 		amount = turnEventDynamicAmount(g, controller, dynamic.Kind)
+	case game.DynamicAmountCardsNamedSourceInGraveyards:
+		amount = countCardsNamedSourceInAllGraveyards(g, obj.Val)
+	case game.DynamicAmountCardsNamedSourceInControllerGraveyard:
+		amount = countCardsNamedSourceInControllerGraveyard(g, obj.Val, controller)
 	case game.DynamicAmountColorsOfManaSpentToCast:
-		if obj != nil {
-			amount = obj.ColorsOfManaSpentToCast
+		if obj.Exists {
+			amount = obj.Val.ColorsOfManaSpentToCast
 		}
 	case game.DynamicAmountTimesKicked:
-		if obj != nil {
-			amount = obj.KickerCount
+		if obj.Exists {
+			amount = obj.Val.KickerCount
 		}
 	case game.DynamicAmountMaxOf:
 		amount = maxOfDynamicAmounts(g, obj, controller, dynamic.Operands, before)
@@ -181,14 +185,14 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 // resolving ability's source object or its just-exiled card, split out of
 // dynamicAmountValueBeforeLayer so that large switch stays within the
 // maintainability budget.
-func sourceDerivedDynamicAmount(g *game.Game, obj *game.StackObject, dynamic game.DynamicAmount) int {
+func sourceDerivedDynamicAmount(g *game.Game, obj opt.V[*game.StackObject], dynamic game.DynamicAmount) int {
 	switch dynamic.Kind {
 	case game.DynamicAmountSourceCardPower:
-		return sourceCardPrintedPower(g, obj)
+		return sourceCardPrintedPower(g, obj.Val)
 	case game.DynamicAmountBlockingCreaturesBeyondFirst:
-		return blockingCreaturesBeyondFirst(g, obj)
+		return blockingCreaturesBeyondFirst(g, obj.Val)
 	case game.DynamicAmountObjectManaValue, game.DynamicAmountCapturedTargetManaValue:
-		return dynamicObjectManaValue(g, obj, &dynamic)
+		return dynamicObjectManaValue(g, obj.Val, &dynamic)
 	default:
 		return 0
 	}
@@ -241,7 +245,7 @@ func turnEventDynamicAmount(g *game.Game, controller game.PlayerID, kind game.Dy
 // against the same resolution context and returns the greatest value
 // (CR 608.2c). It backs the "whichever is greater" wording; an empty operand
 // list yields zero.
-func maxOfDynamicAmounts(g *game.Game, obj *game.StackObject, controller game.PlayerID, operands []game.DynamicAmount, before game.ContinuousLayer) int {
+func maxOfDynamicAmounts(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, operands []game.DynamicAmount, before game.ContinuousLayer) int {
 	best := 0
 	for i := range operands {
 		value := dynamicAmountValueBeforeLayer(g, obj, controller, operands[i], before)
@@ -470,7 +474,7 @@ func totalCharacteristicInGroup(g *game.Game, obj *game.StackObject, controller 
 // it counts the other creatures in its group that share a creature type with it.
 func dynamicAmountValueForPermanent(g *game.Game, permanent *game.Permanent, controller game.PlayerID, dynamic game.DynamicAmount, before game.ContinuousLayer) int {
 	if dynamic.Kind != game.DynamicAmountSharedCreatureTypeCountInGroup {
-		return dynamicAmountValueBeforeLayer(g, nil, controller, dynamic, before)
+		return dynamicAmountValueBeforeLayer(g, opt.V[*game.StackObject]{}, controller, dynamic, before)
 	}
 	multiplier := dynamic.Multiplier
 	if multiplier == 0 {
@@ -543,18 +547,18 @@ func shareCreatureSubtype(a, b map[types.Sub]struct{}) bool {
 // the permanents of dynamic.Group as the effect resolves (CR 608.2c): the member
 // count, the greatest or total power/toughness/mana value, and the distinct
 // color count.
-func groupDynamicAmount(g *game.Game, obj *game.StackObject, controller game.PlayerID, dynamic *game.DynamicAmount) int {
+func groupDynamicAmount(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, dynamic *game.DynamicAmount) int {
 	switch dynamic.Kind {
 	case game.DynamicAmountGreatestPowerInGroup, game.DynamicAmountGreatestToughnessInGroup,
 		game.DynamicAmountGreatestManaValueInGroup:
-		return greatestCharacteristicInGroup(g, obj, controller, dynamic.Group, dynamic.Kind)
+		return greatestCharacteristicInGroup(g, obj.Val, controller, dynamic.Group, dynamic.Kind)
 	case game.DynamicAmountTotalPowerInGroup, game.DynamicAmountTotalToughnessInGroup,
 		game.DynamicAmountTotalManaValueInGroup:
-		return totalCharacteristicInGroup(g, obj, controller, dynamic.Group, dynamic.Kind)
+		return totalCharacteristicInGroup(g, obj.Val, controller, dynamic.Group, dynamic.Kind)
 	case game.DynamicAmountColorCountInGroup:
-		return colorCountInGroup(g, obj, controller, dynamic.Group)
+		return colorCountInGroup(g, obj.Val, controller, dynamic.Group)
 	default:
-		return countPermanentsMatchingGroup(g, obj, controller, dynamic.Group)
+		return countPermanentsMatchingGroup(g, obj.Val, controller, dynamic.Group)
 	}
 }
 
@@ -640,8 +644,17 @@ func triggerEventCardCount(g *game.Game, trigger game.Event) int {
 	return count
 }
 
-func countCardsInZoneMatchingSelection(g *game.Game, obj *game.StackObject, controller game.PlayerID, playerRef game.PlayerReference, cardZone zone.Type, selection game.Selection) int {
-	playerID, ok := resolvePlayerReference(g, obj, playerRef)
+func countCardsInZoneMatchingSelection(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, playerRef game.PlayerReference, cardZone zone.Type, selection game.Selection) int {
+	var playerID game.PlayerID
+	var ok bool
+	if obj.Exists {
+		playerID, ok = resolvePlayerReference(g, obj.Val, playerRef)
+	} else if playerRef.Kind() == game.PlayerReferenceController {
+		// Continuous-layer evaluation can occur without a stack object (for
+		// example while checking a resolving permanent's types). A Controller
+		// reference still resolves to the permanent's controller passed here.
+		playerID, ok = controller, true
+	}
 	if !ok {
 		return 0
 	}
@@ -675,6 +688,64 @@ func countCardsInZoneForPlayer(g *game.Game, playerID game.PlayerID, viewer game
 			viewer:     viewer,
 		}
 		if matchSelection(&subject, &selection) {
+			count++
+		}
+	}
+	return count
+}
+
+// countCardsNamedSourceInAllGraveyards counts the cards in every player's
+// graveyard whose name equals the resolving stack object's source card name
+// (CR 201.2). It backs the "for each card named <this card> in each graveyard"
+// dynamic amount (Rite of Flame). A missing or unnamed source counts nothing.
+func countCardsNamedSourceInAllGraveyards(g *game.Game, obj *game.StackObject) int {
+	if obj == nil {
+		return 0
+	}
+	name := stackObjectSourceName(g, obj)
+	if name == "" {
+		return 0
+	}
+	count := 0
+	for _, player := range g.Players {
+		for _, cardID := range player.Graveyard.All() {
+			card, ok := g.GetCardInstance(cardID)
+			if !ok || card.Def == nil {
+				continue
+			}
+			if card.Def.Name == name {
+				count++
+			}
+		}
+	}
+	return count
+}
+
+// countCardsNamedSourceInControllerGraveyard counts the cards in the resolving
+// ability's controller's graveyard whose name equals the resolving stack
+// object's source card name (CR 201.2). It backs the "for each card named <this
+// card> in your graveyard" dynamic amount (Compound Fracture, Growth Cycle),
+// counting only the controller's graveyard rather than every graveyard. A
+// missing or unnamed source counts nothing.
+func countCardsNamedSourceInControllerGraveyard(g *game.Game, obj *game.StackObject, controller game.PlayerID) int {
+	if obj == nil {
+		return 0
+	}
+	name := stackObjectSourceName(g, obj)
+	if name == "" {
+		return 0
+	}
+	player, ok := playerByID(g, controller)
+	if !ok {
+		return 0
+	}
+	count := 0
+	for _, cardID := range player.Graveyard.All() {
+		card, ok := g.GetCardInstance(cardID)
+		if !ok || card.Def == nil {
+			continue
+		}
+		if card.Def.Name == name {
 			count++
 		}
 	}

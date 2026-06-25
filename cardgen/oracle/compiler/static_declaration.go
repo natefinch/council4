@@ -37,6 +37,7 @@ const (
 	StaticDeclarationCastLimit
 	StaticDeclarationOpeningHandPlay
 	StaticDeclarationOpponentEnteringTriggerSuppression
+	StaticDeclarationCreatureAttackTax
 )
 
 // StaticDeclarationBlocker identifies exact static wording whose declaration
@@ -709,6 +710,39 @@ type StaticDeclaration struct {
 	PerTurnLimit                *StaticPerTurnLimitDeclaration
 	OpeningHandPlay             *StaticOpeningHandPlayDeclaration
 	OpponentEnteringSuppression *StaticOpponentEnteringTriggerSuppressionDeclaration
+	CreatureAttackTax           *StaticCreatureAttackTaxDeclaration
+}
+
+// StaticCreatureAttackTaxAmountKind identifies how a per-creature attack-tax
+// declaration derives its per-attacker generic amount.
+type StaticCreatureAttackTaxAmountKind int
+
+// Per-creature attack-tax amount kinds.
+const (
+	// StaticCreatureAttackTaxFixed is a fixed generic amount (Baird, Archon of
+	// Absolution).
+	StaticCreatureAttackTaxFixed StaticCreatureAttackTaxAmountKind = iota
+
+	// StaticCreatureAttackTaxEnchantments is the controller's enchantment count
+	// (Sphere of Safety).
+	StaticCreatureAttackTaxEnchantments
+
+	// StaticCreatureAttackTaxDomain is the controller's domain — the number of
+	// basic land types among lands they control (Collective Restraint).
+	StaticCreatureAttackTaxDomain
+)
+
+// StaticCreatureAttackTaxDeclaration marks a per-creature attack tax that taxes
+// each attacker a per-creature generic cost ("Creatures can't attack you[ or
+// planeswalkers you control] unless their controller pays {COST} for each ...",
+// Baird, Archon of Absolution, Sphere of Safety, Collective Restraint). Amount
+// selects how the per-attacker cost is derived: a fixed FixedGeneric, the
+// controller's enchantment count, or domain. IncludePlaneswalkers records
+// whether the protection also covers planeswalkers the controller controls.
+type StaticCreatureAttackTaxDeclaration struct {
+	Amount               StaticCreatureAttackTaxAmountKind
+	FixedGeneric         int
+	IncludePlaneswalkers bool
 }
 
 // StaticOpeningHandPlayDeclaration marks the pre-game permission "If this card
@@ -815,6 +849,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticOpponentEnteringTriggerSuppressionDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticCreatureAttackTaxDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}

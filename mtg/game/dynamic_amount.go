@@ -224,6 +224,25 @@ const (
 	// and the characteristic-defining power sibling DynamicValueControllerCardsDrawnThisTurn.
 	// Added last so existing kinds keep their wire values.
 	DynamicAmountCardsDrawnThisTurn
+	// DynamicAmountCardsNamedSourceInGraveyards is the number of cards in every
+	// player's graveyard whose name matches the resolving ability's source card
+	// name ("for each card named Rite of Flame in each graveyard", Rite of
+	// Flame). Every graveyard is counted, not only the controller's; a card
+	// counts when its name equals the source's name as the effect resolves
+	// (CR 201.2, CR 608.2c). It reads the source name from the resolving stack
+	// object and backs the self-named graveyard-count ritual payoff. Added last
+	// so existing kinds keep their wire values.
+	DynamicAmountCardsNamedSourceInGraveyards
+	// DynamicAmountCardsNamedSourceInControllerGraveyard is the number of cards
+	// in the resolving ability's controller's graveyard whose name matches the
+	// resolving ability's source card name ("for each card named <this card> in
+	// your graveyard", Compound Fracture, Growth Cycle). Only the controller's
+	// graveyard is counted, unlike DynamicAmountCardsNamedSourceInGraveyards,
+	// which counts every graveyard; a card counts when its name equals the
+	// source's name as the effect resolves (CR 201.2, CR 608.2c). It reads the
+	// source name from the resolving stack object. Added last so existing kinds
+	// keep their wire values.
+	DynamicAmountCardsNamedSourceInControllerGraveyard
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

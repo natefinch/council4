@@ -166,6 +166,10 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 	case compiler.DynamicAmountDieRollResult:
 		dynamic.Kind = game.DynamicAmountPreviousEffectResult
 		dynamic.ResultKey = dieRollResultKey
+	case compiler.DynamicAmountCardsNamedSelfInGraveyards:
+		dynamic.Kind = game.DynamicAmountCardsNamedSourceInGraveyards
+	case compiler.DynamicAmountCardsNamedSelfInControllerGraveyard:
+		dynamic.Kind = game.DynamicAmountCardsNamedSourceInControllerGraveyard
 	default:
 		return game.DynamicAmount{}, false
 	}

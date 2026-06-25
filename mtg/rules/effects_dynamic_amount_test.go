@@ -374,6 +374,33 @@ func TestDynamicAmountCountsCardsWithCyclingInGraveyard(t *testing.T) {
 	}
 }
 
+// TestDynamicAmountCountCardsInZoneWithoutStackObject reproduces a crash where a
+// permanent's continuous effect counts cards in a zone "you" (its controller)
+// own. Evaluating such a permanent's layers — for example while checking
+// whether a resolving permanent is an aura — has no stack object, so the
+// Controller player reference must resolve to the controller passed in rather
+// than dereferencing a nil stack object.
+func TestDynamicAmountCountCardsInZoneWithoutStackObject(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "A"}})
+	addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "B"}})
+	addCardToGraveyard(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "C"}})
+	player := game.ControllerReference()
+	dynamic := game.DynamicAmount{
+		Kind:      game.DynamicAmountCountCardsInZone,
+		Player:    &player,
+		CardZone:  zone.Graveyard,
+		Selection: &game.Selection{},
+	}
+
+	// No stack object: the permanent path passes an absent optional. This must
+	// not panic and should count the controller's graveyard.
+	got := dynamicAmountValueBeforeLayer(g, opt.V[*game.StackObject]{}, game.Player1, dynamic, 0)
+	if got != 2 {
+		t.Fatalf("cards in controller graveyard = %d, want 2", got)
+	}
+}
+
 func TestModalResolutionUsesEachModesOwnTargets(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
