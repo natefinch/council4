@@ -9,4 +9,5 @@ var Cards = []*game.CardDef{
 	NatureSLore,
 	NeyithOfTheDireHunt,
 	NibelheimAflame,
+	NimblewrightSchematic,
 }
