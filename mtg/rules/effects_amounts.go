@@ -159,9 +159,9 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj opt.V[*game.StackObject], c
 		game.DynamicAmountLifeGainedThisTurn, game.DynamicAmountCardsDrawnThisTurn:
 		amount = turnEventDynamicAmount(g, controller, dynamic.Kind)
 	case game.DynamicAmountCardsNamedSourceInGraveyards:
-		amount = countCardsNamedSourceInAllGraveyards(g, obj)
+		amount = countCardsNamedSourceInAllGraveyards(g, obj.Val)
 	case game.DynamicAmountCardsNamedSourceInControllerGraveyard:
-		amount = countCardsNamedSourceInControllerGraveyard(g, obj, controller)
+		amount = countCardsNamedSourceInControllerGraveyard(g, obj.Val, controller)
 	case game.DynamicAmountColorsOfManaSpentToCast:
 		if obj.Exists {
 			amount = obj.Val.ColorsOfManaSpentToCast
