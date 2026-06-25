@@ -789,5 +789,6 @@ func restoreCastSourceCard(player *game.Player, cardID id.ID, sourceZone zone.Ty
 		player.Exile.Add(cardID)
 	case zone.Library:
 		player.Library.Add(cardID)
+	default:
 	}
 }
