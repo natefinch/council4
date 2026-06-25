@@ -4001,7 +4001,7 @@ func lowerDiscardDrawThenManaValueDamageSequence(ctx contentCtx) (game.AbilityCo
 		damage.Amount.DynamicForm != compiler.DynamicAmountEqual ||
 		damage.Amount.Multiplier != 1 ||
 		damage.Selector.Kind != compiler.SelectorOpponent || damage.Selector.Other ||
-		len(damage.DamageRecipientSelectors) != 0 {
+		len(damage.DamageRecipient.GroupSelectors) != 0 {
 		return game.AbilityContent{}, false
 	}
 	if !damageSourceIsSourcePermanent(damage.References) ||

@@ -155,7 +155,7 @@ func fixedSingleTargetDamageEffect(effect *compiler.CompiledEffect) bool {
 		effect.Amount.Value >= 1 &&
 		effect.Amount.DynamicKind == compiler.DynamicAmountNone &&
 		len(effect.DamageRiders) == 0 &&
-		effect.DamageRecipientReference == parser.DamageRecipientReferenceNone &&
-		effect.EachSourceDamageRecipient == parser.DamageRecipientReferenceNone &&
-		len(effect.DamageRecipientSelectors) == 0
+		effect.DamageRecipient.Reference == parser.DamageRecipientReferenceNone &&
+		effect.DamageRecipient.EachSourceRole == parser.DamageRecipientReferenceNone &&
+		len(effect.DamageRecipient.GroupSelectors) == 0
 }

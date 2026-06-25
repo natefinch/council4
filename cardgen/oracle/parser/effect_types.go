@@ -1116,6 +1116,47 @@ func findDamageRider(riders []DamageRiderSyntax, kind DamageRiderRecipientKind) 
 	return DamageRiderSyntax{}, false
 }
 
+// DamageRecipientSyntax is the typed descriptor of a deal-damage clause's
+// primary recipient when that recipient is not the clause's ordinary single
+// target or single Selection group. It converges the formerly separate
+// referenced-player, dual-recipient-group, and each-source descriptors onto one
+// payload so adding another supported recipient extends this type rather than
+// adding another top-level Effect field. The ordinary single-target and
+// single-group recipients are carried by the effect's Targets and Selection and
+// leave every field here at its zero value.
+//
+// It is the recipient half of the eventual unified damage output; the primary
+// amount and source still travel in the effect's Amount and References.
+type DamageRecipientSyntax struct {
+	// Reference, when non-None, names a player-reference recipient: the
+	// controller/owner of a prior referenced object ("deals N damage to that
+	// land's controller"), the source's own controller ("deals N damage to
+	// you"), or the triggering event's player ("deals N damage to that player").
+	Reference DamageRecipientReferenceKind `json:",omitempty"`
+	// Groups holds the two recipient groups of the dual-recipient group-damage
+	// form "deals N damage to each X and each Y", parsed as separate selections.
+	// It is empty for every other recipient; the single-group form uses the
+	// effect's Selection. A single merged Selection cannot represent two distinct
+	// groups, so lowering emits one damage instruction per group in Oracle order.
+	Groups []SelectionSyntax `json:",omitempty"`
+	// EachSourceGroup holds the source group of an "each <group> deals N damage
+	// to its controller/owner/itself" effect, where every group member is itself
+	// the damage source dealing to the player who controls (or owns) it, or to
+	// itself. It is the zero selection for every other shape. EachSourceRole
+	// records the per-source recipient role.
+	EachSourceGroup SelectionSyntax              `json:",omitzero"`
+	EachSourceRole  DamageRecipientReferenceKind `json:",omitempty"`
+}
+
+// GroupPair returns the two recipient groups of a dual-recipient group-damage
+// clause, if present.
+func (r DamageRecipientSyntax) GroupPair() ([]SelectionSyntax, bool) {
+	if len(r.Groups) == 2 {
+		return r.Groups, true
+	}
+	return nil, false
+}
+
 // SignedAmountSyntax is one signed half of a power/toughness change.
 type SignedAmountSyntax struct {
 	Span     shared.Span `json:"-"`
@@ -1529,27 +1570,12 @@ type EffectSyntax struct {
 	SpellsCantBeCounteredNextOnly bool              `json:",omitempty"`
 	DelayedTiming                 DelayedTimingKind `json:",omitempty"`
 	Selection                     SelectionSyntax   `json:",omitzero"`
-	// DamageRecipientPair holds the two recipient groups of a dual-recipient
-	// fixed group-damage effect ("deals N damage to each X and each Y"). It is
-	// populated only when the recipient is exactly two "each <group>" phrases
-	// joined by "and"; it is empty for every other recipient. The single
-	// merged Selection cannot represent two distinct groups, so lowering emits
-	// one damage instruction per recipient in Oracle order instead.
-	DamageRecipientPair []SelectionSyntax `json:",omitempty"`
-	// DamageRecipientReference marks a damage recipient that is the controller or
-	// owner of a referenced object (the prior removal target), as in "deals 2
-	// damage to that land's controller". It is None for every other recipient.
-	DamageRecipientReference DamageRecipientReferenceKind `json:",omitempty"`
-	// EachSourceDamageGroup holds the source group of an "each <group> deals N
-	// damage to its controller/owner" effect ("Each creature deals 1 damage to
-	// its controller."), where every member of the group is the damage source
-	// dealing to the player who controls (or owns) it. It is populated only when
-	// the subject begins with "each", parses to a recognized group, and the
-	// recipient is exactly the bare "its controller"/"its owner"; it is empty for
-	// every other shape. EachSourceDamageRecipient records the per-source
-	// recipient role.
-	EachSourceDamageGroup     SelectionSyntax              `json:",omitzero"`
-	EachSourceDamageRecipient DamageRecipientReferenceKind `json:",omitempty"`
+	// DamageRecipient is the typed descriptor of a deal-damage clause's primary
+	// recipient when it is not the clause's ordinary single target or single
+	// Selection group: a referenced-player recipient, the dual-recipient group
+	// pair, or the each-source group form. It is the zero value for ordinary
+	// target/group damage.
+	DamageRecipient DamageRecipientSyntax `json:",omitzero"`
 	// DamageRiders holds the ordered follow-on "... and N damage to <recipient>"
 	// damage instructions of a deal-damage clause, in Oracle order: the self
 	// rider ("... and N damage to you"), the target-controller/owner rider

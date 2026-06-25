@@ -85,7 +85,7 @@ func damageRecipientReferenceOf(t *testing.T, name, source string) (DamageRecipi
 	if len(effects) != 1 || effects[0].Kind != EffectDealDamage {
 		t.Fatalf("Parse(%q) effects = %#v", source, effects)
 	}
-	return effects[0].DamageRecipientReference, effects[0].Exact
+	return effects[0].DamageRecipient.Reference, effects[0].Exact
 }
 
 func TestDamageRecipientReferenceAccepts(t *testing.T) {

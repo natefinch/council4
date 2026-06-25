@@ -1316,10 +1316,10 @@ func lowerDealDamageSpell(cardName string, ctx contentCtx) (game.AbilityContent,
 	if ctx.content.Effects[0].Divided {
 		return lowerDividedDamageSpell(ctx)
 	}
-	if ctx.content.Effects[0].DamageRecipientReference == parser.DamageRecipientReferenceYou {
+	if ctx.content.Effects[0].DamageRecipient.Reference == parser.DamageRecipientReferenceYou {
 		return lowerControllerDamageSpell(ctx)
 	}
-	if ctx.content.Effects[0].DamageRecipientReference == parser.DamageRecipientReferenceThatPlayer {
+	if ctx.content.Effects[0].DamageRecipient.Reference == parser.DamageRecipientReferenceThatPlayer {
 		return lowerEventPlayerDamageSpell(ctx)
 	}
 	if content, ok := lowerInheritedPowerDamageSpell(ctx); ok {

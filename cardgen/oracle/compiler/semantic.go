@@ -1602,6 +1602,29 @@ const (
 	StaticSubjectOtherControlledPermanentSubtype
 )
 
+// CompiledDamageRecipient bundles the primary-recipient descriptors of a
+// deal-damage effect into one typed payload, mirroring the parser's
+// DamageRecipientSyntax. Its zero value denotes an ordinary single-target
+// recipient with no special routing.
+type CompiledDamageRecipient struct {
+	// GroupSelectors holds the compiled recipient groups of a dual-recipient
+	// fixed group-damage effect ("deals N damage to each X and each Y"). It is
+	// empty for single-recipient damage; when present it has exactly two entries
+	// that lowering damages in Oracle order.
+	GroupSelectors []CompiledSelector
+	// Reference marks a damage recipient that is the controller or owner of a
+	// referenced object (the prior removal target), as in "deals 2 damage to
+	// that land's controller". It is None for every other recipient.
+	Reference parser.DamageRecipientReferenceKind
+	// EachSourceGroup is the source group of an "each <group> deals N damage to
+	// its controller/owner" effect ("Each creature deals 1 damage to its
+	// controller."), where every group member is the damage source dealing to
+	// the player who controls (or owns) it. EachSourceRole records the per-source
+	// recipient role; it is None for every other effect.
+	EachSourceGroup CompiledSelector
+	EachSourceRole  parser.DamageRecipientReferenceKind
+}
+
 // CompiledEffect is one recognized instruction verb and the sentence containing
 // it. Multiple effects may refer to the same sentence when instructions are
 // coordinated.
@@ -1624,22 +1647,11 @@ type CompiledEffect struct {
 	Duration             DurationKind
 	DelayedTiming        game.DelayedTriggerTiming
 	Selector             CompiledSelector
-	// DamageRecipientSelectors holds the compiled recipient groups of a
-	// dual-recipient fixed group-damage effect ("deals N damage to each X and
-	// each Y"). It is empty for single-recipient damage; when present it has
-	// exactly two entries that lowering damages in Oracle order.
-	DamageRecipientSelectors []CompiledSelector
-	// DamageRecipientReference marks a damage recipient that is the controller or
-	// owner of a referenced object (the prior removal target), as in "deals 2
-	// damage to that land's controller". It is None for every other recipient.
-	DamageRecipientReference parser.DamageRecipientReferenceKind
-	// EachSourceDamageGroup is the source group of an "each <group> deals N
-	// damage to its controller/owner" effect ("Each creature deals 1 damage to
-	// its controller."), where every group member is the damage source dealing
-	// to the player who controls (or owns) it. EachSourceDamageRecipient records
-	// the per-source recipient role; it is None for every other effect.
-	EachSourceDamageGroup     CompiledSelector
-	EachSourceDamageRecipient parser.DamageRecipientReferenceKind
+	// DamageRecipient bundles the primary-recipient descriptors of a deal-damage
+	// effect (dual-recipient groups, each-source group, and referenced-player
+	// reference) into one typed payload. Its zero value denotes a single-target
+	// recipient with no special routing.
+	DamageRecipient CompiledDamageRecipient
 	// DamageRiders holds the ordered follow-on "... and N damage to <recipient>"
 	// damage instructions of a deal-damage clause, in Oracle order: the self
 	// rider, the target-controller/owner rider, then the second-target rider.
