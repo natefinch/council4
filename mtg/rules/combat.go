@@ -1234,6 +1234,9 @@ func declareCreatedTokensAttacking(e *Engine, g *game.Game, controller game.Play
 			Attacker: token.ObjectID,
 			Target:   game.AttackTarget{Player: defender},
 		})
+		// CR 508.8: a creature put onto the battlefield attacking counts the same
+		// as a declared attacker for whether the later combat steps are skipped.
+		g.Combat.AttackersDeclared = true
 	}
 }
 
