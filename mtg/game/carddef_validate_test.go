@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -622,7 +623,7 @@ func TestValidateCardDefChecksNestedEmblemAbility(t *testing.T) {
 		OracleText: "You get an emblem.",
 		SpellAbility: opt.Val(Mode{Sequence: []Instruction{{
 			Primitive: CreateEmblem{EmblemAbilities: []Ability{&StaticAbility{
-				Condition: opt.Val(Condition{ControllerLifeAtLeast: -1}),
+				Condition: opt.Val(Condition{Aggregates: []AggregateComparison{{Aggregate: AggregateControllerLife, Op: compare.GreaterOrEqual, Value: -1}}}),
 			}}},
 		}}}.Ability()),
 	}}
@@ -640,7 +641,7 @@ func TestValidateCardDefChecksNestedReplacementCondition(t *testing.T) {
 		SpellAbility: opt.Val(Mode{Sequence: []Instruction{{
 			Primitive: CreateReplacement{Replacement: &ReplacementEffect{
 				MatchEvent: EventPermanentEnteredBattlefield,
-				Condition:  opt.Val(Condition{ControllerLifeAtLeast: -1}),
+				Condition:  opt.Val(Condition{Aggregates: []AggregateComparison{{Aggregate: AggregateControllerLife, Op: compare.GreaterOrEqual, Value: -1}}}),
 			}},
 		}}}.Ability()),
 	}}
@@ -803,7 +804,7 @@ func TestValidateCardDefGrantedManaAbility(t *testing.T) {
 		{
 			name: "activation condition",
 			mutate: func(ability *ManaAbility) {
-				ability.ActivationCondition = opt.Val(Condition{ControllerLifeAtLeast: 1})
+				ability.ActivationCondition = opt.Val(Condition{Aggregates: []AggregateComparison{{Aggregate: AggregateControllerLife, Op: compare.GreaterOrEqual, Value: 1}}})
 			},
 		},
 		{

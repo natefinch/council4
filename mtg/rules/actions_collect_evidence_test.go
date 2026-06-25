@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -343,7 +344,7 @@ func TestGraveyardActivatedAbilityChecksActivationCondition(t *testing.T) {
 		ActivatedAbilities: []game.ActivatedAbility{{
 			ZoneOfFunction: zone.Graveyard,
 			ActivationCondition: opt.Val(game.Condition{
-				ControllerLifeAtLeast: 10,
+				Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLife, Op: compare.GreaterOrEqual, Value: 10}},
 			}),
 			Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.GainLife{
 				Amount: game.Fixed(1),

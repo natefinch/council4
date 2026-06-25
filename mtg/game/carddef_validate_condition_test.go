@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -153,8 +154,8 @@ func TestValidateCardDefReportsInvalidControllerControlsSelection(t *testing.T) 
 
 func TestValidateCardDefReportsNegativeConditionThresholds(t *testing.T) {
 	tests := map[string]Condition{
-		"controller life":                     {ControllerLifeAtLeast: -1},
-		"controller life at most":             {ControllerLifeAtMost: opt.Val(-1)},
+		"controller life":                     {Aggregates: []AggregateComparison{{Aggregate: AggregateControllerLife, Op: compare.GreaterOrEqual, Value: -1}}},
+		"controller life at most":             {Aggregates: []AggregateComparison{{Aggregate: AggregateControllerLife, Op: compare.LessOrEqual, Value: -1}}},
 		"controller life above starting":      {ControllerLifeAtLeastAboveStarting: -1},
 		"any player life":                     {AnyPlayerLifeAtMost: -1},
 		"opponent count":                      {OpponentCountAtLeast: -1},
@@ -207,7 +208,7 @@ func TestValidateCardDefChecksInstructionSharedCondition(t *testing.T) {
 		SpellAbility: opt.Val(Mode{Sequence: []Instruction{{
 			Primitive: Draw{Amount: Fixed(1), Player: ControllerReference()},
 			Condition: opt.Val(EffectCondition{Condition: opt.Val(Condition{
-				ControllerLifeAtLeast: -1,
+				Aggregates: []AggregateComparison{{Aggregate: AggregateControllerLife, Op: compare.GreaterOrEqual, Value: -1}},
 			})}),
 		}}}.Ability()),
 	}}

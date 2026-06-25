@@ -494,11 +494,11 @@ func TestLifeAndOpponentConditions(t *testing.T) {
 	ctx := conditionContext{controller: game.Player1}
 
 	g.Players[game.Player1].Life = 10
-	if !conditionSatisfied(g, ctx, opt.Val(game.Condition{ControllerLifeAtLeast: 10})) {
+	if !conditionSatisfied(g, ctx, opt.Val(game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLife, Op: compare.GreaterOrEqual, Value: 10}}})) {
 		t.Fatal("controller life-at-least condition failed at threshold")
 	}
 	g.Players[game.Player1].Life = 9
-	if conditionSatisfied(g, ctx, opt.Val(game.Condition{ControllerLifeAtLeast: 10})) {
+	if conditionSatisfied(g, ctx, opt.Val(game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLife, Op: compare.GreaterOrEqual, Value: 10}}})) {
 		t.Fatal("controller life-at-least condition passed below threshold")
 	}
 
@@ -539,7 +539,7 @@ func TestControllerLifeRelativeConditions(t *testing.T) {
 		t.Fatal("life-above-starting condition passed below threshold")
 	}
 
-	atMost := opt.Val(game.Condition{ControllerLifeAtMost: opt.Val(5)})
+	atMost := opt.Val(game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLife, Op: compare.LessOrEqual, Value: 5}}})
 	g.Players[game.Player1].Life = 5
 	if !conditionSatisfied(g, ctx, atMost) {
 		t.Fatal("life-at-most condition failed at threshold")
@@ -550,7 +550,7 @@ func TestControllerLifeRelativeConditions(t *testing.T) {
 	}
 
 	// "0 or less life" must remain an active predicate, not be treated as empty.
-	atMostZero := opt.Val(game.Condition{ControllerLifeAtMost: opt.Val(0)})
+	atMostZero := opt.Val(game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLife, Op: compare.LessOrEqual, Value: 0}}})
 	g.Players[game.Player1].Life = 0
 	if !conditionSatisfied(g, ctx, atMostZero) {
 		t.Fatal("life-at-most-zero condition failed at zero life")
@@ -565,8 +565,8 @@ func TestNegativeConditionThresholdsFailClosed(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	ctx := conditionContext{controller: game.Player1}
 	conditions := []game.Condition{
-		{Negate: true, ControllerLifeAtLeast: -1},
-		{Negate: true, ControllerLifeAtMost: opt.Val(-1)},
+		{Negate: true, Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLife, Op: compare.GreaterOrEqual, Value: -1}}},
+		{Negate: true, Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLife, Op: compare.LessOrEqual, Value: -1}}},
 		{Negate: true, ControllerLifeAtLeastAboveStarting: -1},
 		{Negate: true, AnyPlayerLifeAtMost: -1},
 		{Negate: true, OpponentCountAtLeast: -1},
@@ -607,7 +607,7 @@ func TestControllerLibrarySizeAndLifeExactlyConditions(t *testing.T) {
 	}
 
 	// "you have exactly N life" (Near-Death Experience).
-	lifeExactly := opt.Val(game.Condition{ControllerLifeExactly: opt.Val(1)})
+	lifeExactly := opt.Val(game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLife, Op: compare.Equal, Value: 1}}})
 	g.Players[game.Player1].Life = 1
 	if !conditionSatisfied(g, ctx, lifeExactly) {
 		t.Fatal("life-exactly condition failed at exact life")
@@ -662,8 +662,8 @@ func TestLifeConditionalEntersTappedReplacement(t *testing.T) {
 				Types: []types.Card{types.Land},
 				ReplacementAbilities: []game.ReplacementAbility{
 					game.EntersTappedIfReplacement("This land enters tapped unless you have 10 or more life.", &game.Condition{
-						Negate:                true,
-						ControllerLifeAtLeast: 10,
+						Negate:     true,
+						Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLife, Op: compare.GreaterOrEqual, Value: 10}},
 					}),
 				},
 			}})
@@ -779,5 +779,75 @@ func cinderLikeLand() *game.CardDef {
 				}),
 			}),
 		}},
+	}
+}
+
+// TestAggregateControllerLifeComparators verifies that the unified
+// AggregateComparison representation evaluates every controller-life comparator
+// (at least / at most / exactly) through the single aggregate path, that an
+// empty Aggregates slice disables the predicate, and that multiple aggregate
+// operands are ANDed together.
+func TestAggregateControllerLifeComparators(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	ctx := conditionContext{controller: game.Player1}
+
+	life := func(n int) {
+		g.Players[game.Player1].Life = n
+	}
+	cond := func(ops ...game.AggregateComparison) opt.V[game.Condition] {
+		return opt.Val(game.Condition{Aggregates: ops})
+	}
+	atLeast := game.AggregateComparison{Aggregate: game.AggregateControllerLife, Op: compare.GreaterOrEqual, Value: 10}
+	atMost := game.AggregateComparison{Aggregate: game.AggregateControllerLife, Op: compare.LessOrEqual, Value: 20}
+	exactly := game.AggregateComparison{Aggregate: game.AggregateControllerLife, Op: compare.Equal, Value: 15}
+
+	life(10)
+	if !conditionSatisfied(g, ctx, cond(atLeast)) {
+		t.Fatal("at-least failed at threshold")
+	}
+	life(9)
+	if conditionSatisfied(g, ctx, cond(atLeast)) {
+		t.Fatal("at-least passed below threshold")
+	}
+	life(20)
+	if !conditionSatisfied(g, ctx, cond(atMost)) {
+		t.Fatal("at-most failed at threshold")
+	}
+	life(21)
+	if conditionSatisfied(g, ctx, cond(atMost)) {
+		t.Fatal("at-most passed above threshold")
+	}
+	life(15)
+	if !conditionSatisfied(g, ctx, cond(exactly)) {
+		t.Fatal("exactly failed at exact life")
+	}
+	life(16)
+	if conditionSatisfied(g, ctx, cond(exactly)) {
+		t.Fatal("exactly passed off exact life")
+	}
+
+	// Empty Aggregates slice is treated as no predicate.
+	emptyCond := game.Condition{}
+	if !emptyCond.Empty() {
+		t.Fatal("zero-value condition is not Empty")
+	}
+	withAgg := game.Condition{Aggregates: []game.AggregateComparison{atLeast}}
+	if withAgg.Empty() {
+		t.Fatal("condition with an aggregate reported Empty")
+	}
+
+	// Multiple aggregate operands are ANDed: 10 <= life <= 20.
+	band := cond(atLeast, atMost)
+	life(15)
+	if !conditionSatisfied(g, ctx, band) {
+		t.Fatal("AND band failed inside range")
+	}
+	life(9)
+	if conditionSatisfied(g, ctx, band) {
+		t.Fatal("AND band passed below range")
+	}
+	life(21)
+	if conditionSatisfied(g, ctx, band) {
+		t.Fatal("AND band passed above range")
 	}
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -1782,7 +1783,7 @@ func TestConditionalSourceLifeThresholdStatic(t *testing.T) {
 		Power:     opt.Val(game.PT{Value: 1}),
 		Toughness: opt.Val(game.PT{Value: 1}),
 		StaticAbilities: []game.StaticAbility{{
-			Condition: opt.Val(game.Condition{ControllerLifeAtLeast: 30}),
+			Condition: opt.Val(game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLife, Op: compare.GreaterOrEqual, Value: 30}}}),
 			ContinuousEffects: []game.ContinuousEffect{
 				{
 					Layer:          game.LayerPowerToughnessModify,

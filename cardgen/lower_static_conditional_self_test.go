@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -43,14 +44,14 @@ func TestLowerLeadingConditionSelfStatic(t *testing.T) {
 	}{
 		"leading life pt and keyword": {
 			oracleText: "As long as you have 30 or more life, this creature gets +5/+5 and has flying.",
-			condition:  game.Condition{ControllerLifeAtLeast: 30},
+			condition:  game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLife, Op: compare.GreaterOrEqual, Value: 30}}},
 			power:      5,
 			toughness:  5,
 			keywords:   []game.Keyword{game.Flying},
 		},
 		"trailing life pt and keyword": {
 			oracleText: "This creature gets +5/+5 and has flying as long as you have 30 or more life.",
-			condition:  game.Condition{ControllerLifeAtLeast: 30},
+			condition:  game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLife, Op: compare.GreaterOrEqual, Value: 30}}},
 			power:      5,
 			toughness:  5,
 			keywords:   []game.Keyword{game.Flying},

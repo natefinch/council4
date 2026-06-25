@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -14,7 +15,7 @@ import (
 
 func TestRenderConditionForETBReplacementRejectsNegativeThresholds(t *testing.T) {
 	tests := map[string]game.Condition{
-		"controller life": {ControllerLifeAtLeast: -1},
+		"controller life": {Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLife, Op: compare.GreaterOrEqual, Value: -1}}},
 		"any player life": {AnyPlayerLifeAtMost: -1},
 		"opponent count":  {OpponentCountAtLeast: -1},
 	}

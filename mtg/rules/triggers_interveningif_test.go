@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -295,7 +296,7 @@ func TestStepLifeInterveningIfCheckedWhenTriggeringAndResolving(t *testing.T) {
 		t.Fatal("trigger source card not found")
 	}
 	card.Def.TriggeredAbilities[0].Trigger.InterveningCondition = opt.Val(game.Condition{
-		ControllerLifeAtLeast: 10,
+		Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLife, Op: compare.GreaterOrEqual, Value: 10}},
 	})
 	event := game.Event{
 		Kind:       game.EventBeginningOfStep,

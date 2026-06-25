@@ -808,3 +808,28 @@ func renderCompareOp(op compare.Op) (string, error) {
 		return "", fmt.Errorf("render: unsupported compare op %d", op)
 	}
 }
+
+func renderAggregateComparisons(ctx *renderCtx, aggregates []game.AggregateComparison) (string, error) {
+	ctx.need(importGame)
+	ctx.need(importCompare)
+	parts := make([]string, 0, len(aggregates))
+	for i := range aggregates {
+		kind, err := renderAggregateKind(aggregates[i].Aggregate)
+		if err != nil {
+			return "", err
+		}
+		op, err := renderCompareOp(aggregates[i].Op)
+		if err != nil {
+			return "", err
+		}
+		parts = append(parts, fmt.Sprintf("{Aggregate: %s, Op: %s, Value: %d}", kind, op, aggregates[i].Value))
+	}
+	return fmt.Sprintf("[]game.AggregateComparison{%s}", strings.Join(parts, ", ")), nil
+}
+
+func renderAggregateKind(kind game.AggregateKind) (string, error) {
+	if kind == game.AggregateControllerLife {
+		return "game.AggregateControllerLife", nil
+	}
+	return "", fmt.Errorf("render: unsupported aggregate kind %d", kind)
+}

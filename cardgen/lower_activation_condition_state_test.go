@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 )
 
 func TestLowerActivatedAbilitySourceCombatStateCondition(t *testing.T) {
@@ -89,7 +90,7 @@ func TestLowerActivatedAbilityLifeAtMostCondition(t *testing.T) {
 		Toughness:  new("2"),
 	})
 	condition := face.ActivatedAbilities[0].ActivationCondition
-	if !condition.Exists || !condition.Val.ControllerLifeAtMost.Exists || condition.Val.ControllerLifeAtMost.Val != 5 {
+	if got := condition.Val.Aggregates; !condition.Exists || len(got) != 1 || got[0].Aggregate != game.AggregateControllerLife || got[0].Op != compare.LessOrEqual || got[0].Value != 5 {
 		t.Fatalf("activation condition = %#v, want life at most 5", condition)
 	}
 }
