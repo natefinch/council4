@@ -72,6 +72,15 @@ func targetChoicesForBodyFromSourceObjectWithModes(g *game.Game, controller game
 //   - targetLegalChoicesFound when at least one combination is legal (including optional no-target choices)
 //   - targetNoLegalChoices when specs are valid but no board-legal combination exists
 //   - targetInvalidSpec (with err) when a spec has an invalid min/max range
+//
+// targetChoicesForSpecs enumerates every legal combination of targets for a
+// spell or ability's target specs (CR 115.1: targets are declared as the spell or
+// ability is put on the stack; CR 601.2c: a target is announced for each instance
+// of the word "target"). Each spec corresponds to one "target" instance; only
+// legal targets are offered (CR 115.2, 115.4). The same object can be chosen once
+// per instance of "target" (CR 115.3); "another target" specs additionally exclude
+// the earlier targets of the same spell or ability, enforcing the card's "another"
+// criterion.
 func targetChoicesForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec) targetChoiceResult {
 	if len(specs) == 0 {
 		return targetChoiceResult{kind: targetNoTargetsRequired, choices: [][]game.Target{nil}, targetCounts: [][]int{nil}}
@@ -136,6 +145,8 @@ func appendTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *
 // filterTargetsDistinctFrom drops any candidate that points at the same game
 // object as a target already chosen in prior, supporting "another target ..."
 // specs that must differ from the earlier targets of the same spell or ability.
+// CR 115.3: the same target can't be chosen multiple times for any one instance
+// of the word "target".
 func filterTargetsDistinctFrom(candidates, prior []game.Target) []game.Target {
 	var kept []game.Target
 	for _, candidate := range candidates {
@@ -190,6 +201,11 @@ func targetCandidatesForSpec(g *game.Game, controller game.PlayerID, source *gam
 	return targetCandidatesForSpecChosenBy(g, controller, controller, source, sourceObjectID, spec)
 }
 
+// targetCandidatesForSpecChosenBy returns every object or player that is a legal
+// target for one target spec, evaluating the spec's predicate as predicatePlayer.
+// Only permanents are candidates unless the spec allows players, stack objects, or
+// cards in other zones (CR 115.2, 115.4), and a candidate the source can't legally
+// target (e.g. protection, CR 702.16b, or hexproof, CR 702.11b-c) is excluded.
 func targetCandidatesForSpecChosenBy(g *game.Game, sourceController, predicatePlayer game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec *game.TargetSpec) []game.Target {
 	var candidates []game.Target
 	if targetSpecAllowsPlayers(spec) {
