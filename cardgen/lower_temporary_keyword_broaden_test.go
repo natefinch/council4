@@ -59,11 +59,11 @@ func TestLowerTemporaryKeywordGrantBroadTargets(t *testing.T) {
 			if mode.Targets[0].MinTargets != 1 || mode.Targets[0].MaxTargets != 1 {
 				t.Fatalf("cardinality = [%d,%d], want [1,1]", mode.Targets[0].MinTargets, mode.Targets[0].MaxTargets)
 			}
-			if tc.wantTypes != nil && !reflect.DeepEqual(mode.Targets[0].Predicate.PermanentTypes, tc.wantTypes) {
-				t.Fatalf("permanent types = %v, want %v", mode.Targets[0].Predicate.PermanentTypes, tc.wantTypes)
+			if tc.wantTypes != nil && !reflect.DeepEqual(mode.Targets[0].Selection.Val.RequiredTypesAny, tc.wantTypes) {
+				t.Fatalf("permanent types = %v, want %v", mode.Targets[0].Selection.Val.RequiredTypesAny, tc.wantTypes)
 			}
-			if tc.wantSubtypes != nil && !reflect.DeepEqual(mode.Targets[0].Predicate.Subtypes, tc.wantSubtypes) {
-				t.Fatalf("subtypes = %v, want %v", mode.Targets[0].Predicate.Subtypes, tc.wantSubtypes)
+			if tc.wantSubtypes != nil && !reflect.DeepEqual(mode.Targets[0].Selection.Val.SubtypesAny, tc.wantSubtypes) {
+				t.Fatalf("subtypes = %v, want %v", mode.Targets[0].Selection.Val.SubtypesAny, tc.wantSubtypes)
 			}
 			if len(mode.Sequence) != 1 {
 				t.Fatalf("sequence = %#v, want one instruction", mode.Sequence)
@@ -131,12 +131,13 @@ func TestLowerTemporaryKeywordGrantOptionalTarget(t *testing.T) {
 func TestLowerTemporaryKeywordLossBroadTargets(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name         string
-		oracle       string
-		wantKeywords []game.Keyword
-		wantSubtypes []types.Sub
-		wantTypes    []types.Card
-		wantTapped   bool
+		name            string
+		oracle          string
+		wantKeywords    []game.Keyword
+		wantSubtypes    []types.Sub
+		wantTypes       []types.Card
+		wantConjunctive bool
+		wantTapped      bool
 	}{
 		{
 			name:         "bare subtype noun target",
@@ -145,10 +146,11 @@ func TestLowerTemporaryKeywordLossBroadTargets(t *testing.T) {
 			wantSubtypes: []types.Sub{types.Sub("Human")},
 		},
 		{
-			name:         "conjunctive card-type target",
-			oracle:       "Target artifact creature loses indestructible until end of turn.",
-			wantKeywords: []game.Keyword{game.Indestructible},
-			wantTypes:    []types.Card{types.Artifact, types.Creature},
+			name:            "conjunctive card-type target",
+			oracle:          "Target artifact creature loses indestructible until end of turn.",
+			wantKeywords:    []game.Keyword{game.Indestructible},
+			wantTypes:       []types.Card{types.Artifact, types.Creature},
+			wantConjunctive: true,
 		},
 		{
 			name:         "tapped creature target",
@@ -171,12 +173,18 @@ func TestLowerTemporaryKeywordLossBroadTargets(t *testing.T) {
 			if len(mode.Targets) != 1 {
 				t.Fatalf("targets = %d, want 1", len(mode.Targets))
 			}
-			pred := mode.Targets[0].Predicate
-			if tc.wantSubtypes != nil && !reflect.DeepEqual(pred.Subtypes, tc.wantSubtypes) {
-				t.Fatalf("subtypes = %v, want %v", pred.Subtypes, tc.wantSubtypes)
+			pred := mode.Targets[0].Selection.Val
+			if tc.wantSubtypes != nil && !reflect.DeepEqual(pred.SubtypesAny, tc.wantSubtypes) {
+				t.Fatalf("subtypes = %v, want %v", pred.SubtypesAny, tc.wantSubtypes)
 			}
-			if tc.wantTypes != nil && !reflect.DeepEqual(pred.PermanentTypes, tc.wantTypes) {
-				t.Fatalf("permanent types = %v, want %v", pred.PermanentTypes, tc.wantTypes)
+			if tc.wantTypes != nil {
+				got := pred.RequiredTypesAny
+				if tc.wantConjunctive {
+					got = pred.RequiredTypes
+				}
+				if !reflect.DeepEqual(got, tc.wantTypes) {
+					t.Fatalf("permanent types = %v, want %v", got, tc.wantTypes)
+				}
 			}
 			if tc.wantTapped && pred.Tapped != game.TriTrue {
 				t.Fatalf("tapped = %v, want true", pred.Tapped)

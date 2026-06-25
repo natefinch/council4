@@ -228,8 +228,8 @@ func TestEquipActivatedAbilityBuildsCompleteMechanic(t *testing.T) {
 		targets[0].MinTargets != 1 ||
 		targets[0].MaxTargets != 1 ||
 		targets[0].Allow != TargetAllowPermanent ||
-		!slices.Equal(targets[0].Predicate.PermanentTypes, []types.Card{types.Creature}) ||
-		targets[0].Predicate.Controller != ControllerYou {
+		!slices.Equal(targets[0].Selection.Val.RequiredTypesAny, []types.Card{types.Creature}) ||
+		targets[0].Selection.Val.Controller != ControllerYou {
 		t.Fatalf("targets = %+v, want one creature you control", targets)
 	}
 }
@@ -246,12 +246,12 @@ func TestEquipRestrictedActivatedAbilityBuildsRestriction(t *testing.T) {
 	if len(targets) != 1 {
 		t.Fatalf("targets = %+v, want one", targets)
 	}
-	predicate := targets[0].Predicate
-	if !slices.Equal(predicate.Supertypes, []types.Super{types.Legendary}) {
-		t.Fatalf("supertypes = %v, want copied [Legendary]", predicate.Supertypes)
+	selection := targets[0].Selection.Val
+	if !slices.Equal(selection.Supertypes, []types.Super{types.Legendary}) {
+		t.Fatalf("supertypes = %v, want copied [Legendary]", selection.Supertypes)
 	}
-	if !slices.Equal(predicate.Subtypes, []types.Sub{types.Knight}) {
-		t.Fatalf("subtypes = %v, want copied [Knight]", predicate.Subtypes)
+	if !slices.Equal(selection.SubtypesAny, []types.Sub{types.Knight}) {
+		t.Fatalf("subtypes = %v, want copied [Knight]", selection.SubtypesAny)
 	}
 	if targets[0].Constraint != "legendary Knight you control" {
 		t.Fatalf("constraint = %q", targets[0].Constraint)
@@ -336,12 +336,12 @@ func TestEnchantStaticAbilityBuildsCompleteMechanic(t *testing.T) {
 		MaxTargets: 1,
 		Constraint: "creature",
 		Allow:      TargetAllowPermanent,
-		Predicate: TargetPredicate{
-			PermanentTypes: []types.Card{types.Creature},
-		},
+		Selection: opt.Val(Selection{
+			RequiredTypesAny: []types.Card{types.Creature},
+		}),
 	}
 	ability := EnchantStaticAbility(&target)
-	target.Predicate.PermanentTypes[0] = types.Land
+	target.Selection.Val.RequiredTypesAny[0] = types.Land
 
 	if ability.Text != "Enchant creature" {
 		t.Fatalf("text = %q, want %q", ability.Text, "Enchant creature")
@@ -351,7 +351,7 @@ func TestEnchantStaticAbilityBuildsCompleteMechanic(t *testing.T) {
 		enchantTarget.MinTargets != 1 ||
 		enchantTarget.MaxTargets != 1 ||
 		enchantTarget.Allow != TargetAllowPermanent ||
-		!slices.Equal(enchantTarget.Predicate.PermanentTypes, []types.Card{types.Creature}) {
+		!slices.Equal(enchantTarget.Selection.Val.RequiredTypesAny, []types.Card{types.Creature}) {
 		t.Fatalf("enchant target = %+v, %v; want one creature", enchantTarget, ok)
 	}
 }

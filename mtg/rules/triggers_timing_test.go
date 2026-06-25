@@ -422,7 +422,7 @@ func TestStateTriggerWithoutLegalTargetsReleasesLatch(t *testing.T) {
 		MinTargets: 1,
 		MaxTargets: 1,
 		Allow:      game.TargetAllowPermanent,
-		Predicate:  game.TargetPredicate{Controller: game.ControllerOpponent},
+		Selection:  opt.Val(game.Selection{Controller: game.ControllerOpponent}),
 	}})
 	card, ok := g.GetCardInstance(source.CardInstanceID)
 	if !ok {

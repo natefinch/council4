@@ -80,11 +80,11 @@ var Fiendlash = func() *game.CardDef {
 						MaxTargets: 1,
 						Constraint: "player or planeswalker",
 						Allow:      game.TargetAllowPlayer | game.TargetAllowPermanent,
-						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{
+						Selection: opt.Val(game.Selection{
+							RequiredTypesAny: []types.Card{
 								types.Planeswalker,
 							},
-						},
+						}),
 					},
 				},
 				Sequence: []game.Instruction{

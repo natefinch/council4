@@ -37,10 +37,10 @@ func newFlamespeakerSWill() *game.CardDef {
 					MaxTargets: 1,
 					Constraint: "creature you control",
 					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						PermanentTypes: []types.Card{types.Creature},
-						Controller:     game.ControllerYou,
-					},
+					Selection: opt.Val(game.Selection{
+						RequiredTypesAny: []types.Card{types.Creature},
+						Controller:       game.ControllerYou,
+					}),
 				}),
 				game.StaticAbility{
 					ContinuousEffects: []game.ContinuousEffect{
@@ -73,9 +73,9 @@ func newFlamespeakerSWill() *game.CardDef {
 								MaxTargets: 1,
 								Constraint: "target artifact",
 								Allow:      game.TargetAllowPermanent,
-								Predicate: game.TargetPredicate{
-									PermanentTypes: []types.Card{types.Artifact},
-								},
+								Selection: opt.Val(game.Selection{
+									RequiredTypesAny: []types.Card{types.Artifact},
+								}),
 							},
 						},
 						Sequence: []game.Instruction{

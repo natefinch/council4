@@ -31,9 +31,9 @@ func TestGenerateExecutableCardSourceYenna(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"Timing:          game.SorceryOnly,",
-		"PermanentTypes:            []types.Card{types.Enchantment},",
-		"Controller:                game.ControllerYou,",
-		"NameUniqueAmongControlled: true,",
+		"RequiredTypesAny: []types.Card{types.Enchantment},",
+		"Controller: game.ControllerYou",
+		"NameUniqueAmongControlled: true",
 		"Primitive: game.CreateToken{",
 		"Source: game.TokenCopyOf(game.TokenCopySpec{",
 		"Object:          game.TargetPermanentReference(0),",

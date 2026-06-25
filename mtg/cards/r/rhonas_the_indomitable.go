@@ -99,12 +99,12 @@ var RhonasTheIndomitable = func() *game.CardDef {
 						MaxTargets: 1,
 						Constraint: "another target creature",
 						Allow:      game.TargetAllowPermanent,
-						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{
+						Selection: opt.Val(game.Selection{
+							RequiredTypesAny: []types.Card{
 								types.Creature,
 							},
-							Another: true,
-						},
+							ExcludeSource: true,
+						}),
 					},
 				},
 				Sequence: []game.Instruction{

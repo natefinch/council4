@@ -1060,7 +1060,7 @@ func dividedDamageTargetSpec(target compiler.CompiledTarget, total int) (game.Ta
 			return game.TargetSpec{}, false
 		}
 		spec.Allow = game.TargetAllowPermanent
-		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Creature}}
+		spec.Selection = opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}})
 	default:
 		return game.TargetSpec{}, false
 	}
@@ -2962,33 +2962,47 @@ func spellBounceTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, boo
 		StackObjectKinds: []game.StackObjectKind{game.StackSpell},
 	}
 	allow := game.TargetAllowStackObject
+	var selection game.Selection
+	hasPermanentSide := false
 	if target.Exact {
 		if len(required) != 0 || len(excluded) != 0 {
 			return game.TargetSpec{}, false
 		}
 	} else {
 		allow |= game.TargetAllowPermanent
-		predicate.PermanentTypes = append([]types.Card(nil), required...)
-		predicate.ExcludedTypes = append([]types.Card(nil), excluded...)
+		hasPermanentSide = true
+		if len(required) > 0 {
+			selection.RequiredTypesAny = append([]types.Card(nil), required...)
+		}
+		if len(excluded) > 0 {
+			selection.ExcludedTypes = append([]types.Card(nil), excluded...)
+		}
 	}
 	switch selector.Controller {
 	case compiler.ControllerAny:
 	case compiler.ControllerYou:
 		predicate.Controller = game.ControllerYou
+		selection.Controller = game.ControllerYou
 	case compiler.ControllerOpponent:
 		predicate.Controller = game.ControllerOpponent
+		selection.Controller = game.ControllerOpponent
 	case compiler.ControllerNotYou:
 		predicate.Controller = game.ControllerNotYou
+		selection.Controller = game.ControllerNotYou
 	default:
 		return game.TargetSpec{}, false
 	}
-	return game.TargetSpec{
+	spec := game.TargetSpec{
 		MinTargets: target.Cardinality.Min,
 		MaxTargets: target.Cardinality.Max,
 		Allow:      allow,
 		Predicate:  predicate,
 		Constraint: lowerFirst(target.Text),
-	}, true
+	}
+	if hasPermanentSide && !selection.Empty() {
+		spec.Selection = opt.Val(selection)
+	}
+	return spec, true
 }
 
 // target has a plural ("Return two target creatures to their owners' hands."),

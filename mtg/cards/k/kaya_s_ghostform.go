@@ -37,10 +37,10 @@ func newKayaSGhostform() *game.CardDef {
 					MaxTargets: 1,
 					Constraint: "creature or planeswalker you control",
 					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						PermanentTypes: []types.Card{types.Creature, types.Planeswalker},
-						Controller:     game.ControllerYou,
-					},
+					Selection: opt.Val(game.Selection{
+						RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker},
+						Controller:       game.ControllerYou,
+					}),
 				}),
 			},
 			TriggeredAbilities: []game.TriggeredAbility{

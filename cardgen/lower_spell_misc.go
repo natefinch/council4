@@ -1051,7 +1051,7 @@ func lowerPlayerGraveyardExile(ctx contentCtx) (game.AbilityContent, bool) {
 	switch effect.GraveyardZoneExile {
 	case parser.GraveyardZoneExileTargetPlayer:
 	case parser.GraveyardZoneExileTargetOpponent:
-		spec.Predicate = game.TargetPredicate{Player: game.PlayerOpponent}
+		spec.Selection = opt.Val(game.Selection{Player: game.PlayerOpponent})
 	default:
 		return game.AbilityContent{}, false
 	}

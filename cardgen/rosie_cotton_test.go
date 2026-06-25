@@ -31,7 +31,7 @@ func TestLowerRosieCottonLegendarySelfReferenceAndExclusion(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"counter.PlusOnePlusOne",
-		"Another:        true,",
+		"ExcludeSource: true",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)

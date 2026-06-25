@@ -382,7 +382,7 @@ func TestGenerateExecutableCardSourceEnchantCreature(t *testing.T) {
 	for _, wanted := range []string{
 		"StaticAbilities: []game.StaticAbility",
 		"game.EnchantStaticAbility(&game.TargetSpec{",
-		"PermanentTypes: []types.Card{types.Creature}",
+		"RequiredTypesAny: []types.Card{types.Creature}",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -408,7 +408,7 @@ func TestGenerateExecutableCardSourceEnchantTypeUnion(t *testing.T) {
 	for _, wanted := range []string{
 		"game.EnchantStaticAbility(&game.TargetSpec{",
 		`Constraint: "artifact or creature"`,
-		"PermanentTypes: []types.Card{types.Artifact, types.Creature}",
+		"RequiredTypesAny: []types.Card{types.Artifact, types.Creature}",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -434,7 +434,7 @@ func TestGenerateExecutableCardSourceEnchantSubtype(t *testing.T) {
 	for _, wanted := range []string{
 		"game.EnchantStaticAbility(&game.TargetSpec{",
 		`Constraint: "equipment"`,
-		`Subtypes: []types.Sub{types.Sub("Equipment")}`,
+		`SubtypesAny: []types.Sub{types.Sub("Equipment")}`,
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -460,8 +460,8 @@ func TestGenerateExecutableCardSourceEnchantYouControl(t *testing.T) {
 	for _, wanted := range []string{
 		"game.EnchantStaticAbility(&game.TargetSpec{",
 		`Constraint: "creature you control"`,
-		"PermanentTypes: []types.Card{types.Creature}",
-		"Controller:     game.ControllerYou",
+		"RequiredTypesAny: []types.Card{types.Creature}",
+		"Controller: game.ControllerYou",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -486,7 +486,7 @@ func TestGenerateExecutableCardSourceEnchantSubtypeYouControl(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		`Constraint: "mountain you control"`,
-		`Subtypes:   []types.Sub{types.Sub("Mountain")}`,
+		`SubtypesAny: []types.Sub{types.Sub("Mountain")}`,
 		"Controller: game.ControllerYou",
 	} {
 		if !strings.Contains(source, wanted) {

@@ -1123,7 +1123,7 @@ func TestGenerateExecutableCardSourceFightSubtypeTarget(t *testing.T) {
 	if !strings.Contains(source, "Primitive: game.Fight") {
 		t.Fatalf("source missing Fight primitive:\n%s", source)
 	}
-	if !strings.Contains(source, `Subtypes:       []types.Sub{types.Sub("Mutant")},`) {
+	if !strings.Contains(source, `SubtypesAny: []types.Sub{types.Sub("Mutant")}`) {
 		t.Fatalf("source missing Mutant subtype filter:\n%s", source)
 	}
 }
@@ -1150,7 +1150,7 @@ func TestGenerateExecutableCardSourceFightNamedTarget(t *testing.T) {
 	if !strings.Contains(source, "Primitive: game.Fight") {
 		t.Fatalf("source missing Fight primitive:\n%s", source)
 	}
-	if !strings.Contains(source, `RequiredName:   "Fenric",`) {
+	if !strings.Contains(source, `Name: "Fenric"`) {
 		t.Fatalf("source missing RequiredName predicate:\n%s", source)
 	}
 	if !strings.Contains(source, "DistinctFromPriorTargets: true,") {
@@ -1252,7 +1252,7 @@ func TestGenerateExecutableCardSourceFightAnotherExcludesSource(t *testing.T) {
 		!strings.Contains(source, "RelatedObject: game.TargetPermanentReference(0)") {
 		t.Fatalf("source missing source-permanent fight primitive:\n%s", source)
 	}
-	if !strings.Contains(source, "Another:        true,") {
+	if !strings.Contains(source, "ExcludeSource: true") {
 		t.Fatalf("source missing source-excluding Another predicate:\n%s", source)
 	}
 	if strings.Contains(source, "DistinctFromPriorTargets: true,") {
@@ -1266,8 +1266,8 @@ func TestGenerateExecutableCardSourceFixedDamageTargets(t *testing.T) {
 		target string
 		wanted string
 	}{
-		{target: "creature", wanted: "PermanentTypes: []types.Card{types.Creature}"},
-		{target: "planeswalker", wanted: "PermanentTypes: []types.Card{types.Planeswalker}"},
+		{target: "creature", wanted: "RequiredTypesAny: []types.Card{types.Creature}"},
+		{target: "planeswalker", wanted: "RequiredTypesAny: []types.Card{types.Planeswalker}"},
 		{target: "player", wanted: "game.TargetAllowPlayer"},
 		{target: "opponent", wanted: "Player: game.PlayerOpponent"},
 	}

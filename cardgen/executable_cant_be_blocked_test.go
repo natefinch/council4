@@ -24,7 +24,7 @@ func TestGenerateExecutableCardSourceCantBeBlockedThisTurnInstant(t *testing.T) 
 	}
 	for _, wanted := range []string{
 		`Constraint: "target creature"`,
-		"PermanentTypes: []types.Card{types.Creature}",
+		"RequiredTypesAny: []types.Card{types.Creature}",
 		"Primitive: game.ApplyRule{",
 		"Object: opt.Val(game.TargetPermanentReference(0)),",
 		"Kind: game.RuleEffectCantBeBlocked,",
@@ -165,7 +165,7 @@ func TestGenerateExecutableCardSourceCantBeBlockedThisTurnSourceAndTarget(t *tes
 		"TriggeredAbilities:",
 		"MinTargets: 0,",
 		"MaxTargets: 1,",
-		"Another:        true,",
+		"ExcludeSource: true",
 		"Object: opt.Val(game.SourcePermanentReference()),",
 		"Object: opt.Val(game.TargetPermanentReference(0)),",
 		"Kind: game.RuleEffectCantBeBlocked,",

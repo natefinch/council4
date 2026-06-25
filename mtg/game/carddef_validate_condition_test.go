@@ -129,28 +129,6 @@ func TestValidateCardDefReportsContradictorySelection(t *testing.T) {
 	}
 }
 
-func TestValidateCardDefReportsTargetSpecDualSpecification(t *testing.T) {
-	card := &CardDef{CardFace: CardFace{
-		Name:       "Dual Target Spec",
-		OracleText: "Destroy target creature.",
-		SpellAbility: opt.Val(Mode{
-			Targets: []TargetSpec{{
-				MinTargets: 1,
-				MaxTargets: 1,
-				Allow:      TargetAllowPermanent,
-				Predicate:  TargetPredicate{PermanentTypes: []types.Card{types.Creature}},
-				Selection:  opt.Val(Selection{RequiredTypesAny: []types.Card{types.Creature}}),
-			}},
-		}.Ability()),
-	}}
-
-	issues := ValidateCardDef(card)
-
-	if !hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
-		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidSelection)
-	}
-}
-
 func TestValidateCardDefReportsInvalidControllerControlsSelection(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name: "Invalid Condition",

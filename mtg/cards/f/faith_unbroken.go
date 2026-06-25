@@ -39,10 +39,10 @@ func newFaithUnbroken() *game.CardDef {
 					MaxTargets: 1,
 					Constraint: "creature you control",
 					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						PermanentTypes: []types.Card{types.Creature},
-						Controller:     game.ControllerYou,
-					},
+					Selection: opt.Val(game.Selection{
+						RequiredTypesAny: []types.Card{types.Creature},
+						Controller:       game.ControllerYou,
+					}),
 				}),
 				game.StaticAbility{
 					ContinuousEffects: []game.ContinuousEffect{
@@ -71,10 +71,10 @@ func newFaithUnbroken() *game.CardDef {
 								MaxTargets: 1,
 								Constraint: "target creature an opponent controls",
 								Allow:      game.TargetAllowPermanent,
-								Predicate: game.TargetPredicate{
-									PermanentTypes: []types.Card{types.Creature},
-									Controller:     game.ControllerOpponent,
-								},
+								Selection: opt.Val(game.Selection{
+									RequiredTypesAny: []types.Card{types.Creature},
+									Controller:       game.ControllerOpponent,
+								}),
 							},
 						},
 						Sequence: []game.Instruction{

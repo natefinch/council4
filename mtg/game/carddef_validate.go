@@ -11,7 +11,6 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
-	"github.com/natefinch/council4/opt"
 )
 
 // CardDefIssueCode identifies a class of structural CardDef validation issue.
@@ -781,19 +780,23 @@ func (v *cardDefValidator) validateTargetSpec(faceName, path string, target *Tar
 		v.add(faceName, appendPath(path, "Allow"), CardDefIssueInvalidTargetSpec, "unknown target allow category")
 	}
 	v.validateStackObjectTargetPredicate(faceName, path, target)
+	allowsPermanents := target.Allow&TargetAllowPermanent != 0
+	allowsPlayers := target.Allow&TargetAllowPlayer != 0
+	allowsCards := target.Allow&TargetAllowCard != 0
+	allowsStackObjects := target.Allow&TargetAllowStackObject != 0
+	if !allowsStackObjects && !target.Predicate.Empty() {
+		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "stack-object predicate requires a stack-object target")
+	}
 	if target.Selection.Exists {
 		selection := target.Selection.Val
 		v.validateSelection(faceName, appendPath(path, "Selection"), selection)
-		if !target.Predicate.Selection().Empty() {
-			v.add(faceName, path, CardDefIssueInvalidSelection, "TargetSpec sets both Predicate and Selection")
-		}
 		if target.Allow == TargetAllowUnspecified {
 			v.add(faceName, path, CardDefIssueInvalidTargetSpec, "Selection-based TargetSpec must set Allow")
 		}
-		allowsPermanents := target.Allow&TargetAllowPermanent != 0
-		allowsPlayers := target.Allow&TargetAllowPlayer != 0
-		allowsCards := target.Allow&TargetAllowCard != 0
-		if allowsPlayers && selectionHasPermanentPredicates(selection) {
+		// A combined "spell or permanent" target allows both stack objects and
+		// permanents; its Selection constrains only the permanent alternative,
+		// so permanent predicates are legal as long as permanents are allowed.
+		if allowsPlayers && !allowsPermanents && selectionHasPermanentPredicates(selection) {
 			v.add(faceName, appendPath(path, "Selection"), CardDefIssueInvalidSelection, "player targets cannot use permanent Selection predicates")
 		}
 		if !allowsPlayers && selection.Player != PlayerAny {
@@ -810,16 +813,12 @@ func (v *cardDefValidator) validateTargetSpec(faceName, path string, target *Tar
 		if target.MinTargets != 1 || target.MaxTargets != 1 {
 			v.add(faceName, path, CardDefIssueInvalidTargetSpec, "non-controller target chooser requires exactly one target")
 		}
-		controller := target.Predicate.Controller
+		controller := ControllerAny
 		if target.Selection.Exists {
 			controller = target.Selection.Val.Controller
 		}
 		if controller != ControllerAny && controller != ControllerYou {
-			field := "Predicate.Controller"
-			if target.Selection.Exists {
-				field = "Selection.Controller"
-			}
-			v.add(faceName, appendPath(path, field), CardDefIssueInvalidTargetSpec, "opponent target chooser only supports controller-any or controller-you predicates")
+			v.add(faceName, appendPath(path, "Selection.Controller"), CardDefIssueInvalidTargetSpec, "opponent target chooser only supports controller-any or controller-you predicates")
 		}
 	default:
 		v.add(faceName, appendPath(path, "Chooser"), CardDefIssueInvalidTargetSpec, "unknown target chooser")
@@ -831,22 +830,11 @@ func (v *cardDefValidator) validateStackObjectTargetPredicate(faceName, path str
 	knownAllows := target.Allow & knownTargetAllows
 	allowsStackObjects := knownAllows&TargetAllowStackObject != 0
 	allowsPermanents := knownAllows&TargetAllowPermanent != 0
-	stackSelection := target.Predicate.Selection()
-	// Controller restrictions are supported for stack-object targets (e.g.
-	// "target activated ability you don't control"), so they do not count as an
-	// unsupported permanent predicate here.
-	stackSelection.Controller = ControllerAny
-	// A mana-value comparison is a supported stack-spell qualifier ("counter
-	// target spell with mana value N"); the runtime matcher applies it to the
-	// spell choice, so it does not count as an unsupported permanent predicate.
-	stackSelection.ManaValue = opt.V[compare.Int]{}
-	// A combined "spell or permanent" target carries permanent predicates that
-	// constrain only its permanent alternative; the stack-object side is gated
-	// by StackObjectKinds and spell qualifiers, so they are not unsupported.
-	if allowsStackObjects && !allowsPermanents && !stackSelection.Empty() {
-		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "stack-object target uses unsupported predicates")
-	}
-	if allowsStackObjects && target.Selection.Exists {
+	// A combined "spell or permanent" target allows both stack objects and
+	// permanents; its Selection constrains only the permanent alternative. A
+	// stack-only target carries no permanent characteristics, so it must not set
+	// a Selection.
+	if allowsStackObjects && !allowsPermanents && target.Selection.Exists {
 		v.add(faceName, appendPath(path, "Selection"), CardDefIssueInvalidTargetSpec, "stack-object target cannot use Selection")
 	}
 	if allowsStackObjects && len(kinds) == 0 {

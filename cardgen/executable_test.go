@@ -91,8 +91,8 @@ func TestGenerateExecutableCardSourceFuse(t *testing.T) {
 		`Name: "Tear",`,
 		"Layout: game.LayoutSplit,",
 		"Alternate: opt.Val(game.CardFace{",
-		"PermanentTypes: []types.Card{types.Artifact}",
-		"PermanentTypes: []types.Card{types.Enchantment}",
+		"RequiredTypesAny: []types.Card{types.Artifact}",
+		"RequiredTypesAny: []types.Card{types.Enchantment}",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)

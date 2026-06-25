@@ -119,7 +119,7 @@ func TestLowerPlayerGraveyardExile(t *testing.T) {
 	target := mode.Targets[0]
 	if target.MinTargets != 1 || target.MaxTargets != 1 ||
 		target.Allow != game.TargetAllowPlayer ||
-		target.Predicate.Player != game.PlayerAny {
+		target.Selection.Val.Player != game.PlayerAny {
 		t.Fatalf("target = %#v", target)
 	}
 	if len(mode.Sequence) != 1 {
@@ -148,7 +148,7 @@ func TestLowerOpponentGraveyardExile(t *testing.T) {
 	})
 	mode := face.SpellAbility.Val.Modes[0]
 	target := mode.Targets[0]
-	if target.Allow != game.TargetAllowPlayer || target.Predicate.Player != game.PlayerOpponent {
+	if target.Allow != game.TargetAllowPlayer || target.Selection.Val.Player != game.PlayerOpponent {
 		t.Fatalf("target = %#v", target)
 	}
 	move, ok := mode.Sequence[0].Primitive.(game.MoveCard)

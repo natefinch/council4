@@ -69,8 +69,8 @@ func TestLowerMultiTargetExile(t *testing.T) {
 				t.Fatalf("allow = %v, want TargetAllowPermanent", spec.Allow)
 			}
 			if test.permType != "" {
-				if len(spec.Predicate.PermanentTypes) != 1 || spec.Predicate.PermanentTypes[0] != test.permType {
-					t.Fatalf("predicate types = %v, want [%v]", spec.Predicate.PermanentTypes, test.permType)
+				if len(spec.Selection.Val.RequiredTypesAny) != 1 || spec.Selection.Val.RequiredTypesAny[0] != test.permType {
+					t.Fatalf("predicate types = %v, want [%v]", spec.Selection.Val.RequiredTypesAny, test.permType)
 				}
 			}
 			if len(mode.Sequence) != test.maxTargets {
@@ -190,11 +190,11 @@ func TestLowerUnionExile(t *testing.T) {
 			if spec.MinTargets != 1 || spec.MaxTargets != 1 || spec.Allow != game.TargetAllowPermanent {
 				t.Fatalf("spec = %#v, want one {1,1} permanent target", spec)
 			}
-			if !slices.Equal(spec.Predicate.PermanentTypes, test.types) {
-				t.Fatalf("predicate types = %v, want %v", spec.Predicate.PermanentTypes, test.types)
+			if !slices.Equal(spec.Selection.Val.RequiredTypesAny, test.types) {
+				t.Fatalf("predicate types = %v, want %v", spec.Selection.Val.RequiredTypesAny, test.types)
 			}
-			if !slices.Equal(spec.Predicate.Subtypes, test.subtypes) {
-				t.Fatalf("predicate subtypes = %v, want %v", spec.Predicate.Subtypes, test.subtypes)
+			if !slices.Equal(spec.Selection.Val.SubtypesAny, test.subtypes) {
+				t.Fatalf("predicate subtypes = %v, want %v", spec.Selection.Val.SubtypesAny, test.subtypes)
 			}
 			if len(mode.Sequence) != 1 {
 				t.Fatalf("sequence len = %d, want 1", len(mode.Sequence))

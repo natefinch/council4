@@ -37,10 +37,10 @@ func newChainedToTheRocks() *game.CardDef {
 					MaxTargets: 1,
 					Constraint: "mountain you control",
 					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						Subtypes:   []types.Sub{types.Sub("Mountain")},
-						Controller: game.ControllerYou,
-					},
+					Selection: opt.Val(game.Selection{
+						SubtypesAny: []types.Sub{types.Sub("Mountain")},
+						Controller:  game.ControllerYou,
+					}),
 				}),
 			},
 			TriggeredAbilities: []game.TriggeredAbility{
@@ -59,10 +59,10 @@ func newChainedToTheRocks() *game.CardDef {
 								MaxTargets: 1,
 								Constraint: "target creature an opponent controls",
 								Allow:      game.TargetAllowPermanent,
-								Predicate: game.TargetPredicate{
-									PermanentTypes: []types.Card{types.Creature},
-									Controller:     game.ControllerOpponent,
-								},
+								Selection: opt.Val(game.Selection{
+									RequiredTypesAny: []types.Card{types.Creature},
+									Controller:       game.ControllerOpponent,
+								}),
 							},
 						},
 						Sequence: []game.Instruction{

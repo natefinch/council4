@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 // TestTokenOnlyTargetPredicateAllowsTokensRejectsNontokens covers a
@@ -24,10 +25,10 @@ func TestTokenOnlyTargetPredicateAllowsTokensRejectsNontokens(t *testing.T) {
 					MaxTargets: 1,
 					Constraint: "target token you control",
 					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
+					Selection: opt.Val(game.Selection{
 						Controller: game.ControllerYou,
 						TokenOnly:  true,
-					},
+					}),
 				}},
 				Sequence: []game.Instruction{{Primitive: game.Tap{Object: game.TargetPermanentReference(0)}}},
 			}.Ability(),

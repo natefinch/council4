@@ -49,7 +49,7 @@ func TestGenerateOtawaraSoaringCity(t *testing.T) {
 	}
 	targets := game.BodyTargets(&ability)
 	if len(targets) != 1 ||
-		!slices.Equal(targets[0].Predicate.PermanentTypes, []types.Card{
+		!slices.Equal(targets[0].Selection.Val.RequiredTypesAny, []types.Card{
 			types.Artifact, types.Creature, types.Enchantment, types.Planeswalker,
 		}) {
 		t.Fatalf("targets = %#v", targets)
@@ -83,7 +83,7 @@ func TestGenerateOtawaraSourceRendersTypedChannelData(t *testing.T) {
 		`"Discard this card"`,
 		"PerObjectReduction: 1",
 		"Supertypes: []types.Super{types.Legendary}",
-		"PermanentTypes: []types.Card{types.Artifact, types.Creature, types.Enchantment, types.Planeswalker}",
+		"RequiredTypesAny: []types.Card{types.Artifact, types.Creature, types.Enchantment, types.Planeswalker}",
 		"Primitive: game.Bounce",
 	} {
 		if !strings.Contains(source, wanted) {

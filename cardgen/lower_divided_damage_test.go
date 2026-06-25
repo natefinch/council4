@@ -43,7 +43,7 @@ func TestGenerateExecutableCardSourceDividedDamage(t *testing.T) {
 			wantedSnips: []string{
 				"MinTargets: 1",
 				"MaxTargets: 3",
-				"PermanentTypes: []types.Card{types.Creature}",
+				"RequiredTypesAny: []types.Card{types.Creature}",
 				"Divided:   true",
 			},
 		},

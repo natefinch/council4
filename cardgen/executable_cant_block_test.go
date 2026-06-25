@@ -24,7 +24,7 @@ func TestGenerateExecutableCardSourceCantBlockThisTurnSorcery(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		`Constraint: "target creature"`,
-		"PermanentTypes: []types.Card{types.Creature}",
+		"RequiredTypesAny: []types.Card{types.Creature}",
 		"Primitive: game.ApplyRule{",
 		"Object: opt.Val(game.TargetPermanentReference(0)),",
 		"Kind: game.RuleEffectCantBlock,",

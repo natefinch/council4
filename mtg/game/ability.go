@@ -860,7 +860,10 @@ type TriggerPattern struct {
 
 	SpellTargetsSource bool
 	SpellTargetAllow   TargetAllow
-	SpellTargetPattern opt.V[TargetPredicate]
+	// SpellTargetPattern restricts a spell-cast trigger to spells whose targets
+	// match this permanent/card Selection ("a spell that targets a creature you
+	// don't control"). It is matched through the canonical Selection matcher.
+	SpellTargetPattern opt.V[Selection]
 	RequireKickerPaid  bool
 	RequireHistoric    bool
 	// ExcludeManaAbility is required for EventAbilityActivated patterns until
@@ -1165,7 +1168,7 @@ func ScavengeActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 				MaxTargets: 1,
 				Constraint: "target creature",
 				Allow:      TargetAllowPermanent,
-				Predicate:  TargetPredicate{PermanentTypes: []types.Card{types.Creature}},
+				Selection:  opt.Val(Selection{RequiredTypesAny: []types.Card{types.Creature}}),
 			}},
 			Sequence: []Instruction{{
 				Primitive: AddCounter{
@@ -1362,15 +1365,21 @@ type TargetSpec struct {
 	// "creature or planeswalker", "player").
 	Constraint string
 
-	// Allow and Predicate provide structured target legality for generated card
-	// definitions. Constraint remains for display and as a legacy fallback.
-	Allow     TargetAllow
+	// Allow describes the broad categories this target may choose from.
+	// Constraint remains for display and as a legacy fallback.
+	Allow TargetAllow
+
+	// Predicate carries the stack-object and spell-only qualifiers for
+	// stack-object targets (kinds, controller, mana value, spell card
+	// types/colors/supertypes, source types). Permanent, card, and player
+	// characteristic predicates live on Selection. A combined "spell or
+	// permanent" target sets both: Predicate gates its stack-object alternative
+	// and Selection gates its permanent alternative.
 	Predicate TargetPredicate
 
-	// Selection is the shared Selection-based form of the structured target
-	// predicate. When present it supersedes Predicate; the two must not both be
-	// specified. Predicate remains for existing cards and is adapted to a
-	// Selection by the rules matcher when Selection is absent.
+	// Selection is the canonical permanent/card/player characteristic predicate
+	// for this target. It is the sole characteristic matcher; the runtime
+	// permanent, card, and player legality tests read it directly.
 	Selection opt.V[Selection]
 
 	// TargetZone restricts card targets to one zone. It is meaningful only when

@@ -94,7 +94,7 @@ func TestGenerateExecutableCardSourceCopyTargetToken(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"Allow:      game.TargetAllowPermanent,",
-		"TokenOnly:  true,",
+		"TokenOnly: true",
 		"Source: game.TokenCopyOf(game.TokenCopySpec{",
 		"Object: game.TargetPermanentReference(0),",
 	} {
@@ -164,8 +164,8 @@ func TestGenerateExecutableCardSourceCopyTargetArtifactToken(t *testing.T) {
 	for _, wanted := range []string{
 		"Constraint: \"target artifact token you control\",",
 		"Allow:      game.TargetAllowPermanent,",
-		"PermanentTypes: []types.Card{types.Artifact},",
-		"TokenOnly:      true,",
+		"RequiredTypesAny: []types.Card{types.Artifact},",
+		"TokenOnly: true",
 		"Source: game.TokenCopyOf(game.TokenCopySpec{",
 		"Source: game.TokenCopySourceObject,",
 		"Object: game.TargetPermanentReference(0),",

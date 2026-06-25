@@ -65,7 +65,7 @@ func TestDoesntUntapAttachedKeepsEnchantedCreatureTapped(t *testing.T) {
 			{
 				KeywordAbilities: []game.KeywordAbility{game.EnchantKeyword{Target: game.TargetSpec{
 					Allow:     game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{PermanentTypes: []types.Card{types.Creature}},
+					Selection: opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
 				}}},
 			},
 			{
@@ -107,7 +107,7 @@ func TestUntapPhasesInAllPermanentsBeforeApplyingRestrictions(t *testing.T) {
 			{
 				KeywordAbilities: []game.KeywordAbility{game.EnchantKeyword{Target: game.TargetSpec{
 					Allow:     game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{PermanentTypes: []types.Card{types.Creature}},
+					Selection: opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
 				}}},
 			},
 			{
@@ -155,7 +155,7 @@ func TestCantAttackOrBlockAttachedProhibitsEnchantedCreature(t *testing.T) {
 			{
 				KeywordAbilities: []game.KeywordAbility{game.EnchantKeyword{Target: game.TargetSpec{
 					Allow:     game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{PermanentTypes: []types.Card{types.Creature}},
+					Selection: opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
 				}}},
 			},
 			{
@@ -204,7 +204,7 @@ func TestCantBeBlockedAttachedProhibitsBlockingEnchantedCreature(t *testing.T) {
 			{
 				KeywordAbilities: []game.KeywordAbility{game.EnchantKeyword{Target: game.TargetSpec{
 					Allow:     game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{PermanentTypes: []types.Card{types.Creature}},
+					Selection: opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
 				}}},
 			},
 			{

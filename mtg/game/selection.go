@@ -403,44 +403,6 @@ func (s Selection) Validate() []string {
 	return problems
 }
 
-// Selection returns the Selection-equivalent of a TargetPredicate. It shares the
-// predicate's backing slices rather than copying them, so callers must not
-// mutate the result.
-func (p TargetPredicate) Selection() Selection {
-	selection := Selection{
-		ExcludedTypes:     p.ExcludedTypes,
-		Supertypes:        p.Supertypes,
-		ExcludedSupertype: p.ExcludedSupertype,
-		SubtypesAny:       p.Subtypes,
-		ColorsAny:         p.Colors,
-		ExcludedColors:    p.ExcludedColors,
-		Controller:        p.Controller,
-		Player:            p.Player,
-		Tapped:            p.Tapped,
-		CombatState:       p.CombatState,
-		Keyword:           p.Keyword,
-		ExcludedKeyword:   p.ExcludedKeyword,
-		ManaValue:         p.ManaValue,
-		Power:             p.Power,
-		Toughness:         p.Toughness,
-		ExcludeSource:     p.Another,
-
-		PowerLessThanSource:    p.PowerLessThanSource,
-		PowerGreaterThanSource: p.PowerGreaterThanSource,
-		TokenOnly:              p.TokenOnly,
-		NonToken:               p.NonToken,
-
-		NameUniqueAmongControlled: p.NameUniqueAmongControlled,
-		Name:                      p.RequiredName,
-	}
-	if p.PermanentTypesConjunctive {
-		selection.RequiredTypes = p.PermanentTypes
-	} else {
-		selection.RequiredTypesAny = p.PermanentTypes
-	}
-	return selection
-}
-
 // SelectionCount pairs a Selection with the count and total-power thresholds
 // that a "controls matching" condition needs but that Selection deliberately
 // excludes. MinCount defaults to 1 when the Selection is non-empty. DistinctNames

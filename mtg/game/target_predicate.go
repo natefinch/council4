@@ -70,27 +70,20 @@ const (
 	CombatStateAttackingOrBlocking
 )
 
-// TargetPredicate carries structured target legality predicates parsed from
-// common oracle text. Empty fields are wildcards. These predicates model target
-// restrictions that must be legal when chosen and again on resolution
+// TargetPredicate carries the stack-object and spell-only qualifiers a target
+// spec needs that are not permanent/card characteristics. Permanent, card, and
+// player characteristic predicates live on the spec's Selection; this struct
+// retains only the genuinely stack/spell-specific filters: which stack-object
+// kinds the target accepts, the stack object's controller relation, the spell
+// mana-value comparison, the matched spell's card types/colors/supertypes, and
+// the matched stack object's source card types. Empty fields are wildcards.
+// These restrictions must be legal when chosen and again on resolution
 // (CR 115.1, CR 608.2b).
 type TargetPredicate struct {
-	// PermanentTypes matches a permanent by card type. By default the permanent
-	// must carry any one of the listed types ("target artifact or creature");
-	// when PermanentTypesConjunctive is set it must carry every listed type at
-	// once ("target artifact creature"), mirroring the spell-side
-	// SpellCardTypes vs SpellCardTypesAny distinction.
-	PermanentTypes            []types.Card
-	PermanentTypesConjunctive bool
-	ExcludedTypes             []types.Card
-
-	// Supertypes must all be present; Subtypes matches when any listed subtype
-	// is present. ExcludedSupertype, when non-empty, names a single supertype
-	// that must be absent ("nonbasic").
-	Supertypes        []types.Super
-	ExcludedSupertype types.Super
-	Subtypes          []types.Sub
-
+	// SpellCardTypes and SpellCardTypesAny restrict a matched spell stack object
+	// by its card types (all of, respectively any of). ExcludedSpellCardTypes
+	// names card types a matched spell must not carry. StackObjectKinds lists the
+	// stack-object kinds the target accepts (CR 115.4).
 	SpellCardTypes         []types.Card
 	SpellCardTypesAny      []types.Card
 	ExcludedSpellCardTypes []types.Card
@@ -119,50 +112,29 @@ type TargetPredicate struct {
 	// ability-counter targets (CR 113.7).
 	StackObjectSourceTypes []types.Card
 
-	Colors         []color.Color
-	ExcludedColors []color.Color
-
+	// Controller constrains the matched stack object by the controller of the
+	// spell or ability relative to the player choosing targets ("counter target
+	// spell you don't control").
 	Controller ControllerRelation
-	Player     PlayerRelation
 
-	Tapped      TriState
-	CombatState CombatStateFilter
-
-	Keyword         Keyword
-	ExcludedKeyword Keyword
-
+	// ManaValue compares the matched spell's mana value ("counter target spell
+	// with mana value 3 or less"). It applies only to spell stack objects.
 	ManaValue opt.V[compare.Int]
-	Power     opt.V[compare.Int]
-	Toughness opt.V[compare.Int]
+}
 
-	// PowerLessThanSource and PowerGreaterThanSource restrict the match to a
-	// permanent whose power is strictly less / greater than the ability's source
-	// permanent's power ("target attacking creature with lesser power", Mentor).
-	// They are source-relative, so unlike Power they carry no fixed comparison.
-	PowerLessThanSource    bool
-	PowerGreaterThanSource bool
-
-	Another bool
-
-	// TokenOnly restricts the match to a token permanent ("target token"). It
-	// mirrors Selection.TokenOnly and is enforced through Selection().
-	TokenOnly bool
-
-	// NonToken restricts the match to a non-token permanent ("target nontoken
-	// creature"). It mirrors Selection.NonToken and is enforced through
-	// Selection().
-	NonToken bool
-
-	// NameUniqueAmongControlled restricts the match to a permanent whose name
-	// differs from every other permanent its controller controls ("target
-	// enchantment you control that doesn't have the same name as another
-	// permanent you control", Yenna, Redtooth Regent). It mirrors
-	// Selection.NameUniqueAmongControlled and is enforced through Selection().
-	NameUniqueAmongControlled bool
-
-	// RequiredName, when non-empty, restricts the match to a permanent whose
-	// effective name equals it ("another target creature named Fenric", The
-	// Curse of Fenric III). It mirrors Selection.Name and is enforced through
-	// Selection().
-	RequiredName string
+// Empty reports whether the predicate carries no stack-object or spell qualifier
+// and therefore imposes no stack-side restriction.
+func (p TargetPredicate) Empty() bool {
+	return len(p.SpellCardTypes) == 0 &&
+		len(p.SpellCardTypesAny) == 0 &&
+		len(p.ExcludedSpellCardTypes) == 0 &&
+		len(p.StackObjectKinds) == 0 &&
+		len(p.SpellSupertypes) == 0 &&
+		!p.SpellColorless &&
+		len(p.SpellColors) == 0 &&
+		len(p.SpellExcludedColors) == 0 &&
+		!p.SpellMulticolored &&
+		len(p.StackObjectSourceTypes) == 0 &&
+		p.Controller == ControllerAny &&
+		!p.ManaValue.Exists
 }

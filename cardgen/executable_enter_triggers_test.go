@@ -539,7 +539,7 @@ func TestGenerateExecutableCardSourceEnterTargetTrigger(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"TriggeredAbilities: []game.TriggeredAbility",
-		"PermanentTypes: []types.Card{types.Artifact}",
+		"RequiredTypesAny: []types.Card{types.Artifact}",
 		"Primitive: game.Destroy",
 		"Object: game.TargetPermanentReference(0)",
 	} {

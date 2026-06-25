@@ -55,12 +55,12 @@ func TestLowerDualTargetBounce(t *testing.T) {
 				if spec.Allow != game.TargetAllowPermanent {
 					t.Fatalf("spec[%d] allow = %v, want TargetAllowPermanent", i, spec.Allow)
 				}
-				if spec.Predicate.Controller != test.controllers[i] {
-					t.Fatalf("spec[%d] controller = %v, want %v", i, spec.Predicate.Controller, test.controllers[i])
+				if spec.Selection.Val.Controller != test.controllers[i] {
+					t.Fatalf("spec[%d] controller = %v, want %v", i, spec.Selection.Val.Controller, test.controllers[i])
 				}
 				if test.permTypes[i] != "" {
-					if len(spec.Predicate.PermanentTypes) != 1 || spec.Predicate.PermanentTypes[0] != test.permTypes[i] {
-						t.Fatalf("spec[%d] types = %v, want [%v]", i, spec.Predicate.PermanentTypes, test.permTypes[i])
+					if len(spec.Selection.Val.RequiredTypesAny) != 1 || spec.Selection.Val.RequiredTypesAny[0] != test.permTypes[i] {
+						t.Fatalf("spec[%d] types = %v, want [%v]", i, spec.Selection.Val.RequiredTypesAny, test.permTypes[i])
 					}
 				}
 				bounce, ok := mode.Sequence[i].Primitive.(game.Bounce)
@@ -141,8 +141,8 @@ func TestLowerMultiTargetPermanentVerbs(t *testing.T) {
 				t.Fatalf("allow = %v, want TargetAllowPermanent", spec.Allow)
 			}
 			if test.permType != "" {
-				if len(spec.Predicate.PermanentTypes) != 1 || spec.Predicate.PermanentTypes[0] != test.permType {
-					t.Fatalf("predicate types = %v, want [%v]", spec.Predicate.PermanentTypes, test.permType)
+				if len(spec.Selection.Val.RequiredTypesAny) != 1 || spec.Selection.Val.RequiredTypesAny[0] != test.permType {
+					t.Fatalf("predicate types = %v, want [%v]", spec.Selection.Val.RequiredTypesAny, test.permType)
 				}
 			}
 			if len(mode.Sequence) != test.maxTargets {

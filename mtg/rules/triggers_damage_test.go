@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestDamageTriggerGoesOnStack(t *testing.T) {
@@ -296,9 +297,9 @@ func TestAuraDamageSourceTriggerUsesLKIAfterAuraLeaves(t *testing.T) {
 		StaticAbilities: []game.StaticAbility{
 			game.EnchantStaticAbility(&game.TargetSpec{
 				Allow: game.TargetAllowPermanent,
-				Predicate: game.TargetPredicate{
-					PermanentTypes: []types.Card{types.Creature},
-				},
+				Selection: opt.Val(game.Selection{
+					RequiredTypesAny: []types.Card{types.Creature},
+				}),
 			}),
 		},
 		TriggeredAbilities: []game.TriggeredAbility{{

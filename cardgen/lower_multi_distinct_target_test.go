@@ -65,8 +65,8 @@ func TestLowerMultiDistinctTargetDestroy(t *testing.T) {
 				if spec.Allow != game.TargetAllowPermanent {
 					t.Fatalf("spec[%d] allow = %v, want TargetAllowPermanent", i, spec.Allow)
 				}
-				if len(spec.Predicate.PermanentTypes) != 1 || spec.Predicate.PermanentTypes[0] != test.permTypes[i] {
-					t.Fatalf("spec[%d] types = %v, want [%v]", i, spec.Predicate.PermanentTypes, test.permTypes[i])
+				if len(spec.Selection.Val.RequiredTypesAny) != 1 || spec.Selection.Val.RequiredTypesAny[0] != test.permTypes[i] {
+					t.Fatalf("spec[%d] types = %v, want [%v]", i, spec.Selection.Val.RequiredTypesAny, test.permTypes[i])
 				}
 				destroy, ok := mode.Sequence[i].Primitive.(game.Destroy)
 				if !ok || destroy.Object != game.TargetPermanentReference(i) {
@@ -98,8 +98,8 @@ func TestLowerMultiDistinctTargetExile(t *testing.T) {
 		t.Fatalf("targets = %d, sequence = %d, want %d each", len(mode.Targets), len(mode.Sequence), len(wantTypes))
 	}
 	for i := range mode.Targets {
-		if len(mode.Targets[i].Predicate.PermanentTypes) != 1 || mode.Targets[i].Predicate.PermanentTypes[0] != wantTypes[i] {
-			t.Fatalf("spec[%d] types = %v, want [%v]", i, mode.Targets[i].Predicate.PermanentTypes, wantTypes[i])
+		if len(mode.Targets[i].Selection.Val.RequiredTypesAny) != 1 || mode.Targets[i].Selection.Val.RequiredTypesAny[0] != wantTypes[i] {
+			t.Fatalf("spec[%d] types = %v, want [%v]", i, mode.Targets[i].Selection.Val.RequiredTypesAny, wantTypes[i])
 		}
 		exile, ok := mode.Sequence[i].Primitive.(game.Exile)
 		if !ok || exile.Object != game.TargetPermanentReference(i) {

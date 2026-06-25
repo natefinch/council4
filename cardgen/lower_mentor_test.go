@@ -27,8 +27,8 @@ func TestGenerateExecutableCardSourceMentorKeyword(t *testing.T) {
 		for _, want := range []string{
 			"Primitive: game.AddCounter",
 			"CounterKind: counter.PlusOnePlusOne",
-			"CombatState:         game.CombatStateAttacking,",
-			"PowerLessThanSource: true,",
+			"CombatState: game.CombatStateAttacking",
+			"PowerLessThanSource: true",
 		} {
 			if !strings.Contains(source, want) {
 				t.Fatalf("oracle %q: source missing %q:\n%s", oracle, want, source)

@@ -38,10 +38,10 @@ func newGiantSGrasp() *game.CardDef {
 					MaxTargets: 1,
 					Constraint: "giant you control",
 					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						Subtypes:   []types.Sub{types.Sub("Giant")},
-						Controller: game.ControllerYou,
-					},
+					Selection: opt.Val(game.Selection{
+						SubtypesAny: []types.Sub{types.Sub("Giant")},
+						Controller:  game.ControllerYou,
+					}),
 				}),
 			},
 			TriggeredAbilities: []game.TriggeredAbility{
@@ -60,9 +60,9 @@ func newGiantSGrasp() *game.CardDef {
 								MaxTargets: 1,
 								Constraint: "target nonland permanent",
 								Allow:      game.TargetAllowPermanent,
-								Predicate: game.TargetPredicate{
+								Selection: opt.Val(game.Selection{
 									ExcludedTypes: []types.Card{types.Land},
-								},
+								}),
 							},
 						},
 						Sequence: []game.Instruction{

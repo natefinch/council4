@@ -249,9 +249,9 @@ func TestSpellTargetTriggerPredicates(t *testing.T) {
 		Event:            game.EventSpellCast,
 		Controller:       game.TriggerControllerYou,
 		SpellTargetAllow: game.TargetAllowPermanent,
-		SpellTargetPattern: opt.Val(game.TargetPredicate{
-			PermanentTypes: []types.Card{types.Creature},
-			Controller:     game.ControllerNotYou,
+		SpellTargetPattern: opt.Val(game.Selection{
+			RequiredTypesAny: []types.Card{types.Creature},
+			Controller:       game.ControllerNotYou,
 		}),
 	}, event) {
 		t.Fatal("spell target predicate did not match opponent creature target")
@@ -261,9 +261,9 @@ func TestSpellTargetTriggerPredicates(t *testing.T) {
 		Event:            game.EventSpellCast,
 		Controller:       game.TriggerControllerYou,
 		SpellTargetAllow: game.TargetAllowPermanent,
-		SpellTargetPattern: opt.Val(game.TargetPredicate{
-			PermanentTypes: []types.Card{types.Creature},
-			Controller:     game.ControllerNotYou,
+		SpellTargetPattern: opt.Val(game.Selection{
+			RequiredTypesAny: []types.Card{types.Creature},
+			Controller:       game.ControllerNotYou,
 		}),
 	}, event) {
 		t.Fatal("spell target predicate matched own creature target")

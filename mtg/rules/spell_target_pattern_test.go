@@ -14,10 +14,9 @@ func spellTargetsControllerCreaturePattern() *game.TriggerPattern {
 		Event:            game.EventSpellCast,
 		Controller:       game.TriggerControllerYou,
 		SpellTargetAllow: game.TargetAllowPermanent,
-		SpellTargetPattern: opt.Val(game.TargetPredicate{
-			PermanentTypes:            []types.Card{types.Creature},
-			PermanentTypesConjunctive: true,
-			Controller:                game.ControllerYou,
+		SpellTargetPattern: opt.Val(game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			Controller:    game.ControllerYou,
 		}),
 	}
 }

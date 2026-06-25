@@ -73,10 +73,10 @@ func newMarthaJones() *game.CardDef {
 								MaxTargets: 1,
 								Constraint: "up to one other target creature",
 								Allow:      game.TargetAllowPermanent,
-								Predicate: game.TargetPredicate{
-									PermanentTypes: []types.Card{types.Creature},
-									Another:        true,
-								},
+								Selection: opt.Val(game.Selection{
+									RequiredTypesAny: []types.Card{types.Creature},
+									ExcludeSource:    true,
+								}),
 							},
 						},
 						Sequence: []game.Instruction{

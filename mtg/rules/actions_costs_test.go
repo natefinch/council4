@@ -1070,9 +1070,9 @@ func TestCommanderControlledAlternativeCostCreatureExileResolves(t *testing.T) {
 			MinTargets: 1,
 			MaxTargets: 1,
 			Allow:      game.TargetAllowPermanent,
-			Predicate: game.TargetPredicate{
-				PermanentTypes: []types.Card{types.Creature},
-			},
+			Selection: opt.Val(game.Selection{
+				RequiredTypesAny: []types.Card{types.Creature},
+			}),
 		}},
 		Sequence: []game.Instruction{{
 			Primitive: game.Exile{Object: game.TargetPermanentReference(0)},

@@ -126,7 +126,7 @@ func TestGenerateExecutableCardSourceDestroyCreature(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		`Constraint: "target creature"`,
-		"PermanentTypes: []types.Card{types.Creature}",
+		"RequiredTypesAny: []types.Card{types.Creature}",
 		"Primitive: game.Destroy",
 		"Object: game.TargetPermanentReference(0)",
 	} {
@@ -182,7 +182,7 @@ func TestGenerateExecutableCardSourceTypeUnionTarget(t *testing.T) {
 			oracleText: "Destroy target artifact or enchantment.",
 			wanted: []string{
 				`Constraint: "target artifact or enchantment"`,
-				"PermanentTypes: []types.Card{types.Artifact, types.Enchantment}",
+				"RequiredTypesAny: []types.Card{types.Artifact, types.Enchantment}",
 				"Primitive: game.Destroy",
 			},
 		},
@@ -191,7 +191,7 @@ func TestGenerateExecutableCardSourceTypeUnionTarget(t *testing.T) {
 			oracleText: "Test Bolt deals 3 damage to target creature or planeswalker.",
 			wanted: []string{
 				`Constraint: "target creature or planeswalker"`,
-				"PermanentTypes: []types.Card{types.Creature, types.Planeswalker}",
+				"RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker}",
 				"Allow:      game.TargetAllowPermanent,",
 				"Primitive: game.Damage",
 			},
@@ -687,7 +687,7 @@ func TestGenerateExecutableCardSourceExileCreature(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		`Constraint: "target creature"`,
-		"PermanentTypes: []types.Card{types.Creature}",
+		"RequiredTypesAny: []types.Card{types.Creature}",
 		"Primitive: game.Exile",
 		"Object: game.TargetPermanentReference(0)",
 	} {
@@ -741,7 +741,7 @@ func TestGenerateExecutableCardSourceBounceCreature(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		`Constraint: "target creature"`,
-		"PermanentTypes: []types.Card{types.Creature}",
+		"RequiredTypesAny: []types.Card{types.Creature}",
 		"Primitive: game.Bounce",
 		"Object: game.TargetPermanentReference(0)",
 	} {
@@ -1204,7 +1204,7 @@ func TestGenerateExecutableCardSourceTapOrUntapTarget(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		`Constraint: "target creature"`,
-		"PermanentTypes: []types.Card{types.Creature}",
+		"RequiredTypesAny: []types.Card{types.Creature}",
 		"Primitive: game.TapOrUntap",
 		"Object: game.TargetPermanentReference(0)",
 	} {
@@ -1233,7 +1233,7 @@ func TestGenerateExecutableCardSourceTapTarget(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		`Constraint: "target creature"`,
-		"PermanentTypes: []types.Card{types.Creature}",
+		"RequiredTypesAny: []types.Card{types.Creature}",
 		"Primitive: game.Tap",
 		"Object: game.TargetPermanentReference(0)",
 	} {
@@ -1528,7 +1528,7 @@ func TestGenerateExecutableCardSourceMultiTargetUnionDestroy(t *testing.T) {
 			oracleText: "Destroy up to one target artifact or enchantment.",
 			wanted: []string{
 				`Constraint: "up to one target artifact or enchantment"`,
-				"PermanentTypes: []types.Card{types.Artifact, types.Enchantment}",
+				"RequiredTypesAny: []types.Card{types.Artifact, types.Enchantment}",
 				"MinTargets: 0",
 				"MaxTargets: 1",
 				"Primitive: game.Destroy",
@@ -1539,7 +1539,7 @@ func TestGenerateExecutableCardSourceMultiTargetUnionDestroy(t *testing.T) {
 			oracleText: "Destroy up to two target creatures or planeswalkers.",
 			wanted: []string{
 				`Constraint: "up to two target creatures or planeswalkers"`,
-				"PermanentTypes: []types.Card{types.Creature, types.Planeswalker}",
+				"RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker}",
 				"MinTargets: 0",
 				"MaxTargets: 2",
 				"Primitive: game.Destroy",
@@ -1586,7 +1586,7 @@ func TestGenerateExecutableCardSourceExcludedTypeManaValueTarget(t *testing.T) {
 			wanted: []string{
 				`Constraint: "target nonland permanent with mana value 3 or less"`,
 				"ExcludedTypes: []types.Card{types.Land}",
-				"ManaValue:     opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 3})",
+				"ManaValue: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 3})",
 				"Primitive: game.Destroy",
 			},
 		},

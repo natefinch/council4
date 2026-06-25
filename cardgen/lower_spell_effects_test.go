@@ -46,7 +46,7 @@ func TestLowerSpellDamageQualifiedTarget(t *testing.T) {
 		OracleText: "Test Bolt deals 3 damage to target attacking or blocking creature.",
 	})
 	mode := face.SpellAbility.Val.Modes[0]
-	if got := mode.Targets[0].Predicate.CombatState; got != game.CombatStateAttackingOrBlocking {
+	if got := mode.Targets[0].Selection.Val.CombatState; got != game.CombatStateAttackingOrBlocking {
 		t.Fatalf("combat state = %v, want attacking or blocking", got)
 	}
 }
@@ -311,8 +311,8 @@ func TestLowerSpellDestroyQualifiedTarget(t *testing.T) {
 		OracleText: "Destroy target tapped creature an opponent controls.",
 	})
 	target := face.SpellAbility.Val.Modes[0].Targets[0]
-	if target.Predicate.Tapped != game.TriTrue ||
-		target.Predicate.Controller != game.ControllerOpponent {
+	if target.Selection.Val.Tapped != game.TriTrue ||
+		target.Selection.Val.Controller != game.ControllerOpponent {
 		t.Fatalf("predicate = %+v, want tapped creature an opponent controls", target.Predicate)
 	}
 }
@@ -322,22 +322,22 @@ func TestLowerSpellDestroyPowerToughnessTarget(t *testing.T) {
 	tests := []struct {
 		name       string
 		oracleText string
-		want       game.TargetPredicate
+		want       game.Selection
 	}{
 		{
 			name:       "power at most",
 			oracleText: "Destroy target creature with power 2 or less.",
-			want: game.TargetPredicate{
-				PermanentTypes: []types.Card{types.Creature},
-				Power:          opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 2}),
+			want: game.Selection{
+				RequiredTypesAny: []types.Card{types.Creature},
+				Power:            opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 2}),
 			},
 		},
 		{
 			name:       "toughness at least",
 			oracleText: "Destroy target creature with toughness 4 or greater.",
-			want: game.TargetPredicate{
-				PermanentTypes: []types.Card{types.Creature},
-				Toughness:      opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4}),
+			want: game.Selection{
+				RequiredTypesAny: []types.Card{types.Creature},
+				Toughness:        opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4}),
 			},
 		},
 	}
@@ -351,8 +351,8 @@ func TestLowerSpellDestroyPowerToughnessTarget(t *testing.T) {
 				OracleText: test.oracleText,
 			})
 			target := face.SpellAbility.Val.Modes[0].Targets[0]
-			if !reflect.DeepEqual(target.Predicate, test.want) {
-				t.Fatalf("predicate = %+v, want %+v", target.Predicate, test.want)
+			if !reflect.DeepEqual(target.Selection.Val, test.want) {
+				t.Fatalf("selection = %+v, want %+v", target.Selection.Val, test.want)
 			}
 		})
 	}
@@ -363,22 +363,22 @@ func TestLowerSpellDestroyTypeUnionManaValueTarget(t *testing.T) {
 	tests := []struct {
 		name       string
 		oracleText string
-		want       game.TargetPredicate
+		want       game.Selection
 	}{
 		{
 			name:       "creature or planeswalker",
 			oracleText: "Destroy target creature or planeswalker with mana value 3 or less.",
-			want: game.TargetPredicate{
-				PermanentTypes: []types.Card{types.Creature, types.Planeswalker},
-				ManaValue:      opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 3}),
+			want: game.Selection{
+				RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker},
+				ManaValue:        opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 3}),
 			},
 		},
 		{
 			name:       "artifact or enchantment",
 			oracleText: "Destroy target artifact or enchantment with mana value 4 or less.",
-			want: game.TargetPredicate{
-				PermanentTypes: []types.Card{types.Artifact, types.Enchantment},
-				ManaValue:      opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 4}),
+			want: game.Selection{
+				RequiredTypesAny: []types.Card{types.Artifact, types.Enchantment},
+				ManaValue:        opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 4}),
 			},
 		},
 	}
@@ -392,8 +392,8 @@ func TestLowerSpellDestroyTypeUnionManaValueTarget(t *testing.T) {
 				OracleText: test.oracleText,
 			})
 			target := face.SpellAbility.Val.Modes[0].Targets[0]
-			if !reflect.DeepEqual(target.Predicate, test.want) {
-				t.Fatalf("predicate = %+v, want %+v", target.Predicate, test.want)
+			if !reflect.DeepEqual(target.Selection.Val, test.want) {
+				t.Fatalf("selection = %+v, want %+v", target.Selection.Val, test.want)
 			}
 		})
 	}
@@ -426,21 +426,21 @@ func TestLowerSpellDestroyExcludedSupertypeTarget(t *testing.T) {
 	tests := []struct {
 		name       string
 		oracleText string
-		want       game.TargetPredicate
+		want       game.Selection
 	}{
 		{
 			name:       "nonbasic land",
 			oracleText: "Destroy target nonbasic land.",
-			want: game.TargetPredicate{
-				PermanentTypes:    []types.Card{types.Land},
+			want: game.Selection{
+				RequiredTypesAny:  []types.Card{types.Land},
 				ExcludedSupertype: types.Basic,
 			},
 		},
 		{
 			name:       "nonlegendary creature",
 			oracleText: "Destroy target nonlegendary creature.",
-			want: game.TargetPredicate{
-				PermanentTypes:    []types.Card{types.Creature},
+			want: game.Selection{
+				RequiredTypesAny:  []types.Card{types.Creature},
 				ExcludedSupertype: types.Legendary,
 			},
 		},
@@ -455,8 +455,8 @@ func TestLowerSpellDestroyExcludedSupertypeTarget(t *testing.T) {
 				OracleText: test.oracleText,
 			})
 			target := face.SpellAbility.Val.Modes[0].Targets[0]
-			if !reflect.DeepEqual(target.Predicate, test.want) {
-				t.Fatalf("predicate = %+v, want %+v", target.Predicate, test.want)
+			if !reflect.DeepEqual(target.Selection.Val, test.want) {
+				t.Fatalf("selection = %+v, want %+v", target.Selection.Val, test.want)
 			}
 		})
 	}
@@ -1012,8 +1012,8 @@ func TestLowerSpellReturnQualifiedTarget(t *testing.T) {
 		OracleText: "Return target creature you control to its owner's hand.",
 	})
 	target := face.SpellAbility.Val.Modes[0].Targets[0]
-	if target.Predicate.Controller != game.ControllerYou {
-		t.Fatalf("controller = %v, want ControllerYou", target.Predicate.Controller)
+	if target.Selection.Val.Controller != game.ControllerYou {
+		t.Fatalf("controller = %v, want ControllerYou", target.Selection.Val.Controller)
 	}
 }
 
@@ -1026,8 +1026,8 @@ func TestLowerSpellModifyPTQualifiedTarget(t *testing.T) {
 		OracleText: "Target untapped creature you control gets +2/+2 until end of turn.",
 	})
 	target := face.SpellAbility.Val.Modes[0].Targets[0]
-	if target.Predicate.Tapped != game.TriFalse ||
-		target.Predicate.Controller != game.ControllerYou {
+	if target.Selection.Val.Tapped != game.TriFalse ||
+		target.Selection.Val.Controller != game.ControllerYou {
 		t.Fatalf("predicate = %+v, want untapped creature you control", target.Predicate)
 	}
 }
@@ -1174,11 +1174,11 @@ func TestLowerSpellDamagePlayerOrPlaneswalker(t *testing.T) {
 	if target.Allow != game.TargetAllowPlayer|game.TargetAllowPermanent {
 		t.Fatalf("allow = %v, want player|permanent", target.Allow)
 	}
-	if !reflect.DeepEqual(target.Predicate.PermanentTypes, []types.Card{types.Planeswalker}) {
-		t.Fatalf("permanent types = %v, want [planeswalker]", target.Predicate.PermanentTypes)
+	if !reflect.DeepEqual(target.Selection.Val.RequiredTypesAny, []types.Card{types.Planeswalker}) {
+		t.Fatalf("permanent types = %v, want [planeswalker]", target.Selection.Val.RequiredTypesAny)
 	}
-	if target.Predicate.Player != game.PlayerAny {
-		t.Fatalf("player = %v, want any player", target.Predicate.Player)
+	if target.Selection.Val.Player != game.PlayerAny {
+		t.Fatalf("player = %v, want any player", target.Selection.Val.Player)
 	}
 }
 
@@ -1194,11 +1194,11 @@ func TestLowerSpellDamageOpponentOrPlaneswalker(t *testing.T) {
 	if target.Allow != game.TargetAllowPlayer|game.TargetAllowPermanent {
 		t.Fatalf("allow = %v, want player|permanent", target.Allow)
 	}
-	if !reflect.DeepEqual(target.Predicate.PermanentTypes, []types.Card{types.Planeswalker}) {
-		t.Fatalf("permanent types = %v, want [planeswalker]", target.Predicate.PermanentTypes)
+	if !reflect.DeepEqual(target.Selection.Val.RequiredTypesAny, []types.Card{types.Planeswalker}) {
+		t.Fatalf("permanent types = %v, want [planeswalker]", target.Selection.Val.RequiredTypesAny)
 	}
-	if target.Predicate.Player != game.PlayerOpponent {
-		t.Fatalf("player = %v, want opponent", target.Predicate.Player)
+	if target.Selection.Val.Player != game.PlayerOpponent {
+		t.Fatalf("player = %v, want opponent", target.Selection.Val.Player)
 	}
 }
 
@@ -1211,8 +1211,8 @@ func TestLowerSpellDamageKeywordTarget(t *testing.T) {
 		OracleText: "Leaf Arrow deals 3 damage to target creature with flying.",
 	})
 	target := face.SpellAbility.Val.Modes[0].Targets[0]
-	if target.Predicate.Keyword != game.Flying {
-		t.Fatalf("keyword = %v, want flying", target.Predicate.Keyword)
+	if target.Selection.Val.Keyword != game.Flying {
+		t.Fatalf("keyword = %v, want flying", target.Selection.Val.Keyword)
 	}
 }
 
@@ -1225,11 +1225,11 @@ func TestLowerSpellDamageExcludedKeywordTarget(t *testing.T) {
 		OracleText: "Roast deals 5 damage to target creature without flying.",
 	})
 	target := face.SpellAbility.Val.Modes[0].Targets[0]
-	if target.Predicate.ExcludedKeyword != game.Flying {
-		t.Fatalf("excluded keyword = %v, want flying", target.Predicate.ExcludedKeyword)
+	if target.Selection.Val.ExcludedKeyword != game.Flying {
+		t.Fatalf("excluded keyword = %v, want flying", target.Selection.Val.ExcludedKeyword)
 	}
-	if target.Predicate.Keyword != game.KeywordNone {
-		t.Fatalf("keyword = %v, want none", target.Predicate.Keyword)
+	if target.Selection.Val.Keyword != game.KeywordNone {
+		t.Fatalf("keyword = %v, want none", target.Selection.Val.Keyword)
 	}
 }
 
@@ -1242,8 +1242,8 @@ func TestLowerSpellDamageMultiColorTarget(t *testing.T) {
 		OracleText: "Rending Volley deals 4 damage to target white or blue creature.",
 	})
 	target := face.SpellAbility.Val.Modes[0].Targets[0]
-	if !reflect.DeepEqual(target.Predicate.Colors, []color.Color{color.White, color.Blue}) {
-		t.Fatalf("colors = %v, want [white blue]", target.Predicate.Colors)
+	if !reflect.DeepEqual(target.Selection.Val.ColorsAny, []color.Color{color.White, color.Blue}) {
+		t.Fatalf("colors = %v, want [white blue]", target.Selection.Val.ColorsAny)
 	}
 }
 
@@ -1421,7 +1421,7 @@ func modifyPTSlots(t *testing.T, oracleText, typeLine string, wantMin, wantMax i
 func TestLowerPluralModifyPTEachGet(t *testing.T) {
 	t.Parallel()
 	spec, mods := modifyPTSlots(t, "Two target creatures each get -1/-1 until end of turn.", "Instant", 2, 2)
-	if len(spec.Predicate.PermanentTypes) != 1 || spec.Predicate.PermanentTypes[0] != types.Creature {
+	if len(spec.Selection.Val.RequiredTypesAny) != 1 || spec.Selection.Val.RequiredTypesAny[0] != types.Creature {
 		t.Fatalf("predicate = %+v, want creature", spec.Predicate)
 	}
 	for i, mod := range mods {
@@ -1434,7 +1434,7 @@ func TestLowerPluralModifyPTEachGet(t *testing.T) {
 func TestLowerUpToTwoModifyPTEachGet(t *testing.T) {
 	t.Parallel()
 	spec, mods := modifyPTSlots(t, "Up to two target creatures each get +2/+2 until end of turn.", "Instant", 0, 2)
-	if len(spec.Predicate.PermanentTypes) != 1 || spec.Predicate.PermanentTypes[0] != types.Creature {
+	if len(spec.Selection.Val.RequiredTypesAny) != 1 || spec.Selection.Val.RequiredTypesAny[0] != types.Creature {
 		t.Fatalf("predicate = %+v, want creature", spec.Predicate)
 	}
 	for i, mod := range mods {
@@ -1447,15 +1447,15 @@ func TestLowerUpToTwoModifyPTEachGet(t *testing.T) {
 func TestLowerUpToTwoControlledModifyPTEachGet(t *testing.T) {
 	t.Parallel()
 	spec, _ := modifyPTSlots(t, "Up to two target creatures you control each get +1/+0 until end of turn.", "Instant", 0, 2)
-	if spec.Predicate.Controller != game.ControllerYou {
-		t.Fatalf("controller = %v, want you control", spec.Predicate.Controller)
+	if spec.Selection.Val.Controller != game.ControllerYou {
+		t.Fatalf("controller = %v, want you control", spec.Selection.Val.Controller)
 	}
 }
 
 func TestLowerUpToOneModifyPT(t *testing.T) {
 	t.Parallel()
 	spec, mods := modifyPTSlots(t, "Up to one target creature gets -3/-3 until end of turn.", "Instant", 0, 1)
-	if len(spec.Predicate.PermanentTypes) != 1 || spec.Predicate.PermanentTypes[0] != types.Creature {
+	if len(spec.Selection.Val.RequiredTypesAny) != 1 || spec.Selection.Val.RequiredTypesAny[0] != types.Creature {
 		t.Fatalf("predicate = %+v, want creature", spec.Predicate)
 	}
 	if mods[0].PowerDelta != game.Fixed(-3) || mods[0].ToughnessDelta != game.Fixed(-3) {
@@ -1466,11 +1466,11 @@ func TestLowerUpToOneModifyPT(t *testing.T) {
 func TestLowerTypedSubtypeModifyPT(t *testing.T) {
 	t.Parallel()
 	spec, mods := modifyPTSlots(t, "Target Human you control gets +2/+2 until end of turn.", "Instant", 1, 1)
-	if len(spec.Predicate.Subtypes) != 1 || spec.Predicate.Subtypes[0] != types.Sub("Human") {
-		t.Fatalf("subtypes = %+v, want Human", spec.Predicate.Subtypes)
+	if len(spec.Selection.Val.SubtypesAny) != 1 || spec.Selection.Val.SubtypesAny[0] != types.Sub("Human") {
+		t.Fatalf("subtypes = %+v, want Human", spec.Selection.Val.SubtypesAny)
 	}
-	if spec.Predicate.Controller != game.ControllerYou {
-		t.Fatalf("controller = %v, want you control", spec.Predicate.Controller)
+	if spec.Selection.Val.Controller != game.ControllerYou {
+		t.Fatalf("controller = %v, want you control", spec.Selection.Val.Controller)
 	}
 	if mods[0].PowerDelta != game.Fixed(2) || mods[0].ToughnessDelta != game.Fixed(2) {
 		t.Fatalf("delta = %v/%v, want +2/+2", mods[0].PowerDelta, mods[0].ToughnessDelta)

@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 // TestExcludedKeywordTargetSpecRejectsKeywordBearer exercises the runtime target
@@ -21,10 +22,10 @@ func TestExcludedKeywordTargetSpecRejectsKeywordBearer(t *testing.T) {
 		MaxTargets: 1,
 		Allow:      game.TargetAllowPermanent,
 		Constraint: "target creature without flying",
-		Predicate: game.TargetPredicate{
-			PermanentTypes:  []types.Card{types.Creature},
-			ExcludedKeyword: game.Flying,
-		},
+		Selection: opt.Val(game.Selection{
+			RequiredTypesAny: []types.Card{types.Creature},
+			ExcludedKeyword:  game.Flying,
+		}),
 	}
 
 	if !permanentTargetMatchesSpec(g, game.Player1, 0, &spec, grounded.ObjectID) {

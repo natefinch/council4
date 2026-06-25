@@ -53,9 +53,9 @@ func newRiteOfOblivion() *game.CardDef {
 						MaxTargets: 1,
 						Constraint: "target nonland permanent",
 						Allow:      game.TargetAllowPermanent,
-						Predicate: game.TargetPredicate{
+						Selection: opt.Val(game.Selection{
 							ExcludedTypes: []types.Card{types.Land},
-						},
+						}),
 					},
 				},
 				Sequence: []game.Instruction{

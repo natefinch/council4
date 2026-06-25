@@ -126,10 +126,10 @@ func TestLowerOverloadIsTextBlindAndFailsClosed(t *testing.T) {
 			MinTargets: 1,
 			MaxTargets: 1,
 			Allow:      game.TargetAllowPermanent,
-			Predicate: game.TargetPredicate{
-				PermanentTypes: []types.Card{types.Artifact},
-				Controller:     game.ControllerNotYou,
-			},
+			Selection: opt.Val(game.Selection{
+				RequiredTypesAny: []types.Card{types.Artifact},
+				Controller:       game.ControllerNotYou,
+			}),
 		}},
 		Sequence: []game.Instruction{{Primitive: game.Destroy{Object: game.TargetPermanentReference(0)}}},
 	}.Ability())
@@ -404,7 +404,7 @@ func TestLowerDeadlyRollick(t *testing.T) {
 	if target.MinTargets != 1 ||
 		target.MaxTargets != 1 ||
 		target.Allow != game.TargetAllowPermanent ||
-		!slices.Equal(target.Predicate.PermanentTypes, []types.Card{types.Creature}) {
+		!slices.Equal(target.Selection.Val.RequiredTypesAny, []types.Card{types.Creature}) {
 		t.Fatalf("target = %#v, want exact one creature", target)
 	}
 	if len(mode.Sequence) != 1 {
@@ -424,7 +424,7 @@ func TestLowerDeadlyRollick(t *testing.T) {
 	}
 	for _, want := range []string{
 		"Condition: cost.AlternativeConditionControlsCommander",
-		"PermanentTypes: []types.Card{types.Creature}",
+		"RequiredTypesAny: []types.Card{types.Creature}",
 		"Primitive: game.Exile",
 		"Object: game.TargetPermanentReference(0)",
 	} {

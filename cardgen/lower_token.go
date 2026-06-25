@@ -982,10 +982,10 @@ func mapTokenDef() *game.CardDef {
 				MaxTargets: 1,
 				Constraint: "target creature you control",
 				Allow:      game.TargetAllowPermanent,
-				Predicate: game.TargetPredicate{
-					PermanentTypes: []types.Card{types.Creature},
-					Controller:     game.ControllerYou,
-				},
+				Selection: opt.Val(game.Selection{
+					RequiredTypesAny: []types.Card{types.Creature},
+					Controller:       game.ControllerYou,
+				}),
 			}},
 			Sequence: []game.Instruction{
 				{Primitive: game.Explore{Creature: game.TargetPermanentReference(0)}},
@@ -1120,7 +1120,7 @@ func mutagenTokenDef() *game.CardDef {
 				MaxTargets: 1,
 				Constraint: "target creature",
 				Allow:      game.TargetAllowPermanent,
-				Predicate:  game.TargetPredicate{PermanentTypes: []types.Card{types.Creature}},
+				Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
 			}},
 			Sequence: []game.Instruction{
 				{Primitive: game.AddCounter{
