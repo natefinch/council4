@@ -478,39 +478,11 @@ func firstChoiceIndices(amount int) []int {
 }
 
 func candidateSacrificePermanents(g *game.Game, playerID game.PlayerID, addCost cost.Additional, excludedTapIDs []id.ID) []*game.Permanent {
-	excluded := map[id.ID]bool{}
+	var excludedIDs []id.ID
 	if addCost.Kind == cost.AdditionalTapPermanents {
-		for _, permanentID := range excludedTapIDs {
-			excluded[permanentID] = true
-		}
+		excludedIDs = excludedTapIDs
 	}
-	var candidates []*game.Permanent
-	for _, permanent := range g.Battlefield {
-		if !activeBattlefieldPermanent(permanent) ||
-			permanent.Controller != playerID ||
-			!localAdditionalCostMatchesPermanent(g, permanent, addCost) {
-			continue
-		}
-		if excluded[permanent.ObjectID] {
-			continue
-		}
-		if addCost.Kind == cost.AdditionalTapPermanents && permanent.Tapped {
-			continue
-		}
-		if addCost.RequireTapped && !permanent.Tapped {
-			continue
-		}
-		candidates = append(candidates, permanent)
-	}
-	return candidates
-}
-
-func localAdditionalCostMatchesPermanent(g *game.Game, permanent *game.Permanent, addCost cost.Additional) bool {
-	sel, ok := payment.SelectionForAdditionalCost(addCost)
-	if !ok {
-		return false
-	}
-	return permanentMatchesCostSelection(g, permanent, sel)
+	return payment.CandidatePermanentsForCost(&rulesPaymentState{g: g}, playerID, addCost, nil, excludedIDs...)
 }
 
 func candidateAdditionalCostCards(g *game.Game, playerID game.PlayerID, addCost cost.Additional, excludedCardIDs ...id.ID) []id.ID {
