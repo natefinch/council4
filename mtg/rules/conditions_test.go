@@ -329,11 +329,13 @@ func TestConditionControllerLiveStatePredicates(t *testing.T) {
 	}
 
 	condition := opt.Val(game.Condition{
-		ControllerHandEmpty:                     true,
-		ControllerGraveyardCardCountAtLeast:     7,
-		ControllerGraveyardCardTypeCountAtLeast: 4,
-		ControllerBasicLandTypeCountAtLeast:     3,
-		ControllerCreaturePowerDiversityAtLeast: 3,
+		ControllerHandEmpty: true,
+		Aggregates: []game.AggregateComparison{
+			{Aggregate: game.AggregateControllerGraveyardCardCount, Op: compare.GreaterOrEqual, Value: 7},
+			{Aggregate: game.AggregateControllerGraveyardCardTypeCount, Op: compare.GreaterOrEqual, Value: 4},
+			{Aggregate: game.AggregateControllerBasicLandTypeCount, Op: compare.GreaterOrEqual, Value: 3},
+			{Aggregate: game.AggregateControllerCreaturePowerDiversity, Op: compare.GreaterOrEqual, Value: 3},
+		},
 	})
 	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
 		t.Fatal("condition did not match controller live state")
@@ -354,12 +356,12 @@ func TestConditionCardCountsIgnoreTransientTokens(t *testing.T) {
 		t.Fatal("transient token in hand prevented empty-hand condition")
 	}
 	if conditionSatisfied(g, conditionContext{controller: game.Player1}, opt.Val(game.Condition{
-		ControllerHandSizeAtLeast: 1,
+		Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerHandSize, Op: compare.GreaterOrEqual, Value: 1}},
 	})) {
 		t.Fatal("transient token in hand counted toward hand size")
 	}
 	if conditionSatisfied(g, conditionContext{controller: game.Player1}, opt.Val(game.Condition{
-		ControllerGraveyardCardCountAtLeast: 1,
+		Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerGraveyardCardCount, Op: compare.GreaterOrEqual, Value: 1}},
 	})) {
 		t.Fatal("transient token in graveyard counted as a card")
 	}
@@ -426,7 +428,7 @@ func TestConditionDeliriumCombinesSplitCardTypesOnly(t *testing.T) {
 	addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Relic", Types: []types.Card{types.Artifact}}})
 	addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Aura", Types: []types.Card{types.Enchantment}}})
 
-	delirium := opt.Val(game.Condition{ControllerGraveyardCardTypeCountAtLeast: 4})
+	delirium := opt.Val(game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerGraveyardCardTypeCount, Op: compare.GreaterOrEqual, Value: 4}}})
 	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, delirium) {
 		t.Fatal("split card did not contribute both card types to Delirium")
 	}

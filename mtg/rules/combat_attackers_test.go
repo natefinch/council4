@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -313,7 +314,7 @@ func TestConditionalMixedStaticValuesAffectCharacteristicsAndAttackLegality(t *t
 		Power:     opt.Val(game.PT{Value: 1}),
 		Toughness: opt.Val(game.PT{Value: 1}),
 		StaticAbilities: []game.StaticAbility{{
-			Condition: opt.Val(game.Condition{ControllerGraveyardCardTypeCountAtLeast: 4}),
+			Condition: opt.Val(game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerGraveyardCardTypeCount, Op: compare.GreaterOrEqual, Value: 4}}}),
 			ContinuousEffects: []game.ContinuousEffect{
 				{
 					Layer:          game.LayerPowerToughnessModify,

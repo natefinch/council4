@@ -156,13 +156,13 @@ func TestValidateCardDefReportsNegativeConditionThresholds(t *testing.T) {
 	tests := map[string]Condition{
 		"controller life":                     {Aggregates: []AggregateComparison{{Aggregate: AggregateControllerLife, Op: compare.GreaterOrEqual, Value: -1}}},
 		"controller life at most":             {Aggregates: []AggregateComparison{{Aggregate: AggregateControllerLife, Op: compare.LessOrEqual, Value: -1}}},
-		"controller life above starting":      {ControllerLifeAtLeastAboveStarting: -1},
+		"controller life above starting":      {Aggregates: []AggregateComparison{{Aggregate: AggregateControllerLifeAboveStarting, Op: compare.GreaterOrEqual, Value: -1}}},
 		"any player life":                     {AnyPlayerLifeAtMost: -1},
-		"opponent count":                      {OpponentCountAtLeast: -1},
-		"controller graveyard cards":          {ControllerGraveyardCardCountAtLeast: -1},
-		"controller graveyard card types":     {ControllerGraveyardCardTypeCountAtLeast: -1},
-		"controller basic land types":         {ControllerBasicLandTypeCountAtLeast: -1},
-		"controller creature power diversity": {ControllerCreaturePowerDiversityAtLeast: -1},
+		"opponent count":                      {Aggregates: []AggregateComparison{{Aggregate: AggregateOpponentCount, Op: compare.GreaterOrEqual, Value: -1}}},
+		"controller graveyard cards":          {Aggregates: []AggregateComparison{{Aggregate: AggregateControllerGraveyardCardCount, Op: compare.GreaterOrEqual, Value: -1}}},
+		"controller graveyard card types":     {Aggregates: []AggregateComparison{{Aggregate: AggregateControllerGraveyardCardTypeCount, Op: compare.GreaterOrEqual, Value: -1}}},
+		"controller basic land types":         {Aggregates: []AggregateComparison{{Aggregate: AggregateControllerBasicLandTypeCount, Op: compare.GreaterOrEqual, Value: -1}}},
+		"controller creature power diversity": {Aggregates: []AggregateComparison{{Aggregate: AggregateControllerCreaturePowerDiversity, Op: compare.GreaterOrEqual, Value: -1}}},
 	}
 	for name, condition := range tests {
 		t.Run(name, func(t *testing.T) {

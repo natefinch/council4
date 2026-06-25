@@ -3,6 +3,7 @@ package rules
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/zone"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -28,7 +29,9 @@ func addTriggeredPermanentWithCondition(g *game.Game, controller game.PlayerID, 
 	if !ok {
 		panic("triggered permanent card instance not found")
 	}
-	card.Def.TriggeredAbilities[0].Trigger.InterveningIfControllerLifeAtLeast = lifeAtLeast
+	card.Def.TriggeredAbilities[0].Trigger.InterveningCondition = opt.Val(game.Condition{
+		Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLife, Op: compare.GreaterOrEqual, Value: lifeAtLeast}},
+	})
 	return permanent
 }
 

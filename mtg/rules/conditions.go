@@ -30,36 +30,67 @@ func conditionParametersNegative(cond *game.Condition) bool {
 		}
 	}
 	return cond.AnyPlayerLifeAtMost < 0 ||
-		cond.ControllerLifeAtLeastAboveStarting < 0 ||
 		cond.AnyOpponentPoisonAtLeast < 0 ||
-		cond.ControllerHandSizeExactly.Exists && cond.ControllerHandSizeExactly.Val < 0 ||
-		cond.ControllerLibrarySizeAtLeast < 0 ||
-		cond.SpellXAtLeast < 0 ||
-		cond.OpponentCountAtLeast < 0 ||
-		cond.ControllerGraveyardCardCountAtLeast < 0 ||
-		cond.ControllerGraveyardCardTypeCountAtLeast < 0 ||
 		cond.ControllerGraveyardCardOfTypeCountAtLeast < 0 ||
-		cond.ControllerBasicLandTypeCountAtLeast < 0 ||
-		cond.ControllerCreaturePowerDiversityAtLeast < 0 ||
 		cond.ControlsMatching.Exists && cond.ControlsMatching.Val.MinCount < 0 ||
 		cond.AnyOpponentControls.Exists && cond.AnyOpponentControls.Val.MinCount < 0 ||
 		cond.OpponentsControl.Exists && cond.OpponentsControl.Val.MinCount < 0 ||
-		cond.AttackersAttackingControllerAtLeast < 0 ||
 		cond.SourceLevelCountersAtLeast < 0 ||
-		cond.SourceLevelCountersLessThan < 0 ||
-		cond.ControllerGainedLifeThisTurnAtLeast < 0
+		cond.SourceLevelCountersLessThan < 0
 }
 
 // aggregateValue evaluates a player- or board-derived quantity in the given
 // condition context. It returns the value and whether it could be resolved; an
 // unresolved quantity fails the comparison closed.
 func aggregateValue(g *game.Game, ctx conditionContext, kind game.AggregateKind) (int, bool) {
-	if kind == game.AggregateControllerLife {
+	switch kind {
+	case game.AggregateControllerLife:
 		player, ok := playerByID(g, ctx.controller)
 		if !ok {
 			return 0, false
 		}
 		return player.Life, true
+	case game.AggregateControllerLifeAboveStarting:
+		player, ok := playerByID(g, ctx.controller)
+		if !ok {
+			return 0, false
+		}
+		return player.Life - player.StartingLife, true
+	case game.AggregateControllerHandSize:
+		player, ok := playerByID(g, ctx.controller)
+		if !ok {
+			return 0, false
+		}
+		return cardInstanceCount(g, player.Hand.All()), true
+	case game.AggregateControllerLibrarySize:
+		player, ok := playerByID(g, ctx.controller)
+		if !ok {
+			return 0, false
+		}
+		return cardInstanceCount(g, player.Library.All()), true
+	case game.AggregateControllerGraveyardCardCount:
+		player, ok := playerByID(g, ctx.controller)
+		if !ok {
+			return 0, false
+		}
+		return cardInstanceCount(g, player.Graveyard.All()), true
+	case game.AggregateControllerGraveyardCardTypeCount:
+		return controllerGraveyardCardTypeCount(g, ctx.controller), true
+	case game.AggregateControllerBasicLandTypeCount:
+		return controllerBasicLandTypeCount(g, ctx), true
+	case game.AggregateControllerCreaturePowerDiversity:
+		return controllerCreaturePowerDiversity(g, ctx), true
+	case game.AggregateOpponentCount:
+		return len(aliveOpponents(g, ctx.controller)), true
+	case game.AggregateAttackersAttackingController:
+		return attackersAttackingPlayerCount(g, ctx.controller), true
+	case game.AggregateControllerGainedLifeThisTurn:
+		return lifeChangedThisTurn(g, ctx.controller, game.EventLifeGained), true
+	case game.AggregateSpellX:
+		if ctx.obj == nil {
+			return 0, false
+		}
+		return ctx.obj.XValue, true
 	}
 	return 0, false
 }
@@ -80,53 +111,18 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 		value, ok := aggregateValue(g, ctx, agg.Aggregate)
 		matches = matches && ok && compare.Int{Op: agg.Op, Value: agg.Value}.Matches(value)
 	}
-	if cond.ControllerLifeAtLeastAboveStarting > 0 {
-		player, ok := playerByID(g, ctx.controller)
-		matches = matches && ok && player.Life >= player.StartingLife+cond.ControllerLifeAtLeastAboveStarting
-	}
-	if cond.ControllerHandSizeAtLeast > 0 {
-		player, ok := playerByID(g, ctx.controller)
-		matches = matches && ok && cardInstanceCount(g, player.Hand.All()) >= cond.ControllerHandSizeAtLeast
-	}
-	if cond.ControllerHandSizeExactly.Exists {
-		player, ok := playerByID(g, ctx.controller)
-		matches = matches && ok && cardInstanceCount(g, player.Hand.All()) == cond.ControllerHandSizeExactly.Val
-	}
-	if cond.ControllerLibrarySizeAtLeast > 0 {
-		player, ok := playerByID(g, ctx.controller)
-		matches = matches && ok && cardInstanceCount(g, player.Library.All()) >= cond.ControllerLibrarySizeAtLeast
-	}
-	if cond.SpellXAtLeast > 0 {
-		matches = matches && ctx.obj != nil && ctx.obj.XValue >= cond.SpellXAtLeast
-	}
 	if cond.AnyOpponentPoisonAtLeast > 0 {
 		matches = matches && anyOpponentPoisonAtLeast(g, ctx.controller, cond.AnyOpponentPoisonAtLeast)
 	}
 	if cond.AnyPlayerLifeAtMost > 0 {
 		matches = matches && anyPlayerLifeAtMost(g, cond.AnyPlayerLifeAtMost)
 	}
-	if cond.OpponentCountAtLeast > 0 {
-		matches = matches && len(aliveOpponents(g, ctx.controller)) >= cond.OpponentCountAtLeast
-	}
 	if cond.ControllerHandEmpty {
 		player, ok := playerByID(g, ctx.controller)
 		matches = matches && ok && cardInstanceCount(g, player.Hand.All()) == 0
 	}
-	if cond.ControllerGraveyardCardCountAtLeast > 0 {
-		player, ok := playerByID(g, ctx.controller)
-		matches = matches && ok && cardInstanceCount(g, player.Graveyard.All()) >= cond.ControllerGraveyardCardCountAtLeast
-	}
-	if cond.ControllerGraveyardCardTypeCountAtLeast > 0 {
-		matches = matches && controllerGraveyardCardTypeCount(g, ctx.controller) >= cond.ControllerGraveyardCardTypeCountAtLeast
-	}
 	if cond.ControllerGraveyardCardOfTypeCountAtLeast > 0 {
 		matches = matches && controllerGraveyardCardOfTypeCount(g, ctx.controller, cond.ControllerGraveyardCountCardType) >= cond.ControllerGraveyardCardOfTypeCountAtLeast
-	}
-	if cond.ControllerBasicLandTypeCountAtLeast > 0 {
-		matches = matches && controllerBasicLandTypeCount(g, ctx) >= cond.ControllerBasicLandTypeCountAtLeast
-	}
-	if cond.ControllerCreaturePowerDiversityAtLeast > 0 {
-		matches = matches && controllerCreaturePowerDiversity(g, ctx) >= cond.ControllerCreaturePowerDiversityAtLeast
 	}
 	if cond.AnyOpponentControls.Exists {
 		matches = matches && anyOpponentControlsMatchingSelection(g, ctx, cond.AnyOpponentControls.Val)
@@ -188,12 +184,6 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	}
 	if cond.ControllerControlsCommander {
 		matches = matches && playerControlsCommander(g, ctx.controller)
-	}
-	if cond.AttackersAttackingControllerAtLeast > 0 {
-		matches = matches && attackersAttackingPlayerCount(g, ctx.controller) >= cond.AttackersAttackingControllerAtLeast
-	}
-	if cond.ControllerGainedLifeThisTurnAtLeast > 0 {
-		matches = matches && lifeChangedThisTurn(g, ctx.controller, game.EventLifeGained) >= cond.ControllerGainedLifeThisTurnAtLeast
 	}
 	if len(cond.ControllerControlsNamed) > 0 {
 		matches = matches && controllerControlsNamed(g, ctx, cond.ControllerControlsNamed)

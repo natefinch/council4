@@ -74,7 +74,7 @@ func TestLowerActivatedAbilityLifeAboveStartingCondition(t *testing.T) {
 		Toughness:  new("2"),
 	})
 	condition := face.ActivatedAbilities[0].ActivationCondition
-	if !condition.Exists || condition.Val.ControllerLifeAtLeastAboveStarting != 10 {
+	if got := condition.Val.Aggregates; !condition.Exists || len(got) != 1 || got[0].Aggregate != game.AggregateControllerLifeAboveStarting || got[0].Op != compare.GreaterOrEqual || got[0].Value != 10 {
 		t.Fatalf("activation condition = %#v, want life-above-starting >= 10", condition)
 	}
 }
@@ -118,8 +118,8 @@ func TestLowerActivatedAbilityExactHandSizeCondition(t *testing.T) {
 		OracleText: "{1}: Draw a card. Activate only if you have exactly seven cards in hand.",
 	})
 	condition := face.ActivatedAbilities[0].ActivationCondition
-	if !condition.Exists || !condition.Val.ControllerHandSizeExactly.Exists ||
-		condition.Val.ControllerHandSizeExactly.Val != 7 {
+	if got := condition.Val.Aggregates; !condition.Exists || len(got) != 1 || got[0].Aggregate != game.AggregateControllerHandSize ||
+		got[0].Op != compare.Equal || got[0].Value != 7 {
 		t.Fatalf("activation condition = %#v, want exactly seven cards in hand", condition)
 	}
 }

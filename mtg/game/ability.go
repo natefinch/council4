@@ -633,10 +633,6 @@ type TriggerCondition struct {
 	// layer evaluates it with the trigger controller and triggering event bound.
 	InterveningCondition opt.V[Condition]
 
-	// InterveningIfControllerLifeAtLeast is a structured initial intervening-if
-	// condition for life-threshold triggers.
-	InterveningIfControllerLifeAtLeast int
-
 	// InterveningIfEventPermanentHadCounters is true for intervening-if clauses
 	// such as "if it had counters on it" on zone-change triggers. mtg/rules
 	// checks the event permanent's current object or last-known information.

@@ -1425,41 +1425,11 @@ func (v *cardDefValidator) validateCondition(faceName, path string, condition *C
 			v.add(faceName, appendPath(path, fmt.Sprintf("Aggregates[%d].Value", i)), CardDefIssueInvalidCondition, "aggregate threshold cannot be negative")
 		}
 	}
-	if condition.ControllerLifeAtLeastAboveStarting < 0 {
-		v.add(faceName, appendPath(path, "ControllerLifeAtLeastAboveStarting"), CardDefIssueInvalidCondition, "life threshold cannot be negative")
-	}
-	if condition.ControllerHandSizeAtLeast < 0 {
-		v.add(faceName, appendPath(path, "ControllerHandSizeAtLeast"), CardDefIssueInvalidCondition, "hand-size threshold cannot be negative")
-	}
 	if condition.AnyPlayerLifeAtMost < 0 {
 		v.add(faceName, appendPath(path, "AnyPlayerLifeAtMost"), CardDefIssueInvalidCondition, "life threshold cannot be negative")
 	}
-	if condition.OpponentCountAtLeast < 0 {
-		v.add(faceName, appendPath(path, "OpponentCountAtLeast"), CardDefIssueInvalidCondition, "opponent-count threshold cannot be negative")
-	}
-	if condition.ControllerGraveyardCardCountAtLeast < 0 {
-		v.add(faceName, appendPath(path, "ControllerGraveyardCardCountAtLeast"), CardDefIssueInvalidCondition, "graveyard-card threshold cannot be negative")
-	}
-	if condition.ControllerGraveyardCardTypeCountAtLeast < 0 {
-		v.add(faceName, appendPath(path, "ControllerGraveyardCardTypeCountAtLeast"), CardDefIssueInvalidCondition, "graveyard-card-type threshold cannot be negative")
-	}
 	if condition.ControllerGraveyardCardOfTypeCountAtLeast < 0 {
 		v.add(faceName, appendPath(path, "ControllerGraveyardCardOfTypeCountAtLeast"), CardDefIssueInvalidCondition, "graveyard-card-of-type threshold cannot be negative")
-	}
-	if condition.ControllerBasicLandTypeCountAtLeast < 0 {
-		v.add(faceName, appendPath(path, "ControllerBasicLandTypeCountAtLeast"), CardDefIssueInvalidCondition, "basic-land-type threshold cannot be negative")
-	}
-	if condition.ControllerCreaturePowerDiversityAtLeast < 0 {
-		v.add(faceName, appendPath(path, "ControllerCreaturePowerDiversityAtLeast"), CardDefIssueInvalidCondition, "creature-power-diversity threshold cannot be negative")
-	}
-	if condition.ControllerLibrarySizeAtLeast < 0 {
-		v.add(faceName, appendPath(path, "ControllerLibrarySizeAtLeast"), CardDefIssueInvalidCondition, "library-size threshold cannot be negative")
-	}
-	if condition.ControllerGainedLifeThisTurnAtLeast < 0 {
-		v.add(faceName, appendPath(path, "ControllerGainedLifeThisTurnAtLeast"), CardDefIssueInvalidCondition, "gained-life-this-turn threshold cannot be negative")
-	}
-	if condition.SpellXAtLeast < 0 {
-		v.add(faceName, appendPath(path, "SpellXAtLeast"), CardDefIssueInvalidCondition, "spell-X threshold cannot be negative")
 	}
 	if condition.ControlsMatching.Exists {
 		v.validateConditionSelectionCount(faceName, appendPath(path, "ControlsMatching"), condition.ControlsMatching.Val)

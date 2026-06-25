@@ -617,8 +617,8 @@ func TestRenderStaticAbilityCyclingCostModifier(t *testing.T) {
 	rendered, err := (Renderer{}).renderStaticAbility(newRenderCtx(), &game.StaticAbility{
 		Text: "As long as you have seven or more cards in hand, you may pay {0} rather than pay cycling costs.",
 		Condition: opt.Val(game.Condition{
-			Text:                      "As long as you have seven or more cards in hand",
-			ControllerHandSizeAtLeast: 7,
+			Text:       "As long as you have seven or more cards in hand",
+			Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerHandSize, Op: compare.GreaterOrEqual, Value: 7}},
 		}),
 		RuleEffects: []game.RuleEffect{{
 			Kind:           game.RuleEffectCostModifier,
@@ -634,7 +634,7 @@ func TestRenderStaticAbilityCyclingCostModifier(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		"ControllerHandSizeAtLeast: 7",
+		"Aggregate: game.AggregateControllerHandSize, Op: compare.GreaterOrEqual, Value: 7",
 		"game.RuleEffectCostModifier",
 		"AffectedPlayer: game.PlayerYou",
 		"Kind: game.CostModifierAbility",

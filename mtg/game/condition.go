@@ -27,42 +27,24 @@ type Condition struct {
 	// Aggregates compares player- or board-derived quantities (see
 	// AggregateKind) against thresholds using typed comparators. The entries are
 	// ANDed; an empty slice disables the predicate. It unifies the controller
-	// life-total comparisons ("you have N or more/less life", "exactly N life")
-	// that were previously modeled as separate AtLeast/AtMost/Exactly fields.
+	// life-total, hand-size, library-size, graveyard-count, basic-land-type,
+	// creature-power-diversity, opponent-count, attacker-count, gained-life, and
+	// resolving-spell {X} comparisons that were previously modeled as separate
+	// AtLeast/AtMost/Exactly fields.
 	Aggregates []AggregateComparison
 
-	// ControllerHandSizeAtLeast requires the context controller's hand size to
-	// meet the threshold. AnyPlayerLifeAtMost checks every non-eliminated
-	// player. Zero values disable these predicates.
-	ControllerHandSizeAtLeast int
-	AnyPlayerLifeAtMost       int
-
-	// ControllerLifeAtLeastAboveStarting requires the context controller's
-	// current life total to be at least this many points above their starting
-	// life total ("you have at least N life more than your starting life
-	// total"). Zero disables the predicate.
-	ControllerLifeAtLeastAboveStarting int
-
-	// ControllerHandSizeExactly requires the context controller to hold exactly
-	// this many cards in hand. Negative disables it; zero is expressed via
-	// ControllerHandEmpty, so a present exact-zero predicate is not modeled here.
-	ControllerHandSizeExactly opt.V[int]
+	// AnyPlayerLifeAtMost checks every non-eliminated player. Zero disables it.
+	AnyPlayerLifeAtMost int
 
 	// AnyOpponentPoisonAtLeast requires at least one non-eliminated opponent to
 	// have at least this many poison counters. Zero disables the predicate.
 	AnyOpponentPoisonAtLeast int
 
-	// OpponentCountAtLeast requires this many non-eliminated opponents.
-	OpponentCountAtLeast int
-
-	// ControllerHandEmpty and the controller-relative thresholds model
-	// live game-state predicates used by ability words such as threshold,
-	// delirium, domain, hellbent, and coven.
-	ControllerHandEmpty                     bool
-	ControllerGraveyardCardCountAtLeast     int
-	ControllerGraveyardCardTypeCountAtLeast int
-	ControllerBasicLandTypeCountAtLeast     int
-	ControllerCreaturePowerDiversityAtLeast int
+	// ControllerHandEmpty models the live hand-empty game-state predicate used by
+	// the hellbent ability word. The controller-relative count quantities for
+	// ability words such as threshold, delirium, domain, and coven are modeled by
+	// Aggregates.
+	ControllerHandEmpty bool
 
 	// ControllerCreatedTokenThisTurn requires the context controller to have
 	// created at least one token during the current turn ("Activate only if you
@@ -128,28 +110,6 @@ type Condition struct {
 	// stack object's captured kicker-paid state and is false for copies.
 	SpellWasKicked bool
 
-	// AttackersAttackingControllerAtLeast requires at least this many of the
-	// attackers declared this combat to be attacking the context controller
-	// directly or one of the controller's planeswalkers ("if two or more of
-	// those creatures are attacking you and/or planeswalkers you control";
-	// Mangara, the Diplomat). It is evaluated against live combat state and is
-	// zero (disabled) elsewhere.
-	AttackersAttackingControllerAtLeast int
-
-	// ControllerLibrarySizeAtLeast requires the context controller's library to
-	// hold at least this many cards ("if you have N or more cards in your
-	// library", Battle of Wits). Zero disables the predicate.
-	ControllerLibrarySizeAtLeast int
-
-	// ControllerGainedLifeThisTurnAtLeast requires the context controller to have
-	// gained at least this much total life so far this turn ("if you gained 3 or
-	// more life this turn"; Angelic Accord). It is zero (disabled) otherwise.
-	ControllerGainedLifeThisTurnAtLeast int
-	// SpellXAtLeast requires the resolving spell's chosen value of {X} to be at
-	// least this value ("if X is N or more", the Finale cycle). It is evaluated
-	// against the resolving stack object's captured X value. Zero disables the
-	// predicate.
-	SpellXAtLeast int
 	// ControllerGraveyardCardOfTypeCountAtLeast requires the context controller's
 	// graveyard to hold at least this many cards of ControllerGraveyardCountCardType
 	// ("if twenty or more creature cards are in your graveyard", Mortal Combat).
@@ -229,17 +189,9 @@ type ControlCountComparison struct {
 func (c *Condition) Empty() bool {
 	return !c.ControlsMatching.Exists &&
 		len(c.Aggregates) == 0 &&
-		c.ControllerLifeAtLeastAboveStarting == 0 &&
-		c.ControllerHandSizeAtLeast == 0 &&
-		!c.ControllerHandSizeExactly.Exists &&
 		c.AnyOpponentPoisonAtLeast == 0 &&
 		c.AnyPlayerLifeAtMost == 0 &&
-		c.OpponentCountAtLeast == 0 &&
 		!c.ControllerHandEmpty &&
-		c.ControllerGraveyardCardCountAtLeast == 0 &&
-		c.ControllerGraveyardCardTypeCountAtLeast == 0 &&
-		c.ControllerBasicLandTypeCountAtLeast == 0 &&
-		c.ControllerCreaturePowerDiversityAtLeast == 0 &&
 		!c.ControllerCreatedTokenThisTurn &&
 		!c.AnyOpponentControls.Exists &&
 		!c.OpponentsControl.Exists &&
@@ -262,10 +214,6 @@ func (c *Condition) Empty() bool {
 		!c.EventHistory.Exists &&
 		!c.ControllerControlsCommander &&
 		!c.SpellWasKicked &&
-		c.AttackersAttackingControllerAtLeast == 0 &&
-		c.ControllerLibrarySizeAtLeast == 0 &&
-		c.ControllerGainedLifeThisTurnAtLeast == 0 &&
-		c.SpellXAtLeast == 0 &&
 		c.ControllerGraveyardCardOfTypeCountAtLeast == 0 &&
 		len(c.ControllerControlsNamed) == 0 &&
 		!c.FirstCombatPhaseOfTurn &&

@@ -47,7 +47,7 @@ func TestLowerGatedAlsoTokenCreation(t *testing.T) {
 	if !gate.Exists || !gate.Val.Condition.Exists {
 		t.Fatal("second token creation has no effect-condition gate")
 	}
-	if got := gate.Val.Condition.Val.SpellXAtLeast; got != 10 {
-		t.Fatalf("gate SpellXAtLeast = %d, want 10", got)
+	if got := gate.Val.Condition.Val.Aggregates; len(got) != 1 || got[0].Aggregate != game.AggregateSpellX || got[0].Value != 10 {
+		t.Fatalf("gate spell-X aggregate = %+v, want spell-X >= 10", gate.Val.Condition.Val.Aggregates)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -34,7 +35,7 @@ func TestThresholdInsteadManaResolution(t *testing.T) {
 					Types: []types.Card{types.Instant},
 				}})
 			}
-			threshold := game.Condition{ControllerGraveyardCardCountAtLeast: 7}
+			threshold := game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerGraveyardCardCount, Op: compare.GreaterOrEqual, Value: 7}}}
 			belowThreshold := threshold
 			belowThreshold.Negate = true
 			var seq []game.Instruction

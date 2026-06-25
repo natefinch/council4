@@ -612,8 +612,8 @@ func TestAttackingControllerInterveningConditionLowers(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	if !strings.Contains(source, "AttackersAttackingControllerAtLeast: 2") {
-		t.Fatalf("source missing AttackersAttackingControllerAtLeast field:\n%s", source)
+	if !strings.Contains(source, "Aggregate: game.AggregateAttackersAttackingController, Op: compare.GreaterOrEqual, Value: 2") {
+		t.Fatalf("source missing attackers-attacking-controller aggregate:\n%s", source)
 	}
 }
 

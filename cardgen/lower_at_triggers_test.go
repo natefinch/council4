@@ -274,8 +274,9 @@ func TestLowerAtTriggerInterveningIfConditions(t *testing.T) {
 			condition: "if you have exactly thirteen cards in your hand",
 			assert: func(t *testing.T, condition game.Condition) {
 				t.Helper()
-				if !condition.ControllerHandSizeExactly.Exists || condition.ControllerHandSizeExactly.Val != 13 {
-					t.Fatalf("ControllerHandSizeExactly = %+v, want 13", condition.ControllerHandSizeExactly)
+				if got := condition.Aggregates; len(got) != 1 || got[0].Aggregate != game.AggregateControllerHandSize ||
+					got[0].Op != compare.Equal || got[0].Value != 13 {
+					t.Fatalf("hand-size-exactly aggregate = %+v, want 13", condition.Aggregates)
 				}
 			},
 		},
@@ -284,8 +285,8 @@ func TestLowerAtTriggerInterveningIfConditions(t *testing.T) {
 			condition: "if you gained 3 or more life this turn",
 			assert: func(t *testing.T, condition game.Condition) {
 				t.Helper()
-				if condition.ControllerGainedLifeThisTurnAtLeast != 3 {
-					t.Fatalf("ControllerGainedLifeThisTurnAtLeast = %d, want 3", condition.ControllerGainedLifeThisTurnAtLeast)
+				if got := condition.Aggregates; len(got) != 1 || got[0].Aggregate != game.AggregateControllerGainedLifeThisTurn || got[0].Value != 3 {
+					t.Fatalf("gained-life aggregate = %+v, want 3", condition.Aggregates)
 				}
 			},
 		},

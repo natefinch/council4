@@ -815,7 +815,9 @@ func TestLowerMixedStaticDeclarationsConsumeWholeParagraph(t *testing.T) {
 	}
 	ability := face.StaticAbilities[0].Body
 	if !ability.Condition.Exists ||
-		ability.Condition.Val.ControllerGraveyardCardTypeCountAtLeast != 4 {
+		len(ability.Condition.Val.Aggregates) != 1 ||
+		ability.Condition.Val.Aggregates[0].Aggregate != game.AggregateControllerGraveyardCardTypeCount ||
+		ability.Condition.Val.Aggregates[0].Value != 4 {
 		t.Fatalf("condition = %#v", ability.Condition)
 	}
 	if len(ability.ContinuousEffects) != 2 {
@@ -856,7 +858,7 @@ func TestGenerateMixedStaticDeclarationsSource(t *testing.T) {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	for _, want := range []string{
-		"ControllerGraveyardCardTypeCountAtLeast: 4",
+		"Aggregate: game.AggregateControllerGraveyardCardTypeCount, Op: compare.GreaterOrEqual, Value: 4",
 		"game.LayerPowerToughnessModify",
 		"game.LayerAbility",
 		"game.Flying",

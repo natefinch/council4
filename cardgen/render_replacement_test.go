@@ -17,7 +17,7 @@ func TestRenderConditionForETBReplacementRejectsNegativeThresholds(t *testing.T)
 	tests := map[string]game.Condition{
 		"controller life": {Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLife, Op: compare.GreaterOrEqual, Value: -1}}},
 		"any player life": {AnyPlayerLifeAtMost: -1},
-		"opponent count":  {OpponentCountAtLeast: -1},
+		"opponent count":  {Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateOpponentCount, Op: compare.GreaterOrEqual, Value: -1}}},
 	}
 
 	for name, condition := range tests {
@@ -409,12 +409,14 @@ func TestRenderConditionRejectsTextWithoutPredicate(t *testing.T) {
 
 func TestRenderLiveStateCondition(t *testing.T) {
 	condition := game.Condition{
-		Text:                                    "if ability-word conditions are met",
-		ControllerHandEmpty:                     true,
-		ControllerGraveyardCardCountAtLeast:     7,
-		ControllerGraveyardCardTypeCountAtLeast: 4,
-		ControllerBasicLandTypeCountAtLeast:     5,
-		ControllerCreaturePowerDiversityAtLeast: 3,
+		Text:                "if ability-word conditions are met",
+		ControllerHandEmpty: true,
+		Aggregates: []game.AggregateComparison{
+			{Aggregate: game.AggregateControllerGraveyardCardCount, Op: compare.GreaterOrEqual, Value: 7},
+			{Aggregate: game.AggregateControllerGraveyardCardTypeCount, Op: compare.GreaterOrEqual, Value: 4},
+			{Aggregate: game.AggregateControllerBasicLandTypeCount, Op: compare.GreaterOrEqual, Value: 5},
+			{Aggregate: game.AggregateControllerCreaturePowerDiversity, Op: compare.GreaterOrEqual, Value: 3},
+		},
 		ControlsMatching: opt.Val(game.SelectionCount{
 			Selection: game.Selection{RequiredTypes: []types.Card{types.Artifact}},
 			MinCount:  3,
@@ -426,10 +428,10 @@ func TestRenderLiveStateCondition(t *testing.T) {
 	}
 	for _, want := range []string{
 		"ControllerHandEmpty: true",
-		"ControllerGraveyardCardCountAtLeast: 7",
-		"ControllerGraveyardCardTypeCountAtLeast: 4",
-		"ControllerBasicLandTypeCountAtLeast: 5",
-		"ControllerCreaturePowerDiversityAtLeast: 3",
+		"Aggregate: game.AggregateControllerGraveyardCardCount, Op: compare.GreaterOrEqual, Value: 7",
+		"Aggregate: game.AggregateControllerGraveyardCardTypeCount, Op: compare.GreaterOrEqual, Value: 4",
+		"Aggregate: game.AggregateControllerBasicLandTypeCount, Op: compare.GreaterOrEqual, Value: 5",
+		"Aggregate: game.AggregateControllerCreaturePowerDiversity, Op: compare.GreaterOrEqual, Value: 3",
 		"ControlsMatching: opt.Val",
 	} {
 		if !strings.Contains(rendered, want) {
