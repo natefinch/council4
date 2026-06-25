@@ -213,8 +213,8 @@ func replacementZoneChangeDestination(g *game.Game, event game.Event) zone.Type 
 }
 
 // replacementZoneChange applies zone-change replacement effects to determine
-// where a card actually goes (CR 614.1a: "if a card would be put into a
-// graveyard, exile it instead"). It loops because a replaced destination can
+// where a card actually goes (CR 614.1a, "instead" effects; e.g. a card that
+// would be put into a graveyard is exiled instead). It loops because a replaced destination can
 // match further replacement effects, tracking applied effects so each applies at
 // most once (CR 614.5) and repeating until none remain (CR 616.1f); when several
 // match at once CR 616.1 calls for a player choice, which the engine resolves
@@ -287,10 +287,10 @@ func tokenNameInSet(token *game.CardDef, set []*game.CardDef) bool {
 }
 
 // replacementTokenCreationAmount applies replacement effects that change how many
-// tokens are created (CR 614.16: "if an effect would create one or more tokens,
-// create twice that many instead"). Each effect applies to the event at most once
-// (CR 614.5); when several apply, CR 616.1 calls for a player choice, which the
-// engine resolves deterministically (see #1906).
+// tokens are created (CR 614.16, effects that apply when an effect would create
+// one or more tokens; e.g. doubling the number created). Each effect applies to
+// the event at most once (CR 614.5); when several apply, CR 616.1 calls for a
+// player choice, which the engine resolves deterministically (see #1906).
 func replacementTokenCreationAmount(g *game.Game, controller game.PlayerID, token *game.CardDef, amount int) int {
 	if amount <= 0 {
 		return amount
