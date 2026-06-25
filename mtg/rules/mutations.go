@@ -19,6 +19,16 @@ import (
 // this helper, because EventSpellCast is emitted inside.
 func pushSpellToStack(g *game.Game, obj *game.StackObject, castEvent game.Event) {
 	g.Stack.Push(obj)
+	emitSpellCastEvents(g, obj, castEvent)
+}
+
+// emitSpellCastEvents emits the events that mark a spell as cast (CR 601.2i):
+// it consumes "next spell can't be countered" effects, emits target events, the
+// zone-change to the stack, and the spell-cast event (firing "when you cast"
+// triggers). It is separated from the stack push so a cast can put the card on
+// the stack first (CR 601.2a), pay its costs (CR 601.2f-h), and only then become
+// cast; obj must already be on the stack when this is called.
+func emitSpellCastEvents(g *game.Game, obj *game.StackObject, castEvent game.Event) {
 	consumeNextSpellCantBeCounteredEffects(g, obj)
 	emitTargetEvents(g, obj)
 	castEvent = emitZoneChangeEvent(g, castEvent)

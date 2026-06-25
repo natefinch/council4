@@ -85,8 +85,38 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	if !ok {
 		panic("validated spell targets could not be segmented")
 	}
-	var prefs *payment.Preferences
+	// payLifeFromTop reads the card's position in its source zone (the top of
+	// the library), so it must be determined before the card is moved to the
+	// stack below.
 	payLifeFromTop := sourceZone == zone.Library && castFromZoneRequiresPayLife(g, playerID, card.ID, sourceZone, cast.Face)
+
+	// CR 601.2a: proposing a cast first moves the card from its source zone to
+	// the stack as the topmost object. Doing this before the spell's costs are
+	// determined and paid (CR 601.2f-h) is what makes it impossible for a cost
+	// paid from the source zone — "discard a card", "exile a blue card from your
+	// hand", and the like — to ever select the very card being cast.
+	obj := &game.StackObject{
+		ID:                            g.IDGen.Next(),
+		Kind:                          game.StackSpell,
+		SourceID:                      cast.CardID,
+		Face:                          cast.Face,
+		Controller:                    playerID,
+		Targets:                       append([]game.Target(nil), cast.Targets...),
+		TargetCounts:                  targetCounts,
+		ChosenModes:                   append([]int(nil), cast.ChosenModes...),
+		XValue:                        cast.XValue,
+		KickerPaid:                    cast.KickerPaid,
+		KickerCount:                   cast.KickerCount,
+		Overloaded:                    cast.Overloaded,
+		SourceZone:                    sourceZone,
+		CastDuringControllerMainPhase: playerID == g.Turn.ActivePlayer && g.Turn.IsMainPhase(),
+	}
+	if !removeCastSourceCard(g, player, cast.CardID, sourceZone) {
+		return false
+	}
+	g.Stack.Push(obj)
+
+	var prefs *payment.Preferences
 	switch {
 	case cast.Overloaded:
 		overloadCost := append(cost.Mana(nil), spellDef.Overload.Val.Cost...)
@@ -145,35 +175,28 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	}
 	paymentResult, ok := paymentOrch.paySpellCosts(g, request)
 	if !ok {
+		// CR 728: the proposed cast is illegal because its costs can't be paid,
+		// so the proposal is undone — take the spell back off the stack and
+		// return the card to the zone it was cast from.
+		g.Stack.RemoveByID(obj.ID)
+		restoreCastSourceCard(player, cast.CardID, sourceZone)
 		return false
-	}
-	if !removeCastSourceCard(g, player, cast.CardID, sourceZone) {
-		panic("cast spell disappeared from source zone after validation")
 	}
 	if sourceZone == zone.Command && player.CommanderInstanceID == cast.CardID {
 		player.CommanderCastCount++
 	}
-	obj := &game.StackObject{
-		ID:                            g.IDGen.Next(),
-		Kind:                          game.StackSpell,
-		SourceID:                      cast.CardID,
-		Face:                          cast.Face,
-		Controller:                    playerID,
-		Targets:                       append([]game.Target(nil), cast.Targets...),
-		TargetCounts:                  targetCounts,
-		ChosenModes:                   append([]int(nil), cast.ChosenModes...),
-		XValue:                        cast.XValue,
-		KickerPaid:                    cast.KickerPaid,
-		KickerCount:                   cast.KickerCount,
-		Overloaded:                    cast.Overloaded,
-		Evoked:                        !cast.Overloaded && evokeAlternativeChosen(spellDef, prefs.AlternativeIndex),
-		Flashback:                     paymentResult.CastPermission == payment.SpellCastPermissionFlashback,
-		AdditionalCostsPaid:           paymentResult.AdditionalCostsPaid,
-		SourceZone:                    sourceZone,
-		CastDuringControllerMainPhase: playerID == g.Turn.ActivePlayer && g.Turn.IsMainPhase(),
-	}
+	obj.Evoked = !cast.Overloaded && evokeAlternativeChosen(spellDef, prefs.AlternativeIndex)
+	obj.Flashback = paymentResult.CastPermission == payment.SpellCastPermissionFlashback
+	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
+	obj.ColorsOfManaSpentToCast = distinctManaColorsSpent(paymentResult.PoolSpend)
+
+	// stormCopyCount must be read before the spell-cast event is emitted, since
+	// that event increments the storm count for later spells this turn.
 	stormCopies := stormCopyCount(g, spellDef)
-	pushSpellToStack(g, obj, game.Event{
+	// CR 601.2i: the costs are paid, so the spell becomes cast. The card is
+	// already on the stack; emit its zone-change and spell-cast events now so
+	// "when you cast" triggers fire after payment.
+	emitSpellCastEvents(g, obj, game.Event{
 		SourceID:       cast.CardID,
 		StackObjectID:  obj.ID,
 		Controller:     playerID,
@@ -189,7 +212,6 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		ToZone:         zone.Stack,
 	})
 	createStormCopies(g, obj, spellDef, stormCopies)
-	obj.ColorsOfManaSpentToCast = distinctManaColorsSpent(paymentResult.PoolSpend)
 	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, paymentResult.PoolSpend, spellDef, obj)
 	e.resolveCascadeForCast(g, obj, spellDef, agents, log)
 	return true
@@ -211,6 +233,26 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 		return false
 	}
 	alternative := mutateAlternativeCost(mutateCost)
+
+	// CR 601.2a: move the card to the stack before its costs are paid, so a
+	// from-zone cost can't select the card being cast (see applyCastSpellWithChoices).
+	obj := &game.StackObject{
+		ID:             g.IDGen.Next(),
+		Kind:           game.StackSpell,
+		SourceID:       cast.CardID,
+		Face:           game.FaceFront,
+		Controller:     playerID,
+		Targets:        []game.Target{game.PermanentTarget(cast.MutateTargetID)},
+		TargetCounts:   []int{1},
+		Mutate:         true,
+		MutateTargetID: cast.MutateTargetID,
+		SourceZone:     sourceZone,
+	}
+	if !removeCastSourceCard(g, player, cast.CardID, sourceZone) {
+		return false
+	}
+	g.Stack.Push(obj)
+
 	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, game.FaceFront, spellDef, 0, agents, log)
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
 	paymentResult, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{
@@ -222,28 +264,16 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 		Prefs:       prefs,
 	})
 	if !ok {
+		// CR 728: undo the proposal when costs can't be paid.
+		g.Stack.RemoveByID(obj.ID)
+		restoreCastSourceCard(player, cast.CardID, sourceZone)
 		return false
-	}
-	if !removeCastSourceCard(g, player, cast.CardID, sourceZone) {
-		panic("mutate spell disappeared from source zone after validation")
 	}
 	if sourceZone == zone.Command && player.CommanderInstanceID == cast.CardID {
 		player.CommanderCastCount++
 	}
-	obj := &game.StackObject{
-		ID:                  g.IDGen.Next(),
-		Kind:                game.StackSpell,
-		SourceID:            cast.CardID,
-		Face:                game.FaceFront,
-		Controller:          playerID,
-		Targets:             []game.Target{game.PermanentTarget(cast.MutateTargetID)},
-		TargetCounts:        []int{1},
-		Mutate:              true,
-		MutateTargetID:      cast.MutateTargetID,
-		AdditionalCostsPaid: paymentResult.AdditionalCostsPaid,
-		SourceZone:          sourceZone,
-	}
-	pushSpellToStack(g, obj, game.Event{
+	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
+	emitSpellCastEvents(g, obj, game.Event{
 		SourceID:       cast.CardID,
 		StackObjectID:  obj.ID,
 		Controller:     playerID,
@@ -740,5 +770,25 @@ func removeCastSourceCard(g *game.Game, player *game.Player, cardID id.ID, sourc
 		return player.Library.Remove(cardID)
 	default:
 		return false
+	}
+}
+
+// restoreCastSourceCard returns a card to the zone it was cast from. It reverses
+// removeCastSourceCard when a proposed cast is abandoned because its costs can't
+// be paid (CR 601.2h / 728, handling an illegal action by undoing the
+// proposal), so the card is never lost.
+func restoreCastSourceCard(player *game.Player, cardID id.ID, sourceZone zone.Type) {
+	switch sourceZone {
+	case zone.Hand:
+		player.Hand.Add(cardID)
+	case zone.Command:
+		player.CommandZone.Add(cardID)
+	case zone.Graveyard:
+		player.Graveyard.Add(cardID)
+	case zone.Exile:
+		player.Exile.Add(cardID)
+	case zone.Library:
+		player.Library.Add(cardID)
+	default:
 	}
 }
