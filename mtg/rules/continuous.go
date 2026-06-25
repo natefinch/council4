@@ -924,8 +924,13 @@ func orderContinuousEffects(effects []game.ContinuousEffect) []game.ContinuousEf
 			}
 		}
 		if next == -1 {
-			// CR 613.8b: a dependency loop is resolved in timestamp order; the
-			// remaining effects are already timestamp-sorted.
+			// No remaining effect is applicable, so a dependency loop exists.
+			// CR 613.8b resolves the effects in the loop in timestamp order;
+			// the remaining effects are already timestamp-sorted, so they are
+			// applied in that order as a best-effort approximation. This is
+			// imprecise when an effect outside the loop merely depends on a loop
+			// member (it should wait for that member); that case does not arise
+			// with the supported cards and is tracked in #1904.
 			return append(result, remaining...)
 		}
 		result = append(result, remaining[next])
