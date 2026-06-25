@@ -17,13 +17,13 @@ func (e *Engine) applyActivateAbility(g *game.Game, playerID game.PlayerID, acti
 	return e.applyActivateAbilityWithChoices(g, playerID, activate, [game.NumPlayers]PlayerAgent{}, nil)
 }
 
-// applyActivateAbilityWithChoices activates an ability (CR 602.2). Like casting
-// a spell (CR 601), activating an ability puts it on the stack and then pays its
-// costs (CR 602.2a–602.2g): the ability goes on top of the stack, the player
-// chooses targets and modes, and the total cost is determined and paid. The
+// applyActivateAbilityWithChoices activates an ability (CR 602.2). CR 602.2a:
+// the ability is put on top of the stack as an object that isn't a card.
+// CR 602.2b: the rest of activation follows the casting steps in CR 601.2b–i —
+// choosing targets and modes, then determining and paying the total cost. The
 // special activation forms (cycling, ninjutsu, and hand/graveyard abilities) are
-// dispatched first; a mana ability is handled inline because it does not use the
-// stack (CR 605.3a) — it is paid for and resolved immediately.
+// dispatched first; a mana ability is handled inline because it doesn't go on
+// the stack and resolves immediately (CR 605.3b).
 func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	if e.applyCyclingAbilityWithChoices(g, playerID, activate, agents, log) {
 		return true
