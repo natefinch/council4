@@ -7,6 +7,15 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 )
 
+// orderTriggeredAbilitiesAPNAP orders pending triggered abilities for placement
+// on the stack in APNAP order (CR 603.3b): each player, in turn order starting
+// with the active player (CR 101.4), puts the triggers they control on the stack
+// in the order they choose. CR 603.3b technically describes two APNAP passes
+// (abilities that trigger on another ability triggering are placed in the second
+// pass); this engine uses a single APNAP pass, which matches the rules except
+// for the rare ability that triggers on another ability triggering. Because the
+// stack is last-in-first-out, the last player's triggers resolve first. Triggers
+// with no identifiable controller are appended last.
 func (e *Engine) orderTriggeredAbilitiesAPNAP(g *game.Game, triggers []pendingTriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []pendingTriggeredAbility {
 	if len(triggers) == 0 {
 		return triggers
@@ -32,6 +41,12 @@ func (e *Engine) orderTriggeredAbilitiesAPNAP(g *game.Game, triggers []pendingTr
 	return ordered
 }
 
+// prepareTriggeredAbility makes the choices required as a triggered ability is
+// put on the stack: its controller announces modes (CR 603.3c) and chooses
+// targets (CR 603.3d, which defers to the casting choices of CR 601.2c-d). It
+// reports false when the ability can make no legal choice (e.g. no legal mode or
+// no legal target), in which case the ability is removed from the stack
+// (CR 603.3c, CR 603.3d).
 func (e *Engine) prepareTriggeredAbility(g *game.Game, trigger *pendingTriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	source, _ := pendingTriggerSourceDef(g, trigger)
 	ability, ok := pendingTriggerAbilityFromDef(source, trigger)
@@ -56,6 +71,11 @@ func (e *Engine) prepareTriggeredAbility(g *game.Game, trigger *pendingTriggered
 	return true
 }
 
+// triggerModes selects the mode(s) for a modal triggered ability as it is put on
+// the stack (CR 603.3c: a modal triggered ability's controller announces the
+// mode choice; an illegal mode can't be chosen; if no mode is chosen the ability
+// is removed from the stack). It returns ok=false to signal that no legal mode
+// could be chosen so the caller removes the ability from the stack.
 func (e *Engine) triggerModes(g *game.Game, controller game.PlayerID, ability *game.TriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]int, bool) {
 	content := ability.Content
 	if !content.IsModal() {
@@ -148,6 +168,10 @@ func pendingTriggerAbilityFromDef(def *game.CardDef, trigger *pendingTriggeredAb
 	return triggered, true
 }
 
+// chooseTriggerOrder lets a single player order the triggered abilities they
+// control before they are placed on the stack (CR 603.3b: "in any order they
+// choose"). Stack order is last-in-first-out, so the ability placed last
+// resolves first.
 func (e *Engine) chooseTriggerOrder(g *game.Game, playerID game.PlayerID, triggers []pendingTriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []pendingTriggeredAbility {
 	if len(triggers) <= 1 {
 		return triggers
@@ -178,6 +202,9 @@ func (e *Engine) chooseTriggerOrder(g *game.Game, playerID game.PlayerID, trigge
 	return ordered
 }
 
+// triggerAPNAPPlayers returns the players in APNAP order (CR 101.4): the active
+// player first, then each other player in turn order. This ordering governs how
+// simultaneous triggered abilities are placed on the stack (CR 603.3b).
 func triggerAPNAPPlayers(g *game.Game) []game.PlayerID {
 	players := make([]game.PlayerID, 0, game.NumPlayers)
 	playerID := g.Turn.ActivePlayer

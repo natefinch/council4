@@ -11,6 +11,10 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+// triggerTargets chooses the targets for a triggered ability as it is put on the
+// stack (CR 603.3d, which uses the casting target rules of CR 601.2c). It returns
+// ok=false when the ability has targets but no legal set of targets can be
+// chosen, so the caller removes the ability from the stack (CR 603.3d).
 func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, ability *game.TriggeredAbility, chosenModes []int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
 	result := targetChoicesForBodyFromSourceObjectWithModes(g, controller, source, sourceObjectID, ability, chosenModes)
 	switch result.kind {

@@ -10,6 +10,10 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
+// pendingTriggeredAbility is a triggered ability that has triggered (CR 603.2)
+// but has not yet been put on the stack (CR 603.3). It records the controlling
+// player and source needed to build the StackObject, the triggering event, and
+// the mode/target choices made during preparation (CR 603.3c-d).
 type pendingTriggeredAbility struct {
 	controller                  game.PlayerID
 	sourceID                    id.ID
@@ -41,6 +45,15 @@ func (e *Engine) putTriggeredAbilitiesOnStack(g *game.Game) bool {
 	return e.putTriggeredAbilitiesOnStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, nil)
 }
 
+// putTriggeredAbilitiesOnStackWithChoices implements the process by which
+// abilities that have triggered are put on the stack (CR 603.3). It runs "the
+// next time a player would receive priority": it gathers everything that has
+// triggered since the last check (ordinary event triggers per CR 603.2, plus
+// madness, state, delayed, and mana-spend-rider triggers), applies trigger
+// replacement effects (suppression and CR 603.2d-style multiplication), orders
+// the results in APNAP order (CR 603.3b), and pushes each onto the stack as an
+// object that isn't a card (CR 603.3). It reports whether anything was placed so
+// the caller can re-check state-based actions and triggers (CR 603.3b).
 func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	start := g.TriggerEventCursor
 	if start < 0 || start > len(g.Events) {
@@ -510,6 +523,11 @@ func snapshotChosenCreatureTypeTriggerMultiplierCount(snapshot *game.ObjectSnaps
 	return count
 }
 
+// detectMadnessTriggeredAbilities produces the madness triggered ability for any
+// card that was discarded to exile this batch (CR 702.35a: "When this card is
+// exiled this way, its owner may cast it by paying [cost]..."). The madness
+// static ability has already replaced the discard's destination with exile; this
+// is the second, triggered half of the keyword (CR 603.2).
 func (*Engine) detectMadnessTriggeredAbilities(g *game.Game, events []game.Event) []pendingTriggeredAbility {
 	var pending []pendingTriggeredAbility
 	for _, event := range events {
@@ -540,6 +558,14 @@ func (*Engine) detectMadnessTriggeredAbilities(g *game.Game, events []game.Event
 	return pending
 }
 
+// detectTriggeredAbilities scans for ordinary triggered abilities whose trigger
+// event matches one of the given events (CR 603.2: whenever a game event matches
+// a triggered ability's trigger event, that ability automatically triggers).
+// Every active battlefield permanent is checked, plus sources that may have
+// already left the battlefield: leaves-the-battlefield and simultaneous
+// zone-change triggers look back in time (CR 603.10), while damage triggers fire
+// at the moment damage is dealt even if the source or recipient has since moved
+// (CR 120.4b).
 func (*Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []pendingTriggeredAbility {
 	// Detection is a pure read that scans every permanent for each event, so a
 	// static-source frame avoids rescanning the battlefield for static-ability
