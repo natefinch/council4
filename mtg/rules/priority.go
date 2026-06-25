@@ -11,16 +11,37 @@ import (
 	"github.com/natefinch/council4/mtg/game/mana"
 )
 
+// runPriorityLoop runs the priority sequence for the current step or phase
+// (CR 117). Each iteration is a point at which a player would receive priority,
+// so it first applies state-based actions and puts triggered abilities on the
+// stack, repeating until neither does anything (CR 117.5), before a player acts.
+//
+// Priority then moves per CR 117.3: the player with priority acts and keeps
+// priority after casting a spell, activating an ability, or taking a special
+// action (CR 117.3c); passing hands priority to the next player (CR 117.3d).
+// When every active player passes in succession (CR 117.4), the top of the
+// stack resolves and the active player receives priority again (CR 117.3b), or,
+// if the stack is empty, the step or phase ends and the loop returns.
 func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	consecutivePasses := 0
 
 	for {
+		// CR 117.5 / CR 603.3b: before a player gets priority, perform all
+		// state-based actions (repeating until none apply), then put any waiting
+		// triggered abilities on the stack; if either happened, restart the
+		// check. Once the stack is stable the appropriate player gets priority.
 		e.applyStateBasedActionsWithLog(g, log)
 		if g.IsGameOver() {
 			return
 		}
 		if e.putTriggeredAbilitiesOnStackWithChoices(g, agents, log) {
 			consecutivePasses = 0
+			// CR 603.3b says the "appropriate player" gets priority after
+			// triggered abilities are put on the stack: normally the active
+			// player, but if a nonactive player kept priority (CR 117.3c) when
+			// the trigger occurred it would be that player. The engine
+			// simplifies to the active player here; see #1900 for the
+			// CR 603.3b nonactive-keeps-priority edge case.
 			g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 			continue
 		}
@@ -76,6 +97,10 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 		}
 		if chosen.Kind == action.ActionPass {
 			consecutivePasses++
+			// CR 117.4: when every active player has passed in succession, the
+			// top of the stack resolves (or the step/phase ends if the stack is
+			// empty). CR 117.3b: the active player receives priority after a
+			// spell or ability resolves.
 			if consecutivePasses >= activePlayers {
 				if g.Stack.IsEmpty() {
 					return
@@ -85,10 +110,12 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 				g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 				continue
 			}
+			// CR 117.3d: a passing player hands priority to the next player.
 			g.Turn.PriorityPlayer = g.TurnOrder.NextPriority(playerID)
 			continue
 		}
 
+		// CR 117.3c: a player who took an action (not a pass) keeps priority.
 		consecutivePasses = 0
 		g.Turn.PriorityPlayer = playerID
 	}

@@ -13,6 +13,14 @@ func (e *Engine) resolveTopOfStack(g *game.Game, log *TurnLog) {
 	e.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, log)
 }
 
+// resolveTopOfStackWithChoices resolves the object on top of the stack.
+// CR 608.1: each time all players pass in succession, the spell or ability on
+// top of the stack resolves. The resolving object's last known information is
+// snapshotted first so source-based checks (e.g. protection) still find the
+// correct characteristics after it leaves the stack. The final destination is
+// handled in the per-kind resolve paths: a permanent spell enters the
+// battlefield (CR 608.3), while an instant or sorcery spell (and any ability) is
+// put into the graveyard or removed from the stack (CR 608.2n).
 func (e *Engine) resolveTopOfStackWithChoices(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	obj, ok := g.Stack.Pop()
 	if !ok {
@@ -332,6 +340,12 @@ func stackObjectByID(g *game.Game, objectID id.ID) (*game.StackObject, bool) {
 	return nil, false
 }
 
+// counterStackObject counters the spell or ability with the given stack object
+// ID. CR 701.6a: to counter a spell or ability is to cancel it, removing it from
+// the stack; it doesn't resolve and none of its effects occur, and a countered
+// spell is put into its owner's graveyard. A spell with a "can't be countered"
+// effect is left on the stack instead. A countered ability or a spell copy
+// simply ceases to exist, with no card to move.
 func counterStackObject(g *game.Game, objectID id.ID) bool {
 	obj, ok := stackObjectByID(g, objectID)
 	if !ok {
@@ -403,6 +417,10 @@ func deleteStateTriggerLatch(g *game.Game, sourceObjectID, sourceCardID id.ID, a
 	})
 }
 
+// stackSpellCanBeCountered reports whether a spell on the stack may be
+// countered (CR 701.6). A spell with a "can't be countered" effect applying to
+// it isn't countered. Both the object-scoped effects captured when the spell was
+// cast and the currently active rule effects are consulted.
 func stackSpellCanBeCountered(g *game.Game, obj *game.StackObject) bool {
 	var spellDef *game.CardDef
 	var ok bool
@@ -478,6 +496,13 @@ func (e *Engine) resolveSpellWithChoices(g *game.Game, obj *game.StackObject, ag
 	return "resolved"
 }
 
+// resolveInstantOrSorcerySpell resolves a non-permanent spell (CR 608).
+// CR 608.2b: if all of a spell's targets are illegal as it resolves, the spell
+// doesn't resolve; it is removed from the stack and put into its owner's
+// graveyard (counteredSpellResolution). Otherwise its instructions are followed.
+// CR 608.2n: as the final part of an instant or sorcery spell's resolution it is
+// put into its owner's graveyard, unless an effect (exile, shuffle, adventure,
+// rebound) sends it elsewhere first.
 func (e *Engine) resolveInstantOrSorcerySpell(
 	g *game.Game,
 	obj *game.StackObject,
