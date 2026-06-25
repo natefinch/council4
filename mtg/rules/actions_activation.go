@@ -629,6 +629,13 @@ func canActivateGraveyardAbilityWithModes(g *game.Game, playerID game.PlayerID, 
 	})
 }
 
+// canActivateManaAbility reports whether the player may activate a permanent's
+// activated mana ability. A mana ability is an activated ability that could add
+// mana, has no target, and isn't a loyalty ability (CR 605.1a), so it doesn't use
+// the stack (CR 605.3b). It can be activated whenever the player has priority or
+// is paying a cost that requires mana (CR 605.3a), subject to its timing,
+// activation condition, and the player being able to pay its own cost (CR 602.2,
+// CR 118.3).
 func canActivateManaAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ManaAbility, abilityIndex int) bool {
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent.PhasedOut || effectiveController(g, permanent) != playerID {
 		return false

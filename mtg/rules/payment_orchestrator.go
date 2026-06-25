@@ -25,12 +25,19 @@ func (paymentOrchestratorType) planner(g *game.Game) payment.Planner {
 
 // canPaySpellCosts reports whether the player can currently pay all costs for
 // the spell described by req.
+// canPaySpellCosts reports whether the player could pay the full cost of casting
+// the spell described by req, without paying it. It is the feasibility check for
+// the pay-the-cost step of casting: a total cost that can't be paid in full makes
+// the cast illegal and is rewound (CR 601.2h, CR 118.3).
 func (o paymentOrchestratorType) canPaySpellCosts(g *game.Game, req payment.SpellRequest) bool {
 	return o.planner(g).CanPaySpellCosts(req)
 }
 
 // paySpellCosts pays all spell costs described by req and returns the payment
-// details, including the selected casting permission.
+// details, including the selected casting permission. This is the "pay the total
+// cost" step of casting (CR 601.2h): the locked-in total cost (CR 601.2f) is paid
+// in full, with mana abilities already available to have been activated
+// (CR 601.2g); partial payments are not allowed.
 func (o paymentOrchestratorType) paySpellCosts(g *game.Game, req payment.SpellRequest) (payment.SpellPaymentResult, bool) {
 	return o.planner(g).PaySpellCosts(req)
 }
