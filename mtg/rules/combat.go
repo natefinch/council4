@@ -80,6 +80,9 @@ func (e *Engine) resolveCombatDamagePass(g *game.Game, pass combatDamagePass, lo
 	combatEngine{e}.resolveDamagePass(g, pass, log)
 }
 
+// resolveUnblockedCombatDamage assigns an unblocked attacker's combat damage to
+// the player, planeswalker, or battle it is attacking (CR 510.1b). The damage
+// equals the attacker's power (CR 510.1a).
 func resolveUnblockedCombatDamage(g *game.Game, attacker *game.Permanent, target game.AttackTarget, pass combatDamagePass, log *TurnLog) {
 	if !dealsCombatDamageInPass(g, attacker, pass) {
 		return
@@ -91,6 +94,14 @@ func resolveUnblockedCombatDamage(g *game.Game, attacker *game.Permanent, target
 	markAttackTargetCombatDamage(g, attacker, target, damage, log)
 }
 
+// resolveBlockedCombatDamage assigns combat damage between a blocked attacker and
+// its blockers (CR 510.1c-d): the attacker assigns its power among the blockers
+// (and any trample excess to the attack target), and each blocker assigns its
+// power to the attacker. All of these assignments are marked in the same pass and
+// dealt simultaneously (CR 510.2). A blocked attacker with no remaining blockers
+// assigns no combat damage (CR 510.1c) unless it has trample, which then assigns
+// its damage to the attack target as though all blockers had lethal damage
+// (CR 702.19d).
 func resolveBlockedCombatDamage(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent, target game.AttackTarget, pass combatDamagePass, log *TurnLog) {
 	if ruleEffectAssignsCombatDamageAsThoughUnblocked(g, attacker) {
 		resolveCombatDamageAsThoughUnblocked(g, attacker, blockers, target, pass, log)
@@ -506,6 +517,13 @@ type creatureDamageAssignment struct {
 	damage    int
 }
 
+// assignAttackerCombatDamage divides a blocked attacker's combat damage (equal to
+// its power, CR 510.1a) among the creatures blocking it (CR 510.1c). It honors a
+// legal player-chosen assignment if one was recorded, otherwise it falls back to
+// a deterministic default that assigns lethal damage to each blocker in turn.
+// With trample, lethal damage must be assigned to every blocker before any
+// excess tramples through to the attack target (CR 702.19b); that excess is
+// returned as tramplingDamage.
 func assignAttackerCombatDamage(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent) (assignments []creatureDamageAssignment, tramplingDamage int) {
 	damageRemaining := effectivePower(g, attacker)
 	if damageRemaining <= 0 {
@@ -554,23 +572,36 @@ func attackerChosenDamageAssignments(g *game.Game, attacker *game.Permanent, blo
 		if assigned < 0 {
 			return nil, 0, false
 		}
-		if hasTrample && assigned < lethalDamageRemainingFromSource(g, attacker, blocker) {
-			return nil, 0, false
-		}
 		if assigned == 0 {
 			continue
 		}
 		total += assigned
 		assignments = append(assignments, creatureDamageAssignment{permanent: blocker, damage: assigned})
 	}
-	if !hasTrample && !damageAssignmentFollowsBlockerOrder(g, attacker, blockers) {
-		return nil, 0, false
-	}
+	// CR 510.1c: a blocked creature's controller divides its combat damage among
+	// the creatures blocking it however they choose; there is no requirement to
+	// assign lethal damage to one blocker before another (the pre-2017 damage
+	// assignment order rule no longer exists).
 	if total == 0 || total > damage {
 		return nil, 0, false
 	}
 	if hasTrample {
-		return assignments, damage - total, true
+		// CR 702.19b: a trampling attacker may assign its remaining damage to the
+		// attack target, but only if it has assigned lethal damage to every
+		// blocker. If it assigns no excess to the target (all of its damage goes
+		// to blockers), it need not assign lethal to all of them.
+		excess := damage - total
+		if excess > 0 {
+			for _, blocker := range blockers {
+				if blocker == nil {
+					continue
+				}
+				if g.Combat.DamageAssignment[blocker.ObjectID] < lethalDamageRemainingFromSource(g, attacker, blocker) {
+					return nil, 0, false
+				}
+			}
+		}
+		return assignments, excess, true
 	}
 	if total != damage {
 		return nil, 0, false
@@ -578,26 +609,9 @@ func attackerChosenDamageAssignments(g *game.Game, attacker *game.Permanent, blo
 	return assignments, 0, true
 }
 
-func damageAssignmentFollowsBlockerOrder(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent) bool {
-	if g.Combat == nil || attacker == nil {
-		return false
-	}
-	mayAssignToLater := true
-	for _, blocker := range blockers {
-		if blocker == nil {
-			continue
-		}
-		assigned := g.Combat.DamageAssignment[blocker.ObjectID]
-		if assigned > 0 && !mayAssignToLater {
-			return false
-		}
-		if assigned < lethalDamageRemainingFromSource(g, attacker, blocker) {
-			mayAssignToLater = false
-		}
-	}
-	return true
-}
-
+// lethalDamageRemainingFromSource is like lethalDamageRemaining but accounts for
+// the damage source: a source with deathtouch deals lethal damage with any
+// nonzero amount, so one point suffices (CR 702.2c).
 func lethalDamageRemainingFromSource(g *game.Game, source, permanent *game.Permanent) int {
 	if hasKeyword(g, source, game.Deathtouch) {
 		if permanent.MarkedDeathtouchDamage {
@@ -608,6 +622,10 @@ func lethalDamageRemainingFromSource(g *game.Game, source, permanent *game.Perma
 	return lethalDamageRemaining(g, permanent)
 }
 
+// lethalDamageRemaining returns how much more damage must be marked on a permanent
+// for it to have lethal damage, i.e. its toughness minus damage already marked
+// (CR 120.6: a creature with marked damage >= toughness has been dealt lethal
+// damage). Used to decide how much damage to assign to each blocker.
 func lethalDamageRemaining(g *game.Game, permanent *game.Permanent) int {
 	lethal, ok := lethalDamageNeeded(g, permanent)
 	if !ok {
@@ -818,6 +836,11 @@ func eligibleAttackers(g *game.Game, playerID game.PlayerID) []*game.Permanent {
 	return eligible
 }
 
+// canAttackWith reports whether a permanent may be declared as an attacker by
+// playerID (CR 508.1a): it must be a creature the player controls, untapped, not
+// a Defender, and either have haste or have been controlled continuously since
+// the turn began (modeled by the summoning-sickness flag), subject to any
+// "can't attack" restrictions.
 func canAttackWith(g *game.Game, permanent *game.Permanent, playerID game.PlayerID) bool {
 	if effectiveController(g, permanent) != playerID || permanent.Tapped || permanent.PhasedOut {
 		return false

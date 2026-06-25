@@ -27,6 +27,16 @@ type combatEngine struct {
 // attacker declaration, blocker declaration, optional first-strike damage,
 // normal-damage, and end-of-combat priority. It initialises and clears
 // g.Combat; callers must not touch g.Combat while this is running.
+// runPhase runs the combat phase and its five steps in order (CR 506.1):
+// beginning of combat (CR 507), declare attackers (CR 508), declare blockers
+// (CR 509), combat damage (CR 510), and end of combat (CR 511). A first or double
+// strike creature adds a second combat damage step (CR 510.4): the first pass
+// deals first/double strike damage, the second deals the rest.
+//
+// Divergence: CR 508.8 says the declare blockers and combat damage steps are
+// skipped when no creature is attacking; this engine still runs them (their
+// turn-based actions then do nothing), which leaves spurious priority windows on
+// no-attack turns. Tracked in #1908.
 func (ce combatEngine) runPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.CombatPhasesThisTurn++
@@ -94,16 +104,22 @@ func (ce combatEngine) runPriorityStep(g *game.Game, agents [game.NumPlayers]Pla
 }
 
 // runPriority gives priority to the active player and runs the priority loop.
-// It returns false if the game ended during the window.
+// It returns false if the game ended during the window. After every combat
+// turn-based action (declaring attackers/blockers, dealing combat damage) it is
+// the active player who receives priority (CR 508.2, CR 509.2, CR 510.3,
+// CR 511.1).
 func (ce combatEngine) runPriority(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 	ce.e.runPriorityLoop(g, agents, log)
 	return !g.IsGameOver()
 }
 
-// declareAttackers runs the declare-attackers turn-based action: it enumerates
+// declareAttackers runs the declare-attackers turn-based action (CR 508.1: the
+// active player declares attackers; this does not use the stack): it enumerates
 // legal attacker choices, asks the active player to pick one, logs it, and
-// applies it.
+// applies it. Legality enforces CR 508.1a (chosen creatures are untapped and have
+// haste or were controlled since the turn began) and the attack restrictions and
+// requirements (CR 508.1b-d).
 func (ce combatEngine) declareAttackers(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	playerID := g.Turn.ActivePlayer
 	legal := ce.legalAttackers(g, playerID)
@@ -129,8 +145,13 @@ func (ce combatEngine) declareAttackers(g *game.Game, agents [game.NumPlayers]Pl
 	ce.e.notifyActionObservers(g, agents, playerID, chosen)
 }
 
-// declareBlockers runs the declare-blockers turn-based action for each
-// defending player in priority order.
+// declareBlockers runs the declare-blockers turn-based action for each defending
+// player in turn order (CR 509.1: each defending player declares blockers; this
+// does not use the stack). Legality enforces CR 509.1a (chosen blockers are
+// untapped and assigned to an attacker that is attacking that player or a
+// planeswalker/battle they control or protect) and the block restrictions and
+// requirements (CR 509.1b-c). After all blockers are declared, attackers with no
+// blockers become unblocked (CR 509.1h).
 func (ce combatEngine) declareBlockers(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	for _, playerID := range defendingPlayersInOrder(g) {
 		legal := ce.legalBlockers(g, playerID)
@@ -613,7 +634,11 @@ func (combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, declare 
 }
 
 // resolveDamagePass assigns and marks combat damage for all attackers in the
-// given damage pass (first-strike or normal).
+// given damage pass (first-strike or normal), implementing the combat damage step
+// (CR 510). Combat damage is assigned per CR 510.1 (unblocked creatures to the
+// player/planeswalker/battle they attack, blocked creatures to their blockers)
+// and then all of it is dealt simultaneously (CR 510.2); the events are batched
+// so they share one simultaneous timestamp and trigger together.
 func (combatEngine) resolveDamagePass(g *game.Game, pass combatDamagePass, log *TurnLog) {
 	if g.Combat == nil {
 		return
