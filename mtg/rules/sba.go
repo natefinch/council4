@@ -15,8 +15,9 @@ const maxStateBasedActionPasses = 1000
 //   - CR 704.5e: spell/card copies in the wrong zone cease to exist. Copies are
 //     instead cleaned up where they are created and resolved (stack.go,
 //     storm.go) rather than by a dedicated SBA check.
-//   - CR 704.5k: the world rule (no Commander-legal cards have the world
-//     supertype).
+//   - CR 704.5k: the world rule. The world supertype exists (and a few
+//     Commander-legal cards such as Concordant Crossroads have it), but the
+//     "shortest time as a world permanent" removal is not modeled.
 //   - CR 704.5r: removing counters beyond a "can't have more than N" cap.
 //   - CR 704.5t/u/w/x/z: dungeon venture, space sculptor, battle protector, and
 //     start-your-engines speed actions.
@@ -100,7 +101,7 @@ func newPassBatchID(g *game.Game) func() id.ID {
 //     loses (HasLethalCommanderDamage).
 //
 // MarkedToLoseGame covers effects that directly state a player loses the game.
-// CR 104.3a: a player who loses leaves the game; eliminatePlayer applies the
+// CR 104.5: a player who loses the game leaves it; eliminatePlayer applies the
 // CR 800.4 departure cleanup.
 func (e *Engine) checkStateBasedActions(g *game.Game) (bool, []LossLog) {
 	changed := false
@@ -419,14 +420,15 @@ func permanentTokenName(permanent *game.Permanent) string {
 }
 
 // permanentDeathReason reports whether a permanent meets a state-based-action
-// condition that removes it, and which one. The checks follow CR 704.5 in the
-// order the rules list them so a permanent that qualifies under multiple rules
-// is reported under the first:
+// condition that removes it, and which one. The conditions are independent —
+// each applies to a distinct permanent type (Saga, planeswalker, battle,
+// creature) — so the check order below does not affect the outcome; it does not
+// match the numeric CR 704.5 ordering:
 //   - CR 704.5s: a Saga at or past its final chapter number, not awaiting a
 //     chapter ability still on the stack, is sacrificed.
 //   - CR 704.5i: a planeswalker with 0 loyalty is put into its graveyard.
-//   - CR 704.5v: a battle with 0 defense (not the source of an unresolved
-//     ability) is put into its graveyard.
+//   - CR 704.5v: a battle with 0 defense, not the source of an ability still on
+//     the stack, is put into its graveyard.
 //   - CR 704.5f: a creature with toughness 0 or less is put into its graveyard.
 //     This is checked before indestructible and regeneration because neither
 //     can replace it.
@@ -448,7 +450,9 @@ func permanentDeathReason(g *game.Game, permanent *game.Permanent) (PermanentDea
 	if permanentHasType(g, permanent, types.Planeswalker) && permanent.Counters.Get(counter.Loyalty) <= 0 {
 		return PermanentDeathReasonZeroLoyalty, true
 	}
-	if permanentHasType(g, permanent, types.Battle) && permanent.Counters.Get(counter.Defense) <= 0 {
+	if permanentHasType(g, permanent, types.Battle) &&
+		permanent.Counters.Get(counter.Defense) <= 0 &&
+		!battleAwaitingAbility(g, permanent) {
 		return PermanentDeathReasonZeroDefense, true
 	}
 	if !permanentHasType(g, permanent, types.Creature) {
@@ -475,7 +479,21 @@ func permanentDeathReason(g *game.Game, permanent *game.Permanent) (PermanentDea
 	return "", false
 }
 
-// permanentDeathBypassesDestroy reports whether a death reason puts the
+// battleAwaitingAbility reports whether a battle is the source of a triggered
+// ability currently on the stack. CR 704.5v keeps a battle with 0 defense from
+// being put into its graveyard while it "is the source of an ability that has
+// triggered but not yet left the stack" — for example a "when this battle's
+// defense becomes 0" trigger that has not finished resolving. Abilities that
+// have triggered but have not yet been put on the stack are not covered here.
+func battleAwaitingAbility(g *game.Game, permanent *game.Permanent) bool {
+	for _, object := range g.Stack.Objects() {
+		if object.Kind == game.StackTriggeredAbility && object.SourceID == permanent.ObjectID {
+			return true
+		}
+	}
+	return false
+}
+
 // permanent directly into the graveyard rather than destroying it. The
 // CR 704.5 actions that move a permanent without destroying it can't be
 // replaced by regeneration or a destruction-replacement (toughness 0 per
@@ -508,12 +526,13 @@ func (*Engine) eliminatePlayer(g *game.Game, playerID game.PlayerID) bool {
 	return true
 }
 
-// cleanupEliminatedPlayer applies the consequences of a player leaving the game
-// (CR 800.4). CR 800.4a: all objects owned by the departing player leave the
-// game and any spells/abilities they control cease to exist; here their stack
-// objects are removed and their permanents are exiled. CR 800.4c/800.4e: control
-// of objects they controlled but didn't own reverts to the owner, and they are
-// removed from combat.
+// cleanupEliminatedPlayer applies the consequences of a player leaving the game.
+// CR 800.4a: all objects owned by the departing player leave the game, effects
+// granting them control of objects end, their stack objects not represented by
+// cards cease to exist, and any objects they still control are exiled. Here
+// their stack objects are removed, their permanents exiled, and control of
+// permanents they controlled but did not own reverts to the owner. Permanents
+// that leave the battlefield this way are removed from combat (CR 506.4).
 func cleanupEliminatedPlayer(g *game.Game, playerID game.PlayerID) {
 	g.Stack.RemoveControlledBy(playerID)
 	cleanupEliminatedPlayerPermanents(g, playerID)
