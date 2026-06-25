@@ -77,6 +77,7 @@ const (
 	StaticContinuousModifyPowerToughness
 	StaticContinuousSetBasePowerToughness
 	StaticContinuousGrantKeywords
+	StaticContinuousLoseKeywords
 	StaticContinuousGrantManaAbility
 	StaticContinuousAddTypes
 	StaticContinuousAddSubtypeFromEntryChoice
@@ -774,6 +775,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declarations, ok := recognizeStaticPowerToughnessDeclarations(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
+		return
+	}
+	if declarations, ok := recognizeStaticPowerToughnessKeywordLossDeclarations(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
 	}
@@ -1808,6 +1813,61 @@ func recognizeStaticPowerToughnessDeclarations(ability CompiledAbility, statics 
 		declarations = append(declarations, staticKeywordGrantDeclaration(ability.Span, group.Group, condition, keywords))
 	}
 	return declarations, true
+}
+
+// recognizeStaticPowerToughnessKeywordLossDeclarations maps a paragraph that
+// composes a power/toughness modification with a keyword loss onto closed
+// semantic declarations ("Equipped creature gets +10/+10 and loses flying.",
+// Colossus Hammer). The parser emits the typed [PowerToughness, KeywordLoss]
+// node sequence; the resolving content carries the modify-power/toughness effect
+// plus a "lose" effect for the removed keyword(s), and the lost keywords are the
+// keyword atoms the recognizer identified. The affected group derives from the
+// resolving power/toughness effect so the loss applies to the same subject,
+// keeping the mapping text-blind. It fails closed on any other shape.
+func recognizeStaticPowerToughnessKeywordLossDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics,
+		parser.StaticDeclarationContinuousPowerToughness,
+		parser.StaticDeclarationKeywordLoss) {
+		return nil, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Keywords) == 0 {
+		return nil, false
+	}
+	var ptEffect *CompiledEffect
+	for i := range ability.Content.Effects {
+		switch ability.Content.Effects[i].Kind {
+		case EffectModifyPT:
+			if ptEffect != nil {
+				return nil, false
+			}
+			ptEffect = &ability.Content.Effects[i]
+		case EffectLose:
+		default:
+			return nil, false
+		}
+	}
+	if ptEffect == nil ||
+		!ptEffect.PowerDelta.Known ||
+		!ptEffect.ToughnessDelta.Known ||
+		ptEffect.Duration != DurationNone {
+		return nil, false
+	}
+	if statics[0].Dynamic != (ptEffect.Amount.DynamicKind != DynamicAmountNone) {
+		return nil, false
+	}
+	group, ok := staticDeclarationEffectGroup(ability, ptEffect)
+	if !ok {
+		return nil, false
+	}
+	return []StaticDeclaration{
+		staticPTDeclaration(ability.Span, group.Group, nil, ptEffect),
+		staticKeywordLossDeclaration(ability.Span, group.Group, nil, ability.Content.Keywords),
+	}, true
 }
 
 // recognizeStaticPowerToughnessRuleDeclarations maps a paragraph that composes a
@@ -3143,6 +3203,28 @@ func staticKeywordGrantDeclaration(span shared.Span, group StaticGroupReference,
 		Continuous: &StaticContinuousDeclaration{
 			Layer:     StaticLayerAbility,
 			Operation: StaticContinuousGrantKeywords,
+			Keywords:  append([]CompiledKeyword(nil), keywords...),
+		},
+	}
+}
+
+// staticKeywordLossDeclaration builds the ability-layer continuous declaration
+// that removes parameterless keywords from its subject ("Equipped creature ...
+// loses flying.", Colossus Hammer). It mirrors staticKeywordGrantDeclaration but
+// records the loss operation so lowering emits RemoveKeywords rather than
+// AddKeywords on the shared affected group.
+func staticKeywordLossDeclaration(span shared.Span, group StaticGroupReference, condition *CompiledCondition, keywords []CompiledKeyword) StaticDeclaration {
+	operationSpan := keywords[0].Span
+	operationSpan.End = keywords[len(keywords)-1].Span.End
+	return StaticDeclaration{
+		Kind:          StaticDeclarationContinuous,
+		Span:          span,
+		OperationSpan: operationSpan,
+		Group:         group,
+		Condition:     condition,
+		Continuous: &StaticContinuousDeclaration{
+			Layer:     StaticLayerAbility,
+			Operation: StaticContinuousLoseKeywords,
 			Keywords:  append([]CompiledKeyword(nil), keywords...),
 		},
 	}
