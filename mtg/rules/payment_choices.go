@@ -486,39 +486,11 @@ func candidateSacrificePermanents(g *game.Game, playerID game.PlayerID, addCost 
 }
 
 func candidateAdditionalCostCards(g *game.Game, playerID game.PlayerID, addCost cost.Additional, excludedCardIDs ...id.ID) []id.ID {
-	player, ok := playerByID(g, playerID)
-	if !ok {
-		return nil
-	}
-	source := additionalCostSourceZone(addCost)
-	excluded := make(map[id.ID]bool, len(excludedCardIDs))
-	for _, cardID := range excludedCardIDs {
-		excluded[cardID] = true
-	}
-	var cardIDs []id.ID
-	switch source {
-	case zone.Hand:
-		cardIDs = player.Hand.All()
-	case zone.Graveyard:
-		cardIDs = player.Graveyard.All()
-	case zone.Exile:
-		cardIDs = player.Exile.All()
-	case zone.Command:
-		cardIDs = player.CommandZone.All()
-	default:
-		return nil
-	}
-	var candidates []id.ID
-	for _, cardID := range cardIDs {
-		if excluded[cardID] {
-			continue
-		}
-		card, ok := g.GetCardInstance(cardID)
-		if ok && localAdditionalCostMatchesCard(g, cardFaceOrDefault(card, game.FaceFront), addCost) {
-			candidates = append(candidates, cardID)
-		}
-	}
-	return candidates
+	// The choice layer never excludes the cost's own source card here (sourceCardID
+	// is zero): escape's "another" exclusion is enforced by the planner, and
+	// widening it to candidate presentation would change the offered set. Candidate
+	// enumeration otherwise shares the planner's reservation-aware engine.
+	return payment.CandidateCardsForCost(&rulesPaymentState{g: g}, playerID, addCost, 0, excludedCardIDs...)
 }
 
 func localAdditionalCostMatchesCard(g *game.Game, face *game.CardDef, addCost cost.Additional) bool {
