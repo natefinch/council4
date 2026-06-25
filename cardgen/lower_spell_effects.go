@@ -14,17 +14,76 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+// plainGraveyardReturn reports the shared precondition the self/source and
+// chosen-at-resolution graveyard-return scopes require before inspecting their
+// own subject: a non-negated, non-delayed, no-duration EffectReturn whose source
+// zone is the graveyard. Exactness, destination, ownership, and subject-specific
+// riders stay caller-side because they diverge per scope (the mass scope also
+// accepts EffectPut and the targeted scope gates on exactness instead, so neither
+// shares this precondition).
+func plainGraveyardReturn(effect compiler.CompiledEffect) bool {
+	return effect.Kind == compiler.EffectReturn &&
+		!effect.Negated &&
+		effect.DelayedTiming == 0 &&
+		effect.Duration == compiler.DurationNone &&
+		effect.FromZone == zone.Graveyard
+}
+
+// graveyardReturnDestination carries the validated per-card move a single
+// graveyard-return subject makes once its card reference is known: the
+// destination zone plus the entry-tapped, owner-control, library-position, and
+// entry-counter riders the scope already validated.
+type graveyardReturnDestination struct {
+	Zone              zone.Type
+	EntryTapped       bool
+	UnderYourControl  bool
+	DestinationBottom bool
+	EntryCounters     []game.CounterPlacement
+}
+
+// graveyardReturnInstruction builds the instruction that returns one card from
+// the graveyard to dest. The self/source and single-target scopes share it so the
+// MoveCard-to-hand, MoveCard-to-library, and PutOnBattlefield (with its
+// entry-tapped, owner-control, and entry-counter riders) reconstruction lives in
+// one place instead of being respelled per scope. It fails closed on any
+// destination zone the graveyard-return scopes do not model.
+func graveyardReturnInstruction(card game.CardReference, dest graveyardReturnDestination) (game.Instruction, bool) {
+	switch dest.Zone {
+	case zone.Hand:
+		return game.Instruction{Primitive: game.MoveCard{
+			Card:        card,
+			FromZone:    zone.Graveyard,
+			Destination: zone.Hand,
+		}}, true
+	case zone.Library:
+		return game.Instruction{Primitive: game.MoveCard{
+			Card:              card,
+			FromZone:          zone.Graveyard,
+			Destination:       zone.Library,
+			DestinationBottom: dest.DestinationBottom,
+		}}, true
+	case zone.Battlefield:
+		put := game.PutOnBattlefield{
+			Source:        game.CardBattlefieldSource(card),
+			EntryTapped:   dest.EntryTapped,
+			EntryCounters: dest.EntryCounters,
+		}
+		if dest.UnderYourControl {
+			put.Recipient = opt.Val(game.ControllerReference())
+		}
+		return game.Instruction{Primitive: put}, true
+	default:
+		return game.Instruction{}, false
+	}
+}
+
 func lowerSelfCardGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 1 {
 		return game.AbilityContent{}, false
 	}
 	effect := ctx.content.Effects[0]
-	if effect.Kind != compiler.EffectReturn ||
+	if !plainGraveyardReturn(effect) ||
 		!effect.Exact ||
-		effect.FromZone != zone.Graveyard ||
-		effect.Negated ||
-		effect.DelayedTiming != 0 ||
-		effect.Duration != compiler.DurationNone ||
 		effect.UnderYourControl ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
@@ -37,32 +96,27 @@ func lowerSelfCardGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 	if !ok {
 		return game.AbilityContent{}, false
 	}
+	dest := graveyardReturnDestination{Zone: effect.ToZone, EntryTapped: effect.EntersTapped}
 	switch effect.ToZone {
 	case zone.Hand:
 		if effect.EntersTapped || effect.CounterKindKnown || effect.Amount.Known {
 			return game.AbilityContent{}, false
 		}
-		return game.Mode{Sequence: []game.Instruction{{Primitive: game.MoveCard{
-			Card:        sourceCard,
-			FromZone:    zone.Graveyard,
-			Destination: zone.Hand,
-		}}}}.Ability(), true
 	case zone.Battlefield:
-		if effect.CounterKindKnown &&
-			(effect.CounterKind != counter.PlusOnePlusOne || !effect.Amount.Known || effect.Amount.Value < 1) {
-			return game.AbilityContent{}, false
-		}
-		put := game.PutOnBattlefield{
-			Source:      game.CardBattlefieldSource(sourceCard),
-			EntryTapped: effect.EntersTapped,
-		}
 		if effect.CounterKindKnown {
-			put.EntryCounters = []game.CounterPlacement{{Kind: counter.PlusOnePlusOne, Amount: effect.Amount.Value}}
+			if effect.CounterKind != counter.PlusOnePlusOne || !effect.Amount.Known || effect.Amount.Value < 1 {
+				return game.AbilityContent{}, false
+			}
+			dest.EntryCounters = []game.CounterPlacement{{Kind: counter.PlusOnePlusOne, Amount: effect.Amount.Value}}
 		}
-		return game.Mode{Sequence: []game.Instruction{{Primitive: put}}}.Ability(), true
 	default:
 		return game.AbilityContent{}, false
 	}
+	instruction, ok := graveyardReturnInstruction(sourceCard, dest)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{instruction}}.Ability(), true
 }
 
 func selfCardGraveyardReturnReferences(references []compiler.CompiledReference) bool {
@@ -91,12 +145,8 @@ func lowerChosenCardGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) 
 	}
 	effect := ctx.content.Effects[0]
 	battlefield := effect.ToZone == zone.Battlefield
-	if effect.Kind != compiler.EffectReturn ||
+	if !plainGraveyardReturn(effect) ||
 		!effect.Exact ||
-		effect.Negated ||
-		effect.DelayedTiming != 0 ||
-		effect.Duration != compiler.DurationNone ||
-		effect.FromZone != zone.Graveyard ||
 		(effect.ToZone != zone.Hand && effect.ToZone != zone.Battlefield) ||
 		(effect.EntersTapped && !battlefield) ||
 		(effect.UnderYourControl && !battlefield) ||
@@ -297,87 +347,68 @@ func lowerTargetedGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 		ctx.content.Effects[0].FromZone != zone.Graveyard {
 		return game.AbilityContent{}, false
 	}
+	effect := ctx.content.Effects[0]
 	// The plain return clause is byte-exact. The only inexact form accepted here
 	// is a return-to-battlefield carrying a recognized counter entry rider ("...
 	// with a +1/+1 counter on it", "... with two additional +1/+1 counters on
 	// it"), whose supported counter kind and fixed count the compiler captures;
 	// every other inexact return fails closed.
-	counterRider := ctx.content.Effects[0].ToZone == zone.Battlefield &&
-		ctx.content.Effects[0].CounterKindKnown
-	if !ctx.content.Effects[0].Exact && !counterRider {
+	counterRider := effect.ToZone == zone.Battlefield &&
+		effect.CounterKindKnown
+	if !effect.Exact && !counterRider {
 		return game.AbilityContent{}, false
 	}
 	targetSpec, ok := cardInZoneTargetSpec(ctx.content.Targets[0], zone.Graveyard)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
-	sequence := make([]game.Instruction, 0, targetSpec.MaxTargets)
-	switch ctx.content.Effects[0].ToZone {
+	dest := graveyardReturnDestination{
+		Zone:             effect.ToZone,
+		EntryTapped:      effect.EntersTapped,
+		UnderYourControl: effect.UnderYourControl,
+	}
+	switch effect.ToZone {
 	case zone.Hand:
-		for i := range targetSpec.MaxTargets {
-			sequence = append(sequence, game.Instruction{Primitive: game.MoveCard{
-				Card:        game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: i},
-				FromZone:    zone.Graveyard,
-				Destination: zone.Hand,
-			}})
-		}
-		return game.Mode{
-			Targets:  []game.TargetSpec{targetSpec},
-			Sequence: sequence,
-		}.Ability(), true
 	case zone.Library:
-		if ctx.content.Effects[0].Destination != parser.EffectDestinationTop &&
-			ctx.content.Effects[0].Destination != parser.EffectDestinationBottom {
+		if effect.Destination != parser.EffectDestinationTop &&
+			effect.Destination != parser.EffectDestinationBottom {
 			return game.AbilityContent{}, false
 		}
-		destinationBottom := ctx.content.Effects[0].Destination == parser.EffectDestinationBottom
-		for i := range targetSpec.MaxTargets {
-			sequence = append(sequence, game.Instruction{Primitive: game.MoveCard{
-				Card:              game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: i},
-				FromZone:          zone.Graveyard,
-				Destination:       zone.Library,
-				DestinationBottom: destinationBottom,
-			}})
-		}
-		return game.Mode{
-			Targets:  []game.TargetSpec{targetSpec},
-			Sequence: sequence,
-		}.Ability(), true
+		dest.DestinationBottom = effect.Destination == parser.EffectDestinationBottom
 	case zone.Battlefield:
-		var entryCounters []game.CounterPlacement
 		if counterRider {
 			// The counter count rides in the effect amount; a single-target return
 			// keeps that amount unambiguous (multi-target cardinality would also
 			// land in the amount), so only the fixed positive single-target form is
 			// modeled.
 			if targetSpec.MaxTargets != 1 ||
-				!ctx.content.Effects[0].Amount.Known ||
-				ctx.content.Effects[0].Amount.Value < 1 {
+				!effect.Amount.Known ||
+				effect.Amount.Value < 1 {
 				return game.AbilityContent{}, false
 			}
-			entryCounters = []game.CounterPlacement{{
-				Kind:   ctx.content.Effects[0].CounterKind,
-				Amount: ctx.content.Effects[0].Amount.Value,
+			dest.EntryCounters = []game.CounterPlacement{{
+				Kind:   effect.CounterKind,
+				Amount: effect.Amount.Value,
 			}}
 		}
-		for i := range targetSpec.MaxTargets {
-			put := game.PutOnBattlefield{
-				Source:        game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: i}),
-				EntryTapped:   ctx.content.Effects[0].EntersTapped,
-				EntryCounters: entryCounters,
-			}
-			if ctx.content.Effects[0].UnderYourControl {
-				put.Recipient = opt.Val(game.ControllerReference())
-			}
-			sequence = append(sequence, game.Instruction{Primitive: put})
-		}
-		return game.Mode{
-			Targets:  []game.TargetSpec{targetSpec},
-			Sequence: sequence,
-		}.Ability(), true
 	default:
 		return game.AbilityContent{}, false
 	}
+	sequence := make([]game.Instruction, 0, targetSpec.MaxTargets)
+	for i := range targetSpec.MaxTargets {
+		instruction, ok := graveyardReturnInstruction(
+			game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: i},
+			dest,
+		)
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		sequence = append(sequence, instruction)
+	}
+	return game.Mode{
+		Targets:  []game.TargetSpec{targetSpec},
+		Sequence: sequence,
+	}.Ability(), true
 }
 
 func cardInZoneTargetSpec(target compiler.CompiledTarget, targetZone zone.Type) (game.TargetSpec, bool) {
