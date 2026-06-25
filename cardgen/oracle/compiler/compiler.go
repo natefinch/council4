@@ -58,15 +58,6 @@ func compileAbility(
 			ManaCost:              slices.Clone(ability.AlternativeCost.ManaCost),
 			ReplaceTargetWithEach: ability.AlternativeCost.ReplaceTargetWithEach,
 		}
-		for _, card := range ability.AlternativeCost.DiscardCards {
-			compiled.AlternativeCost.DiscardCards = append(
-				compiled.AlternativeCost.DiscardCards,
-				CompiledAlternativeDiscardCard{
-					Subtype:    card.Subtype,
-					HasSubtype: card.HasSubtype,
-				},
-			)
-		}
 	}
 	if kind == AbilityTriggered {
 		trigger := compileTrigger(ability, context)

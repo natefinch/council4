@@ -191,7 +191,8 @@ const (
 	AlternativeCostEscape
 	// AlternativeCostDiscard is the Foil/Outbreak family: discard one or more
 	// cards (each an optional subtype filter) from hand rather than pay the
-	// spell's printed mana cost. The discarded cards ride in DiscardCards.
+	// spell's printed mana cost. The discards are carried as typed cost
+	// components on the ability's CompiledCost.
 	AlternativeCostDiscard
 )
 
@@ -203,18 +204,6 @@ type CompiledAlternativeCost struct {
 	WithoutPayingManaCost bool
 	ManaCost              cost.Mana
 	ReplaceTargetWithEach bool
-
-	// DiscardCards lists the cards discarded from hand by an
-	// AlternativeCostDiscard cost, in printed order. Each carries an optional
-	// subtype filter.
-	DiscardCards []CompiledAlternativeDiscardCard
-}
-
-// CompiledAlternativeDiscardCard is one card discarded by a discard alternative
-// spell cost, optionally constrained to a card subtype.
-type CompiledAlternativeDiscardCard struct {
-	Subtype    types.Sub
-	HasSubtype bool
 }
 
 // ActivationTimingKind identifies an exact restriction on when an activated

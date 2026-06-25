@@ -975,6 +975,59 @@ func TestPitchAlternativeCostPaysLifeAndExilesColoredCard(t *testing.T) {
 	}
 }
 
+// TestDiscardAlternativeCostDiscardsFilteredCards locks in the Foil discard
+// payment: choosing the alternative discards a subtype-filtered card plus
+// another card from hand rather than the normal mana cost. The discard cost now
+// flows through the shared cost components, guarding parity with the former
+// bespoke discard path.
+func TestDiscardAlternativeCostDiscardsFilteredCards(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	islandCard := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Island",
+		Types:    []types.Card{types.Land},
+		Subtypes: []types.Sub{types.Island},
+	}})
+	otherCard := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Spare",
+		Types: []types.Card{types.Instant},
+	}})
+	normalCost := cost.Mana{cost.O(2), cost.U, cost.U}
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Foil",
+		ManaCost: opt.Val(normalCost),
+		Types:    []types.Card{types.Instant},
+		AlternativeCosts: []cost.Alternative{
+			{
+				Label: "Discard an Island card and another card",
+				AdditionalCosts: []cost.Additional{
+					{Kind: cost.AdditionalDiscard, Source: zone.Hand, Amount: 1, SubtypesAny: cost.SubtypeSet{types.Island}},
+					{Kind: cost.AdditionalDiscard, Source: zone.Hand, Amount: 1},
+				},
+			},
+		},
+		SpellAbility: opt.Val(game.AbilityContent{})},
+	})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}}}
+
+	if !engine.applyActionWithChoices(g, game.Player1, action.CastSpell(spellID, nil, 0, nil), agents, &TurnLog{}) {
+		t.Fatal("applyActionWithChoices(cast with discard alternative cost) = false, want true")
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(islandCard) {
+		t.Fatal("filtered Island card was not discarded")
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(otherCard) {
+		t.Fatal("second card was not discarded")
+	}
+	if g.Players[game.Player1].Hand.Contains(islandCard) || g.Players[game.Player1].Hand.Contains(otherCard) {
+		t.Fatal("a discarded card remained in hand")
+	}
+	if obj, ok := g.Stack.Peek(); !ok || obj.SourceID != spellID {
+		t.Fatalf("stack top = %+v, want discard-cast spell", obj)
+	}
+}
+
 func TestCommanderControlledAlternativeCostNormalAndFreeChoices(t *testing.T) {
 	for _, test := range []struct {
 		name       string

@@ -496,5 +496,8 @@ func lowerDiscardCost(component compiler.CostComponent) (cost.Additional, bool) 
 		additional.MatchCardType = true
 		additional.CardType = component.ObjectType
 	}
+	if len(component.SubtypesAny) == 1 {
+		additional.SubtypesAny = cost.SubtypeSet{component.SubtypesAny[0]}
+	}
 	return additional, true
 }
