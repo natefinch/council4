@@ -1824,28 +1824,19 @@ type EffectSyntax struct {
 	EntersTapped       bool                      `json:",omitempty"`
 	EntersTappedSelf   bool                      `json:",omitempty"`
 	EntersWithCounters bool                      `json:",omitempty"`
-	// EntersWithCountersGroup reports a static enters-with-counters replacement
-	// that adds a counter to a group of OTHER permanents as they enter, e.g.
-	// "Each other creature you control enters with an additional vigilance
-	// counter on it." (Tayam, Luminous Enigma). It is distinct from the self
-	// form (EntersWithCounters with a self subject). The affected permanents are
-	// the controller's permanents matched by Selection; the counter kind is in
-	// CounterKind / CounterKnown and exactly one counter is added.
-	EntersWithCountersGroup bool `json:",omitempty"`
-	// EntersTappedGroup reports a static enters-tapped replacement that taps a
-	// group of OTHER permanents as they enter, e.g. "Creatures your opponents
-	// control enter tapped." (Authority of the Consuls). It is distinct from the
-	// self form EntersTappedSelf ("This land enters tapped."). The controller
-	// scope and affected permanent types are carried in the sibling fields.
-	EntersTappedGroup bool `json:",omitempty"`
-	// EntersTappedGroupScope identifies whose entering permanents are tapped by an
-	// EntersTappedGroup replacement. It is EntersTappedGroupControllerNone for
-	// every other effect.
-	EntersTappedGroupScope EntersTappedGroupControllerScope `json:",omitempty"`
-	// EntersTappedGroupTypes restricts an EntersTappedGroup replacement to entering
-	// permanents that have any of these card types. It is empty when the
-	// replacement taps every entering permanent ("Permanents ... enter tapped.").
-	EntersTappedGroupTypes []types.Card `json:",omitempty"`
+	// GroupEntryModification carries the static "group enters modified"
+	// replacement families behind one typed operation discriminator: the
+	// enters-tapped-group form ("Creatures your opponents control enter tapped.",
+	// Authority of the Consuls) and the enters-with-counters-group form ("Each
+	// other creature you control enters with an additional vigilance counter on
+	// it.", Tayam, Luminous Enigma). Both apply to a group of OTHER permanents as
+	// they enter and are distinct from the self forms (EntersTappedSelf,
+	// EntersWithCounters with a self subject). The with-counters form reads the
+	// counter kind and amount from the effect's shared CounterKind/CounterKnown/
+	// Amount fields and the affected group from Selection. It is the zero value
+	// for every non-group entry effect; the EntersTappedGroup and
+	// EntersWithCountersGroup accessors report each form.
+	GroupEntryModification GroupEntryModificationSyntax `json:",omitzero"`
 	// EntersColorChoice reports a self entry replacement of the form "As this
 	// <permanent> enters, choose a color." or "... choose a color other than
 	// <color>." The enters verb is shared by several entry constructs, so this is
@@ -2446,6 +2437,54 @@ const (
 	EntersTappedGroupControllerOpponents EntersTappedGroupControllerScope = "EntersTappedGroupControllerOpponents"
 	EntersTappedGroupControllerEach      EntersTappedGroupControllerScope = "EntersTappedGroupControllerEach"
 )
+
+// GroupEntryModificationKind identifies the operation of a static "group enters
+// modified" replacement applied to a group of OTHER permanents as they enter the
+// battlefield. Expressing the enters-tapped-group and enters-with-counters-group
+// families behind one operation discriminator keeps related static-entry
+// variants off the top-level effect struct as parallel boolean fields.
+type GroupEntryModificationKind uint8
+
+// Group entry-modification kinds.
+const (
+	// GroupEntryModificationNone is the zero value, set for every effect that is
+	// not a static group entry-modification replacement.
+	GroupEntryModificationNone GroupEntryModificationKind = iota
+	// GroupEntryModificationTapped is "<permanents> [your opponents/you] control
+	// enter [the battlefield] tapped." (Authority of the Consuls): the entering
+	// permanents named by ControllerScope and optionally restricted by Types
+	// enter tapped.
+	GroupEntryModificationTapped
+	// GroupEntryModificationWithCounters is "Each <group> you control enters with
+	// an additional <kind> counter on it." (Tayam, Luminous Enigma): the entering
+	// permanents matched by the effect's Selection enter with the counter named by
+	// the effect's CounterKind/CounterKnown and Amount fields.
+	GroupEntryModificationWithCounters
+)
+
+// GroupEntryModificationSyntax is a static replacement that modifies a group of
+// OTHER permanents as they enter the battlefield. Kind names the operation. The
+// tapped form additionally carries whose entering permanents are tapped
+// (ControllerScope) and an optional card-type restriction (Types); the
+// with-counters form reads its counter from the effect's shared counter fields
+// and needs no extra operands here.
+type GroupEntryModificationSyntax struct {
+	Kind            GroupEntryModificationKind       `json:",omitempty"`
+	ControllerScope EntersTappedGroupControllerScope `json:",omitempty"`
+	Types           []types.Card                     `json:",omitempty"`
+}
+
+// EntersTappedGroup reports the enters-tapped-group form of a static group
+// entry-modification replacement.
+func (e EffectSyntax) EntersTappedGroup() bool {
+	return e.GroupEntryModification.Kind == GroupEntryModificationTapped
+}
+
+// EntersWithCountersGroup reports the enters-with-counters-group form of a static
+// group entry-modification replacement.
+func (e EffectSyntax) EntersWithCountersGroup() bool {
+	return e.GroupEntryModification.Kind == GroupEntryModificationWithCounters
+}
 
 // Static effect subjects recognized by resolving-effect grammar.
 const (

@@ -3649,7 +3649,7 @@ func TestParseGroupEntersTappedEffect(t *testing.T) {
 			var group *EffectSyntax
 			for i := range ability.Sentences {
 				for j := range ability.Sentences[i].Effects {
-					if ability.Sentences[i].Effects[j].EntersTappedGroup {
+					if ability.Sentences[i].Effects[j].EntersTappedGroup() {
 						group = &ability.Sentences[i].Effects[j]
 					}
 				}
@@ -3669,14 +3669,70 @@ func TestParseGroupEntersTappedEffect(t *testing.T) {
 			if !group.Exact {
 				t.Fatal("group enters-tapped effect is not exact")
 			}
-			if group.EntersTappedGroupScope != test.scope {
-				t.Fatalf("scope = %v, want %v", group.EntersTappedGroupScope, test.scope)
+			if group.GroupEntryModification.ControllerScope != test.scope {
+				t.Fatalf("scope = %v, want %v", group.GroupEntryModification.ControllerScope, test.scope)
 			}
-			if !slices.Equal(group.EntersTappedGroupTypes, test.cardTypes) {
-				t.Fatalf("types = %v, want %v", group.EntersTappedGroupTypes, test.cardTypes)
+			if !slices.Equal(group.GroupEntryModification.Types, test.cardTypes) {
+				t.Fatalf("types = %v, want %v", group.GroupEntryModification.Types, test.cardTypes)
 			}
 			if len(group.Targets) != 0 || len(group.References) != 0 {
 				t.Fatalf("group effect has phantom targets/references: targets=%d references=%d", len(group.Targets), len(group.References))
+			}
+		})
+	}
+}
+
+// TestGroupEntryModificationDiscriminator pins the consolidated
+// GroupEntryModification payload: the tapped-group and counters-group forms must
+// each populate the single typed payload with the correct operation kind, while
+// the legacy boolean accessors continue to report identically.
+func TestGroupEntryModificationDiscriminator(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		source        string
+		kind          GroupEntryModificationKind
+		tappedGroup   bool
+		countersGroup bool
+	}{
+		{
+			name:          "tapped group",
+			source:        "Lands you control enter tapped.",
+			kind:          GroupEntryModificationTapped,
+			tappedGroup:   true,
+			countersGroup: false,
+		},
+		{
+			name:          "counters group",
+			source:        "Each creature you control enters with an additional +1/+1 counter on it.",
+			kind:          GroupEntryModificationWithCounters,
+			tappedGroup:   false,
+			countersGroup: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{})
+			var effect *EffectSyntax
+			for i := range document.Abilities[0].Sentences {
+				for j := range document.Abilities[0].Sentences[i].Effects {
+					if document.Abilities[0].Sentences[i].Effects[j].GroupEntryModification.Kind != GroupEntryModificationNone {
+						effect = &document.Abilities[0].Sentences[i].Effects[j]
+					}
+				}
+			}
+			if effect == nil {
+				t.Fatalf("source %q not recognized as a group entry modification", test.source)
+			}
+			if effect.GroupEntryModification.Kind != test.kind {
+				t.Fatalf("kind = %v, want %v", effect.GroupEntryModification.Kind, test.kind)
+			}
+			if effect.EntersTappedGroup() != test.tappedGroup {
+				t.Fatalf("EntersTappedGroup() = %v, want %v", effect.EntersTappedGroup(), test.tappedGroup)
+			}
+			if effect.EntersWithCountersGroup() != test.countersGroup {
+				t.Fatalf("EntersWithCountersGroup() = %v, want %v", effect.EntersWithCountersGroup(), test.countersGroup)
 			}
 		})
 	}

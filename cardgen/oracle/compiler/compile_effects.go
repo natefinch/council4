@@ -299,9 +299,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				Destination:                  syntax.Destination,
 				EntersTapped:                 syntax.EntersTapped,
 				EntersTappedSelf:             syntax.EntersTappedSelf,
-				EntersTappedGroup:            syntax.EntersTappedGroup,
-				EntersTappedGroupScope:       syntax.EntersTappedGroupScope,
-				EntersTappedGroupTypes:       slices.Clone(syntax.EntersTappedGroupTypes),
+				GroupEntryModification:       compileGroupEntryModification(syntax.GroupEntryModification),
 				EntersColorChoice:            syntax.EntersColorChoice,
 				EntersColorChoiceExclude:     syntax.EntersColorChoiceExclude,
 				EntersTypeChoice:             syntax.EntersTypeChoice,
@@ -347,7 +345,6 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				SwitchPTSource:             syntax.SwitchPTSource,
 
 				EntersWithCounters:        syntax.EntersWithCounters,
-				EntersWithCountersGroup:   syntax.EntersWithCountersGroup,
 				UnderYourControl:          syntax.UnderYourControl,
 				UnderOwnersControl:        syntax.UnderOwnersControl,
 				TokenCopyOfForEach:        syntax.TokenCopyOfForEach,
@@ -646,4 +643,15 @@ func compileStaticRuleReferences(sentences []parser.Sentence) []CompiledReferenc
 		})
 	}
 	return references
+}
+
+// compileGroupEntryModification mirrors the parser's typed static group
+// entry-modification payload into its compiler form, cloning the tapped form's
+// card-type restriction.
+func compileGroupEntryModification(syntax parser.GroupEntryModificationSyntax) CompiledGroupEntryModification {
+	return CompiledGroupEntryModification{
+		Kind:            syntax.Kind,
+		ControllerScope: syntax.ControllerScope,
+		Types:           slices.Clone(syntax.Types),
+	}
 }

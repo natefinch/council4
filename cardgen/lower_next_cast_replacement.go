@@ -36,7 +36,7 @@ func lowerNextCastEntersWithCountersReplacement(ctx contentCtx) (game.AbilityCon
 		!effect.Exact ||
 		effect.Negated ||
 		effect.Optional ||
-		effect.EntersWithCountersGroup ||
+		effect.EntersWithCountersGroup() ||
 		effect.EntersTypeChoice ||
 		effect.EntersColorChoice ||
 		effect.Selector.Tapped {

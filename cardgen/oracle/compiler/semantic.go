@@ -1605,6 +1605,17 @@ type CompiledDamageRecipient struct {
 	EachSourceRole  parser.DamageRecipientReferenceKind
 }
 
+// CompiledGroupEntryModification mirrors the parser's typed static group
+// entry-modification payload (enters-tapped-group and enters-with-counters-group
+// static replacements). Kind names the operation; the tapped form carries the
+// controller scope and optional card-type restriction. The with-counters form
+// reads its counter from the effect's Selector/CounterKind fields.
+type CompiledGroupEntryModification struct {
+	Kind            parser.GroupEntryModificationKind
+	ControllerScope parser.EntersTappedGroupControllerScope
+	Types           []types.Card
+}
+
 // CompiledEffect is one recognized instruction verb and the sentence containing
 // it. Multiple effects may refer to the same sentence when instructions are
 // coordinated.
@@ -1804,23 +1815,19 @@ type CompiledEffect struct {
 	Destination        parser.EffectDestinationPosition
 	EntersTapped       bool
 	EntersTappedSelf   bool
-	// EntersTappedGroup mirrors the parser flag for a static enters-tapped
-	// replacement that taps a group of OTHER permanents as they enter (Authority
-	// of the Consuls). Lowering reads it to build a continuous controller- and
-	// type-scoped replacement; it is false for the self enters-tapped form.
-	EntersTappedGroup        bool
-	EntersTappedGroupScope   parser.EntersTappedGroupControllerScope
-	EntersTappedGroupTypes   []types.Card
+	// GroupEntryModification mirrors the parser's typed static group
+	// entry-modification payload: the enters-tapped-group form (Authority of the
+	// Consuls) and the enters-with-counters-group form (Tayam, Luminous Enigma).
+	// Lowering reads it through the EntersTappedGroup and EntersWithCountersGroup
+	// accessors; the tapped form's ControllerScope/Types build the continuous
+	// controller- and type-scoped replacement, while the with-counters form reads
+	// the counter from Selector/CounterKind. It is the zero value for the self
+	// entry forms.
+	GroupEntryModification   CompiledGroupEntryModification
 	EntersColorChoice        bool
 	EntersColorChoiceExclude mana.Color
 	EntersTypeChoice         bool
 	EntersWithCounters       bool
-	// EntersWithCountersGroup mirrors the parser flag for a static
-	// enters-with-counters replacement that adds one counter to a group of the
-	// controller's permanents as they enter (Tayam, Luminous Enigma). Lowering
-	// reads it together with Selector and CounterKind to build a continuous
-	// controller-scoped replacement; it is false for the self form.
-	EntersWithCountersGroup bool
 	// EntersDevour mirrors the parser's Devour as-enters replacement flag and
 	// EntersDevourMultiplier its per-sacrificed-permanent +1/+1 counter count.
 	// EntersDevourType and EntersDevourSubtype carry the typed-variant sacrifice
@@ -2228,6 +2235,18 @@ type CompiledEffect struct {
 	VoteArm             bool
 	VoteArmOption       int
 	VoteArmTieInclusive bool
+}
+
+// EntersTappedGroup reports the enters-tapped-group form of a static group
+// entry-modification replacement.
+func (e *CompiledEffect) EntersTappedGroup() bool {
+	return e.GroupEntryModification.Kind == parser.GroupEntryModificationTapped
+}
+
+// EntersWithCountersGroup reports the enters-with-counters-group form of a static
+// group entry-modification replacement.
+func (e *CompiledEffect) EntersWithCountersGroup() bool {
+	return e.GroupEntryModification.Kind == parser.GroupEntryModificationWithCounters
 }
 
 // CoinFlipBranch identifies which branch of a recognized "Flip a coin." outcome
