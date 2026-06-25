@@ -763,12 +763,9 @@ func conditionTargetEnteredThisTurn(g *game.Game, ctx conditionContext, targetIn
 // the battlefield during the current turn, scanning this turn's events for its
 // enter-the-battlefield event.
 func permanentEnteredThisTurn(g *game.Game, permanentID id.ID) bool {
-	for _, event := range g.EventsThisTurn() {
-		if event.Kind == game.EventPermanentEnteredBattlefield && event.PermanentID == permanentID {
-			return true
-		}
-	}
-	return false
+	return eventsThisTurnWindow(g).any(func(event game.Event) bool {
+		return event.Kind == game.EventPermanentEnteredBattlefield && event.PermanentID == permanentID
+	})
 }
 
 func eventPermanentNameUniqueAmongControlledAndGraveyardCreatures(g *game.Game, ctx conditionContext) bool {
@@ -833,14 +830,11 @@ func activationConditionSatisfied(g *game.Game, playerID game.PlayerID, permanen
 // event log as a battlefield-entry event carrying the token's definition, so the
 // scan reuses that log rather than tracking separate mutable state.
 func controllerCreatedTokenThisTurn(g *game.Game, controller game.PlayerID) bool {
-	for _, event := range g.EventsThisTurn() {
-		if event.Kind == game.EventPermanentEnteredBattlefield &&
+	return eventsThisTurnWindow(g).any(func(event game.Event) bool {
+		return event.Kind == game.EventPermanentEnteredBattlefield &&
 			event.TokenDef != nil &&
-			event.Controller == controller {
-			return true
-		}
-	}
-	return false
+			event.Controller == controller
+	})
 }
 
 // conditionEventHistorySatisfied returns true when the chosen turn's event
@@ -855,19 +849,19 @@ func conditionEventHistorySatisfied(g *game.Game, ctx conditionContext, hist *ga
 	if ctx.source == nil && eventHistoryPatternNeedsSource(&hist.Pattern) {
 		return false
 	}
-	var events []game.Event
+	var events eventWindow
 	switch hist.Window {
 	case game.EventHistoryCurrentTurn:
-		events = g.EventsThisTurn()
+		events = eventsThisTurnWindow(g)
 	case game.EventHistoryPreviousTurn:
-		events = g.EventsPreviousTurn()
+		events = eventsPreviousTurnWindow(g)
 	default:
 		return false
 	}
 	want := max(hist.MinCount, 1)
 	matches := 0
-	for _, event := range events {
-		if triggerMatchesEvent(g, ctx.source, &hist.Pattern, event) {
+	for i := range events {
+		if triggerMatchesEvent(g, ctx.source, &hist.Pattern, events[i]) {
 			matches++
 			if matches >= want {
 				return true

@@ -30,18 +30,7 @@ func emitEvent(g *game.Game, event game.Event) {
 }
 
 func nextPlayerEventOrdinalThisTurn(g *game.Game, kind game.EventKind, playerID game.PlayerID) int {
-	ordinal := 1
-	start := 0
-	index := g.Turn.TurnNumber - 1
-	if index >= 0 && index < len(g.EventTurnStarts) {
-		start = g.EventTurnStarts[index]
-	}
-	for _, event := range g.Events[start:] {
-		if event.Kind == kind && event.Player == playerID {
-			ordinal++
-		}
-	}
-	return ordinal
+	return eventsThisTurnWindow(g).nextOrdinal(eventKindPlayer(kind, playerID))
 }
 
 // discardBatchOrdinalThisTurn reports the per-turn ordinal position of the
@@ -53,28 +42,16 @@ func nextPlayerEventOrdinalThisTurn(g *game.Game, kind game.EventKind, playerID 
 // occurrence each turn is ordinal 1, so a first-each-turn discard trigger gates
 // on PlayerEventOrdinalThisTurn == 1 regardless of how many cards it includes.
 func discardBatchOrdinalThisTurn(g *game.Game, playerID game.PlayerID, simultaneousID id.ID) int {
-	start := 0
-	index := g.Turn.TurnNumber - 1
-	if index >= 0 && index < len(g.EventTurnStarts) {
-		start = g.EventTurnStarts[index]
-	}
-	batches := 0
-	seen := make(map[id.ID]bool)
-	for _, event := range g.Events[start:] {
-		if event.Kind != game.EventCardDiscarded || event.Player != playerID {
-			continue
-		}
-		if simultaneousID != 0 && event.SimultaneousID == simultaneousID {
-			return event.PlayerEventOrdinalThisTurn
-		}
-		if event.SimultaneousID == 0 || !seen[event.SimultaneousID] {
-			if event.SimultaneousID != 0 {
-				seen[event.SimultaneousID] = true
+	window := eventsThisTurnWindow(g)
+	discardedByPlayer := eventKindPlayer(game.EventCardDiscarded, playerID)
+	if simultaneousID != 0 {
+		for i := range window {
+			if discardedByPlayer(window[i]) && window[i].SimultaneousID == simultaneousID {
+				return window[i].PlayerEventOrdinalThisTurn
 			}
-			batches++
 		}
 	}
-	return batches + 1
+	return window.distinctBatches(discardedByPlayer) + 1
 }
 
 // nextSpellCastOrdinalThisTurn reports the per-turn ordinal position of the
@@ -83,18 +60,7 @@ func discardBatchOrdinalThisTurn(g *game.Game, playerID game.PlayerID, simultane
 // EventSpellCopied and are deliberately excluded so copies do not advance the
 // count.
 func nextSpellCastOrdinalThisTurn(g *game.Game, controller game.PlayerID) int {
-	ordinal := 1
-	start := 0
-	index := g.Turn.TurnNumber - 1
-	if index >= 0 && index < len(g.EventTurnStarts) {
-		start = g.EventTurnStarts[index]
-	}
-	for _, event := range g.Events[start:] {
-		if event.Kind == game.EventSpellCast && event.Controller == controller {
-			ordinal++
-		}
-	}
-	return ordinal
+	return eventsThisTurnWindow(g).nextOrdinal(eventKindController(game.EventSpellCast, controller))
 }
 
 func emitZoneChangeEvent(g *game.Game, event game.Event) game.Event {

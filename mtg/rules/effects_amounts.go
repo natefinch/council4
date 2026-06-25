@@ -257,13 +257,7 @@ func maxOfDynamicAmounts(g *game.Game, obj *game.StackObject, controller game.Pl
 // own triggering spell counts, because its cast event precedes the ability's
 // resolution.
 func spellsCastThisTurn(g *game.Game, controller game.PlayerID) int {
-	count := 0
-	for _, event := range g.EventsThisTurn() {
-		if event.Kind == game.EventSpellCast && event.Controller == controller {
-			count++
-		}
-	}
-	return count
+	return eventsThisTurnWindow(g).count(eventKindController(game.EventSpellCast, controller))
 }
 
 // lifeChangedThisTurn sums the life a player gained or lost so far this turn from
@@ -273,25 +267,16 @@ func spellsCastThisTurn(g *game.Game, controller game.PlayerID) int {
 // because dealing damage to a player causes that much life loss (CR 120.3),
 // emitted as an EventLifeLost.
 func lifeChangedThisTurn(g *game.Game, player game.PlayerID, kind game.EventKind) int {
-	total := 0
-	for _, event := range g.EventsThisTurn() {
-		if event.Kind == kind && event.Player == player {
-			total += event.Amount
-		}
-	}
-	return total
+	return eventsThisTurnWindow(g).sumAmount(eventKindPlayer(kind, player))
 }
 
 // opponentLostLifeThisTurn reports whether any opponent of playerID has lost
 // life so far this turn (CR 702.107b, Spectacle). Damage to a player is life
 // loss (CR 120.3), so both combat and noncombat damage to an opponent qualify.
 func opponentLostLifeThisTurn(g *game.Game, playerID game.PlayerID) bool {
-	for _, event := range g.EventsThisTurn() {
-		if event.Kind == game.EventLifeLost && event.Player != playerID && event.Amount > 0 {
-			return true
-		}
-	}
-	return false
+	return eventsThisTurnWindow(g).any(func(event game.Event) bool {
+		return event.Kind == game.EventLifeLost && event.Player != playerID && event.Amount > 0
+	})
 }
 
 // controllerAggregateAmount computes the player-relative dynamic amounts that
