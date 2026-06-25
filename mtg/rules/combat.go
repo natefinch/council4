@@ -572,9 +572,6 @@ func attackerChosenDamageAssignments(g *game.Game, attacker *game.Permanent, blo
 		if assigned < 0 {
 			return nil, 0, false
 		}
-		if hasTrample && assigned < lethalDamageRemainingFromSource(g, attacker, blocker) {
-			return nil, 0, false
-		}
 		if assigned == 0 {
 			continue
 		}
@@ -584,14 +581,27 @@ func attackerChosenDamageAssignments(g *game.Game, attacker *game.Permanent, blo
 	// CR 510.1c: a blocked creature's controller divides its combat damage among
 	// the creatures blocking it however they choose; there is no requirement to
 	// assign lethal damage to one blocker before another (the pre-2017 damage
-	// assignment order rule no longer exists). Trample is the exception: lethal
-	// damage must be assigned to every blocker before any tramples through
-	// (CR 702.19b), enforced above.
+	// assignment order rule no longer exists).
 	if total == 0 || total > damage {
 		return nil, 0, false
 	}
 	if hasTrample {
-		return assignments, damage - total, true
+		// CR 702.19b: a trampling attacker may assign its remaining damage to the
+		// attack target, but only if it has assigned lethal damage to every
+		// blocker. If it assigns no excess to the target (all of its damage goes
+		// to blockers), it need not assign lethal to all of them.
+		excess := damage - total
+		if excess > 0 {
+			for _, blocker := range blockers {
+				if blocker == nil {
+					continue
+				}
+				if g.Combat.DamageAssignment[blocker.ObjectID] < lethalDamageRemainingFromSource(g, attacker, blocker) {
+					return nil, 0, false
+				}
+			}
+		}
+		return assignments, excess, true
 	}
 	if total != damage {
 		return nil, 0, false

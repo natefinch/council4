@@ -168,6 +168,38 @@ func TestAttackerChosenTrampleDeathtouchAssignmentCarriesExcessToPlayer(t *testi
 	}
 }
 
+// TestTrampleChosenAssignmentAllToBlockersBelowLethalIsHonored covers CR 702.19b:
+// a trampling attacker need not assign lethal damage to every blocker as long as
+// it assigns no excess to the attack target. Here a 5-power trampler assigns all
+// 5 damage to one of two blockers (leaving the other below lethal) and nothing to
+// the player, which is legal and must be honored.
+func TestTrampleChosenAssignmentAllToBlockersBelowLethalIsHonored(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 5, game.Trample)
+	first := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
+	second := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}}},
+		Blockers: []game.BlockDeclaration{
+			{Blocker: first.ObjectID, Blocking: attacker.ObjectID},
+			{Blocker: second.ObjectID, Blocking: attacker.ObjectID},
+		},
+		DamageAssignment: map[id.ID]int{
+			first.ObjectID:  5,
+			second.ObjectID: 0,
+		},
+	}
+
+	NewEngine(nil).resolveCombatDamage(g, &TurnLog{})
+
+	if first.MarkedDamage != 5 || second.MarkedDamage != 0 {
+		t.Fatalf("blocker damage = %d/%d, want chosen 5/0", first.MarkedDamage, second.MarkedDamage)
+	}
+	if g.Players[game.Player2].Life != 40 {
+		t.Fatalf("defending player life = %d, want 40 (no trample excess)", g.Players[game.Player2].Life)
+	}
+}
+
 func TestBlockedCombatDamageMarksCreaturesAndPreventsPlayerDamage(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
