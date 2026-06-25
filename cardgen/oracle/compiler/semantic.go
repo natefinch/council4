@@ -204,15 +204,6 @@ type CompiledAlternativeCost struct {
 	ManaCost              cost.Mana
 	ReplaceTargetWithEach bool
 
-	// PitchColor is the color of the card exiled from hand by a pitch cost.
-	PitchColor color.Color
-	// PitchColorKnown reports whether PitchColor was recognized.
-	PitchColorKnown bool
-	// PitchCount is the number of cards exiled from hand by a pitch cost.
-	PitchCount int
-	// PitchLife is additional life paid alongside a pitch cost, or zero.
-	PitchLife int
-
 	// DiscardCards lists the cards discarded from hand by an
 	// AlternativeCostDiscard cost, in printed order. Each carries an optional
 	// subtype filter.

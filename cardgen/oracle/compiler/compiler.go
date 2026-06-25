@@ -57,12 +57,6 @@ func compileAbility(
 			WithoutPayingManaCost: ability.AlternativeCost.WithoutPayingManaCost,
 			ManaCost:              slices.Clone(ability.AlternativeCost.ManaCost),
 			ReplaceTargetWithEach: ability.AlternativeCost.ReplaceTargetWithEach,
-			PitchCount:            ability.AlternativeCost.PitchCount,
-			PitchLife:             ability.AlternativeCost.PitchLife,
-		}
-		if mapped, ok := compilerColor(ability.AlternativeCost.PitchColor); ok {
-			compiled.AlternativeCost.PitchColor = mapped
-			compiled.AlternativeCost.PitchColorKnown = true
 		}
 		for _, card := range ability.AlternativeCost.DiscardCards {
 			compiled.AlternativeCost.DiscardCards = append(

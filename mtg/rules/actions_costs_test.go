@@ -925,6 +925,56 @@ func TestPaymentChoiceSelectsAlternativeCostWithAdditionalCost(t *testing.T) {
 	}
 }
 
+// TestPitchAlternativeCostPaysLifeAndExilesColoredCard locks in the Force of
+// Will pitch payment: choosing the alternative pays 1 life and exiles a blue
+// card from hand rather than the normal mana cost. The pitch cost now flows
+// through the shared cost components, so this guards behavior parity with the
+// former bespoke pitch path.
+func TestPitchAlternativeCostPaysLifeAndExilesColoredCard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	normalCost := cost.Mana{cost.O(3), cost.U, cost.U}
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Force of Will",
+		ManaCost: opt.Val(normalCost),
+		Types:    []types.Card{types.Instant},
+		AlternativeCosts: []cost.Alternative{
+			{
+				Label: "Exile a blue card",
+				AdditionalCosts: []cost.Additional{
+					{Kind: cost.AdditionalPayLife, Amount: 1},
+					{Kind: cost.AdditionalExile, Source: zone.Hand, Amount: 1, MatchCardColor: true, CardColor: color.Blue},
+				},
+			},
+		},
+		SpellAbility: opt.Val(game.AbilityContent{})},
+	})
+	pitchCard := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:   "Blue Pitch",
+		Colors: []color.Color{color.Blue},
+		Types:  []types.Card{types.Instant},
+	}})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	startingLife := g.Players[game.Player1].Life
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}}}
+
+	if !engine.applyActionWithChoices(g, game.Player1, action.CastSpell(spellID, nil, 0, nil), agents, &TurnLog{}) {
+		t.Fatal("applyActionWithChoices(cast with pitch alternative cost) = false, want true")
+	}
+	if got := g.Players[game.Player1].Life; got != startingLife-1 {
+		t.Fatalf("life = %d, want %d (pay 1 life)", got, startingLife-1)
+	}
+	if !g.Players[game.Player1].Exile.Contains(pitchCard) {
+		t.Fatal("blue pitch card was not exiled from hand")
+	}
+	if g.Players[game.Player1].Hand.Contains(pitchCard) {
+		t.Fatal("blue pitch card remained in hand after being pitched")
+	}
+	if obj, ok := g.Stack.Peek(); !ok || obj.SourceID != spellID {
+		t.Fatalf("stack top = %+v, want pitched spell", obj)
+	}
+}
+
 func TestCommanderControlledAlternativeCostNormalAndFreeChoices(t *testing.T) {
 	for _, test := range []struct {
 		name       string

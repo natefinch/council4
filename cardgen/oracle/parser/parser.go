@@ -465,9 +465,12 @@ func parseAbility(
 		}
 	}
 	if ability.Kind != AbilityChapter && ability.costPhrase == nil {
-		if alternative, ok := spellAlternativeCostClause(body); ok {
+		if alternative, alternativeCost, ok := spellAlternativeCostClause(body); ok {
 			ability.Kind = AbilitySpellAlternativeCost
 			ability.AlternativeCost = alternative
+			if alternativeCost != nil {
+				ability.CostSyntax = alternativeCost
+			}
 		}
 	}
 	if ability.Kind == AbilityTriggered {

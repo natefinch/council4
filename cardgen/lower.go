@@ -988,7 +988,7 @@ func lowerSpellAlternativeCost(cardName string, ability compiler.CompiledAbility
 		}, nil
 	}
 	if ability.AlternativeCost != nil && ability.AlternativeCost.Kind == compiler.AlternativeCostPitch {
-		return lowerPitchAlternativeCost(ability)
+		return lowerPitchAlternativeCost(cardName, ability)
 	}
 	if ability.AlternativeCost != nil && ability.AlternativeCost.Kind == compiler.AlternativeCostDiscard {
 		return lowerDiscardAlternativeCost(ability)
@@ -1136,17 +1136,19 @@ func lowerEscapeAlternativeCost(cardName string, ability compiler.CompiledAbilit
 	}, nil
 }
 
-// free (no-mana) alternative whose additional costs exile a colored card from
-// hand and optionally pay life, gated by the optional not-your-turn condition.
-func lowerPitchAlternativeCost(ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {
+// lowerPitchAlternativeCost lowers the Force of Will pitch family into a free
+// (no-mana) alternative whose non-mana cost components — an optional pay-life
+// and an exile-a-colored-card-from-hand — are lowered through the shared cost
+// machinery used for activated, additional, and resolution costs. The cost
+// rides on the ability's compiled Cost; the not-your-turn condition gates the
+// option. It fails closed when the cost is unrecognized.
+func lowerPitchAlternativeCost(cardName string, ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {
 	alternative := ability.AlternativeCost
 	unsupported := alternative == nil ||
-		!alternative.PitchColorKnown ||
-		alternative.PitchCount < 1 ||
-		alternative.PitchLife < 0 ||
 		alternative.WithoutPayingManaCost ||
 		len(alternative.ManaCost) != 0 ||
-		ability.Cost != nil ||
+		ability.Cost == nil ||
+		len(ability.Cost.Components) == 0 ||
 		len(ability.Content.Effects) != 0 ||
 		len(ability.Content.Targets) != 0 ||
 		len(ability.Content.Conditions) != 0 ||
@@ -1160,27 +1162,22 @@ func lowerPitchAlternativeCost(ability compiler.CompiledAbility) (abilityLowerin
 			"the executable source backend could not recognize the spell's alternative cost",
 		)
 	}
-	var additionalCosts []cost.Additional
-	if alternative.PitchLife > 0 {
-		additionalCosts = append(additionalCosts, cost.Additional{
-			Kind:   cost.AdditionalPayLife,
-			Amount: alternative.PitchLife,
-		})
+	manaCost, additionalCosts, ok := lowerActivationCostComponents(cardName, ability.Cost)
+	if !ok || len(manaCost) != 0 || len(additionalCosts) == 0 {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported alternative spell cost",
+			"the executable source backend does not yet lower this pitch cost",
+		)
 	}
-	additionalCosts = append(additionalCosts, cost.Additional{
-		Kind:           cost.AdditionalExile,
-		Amount:         alternative.PitchCount,
-		Source:         zone.Hand,
-		MatchCardColor: true,
-		CardColor:      alternative.PitchColor,
-	})
 	return abilityLowering{
 		alternativeCosts: []cost.Alternative{{
-			Label:           pitchAlternativeLabel(alternative.PitchColor),
+			Label:           pitchAlternativeLabel(additionalCosts),
 			AdditionalCosts: additionalCosts,
 			Condition:       condition,
 		}},
 		consumed: semanticConsumption{
+			cost:            true,
 			alternativeCost: true,
 			references:      len(ability.Content.References),
 		},
@@ -1197,7 +1194,6 @@ func lowerDiscardAlternativeCost(ability compiler.CompiledAbility) (abilityLower
 		len(alternative.DiscardCards) == 0 ||
 		alternative.WithoutPayingManaCost ||
 		len(alternative.ManaCost) != 0 ||
-		alternative.PitchColorKnown ||
 		ability.Cost != nil ||
 		len(ability.Content.Effects) != 0 ||
 		len(ability.Content.Targets) != 0 ||
@@ -1276,11 +1272,21 @@ func lowerAlternativeCostCondition(alternative *compiler.CompiledAlternativeCost
 	}
 }
 
-func pitchAlternativeLabel(c color.Color) string {
-	if name, ok := colorDisplayName(c); ok {
-		return "Exile a " + name + " card"
+// pitchAlternativeLabel builds the display label for a pitch alternative from
+// its lowered exile cost, naming the exiled card's color when known.
+func pitchAlternativeLabel(additionalCosts []cost.Additional) string {
+	for _, additional := range additionalCosts {
+		if additional.Kind != cost.AdditionalExile {
+			continue
+		}
+		if additional.MatchCardColor {
+			if name, ok := colorDisplayName(additional.CardColor); ok {
+				return "Exile a " + name + " card"
+			}
+		}
+		return "Exile a card"
 	}
-	return "Exile a card"
+	return "Alternative cost"
 }
 
 func colorDisplayName(c color.Color) (string, bool) {

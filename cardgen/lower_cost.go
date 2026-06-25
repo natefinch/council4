@@ -374,6 +374,9 @@ func lowerRemoveCounterAmongCost(component compiler.CostComponent) (cost.Additio
 }
 
 func lowerExileCost(component compiler.CostComponent) (cost.Additional, bool) {
+	if component.SourceZone == zone.Hand {
+		return lowerExileFromHandCost(component)
+	}
 	if component.SourceZone != zone.Graveyard ||
 		component.ObjectKind != compiler.SelectorCard {
 		return cost.Additional{}, false
@@ -406,6 +409,37 @@ func lowerExileCost(component compiler.CostComponent) (cost.Additional, bool) {
 	}
 	if len(component.SubtypesAny) == 1 {
 		additional.SubtypesAny = cost.SubtypeSet{component.SubtypesAny[0]}
+	}
+	return additional, true
+}
+
+// lowerExileFromHandCost lowers an "exile N [colored] card(s) from your hand"
+// cost, backing the Force of Will pitch family. The exile draws from hand,
+// requires a fixed positive count, and optionally constrains the exiled card to
+// a single color.
+func lowerExileFromHandCost(component compiler.CostComponent) (cost.Additional, bool) {
+	if component.ObjectKind != compiler.SelectorCard ||
+		!component.AmountKnown ||
+		component.AmountValue <= 0 ||
+		component.ExcludeSource ||
+		component.ObjectHistoric ||
+		component.AnyNumber ||
+		len(component.SubtypesAny) != 0 {
+		return cost.Additional{}, false
+	}
+	additional := cost.Additional{
+		Kind:   cost.AdditionalExile,
+		Text:   component.Text,
+		Amount: component.AmountValue,
+		Source: zone.Hand,
+	}
+	if component.ObjectColorKnown {
+		additional.MatchCardColor = true
+		additional.CardColor = component.ObjectColor
+	}
+	if component.ObjectTypeKnown {
+		additional.MatchCardType = true
+		additional.CardType = component.ObjectType
 	}
 	return additional, true
 }
