@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func landCard(name string) *game.CardDef {
@@ -18,13 +19,16 @@ func landCard(name string) *game.CardDef {
 
 func anyNumberReturnInstruction() *game.Instruction {
 	return &game.Instruction{
-		Primitive: game.ReturnFromGraveyard{
-			Player:      game.ControllerReference(),
-			Selection:   game.Selection{RequiredTypes: []types.Card{types.Land}},
-			Destination: zone.Battlefield,
-			EntryTapped: true,
-			AnyNumber:   true,
-		},
+		Primitive: game.ReturnFromGraveyardChoice(
+			game.ControllerReference(),
+			game.Selection{RequiredTypes: []types.Card{types.Land}},
+			game.Quantity{},
+			zone.Battlefield,
+			true,
+			opt.V[int]{},
+			true,
+			"",
+		),
 	}
 }
 

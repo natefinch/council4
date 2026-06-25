@@ -25,18 +25,18 @@ func TestLowerGrowthSpiralPutsLandFromHand(t *testing.T) {
 	if _, ok := mode.Sequence[0].Primitive.(game.Draw); !ok {
 		t.Fatalf("first primitive = %T, want Draw", mode.Sequence[0].Primitive)
 	}
-	put, ok := mode.Sequence[1].Primitive.(game.PutFromHand)
+	put, ok := mode.Sequence[1].Primitive.(game.ChooseFromZone)
 	if !ok {
-		t.Fatalf("second primitive = %T, want PutFromHand", mode.Sequence[1].Primitive)
+		t.Fatalf("second primitive = %T, want game.ChooseFromZone", mode.Sequence[1].Primitive)
 	}
 	if !mode.Sequence[1].Optional {
 		t.Fatal("put-from-hand step is not optional (the \"you may\" wrapper was lost)")
 	}
-	if put.Player.Kind() != game.PlayerReferenceController || put.Amount.Value() != 1 {
+	if put.Player.Kind() != game.PlayerReferenceController || put.Quantity.Value() != 1 {
 		t.Fatalf("put = %#v, want controller put one", put)
 	}
-	if len(put.Selection.RequiredTypes) != 1 || put.Selection.RequiredTypes[0] != types.Land {
-		t.Fatalf("selection = %#v, want land card", put.Selection)
+	if len(put.Filter.RequiredTypes) != 1 || put.Filter.RequiredTypes[0] != types.Land {
+		t.Fatalf("selection = %#v, want land card", put.Filter)
 	}
 }
 
@@ -52,8 +52,8 @@ func TestLowerMandatoryPutLandFromHand(t *testing.T) {
 	if len(mode.Sequence) != 1 {
 		t.Fatalf("sequence = %#v, want single put-from-hand", mode.Sequence)
 	}
-	if _, ok := mode.Sequence[0].Primitive.(game.PutFromHand); !ok {
-		t.Fatalf("primitive = %T, want PutFromHand", mode.Sequence[0].Primitive)
+	if _, ok := mode.Sequence[0].Primitive.(game.ChooseFromZone); !ok {
+		t.Fatalf("primitive = %T, want game.ChooseFromZone", mode.Sequence[0].Primitive)
 	}
 	if mode.Sequence[0].Optional {
 		t.Fatal("mandatory put-from-hand was marked optional")
@@ -82,18 +82,18 @@ func TestLowerMandatoryPutLandFromHandTapped(t *testing.T) {
 	if len(mode.Sequence) != 1 {
 		t.Fatalf("sequence = %#v, want single put-from-hand", mode.Sequence)
 	}
-	put, ok := mode.Sequence[0].Primitive.(game.PutFromHand)
+	put, ok := mode.Sequence[0].Primitive.(game.ChooseFromZone)
 	if !ok {
-		t.Fatalf("primitive = %T, want PutFromHand", mode.Sequence[0].Primitive)
+		t.Fatalf("primitive = %T, want game.ChooseFromZone", mode.Sequence[0].Primitive)
 	}
-	if !put.EntersTapped {
+	if !put.Riders.EntersTapped {
 		t.Fatal("put-from-hand did not carry the \"tapped\" entry rider")
 	}
 	if mode.Sequence[0].Optional {
 		t.Fatal("mandatory put-from-hand was marked optional")
 	}
-	if len(put.Selection.RequiredTypes) != 1 || put.Selection.RequiredTypes[0] != types.Land {
-		t.Fatalf("selection = %#v, want land card", put.Selection)
+	if len(put.Filter.RequiredTypes) != 1 || put.Filter.RequiredTypes[0] != types.Land {
+		t.Fatalf("selection = %#v, want land card", put.Filter)
 	}
 }
 
@@ -114,11 +114,11 @@ func TestLowerOptionalPutLandFromHandTapped(t *testing.T) {
 	if len(mode.Sequence) != 1 {
 		t.Fatalf("sequence = %#v, want single put-from-hand", mode.Sequence)
 	}
-	put, ok := mode.Sequence[0].Primitive.(game.PutFromHand)
+	put, ok := mode.Sequence[0].Primitive.(game.ChooseFromZone)
 	if !ok {
-		t.Fatalf("primitive = %T, want PutFromHand", mode.Sequence[0].Primitive)
+		t.Fatalf("primitive = %T, want game.ChooseFromZone", mode.Sequence[0].Primitive)
 	}
-	if !put.EntersTapped {
+	if !put.Riders.EntersTapped {
 		t.Fatal("put-from-hand did not carry the \"tapped\" entry rider")
 	}
 	if !mode.Sequence[0].Optional {

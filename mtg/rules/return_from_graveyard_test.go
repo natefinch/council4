@@ -7,15 +7,21 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func returnCreatureFromGraveyardInstruction() *game.Instruction {
 	return &game.Instruction{
-		Primitive: game.ReturnFromGraveyard{
-			Player:    game.ControllerReference(),
-			Selection: game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou},
-			Amount:    game.Fixed(1),
-		},
+		Primitive: game.ReturnFromGraveyardChoice(
+			game.ControllerReference(),
+			game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou},
+			game.Fixed(1),
+			zone.None,
+			false,
+			opt.V[int]{},
+			false,
+			"",
+		),
 	}
 }
 
@@ -79,12 +85,16 @@ func TestReturnFromGraveyardReanimatesChosenCreatureToBattlefield(t *testing.T) 
 	}})
 
 	instruction := &game.Instruction{
-		Primitive: game.ReturnFromGraveyard{
-			Player:      game.ControllerReference(),
-			Selection:   game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou},
-			Amount:      game.Fixed(1),
-			Destination: zone.Battlefield,
-		},
+		Primitive: game.ReturnFromGraveyardChoice(
+			game.ControllerReference(),
+			game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou},
+			game.Fixed(1),
+			zone.Battlefield,
+			false,
+			opt.V[int]{},
+			false,
+			"",
+		),
 	}
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: defaultChoiceAgent{}}
 	engine.resolveInstructionWithChoices(g, obj, instruction, agents, &TurnLog{})

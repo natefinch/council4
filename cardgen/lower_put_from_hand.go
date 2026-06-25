@@ -100,7 +100,7 @@ func lowerPutSourceOnLibrary(ctx contentCtx) (game.AbilityContent, bool) {
 // lowerPutFromHandSpell lowers "put a <filter> card from your hand onto the
 // battlefield" — a ramp / cheat-into-play effect (Growth Spiral's "you may put a
 // land card from your hand onto the battlefield", Dramatic Entrance, Elvish
-// Pioneer, ...). It produces one game.PutFromHand instruction that has the
+// Pioneer, ...). It produces one game.ChooseFromZone instruction that has the
 // controller choose one matching card from their own hand and put it onto the
 // battlefield. A "you may" wrapper is carried by the enclosing instruction's
 // Optional flag, applied by the optional-flow machinery after this lowers, so
@@ -160,11 +160,11 @@ func lowerPutFromHandSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	return game.Mode{Sequence: []game.Instruction{{
-		Primitive: game.PutFromHand{
-			Player:       game.ControllerReference(),
-			Selection:    selection,
-			Amount:       game.Fixed(1),
-			EntersTapped: effect.EntersTapped,
-		},
+		Primitive: game.PutFromHandChoice(
+			game.ControllerReference(),
+			selection,
+			game.Fixed(1),
+			effect.EntersTapped,
+		),
 	}}}.Ability(), true
 }

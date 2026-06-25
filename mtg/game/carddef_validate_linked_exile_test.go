@@ -24,12 +24,12 @@ func imprintExileTriggered() TriggeredAbility {
 		Trigger: TriggerCondition{Pattern: TriggerPattern{Event: EventPermanentEnteredBattlefield}},
 		Content: Mode{Sequence: []Instruction{{
 			Optional: true,
-			Primitive: ExileFromHand{
-				Player:        ControllerReference(),
-				Selection:     Selection{ExcludedTypes: []types.Card{types.Artifact, types.Land}},
-				Amount:        Fixed(1),
-				PublishLinked: linkedExileColorTestLink,
-			},
+			Primitive: ExileFromHandChoice(
+				ControllerReference(),
+				Selection{ExcludedTypes: []types.Card{types.Artifact, types.Land}},
+				Fixed(1),
+				linkedExileColorTestLink,
+			),
 		}}}.Ability(),
 	}
 }
@@ -68,11 +68,11 @@ func TestValidateCardDefRejectsImprintManaWithoutExile(t *testing.T) {
 // dependency is link-specific: a different published link does not satisfy it.
 func TestValidateCardDefRejectsImprintManaWithMismatchedLink(t *testing.T) {
 	exile := imprintExileTriggered()
-	exilePrim, ok := exile.Content.Modes[0].Sequence[0].Primitive.(ExileFromHand)
+	exilePrim, ok := exile.Content.Modes[0].Sequence[0].Primitive.(ChooseFromZone)
 	if !ok {
-		t.Fatal("imprint exile primitive is not an ExileFromHand")
+		t.Fatal("imprint exile primitive is not a ChooseFromZone")
 	}
-	exilePrim.PublishLinked = "other"
+	exilePrim.Riders.PublishLinked = "other"
 	exile.Content.Modes[0].Sequence[0].Primitive = exilePrim
 
 	card := &CardDef{CardFace: CardFace{

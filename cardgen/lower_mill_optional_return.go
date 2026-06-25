@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // lowerMillThenOptionalAmongToHandSequence lowers the ordered sequence "mill N
@@ -73,13 +74,16 @@ func lowerMillThenOptionalAmongToHandSequence(ctx contentCtx) (game.AbilityConte
 			PublishLinked: milledCardsLinkKey,
 		}},
 		{
-			Primitive: game.ReturnFromGraveyard{
-				Player:      game.ControllerReference(),
-				Amount:      game.Fixed(1),
-				Destination: zone.Hand,
-				FromLinked:  milledCardsLinkKey,
-				Selection:   selection,
-			},
+			Primitive: game.ReturnFromGraveyardChoice(
+				game.ControllerReference(),
+				selection,
+				game.Fixed(1),
+				zone.Hand,
+				false,
+				opt.V[int]{},
+				false,
+				milledCardsLinkKey,
+			),
 			Optional: true,
 		},
 	}

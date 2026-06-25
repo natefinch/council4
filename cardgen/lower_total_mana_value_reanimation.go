@@ -14,8 +14,8 @@ import (
 // chooses up to N cards from their own graveyard whose combined mana value does
 // not exceed X and puts them onto the battlefield, tapped when the wording says
 // so. Unlike a per-card "with mana value X or less" filter, the constraint binds
-// the chosen set as a whole, so it lowers to ReturnFromGraveyard's
-// MaxTotalManaValue cap rather than a Selection mana-value bound.
+// the chosen set as a whole, so it lowers to the ChooseFromZone
+// Riders.MaxTotalManaValue cap rather than a Selection mana-value bound.
 //
 // It is card-name-blind and fails closed on any shape it does not fully model —
 // a target or reference, a non-graveyard source, a destination other than the
@@ -72,13 +72,15 @@ func lowerTotalManaValueGraveyardReanimation(ctx contentCtx) (game.AbilityConten
 		return game.AbilityContent{}, false
 	}
 	return game.Mode{Sequence: []game.Instruction{{
-		Primitive: game.ReturnFromGraveyard{
-			Player:            game.ControllerReference(),
-			Selection:         selection,
-			Amount:            game.Fixed(effect.Amount.Value),
-			Destination:       zone.Battlefield,
-			EntryTapped:       effect.EntersTapped,
-			MaxTotalManaValue: opt.Val(selector.TotalManaValue.Value),
-		},
+		Primitive: game.ReturnFromGraveyardChoice(
+			game.ControllerReference(),
+			selection,
+			game.Fixed(effect.Amount.Value),
+			zone.Battlefield,
+			effect.EntersTapped,
+			opt.Val(selector.TotalManaValue.Value),
+			false,
+			"",
+		),
 	}}}.Ability(), true
 }

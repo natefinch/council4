@@ -61,23 +61,23 @@ func TestLowerMillThenOptionalPutPermanentAmongToBattlefield(t *testing.T) {
 	if mill.PublishLinked != milledCardsLinkKey || mill.Amount.Value() != 4 {
 		t.Fatalf("mill = %#v, want fixed 4 publishing milled cards", mill)
 	}
-	put, ok := sequence[1].Primitive.(game.ReturnFromGraveyard)
+	put, ok := sequence[1].Primitive.(game.ChooseFromZone)
 	if !ok {
-		t.Fatalf("sequence[1] = %#v, want ReturnFromGraveyard", sequence[1].Primitive)
+		t.Fatalf("sequence[1] = %#v, want ChooseFromZone", sequence[1].Primitive)
 	}
 	if !sequence[1].Optional {
 		t.Fatal("single-card put must be optional (\"you may\")")
 	}
-	if put.AnyNumber {
+	if put.Count == game.ChooseAnyNumber {
 		t.Fatal("single-card put must not be any-number")
 	}
-	if put.Amount.Value() != 1 || put.Destination != zone.Battlefield ||
-		put.FromLinked != milledCardsLinkKey || put.EntryTapped {
+	if put.Quantity.Value() != 1 || put.Destination.Zone != zone.Battlefield ||
+		put.Riders.FromLinked != milledCardsLinkKey || put.Riders.EntersTapped {
 		t.Fatalf("put = %#v, want one card onto battlefield from milled cards, untapped", put)
 	}
 	wantTypes := []types.Card{types.Artifact, types.Creature, types.Enchantment, types.Land, types.Planeswalker, types.Battle}
-	if len(put.Selection.RequiredTypesAny) != len(wantTypes) {
-		t.Fatalf("put selection = %#v, want permanent type union", put.Selection)
+	if len(put.Filter.RequiredTypesAny) != len(wantTypes) {
+		t.Fatalf("put selection = %#v, want permanent type union", put.Filter)
 	}
 }
 
@@ -135,18 +135,18 @@ func TestLowerMillThenPutAnyNumberLandsAmongToBattlefield(t *testing.T) {
 	if mill.PublishLinked != milledCardsLinkKey {
 		t.Fatalf("mill PublishLinked = %q", mill.PublishLinked)
 	}
-	put, ok := sequence[1].Primitive.(game.ReturnFromGraveyard)
+	put, ok := sequence[1].Primitive.(game.ChooseFromZone)
 	if !ok {
-		t.Fatalf("sequence[1] = %#v, want ReturnFromGraveyard", sequence[1].Primitive)
+		t.Fatalf("sequence[1] = %#v, want ChooseFromZone", sequence[1].Primitive)
 	}
 	if sequence[1].Optional {
 		t.Fatal("mandatory \"Put any number\" must not be an optional instruction")
 	}
-	if !put.AnyNumber || !put.EntryTapped || put.Destination != zone.Battlefield ||
-		put.FromLinked != milledCardsLinkKey {
+	if put.Count != game.ChooseAnyNumber || !put.Riders.EntersTapped || put.Destination.Zone != zone.Battlefield ||
+		put.Riders.FromLinked != milledCardsLinkKey {
 		t.Fatalf("put = %#v, want any-number tapped lands onto battlefield from milled cards", put)
 	}
-	if len(put.Selection.RequiredTypes) != 1 || put.Selection.RequiredTypes[0] != types.Land {
-		t.Fatalf("put selection = %#v, want land cards", put.Selection)
+	if len(put.Filter.RequiredTypes) != 1 || put.Filter.RequiredTypes[0] != types.Land {
+		t.Fatalf("put selection = %#v, want land cards", put.Filter)
 	}
 }

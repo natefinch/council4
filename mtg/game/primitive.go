@@ -71,11 +71,8 @@ const (
 	PrimitiveImpulseExile
 	PrimitiveReorderLibraryTop
 	PrimitiveShuffleLibrary
-	PrimitiveExileFromHand
 	PrimitiveLookAtLibraryTop
-	PrimitivePutFromHand
 	PrimitiveCastForFree
-	PrimitiveReturnFromGraveyard
 	PrimitivePlayerLosesGame
 	PrimitiveAttach
 	PrimitiveMoveCommander
@@ -101,7 +98,6 @@ const (
 	PrimitiveRollDie
 	PrimitiveRemoveFromCombat
 	PrimitiveChooseDiscardFromHand
-	PrimitiveExileFromGraveyard
 	PrimitiveShuffleGraveyardIntoLibrary
 	PrimitiveGroupSelfPowerDamage
 	PrimitiveBecomeMonarch
@@ -125,10 +121,16 @@ const (
 	// PrimitivePlayHideawayCard plays the source's hidden-away exiled card
 	// without paying its mana cost, gated by the enclosing instruction condition.
 	PrimitivePlayHideawayCard
+	// PrimitiveChooseFromZone is the single canonical "player chooses cards from
+	// a zone matching a filter, then those cards move to a destination" primitive
+	// (game.ChooseFromZone). It supersedes the retired per-family wrapper
+	// primitives ExileFromHand, ExileFromGraveyard, PutFromHand, and
+	// ReturnFromGraveyard, which now lower to a ChooseFromZone envelope.
+	PrimitiveChooseFromZone
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitivePlayHideawayCard) + 1
+const primitiveKindCount = int(PrimitiveChooseFromZone) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -700,21 +702,6 @@ type Exile struct {
 	ExileLinkedKey LinkedKey
 }
 
-// ExileFromHand has Player choose Amount cards from their hand that match
-// Selection and exiles them, modelling "exile a ... card from your hand." The
-// enclosing Instruction's Optional flag expresses the "you may" wrapper. When
-// PublishLinked is set, each exiled card is remembered as an object-scoped
-// linked object on the source permanent (imprint) so a later ability can read
-// it; the link follows the permanent's object identity, so a re-entered object
-// starts without an imprint. Fewer matching cards than Amount exiles all of
-// them; no matching card exiles nothing.
-type ExileFromHand struct {
-	Player        PlayerReference
-	Selection     Selection
-	Amount        Quantity
-	PublishLinked LinkedKey
-}
-
 // ExileEntireHand exiles every card in Player's hand at once with no choice,
 // modeling the involuntary whole-hand wording "exile all cards from your hand."
 // (Wormfang Behemoth). Each exiled card is remembered under LinkedKey, keyed by
@@ -798,53 +785,6 @@ type CreateTokenForEachDestroyed struct {
 	LinkedKey LinkedKey
 }
 
-// ExileFromGraveyard has Player choose up to Amount cards from their own
-// graveyard that match Selection and exiles each, modeling the non-target
-// graveyard wording "(you may) exile a <filter> card from your graveyard"
-// (Masked Vandal, the Imoen cycle, Aphemia, ...). The targeted form ("exile
-// target ... card from your graveyard") lowers to a card target instead; this
-// primitive covers the choose-at-resolution form where the exiled card is
-// selected rather than targeted. The enclosing Instruction's Optional flag
-// expresses the "you may" wrapper, so the engine gathers consent before this
-// runs; here the player chooses which matching card to exile, if any. Fewer
-// matching cards than Amount exiles all of them; no matching card exiles
-// nothing.
-//
-// When AllOwners is set the candidate pool spans every player's graveyard
-// rather than only Player's own ("exile a card from a graveyard", Cemetery
-// Prowler): Player still makes the choice, but any player's graveyard card may
-// be exiled. Each chosen card is removed from its own owner's graveyard.
-//
-// When PublishLinked is set, each exiled card is remembered under the
-// source-keyed linked set it names (keyed by the source permanent's card
-// identity, like ExileEntireHand), so a later ability on the same source can
-// read the exiled card's characteristics through a LinkedObjectReference or
-// return it with ReturnExiledCardsToHand. The set survives the source leaving
-// the battlefield, which a Saga relies on when an early chapter exiles the card
-// and a later chapter references it (The Aesir Escape Valhalla).
-type ExileFromGraveyard struct {
-	Player        PlayerReference
-	Selection     Selection
-	Amount        Quantity
-	AllOwners     bool
-	PublishLinked LinkedKey
-}
-
-// PutFromHand has Player choose up to Amount cards from their hand that match
-// Selection and puts each onto the battlefield under that player's control,
-// modeling "put a land card from your hand onto the battlefield" and similar
-// cheat-into-play / ramp effects. The enclosing Instruction's Optional flag
-// expresses a "you may" wrapper, so the engine gathers consent before this runs;
-// here the player chooses which matching card to put, if any. EntersTapped makes
-// each card enter the battlefield tapped. Fewer matching cards than Amount puts
-// all of them; no matching card puts nothing.
-type PutFromHand struct {
-	Player       PlayerReference
-	Selection    Selection
-	Amount       Quantity
-	EntersTapped bool
-}
-
 // CastForFree has Player cast one card matching Selection from Zone without
 // paying its mana cost, modeling "(You may) cast a spell [with mana value N or
 // less] from your hand without paying its mana cost." and similar free-cast
@@ -855,52 +795,6 @@ type CastForFree struct {
 	Player    PlayerReference
 	Selection Selection
 	Zone      zone.Type
-}
-
-// ReturnFromGraveyard has Player choose up to Amount cards from their graveyard
-// that match Selection and returns each to their hand, modeling the non-target
-// graveyard recursion wording "Return a <filter> card from your graveyard to
-// your hand" (Takenuma's "creature or planeswalker card", Grapple with the
-// Past, ...). The targeted form ("Return target creature card ...") lowers to a
-// card target instead; this primitive covers the choose-at-resolution form
-// where the returned card is selected rather than targeted. Fewer matching
-// cards than Amount returns all of them; no matching card returns nothing.
-//
-// Destination selects where the chosen cards go: zone.None or zone.Hand returns
-// each to its owner's hand, while zone.Battlefield reanimates each onto the
-// battlefield under Player's control ("... to the battlefield", Tayam), tapped
-// when EntryTapped is set.
-//
-// MaxTotalManaValue, when set, caps the combined mana value of the chosen cards
-// ("Return up to two creature cards with total mana value 4 or less from your
-// graveyard to the battlefield" — Lively Dirge). Player may choose any subset of
-// matching cards whose total mana value does not exceed the cap, up to Amount
-// cards; an empty choice is always legal, so the cap also makes the choice
-// optional ("up to").
-type ReturnFromGraveyard struct {
-	Player            PlayerReference
-	Selection         Selection
-	Amount            Quantity
-	Destination       zone.Type
-	EntryTapped       bool
-	MaxTotalManaValue opt.V[int]
-
-	// AnyNumber models the "put any number of <filter> cards from among them
-	// onto the battlefield" wording: the resolving player chooses any subset of
-	// the matching candidate pool, from none up to all of them, rather than a
-	// fixed count. Amount is ignored (and must be zero) when it is set, since the
-	// upper bound is the whole matching pool. It pairs naturally with FromLinked
-	// to put any number of a specific earlier-produced set (such as milled
-	// cards) onto the battlefield.
-	AnyNumber bool
-
-	// FromLinked, when set, restricts the candidate pool to the cards remembered
-	// under this key by a prior instruction (such as a Mill that published the
-	// cards it milled). Only graveyard cards whose identity was linked this way
-	// are eligible, modeling "put a card from among those cards into your hand"
-	// where "those cards" denotes a specific earlier-produced set rather than the
-	// whole graveyard. When empty, the whole graveyard is scanned as usual.
-	FromLinked LinkedKey
 }
 
 // MassReturnFromGraveyard returns every card in Player's graveyard matching

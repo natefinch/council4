@@ -74,7 +74,7 @@ func selfCardGraveyardReturnReferences(references []compiler.CompiledReference) 
 // is chosen from the controller's own graveyard at resolution rather than
 // targeted (Takenuma's "creature or planeswalker card", Grapple with the Past,
 // ...). The targeted form lowers through lowerTargetedGraveyardReturn instead.
-// It produces one game.ReturnFromGraveyard instruction whose Selection carries
+// It produces one game.ChooseFromZone instruction whose Filter carries
 // the same card filter the targeted and search paths reconstruct. It is
 // card-name-blind and fails closed on any shape it does not fully model — a
 // reference or target, a non-graveyard source, a non-hand destination, an
@@ -126,15 +126,22 @@ func lowerChosenCardGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) 
 	if !ok {
 		return game.AbilityContent{}, false
 	}
-	primitive := game.ReturnFromGraveyard{
-		Player:    game.ControllerReference(),
-		Selection: selection,
-		Amount:    game.Fixed(1),
-	}
+	destination := zone.Hand
+	entryTapped := false
 	if battlefield {
-		primitive.Destination = zone.Battlefield
-		primitive.EntryTapped = effect.EntersTapped
+		destination = zone.Battlefield
+		entryTapped = effect.EntersTapped
 	}
+	primitive := game.ReturnFromGraveyardChoice(
+		game.ControllerReference(),
+		selection,
+		game.Fixed(1),
+		destination,
+		entryTapped,
+		opt.V[int]{},
+		false,
+		"",
+	)
 	return game.Mode{Sequence: []game.Instruction{{Primitive: primitive}}}.Ability(), true
 }
 

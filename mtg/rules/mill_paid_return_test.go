@@ -40,12 +40,16 @@ func millPaidReturnInstructions() []game.Instruction {
 			PublishResult: "controller-paid",
 		},
 		{
-			Primitive: game.ReturnFromGraveyard{
-				Player:      game.ControllerReference(),
-				Amount:      game.Fixed(1),
-				Destination: zone.Hand,
-				FromLinked:  game.LinkedKey(milledCardsTestLink),
-			},
+			Primitive: game.ReturnFromGraveyardChoice(
+				game.ControllerReference(),
+				game.Selection{},
+				game.Fixed(1),
+				zone.Hand,
+				false,
+				opt.V[int]{},
+				false,
+				game.LinkedKey(milledCardsTestLink),
+			),
 			ResultGate: paid,
 		},
 	}

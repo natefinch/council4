@@ -17,8 +17,9 @@ const aesirExiledCardKey = game.LinkedKey("exile-graveyard-card")
 
 // lowerAesirExileGraveyardScaledGain lowers a Saga's first chapter "Exile a
 // <filter> card from your graveyard. You gain life equal to its mana value."
-// (The Aesir Escape Valhalla chapter I) into a linked ExileFromGraveyard
-// followed by a controller life gain scaled by the exiled card's mana value.
+// (The Aesir Escape Valhalla chapter I) into a linked exile-from-graveyard
+// ChooseFromZone followed by a controller life gain scaled by the exiled card's
+// mana value.
 // The exile publishes the chosen card under aesirExiledCardKey, keyed by the
 // source permanent, so the life gain reads its mana value through that link and
 // later chapters can reference the same card. The "its" pronoun naming the
@@ -50,12 +51,13 @@ func lowerAesirExileGraveyardScaledGain(ctx contentCtx) (game.AbilityContent, bo
 		return game.AbilityContent{}, false
 	}
 	return game.Mode{Sequence: []game.Instruction{
-		{Primitive: game.ExileFromGraveyard{
-			Player:        game.ControllerReference(),
-			Selection:     selection,
-			Amount:        game.Fixed(content.Effects[0].Amount.Value),
-			PublishLinked: aesirExiledCardKey,
-		}},
+		{Primitive: game.ExileFromGraveyardChoice(
+			game.ControllerReference(),
+			selection,
+			game.Fixed(content.Effects[0].Amount.Value),
+			false,
+			aesirExiledCardKey,
+		)},
 		{Primitive: game.GainLife{
 			Player: game.ControllerReference(),
 			Amount: amount,

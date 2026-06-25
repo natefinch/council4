@@ -15,9 +15,10 @@ import (
 // env.Quantity, env.Count, and env.Grouping, then moves each chosen card to its
 // destination applying env.Riders.
 //
-// It is the single canonical resolver the historically separate zone-choice
-// primitives (ReturnFromGraveyard, the typed library Search, ExileFromHand,
-// PutFromHand, CastForFree, ...) will migrate onto. Each grouping drives the
+// It is the single canonical resolver the four retired zone-choice wrappers
+// (exile-from-hand, exile-from-graveyard, put-from-hand, return-from-graveyard)
+// now lower onto, and that the still-separate effects (the typed library Search,
+// CastForFree, ...) may migrate onto. Each grouping drives the
 // choice; the movement is shared. An unsupported envelope, an unresolvable
 // player, or an empty candidate pool is a legal no-op (fail closed).
 func (r *effectResolver) resolveChooseFromZone(env game.ChooseFromZone) effectResolved {

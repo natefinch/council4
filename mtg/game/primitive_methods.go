@@ -26,12 +26,6 @@ func (LookAtHand) Kind() PrimitiveKind { return PrimitiveLookAtHand }
 // Kind implements Primitive for ChooseDiscardFromHand.
 func (ChooseDiscardFromHand) Kind() PrimitiveKind { return PrimitiveChooseDiscardFromHand }
 
-// Kind implements Primitive for ExileFromHand.
-func (ExileFromHand) Kind() PrimitiveKind { return PrimitiveExileFromHand }
-
-// Kind implements Primitive for ExileFromGraveyard.
-func (ExileFromGraveyard) Kind() PrimitiveKind { return PrimitiveExileFromGraveyard }
-
 // Kind implements Primitive for ExileEntireHand.
 func (ExileEntireHand) Kind() PrimitiveKind { return PrimitiveExileEntireHand }
 
@@ -54,14 +48,11 @@ func (CreateTokenForEachDestroyed) Kind() PrimitiveKind {
 	return PrimitiveCreateTokenForEachDestroyed
 }
 
-// Kind implements Primitive for PutFromHand.
-func (PutFromHand) Kind() PrimitiveKind { return PrimitivePutFromHand }
-
 // Kind implements Primitive for CastForFree.
 func (CastForFree) Kind() PrimitiveKind { return PrimitiveCastForFree }
 
-// Kind implements Primitive for ReturnFromGraveyard.
-func (ReturnFromGraveyard) Kind() PrimitiveKind { return PrimitiveReturnFromGraveyard }
+// Kind implements Primitive for ChooseFromZone.
+func (ChooseFromZone) Kind() PrimitiveKind { return PrimitiveChooseFromZone }
 
 // Kind implements Primitive for Discard.
 func (Discard) Kind() PrimitiveKind { return PrimitiveDiscard }
@@ -328,17 +319,14 @@ func (ShuffleLibrary) isPrimitive()                       {}
 func (ShuffleGraveyardIntoLibrary) isPrimitive()          {}
 func (LookAtHand) isPrimitive()                           {}
 func (ChooseDiscardFromHand) isPrimitive()                {}
-func (ExileFromHand) isPrimitive()                        {}
-func (ExileFromGraveyard) isPrimitive()                   {}
 func (ExileEntireHand) isPrimitive()                      {}
 func (ReturnExiledCardsToHand) isPrimitive()              {}
 func (ExileForEachPlayer) isPrimitive()                   {}
 func (ReturnLinkedExiledCardsToBattlefield) isPrimitive() {}
 func (DestroyForEachPlayer) isPrimitive()                 {}
 func (CreateTokenForEachDestroyed) isPrimitive()          {}
-func (PutFromHand) isPrimitive()                          {}
 func (CastForFree) isPrimitive()                          {}
-func (ReturnFromGraveyard) isPrimitive()                  {}
+func (ChooseFromZone) isPrimitive()                       {}
 func (Discard) isPrimitive()                              {}
 func (Destroy) isPrimitive()                              {}
 func (AddMana) isPrimitive()                              {}
@@ -539,16 +527,6 @@ func (p Exile) instructionRefs() primitiveRefs {
 	return primitiveRefs{publishesLinked: p.ExileLinkedKey}
 }
 
-func (p ExileFromHand) instructionRefs() primitiveRefs {
-	refs := quantityRefs(p.Amount)
-	refs.publishesLinked = p.PublishLinked
-	return refs
-}
-func (p ExileFromGraveyard) instructionRefs() primitiveRefs {
-	refs := quantityRefs(p.Amount)
-	refs.publishesLinked = p.PublishLinked
-	return refs
-}
 func (p ExileEntireHand) instructionRefs() primitiveRefs {
 	return primitiveRefs{publishesLinked: p.LinkedKey}
 }
@@ -569,13 +547,13 @@ func (p ReturnLinkedExiledCardsToBattlefield) instructionRefs() primitiveRefs {
 	refs.consumesLinked = append(refs.consumesLinked, p.LinkedKey)
 	return refs
 }
-func (p PutFromHand) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
-func (CastForFree) instructionRefs() primitiveRefs   { return primitiveRefs{} }
-func (p ReturnFromGraveyard) instructionRefs() primitiveRefs {
-	refs := quantityRefs(p.Amount)
-	if p.FromLinked != "" {
-		refs.consumesLinked = append(refs.consumesLinked, p.FromLinked)
+func (CastForFree) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (p ChooseFromZone) instructionRefs() primitiveRefs {
+	refs := quantityRefs(p.Quantity)
+	if p.Riders.FromLinked != "" {
+		refs.consumesLinked = append(refs.consumesLinked, p.Riders.FromLinked)
 	}
+	refs.publishesLinked = p.Riders.PublishLinked
 	return refs
 }
 func (p Bounce) instructionRefs() primitiveRefs  { return objectReferenceRefs(p.Object) }

@@ -27,31 +27,31 @@ func TestLowerTotalManaValueGraveyardReanimation(t *testing.T) {
 	if len(mode.Sequence) != 1 {
 		t.Fatalf("sequence = %#v; want one instruction", mode.Sequence)
 	}
-	prim, ok := mode.Sequence[0].Primitive.(game.ReturnFromGraveyard)
+	prim, ok := mode.Sequence[0].Primitive.(game.ChooseFromZone)
 	if !ok {
-		t.Fatalf("primitive = %T; want game.ReturnFromGraveyard", mode.Sequence[0].Primitive)
+		t.Fatalf("primitive = %T; want game.ChooseFromZone", mode.Sequence[0].Primitive)
 	}
 	if prim.Player != game.ControllerReference() {
 		t.Fatalf("player = %#v; want controller", prim.Player)
 	}
-	if prim.Destination != zone.Battlefield {
+	if prim.Destination.Zone != zone.Battlefield {
 		t.Fatalf("destination = %v; want battlefield", prim.Destination)
 	}
-	if prim.Amount.Value() != 2 {
-		t.Fatalf("amount = %#v; want fixed 2", prim.Amount)
+	if prim.Quantity.Value() != 2 {
+		t.Fatalf("amount = %#v; want fixed 2", prim.Quantity)
 	}
-	if !prim.MaxTotalManaValue.Exists || prim.MaxTotalManaValue.Val != 4 {
-		t.Fatalf("max total mana value = %#v; want 4", prim.MaxTotalManaValue)
+	if !prim.Riders.MaxTotalManaValue.Exists || prim.Riders.MaxTotalManaValue.Val != 4 {
+		t.Fatalf("max total mana value = %#v; want 4", prim.Riders.MaxTotalManaValue)
 	}
-	if prim.EntryTapped {
+	if prim.Riders.EntersTapped {
 		t.Fatal("entry tapped = true; want false")
 	}
-	if prim.Selection.ManaValue.Exists {
-		t.Fatalf("selection carries a per-card mana value bound %#v; total cap must not lower to a per-card filter", prim.Selection.ManaValue)
+	if prim.Filter.ManaValue.Exists {
+		t.Fatalf("selection carries a per-card mana value bound %#v; total cap must not lower to a per-card filter", prim.Filter.ManaValue)
 	}
-	if !slices.Equal(prim.Selection.RequiredTypes, []types.Card{types.Creature}) ||
-		prim.Selection.Controller != game.ControllerYou {
-		t.Fatalf("selection = %#v; want your creature cards", prim.Selection)
+	if !slices.Equal(prim.Filter.RequiredTypes, []types.Card{types.Creature}) ||
+		prim.Filter.Controller != game.ControllerYou {
+		t.Fatalf("selection = %#v; want your creature cards", prim.Filter)
 	}
 	if err := game.ValidateInstructionSequence(mode.Sequence, mode.Targets); err != nil {
 		t.Fatalf("invalid instruction sequence: %v", err)
@@ -66,15 +66,15 @@ func TestLowerTotalManaValueGraveyardReanimationTapped(t *testing.T) {
 		TypeLine:   "Sorcery",
 		OracleText: "Return up to three creature cards with total mana value 6 or less from your graveyard to the battlefield tapped.",
 	})
-	prim, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.ReturnFromGraveyard)
+	prim, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.ChooseFromZone)
 	if !ok {
-		t.Fatalf("primitive = %T; want game.ReturnFromGraveyard", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+		t.Fatalf("primitive = %T; want game.ChooseFromZone", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
 	}
-	if !prim.EntryTapped {
+	if !prim.Riders.EntersTapped {
 		t.Fatal("entry tapped = false; want true")
 	}
-	if prim.Amount.Value() != 3 || !prim.MaxTotalManaValue.Exists || prim.MaxTotalManaValue.Val != 6 {
-		t.Fatalf("amount/cap = %#v / %#v; want 3 and 6", prim.Amount, prim.MaxTotalManaValue)
+	if prim.Quantity.Value() != 3 || !prim.Riders.MaxTotalManaValue.Exists || prim.Riders.MaxTotalManaValue.Val != 6 {
+		t.Fatalf("amount/cap = %#v / %#v; want 3 and 6", prim.Quantity, prim.Riders.MaxTotalManaValue)
 	}
 }
 
@@ -118,10 +118,10 @@ func TestGenerateTotalManaValueReanimationSource(t *testing.T) {
 		t.Fatalf("generated source does not parse: %v\n%s", err, source)
 	}
 	for _, want := range []string{
-		"game.ReturnFromGraveyard{",
+		"game.ChooseFromZone{",
 		"game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou}",
-		"Amount:            game.Fixed(2),",
-		"Destination:       zone.Battlefield,",
+		"Quantity:   game.Fixed(2),",
+		"Zone: zone.Battlefield,",
 		"MaxTotalManaValue: opt.Val(4),",
 	} {
 		if !strings.Contains(source, want) {

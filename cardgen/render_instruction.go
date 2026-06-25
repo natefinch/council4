@@ -326,18 +326,6 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: Reveal kind has unexpected concrete type")
 		}
 		return r.renderRevealPrimitive(ctx, value)
-	case game.PrimitiveExileFromHand:
-		value, ok := primitive.(game.ExileFromHand)
-		if !ok {
-			return "", errors.New("render: internal error: ExileFromHand kind has unexpected concrete type")
-		}
-		return r.renderExileFromHand(ctx, value)
-	case game.PrimitiveExileFromGraveyard:
-		value, ok := primitive.(game.ExileFromGraveyard)
-		if !ok {
-			return "", errors.New("render: internal error: ExileFromGraveyard kind has unexpected concrete type")
-		}
-		return r.renderExileFromGraveyard(ctx, value)
 	case game.PrimitiveExileEntireHand:
 		value, ok := primitive.(game.ExileEntireHand)
 		if !ok {
@@ -374,12 +362,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: CreateTokenForEachDestroyed kind has unexpected concrete type")
 		}
 		return r.renderCreateTokenForEachDestroyed(ctx, value)
-	case game.PrimitivePutFromHand:
-		value, ok := primitive.(game.PutFromHand)
+	case game.PrimitiveChooseFromZone:
+		value, ok := primitive.(game.ChooseFromZone)
 		if !ok {
-			return "", errors.New("render: internal error: PutFromHand kind has unexpected concrete type")
+			return "", errors.New("render: internal error: ChooseFromZone kind has unexpected concrete type")
 		}
-		return r.renderPutFromHand(ctx, value)
+		return r.renderChooseFromZone(ctx, value)
 	case game.PrimitivePutHandOnLibraryThenDraw:
 		return r.renderPutHandOnLibraryThenDraw(primitive)
 	case game.PrimitiveCastForFree:
@@ -388,12 +376,6 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: CastForFree kind has unexpected concrete type")
 		}
 		return r.renderCastForFree(ctx, value)
-	case game.PrimitiveReturnFromGraveyard:
-		value, ok := primitive.(game.ReturnFromGraveyard)
-		if !ok {
-			return "", errors.New("render: internal error: ReturnFromGraveyard kind has unexpected concrete type")
-		}
-		return r.renderReturnFromGraveyard(ctx, value)
 	case game.PrimitiveMassReturnFromGraveyard:
 		value, ok := primitive.(game.MassReturnFromGraveyard)
 		if !ok {
@@ -779,57 +761,6 @@ func (r Renderer) renderRevealPrimitive(ctx *renderCtx, value game.Reveal) (stri
 	return structLit("game.Reveal", fields), nil
 }
 
-func (r Renderer) renderExileFromHand(ctx *renderCtx, value game.ExileFromHand) (string, error) {
-	player, err := r.renderPlayerReference(value.Player)
-	if err != nil {
-		return "", err
-	}
-	amount, err := r.renderQuantity(ctx, value.Amount)
-	if err != nil {
-		return "", err
-	}
-	selection, err := r.renderSelection(ctx, value.Selection)
-	if err != nil {
-		return "", err
-	}
-	fields := []string{
-		fmt.Sprintf("Player: %s,", player),
-		fmt.Sprintf("Selection: %s,", selection),
-		fmt.Sprintf("Amount: %s,", amount),
-	}
-	if value.PublishLinked != "" {
-		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
-	}
-	return structLit("game.ExileFromHand", fields), nil
-}
-
-func (r Renderer) renderExileFromGraveyard(ctx *renderCtx, value game.ExileFromGraveyard) (string, error) {
-	player, err := r.renderPlayerReference(value.Player)
-	if err != nil {
-		return "", err
-	}
-	amount, err := r.renderQuantity(ctx, value.Amount)
-	if err != nil {
-		return "", err
-	}
-	selection, err := r.renderSelection(ctx, value.Selection)
-	if err != nil {
-		return "", err
-	}
-	fields := []string{
-		fmt.Sprintf("Player: %s,", player),
-		fmt.Sprintf("Selection: %s,", selection),
-		fmt.Sprintf("Amount: %s,", amount),
-	}
-	if value.AllOwners {
-		fields = append(fields, "AllOwners: true,")
-	}
-	if value.PublishLinked != "" {
-		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
-	}
-	return structLit("game.ExileFromGraveyard", fields), nil
-}
-
 func (r Renderer) renderExileEntireHand(value game.ExileEntireHand) (string, error) {
 	player, err := r.renderPlayerReference(value.Player)
 	if err != nil {
@@ -910,28 +841,121 @@ func (r Renderer) renderCreateTokenForEachDestroyed(ctx *renderCtx, value game.C
 	}), nil
 }
 
-func (r Renderer) renderPutFromHand(ctx *renderCtx, value game.PutFromHand) (string, error) {
+// renderChooseFromZone renders the canonical game.ChooseFromZone envelope, the
+// single primitive every choose-from-zone family (exile from hand/graveyard, put
+// from hand, return from graveyard) now lowers to. It emits every field the
+// lowerers can set so the rendered literal reproduces the envelope exactly. Only
+// non-zero fields are emitted, matching the zero-value semantics of the runtime.
+func (r Renderer) renderChooseFromZone(ctx *renderCtx, value game.ChooseFromZone) (string, error) {
+	ctx.need(importZone)
 	player, err := r.renderPlayerReference(value.Player)
 	if err != nil {
 		return "", err
 	}
-	amount, err := r.renderQuantity(ctx, value.Amount)
+	selection, err := r.renderSelection(ctx, value.Filter)
 	if err != nil {
 		return "", err
 	}
-	selection, err := r.renderSelection(ctx, value.Selection)
+	sourceZone, err := renderZone(value.SourceZone)
+	if err != nil {
+		return "", err
+	}
+	destZone, err := renderZone(value.Destination.Zone)
 	if err != nil {
 		return "", err
 	}
 	fields := []string{
 		fmt.Sprintf("Player: %s,", player),
-		fmt.Sprintf("Selection: %s,", selection),
-		fmt.Sprintf("Amount: %s,", amount),
+		fmt.Sprintf("SourceZone: %s,", sourceZone),
 	}
-	if value.EntersTapped {
+	if value.AllOwners {
+		fields = append(fields, "AllOwners: true,")
+	}
+	fields = append(fields, fmt.Sprintf("Filter: %s,", selection))
+	if value.Count != game.ChooseAnyNumber {
+		amount, err := r.renderQuantity(ctx, value.Quantity)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Quantity: %s,", amount))
+	}
+	switch value.Count {
+	case game.ChooseExactly:
+	case game.ChooseUpTo:
+		fields = append(fields, "Count: game.ChooseUpTo,")
+	case game.ChooseAnyNumber:
+		fields = append(fields, "Count: game.ChooseAnyNumber,")
+	default:
+		return "", fmt.Errorf("render: unsupported ChooseFromZone count %d", value.Count)
+	}
+	destination, err := r.renderChooseDestination(value.Destination, destZone)
+	if err != nil {
+		return "", err
+	}
+	fields = append(fields, fmt.Sprintf("Destination: %s,", destination))
+	riders, ok, err := r.renderChooseRiders(ctx, value.Riders)
+	if err != nil {
+		return "", err
+	}
+	if ok {
+		fields = append(fields, fmt.Sprintf("Riders: %s,", riders))
+	}
+	if value.Prompt != "" {
+		fields = append(fields, fmt.Sprintf("Prompt: %q,", value.Prompt))
+	}
+	return structLit("game.ChooseFromZone", fields), nil
+}
+
+// renderChooseDestination renders a game.ChooseDestination given its
+// already-rendered zone literal.
+func (Renderer) renderChooseDestination(destination game.ChooseDestination, destZone string) (string, error) {
+	fields := []string{fmt.Sprintf("Zone: %s,", destZone)}
+	switch destination.Position {
+	case game.ChoosePositionDefault:
+	case game.ChoosePositionTop:
+		fields = append(fields, "Position: game.ChoosePositionTop,")
+	default:
+		return "", fmt.Errorf("render: unsupported ChooseFromZone destination position %d", destination.Position)
+	}
+	return structLit("game.ChooseDestination", fields), nil
+}
+
+// renderChooseRiders renders a game.ChooseRiders, returning ok=false when no
+// rider is set so the caller can omit the field entirely.
+func (Renderer) renderChooseRiders(ctx *renderCtx, riders game.ChooseRiders) (string, bool, error) {
+	var fields []string
+	if riders.EntersTapped {
 		fields = append(fields, "EntersTapped: true,")
 	}
-	return structLit("game.PutFromHand", fields), nil
+	if riders.UnderOwnerControl {
+		fields = append(fields, "UnderOwnerControl: true,")
+	}
+	if riders.DestinationBottom {
+		fields = append(fields, "DestinationBottom: true,")
+	}
+	if riders.Reveal {
+		fields = append(fields, "Reveal: true,")
+	}
+	if riders.FromLinked != "" {
+		fields = append(fields, fmt.Sprintf("FromLinked: game.LinkedKey(%q),", string(riders.FromLinked)))
+	}
+	if riders.PublishLinked != "" {
+		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(riders.PublishLinked)))
+	}
+	if riders.PublishObjectScoped {
+		fields = append(fields, "PublishObjectScoped: true,")
+	}
+	if riders.MaxTotalManaValue.Exists {
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("MaxTotalManaValue: opt.Val(%d),", riders.MaxTotalManaValue.Val))
+	}
+	if riders.MaxManaValueFromX {
+		fields = append(fields, "MaxManaValueFromX: true,")
+	}
+	if len(fields) == 0 {
+		return "", false, nil
+	}
+	return structLit("game.ChooseRiders", fields), true, nil
 }
 
 func (r Renderer) renderPutHandOnLibraryThenDraw(primitive game.Primitive) (string, error) {
@@ -974,49 +998,6 @@ func (r Renderer) renderCastForFree(ctx *renderCtx, value game.CastForFree) (str
 		fmt.Sprintf("Selection: %s,", selection),
 		fmt.Sprintf("Zone: %s,", sourceZone),
 	}), nil
-}
-
-func (r Renderer) renderReturnFromGraveyard(ctx *renderCtx, value game.ReturnFromGraveyard) (string, error) {
-	player, err := r.renderPlayerReference(value.Player)
-	if err != nil {
-		return "", err
-	}
-	amount, err := r.renderQuantity(ctx, value.Amount)
-	if err != nil {
-		return "", err
-	}
-	selection, err := r.renderSelection(ctx, value.Selection)
-	if err != nil {
-		return "", err
-	}
-	fields := []string{
-		fmt.Sprintf("Player: %s,", player),
-		fmt.Sprintf("Selection: %s,", selection),
-	}
-	if value.AnyNumber {
-		fields = append(fields, "AnyNumber: true,")
-	} else {
-		fields = append(fields, fmt.Sprintf("Amount: %s,", amount))
-	}
-	if value.Destination != zone.None {
-		destination, err := renderZone(value.Destination)
-		if err != nil {
-			return "", err
-		}
-		ctx.need(importZone)
-		fields = append(fields, fmt.Sprintf("Destination: %s,", destination))
-	}
-	if value.EntryTapped {
-		fields = append(fields, "EntryTapped: true,")
-	}
-	if value.MaxTotalManaValue.Exists {
-		ctx.need(importOpt)
-		fields = append(fields, fmt.Sprintf("MaxTotalManaValue: opt.Val(%d),", value.MaxTotalManaValue.Val))
-	}
-	if value.FromLinked != "" {
-		fields = append(fields, fmt.Sprintf("FromLinked: game.LinkedKey(%q),", string(value.FromLinked)))
-	}
-	return structLit("game.ReturnFromGraveyard", fields), nil
 }
 
 func (r Renderer) renderMassReturnFromGraveyard(ctx *renderCtx, value game.MassReturnFromGraveyard) (string, error) {

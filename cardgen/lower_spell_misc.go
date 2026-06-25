@@ -1141,7 +1141,7 @@ func lowerTargetedGraveyardExile(ctx contentCtx) (game.AbilityContent, bool) {
 // controller's own graveyard at resolution rather than targeted (Masked Vandal,
 // the Imoen cycle, Aphemia, Forgotten Harvest, ...). The targeted form ("exile
 // target ... card from your graveyard") lowers through lowerTargetedGraveyardExile
-// instead. It produces one game.ExileFromGraveyard instruction whose Selection
+// instead. It produces one game.ChooseFromZone instruction whose Filter
 // carries the same card filter the targeted and search paths reconstruct, so an
 // enclosing "you may X. If you do, Y" wrapper marks that single instruction
 // Optional and gates Y on the player having exiled a card. It is card-name-blind
@@ -1193,11 +1193,13 @@ func lowerControllerGraveyardChoiceExile(ctx contentCtx) (game.AbilityContent, b
 		return game.AbilityContent{}, false
 	}
 	return game.Mode{Sequence: []game.Instruction{{
-		Primitive: game.ExileFromGraveyard{
-			Player:    game.ControllerReference(),
-			Selection: selection,
-			Amount:    game.Fixed(effect.Amount.Value),
-		},
+		Primitive: game.ExileFromGraveyardChoice(
+			game.ControllerReference(),
+			selection,
+			game.Fixed(effect.Amount.Value),
+			false,
+			"",
+		),
 	}}}.Ability(), true
 }
 

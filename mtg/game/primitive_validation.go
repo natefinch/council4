@@ -1271,113 +1271,53 @@ func (p Reveal) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 	return nil
 }
 
-// zoneChoiceValidation describes the validatable shape shared by the
-// choose-from-zone family of primitives (ExileFromHand, ExileFromGraveyard,
-// PutFromHand, ReturnFromGraveyard), each of which has the runtime re-expressed
-// as a game.ChooseFromZone consumer. validateZoneChoice is the single validator
-// the per-family validatePrimitive methods delegate to; the descriptor's fields
-// turn the family-specific capability restrictions on and off so the canonical
-// validator reproduces each family's exact accept/reject set. Label names the
-// family for the error messages.
-type zoneChoiceValidation struct {
-	// Label is the family name used to build each error message.
-	Label string
-
-	// Player is the resolving player who makes the choice.
-	Player PlayerReference
-
-	// Amount is the numeric bound on the chosen set.
-	Amount Quantity
-
-	// AnyNumber selects the unbounded "put any number of those cards" form,
-	// where the upper bound is the whole matching pool and Amount must be zero.
-	AnyNumber bool
-
-	// Publish is the linked key the chosen cards are remembered under, if any.
-	Publish LinkedKey
-
-	// PublishSingleCard requires Amount to equal one whenever Publish is set,
-	// the object-scoped imprint restriction (ExileFromHand / Chrome Mox). The
-	// card-scoped publish families leave it false.
-	PublishSingleCard bool
-
-	// HasDestination reports whether the family carries a runtime Destination
-	// field whose zone, tapped entry, and mana-value cap must be validated. The
-	// exile and put families fix their destination and leave it false.
-	HasDestination bool
-
-	// Destination is the family's destination zone, validated only when
-	// HasDestination is set.
-	Destination zone.Type
-
-	// EntersTapped marks tapped battlefield entry, valid only for a battlefield
-	// Destination.
-	EntersTapped bool
-
-	// MaxTotalManaValue caps the combined mana value of the chosen cards, valid
-	// only for a battlefield Destination and incompatible with AnyNumber.
-	MaxTotalManaValue opt.V[int]
-}
-
-// validateZoneChoice is the canonical validator for the choose-from-zone family.
-// It enforces the bound (a fixed positive Amount, or the any-number form's empty
-// Amount and absent cap), the object-scoped single-card publish restriction, the
-// destination/tapped/mana-value-cap rules for families that carry a destination,
-// and the player reference, failing closed on any unsupported combination.
-func validateZoneChoice(v zoneChoiceValidation, targets []TargetSpec, checkTargets bool) error {
-	if v.AnyNumber {
-		if v.Amount.IsDynamic() || v.Amount.Value() != 0 {
-			return fmt.Errorf("%s any-number form takes no fixed amount", v.Label)
+// validatePrimitive validates the canonical choose-from-zone envelope. It
+// enforces the bound (a fixed positive Quantity, or the any-number form's empty
+// Quantity and absent mana-value cap), the object-scoped single-card publish
+// restriction (the imprint rule, Chrome Mox), and the destination/tapped/
+// mana-value-cap rules, failing closed on any unsupported combination. It
+// reproduces the accept/reject set of the retired per-family validators
+// (ExileFromHand, ExileFromGraveyard, PutFromHand, ReturnFromGraveyard) that now
+// lower to this envelope.
+func (p ChooseFromZone) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.SourceZone == zone.None {
+		return errors.New("choose from zone requires a source zone")
+	}
+	if p.Count == ChooseAnyNumber {
+		if p.Quantity.IsDynamic() || p.Quantity.Value() != 0 {
+			return errors.New("choose from zone any-number form takes no fixed amount")
 		}
-		if v.MaxTotalManaValue.Exists {
-			return fmt.Errorf("%s any-number form takes no total mana value cap", v.Label)
+		if p.Riders.MaxTotalManaValue.Exists {
+			return errors.New("choose from zone any-number form takes no total mana value cap")
 		}
 	} else {
-		if err := validateQuantity(v.Amount, targets, checkTargets); err != nil {
+		if err := validateQuantity(p.Quantity, targets, checkTargets); err != nil {
 			return err
 		}
-		if v.Amount.IsDynamic() || v.Amount.Value() < 1 {
-			return fmt.Errorf("%s requires a fixed positive amount", v.Label)
+		if p.Quantity.IsDynamic() || p.Quantity.Value() < 1 {
+			return errors.New("choose from zone requires a fixed positive amount")
 		}
 	}
-	if v.PublishSingleCard && v.Publish != "" && v.Amount.Value() != 1 {
-		return fmt.Errorf("linked %s must exile exactly one card", v.Label)
+	if p.Riders.PublishObjectScoped && p.Riders.PublishLinked != "" && p.Quantity.Value() != 1 {
+		return errors.New("linked choose from zone must move exactly one card")
 	}
-	if v.HasDestination {
-		if v.Destination != zone.None && v.Destination != zone.Hand && v.Destination != zone.Battlefield {
-			return fmt.Errorf("%s requires a hand or battlefield destination", v.Label)
+	switch p.Destination.Zone {
+	case zone.Exile, zone.Hand, zone.Battlefield:
+	default:
+		return errors.New("choose from zone requires an exile, hand, or battlefield destination")
+	}
+	if p.Riders.EntersTapped && p.Destination.Zone != zone.Battlefield {
+		return errors.New("choose from zone tapped entry requires a battlefield destination")
+	}
+	if p.Riders.MaxTotalManaValue.Exists {
+		if p.Destination.Zone != zone.Battlefield {
+			return errors.New("choose from zone total mana value cap requires a battlefield destination")
 		}
-		if v.EntersTapped && v.Destination != zone.Battlefield {
-			return fmt.Errorf("%s tapped entry requires a battlefield destination", v.Label)
-		}
-		if v.MaxTotalManaValue.Exists {
-			if v.Destination != zone.Battlefield {
-				return fmt.Errorf("%s total mana value cap requires a battlefield destination", v.Label)
-			}
-			if v.MaxTotalManaValue.Val < 0 {
-				return fmt.Errorf("%s total mana value cap must be non-negative", v.Label)
-			}
+		if p.Riders.MaxTotalManaValue.Val < 0 {
+			return errors.New("choose from zone total mana value cap must be non-negative")
 		}
 	}
-	return validatePlayerReference(v.Player, targets, checkTargets)
-}
-
-func (p ExileFromHand) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	return validateZoneChoice(zoneChoiceValidation{
-		Label:             "exile from hand",
-		Player:            p.Player,
-		Amount:            p.Amount,
-		Publish:           p.PublishLinked,
-		PublishSingleCard: true,
-	}, targets, checkTargets)
-}
-
-func (p ExileFromGraveyard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	return validateZoneChoice(zoneChoiceValidation{
-		Label:  "exile from graveyard",
-		Player: p.Player,
-		Amount: p.Amount,
-	}, targets, checkTargets)
+	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
 func (p ExileEntireHand) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
@@ -1437,32 +1377,11 @@ func (p CreateTokenForEachDestroyed) validatePrimitive([]TargetSpec, bool) error
 	return nil
 }
 
-func (p PutFromHand) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	return validateZoneChoice(zoneChoiceValidation{
-		Label:  "put from hand",
-		Player: p.Player,
-		Amount: p.Amount,
-	}, targets, checkTargets)
-}
-
 func (p CastForFree) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.Zone == zone.None {
 		return errors.New("cast for free requires a source zone")
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
-}
-
-func (p ReturnFromGraveyard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	return validateZoneChoice(zoneChoiceValidation{
-		Label:             "return from graveyard",
-		Player:            p.Player,
-		Amount:            p.Amount,
-		AnyNumber:         p.AnyNumber,
-		HasDestination:    true,
-		Destination:       p.Destination,
-		EntersTapped:      p.EntryTapped,
-		MaxTotalManaValue: p.MaxTotalManaValue,
-	}, targets, checkTargets)
 }
 
 func (p MassReturnFromGraveyard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {

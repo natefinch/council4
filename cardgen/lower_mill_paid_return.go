@@ -88,12 +88,16 @@ func lowerMillThenPaidReturnSequence(cardName string, ctx contentCtx) (game.Abil
 			PublishResult: controllerPaidResultKey,
 		},
 		{
-			Primitive: game.ReturnFromGraveyard{
-				Player:      game.ControllerReference(),
-				Amount:      game.Fixed(1),
-				Destination: zone.Hand,
-				FromLinked:  milledCardsLinkKey,
-			},
+			Primitive: game.ReturnFromGraveyardChoice(
+				game.ControllerReference(),
+				game.Selection{},
+				game.Fixed(1),
+				zone.Hand,
+				false,
+				opt.V[int]{},
+				false,
+				milledCardsLinkKey,
+			),
 			ResultGate: opt.Val(game.InstructionResultGate{
 				Key:       controllerPaidResultKey,
 				Succeeded: game.TriTrue,

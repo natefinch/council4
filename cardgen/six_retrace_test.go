@@ -46,9 +46,9 @@ func TestGenerateExecutableCardSourceSix(t *testing.T) {
 		"ExcludedTypes: []types.Card{types.Land}",
 		"game.Mill{",
 		"PublishLinked: game.LinkedKey(\"milled-cards\")",
-		"game.ReturnFromGraveyard{",
-		"FromLinked:  game.LinkedKey(\"milled-cards\")",
-		"Selection:   game.Selection{RequiredTypes: []types.Card{types.Land}}",
+		"game.ChooseFromZone{",
+		"FromLinked: game.LinkedKey(\"milled-cards\")",
+		"Filter:     game.Selection{RequiredTypes: []types.Card{types.Land}}",
 	} {
 		if !strings.Contains(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
@@ -107,21 +107,21 @@ func TestLowerSixMillThenOptionalLandReturn(t *testing.T) {
 	if sequence[0].Optional {
 		t.Fatal("mill is mandatory")
 	}
-	ret, ok := sequence[1].Primitive.(game.ReturnFromGraveyard)
+	ret, ok := sequence[1].Primitive.(game.ChooseFromZone)
 	if !ok {
-		t.Fatalf("second primitive = %#v, want ReturnFromGraveyard", sequence[1].Primitive)
+		t.Fatalf("second primitive = %#v, want ChooseFromZone", sequence[1].Primitive)
 	}
 	if !sequence[1].Optional {
 		t.Fatal("land-to-hand return is optional")
 	}
-	if ret.FromLinked != mill.PublishLinked {
-		t.Fatalf("return FromLinked = %q, mill PublishLinked = %q", ret.FromLinked, mill.PublishLinked)
+	if ret.Riders.FromLinked != mill.PublishLinked {
+		t.Fatalf("return FromLinked = %q, mill PublishLinked = %q", ret.Riders.FromLinked, mill.PublishLinked)
 	}
-	if ret.Destination != zone.Hand {
-		t.Fatalf("return destination = %v, want hand", ret.Destination)
+	if ret.Destination.Zone != zone.Hand {
+		t.Fatalf("return destination = %v, want hand", ret.Destination.Zone)
 	}
-	if !slices.Equal(ret.Selection.RequiredTypes, []types.Card{types.Land}) {
-		t.Fatalf("return selection required types = %#v", ret.Selection.RequiredTypes)
+	if !slices.Equal(ret.Filter.RequiredTypes, []types.Card{types.Land}) {
+		t.Fatalf("return selection required types = %#v", ret.Filter.RequiredTypes)
 	}
 }
 
