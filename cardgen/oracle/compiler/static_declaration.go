@@ -652,25 +652,28 @@ type StaticCastAsThoughFlashDeclaration struct {
 	SpellSubtypes []types.Sub
 }
 
-// StaticDrawLimitDeclaration caps how many cards the affected players may draw
-// each turn at Limit ("Each opponent can't draw more than one card each turn.",
-// Narset, Parter of Veils). AffectsAllPlayers selects every player ("Each player
-// can't ...", Spirit of the Labyrinth); AffectsController selects only the
-// controller ("You can't ..."). With neither flag set the cap affects only the
-// controller's opponents.
-type StaticDrawLimitDeclaration struct {
-	Limit             int
-	AffectsAllPlayers bool
-	AffectsController bool
-}
+// StaticPerTurnLimitOperation identifies which per-turn player action a
+// StaticPerTurnLimitDeclaration caps.
+type StaticPerTurnLimitOperation uint8
 
-// StaticCastLimitDeclaration caps how many spells the affected players may cast
-// each turn at Limit ("Each player can't cast more than one spell each turn.",
-// Rule of Law, Eidolon of Rhetoric). AffectsAllPlayers selects every player
-// ("Each player"/"Players"); AffectsController selects only the controller
-// ("You"). With neither flag set the cap affects only the controller's
-// opponents.
-type StaticCastLimitDeclaration struct {
+// Static per-turn limit operations.
+const (
+	StaticPerTurnLimitUnknown StaticPerTurnLimitOperation = iota
+	// StaticPerTurnLimitDraw caps cards drawn each turn ("... can't draw more
+	// than one card each turn.", Narset, Parter of Veils).
+	StaticPerTurnLimitDraw
+	// StaticPerTurnLimitCast caps spells cast each turn ("... can't cast more
+	// than one spell each turn.", Rule of Law, Eidolon of Rhetoric).
+	StaticPerTurnLimitCast
+)
+
+// StaticPerTurnLimitDeclaration caps a per-turn player action at Limit. Operation
+// selects whether the cap counts cards drawn (StaticPerTurnLimitDraw) or spells
+// cast (StaticPerTurnLimitCast). AffectsAllPlayers selects every player ("Each
+// player"/"Players"); AffectsController selects only the controller ("You"). With
+// neither flag set the cap affects only the controller's opponents.
+type StaticPerTurnLimitDeclaration struct {
+	Operation         StaticPerTurnLimitOperation
 	Limit             int
 	AffectsAllPlayers bool
 	AffectsController bool
@@ -685,7 +688,9 @@ type StaticDeclaration struct {
 	Group         StaticGroupReference
 	Condition     *CompiledCondition
 
-	// Exactly one variant payload matching Kind is non-nil.
+	// Exactly one variant payload matching Kind is non-nil. PerTurnLimit serves
+	// both the StaticDeclarationDrawLimit and StaticDeclarationCastLimit kinds,
+	// discriminated by its Operation.
 	Continuous                  *StaticContinuousDeclaration
 	Rule                        *StaticRuleDeclaration
 	Cost                        *StaticCostModifierDeclaration
@@ -700,8 +705,7 @@ type StaticDeclaration struct {
 	CharacteristicPT            *StaticCharacteristicPowerToughnessDeclaration
 	CastAsThoughFlash           *StaticCastAsThoughFlashDeclaration
 	GraveyardGrant              *StaticGraveyardKeywordGrantDeclaration
-	DrawLimit                   *StaticDrawLimitDeclaration
-	CastLimit                   *StaticCastLimitDeclaration
+	PerTurnLimit                *StaticPerTurnLimitDeclaration
 	OpeningHandPlay             *StaticOpeningHandPlayDeclaration
 	OpponentEnteringSuppression *StaticOpponentEnteringTriggerSuppressionDeclaration
 }
@@ -3883,7 +3887,8 @@ func recognizeStaticDrawLimitDeclaration(ability CompiledAbility, statics []pars
 		Kind:          StaticDeclarationDrawLimit,
 		Span:          node.Span,
 		OperationSpan: node.OperationSpan,
-		DrawLimit: &StaticDrawLimitDeclaration{
+		PerTurnLimit: &StaticPerTurnLimitDeclaration{
+			Operation:         StaticPerTurnLimitDraw,
 			Limit:             node.DrawLimit,
 			AffectsAllPlayers: node.DrawLimitAffectsAllPlayers,
 			AffectsController: node.DrawLimitAffectsController,
@@ -3916,7 +3921,8 @@ func recognizeStaticCastLimitDeclaration(ability CompiledAbility, statics []pars
 		Kind:          StaticDeclarationCastLimit,
 		Span:          node.Span,
 		OperationSpan: node.OperationSpan,
-		CastLimit: &StaticCastLimitDeclaration{
+		PerTurnLimit: &StaticPerTurnLimitDeclaration{
+			Operation:         StaticPerTurnLimitCast,
 			Limit:             node.CastLimit,
 			AffectsAllPlayers: node.CastLimitAffectsAllPlayers,
 			AffectsController: node.CastLimitAffectsController,
