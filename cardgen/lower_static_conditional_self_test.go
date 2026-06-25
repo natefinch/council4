@@ -58,7 +58,7 @@ func TestLowerLeadingConditionSelfStatic(t *testing.T) {
 		},
 		"leading hand size": {
 			oracleText: "As long as you have seven or more cards in hand, this creature gets +2/+1 and has first strike.",
-			condition:  game.Condition{ControllerHandSizeAtLeast: 7},
+			condition:  game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerHandSize, Op: compare.GreaterOrEqual, Value: 7}}},
 			power:      2,
 			toughness:  1,
 			keywords:   []game.Keyword{game.FirstStrike},

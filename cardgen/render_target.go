@@ -828,8 +828,32 @@ func renderAggregateComparisons(ctx *renderCtx, aggregates []game.AggregateCompa
 }
 
 func renderAggregateKind(kind game.AggregateKind) (string, error) {
-	if kind == game.AggregateControllerLife {
+	switch kind {
+	case game.AggregateControllerLife:
 		return "game.AggregateControllerLife", nil
+	case game.AggregateControllerLifeAboveStarting:
+		return "game.AggregateControllerLifeAboveStarting", nil
+	case game.AggregateControllerHandSize:
+		return "game.AggregateControllerHandSize", nil
+	case game.AggregateControllerLibrarySize:
+		return "game.AggregateControllerLibrarySize", nil
+	case game.AggregateControllerGraveyardCardCount:
+		return "game.AggregateControllerGraveyardCardCount", nil
+	case game.AggregateControllerGraveyardCardTypeCount:
+		return "game.AggregateControllerGraveyardCardTypeCount", nil
+	case game.AggregateControllerBasicLandTypeCount:
+		return "game.AggregateControllerBasicLandTypeCount", nil
+	case game.AggregateControllerCreaturePowerDiversity:
+		return "game.AggregateControllerCreaturePowerDiversity", nil
+	case game.AggregateOpponentCount:
+		return "game.AggregateOpponentCount", nil
+	case game.AggregateAttackersAttackingController:
+		return "game.AggregateAttackersAttackingController", nil
+	case game.AggregateControllerGainedLifeThisTurn:
+		return "game.AggregateControllerGainedLifeThisTurn", nil
+	case game.AggregateSpellX:
+		return "game.AggregateSpellX", nil
+	default:
+		return "", fmt.Errorf("render: unsupported aggregate kind %d", kind)
 	}
-	return "", fmt.Errorf("render: unsupported aggregate kind %d", kind)
 }

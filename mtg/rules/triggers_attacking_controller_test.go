@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/opt"
 )
@@ -23,7 +24,7 @@ func mangaraAttackingControllerPermanent(g *game.Game, controller game.PlayerID)
 		panic("triggered permanent card instance not found")
 	}
 	card.Def.TriggeredAbilities[0].Trigger.InterveningCondition = opt.Val(game.Condition{
-		AttackersAttackingControllerAtLeast: 2,
+		Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateAttackersAttackingController, Op: compare.GreaterOrEqual, Value: 2}},
 	})
 	return permanent
 }

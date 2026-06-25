@@ -417,7 +417,7 @@ func TestStaticCovenConditionUsesLayerBoundedValues(t *testing.T) {
 		Power:     opt.Val(game.PT{Value: 1}),
 		Toughness: opt.Val(game.PT{Value: 1}),
 		StaticAbilities: []game.StaticAbility{{
-			Condition: opt.Val(game.Condition{ControllerCreaturePowerDiversityAtLeast: 3}),
+			Condition: opt.Val(game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerCreaturePowerDiversity, Op: compare.GreaterOrEqual, Value: 3}}}),
 			ContinuousEffects: []game.ContinuousEffect{{
 				Layer:          game.LayerPowerToughnessModify,
 				AffectedSource: true,

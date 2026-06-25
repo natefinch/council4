@@ -17,6 +17,50 @@ const (
 
 	// AggregateControllerLife is the context controller's current life total.
 	AggregateControllerLife
+
+	// AggregateControllerLifeAboveStarting is the context controller's current
+	// life total minus their starting life total ("N life more than your
+	// starting life total").
+	AggregateControllerLifeAboveStarting
+
+	// AggregateControllerHandSize is the number of cards in the context
+	// controller's hand.
+	AggregateControllerHandSize
+
+	// AggregateControllerLibrarySize is the number of cards in the context
+	// controller's library.
+	AggregateControllerLibrarySize
+
+	// AggregateControllerGraveyardCardCount is the number of cards in the
+	// context controller's graveyard.
+	AggregateControllerGraveyardCardCount
+
+	// AggregateControllerGraveyardCardTypeCount is the number of distinct card
+	// types among cards in the context controller's graveyard (delirium).
+	AggregateControllerGraveyardCardTypeCount
+
+	// AggregateControllerBasicLandTypeCount is the number of distinct basic land
+	// types among lands the context controller controls (domain).
+	AggregateControllerBasicLandTypeCount
+
+	// AggregateControllerCreaturePowerDiversity is the number of distinct power
+	// values among creatures the context controller controls (coven).
+	AggregateControllerCreaturePowerDiversity
+
+	// AggregateOpponentCount is the number of non-eliminated opponents of the
+	// context controller.
+	AggregateOpponentCount
+
+	// AggregateAttackersAttackingController is the number of attackers attacking
+	// the context controller or a planeswalker they control.
+	AggregateAttackersAttackingController
+
+	// AggregateControllerGainedLifeThisTurn is the total life the context
+	// controller has gained so far this turn.
+	AggregateControllerGainedLifeThisTurn
+
+	// AggregateSpellX is the resolving spell's chosen value of {X}.
+	AggregateSpellX
 )
 
 // AggregateComparison compares a player- or board-derived quantity against a

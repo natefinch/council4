@@ -237,8 +237,10 @@ func TestLowerCyclingCostModifiers(t *testing.T) {
 			if body.Condition.Exists != (tc.wantHandSize > 0) {
 				t.Fatalf("condition exists = %v, want %v", body.Condition.Exists, tc.wantHandSize > 0)
 			}
-			if tc.wantHandSize > 0 && body.Condition.Val.ControllerHandSizeAtLeast != tc.wantHandSize {
-				t.Fatalf("hand-size condition = %d, want %d", body.Condition.Val.ControllerHandSizeAtLeast, tc.wantHandSize)
+			if tc.wantHandSize > 0 && (len(body.Condition.Val.Aggregates) != 1 ||
+				body.Condition.Val.Aggregates[0].Aggregate != game.AggregateControllerHandSize ||
+				body.Condition.Val.Aggregates[0].Value != tc.wantHandSize) {
+				t.Fatalf("hand-size condition = %+v, want %d", body.Condition.Val.Aggregates, tc.wantHandSize)
 			}
 			effect := body.RuleEffects[0]
 			if effect.Kind != game.RuleEffectCostModifier {

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -17,7 +18,7 @@ func TestEffectConditionSpellXAtLeastGatesResolution(t *testing.T) {
 		return &game.Instruction{
 			Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()},
 			Condition: opt.Val(game.EffectCondition{
-				Condition: opt.Val(game.Condition{SpellXAtLeast: 10}),
+				Condition: opt.Val(game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateSpellX, Op: compare.GreaterOrEqual, Value: 10}}}),
 			}),
 		}
 	}

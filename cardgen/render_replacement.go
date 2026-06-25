@@ -817,17 +817,7 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 			return "", fmt.Errorf("render: %s condition has a negative threshold", context)
 		}
 	}
-	if cond.ControllerLifeAtLeastAboveStarting < 0 ||
-		cond.ControllerHandSizeAtLeast < 0 ||
-		cond.AnyPlayerLifeAtMost < 0 ||
-		cond.OpponentCountAtLeast < 0 ||
-		cond.ControllerGraveyardCardCountAtLeast < 0 ||
-		cond.ControllerGraveyardCardTypeCountAtLeast < 0 ||
-		cond.ControllerBasicLandTypeCountAtLeast < 0 ||
-		cond.ControllerLibrarySizeAtLeast < 0 ||
-		cond.SpellXAtLeast < 0 ||
-		cond.ControllerCreaturePowerDiversityAtLeast < 0 ||
-		cond.ControllerGainedLifeThisTurnAtLeast < 0 ||
+	if cond.AnyPlayerLifeAtMost < 0 ||
 		cond.SourceClassLevelAtLeast < 0 ||
 		cond.SourceClassLevelLessThan < 0 ||
 		cond.SourceLevelCountersAtLeast < 0 ||
@@ -866,23 +856,6 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, fmt.Sprintf("Aggregates: %s,", rendered))
 		hasPredicate = true
 	}
-	if cond.ControllerLifeAtLeastAboveStarting > 0 {
-		fields = append(fields, fmt.Sprintf("ControllerLifeAtLeastAboveStarting: %d,", cond.ControllerLifeAtLeastAboveStarting))
-		hasPredicate = true
-	}
-	if cond.ControllerHandSizeAtLeast > 0 {
-		fields = append(fields, fmt.Sprintf("ControllerHandSizeAtLeast: %d,", cond.ControllerHandSizeAtLeast))
-		hasPredicate = true
-	}
-	if cond.ControllerHandSizeExactly.Exists {
-		ctx.need(importOpt)
-		fields = append(fields, fmt.Sprintf("ControllerHandSizeExactly: opt.Val(%d),", cond.ControllerHandSizeExactly.Val))
-		hasPredicate = true
-	}
-	if cond.ControllerLibrarySizeAtLeast > 0 {
-		fields = append(fields, fmt.Sprintf("ControllerLibrarySizeAtLeast: %d,", cond.ControllerLibrarySizeAtLeast))
-		hasPredicate = true
-	}
 	if cond.SourceClassLevelAtLeast > 0 {
 		fields = append(fields, fmt.Sprintf("SourceClassLevelAtLeast: %d,", cond.SourceClassLevelAtLeast))
 		hasPredicate = true
@@ -905,10 +878,6 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	}
 	if cond.AnyPlayerLifeAtMost > 0 {
 		fields = append(fields, fmt.Sprintf("AnyPlayerLifeAtMost: %d,", cond.AnyPlayerLifeAtMost))
-		hasPredicate = true
-	}
-	if cond.OpponentCountAtLeast > 0 {
-		fields = append(fields, fmt.Sprintf("OpponentCountAtLeast: %d,", cond.OpponentCountAtLeast))
 		hasPredicate = true
 	}
 	if cond.ControllerHandEmpty {
@@ -977,18 +946,6 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, fmt.Sprintf("CastFromZone: opt.Val(%s),", castZone))
 		hasPredicate = true
 	}
-	if cond.SpellXAtLeast > 0 {
-		fields = append(fields, fmt.Sprintf("SpellXAtLeast: %d,", cond.SpellXAtLeast))
-		hasPredicate = true
-	}
-	if cond.ControllerGraveyardCardCountAtLeast > 0 {
-		fields = append(fields, fmt.Sprintf("ControllerGraveyardCardCountAtLeast: %d,", cond.ControllerGraveyardCardCountAtLeast))
-		hasPredicate = true
-	}
-	if cond.ControllerGraveyardCardTypeCountAtLeast > 0 {
-		fields = append(fields, fmt.Sprintf("ControllerGraveyardCardTypeCountAtLeast: %d,", cond.ControllerGraveyardCardTypeCountAtLeast))
-		hasPredicate = true
-	}
 	if cond.ControllerGraveyardCardOfTypeCountAtLeast > 0 {
 		literal, err := cardTypeLiteral(cond.ControllerGraveyardCountCardType)
 		if err != nil {
@@ -997,22 +954,6 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		ctx.need(importTypes)
 		fields = append(fields, fmt.Sprintf("ControllerGraveyardCardOfTypeCountAtLeast: %d,", cond.ControllerGraveyardCardOfTypeCountAtLeast))
 		fields = append(fields, fmt.Sprintf("ControllerGraveyardCountCardType: %s,", literal))
-		hasPredicate = true
-	}
-	if cond.ControllerBasicLandTypeCountAtLeast > 0 {
-		fields = append(fields, fmt.Sprintf("ControllerBasicLandTypeCountAtLeast: %d,", cond.ControllerBasicLandTypeCountAtLeast))
-		hasPredicate = true
-	}
-	if cond.ControllerCreaturePowerDiversityAtLeast > 0 {
-		fields = append(fields, fmt.Sprintf("ControllerCreaturePowerDiversityAtLeast: %d,", cond.ControllerCreaturePowerDiversityAtLeast))
-		hasPredicate = true
-	}
-	if cond.AttackersAttackingControllerAtLeast > 0 {
-		fields = append(fields, fmt.Sprintf("AttackersAttackingControllerAtLeast: %d,", cond.AttackersAttackingControllerAtLeast))
-		hasPredicate = true
-	}
-	if cond.ControllerGainedLifeThisTurnAtLeast > 0 {
-		fields = append(fields, fmt.Sprintf("ControllerGainedLifeThisTurnAtLeast: %d,", cond.ControllerGainedLifeThisTurnAtLeast))
 		hasPredicate = true
 	}
 	if cond.AnyOpponentControls.Exists {

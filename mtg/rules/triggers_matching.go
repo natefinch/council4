@@ -505,12 +505,6 @@ func triggerInterveningIf(g *game.Game, source *game.Permanent, controller game.
 	}
 	// Intervening "if" conditions are checked both as the event triggers and as
 	// the ability resolves (CR 603.4).
-	if trigger.InterveningIfControllerLifeAtLeast != 0 {
-		player, ok := playerByID(g, controller)
-		if !ok || player.Life < trigger.InterveningIfControllerLifeAtLeast {
-			return false
-		}
-	}
 	if trigger.InterveningIfEventPermanentHadCounters && !eventPermanentHadCounters(g, event) {
 		return false
 	}

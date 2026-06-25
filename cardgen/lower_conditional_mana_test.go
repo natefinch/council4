@@ -46,8 +46,8 @@ func TestLowerCabalRitualThresholdMana(t *testing.T) {
 			t.Fatalf("instruction[%d] is ungated: %#v", i, instr)
 		}
 		cond := instr.Condition.Val.Condition.Val
-		if cond.ControllerGraveyardCardCountAtLeast != 7 {
-			t.Fatalf("instruction[%d] threshold = %d, want 7", i, cond.ControllerGraveyardCardCountAtLeast)
+		if len(cond.Aggregates) != 1 || cond.Aggregates[0].Aggregate != game.AggregateControllerGraveyardCardCount || cond.Aggregates[0].Value != 7 {
+			t.Fatalf("instruction[%d] aggregates = %+v, want graveyard-card-count >= 7", i, cond.Aggregates)
 		}
 		if cond.Negate {
 			baseCount++

@@ -84,8 +84,8 @@ func TestLowerThermalBlastThresholdInsteadDamage(t *testing.T) {
 	if len(seq) != 2 {
 		t.Fatalf("sequence length = %d, want 2 (base + threshold)", len(seq))
 	}
-	if got := seq[0].Condition.Val.Condition.Val.ControllerGraveyardCardCountAtLeast; got != 7 {
-		t.Fatalf("base gate graveyard threshold = %d, want 7", got)
+	if got := seq[0].Condition.Val.Condition.Val.Aggregates; len(got) != 1 || got[0].Aggregate != game.AggregateControllerGraveyardCardCount || got[0].Value != 7 {
+		t.Fatalf("base gate graveyard aggregate = %+v, want graveyard-card-count >= 7", seq[0].Condition.Val.Condition.Val.Aggregates)
 	}
 	if !seq[0].Condition.Val.Condition.Val.Negate {
 		t.Fatal("base damage must be gated on NOT(threshold)")

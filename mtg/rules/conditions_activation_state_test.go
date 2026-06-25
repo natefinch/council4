@@ -101,7 +101,7 @@ func TestConditionAnyOpponentPoisonAtLeast(t *testing.T) {
 // restriction holds only at the precise hand size.
 func TestConditionControllerHandSizeExactly(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	condition := opt.Val(game.Condition{ControllerHandSizeExactly: opt.Val(7)})
+	condition := opt.Val(game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerHandSize, Op: compare.Equal, Value: 7}}})
 	ctx := conditionContext{controller: game.Player1}
 	for i := range 6 {
 		addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{

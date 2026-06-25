@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -134,7 +135,7 @@ func TestControllerControlsCommanderCondition(t *testing.T) {
 func TestControllerGainedLifeThisTurnCondition(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	ctx := conditionContext{controller: game.Player1}
-	condition := opt.Val(game.Condition{ControllerGainedLifeThisTurnAtLeast: 3})
+	condition := opt.Val(game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerGainedLifeThisTurn, Op: compare.GreaterOrEqual, Value: 3}}})
 
 	if conditionSatisfied(g, ctx, condition) {
 		t.Fatal("gained-life condition passed with no life gained this turn")
@@ -514,11 +515,11 @@ func TestLifeAndOpponentConditions(t *testing.T) {
 
 	g.Players[game.Player3].Eliminated = true
 	g.Players[game.Player4].Eliminated = true
-	if conditionSatisfied(g, ctx, opt.Val(game.Condition{OpponentCountAtLeast: 2})) {
+	if conditionSatisfied(g, ctx, opt.Val(game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateOpponentCount, Op: compare.GreaterOrEqual, Value: 2}}})) {
 		t.Fatal("opponent-count condition included eliminated players")
 	}
 	g.Players[game.Player3].Eliminated = false
-	if !conditionSatisfied(g, ctx, opt.Val(game.Condition{OpponentCountAtLeast: 2})) {
+	if !conditionSatisfied(g, ctx, opt.Val(game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateOpponentCount, Op: compare.GreaterOrEqual, Value: 2}}})) {
 		t.Fatal("opponent-count condition failed with two alive opponents")
 	}
 }
@@ -529,7 +530,7 @@ func TestControllerLifeRelativeConditions(t *testing.T) {
 
 	// StartingLife defaults to 40; "at least 10 life more than your starting
 	// life total" needs current life >= 50.
-	aboveStarting := opt.Val(game.Condition{ControllerLifeAtLeastAboveStarting: 10})
+	aboveStarting := opt.Val(game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLifeAboveStarting, Op: compare.GreaterOrEqual, Value: 10}}})
 	g.Players[game.Player1].Life = 50
 	if !conditionSatisfied(g, ctx, aboveStarting) {
 		t.Fatal("life-above-starting condition failed at threshold")
@@ -567,9 +568,9 @@ func TestNegativeConditionThresholdsFailClosed(t *testing.T) {
 	conditions := []game.Condition{
 		{Negate: true, Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLife, Op: compare.GreaterOrEqual, Value: -1}}},
 		{Negate: true, Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLife, Op: compare.LessOrEqual, Value: -1}}},
-		{Negate: true, ControllerLifeAtLeastAboveStarting: -1},
+		{Negate: true, Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLifeAboveStarting, Op: compare.GreaterOrEqual, Value: -1}}},
 		{Negate: true, AnyPlayerLifeAtMost: -1},
-		{Negate: true, OpponentCountAtLeast: -1},
+		{Negate: true, Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateOpponentCount, Op: compare.GreaterOrEqual, Value: -1}}},
 	}
 	for _, condition := range conditions {
 		if conditionSatisfied(g, ctx, opt.Val(condition)) {
@@ -593,7 +594,7 @@ func TestControllerLibrarySizeAndLifeExactlyConditions(t *testing.T) {
 	ctx := conditionContext{controller: game.Player1}
 
 	// "you have N or more cards in your library" (Battle of Wits).
-	librarySize := opt.Val(game.Condition{ControllerLibrarySizeAtLeast: 2})
+	librarySize := opt.Val(game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLibrarySize, Op: compare.GreaterOrEqual, Value: 2}}})
 	if conditionSatisfied(g, ctx, librarySize) {
 		t.Fatal("library-size condition passed with an empty library")
 	}
@@ -850,4 +851,140 @@ func TestAggregateControllerLifeComparators(t *testing.T) {
 	if conditionSatisfied(g, ctx, band) {
 		t.Fatal("AND band passed above range")
 	}
+}
+
+// TestAggregateMigratedQuantityFamilies verifies that each Condition quantity
+// family migrated onto the unified AggregateComparison representation evaluates
+// identically across every comparator direction (at least / at most / exactly)
+// and that operands from different families AND together.
+func TestAggregateMigratedQuantityFamilies(t *testing.T) {
+	land := func(name string) *game.CardDef {
+		return &game.CardDef{CardFace: game.CardFace{Name: name, Types: []types.Card{types.Land}}}
+	}
+	agg := func(kind game.AggregateKind, op compare.Op, value int) opt.V[game.Condition] {
+		return opt.Val(game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: kind, Op: op, Value: value}}})
+	}
+
+	t.Run("hand size", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		ctx := conditionContext{controller: game.Player1}
+		for i := range 3 {
+			addCardToHand(g, game.Player1, land(fmt.Sprintf("Hand %d", i)))
+		}
+		if !conditionSatisfied(g, ctx, agg(game.AggregateControllerHandSize, compare.GreaterOrEqual, 3)) {
+			t.Fatal("hand-size >= 3 failed at threshold")
+		}
+		if conditionSatisfied(g, ctx, agg(game.AggregateControllerHandSize, compare.GreaterOrEqual, 4)) {
+			t.Fatal("hand-size >= 4 passed below threshold")
+		}
+		if !conditionSatisfied(g, ctx, agg(game.AggregateControllerHandSize, compare.LessOrEqual, 3)) {
+			t.Fatal("hand-size <= 3 failed at threshold")
+		}
+		if conditionSatisfied(g, ctx, agg(game.AggregateControllerHandSize, compare.LessOrEqual, 2)) {
+			t.Fatal("hand-size <= 2 passed above threshold")
+		}
+		if !conditionSatisfied(g, ctx, agg(game.AggregateControllerHandSize, compare.Equal, 3)) {
+			t.Fatal("hand-size == 3 failed at exact size")
+		}
+		if conditionSatisfied(g, ctx, agg(game.AggregateControllerHandSize, compare.Equal, 2)) {
+			t.Fatal("hand-size == 2 passed off exact size")
+		}
+	})
+
+	t.Run("library size", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		ctx := conditionContext{controller: game.Player1}
+		for i := range 2 {
+			addCardToLibrary(g, game.Player1, land(fmt.Sprintf("Lib %d", i)))
+		}
+		if !conditionSatisfied(g, ctx, agg(game.AggregateControllerLibrarySize, compare.GreaterOrEqual, 2)) {
+			t.Fatal("library-size >= 2 failed at threshold")
+		}
+		if conditionSatisfied(g, ctx, agg(game.AggregateControllerLibrarySize, compare.GreaterOrEqual, 3)) {
+			t.Fatal("library-size >= 3 passed below threshold")
+		}
+		if !conditionSatisfied(g, ctx, agg(game.AggregateControllerLibrarySize, compare.Equal, 2)) {
+			t.Fatal("library-size == 2 failed at exact size")
+		}
+	})
+
+	t.Run("graveyard card count", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		ctx := conditionContext{controller: game.Player1}
+		for i := range 4 {
+			addCardToGraveyard(g, game.Player1, land(fmt.Sprintf("Grave %d", i)))
+		}
+		if !conditionSatisfied(g, ctx, agg(game.AggregateControllerGraveyardCardCount, compare.GreaterOrEqual, 4)) {
+			t.Fatal("graveyard-count >= 4 failed at threshold")
+		}
+		if conditionSatisfied(g, ctx, agg(game.AggregateControllerGraveyardCardCount, compare.GreaterOrEqual, 5)) {
+			t.Fatal("graveyard-count >= 5 passed below threshold")
+		}
+		if !conditionSatisfied(g, ctx, agg(game.AggregateControllerGraveyardCardCount, compare.LessOrEqual, 4)) {
+			t.Fatal("graveyard-count <= 4 failed at threshold")
+		}
+	})
+
+	t.Run("life above starting", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		ctx := conditionContext{controller: game.Player1}
+		g.Players[game.Player1].Life = g.Players[game.Player1].StartingLife + 5
+		if !conditionSatisfied(g, ctx, agg(game.AggregateControllerLifeAboveStarting, compare.GreaterOrEqual, 5)) {
+			t.Fatal("life-above-starting >= 5 failed at threshold")
+		}
+		if conditionSatisfied(g, ctx, agg(game.AggregateControllerLifeAboveStarting, compare.GreaterOrEqual, 6)) {
+			t.Fatal("life-above-starting >= 6 passed below threshold")
+		}
+		if !conditionSatisfied(g, ctx, agg(game.AggregateControllerLifeAboveStarting, compare.Equal, 5)) {
+			t.Fatal("life-above-starting == 5 failed at exact delta")
+		}
+	})
+
+	t.Run("opponent count", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		ctx := conditionContext{controller: game.Player1}
+		if !conditionSatisfied(g, ctx, agg(game.AggregateOpponentCount, compare.GreaterOrEqual, 3)) {
+			t.Fatal("opponent-count >= 3 failed with three opponents")
+		}
+		g.Players[game.Player4].Eliminated = true
+		if !conditionSatisfied(g, ctx, agg(game.AggregateOpponentCount, compare.Equal, 2)) {
+			t.Fatal("opponent-count == 2 failed after one elimination")
+		}
+		if conditionSatisfied(g, ctx, agg(game.AggregateOpponentCount, compare.GreaterOrEqual, 3)) {
+			t.Fatal("opponent-count >= 3 passed after one elimination")
+		}
+	})
+
+	t.Run("gained life this turn", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		ctx := conditionContext{controller: game.Player1}
+		if conditionSatisfied(g, ctx, agg(game.AggregateControllerGainedLifeThisTurn, compare.GreaterOrEqual, 3)) {
+			t.Fatal("gained-life >= 3 passed with no life gained")
+		}
+		emitEvent(g, game.Event{Kind: game.EventLifeGained, Player: game.Player1, Amount: 3})
+		if !conditionSatisfied(g, ctx, agg(game.AggregateControllerGainedLifeThisTurn, compare.GreaterOrEqual, 3)) {
+			t.Fatal("gained-life >= 3 failed after gaining 3 life")
+		}
+		if !conditionSatisfied(g, ctx, agg(game.AggregateControllerGainedLifeThisTurn, compare.LessOrEqual, 3)) {
+			t.Fatal("gained-life <= 3 failed after gaining 3 life")
+		}
+	})
+
+	t.Run("AND across families", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		ctx := conditionContext{controller: game.Player1}
+		addCardToHand(g, game.Player1, land("Hand"))
+		addCardToGraveyard(g, game.Player1, land("Grave"))
+		band := opt.Val(game.Condition{Aggregates: []game.AggregateComparison{
+			{Aggregate: game.AggregateControllerHandSize, Op: compare.GreaterOrEqual, Value: 1},
+			{Aggregate: game.AggregateControllerGraveyardCardCount, Op: compare.GreaterOrEqual, Value: 1},
+		}})
+		if !conditionSatisfied(g, ctx, band) {
+			t.Fatal("AND across families failed when both satisfied")
+		}
+		band.Val.Aggregates[1].Value = 2
+		if conditionSatisfied(g, ctx, band) {
+			t.Fatal("AND across families passed when one operand unsatisfied")
+		}
+	})
 }

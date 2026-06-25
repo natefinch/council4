@@ -3,6 +3,7 @@ package rules
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/zone"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -358,7 +359,7 @@ func TestCyclingCostReplacementCanRequireHandSize(t *testing.T) {
 		Kind:           game.CostModifierAbility,
 		AbilityKeyword: game.Cycling,
 		SetManaCost:    opt.Val(cost.Mana{}),
-	}, opt.Val(game.Condition{ControllerHandSizeAtLeast: 7}))
+	}, opt.Val(game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerHandSize, Op: compare.GreaterOrEqual, Value: 7}}}))
 	for range 5 {
 		addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Filler"}})
 	}

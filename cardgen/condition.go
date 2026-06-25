@@ -51,23 +51,23 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 	case compiler.ConditionPredicateControllerLifeAtMost:
 		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerLife, Op: compare.LessOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateControllerLifeAtLeastAboveStarting:
-		result.ControllerLifeAtLeastAboveStarting = condition.Threshold
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerLifeAboveStarting, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateControllerHandSizeAtLeast:
-		result.ControllerHandSizeAtLeast = condition.Threshold
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerHandSize, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateControllerHandSizeExactly:
-		result.ControllerHandSizeExactly = opt.Val(condition.Threshold)
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerHandSize, Op: compare.Equal, Value: condition.Threshold})
 	case compiler.ConditionPredicateControllerLibrarySizeAtLeast:
-		result.ControllerLibrarySizeAtLeast = condition.Threshold
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerLibrarySize, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateControllerLifeExactly:
 		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerLife, Op: compare.Equal, Value: condition.Threshold})
 	case compiler.ConditionPredicateSpellXAtLeast:
-		result.SpellXAtLeast = condition.Threshold
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateSpellX, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateAnyOpponentPoisonAtLeast:
 		result.AnyOpponentPoisonAtLeast = condition.Threshold
 	case compiler.ConditionPredicateAnyPlayerLifeAtMost:
 		result.AnyPlayerLifeAtMost = condition.Threshold
 	case compiler.ConditionPredicateOpponentCountAtLeast:
-		result.OpponentCountAtLeast = condition.Threshold
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateOpponentCount, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateControllerControls:
 		count, ok := lowerConditionSelectionCount(condition)
 		if !ok {
@@ -99,9 +99,9 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 	case compiler.ConditionPredicateControllerCreatedTokenThisTurn:
 		result.ControllerCreatedTokenThisTurn = true
 	case compiler.ConditionPredicateControllerGraveyardCardCountAtLeast:
-		result.ControllerGraveyardCardCountAtLeast = condition.Threshold
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerGraveyardCardCount, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateControllerGraveyardCardTypeCountAtLeast:
-		result.ControllerGraveyardCardTypeCountAtLeast = condition.Threshold
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerGraveyardCardTypeCount, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateControllerGraveyardCardOfTypeCountAtLeast:
 		if condition.GraveyardCountCardType == "" {
 			return game.Condition{}, false
@@ -109,11 +109,11 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.ControllerGraveyardCardOfTypeCountAtLeast = condition.Threshold
 		result.ControllerGraveyardCountCardType = condition.GraveyardCountCardType
 	case compiler.ConditionPredicateControllerCreaturePowerDiversityAtLeast:
-		result.ControllerCreaturePowerDiversityAtLeast = condition.Threshold
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerCreaturePowerDiversity, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateAttackersAttackingControllerAtLeast:
-		result.AttackersAttackingControllerAtLeast = condition.Threshold
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateAttackersAttackingController, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateControllerGainedLifeThisTurnAtLeast:
-		result.ControllerGainedLifeThisTurnAtLeast = condition.Threshold
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerGainedLifeThisTurn, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateObjectMatches:
 		object, ok := lowerConditionObjectReference(condition.ObjectBinding)
 		if !ok {
