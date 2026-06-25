@@ -5790,16 +5790,18 @@ func parseGroupEntersTappedEffect(sentence Sentence, tokens []shared.Token) ([]E
 		return nil, false
 	}
 	effect := EffectSyntax{
-		Kind:                   EffectEnterTapped,
-		Context:                EffectContextController,
-		Span:                   sentence.Span,
-		ClauseSpan:             sentence.Span,
-		Text:                   sentence.Text,
-		Tokens:                 append([]shared.Token(nil), tokens...),
-		EntersTapped:           true,
-		EntersTappedGroup:      true,
-		EntersTappedGroupScope: scope,
-		EntersTappedGroupTypes: cardTypes,
+		Kind:         EffectEnterTapped,
+		Context:      EffectContextController,
+		Span:         sentence.Span,
+		ClauseSpan:   sentence.Span,
+		Text:         sentence.Text,
+		Tokens:       append([]shared.Token(nil), tokens...),
+		EntersTapped: true,
+		GroupEntryModification: GroupEntryModificationSyntax{
+			Kind:            GroupEntryModificationTapped,
+			ControllerScope: scope,
+			Types:           cardTypes,
+		},
 	}
 	effect.Exact = exactEffectSyntax(&effect)
 	return []EffectSyntax{effect}, true
@@ -5860,18 +5862,20 @@ func parseGroupEntersWithCountersEffect(sentence Sentence, tokens []shared.Token
 	}
 	selection.SubtypeFromEntryChoice = chosenEntryType
 	effect := EffectSyntax{
-		Kind:                    EffectEnterTapped,
-		Context:                 EffectContextController,
-		Span:                    sentence.Span,
-		ClauseSpan:              sentence.Span,
-		Text:                    sentence.Text,
-		Tokens:                  append([]shared.Token(nil), tokens...),
-		EntersWithCounters:      true,
-		EntersWithCountersGroup: true,
-		Selection:               selection,
-		CounterKind:             placement.CounterKind,
-		CounterKnown:            placement.CounterKnown,
-		Amount:                  placement.Amount,
+		Kind:               EffectEnterTapped,
+		Context:            EffectContextController,
+		Span:               sentence.Span,
+		ClauseSpan:         sentence.Span,
+		Text:               sentence.Text,
+		Tokens:             append([]shared.Token(nil), tokens...),
+		EntersWithCounters: true,
+		GroupEntryModification: GroupEntryModificationSyntax{
+			Kind: GroupEntryModificationWithCounters,
+		},
+		Selection:    selection,
+		CounterKind:  placement.CounterKind,
+		CounterKnown: placement.CounterKnown,
+		Amount:       placement.Amount,
 	}
 	effect.Exact = exactEffectSyntax(&effect)
 	return []EffectSyntax{effect}, true

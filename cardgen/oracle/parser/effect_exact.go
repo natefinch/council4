@@ -58,8 +58,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectDraw:
 		return exactCardCountEffectSyntax(effect, "Draw", "draws", true)
 	case EffectEnterTapped:
-		return exactLegacyFixedAmountSyntax(effect) || effect.EntersTappedGroup ||
-			effect.EntersWithCountersGroup
+		return exactLegacyFixedAmountSyntax(effect) ||
+			effect.GroupEntryModification.Kind != GroupEntryModificationNone
 	case EffectExile:
 		return exactSourceSpellExileSyntax(effect) ||
 			exactCounteredSpellExileSyntax(effect) ||

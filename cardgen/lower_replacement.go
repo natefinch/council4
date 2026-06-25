@@ -96,7 +96,7 @@ func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering,
 func lowerGroupEntersTappedReplacement(
 	ability compiler.CompiledAbility,
 ) (game.ReplacementAbility, bool, *shared.Diagnostic) {
-	if len(ability.Content.Effects) != 1 || !ability.Content.Effects[0].EntersTappedGroup {
+	if len(ability.Content.Effects) != 1 || !ability.Content.Effects[0].EntersTappedGroup() {
 		return game.ReplacementAbility{}, false, nil
 	}
 	unsupported := func(detail string) (game.ReplacementAbility, bool, *shared.Diagnostic) {
@@ -114,11 +114,11 @@ func lowerGroupEntersTappedReplacement(
 		return unsupported("the executable source backend supports only unconditional group enters-tapped replacements")
 	}
 	effect := ability.Content.Effects[0]
-	controller, ok := groupEntersTappedController(effect.EntersTappedGroupScope)
+	controller, ok := groupEntersTappedController(effect.GroupEntryModification.ControllerScope)
 	if !ok {
 		return unsupported("the executable source backend does not lower this enters-tapped controller scope")
 	}
-	return game.EntersTappedGroupReplacement(ability.Text, controller, effect.EntersTappedGroupTypes...), true, nil
+	return game.EntersTappedGroupReplacement(ability.Text, controller, effect.GroupEntryModification.Types...), true, nil
 }
 
 // lowerDrawEmptyLibraryWinReplacement lowers the draw-from-empty-library win
@@ -1100,7 +1100,7 @@ func lowerEntersWithCountersReplacement(
 			detail,
 		)
 	}
-	if ability.Content.Effects[0].EntersWithCountersGroup {
+	if ability.Content.Effects[0].EntersWithCountersGroup() {
 		return lowerGroupEntersWithCountersReplacement(ability, unsupported)
 	}
 	if len(ability.Content.Effects) != 1 ||
