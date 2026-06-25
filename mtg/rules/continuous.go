@@ -890,11 +890,12 @@ func continuousSelectionApplies(g *game.Game, resolver referenceResolver, group 
 
 // orderContinuousEffects orders the effects within a single layer. Effects are
 // first sorted by timestamp, breaking ties by ID (CR 613.7: an effect with an
-// earlier timestamp is applied first). Dependencies are then resolved by
-// repeatedly emitting effects whose dependencies have already been applied,
-// reevaluating the remaining order after each one (CR 613.8 / 613.8c), which can
-// reorder effects within the layer. If a dependency loop remains, the
-// still-unordered effects are emitted in timestamp order (CR 613.8b).
+// earlier timestamp is applied first). Dependencies then override timestamp
+// order (CR 613.8): each step applies the earliest-timestamp effect whose
+// dependencies have already been applied, reevaluating after each one
+// (CR 613.8c), so a dependent effect applies just after its dependencies
+// (CR 613.8b). If a dependency loop remains, the still-unordered effects are
+// applied in timestamp order (CR 613.8b).
 func orderContinuousEffects(effects []game.ContinuousEffect) []game.ContinuousEffect {
 	if len(effects) <= 1 {
 		return effects
@@ -909,22 +910,29 @@ func orderContinuousEffects(effects []game.ContinuousEffect) []game.ContinuousEf
 	result := make([]game.ContinuousEffect, 0, len(ordered))
 	applied := make(map[id.ID]bool, len(ordered))
 	for len(remaining) > 0 {
-		progress := false
-		for i := 0; i < len(remaining); {
+		// CR 613.8c: after each effect is applied the remaining order is
+		// reevaluated. remaining stays timestamp-sorted, so scanning from the
+		// front and taking the first effect whose dependencies are satisfied
+		// applies the earliest-timestamp unblocked effect next (CR 613.8b: a
+		// dependent effect waits until just after its dependencies, otherwise
+		// timestamp order governs).
+		next := -1
+		for i := range remaining {
 			if dependenciesSatisfied(&remaining[i], applied, remaining) {
-				result = append(result, remaining[i])
-				if remaining[i].ID != 0 {
-					applied[remaining[i].ID] = true
-				}
-				remaining = append(remaining[:i], remaining[i+1:]...)
-				progress = true
-				continue
+				next = i
+				break
 			}
-			i++
 		}
-		if !progress {
+		if next == -1 {
+			// CR 613.8b: a dependency loop is resolved in timestamp order; the
+			// remaining effects are already timestamp-sorted.
 			return append(result, remaining...)
 		}
+		result = append(result, remaining[next])
+		if remaining[next].ID != 0 {
+			applied[remaining[next].ID] = true
+		}
+		remaining = append(remaining[:next], remaining[next+1:]...)
 	}
 	return result
 }
