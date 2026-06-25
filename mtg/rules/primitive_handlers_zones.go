@@ -764,16 +764,17 @@ func handleExile(r *effectResolver, prim game.Exile) effectResolved {
 		}
 		return res
 	}
-	if prim.Group.Valid() {
-		for _, permanent := range r.groupPermanents(prim.Group) {
+	targets := r.resolveObjectGroup(prim.Object, prim.Group)
+	if !targets.single {
+		for _, permanent := range targets.permanents {
 			res.succeeded = movePermanentToZone(r.game, permanent, zone.Exile) || res.succeeded
 		}
 		return res
 	}
-	permanent, ok := r.resolveObject(prim.Object)
-	if !ok {
+	if !targets.resolved {
 		return res
 	}
+	permanent := targets.permanents[0]
 	linkedObjectRef := permanentLinkedObjectRef(permanent)
 	res.succeeded = movePermanentToZone(r.game, permanent, zone.Exile)
 	if prim.ExileLinkedKey != "" {
@@ -1053,17 +1054,13 @@ func handleBounce(r *effectResolver, prim game.Bounce) effectResolved {
 		)
 		return res
 	}
-	if prim.Group.Valid() {
-		res.succeeded = movePermanentsToZoneSimultaneously(
-			r.game,
-			r.groupPermanents(prim.Group),
-			zone.Hand,
-		)
+	targets := r.resolveObjectGroup(prim.Object, prim.Group)
+	if !targets.single {
+		res.succeeded = movePermanentsToZoneSimultaneously(r.game, targets.permanents, zone.Hand)
 		return res
 	}
-	permanent, ok := r.resolveObject(prim.Object)
-	if ok {
-		res.succeeded = movePermanentToZone(r.game, permanent, zone.Hand)
+	if targets.resolved {
+		res.succeeded = movePermanentToZone(r.game, targets.permanents[0], zone.Hand)
 		return res
 	}
 	if resolved, ok := resolveObjectReference(r.game, r.obj, prim.Object); ok && resolved.stack != nil {

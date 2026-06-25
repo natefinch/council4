@@ -99,10 +99,10 @@ func playersInAPNAPOrder(g *game.Game, players []game.PlayerID) []game.PlayerID 
 
 func handleDestroy(r *effectResolver, prim game.Destroy) effectResolved {
 	res := effectResolved{accepted: true}
-	if prim.Group.Valid() {
-		permanents := r.groupPermanents(prim.Group)
-		destroyed := make([]*game.Permanent, 0, len(permanents))
-		for _, permanent := range permanents {
+	targets := r.resolveObjectGroup(prim.Object, prim.Group)
+	if !targets.single {
+		destroyed := make([]*game.Permanent, 0, len(targets.permanents))
+		for _, permanent := range targets.permanents {
 			if hasKeyword(r.game, permanent, game.Indestructible) || replaceDestroyPermanent(r.game, permanent, prim.PreventRegeneration) {
 				continue
 			}
@@ -112,9 +112,8 @@ func handleDestroy(r *effectResolver, prim game.Destroy) effectResolved {
 		res.amount = len(destroyed)
 		return res
 	}
-	permanent, ok := r.resolveObject(prim.Object)
-	if ok {
-		_, res.succeeded = destroyPermanentInBatch(r.game, permanent.ObjectID, 0, prim.PreventRegeneration)
+	if targets.resolved {
+		_, res.succeeded = destroyPermanentInBatch(r.game, targets.permanents[0].ObjectID, 0, prim.PreventRegeneration)
 	}
 	return res
 }
@@ -668,12 +667,13 @@ func handleModifyPT(r *effectResolver, prim game.ModifyPT) effectResolved {
 
 func handleTap(r *effectResolver, prim game.Tap) effectResolved {
 	res := effectResolved{accepted: true}
-	if prim.Group.Valid() {
-		res.succeeded = setPermanentsTappedSimultaneously(r.game, r.groupPermanents(prim.Group), true)
+	targets := r.resolveObjectGroup(prim.Object, prim.Group)
+	if !targets.single {
+		res.succeeded = setPermanentsTappedSimultaneously(r.game, targets.permanents, true)
 		return res
 	}
-	if permanent, ok := r.resolveObject(prim.Object); ok {
-		setPermanentTapped(r.game, permanent, true)
+	if targets.resolved {
+		setPermanentTapped(r.game, targets.permanents[0], true)
 		res.succeeded = true
 	}
 	return res
@@ -1079,12 +1079,7 @@ func handleRemoveCounter(r *effectResolver, prim game.RemoveCounter) effectResol
 
 func handlePhaseOut(r *effectResolver, prim game.PhaseOut) effectResolved {
 	res := effectResolved{accepted: true}
-	var roots []*game.Permanent
-	if prim.Group.Valid() {
-		roots = append(roots, r.groupPermanents(prim.Group)...)
-	} else if permanent, ok := r.resolveObject(prim.Object); ok {
-		roots = append(roots, permanent)
-	}
+	roots := r.resolveObjectGroup(prim.Object, prim.Group).permanents
 	phaseOutRoots := make([]phaseOutRoot, 0, len(roots))
 	for _, permanent := range roots {
 		phaseOutRoots = append(phaseOutRoots, phaseOutRoot{
