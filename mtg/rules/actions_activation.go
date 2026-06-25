@@ -184,6 +184,11 @@ func playerCanPlayLand(g *game.Game, playerID game.PlayerID) bool {
 	return g.Turn.LandsPlayedThisTurn < g.Turn.LandsAllowedThisTurn+additionalLandPlaysFor(g, playerID)
 }
 
+// canCastAtCurrentTiming reports whether the player may begin casting the given
+// card now under the timing rules. CR 117.1a: a player may cast an instant
+// spell (or a spell with flash, CR 702.8) any time they have priority. CR 117.1:
+// other spells (sorcery-speed) may be cast only during the player's own main
+// phase while they have priority and the stack is empty (isSorcerySpeed).
 func canCastAtCurrentTiming(g *game.Game, playerID game.PlayerID, card *game.CardDef) bool {
 	if card.HasType(types.Instant) || card.HasKeyword(game.Flash) {
 		return true
