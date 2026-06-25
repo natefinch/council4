@@ -49,6 +49,13 @@ type permanentCreationOptions struct {
 	ColorsOfManaSpentToCast int
 }
 
+// createCardPermanentFaceWithOptions puts a card onto the battlefield as a new
+// permanent (CR 400.7: it becomes a new object with no memory of its prior
+// existence), assigning it a fresh object ID and timestamp. It applies the
+// entering-the-battlefield replacement effects (CR 614.1c-d, e.g. "as this
+// enters" choices and entering tapped or with counters) before the permanent
+// exists, and the entering event then lets "when/whenever this enters" abilities
+// trigger (CR 603.6a).
 func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone zone.Type, face game.FaceIndex, continuous []game.ContinuousEffect, options permanentCreationOptions, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
 	faceDef, ok := cardFaceDef(card, face)
 	if !ok {
@@ -318,6 +325,13 @@ type preparedPermanentZoneMove struct {
 	componentMoves    []mergedCardZoneMove
 }
 
+// preparePermanentZoneMove computes everything needed to move a permanent off the
+// battlefield without yet mutating game state: it snapshots the permanent's last
+// known information (so leaves-the-battlefield abilities and other look-back
+// effects see its prior characteristics, CR 603.10, CR 608.2h), applies
+// zone-change replacement effects to find the real destination (CR 614), and
+// resolves merged-permanent component moves. The moved card becomes a new object
+// in its new zone (CR 400.7).
 func preparePermanentZoneMove(g *game.Game, permanent *game.Permanent, destination zone.Type) (preparedPermanentZoneMove, bool) {
 	if _, ok := permanentByObjectID(g, permanent.ObjectID); !ok {
 		return preparedPermanentZoneMove{}, false
@@ -359,6 +373,13 @@ func preparePermanentZoneMove(g *game.Game, permanent *game.Permanent, destinati
 	}, true
 }
 
+// applyPreparedPermanentZoneMove commits a prepared permanent zone move: it
+// records last known information, detaches the permanent and its attachments,
+// removes it from the battlefield, and places the underlying card (or token) into
+// the destination zone; a card going to a library, graveyard, or hand goes to its
+// owner's (CR 400.3). The permanent ceases to exist and the card becomes a new
+// object in its new zone (CR 400.7); a token that leaves the battlefield ceases to
+// exist as a state-based action shortly after (CR 111.7).
 func applyPreparedPermanentZoneMove(g *game.Game, move *preparedPermanentZoneMove) bool {
 	rememberLastKnown(g, &move.snapshot)
 	revealZoneReplacementSource(g, move.event, move.replacement.revealSource)
@@ -436,6 +457,13 @@ func movePermanentToZoneInBatch(g *game.Game, permanent *game.Permanent, destina
 	return applyPreparedPermanentZoneMove(g, &move)
 }
 
+// movePermanentsToZoneSimultaneously moves several permanents to the same zone as
+// a single simultaneous event so look-back-in-time abilities see them all leaving
+// together (CR 603.10a) and so a single damage/zone-change batch is produced. All
+// moves are prepared (last known information snapshotted) before any is applied so
+// each one's replacement and trigger checks use the pre-move game state. CR 404.3
+// lets the owner arrange cards put into the same graveyard at once; this engine
+// does not prompt for that order and adds them in processing order instead.
 func movePermanentsToZoneSimultaneously(g *game.Game, permanents []*game.Permanent, destination zone.Type) bool {
 	moves := make([]preparedPermanentZoneMove, 0, len(permanents))
 	for _, permanent := range permanents {
@@ -516,6 +544,11 @@ func moveCardBetweenZonesWithPlacement(g *game.Game, playerID game.PlayerID, car
 	return moveCardBetweenZonesInBatch(g, playerID, cardID, fromZone, toZone, bottom, 0)
 }
 
+// moveCardBetweenZonesInBatch moves a card from one zone to another, applying any
+// zone-change replacement effects to determine its real destination (CR 614) and
+// commander command-zone handling (the hand/library-to-command move is a
+// replacement effect, CR 903.9b; the graveyard/exile case is a state-based action,
+// CR 903.9a). The card becomes a new object in its new zone (CR 400.7).
 func moveCardBetweenZonesInBatch(g *game.Game, playerID game.PlayerID, cardID id.ID, fromZone, toZone zone.Type, bottom bool, simultaneousID id.ID) bool {
 	replacement := zoneChangeReplacementResult{destination: toZone}
 	card, cardOK := g.GetCardInstance(cardID)
@@ -589,6 +622,10 @@ func discardCardFromHand(g *game.Game, playerID game.PlayerID, cardID id.ID) boo
 	return discardCardFromHandInBatch(g, playerID, cardID, 0)
 }
 
+// discardCardFromHandInBatch discards a card by moving it from its owner's hand to
+// their graveyard (CR 701.9a), subject to zone-change replacement effects (e.g.
+// madness exiles it instead, CR 702.35a). The discarded card becomes a new object
+// in its destination zone (CR 400.7).
 func discardCardFromHandInBatch(g *game.Game, playerID game.PlayerID, cardID, simultaneousID id.ID) bool {
 	player, ok := playerByID(g, playerID)
 	if !ok || !player.Hand.Remove(cardID) {
@@ -679,6 +716,12 @@ func destroyPermanent(g *game.Game, objectID id.ID) (*game.Permanent, bool) {
 	return destroyPermanentInBatch(g, objectID, 0, false)
 }
 
+// destroyPermanentInBatch destroys a permanent by moving it from the battlefield
+// to its owner's graveyard (CR 701.8a), unless it has indestructible (CR 702.12b)
+// or the destruction is replaced by a shield counter (CR 122.1c) or regeneration
+// (CR 614.8). A commander moved to the graveyard may be put into the command zone
+// by its owner as a state-based action (CR 903.9a). Returns the destroyed
+// permanent and whether it was actually destroyed.
 func destroyPermanentInBatch(g *game.Game, objectID, simultaneousID id.ID, preventRegeneration bool) (*game.Permanent, bool) {
 	permanent, ok := permanentByObjectID(g, objectID)
 	if !ok {
@@ -700,6 +743,11 @@ func destroyPermanentInBatch(g *game.Game, objectID, simultaneousID id.ID, preve
 	return permanent, true
 }
 
+// destinationZone returns the zone object for a given owner and zone type.
+// Library, hand, and graveyard belong to a specific player, so an object that
+// would go to one of them goes to its owner's corresponding zone (CR 400.3). The
+// exile and command zones are shared zones in the rules (CR 400.1); this engine
+// represents them per owner, so callers pass the object's owner for those too.
 func destinationZone(g *game.Game, owner game.PlayerID, destination zone.Type) (*zone.Zone, bool) {
 	if owner < 0 || int(owner) >= len(g.Players) {
 		return nil, false
