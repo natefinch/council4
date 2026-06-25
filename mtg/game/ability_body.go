@@ -157,7 +157,11 @@ func EntersTappedGroupReplacement(text string, controller TriggerControllerFilte
 	replacement.EntersTapped = true
 	replacement.EntersTappedOthers = true
 	replacement.ControllerFilter = controller
-	replacement.EntersTappedTypes = append([]types.Card(nil), cardTypes...)
+	if len(cardTypes) > 0 {
+		replacement.EntersTappedSelection = &Selection{
+			RequiredTypesAny: append([]types.Card(nil), cardTypes...),
+		}
+	}
 	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
@@ -614,7 +618,7 @@ func CounterPlacementReplacement(text string, multiplier, addend int, kindFilter
 	replacement := AnyCounterPlacementReplacement(text, multiplier, addend, filter)
 	replacement.Replacement.MatchCounterKind = true
 	replacement.Replacement.CounterKindFilter = kindFilter
-	replacement.Replacement.CounterRecipientTypes = []types.Card{types.Creature}
+	replacement.Replacement.CounterRecipientSelection = &Selection{RequiredTypes: []types.Card{types.Creature}}
 	replacement.Replacement.CounterUseRecipientController = true
 	return replacement
 }
@@ -663,7 +667,9 @@ func ControlledPermanentCounterKindPlacementReplacement(text string, multiplier,
 func ControlledPermanentTypesCounterPlacementReplacement(text string, multiplier, addend int, recipientTypesAny []types.Card, filter TriggerControllerFilter) ReplacementAbility {
 	replacement := AnyCounterPlacementReplacement(text, multiplier, addend, filter)
 	replacement.Replacement.CounterUseRecipientController = true
-	replacement.Replacement.CounterRecipientTypesAny = append([]types.Card(nil), recipientTypesAny...)
+	replacement.Replacement.CounterRecipientSelection = &Selection{
+		RequiredTypesAny: append([]types.Card(nil), recipientTypesAny...),
+	}
 	return replacement
 }
 

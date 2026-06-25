@@ -1026,7 +1026,7 @@ func matchingETBReplacementEffects(g *game.Game, permanent *game.Permanent, even
 			if replacement.SourceObjectID != 0 && replacement.SourceObjectID == event.PermanentID {
 				continue
 			}
-			if !entersTappedGroupTypeMatches(g, replacement, source) {
+			if !entersTappedGroupSelectionMatches(g, replacement, source) {
 				continue
 			}
 		}
@@ -1046,22 +1046,18 @@ func matchingETBReplacementEffects(g *game.Game, permanent *game.Permanent, even
 	return matches
 }
 
-// entersTappedGroupTypeMatches reports whether the entering permanent satisfies
-// the permanent-type filter of a group enters-tapped replacement. An empty
-// filter taps every entering permanent.
-func entersTappedGroupTypeMatches(g *game.Game, replacement *game.ReplacementEffect, permanent *game.Permanent) bool {
-	if len(replacement.EntersTappedTypes) == 0 {
+// entersTappedGroupSelectionMatches reports whether the entering permanent
+// satisfies the permanent characteristic filter of a group enters-tapped
+// replacement, matched through the canonical matchSelection. A nil selection
+// taps every entering permanent.
+func entersTappedGroupSelectionMatches(g *game.Game, replacement *game.ReplacementEffect, permanent *game.Permanent) bool {
+	if replacement.EntersTappedSelection == nil {
 		return true
 	}
 	if permanent == nil {
 		return false
 	}
-	for _, cardType := range replacement.EntersTappedTypes {
-		if permanentHasType(g, permanent, cardType) {
-			return true
-		}
-	}
-	return false
+	return permanentMatchesReplacementSelection(g, permanent, replacement.EntersTappedSelection)
 }
 
 // entersWithCountersGroupMatches reports whether the entering permanent is a
@@ -1179,13 +1175,10 @@ func matchingCounterPlacementReplacementEffects(g *game.Game, event game.Event, 
 		if replacement.MatchCounterKind && replacement.CounterKindFilter != event.CounterKind {
 			continue
 		}
-		if len(replacement.CounterRecipientTypes) > 0 && !counterRecipientPermanentMatches(g, event.PermanentID, recipient, replacement.CounterRecipientTypes) {
+		if replacement.CounterRecipientSelection != nil && !counterRecipientMatchesSelection(g, event.PermanentID, recipient, replacement.CounterRecipientSelection) {
 			continue
 		}
-		if len(replacement.CounterRecipientTypesAny) > 0 && !counterRecipientPermanentMatchesAny(g, event.PermanentID, recipient, replacement.CounterRecipientTypesAny) {
-			continue
-		}
-		if replacement.CounterRecipientAnyPermanent && !counterRecipientPermanentMatches(g, event.PermanentID, recipient, nil) {
+		if replacement.CounterRecipientAnyPermanent && !counterRecipientMatchesSelection(g, event.PermanentID, recipient, &game.Selection{}) {
 			continue
 		}
 		matchEvent := counterPlacementMatchEvent(g, replacement, event, recipient)
@@ -1313,45 +1306,45 @@ func damageSourceColors(g *game.Game, event damageEvent) []color.Color {
 	return nil
 }
 
-func counterRecipientPermanentMatches(g *game.Game, permanentID id.ID, permanent *game.Permanent, requiredTypes []types.Card) bool {
-	if permanent == nil {
-		if permanentID == 0 {
-			return false
-		}
-		var ok bool
-		permanent, ok = permanentByObjectID(g, permanentID)
-		if !ok {
-			return false
-		}
+// counterRecipientPermanent resolves the permanent a counter-placement event
+// would add counters to, preferring the supplied recipient and falling back to
+// the event's permanent ID. A player recipient (no permanent) does not resolve.
+func counterRecipientPermanent(g *game.Game, permanentID id.ID, permanent *game.Permanent) (*game.Permanent, bool) {
+	if permanent != nil {
+		return permanent, true
 	}
-	for _, cardType := range requiredTypes {
-		if !permanentHasType(g, permanent, cardType) {
-			return false
-		}
+	if permanentID == 0 {
+		return nil, false
 	}
-	return true
+	return permanentByObjectID(g, permanentID)
 }
 
-// counterRecipientPermanentMatchesAny reports whether the counter recipient is a
-// permanent that has at least one of anyTypes (a type-union filter, as on
-// Ozolith, the Shattered Spire's "an artifact or creature you control").
-func counterRecipientPermanentMatchesAny(g *game.Game, permanentID id.ID, permanent *game.Permanent, anyTypes []types.Card) bool {
-	if permanent == nil {
-		if permanentID == 0 {
-			return false
-		}
-		var ok bool
-		permanent, ok = permanentByObjectID(g, permanentID)
-		if !ok {
-			return false
-		}
+// counterRecipientMatchesSelection reports whether the counter recipient
+// permanent satisfies sel, matched through the canonical matchSelection. It
+// reads the recipient's effective characteristics, the same values the legacy
+// per-type checks read through permanentHasType.
+func counterRecipientMatchesSelection(g *game.Game, permanentID id.ID, permanent *game.Permanent, sel *game.Selection) bool {
+	recipient, ok := counterRecipientPermanent(g, permanentID, permanent)
+	if !ok {
+		return false
 	}
-	for _, cardType := range anyTypes {
-		if permanentHasType(g, permanent, cardType) {
-			return true
-		}
+	return permanentMatchesReplacementSelection(g, recipient, sel)
+}
+
+// permanentMatchesReplacementSelection matches a replacement's object-characteristic
+// Selection against a live permanent through the shared matchSelection, reading
+// the permanent's effective values. Replacement recipient filters carry no
+// controller relativity (controller scope lives outside the Selection), so the
+// subject's viewer is irrelevant.
+func permanentMatchesReplacementSelection(g *game.Game, permanent *game.Permanent, sel *game.Selection) bool {
+	values := effectivePermanentValues(g, permanent)
+	subject := selectionSubject{
+		kind:      subjectPermanent,
+		g:         g,
+		permanent: permanent,
+		values:    &values,
 	}
-	return false
+	return matchSelection(&subject, sel)
 }
 
 func replacementEffectMatchesEvent(g *game.Game, replacement *game.ReplacementEffect, event game.Event) bool {

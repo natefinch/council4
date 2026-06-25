@@ -78,8 +78,12 @@ func TestLowerGroupEntersTappedReplacement(t *testing.T) {
 			if replacement.ControllerFilter != test.controller {
 				t.Fatalf("controller filter = %v, want %v", replacement.ControllerFilter, test.controller)
 			}
-			if !slices.Equal(replacement.EntersTappedTypes, test.cardTypes) {
-				t.Fatalf("types = %v, want %v", replacement.EntersTappedTypes, test.cardTypes)
+			var gotTypes []types.Card
+			if replacement.EntersTappedSelection != nil {
+				gotTypes = replacement.EntersTappedSelection.RequiredTypesAny
+			}
+			if !slices.Equal(gotTypes, test.cardTypes) {
+				t.Fatalf("types = %v, want %v", gotTypes, test.cardTypes)
 			}
 		})
 	}
@@ -1136,8 +1140,9 @@ func TestLowerControlledTypeUnionCounterReplacement(t *testing.T) {
 		t.Fatalf("replacement = %+v, want artifact-or-creature +1/+1 additive modifier", replacement)
 	}
 	want := []types.Card{types.Artifact, types.Creature}
-	if !slices.Equal(replacement.CounterRecipientTypesAny, want) {
-		t.Fatalf("recipient types = %v, want %v", replacement.CounterRecipientTypesAny, want)
+	if replacement.CounterRecipientSelection == nil ||
+		!slices.Equal(replacement.CounterRecipientSelection.RequiredTypesAny, want) {
+		t.Fatalf("recipient selection = %+v, want RequiredTypesAny %v", replacement.CounterRecipientSelection, want)
 	}
 }
 
