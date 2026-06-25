@@ -33,10 +33,10 @@ type combatEngine struct {
 // strike creature adds a second combat damage step (CR 510.4): the first pass
 // deals first/double strike damage, the second deals the rest.
 //
-// Divergence: CR 508.8 says the declare blockers and combat damage steps are
-// skipped when no creature is attacking; this engine still runs them (their
-// turn-based actions then do nothing), which leaves spurious priority windows on
-// no-attack turns. Tracked in #1908.
+// CR 508.8: if no creature is attacking after the declare attackers step (none
+// were declared and none were put onto the battlefield attacking), the declare
+// blockers and combat damage steps are skipped and the phase proceeds directly to
+// end of combat.
 func (ce combatEngine) runPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.CombatPhasesThisTurn++
@@ -56,16 +56,31 @@ func (ce combatEngine) runPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	}
 	emptyManaPools(g)
 
-	g.Turn.Step = game.StepDeclareBlockers
-	ce.declareBlockers(g, agents, log)
-	if !ce.runPriority(g, agents, log) {
-		return
-	}
-	emptyManaPools(g)
+	// CR 508.8: skip the declare blockers and combat damage steps if no creature
+	// is attacking (none declared and none put onto the battlefield attacking).
+	if len(g.Combat.Attackers) > 0 {
+		g.Turn.Step = game.StepDeclareBlockers
+		ce.declareBlockers(g, agents, log)
+		if !ce.runPriority(g, agents, log) {
+			return
+		}
+		emptyManaPools(g)
 
-	if combatHasFirstStrikeDamage(g) {
-		g.Turn.Step = game.StepFirstStrikeDamage
-		ce.resolveDamagePass(g, firstStrikeCombatDamage, log)
+		if combatHasFirstStrikeDamage(g) {
+			g.Turn.Step = game.StepFirstStrikeDamage
+			ce.resolveDamagePass(g, firstStrikeCombatDamage, log)
+			ce.e.applyStateBasedActionsWithLog(g, log)
+			if g.IsGameOver() {
+				return
+			}
+			if !ce.runPriority(g, agents, log) {
+				return
+			}
+			emptyManaPools(g)
+		}
+
+		g.Turn.Step = game.StepCombatDamage
+		ce.resolveDamagePass(g, normalCombatDamage, log)
 		ce.e.applyStateBasedActionsWithLog(g, log)
 		if g.IsGameOver() {
 			return
@@ -75,17 +90,6 @@ func (ce combatEngine) runPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 		}
 		emptyManaPools(g)
 	}
-
-	g.Turn.Step = game.StepCombatDamage
-	ce.resolveDamagePass(g, normalCombatDamage, log)
-	ce.e.applyStateBasedActionsWithLog(g, log)
-	if g.IsGameOver() {
-		return
-	}
-	if !ce.runPriority(g, agents, log) {
-		return
-	}
-	emptyManaPools(g)
 
 	ce.runPriorityStep(g, agents, log, game.StepEndOfCombat)
 }

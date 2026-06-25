@@ -13,8 +13,10 @@ import (
 
 func TestCombatPhaseVisitsPriorityStepsInOrder(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	// With an attacker declared, all five combat steps occur in order.
+	addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 	engine := NewEngine(nil)
-	recorder := &combatStepRecorder{}
+	recorder := &firstLegalStepRecorder{}
 	agents := [game.NumPlayers]PlayerAgent{
 		game.Player1: recorder,
 		game.Player2: recorder,
@@ -33,6 +35,33 @@ func TestCombatPhaseVisitsPriorityStepsInOrder(t *testing.T) {
 	}
 	if !slices.Equal(recorder.firstVisits, want) {
 		t.Fatalf("visited combat steps = %v, want %v", recorder.firstVisits, want)
+	}
+}
+
+// TestCombatPhaseSkipsBlockerAndDamageStepsWithoutAttackers covers CR 508.8: when
+// no creature is declared as an attacker (and none is put onto the battlefield
+// attacking), the declare blockers and combat damage steps are skipped and the
+// phase proceeds directly from declare attackers to end of combat.
+func TestCombatPhaseSkipsBlockerAndDamageStepsWithoutAttackers(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	recorder := &combatStepRecorder{}
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player1: recorder,
+		game.Player2: recorder,
+		game.Player3: recorder,
+		game.Player4: recorder,
+	}
+
+	engine.runCombatPhase(g, agents, &TurnLog{})
+
+	want := []game.Step{
+		game.StepBeginningOfCombat,
+		game.StepDeclareAttackers,
+		game.StepEndOfCombat,
+	}
+	if !slices.Equal(recorder.firstVisits, want) {
+		t.Fatalf("visited combat steps = %v, want %v (declare blockers and combat damage skipped)", recorder.firstVisits, want)
 	}
 }
 
@@ -85,8 +114,11 @@ func TestCombatPhasePriorityWindowsPassThroughWithoutActions(t *testing.T) {
 			t.Fatalf("logged action kind = %v, want pass or declare attackers", logged.Action.Kind)
 		}
 	}
-	if passCount != game.NumPlayers*5 {
-		t.Fatalf("logged pass actions = %d, want %d", passCount, game.NumPlayers*5)
+	// CR 508.8: with no attackers, the declare blockers and combat damage steps
+	// are skipped, so only the beginning of combat, declare attackers, and end of
+	// combat steps open a priority window.
+	if passCount != game.NumPlayers*3 {
+		t.Fatalf("logged pass actions = %d, want %d", passCount, game.NumPlayers*3)
 	}
 	if declareAttackersCount != 1 {
 		t.Fatalf("logged declare attackers actions = %d, want 1", declareAttackersCount)
@@ -249,6 +281,28 @@ func (r *combatStepRecorder) ChooseAction(obs PlayerObservation, legal []action.
 		r.firstVisits = append(r.firstVisits, obs.Turn.Step)
 	}
 	return action.Pass()
+}
+
+// firstLegalStepRecorder records the first time it is asked to act in each combat
+// step (like combatStepRecorder) but takes the first legal action rather than
+// always passing, so it will declare an attacker when one is available.
+type firstLegalStepRecorder struct {
+	firstVisits []game.Step
+	seen        map[game.Step]bool
+}
+
+func (r *firstLegalStepRecorder) ChooseAction(obs PlayerObservation, legal []action.Action) action.Action {
+	if r.seen == nil {
+		r.seen = make(map[game.Step]bool)
+	}
+	if obs.Turn.Phase == game.PhaseCombat && !r.seen[obs.Turn.Step] {
+		r.seen[obs.Turn.Step] = true
+		r.firstVisits = append(r.firstVisits, obs.Turn.Step)
+	}
+	if len(legal) == 0 {
+		return action.Pass()
+	}
+	return legal[0]
 }
 
 type combatStateRecorder struct {
