@@ -499,6 +499,48 @@ func TestContinuousEffectsApplyInLayerOrderBeforeTimestamp(t *testing.T) {
 	}
 }
 
+// TestContinuousEffectDependencyKeepsTimestampOrderForUnblockedEffects covers
+// CR 613.8b/613.8c: once a dependency is applied, the dependent effect applies
+// just after it, and any independent later-timestamp effect must not jump ahead
+// of the now-unblocked earlier-timestamp dependent effect.
+func TestContinuousEffectDependencyKeepsTimestampOrderForUnblockedEffects(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	// Three "set power" effects in layer 7b. By timestamp the order is
+	// dependent(ts=10) < base(ts=20) < late(ts=30), but the dependent effect
+	// waits for base (CR 613.8b), giving the applied order base, dependent,
+	// late, so the late effect's value wins. A forward-only pass would instead
+	// emit base, late, dependent and let the dependent value win.
+	g.ContinuousEffects = append(g.ContinuousEffects,
+		game.ContinuousEffect{
+			ID:               20,
+			AffectedObjectID: creature.ObjectID,
+			Timestamp:        20,
+			Layer:            game.LayerPowerToughnessSet,
+			SetPower:         opt.Val(game.PT{Value: 2}),
+		},
+		game.ContinuousEffect{
+			ID:               21,
+			AffectedObjectID: creature.ObjectID,
+			Timestamp:        10,
+			DependsOn:        []id.ID{20},
+			Layer:            game.LayerPowerToughnessSet,
+			SetPower:         opt.Val(game.PT{Value: 1}),
+		},
+		game.ContinuousEffect{
+			ID:               22,
+			AffectedObjectID: creature.ObjectID,
+			Timestamp:        30,
+			Layer:            game.LayerPowerToughnessSet,
+			SetPower:         opt.Val(game.PT{Value: 3}),
+		},
+	)
+
+	if got := effectivePower(g, creature); got != 3 {
+		t.Fatalf("effective power = %d, want timestamp-ordered 3", got)
+	}
+}
+
 func TestContinuousEffectDependenciesOverrideTimestampWithinLayer(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)

@@ -128,6 +128,10 @@ func frameCacheFor(g *game.Game) *frameCache {
 	return fc
 }
 
+// effectiveController resolves a permanent's controller by applying only the
+// control-changing effects of layer 2 (CR 613.1b). It is separated from the full
+// layer computation because many layer effects are controller-relative, so the
+// controller must be known before the later layers are applied.
 func effectiveController(g *game.Game, permanent *game.Permanent) game.PlayerID {
 	fc := frameCacheFor(g)
 	if fc != nil {
@@ -153,6 +157,11 @@ func effectiveController(g *game.Game, permanent *game.Permanent) game.PlayerID 
 	return values.controller
 }
 
+// effectivePermanentValues computes a permanent's characteristics by the
+// continuous-effect layer system (CR 613.1): start with the permanent's own
+// printed/defined values, apply each layer in order, then apply the counter and
+// temporary power/toughness modifiers. Results are memoized per static-source
+// frame.
 func effectivePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffectiveValues {
 	fc := frameCacheFor(g)
 	if fc != nil {
@@ -177,6 +186,11 @@ func effectivePermanentValues(g *game.Game, permanent *game.Permanent) permanent
 	return values
 }
 
+// basePermanentValues returns the permanent's characteristics before any
+// continuous effects are applied: the starting point of the layer system, i.e.
+// the values printed on the card or defined by the effect that created a token
+// or copy (CR 613.1). Face-down permanents start as 2/2 creatures with no text,
+// name, subtypes, or mana cost (CR 613.2b, CR 708.2a).
 func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffectiveValues {
 	values := permanentEffectiveValues{keywords: make(map[game.Keyword]bool)}
 	values.controller = permanent.Controller
@@ -498,6 +512,11 @@ func basePermanentHasType(g *game.Game, permanent *game.Permanent, cardType type
 	return ok && card.HasType(cardType)
 }
 
+// applyContinuousLayers applies the continuous effects that affect a permanent
+// in the order prescribed by the layer system (CR 613.1): each layer in turn,
+// with the effects within a layer ordered by timestamp and dependency (see
+// orderContinuousEffects). The Changeling special case adds every creature type
+// in the type-changing layer 4 (CR 613.1d) before type-dependent effects apply.
 func applyContinuousLayers(g *game.Game, permanent *game.Permanent, values *permanentEffectiveValues) {
 	sources := staticAbilitySources(g)
 	for _, layer := range continuousLayers {
@@ -531,6 +550,13 @@ func permanentValuesBeforeLayer(g *game.Game, permanent *game.Permanent, stop ga
 	return values
 }
 
+// continuousLayers is the order in which continuous effects are applied
+// (CR 613.1): layer 1 copy (613.1a), layer 2 control (613.1b), layer 3 text
+// (613.1c), layer 4 type (613.1d), layer 5 color (613.1e), layer 6 ability
+// (613.1f), then the layer 7 power/toughness sublayers (613.4): 7b set effects
+// (613.4b), 7c modifying effects and counters (613.4c), and 7d power/toughness
+// switch (613.4d). Layer 7a characteristic-defining P/T (613.4a) is folded into
+// the base values, and layer 7c counters are applied in applyCounterAndTemporaryValues.
 var continuousLayers = [...]game.ContinuousLayer{
 	game.LayerCopy,
 	game.LayerControl,
@@ -862,6 +888,14 @@ func continuousSelectionApplies(g *game.Game, resolver referenceResolver, group 
 	return matchSelection(&subject, &sel)
 }
 
+// orderContinuousEffects orders the effects within a single layer. Effects are
+// first sorted by timestamp, breaking ties by ID (CR 613.7: an effect with an
+// earlier timestamp is applied first). Dependencies then override timestamp
+// order (CR 613.8): each step applies the earliest-timestamp effect whose
+// dependencies have already been applied, reevaluating after each one
+// (CR 613.8c), so a dependent effect applies just after its dependencies
+// (CR 613.8b). If a dependency loop remains, the still-unordered effects are
+// applied in timestamp order (CR 613.8b).
 func orderContinuousEffects(effects []game.ContinuousEffect) []game.ContinuousEffect {
 	if len(effects) <= 1 {
 		return effects
@@ -876,26 +910,40 @@ func orderContinuousEffects(effects []game.ContinuousEffect) []game.ContinuousEf
 	result := make([]game.ContinuousEffect, 0, len(ordered))
 	applied := make(map[id.ID]bool, len(ordered))
 	for len(remaining) > 0 {
-		progress := false
-		for i := 0; i < len(remaining); {
+		// CR 613.8c: after each effect is applied the remaining order is
+		// reevaluated. remaining stays timestamp-sorted, so scanning from the
+		// front and taking the first effect whose dependencies are satisfied
+		// applies the earliest-timestamp unblocked effect next (CR 613.8b: a
+		// dependent effect waits until just after its dependencies, otherwise
+		// timestamp order governs).
+		next := -1
+		for i := range remaining {
 			if dependenciesSatisfied(&remaining[i], applied, remaining) {
-				result = append(result, remaining[i])
-				if remaining[i].ID != 0 {
-					applied[remaining[i].ID] = true
-				}
-				remaining = append(remaining[:i], remaining[i+1:]...)
-				progress = true
-				continue
+				next = i
+				break
 			}
-			i++
 		}
-		if !progress {
+		if next == -1 {
+			// No remaining effect is applicable, so a dependency loop exists.
+			// CR 613.8b resolves the effects in the loop in timestamp order;
+			// the remaining effects are already timestamp-sorted, so they are
+			// applied in that order as a best-effort approximation. This is
+			// imprecise when an effect outside the loop merely depends on a loop
+			// member (it should wait for that member); that case does not arise
+			// with the supported cards and is tracked in #1904.
 			return append(result, remaining...)
 		}
+		result = append(result, remaining[next])
+		if remaining[next].ID != 0 {
+			applied[remaining[next].ID] = true
+		}
+		remaining = append(remaining[:next], remaining[next+1:]...)
 	}
 	return result
 }
 
+// compareContinuousEffects orders two effects by timestamp, breaking ties by ID
+// for a deterministic order (CR 613.7: earlier timestamp applies first).
 func compareContinuousEffects(left, right *game.ContinuousEffect) int {
 	if left.Timestamp < right.Timestamp {
 		return -1
@@ -912,6 +960,10 @@ func compareContinuousEffects(left, right *game.ContinuousEffect) int {
 	return 0
 }
 
+// dependenciesSatisfied reports whether every effect this one depends on has
+// already been applied, so a dependent effect waits until the effects it depends
+// on are applied (CR 613.8). A dependency that is not among the remaining effects
+// is treated as satisfied.
 func dependenciesSatisfied(effect *game.ContinuousEffect, applied map[id.ID]bool, remaining []game.ContinuousEffect) bool {
 	for _, dependency := range effect.DependsOn {
 		if dependency == 0 || applied[dependency] {
@@ -927,6 +979,10 @@ func dependenciesSatisfied(effect *game.ContinuousEffect, applied map[id.ID]bool
 	return true
 }
 
+// applyContinuousEffect applies a single continuous effect to a permanent's
+// in-progress values according to its layer (CR 613.1): copy (layer 1), control
+// (layer 2), text (layer 3, CR 612), type (layer 4), color (layer 5), ability
+// (layer 6), and the power/toughness sublayers (layer 7, CR 613.4).
 func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *permanentEffectiveValues, effect *game.ContinuousEffect) {
 	switch effect.Layer {
 	case game.LayerCopy:
@@ -971,6 +1027,8 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 			values.keywords[keyword] = true
 		}
 	case game.LayerPowerToughnessSet:
+		// Layer 7b: effects that set power and/or toughness to a specific value
+		// (CR 613.4b).
 		if effect.SetPower.Exists {
 			values.powerPT = ptPtr(effect.SetPower)
 			values.dynamicPower = nil
@@ -992,6 +1050,9 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 			values.toughness, values.toughnessOK = ptValue(g, values.controller, values.toughnessPT, nil)
 		}
 	case game.LayerPowerToughnessModify:
+		// Layer 7c: effects that modify (but don't set) power and/or toughness,
+		// including doubling (CR 613.4c). Counters, also part of 7c, are applied
+		// in applyCounterAndTemporaryValues.
 		powerDelta := effect.PowerDelta
 		if effect.PowerDeltaDynamic.Exists {
 			powerDelta = dynamicAmountValueForPermanent(g, permanent, effect.Controller, effect.PowerDeltaDynamic.Val, effect.Layer)
@@ -1013,6 +1074,8 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 			values.toughness += toughnessDelta
 		}
 	case game.LayerPowerToughnessSwitch:
+		// Layer 7d: effects that switch a creature's power and toughness
+		// (CR 613.4d).
 		values.power, values.toughness = values.toughness, values.power
 		values.powerOK, values.toughnessOK = values.toughnessOK, values.powerOK
 	default:
@@ -1136,6 +1199,16 @@ func basicLandSubtypeManaColor(subtype types.Sub) (mana.Color, bool) {
 	}
 }
 
+// applyCounterAndTemporaryValues applies +1/+1 and -1/-1 counters and temporary
+// power/toughness modifiers. Both belong to power/toughness layer 7c (CR 613.4c):
+// counters modify P/T and are timestamped when placed (CR 613.7c), and temporary
+// "until end of turn" modifiers come from resolving spells/abilities and are
+// timestamped when created (CR 613.7b). The engine applies both after the whole
+// layer pass instead of interleaving them into 7c by timestamp. This yields the
+// same result for the usual commutative additive modifiers, but can diverge for
+// a non-commutative 7c effect (e.g. a power/toughness doubling effect) and, for
+// asymmetric temporary modifiers, from the required 7c-before-7d ordering when a
+// 7d power/toughness switch is also present. See #1903.
 func applyCounterAndTemporaryValues(permanent *game.Permanent, values *permanentEffectiveValues) {
 	counterDelta := powerToughnessCounterDelta(permanent)
 	if values.powerOK {
