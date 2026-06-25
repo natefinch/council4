@@ -465,6 +465,55 @@ func chosenCreatureTargetHasListQualifiers(selection SelectionSyntax) bool {
 		len(selection.Alternatives) != 0
 }
 
+// exactChosenCardInYourGraveyardTargetSyntax reconstructs the canonical Oracle
+// phrase for a single chosen card of one card type in the controller's
+// graveyard ("target artifact card in your graveyard", Emry, Lurker of the
+// Loch) and reports whether it round-trips byte-for-byte against the target
+// tokens. It exists so the leading "Choose" verb of "Choose target <type> card
+// in your graveyard." is consumed by exactTargetChoiceSpan; the target itself is
+// already recognized through the normal graveyard-card target path.
+//
+// It accepts only the mandatory single-target cardinality, a controller-scoped
+// graveyard zone, and exactly one required card type with no other qualifier, so
+// any plural count, opponent or shared graveyard, additional type, color,
+// supertype, subtype, name, mana-value, historic, or counter qualifier fails
+// closed.
+func exactChosenCardInYourGraveyardTargetSyntax(
+	tokens []shared.Token,
+	cardinality TargetCardinalitySyntax,
+	selection SelectionSyntax,
+) bool {
+	if cardinality != (TargetCardinalitySyntax{Min: 1, Max: 1}) ||
+		selection.Controller != SelectionControllerYou ||
+		selection.Zone != zone.Graveyard ||
+		selection.Historic ||
+		selection.ConjunctiveTypes ||
+		selection.NonToken ||
+		selection.TokenOnly ||
+		selection.BasicLandType ||
+		selection.InclusiveOneOfEach ||
+		selection.ManaValueX ||
+		selection.RequiredName != "" ||
+		selection.CounterRequired ||
+		selection.CounterAny ||
+		selection.CounterAbsent ||
+		chosenCreatureTargetHasScalarQualifiers(selection) ||
+		chosenCreatureTargetHasListQualifiers(selection) {
+		return false
+	}
+	if len(selection.RequiredTypesAny) != 1 {
+		return false
+	}
+	word, ok := cardTypeWord(selection.RequiredTypesAny[0])
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(
+		joinedEffectText(tokens),
+		"target "+word+" card in your graveyard",
+	)
+}
+
 func exactTargetChoiceSpan(
 	tokens []shared.Token,
 	start int,
@@ -475,6 +524,7 @@ func exactTargetChoiceSpan(
 	if start == 1 &&
 		equalWord(tokens[0], "choose") &&
 		(exactChosenCreatureCardsInYourGraveyardTargetSyntax(targetTokens, cardinality, selection) ||
+			exactChosenCardInYourGraveyardTargetSyntax(targetTokens, cardinality, selection) ||
 			exactRuntimeTargetSyntax(targetTokens, cardinality, selection)) {
 		return tokens[0].Span
 	}
