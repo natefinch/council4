@@ -716,6 +716,8 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountCardsDrawnThisTurn
 	case parser.EffectDynamicAmountCardsNamedSelfInGraveyards:
 		return DynamicAmountCardsNamedSelfInGraveyards
+	case parser.EffectDynamicAmountCardsNamedSelfInControllerGraveyard:
+		return DynamicAmountCardsNamedSelfInControllerGraveyard
 	default:
 		return DynamicAmountNone
 	}

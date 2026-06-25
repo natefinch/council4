@@ -1427,10 +1427,13 @@ func parseDynamicDestroyedThisWaySubject(tokens []shared.Token, start int) (dyna
 
 // parseDynamicCardsNamedSelfInGraveyardsSubject recognizes the count subject
 // "card named <this card> in each graveyard" (Rite of Flame: "add {R} for each
-// card named Rite of Flame in each graveyard."). It accepts only the card's own
-// name, matched through an Atoms self-name span beginning right after "named",
-// so a literal other-card name fails closed. The subject is a singular count, so
-// it pairs with the singular "for each" prefix.
+// card named Rite of Flame in each graveyard.") and its controller-scoped
+// sibling "card named <this card> in your graveyard" (Compound Fracture, Growth
+// Cycle). It accepts only the card's own name, matched through an Atoms
+// self-name span beginning right after "named", so a literal other-card name
+// fails closed. The subject is a singular count, so it pairs with the singular
+// "for each" prefix. The "in each graveyard" wording counts every graveyard;
+// "in your graveyard" counts only the controller's.
 func parseDynamicCardsNamedSelfInGraveyardsSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
 	if !effectWordsAt(tokens, start, "card", "named") {
 		return dynamicAmountSubject{}, false
@@ -1450,11 +1453,20 @@ func parseDynamicCardsNamedSelfInGraveyardsSubject(tokens []shared.Token, start 
 	if nameEnd == nameStart {
 		return dynamicAmountSubject{}, false
 	}
-	if !effectWordsAt(tokens, nameEnd, "in", "each", "graveyard") || !dynamicAmountBoundary(tokens, nameEnd+3) {
+	var kind EffectDynamicAmountKind
+	switch {
+	case effectWordsAt(tokens, nameEnd, "in", "each", "graveyard"):
+		kind = EffectDynamicAmountCardsNamedSelfInGraveyards
+	case effectWordsAt(tokens, nameEnd, "in", "your", "graveyard"):
+		kind = EffectDynamicAmountCardsNamedSelfInControllerGraveyard
+	default:
+		return dynamicAmountSubject{}, false
+	}
+	if !dynamicAmountBoundary(tokens, nameEnd+3) {
 		return dynamicAmountSubject{}, false
 	}
 	return dynamicAmountSubject{
-		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountCardsNamedSelfInGraveyards},
+		amount: EffectAmountSyntax{DynamicKind: kind},
 		end:    nameEnd + 3, count: true,
 	}, true
 }

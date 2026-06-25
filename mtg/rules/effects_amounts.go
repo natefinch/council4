@@ -160,6 +160,8 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		amount = turnEventDynamicAmount(g, controller, dynamic.Kind)
 	case game.DynamicAmountCardsNamedSourceInGraveyards:
 		amount = countCardsNamedSourceInAllGraveyards(g, obj)
+	case game.DynamicAmountCardsNamedSourceInControllerGraveyard:
+		amount = countCardsNamedSourceInControllerGraveyard(g, obj, controller)
 	case game.DynamicAmountColorsOfManaSpentToCast:
 		if obj != nil {
 			amount = obj.ColorsOfManaSpentToCast
@@ -705,6 +707,37 @@ func countCardsNamedSourceInAllGraveyards(g *game.Game, obj *game.StackObject) i
 			if card.Def.Name == name {
 				count++
 			}
+		}
+	}
+	return count
+}
+
+// countCardsNamedSourceInControllerGraveyard counts the cards in the resolving
+// ability's controller's graveyard whose name equals the resolving stack
+// object's source card name (CR 201.2). It backs the "for each card named <this
+// card> in your graveyard" dynamic amount (Compound Fracture, Growth Cycle),
+// counting only the controller's graveyard rather than every graveyard. A
+// missing or unnamed source counts nothing.
+func countCardsNamedSourceInControllerGraveyard(g *game.Game, obj *game.StackObject, controller game.PlayerID) int {
+	if obj == nil {
+		return 0
+	}
+	name := stackObjectSourceName(g, obj)
+	if name == "" {
+		return 0
+	}
+	player, ok := playerByID(g, controller)
+	if !ok {
+		return 0
+	}
+	count := 0
+	for _, cardID := range player.Graveyard.All() {
+		card, ok := g.GetCardInstance(cardID)
+		if !ok || card.Def == nil {
+			continue
+		}
+		if card.Def.Name == name {
+			count++
 		}
 	}
 	return count

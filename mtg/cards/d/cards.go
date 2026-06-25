@@ -10,6 +10,7 @@ var Cards = []*game.CardDef{
 	DeathcapGlade,
 	Decommission,
 	DemonicAppetite,
+	DesertSDue,
 	DomriAnarchOfBolas,
 	DonatelloMutantMechanic,
 	DragonskullSummit,

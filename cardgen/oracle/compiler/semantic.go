@@ -2800,6 +2800,15 @@ const (
 	// total across all players; the source name is read at resolution. Added last
 	// so existing kinds keep their wire values.
 	DynamicAmountCardsNamedSelfInGraveyards
+	// DynamicAmountCardsNamedSelfInControllerGraveyard is the number of cards in
+	// the controller's graveyard whose name matches the card's own name ("for
+	// each card named Compound Fracture in your graveyard", Compound Fracture).
+	// The parser recognizes only the card's own self-name, so the count is the
+	// self-named total in the controller's graveyard alone, unlike
+	// DynamicAmountCardsNamedSelfInGraveyards, which counts every graveyard; the
+	// source name is read at resolution. Added last so existing kinds keep their
+	// wire values.
+	DynamicAmountCardsNamedSelfInControllerGraveyard
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

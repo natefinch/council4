@@ -774,6 +774,15 @@ const (
 	// self-named graveyard total; the source name is read at resolution. Added
 	// last so existing kinds keep their values.
 	EffectDynamicAmountCardsNamedSelfInGraveyards EffectDynamicAmountKind = "EffectDynamicAmountCardsNamedSelfInGraveyards"
+	// EffectDynamicAmountCardsNamedSelfInControllerGraveyard is the number of
+	// cards in the controller's graveyard whose name matches the card's own name
+	// ("for each card named <this card> in your graveyard", Compound Fracture,
+	// Growth Cycle). The parser accepts only the card's own name (an Atoms
+	// self-name span), so the count is the self-named total in the controller's
+	// graveyard alone, unlike EffectDynamicAmountCardsNamedSelfInGraveyards,
+	// which counts every graveyard; the source name is read at resolution. Added
+	// last so existing kinds keep their values.
+	EffectDynamicAmountCardsNamedSelfInControllerGraveyard EffectDynamicAmountKind = "EffectDynamicAmountCardsNamedSelfInControllerGraveyard"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
