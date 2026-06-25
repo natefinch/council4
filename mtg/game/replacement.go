@@ -272,18 +272,22 @@ type ReplacementEffect struct {
 	// "create those tokens plus an additional Food token"). The addend tokens are
 	// created directly alongside the matched tokens, so they neither re-trigger
 	// this replacement nor multiply with TokenMultiplier.
-	TokenAddendDef        *CardDef
-	CounterMultiplier     int
-	CounterAddend         int
-	MatchCounterKind      bool
-	CounterKindFilter     counter.Kind
-	CounterRecipientTypes []types.Card
-	// CounterRecipientTypesAny restricts the recipient to a permanent that has at
-	// least one of the listed card types ("an artifact or creature you control",
-	// Ozolith, the Shattered Spire). An empty slice imposes no type restriction.
-	// Unlike CounterRecipientTypes (which requires every listed type), this is a
-	// union filter.
-	CounterRecipientTypesAny      []types.Card
+	TokenAddendDef    *CardDef
+	CounterMultiplier int
+	CounterAddend     int
+	MatchCounterKind  bool
+	CounterKindFilter counter.Kind
+	// CounterRecipientSelection restricts the counter recipient to a permanent
+	// whose characteristics satisfy this canonical Selection, matched through the
+	// shared matchSelection so the recipient filter reads the same vocabulary as
+	// targets, triggers, and cost modifiers. It carries the conjunctive
+	// "creature" recipient of a typed counter-doubling replacement
+	// (CounterPlacementReplacement) via RequiredTypes and the union recipient of
+	// "an artifact or creature you control" (Ozolith, the Shattered Spire) via
+	// RequiredTypesAny. It is nil for replacements with no recipient-type filter.
+	// Recipient controller scope stays outside the Selection on
+	// CounterUseRecipientController.
+	CounterRecipientSelection     *Selection
 	CounterRecipientAnyPermanent  bool
 	CounterUseRecipientController bool
 	// CounterRecipientSelf restricts the recipient to the replacement's own
@@ -380,10 +384,12 @@ type ReplacementEffect struct {
 	// ControllerFilter and EntersTappedTypes.
 	EntersTappedOthers bool
 
-	// EntersTappedTypes restricts an EntersTappedOthers replacement to entering
-	// permanents that have any of these card types. It is empty when every
-	// entering permanent is tapped ("Permanents ... enter tapped.").
-	EntersTappedTypes []types.Card
+	// EntersTappedSelection restricts an EntersTappedOthers replacement to
+	// entering permanents whose characteristics satisfy this canonical Selection,
+	// matched through the shared matchSelection. Its RequiredTypesAny carries the
+	// "any of these card types" recipient filter; it is nil when every entering
+	// permanent is tapped ("Permanents ... enter tapped.").
+	EntersTappedSelection *Selection
 
 	// EntersWithCountersOthers marks a continuous static enters-with-counters
 	// replacement that adds the EntersWithCounters placements to a group of OTHER

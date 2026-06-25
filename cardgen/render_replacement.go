@@ -251,12 +251,13 @@ func (Renderer) renderGroupEntersTappedReplacement(ctx *renderCtx, ability *game
 	if err != nil {
 		return "", err
 	}
-	if len(replacement.EntersTappedTypes) == 0 {
+	if replacement.EntersTappedSelection == nil {
 		return fmt.Sprintf("game.EntersTappedGroupReplacement(%q, %s)", ability.Text, controller), nil
 	}
 	ctx.need(importTypes)
-	typeLiterals := make([]string, 0, len(replacement.EntersTappedTypes))
-	for _, cardType := range replacement.EntersTappedTypes {
+	recipientTypes := replacement.EntersTappedSelection.RequiredTypesAny
+	typeLiterals := make([]string, 0, len(recipientTypes))
+	for _, cardType := range recipientTypes {
 		literal, err := cardTypeLiteral(cardType)
 		if err != nil {
 			return "", err
@@ -414,10 +415,10 @@ func renderCounterPlacementReplacement(ctx *renderCtx, ability *game.Replacement
 			kind,
 		), nil
 	}
-	if len(replacement.CounterRecipientTypesAny) > 0 {
+	if sel := replacement.CounterRecipientSelection; sel != nil && len(sel.RequiredTypesAny) > 0 {
 		ctx.need(importTypes)
-		typeLiterals := make([]string, 0, len(replacement.CounterRecipientTypesAny))
-		for _, cardType := range replacement.CounterRecipientTypesAny {
+		typeLiterals := make([]string, 0, len(sel.RequiredTypesAny))
+		for _, cardType := range sel.RequiredTypesAny {
 			literal, err := cardTypeLiteral(cardType)
 			if err != nil {
 				return "", err
