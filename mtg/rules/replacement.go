@@ -36,6 +36,12 @@ type damageEvent struct {
 	combatDamage   bool
 }
 
+// applyDamagePrevention applies prevention effects to a damage event and returns
+// the amount of damage that will actually be dealt (CR 615.1: prevention effects
+// watch for a damage event and prevent some or all of the damage). Protection
+// from the source prevents all of the damage (CR 702.16e), and prevention shields
+// and shield counters prevent damage per their own rules. The amount prevented is
+// reported via a damage-prevented event.
 func applyDamagePrevention(g *game.Game, event damageEvent) int {
 	if event.amount <= 0 {
 		return 0
@@ -62,6 +68,14 @@ func applyDamagePrevention(g *game.Game, event damageEvent) int {
 	return amount
 }
 
+// replacementDamageAmount applies damage replacement effects to a damage event
+// and returns the resulting amount (CR 614.1: replacement effects watch for an
+// event and replace it). It loops because replacing the event can expose further
+// replacement effects, tracking applied effects so each one affects the event at
+// most once (CR 614.5) and repeating until none remain (CR 616.1f). When more
+// than one replacement effect would apply at once, CR 616.1 has the affected
+// object's controller or the affected player choose one; the engine instead
+// applies a deterministic default (see #1906).
 func replacementDamageAmount(g *game.Game, event damageEvent) int {
 	if event.amount <= 0 {
 		return event.amount
@@ -88,6 +102,11 @@ func replacementDamageAmount(g *game.Game, event damageEvent) int {
 	}
 }
 
+// orderedPreventionShieldIndices returns the indices of the prevention shields
+// that apply to a damage event, in the order they will be applied (CR 615.1:
+// prevention effects). When more than one shield applies, CR 616.1 calls for the
+// affected player or controller to choose the order, which the engine resolves
+// deterministically (see #1906).
 func orderedPreventionShieldIndices(g *game.Game, event damageEvent) []int {
 	var indices []int
 	var options []string
@@ -104,6 +123,12 @@ func orderedPreventionShieldIndices(g *game.Game, event damageEvent) []int {
 	return indices
 }
 
+// replaceDestroyPermanent applies effects that replace destroying a permanent
+// (CR 614): a shield counter or a regeneration shield (a destruction-replacement
+// effect, CR 614.8) each replace the destroy event. When both are available,
+// CR 616.1 has the permanent's controller choose which to apply; the engine
+// records a deterministic default (see #1906). Returns whether the destroy was
+// replaced.
 func replaceDestroyPermanent(g *game.Game, permanent *game.Permanent, preventRegeneration bool) bool {
 	if permanent == nil {
 		return false
@@ -135,6 +160,12 @@ func replaceDestroyPermanent(g *game.Game, permanent *game.Permanent, preventReg
 	return replaceDestroyWithRegeneration(g, permanent)
 }
 
+// replacementDecisionPlayer returns the player the engine uses when recording a
+// choice among several applicable replacement/prevention effects on a damage
+// event: the affected object's controller, or the affected player when no object
+// is involved. CR 616.1 names the affected object's controller (or owner if it
+// has no controller); the chooser-identity and choice simplifications are tracked
+// in #1906.
 func replacementDecisionPlayer(g *game.Game, event damageEvent) game.PlayerID {
 	if event.permanent != nil {
 		return effectiveController(g, event.permanent)
@@ -142,6 +173,11 @@ func replacementDecisionPlayer(g *game.Game, event damageEvent) game.PlayerID {
 	return event.player
 }
 
+// recordReplacementDecision records the point at which CR 616.1 calls for the
+// affected player/controller to choose which of several applicable
+// replacement/prevention effects to apply. The engine does not prompt: it records
+// a deterministic fallback (the options in order, UsedFallback) so the turn log
+// shows a choice point existed, and the apply paths use a fixed order. See #1906.
 func recordReplacementDecision(g *game.Game, player game.PlayerID, options []string) game.ReplacementDecision {
 	selected := make([]int, len(options))
 	for i := range options {
@@ -176,6 +212,13 @@ func replacementZoneChangeDestination(g *game.Game, event game.Event) zone.Type 
 	return replacementZoneChange(g, event).destination
 }
 
+// replacementZoneChange applies zone-change replacement effects to determine
+// where a card actually goes (CR 614.1a, "instead" effects; e.g. a card that
+// would be put into a graveyard is exiled instead). It loops because a replaced destination can
+// match further replacement effects, tracking applied effects so each applies at
+// most once (CR 614.5) and repeating until none remain (CR 616.1f); when several
+// match at once CR 616.1 calls for a player choice, which the engine resolves
+// deterministically (see #1906).
 func replacementZoneChange(g *game.Game, event game.Event) zoneChangeReplacementResult {
 	result := zoneChangeReplacementResult{destination: event.ToZone}
 	applied := make(map[id.ID]bool)
@@ -243,6 +286,11 @@ func tokenNameInSet(token *game.CardDef, set []*game.CardDef) bool {
 	return false
 }
 
+// replacementTokenCreationAmount applies replacement effects that change how many
+// tokens are created (CR 614.16, effects that apply when an effect would create
+// one or more tokens; e.g. doubling the number created). Each effect applies to
+// the event at most once (CR 614.5); when several apply, CR 616.1 calls for a
+// player choice, which the engine resolves deterministically (see #1906).
 func replacementTokenCreationAmount(g *game.Game, controller game.PlayerID, token *game.CardDef, amount int) int {
 	if amount <= 0 {
 		return amount
@@ -272,6 +320,11 @@ func replacementTokenCreationAmount(g *game.Game, controller game.PlayerID, toke
 	}
 }
 
+// replacementPermanentCounterPlacementAmount applies replacement effects that
+// change how many counters are placed on a permanent (CR 614.16, e.g. doubling
+// effects). Each effect applies at most once (CR 614.5); when several apply,
+// CR 616.1 calls for a player choice, which the engine resolves deterministically
+// (see #1906).
 func replacementPermanentCounterPlacementAmount(g *game.Game, placementController game.PlayerID, permanent *game.Permanent, kind counter.Kind, amount int) int {
 	if permanent == nil || amount <= 0 {
 		return amount
@@ -304,6 +357,10 @@ func replacementPermanentCounterPlacementAmount(g *game.Game, placementControlle
 	}
 }
 
+// replacementPlayerCounterPlacementAmount applies replacement effects that change
+// how many counters are placed on a player (CR 614.16). Each effect applies at
+// most once (CR 614.5); when several apply, CR 616.1 calls for a player choice,
+// which the engine resolves deterministically (see #1906).
 func replacementPlayerCounterPlacementAmount(g *game.Game, placementController, player game.PlayerID, kind counter.Kind, amount int) int {
 	if amount <= 0 {
 		return amount
@@ -350,6 +407,14 @@ func revealZoneReplacementSource(g *game.Game, event game.Event, reveal bool) {
 	})
 }
 
+// applyEnterBattlefieldReplacementEffects applies the replacement effects that
+// modify how a permanent enters the battlefield: "enters with" / "as this
+// enters" / "enters as" effects (CR 614.1c) and "enters tapped"-style continuous
+// effects (CR 614.1d). These include entering tapped, with counters, as a copy,
+// and the keyword entry choices (unleash, riot, devour, tribute); required
+// choices are made before the permanent enters (CR 614.12a). When several apply,
+// CR 616.1 calls for a player choice, which the engine resolves deterministically
+// (see #1906).
 func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, fromZone zone.Type) {
 	event := game.Event{
 		Kind:        game.EventPermanentEnteredBattlefield,
@@ -954,6 +1019,12 @@ func enterBattlefieldPaymentPaid(ctx enterBattlefieldContext, g *game.Game, play
 	})
 }
 
+// matchingZoneReplacementEffects returns the zone-change replacement effects that
+// apply to an event and have not already been applied to it (CR 614.5). It
+// includes both registered replacement effects and a card's own static
+// zone-change replacement effects ("if this would be put into a graveyard, exile
+// it instead"). The order does not enforce the CR 616.1a self-replacement-first
+// rule; replacement-effect selection is resolved deterministically (see #1906).
 func matchingZoneReplacementEffects(g *game.Game, event game.Event, applied map[id.ID]bool) []game.ReplacementEffect {
 	var matches []game.ReplacementEffect
 	for i := range g.ReplacementEffects {
