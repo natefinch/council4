@@ -1,0 +1,33 @@
+
+  [0]: 
+    Kind: spell
+    Text: Create two 1/1 white Soldier creature tokens.
+    Content: 
+      Effects: 
+        [0]: 
+          Kind: 13
+          Context: EffectContextController
+          Text: Create two 1/1 white Soldier creature tokens.
+          References: 
+          SubjectReferences: 
+          Targets: 
+          SubjectTargets: 
+          Selector: 
+            Kind: 5
+          DamageRecipient: 
+            EachSourceGroup: 
+          Amount: 
+            Value: 2
+            Known: true
+          TokenPower: 1
+          TokenToughness: 1
+          TokenPTKnown: true
+          BecomeTypeAddColors: 
+          PolymorphColors: 
+          PolymorphSupertypes: 
+          Exact: true
+          Order: 
+            End: 2
+          VerbOrder: 
+            End: 1
+      Keywords: 

@@ -1,0 +1,47 @@
+
+  [0]: 
+    Kind: spell
+    Text: Destroy target creature.
+    Content: 
+      Targets: 
+        [0]: 
+          Text: target creature
+          Cardinality: 
+            Min: 1
+            Max: 1
+          Selector: 
+            Kind: 5
+          Exact: true
+          Order: 
+            Start: 2
+            End: 3
+      Effects: 
+        [0]: 
+          Kind: 15
+          Context: EffectContextController
+          Text: Destroy target creature.
+          References: 
+          SubjectReferences: 
+          Targets: 
+            [0]: 
+              Text: target creature
+              Cardinality: 
+                Min: 1
+                Max: 1
+              Selector: 
+                Kind: 5
+              Exact: true
+          SubjectTargets: 
+          Selector: 
+            Kind: 5
+          DamageRecipient: 
+            EachSourceGroup: 
+          BecomeTypeAddColors: 
+          PolymorphColors: 
+          PolymorphSupertypes: 
+          Exact: true
+          Order: 
+            End: 4
+          VerbOrder: 
+            End: 1
+      Keywords: 

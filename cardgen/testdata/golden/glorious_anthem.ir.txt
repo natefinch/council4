@@ -1,0 +1,56 @@
+
+  [0]: 
+    Kind: static
+    Text: Creatures you control get +1/+1.
+    Content: 
+      Effects: 
+        [0]: 
+          Kind: 36
+          Text: Creatures you control get +1/+1.
+          References: 
+          SubjectReferences: 
+          Targets: 
+          SubjectTargets: 
+          Selector: 
+          DamageRecipient: 
+            EachSourceGroup: 
+          Amount: 
+            Value: 1
+            Known: true
+          PowerDelta: 
+            Value: 1
+            Known: true
+          ToughnessDelta: 
+            Value: 1
+            Known: true
+          StaticSubject: 7
+          BecomeTypeAddColors: 
+          PolymorphColors: 
+          PolymorphSupertypes: 
+          Order: 
+            End: 3
+          VerbOrder: 
+            Start: 1
+            End: 2
+      Keywords: 
+    Static: 
+      Declarations: 
+        [0]: 
+          Kind: 1
+          Group: 
+            Domain: 4
+            Selection: 
+              RequiredTypes: 
+                [0]: Creature
+          Continuous: 
+            Layer: 2
+            Operation: 1
+            PowerDelta: 
+              Value: 1
+              Known: true
+            ToughnessDelta: 
+              Value: 1
+              Known: true
+            DynamicAmount: 
+              Value: 1
+              Known: true

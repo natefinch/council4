@@ -1,0 +1,39 @@
+package g
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
+)
+
+// Glorious Anthem
+//
+// Type: Enchantment
+//
+// Oracle text:
+//
+//	Creatures you control get +1/+1.
+var GloriousAnthem = newGloriousAnthem()
+
+func newGloriousAnthem() *game.CardDef {
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:  "Glorious Anthem",
+			Types: []types.Card{types.Enchantment},
+			StaticAbilities: []game.StaticAbility{
+				game.StaticAbility{
+					ContinuousEffects: []game.ContinuousEffect{
+						game.ContinuousEffect{
+							Layer:          game.LayerPowerToughnessModify,
+							Group:          game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+							PowerDelta:     1,
+							ToughnessDelta: 1,
+						},
+					},
+				},
+			},
+			OracleText: `
+			Creatures you control get +1/+1.
+		`,
+		},
+	}
+}
