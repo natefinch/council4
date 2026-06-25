@@ -1085,6 +1085,9 @@ func parseStaticOperation(
 	if operation, next, ok := parseStaticKeywordGrantOperation(tokens, index, end, atoms); ok {
 		return operation, next, true
 	}
+	if operation, next, ok := parseStaticKeywordLossOperation(tokens, index, end, atoms); ok {
+		return operation, next, true
+	}
 	if operation, next, ok := parseStaticRuleOperation(tokens, index, end, subject); ok {
 		return operation, next, true
 	}
@@ -1799,6 +1802,35 @@ func parseStaticKeywordGrantOperation(
 	operationSpan.End = spans[len(spans)-1].End
 	return StaticDeclarationSyntax{
 		Kind:          StaticDeclarationKeywordGrant,
+		OperationSpan: operationSpan,
+		KeywordSpans:  spans,
+	}, next, true
+}
+
+// parseStaticKeywordLossOperation recognizes the keyword-loss operation
+// "<subject> loses/lose <keyword>[, <keyword>...]" inside a static declaration
+// ("Equipped creature gets +10/+10 and loses flying.", Colossus Hammer). It
+// mirrors parseStaticKeywordGrantOperation but matches the loss verb so the
+// compiler emits an ability-layer continuous effect that removes the named
+// keywords rather than granting them. Only keywords the keyword-atom recognizer
+// already identified can be lost, so non-keyword "loses" wording ("loses 2
+// life") fails closed here and the surrounding loop rejects the paragraph.
+func parseStaticKeywordLossOperation(
+	tokens []shared.Token,
+	index, end int,
+	atoms Atoms,
+) (StaticDeclarationSyntax, int, bool) {
+	if !staticWordsAt(tokens, index, "loses") && !staticWordsAt(tokens, index, "lose") {
+		return StaticDeclarationSyntax{}, 0, false
+	}
+	spans, next, ok := parseStaticKeywordList(tokens, index+1, end, atoms)
+	if !ok {
+		return StaticDeclarationSyntax{}, 0, false
+	}
+	operationSpan := spans[0]
+	operationSpan.End = spans[len(spans)-1].End
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationKeywordLoss,
 		OperationSpan: operationSpan,
 		KeywordSpans:  spans,
 	}, next, true

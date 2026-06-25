@@ -454,6 +454,16 @@ func lowerStaticContinuousDeclaration(declaration compiler.StaticDeclaration) (g
 			effect.AddAbilities = abilities
 		}
 		return effect, true
+	case compiler.StaticContinuousLoseKeywords:
+		if layer != game.LayerAbility {
+			return game.ContinuousEffect{}, false
+		}
+		keywords, ok := mixedStaticKeywords(declaration.Continuous.Keywords)
+		if !ok || len(keywords) == 0 {
+			return game.ContinuousEffect{}, false
+		}
+		effect.RemoveKeywords = keywords
+		return effect, true
 	case compiler.StaticContinuousGrantManaAbility:
 		if layer != game.LayerAbility || declaration.Continuous.GrantedMana == nil {
 			return game.ContinuousEffect{}, false

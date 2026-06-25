@@ -22,6 +22,7 @@ const (
 	StaticDeclarationContinuousEntryChoiceSubtype         StaticDeclarationKind = "StaticDeclarationContinuousEntryChoiceSubtype"
 	StaticDeclarationChosenCreatureTypeTriggerMultiplier  StaticDeclarationKind = "StaticDeclarationChosenCreatureTypeTriggerMultiplier"
 	StaticDeclarationKeywordGrant                         StaticDeclarationKind = "StaticDeclarationKeywordGrant"
+	StaticDeclarationKeywordLoss                          StaticDeclarationKind = "StaticDeclarationKeywordLoss"
 	StaticDeclarationRule                                 StaticDeclarationKind = "StaticDeclarationRule"
 	StaticDeclarationCostModifier                         StaticDeclarationKind = "StaticDeclarationCostModifier"
 	StaticDeclarationCardAbilityGrant                     StaticDeclarationKind = "StaticDeclarationCardAbilityGrant"
