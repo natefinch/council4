@@ -134,7 +134,7 @@ func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *
 		if modifier.Kind != game.CostModifierSpell {
 			continue
 		}
-		if !spellCostModifierMatchesCard(modifier, card) {
+		if !spellCostModifierMatchesCard(s.g, modifier, card) {
 			continue
 		}
 		if !spellCostModifierMatchesZone(modifier, sourceZone) {

@@ -2,6 +2,7 @@ package game
 
 import (
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -153,6 +154,53 @@ type CostModifier struct {
 	// SharedExiledCardTypeReduction reads, keyed by the source permanent's card
 	// identity. It is meaningful only when that reduction is positive.
 	ExiledLinkKey LinkedKey
+
+	// CardSelection is the canonical card-subject filter for a spell cost
+	// modifier, mirroring how triggers and additional costs describe the card
+	// they match. When non-empty it supersedes the legacy per-field filters
+	// (MatchCardType, MatchColor, MatchColors, MatchSubtypes, MinPower, and the
+	// excluded-card-type match); CardSubjectSelection derives the equivalent
+	// Selection from those legacy fields when CardSelection is empty so the rules
+	// layer always matches through the shared card-subject Selection matcher.
+	// Cost-specific context (source zone, target relation, entry-choice subtype,
+	// linked-exile and dynamic reductions) stays on its own fields, outside the
+	// Selection.
+	CardSelection Selection
+}
+
+// CardSubjectSelection returns the card-subject Selection a spell cost modifier
+// matches against. It prefers an explicit CardSelection and otherwise derives an
+// equivalent Selection from the legacy per-field card filters, so the rules
+// layer can route cost-modifier card matching through the shared
+// Selection matcher. Cost-specific context is intentionally excluded.
+func (m CostModifier) CardSubjectSelection() Selection {
+	if !m.CardSelection.Empty() {
+		return m.CardSelection
+	}
+	var sel Selection
+	if m.MatchCardType {
+		sel.RequiredTypes = []types.Card{m.CardType}
+	}
+	if m.MatchExcludedCardType {
+		sel.ExcludedTypes = []types.Card{m.ExcludedCardType}
+	}
+	if m.MatchColor {
+		if m.Color == "" {
+			sel.Colorless = true
+		} else {
+			sel.ColorsAny = []color.Color{m.Color}
+		}
+	}
+	if len(m.MatchColors) != 0 {
+		sel.ColorsAny = m.MatchColors
+	}
+	if len(m.MatchSubtypes) != 0 {
+		sel.SubtypesAny = m.MatchSubtypes
+	}
+	if m.MinPower.Exists {
+		sel.Power = opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: m.MinPower.Val})
+	}
+	return sel
 }
 
 // RuleEffectKind identifies non-layer continuous rules effects such as
