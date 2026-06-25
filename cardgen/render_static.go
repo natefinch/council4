@@ -648,6 +648,13 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("AttackTaxGeneric: %d,", effect.AttackTaxGeneric))
 	}
+	if effect.Kind == game.RuleEffectAttackTaxPerCreature {
+		perCreatureFields, err := renderPerCreatureAttackTaxFields(effect)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, perCreatureFields...)
+	}
 	if effect.Kind == game.RuleEffectPayLifeForColoredMana {
 		manaColor, err := renderManaColor(effect.ManaColor)
 		if err != nil {
@@ -796,6 +803,42 @@ func renderRuleEffectZoneField(ctx *renderCtx, name string, zones []zone.Type) (
 	return []string{fmt.Sprintf("%s: []zone.Type{%s},", name, strings.Join(rendered, ", "))}, nil
 }
 
+// renderPerCreatureAttackTaxFields renders the per-attacker amount and scope
+// fields of a RuleEffectAttackTaxPerCreature effect (Baird, Archon of
+// Absolution, Sphere of Safety, Collective Restraint). Exactly one amount source
+// must be set: a fixed AttackTaxGeneric, a CardSelection permanent count (which
+// the shared CardSelection field renders), or an AttackTaxScaledAmount
+// aggregate. AttackTaxIncludesPlaneswalkers is emitted only when set.
+func renderPerCreatureAttackTaxFields(effect *game.RuleEffect) ([]string, error) {
+	var fields []string
+	if effect.AttackTaxIncludesPlaneswalkers {
+		fields = append(fields, "AttackTaxIncludesPlaneswalkers: true,")
+	}
+	sources := 0
+	if effect.AttackTaxGeneric != 0 {
+		sources++
+		if effect.AttackTaxGeneric < 0 {
+			return nil, errors.New("render: per-creature attack tax generic amount must be non-negative")
+		}
+		fields = append(fields, fmt.Sprintf("AttackTaxGeneric: %d,", effect.AttackTaxGeneric))
+	}
+	if !effect.CardSelection.Empty() {
+		sources++
+	}
+	if effect.AttackTaxScaledAmount != game.AggregateNone {
+		sources++
+		aggregate, err := renderAggregateKind(effect.AttackTaxScaledAmount)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("AttackTaxScaledAmount: %s,", aggregate))
+	}
+	if sources != 1 {
+		return nil, errors.New("render: per-creature attack tax requires exactly one per-attacker amount source")
+	}
+	return fields, nil
+}
+
 func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 	switch kind {
 	case game.RuleEffectCantBlock:
@@ -852,6 +895,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectAdditionalTriggerForControlledPermanent", nil
 	case game.RuleEffectSuppressOpponentEnteringTriggers:
 		return "game.RuleEffectSuppressOpponentEnteringTriggers", nil
+	case game.RuleEffectAttackTaxPerCreature:
+		return "game.RuleEffectAttackTaxPerCreature", nil
 	case game.RuleEffectUntapDuringOtherPlayersUntapStep:
 		return "game.RuleEffectUntapDuringOtherPlayersUntapStep", nil
 	case game.RuleEffectCastSpellsAsThoughFlash:

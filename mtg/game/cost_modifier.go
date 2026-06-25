@@ -362,6 +362,26 @@ const (
 	// opponent (CR 614 / the entering-trigger interaction). The effect is global;
 	// it carries no filters.
 	RuleEffectSuppressOpponentEnteringTriggers
+	// RuleEffectAttackTaxPerCreature taxes each creature attacking the effect's
+	// controller a per-attacker generic cost. When
+	// AttackTaxIncludesPlaneswalkers is set the protection also covers attacks on
+	// any planeswalker that controller controls ("Creatures can't attack you or
+	// planeswalkers you control ...", Baird, Archon of Absolution, Sphere of
+	// Safety); otherwise it covers only direct attacks on the controller
+	// ("Creatures can't attack you ...", Collective Restraint). Exactly one
+	// per-attacker amount source is set:
+	//   - AttackTaxGeneric, a fixed generic value ("... pays {1} for each of those
+	//     creatures.", Baird, Archon of Absolution);
+	//   - CardSelection, the number of permanents the controller controls matching
+	//     it ("... where X is the number of enchantments you control.", Sphere of
+	//     Safety);
+	//   - AttackTaxScaledAmount, a board-derived aggregate ("... where X is the
+	//     number of basic land types among lands you control.", Collective
+	//     Restraint, domain).
+	// Unlike the fixed-generic RuleEffectAttackTax (Propaganda), the amount is
+	// evaluated from the battlefield as attackers are declared. AffectedPlayer
+	// scopes the protected defending player to the controller.
+	RuleEffectAttackTaxPerCreature
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -407,7 +427,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectMustBeBlockedByAllAble,
 		RuleEffectAssignCombatDamageAsThoughUnblocked,
 		RuleEffectCantTransform,
-		RuleEffectSuppressOpponentEnteringTriggers:
+		RuleEffectSuppressOpponentEnteringTriggers,
+		RuleEffectAttackTaxPerCreature:
 		return true
 	default:
 		return false
@@ -631,4 +652,21 @@ type RuleEffect struct {
 	// It is the resolved form of RequiredAttackTargetRef and is unset for every
 	// other effect.
 	RequiredAttackTarget opt.V[PlayerID]
+
+	// AttackTaxIncludesPlaneswalkers extends a RuleEffectAttackTaxPerCreature tax
+	// to cover attacks on planeswalkers the effect's controller controls, not only
+	// direct attacks on the controller ("Creatures can't attack you or
+	// planeswalkers you control ...", Baird, Archon of Absolution, Sphere of
+	// Safety). When false the tax covers only direct attacks on the controller
+	// ("Creatures can't attack you ...", Collective Restraint). It is unused for
+	// every other kind.
+	AttackTaxIncludesPlaneswalkers bool
+
+	// AttackTaxScaledAmount sets a RuleEffectAttackTaxPerCreature per-attacker
+	// amount to a board-derived aggregate evaluated from the controller's
+	// perspective ("... where X is the number of basic land types among lands you
+	// control.", Collective Restraint, domain). It is AggregateNone when the
+	// amount is the fixed AttackTaxGeneric or the CardSelection permanent count,
+	// and is unused for every other kind.
+	AttackTaxScaledAmount AggregateKind
 }
