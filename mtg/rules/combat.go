@@ -99,7 +99,9 @@ func resolveUnblockedCombatDamage(g *game.Game, attacker *game.Permanent, target
 // (and any trample excess to the attack target), and each blocker assigns its
 // power to the attacker. All of these assignments are marked in the same pass and
 // dealt simultaneously (CR 510.2). A blocked attacker with no remaining blockers
-// assigns no combat damage unless it has trample (CR 509.1h, CR 702.19b).
+// assigns no combat damage (CR 510.1c) unless it has trample, which then assigns
+// its damage to the attack target as though all blockers had lethal damage
+// (CR 702.19d).
 func resolveBlockedCombatDamage(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent, target game.AttackTarget, pass combatDamagePass, log *TurnLog) {
 	if ruleEffectAssignsCombatDamageAsThoughUnblocked(g, attacker) {
 		resolveCombatDamageAsThoughUnblocked(g, attacker, blockers, target, pass, log)

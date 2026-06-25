@@ -29,11 +29,14 @@ type combatEngine struct {
 // g.Combat; callers must not touch g.Combat while this is running.
 // runPhase runs the combat phase and its five steps in order (CR 506.1):
 // beginning of combat (CR 507), declare attackers (CR 508), declare blockers
-// (CR 509), combat damage (CR 510), and end of combat (CR 511). The declare
-// blockers and combat damage steps are still run here even with no attackers; the
-// declaration turn-based actions simply produce nothing. A first or double strike
-// creature adds a second combat damage step (CR 510.4): the first pass deals
-// first/double strike damage, the second deals the rest.
+// (CR 509), combat damage (CR 510), and end of combat (CR 511). A first or double
+// strike creature adds a second combat damage step (CR 510.4): the first pass
+// deals first/double strike damage, the second deals the rest.
+//
+// Divergence: CR 508.8 says the declare blockers and combat damage steps are
+// skipped when no creature is attacking; this engine still runs them (their
+// turn-based actions then do nothing), which leaves spurious priority windows on
+// no-attack turns. Tracked in #1908.
 func (ce combatEngine) runPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.CombatPhasesThisTurn++
