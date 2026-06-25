@@ -306,8 +306,8 @@ func targetCountsForCardinality(specs []game.TargetSpec, targetCount int, counts
 // targetLegalForSpecAtResolution reports whether a single target is still a legal
 // target for its spec at resolution (CR 608.2b): it must still match the spec's
 // predicate and the source must still be able to target it (e.g. it has not gained
-// protection or hexproof, CR 115.2). A target that has left the zone it was in
-// when targeted no longer matches its spec and so is illegal.
+// protection, CR 702.16b, or hexproof, CR 702.11b-c). A target that has left the
+// zone it was in when targeted no longer matches its spec and so is illegal.
 func targetLegalForSpecAtResolution(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec *game.TargetSpec, target game.Target) bool {
 	if targetSpecUsesExternalChooser(spec) {
 		return externalChooserCouldChooseTarget(g, controller, source, sourceObjectID, spec, target)
