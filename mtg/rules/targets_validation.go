@@ -32,6 +32,10 @@ func targetsValidForBodyFromSourceObjectWithModes(g *game.Game, controller game.
 	return targetsValidForSpecs(g, controller, source, sourceObjectID, bodyTargetSpecs(body, chosenModes), targets)
 }
 
+// targetsValidForSpecs reports whether a set of chosen targets is a legal
+// selection for a spell or ability's target specs at announcement time (CR 115,
+// CR 601.2c): the right number of legal targets is chosen for each instance of
+// the word "target", with no target repeated within one instance (CR 115.3).
 func targetsValidForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, targets []game.Target) bool {
 	_, ok := targetCountsForSpecs(g, controller, source, sourceObjectID, specs, targets)
 	return ok
@@ -219,6 +223,13 @@ func bodyHasAnyLegalTargetsFromSourceObject(g *game.Game, source *game.CardDef, 
 	return stackObjectHasAnyLegalTargetsForSpecs(g, source, sourceObjectID, bodyTargetSpecs(body, obj.ChosenModes), obj)
 }
 
+// stackObjectHasAnyLegalTargetsForSpecs rechecks the legality of a resolving
+// spell or ability's chosen targets (CR 608.2b). Each target is re-evaluated
+// against its spec; targets that are no longer legal are replaced with a deferred
+// marker so the resolution code skips its effect on them, and the spell or ability
+// resolves only if at least one target is still legal. If every target is illegal
+// the caller does not resolve it (CR 608.2b: it is removed from the stack and, if
+// a spell, put into its owner's graveyard).
 func stackObjectHasAnyLegalTargetsForSpecs(g *game.Game, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, obj *game.StackObject) bool {
 	if len(specs) == 0 {
 		return true
@@ -292,6 +303,11 @@ func targetCountsForCardinality(specs []game.TargetSpec, targetCount int, counts
 	return false
 }
 
+// targetLegalForSpecAtResolution reports whether a single target is still a legal
+// target for its spec at resolution (CR 608.2b): it must still match the spec's
+// predicate and the source must still be able to target it (e.g. it has not gained
+// protection or hexproof, CR 115.2). A target that has left the zone it was in
+// when targeted no longer matches its spec and so is illegal.
 func targetLegalForSpecAtResolution(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec *game.TargetSpec, target game.Target) bool {
 	if targetSpecUsesExternalChooser(spec) {
 		return externalChooserCouldChooseTarget(g, controller, source, sourceObjectID, spec, target)
