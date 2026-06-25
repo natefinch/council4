@@ -89,7 +89,12 @@ func TestAttackerChosenCombatDamageAssignmentIsUsed(t *testing.T) {
 	}
 }
 
-func TestOutOfOrderCombatDamageAssignmentFallsBackToDeterministicAssignment(t *testing.T) {
+// TestFreeCombatDamageDivisionAmongBlockersIsHonored covers CR 510.1c: a blocked
+// creature's controller may divide its combat damage among the blockers however
+// they choose, including assigning less than lethal to an earlier blocker and
+// more to a later one. (The pre-2017 "damage assignment order" rule that required
+// lethal-in-order no longer exists.)
+func TestFreeCombatDamageDivisionAmongBlockersIsHonored(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 5)
 	first := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
@@ -108,8 +113,8 @@ func TestOutOfOrderCombatDamageAssignmentFallsBackToDeterministicAssignment(t *t
 
 	NewEngine(nil).resolveCombatDamage(g, &TurnLog{})
 
-	if first.MarkedDamage != 3 || second.MarkedDamage != 2 {
-		t.Fatalf("blocker damage = %d/%d, want deterministic fallback 3/2", first.MarkedDamage, second.MarkedDamage)
+	if first.MarkedDamage != 1 || second.MarkedDamage != 4 {
+		t.Fatalf("blocker damage = %d/%d, want chosen 1/4", first.MarkedDamage, second.MarkedDamage)
 	}
 }
 
