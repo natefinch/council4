@@ -1967,3 +1967,78 @@ func TestCompileStaticLoseAbilitiesBecomeNameFailsClosed(t *testing.T) {
 		}
 	}
 }
+
+// TestCompileStaticPerTurnLimitDeclarations pins the consolidated per-turn-limit
+// payload: draw and cast caps share one StaticPerTurnLimitDeclaration operand
+// struct, discriminated by Operation, instead of separate top-level pointers.
+func TestCompileStaticPerTurnLimitDeclarations(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		source            string
+		kind              StaticDeclarationKind
+		operation         StaticPerTurnLimitOperation
+		limit             int
+		affectsAllPlayers bool
+		affectsController bool
+	}{
+		{
+			source:            "Each opponent can't draw more than one card each turn.",
+			kind:              StaticDeclarationDrawLimit,
+			operation:         StaticPerTurnLimitDraw,
+			limit:             1,
+			affectsAllPlayers: false,
+			affectsController: false,
+		},
+		{
+			source:            "Each player can't draw more than one card each turn.",
+			kind:              StaticDeclarationDrawLimit,
+			operation:         StaticPerTurnLimitDraw,
+			limit:             1,
+			affectsAllPlayers: true,
+			affectsController: false,
+		},
+		{
+			source:            "Each player can't cast more than one spell each turn.",
+			kind:              StaticDeclarationCastLimit,
+			operation:         StaticPerTurnLimitCast,
+			limit:             1,
+			affectsAllPlayers: true,
+			affectsController: false,
+		},
+		{
+			source:            "You can't cast more than one spell each turn.",
+			kind:              StaticDeclarationCastLimit,
+			operation:         StaticPerTurnLimitCast,
+			limit:             1,
+			affectsAllPlayers: false,
+			affectsController: true,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.source, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(tc.source, pipelineContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := compilation.Abilities[0]
+			if ability.Static == nil || len(ability.Static.Declarations) != 1 {
+				t.Fatalf("static semantics = %#v, want one declaration", ability.Static)
+			}
+			declaration := ability.Static.Declarations[0]
+			if declaration.Kind != tc.kind {
+				t.Fatalf("kind = %v, want %v", declaration.Kind, tc.kind)
+			}
+			limit := declaration.PerTurnLimit
+			if limit == nil {
+				t.Fatalf("declaration = %#v, want consolidated per-turn-limit payload", declaration)
+			}
+			if limit.Operation != tc.operation ||
+				limit.Limit != tc.limit ||
+				limit.AffectsAllPlayers != tc.affectsAllPlayers ||
+				limit.AffectsController != tc.affectsController {
+				t.Fatalf("per-turn limit = %#v", limit)
+			}
+		})
+	}
+}

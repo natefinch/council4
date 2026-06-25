@@ -97,10 +97,8 @@ func lowerStaticDeclarations(
 				ok = appendStaticPlayerRuleDeclaration(&body, declaration)
 			case compiler.StaticDeclarationOpponentActionRestriction:
 				ok = appendStaticOpponentActionRestrictionDeclaration(&body, declaration)
-			case compiler.StaticDeclarationDrawLimit:
-				ok = appendStaticDrawLimitDeclaration(&body, declaration)
-			case compiler.StaticDeclarationCastLimit:
-				ok = appendStaticCastLimitDeclaration(&body, declaration)
+			case compiler.StaticDeclarationDrawLimit, compiler.StaticDeclarationCastLimit:
+				ok = appendStaticPerTurnLimitDeclaration(&body, declaration)
 			case compiler.StaticDeclarationEnterBattlefieldRestriction:
 				ok = appendStaticEnterBattlefieldRestrictionDeclaration(&body, declaration)
 			case compiler.StaticDeclarationSpellUncounterable:
@@ -341,10 +339,7 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.GraveyardGrant != nil {
 		payloads++
 	}
-	if declaration.DrawLimit != nil {
-		payloads++
-	}
-	if declaration.CastLimit != nil {
+	if declaration.PerTurnLimit != nil {
 		payloads++
 	}
 	if declaration.OpeningHandPlay != nil {
@@ -370,9 +365,11 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	case compiler.StaticDeclarationOpponentActionRestriction:
 		return declaration.OpponentRestriction != nil
 	case compiler.StaticDeclarationDrawLimit:
-		return declaration.DrawLimit != nil
+		return declaration.PerTurnLimit != nil &&
+			declaration.PerTurnLimit.Operation == compiler.StaticPerTurnLimitDraw
 	case compiler.StaticDeclarationCastLimit:
-		return declaration.CastLimit != nil
+		return declaration.PerTurnLimit != nil &&
+			declaration.PerTurnLimit.Operation == compiler.StaticPerTurnLimitCast
 	case compiler.StaticDeclarationEnterBattlefieldRestriction:
 		return declaration.EnterRestriction != nil
 	case compiler.StaticDeclarationSpellUncounterable:
@@ -1011,12 +1008,13 @@ func lowerManaColorValid(c mana.Color) bool {
 	}
 }
 
-// appendStaticDrawLimitDeclaration adds the continuous per-turn draw cap
-// described by a draw-limit declaration. "Each opponent"/"your opponents"
-// affects every opponent of the controller; "each player"/"players" affects
-// every player; "you" affects only the controller.
-func appendStaticDrawLimitDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
-	limit := declaration.DrawLimit
+// appendStaticPerTurnLimitDeclaration adds the continuous per-turn draw or spell
+// cap described by a per-turn-limit declaration. "Each player"/"players" affects
+// every player; "you" affects only the controller; otherwise the cap affects the
+// controller's opponents. The declaration's Operation selects whether the cap
+// counts cards drawn or spells cast.
+func appendStaticPerTurnLimitDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	limit := declaration.PerTurnLimit
 	if limit == nil || limit.Limit < 1 {
 		return false
 	}
@@ -1026,34 +1024,18 @@ func appendStaticDrawLimitDeclaration(body *game.StaticAbility, declaration comp
 	} else if limit.AffectsController {
 		affected = game.PlayerYou
 	}
-	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
-		Kind:             game.RuleEffectDrawLimitPerTurn,
-		AffectedPlayer:   affected,
-		DrawLimitPerTurn: limit.Limit,
-	})
-	return true
-}
-
-// appendStaticCastLimitDeclaration adds the continuous per-turn spell cap
-// described by a cast-limit declaration. "Each player"/"players" affects every
-// player; "you" affects only the controller; otherwise the cap affects the
-// controller's opponents.
-func appendStaticCastLimitDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
-	limit := declaration.CastLimit
-	if limit == nil || limit.Limit < 1 {
+	effect := game.RuleEffect{AffectedPlayer: affected}
+	switch limit.Operation {
+	case compiler.StaticPerTurnLimitDraw:
+		effect.Kind = game.RuleEffectDrawLimitPerTurn
+		effect.DrawLimitPerTurn = limit.Limit
+	case compiler.StaticPerTurnLimitCast:
+		effect.Kind = game.RuleEffectCastLimitPerTurn
+		effect.CastLimitPerTurn = limit.Limit
+	default:
 		return false
 	}
-	affected := game.PlayerOpponent
-	if limit.AffectsAllPlayers {
-		affected = game.PlayerAny
-	} else if limit.AffectsController {
-		affected = game.PlayerYou
-	}
-	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
-		Kind:             game.RuleEffectCastLimitPerTurn,
-		AffectedPlayer:   affected,
-		CastLimitPerTurn: limit.Limit,
-	})
+	body.RuleEffects = append(body.RuleEffects, effect)
 	return true
 }
 
