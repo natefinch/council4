@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -366,8 +367,8 @@ func TestLowerDrawDiscardTriggerSupportedInterveningCondition(t *testing.T) {
 	if trigger.InterveningIf == "" || !trigger.InterveningCondition.Exists {
 		t.Fatalf("trigger = %+v, want intervening condition", trigger)
 	}
-	if trigger.InterveningCondition.Val.ControllerLifeAtLeast != 5 {
-		t.Errorf("condition = %+v, want ControllerLifeAtLeast 5", trigger.InterveningCondition.Val)
+	if got := trigger.InterveningCondition.Val.Aggregates; len(got) != 1 || got[0].Aggregate != game.AggregateControllerLife || got[0].Op != compare.GreaterOrEqual || got[0].Value != 5 {
+		t.Errorf("condition = %+v, want controller life >= 5", trigger.InterveningCondition.Val)
 	}
 }
 

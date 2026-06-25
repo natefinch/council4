@@ -859,7 +859,7 @@ func TestLowerCastTriggerSupportedInterveningCondition(t *testing.T) {
 		{
 			name:      "if you have 5 or more life",
 			oracle:    "Whenever you cast a creature spell, if you have 5 or more life, draw a card.",
-			wantField: "ControllerLifeAtLeast",
+			wantField: "Aggregates",
 		},
 	}
 	for _, tc := range tests {

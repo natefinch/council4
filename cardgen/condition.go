@@ -47,9 +47,9 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 	}
 	switch condition.Predicate {
 	case compiler.ConditionPredicateControllerLifeAtLeast:
-		result.ControllerLifeAtLeast = condition.Threshold
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerLife, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateControllerLifeAtMost:
-		result.ControllerLifeAtMost = opt.Val(condition.Threshold)
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerLife, Op: compare.LessOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateControllerLifeAtLeastAboveStarting:
 		result.ControllerLifeAtLeastAboveStarting = condition.Threshold
 	case compiler.ConditionPredicateControllerHandSizeAtLeast:
@@ -59,7 +59,7 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 	case compiler.ConditionPredicateControllerLibrarySizeAtLeast:
 		result.ControllerLibrarySizeAtLeast = condition.Threshold
 	case compiler.ConditionPredicateControllerLifeExactly:
-		result.ControllerLifeExactly = opt.Val(condition.Threshold)
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerLife, Op: compare.Equal, Value: condition.Threshold})
 	case compiler.ConditionPredicateSpellXAtLeast:
 		result.SpellXAtLeast = condition.Threshold
 	case compiler.ConditionPredicateAnyOpponentPoisonAtLeast:

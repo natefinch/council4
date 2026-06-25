@@ -24,17 +24,18 @@ type Condition struct {
 	// optionally constrained by TotalPower. It is ignored when absent.
 	ControlsMatching opt.V[SelectionCount]
 
-	// ControllerLifeAtLeast requires the context controller's current life total
-	// to meet the threshold. AnyPlayerLifeAtMost checks every non-eliminated
+	// Aggregates compares player- or board-derived quantities (see
+	// AggregateKind) against thresholds using typed comparators. The entries are
+	// ANDed; an empty slice disables the predicate. It unifies the controller
+	// life-total comparisons ("you have N or more/less life", "exactly N life")
+	// that were previously modeled as separate AtLeast/AtMost/Exactly fields.
+	Aggregates []AggregateComparison
+
+	// ControllerHandSizeAtLeast requires the context controller's hand size to
+	// meet the threshold. AnyPlayerLifeAtMost checks every non-eliminated
 	// player. Zero values disable these predicates.
-	ControllerLifeAtLeast     int
 	ControllerHandSizeAtLeast int
 	AnyPlayerLifeAtMost       int
-
-	// ControllerLifeAtMost requires the context controller's current life total
-	// to be at most the threshold ("you have N or less life"). It uses opt.V so
-	// a zero threshold ("0 or less life") is distinguishable from absence.
-	ControllerLifeAtMost opt.V[int]
 
 	// ControllerLifeAtLeastAboveStarting requires the context controller's
 	// current life total to be at least this many points above their starting
@@ -140,11 +141,6 @@ type Condition struct {
 	// library", Battle of Wits). Zero disables the predicate.
 	ControllerLibrarySizeAtLeast int
 
-	// ControllerLifeExactly requires the context controller's current life total
-	// to equal this value ("if you have exactly N life", Near-Death Experience).
-	// It uses opt.V so an exact-zero threshold is distinguishable from absence.
-	ControllerLifeExactly opt.V[int]
-
 	// ControllerGainedLifeThisTurnAtLeast requires the context controller to have
 	// gained at least this much total life so far this turn ("if you gained 3 or
 	// more life this turn"; Angelic Accord). It is zero (disabled) otherwise.
@@ -232,8 +228,7 @@ type ControlCountComparison struct {
 // Empty reports whether the condition contains no active predicate.
 func (c *Condition) Empty() bool {
 	return !c.ControlsMatching.Exists &&
-		c.ControllerLifeAtLeast == 0 &&
-		!c.ControllerLifeAtMost.Exists &&
+		len(c.Aggregates) == 0 &&
 		c.ControllerLifeAtLeastAboveStarting == 0 &&
 		c.ControllerHandSizeAtLeast == 0 &&
 		!c.ControllerHandSizeExactly.Exists &&
@@ -269,7 +264,6 @@ func (c *Condition) Empty() bool {
 		!c.SpellWasKicked &&
 		c.AttackersAttackingControllerAtLeast == 0 &&
 		c.ControllerLibrarySizeAtLeast == 0 &&
-		!c.ControllerLifeExactly.Exists &&
 		c.ControllerGainedLifeThisTurnAtLeast == 0 &&
 		c.SpellXAtLeast == 0 &&
 		c.ControllerGraveyardCardOfTypeCountAtLeast == 0 &&

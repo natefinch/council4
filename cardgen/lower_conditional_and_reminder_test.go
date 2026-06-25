@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -170,8 +171,8 @@ func TestLowerLifeAndOpponentConditionalEntersTappedReplacements(t *testing.T) {
 			name:      "controller life",
 			condition: "unless you have 10 or more life",
 			assert: func(t *testing.T, condition game.Condition) {
-				if condition.ControllerLifeAtLeast != 10 {
-					t.Fatalf("ControllerLifeAtLeast = %d, want 10", condition.ControllerLifeAtLeast)
+				if got := condition.Aggregates; len(got) != 1 || got[0].Aggregate != game.AggregateControllerLife || got[0].Op != compare.GreaterOrEqual || got[0].Value != 10 {
+					t.Fatalf("aggregates = %+v, want controller life >= 10", condition.Aggregates)
 				}
 			},
 		},

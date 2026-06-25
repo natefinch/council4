@@ -24,15 +24,17 @@ type conditionContext struct {
 // conditionParametersNegative reports whether any numeric condition parameter is
 // negative, which is structurally invalid and must fail closed.
 func conditionParametersNegative(cond *game.Condition) bool {
-	return cond.ControllerLifeAtLeast < 0 ||
-		cond.AnyPlayerLifeAtMost < 0 ||
-		cond.ControllerLifeAtMost.Exists && cond.ControllerLifeAtMost.Val < 0 ||
+	for _, agg := range cond.Aggregates {
+		if agg.Value < 0 {
+			return true
+		}
+	}
+	return cond.AnyPlayerLifeAtMost < 0 ||
 		cond.ControllerLifeAtLeastAboveStarting < 0 ||
 		cond.AnyOpponentPoisonAtLeast < 0 ||
 		cond.ControllerHandSizeExactly.Exists && cond.ControllerHandSizeExactly.Val < 0 ||
 		cond.ControllerLibrarySizeAtLeast < 0 ||
 		cond.SpellXAtLeast < 0 ||
-		cond.ControllerLifeExactly.Exists && cond.ControllerLifeExactly.Val < 0 ||
 		cond.OpponentCountAtLeast < 0 ||
 		cond.ControllerGraveyardCardCountAtLeast < 0 ||
 		cond.ControllerGraveyardCardTypeCountAtLeast < 0 ||
@@ -48,6 +50,20 @@ func conditionParametersNegative(cond *game.Condition) bool {
 		cond.ControllerGainedLifeThisTurnAtLeast < 0
 }
 
+// aggregateValue evaluates a player- or board-derived quantity in the given
+// condition context. It returns the value and whether it could be resolved; an
+// unresolved quantity fails the comparison closed.
+func aggregateValue(g *game.Game, ctx conditionContext, kind game.AggregateKind) (int, bool) {
+	if kind == game.AggregateControllerLife {
+		player, ok := playerByID(g, ctx.controller)
+		if !ok {
+			return 0, false
+		}
+		return player.Life, true
+	}
+	return 0, false
+}
+
 func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game.Condition]) bool {
 	if !condition.Exists || condition.Val.Empty() {
 		return true
@@ -60,13 +76,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.ControlsMatching.Exists {
 		matches = matches && controllerControlsMatchingSelection(g, ctx, cond.ControlsMatching.Val)
 	}
-	if cond.ControllerLifeAtLeast > 0 {
-		player, ok := playerByID(g, ctx.controller)
-		matches = matches && ok && player.Life >= cond.ControllerLifeAtLeast
-	}
-	if cond.ControllerLifeAtMost.Exists {
-		player, ok := playerByID(g, ctx.controller)
-		matches = matches && ok && player.Life <= cond.ControllerLifeAtMost.Val
+	for _, agg := range cond.Aggregates {
+		value, ok := aggregateValue(g, ctx, agg.Aggregate)
+		matches = matches && ok && compare.Int{Op: agg.Op, Value: agg.Value}.Matches(value)
 	}
 	if cond.ControllerLifeAtLeastAboveStarting > 0 {
 		player, ok := playerByID(g, ctx.controller)
@@ -86,10 +98,6 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	}
 	if cond.SpellXAtLeast > 0 {
 		matches = matches && ctx.obj != nil && ctx.obj.XValue >= cond.SpellXAtLeast
-	}
-	if cond.ControllerLifeExactly.Exists {
-		player, ok := playerByID(g, ctx.controller)
-		matches = matches && ok && player.Life == cond.ControllerLifeExactly.Val
 	}
 	if cond.AnyOpponentPoisonAtLeast > 0 {
 		matches = matches && anyOpponentPoisonAtLeast(g, ctx.controller, cond.AnyOpponentPoisonAtLeast)

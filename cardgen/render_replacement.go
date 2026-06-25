@@ -811,9 +811,12 @@ func (r Renderer) renderStaticAbilityCondition(ctx *renderCtx, cond *game.Condit
 }
 
 func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.Condition, context string) (string, error) {
-	if cond.ControllerLifeAtLeast < 0 ||
-		cond.ControllerLifeAtMost.Exists && cond.ControllerLifeAtMost.Val < 0 ||
-		cond.ControllerLifeAtLeastAboveStarting < 0 ||
+	for i := range cond.Aggregates {
+		if cond.Aggregates[i].Value < 0 {
+			return "", fmt.Errorf("render: %s condition has a negative threshold", context)
+		}
+	}
+	if cond.ControllerLifeAtLeastAboveStarting < 0 ||
 		cond.ControllerHandSizeAtLeast < 0 ||
 		cond.AnyPlayerLifeAtMost < 0 ||
 		cond.OpponentCountAtLeast < 0 ||
@@ -822,7 +825,6 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		cond.ControllerBasicLandTypeCountAtLeast < 0 ||
 		cond.ControllerLibrarySizeAtLeast < 0 ||
 		cond.SpellXAtLeast < 0 ||
-		cond.ControllerLifeExactly.Exists && cond.ControllerLifeExactly.Val < 0 ||
 		cond.ControllerCreaturePowerDiversityAtLeast < 0 ||
 		cond.ControllerGainedLifeThisTurnAtLeast < 0 ||
 		cond.SourceClassLevelAtLeast < 0 ||
@@ -855,13 +857,12 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, fmt.Sprintf("ControlsMatching: opt.Val(%s),", rendered))
 		hasPredicate = true
 	}
-	if cond.ControllerLifeAtLeast > 0 {
-		fields = append(fields, fmt.Sprintf("ControllerLifeAtLeast: %d,", cond.ControllerLifeAtLeast))
-		hasPredicate = true
-	}
-	if cond.ControllerLifeAtMost.Exists {
-		ctx.need(importOpt)
-		fields = append(fields, fmt.Sprintf("ControllerLifeAtMost: opt.Val(%d),", cond.ControllerLifeAtMost.Val))
+	if len(cond.Aggregates) > 0 {
+		rendered, err := renderAggregateComparisons(ctx, cond.Aggregates)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Aggregates: %s,", rendered))
 		hasPredicate = true
 	}
 	if cond.ControllerLifeAtLeastAboveStarting > 0 {
@@ -895,11 +896,6 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	}
 	if cond.SourceLevelCountersLessThan > 0 {
 		fields = append(fields, fmt.Sprintf("SourceLevelCountersLessThan: %d,", cond.SourceLevelCountersLessThan))
-		hasPredicate = true
-	}
-	if cond.ControllerLifeExactly.Exists {
-		ctx.need(importOpt)
-		fields = append(fields, fmt.Sprintf("ControllerLifeExactly: opt.Val(%d),", cond.ControllerLifeExactly.Val))
 		hasPredicate = true
 	}
 	if cond.AnyOpponentPoisonAtLeast > 0 {

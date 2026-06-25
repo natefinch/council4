@@ -1420,11 +1420,10 @@ func (v *cardDefValidator) validateTargetIndex(faceName, path string, targetInde
 }
 
 func (v *cardDefValidator) validateCondition(faceName, path string, condition *Condition, targets []TargetSpec) {
-	if condition.ControllerLifeAtLeast < 0 {
-		v.add(faceName, appendPath(path, "ControllerLifeAtLeast"), CardDefIssueInvalidCondition, "life threshold cannot be negative")
-	}
-	if condition.ControllerLifeAtMost.Exists && condition.ControllerLifeAtMost.Val < 0 {
-		v.add(faceName, appendPath(path, "ControllerLifeAtMost"), CardDefIssueInvalidCondition, "life threshold cannot be negative")
+	for i := range condition.Aggregates {
+		if condition.Aggregates[i].Value < 0 {
+			v.add(faceName, appendPath(path, fmt.Sprintf("Aggregates[%d].Value", i)), CardDefIssueInvalidCondition, "aggregate threshold cannot be negative")
+		}
 	}
 	if condition.ControllerLifeAtLeastAboveStarting < 0 {
 		v.add(faceName, appendPath(path, "ControllerLifeAtLeastAboveStarting"), CardDefIssueInvalidCondition, "life threshold cannot be negative")
@@ -1455,9 +1454,6 @@ func (v *cardDefValidator) validateCondition(faceName, path string, condition *C
 	}
 	if condition.ControllerLibrarySizeAtLeast < 0 {
 		v.add(faceName, appendPath(path, "ControllerLibrarySizeAtLeast"), CardDefIssueInvalidCondition, "library-size threshold cannot be negative")
-	}
-	if condition.ControllerLifeExactly.Exists && condition.ControllerLifeExactly.Val < 0 {
-		v.add(faceName, appendPath(path, "ControllerLifeExactly"), CardDefIssueInvalidCondition, "life threshold cannot be negative")
 	}
 	if condition.ControllerGainedLifeThisTurnAtLeast < 0 {
 		v.add(faceName, appendPath(path, "ControllerGainedLifeThisTurnAtLeast"), CardDefIssueInvalidCondition, "gained-life-this-turn threshold cannot be negative")

@@ -166,7 +166,7 @@ func TestValidateCardDefChecksDelayedTriggerInstructionCondition(t *testing.T) {
 						Sequence: []Instruction{{
 							Primitive: Draw{Amount: Fixed(1), Player: ControllerReference()},
 							Condition: opt.Val(EffectCondition{Condition: opt.Val(Condition{
-								ControllerLifeAtLeast: -1,
+								Aggregates: []AggregateComparison{{Aggregate: AggregateControllerLife, Op: compare.GreaterOrEqual, Value: -1}},
 							})}),
 						}},
 					}.Ability(),
