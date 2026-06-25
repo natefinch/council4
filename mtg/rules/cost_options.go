@@ -1,23 +1,10 @@
 package rules
 
 import (
-	"strings"
-
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/opt"
 )
-
-const flashbackAlternativeLabel = "Flashback"
-
-// escapeAlternativeLabel is the label carried by the Escape alternative cost so
-// the cast flow can recognize a graveyard escape cast (CR 702.139).
-const escapeAlternativeLabel = "Escape"
-
-// evokeAlternativeLabel is the label carried by the Evoke alternative cost so
-// the cast flow can recognize that a spell was cast for its Evoke cost and mark
-// the resulting permanent to be sacrificed when it enters (CR 702.74).
-const evokeAlternativeLabel = "Evoke"
 
 // evokeAlternativeChosen reports whether the spell cost option selected by the
 // payment preferences is the spell's Evoke alternative cost. The normal cost is
@@ -28,7 +15,7 @@ func evokeAlternativeChosen(card *game.CardDef, alternativeIndex int) bool {
 	if card == nil || index < 0 || index >= len(card.AlternativeCosts) {
 		return false
 	}
-	return strings.EqualFold(strings.TrimSpace(card.AlternativeCosts[index].Label), evokeAlternativeLabel)
+	return card.AlternativeCosts[index].Mechanic == cost.AlternativeMechanicEvoke
 }
 
 func manaCostPtr(manaCost opt.V[cost.Mana]) *cost.Mana {
@@ -39,11 +26,11 @@ func manaCostPtr(manaCost opt.V[cost.Mana]) *cost.Mana {
 }
 
 func isFlashbackAlternative(alternative cost.Alternative) bool {
-	return strings.EqualFold(strings.TrimSpace(alternative.Label), flashbackAlternativeLabel)
+	return alternative.Mechanic == cost.AlternativeMechanicFlashback
 }
 
 func isEscapeAlternative(alternative cost.Alternative) bool {
-	return strings.EqualFold(strings.TrimSpace(alternative.Label), escapeAlternativeLabel)
+	return alternative.Mechanic == cost.AlternativeMechanicEscape
 }
 
 func spellAdditionalCosts(card *game.CardDef) []cost.Additional {

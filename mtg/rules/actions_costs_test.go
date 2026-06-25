@@ -1100,7 +1100,8 @@ func TestCommanderControlledAlternativeCostDoesNotReplaceForcedFlashback(t *test
 	engine := NewEngine(nil)
 	spell := commanderAlternativeTestSpell(nil)
 	spell.AlternativeCosts = append(spell.AlternativeCosts, cost.Alternative{
-		Label:    flashbackAlternativeLabel,
+		Label:    "Flashback",
+		Mechanic: cost.AlternativeMechanicFlashback,
 		ManaCost: opt.Val(cost.Mana{cost.G}),
 	})
 	spell.StaticAbilities = []game.StaticAbility{{
@@ -1164,7 +1165,8 @@ func TestGraveyardCastSelectsIndependentOrFlashbackPermission(t *testing.T) {
 			engine := NewEngine(nil)
 			spell := commanderAlternativeTestSpell(nil)
 			spell.AlternativeCosts = append(spell.AlternativeCosts, cost.Alternative{
-				Label:    flashbackAlternativeLabel,
+				Label:    "Flashback",
+				Mechanic: cost.AlternativeMechanicFlashback,
 				ManaCost: opt.Val(cost.Mana{cost.G}),
 			})
 			spell.StaticAbilities = []game.StaticAbility{{
@@ -1235,6 +1237,60 @@ func TestCommanderControlledAlternativeCostFromExile(t *testing.T) {
 	if !engine.applyAction(g, game.Player1, act) {
 		t.Fatal("free cast from exile failed")
 	}
+}
+
+func TestFlashbackAlternativeRecognizedByMechanicNotLabel(t *testing.T) {
+	// A flashback alternative whose display Label is unrelated to "Flashback"
+	// must still grant the graveyard flashback cast, and a look-alike Label of
+	// "Flashback" with no mechanic must not. Behavior keys off Mechanic only.
+	makeSpell := func(label string, mechanic cost.AlternativeMechanic) *game.CardDef {
+		spell := commanderAlternativeTestSpell(nil)
+		spell.AlternativeCosts = []cost.Alternative{{
+			Label:    label,
+			Mechanic: mechanic,
+			ManaCost: opt.Val(cost.Mana{cost.G}),
+		}}
+		spell.StaticAbilities = []game.StaticAbility{{
+			KeywordAbilities: game.SimpleKeywords(game.Flashback),
+		}}
+		return spell
+	}
+
+	t.Run("non-flashback label with flashback mechanic casts from graveyard", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		spellID := addCardToHand(g, game.Player1, makeSpell("Bargain", cost.AlternativeMechanicFlashback))
+		g.Players[game.Player1].Hand.Remove(spellID)
+		g.Players[game.Player1].Graveyard.Add(spellID)
+		forest := addBasicLandPermanent(g, game.Player1, types.Forest)
+		g.Turn.Phase = game.PhasePrecombatMain
+		g.Turn.Step = game.StepNone
+		act := action.CastSpellFromZone(spellID, zone.Graveyard, nil, 0, nil)
+		if !engine.applyAction(g, game.Player1, act) {
+			t.Fatal("flashback cast keyed off mechanic failed")
+		}
+		if !forest.Tapped {
+			t.Fatal("flashback mana cost was not paid")
+		}
+		if obj, ok := g.Stack.Peek(); !ok || !obj.Flashback {
+			t.Fatalf("stack object = %+v, want flashback cast", obj)
+		}
+	})
+
+	t.Run("flashback label without mechanic is not a flashback alternative", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		spellID := addCardToHand(g, game.Player1, makeSpell("Flashback", cost.AlternativeMechanicNone))
+		g.Players[game.Player1].Hand.Remove(spellID)
+		g.Players[game.Player1].Graveyard.Add(spellID)
+		addBasicLandPermanent(g, game.Player1, types.Forest)
+		g.Turn.Phase = game.PhasePrecombatMain
+		g.Turn.Step = game.StepNone
+		act := action.CastSpellFromZone(spellID, zone.Graveyard, nil, 0, nil)
+		if containsAction(engine.legalActions(g, game.Player1), act) {
+			t.Fatal("display label alone granted a graveyard flashback cast")
+		}
+	})
 }
 
 func commanderAlternativeTestSpell(additional []cost.Additional) *game.CardDef {

@@ -347,7 +347,8 @@ func TestFlashbackAlternativeSacrificeCostCastsFromGraveyardAndExiles(t *testing
 			KeywordAbilities: []game.KeywordAbility{game.SimpleKeyword{Kind: game.Flashback}},
 		}},
 		AlternativeCosts: []cost.Alternative{{
-			Label: "Flashback",
+			Label:    "Flashback",
+			Mechanic: cost.AlternativeMechanicFlashback,
 			AdditionalCosts: []cost.Additional{
 				{Kind: cost.AdditionalSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: types.Creature},
 			},

@@ -2,7 +2,6 @@ package payment
 
 import (
 	"slices"
-	"strings"
 
 	"github.com/natefinch/council4/mtg/game/zone"
 
@@ -41,6 +40,7 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 		alternatives = append(slices.Clone(alternatives), cost.Alternative{
 			Label:    flashbackAlternativeLabel,
 			ManaCost: opt.Val(slices.Clone(flashbackCost)),
+			Mechanic: cost.AlternativeMechanicFlashback,
 		})
 		hasFlashbackAlternative = true
 	}
@@ -266,7 +266,7 @@ func alternativeCostConditionSatisfied(s State, playerID game.PlayerID, conditio
 }
 
 func isFlashbackAlternative(alternative cost.Alternative) bool {
-	return strings.EqualFold(strings.TrimSpace(alternative.Label), flashbackAlternativeLabel)
+	return alternative.Mechanic == cost.AlternativeMechanicFlashback
 }
 
 // jumpStartAlternativeCost builds the Flashback-style alternative cost a
@@ -276,7 +276,8 @@ func isFlashbackAlternative(alternative cost.Alternative) bool {
 // the discard-a-card additional cost that distinguishes Jump-start.
 func jumpStartAlternativeCost(card *game.CardDef) cost.Alternative {
 	alternative := cost.Alternative{
-		Label: flashbackAlternativeLabel,
+		Label:    flashbackAlternativeLabel,
+		Mechanic: cost.AlternativeMechanicFlashback,
 		AdditionalCosts: []cost.Additional{{
 			Kind:   cost.AdditionalDiscard,
 			Amount: 1,
@@ -290,7 +291,7 @@ func jumpStartAlternativeCost(card *game.CardDef) cost.Alternative {
 }
 
 func isEscapeAlternative(alternative cost.Alternative) bool {
-	return strings.EqualFold(strings.TrimSpace(alternative.Label), escapeAlternativeLabel)
+	return alternative.Mechanic == cost.AlternativeMechanicEscape
 }
 
 func spellManaCostWithKicker(base *cost.Mana, kicker game.KickerKeyword, kickerOK, kickerPaid bool, kickerCount int) *cost.Mana {

@@ -47,6 +47,7 @@ func evokeTestCreature() *game.CardDef {
 		Toughness: opt.Val(pt),
 		AlternativeCosts: []cost.Alternative{{
 			Label:    "Evoke",
+			Mechanic: cost.AlternativeMechanicEvoke,
 			ManaCost: opt.Val(cost.Mana{cost.O(1)}),
 		}},
 		TriggeredAbilities: []game.TriggeredAbility{

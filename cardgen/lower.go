@@ -1061,6 +1061,7 @@ func lowerFlashbackAlternativeCost(cardName string, ability compiler.CompiledAbi
 	}
 	alternative := cost.Alternative{
 		Label:           "Flashback",
+		Mechanic:        cost.AlternativeMechanicFlashback,
 		AdditionalCosts: additionalCosts,
 	}
 	if len(manaCost) > 0 {
@@ -1113,6 +1114,7 @@ func lowerEscapeAlternativeCost(cardName string, ability compiler.CompiledAbilit
 	}
 	alternative := cost.Alternative{
 		Label:           "Escape",
+		Mechanic:        cost.AlternativeMechanicEscape,
 		AdditionalCosts: additionalCosts,
 	}
 	if len(manaCost) > 0 {

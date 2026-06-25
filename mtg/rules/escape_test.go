@@ -23,6 +23,7 @@ func escapeSpell() *game.CardDef {
 		}},
 		AlternativeCosts: []cost.Alternative{{
 			Label:    "Escape",
+			Mechanic: cost.AlternativeMechanicEscape,
 			ManaCost: opt.Val(cost.Mana{cost.G}),
 			AdditionalCosts: []cost.Additional{
 				{Kind: cost.AdditionalExile, Text: "Exile two other cards from your graveyard", Source: zone.Graveyard, Amount: 2, ExcludeSource: true},
