@@ -1226,6 +1226,16 @@ func (v *cardDefValidator) validateAttackTaxRuleEffect(faceName, path string, ef
 	}
 }
 
+// costModifierSelectionMatchesCreatureType reports whether a cost modifier's
+// card-subject selection narrows to creature spells by card type with no color
+// filter, the shape an entry-choice creature-subtype cost modifier requires.
+func costModifierSelectionMatchesCreatureType(selection Selection) bool {
+	return len(selection.RequiredTypes) == 1 &&
+		selection.RequiredTypes[0] == types.Creature &&
+		len(selection.ColorsAny) == 0 &&
+		!selection.Colorless
+}
+
 func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier CostModifier, sourceAbility bool) {
 	if sourceAbility && modifier.Kind != CostModifierAbility {
 		v.add(faceName, appendPath(path, "Kind"), CardDefIssueInvalidRuleEffect, "source ability cost modifiers must have ability kind")
@@ -1251,51 +1261,15 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 	if modifier.SetManaCost.Exists && modifier.SetGeneric.Exists {
 		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "cost modifier cannot set both full mana cost and generic cost")
 	}
-	if len(modifier.MatchColors) != 0 {
+	if !modifier.CardSelection.Empty() {
 		if modifier.Kind != CostModifierSpell {
-			v.add(faceName, appendPath(path, "MatchColors"), CardDefIssueInvalidRuleEffect, "color-disjunction cost modifiers must be spell modifiers")
+			v.add(faceName, appendPath(path, "CardSelection"), CardDefIssueInvalidRuleEffect, "card-subject cost modifiers must be spell modifiers")
 		}
-		if modifier.MatchColor || modifier.MatchCardType {
-			v.add(faceName, appendPath(path, "MatchColors"), CardDefIssueInvalidRuleEffect, "color-disjunction cost modifiers cannot also match a single color or card type")
-		}
-		if len(modifier.MatchColors) < 2 {
-			v.add(faceName, appendPath(path, "MatchColors"), CardDefIssueInvalidRuleEffect, "color-disjunction cost modifiers require two or more colors")
-		}
-		for _, c := range modifier.MatchColors {
-			if c == "" {
-				v.add(faceName, appendPath(path, "MatchColors"), CardDefIssueInvalidRuleEffect, "color-disjunction cost modifiers require real colors")
-			}
-		}
-	}
-	if len(modifier.MatchSubtypes) != 0 {
-		if modifier.Kind != CostModifierSpell {
-			v.add(faceName, appendPath(path, "MatchSubtypes"), CardDefIssueInvalidRuleEffect, "subtype cost modifiers must be spell modifiers")
-		}
-		if modifier.MatchCardType || len(modifier.MatchColors) != 0 {
-			v.add(faceName, appendPath(path, "MatchSubtypes"), CardDefIssueInvalidRuleEffect, "subtype cost modifiers cannot also match a card type or a color disjunction")
-		}
-		for _, sub := range modifier.MatchSubtypes {
-			if sub == "" {
-				v.add(faceName, appendPath(path, "MatchSubtypes"), CardDefIssueInvalidRuleEffect, "subtype cost modifiers require real subtypes")
-			}
-		}
-	}
-	if modifier.MatchExcludedCardType {
-		if modifier.Kind != CostModifierSpell {
-			v.add(faceName, appendPath(path, "MatchExcludedCardType"), CardDefIssueInvalidRuleEffect, "excluded card-type cost modifiers must be spell modifiers")
-		}
-		if modifier.MatchCardType {
-			v.add(faceName, appendPath(path, "MatchExcludedCardType"), CardDefIssueInvalidRuleEffect, "cost modifier cannot both match and exclude a card type")
-		}
-		if modifier.ExcludedCardType == "" {
-			v.add(faceName, appendPath(path, "ExcludedCardType"), CardDefIssueInvalidRuleEffect, "excluded card-type cost modifiers require a real card type")
-		}
+		v.validateSelection(faceName, appendPath(path, "CardSelection"), modifier.CardSelection)
 	}
 	if modifier.ChosenSubtypeFromEntryChoice &&
 		(modifier.Kind != CostModifierSpell ||
-			!modifier.MatchCardType ||
-			modifier.CardType != types.Creature ||
-			modifier.MatchColor) {
+			!costModifierSelectionMatchesCreatureType(modifier.CardSelection)) {
 		v.add(faceName, appendPath(path, "ChosenSubtypeFromEntryChoice"), CardDefIssueInvalidRuleEffect, "chosen subtype cost modifier must match creature spells from the entry-time creature-type choice")
 	}
 	if modifier.SourceZone.Exists {

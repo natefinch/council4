@@ -45,11 +45,11 @@ func TestLowerElspethChapterTwoNoncreatureTax(t *testing.T) {
 	if effect.CostModifier.GenericIncrease != 2 {
 		t.Fatalf("generic increase = %d, want 2", effect.CostModifier.GenericIncrease)
 	}
-	if effect.CostModifier.MatchCardType {
+	if len(effect.CostModifier.CardSelection.RequiredTypes) != 0 {
 		t.Fatal("unexpected required card-type filter on chapter II tax")
 	}
-	if !effect.CostModifier.MatchExcludedCardType || effect.CostModifier.ExcludedCardType != types.Creature {
-		t.Fatalf("excluded card-type filter = (%v, %v), want (true, Creature)", effect.CostModifier.MatchExcludedCardType, effect.CostModifier.ExcludedCardType)
+	if cardSel := effect.CostModifier.CardSelection; len(cardSel.ExcludedTypes) != 1 || cardSel.ExcludedTypes[0] != types.Creature {
+		t.Fatalf("excluded card-type filter = %+v, want ExcludedTypes [Creature]", effect.CostModifier.CardSelection)
 	}
 }
 

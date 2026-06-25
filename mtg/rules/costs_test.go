@@ -289,8 +289,7 @@ func TestStaticChosenTypeSpellCostReductionAppliesToMatchingCreature(t *testing.
 				AffectedPlayer: game.PlayerYou,
 				CostModifier: game.CostModifier{
 					Kind:                         game.CostModifierSpell,
-					MatchCardType:                true,
-					CardType:                     types.Creature,
+					CardSelection:                game.Selection{RequiredTypes: []types.Card{types.Creature}},
 					ChosenSubtypeFromEntryChoice: true,
 					GenericReduction:             1,
 				},
@@ -327,8 +326,7 @@ func rubyMedallionPermanent() *game.CardDef {
 				AffectedPlayer: game.PlayerYou,
 				CostModifier: game.CostModifier{
 					Kind:             game.CostModifierSpell,
-					MatchColor:       true,
-					Color:            color.Red,
+					CardSelection:    game.Selection{ColorsAny: []color.Color{color.Red}},
 					GenericReduction: 1,
 				},
 			}},
@@ -388,7 +386,7 @@ func TestStaticColorlessSpellCostReductionMatchesColorlessSpells(t *testing.T) {
 					AffectedPlayer: game.PlayerYou,
 					CostModifier: game.CostModifier{
 						Kind:             game.CostModifierSpell,
-						MatchColor:       true,
+						CardSelection:    game.Selection{Colorless: true},
 						GenericReduction: 1,
 					},
 				}},
@@ -695,8 +693,7 @@ func spellCostReducerPermanent(controller game.PlayerID, cardType types.Card, re
 				AffectedPlayer: affected,
 				CostModifier: game.CostModifier{
 					Kind:             game.CostModifierSpell,
-					MatchCardType:    true,
-					CardType:         cardType,
+					CardSelection:    game.Selection{RequiredTypes: []types.Card{cardType}},
 					GenericReduction: reduction,
 				},
 			}},

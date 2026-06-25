@@ -660,8 +660,7 @@ func TestRenderStaticAbilityColorSpellCostModifier(t *testing.T) {
 			AffectedPlayer: game.PlayerYou,
 			CostModifier: game.CostModifier{
 				Kind:             game.CostModifierSpell,
-				MatchColor:       true,
-				Color:            color.Red,
+				CardSelection:    game.Selection{ColorsAny: []color.Color{color.Red}},
 				GenericReduction: 1,
 			},
 		}},
@@ -671,8 +670,7 @@ func TestRenderStaticAbilityColorSpellCostModifier(t *testing.T) {
 	}
 	for _, want := range []string{
 		"Kind: game.CostModifierSpell",
-		"MatchColor: true",
-		"Color: color.Red",
+		"CardSelection: game.Selection{ColorsAny: []color.Color{color.Red}}",
 		"GenericReduction: 1",
 	} {
 		if !strings.Contains(rendered, want) {
@@ -697,7 +695,7 @@ func TestRenderStaticAbilityColorlessSpellCostModifier(t *testing.T) {
 			AffectedPlayer: game.PlayerYou,
 			CostModifier: game.CostModifier{
 				Kind:             game.CostModifierSpell,
-				MatchColor:       true,
+				CardSelection:    game.Selection{Colorless: true},
 				GenericReduction: 1,
 			},
 		}},
@@ -705,7 +703,7 @@ func TestRenderStaticAbilityColorlessSpellCostModifier(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(rendered, "MatchColor: true") {
+	if !strings.Contains(rendered, "Colorless: true") {
 		t.Fatalf("rendered static ability missing colorless match:\n%s", rendered)
 	}
 	if strings.Contains(rendered, "Color: color.") {

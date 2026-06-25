@@ -2,7 +2,6 @@ package game
 
 import (
 	"github.com/natefinch/council4/mtg/game/color"
-	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -23,16 +22,14 @@ const (
 
 // CostModifier is a generic-cost increase/reduction/set effect.
 //
-// MatchColor constrains a spell cost modifier to spells of a single color. When
-// MatchColor is set, Color names the required color; an empty Color is the
-// colorless sentinel, constraining the modifier to colorless spells. MatchColor
-// may combine with MatchCardType ("black creature spells"). MatchSubtypes and
-// MatchColors are each mutually exclusive with MatchCardType.
+// CardSelection is the sole card-subject filter for a spell cost modifier: it
+// names the spells the modifier affects by card type, excluded card type, color,
+// color disjunction, subtype, and minimum power, matched through the shared
+// card-subject Selection matcher. An empty CardSelection affects every spell the
+// caster filter admits.
 type CostModifier struct {
 	Kind             CostModifierKind
 	Controller       PlayerID
-	CardType         types.Card
-	Color            color.Color
 	AbilityKeyword   Keyword
 	GenericIncrease  int
 	GenericReduction int
@@ -47,19 +44,10 @@ type CostModifier struct {
 	// than each {2} of that tax (Liesa, Shroud of Dusk).
 	LifePayableTaxInstances int
 
-	MatchCardType bool
-	MatchColor    bool
-	// MatchExcludedCardType narrows a spell cost modifier to spells that do NOT
-	// have ExcludedCardType ("Noncreature spells your opponents cast cost {2}
-	// more to cast ...", Elspeth Conquers Death chapter II). It is meaningful
-	// only on a CostModifierSpell and is mutually exclusive with the positive
-	// card-type match (MatchCardType).
-	MatchExcludedCardType bool
-	ExcludedCardType      types.Card
 	// ChosenSubtypeFromEntryChoice constrains a creature spell cost modifier to
 	// spells whose subtype matches the source permanent's entry-time
 	// creature-type choice (see EntryTypeChoiceKey). It is meaningful only on a
-	// CostModifierSpell that matches creatures by card type.
+	// CostModifierSpell whose CardSelection matches creatures by card type.
 	ChosenSubtypeFromEntryChoice bool
 	FirstCycleEachTurn           bool
 
@@ -95,36 +83,13 @@ type CostModifier struct {
 	// reduction; it is a pointer so CostModifier stays cheap to copy.
 	DynamicReduction *DynamicAmount
 
-	// MatchColors constrains a spell cost modifier to spells carrying any one of
-	// these colors ("... that's red or green ..."): the modifier applies when
-	// the spell has at least one of the listed colors. It holds two or more real
-	// colors and is mutually exclusive with MatchColor and MatchCardType.
-	MatchColors []color.Color
-
-	// MatchSubtypes constrains a spell cost modifier to spells carrying any one
-	// of these subtypes ("Aura and Equipment spells ..."): the modifier applies
-	// when the spell has at least one of the listed subtypes. It may combine with
-	// MatchColor and is mutually exclusive with MatchCardType and MatchColors.
-	MatchSubtypes []types.Sub
-
 	// SourceZone constrains a spell cost modifier to spells being cast from a
 	// single zone ("Spells you cast from your graveyard cost {N} less to cast.",
 	// Gravebreaker Lamia, Patrician Geist): the modifier applies only when the
 	// spell is cast from this zone. When the option is absent the modifier
 	// applies to spells cast from any zone. It is meaningful only on a
-	// CostModifierSpell and combines with the card-type, color, and subtype
-	// filters.
+	// CostModifierSpell and combines with the CardSelection card filter.
 	SourceZone opt.V[zone.Type]
-
-	// MinPower constrains a spell cost modifier to spells whose base printed
-	// power is at least this threshold ("Creature spells you cast with power 4
-	// or greater cost {2} less to cast.", Goreclaw): the modifier applies only
-	// when the spell card has a numeric printed power greater than or equal to
-	// the threshold. A spell with no printed power, or a star (*) power, never
-	// satisfies the threshold. When the option is absent the modifier applies
-	// regardless of power. It is meaningful only on a CostModifierSpell and
-	// combines with the card-type, color, subtype, and zone filters.
-	MinPower opt.V[int]
 
 	// TargetsSource constrains a spell cost modifier to spells that target the
 	// permanent whose static ability carries the modifier ("Spells your
@@ -157,50 +122,13 @@ type CostModifier struct {
 
 	// CardSelection is the canonical card-subject filter for a spell cost
 	// modifier, mirroring how triggers and additional costs describe the card
-	// they match. When non-empty it supersedes the legacy per-field filters
-	// (MatchCardType, MatchColor, MatchColors, MatchSubtypes, MinPower, and the
-	// excluded-card-type match); CardSubjectSelection derives the equivalent
-	// Selection from those legacy fields when CardSelection is empty so the rules
-	// layer always matches through the shared card-subject Selection matcher.
-	// Cost-specific context (source zone, target relation, entry-choice subtype,
-	// linked-exile and dynamic reductions) stays on its own fields, outside the
-	// Selection.
+	// they match: card type, excluded card type, color, color disjunction,
+	// subtype, and minimum power. The rules layer matches it through the shared
+	// card-subject Selection matcher. An empty CardSelection affects every spell
+	// the caster filter admits. Cost-specific context (source zone, target
+	// relation, entry-choice subtype, linked-exile and dynamic reductions) stays
+	// on its own fields, outside the Selection.
 	CardSelection Selection
-}
-
-// CardSubjectSelection returns the card-subject Selection a spell cost modifier
-// matches against. It prefers an explicit CardSelection and otherwise derives an
-// equivalent Selection from the legacy per-field card filters, so the rules
-// layer can route cost-modifier card matching through the shared
-// Selection matcher. Cost-specific context is intentionally excluded.
-func (m CostModifier) CardSubjectSelection() Selection {
-	if !m.CardSelection.Empty() {
-		return m.CardSelection
-	}
-	var sel Selection
-	if m.MatchCardType {
-		sel.RequiredTypes = []types.Card{m.CardType}
-	}
-	if m.MatchExcludedCardType {
-		sel.ExcludedTypes = []types.Card{m.ExcludedCardType}
-	}
-	if m.MatchColor {
-		if m.Color == "" {
-			sel.Colorless = true
-		} else {
-			sel.ColorsAny = []color.Color{m.Color}
-		}
-	}
-	if len(m.MatchColors) != 0 {
-		sel.ColorsAny = m.MatchColors
-	}
-	if len(m.MatchSubtypes) != 0 {
-		sel.SubtypesAny = m.MatchSubtypes
-	}
-	if m.MinPower.Exists {
-		sel.Power = opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: m.MinPower.Val})
-	}
-	return sel
 }
 
 // RuleEffectKind identifies non-layer continuous rules effects such as

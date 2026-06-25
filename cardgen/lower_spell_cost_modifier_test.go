@@ -44,7 +44,7 @@ func TestLowerSpellCostModifierOpponentsIncrease(t *testing.T) {
 	if effect.CostModifier.GenericReduction != 0 {
 		t.Fatalf("generic reduction = %d, want 0", effect.CostModifier.GenericReduction)
 	}
-	if effect.CostModifier.MatchCardType {
+	if !effect.CostModifier.CardSelection.Empty() {
 		t.Fatal("unexpected card-type filter on unfiltered tax")
 	}
 }
@@ -76,8 +76,8 @@ func TestLowerSpellCostModifierControllerReductionFiltered(t *testing.T) {
 	if effect.CostModifier.GenericReduction != 1 {
 		t.Fatalf("generic reduction = %d, want 1", effect.CostModifier.GenericReduction)
 	}
-	if !effect.CostModifier.MatchCardType || effect.CostModifier.CardType != types.Artifact {
-		t.Fatalf("card-type filter = (%v, %v), want (true, Artifact)", effect.CostModifier.MatchCardType, effect.CostModifier.CardType)
+	if cardSel := effect.CostModifier.CardSelection; len(cardSel.RequiredTypes) != 1 || cardSel.RequiredTypes[0] != types.Artifact {
+		t.Fatalf("card-type filter = %+v, want RequiredTypes [Artifact]", effect.CostModifier.CardSelection)
 	}
 }
 
@@ -113,11 +113,11 @@ func TestLowerSpellCostModifierNoncreatureExcluded(t *testing.T) {
 	if effect.CostModifier.GenericIncrease != 2 {
 		t.Fatalf("generic increase = %d, want 2", effect.CostModifier.GenericIncrease)
 	}
-	if effect.CostModifier.MatchCardType {
+	if len(effect.CostModifier.CardSelection.RequiredTypes) != 0 {
 		t.Fatal("unexpected required card-type filter on noncreature tax")
 	}
-	if !effect.CostModifier.MatchExcludedCardType || effect.CostModifier.ExcludedCardType != types.Creature {
-		t.Fatalf("excluded card-type filter = (%v, %v), want (true, Creature)", effect.CostModifier.MatchExcludedCardType, effect.CostModifier.ExcludedCardType)
+	if cardSel := effect.CostModifier.CardSelection; len(cardSel.ExcludedTypes) != 1 || cardSel.ExcludedTypes[0] != types.Creature {
+		t.Fatalf("excluded card-type filter = %+v, want ExcludedTypes [Creature]", effect.CostModifier.CardSelection)
 	}
 }
 

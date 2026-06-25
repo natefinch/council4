@@ -73,8 +73,7 @@ func TestRenderCardConditionChosenSubtype(t *testing.T) {
 func TestRenderCostModifierChosenSubtype(t *testing.T) {
 	rendered, err := (Renderer{}).renderCostModifier(newRenderCtx(), game.CostModifier{
 		Kind:                         game.CostModifierSpell,
-		MatchCardType:                true,
-		CardType:                     types.Creature,
+		CardSelection:                game.Selection{RequiredTypes: []types.Card{types.Creature}},
 		ChosenSubtypeFromEntryChoice: true,
 		GenericReduction:             1,
 	})
@@ -91,12 +90,12 @@ func TestRenderCostModifierColorDisjunction(t *testing.T) {
 	rendered, err := (Renderer{}).renderCostModifier(newRenderCtx(), game.CostModifier{
 		Kind:             game.CostModifierSpell,
 		GenericReduction: 1,
-		MatchColors:      []color.Color{color.Red, color.Green},
+		CardSelection:    game.Selection{ColorsAny: []color.Color{color.Red, color.Green}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(rendered, "MatchColors: []color.Color{color.Red, color.Green}") {
+	if !strings.Contains(rendered, "CardSelection: game.Selection{ColorsAny: []color.Color{color.Red, color.Green}}") {
 		t.Fatalf("rendered CostModifier missing color disjunction:\n%s", rendered)
 	}
 	assertParsesAsGoExpr(t, rendered)
