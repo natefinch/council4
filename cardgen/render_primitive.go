@@ -759,9 +759,9 @@ func (r Renderer) renderCounterSourceSpec(source game.CounterSourceSpec) (string
 }
 
 func (r Renderer) renderGroupSourceDamage(ctx *renderCtx, primitive game.Primitive) (string, error) {
-	value, ok := primitive.(game.GroupSourceDamage)
-	if !ok {
-		return "", errors.New("render: internal error: GroupSourceDamage kind has unexpected concrete type")
+	value, err := assertPrimitive[game.GroupSourceDamage](primitive)
+	if err != nil {
+		return "", err
 	}
 	group, err := r.renderGroupReference(ctx, value.Group)
 	if err != nil {
@@ -782,9 +782,9 @@ func (r Renderer) renderGroupSourceDamage(ctx *renderCtx, primitive game.Primiti
 }
 
 func (r Renderer) renderGroupSelfPowerDamage(ctx *renderCtx, primitive game.Primitive) (string, error) {
-	value, ok := primitive.(game.GroupSelfPowerDamage)
-	if !ok {
-		return "", errors.New("render: internal error: GroupSelfPowerDamage kind has unexpected concrete type")
+	value, err := assertPrimitive[game.GroupSelfPowerDamage](primitive)
+	if err != nil {
+		return "", err
 	}
 	group, err := r.renderGroupReference(ctx, value.Group)
 	if err != nil {
@@ -796,9 +796,9 @@ func (r Renderer) renderGroupSelfPowerDamage(ctx *renderCtx, primitive game.Prim
 }
 
 func (r Renderer) renderDamagePrimitive(ctx *renderCtx, primitive game.Primitive) (string, error) {
-	value, ok := primitive.(game.Damage)
-	if !ok {
-		return "", errors.New("render: internal error: Damage kind has unexpected concrete type")
+	value, err := assertPrimitive[game.Damage](primitive)
+	if err != nil {
+		return "", err
 	}
 	recipient, err := r.renderDamageRecipient(ctx, value.Recipient)
 	if err != nil {
@@ -832,18 +832,18 @@ func (r Renderer) renderPlayerAmountPrimitive(ctx *renderCtx, primitive game.Pri
 	var player game.PlayerReference
 	switch primitive.Kind() {
 	case game.PrimitiveDraw:
-		value, ok := primitive.(game.Draw)
-		if !ok {
-			return "", errors.New("render: internal error: Draw kind has unexpected concrete type")
+		value, err := assertPrimitive[game.Draw](primitive)
+		if err != nil {
+			return "", err
 		}
 		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 			return r.renderAmountPlayerGroup(ctx, "game.Draw", value.Amount, value.PlayerGroup)
 		}
 		typeName, amount, player = "game.Draw", value.Amount, value.Player
 	case game.PrimitiveDiscard:
-		value, ok := primitive.(game.Discard)
-		if !ok {
-			return "", errors.New("render: internal error: Discard kind has unexpected concrete type")
+		value, err := assertPrimitive[game.Discard](primitive)
+		if err != nil {
+			return "", err
 		}
 		if value.EntireHand {
 			return r.renderDiscardEntireHand(value)
@@ -853,9 +853,9 @@ func (r Renderer) renderPlayerAmountPrimitive(ctx *renderCtx, primitive game.Pri
 		}
 		typeName, amount, player = "game.Discard", value.Amount, value.Player
 	case game.PrimitiveMill:
-		value, ok := primitive.(game.Mill)
-		if !ok {
-			return "", errors.New("render: internal error: Mill kind has unexpected concrete type")
+		value, err := assertPrimitive[game.Mill](primitive)
+		if err != nil {
+			return "", err
 		}
 		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 			return r.renderAmountPlayerGroup(ctx, "game.Mill", value.Amount, value.PlayerGroup)
@@ -865,48 +865,48 @@ func (r Renderer) renderPlayerAmountPrimitive(ctx *renderCtx, primitive game.Pri
 		}
 		typeName, amount, player = "game.Mill", value.Amount, value.Player
 	case game.PrimitiveExileTopOfLibrary:
-		value, ok := primitive.(game.ExileTopOfLibrary)
-		if !ok {
-			return "", errors.New("render: internal error: ExileTopOfLibrary kind has unexpected concrete type")
+		value, err := assertPrimitive[game.ExileTopOfLibrary](primitive)
+		if err != nil {
+			return "", err
 		}
 		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 			return r.renderAmountPlayerGroup(ctx, "game.ExileTopOfLibrary", value.Amount, value.PlayerGroup)
 		}
 		typeName, amount, player = "game.ExileTopOfLibrary", value.Amount, value.Player
 	case game.PrimitiveScry:
-		value, ok := primitive.(game.Scry)
-		if !ok {
-			return "", errors.New("render: internal error: Scry kind has unexpected concrete type")
+		value, err := assertPrimitive[game.Scry](primitive)
+		if err != nil {
+			return "", err
 		}
 		typeName, amount, player = "game.Scry", value.Amount, value.Player
 	case game.PrimitiveSurveil:
-		value, ok := primitive.(game.Surveil)
-		if !ok {
-			return "", errors.New("render: internal error: Surveil kind has unexpected concrete type")
+		value, err := assertPrimitive[game.Surveil](primitive)
+		if err != nil {
+			return "", err
 		}
 		typeName, amount, player = "game.Surveil", value.Amount, value.Player
 	case game.PrimitiveGainLife:
-		value, ok := primitive.(game.GainLife)
-		if !ok {
-			return "", errors.New("render: internal error: GainLife kind has unexpected concrete type")
+		value, err := assertPrimitive[game.GainLife](primitive)
+		if err != nil {
+			return "", err
 		}
 		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 			return r.renderAmountPlayerGroup(ctx, "game.GainLife", value.Amount, value.PlayerGroup)
 		}
 		typeName, amount, player = "game.GainLife", value.Amount, value.Player
 	case game.PrimitiveLoseLife:
-		value, ok := primitive.(game.LoseLife)
-		if !ok {
-			return "", errors.New("render: internal error: LoseLife kind has unexpected concrete type")
+		value, err := assertPrimitive[game.LoseLife](primitive)
+		if err != nil {
+			return "", err
 		}
 		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 			return r.renderAmountPlayerGroup(ctx, "game.LoseLife", value.Amount, value.PlayerGroup)
 		}
 		typeName, amount, player = "game.LoseLife", value.Amount, value.Player
 	case game.PrimitiveReorderLibraryTop:
-		value, ok := primitive.(game.ReorderLibraryTop)
-		if !ok {
-			return "", errors.New("render: internal error: ReorderLibraryTop kind has unexpected concrete type")
+		value, err := assertPrimitive[game.ReorderLibraryTop](primitive)
+		if err != nil {
+			return "", err
 		}
 		typeName, amount, player = "game.ReorderLibraryTop", value.Amount, value.Player
 	default:
@@ -1040,9 +1040,9 @@ func (r Renderer) renderLookAtLibraryTop(value game.LookAtLibraryTop) (string, e
 func (r Renderer) renderStandalonePrimitive(ctx *renderCtx, primitive game.Primitive) (string, error) {
 	switch primitive.Kind() {
 	case game.PrimitiveInvestigate:
-		value, ok := primitive.(game.Investigate)
-		if !ok {
-			return "", errors.New("render: internal error: Investigate kind has unexpected concrete type")
+		value, err := assertPrimitive[game.Investigate](primitive)
+		if err != nil {
+			return "", err
 		}
 		amount, err := r.renderQuantity(ctx, value.Amount)
 		if err != nil {
@@ -1050,9 +1050,9 @@ func (r Renderer) renderStandalonePrimitive(ctx *renderCtx, primitive game.Primi
 		}
 		return structLit("game.Investigate", []string{fmt.Sprintf("Amount: %s,", amount)}), nil
 	case game.PrimitiveProliferate:
-		value, ok := primitive.(game.Proliferate)
-		if !ok {
-			return "", errors.New("render: internal error: Proliferate kind has unexpected concrete type")
+		value, err := assertPrimitive[game.Proliferate](primitive)
+		if err != nil {
+			return "", err
 		}
 		amount, err := r.renderQuantity(ctx, value.Amount)
 		if err != nil {
@@ -1060,9 +1060,9 @@ func (r Renderer) renderStandalonePrimitive(ctx *renderCtx, primitive game.Primi
 		}
 		return structLit("game.Proliferate", []string{fmt.Sprintf("Amount: %s,", amount)}), nil
 	case game.PrimitiveManifest:
-		value, ok := primitive.(game.Manifest)
-		if !ok {
-			return "", errors.New("render: internal error: Manifest kind has unexpected concrete type")
+		value, err := assertPrimitive[game.Manifest](primitive)
+		if err != nil {
+			return "", err
 		}
 		var fields []string
 		if value.Dread {
@@ -1199,51 +1199,51 @@ func (r Renderer) renderDigPrimitive(ctx *renderCtx, value game.Dig) (string, er
 func (r Renderer) renderObjectOrGroupPrimitive(ctx *renderCtx, primitive game.Primitive) (string, error) {
 	switch primitive.Kind() {
 	case game.PrimitiveDestroy:
-		value, ok := primitive.(game.Destroy)
-		if !ok {
-			return "", errors.New("render: internal error: Destroy kind has unexpected concrete type")
+		value, err := assertPrimitive[game.Destroy](primitive)
+		if err != nil {
+			return "", err
 		}
 		return r.renderDestroy(ctx, value)
 	case game.PrimitiveBounce:
-		value, ok := primitive.(game.Bounce)
-		if !ok {
-			return "", errors.New("render: internal error: Bounce kind has unexpected concrete type")
+		value, err := assertPrimitive[game.Bounce](primitive)
+		if err != nil {
+			return "", err
 		}
 		return r.renderBounce(ctx, value)
 	case game.PrimitiveUntap:
-		value, ok := primitive.(game.Untap)
-		if !ok {
-			return "", errors.New("render: internal error: Untap kind has unexpected concrete type")
+		value, err := assertPrimitive[game.Untap](primitive)
+		if err != nil {
+			return "", err
 		}
 		return r.renderUntap(ctx, value)
 	case game.PrimitiveTap:
-		value, ok := primitive.(game.Tap)
-		if !ok {
-			return "", errors.New("render: internal error: Tap kind has unexpected concrete type")
+		value, err := assertPrimitive[game.Tap](primitive)
+		if err != nil {
+			return "", err
 		}
 		return r.renderObjectOrGroup(ctx, "game.Tap", value.Object, value.Group)
 	case game.PrimitiveTapOrUntap:
-		value, ok := primitive.(game.TapOrUntap)
-		if !ok {
-			return "", errors.New("render: internal error: TapOrUntap kind has unexpected concrete type")
+		value, err := assertPrimitive[game.TapOrUntap](primitive)
+		if err != nil {
+			return "", err
 		}
 		return r.renderObjectOrGroup(ctx, "game.TapOrUntap", value.Object, game.GroupReference{})
 	case game.PrimitiveExile:
-		value, ok := primitive.(game.Exile)
-		if !ok {
-			return "", errors.New("render: internal error: Exile kind has unexpected concrete type")
+		value, err := assertPrimitive[game.Exile](primitive)
+		if err != nil {
+			return "", err
 		}
 		return r.renderExile(ctx, value)
 	case game.PrimitivePhaseOut:
-		value, ok := primitive.(game.PhaseOut)
-		if !ok {
-			return "", errors.New("render: internal error: PhaseOut kind has unexpected concrete type")
+		value, err := assertPrimitive[game.PhaseOut](primitive)
+		if err != nil {
+			return "", err
 		}
 		return r.renderObjectOrGroup(ctx, "game.PhaseOut", value.Object, value.Group)
 	case game.PrimitiveRegenerate:
-		value, ok := primitive.(game.Regenerate)
-		if !ok {
-			return "", errors.New("render: internal error: Regenerate kind has unexpected concrete type")
+		value, err := assertPrimitive[game.Regenerate](primitive)
+		if err != nil {
+			return "", err
 		}
 		return r.renderObjectOrGroup(ctx, "game.Regenerate", value.Object, value.Group)
 	default:
@@ -1342,16 +1342,16 @@ func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error
 	var object game.ObjectReference
 	switch primitive.Kind() {
 	case game.PrimitiveExplore:
-		value, ok := primitive.(game.Explore)
-		if !ok {
-			return "", errors.New("render: internal error: Explore kind has unexpected concrete type")
+		value, err := assertPrimitive[game.Explore](primitive)
+		if err != nil {
+			return "", err
 		}
 		fieldName = "Creature"
 		typeName, object = "game.Explore", value.Creature
 	case game.PrimitiveCounterObject:
-		value, ok := primitive.(game.CounterObject)
-		if !ok {
-			return "", errors.New("render: internal error: CounterObject kind has unexpected concrete type")
+		value, err := assertPrimitive[game.CounterObject](primitive)
+		if err != nil {
+			return "", err
 		}
 		if value.ExileInstead {
 			rendered, err := r.renderObjectReference(value.Object)
@@ -1365,27 +1365,27 @@ func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error
 		}
 		typeName, object = "game.CounterObject", value.Object
 	case game.PrimitiveChooseNewTargets:
-		value, ok := primitive.(game.ChooseNewTargets)
-		if !ok {
-			return "", errors.New("render: internal error: ChooseNewTargets kind has unexpected concrete type")
+		value, err := assertPrimitive[game.ChooseNewTargets](primitive)
+		if err != nil {
+			return "", err
 		}
 		typeName, object = "game.ChooseNewTargets", value.Object
 	case game.PrimitiveSacrifice:
-		value, ok := primitive.(game.Sacrifice)
-		if !ok {
-			return "", errors.New("render: internal error: Sacrifice kind has unexpected concrete type")
+		value, err := assertPrimitive[game.Sacrifice](primitive)
+		if err != nil {
+			return "", err
 		}
 		typeName, object = "game.Sacrifice", value.Object
 	case game.PrimitiveSkipNextUntap:
-		value, ok := primitive.(game.SkipNextUntap)
-		if !ok {
-			return "", errors.New("render: internal error: SkipNextUntap kind has unexpected concrete type")
+		value, err := assertPrimitive[game.SkipNextUntap](primitive)
+		if err != nil {
+			return "", err
 		}
 		typeName, object = "game.SkipNextUntap", value.Object
 	case game.PrimitiveRemoveFromCombat:
-		value, ok := primitive.(game.RemoveFromCombat)
-		if !ok {
-			return "", errors.New("render: internal error: RemoveFromCombat kind has unexpected concrete type")
+		value, err := assertPrimitive[game.RemoveFromCombat](primitive)
+		if err != nil {
+			return "", err
 		}
 		typeName, object = "game.RemoveFromCombat", value.Object
 	default:
@@ -1411,9 +1411,9 @@ func (r Renderer) renderCopyStackObjectPrimitive(value game.CopyStackObject) (st
 }
 
 func (r Renderer) renderFightPrimitive(primitive game.Primitive) (string, error) {
-	value, ok := primitive.(game.Fight)
-	if !ok {
-		return "", errors.New("render: internal error: Fight kind has unexpected concrete type")
+	value, err := assertPrimitive[game.Fight](primitive)
+	if err != nil {
+		return "", err
 	}
 	object, err := r.renderObjectReference(value.Object)
 	if err != nil {
@@ -1429,9 +1429,9 @@ func (r Renderer) renderFightPrimitive(primitive game.Primitive) (string, error)
 	}), nil
 }
 func (r Renderer) renderAttachPrimitive(primitive game.Primitive) (string, error) {
-	value, ok := primitive.(game.Attach)
-	if !ok {
-		return "", errors.New("render: internal error: Attach kind has unexpected concrete type")
+	value, err := assertPrimitive[game.Attach](primitive)
+	if err != nil {
+		return "", err
 	}
 	attachment, err := r.renderObjectReference(value.Attachment)
 	if err != nil {
