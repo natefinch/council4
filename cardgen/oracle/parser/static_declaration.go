@@ -46,6 +46,30 @@ const (
 	StaticDeclarationCastLimit                            StaticDeclarationKind = "StaticDeclarationCastLimit"
 	StaticDeclarationOpeningHandPlay                      StaticDeclarationKind = "StaticDeclarationOpeningHandPlay"
 	StaticDeclarationOpponentEnteringTriggerSuppression   StaticDeclarationKind = "StaticDeclarationOpponentEnteringTriggerSuppression"
+	StaticDeclarationCreatureAttackTax                    StaticDeclarationKind = "StaticDeclarationCreatureAttackTax"
+)
+
+// StaticAttackTaxAmountKind identifies how a per-creature attack-tax declaration
+// (Baird, Archon of Absolution, Sphere of Safety, Collective Restraint) derives
+// its per-attacker generic amount.
+type StaticAttackTaxAmountKind string
+
+// Per-creature attack-tax amount kinds recognized by the parser.
+const (
+	// StaticAttackTaxAmountFixed is a fixed generic amount printed as the cost
+	// symbol ("pays {1} for each of those creatures.", Baird, Archon of
+	// Absolution).
+	StaticAttackTaxAmountFixed StaticAttackTaxAmountKind = "StaticAttackTaxAmountFixed"
+
+	// StaticAttackTaxAmountEnchantments is the number of enchantments the
+	// controller controls ("where X is the number of enchantments you control.",
+	// Sphere of Safety).
+	StaticAttackTaxAmountEnchantments StaticAttackTaxAmountKind = "StaticAttackTaxAmountEnchantments"
+
+	// StaticAttackTaxAmountDomain is the number of basic land types among lands
+	// the controller controls ("where X is the number of basic land types among
+	// lands you control.", Collective Restraint, domain).
+	StaticAttackTaxAmountDomain StaticAttackTaxAmountKind = "StaticAttackTaxAmountDomain"
 )
 
 // StaticDeclarationDynamicValueKind identifies the rules-derived count a
@@ -475,6 +499,15 @@ type StaticDeclarationSyntax struct {
 	AttackTaxGeneric    int                             `json:",omitempty"`
 	AdditionalLandPlays int                             `json:",omitempty"`
 
+	// Per-creature attack-tax payload (Baird, Archon of Absolution, Sphere of
+	// Safety, Collective Restraint): AttackTaxAmountKind selects how the
+	// per-attacker generic amount is derived (a fixed AttackTaxGeneric, the
+	// controller's enchantment count, or domain). AttackTaxIncludesPlaneswalkers
+	// records the "or planeswalkers you control" scope. They are unset for every
+	// other declaration kind.
+	AttackTaxAmountKind            StaticAttackTaxAmountKind `json:",omitempty"`
+	AttackTaxIncludesPlaneswalkers bool                      `json:",omitempty"`
+
 	// ManaColor carries the colored mana symbol of a
 	// StaticDeclarationPlayerRuleLifeForColoredMana declaration ("For each {B} in
 	// a cost, ..."). It is empty for every other player rule.
@@ -755,6 +788,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticOpponentEnteringTriggerSuppressionDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticCreatureAttackTaxDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseChosenCreatureTypeTriggerMultiplierDeclaration(tokens); ok {

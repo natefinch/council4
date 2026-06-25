@@ -681,6 +681,9 @@ func (combatEngine) attackTaxCost(g *game.Game, declarations []game.AttackDeclar
 			if ruleEffectAttackTaxApplies(&effects[i], declaration) {
 				total += effects[i].AttackTaxGeneric
 			}
+			if ruleEffectPerCreatureAttackTaxApplies(&effects[i], declaration) {
+				total += perCreatureAttackTaxAmount(g, &effects[i])
+			}
 		}
 	}
 	if total <= 0 {
@@ -696,6 +699,48 @@ func ruleEffectAttackTaxApplies(effect *game.RuleEffect, declaration game.Attack
 		effect.AttackTaxGeneric > 0 &&
 		declaration.Target.IsPlayerAttack() &&
 		playerRelationMatches(effect.Controller, declaration.Target.Player, effect.AffectedPlayer)
+}
+
+// ruleEffectPerCreatureAttackTaxApplies reports whether a per-creature attack
+// tax (Baird, Archon of Absolution, Sphere of Safety, Collective Restraint)
+// charges the given attacker. The tax protects the effect controller; when
+// AttackTaxIncludesPlaneswalkers is set it also covers any planeswalker that
+// controller controls, so it taxes both direct attacks on that player and
+// attacks on their planeswalkers, but never attacks on a battle nor an attacker
+// whose target already left combat. Without that flag it taxes only direct
+// attacks on the controller.
+func ruleEffectPerCreatureAttackTaxApplies(effect *game.RuleEffect, declaration game.AttackDeclaration) bool {
+	if effect == nil || effect.Kind != game.RuleEffectAttackTaxPerCreature {
+		return false
+	}
+	if !playerRelationMatches(effect.Controller, declaration.Target.Player, effect.AffectedPlayer) {
+		return false
+	}
+	if effect.AttackTaxIncludesPlaneswalkers {
+		return !declaration.Target.NoTarget && declaration.Target.BattleID == 0
+	}
+	return declaration.Target.IsPlayerAttack()
+}
+
+// perCreatureAttackTaxAmount evaluates the per-attacker generic mana a
+// per-creature attack tax charges, from its single configured amount source: a
+// CardSelection permanent count ("for each of those creatures, where X is the
+// number of enchantments you control", Sphere of Safety), a board-derived
+// aggregate ("where X is the number of basic land types among lands you
+// control", Collective Restraint), or a fixed generic value ("pays {1} for each
+// of those creatures", Baird, Archon of Absolution).
+func perCreatureAttackTaxAmount(g *game.Game, effect *game.RuleEffect) int {
+	if !effect.CardSelection.Empty() {
+		return countPermanentsMatchingGroup(g, nil, effect.Controller, game.BattlefieldGroup(effect.CardSelection))
+	}
+	if effect.AttackTaxScaledAmount != game.AggregateNone {
+		value, ok := aggregateValue(g, conditionContext{controller: effect.Controller}, effect.AttackTaxScaledAmount)
+		if !ok {
+			return 0
+		}
+		return value
+	}
+	return effect.AttackTaxGeneric
 }
 
 // attackingPermanentExclusions returns a set of permanent object IDs that are

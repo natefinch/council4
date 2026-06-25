@@ -38,6 +38,53 @@ func TestGenerateExecutableCardSourceEDHStatics(t *testing.T) {
 				"game.RuleEffectSuppressOpponentEnteringTriggers",
 			},
 		},
+		"sphere of safety": {
+			card: &ScryfallCard{
+				Name:       "Sphere of Safety",
+				Layout:     "normal",
+				ManaCost:   "{4}{W}",
+				TypeLine:   "Enchantment",
+				OracleText: "Creatures can't attack you or planeswalkers you control unless their controller pays {X} for each of those creatures, where X is the number of enchantments you control.",
+			},
+			wants: []string{
+				"game.RuleEffectAttackTaxPerCreature",
+				"AffectedPlayer: game.PlayerYou",
+				"AttackTaxIncludesPlaneswalkers: true",
+				"RequiredTypes: []types.Card{types.Enchantment}",
+				"Controller: game.ControllerYou",
+			},
+		},
+		"baird steward of argive": {
+			card: &ScryfallCard{
+				Name:       "Baird, Steward of Argive",
+				Layout:     "normal",
+				ManaCost:   "{3}{W}",
+				TypeLine:   "Legendary Creature — Human Soldier",
+				OracleText: "Vigilance\nCreatures can't attack you or planeswalkers you control unless their controller pays {1} for each of those creatures.",
+				Power:      new("2"),
+				Toughness:  new("4"),
+			},
+			wants: []string{
+				"game.RuleEffectAttackTaxPerCreature",
+				"AffectedPlayer: game.PlayerYou",
+				"AttackTaxIncludesPlaneswalkers: true",
+				"AttackTaxGeneric: 1",
+			},
+		},
+		"collective restraint": {
+			card: &ScryfallCard{
+				Name:       "Collective Restraint",
+				Layout:     "normal",
+				ManaCost:   "{3}{U}",
+				TypeLine:   "Enchantment",
+				OracleText: "Domain — Creatures can't attack you unless their controller pays {X} for each creature they control that's attacking you, where X is the number of basic land types among lands you control.",
+			},
+			wants: []string{
+				"game.RuleEffectAttackTaxPerCreature",
+				"AffectedPlayer: game.PlayerYou",
+				"AttackTaxScaledAmount: game.AggregateControllerBasicLandTypeCount",
+			},
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -48,8 +95,11 @@ func TestGenerateExecutableCardSourceEDHStatics(t *testing.T) {
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
+			// Collapse gofmt's column-alignment padding so struct-field
+			// assertions don't depend on neighboring field name lengths.
+			normalized := strings.Join(strings.Fields(source), " ")
 			for _, wanted := range tc.wants {
-				if !strings.Contains(source, wanted) {
+				if !strings.Contains(normalized, wanted) {
 					t.Fatalf("source missing %q:\n%s", wanted, source)
 				}
 			}
