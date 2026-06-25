@@ -210,13 +210,8 @@ func triggerCastDuringTurnMatches(g *game.Game, sourceController game.PlayerID, 
 }
 
 func filteredSpellCastOrdinalThisTurn(g *game.Game, event game.Event, selection *game.Selection) int {
-	start := 0
-	index := g.Turn.TurnNumber - 1
-	if index >= 0 && index < len(g.EventTurnStarts) {
-		start = g.EventTurnStarts[index]
-	}
 	ordinal := 0
-	for _, candidate := range g.Events[start:] {
+	for _, candidate := range eventsThisTurnWindow(g) {
 		if candidate.Kind != game.EventSpellCast || candidate.Controller != event.Controller {
 			continue
 		}

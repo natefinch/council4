@@ -90,12 +90,7 @@ func costModifierAppliesToAbility(g *game.Game, modifier game.CostModifier, play
 }
 
 func playerCycledThisTurn(g *game.Game, playerID game.PlayerID) bool {
-	for _, event := range g.EventsThisTurn() {
-		if event.Kind == game.EventCycled && event.Player == playerID {
-			return true
-		}
-	}
-	return false
+	return eventsThisTurnWindow(g).any(eventKindPlayer(game.EventCycled, playerID))
 }
 
 func applyAbilityCostModifiers(manaCost *cost.Mana, modifiers []game.CostModifier) *cost.Mana {
