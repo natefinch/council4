@@ -772,6 +772,9 @@ func parseDynamicAmountSubjectHelper(tokens []shared.Token, start int, atoms Ato
 	if subject, ok := parseDynamicDestroyedThisWaySubject(tokens, start); ok {
 		return subject, true
 	}
+	if subject, ok := parseDynamicCardsNamedSelfInGraveyardsSubject(tokens, start, atoms); ok {
+		return subject, true
+	}
 	if subject, ok := parseDynamicDevotionSubject(tokens, start); ok {
 		return subject, true
 	}
@@ -1419,6 +1422,52 @@ func parseDynamicDestroyedThisWaySubject(tokens []shared.Token, start int) (dyna
 	return dynamicAmountSubject{
 		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountDestroyedThisWay},
 		end:    end + 3, count: true, plural: plural,
+	}, true
+}
+
+// parseDynamicCardsNamedSelfInGraveyardsSubject recognizes the count subject
+// "card named <this card> in each graveyard" (Rite of Flame: "add {R} for each
+// card named Rite of Flame in each graveyard.") and its controller-scoped
+// sibling "card named <this card> in your graveyard" (Compound Fracture, Growth
+// Cycle). It accepts only the card's own name, matched through an Atoms
+// self-name span beginning right after "named", so a literal other-card name
+// fails closed. The subject is a singular count, so it pairs with the singular
+// "for each" prefix. The "in each graveyard" wording counts every graveyard;
+// "in your graveyard" counts only the controller's.
+func parseDynamicCardsNamedSelfInGraveyardsSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
+	if !effectWordsAt(tokens, start, "card", "named") {
+		return dynamicAmountSubject{}, false
+	}
+	nameStart := start + 2
+	if nameStart >= len(tokens) {
+		return dynamicAmountSubject{}, false
+	}
+	nameSpan, ok := atoms.SelfNameSpanStartingAt(tokens[nameStart].Span)
+	if !ok {
+		return dynamicAmountSubject{}, false
+	}
+	nameEnd := nameStart
+	for nameEnd < len(tokens) && tokens[nameEnd].Span.End.Offset <= nameSpan.End.Offset {
+		nameEnd++
+	}
+	if nameEnd == nameStart {
+		return dynamicAmountSubject{}, false
+	}
+	var kind EffectDynamicAmountKind
+	switch {
+	case effectWordsAt(tokens, nameEnd, "in", "each", "graveyard"):
+		kind = EffectDynamicAmountCardsNamedSelfInGraveyards
+	case effectWordsAt(tokens, nameEnd, "in", "your", "graveyard"):
+		kind = EffectDynamicAmountCardsNamedSelfInControllerGraveyard
+	default:
+		return dynamicAmountSubject{}, false
+	}
+	if !dynamicAmountBoundary(tokens, nameEnd+3) {
+		return dynamicAmountSubject{}, false
+	}
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: kind},
+		end:    nameEnd + 3, count: true,
 	}, true
 }
 

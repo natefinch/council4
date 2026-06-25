@@ -2456,11 +2456,40 @@ func recognizeLookAtTargetPlayerHandSentence(sentence *Sentence) {
 // ("for each <kind> counter on this permanent", recognizeSourceCounterCountMana).
 func recognizeDynamicCountMana(effect *EffectSyntax) bool {
 	return recognizeControlledCountMana(effect) ||
+		recognizeCardsNamedSelfInGraveyardsMana(effect) ||
 		recognizeChosenColorCountMana(effect) ||
 		recognizeChosenColorSourceCounterMana(effect) ||
 		recognizeSourceCounterCountMana(effect) ||
 		recognizeSingleColorDynamicMana(effect) ||
 		recognizeAnyOneColorDynamicMana(effect)
+}
+
+// recognizeCardsNamedSelfInGraveyardsMana types an "Add <mana> for each card
+// named <this card> in each graveyard" add-mana body (Rite of Flame) whose
+// produced amount scales with the number of self-named cards across every
+// graveyard. parseEffectAmount already typed the trailing count clause as a
+// self-named graveyard count; the leading mana symbol is left unparsed because
+// parseEffectMana rejects the trailing count clause. This re-parses just the
+// symbol before the count phrase and records the produced color, so the lowerer
+// can emit one mana per counted card. It fires only for a single fixed produced
+// color, so choice, any-color, and multi-symbol outputs stay fail-closed.
+func recognizeCardsNamedSelfInGraveyardsMana(effect *EffectSyntax) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Amount.DynamicKind != EffectDynamicAmountCardsNamedSelfInGraveyards ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormForEach ||
+		effect.Amount.Multiplier < 1 {
+		return false
+	}
+	body := manaBodyBeforeAmount(effect)
+	if len(body) == 0 {
+		return false
+	}
+	parsed := parseEffectMana(EffectAddMana, body, true)
+	if !parsed.ColorsKnown || len(parsed.Colors) != 1 || parsed.Choice {
+		return false
+	}
+	effect.Mana = parsed
+	return true
 }
 
 // recognizeTargetColorIfRider reports whether a single-target counter or destroy
