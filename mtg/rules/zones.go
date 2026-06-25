@@ -376,10 +376,10 @@ func preparePermanentZoneMove(g *game.Game, permanent *game.Permanent, destinati
 // applyPreparedPermanentZoneMove commits a prepared permanent zone move: it
 // records last known information, detaches the permanent and its attachments,
 // removes it from the battlefield, and places the underlying card (or token) into
-// the destination zone, which is always the owner's library/hand/graveyard
-// (CR 400.3). The permanent ceases to exist and the card becomes a new object in
-// its new zone (CR 400.7); a token that leaves the battlefield ceases to exist as
-// a state-based action shortly after (CR 111.7).
+// the destination zone; a card going to a library, graveyard, or hand goes to its
+// owner's (CR 400.3). The permanent ceases to exist and the card becomes a new
+// object in its new zone (CR 400.7); a token that leaves the battlefield ceases to
+// exist as a state-based action shortly after (CR 111.7).
 func applyPreparedPermanentZoneMove(g *game.Game, move *preparedPermanentZoneMove) bool {
 	rememberLastKnown(g, &move.snapshot)
 	revealZoneReplacementSource(g, move.event, move.replacement.revealSource)
@@ -546,8 +546,9 @@ func moveCardBetweenZonesWithPlacement(g *game.Game, playerID game.PlayerID, car
 
 // moveCardBetweenZonesInBatch moves a card from one zone to another, applying any
 // zone-change replacement effects to determine its real destination (CR 614) and
-// commander-zone replacement. The card becomes a new object in its new zone
-// (CR 400.7).
+// commander command-zone handling (the hand/library-to-command move is a
+// replacement effect, CR 903.9b; the graveyard/exile case is a state-based action,
+// CR 903.9a). The card becomes a new object in its new zone (CR 400.7).
 func moveCardBetweenZonesInBatch(g *game.Game, playerID game.PlayerID, cardID id.ID, fromZone, toZone zone.Type, bottom bool, simultaneousID id.ID) bool {
 	replacement := zoneChangeReplacementResult{destination: toZone}
 	card, cardOK := g.GetCardInstance(cardID)
