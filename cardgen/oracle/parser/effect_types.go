@@ -767,6 +767,13 @@ const (
 	// counts, since its draw event precedes the resolving ability. Added last so
 	// existing kinds keep their values.
 	EffectDynamicAmountCardsDrawnThisTurn EffectDynamicAmountKind = "EffectDynamicAmountCardsDrawnThisTurn"
+	// EffectDynamicAmountCardsNamedSelfInGraveyards is the number of cards in
+	// every graveyard whose name matches the card's own name ("for each card
+	// named <this card> in each graveyard", Rite of Flame). The parser accepts
+	// only the card's own name (an Atoms self-name span), so the count is the
+	// self-named graveyard total; the source name is read at resolution. Added
+	// last so existing kinds keep their values.
+	EffectDynamicAmountCardsNamedSelfInGraveyards EffectDynamicAmountKind = "EffectDynamicAmountCardsNamedSelfInGraveyards"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.

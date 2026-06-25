@@ -2793,6 +2793,13 @@ const (
 	// precedes the resolving ability. It is controller-scoped and carries no
 	// in-text referent. Added last so existing kinds keep their wire values.
 	DynamicAmountCardsDrawnThisTurn
+	// DynamicAmountCardsNamedSelfInGraveyards is the number of cards in every
+	// graveyard whose name matches the card's own name ("for each card named
+	// Rite of Flame in each graveyard", Rite of Flame). The parser recognizes
+	// only the card's own self-name, so the count is the self-named graveyard
+	// total across all players; the source name is read at resolution. Added last
+	// so existing kinds keep their wire values.
+	DynamicAmountCardsNamedSelfInGraveyards
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

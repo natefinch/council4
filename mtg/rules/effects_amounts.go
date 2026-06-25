@@ -158,6 +158,8 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 	case game.DynamicAmountSpellsCastThisTurn, game.DynamicAmountLifeLostThisTurn,
 		game.DynamicAmountLifeGainedThisTurn, game.DynamicAmountCardsDrawnThisTurn:
 		amount = turnEventDynamicAmount(g, controller, dynamic.Kind)
+	case game.DynamicAmountCardsNamedSourceInGraveyards:
+		amount = countCardsNamedSourceInAllGraveyards(g, obj)
 	case game.DynamicAmountColorsOfManaSpentToCast:
 		if obj != nil {
 			amount = obj.ColorsOfManaSpentToCast
@@ -676,6 +678,33 @@ func countCardsInZoneForPlayer(g *game.Game, playerID game.PlayerID, viewer game
 		}
 		if matchSelection(&subject, &selection) {
 			count++
+		}
+	}
+	return count
+}
+
+// countCardsNamedSourceInAllGraveyards counts the cards in every player's
+// graveyard whose name equals the resolving stack object's source card name
+// (CR 201.2). It backs the "for each card named <this card> in each graveyard"
+// dynamic amount (Rite of Flame). A missing or unnamed source counts nothing.
+func countCardsNamedSourceInAllGraveyards(g *game.Game, obj *game.StackObject) int {
+	if obj == nil {
+		return 0
+	}
+	name := stackObjectSourceName(g, obj)
+	if name == "" {
+		return 0
+	}
+	count := 0
+	for _, player := range g.Players {
+		for _, cardID := range player.Graveyard.All() {
+			card, ok := g.GetCardInstance(cardID)
+			if !ok || card.Def == nil {
+				continue
+			}
+			if card.Def.Name == name {
+				count++
+			}
 		}
 	}
 	return count
