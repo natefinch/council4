@@ -236,12 +236,7 @@ func EnchantStaticAbility(target *TargetSpec) StaticAbility {
 
 func cloneTargetSpec(source *TargetSpec) TargetSpec {
 	target := *source
-	target.Predicate.PermanentTypes = append([]types.Card(nil), target.Predicate.PermanentTypes...)
-	target.Predicate.ExcludedTypes = append([]types.Card(nil), target.Predicate.ExcludedTypes...)
-	target.Predicate.Supertypes = append([]types.Super(nil), target.Predicate.Supertypes...)
-	target.Predicate.Subtypes = append([]types.Sub(nil), target.Predicate.Subtypes...)
-	target.Predicate.Colors = append([]color.Color(nil), target.Predicate.Colors...)
-	target.Predicate.ExcludedColors = append([]color.Color(nil), target.Predicate.ExcludedColors...)
+	target.Predicate = cloneTargetPredicate(target.Predicate)
 	if target.Selection.Exists {
 		target.Selection = opt.Val(cloneSelection(target.Selection.Val))
 	}
@@ -759,12 +754,12 @@ func EquipActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 func EquipRestrictedActivatedAbility(manaCost cost.Mana, supertypes []types.Super, subtypes []types.Sub) ActivatedAbility {
 	activationCost := append(cost.Mana(nil), manaCost...)
 	keywordCost := append(cost.Mana(nil), manaCost...)
-	predicate := TargetPredicate{
-		PermanentTypes: []types.Card{types.Creature},
-		Controller:     ControllerYou,
-		Supertypes:     append([]types.Super(nil), supertypes...),
+	selection := Selection{
+		RequiredTypesAny: []types.Card{types.Creature},
+		Controller:       ControllerYou,
+		Supertypes:       append([]types.Super(nil), supertypes...),
 	}
-	predicate.Subtypes = append([]types.Sub(nil), subtypes...)
+	selection.SubtypesAny = append([]types.Sub(nil), subtypes...)
 	return ActivatedAbility{
 		Text:           "Equip " + manaCost.String(),
 		ManaCost:       opt.Val(activationCost),
@@ -778,7 +773,7 @@ func EquipRestrictedActivatedAbility(manaCost cost.Mana, supertypes []types.Supe
 			MaxTargets: 1,
 			Constraint: equipRestrictionConstraint(supertypes, subtypes),
 			Allow:      TargetAllowPermanent,
-			Predicate:  predicate,
+			Selection:  opt.Val(selection),
 		}}}.Ability(),
 	}
 }
@@ -805,10 +800,10 @@ func ReconfigureActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 			MaxTargets: 1,
 			Constraint: "creature you control",
 			Allow:      TargetAllowPermanent,
-			Predicate: TargetPredicate{
-				PermanentTypes: []types.Card{types.Creature},
-				Controller:     ControllerYou,
-			},
+			Selection: opt.Val(Selection{
+				RequiredTypesAny: []types.Card{types.Creature},
+				Controller:       ControllerYou,
+			}),
 		}}}.Ability(),
 	}
 }

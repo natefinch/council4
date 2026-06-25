@@ -1664,24 +1664,25 @@ func fightCreatureTargetSpec(target compiler.CompiledTarget, another fightAnothe
 		Constraint:               target.Text,
 		Allow:                    game.TargetAllowPermanent,
 		DistinctFromPriorTargets: target.Selector.Another && another == fightAnotherPriorTarget,
-		Predicate: game.TargetPredicate{
-			PermanentTypes: []types.Card{types.Creature},
-			Subtypes:       slices.Clone(target.Selector.SubtypesAny()),
-			RequiredName:   target.Selector.RequiredName,
-			Another:        target.Selector.Another && another == fightAnotherExcludeSource,
-		},
+	}
+	selection := game.Selection{
+		RequiredTypesAny: []types.Card{types.Creature},
+		SubtypesAny:      slices.Clone(target.Selector.SubtypesAny()),
+		Name:             target.Selector.RequiredName,
+		ExcludeSource:    target.Selector.Another && another == fightAnotherExcludeSource,
 	}
 	switch target.Selector.Controller {
 	case compiler.ControllerAny:
 	case compiler.ControllerYou:
-		spec.Predicate.Controller = game.ControllerYou
+		selection.Controller = game.ControllerYou
 	case compiler.ControllerOpponent:
-		spec.Predicate.Controller = game.ControllerOpponent
+		selection.Controller = game.ControllerOpponent
 	case compiler.ControllerNotYou:
-		spec.Predicate.Controller = game.ControllerNotYou
+		selection.Controller = game.ControllerNotYou
 	default:
 		return game.TargetSpec{}, false
 	}
+	spec.Selection = opt.Val(selection)
 	return spec, true
 }
 

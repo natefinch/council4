@@ -78,17 +78,17 @@ func TestLowerMultiTargetBounceExcludedTypeAndUpToOne(t *testing.T) {
 			if spec.Allow != game.TargetAllowPermanent {
 				t.Fatalf("allow = %v, want TargetAllowPermanent", spec.Allow)
 			}
-			if !cardSlicesEqual(spec.Predicate.PermanentTypes, test.permTypes) {
-				t.Fatalf("permanent types = %v, want %v", spec.Predicate.PermanentTypes, test.permTypes)
+			if !cardSlicesEqual(spec.Selection.Val.RequiredTypesAny, test.permTypes) {
+				t.Fatalf("permanent types = %v, want %v", spec.Selection.Val.RequiredTypesAny, test.permTypes)
 			}
-			if !cardSlicesEqual(spec.Predicate.ExcludedTypes, test.excluded) {
-				t.Fatalf("excluded types = %v, want %v", spec.Predicate.ExcludedTypes, test.excluded)
+			if !cardSlicesEqual(spec.Selection.Val.ExcludedTypes, test.excluded) {
+				t.Fatalf("excluded types = %v, want %v", spec.Selection.Val.ExcludedTypes, test.excluded)
 			}
-			if spec.Predicate.Controller != test.controller {
-				t.Fatalf("controller = %v, want %v", spec.Predicate.Controller, test.controller)
+			if spec.Selection.Val.Controller != test.controller {
+				t.Fatalf("controller = %v, want %v", spec.Selection.Val.Controller, test.controller)
 			}
-			if spec.Predicate.Another != test.another {
-				t.Fatalf("another = %v, want %v", spec.Predicate.Another, test.another)
+			if spec.Selection.Val.ExcludeSource != test.another {
+				t.Fatalf("another = %v, want %v", spec.Selection.Val.ExcludeSource, test.another)
 			}
 			if len(mode.Sequence) != test.maxTargets {
 				t.Fatalf("sequence len = %d, want %d", len(mode.Sequence), test.maxTargets)
@@ -124,11 +124,11 @@ func TestLowerUpToOneTargetTappedBounce(t *testing.T) {
 		if spec.Allow != game.TargetAllowPermanent {
 			t.Fatalf("allow = %v, want TargetAllowPermanent", spec.Allow)
 		}
-		if !cardSlicesEqual(spec.Predicate.PermanentTypes, []types.Card{types.Creature}) {
-			t.Fatalf("permanent types = %v, want [Creature]", spec.Predicate.PermanentTypes)
+		if !cardSlicesEqual(spec.Selection.Val.RequiredTypesAny, []types.Card{types.Creature}) {
+			t.Fatalf("permanent types = %v, want [Creature]", spec.Selection.Val.RequiredTypesAny)
 		}
-		if spec.Predicate.Tapped != game.TriTrue {
-			t.Fatalf("tapped = %v, want TriTrue", spec.Predicate.Tapped)
+		if spec.Selection.Val.Tapped != game.TriTrue {
+			t.Fatalf("tapped = %v, want TriTrue", spec.Selection.Val.Tapped)
 		}
 		if len(mode.Sequence) != 1 {
 			t.Fatalf("sequence len = %d, want 1", len(mode.Sequence))

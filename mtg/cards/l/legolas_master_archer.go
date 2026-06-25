@@ -85,8 +85,8 @@ var LegolasMasterArcher = func() *game.CardDef {
 					Event:            game.EventSpellCast,
 					Controller:       game.TriggerControllerYou,
 					SpellTargetAllow: game.TargetAllowPermanent,
-					SpellTargetPattern: opt.Val(game.TargetPredicate{
-						PermanentTypes: []types.Card{
+					SpellTargetPattern: opt.Val(game.Selection{
+						RequiredTypesAny: []types.Card{
 							types.Creature,
 						},
 						Controller: game.ControllerNotYou,
@@ -101,11 +101,11 @@ var LegolasMasterArcher = func() *game.CardDef {
 						MaxTargets: 1,
 						Constraint: "creature",
 						Allow:      game.TargetAllowPermanent,
-						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{
+						Selection: opt.Val(game.Selection{
+							RequiredTypesAny: []types.Card{
 								types.Creature,
 							},
-						},
+						}),
 					},
 				},
 				Sequence: []game.Instruction{

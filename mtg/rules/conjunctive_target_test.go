@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 // TestConjunctivePermanentTargetRequiresAllTypes covers the conjunctive
@@ -28,7 +29,7 @@ func TestConjunctivePermanentTargetRequiresAllTypes(t *testing.T) {
 		MinTargets: 1,
 		MaxTargets: 1,
 		Allow:      game.TargetAllowPermanent,
-		Predicate:  game.TargetPredicate{PermanentTypes: []types.Card{types.Artifact, types.Creature}, PermanentTypesConjunctive: true},
+		Selection:  opt.Val(game.Selection{RequiredTypes: []types.Card{types.Artifact, types.Creature}}),
 	}
 
 	if !permanentTargetMatchesSpec(g, game.Player1, plainArtifact.ObjectID, &spec, artifactCreature.ObjectID) {

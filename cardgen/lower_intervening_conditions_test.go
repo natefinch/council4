@@ -630,8 +630,8 @@ func TestTargetLoweringFollowsTypedMeaningNotText(t *testing.T) {
 	})
 	if !ok ||
 		permanent.Allow != game.TargetAllowPermanent ||
-		permanent.Predicate.Controller != game.ControllerOpponent ||
-		!slices.Equal(permanent.Predicate.PermanentTypes, []types.Card{types.Creature}) {
+		permanent.Selection.Val.Controller != game.ControllerOpponent ||
+		!slices.Equal(permanent.Selection.Val.RequiredTypesAny, []types.Card{types.Creature}) {
 		t.Fatalf("permanent target = %#v, %v", permanent, ok)
 	}
 	if _, ok := permanentTargetSpec(compiler.CompiledTarget{
@@ -669,7 +669,7 @@ func TestTargetLoweringFollowsTypedMeaningNotText(t *testing.T) {
 		Exact:       true,
 		Selector:    compiler.CompiledSelector{Kind: compiler.SelectorOpponent},
 	})
-	if !ok || player.Predicate.Player != game.PlayerOpponent {
+	if !ok || player.Selection.Val.Player != game.PlayerOpponent {
 		t.Fatalf("player target = %#v, %v", player, ok)
 	}
 }

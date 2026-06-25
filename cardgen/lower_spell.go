@@ -732,7 +732,7 @@ func controllerPlayerTargetSpec(opponent bool) game.TargetSpec {
 	}
 	if opponent {
 		spec.Constraint = "target opponent"
-		spec.Predicate = game.TargetPredicate{Player: game.PlayerOpponent}
+		spec.Selection = opt.Val(game.Selection{Player: game.PlayerOpponent})
 	}
 	return spec
 }

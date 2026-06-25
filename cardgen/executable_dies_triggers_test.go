@@ -443,8 +443,8 @@ func TestGenerateExecutableCardSourceDiesOrExileReanimationAura(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"game.EnchantStaticAbility(&game.TargetSpec{",
-		"PermanentTypes: []types.Card{types.Creature, types.Planeswalker}",
-		"Controller:     game.ControllerYou",
+		"RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker}",
+		"Controller: game.ControllerYou",
 		"game.EventPermanentDied",
 		"game.EventZoneChanged",
 		"game.TriggerSourceAttachedPermanent",

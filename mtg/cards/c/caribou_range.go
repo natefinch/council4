@@ -40,10 +40,10 @@ func newCaribouRange() *game.CardDef {
 					MaxTargets: 1,
 					Constraint: "land you control",
 					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						PermanentTypes: []types.Card{types.Land},
-						Controller:     game.ControllerYou,
-					},
+					Selection: opt.Val(game.Selection{
+						RequiredTypesAny: []types.Card{types.Land},
+						Controller:       game.ControllerYou,
+					}),
 				}),
 				game.StaticAbility{
 					ContinuousEffects: []game.ContinuousEffect{

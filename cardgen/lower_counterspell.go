@@ -1014,7 +1014,7 @@ func playerTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 	switch target.Selector.Kind {
 	case compiler.SelectorPlayer:
 	case compiler.SelectorOpponent:
-		spec.Predicate = game.TargetPredicate{Player: game.PlayerOpponent}
+		spec.Selection = opt.Val(game.Selection{Player: game.PlayerOpponent})
 	default:
 		return game.TargetSpec{}, false
 	}

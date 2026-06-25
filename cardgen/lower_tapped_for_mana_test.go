@@ -81,7 +81,7 @@ func TestLowerForbiddenOrchardSelfTappedForMana(t *testing.T) {
 		t.Fatalf("recipient = %#v, want targeted-player reference", create.Recipient)
 	}
 	targets := ability.Content.Modes[0].Targets
-	if len(targets) != 1 || targets[0].Predicate.Player != game.PlayerOpponent {
+	if len(targets) != 1 || targets[0].Selection.Val.Player != game.PlayerOpponent {
 		t.Fatalf("targets = %#v, want one opponent target", targets)
 	}
 }

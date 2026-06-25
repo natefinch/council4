@@ -96,38 +96,6 @@ func appendCardTypePredicateField(
 
 func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredicate) (lit string, ok bool, err error) {
 	var fields []string
-	if len(predicate.PermanentTypes) > 0 {
-		ctx.need(importTypes)
-		lits, err := renderTypesCardSlice(ctx, predicate.PermanentTypes)
-		if err != nil {
-			return "", false, err
-		}
-		fields = append(fields, fmt.Sprintf("PermanentTypes: %s,", lits))
-	}
-	if predicate.PermanentTypesConjunctive {
-		fields = append(fields, "PermanentTypesConjunctive: true,")
-	}
-	if len(predicate.ExcludedTypes) > 0 {
-		lits, err := renderTypesCardSlice(ctx, predicate.ExcludedTypes)
-		if err != nil {
-			return "", false, err
-		}
-		fields = append(fields, fmt.Sprintf("ExcludedTypes: %s,", lits))
-	}
-	if len(predicate.Supertypes) > 0 || predicate.ExcludedSupertype != "" {
-		fields, err = appendSupertypeFields(ctx, fields, predicate.Supertypes, predicate.ExcludedSupertype)
-		if err != nil {
-			return "", false, err
-		}
-	}
-	if len(predicate.Subtypes) > 0 {
-		ctx.need(importTypes)
-		literals := make([]string, 0, len(predicate.Subtypes))
-		for _, sub := range predicate.Subtypes {
-			literals = append(literals, SubtypeToLiteral(string(sub), nil))
-		}
-		fields = append(fields, fmt.Sprintf("Subtypes: []types.Sub{%s},", strings.Join(literals, ", ")))
-	}
 	for _, field := range []struct {
 		name   string
 		values []types.Card
@@ -151,61 +119,12 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 		}
 		fields = append(fields, stackFields...)
 	}
-	if len(predicate.Colors) > 0 {
-		colors, err := renderColorSlice(ctx, predicate.Colors)
-		if err != nil {
-			return "", false, err
-		}
-		fields = append(fields, fmt.Sprintf("Colors: %s,", colors))
-	}
-	if len(predicate.ExcludedColors) > 0 {
-		colors, err := renderColorSlice(ctx, predicate.ExcludedColors)
-		if err != nil {
-			return "", false, err
-		}
-		fields = append(fields, fmt.Sprintf("ExcludedColors: %s,", colors))
-	}
-	if predicate.Player != game.PlayerAny {
-		pr, err := renderPlayerRelation(predicate.Player)
-		if err != nil {
-			return "", false, err
-		}
-		fields = append(fields, fmt.Sprintf("Player: %s,", pr))
-	}
 	if predicate.Controller != game.ControllerAny {
 		cr, err := renderControllerRelation(predicate.Controller)
 		if err != nil {
 			return "", false, err
 		}
 		fields = append(fields, fmt.Sprintf("Controller: %s,", cr))
-	}
-	if predicate.Tapped != game.TriAny {
-		ts, err := renderTriState(predicate.Tapped)
-		if err != nil {
-			return "", false, err
-		}
-		fields = append(fields, fmt.Sprintf("Tapped: %s,", ts))
-	}
-	if predicate.CombatState != game.CombatStateAny {
-		cs, err := renderCombatStateFilter(predicate.CombatState)
-		if err != nil {
-			return "", false, err
-		}
-		fields = append(fields, fmt.Sprintf("CombatState: %s,", cs))
-	}
-	if predicate.Keyword != game.KeywordNone {
-		kw, err := renderKeyword(predicate.Keyword)
-		if err != nil {
-			return "", false, err
-		}
-		fields = append(fields, fmt.Sprintf("Keyword: %s,", kw))
-	}
-	if predicate.ExcludedKeyword != game.KeywordNone {
-		kw, err := renderKeyword(predicate.ExcludedKeyword)
-		if err != nil {
-			return "", false, err
-		}
-		fields = append(fields, fmt.Sprintf("ExcludedKeyword: %s,", kw))
 	}
 	if predicate.ManaValue.Exists {
 		ctx.need(importOpt)
@@ -214,43 +133,6 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 			return "", false, err
 		}
 		fields = append(fields, fmt.Sprintf("ManaValue: opt.Val(%s),", cmp))
-	}
-	if predicate.Power.Exists {
-		ctx.need(importOpt)
-		cmp, err := renderCompareInt(ctx, predicate.Power.Val)
-		if err != nil {
-			return "", false, err
-		}
-		fields = append(fields, fmt.Sprintf("Power: opt.Val(%s),", cmp))
-	}
-	if predicate.Toughness.Exists {
-		ctx.need(importOpt)
-		cmp, err := renderCompareInt(ctx, predicate.Toughness.Val)
-		if err != nil {
-			return "", false, err
-		}
-		fields = append(fields, fmt.Sprintf("Toughness: opt.Val(%s),", cmp))
-	}
-	if predicate.Another {
-		fields = append(fields, "Another: true,")
-	}
-	if predicate.PowerLessThanSource {
-		fields = append(fields, "PowerLessThanSource: true,")
-	}
-	if predicate.PowerGreaterThanSource {
-		fields = append(fields, "PowerGreaterThanSource: true,")
-	}
-	if predicate.TokenOnly {
-		fields = append(fields, "TokenOnly: true,")
-	}
-	if predicate.NonToken {
-		fields = append(fields, "NonToken: true,")
-	}
-	if predicate.NameUniqueAmongControlled {
-		fields = append(fields, "NameUniqueAmongControlled: true,")
-	}
-	if predicate.RequiredName != "" {
-		fields = append(fields, fmt.Sprintf("RequiredName: %q,", predicate.RequiredName))
 	}
 	if len(fields) == 0 {
 		return "", false, nil
@@ -529,6 +411,9 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 	}
 	if selection.TokenOnly {
 		fields = append(fields, "TokenOnly: true,")
+	}
+	if selection.NameUniqueAmongControlled {
+		fields = append(fields, "NameUniqueAmongControlled: true,")
 	}
 	if selection.EnteredThisTurn {
 		fields = append(fields, "EnteredThisTurn: true,")

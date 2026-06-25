@@ -72,13 +72,13 @@ var HalanaAndAlenaPartners = func() *game.CardDef {
 						MaxTargets: 1,
 						Constraint: "another creature you control",
 						Allow:      game.TargetAllowPermanent,
-						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{
+						Selection: opt.Val(game.Selection{
+							RequiredTypesAny: []types.Card{
 								types.Creature,
 							},
-							Controller: game.ControllerYou,
-							Another:    true,
-						},
+							Controller:    game.ControllerYou,
+							ExcludeSource: true,
+						}),
 					},
 				},
 				Sequence: []game.Instruction{

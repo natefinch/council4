@@ -301,8 +301,8 @@ func TestLowerGainControlUntapHasteSequence(t *testing.T) {
 	if len(mode.Targets) != 1 {
 		t.Fatalf("targets = %d, want 1", len(mode.Targets))
 	}
-	if mode.Targets[0].Predicate.PermanentTypes[0] != types.Creature {
-		t.Fatalf("target type = %v, want Creature", mode.Targets[0].Predicate.PermanentTypes)
+	if mode.Targets[0].Selection.Val.RequiredTypesAny[0] != types.Creature {
+		t.Fatalf("target type = %v, want Creature", mode.Targets[0].Selection.Val.RequiredTypesAny)
 	}
 	if len(mode.Sequence) != 3 {
 		t.Fatalf("sequence len = %d, want 3", len(mode.Sequence))
@@ -388,8 +388,8 @@ func TestLowerGainControlActivatedAbility(t *testing.T) {
 	if len(mode.Targets) != 1 {
 		t.Fatalf("targets = %d, want 1", len(mode.Targets))
 	}
-	if mode.Targets[0].Predicate.Controller != game.ControllerOpponent {
-		t.Fatalf("target controller predicate = %v, want Opponent", mode.Targets[0].Predicate.Controller)
+	if mode.Targets[0].Selection.Val.Controller != game.ControllerOpponent {
+		t.Fatalf("target controller predicate = %v, want Opponent", mode.Targets[0].Selection.Val.Controller)
 	}
 	if len(mode.Sequence) != 2 {
 		t.Fatalf("sequence len = %d, want 2", len(mode.Sequence))

@@ -26,8 +26,8 @@ func TestLowerTapStunCounterTriggeredSequence(t *testing.T) {
 	if len(mode.Targets) != 1 || len(mode.Sequence) != 2 {
 		t.Fatalf("mode = %+v, want one target and two instructions", mode)
 	}
-	if mode.Targets[0].Predicate.Controller != game.ControllerOpponent {
-		t.Fatalf("target controller = %v, want opponent", mode.Targets[0].Predicate.Controller)
+	if mode.Targets[0].Selection.Val.Controller != game.ControllerOpponent {
+		t.Fatalf("target controller = %v, want opponent", mode.Targets[0].Selection.Val.Controller)
 	}
 	tap, ok := mode.Sequence[0].Primitive.(game.Tap)
 	if !ok || tap.Object != game.TargetPermanentReference(0) {

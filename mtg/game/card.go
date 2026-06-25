@@ -630,10 +630,6 @@ func cloneTargetSpecs(specs []TargetSpec) []TargetSpec {
 
 func cloneTargetPredicate(predicate TargetPredicate) TargetPredicate {
 	cloned := predicate
-	cloned.PermanentTypes = slices.Clone(predicate.PermanentTypes)
-	cloned.ExcludedTypes = slices.Clone(predicate.ExcludedTypes)
-	cloned.Supertypes = slices.Clone(predicate.Supertypes)
-	cloned.Subtypes = slices.Clone(predicate.Subtypes)
 	cloned.SpellCardTypes = slices.Clone(predicate.SpellCardTypes)
 	cloned.SpellCardTypesAny = slices.Clone(predicate.SpellCardTypesAny)
 	cloned.ExcludedSpellCardTypes = slices.Clone(predicate.ExcludedSpellCardTypes)
@@ -642,8 +638,6 @@ func cloneTargetPredicate(predicate TargetPredicate) TargetPredicate {
 	cloned.SpellColors = slices.Clone(predicate.SpellColors)
 	cloned.SpellExcludedColors = slices.Clone(predicate.SpellExcludedColors)
 	cloned.StackObjectSourceTypes = slices.Clone(predicate.StackObjectSourceTypes)
-	cloned.Colors = slices.Clone(predicate.Colors)
-	cloned.ExcludedColors = slices.Clone(predicate.ExcludedColors)
 	return cloned
 }
 

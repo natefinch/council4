@@ -875,7 +875,7 @@ func damageTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 	case compiler.SelectorPlayer:
 		if target.Selector.PlayerOrPlaneswalker {
 			spec.Allow = game.TargetAllowPlayer | game.TargetAllowPermanent
-			spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Planeswalker}}
+			spec.Selection = opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Planeswalker}})
 			return spec, true
 		}
 		spec.Allow = game.TargetAllowPlayer
@@ -883,13 +883,13 @@ func damageTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 		spec.Allow = game.TargetAllowPlayer
 		if target.Selector.PlayerOrPlaneswalker {
 			spec.Allow |= game.TargetAllowPermanent
-			spec.Predicate = game.TargetPredicate{
-				Player:         game.PlayerOpponent,
-				PermanentTypes: []types.Card{types.Planeswalker},
-			}
+			spec.Selection = opt.Val(game.Selection{
+				Player:           game.PlayerOpponent,
+				RequiredTypesAny: []types.Card{types.Planeswalker},
+			})
 			return spec, true
 		}
-		spec.Predicate = game.TargetPredicate{Player: game.PlayerOpponent}
+		spec.Selection = opt.Val(game.Selection{Player: game.PlayerOpponent})
 	default:
 		return game.TargetSpec{}, false
 	}
@@ -921,6 +921,9 @@ func permanentTargetSpecWithCardinality(target compiler.CompiledTarget) (game.Ta
 	if len(target.Selector.Alternatives) > 0 {
 		return alternativePermanentTargetSpec(&target, &spec)
 	}
+	var selection game.Selection
+	var permanentTypes []types.Card
+	conjunctive := false
 	switch target.Selector.Kind {
 	case compiler.SelectorUnknown:
 		// A bare subtype noun ("target Soldier you control") selects any
@@ -932,18 +935,18 @@ func permanentTargetSpecWithCardinality(target compiler.CompiledTarget) (game.Ta
 		}
 
 	case compiler.SelectorArtifact:
-		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Artifact}}
+		permanentTypes = []types.Card{types.Artifact}
 	case compiler.SelectorCreature:
-		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Creature}}
+		permanentTypes = []types.Card{types.Creature}
 	case compiler.SelectorEnchantment:
-		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Enchantment}}
+		permanentTypes = []types.Card{types.Enchantment}
 	case compiler.SelectorLand:
-		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Land}}
+		permanentTypes = []types.Card{types.Land}
 	case compiler.SelectorPermanent:
 	case compiler.SelectorPlaneswalker:
-		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Planeswalker}}
+		permanentTypes = []types.Card{types.Planeswalker}
 	case compiler.SelectorBattle:
-		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Battle}}
+		permanentTypes = []types.Card{types.Battle}
 	default:
 		return game.TargetSpec{}, false
 	}
@@ -957,95 +960,103 @@ func permanentTargetSpecWithCardinality(target compiler.CompiledTarget) (game.Ta
 		// A conjunctive type set ("artifact creature") requires every listed type
 		// at once; the flag routes the same type list through the all-of filter
 		// instead of the default any-of match.
-		spec.Predicate.PermanentTypes = append([]types.Card(nil), union...)
-		spec.Predicate.PermanentTypesConjunctive = target.Selector.ConjunctiveTypes
+		permanentTypes = append([]types.Card(nil), union...)
+		conjunctive = target.Selector.ConjunctiveTypes
+	}
+	if conjunctive {
+		selection.RequiredTypes = permanentTypes
+	} else {
+		selection.RequiredTypesAny = permanentTypes
 	}
 	if excludedTypes := target.Selector.ExcludedTypes(); len(excludedTypes) > 0 {
-		spec.Predicate.ExcludedTypes = append([]types.Card(nil), excludedTypes...)
+		selection.ExcludedTypes = append([]types.Card(nil), excludedTypes...)
 	}
 	if supertypes := target.Selector.Supertypes(); len(supertypes) > 0 {
-		spec.Predicate.Supertypes = append([]types.Super(nil), supertypes...)
+		selection.Supertypes = append([]types.Super(nil), supertypes...)
 	}
 	if excludedSupertypes := target.Selector.ExcludedSupertypes(); len(excludedSupertypes) > 0 {
-		spec.Predicate.ExcludedSupertype = excludedSupertypes[0]
+		selection.ExcludedSupertype = excludedSupertypes[0]
 	}
 	if subtypes := target.Selector.SubtypesAny(); len(subtypes) > 0 {
-		spec.Predicate.Subtypes = append([]types.Sub(nil), subtypes...)
+		selection.SubtypesAny = append([]types.Sub(nil), subtypes...)
 	}
 	if colors := target.Selector.ColorsAny(); len(colors) > 0 {
-		spec.Predicate.Colors = append([]color.Color(nil), colors...)
+		selection.ColorsAny = append([]color.Color(nil), colors...)
 	}
 	if excludedColors := target.Selector.ExcludedColors(); len(excludedColors) > 0 {
-		spec.Predicate.ExcludedColors = append([]color.Color(nil), excludedColors...)
+		selection.ExcludedColors = append([]color.Color(nil), excludedColors...)
 	}
 	if target.Selector.Keyword != parser.KeywordUnknown {
 		keyword, ok := runtimeKeyword(target.Selector.Keyword)
 		if !ok {
 			return game.TargetSpec{}, false
 		}
-		spec.Predicate.Keyword = keyword
+		selection.Keyword = keyword
 	}
 	if target.Selector.ExcludedKeyword != parser.KeywordUnknown {
 		keyword, ok := runtimeKeyword(target.Selector.ExcludedKeyword)
 		if !ok {
 			return game.TargetSpec{}, false
 		}
-		spec.Predicate.ExcludedKeyword = keyword
+		selection.ExcludedKeyword = keyword
 	}
 	if target.Selector.MatchManaValue {
 		if target.Selector.ManaValueX {
 			return game.TargetSpec{}, false
 		}
-		spec.Predicate.ManaValue = opt.Val(target.Selector.ManaValue)
+		selection.ManaValue = opt.Val(target.Selector.ManaValue)
 	}
 	if target.Selector.MatchPower {
-		spec.Predicate.Power = opt.Val(target.Selector.Power)
+		selection.Power = opt.Val(target.Selector.Power)
 	}
 	if target.Selector.PowerLessThanSource {
-		spec.Predicate.PowerLessThanSource = true
+		selection.PowerLessThanSource = true
 	}
 	if target.Selector.PowerGreaterThanSource {
-		spec.Predicate.PowerGreaterThanSource = true
+		selection.PowerGreaterThanSource = true
 	}
 	if target.Selector.MatchToughness {
-		spec.Predicate.Toughness = opt.Val(target.Selector.Toughness)
+		selection.Toughness = opt.Val(target.Selector.Toughness)
 	}
 	if target.Selector.Another || target.Selector.Other {
-		spec.Predicate.Another = true
+		selection.ExcludeSource = true
 	}
 	if target.Selector.TokenOnly {
-		spec.Predicate.TokenOnly = true
+		selection.TokenOnly = true
 	}
 	if target.Selector.NonToken {
-		spec.Predicate.NonToken = true
+		selection.NonToken = true
 	}
 	if target.Selector.NameUniqueAmongControlled {
-		spec.Predicate.NameUniqueAmongControlled = true
+		selection.NameUniqueAmongControlled = true
 	}
 
 	switch {
 	case target.Selector.Attacking && target.Selector.Blocking:
-		spec.Predicate.CombatState = game.CombatStateAttackingOrBlocking
+		selection.CombatState = game.CombatStateAttackingOrBlocking
 	case target.Selector.Attacking:
-		spec.Predicate.CombatState = game.CombatStateAttacking
+		selection.CombatState = game.CombatStateAttacking
 	case target.Selector.Blocking:
-		spec.Predicate.CombatState = game.CombatStateBlocking
+		selection.CombatState = game.CombatStateBlocking
 	case target.Selector.Tapped:
-		spec.Predicate.Tapped = game.TriTrue
+		selection.Tapped = game.TriTrue
 	case target.Selector.Untapped:
-		spec.Predicate.Tapped = game.TriFalse
+		selection.Tapped = game.TriFalse
 	default:
 	}
 	switch target.Selector.Controller {
 	case compiler.ControllerAny:
 	case compiler.ControllerYou:
-		spec.Predicate.Controller = game.ControllerYou
+		selection.Controller = game.ControllerYou
 	case compiler.ControllerOpponent:
-		spec.Predicate.Controller = game.ControllerOpponent
+		selection.Controller = game.ControllerOpponent
 	case compiler.ControllerNotYou:
-		spec.Predicate.Controller = game.ControllerNotYou
+		selection.Controller = game.ControllerNotYou
 	default:
 		return game.TargetSpec{}, false
+	}
+	if !selection.Empty() {
+		spec.Selection = opt.Val(selection)
 	}
 	spec.Constraint = lowerFirst(target.Text)
 	return spec, true
@@ -1078,10 +1089,17 @@ func alternativePermanentTargetSpec(target *compiler.CompiledTarget, spec *game.
 			Selector:    selector.Alternatives[i],
 			Exact:       true,
 		})
-		if !ok || alternativeSpec.Selection.Exists {
+		if !ok {
 			return game.TargetSpec{}, false
 		}
-		selection.AnyOf = append(selection.AnyOf, alternativeSpec.Predicate.Selection())
+		// Each alternative contributes its characteristic Selection. A nested
+		// alternative (its own AnyOf) is not supported, preserving the prior
+		// fail-closed behavior.
+		altSelection := alternativeSpec.Selection.Val
+		if len(altSelection.AnyOf) > 0 {
+			return game.TargetSpec{}, false
+		}
+		selection.AnyOf = append(selection.AnyOf, altSelection)
 	}
 	spec.Selection = opt.Val(selection)
 	return *spec, true

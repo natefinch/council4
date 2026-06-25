@@ -44,11 +44,11 @@ func TestLowerDualModifyPTOpposingTargets(t *testing.T) {
 	if len(targets) != 2 {
 		t.Fatalf("targets = %+v, want two single-creature targets", targets)
 	}
-	if targets[0].Predicate.Controller != game.ControllerYou {
-		t.Fatalf("target[0] controller = %v, want you", targets[0].Predicate.Controller)
+	if targets[0].Selection.Val.Controller != game.ControllerYou {
+		t.Fatalf("target[0] controller = %v, want you", targets[0].Selection.Val.Controller)
 	}
-	if targets[1].Predicate.Controller != game.ControllerOpponent {
-		t.Fatalf("target[1] controller = %v, want opponent", targets[1].Predicate.Controller)
+	if targets[1].Selection.Val.Controller != game.ControllerOpponent {
+		t.Fatalf("target[1] controller = %v, want opponent", targets[1].Selection.Val.Controller)
 	}
 	if first.Object != game.TargetPermanentReference(0) ||
 		first.PowerDelta.Value() != 1 || first.ToughnessDelta.Value() != 1 ||
@@ -71,10 +71,10 @@ func TestLowerDualModifyPTAnotherTarget(t *testing.T) {
 	if len(targets) != 2 {
 		t.Fatalf("targets = %+v, want two single-creature targets", targets)
 	}
-	if targets[0].Predicate.Another {
+	if targets[0].Selection.Val.ExcludeSource {
 		t.Fatalf("target[0] = %+v, want no distinctness restriction", targets[0])
 	}
-	if !targets[1].Predicate.Another {
+	if !targets[1].Selection.Val.ExcludeSource {
 		t.Fatalf("target[1] = %+v, want distinct (another) restriction", targets[1])
 	}
 	if first.PowerDelta.Value() != 0 || first.ToughnessDelta.Value() != 2 {

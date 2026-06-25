@@ -201,14 +201,14 @@ func TestStructuredTargetPredicates(t *testing.T) {
 			MaxTargets: 1,
 			Constraint: "nonblack tapped creature with flying mana value 4 or less an opponent controls",
 			Allow:      game.TargetAllowPermanent,
-			Predicate: game.TargetPredicate{
-				PermanentTypes: []types.Card{types.Creature},
-				ExcludedColors: []color.Color{color.Black},
-				Controller:     game.ControllerOpponent,
-				Tapped:         game.TriTrue,
-				Keyword:        game.Flying,
-				ManaValue:      opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 4}),
-			},
+			Selection: opt.Val(game.Selection{
+				RequiredTypesAny: []types.Card{types.Creature},
+				ExcludedColors:   []color.Color{color.Black},
+				Controller:       game.ControllerOpponent,
+				Tapped:           game.TriTrue,
+				Keyword:          game.Flying,
+				ManaValue:        opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 4}),
+			}),
 		},
 	}))
 	g.Turn.Phase = game.PhasePrecombatMain
@@ -283,10 +283,10 @@ func TestAnotherTargetPredicateExcludesSourcePermanent(t *testing.T) {
 					MaxTargets: 1,
 					Constraint: "another target creature",
 					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						PermanentTypes: []types.Card{types.Creature},
-						Another:        true,
-					},
+					Selection: opt.Val(game.Selection{
+						RequiredTypesAny: []types.Card{types.Creature},
+						ExcludeSource:    true,
+					}),
 				}},
 				Sequence: []game.Instruction{{Primitive: game.Tap{Object: game.TargetPermanentReference(0)}}},
 			}.Ability(),

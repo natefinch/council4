@@ -632,7 +632,7 @@ func TestGenerateExecutableCardSourceTokenTargetOpponentRecipient(t *testing.T) 
 	for _, wanted := range []string{
 		`Constraint: "Target opponent",`,
 		"Allow:      game.TargetAllowPlayer,",
-		"Player: game.PlayerOpponent,",
+		"Player: game.PlayerOpponent",
 		"Primitive: game.CreateToken{",
 		"Recipient: opt.Val(game.TargetPlayerReference(0)),",
 		`Name:      "Horror",`,
@@ -667,7 +667,7 @@ func TestLowerTargetPlayerNamedTokenRecipient(t *testing.T) {
 		t.Fatalf("token def = %+v, want Treasure", create.Source)
 	}
 	targets := face.SpellAbility.Val.Modes[0].Targets
-	if len(targets) != 1 || targets[0].Predicate.Player != game.PlayerOpponent {
+	if len(targets) != 1 || targets[0].Selection.Val.Player != game.PlayerOpponent {
 		t.Fatalf("targets = %+v, want one opponent target", targets)
 	}
 }
@@ -690,8 +690,8 @@ func TestGenerateExecutableCardSourceCopyOfTargetCreatureToken(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"Constraint: \"target creature you control\",",
-		"PermanentTypes: []types.Card{types.Creature},",
-		"Controller:     game.ControllerYou,",
+		"RequiredTypesAny: []types.Card{types.Creature},",
+		"Controller: game.ControllerYou",
 		"Primitive: game.CreateToken{",
 		"Source: game.TokenCopyOf(game.TokenCopySpec{",
 		"Source: game.TokenCopySourceObject,",

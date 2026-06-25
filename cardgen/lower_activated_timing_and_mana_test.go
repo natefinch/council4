@@ -124,8 +124,8 @@ func TestLowerEnchantCreatureAbility(t *testing.T) {
 		target.MinTargets != 1 ||
 		target.MaxTargets != 1 ||
 		target.Allow != game.TargetAllowPermanent ||
-		len(target.Predicate.PermanentTypes) != 1 ||
-		target.Predicate.PermanentTypes[0] != types.Creature {
+		len(target.Selection.Val.RequiredTypesAny) != 1 ||
+		target.Selection.Val.RequiredTypesAny[0] != types.Creature {
 		t.Fatalf("enchant target = %+v, %v; want one creature", target, ok)
 	}
 }

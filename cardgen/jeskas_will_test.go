@@ -32,7 +32,7 @@ func TestLowerJeskasWill(t *testing.T) {
 
 	manaMode := content.Modes[0]
 	if len(manaMode.Targets) != 1 ||
-		manaMode.Targets[0].Predicate.Player != game.PlayerOpponent ||
+		manaMode.Targets[0].Selection.Val.Player != game.PlayerOpponent ||
 		len(manaMode.Sequence) != 1 {
 		t.Fatalf("mana mode = %+v", manaMode)
 	}

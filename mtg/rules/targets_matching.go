@@ -354,13 +354,14 @@ func permanentTargetMatchesSpec(g *game.Game, controller game.PlayerID, sourceOb
 	return permanentTypeMatchesSpec(g, spec, permanent)
 }
 
-// targetSelection returns the Selection a TargetSpec matches against, preferring
-// the explicit Selection and otherwise adapting the legacy TargetPredicate.
+// targetSelection returns the Selection a TargetSpec matches against. Permanent,
+// card, and player characteristics live solely on the spec's Selection; the
+// legacy TargetPredicate now carries only stack-object and spell qualifiers.
 func targetSelection(spec *game.TargetSpec) game.Selection {
 	if spec.Selection.Exists {
 		return spec.Selection.Val
 	}
-	return spec.Predicate.Selection()
+	return game.Selection{}
 }
 
 func combatStateMatches(g *game.Game, permanent *game.Permanent, filter game.CombatStateFilter) bool {
@@ -451,7 +452,8 @@ func permanentTypeMatchesSpec(g *game.Game, spec *game.TargetSpec, permanent *ga
 	if spec.Selection.Exists && normalizedTargetConstraint(spec) == "" {
 		return true
 	}
-	if len(spec.Predicate.PermanentTypes) > 0 || len(spec.Predicate.ExcludedTypes) > 0 {
+	sel := targetSelection(spec)
+	if len(sel.RequiredTypes) > 0 || len(sel.RequiredTypesAny) > 0 || len(sel.ExcludedTypes) > 0 {
 		return true
 	}
 	// A subtype filter narrows membership to permanents carrying that subtype,
@@ -459,7 +461,7 @@ func permanentTypeMatchesSpec(g *game.Game, spec *game.TargetSpec, permanent *ga
 	// a bare-subtype target ("target Soldier you control") that sets no card-type
 	// constraint is satisfied here rather than falling through to constraint-string
 	// type inference, which cannot recognize a subtype as a type.
-	if len(spec.Predicate.Subtypes) > 0 {
+	if len(sel.SubtypesAny) > 0 {
 		return true
 	}
 	normalized := normalizedTargetConstraint(spec)

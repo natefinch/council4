@@ -180,8 +180,12 @@ func equipRestrictionTypes(ability *game.ActivatedAbility) ([]types.Super, []typ
 	if len(ability.Content.Modes) != 1 || len(ability.Content.Modes[0].Targets) != 1 {
 		return nil, nil, false
 	}
-	predicate := ability.Content.Modes[0].Targets[0].Predicate
-	return predicate.Supertypes, predicate.Subtypes, true
+	target := ability.Content.Modes[0].Targets[0]
+	if !target.Selection.Exists {
+		return nil, nil, false
+	}
+	selection := target.Selection.Val
+	return selection.Supertypes, selection.SubtypesAny, true
 }
 
 func renderSupertypeSlice(ctx *renderCtx, supertypes []types.Super) (string, error) {
@@ -687,12 +691,9 @@ func (r Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatt
 		fields = append(fields, fmt.Sprintf("SpellTargetAllow: %s,", renderTargetAllow(pattern.SpellTargetAllow)))
 	}
 	if pattern.SpellTargetPattern.Exists {
-		lit, ok, err := r.renderTargetPredicate(ctx, pattern.SpellTargetPattern.Val)
+		lit, err := r.renderSelection(ctx, pattern.SpellTargetPattern.Val)
 		if err != nil {
 			return "", err
-		}
-		if !ok {
-			return "", errors.New("render: empty spell-target predicate")
 		}
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("SpellTargetPattern: opt.Val(%s),", lit))

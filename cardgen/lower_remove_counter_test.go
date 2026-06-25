@@ -109,7 +109,7 @@ func TestLowerRemoveCounterNonlandTarget(t *testing.T) {
 	if remove.Amount != game.Fixed(1) || !remove.ChooseKind {
 		t.Fatalf("remove = %#v", remove)
 	}
-	excluded := content.Modes[0].Targets[0].Predicate.ExcludedTypes
+	excluded := content.Modes[0].Targets[0].Selection.Val.ExcludedTypes
 	if len(excluded) != 1 {
 		t.Fatalf("excluded types = %#v", excluded)
 	}

@@ -58,16 +58,16 @@ func expectUnsupportedCounterPlacement(t *testing.T, oracleText string) {
 func TestLowerCounterPlacementSubtypeTarget(t *testing.T) {
 	t.Parallel()
 	target := spellCounterTarget(t, "Put a +1/+1 counter on target Beast creature you control.")
-	if !slices.Contains(target.Predicate.PermanentTypes, types.Creature) {
-		t.Fatalf("permanent types = %#v, want Creature", target.Predicate.PermanentTypes)
+	if !slices.Contains(target.Selection.Val.RequiredTypesAny, types.Creature) {
+		t.Fatalf("permanent types = %#v, want Creature", target.Selection.Val.RequiredTypesAny)
 	}
-	if !slices.Contains(target.Predicate.Subtypes, types.Sub("Beast")) {
-		t.Fatalf("subtypes = %#v, want Beast", target.Predicate.Subtypes)
+	if !slices.Contains(target.Selection.Val.SubtypesAny, types.Sub("Beast")) {
+		t.Fatalf("subtypes = %#v, want Beast", target.Selection.Val.SubtypesAny)
 	}
-	if target.Predicate.Controller != game.ControllerYou {
-		t.Fatalf("controller = %v, want ControllerYou", target.Predicate.Controller)
+	if target.Selection.Val.Controller != game.ControllerYou {
+		t.Fatalf("controller = %v, want ControllerYou", target.Selection.Val.Controller)
 	}
-	if target.Predicate.Another {
+	if target.Selection.Val.ExcludeSource {
 		t.Fatal("another = true, want false")
 	}
 }
@@ -75,40 +75,36 @@ func TestLowerCounterPlacementSubtypeTarget(t *testing.T) {
 func TestLowerCounterPlacementSubtypeAsNounTarget(t *testing.T) {
 	t.Parallel()
 	target := spellCounterTarget(t, "Put a +1/+1 counter on target Soldier you control.")
-	if !slices.Contains(target.Predicate.Subtypes, types.Sub("Soldier")) {
-		t.Fatalf("subtypes = %#v, want Soldier", target.Predicate.Subtypes)
+	if !slices.Contains(target.Selection.Val.SubtypesAny, types.Sub("Soldier")) {
+		t.Fatalf("subtypes = %#v, want Soldier", target.Selection.Val.SubtypesAny)
 	}
-	if target.Predicate.Controller != game.ControllerYou {
-		t.Fatalf("controller = %v, want ControllerYou", target.Predicate.Controller)
+	if target.Selection.Val.Controller != game.ControllerYou {
+		t.Fatalf("controller = %v, want ControllerYou", target.Selection.Val.Controller)
 	}
 }
 
 func TestLowerCounterPlacementAnotherTargetExcludesSelf(t *testing.T) {
 	t.Parallel()
 	target := spellCounterTarget(t, "Put a +1/+1 counter on another target creature.")
-	if !target.Predicate.Another {
+	if !target.Selection.Val.ExcludeSource {
 		t.Fatal("another = false, want true (must exclude source)")
 	}
-	if !slices.Contains(target.Predicate.PermanentTypes, types.Creature) {
-		t.Fatalf("permanent types = %#v, want Creature", target.Predicate.PermanentTypes)
-	}
-	// The "another" exclusion must flow through to the runtime selection.
-	if !target.Predicate.Selection().ExcludeSource {
-		t.Fatal("selection.ExcludeSource = false, want true")
+	if !slices.Contains(target.Selection.Val.RequiredTypesAny, types.Creature) {
+		t.Fatalf("permanent types = %#v, want Creature", target.Selection.Val.RequiredTypesAny)
 	}
 }
 
 func TestLowerCounterPlacementAnotherSubtypeTarget(t *testing.T) {
 	t.Parallel()
 	target := spellCounterTarget(t, "Put a +1/+1 counter on another target Soldier you control.")
-	if !target.Predicate.Another {
+	if !target.Selection.Val.ExcludeSource {
 		t.Fatal("another = false, want true")
 	}
-	if !slices.Contains(target.Predicate.Subtypes, types.Sub("Soldier")) {
-		t.Fatalf("subtypes = %#v, want Soldier", target.Predicate.Subtypes)
+	if !slices.Contains(target.Selection.Val.SubtypesAny, types.Sub("Soldier")) {
+		t.Fatalf("subtypes = %#v, want Soldier", target.Selection.Val.SubtypesAny)
 	}
-	if target.Predicate.Controller != game.ControllerYou {
-		t.Fatalf("controller = %v, want ControllerYou", target.Predicate.Controller)
+	if target.Selection.Val.Controller != game.ControllerYou {
+		t.Fatalf("controller = %v, want ControllerYou", target.Selection.Val.Controller)
 	}
 }
 
@@ -244,10 +240,10 @@ func TestLowerCounterPlacementKeywordCounterGroupRecipient(t *testing.T) {
 func TestLowerCounterPlacementControllerWithoutKeywordTarget(t *testing.T) {
 	t.Parallel()
 	target := spellCounterTarget(t, "Put a +1/+1 counter on target creature you control without flying.")
-	if target.Predicate.Controller != game.ControllerYou {
-		t.Fatalf("controller = %v, want ControllerYou", target.Predicate.Controller)
+	if target.Selection.Val.Controller != game.ControllerYou {
+		t.Fatalf("controller = %v, want ControllerYou", target.Selection.Val.Controller)
 	}
-	if target.Predicate.ExcludedKeyword != game.Flying {
-		t.Fatalf("excluded keyword = %v, want flying", target.Predicate.ExcludedKeyword)
+	if target.Selection.Val.ExcludedKeyword != game.Flying {
+		t.Fatalf("excluded keyword = %v, want flying", target.Selection.Val.ExcludedKeyword)
 	}
 }

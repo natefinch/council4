@@ -611,7 +611,7 @@ func lowerTargetOpponentHandMana(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	target, ok := playerTargetSpec(ctx.content.Targets[0])
-	if !ok || target.Predicate.Player != game.PlayerOpponent {
+	if !ok || !target.Selection.Exists || target.Selection.Val.Player != game.PlayerOpponent {
 		return game.AbilityContent{}, false
 	}
 	player := game.TargetPlayerReference(0)

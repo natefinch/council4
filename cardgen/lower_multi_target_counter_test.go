@@ -114,14 +114,14 @@ func TestLowerMultiTargetCounterPlacementOtherYouControl(t *testing.T) {
 	})
 	mode := face.TriggeredAbilities[0].Content.Modes[0]
 	spec := mode.Targets[0]
-	if !spec.Predicate.Another {
+	if !spec.Selection.Val.ExcludeSource {
 		t.Fatal("predicate Another = false, want true for \"other\"")
 	}
-	if spec.Predicate.Controller != game.ControllerYou {
-		t.Fatalf("controller = %v, want you", spec.Predicate.Controller)
+	if spec.Selection.Val.Controller != game.ControllerYou {
+		t.Fatalf("controller = %v, want you", spec.Selection.Val.Controller)
 	}
-	if len(spec.Predicate.PermanentTypes) != 1 || spec.Predicate.PermanentTypes[0] != types.Creature {
-		t.Fatalf("permanent types = %#v, want [creature]", spec.Predicate.PermanentTypes)
+	if len(spec.Selection.Val.RequiredTypesAny) != 1 || spec.Selection.Val.RequiredTypesAny[0] != types.Creature {
+		t.Fatalf("permanent types = %#v, want [creature]", spec.Selection.Val.RequiredTypesAny)
 	}
 }
 

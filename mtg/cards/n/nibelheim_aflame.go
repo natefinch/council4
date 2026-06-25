@@ -51,12 +51,12 @@ var NibelheimAflame = &game.CardDef{
 					MaxTargets: 1,
 					Constraint: "creature you control",
 					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						PermanentTypes: []types.Card{
+					Selection: opt.Val(game.Selection{
+						RequiredTypesAny: []types.Card{
 							types.Creature,
 						},
 						Controller: game.ControllerYou,
-					},
+					}),
 				},
 			},
 			Sequence: []game.Instruction{

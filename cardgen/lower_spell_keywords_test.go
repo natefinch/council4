@@ -474,8 +474,8 @@ func TestLowerTargetFearGrantSpell(t *testing.T) {
 			if len(mode.Targets) != 1 {
 				t.Fatalf("targets = %d, want 1", len(mode.Targets))
 			}
-			if !reflect.DeepEqual(mode.Targets[0].Predicate.Supertypes, tc.wantSupertypes) {
-				t.Fatalf("target supertypes = %v, want %v", mode.Targets[0].Predicate.Supertypes, tc.wantSupertypes)
+			if !reflect.DeepEqual(mode.Targets[0].Selection.Val.Supertypes, tc.wantSupertypes) {
+				t.Fatalf("target supertypes = %v, want %v", mode.Targets[0].Selection.Val.Supertypes, tc.wantSupertypes)
 			}
 			apply, ok := mode.Sequence[0].Primitive.(game.ApplyContinuous)
 			if !ok {
@@ -523,8 +523,8 @@ func TestLowerTargetIntimidateGrantSpell(t *testing.T) {
 			if len(mode.Targets) != 1 {
 				t.Fatalf("targets = %d, want 1", len(mode.Targets))
 			}
-			if !reflect.DeepEqual(mode.Targets[0].Predicate.Supertypes, tc.wantSupertypes) {
-				t.Fatalf("target supertypes = %v, want %v", mode.Targets[0].Predicate.Supertypes, tc.wantSupertypes)
+			if !reflect.DeepEqual(mode.Targets[0].Selection.Val.Supertypes, tc.wantSupertypes) {
+				t.Fatalf("target supertypes = %v, want %v", mode.Targets[0].Selection.Val.Supertypes, tc.wantSupertypes)
 			}
 			apply, ok := mode.Sequence[0].Primitive.(game.ApplyContinuous)
 			if !ok {

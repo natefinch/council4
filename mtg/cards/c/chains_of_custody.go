@@ -39,10 +39,10 @@ func newChainsOfCustody() *game.CardDef {
 					MaxTargets: 1,
 					Constraint: "creature you control",
 					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						PermanentTypes: []types.Card{types.Creature},
-						Controller:     game.ControllerYou,
-					},
+					Selection: opt.Val(game.Selection{
+						RequiredTypesAny: []types.Card{types.Creature},
+						Controller:       game.ControllerYou,
+					}),
 				}),
 				game.StaticAbility{
 					ContinuousEffects: []game.ContinuousEffect{
@@ -72,10 +72,10 @@ func newChainsOfCustody() *game.CardDef {
 								MaxTargets: 1,
 								Constraint: "target nonland permanent an opponent controls",
 								Allow:      game.TargetAllowPermanent,
-								Predicate: game.TargetPredicate{
+								Selection: opt.Val(game.Selection{
 									ExcludedTypes: []types.Card{types.Land},
 									Controller:    game.ControllerOpponent,
-								},
+								}),
 							},
 						},
 						Sequence: []game.Instruction{

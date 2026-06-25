@@ -162,12 +162,12 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 		if !ok {
 			return game.TriggerPattern{}, false
 		}
-		predicate, ok := selectionTargetPredicate(targetSelection)
+		spellSelection, ok := spellTargetSelection(targetSelection)
 		if !ok {
 			return game.TriggerPattern{}, false
 		}
 		result.SpellTargetAllow = game.TargetAllowPermanent
-		result.SpellTargetPattern = opt.Val(predicate)
+		result.SpellTargetPattern = opt.Val(spellSelection)
 	}
 	if castDuringTurn != game.TriggerTurnAny && event != game.EventSpellCast {
 		return game.TriggerPattern{}, false
@@ -626,12 +626,13 @@ func triggerSelectionSelector(selection compiler.TriggerSelection) (compiler.Com
 	return selector, SelectionMask{}.Rejecting(DimRequiredName), true
 }
 
-// selectionTargetPredicate converts a lowered Selection into the equivalent
-// TargetPredicate used by a spell-cast trigger's SpellTargetPattern. It is the
-// inverse of TargetPredicate.Selection() and fails closed on Selection features
-// that a TargetPredicate cannot express, so unsupported target relations remain
-// unsupported rather than silently dropping a filter.
-func selectionTargetPredicate(selection game.Selection) (game.TargetPredicate, bool) {
+// spellTargetSelection projects a lowered trigger Selection onto the canonical
+// permanent/card Selection used by a spell-cast trigger's SpellTargetPattern. It
+// fails closed on Selection features the original TargetPredicate-backed pattern
+// could not express, so unsupported target relations remain unsupported rather
+// than silently widening trigger coverage. The projection drops the same fields
+// the former predicate round-trip discarded, preserving byte-for-byte behavior.
+func spellTargetSelection(selection game.Selection) (game.Selection, bool) {
 	if len(selection.AnyOf) > 0 ||
 		selection.ExcludedSubtype != "" ||
 		selection.Colorless ||
@@ -645,14 +646,16 @@ func selectionTargetPredicate(selection game.Selection) (game.TargetPredicate, b
 		selection.EnteredThisTurn ||
 		selection.SubtypeChoice != game.SubtypeChoiceNone ||
 		selection.ColorChoice != game.ColorChoiceNone {
-		return game.TargetPredicate{}, false
+		return game.Selection{}, false
 	}
-	predicate := game.TargetPredicate{
+	return game.Selection{
+		RequiredTypes:     selection.RequiredTypes,
+		RequiredTypesAny:  selection.RequiredTypesAny,
 		ExcludedTypes:     selection.ExcludedTypes,
 		Supertypes:        selection.Supertypes,
 		ExcludedSupertype: selection.ExcludedSupertype,
-		Subtypes:          selection.SubtypesAny,
-		Colors:            selection.ColorsAny,
+		SubtypesAny:       selection.SubtypesAny,
+		ColorsAny:         selection.ColorsAny,
 		ExcludedColors:    selection.ExcludedColors,
 		Controller:        selection.Controller,
 		Player:            selection.Player,
@@ -663,15 +666,8 @@ func selectionTargetPredicate(selection game.Selection) (game.TargetPredicate, b
 		ManaValue:         selection.ManaValue,
 		Power:             selection.Power,
 		Toughness:         selection.Toughness,
-		Another:           selection.ExcludeSource,
-	}
-	if len(selection.RequiredTypes) > 0 {
-		predicate.PermanentTypes = selection.RequiredTypes
-		predicate.PermanentTypesConjunctive = true
-	} else {
-		predicate.PermanentTypes = selection.RequiredTypesAny
-	}
-	return predicate, true
+		ExcludeSource:     selection.ExcludeSource,
+	}, true
 }
 
 func lowerTriggerSelectionController(controller compiler.ControllerKind) (game.ControllerRelation, bool) {

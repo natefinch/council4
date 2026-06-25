@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, ability *game.TriggeredAbility, chosenModes []int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
@@ -674,7 +675,7 @@ func spellTargetsSource(g *game.Game, source *game.Permanent, event game.Event) 
 	return false
 }
 
-func spellTargetsPattern(g *game.Game, controller game.PlayerID, allow game.TargetAllow, predicate game.TargetPredicate, event game.Event) bool {
+func spellTargetsPattern(g *game.Game, controller game.PlayerID, allow game.TargetAllow, selection game.Selection, event game.Event) bool {
 	if event.Kind != game.EventSpellCast {
 		return false
 	}
@@ -684,7 +685,7 @@ func spellTargetsPattern(g *game.Game, controller game.PlayerID, allow game.Targ
 	}
 	spec := game.TargetSpec{
 		Allow:     allow,
-		Predicate: predicate,
+		Selection: opt.Val(selection),
 	}
 	for _, target := range obj.Targets {
 		if targetMatchesSpec(g, controller, 0, &spec, target) {

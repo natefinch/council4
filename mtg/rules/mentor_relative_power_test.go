@@ -41,7 +41,7 @@ func TestMentorTargetRequiresLesserPowerThanSource(t *testing.T) {
 		MinTargets: 1,
 		MaxTargets: 1,
 		Allow:      game.TargetAllowPermanent,
-		Predicate:  game.TargetPredicate{PermanentTypes: []types.Card{types.Creature}, PowerLessThanSource: true},
+		Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}, PowerLessThanSource: true}),
 	}
 
 	if !permanentTargetMatchesSpec(g, game.Player1, mentor.ObjectID, &spec, weaker.ObjectID) {
@@ -58,7 +58,7 @@ func TestMentorTargetRequiresLesserPowerThanSource(t *testing.T) {
 		MinTargets: 1,
 		MaxTargets: 1,
 		Allow:      game.TargetAllowPermanent,
-		Predicate:  game.TargetPredicate{PermanentTypes: []types.Card{types.Creature}, PowerGreaterThanSource: true},
+		Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}, PowerGreaterThanSource: true}),
 	}
 
 	if !permanentTargetMatchesSpec(g, game.Player1, mentor.ObjectID, &greaterSpec, stronger.ObjectID) {

@@ -655,19 +655,19 @@ func opponentChosenTargetAbilitySource() *game.CardDef {
 						MinTargets: 1,
 						MaxTargets: 1,
 						Allow:      game.TargetAllowPermanent,
-						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Controller:     game.ControllerYou,
-						},
+						Selection: opt.Val(game.Selection{
+							RequiredTypesAny: []types.Card{types.Creature},
+							Controller:       game.ControllerYou,
+						}),
 					},
 					{
 						MinTargets: 1,
 						MaxTargets: 1,
 						Allow:      game.TargetAllowPermanent,
-						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Controller:     game.ControllerYou,
-						},
+						Selection: opt.Val(game.Selection{
+							RequiredTypesAny: []types.Card{types.Creature},
+							Controller:       game.ControllerYou,
+						}),
 						Chooser: game.TargetChooserOpponent,
 					},
 				},
@@ -710,13 +710,13 @@ func TestDistinctFromPriorTargetsExcludesSharedObject(t *testing.T) {
 			MinTargets: 1,
 			MaxTargets: 1,
 			Allow:      game.TargetAllowPermanent,
-			Predicate:  game.TargetPredicate{PermanentTypes: []types.Card{types.Creature}},
+			Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
 		},
 		{
 			MinTargets:               1,
 			MaxTargets:               1,
 			Allow:                    game.TargetAllowPermanent,
-			Predicate:                game.TargetPredicate{PermanentTypes: []types.Card{types.Creature}},
+			Selection:                opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
 			DistinctFromPriorTargets: true,
 		},
 	})

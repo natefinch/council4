@@ -758,7 +758,7 @@ func enchantTargetSpec(target compiler.CompiledEnchantTarget) (game.TargetSpec, 
 		return spec, true
 	case target.Opponent:
 		spec.Allow = game.TargetAllowPlayer
-		spec.Predicate.Player = game.PlayerOpponent
+		spec.Selection = opt.Val(game.Selection{Player: game.PlayerOpponent})
 		spec.Constraint = "opponent"
 		return spec, true
 	case target.Permanent:
@@ -770,16 +770,18 @@ func enchantTargetSpec(target compiler.CompiledEnchantTarget) (game.TargetSpec, 
 	switch {
 	case len(target.Subtypes) == 0:
 		spec.Constraint = enchantConstraintText(target)
-		spec.Predicate.PermanentTypes = slices.Clone(target.CardTypes)
+		selection := game.Selection{RequiredTypesAny: slices.Clone(target.CardTypes)}
 		if target.YouControl {
-			spec.Predicate.Controller = game.ControllerYou
+			selection.Controller = game.ControllerYou
 		}
+		spec.Selection = opt.Val(selection)
 	case len(target.CardTypes) == 0:
 		spec.Constraint = enchantConstraintText(target)
-		spec.Predicate.Subtypes = slices.Clone(target.Subtypes)
+		selection := game.Selection{SubtypesAny: slices.Clone(target.Subtypes)}
 		if target.YouControl {
-			spec.Predicate.Controller = game.ControllerYou
+			selection.Controller = game.ControllerYou
 		}
+		spec.Selection = opt.Val(selection)
 	default:
 		// A union mixing card types and subtypes ("creature or Vehicle") is a
 		// disjunction across two characteristic families, which a single
