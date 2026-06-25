@@ -247,6 +247,7 @@ func TestGenerateDreadReturnFlashbackSource(t *testing.T) {
 	for _, want := range []string{
 		"game.SimpleKeyword{Kind: game.Flashback}",
 		`Label: "Flashback"`,
+		"Mechanic: cost.AlternativeMechanicFlashback,",
 		"AdditionalCosts: []cost.Additional{",
 		"Kind:               cost.AdditionalSacrifice,",
 		"PermanentType:      types.Creature,",

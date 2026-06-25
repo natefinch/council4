@@ -188,7 +188,37 @@ type Alternative struct {
 	ManaCost        opt.V[Mana]
 	AdditionalCosts []Additional
 	Condition       AlternativeCondition
+	// Mechanic identifies the rules mechanic this alternative grants, so the
+	// rules layer decides Flashback/Escape/Evoke behavior from typed data
+	// rather than the display Label. AlternativeMechanicNone leaves the
+	// alternative's behavior fully described by its mana cost, additional
+	// costs, and condition.
+	Mechanic AlternativeMechanic
 }
+
+// AlternativeMechanic identifies the named rules mechanic an alternative cost
+// grants. It lets the rules layer recognize graveyard-cast permissions and
+// resolution riders (Flashback exile, Escape recast, Evoke sacrifice) from
+// typed data instead of comparing the display Label.
+type AlternativeMechanic uint8
+
+// Supported alternative-cost mechanics.
+const (
+	// AlternativeMechanicNone marks an ordinary alternative cost (pitch,
+	// discard, Spectacle, commander-free, Overload) whose behavior is fully
+	// described by its costs and condition.
+	AlternativeMechanicNone AlternativeMechanic = iota
+	// AlternativeMechanicFlashback marks the Flashback graveyard cast
+	// (CR 702.34) and the Jump-start cast (CR 702.134), which both grant the
+	// graveyard Flashback permission and exile the spell on resolution.
+	AlternativeMechanicFlashback
+	// AlternativeMechanicEscape marks the Escape graveyard cast (CR 702.139),
+	// which grants the graveyard Escape permission and does not exile the spell.
+	AlternativeMechanicEscape
+	// AlternativeMechanicEvoke marks the Evoke cast (CR 702.74), which lets the
+	// resulting permanent be sacrificed by its evoke-sacrifice trigger.
+	AlternativeMechanicEvoke
+)
 
 // AlternativeCondition identifies a condition that must be true to select an
 // alternative cost.

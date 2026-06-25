@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func TestParseCommanderControlledAlternativeSpellCost(t *testing.T) {
@@ -217,15 +218,40 @@ func TestParsePitchAlternativeSpellCost(t *testing.T) {
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
-			alternative := document.Abilities[0].AlternativeCost
+			ability := document.Abilities[0]
+			alternative := ability.AlternativeCost
 			if alternative == nil || alternative.Kind != SpellAlternativeCostPitch {
 				t.Fatalf("alternative cost = %#v, want pitch", alternative)
 			}
-			if alternative.PitchColor != test.wantColor ||
-				alternative.PitchCount != test.wantCount ||
-				alternative.PitchLife != test.wantLife ||
-				alternative.Condition != test.wantCondition {
-				t.Fatalf("pitch cost = %#v", alternative)
+			if alternative.Condition != test.wantCondition {
+				t.Fatalf("pitch condition = %v, want %v", alternative.Condition, test.wantCondition)
+			}
+			if ability.CostSyntax == nil {
+				t.Fatal("pitch cost syntax = nil, want components")
+			}
+			var gotLife int
+			var exile *CostComponent
+			for i := range ability.CostSyntax.Components {
+				component := &ability.CostSyntax.Components[i]
+				switch component.Kind {
+				case CostComponentPayLife:
+					gotLife = component.AmountValue
+				case CostComponentExile:
+					exile = component
+				default:
+				}
+			}
+			if gotLife != test.wantLife {
+				t.Fatalf("pitch life = %d, want %d", gotLife, test.wantLife)
+			}
+			if exile == nil {
+				t.Fatalf("pitch cost syntax = %#v, want exile component", ability.CostSyntax)
+			}
+			if exile.ObjectColor != test.wantColor ||
+				!exile.ObjectColorKnown ||
+				exile.AmountValue != test.wantCount ||
+				exile.SourceZone != zone.Hand {
+				t.Fatalf("pitch exile component = %#v", exile)
 			}
 		})
 	}

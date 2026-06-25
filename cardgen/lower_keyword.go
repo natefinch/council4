@@ -1286,6 +1286,7 @@ func lowerEvokeAbility(
 		triggeredAbility: opt.Val(game.EvokeSacrificeTriggeredAbility()),
 		alternativeCosts: []cost.Alternative{{
 			Label:    "Evoke",
+			Mechanic: cost.AlternativeMechanicEvoke,
 			ManaCost: opt.Val(manaCost),
 		}},
 		consumed:    semanticConsumption{keywords: 1},

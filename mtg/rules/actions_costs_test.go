@@ -925,6 +925,109 @@ func TestPaymentChoiceSelectsAlternativeCostWithAdditionalCost(t *testing.T) {
 	}
 }
 
+// TestPitchAlternativeCostPaysLifeAndExilesColoredCard locks in the Force of
+// Will pitch payment: choosing the alternative pays 1 life and exiles a blue
+// card from hand rather than the normal mana cost. The pitch cost now flows
+// through the shared cost components, so this guards behavior parity with the
+// former bespoke pitch path.
+func TestPitchAlternativeCostPaysLifeAndExilesColoredCard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	normalCost := cost.Mana{cost.O(3), cost.U, cost.U}
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Force of Will",
+		ManaCost: opt.Val(normalCost),
+		Types:    []types.Card{types.Instant},
+		AlternativeCosts: []cost.Alternative{
+			{
+				Label: "Exile a blue card",
+				AdditionalCosts: []cost.Additional{
+					{Kind: cost.AdditionalPayLife, Amount: 1},
+					{Kind: cost.AdditionalExile, Source: zone.Hand, Amount: 1, MatchCardColor: true, CardColor: color.Blue},
+				},
+			},
+		},
+		SpellAbility: opt.Val(game.AbilityContent{})},
+	})
+	pitchCard := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:   "Blue Pitch",
+		Colors: []color.Color{color.Blue},
+		Types:  []types.Card{types.Instant},
+	}})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	startingLife := g.Players[game.Player1].Life
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}}}
+
+	if !engine.applyActionWithChoices(g, game.Player1, action.CastSpell(spellID, nil, 0, nil), agents, &TurnLog{}) {
+		t.Fatal("applyActionWithChoices(cast with pitch alternative cost) = false, want true")
+	}
+	if got := g.Players[game.Player1].Life; got != startingLife-1 {
+		t.Fatalf("life = %d, want %d (pay 1 life)", got, startingLife-1)
+	}
+	if !g.Players[game.Player1].Exile.Contains(pitchCard) {
+		t.Fatal("blue pitch card was not exiled from hand")
+	}
+	if g.Players[game.Player1].Hand.Contains(pitchCard) {
+		t.Fatal("blue pitch card remained in hand after being pitched")
+	}
+	if obj, ok := g.Stack.Peek(); !ok || obj.SourceID != spellID {
+		t.Fatalf("stack top = %+v, want pitched spell", obj)
+	}
+}
+
+// TestDiscardAlternativeCostDiscardsFilteredCards locks in the Foil discard
+// payment: choosing the alternative discards a subtype-filtered card plus
+// another card from hand rather than the normal mana cost. The discard cost now
+// flows through the shared cost components, guarding parity with the former
+// bespoke discard path.
+func TestDiscardAlternativeCostDiscardsFilteredCards(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	islandCard := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Island",
+		Types:    []types.Card{types.Land},
+		Subtypes: []types.Sub{types.Island},
+	}})
+	otherCard := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Spare",
+		Types: []types.Card{types.Instant},
+	}})
+	normalCost := cost.Mana{cost.O(2), cost.U, cost.U}
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Foil",
+		ManaCost: opt.Val(normalCost),
+		Types:    []types.Card{types.Instant},
+		AlternativeCosts: []cost.Alternative{
+			{
+				Label: "Discard an Island card and another card",
+				AdditionalCosts: []cost.Additional{
+					{Kind: cost.AdditionalDiscard, Source: zone.Hand, Amount: 1, SubtypesAny: cost.SubtypeSet{types.Island}},
+					{Kind: cost.AdditionalDiscard, Source: zone.Hand, Amount: 1},
+				},
+			},
+		},
+		SpellAbility: opt.Val(game.AbilityContent{})},
+	})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}}}
+
+	if !engine.applyActionWithChoices(g, game.Player1, action.CastSpell(spellID, nil, 0, nil), agents, &TurnLog{}) {
+		t.Fatal("applyActionWithChoices(cast with discard alternative cost) = false, want true")
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(islandCard) {
+		t.Fatal("filtered Island card was not discarded")
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(otherCard) {
+		t.Fatal("second card was not discarded")
+	}
+	if g.Players[game.Player1].Hand.Contains(islandCard) || g.Players[game.Player1].Hand.Contains(otherCard) {
+		t.Fatal("a discarded card remained in hand")
+	}
+	if obj, ok := g.Stack.Peek(); !ok || obj.SourceID != spellID {
+		t.Fatalf("stack top = %+v, want discard-cast spell", obj)
+	}
+}
+
 func TestCommanderControlledAlternativeCostNormalAndFreeChoices(t *testing.T) {
 	for _, test := range []struct {
 		name       string
@@ -1100,7 +1203,8 @@ func TestCommanderControlledAlternativeCostDoesNotReplaceForcedFlashback(t *test
 	engine := NewEngine(nil)
 	spell := commanderAlternativeTestSpell(nil)
 	spell.AlternativeCosts = append(spell.AlternativeCosts, cost.Alternative{
-		Label:    flashbackAlternativeLabel,
+		Label:    "Flashback",
+		Mechanic: cost.AlternativeMechanicFlashback,
 		ManaCost: opt.Val(cost.Mana{cost.G}),
 	})
 	spell.StaticAbilities = []game.StaticAbility{{
@@ -1164,7 +1268,8 @@ func TestGraveyardCastSelectsIndependentOrFlashbackPermission(t *testing.T) {
 			engine := NewEngine(nil)
 			spell := commanderAlternativeTestSpell(nil)
 			spell.AlternativeCosts = append(spell.AlternativeCosts, cost.Alternative{
-				Label:    flashbackAlternativeLabel,
+				Label:    "Flashback",
+				Mechanic: cost.AlternativeMechanicFlashback,
 				ManaCost: opt.Val(cost.Mana{cost.G}),
 			})
 			spell.StaticAbilities = []game.StaticAbility{{
@@ -1235,6 +1340,60 @@ func TestCommanderControlledAlternativeCostFromExile(t *testing.T) {
 	if !engine.applyAction(g, game.Player1, act) {
 		t.Fatal("free cast from exile failed")
 	}
+}
+
+func TestFlashbackAlternativeRecognizedByMechanicNotLabel(t *testing.T) {
+	// A flashback alternative whose display Label is unrelated to "Flashback"
+	// must still grant the graveyard flashback cast, and a look-alike Label of
+	// "Flashback" with no mechanic must not. Behavior keys off Mechanic only.
+	makeSpell := func(label string, mechanic cost.AlternativeMechanic) *game.CardDef {
+		spell := commanderAlternativeTestSpell(nil)
+		spell.AlternativeCosts = []cost.Alternative{{
+			Label:    label,
+			Mechanic: mechanic,
+			ManaCost: opt.Val(cost.Mana{cost.G}),
+		}}
+		spell.StaticAbilities = []game.StaticAbility{{
+			KeywordAbilities: game.SimpleKeywords(game.Flashback),
+		}}
+		return spell
+	}
+
+	t.Run("non-flashback label with flashback mechanic casts from graveyard", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		spellID := addCardToHand(g, game.Player1, makeSpell("Bargain", cost.AlternativeMechanicFlashback))
+		g.Players[game.Player1].Hand.Remove(spellID)
+		g.Players[game.Player1].Graveyard.Add(spellID)
+		forest := addBasicLandPermanent(g, game.Player1, types.Forest)
+		g.Turn.Phase = game.PhasePrecombatMain
+		g.Turn.Step = game.StepNone
+		act := action.CastSpellFromZone(spellID, zone.Graveyard, nil, 0, nil)
+		if !engine.applyAction(g, game.Player1, act) {
+			t.Fatal("flashback cast keyed off mechanic failed")
+		}
+		if !forest.Tapped {
+			t.Fatal("flashback mana cost was not paid")
+		}
+		if obj, ok := g.Stack.Peek(); !ok || !obj.Flashback {
+			t.Fatalf("stack object = %+v, want flashback cast", obj)
+		}
+	})
+
+	t.Run("flashback label without mechanic is not a flashback alternative", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		spellID := addCardToHand(g, game.Player1, makeSpell("Flashback", cost.AlternativeMechanicNone))
+		g.Players[game.Player1].Hand.Remove(spellID)
+		g.Players[game.Player1].Graveyard.Add(spellID)
+		addBasicLandPermanent(g, game.Player1, types.Forest)
+		g.Turn.Phase = game.PhasePrecombatMain
+		g.Turn.Step = game.StepNone
+		act := action.CastSpellFromZone(spellID, zone.Graveyard, nil, 0, nil)
+		if containsAction(engine.legalActions(g, game.Player1), act) {
+			t.Fatal("display label alone granted a graveyard flashback cast")
+		}
+	})
 }
 
 func commanderAlternativeTestSpell(additional []cost.Additional) *game.CardDef {

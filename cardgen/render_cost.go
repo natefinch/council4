@@ -339,6 +339,17 @@ func (r Renderer) renderAlternativeCosts(ctx *renderCtx, alternatives []cost.Alt
 		default:
 			return "", fmt.Errorf("render: unsupported alternative-cost condition %d", alternative.Condition)
 		}
+		switch alternative.Mechanic {
+		case cost.AlternativeMechanicNone:
+		case cost.AlternativeMechanicFlashback:
+			fields = append(fields, "Mechanic: cost.AlternativeMechanicFlashback,")
+		case cost.AlternativeMechanicEscape:
+			fields = append(fields, "Mechanic: cost.AlternativeMechanicEscape,")
+		case cost.AlternativeMechanicEvoke:
+			fields = append(fields, "Mechanic: cost.AlternativeMechanicEvoke,")
+		default:
+			return "", fmt.Errorf("render: unsupported alternative-cost mechanic %d", alternative.Mechanic)
+		}
 		elements = append(elements, structLit("cost.Alternative", fields)+",")
 	}
 	return sliceLit("cost.Alternative", elements), nil

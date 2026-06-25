@@ -29,7 +29,8 @@ var NibelheimAflame = &game.CardDef{
 		}),
 		AlternativeCosts: []cost.Alternative{
 			{
-				Label: "Flashback",
+				Label:    "Flashback",
+				Mechanic: cost.AlternativeMechanicFlashback,
 				ManaCost: opt.Val(cost.Mana{
 					cost.O(5),
 					cost.R,
