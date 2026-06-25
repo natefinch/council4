@@ -117,6 +117,8 @@ func lowerStaticDeclarations(
 				ok = appendStaticOpeningHandPlayDeclaration(&body, declaration)
 			case compiler.StaticDeclarationOpponentEnteringTriggerSuppression:
 				ok = appendStaticOpponentEnteringTriggerSuppressionDeclaration(&body, declaration)
+			case compiler.StaticDeclarationCreatureAttackTax:
+				ok = appendStaticCreatureAttackTaxDeclaration(&body, declaration)
 			default:
 				ok = false
 			}
@@ -348,6 +350,9 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.OpponentEnteringSuppression != nil {
 		payloads++
 	}
+	if declaration.CreatureAttackTax != nil {
+		payloads++
+	}
 	if payloads != 1 {
 		return false
 	}
@@ -390,6 +395,8 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 		return declaration.OpeningHandPlay != nil
 	case compiler.StaticDeclarationOpponentEnteringTriggerSuppression:
 		return declaration.OpponentEnteringSuppression != nil
+	case compiler.StaticDeclarationCreatureAttackTax:
+		return declaration.CreatureAttackTax != nil
 	default:
 		return false
 	}
@@ -1314,6 +1321,44 @@ func appendStaticOpponentEnteringTriggerSuppressionDeclaration(body *game.Static
 	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
 		Kind: game.RuleEffectSuppressOpponentEnteringTriggers,
 	})
+	return true
+}
+
+// appendStaticCreatureAttackTaxDeclaration lowers a per-creature attack tax
+// ("Creatures can't attack you[ or planeswalkers you control] unless their
+// controller pays {COST} for each ...", Baird, Archon of Absolution, Sphere of
+// Safety, Collective Restraint) into a controller-scoped per-creature attack-tax
+// rule effect. The runtime charges each creature attacking the controller (and,
+// when planeswalkers are included, a planeswalker they control) a per-attacker
+// amount: a fixed generic value, the controller's enchantment count (named by
+// CardSelection), or the controller's domain.
+func appendStaticCreatureAttackTaxDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	tax := declaration.CreatureAttackTax
+	if tax == nil {
+		return false
+	}
+	effect := game.RuleEffect{
+		Kind:                           game.RuleEffectAttackTaxPerCreature,
+		AffectedPlayer:                 game.PlayerYou,
+		AttackTaxIncludesPlaneswalkers: tax.IncludePlaneswalkers,
+	}
+	switch tax.Amount {
+	case compiler.StaticCreatureAttackTaxFixed:
+		if tax.FixedGeneric <= 0 {
+			return false
+		}
+		effect.AttackTaxGeneric = tax.FixedGeneric
+	case compiler.StaticCreatureAttackTaxEnchantments:
+		effect.CardSelection = game.Selection{
+			RequiredTypes: []types.Card{types.Enchantment},
+			Controller:    game.ControllerYou,
+		}
+	case compiler.StaticCreatureAttackTaxDomain:
+		effect.AttackTaxScaledAmount = game.AggregateControllerBasicLandTypeCount
+	default:
+		return false
+	}
+	body.RuleEffects = append(body.RuleEffects, effect)
 	return true
 }
 

@@ -1473,6 +1473,17 @@ func exactGainGrantedAbilityEffectSyntax(effect *EffectSyntax) bool {
 	return strings.EqualFold(exactEffectClauseText(effect), expected)
 }
 
+// cardsNamedSelfInGraveyardsAmount reports whether amount is a self-named
+// graveyard count ("for each card named <this card> in [each|your] graveyard"),
+// across either every graveyard or only the controller's. The count is
+// self-contained per clause (it reads the source card's own name at resolution,
+// not a shared X), so an elided-subject clause carrying it reconstructs
+// faithfully in isolation.
+func cardsNamedSelfInGraveyardsAmount(amount EffectAmountSyntax) bool {
+	return amount.DynamicKind == EffectDynamicAmountCardsNamedSelfInGraveyards ||
+		amount.DynamicKind == EffectDynamicAmountCardsNamedSelfInControllerGraveyard
+}
+
 func exactLifeEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVerb string) bool {
 	var prefixes []string
 	switch effect.Context {
@@ -1490,17 +1501,22 @@ func exactLifeEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVerb str
 		if len(effect.Targets) == 1 && effect.Targets[0].Exact {
 			prefixes = []string{titleFirstEffectText(effect.Targets[0].Text) + " " + subjectVerb}
 		} else if effect.Context == EffectContextPriorSubject && len(effect.Targets) == 0 &&
-			effect.Amount.DynamicForm == EffectDynamicAmountFormNone {
+			(effect.Amount.DynamicForm == EffectDynamicAmountFormNone ||
+				cardsNamedSelfInGraveyardsAmount(effect.Amount)) {
 			// The subject is elided: it is inherited from the prior effect in a
 			// compound sentence ("Target player draws two cards and loses 2
 			// life"). The clause reconstructs from the bare third-person verb,
 			// matching how exactDamageEffectSyntax handles a prior-subject
 			// damage clause with no own subject tokens. Restricted to a
-			// self-contained amount (a fixed value or the spell's cost X): a
-			// trailing "where X is ..." amount form defines a single X shared by
-			// every effect in the sentence, but the parser binds that clause to
-			// only one effect, so reconstructing the elided-subject clause in
-			// isolation would not faithfully model the shared amount.
+			// self-contained amount (a fixed value, the spell's cost X, or a
+			// self-named graveyard count): a trailing "where X is ..." amount
+			// form defines a single X shared by every effect in the sentence,
+			// but the parser binds that clause to only one effect, so
+			// reconstructing the elided-subject clause in isolation would not
+			// faithfully model the shared amount. A "for each card named <this
+			// card> in [each|your] graveyard" count, by contrast, is independent
+			// per clause ("Target player gains 4 life, then gains 4 life for each
+			// card named Life Burst in each graveyard", Life Burst).
 			prefixes = []string{subjectVerb}
 		}
 	case EffectContextEventPlayer, EffectContextReferencedPlayer:
@@ -3607,8 +3623,19 @@ func exactModifyPTEffectSyntax(effect *EffectSyntax) bool {
 	}
 	switch effect.Amount.DynamicForm {
 	case EffectDynamicAmountFormForEach:
-		return strings.EqualFold(text, fmt.Sprintf("%s gets %s/%s %s until end of turn.", subject, power, toughness, effect.Amount.Text)) ||
-			strings.EqualFold(text, fmt.Sprintf("%s gets %s/%s until end of turn %s.", subject, power, toughness, effect.Amount.Text))
+		// The "an additional" wording introduces a second, stacking pump on a
+		// creature an earlier clause already modified ("Target creature gets
+		// -1/-1 until end of turn. It gets an additional -1/-1 until end of turn
+		// for each card named Compound Fracture in your graveyard.", Compound
+		// Fracture; Growth Cycle). Mechanically it is a plain dynamic pump, so
+		// reconstruct both the bare and "an additional" verb phrasings.
+		for _, verb := range []string{"gets", "gets an additional"} {
+			if strings.EqualFold(text, fmt.Sprintf("%s %s %s/%s %s until end of turn.", subject, verb, power, toughness, effect.Amount.Text)) ||
+				strings.EqualFold(text, fmt.Sprintf("%s %s %s/%s until end of turn %s.", subject, verb, power, toughness, effect.Amount.Text)) {
+				return true
+			}
+		}
+		return false
 	case EffectDynamicAmountFormWhereX:
 		powerX := signedPTSideText(effect.PowerDelta)
 		toughnessX := signedPTSideText(effect.ToughnessDelta)

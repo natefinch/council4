@@ -1046,6 +1046,8 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		}
 	case RuleEffectAttackTax:
 		v.validateAttackTaxRuleEffect(faceName, path, effect)
+	case RuleEffectAttackTaxPerCreature:
+		v.validatePerCreatureAttackTaxRuleEffect(faceName, path, effect)
 	case RuleEffectPayLifeForColoredMana:
 		if effect.AffectedPlayer == PlayerAny {
 			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "life-for-mana payment must set affected player")
@@ -1213,6 +1215,36 @@ func (v *cardDefValidator) validateAttackTaxRuleEffect(faceName, path string, ef
 	}
 	if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
 		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "attack tax cannot affect a permanent")
+	}
+}
+
+// validatePerCreatureAttackTaxRuleEffect checks a per-creature attack tax
+// (Baird, Archon of Absolution, Sphere of Safety, Collective Restraint). The
+// protected defending player is the controller and the per-attacker amount is
+// set by exactly one source: a fixed AttackTaxGeneric, a CardSelection permanent
+// count, or an AttackTaxScaledAmount aggregate. No permanent target is allowed.
+func (v *cardDefValidator) validatePerCreatureAttackTaxRuleEffect(faceName, path string, effect *RuleEffect) {
+	if effect.AffectedPlayer != PlayerYou {
+		v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "per-creature attack tax must protect the controller")
+	}
+	sources := 0
+	if effect.AttackTaxGeneric != 0 {
+		sources++
+	}
+	if !effect.CardSelection.Empty() {
+		sources++
+	}
+	if effect.AttackTaxScaledAmount != AggregateNone {
+		sources++
+	}
+	if sources != 1 {
+		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "per-creature attack tax must set exactly one per-attacker amount source")
+	}
+	if effect.AttackTaxGeneric < 0 {
+		v.add(faceName, appendPath(path, "AttackTaxGeneric"), CardDefIssueInvalidRuleEffect, "per-creature attack tax generic amount must be non-negative")
+	}
+	if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "per-creature attack tax cannot affect a permanent")
 	}
 }
 

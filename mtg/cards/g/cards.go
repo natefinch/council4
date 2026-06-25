@@ -12,5 +12,6 @@ var Cards = []*game.CardDef{
 	GravenCairns,
 	GreaterTanuki,
 	GreenwheelLiberator,
+	GrowthCycle,
 	GuardianProject,
 }
