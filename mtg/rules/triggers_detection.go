@@ -561,9 +561,11 @@ func (*Engine) detectMadnessTriggeredAbilities(g *game.Game, events []game.Event
 // detectTriggeredAbilities scans for ordinary triggered abilities whose trigger
 // event matches one of the given events (CR 603.2: whenever a game event matches
 // a triggered ability's trigger event, that ability automatically triggers).
-// Every active battlefield permanent is checked, plus look-back-in-time sources
-// for leaves-the-battlefield, damage, and simultaneous zone-change events
-// (CR 603.10).
+// Every active battlefield permanent is checked, plus sources that may have
+// already left the battlefield: leaves-the-battlefield and simultaneous
+// zone-change triggers look back in time (CR 603.10), while damage triggers fire
+// at the moment damage is dealt even if the source or recipient has since moved
+// (CR 120.4b).
 func (*Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []pendingTriggeredAbility {
 	// Detection is a pure read that scans every permanent for each event, so a
 	// static-source frame avoids rescanning the battlefield for static-ability

@@ -10,9 +10,12 @@ import (
 // orderTriggeredAbilitiesAPNAP orders pending triggered abilities for placement
 // on the stack in APNAP order (CR 603.3b): each player, in turn order starting
 // with the active player (CR 101.4), puts the triggers they control on the stack
-// in the order they choose. Because the stack is last-in-first-out, the last
-// player's triggers resolve first. Triggers with no identifiable controller are
-// appended last.
+// in the order they choose. CR 603.3b technically describes two APNAP passes
+// (abilities that trigger on another ability triggering are placed in the second
+// pass); this engine uses a single APNAP pass, which matches the rules except
+// for the rare ability that triggers on a triggered ability being put on the
+// stack. Because the stack is last-in-first-out, the last player's triggers
+// resolve first. Triggers with no identifiable controller are appended last.
 func (e *Engine) orderTriggeredAbilitiesAPNAP(g *game.Game, triggers []pendingTriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []pendingTriggeredAbility {
 	if len(triggers) == 0 {
 		return triggers
