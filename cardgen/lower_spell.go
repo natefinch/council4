@@ -246,6 +246,9 @@ func lowerContent(
 		if diagnostic == nil {
 			return content, nil
 		}
+		if hetero, ok := lowerHeterogeneousSearch(ctx); ok {
+			return hetero, nil
+		}
 		if trailing, ok := lowerSearchThenTrailingSequence(cardName, ctx, syntax); ok {
 			return trailing, nil
 		}

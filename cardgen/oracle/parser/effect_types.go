@@ -2124,6 +2124,14 @@ type EffectSyntax struct {
 	// named target player's control rather than the searching player's. The zero
 	// value (no rider) means the found card enters under the searcher's control.
 	SearchControl SearchControlRider `json:",omitempty"`
+	// SearchSlots records the per-slot subtypes of a heterogeneous multi-slot
+	// library search whose noun phrase joins two distinct singular card slots
+	// with a plain "and" ("a Forest card and a Plains card", Krosan Verge): the
+	// controller finds one card matching each listed subtype. It is set only on
+	// the EffectSearch clause carrying that exact reconstructed conjunction and
+	// is empty for every ordinary single-filter search, including the "or"
+	// subtype union ("a Forest or Plains card") and the "and/or" inclusive form.
+	SearchSlots []types.Sub `json:",omitempty"`
 	// DiscardEntireHand marks a "discard their hand" clause ("Each player
 	// discards their hand", "Discard your hand", "Target player discards their
 	// hand"): the affected player discards every card in hand rather than a fixed

@@ -1289,6 +1289,18 @@ type SearchSpec struct {
 	// Scout, Embermage Goblin). It composes with the other filters but in
 	// practice stands alone on a plain "card named X" tutor.
 	Name string
+
+	// SlotFilters, when non-empty, makes the search find one card matching each
+	// per-slot filter in source order instead of applying the single Filter to
+	// every found card, modeling a heterogeneous multi-slot search ("a Forest
+	// card and a Plains card", Krosan Verge). Each found card enters the single
+	// shared Destination (with EntersTapped); the searching player makes one
+	// optional dependent choice per slot, finding at most one card per slot and
+	// never assigning a card to two slots. It is meaningful only when Filter is
+	// empty, the destination is a single non-split Hand or Battlefield slot, and
+	// Amount equals len(SlotFilters); it is mutually exclusive with
+	// SplitDestination, SharedSubtype, RevealOnly, MaxManaValueFromX, and Name.
+	SlotFilters []Selection
 }
 
 // IsUnrestricted reports whether every library card matches the search filter.
@@ -1296,6 +1308,7 @@ func (s SearchSpec) IsUnrestricted() bool {
 	return s.Filter.Empty() &&
 		!s.MaxManaValueFromX &&
 		!s.SharedSubtype &&
+		len(s.SlotFilters) == 0 &&
 		s.Name == ""
 }
 

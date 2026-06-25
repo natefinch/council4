@@ -2030,6 +2030,12 @@ type CompiledEffect struct {
 	// search lowerer can route the found permanent under the named target
 	// player's control without re-reading the search text.
 	SearchControl parser.SearchControlRider
+	// SearchSlots carries the per-slot subtypes of a heterogeneous multi-slot
+	// library search ("a Forest card and a Plains card", Krosan Verge) from the
+	// parser so the search lowerer can build a SearchSpec.SlotFilters from typed
+	// subtypes rather than re-reading the search text. It is empty for every
+	// ordinary single-filter search.
+	SearchSlots []types.Sub
 	// DiscardEntireHand carries the parser-recognized "discard their hand" clause
 	// through the text-blind compiler boundary: the affected player discards
 	// every card in hand rather than a fixed count.

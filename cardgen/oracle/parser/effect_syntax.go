@@ -1430,6 +1430,7 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 		effect.SearchSharedSubtype = searchSharedSubtypeRider(effect)
 		effect.SearchDestination = searchDestinationPosition(effect)
 		effect.SearchControl = searchControlRider(effect)
+		effect.SearchSlots = searchHeterogeneousSlotSubtypes(effect)
 	}
 }
 

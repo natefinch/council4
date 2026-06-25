@@ -178,6 +178,20 @@ func searchSpecSupported(spec game.SearchSpec) bool {
 			spec.SplitDestination.Val.Zone == zone.Library) {
 		return false
 	}
+	if len(spec.SlotFilters) != 0 {
+		// A heterogeneous multi-slot search places every found card at the single
+		// primary destination, so it cannot also carry a split destination, an
+		// ordered library destination, or the shared-subtype correlation, and its
+		// shared Filter must be empty (each constraint lives on a slot filter).
+		if spec.SplitDestination.Exists ||
+			spec.SharedSubtype ||
+			spec.MaxManaValueFromX ||
+			spec.Name != "" ||
+			!spec.Filter.Empty() ||
+			primary.Zone == zone.Library {
+			return false
+		}
+	}
 	return true
 }
 
@@ -215,6 +229,9 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 		// resolved from the resolving stack object as the search runs.
 		spec.Filter.ManaValue = opt.Val(compare.Int{Op: compare.LessOrEqual, Value: obj.XValue})
 		spec.MaxManaValueFromX = false
+	}
+	if len(spec.SlotFilters) != 0 {
+		return e.searchLibrarySlots(g, obj, agents, log, playerID, controllerID, player, spec), nil
 	}
 	var candidates []id.ID
 	for _, cardID := range player.Library.All() {
@@ -334,6 +351,61 @@ func (e *Engine) searchLibraryRevealOnly(g *game.Game, obj *game.StackObject, ag
 		emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
 	}
 	return cardID, true
+}
+
+// searchLibrarySlots resolves a heterogeneous multi-slot library search whose
+// slots each match a distinct filter ("a Forest card and a Plains card", Krosan
+// Verge). It runs one optional dependent choice per slot in source order,
+// offering only library cards that match that slot's filter and were not already
+// taken by an earlier slot, so the same card never fills two slots. Every found
+// card enters the single shared destination (spec.Destination, spec.EntersTapped)
+// under controllerID's control, and the library is shuffled once afterward. The
+// player may decline any slot (CR 701.19e). It returns whether any card was found.
+func (e *Engine) searchLibrarySlots(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID, controllerID game.PlayerID, player *game.Player, spec game.SearchSpec) bool {
+	dest := game.SearchDestination{
+		Zone:         spec.Destination,
+		Position:     spec.DestinationPosition,
+		EntersTapped: spec.EntersTapped,
+	}
+	taken := make(map[id.ID]bool)
+	var found []id.ID
+	for _, filter := range spec.SlotFilters {
+		var candidates []id.ID
+		for _, cardID := range player.Library.All() {
+			if taken[cardID] {
+				continue
+			}
+			if searchSlotMatches(g, obj, cardID, filter) {
+				candidates = append(candidates, cardID)
+			}
+		}
+		picked := e.chooseSearchMatches(g, agents, log, playerID, candidates, 1, 0)
+		if len(picked) == 1 {
+			taken[picked[0]] = true
+			found = append(found, picked[0])
+		}
+	}
+	for _, cardID := range found {
+		if !player.Library.Remove(cardID) {
+			continue
+		}
+		if spec.Reveal {
+			emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
+		}
+		_, _ = e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, dest)
+	}
+	player.Library.Shuffle(e.rng)
+	return len(found) > 0
+}
+
+// searchSlotMatches reports whether a library card satisfies one slot filter of
+// a heterogeneous multi-slot library search.
+func searchSlotMatches(g *game.Game, obj *game.StackObject, cardID id.ID, filter game.Selection) bool {
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		return false
+	}
+	return cardMatchesSelection(g, obj, card, filter)
 }
 
 // placeFoundCard moves a found library card into a single-card search
