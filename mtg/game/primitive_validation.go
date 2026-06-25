@@ -203,6 +203,23 @@ func validateCapturedTargetControllerOptionalReference(
 	return validateCapturedTargetControllerReference(reference.Val, targets, checkTargets)
 }
 
+// validateCapturedTargetControllerPlayerAndQuantity is the shared body for the
+// many single-player primitives whose only captured-target-controller checks are
+// their Player reference followed by their Amount quantity. Collapsing the
+// identical reference-then-quantity body keeps each primitive's method a single
+// explicit call while still routing through the same per-shape helpers.
+func validateCapturedTargetControllerPlayerAndQuantity(
+	player PlayerReference,
+	quantity Quantity,
+	targets []TargetSpec,
+	checkTargets bool,
+) error {
+	if err := validateCapturedTargetControllerReference(player, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateCapturedTargetControllerQuantity(quantity, targets, checkTargets)
+}
+
 func (p Damage) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	var references []PlayerReference
 	if ref, ok := p.Recipient.PlayerReference(); ok {
@@ -218,17 +235,11 @@ func (p Damage) validateCapturedTargetControllerReferences(targets []TargetSpec,
 }
 
 func (p Draw) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func (p ReorderLibraryTop) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func (p LookAtLibraryTop) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
@@ -248,10 +259,7 @@ func (p ChooseDiscardFromHand) validateCapturedTargetControllerReferences(target
 }
 
 func (p Discard) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func (p AddMana) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
@@ -263,10 +271,7 @@ func (p AddCounter) validateCapturedTargetControllerReferences(targets []TargetS
 }
 
 func (p AddPlayerCounter) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func (p MoveCounters) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
@@ -344,10 +349,7 @@ func (p Adapt) validateCapturedTargetControllerReferences(targets []TargetSpec, 
 }
 
 func (p Connive) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func (p Pay) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
@@ -362,17 +364,11 @@ func (p Choose) validateCapturedTargetControllerReferences(targets []TargetSpec,
 }
 
 func (p GainLife) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func (p LoseLife) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func (p MoveCard) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
@@ -380,24 +376,15 @@ func (p MoveCard) validateCapturedTargetControllerReferences(targets []TargetSpe
 }
 
 func (p SacrificePermanents) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func (p Mill) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func (p ExileTopOfLibrary) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func (p PutHandOnLibraryThenDraw) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
@@ -409,17 +396,11 @@ func (p RevealUntil) validateCapturedTargetControllerReferences(targets []Target
 }
 
 func (p Scry) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func (p Surveil) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func (p Dig) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
@@ -445,10 +426,7 @@ func (p SkipStep) validateCapturedTargetControllerReferences(targets []TargetSpe
 }
 
 func (p PreventDamage) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func validatePlayerGroupReference(ref PlayerGroupReference) error {
