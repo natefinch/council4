@@ -52,12 +52,10 @@ func lowerCoinFlipSequence(cardName string, ctx contentCtx, syntax *parser.Abili
 		return game.AbilityContent{}, false
 	}
 
-	sequence := []game.Instruction{{
-		Primitive:     game.RollDie{Sides: 2},
-		PublishResult: coinFlipResultKey,
-	}}
+	publisher := game.Instruction{Primitive: game.RollDie{Sides: 2}}
 	// appendCoinFlipEffects appends the win branch then the lose branch, so each
 	// branch is a contiguous run of effects sharing a CoinFlipBranch value.
+	var branches []resultGatedBranch
 	for start := 0; start < len(effects); {
 		branch := effects[start].CoinFlipBranch
 		end := start + 1
@@ -72,18 +70,17 @@ func lowerCoinFlipSequence(cardName string, ctx contentCtx, syntax *parser.Abili
 		if !ok {
 			return game.AbilityContent{}, false
 		}
-		for k := range branchContent.Modes[0].Sequence {
-			instruction := branchContent.Modes[0].Sequence[k]
-			if instruction.ResultGate.Exists {
-				return game.AbilityContent{}, false
-			}
-			instruction.ResultGate = opt.Val(game.InstructionResultGate{
-				Key:         coinFlipResultKey,
+		branches = append(branches, resultGatedBranch{
+			predicate: game.InstructionResultGate{
 				AmountRange: opt.Val(game.IntRange{Min: gate, Max: gate}),
-			})
-			sequence = append(sequence, instruction)
-		}
+			},
+			sequence: branchContent.Modes[0].Sequence,
+		})
 		start = end
+	}
+	sequence, ok := assembleResultGatedBranches(publisher, coinFlipResultKey, branches)
+	if !ok {
+		return game.AbilityContent{}, false
 	}
 	return game.Mode{Sequence: sequence}.Ability(), true
 }
