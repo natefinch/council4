@@ -1445,6 +1445,26 @@ func TestLowerConditionalEntersWithCountersReplacement(t *testing.T) {
 				}
 			},
 		},
+		"revolt": {
+			typeLine:   "Creature — Elf Warrior",
+			oracleText: "Revolt — This creature enters with a +1/+1 counter on it if a permanent left the battlefield under your control this turn.",
+			amount:     1,
+			checkCond: func(t *testing.T, cond game.Condition) {
+				if !cond.EventHistory.Exists {
+					t.Fatalf("condition = %#v, want EventHistory", cond)
+				}
+				pattern := cond.EventHistory.Val.Pattern
+				if pattern.Event != game.EventZoneChanged ||
+					pattern.Controller != game.TriggerControllerYou ||
+					!pattern.MatchFromZone || pattern.FromZone != zone.Battlefield ||
+					pattern.MatchToZone {
+					t.Fatalf("event history pattern = %#v", pattern)
+				}
+				if cond.EventHistory.Val.Window != game.EventHistoryCurrentTurn {
+					t.Fatalf("event history window = %#v", cond.EventHistory.Val.Window)
+				}
+			},
+		},
 		"ferocious controls": {
 			typeLine:   "Creature — Elephant",
 			oracleText: "Ferocious — This creature enters with a +1/+1 counter on it if you control a creature with power 4 or greater.",
@@ -1523,12 +1543,6 @@ func TestLowerConditionalEntersWithCountersFailsClosed(t *testing.T) {
 		typeLine   string
 		oracleText string
 	}{
-		// "a permanent left the battlefield under your control this turn" is not a
-		// modeled condition predicate.
-		"unmodeled revolt predicate": {
-			typeLine:   "Creature — Elf Warrior",
-			oracleText: "Revolt — This creature enters with two +1/+1 counters on it if a permanent left the battlefield under your control this turn.",
-		},
 		// Dynamic "for each" counter quantity is not modeled.
 		"dynamic for each": {
 			typeLine:   "Creature — Plant",

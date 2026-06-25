@@ -10,5 +10,6 @@ var Cards = []*game.CardDef{
 	IgnobleHierarch,
 	InfernoFist,
 	InfiltrationLens,
+	InsectoidExterminator,
 	IroasSBlessing,
 }

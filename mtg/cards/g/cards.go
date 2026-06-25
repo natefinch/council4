@@ -11,5 +11,6 @@ var Cards = []*game.CardDef{
 	GimliSRecklessMight,
 	GravenCairns,
 	GreaterTanuki,
+	GreenwheelLiberator,
 	GuardianProject,
 }

@@ -208,7 +208,54 @@ func parseEventHistoryTriggerEvent(tokens []shared.Token) *TriggerEventClause {
 			},
 		}
 	}
-	return nil
+	return parseEventHistoryLeftBattlefield(tokens, span)
+}
+
+// parseEventHistoryLeftBattlefield recognizes the Revolt event-history clause
+// "a permanent left the battlefield under your control" (and its creature-scoped
+// variant "a creature left the battlefield under your control"). It compiles to
+// a current-turn zone-change pattern matching any permanent (or any creature)
+// whose controller was the ability's controller leaving the battlefield to any
+// zone, exactly like the live trigger "Whenever a permanent you control leaves
+// the battlefield". The controller relation is carried on the clause itself
+// (TriggerEventClause.Controller), matching the live trigger's representation.
+func parseEventHistoryLeftBattlefield(tokens []shared.Token, span shared.Span) *TriggerEventClause {
+	rest, ok := cutTokenPrefix(tokens, "a")
+	if !ok || len(rest) == 0 {
+		return nil
+	}
+	var selection TriggerSelection
+	switch {
+	case tokenWordsEqual(rest[:1], "permanent"):
+	case tokenWordsEqual(rest[:1], "creature"):
+		selection.RequiredTypes = []TriggerCardType{TriggerCardTypeCreature}
+	default:
+		return nil
+	}
+	subject := tokens[:2]
+	rest = rest[1:]
+	if !tokenWordsEqual(rest, "left", "the", "battlefield", "under", "your", "control") {
+		return nil
+	}
+	return &TriggerEventClause{
+		Kind:       TriggerEventKindZoneChange,
+		Span:       span,
+		Controller: ControllerYou,
+		Subject: TriggerEventSubject{
+			Kind:      TriggerEventSubjectSelection,
+			Span:      shared.SpanOf(subject),
+			Selection: selection,
+		},
+		ZoneChange: TriggerEventZoneChange{
+			Kind: TriggerEventZoneChangeMoved,
+			Span: rest[0].Span,
+		},
+		Zone: TriggerEventZoneContext{
+			Span:          shared.SpanOf(rest),
+			MatchFromZone: true,
+			FromZone:      triggerEventZone(TriggerEventZoneBattlefield, shared.Span{}),
+		},
+	}
 }
 
 func parseEventHistoryPlayerEvent(tokens []shared.Token) *PlayerEventTriggerClause {

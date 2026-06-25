@@ -20,5 +20,6 @@ var Cards = []*game.CardDef{
 	CommandTower,
 	ContestOfClaws,
 	CosmicHunger,
+	CountlessGearsRenegade,
 	CrystallineCrawler,
 }

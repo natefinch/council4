@@ -9,5 +9,6 @@ var Cards = []*game.CardDef{
 	HalanaAndAlenaPartners,
 	HauntedRidge,
 	HazoretGodseeker,
+	HiddenStockpile,
 	HunterSTalent,
 }
