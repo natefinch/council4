@@ -189,8 +189,8 @@ func effectivePermanentValues(g *game.Game, permanent *game.Permanent) permanent
 // basePermanentValues returns the permanent's characteristics before any
 // continuous effects are applied: the starting point of the layer system, i.e.
 // the values printed on the card or defined by the effect that created a token
-// or copy (CR 613.1). Face-down permanents start as 2/2 colorless creatures with
-// no name or types (CR 708.2).
+// or copy (CR 613.1). Face-down permanents start as 2/2 creatures with no text,
+// name, subtypes, or mana cost (CR 613.2b, CR 708.2a).
 func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffectiveValues {
 	values := permanentEffectiveValues{keywords: make(map[game.Keyword]bool)}
 	values.controller = permanent.Controller
@@ -1187,13 +1187,15 @@ func basicLandSubtypeManaColor(subtype types.Sub) (mana.Color, bool) {
 }
 
 // applyCounterAndTemporaryValues applies +1/+1 and -1/-1 counters and temporary
-// power/toughness modifiers. Counters modify power/toughness in layer 7c
-// (CR 613.4c), which they share with the 7c modifying effects applied during the
-// layer pass; within 7c, counters and effects are ordered by timestamp
-// (CR 613.7c). The engine applies counters after the 7c effects, which yields the
-// same result for the usual commutative additive modifiers; it can diverge from
-// strict timestamp order only for a non-commutative 7c effect (e.g. a
-// power/toughness doubling effect) interleaved with a counter. See #1903.
+// power/toughness modifiers. Both belong to power/toughness layer 7c (CR 613.4c):
+// counters modify P/T and are timestamped when placed (CR 613.7c), and temporary
+// "until end of turn" modifiers come from resolving spells/abilities and are
+// timestamped when created (CR 613.7b). The engine applies both after the whole
+// layer pass instead of interleaving them into 7c by timestamp. This yields the
+// same result for the usual commutative additive modifiers, but can diverge for
+// a non-commutative 7c effect (e.g. a power/toughness doubling effect) and, for
+// asymmetric temporary modifiers, from the required 7c-before-7d ordering when a
+// 7d power/toughness switch is also present. See #1903.
 func applyCounterAndTemporaryValues(permanent *game.Permanent, values *permanentEffectiveValues) {
 	counterDelta := powerToughnessCounterDelta(permanent)
 	if values.powerOK {
