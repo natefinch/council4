@@ -345,6 +345,9 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 	if selection.Multicolored {
 		fields = append(fields, "Multicolored: true,")
 	}
+	if selection.Colored {
+		fields = append(fields, "Colored: true,")
+	}
 
 	if selection.Controller != game.ControllerAny {
 		cr, err := renderControllerRelation(selection.Controller)

@@ -2218,6 +2218,8 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	default:
 	}
 	selection.All = slices.Contains(words, "all")
+	selection.Colored = effectContainsWords(words, "one", "or", "more", "colors") ||
+		effectContainsWords(words, "one", "or", "more", "color")
 	selection.Historic = slices.Contains(words, "historic")
 	selection.Another = atoms.SelectionFlagIn(span, SelectionFlagAnother)
 	selection.Other = atoms.SelectionFlagIn(span, SelectionFlagOther)
@@ -2274,6 +2276,7 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 		selection.ExcludedColors = nil
 		selection.Colorless = false
 		selection.Multicolored = false
+		selection.Colored = false
 	}
 	return selection
 }

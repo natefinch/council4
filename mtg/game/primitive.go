@@ -938,6 +938,11 @@ type SacrificePermanents struct {
 	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
 	Amount      Quantity             // number of permanents to sacrifice
 	Selection   Selection            // eligible permanent filter; zero = any permanent
+	// All, when set, sacrifices every permanent each affected player controls
+	// that matches Selection rather than a chosen Amount ("Each player sacrifices
+	// all permanents they control that are one or more colors." — All Is Dust).
+	// Amount is ignored when All is set, and no per-player choice is offered.
+	All bool
 	// Fallback is applied to each affected player who controls no permanent
 	// matching Selection, i.e. who can't satisfy the edict ("Each player who
 	// can't discards a card."). SacrificeFallbackNone leaves no rider.

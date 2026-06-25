@@ -666,6 +666,10 @@ func lowerSacrificeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 		return content, nil
 	}
 
+	if content, ok := lowerMassSacrificeSpell(ctx); ok {
+		return content, nil
+	}
+
 	effect := ctx.content.Effects[0]
 	if !effect.Exact {
 		return unsupported()
@@ -865,6 +869,58 @@ func sacrificeChoiceReferences(references []compiler.CompiledReference) bool {
 	return true
 }
 
+// lowerMassSacrificeSpell lowers the mass "<player> sacrifices all <group> [they
+// control] that are one or more colors." form (All Is Dust): every affected
+// player loses every matching permanent they control rather than a chosen
+// amount. It is gated on the selector's All flag and the exact effect, accepts
+// only the per-player subjects (each player/opponent/other player, that player)
+// and the "they"/"their" possessive references, and rejects every other modifier
+// so the bounded chosen-amount sacrifice path stays untouched.
+func lowerMassSacrificeSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		!effect.Selector.All ||
+		effect.Negated ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		!sacrificeMassReferences(ctx.content.References) {
+		return game.AbilityContent{}, false
+	}
+	selection, ok := sacrificeChoiceSelection(effect.Selector)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	prim := game.SacrificePermanents{All: true, Selection: selection}
+	switch effect.Context {
+	case parser.EffectContextReferencedPlayer:
+		prim.Player = game.EventPlayerReference()
+	case parser.EffectContextEachOpponent, parser.EffectContextEachOtherPlayer:
+		prim.PlayerGroup = game.OpponentsReference()
+	case parser.EffectContextEachPlayer:
+		prim.PlayerGroup = game.AllPlayersReference()
+	default:
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{{Primitive: prim}}}.Ability(), true
+}
+
+// sacrificeMassReferences reports whether the mass-sacrifice references are only
+// "they"/"their" possessives ("all permanents they control", "of their choice").
+// The mass form scopes each player to permanents they control, so the pronoun
+// carries no additional binding.
+func sacrificeMassReferences(references []compiler.CompiledReference) bool {
+	for _, reference := range references {
+		if reference.Kind != compiler.ReferencePronoun ||
+			(reference.Pronoun != compiler.ReferencePronounThey &&
+				reference.Pronoun != compiler.ReferencePronounTheir) {
+			return false
+		}
+	}
+	return true
+}
+
 // sacrificeReferencedPlayerChoice reports whether the references describe a
 // "that player sacrifices <type> of their choice" edict: exactly one
 // event-player "that player" subject plus zero or more "their"-choice
@@ -941,6 +997,9 @@ func sacrificeChoiceSelection(selector compiler.CompiledSelector) (game.Selectio
 	// "Sacrifice another creature." sacrifices a permanent other than the
 	// effect's own source; the runtime selection drops the source object.
 	selection.ExcludeSource = selector.Another || selector.Other
+	// "... permanents ... that are one or more colors" (All Is Dust) restricts
+	// the eligible set to colored permanents; colorless ones survive.
+	selection.Colored = selector.Colored
 	return selection, true
 }
 

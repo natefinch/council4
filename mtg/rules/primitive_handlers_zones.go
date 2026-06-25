@@ -1459,6 +1459,10 @@ func handleSacrificePermanents(r *effectResolver, prim game.SacrificePermanents)
 	var chosen []*game.Permanent
 	var cantSacrifice []game.PlayerID
 	for _, playerID := range players {
+		if prim.All {
+			chosen = append(chosen, playerControlledMatchingSelection(r.game, resolver, playerID, prim.Selection)...)
+			continue
+		}
 		if prim.Fallback.Kind != game.SacrificeFallbackNone &&
 			!playerControlsSelection(r.game, resolver, playerID, prim.Selection) {
 			cantSacrifice = append(cantSacrifice, playerID)
@@ -1490,6 +1494,23 @@ func playerControlsSelection(g *game.Game, resolver referenceResolver, playerID 
 		}
 	}
 	return false
+}
+
+// playerControlledMatchingSelection returns every permanent playerID controls
+// that satisfies sel, in battlefield order. It backs the "sacrifices all <group>
+// they control" mass form (All Is Dust), where each player loses every matching
+// permanent rather than a chosen amount.
+func playerControlledMatchingSelection(g *game.Game, resolver referenceResolver, playerID game.PlayerID, sel game.Selection) []*game.Permanent {
+	var matching []*game.Permanent
+	for _, permanent := range g.Battlefield {
+		if effectiveController(g, permanent) != playerID {
+			continue
+		}
+		if resolver.permanentMatchesGroupSelection(&sel, nil, permanent) {
+			matching = append(matching, permanent)
+		}
+	}
+	return matching
 }
 
 // applySacrificeFallback applies a SacrificePermanents edict's who-can't rider

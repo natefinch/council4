@@ -150,6 +150,9 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if sel.Multicolored && s.colorCount() < 2 {
 		return false
 	}
+	if sel.Colored && s.colorCount() == 0 {
+		return false
+	}
 	if !s.controllerMatches(sel.Controller) {
 		return false
 	}

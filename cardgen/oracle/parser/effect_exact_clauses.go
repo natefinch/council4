@@ -2019,6 +2019,62 @@ func massGroupPhraseTextShape(phrase string) bool {
 	return false
 }
 
+// exactSacrificeMassEffectSyntax recognizes the mass sacrifice wording
+// "<player> sacrifices all <group> [they control] that are one or more colors."
+// (All Is Dust), the only sacrifice form that removes every matching permanent a
+// player controls rather than a chosen amount. It requires the typed selection's
+// All and Colored flags so it fails closed for every bounded "sacrifices N
+// <group>" wording, which exactSacrificeChoiceEffectSyntax continues to own. The
+// "one or more colors" suffix is reconstructed canonically and is mandatory so a
+// Colored selection without that exact text fails closed; the optional "they
+// control" suffix is stripped because the per-player sacrifice already scopes
+// each player to permanents they control. The remaining bare mass group phrase
+// is validated by the shared exactMassGroupPhrase.
+func exactSacrificeMassEffectSyntax(effect *EffectSyntax) bool {
+	if !effect.Selection.All || !effect.Selection.Colored || len(effect.Targets) != 0 {
+		return false
+	}
+	subject, ok := massSacrificeSubject(effect.Context)
+	if !ok {
+		return false
+	}
+	phrase := strings.ToLower(exactEffectClauseText(effect))
+	phrase, ok = strings.CutPrefix(phrase, strings.ToLower(subject)+" sacrifices all ")
+	if !ok {
+		return false
+	}
+	phrase, ok = strings.CutSuffix(phrase, ".")
+	if !ok {
+		return false
+	}
+	phrase, ok = strings.CutSuffix(phrase, " that are one or more colors")
+	if !ok {
+		return false
+	}
+	if rest, ok := strings.CutSuffix(phrase, " they control"); ok {
+		phrase = rest
+	}
+	return exactMassGroupPhrase(&effect.Selection, phrase)
+}
+
+// massSacrificeSubject maps the per-player sacrifice contexts to their printed
+// subject phrase, failing closed for the controller and target contexts the mass
+// sacrifice form does not model.
+func massSacrificeSubject(context EffectContextKind) (string, bool) {
+	switch context {
+	case EffectContextEachPlayer:
+		return "Each player", true
+	case EffectContextEachOpponent:
+		return "Each opponent", true
+	case EffectContextEachOtherPlayer:
+		return "Each other player", true
+	case EffectContextReferencedPlayer:
+		return "That player", true
+	default:
+		return "", false
+	}
+}
+
 func exactMassBaseNoun(phrase string) bool {
 	switch phrase {
 	case "creatures", "artifacts", "enchantments", "lands", "planeswalkers", "permanents",

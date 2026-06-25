@@ -129,11 +129,14 @@ type Selection struct {
 
 	// ColorsAny matches when any listed color is present. ExcludedColors must
 	// all be absent. Colorless requires no colors; Multicolored requires at
-	// least two colors.
+	// least two colors. Colored requires one or more colors, i.e. the
+	// permanent is not colorless ("permanents ... that are one or more colors",
+	// All Is Dust). It is the complement of Colorless.
 	ColorsAny      []color.Color
 	ExcludedColors []color.Color
 	Colorless      bool
 	Multicolored   bool
+	Colored        bool
 
 	// ExcludeSource drops the predicate's own source object from the match, for
 	// "another" target restrictions and "other ..." mass effects.
@@ -309,6 +312,7 @@ func (s Selection) Empty() bool {
 		len(s.ExcludedColors) == 0 &&
 		!s.Colorless &&
 		!s.Multicolored &&
+		!s.Colored &&
 		s.Controller == ControllerAny &&
 		s.Player == PlayerAny &&
 		s.Tapped == TriAny &&
@@ -377,6 +381,9 @@ func (s Selection) Validate() []string {
 	}
 	if s.Colorless && s.Multicolored {
 		problems = append(problems, "selection cannot require both colorless and multicolored")
+	}
+	if s.Colorless && s.Colored {
+		problems = append(problems, "selection cannot require both colorless and colored")
 	}
 	if s.Colorless && len(s.ColorsAny) > 0 {
 		problems = append(problems, "selection cannot require both colorless and any color")
