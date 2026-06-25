@@ -1278,10 +1278,14 @@ type SelectionSyntax struct {
 	// NonToken records a "nontoken" selector qualifier ("nontoken creature");
 	// TokenOnly records a "token" qualifier ("token creature"). They are mutually
 	// exclusive and lower to Selection.NonToken / Selection.TokenOnly.
-	NonToken      bool `json:",omitempty"`
-	TokenOnly     bool `json:",omitempty"`
-	Colorless     bool `json:",omitempty"`
-	Multicolored  bool `json:",omitempty"`
+	NonToken     bool `json:",omitempty"`
+	TokenOnly    bool `json:",omitempty"`
+	Colorless    bool `json:",omitempty"`
+	Multicolored bool `json:",omitempty"`
+	// Colored records a "one or more colors" qualifier ("permanents ... that are
+	// one or more colors", All Is Dust). It is the complement of Colorless and
+	// lowers to Selection.Colored.
+	Colored       bool `json:",omitempty"`
 	BasicLandType bool `json:",omitempty"`
 	// Historic records a "historic" card qualifier ("target historic card from
 	// your graveyard"). A historic card is an artifact, a legendary, or a Saga

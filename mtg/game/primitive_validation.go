@@ -1837,6 +1837,14 @@ func (p Sacrifice) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 }
 
 func (p SacrificePermanents) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.All {
+		if p.Amount.IsDynamic() || p.Amount.Value() != 0 {
+			return errors.New("SacrificePermanents with All set requires a zero Amount")
+		}
+		if p.Fallback.Kind != SacrificeFallbackNone {
+			return errors.New("SacrificePermanents with All set cannot carry a fallback")
+		}
+	}
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}

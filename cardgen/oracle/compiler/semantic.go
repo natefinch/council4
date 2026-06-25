@@ -1085,7 +1085,11 @@ type CompiledSelector struct {
 	MatchToughness   bool
 	Colorless        bool
 	Multicolored     bool
-	BasicLandType    bool
+	// Colored records a "one or more colors" qualifier ("permanents ... that are
+	// one or more colors", All Is Dust). It is the complement of Colorless and
+	// lowers to Selection.Colored.
+	Colored       bool
+	BasicLandType bool
 	// Historic records a "historic" card qualifier ("target historic card from
 	// your graveyard"). A historic card is an artifact, a legendary, or a Saga
 	// (CR 702.61b); the cross-category disjunction is kept as its own flag and

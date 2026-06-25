@@ -1517,15 +1517,20 @@ func (r Renderer) renderAmountPlayerGroup(
 }
 
 func (r Renderer) renderSacrificePermanents(ctx *renderCtx, value *game.SacrificePermanents) (string, error) {
-	renderedAmount, err := r.renderQuantity(ctx, value.Amount)
-	if err != nil {
-		return "", err
-	}
 	renderedSelection, err := r.renderSelection(ctx, value.Selection)
 	if err != nil {
 		return "", err
 	}
-	fields := []string{fmt.Sprintf("Amount: %s,", renderedAmount)}
+	var fields []string
+	if value.All {
+		fields = append(fields, "All: true,")
+	} else {
+		renderedAmount, err := r.renderQuantity(ctx, value.Amount)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Amount: %s,", renderedAmount))
+	}
 	if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 		var renderedGroup string
 		switch value.PlayerGroup.Kind {

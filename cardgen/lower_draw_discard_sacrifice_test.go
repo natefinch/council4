@@ -541,6 +541,50 @@ func TestLowerSacrificeSpellThatPlayerEventPlayerChoice(t *testing.T) {
 	}
 }
 
+// TestLowerSacrificeSpellEachPlayerAllColored covers All Is Dust's mass edict
+// "Each player sacrifices all permanents they control that are one or more
+// colors." It lowers to a single SacrificePermanents with All set, the
+// all-players group, and a Colored permanent selection so colorless permanents
+// survive. The bounded chosen-amount path is untouched (no Amount).
+func TestLowerSacrificeSpellEachPlayerAllColored(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "All Is Dust",
+		Layout:     "normal",
+		TypeLine:   "Kindred Sorcery — Eldrazi",
+		OracleText: "Each player sacrifices all permanents they control that are one or more colors.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not found")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 0 {
+		t.Fatalf("targets = %d, want none", len(mode.Targets))
+	}
+	prim, ok := mode.Sequence[0].Primitive.(game.SacrificePermanents)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.SacrificePermanents", mode.Sequence[0].Primitive)
+	}
+	if !prim.All {
+		t.Fatal("prim.All = false, want true")
+	}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceAllPlayers {
+		t.Fatalf("player group = %v, want all players", prim.PlayerGroup.Kind)
+	}
+	if prim.Player.Kind() != game.PlayerReferenceNone {
+		t.Fatalf("player = %v, want none", prim.Player.Kind())
+	}
+	if prim.Amount.IsDynamic() || prim.Amount.Value() != 0 {
+		t.Fatalf("amount = %#v, want zero", prim.Amount)
+	}
+	if !prim.Selection.Colored {
+		t.Fatalf("selection = %#v, want Colored", prim.Selection)
+	}
+	if len(prim.Selection.RequiredTypes) != 0 {
+		t.Fatalf("selection RequiredTypes = %#v, want any permanent", prim.Selection.RequiredTypes)
+	}
+}
+
 func TestLowerSacrificeSpellEachPlayerLand(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

@@ -120,7 +120,7 @@ func selectionPhraseDeterminerWords(determiner determinerKind) ([]string, bool) 
 func selectionPhraseRepresentable(selection SelectionSyntax) bool {
 	if selection.Another || selection.OtherThanSource ||
 		selection.NonToken || selection.TokenOnly ||
-		selection.Colorless || selection.Multicolored || selection.BasicLandType ||
+		selection.Colorless || selection.Multicolored || selection.Colored || selection.BasicLandType ||
 		selection.Historic || selection.ConjunctiveTypes || selection.PlayerOrPlaneswalker ||
 		selection.MatchTotalManaValue || selection.InclusiveOneOfEach ||
 		selection.ManaValueX || selection.EnteredThisTurn ||
