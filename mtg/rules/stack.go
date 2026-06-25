@@ -13,13 +13,14 @@ func (e *Engine) resolveTopOfStack(g *game.Game, log *TurnLog) {
 	e.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, log)
 }
 
-// resolveTopOfStackWithChoices resolves the object on top of the stack (CR 608).
-// CR 608.1: the topmost object is removed from the stack and resolves. The
-// resolving object's last known information is snapshotted first so that
-// source-based checks (e.g. protection) still find the correct characteristics
-// after it has left the stack. After a spell finishes resolving it is put into
-// its owner's graveyard unless an effect moved it elsewhere (CR 608.3), handled
-// in the per-kind resolve paths.
+// resolveTopOfStackWithChoices resolves the object on top of the stack.
+// CR 608.1: each time all players pass in succession, the spell or ability on
+// top of the stack resolves. The resolving object's last known information is
+// snapshotted first so source-based checks (e.g. protection) still find the
+// correct characteristics after it leaves the stack. The final destination is
+// handled in the per-kind resolve paths: a permanent spell enters the
+// battlefield (CR 608.3), while an instant or sorcery spell (and any ability) is
+// put into the graveyard or removed from the stack (CR 608.2n).
 func (e *Engine) resolveTopOfStackWithChoices(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	obj, ok := g.Stack.Pop()
 	if !ok {

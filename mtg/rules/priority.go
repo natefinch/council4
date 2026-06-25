@@ -26,16 +26,22 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 	consecutivePasses := 0
 
 	for {
-		// CR 117.5: before a player gets priority, perform all state-based
-		// actions (repeating until none apply), then put any waiting triggered
-		// abilities on the stack; if either happened, restart the check. After
-		// triggers are put on the stack the active player gets priority.
+		// CR 117.5 / CR 603.3b: before a player gets priority, perform all
+		// state-based actions (repeating until none apply), then put any waiting
+		// triggered abilities on the stack; if either happened, restart the
+		// check. Once the stack is stable the appropriate player gets priority.
 		e.applyStateBasedActionsWithLog(g, log)
 		if g.IsGameOver() {
 			return
 		}
 		if e.putTriggeredAbilitiesOnStackWithChoices(g, agents, log) {
 			consecutivePasses = 0
+			// CR 603.3b says the "appropriate player" gets priority after
+			// triggered abilities are put on the stack: normally the active
+			// player, but if a nonactive player kept priority (CR 117.3c) when
+			// the trigger occurred it would be that player. The engine
+			// simplifies to the active player here; see #1900 for the
+			// CR 603.3b nonactive-keeps-priority edge case.
 			g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 			continue
 		}
