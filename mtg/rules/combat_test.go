@@ -65,6 +65,41 @@ func TestCombatPhaseSkipsBlockerAndDamageStepsWithoutAttackers(t *testing.T) {
 	}
 }
 
+// TestCombatStepsNotSkippedAfterDeclaredAttackerLeavesCombat covers the
+// historical nature of CR 508.8: once a creature has been declared as an attacker,
+// the declare blockers and combat damage steps still occur even if that attacker
+// later leaves combat (so g.Combat.Attackers becomes empty). The engine tracks
+// this with AttackersDeclared rather than the mutable Attackers slice.
+func TestCombatStepsNotSkippedAfterDeclaredAttackerLeavesCombat(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Combat = &game.CombatState{}
+
+	ce := combatEngine{NewEngine(nil)}
+	if !ce.applyAttackers(g, game.Player1, action.DeclareAttackersAction{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}) {
+		t.Fatal("applyAttackers failed for a legal attacker declaration")
+	}
+	if !g.Combat.AttackersDeclared {
+		t.Fatal("AttackersDeclared not set after declaring an attacker")
+	}
+
+	removePermanentFromCombat(g, attacker.ObjectID)
+
+	if len(g.Combat.Attackers) != 0 {
+		t.Fatalf("attackers after removal = %d, want 0", len(g.Combat.Attackers))
+	}
+	if !g.Combat.AttackersDeclared {
+		t.Fatal("AttackersDeclared cleared after the declared attacker left combat; the declare blockers and combat damage steps would be wrongly skipped")
+	}
+}
+
 func TestCombatPhaseInitializesAndClearsCombatState(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

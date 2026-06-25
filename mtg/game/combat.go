@@ -56,6 +56,13 @@ type CombatState struct {
 	// Attackers lists all declared attackers and their targets.
 	Attackers []AttackDeclaration
 
+	// AttackersDeclared records whether any creature was declared as an attacker
+	// or put onto the battlefield attacking this combat (CR 508.8). It stays true
+	// even if those creatures later leave combat, so the declare blockers and
+	// combat damage steps are not skipped once a creature has attacked. Attackers
+	// itself can shrink as attackers leave combat, so it can't answer this.
+	AttackersDeclared bool
+
 	// Blockers lists all declared blockers and which attacker they block.
 	Blockers []BlockDeclaration
 
