@@ -107,8 +107,7 @@ func lowerGroupDamageSpell(
 			"the executable source backend supports only exact fixed or X group damage amounts",
 		)
 	}
-	damageSource, ok := lowerDamageSourceReference(ctx.content.References)
-	if !ok {
+	if _, ok := lowerDamageSourceReference(ctx.content.References); !ok {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported damage spell",
@@ -139,12 +138,7 @@ func lowerGroupDamageSpell(
 			"the executable source backend supports only exact fixed group damage amounts",
 		)
 	}
-	var damageSourceRef opt.V[game.ObjectReference]
-	if damageSource.Kind() == game.ObjectReferenceEventPermanent {
-		damageSourceRef = opt.Val(damageSource)
-	} else if damageSourceIsSourcePermanent(ctx.content.References) {
-		damageSourceRef = opt.Val(game.SourcePermanentReference())
-	}
+	damageSourceRef := primaryDamageSource(ctx.content.References)
 	instructions := make([]game.Instruction, 0, len(recipients))
 	for _, recipient := range recipients {
 		damage := game.Damage{
@@ -453,7 +447,7 @@ func lowerFixedDamageSpell(
 		// No amount override: the damage defaults to X (DynamicAmountX).
 	}
 	if effect.DamageRecipient.Reference != parser.DamageRecipientReferenceNone {
-		return lowerReferencedPlayerDamageSpell(ctx, effect.DamageRecipient.Reference, amount, damageSource, sourceBound)
+		return lowerReferencedPlayerDamageSpell(ctx, effect.DamageRecipient.Reference, amount)
 	}
 	target, ok := damageTargetSpec(ctx.content.Targets[0])
 	// A target-controller rider ("... and B damage to that creature's
@@ -487,9 +481,8 @@ func lowerFixedDamageSpell(
 		Amount:    amount,
 		Recipient: game.AnyTargetDamageRecipient(0),
 	}
-	if sourceBound && damageSource.Kind() == game.ObjectReferenceEventPermanent {
-		damage.DamageSource = opt.Val(damageSource)
-	} else if damageSourceIsSourcePermanent(ctx.content.References) ||
+	damage.DamageSource = primaryDamageSource(ctx.content.References)
+	if !damage.DamageSource.Exists &&
 		effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower {
 		damage.DamageSource = opt.Val(game.SourcePermanentReference())
 	}
@@ -698,8 +691,6 @@ func lowerReferencedPlayerDamageSpell(
 	ctx contentCtx,
 	recipientKind parser.DamageRecipientReferenceKind,
 	amount game.Quantity,
-	damageSource game.ObjectReference,
-	sourceBound bool,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	recipient, ok := referencedDamageRecipientPlayer(ctx, recipientKind)
 	target, targetOK := removalTargetSpecForRecipient(ctx.content.Targets[0])
@@ -712,13 +703,9 @@ func lowerReferencedPlayerDamageSpell(
 		)
 	}
 	damage := game.Damage{
-		Amount:    amount,
-		Recipient: game.PlayerDamageRecipient(recipient),
-	}
-	if sourceBound && damageSource.Kind() == game.ObjectReferenceEventPermanent {
-		damage.DamageSource = opt.Val(damageSource)
-	} else if damageSourceIsSourcePermanent(ctx.content.References[:1]) {
-		damage.DamageSource = opt.Val(game.SourcePermanentReference())
+		Amount:       amount,
+		Recipient:    game.PlayerDamageRecipient(recipient),
+		DamageSource: primaryDamageSource(ctx.content.References),
 	}
 	return game.Mode{
 		Targets: []game.TargetSpec{target},
@@ -821,14 +808,9 @@ func lowerControllerDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 		amount = game.Fixed(effect.Amount.Value)
 	}
 	damage := game.Damage{
-		Amount:    amount,
-		Recipient: game.PlayerDamageRecipient(game.ControllerReference()),
-	}
-	if damageSource, ok := lowerDamageSourceReference(ctx.content.References); ok &&
-		damageSource.Kind() == game.ObjectReferenceEventPermanent {
-		damage.DamageSource = opt.Val(damageSource)
-	} else if damageSourceIsSourcePermanent(ctx.content.References) {
-		damage.DamageSource = opt.Val(game.SourcePermanentReference())
+		Amount:       amount,
+		Recipient:    game.PlayerDamageRecipient(game.ControllerReference()),
+		DamageSource: primaryDamageSource(ctx.content.References),
 	}
 	return game.Mode{
 		Sequence: []game.Instruction{{Primitive: damage}},
@@ -889,14 +871,9 @@ func lowerEventPlayerDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.D
 		return unsupported()
 	}
 	damage := game.Damage{
-		Amount:    amount,
-		Recipient: game.PlayerDamageRecipient(game.EventPlayerReference()),
-	}
-	if damageSource, ok := lowerDamageSourceReference(sourceReferences[:1]); ok &&
-		damageSource.Kind() == game.ObjectReferenceEventPermanent {
-		damage.DamageSource = opt.Val(damageSource)
-	} else if damageSourceIsSourcePermanent(sourceReferences[:1]) {
-		damage.DamageSource = opt.Val(game.SourcePermanentReference())
+		Amount:       amount,
+		Recipient:    game.PlayerDamageRecipient(game.EventPlayerReference()),
+		DamageSource: primaryDamageSource(sourceReferences[:1]),
 	}
 	return game.Mode{
 		Sequence: []game.Instruction{{Primitive: damage}},
@@ -1000,19 +977,10 @@ func lowerDividedDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 		)
 	}
 	damage := game.Damage{
-		Amount:    game.Fixed(total),
-		Recipient: game.AnyTargetDamageRecipient(0),
-		Divided:   true,
-	}
-	var damageSource game.ObjectReference
-	var sourceBound bool
-	if len(ctx.content.References) > 0 {
-		damageSource, sourceBound = lowerDamageSourceReference(ctx.content.References[:1])
-	}
-	if sourceBound && damageSource.Kind() == game.ObjectReferenceEventPermanent {
-		damage.DamageSource = opt.Val(damageSource)
-	} else if damageSourceIsSourcePermanent(ctx.content.References) {
-		damage.DamageSource = opt.Val(game.SourcePermanentReference())
+		Amount:       game.Fixed(total),
+		Recipient:    game.AnyTargetDamageRecipient(0),
+		Divided:      true,
+		DamageSource: primaryDamageSource(ctx.content.References),
 	}
 	return game.Mode{
 		Targets: []game.TargetSpec{target},
@@ -1415,10 +1383,9 @@ func lowerEventPowerGroupDamageSpell(ctx contentCtx) (game.AbilityContent, bool)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
-	damageSourceRef := opt.Val(game.SourcePermanentReference())
-	if damageSource, sourceBound := lowerDamageSourceReference(ctx.content.References[:1]); sourceBound &&
-		damageSource.Kind() == game.ObjectReferenceEventPermanent {
-		damageSourceRef = opt.Val(damageSource)
+	damageSourceRef := primaryDamageSource(ctx.content.References)
+	if !damageSourceRef.Exists {
+		damageSourceRef = opt.Val(game.SourcePermanentReference())
 	}
 	damage := game.Damage{
 		Amount:       game.Dynamic(dynamic),
@@ -1463,17 +1430,7 @@ func lowerEachOfTargetsDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	if !ok || !exactDamageSourceSyntax(ctx.content.References) {
 		return game.AbilityContent{}, false
 	}
-	var damageSource game.ObjectReference
-	var sourceBound bool
-	if len(ctx.content.References) > 0 {
-		damageSource, sourceBound = lowerDamageSourceReference(ctx.content.References[:1])
-	}
-	var damageSourceRef opt.V[game.ObjectReference]
-	if sourceBound && damageSource.Kind() == game.ObjectReferenceEventPermanent {
-		damageSourceRef = opt.Val(damageSource)
-	} else if damageSourceIsSourcePermanent(ctx.content.References) {
-		damageSourceRef = opt.Val(game.SourcePermanentReference())
-	}
+	damageSourceRef := primaryDamageSource(ctx.content.References)
 	sequence := make([]game.Instruction, 0, spec.MaxTargets)
 	for i := range spec.MaxTargets {
 		sequence = append(sequence, game.Instruction{Primitive: game.Damage{
@@ -1547,6 +1504,30 @@ func damageSourceIsSourcePermanent(references []compiler.CompiledReference) bool
 	default:
 		return false
 	}
+}
+
+// primaryDamageSource resolves the optional DamageSource attribution shared by
+// every primary deal-damage instruction. It is the lowering-side realization of
+// the unified damage output's Source component (#1748): the same source-binding
+// branch was previously rebuilt in each primary-damage lowering. When the damage
+// subject is the triggering event's permanent ("it" bound to the event) it
+// returns that event reference; when the subject is the ability's own source
+// permanent ("this creature", or "it" bound to the source) it returns
+// game.SourcePermanentReference() so the runtime attributes the source's
+// last-known keywords (lifelink, deathtouch); otherwise it returns the zero opt
+// and the runtime attributes the damage to the resolving source. Only the damage
+// subject (references[0]) is inspected.
+func primaryDamageSource(references []compiler.CompiledReference) opt.V[game.ObjectReference] {
+	if len(references) > 0 {
+		if source, bound := lowerDamageSourceReference(references[:1]); bound &&
+			source.Kind() == game.ObjectReferenceEventPermanent {
+			return opt.Val(source)
+		}
+	}
+	if damageSourceIsSourcePermanent(references) {
+		return opt.Val(game.SourcePermanentReference())
+	}
+	return opt.V[game.ObjectReference]{}
 }
 
 func exactDamageSourceSyntax(references []compiler.CompiledReference) bool {
