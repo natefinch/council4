@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -236,4 +237,60 @@ func emitCreatureDiedEvent(g *game.Game) {
 		PermanentID: perm.ObjectID,
 		CardTypes:   []types.Card{types.Creature},
 	})
+}
+
+func TestEventHistoryConditionRevoltLeftBattlefield(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source1 := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Test Bear",
+		Types: []types.Card{types.Creature},
+	}})
+	source2 := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Opponent Bear",
+		Types: []types.Card{types.Creature},
+	}})
+
+	// The pattern produced by the Revolt event-history recognizer: any permanent
+	// you control leaving the battlefield this turn.
+	revoltCond := opt.Val(game.Condition{
+		EventHistory: opt.Val(game.EventHistoryCondition{
+			Pattern: game.TriggerPattern{
+				Event:         game.EventZoneChanged,
+				Controller:    game.TriggerControllerYou,
+				MatchFromZone: true,
+				FromZone:      zone.Battlefield,
+			},
+			Window: game.EventHistoryCurrentTurn,
+		}),
+	})
+
+	ctx1 := conditionContext{controller: game.Player1, source: source1}
+	ctx2 := conditionContext{controller: game.Player2, source: source2}
+	if conditionSatisfied(g, ctx1, revoltCond) {
+		t.Fatal("condition satisfied before any permanent left the battlefield")
+	}
+
+	// A non-battlefield departure (entering from the hand) must not satisfy revolt.
+	emitEvent(g, game.Event{Kind: game.EventZoneChanged, Controller: game.Player1, PermanentID: source1.ObjectID, FromZone: zone.Hand, ToZone: zone.Battlefield})
+	if conditionSatisfied(g, ctx1, revoltCond) {
+		t.Fatal("condition satisfied after a non-battlefield zone change")
+	}
+
+	// An opponent's permanent leaving the battlefield satisfies the opponent's
+	// source but not the controller-scoped Player1 source.
+	emitEvent(g, game.Event{Kind: game.EventZoneChanged, Controller: game.Player2, PermanentID: source2.ObjectID, FromZone: zone.Battlefield, ToZone: zone.Exile})
+	if conditionSatisfied(g, ctx1, revoltCond) {
+		t.Fatal("condition satisfied for Player1 when only Player2's permanent left the battlefield")
+	}
+	if !conditionSatisfied(g, ctx2, revoltCond) {
+		t.Fatal("condition not satisfied for Player2 after their permanent left the battlefield")
+	}
+
+	// A permanent the controller owns leaving the battlefield to any zone
+	// (here exile rather than the graveyard) satisfies revolt.
+	emitEvent(g, game.Event{Kind: game.EventZoneChanged, Controller: game.Player1, PermanentID: source1.ObjectID, FromZone: zone.Battlefield, ToZone: zone.Exile})
+	if !conditionSatisfied(g, ctx1, revoltCond) {
+		t.Fatal("condition not satisfied after the controller's permanent left the battlefield")
+	}
 }

@@ -11,6 +11,7 @@ var Cards = []*game.CardDef{
 	MarthaJones,
 	MasterSRebuke,
 	MephiticDraught,
+	MichelangeloGameMaster,
 	MorbidOpportunist,
 	MortalObstinacy,
 	MossfireValley,

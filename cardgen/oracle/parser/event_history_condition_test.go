@@ -114,6 +114,73 @@ func TestEventHistoryConditions(t *testing.T) {
 	}
 }
 
+func TestEventHistoryLeftBattlefieldRevolt(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		condition     string
+		requiredTypes []TriggerCardType
+	}{
+		{
+			name:      "any permanent",
+			condition: "a permanent left the battlefield under your control",
+		},
+		{
+			name:          "creature only",
+			condition:     "a creature left the battlefield under your control",
+			requiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+		},
+	}
+	for i := range tests {
+		test := &tests[i]
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(
+				"When this creature enters, if "+test.condition+" this turn, draw a card.",
+				Context{},
+			)
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if len(document.Abilities) != 1 || len(document.Abilities[0].EventHistoryConditions) != 1 {
+				t.Fatalf("event history conditions = %#v", document.Abilities)
+			}
+			condition := &document.Abilities[0].EventHistoryConditions[0]
+			if condition.Window.Kind != EventHistoryWindowCurrentTurn || condition.Negated {
+				t.Fatalf("condition = %#v", condition)
+			}
+			event := condition.TriggerEvent
+			if event == nil || condition.PlayerEvent != nil {
+				t.Fatalf("condition = %#v", condition)
+			}
+			if event.Kind != TriggerEventKindZoneChange {
+				t.Fatalf("event kind = %q, want %q", event.Kind, TriggerEventKindZoneChange)
+			}
+			if event.Controller != ControllerYou {
+				t.Fatalf("event controller = %q, want %q", event.Controller, ControllerYou)
+			}
+			if event.ZoneChange.Kind != TriggerEventZoneChangeMoved {
+				t.Fatalf("zone change kind = %q, want %q", event.ZoneChange.Kind, TriggerEventZoneChangeMoved)
+			}
+			if !event.Zone.MatchFromZone || event.Zone.FromZone.Kind != TriggerEventZoneBattlefield {
+				t.Fatalf("zone context = %#v", event.Zone)
+			}
+			if event.Zone.MatchToZone {
+				t.Fatalf("zone context should not match a destination: %#v", event.Zone)
+			}
+			got := event.Subject.Selection.RequiredTypes
+			if len(got) != len(test.requiredTypes) {
+				t.Fatalf("required types = %#v, want %#v", got, test.requiredTypes)
+			}
+			for j := range got {
+				if got[j] != test.requiredTypes[j] {
+					t.Fatalf("required types = %#v, want %#v", got, test.requiredTypes)
+				}
+			}
+		})
+	}
+}
+
 func TestEventHistoryConditionActivationOnlyIfSpan(t *testing.T) {
 	t.Parallel()
 	const activationSource = "{1}: Draw a card. Activate only if you attacked this turn."
@@ -157,6 +224,9 @@ func TestEventHistoryConditionsFailClosed(t *testing.T) {
 		"spells were cast last turn",
 		"no spells were cast this turn",
 		"you lost life",
+		"a permanent left the battlefield",
+		"a permanent left the battlefield under an opponent's control",
+		"an artifact left the battlefield under your control",
 	} {
 		t.Run(condition, func(t *testing.T) {
 			t.Parallel()
