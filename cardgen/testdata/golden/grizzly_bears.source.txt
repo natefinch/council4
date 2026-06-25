@@ -1,0 +1,26 @@
+package g
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// Grizzly Bears
+//
+// Type: Creature — Bear
+//
+// Oracle text:
+var GrizzlyBears = newGrizzlyBears()
+
+func newGrizzlyBears() *game.CardDef {
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:      "Grizzly Bears",
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Bear},
+			Power:     opt.Val(game.PT{Value: 2}),
+			Toughness: opt.Val(game.PT{Value: 2}),
+		},
+	}
+}

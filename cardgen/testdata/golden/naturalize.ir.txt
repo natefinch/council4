@@ -1,0 +1,47 @@
+
+  [0]: 
+    Kind: spell
+    Text: Destroy target artifact or enchantment.
+    Content: 
+      Targets: 
+        [0]: 
+          Text: target artifact or enchantment
+          Cardinality: 
+            Min: 1
+            Max: 1
+          Selector: 
+            Kind: 4
+          Exact: true
+          Order: 
+            Start: 2
+            End: 3
+      Effects: 
+        [0]: 
+          Kind: 15
+          Context: EffectContextController
+          Text: Destroy target artifact or enchantment.
+          References: 
+          SubjectReferences: 
+          Targets: 
+            [0]: 
+              Text: target artifact or enchantment
+              Cardinality: 
+                Min: 1
+                Max: 1
+              Selector: 
+                Kind: 4
+              Exact: true
+          SubjectTargets: 
+          Selector: 
+            Kind: 4
+          DamageRecipient: 
+            EachSourceGroup: 
+          BecomeTypeAddColors: 
+          PolymorphColors: 
+          PolymorphSupertypes: 
+          Exact: true
+          Order: 
+            End: 4
+          VerbOrder: 
+            End: 1
+      Keywords: 

@@ -1,0 +1,86 @@
+
+  [0]: 
+    Kind: activated
+    Text: {T}: Prodigal Sorcerer deals 1 damage to any target.
+    ActivationZone: Battlefield
+    Cost: 
+      Text: {T}
+      Components: 
+        [0]: 
+          Kind: 2
+          Text: {T}
+          Symbol: {T}
+          Order: 
+            End: 1
+      Order: 
+        End: 1
+    Content: 
+      Targets: 
+        [0]: 
+          Text: any target
+          Cardinality: 
+            Min: 1
+            Max: 1
+          Selector: 
+            Kind: 1
+          Exact: true
+          Order: 
+            Start: 6
+            End: 7
+      Effects: 
+        [0]: 
+          Kind: 14
+          Context: EffectContextSource
+          Text: Prodigal Sorcerer deals 1 damage to any target.
+          References: 
+            [0]: 
+              Kind: 1
+              Text: Prodigal Sorcerer
+              Binding: 2
+              Order: 
+                Start: 2
+                End: 3
+          SubjectReferences: 
+            [0]: 
+              Kind: 1
+              Text: Prodigal Sorcerer
+              Binding: 2
+              Order: 
+                Start: 2
+                End: 3
+          Targets: 
+            [0]: 
+              Text: any target
+              Cardinality: 
+                Min: 1
+                Max: 1
+              Selector: 
+                Kind: 1
+              Exact: true
+          SubjectTargets: 
+          Selector: 
+            Kind: 1
+          DamageRecipient: 
+            EachSourceGroup: 
+          Amount: 
+            Value: 1
+            Known: true
+          BecomeTypeAddColors: 
+          PolymorphColors: 
+          PolymorphSupertypes: 
+          Exact: true
+          Order: 
+            Start: 2
+            End: 8
+          VerbOrder: 
+            Start: 4
+            End: 5
+      Keywords: 
+      References: 
+        [0]: 
+          Kind: 1
+          Text: Prodigal Sorcerer
+          Binding: 2
+          Order: 
+            Start: 2
+            End: 3

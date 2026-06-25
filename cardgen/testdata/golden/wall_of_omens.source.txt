@@ -1,0 +1,52 @@
+package g
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// Wall of Omens
+//
+// Type: Creature — Wall
+//
+// Oracle text:
+//
+//	When this creature enters, draw a card.
+var WallOfOmens = newWallOfOmens()
+
+func newWallOfOmens() *game.CardDef {
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:      "Wall of Omens",
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Wall},
+			Power:     opt.Val(game.PT{Value: 0}),
+			Toughness: opt.Val(game.PT{Value: 4}),
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.TriggeredAbility{
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhen,
+						Pattern: game.TriggerPattern{
+							Event:  game.EventPermanentEnteredBattlefield,
+							Source: game.TriggerSourceSelf,
+						},
+					},
+					Content: game.Mode{
+						Sequence: []game.Instruction{
+							{
+								Primitive: game.Draw{
+									Amount: game.Fixed(1),
+									Player: game.ControllerReference(),
+								},
+							},
+						},
+					}.Ability(),
+				},
+			},
+			OracleText: `
+			When this creature enters, draw a card.
+		`,
+		},
+	}
+}

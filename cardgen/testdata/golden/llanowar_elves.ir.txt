@@ -1,0 +1,51 @@
+
+  [0]: 
+    Kind: activated
+    Text: {T}: Add {G}.
+    ActivationZone: Battlefield
+    Cost: 
+      Text: {T}
+      Components: 
+        [0]: 
+          Kind: 2
+          Text: {T}
+          Symbol: {T}
+          Order: 
+            End: 1
+      Order: 
+        End: 1
+    Content: 
+      Effects: 
+        [0]: 
+          Kind: 1
+          Context: EffectContextController
+          Text: Add {G}.
+          References: 
+          SubjectReferences: 
+          Targets: 
+          SubjectTargets: 
+          Selector: 
+          DamageRecipient: 
+            EachSourceGroup: 
+          Amount: 
+            Value: 1
+            Known: true
+          Details: 
+            Symbol: {G}
+          BecomeTypeAddColors: 
+          PolymorphColors: 
+          PolymorphSupertypes: 
+          Mana: 
+            Symbols: 
+              [0]: {G}
+            Colors: 
+              [0]: G
+            ColorsKnown: true
+            LegacyBodyExact: true
+          Order: 
+            Start: 2
+            End: 4
+          VerbOrder: 
+            Start: 2
+            End: 3
+      Keywords: 

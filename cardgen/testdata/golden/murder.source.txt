@@ -1,0 +1,46 @@
+package g
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// Murder
+//
+// Type: Instant
+//
+// Oracle text:
+//
+//	Destroy target creature.
+var Murder = newMurder()
+
+func newMurder() *game.CardDef {
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:  "Murder",
+			Types: []types.Card{types.Instant},
+			SpellAbility: opt.Val(game.Mode{
+				Targets: []game.TargetSpec{
+					game.TargetSpec{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Constraint: "target creature",
+						Allow:      game.TargetAllowPermanent,
+						Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
+					},
+				},
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.Destroy{
+							Object: game.TargetPermanentReference(0),
+						},
+					},
+				},
+			}.Ability()),
+			OracleText: `
+			Destroy target creature.
+		`,
+		},
+	}
+}

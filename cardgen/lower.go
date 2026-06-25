@@ -144,6 +144,27 @@ func hasAdventureCastPermission(faces []loweredFaceAbilities) bool {
 	return false
 }
 
+// compileFaceDocument parses and compiles a single face's Oracle text into the
+// conservative semantic IR. The parser owns the Oracle wording; the compiler
+// stays text-blind. lowerFaceAbilities and the golden snapshot harness share
+// this helper so both observe identical parser context and compiler output.
+func compileFaceDocument(
+	face scryfallFaceFields,
+	parsedType ParsedTypeLine,
+) (compiler.Compilation, []shared.Diagnostic) {
+	document, diagnostics := parser.Parse(face.OracleText, parser.Context{
+		InstantOrSorcery: slices.Contains(parsedType.Types, "Instant") || slices.Contains(parsedType.Types, "Sorcery"),
+		Planeswalker:     slices.Contains(parsedType.Types, "Planeswalker"),
+		Saga:             slices.Contains(parsedType.Subtypes, "Saga"),
+		Class:            slices.Contains(parsedType.Subtypes, "Class"),
+		Leveler:          face.Layout == "leveler",
+		CardName:         face.Name,
+		Legendary:        slices.Contains(parsedType.Supertypes, "Legendary"),
+	})
+	compilation, compilerDiagnostics := compiler.Compile(document, compiler.Context{})
+	return compilation, append(diagnostics, compilerDiagnostics...)
+}
+
 func lowerFaceAbilities(
 	face scryfallFaceFields,
 ) (loweredFaceAbilities, []shared.Diagnostic) {
@@ -158,17 +179,7 @@ func lowerFaceAbilities(
 	if face.OracleText == "" {
 		return loweredFaceAbilities{}, nil
 	}
-	document, diagnostics := parser.Parse(face.OracleText, parser.Context{
-		InstantOrSorcery: slices.Contains(parsedType.Types, "Instant") || slices.Contains(parsedType.Types, "Sorcery"),
-		Planeswalker:     slices.Contains(parsedType.Types, "Planeswalker"),
-		Saga:             slices.Contains(parsedType.Subtypes, "Saga"),
-		Class:            slices.Contains(parsedType.Subtypes, "Class"),
-		Leveler:          face.Layout == "leveler",
-		CardName:         face.Name,
-		Legendary:        slices.Contains(parsedType.Supertypes, "Legendary"),
-	})
-	compilation, compilerDiagnostics := compiler.Compile(document, compiler.Context{})
-	diagnostics = append(diagnostics, compilerDiagnostics...)
+	compilation, diagnostics := compileFaceDocument(face, parsedType)
 
 	var result loweredFaceAbilities
 	if spell, ok := lowerSpellFaceCombiner(face.Name, compilation); ok {

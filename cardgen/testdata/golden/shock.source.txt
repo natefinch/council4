@@ -1,0 +1,46 @@
+package g
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// Shock
+//
+// Type: Instant
+//
+// Oracle text:
+//
+//	Shock deals 2 damage to any target.
+var Shock = newShock()
+
+func newShock() *game.CardDef {
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:  "Shock",
+			Types: []types.Card{types.Instant},
+			SpellAbility: opt.Val(game.Mode{
+				Targets: []game.TargetSpec{
+					game.TargetSpec{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Constraint: "any target",
+						Allow:      game.TargetAllowPermanent | game.TargetAllowPlayer,
+					},
+				},
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.Damage{
+							Amount:    game.Fixed(2),
+							Recipient: game.AnyTargetDamageRecipient(0),
+						},
+					},
+				},
+			}.Ability()),
+			OracleText: `
+			Shock deals 2 damage to any target.
+		`,
+		},
+	}
+}
