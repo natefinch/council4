@@ -3349,8 +3349,8 @@ func TestParseDualRecipientGroupDamage(t *testing.T) {
 			t.Parallel()
 			document, _ := Parse(test.source, Context{InstantOrSorcery: true, CardName: test.cardName})
 			effect := document.Abilities[0].Sentences[0].Effects[0]
-			gotKinds := make([]SelectionKind, 0, len(effect.DamageRecipientPair))
-			for _, half := range effect.DamageRecipientPair {
+			gotKinds := make([]SelectionKind, 0, len(effect.DamageRecipient.Groups))
+			for _, half := range effect.DamageRecipient.Groups {
 				gotKinds = append(gotKinds, half.Kind)
 			}
 			if !slices.Equal(gotKinds, test.wantPair) {
@@ -3358,6 +3358,91 @@ func TestParseDualRecipientGroupDamage(t *testing.T) {
 			}
 			if effect.Exact != test.exact {
 				t.Fatalf("exact = %v, want %v", effect.Exact, test.exact)
+			}
+		})
+	}
+}
+
+// TestParseDamageRecipientBundle verifies that the unified DamageRecipientSyntax
+// payload captures each non-target primary-recipient shape in its own typed
+// field: the referenced-player Reference, the dual-recipient Groups pair (with
+// GroupPair reporting exactly two halves), and the each-source group plus its
+// per-source recipient role. Ordinary single-target burn leaves the whole
+// bundle at its zero value so it stays off every special routing path.
+func TestParseDamageRecipientBundle(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name             string
+		source           string
+		cardName         string
+		wantReference    DamageRecipientReferenceKind
+		wantGroupPair    bool
+		wantGroupKinds   []SelectionKind
+		wantEachRole     DamageRecipientReferenceKind
+		wantEachKind     SelectionKind
+		wantZeroEntirely bool
+	}{
+		{
+			name:          "referenced-player you",
+			source:        "Test Bolt deals 3 damage to you.",
+			cardName:      "Test Bolt",
+			wantReference: DamageRecipientReferenceYou,
+		},
+		{
+			name:           "dual-recipient groups",
+			source:         "Famine deals 3 damage to each creature and each player.",
+			cardName:       "Famine",
+			wantGroupPair:  true,
+			wantGroupKinds: []SelectionKind{SelectionCreature, SelectionPlayer},
+		},
+		{
+			name:          "each-source controller",
+			source:        "Each creature deals 1 damage to its controller.",
+			cardName:      "Test Source",
+			wantReference: DamageRecipientReferenceController,
+			wantEachRole:  DamageRecipientReferenceController,
+			wantEachKind:  SelectionCreature,
+		},
+		{
+			name:             "ordinary single target",
+			source:           "Lightning Bolt deals 3 damage to any target.",
+			cardName:         "Lightning Bolt",
+			wantZeroEntirely: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true, CardName: test.cardName})
+			recipient := document.Abilities[0].Sentences[0].Effects[0].DamageRecipient
+			if test.wantZeroEntirely {
+				if recipient.Reference != DamageRecipientReferenceNone ||
+					len(recipient.Groups) != 0 ||
+					recipient.EachSourceRole != DamageRecipientReferenceNone ||
+					recipient.EachSourceGroup.Kind != SelectionUnknown {
+					t.Fatalf("ordinary target recipient = %#v, want zero", recipient)
+				}
+				return
+			}
+			if recipient.Reference != test.wantReference {
+				t.Fatalf("Reference = %v, want %v", recipient.Reference, test.wantReference)
+			}
+			pair, ok := recipient.GroupPair()
+			if ok != test.wantGroupPair {
+				t.Fatalf("GroupPair ok = %v, want %v", ok, test.wantGroupPair)
+			}
+			if test.wantGroupPair {
+				gotKinds := []SelectionKind{pair[0].Kind, pair[1].Kind}
+				if !slices.Equal(gotKinds, test.wantGroupKinds) {
+					t.Fatalf("group kinds = %#v, want %#v", gotKinds, test.wantGroupKinds)
+				}
+			}
+			if recipient.EachSourceRole != test.wantEachRole {
+				t.Fatalf("EachSourceRole = %v, want %v", recipient.EachSourceRole, test.wantEachRole)
+			}
+			if test.wantEachRole != DamageRecipientReferenceNone &&
+				recipient.EachSourceGroup.Kind != test.wantEachKind {
+				t.Fatalf("EachSourceGroup kind = %v, want %v", recipient.EachSourceGroup.Kind, test.wantEachKind)
 			}
 		})
 	}

@@ -25,8 +25,8 @@ func lowerEachSourceDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	}
 	effect := ctx.content.Effects[0]
 	if effect.Kind != compiler.EffectDealDamage ||
-		effect.EachSourceDamageRecipient == parser.DamageRecipientReferenceNone ||
-		effect.EachSourceDamageRecipient == parser.DamageRecipientReferenceItself ||
+		effect.DamageRecipient.EachSourceRole == parser.DamageRecipientReferenceNone ||
+		effect.DamageRecipient.EachSourceRole == parser.DamageRecipientReferenceItself ||
 		effect.Negated ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -37,14 +37,14 @@ func lowerEachSourceDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	if !ok {
 		return game.AbilityContent{}, false
 	}
-	group, ok := damageGroupRecipient(effect.EachSourceDamageGroup)
+	group, ok := damageGroupRecipient(effect.DamageRecipient.EachSourceGroup)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
 	primitive := game.GroupSourceDamage{
 		Group:   group,
 		Amount:  amount,
-		ToOwner: effect.EachSourceDamageRecipient == parser.DamageRecipientReferenceOwner,
+		ToOwner: effect.DamageRecipient.EachSourceRole == parser.DamageRecipientReferenceOwner,
 	}
 	return game.Mode{
 		Sequence: []game.Instruction{{Primitive: primitive}},
@@ -68,17 +68,17 @@ func lowerEachSelfPowerDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	}
 	effect := ctx.content.Effects[0]
 	if effect.Kind != compiler.EffectDealDamage ||
-		effect.EachSourceDamageRecipient != parser.DamageRecipientReferenceItself ||
+		effect.DamageRecipient.EachSourceRole != parser.DamageRecipientReferenceItself ||
 		effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower ||
 		effect.Negated ||
-		effect.EachSourceDamageGroup.Kind != compiler.SelectorCreature ||
+		effect.DamageRecipient.EachSourceGroup.Kind != compiler.SelectorCreature ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 {
 		return game.AbilityContent{}, false
 	}
-	group, ok := damageGroupRecipient(effect.EachSourceDamageGroup)
+	group, ok := damageGroupRecipient(effect.DamageRecipient.EachSourceGroup)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
@@ -117,8 +117,8 @@ func lowerGroupDamageSpell(
 	}
 	sel := effect.Selector
 	recipientSelectors := []compiler.CompiledSelector{sel}
-	if len(effect.DamageRecipientSelectors) > 0 {
-		recipientSelectors = effect.DamageRecipientSelectors
+	if len(effect.DamageRecipient.GroupSelectors) > 0 {
+		recipientSelectors = effect.DamageRecipient.GroupSelectors
 	}
 	recipients := make([]game.DamageRecipient, 0, len(recipientSelectors))
 	for _, recipientSel := range recipientSelectors {
@@ -452,8 +452,8 @@ func lowerFixedDamageSpell(
 	default:
 		// No amount override: the damage defaults to X (DynamicAmountX).
 	}
-	if effect.DamageRecipientReference != parser.DamageRecipientReferenceNone {
-		return lowerReferencedPlayerDamageSpell(ctx, effect.DamageRecipientReference, amount, damageSource, sourceBound)
+	if effect.DamageRecipient.Reference != parser.DamageRecipientReferenceNone {
+		return lowerReferencedPlayerDamageSpell(ctx, effect.DamageRecipient.Reference, amount, damageSource, sourceBound)
 	}
 	target, ok := damageTargetSpec(ctx.content.Targets[0])
 	// A target-controller rider ("... and B damage to that creature's
@@ -797,12 +797,12 @@ func lowerControllerDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 	}
 	if len(ctx.content.Effects) != 1 ||
 		effect.Kind != compiler.EffectDealDamage ||
-		effect.DamageRecipientReference != parser.DamageRecipientReferenceYou ||
+		effect.DamageRecipient.Reference != parser.DamageRecipientReferenceYou ||
 		!effect.Exact ||
 		effect.Negated ||
 		effect.Divided ||
 		len(ctx.content.Targets) != 0 ||
-		len(effect.DamageRecipientSelectors) != 0 ||
+		len(effect.DamageRecipient.GroupSelectors) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
 		len(ctx.content.Modes) != 0 {
@@ -857,12 +857,12 @@ func lowerEventPlayerDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.D
 	}
 	if len(ctx.content.Effects) != 1 ||
 		effect.Kind != compiler.EffectDealDamage ||
-		effect.DamageRecipientReference != parser.DamageRecipientReferenceThatPlayer ||
+		effect.DamageRecipient.Reference != parser.DamageRecipientReferenceThatPlayer ||
 		!effect.Exact ||
 		effect.Negated ||
 		effect.Divided ||
 		len(ctx.content.Targets) != 0 ||
-		len(effect.DamageRecipientSelectors) != 0 ||
+		len(effect.DamageRecipient.GroupSelectors) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
 		len(ctx.content.Modes) != 0 {
@@ -1169,7 +1169,7 @@ func lowerSourcePowerDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		effect.Negated ||
 		effect.Context != parser.EffectContextTarget ||
 		effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower ||
-		len(effect.DamageRecipientSelectors) != 0 ||
+		len(effect.DamageRecipient.GroupSelectors) != 0 ||
 		len(ctx.content.References) != 1 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
@@ -1252,7 +1252,7 @@ func lowerSourcePowerGroupDamageSpell(ctx contentCtx) (game.AbilityContent, bool
 		effect.Negated ||
 		effect.Context != parser.EffectContextTarget ||
 		effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower ||
-		len(effect.DamageRecipientSelectors) == 0 ||
+		len(effect.DamageRecipient.GroupSelectors) == 0 ||
 		len(ctx.content.Targets) != 1 ||
 		len(ctx.content.References) != 1 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -1277,8 +1277,8 @@ func lowerSourcePowerGroupDamageSpell(ctx contentCtx) (game.AbilityContent, bool
 	if !ok {
 		return game.AbilityContent{}, false
 	}
-	instructions := make([]game.Instruction, 0, len(effect.DamageRecipientSelectors))
-	for _, sel := range effect.DamageRecipientSelectors {
+	instructions := make([]game.Instruction, 0, len(effect.DamageRecipient.GroupSelectors))
+	for _, sel := range effect.DamageRecipient.GroupSelectors {
 		recipient, ok := groupDamageRecipientForExcluding(sel, sourceRef)
 		if !ok {
 			return game.AbilityContent{}, false
@@ -1319,8 +1319,8 @@ func lowerInheritedPowerGroupDamageSpell(ctx contentCtx) (game.AbilityContent, b
 		effect.Negated ||
 		effect.Context != parser.EffectContextReferencedObject ||
 		effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower ||
-		len(effect.DamageRecipientSelectors) != 0 ||
-		effect.DamageRecipientReference != parser.DamageRecipientReferenceNone ||
+		len(effect.DamageRecipient.GroupSelectors) != 0 ||
+		effect.DamageRecipient.Reference != parser.DamageRecipientReferenceNone ||
 		len(effect.DamageRiders) != 0 ||
 		len(ctx.content.Targets) != 1 ||
 		len(ctx.content.References) != 2 ||
@@ -1389,9 +1389,9 @@ func lowerEventPowerGroupDamageSpell(ctx contentCtx) (game.AbilityContent, bool)
 		effect.Negated ||
 		(effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower &&
 			effect.Amount.DynamicKind != compiler.DynamicAmountSourceToughness) ||
-		effect.DamageRecipientReference != parser.DamageRecipientReferenceNone ||
+		effect.DamageRecipient.Reference != parser.DamageRecipientReferenceNone ||
 		len(effect.DamageRiders) != 0 ||
-		len(effect.DamageRecipientSelectors) != 0 ||
+		len(effect.DamageRecipient.GroupSelectors) != 0 ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.References) != 2 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -1450,7 +1450,7 @@ func lowerEachOfTargetsDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		effect.Negated ||
 		effect.Divided ||
 		!effect.Amount.Known || effect.Amount.Value < 1 ||
-		effect.DamageRecipientReference != parser.DamageRecipientReferenceNone ||
+		effect.DamageRecipient.Reference != parser.DamageRecipientReferenceNone ||
 		(effect.Context != parser.EffectContextSource &&
 			effect.Context != parser.EffectContextReferencedObject) ||
 		ctx.content.Targets[0].Cardinality.Max < 2 ||

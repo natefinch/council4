@@ -2166,7 +2166,7 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 	if effect.Divided {
 		return exactDividedDamageText(effect, prefix, text)
 	}
-	if effect.DamageRecipientReference != DamageRecipientReferenceNone {
+	if effect.DamageRecipient.Reference != DamageRecipientReferenceNone {
 		if len(effect.Targets) != 0 {
 			return false
 		}
@@ -2208,12 +2208,12 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 		if !ok {
 			return false
 		}
-		if len(effect.DamageRecipientPair) == 2 {
-			first, ok := exactGroupDamageRecipientText(effect.DamageRecipientPair[0])
+		if pair, ok := effect.DamageRecipient.GroupPair(); ok {
+			first, ok := exactGroupDamageRecipientText(pair[0])
 			if !ok {
 				return false
 			}
-			second, ok := exactGroupDamageRecipientText(effect.DamageRecipientPair[1])
+			second, ok := exactGroupDamageRecipientText(pair[1])
 			if !ok {
 				return false
 			}
@@ -2349,15 +2349,15 @@ func exactSourcePowerDamageEffectSyntax(effect *EffectSyntax) bool {
 		return false
 	}
 	text := exactEffectClauseText(effect)
-	if len(effect.DamageRecipientPair) == 2 {
+	if pair, ok := effect.DamageRecipient.GroupPair(); ok {
 		if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
 			return false
 		}
-		first, ok := exactGroupDamageRecipientText(effect.DamageRecipientPair[0])
+		first, ok := exactGroupDamageRecipientText(pair[0])
 		if !ok {
 			return false
 		}
-		second, ok := exactGroupDamageRecipientText(effect.DamageRecipientPair[1])
+		second, ok := exactGroupDamageRecipientText(pair[1])
 		if !ok {
 			return false
 		}
@@ -2525,7 +2525,7 @@ func exactGroupDamageAmountText(amount EffectAmountSyntax) (string, bool) {
 // keeping the dual-recipient and fixed paths unchanged and unsupported wordings
 // rejected.
 func exactGroupDynamicDamageText(effect *EffectSyntax, prefix, text string) bool {
-	if len(effect.DamageRecipientPair) != 0 {
+	if len(effect.DamageRecipient.Groups) != 0 {
 		return false
 	}
 	recipient, ok := exactGroupDamageRecipientText(effect.Selection)
