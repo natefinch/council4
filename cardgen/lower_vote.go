@@ -47,11 +47,11 @@ func lowerVoteSequence(cardName string, ctx contentCtx, syntax *parser.Ability) 
 		return game.AbilityContent{}, false
 	}
 
-	sequence := []game.Instruction{{
-		Primitive:     game.Vote{Options: append([]string(nil), syntax.Vote.Options...)},
-		PublishResult: voteResultKey,
-	}}
+	publisher := game.Instruction{
+		Primitive: game.Vote{Options: append([]string(nil), syntax.Vote.Options...)},
+	}
 	// Each arm is a contiguous run of effects sharing the same option/tie gate.
+	var branches []resultGatedBranch
 	for start := 0; start < len(effects); {
 		option := effects[start].VoteArmOption
 		tie := effects[start].VoteArmTieInclusive
@@ -69,18 +69,15 @@ func lowerVoteSequence(cardName string, ctx contentCtx, syntax *parser.Ability) 
 		if !ok {
 			return game.AbilityContent{}, false
 		}
-		for k := range armContent.Modes[0].Sequence {
-			instruction := armContent.Modes[0].Sequence[k]
-			if instruction.ResultGate.Exists {
-				return game.AbilityContent{}, false
-			}
-			instruction.ResultGate = opt.Val(game.InstructionResultGate{
-				Key:         voteResultKey,
-				AmountRange: opt.Val(gate),
-			})
-			sequence = append(sequence, instruction)
-		}
+		branches = append(branches, resultGatedBranch{
+			predicate: game.InstructionResultGate{AmountRange: opt.Val(gate)},
+			sequence:  armContent.Modes[0].Sequence,
+		})
 		start = end
+	}
+	sequence, ok := assembleResultGatedBranches(publisher, voteResultKey, branches)
+	if !ok {
+		return game.AbilityContent{}, false
 	}
 	return game.Mode{Sequence: sequence}.Ability(), true
 }

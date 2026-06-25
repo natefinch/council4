@@ -3794,10 +3794,8 @@ func lowerDiceTableSequence(cardName string, ctx contentCtx, syntax *parser.Abil
 			return game.AbilityContent{}, false
 		}
 	}
-	sequence := []game.Instruction{{
-		Primitive:     game.RollDie{Sides: roll.DieSides},
-		PublishResult: dieRollResultKey,
-	}}
+	publisher := game.Instruction{Primitive: game.RollDie{Sides: roll.DieSides}}
+	var branches []resultGatedBranch
 	for start := 1; start < len(effects); {
 		end := start + 1
 		for end < len(effects) &&
@@ -3815,18 +3813,15 @@ func lowerDiceTableSequence(cardName string, ctx contentCtx, syntax *parser.Abil
 			len(rowContent.Modes[0].Targets) != 0 {
 			return game.AbilityContent{}, false
 		}
-		for k := range rowContent.Modes[0].Sequence {
-			instruction := rowContent.Modes[0].Sequence[k]
-			if instruction.ResultGate.Exists {
-				return game.AbilityContent{}, false
-			}
-			instruction.ResultGate = opt.Val(game.InstructionResultGate{
-				Key:         dieRollResultKey,
-				AmountRange: opt.Val(rowRange),
-			})
-			sequence = append(sequence, instruction)
-		}
+		branches = append(branches, resultGatedBranch{
+			predicate: game.InstructionResultGate{AmountRange: opt.Val(rowRange)},
+			sequence:  rowContent.Modes[0].Sequence,
+		})
 		start = end
+	}
+	sequence, ok := assembleResultGatedBranches(publisher, dieRollResultKey, branches)
+	if !ok {
+		return game.AbilityContent{}, false
 	}
 	return game.Mode{Sequence: sequence}.Ability(), true
 }

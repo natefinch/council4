@@ -127,12 +127,10 @@ func lowerKinshipPayoff(
 			len(content.Modes[0].Targets) != 0 {
 			return nil, false
 		}
-		for _, instruction := range content.Modes[0].Sequence {
-			if instruction.ResultGate.Exists {
-				return nil, false
-			}
-			instruction.ResultGate = opt.Val(gate)
-			gated = append(gated, instruction)
+		var ok bool
+		gated, ok = appendResultGatedBranch(gated, gate, content.Modes[0].Sequence)
+		if !ok {
+			return nil, false
 		}
 	}
 	if len(gated) == 0 {
