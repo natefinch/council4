@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, ability *game.TriggeredAbility, chosenModes []int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
@@ -28,6 +29,26 @@ func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *
 }
 
 func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.TriggerPattern, event game.Event) bool {
+	// Trigger patterns are checked when the triggering event is processed, and
+	// LTB/dies checks may need last-known information for the moved permanent
+	// (CR 603.2, CR 603.6c, CR 603.10). A nil source has no controller; that
+	// only reaches here for source-agnostic event-history conditions evaluated
+	// during a spell's resolution, where source-relative filters fail closed via
+	// the out-of-range controller sentinel below.
+	sourceController := game.PlayerID(-1)
+	if source != nil {
+		sourceController = effectiveController(g, source)
+	}
+	return triggerMatchesEventForController(g, source, sourceController, pattern, event)
+}
+
+// triggerMatchesEventForController matches a trigger pattern against an event
+// using an explicit controller, decoupling controller-relative filters from the
+// source permanent's live controller. Event-based delayed triggers reuse it so
+// "you cast a spell this turn" stays bound to the trigger's controller even
+// after the creating permanent has left the battlefield (CR 603.7e). An
+// out-of-range controller fails closed for "you"/"an opponent" filters.
+func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sourceController game.PlayerID, pattern *game.TriggerPattern, event game.Event) bool {
 	if pattern.Event == game.EventUnknown || !patternMatchesEventKind(pattern, event.Kind) {
 		return false
 	}
@@ -36,17 +57,21 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 	if pattern.Event == game.EventAbilityActivated && !pattern.ExcludeManaAbility {
 		return false
 	}
-	if pattern.Event == game.EventZoneChanged && event.PermanentID == 0 {
+	if pattern.Event == game.EventZoneChanged && event.PermanentID == 0 && event.CardID == 0 {
 		return false
 	}
 	if pattern.RequireTappedForMana && !event.TappedForMana {
 		return false
 	}
+	if pattern.RequireProducedManaColor != "" &&
+		!slices.Contains(event.ProducedManaColors, pattern.RequireProducedManaColor) {
+		return false
+	}
 
-	// Trigger patterns are checked when the triggering event is processed, and
-	// LTB/dies checks may need last-known information for the moved permanent
-	// (CR 603.2, CR 603.6c, CR 603.10).
-	sourceController := effectiveController(g, source)
+	var sourceObjectID id.ID
+	if source != nil {
+		sourceObjectID = source.ObjectID
+	}
 	subjectController := event.Controller
 	if subject, ok := triggerSubjectPermanent(g, pattern.Subject, event); ok {
 		subjectController = effectiveController(g, subject)
@@ -73,6 +98,9 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 	if pattern.MatchFromZone && pattern.FromZone != event.FromZone {
 		return false
 	}
+	if pattern.ExcludeFromZone && pattern.FromZone == event.FromZone {
+		return false
+	}
 	if pattern.MatchToZone && pattern.ToZone != event.ToZone {
 		return false
 	}
@@ -97,6 +125,9 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 		pattern.PlayerEventOrdinalThisTurn != event.PlayerEventOrdinalThisTurn {
 		return false
 	}
+	if pattern.ExcludeFirstDrawInDrawStep && event.FirstInDrawStep {
+		return false
+	}
 	if !triggerCombatPatternMatches(g, sourceController, source, pattern, event) {
 		return false
 	}
@@ -106,13 +137,19 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 	if pattern.MatchCounterKind && pattern.CounterKind != event.CounterKind {
 		return false
 	}
+	if pattern.ClassBecameLevel > 0 && event.Amount != pattern.ClassBecameLevel {
+		return false
+	}
 	if pattern.Event == game.EventBeginningOfStep {
 		if pattern.Step == game.StepNone || pattern.Step != event.Step {
 			return false
 		}
 	}
 	if subjectSel := triggerSubjectSelection(pattern); !subjectSel.Empty() {
-		matched := triggerSelectionMatches(g, sourceController, event, event.PermanentID, &subjectSel, source.ObjectID)
+		matched := triggerSelectionMatches(g, sourceController, event, event.PermanentID, &subjectSel, sourceObjectID)
+		if !matched && event.PermanentID == 0 && event.CardID != 0 {
+			matched = triggerCardInstanceSelectionMatches(g, sourceController, event, &subjectSel, sourceObjectID)
+		}
 		if !matched && pattern.SubjectSelectionOrSelf {
 			matched = triggerSourceMatches(g, source, game.TriggerSourceSelf, pattern.Subject, event)
 		}
@@ -121,12 +158,13 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 		}
 	}
 	if !cardSel.Empty() {
+		event = eventWithCardCharacteristics(g, event)
 		subject := selectionSubject{
 			kind:           subjectCastSpell,
 			g:              g,
 			event:          event,
 			cardTypes:      eventSpellCardTypes(g, event),
-			sourceObjectID: source.ObjectID,
+			sourceObjectID: sourceObjectID,
 		}
 		if !matchSelection(&subject, &cardSel) {
 			return false
@@ -146,17 +184,34 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 	if pattern.SpellTargetPattern.Exists && !spellTargetsPattern(g, sourceController, pattern.SpellTargetAllow, pattern.SpellTargetPattern.Val, event) {
 		return false
 	}
+	if !triggerCastDuringTurnMatches(g, sourceController, pattern.CastDuringTurn) {
+		return false
+	}
 	return true
 }
 
-func filteredSpellCastOrdinalThisTurn(g *game.Game, event game.Event, selection *game.Selection) int {
-	start := 0
-	index := g.Turn.TurnNumber - 1
-	if index >= 0 && index < len(g.EventTurnStarts) {
-		start = g.EventTurnStarts[index]
+// triggerCastDuringTurnMatches reports whether the active player satisfies a
+// pattern's CastDuringTurn relation relative to the ability's controller, so
+// "Whenever you cast a spell during your turn / during an opponent's turn"
+// fires only on the appropriate turn (CR 603.2).
+func triggerCastDuringTurnMatches(g *game.Game, sourceController game.PlayerID, relation game.TriggerTurnRelation) bool {
+	if relation == game.TriggerTurnAny {
+		return true
 	}
+	yourTurn := g.Turn.ActivePlayer == sourceController
+	switch relation {
+	case game.TriggerTurnYours:
+		return yourTurn
+	case game.TriggerTurnNotYours:
+		return !yourTurn
+	default:
+		return true
+	}
+}
+
+func filteredSpellCastOrdinalThisTurn(g *game.Game, event game.Event, selection *game.Selection) int {
 	ordinal := 0
-	for _, candidate := range g.Events[start:] {
+	for _, candidate := range eventsThisTurnWindow(g) {
 		if candidate.Kind != game.EventSpellCast || candidate.Controller != event.Controller {
 			continue
 		}
@@ -211,6 +266,12 @@ func triggerCombatPatternMatches(g *game.Game, viewer game.PlayerID, source *gam
 		return false
 	}
 	if pattern.AttackedPlayerHasMostLife && !attackedPlayerHasMostLife(g, event) {
+		return false
+	}
+	if pattern.AttacksWithGreaterPowerCreature && !attacksWithGreaterPowerCreature(g, source, event) {
+		return false
+	}
+	if pattern.AttackWhileSaddled && !source.Saddled {
 		return false
 	}
 	if !pattern.DamageRecipientSelection.Empty() &&
@@ -321,6 +382,31 @@ func attackedPlayerHasMostLife(g *game.Game, event game.Event) bool {
 	return true
 }
 
+// attacksWithGreaterPowerCreature reports whether, in the current combat,
+// another attacking creature has power greater than the ability's source
+// (training CR 702.150). The full attacker declaration is recorded in
+// g.Combat.Attackers before any attacker-declared event is processed, so the
+// comparison is authoritative when the source's own attack triggers.
+func attacksWithGreaterPowerCreature(g *game.Game, source *game.Permanent, event game.Event) bool {
+	if event.Kind != game.EventAttackerDeclared || g.Combat == nil {
+		return false
+	}
+	sourcePower := effectivePower(g, source)
+	for _, declaration := range g.Combat.Attackers {
+		if declaration.Attacker == source.ObjectID {
+			continue
+		}
+		other, ok := permanentByObjectID(g, declaration.Attacker)
+		if !ok {
+			continue
+		}
+		if effectivePower(g, other) > sourcePower {
+			return true
+		}
+	}
+	return false
+}
+
 func attackRecipientMatches(filter game.AttackRecipientKind, event game.Event) bool {
 	if filter == game.AttackRecipientAny {
 		return true
@@ -367,6 +453,27 @@ func triggerSelectionMatches(g *game.Game, viewer game.PlayerID, event game.Even
 	return matchSelection(&subject, selection)
 }
 
+// triggerCardInstanceSelectionMatches matches a subject selection against the
+// card moved by a zone change that names a card rather than a permanent (for
+// example "one or more creature cards leave your graveyard"), reading the card's
+// printed characteristics from its instance.
+func triggerCardInstanceSelectionMatches(g *game.Game, viewer game.PlayerID, event game.Event, selection *game.Selection, sourceObjectID id.ID) bool {
+	card, ok := g.GetCardInstance(event.CardID)
+	if !ok || card.Def == nil {
+		return false
+	}
+	subject := selectionSubject{
+		kind:           subjectCard,
+		g:              g,
+		event:          event,
+		card:           card,
+		controller:     event.Player,
+		viewer:         viewer,
+		sourceObjectID: sourceObjectID,
+	}
+	return matchSelection(&subject, selection)
+}
+
 func eventStackObjectKindMatches(g *game.Game, event game.Event, kind game.StackObjectKind) bool {
 	if event.StackObjectID == 0 {
 		return false
@@ -393,12 +500,6 @@ func triggerInterveningIf(g *game.Game, source *game.Permanent, controller game.
 	}
 	// Intervening "if" conditions are checked both as the event triggers and as
 	// the ability resolves (CR 603.4).
-	if trigger.InterveningIfControllerLifeAtLeast != 0 {
-		player, ok := playerByID(g, controller)
-		if !ok || player.Life < trigger.InterveningIfControllerLifeAtLeast {
-			return false
-		}
-	}
 	if trigger.InterveningIfEventPermanentHadCounters && !eventPermanentHadCounters(g, event) {
 		return false
 	}
@@ -410,6 +511,9 @@ func triggerInterveningIf(g *game.Game, source *game.Permanent, controller game.
 		return false
 	}
 	if trigger.InterveningIfEventPermanentWasCast && (event == nil || !event.EnterWasCast) {
+		return false
+	}
+	if trigger.InterveningIfEventPermanentWasEvoked && (event == nil || !event.EnterEvoked) {
 		return false
 	}
 	if trigger.InterveningIfEventPermanentWasCastByController &&
@@ -560,7 +664,7 @@ func spellTargetsSource(g *game.Game, source *game.Permanent, event game.Event) 
 	return false
 }
 
-func spellTargetsPattern(g *game.Game, controller game.PlayerID, allow game.TargetAllow, predicate game.TargetPredicate, event game.Event) bool {
+func spellTargetsPattern(g *game.Game, controller game.PlayerID, allow game.TargetAllow, selection game.Selection, event game.Event) bool {
 	if event.Kind != game.EventSpellCast {
 		return false
 	}
@@ -570,7 +674,7 @@ func spellTargetsPattern(g *game.Game, controller game.PlayerID, allow game.Targ
 	}
 	spec := game.TargetSpec{
 		Allow:     allow,
-		Predicate: predicate,
+		Selection: opt.Val(selection),
 	}
 	for _, target := range obj.Targets {
 		if targetMatchesSpec(g, controller, 0, &spec, target) {
@@ -644,6 +748,35 @@ func eventSpellHistoric(event game.Event) bool {
 	return slices.Contains(event.CardTypes, types.Artifact) ||
 		slices.Contains(event.CardSupertypes, types.Legendary) ||
 		slices.Contains(event.CardSubtypes, types.Saga)
+}
+
+// eventWithCardCharacteristics fills a card-filter event's printed characteristic
+// slices from its card instance's front face when the event does not already
+// carry them, so subtype, supertype, and color filters on draw, discard, and
+// cycle triggers read the moved card. Spell-cast events already record these, so
+// the populated-field guard leaves them unchanged.
+func eventWithCardCharacteristics(g *game.Game, event game.Event) game.Event {
+	if event.CardID == 0 {
+		return event
+	}
+	card, ok := g.GetCardInstance(event.CardID)
+	if !ok {
+		return event
+	}
+	face := cardFaceOrDefault(card, game.FaceFront)
+	if len(event.CardTypes) == 0 {
+		event.CardTypes = face.Types
+	}
+	if len(event.CardSupertypes) == 0 {
+		event.CardSupertypes = face.Supertypes
+	}
+	if len(event.CardSubtypes) == 0 {
+		event.CardSubtypes = face.Subtypes
+	}
+	if len(event.Colors) == 0 {
+		event.Colors = face.Colors
+	}
+	return event
 }
 
 // eventSpellCardTypes resolves the card types a spell-cast event matches against,

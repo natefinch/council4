@@ -20,6 +20,7 @@ const (
 	KeywordUnknown          KeywordKind = ""
 	KeywordAffinity         KeywordKind = "KeywordAffinity"
 	KeywordAnnihilator      KeywordKind = "KeywordAnnihilator"
+	KeywordBanding          KeywordKind = "KeywordBanding"
 	KeywordBloodthirst      KeywordKind = "KeywordBloodthirst"
 	KeywordCascade          KeywordKind = "KeywordCascade"
 	KeywordChangeling       KeywordKind = "KeywordChangeling"
@@ -56,12 +57,14 @@ const (
 	KeywordIndestructible   KeywordKind = "KeywordIndestructible"
 	KeywordInfect           KeywordKind = "KeywordInfect"
 	KeywordIntimidate       KeywordKind = "KeywordIntimidate"
+	KeywordJumpStart        KeywordKind = "KeywordJumpStart"
 	KeywordKicker           KeywordKind = "KeywordKicker"
 	KeywordLifelink         KeywordKind = "KeywordLifelink"
 	KeywordLivingWeapon     KeywordKind = "KeywordLivingWeapon"
 	KeywordMadness          KeywordKind = "KeywordMadness"
 	KeywordMenace           KeywordKind = "KeywordMenace"
 	KeywordMorph            KeywordKind = "KeywordMorph"
+	KeywordMultikicker      KeywordKind = "KeywordMultikicker"
 	KeywordMutate           KeywordKind = "KeywordMutate"
 	KeywordNinjutsu         KeywordKind = "KeywordNinjutsu"
 	KeywordOutlast          KeywordKind = "KeywordOutlast"
@@ -70,22 +73,33 @@ const (
 	KeywordProwess          KeywordKind = "KeywordProwess"
 	KeywordReadAhead        KeywordKind = "KeywordReadAhead"
 	KeywordReach            KeywordKind = "KeywordReach"
-	KeywordShadow           KeywordKind = "KeywordShadow"
-	KeywordScavenge         KeywordKind = "KeywordScavenge"
-	KeywordShroud           KeywordKind = "KeywordShroud"
-	KeywordSkulk            KeywordKind = "KeywordSkulk"
-	KeywordSplitSecond      KeywordKind = "KeywordSplitSecond"
-	KeywordStorm            KeywordKind = "KeywordStorm"
-	KeywordSuspend          KeywordKind = "KeywordSuspend"
-	KeywordToxic            KeywordKind = "KeywordToxic"
-	KeywordTrample          KeywordKind = "KeywordTrample"
-	KeywordUnearth          KeywordKind = "KeywordUnearth"
-	KeywordUndying          KeywordKind = "KeywordUndying"
-	KeywordUnleash          KeywordKind = "KeywordUnleash"
-	KeywordVigilance        KeywordKind = "KeywordVigilance"
-	KeywordWard             KeywordKind = "KeywordWard"
-	KeywordWither           KeywordKind = "KeywordWither"
-	KeywordRiot             KeywordKind = "KeywordRiot"
+	// KeywordRetrace is the Retrace keyword (CR 702.81): "You may cast this card
+	// from your graveyard by discarding a land card in addition to paying its
+	// other costs." It is a non-parameterized graveyard alternative-casting
+	// permission, also conferred on other graveyard cards by "<filter> cards in
+	// your graveyard have retrace" statics (Six, Wrenn and Six Emblem).
+	KeywordRetrace     KeywordKind = "KeywordRetrace"
+	KeywordShadow      KeywordKind = "KeywordShadow"
+	KeywordScavenge    KeywordKind = "KeywordScavenge"
+	KeywordShroud      KeywordKind = "KeywordShroud"
+	KeywordSkulk       KeywordKind = "KeywordSkulk"
+	KeywordSplitSecond KeywordKind = "KeywordSplitSecond"
+	KeywordStorm       KeywordKind = "KeywordStorm"
+	KeywordSuspend     KeywordKind = "KeywordSuspend"
+	// KeywordHideaway is the Hideaway N land keyword (CR 702.75). Its integer
+	// parameter is the number of cards looked at from the top of the library
+	// when the permanent enters, one of which is exiled face down to be played
+	// later by the source's activated ability.
+	KeywordHideaway  KeywordKind = "KeywordHideaway"
+	KeywordToxic     KeywordKind = "KeywordToxic"
+	KeywordTrample   KeywordKind = "KeywordTrample"
+	KeywordUnearth   KeywordKind = "KeywordUnearth"
+	KeywordUndying   KeywordKind = "KeywordUndying"
+	KeywordUnleash   KeywordKind = "KeywordUnleash"
+	KeywordVigilance KeywordKind = "KeywordVigilance"
+	KeywordWard      KeywordKind = "KeywordWard"
+	KeywordWither    KeywordKind = "KeywordWither"
+	KeywordRiot      KeywordKind = "KeywordRiot"
 	// KeywordLandcycling and the typed variants below are the landcycling
 	// keyword family (CR 702.29). Each is a cycling ability whose
 	// discard-from-hand activation searches the library for a land matching a
@@ -101,6 +115,15 @@ const (
 	KeywordFlanking         KeywordKind = "KeywordFlanking"
 	KeywordSoulshift        KeywordKind = "KeywordSoulshift"
 	KeywordRampage          KeywordKind = "KeywordRampage"
+	KeywordTraining         KeywordKind = "KeywordTraining"
+	// KeywordSaddle is the Saddle N keyword (Mounts, CR 702.166). Its integer
+	// parameter is the total power of other creatures that must be tapped to
+	// make the Mount saddled until end of turn.
+	KeywordSaddle KeywordKind = "KeywordSaddle"
+	// KeywordCrew is the Crew N keyword (Vehicles, CR 702.122). Its integer
+	// parameter is the total power of creatures that must be tapped to make the
+	// Vehicle become an artifact creature until end of turn.
+	KeywordCrew KeywordKind = "KeywordCrew"
 	// KeywordLandwalk and the typed variants below are the landwalk evasion
 	// keyword family (CR 702.14). Each typed variant keys off the defending
 	// player controlling a land of its named subtype; plain Landwalk keys off
@@ -116,96 +139,157 @@ const (
 	// creature can't be blocked as long as the defending player controls a
 	// nonbasic land (a land without the Basic supertype).
 	KeywordNonbasicLandwalk KeywordKind = "KeywordNonbasicLandwalk"
+	// KeywordEvoke is the Evoke alternative-cost keyword (CR 702.74): "Evoke
+	// <cost>" lets the spell be cast for its evoke cost, and the resulting
+	// permanent is sacrificed when it enters the battlefield.
+	KeywordEvoke KeywordKind = "KeywordEvoke"
+	// KeywordRebound is the Rebound keyword (CR 702.88): if you cast this spell
+	// from your hand, exile it as it resolves; at the beginning of your next
+	// upkeep you may cast it from exile without paying its mana cost.
+	KeywordRebound KeywordKind = "KeywordRebound"
+	// KeywordSpectacle is the Spectacle alternative-cost keyword (CR 702.107):
+	// "Spectacle <cost>" lets the spell be cast for its spectacle cost rather
+	// than its mana cost if an opponent lost life this turn.
+	KeywordSpectacle KeywordKind = "KeywordSpectacle"
+	// KeywordStartEngines is the "Start your engines!" keyword (CR 702.179). It
+	// is printed on a permanent with reminder text and seeds the controller's
+	// speed to 1 if they have none. The recurring once-per-turn speed increase
+	// on opponent life loss and the speed cap of 4 are built-in rules keyed off
+	// the player's speed.
+	KeywordStartEngines KeywordKind = "KeywordStartEngines"
+	// KeywordFuse is the Fuse keyword (CR 702.102), printed on both halves of a
+	// fuse split card: "You may cast one or both halves of this card from your
+	// hand." It is a static ability of the card in any zone granting the
+	// alternative permission to cast both halves as a single fused split spell.
+	// It is appended at the end so the existing keyword block stays aligned.
+	KeywordFuse KeywordKind = "KeywordFuse"
+	// KeywordPartnerWith is the "Partner with <name>" keyword (CR 702.124e). It
+	// names a specific partner card and grants an enters trigger that lets the
+	// chosen player tutor the named partner into hand. Both the deck-construction
+	// "partner commander" permission and the pair-fetch ETB are mechanics the
+	// deterministic playtester does not simulate, so the keyword is recognized
+	// and represented but not simulated. It is appended at the end so the
+	// existing keyword block stays aligned.
+	KeywordPartnerWith KeywordKind = "KeywordPartnerWith"
+	// KeywordChooseABackground is the "Choose a Background" keyword (CR 702.124f):
+	// "You can have a Background as a second commander." It is a deck-construction
+	// permission the deterministic playtester does not simulate, so the keyword is
+	// recognized and represented but not simulated. It is appended at the end so
+	// the existing keyword block stays aligned.
+	KeywordChooseABackground KeywordKind = "KeywordChooseABackground"
+	// KeywordReconfigure is the Reconfigure keyword (CR 702.151), printed on
+	// Equipment creatures: "Reconfigure <cost>" is a mana-cost activated ability
+	// that attaches the source to target creature you control, or unattaches it,
+	// only as a sorcery; while attached the source isn't a creature. The mana
+	// cost is carried by Parameter exactly like Equip. It is appended at the end
+	// so the existing keyword block stays aligned.
+	KeywordReconfigure KeywordKind = "KeywordReconfigure"
 )
 
 var keywordNames = map[KeywordKind]string{
-	KeywordAffinity:         "Affinity",
-	KeywordAnnihilator:      "Annihilator",
-	KeywordBloodthirst:      "Bloodthirst",
-	KeywordCascade:          "Cascade",
-	KeywordChangeling:       "Changeling",
-	KeywordCompanion:        "Companion",
-	KeywordConvoke:          "Convoke",
-	KeywordCumulativeUpkeep: "Cumulative upkeep",
-	KeywordCycling:          "Cycling",
-	KeywordDeathtouch:       "Deathtouch",
-	KeywordDefender:         "Defender",
-	KeywordDelve:            "Delve",
-	KeywordDevoid:           "Devoid",
-	KeywordDisguise:         "Disguise",
-	KeywordDredge:           "Dredge",
-	KeywordDoubleStrike:     "Double strike",
-	KeywordEmerge:           "Emerge",
-	KeywordEnchant:          "Enchant",
-	KeywordEquip:            "Equip",
-	KeywordEscape:           "Escape",
-	KeywordEternalize:       "Eternalize",
-	KeywordEmbalm:           "Embalm",
-	KeywordExalted:          "Exalted",
-	KeywordEvolve:           "Evolve",
-	KeywordFabricate:        "Fabricate",
-	KeywordFear:             "Fear",
-	KeywordFirstStrike:      "First strike",
-	KeywordFlash:            "Flash",
-	KeywordFlashback:        "Flashback",
-	KeywordFlying:           "Flying",
-	KeywordForetell:         "Foretell",
-	KeywordHaste:            "Haste",
-	KeywordHexproof:         "Hexproof",
-	KeywordHorsemanship:     "Horsemanship",
-	KeywordImprovise:        "Improvise",
-	KeywordIndestructible:   "Indestructible",
-	KeywordInfect:           "Infect",
-	KeywordIntimidate:       "Intimidate",
-	KeywordKicker:           "Kicker",
-	KeywordLifelink:         "Lifelink",
-	KeywordLivingWeapon:     "Living weapon",
-	KeywordMadness:          "Madness",
-	KeywordMenace:           "Menace",
-	KeywordMorph:            "Morph",
-	KeywordMutate:           "Mutate",
-	KeywordNinjutsu:         "Ninjutsu",
-	KeywordOutlast:          "Outlast",
-	KeywordPersist:          "Persist",
-	KeywordProtection:       "Protection",
-	KeywordProwess:          "Prowess",
-	KeywordReadAhead:        "Read ahead",
-	KeywordReach:            "Reach",
-	KeywordShadow:           "Shadow",
-	KeywordScavenge:         "Scavenge",
-	KeywordShroud:           "Shroud",
-	KeywordSkulk:            "Skulk",
-	KeywordSplitSecond:      "Split second",
-	KeywordStorm:            "Storm",
-	KeywordSuspend:          "Suspend",
-	KeywordToxic:            "Toxic",
-	KeywordTrample:          "Trample",
-	KeywordUnearth:          "Unearth",
-	KeywordUndying:          "Undying",
-	KeywordUnleash:          "Unleash",
-	KeywordVigilance:        "Vigilance",
-	KeywordWard:             "Ward",
-	KeywordWither:           "Wither",
-	KeywordRiot:             "Riot",
-	KeywordLandcycling:      "Landcycling",
-	KeywordBasicLandcycling: "Basic landcycling",
-	KeywordPlainscycling:    "Plainscycling",
-	KeywordIslandcycling:    "Islandcycling",
-	KeywordSwampcycling:     "Swampcycling",
-	KeywordMountaincycling:  "Mountaincycling",
-	KeywordForestcycling:    "Forestcycling",
-	KeywordDethrone:         "Dethrone",
-	KeywordFlanking:         "Flanking",
-	KeywordSoulshift:        "Soulshift",
-	KeywordRampage:          "Rampage",
-	KeywordLandwalk:         "Landwalk",
-	KeywordPlainswalk:       "Plainswalk",
-	KeywordIslandwalk:       "Islandwalk",
-	KeywordSwampwalk:        "Swampwalk",
-	KeywordMountainwalk:     "Mountainwalk",
-	KeywordForestwalk:       "Forestwalk",
-	KeywordDesertwalk:       "Desertwalk",
-	KeywordNonbasicLandwalk: "Nonbasic landwalk",
+	KeywordAffinity:          "Affinity",
+	KeywordAnnihilator:       "Annihilator",
+	KeywordBanding:           "Banding",
+	KeywordBloodthirst:       "Bloodthirst",
+	KeywordCascade:           "Cascade",
+	KeywordChangeling:        "Changeling",
+	KeywordCompanion:         "Companion",
+	KeywordConvoke:           "Convoke",
+	KeywordCumulativeUpkeep:  "Cumulative upkeep",
+	KeywordCycling:           "Cycling",
+	KeywordDeathtouch:        "Deathtouch",
+	KeywordDefender:          "Defender",
+	KeywordDelve:             "Delve",
+	KeywordDevoid:            "Devoid",
+	KeywordDisguise:          "Disguise",
+	KeywordDredge:            "Dredge",
+	KeywordDoubleStrike:      "Double strike",
+	KeywordEmerge:            "Emerge",
+	KeywordEnchant:           "Enchant",
+	KeywordEquip:             "Equip",
+	KeywordEscape:            "Escape",
+	KeywordEternalize:        "Eternalize",
+	KeywordEmbalm:            "Embalm",
+	KeywordExalted:           "Exalted",
+	KeywordEvolve:            "Evolve",
+	KeywordEvoke:             "Evoke",
+	KeywordFabricate:         "Fabricate",
+	KeywordFear:              "Fear",
+	KeywordFirstStrike:       "First strike",
+	KeywordFlash:             "Flash",
+	KeywordFlashback:         "Flashback",
+	KeywordFlying:            "Flying",
+	KeywordForetell:          "Foretell",
+	KeywordHaste:             "Haste",
+	KeywordHexproof:          "Hexproof",
+	KeywordHorsemanship:      "Horsemanship",
+	KeywordImprovise:         "Improvise",
+	KeywordIndestructible:    "Indestructible",
+	KeywordInfect:            "Infect",
+	KeywordIntimidate:        "Intimidate",
+	KeywordJumpStart:         "Jump-start",
+	KeywordKicker:            "Kicker",
+	KeywordLifelink:          "Lifelink",
+	KeywordLivingWeapon:      "Living weapon",
+	KeywordMadness:           "Madness",
+	KeywordMenace:            "Menace",
+	KeywordMorph:             "Morph",
+	KeywordMultikicker:       "Multikicker",
+	KeywordMutate:            "Mutate",
+	KeywordNinjutsu:          "Ninjutsu",
+	KeywordOutlast:           "Outlast",
+	KeywordPersist:           "Persist",
+	KeywordProtection:        "Protection",
+	KeywordProwess:           "Prowess",
+	KeywordReadAhead:         "Read ahead",
+	KeywordReach:             "Reach",
+	KeywordReconfigure:       "Reconfigure",
+	KeywordRetrace:           "Retrace",
+	KeywordShadow:            "Shadow",
+	KeywordScavenge:          "Scavenge",
+	KeywordShroud:            "Shroud",
+	KeywordSkulk:             "Skulk",
+	KeywordSplitSecond:       "Split second",
+	KeywordStorm:             "Storm",
+	KeywordSuspend:           "Suspend",
+	KeywordHideaway:          "Hideaway",
+	KeywordToxic:             "Toxic",
+	KeywordTrample:           "Trample",
+	KeywordUnearth:           "Unearth",
+	KeywordUndying:           "Undying",
+	KeywordUnleash:           "Unleash",
+	KeywordVigilance:         "Vigilance",
+	KeywordWard:              "Ward",
+	KeywordWither:            "Wither",
+	KeywordRiot:              "Riot",
+	KeywordLandcycling:       "Landcycling",
+	KeywordBasicLandcycling:  "Basic landcycling",
+	KeywordPlainscycling:     "Plainscycling",
+	KeywordIslandcycling:     "Islandcycling",
+	KeywordSwampcycling:      "Swampcycling",
+	KeywordMountaincycling:   "Mountaincycling",
+	KeywordForestcycling:     "Forestcycling",
+	KeywordDethrone:          "Dethrone",
+	KeywordFlanking:          "Flanking",
+	KeywordSoulshift:         "Soulshift",
+	KeywordRampage:           "Rampage",
+	KeywordTraining:          "Training",
+	KeywordSaddle:            "Saddle",
+	KeywordCrew:              "Crew",
+	KeywordLandwalk:          "Landwalk",
+	KeywordPlainswalk:        "Plainswalk",
+	KeywordIslandwalk:        "Islandwalk",
+	KeywordSwampwalk:         "Swampwalk",
+	KeywordMountainwalk:      "Mountainwalk",
+	KeywordForestwalk:        "Forestwalk",
+	KeywordDesertwalk:        "Desertwalk",
+	KeywordNonbasicLandwalk:  "Nonbasic landwalk",
+	KeywordRebound:           "Rebound",
+	KeywordSpectacle:         "Spectacle",
+	KeywordStartEngines:      "Start your engines!",
+	KeywordFuse:              "Fuse",
+	KeywordPartnerWith:       "Partner with",
+	KeywordChooseABackground: "Choose a Background",
 }
 
 // String returns the parser-owned canonical keyword name.
@@ -242,9 +326,12 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordLivingWeapon, Words: []string{"living", "weapon"}},
 	{Kind: KeywordReadAhead, Words: []string{"read", "ahead"}},
 	{Kind: KeywordSplitSecond, Words: []string{"split", "second"}},
+	{Kind: KeywordPartnerWith, Words: []string{"partner", "with"}},
+	{Kind: KeywordChooseABackground, Words: []string{"choose", "a", "background"}},
 	{Kind: KeywordBasicLandcycling, Words: []string{"basic", "landcycling"}},
 	{Kind: KeywordAffinity, Words: []string{"affinity"}},
 	{Kind: KeywordAnnihilator, Words: []string{"annihilator"}},
+	{Kind: KeywordBanding, Words: []string{"banding"}},
 	{Kind: KeywordBloodthirst, Words: []string{"bloodthirst"}},
 	{Kind: KeywordCascade, Words: []string{"cascade"}},
 	{Kind: KeywordChangeling, Words: []string{"changeling"}},
@@ -265,6 +352,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordEmbalm, Words: []string{"embalm"}},
 	{Kind: KeywordExalted, Words: []string{"exalted"}},
 	{Kind: KeywordEvolve, Words: []string{"evolve"}},
+	{Kind: KeywordEvoke, Words: []string{"evoke"}},
 	{Kind: KeywordFabricate, Words: []string{"fabricate"}},
 	{Kind: KeywordFear, Words: []string{"fear"}},
 	{Kind: KeywordFlash, Words: []string{"flash"}},
@@ -278,11 +366,13 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordIndestructible, Words: []string{"indestructible"}},
 	{Kind: KeywordInfect, Words: []string{"infect"}},
 	{Kind: KeywordIntimidate, Words: []string{"intimidate"}},
+	{Kind: KeywordJumpStart, Words: []string{"jump-start"}},
 	{Kind: KeywordKicker, Words: []string{"kicker"}},
 	{Kind: KeywordLifelink, Words: []string{"lifelink"}},
 	{Kind: KeywordMadness, Words: []string{"madness"}},
 	{Kind: KeywordMenace, Words: []string{"menace"}},
 	{Kind: KeywordMorph, Words: []string{"morph"}},
+	{Kind: KeywordMultikicker, Words: []string{"multikicker"}},
 	{Kind: KeywordMutate, Words: []string{"mutate"}},
 	{Kind: KeywordNinjutsu, Words: []string{"ninjutsu"}},
 	{Kind: KeywordOutlast, Words: []string{"outlast"}},
@@ -290,12 +380,15 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordProtection, Words: []string{"protection"}},
 	{Kind: KeywordProwess, Words: []string{"prowess"}},
 	{Kind: KeywordReach, Words: []string{"reach"}},
+	{Kind: KeywordReconfigure, Words: []string{"reconfigure"}},
+	{Kind: KeywordRetrace, Words: []string{"retrace"}},
 	{Kind: KeywordShadow, Words: []string{"shadow"}},
 	{Kind: KeywordScavenge, Words: []string{"scavenge"}},
 	{Kind: KeywordShroud, Words: []string{"shroud"}},
 	{Kind: KeywordSkulk, Words: []string{"skulk"}},
 	{Kind: KeywordStorm, Words: []string{"storm"}},
 	{Kind: KeywordSuspend, Words: []string{"suspend"}},
+	{Kind: KeywordHideaway, Words: []string{"hideaway"}},
 	{Kind: KeywordToxic, Words: []string{"toxic"}},
 	{Kind: KeywordTrample, Words: []string{"trample"}},
 	{Kind: KeywordUnearth, Words: []string{"unearth"}},
@@ -315,7 +408,11 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordFlanking, Words: []string{"flanking"}},
 	{Kind: KeywordSoulshift, Words: []string{"soulshift"}},
 	{Kind: KeywordRampage, Words: []string{"rampage"}},
+	{Kind: KeywordTraining, Words: []string{"training"}},
+	{Kind: KeywordSaddle, Words: []string{"saddle"}},
+	{Kind: KeywordCrew, Words: []string{"crew"}},
 	{Kind: KeywordNonbasicLandwalk, Words: []string{"nonbasic", "landwalk"}},
+	{Kind: KeywordRebound, Words: []string{"rebound"}},
 	{Kind: KeywordLandwalk, Words: []string{"landwalk"}},
 	{Kind: KeywordPlainswalk, Words: []string{"plainswalk"}},
 	{Kind: KeywordIslandwalk, Words: []string{"islandwalk"}},
@@ -323,6 +420,9 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordMountainwalk, Words: []string{"mountainwalk"}},
 	{Kind: KeywordForestwalk, Words: []string{"forestwalk"}},
 	{Kind: KeywordDesertwalk, Words: []string{"desertwalk"}},
+	{Kind: KeywordSpectacle, Words: []string{"spectacle"}},
+	{Kind: KeywordStartEngines, Words: []string{"start", "your", "engines"}},
+	{Kind: KeywordFuse, Words: []string{"fuse"}},
 }
 
 // KeywordParameterKind identifies the grammar used by a keyword parameter.
@@ -363,9 +463,15 @@ type EnchantPredicate struct {
 	Permanent bool        `json:",omitempty"`
 	CardTypes []CardType  `json:",omitempty"`
 	Subtypes  []types.Sub `json:",omitempty"`
+	// YouControl restricts a permanent target to one the enchanting player
+	// controls ("Enchant creature or planeswalker you control"). It applies only
+	// to the card-type/subtype predicate; it is never set with Player or Opponent.
+	YouControl bool `json:",omitempty"`
 }
 
-// Empty reports whether the predicate carries no recognized restriction.
+// Empty reports whether the predicate carries no recognized restriction. A bare
+// "you control" controller restriction is not a recognized object class on its
+// own, so it does not make a predicate non-empty.
 func (p EnchantPredicate) Empty() bool {
 	return !p.Player && !p.Opponent && !p.Permanent &&
 		len(p.CardTypes) == 0 && len(p.Subtypes) == 0
@@ -475,6 +581,13 @@ type Keyword struct {
 	Span      shared.Span      `json:"-"`
 	Text      string           `json:",omitempty"`
 	Parameter KeywordParameter `json:",omitzero"`
+	// WardCost is the typed non-mana or composite payment of a "Ward—<cost>"
+	// ability (CR 702.21), or nil for a mana-only Ward whose cost is carried by
+	// Parameter. It models the em-dash forms "Ward—Pay N life.", "Ward—Sacrifice
+	// a creature.", "Ward—Discard a card.", and the composite "Ward—{2}, Pay 2
+	// life." Its components are the same comma-separated cost operations the
+	// activated-ability cost parser recognizes.
+	WardCost *Cost `json:",omitempty"`
 	// EquipRestriction is the typed quality restriction on a restricted Equip
 	// ability ("Equip legendary creature {3}", "Equip Knight {2}"), or nil for an
 	// unrestricted Equip. The mana cost is still carried by Parameter.
@@ -606,6 +719,193 @@ func annihilatorCanonicalText(rank int) string {
 // other rules text, are left untouched.
 func annihilatorLineRank(line string) (int, bool) {
 	const prefix = "Annihilator "
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, prefix) {
+		return 0, false
+	}
+	rest := strings.TrimSpace(trimmed[len(prefix):])
+	digits := 0
+	for digits < len(rest) && rest[digits] >= '0' && rest[digits] <= '9' {
+		digits++
+	}
+	if digits == 0 {
+		return 0, false
+	}
+	rank, err := strconv.Atoi(rest[:digits])
+	if err != nil || rank <= 0 {
+		return 0, false
+	}
+	tail := strings.TrimSpace(rest[digits:])
+	if tail != "" && (!strings.HasPrefix(tail, "(") || !strings.HasSuffix(tail, ")")) {
+		return 0, false
+	}
+	return rank, true
+}
+
+// expandAfflictKeyword rewrites each printed "Afflict N" keyword line into the
+// triggered ability it abbreviates: "Whenever this creature becomes blocked,
+// defending player loses N life." (CR 702.131). Afflict is pure shorthand for
+// that combat trigger, so expanding it to canonical wording lets the standard
+// trigger pipeline lower it. The rewrite is parser-owned because it is a wording
+// substitution; downstream stages see only the expanded ability.
+func expandAfflictKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		rank, ok := afflictLineRank(line)
+		if !ok {
+			continue
+		}
+		lines[i] = afflictCanonicalText(rank)
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
+
+// expandFrenzyKeyword rewrites each printed "Frenzy N" keyword line into the
+// triggered ability it abbreviates: "Whenever this creature attacks and isn't
+// blocked, it gets +N/+0 until end of turn." (CR 702.35). Frenzy is pure
+// shorthand for that unblocked-attacker combat trigger, so expanding it to
+// canonical wording lets the standard trigger pipeline lower it. The rewrite is
+// parser-owned because it is a wording substitution; downstream stages see only
+// the expanded ability.
+func expandFrenzyKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		rank, ok := frenzyLineRank(line)
+		if !ok {
+			continue
+		}
+		lines[i] = frenzyCanonicalText(rank)
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
+
+// afflictCanonicalText is the triggered ability that the printed "Afflict N"
+// keyword abbreviates. The life-loss amount is always written as a numeral, as
+// in the printed reminder text.
+func afflictCanonicalText(rank int) string {
+	return "Whenever this creature becomes blocked, defending player loses " +
+		strconv.Itoa(rank) + " life."
+}
+
+// afflictLineRank reports the rank N of a line that is exactly the printed
+// "Afflict N" keyword, optionally followed only by its parenthesized reminder
+// text. Lines that merely contain the word elsewhere (e.g. "creatures you
+// control have afflict 2"), or pair it with other rules text, are left
+// untouched.
+func afflictLineRank(line string) (int, bool) {
+	const prefix = "Afflict "
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, prefix) {
+		return 0, false
+	}
+	rest := strings.TrimSpace(trimmed[len(prefix):])
+	digits := 0
+	for digits < len(rest) && rest[digits] >= '0' && rest[digits] <= '9' {
+		digits++
+	}
+	if digits == 0 {
+		return 0, false
+	}
+	rank, err := strconv.Atoi(rest[:digits])
+	if err != nil || rank <= 0 {
+		return 0, false
+	}
+	tail := strings.TrimSpace(rest[digits:])
+	if tail != "" && (!strings.HasPrefix(tail, "(") || !strings.HasSuffix(tail, ")")) {
+		return 0, false
+	}
+	return rank, true
+}
+
+// frenzyCanonicalText is the triggered ability that the printed "Frenzy N"
+// keyword abbreviates, with N spelled as its signed power bonus.
+func frenzyCanonicalText(rank int) string {
+	bonus := strconv.Itoa(rank)
+	return "Whenever this creature attacks and isn't blocked, it gets +" + bonus + "/+0 until end of turn."
+}
+
+// frenzyLineRank reports the rank N of a line that is exactly the printed
+// "Frenzy N" keyword, optionally followed only by its parenthesized reminder
+// text. Lines that merely contain the word elsewhere, or pair it with other
+// rules text, are left untouched.
+func frenzyLineRank(line string) (int, bool) {
+	const prefix = "Frenzy "
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, prefix) {
+		return 0, false
+	}
+	rest := strings.TrimSpace(trimmed[len(prefix):])
+	digits := 0
+	for digits < len(rest) && rest[digits] >= '0' && rest[digits] <= '9' {
+		digits++
+	}
+	if digits == 0 {
+		return 0, false
+	}
+	rank, err := strconv.Atoi(rest[:digits])
+	if err != nil || rank <= 0 {
+		return 0, false
+	}
+	tail := strings.TrimSpace(rest[digits:])
+	if tail != "" && (!strings.HasPrefix(tail, "(") || !strings.HasSuffix(tail, ")")) {
+		return 0, false
+	}
+	return rank, true
+}
+
+// expandAfterlifeKeyword rewrites each printed "Afterlife N" keyword line into
+// the dies-triggered token creation it abbreviates: "When this creature dies,
+// create N 1/1 white and black Spirit creature tokens with flying." (CR
+// 702.135). Afterlife is pure shorthand for that death trigger, so expanding it
+// to canonical wording lets the standard trigger pipeline lower it. The rewrite
+// is parser-owned because it is a wording substitution; downstream stages see
+// only the expanded ability.
+func expandAfterlifeKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		rank, ok := afterlifeLineRank(line)
+		if !ok {
+			continue
+		}
+		lines[i] = afterlifeCanonicalText(rank)
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
+
+// afterlifeCanonicalText is the dies-triggered ability that the printed
+// "Afterlife N" keyword abbreviates, with N spelled as its Oracle wording.
+func afterlifeCanonicalText(rank int) string {
+	if rank == 1 {
+		return "When this creature dies, create a 1/1 white and black Spirit creature token with flying."
+	}
+	word, ok := cardinalWord(rank)
+	if !ok {
+		word = strconv.Itoa(rank)
+	}
+	return "When this creature dies, create " + word + " 1/1 white and black Spirit creature tokens with flying."
+}
+
+// afterlifeLineRank reports the rank N of a line that is exactly the printed
+// "Afterlife N" keyword, optionally followed only by its parenthesized reminder
+// text. Lines that merely contain the word elsewhere, or pair it with other
+// rules text, are left untouched.
+func afterlifeLineRank(line string) (int, bool) {
+	const prefix = "Afterlife "
 	trimmed := strings.TrimSpace(line)
 	if !strings.HasPrefix(trimmed, prefix) {
 		return 0, false
@@ -839,6 +1139,150 @@ func expandModularKeyword(source string) string {
 	return strings.Join(lines, "\n")
 }
 
+// graftLineRank reports the rank N of a line that is exactly the printed
+// "Graft N" keyword, optionally followed only by its parenthesized reminder
+// text. Lines that merely contain the word elsewhere or that pair it with other
+// rules text are left untouched.
+func graftLineRank(line string) (int, bool) {
+	const prefix = "Graft "
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, prefix) {
+		return 0, false
+	}
+	rest := strings.TrimSpace(trimmed[len(prefix):])
+	digits := 0
+	for digits < len(rest) && rest[digits] >= '0' && rest[digits] <= '9' {
+		digits++
+	}
+	if digits == 0 {
+		return 0, false
+	}
+	rank, err := strconv.Atoi(rest[:digits])
+	if err != nil || rank <= 0 {
+		return 0, false
+	}
+	tail := strings.TrimSpace(rest[digits:])
+	if tail != "" && (!strings.HasPrefix(tail, "(") || !strings.HasSuffix(tail, ")")) {
+		return 0, false
+	}
+	return rank, true
+}
+
+// expandGraftKeyword rewrites each printed "Graft N" keyword line into the two
+// abilities it abbreviates (CR 702.57): a static placing N +1/+1 counters as the
+// creature enters, and a trigger that may move a +1/+1 counter from this creature
+// onto another creature as that creature enters. Like Modular, Graft is pure
+// shorthand for fixed abilities, so expanding it to canonical wording lets the
+// standard enters-with-counters and trigger pipelines lower it; "that creature"
+// names the triggering permanent so the moved counter lands on the entering
+// creature rather than the source. The rewrite is parser-owned because it is a
+// wording substitution; downstream stages see only the expanded abilities.
+func expandGraftKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		rank, ok := graftLineRank(line)
+		if !ok {
+			continue
+		}
+		counters, ok := modularCounterPhrase(rank)
+		if !ok {
+			continue
+		}
+		lines[i] = "This creature enters with " + counters + " on it.\n" +
+			"Whenever another creature enters, you may move a +1/+1 counter " +
+			"from this creature onto that creature."
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
+
+// expandAffinityKeyword rewrites each printed "Affinity for <permanents>"
+// keyword line into the static cast cost reduction it abbreviates (CR 702.41a):
+// "This spell costs {1} less to cast for each <permanent> you control." Affinity
+// is pure shorthand for that self cost reduction, so expanding it to canonical
+// wording lets the standard source-spell cost-reduction pipeline lower it
+// without a dedicated keyword path. The rewrite is parser-owned because it is a
+// wording substitution; downstream stages see only the expanded ability. A line
+// whose noun cannot be singularized into a countable subject the downstream
+// pipeline recognizes is still rewritten and simply fails closed there, so it
+// stays unsupported rather than silently dropping the reduction.
+func expandAffinityKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		noun, ok := affinityLineNoun(line)
+		if !ok {
+			continue
+		}
+		lines[i] = "This spell costs {1} less to cast for each " +
+			affinitySingularNoun(noun) + " you control."
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
+
+// affinityLineNoun reports the plural permanent noun of a line that is exactly
+// the printed "Affinity for <noun>" keyword, optionally followed only by its
+// parenthesized reminder text. Lines that merely contain the word elsewhere, or
+// pair it with other rules text, are left untouched. The noun must be a simple
+// word phrase so a malformed line fails closed.
+func affinityLineNoun(line string) (string, bool) {
+	const prefix = "Affinity for "
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, prefix) {
+		return "", false
+	}
+	rest := strings.TrimSpace(trimmed[len(prefix):])
+	if open := strings.Index(rest, "("); open >= 0 {
+		reminder := strings.TrimSpace(rest[open:])
+		if !strings.HasPrefix(reminder, "(") || !strings.HasSuffix(reminder, ")") {
+			return "", false
+		}
+		rest = strings.TrimSpace(rest[:open])
+	}
+	if rest == "" {
+		return "", false
+	}
+	for _, r := range rest {
+		if r != ' ' && (r < 'A' || r > 'z' || (r > 'Z' && r < 'a')) {
+			return "", false
+		}
+	}
+	return rest, true
+}
+
+// affinitySingularNoun singularizes the head word of an Affinity noun phrase so
+// the canonical "for each <noun> you control" wording counts a single permanent
+// kind ("artifacts" → "artifact", "Allies" → "Ally", "Forests" → "Forest"). Only
+// the trailing head noun is singularized; any leading qualifiers ("artifact" in
+// "artifact creatures", "snow" in "snow lands") are preserved. "Plains" is both
+// singular and plural and is left unchanged.
+func affinitySingularNoun(plural string) string {
+	fields := strings.Fields(plural)
+	if len(fields) == 0 {
+		return plural
+	}
+	head := fields[len(fields)-1]
+	switch {
+	case head == "Plains":
+	case strings.HasSuffix(head, "ss"):
+	case len(head) > 4 && strings.HasSuffix(head, "ies"):
+		head = strings.TrimSuffix(head, "ies") + "y"
+	case len(head) > 1 && strings.HasSuffix(head, "s"):
+		head = strings.TrimSuffix(head, "s")
+	default:
+	}
+	fields[len(fields)-1] = head
+	return strings.Join(fields, " ")
+}
+
 // battleCryCanonicalText is the triggered ability that the printed "Battle cry"
 // keyword abbreviates (CR 702.91a).
 const battleCryCanonicalText = "Whenever this creature attacks, " +
@@ -871,6 +1315,88 @@ func expandBattleCryKeyword(source string) string {
 // rules text (such as a sticker-cost prefix), are left untouched.
 func isBattleCryKeywordLine(line string) bool {
 	const keyword = "Battle cry"
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, keyword) {
+		return false
+	}
+	tail := strings.TrimSpace(trimmed[len(keyword):])
+	if tail == "" {
+		return true
+	}
+	return strings.HasPrefix(tail, "(") && strings.HasSuffix(tail, ")")
+}
+
+// mentorCanonicalText is the full Oracle wording Mentor abbreviates (CR 702.123).
+const mentorCanonicalText = "Whenever this creature attacks, " +
+	"put a +1/+1 counter on target attacking creature with lesser power."
+
+// expandMentorKeyword rewrites each bare "Mentor" keyword line into its full
+// triggered-ability Oracle text so the existing attacks-trigger and counter
+// placement pipeline lowers it. Parser owns the wording.
+func expandMentorKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		if !isMentorKeywordLine(line) {
+			continue
+		}
+		lines[i] = mentorCanonicalText
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
+
+// isMentorKeywordLine reports whether a line is exactly the printed "Mentor"
+// keyword, optionally followed only by its parenthesized reminder text. Lines
+// that merely contain the word elsewhere, or pair it with other rules text, are
+// left untouched.
+func isMentorKeywordLine(line string) bool {
+	const keyword = "Mentor"
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, keyword) {
+		return false
+	}
+	tail := strings.TrimSpace(trimmed[len(keyword):])
+	if tail == "" {
+		return true
+	}
+	return strings.HasPrefix(tail, "(") && strings.HasSuffix(tail, ")")
+}
+
+// meleeCanonicalText is the full Oracle wording Melee abbreviates (CR 702.72).
+const meleeCanonicalText = "Whenever this creature attacks, it gets +1/+1 until " +
+	"end of turn for each opponent you attacked this combat."
+
+// expandMeleeKeyword rewrites each bare "Melee" keyword line into its full
+// triggered-ability Oracle text so the existing attacks-trigger and dynamic
+// power/toughness pipeline lowers it. The "for each opponent you attacked this
+// combat" count resolves from the current combat's attack declarations. Parser
+// owns the wording.
+func expandMeleeKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		if !isMeleeKeywordLine(line) {
+			continue
+		}
+		lines[i] = meleeCanonicalText
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
+
+// isMeleeKeywordLine reports whether a line is exactly the printed "Melee"
+// keyword, optionally followed only by its parenthesized reminder text. Lines
+// that merely contain the word elsewhere, or pair it with other rules text, are
+// left untouched.
+func isMeleeKeywordLine(line string) bool {
+	const keyword = "Melee"
 	trimmed := strings.TrimSpace(line)
 	if !strings.HasPrefix(trimmed, keyword) {
 		return false
@@ -921,6 +1447,9 @@ func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
 		}
 		parameter, parameterEnd := parseKeywordParameter(kind, tokens, end, atoms)
 		end = parameterEnd
+		if kind == KeywordWard {
+			end = wardEmDashCostEnd(tokens, end)
+		}
 		keywords = append(keywords, Keyword{
 			Kind:             kind,
 			NameSpan:         nameSpan,
@@ -932,6 +1461,26 @@ func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
 		i = end - 1
 	}
 	return keywords
+}
+
+// wardEmDashCostEnd extends a Ward keyword atom past the em dash and the
+// non-mana or composite cost clause that follows it ("Ward—Pay N life.",
+// "Ward—{2}, Pay 2 life."), returning the token index after the cost so the
+// keyword span covers its whole printed cost (CR 702.21). It stops before the
+// trailing top-level period and is a no-op when no em dash follows the keyword
+// name, leaving the mana-only "Ward {N}" form untouched.
+func wardEmDashCostEnd(tokens []shared.Token, start int) int {
+	if start >= len(tokens) || tokens[start].Kind != shared.EmDash {
+		return start
+	}
+	end := start + 1
+	for end < len(tokens) && tokens[end].Kind != shared.Period {
+		end++
+	}
+	if end == start+1 {
+		return start
+	}
+	return end
 }
 
 func recognizeKeywordNameAt(tokens []shared.Token, start int) (KeywordKind, int, bool) {
@@ -1088,6 +1637,16 @@ func parseEnchantTargetPredicate(tokens []shared.Token, start int, atoms Atoms) 
 	if predicate.Empty() {
 		return EnchantPredicate{}, start, false
 	}
+	// A trailing "you control" controller restriction narrows the permanent
+	// predicate to the enchanting player's own permanents ("Enchant creature or
+	// planeswalker you control"). It is consumed only after a recognized
+	// card-type/subtype predicate so the keyword span covers the whole
+	// restriction; an unrecognized trailing qualifier is left uncovered to fail
+	// closed downstream.
+	if end+1 < len(tokens) && equalWord(tokens[end], "you") && equalWord(tokens[end+1], "control") {
+		predicate.YouControl = true
+		end += 2
+	}
 	return predicate, end, true
 }
 
@@ -1111,7 +1670,11 @@ func enchantTargetName(predicate EnchantPredicate) string {
 	for _, subtype := range predicate.Subtypes {
 		words = append(words, strings.ToLower(string(subtype)))
 	}
-	return strings.Join(words, " or ")
+	name := strings.Join(words, " or ")
+	if predicate.YouControl {
+		name += " you control"
+	}
+	return name
 }
 
 func parseKeywordManaCost(tokens []shared.Token, start int) (cost.Mana, int, bool) {
@@ -1430,32 +1993,58 @@ func scanKeywordSelectors(tokens []shared.Token) []KeywordSelector {
 	return selectors
 }
 
-// devourCanonicalText is the canonical as-enters replacement that the printed
-// "Devour N" keyword abbreviates (CR 702.81), with the per-sacrificed-creature
-// +1/+1 counter multiplier N written as a plain integer. parseDevourEffect
-// recognizes this exact wording and recovers N.
-func devourCanonicalText(n int) string {
-	return "As this creature enters, you may sacrifice any number of creatures, " +
-		"then it enters with " + strconv.Itoa(n) + " +1/+1 counters on it for each creature sacrificed."
+// devourSubject describes one printed Devour variant: the optional permanent-type
+// word that follows "Devour" (empty for the plain creature form), the plural and
+// singular nouns its canonical as-enters wording uses, and the structured filter
+// downstream stages apply when choosing what may be sacrificed. cardType is set
+// for base card types (artifact, land); subtype is set for typed permanents named
+// by subtype (Food). Both are zero for the creature form, which keeps the
+// existing creature-only Devour lowering and rendering byte-for-byte unchanged.
+type devourSubject struct {
+	keyword  string
+	plural   string
+	singular string
+	cardType types.Card
+	subtype  types.Sub
 }
 
-// expandDevourKeyword rewrites each printed "Devour N" keyword line into the
+// devourSubjects lists the Devour variants the parser expands (CR 702.81). The
+// creature form is first and carries no structured filter; the typed forms name
+// the permanents their controller may sacrifice as the creature enters.
+var devourSubjects = []devourSubject{
+	{plural: "creatures", singular: "creature"},
+	{keyword: "artifact", plural: "artifacts", singular: "artifact", cardType: types.Artifact},
+	{keyword: "land", plural: "lands", singular: "land", cardType: types.Land},
+	{keyword: "Food", plural: "Foods", singular: "Food", subtype: types.Food},
+}
+
+// devourCanonicalText is the canonical as-enters replacement that a printed
+// Devour keyword abbreviates (CR 702.81), naming the sacrificed permanents from
+// subject and writing the per-sacrificed-permanent +1/+1 counter multiplier N as
+// a plain integer. parseDevourEffect recognizes this exact wording and recovers
+// both N and the subject.
+func devourCanonicalText(subject devourSubject, n int) string {
+	return "As this creature enters, you may sacrifice any number of " + subject.plural + ", " +
+		"then it enters with " + strconv.Itoa(n) + " +1/+1 counters on it for each " + subject.singular + " sacrificed."
+}
+
+// expandDevourKeyword rewrites each printed Devour keyword line into the
 // canonical as-enters replacement it abbreviates (CR 702.81). Like Bushido and
 // Extort, Devour is shorthand for a fixed ability, so expanding it to canonical
-// wording lets the standard replacement pipeline lower it. Only the +1/+1-counter
-// creature form ("Devour N") is expanded; the typed variants ("Devour artifact
-// N", "Devour land N", "Devour Food N") and the variable form ("Devour X ...")
-// are left untouched. The rewrite is parser-owned because it is a wording
-// substitution; downstream stages see only the expanded ability.
+// wording lets the standard replacement pipeline lower it. The creature form
+// ("Devour N") and the typed permanent forms ("Devour artifact N", "Devour land
+// N", "Devour Food N") are expanded; the variable form ("Devour X ...") is left
+// untouched. The rewrite is parser-owned because it is a wording substitution;
+// downstream stages see only the expanded ability.
 func expandDevourKeyword(source string) string {
 	lines := strings.Split(source, "\n")
 	changed := false
 	for i, line := range lines {
-		n, ok := devourLineRank(line)
+		subject, n, ok := devourLineRank(line)
 		if !ok {
 			continue
 		}
-		lines[i] = devourCanonicalText(n)
+		lines[i] = devourCanonicalText(subject, n)
 		changed = true
 	}
 	if !changed {
@@ -1464,35 +2053,67 @@ func expandDevourKeyword(source string) string {
 	return strings.Join(lines, "\n")
 }
 
-// devourLineRank reports the rank N of a line that is exactly the printed
-// "Devour N" keyword, optionally followed only by its parenthesized reminder
-// text. The word immediately after "Devour " must be the rank digits, which
-// excludes the typed "Devour artifact N"/"Devour land N"/"Devour Food N" forms
-// and the variable "Devour X ..." form. Lines that merely contain the word
-// elsewhere, or pair it with other rules text, are left untouched.
-func devourLineRank(line string) (int, bool) {
+// devourLineRank reports the subject and rank N of a line that is exactly a
+// printed Devour keyword, optionally followed only by its parenthesized reminder
+// text. The creature form begins with the rank digits; the typed forms begin
+// with the permanent-type word ("artifact"/"land"/"Food") and then the rank. The
+// variable "Devour X ..." form, lines that merely contain the word elsewhere,
+// and lines that pair it with other rules text are left untouched.
+func devourLineRank(line string) (devourSubject, int, bool) {
 	const prefix = "Devour "
 	trimmed := strings.TrimSpace(line)
 	if !strings.HasPrefix(trimmed, prefix) {
-		return 0, false
+		return devourSubject{}, 0, false
 	}
-	rest := strings.TrimSpace(trimmed[len(prefix):])
+	subject, rest, ok := devourSubjectPrefix(strings.TrimSpace(trimmed[len(prefix):]))
+	if !ok {
+		return devourSubject{}, 0, false
+	}
 	digits := 0
 	for digits < len(rest) && rest[digits] >= '0' && rest[digits] <= '9' {
 		digits++
 	}
 	if digits == 0 {
-		return 0, false
+		return devourSubject{}, 0, false
 	}
 	rank, err := strconv.Atoi(rest[:digits])
 	if err != nil || rank <= 0 {
-		return 0, false
+		return devourSubject{}, 0, false
 	}
 	tail := strings.TrimSpace(rest[digits:])
 	if tail != "" && (!strings.HasPrefix(tail, "(") || !strings.HasSuffix(tail, ")")) {
-		return 0, false
+		return devourSubject{}, 0, false
 	}
-	return rank, true
+	return subject, rank, true
+}
+
+// devourSubjectPrefix splits the text after "Devour " into its subject and the
+// remaining text that should begin with the rank digits. The creature form has
+// no type word, so text that starts with a digit yields the creature subject
+// unchanged; otherwise the leading word must name a typed Devour permanent.
+func devourSubjectPrefix(rest string) (devourSubject, string, bool) {
+	if rest != "" && rest[0] >= '0' && rest[0] <= '9' {
+		return devourSubjects[0], rest, true
+	}
+	for _, subject := range devourSubjects[1:] {
+		word := subject.keyword + " "
+		if strings.HasPrefix(rest, word) {
+			return subject, strings.TrimSpace(rest[len(word):]), true
+		}
+	}
+	return devourSubject{}, "", false
+}
+
+// devourSubjectByNouns finds the Devour subject whose canonical plural and
+// singular nouns match the given lower-cased words, recovering the structured
+// sacrifice filter from the expanded wording.
+func devourSubjectByNouns(plural, singular string) (devourSubject, bool) {
+	for _, subject := range devourSubjects {
+		if strings.ToLower(subject.plural) == plural && strings.ToLower(subject.singular) == singular {
+			return subject, true
+		}
+	}
+	return devourSubject{}, false
 }
 
 // tributeCanonicalText is the canonical as-enters replacement that the printed

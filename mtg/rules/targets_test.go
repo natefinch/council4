@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -654,19 +655,19 @@ func opponentChosenTargetAbilitySource() *game.CardDef {
 						MinTargets: 1,
 						MaxTargets: 1,
 						Allow:      game.TargetAllowPermanent,
-						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Controller:     game.ControllerYou,
-						},
+						Selection: opt.Val(game.Selection{
+							RequiredTypesAny: []types.Card{types.Creature},
+							Controller:       game.ControllerYou,
+						}),
 					},
 					{
 						MinTargets: 1,
 						MaxTargets: 1,
 						Allow:      game.TargetAllowPermanent,
-						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{types.Creature},
-							Controller:     game.ControllerYou,
-						},
+						Selection: opt.Val(game.Selection{
+							RequiredTypesAny: []types.Card{types.Creature},
+							Controller:       game.ControllerYou,
+						}),
 						Chooser: game.TargetChooserOpponent,
 					},
 				},
@@ -695,4 +696,63 @@ func addShroudGranter(g *game.Game, controller game.PlayerID) *game.Permanent {
 			}},
 		}},
 	}})
+}
+
+// TestDistinctFromPriorTargetsExcludesSharedObject checks that a second target
+// spec marked DistinctFromPriorTargets ("... another target creature") never
+// pairs an object with itself: with two creatures available, the enumerated
+// cast actions cover the ordered distinct pairs and omit the self-pairs.
+func TestDistinctFromPriorTargetsExcludesSharedObject(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spell := permanentTargetSpellWithSpecs([]game.TargetSpec{
+		{
+			MinTargets: 1,
+			MaxTargets: 1,
+			Allow:      game.TargetAllowPermanent,
+			Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
+		},
+		{
+			MinTargets:               1,
+			MaxTargets:               1,
+			Allow:                    game.TargetAllowPermanent,
+			Selection:                opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
+			DistinctFromPriorTargets: true,
+		},
+	})
+	spellID := addCardToHand(g, game.Player1, spell)
+	mine := addCreaturePermanent(g, game.Player1)
+	theirs := addCreaturePermanent(g, game.Player2)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	legal := engine.legalActions(g, game.Player1)
+
+	var pairs [][2]id.ID
+	for _, act := range legal {
+		cast, ok := act.CastSpellPayload()
+		if !ok || cast.CardID != spellID {
+			continue
+		}
+		if len(cast.Targets) != 2 {
+			t.Fatalf("cast targets = %d, want 2", len(cast.Targets))
+		}
+		if cast.Targets[0].PermanentID == cast.Targets[1].PermanentID {
+			t.Fatalf("distinct spec produced self-pair: %+v", cast.Targets)
+		}
+		pairs = append(pairs, [2]id.ID{cast.Targets[0].PermanentID, cast.Targets[1].PermanentID})
+	}
+	wantPairs := map[[2]id.ID]bool{
+		{mine.ObjectID, theirs.ObjectID}: true,
+		{theirs.ObjectID, mine.ObjectID}: true,
+	}
+	if len(pairs) != len(wantPairs) {
+		t.Fatalf("distinct fight pairs = %d, want %d (%+v)", len(pairs), len(wantPairs), pairs)
+	}
+	for _, pair := range pairs {
+		if !wantPairs[pair] {
+			t.Fatalf("unexpected pair %+v", pair)
+		}
+	}
 }

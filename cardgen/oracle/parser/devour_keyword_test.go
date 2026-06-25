@@ -1,6 +1,10 @@
 package parser
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/natefinch/council4/mtg/game/types"
+)
 
 func devourEffect(t *testing.T, source string) EffectSyntax {
 	t.Helper()
@@ -56,14 +60,50 @@ func TestExpandDevourKeywordMultiplier(t *testing.T) {
 	}
 }
 
+func TestExpandDevourKeywordTypedVariants(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		source   string
+		wantN    int
+		wantType types.Card
+		wantSub  types.Sub
+	}{
+		{"devour artifact 1", "Devour artifact 1 (As this creature enters, you may sacrifice any number of artifacts. It enters with that many +1/+1 counters on it.)", 1, types.Artifact, ""},
+		{"devour land 3", "Devour land 3 (As this creature enters, you may sacrifice any number of lands. It enters with three times that many +1/+1 counters on it.)", 3, types.Land, ""},
+		{"devour Food 3", "Devour Food 3 (As this creature enters, you may sacrifice any number of Foods. It enters with three times that many +1/+1 counters on it.)", 3, "", types.Food},
+		{"bare devour land", "Devour land 2", 2, types.Land, ""},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			effect := devourEffect(t, test.source)
+			if !effect.EntersDevour {
+				t.Fatal("EntersDevour = false, want true")
+			}
+			if !effect.Exact {
+				t.Fatal("Exact = false, want true")
+			}
+			if effect.EntersDevourMultiplier != test.wantN {
+				t.Fatalf("EntersDevourMultiplier = %d, want %d", effect.EntersDevourMultiplier, test.wantN)
+			}
+			if effect.EntersDevourType != test.wantType {
+				t.Fatalf("EntersDevourType = %q, want %q", effect.EntersDevourType, test.wantType)
+			}
+			if effect.EntersDevourSubtype != test.wantSub {
+				t.Fatalf("EntersDevourSubtype = %q, want %q", effect.EntersDevourSubtype, test.wantSub)
+			}
+		})
+	}
+}
+
 func TestExpandDevourKeywordLeavesOtherFormsAlone(t *testing.T) {
 	t.Parallel()
-	// The typed and variable Devour forms must not be rewritten to the
-	// creature-sacrifice canonical text.
+	// The variable Devour form and Devour lines naming an unsupported permanent
+	// type must not be rewritten to a canonical sacrifice replacement.
 	cases := []string{
-		"Devour artifact 1 (As this creature enters, you may sacrifice any number of artifacts. It enters with that many +1/+1 counters on it.)",
-		"Devour land 3 (As this creature enters, you may sacrifice any number of lands. It enters with three times that many +1/+1 counters on it.)",
 		"Devour X, where X is the number of creatures devoured this way",
+		"Devour Treasure 1 (As this creature enters, you may sacrifice any number of Treasures. It enters with that many +1/+1 counters on it.)",
 	}
 	for _, source := range cases {
 		if got := expandDevourKeyword(source); got != source {

@@ -44,6 +44,9 @@ func (r Renderer) renderTargetSpec(ctx *renderCtx, spec *game.TargetSpec) (strin
 	} else if ok {
 		fields = append(fields, fmt.Sprintf("Predicate: %s,", predicate))
 	}
+	if spec.DistinctFromPriorTargets {
+		fields = append(fields, "DistinctFromPriorTargets: true,")
+	}
 	return structLit("game.TargetSpec", fields), nil
 }
 
@@ -93,38 +96,6 @@ func appendCardTypePredicateField(
 
 func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredicate) (lit string, ok bool, err error) {
 	var fields []string
-	if len(predicate.PermanentTypes) > 0 {
-		ctx.need(importTypes)
-		lits, err := renderTypesCardSlice(ctx, predicate.PermanentTypes)
-		if err != nil {
-			return "", false, err
-		}
-		fields = append(fields, fmt.Sprintf("PermanentTypes: %s,", lits))
-	}
-	if predicate.PermanentTypesConjunctive {
-		fields = append(fields, "PermanentTypesConjunctive: true,")
-	}
-	if len(predicate.ExcludedTypes) > 0 {
-		lits, err := renderTypesCardSlice(ctx, predicate.ExcludedTypes)
-		if err != nil {
-			return "", false, err
-		}
-		fields = append(fields, fmt.Sprintf("ExcludedTypes: %s,", lits))
-	}
-	if len(predicate.Supertypes) > 0 || predicate.ExcludedSupertype != "" {
-		fields, err = appendSupertypeFields(ctx, fields, predicate.Supertypes, predicate.ExcludedSupertype)
-		if err != nil {
-			return "", false, err
-		}
-	}
-	if len(predicate.Subtypes) > 0 {
-		ctx.need(importTypes)
-		literals := make([]string, 0, len(predicate.Subtypes))
-		for _, sub := range predicate.Subtypes {
-			literals = append(literals, SubtypeToLiteral(string(sub), nil))
-		}
-		fields = append(fields, fmt.Sprintf("Subtypes: []types.Sub{%s},", strings.Join(literals, ", ")))
-	}
 	for _, field := range []struct {
 		name   string
 		values []types.Card
@@ -148,61 +119,12 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 		}
 		fields = append(fields, stackFields...)
 	}
-	if len(predicate.Colors) > 0 {
-		colors, err := renderColorSlice(ctx, predicate.Colors)
-		if err != nil {
-			return "", false, err
-		}
-		fields = append(fields, fmt.Sprintf("Colors: %s,", colors))
-	}
-	if len(predicate.ExcludedColors) > 0 {
-		colors, err := renderColorSlice(ctx, predicate.ExcludedColors)
-		if err != nil {
-			return "", false, err
-		}
-		fields = append(fields, fmt.Sprintf("ExcludedColors: %s,", colors))
-	}
-	if predicate.Player != game.PlayerAny {
-		pr, err := renderPlayerRelation(predicate.Player)
-		if err != nil {
-			return "", false, err
-		}
-		fields = append(fields, fmt.Sprintf("Player: %s,", pr))
-	}
 	if predicate.Controller != game.ControllerAny {
 		cr, err := renderControllerRelation(predicate.Controller)
 		if err != nil {
 			return "", false, err
 		}
 		fields = append(fields, fmt.Sprintf("Controller: %s,", cr))
-	}
-	if predicate.Tapped != game.TriAny {
-		ts, err := renderTriState(predicate.Tapped)
-		if err != nil {
-			return "", false, err
-		}
-		fields = append(fields, fmt.Sprintf("Tapped: %s,", ts))
-	}
-	if predicate.CombatState != game.CombatStateAny {
-		cs, err := renderCombatStateFilter(predicate.CombatState)
-		if err != nil {
-			return "", false, err
-		}
-		fields = append(fields, fmt.Sprintf("CombatState: %s,", cs))
-	}
-	if predicate.Keyword != game.KeywordNone {
-		kw, err := renderKeyword(predicate.Keyword)
-		if err != nil {
-			return "", false, err
-		}
-		fields = append(fields, fmt.Sprintf("Keyword: %s,", kw))
-	}
-	if predicate.ExcludedKeyword != game.KeywordNone {
-		kw, err := renderKeyword(predicate.ExcludedKeyword)
-		if err != nil {
-			return "", false, err
-		}
-		fields = append(fields, fmt.Sprintf("ExcludedKeyword: %s,", kw))
 	}
 	if predicate.ManaValue.Exists {
 		ctx.need(importOpt)
@@ -211,25 +133,6 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 			return "", false, err
 		}
 		fields = append(fields, fmt.Sprintf("ManaValue: opt.Val(%s),", cmp))
-	}
-	if predicate.Power.Exists {
-		ctx.need(importOpt)
-		cmp, err := renderCompareInt(ctx, predicate.Power.Val)
-		if err != nil {
-			return "", false, err
-		}
-		fields = append(fields, fmt.Sprintf("Power: opt.Val(%s),", cmp))
-	}
-	if predicate.Toughness.Exists {
-		ctx.need(importOpt)
-		cmp, err := renderCompareInt(ctx, predicate.Toughness.Val)
-		if err != nil {
-			return "", false, err
-		}
-		fields = append(fields, fmt.Sprintf("Toughness: opt.Val(%s),", cmp))
-	}
-	if predicate.Another {
-		fields = append(fields, "Another: true,")
 	}
 	if len(fields) == 0 {
 		return "", false, nil
@@ -406,7 +309,19 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 		ctx.need(importTypes)
 		fields = append(fields, fmt.Sprintf("ExcludedSubtype: %s,", SubtypeToLiteral(string(selection.ExcludedSubtype), nil)))
 	}
+	if selection.ChosenSubtypeFrom != "" {
+		switch selection.ChosenSubtypeFrom {
+		case game.EntryTypeChoiceKey:
+			fields = append(fields, "ChosenSubtypeFrom: game.EntryTypeChoiceKey,")
+		default:
+			fields = append(fields, fmt.Sprintf("ChosenSubtypeFrom: game.ChoiceKey(%q),", selection.ChosenSubtypeFrom))
+		}
+	}
 	fields, err := appendSubtypeChoiceField(fields, selection.SubtypeChoice)
+	if err != nil {
+		return "", err
+	}
+	fields, err = appendColorChoiceField(fields, selection.ColorChoice)
 	if err != nil {
 		return "", err
 	}
@@ -485,14 +400,32 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 	if selection.ExcludeSource {
 		fields = append(fields, "ExcludeSource: true,")
 	}
+	if selection.PowerLessThanSource {
+		fields = append(fields, "PowerLessThanSource: true,")
+	}
+	if selection.PowerGreaterThanSource {
+		fields = append(fields, "PowerGreaterThanSource: true,")
+	}
 	if selection.NonToken {
 		fields = append(fields, "NonToken: true,")
 	}
 	if selection.TokenOnly {
 		fields = append(fields, "TokenOnly: true,")
 	}
+	if selection.NameUniqueAmongControlled {
+		fields = append(fields, "NameUniqueAmongControlled: true,")
+	}
 	if selection.EnteredThisTurn {
 		fields = append(fields, "EnteredThisTurn: true,")
+	}
+	if selection.RequirePermanentCard {
+		fields = append(fields, "RequirePermanentCard: true,")
+	}
+	if selection.SharesCreatureTypeWithSource {
+		fields = append(fields, "SharesCreatureTypeWithSource: true,")
+	}
+	if selection.Name != "" {
+		fields = append(fields, fmt.Sprintf("Name: %q,", selection.Name))
 	}
 
 	for i := range fields {
@@ -513,6 +446,7 @@ func renderSelectionComparisons(ctx *renderCtx, selection game.Selection) ([]str
 		{"ManaValue", selection.ManaValue},
 		{"Power", selection.Power},
 		{"Toughness", selection.Toughness},
+		{"RequiredCounterCount", selection.RequiredCounterCount},
 	} {
 		if !c.value.Exists {
 			continue
@@ -524,6 +458,21 @@ func renderSelectionComparisons(ctx *renderCtx, selection game.Selection) ([]str
 		}
 		fields = append(fields, fmt.Sprintf("%s: opt.Val(%s),", c.name, cmp))
 	}
+	if selection.ManaValueDynamic.Exists {
+		ctx.need(importOpt)
+		kind, err := renderDynamicAmountKind(selection.ManaValueDynamic.Val.Kind)
+		if err != nil {
+			return nil, err
+		}
+		boundFields := []string{fmt.Sprintf("Kind: %s", kind)}
+		if selection.ManaValueDynamic.Val.Multiplier != 0 {
+			boundFields = append(boundFields, fmt.Sprintf("Multiplier: %d", selection.ManaValueDynamic.Val.Multiplier))
+		}
+		if selection.ManaValueDynamic.Val.Addend != 0 {
+			boundFields = append(boundFields, fmt.Sprintf("Addend: %d", selection.ManaValueDynamic.Val.Addend))
+		}
+		fields = append(fields, fmt.Sprintf("ManaValueDynamic: opt.Val(game.ManaValueDynamicBound{%s}),", strings.Join(boundFields, ", ")))
+	}
 	if selection.MatchCounter {
 		ctx.need(importCounter)
 		kind, err := renderCounterKind(selection.RequiredCounter)
@@ -531,12 +480,33 @@ func renderSelectionComparisons(ctx *renderCtx, selection game.Selection) ([]str
 			return nil, err
 		}
 		fields = append(fields, "MatchCounter: true,", fmt.Sprintf("RequiredCounter: %s,", kind))
+	} else if selection.RequiredCounterCount.Exists {
+		ctx.need(importCounter)
+		kind, err := renderCounterKind(selection.RequiredCounter)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("RequiredCounter: %s,", kind))
 	}
 	if selection.MatchAnyCounter {
 		fields = append(fields, "MatchAnyCounter: true,")
 	}
+	if selection.MatchNoCounters {
+		fields = append(fields, "MatchNoCounters: true,")
+	}
+	if selection.MatchExcludedCounter {
+		ctx.need(importCounter)
+		kind, err := renderCounterKind(selection.ExcludedCounter)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, "MatchExcludedCounter: true,", fmt.Sprintf("ExcludedCounter: %s,", kind))
+	}
 	if selection.MatchModified {
 		fields = append(fields, "MatchModified: true,")
+	}
+	if selection.MatchCommander {
+		fields = append(fields, "MatchCommander: true,")
 	}
 	return fields, nil
 }
@@ -556,6 +526,17 @@ func appendSubtypeChoiceField(fields []string, choice game.SubtypeChoiceSource) 
 		return append(fields, "SubtypeChoice: game.SubtypeChoiceResolutionExcluded,"), nil
 	default:
 		return nil, fmt.Errorf("render: unsupported subtype choice source %d", choice)
+	}
+}
+
+func appendColorChoiceField(fields []string, choice game.ColorChoiceSource) ([]string, error) {
+	switch choice {
+	case game.ColorChoiceNone:
+		return fields, nil
+	case game.ColorChoiceSourceEntry:
+		return append(fields, "ColorChoice: game.ColorChoiceSourceEntry,"), nil
+	default:
+		return nil, fmt.Errorf("render: unsupported color choice source %d", choice)
 	}
 }
 
@@ -675,6 +656,8 @@ func renderKeyword(kw game.Keyword) (string, error) {
 		return "game.FirstStrike", nil
 	case game.Flash:
 		return "game.Flash", nil
+	case game.Fuse:
+		return "game.Fuse", nil
 	case game.Flying:
 		return "game.Flying", nil
 	case game.Haste:
@@ -789,6 +772,10 @@ func renderKeyword(kw game.Keyword) (string, error) {
 		return "game.Intimidate", nil
 	case game.Landwalk:
 		return "game.Landwalk", nil
+	case game.Retrace:
+		return "game.Retrace", nil
+	case game.Banding:
+		return "game.Banding", nil
 	default:
 		return "", fmt.Errorf("render: unsupported keyword %d", kw)
 	}
@@ -819,5 +806,54 @@ func renderCompareOp(op compare.Op) (string, error) {
 		return "compare.GreaterThan", nil
 	default:
 		return "", fmt.Errorf("render: unsupported compare op %d", op)
+	}
+}
+
+func renderAggregateComparisons(ctx *renderCtx, aggregates []game.AggregateComparison) (string, error) {
+	ctx.need(importGame)
+	ctx.need(importCompare)
+	parts := make([]string, 0, len(aggregates))
+	for i := range aggregates {
+		kind, err := renderAggregateKind(aggregates[i].Aggregate)
+		if err != nil {
+			return "", err
+		}
+		op, err := renderCompareOp(aggregates[i].Op)
+		if err != nil {
+			return "", err
+		}
+		parts = append(parts, fmt.Sprintf("{Aggregate: %s, Op: %s, Value: %d}", kind, op, aggregates[i].Value))
+	}
+	return fmt.Sprintf("[]game.AggregateComparison{%s}", strings.Join(parts, ", ")), nil
+}
+
+func renderAggregateKind(kind game.AggregateKind) (string, error) {
+	switch kind {
+	case game.AggregateControllerLife:
+		return "game.AggregateControllerLife", nil
+	case game.AggregateControllerLifeAboveStarting:
+		return "game.AggregateControllerLifeAboveStarting", nil
+	case game.AggregateControllerHandSize:
+		return "game.AggregateControllerHandSize", nil
+	case game.AggregateControllerLibrarySize:
+		return "game.AggregateControllerLibrarySize", nil
+	case game.AggregateControllerGraveyardCardCount:
+		return "game.AggregateControllerGraveyardCardCount", nil
+	case game.AggregateControllerGraveyardCardTypeCount:
+		return "game.AggregateControllerGraveyardCardTypeCount", nil
+	case game.AggregateControllerBasicLandTypeCount:
+		return "game.AggregateControllerBasicLandTypeCount", nil
+	case game.AggregateControllerCreaturePowerDiversity:
+		return "game.AggregateControllerCreaturePowerDiversity", nil
+	case game.AggregateOpponentCount:
+		return "game.AggregateOpponentCount", nil
+	case game.AggregateAttackersAttackingController:
+		return "game.AggregateAttackersAttackingController", nil
+	case game.AggregateControllerGainedLifeThisTurn:
+		return "game.AggregateControllerGainedLifeThisTurn", nil
+	case game.AggregateSpellX:
+		return "game.AggregateSpellX", nil
+	default:
+		return "", fmt.Errorf("render: unsupported aggregate kind %d", kind)
 	}
 }

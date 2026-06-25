@@ -126,10 +126,10 @@ func TestLowerOverloadIsTextBlindAndFailsClosed(t *testing.T) {
 			MinTargets: 1,
 			MaxTargets: 1,
 			Allow:      game.TargetAllowPermanent,
-			Predicate: game.TargetPredicate{
-				PermanentTypes: []types.Card{types.Artifact},
-				Controller:     game.ControllerNotYou,
-			},
+			Selection: opt.Val(game.Selection{
+				RequiredTypesAny: []types.Card{types.Artifact},
+				Controller:       game.ControllerNotYou,
+			}),
 		}},
 		Sequence: []game.Instruction{{Primitive: game.Destroy{Object: game.TargetPermanentReference(0)}}},
 	}.Ability())
@@ -247,6 +247,7 @@ func TestGenerateDreadReturnFlashbackSource(t *testing.T) {
 	for _, want := range []string{
 		"game.SimpleKeyword{Kind: game.Flashback}",
 		`Label: "Flashback"`,
+		"Mechanic: cost.AlternativeMechanicFlashback,",
 		"AdditionalCosts: []cost.Additional{",
 		"Kind:               cost.AdditionalSacrifice,",
 		"PermanentType:      types.Creature,",
@@ -403,7 +404,7 @@ func TestLowerDeadlyRollick(t *testing.T) {
 	if target.MinTargets != 1 ||
 		target.MaxTargets != 1 ||
 		target.Allow != game.TargetAllowPermanent ||
-		!slices.Equal(target.Predicate.PermanentTypes, []types.Card{types.Creature}) {
+		!slices.Equal(target.Selection.Val.RequiredTypesAny, []types.Card{types.Creature}) {
 		t.Fatalf("target = %#v, want exact one creature", target)
 	}
 	if len(mode.Sequence) != 1 {
@@ -423,7 +424,7 @@ func TestLowerDeadlyRollick(t *testing.T) {
 	}
 	for _, want := range []string{
 		"Condition: cost.AlternativeConditionControlsCommander",
-		"PermanentTypes: []types.Card{types.Creature}",
+		"RequiredTypesAny: []types.Card{types.Creature}",
 		"Primitive: game.Exile",
 		"Object: game.TargetPermanentReference(0)",
 	} {
@@ -565,5 +566,47 @@ func TestLowerForceOfNegationPitchAndCounterExile(t *testing.T) {
 	counter, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.CounterObject)
 	if !ok || !counter.ExileInstead {
 		t.Fatalf("primitive = %#v, want counter with exile instead", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+}
+
+func TestLowerFoilDiscardAlternativeCost(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:     "Foil",
+		Layout:   "normal",
+		TypeLine: "Instant",
+		ManaCost: "{2}{U}{U}",
+		OracleText: "You may discard an Island card and another card rather than pay this spell's mana cost.\n" +
+			"Counter target spell.",
+	})
+	if len(face.AlternativeCosts) != 1 {
+		t.Fatalf("alternative costs = %#v, want one", face.AlternativeCosts)
+	}
+	alt := face.AlternativeCosts[0]
+	if alt.ManaCost.Exists {
+		t.Fatalf("discard alternative should carry no mana cost: %#v", alt)
+	}
+	if alt.Condition != cost.AlternativeConditionNone {
+		t.Fatalf("condition = %v, want none", alt.Condition)
+	}
+	if len(alt.AdditionalCosts) != 2 {
+		t.Fatalf("additional costs = %#v, want two discards", alt.AdditionalCosts)
+	}
+	island := alt.AdditionalCosts[0]
+	if island.Kind != cost.AdditionalDiscard ||
+		island.Source != zone.Hand ||
+		island.Amount != 1 ||
+		island.SubtypesAny != (cost.SubtypeSet{types.Island}) {
+		t.Fatalf("first discard = %#v, want discard one Island card from hand", island)
+	}
+	other := alt.AdditionalCosts[1]
+	if other.Kind != cost.AdditionalDiscard ||
+		other.Source != zone.Hand ||
+		other.Amount != 1 ||
+		other.SubtypesAny != (cost.SubtypeSet{}) {
+		t.Fatalf("second discard = %#v, want discard one unfiltered card from hand", other)
+	}
+	if _, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.CounterObject); !ok {
+		t.Fatalf("primitive = %#v, want counter object", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
 	}
 }

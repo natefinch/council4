@@ -49,6 +49,9 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 	if effect.TokenCopyOfAttached {
 		return lowerCreateCopyTokenAttachedSpell(ctx)
 	}
+	if effect.TokenCopyOfTriggeringSet {
+		return lowerCreateCopyTokenTriggeringSetSpell(ctx)
+	}
 	if effect.TokenCopyOfForEach {
 		return lowerCreateCopyTokenForEachSpell(ctx)
 	}
@@ -75,11 +78,12 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 	}
 	var recipient opt.V[game.PlayerReference]
 	var targets []game.TargetSpec
-	var counterObject game.ObjectReference
-	sourceCounterAmount := effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount
+	var amountObject game.ObjectReference
+	amountReferencesObject := effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount ||
+		effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower
 	switch {
 	case controllerRecipient:
-		if sourceCounterAmount {
+		if amountReferencesObject {
 			if len(ctx.content.References) != 1 {
 				return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 			}
@@ -88,7 +92,7 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 			if !ok {
 				return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 			}
-			counterObject = object
+			amountObject = object
 		} else if len(ctx.content.References) != 0 {
 			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 		}
@@ -121,10 +125,13 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 	if !ok && len(extraKeywords) == 0 {
 		def, ok = synthesizeNamedArtifactTokenDef(&effect)
 	}
+	if !ok && len(extraKeywords) == 0 {
+		def, ok = synthesizePredefinedTokenDef(&effect)
+	}
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
-	amount, ok := createTokenAmount(ctx, &effect, counterObject)
+	amount, ok := createTokenAmount(ctx, &effect, amountObject)
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
@@ -235,7 +242,7 @@ func createTokenDurationOK(duration compiler.DurationKind) bool {
 // permanent's counters (last-known information once it has died), as for
 // Chasm Skulker's death-triggered Squid tokens. Source-power counts and any
 // unrepresented dynamic kind fail closed.
-func createTokenAmount(ctx contentCtx, effect *compiler.CompiledEffect, counterObject game.ObjectReference) (game.Quantity, bool) {
+func createTokenAmount(ctx contentCtx, effect *compiler.CompiledEffect, amountObject game.ObjectReference) (game.Quantity, bool) {
 	switch {
 	case effect.Amount.Known:
 		if effect.Amount.Value < 1 {
@@ -251,12 +258,10 @@ func createTokenAmount(ctx contentCtx, effect *compiler.CompiledEffect, counterO
 		}
 		return game.Dynamic(dynamic), true
 	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
-		if effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower {
-			return game.Quantity{}, false
-		}
 		object := game.ObjectReference{}
-		if effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount {
-			object = counterObject
+		if effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount ||
+			effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower {
+			object = amountObject
 		}
 		dynamic, ok := lowerDynamicAmount(effect.Amount, object)
 		if !ok {
@@ -328,13 +333,29 @@ func lowerCreateCopyTokenReferenceSpell(ctx contentCtx) (game.AbilityContent, *s
 		effect.Negated ||
 		effect.DelayedTiming != 0 ||
 		effect.Duration != compiler.DurationNone ||
-		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Targets) > 1 ||
 		len(ctx.content.References) < 1 ||
 		!tokenCopyAuxiliaryReferencesOK(ctx.content.References[1:]) ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != len(effect.TokenCopyGrantKeywords) ||
 		len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	// "Choose target <permanent>. Create a token that's a copy of it." (Yenna,
+	// Redtooth Regent) chooses the copied permanent with a separate targeting
+	// sentence, so the "it" copy source binds an ability-level target. Emit that
+	// target's spec and require the leading reference to bind it; the copy of an
+	// inline "target <permanent>" instead goes through lowerCreateCopyTokenSpell.
+	var targets []game.TargetSpec
+	if len(ctx.content.Targets) == 1 {
+		if !referencesBindTo(ctx.content.References[:1], compiler.ReferenceBindingTarget, 0) {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		targetSpec, ok := permanentTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		targets = []game.TargetSpec{targetSpec}
 	}
 	object, ok := lowerObjectReference(
 		ctx.content.References[0],
@@ -352,6 +373,7 @@ func lowerCreateCopyTokenReferenceSpell(ctx contentCtx) (game.AbilityContent, *s
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
 	return game.Mode{
+		Targets: targets,
 		Sequence: []game.Instruction{{
 			Primitive: game.CreateToken{
 				Amount:      amount,
@@ -400,6 +422,66 @@ func lowerCreateCopyTokenAttachedSpell(ctx contentCtx) (game.AbilityContent, *sh
 			},
 		}},
 	}.Ability(), nil
+}
+
+// lowerCreateCopyTokenTriggeringSetSpell lowers "Create a token that's a copy of
+// one of them[, except <it> isn't legendary]." (Twilight Diviner) to a
+// CreateToken whose source is a controller-chosen member of the resolving
+// ability's triggering event batch. The "them"/"they" pronoun is a benign
+// reference naming that batch; only a controller recipient with supported copy
+// modifiers (legendary drop, tapped entry) is accepted here.
+func lowerCreateCopyTokenTriggeringSetSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.Effects) != 1 ||
+		effect.Context != parser.EffectContextController ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		len(ctx.content.Targets) != 0 ||
+		!tokenCopyAuxiliaryReferencesOK(ctx.content.References) ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != len(effect.TokenCopyGrantKeywords) ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	spec, ok := tokenCopyTriggeringSetModifiers(&effect)
+	if !ok {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	amount, ok := createTokenAmount(ctx, &effect, game.ObjectReference{})
+	if !ok {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.CreateToken{
+				Amount:      amount,
+				Source:      game.TokenCopyOf(spec),
+				EntryTapped: effect.TokenCopyEntersTapped,
+			},
+		}},
+	}.Ability(), nil
+}
+
+// tokenCopyTriggeringSetModifiers builds the runtime copy spec for a "copy of one
+// of them" create over the controller-chosen triggering-batch member, applying
+// the "except <it> isn't legendary" supertype drop and any folded "that token
+// gains <keyword>" rider keywords. It fails closed when a granted keyword has no
+// reusable runtime static form.
+func tokenCopyTriggeringSetModifiers(effect *compiler.CompiledEffect) (game.TokenCopySpec, bool) {
+	spec := game.TokenCopySpec{
+		Source:          game.TokenCopySourceChosenFromTriggerBatch,
+		SetNotLegendary: effect.TokenCopyDropLegendary,
+	}
+	for _, kind := range effect.TokenCopyGrantKeywords {
+		keyword, ok := runtimeKeyword(kind)
+		if !ok {
+			return game.TokenCopySpec{}, false
+		}
+		spec.AddKeywords = append(spec.AddKeywords, keyword)
+	}
+	return spec, true
 }
 
 // lowerCreateCopyTokenForEachSpell lowers a per-each copy-token create whose
@@ -456,14 +538,20 @@ func copyForEachGroupSelection(selector compiler.CompiledSelector) (game.Selecti
 	if selector.Kind == compiler.SelectorUnknown && (selector.TokenOnly || selector.NonToken) {
 		adjusted.Kind = compiler.SelectorPermanent
 	}
-	selection, ok := massGroupSelection(adjusted)
-	if !ok {
-		return game.Selection{}, false
-	}
-	selection.TokenOnly = selector.TokenOnly
-	selection.NonToken = selector.NonToken
-	return selection, true
+	return SelectionForSelectorMasked(adjusted, copyForEachGroupSelectionMask)
 }
+
+// copyForEachGroupSelectionMask honors the per-object token qualifier a
+// copy-for-each iteration can scope to ("for each token you control") while
+// dropping the historic, excluded-subtype, and source-relative-power dimensions
+// the iterated battlefield group never carries.
+var copyForEachGroupSelectionMask = SelectionMask{}.Ignoring(
+	DimHistoric,
+	DimExcludedSubtype,
+	DimPowerVsSource,
+).Rejecting(
+	DimRequiredName,
+)
 
 // tokenCopyForEachModifiers builds the runtime copy spec for a per-each copy
 // over the iterated group, applying the "except <it> isn't legendary" supertype
@@ -541,6 +629,12 @@ func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect, extraKeywords [
 	if len(colors) > 2 {
 		return nil, false
 	}
+	supertypes := effect.Selector.Supertypes()
+	for _, supertype := range supertypes {
+		if supertype != types.Legendary {
+			return nil, false
+		}
+	}
 	cardTypes, ok := creatureTokenCardTypes(effect.Selector)
 	if !ok {
 		return nil, false
@@ -555,10 +649,11 @@ func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect, extraKeywords [
 	}
 	def := &game.CardDef{
 		CardFace: game.CardFace{
-			Name:     name,
-			Colors:   slices.Clone(colors),
-			Types:    cardTypes,
-			Subtypes: slices.Clone(subtypes),
+			Name:       name,
+			Colors:     slices.Clone(colors),
+			Types:      cardTypes,
+			Subtypes:   slices.Clone(subtypes),
+			Supertypes: slices.Clone(supertypes),
 		},
 	}
 	// A fixed-power/toughness token carries its printed power and toughness on
@@ -703,6 +798,62 @@ func synthesizeNamedArtifactTokenDef(effect *compiler.CompiledEffect) (*game.Car
 	return namedArtifactTokenDef(subtypes[0])
 }
 
+// synthesizePredefinedTokenDef builds a token CardDef for a predefined named
+// token whose name is a card name rather than a card subtype (Mutavault). The
+// create clause carries only the name, so the token's full definition — its
+// types, mana ability, and activated abilities — is fixed here, mirroring the
+// printed token's reminder text. Any name with no fixed definition fails closed.
+func synthesizePredefinedTokenDef(effect *compiler.CompiledEffect) (*game.CardDef, bool) {
+	if effect.TokenPredefinedName == "" || effect.TokenPTKnown {
+		return nil, false
+	}
+	switch effect.TokenPredefinedName {
+	case "Mutavault":
+		return mutavaultTokenDef(), true
+	default:
+		return nil, false
+	}
+}
+
+// mutavaultTokenDef builds the Mutavault token: a colorless land with the
+// intrinsic colorless mana ability "{T}: Add {C}." and the self-animation
+// ability "{1}: This token becomes a 2/2 creature with all creature types until
+// end of turn. It's still a land." The animation adds the creature type and every
+// creature subtype, and sets the token to 2/2, for the rest of the turn while
+// leaving the land type intact (CR 613: the type layer adds rather than replaces).
+func mutavaultTokenDef() *game.CardDef {
+	manaAbility := game.TapManaAbility(mana.C)
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:          "Mutavault",
+			Types:         []types.Card{types.Land},
+			ManaAbilities: []game.ManaAbility{manaAbility},
+			ActivatedAbilities: []game.ActivatedAbility{{
+				Text:     "{1}: This token becomes a 2/2 creature with all creature types until end of turn. It's still a land.",
+				ManaCost: opt.Val(cost.Mana{cost.O(1)}),
+				Content: game.Mode{Sequence: []game.Instruction{{
+					Primitive: game.ApplyContinuous{
+						Object: opt.Val(game.SourcePermanentReference()),
+						ContinuousEffects: []game.ContinuousEffect{
+							{
+								Layer:                game.LayerType,
+								AddTypes:             []types.Card{types.Creature},
+								AddEveryCreatureType: true,
+							},
+							{
+								Layer:        game.LayerPowerToughnessSet,
+								SetPower:     opt.Val(game.PT{Value: 2}),
+								SetToughness: opt.Val(game.PT{Value: 2}),
+							},
+						},
+						Duration: game.DurationUntilEndOfTurn,
+					},
+				}}}.Ability(),
+			}},
+		},
+	}
+}
+
 // namedArtifactTokenDef returns the synthesized CardDef for a recognized
 // predefined artifact token, or false for an unrepresented one.
 func namedArtifactTokenDef(sub types.Sub) (*game.CardDef, bool) {
@@ -831,10 +982,10 @@ func mapTokenDef() *game.CardDef {
 				MaxTargets: 1,
 				Constraint: "target creature you control",
 				Allow:      game.TargetAllowPermanent,
-				Predicate: game.TargetPredicate{
-					PermanentTypes: []types.Card{types.Creature},
-					Controller:     game.ControllerYou,
-				},
+				Selection: opt.Val(game.Selection{
+					RequiredTypesAny: []types.Card{types.Creature},
+					Controller:       game.ControllerYou,
+				}),
 			}},
 			Sequence: []game.Instruction{
 				{Primitive: game.Explore{Creature: game.TargetPermanentReference(0)}},
@@ -940,10 +1091,12 @@ func landerTokenDef() *game.CardDef {
 			{Primitive: game.Search{
 				Player: game.ControllerReference(),
 				Spec: game.SearchSpec{
-					SourceZone:   zone.Library,
-					Destination:  zone.Battlefield,
-					CardType:     opt.Val(types.Land),
-					Supertype:    opt.Val(types.Basic),
+					SourceZone:  zone.Library,
+					Destination: zone.Battlefield,
+					Filter: game.Selection{
+						RequiredTypes: []types.Card{types.Land},
+						Supertypes:    []types.Super{types.Basic},
+					},
 					EntersTapped: true,
 				},
 				Amount: game.Fixed(1),
@@ -967,7 +1120,7 @@ func mutagenTokenDef() *game.CardDef {
 				MaxTargets: 1,
 				Constraint: "target creature",
 				Allow:      game.TargetAllowPermanent,
-				Predicate:  game.TargetPredicate{PermanentTypes: []types.Card{types.Creature}},
+				Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
 			}},
 			Sequence: []game.Instruction{
 				{Primitive: game.AddCounter{

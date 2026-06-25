@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -170,8 +171,8 @@ func TestLowerLifeAndOpponentConditionalEntersTappedReplacements(t *testing.T) {
 			name:      "controller life",
 			condition: "unless you have 10 or more life",
 			assert: func(t *testing.T, condition game.Condition) {
-				if condition.ControllerLifeAtLeast != 10 {
-					t.Fatalf("ControllerLifeAtLeast = %d, want 10", condition.ControllerLifeAtLeast)
+				if got := condition.Aggregates; len(got) != 1 || got[0].Aggregate != game.AggregateControllerLife || got[0].Op != compare.GreaterOrEqual || got[0].Value != 10 {
+					t.Fatalf("aggregates = %+v, want controller life >= 10", condition.Aggregates)
 				}
 			},
 		},
@@ -188,8 +189,8 @@ func TestLowerLifeAndOpponentConditionalEntersTappedReplacements(t *testing.T) {
 			name:      "opponent count",
 			condition: "unless you have two or more opponents",
 			assert: func(t *testing.T, condition game.Condition) {
-				if condition.OpponentCountAtLeast != 2 {
-					t.Fatalf("OpponentCountAtLeast = %d, want 2", condition.OpponentCountAtLeast)
+				if got := condition.Aggregates; len(got) != 1 || got[0].Aggregate != game.AggregateOpponentCount || got[0].Value != 2 {
+					t.Fatalf("opponent-count aggregate = %+v, want 2", condition.Aggregates)
 				}
 			},
 		},
@@ -432,14 +433,15 @@ func TestLowerAbilityWordConditions(t *testing.T) {
 		oracleText string
 		wants      []string
 	}{
-		{"threshold static", "Threshold Bear", "Creature — Bear", "Threshold — This creature gets +2/+2 as long as there are seven or more cards in your graveyard.", []string{"ControllerGraveyardCardCountAtLeast: 7"}},
-		{"delirium static", "Delirium Bear", "Creature — Bear", "Delirium — This creature gets +1/+1 and has menace as long as there are four or more card types among cards in your graveyard.", []string{"ControllerGraveyardCardTypeCountAtLeast: 4", "AffectedSource: true"}},
+		{"threshold static", "Threshold Bear", "Creature — Bear", "Threshold — This creature gets +2/+2 as long as there are seven or more cards in your graveyard.", []string{"Aggregate: game.AggregateControllerGraveyardCardCount, Op: compare.GreaterOrEqual, Value: 7"}},
+		{"graveyard creature-card static", "Graveyard Bear", "Creature — Bear", "This creature gets +2/+2 as long as there are six or more creature cards in your graveyard.", []string{"ControllerGraveyardCardOfTypeCountAtLeast: 6", "ControllerGraveyardCountCardType:          types.Creature"}},
+		{"delirium static", "Delirium Bear", "Creature — Bear", "Delirium — This creature gets +1/+1 and has menace as long as there are four or more card types among cards in your graveyard.", []string{"Aggregate: game.AggregateControllerGraveyardCardTypeCount, Op: compare.GreaterOrEqual, Value: 4", "AffectedSource: true"}},
 		{"domain static", "Domain Bear", "Creature — Bear", "Domain — This creature gets +1/+1 for each basic land type among lands you control.", []string{"PowerDeltaDynamic: opt.Val(game.DynamicAmount{", "ToughnessDeltaDynamic: opt.Val(game.DynamicAmount{", "game.DynamicAmountControllerBasicLandTypeCount"}},
 		{"domain spell", "Tribal Flames", "Sorcery", "Domain — Tribal Flames deals X damage to any target, where X is the number of basic land types among lands you control.", []string{"game.DynamicAmountControllerBasicLandTypeCount"}},
 		{"metalcraft trigger", "Metalcraft Bear", "Creature — Bear", "Metalcraft — When this creature enters, if you control three or more artifacts, draw a card.", []string{"InterveningCondition: opt.Val(game.Condition{", "MinCount:"}},
 		{"hellbent activation", "Hellbent Bear", "Creature — Bear", "Hellbent — {1}: Draw a card. Activate only if you have no cards in hand.", []string{"ActivationCondition: opt.Val(game.Condition{", "ControllerHandEmpty: true"}},
 		{"ferocious activation", "Ferocious Bear", "Creature — Bear", "Ferocious — {1}: Draw a card. Activate only if you control a creature with power 4 or greater.", []string{"ActivationCondition: opt.Val(game.Condition{", "Value: 4"}},
-		{"coven trigger", "Coven Bear", "Creature — Bear", "Coven — At the beginning of combat on your turn, if you control three or more creatures with different powers, draw a card.", []string{"InterveningCondition: opt.Val(game.Condition{", "ControllerCreaturePowerDiversityAtLeast: 3"}},
+		{"coven trigger", "Coven Bear", "Creature — Bear", "Coven — At the beginning of combat on your turn, if you control three or more creatures with different powers, draw a card.", []string{"InterveningCondition: opt.Val(game.Condition{", "Aggregate: game.AggregateControllerCreaturePowerDiversity, Op: compare.GreaterOrEqual, Value: 3"}},
 		{"morbid trigger", "Morbid Bear", "Creature — Bear", "Morbid — At the beginning of your end step, if a creature died this turn, put a +1/+1 counter on this creature.", []string{"InterveningCondition: opt.Val(game.Condition{", "game.EventPermanentDied", "Window: game.EventHistoryCurrentTurn"}},
 		{"survival trigger", "Survival Bear", "Creature — Bear", "Survival — At the beginning of your second main phase, if this creature is tapped, you gain 2 life.", []string{"InterveningCondition: opt.Val(game.Condition{", "Tapped: game.TriTrue"}},
 	}
@@ -476,7 +478,6 @@ func TestLowerAbilityWordConditions(t *testing.T) {
 
 func TestLowerAbilityWordConditionsFailClosed(t *testing.T) {
 	tests := []string{
-		"Threshold — This creature gets +2/+2 as long as there are six or more creature cards in your graveyard.",
 		"Delirium — This creature gets +2/+2 as long as there are three or more card types among cards in an opponent's graveyard.",
 		"Metalcraft — This creature gets +2/+2 as long as you control two or more artifacts with banding.",
 		"Hellbent — {1}: Draw a card. Activate only if you have one or fewer cards in hand.",

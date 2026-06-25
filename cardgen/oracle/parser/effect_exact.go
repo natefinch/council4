@@ -20,6 +20,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactDamageEffectSyntax(effect) || exactSourcePowerDamageEffectSyntax(effect)
 	case EffectCantBeBlocked:
 		return exactCantBeBlockedEffectSyntax(effect)
+	case EffectCantBlock:
+		return exactCantBlockEffectSyntax(effect)
 	case EffectCounter:
 		return exactCounterEffectSyntax(effect)
 	case EffectCopyStackObject:
@@ -30,56 +32,81 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return strings.EqualFold(exactEffectClauseText(effect), "Choose a creature type.")
 	case EffectCreate:
 		return exactCreateTokenEffectSyntax(effect) ||
+			exactCreateTokenForEachDestroyedThisWayEffectSyntax(effect) ||
 			exactCreateNamedTokenEffectSyntax(effect) ||
+			exactCreatePredefinedTokenEffectSyntax(effect) ||
 			exactCreateNamedTokenChoiceEffectSyntax(effect) ||
 			exactCreateCopyTokenEffectSyntax(effect) ||
 			exactCreateCopyTokenReferenceEffectSyntax(effect) ||
+			exactCreateCopyTokenTriggeringSetEffectSyntax(effect) ||
 			exactCreateCopyTokenAttachedEffectSyntax(effect)
+	case EffectCreateEmblem:
+		return exactCreateEmblemEffectSyntax(effect)
 	case EffectDiscard:
 		return exactCardCountEffectSyntax(effect, "Discard", "discards", false) ||
 			effect.DiscardEntireHand ||
 			effect.HandDiscard.AtRandom
 	case EffectDestroy:
 		return exactDirectTargetEffectSyntax(effect, "Destroy") ||
+			exactMultiDistinctTargetEffectSyntax(effect, "Destroy") ||
 			exactMassEffectSyntax(effect, "Destroy all ") ||
 			exactMassEachEffectSyntax(effect, "Destroy each ") ||
+			exactDestroyForEachPlayerEffectSyntax(effect) ||
 			exactBackReferenceEffectSyntax(effect, "Destroy")
 	case EffectDig:
 		return exactDigLookEffectSyntax(effect)
 	case EffectDraw:
 		return exactCardCountEffectSyntax(effect, "Draw", "draws", true)
 	case EffectEnterTapped:
-		return exactLegacyFixedAmountSyntax(effect) || effect.EntersTappedGroup ||
-			effect.EntersWithCountersGroup
+		return exactLegacyFixedAmountSyntax(effect) ||
+			effect.GroupEntryModification.Kind != GroupEntryModificationNone
 	case EffectExile:
 		return exactSourceSpellExileSyntax(effect) ||
 			exactCounteredSpellExileSyntax(effect) ||
+			exactExileUntilSourceLeavesEffectSyntax(effect) ||
+			exactExileForEachPlayerUntilLeavesEffectSyntax(effect) ||
 			exactExileTopOfLibrarySyntax(effect) ||
+			exactExileEntireHandEffectSyntax(effect) ||
 			exactDirectTargetEffectSyntax(effect, "Exile") ||
+			exactMultiDistinctTargetEffectSyntax(effect, "Exile") ||
 			exactMassEffectSyntax(effect, "Exile all ") ||
+			exactMassEachEffectSyntax(effect, "Exile each ") ||
 			exactBackReferenceEffectSyntax(effect, "Exile") ||
 			exactGraveyardExileEffectSyntax(effect) ||
 			exactPlayerGraveyardExileEffectSyntax(effect)
 	case EffectFight:
 		return exactFightEffectSyntax(effect)
 	case EffectExplore:
-		return exactDirectPronounEffectSyntax(effect, "It explores.")
+		return exactDirectPronounEffectSyntax(effect, "It explores.") ||
+			exactSourceExploresEffectSyntax(effect) ||
+			exactTargetExploresEffectSyntax(effect)
 	case EffectGain:
 		return exactLifeEffectSyntax(effect, "gain", "gains") ||
-			exactTemporaryKeywordEffectSyntax(effect)
+			exactTemporaryKeywordEffectSyntax(effect) ||
+			exactDirectTargetKeywordGrantEffectSyntax(effect) ||
+			exactControlledSourceKeywordGrantEffectSyntax(effect) ||
+			exactBackReferenceTargetKeywordGrantEffectSyntax(effect) ||
+			exactGainGrantedAbilityEffectSyntax(effect)
 	case EffectGainControl:
 		return exactGainControlEffectSyntax(effect)
+	case EffectBecomeMonarch:
+		return exactBecomeMonarchEffectSyntax(effect)
 	case EffectInvestigate:
 		return exactStandaloneActionEffectSyntax(effect, "Investigate")
 	case EffectAmass:
 		return exactAmassEffectSyntax(effect)
 	case EffectRenown:
 		return exactStandaloneActionEffectSyntax(effect, "renown")
+	case EffectAdapt:
+		return exactStandaloneActionEffectSyntax(effect, "Adapt")
+	case EffectConnive:
+		return exactConniveEffectSyntax(effect)
 	case EffectLose:
 		return exactLifeEffectSyntax(effect, "lose", "loses") ||
+			exactLifeEffectSyntax(effect, "pay", "pays") ||
 			exactTemporaryKeywordLossEffectSyntax(effect)
 	case EffectLoseGame:
-		return strings.EqualFold(exactEffectClauseText(effect), "You lose the game.")
+		return exactLoseGameEffectSyntax(effect)
 	case EffectWinGame:
 		return strings.EqualFold(exactEffectClauseText(effect), "You win the game.")
 	case EffectManifest:
@@ -92,18 +119,25 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactMoveCountersEffectSyntax(effect)
 	case EffectModifyPT:
 		return exactModifyPTEffectSyntax(effect)
-	case EffectGainEnergy:
-		return exactGainEnergyEffectSyntax(effect)
+	case EffectGainPlayerCounter:
+		return exactGainPlayerCounterEffectSyntax(effect)
 	case EffectPut:
 		return exactCounterPlacementEffectSyntax(effect) || exactGraveyardPutEffectSyntax(effect) ||
 			exactDigPutEffectSyntax(effect) || exactHandLibraryPutEffectSyntax(effect) ||
-			exactPutThoseCountersEffectSyntax(effect)
+			exactPutThoseCountersEffectSyntax(effect) || exactPutThoseCardsIntoHandEffectSyntax(effect) ||
+			exactBottomLinkedExiledCardsEffectSyntax(effect) ||
+			exactPutLinkedExiledRestOnLibraryBottomEffectSyntax(effect) ||
+			exactCounterExiledCardManaValueEffectSyntax(effect)
 	case EffectProliferate:
 		return exactStandaloneActionEffectSyntax(effect, "Proliferate")
+	case EffectRemoveCounter:
+		return exactRemoveCounterEffectSyntax(effect)
 	case EffectRegenerate:
 		return exactDirectTargetEffectSyntax(effect, "Regenerate") ||
 			exactRegenerateSelfEffectSyntax(effect) ||
-			exactRegenerateAttachedEffectSyntax(effect)
+			exactRegenerateAttachedEffectSyntax(effect) ||
+			exactMassEffectSyntax(effect, "Regenerate all ") ||
+			exactMassEachEffectSyntax(effect, "Regenerate each ")
 	case EffectReorderLibraryTop:
 		return exactLibraryTopReorderEffectSyntax(effect)
 	case EffectReturn:
@@ -111,10 +145,15 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactMultiBounceEffectSyntax(effect) ||
 			exactDualBounceEffectSyntax(effect) ||
 			exactMassBounceEffectSyntax(effect) ||
+			exactMassEachBounceEffectSyntax(effect) ||
 			exactControlledBounceEffectSyntax(effect) ||
 			exactSelfBounceEffectSyntax(effect) ||
 			exactGraveyardReturnEffectSyntax(effect) ||
 			exactChosenCardsBattlefieldReturnEffectSyntax(effect) ||
+			exactReturnExiledCardEffectSyntax(effect) ||
+			exactReturnLinkedExiledToBattlefieldPartialEffectSyntax(effect) ||
+			exactReturnExiledCardsToHandEffectSyntax(effect) ||
+			exactReturnSourceAndExiledCardToHandEffectSyntax(effect) ||
 			exactDirectPronounEffectSyntax(effect, "Return it to its owner's hand.")
 	default:
 		return exactEffectSyntaxTail(effect)
@@ -132,6 +171,7 @@ func exactEffectSyntaxTail(effect *EffectSyntax) bool {
 		return effect.EntersTribute && effect.EntersTributeCount > 0
 	case EffectSacrifice:
 		return exactDirectPronounEffectSyntax(effect, "Sacrifice it.") ||
+			exactSelfSacrificeEffectSyntax(effect) ||
 			exactSacrificeChoiceEffectSyntax(effect)
 	case EffectSearch:
 		return exactSearchEffectSyntax(effect)
@@ -141,20 +181,29 @@ func exactEffectSyntaxTail(effect *EffectSyntax) bool {
 		return exactControllerAmountEffectSyntax(effect, "Surveil")
 	case EffectShuffle:
 		return exactOptionalControllerShuffleEffectSyntax(effect) ||
-			exactSourceSpellShuffleIntoLibrarySyntax(effect)
+			exactSourceSpellShuffleIntoLibrarySyntax(effect) ||
+			exactControllerGraveyardShuffleIntoLibrarySyntax(effect)
 	case EffectTap:
 		return exactDirectTargetEffectSyntax(effect, "Tap") ||
 			exactDirectReferenceEffectSyntax(effect, "Tap") ||
-			exactMassEffectSyntax(effect, "Tap all ")
+			exactMassEffectSyntax(effect, "Tap all ") ||
+			exactMassEachEffectSyntax(effect, "Tap each ")
+	case EffectTapOrUntap:
+		return exactDirectTargetEffectSyntax(effect, "Tap or untap")
 	case EffectUntap:
 		return exactDirectTargetEffectSyntax(effect, "Untap") ||
 			exactDirectReferenceEffectSyntax(effect, "Untap") ||
 			exactMassEffectSyntax(effect, "Untap all ") ||
+			exactMassEachEffectSyntax(effect, "Untap each ") ||
 			exactBoundedUntapEffectSyntax(effect) ||
 			exactNegatedNextUntapStepSyntax(effect) ||
+			exactTargetNextUntapStepSyntax(effect) ||
+			exactSourceNextUntapStepSyntax(effect) ||
 			exactPriorSubjectNextUntapStepSyntax(effect)
 	case EffectTransform:
 		return exactDirectTargetEffectSyntax(effect, "Transform")
+	case EffectRemoveFromCombat:
+		return exactRemoveFromCombatEffectSyntax(effect)
 	default:
 		return false
 	}
@@ -167,6 +216,20 @@ func exactOptionalControllerShuffleEffectSyntax(effect *EffectSyntax) bool {
 	text := exactEffectClauseText(effect)
 	return strings.EqualFold(text, "Shuffle.") ||
 		strings.EqualFold(text, "Shuffle your library.")
+}
+
+// exactControllerGraveyardShuffleIntoLibrarySyntax recognizes the verbatim
+// "Shuffle your graveyard into your library." (The Mending of Dominaria
+// chapter III), a controller-scoped, non-optional shuffle whose graveyard
+// source is carried by FromZone (see effectFromZone).
+func exactControllerGraveyardShuffleIntoLibrarySyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController || effect.Optional {
+		return false
+	}
+	if effect.FromZone != zone.Graveyard || effect.ToZone != zone.Library {
+		return false
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), "Shuffle your graveyard into your library.")
 }
 
 func exactLibraryTopReorderEffectSyntax(effect *EffectSyntax) bool {
@@ -283,6 +346,25 @@ func exactHandLibraryPutEffectSyntax(effect *EffectSyntax) bool {
 	)
 }
 
+// exactSelfSacrificeEffectSyntax recognizes the controller sacrificing the
+// source permanent itself by self-reference — "Sacrifice this creature.",
+// "Sacrifice <this card's name>." — including the optional "You may sacrifice
+// this creature." offer (exactEffectClauseText strips the "you may" prefix).
+// The pronoun form "Sacrifice it." is handled by exactDirectPronounEffectSyntax.
+func exactSelfSacrificeEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController ||
+		len(effect.Targets) != 0 ||
+		effect.Duration != EffectDurationNone ||
+		effect.Negated {
+		return false
+	}
+	object, ok := exactSelfSubjectReferenceText(effect.References)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), "Sacrifice "+object+".")
+}
+
 func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {
 	// The defending-player form (Annihilator) spells amounts up to four; the
 	// other subjects stay capped at the smaller historical range they were
@@ -316,6 +398,8 @@ func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {
 		subject = "Each player"
 	case EffectContextDefendingPlayer:
 		subject = "Defending player"
+	case EffectContextReferencedPlayer:
+		subject = "That player"
 	case EffectContextTarget:
 		if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
 			return false
@@ -330,22 +414,38 @@ func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {
 }
 
 // sacrificeChoiceNoun reconstructs the permanent noun phrase of a sacrifice
-// effect ("creature", "nontoken creature", "creature or planeswalker"),
-// optionally pluralized. It fails closed for selector shapes the runtime
-// sacrifice selection cannot express so the effect stays unsupported.
+// effect ("creature", "nontoken creature", "creature or planeswalker",
+// "nonland permanent", "Blood token"), optionally pluralized. It fails closed
+// for selector shapes the runtime sacrifice selection cannot express so the
+// effect stays unsupported.
 func sacrificeChoiceNoun(selection *SelectionSyntax, plural bool) (string, bool) {
 	base, ok := sacrificeChoiceBaseNoun(selection, plural)
 	if !ok {
 		return "", false
 	}
+	// The token-suffix forms ("Blood token", "a token") carry the token qualifier
+	// as a trailing word, which sacrificeChoiceBaseNoun has already appended; a
+	// card-type token ("token creature") instead leads with the qualifier.
 	switch {
 	case selection.NonToken:
 		base = "nontoken " + base
-	case selection.TokenOnly:
+	case selection.TokenOnly && !sacrificeTokenSuffixForm(selection):
 		base = "token " + base
 	default:
 	}
 	return base, true
+}
+
+// sacrificeTokenSuffixForm reports whether the selector names a token by a
+// subtype ("Blood token") or by no type at all ("a token"), where Oracle places
+// the "token" word last. A token named by a card type ("token creature") keeps
+// the qualifier leading and is excluded here.
+func sacrificeTokenSuffixForm(selection *SelectionSyntax) bool {
+	return selection.TokenOnly &&
+		selection.Kind == SelectionUnknown &&
+		len(selection.RequiredTypesAny) == 0 &&
+		len(selection.ExcludedTypes) == 0 &&
+		len(selection.SubtypesAny) <= 1
 }
 
 // sacrificeChoiceBaseNoun maps the selector kind (or a card-type union such as
@@ -366,6 +466,35 @@ func sacrificeChoiceBaseNoun(selection *SelectionSyntax, plural bool) (string, b
 		}
 		return joinOrList(words), true
 	}
+	// A token named by no type at all ("a token") or by a subtype ("a Blood
+	// token") renders the "token" word last. The bare form matches any token; the
+	// subtype form matches that token subtype through the SubtypesAny filter.
+	if sacrificeTokenSuffixForm(selection) {
+		noun := "token"
+		if len(selection.SubtypesAny) == 1 {
+			noun = string(selection.SubtypesAny[0]) + " token"
+		}
+		if plural {
+			noun += "s"
+		}
+		return noun, true
+	}
+	// A bare subtype names the permanent by its subtype alone, with no card-type
+	// kind: an artifact token ("a Treasure"/"a Food"), a land type ("a Forest"),
+	// or a creature subtype ("a Goblin"). The subtype noun is printed verbatim
+	// ("Treasure"/"Treasures"); the runtime sacrifice selection matches it
+	// through the SubtypesAny filter. Irregular plurals ("Elves") simply fail the
+	// byte-exact reconstruction and stay unsupported.
+	if selection.Kind == SelectionUnknown &&
+		len(selection.RequiredTypesAny) == 0 &&
+		len(selection.ExcludedTypes) == 0 &&
+		len(selection.SubtypesAny) == 1 {
+		noun := string(selection.SubtypesAny[0])
+		if plural {
+			noun += "s"
+		}
+		return noun, true
+	}
 	noun := ""
 	switch selection.Kind {
 	case SelectionArtifact:
@@ -383,6 +512,21 @@ func sacrificeChoiceBaseNoun(selection *SelectionSyntax, plural bool) (string, b
 	}
 	if plural {
 		noun += "s"
+	}
+	// A single excluded card type renders as a "non<type>" prefix ("nonland
+	// permanent", "noncreature artifact", "nonartifact creature"). The runtime
+	// sacrifice selection matches it through the ExcludedTypes filter. More than
+	// one excluded type has no canonical sacrifice wording, so it fails closed.
+	switch len(selection.ExcludedTypes) {
+	case 0:
+	case 1:
+		word, ok := searchFilterCardTypeWord(selection.ExcludedTypes[0])
+		if !ok {
+			return "", false
+		}
+		noun = "non" + word + " " + noun
+	default:
+		return "", false
 	}
 	return noun, true
 }
@@ -459,7 +603,8 @@ func analyzeSearchClause(effect *EffectSyntax) searchClauseAnalysis {
 	rest = rest[len(consumed):]
 
 	noun := ""
-	if strings.HasPrefix(rest, "land card with a basic land type") {
+	switch {
+	case strings.HasPrefix(rest, "land card with a basic land type"):
 		if effect.Selection.Kind != SelectionLand {
 			return searchClauseAnalysis{detail: unsupportedSearchFilterDetail(rest), sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 		}
@@ -474,7 +619,16 @@ func analyzeSearchClause(effect *EffectSyntax) searchClauseAnalysis {
 			return searchClauseAnalysis{detail: unsupportedSearchFilterDetail(rest), sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 		}
 		noun = "land card with a basic land type"
-	} else {
+		if plural {
+			noun += "s"
+		}
+	case len(effect.Selection.Alternatives) > 0:
+		disjunction, ok := canonicalSearchDisjunctionNoun(effect.Selection, rest, plural)
+		if !ok {
+			return searchClauseAnalysis{detail: unsupportedSearchFilterDetail(rest), sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
+		}
+		noun = disjunction
+	default:
 		filter, ok := canonicalSearchFilter(effect.Selection)
 		if !ok {
 			return searchClauseAnalysis{detail: unsupportedSearchFilterDetail(rest), sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
@@ -483,9 +637,9 @@ func analyzeSearchClause(effect *EffectSyntax) searchClauseAnalysis {
 		if filter != "" {
 			noun = filter + " card"
 		}
-	}
-	if plural {
-		noun += "s"
+		if plural {
+			noun += "s"
+		}
 	}
 	if effect.Selection.RequiredName != "" {
 		noun += " named " + effect.Selection.RequiredName
@@ -708,6 +862,21 @@ func searchClausePrefix(effect *EffectSyntax) (prefix, text string) {
 			return controllerPrefix, controllerPrefix + normalizeThirdPersonSearchRest(rest)
 		}
 	}
+	// An each-player searcher ("Each player searches their library for ...")
+	// performs a symmetric search from every player's own library; the found
+	// card enters under each searching player's control. The clause reads in the
+	// third person ("searches", "puts", "shuffles"); normalize the searcher's
+	// verbs to the canonical controller second-person form and reconstruct
+	// against the standard "Search your library for ..." prefix so the shared
+	// recognizer validates the count, filter, and destination. Lowering resolves
+	// the searcher to the all-players group. The "may" optional form is not this
+	// shape and falls through.
+	if !effect.Optional && effect.Context == EffectContextEachPlayer {
+		const eachPlayerPrefix = "Each player searches their library for "
+		if rest, ok := strings.CutPrefix(text, eachPlayerPrefix); ok {
+			return controllerPrefix, controllerPrefix + normalizeThirdPersonSearchRest(rest)
+		}
+	}
 	// A referenced-object-controller searcher ("Its controller may search …",
 	// "That land's controller may search …") reconstructs its prefix from the
 	// subject reference's verbatim text, so any possessive object form — not just
@@ -856,10 +1025,48 @@ func searchCharacteristicRider(characteristic string, bound compare.Int) (string
 // creature", "Dragon creature", "Rebel permanent"). An optional "with mana value
 // N or less" or "with power/toughness N or less/greater" rider is reconstructed
 // by the caller, not here.
+// canonicalSearchDisjunctionNoun reconstructs the noun phrase of a two-sided
+// disjunctive search filter ("creature or basic land card", "basic land card or
+// a Gate card") whose sides parsed into Selection.Alternatives. Each side
+// reconstructs through canonicalSearchFilter; the two are joined by "or" with
+// the trailing "card[s]" placed after one or both sides, matching the variant
+// Oracle wordings. The candidate whose joined form prefixes the source text is
+// returned so the reconstruction stays byte-exact; it fails closed when no
+// candidate matches or a side is not an expressible filter.
+func canonicalSearchDisjunctionNoun(sel SelectionSyntax, rest string, plural bool) (string, bool) {
+	if len(sel.Alternatives) != 2 {
+		return "", false
+	}
+	first, ok := canonicalSearchFilter(sel.Alternatives[0])
+	if !ok || first == "" {
+		return "", false
+	}
+	second, ok := canonicalSearchFilter(sel.Alternatives[1])
+	if !ok || second == "" {
+		return "", false
+	}
+	card := "card"
+	if plural {
+		card = "cards"
+	}
+	candidates := []string{
+		first + " or " + second + " " + card,
+		first + " " + card + " or " + second + " " + card,
+		first + " " + card + " or a " + second + " " + card,
+		first + " " + card + " or an " + second + " " + card,
+	}
+	for _, candidate := range candidates {
+		if strings.HasPrefix(rest, candidate) {
+			return candidate, true
+		}
+	}
+	return "", false
+}
+
 func canonicalSearchFilter(sel SelectionSyntax) (string, bool) {
 	if sel.Controller != SelectionControllerAny ||
 		sel.All || sel.Another || sel.Other || sel.Attacking || sel.Blocking ||
-		sel.Tapped || sel.Untapped || sel.Colorless || sel.Multicolored ||
+		sel.Tapped || sel.Untapped || sel.Multicolored ||
 		sel.Keyword != KeywordUnknown || sel.Zone != zone.None ||
 		len(sel.ExcludedTypes) != 0 || len(sel.SourceTypes) != 0 ||
 		len(sel.ExcludedColors) != 0 {
@@ -876,6 +1083,12 @@ func canonicalSearchFilter(sel SelectionSyntax) (string, bool) {
 			words = append(words, word)
 		}
 		colorStr = joinOrList(words)
+	}
+	if sel.Colorless {
+		if colorStr != "" {
+			return "", false
+		}
+		colorStr = "colorless"
 	}
 	basic, legendary := false, false
 	switch len(sel.Supertypes) {
@@ -969,6 +1182,9 @@ func canonicalSearchFilter(sel SelectionSyntax) (string, bool) {
 		return "", false
 	}
 	if colorStr != "" {
+		if base == "" {
+			return prefix + colorStr, true
+		}
 		return prefix + colorStr + " " + base, true
 	}
 	return prefix + base, true
@@ -1139,6 +1355,76 @@ func searchSplitDestinationSupported(destination string) bool {
 	return false
 }
 
+// exactLoseGameEffectSyntax reconstructs the byte-exact "<subject> lose(s) the
+// game." clause for each supported losing player: the controller ("You lose the
+// game."), the referenced triggering player ("They lose the game.", "That player
+// loses the game."), and a single exact target ("Target player loses the
+// game."). The subject phrasing mirrors exactLifeEffectSyntax so a granted "...
+// that player loses the game." trigger and a targeted lose-game spell both
+// reconstruct without the compiler inspecting wording.
+func exactLoseGameEffectSyntax(effect *EffectSyntax) bool {
+	var prefixes []string
+	switch effect.Context {
+	case EffectContextController:
+		prefixes = []string{"You lose"}
+	case EffectContextEventPlayer, EffectContextReferencedPlayer:
+		prefixes = []string{"They lose", "That player loses"}
+	case EffectContextTarget, EffectContextPriorSubject:
+		if len(effect.Targets) == 1 && effect.Targets[0].Exact {
+			prefixes = []string{titleFirstEffectText(effect.Targets[0].Text) + " loses"}
+		}
+	default:
+	}
+	text := exactEffectClauseText(effect)
+	for _, prefix := range prefixes {
+		if strings.EqualFold(text, prefix+" the game.") {
+			return true
+		}
+	}
+	return false
+}
+
+// exactGainGrantedAbilityEffectSyntax reconstructs the byte-exact "<subject>
+// gains." head of a resolving ability grant ("This creature gains \"Whenever
+// this creature deals combat damage to a player, that player loses the
+// game.\""). The quoted body is stripped from the clause text to a bare "gains",
+// mirroring how a token's quoted rider strips to a bare "with"; its tokens are
+// recognized and covered through the parsed granted ability's own inner
+// document, so the compiler lowers the conferred ability without inspecting
+// wording. It applies only once attachGainGrantedAbilities has bound the quoted
+// ability.
+// exactCreateEmblemEffectSyntax reconstructs an "You get an emblem with
+// \"...\"" clause from its typed emblem abilities. The quoted ability text is
+// recognized and covered through each parsed inner document, so the clause
+// strips to a bare "You get an emblem with" the way a gain rider strips to
+// "gains". It applies only once attachEmblemEffects has bound the abilities.
+func exactCreateEmblemEffectSyntax(effect *EffectSyntax) bool {
+	if len(effect.EmblemAbilities) == 0 {
+		return false
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), "You get an emblem with.")
+}
+
+func exactGainGrantedAbilityEffectSyntax(effect *EffectSyntax) bool {
+	if effect.GainGrantedAbility == nil {
+		return false
+	}
+	verb := slices.IndexFunc(effect.Tokens, func(token shared.Token) bool {
+		return token.Span == effect.VerbSpan
+	})
+	if verb < 0 || !equalWord(effect.Tokens[verb], "gains") {
+		return false
+	}
+	subjectStart := effectSubjectStart(effect.Tokens, verb, effectSelfNameSpans(effect))
+	subjectTokens := effect.Tokens[subjectStart:verb]
+	if len(subjectTokens) == 0 {
+		return false
+	}
+	subject := joinedEffectText(subjectTokens)
+	expected := subject + " gains."
+	return strings.EqualFold(exactEffectClauseText(effect), expected)
+}
+
 func exactLifeEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVerb string) bool {
 	var prefixes []string
 	switch effect.Context {
@@ -1150,6 +1436,8 @@ func exactLifeEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVerb str
 		prefixes = []string{"Each other player " + subjectVerb}
 	case EffectContextEachPlayer:
 		prefixes = []string{"Each player " + subjectVerb}
+	case EffectContextDefendingPlayer:
+		prefixes = []string{"Defending player " + subjectVerb}
 	case EffectContextTarget, EffectContextPriorSubject:
 		if len(effect.Targets) == 1 && effect.Targets[0].Exact {
 			prefixes = []string{titleFirstEffectText(effect.Targets[0].Text) + " " + subjectVerb}
@@ -1192,10 +1480,163 @@ func exactTemporaryKeywordEffectSyntax(effect *EffectSyntax) bool {
 			"You gain protection from everything until your next turn.",
 		)
 	}
-	return exactTemporaryKeywordChangeSyntax(effect, "gain", "gains")
+	return exactTemporaryKeywordChangeSyntax(effect, "gain", "gains") ||
+		exactPermanentKeywordGrantEffectSyntax(effect)
 }
 
-// exactTemporaryKeywordLossEffectSyntax recognizes a resolving keyword removal
+// exactPermanentKeywordGrantEffectSyntax recognizes a resolving keyword grant
+// with no duration to the object an earlier clause acted on ("It gains haste."),
+// the temporary-reanimation haste rider on "Return target creature card ... It
+// gains haste. Exile it at the beginning of the next end step." (Whip of Erebos
+// and the many graveyard-return cards that grant the reanimated creature haste).
+// The grant carries no "until end of turn" suffix, so it persists while the
+// object remains on the battlefield; a sibling cleanup clause exiles it at the
+// next end step. Only the singular referenced-object back-reference ("it" / "that
+// creature") is matched, so a static group anthem ("Creatures you control gain
+// trample.") never reaches this no-duration path.
+func exactPermanentKeywordGrantEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Duration != "" || effect.Context != EffectContextReferencedObject {
+		return false
+	}
+	subject, ok := exactObjectReferenceText(effect.SubjectReferences)
+	if !ok {
+		return false
+	}
+	text := strings.ToLower(exactEffectClauseText(effect))
+	middle, ok := strings.CutPrefix(text, strings.ToLower(subject)+" gains ")
+	if !ok {
+		return false
+	}
+	body, ok := strings.CutSuffix(middle, ".")
+	return ok && body != "" && (exactTemporaryKeywordList(body) || exactKeywordChoiceList(body))
+}
+
+// keywordGrantIsChoice reports whether a gain effect grants a disjunctive
+// keyword choice ("gains banding, first strike, or trample") rather than a
+// conjunctive list. It extracts the keyword body after the "gains " verb (for a
+// direct target, a referenced object, the source, or a prior subject) and tests
+// it against the disjunctive keyword-choice grammar. It returns false for any
+// effect that is not a recognized keyword-choice grant.
+func keywordGrantIsChoice(effect *EffectSyntax) bool {
+	if effect.Kind != EffectGain {
+		return false
+	}
+	text := strings.ToLower(exactEffectClauseText(effect))
+	_, after, ok := strings.Cut(text, " gains ")
+	if !ok {
+		// A prior-subject grant reads "gains <keywords> ..." with no subject noun.
+		after, ok = strings.CutPrefix(text, "gains ")
+		if !ok {
+			return false
+		}
+	}
+	body, ok := strings.CutSuffix(after, ".")
+	if !ok {
+		body, ok = strings.CutSuffix(after, " until end of turn.")
+		if !ok {
+			return false
+		}
+	}
+	return exactKeywordChoiceList(body)
+}
+
+// exactBackReferenceTargetKeywordGrantEffectSyntax recognizes a resolving
+// keyword grant with no duration whose subject is a back-reference to the
+// ability's target ("... or that creature gains banding, first strike, or
+// trample."). The compiler binds "that creature" to the target, so the effect
+// carries EffectContextTarget with a subject reference and no target noun phrase
+// of its own (the targeted noun is owned by the sibling alternative clause).
+// Both a conjunctive keyword list (grant all) and a disjunctive keyword choice
+// (grant one chosen at resolution) are recognized; the lowering distinguishes
+// them from the connective recorded on the effect. The own-target form ("Target
+// creature gains ...") is handled by exactDirectTargetKeywordGrantEffectSyntax.
+func exactBackReferenceTargetKeywordGrantEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Duration != "" || effect.Context != EffectContextTarget || len(effect.Targets) != 0 {
+		return false
+	}
+	subject, ok := exactObjectReferenceText(effect.SubjectReferences)
+	if !ok {
+		return false
+	}
+	text := strings.ToLower(exactEffectClauseText(effect))
+	middle, ok := strings.CutPrefix(text, strings.ToLower(subject)+" gains ")
+	if !ok {
+		return false
+	}
+	body, ok := strings.CutSuffix(middle, ".")
+	return ok && body != "" && (exactTemporaryKeywordList(body) || exactKeywordChoiceList(body))
+}
+
+// exactDirectTargetKeywordGrantEffectSyntax recognizes a resolving keyword grant
+// with no duration to a single targeted creature ("Target creature gains first
+// strike.", "Target creature gains banding, first strike, or trample."). The
+// grant carries no "until end of turn" suffix, so it persists indefinitely while
+// the creature remains on the battlefield (the runtime applies it with
+// DurationPermanent). Both a conjunctive keyword list ("first strike and
+// trample", grant all) and a disjunctive keyword choice ("banding, first strike,
+// or trample", grant one chosen at resolution) are recognized; the lowering
+// distinguishes them from the connective recorded on the effect.
+func exactDirectTargetKeywordGrantEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Duration != "" || effect.Context != EffectContextTarget {
+		return false
+	}
+	if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
+		return false
+	}
+	text := strings.ToLower(exactEffectClauseText(effect))
+	middle, ok := strings.CutPrefix(text, strings.ToLower(effect.Targets[0].Text)+" gains ")
+	if !ok {
+		return false
+	}
+	body, ok := strings.CutSuffix(middle, ".")
+	if !ok || body == "" {
+		return false
+	}
+	return exactTemporaryKeywordList(body) || exactKeywordChoiceList(body)
+}
+
+// exactControlledSourceKeywordGrantEffectSyntax recognizes a resolving keyword
+// grant to a single targeted permanent that lasts as long as the source remains
+// under its controller's control ("Target creature you control gains
+// indestructible for as long as you control this Saga.", Tale of Tinúviel
+// chapter I). It mirrors exactDirectTargetKeywordGrantEffectSyntax for the
+// no-duration grant but matches the "for as long as you control this <noun>"
+// duration suffix instead of a bare period, so the grant reconstructs
+// byte-exactly. Both a conjunctive keyword list and a disjunctive keyword choice
+// are recognized.
+func exactControlledSourceKeywordGrantEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextTarget ||
+		len(effect.Targets) != 1 || !effect.Targets[0].Exact {
+		return false
+	}
+	if effect.Duration != EffectDurationWhileYouControlSource {
+		return false
+	}
+	text := strings.ToLower(exactEffectClauseText(effect))
+	middle, ok := strings.CutPrefix(text, strings.ToLower(effect.Targets[0].Text)+" gains ")
+	if !ok {
+		return false
+	}
+	return exactKeywordControlledSourceDurationBody(middle)
+}
+
+// exactKeywordControlledSourceDurationBody validates the keyword list preceding a
+// "for as long as you control this <noun>." suffix on a keyword grant, mirroring
+// exactGainControlControlledSourceDuration's named-source acceptance.
+func exactKeywordControlledSourceDurationBody(middle string) bool {
+	const suffix = " for as long as you control this "
+	index := strings.Index(middle, suffix)
+	if index <= 0 {
+		return false
+	}
+	noun, ok := strings.CutSuffix(middle[index+len(suffix):], ".")
+	if !ok || noun == "" || strings.ContainsRune(noun, ' ') {
+		return false
+	}
+	body := middle[:index]
+	return exactTemporaryKeywordList(body) || exactKeywordChoiceList(body)
+}
+
 // until end of turn ("Permanents your opponents control lose hexproof and
 // indestructible until end of turn.", "Target creature loses flying until end of
 // turn."). It mirrors exactTemporaryKeywordEffectSyntax with the "lose"/"loses"
@@ -1231,7 +1672,7 @@ func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singula
 		if !ok {
 			return false
 		}
-		middle, ok = strings.CutSuffix(middle, " until end of turn.")
+		middle, ok = cutTemporaryKeywordDurationSuffix(effect, middle)
 		return ok && exactTemporaryKeywordList(middle)
 	}
 	if effect.Context == EffectContextReferencedObject {
@@ -1278,6 +1719,25 @@ func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singula
 	if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
 		return false
 	}
+	// A plural ("two target creatures") or optional-multi ("up to two target
+	// creatures") target distributes the change with "each <pluralVerb>": "Up to
+	// two target creatures each gain lifelink until end of turn." and the
+	// combined "Up to two target creatures each get +N/+N and gain trample until
+	// end of turn." pump form. The singular "<target> <singularVerb>" path below
+	// owns the one-target cardinality.
+	if effect.Targets[0].Cardinality.Max >= 2 {
+		if prefix, suffix, ok := strings.Cut(text, " and "+pluralVerb+" "); ok &&
+			strings.HasPrefix(prefix, strings.ToLower(effect.Targets[0].Text)+" each get ") {
+			middle, suffixOK := strings.CutSuffix(suffix, " until end of turn.")
+			return suffixOK && exactTemporaryKeywordList(middle)
+		}
+		eachMiddle, ok := strings.CutPrefix(text, strings.ToLower(effect.Targets[0].Text)+" each "+pluralVerb+" ")
+		if !ok {
+			return false
+		}
+		body, suffixOK := strings.CutSuffix(eachMiddle, " until end of turn.")
+		return suffixOK && body != "" && exactTemporaryKeywordList(body)
+	}
 	if prefix, suffix, ok := strings.Cut(text, " and "+singularVerb+" "); ok &&
 		strings.HasPrefix(prefix, strings.ToLower(effect.Targets[0].Text)+" gets ") {
 		middle, suffixOK := strings.CutSuffix(suffix, " until end of turn.")
@@ -1293,6 +1753,24 @@ func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singula
 		return false
 	}
 	return exactTemporaryKeywordList(middle)
+}
+
+// cutTemporaryKeywordDurationSuffix strips the until-end-of-turn duration suffix
+// from a keyword-change clause body. A plain grant ends "… until end of turn.";
+// a grant that shares a "+X/+X … where X is …" pump's amount carries the trailing
+// "where X is …" clause bound to this keyword effect (The Weatherseed Treaty
+// chapter III: "gains trample until end of turn, where X is the number of basic
+// land types …"), so the suffix becomes "… until end of turn, <amount>.". The
+// combined +N/+N-and-gain lowering reads that shared amount to resolve the pump's
+// X; here it is consumed so the clause reconstructs byte-exactly.
+func cutTemporaryKeywordDurationSuffix(effect *EffectSyntax, body string) (string, bool) {
+	if effect.Amount.DynamicForm == EffectDynamicAmountFormWhereX && effect.Amount.Text != "" {
+		suffix := " until end of turn, " + strings.ToLower(effect.Amount.Text) + "."
+		if middle, ok := strings.CutSuffix(body, suffix); ok {
+			return middle, true
+		}
+	}
+	return strings.CutSuffix(body, " until end of turn.")
 }
 
 // exactGroupTemporaryKeywordEffectSyntax recognizes a resolving keyword grant to
@@ -1338,25 +1816,69 @@ func exactGroupTemporaryKeywordEffectSyntax(effect *EffectSyntax, text, pluralVe
 }
 
 // exactCantBeBlockedEffectSyntax recognizes the temporary combat-evasion
-// resolving effect "Target creature can't be blocked this turn." that grants the
-// single targeted creature a "can't be blocked" restriction until end of turn.
-// The clause is reconstructed byte-exactly from the target's own text so the
-// broader family ("target creature you control can't be blocked this turn.",
-// "target creature an opponent controls can't be blocked this turn.") is
-// recognized while every deviation fails closed: a different duration (the
+// resolving effect "<subject> can't be blocked this turn." that grants the
+// subject creature(s) a "can't be blocked" restriction until end of turn. Three
+// subject shapes are recognized, each reconstructed byte-exactly so every
+// deviation fails closed:
+//
+//   - a target noun phrase ("Target creature can't be blocked this turn.",
+//     "Up to one target creature can't be blocked this turn.") with single,
+//     plural, or optional cardinality, like the sibling can't-block recognizer;
+//   - the source itself ("This creature can't be blocked this turn." / the
+//     card's own name), a self grant on an activated ability; and
+//   - a prior-subject sequence clause ("... and can't be blocked this turn.")
+//     whose subject noun is inherited from the preceding clause and so carries
+//     only the bare predicate here.
+//
+// Every other deviation leaves the clause non-exact: a different duration (the
 // trailing "this turn" is fixed), a "can't be blocked except by ..." qualifier,
-// a group recipient (more or fewer than one target), or any "can't block" /
-// "can't attack" wording leaves the clause non-exact.
+// a "by more than one creature" rider, or any "can't block" / "can't attack"
+// wording.
 func exactCantBeBlockedEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Duration != EffectDurationThisTurn {
+		return false
+	}
+	clause := exactEffectClauseText(effect)
+	switch effect.Context {
+	case EffectContextTarget:
+		return len(effect.Targets) == 1 &&
+			effect.Targets[0].Exact &&
+			effect.Targets[0].Cardinality.Min >= 0 &&
+			effect.Targets[0].Cardinality.Max >= 1 &&
+			effect.Targets[0].Cardinality.Min <= effect.Targets[0].Cardinality.Max &&
+			strings.EqualFold(clause, effect.Targets[0].Text+" can't be blocked this turn.")
+	case EffectContextSource:
+		subject, ok := exactSelfSubjectReferenceText(effect.SubjectReferences)
+		return ok && strings.EqualFold(clause, subject+" can't be blocked this turn.")
+	case EffectContextPriorSubject:
+		return strings.EqualFold(clause, "can't be blocked this turn.")
+	default:
+		return false
+	}
+}
+
+// exactCantBlockEffectSyntax recognizes the temporary combat-restriction
+// resolving effect "<targets> can't block this turn." that grants the targeted
+// creature(s) a "can't block" restriction until end of turn. Unlike the
+// single-target can't-be-blocked recognizer it accepts the multi-target and
+// optional cardinalities ("Up to three target creatures can't block this turn.",
+// "One or two target creatures can't block this turn.") the lowering applies
+// per target. The clause is reconstructed byte-exactly from the target's own
+// text so every deviation fails closed: a different duration (the trailing "this
+// turn" is fixed), a "can't block creatures you control" protected-object
+// qualifier, an "except" rider, or any "can't be blocked" / "can't attack"
+// wording leaves the clause non-exact.
+func exactCantBlockEffectSyntax(effect *EffectSyntax) bool {
 	return effect.Duration == EffectDurationThisTurn &&
 		effect.Context == EffectContextTarget &&
 		len(effect.Targets) == 1 &&
 		effect.Targets[0].Exact &&
-		effect.Targets[0].Cardinality.Min == 1 &&
-		effect.Targets[0].Cardinality.Max == 1 &&
+		effect.Targets[0].Cardinality.Min >= 0 &&
+		effect.Targets[0].Cardinality.Max >= 1 &&
+		effect.Targets[0].Cardinality.Min <= effect.Targets[0].Cardinality.Max &&
 		strings.EqualFold(
 			exactEffectClauseText(effect),
-			effect.Targets[0].Text+" can't be blocked this turn.",
+			effect.Targets[0].Text+" can't block this turn.",
 		)
 }
 
@@ -1364,19 +1886,52 @@ func exactTemporaryKeywordList(text string) bool {
 	text = strings.ReplaceAll(strings.ToLower(text), ", and ", ", ")
 	text = strings.ReplaceAll(text, " and ", ", ")
 	for keyword := range strings.SplitSeq(text, ", ") {
-		switch keyword {
-		case "deathtouch", "double strike", "fear", "first strike", "flying", "haste",
-			"hexproof", "indestructible", "intimidate", "lifelink", "menace", "reach", "shadow", "shroud", "trample", "vigilance",
-			"protection from each color", "protection from everything",
-			"protection from monocolored", "protection from multicolored",
-			"protection from white", "protection from blue", "protection from black",
-			"protection from red", "protection from green",
-			"protection from the color of your choice", "protection from a color of your choice":
-		default:
+		if !grantableKeywordWord(keyword) {
 			return false
 		}
 	}
 	return true
+}
+
+// exactKeywordChoiceList recognizes a disjunctive list of two or more grantable
+// keywords joined by "or" ("first strike or trample", "banding, first strike, or
+// trample"). The disjunction means the controller chooses exactly one of the
+// listed keywords at resolution, distinct from the conjunctive list recognized by
+// exactTemporaryKeywordList where every keyword is granted. It requires at least
+// one "or" connective so a single keyword or an "and" list never matches here.
+func exactKeywordChoiceList(text string) bool {
+	text = strings.ToLower(text)
+	if !strings.Contains(text, " or ") {
+		return false
+	}
+	text = strings.ReplaceAll(text, ", or ", ", ")
+	text = strings.ReplaceAll(text, " or ", ", ")
+	count := 0
+	for keyword := range strings.SplitSeq(text, ", ") {
+		if !grantableKeywordWord(keyword) {
+			return false
+		}
+		count++
+	}
+	return count >= 2
+}
+
+// grantableKeywordWord reports whether a lowercase Oracle phrase names a
+// non-parameterized keyword (or a fully-specified protection variant) the
+// executable backend can grant.
+func grantableKeywordWord(keyword string) bool {
+	switch keyword {
+	case "deathtouch", "double strike", "fear", "first strike", "flying", "haste",
+		"banding", "hexproof", "indestructible", "intimidate", "lifelink", "menace", "reach", "shadow", "shroud", "trample", "vigilance",
+		"protection from each color", "protection from everything",
+		"protection from monocolored", "protection from multicolored",
+		"protection from white", "protection from blue", "protection from black",
+		"protection from red", "protection from green",
+		"protection from the color of your choice", "protection from a color of your choice":
+		return true
+	default:
+		return false
+	}
 }
 
 // exactCreateTokenEffectSyntax recognizes vanilla creature-token creation:
@@ -1435,11 +1990,14 @@ func creatureTokenSpecBody(effect *EffectSyntax) (func(countWord, noun string) s
 	if len(sel.SubtypesAny) < 1 || len(sel.SubtypesAny) > 2 ||
 		len(sel.ColorsAny) > 2 ||
 		len(sel.ExcludedTypes) != 0 || len(sel.ExcludedColors) != 0 ||
-		len(sel.Supertypes) != 0 ||
 		sel.Multicolored ||
 		sel.MatchPower || sel.MatchToughness || sel.MatchManaValue ||
 		sel.Untapped || sel.Blocking ||
 		sel.All || sel.Another || sel.Other {
+		return nil, false
+	}
+	supertypePart, ok := tokenSupertypePart(sel)
+	if !ok {
 		return nil, false
 	}
 	typeWords, ok := tokenCreatureTypeWords(sel)
@@ -1476,8 +2034,15 @@ func creatureTokenSpecBody(effect *EffectSyntax) (func(countWord, noun string) s
 	}
 	subtypeJoin := strings.Join(subtypeWords, " ")
 	namePart := ""
-	if effect.TokenName != "" {
+	if effect.TokenName != "" && !effect.TokenNameLeading {
 		namePart = " named " + effect.TokenName
+	}
+	// The leading "Create <Name>, a ..." form prints the name as a "<Name>, "
+	// prefix on the token spec; record it so the closure renders it ahead of the
+	// count word.
+	leadingNamePart := ""
+	if effect.TokenName != "" && effect.TokenNameLeading {
+		leadingNamePart = effect.TokenName + ", "
 	}
 	// A token entering attacking carries a trailing "that's/that are [tapped
 	// and] attacking" relative clause; its "tapped" modifier lives in that clause
@@ -1488,10 +2053,33 @@ func creatureTokenSpecBody(effect *EffectSyntax) (func(countWord, noun string) s
 		tappedPart = "tapped "
 	}
 	return func(countWord, noun string) string {
-		return fmt.Sprintf("%s %s%s %s%s %s %s%s%s%s%s",
-			countWord, tappedPart, ptPart, colorPart,
-			subtypeJoin, typeWords, noun, keywordPart, grantedPart, namePart, tokenAttackClause(sel, noun))
+		return fmt.Sprintf("%s%s %s%s%s %s%s %s %s%s%s%s%s",
+			leadingNamePart, countWord, tappedPart, supertypePart, ptPart, colorPart,
+			subtypeJoin, typeWords, noun, keywordPart, grantedPart, namePart,
+			tokenAttackClause(sel, noun, effect.AttackDefender))
 	}, true
+}
+
+// tokenSupertypePart renders a created creature token's canonical supertype words
+// ("legendary "), or "" when the token has no supertype. It accepts only the
+// Legendary supertype the named-token forms print; any other supertype fails
+// closed.
+func tokenSupertypePart(sel SelectionSyntax) (string, bool) {
+	if len(sel.Supertypes) == 0 {
+		return "", true
+	}
+	words := make([]string, 0, len(sel.Supertypes))
+	for _, supertype := range sel.Supertypes {
+		if supertype != SupertypeLegendary {
+			return "", false
+		}
+		word, ok := supertypeWord(supertype)
+		if !ok {
+			return "", false
+		}
+		words = append(words, word)
+	}
+	return strings.Join(words, " ") + " ", true
 }
 
 // tokenKeywordPart renders the canonical "with <keyword>[ and <keyword>]" rider
@@ -1542,8 +2130,10 @@ func tokenColorPart(sel SelectionSyntax) (string, bool) {
 // created token, or "" when the token does not enter attacking. The relative
 // pronoun matches the count noun ("that's" for a single "token", "that are" for
 // "tokens"), and the clause includes "tapped and" when the token also enters
-// tapped.
-func tokenAttackClause(sel SelectionSyntax, noun string) string {
+// tapped. An explicit attacked defender (CR 508.4) recorded in defender appends
+// the recognized "that player[ or a planeswalker they control]" / "that
+// opponent" tail so the byte-exact reconstruction covers it.
+func tokenAttackClause(sel SelectionSyntax, noun string, defender AttackDefenderKind) string {
 	if !sel.Attacking {
 		return ""
 	}
@@ -1551,10 +2141,20 @@ func tokenAttackClause(sel SelectionSyntax, noun string) string {
 	if noun == "token" {
 		relative = "that's"
 	}
+	clause := " " + relative + " attacking"
 	if sel.Tapped {
-		return " " + relative + " tapped and attacking"
+		clause = " " + relative + " tapped and attacking"
 	}
-	return " " + relative + " attacking"
+	switch defender {
+	case AttackDefenderThatPlayerOrPlaneswalker:
+		clause += " that player or a planeswalker they control"
+	case AttackDefenderThatPlayer:
+		clause += " that player"
+	case AttackDefenderThatOpponent:
+		clause += " that opponent"
+	default:
+	}
+	return clause
 }
 
 func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
@@ -1616,8 +2216,13 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 		if effect.Amount.DynamicKind == EffectDynamicAmountNone {
 			return false
 		}
-		return strings.EqualFold(exactEffectClauseText(effect),
-			"Create "+specBody("a number of", "tokens")+" "+effect.Amount.Text+".")
+		// Oracle wording for these counts retains the "You" subject ("You create
+		// a number of X tokens equal to ..."), which effectSubjectStart does not
+		// strip, so accept both the bare and "You" prefixes.
+		spec := specBody("a number of", "tokens")
+		clause := exactEffectClauseText(effect)
+		return strings.EqualFold(clause, "Create "+spec+" "+effect.Amount.Text+".") ||
+			strings.EqualFold(clause, "You create "+spec+" "+effect.Amount.Text+".")
 	case EffectDynamicAmountFormWhereX:
 		if effect.Amount.DynamicKind == EffectDynamicAmountNone && !effect.Amount.VariableX {
 			return false
@@ -1649,28 +2254,37 @@ func namedArtifactTokenSubtype(sub types.Sub) bool {
 // for a predefined artifact token that carries no printed power/toughness
 // (Treasure, Food, Clue, Blood), including a fixed count ("Create two Treasure
 // tokens."), an optional "tapped" entry modifier ("Create a tapped Treasure
-// token."), the referenced-controller form ("Its controller creates a Treasure
-// token."), and the targeted-player form ("Target opponent creates two Treasure
-// tokens."). It fails closed for every richer shape (colored, keyworded,
-// per-each, or any other named token).
+// token."), a "for each <iterator>" count ("Create a Treasure token for each
+// artifact you control."), the referenced-controller form ("Its controller
+// creates a Treasure token."), and the targeted-player form ("Target opponent
+// creates two Treasure tokens."). It fails closed for every richer shape
+// (colored, keyworded, or any other named token).
 func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 	targetRecipient, ok := exactCreateTokenRecipientContext(effect)
 	if !ok ||
 		effect.TokenPTKnown || effect.TokenCopyOfTarget ||
-		effect.Negated ||
-		effect.Amount.DynamicForm == EffectDynamicAmountFormForEach {
+		effect.Negated {
 		return false
 	}
-	// The spell's variable X count ("Create X Treasure tokens.") attaches only
-	// to the controller form; the referenced-object-controller and
-	// targeted-player forms accept fixed counts only, mirroring the
-	// creature-token path.
+	// The spell's variable X count ("Create X Treasure tokens.") and the
+	// "for each <iterator>" count attach only to the controller form; the
+	// referenced-object-controller and targeted-player forms accept fixed
+	// counts only, mirroring the creature-token path.
 	controllerForm := effect.Context != EffectContextReferencedObjectController && !targetRecipient
 	variableCount := effect.Amount.VariableX &&
 		effect.Amount.DynamicForm == EffectDynamicAmountFormNone && controllerForm
 	dynamicCombatDamageCount := effect.Amount.DynamicKind == EffectDynamicAmountTriggeringCombatDamage &&
 		effect.Amount.DynamicForm == EffectDynamicAmountFormNone && controllerForm
-	if !variableCount && !dynamicCombatDamageCount && (!effect.Amount.Known || effect.Amount.Value < 1) {
+	dynamicDieRollResultCount := effect.Amount.DynamicKind == EffectDynamicAmountDieRollResult &&
+		effect.Amount.DynamicForm == EffectDynamicAmountFormEqual && controllerForm
+	forEachCount := effect.Amount.DynamicForm == EffectDynamicAmountFormForEach &&
+		effect.Amount.DynamicKind != EffectDynamicAmountNone &&
+		effect.Amount.Multiplier == 1 && controllerForm
+	whereXDynamicCount := effect.Amount.DynamicForm == EffectDynamicAmountFormWhereX &&
+		(effect.Amount.DynamicKind != EffectDynamicAmountNone || effect.Amount.VariableX) &&
+		effect.Amount.Multiplier == 1 && controllerForm
+	if !variableCount && !dynamicCombatDamageCount && !dynamicDieRollResultCount && !forEachCount &&
+		!whereXDynamicCount && (!effect.Amount.Known || effect.Amount.Value < 1) {
 		return false
 	}
 	sel := effect.Selection
@@ -1691,6 +2305,23 @@ func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 	if sel.Tapped {
 		tappedPart = "tapped "
 	}
+	if dynamicDieRollResultCount {
+		spec := fmt.Sprintf("a number of %s%s tokens", tappedPart, string(sel.SubtypesAny[0]))
+		clause := exactEffectClauseText(effect)
+		return strings.EqualFold(clause, "Create "+spec+" "+effect.Amount.Text+".") ||
+			strings.EqualFold(clause, "You create "+spec+" "+effect.Amount.Text+".")
+	}
+	if forEachCount {
+		spec := fmt.Sprintf("a %s%s token", tappedPart, string(sel.SubtypesAny[0]))
+		full := fullEffectClauseText(effect)
+		return strings.EqualFold(full, effect.Amount.Text+", create "+spec+".") ||
+			strings.EqualFold(full, "Create "+spec+" "+effect.Amount.Text+".")
+	}
+	if whereXDynamicCount {
+		spec := fmt.Sprintf("X %s%s tokens", tappedPart, string(sel.SubtypesAny[0]))
+		return strings.EqualFold(exactEffectClauseText(effect),
+			"Create "+spec+", "+effect.Amount.Text+".")
+	}
 	countWord, noun := "a", "token"
 	switch {
 	case variableCount:
@@ -1709,6 +2340,46 @@ func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 		}
 		return strings.EqualFold(exactEffectClauseText(effect), subject+" creates "+specBody+".")
 	}
+	return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody+".")
+}
+
+// exactCreatePredefinedTokenEffectSyntax recognizes "Create a [tapped] <Name>
+// token." for a predefined named token whose name is a card name rather than a
+// card subtype (Mutavault). Such a token carries no printed power/toughness,
+// color, subtype, keyword, or count modifier in its create clause; the name
+// alone identifies it (its characteristics live in its own definition). It
+// accepts only the controller recipient form with a single fixed count and an
+// optional leading "tapped" adjective, and byte-checks the reconstructed
+// "Create a [tapped] <Name> token." clause. Every richer shape (a count other
+// than one, a non-controller recipient, or any selection qualifier beyond
+// "tapped") fails closed.
+func exactCreatePredefinedTokenEffectSyntax(effect *EffectSyntax) bool {
+	if effect.TokenPredefinedName == "" ||
+		effect.Context != EffectContextController ||
+		effect.TokenPTKnown || effect.TokenCopyOfTarget ||
+		effect.TokenChoice || effect.Negated ||
+		len(effect.Targets) != 0 ||
+		!effect.Amount.Known || effect.Amount.Value != 1 {
+		return false
+	}
+	sel := effect.Selection
+	if sel.Kind != SelectionUnknown ||
+		len(sel.SubtypesAny) != 0 ||
+		sel.Keyword != KeywordUnknown ||
+		len(sel.ColorsAny) != 0 || len(sel.ExcludedColors) != 0 ||
+		len(sel.RequiredTypesAny) != 0 || len(sel.ExcludedTypes) != 0 ||
+		len(sel.SourceTypes) != 0 || len(sel.Supertypes) != 0 ||
+		sel.MatchPower || sel.MatchToughness || sel.MatchManaValue ||
+		sel.Untapped || sel.Attacking || sel.Blocking ||
+		sel.All || sel.Another || sel.Other ||
+		sel.Colorless || sel.Multicolored {
+		return false
+	}
+	tappedPart := ""
+	if sel.Tapped {
+		tappedPart = "tapped "
+	}
+	specBody := fmt.Sprintf("a %s%s token", tappedPart, effect.TokenPredefinedName)
 	return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody+".")
 }
 
@@ -1810,7 +2481,7 @@ func exactCreateCopyTokenEffectSyntax(effect *EffectSyntax) bool {
 		!effect.Targets[0].Exact {
 		return false
 	}
-	base, dropLegendary, ok := copyTokenExceptModifier(exactEffectClauseText(effect))
+	base, rider, ok := copyTokenExceptModifier(effect, exactEffectClauseText(effect))
 	if !ok {
 		return false
 	}
@@ -1818,7 +2489,8 @@ func exactCreateCopyTokenEffectSyntax(effect *EffectSyntax) bool {
 	if !matched {
 		return false
 	}
-	effect.TokenCopyDropLegendary = dropLegendary
+	effect.TokenCopyDropLegendary = rider.dropLegendary
+	effect.TokenCopyGrantKeywords = rider.grantKeywords
 	effect.TokenCopyEntersTapped = entersTapped
 	return true
 }
@@ -1885,7 +2557,7 @@ func exactCreateCopyTokenReferenceEffectSyntax(effect *EffectSyntax) bool {
 		len(effect.References) == 0 {
 		return false
 	}
-	base, dropLegendary, ok := copyTokenExceptModifier(exactEffectClauseText(effect))
+	base, rider, ok := copyTokenExceptModifier(effect, exactEffectClauseText(effect))
 	if !ok {
 		return false
 	}
@@ -1915,9 +2587,61 @@ func exactCreateCopyTokenReferenceEffectSyntax(effect *EffectSyntax) bool {
 			return false
 		}
 	}
-	effect.TokenCopyDropLegendary = dropLegendary
+	effect.TokenCopyDropLegendary = rider.dropLegendary
+	effect.TokenCopyGrantKeywords = rider.grantKeywords
 	effect.TokenCopyEntersTapped = entersTapped
 	return true
+}
+
+// exactCreateCopyTokenTriggeringSetEffectSyntax reports whether the effect is
+// "Create a token that's a copy of one of them[, except <it/the token> isn't
+// legendary]." where "them" denotes the set of permanents that triggered the
+// enclosing ability and the controller chooses one to copy ("Whenever one or
+// more other creatures you control enter, ... create a token that's a copy of
+// one of them.", Twilight Diviner). The copy source is the controller-chosen
+// member of the triggering event batch; the source phrase "one of them" is
+// fixed and the effect's references must be the "them"/"they" pronouns naming
+// that set (plus any modifier pronoun). It requires no targets, the controller
+// recipient, and a known positive count.
+func exactCreateCopyTokenTriggeringSetEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController ||
+		effect.TokenPTKnown ||
+		effect.Negated ||
+		!createCopyTokenCountKnown(effect) ||
+		len(effect.Targets) != 0 ||
+		!referencesIncludeThemPronoun(effect.References) {
+		return false
+	}
+	base, rider, ok := copyTokenExceptModifier(effect, exactEffectClauseText(effect))
+	if !ok {
+		return false
+	}
+	entersTapped, matched := createCopyTokenClauseMatches(effect, base, "one of them")
+	if !matched {
+		return false
+	}
+	for i := range effect.References {
+		if effect.References[i].Kind != ReferencePronoun {
+			return false
+		}
+	}
+	effect.TokenCopyDropLegendary = rider.dropLegendary
+	effect.TokenCopyGrantKeywords = rider.grantKeywords
+	effect.TokenCopyEntersTapped = entersTapped
+	return true
+}
+
+// referencesIncludeThemPronoun reports whether references holds the "them" (or
+// "they") pronoun that names the triggering-event set for a "copy of one of
+// them" token create.
+func referencesIncludeThemPronoun(references []Reference) bool {
+	for i := range references {
+		if references[i].Kind == ReferencePronoun &&
+			(references[i].Pronoun == PronounThem || references[i].Pronoun == PronounThey) {
+			return true
+		}
+	}
+	return false
 }
 
 // exactCreateCopyTokenAttachedEffectSyntax reports whether the effect is "Create
@@ -1933,7 +2657,7 @@ func exactCreateCopyTokenAttachedEffectSyntax(effect *EffectSyntax) bool {
 		len(effect.Targets) != 0 {
 		return false
 	}
-	base, dropLegendary, ok := copyTokenExceptModifier(exactEffectClauseText(effect))
+	base, rider, ok := copyTokenExceptModifier(effect, exactEffectClauseText(effect))
 	if !ok {
 		return false
 	}
@@ -1947,7 +2671,8 @@ func exactCreateCopyTokenAttachedEffectSyntax(effect *EffectSyntax) bool {
 			return false
 		}
 	}
-	effect.TokenCopyDropLegendary = dropLegendary
+	effect.TokenCopyDropLegendary = rider.dropLegendary
+	effect.TokenCopyGrantKeywords = rider.grantKeywords
 	effect.TokenCopyEntersTapped = equippedTapped || enchantedTapped
 	return true
 }
@@ -1981,7 +2706,7 @@ func exactCreateCopyTokenForEachEffectSyntax(effect *EffectSyntax, atoms Atoms) 
 	if !ok {
 		return nil, false
 	}
-	base, dropLegendary, ok := copyTokenExceptModifier(copyForEachClauseText(effect, verb))
+	base, rider, ok := copyTokenExceptModifier(effect, copyForEachClauseText(effect, verb))
 	if !ok {
 		return nil, false
 	}
@@ -1989,7 +2714,8 @@ func exactCreateCopyTokenForEachEffectSyntax(effect *EffectSyntax, atoms Atoms) 
 	if !matched {
 		return nil, false
 	}
-	effect.TokenCopyDropLegendary = dropLegendary
+	effect.TokenCopyDropLegendary = rider.dropLegendary
+	effect.TokenCopyGrantKeywords = rider.grantKeywords
 	effect.TokenCopyEntersTapped = entersTapped
 	return group, true
 }
@@ -2030,16 +2756,19 @@ func copyForEachClauseText(effect *EffectSyntax, verb int) string {
 }
 
 // copyForEachSourcePhrase reports whether base names a per-each copy source that
-// refers to the iterated group member ("that permanent", "that token", or the
-// pronoun "it"), and whether the optional "tapped" entry modifier is present.
+// refers to the iterated group member ("that permanent", "that token", "that
+// creature", or the pronoun "it"), and whether the optional "tapped" entry
+// modifier is present.
 func copyForEachSourcePhrase(base string) (tapped, ok bool) {
 	switch {
 	case strings.EqualFold(base, "Create a token that's a copy of that permanent."),
 		strings.EqualFold(base, "Create a token that's a copy of that token."),
+		strings.EqualFold(base, "Create a token that's a copy of that creature."),
 		strings.EqualFold(base, "Create a token that's a copy of it."):
 		return false, true
 	case strings.EqualFold(base, "Create a tapped token that's a copy of that permanent."),
 		strings.EqualFold(base, "Create a tapped token that's a copy of that token."),
+		strings.EqualFold(base, "Create a tapped token that's a copy of that creature."),
 		strings.EqualFold(base, "Create a tapped token that's a copy of it."):
 		return true, true
 	default:
@@ -2047,27 +2776,142 @@ func copyForEachSourcePhrase(base string) (tapped, ok bool) {
 	}
 }
 
+// copyTokenExceptRider holds the recognized copiable modifiers of a copy-token
+// "except <rider>" clause: whether the copy drops its legendary supertype and
+// the keyword abilities it gains.
+type copyTokenExceptRider struct {
+	dropLegendary bool
+	grantKeywords []KeywordKind
+}
+
 // copyTokenExceptModifier splits a copy-token clause into its base "Create a
-// token that's a copy of <source>." text and a recognized trailing modifier. The
-// only supported modifier is "except <it/the token> isn't legendary"; a clause
-// with no ", except" suffix returns the clause unchanged with dropLegendary
-// false. Any other except modifier (power/toughness, added types, quoted
+// token that's a copy of <source>." text and the recognized trailing copiable
+// modifiers. A clause with no ", except" suffix returns the clause unchanged
+// with no modifiers. The bare "except <it/the token> isn't legendary" form is
+// recognized directly. A richer "except <the token/it> has <keyword>[ and ...][,
+// and] <it/the token> isn't legendary" rider (Irenicus's Vile Duplication) is
+// recognized from the effect's rider tokens, returning the granted copiable
+// keywords. Any other except modifier (power/toughness, added types, quoted
 // abilities) is unrecognized and returns ok=false so the copy fails closed.
-func copyTokenExceptModifier(clause string) (base string, dropLegendary, ok bool) {
+func copyTokenExceptModifier(effect *EffectSyntax, clause string) (base string, rider copyTokenExceptRider, ok bool) {
 	body, hadPeriod := strings.CutSuffix(clause, ".")
 	if !hadPeriod {
-		return clause, false, true
+		return clause, copyTokenExceptRider{}, true
 	}
 	head, except, found := strings.Cut(body, ", except ")
 	if !found {
-		return clause, false, true
+		return clause, copyTokenExceptRider{}, true
 	}
 	switch normalizeApostrophes(strings.ToLower(strings.TrimSpace(except))) {
 	case "it isn't legendary", "it is not legendary", "it's not legendary",
 		"the token isn't legendary", "the token is not legendary":
-		return head + ".", true, true
+		return head + ".", copyTokenExceptRider{dropLegendary: true}, true
+	}
+	drop, keywords, riderOK := copyTokenExceptRiderTokens(effect)
+	if !riderOK {
+		return "", copyTokenExceptRider{}, false
+	}
+	return head + ".", copyTokenExceptRider{dropLegendary: drop, grantKeywords: keywords}, true
+}
+
+// copyTokenExceptRiderTokens parses the copiable rider that follows a copy-token
+// "except" clause from the effect's tokens. It splits the rider after the final
+// "except" word into "and"/comma-separated sub-clauses and accepts only the
+// "<it/the token> isn't legendary" drop-legendary clause and one or more
+// "<it/the token> has <keyword>" keyword-grant clauses. A quoted granted ability
+// or parenthetical in the rider ("...except it has haste and \"At the beginning
+// of the end step, sacrifice this token.\"", Electroduplicate/Heat Shimmer)
+// carries semantics the keyword/legendary recognizer cannot represent, so it
+// fails closed rather than silently dropping it. It also fails closed when any
+// sub-clause is unrecognized or when no modifier at all is recognized, so the
+// copy stays unsupported rather than silently dropping rider semantics.
+func copyTokenExceptRiderTokens(effect *EffectSyntax) (dropLegendary bool, grantKeywords []KeywordKind, ok bool) {
+	raw := effect.Tokens
+	exceptIndex := -1
+	for i := range raw {
+		if equalWord(raw[i], "except") {
+			exceptIndex = i
+		}
+	}
+	if exceptIndex < 0 {
+		return false, nil, false
+	}
+	rider := raw[exceptIndex+1:]
+	for _, token := range rider {
+		if token.Kind == shared.Quote || token.Kind == shared.LeftParen {
+			return false, nil, false
+		}
+	}
+	for len(rider) > 0 && rider[len(rider)-1].Kind == shared.Period {
+		rider = rider[:len(rider)-1]
+	}
+	// A rider that ends in a dangling conjunction or comma signals that trailing
+	// content (a quoted granted ability that the clause builder dropped from the
+	// effect tokens) was elided, so fail closed rather than recognizing only the
+	// surviving prefix.
+	if len(rider) > 0 {
+		last := rider[len(rider)-1]
+		if last.Kind == shared.Comma || equalWord(last, "and") || equalWord(last, "or") {
+			return false, nil, false
+		}
+	}
+	clauses := splitEntersAsCopyRiderClauses(rider)
+	if len(clauses) == 0 {
+		return false, nil, false
+	}
+	for _, clause := range clauses {
+		if copyTokenNotLegendaryClause(normalizedWords(clause)) {
+			dropLegendary = true
+			continue
+		}
+		if keyword, kok := copyTokenHasKeywordClause(clause); kok {
+			grantKeywords = append(grantKeywords, keyword)
+			continue
+		}
+		return false, nil, false
+	}
+	if !dropLegendary && len(grantKeywords) == 0 {
+		return false, nil, false
+	}
+	return dropLegendary, grantKeywords, true
+}
+
+// copyTokenNotLegendaryClause reports whether the rider sub-clause words are an
+// "<it/the token> isn't legendary" copiable rider. The "the token" subject is
+// normalized to the "it" subject the shared enters-as-copy recognizer accepts.
+func copyTokenNotLegendaryClause(words []string) bool {
+	if len(words) >= 2 && words[0] == "the" && words[1] == "token" {
+		words = append([]string{"it"}, words[2:]...)
+	}
+	return entersAsCopyNotLegendaryClause(words)
+}
+
+// copyTokenHasKeywordClause recognizes an "<it/the token> has <keyword>" copiable
+// rider sub-clause and returns the single granted keyword. The keyword name must
+// consume the entire remainder of the clause so trailing words (parameters or
+// extra text) fail closed.
+func copyTokenHasKeywordClause(clause []shared.Token) (KeywordKind, bool) {
+	rest, ok := copyTokenHasSubject(clause)
+	if !ok {
+		return KeywordUnknown, false
+	}
+	kind, width, ok := recognizeKeywordNameAt(rest, 0)
+	if !ok || width != len(rest) {
+		return KeywordUnknown, false
+	}
+	return kind, true
+}
+
+// copyTokenHasSubject strips a leading "it has" or "the token has" subject from a
+// rider sub-clause, returning the remaining keyword-name tokens.
+func copyTokenHasSubject(clause []shared.Token) ([]shared.Token, bool) {
+	switch {
+	case len(clause) >= 3 && equalWord(clause[0], "it") && equalWord(clause[1], "has"):
+		return clause[2:], true
+	case len(clause) >= 4 && equalWord(clause[0], "the") && equalWord(clause[1], "token") && equalWord(clause[2], "has"):
+		return clause[3:], true
 	default:
-		return "", false, false
+		return nil, false
 	}
 }
 
@@ -2079,13 +2923,34 @@ func normalizeApostrophes(text string) string {
 
 // copyTokenReferenceSupported reports whether a reference can name the copy
 // source of a copy-of-reference token: an explicit self reference ("this
-// creature"/"this permanent" or the card's own name) or the pronoun "it".
+// creature"/"this permanent" or the card's own name), the pronoun "it", or a
+// "that <permanent>" antecedent ("that creature", "that permanent", "that
+// token") that resolves to a single triggering permanent ("Whenever a nontoken
+// Zombie you control enters, create a token that's a copy of that creature." —
+// Necroduality). The compiler binds the "that" antecedent and the lowering fails
+// closed when it does not resolve to a supported single object.
 func copyTokenReferenceSupported(reference Reference) bool {
 	switch reference.Kind {
 	case ReferenceThisObject, ReferenceSelfName:
 		return true
+	case ReferenceThatObject:
+		return copyTokenThatAntecedentText(reference.Text)
 	case ReferencePronoun:
 		return reference.Pronoun == PronounIt
+	default:
+		return false
+	}
+}
+
+// copyTokenThatAntecedentText reports whether text is a "that <permanent>"
+// antecedent the copy-of-reference token form accepts as its copy source. Only
+// the bare permanent antecedents qualify; richer "that creature an opponent
+// controls" phrasings carry extra words and are rejected so the copy fails
+// closed.
+func copyTokenThatAntecedentText(text string) bool {
+	switch normalizeApostrophes(strings.ToLower(strings.TrimSpace(text))) {
+	case "that creature", "that permanent", "that token":
+		return true
 	default:
 		return false
 	}
@@ -2334,14 +3199,22 @@ func exactGainControlControlledSourceDuration(text, prefix string) bool {
 }
 
 func exactGainControlBattlefieldSourceDuration(text, prefix string) bool {
-	for _, noun := range []string{"artifact", "creature", "enchantment", "land", "permanent", "planeswalker"} {
-		for _, verb := range []string{"is", "remains"} {
-			if strings.EqualFold(text, prefix+" as long as this "+noun+" "+verb+" on the battlefield.") {
-				return true
-			}
-		}
+	lower := strings.ToLower(text)
+	suffix, ok := strings.CutPrefix(lower, strings.ToLower(prefix)+" for as long as this ")
+	if !ok {
+		suffix, ok = strings.CutPrefix(lower, strings.ToLower(prefix)+" as long as this ")
 	}
-	return false
+	if !ok {
+		return false
+	}
+	self, rest, ok := strings.Cut(suffix, " ")
+	if !ok || self == "" {
+		return false
+	}
+	// "this <type>" is a single-word self reference (e.g. "creature", "saga",
+	// "aura"); the runtime already carries the source-on-battlefield duration,
+	// so only the trailing battlefield phrase needs verbatim confirmation.
+	return rest == "remains on the battlefield." || rest == "is on the battlefield."
 }
 
 func exactControllerAmountEffectSyntax(effect *EffectSyntax, verb string) bool {
@@ -2389,7 +3262,28 @@ func exactDigPutEffectSyntax(effect *EffectSyntax) bool {
 	return strings.EqualFold(exactEffectClauseText(effect), want)
 }
 
-// digRemainderText renders the remainder destination clause that parseDigPut
+// exactPutThoseCardsIntoHandEffectSyntax reconstructs the "put a card from among
+// those cards into your hand." consequence (Ripples of Undeath), where "those
+// cards" denotes a card set produced by an earlier clause in the same ability
+// (such as a preceding mill). It requires a controller-context single-card put
+// into the hand carrying exactly one "those" pronoun reference, and matches the
+// canonical clause text byte-for-byte; any filter or count variation fails closed
+// so only the plain any-card form is recognized.
+func exactPutThoseCardsIntoHandEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController ||
+		effect.ToZone != zone.Hand ||
+		!effect.Amount.Known || effect.Amount.Value != 1 {
+		return false
+	}
+	if len(effect.References) != 1 ||
+		effect.References[0].Kind != ReferencePronoun ||
+		effect.References[0].Pronoun != PronounThose {
+		return false
+	}
+	return strings.EqualFold(exactEffectClauseText(effect),
+		"put a card from among those cards into your hand.")
+}
+
 // recorded, so the exactness gate can compare it byte-for-byte.
 func digRemainderText(remainder DigRemainderKind) string {
 	switch remainder {
@@ -2416,6 +3310,68 @@ func digSourceText(source DigSourceKind) string {
 	default:
 		return ""
 	}
+}
+
+// exactConniveEffectSyntax reconstructs a connive keyword-action clause whose
+// subject is the conniving permanent itself ("this creature connives.",
+// "<this card's name> connives.", and the rarer numeric "<subject> connives N."
+// form). It requires the source-scoped self subject and, when a count is
+// printed, a fixed count of at least one; the variable form fails closed. The
+// parenthetical reminder text is excluded from the parsed clause upstream.
+func exactConniveEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextSource {
+		return false
+	}
+	subject, ok := exactSelfSubjectReferenceText(effect.SubjectReferences)
+	if !ok {
+		return false
+	}
+	text := exactEffectClauseText(effect)
+	if !effect.Amount.Known {
+		return strings.EqualFold(text, subject+" connives.")
+	}
+	if effect.Amount.Value < 1 {
+		return false
+	}
+	return strings.EqualFold(text, fmt.Sprintf("%s connives %s.", subject, effectAmountSourceText(effect)))
+}
+
+// exactSourceExploresEffectSyntax recognizes the explore keyword action whose
+// subject is the source permanent itself ("This creature explores." / "<name>
+// explores."), the counterpart to the pronoun form "It explores." handled by
+// exactDirectPronounEffectSyntax. The reminder text is excluded upstream. Only a
+// bare explore is exact here; the repeated form ("explores, then it explores
+// again.") and the variable form ("explores X times.") fail closed.
+func exactSourceExploresEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextSource ||
+		len(effect.Targets) != 0 ||
+		effect.Duration != EffectDurationNone {
+		return false
+	}
+	subject, ok := exactSelfSubjectReferenceText(effect.SubjectReferences)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), subject+" explores.")
+}
+
+// exactTargetExploresEffectSyntax recognizes the explore keyword action whose
+// subject is a single target permanent ("Target creature you control
+// explores."), the counterpart to the source forms handled by
+// exactSourceExploresEffectSyntax. The reminder text is excluded upstream. Only
+// a bare explore is exact; the repeated form ("explores, then it explores
+// again.") fails closed.
+func exactTargetExploresEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextTarget ||
+		effect.Duration != EffectDurationNone ||
+		len(effect.Targets) != 1 ||
+		!effect.Targets[0].Exact {
+		return false
+	}
+	return strings.EqualFold(
+		exactEffectClauseText(effect),
+		effect.Targets[0].Text+" explores.",
+	)
 }
 
 func exactStandaloneActionEffectSyntax(effect *EffectSyntax, verb string) bool {
@@ -2736,10 +3692,57 @@ func exactMoveCountersEffectSyntax(effect *EffectSyntax) bool {
 	)
 }
 
+// exactRemoveCounterEffectSyntax recognizes the resolving counter-removal effect
+// "Remove <amount> [<kind> ]counter(s) from <object>." (Ferropede, "remove a
+// counter from target permanent."; Thrull Parasite, "Remove a counter from
+// target nonland permanent."; "Remove two +1/+1 counters from target creature").
+// The object is a single recognized target permanent (single or "up to one"
+// cardinality). The count is a fixed positive amount; the counter is either a
+// named recognized kind or, in the kind-unspecified "a counter" form, a counter
+// of any kind the controller chooses at resolution. The clause is reconstructed
+// and matched byte-exact, so the mass "all counters" form, dynamic counts, and
+// any referenced or pronoun-object shape stay non-exact and fail closed.
+func exactRemoveCounterEffectSyntax(effect *EffectSyntax) bool {
+	if len(effect.Targets) != 1 ||
+		len(effect.References) != 0 ||
+		!effect.Targets[0].Exact ||
+		effect.Targets[0].Cardinality.Max != 1 ||
+		!effect.Amount.Known ||
+		effect.Amount.Value < 1 {
+		return false
+	}
+	// The kind-unspecified "a counter" form removes one counter of a single
+	// controller-chosen kind, so a plural unspecified count ("two counters") has
+	// no single-choice resolution and is left non-exact to fail closed.
+	if !effect.CounterKnown && effect.Amount.Value != 1 {
+		return false
+	}
+	noun := "counters"
+	if effect.Amount.Value == 1 {
+		noun = "counter"
+	}
+	object := effect.Targets[0].Text
+	text := exactEffectClauseText(effect)
+	if effect.CounterKnown {
+		return strings.EqualFold(
+			text,
+			fmt.Sprintf("Remove %s %s %s from %s.",
+				effectAmountSourceText(effect), effect.CounterKind.String(), noun, object),
+		)
+	}
+	return strings.EqualFold(
+		text,
+		fmt.Sprintf("Remove %s %s from %s.",
+			effectAmountSourceText(effect), noun, object),
+	)
+}
+
 // exactPutThoseCountersEffectSyntax recognizes the counter-salvage form "put
-// those counters on <destination>", where "those counters" names the counters a
+// those counters on <destination>" and its singular-pronoun variant "put its
+// counters on <destination>", where "those"/"its" name the counters a
 // triggering permanent had as it left a zone ("Whenever a creature you control
 // leaves the battlefield, if it had counters on it, put those counters on target
+// creature you control.", "When this creature dies, put its counters on target
 // creature you control."). The destination is either a single/optional exact
 // target permanent or the source permanent itself ("this <object>" or the card's
 // own name). The clause is reconstructed and matched byte-exact so any
@@ -2753,10 +3756,7 @@ func exactPutThoseCountersEffectSyntax(effect *EffectSyntax) bool {
 		if !effect.Targets[0].Exact || effect.Targets[0].Cardinality.Max != 1 {
 			return false
 		}
-		return strings.EqualFold(
-			text,
-			fmt.Sprintf("Put those counters on %s.", effect.Targets[0].Text),
-		)
+		return putThoseCountersClauseMatches(text, effect.Targets[0].Text)
 	}
 	if len(effect.Targets) != 0 {
 		return false
@@ -2765,7 +3765,21 @@ func exactPutThoseCountersEffectSyntax(effect *EffectSyntax) bool {
 	if !ok {
 		return false
 	}
-	return strings.EqualFold(text, fmt.Sprintf("Put those counters on %s.", dest))
+	return putThoseCountersClauseMatches(text, dest)
+}
+
+// putThoseCountersClauseMatches reports whether text is the kind-agnostic
+// counter-salvage placement "Put those counters on <dest>." or its
+// singular-pronoun variant "Put its counters on <dest>." Both pronouns name a
+// triggering permanent's counters for the same salvage move, so either wording
+// round-trips to the same MoveThoseCounters effect.
+func putThoseCountersClauseMatches(text, dest string) bool {
+	for _, pronoun := range []string{"those", "its"} {
+		if strings.EqualFold(text, fmt.Sprintf("Put %s counters on %s.", pronoun, dest)) {
+			return true
+		}
+	}
+	return false
 }
 
 // putThoseCountersSelfText returns the rendered text of a self destination for
@@ -2905,13 +3919,13 @@ func exactMoveCountersDistributeGroupText(selection SelectionSyntax) (string, bo
 }
 
 func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
-	if !effect.CounterKnown {
+	if !effect.CounterKnown && len(effect.CounterKindChoices) < 2 {
 		return false
 	}
-	object := ""
+	objects := []string{}
 	switch {
 	case len(effect.Targets) == 1 && effect.Targets[0].Exact:
-		object = effect.Targets[0].Text
+		object := effect.Targets[0].Text
 		// "Put a +1/+1 counter on each of up to two target creatures." places one
 		// counter on each of several targets, so the canonical object reads "each
 		// of <target>" for any genuine multi-target cardinality (Max >= 2). The
@@ -2919,10 +3933,10 @@ func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
 		if effect.Targets[0].Cardinality.Max >= 2 {
 			object = "each of " + object
 		}
+		objects = append(objects, object)
 	case len(effect.Targets) == 0:
-		var ok bool
 		if effect.CounterRecipientAttached {
-			object = "enchanted creature"
+			objects = append(objects, "enchanted creature")
 			break
 		}
 		// A trailing dynamic count ("… where X is the number of +1/+1 counters
@@ -2930,21 +3944,85 @@ func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
 		// that referent names the counted subject, not the placement recipient,
 		// so exclude it before reconstructing the recipient.
 		recipientRefs := referencesOutsideSpan(effect.References, effect.Amount.Span)
-		object, ok = exactObjectReferenceText(recipientRefs)
-		if !ok {
-			object, ok = exactSelfSubjectReferenceText(recipientRefs)
+		// A filtered group recipient with a "with a <kind> counter on it/them"
+		// qualifier ("each creature you control with a +1/+1 counter on it")
+		// carries a trailing pronoun referent inside its own selection span that
+		// names the filtered permanent, not the recipient. Exclude it only for
+		// that qualifier so a recipient that genuinely is a referenced object
+		// ("Put a +1/+1 counter on this creature.") keeps its referent.
+		if effect.Selection.CounterRequired || effect.Selection.CounterAny {
+			recipientRefs = referencesOutsideSpan(recipientRefs, effect.Selection.Span)
 		}
-		if !ok && len(recipientRefs) == 0 {
-			// "Put a +1/+1 counter on each creature you control." — a group of
-			// permanents rather than a single object.
-			object, ok = exactGroupDamagePermanentRecipientText(effect.Selection)
+		if object, ok := exactObjectReferenceText(recipientRefs); ok {
+			objects = append(objects, object)
+		} else if object, ok := exactSelfSubjectReferenceText(recipientRefs); ok {
+			objects = append(objects, object)
+		} else if len(recipientRefs) == 0 {
+			// A non-target recipient is either a group ("each creature you
+			// control") or a single chooser ("a creature you control"); try both
+			// reconstructions and accept whichever matches the source text.
+			if object, ok := exactGroupDamagePermanentRecipientText(effect.Selection); ok {
+				objects = append(objects, object)
+			}
+			if object, ok := exactSingularChosenPermanentRecipientText(effect.Selection); ok {
+				objects = append(objects, object)
+			}
 		}
-		if !ok {
+		if len(objects) == 0 {
 			return false
 		}
 	default:
 		return false
 	}
+	for _, object := range objects {
+		if counterPlacementTextMatches(effect, object) {
+			return true
+		}
+		if len(effect.CounterKindChoices) >= 2 && counterPlacementChoiceTextMatches(effect, object) {
+			return true
+		}
+	}
+	return false
+}
+
+// counterPlacementChoiceTextMatches reconstructs the controller-choice counter
+// placement clause "Put a <X> counter or a <Y> counter on <object>." from the
+// recognized choice kinds and reports whether the printed effect text matches it
+// byte-for-byte. Each named kind is a single counter ("a <kind> counter") and the
+// kinds are joined with " or " in source order; any richer amount or wording
+// fails closed because the canonical text would not match.
+func counterPlacementChoiceTextMatches(effect *EffectSyntax, object string) bool {
+	if !effect.Amount.Known || effect.Amount.Value != 1 {
+		return false
+	}
+	parts := make([]string, 0, len(effect.CounterKindChoices))
+	for _, kind := range effect.CounterKindChoices {
+		parts = append(parts, "a "+kind.String()+" counter")
+	}
+	prefix := "Put " + strings.Join(parts, " or ") + " on " + object
+	return strings.EqualFold(exactEffectClauseText(effect), prefix+".")
+}
+
+// counterPlacementSingleChoiceRecipient reports whether an exact non-target
+// counter placement names a single chosen group member ("a creature you
+// control") rather than a distributive group ("each creature you control"). The
+// two forms compile to identical selectors, so lowering relies on this flag to
+// emit a single-choice placement instead of a group placement.
+func counterPlacementSingleChoiceRecipient(effect *EffectSyntax) bool {
+	if effect.Kind != EffectPut || !effect.CounterKnown || len(effect.Targets) != 0 {
+		return false
+	}
+	if effect.CounterRecipientAttached {
+		return false
+	}
+	object, ok := exactSingularChosenPermanentRecipientText(effect.Selection)
+	if !ok {
+		return false
+	}
+	return counterPlacementTextMatches(effect, object)
+}
+
+func counterPlacementTextMatches(effect *EffectSyntax, object string) bool {
 	noun := "counters"
 	if effect.Amount.Known && effect.Amount.Value == 1 {
 		noun = "counter"
@@ -2978,26 +4056,80 @@ func effectAmountSourceText(effect *EffectSyntax) string {
 	return effect.Amount.Text
 }
 
-// exactGainEnergyEffectSyntax recognizes the controller energy-gain effect "You
-// get {E}…{E}." (with an optional "(N energy counters)" reminder the parser
-// already strips). The clause must be exactly the "get"/"gets" verb followed by N
-// energy symbols and a closing period, with no other object, target, or
-// reference, so every richer or differently-recipient form fails closed.
-func exactGainEnergyEffectSyntax(effect *EffectSyntax) bool {
-	if effect.Context != EffectContextController ||
-		!effect.Amount.Known || effect.Amount.Value < 1 ||
-		len(effect.Targets) != 0 || len(effect.References) != 0 {
+// exactGainPlayerCounterEffectSyntax recognizes the player-counter gain effect
+// "You get {E}…{E}." (energy symbols) or "<recipient> gets <N> <kind> counter(s)."
+// (a named player-only counter). The optional "(N energy counters)" reminder is
+// already stripped. The energy form is controller-only; the named form supports
+// the controller plus the defending player, the triggering "that player", a
+// single targeted player, and the "each opponent"/"each player" groups, mirroring
+// the recipients exactLifeEffectSyntax accepts.
+// Every other recipient or richer form fails closed; the lowering re-resolves the
+// recipient from the same typed context.
+func exactGainPlayerCounterEffectSyntax(effect *EffectSyntax) bool {
+	if !effect.Amount.Known || effect.Amount.Value < 1 {
 		return false
 	}
-	verb := slices.IndexFunc(effect.Tokens, func(token shared.Token) bool {
-		return token.Span == effect.VerbSpan
-	})
-	if verb < 0 {
+	if effect.Context == EffectContextController &&
+		len(effect.Targets) == 0 && len(effect.References) == 0 {
+		verb := slices.IndexFunc(effect.Tokens, func(token shared.Token) bool {
+			return token.Span == effect.VerbSpan
+		})
+		if verb >= 0 {
+			rest := effect.Tokens[verb+1:]
+			if len(rest) > 0 && rest[len(rest)-1].Kind == shared.Period {
+				rest = rest[:len(rest)-1]
+			}
+			if len(rest) == effect.Amount.Value && allEnergySymbols(rest) {
+				return true
+			}
+		}
+	}
+	if !effect.CounterKnown || !effect.CounterKind.PlayerOnly() {
 		return false
 	}
-	rest := effect.Tokens[verb+1:]
-	if len(rest) > 0 && rest[len(rest)-1].Kind == shared.Period {
-		rest = rest[:len(rest)-1]
+	noun := effect.CounterKind.String()
+	return exactPlayerCounterRecipientText(effect, noun+" counter", noun+" counters")
+}
+
+// exactPlayerCounterRecipientText reconstructs the named player-counter gain
+// clause "<recipient> gets <N> <singular|plural>." for each supported recipient
+// subject and reports whether the printed effect text matches byte-for-byte. The
+// recipient set matches the references the lowering resolves (controller,
+// defending player, the triggering "that player"/"they", the referenced object's
+// controller "Its controller", a lone targeted player, and the "each
+// opponent"/"each player" groups); any other subject yields no prefix and fails
+// closed.
+func exactPlayerCounterRecipientText(effect *EffectSyntax, singular, plural string) bool {
+	var prefixes []string
+	switch effect.Context {
+	case EffectContextController:
+		prefixes = []string{"You get"}
+	case EffectContextEachOpponent:
+		prefixes = []string{"Each opponent gets"}
+	case EffectContextEachOtherPlayer:
+		prefixes = []string{"Each other player gets"}
+	case EffectContextEachPlayer:
+		prefixes = []string{"Each player gets"}
+	case EffectContextDefendingPlayer:
+		prefixes = []string{"Defending player gets"}
+	case EffectContextEventPlayer, EffectContextReferencedPlayer:
+		prefixes = []string{"They get", "That player gets"}
+	case EffectContextReferencedObjectController:
+		if subject := referencedControllerSubjectText(effect); subject != "" {
+			prefixes = []string{subject + " gets"}
+		}
+	case EffectContextTarget, EffectContextPriorSubject:
+		if len(effect.Targets) == 1 && effect.Targets[0].Exact {
+			prefixes = []string{titleFirstEffectText(effect.Targets[0].Text) + " gets"}
+		}
+	default:
 	}
-	return len(rest) == effect.Amount.Value && allEnergySymbols(rest)
+	text := exactEffectClauseText(effect)
+	amountText := effectAmountSourceText(effect)
+	for _, prefix := range prefixes {
+		if exactCountedNounEffectText(text, prefix, singular, plural, effect.Amount, amountText, false) {
+			return true
+		}
+	}
+	return false
 }

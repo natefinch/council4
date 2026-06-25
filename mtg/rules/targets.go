@@ -120,6 +120,9 @@ func appendTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *
 		return
 	}
 	candidates := targetCandidatesForSpec(g, controller, source, sourceObjectID, &spec)
+	if spec.DistinctFromPriorTargets {
+		candidates = filterTargetsDistinctFrom(candidates, prefix)
+	}
 	maxTargets := min(spec.MaxTargets, len(candidates))
 	for _, count := range targetCountsForChoices(spec.MinTargets, maxTargets) {
 		for _, combination := range targetCombinations(candidates, count) {
@@ -128,6 +131,44 @@ func appendTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *
 			appendTargetChoicesForSpec(g, controller, source, sourceObjectID, specs, specIndex+1, next, nextCounts, result, targetCounts)
 		}
 	}
+}
+
+// filterTargetsDistinctFrom drops any candidate that points at the same game
+// object as a target already chosen in prior, supporting "another target ..."
+// specs that must differ from the earlier targets of the same spell or ability.
+func filterTargetsDistinctFrom(candidates, prior []game.Target) []game.Target {
+	var kept []game.Target
+	for _, candidate := range candidates {
+		distinct := true
+		for _, used := range prior {
+			if sameTargetObject(candidate, used) {
+				distinct = false
+				break
+			}
+		}
+		if distinct {
+			kept = append(kept, candidate)
+		}
+	}
+	return kept
+}
+
+// sameTargetObject reports whether two targets point at the same game object.
+func sameTargetObject(a, b game.Target) bool {
+	if a.Kind != b.Kind {
+		return false
+	}
+	switch a.Kind {
+	case game.TargetPermanent:
+		return a.PermanentID == b.PermanentID
+	case game.TargetPlayer:
+		return a.PlayerID == b.PlayerID
+	case game.TargetStackObject:
+		return a.StackObjectID == b.StackObjectID
+	case game.TargetCard:
+		return a.CardID == b.CardID
+	}
+	return false
 }
 
 func targetCountsForChoices(minTargets, maxTargets int) []int {

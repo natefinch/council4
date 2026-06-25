@@ -21,7 +21,7 @@ func TestLowerFixedCounterSpell(t *testing.T) {
 		OracleText: "Put two +1/+1 counters on target creature.",
 	})
 	mode := face.SpellAbility.Val.Modes[0]
-	if len(mode.Targets) != 1 || mode.Targets[0].Predicate.PermanentTypes[0] != types.Creature {
+	if len(mode.Targets) != 1 || mode.Targets[0].Selection.Val.RequiredTypesAny[0] != types.Creature {
 		t.Fatalf("targets = %+v, want one creature target", mode.Targets)
 	}
 	add, ok := mode.Sequence[0].Primitive.(game.AddCounter)
@@ -401,7 +401,7 @@ func TestRebaseAddPlayerCounterTargetReference(t *testing.T) {
 func TestLowerCounterPlacementRejectsUnsupportedForms(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
-		"Put a quest counter on target permanent.",
+		"Put a fade counter on target permanent.",
 		"Put an energy counter on target creature.",
 		"Put a charge counter on target player.",
 		"Put a charge counter on any target.",

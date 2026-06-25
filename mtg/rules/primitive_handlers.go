@@ -99,10 +99,10 @@ func playersInAPNAPOrder(g *game.Game, players []game.PlayerID) []game.PlayerID 
 
 func handleDestroy(r *effectResolver, prim game.Destroy) effectResolved {
 	res := effectResolved{accepted: true}
-	if prim.Group.Valid() {
-		permanents := r.groupPermanents(prim.Group)
-		destroyed := make([]*game.Permanent, 0, len(permanents))
-		for _, permanent := range permanents {
+	targets := r.resolveObjectGroup(prim.Object, prim.Group)
+	if !targets.single {
+		destroyed := make([]*game.Permanent, 0, len(targets.permanents))
+		for _, permanent := range targets.permanents {
 			if hasKeyword(r.game, permanent, game.Indestructible) || replaceDestroyPermanent(r.game, permanent, prim.PreventRegeneration) {
 				continue
 			}
@@ -112,9 +112,8 @@ func handleDestroy(r *effectResolver, prim game.Destroy) effectResolved {
 		res.amount = len(destroyed)
 		return res
 	}
-	permanent, ok := r.resolveObject(prim.Object)
-	if ok {
-		_, res.succeeded = destroyPermanentInBatch(r.game, permanent.ObjectID, 0, prim.PreventRegeneration)
+	if targets.resolved {
+		_, res.succeeded = destroyPermanentInBatch(r.game, targets.permanents[0].ObjectID, 0, prim.PreventRegeneration)
 	}
 	return res
 }
@@ -193,12 +192,22 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 }
 
 func handleAddCounter(r *effectResolver, prim game.AddCounter) effectResolved {
+	if prim.AllKinds {
+		return handleDoubleAllCounterKinds(r, prim)
+	}
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	if res.amount <= 0 {
 		return res
 	}
 	placementController := stackObjectController(r.obj)
 	if prim.Group.Valid() {
+		if prim.ChooseOne {
+			if permanent, ok := r.chooseOneGroupPermanent(prim.Group); ok {
+				addCountersToPermanentControlledBy(r.game, placementController, permanent, prim.CounterKind, res.amount)
+				res.succeeded = true
+			}
+			return res
+		}
 		for _, permanent := range r.groupPermanents(prim.Group) {
 			if addCountersToPermanentControlledBy(r.game, placementController, permanent, prim.CounterKind, res.amount) {
 				res.succeeded = true
@@ -208,8 +217,74 @@ func handleAddCounter(r *effectResolver, prim game.AddCounter) effectResolved {
 	}
 	permanent, ok := r.resolveObject(prim.Object)
 	if ok {
-		addCountersToPermanentControlledBy(r.game, placementController, permanent, prim.CounterKind, res.amount)
+		counterKind := prim.CounterKind
+		if len(prim.KindChoices) != 0 {
+			counterKind = r.chooseCounterKindToPlace(prim.KindChoices)
+		}
+		addCountersToPermanentControlledBy(r.game, placementController, permanent, counterKind, res.amount)
 		res.succeeded = true
+	}
+	return res
+}
+
+// chooseCounterKindToPlace resolves which counter kind an "Put a <X> counter or a
+// <Y> counter on it" effect places: the resolving controller chooses one of the
+// listed kinds ("Put a +1/+1 counter or a loyalty counter on it.", Elspeth
+// Conquers Death chapter III). The kinds are presented in listed order so the
+// prompt is deterministic. An empty or unexpected selection falls back to the
+// first kind.
+func (r *effectResolver) chooseCounterKindToPlace(kinds []counter.Kind) counter.Kind {
+	if len(kinds) == 0 {
+		return 0
+	}
+	options := make([]game.ChoiceOption, len(kinds))
+	for i, kind := range kinds {
+		options[i] = game.ChoiceOption{
+			Index: i,
+			Label: kind.String() + " counter",
+		}
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:       game.ChoiceResolution,
+		Player:     r.obj.Controller,
+		Prompt:     "Choose a kind of counter",
+		Options:    options,
+		MinChoices: 1,
+		MaxChoices: 1,
+	}, r.log)
+	if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(kinds) {
+		return kinds[0]
+	}
+	return kinds[selected[0]]
+}
+
+// handleDoubleAllCounterKinds doubles every kind of counter on the primitive's
+// object ("double the number of each kind of counter on <permanent>", Vorel of
+// the Hull Clade). It snapshots the counts before placing any counters so
+// doubling one kind never feeds another, then adds, for each kind present, that
+// many more counters. Kinds are visited in a deterministic order.
+func handleDoubleAllCounterKinds(r *effectResolver, prim game.AddCounter) effectResolved {
+	res := effectResolved{accepted: true}
+	permanent, ok := r.resolveObject(prim.Object)
+	if !ok {
+		return res
+	}
+	placementController := stackObjectController(r.obj)
+	counts := permanent.Counters.All()
+	kinds := make([]counter.Kind, 0, len(counts))
+	for kind := range counts {
+		kinds = append(kinds, kind)
+	}
+	slices.Sort(kinds)
+	for _, kind := range kinds {
+		amount := counts[kind]
+		if amount <= 0 {
+			continue
+		}
+		if addCountersToPermanentControlledBy(r.game, placementController, permanent, kind, amount) {
+			res.succeeded = true
+			res.amount += amount
+		}
 	}
 	return res
 }
@@ -273,15 +348,31 @@ func amassArmyTokenDef(subtype types.Sub) *game.CardDef {
 
 func handleAddPlayerCounter(r *effectResolver, prim game.AddPlayerCounter) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	if res.amount <= 0 {
+		return res
+	}
+	controller := stackObjectController(r.obj)
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		for _, playerID := range r.playerGroupMembers(prim.PlayerGroup) {
+			player, ok := playerByID(r.game, playerID)
+			if !ok || player.Eliminated {
+				continue
+			}
+			if addCountersToPlayerControlledBy(r.game, controller, player, prim.CounterKind, res.amount) {
+				res.succeeded = true
+			}
+		}
+		return res
+	}
 	playerID, ok := r.resolvePlayer(prim.Player)
-	if !ok || res.amount <= 0 {
+	if !ok {
 		return res
 	}
 	player, ok := playerByID(r.game, playerID)
 	if !ok || player.Eliminated {
 		return res
 	}
-	if addCountersToPlayerControlledBy(r.game, stackObjectController(r.obj), player, prim.CounterKind, res.amount) {
+	if addCountersToPlayerControlledBy(r.game, controller, player, prim.CounterKind, res.amount) {
 		res.succeeded = true
 	}
 	return res
@@ -332,9 +423,10 @@ func handleMoveCounters(r *effectResolver, prim game.MoveCounters) effectResolve
 }
 
 // chooseCounterKindToMove resolves which single counter kind a "Move a counter"
-// effect moves: the lone kind present on the source, or the controller's choice
-// when the source carries counters of more than one kind. The candidate kinds
-// are presented in counter-kind order so the prompt is deterministic.
+// or "Remove a counter" effect acts on: the lone kind present on the source, or
+// the controller's choice when the source carries counters of more than one
+// kind. The candidate kinds are presented in counter-kind order so the prompt is
+// deterministic.
 func (r *effectResolver) chooseCounterKindToMove(counters counter.Set) (counter.Kind, bool) {
 	var kinds []counter.Kind
 	for kind, amount := range counters.All() {
@@ -359,7 +451,7 @@ func (r *effectResolver) chooseCounterKindToMove(counters counter.Set) (counter.
 	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
 		Kind:       game.ChoiceResolution,
 		Player:     r.obj.Controller,
-		Prompt:     "Choose a kind of counter to move",
+		Prompt:     "Choose a kind of counter",
 		Options:    options,
 		MinChoices: 1,
 		MaxChoices: 1,
@@ -422,6 +514,15 @@ func (r *effectResolver) distributeMoveCounters(prim game.MoveCounters) effectRe
 
 func handleApplyContinuous(r *effectResolver, prim game.ApplyContinuous) effectResolved {
 	res := effectResolved{accepted: true}
+	if prim.ChooseFrom.Valid() {
+		effects := r.resolveChosenColorProtection(prim.ContinuousEffects)
+		for _, permanent := range r.chooseApplyContinuousPermanents(prim) {
+			if applyTypedContinuousEffects(r.game, r.obj, permanent, effects, prim.Duration) {
+				res.succeeded = true
+			}
+		}
+		return res
+	}
 	var permanent *game.Permanent
 	if prim.Object.Exists {
 		permanent, _ = r.resolveObject(prim.Object.Val)
@@ -436,6 +537,51 @@ func handleApplyContinuous(r *effectResolver, prim game.ApplyContinuous) effectR
 		)
 	}
 	return res
+}
+
+// chooseApplyContinuousPermanents prompts the resolving controller to choose up
+// to the primitive's dynamic amount of distinct permanents from its candidate
+// group ("up to that many target lands you control", Primal Adversary). It
+// returns the chosen permanents, or nil when the amount or candidate set is
+// empty, so the continuous effect applies to nothing.
+func (r *effectResolver) chooseApplyContinuousPermanents(prim game.ApplyContinuous) []*game.Permanent {
+	amount := r.quantity(prim.ChooseUpTo)
+	if amount <= 0 {
+		return nil
+	}
+	candidates := r.groupPermanents(prim.ChooseFrom)
+	maxChoices := min(amount, len(candidates))
+	if maxChoices == 0 {
+		return nil
+	}
+	options := make([]game.ChoiceOption, len(candidates))
+	for i, permanent := range candidates {
+		options[i] = game.ChoiceOption{
+			Index: i,
+			Label: permanentChoiceLabel(r.game, permanent),
+			Card:  permanentChoiceInfo(r.game, permanent),
+		}
+	}
+	prompt := prim.Prompt
+	if prompt == "" {
+		prompt = "Choose permanents"
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           r.obj.Controller,
+		Prompt:           prompt,
+		Options:          options,
+		MinChoices:       0,
+		MaxChoices:       maxChoices,
+		DefaultSelection: firstChoiceIndices(maxChoices),
+	}, r.log)
+	chosen := make([]*game.Permanent, 0, len(selected))
+	for _, idx := range selected {
+		if idx >= 0 && idx < len(candidates) {
+			chosen = append(chosen, candidates[idx])
+		}
+	}
+	return chosen
 }
 
 // resolveChosenColorProtection rewrites any granted "protection from the color
@@ -521,14 +667,38 @@ func handleModifyPT(r *effectResolver, prim game.ModifyPT) effectResolved {
 
 func handleTap(r *effectResolver, prim game.Tap) effectResolved {
 	res := effectResolved{accepted: true}
-	if prim.Group.Valid() {
-		res.succeeded = setPermanentsTappedSimultaneously(r.game, r.groupPermanents(prim.Group), true)
+	targets := r.resolveObjectGroup(prim.Object, prim.Group)
+	if !targets.single {
+		res.succeeded = setPermanentsTappedSimultaneously(r.game, targets.permanents, true)
 		return res
 	}
-	if permanent, ok := r.resolveObject(prim.Object); ok {
-		setPermanentTapped(r.game, permanent, true)
+	if targets.resolved {
+		setPermanentTapped(r.game, targets.permanents[0], true)
 		res.succeeded = true
 	}
+	return res
+}
+
+func handleTapOrUntap(r *effectResolver, prim game.TapOrUntap) effectResolved {
+	res := effectResolved{accepted: true}
+	permanent, ok := r.resolveObject(prim.Object)
+	if !ok {
+		return res
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:   game.ChoiceResolution,
+		Player: r.obj.Controller,
+		Prompt: "Tap or untap the permanent?",
+		Options: []game.ChoiceOption{
+			{Index: 0, Label: "Tap"},
+			{Index: 1, Label: "Untap"},
+		},
+		MinChoices: 1,
+		MaxChoices: 1,
+	}, r.log)
+	tap := len(selected) != 1 || selected[0] != 1
+	setPermanentTapped(r.game, permanent, tap)
+	res.succeeded = true
 	return res
 }
 
@@ -545,8 +715,19 @@ func handleSetClassLevel(r *effectResolver, prim game.SetClassLevel) effectResol
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	permanent, ok := r.resolveObject(prim.Object)
 	if ok && res.amount > permanent.ClassLevel {
+		previous := permanent.ClassLevel
 		permanent.ClassLevel = res.amount
 		res.succeeded = true
+		for level := previous + 1; level <= res.amount; level++ {
+			emitEvent(r.game, game.Event{
+				Kind:           game.EventClassLevelGained,
+				SourceObjectID: permanent.ObjectID,
+				PermanentID:    permanent.ObjectID,
+				SourceID:       permanent.CardInstanceID,
+				Controller:     effectiveController(r.game, permanent),
+				Amount:         level,
+			})
+		}
 	}
 	return res
 }
@@ -577,6 +758,28 @@ func handleRenown(r *effectResolver, prim game.Renown) effectResolved {
 	return res
 }
 
+func handleAdapt(r *effectResolver, prim game.Adapt) effectResolved {
+	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	permanent, ok := r.resolveObject(prim.Object)
+	if ok && permanent.Counters.Get(counter.PlusOnePlusOne) == 0 {
+		if res.amount > 0 {
+			addCountersToPermanentControlledBy(r.game, stackObjectController(r.obj), permanent, counter.PlusOnePlusOne, res.amount)
+		}
+		res.succeeded = true
+	}
+	return res
+}
+
+func handleBecomeSaddled(r *effectResolver, prim game.BecomeSaddled) effectResolved {
+	res := effectResolved{accepted: true}
+	permanent, ok := r.resolveObject(prim.Object)
+	if ok && !permanent.Saddled {
+		permanent.Saddled = true
+		res.succeeded = true
+	}
+	return res
+}
+
 func handlePay(r *effectResolver, prim game.Pay) effectResolved {
 	payment := prim.Payment
 	if payment.Prompt == "" {
@@ -584,6 +787,31 @@ func handlePay(r *effectResolver, prim game.Pay) effectResolved {
 	}
 	accepted, succeeded := r.engine.resolveResolutionPaymentValue(r.game, r.obj, &payment, r.agents, r.log)
 	return effectResolved{accepted: accepted, succeeded: succeeded}
+}
+
+// maxResolutionPayRepeatCount bounds how many times a PayRepeatedly cost may be
+// paid in one resolution, matching the Multikicker enumeration cap so a free or
+// fully-affordable cost cannot iterate without limit.
+const maxResolutionPayRepeatCount = 20
+
+func handlePayRepeatedly(r *effectResolver, prim game.PayRepeatedly) effectResolved {
+	count := 0
+	for count < maxResolutionPayRepeatCount {
+		payment := prim.Payment
+		if payment.Prompt == "" {
+			payment.Prompt = prim.Prompt
+		}
+		accepted, succeeded := r.engine.resolveResolutionPaymentValue(r.game, r.obj, &payment, r.agents, r.log)
+		if !accepted || !succeeded {
+			break
+		}
+		count++
+	}
+	rememberResolutionChoice(r.obj, string(prim.PublishCount), game.ResolutionChoiceResult{
+		Kind:   game.ResolutionChoiceNumber,
+		Number: count,
+	})
+	return effectResolved{accepted: true, succeeded: count > 0, amount: count}
 }
 
 func handleChoose(r *effectResolver, prim game.Choose) effectResolved {
@@ -699,6 +927,39 @@ func handleUntap(r *effectResolver, prim game.Untap) effectResolved {
 	return res
 }
 
+// chooseOneGroupPermanent prompts the resolving controller to choose exactly one
+// permanent from the group ("a creature you control"). It returns false when the
+// group has no member.
+func (r *effectResolver) chooseOneGroupPermanent(group game.GroupReference) (*game.Permanent, bool) {
+	candidates := r.groupPermanents(group)
+	if len(candidates) == 0 {
+		return nil, false
+	}
+	options := make([]game.ChoiceOption, len(candidates))
+	for i, permanent := range candidates {
+		options[i] = game.ChoiceOption{
+			Index: i,
+			Label: permanentChoiceLabel(r.game, permanent),
+			Card:  permanentChoiceInfo(r.game, permanent),
+		}
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           r.obj.Controller,
+		Prompt:           "Choose a permanent",
+		Options:          options,
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: firstChoiceIndices(1),
+	}, r.log)
+	for _, idx := range selected {
+		if idx >= 0 && idx < len(candidates) {
+			return candidates[idx], true
+		}
+	}
+	return nil, false
+}
+
 func (r *effectResolver) chooseUntapPermanents(prim game.Untap) []*game.Permanent {
 	amount := r.quantity(prim.Amount)
 	if amount <= 0 {
@@ -739,6 +1000,15 @@ func handleSkipNextUntap(r *effectResolver, prim game.SkipNextUntap) effectResol
 	res := effectResolved{accepted: true}
 	if permanent, ok := r.resolveObject(prim.Object); ok {
 		permanent.Exerted = true
+		res.succeeded = true
+	}
+	return res
+}
+
+func handleRemoveFromCombat(r *effectResolver, prim game.RemoveFromCombat) effectResolved {
+	res := effectResolved{accepted: true}
+	if permanent, ok := r.resolveObject(prim.Object); ok {
+		removePermanentFromCombat(r.game, permanent.ObjectID)
 		res.succeeded = true
 	}
 	return res
@@ -793,7 +1063,15 @@ func handleRemoveCounter(r *effectResolver, prim game.RemoveCounter) effectResol
 		return res
 	}
 	if permanent, ok := r.resolveObject(prim.Object); ok {
-		permanent.Counters.Remove(prim.CounterKind, res.amount)
+		kind := prim.CounterKind
+		if prim.ChooseKind {
+			chosen, ok := r.chooseCounterKindToMove(permanent.Counters)
+			if !ok {
+				return res
+			}
+			kind = chosen
+		}
+		permanent.Counters.Remove(kind, res.amount)
 		res.succeeded = true
 	}
 	return res
@@ -801,12 +1079,7 @@ func handleRemoveCounter(r *effectResolver, prim game.RemoveCounter) effectResol
 
 func handlePhaseOut(r *effectResolver, prim game.PhaseOut) effectResolved {
 	res := effectResolved{accepted: true}
-	var roots []*game.Permanent
-	if prim.Group.Valid() {
-		roots = append(roots, r.groupPermanents(prim.Group)...)
-	} else if permanent, ok := r.resolveObject(prim.Object); ok {
-		roots = append(roots, permanent)
-	}
+	roots := r.resolveObjectGroup(prim.Object, prim.Group).permanents
 	phaseOutRoots := make([]phaseOutRoot, 0, len(roots))
 	for _, permanent := range roots {
 		phaseOutRoots = append(phaseOutRoots, phaseOutRoot{
@@ -940,6 +1213,15 @@ func collectPhaseOutPermanentTree(
 
 func handleRegenerate(r *effectResolver, prim game.Regenerate) effectResolved {
 	res := effectResolved{accepted: true}
+	if prim.Group.Valid() {
+		permanents := r.groupPermanents(prim.Group)
+		for _, permanent := range permanents {
+			permanent.RegenerationShields++
+		}
+		res.succeeded = len(permanents) > 0
+		res.amount = len(permanents)
+		return res
+	}
 	if permanent, ok := r.resolveObject(prim.Object); ok {
 		permanent.RegenerationShields++
 		res.succeeded = true
@@ -1072,6 +1354,24 @@ func handleSkipStep(r *effectResolver, prim game.SkipStep) effectResolved {
 	return res
 }
 
+func handleAddExtraPhases(r *effectResolver, prim game.AddExtraPhases) effectResolved {
+	if prim.Combat {
+		r.game.Turn.ExtraPhases = append(r.game.Turn.ExtraPhases, game.PhaseCombat)
+	}
+	if prim.Main {
+		r.game.Turn.ExtraPhases = append(r.game.Turn.ExtraPhases, game.PhasePostcombatMain)
+	}
+	return effectResolved{accepted: true, succeeded: true}
+}
+
+func handleRollDie(r *effectResolver, prim game.RollDie) effectResolved {
+	if prim.Sides < 2 {
+		return effectResolved{accepted: true, succeeded: false}
+	}
+	roll := r.engine.rng.IntN(prim.Sides) + 1
+	return effectResolved{accepted: true, succeeded: true, amount: roll}
+}
+
 func handleCreateEmblem(r *effectResolver, prim game.CreateEmblem) effectResolved {
 	r.game.Emblems = append(r.game.Emblems, game.Emblem{
 		Owner:     r.obj.Controller,
@@ -1093,8 +1393,40 @@ func handleCreateReplacement(r *effectResolver, prim game.CreateReplacement) eff
 	if prim.Duration != game.DurationPermanent {
 		replacement.Duration = prim.Duration
 	}
+	if prim.Object.Kind() == game.ObjectReferenceEventStackObject {
+		cardID, ok := triggeringSpellCardID(r, prim.Object)
+		if !ok {
+			return effectResolved{accepted: true, succeeded: false}
+		}
+		replacement.AffectedCardID = cardID
+	} else if prim.Object.Kind() != game.ObjectReferenceNone {
+		permanent, ok := r.resolveObject(prim.Object)
+		if !ok || permanent == nil {
+			return effectResolved{accepted: true, succeeded: false}
+		}
+		replacement.AffectedObjectID = permanent.ObjectID
+	}
 	r.game.ReplacementEffects = append(r.game.ReplacementEffects, replacement)
 	return effectResolved{accepted: true, succeeded: true}
+}
+
+// triggeringSpellCardID resolves the stable card instance ID of the spell named
+// by an event-stack-object reference ("that creature"/"that spell") on a
+// spell-cast trigger. A future-cast enters-with-counters replacement binds to
+// this card ID rather than an object ID because a permanent spell gains a fresh
+// object ID as it resolves onto the battlefield, so only the preserved card
+// instance ID identifies the entering permanent. It fails closed when the
+// reference does not denote a card-backed spell still on the stack.
+func triggeringSpellCardID(r *effectResolver, ref game.ObjectReference) (id.ID, bool) {
+	stackObjectID, ok := copyStackObjectSourceID(r.obj, ref)
+	if !ok {
+		return 0, false
+	}
+	stackObject, ok := stackObjectByID(r.game, stackObjectID)
+	if !ok || stackObject.Kind != game.StackSpell || stackObject.SourceID == 0 {
+		return 0, false
+	}
+	return stackObject.SourceID, true
 }
 
 func applyTypedContinuousEffects(g *game.Game, obj *game.StackObject, permanent *game.Permanent, templates []game.ContinuousEffect, duration game.EffectDuration) bool {
@@ -1160,13 +1492,23 @@ func applyTypedContinuousEffects(g *game.Game, obj *game.StackObject, permanent 
 }
 
 // snapshotContinuousX locks a one-shot continuous effect's dynamic power and
-// toughness deltas to fixed values at resolution. A mass pump such as
-// "Creatures you control get +X/+X until end of turn, where X is the number of
-// creatures you control." computes X once when the spell or ability resolves,
-// so every dynamic delta kind (the spell's X, a battlefield count, a greatest
-// characteristic, …) is evaluated here and frozen rather than re-evaluated each
-// time the continuous effect applies.
+// toughness deltas and dynamic base-P/T sets to fixed values at resolution. A
+// mass pump such as "Creatures you control get +X/+X until end of turn, where X
+// is the number of creatures you control." computes X once when the spell or
+// ability resolves, and a base-P/T set such as Mirror Entity's "creatures you
+// control have base power and toughness X/X until end of turn" likewise locks X
+// to the cost paid. Every dynamic kind (the spell or ability's X, a battlefield
+// count, a greatest characteristic, …) is evaluated here and frozen rather than
+// re-evaluated each time the continuous effect applies.
 func snapshotContinuousX(g *game.Game, obj *game.StackObject, effect *game.ContinuousEffect) {
+	if effect.SetPowerDynamic.Exists {
+		effect.SetPower = opt.Val(game.PT{Value: dynamicAmountValue(g, obj, obj.Controller, effect.SetPowerDynamic.Val)})
+		effect.SetPowerDynamic.Exists = false
+	}
+	if effect.SetToughnessDynamic.Exists {
+		effect.SetToughness = opt.Val(game.PT{Value: dynamicAmountValue(g, obj, obj.Controller, effect.SetToughnessDynamic.Val)})
+		effect.SetToughnessDynamic.Exists = false
+	}
 	if effect.PowerDeltaDynamic.Exists {
 		effect.PowerDelta += dynamicAmountValue(g, obj, obj.Controller, effect.PowerDeltaDynamic.Val)
 		effect.PowerDeltaDynamic.Exists = false

@@ -89,6 +89,7 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 		FromZone:       zone.Exile,
 		ToZone:         zone.Stack,
 	})
+	stackObj.ColorsOfManaSpentToCast = distinctManaColorsSpent(poolSpent)
 	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, poolSpent, spellDef, stackObj)
 	return true
 }

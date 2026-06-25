@@ -1,0 +1,49 @@
+package g
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// Giant Growth
+//
+// Type: Instant
+//
+// Oracle text:
+//
+//	Target creature gets +3/+3 until end of turn.
+var GiantGrowth = newGiantGrowth()
+
+func newGiantGrowth() *game.CardDef {
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:  "Giant Growth",
+			Types: []types.Card{types.Instant},
+			SpellAbility: opt.Val(game.Mode{
+				Targets: []game.TargetSpec{
+					game.TargetSpec{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Constraint: "target creature",
+						Allow:      game.TargetAllowPermanent,
+						Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
+					},
+				},
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.ModifyPT{
+							Object:         game.TargetPermanentReference(0),
+							PowerDelta:     game.Fixed(3),
+							ToughnessDelta: game.Fixed(3),
+							Duration:       game.DurationUntilEndOfTurn,
+						},
+					},
+				},
+			}.Ability()),
+			OracleText: `
+			Target creature gets +3/+3 until end of turn.
+		`,
+		},
+	}
+}

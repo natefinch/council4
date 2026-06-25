@@ -27,7 +27,7 @@ func TestCommanderModalBonusIsChosenAtCastTime(t *testing.T) {
 						MinTargets: 1,
 						MaxTargets: 1,
 						Allow:      game.TargetAllowPlayer,
-						Predicate:  game.TargetPredicate{Player: game.PlayerOpponent},
+						Selection:  opt.Val(game.Selection{Player: game.PlayerOpponent}),
 					}},
 					Sequence: []game.Instruction{{Primitive: game.AddMana{
 						Amount: game.Dynamic(game.DynamicAmount{

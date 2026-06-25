@@ -115,192 +115,56 @@ func newParityBoard(t *testing.T) parityBoard {
 	return board
 }
 
-// referenceStructuredPredicateMatches reproduces the legacy combination of
-// structuredPermanentPredicateMatches, permanentControllerMatchesSpec, and the
-// "Another" source exclusion that permanentTargetMatchesSpec performed before
-// the shared Selection matcher subsumed them.
-func referenceStructuredPredicateMatches(g *game.Game, controller game.PlayerID, sourceObjectID id.ID, pred game.TargetPredicate, permanent *game.Permanent) bool {
-	if len(pred.PermanentTypes) > 0 && !slices.ContainsFunc(pred.PermanentTypes, func(cardType types.Card) bool {
-		return permanentHasType(g, permanent, cardType)
-	}) {
-		return false
-	}
-	if slices.ContainsFunc(pred.ExcludedTypes, func(cardType types.Card) bool {
-		return permanentHasType(g, permanent, cardType)
-	}) {
-		return false
-	}
-	colors := permanentEffectiveColors(g, permanent)
-	if len(pred.Colors) > 0 && !slices.ContainsFunc(pred.Colors, func(c color.Color) bool {
-		return slices.Contains(colors, c)
-	}) {
-		return false
-	}
-	if slices.ContainsFunc(pred.ExcludedColors, func(c color.Color) bool {
-		return slices.Contains(colors, c)
-	}) {
-		return false
-	}
-	if pred.Tapped == game.TriTrue && !permanent.Tapped {
-		return false
-	}
-	if pred.Tapped == game.TriFalse && permanent.Tapped {
-		return false
-	}
-	if !combatStateMatches(g, permanent, pred.CombatState) {
-		return false
-	}
-	if pred.Keyword != game.KeywordNone && !hasKeyword(g, permanent, pred.Keyword) {
-		return false
-	}
-	if pred.ExcludedKeyword != game.KeywordNone && hasKeyword(g, permanent, pred.ExcludedKeyword) {
-		return false
-	}
-	if pred.ManaValue.Exists {
-		def, ok := permanentCardDef(g, permanent)
-		if !ok || !pred.ManaValue.Val.Matches(def.ManaValue()) {
-			return false
-		}
-	}
-	if pred.Power.Exists && !pred.Power.Val.Matches(effectivePower(g, permanent)) {
-		return false
-	}
-	if pred.Toughness.Exists {
-		toughness, ok := effectiveToughness(g, permanent)
-		if !ok || !pred.Toughness.Val.Matches(toughness) {
-			return false
-		}
-	}
-	permanentController := effectiveController(g, permanent)
-	switch pred.Controller {
-	case game.ControllerYou:
-		if permanentController != controller {
-			return false
-		}
-	case game.ControllerOpponent, game.ControllerNotYou:
-		if permanentController == controller || !isPlayerAlive(g, permanentController) {
-			return false
-		}
-	default:
-	}
-	if pred.Another && sourceObjectID != 0 && permanent.ObjectID == sourceObjectID {
-		return false
-	}
-	return true
-}
-
-// matchTargetPredicate runs a TargetPredicate through the shared matcher exactly
-// as permanentTargetMatchesSpec does.
-func matchTargetPredicate(g *game.Game, controller game.PlayerID, sourceObjectID id.ID, pred game.TargetPredicate, permanent *game.Permanent) bool {
-	sel := pred.Selection()
-	values := effectivePermanentValues(g, permanent)
-	subject := selectionSubject{
-		kind:           subjectPermanent,
-		g:              g,
-		permanent:      permanent,
-		values:         &values,
-		viewer:         controller,
-		sourceObjectID: sourceObjectID,
-		clampPower:     true,
-	}
-	if sel.Controller != game.ControllerAny {
-		subject.controller = effectiveController(g, permanent)
-	}
-	return matchSelection(&subject, &sel)
-}
-
-func TestSharedMatcherTargetPredicateParity(t *testing.T) {
-	board := newParityBoard(t)
-	g := board.g
-	source := board.redFlyerTapped
-
-	predicates := map[string]game.TargetPredicate{
-		"wildcard":          {},
-		"creature":          {PermanentTypes: []types.Card{types.Creature}},
-		"creature-or-art":   {PermanentTypes: []types.Card{types.Creature, types.Artifact}},
-		"excluded-land":     {ExcludedTypes: []types.Card{types.Land}},
-		"excluded-creature": {ExcludedTypes: []types.Card{types.Creature}},
-		"red":               {Colors: []color.Color{color.Red}},
-		"red-or-green":      {Colors: []color.Color{color.Red, color.Green}},
-		"excluded-white":    {ExcludedColors: []color.Color{color.White}},
-		"tapped":            {Tapped: game.TriTrue},
-		"untapped":          {Tapped: game.TriFalse},
-		"flying":            {Keyword: game.Flying},
-		"excluded-flying":   {ExcludedKeyword: game.Flying},
-		"mv-ge-3":           {ManaValue: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 3})},
-		"mv-eq-1":           {ManaValue: opt.Val(compare.Int{Op: compare.Equal, Value: 1})},
-		"power-ge-3":        {Power: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 3})},
-		"power-le-1":        {Power: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 1})},
-		"toughness-ge-4":    {Toughness: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4})},
-		"controller-you":    {Controller: game.ControllerYou},
-		"controller-opp":    {Controller: game.ControllerOpponent},
-		"another":           {Another: true},
-		"another-creature":  {PermanentTypes: []types.Card{types.Creature}, Another: true},
-		"combo-red-flyer":   {PermanentTypes: []types.Card{types.Creature}, Colors: []color.Color{color.Red}, Keyword: game.Flying, Tapped: game.TriTrue, Power: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 2})},
-	}
-
-	for name, pred := range predicates {
-		for _, permanent := range board.all {
-			want := referenceStructuredPredicateMatches(g, game.Player1, source.ObjectID, pred, permanent)
-			got := matchTargetPredicate(g, game.Player1, source.ObjectID, pred, permanent)
-			if got != want {
-				t.Errorf("predicate %q on %s: matcher=%v reference=%v", name, permanentDebugName(g, permanent), got, want)
-			}
-		}
-	}
-}
-
 // referenceConditionFilterMatches reproduces the legacy
-// permanentMatchesConditionFilter per-permanent semantics.
-func referenceConditionFilterMatches(g *game.Game, permanent *game.Permanent, filter game.PermanentFilter, useBase bool) bool {
+// permanentMatchesConditionFilter per-permanent semantics against a Selection.
+func referenceConditionFilterMatches(g *game.Game, permanent *game.Permanent, sel game.Selection, useBase bool) bool {
 	var values permanentEffectiveValues
 	if useBase {
 		values = basePermanentValues(g, permanent)
 	} else {
 		values = effectivePermanentValues(g, permanent)
 	}
-	for _, cardType := range filter.Types {
+	for _, cardType := range sel.RequiredTypes {
 		if !slices.Contains(values.types, cardType) {
 			return false
 		}
 	}
-	for _, supertype := range filter.Supertypes {
+	for _, supertype := range sel.Supertypes {
 		if !slices.Contains(values.supertypes, supertype) {
 			return false
 		}
 	}
-	if len(filter.SubtypesAny) > 0 && !slices.ContainsFunc(filter.SubtypesAny, func(subtype types.Sub) bool {
+	if len(sel.SubtypesAny) > 0 && !slices.ContainsFunc(sel.SubtypesAny, func(subtype types.Sub) bool {
 		return slices.Contains(values.subtypes, subtype)
 	}) {
 		return false
 	}
-	if filter.Power.Exists {
+	if sel.Power.Exists {
 		if useBase {
 			return false
 		}
-		if !values.powerOK || !filter.Power.Val.Matches(values.power) {
+		if !values.powerOK || !sel.Power.Val.Matches(values.power) {
 			return false
 		}
 	}
-	if filter.Toughness.Exists {
+	if sel.Toughness.Exists {
 		if useBase {
 			return false
 		}
-		if !values.toughnessOK || !filter.Toughness.Val.Matches(values.toughness) {
+		if !values.toughnessOK || !sel.Toughness.Val.Matches(values.toughness) {
 			return false
 		}
 	}
 	return true
 }
 
-func matchConditionFilter(g *game.Game, permanent *game.Permanent, filter game.PermanentFilter, useBase bool) bool {
+func matchConditionFilter(g *game.Game, permanent *game.Permanent, sel game.Selection, useBase bool) bool {
 	var values permanentEffectiveValues
 	if useBase {
 		values = basePermanentValues(g, permanent)
 	} else {
 		values = effectivePermanentValues(g, permanent)
 	}
-	sel := filter.Selection()
 	subject := selectionSubject{
 		kind:      subjectPermanent,
 		g:         g,
@@ -316,10 +180,10 @@ func TestSharedMatcherPermanentFilterParity(t *testing.T) {
 	board := newParityBoard(t)
 	g := board.g
 
-	filters := map[string]game.PermanentFilter{
+	filters := map[string]game.Selection{
 		"empty":          {},
-		"creature":       {Types: []types.Card{types.Creature}},
-		"artifact-crea":  {Types: []types.Card{types.Artifact, types.Creature}},
+		"creature":       {RequiredTypes: []types.Card{types.Creature}},
+		"artifact-crea":  {RequiredTypes: []types.Card{types.Artifact, types.Creature}},
 		"snow-super":     {Supertypes: []types.Super{types.Basic}},
 		"forest-subtype": {SubtypesAny: []types.Sub{types.Forest}},
 		"power-ge-3":     {Power: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 3})},
@@ -785,5 +649,19 @@ func TestMatchSelectionAnyCounter(t *testing.T) {
 	}
 	if matchSelectionForPermanent(g, game.Player1, anyCounter, board.redFlyerTapped) {
 		t.Error("a permanent without counters must not match a MatchAnyCounter selection")
+	}
+}
+
+func TestMatchSelectionNoCounters(t *testing.T) {
+	board := newParityBoard(t)
+	g := board.g
+	withCounter := board.whiteCreature
+	withCounter.Counters.Add(counter.Charge, 1)
+	noCounters := game.Selection{MatchNoCounters: true}
+	if matchSelectionForPermanent(g, game.Player1, noCounters, withCounter) {
+		t.Error("a permanent carrying a counter must not match a MatchNoCounters selection")
+	}
+	if !matchSelectionForPermanent(g, game.Player1, noCounters, board.redFlyerTapped) {
+		t.Error("a permanent with no counters should match a MatchNoCounters selection")
 	}
 }

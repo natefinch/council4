@@ -201,7 +201,6 @@ func TestLowerOpponentLandfallControlComparison(t *testing.T) {
 func TestLowerEventHistoryInterveningConditionFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
-		"At the beginning of your upkeep, if you gained 2 or more life this turn, draw a card.",
 		"At the beginning of your upkeep, if no creatures attacked last turn, draw a card.",
 	} {
 		t.Run(oracleText, func(t *testing.T) {
@@ -514,7 +513,7 @@ func TestLowerObjectConditionInvalidSemanticShapesFailClosed(t *testing.T) {
 			Predicate:     compiler.ConditionPredicateObjectMatches,
 			ObjectBinding: compiler.ReferenceBindingAmbiguous,
 			Selection: compiler.ConditionSelection{
-				RequiredTypes: []compiler.ConditionCardType{compiler.ConditionCardTypeCreature},
+				RequiredTypes: []types.Card{types.Creature},
 			},
 		},
 		{
@@ -529,7 +528,7 @@ func TestLowerObjectConditionInvalidSemanticShapesFailClosed(t *testing.T) {
 			Predicate:     compiler.ConditionPredicateObjectExists,
 			ObjectBinding: compiler.ReferenceBindingSource,
 			Selection: compiler.ConditionSelection{
-				RequiredTypes: []compiler.ConditionCardType{compiler.ConditionCardTypeCreature},
+				RequiredTypes: []types.Card{types.Creature},
 			},
 		},
 		{
@@ -538,7 +537,7 @@ func TestLowerObjectConditionInvalidSemanticShapesFailClosed(t *testing.T) {
 			Predicate:     compiler.ConditionPredicateObjectMatches,
 			ObjectBinding: compiler.ReferenceBindingSource,
 			Selection: compiler.ConditionSelection{
-				RequiredTypes: []compiler.ConditionCardType{compiler.ConditionCardTypeCreature},
+				RequiredTypes: []types.Card{types.Creature},
 				Tapped:        compiler.ConditionTriState(99),
 			},
 		},
@@ -592,6 +591,32 @@ func TestRenderGeneratedObjectInterveningConditions(t *testing.T) {
 	}
 }
 
+// TestAttackingControllerInterveningConditionLowers verifies the Mangara combat
+// intervening-if "if two or more of those creatures are attacking you and/or
+// planeswalkers you control" lowers cleanly and renders the typed condition
+// field.
+func TestAttackingControllerInterveningConditionLowers(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Mangara, the Diplomat",
+		Layout:     "normal",
+		TypeLine:   "Legendary Creature — Human Advisor",
+		OracleText: "Lifelink\nWhenever an opponent attacks with creatures, if two or more of those creatures are attacking you and/or planeswalkers you control, draw a card.",
+		ManaCost:   "{2}{W}",
+		Power:      new("1"),
+		Toughness:  new("4"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Aggregate: game.AggregateAttackersAttackingController, Op: compare.GreaterOrEqual, Value: 2") {
+		t.Fatalf("source missing attackers-attacking-controller aggregate:\n%s", source)
+	}
+}
+
 func TestTargetLoweringFollowsTypedMeaningNotText(t *testing.T) {
 	t.Parallel()
 	permanent, ok := permanentTargetSpec(compiler.CompiledTarget{
@@ -605,8 +630,8 @@ func TestTargetLoweringFollowsTypedMeaningNotText(t *testing.T) {
 	})
 	if !ok ||
 		permanent.Allow != game.TargetAllowPermanent ||
-		permanent.Predicate.Controller != game.ControllerOpponent ||
-		!slices.Equal(permanent.Predicate.PermanentTypes, []types.Card{types.Creature}) {
+		permanent.Selection.Val.Controller != game.ControllerOpponent ||
+		!slices.Equal(permanent.Selection.Val.RequiredTypesAny, []types.Card{types.Creature}) {
 		t.Fatalf("permanent target = %#v, %v", permanent, ok)
 	}
 	if _, ok := permanentTargetSpec(compiler.CompiledTarget{
@@ -644,7 +669,7 @@ func TestTargetLoweringFollowsTypedMeaningNotText(t *testing.T) {
 		Exact:       true,
 		Selector:    compiler.CompiledSelector{Kind: compiler.SelectorOpponent},
 	})
-	if !ok || player.Predicate.Player != game.PlayerOpponent {
+	if !ok || player.Selection.Val.Player != game.PlayerOpponent {
 		t.Fatalf("player target = %#v, %v", player, ok)
 	}
 }

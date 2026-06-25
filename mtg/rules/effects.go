@@ -117,6 +117,11 @@ func spellHasKicker(card *game.CardDef) bool {
 	return ok
 }
 
+func spellHasMultikicker(card *game.CardDef) bool {
+	kicker, ok := spellKicker(card)
+	return ok && kicker.Multi
+}
+
 func spellKicker(card *game.CardDef) (game.KickerKeyword, bool) {
 	if card == nil {
 		return game.KickerKeyword{}, false
@@ -366,6 +371,7 @@ func registerPermanentReplacementEffects(g *game.Game, permanent *game.Permanent
 			!replacement.EntersTappedOthers &&
 			!replacement.EntersWithCountersOthers &&
 			replacement.DrawCardMultiplier <= 1 &&
+			replacement.DrawCardDigLook <= 0 &&
 			!replacement.DrawFromEmptyLibraryWins &&
 			!replacement.ContinuousZoneRedirect {
 			continue
@@ -376,6 +382,9 @@ func registerPermanentReplacementEffects(g *game.Game, permanent *game.Permanent
 		replacement.Controller = effectiveController(g, permanent)
 		replacement.Duration = game.DurationPermanent
 		replacement.CreatedTurn = g.Turn.TurnNumber
+		if replacement.CounterRecipientSelf {
+			replacement.AffectedObjectID = permanent.ObjectID
+		}
 		g.ReplacementEffects = append(g.ReplacementEffects, replacement)
 	}
 }

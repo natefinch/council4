@@ -24,6 +24,14 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 	if rendered, ok, err := r.renderEquipRestrictedAbility(ctx, ability); ok {
 		return rendered, err
 	}
+	if manaCost, ok := game.ActivatedBodyReconfigureCost(ability); ok &&
+		reflect.DeepEqual(*ability, game.ReconfigureActivatedAbility(manaCost)) {
+		renderedCost, err := r.renderManaCost(ctx, manaCost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.ReconfigureActivatedAbility(%s)", renderedCost), nil
+	}
 	if manaCost, ok := game.ActivatedBodyCyclingCost(ability); ok &&
 		reflect.DeepEqual(*ability, game.CyclingActivatedAbility(manaCost)) {
 		renderedCost, err := r.renderManaCost(ctx, manaCost)
@@ -48,6 +56,14 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 		}
 		return fmt.Sprintf("game.UnearthActivatedAbility(%s)", renderedCost), nil
 	}
+	if power, ok := game.ActivatedBodySaddlePower(ability); ok &&
+		reflect.DeepEqual(*ability, game.SaddleActivatedAbility(power)) {
+		return fmt.Sprintf("game.SaddleActivatedAbility(%d)", power), nil
+	}
+	if power, ok := game.ActivatedBodyCrewPower(ability); ok &&
+		reflect.DeepEqual(*ability, game.CrewActivatedAbility(power)) {
+		return fmt.Sprintf("game.CrewActivatedAbility(%d)", power), nil
+	}
 	if manaCost, subtypes, ok := game.ActivatedBodyEternalizeParams(ability); ok &&
 		reflect.DeepEqual(*ability, game.EternalizeActivatedBody(manaCost, subtypes...)) {
 		return r.renderEternalizeFamilyAbility(ctx, "game.EternalizeActivatedBody", manaCost, subtypes)
@@ -58,6 +74,7 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 	}
 
 	var fields []string
+	fields = append(fields, fmt.Sprintf("Text: %s,", renderText(ability.Text)))
 	if ability.ManaCost.Exists {
 		ctx.need(importOpt)
 		manaCostLit, err := r.renderManaCost(ctx, ability.ManaCost.Val)
@@ -163,8 +180,12 @@ func equipRestrictionTypes(ability *game.ActivatedAbility) ([]types.Super, []typ
 	if len(ability.Content.Modes) != 1 || len(ability.Content.Modes[0].Targets) != 1 {
 		return nil, nil, false
 	}
-	predicate := ability.Content.Modes[0].Targets[0].Predicate
-	return predicate.Supertypes, predicate.Subtypes, true
+	target := ability.Content.Modes[0].Targets[0]
+	if !target.Selection.Exists {
+		return nil, nil, false
+	}
+	selection := target.Selection.Val
+	return selection.Supertypes, selection.SubtypesAny, true
 }
 
 func renderSupertypeSlice(ctx *renderCtx, supertypes []types.Super) (string, error) {
@@ -450,6 +471,12 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 			return fmt.Sprintf("game.FabricateTriggeredAbility(%d)", fabricate.Count), nil
 		}
 	}
+	if keyword, ok := game.BodyKeywordAbility(ability, game.Hideaway); ok {
+		if hideaway, ok := keyword.(game.HideawayKeyword); ok &&
+			reflect.DeepEqual(*ability, game.HideawayTriggeredAbility(hideaway.Amount)) {
+			return fmt.Sprintf("game.HideawayTriggeredAbility(%d)", hideaway.Amount), nil
+		}
+	}
 	if keyword, ok := game.BodyKeywordAbility(ability, game.Soulshift); ok {
 		if soulshift, ok := keyword.(game.SoulshiftKeyword); ok &&
 			reflect.DeepEqual(*ability, game.SoulshiftTriggeredAbility(soulshift.Count)) {
@@ -471,11 +498,20 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 	if reflect.DeepEqual(*ability, game.DethroneTriggeredBody) {
 		return "game.DethroneTriggeredBody", nil
 	}
+	if reflect.DeepEqual(*ability, game.StartEnginesTriggeredBody) {
+		return "game.StartEnginesTriggeredBody", nil
+	}
 	if reflect.DeepEqual(*ability, game.FlankingTriggeredBody) {
 		return "game.FlankingTriggeredBody", nil
 	}
+	if reflect.DeepEqual(*ability, game.TrainingTriggeredBody) {
+		return "game.TrainingTriggeredBody", nil
+	}
 	if reflect.DeepEqual(*ability, game.LivingWeaponTriggeredAbility()) {
 		return "game.LivingWeaponTriggeredAbility()", nil
+	}
+	if reflect.DeepEqual(*ability, game.EvokeSacrificeTriggeredAbility()) {
+		return "game.EvokeSacrificeTriggeredAbility()", nil
 	}
 	var fields []string
 	trigger, err := r.renderTriggerCondition(ctx, &ability.Trigger)
@@ -562,6 +598,9 @@ func (r Renderer) renderTriggerCondition(ctx *renderCtx, trigger *game.TriggerCo
 	if trigger.InterveningIfEventPermanentWasCast {
 		fields = append(fields, "InterveningIfEventPermanentWasCast: true,")
 	}
+	if trigger.InterveningIfEventPermanentWasEvoked {
+		fields = append(fields, "InterveningIfEventPermanentWasEvoked: true,")
+	}
 	if trigger.InterveningIfEventPermanentWasCastByController {
 		fields = append(fields, "InterveningIfEventPermanentWasCastByController: true,")
 	}
@@ -574,7 +613,7 @@ func (r Renderer) renderTriggerCondition(ctx *renderCtx, trigger *game.TriggerCo
 	return structLit("game.TriggerCondition", fields), nil
 }
 
-func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPattern) (string, error) {
+func (r Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPattern) (string, error) {
 	if (pattern.Event == game.EventBeginningOfStep) != (pattern.Step != game.StepNone) {
 		return "", errors.New("render: beginning-of-step trigger pattern must set exactly one supported step")
 	}
@@ -582,16 +621,19 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 	allowFromZone := pattern.MatchFromZone &&
 		(pattern.Event == game.EventSpellCast || pattern.Event == game.EventPermanentEnteredBattlefield || allowZoneChangeZones) &&
 		!pattern.MatchToZone
+	allowExcludeFromZone := pattern.ExcludeFromZone &&
+		(pattern.Event == game.EventSpellCast || allowZoneChangeZones)
 	if len(pattern.RequireCardTypes) != 0 ||
 		len(pattern.ExcludeCardTypes) != 0 ||
 		(pattern.MatchFromZone && !allowFromZone && !allowZoneChangeZones) ||
 		(pattern.MatchToZone && !allowZoneChangeZones) ||
 		(pattern.ExcludeToZone && !allowZoneChangeZones) ||
 		(pattern.MatchToZone && pattern.ExcludeToZone) ||
+		(pattern.ExcludeFromZone && !allowExcludeFromZone) ||
+		(pattern.MatchFromZone && pattern.ExcludeFromZone) ||
 		pattern.DamageRecipientCombatState != game.CombatStateAny ||
-		pattern.SpellTargetsSource ||
-		pattern.SpellTargetAllow != game.TargetAllowUnspecified ||
-		pattern.SpellTargetPattern.Exists ||
+		(pattern.SpellTargetsSource && pattern.Event != game.EventSpellCast) ||
+		((pattern.SpellTargetAllow != game.TargetAllowUnspecified || pattern.SpellTargetPattern.Exists) && pattern.Event != game.EventSpellCast) ||
 		(pattern.RequireKickerPaid && pattern.Event != game.EventSpellCast) ||
 		(pattern.RequireHistoric && pattern.Event != game.EventSpellCast) ||
 		(pattern.MatchSpellCopy && pattern.Event != game.EventSpellCast) ||
@@ -600,6 +642,8 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		(pattern.Event == game.EventAbilityActivated && !pattern.ExcludeManaAbility) ||
 		(pattern.PlayerEventOrdinalThisTurn > 0 &&
 			pattern.Event != game.EventCardDrawn &&
+			pattern.Event != game.EventCardDiscarded &&
+			pattern.Event != game.EventCycled &&
 			pattern.Event != game.EventLifeGained &&
 			pattern.Event != game.EventLifeLost &&
 			pattern.Event != game.EventScry &&
@@ -607,8 +651,12 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 			pattern.Event != game.EventSpellCast) ||
 		(pattern.RequireCombatDamage && pattern.RequireNonCombatDamage) ||
 		(pattern.AttackAlone && pattern.Event != game.EventAttackerDeclared) ||
+		(pattern.AttackWhileSaddled && pattern.Event != game.EventAttackerDeclared) ||
+		(pattern.ExcludeFirstDrawInDrawStep && pattern.Event != game.EventCardDrawn) ||
+		(pattern.ClassBecameLevel > 0 && pattern.Event != game.EventClassLevelGained) ||
 		(pattern.AttackerCountAtLeast != 0 &&
-			(pattern.Event != game.EventAttackerDeclared || !pattern.OneOrMore || pattern.AttackAlone || pattern.AttackerCountAtLeast < 2)) {
+			(pattern.Event != game.EventAttackerDeclared || pattern.AttackAlone || pattern.AttackerCountAtLeast < 2 ||
+				(!pattern.OneOrMore && pattern.Source != game.TriggerSourceSelf))) {
 		return "", errors.New("render: unsupported trigger pattern fields")
 	}
 	if err := validateTriggerPatternCardSelection(pattern); err != nil {
@@ -639,6 +687,17 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		return "", err
 	}
 	fields = append(fields, selectionFields...)
+	if pattern.SpellTargetAllow != game.TargetAllowUnspecified {
+		fields = append(fields, fmt.Sprintf("SpellTargetAllow: %s,", renderTargetAllow(pattern.SpellTargetAllow)))
+	}
+	if pattern.SpellTargetPattern.Exists {
+		lit, err := r.renderSelection(ctx, pattern.SpellTargetPattern.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("SpellTargetPattern: opt.Val(%s),", lit))
+	}
 	return structLit("game.TriggerPattern", fields), nil
 }
 
@@ -709,8 +768,26 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 	if pattern.MatchSpellCopy {
 		fields = append(fields, "MatchSpellCopy: true,")
 	}
+	if pattern.SpellTargetsSource {
+		fields = append(fields, "SpellTargetsSource: true,")
+	}
+	if pattern.CastDuringTurn != game.TriggerTurnAny {
+		relation, err := renderTriggerTurnRelation(pattern.CastDuringTurn)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("CastDuringTurn: %s,", relation))
+	}
 	if pattern.RequireTappedForMana {
 		fields = append(fields, "RequireTappedForMana: true,")
+	}
+	if pattern.RequireProducedManaColor != "" {
+		colorLiteral, err := renderManaColor(pattern.RequireProducedManaColor)
+		if err != nil {
+			return nil, err
+		}
+		ctx.need(importMana)
+		fields = append(fields, fmt.Sprintf("RequireProducedManaColor: %s,", colorLiteral))
 	}
 	if pattern.UnionEvent != game.EventUnknown {
 		unionEvent, err := renderEventKind(pattern.UnionEvent)
@@ -724,6 +801,12 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 	}
 	if pattern.PlayerEventOrdinalThisTurn > 0 {
 		fields = append(fields, fmt.Sprintf("PlayerEventOrdinalThisTurn: %d,", pattern.PlayerEventOrdinalThisTurn))
+	}
+	if pattern.ExcludeFirstDrawInDrawStep {
+		fields = append(fields, "ExcludeFirstDrawInDrawStep: true,")
+	}
+	if pattern.ClassBecameLevel > 0 {
+		fields = append(fields, fmt.Sprintf("ClassBecameLevel: %d,", pattern.ClassBecameLevel))
 	}
 	if pattern.MatchStackObjectKind {
 		stackObjectKind, err := renderStackObjectKind(pattern.StackObjectKind)
@@ -757,6 +840,9 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 	}
 	if pattern.AttackAlone {
 		fields = append(fields, "AttackAlone: true,")
+	}
+	if pattern.AttackWhileSaddled {
+		fields = append(fields, "AttackWhileSaddled: true,")
 	}
 	if pattern.AttackerCountAtLeast != 0 {
 		fields = append(fields, fmt.Sprintf("AttackerCountAtLeast: %d,", pattern.AttackerCountAtLeast))
@@ -853,6 +939,14 @@ func renderTriggerPatternZoneFields(ctx *renderCtx, pattern *game.TriggerPattern
 		ctx.need(importZone)
 		fields = append(fields, "MatchFromZone: true,", fmt.Sprintf("FromZone: %s,", fromZone))
 	}
+	if pattern.ExcludeFromZone {
+		fromZone, err := renderZone(pattern.FromZone)
+		if err != nil {
+			return nil, err
+		}
+		ctx.need(importZone)
+		fields = append(fields, "ExcludeFromZone: true,", fmt.Sprintf("FromZone: %s,", fromZone))
+	}
 	if pattern.MatchToZone {
 		toZone, err := renderZone(pattern.ToZone)
 		if err != nil {
@@ -885,18 +979,30 @@ func renderStackObjectKind(kind game.StackObjectKind) (string, error) {
 	}
 }
 
+func renderTriggerTurnRelation(relation game.TriggerTurnRelation) (string, error) {
+	switch relation {
+	case game.TriggerTurnYours:
+		return "game.TriggerTurnYours", nil
+	case game.TriggerTurnNotYours:
+		return "game.TriggerTurnNotYours", nil
+	default:
+		return "", fmt.Errorf("render: unsupported trigger turn relation %d", relation)
+	}
+}
+
 // validateTriggerPatternCardSelection validates CardSelection constraints for a
 // TriggerPattern and returns an error if they are unsupported. Spell-cast
-// triggers read full card characteristics from the event, while discard
-// triggers can only filter the discarded card's types (CR 603.2).
+// triggers read full card characteristics from the event, while draw, discard,
+// and cycle triggers read the moved card's types, supertypes, subtypes, and
+// colors from the moved card instance (CR 603.2).
 func validateTriggerPatternCardSelection(pattern *game.TriggerPattern) error {
 	if pattern.CardSelection.Empty() {
 		return nil
 	}
 	switch pattern.Event {
-	case game.EventSpellCast, game.EventCardDiscarded:
+	case game.EventSpellCast, game.EventCardDiscarded, game.EventCardDrawn, game.EventCycled:
 	default:
-		return errors.New("render: CardSelection is only supported for EventSpellCast and EventCardDiscarded trigger patterns")
+		return errors.New("render: CardSelection is only supported for EventSpellCast, EventCardDiscarded, EventCardDrawn, and EventCycled trigger patterns")
 	}
 	unsupported := pattern.CardSelection
 	unsupported.RequiredTypes = nil
@@ -910,6 +1016,14 @@ func validateTriggerPatternCardSelection(pattern *game.TriggerPattern) error {
 		unsupported.Colorless = false
 		unsupported.Multicolored = false
 		unsupported.ManaValue.Exists = false
+	}
+	if pattern.Event == game.EventCardDiscarded || pattern.Event == game.EventCardDrawn || pattern.Event == game.EventCycled {
+		unsupported.Supertypes = nil
+		unsupported.SubtypesAny = nil
+		unsupported.ExcludedSubtype = ""
+		unsupported.ColorsAny = nil
+		unsupported.Colorless = false
+		unsupported.Multicolored = false
 	}
 	if !unsupported.Empty() {
 		return errors.New("render: unsupported CardSelection fields in trigger pattern")
@@ -972,6 +1086,9 @@ func renderTriggerPatternDamageFields(ctx *renderCtx, pattern *game.TriggerPatte
 			return nil, err
 		}
 		fields = append(fields, fmt.Sprintf("DamageRecipientSelection: %s,", selection))
+	}
+	if pattern.DamageSourceCaptured {
+		fields = append(fields, "DamageSourceCaptured: true,")
 	}
 	return fields, nil
 }

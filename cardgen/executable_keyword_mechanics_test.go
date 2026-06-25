@@ -229,8 +229,7 @@ func TestGenerateExecutableCardSourceBasicLandcycling(t *testing.T) {
 		"Kind:   cost.AdditionalDiscard,",
 		"game.CyclingKeyword{Cost: cost.Mana{cost.O(1)}}",
 		"Primitive: game.Search{",
-		"CardType:    opt.Val(types.Land),",
-		"Supertype:   opt.Val(types.Basic),",
+		"Filter:      game.Selection{RequiredTypes: []types.Card{types.Land}, Supertypes: []types.Super{types.Basic}},",
 		"Reveal:      true,",
 	} {
 		if !strings.Contains(source, wanted) {
@@ -260,7 +259,7 @@ func TestGenerateExecutableCardSourceTypedLandcycling(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"Primitive: game.Search{",
-		"SubtypesAny: []types.Sub{types.Swamp}",
+		`SubtypesAny: []types.Sub{types.Sub("Swamp")}`,
 		"Destination: zone.Hand,",
 	} {
 		if !strings.Contains(source, wanted) {
@@ -383,7 +382,7 @@ func TestGenerateExecutableCardSourceEnchantCreature(t *testing.T) {
 	for _, wanted := range []string{
 		"StaticAbilities: []game.StaticAbility",
 		"game.EnchantStaticAbility(&game.TargetSpec{",
-		"PermanentTypes: []types.Card{types.Creature}",
+		"RequiredTypesAny: []types.Card{types.Creature}",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -409,7 +408,7 @@ func TestGenerateExecutableCardSourceEnchantTypeUnion(t *testing.T) {
 	for _, wanted := range []string{
 		"game.EnchantStaticAbility(&game.TargetSpec{",
 		`Constraint: "artifact or creature"`,
-		"PermanentTypes: []types.Card{types.Artifact, types.Creature}",
+		"RequiredTypesAny: []types.Card{types.Artifact, types.Creature}",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -435,7 +434,60 @@ func TestGenerateExecutableCardSourceEnchantSubtype(t *testing.T) {
 	for _, wanted := range []string{
 		"game.EnchantStaticAbility(&game.TargetSpec{",
 		`Constraint: "equipment"`,
-		`Subtypes: []types.Sub{types.Sub("Equipment")}`,
+		`SubtypesAny: []types.Sub{types.Sub("Equipment")}`,
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceEnchantYouControl(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Aura",
+		Layout:     "normal",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant creature you control",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EnchantStaticAbility(&game.TargetSpec{",
+		`Constraint: "creature you control"`,
+		"RequiredTypesAny: []types.Card{types.Creature}",
+		"Controller: game.ControllerYou",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceEnchantSubtypeYouControl(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Aura",
+		Layout:     "normal",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant Mountain you control",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		`Constraint: "mountain you control"`,
+		`SubtypesAny: []types.Sub{types.Sub("Mountain")}`,
+		"Controller: game.ControllerYou",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -506,13 +558,11 @@ func TestGenerateExecutableCardSourceEnchantMixedUnion(t *testing.T) {
 func TestGenerateExecutableCardSourceEnchantUnsupportedTargets(t *testing.T) {
 	t.Parallel()
 	for _, oracle := range []string{
-		"Enchant creature you control",             // controller qualifier
-		"Enchant artifact or creature you control", // controller-qualified union
-		"Enchant creature or",                      // dangling separator
-		"Enchant artifact creature",                // conjunctive type line, no separator
-		"Enchant nonland permanent",                // negated type qualifier
-		"Enchant creatures",                        // plural form
-		"Enchant instant",                          // non-permanent card type
+		"Enchant creature or",       // dangling separator
+		"Enchant artifact creature", // conjunctive type line, no separator
+		"Enchant nonland permanent", // negated type qualifier
+		"Enchant creatures",         // plural form
+		"Enchant instant",           // non-permanent card type
 	} {
 		card := &ScryfallCard{
 			Name:       "Test Aura",
@@ -845,5 +895,62 @@ func TestGenerateExecutableCardSourceQualifiedLandwalkUnsupported(t *testing.T) 
 	}
 	if len(diagnostics) == 0 {
 		t.Fatal("expected diagnostics for unsupported snow swampwalk, got none")
+	}
+}
+
+func TestGenerateExecutableCardSourceTraining(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Trainee",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Soldier",
+		ManaCost:   "{W}",
+		Power:      new("1"),
+		Toughness:  new("1"),
+		OracleText: "Training (Whenever this creature attacks with another creature with greater power, put a +1/+1 counter on this creature.)",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"TriggeredAbilities: []game.TriggeredAbility",
+		"game.TrainingTriggeredBody",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceSaddle(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Mount",
+		Layout:     "normal",
+		TypeLine:   "Creature — Horse Mount",
+		ManaCost:   "{1}{R}",
+		Power:      new("2"),
+		Toughness:  new("2"),
+		OracleText: "Whenever this creature attacks while saddled, it gets +1/+0 until end of turn.\nSaddle 2 (Tap any number of other creatures you control with total power 2 or more: This Mount becomes saddled until end of turn. Saddle only as a sorcery.)",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"ActivatedAbilities: []game.ActivatedAbility",
+		"game.SaddleActivatedAbility(2)",
+		"AttackWhileSaddled: true,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
 	}
 }

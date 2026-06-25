@@ -18,7 +18,7 @@ func TestDrawFromEmptyLibraryWinsInsteadOfFailing(t *testing.T) {
 	permanent := addCombatPermanent(g, game.Player1, def)
 	registerPermanentReplacementEffects(g, permanent)
 
-	if _, ok := engine.drawCard(g, game.Player1); ok {
+	if _, ok := engine.drawCard(g, game.Player1, false); ok {
 		t.Fatal("drawCard() ok = true, want false for empty library")
 	}
 	if g.FailedDraws[game.Player1] {
@@ -49,7 +49,7 @@ func TestDrawFromEmptyLibraryWinDoesNotHelpOtherPlayers(t *testing.T) {
 	permanent := addCombatPermanent(g, game.Player1, def)
 	registerPermanentReplacementEffects(g, permanent)
 
-	if _, ok := engine.drawCard(g, game.Player2); ok {
+	if _, ok := engine.drawCard(g, game.Player2, false); ok {
 		t.Fatal("drawCard() ok = true, want false for empty library")
 	}
 	if !g.FailedDraws[game.Player2] {

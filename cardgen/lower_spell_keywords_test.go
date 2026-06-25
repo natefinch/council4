@@ -102,6 +102,48 @@ func TestLowerExploreSourcePermanentTrigger(t *testing.T) {
 	}
 }
 
+// TestLowerExploreSourceNameTrigger verifies that the "<name> explores" wording
+// (Astrid Peth's "Astrid Peth explores.") binds the explore subject to the
+// source permanent rather than the triggering event permanent.
+func TestLowerExploreSourceNameTrigger(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Scout",
+		Layout:     "normal",
+		TypeLine:   "Creature — Merfolk Scout",
+		OracleText: "Whenever Test Scout attacks, Test Scout explores.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	explore, ok := mode.Sequence[0].Primitive.(game.Explore)
+	if !ok || explore.Creature != game.SourcePermanentReference() {
+		t.Fatalf("primitive = %+v, want source permanent explores", mode.Sequence[0].Primitive)
+	}
+}
+
+// TestLowerTargetExploreSpell verifies that "Target creature you control
+// explores." lowers to a single-target Explore spell whose subject is the
+// chosen target permanent.
+func TestLowerTargetExploreSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Survey",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		ManaCost:   "{1}{G}",
+		OracleText: "Target creature you control explores.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %d, want 1", len(mode.Targets))
+	}
+	explore, ok := mode.Sequence[0].Primitive.(game.Explore)
+	if !ok || explore.Creature != game.TargetPermanentReference(0) {
+		t.Fatalf("primitive = %+v, want target permanent explores", mode.Sequence[0].Primitive)
+	}
+}
+
 func TestLowerModifyPTEventPermanentTrigger(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -217,13 +259,17 @@ func TestLowerModifyPTEventPermanentFailsClosed(t *testing.T) {
 	}
 }
 
+// TestLowerExploreRejectsUnsupportedTargets pins that the group "each creature
+// you control explores" form (Hakbal) stays fail-closed: the executable backend
+// supports single-source and single-target explore, not a battlefield-group
+// explore.
 func TestLowerExploreRejectsUnsupportedTargets(t *testing.T) {
 	t.Parallel()
 	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
 		Name:       "Test Explore",
 		Layout:     "normal",
 		TypeLine:   "Sorcery",
-		OracleText: "Target creature explores.",
+		OracleText: "Each creature you control explores.",
 	})
 	if len(diagnostics) == 0 {
 		t.Fatal("expected unsupported explore diagnostic")
@@ -428,8 +474,8 @@ func TestLowerTargetFearGrantSpell(t *testing.T) {
 			if len(mode.Targets) != 1 {
 				t.Fatalf("targets = %d, want 1", len(mode.Targets))
 			}
-			if !reflect.DeepEqual(mode.Targets[0].Predicate.Supertypes, tc.wantSupertypes) {
-				t.Fatalf("target supertypes = %v, want %v", mode.Targets[0].Predicate.Supertypes, tc.wantSupertypes)
+			if !reflect.DeepEqual(mode.Targets[0].Selection.Val.Supertypes, tc.wantSupertypes) {
+				t.Fatalf("target supertypes = %v, want %v", mode.Targets[0].Selection.Val.Supertypes, tc.wantSupertypes)
 			}
 			apply, ok := mode.Sequence[0].Primitive.(game.ApplyContinuous)
 			if !ok {
@@ -477,8 +523,8 @@ func TestLowerTargetIntimidateGrantSpell(t *testing.T) {
 			if len(mode.Targets) != 1 {
 				t.Fatalf("targets = %d, want 1", len(mode.Targets))
 			}
-			if !reflect.DeepEqual(mode.Targets[0].Predicate.Supertypes, tc.wantSupertypes) {
-				t.Fatalf("target supertypes = %v, want %v", mode.Targets[0].Predicate.Supertypes, tc.wantSupertypes)
+			if !reflect.DeepEqual(mode.Targets[0].Selection.Val.Supertypes, tc.wantSupertypes) {
+				t.Fatalf("target supertypes = %v, want %v", mode.Targets[0].Selection.Val.Supertypes, tc.wantSupertypes)
 			}
 			apply, ok := mode.Sequence[0].Primitive.(game.ApplyContinuous)
 			if !ok {

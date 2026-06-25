@@ -179,12 +179,12 @@ func TestLowerSemicolonKeywordLineFailsClosedOnUnknownKeyword(t *testing.T) {
 		Name:       "Partial Keyword Tester",
 		Layout:     "normal",
 		TypeLine:   "Creature — Insect",
-		OracleText: "Flying; banding (Any creatures with banding, and up to one without, can block as a group.)",
+		OracleText: "Flying; phasing (This permanent phases in or out before you untap during each of your untap steps.)",
 		Power:      new("1"),
 		Toughness:  new("1"),
 	})
 	if len(diagnostics) == 0 {
-		t.Fatal("expected a fail-closed diagnostic for the unmodeled banding keyword")
+		t.Fatal("expected a fail-closed diagnostic for the unmodeled phasing keyword")
 	}
 	if got := diagnostics[0].Summary; got != "unsupported mixed keyword ability" {
 		t.Fatalf("summary = %q, want unsupported mixed keyword ability", got)
@@ -337,14 +337,14 @@ func TestLowerLandcyclingAbility(t *testing.T) {
 			if search.Spec.Destination != zone.Hand || !search.Spec.Reveal {
 				t.Errorf("spec = %#v, want hand destination with reveal", search.Spec)
 			}
-			if tc.wantCardType && search.Spec.CardType.Val != types.Land {
-				t.Errorf("card type = %v, want land", search.Spec.CardType)
+			if tc.wantCardType && (len(search.Spec.Filter.RequiredTypes) == 0 || search.Spec.Filter.RequiredTypes[0] != types.Land) {
+				t.Errorf("card type = %v, want land", search.Spec.Filter.RequiredTypes)
 			}
-			if tc.wantSupertype && search.Spec.Supertype.Val != types.Basic {
-				t.Errorf("supertype = %v, want basic", search.Spec.Supertype)
+			if tc.wantSupertype && (len(search.Spec.Filter.Supertypes) == 0 || search.Spec.Filter.Supertypes[0] != types.Basic) {
+				t.Errorf("supertype = %v, want basic", search.Spec.Filter.Supertypes)
 			}
-			if tc.wantSubtype != "" && !slices.Contains(search.Spec.SubtypesAny, tc.wantSubtype) {
-				t.Errorf("subtypes = %v, want %v", search.Spec.SubtypesAny, tc.wantSubtype)
+			if tc.wantSubtype != "" && !slices.Contains(search.Spec.Filter.SubtypesAny, tc.wantSubtype) {
+				t.Errorf("subtypes = %v, want %v", search.Spec.Filter.SubtypesAny, tc.wantSubtype)
 			}
 		})
 	}

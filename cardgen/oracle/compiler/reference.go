@@ -39,7 +39,22 @@ func bindReferences(
 
 		if trigger != nil &&
 			(reference.Kind != ReferenceThatPlayer || !triggerPatternBindsThatPlayer(&trigger.Pattern)) &&
+			!thatObjectPrefersEventPermanent(*reference, trigger) &&
 			precedingSourceReferenceAfter(bound[:i], reference.Order, trigger.Order.End) {
+			reference.Binding = ReferenceBindingSource
+			continue
+		}
+		// In a self-source cycle trigger ("When you cycle this card, it deals 1
+		// damage to each opponent.", CR 702.29e) the cycled card is the ability's
+		// own source, so the object pronoun "it"/"that card" in the body names
+		// the source. This is scoped to the self-source cycle event, which has no
+		// event permanent of its own, so it never reinterprets other triggers.
+		if trigger != nil &&
+			trigger.Pattern.Source == TriggerSourceSelf &&
+			trigger.Pattern.Event == TriggerEventCycled &&
+			reference.Order.Start >= trigger.Order.Start &&
+			(reference.Kind == ReferenceThatObject ||
+				(reference.Kind == ReferencePronoun && reference.Pronoun == ReferencePronounIt)) {
 			reference.Binding = ReferenceBindingSource
 			continue
 		}
@@ -207,8 +222,12 @@ func priorInstructionAntecedent(reference CompiledReference, effects []CompiledE
 	// "That token" / "those tokens" reads as the subject of a following clause
 	// ("That token gains ...") rather than the object of the current one, so the
 	// nearest preceding verb belongs to the antecedent effect itself. When that
-	// effect creates a token, bind the reference straight to it.
-	if effects[current].Kind == EffectCreate && reference.Kind == ReferenceThatObject {
+	// effect creates a token, bind the reference straight to it. A "that
+	// <permanent>" reference contained within the create effect's own clause is
+	// instead that effect's copy source ("create a token that's a copy of that
+	// creature"), not a following subject, so leave it for later binding.
+	if effects[current].Kind == EffectCreate && reference.Kind == ReferenceThatObject &&
+		!effects[current].Order.Contains(reference.Order) {
 		return current, true
 	}
 	prior := -1
@@ -334,6 +353,20 @@ func precedingSourceReferenceAfter(references []CompiledReference, order shared.
 	return false
 }
 
+// thatObjectPrefersEventPermanent reports whether a demonstrative "that
+// <object>" reference should bind to the triggering permanent rather than be
+// captured by the preceding-source heuristic. After a permanent-binding trigger
+// (e.g. "another creature you control enters"), "that creature" names the
+// triggering object, not the source permanent the effect clause also mentions
+// ("this creature deals damage equal to that creature's power"). Letting it fall
+// through to the target and event-permanent bindings keeps the demonstrative
+// pointed at the entering permanent.
+func thatObjectPrefersEventPermanent(reference CompiledReference, trigger *CompiledTrigger) bool {
+	return reference.Kind == ReferenceThatObject &&
+		!trigger.Pattern.OneOrMore &&
+		triggerEventBindsPermanent(trigger.Pattern.Event)
+}
+
 func triggerEventBindsPermanent(event TriggerEvent) bool {
 	switch event {
 	case TriggerEventPermanentEnteredBattlefield,
@@ -350,6 +383,7 @@ func triggerEventBindsPermanent(event TriggerEvent) bool {
 		TriggerEventObjectBecameTarget,
 		TriggerEventPermanentMutated,
 		TriggerEventAttackerBecameBlocked,
+		TriggerEventAttackerBecameUnblocked,
 		TriggerEventTokenCreated:
 		return true
 	default:
@@ -362,11 +396,10 @@ func triggerReferenceBindsEventCard(
 	reference CompiledReference,
 	effects []CompiledEffect,
 ) bool {
-	if trigger.OneOrMore ||
-		(trigger.Event != TriggerEventPermanentDied &&
-			(trigger.Event != TriggerEventZoneChanged ||
-				!trigger.MatchToZone ||
-				trigger.ToZone != TriggerZoneGraveyard)) {
+	if trigger.Event != TriggerEventPermanentDied &&
+		(trigger.Event != TriggerEventZoneChanged ||
+			!trigger.MatchToZone ||
+			(trigger.ToZone != TriggerZoneGraveyard && trigger.ToZone != TriggerZoneExile)) {
 		return false
 	}
 	for i := range effects {
@@ -375,8 +408,19 @@ func triggerReferenceBindsEventCard(
 			continue
 		}
 		switch effect.Kind {
-		case EffectReturn, EffectExile, EffectCast:
+		case EffectPut:
+			// "Put it/them onto the battlefield" reanimates the triggering
+			// card(s); a coalesced one-or-more trigger binds the whole batch.
+			return effect.ToZone == zone.Battlefield
+		case EffectReturn:
+			// "Return them to the battlefield" likewise reanimates the batch;
+			// any other singular return binds the lone event card.
+			if trigger.OneOrMore {
+				return effect.ToZone == zone.Battlefield
+			}
 			return true
+		case EffectExile, EffectCast:
+			return !trigger.OneOrMore
 		default:
 			return false
 		}

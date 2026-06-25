@@ -185,6 +185,9 @@ func lowerTriggeredAbility(
 		)
 	}
 	pattern := ability.Trigger.Pattern
+	if ability.ExactSequence == compiler.ExactSequenceConditionalLookAtTopReveal {
+		return lowerConditionalLookAtTopTrigger(ability)
+	}
 	if pattern.Kind == compiler.TriggerAt {
 		return lowerAtTrigger(cardName, ability, syntax)
 	}
@@ -195,7 +198,8 @@ func lowerTriggeredAbility(
 		return lowerLifeDamageTrigger(cardName, ability, syntax)
 	case compiler.TriggerEventPermanentEnteredBattlefield,
 		compiler.TriggerEventPermanentDied,
-		compiler.TriggerEventZoneChanged:
+		compiler.TriggerEventZoneChanged,
+		compiler.TriggerEventDoorUnlocked:
 		return lowerPermanentZoneChangeTrigger(cardName, ability, syntax)
 	case compiler.TriggerEventSpellCast:
 		return lowerCastTrigger(cardName, ability, syntax)
@@ -214,9 +218,24 @@ func lowerDrawDiscardTrigger(
 ) (game.TriggeredAbility, *shared.Diagnostic) {
 	const summary = "unsupported draw/discard trigger"
 	const effectSummary = "unsupported draw/discard trigger effect"
-	if ability.Trigger == nil || ability.Trigger.Pattern.Kind != compiler.TriggerWhenever {
+	if ability.Trigger == nil {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
+			"the executable source backend requires a semantic trigger pattern")
+	}
+	// Draw and discard triggers are recurring ("Whenever you ..."). The
+	// self-source cycle trigger "When you cycle this card" fires once from the
+	// cycled card itself (CR 702.29e) and is the only one introduced by "When".
+	kind := ability.Trigger.Pattern.Kind
+	selfCycle := ability.Trigger.Pattern.Source == compiler.TriggerSourceSelf &&
+		ability.Trigger.Pattern.Event == compiler.TriggerEventCycled
+	if kind != compiler.TriggerWhenever && (kind != compiler.TriggerWhen || !selfCycle) {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
 			"the executable source backend supports only TriggerWhenever draw and discard triggers")
+	}
+	triggerType, ok := lowerTriggerKind(kind)
+	if !ok {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
+			"the executable source backend does not support this semantic trigger kind")
 	}
 	pattern, ok := lowerTriggerPattern(&ability.Trigger.Pattern)
 	if !ok ||
@@ -241,14 +260,14 @@ func lowerDrawDiscardTrigger(
 			"the executable source backend does not support this draw/discard trigger body")
 	}
 	body, bodySyntax, triggerOptional := prepared.body, prepared.syntax, prepared.optional
-	content, diagnostic := lowerTriggerBodyContent(cardName, body.Content, body.Optional, &bodySyntax, pattern.Event)
+	content, diagnostic := lowerTriggerBodyContent(cardName, body.Content, body.Optional, &bodySyntax, pattern)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}
 	return game.TriggeredAbility{
 		Text: ability.Text,
 		Trigger: game.TriggerCondition{
-			Type:                 game.TriggerWhenever,
+			Type:                 triggerType,
 			Pattern:              pattern,
 			InterveningIf:        interveningIfText(ability.Trigger),
 			InterveningCondition: intervening,
@@ -315,7 +334,13 @@ func lowerGenericPatternTrigger(
 			"the executable source backend does not support this trigger body")
 	}
 	body, bodySyntax, triggerOptional := prepared.body, prepared.syntax, prepared.optional
-	content, diagnostic := lowerAbilityContent(cardName, compiler.AbilityTriggered, body.Content, body.Optional, &bodySyntax)
+	var content game.AbilityContent
+	var diagnostic *shared.Diagnostic
+	if pattern.Event == game.EventCountersAdded {
+		content, diagnostic = lowerTriggerBodyContent(cardName, body.Content, body.Optional, &bodySyntax, pattern)
+	} else {
+		content, diagnostic = lowerAbilityContent(cardName, compiler.AbilityTriggered, body.Content, body.Optional, &bodySyntax)
+	}
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}
@@ -547,6 +572,9 @@ func lowerTriggeredAbilityKind(
 		if ability.Content.Effects[i].ReturnAsEnchantment {
 			spans = append(spans, ability.Content.Effects[i].ReturnAsEnchantmentRiderSpan)
 		}
+		if ability.Content.Effects[i].PlayFromTopPayLife {
+			spans = append(spans, ability.Content.Effects[i].PlayFromTopPayLifeRiderSpan)
+		}
 	}
 	for _, target := range ability.Content.Targets {
 		spans = append(spans, target.Span)
@@ -606,6 +634,13 @@ func (lowering *abilityLowering) complete(
 			(span == syntax.AbilityWord.SeparatorSpan ||
 				spanCoveredByAbilityWord(span, syntax.AbilityWord))) ||
 			spanCovered(span, lowering.sourceSpans) {
+			continue
+		}
+		// A recognized coin flip re-parses each branch clause, so its compiled
+		// branch effects carry spans in the branch sub-document rather than the
+		// card source. The recognizer recorded the consumed flip and branch
+		// sentence spans (card coordinates), which cover the whole coin-flip body.
+		if syntax.CoinFlip != nil && spanCovered(span, syntax.CoinFlip.Spans) {
 			continue
 		}
 		return false

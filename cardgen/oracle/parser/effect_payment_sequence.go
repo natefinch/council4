@@ -1,6 +1,11 @@
 package parser
 
-import "github.com/natefinch/council4/cardgen/oracle/shared"
+import (
+	"strconv"
+
+	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/cost"
+)
 
 // recognizeControllerMandatoryPaymentSequence folds the exact two-sentence
 // "pay {N}. If you don't, you lose the game." Pact form onto its consequence
@@ -71,18 +76,32 @@ func recognizeControllerOptionalPaymentSequence(ability *Ability) {
 	if ability.Kind != AbilityTriggered || len(ability.Sentences) < 2 {
 		return
 	}
-	for i := 2; i < len(ability.Sentences); i++ {
-		if len(semanticEffectTokens(ability.Sentences[i].Tokens)) != 0 {
-			return
-		}
+	// Locate the consequence ("if you do, ...") and the payment offer. The
+	// consequence is the last sentence carrying effect tokens; the payment offer
+	// is the sentence immediately before it. Any sentences before the payment are
+	// mandatory effects performed before the optional payment ("mill three cards.
+	// Then you may pay ... If you do, ...") and are left intact for the ordered
+	// sequence lowering; the two-sentence form is the special case where the
+	// payment offer is the first sentence and there are no leading effects.
+	consequenceIndex := lastSemanticSentenceIndex(ability.Sentences)
+	if consequenceIndex < 1 {
+		return
 	}
-	paymentSentence := &ability.Sentences[0]
-	consequenceSentence := &ability.Sentences[1]
+	paymentIndex := consequenceIndex - 1
+	paymentSentence := &ability.Sentences[paymentIndex]
+	consequenceSentence := &ability.Sentences[consequenceIndex]
 	paymentTokens := semanticEffectTokens(paymentSentence.Tokens)
 	// An intervening-if condition may precede the optional payment ("... if you
 	// gained life this turn, you may pay X life, ..."); the trigger frame owns
-	// that condition, so drop it before matching the "you may" payment offer.
+	// that condition, so drop it before matching the "you may" payment offer. A
+	// leading "Then" sequences the offer after the preceding effect ("... Then
+	// you may pay ...") and is likewise dropped.
 	paymentTokens = stripLeadingInterveningIfPayment(paymentTokens)
+	// Capture the payment span before dropping a leading "Then" so the connector
+	// token stays covered by a recognized semantic span; the trigger frame owns
+	// any intervening-if already removed above.
+	paymentSpanTokens := paymentTokens
+	paymentTokens = stripLeadingThen(paymentTokens)
 	if len(paymentTokens) < 4 ||
 		!effectWordsAt(paymentTokens, 0, "you", "may") ||
 		paymentTokens[len(paymentTokens)-1].Kind != shared.Period {
@@ -102,7 +121,7 @@ func recognizeControllerOptionalPaymentSequence(ability *Ability) {
 	}
 
 	payment := EffectPaymentSyntax{
-		Span:                   shared.SpanOf(paymentTokens),
+		Span:                   shared.SpanOf(paymentSpanTokens),
 		Form:                   EffectPaymentFormMayPayThenIfDo,
 		Payer:                  EffectPaymentPayerController,
 		SuccessConditionNodeID: boundary.NodeID,
@@ -112,6 +131,23 @@ func recognizeControllerOptionalPaymentSequence(ability *Ability) {
 	case payKeywordManaCostOK(paymentTokens):
 		manaCost, _, _ := parseKeywordManaCost(paymentTokens, 3)
 		payment.ManaCost = manaCost
+	case combinedPayOK(paymentSentence, paymentTokens):
+		// "you may pay {mana} and N life." pays a combined mana + life resolution
+		// cost, with the mana captured in ManaCost and the fixed life portion as
+		// the AdditionalCost.
+		manaCost, lifeCostCombined, _ := controllerPayManaAndLifeCost(paymentSentence, paymentTokens)
+		payment.ManaCost = manaCost
+		payment.AdditionalCost = lifeCostCombined
+	case combinedPayManaAndAdditionalCostOK(paymentSentence, paymentTokens, ability):
+		// "you may pay {mana} and <non-mana cost>." (such as Conspiracy
+		// Theorist's "pay {1} and discard a card.") pays a combined mana +
+		// non-mana resolution cost, with the mana captured in ManaCost and the
+		// trailing cost phrase ("discard a card") as the AdditionalCost. This
+		// generalizes the combined mana + life case above to any non-mana cost
+		// the resolution payment can carry.
+		manaCost, additionalCost, _ := controllerPayManaAndAdditionalCost(paymentSentence, paymentTokens, ability)
+		payment.ManaCost = manaCost
+		payment.AdditionalCost = additionalCost
 	case lifeOK:
 		// "you may pay X life, where X is <dynamic>" pays a rules-derived amount
 		// of life as a resolution cost. The same dynamic sizes a variable "X/X"
@@ -181,6 +217,34 @@ func recognizeControllerOptionalPaymentSequence(ability *Ability) {
 	ability.OptionalSpan = shared.Span{}
 }
 
+// lastSemanticSentenceIndex returns the index of the last sentence carrying any
+// semantic (non-parenthetical, non-quoted) tokens, or -1 when every sentence is
+// empty of them. It locates the consequence sentence of an optional-payment
+// ability while skipping trailing reminder-only or empty sentences.
+func lastSemanticSentenceIndex(sentences []Sentence) int {
+	for i := len(sentences) - 1; i >= 0; i-- {
+		if len(semanticEffectTokens(sentences[i].Tokens)) != 0 {
+			return i
+		}
+	}
+	return -1
+}
+
+// stripLeadingThen drops a leading "then" connector from a payment offer's tokens
+// ("... Then you may pay ..."), returning the tokens from "you" onward. It strips
+// only when the tokens open with "then" immediately followed by "you may"; every
+// other shape is returned unchanged so non-sequenced offers are untouched.
+func stripLeadingThen(tokens []shared.Token) []shared.Token {
+	if len(tokens) < 3 || !equalWord(tokens[0], "then") {
+		return tokens
+	}
+	rest := tokens[1:]
+	if !effectWordsAt(rest, 0, "you", "may") {
+		return tokens
+	}
+	return rest
+}
+
 // stripLeadingInterveningIfPayment drops a leading intervening-if condition
 // ("if you gained life this turn, you may pay ...") from an optional-payment
 // sentence's tokens, returning the tokens from the payment offer onward. It
@@ -214,6 +278,88 @@ func payKeywordManaCostOK(paymentTokens []shared.Token) bool {
 	return ok && paymentEnd == len(paymentTokens)-1
 }
 
+// combinedPayOK reports whether an optional-payment offer's tokens form the
+// combined "you may pay {mana} and N life." cost.
+func combinedPayOK(sentence *Sentence, paymentTokens []shared.Token) bool {
+	_, _, ok := controllerPayManaAndLifeCost(sentence, paymentTokens)
+	return ok
+}
+
+// controllerPayManaAndLifeCost recognizes the combined "pay {mana} and N life"
+// resolution cost of an optional payment offer ("you may pay {1} and 3 life.").
+// paymentTokens are the offer's semantic tokens beginning at "you may", so "pay"
+// is at index 2 and the keyword mana cost at index 3. It returns the mana portion
+// as a cost.Mana plus a single-component fixed pay-life Cost for the "N life"
+// portion, or ok=false for any other shape (a missing mana part, a non-integer or
+// non-positive life amount, or any token past "life" before the period).
+func controllerPayManaAndLifeCost(sentence *Sentence, paymentTokens []shared.Token) (cost.Mana, *Cost, bool) {
+	if !effectWordsAt(paymentTokens, 2, "pay") {
+		return nil, nil, false
+	}
+	manaCost, idx, ok := parseKeywordManaCost(paymentTokens, 3)
+	if !ok || idx+3 != len(paymentTokens)-1 {
+		return nil, nil, false
+	}
+	if !equalWord(paymentTokens[idx], "and") ||
+		paymentTokens[idx+1].Kind != shared.Integer ||
+		!equalWord(paymentTokens[idx+2], "life") ||
+		paymentTokens[idx+3].Kind != shared.Period {
+		return nil, nil, false
+	}
+	amount, err := strconv.Atoi(paymentTokens[idx+1].Text)
+	if err != nil || amount <= 0 {
+		return nil, nil, false
+	}
+	lifeTokens := paymentTokens[idx+1 : idx+3]
+	span := shared.SpanOf(lifeTokens)
+	text := shared.SliceSpan(sentence.Text, costRelativeSpan(span, sentence.Span.Start.Offset))
+	lifeCost := &Cost{
+		Span: span,
+		Text: text,
+		Components: []CostComponent{{
+			Kind:        CostComponentPayLife,
+			Span:        span,
+			Text:        text,
+			AmountValue: amount,
+			AmountKnown: true,
+		}},
+	}
+	return manaCost, lifeCost, true
+}
+
+// combinedPayManaAndAdditionalCostOK reports whether an optional-payment offer's
+// tokens form the combined "you may pay {mana} and <non-mana cost>." cost.
+func combinedPayManaAndAdditionalCostOK(sentence *Sentence, paymentTokens []shared.Token, ability *Ability) bool {
+	_, _, ok := controllerPayManaAndAdditionalCost(sentence, paymentTokens, ability)
+	return ok
+}
+
+// controllerPayManaAndAdditionalCost recognizes the combined "pay {mana} and
+// <non-mana cost>" resolution cost of an optional payment offer (such as
+// Conspiracy Theorist's "you may pay {1} and discard a card."). paymentTokens are
+// the offer's semantic tokens beginning at "you may", so "pay" is at index 2 and
+// the keyword mana cost at index 3. It returns the mana portion as a cost.Mana
+// plus the parsed non-mana Cost for the phrase after "and" (reusing the same
+// activated-cost grammar that already lowers "discard a card", "sacrifice a
+// land", and similar resolution payments), or ok=false for any other shape (a
+// missing mana part, a missing "and" connector, an empty trailing phrase, or a
+// trailing phrase that parses to a mana, loyalty, or tap/untap component).
+func controllerPayManaAndAdditionalCost(sentence *Sentence, paymentTokens []shared.Token, ability *Ability) (cost.Mana, *Cost, bool) {
+	if !effectWordsAt(paymentTokens, 2, "pay") {
+		return nil, nil, false
+	}
+	manaCost, idx, ok := parseKeywordManaCost(paymentTokens, 3)
+	if !ok || idx >= len(paymentTokens)-1 || !equalWord(paymentTokens[idx], "and") {
+		return nil, nil, false
+	}
+	costTokens := paymentTokens[idx+1 : len(paymentTokens)-1]
+	additionalCost, ok := parseControllerPaymentAdditionalCost(sentence, costTokens, ability)
+	if !ok {
+		return nil, nil, false
+	}
+	return manaCost, additionalCost, true
+}
+
 // controllerPayLifeDynamicCost recognizes a "pay X life, where X is <dynamic>"
 // resolution cost (the tokens between "you may" and the trailing period), such
 // as Tivash's "pay X life, where X is the amount of life you gained this turn".
@@ -238,7 +384,7 @@ func controllerPayLifeDynamicCost(sentence *Sentence, costTokens []shared.Token)
 	}
 	span := shared.SpanOf(costTokens)
 	text := shared.SliceSpan(sentence.Text, costRelativeSpan(span, sentence.Span.Start.Offset))
-	cost := &Cost{
+	lifeCost := &Cost{
 		Span: span,
 		Text: text,
 		Components: []CostComponent{{
@@ -248,7 +394,7 @@ func controllerPayLifeDynamicCost(sentence *Sentence, costTokens []shared.Token)
 			PayLifeDynamic: dynamic,
 		}},
 	}
-	return cost, subject.amount.DynamicKind, true
+	return lifeCost, subject.amount.DynamicKind, true
 }
 
 // payLifeDynamicForKind maps a recognized effect dynamic-amount kind onto the

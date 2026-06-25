@@ -40,6 +40,12 @@ const (
 	// indices of the cards taken. MinChoices and MaxChoices both equal the number
 	// of cards taken, bounded by the number of cards actually seen.
 	ChoiceDig
+	// ChoiceVote asks one player to cast their vote in a "Starting with you,
+	// each player votes for <A> or <B>." voting interaction (CR 701.32). Each
+	// option corresponds to one named choice; the returned selection is the
+	// single option index the player votes for. MinChoices and MaxChoices both
+	// equal one.
+	ChoiceVote
 )
 
 // ChoiceCardInfo carries the public characteristics of a card or permanent that
@@ -79,6 +85,11 @@ type ChoiceRequest struct {
 	// DefaultSelection is used by the rules engine when no agent supplies a
 	// valid answer. It must contain option indices valid for this request.
 	DefaultSelection []int
+
+	// MaxTotalManaValue, when set, caps the combined mana value of the selected
+	// options. A selection is valid only when the sum of its options' card mana
+	// values does not exceed this cap. Options without card info contribute zero.
+	MaxTotalManaValue opt.V[int]
 
 	// Subject carries the public characteristics of the single card a decision
 	// concerns, when there is one — for example the card being placed by a scry

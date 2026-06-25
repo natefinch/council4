@@ -3,6 +3,7 @@ package rules
 import (
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/natefinch/council4/mtg/game/zone"
 
@@ -17,10 +18,12 @@ import (
 )
 
 type enterBattlefieldContext struct {
-	engine *Engine
-	agents [game.NumPlayers]PlayerAgent
-	log    *TurnLog
-	xValue int
+	engine            *Engine
+	agents            [game.NumPlayers]PlayerAgent
+	log               *TurnLog
+	xValue            int
+	kickCount         int
+	colorsOfManaSpent int
 }
 
 type damageEvent struct {
@@ -385,10 +388,24 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 				amount = ctx.xValue
 			}
 			if placement.Dynamic.Exists && placement.Dynamic.Val != nil {
+				// A group enters-with-counters replacement ("Each other creature
+				// you control enters with ... equal to <source>'s toughness." —
+				// Arwen, Weaver of Hope) scales by a characteristic of the
+				// replacement's source permanent, not the entering one, so the
+				// dynamic amount resolves against the source object. A self
+				// replacement reads the entering permanent itself.
+				sourceID := permanent.ObjectID
+				sourceCardID := permanent.CardInstanceID
+				if replacement.EntersWithCountersOthers {
+					sourceID = replacement.SourceObjectID
+					sourceCardID = replacement.SourceCardID
+				}
 				obj := &game.StackObject{
-					SourceID:     permanent.ObjectID,
-					SourceCardID: permanent.CardInstanceID,
-					Controller:   replacement.Controller,
+					SourceID:                sourceID,
+					SourceCardID:            sourceCardID,
+					Controller:              replacement.Controller,
+					ColorsOfManaSpentToCast: ctx.colorsOfManaSpent,
+					KickerCount:             ctx.kickCount,
 				}
 				amount = dynamicAmountValue(g, obj, replacement.Controller, *placement.Dynamic.Val)
 			}
@@ -404,7 +421,7 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 			applyEntryTypeChoice(ctx, g, permanent, replacement.Controller)
 		}
 		if replacement.EntryDevourMultiplier > 0 {
-			applyEntryDevour(ctx, g, permanent, replacement.Controller, replacement.EntryDevourMultiplier)
+			applyEntryDevour(ctx, g, permanent, replacement.Controller, replacement.EntryDevourMultiplier, replacement.EntryDevourType, replacement.EntryDevourSubtype)
 		}
 		if replacement.EntryTributeCount > 0 {
 			applyEntryTribute(ctx, g, permanent, replacement.Controller, replacement.EntryTributeCount)
@@ -537,11 +554,13 @@ func applyEntryTypeChoice(ctx enterBattlefieldContext, g *game.Game, permanent *
 }
 
 // applyEntryDevour resolves the Devour keyword for an entering permanent (CR
-// 702.81): its controller may sacrifice any number of other creatures they
-// control as it enters, and it enters with multiplier +1/+1 counters on it for
-// each creature sacrificed this way. Choosing to sacrifice nothing is legal and
-// is the default.
-func applyEntryDevour(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, controller game.PlayerID, multiplier int) {
+// 702.81): its controller may sacrifice any number of other matching permanents
+// they control as it enters, and it enters with multiplier +1/+1 counters on it
+// for each one sacrificed this way. The matching permanents are creatures for the
+// plain "Devour N" form; the typed variants restrict the choice to a card type
+// (cardType, for "Devour artifact N"/"Devour land N") or a subtype (subtype, for
+// "Devour Food N"). Choosing to sacrifice nothing is legal and is the default.
+func applyEntryDevour(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, controller game.PlayerID, multiplier int, cardType types.Card, subtype types.Sub) {
 	engine := ctx.engine
 	if engine == nil {
 		engine = NewEngine(nil)
@@ -554,7 +573,7 @@ func applyEntryDevour(ctx enterBattlefieldContext, g *game.Game, permanent *game
 		if effectiveController(g, candidate) != controller {
 			continue
 		}
-		if !permanentHasType(g, candidate, types.Creature) {
+		if !devourCandidateMatches(g, candidate, cardType, subtype) {
 			continue
 		}
 		candidates = append(candidates, candidate)
@@ -569,7 +588,7 @@ func applyEntryDevour(ctx enterBattlefieldContext, g *game.Game, permanent *game
 	request := game.ChoiceRequest{
 		Kind:       game.ChoicePayment,
 		Player:     controller,
-		Prompt:     "Devour: choose any number of creatures to sacrifice.",
+		Prompt:     devourPrompt(cardType, subtype),
 		Options:    options,
 		MinChoices: 0,
 		MaxChoices: len(candidates),
@@ -586,6 +605,33 @@ func applyEntryDevour(ctx enterBattlefieldContext, g *game.Game, permanent *game
 	}
 	sacrificePermanentsSimultaneously(g, sacrificed)
 	addCountersToPermanent(g, permanent, counter.PlusOnePlusOne, multiplier*len(sacrificed))
+}
+
+// devourCandidateMatches reports whether a permanent may be sacrificed to a
+// Devour replacement. A non-empty subtype restricts the choice to permanents
+// with that subtype ("Devour Food N"); otherwise a non-empty cardType restricts
+// it to that card type ("Devour artifact N"/"Devour land N"); the plain creature
+// form ("Devour N") leaves both empty and matches creatures.
+func devourCandidateMatches(g *game.Game, candidate *game.Permanent, cardType types.Card, subtype types.Sub) bool {
+	if subtype != "" {
+		return permanentHasSubtype(g, candidate, subtype)
+	}
+	if cardType != "" {
+		return permanentHasType(g, candidate, cardType)
+	}
+	return permanentHasType(g, candidate, types.Creature)
+}
+
+// devourPrompt builds the sacrifice prompt for a Devour replacement, naming the
+// permanents that may be sacrificed for the creature form or a typed variant.
+func devourPrompt(cardType types.Card, subtype types.Sub) string {
+	noun := "creatures"
+	if subtype != "" {
+		noun = string(subtype) + "s"
+	} else if cardType != "" {
+		noun = strings.ToLower(string(cardType)) + "s"
+	}
+	return "Devour: choose any number of " + noun + " to sacrifice."
 }
 
 // applyEntryTribute resolves the Tribute keyword for an entering permanent (CR
@@ -716,6 +762,11 @@ func applyEntersAsCopy(ctx enterBattlefieldContext, g *game.Game, permanent *gam
 			values.Types = append(values.Types, cardType)
 		}
 	}
+	for _, subtype := range replacement.EntersAsCopyAddSubtypes {
+		if !slices.Contains(values.Subtypes, subtype) {
+			values.Subtypes = append(values.Subtypes, subtype)
+		}
+	}
 	for _, keyword := range replacement.EntersAsCopyAddKeywords {
 		body, ok := game.KeywordStaticBody(keyword)
 		if !ok {
@@ -748,6 +799,9 @@ func applyEntersAsCopy(ctx enterBattlefieldContext, g *game.Game, permanent *gam
 		if slices.Contains(values.Types, placement.IfType) {
 			addCountersToPermanent(g, permanent, placement.Kind, placement.Amount)
 		}
+	}
+	if replacement.EntersAsCopyTapped {
+		setPermanentTapped(g, permanent, true)
 	}
 }
 
@@ -972,7 +1026,7 @@ func matchingETBReplacementEffects(g *game.Game, permanent *game.Permanent, even
 			if replacement.SourceObjectID != 0 && replacement.SourceObjectID == event.PermanentID {
 				continue
 			}
-			if !entersTappedGroupTypeMatches(g, replacement, source) {
+			if !entersTappedGroupSelectionMatches(g, replacement, source) {
 				continue
 			}
 		}
@@ -992,22 +1046,18 @@ func matchingETBReplacementEffects(g *game.Game, permanent *game.Permanent, even
 	return matches
 }
 
-// entersTappedGroupTypeMatches reports whether the entering permanent satisfies
-// the permanent-type filter of a group enters-tapped replacement. An empty
-// filter taps every entering permanent.
-func entersTappedGroupTypeMatches(g *game.Game, replacement *game.ReplacementEffect, permanent *game.Permanent) bool {
-	if len(replacement.EntersTappedTypes) == 0 {
+// entersTappedGroupSelectionMatches reports whether the entering permanent
+// satisfies the permanent characteristic filter of a group enters-tapped
+// replacement, matched through the canonical matchSelection. A nil selection
+// taps every entering permanent.
+func entersTappedGroupSelectionMatches(g *game.Game, replacement *game.ReplacementEffect, permanent *game.Permanent) bool {
+	if replacement.EntersTappedSelection == nil {
 		return true
 	}
 	if permanent == nil {
 		return false
 	}
-	for _, cardType := range replacement.EntersTappedTypes {
-		if permanentHasType(g, permanent, cardType) {
-			return true
-		}
-	}
-	return false
+	return permanentMatchesReplacementSelection(g, permanent, replacement.EntersTappedSelection)
 }
 
 // entersWithCountersGroupMatches reports whether the entering permanent is a
@@ -1045,6 +1095,9 @@ func matchingTokenCreationReplacementEffects(g *game.Game, event game.Event, tok
 		if !tokenHasAllSubtypes(token, replacement.TokenRequiredSubtypes) {
 			continue
 		}
+		if !tokenHasAllTypes(token, replacement.TokenRequiredTypes) {
+			continue
+		}
 		if applied[replacement.ID] || !replacementEffectMatchesEvent(g, replacement, event) {
 			continue
 		}
@@ -1065,6 +1118,24 @@ func tokenHasAllSubtypes(token *game.CardDef, required []types.Sub) bool {
 	}
 	for _, sub := range required {
 		if !slices.Contains(token.Subtypes, sub) {
+			return false
+		}
+	}
+	return true
+}
+
+// tokenHasAllTypes reports whether the created token carries every card type in
+// the replacement's filter. An empty filter matches any token; a nil token never
+// satisfies a non-empty filter.
+func tokenHasAllTypes(token *game.CardDef, required []types.Card) bool {
+	if len(required) == 0 {
+		return true
+	}
+	if token == nil {
+		return false
+	}
+	for _, cardType := range required {
+		if !slices.Contains(token.Types, cardType) {
 			return false
 		}
 	}
@@ -1104,13 +1175,10 @@ func matchingCounterPlacementReplacementEffects(g *game.Game, event game.Event, 
 		if replacement.MatchCounterKind && replacement.CounterKindFilter != event.CounterKind {
 			continue
 		}
-		if len(replacement.CounterRecipientTypes) > 0 && !counterRecipientPermanentMatches(g, event.PermanentID, recipient, replacement.CounterRecipientTypes) {
+		if replacement.CounterRecipientSelection != nil && !counterRecipientMatchesSelection(g, event.PermanentID, recipient, replacement.CounterRecipientSelection) {
 			continue
 		}
-		if len(replacement.CounterRecipientTypesAny) > 0 && !counterRecipientPermanentMatchesAny(g, event.PermanentID, recipient, replacement.CounterRecipientTypesAny) {
-			continue
-		}
-		if replacement.CounterRecipientAnyPermanent && !counterRecipientPermanentMatches(g, event.PermanentID, recipient, nil) {
+		if replacement.CounterRecipientAnyPermanent && !counterRecipientMatchesSelection(g, event.PermanentID, recipient, &game.Selection{}) {
 			continue
 		}
 		matchEvent := counterPlacementMatchEvent(g, replacement, event, recipient)
@@ -1238,45 +1306,45 @@ func damageSourceColors(g *game.Game, event damageEvent) []color.Color {
 	return nil
 }
 
-func counterRecipientPermanentMatches(g *game.Game, permanentID id.ID, permanent *game.Permanent, requiredTypes []types.Card) bool {
-	if permanent == nil {
-		if permanentID == 0 {
-			return false
-		}
-		var ok bool
-		permanent, ok = permanentByObjectID(g, permanentID)
-		if !ok {
-			return false
-		}
+// counterRecipientPermanent resolves the permanent a counter-placement event
+// would add counters to, preferring the supplied recipient and falling back to
+// the event's permanent ID. A player recipient (no permanent) does not resolve.
+func counterRecipientPermanent(g *game.Game, permanentID id.ID, permanent *game.Permanent) (*game.Permanent, bool) {
+	if permanent != nil {
+		return permanent, true
 	}
-	for _, cardType := range requiredTypes {
-		if !permanentHasType(g, permanent, cardType) {
-			return false
-		}
+	if permanentID == 0 {
+		return nil, false
 	}
-	return true
+	return permanentByObjectID(g, permanentID)
 }
 
-// counterRecipientPermanentMatchesAny reports whether the counter recipient is a
-// permanent that has at least one of anyTypes (a type-union filter, as on
-// Ozolith, the Shattered Spire's "an artifact or creature you control").
-func counterRecipientPermanentMatchesAny(g *game.Game, permanentID id.ID, permanent *game.Permanent, anyTypes []types.Card) bool {
-	if permanent == nil {
-		if permanentID == 0 {
-			return false
-		}
-		var ok bool
-		permanent, ok = permanentByObjectID(g, permanentID)
-		if !ok {
-			return false
-		}
+// counterRecipientMatchesSelection reports whether the counter recipient
+// permanent satisfies sel, matched through the canonical matchSelection. It
+// reads the recipient's effective characteristics, the same values the legacy
+// per-type checks read through permanentHasType.
+func counterRecipientMatchesSelection(g *game.Game, permanentID id.ID, permanent *game.Permanent, sel *game.Selection) bool {
+	recipient, ok := counterRecipientPermanent(g, permanentID, permanent)
+	if !ok {
+		return false
 	}
-	for _, cardType := range anyTypes {
-		if permanentHasType(g, permanent, cardType) {
-			return true
-		}
+	return permanentMatchesReplacementSelection(g, recipient, sel)
+}
+
+// permanentMatchesReplacementSelection matches a replacement's object-characteristic
+// Selection against a live permanent through the shared matchSelection, reading
+// the permanent's effective values. Replacement recipient filters carry no
+// controller relativity (controller scope lives outside the Selection), so the
+// subject's viewer is irrelevant.
+func permanentMatchesReplacementSelection(g *game.Game, permanent *game.Permanent, sel *game.Selection) bool {
+	values := effectivePermanentValues(g, permanent)
+	subject := selectionSubject{
+		kind:      subjectPermanent,
+		g:         g,
+		permanent: permanent,
+		values:    &values,
 	}
-	return false
+	return matchSelection(&subject, sel)
 }
 
 func replacementEffectMatchesEvent(g *game.Game, replacement *game.ReplacementEffect, event game.Event) bool {
@@ -1295,6 +1363,12 @@ func replacementEffectMatchesEventWithSource(g *game.Game, replacement *game.Rep
 		return false
 	}
 	if replacement.MatchEvent != game.EventUnknown && replacement.MatchEvent != event.Kind {
+		return false
+	}
+	if replacement.AffectedObjectID != 0 && replacement.AffectedObjectID != event.PermanentID {
+		return false
+	}
+	if replacement.AffectedCardID != 0 && replacement.AffectedCardID != event.CardID {
 		return false
 	}
 	controller := replacementCurrentController(g, replacement)
@@ -1332,11 +1406,17 @@ func replacementCurrentController(g *game.Game, replacement *game.ReplacementEff
 // continuousZoneRedirectMatchesEvent reports whether a continuous
 // graveyard-redirect replacement (CR 614) applies to the zone-change event. The
 // watched graveyard belongs to the moving card's owner (event.Player), matched
-// relative to the replacement's controller, and the moving card must carry one
-// of the replacement's required card types when the filter is non-empty.
+// relative to the replacement's controller; a "would die" form additionally
+// restricts by the dying permanent's controller (event.Controller); and the
+// moving card must carry one of the replacement's required card types when the
+// filter is non-empty.
 func continuousZoneRedirectMatchesEvent(g *game.Game, replacement *game.ReplacementEffect, event game.Event, controller game.PlayerID) bool {
 	if replacement.RedirectOwnerFilter != game.TriggerControllerAny &&
 		!triggerControllerMatches(controller, replacement.RedirectOwnerFilter, event.Player) {
+		return false
+	}
+	if replacement.RedirectControlFilter != game.TriggerControllerAny &&
+		!triggerControllerMatches(controller, replacement.RedirectControlFilter, event.Controller) {
 		return false
 	}
 	if len(replacement.RedirectTypeFilter) == 0 {

@@ -11,11 +11,132 @@ func parseStaticRuleSyntax(tokens []shared.Token) (*StaticRuleSyntax, bool) {
 	if len(tokens) < 5 || tokens[len(tokens)-1].Kind != shared.Period {
 		return nil, false
 	}
+	if rule, ok := parseTrueLureStaticRule(tokens); ok {
+		return rule, true
+	}
+	if rule, ok := parseAssignDamageAsUnblockedStaticRule(tokens); ok {
+		return rule, true
+	}
 	subject, next, ok := parseStaticRuleSubject(tokens)
 	if !ok {
 		return nil, false
 	}
 	return parseStaticRuleOperationsForSubject(tokens, subject, next)
+}
+
+// parseTrueLureStaticRule recognizes the true-lure requirement "All creatures
+// able to block <subject> do so.", where <subject> names the source creature
+// ("this creature") or the creature an Aura or Equipment is attached to
+// ("enchanted creature"/"equipped creature"). Every creature able to block the
+// subject attacker must do so (CR 509.1c). Forms with an extra blocker filter
+// ("All creatures with flying able to block ...", "All Walls able to block ...")
+// or a compound subject ("... this creature or enchanted creature ...") do not
+// match and fail closed.
+func parseTrueLureStaticRule(tokens []shared.Token) (*StaticRuleSyntax, bool) {
+	const prefix = 5 // "All creatures able to block"
+	if !staticRuleWordsAt(tokens, 0, "all", "creatures", "able", "to", "block") {
+		return nil, false
+	}
+	end := len(tokens) - 1 // index of the trailing period
+	if !staticRuleWordsAt(tokens, end-2, "do", "so") {
+		return nil, false
+	}
+	subject, ok := parseAttachableCreatureSubject(tokens[prefix : end-2])
+	if !ok {
+		return nil, false
+	}
+	rule := &StaticRuleSyntax{
+		Span:    shared.SpanOf(tokens),
+		Subject: subject,
+		Constraint: StaticRuleConstraint{
+			Kind: StaticRuleConstraintRequirement,
+		},
+		Operation: StaticRuleOperation{
+			Kind:  StaticRuleOperationBlockedByAll,
+			Voice: StaticRuleVoicePassive,
+		},
+	}
+	if !validStaticRuleSyntax(*rule) {
+		return nil, false
+	}
+	return rule, true
+}
+
+// parseAssignDamageAsUnblockedStaticRule recognizes "You may have <subject> assign
+// <its> combat damage as though <it> weren't blocked.", the permission for the
+// subject attacker to deal its combat damage to its attack target as though it
+// weren't blocked. <subject> names the source creature ("this creature"); the
+// possessive and subject pronouns ("its"/"his"/"her"/"their" and "it"/"he"/
+// "she"/"they") agree with the printed creature. A trailing "this turn" or other
+// rider makes the form fail closed.
+func parseAssignDamageAsUnblockedStaticRule(tokens []shared.Token) (*StaticRuleSyntax, bool) {
+	if !staticRuleWordsAt(tokens, 0, "you", "may", "have") {
+		return nil, false
+	}
+	subject, ok := parseAttachableCreatureSubject(tokens[3:5])
+	if !ok || subject.Kind != StaticRuleSubjectSourceCreature {
+		return nil, false
+	}
+	if !staticRuleWordsAt(tokens, 5, "assign") ||
+		!staticRulePossessivePronounAt(tokens, 6) ||
+		!staticRuleWordsAt(tokens, 7, "combat", "damage", "as", "though") ||
+		!staticRuleSubjectPronounAt(tokens, 11) ||
+		!staticRuleWordsAt(tokens, 12, "weren't", "blocked") {
+		return nil, false
+	}
+	if len(tokens) != 15 { // 14 words plus the trailing period
+		return nil, false
+	}
+	rule := &StaticRuleSyntax{
+		Span:    shared.SpanOf(tokens),
+		Subject: subject,
+		Constraint: StaticRuleConstraint{
+			Kind: StaticRuleConstraintRequirement,
+		},
+		Operation: StaticRuleOperation{
+			Kind:  StaticRuleOperationAssignDamageAsUnblocked,
+			Voice: StaticRuleVoicePassive,
+		},
+	}
+	if !validStaticRuleSyntax(*rule) {
+		return nil, false
+	}
+	return rule, true
+}
+
+// parseAttachableCreatureSubject parses a self or attached creature subject that
+// spans exactly the given tokens: "this creature" (source creature) or "enchanted
+// creature"/"equipped creature" (the creature an Aura or Equipment is attached
+// to). Any other or partial span fails closed.
+func parseAttachableCreatureSubject(tokens []shared.Token) (StaticRuleSubject, bool) {
+	subject, next, ok := parseStaticRuleSubject(tokens)
+	if !ok || next != len(tokens) {
+		return StaticRuleSubject{}, false
+	}
+	switch subject.Kind {
+	case StaticRuleSubjectSourceCreature, StaticRuleSubjectAttachedObject:
+		return subject, true
+	default:
+		return StaticRuleSubject{}, false
+	}
+}
+
+// staticRulePossessivePronounAt reports whether the token at index is a
+// third-person possessive pronoun ("its", "his", "her", "their").
+func staticRulePossessivePronounAt(tokens []shared.Token, index int) bool {
+	return staticRuleWordsAt(tokens, index, "its") ||
+		staticRuleWordsAt(tokens, index, "his") ||
+		staticRuleWordsAt(tokens, index, "her") ||
+		staticRuleWordsAt(tokens, index, "their")
+}
+
+// staticRuleSubjectPronounAt reports whether the token at index is a third-person
+// subject pronoun ("it", "he", "she", "they").
+func staticRuleSubjectPronounAt(tokens []shared.Token, index int) bool {
+	return staticRuleWordsAt(tokens, index, "it") ||
+		staticRuleWordsAt(tokens, index, "he") ||
+		staticRuleWordsAt(tokens, index, "she") ||
+		staticRuleWordsAt(tokens, index, "they")
 }
 
 // parseSelfNameStaticRuleSyntax recognizes a static-rule sentence whose subject
@@ -168,6 +289,13 @@ func parseProhibitedStaticRuleOperation(tokens []shared.Token, start int) (Stati
 			Voice: StaticRuleVoiceActive,
 			Span:  tokens[start].Span,
 		}, start + 1, true
+	}
+	if staticRuleWordsAt(tokens, start, "block", "and", "can't", "be", "blocked") {
+		return StaticRuleOperation{
+			Kind:  StaticRuleOperationBlockAndBeBlocked,
+			Voice: StaticRuleVoiceActive,
+			Span:  shared.SpanOf(tokens[start : start+5]),
+		}, start + 5, true
 	}
 	if staticRuleWordsAt(tokens, start, "block") {
 		return StaticRuleOperation{
@@ -407,9 +535,36 @@ func validStaticRuleSyntax(rule StaticRuleSyntax) bool {
 			rule.Operation.Kind == StaticRuleOperationCounter &&
 			rule.Operation.Voice == StaticRuleVoicePassive &&
 			len(rule.Qualifiers) == 0
+	case StaticRuleSubjectControlledCreatures:
+		return (rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+			rule.Operation.Kind == StaticRuleOperationBlock &&
+			rule.Operation.Voice == StaticRuleVoicePassive &&
+			len(rule.Qualifiers) == 0) ||
+			(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+				rule.Operation.Kind == StaticRuleOperationTransform &&
+				rule.Operation.Voice == StaticRuleVoiceActive &&
+				len(rule.Qualifiers) == 0) ||
+			validGroupMustAttackRule(rule)
+	case StaticRuleSubjectBattlefieldCreatures:
+		return (rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+			rule.Operation.Kind == StaticRuleOperationBlock &&
+			rule.Operation.Voice == StaticRuleVoiceActive &&
+			len(rule.Qualifiers) == 0) ||
+			validGroupMustAttackRule(rule)
+	case StaticRuleSubjectOpponentControlledCreatures:
+		return validGroupMustAttackRule(rule)
 	default:
 		return false
 	}
+}
+
+// validGroupMustAttackRule reports whether a group-scoped static rule is the
+// forced-attack requirement "<group> attack[s] each combat if able."
+func validGroupMustAttackRule(rule StaticRuleSyntax) bool {
+	return rule.Constraint.Kind == StaticRuleConstraintRequirement &&
+		rule.Operation.Kind == StaticRuleOperationAttack &&
+		rule.Operation.Voice == StaticRuleVoiceActive &&
+		staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierEachCombat, StaticRuleQualifierIfAble)
 }
 
 // validCreatureStaticRuleOperation reports whether a creature-scoped static rule
@@ -440,7 +595,15 @@ func validCreatureStaticRuleOperation(rule StaticRuleSyntax) bool {
 			rule.Operation.Voice == StaticRuleVoiceActive &&
 			len(rule.Qualifiers) == 0) ||
 		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+			rule.Operation.Kind == StaticRuleOperationBlockAndBeBlocked &&
+			rule.Operation.Voice == StaticRuleVoiceActive &&
+			len(rule.Qualifiers) == 0) ||
+		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationUntap &&
+			rule.Operation.Voice == StaticRuleVoiceActive &&
+			len(rule.Qualifiers) == 0) ||
+		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+			rule.Operation.Kind == StaticRuleOperationTransform &&
 			rule.Operation.Voice == StaticRuleVoiceActive &&
 			len(rule.Qualifiers) == 0) ||
 		(rule.Constraint.Kind == StaticRuleConstraintRequirement &&
@@ -450,7 +613,15 @@ func validCreatureStaticRuleOperation(rule StaticRuleSyntax) bool {
 		(rule.Constraint.Kind == StaticRuleConstraintRequirement &&
 			rule.Operation.Kind == StaticRuleOperationBlock &&
 			rule.Operation.Voice == StaticRuleVoicePassive &&
-			staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierIfAble))
+			staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierIfAble)) ||
+		(rule.Constraint.Kind == StaticRuleConstraintRequirement &&
+			rule.Operation.Kind == StaticRuleOperationBlockedByAll &&
+			rule.Operation.Voice == StaticRuleVoicePassive &&
+			len(rule.Qualifiers) == 0) ||
+		(rule.Constraint.Kind == StaticRuleConstraintRequirement &&
+			rule.Operation.Kind == StaticRuleOperationAssignDamageAsUnblocked &&
+			rule.Operation.Voice == StaticRuleVoicePassive &&
+			len(rule.Qualifiers) == 0)
 }
 
 func staticRuleQualifiersAre(qualifiers []StaticRuleQualifier, kinds ...StaticRuleQualifierKind) bool {

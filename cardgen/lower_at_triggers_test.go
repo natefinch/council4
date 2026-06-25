@@ -7,6 +7,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -263,8 +264,40 @@ func TestLowerAtTriggerInterveningIfConditions(t *testing.T) {
 			condition: "if you have 10 or more life",
 			assert: func(t *testing.T, condition game.Condition) {
 				t.Helper()
-				if condition.ControllerLifeAtLeast != 10 {
-					t.Fatalf("ControllerLifeAtLeast = %d, want 10", condition.ControllerLifeAtLeast)
+				if got := condition.Aggregates; len(got) != 1 || got[0].Aggregate != game.AggregateControllerLife || got[0].Op != compare.GreaterOrEqual || got[0].Value != 10 {
+					t.Fatalf("aggregates = %+v, want controller life >= 10", condition.Aggregates)
+				}
+			},
+		},
+		{
+			name:      "controller hand size exactly",
+			condition: "if you have exactly thirteen cards in your hand",
+			assert: func(t *testing.T, condition game.Condition) {
+				t.Helper()
+				if got := condition.Aggregates; len(got) != 1 || got[0].Aggregate != game.AggregateControllerHandSize ||
+					got[0].Op != compare.Equal || got[0].Value != 13 {
+					t.Fatalf("hand-size-exactly aggregate = %+v, want 13", condition.Aggregates)
+				}
+			},
+		},
+		{
+			name:      "gained life this turn",
+			condition: "if you gained 3 or more life this turn",
+			assert: func(t *testing.T, condition game.Condition) {
+				t.Helper()
+				if got := condition.Aggregates; len(got) != 1 || got[0].Aggregate != game.AggregateControllerGainedLifeThisTurn || got[0].Value != 3 {
+					t.Fatalf("gained-life aggregate = %+v, want 3", condition.Aggregates)
+				}
+			},
+		},
+		{
+			name:      "graveyard creature cards",
+			condition: "if twenty or more creature cards are in your graveyard",
+			assert: func(t *testing.T, condition game.Condition) {
+				t.Helper()
+				if condition.ControllerGraveyardCardOfTypeCountAtLeast != 20 ||
+					condition.ControllerGraveyardCountCardType != types.Creature {
+					t.Fatalf("condition = %+v, want 20 creature cards in graveyard", condition)
 				}
 			},
 		},
@@ -292,7 +325,6 @@ func TestLowerAtTriggerInterveningIfConditions(t *testing.T) {
 func TestLowerAtTriggerUnsupportedInterveningIfFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, condition := range []string{
-		"if you gained 2 or more life this turn",
 		"if this creature came under your control since the beginning of your last upkeep",
 	} {
 		t.Run(condition, func(t *testing.T) {

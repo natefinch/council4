@@ -100,7 +100,7 @@ func lowerPutSourceOnLibrary(ctx contentCtx) (game.AbilityContent, bool) {
 // lowerPutFromHandSpell lowers "put a <filter> card from your hand onto the
 // battlefield" — a ramp / cheat-into-play effect (Growth Spiral's "you may put a
 // land card from your hand onto the battlefield", Dramatic Entrance, Elvish
-// Pioneer, ...). It produces one game.PutFromHand instruction that has the
+// Pioneer, ...). It produces one game.ChooseFromZone instruction that has the
 // controller choose one matching card from their own hand and put it onto the
 // battlefield. A "you may" wrapper is carried by the enclosing instruction's
 // Optional flag, applied by the optional-flow machinery after this lowers, so
@@ -108,10 +108,11 @@ func lowerPutSourceOnLibrary(ctx contentCtx) (game.AbilityContent, bool) {
 //
 // It is card-name-blind and fails closed (ok=false) on any shape it does not
 // fully model — references or targets, a non-hand source or non-battlefield
-// destination, a selector qualifier it cannot express, an "enters tapped" rider,
-// or an amount other than exactly one card — so an unmodeled wording falls
-// through to the generic put path's diagnostic rather than lowering to a
-// silently-wrong instruction.
+// destination, a selector qualifier it cannot express, or an amount other than
+// exactly one card — so an unmodeled wording falls through to the generic put
+// path's diagnostic rather than lowering to a silently-wrong instruction. An
+// "enters tapped" rider ("onto the battlefield tapped") is honored and carried
+// through to the produced instruction.
 func lowerPutFromHandSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.References) != 0 {
@@ -125,11 +126,17 @@ func lowerPutFromHandSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		effect.Duration != compiler.DurationNone ||
 		effect.FromZone != zone.Hand ||
 		effect.ToZone != zone.Battlefield ||
-		effect.EntersTapped ||
 		effect.UnderYourControl {
 		return game.AbilityContent{}, false
 	}
 	selector := effect.Selector
+	// The parser reflects the trailing "tapped" entry rider of "onto the
+	// battlefield tapped" into the selector's Tapped flag as well as setting
+	// EntersTapped. A card chosen from hand is never literally tapped, so when
+	// EntersTapped is set the selector's Tapped is that same entry rider rather
+	// than a selection qualifier and is not a blocker; cardSelectionForSelector
+	// ignores Tapped, so the produced selection stays correct either way.
+	tappedSelection := selector.Tapped && !effect.EntersTapped
 	if selector.Zone != zone.Hand ||
 		selector.Controller != compiler.ControllerAny ||
 		selector.All ||
@@ -137,7 +144,7 @@ func lowerPutFromHandSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		selector.Other ||
 		selector.Attacking ||
 		selector.Blocking ||
-		selector.Tapped ||
+		tappedSelection ||
 		selector.Untapped {
 		return game.AbilityContent{}, false
 	}
@@ -153,10 +160,11 @@ func lowerPutFromHandSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	return game.Mode{Sequence: []game.Instruction{{
-		Primitive: game.PutFromHand{
-			Player:    game.ControllerReference(),
-			Selection: selection,
-			Amount:    game.Fixed(1),
-		},
+		Primitive: game.PutFromHandChoice(
+			game.ControllerReference(),
+			selection,
+			game.Fixed(1),
+			effect.EntersTapped,
+		),
 	}}}.Ability(), true
 }

@@ -11,6 +11,12 @@ func emitEvent(g *game.Game, event game.Event) {
 	if event.Kind == game.EventSpellCast && event.PlayerEventOrdinalThisTurn == 0 {
 		event.PlayerEventOrdinalThisTurn = nextSpellCastOrdinalThisTurn(g, event.Controller)
 	}
+	if event.Kind == game.EventCardDiscarded && event.PlayerEventOrdinalThisTurn == 0 {
+		event.PlayerEventOrdinalThisTurn = discardBatchOrdinalThisTurn(g, event.Player, event.SimultaneousID)
+	}
+	if event.Kind == game.EventCycled && event.PlayerEventOrdinalThisTurn == 0 {
+		event.PlayerEventOrdinalThisTurn = nextPlayerEventOrdinalThisTurn(g, game.EventCycled, event.Player)
+	}
 	if event.Kind == game.EventCardDrawn || event.Kind == game.EventBeginningOfStep {
 		event.TriggeredAbilities = captureEventTriggeredAbilities(g, event)
 		event.TriggeredAbilitiesCaptured = true
@@ -24,18 +30,28 @@ func emitEvent(g *game.Game, event game.Event) {
 }
 
 func nextPlayerEventOrdinalThisTurn(g *game.Game, kind game.EventKind, playerID game.PlayerID) int {
-	ordinal := 1
-	start := 0
-	index := g.Turn.TurnNumber - 1
-	if index >= 0 && index < len(g.EventTurnStarts) {
-		start = g.EventTurnStarts[index]
-	}
-	for _, event := range g.Events[start:] {
-		if event.Kind == kind && event.Player == playerID {
-			ordinal++
+	return eventsThisTurnWindow(g).nextOrdinal(eventKindPlayer(kind, playerID))
+}
+
+// discardBatchOrdinalThisTurn reports the per-turn ordinal position of the
+// discard occurrence the event about to be emitted belongs to, counting
+// distinct discard "batches" by the same player this turn (CR 701.8e; "the
+// first time you discard one or more cards each turn", Rielle). Cards discarded
+// together share a nonzero SimultaneousID and form one occurrence; a single
+// discard carries SimultaneousID 0 and is its own occurrence. The first
+// occurrence each turn is ordinal 1, so a first-each-turn discard trigger gates
+// on PlayerEventOrdinalThisTurn == 1 regardless of how many cards it includes.
+func discardBatchOrdinalThisTurn(g *game.Game, playerID game.PlayerID, simultaneousID id.ID) int {
+	window := eventsThisTurnWindow(g)
+	discardedByPlayer := eventKindPlayer(game.EventCardDiscarded, playerID)
+	if simultaneousID != 0 {
+		for i := range window {
+			if discardedByPlayer(window[i]) && window[i].SimultaneousID == simultaneousID {
+				return window[i].PlayerEventOrdinalThisTurn
+			}
 		}
 	}
-	return ordinal
+	return window.distinctBatches(discardedByPlayer) + 1
 }
 
 // nextSpellCastOrdinalThisTurn reports the per-turn ordinal position of the
@@ -44,18 +60,7 @@ func nextPlayerEventOrdinalThisTurn(g *game.Game, kind game.EventKind, playerID 
 // EventSpellCopied and are deliberately excluded so copies do not advance the
 // count.
 func nextSpellCastOrdinalThisTurn(g *game.Game, controller game.PlayerID) int {
-	ordinal := 1
-	start := 0
-	index := g.Turn.TurnNumber - 1
-	if index >= 0 && index < len(g.EventTurnStarts) {
-		start = g.EventTurnStarts[index]
-	}
-	for _, event := range g.Events[start:] {
-		if event.Kind == game.EventSpellCast && event.Controller == controller {
-			ordinal++
-		}
-	}
-	return ordinal
+	return eventsThisTurnWindow(g).nextOrdinal(eventKindController(game.EventSpellCast, controller))
 }
 
 func emitZoneChangeEvent(g *game.Game, event game.Event) game.Event {
@@ -274,6 +279,75 @@ func emitTargetEvents(g *game.Game, obj *game.StackObject) {
 		}
 		emitEvent(g, event)
 	}
+	emitCrimeEvent(g, obj)
+}
+
+// emitCrimeEvent emits an EventCrimeCommitted when putting obj on the stack
+// constitutes committing a crime (CR 700.15). A crime is committed once per
+// spell or ability put on the stack, regardless of how many qualifying targets
+// it has, so this fires at most one event per push.
+func emitCrimeEvent(g *game.Game, obj *game.StackObject) {
+	if !committedCrime(g, obj) {
+		return
+	}
+	sourceID, sourceObjectID := damageSourceIDs(g, obj)
+	emitEvent(g, game.Event{
+		Kind:           game.EventCrimeCommitted,
+		SourceID:       sourceID,
+		SourceObjectID: sourceObjectID,
+		StackObjectID:  obj.ID,
+		Controller:     obj.Controller,
+		Player:         obj.Controller,
+	})
+}
+
+// committedCrime reports whether obj targets one or more opponents of its
+// controller, objects an opponent controls (permanents or spells/abilities on
+// the stack), or cards in an opponent's graveyard (CR 700.15a). Targets that no
+// longer resolve to a known object are ignored.
+func committedCrime(g *game.Game, obj *game.StackObject) bool {
+	for _, target := range obj.Targets {
+		switch target.Kind {
+		case game.TargetPlayer:
+			if target.PlayerID != obj.Controller {
+				return true
+			}
+		case game.TargetPermanent:
+			if permanent, ok := permanentByObjectID(g, target.PermanentID); ok &&
+				permanent.Controller != obj.Controller {
+				return true
+			}
+		case game.TargetStackObject:
+			if stackObj, ok := stackObjectByID(g, target.StackObjectID); ok &&
+				stackObj.Controller != obj.Controller {
+				return true
+			}
+		case game.TargetCard:
+			if cardInOpponentGraveyard(g, obj.Controller, target.CardID) {
+				return true
+			}
+		default:
+		}
+	}
+	return false
+}
+
+// cardInOpponentGraveyard reports whether cardID currently sits in the
+// graveyard of a player other than controller.
+func cardInOpponentGraveyard(g *game.Game, controller game.PlayerID, cardID id.ID) bool {
+	for opponent := range game.PlayerID(game.NumPlayers) {
+		if opponent == controller {
+			continue
+		}
+		player, ok := playerByID(g, opponent)
+		if !ok {
+			continue
+		}
+		if player.Graveyard.Contains(cardID) {
+			return true
+		}
+	}
+	return false
 }
 
 func emitAbilityActivatedEvent(g *game.Game, obj *game.StackObject, permanentID game.ObjectID, manaAbility bool) {

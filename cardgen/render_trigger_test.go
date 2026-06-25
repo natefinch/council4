@@ -617,8 +617,8 @@ func TestRenderStaticAbilityCyclingCostModifier(t *testing.T) {
 	rendered, err := (Renderer{}).renderStaticAbility(newRenderCtx(), &game.StaticAbility{
 		Text: "As long as you have seven or more cards in hand, you may pay {0} rather than pay cycling costs.",
 		Condition: opt.Val(game.Condition{
-			Text:                      "As long as you have seven or more cards in hand",
-			ControllerHandSizeAtLeast: 7,
+			Text:       "As long as you have seven or more cards in hand",
+			Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerHandSize, Op: compare.GreaterOrEqual, Value: 7}},
 		}),
 		RuleEffects: []game.RuleEffect{{
 			Kind:           game.RuleEffectCostModifier,
@@ -634,7 +634,7 @@ func TestRenderStaticAbilityCyclingCostModifier(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		"ControllerHandSizeAtLeast: 7",
+		"Aggregate: game.AggregateControllerHandSize, Op: compare.GreaterOrEqual, Value: 7",
 		"game.RuleEffectCostModifier",
 		"AffectedPlayer: game.PlayerYou",
 		"Kind: game.CostModifierAbility",
@@ -660,8 +660,7 @@ func TestRenderStaticAbilityColorSpellCostModifier(t *testing.T) {
 			AffectedPlayer: game.PlayerYou,
 			CostModifier: game.CostModifier{
 				Kind:             game.CostModifierSpell,
-				MatchColor:       true,
-				Color:            color.Red,
+				CardSelection:    game.Selection{ColorsAny: []color.Color{color.Red}},
 				GenericReduction: 1,
 			},
 		}},
@@ -671,8 +670,7 @@ func TestRenderStaticAbilityColorSpellCostModifier(t *testing.T) {
 	}
 	for _, want := range []string{
 		"Kind: game.CostModifierSpell",
-		"MatchColor: true",
-		"Color: color.Red",
+		"CardSelection: game.Selection{ColorsAny: []color.Color{color.Red}}",
 		"GenericReduction: 1",
 	} {
 		if !strings.Contains(rendered, want) {
@@ -697,7 +695,7 @@ func TestRenderStaticAbilityColorlessSpellCostModifier(t *testing.T) {
 			AffectedPlayer: game.PlayerYou,
 			CostModifier: game.CostModifier{
 				Kind:             game.CostModifierSpell,
-				MatchColor:       true,
+				CardSelection:    game.Selection{Colorless: true},
 				GenericReduction: 1,
 			},
 		}},
@@ -705,7 +703,7 @@ func TestRenderStaticAbilityColorlessSpellCostModifier(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(rendered, "MatchColor: true") {
+	if !strings.Contains(rendered, "Colorless: true") {
 		t.Fatalf("rendered static ability missing colorless match:\n%s", rendered)
 	}
 	if strings.Contains(rendered, "Color: color.") {
@@ -740,15 +738,33 @@ func TestRenderTriggerPatternRejectsUnsupportedCardSelectionFields(t *testing.T)
 	}
 }
 
-func TestRenderTriggerPatternRejectsNonTypeCardSelectionOnDiscardEvent(t *testing.T) {
+func TestRenderTriggerPatternAllowsSubtypeCardSelectionOnDiscardEvent(t *testing.T) {
+	t.Parallel()
+	pattern := game.TriggerPattern{
+		Event:  game.EventCardDiscarded,
+		Player: game.TriggerPlayerYou,
+		CardSelection: game.Selection{
+			SubtypesAny: []types.Sub{types.Island, types.Pirate, types.Vehicle},
+		},
+	}
+	rendered, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern)
+	if err != nil {
+		t.Fatalf("rendering subtype-union discard CardSelection: %v", err)
+	}
+	if !strings.Contains(rendered, "SubtypesAny:") {
+		t.Fatalf("rendered discard trigger missing subtype filter:\n%s", rendered)
+	}
+}
+
+func TestRenderTriggerPatternRejectsUnavailableCardSelectionOnDiscardEvent(t *testing.T) {
 	t.Parallel()
 	pattern := game.TriggerPattern{
 		Event:         game.EventCardDiscarded,
 		Player:        game.TriggerPlayerYou,
-		CardSelection: game.Selection{ColorsAny: []color.Color{color.Blue}},
+		CardSelection: game.Selection{Power: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 2})},
 	}
 	if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
-		t.Fatal("expected error: discard CardSelection only supports card-type filters")
+		t.Fatal("expected error: discard CardSelection cannot filter on power")
 	}
 }
 

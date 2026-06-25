@@ -61,6 +61,7 @@ func targetCountsForSpecFrom(g *game.Game, controller game.PlayerID, source *gam
 	for count := spec.MinTargets; count <= maxTargets; count++ {
 		slice := targets[targetIndex : targetIndex+count]
 		if targetsMatchSpecSlice(g, controller, source, sourceObjectID, &spec, slice) &&
+			targetSliceDistinctFromPrior(&spec, targets[:targetIndex], slice) &&
 			targetCountsForSpecFrom(g, controller, source, sourceObjectID, specs, targets, counts, specIndex+1, targetIndex+count) {
 			counts[specIndex] = count
 			return true
@@ -116,7 +117,8 @@ func recordedTargetCountsValidForSpecs(g *game.Game, controller game.PlayerID, s
 			count < spec.MinTargets ||
 			count > spec.MaxTargets ||
 			targetIndex+count > len(targets) ||
-			!targetsMatchSpecSlice(g, controller, source, sourceObjectID, &spec, targets[targetIndex:targetIndex+count]) {
+			!targetsMatchSpecSlice(g, controller, source, sourceObjectID, &spec, targets[targetIndex:targetIndex+count]) ||
+			!targetSliceDistinctFromPrior(&spec, targets[:targetIndex], targets[targetIndex:targetIndex+count]) {
 			return false
 		}
 		targetIndex += count
@@ -150,12 +152,31 @@ func appendMatchingTargetCounts(g *game.Game, controller game.PlayerID, source *
 	maxTargets := min(spec.MaxTargets, len(targets)-targetIndex)
 	for count := spec.MinTargets; count <= maxTargets; count++ {
 		slice := targets[targetIndex : targetIndex+count]
-		if !targetsMatchSpecSlice(g, controller, source, sourceObjectID, &spec, slice) {
+		if !targetsMatchSpecSlice(g, controller, source, sourceObjectID, &spec, slice) ||
+			!targetSliceDistinctFromPrior(&spec, targets[:targetIndex], slice) {
 			continue
 		}
 		next := append(append([]int(nil), prefix...), count)
 		appendMatchingTargetCounts(g, controller, source, sourceObjectID, specs, targets, specIndex+1, targetIndex+count, next, matches)
 	}
+}
+
+// targetSliceDistinctFromPrior reports whether a spec's chosen targets satisfy
+// its DistinctFromPriorTargets requirement: when set, none of the slice's
+// objects may equal an object already chosen for an earlier spec ("... another
+// target creature"). It is a no-op for the default unset case.
+func targetSliceDistinctFromPrior(spec *game.TargetSpec, prior, slice []game.Target) bool {
+	if !spec.DistinctFromPriorTargets {
+		return true
+	}
+	for _, chosen := range slice {
+		for _, used := range prior {
+			if sameTargetObject(chosen, used) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func targetsMatchSpecSlice(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec *game.TargetSpec, targets []game.Target) bool {

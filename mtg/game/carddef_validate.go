@@ -11,7 +11,6 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
-	"github.com/natefinch/council4/opt"
 )
 
 // CardDefIssueCode identifies a class of structural CardDef validation issue.
@@ -62,8 +61,9 @@ func ValidateCardDef(card *CardDef) []CardDefIssue {
 }
 
 type cardDefValidator struct {
-	card   *CardDef
-	issues []CardDefIssue
+	card       *CardDef
+	issues     []CardDefIssue
+	faceLinked map[LinkedKey]int
 }
 
 func (v *cardDefValidator) validate() {
@@ -94,6 +94,7 @@ func (v *cardDefValidator) validate() {
 }
 
 func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
+	v.faceLinked = collectFacePublishedLinkedKeys(face)
 	hasAbilities := face.SpellAbility.Exists ||
 		face.Overload.Exists ||
 		face.EntersPrepared ||
@@ -163,7 +164,8 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 	for i, alternative := range face.AlternativeCosts {
 		if alternative.Condition != cost.AlternativeConditionNone &&
 			alternative.Condition != cost.AlternativeConditionControlsCommander &&
-			alternative.Condition != cost.AlternativeConditionNotYourTurn {
+			alternative.Condition != cost.AlternativeConditionNotYourTurn &&
+			alternative.Condition != cost.AlternativeConditionOpponentLostLifeThisTurn {
 			v.add(
 				faceName,
 				appendPath(path, fmt.Sprintf("AlternativeCosts[%d].Condition", i)),
@@ -253,15 +255,17 @@ func (v *cardDefValidator) validateLinkedExileColorDependencies(faceName, path s
 	}
 }
 
-// collectExileFromHandLinks records the link keys published by every
-// ExileFromHand primitive across the face's ability contents.
+// collectExileFromHandLinks records the link keys published by every exile-from-
+// hand choose-from-zone primitive (the imprint family: a hand source, an exile
+// destination, an object-scoped publish) across the face's ability contents.
 func collectExileFromHandLinks(face *CardFace, into map[string]bool) {
 	collect := func(content AbilityContent) {
 		for _, mode := range content.Modes {
 			for i := range mode.Sequence {
-				exile, ok := mode.Sequence[i].Primitive.(ExileFromHand)
-				if ok && exile.PublishLinked != "" {
-					into[string(exile.PublishLinked)] = true
+				choose, ok := mode.Sequence[i].Primitive.(ChooseFromZone)
+				if ok && choose.SourceZone == zone.Hand && choose.Destination.Zone == zone.Exile &&
+					choose.Riders.PublishObjectScoped && choose.Riders.PublishLinked != "" {
+					into[string(choose.Riders.PublishLinked)] = true
 				}
 			}
 		}
@@ -281,6 +285,43 @@ func collectExileFromHandLinks(face *CardFace, into map[string]bool) {
 	for i := range face.LoyaltyAbilities {
 		collect(face.LoyaltyAbilities[i].Content)
 	}
+}
+
+// collectFacePublishedLinkedKeys records the linked keys published by every
+// primitive across the face's top-level ability contents. A primitive in one
+// ability (e.g. a triggered return-on-leave) may consume a linked key that a
+// different ability on the same face publishes (e.g. an enters-the-battlefield
+// exile-until-leaves), because the publishing ability always resolves first.
+func collectFacePublishedLinkedKeys(face *CardFace) map[LinkedKey]int {
+	keys := map[LinkedKey]int{}
+	collect := func(content AbilityContent) {
+		for _, mode := range content.Modes {
+			for i := range mode.Sequence {
+				if key := mode.Sequence[i].Primitive.instructionRefs().publishesLinked; key != "" {
+					keys[key] = i
+				}
+			}
+		}
+	}
+	if face.SpellAbility.Exists {
+		collect(face.SpellAbility.Val)
+	}
+	for i := range face.ActivatedAbilities {
+		collect(face.ActivatedAbilities[i].Content)
+	}
+	for i := range face.TriggeredAbilities {
+		collect(face.TriggeredAbilities[i].Content)
+	}
+	for i := range face.ChapterAbilities {
+		collect(face.ChapterAbilities[i].Content)
+	}
+	for i := range face.LoyaltyAbilities {
+		collect(face.LoyaltyAbilities[i].Content)
+	}
+	for i := range face.ManaAbilities {
+		collect(face.ManaAbilities[i].Content)
+	}
+	return keys
 }
 
 func abilityContentHasTargets(content AbilityContent) bool {
@@ -484,10 +525,12 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 			v.add(faceName, path, CardDefIssueInvalidKeywordAbility, "simple keyword must set Kind")
 		}
 	case WardKeyword:
-		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+		v.validateWardKeywordCost(faceName, path, keyword)
 	case CumulativeUpkeepKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case EquipKeyword:
+		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+	case ReconfigureKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case EnchantKeyword:
 		v.validateTargetSpec(faceName, appendPath(path, "Target"), &keyword.Target)
@@ -582,6 +625,10 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		if keyword.Count <= 0 {
 			v.add(faceName, appendPath(path, "Count"), CardDefIssueInvalidKeywordAbility, "fabricate count must be positive")
 		}
+	case HideawayKeyword:
+		if keyword.Amount <= 0 {
+			v.add(faceName, appendPath(path, "Amount"), CardDefIssueInvalidKeywordAbility, "hideaway amount must be positive")
+		}
 	case SoulshiftKeyword:
 		if keyword.Count <= 0 {
 			v.add(faceName, appendPath(path, "Count"), CardDefIssueInvalidKeywordAbility, "soulshift count must be positive")
@@ -604,6 +651,14 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		if keyword.Nonbasic && (keyword.AnyLand || keyword.Subtype != "") {
 			v.add(faceName, path, CardDefIssueInvalidKeywordAbility, "landwalk must not combine Nonbasic with AnyLand or a subtype")
 		}
+	case SaddleKeyword:
+		if keyword.Power <= 0 {
+			v.add(faceName, appendPath(path, "Power"), CardDefIssueInvalidKeywordAbility, "saddle power must be positive")
+		}
+	case CrewKeyword:
+		if keyword.Power <= 0 {
+			v.add(faceName, appendPath(path, "Power"), CardDefIssueInvalidKeywordAbility, "crew power must be positive")
+		}
 	case nil:
 		v.add(faceName, path, CardDefIssueInvalidKeywordAbility, "keyword ability is nil")
 	default:
@@ -618,7 +673,7 @@ func (v *cardDefValidator) validateInstructionSequence(
 	capturedTargets []TargetSpec,
 	inheritedLinked map[LinkedKey]int,
 ) {
-	if err := validateInstructionSequenceWithLinked(seq, targets, true, inheritedLinked, capturedTargets, true); err != nil {
+	if err := validateInstructionSequenceWithLinked(seq, targets, true, inheritedLinked, capturedTargets, true, v.faceLinked); err != nil {
 		v.add(faceName, path, CardDefIssueInvalidAbilityBody, err.Error())
 	}
 	publishedLinked := make(map[LinkedKey]int, len(inheritedLinked))
@@ -646,6 +701,22 @@ func (v *cardDefValidator) validateInstructionSequence(
 			)
 		}
 		if delayed, ok := seq[i].Primitive.(CreateDelayedTrigger); ok {
+			if delayed.Trigger.EventPattern.Exists {
+				pattern := delayed.Trigger.EventPattern.Val
+				v.validateTriggerPattern(
+					faceName,
+					appendPath(instructionPath, "Primitive.Trigger.EventPattern"),
+					&pattern,
+				)
+				if delayed.Trigger.Timing != 0 {
+					v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "delayed trigger sets both Timing and EventPattern")
+				}
+				if delayed.Trigger.Window == DelayedWindowNone {
+					v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "event delayed trigger has no Window")
+				}
+			} else if delayed.Trigger.Window != DelayedWindowNone {
+				v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "fixed-phase delayed trigger sets Window without EventPattern")
+			}
 			v.validateAbilityContentWithLinked(
 				faceName,
 				appendPath(instructionPath, "Primitive.Trigger.Content"),
@@ -686,6 +757,15 @@ func (v *cardDefValidator) validateManaKeywordCost(faceName, path string, manaCo
 	}
 }
 
+// validateWardKeywordCost accepts a Ward cost composed of a mana component, one
+// or more non-mana additional components ("Ward—Pay 2 life."), or both
+// ("Ward—{2}, Pay 2 life."). At least one component must be present.
+func (v *cardDefValidator) validateWardKeywordCost(faceName, path string, ward WardKeyword) {
+	if len(ward.Cost) == 0 && len(ward.AdditionalCosts) == 0 {
+		v.add(faceName, appendPath(path, "Cost"), CardDefIssueInvalidKeywordAbility, "ward cost must be explicit")
+	}
+}
+
 const knownTargetAllows = TargetAllowPermanent | TargetAllowPlayer | TargetAllowStackObject | TargetAllowCard
 
 func (v *cardDefValidator) validateTargetSpec(faceName, path string, target *TargetSpec) {
@@ -700,19 +780,23 @@ func (v *cardDefValidator) validateTargetSpec(faceName, path string, target *Tar
 		v.add(faceName, appendPath(path, "Allow"), CardDefIssueInvalidTargetSpec, "unknown target allow category")
 	}
 	v.validateStackObjectTargetPredicate(faceName, path, target)
+	allowsPermanents := target.Allow&TargetAllowPermanent != 0
+	allowsPlayers := target.Allow&TargetAllowPlayer != 0
+	allowsCards := target.Allow&TargetAllowCard != 0
+	allowsStackObjects := target.Allow&TargetAllowStackObject != 0
+	if !allowsStackObjects && !target.Predicate.Empty() {
+		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "stack-object predicate requires a stack-object target")
+	}
 	if target.Selection.Exists {
 		selection := target.Selection.Val
 		v.validateSelection(faceName, appendPath(path, "Selection"), selection)
-		if !target.Predicate.Selection().Empty() {
-			v.add(faceName, path, CardDefIssueInvalidSelection, "TargetSpec sets both Predicate and Selection")
-		}
 		if target.Allow == TargetAllowUnspecified {
 			v.add(faceName, path, CardDefIssueInvalidTargetSpec, "Selection-based TargetSpec must set Allow")
 		}
-		allowsPermanents := target.Allow&TargetAllowPermanent != 0
-		allowsPlayers := target.Allow&TargetAllowPlayer != 0
-		allowsCards := target.Allow&TargetAllowCard != 0
-		if allowsPlayers && selectionHasPermanentPredicates(selection) {
+		// A combined "spell or permanent" target allows both stack objects and
+		// permanents; its Selection constrains only the permanent alternative,
+		// so permanent predicates are legal as long as permanents are allowed.
+		if allowsPlayers && !allowsPermanents && selectionHasPermanentPredicates(selection) {
 			v.add(faceName, appendPath(path, "Selection"), CardDefIssueInvalidSelection, "player targets cannot use permanent Selection predicates")
 		}
 		if !allowsPlayers && selection.Player != PlayerAny {
@@ -729,16 +813,12 @@ func (v *cardDefValidator) validateTargetSpec(faceName, path string, target *Tar
 		if target.MinTargets != 1 || target.MaxTargets != 1 {
 			v.add(faceName, path, CardDefIssueInvalidTargetSpec, "non-controller target chooser requires exactly one target")
 		}
-		controller := target.Predicate.Controller
+		controller := ControllerAny
 		if target.Selection.Exists {
 			controller = target.Selection.Val.Controller
 		}
 		if controller != ControllerAny && controller != ControllerYou {
-			field := "Predicate.Controller"
-			if target.Selection.Exists {
-				field = "Selection.Controller"
-			}
-			v.add(faceName, appendPath(path, field), CardDefIssueInvalidTargetSpec, "opponent target chooser only supports controller-any or controller-you predicates")
+			v.add(faceName, appendPath(path, "Selection.Controller"), CardDefIssueInvalidTargetSpec, "opponent target chooser only supports controller-any or controller-you predicates")
 		}
 	default:
 		v.add(faceName, appendPath(path, "Chooser"), CardDefIssueInvalidTargetSpec, "unknown target chooser")
@@ -750,22 +830,11 @@ func (v *cardDefValidator) validateStackObjectTargetPredicate(faceName, path str
 	knownAllows := target.Allow & knownTargetAllows
 	allowsStackObjects := knownAllows&TargetAllowStackObject != 0
 	allowsPermanents := knownAllows&TargetAllowPermanent != 0
-	stackSelection := target.Predicate.Selection()
-	// Controller restrictions are supported for stack-object targets (e.g.
-	// "target activated ability you don't control"), so they do not count as an
-	// unsupported permanent predicate here.
-	stackSelection.Controller = ControllerAny
-	// A mana-value comparison is a supported stack-spell qualifier ("counter
-	// target spell with mana value N"); the runtime matcher applies it to the
-	// spell choice, so it does not count as an unsupported permanent predicate.
-	stackSelection.ManaValue = opt.V[compare.Int]{}
-	// A combined "spell or permanent" target carries permanent predicates that
-	// constrain only its permanent alternative; the stack-object side is gated
-	// by StackObjectKinds and spell qualifiers, so they are not unsupported.
-	if allowsStackObjects && !allowsPermanents && !stackSelection.Empty() {
-		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "stack-object target uses unsupported predicates")
-	}
-	if allowsStackObjects && target.Selection.Exists {
+	// A combined "spell or permanent" target allows both stack objects and
+	// permanents; its Selection constrains only the permanent alternative. A
+	// stack-only target carries no permanent characteristics, so it must not set
+	// a Selection.
+	if allowsStackObjects && !allowsPermanents && target.Selection.Exists {
 		v.add(faceName, appendPath(path, "Selection"), CardDefIssueInvalidTargetSpec, "stack-object target cannot use Selection")
 	}
 	if allowsStackObjects && len(kinds) == 0 {
@@ -866,8 +935,9 @@ func (v *cardDefValidator) validateContinuousEffect(faceName, path string, conti
 			!IsTapAnyColorManaAbility(manaAbility) &&
 			!IsTapColorlessManaAbility(manaAbility) &&
 			!IsTapOneColorManaAbility(manaAbility) &&
-			!IsTapSacrificeAnyOneColorManaAbility(manaAbility) {
-			v.add(faceName, abilityPath, CardDefIssueInvalidAbilityBody, "continuous effects support only the standard tap-for-one-mana-of-any-color granted mana ability, the bare tap-for-one-mana ability, or the Treasure-style sacrifice mana ability")
+			!IsTapSacrificeAnyOneColorManaAbility(manaAbility) &&
+			!IsTapSacrificeAnyColorManaAbility(manaAbility) {
+			v.add(faceName, abilityPath, CardDefIssueInvalidAbilityBody, "continuous effects support only the standard tap-for-one-mana-of-any-color granted mana ability, the bare tap-for-one-mana ability, the Treasure-style sacrifice mana ability, or the count-1 sacrifice any-color mana ability")
 		}
 	}
 	if len(continuous.AddAbilities) > 0 && continuous.Layer != LayerAbility {
@@ -886,8 +956,8 @@ func (v *cardDefValidator) validateContinuousEffect(faceName, path string, conti
 		if continuous.Layer != LayerType {
 			v.add(faceName, appendPath(path, "Layer"), CardDefIssueInvalidAbilityBody, "entry-choice subtype reference requires the type layer")
 		}
-		if !continuous.AffectedSource {
-			v.add(faceName, appendPath(path, "AffectedSource"), CardDefIssueInvalidReference, "entry-choice subtype reference must affect its source")
+		if !continuous.AffectedSource && continuous.Group.Empty() {
+			v.add(faceName, appendPath(path, "AffectedSource"), CardDefIssueInvalidReference, "entry-choice subtype reference must affect its source or a group")
 		}
 	}
 }
@@ -926,6 +996,23 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if !reflect.DeepEqual(effect.GrantedAbility, CyclingActivatedAbility(cyclingCost)) {
 			v.add(faceName, appendPath(path, "GrantedAbility"), CardDefIssueInvalidRuleEffect, "hand-card ability grant must use the standard Cycling ability template")
 		}
+	case RuleEffectGrantGraveyardCardKeyword:
+		if effect.AffectedPlayer == PlayerAny {
+			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "graveyard-card keyword grants must set affected player")
+		}
+		if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "graveyard-card keyword grants cannot affect a permanent")
+		}
+		v.validateSelection(faceName, appendPath(path, "CardSelection"), effect.CardSelection)
+		if effect.CardSelection.Empty() {
+			v.add(faceName, appendPath(path, "CardSelection"), CardDefIssueInvalidSelection, "graveyard-card keyword grants require a card selection")
+		}
+		if handCardSelectionHasUnsupportedPredicates(effect.CardSelection) {
+			v.add(faceName, appendPath(path, "CardSelection"), CardDefIssueInvalidSelection, "graveyard-card keyword grants support only printed card characteristics")
+		}
+		if effect.GrantedKeyword == KeywordNone {
+			v.add(faceName, appendPath(path, "GrantedKeyword"), CardDefIssueInvalidRuleEffect, "graveyard-card keyword grant must grant a keyword")
+		}
 	case RuleEffectNoMaximumHandSize, RuleEffectLifeTotalCantChange, RuleEffectCastSpellsAsThoughFlash, RuleEffectPlayWithTopCardRevealed, RuleEffectLookAtTopCardAnyTime:
 		if effect.AffectedPlayer == PlayerAny {
 			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "player rule effects must set affected player")
@@ -943,8 +1030,39 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if effect.AdditionalLandPlays < 1 {
 			v.add(faceName, appendPath(path, "AdditionalLandPlays"), CardDefIssueInvalidRuleEffect, "additional land plays must grant at least one extra land play")
 		}
+	case RuleEffectDrawLimitPerTurn:
+		if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "draw limit cannot affect a permanent")
+		}
+		if effect.DrawLimitPerTurn < 1 {
+			v.add(faceName, appendPath(path, "DrawLimitPerTurn"), CardDefIssueInvalidRuleEffect, "draw limit must allow at least one card each turn")
+		}
+	case RuleEffectCastLimitPerTurn:
+		if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "cast limit cannot affect a permanent")
+		}
+		if effect.CastLimitPerTurn < 1 {
+			v.add(faceName, appendPath(path, "CastLimitPerTurn"), CardDefIssueInvalidRuleEffect, "cast limit must allow at least one spell each turn")
+		}
 	case RuleEffectAttackTax:
 		v.validateAttackTaxRuleEffect(faceName, path, effect)
+	case RuleEffectPayLifeForColoredMana:
+		if effect.AffectedPlayer == PlayerAny {
+			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "life-for-mana payment must set affected player")
+		}
+		if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "life-for-mana payment cannot affect a permanent")
+		}
+		if !manaColorValid(effect.ManaColor) {
+			v.add(faceName, appendPath(path, "ManaColor"), CardDefIssueInvalidRuleEffect, "life-for-mana payment must set a colored mana color")
+		}
+	case RuleEffectPayLifeForCommanderTax:
+		if effect.AffectedPlayer != PlayerYou {
+			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "life-for-commander-tax payment must affect the controller")
+		}
+		if !effect.AffectedSource {
+			v.add(faceName, appendPath(path, "AffectedSource"), CardDefIssueInvalidRuleEffect, "life-for-commander-tax payment must be self-scoped")
+		}
 	case RuleEffectPlayFromZone:
 		if err := validatePlayFromZoneRuleEffect(effect, false, true); err != nil {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, err.Error())
@@ -1009,6 +1127,19 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		payload.PermanentTypes = nil
 		if !reflect.DeepEqual(payload, RuleEffect{}) {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "entering-permanent trigger multiplier accepts only a permanent-type filter")
+		}
+	case RuleEffectAdditionalTriggerForControlledPermanent:
+		payload := *effect
+		payload.Kind = RuleEffectNone
+		payload.AffectedSelection = Selection{}
+		if !reflect.DeepEqual(payload, RuleEffect{}) {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "controlled-permanent trigger multiplier accepts only a source-permanent selection filter")
+		}
+	case RuleEffectSuppressOpponentEnteringTriggers:
+		payload := *effect
+		payload.Kind = RuleEffectNone
+		if !reflect.DeepEqual(payload, RuleEffect{}) {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "opponent entering-trigger suppression does not accept additional payload")
 		}
 	default:
 	}
@@ -1085,6 +1216,16 @@ func (v *cardDefValidator) validateAttackTaxRuleEffect(faceName, path string, ef
 	}
 }
 
+// costModifierSelectionMatchesCreatureType reports whether a cost modifier's
+// card-subject selection narrows to creature spells by card type with no color
+// filter, the shape an entry-choice creature-subtype cost modifier requires.
+func costModifierSelectionMatchesCreatureType(selection Selection) bool {
+	return len(selection.RequiredTypes) == 1 &&
+		selection.RequiredTypes[0] == types.Creature &&
+		len(selection.ColorsAny) == 0 &&
+		!selection.Colorless
+}
+
 func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier CostModifier, sourceAbility bool) {
 	if sourceAbility && modifier.Kind != CostModifierAbility {
 		v.add(faceName, appendPath(path, "Kind"), CardDefIssueInvalidRuleEffect, "source ability cost modifiers must have ability kind")
@@ -1110,40 +1251,15 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 	if modifier.SetManaCost.Exists && modifier.SetGeneric.Exists {
 		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "cost modifier cannot set both full mana cost and generic cost")
 	}
-	if len(modifier.MatchColors) != 0 {
+	if !modifier.CardSelection.Empty() {
 		if modifier.Kind != CostModifierSpell {
-			v.add(faceName, appendPath(path, "MatchColors"), CardDefIssueInvalidRuleEffect, "color-disjunction cost modifiers must be spell modifiers")
+			v.add(faceName, appendPath(path, "CardSelection"), CardDefIssueInvalidRuleEffect, "card-subject cost modifiers must be spell modifiers")
 		}
-		if modifier.MatchColor || modifier.MatchCardType {
-			v.add(faceName, appendPath(path, "MatchColors"), CardDefIssueInvalidRuleEffect, "color-disjunction cost modifiers cannot also match a single color or card type")
-		}
-		if len(modifier.MatchColors) < 2 {
-			v.add(faceName, appendPath(path, "MatchColors"), CardDefIssueInvalidRuleEffect, "color-disjunction cost modifiers require two or more colors")
-		}
-		for _, c := range modifier.MatchColors {
-			if c == "" {
-				v.add(faceName, appendPath(path, "MatchColors"), CardDefIssueInvalidRuleEffect, "color-disjunction cost modifiers require real colors")
-			}
-		}
-	}
-	if len(modifier.MatchSubtypes) != 0 {
-		if modifier.Kind != CostModifierSpell {
-			v.add(faceName, appendPath(path, "MatchSubtypes"), CardDefIssueInvalidRuleEffect, "subtype cost modifiers must be spell modifiers")
-		}
-		if modifier.MatchCardType || len(modifier.MatchColors) != 0 {
-			v.add(faceName, appendPath(path, "MatchSubtypes"), CardDefIssueInvalidRuleEffect, "subtype cost modifiers cannot also match a card type or a color disjunction")
-		}
-		for _, sub := range modifier.MatchSubtypes {
-			if sub == "" {
-				v.add(faceName, appendPath(path, "MatchSubtypes"), CardDefIssueInvalidRuleEffect, "subtype cost modifiers require real subtypes")
-			}
-		}
+		v.validateSelection(faceName, appendPath(path, "CardSelection"), modifier.CardSelection)
 	}
 	if modifier.ChosenSubtypeFromEntryChoice &&
 		(modifier.Kind != CostModifierSpell ||
-			!modifier.MatchCardType ||
-			modifier.CardType != types.Creature ||
-			modifier.MatchColor) {
+			!costModifierSelectionMatchesCreatureType(modifier.CardSelection)) {
 		v.add(faceName, appendPath(path, "ChosenSubtypeFromEntryChoice"), CardDefIssueInvalidRuleEffect, "chosen subtype cost modifier must match creature spells from the entry-time creature-type choice")
 	}
 	if modifier.SourceZone.Exists {
@@ -1154,10 +1270,14 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 			v.add(faceName, appendPath(path, "SourceZone"), CardDefIssueInvalidRuleEffect, "source-zone cost modifiers require a real zone")
 		}
 	}
+	if modifier.TargetsSource && modifier.Kind != CostModifierSpell {
+		v.add(faceName, appendPath(path, "TargetsSource"), CardDefIssueInvalidRuleEffect, "targets-source cost modifiers must be spell modifiers")
+	}
 	if modifier.PerObjectReduction < 0 {
 		v.add(faceName, appendPath(path, "PerObjectReduction"), CardDefIssueInvalidRuleEffect, "per-object cost reduction cannot be negative")
 	}
-	if modifier.PerObjectReduction > 0 {
+	switch {
+	case modifier.PerObjectReduction > 0:
 		if modifier.Kind != CostModifierSpell && (!sourceAbility || modifier.Kind != CostModifierAbility) {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "per-object cost reduction requires a spell modifier or a source ability modifier")
 		}
@@ -1166,8 +1286,19 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 		} else {
 			v.validateSelection(faceName, appendPath(path, "CountSelection"), *modifier.CountSelection)
 		}
-	} else if modifier.CountSelection != nil && !modifier.CountSelection.Empty() {
+		if modifier.CountZone.Exists {
+			if modifier.Kind != CostModifierSpell {
+				v.add(faceName, appendPath(path, "CountZone"), CardDefIssueInvalidRuleEffect, "card-zone count reductions must be spell modifiers")
+			}
+			if modifier.CountZone.Val != zone.Graveyard && modifier.CountZone.Val != zone.Hand {
+				v.add(faceName, appendPath(path, "CountZone"), CardDefIssueInvalidRuleEffect, "card-zone count reductions require the graveyard or hand zone")
+			}
+		}
+	case modifier.CountSelection != nil && !modifier.CountSelection.Empty():
 		v.add(faceName, appendPath(path, "CountSelection"), CardDefIssueInvalidRuleEffect, "count selection requires a per-object reduction")
+	case modifier.CountZone.Exists:
+		v.add(faceName, appendPath(path, "CountZone"), CardDefIssueInvalidRuleEffect, "card-zone count requires a per-object reduction")
+	default:
 	}
 	if modifier.DynamicReduction != nil {
 		if modifier.Kind != CostModifierSpell {
@@ -1179,6 +1310,33 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 		if !dynamicCostReductionKindSupported(modifier.DynamicReduction.Kind) {
 			v.add(faceName, appendPath(path, "DynamicReduction"), CardDefIssueInvalidRuleEffect, "dynamic cost reduction amount kind is unsupported")
 		}
+	}
+	v.validateSharedExiledCardTypeReduction(faceName, path, modifier)
+}
+
+// validateSharedExiledCardTypeReduction checks the shared-exiled-card-type
+// generic reduction ("Spells you cast cost {N} less to cast for each card type
+// they share with cards exiled with this creature.", Cemetery Prowler). The
+// reduction is a spell modifier whose amount scales per shared card type, so it
+// must name the linked-exile key it reads, cannot be negative, and is mutually
+// exclusive with the per-object and dynamic reductions. An empty key without a
+// positive amount is the inert zero value.
+func (v *cardDefValidator) validateSharedExiledCardTypeReduction(faceName string, path string, modifier CostModifier) {
+	if modifier.SharedExiledCardTypeReduction < 0 {
+		v.add(faceName, appendPath(path, "SharedExiledCardTypeReduction"), CardDefIssueInvalidRuleEffect, "shared-exiled-card-type cost reduction cannot be negative")
+	}
+	if modifier.SharedExiledCardTypeReduction > 0 {
+		if modifier.Kind != CostModifierSpell {
+			v.add(faceName, appendPath(path, "SharedExiledCardTypeReduction"), CardDefIssueInvalidRuleEffect, "shared-exiled-card-type cost reduction requires a spell modifier")
+		}
+		if modifier.ExiledLinkKey == "" {
+			v.add(faceName, appendPath(path, "ExiledLinkKey"), CardDefIssueInvalidRuleEffect, "shared-exiled-card-type cost reduction requires a linked-exile key")
+		}
+		if modifier.PerObjectReduction > 0 || modifier.DynamicReduction != nil {
+			v.add(faceName, appendPath(path, "SharedExiledCardTypeReduction"), CardDefIssueInvalidRuleEffect, "shared-exiled-card-type cost reduction cannot combine with another dynamic reduction")
+		}
+	} else if modifier.ExiledLinkKey != "" {
+		v.add(faceName, appendPath(path, "ExiledLinkKey"), CardDefIssueInvalidRuleEffect, "linked-exile key requires a shared-exiled-card-type cost reduction")
 	}
 }
 
@@ -1195,6 +1353,7 @@ func dynamicCostReductionKindSupported(kind DynamicAmountKind) bool {
 		DynamicAmountGreatestManaValueInGroup,
 		DynamicAmountTotalPowerInGroup,
 		DynamicAmountTotalToughnessInGroup,
+		DynamicAmountTotalManaValueInGroup,
 		DynamicAmountControllerLife,
 		DynamicAmountControllerHandSize,
 		DynamicAmountControllerGraveyardSize,
@@ -1261,41 +1420,19 @@ func (v *cardDefValidator) validateTargetIndex(faceName, path string, targetInde
 }
 
 func (v *cardDefValidator) validateCondition(faceName, path string, condition *Condition, targets []TargetSpec) {
-	if condition.ControllerLifeAtLeast < 0 {
-		v.add(faceName, appendPath(path, "ControllerLifeAtLeast"), CardDefIssueInvalidCondition, "life threshold cannot be negative")
-	}
-	if condition.ControllerHandSizeAtLeast < 0 {
-		v.add(faceName, appendPath(path, "ControllerHandSizeAtLeast"), CardDefIssueInvalidCondition, "hand-size threshold cannot be negative")
+	for i := range condition.Aggregates {
+		if condition.Aggregates[i].Value < 0 {
+			v.add(faceName, appendPath(path, fmt.Sprintf("Aggregates[%d].Value", i)), CardDefIssueInvalidCondition, "aggregate threshold cannot be negative")
+		}
 	}
 	if condition.AnyPlayerLifeAtMost < 0 {
 		v.add(faceName, appendPath(path, "AnyPlayerLifeAtMost"), CardDefIssueInvalidCondition, "life threshold cannot be negative")
 	}
-	if condition.OpponentCountAtLeast < 0 {
-		v.add(faceName, appendPath(path, "OpponentCountAtLeast"), CardDefIssueInvalidCondition, "opponent-count threshold cannot be negative")
-	}
-	if condition.ControllerGraveyardCardCountAtLeast < 0 {
-		v.add(faceName, appendPath(path, "ControllerGraveyardCardCountAtLeast"), CardDefIssueInvalidCondition, "graveyard-card threshold cannot be negative")
-	}
-	if condition.ControllerGraveyardCardTypeCountAtLeast < 0 {
-		v.add(faceName, appendPath(path, "ControllerGraveyardCardTypeCountAtLeast"), CardDefIssueInvalidCondition, "graveyard-card-type threshold cannot be negative")
-	}
-	if condition.ControllerBasicLandTypeCountAtLeast < 0 {
-		v.add(faceName, appendPath(path, "ControllerBasicLandTypeCountAtLeast"), CardDefIssueInvalidCondition, "basic-land-type threshold cannot be negative")
-	}
-	if condition.ControllerCreaturePowerDiversityAtLeast < 0 {
-		v.add(faceName, appendPath(path, "ControllerCreaturePowerDiversityAtLeast"), CardDefIssueInvalidCondition, "creature-power-diversity threshold cannot be negative")
-	}
-	if condition.ControllerControls.MinCount < 0 {
-		v.add(faceName, appendPath(path, "ControllerControls.MinCount"), CardDefIssueInvalidCondition, "permanent-count threshold cannot be negative")
-	}
-	if !condition.ControllerControls.Empty() {
-		v.validateSelection(faceName, appendPath(path, "ControllerControls"), condition.ControllerControls.Selection())
+	if condition.ControllerGraveyardCardOfTypeCountAtLeast < 0 {
+		v.add(faceName, appendPath(path, "ControllerGraveyardCardOfTypeCountAtLeast"), CardDefIssueInvalidCondition, "graveyard-card-of-type threshold cannot be negative")
 	}
 	if condition.ControlsMatching.Exists {
 		v.validateConditionSelectionCount(faceName, appendPath(path, "ControlsMatching"), condition.ControlsMatching.Val)
-		if !condition.ControllerControls.Empty() {
-			v.add(faceName, path, CardDefIssueInvalidSelection, "Condition sets both ControllerControls and ControlsMatching")
-		}
 	}
 	if condition.AnyOpponentControls.Exists {
 		v.validateConditionSelectionCount(faceName, appendPath(path, "AnyOpponentControls"), condition.AnyOpponentControls.Val)
@@ -1420,6 +1557,14 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 			unsupported.Multicolored = false
 			unsupported.ManaValue.Exists = false
 		}
+		if eventCarriesMovedCardCharacteristics(pattern.Event) {
+			unsupported.Supertypes = nil
+			unsupported.SubtypesAny = nil
+			unsupported.ExcludedSubtype = ""
+			unsupported.ColorsAny = nil
+			unsupported.Colorless = false
+			unsupported.Multicolored = false
+		}
 		if !unsupported.Empty() {
 			v.add(faceName, appendPath(path, "CardSelection"), CardDefIssueInvalidSelection, "trigger card Selection uses predicates unavailable from event data")
 		}
@@ -1444,6 +1589,14 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 	}
 	if pattern.RequireCombatDamage && pattern.RequireNonCombatDamage {
 		v.add(faceName, path, CardDefIssueInvalidSelection, "trigger pattern cannot require both combat and noncombat damage")
+	}
+	if pattern.DamageSourceCaptured {
+		if pattern.Event != EventDamageDealt {
+			v.add(faceName, appendPath(path, "DamageSourceCaptured"), CardDefIssueInvalidSelection, "DamageSourceCaptured requires a damage-dealt event")
+		}
+		if pattern.Source != TriggerSourceAny || pattern.Subject != TriggerSubjectDefault || !pattern.DamageSourceSelection.Empty() {
+			v.add(faceName, appendPath(path, "DamageSourceCaptured"), CardDefIssueInvalidSelection, "DamageSourceCaptured must not be combined with a damage-source filter")
+		}
 	}
 	if pattern.OneOrMorePerAttackTarget && (!pattern.OneOrMore || pattern.Event != EventAttackerDeclared) {
 		v.add(faceName, path, CardDefIssueInvalidSelection, "OneOrMorePerAttackTarget requires a one-or-more attacker-declared pattern")
@@ -1478,12 +1631,17 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 	}
 	if pattern.PlayerEventOrdinalThisTurn > 0 &&
 		pattern.Event != EventCardDrawn &&
+		pattern.Event != EventCardDiscarded &&
+		pattern.Event != EventCycled &&
 		pattern.Event != EventLifeGained &&
 		pattern.Event != EventLifeLost &&
 		pattern.Event != EventScry &&
 		pattern.Event != EventSurveil &&
 		pattern.Event != EventSpellCast {
 		v.add(faceName, appendPath(path, "PlayerEventOrdinalThisTurn"), CardDefIssueInvalidSelection, "player-event ordinal is unavailable for this event")
+	}
+	if pattern.ExcludeFirstDrawInDrawStep && pattern.Event != EventCardDrawn {
+		v.add(faceName, appendPath(path, "ExcludeFirstDrawInDrawStep"), CardDefIssueInvalidSelection, "first-draw-in-draw-step exclusion is only supported for card-drawn events")
 	}
 	if pattern.MatchFromZone && pattern.FromZone == zone.None {
 		v.add(faceName, appendPath(path, "FromZone"), CardDefIssueInvalidSelection, "from-zone trigger filter must set a source zone")
@@ -1497,8 +1655,28 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 	if pattern.MatchToZone && pattern.ExcludeToZone {
 		v.add(faceName, appendPath(path, "ToZone"), CardDefIssueInvalidSelection, "to-zone trigger filter cannot both require and exclude its destination")
 	}
+	if pattern.ExcludeFromZone && pattern.FromZone == zone.None {
+		v.add(faceName, appendPath(path, "FromZone"), CardDefIssueInvalidSelection, "excluded from-zone trigger filter must set a source zone")
+	}
+	if pattern.MatchFromZone && pattern.ExcludeFromZone {
+		v.add(faceName, appendPath(path, "FromZone"), CardDefIssueInvalidSelection, "from-zone trigger filter cannot both require and exclude its source")
+	}
 	if pattern.FaceDown && !pattern.MatchFaceDown {
 		v.add(faceName, appendPath(path, "FaceDown"), CardDefIssueInvalidSelection, "face-down trigger filter must be enabled")
+	}
+}
+
+// eventCarriesMovedCardCharacteristics reports whether a player-card event
+// carries the moved card's printed characteristics, so a trigger card Selection
+// may filter on supertypes, subtypes, and colors in addition to card types. The
+// draw, discard, and cycle events reference the moved card instance, from which
+// the runtime reads those characteristics.
+func eventCarriesMovedCardCharacteristics(event EventKind) bool {
+	switch event {
+	case EventCardDrawn, EventCardDiscarded, EventCycled:
+		return true
+	default:
+		return false
 	}
 }
 
@@ -1510,14 +1688,18 @@ func (v *cardDefValidator) validateAttackerCountRelations(faceName, path string,
 	if pattern.AttackAlone && pattern.Event != EventAttackerDeclared {
 		v.add(faceName, appendPath(path, "AttackAlone"), CardDefIssueInvalidSelection, "attacks-alone trigger filter is only supported for attacker-declared events")
 	}
+	if pattern.AttackWhileSaddled && pattern.Event != EventAttackerDeclared {
+		v.add(faceName, appendPath(path, "AttackWhileSaddled"), CardDefIssueInvalidSelection, "attacks-while-saddled trigger filter is only supported for attacker-declared events")
+	}
 	if pattern.AttackerCountAtLeast == 0 {
 		return
 	}
 	if pattern.AttackerCountAtLeast < 2 {
 		v.add(faceName, appendPath(path, "AttackerCountAtLeast"), CardDefIssueInvalidSelection, "attacker-count trigger filter must require at least two attackers")
 	}
-	if pattern.Event != EventAttackerDeclared || !pattern.OneOrMore || pattern.AttackAlone {
-		v.add(faceName, appendPath(path, "AttackerCountAtLeast"), CardDefIssueInvalidSelection, "attacker-count trigger filter requires a one-or-more attacker-declared pattern without attacks-alone")
+	if pattern.Event != EventAttackerDeclared || pattern.AttackAlone ||
+		(!pattern.OneOrMore && pattern.Source != TriggerSourceSelf) {
+		v.add(faceName, appendPath(path, "AttackerCountAtLeast"), CardDefIssueInvalidSelection, "attacker-count trigger filter requires a one-or-more or self-source attacker-declared pattern without attacks-alone")
 	}
 }
 
@@ -1580,12 +1762,13 @@ func (v *cardDefValidator) validatePlayerRef(faceName, path string, ref PlayerRe
 	}
 }
 
-func (v *cardDefValidator) validateCardCondition(faceName, path string, condition CardCondition) {
+func (v *cardDefValidator) validateCardCondition(faceName, path string, condition CardSelection) {
 	v.validateCardRef(faceName, appendPath(path, "Card"), condition.Card)
-	if condition.ChosenSubtypeFrom != "" && condition.ChosenSubtypeFrom != EntryTypeChoiceKey {
-		v.add(faceName, appendPath(path, "ChosenSubtypeFrom"), CardDefIssueInvalidCondition, "chosen subtype condition must use the entry-time creature-type choice")
+	sel := condition.Selection
+	if sel.ChosenSubtypeFrom != "" && sel.ChosenSubtypeFrom != EntryTypeChoiceKey {
+		v.add(faceName, appendPath(path, "Selection.ChosenSubtypeFrom"), CardDefIssueInvalidCondition, "chosen subtype condition must use the entry-time creature-type choice")
 	}
-	if !condition.RequirePermanentCard && len(condition.Types) == 0 && len(condition.Supertypes) == 0 && len(condition.SubtypesAny) == 0 && condition.ChosenSubtypeFrom == "" {
+	if !sel.RequirePermanentCard && len(sel.RequiredTypes) == 0 && len(sel.Supertypes) == 0 && len(sel.SubtypesAny) == 0 && sel.ChosenSubtypeFrom == "" {
 		v.add(faceName, path, CardDefIssueInvalidReference, "card condition has no filters")
 	}
 }
@@ -1624,7 +1807,7 @@ func (v *cardDefValidator) validateTokenCopySpec(faceName, path string, spec Tok
 	switch spec.Source {
 	case TokenCopySourceObject:
 		v.validateObjectRef(faceName, appendPath(path, "Object"), spec.Object, targets)
-	case TokenCopySourceSourceCard:
+	case TokenCopySourceSourceCard, TokenCopySourceChosenFromTriggerBatch:
 	case TokenCopySourceEachInGroup:
 		if spec.Group == nil {
 			v.add(faceName, appendPath(path, "Group"), CardDefIssueInvalidReference, "token copy for-each group is nil")

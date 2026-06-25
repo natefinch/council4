@@ -145,7 +145,17 @@ func recognizeCardTypeWord(word string) (CardType, bool) {
 	}
 }
 
-// cardTypeWord returns the singular lowercase Oracle word for a typed CardType,
+// recognizeExcludedCardTypeWord maps a "non-<type>" group prefix word (e.g.
+// "Nonland", "Nonartifact") to the excluded CardType, mirroring
+// recognizeColorOrNonColorWord at the card-type level. It fails closed for any
+// word lacking the "non" prefix or naming an unknown card type.
+func recognizeExcludedCardTypeWord(word string) (CardType, bool) {
+	if rest, ok := strings.CutPrefix(strings.ToLower(word), "non"); ok {
+		return recognizeCardTypeWord(rest)
+	}
+	return CardTypeUnknown, false
+}
+
 // the inverse of recognizeCardTypeWord across every card type (including the
 // non-permanent instant and sorcery types). It fails closed for the unknown
 // card type.
@@ -435,6 +445,26 @@ func CardinalWordValue(word string) (int, bool) {
 		return 9, true
 	case "ten":
 		return 10, true
+	case "eleven":
+		return 11, true
+	case "twelve":
+		return 12, true
+	case "thirteen":
+		return 13, true
+	case "fourteen":
+		return 14, true
+	case "fifteen":
+		return 15, true
+	case "sixteen":
+		return 16, true
+	case "seventeen":
+		return 17, true
+	case "eighteen":
+		return 18, true
+	case "nineteen":
+		return 19, true
+	case "twenty":
+		return 20, true
 	default:
 		return 0, false
 	}
@@ -507,8 +537,14 @@ const (
 	ControllerRelationYouControl       ControllerRelation = "ControllerRelationYouControl"
 	ControllerRelationYouDontControl   ControllerRelation = "ControllerRelationYouDontControl"
 	ControllerRelationOpponentControls ControllerRelation = "ControllerRelationOpponentControls"
-	ControllerRelationYouOwn           ControllerRelation = "ControllerRelationYouOwn"
-	ControllerRelationOpponentOwns     ControllerRelation = "ControllerRelationOpponentOwns"
+	// ControllerRelationEachOpponentControls is the distributive opponent
+	// wording ("each creature each opponent controls"). It denotes the same
+	// opponent-controlled set as ControllerRelationOpponentControls but a
+	// different verbatim phrasing, so the byte-exact recipient reconstruction can
+	// rebuild it while lowering treats both as the opponent controller.
+	ControllerRelationEachOpponentControls ControllerRelation = "ControllerRelationEachOpponentControls"
+	ControllerRelationYouOwn               ControllerRelation = "ControllerRelationYouOwn"
+	ControllerRelationOpponentOwns         ControllerRelation = "ControllerRelationOpponentOwns"
 )
 
 // SingularNounForms returns the candidate singular spellings for a possibly

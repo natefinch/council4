@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -81,7 +82,7 @@ func TestActivatedAbilityCollectEvidenceRequiresEnoughManaValue(t *testing.T) {
 	}
 }
 
-func TestCollectEvidenceRejectsStalePreferenceWithoutMutation(t *testing.T) {
+func TestCollectEvidenceStalePreferenceFallsBackToDeterministicPlan(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Evidence Source"}})
 	graveyardCard := addCardToGraveyard(g, game.Player1, evidenceCard("Evidence Four", 4))
@@ -98,13 +99,40 @@ func TestCollectEvidenceRejectsStalePreferenceWithoutMutation(t *testing.T) {
 		}},
 		Prefs: &payment.Preferences{EvidenceChoices: []id.ID{handCard}},
 	})
+	if !ok {
+		t.Fatal("stale collect-evidence preference did not fall back to a deterministic legal plan")
+	}
+	if g.Players[game.Player1].Graveyard.Contains(graveyardCard) ||
+		!g.Players[game.Player1].Exile.Contains(graveyardCard) ||
+		!g.Players[game.Player1].Hand.Contains(handCard) {
+		t.Fatal("collect-evidence fallback did not exile the legal graveyard card while leaving the hand untouched")
+	}
+}
+
+func TestCollectEvidenceStalePreferenceRejectedUnderStrictReplayWithoutMutation(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Evidence Source"}})
+	graveyardCard := addCardToGraveyard(g, game.Player1, evidenceCard("Evidence Four", 4))
+	handCard := addCardToHand(g, game.Player1, evidenceCard("Stale Evidence", 4))
+
+	_, ok := paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
+		PlayerID: game.Player1,
+		Source:   source,
+		AdditionalCosts: []cost.Additional{{
+			Kind:   cost.AdditionalCollectEvidence,
+			Text:   "Collect evidence 4",
+			Amount: 4,
+			Source: zone.Graveyard,
+		}},
+		Prefs: &payment.Preferences{EvidenceChoices: []id.ID{handCard}, StrictReplay: true},
+	})
 	if ok {
-		t.Fatal("stale collect-evidence preference paid successfully")
+		t.Fatal("strict-replay stale collect-evidence preference paid successfully")
 	}
 	if !g.Players[game.Player1].Graveyard.Contains(graveyardCard) ||
 		g.Players[game.Player1].Exile.Contains(graveyardCard) ||
 		!g.Players[game.Player1].Hand.Contains(handCard) {
-		t.Fatal("stale collect-evidence preference mutated zones")
+		t.Fatal("strict-replay stale collect-evidence preference mutated zones")
 	}
 }
 
@@ -316,7 +344,7 @@ func TestGraveyardActivatedAbilityChecksActivationCondition(t *testing.T) {
 		ActivatedAbilities: []game.ActivatedAbility{{
 			ZoneOfFunction: zone.Graveyard,
 			ActivationCondition: opt.Val(game.Condition{
-				ControllerLifeAtLeast: 10,
+				Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLife, Op: compare.GreaterOrEqual, Value: 10}},
 			}),
 			Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.GainLife{
 				Amount: game.Fixed(1),

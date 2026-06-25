@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -77,17 +78,17 @@ func TestLowerMultiTargetBounceExcludedTypeAndUpToOne(t *testing.T) {
 			if spec.Allow != game.TargetAllowPermanent {
 				t.Fatalf("allow = %v, want TargetAllowPermanent", spec.Allow)
 			}
-			if !cardSlicesEqual(spec.Predicate.PermanentTypes, test.permTypes) {
-				t.Fatalf("permanent types = %v, want %v", spec.Predicate.PermanentTypes, test.permTypes)
+			if !cardSlicesEqual(spec.Selection.Val.RequiredTypesAny, test.permTypes) {
+				t.Fatalf("permanent types = %v, want %v", spec.Selection.Val.RequiredTypesAny, test.permTypes)
 			}
-			if !cardSlicesEqual(spec.Predicate.ExcludedTypes, test.excluded) {
-				t.Fatalf("excluded types = %v, want %v", spec.Predicate.ExcludedTypes, test.excluded)
+			if !cardSlicesEqual(spec.Selection.Val.ExcludedTypes, test.excluded) {
+				t.Fatalf("excluded types = %v, want %v", spec.Selection.Val.ExcludedTypes, test.excluded)
 			}
-			if spec.Predicate.Controller != test.controller {
-				t.Fatalf("controller = %v, want %v", spec.Predicate.Controller, test.controller)
+			if spec.Selection.Val.Controller != test.controller {
+				t.Fatalf("controller = %v, want %v", spec.Selection.Val.Controller, test.controller)
 			}
-			if spec.Predicate.Another != test.another {
-				t.Fatalf("another = %v, want %v", spec.Predicate.Another, test.another)
+			if spec.Selection.Val.ExcludeSource != test.another {
+				t.Fatalf("another = %v, want %v", spec.Selection.Val.ExcludeSource, test.another)
 			}
 			if len(mode.Sequence) != test.maxTargets {
 				t.Fatalf("sequence len = %d, want %d", len(mode.Sequence), test.maxTargets)
@@ -102,14 +103,70 @@ func TestLowerMultiTargetBounceExcludedTypeAndUpToOne(t *testing.T) {
 	}
 }
 
-func cardSlicesEqual(got, want []types.Card) bool {
-	if len(got) != len(want) {
-		return false
-	}
-	for i := range got {
-		if got[i] != want[i] {
-			return false
+// TestLowerUpToOneTargetTappedBounce proves the "up to one target <qualified>"
+// optional single-target form reuses the mandatory single-target reconstruction
+// for qualifiers (here a tapped-state filter) the plural multi-target form does
+// not express, both as a stand-alone spell and as the enters-the-battlefield
+// trigger printed on Peerless Ropemaster. Each lowers to one optional permanent
+// target (MinTargets 0, MaxTargets 1) carrying the tapped predicate and a single
+// Bounce addressing target index 0.
+func TestLowerUpToOneTargetTappedBounce(t *testing.T) {
+	t.Parallel()
+	assertTappedBounce := func(t *testing.T, mode game.Mode) {
+		t.Helper()
+		if len(mode.Targets) != 1 {
+			t.Fatalf("targets = %#v, want one spec", mode.Targets)
+		}
+		spec := mode.Targets[0]
+		if spec.MinTargets != 0 || spec.MaxTargets != 1 {
+			t.Fatalf("cardinality = {%d,%d}, want {0,1}", spec.MinTargets, spec.MaxTargets)
+		}
+		if spec.Allow != game.TargetAllowPermanent {
+			t.Fatalf("allow = %v, want TargetAllowPermanent", spec.Allow)
+		}
+		if !cardSlicesEqual(spec.Selection.Val.RequiredTypesAny, []types.Card{types.Creature}) {
+			t.Fatalf("permanent types = %v, want [Creature]", spec.Selection.Val.RequiredTypesAny)
+		}
+		if spec.Selection.Val.Tapped != game.TriTrue {
+			t.Fatalf("tapped = %v, want TriTrue", spec.Selection.Val.Tapped)
+		}
+		if len(mode.Sequence) != 1 {
+			t.Fatalf("sequence len = %d, want 1", len(mode.Sequence))
+		}
+		p, ok := mode.Sequence[0].Primitive.(game.Bounce)
+		if !ok || p.Object != game.TargetPermanentReference(0) {
+			t.Fatalf("sequence[0] = %#v, want Bounce of TargetPermanentReference(0)", mode.Sequence[0].Primitive)
 		}
 	}
-	return true
+
+	t.Run("spell", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, &ScryfallCard{
+			Name:       "Test Tapped Bounce",
+			Layout:     "normal",
+			TypeLine:   "Sorcery",
+			OracleText: "Return up to one target tapped creature to its owner's hand.",
+		})
+		assertTappedBounce(t, face.SpellAbility.Val.Modes[0])
+	})
+
+	t.Run("enters trigger", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, &ScryfallCard{
+			Name:       "Peerless Ropemaster",
+			Layout:     "normal",
+			TypeLine:   "Creature — Human Rogue",
+			Power:      new("2"),
+			Toughness:  new("2"),
+			OracleText: "When this creature enters, return up to one target tapped creature to its owner's hand.",
+		})
+		if len(face.TriggeredAbilities) != 1 {
+			t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+		}
+		assertTappedBounce(t, face.TriggeredAbilities[0].Content.Modes[0])
+	})
+}
+
+func cardSlicesEqual(got, want []types.Card) bool {
+	return slices.Equal(got, want)
 }

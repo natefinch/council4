@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
@@ -202,6 +203,23 @@ func validateCapturedTargetControllerOptionalReference(
 	return validateCapturedTargetControllerReference(reference.Val, targets, checkTargets)
 }
 
+// validateCapturedTargetControllerPlayerAndQuantity is the shared body for the
+// many single-player primitives whose only captured-target-controller checks are
+// their Player reference followed by their Amount quantity. Collapsing the
+// identical reference-then-quantity body keeps each primitive's method a single
+// explicit call while still routing through the same per-shape helpers.
+func validateCapturedTargetControllerPlayerAndQuantity(
+	player PlayerReference,
+	quantity Quantity,
+	targets []TargetSpec,
+	checkTargets bool,
+) error {
+	if err := validateCapturedTargetControllerReference(player, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateCapturedTargetControllerQuantity(quantity, targets, checkTargets)
+}
+
 func (p Damage) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	var references []PlayerReference
 	if ref, ok := p.Recipient.PlayerReference(); ok {
@@ -217,17 +235,11 @@ func (p Damage) validateCapturedTargetControllerReferences(targets []TargetSpec,
 }
 
 func (p Draw) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func (p ReorderLibraryTop) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func (p LookAtLibraryTop) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
@@ -238,11 +250,16 @@ func (p ShuffleLibrary) validateCapturedTargetControllerReferences(targets []Tar
 	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
 }
 
+func (p LookAtHand) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
+}
+
+func (p ChooseDiscardFromHand) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
+}
+
 func (p Discard) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func (p AddMana) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
@@ -254,10 +271,7 @@ func (p AddCounter) validateCapturedTargetControllerReferences(targets []TargetS
 }
 
 func (p AddPlayerCounter) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func (p MoveCounters) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
@@ -306,6 +320,10 @@ func (p StartEngines) validateCapturedTargetControllerReferences(targets []Targe
 	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
 }
 
+func (p BecomeMonarch) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
+}
+
 func (p SetClassLevel) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
 }
@@ -326,6 +344,14 @@ func (p Renown) validateCapturedTargetControllerReferences(targets []TargetSpec,
 	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
 }
 
+func (p Adapt) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p Connive) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
+}
+
 func (p Pay) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	return validateCapturedTargetControllerOptionalReference(p.Payment.Payer, targets, checkTargets)
 }
@@ -338,17 +364,11 @@ func (p Choose) validateCapturedTargetControllerReferences(targets []TargetSpec,
 }
 
 func (p GainLife) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func (p LoseLife) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func (p MoveCard) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
@@ -356,42 +376,31 @@ func (p MoveCard) validateCapturedTargetControllerReferences(targets []TargetSpe
 }
 
 func (p SacrificePermanents) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func (p Mill) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func (p ExileTopOfLibrary) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func (p PutHandOnLibraryThenDraw) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
 }
 
+func (p RevealUntil) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
+}
+
 func (p Scry) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func (p Surveil) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func (p Dig) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
@@ -417,10 +426,7 @@ func (p SkipStep) validateCapturedTargetControllerReferences(targets []TargetSpe
 }
 
 func (p PreventDamage) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
-		return err
-	}
-	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
 func validatePlayerGroupReference(ref PlayerGroupReference) error {
@@ -448,6 +454,21 @@ func validateMassObjectOrGroup(object ObjectReference, group GroupReference, tar
 		return validateObjectReference(object, targets, checkTargets)
 	}
 	return validateGroupReference(group, targets, checkTargets)
+}
+
+// validateMassPlayerOrGroup is the player twin of validateMassObjectOrGroup: it
+// enforces that exactly one of a primitive's Player or PlayerGroup reference is
+// set. name is the owning primitive's name so each call site keeps its existing
+// error message verbatim. Reference dispatch (validatePlayerReference /
+// validatePlayerGroupReference) stays at the call sites because the surrounding
+// per-primitive checks differ.
+func validateMassPlayerOrGroup(name string, player PlayerReference, group PlayerGroupReference) error {
+	hasGroup := group.Kind != PlayerGroupReferenceNone
+	hasPlayer := player.Kind() != PlayerReferenceNone
+	if hasGroup == hasPlayer {
+		return fmt.Errorf("%s requires exactly one of Player or PlayerGroup", name)
+	}
+	return nil
 }
 
 func validateCardReference(ref CardReference) error {
@@ -519,7 +540,7 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 		}
 		return validateObjectReference(dynamic.Object, targets, checkTargets)
 	case DynamicAmountCountSelector, DynamicAmountGreatestPowerInGroup, DynamicAmountGreatestToughnessInGroup, DynamicAmountGreatestManaValueInGroup,
-		DynamicAmountTotalPowerInGroup, DynamicAmountTotalToughnessInGroup, DynamicAmountColorCountInGroup,
+		DynamicAmountTotalPowerInGroup, DynamicAmountTotalToughnessInGroup, DynamicAmountTotalManaValueInGroup, DynamicAmountColorCountInGroup,
 		DynamicAmountSharedCreatureTypeCountInGroup:
 		return validateGroupReference(dynamic.Group, targets, checkTargets)
 	case DynamicAmountCountCardsInZone:
@@ -571,6 +592,10 @@ func (p GroupSourceDamage) validatePrimitive(targets []TargetSpec, checkTargets 
 		return err
 	}
 	return validateQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p GroupSelfPowerDamage) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateGroupReference(p.Group, targets, checkTargets)
 }
 
 func (p Damage) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
@@ -635,11 +660,10 @@ func (p Draw) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
-	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
-	hasPlayer := p.Player.Kind() != PlayerReferenceNone
-	if hasGroup == hasPlayer {
-		return errors.New("Draw requires exactly one of Player or PlayerGroup")
+	if err := validateMassPlayerOrGroup("Draw", p.Player, p.PlayerGroup); err != nil {
+		return err
 	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
 	if hasGroup {
 		return validatePlayerGroupReference(p.PlayerGroup)
 	}
@@ -667,6 +691,18 @@ func (p ShuffleLibrary) validatePrimitive(targets []TargetSpec, checkTargets boo
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p ShuffleGraveyardIntoLibrary) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p LookAtHand) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p ChooseDiscardFromHand) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
 func (p Discard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.EntireHand && (p.Amount.IsDynamic() || p.Amount.Value() != 0) {
 		return errors.New("Discard with EntireHand must not set Amount")
@@ -674,10 +710,12 @@ func (p Discard) validatePrimitive(targets []TargetSpec, checkTargets bool) erro
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
+	if err := validateMassPlayerOrGroup("Discard", p.Player, p.PlayerGroup); err != nil {
+		return err
+	}
 	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
-	hasPlayer := p.Player.Kind() != PlayerReferenceNone
-	if hasGroup == hasPlayer {
-		return errors.New("Discard requires exactly one of Player or PlayerGroup")
+	if p.PublishLinked != "" && (p.EntireHand || hasGroup) {
+		return errors.New("Discard with PublishLinked must be a single-player, non-entire-hand discard")
 	}
 	if hasGroup {
 		return validatePlayerGroupReference(p.PlayerGroup)
@@ -747,11 +785,25 @@ func validateManaSpendRider(rider ManaSpendRider) error {
 		}
 		return nil
 	case ManaSpendCastCreatureSpell:
-		if rider.Restriction != ManaSpendUnrestricted ||
-			rider.ChosenSubtypeFrom != "" ||
+		// Two modeled shapes share this condition: the unrestricted haste bonus
+		// rider (Arena of Glory: spendable on anything, a creature spell paid
+		// with it gains haste) and the bare restricted spend rider (Beastcaller
+		// Savant: spendable only on creature spells, no further effect).
+		if rider.ChosenSubtypeFrom != "" ||
 			rider.SpellRuleEffect != RuleEffectNone ||
-			len(rider.Effect.Sequence) != 0 ||
-			len(rider.SpellGainsKeywords) == 0 {
+			len(rider.Effect.Sequence) != 0 {
+			return errors.New("creature-spell mana spend rider has unsupported fields")
+		}
+		switch rider.Restriction {
+		case ManaSpendUnrestricted:
+			if len(rider.SpellGainsKeywords) == 0 {
+				return errors.New("creature-spell mana spend rider has unsupported fields")
+			}
+		case ManaSpendRestrictedToCondition:
+			if len(rider.SpellGainsKeywords) != 0 {
+				return errors.New("creature-spell mana spend rider has unsupported fields")
+			}
+		default:
 			return errors.New("creature-spell mana spend rider has unsupported fields")
 		}
 		return nil
@@ -771,6 +823,52 @@ func validateManaSpendRider(rider ManaSpendRider) error {
 }
 
 func (p AddCounter) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.ChooseOne && p.Group.Domain() == groupDomainNone {
+		return errors.New("add counter choosing one recipient requires a group")
+	}
+	if p.AllKinds {
+		if p.Group.Domain() != groupDomainNone {
+			return errors.New("add counter doubling every kind requires a single object, not a group")
+		}
+		if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
+			return err
+		}
+		if p.Object.Kind() == ObjectReferenceTargetPermanent {
+			return validateTargetAllows(p.Object.TargetIndex(), TargetAllowPermanent, targets, checkTargets)
+		}
+		return nil
+	}
+	if len(p.KindChoices) != 0 {
+		if p.Group.Domain() != groupDomainNone {
+			return errors.New("add counter with a kind choice requires a single object, not a group")
+		}
+		if len(p.KindChoices) < 2 {
+			return errors.New("add counter kind choice requires two or more kinds")
+		}
+		seen := make(map[counter.Kind]bool, len(p.KindChoices))
+		for _, kind := range p.KindChoices {
+			if !kind.Valid() {
+				return errors.New("add counter kind choice requires recognized counter kinds")
+			}
+			if kind.PlayerOnly() {
+				return errors.New("player-only counter kind cannot be placed on a permanent")
+			}
+			if seen[kind] {
+				return errors.New("add counter kind choice has duplicate kinds")
+			}
+			seen[kind] = true
+		}
+		if err := validatePositiveQuantity(p.Amount, targets, checkTargets); err != nil {
+			return err
+		}
+		if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
+			return err
+		}
+		if p.Object.Kind() == ObjectReferenceTargetPermanent {
+			return validateTargetAllows(p.Object.TargetIndex(), TargetAllowPermanent, targets, checkTargets)
+		}
+		return nil
+	}
 	if !p.CounterKind.Valid() {
 		return errors.New("add counter requires a recognized counter kind")
 	}
@@ -804,6 +902,13 @@ func (p AddPlayerCounter) validatePrimitive(targets []TargetSpec, checkTargets b
 	}
 	if err := validatePositiveQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
+	}
+	if err := validateMassPlayerOrGroup("AddPlayerCounter", p.Player, p.PlayerGroup); err != nil {
+		return err
+	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
+	if hasGroup {
+		return validatePlayerGroupReference(p.PlayerGroup)
 	}
 	if err := validatePlayerReference(p.Player, targets, checkTargets); err != nil {
 		return err
@@ -843,9 +948,20 @@ func (p ApplyContinuous) validatePrimitive(targets []TargetSpec, checkTargets bo
 	if len(p.ContinuousEffects) == 0 {
 		return errors.New("continuous effect instruction has no declarations")
 	}
+	if p.ChooseFrom.Valid() {
+		if p.Object.Exists {
+			return errors.New("continuous effect instruction cannot both choose from a group and target an object")
+		}
+		if p.PublishLinked != "" {
+			return errors.New("group-choosing continuous effect cannot publish a single linked object")
+		}
+		return nil
+	}
 	if p.PublishLinked != "" &&
-		(!p.Object.Exists || p.Object.Val.Kind() != ObjectReferenceTargetPermanent) {
-		return errors.New("linked continuous effect must target a permanent")
+		(!p.Object.Exists ||
+			(p.Object.Val.Kind() != ObjectReferenceTargetPermanent &&
+				p.Object.Val.Kind() != ObjectReferenceLinkedObject)) {
+		return errors.New("linked continuous effect must target a permanent or linked object")
 	}
 	if p.Object.Exists {
 		return validateObjectReference(p.Object.Val, targets, checkTargets)
@@ -959,9 +1075,16 @@ func (p Tap) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
 }
 
+func (p TapOrUntap) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateObjectReference(p.Object, targets, checkTargets)
+}
+
 func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
+	}
+	if p.Spec.RevealOnly {
+		return p.validateRevealOnlySearch(targets, checkTargets)
 	}
 	if p.Spec.SourceZone == zone.None || p.Spec.Destination == zone.None {
 		return errors.New("search requires source and destination zones")
@@ -995,17 +1118,20 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 			p.Spec.SplitDestination.Val.Zone == zone.Library) {
 		return errors.New("search has unsupported split destination")
 	}
-	if p.Spec.CardType.Exists && len(p.Spec.CardTypesAny) != 0 {
+	if len(p.Spec.Filter.RequiredTypes) != 0 && len(p.Spec.Filter.RequiredTypesAny) != 0 {
 		return errors.New("search cannot combine one required card type with a card-type union")
 	}
-	if len(p.Spec.CardTypesAny) == 1 {
+	if len(p.Spec.Filter.RequiredTypesAny) == 1 {
 		return errors.New("search card-type union requires at least two card types")
 	}
-	if slices.Contains(p.Spec.CardTypesAny, "") {
+	if slices.Contains(p.Spec.Filter.RequiredTypesAny, "") {
 		return errors.New("search card-type union cannot contain an empty type")
 	}
-	if p.Spec.Supertype.Exists && p.Spec.Supertype.Val == "" {
+	if slices.Contains(p.Spec.Filter.Supertypes, "") {
 		return errors.New("search supertype cannot be empty")
+	}
+	if problems := p.Spec.Filter.Validate(); len(problems) != 0 {
+		return errors.New("search filter: " + problems[0])
 	}
 	if p.PublishLinked != "" &&
 		(p.Amount.IsDynamic() ||
@@ -1022,6 +1148,16 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 			return err
 		}
 	}
+	if err := validateMassPlayerOrGroup("Search", p.Player, p.PlayerGroup); err != nil {
+		return err
+	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
+	if hasGroup {
+		if p.Controller.Exists {
+			return errors.New("Search with PlayerGroup cannot set a controller")
+		}
+		return validatePlayerGroupReference(p.PlayerGroup)
+	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
@@ -1036,6 +1172,53 @@ func validSearchDestination(destination SearchDestination) bool {
 	default:
 		return false
 	}
+}
+
+// validateRevealOnlySearch validates the search-and-reveal-only slice that leaves
+// the found card in the library for a following ConditionalDestinationPlace to
+// route. It requires a single searching player, a library source, no destination,
+// a reveal, exactly one found card, and none of the placement riders.
+func (p Search) validateRevealOnlySearch(targets []TargetSpec, checkTargets bool) error {
+	if p.Spec.SourceZone != zone.Library {
+		return errors.New("reveal-only search must source from the library")
+	}
+	if p.Spec.Destination != zone.None {
+		return errors.New("reveal-only search leaves the card in the library and has no destination")
+	}
+	if !p.Spec.Reveal {
+		return errors.New("reveal-only search must reveal the found card")
+	}
+	if p.Amount.IsDynamic() || p.Amount.Value() != 1 {
+		return errors.New("reveal-only search must find exactly one card")
+	}
+	if p.Spec.SplitDestination.Exists ||
+		p.Spec.EntersTapped ||
+		p.Spec.MaxManaValueFromX ||
+		p.Spec.SharedSubtype ||
+		p.Spec.DestinationPosition != SearchPositionUnspecified {
+		return errors.New("reveal-only search does not support split destination, tapped entry, X bound, shared-subtype, or library-position riders")
+	}
+	if p.Controller.Exists {
+		return errors.New("reveal-only search does not support a controller rider")
+	}
+	if p.PlayerGroup.Kind != PlayerGroupReferenceNone {
+		return errors.New("reveal-only search requires a single searching player")
+	}
+	switch p.Spec.FailToFindPolicy {
+	case SearchFailToFindDefault, SearchMayFailToFind:
+	default:
+		return errors.New("reveal-only search supports only the default or may-fail-to-find policy")
+	}
+	if len(p.Spec.Filter.RequiredTypes) != 0 && len(p.Spec.Filter.RequiredTypesAny) != 0 {
+		return errors.New("search cannot combine one required card type with a card-type union")
+	}
+	if len(p.Spec.Filter.RequiredTypesAny) == 1 {
+		return errors.New("search card-type union requires at least two card types")
+	}
+	if problems := p.Spec.Filter.Validate(); len(problems) != 0 {
+		return errors.New("search filter: " + problems[0])
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
 func (p Reveal) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
@@ -1066,42 +1249,115 @@ func (p Reveal) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 	return nil
 }
 
-func (p ExileFromHand) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
-		return err
+// validatePrimitive validates the canonical choose-from-zone envelope. It
+// enforces the bound (a fixed positive Quantity, or the any-number form's empty
+// Quantity and absent mana-value cap), the object-scoped single-card publish
+// restriction (the imprint rule, Chrome Mox), and the destination/tapped/
+// mana-value-cap rules, failing closed on any unsupported combination. It
+// reproduces the accept/reject set of the retired per-family validators
+// (ExileFromHand, ExileFromGraveyard, PutFromHand, ReturnFromGraveyard) that now
+// lower to this envelope.
+func (p ChooseFromZone) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.SourceZone == zone.None {
+		return errors.New("choose from zone requires a source zone")
 	}
-	if p.Amount.IsDynamic() || p.Amount.Value() < 1 {
-		return errors.New("exile from hand requires a fixed positive amount")
+	if p.Count == ChooseAnyNumber {
+		if p.Quantity.IsDynamic() || p.Quantity.Value() != 0 {
+			return errors.New("choose from zone any-number form takes no fixed amount")
+		}
+		if p.Riders.MaxTotalManaValue.Exists {
+			return errors.New("choose from zone any-number form takes no total mana value cap")
+		}
+	} else {
+		if err := validateQuantity(p.Quantity, targets, checkTargets); err != nil {
+			return err
+		}
+		if p.Quantity.IsDynamic() || p.Quantity.Value() < 1 {
+			return errors.New("choose from zone requires a fixed positive amount")
+		}
 	}
-	if p.PublishLinked != "" && p.Amount.Value() != 1 {
-		return errors.New("linked exile from hand must exile exactly one card")
+	if p.Riders.PublishObjectScoped && p.Riders.PublishLinked != "" && p.Quantity.Value() != 1 {
+		return errors.New("linked choose from zone must move exactly one card")
+	}
+	switch p.Destination.Zone {
+	case zone.Exile, zone.Hand, zone.Battlefield:
+	default:
+		return errors.New("choose from zone requires an exile, hand, or battlefield destination")
+	}
+	if p.Riders.EntersTapped && p.Destination.Zone != zone.Battlefield {
+		return errors.New("choose from zone tapped entry requires a battlefield destination")
+	}
+	if p.Riders.MaxTotalManaValue.Exists {
+		if p.Destination.Zone != zone.Battlefield {
+			return errors.New("choose from zone total mana value cap requires a battlefield destination")
+		}
+		if p.Riders.MaxTotalManaValue.Val < 0 {
+			return errors.New("choose from zone total mana value cap must be non-negative")
+		}
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
-func (p PutFromHand) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+func (p ExileEntireHand) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.LinkedKey == "" {
+		return errors.New("exile entire hand requires a linked key")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p ReturnExiledCardsToHand) validatePrimitive([]TargetSpec, bool) error {
+	if p.LinkedKey == "" {
+		return errors.New("return exiled cards to hand requires a linked key")
+	}
+	return nil
+}
+
+func (p ExileForEachPlayer) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.LinkedKey == "" {
+		return errors.New("exile for each player requires a linked key")
+	}
+	if err := firstProblem(p.Selection.Validate()); err != nil {
+		return err
+	}
+	return validatePlayerReference(p.Chooser, targets, checkTargets)
+}
+
+func (p ReturnLinkedExiledCardsToBattlefield) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.LinkedKey == "" {
+		return errors.New("return linked exiled cards to battlefield requires a linked key")
+	}
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
 	if p.Amount.IsDynamic() || p.Amount.Value() < 1 {
-		return errors.New("put from hand requires a fixed positive amount")
+		return errors.New("return linked exiled cards to battlefield requires a fixed positive Amount")
 	}
-	return validatePlayerReference(p.Player, targets, checkTargets)
+	return validatePlayerReference(p.Chooser, targets, checkTargets)
+}
+
+func (p DestroyForEachPlayer) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.LinkedKey == "" {
+		return errors.New("destroy for each player requires a linked key")
+	}
+	if err := firstProblem(p.Selection.Validate()); err != nil {
+		return err
+	}
+	return validatePlayerReference(p.Chooser, targets, checkTargets)
+}
+
+func (p CreateTokenForEachDestroyed) validatePrimitive([]TargetSpec, bool) error {
+	if p.LinkedKey == "" {
+		return errors.New("create token for each destroyed requires a linked key")
+	}
+	if !p.Source.Valid() {
+		return errors.New("create token for each destroyed requires a valid source")
+	}
+	return nil
 }
 
 func (p CastForFree) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.Zone == zone.None {
 		return errors.New("cast for free requires a source zone")
-	}
-	return validatePlayerReference(p.Player, targets, checkTargets)
-}
-
-func (p ReturnFromGraveyard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
-		return err
-	}
-	if p.Amount.IsDynamic() || p.Amount.Value() < 1 {
-		return errors.New("return from graveyard requires a fixed positive amount")
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
@@ -1119,6 +1375,14 @@ func (p MassReturnFromGraveyard) validatePrimitive(targets []TargetSpec, checkTa
 	if p.SourceGroup.Kind != PlayerGroupReferenceNone {
 		if problems := p.SourceGroup.Validate(); len(problems) != 0 {
 			return errors.New(problems[0])
+		}
+	}
+	if p.FromTriggerBatch {
+		if p.Destination != zone.Battlefield {
+			return errors.New("mass return from graveyard trigger batch requires a battlefield destination")
+		}
+		if p.SourceGroup.Kind != PlayerGroupReferenceNone {
+			return errors.New("mass return from graveyard trigger batch cannot widen source graveyards")
 		}
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
@@ -1205,7 +1469,15 @@ func (p PutPermanentOnLibrary) validatePrimitive(targets []TargetSpec, checkTarg
 	return validateObjectReference(p.Object, targets, checkTargets)
 }
 
+func (PutLinkedExiledCardsInLibrary) validatePrimitive([]TargetSpec, bool) error {
+	return nil
+}
+
 func (p StartEngines) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p BecomeMonarch) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
@@ -1238,11 +1510,39 @@ func (p Renown) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 	return validateObjectReference(p.Object, targets, checkTargets)
 }
 
+func (p Adapt) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateObjectReference(p.Object, targets, checkTargets)
+}
+
+func (p Connive) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if err := validatePlayerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateObjectReference(p.Object, targets, checkTargets)
+}
+
+func (p BecomeSaddled) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateObjectReference(p.Object, targets, checkTargets)
+}
+
 func (ShuffleSpellIntoLibrary) validatePrimitive(_ []TargetSpec, _ bool) error {
 	return nil
 }
 
 func (p Pay) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateResolutionPayment(p.Payment, targets, checkTargets)
+}
+
+func (p PayRepeatedly) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.PublishCount == "" {
+		return errors.New("PayRepeatedly requires a published count key")
+	}
 	return validateResolutionPayment(p.Payment, targets, checkTargets)
 }
 
@@ -1303,11 +1603,10 @@ func (p GainLife) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
-	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
-	hasPlayer := p.Player.Kind() != PlayerReferenceNone
-	if hasGroup == hasPlayer {
-		return errors.New("GainLife requires exactly one of Player or PlayerGroup")
+	if err := validateMassPlayerOrGroup("GainLife", p.Player, p.PlayerGroup); err != nil {
+		return err
 	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
 	if hasGroup {
 		return validatePlayerGroupReference(p.PlayerGroup)
 	}
@@ -1318,11 +1617,10 @@ func (p LoseLife) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
-	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
-	hasPlayer := p.Player.Kind() != PlayerReferenceNone
-	if hasGroup == hasPlayer {
-		return errors.New("LoseLife requires exactly one of Player or PlayerGroup")
+	if err := validateMassPlayerOrGroup("LoseLife", p.Player, p.PlayerGroup); err != nil {
+		return err
 	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
 	if hasGroup {
 		return validatePlayerGroupReference(p.PlayerGroup)
 	}
@@ -1366,7 +1664,7 @@ func (p RepeatProcess) validatePrimitive(targets []TargetSpec, checkTargets bool
 	if len(p.Body.Modes) == 0 {
 		return errors.New("RepeatProcess requires a body")
 	}
-	return validateNestedAbilityContent(p.Body, nil, targets, checkTargets)
+	return validateNestedAbilityContent(p.Body, nil, targets, checkTargets, nil)
 }
 
 func (p Exile) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
@@ -1509,8 +1807,24 @@ func (p GrantCastPermission) validatePrimitive([]TargetSpec, bool) error {
 	if p.FromZone != zone.Graveyard {
 		return errors.New("cast permission requires graveyard as its source zone")
 	}
-	if p.Duration != DurationUntilEndOfYourNextTurn {
+	if p.Duration != DurationUntilEndOfTurn && p.Duration != DurationUntilEndOfYourNextTurn {
 		return errors.New("cast permission requires a supported bounded duration")
+	}
+	return nil
+}
+
+func (p ExileForPlay) validatePrimitive([]TargetSpec, bool) error {
+	if !p.SelectFromBatch {
+		if err := validateCardReference(p.Card); err != nil {
+			return err
+		}
+	}
+	if p.FromZone != zone.Graveyard {
+		return errors.New("ExileForPlay requires graveyard as its source zone")
+	}
+	if p.Duration != DurationThisTurn && p.Duration != DurationUntilEndOfTurn &&
+		p.Duration != DurationUntilEndOfYourNextTurn && p.Duration != DurationUntilYourNextEndStep {
+		return errors.New("ExileForPlay requires a this-turn, until-end-of-turn, until-end-of-your-next-turn, or until-your-next-end-step play window")
 	}
 	return nil
 }
@@ -1529,14 +1843,13 @@ func (p SacrificePermanents) validatePrimitive(targets []TargetSpec, checkTarget
 	if err := firstProblem(p.Selection.Validate()); err != nil {
 		return err
 	}
-	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
-	hasPlayer := p.Player.Kind() != PlayerReferenceNone
-	if hasGroup == hasPlayer {
-		return errors.New("SacrificePermanents requires exactly one of Player or PlayerGroup")
+	if err := validateMassPlayerOrGroup("SacrificePermanents", p.Player, p.PlayerGroup); err != nil {
+		return err
 	}
 	if err := p.Fallback.validate(targets, checkTargets); err != nil {
 		return err
 	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
 	if hasGroup {
 		return validatePlayerGroupReference(p.PlayerGroup)
 	}
@@ -1583,6 +1896,10 @@ func (p SkipNextUntap) validatePrimitive(targets []TargetSpec, checkTargets bool
 	return validateObjectReference(p.Object, targets, checkTargets)
 }
 
+func (p RemoveFromCombat) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateObjectReference(p.Object, targets, checkTargets)
+}
+
 func (p CounterObject) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
 		return err
@@ -1610,10 +1927,10 @@ func (p CopyStackObject) validatePrimitive(targets []TargetSpec, checkTargets bo
 	switch p.Object.Kind() {
 	case ObjectReferenceTargetStackObject:
 		return validateTargetAllows(p.Object.TargetIndex(), TargetAllowStackObject, targets, checkTargets)
-	case ObjectReferenceEventStackObject:
+	case ObjectReferenceEventStackObject, ObjectReferenceResolvingStackObject:
 		return nil
 	default:
-		return errors.New("copy stack object requires a target or event stack object reference")
+		return errors.New("copy stack object requires a target, event, or resolving stack object reference")
 	}
 }
 
@@ -1621,12 +1938,14 @@ func (p Mill) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
-	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
-	hasPlayer := p.Player.Kind() != PlayerReferenceNone
-	if hasGroup == hasPlayer {
-		return errors.New("Mill requires exactly one of Player or PlayerGroup")
+	if err := validateMassPlayerOrGroup("Mill", p.Player, p.PlayerGroup); err != nil {
+		return err
 	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
 	if hasGroup {
+		if p.PublishLinked != "" {
+			return errors.New("Mill cannot publish linked cards for the group form")
+		}
 		return validatePlayerGroupReference(p.PlayerGroup)
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
@@ -1636,11 +1955,10 @@ func (p ExileTopOfLibrary) validatePrimitive(targets []TargetSpec, checkTargets 
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
-	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
-	hasPlayer := p.Player.Kind() != PlayerReferenceNone
-	if hasGroup == hasPlayer {
-		return errors.New("ExileTopOfLibrary requires exactly one of Player or PlayerGroup")
+	if err := validateMassPlayerOrGroup("ExileTopOfLibrary", p.Player, p.PlayerGroup); err != nil {
+		return err
 	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
 	if hasGroup {
 		return validatePlayerGroupReference(p.PlayerGroup)
 	}
@@ -1650,6 +1968,23 @@ func (p ExileTopOfLibrary) validatePrimitive(targets []TargetSpec, checkTargets 
 func (p PutHandOnLibraryThenDraw) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.DrawOffset < 0 {
 		return errors.New("PutHandOnLibraryThenDraw requires a non-negative DrawOffset")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p RevealUntil) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Destination != zone.Graveyard && p.Destination != zone.Hand {
+		return errors.New("RevealUntil requires a Graveyard or Hand Destination")
+	}
+	if err := firstProblem(p.Until.Validate()); err != nil {
+		return err
+	}
+	if err := validateMassPlayerOrGroup("RevealUntil", p.Player, p.PlayerGroup); err != nil {
+		return err
+	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
+	if hasGroup {
+		return validatePlayerGroupReference(p.PlayerGroup)
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
@@ -1700,11 +2035,23 @@ func (p ImpulseExile) validatePrimitive(targets []TargetSpec, checkTargets bool)
 		return errors.New("ImpulseExile requires a positive number of cards")
 	}
 	if p.Duration != DurationThisTurn && p.Duration != DurationUntilEndOfTurn &&
-		p.Duration != DurationUntilEndOfYourNextTurn {
-		return errors.New("ImpulseExile requires a this-turn, until-end-of-turn, or until-end-of-your-next-turn play window")
+		p.Duration != DurationUntilEndOfYourNextTurn && p.Duration != DurationUntilYourNextEndStep {
+		return errors.New("ImpulseExile requires a this-turn, until-end-of-turn, until-end-of-your-next-turn, or until-your-next-end-step play window")
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
+
+func (p HideawayExile) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if !p.Amount.IsDynamic() && p.Amount.Value() < 1 {
+		return errors.New("HideawayExile requires a positive number of cards")
+	}
+	return nil
+}
+
+func (PlayHideawayCard) validatePrimitive([]TargetSpec, bool) error { return nil }
 
 func (p Investigate) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
@@ -1751,7 +2098,7 @@ func (p PhaseOut) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 }
 
 func (p Regenerate) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	return validateObjectReference(p.Object, targets, checkTargets)
+	return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
 }
 
 func (p BecomeCopy) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
@@ -1778,6 +2125,23 @@ func (p SkipStep) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p AddExtraPhases) validatePrimitive([]TargetSpec, bool) error {
+	if !p.Combat && !p.Main {
+		return errors.New("add extra phases requires at least one phase")
+	}
+	if p.Main && !p.Combat {
+		return errors.New("add extra phases main phase must follow an extra combat phase")
+	}
+	return nil
+}
+
+func (p RollDie) validatePrimitive([]TargetSpec, bool) error {
+	if p.Sides < 2 {
+		return errors.New("roll die requires at least two sides")
+	}
+	return nil
+}
+
 func (p CreateEmblem) validatePrimitive([]TargetSpec, bool) error {
 	if len(p.EmblemAbilities) == 0 {
 		return errors.New("create emblem requires at least one ability")
@@ -1786,23 +2150,48 @@ func (p CreateEmblem) validatePrimitive([]TargetSpec, bool) error {
 }
 
 func (p CreateDelayedTrigger) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	switch p.Trigger.Timing {
-	case DelayedAtBeginningOfNextEndStep, DelayedAtBeginningOfNextUpkeep, DelayedAtBeginningOfNextMainPhase:
-	default:
-		return errors.New("delayed trigger requires a recognized timing")
+	if p.Trigger.EventPattern.Exists {
+		if p.Trigger.Timing != 0 {
+			return errors.New("event-based delayed trigger must not set a timing")
+		}
+		if p.Trigger.Window == DelayedWindowNone {
+			return errors.New("event-based delayed trigger requires a window")
+		}
+	} else {
+		switch p.Trigger.Timing {
+		case DelayedAtBeginningOfNextEndStep, DelayedAtBeginningOfNextUpkeep, DelayedAtBeginningOfNextMainPhase:
+		default:
+			return errors.New("delayed trigger requires a recognized timing")
+		}
+		if p.Trigger.Window != DelayedWindowNone {
+			return errors.New("fixed-phase delayed trigger must not set a window")
+		}
 	}
 	if len(p.Trigger.Content.Modes) == 0 {
 		return errors.New("delayed trigger requires content")
 	}
+	if p.Trigger.DamageSourceObject.Exists {
+		if !p.Trigger.EventPattern.Exists || !p.Trigger.EventPattern.Val.DamageSourceCaptured {
+			return errors.New("delayed trigger DamageSourceObject requires a DamageSourceCaptured event pattern")
+		}
+		if err := validateObjectReference(p.Trigger.DamageSourceObject.Val, targets, checkTargets); err != nil {
+			return err
+		}
+	} else if p.Trigger.EventPattern.Exists && p.Trigger.EventPattern.Val.DamageSourceCaptured {
+		return errors.New("delayed trigger DamageSourceCaptured pattern requires a DamageSourceObject")
+	}
 	return nil
 }
 
-func (p CreateReplacement) validatePrimitive([]TargetSpec, bool) error {
+func (p CreateReplacement) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.Replacement == nil {
 		return errors.New("create replacement requires a replacement")
 	}
 	if p.Replacement.MatchEvent == EventUnknown {
 		return errors.New("create replacement requires an event")
+	}
+	if p.Object.Kind() != ObjectReferenceNone {
+		return validateObjectReference(p.Object, targets, checkTargets)
 	}
 	return nil
 }
@@ -1833,6 +2222,7 @@ func validateNestedAbilityContent(
 	inheritedLinked map[LinkedKey]int,
 	capturedTargets []TargetSpec,
 	checkCapturedTargets bool,
+	siblingLinked map[LinkedKey]int,
 ) error {
 	for i := range content.Modes {
 		targets := append([]TargetSpec(nil), content.SharedTargets...)
@@ -1844,6 +2234,7 @@ func validateNestedAbilityContent(
 			inheritedLinked,
 			capturedTargets,
 			checkCapturedTargets,
+			siblingLinked,
 		); err != nil {
 			return fmt.Errorf("mode %d: %w", i, err)
 		}

@@ -126,7 +126,7 @@ func TestGenerateExecutableCardSourceDestroyCreature(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		`Constraint: "target creature"`,
-		"PermanentTypes: []types.Card{types.Creature}",
+		"RequiredTypesAny: []types.Card{types.Creature}",
 		"Primitive: game.Destroy",
 		"Object: game.TargetPermanentReference(0)",
 	} {
@@ -182,7 +182,7 @@ func TestGenerateExecutableCardSourceTypeUnionTarget(t *testing.T) {
 			oracleText: "Destroy target artifact or enchantment.",
 			wanted: []string{
 				`Constraint: "target artifact or enchantment"`,
-				"PermanentTypes: []types.Card{types.Artifact, types.Enchantment}",
+				"RequiredTypesAny: []types.Card{types.Artifact, types.Enchantment}",
 				"Primitive: game.Destroy",
 			},
 		},
@@ -191,7 +191,7 @@ func TestGenerateExecutableCardSourceTypeUnionTarget(t *testing.T) {
 			oracleText: "Test Bolt deals 3 damage to target creature or planeswalker.",
 			wanted: []string{
 				`Constraint: "target creature or planeswalker"`,
-				"PermanentTypes: []types.Card{types.Creature, types.Planeswalker}",
+				"RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker}",
 				"Allow:      game.TargetAllowPermanent,",
 				"Primitive: game.Damage",
 			},
@@ -687,7 +687,7 @@ func TestGenerateExecutableCardSourceExileCreature(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		`Constraint: "target creature"`,
-		"PermanentTypes: []types.Card{types.Creature}",
+		"RequiredTypesAny: []types.Card{types.Creature}",
 		"Primitive: game.Exile",
 		"Object: game.TargetPermanentReference(0)",
 	} {
@@ -741,7 +741,7 @@ func TestGenerateExecutableCardSourceBounceCreature(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		`Constraint: "target creature"`,
-		"PermanentTypes: []types.Card{types.Creature}",
+		"RequiredTypesAny: []types.Card{types.Creature}",
 		"Primitive: game.Bounce",
 		"Object: game.TargetPermanentReference(0)",
 	} {
@@ -1185,6 +1185,35 @@ func TestGenerateExecutableCardSourceControllerDiscard(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceTapOrUntapTarget(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Coral Trickster",
+		Layout:     "normal",
+		ManaCost:   "{U}",
+		TypeLine:   "Instant",
+		OracleText: "Tap or untap target creature.",
+		Colors:     []string{"U"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		`Constraint: "target creature"`,
+		"RequiredTypesAny: []types.Card{types.Creature}",
+		"Primitive: game.TapOrUntap",
+		"Object: game.TargetPermanentReference(0)",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceTapTarget(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -1204,7 +1233,7 @@ func TestGenerateExecutableCardSourceTapTarget(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		`Constraint: "target creature"`,
-		"PermanentTypes: []types.Card{types.Creature}",
+		"RequiredTypesAny: []types.Card{types.Creature}",
 		"Primitive: game.Tap",
 		"Object: game.TargetPermanentReference(0)",
 	} {
@@ -1455,6 +1484,38 @@ func TestGenerateExecutableCardSourceEachOfUpToTwoTargetCreatures(t *testing.T) 
 	}
 }
 
+func TestGenerateExecutableCardSourceInheritedSourcePowerGroupDamageSequence(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Aflame",
+		Layout:     "normal",
+		ManaCost:   "{2}{R}{R}",
+		TypeLine:   "Sorcery",
+		OracleText: "Choose target creature you control. It deals damage equal to its power to each other creature. If this spell was cast from a graveyard, discard your hand and draw four cards.\nFlashback {5}{R}{R} (You may cast this card from your graveyard for its flashback cost. Then exile it.)",
+		Colors:     []string{"R"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		`Constraint: "target creature you control"`,
+		"game.DynamicAmountObjectPower",
+		"game.GroupDamageRecipient(game.BattlefieldGroupExcluding(game.Selection{RequiredTypes: []types.Card{types.Creature}}, game.TargetPermanentReference(0)))",
+		"DamageSource: opt.Val(game.TargetPermanentReference(0))",
+		"CastFromZone: opt.Val(zone.Graveyard)",
+		"EntireHand: true",
+		"game.Draw{",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceMultiTargetUnionDestroy(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -1467,7 +1528,7 @@ func TestGenerateExecutableCardSourceMultiTargetUnionDestroy(t *testing.T) {
 			oracleText: "Destroy up to one target artifact or enchantment.",
 			wanted: []string{
 				`Constraint: "up to one target artifact or enchantment"`,
-				"PermanentTypes: []types.Card{types.Artifact, types.Enchantment}",
+				"RequiredTypesAny: []types.Card{types.Artifact, types.Enchantment}",
 				"MinTargets: 0",
 				"MaxTargets: 1",
 				"Primitive: game.Destroy",
@@ -1478,7 +1539,7 @@ func TestGenerateExecutableCardSourceMultiTargetUnionDestroy(t *testing.T) {
 			oracleText: "Destroy up to two target creatures or planeswalkers.",
 			wanted: []string{
 				`Constraint: "up to two target creatures or planeswalkers"`,
-				"PermanentTypes: []types.Card{types.Creature, types.Planeswalker}",
+				"RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker}",
 				"MinTargets: 0",
 				"MaxTargets: 2",
 				"Primitive: game.Destroy",
@@ -1525,7 +1586,7 @@ func TestGenerateExecutableCardSourceExcludedTypeManaValueTarget(t *testing.T) {
 			wanted: []string{
 				`Constraint: "target nonland permanent with mana value 3 or less"`,
 				"ExcludedTypes: []types.Card{types.Land}",
-				"ManaValue:     opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 3})",
+				"ManaValue: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 3})",
 				"Primitive: game.Destroy",
 			},
 		},

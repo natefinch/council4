@@ -42,6 +42,40 @@ func TestLowerTargetedGraveyardReturnToHand(t *testing.T) {
 	}
 }
 
+func TestLowerTargetedGraveyardReturnHistoric(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Historic Return",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return target historic card from your graveyard to your hand.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %#v, want one", mode.Targets)
+	}
+	target := mode.Targets[0]
+	if target.Allow != game.TargetAllowCard || target.TargetZone != zone.Graveyard ||
+		target.Selection.Val.Controller != game.ControllerYou {
+		t.Fatalf("target = %#v", target)
+	}
+	wantAnyOf := []game.Selection{
+		{RequiredTypes: []types.Card{types.Artifact}},
+		{Supertypes: []types.Super{types.Legendary}},
+		{SubtypesAny: []types.Sub{types.Saga}},
+	}
+	if !reflect.DeepEqual(target.Selection.Val.AnyOf, wantAnyOf) {
+		t.Fatalf("AnyOf = %#v, want %#v", target.Selection.Val.AnyOf, wantAnyOf)
+	}
+	move, ok := mode.Sequence[0].Primitive.(game.MoveCard)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.MoveCard", mode.Sequence[0].Primitive)
+	}
+	if move.Card.Kind != game.CardReferenceTarget || move.FromZone != zone.Graveyard || move.Destination != zone.Hand {
+		t.Fatalf("move = %#v", move)
+	}
+}
+
 func TestLowerTargetedGraveyardReturnSingleNonpermanentType(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
@@ -374,6 +408,76 @@ func TestLowerTargetedGraveyardReturnMultiTarget(t *testing.T) {
 	}
 }
 
+// TestLowerTargetedGraveyardReturnMultiTargetWithManaValue covers the plural
+// multi-target graveyard return that additionally carries a mana-value bound
+// ("Return up to two target creature cards with mana value 2 or less from your
+// graveyard to the battlefield.", Sigardian Savior). Every gathered card
+// individually satisfies the per-card bound, so the pluralized noun keeps the
+// "with mana value N or less" qualifier rather than failing closed.
+func TestLowerTargetedGraveyardReturnMultiTargetWithManaValue(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Sigardian Savior",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return up to two target creature cards with mana value 2 or less from your graveyard to the battlefield.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %#v, want one variable target spec", mode.Targets)
+	}
+	target := mode.Targets[0]
+	selection := target.Selection.Val
+	if target.MinTargets != 0 || target.MaxTargets != 2 ||
+		target.Allow != game.TargetAllowCard || target.TargetZone != zone.Graveyard ||
+		!slices.Equal(selection.RequiredTypes, []types.Card{types.Creature}) ||
+		selection.Controller != game.ControllerYou ||
+		!selection.ManaValue.Exists ||
+		selection.ManaValue.Val.Op != compare.LessOrEqual ||
+		selection.ManaValue.Val.Value != 2 {
+		t.Fatalf("target = %#v", target)
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence length = %d, want 2", len(mode.Sequence))
+	}
+	for i, instruction := range mode.Sequence {
+		put, ok := instruction.Primitive.(game.PutOnBattlefield)
+		if !ok {
+			t.Fatalf("primitive %d = %T, want game.PutOnBattlefield", i, instruction.Primitive)
+		}
+		ref, ok := put.Source.CardRef()
+		if !ok || ref.Kind != game.CardReferenceTarget || ref.TargetIndex != i {
+			t.Fatalf("put %d source = %#v", i, put.Source)
+		}
+	}
+}
+
+// TestLowerTargetedGraveyardReturnMultiTargetPermanentWithManaValue covers the
+// "permanent card" union under the same plural mana-value form, confirming the
+// disjunctive permanent-type set rides the multi-target spec with the bound.
+func TestLowerTargetedGraveyardReturnMultiTargetPermanentWithManaValue(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Mass Reclamation",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return up to two target permanent cards with mana value 2 or less from your graveyard to the battlefield.",
+	})
+	target := face.SpellAbility.Val.Modes[0].Targets[0]
+	selection := target.Selection.Val
+	if target.MinTargets != 0 || target.MaxTargets != 2 ||
+		len(selection.RequiredTypes) != 0 ||
+		!slices.Equal(selection.RequiredTypesAny, []types.Card{
+			types.Artifact, types.Creature, types.Enchantment,
+			types.Land, types.Planeswalker, types.Battle,
+		}) ||
+		!selection.ManaValue.Exists ||
+		selection.ManaValue.Val.Op != compare.LessOrEqual ||
+		selection.ManaValue.Val.Value != 2 {
+		t.Fatalf("target = %#v", target)
+	}
+}
+
 func TestLowerDynamicDamageCountsCardsWithCyclingInGraveyard(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -690,7 +794,7 @@ func TestLowerTwoGraveyardReturnsAdvanceCardSlot(t *testing.T) {
 // TestLowerChosenCardGraveyardReturnToHand covers the non-target "Return a
 // <filter> card from your graveyard to your hand" recursion wording, which is
 // chosen at resolution rather than targeted and lowers to a
-// game.ReturnFromGraveyard primitive carrying the card filter.
+// game.ChooseFromZone primitive carrying the card filter.
 func TestLowerChosenCardGraveyardReturnToHand(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -703,18 +807,18 @@ func TestLowerChosenCardGraveyardReturnToHand(t *testing.T) {
 	if len(mode.Targets) != 0 {
 		t.Fatalf("targets = %#v, want none", mode.Targets)
 	}
-	ret, ok := mode.Sequence[0].Primitive.(game.ReturnFromGraveyard)
+	ret, ok := mode.Sequence[0].Primitive.(game.ChooseFromZone)
 	if !ok {
-		t.Fatalf("primitive = %T, want game.ReturnFromGraveyard", mode.Sequence[0].Primitive)
+		t.Fatalf("primitive = %T, want game.ChooseFromZone", mode.Sequence[0].Primitive)
 	}
 	if ret.Player.Kind() != game.PlayerReferenceController {
 		t.Fatalf("player = %#v, want controller", ret.Player)
 	}
-	if ret.Amount.Value() != 1 {
-		t.Fatalf("amount = %#v, want fixed one", ret.Amount)
+	if ret.Quantity.Value() != 1 {
+		t.Fatalf("amount = %#v, want fixed one", ret.Quantity)
 	}
-	if !slices.Equal(ret.Selection.RequiredTypesAny, []types.Card{types.Creature, types.Planeswalker}) {
-		t.Fatalf("selection = %#v", ret.Selection)
+	if !slices.Equal(ret.Filter.RequiredTypesAny, []types.Card{types.Creature, types.Planeswalker}) {
+		t.Fatalf("selection = %#v", ret.Filter)
 	}
 }
 
@@ -729,12 +833,92 @@ func TestLowerChosenPlainCardGraveyardReturnToHand(t *testing.T) {
 		OracleText: "Return a card from your graveyard to your hand.",
 	})
 	mode := face.SpellAbility.Val.Modes[0]
-	ret, ok := mode.Sequence[0].Primitive.(game.ReturnFromGraveyard)
+	ret, ok := mode.Sequence[0].Primitive.(game.ChooseFromZone)
 	if !ok {
-		t.Fatalf("primitive = %T, want game.ReturnFromGraveyard", mode.Sequence[0].Primitive)
+		t.Fatalf("primitive = %T, want game.ChooseFromZone", mode.Sequence[0].Primitive)
 	}
-	if len(ret.Selection.RequiredTypes) != 0 || len(ret.Selection.RequiredTypesAny) != 0 {
-		t.Fatalf("selection should be unrestricted, got %#v", ret.Selection)
+	if len(ret.Filter.RequiredTypes) != 0 || len(ret.Filter.RequiredTypesAny) != 0 {
+		t.Fatalf("selection should be unrestricted, got %#v", ret.Filter)
+	}
+}
+
+// TestLowerChosenCardGraveyardReturnToBattlefield covers the chosen reanimation
+// wording "Return a permanent card with mana value N or less from your graveyard
+// to the battlefield" (Tayam's activated ability tail), which the controller
+// chooses at resolution and puts onto the battlefield under their control.
+func TestLowerChosenCardGraveyardReturnToBattlefield(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Reanimator",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return a permanent card with mana value 3 or less from your graveyard to the battlefield.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 0 {
+		t.Fatalf("targets = %#v, want none", mode.Targets)
+	}
+	ret, ok := mode.Sequence[0].Primitive.(game.ChooseFromZone)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.ChooseFromZone", mode.Sequence[0].Primitive)
+	}
+	if ret.Destination.Zone != zone.Battlefield || ret.Riders.EntersTapped {
+		t.Fatalf("return = %#v, want battlefield destination not tapped", ret)
+	}
+	if ret.Filter.ManaValue.Val.Op != compare.LessOrEqual || ret.Filter.ManaValue.Val.Value != 3 {
+		t.Fatalf("selection mana value = %#v, want <= 3", ret.Filter.ManaValue)
+	}
+	if !slices.Equal(ret.Filter.RequiredTypesAny, []types.Card{types.Artifact, types.Creature, types.Enchantment, types.Land, types.Planeswalker, types.Battle}) {
+		t.Fatalf("selection = %#v, want permanent-card union", ret.Filter)
+	}
+}
+
+// TestLowerChosenCardGraveyardReturnToBattlefieldTapped covers the entry-tapped
+// reanimation rider "... to the battlefield tapped" (Deeproot Wayfinder).
+func TestLowerChosenCardGraveyardReturnToBattlefieldTapped(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Ramp",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return a land card from your graveyard to the battlefield tapped.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	ret, ok := mode.Sequence[0].Primitive.(game.ChooseFromZone)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.ChooseFromZone", mode.Sequence[0].Primitive)
+	}
+	if ret.Destination.Zone != zone.Battlefield || !ret.Riders.EntersTapped {
+		t.Fatalf("return = %#v, want battlefield destination tapped", ret)
+	}
+	if !slices.Equal(ret.Filter.RequiredTypes, []types.Card{types.Land}) {
+		t.Fatalf("selection = %#v, want land", ret.Filter)
+	}
+}
+
+// TestLowerMillThenChosenGraveyardReanimateSequence covers the ordered
+// "Mill N cards, then return a permanent card with mana value X or less from
+// your graveyard to the battlefield" composition (Tayam's activated ability),
+// which lowers to a Mill instruction followed by a chosen battlefield return.
+func TestLowerMillThenChosenGraveyardReanimateSequence(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Sequencer",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Mill three cards, then return a permanent card with mana value 3 or less from your graveyard to the battlefield.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions", mode.Sequence)
+	}
+	mill, ok := mode.Sequence[0].Primitive.(game.Mill)
+	if !ok || mill.Amount.Value() != 3 {
+		t.Fatalf("first instruction = %#v, want Mill 3", mode.Sequence[0].Primitive)
+	}
+	ret, ok := mode.Sequence[1].Primitive.(game.ChooseFromZone)
+	if !ok || ret.Destination.Zone != zone.Battlefield {
+		t.Fatalf("second instruction = %#v, want battlefield ChooseFromZone", mode.Sequence[1].Primitive)
 	}
 }
 

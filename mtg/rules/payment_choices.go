@@ -30,9 +30,17 @@ func (e *Engine) paymentPreferencesForCostFromSource(g *game.Game, playerID game
 		case cost.AdditionalSacrifice:
 			prefs.SacrificeChoices = append(prefs.SacrificeChoices, e.additionalCostPermanentChoices(g, playerID, additionalCost, amount, agents, log)...)
 		case cost.AdditionalTapPermanents:
+			if additionalCost.TotalPowerAtLeast > 0 {
+				// The payment planner greedily selects which creatures to tap to
+				// reach the Saddle power threshold; no explicit preference is
+				// gathered here.
+				continue
+			}
 			prefs.TapChoices = append(prefs.TapChoices, e.additionalCostPermanentChoices(g, playerID, additionalCost, amount, agents, log, tapExclusions...)...)
 		case cost.AdditionalReturnToHand:
 			prefs.ReturnChoices = append(prefs.ReturnChoices, e.additionalCostPermanentChoices(g, playerID, additionalCost, amount, agents, log)...)
+		case cost.AdditionalRemoveCounterAmong:
+			prefs.RemoveCounterChoices = append(prefs.RemoveCounterChoices, e.additionalCostRemoveCounterAmongChoices(g, playerID, additionalCost, amount, agents, log)...)
 		case cost.AdditionalDiscard:
 			prefs.DiscardChoices = append(prefs.DiscardChoices, e.additionalCostCardChoices(g, playerID, additionalCost, amount, nil, 0, 0, zone.None, agents, log)...)
 		case cost.AdditionalExile:
@@ -137,16 +145,23 @@ func (e *Engine) phyrexianPaymentChoices(g *game.Game, playerID game.PlayerID, m
 	if manaCost == nil {
 		return nil
 	}
+	effective := payment.EffectiveManaCost(&rulesPaymentState{g: g}, playerID, *manaCost)
 	var choices []bool
 	availableLife := 0
 	if player, ok := playerByID(g, playerID); ok {
 		availableLife = player.Life
 	}
-	for _, symbol := range *manaCost {
-		if symbol.Kind != cost.PhyrexianSymbol {
+	for _, symbol := range effective {
+		var manaLabel string
+		switch symbol.Kind {
+		case cost.PhyrexianSymbol:
+			manaLabel = fmt.Sprintf("Pay %s mana", symbol.Color)
+		case cost.PhyrexianGenericSymbol:
+			manaLabel = fmt.Sprintf("Pay {%d}", symbol.Generic)
+		default:
 			continue
 		}
-		options := []game.ChoiceOption{{Index: 0, Label: fmt.Sprintf("Pay %s mana", symbol.Color)}}
+		options := []game.ChoiceOption{{Index: 0, Label: manaLabel}}
 		if availableLife >= 2 {
 			options = append(options, game.ChoiceOption{Index: 1, Label: "Pay 2 life"})
 		}
@@ -189,6 +204,47 @@ func (e *Engine) additionalCostPermanentChoices(g *game.Game, playerID game.Play
 	}
 	selected := e.chooseChoice(g, agents, request, log)
 	return selectedPaymentPermanentIDs(candidates, selected)
+}
+
+// additionalCostRemoveCounterAmongChoices gathers the per-counter selection for
+// an AdditionalRemoveCounterAmong cost. Each removable counter on a matching
+// controlled permanent becomes one selectable option, so the player may take
+// several counters from the same permanent. The returned slice names one
+// permanent per counter removed.
+func (e *Engine) additionalCostRemoveCounterAmongChoices(g *game.Game, playerID game.PlayerID, addCost cost.Additional, amount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []id.ID {
+	if amount <= 0 {
+		return nil
+	}
+	candidates := candidateSacrificePermanents(g, playerID, addCost, nil)
+	var expanded []id.ID
+	options := make([]game.ChoiceOption, 0, len(candidates))
+	for _, permanent := range candidates {
+		for range payment.RemovableAmongCounterCount(permanent, addCost) {
+			options = append(options, game.ChoiceOption{Index: len(expanded), Label: permanentChoiceLabel(g, permanent), Card: permanentChoiceInfo(g, permanent)})
+			expanded = append(expanded, permanent.ObjectID)
+		}
+	}
+	if len(expanded) <= amount {
+		return expanded
+	}
+	request := game.ChoiceRequest{
+		Kind:             game.ChoicePayment,
+		Player:           playerID,
+		Prompt:           payment.AdditionalCostText(addCost),
+		Options:          options,
+		MinChoices:       amount,
+		MaxChoices:       amount,
+		DefaultSelection: firstChoiceIndices(amount),
+	}
+	selected := e.chooseChoice(g, agents, request, log)
+	result := make([]id.ID, 0, len(selected))
+	for _, index := range selected {
+		if index < 0 || index >= len(expanded) {
+			continue
+		}
+		result = append(result, expanded[index])
+	}
+	return result
 }
 
 func (e *Engine) additionalCostCardChoices(g *game.Game, playerID game.PlayerID, addCost cost.Additional, amount int, remainingCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog, excludedCardIDs ...id.ID) []id.ID {
@@ -368,7 +424,7 @@ func remainingGraveyardPreferenceCostsPayable(g *game.Game, playerID game.Player
 				return false
 			}
 			card, ok := g.GetCardInstance(sourceCardID)
-			if !ok || !g.Players[playerID].Graveyard.Contains(sourceCardID) || !localAdditionalCostMatchesCard(cardFaceOrDefault(card, game.FaceFront), additional) {
+			if !ok || !g.Players[playerID].Graveyard.Contains(sourceCardID) || !localAdditionalCostMatchesCard(g, cardFaceOrDefault(card, game.FaceFront), additional) {
 				return false
 			}
 			nextReserved := cardIDSet(reservedCardIDs(reserved)...)
@@ -422,106 +478,59 @@ func firstChoiceIndices(amount int) []int {
 }
 
 func candidateSacrificePermanents(g *game.Game, playerID game.PlayerID, addCost cost.Additional, excludedTapIDs []id.ID) []*game.Permanent {
-	excluded := map[id.ID]bool{}
+	var excludedIDs []id.ID
 	if addCost.Kind == cost.AdditionalTapPermanents {
-		for _, permanentID := range excludedTapIDs {
-			excluded[permanentID] = true
-		}
+		excludedIDs = excludedTapIDs
 	}
-	var candidates []*game.Permanent
-	for _, permanent := range g.Battlefield {
-		if !activeBattlefieldPermanent(permanent) ||
-			permanent.Controller != playerID ||
-			!localAdditionalCostMatchesPermanent(g, permanent, addCost) {
-			continue
-		}
-		if excluded[permanent.ObjectID] {
-			continue
-		}
-		if addCost.Kind == cost.AdditionalTapPermanents && permanent.Tapped {
-			continue
-		}
-		if addCost.RequireTapped && !permanent.Tapped {
-			continue
-		}
-		candidates = append(candidates, permanent)
-	}
-	return candidates
-}
-
-func localAdditionalCostMatchesPermanent(g *game.Game, permanent *game.Permanent, addCost cost.Additional) bool {
-	if addCost.MatchPermanentType && !permanentHasType(g, permanent, addCost.PermanentType) {
-		return false
-	}
-	if addCost.RequireSupertype != "" && !permanentHasSupertype(g, permanent, addCost.RequireSupertype) {
-		return false
-	}
-	if addCost.SubtypesAny != (cost.SubtypeSet{}) {
-		for _, subtype := range addCost.SubtypesAny {
-			if subtype != "" && permanentHasSubtype(g, permanent, subtype) {
-				return true
-			}
-		}
-		return false
-	}
-	return true
+	return payment.CandidatePermanentsForCost(&rulesPaymentState{g: g}, playerID, addCost, nil, excludedIDs...)
 }
 
 func candidateAdditionalCostCards(g *game.Game, playerID game.PlayerID, addCost cost.Additional, excludedCardIDs ...id.ID) []id.ID {
-	player, ok := playerByID(g, playerID)
-	if !ok {
-		return nil
-	}
-	source := additionalCostSourceZone(addCost)
-	excluded := make(map[id.ID]bool, len(excludedCardIDs))
-	for _, cardID := range excludedCardIDs {
-		excluded[cardID] = true
-	}
-	var cardIDs []id.ID
-	switch source {
-	case zone.Hand:
-		cardIDs = player.Hand.All()
-	case zone.Graveyard:
-		cardIDs = player.Graveyard.All()
-	case zone.Exile:
-		cardIDs = player.Exile.All()
-	case zone.Command:
-		cardIDs = player.CommandZone.All()
-	default:
-		return nil
-	}
-	var candidates []id.ID
-	for _, cardID := range cardIDs {
-		if excluded[cardID] {
-			continue
-		}
-		card, ok := g.GetCardInstance(cardID)
-		if ok && localAdditionalCostMatchesCard(cardFaceOrDefault(card, game.FaceFront), addCost) {
-			candidates = append(candidates, cardID)
-		}
-	}
-	return candidates
+	// The choice layer never excludes the cost's own source card here (sourceCardID
+	// is zero): escape's "another" exclusion is enforced by the planner, and
+	// widening it to candidate presentation would change the offered set. Candidate
+	// enumeration otherwise shares the planner's reservation-aware engine.
+	return payment.CandidateCardsForCost(&rulesPaymentState{g: g}, playerID, addCost, 0, excludedCardIDs...)
 }
 
-func localAdditionalCostMatchesCard(face *game.CardDef, addCost cost.Additional) bool {
+func localAdditionalCostMatchesCard(g *game.Game, face *game.CardDef, addCost cost.Additional) bool {
+	sel, ok := payment.SelectionForAdditionalCost(addCost)
+	if !ok {
+		return false
+	}
+	return cardDefMatchesCostSelection(g, face, sel)
+}
+
+// permanentMatchesCostSelection reports whether a battlefield permanent
+// satisfies a cost's converted Selection. It builds the same subjectPermanent
+// the effect side uses so additional-cost candidate filtering and the payment
+// planner share one matcher.
+func permanentMatchesCostSelection(g *game.Game, permanent *game.Permanent, sel game.Selection) bool {
+	values := effectivePermanentValues(g, permanent)
+	subject := selectionSubject{
+		kind:      subjectPermanent,
+		g:         g,
+		permanent: permanent,
+		values:    &values,
+	}
+	if sel.Controller != game.ControllerAny {
+		subject.controller = effectiveController(g, permanent)
+	}
+	return matchSelection(&subject, &sel)
+}
+
+// cardDefMatchesCostSelection reports whether a card face satisfies a cost's
+// converted Selection, reading printed characteristics through the same
+// subjectCard the effect side uses.
+func cardDefMatchesCostSelection(g *game.Game, face *game.CardDef, sel game.Selection) bool {
 	if face == nil {
 		return false
 	}
-	if addCost.MatchCardType && !face.HasType(addCost.CardType) {
-		return false
-	}
-	if addCost.MatchCardColor && !slices.Contains(face.Colors, addCost.CardColor) {
-		return false
-	}
-	if addCost.SubtypesAny != (cost.SubtypeSet{}) {
-		for _, subtype := range addCost.SubtypesAny {
-			if subtype != "" && face.HasSubtype(subtype) {
-				return true
-			}
-		}
-		return false
-	}
-	return true
+	return matchSelection(&selectionSubject{
+		kind: subjectCard,
+		g:    g,
+		card: &game.CardInstance{Def: face},
+	}, &sel)
 }
 
 func paymentPermanentIDs(permanents []*game.Permanent) []id.ID {

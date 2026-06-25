@@ -71,6 +71,70 @@ func TestLowerCyclingTriggers(t *testing.T) {
 	}
 }
 
+func TestLowerCycleThisCardSelfTrigger(t *testing.T) {
+	t.Parallel()
+	// Magmakin Artillerist shape: a self-source "When you cycle this card"
+	// trigger whose body uses the pronoun "it" for the cycled card.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Artillerist",
+		Layout:     "normal",
+		TypeLine:   "Creature — Elemental",
+		OracleText: "Cycling {1}{R} ({1}{R}, Discard this card: Draw a card.)\nWhen you cycle this card, it deals 1 damage to each opponent.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	trigger := face.TriggeredAbilities[0].Trigger
+	if trigger.Type != game.TriggerWhen {
+		t.Errorf("trigger type = %v, want TriggerWhen", trigger.Type)
+	}
+	if trigger.Pattern.Event != game.EventCycled {
+		t.Errorf("event = %v, want EventCycled", trigger.Pattern.Event)
+	}
+	if trigger.Pattern.Player != game.TriggerPlayerYou {
+		t.Errorf("player = %v, want TriggerPlayerYou", trigger.Pattern.Player)
+	}
+	if trigger.Pattern.Source != game.TriggerSourceSelf {
+		t.Errorf("source = %v, want TriggerSourceSelf", trigger.Pattern.Source)
+	}
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("got %d activated abilities, want 1 (Cycling)", len(face.ActivatedAbilities))
+	}
+}
+
+func TestGenerateExecutableCardSourceMagmakinArtillerist(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Magmakin Artillerist",
+		Layout:     "normal",
+		TypeLine:   "Creature — Elemental Pirate",
+		ManaCost:   "{2}{R}",
+		OracleText: "Whenever you discard one or more cards, this creature deals that much damage to each opponent.\nCycling {1}{R} ({1}{R}, Discard this card: Draw a card.)\nWhen you cycle this card, it deals 1 damage to each opponent.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	if _, err := goparser.ParseFile(token.NewFileSet(), "magmakin.go", source, goparser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+	for _, want := range []string{
+		"game.EventCycled",
+		"game.TriggerSourceSelf",
+		"game.CyclingActivatedAbility",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+}
+
 func TestLowerHandCyclingGrants(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -173,8 +237,10 @@ func TestLowerCyclingCostModifiers(t *testing.T) {
 			if body.Condition.Exists != (tc.wantHandSize > 0) {
 				t.Fatalf("condition exists = %v, want %v", body.Condition.Exists, tc.wantHandSize > 0)
 			}
-			if tc.wantHandSize > 0 && body.Condition.Val.ControllerHandSizeAtLeast != tc.wantHandSize {
-				t.Fatalf("hand-size condition = %d, want %d", body.Condition.Val.ControllerHandSizeAtLeast, tc.wantHandSize)
+			if tc.wantHandSize > 0 && (len(body.Condition.Val.Aggregates) != 1 ||
+				body.Condition.Val.Aggregates[0].Aggregate != game.AggregateControllerHandSize ||
+				body.Condition.Val.Aggregates[0].Value != tc.wantHandSize) {
+				t.Fatalf("hand-size condition = %+v, want %d", body.Condition.Val.Aggregates, tc.wantHandSize)
 			}
 			effect := body.RuleEffects[0]
 			if effect.Kind != game.RuleEffectCostModifier {
@@ -237,8 +303,8 @@ func TestLowerGainControlUntapHasteSequence(t *testing.T) {
 	if len(mode.Targets) != 1 {
 		t.Fatalf("targets = %d, want 1", len(mode.Targets))
 	}
-	if mode.Targets[0].Predicate.PermanentTypes[0] != types.Creature {
-		t.Fatalf("target type = %v, want Creature", mode.Targets[0].Predicate.PermanentTypes)
+	if mode.Targets[0].Selection.Val.RequiredTypesAny[0] != types.Creature {
+		t.Fatalf("target type = %v, want Creature", mode.Targets[0].Selection.Val.RequiredTypesAny)
 	}
 	if len(mode.Sequence) != 3 {
 		t.Fatalf("sequence len = %d, want 3", len(mode.Sequence))
@@ -324,8 +390,8 @@ func TestLowerGainControlActivatedAbility(t *testing.T) {
 	if len(mode.Targets) != 1 {
 		t.Fatalf("targets = %d, want 1", len(mode.Targets))
 	}
-	if mode.Targets[0].Predicate.Controller != game.ControllerOpponent {
-		t.Fatalf("target controller predicate = %v, want Opponent", mode.Targets[0].Predicate.Controller)
+	if mode.Targets[0].Selection.Val.Controller != game.ControllerOpponent {
+		t.Fatalf("target controller predicate = %v, want Opponent", mode.Targets[0].Selection.Val.Controller)
 	}
 	if len(mode.Sequence) != 2 {
 		t.Fatalf("sequence len = %d, want 2", len(mode.Sequence))

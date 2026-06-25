@@ -191,12 +191,12 @@ func (a imprintExileAgent) ChooseChoice(_ PlayerObservation, request game.Choice
 func exileFromHandInstruction() *game.Instruction {
 	return &game.Instruction{
 		Optional: true,
-		Primitive: game.ExileFromHand{
-			Player:        game.ControllerReference(),
-			Selection:     game.Selection{ExcludedTypes: []types.Card{types.Artifact, types.Land}},
-			Amount:        game.Fixed(1),
-			PublishLinked: testImprintLink,
-		},
+		Primitive: game.ExileFromHandChoice(
+			game.ControllerReference(),
+			game.Selection{ExcludedTypes: []types.Card{types.Artifact, types.Land}},
+			game.Fixed(1),
+			testImprintLink,
+		),
 	}
 }
 

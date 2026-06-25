@@ -41,6 +41,7 @@ func (g *Game) Clone() *Game {
 		CostModifiers:              cloneSlice(g.CostModifiers),
 		RuleEffects:                cloneSlicePtr(g.RuleEffects, fixupRuleEffect),
 		SuspendedCards:             cloneComparableMap(g.SuspendedCards),
+		ReboundCards:               cloneComparableMap(g.ReboundCards),
 		AdventureCards:             cloneComparableMap(g.AdventureCards),
 		LastKnownInformation:       cloneMapFunc(g.LastKnownInformation, cloneObjectSnapshot),
 		LinkedObjects:              cloneLinkedObjects(g.LinkedObjects),
@@ -251,12 +252,11 @@ func cloneReplacementDecision(d ReplacementDecision) ReplacementDecision {
 }
 
 func fixupReplacementEffect(e *ReplacementEffect) {
-	e.CounterRecipientTypes = cloneSlice(e.CounterRecipientTypes)
-	e.CounterRecipientTypesAny = cloneSlice(e.CounterRecipientTypesAny)
 	e.DamageSourceColors = cloneSlice(e.DamageSourceColors)
 	e.EntersWithCounters = cloneSlice(e.EntersWithCounters)
-	// Condition, Selection, EntersAsCopySelection, and EntersWithCountersRecipient
-	// are immutable rules data and are copied by value or shared pointer.
+	// Condition, Selection, EntersAsCopySelection, EntersWithCountersRecipient,
+	// CounterRecipientSelection, and EntersTappedSelection are immutable rules
+	// data and are copied by value or shared pointer.
 }
 
 func fixupRuleEffect(e *RuleEffect) {
@@ -319,6 +319,7 @@ func cloneBlockerOrder(m map[id.ID][]id.ID) map[id.ID][]id.ID {
 
 func cloneTurnState(t TurnState) TurnState {
 	t.ExtraTurns = cloneSlice(t.ExtraTurns)
+	t.ExtraPhases = cloneSlice(t.ExtraPhases)
 	return t
 }
 

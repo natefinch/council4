@@ -18,9 +18,9 @@ func immediateBlinkInstructions(put game.PutOnBattlefield) []game.Instruction {
 		{Primitive: game.Exile{Object: game.TargetPermanentReference(0), ExileLinkedKey: "blink"}},
 		{
 			Primitive: put,
-			CardCondition: opt.Val(game.CardCondition{
-				Card:                 game.CardReference{Kind: game.CardReferenceLinked, LinkID: "blink"},
-				RequirePermanentCard: true,
+			CardCondition: opt.Val(game.CardSelection{
+				Card:      game.CardReference{Kind: game.CardReferenceLinked, LinkID: "blink"},
+				Selection: game.Selection{RequirePermanentCard: true},
 			}),
 		},
 	}
@@ -135,9 +135,9 @@ func selfBlinkInstructions() []game.Instruction {
 		{Primitive: game.Exile{Object: game.SourcePermanentReference(), ExileLinkedKey: "blink"}},
 		{
 			Primitive: game.PutOnBattlefield{Source: game.LinkedBattlefieldSource("blink")},
-			CardCondition: opt.Val(game.CardCondition{
-				Card:                 game.CardReference{Kind: game.CardReferenceLinked, LinkID: "blink"},
-				RequirePermanentCard: true,
+			CardCondition: opt.Val(game.CardSelection{
+				Card:      game.CardReference{Kind: game.CardReferenceLinked, LinkID: "blink"},
+				Selection: game.Selection{RequirePermanentCard: true},
 			}),
 		},
 	}

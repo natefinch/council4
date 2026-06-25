@@ -1,0 +1,46 @@
+package g
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// Lightning Bolt
+//
+// Type: Instant
+//
+// Oracle text:
+//
+//	Lightning Bolt deals 3 damage to any target.
+var LightningBolt = newLightningBolt()
+
+func newLightningBolt() *game.CardDef {
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:  "Lightning Bolt",
+			Types: []types.Card{types.Instant},
+			SpellAbility: opt.Val(game.Mode{
+				Targets: []game.TargetSpec{
+					game.TargetSpec{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Constraint: "any target",
+						Allow:      game.TargetAllowPermanent | game.TargetAllowPlayer,
+					},
+				},
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.Damage{
+							Amount:    game.Fixed(3),
+							Recipient: game.AnyTargetDamageRecipient(0),
+						},
+					},
+				},
+			}.Ability()),
+			OracleText: `
+			Lightning Bolt deals 3 damage to any target.
+		`,
+		},
+	}
+}

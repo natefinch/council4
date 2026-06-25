@@ -43,11 +43,13 @@ var Anger = &game.CardDef{
 					As long as this card is in your graveyard and you control a Mountain, creatures you control have haste.
 				`,
 				Condition: opt.Val(game.Condition{
-					ControllerControls: game.PermanentFilter{
-						SubtypesAny: []types.Sub{
-							types.Mountain,
+					ControlsMatching: opt.Val(game.SelectionCount{
+						Selection: game.Selection{
+							SubtypesAny: []types.Sub{
+								types.Mountain,
+							},
 						},
-					},
+					}),
 				}),
 				ZoneOfFunction: zone.Graveyard,
 				ContinuousEffects: []game.ContinuousEffect{

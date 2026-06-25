@@ -2,10 +2,12 @@ package parser
 
 import (
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/lexer"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/cost"
 )
 
 // Parse builds a lossless syntax tree for source. It returns a partial tree
@@ -15,10 +17,20 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	source = expandExtortKeyword(source)
 	source = expandDevourKeyword(source)
 	source = expandAnnihilatorKeyword(source)
+	source = expandAfflictKeyword(source)
+	source = expandFrenzyKeyword(source)
+	source = expandAfterlifeKeyword(source)
 	source = expandRenownKeyword(source)
 	source = expandModularKeyword(source)
+	source = expandGraftKeyword(source)
+	source = expandAffinityKeyword(source)
 	source = expandBattleCryKeyword(source)
 	source = expandTributeKeyword(source)
+	source = expandMentorKeyword(source)
+	source = expandMeleeKeyword(source)
+	source = expandFusedTrigger(source)
+	source = expandDisjunctiveTrigger(source)
+	source = expandDiesOrExileTrigger(source)
 	tokens, diagnostics := lexAll(source)
 	lines := splitLines(tokens)
 	document := Document{
@@ -30,14 +42,33 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 		},
 	}
 
+	var pendingEscalateCost cost.Mana
+	var pendingEscalateSpan shared.Span
 	for i := 0; i < len(lines); {
 		if len(lines[i]) == 0 {
 			i++
 			continue
 		}
+		if manaCost, span, ok := escalateHeader(lines[i]); ok && nextNonEmptyLineIsModalHeader(lines, i) {
+			pendingEscalateCost = manaCost
+			pendingEscalateSpan = span
+			i++
+			continue
+		}
+		if context.Leveler {
+			if band, next, ok := parseLevelBand(source, lines, i); ok {
+				document.Abilities = append(document.Abilities, band)
+				i = next
+				continue
+			}
+		}
 		ability, abilityDiagnostics := parseAbility(source, lines[i], context)
 		diagnostics = append(diagnostics, abilityDiagnostics...)
-		if modalStart := modalHeaderStart(lines[i]); modalStart >= 0 {
+		modalStart := modalHeaderStart(lines[i])
+		if modalStart < 0 && context.Saga && len(ability.Chapters) > 0 {
+			modalStart = chapterModalHeaderStart(lines[i])
+		}
+		if modalStart >= 0 {
 			modalTokens := lines[i][modalStart:]
 			dash := shared.TopLevelIndex(modalTokens, shared.EmDash)
 			headerTokens := modalTokens
@@ -45,6 +76,15 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 				headerTokens = modalTokens[:dash+1]
 			}
 			modal := &Modal{header: phraseFromTokens(source, headerTokens)}
+			if pendingEscalateCost != nil {
+				modal.Escalate = true
+				modal.EscalateCost = pendingEscalateCost
+				modal.EscalateSpan = pendingEscalateSpan
+				ability.Span.Start = pendingEscalateSpan.Start
+				ability.Text = shared.SliceSpan(source, ability.Span)
+				pendingEscalateCost = nil
+				pendingEscalateSpan = shared.Span{}
+			}
 			j := i + 1
 			if dash >= 0 && dash+1 < len(modalTokens) {
 				for _, modeTokens := range inlineModeTokens(modalTokens[dash+1:]) {
@@ -73,12 +113,35 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 				ability.Modal = modal
 			}
 			i = j
+		} else if table, next, ok := parseDiceTable(source, lines, i); ok {
+			ability.DiceTable = table
+			lastRow := table.Rows[len(table.Rows)-1]
+			ability.Span.End = lastRow.Span.End
+			ability.Text = shared.SliceSpan(source, ability.Span)
+			i = next
+		} else if isSpreeHeader(lines[i]) {
+			modal := &Modal{header: phraseFromTokens(source, lines[i]), Spree: true}
+			j := i + 1
+			for j < len(lines) && startsWith(lines[j], shared.Plus) {
+				mode, modeDiagnostics := parseSpreeMode(source, lines[j][1:])
+				modal.Options = append(modal.Options, mode)
+				diagnostics = append(diagnostics, modeDiagnostics...)
+				j++
+			}
+			if len(modal.Options) == 0 {
+				i++
+			} else {
+				ability.Span.End = modal.Options[len(modal.Options)-1].Span.End
+				ability.Text = shared.SliceSpan(source, ability.Span)
+				ability.Modal = modal
+				i = j
+			}
 		} else {
 			i++
 		}
 		document.Abilities = append(document.Abilities, ability)
 	}
-	emitAtoms(document.Abilities, context.CardName)
+	emitAtoms(document.Abilities, context.CardName, context.Legendary)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -92,11 +155,22 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitSourceSpellCostReductionDynamic(document.Abilities)
 	emitStaticDeclarations(document.Abilities)
 	stripCastThisFromExileEffectSemantics(document.Abilities)
+	stripLifeForColoredManaEffectSemantics(document.Abilities)
+	stripLifeForCommanderTaxEffectSemantics(document.Abilities)
+	emitCompanionAbility(document.Abilities)
+	emitPartnerWithAbility(document.Abilities)
+	emitPartnerAbility(document.Abilities)
+	emitChooseABackgroundAbility(document.Abilities)
 	emitSemanticAccessors(document.Abilities)
+	emitWardKeywordCost(document.Abilities)
 	stripImpulseExileSemantics(document.Abilities)
+	stripPayRepeatedlyAnimateSemantics(document.Abilities)
+	emitCoinFlipSequences(document.Abilities)
+	emitVoteSequences(document.Abilities)
 	emitReminderInner(document.Abilities)
 	emitSourceOrder(document.Abilities)
 	stripConditionalModalHeaderSemantics(document.Abilities)
+	emitDelayedTriggerEffects(document.Abilities)
 	return document, diagnostics
 }
 
@@ -126,6 +200,69 @@ func stripCastThisFromExileEffectSemantics(abilities []Ability) {
 func abilityHasCastThisFromExileDeclaration(ability *Ability) bool {
 	for i := range ability.StaticDeclarations {
 		if ability.StaticDeclarations[i].PlayerRule == StaticDeclarationPlayerRuleCastThisFromExile {
+			return true
+		}
+	}
+	return false
+}
+
+// stripLifeForColoredManaEffectSemantics suppresses the resolving-effect reading
+// of the life-for-colored-mana cost-substitution player rule ("For each {B} in a
+// cost, you may pay 2 life rather than pay that mana."). The sentence's "you may
+// pay 2 life" clause otherwise compiles to a spurious pay-life effect that blocks
+// the text-blind compiler's empty-content recognition of the player rule, so when
+// the static idiom is recognized the static declaration owns the whole sentence
+// and its competing effect and target syntax is cleared.
+func stripLifeForColoredManaEffectSemantics(abilities []Ability) {
+	for i := range abilities {
+		ability := &abilities[i]
+		if !abilityHasLifeForColoredManaDeclaration(ability) {
+			continue
+		}
+		for j := range ability.Sentences {
+			sentence := &ability.Sentences[j]
+			sentence.Effects = nil
+			sentence.Targets = nil
+			sentence.LegacyEffects = false
+		}
+	}
+}
+
+func abilityHasLifeForColoredManaDeclaration(ability *Ability) bool {
+	for i := range ability.StaticDeclarations {
+		if ability.StaticDeclarations[i].PlayerRule == StaticDeclarationPlayerRuleLifeForColoredMana {
+			return true
+		}
+	}
+	return false
+}
+
+// stripLifeForCommanderTaxEffectSemantics suppresses the resolving-effect reading
+// of the life-for-commander-tax cost-substitution player rule ("Rather than pay
+// {2} for each previous time you've cast this spell from the command zone this
+// game, pay 2 life that many times."). The sentence's "pay {2}" and "pay 2 life"
+// clauses otherwise compile to spurious effects that block the text-blind
+// compiler's empty-content recognition of the player rule, so when the static
+// idiom is recognized the static declaration owns the whole sentence and its
+// competing effect and target syntax is cleared.
+func stripLifeForCommanderTaxEffectSemantics(abilities []Ability) {
+	for i := range abilities {
+		ability := &abilities[i]
+		if !abilityHasLifeForCommanderTaxDeclaration(ability) {
+			continue
+		}
+		for j := range ability.Sentences {
+			sentence := &ability.Sentences[j]
+			sentence.Effects = nil
+			sentence.Targets = nil
+			sentence.LegacyEffects = false
+		}
+	}
+}
+
+func abilityHasLifeForCommanderTaxDeclaration(ability *Ability) bool {
+	for i := range ability.StaticDeclarations {
+		if ability.StaticDeclarations[i].PlayerRule == StaticDeclarationPlayerRuleLifeForCommanderTax {
 			return true
 		}
 	}
@@ -218,29 +355,42 @@ func emitOptional(abilities []Ability) {
 
 // emitAtoms fills each ability's and modal option's typed atom collection from
 // its semantic tokens.
-func emitAtoms(abilities []Ability, cardName string) {
+func emitAtoms(abilities []Ability, cardName string, legendary bool) {
 	for i := range abilities {
 		tokens := abilities[i].Tokens
 		if abilities[i].AbilityWord != nil {
 			tokens = tokensOutsideParserSpan(tokens, abilities[i].AbilityWord.Span)
 		}
-		abilities[i].Atoms = collectAtoms(tokens, abilities[i].Reminders, abilities[i].Quoted, cardName)
+		abilities[i].Atoms = collectAtoms(tokens, abilities[i].Reminders, abilities[i].Quoted, cardName, legendary)
+		if abilities[i].DiceTable != nil {
+			for k := range abilities[i].DiceTable.Rows {
+				row := &abilities[i].DiceTable.Rows[k]
+				row.Atoms = collectAtoms(row.Tokens, nil, nil, cardName, legendary)
+			}
+		}
 		if abilities[i].Modal == nil {
 			continue
 		}
-		abilities[i].Modal.Atoms = collectAtoms(abilities[i].Modal.header.Tokens, nil, nil, cardName)
-		choice := recognizeModalChoice(abilities[i].Modal.header, abilities[i].Modal.Atoms)
-		abilities[i].Modal.MinModes = choice.minModes
-		abilities[i].Modal.MaxModes = choice.maxModes
-		if choice.maxModes < 0 {
+		abilities[i].Modal.Atoms = collectAtoms(abilities[i].Modal.header.Tokens, nil, nil, cardName, legendary)
+		if abilities[i].Modal.Spree {
+			abilities[i].Modal.MinModes = 1
 			abilities[i].Modal.MaxModes = len(abilities[i].Modal.Options)
+			abilities[i].Modal.ChoiceKind = ModalChoiceKindOneOrMore
+			abilities[i].Modal.ChoiceKnown = true
+		} else {
+			choice := recognizeModalChoice(abilities[i].Modal.header, abilities[i].Modal.Atoms)
+			abilities[i].Modal.MinModes = choice.minModes
+			abilities[i].Modal.MaxModes = choice.maxModes
+			if choice.maxModes < 0 {
+				abilities[i].Modal.MaxModes = len(abilities[i].Modal.Options)
+			}
+			abilities[i].Modal.ChoiceKind = choice.kind
+			abilities[i].Modal.ChoiceBonus = choice.bonus
+			abilities[i].Modal.ChoiceKnown = choice.ok
 		}
-		abilities[i].Modal.ChoiceKind = choice.kind
-		abilities[i].Modal.ChoiceBonus = choice.bonus
-		abilities[i].Modal.ChoiceKnown = choice.ok
 		for j := range abilities[i].Modal.Options {
 			mode := &abilities[i].Modal.Options[j]
-			mode.Atoms = collectAtoms(mode.Body.Tokens, mode.Reminders, mode.Quoted, cardName)
+			mode.Atoms = collectAtoms(mode.Body.Tokens, mode.Reminders, mode.Quoted, cardName, legendary)
 		}
 	}
 }
@@ -263,6 +413,11 @@ func parseAbility(
 		} else if flashback, costPhrase, ok := flashbackAlternativeCostClause(source, tokens, dash); ok {
 			ability.AlternativeCost = flashback
 			ability.costPhrase = &costPhrase
+		} else if escape, costPhrase, ok := escapeAlternativeCostClause(source, tokens, dash); ok {
+			ability.AlternativeCost = escape
+			ability.costPhrase = &costPhrase
+		} else if costPhrase, ok := wardKeywordCostClause(source, tokens, dash); ok {
+			ability.wardCostPhrase = &costPhrase
 		} else {
 			phrase := phraseFromTokens(source, tokens[:dash])
 			ability.AbilityWord = &AbilityWordClause{
@@ -272,6 +427,18 @@ func parseAbility(
 			}
 		}
 		body = tokens[dash+1:]
+		if ability.wardCostPhrase != nil {
+			body = nil
+		}
+		if len(ability.Chapters) > 0 {
+			if stripped, flavor, ok := stripChapterFlavorName(body); ok {
+				body = stripped
+				ability.ChapterFlavorSpan = shared.Span{
+					Start: tokens[dash].Span.Start,
+					End:   flavor[len(flavor)-1].Span.End,
+				}
+			}
+		}
 	}
 	if colon := shared.TopLevelIndex(body, shared.Colon); colon >= 0 {
 		phrase := phraseFromTokens(source, body[:colon])
@@ -282,6 +449,8 @@ func parseAbility(
 		ability.Kind = AbilityChapter
 	case ability.AlternativeCost != nil:
 		ability.Kind = AbilitySpellAlternativeCost
+	case ability.wardCostPhrase != nil:
+		ability.Kind = AbilityStatic
 	default:
 		ability.Kind = classifyAbility(body, context)
 	}
@@ -296,9 +465,12 @@ func parseAbility(
 		}
 	}
 	if ability.Kind != AbilityChapter && ability.costPhrase == nil {
-		if alternative, ok := spellAlternativeCostClause(body); ok {
+		if alternative, alternativeCost, ok := spellAlternativeCostClause(body); ok {
 			ability.Kind = AbilitySpellAlternativeCost
 			ability.AlternativeCost = alternative
+			if alternativeCost != nil {
+				ability.CostSyntax = alternativeCost
+			}
 		}
 	}
 	if ability.Kind == AbilityTriggered {
@@ -315,6 +487,20 @@ func parseAbility(
 	ability.Reminders, ability.Quoted, diagnostics = parseDelimited(source, body, diagnostics)
 	if ability.Kind == AbilityReminder && context.Saga {
 		ability.SagaReminder = recognizeSagaLoreReminder(ability.Text)
+	}
+	if context.Class {
+		if ability.Kind == AbilityReminder {
+			ability.ClassReminder = recognizeClassLevelReminder(ability.Text)
+		}
+		if ability.Kind == AbilityActivated {
+			ability.ClassLevelGain = recognizeClassLevelGain(resolvingBody)
+		}
+	}
+	if context.Leveler {
+		if manaCost, ok := recognizeLevelUpAbility(tokens); ok {
+			ability.LevelUpCost = manaCost
+			ability.LevelUpRecognized = true
+		}
 	}
 	ability.ReadAheadSacrificeChapter, ability.ReadAheadRecognized = recognizeReadAheadReminder(ability.Text)
 	ability.DevoidRecognized = ability.Text == "Devoid (This card has no color.)"
@@ -385,6 +571,69 @@ func parseChapterHeading(tokens []shared.Token) ([]int, bool) {
 		chapters = append(chapters, chapter)
 	}
 	return chapters, len(chapters) > 0
+}
+
+// chapterFlavorFunctionWords are the lowercase function words a Saga chapter
+// flavor name may contain between its capitalized content words ("Hall of
+// Sorrow"). Every other word in a flavor name is capitalized.
+var chapterFlavorFunctionWords = map[string]bool{
+	"a": true, "an": true, "and": true, "at": true, "for": true,
+	"from": true, "in": true, "of": true, "on": true, "or": true,
+	"the": true, "to": true, "with": true,
+}
+
+// stripChapterFlavorName removes a Saga chapter's flavor-name prefix. Final
+// Fantasy "Summon:" Sagas print each chapter as "<chapter> — <Flavor Name> —
+// <effect>", where the flavor name is a Title-Case proper name set off by a
+// second em dash. When body begins with such a name followed by an em dash and
+// a non-empty effect, it returns the effect tokens, the flavor-name tokens, and
+// true so the effect classifies as if the flavor name were absent. Bodies whose
+// leading segment is not a proper name — a modal "Choose one at random" header
+// or a "faces a villainous choice" clause — return the body unchanged and false.
+func stripChapterFlavorName(body []shared.Token) (effect, flavor []shared.Token, ok bool) {
+	dash := shared.TopLevelIndex(body, shared.EmDash)
+	if dash <= 0 || dash+1 >= len(body) {
+		return body, nil, false
+	}
+	if !isChapterFlavorName(body[:dash]) {
+		return body, nil, false
+	}
+	return body[dash+1:], body[:dash], true
+}
+
+// isChapterFlavorName reports whether tokens form a Saga chapter flavor name: a
+// Title-Case proper name whose content words are all capitalized, joined only by
+// lowercase function words and trailing exclamation or question marks ("Gungnir",
+// "Hall of Sorrow", "Stampede!"). Clauses with lowercase content words ("faces a
+// villainous choice") or sentence punctuation are rejected.
+func isChapterFlavorName(tokens []shared.Token) bool {
+	capitalized := false
+	for _, token := range tokens {
+		switch token.Kind {
+		case shared.Word:
+			if isCapitalizedWord(token.Text) {
+				capitalized = true
+				continue
+			}
+			if chapterFlavorFunctionWords[strings.ToLower(token.Text)] {
+				continue
+			}
+			return false
+		case shared.Exclamation, shared.Question:
+			continue
+		default:
+			return false
+		}
+	}
+	return capitalized
+}
+
+// isCapitalizedWord reports whether text begins with an ASCII uppercase letter.
+func isCapitalizedWord(text string) bool {
+	if text == "" {
+		return false
+	}
+	return text[0] >= 'A' && text[0] <= 'Z'
 }
 
 // recognizeSagaLoreReminder reports whether text is a Saga's intrinsic
@@ -459,6 +708,107 @@ func romanChapter(text string) (int, bool) {
 	}
 }
 
+// lineEndsWithRollDie reports whether a line's final clause is "roll a d<N>."
+// (ignoring any trailing period) and returns N. It detects the header line of a
+// die-roll outcome table, whose result rows follow on subsequent lines.
+func lineEndsWithRollDie(tokens []shared.Token) (int, bool) {
+	end := len(tokens)
+	for end > 0 && tokens[end-1].Kind == shared.Period {
+		end--
+	}
+	if end < 4 {
+		return 0, false
+	}
+	words := tokens[end-4 : end]
+	if !equalWord(words[0], "roll") ||
+		!equalWord(words[1], "a") ||
+		!equalWord(words[2], "d") ||
+		words[3].Kind != shared.Integer {
+		return 0, false
+	}
+	sides, err := strconv.Atoi(words[3].Text)
+	if err != nil || sides < 2 {
+		return 0, false
+	}
+	return sides, true
+}
+
+// parseDiceTableRow recognizes a single outcome row "<low>[—<high>] | <body>"
+// or "<value>+ | <body>" and returns its inclusive interval and resolving
+// sentences. The em-dash, en-dash, or ASCII hyphen separate a range; a trailing
+// plus opens the interval up to dieSides. It fails closed on any other shape so
+// non-table lines flow through the ordinary ability parser.
+func parseDiceTableRow(source string, tokens []shared.Token, dieSides int) (DiceTableRow, bool) {
+	if len(tokens) == 0 || tokens[0].Kind != shared.Integer {
+		return DiceTableRow{}, false
+	}
+	low, err := strconv.Atoi(tokens[0].Text)
+	if err != nil {
+		return DiceTableRow{}, false
+	}
+	high := low
+	idx := 1
+	switch {
+	case idx < len(tokens) &&
+		(tokens[idx].Kind == shared.EmDash || tokens[idx].Kind == shared.EnDash || tokens[idx].Kind == shared.Minus):
+		if idx+1 >= len(tokens) || tokens[idx+1].Kind != shared.Integer {
+			return DiceTableRow{}, false
+		}
+		high, err = strconv.Atoi(tokens[idx+1].Text)
+		if err != nil {
+			return DiceTableRow{}, false
+		}
+		idx += 2
+	case idx < len(tokens) && tokens[idx].Kind == shared.Plus:
+		high = dieSides
+		idx++
+	default:
+	}
+	if idx >= len(tokens) || tokens[idx].Kind != shared.Glyph || tokens[idx].Text != "|" {
+		return DiceTableRow{}, false
+	}
+	idx++
+	bodyTokens := tokens[idx:]
+	if len(bodyTokens) == 0 || low > high {
+		return DiceTableRow{}, false
+	}
+	span := shared.SpanOf(tokens)
+	return DiceTableRow{
+		Span:      span,
+		Text:      shared.SliceSpan(source, span),
+		Tokens:    cloneTokens(tokens),
+		Min:       low,
+		Max:       high,
+		Sentences: ParseSentences(source, bodyTokens),
+	}, true
+}
+
+// parseDiceTable consumes a die-roll outcome table starting at line i: the
+// header line at i must end with "roll a d<N>." and line i+1 must be an outcome
+// row. It collects every consecutive outcome row and returns the table together
+// with the index of the first unconsumed line.
+func parseDiceTable(source string, lines [][]shared.Token, i int) (*DiceTable, int, bool) {
+	sides, ok := lineEndsWithRollDie(lines[i])
+	if !ok || i+1 >= len(lines) {
+		return nil, 0, false
+	}
+	firstRow, ok := parseDiceTableRow(source, lines[i+1], sides)
+	if !ok {
+		return nil, 0, false
+	}
+	table := &DiceTable{DieSides: sides, Rows: []DiceTableRow{firstRow}}
+	j := i + 2
+	for j < len(lines) {
+		row, rowOK := parseDiceTableRow(source, lines[j], sides)
+		if !rowOK {
+			break
+		}
+		table.Rows = append(table.Rows, row)
+		j++
+	}
+	return table, j, true
+}
+
 func parseMode(source string, tokens []shared.Token) (Mode, []shared.Diagnostic) {
 	bodyTokens := tokens
 	mode := Mode{
@@ -469,6 +819,10 @@ func parseMode(source string, tokens []shared.Token) (Mode, []shared.Diagnostic)
 	if label, body, ok := parseModeLabel(source, tokens); ok {
 		mode.Label = label
 		bodyTokens = body
+	} else if effect, flavor, ok := stripChapterFlavorName(tokens); ok {
+		mode.FlavorSpan = shared.SpanOf(flavor)
+		mode.FlavorSeparatorSpan = tokens[len(flavor)].Span
+		bodyTokens = effect
 	}
 	mode.Body = phraseFromTokens(source, bodyTokens)
 	mode.Sentences = ParseSentences(source, bodyTokens)
@@ -868,6 +1222,14 @@ func recognizeModalChoice(header Phrase, atoms Atoms) modalChoiceRecognition {
 	}
 	if len(tokens) == 5 &&
 		tokens[0].Kind == shared.Word && strings.EqualFold(tokens[0].Text, "choose") &&
+		tokens[1].Kind == shared.Word && strings.EqualFold(tokens[1].Text, "one") &&
+		tokens[2].Kind == shared.Word && strings.EqualFold(tokens[2].Text, "at") &&
+		tokens[3].Kind == shared.Word && strings.EqualFold(tokens[3].Text, "random") &&
+		tokens[4].Kind == shared.EmDash {
+		return modalChoiceRecognition{minModes: 1, maxModes: 1, kind: ModalChoiceKindOneAtRandom, ok: true}
+	}
+	if len(tokens) == 5 &&
+		tokens[0].Kind == shared.Word && strings.EqualFold(tokens[0].Text, "choose") &&
 		tokens[1].Kind == shared.Word && strings.EqualFold(tokens[1].Text, "up") &&
 		tokens[2].Kind == shared.Word && strings.EqualFold(tokens[2].Text, "to") &&
 		tokens[3].Kind == shared.Word &&
@@ -937,6 +1299,26 @@ func modalHeaderStart(tokens []shared.Token) int {
 		}
 	}
 	return -1
+}
+
+// chapterModalHeaderStart reports the index at which a modal choose header begins
+// within a Saga chapter line whose body is itself a modal ("I, II, III — Choose
+// one at random — • ..."). The chapter numbers precede the first em dash; the
+// remainder is a modal header whose bullet options follow on subsequent lines.
+// It returns -1 when the line is not a chapter heading or its body is not a modal
+// header, so non-chapter ability-word lines are unaffected.
+func chapterModalHeaderStart(tokens []shared.Token) int {
+	dash := shared.TopLevelIndex(tokens, shared.EmDash)
+	if dash <= 0 || dash+1 >= len(tokens) {
+		return -1
+	}
+	if _, ok := parseChapterHeading(tokens[:dash]); !ok {
+		return -1
+	}
+	if !isModalHeader(tokens[dash+1:]) {
+		return -1
+	}
+	return dash + 1
 }
 
 // tokensOutsideParens returns the tokens that lie outside any parenthesized

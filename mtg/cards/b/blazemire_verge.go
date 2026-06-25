@@ -34,12 +34,14 @@ var BlazemireVerge = &game.CardDef{
 				`,
 				AdditionalCosts: cost.Tap,
 				ActivationCondition: opt.Val(game.Condition{
-					ControllerControls: game.PermanentFilter{
-						SubtypesAny: []types.Sub{
-							types.Swamp,
-							types.Mountain,
+					ControlsMatching: opt.Val(game.SelectionCount{
+						Selection: game.Selection{
+							SubtypesAny: []types.Sub{
+								types.Swamp,
+								types.Mountain,
+							},
 						},
-					},
+					}),
 				}),
 				Content: game.Mode{
 					Sequence: []game.Instruction{

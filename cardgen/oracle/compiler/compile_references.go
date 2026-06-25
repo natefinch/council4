@@ -25,6 +25,10 @@ func compileKeywords(syntaxKeywords []parser.Keyword) []CompiledKeyword {
 		if keyword.Parameter.Kind == parser.KeywordParameterProtection {
 			compiled.Protection, compiled.ProtectionKnown = compileProtectionKeyword(keyword.Parameter.Protection())
 		}
+		if keyword.WardCost != nil {
+			cost := compileCost(*keyword.WardCost)
+			compiled.WardCost = &cost
+		}
 		if keyword.EquipRestriction != nil {
 			compiled.EquipRestriction = compileEquipRestriction(keyword.EquipRestriction)
 		}
@@ -68,9 +72,10 @@ func compileEnchantTarget(predicate parser.EnchantPredicate) CompiledEnchantTarg
 		return CompiledEnchantTarget{}
 	}
 	target := CompiledEnchantTarget{
-		Player:    predicate.Player,
-		Opponent:  predicate.Opponent,
-		Permanent: predicate.Permanent,
+		Player:     predicate.Player,
+		Opponent:   predicate.Opponent,
+		Permanent:  predicate.Permanent,
+		YouControl: predicate.YouControl,
 	}
 	for _, cardType := range predicate.CardTypes {
 		runtime, ok := compilerCardType(cardType)

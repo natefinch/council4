@@ -40,7 +40,7 @@ func resolvingClauseStart(tokens []shared.Token, indices []int, effectIndex int)
 	}
 	for i := indices[effectIndex] - 1; i > indices[effectIndex-1]; i-- {
 		if tokens[i].Kind == shared.Comma || tokens[i].Kind == shared.Semicolon ||
-			equalWord(tokens[i], "then") || equalWord(tokens[i], "and") {
+			equalWord(tokens[i], "then") || equalWord(tokens[i], "and") || equalWord(tokens[i], "or") {
 			return i + 1
 		}
 	}
@@ -93,6 +93,25 @@ func parsePlusAdditionalReplacement(tokens []shared.Token, atoms Atoms) (EffectR
 	return EffectReplacementSyntax{}, false
 }
 
+// trailingInsteadBeforeConditionReplacement recognizes the plain "instead"
+// replacement marker that ends an effect clause whose trailing "if" condition
+// has already been stripped from the ownership tokens ("That creature gets
+// -13/-13 until end of turn instead if a creature died this turn.", Tragic
+// Slip, whose ownership tokens end at "instead"). The "instead" word marks this
+// effect as replacing the preceding effect; the stripped trailing condition
+// gates when the replacement applies. It is distinguished from the final
+// "... instead." form the caller handles next by requiring the clause to end at
+// the bare "instead" word with no closing period.
+func trailingInsteadBeforeConditionReplacement(tokens []shared.Token) (EffectReplacementSyntax, bool) {
+	if len(tokens) == 0 || !equalWord(tokens[len(tokens)-1], "instead") {
+		return EffectReplacementSyntax{}, false
+	}
+	return EffectReplacementSyntax{
+		Kind: EffectReplacementInstead,
+		Span: tokens[len(tokens)-1].Span,
+	}, true
+}
+
 func parseEffectReplacement(tokens []shared.Token, atoms Atoms) EffectReplacementSyntax {
 	if replacement, ok := parseInsteadOneOfEachReplacement(tokens); ok {
 		return replacement
@@ -101,6 +120,9 @@ func parseEffectReplacement(tokens []shared.Token, atoms Atoms) EffectReplacemen
 		return replacement
 	}
 	if replacement, ok := leadingInsteadReplacement(tokens); ok {
+		return replacement
+	}
+	if replacement, ok := trailingInsteadBeforeConditionReplacement(tokens); ok {
 		return replacement
 	}
 	if len(tokens) < 2 ||
@@ -326,7 +348,11 @@ func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) Eff
 	}
 	symbols, choice, ok := parseManaSymbolBody(loopBody)
 	if !ok {
-		return EffectManaSyntax{}
+		counted, cok := countedSingleManaSymbols(loopBody)
+		if !cok {
+			return EffectManaSyntax{}
+		}
+		symbols, choice = counted, false
 	}
 	colors, colorsKnown := effectManaColors(symbols)
 	return EffectManaSyntax{
@@ -384,6 +410,26 @@ func parseManaSymbolBody(body []shared.Token) (symbols []string, choice, ok bool
 		return nil, false, false
 	}
 	return symbols, choice, true
+}
+
+// countedSingleManaSymbols expands a counted single-symbol add-mana body
+// ("Add six {R}", The Flux; "Add seven {R}", Irencrag Feat) into N copies of the
+// lone mana symbol. It requires a leading cardinal count of two or more followed
+// by exactly one mana symbol, so ordinary single- and multi-symbol bodies keep
+// their own branch and any other shape fails closed.
+func countedSingleManaSymbols(body []shared.Token) ([]string, bool) {
+	if len(body) != 2 || body[1].Kind != shared.Symbol {
+		return nil, false
+	}
+	count, ok := additionalLandCountWord(body[0])
+	if !ok || count < 2 {
+		return nil, false
+	}
+	symbols := make([]string, count)
+	for i := range symbols {
+		symbols[i] = body[1].Text
+	}
+	return symbols, true
 }
 
 // manaAnyOneColorCount resolves the leading count of the body "<N> mana of any
@@ -496,6 +542,8 @@ func effectConnection(tokens []shared.Token, indices []int, effectIndex int) (Ef
 			return EffectConnectionThen, tokens[i].Span
 		case equalWord(tokens[i], "and"):
 			return EffectConnectionAnd, tokens[i].Span
+		case equalWord(tokens[i], "or"):
+			return EffectConnectionOr, tokens[i].Span
 		}
 	}
 	return EffectConnectionNone, shared.Span{}
@@ -661,8 +709,15 @@ func effectSubjectStart(tokens []shared.Token, index int, selfNames []shared.Spa
 		if spanWithinAny(tokens[i].Span, selfNames) {
 			continue
 		}
-		if tokens[i].Kind == shared.Comma || tokens[i].Kind == shared.Period || tokens[i].Kind == shared.Semicolon ||
-			equalWord(tokens[i], "then") || equalWord(tokens[i], "and") {
+		boundary := tokens[i].Kind == shared.Comma || tokens[i].Kind == shared.Period ||
+			tokens[i].Kind == shared.Semicolon || equalWord(tokens[i], "then") || equalWord(tokens[i], "and")
+		// A clause-leading "also" ("..., also create a token") is an additive
+		// adverb that carries no subject; skip it so the controller subject and
+		// exact verb coverage are recognized. A non-leading "also" (e.g.
+		// "creatures you control also gain first strike") follows a real subject
+		// and must be retained.
+		leadingAlso := equalWord(tokens[i], "also") && i == start
+		if boundary || leadingAlso {
 			start = i + 1
 		}
 	}
@@ -685,15 +740,21 @@ func spanWithinAny(span shared.Span, spans []shared.Span) bool {
 func parseEffectPayment(tokens []shared.Token, atoms Atoms) EffectPaymentSyntax {
 	for i := range tokens {
 		var payer EffectPaymentPayerKind
+		var costStart int
 		switch {
 		case effectWordsAt(tokens, i, "unless", "its", "controller", "pays"):
 			payer = EffectPaymentPayerTargetController
+			costStart = i + 4
 		case effectWordsAt(tokens, i, "unless", "that", "player", "pays"):
 			payer = EffectPaymentPayerEventPlayer
+			costStart = i + 4
+		case effectWordsAt(tokens, i, "unless", "you", "pay"):
+			payer = EffectPaymentPayerController
+			costStart = i + 3
 		default:
 			continue
 		}
-		manaCost, end, ok := parseKeywordManaCost(tokens, i+4)
+		manaCost, end, ok := parseKeywordManaCost(tokens, costStart)
 		if !ok || end >= len(tokens) {
 			return EffectPaymentSyntax{}
 		}
@@ -707,6 +768,22 @@ func parseEffectPayment(tokens []shared.Token, atoms Atoms) EffectPaymentSyntax 
 			if !attempted || !amountOK ||
 				amount.DynamicForm != EffectDynamicAmountFormWhereX ||
 				amount.DynamicKind != EffectDynamicAmountSourcePower ||
+				amount.Multiplier != 1 ||
+				amount.Span.End != tokens[len(tokens)-1].Span.Start {
+				return EffectPaymentSyntax{}
+			}
+			genericAmount = amount
+			paymentEnd = len(tokens) - 1
+		// "{N} for each <count subject>" repeats the fixed generic payment per
+		// counted object ("pays {1} for each card in your graveyard.", Circular
+		// Logic). The fixed mana cost stays in ManaCost and the trailing for-each
+		// count rides in GenericManaAmount; lowering repeats the cost by the count.
+		case fixedGenericManaCost(manaCost) &&
+			effectWordsAt(tokens, end, "for", "each") &&
+			tokens[len(tokens)-1].Kind == shared.Period:
+			amount, attempted, amountOK := parseDynamicEffectAmount(tokens[end:len(tokens)-1], atoms)
+			if !attempted || !amountOK ||
+				amount.DynamicForm != EffectDynamicAmountFormForEach ||
 				amount.Multiplier != 1 ||
 				amount.Span.End != tokens[len(tokens)-1].Span.Start {
 				return EffectPaymentSyntax{}
@@ -727,16 +804,132 @@ func parseEffectPayment(tokens []shared.Token, atoms Atoms) EffectPaymentSyntax 
 	return EffectPaymentSyntax{}
 }
 
+// fixedGenericManaCost reports whether a parsed payment mana cost is a single
+// fixed generic symbol such as {1}. It backs the "{N} for each <subject>"
+// resolution-payment form, where the generic cost is repeated per counted object.
+func fixedGenericManaCost(manaCost cost.Mana) bool {
+	return len(manaCost) == 1 && manaCost[0].Kind == cost.GenericSymbol
+}
+
+// classifiedVerb is one candidate effect verb produced by the single
+// effect-classification pass: its token index, the authoritative effect kind
+// from effectKindAt, and whether it sits inside a leading if/unless condition
+// clause. Both the real effect segmentation (effectIndices) and the
+// ordered-lowering count (orderedEffectCount) derive from the same records so a
+// sentence's parsed effect list and its ordered-lowering metadata cannot
+// classify a verb differently.
+type classifiedVerb struct {
+	Index           int
+	Kind            EffectKind
+	WithinCondition bool
+}
+
+// classifyEffectVerbs returns one classifiedVerb per token that the authoritative
+// effectKindAt classifier recognizes as an effect verb, after applying the
+// exclusions shared by every consumer: a self-name reference, the inner "untap"
+// of a "tap or untap" choice, and a copy-token "except" rider boundary. The
+// per-consumer exclusions (the noun-form "next untap step" for segmentation, the
+// leading-condition membership for the ordered count) are left to the callers so
+// this single pass owns all verb-kind overrides in one place.
+func classifyEffectVerbs(tokens []shared.Token, atoms Atoms) []classifiedVerb {
+	var result []classifiedVerb
+	for i := range tokens {
+		kind := effectKindAt(tokens, i)
+		if kind == EffectUnknown ||
+			atoms.SelfNameAt(tokens[i].Span) ||
+			tapOrUntapInnerUntapAt(tokens, i) ||
+			copyTokenExceptRiderBoundaryAt(tokens, i) {
+			continue
+		}
+		result = append(result, classifiedVerb{
+			Index:           i,
+			Kind:            kind,
+			WithinCondition: effectWithinCondition(tokens, i),
+		})
+	}
+	return result
+}
+
 func effectIndices(tokens []shared.Token, atoms Atoms) []int {
 	var result []int
-	for i := range tokens {
-		if effectKindAt(tokens, i) != EffectUnknown &&
-			!atoms.SelfNameAt(tokens[i].Span) &&
-			!effectNounAt(tokens, i) {
-			result = append(result, i)
+	for _, verb := range classifyEffectVerbs(tokens, atoms) {
+		if !effectNounAt(tokens, verb.Index) {
+			result = append(result, verb.Index)
 		}
 	}
 	return result
+}
+
+// orderedEffectCount returns the number of effect verbs that make a sentence
+// drive the ordered-lowering path. It derives from the same classifyEffectVerbs
+// pass as the real effect segmentation, excluding verbs inside a leading
+// condition clause (an "if"/"unless" guard is not a sequenced effect) and
+// collapsing a mass reanimation/exchange to a single effect.
+func orderedEffectCount(tokens []shared.Token, atoms Atoms) int {
+	if _, ok := massReanimationExchangeWords(tokens); ok {
+		return 1
+	}
+	count := 0
+	for _, verb := range classifyEffectVerbs(tokens, atoms) {
+		if !verb.WithinCondition {
+			count++
+		}
+	}
+	return count
+}
+
+// copyTokenExceptRiderBoundaryAt reports whether the effect-boundary verb at
+// index lies inside a copy-token "Create ... a copy of <source>, except <rider>"
+// clause, where the rider modifies the created copy rather than starting a new
+// effect. A keyword-grant rider verb ("the token has flying", Irenicus's Vile
+// Duplication) would otherwise split the rider into a stranded EffectGrantKeyword
+// sibling; keeping it inside the create clause lets the copy-token recognizer
+// fold the copiable rider into the create (or fail closed for an unrecognized
+// rider). The guard requires a copy-token create head ("Create ... a copy of")
+// before a ", except" that precedes the verb, so only copy-token create riders
+// are affected; every such card with a verb rider is multi-effect unsupported
+// today, so folding it strands no existing output.
+func copyTokenExceptRiderBoundaryAt(tokens []shared.Token, index int) bool {
+	if index == 0 {
+		return false
+	}
+	exceptIndex := -1
+	for i := 1; i < index; i++ {
+		if equalWord(tokens[i], "except") && tokens[i-1].Kind == shared.Comma {
+			exceptIndex = i
+		}
+	}
+	if exceptIndex < 0 {
+		return false
+	}
+	return createCopyTokenHead(tokens[:exceptIndex])
+}
+
+// createCopyTokenHead reports whether the head tokens begin a copy-token creation
+// clause: a leading "Create" verb followed by an "a copy of" phrase. It anchors
+// the copy-token "except" rider guard so unrelated "Create" clauses without a
+// copy-of phrase, and non-creation clauses, are never affected.
+func createCopyTokenHead(head []shared.Token) bool {
+	if len(head) == 0 || !equalWord(head[0], "create") {
+		return false
+	}
+	for i := 1; i+1 < len(head); i++ {
+		if equalWord(head[i], "copy") && equalWord(head[i-1], "a") && equalWord(head[i+1], "of") {
+			return true
+		}
+	}
+	return false
+}
+
+// tapOrUntapInnerUntapAt reports whether the "untap" at index is the second verb
+// of a "tap or untap" choice ("Tap or untap target creature."), so it is not a
+// separate untap effect. The "tap or untap" phrase lowers to one TapOrUntap
+// instruction anchored on the leading "tap" verb.
+func tapOrUntapInnerUntapAt(tokens []shared.Token, index int) bool {
+	return index >= 2 &&
+		equalWord(tokens[index], "untap") &&
+		equalWord(tokens[index-1], "or") &&
+		(equalWord(tokens[index-2], "tap") || equalWord(tokens[index-2], "taps"))
 }
 
 func effectNounAt(tokens []shared.Token, index int) bool {
@@ -763,6 +956,39 @@ func cantBeBlockedThisTurnVerbAt(tokens []shared.Token, index int) bool {
 		equalWord(tokens[index+2], "blocked") &&
 		equalWord(tokens[index+3], "this") &&
 		equalWord(tokens[index+4], "turn")
+}
+
+// cantBlockThisTurnVerbAt reports whether the temporary prohibition "can't block
+// this turn" / "cannot block this turn" begins at index. It anchors the
+// temporary can't-block resolving effect ("Target creature can't block this
+// turn.", "Up to three target creatures can't block this turn.") on the negated
+// "can't"/"cannot" so the subject is the targeted creature(s). The "this turn"
+// tail distinguishes this resolving, until-end-of-turn effect from the
+// continuous static prohibitions ("Creatures can't block.", "Creatures with
+// power less than this creature's power can't block it.") that carry no turn
+// duration, so those keep flowing through the static-declaration path. The
+// exactness recognizer reconstructs the full clause, so any other wording (a
+// "can't block creatures you control" qualifier, an "except" rider) still fails
+// closed.
+func cantBlockThisTurnVerbAt(tokens []shared.Token, index int) bool {
+	return (equalWord(tokens[index], "can't") || equalWord(tokens[index], "cannot")) &&
+		index+3 < len(tokens) &&
+		equalWord(tokens[index+1], "block") &&
+		equalWord(tokens[index+2], "this") &&
+		equalWord(tokens[index+3], "turn")
+}
+
+// negatedNextUntapStepVerbAt reports whether the token at index begins the
+// standalone stun predicate "doesn't/don't untap during ... next untap step"
+// that follows a leading target subject ("Target creature doesn't untap during
+// its controller's next untap step."). Unlike a forward effect verb, the negated
+// "doesn't" contraction is not itself an effect word, so target scanning would
+// otherwise absorb it into the target noun phrase. Breaking here keeps the target
+// ("Target creature") clean so it reconstructs exactly.
+func negatedNextUntapStepVerbAt(tokens []shared.Token, index int) bool {
+	return (equalWord(tokens[index], "doesn't") || equalWord(tokens[index], "don't")) &&
+		index+1 < len(tokens) &&
+		equalWord(tokens[index+1], "untap")
 }
 
 // pastCastCountPhraseAt reports whether the "cast" verb at index is the past
@@ -837,6 +1063,20 @@ func castThisFromGraveyardAt(tokens []shared.Token, index int) bool {
 	return effectWordsAt(tokens, index, "cast", "this", "card", "from", "your", "graveyard")
 }
 
+// manaSpentToCastPhraseAt reports whether the "cast" verb at index is the
+// infinitive inside the Converge count phrase "mana spent to cast it" rather
+// than a casting effect. The Converge dynamic amount ("for each color of mana
+// spent to cast it") consumes that span as a count, so the bare "cast" must not
+// also seed a separate cast effect that would split the enters-with-counters
+// sentence.
+func manaSpentToCastPhraseAt(tokens []shared.Token, index int) bool {
+	return index >= 3 &&
+		equalWord(tokens[index-3], "mana") &&
+		equalWord(tokens[index-2], "spent") &&
+		equalWord(tokens[index-1], "to") &&
+		effectWordsAt(tokens, index, "cast", "it")
+}
+
 func resolvingClauseEnd(tokens []shared.Token, indices []int, effectIndex int) int {
 	start := indices[effectIndex] + 1
 	end := len(tokens)
@@ -846,7 +1086,7 @@ func resolvingClauseEnd(tokens []shared.Token, indices []int, effectIndex int) i
 				end = i
 				break
 			}
-			if equalWord(tokens[i], "then") || equalWord(tokens[i], "and") {
+			if equalWord(tokens[i], "then") || equalWord(tokens[i], "and") || equalWord(tokens[i], "or") {
 				end = i
 				if i > start && tokens[i-1].Kind == shared.Comma {
 					end--
@@ -940,12 +1180,71 @@ func winGameVerbAt(tokens []shared.Token, index int) bool {
 	return false
 }
 
+// payLifeVerbAt reports whether the "pay"/"pays" verb at index governs a bare
+// "pay N life" life payment ("Pay 2 life."). Paying life is losing that much
+// life (CR 119.1b), so this anchors the generic "pay" verb to EffectLose. The
+// classification is confirmed by scanning forward to the clause terminator for a
+// top-level "life" word outside any quoted granted ability, with no mana Symbol
+// in the clause: a combined "pay {mana} and N life" cost carries a mana symbol
+// and is folded by the optional-payment recognizers, not treated as a resolving
+// life-loss effect.
+func payLifeVerbAt(tokens []shared.Token, index int) bool {
+	if !equalWord(tokens[index], "pay") && !equalWord(tokens[index], "pays") {
+		return false
+	}
+	// A preceding top-level "enters"/"enter" marks the "As this <permanent>
+	// enters, you may pay N life. If you don't, it enters tapped." entry-payment
+	// replacement (the dual-land cycle), where the life amount is folded onto the
+	// leading enters effect rather than parsed as a resolving life loss. Leave
+	// that shape to the optional-entry-payment recognizer.
+	for i := range index {
+		if tokens[i].Kind == shared.Word &&
+			(equalWord(tokens[i], "enters") || equalWord(tokens[i], "enter")) {
+			return false
+		}
+	}
+	quoted := false
+	for i := index + 1; i < len(tokens); i++ {
+		switch tokens[i].Kind {
+		case shared.Period, shared.Semicolon, shared.Comma, shared.Symbol:
+			return false
+		case shared.Quote:
+			quoted = !quoted
+		case shared.Word:
+			if !quoted && equalWord(tokens[i], "life") {
+				return true
+			}
+		default:
+		}
+	}
+	return false
+}
+
+// manifestDreadClauseBoundary reports whether the token following "manifest
+// dread" ends that keyword-action clause: end of the token run, a sentence
+// terminator, or a clause separator such as the comma before "then put ...
+// counters on that creature" (Weight Room). "manifest dread" is a fixed
+// keyword action with no "manifest dread <noun>" phrasing, so recognizing it
+// before a continuation lets a following clause reference the manifested
+// creature instead of misreading the verb as a plain "manifest the top card".
+func manifestDreadClauseBoundary(tokens []shared.Token, index int) bool {
+	if index >= len(tokens) {
+		return true
+	}
+	switch tokens[index].Kind {
+	case shared.Period, shared.Comma, shared.Semicolon:
+		return true
+	default:
+		return equalWord(tokens[index], "then")
+	}
+}
+
 func effectKindAt(tokens []shared.Token, index int) EffectKind {
 	kind := effectWordKind(tokens[index])
 	switch {
 	case equalWord(tokens[index], "manifest") || equalWord(tokens[index], "manifests"):
 		switch {
-		case effectWordsAt(tokens, index+1, "dread") && len(tokens) == index+3 && tokens[index+2].Kind == shared.Period:
+		case effectWordsAt(tokens, index+1, "dread") && manifestDreadClauseBoundary(tokens, index+2):
 			return EffectManifestDread
 		case effectWordsAt(tokens, index+1, "the", "top", "card", "of", "your", "library") &&
 			len(tokens) == index+8 && tokens[index+7].Kind == shared.Period:
@@ -960,14 +1259,24 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		if lookAtTopCardAnyTimeInstruction(tokens[index:]) {
 			return EffectUnknown
 		}
+		if lookAtLibraryTopInstruction(tokens[index:]) {
+			return EffectLookAtLibraryTop
+		}
+		if lookAtHandInstruction(tokens[index:]) {
+			return EffectLookAtHand
+		}
 		return EffectManifestDread
 	case equalWord(tokens[index], "win") || equalWord(tokens[index], "wins"):
 		if winGameVerbAt(tokens, index) {
 			return EffectWinGame
 		}
 		return EffectUnknown
+	case payLifeVerbAt(tokens, index):
+		return EffectLose
 	case cantBeBlockedThisTurnVerbAt(tokens, index):
 		return EffectCantBeBlocked
+	case cantBlockThisTurnVerbAt(tokens, index):
+		return EffectCantBlock
 	case kind == EffectGrantKeyword && index >= 2 &&
 		(equalWord(tokens[index-2], "opponent") || equalWord(tokens[index-2], "opponents")) &&
 		equalWord(tokens[index-1], "you"):
@@ -986,9 +1295,23 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectUnknown
 	case kind == EffectCast && castThisFromGraveyardAt(tokens, index):
 		return EffectUnknown
+	case kind == EffectCast && manaSpentToCastPhraseAt(tokens, index):
+		return EffectUnknown
+	case kind == EffectCast && spellCostModifierCastAt(tokens, index):
+		// A resolving spell-cost-modifier sentence carries two "cast" tokens
+		// ("spells you cast ... cost {N} less to cast"); its dedicated recognizer
+		// produces a single effect, so neither the effect segmentation nor the
+		// ordered-lowering count may treat the casts as separate effects.
+		return EffectUnknown
 	case kind == EffectCounter && !counterVerbAt(tokens, index):
 		return EffectUnknown
 	case kind == EffectCopyStackObject && !copyVerbAt(tokens, index):
+		return EffectUnknown
+	case kind == EffectTransform && index > 0 &&
+		(equalWord(tokens[index-1], "can't") || equalWord(tokens[index-1], "cannot")):
+		// "<subject> can't transform." is a continuous transform prohibition, not
+		// a resolving transform effect; it is owned by the static-rule
+		// declaration path, so it carries no resolving effect.
 		return EffectUnknown
 	case chooseNewTargetsVerbAt(tokens, index):
 		return EffectChooseNewTargets
@@ -996,29 +1319,181 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectChooseCreatureType
 	case kind == EffectGain && index+1 < len(tokens) && equalWord(tokens[index+1], "control"):
 		return EffectGainControl
+	case kind == EffectGain && everyCreatureTypeGainRiderAt(tokens, index) && priorBasePowerToughnessSet(tokens, index):
+		// "gain all/every creature type(s)" folded onto a base power/toughness set
+		// (Mirror Entity) is a rider on that set, not a standalone effect, so it
+		// is suppressed from both segmentation and the ordered-lowering count.
+		return EffectUnknown
 	case kind == EffectDouble && index+1 < len(tokens) && equalWord(tokens[index+1], "strike"):
 		return EffectUnknown
 	case kind == EffectGrantKeyword && priorPTChange(tokens, index):
 		return EffectUnknown
 	case kind == EffectGrantKeyword && effectWordsAt(tokens, index+1, "the", "same", "name"):
 		return EffectUnknown
-	case kind == EffectModifyPT && gainEnergyVerbAt(tokens, index):
-		return EffectGainEnergy
+	case kind == EffectModifyPT && playerCounterGainVerbAt(tokens, index):
+		return EffectGainPlayerCounter
+	case becomeMonarchVerbAt(tokens, index):
+		return EffectBecomeMonarch
+	case kind == EffectTap && index+2 < len(tokens) &&
+		equalWord(tokens[index+1], "or") && equalWord(tokens[index+2], "untap"):
+		return EffectTapOrUntap
+	case removeFromCombatVerbAt(tokens, index):
+		return EffectRemoveFromCombat
+	case removeCounterVerbAt(tokens, index):
+		return EffectRemoveCounter
+	case ellipticalOrRemoveCounterAt(tokens, index):
+		return EffectRemoveCounter
 	default:
 		return kind
 	}
 }
 
-// gainEnergyVerbAt reports whether the "get"/"gets" verb at index is followed
-// only by energy symbols ("You get {E}{E}."), i.e. an energy-gain effect rather
-// than a power/toughness modification. The recipient (controller vs other) is
-// resolved separately; this only distinguishes the verb's object as energy.
-func gainEnergyVerbAt(tokens []shared.Token, index int) bool {
+// removeCounterVerbAt reports whether the verb at index begins the resolving
+// effect "Remove <amount> [<kind> ]counter(s) from <object>." (Ferropede,
+// "Whenever this creature deals combat damage to a player, you may remove a
+// counter from target permanent."). The verb "remove" is otherwise used only in
+// counter-removal costs (parsed before the colon) and the "Remove ... from
+// combat" effect, so the classification is anchored on the "remove"/"removes"
+// verb followed by a "counter"/"counters" word and a "from" clause that is not
+// "from combat". The exact-syntax matcher reconstructs the supported single
+// recognized-target forms; richer shapes (mass "all counters", dynamic counts)
+// stay non-exact and fail closed.
+func removeCounterVerbAt(tokens []shared.Token, index int) bool {
+	if !equalWord(tokens[index], "remove") && !equalWord(tokens[index], "removes") {
+		return false
+	}
+	if removeFromCombatClauseStartsAt(tokens, index+1) >= 0 {
+		return false
+	}
+	sawCounter := false
+	for i := index + 1; i < len(tokens); i++ {
+		if equalWord(tokens[i], "counter") || equalWord(tokens[i], "counters") {
+			sawCounter = true
+		}
+	}
+	if !sawCounter {
+		return false
+	}
+	for i := index + 1; i+1 < len(tokens); i++ {
+		if equalWord(tokens[i], "from") {
+			return true
+		}
+	}
+	return false
+}
+
+// ellipticalOrRemoveCounterAt reports whether the "remove" verb at index begins
+// the kind-elided counter removal alternative "...or remove <amount> from
+// <it/them>." that follows a counter-placement alternative in the same sentence
+// ("Put a lore counter on target Saga you control or remove one from it.",
+// Sigurd, Jarl of Ravensthorpe; "...put a charge counter on it or remove one
+// from it.", Immard). The placed counter's noun is elided after "remove", so the
+// ordinary removeCounterVerbAt — which anchors on an explicit "counter" noun —
+// does not classify it. The verb is recognized only as the second arm of an
+// "or" choice whose first arm already named a "counter", and only when a "from"
+// clause (not "from combat") follows without its own "counter" noun, so a
+// removal that does spell out its counter noun keeps flowing through
+// removeCounterVerbAt and no unrelated "remove" wording is captured.
+func ellipticalOrRemoveCounterAt(tokens []shared.Token, index int) bool {
+	if !equalWord(tokens[index], "remove") && !equalWord(tokens[index], "removes") {
+		return false
+	}
+	if index == 0 || !equalWord(tokens[index-1], "or") {
+		return false
+	}
+	priorCounter := false
+	for i := range index {
+		if equalWord(tokens[i], "counter") || equalWord(tokens[i], "counters") {
+			priorCounter = true
+			break
+		}
+	}
+	if !priorCounter {
+		return false
+	}
+	if removeFromCombatClauseStartsAt(tokens, index+1) >= 0 {
+		return false
+	}
+	fromIndex := -1
+	for i := index + 1; i+1 < len(tokens); i++ {
+		if equalWord(tokens[i], "counter") || equalWord(tokens[i], "counters") {
+			return false
+		}
+		if equalWord(tokens[i], "from") {
+			fromIndex = i
+			break
+		}
+	}
+	return fromIndex >= 0
+}
+
+// removeFromCombatVerbAt reports whether the verb at index begins the resolving
+// effect "Remove <object> from combat." (Reconnaissance, "Remove target
+// attacking creature you control from combat."). The verb "remove" is otherwise
+// used only in counter-removal costs, so the classification is anchored on the
+// "remove"/"removes" verb followed later by the "from combat" clause.
+func removeFromCombatVerbAt(tokens []shared.Token, index int) bool {
+	if !equalWord(tokens[index], "remove") && !equalWord(tokens[index], "removes") {
+		return false
+	}
+	return removeFromCombatClauseStartsAt(tokens, index+1) >= 0
+}
+
+// removeFromCombatClauseStartsAt returns the index of the "from" token of a
+// "from combat" clause at or after start, or -1 if none precedes the sentence
+// end. It anchors both the "Remove ... from combat" verb classification and the
+// target-boundary scan that keeps "from combat" out of the target noun phrase.
+func removeFromCombatClauseStartsAt(tokens []shared.Token, start int) int {
+	for i := start; i+1 < len(tokens); i++ {
+		if equalWord(tokens[i], "from") && equalWord(tokens[i+1], "combat") {
+			return i
+		}
+	}
+	return -1
+}
+
+// playerCounterGainVerbAt reports whether the "get"/"gets" verb at index is
+// followed by a player-counter object — energy symbols ("You get {E}{E}.") or a
+// named player counter ("You get an experience counter.") — rather than a
+// power/toughness modification ("gets +1/+1"). The recipient and exact count are
+// resolved separately; this only distinguishes the verb's object.
+func playerCounterGainVerbAt(tokens []shared.Token, index int) bool {
 	if !equalWord(tokens[index], "get") && !equalWord(tokens[index], "gets") {
 		return false
 	}
-	symbols := energySymbolsAfter(tokens, index+1)
-	return len(symbols) > 0
+	return len(energySymbolsAfter(tokens, index+1)) > 0 ||
+		playerCounterWordAfter(tokens, index+1)
+}
+
+// becomeMonarchVerbAt reports whether the "become"/"becomes" verb at index heads
+// a "<subject> become(s) the monarch" designation effect (CR 720). The object is
+// the fixed "the monarch" noun phrase that ends the sentence; any other object
+// leaves the verb unclassified so unrelated "becomes" wordings ("becomes a
+// copy", "becomes an artifact") keep their own whole-sentence recognizers.
+func becomeMonarchVerbAt(tokens []shared.Token, index int) bool {
+	if !equalWord(tokens[index], "become") && !equalWord(tokens[index], "becomes") {
+		return false
+	}
+	return index+3 < len(tokens) &&
+		effectWordsAt(tokens, index+1, "the", "monarch") &&
+		tokens[index+3].Kind == shared.Period
+}
+
+// playerCounterWordAfter reports whether the tokens beginning at start name a
+// player-only counter kind immediately followed by the "counter"/"counters"
+// noun ("an experience counter", "two poison counters"). The kind word and count
+// are recognized later from counter atoms and the effect amount; this only gates
+// classification so a "gets +1/+1" P/T change never matches.
+func playerCounterWordAfter(tokens []shared.Token, start int) bool {
+	for i := start; i+1 < len(tokens); i++ {
+		if !equalWord(tokens[i], "experience") && !equalWord(tokens[i], "poison") {
+			continue
+		}
+		if equalWord(tokens[i+1], "counter") || equalWord(tokens[i+1], "counters") {
+			return true
+		}
+	}
+	return false
 }
 
 // energySymbolsAfter returns the run of consecutive energy ({E}) symbol tokens
@@ -1047,6 +1522,8 @@ func effectWordKind(token shared.Token) EffectKind {
 		return EffectAmass
 	case "renown":
 		return EffectRenown
+	case "adapt", "adapts":
+		return EffectAdapt
 	case "attach", "attaches":
 		return EffectAttach
 	case "cast", "casts":
@@ -1055,6 +1532,8 @@ func effectWordKind(token shared.Token) EffectKind {
 		return EffectCounter
 	case "copy", "copies":
 		return EffectCopyStackObject
+	case "connive", "connives":
+		return EffectConnive
 	case "create", "creates":
 		return EffectCreate
 	case "deal", "deals":
@@ -1130,6 +1609,28 @@ func effectWordKind(token shared.Token) EffectKind {
 // sentence sorts them. The looked-at count is any number word; the exactness
 // recognizer rejects a variable ("X") or non-numeric word so only fixed digs
 // reach the combined lowerer.
+// lookAtHandInstruction reports whether the sentence is the private
+// hand-inspection effect "Look at <player>'s hand." (Gitaxian Probe, Peek). The
+// verb "look" is generic, so the classification is anchored on the "look at"
+// lead-in, a possessive player reference (a token ending in "'s"), and a
+// trailing "hand." clause boundary. This distinguishes it from the library
+// "look at the top ..." dig/visibility wordings handled before it.
+func lookAtHandInstruction(tokens []shared.Token) bool {
+	if len(tokens) < 5 || !effectWordsAt(tokens, 0, "look", "at") {
+		return false
+	}
+	last := len(tokens) - 1
+	if tokens[last].Kind != shared.Period || !equalWord(tokens[last-1], "hand") {
+		return false
+	}
+	for _, token := range tokens[2 : last-1] {
+		if strings.HasSuffix(token.Text, "'s") {
+			return true
+		}
+	}
+	return false
+}
+
 func digLookInstruction(tokens []shared.Token) bool {
 	return len(tokens) == 10 &&
 		effectWordsAt(tokens, 0, "look", "at", "the", "top") &&
@@ -1147,6 +1648,18 @@ func lookAtTopCardAnyTimeInstruction(tokens []shared.Token) bool {
 	return len(tokens) == 11 &&
 		effectWordsAt(tokens, 0, "look", "at", "the", "top", "card", "of", "your", "library", "any", "time") &&
 		tokens[10].Kind == shared.Period
+}
+
+// lookAtLibraryTopInstruction reports whether the sentence is the one-shot peek
+// "look at the top card of your library." (the Kinship ability word's leading
+// instruction). It is the resolving-effect counterpart of
+// lookAtTopCardAnyTimeInstruction's continuous "any time" permission: the player
+// privately sees the top card once as the ability resolves, conveying hidden
+// information without moving the card.
+func lookAtLibraryTopInstruction(tokens []shared.Token) bool {
+	return len(tokens) == 9 &&
+		effectWordsAt(tokens, 0, "look", "at", "the", "top", "card", "of", "your", "library") &&
+		tokens[8].Kind == shared.Period
 }
 
 // chooseNewTargetsVerbAt reports whether a retarget effect ("[You may] choose
@@ -1228,6 +1741,26 @@ func priorPTChange(tokens []shared.Token, index int) bool {
 		if equalWord(tokens[i], "get") || equalWord(tokens[i], "gets") {
 			power, toughness := parsePTChange(tokens[i+1 : index])
 			return power.Known && toughness.Known
+		}
+	}
+	return false
+}
+
+// everyCreatureTypeGainRiderAt reports whether the tokens at index begin a "gain
+// all creature types" / "gain every creature type" rider, the all-creature-type
+// grant folded onto a base power/toughness set (Mirror Entity).
+func everyCreatureTypeGainRiderAt(tokens []shared.Token, index int) bool {
+	return staticWordsAt(tokens, index+1, "all", "creature", "types") ||
+		staticWordsAt(tokens, index+1, "every", "creature", "type")
+}
+
+// priorBasePowerToughnessSet reports whether a "base power and toughness" set
+// phrase precedes index in the same sentence, marking the gain-every-creature
+// rider as folded onto that set rather than a standalone effect.
+func priorBasePowerToughnessSet(tokens []shared.Token, index int) bool {
+	for i := 0; i+3 < index; i++ {
+		if staticWordsAt(tokens, i, "base", "power", "and", "toughness") {
+			return true
 		}
 	}
 	return false

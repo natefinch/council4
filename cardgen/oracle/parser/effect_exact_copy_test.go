@@ -111,3 +111,38 @@ func TestParseChangeTargetRetarget(t *testing.T) {
 		}
 	}
 }
+
+// TestParseCopyTokenOneOfThem verifies the "create a token that's a copy of one
+// of them." copy source (Twilight Diviner) is recognized as an exact
+// copy-of-triggering-set create whose "them" pronoun names the triggering set.
+func TestParseCopyTokenOneOfThem(t *testing.T) {
+	t.Parallel()
+	source := "Whenever one or more other creatures you control enter, create a token that's a copy of one of them."
+	document, diagnostics := Parse(source, Context{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("Parse(%q) diagnostics = %#v", source, diagnostics)
+	}
+	if len(document.Abilities) != 1 {
+		t.Fatalf("Parse(%q) abilities = %#v", source, document.Abilities)
+	}
+	var effect *EffectSyntax
+	for i := range document.Abilities[0].Sentences {
+		for j := range document.Abilities[0].Sentences[i].Effects {
+			if document.Abilities[0].Sentences[i].Effects[j].Kind == EffectCreate {
+				effect = &document.Abilities[0].Sentences[i].Effects[j]
+			}
+		}
+	}
+	if effect == nil {
+		t.Fatalf("Parse(%q) found no create effect", source)
+	}
+	if !effect.TokenCopyOfTriggeringSet {
+		t.Errorf("Parse(%q) TokenCopyOfTriggeringSet = false, want true", source)
+	}
+	if !effect.Exact {
+		t.Errorf("Parse(%q) exact = false, want true", source)
+	}
+	if effect.TokenCopyOfTarget || effect.TokenCopyOfReference || effect.TokenCopyOfAttached {
+		t.Errorf("Parse(%q) misclassified copy source: %#v", source, effect)
+	}
+}

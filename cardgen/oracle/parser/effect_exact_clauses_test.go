@@ -25,6 +25,7 @@ func TestExactCounterSpellTypeUnion(t *testing.T) {
 	for _, source := range []string{
 		"Counter target artifact or enchantment spell.",
 		"Counter target enchantment, instant, or sorcery spell.",
+		"Counter target enchantment, instant, or sorcery spell an opponent controls.",
 	} {
 		if !counterEffectExact(t, source) {
 			t.Errorf("counterEffectExact(%q) = false, want true", source)
@@ -74,7 +75,6 @@ func TestExactCounterSpellTypeUnionFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
 		"Counter target blue enchantment, instant, or sorcery spell.",
-		"Counter target enchantment, instant, or sorcery spell an opponent controls.",
 		"Counter target enchantment, instant, or sorcery spell with mana value 3 or less.",
 		"Counter target enchantment, enchantment, or sorcery spell.",
 		"Counter target enchantment and instant spell.",
@@ -189,6 +189,22 @@ func TestExactGraveyardCardTargetAccepts(t *testing.T) {
 		"Return up to three target permanent cards from your graveyard to your hand.",
 		"Return up to two target Zombie cards from your graveyard to the battlefield.",
 		"Return up to two target cards with cycling from your graveyard to your hand.",
+		// Three-or-more type unions render with the serial-comma "X, Y, or Z"
+		// form for a single target and the "X, Y, and/or Z" form for plural
+		// multi-target counts.
+		"Return target artifact, creature, or enchantment card from your graveyard to the battlefield.",
+		"Return target instant, sorcery, or creature card from your graveyard to your hand.",
+		"Return up to two target artifact, creature, and/or enchantment cards from your graveyard to your hand.",
+		// Plural multi-target type unions join with "and/or" rather than "or".
+		"Return up to two target instant and/or sorcery cards from your graveyard to your hand.",
+		// "one or two"/"one, two, or three" target counts are exact cardinalities.
+		"Return one or two target creature cards from your graveyard to your hand.",
+		"Return one, two, or three target creature cards from your graveyard to your hand.",
+		// Owner-relative hand destinations lower identically to "to your hand"
+		// because returned cards always move to their owner's hand.
+		"Return target creature card from your graveyard to its owner's hand.",
+		"Return up to two target creature cards from your graveyard to their hand.",
+		"Return up to three target creature cards from your graveyard to their owners' hands.",
 	}
 	for _, source := range accepted {
 		if !graveyardReturnExact(t, source) {
@@ -206,8 +222,6 @@ func TestExactGraveyardCardTargetFailsClosed(t *testing.T) {
 		// Supertype and excluded-type combinations are unrendered.
 		"Return target basic land card from your graveyard to the battlefield.",
 		"Return target nonland permanent card from your graveyard to the battlefield.",
-		// "and/or" unions are not the canonical " or " join.
-		"Return up to two target instant and/or sorcery cards from your graveyard to your hand.",
 	}
 	for _, source := range rejected {
 		if graveyardReturnExact(t, source) {
@@ -415,11 +429,11 @@ func TestExactDestroyTypeUnionManaValueAccepts(t *testing.T) {
 
 func TestExactDestroyTypeUnionManaValueFailsClosed(t *testing.T) {
 	t.Parallel()
-	// Power and toughness on a type union would silently drop the union members
-	// that never carry that characteristic, and a controller clause combined
-	// with a mana-value qualifier is an unreconstructed word order.
+	// A mana-value qualifier on a comma-free two-member union ("creature or
+	// planeswalker ... with mana value 3 or less") applies to the whole union in
+	// a word order the round-trip does not reconstruct; the qualified Oxford-list
+	// disjunction (handled elsewhere) is a distinct, supported shape.
 	rejected := []string{
-		"Destroy target artifact, enchantment, or creature with power 4 or greater.",
 		"Destroy target creature or planeswalker you control with mana value 3 or less.",
 	}
 	for _, source := range rejected {
@@ -547,13 +561,13 @@ func TestExactSubtypeUnionAccepts(t *testing.T) {
 }
 
 // TestExactOxfordUnionFailsClosed keeps unions the runtime predicate cannot
-// faithfully reconstruct outside the exact envelope: a per-member keyword or
-// power qualifier, and a union that mixes a card type with a subtype.
+// faithfully reconstruct outside the exact envelope: a union that mixes a card
+// type with a subtype. A per-member keyword or power qualifier on an
+// Oxford-comma list is a distinct, supported shape handled by the qualified
+// disjunctive permanent target.
 func TestExactOxfordUnionFailsClosed(t *testing.T) {
 	t.Parallel()
 	rejected := []string{
-		"Exile target artifact, enchantment, or creature with flying.",
-		"Exile target artifact, enchantment, or creature with power 4 or greater.",
 		"Exile target creature or Spacecraft.",
 	}
 	for _, source := range rejected {
@@ -624,6 +638,7 @@ func TestExactSourceSpellShuffleIntoLibraryAccepts(t *testing.T) {
 	}{
 		{"Green Sun's Zenith", "Shuffle Green Sun's Zenith into its owner's library."},
 		{"Beacon of Destruction", "Shuffle Beacon of Destruction into its owner's library."},
+		{"The Mending of Dominaria", "Shuffle your graveyard into your library."},
 	}
 	for _, tc := range cases {
 		if !shuffleSelfIntoLibraryExact(t, tc.cardName, tc.source) {
@@ -639,7 +654,6 @@ func TestExactSourceSpellShuffleIntoLibraryFailsClosed(t *testing.T) {
 		source   string
 	}{
 		{"Foo", "Shuffle target creature into its owner's library."},
-		{"Foo", "Shuffle your graveyard into your library."},
 	}
 	for _, tc := range cases {
 		if shuffleSelfIntoLibraryExact(t, tc.cardName, tc.source) {

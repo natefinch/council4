@@ -24,7 +24,7 @@ func TestLowerMoveCounterSingleNamed(t *testing.T) {
 		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
 	}
 	mode := face.ActivatedAbilities[0].Content.Modes[0]
-	if len(mode.Targets) != 1 || mode.Targets[0].Predicate.PermanentTypes[0] != types.Creature {
+	if len(mode.Targets) != 1 || mode.Targets[0].Selection.Val.RequiredTypesAny[0] != types.Creature {
 		t.Fatalf("targets = %+v, want one creature target", mode.Targets)
 	}
 	move, ok := mode.Sequence[0].Primitive.(game.MoveCounters)

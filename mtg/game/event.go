@@ -57,7 +57,30 @@ const (
 	// found, so "whenever a player/an opponent/you searches their library"
 	// triggers fire. Event.Player is the searching player.
 	EventLibrarySearched
+	// EventAttackerBecameUnblocked marks an attacker that remained unblocked
+	// after the declare-blockers step completed (CR 509.1h). It is emitted once
+	// per unblocked attacker so "whenever this creature attacks and isn't
+	// blocked" triggers fire. SourceObjectID/PermanentID identify the attacker.
+	EventAttackerBecameUnblocked
+	// EventClassLevelGained marks a Class permanent's level rising to a new
+	// value (CR 716). It is emitted once for each level passed through so
+	// "When this Class becomes level N" triggers fire. SourceObjectID/PermanentID
+	// identify the Class, Controller is its controller, and Amount is the new
+	// level reached.
+	EventClassLevelGained
+	// EventCrimeCommitted marks a player committing a crime (CR 700.15): they
+	// put a spell or ability on the stack that targets one or more opponents,
+	// objects an opponent controls, or cards in an opponent's graveyard. It is
+	// emitted once per spell or ability put on the stack, regardless of how many
+	// such targets it has. Controller and Player identify the player who
+	// committed the crime, and StackObjectID identifies the spell or ability.
+	EventCrimeCommitted
 )
+
+// EventKindCount is the number of EventKind values, including EventUnknown. It
+// is appended at the end of the const block so existing wire values are
+// preserved; new kinds must be added immediately before this sentinel.
+const EventKindCount = int(EventCrimeCommitted) + 1
 
 // DamageRecipientKind identifies what received damage. Values are flags so a
 // trigger pattern can match either kind.
@@ -161,6 +184,11 @@ type Event struct {
 	// kicker cost was paid. It is false for objects that were not kicked.
 	KickerPaid bool
 
+	// EnterEvoked records whether an entering permanent resulted from a spell
+	// cast for its Evoke alternative cost (CR 702.74). It feeds the evoke
+	// sacrifice trigger's intervening "if its evoke cost was paid" condition.
+	EnterEvoked bool
+
 	// EnterWasCast records whether a permanent entered from resolving a cast,
 	// non-copy spell.
 	EnterWasCast bool
@@ -223,6 +251,12 @@ type Event struct {
 	// during the current turn. It is populated only for events with supported
 	// ordinal trigger semantics.
 	PlayerEventOrdinalThisTurn int
+
+	// FirstInDrawStep marks an EventCardDrawn as the player's first draw during
+	// their own draw step (the turn-based draw). Triggers carrying
+	// ExcludeFirstDrawInDrawStep ignore such a draw ("except the first one they
+	// draw in each of their draw steps", Orcish Bowmasters, Xyris).
+	FirstInDrawStep bool
 
 	// CounterKind and PreviousCounterAmount describe EventCountersAdded for
 	// either PermanentID or Player.

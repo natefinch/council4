@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 )
 
 func TestLowerActivatedAbilitySourceCombatStateCondition(t *testing.T) {
@@ -62,6 +63,38 @@ func TestLowerActivatedAbilityOpponentPoisonCondition(t *testing.T) {
 	}
 }
 
+func TestLowerActivatedAbilityLifeAboveStartingCondition(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Pilgrim",
+		Layout:     "normal",
+		TypeLine:   "Creature — Test",
+		OracleText: "{1}: Draw a card. Activate only if you have at least 10 life more than your starting life total.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	condition := face.ActivatedAbilities[0].ActivationCondition
+	if got := condition.Val.Aggregates; !condition.Exists || len(got) != 1 || got[0].Aggregate != game.AggregateControllerLifeAboveStarting || got[0].Op != compare.GreaterOrEqual || got[0].Value != 10 {
+		t.Fatalf("activation condition = %#v, want life-above-starting >= 10", condition)
+	}
+}
+
+func TestLowerActivatedAbilityLifeAtMostCondition(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Ascetic",
+		Layout:     "normal",
+		TypeLine:   "Creature — Test",
+		OracleText: "{1}: Draw a card. Activate only if you have 5 or less life.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	condition := face.ActivatedAbilities[0].ActivationCondition
+	if got := condition.Val.Aggregates; !condition.Exists || len(got) != 1 || got[0].Aggregate != game.AggregateControllerLife || got[0].Op != compare.LessOrEqual || got[0].Value != 5 {
+		t.Fatalf("activation condition = %#v, want life at most 5", condition)
+	}
+}
+
 func TestLowerActivatedAbilityCreatedTokenThisTurnCondition(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -85,8 +118,8 @@ func TestLowerActivatedAbilityExactHandSizeCondition(t *testing.T) {
 		OracleText: "{1}: Draw a card. Activate only if you have exactly seven cards in hand.",
 	})
 	condition := face.ActivatedAbilities[0].ActivationCondition
-	if !condition.Exists || !condition.Val.ControllerHandSizeExactly.Exists ||
-		condition.Val.ControllerHandSizeExactly.Val != 7 {
+	if got := condition.Val.Aggregates; !condition.Exists || len(got) != 1 || got[0].Aggregate != game.AggregateControllerHandSize ||
+		got[0].Op != compare.Equal || got[0].Value != 7 {
 		t.Fatalf("activation condition = %#v, want exactly seven cards in hand", condition)
 	}
 }

@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -392,7 +394,7 @@ func lowerCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic)
 		return unsupported()
 	}
 	targetSpec, ok := counterTargetSpec(ctx.content.Targets[0])
-	if !ok || len(targetSpec.Predicate.SpellCardTypesAny) != 0 {
+	if !ok {
 		return unsupported()
 	}
 	instruction := game.Instruction{
@@ -444,7 +446,7 @@ func lowerCounterThenExileInstead(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	targetSpec, ok := counterTargetSpec(target)
-	if !ok || len(targetSpec.Predicate.SpellCardTypesAny) != 0 {
+	if !ok {
 		return game.AbilityContent{}, false
 	}
 	return game.Mode{
@@ -637,7 +639,11 @@ func copyStackObjectReference(ctx contentCtx) (game.ObjectReference, []game.Targ
 		}
 		return game.TargetStackObjectReference(0), []game.TargetSpec{targetSpec}, true
 	case len(ctx.content.Targets) == 0 && len(ctx.content.References) == 1:
-		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowEvent: true})
+		reference := ctx.content.References[0]
+		if reference.Kind == compiler.ReferenceThisObject || reference.Kind == compiler.ReferenceSelfName {
+			return game.ResolvingStackObjectReference(), nil, true
+		}
+		object, ok := lowerObjectReference(reference, referenceLoweringContext{AllowEvent: true})
 		if !ok || object.Kind() != game.ObjectReferenceEventStackObject {
 			return game.ObjectReference{}, nil, false
 		}
@@ -656,16 +662,25 @@ func lowerSacrificeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 		)
 	}
 
+	if content, ok := lowerSacrificeSourceUnlessPaySpell(ctx); ok {
+		return content, nil
+	}
+
 	effect := ctx.content.Effects[0]
 	if !effect.Exact {
 		return unsupported()
 	}
-	// Source-bound or event-permanent-bound sacrifice of the direct pronoun.
+	// Source-bound or event-permanent-bound sacrifice of a self-reference: the
+	// direct pronoun ("it") or the source object named explicitly ("this
+	// creature", the card's own name).
+	selfReference := len(ctx.content.References) == 1 &&
+		(ctx.content.References[0].Kind == compiler.ReferenceThisObject ||
+			ctx.content.References[0].Kind == compiler.ReferenceSelfName ||
+			(ctx.content.References[0].Kind == compiler.ReferencePronoun &&
+				ctx.content.References[0].Pronoun == compiler.ReferencePronounIt))
 	if effect.Context == parser.EffectContextController &&
 		len(ctx.content.Targets) == 0 &&
-		len(ctx.content.References) == 1 &&
-		ctx.content.References[0].Kind == compiler.ReferencePronoun &&
-		ctx.content.References[0].Pronoun == compiler.ReferencePronounIt &&
+		selfReference &&
 		len(ctx.content.Conditions) == 0 &&
 		len(ctx.content.Keywords) == 0 &&
 		len(ctx.content.Modes) == 0 &&
@@ -724,6 +739,22 @@ func lowerSacrificeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 		}.Ability(), nil
 
 	case len(ctx.content.Targets) == 0:
+		// "That player sacrifices <N> <type> of their choice." — the player
+		// named by the triggering event (e.g. each opponent's upkeep) chooses.
+		if effect.Context == parser.EffectContextReferencedPlayer {
+			if !sacrificeReferencedPlayerChoice(ctx.content.References) {
+				return unsupported()
+			}
+			return game.Mode{
+				Sequence: []game.Instruction{{
+					Primitive: game.SacrificePermanents{
+						Player:    game.EventPlayerReference(),
+						Amount:    amount,
+						Selection: selection,
+					},
+				}},
+			}.Ability(), nil
+		}
 		// "You sacrifice <N> <type>." or "Each opponent/player sacrifices <N> <type>."
 		if !sacrificeChoiceReferences(ctx.content.References) {
 			return unsupported()
@@ -774,6 +805,56 @@ func lowerSacrificeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 	}
 }
 
+// lowerSacrificeSourceUnlessPaySpell lowers "sacrifice <this permanent> unless
+// you pay {cost}." (Phantasmal Forces, Krosan Cloudscraper, Sunken City, and the
+// upkeep "pay or sacrifice" cycle). The controller is offered the fixed mana
+// payment as the ability resolves; declining (or being unable to pay) sacrifices
+// the source permanent. It is restricted to a single source-bound sacrifice with
+// a fixed, non-variable controller payment and no targets, modes, or keywords.
+func lowerSacrificeSourceUnlessPaySpell(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Conditions) != 1 ||
+		len(ctx.content.References) != 1 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	payment := effect.Payment
+	if effect.Kind != compiler.EffectSacrifice ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		payment.Form != parser.EffectPaymentFormUnless ||
+		payment.Payer != parser.EffectPaymentPayerController ||
+		len(payment.ManaCost) == 0 ||
+		manaCostHasVariableSymbol(payment.ManaCost) ||
+		payment.GenericManaAmount.DynamicKind != compiler.DynamicAmountNone ||
+		ctx.content.Conditions[0].Predicate != compiler.ConditionPredicateControllerDoesNotPay ||
+		ctx.content.References[0].Binding != compiler.ReferenceBindingSource {
+		return game.AbilityContent{}, false
+	}
+	const resultKey = game.ResultKey("sacrifice-unless-paid")
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{
+				Primitive: game.Pay{Payment: game.ResolutionPayment{
+					Prompt:   "Pay " + payment.ManaCost.String() + "?",
+					ManaCost: opt.Val(payment.ManaCost),
+				}},
+				PublishResult: resultKey,
+			},
+			{
+				Primitive: game.Sacrifice{Object: game.SourcePermanentReference()},
+				ResultGate: opt.Val(game.InstructionResultGate{
+					Key:       resultKey,
+					Succeeded: game.TriFalse,
+				}),
+			},
+		},
+	}.Ability(), true
+}
+
 func sacrificeChoiceReferences(references []compiler.CompiledReference) bool {
 	for _, reference := range references {
 		if reference.Kind != compiler.ReferencePronoun ||
@@ -784,31 +865,72 @@ func sacrificeChoiceReferences(references []compiler.CompiledReference) bool {
 	return true
 }
 
-// sacrificeChoiceSelection maps the sacrifice effect's compiled selector to a
-// runtime Selection. It supports a single permanent card type, a card-type
-// union ("creature or planeswalker"), and the nontoken/token qualifier. It
-// fails closed for any other selector shape so unrecognized filters stay
-// unsupported.
-func sacrificeChoiceSelection(selector compiler.CompiledSelector) (game.Selection, bool) {
-	var selection game.Selection
-	if union := selector.RequiredTypesAny(); len(union) > 1 {
-		selection.RequiredTypesAny = union
-	} else {
-		switch selector.Kind {
-		case compiler.SelectorCreature:
-			selection.RequiredTypes = []types.Card{types.Creature}
-		case compiler.SelectorArtifact:
-			selection.RequiredTypes = []types.Card{types.Artifact}
-		case compiler.SelectorLand:
-			selection.RequiredTypes = []types.Card{types.Land}
-		case compiler.SelectorEnchantment:
-			selection.RequiredTypes = []types.Card{types.Enchantment}
-		case compiler.SelectorPermanent:
-			// zero Selection = any permanent
+// sacrificeReferencedPlayerChoice reports whether the references describe a
+// "that player sacrifices <type> of their choice" edict: exactly one
+// event-player "that player" subject plus zero or more "their"-choice
+// possessives. The subject resolves to game.EventPlayerReference, so the player
+// named by the triggering event (e.g. each opponent's upkeep) makes the choice.
+func sacrificeReferencedPlayerChoice(references []compiler.CompiledReference) bool {
+	sawSubject := false
+	for _, reference := range references {
+		switch {
+		case reference.Kind == compiler.ReferenceThatPlayer &&
+			reference.Binding == compiler.ReferenceBindingEventPlayer:
+			if sawSubject {
+				return false
+			}
+			sawSubject = true
+		case reference.Kind == compiler.ReferencePronoun &&
+			reference.Pronoun == compiler.ReferencePronounTheir:
 		default:
-			return game.Selection{}, false
+			return false
 		}
 	}
+	return sawSubject
+}
+
+// DO-NOT-COPY(filter): accepts the bare token noun ("a token", an unknown kind
+// whose sole constraint is the token qualifier), which the canonical projector
+// fails closed on (an unknown noun without a subtype); reproducing it would
+// require broadening the canonical core, deferred to Stage 5; prefer
+// SelectionForSelectorMasked for new code. (retire: #1393)
+//
+// sacrificeChoiceSelection maps the sacrifice effect's compiled selector to a
+// runtime Selection. It supports a single permanent card type, a card-type
+// union ("creature or planeswalker"), a single excluded card type ("nonland
+// permanent"), a named token subtype, the bare token noun ("a token"), and the
+// nontoken/token qualifier. It fails closed for any other selector shape so
+// unrecognized filters stay unsupported.
+func sacrificeChoiceSelection(selector compiler.CompiledSelector) (game.Selection, bool) {
+	var selection game.Selection
+	subtypes := selector.SubtypesAny()
+	switch {
+	case len(selector.RequiredTypesAny()) > 1:
+		selection.RequiredTypesAny = selector.RequiredTypesAny()
+	case selector.Kind == compiler.SelectorCreature:
+		selection.RequiredTypes = []types.Card{types.Creature}
+	case selector.Kind == compiler.SelectorArtifact:
+		selection.RequiredTypes = []types.Card{types.Artifact}
+	case selector.Kind == compiler.SelectorLand:
+		selection.RequiredTypes = []types.Card{types.Land}
+	case selector.Kind == compiler.SelectorEnchantment:
+		selection.RequiredTypes = []types.Card{types.Enchantment}
+	case selector.Kind == compiler.SelectorPermanent:
+		// zero Selection = any permanent
+	case len(subtypes) > 0:
+		// A named artifact-token subtype ("a Treasure", "a Food") names the
+		// permanent by its subtype alone; the SubtypesAny filter applied below
+		// is the whole constraint, so no card-type kind is required here.
+	case selector.TokenOnly:
+		// The bare token noun ("a token") names no type; the TokenOnly qualifier
+		// applied below is the whole constraint.
+	default:
+		return game.Selection{}, false
+	}
+	selection.SubtypesAny = subtypes
+	// A single excluded card type ("nonland permanent", "noncreature artifact")
+	// drops permanents carrying that type from the eligible set.
+	selection.ExcludedTypes = selector.ExcludedTypes()
 	switch {
 	case selector.NonToken:
 		selection.NonToken = true
@@ -816,6 +938,9 @@ func sacrificeChoiceSelection(selector compiler.CompiledSelector) (game.Selectio
 		selection.TokenOnly = true
 	default:
 	}
+	// "Sacrifice another creature." sacrifices a permanent other than the
+	// effect's own source; the runtime selection drops the source object.
+	selection.ExcludeSource = selector.Another || selector.Other
 	return selection, true
 }
 
@@ -844,16 +969,25 @@ func lowerCounterUnlessPaysSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	if !ok {
 		return game.AbilityContent{}, false
 	}
+	resolutionPayment := game.ResolutionPayment{
+		Prompt:   "Pay " + payment.ManaCost.String() + "?",
+		Payer:    opt.Val(game.ObjectControllerReference(game.TargetStackObjectReference(0))),
+		ManaCost: opt.Val(slices.Clone(payment.ManaCost)),
+	}
+	if payment.GenericManaAmount.DynamicKind != compiler.DynamicAmountNone {
+		multiplier, ok := lowerDynamicAmount(payment.GenericManaAmount, game.SourcePermanentReference())
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		resolutionPayment.Prompt = "Pay " + payment.ManaCost.String() + " " + payment.GenericManaAmount.Text + "?"
+		resolutionPayment.ManaCostMultiplier = opt.Val(&multiplier)
+	}
 	const resultKey = game.ResultKey("unless-paid")
 	return game.Mode{
 		Targets: []game.TargetSpec{targetSpec},
 		Sequence: []game.Instruction{
 			{
-				Primitive: game.Pay{Payment: game.ResolutionPayment{
-					Prompt:   "Pay " + payment.ManaCost.String() + "?",
-					Payer:    opt.Val(game.ObjectControllerReference(game.TargetStackObjectReference(0))),
-					ManaCost: opt.Val(payment.ManaCost),
-				}},
+				Primitive:     game.Pay{Payment: resolutionPayment},
 				PublishResult: resultKey,
 			},
 			{
@@ -880,7 +1014,7 @@ func playerTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 	switch target.Selector.Kind {
 	case compiler.SelectorPlayer:
 	case compiler.SelectorOpponent:
-		spec.Predicate = game.TargetPredicate{Player: game.PlayerOpponent}
+		spec.Selection = opt.Val(game.Selection{Player: game.PlayerOpponent})
 	default:
 		return game.TargetSpec{}, false
 	}

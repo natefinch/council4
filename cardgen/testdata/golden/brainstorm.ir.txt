@@ -1,0 +1,63 @@
+
+  [0]: 
+    Kind: spell
+    Text: Draw three cards, then put two cards from your hand on top of your library in any order.
+    Content: 
+      Effects: 
+        [0]: 
+          Kind: 20
+          Context: EffectContextController
+          Text: Draw three cards, then put two cards from your hand on top of your library in any order.
+          References: 
+          SubjectReferences: 
+          Targets: 
+          SubjectTargets: 
+          Selector: 
+            Kind: 9
+          DamageRecipient: 
+            EachSourceGroup: 
+          Amount: 
+            Value: 3
+            Known: true
+          BecomeTypeAddColors: 
+          PolymorphColors: 
+          PolymorphSupertypes: 
+          Exact: true
+          RequiresOrderedLowering: true
+          Order: 
+            End: 4
+          VerbOrder: 
+            End: 1
+        [1]: 
+          Kind: 42
+          Context: EffectContextController
+          Connection: EffectConnectionThen
+          Text: Draw three cards, then put two cards from your hand on top of your library in any order.
+          References: 
+          SubjectReferences: 
+          Targets: 
+          SubjectTargets: 
+          Selector: 
+            Kind: 9
+            Zone: Hand
+          DamageRecipient: 
+            EachSourceGroup: 
+          Amount: 
+            Value: 2
+            Known: true
+          FromZone: Hand
+          ToZone: Library
+          Destination: EffectDestinationTop
+          BecomeTypeAddColors: 
+          PolymorphColors: 
+          PolymorphSupertypes: 
+          Exact: true
+          RequiresOrderedLowering: true
+          Order: 
+            End: 4
+          VerbOrder: 
+            Start: 2
+            End: 3
+          HandLibraryPut: 
+            Present: true
+      Keywords: 

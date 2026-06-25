@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"slices"
-
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
@@ -72,8 +70,15 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		}
 	case game.DynamicAmountControllerLife, game.DynamicAmountControllerHandSize,
 		game.DynamicAmountControllerGraveyardSize, game.DynamicAmountControllerBasicLandTypeCount,
-		game.DynamicAmountOpponentCount:
+		game.DynamicAmountOpponentCount, game.DynamicAmountOpponentsAttackedThisCombat,
+		game.DynamicAmountControllerSpeed:
 		amount = controllerAggregateAmount(g, controller, dynamic, before)
+	case game.DynamicAmountOpponentControllingCount:
+		for _, opponent := range aliveOpponents(g, controller) {
+			if countPermanentsMatchingGroup(g, nil, opponent, dynamic.Group) > 0 {
+				amount++
+			}
+		}
 	case game.DynamicAmountDevotion:
 		// ColorFrom binds devotion to the color chosen as the ability resolves
 		// (Nykthos, Shrine to Nyx's "devotion to that color"); otherwise the
@@ -92,6 +97,7 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 	case game.DynamicAmountCountSelector, game.DynamicAmountGreatestPowerInGroup,
 		game.DynamicAmountGreatestToughnessInGroup, game.DynamicAmountGreatestManaValueInGroup,
 		game.DynamicAmountTotalPowerInGroup, game.DynamicAmountTotalToughnessInGroup,
+		game.DynamicAmountTotalManaValueInGroup,
 		game.DynamicAmountColorCountInGroup:
 		amount = groupDynamicAmount(g, obj, controller, &dynamic)
 	case game.DynamicAmountCountCardsInZone:
@@ -108,7 +114,7 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		if obj != nil && key != "" {
 			amount = obj.ResolvedExcessDamage[key]
 		}
-	case game.DynamicAmountEventDamage, game.DynamicAmountEventLifeChange:
+	case game.DynamicAmountEventDamage, game.DynamicAmountEventLifeChange, game.DynamicAmountEventCounterCount:
 		if obj != nil && obj.HasTriggerEvent {
 			amount = obj.TriggerEvent.Amount
 		}
@@ -150,8 +156,16 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 			amount = choice.Number
 		}
 	case game.DynamicAmountSpellsCastThisTurn, game.DynamicAmountLifeLostThisTurn,
-		game.DynamicAmountLifeGainedThisTurn:
+		game.DynamicAmountLifeGainedThisTurn, game.DynamicAmountCardsDrawnThisTurn:
 		amount = turnEventDynamicAmount(g, controller, dynamic.Kind)
+	case game.DynamicAmountColorsOfManaSpentToCast:
+		if obj != nil {
+			amount = obj.ColorsOfManaSpentToCast
+		}
+	case game.DynamicAmountTimesKicked:
+		if obj != nil {
+			amount = obj.KickerCount
+		}
 	case game.DynamicAmountMaxOf:
 		amount = maxOfDynamicAmounts(g, obj, controller, dynamic.Operands, before)
 	default:
@@ -206,16 +220,18 @@ func blockingCreaturesBeyondFirst(g *game.Game, obj *game.StackObject) int {
 }
 
 // turnEventDynamicAmount dispatches the controller-scoped amounts derived from
-// the current turn's event log (CR 608.2c): the number of spells cast and the
-// total life gained or lost so far this turn. It is split out of
-// dynamicAmountValueBeforeLayer so that large switch stays within the
-// maintainability budget.
+// the current turn's event log (CR 608.2c): the number of spells cast, the
+// number of cards drawn, and the total life gained or lost so far this turn. It
+// is split out of dynamicAmountValueBeforeLayer so that large switch stays
+// within the maintainability budget.
 func turnEventDynamicAmount(g *game.Game, controller game.PlayerID, kind game.DynamicAmountKind) int {
 	switch kind {
 	case game.DynamicAmountLifeLostThisTurn:
 		return lifeChangedThisTurn(g, controller, game.EventLifeLost)
 	case game.DynamicAmountLifeGainedThisTurn:
 		return lifeChangedThisTurn(g, controller, game.EventLifeGained)
+	case game.DynamicAmountCardsDrawnThisTurn:
+		return cardsDrawnThisTurn(g, controller)
 	default:
 		return spellsCastThisTurn(g, controller)
 	}
@@ -241,13 +257,7 @@ func maxOfDynamicAmounts(g *game.Game, obj *game.StackObject, controller game.Pl
 // own triggering spell counts, because its cast event precedes the ability's
 // resolution.
 func spellsCastThisTurn(g *game.Game, controller game.PlayerID) int {
-	count := 0
-	for _, event := range g.EventsThisTurn() {
-		if event.Kind == game.EventSpellCast && event.Controller == controller {
-			count++
-		}
-	}
-	return count
+	return eventsThisTurnWindow(g).count(eventKindController(game.EventSpellCast, controller))
 }
 
 // lifeChangedThisTurn sums the life a player gained or lost so far this turn from
@@ -257,13 +267,16 @@ func spellsCastThisTurn(g *game.Game, controller game.PlayerID) int {
 // because dealing damage to a player causes that much life loss (CR 120.3),
 // emitted as an EventLifeLost.
 func lifeChangedThisTurn(g *game.Game, player game.PlayerID, kind game.EventKind) int {
-	total := 0
-	for _, event := range g.EventsThisTurn() {
-		if event.Kind == kind && event.Player == player {
-			total += event.Amount
-		}
-	}
-	return total
+	return eventsThisTurnWindow(g).sumAmount(eventKindPlayer(kind, player))
+}
+
+// opponentLostLifeThisTurn reports whether any opponent of playerID has lost
+// life so far this turn (CR 702.107b, Spectacle). Damage to a player is life
+// loss (CR 120.3), so both combat and noncombat damage to an opponent qualify.
+func opponentLostLifeThisTurn(g *game.Game, playerID game.PlayerID) bool {
+	return eventsThisTurnWindow(g).any(func(event game.Event) bool {
+		return event.Kind == game.EventLifeLost && event.Player != playerID && event.Amount > 0
+	})
 }
 
 // controllerAggregateAmount computes the player-relative dynamic amounts that
@@ -292,9 +305,46 @@ func controllerAggregateAmount(g *game.Game, controller game.PlayerID, dynamic g
 		})
 	case game.DynamicAmountOpponentCount:
 		return len(aliveOpponents(g, controller))
+	case game.DynamicAmountOpponentsAttackedThisCombat:
+		return opponentsAttackedThisCombat(g, controller)
+	case game.DynamicAmountControllerSpeed:
+		if player, ok := playerByID(g, controller); ok {
+			return player.Speed
+		}
 	default:
 	}
 	return 0
+}
+
+// opponentsAttackedThisCombat counts the distinct opponents of controller being
+// attacked this combat by creatures controller controls, read from the current
+// combat's attack declarations as the ability resolves (CR 506.2, CR 702.72).
+// It backs the Melee count "for each opponent you attacked this combat" and is
+// zero outside combat.
+func opponentsAttackedThisCombat(g *game.Game, controller game.PlayerID) int {
+	if g.Combat == nil {
+		return 0
+	}
+	opponents := make(map[game.PlayerID]bool, game.NumPlayers)
+	for _, opponent := range aliveOpponents(g, controller) {
+		opponents[opponent] = false
+	}
+	for _, declaration := range g.Combat.Attackers {
+		attacker, ok := permanentByObjectID(g, declaration.Attacker)
+		if !ok || effectiveController(g, attacker) != controller {
+			continue
+		}
+		if _, ok := opponents[declaration.Target.Player]; ok {
+			opponents[declaration.Target.Player] = true
+		}
+	}
+	attacked := 0
+	for _, did := range opponents {
+		if did {
+			attacked++
+		}
+	}
+	return attacked
 }
 
 // controllerDevotion returns the controller's devotion to colors: the number of
@@ -382,6 +432,8 @@ func totalGroupCharacteristic(kind game.DynamicAmountKind) characteristic {
 	switch kind {
 	case game.DynamicAmountTotalToughnessInGroup:
 		return characteristicToughness
+	case game.DynamicAmountTotalManaValueInGroup:
+		return characteristicManaValue
 	default:
 		return characteristicPower
 	}
@@ -496,7 +548,8 @@ func groupDynamicAmount(g *game.Game, obj *game.StackObject, controller game.Pla
 	case game.DynamicAmountGreatestPowerInGroup, game.DynamicAmountGreatestToughnessInGroup,
 		game.DynamicAmountGreatestManaValueInGroup:
 		return greatestCharacteristicInGroup(g, obj, controller, dynamic.Group, dynamic.Kind)
-	case game.DynamicAmountTotalPowerInGroup, game.DynamicAmountTotalToughnessInGroup:
+	case game.DynamicAmountTotalPowerInGroup, game.DynamicAmountTotalToughnessInGroup,
+		game.DynamicAmountTotalManaValueInGroup:
 		return totalCharacteristicInGroup(g, obj, controller, dynamic.Group, dynamic.Kind)
 	case game.DynamicAmountColorCountInGroup:
 		return colorCountInGroup(g, obj, controller, dynamic.Group)
@@ -592,6 +645,14 @@ func countCardsInZoneMatchingSelection(g *game.Game, obj *game.StackObject, cont
 	if !ok {
 		return 0
 	}
+	return countCardsInZoneForPlayer(g, playerID, controller, cardZone, selection)
+}
+
+// countCardsInZoneForPlayer counts the cards a player owns in a card zone that
+// match selection, viewed by controller. It is the player-id core shared by the
+// reference-resolving dynamic-amount path and the cost-time self cost reductions
+// that count cards in the caster's own zone without a resolving stack object.
+func countCardsInZoneForPlayer(g *game.Game, playerID game.PlayerID, viewer game.PlayerID, cardZone zone.Type, selection game.Selection) int {
 	player, ok := playerByID(g, playerID)
 	if !ok {
 		return 0
@@ -611,7 +672,7 @@ func countCardsInZoneMatchingSelection(g *game.Game, obj *game.StackObject, cont
 			g:          g,
 			card:       card,
 			controller: card.Owner,
-			viewer:     controller,
+			viewer:     viewer,
 		}
 		if matchSelection(&subject, &selection) {
 			count++
@@ -702,6 +763,12 @@ func resolvedObjectManaValue(g *game.Game, resolved *resolvedObjectReference) in
 	if resolved.permanent != nil {
 		if def, ok := permanentCardDef(g, resolved.permanent); ok {
 			return def.ManaValue()
+		}
+		return 0
+	}
+	if resolved.stack != nil {
+		if manaValue, ok := stackObjectManaValue(g, resolved.stack); ok {
+			return manaValue
 		}
 		return 0
 	}
@@ -797,7 +864,7 @@ func effectConditionSatisfied(g *game.Game, obj *game.StackObject, condition opt
 	return true
 }
 
-func cardConditionSatisfied(g *game.Game, obj *game.StackObject, condition opt.V[game.CardCondition]) bool {
+func cardConditionSatisfied(g *game.Game, obj *game.StackObject, condition opt.V[game.CardSelection]) bool {
 	if !condition.Exists {
 		return true
 	}
@@ -810,48 +877,42 @@ func cardConditionSatisfied(g *game.Game, obj *game.StackObject, condition opt.V
 			continue
 		}
 		card, ok := g.GetCardInstance(ref.CardID)
-		if ok && cardMatchesCondition(card.Def, condition, obj) {
+		if ok && cardMatchesSelection(g, obj, card, cond.Selection) {
 			return true
 		}
 	}
 	return false
 }
 
-func cardMatchesCondition(card *game.CardDef, condition opt.V[game.CardCondition], obj *game.StackObject) bool {
+// cardConditionPredicateSatisfied reports whether card satisfies an optional
+// CardSelection's predicate. It ignores the selection's Card reference (the
+// caller has already resolved which card to test) and matches anything when no
+// condition is present.
+func cardConditionPredicateSatisfied(g *game.Game, obj *game.StackObject, card *game.CardInstance, condition opt.V[game.CardSelection]) bool {
 	if !condition.Exists {
 		return true
 	}
-	if card == nil {
+	return cardMatchesSelection(g, obj, card, condition.Val.Selection)
+}
+
+// cardMatchesSelection matches a card in a non-battlefield zone against a
+// Selection, reading any chosen-subtype provenance from the resolving object's
+// choices.
+func cardMatchesSelection(g *game.Game, obj *game.StackObject, card *game.CardInstance, selection game.Selection) bool {
+	if card == nil || card.Def == nil {
 		return false
 	}
-	cond := condition.Val
-	if cond.RequirePermanentCard && !card.IsPermanent() {
-		return false
+	subject := &selectionSubject{
+		kind: subjectCard,
+		g:    g,
+		card: card,
 	}
-	face := card.DefaultFace()
-	for _, cardType := range cond.Types {
-		if !face.HasType(cardType) {
-			return false
-		}
+	if obj != nil {
+		subject.resolutionChoices = obj.ResolutionChoices
+		subject.viewer = obj.Controller
+		subject.sourceObjectID = obj.SourceID
 	}
-	for _, supertype := range cond.Supertypes {
-		if !face.HasSupertype(supertype) {
-			return false
-		}
-	}
-	if len(cond.SubtypesAny) > 0 && !slices.ContainsFunc(cond.SubtypesAny, face.HasSubtype) {
-		return false
-	}
-	if cond.ChosenSubtypeFrom != "" {
-		choice, ok := linkedResolutionChoice(obj, string(cond.ChosenSubtypeFrom))
-		if !ok ||
-			choice.Kind != game.ResolutionChoiceSubtype ||
-			!types.KnownSubtypeForType(types.Creature, choice.Subtype) ||
-			!face.HasSubtype(choice.Subtype) {
-			return false
-		}
-	}
-	return true
+	return matchSelection(subject, &selection)
 }
 
 func instructionResultGateSatisfied(obj *game.StackObject, gate game.InstructionResultGate) bool {
@@ -869,6 +930,10 @@ func instructionResultGateSatisfied(obj *game.StackObject, gate game.Instruction
 		return false
 	}
 	if gate.Succeeded != game.TriAny && (gate.Succeeded == game.TriTrue) != result.Succeeded {
+		return false
+	}
+	if gate.AmountRange.Exists &&
+		(result.Amount < gate.AmountRange.Val.Min || result.Amount > gate.AmountRange.Val.Max) {
 		return false
 	}
 	return true

@@ -3,7 +3,6 @@ package cardgen
 import (
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -100,6 +99,10 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 	if !ok {
 		return game.TriggerPattern{}, false
 	}
+	castDuringTurn, ok := lowerTriggerCastDuringTurn(pattern.CastDuringTurn)
+	if !ok {
+		return game.TriggerPattern{}, false
+	}
 	result := game.TriggerPattern{
 		Event:                             event,
 		UnionEvent:                        unionEvent,
@@ -125,18 +128,48 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 		OneOrMore:                         pattern.OneOrMore,
 		OneOrMorePerAttackTarget:          pattern.OneOrMorePerAttackTarget,
 		AttackAlone:                       pattern.AttackAlone,
+		AttackWhileSaddled:                pattern.AttackWhileSaddled,
 		AttackerCountAtLeast:              pattern.AttackerCountAtLeast,
 		RequireKickerPaid:                 pattern.RequireKickerPaid,
 		RequireHistoric:                   pattern.RequireHistoric,
 		ExcludeManaAbility:                pattern.ExcludeManaAbility,
 		PlayerEventOrdinalThisTurn:        pattern.PlayerEventOrdinalThisTurn,
+		ExcludeFirstDrawInDrawStep:        pattern.ExcludeFirstDrawInDrawStep,
 		MatchSpellCopy:                    pattern.MatchSpellCopy,
+		SpellTargetsSource:                pattern.SpellTargetsSource,
+		CastDuringTurn:                    castDuringTurn,
 		RequireTappedForMana:              pattern.TappedForMana,
+		RequireProducedManaColor:          pattern.TappedForManaColor,
+		ClassBecameLevel:                  pattern.ClassBecameLevel,
+	}
+	if pattern.ClassBecameLevel > 0 && event != game.EventClassLevelGained {
+		return game.TriggerPattern{}, false
 	}
 	if pattern.TappedForMana && event != game.EventPermanentTapped {
 		return game.TriggerPattern{}, false
 	}
 	if pattern.MatchSpellCopy && event != game.EventSpellCast {
+		return game.TriggerPattern{}, false
+	}
+	if pattern.SpellTargetsSource && event != game.EventSpellCast {
+		return game.TriggerPattern{}, false
+	}
+	if pattern.SpellTargetSelection != nil {
+		if event != game.EventSpellCast {
+			return game.TriggerPattern{}, false
+		}
+		targetSelection, ok := lowerTriggerSelection(*pattern.SpellTargetSelection)
+		if !ok {
+			return game.TriggerPattern{}, false
+		}
+		spellSelection, ok := spellTargetSelection(targetSelection)
+		if !ok {
+			return game.TriggerPattern{}, false
+		}
+		result.SpellTargetAllow = game.TargetAllowPermanent
+		result.SpellTargetPattern = opt.Val(spellSelection)
+	}
+	if castDuringTurn != game.TriggerTurnAny && event != game.EventSpellCast {
 		return game.TriggerPattern{}, false
 	}
 
@@ -162,6 +195,8 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 			result.CounterKind = counter.PlusOnePlusOne
 		case compiler.TriggerCounterMinusOneMinusOne:
 			result.CounterKind = counter.MinusOneMinusOne
+		case compiler.TriggerCounterLore:
+			result.CounterKind = counter.Lore
 		default:
 			return game.TriggerPattern{}, false
 		}
@@ -184,13 +219,17 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 // reporting false (fail-closed) when a zone is unrepresentable or the from/to
 // flags are inconsistent. A to-zone may be required or excluded, never both.
 func lowerTriggerZones(pattern *compiler.TriggerPattern, result *game.TriggerPattern) bool {
-	if pattern.MatchFromZone {
+	if pattern.MatchFromZone && pattern.ExcludeFromZone {
+		return false
+	}
+	if pattern.MatchFromZone || pattern.ExcludeFromZone {
 		fromZone, ok := lowerTriggerZone(pattern.FromZone)
 		if !ok {
 			return false
 		}
 		result.FromZone = fromZone
-		result.MatchFromZone = true
+		result.MatchFromZone = pattern.MatchFromZone
+		result.ExcludeFromZone = pattern.ExcludeFromZone
 	} else if pattern.FromZone != compiler.TriggerZoneNone {
 		return false
 	}
@@ -214,14 +253,18 @@ func lowerTriggerZones(pattern *compiler.TriggerPattern, result *game.TriggerPat
 // attackerCountRelationsLowerable reports whether the attacker-count combat
 // relations (AttackAlone, AttackerCountAtLeast) are well-formed for lowering.
 // Both relations only apply to attacker-declared events; "N or more" requires
-// N >= 2, the one-or-more batching, and must not also be "attacks alone".
+// N >= 2 and must not also be "attacks alone". The count is satisfied either by
+// the controller-scoped one-or-more batching ("you attack with N or more
+// creatures") or by a self-source pattern ("this creature and at least N other
+// creatures attack", Battalion), whose single declared attacker is the source.
 func attackerCountRelationsLowerable(pattern *compiler.TriggerPattern, event game.EventKind) bool {
 	if (pattern.AttackAlone || pattern.AttackerCountAtLeast != 0) &&
 		event != game.EventAttackerDeclared {
 		return false
 	}
 	if pattern.AttackerCountAtLeast != 0 &&
-		(pattern.AttackerCountAtLeast < 2 || !pattern.OneOrMore || pattern.AttackAlone) {
+		(pattern.AttackerCountAtLeast < 2 || pattern.AttackAlone ||
+			(!pattern.OneOrMore && pattern.Source != compiler.TriggerSourceSelf)) {
 		return false
 	}
 	return true
@@ -270,7 +313,10 @@ func lowerTriggerEvent(event compiler.TriggerEvent) (game.EventKind, bool) {
 	switch event {
 	case compiler.TriggerEventSpellCast:
 		return game.EventSpellCast, true
-	case compiler.TriggerEventPermanentEnteredBattlefield:
+	case compiler.TriggerEventPermanentEnteredBattlefield, compiler.TriggerEventDoorUnlocked:
+		// A Room half's door unlocks as the half enters the battlefield from
+		// being cast, so the runtime fires the door-unlock trigger off the same
+		// permanent-entered-battlefield event as an ordinary self-enters trigger.
 		return game.EventPermanentEnteredBattlefield, true
 	case compiler.TriggerEventPermanentDied:
 		return game.EventPermanentDied, true
@@ -316,10 +362,16 @@ func lowerTriggerEvent(event compiler.TriggerEvent) (game.EventKind, bool) {
 		return game.EventPermanentMutated, true
 	case compiler.TriggerEventAttackerBecameBlocked:
 		return game.EventAttackerBecameBlocked, true
+	case compiler.TriggerEventAttackerBecameUnblocked:
+		return game.EventAttackerBecameUnblocked, true
 	case compiler.TriggerEventTokenCreated:
 		return game.EventTokenCreated, true
 	case compiler.TriggerEventLibrarySearched:
 		return game.EventLibrarySearched, true
+	case compiler.TriggerEventClassBecameLevel:
+		return game.EventClassLevelGained, true
+	case compiler.TriggerEventCrimeCommitted:
+		return game.EventCrimeCommitted, true
 	default:
 		return game.EventUnknown, false
 	}
@@ -394,6 +446,19 @@ func lowerTriggerDamageRecipient(recipient compiler.TriggerDamageRecipient) (gam
 	return result, true
 }
 
+func lowerTriggerCastDuringTurn(relation compiler.TriggerCastTurn) (game.TriggerTurnRelation, bool) {
+	switch relation {
+	case compiler.TriggerCastTurnAny:
+		return game.TriggerTurnAny, true
+	case compiler.TriggerCastTurnYours:
+		return game.TriggerTurnYours, true
+	case compiler.TriggerCastTurnNotYours:
+		return game.TriggerTurnNotYours, true
+	default:
+		return game.TriggerTurnAny, false
+	}
+}
+
 func lowerTriggerStep(step compiler.TriggerStep) (game.Step, bool) {
 	switch step {
 	case compiler.TriggerStepNone:
@@ -438,102 +503,171 @@ func lowerTriggerZone(triggerZone compiler.TriggerZone) (zone.Type, bool) {
 	}
 }
 
+// lowerTriggerSelection projects a trigger-subject filter onto the canonical
+// game.Selection. It is a thin adapter over the shared SelectionForSelector
+// projector: triggerSelectionSelector translates the shared-typed TriggerSelection
+// fields into a compiler.CompiledSelector, SelectionForSelectorMasked maps that
+// onto the runtime Selection, and the two dimensions the selector atoms cannot
+// carry (the conjunctive required card-type nouns and the trigger controller
+// relation) are applied explicitly afterward. Routing through the canonical
+// projector lets triggered abilities inherit every Selection dimension
+// automatically instead of maintaining a second hand-written projector.
 func lowerTriggerSelection(selection compiler.TriggerSelection) (game.Selection, bool) {
-	required, ok := lowerTriggerCardTypes(selection.RequiredTypes)
+	controller, ok := lowerTriggerSelectionController(selection.Controller)
 	if !ok {
 		return game.Selection{}, false
 	}
-	requiredAny, ok := lowerTriggerCardTypes(selection.RequiredTypesAny)
+	selector, mask, ok := triggerSelectionSelector(selection)
 	if !ok {
 		return game.Selection{}, false
 	}
-	excluded, ok := lowerTriggerCardTypes(selection.ExcludedTypes)
+	result, ok := SelectionForSelectorMasked(selector, mask)
 	if !ok {
 		return game.Selection{}, false
 	}
-	supertypes, ok := lowerTriggerSupertypes(selection.Supertypes)
-	if !ok {
-		return game.Selection{}, false
-	}
+	// The trigger required-type nouns and controller relation are mapped
+	// directly: the canonical selector atoms carry RequiredTypesAny but not the
+	// conjunctive RequiredTypes set, and the trigger controller collapses
+	// "opponent" onto NotYou, so both are applied after the shared projection.
+	result.RequiredTypes = selection.RequiredTypes
+	result.RequiredTypesAny = selection.RequiredTypesAny
+	result.Controller = controller
+	result.MatchModified = selection.Modified
+	return result, true
+}
+
+// triggerSelectionSelector translates a TriggerSelection's shared-typed filter
+// dimensions into a compiler.CompiledSelector and the mask that reproduces the
+// trigger projector's behavior. It fails closed on any tristate or combat-state
+// value the per-enum helpers cannot translate. The required card-type nouns and
+// controller relation are mapped by lowerTriggerSelection directly because the
+// selector atoms cannot carry the conjunctive required set and the trigger
+// controller collapses "opponent" onto NotYou.
+func triggerSelectionSelector(selection compiler.TriggerSelection) (compiler.CompiledSelector, SelectionMask, bool) {
 	subtypes, ok := lowerTriggerSubtypes(selection.SubtypesAny)
 	if !ok {
-		return game.Selection{}, false
-	}
-	colors, ok := lowerTriggerColors(selection.ColorsAny)
-	if !ok {
-		return game.Selection{}, false
-	}
-	excludedColors, ok := lowerTriggerColors(selection.ExcludedColors)
-	if !ok {
-		return game.Selection{}, false
+		return compiler.CompiledSelector{}, SelectionMask{}, false
 	}
 	tapped, ok := lowerTriggerTriState(selection.Tapped)
 	if !ok {
-		return game.Selection{}, false
+		return compiler.CompiledSelector{}, SelectionMask{}, false
 	}
 	combatState, ok := lowerTriggerCombatState(selection.CombatState)
 	if !ok {
-		return game.Selection{}, false
+		return compiler.CompiledSelector{}, SelectionMask{}, false
 	}
-	keyword, ok := lowerTriggerKeyword(selection.Keyword)
-	if !ok {
-		return game.Selection{}, false
+
+	selector := compiler.CompiledSelector{
+		Kind:                   compiler.SelectorPermanent,
+		Colorless:              selection.Colorless,
+		Multicolored:           selection.Multicolored,
+		NonToken:               selection.NonToken,
+		TokenOnly:              selection.TokenOnly,
+		Keyword:                selection.Keyword,
+		ExcludedKeyword:        selection.ExcludedKeyword,
+		SubtypeFromEntryChoice: selection.SubtypeFromEntryChoice,
+		MatchAnyCounter:        selection.MatchAnyCounter,
 	}
-	excludedKeyword, ok := lowerTriggerKeyword(selection.ExcludedKeyword)
-	if !ok {
-		return game.Selection{}, false
+
+	switch tapped {
+	case game.TriTrue:
+		selector.Tapped = true
+	case game.TriFalse:
+		selector.Untapped = true
+	default:
 	}
-	manaValue, ok := lowerTriggerNumberFilter(selection.ManaValue)
-	if !ok {
-		return game.Selection{}, false
+
+	switch combatState {
+	case game.CombatStateAttacking:
+		selector.Attacking = true
+	case game.CombatStateBlocking:
+		selector.Blocking = true
+	default:
 	}
-	power, ok := lowerTriggerNumberFilter(selection.Power)
-	if !ok {
-		return game.Selection{}, false
+
+	if selection.Power.Op != compare.Any {
+		selector.MatchPower = true
+		selector.Power = selection.Power
 	}
-	toughness, ok := lowerTriggerNumberFilter(selection.Toughness)
-	if !ok {
-		return game.Selection{}, false
+	if selection.Toughness.Op != compare.Any {
+		selector.MatchToughness = true
+		selector.Toughness = selection.Toughness
 	}
-	result := game.Selection{
-		RequiredTypes:    required,
-		RequiredTypesAny: requiredAny,
-		ExcludedTypes:    excluded,
-		Supertypes:       supertypes,
-		SubtypesAny:      subtypes,
-		ColorsAny:        colors,
-		ExcludedColors:   excludedColors,
-		Colorless:        selection.Colorless,
-		Multicolored:     selection.Multicolored,
-		Tapped:           tapped,
-		CombatState:      combatState,
-		Keyword:          keyword,
-		ExcludedKeyword:  excludedKeyword,
-		ManaValue:        manaValue,
-		Power:            power,
-		Toughness:        toughness,
-		NonToken:         selection.NonToken,
-		TokenOnly:        selection.TokenOnly,
-	}
-	if selection.SubtypeFromEntryChoice {
-		result.SubtypeChoice = game.SubtypeChoiceSourceEntry
-	}
-	result.Controller, ok = lowerTriggerSelectionController(selection.Controller)
-	if !ok {
-		return game.Selection{}, false
-	}
-	if selection.MatchManaValue {
-		if selection.ManaValue.Comparison != compiler.TriggerComparisonUnknown {
-			return game.Selection{}, false
+
+	switch {
+	case selection.MatchManaValue:
+		if selection.ManaValue.Op != compare.Any {
+			return compiler.CompiledSelector{}, SelectionMask{}, false
 		}
-		result.ManaValue = opt.Val(compare.Int{
-			Op:    compare.GreaterOrEqual,
-			Value: selection.ManaValueAtLeast,
-		})
-	} else if selection.ManaValueAtLeast != 0 {
+		op := compare.GreaterOrEqual
+		value := selection.ManaValueAtLeast
+		if selection.ManaValueAtMost != 0 {
+			op = compare.LessOrEqual
+			value = selection.ManaValueAtMost
+		}
+		selector.MatchManaValue = true
+		selector.ManaValue = compare.Int{Op: op, Value: value}
+	case selection.ManaValueAtLeast != 0 || selection.ManaValueAtMost != 0:
+		return compiler.CompiledSelector{}, SelectionMask{}, false
+	case selection.ManaValue.Op != compare.Any:
+		selector.MatchManaValue = true
+		selector.ManaValue = selection.ManaValue
+	default:
+	}
+
+	selector = selector.WithAtoms(compiler.CompiledSelectorAtoms{
+		ExcludedTypes:  selection.ExcludedTypes,
+		Supertypes:     selection.Supertypes,
+		SubtypesAny:    subtypes,
+		ColorsAny:      selection.ColorsAny,
+		ExcludedColors: selection.ExcludedColors,
+	})
+
+	return selector, SelectionMask{}.Rejecting(DimRequiredName), true
+}
+
+// spellTargetSelection projects a lowered trigger Selection onto the canonical
+// permanent/card Selection used by a spell-cast trigger's SpellTargetPattern. It
+// fails closed on Selection features the original TargetPredicate-backed pattern
+// could not express, so unsupported target relations remain unsupported rather
+// than silently widening trigger coverage. The projection drops the same fields
+// the former predicate round-trip discarded, preserving byte-for-byte behavior.
+func spellTargetSelection(selection game.Selection) (game.Selection, bool) {
+	if len(selection.AnyOf) > 0 ||
+		selection.ExcludedSubtype != "" ||
+		selection.Colorless ||
+		selection.Multicolored ||
+		selection.NonToken ||
+		selection.TokenOnly ||
+		selection.MatchCounter ||
+		selection.MatchAnyCounter ||
+		selection.MatchModified ||
+		selection.RequiredCounterCount.Exists ||
+		selection.EnteredThisTurn ||
+		selection.SubtypeChoice != game.SubtypeChoiceNone ||
+		selection.ColorChoice != game.ColorChoiceNone {
 		return game.Selection{}, false
 	}
-	return result, true
+	return game.Selection{
+		RequiredTypes:     selection.RequiredTypes,
+		RequiredTypesAny:  selection.RequiredTypesAny,
+		ExcludedTypes:     selection.ExcludedTypes,
+		Supertypes:        selection.Supertypes,
+		ExcludedSupertype: selection.ExcludedSupertype,
+		SubtypesAny:       selection.SubtypesAny,
+		ColorsAny:         selection.ColorsAny,
+		ExcludedColors:    selection.ExcludedColors,
+		Controller:        selection.Controller,
+		Player:            selection.Player,
+		Tapped:            selection.Tapped,
+		CombatState:       selection.CombatState,
+		Keyword:           selection.Keyword,
+		ExcludedKeyword:   selection.ExcludedKeyword,
+		ManaValue:         selection.ManaValue,
+		Power:             selection.Power,
+		Toughness:         selection.Toughness,
+		ExcludeSource:     selection.ExcludeSource,
+	}, true
 }
 
 func lowerTriggerSelectionController(controller compiler.ControllerKind) (game.ControllerRelation, bool) {
@@ -562,55 +696,7 @@ func lowerTriggerCombatState(state compiler.TriggerCombatState) (game.CombatStat
 	}
 }
 
-func lowerTriggerSupertypes(supertypes []compiler.TriggerSupertype) ([]types.Super, bool) {
-	if len(supertypes) == 0 {
-		return nil, true
-	}
-	result := make([]types.Super, 0, len(supertypes))
-	for _, supertype := range supertypes {
-		switch supertype {
-		case compiler.TriggerSupertypeLegendary:
-			result = append(result, types.Legendary)
-		case compiler.TriggerSupertypeSnow:
-			result = append(result, types.Snow)
-		default:
-			return nil, false
-		}
-	}
-	return result, true
-}
-
-func lowerTriggerCardTypes(cardTypes []compiler.TriggerCardType) ([]types.Card, bool) {
-	if len(cardTypes) == 0 {
-		return nil, true
-	}
-	result := make([]types.Card, 0, len(cardTypes))
-	for _, cardType := range cardTypes {
-		switch cardType {
-		case compiler.TriggerCardTypeArtifact:
-			result = append(result, types.Artifact)
-		case compiler.TriggerCardTypeBattle:
-			result = append(result, types.Battle)
-		case compiler.TriggerCardTypeCreature:
-			result = append(result, types.Creature)
-		case compiler.TriggerCardTypeEnchantment:
-			result = append(result, types.Enchantment)
-		case compiler.TriggerCardTypeInstant:
-			result = append(result, types.Instant)
-		case compiler.TriggerCardTypeLand:
-			result = append(result, types.Land)
-		case compiler.TriggerCardTypePlaneswalker:
-			result = append(result, types.Planeswalker)
-		case compiler.TriggerCardTypeSorcery:
-			result = append(result, types.Sorcery)
-		default:
-			return nil, false
-		}
-	}
-	return result, true
-}
-
-func lowerTriggerSubtypes(subtypes []compiler.TriggerSubtype) ([]types.Sub, bool) {
+func lowerTriggerSubtypes(subtypes []types.Sub) ([]types.Sub, bool) {
 	if len(subtypes) == 0 {
 		return nil, true
 	}
@@ -630,65 +716,4 @@ func lowerTriggerTriState(state compiler.TriggerTriState) (game.TriState, bool) 
 	default:
 		return game.TriAny, false
 	}
-}
-
-func lowerTriggerKeyword(keyword compiler.TriggerKeyword) (game.Keyword, bool) {
-	switch keyword {
-	case compiler.TriggerKeywordUnknown:
-		return game.KeywordNone, true
-	case compiler.TriggerKeywordDefender:
-		return game.Defender, true
-	case compiler.TriggerKeywordFlash:
-		return game.Flash, true
-	case compiler.TriggerKeywordFlying:
-		return game.Flying, true
-	case compiler.TriggerKeywordHaste:
-		return game.Haste, true
-	default:
-		return game.KeywordNone, false
-	}
-}
-
-func lowerTriggerNumberFilter(filter compiler.TriggerNumberFilter) (opt.V[compare.Int], bool) {
-	var op compare.Op
-	switch filter.Comparison {
-	case compiler.TriggerComparisonUnknown:
-		if filter.Value != 0 {
-			return opt.V[compare.Int]{}, false
-		}
-		return opt.V[compare.Int]{}, true
-	case compiler.TriggerComparisonEqual:
-		op = compare.Equal
-	case compiler.TriggerComparisonAtMost:
-		op = compare.LessOrEqual
-	case compiler.TriggerComparisonAtLeast:
-		op = compare.GreaterOrEqual
-	default:
-		return opt.V[compare.Int]{}, false
-	}
-	return opt.Val(compare.Int{Op: op, Value: filter.Value}), true
-}
-
-func lowerTriggerColors(colors []compiler.TriggerColor) ([]color.Color, bool) {
-	if len(colors) == 0 {
-		return nil, true
-	}
-	result := make([]color.Color, 0, len(colors))
-	for _, triggerColor := range colors {
-		switch triggerColor {
-		case compiler.TriggerColorWhite:
-			result = append(result, color.White)
-		case compiler.TriggerColorBlue:
-			result = append(result, color.Blue)
-		case compiler.TriggerColorBlack:
-			result = append(result, color.Black)
-		case compiler.TriggerColorRed:
-			result = append(result, color.Red)
-		case compiler.TriggerColorGreen:
-			result = append(result, color.Green)
-		default:
-			return nil, false
-		}
-	}
-	return result, true
 }

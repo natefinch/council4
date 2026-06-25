@@ -175,6 +175,43 @@ func TestParseComposedActivationRestrictions(t *testing.T) {
 	}
 }
 
+func TestParseConjoinedActivationRestrictions(t *testing.T) {
+	t.Parallel()
+	for _, test := range []struct {
+		name  string
+		text  string
+		kinds []ActivationRestrictionKind
+	}{
+		{
+			"sorcery and once each turn",
+			"{1}: Draw a card. Activate only as a sorcery and only once each turn.",
+			[]ActivationRestrictionKind{ActivationRestrictionSorceryTiming, ActivationRestrictionFrequency},
+		},
+		{
+			"player turn and once each turn",
+			"{1}: Draw a card. Activate only during your turn and only once each turn.",
+			[]ActivationRestrictionKind{ActivationRestrictionPlayerTurn, ActivationRestrictionFrequency},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.text, Context{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			restrictions := document.Abilities[0].ActivationRestrictions
+			if len(restrictions) != len(test.kinds) {
+				t.Fatalf("restrictions = %#v, want %d clauses", restrictions, len(test.kinds))
+			}
+			for i, kind := range test.kinds {
+				if restrictions[i].Kind != kind {
+					t.Fatalf("restriction[%d].Kind = %v, want %v", i, restrictions[i].Kind, kind)
+				}
+			}
+		})
+	}
+}
+
 func TestParseActivationPlayerTurnRestriction(t *testing.T) {
 	t.Parallel()
 	source := "{1}: Draw a card. Activate only during your turn."
@@ -200,7 +237,6 @@ func TestParseActivationPlayerTurnFailClosed(t *testing.T) {
 	for _, source := range []string{
 		"{1}: Draw a card. Activate only during an opponent's turn.",
 		"{1}: Draw a card. Activate only during each turn.",
-		"{1}: Draw a card. Activate only during your turn and only once each turn.",
 		"{1}: Draw a card. Activate only during your turns.",
 	} {
 		t.Run(source, func(t *testing.T) {

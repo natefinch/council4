@@ -103,6 +103,14 @@ func conditionBoundaries(tokens []shared.Token, triggered, ifAbleExcluded bool, 
 			i = end - 1
 			continue
 		}
+		if playFromTopPayLifeRiderConditionAt(tokens, i) {
+			i = end - 1
+			continue
+		}
+		if conditionLeaveBattlefieldExileReplacementAt(tokens, i) {
+			i = end - 1
+			continue
+		}
 		boundaries = append(boundaries, ConditionBoundary{
 			Start:             tokens[i].Span.Start,
 			NodeID:            len(boundaries),
@@ -119,10 +127,25 @@ func conditionBoundaries(tokens []shared.Token, triggered, ifAbleExcluded bool, 
 }
 
 func conditionIsResolvingThenIf(tokens []shared.Token, index int, intro ConditionIntroKind) bool {
-	return intro == ConditionIntroIf &&
-		index > 0 &&
-		equalWord(tokens[index-1], "then") &&
-		(index == 1 || tokenEndsSentence(tokens[index-2]))
+	if intro != ConditionIntroIf || index < 0 {
+		return false
+	}
+	if index > 0 && equalWord(tokens[index-1], "then") &&
+		(index == 1 || tokenEndsSentence(tokens[index-2])) {
+		return true
+	}
+	return conditionIsResolvingCreatedToken(tokens, index)
+}
+
+// conditionIsResolvingCreatedToken reports whether a sentence-leading "If the
+// token ..." introduces a resolving condition that inspects a token a prior
+// effect in the same ability created (Yenna, Redtooth Regent: "If the token is
+// an Aura, ..."). The token only exists during resolution, so the gate is
+// evaluated then rather than as an activation restriction.
+func conditionIsResolvingCreatedToken(tokens []shared.Token, index int) bool {
+	sentenceLeading := index == 0 || tokenEndsSentence(tokens[index-1])
+	return sentenceLeading && index+2 < len(tokens) &&
+		equalWord(tokens[index+1], "the") && equalWord(tokens[index+2], "token")
 }
 
 func tokenEndsSentence(token shared.Token) bool {
@@ -146,10 +169,16 @@ func conditionActivationKeyword(tokens []shared.Token, index int, intro Conditio
 }
 
 // conditionAttacksEachCombatIfAble reports whether the semantic tokens spell
-// "attacks each combat if able", the restriction whose trailing "if able" must
-// not become a standalone condition.
+// "attack[s] each combat if able", the restriction whose trailing "if able" must
+// not become a standalone condition. The singular self form ("This creature
+// attacks each combat if able."), the plural group form ("Creatures you
+// control attack each combat if able."), and the directed two-player form ("each
+// creature they control attacks the other chosen player each combat if able.",
+// The Brothers' War chapter II) are recognized.
 func conditionAttacksEachCombatIfAble(semantic []shared.Token) bool {
-	return conditionContainsSequence(semantic, 0, "attacks", "each", "combat", "if", "able")
+	return conditionContainsSequence(semantic, 0, "attacks", "each", "combat", "if", "able") ||
+		conditionContainsSequence(semantic, 0, "attack", "each", "combat", "if", "able") ||
+		conditionContainsSequence(semantic, 0, "attacks", "the", "other", "chosen", "player", "each", "combat", "if", "able")
 }
 
 // conditionForcedAttackIfAble reports whether the semantic tokens spell a

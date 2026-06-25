@@ -249,7 +249,7 @@ func TestRecognizeStaticPermanentManaAbilityGrantFromTypedNode(t *testing.T) {
 	if declaration.Continuous == nil ||
 		declaration.Continuous.Operation != StaticContinuousGrantManaAbility ||
 		declaration.Group.Domain != StaticGroupSourceControllerPermanents ||
-		!slices.Equal(declaration.Group.Selection.RequiredTypes, []StaticCardType{StaticCardTypeLand}) {
+		!slices.Equal(declaration.Group.Selection.RequiredTypes, []types.Card{types.Land}) {
 		t.Fatalf("declaration = %#v, want controlled-land mana-ability grant", declaration)
 	}
 }
@@ -284,9 +284,43 @@ func TestRecognizeStaticPermanentManaAbilityGrantTreasureSacrifice(t *testing.T)
 		!declaration.Continuous.GrantedMana.Sacrifice ||
 		!declaration.Continuous.GrantedMana.AnyOneColor ||
 		declaration.Continuous.GrantedMana.Amount != 3 ||
-		!slices.Equal(declaration.Group.Selection.RequiredTypes, []StaticCardType{StaticCardTypeArtifact}) ||
+		!slices.Equal(declaration.Group.Selection.RequiredTypes, []types.Card{types.Artifact}) ||
 		!slices.Equal(declaration.Group.Selection.SubtypesAny, []types.Sub{types.Treasure}) {
 		t.Fatalf("declaration = %#v, want controlled-Treasure sacrifice mana-ability grant", declaration)
+	}
+}
+
+func TestRecognizeStaticPermanentManaAbilityGrantSacrificeAnyColor(t *testing.T) {
+	t.Parallel()
+	ability := CompiledAbility{Kind: AbilityStatic}
+	statics := []parser.StaticDeclarationSyntax{{
+		Kind: parser.StaticDeclarationPermanentAbilityGrant,
+		Subject: parser.StaticDeclarationSubject{
+			Kind: parser.StaticDeclarationSubjectGroup,
+			Group: parser.EffectStaticSubjectSyntax{
+				Kind: parser.EffectStaticSubjectControlledArtifacts,
+			},
+		},
+		GrantedManaAbility: &parser.StaticGrantedManaAbilitySyntax{
+			TapCost:   true,
+			Amount:    1,
+			AnyColor:  true,
+			Sacrifice: true,
+			Text:      "{T}, Sacrifice this artifact: Add one mana of any color.",
+		},
+	}}
+	declaration, ok := recognizeStaticPermanentAbilityGrantDeclaration(ability, statics)
+	if !ok {
+		t.Fatal("did not recognize typed sacrifice any-color mana-ability grant")
+	}
+	if declaration.Continuous == nil ||
+		declaration.Continuous.GrantedMana == nil ||
+		!declaration.Continuous.GrantedMana.Sacrifice ||
+		!declaration.Continuous.GrantedMana.AnyColor ||
+		declaration.Continuous.GrantedMana.AnyOneColor ||
+		declaration.Continuous.GrantedMana.Amount != 1 ||
+		!slices.Equal(declaration.Group.Selection.RequiredTypes, []types.Card{types.Artifact}) {
+		t.Fatalf("declaration = %#v, want controlled-artifact sacrifice any-color mana-ability grant", declaration)
 	}
 }
 
@@ -445,7 +479,7 @@ func TestRecognizeStaticSpellCostModifierFromTypedNodes(t *testing.T) {
 		node       parser.StaticDeclarationSyntax
 		reduction  int
 		increase   int
-		types      []StaticCardType
+		types      []types.Card
 		matchColor bool
 		color      color.Color
 	}{
@@ -467,7 +501,7 @@ func TestRecognizeStaticSpellCostModifierFromTypedNodes(t *testing.T) {
 				SpellType:           parser.StaticDeclarationSpellTypeCreature,
 			},
 			reduction: 2,
-			types:     []StaticCardType{StaticCardTypeCreature},
+			types:     []types.Card{types.Creature},
 		},
 		"creature spells increase": {
 			node: parser.StaticDeclarationSyntax{
@@ -477,7 +511,7 @@ func TestRecognizeStaticSpellCostModifierFromTypedNodes(t *testing.T) {
 				SpellType:           parser.StaticDeclarationSpellTypeCreature,
 			},
 			increase: 1,
-			types:    []StaticCardType{StaticCardTypeCreature},
+			types:    []types.Card{types.Creature},
 		},
 		"instant and sorcery reduction": {
 			node: parser.StaticDeclarationSyntax{
@@ -487,7 +521,7 @@ func TestRecognizeStaticSpellCostModifierFromTypedNodes(t *testing.T) {
 				SpellType:           parser.StaticDeclarationSpellTypeInstantOrSorcery,
 			},
 			reduction: 1,
-			types:     []StaticCardType{StaticCardTypeInstant, StaticCardTypeSorcery},
+			types:     []types.Card{types.Instant, types.Sorcery},
 		},
 		"red spells reduction": {
 			node: parser.StaticDeclarationSyntax{
@@ -572,6 +606,48 @@ func TestRecognizeStaticGraveyardZoneSpellCostModifierFromTypedNode(t *testing.T
 		declaration.Cost.SourceZone != parser.StaticDeclarationCastZoneGraveyard ||
 		declaration.Cost.GenericReduction != 1 {
 		t.Fatalf("declaration = %#v ok = %v, want graveyard-scoped reduction", declaration, ok)
+	}
+}
+
+func TestRecognizeStaticPowerThresholdSpellCostModifierFromTypedNode(t *testing.T) {
+	t.Parallel()
+	node := parser.StaticDeclarationSyntax{
+		Kind:                   parser.StaticDeclarationCostModifier,
+		CostModifier:           parser.StaticDeclarationCostModifierSpellReduction,
+		CostReductionAmount:    2,
+		SpellType:              parser.StaticDeclarationSpellTypeCreature,
+		SpellPowerAtLeast:      4,
+		MatchSpellPowerAtLeast: true,
+	}
+
+	declaration, ok := recognizeStaticSpellCostModifierDeclaration(
+		CompiledAbility{Kind: AbilityStatic},
+		[]parser.StaticDeclarationSyntax{node},
+	)
+
+	if !ok || declaration.Cost == nil ||
+		!declaration.Cost.MatchMinPower ||
+		declaration.Cost.MinPower != 4 ||
+		declaration.Cost.GenericReduction != 2 {
+		t.Fatalf("declaration = %#v ok = %v, want power-4 creature reduction", declaration, ok)
+	}
+}
+
+func TestRecognizeStaticZeroPowerThresholdSpellCostModifierFailsClosed(t *testing.T) {
+	t.Parallel()
+	node := parser.StaticDeclarationSyntax{
+		Kind:                   parser.StaticDeclarationCostModifier,
+		CostModifier:           parser.StaticDeclarationCostModifierSpellReduction,
+		CostReductionAmount:    2,
+		SpellType:              parser.StaticDeclarationSpellTypeCreature,
+		MatchSpellPowerAtLeast: true,
+	}
+
+	if _, ok := recognizeStaticSpellCostModifierDeclaration(
+		CompiledAbility{Kind: AbilityStatic},
+		[]parser.StaticDeclarationSyntax{node},
+	); ok {
+		t.Fatal("recognized a zero power threshold cost modifier, want fail closed")
 	}
 }
 
@@ -706,7 +782,7 @@ func TestRecognizeStaticCardAbilityGrantFromTypedNodes(t *testing.T) {
 	if declaration.CardGrant == nil ||
 		declaration.CardGrant.Text != "Each land card in your hand has cycling {2}." ||
 		len(declaration.Group.Selection.RequiredTypes) != 1 ||
-		declaration.Group.Selection.RequiredTypes[0] != StaticCardTypeLand {
+		declaration.Group.Selection.RequiredTypes[0] != types.Land {
 		t.Fatalf("declaration = %#v", declaration)
 	}
 }
@@ -812,5 +888,43 @@ func TestRecognizeStaticEachPlayerSubjectRejectedForControllerOnlyRule(t *testin
 	ability := CompiledAbility{Kind: AbilityStatic}
 	if _, ok := recognizeStaticPlayerRuleDeclaration(ability, []parser.StaticDeclarationSyntax{node}); ok {
 		t.Fatal("recognized each-player subject for a controller-only rule, want fail closed")
+	}
+}
+
+func TestRecognizeStaticLifeForCommanderTaxFromTypedNodeWithoutInspectingText(t *testing.T) {
+	t.Parallel()
+	node := parser.StaticDeclarationSyntax{
+		Kind:       parser.StaticDeclarationPlayerRule,
+		Subject:    parser.StaticDeclarationSubject{Kind: parser.StaticDeclarationSubjectController},
+		PlayerRule: parser.StaticDeclarationPlayerRuleLifeForCommanderTax,
+	}
+	content := AbilityContent{
+		References: []CompiledReference{
+			{Binding: ReferenceBindingSource, Text: "this spell"},
+		},
+	}
+	ability := CompiledAbility{Kind: AbilityStatic, Content: content}
+	declaration, ok := recognizeStaticPlayerRuleDeclaration(ability, []parser.StaticDeclarationSyntax{node})
+	if !ok || declaration.Player == nil ||
+		declaration.Player.Kind != StaticPlayerRuleLifeForCommanderTax {
+		t.Fatalf("declaration = %#v, ok = %v, want typed life-for-commander-tax", declaration, ok)
+	}
+}
+
+func TestRecognizeStaticLifeForCommanderTaxRejectsForeignReference(t *testing.T) {
+	t.Parallel()
+	node := parser.StaticDeclarationSyntax{
+		Kind:       parser.StaticDeclarationPlayerRule,
+		Subject:    parser.StaticDeclarationSubject{Kind: parser.StaticDeclarationSubjectController},
+		PlayerRule: parser.StaticDeclarationPlayerRuleLifeForCommanderTax,
+	}
+	content := AbilityContent{
+		References: []CompiledReference{
+			{Binding: ReferenceBindingEventPlayer, Text: "they"},
+		},
+	}
+	ability := CompiledAbility{Kind: AbilityStatic, Content: content}
+	if _, ok := recognizeStaticPlayerRuleDeclaration(ability, []parser.StaticDeclarationSyntax{node}); ok {
+		t.Fatal("recognized life-for-commander-tax with a non-source reference, want fail closed")
 	}
 }

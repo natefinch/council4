@@ -104,15 +104,25 @@ func TestParseConditionPredicateMeaning(t *testing.T) {
 		threshold int
 	}{
 		{"controller life", "you have 7 or more life", ConditionPredicateControllerLifeAtLeast, 7},
+		{"controller life at least", "you have at least 7 life", ConditionPredicateControllerLifeAtLeast, 7},
+		{"controller life at most", "you have 5 or less life", ConditionPredicateControllerLifeAtMost, 5},
+		{"controller life at most zero", "you have 0 or less life", ConditionPredicateControllerLifeAtMost, 0},
+		{"controller life above starting", "you have at least 10 life more than your starting life total", ConditionPredicateControllerLifeAtLeastAboveStarting, 10},
 		{"controller hand size", "you have one or more cards in hand", ConditionPredicateControllerHandSizeAtLeast, 1},
 		{"controller hand empty", "you have no cards in hand", ConditionPredicateControllerHandEmpty, 0},
 		{"any player life at most", "a player has 5 or less life", ConditionPredicateAnyPlayerLifeAtMost, 5},
 		{"opponent count", "you have two or more opponents", ConditionPredicateOpponentCountAtLeast, 2},
 		{"graveyard cards", "there are six or more cards in your graveyard", ConditionPredicateGraveyardCardCountAtLeast, 6},
 		{"graveyard card types", "there are three or more card types among cards in your graveyard", ConditionPredicateGraveyardCardTypeCountAtLeast, 3},
+		{"graveyard creature cards", "twenty or more creature cards are in your graveyard", ConditionPredicateGraveyardCardOfTypeCountAtLeast, 20},
+		{"graveyard land cards", "seven or more land cards are in your graveyard", ConditionPredicateGraveyardCardOfTypeCountAtLeast, 7},
 		{"creature power diversity", "you control three or more creatures with different powers", ConditionPredicateCreaturePowerDiversityAtLeast, 3},
 		{"opponent poison counters", "an opponent has three or more poison counters", ConditionPredicateAnyOpponentPoisonAtLeast, 3},
 		{"controller hand size exactly", "you have exactly seven cards in hand", ConditionPredicateControllerHandSizeExactly, 7},
+		{"controller hand size exactly your hand", "you have exactly thirteen cards in your hand", ConditionPredicateControllerHandSizeExactly, 13},
+		{"controller library size", "you have 200 or more cards in your library", ConditionPredicateControllerLibrarySizeAtLeast, 200},
+		{"controller life exactly", "you have exactly 1 life", ConditionPredicateControllerLifeExactly, 1},
+		{"controls twenty creatures", "you control twenty or more creatures", ConditionPredicateControls, 0},
 		{"created token this turn", "you created a token this turn", ConditionPredicateCreatedTokenThisTurn, 0},
 		{"active token creation", "an effect would create one or more tokens under your control", ConditionPredicateTokenCreationUnderController, 0},
 		{"passive token creation", "one or more tokens would be created under your control", ConditionPredicateTokenCreationUnderController, 0},
@@ -120,7 +130,10 @@ func TestParseConditionPredicateMeaning(t *testing.T) {
 		{"any-player passive token creation", "one or more tokens would be created", ConditionPredicateTokenCreationAnyController, 0},
 		{"typed controller token creation", "you would create one or more Treasure tokens", ConditionPredicateTokenCreationUnderController, 0},
 		{"cast during main phase", "you cast this spell during your main phase", ConditionPredicateCastDuringControllerMainPhase, 0},
+		{"spell was kicked", "this spell was kicked", ConditionPredicateSpellWasKicked, 0},
 		{"controls commander", "you control your commander", ConditionPredicateControllerControlsCommander, 0},
+		{"spell X at least more", "X is 10 or more", ConditionPredicateSpellXAtLeast, 10},
+		{"spell X at least greater", "X is 4 or greater", ConditionPredicateSpellXAtLeast, 4},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -130,6 +143,21 @@ func TestParseConditionPredicateMeaning(t *testing.T) {
 				t.Fatalf("clause = %#v, want predicate %s threshold %d", clause, test.predicate, test.threshold)
 			}
 		})
+	}
+}
+
+func TestParseConditionGraveyardCardOfTypeCount(t *testing.T) {
+	t.Parallel()
+	clause := parseSingleConditionClause(t,
+		"twenty or more creature cards are in your graveyard")
+	if clause.Predicate != ConditionPredicateGraveyardCardOfTypeCountAtLeast {
+		t.Fatalf("predicate = %s, want graveyard-card-of-type count", clause.Predicate)
+	}
+	if clause.Threshold != 20 {
+		t.Fatalf("threshold = %d, want 20", clause.Threshold)
+	}
+	if clause.GraveyardCountCardType != TriggerCardTypeCreature {
+		t.Fatalf("card type = %s, want creature", clause.GraveyardCountCardType)
 	}
 }
 
@@ -309,6 +337,13 @@ func TestParseConditionControlsComposition(t *testing.T) {
 			requiredTypes: []TriggerCardType{TriggerCardTypeCreature},
 			subtypes:      []types.Sub{types.Griffin},
 		},
+		{
+			name:          "multi subtype disjunction",
+			condition:     "you control another Wolf or Werewolf",
+			comparison:    ConditionComparisonNone,
+			subtypes:      []types.Sub{types.Wolf, types.Werewolf},
+			excludeSource: true,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -375,6 +410,64 @@ func TestParseConditionEventSubjectAndSourceState(t *testing.T) {
 				!slices.Equal(clause.Selection.SubtypesAny, test.subtypes) ||
 				clause.Selection.CombatState != test.combat ||
 				clause.Selection.PowerAtLeast != test.power {
+				t.Fatalf("clause = %#v", clause)
+			}
+		})
+	}
+}
+
+// TestParseSelfNamePossessivePowerCondition covers the source-power activation
+// condition written with a possessive self-name subject ("Kitsa's power is 3 or
+// greater") rather than "this creature's power ...". The possessive self-name
+// binds the source permanent, so it must produce the same source power-threshold
+// predicate as the "this creature" spelling.
+func TestParseSelfNamePossessivePowerCondition(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"{2}, {T}: Draw a card. Activate only if Kitsa's power is 3 or greater.",
+		Context{CardName: "Kitsa, Otterball Elite"},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if len(document.Abilities) != 1 {
+		t.Fatalf("abilities = %#v", document.Abilities)
+	}
+	clauses := document.Abilities[0].ConditionClauses
+	if len(clauses) != 1 {
+		t.Fatalf("clauses = %#v, want exactly one", clauses)
+	}
+	clause := clauses[0]
+	if clause.Predicate != ConditionPredicateObjectMatches ||
+		clause.ObjectBinding != ConditionObjectBindingSource ||
+		!clause.Selection.MatchPowerAtLeast ||
+		clause.Selection.PowerAtLeast != 3 {
+		t.Fatalf("clause = %#v", clause)
+	}
+}
+
+// TestParseAttachedCreatureStateCondition covers the conditional-grant gate
+// "equipped/enchanted creature is <state>" used by Equipment and Auras
+// ("As long as equipped creature is legendary, it has hexproof."). The subject
+// binds the attached object and a bare supertype state sets the supertype
+// filter.
+func TestParseAttachedCreatureStateCondition(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		condition  string
+		supertypes []ConditionSupertype
+	}{
+		{"equipped legendary", "equipped creature is legendary", []ConditionSupertype{ConditionSupertypeLegendary}},
+		{"enchanted legendary", "enchanted creature is legendary", []ConditionSupertype{ConditionSupertypeLegendary}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			clause := parseSingleConditionClause(t, test.condition)
+			if clause.Predicate != ConditionPredicateObjectMatches ||
+				clause.ObjectBinding != ConditionObjectBindingSourceAttached ||
+				!slices.Equal(clause.Selection.Supertypes, test.supertypes) {
 				t.Fatalf("clause = %#v", clause)
 			}
 		})
@@ -468,8 +561,8 @@ func TestParseConditionPriorInstruction(t *testing.T) {
 
 // TestParseConditionDestroyedThisWay covers the outcome-worded resolving success
 // gate "If a <permanent> is destroyed this way, ..." (Noxious Gearhulk), which
-// follows a preceding optional destroy and maps to the same prior-instruction
-// success predicate as "if you do".
+// follows a preceding optional destroy and maps to its own destroyed-this-way
+// predicate, distinct from the literal "if you do" gate.
 func TestParseConditionDestroyedThisWay(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -480,12 +573,12 @@ func TestParseConditionDestroyedThisWay(t *testing.T) {
 		{
 			name:      "a creature is destroyed this way",
 			body:      "You may destroy target creature. If a creature is destroyed this way, you gain 2 life.",
-			predicate: ConditionPredicatePriorInstructionAccepted,
+			predicate: ConditionPredicateDestroyedThisWay,
 		},
 		{
 			name:      "a permanent is destroyed this way",
 			body:      "You may destroy target permanent. If a permanent is destroyed this way, you gain 2 life.",
-			predicate: ConditionPredicatePriorInstructionAccepted,
+			predicate: ConditionPredicateDestroyedThisWay,
 		},
 	}
 	for _, test := range tests {
@@ -506,6 +599,59 @@ func TestParseConditionDestroyedThisWay(t *testing.T) {
 	}
 }
 
+// TestParseConditionAttackersAttackingController covers the Mangara combat
+// intervening-if "if two or more of those creatures are attacking you and/or
+// planeswalkers you control", which maps to its own attacker-count-by-defender
+// predicate carrying the threshold, alongside the typed opponent-attack trigger.
+func TestParseConditionAttackersAttackingController(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"Whenever an opponent attacks with creatures, if two or more of those creatures are attacking you and/or planeswalkers you control, draw a card.",
+		Context{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if len(document.Abilities) != 1 {
+		t.Fatalf("abilities = %#v", document.Abilities)
+	}
+	ability := document.Abilities[0]
+	if ability.Trigger == nil || ability.Trigger.TriggerEvent == nil {
+		t.Fatalf("trigger event not typed: %#v", ability.Trigger)
+	}
+	if ability.Trigger.TriggerEvent.Kind != TriggerEventKindAttack ||
+		ability.Trigger.TriggerEvent.Actor.Kind != TriggerEventActorOpponent {
+		t.Fatalf("trigger event = %#v, want opponent attack", ability.Trigger.TriggerEvent)
+	}
+	clauses := ability.ConditionClauses
+	if len(clauses) != 1 ||
+		clauses[0].Predicate != ConditionPredicateAttackersAttackingControllerAtLeast ||
+		clauses[0].Threshold != 2 {
+		t.Fatalf("clauses = %#v, want attackers-attacking-controller threshold 2", clauses)
+	}
+}
+
+// TestParseConditionGainedLifeThisTurn covers the intervening-if condition
+// "if you gained N or more life this turn" (Angelic Accord, Griffin Aerie),
+// which gates an end-step trigger on the controller's accumulated life gain.
+func TestParseConditionGainedLifeThisTurn(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"At the beginning of each end step, if you gained 4 or more life this turn, draw a card.",
+		Context{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if len(document.Abilities) != 1 {
+		t.Fatalf("abilities = %#v", document.Abilities)
+	}
+	clauses := document.Abilities[0].ConditionClauses
+	if len(clauses) != 1 ||
+		clauses[0].Predicate != ConditionPredicateControllerGainedLifeThisTurnAtLeast ||
+		clauses[0].Threshold != 4 {
+		t.Fatalf("clauses = %#v, want gained-life-this-turn threshold 4", clauses)
+	}
+}
+
 // TestParseConditionDestroyedThisWayRejectsOtherWording confirms the recognizer
 // fails closed on wording it does not model, leaving an unsupported condition
 // rather than a silently-wrong success gate.
@@ -523,7 +669,8 @@ func TestParseConditionDestroyedThisWayRejectsOtherWording(t *testing.T) {
 				t.Fatalf("abilities = %#v", document.Abilities)
 			}
 			for _, clause := range document.Abilities[0].ConditionClauses {
-				if clause.Predicate == ConditionPredicatePriorInstructionAccepted {
+				if clause.Predicate == ConditionPredicatePriorInstructionAccepted ||
+					clause.Predicate == ConditionPredicateDestroyedThisWay {
 					t.Fatalf("clause unexpectedly recognized as prior-instruction success: %#v", clause)
 				}
 			}
@@ -762,9 +909,8 @@ func TestParseConditionNearMissFailsClosed(t *testing.T) {
 		"you control a creature with deathtouch and flying",
 		"you control two or fewer creatures with the same power",
 		"you have exactly seven cards in your graveyard",
-		"there are six or more creature cards in your graveyard",
 		"there are three or more card types among cards in an opponent's graveyard",
-		"you control a creature with banding",
+		"you control a creature with phasing",
 		"a player has 5 or more life",
 		"you gain control of a creature",
 		"you control a creature creature",

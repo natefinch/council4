@@ -711,9 +711,9 @@ func makeAuraAttachedTo(g *game.Game, controller game.PlayerID, target *game.Per
 		StaticAbilities: []game.StaticAbility{{
 			KeywordAbilities: []game.KeywordAbility{game.EnchantKeyword{Target: game.TargetSpec{
 				Allow: game.TargetAllowPermanent,
-				Predicate: game.TargetPredicate{
-					PermanentTypes: []types.Card{types.Creature},
-				},
+				Selection: opt.Val(game.Selection{
+					RequiredTypesAny: []types.Card{types.Creature},
+				}),
 			}}},
 		}},
 	}})

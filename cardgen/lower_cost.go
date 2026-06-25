@@ -251,6 +251,10 @@ func lowerCostPermanentObject(component compiler.CostComponent, additional *cost
 	if component.ObjectNonToken {
 		return false
 	}
+	additional.RequireToken = component.ObjectTokenOnly
+	if component.ObjectExcludedTypeKnown {
+		additional.ExcludePermanentType = component.ObjectExcludedType
+	}
 	if component.ObjectColorKnown {
 		additional.MatchCardColor = true
 		additional.CardColor = component.ObjectColor
@@ -318,6 +322,9 @@ func lowerRemoveCounterCost(
 	_ string,
 	component compiler.CostComponent,
 ) (cost.Additional, bool) {
+	if component.RemoveCounterAmong {
+		return lowerRemoveCounterAmongCost(component)
+	}
 	if !component.AmountKnown || !component.CounterKindKnown || !component.SourceSelf {
 		return cost.Additional{}, false
 	}
@@ -329,23 +336,72 @@ func lowerRemoveCounterCost(
 	}, true
 }
 
-func lowerExileCost(component compiler.CostComponent) (cost.Additional, bool) {
-	if component.SourceZone != zone.Graveyard ||
-		component.ObjectKind != compiler.SelectorCard {
+// lowerRemoveCounterAmongCost lowers "remove N <kind> counters from among
+// <permanents> you control" and the generic "remove N counters from among
+// <permanents> you control" (any counter kind). It requires a fixed or X amount;
+// the permanent constraint is taken from the cost's object selector. When the
+// printed cost names no counter kind the cost matches counters of any kind, set
+// via AnyCounterKind so the payment planner spreads the removal across whatever
+// counters the chosen permanents carry.
+func lowerRemoveCounterAmongCost(component compiler.CostComponent) (cost.Additional, bool) {
+	if component.ObjectController != compiler.ControllerYou {
 		return cost.Additional{}, false
 	}
 	if !component.AmountKnown && !component.AmountFromX {
 		return cost.Additional{}, false
 	}
 	additional := cost.Additional{
-		Kind:   cost.AdditionalExile,
-		Text:   component.Text,
-		Source: zone.Graveyard,
+		Kind: cost.AdditionalRemoveCounterAmong,
+		Text: component.Text,
+	}
+	if component.CounterKindKnown {
+		additional.CounterKind = component.CounterKind
+	} else {
+		additional.AnyCounterKind = true
 	}
 	if component.AmountFromX {
 		additional.AmountFromX = true
 	} else {
+		if component.AmountValue <= 0 {
+			return cost.Additional{}, false
+		}
 		additional.Amount = component.AmountValue
+	}
+	if !lowerCostPermanentObject(component, &additional, false) {
+		return cost.Additional{}, false
+	}
+	return additional, true
+}
+
+func lowerExileCost(component compiler.CostComponent) (cost.Additional, bool) {
+	if component.SourceZone == zone.Hand {
+		return lowerExileFromHandCost(component)
+	}
+	if component.SourceZone != zone.Graveyard ||
+		component.ObjectKind != compiler.SelectorCard {
+		return cost.Additional{}, false
+	}
+	additional := cost.Additional{
+		Kind:          cost.AdditionalExile,
+		Text:          component.Text,
+		Source:        zone.Graveyard,
+		ExcludeSource: component.ExcludeSource,
+		MatchHistoric: component.ObjectHistoric,
+	}
+	if component.AnyNumber {
+		if component.TotalManaValueAtLeast <= 0 {
+			return cost.Additional{}, false
+		}
+		additional.TotalManaValueAtLeast = component.TotalManaValueAtLeast
+	} else {
+		if !component.AmountKnown && !component.AmountFromX {
+			return cost.Additional{}, false
+		}
+		if component.AmountFromX {
+			additional.AmountFromX = true
+		} else {
+			additional.Amount = component.AmountValue
+		}
 	}
 	if component.ObjectTypeKnown {
 		additional.MatchCardType = true
@@ -353,6 +409,37 @@ func lowerExileCost(component compiler.CostComponent) (cost.Additional, bool) {
 	}
 	if len(component.SubtypesAny) == 1 {
 		additional.SubtypesAny = cost.SubtypeSet{component.SubtypesAny[0]}
+	}
+	return additional, true
+}
+
+// lowerExileFromHandCost lowers an "exile N [colored] card(s) from your hand"
+// cost, backing the Force of Will pitch family. The exile draws from hand,
+// requires a fixed positive count, and optionally constrains the exiled card to
+// a single color.
+func lowerExileFromHandCost(component compiler.CostComponent) (cost.Additional, bool) {
+	if component.ObjectKind != compiler.SelectorCard ||
+		!component.AmountKnown ||
+		component.AmountValue <= 0 ||
+		component.ExcludeSource ||
+		component.ObjectHistoric ||
+		component.AnyNumber ||
+		len(component.SubtypesAny) != 0 {
+		return cost.Additional{}, false
+	}
+	additional := cost.Additional{
+		Kind:   cost.AdditionalExile,
+		Text:   component.Text,
+		Amount: component.AmountValue,
+		Source: zone.Hand,
+	}
+	if component.ObjectColorKnown {
+		additional.MatchCardColor = true
+		additional.CardColor = component.ObjectColor
+	}
+	if component.ObjectTypeKnown {
+		additional.MatchCardType = true
+		additional.CardType = component.ObjectType
 	}
 	return additional, true
 }
@@ -408,6 +495,9 @@ func lowerDiscardCost(component compiler.CostComponent) (cost.Additional, bool) 
 	if component.ObjectTypeKnown {
 		additional.MatchCardType = true
 		additional.CardType = component.ObjectType
+	}
+	if len(component.SubtypesAny) == 1 {
+		additional.SubtypesAny = cost.SubtypeSet{component.SubtypesAny[0]}
 	}
 	return additional, true
 }

@@ -262,6 +262,7 @@ func writeCardList(directory string) error {
 }
 
 func cardDefNames(file *ast.File) []string {
+	builders := cardDefBuilderFuncs(file)
 	var names []string
 	for _, declaration := range file.Decls {
 		general, ok := declaration.(*ast.GenDecl)
@@ -270,7 +271,7 @@ func cardDefNames(file *ast.File) []string {
 		}
 		for _, specification := range general.Specs {
 			values, ok := specification.(*ast.ValueSpec)
-			if !ok || !isCardDef(values) {
+			if !ok || (!isCardDef(values) && !isCardDefBuilderCall(values, builders)) {
 				continue
 			}
 			for _, name := range values.Names {
@@ -281,6 +282,58 @@ func cardDefNames(file *ast.File) []string {
 		}
 	}
 	return names
+}
+
+// cardDefBuilderFuncs returns the set of function names in file that take no
+// parameters and return *game.CardDef. Generated card files declare each card as
+// `var X = newX()` where newX is such a builder function, so a var initialized by
+// a call to one of these functions is a CardDef registration.
+func cardDefBuilderFuncs(file *ast.File) map[string]bool {
+	builders := map[string]bool{}
+	for _, declaration := range file.Decls {
+		function, ok := declaration.(*ast.FuncDecl)
+		if !ok || function.Recv != nil || function.Name == nil {
+			continue
+		}
+		if returnsCardDefPointer(function.Type) {
+			builders[function.Name.Name] = true
+		}
+	}
+	return builders
+}
+
+// returnsCardDefPointer reports whether fn returns exactly one value of type
+// *game.CardDef.
+func returnsCardDefPointer(fn *ast.FuncType) bool {
+	if fn.Results == nil || len(fn.Results.List) != 1 {
+		return false
+	}
+	star, ok := fn.Results.List[0].Type.(*ast.StarExpr)
+	if !ok {
+		return false
+	}
+	selector, ok := star.X.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	packageName, ok := selector.X.(*ast.Ident)
+	return ok && packageName.Name == "game" && selector.Sel.Name == "CardDef"
+}
+
+// isCardDefBuilderCall reports whether values is initialized by a call to one of
+// the builder functions in builders, e.g. `var X = newX()`.
+func isCardDefBuilderCall(values *ast.ValueSpec, builders map[string]bool) bool {
+	for _, value := range values.Values {
+		call, ok := value.(*ast.CallExpr)
+		if !ok {
+			continue
+		}
+		identifier, ok := call.Fun.(*ast.Ident)
+		if ok && builders[identifier.Name] {
+			return true
+		}
+	}
+	return false
 }
 
 func isCardDef(values *ast.ValueSpec) bool {

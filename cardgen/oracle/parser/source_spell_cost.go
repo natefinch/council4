@@ -21,10 +21,10 @@ func emitSourceSpellCostReduction(abilities []Ability) {
 		if ability.Modal != nil {
 			continue
 		}
-		if len(ability.Sentences) != 1 || len(ability.Sentences[0].Effects) != 1 {
+		effect := singleResolvingEffect(ability)
+		if effect == nil {
 			continue
 		}
-		effect := &ability.Sentences[0].Effects[0]
 		if effect.Kind != EffectCast || effect.Context != EffectContextSource {
 			continue
 		}
@@ -34,8 +34,7 @@ func emitSourceSpellCostReduction(abilities []Ability) {
 			effect.Amount.Selection == nil {
 			continue
 		}
-		tokens := eventHistorySemanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
-		amount, ok := sourceSpellCostReductionAmount(tokens, ability.Atoms)
+		amount, ok := sourceSpellCostReductionAmount(sourceSpellCostBodyTokens(ability), ability.Atoms)
 		if !ok {
 			continue
 		}
@@ -61,10 +60,10 @@ func emitSourceSpellCostReductionDynamic(abilities []Ability) {
 		if ability.Modal != nil {
 			continue
 		}
-		if len(ability.Sentences) != 1 || len(ability.Sentences[0].Effects) != 1 {
+		effect := singleResolvingEffect(ability)
+		if effect == nil {
 			continue
 		}
-		effect := &ability.Sentences[0].Effects[0]
 		if effect.Kind != EffectCast || effect.Context != EffectContextSource {
 			continue
 		}
@@ -72,12 +71,49 @@ func emitSourceSpellCostReductionDynamic(abilities []Ability) {
 			!sourceSpellCostReductionDynamicKind(effect.Amount.DynamicKind) {
 			continue
 		}
-		tokens := eventHistorySemanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
-		if !sourceSpellCostReductionDynamicFrame(tokens, ability.Atoms) {
+		if !sourceSpellCostReductionDynamicFrame(sourceSpellCostBodyTokens(ability), ability.Atoms) {
 			continue
 		}
 		effect.SourceSpellCostReductionDynamic = true
 	}
+}
+
+// singleResolvingEffect returns the ability's only resolving effect when exactly
+// one sentence carries effects, that sentence carries exactly one effect, and
+// every other sentence is reminder-only (no effects, static rule, targets, or
+// payment prelude). A reminder such as the "(Artifacts, legendaries, and Sagas
+// are historic.)" that follows The Capitoline Triad's cost reduction parses as
+// its own effect-free sentence; this tolerates it while a genuine second
+// resolving clause still fails closed by returning nil.
+func singleResolvingEffect(ability *Ability) *EffectSyntax {
+	var found *EffectSyntax
+	for s := range ability.Sentences {
+		sentence := &ability.Sentences[s]
+		switch len(sentence.Effects) {
+		case 0:
+			if sentence.StaticRule != nil || len(sentence.Targets) != 0 || sentence.PaymentPrelude != nil {
+				return nil
+			}
+		case 1:
+			if found != nil {
+				return nil
+			}
+			found = &sentence.Effects[0]
+		default:
+			return nil
+		}
+	}
+	return found
+}
+
+// sourceSpellCostBodyTokens returns the ability's resolving-body semantic tokens:
+// the tokens within BodySpan (after any ability-word or chapter prefix) with
+// reminder and quoted spans removed. The Capitoline Triad's "Those Who Came
+// Before —" ability-word prefix and historic reminder are excluded so the
+// subject scan begins at "This spell".
+func sourceSpellCostBodyTokens(ability *Ability) []shared.Token {
+	body := tokensWithinParserSpan(ability.Tokens, ability.BodySpan)
+	return eventHistorySemanticTokens(body, ability.Reminders, ability.Quoted)
 }
 
 // sourceSpellCostReductionDynamicKind reports whether a "where X is ..." dynamic
@@ -92,6 +128,7 @@ func sourceSpellCostReductionDynamicKind(kind EffectDynamicAmountKind) bool {
 		EffectDynamicAmountGreatestManaValue,
 		EffectDynamicAmountTotalPower,
 		EffectDynamicAmountTotalToughness,
+		EffectDynamicAmountTotalManaValue,
 		EffectDynamicAmountControllerLife,
 		EffectDynamicAmountOpponentCount,
 		EffectDynamicAmountBasicLandTypes,
@@ -141,9 +178,10 @@ func sourceSpellCostReductionDynamicFrame(tokens []shared.Token, atoms Atoms) bo
 // sourceSpellCostReductionAmount validates the exact "This spell costs {N} less
 // to cast for each <count subject>." wording and returns the per-object generic
 // reduction N. The subject phrase must be the spell itself ("This spell" or the
-// card's own name) and the counted objects must be battlefield permanents the
-// existing typed count machinery represents; graveyard, hand, variable {X}, and
-// any other shape fail closed by returning false.
+// card's own name) and the counted objects must be battlefield permanents, or
+// cards in the caster's own graveyard or hand, that the typed count machinery
+// represents; library, exile, variable {X}, and any other shape fail closed by
+// returning false.
 func sourceSpellCostReductionAmount(tokens []shared.Token, atoms Atoms) (int, bool) {
 	if len(tokens) == 0 || tokens[len(tokens)-1].Kind != shared.Period {
 		return 0, false
@@ -181,7 +219,9 @@ func sourceSpellCostReductionAmount(tokens []shared.Token, atoms Atoms) (int, bo
 	if subject.amount.DynamicKind != EffectDynamicAmountCount || subject.amount.Selection == nil {
 		return 0, false
 	}
-	if subject.amount.Selection.Zone != zone.None {
+	switch subject.amount.Selection.Zone {
+	case zone.None, zone.Graveyard, zone.Hand:
+	default:
 		return 0, false
 	}
 	return amount, true

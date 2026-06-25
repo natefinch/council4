@@ -70,15 +70,17 @@ var GimliSRecklessMight = func() *game.CardDef {
 				InterveningIf: "creatures you control have total power 8 or greater",
 				InterveningCondition: opt.Val(game.Condition{
 					Text: "creatures you control have total power 8 or greater",
-					ControllerControls: game.PermanentFilter{
-						Types: []types.Card{
-							types.Creature,
+					ControlsMatching: opt.Val(game.SelectionCount{
+						Selection: game.Selection{
+							RequiredTypes: []types.Card{
+								types.Creature,
+							},
 						},
 						TotalPower: opt.Val(compare.Int{
 							Op:    compare.GreaterOrEqual,
 							Value: 8,
 						}),
-					},
+					}),
 				}),
 			},
 			Content: game.Mode{
@@ -88,25 +90,25 @@ var GimliSRecklessMight = func() *game.CardDef {
 						MaxTargets: 1,
 						Constraint: "attacking creature you control",
 						Allow:      game.TargetAllowPermanent,
-						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{
+						Selection: opt.Val(game.Selection{
+							RequiredTypesAny: []types.Card{
 								types.Creature,
 							},
 							Controller:  game.ControllerYou,
 							CombatState: game.CombatStateAttacking,
-						},
+						}),
 					},
 					{
 						MinTargets: 0,
 						MaxTargets: 1,
 						Constraint: "creature you don't control",
 						Allow:      game.TargetAllowPermanent,
-						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{
+						Selection: opt.Val(game.Selection{
+							RequiredTypesAny: []types.Card{
 								types.Creature,
 							},
 							Controller: game.ControllerOpponent,
-						},
+						}),
 					},
 				},
 				Sequence: []game.Instruction{

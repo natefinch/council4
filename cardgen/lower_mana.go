@@ -78,11 +78,12 @@ func lowerReminderManaAbility(
 // lowerManaAbility lowers an activated mana ability into a game.ManaAbility.
 // It accepts the same supported cost shapes as ordinary activated abilities,
 // plus supported fixed-symbol, choice, and any-color mana output bodies. A
-// single fixed self-damage rider ("<CARDNAME> deals N damage to you") may
-// accompany the add-mana effect, modelling painlands, the painland Talismans,
-// and similar self-damaging mana sources; the lowered content already carries
-// the source-dealt Damage instruction. Unrecognised costs and bodies remain
-// fail-closed.
+// single fixed self-damage rider ("<CARDNAME> deals N damage to you") or a
+// fixed life-gain rider ("You gain N life") may accompany the add-mana effect,
+// modelling painlands, the painland Talismans, and similar self-damaging or
+// life-gaining mana sources; the lowered content already carries the matching
+// source-dealt Damage or GainLife instruction. Unrecognised costs and bodies
+// remain fail-closed.
 func lowerManaAbility(
 	cardName string,
 	ability compiler.CompiledAbility,
@@ -95,7 +96,16 @@ func lowerManaAbility(
 			"the Payment Planner cannot safely choose modes for a mana ability",
 		)
 	}
-	shell, diagnostic := lowerActivationShell(cardName, ability, syntax)
+	loweredAbility := ability
+	var gatedContent opt.V[game.AbilityContent]
+	if stripped, gated, ok := tronConditionalManaContent(ability); ok {
+		loweredAbility = stripped
+		gatedContent = opt.Val(gated)
+	} else if stripped, gated, ok := counterConditionalMultiplierManaContent(ability); ok {
+		loweredAbility = stripped
+		gatedContent = opt.Val(gated)
+	}
+	shell, diagnostic := lowerActivationShell(cardName, loweredAbility, syntax)
 	if diagnostic != nil {
 		return game.ManaAbility{}, diagnostic
 	}
@@ -106,11 +116,13 @@ func lowerManaAbility(
 		len(shell.semanticContent.Targets) != 0 ||
 		(len(shell.semanticContent.Effects) == 2 &&
 			!isSelfDamageToControllerRider(&shell.semanticContent.Effects[1]) &&
+			!isGainLifeToControllerRider(&shell.semanticContent.Effects[1]) &&
+			!isSourceStunRider(&shell.semanticContent.Effects[1]) &&
 			!isManaSpendRider(&shell.semanticContent.Effects[1])) {
 		return game.ManaAbility{}, executableDiagnostic(
 			ability,
 			"unsupported mana effect",
-			"the executable source backend supports only exact non-targeting add-mana content, optionally with a fixed self-damage rider, in mana abilities",
+			"the executable source backend supports only exact non-targeting add-mana content, optionally with a fixed self-damage or life-gain rider, in mana abilities",
 		)
 	}
 	if shell.semanticContent.Effects[0].HasUnrecognizedSibling {
@@ -135,10 +147,14 @@ func lowerManaAbility(
 		functionZone = zone.None
 	}
 
+	content := shell.content
+	if gatedContent.Exists {
+		content = gatedContent.Val
+	}
 	return game.ManaAbility{
 		Text:                shell.text,
 		ManaCost:            shell.manaCost,
-		Content:             shell.content,
+		Content:             content,
 		Timing:              shell.timing,
 		ActivationCondition: shell.activationCondition,
 		AdditionalCosts:     shell.additionalCosts,
@@ -174,18 +190,62 @@ func isSelfDamageToControllerRider(effect *compiler.CompiledEffect) bool {
 		!effect.Optional &&
 		!effect.Divided &&
 		!effect.HasUnrecognizedSibling &&
-		effect.DamageRecipientReference == parser.DamageRecipientReferenceYou &&
-		len(effect.DamageRecipientSelectors) == 0 &&
+		effect.DamageRecipient.Reference == parser.DamageRecipientReferenceYou &&
+		len(effect.DamageRecipient.GroupSelectors) == 0 &&
 		len(effect.Targets) == 0 &&
-		!effect.HasSelfDamageRider &&
-		!effect.HasSecondTargetDamageRider &&
-		effect.TargetControllerDamageRiderRecipient == parser.DamageRecipientReferenceNone &&
+		len(effect.DamageRiders) == 0 &&
 		effect.Duration == compiler.DurationNone &&
 		effect.DelayedTiming == 0 &&
 		effect.Amount.Known &&
 		!effect.Amount.VariableX &&
 		effect.Amount.DynamicKind == compiler.DynamicAmountNone &&
 		effect.Amount.Value >= 1
+}
+
+// isGainLifeToControllerRider reports whether effect is exactly a "You gain N
+// life" rider, the life-gaining counterpart to isSelfDamageToControllerRider and
+// the only other non-mana effect a mana ability may carry. It accepts only a
+// fixed positive amount of life gained by the ability's own controller with no
+// target, no references, and no duration, so unrelated gain-life clauses cannot
+// ride into a mana ability. This models lands and rocks that gain life when
+// tapped for mana (The Great Henge: "{T}: Add {G}{G}. You gain 2 life."), whose
+// lowered content already carries the matching controller GainLife instruction.
+func isGainLifeToControllerRider(effect *compiler.CompiledEffect) bool {
+	return effect.Kind == compiler.EffectGain &&
+		effect.LifeObject &&
+		effect.Context == parser.EffectContextController &&
+		effect.Exact &&
+		!effect.Negated &&
+		!effect.Optional &&
+		!effect.Divided &&
+		!effect.HasUnrecognizedSibling &&
+		len(effect.Targets) == 0 &&
+		len(effect.References) == 0 &&
+		effect.Duration == compiler.DurationNone &&
+		effect.DelayedTiming == 0 &&
+		effect.Amount.Known &&
+		!effect.Amount.VariableX &&
+		effect.Amount.DynamicKind == compiler.DynamicAmountNone &&
+		effect.Amount.Value >= 1
+}
+
+// isSourceStunRider reports whether effect is exactly the self-source stun "This
+// <permanent> doesn't untap during your next untap step." rider that the dual
+// lands (Mogg Hollows, Rootwater Depths, and the rest of the cycle) append to a
+// mana ability so the land stays tapped through its controller's next untap
+// step. It accepts only the parser-exact negated next-untap-step clause whose
+// subject is the source itself, with no target, duration, or delayed timing, so
+// no other negated-untap clause can ride into a mana ability. The mana ability's
+// lowered content already carries the matching source SkipNextUntap instruction.
+func isSourceStunRider(effect *compiler.CompiledEffect) bool {
+	return effect.Kind == compiler.EffectUntap &&
+		effect.Negated &&
+		effect.Exact &&
+		!effect.Optional &&
+		effect.Context == parser.EffectContextSource &&
+		len(effect.Targets) == 0 &&
+		effect.Duration == compiler.DurationNone &&
+		effect.DelayedTiming == 0
 }
 
 // isManaSpendRider reports whether effect is one of the closed, fully modeled
@@ -203,6 +263,7 @@ func isManaSpendRider(effect *compiler.CompiledEffect) bool {
 		isChosenTypeManaSpendRider(effect.ManaSpendRider) ||
 		isChosenTypeCastOrActivateManaSpendRider(effect.ManaSpendRider) ||
 		isLegendarySpellManaSpendRider(effect.ManaSpendRider) ||
+		isCreatureSpellRestrictedManaSpendRider(effect.ManaSpendRider) ||
 		isCreatureSpellHasteManaSpendRider(effect.ManaSpendRider)
 }
 
@@ -243,6 +304,17 @@ func isLegendarySpellManaSpendRider(rider *compiler.CompiledManaSpendRider) bool
 	return rider.Condition == parser.ManaSpendCastLegendarySpell &&
 		(rider.Effect == parser.ManaSpendRiderEffectCantBeCountered ||
 			rider.Effect == parser.ManaSpendRiderEffectUnknown) &&
+		rider.Restricted &&
+		rider.ScryAmount == 0
+}
+
+// isCreatureSpellRestrictedManaSpendRider reports whether rider is the bare
+// restricted "spend this mana only to cast a creature spell" rider (Beastcaller
+// Savant, Dwynen's Elite). It restricts the tagged mana to creature spells with
+// no further qualifier or rider effect.
+func isCreatureSpellRestrictedManaSpendRider(rider *compiler.CompiledManaSpendRider) bool {
+	return rider.Condition == parser.ManaSpendCastCreatureSpell &&
+		rider.Effect == parser.ManaSpendRiderEffectUnknown &&
 		rider.Restricted &&
 		rider.ScryAmount == 0
 }
@@ -358,6 +430,35 @@ func lowerManaSpendRiderContent(ctx contentCtx) (game.AbilityContent, *shared.Di
 			mana.W, mana.U, mana.B, mana.R, mana.G,
 		).Content, nil
 	}
+	if isCreatureSpellRestrictedManaSpendRider(riderEffect) {
+		rider := game.ManaSpendRider{
+			Condition:   game.ManaSpendCastCreatureSpell,
+			Restriction: game.ManaSpendRestrictedToCondition,
+		}
+		if manaEffect.Mana.AnyColor && manaEffect.Mana.AnyColorCount < 2 {
+			return game.TapManaChoiceWithSpendRiderAbility(
+				ctx.text,
+				rider,
+				mana.W, mana.U, mana.B, mana.R, mana.G,
+			).Content, nil
+		}
+		content, ok := typedManaEffectContent(manaEffect.Mana)
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported mana effect",
+				"the restricted creature-spell rider requires an exact modeled add-mana effect",
+			)
+		}
+		if !attachManaSpendRider(&content, rider) {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported mana effect",
+				"the restricted creature-spell rider requires an exact add-mana instruction to tag",
+			)
+		}
+		return content, nil
+	}
 	if isCreatureSpellHasteManaSpendRider(riderEffect) {
 		content, ok := typedManaEffectContent(manaEffect.Mana)
 		if !ok {
@@ -425,7 +526,13 @@ func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 	if content, ok := lowerSourceCounterCountMana(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerSingleColorDynamicMana(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerChosenColorCountMana(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerChosenColorSourceCounterMana(ctx); ok {
 		return content, nil
 	}
 	if content, ok := lowerAnyOneColorDynamicMana(ctx); ok {
@@ -504,7 +611,7 @@ func lowerTargetOpponentHandMana(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	target, ok := playerTargetSpec(ctx.content.Targets[0])
-	if !ok || target.Predicate.Player != game.PlayerOpponent {
+	if !ok || !target.Selection.Exists || target.Selection.Val.Player != game.PlayerOpponent {
 		return game.AbilityContent{}, false
 	}
 	player := game.TargetPlayerReference(0)
@@ -642,6 +749,51 @@ func lowerSourceCounterCountMana(ctx contentCtx) (game.AbilityContent, bool) {
 	}.Ability(), true
 }
 
+// lowerSingleColorDynamicMana lowers an "Add an amount of <color> equal to
+// <dynamic>" body (Marwyn, the Nurturer: "...equal to Marwyn's power.") into an
+// AddMana instruction that produces a fixed color scaled by a dynamic amount. It
+// is the fixed-color sibling of lowerAnyOneColorDynamicMana: the dynamic amount
+// is lowered generically (source power/toughness, a permanent or counter count,
+// devotion, and so on), so any amount lowerDynamicAmount supports unlocks this
+// mana ability. It fires only for a single known produced color with a present
+// dynamic amount, so plain fixed-amount, choice, and any-color outputs stay
+// handled by their own paths or fail closed.
+func lowerSingleColorDynamicMana(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		(len(ctx.content.References) != 0 && !singleSelfReference(ctx.content.References)) {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		effect.Context != parser.EffectContextController ||
+		effect.Amount.DynamicKind == compiler.DynamicAmountNone ||
+		!effect.Mana.ColorsKnown ||
+		len(effect.Mana.Colors) != 1 ||
+		effect.Mana.Choice ||
+		effect.Mana.AnyColor {
+		return game.AbilityContent{}, false
+	}
+	dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{Primitive: game.AddMana{
+			Amount:    game.Dynamic(dynamic),
+			ManaColor: effect.Mana.Colors[0],
+		}}},
+	}.Ability(), true
+}
+
 // lowerChosenColorCountMana lowers a "Choose a color. Add an amount of mana of
 // that color equal to <dynamic count>" body (Three Tree City) into a Choose plus
 // an AddMana instruction whose color is the chosen color and whose amount is a
@@ -677,6 +829,42 @@ func lowerChosenColorCountMana(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	return game.TapManaChosenColorCountAbility("", selection).Content, true
+}
+
+// lowerChosenColorSourceCounterMana lowers a "Choose a color. Add one mana of
+// that color for each <kind> counter on <this permanent>" body (Astral
+// Cornucopia) into a Choose-a-color plus an AddMana instruction whose color is
+// the chosen color and whose amount is the number of counters of one kind on the
+// source permanent. It accepts only a single source-counter ForEach amount that
+// lowers to an object-counter dynamic; other amounts fail closed so an unmodeled
+// wording cannot lower to a mislabeled ability.
+func lowerChosenColorSourceCounterMana(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		!singleSelfReference(ctx.content.References) {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		effect.Context != parser.EffectContextController ||
+		!effect.Mana.ChosenColorDynamic ||
+		effect.Amount.DynamicKind != compiler.DynamicAmountSourceCounterCount ||
+		effect.Amount.DynamicForm != compiler.DynamicAmountForEach {
+		return game.AbilityContent{}, false
+	}
+	dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+	if !ok || dynamic.Kind != game.DynamicAmountObjectCounters {
+		return game.AbilityContent{}, false
+	}
+	return game.TapManaChosenColorDynamicAbility("", dynamic).Content, true
 }
 
 // lowerAnyOneColorDynamicMana lowers an "Add X mana of any one color, where X is
@@ -922,6 +1110,11 @@ func typedManaEffectContent(effect compiler.CompiledEffectMana) (game.AbilityCon
 	return game.AbilityContent{}, false
 }
 
+// DO-NOT-COPY(filter): routes a single typed Kind through the disjunctive
+// RequiredTypesAny union (not the canonical RequiredTypes), a representation the
+// canonical projector does not reproduce; prefer SelectionForSelectorMasked for
+// new code. (retire: #1393)
+//
 // colorsAmongControlledSelection builds the runtime permanent filter for a "one
 // mana of any color among <permanents> you control" mana ability from its
 // compiled selector. It accepts only a "you control" battlefield group and maps

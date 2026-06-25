@@ -157,6 +157,73 @@ const (
 	// supported amounts; an empty operand list yields zero. Added last so
 	// existing kinds keep their wire values.
 	DynamicAmountMaxOf
+	// DynamicAmountEventCounterCount is the number of counters added in the
+	// triggering EventCountersAdded batch (CR 122, CR 700.4). It scales
+	// counter-placement triggers such as "draw that many cards" by reading the
+	// counter count recorded on the resolving ability's TriggerEvent.
+	// Added last so existing kinds keep their wire values.
+	DynamicAmountEventCounterCount
+	// DynamicAmountColorsOfManaSpentToCast is the number of distinct colors of
+	// mana spent to cast the spell that became the resolving ability's source
+	// (CR 202.2, CR 702.76). It backs the Converge count ("for each color of
+	// mana spent to cast it"), most commonly the enters-with-counters quantity
+	// on a creature such as Crystalline Crawler. The count is recorded as the
+	// spell's costs are paid and read from the evaluating stack object, which
+	// carries it forward to the entering permanent's replacement; colorless mana
+	// contributes no color, so a spell paid entirely with colorless or
+	// generic-from-colorless mana yields zero. Added last so existing kinds keep
+	// their wire values.
+	DynamicAmountColorsOfManaSpentToCast
+	// DynamicAmountTotalManaValueInGroup is the sum of mana value among the
+	// permanents of Group, evaluated as the effect resolves (CR 608.2c). It backs
+	// "the total mana value of <group>" amounts (Metalwork Colossus, Earthquake
+	// Dragon, Excalibur, Sword of Eden cost reductions); an empty group yields
+	// zero. Added last so existing kinds keep their wire values.
+	DynamicAmountTotalManaValueInGroup
+	// DynamicAmountTimesKicked is the number of times the spell that became the
+	// resolving object was kicked (its Multikicker count, CR 702.32). It is read
+	// from the evaluating stack object's KickerCount, which the casting machinery
+	// records as the additional cost is paid and which the entering permanent's
+	// replacement carries forward. It backs "for each time it was kicked" amounts:
+	// the enters-with-counters quantity on Multikicker permanents (Everflowing
+	// Chalice, Gnarlid Pack) and the count payoff on Multikicker spells (Wolfbriar
+	// Elemental's Wolf tokens). A spell cast without Multikicker, or a permanent
+	// that did not enter from a kicked cast, yields zero. Added last so existing
+	// kinds keep their wire values.
+	DynamicAmountTimesKicked
+	// DynamicAmountOpponentsAttackedThisCombat is the number of the resolving
+	// ability controller's opponents being attacked this combat by creatures the
+	// controller controls, read from the current combat's attack declarations as
+	// the ability resolves (CR 506.2, CR 702.72). Each distinct opponent counts
+	// once; it is zero outside combat. It backs Melee N, whose attack trigger
+	// pumps the source "+1/+1 until end of turn for each opponent you attacked
+	// this combat." Added last so existing kinds keep their wire values.
+	DynamicAmountOpponentsAttackedThisCombat
+	// DynamicAmountControllerSpeed is the resolving ability controller's current
+	// speed (the Start your engines! subsystem, CR 702.179), read from the
+	// player's speed as the effect resolves. A player with no speed has a value
+	// of zero, and speed is capped at 4. It backs "your speed" amounts such as
+	// The Speed Demon's "you draw X cards and lose X life, where X is your
+	// speed." Added last so existing kinds keep their wire values.
+	DynamicAmountControllerSpeed
+	// DynamicAmountOpponentControllingCount is the number of the resolving ability
+	// controller's opponents who control at least one permanent matching Group
+	// ("the number of opponents who control a creature with power 4 or greater",
+	// Summon: Yojimbo chapter IV). Group's selection is evaluated relative to each
+	// opponent (its controller relation is "you control" read from that
+	// opponent's perspective); each qualifying opponent counts once. It is a
+	// player count, not a board count. Added last so existing kinds keep their
+	// wire values.
+	DynamicAmountOpponentControllingCount
+	// DynamicAmountCardsDrawnThisTurn is the number of cards Player has drawn so
+	// far this turn, counted from the turn's EventCardDrawn events for that
+	// player (CR 608.2c). The triggering or just-resolved draw counts, because
+	// its draw event precedes the resolving ability. It reads the resolving
+	// ability's controller and backs the draw-payoff family: Thundering Djinn's
+	// attack-trigger damage "equal to the number of cards you've drawn this turn"
+	// and the characteristic-defining power sibling DynamicValueControllerCardsDrawnThisTurn.
+	// Added last so existing kinds keep their wire values.
+	DynamicAmountCardsDrawnThisTurn
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

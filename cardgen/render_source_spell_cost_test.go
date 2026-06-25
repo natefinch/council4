@@ -5,7 +5,11 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestRenderSourceSpellCostModifier(t *testing.T) {
@@ -45,6 +49,53 @@ func TestRenderSourceSpellCostModifier(t *testing.T) {
 				"PerObjectReduction: 2,",
 				"CountSelection:",
 				"Controller: game.ControllerOpponent",
+			},
+		},
+		{
+			name: "creature power-threshold reduction",
+			modifier: game.CostModifier{
+				Kind: game.CostModifierSpell,
+				CardSelection: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+					Power:         opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4}),
+				},
+				GenericReduction: 2,
+			},
+			wantParts: []string{
+				"Kind: game.CostModifierSpell,",
+				"CardSelection: game.Selection{",
+				"RequiredTypes: []types.Card{types.Creature}",
+				"Power: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4})",
+				"GenericReduction: 2,",
+			},
+		},
+		{
+			name: "dynamic devotion reduction",
+			modifier: game.CostModifier{
+				Kind: game.CostModifierSpell,
+				DynamicReduction: &game.DynamicAmount{
+					Kind:       game.DynamicAmountDevotion,
+					Multiplier: 1,
+					Colors:     []color.Color{color.Black},
+				},
+			},
+			wantParts: []string{
+				"DynamicReduction: &game.DynamicAmount{",
+				"Kind: game.DynamicAmountDevotion,",
+				"Colors: []color.Color{color.Black}",
+			},
+		},
+		{
+			name: "card-zone count reduction",
+			modifier: game.CostModifier{
+				Kind:               game.CostModifierSpell,
+				PerObjectReduction: 1,
+				CountSelection:     &game.Selection{RequiredTypes: []types.Card{types.Artifact}},
+				CountZone:          opt.Val(zone.Graveyard),
+			},
+			wantParts: []string{
+				"PerObjectReduction: 1,",
+				"CountZone: opt.Val(zone.Graveyard),",
 			},
 		},
 	}

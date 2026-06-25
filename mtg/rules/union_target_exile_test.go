@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 // addTypedPermanent puts a permanent with the given card types and subtypes onto
@@ -43,9 +44,9 @@ func TestUnionTargetExileMatchesEachUnionMember(t *testing.T) {
 			MaxTargets: 1,
 			Allow:      game.TargetAllowPermanent,
 			Constraint: "target artifact, creature, or enchantment",
-			Predicate: game.TargetPredicate{
-				PermanentTypes: []types.Card{types.Artifact, types.Creature, types.Enchantment},
-			},
+			Selection: opt.Val(game.Selection{
+				RequiredTypesAny: []types.Card{types.Artifact, types.Creature, types.Enchantment},
+			}),
 		}
 		artifact := addTypedPermanent(g, game.Player2, []types.Card{types.Artifact}, nil)
 		creature := addTypedPermanent(g, game.Player2, []types.Card{types.Creature}, nil)
@@ -69,9 +70,9 @@ func TestUnionTargetExileMatchesEachUnionMember(t *testing.T) {
 			MaxTargets: 1,
 			Allow:      game.TargetAllowPermanent,
 			Constraint: "target Skeleton, Vampire, or Zombie",
-			Predicate: game.TargetPredicate{
-				Subtypes: []types.Sub{types.Skeleton, types.Vampire, types.Zombie},
-			},
+			Selection: opt.Val(game.Selection{
+				SubtypesAny: []types.Sub{types.Skeleton, types.Vampire, types.Zombie},
+			}),
 		}
 		skeleton := addTypedPermanent(g, game.Player2, []types.Card{types.Creature}, []types.Sub{types.Skeleton})
 		vampire := addTypedPermanent(g, game.Player2, []types.Card{types.Creature}, []types.Sub{types.Vampire})

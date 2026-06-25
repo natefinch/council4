@@ -32,6 +32,11 @@ func TestLowerActivatedAbilityTiming(t *testing.T) {
 			"{1}: Draw a card. Activate only as a sorcery. Activate only once each turn.",
 			game.SorceryOncePerTurn,
 		},
+		{
+			"sorcery once per turn conjoined",
+			"{1}: Draw a card. Activate only as a sorcery and only once each turn.",
+			game.SorceryOncePerTurn,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -119,8 +124,8 @@ func TestLowerEnchantCreatureAbility(t *testing.T) {
 		target.MinTargets != 1 ||
 		target.MaxTargets != 1 ||
 		target.Allow != game.TargetAllowPermanent ||
-		len(target.Predicate.PermanentTypes) != 1 ||
-		target.Predicate.PermanentTypes[0] != types.Creature {
+		len(target.Selection.Val.RequiredTypesAny) != 1 ||
+		target.Selection.Val.RequiredTypesAny[0] != types.Creature {
 		t.Fatalf("enchant target = %+v, %v; want one creature", target, ok)
 	}
 }

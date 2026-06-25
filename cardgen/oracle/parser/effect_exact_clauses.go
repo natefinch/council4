@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -33,6 +34,15 @@ func exactGraveyardReturnEffectSyntax(effect *EffectSyntax) bool {
 	prefix := "Return " + effect.Targets[0].Text
 	for _, suffix := range []string{
 		" to your hand.",
+		// An owner-relative hand destination ("to its owner's hand", the plural
+		// "to their owners' hands", or the opponent-graveyard "to their hand")
+		// returns a graveyard card the controller does not own (a card targeted
+		// "from a graveyard" or "from an opponent's graveyard"). The runtime
+		// MoveCard handler always routes a returned card to its own owner's hand,
+		// so these lower identically to the "to your hand." form.
+		" to its owner's hand.",
+		" to their owners' hands.",
+		" to their hand.",
 		" to the battlefield.",
 		" to the battlefield tapped.",
 		" to the battlefield under your control.",
@@ -50,7 +60,9 @@ func exactGraveyardReturnEffectSyntax(effect *EffectSyntax) bool {
 }
 
 // exactChosenGraveyardReturnEffectSyntax recognizes the non-target "Return a
-// <filter> card from your graveyard to your hand." recursion wording, where the
+// <filter> card from your graveyard to your hand." recursion wording and the
+// reanimation form "Return a <filter> card from your graveyard to the
+// battlefield." (optionally "tapped" and/or "under your control"), where the
 // returned card is chosen from the controller's own graveyard at resolution
 // rather than targeted (Raise Dead targets; Takenuma's "return a creature or
 // planeswalker card" does not). It reconstructs the canonical noun phrase from
@@ -61,22 +73,31 @@ func exactGraveyardReturnEffectSyntax(effect *EffectSyntax) bool {
 // every other selection shape so an unrepresentable filter keeps failing rather
 // than lowering to a wrong predicate.
 func exactChosenGraveyardReturnEffectSyntax(effect *EffectSyntax, text string) bool {
-	if len(effect.References) != 0 || effect.ToZone != zone.Hand {
+	if len(effect.References) != 0 {
+		return false
+	}
+	if effect.ToZone != zone.Hand && effect.ToZone != zone.Battlefield {
 		return false
 	}
 	sel := effect.Selection
 	if sel.Zone != zone.Graveyard || sel.Controller != SelectionControllerYou {
 		return false
 	}
+	// A battlefield entry-tapped rider ("... to the battlefield tapped.") leaves
+	// the entry word inside the selector span, setting sel.Tapped; graveyard
+	// cards are never tapped, so that filter is vacuous and is ignored when it
+	// coincides with the entry-tapped destination. A genuine tapped filter
+	// without entry-tapped still fails closed.
+	entryTapped := effect.ToZone == zone.Battlefield && effect.EntersTapped
 	if sel.All || sel.Another || sel.Other || sel.Attacking || sel.Blocking ||
-		sel.Tapped || sel.Untapped || sel.MatchPower || sel.MatchToughness ||
+		(sel.Tapped && !entryTapped) || sel.Untapped || sel.MatchPower || sel.MatchToughness ||
 		sel.Keyword != KeywordUnknown || sel.ExcludedKeyword != KeywordUnknown ||
 		len(sel.ExcludedTypes) != 0 || len(sel.SourceTypes) != 0 ||
 		len(sel.Supertypes) != 0 || len(sel.ExcludedSupertypes) != 0 ||
 		len(sel.ExcludedColors) != 0 || len(sel.Alternatives) != 0 {
 		return false
 	}
-	noun, ok := graveyardCardNoun(sel)
+	noun, ok := graveyardCardNoun(sel, false)
 	if !ok {
 		return false
 	}
@@ -89,7 +110,25 @@ func exactChosenGraveyardReturnEffectSyntax(effect *EffectSyntax, text string) b
 		manaClause = clause
 	}
 	article := indefiniteArticle(noun)
-	return strings.EqualFold(text, "Return "+article+" "+noun+manaClause+" from your graveyard to your hand.")
+	prefix := "Return " + article + " " + noun + manaClause + " from your graveyard to "
+	switch effect.ToZone {
+	case zone.Hand:
+		if effect.EntersTapped || effect.UnderYourControl {
+			return false
+		}
+		return strings.EqualFold(text, prefix+"your hand.")
+	case zone.Battlefield:
+		destination := "the battlefield"
+		if effect.EntersTapped {
+			destination += " tapped"
+		}
+		if effect.UnderYourControl {
+			destination += " under your control"
+		}
+		return strings.EqualFold(text, prefix+destination+".")
+	default:
+		return false
+	}
 }
 
 func exactChosenCardsBattlefieldReturnEffectSyntax(effect *EffectSyntax) bool {
@@ -191,6 +230,430 @@ func exactCounteredSpellExileSyntax(effect *EffectSyntax) bool {
 		return true
 	}
 	return false
+}
+
+// exactExileUntilSourceLeavesEffectSyntax recognizes the O-Ring exile clause
+// "exile <target> until <this permanent> leaves the battlefield." (Banisher
+// Priest, Banishing Light, Fairgrounds Warden) and its "you may exile ..."
+// optional offer (Angel of Sanctions). The single target is the exiled
+// permanent and the trailing "until <self> leaves the battlefield" names the
+// source permanent as the duration anchor, not a second object. It marks the
+// effect so lowering links the exile to the source and synthesizes the paired
+// leaves-the-battlefield return trigger. The optional "you may" prefix is
+// carried by effect.Optional and stripped by exactEffectClauseText before the
+// clause-text comparison, so it surfaces later as the trigger's Optional flag.
+// The parser owns this wording; any other exile shape leaves the clause
+// non-exact so lowering fails closed.
+func exactExileUntilSourceLeavesEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectExile || effect.Negated {
+		return false
+	}
+	if effect.Duration != EffectDurationNone || effect.FromZone != zone.None || effect.ToZone != zone.None {
+		return false
+	}
+	if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
+		return false
+	}
+	if len(effect.References) != 1 {
+		return false
+	}
+	reference := effect.References[0]
+	if reference.Kind != ReferenceThisObject && reference.Kind != ReferenceSelfName {
+		return false
+	}
+	expected := "Exile " + effect.Targets[0].Text + " until " + reference.Text + " leaves the battlefield."
+	if !strings.EqualFold(exactEffectClauseText(effect), expected) {
+		return false
+	}
+	effect.ExileUntilSourceLeaves = true
+	return true
+}
+
+// exactExileForEachPlayerUntilLeavesEffectSyntax recognizes the distributive
+// Saga exile clause "For each player, exile up to one [other] target
+// <permanent> that player controls until <this Saga> leaves the battlefield."
+// (Vault 13: Dweller's Journey). The leading "For each player," distributes a
+// single "up to one" target pool across every player; the controller chooses
+// one eligible permanent per player at resolution and the exiled permanents are
+// linked to the source so a paired chapter returns them. The "that player"
+// reference is the distributive anchor and the trailing self-reference is the
+// duration anchor, neither a second object.
+//
+// effectSubjectStart drops the "For each player," prefix from the reconstructed
+// clause text, so the recognizer confirms that prefix on the raw effect text and
+// rebuilds the remainder from the single target and source anchor. The trailing
+// "until this Saga leaves the battlefield" contributes the source's own "Saga"
+// subtype to the parsed selection; because the clause is matched by exact
+// wording, that spurious subtype is removed so the candidate filter is the
+// printed "[other] <permanent>" rather than "Saga". Any other exile shape leaves
+// the clause non-exact so lowering fails closed.
+func exactExileForEachPlayerUntilLeavesEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectExile || effect.Negated || effect.Optional {
+		return false
+	}
+	if effect.Context != EffectContextController {
+		return false
+	}
+	if effect.Duration != EffectDurationNone || effect.FromZone != zone.None || effect.ToZone != zone.None {
+		return false
+	}
+	if len(effect.Targets) != 1 {
+		return false
+	}
+	if effect.Targets[0].Cardinality.Min != 0 || effect.Targets[0].Cardinality.Max != 1 {
+		return false
+	}
+	sourceRef, ok := exileForEachPlayerReferences(effect.References)
+	if !ok {
+		return false
+	}
+	if !strings.HasPrefix(strings.ToLower(strings.TrimSpace(effect.Text)), "for each player, ") {
+		return false
+	}
+	expected := "Exile " + effect.Targets[0].Text + " until " + sourceRef.Text + " leaves the battlefield."
+	if !strings.EqualFold(exactEffectClauseText(effect), expected) {
+		return false
+	}
+	stripSourceSubtypeContamination(&effect.Selection, sourceRef)
+	effect.ExileForEachPlayerUntilSourceLeaves = true
+	return true
+}
+
+// exileForEachPlayerReferences confirms the distributive exile clause carries
+// exactly the two anchors its wording requires: a "that player" reference (the
+// per-player distribution anchor) and a self reference (the duration anchor). It
+// returns the source reference so the caller can rebuild and compare the
+// trailing "until <self> leaves the battlefield" phrase.
+func exileForEachPlayerReferences(references []Reference) (Reference, bool) {
+	if len(references) != 2 {
+		return Reference{}, false
+	}
+	var thatPlayer, sourceRef *Reference
+	for index := range references {
+		switch references[index].Kind {
+		case ReferenceThatPlayer:
+			thatPlayer = &references[index]
+		case ReferenceThisObject, ReferenceSelfName:
+			sourceRef = &references[index]
+		default:
+		}
+	}
+	if thatPlayer == nil || sourceRef == nil {
+		return Reference{}, false
+	}
+	return *sourceRef, true
+}
+
+// stripSourceSubtypeContamination removes the source permanent's own printed
+// subtypes from a parsed selection's any-of subtype filter. The distributive
+// exile clause ends with "until this Saga leaves the battlefield", which leaks
+// the source's "Saga" subtype into the exile selection; once the clause is
+// matched by exact wording the leaked subtype is dropped so the candidate filter
+// reflects the printed "[other] <permanent>" wording rather than the duration
+// phrase. Only subtypes named verbatim in the source reference text are removed.
+func stripSourceSubtypeContamination(selection *SelectionSyntax, sourceRef Reference) {
+	if len(selection.SubtypesAny) == 0 {
+		return
+	}
+	sourceWords := strings.Fields(strings.ToLower(sourceRef.Text))
+	selection.SubtypesAny = slices.DeleteFunc(selection.SubtypesAny, func(subtype types.Sub) bool {
+		return slices.Contains(sourceWords, strings.ToLower(string(subtype)))
+	})
+}
+
+// exactReturnExiledCardEffectSyntax recognizes the explicit O-Ring leaves-the-
+// battlefield clause "return the exiled card to the battlefield under its
+// owner's control." (Oblivion Ring, Journey to Nowhere, Fiend Hunter). The
+// returned card is the one a sibling enters-the-battlefield exile removed,
+// identified by the source link, so the effect carries no target. It marks the
+// effect so lowering emits the linked battlefield return; any other return shape
+// leaves the clause non-exact so lowering fails closed.
+func exactReturnExiledCardEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectReturn || effect.Negated || effect.Optional {
+		return false
+	}
+	if effect.Context != EffectContextController || !effect.UnderOwnersControl {
+		return false
+	}
+	if effect.ToZone != zone.Battlefield || effect.FromZone != zone.None {
+		return false
+	}
+	if len(effect.Targets) != 0 {
+		return false
+	}
+	if !strings.EqualFold(exactEffectClauseText(effect),
+		"Return the exiled card to the battlefield under its owner's control.") {
+		return false
+	}
+	effect.ReturnExiledCard = true
+	return true
+}
+
+// exactExileEntireHandEffectSyntax recognizes the involuntary whole-hand exile
+// clause "Exile all cards from your hand." (Wormfang Behemoth). The whole hand
+// moves to exile with no choice, and the exiled set is linked to the source so a
+// paired leaves-the-battlefield "return the exiled cards" trigger returns it; the
+// clause carries no target. It marks the effect so lowering emits the linked
+// entire-hand exile; any other exile shape leaves the clause non-exact so
+// lowering fails closed.
+func exactExileEntireHandEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectExile || effect.Negated || effect.Optional {
+		return false
+	}
+	if effect.Context != EffectContextController || effect.FromZone != zone.Hand {
+		return false
+	}
+	if len(effect.Targets) != 0 {
+		return false
+	}
+	if !strings.EqualFold(exactEffectClauseText(effect), "Exile all cards from your hand.") {
+		return false
+	}
+	effect.ExileEntireHand = true
+	return true
+}
+
+// exactReturnExiledCardsToHandEffectSyntax recognizes the leaves-the-battlefield
+// clause "Return the exiled cards to their owner's hand." (Wormfang Behemoth).
+// The returned cards are the set a sibling entire-hand exile removed, identified
+// by the source link rather than a target, so the effect carries no target. It
+// marks the effect so lowering emits the linked return to hand; any other return
+// shape leaves the clause non-exact so lowering fails closed.
+func exactReturnExiledCardsToHandEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectReturn || effect.Negated || effect.Optional {
+		return false
+	}
+	if effect.Context != EffectContextController {
+		return false
+	}
+	if effect.ToZone != zone.Hand || effect.FromZone != zone.None {
+		return false
+	}
+	if len(effect.Targets) != 0 {
+		return false
+	}
+	if !strings.EqualFold(exactEffectClauseText(effect),
+		"Return the exiled cards to their owner's hand.") {
+		return false
+	}
+	effect.ReturnExiledCardsToHand = true
+	return true
+}
+
+// exactBottomLinkedExiledCardsEffectSyntax reports whether a put-into-library
+// effect is the linked disposal clause "The owner of each card exiled with
+// <this permanent> puts that card on the bottom of their library." (Trial of a
+// Time Lord). The disposed cards are the ones a sibling exile-until-leaves
+// clause removed, identified by the source link, so the effect carries no
+// target. It marks the effect so lowering emits the linked library-bottom
+// disposal; any other put shape leaves the clause non-exact so lowering fails
+// closed.
+func exactBottomLinkedExiledCardsEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectPut || effect.Negated || effect.Optional {
+		return false
+	}
+	if effect.Context != EffectContextSource || effect.ToZone != zone.Library {
+		return false
+	}
+	if len(effect.Targets) != 0 {
+		return false
+	}
+	anchor, ok := exiledWithSelfAnchorText(effect)
+	if !ok {
+		return false
+	}
+	canonical := "The owner of each card exiled with " + anchor +
+		" puts that card on the bottom of their library."
+	if !strings.EqualFold(exactEffectClauseText(effect), canonical) {
+		return false
+	}
+	effect.BottomLinkedExiledCards = true
+	return true
+}
+
+// exactReturnLinkedExiledToBattlefieldPartialEffectSyntax recognizes the Saga
+// chapter clause "Return <count> cards exiled with <this Saga> to the
+// battlefield under their owners' control." (Vault 13: Dweller's Journey). The
+// returned cards are a fixed-size subset, chosen at resolution, of the set a
+// sibling distributive exile clause linked to the source, so the effect carries
+// no target and reads its source through the link rather than a printed object.
+// The spelled count is rebuilt from the parsed amount so only the exact printed
+// number matches. It marks the effect so lowering emits the partial linked
+// battlefield return; any other return shape leaves the clause non-exact so
+// lowering fails closed.
+func exactReturnLinkedExiledToBattlefieldPartialEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectReturn || effect.Negated || effect.Optional {
+		return false
+	}
+	if effect.Context != EffectContextController || !effect.UnderOwnersControl {
+		return false
+	}
+	if effect.ToZone != zone.Battlefield || effect.FromZone != zone.None {
+		return false
+	}
+	if len(effect.Targets) != 0 {
+		return false
+	}
+	if !effect.Amount.Known || effect.Amount.Value < 1 {
+		return false
+	}
+	count, ok := cardinalWord(effect.Amount.Value)
+	if !ok {
+		return false
+	}
+	anchor, ok := linkedExiledSourceAnchorText(effect)
+	if !ok {
+		return false
+	}
+	canonical := "Return " + count + " cards exiled with " + anchor +
+		" to the battlefield under their owners' control."
+	if !strings.EqualFold(exactEffectClauseText(effect), canonical) {
+		return false
+	}
+	effect.ReturnLinkedExiledToBattlefieldPartial = true
+	return true
+}
+
+// linkedExiledSourceAnchorText returns the self-reference text ("this Saga")
+// that names the source link of a linked-exile return or disposal clause,
+// scanning both the effect's references and subject references because the
+// anchor may appear in either set depending on the surrounding sentence.
+func linkedExiledSourceAnchorText(effect *EffectSyntax) (string, bool) {
+	for _, references := range [][]Reference{effect.References, effect.SubjectReferences} {
+		for _, reference := range references {
+			if reference.Kind != ReferenceThisObject && reference.Kind != ReferenceSelfName {
+				continue
+			}
+			if text := strings.TrimSpace(reference.Text); text != "" {
+				return text, true
+			}
+		}
+	}
+	return "", false
+}
+
+// exactPutLinkedExiledRestOnLibraryBottomEffectSyntax recognizes the Saga
+// chapter disposal clause "put the rest on the bottom of their owners'
+// libraries." (Vault 13: Dweller's Journey). The disposed cards are the linked
+// exiled set a sibling partial-return clause did not bring back, identified by
+// the source link, so the effect carries no target. It marks the effect so
+// lowering routes the unreturned remainder to the bottom of their owners'
+// libraries; any other put shape leaves the clause non-exact so lowering fails
+// closed.
+func exactPutLinkedExiledRestOnLibraryBottomEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectPut || effect.Negated || effect.Optional {
+		return false
+	}
+	if effect.Context != EffectContextController {
+		return false
+	}
+	if len(effect.Targets) != 0 {
+		return false
+	}
+	if !strings.EqualFold(exactEffectClauseText(effect),
+		"put the rest on the bottom of their owners' libraries.") {
+		return false
+	}
+	effect.PutLinkedExiledRestOnLibraryBottom = true
+	return true
+}
+
+// exactCounterExiledCardManaValueEffectSyntax recognizes the chapter II clause
+// "Put a number of +1/+1 counters on target creature you control equal to the
+// mana value of the exiled card." (The Aesir Escape Valhalla). The count is the
+// mana value of the card a sibling chapter exiled under the source link, read
+// through that link rather than a printed number, so the parser drops the amount
+// span and the generic counter recognizer cannot match. The target is kept; the
+// effect is marked so lowering scales the placement by the linked exiled card's
+// mana value. Any other counter shape leaves the clause non-exact so lowering
+// fails closed.
+func exactCounterExiledCardManaValueEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectPut || effect.Negated || effect.Optional {
+		return false
+	}
+	if !effect.CounterKnown {
+		return false
+	}
+	if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
+		return false
+	}
+	target := effect.Targets[0]
+	if target.Cardinality.Min != 1 || target.Cardinality.Max != 1 {
+		return false
+	}
+	canonical := "Put a number of " + effect.CounterKind.String() + " counters on " +
+		target.Text + " equal to the mana value of the exiled card."
+	if !strings.EqualFold(exactEffectClauseText(effect), canonical) {
+		return false
+	}
+	effect.CounterExiledCardManaValue = true
+	return true
+}
+
+// exactReturnSourceAndExiledCardToHandEffectSyntax recognizes the chapter III
+// clause "Return this Saga and the exiled card to their owner's hand." (The
+// Aesir Escape Valhalla). It returns both the source permanent and the card a
+// sibling chapter exiled under the source link, identified by the link rather
+// than a target, so the effect carries no target. It marks the effect so
+// lowering emits a source bounce paired with a linked return to hand; any other
+// return shape leaves the clause non-exact so lowering fails closed.
+func exactReturnSourceAndExiledCardToHandEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectReturn || effect.Negated || effect.Optional {
+		return false
+	}
+	if effect.Context != EffectContextController {
+		return false
+	}
+	if effect.ToZone != zone.Hand || effect.FromZone != zone.None {
+		return false
+	}
+	if len(effect.Targets) != 0 {
+		return false
+	}
+	anchor, ok := selfReferenceAnchorText(effect)
+	if !ok {
+		return false
+	}
+	canonical := "Return " + anchor + " and the exiled card to their owner's hand."
+	if !strings.EqualFold(exactEffectClauseText(effect), canonical) {
+		return false
+	}
+	effect.ReturnSourceAndExiledCardToHand = true
+	return true
+}
+
+// selfReferenceAnchorText returns the source-anchor wording ("this Saga") that a
+// clause names as its own permanent, drawn from a this-object or self-name
+// reference in either the subject or the effect references. It reports false
+// when no such anchor is present.
+func selfReferenceAnchorText(effect *EffectSyntax) (string, bool) {
+	for _, group := range [][]Reference{effect.SubjectReferences, effect.References} {
+		for _, reference := range group {
+			if reference.Kind != ReferenceThisObject && reference.Kind != ReferenceSelfName {
+				continue
+			}
+			if text := strings.TrimSpace(reference.Text); text != "" {
+				return text, true
+			}
+		}
+	}
+	return "", false
+}
+
+// exiledWithSelfAnchorText returns the source-anchor wording ("this Saga") that
+// the linked disposal clause names as the exile source, drawn from a subject
+// this-object or self-name reference. It reports false when no such anchor is
+// present so the recognizer cannot match an unanchored clause.
+func exiledWithSelfAnchorText(effect *EffectSyntax) (string, bool) {
+	for _, reference := range effect.SubjectReferences {
+		if reference.Kind != ReferenceThisObject && reference.Kind != ReferenceSelfName {
+			continue
+		}
+		if text := strings.TrimSpace(reference.Text); text != "" {
+			return text, true
+		}
+	}
+	return "", false
 }
 
 func parseGraveyardZoneExile(effect *EffectSyntax) GraveyardZoneExileKind {
@@ -306,7 +769,7 @@ func exactGraveyardCardTargetSyntax(target *TargetSyntax) bool {
 	if !ok {
 		return false
 	}
-	noun, ok := graveyardCardNoun(sel)
+	noun, ok := graveyardCardNoun(sel, plural)
 	if !ok {
 		return false
 	}
@@ -315,12 +778,25 @@ func exactGraveyardCardTargetSyntax(target *TargetSyntax) bool {
 	}
 	manaClause := ""
 	if sel.MatchManaValue {
-		// The canonical mana-value qualifier follows the singular noun; the
-		// multi-target plural noun never carries it in printed Oracle wording.
-		if plural {
+		// The canonical mana-value qualifier follows the noun in both the
+		// singular ("creature card with mana value 3 or less") and the
+		// pluralized multi-target ("two target creature cards with mana value 2
+		// or less", Sigardian Savior) forms; every card the plural target
+		// gathers individually satisfies the per-card bound.
+		clause, ok := graveyardManaValueClause(sel.ManaValue)
+		if !ok {
 			return false
 		}
-		clause, ok := graveyardManaValueClause(sel.ManaValue)
+		manaClause = clause
+	}
+	if sel.ManaValueDynamic != "" {
+		// A dynamic "less than or equal to the amount of life you (lost|gained)
+		// this turn" bound (Betor, Ancestor's Voice) is independent of the fixed
+		// MatchManaValue path and never combines with it on a printed card.
+		if sel.MatchManaValue {
+			return false
+		}
+		clause, ok := graveyardManaValueDynamicClause(sel.ManaValueDynamic)
 		if !ok {
 			return false
 		}
@@ -350,9 +826,10 @@ func graveyardOwnerSuffix(controller SelectionController) (string, bool) {
 // graveyard-card noun, whether that noun is plural, and whether the cardinality
 // is one the round-trip represents. Single targets render "target " (or
 // "another target " for a self-exclusion); optional and multi-target counts reuse
-// multiTargetCardinalityPrefix for "up to one ", "up to <N> ", and "<N> ". It
-// fails closed for a self-exclusion combined with a multi-target count, which has
-// no canonical phrasing.
+// multiTargetCardinalityPrefix for "up to one ", "up to <N> ", and "<N> ". The
+// enumerated lower-bounded ranges "one or two" and "one, two, or three" render
+// their explicit count words. It fails closed for a self-exclusion combined with
+// a multi-target count, which has no canonical phrasing.
 func graveyardCardCardinalityPrefix(c TargetCardinalitySyntax, another bool) (prefix string, plural, ok bool) {
 	if c == (TargetCardinalitySyntax{Min: 1, Max: 1}) {
 		if another {
@@ -362,6 +839,12 @@ func graveyardCardCardinalityPrefix(c TargetCardinalitySyntax, another bool) (pr
 	}
 	if another {
 		return "", false, false
+	}
+	switch c {
+	case TargetCardinalitySyntax{Min: 1, Max: 2}:
+		return "one or two target ", true, true
+	case TargetCardinalitySyntax{Min: 1, Max: 3}:
+		return "one, two, or three target ", true, true
 	}
 	countPrefix, plural, ok := multiTargetCardinalityPrefix(c)
 	if !ok {
@@ -377,8 +860,10 @@ func graveyardCardCardinalityPrefix(c TargetCardinalitySyntax, another bool) (pr
 // accepts an optional single color qualifier (a single color, "colorless", or
 // "multicolored") followed by at most one type/subtype/permanent core, rendered
 // in canonical Oracle order, and fails closed for any combination it could not
-// reconstruct.
-func graveyardCardNoun(sel SelectionSyntax) (string, bool) {
+// reconstruct. A plural multi-target return joins a card-type union with the
+// "and/or" conjunction the Oracle templating uses for plural counts ("instant
+// and/or sorcery cards") rather than the singular "or".
+func graveyardCardNoun(sel SelectionSyntax, plural bool) (string, bool) {
 	colorPrefix, hasColor, ok := graveyardColorPrefix(sel)
 	if !ok {
 		return "", false
@@ -400,7 +885,7 @@ func graveyardCardNoun(sel SelectionSyntax) (string, bool) {
 	var core string
 	switch {
 	case hasTypes:
-		core, ok = graveyardCardTypeNoun(sel)
+		core, ok = graveyardCardTypeNoun(sel, plural)
 		if !ok {
 			return "", false
 		}
@@ -413,13 +898,21 @@ func graveyardCardNoun(sel SelectionSyntax) (string, bool) {
 		core = string(sel.SubtypesAny[0]) + " card"
 	default:
 		// The plain "card" noun requires the generic card kind, unless a color
-		// qualifier already restricts it ("green card", "colorless card").
-		if sel.Kind != SelectionCard && !hasColor {
+		// qualifier or the "historic" qualifier already restricts it ("green
+		// card", "colorless card", "historic card").
+		if sel.Kind != SelectionCard && !hasColor && !sel.Historic {
 			return "", false
 		}
 		core = "card"
 	}
-	return colorPrefix + core, true
+	// A "historic" qualifier ("historic card", "historic permanent card")
+	// precedes the core noun, after any color qualifier, in canonical Oracle
+	// order.
+	historicPrefix := ""
+	if sel.Historic {
+		historicPrefix = "historic "
+	}
+	return colorPrefix + historicPrefix + core, true
 }
 
 // graveyardColorPrefix renders the optional leading color qualifier of a
@@ -466,8 +959,9 @@ func graveyardColorPrefix(sel SelectionSyntax) (prefix string, hasColor, ok bool
 // arrives as a generic SelectionCard whose RequiredTypesAny retains the exact
 // type, which lowering reproduces as a type-restricted card target. A union of
 // two or more types is carried explicitly by the compiler, so each member is
-// rendered from its card-type word and joined with " or ".
-func graveyardCardTypeNoun(sel SelectionSyntax) (string, bool) {
+// rendered from its card-type word and joined with " or " for a singular target
+// or " and/or " for a plural multi-target return.
+func graveyardCardTypeNoun(sel SelectionSyntax, plural bool) (string, bool) {
 	if len(sel.RequiredTypesAny) == 1 {
 		word, ok := cardTypeWord(sel.RequiredTypesAny[0])
 		if !ok {
@@ -497,7 +991,29 @@ func graveyardCardTypeNoun(sel SelectionSyntax) (string, bool) {
 		}
 		words = append(words, word)
 	}
-	return strings.Join(words, " or ") + " card", true
+	conjunction := "or"
+	if plural {
+		conjunction = "and/or"
+	}
+	return serialList(words, conjunction) + " card", true
+}
+
+// serialList renders a list of words with the canonical Oracle conjunction: two
+// words join as "A <conj> B", and three or more use the serial-comma form
+// "A, B, <conj> C". The conjunction is "or" for a singular target or "and/or"
+// for a plural multi-target count.
+func serialList(words []string, conjunction string) string {
+	switch len(words) {
+	case 0:
+		return ""
+	case 1:
+		return words[0]
+	case 2:
+		return words[0] + " " + conjunction + " " + words[1]
+	default:
+		head := strings.Join(words[:len(words)-1], ", ")
+		return head + ", " + conjunction + " " + words[len(words)-1]
+	}
 }
 
 // graveyardManaValueClause renders the canonical " with mana value N or less"
@@ -508,6 +1024,21 @@ func graveyardManaValueClause(manaValue compare.Int) (string, bool) {
 		return "", false
 	}
 	return " with mana value " + strconv.Itoa(manaValue.Value) + " or less", true
+}
+
+// graveyardManaValueDynamicClause renders the canonical " with mana value less
+// than or equal to the amount of life you (lost|gained) this turn" qualifier from
+// a dynamic mana-value bound (Betor, Ancestor's Voice). It fails closed for any
+// other dynamic amount.
+func graveyardManaValueDynamicClause(kind EffectDynamicAmountKind) (string, bool) {
+	switch kind {
+	case EffectDynamicAmountLifeLostThisTurn:
+		return " with mana value less than or equal to the amount of life you lost this turn", true
+	case EffectDynamicAmountLifeGainedThisTurn:
+		return " with mana value less than or equal to the amount of life you gained this turn", true
+	default:
+		return "", false
+	}
 }
 
 func titleFirstEffectText(text string) string {
@@ -557,6 +1088,74 @@ func exactDirectTargetEffectSyntax(effect *EffectSyntax, verb string) bool {
 		strings.EqualFold(exactEffectClauseText(effect), verb+" "+effect.Targets[0].Text+".")
 }
 
+// exactBecomeMonarchEffectSyntax recognizes the monarch-designation effect
+// (CR 720) in its controller form "You become the monarch." and its single
+// player-target form "Target player becomes the monarch." / "Target opponent
+// becomes the monarch.". Any other subject leaves the clause non-exact so
+// lowering fails closed.
+func exactBecomeMonarchEffectSyntax(effect *EffectSyntax) bool {
+	text := exactEffectClauseText(effect)
+	if len(effect.Targets) == 0 {
+		return strings.EqualFold(text, "You become the monarch.")
+	}
+	return len(effect.Targets) == 1 &&
+		effect.Targets[0].Exact &&
+		strings.EqualFold(text, effect.Targets[0].Text+" becomes the monarch.")
+}
+
+// exactMultiDistinctTargetEffectSyntax recognizes a verb applied to two or more
+// distinct single targets, each named by its own "target <noun>" clause:
+// "Destroy target artifact, target creature, target enchantment, and target
+// land." (Decimate), "Destroy target artifact and target creature." Every target
+// is exact with single cardinality, and the canonical list joins the target
+// texts in an Oracle serial series — "A and B" for two, "A, B, and C" for three
+// or more with the serial comma. Any other shape (a plural or optional target, a
+// non-exact target, or trailing clause text) leaves the reconstruction
+// mismatched and the clause non-exact, so lowering fails closed.
+func exactMultiDistinctTargetEffectSyntax(effect *EffectSyntax, verb string) bool {
+	if len(effect.Targets) < 2 {
+		return false
+	}
+	single := TargetCardinalitySyntax{Min: 1, Max: 1}
+	texts := make([]string, 0, len(effect.Targets))
+	for i := range effect.Targets {
+		target := effect.Targets[i]
+		if !target.Exact || target.Cardinality != single {
+			return false
+		}
+		texts = append(texts, target.Text)
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), verb+" "+joinSerialTargetTexts(texts)+".")
+}
+
+// joinSerialTargetTexts joins distinct target clause texts the way Oracle text
+// lists a verb's several targets: a single text as-is, two joined by "and", and
+// three or more in a serial-comma series ("target artifact, target creature, and
+// target land").
+func joinSerialTargetTexts(texts []string) string {
+	switch len(texts) {
+	case 0:
+		return ""
+	case 1:
+		return texts[0]
+	case 2:
+		return texts[0] + " and " + texts[1]
+	default:
+		return strings.Join(texts[:len(texts)-1], ", ") + ", and " + texts[len(texts)-1]
+	}
+}
+
+// exactRemoveFromCombatEffectSyntax recognizes the resolving effect "Remove
+// <target> from combat." (Reconnaissance, "Remove target attacking creature you
+// control from combat."), whose single permanent target is the creature taken
+// out of combat. The "from combat" clause is the verb's fixed suffix; any other
+// wording leaves the clause non-exact so lowering fails closed.
+func exactRemoveFromCombatEffectSyntax(effect *EffectSyntax) bool {
+	return len(effect.Targets) == 1 &&
+		effect.Targets[0].Exact &&
+		strings.EqualFold(exactEffectClauseText(effect), "Remove "+effect.Targets[0].Text+" from combat.")
+}
+
 // exactRegenerateSelfEffectSyntax recognizes the self-regeneration form
 // "Regenerate this creature." (and the "this permanent"/"this token" object
 // nouns) or "Regenerate <CardName>." where the regenerated permanent is the
@@ -601,19 +1200,25 @@ func exactCopyStackObjectEffectSyntax(effect *EffectSyntax) bool {
 }
 
 // exactCopyReferencedSpellEffectSyntax recognizes the resolving effect "Copy
-// that spell." / "Copy it.", whose copy source is a back-reference to the
-// triggering spell rather than a chosen target ("Whenever you cast a spell ...,
-// copy that spell.", Reflections of Littjara). It requires no targets and a
-// single "that spell"/"it" reference; the compiler binds that reference to the
-// triggering spell and lowering copies it. The optional "You may choose new
-// targets for the copy." rider folds separately once this clause is exact.
+// that spell." / "Copy it." / "Copy this spell.", whose copy source is a
+// back-reference to the triggering spell ("Whenever you cast a spell ..., copy
+// that spell.", Reflections of Littjara) or to the resolving spell itself
+// ("Copy this spell.", Sevinne's Reclamation). It requires no targets and a
+// single "that spell"/"it"/"this spell" reference; the compiler binds that
+// reference to the triggering or resolving spell and lowering copies it. The
+// optional "You may choose new targets for the copy." rider folds separately
+// once this clause is exact.
 func exactCopyReferencedSpellEffectSyntax(effect *EffectSyntax) bool {
-	if len(effect.Targets) != 0 || len(effect.References) != 1 {
+	if len(effect.Targets) != 0 {
 		return false
 	}
-	reference := effect.References[0]
+	references := effectClauseReferences(effect)
+	if len(references) != 1 {
+		return false
+	}
+	reference := references[0]
 	switch reference.Kind {
-	case ReferenceThatObject:
+	case ReferenceThatObject, ReferenceThisObject:
 	case ReferencePronoun:
 		if reference.Pronoun != PronounIt {
 			return false
@@ -622,6 +1227,22 @@ func exactCopyReferencedSpellEffectSyntax(effect *EffectSyntax) bool {
 		return false
 	}
 	return strings.EqualFold(exactEffectClauseText(effect), "Copy "+reference.Text+".")
+}
+
+// effectClauseReferences returns the effect's references that fall at or after
+// its verb, dropping references that belong to a leading condition clause ("If
+// this spell was cast from a graveyard, ...") which the parser records on the
+// gated effect. Exact recognizers that constrain reference count read the
+// clause's own references through this helper so a condition's back-reference
+// does not defeat the match.
+func effectClauseReferences(effect *EffectSyntax) []Reference {
+	var clause []Reference
+	for _, reference := range effect.References {
+		if reference.Span.Start.Offset >= effect.VerbSpan.Start.Offset {
+			clause = append(clause, reference)
+		}
+	}
+	return clause
 }
 
 // exactChooseNewTargetsEffectSyntax recognizes the retarget effect "[You may]
@@ -647,6 +1268,60 @@ func exactNegatedNextUntapStepSyntax(effect *EffectSyntax) bool {
 	return verb == 4 &&
 		slices.Equal(words[:verb], []string{"lands", "you", "control", "don't"}) &&
 		slices.Equal(words[verb+1:], []string{"during", "your", "next", "untap", "step"})
+}
+
+// exactTargetNextUntapStepSyntax recognizes the standalone targeted stun spell or
+// ability "Target <permanent> doesn't untap during its controller's next untap
+// step." (Sleeper Dart, House Guildmage, Skyline Cascade), where the stunned
+// permanent is the effect's own single target rather than a just-tapped prior
+// subject. The clause carries one target and one possessive "its" reference (the
+// "its controller's" owner of the next untap step) and no duration; only the
+// single "next untap step" window is exact, so every plural, mass, or multi-step
+// wording leaves the clause non-exact and lowering fails closed.
+func exactTargetNextUntapStepSyntax(effect *EffectSyntax) bool {
+	if !effect.Negated || effect.Optional ||
+		effect.Context != EffectContextTarget ||
+		len(effect.Targets) != 1 || len(effect.References) != 1 ||
+		effect.Duration != EffectDurationNone || effect.DelayedTiming != DelayedTimingNone {
+		return false
+	}
+	possessive := effect.References[0]
+	if possessive.Kind != ReferencePronoun || possessive.Pronoun != PronounIts {
+		return false
+	}
+	words := normalizedWords(effect.Tokens)
+	verb := slices.Index(words, "untap")
+	if verb < 1 || len(words) == 0 || words[0] != "target" || words[verb-1] != "doesn't" {
+		return false
+	}
+	return slices.Equal(words[verb+1:], []string{"during", "its", "controller's", "next", "untap", "step"})
+}
+
+// exactSourceNextUntapStepSyntax recognizes the standalone self-source stun
+// clause "This <permanent> doesn't untap during your next untap step." in which
+// the stunned permanent is the source itself (the dual lands Mogg Hollows /
+// Rootwater Depths and Arbalest Elite append it to a mana or damage ability so
+// the source skips its own next untap). The clause carries a single
+// "This <permanent>" self reference and no target, possessive controller
+// reference, or duration; only the single "your next untap step" window is
+// exact, so every plural, mass, or multi-step wording leaves the clause
+// non-exact and lowering fails closed.
+func exactSourceNextUntapStepSyntax(effect *EffectSyntax) bool {
+	if !effect.Negated || effect.Optional ||
+		effect.Context != EffectContextSource ||
+		len(effect.Targets) != 0 || len(effect.References) != 1 ||
+		effect.Duration != EffectDurationNone || effect.DelayedTiming != DelayedTimingNone {
+		return false
+	}
+	if effect.References[0].Kind != ReferenceThisObject {
+		return false
+	}
+	words := normalizedWords(effect.Tokens)
+	verb := slices.Index(words, "untap")
+	if verb < 1 || words[verb-1] != "doesn't" {
+		return false
+	}
+	return slices.Equal(words[verb+1:], []string{"during", "your", "next", "untap", "step"})
 }
 
 // exactPriorSubjectNextUntapStepSyntax recognizes the prior-subject "doesn't
@@ -705,6 +1380,18 @@ func exactPriorSubjectNextUntapStepSyntax(effect *EffectSyntax) bool {
 	return words[verb-1] == negation && slices.Equal(words[verb+1:], tail)
 }
 
+// The bounce-to-hand destination possessive is the only part of a return clause
+// shared verbatim across every battlefield bounce scope. Naming the three
+// possessive renderings once lets the single-, multi-, dual-, controlled-choice,
+// self-, and mass-group exactness branches reconstruct the same destination
+// instead of each spelling out the literal, keeping the typed destination in one
+// place.
+const (
+	bounceHandDestSingular   = "to its owner's hand."
+	bounceHandDestPlural     = "to their owners' hands."
+	bounceHandDestTheirOwner = "to their owner's hand."
+)
+
 // exactControlledBounceEffectSyntax recognizes the controlled-choice battlefield
 // bounce "Return a/an/another <permanent> you control to its owner's hand." that
 // lowers to a Bounce whose resolving controller chooses one permanent they
@@ -720,13 +1407,13 @@ func exactControlledBounceEffectSyntax(effect *EffectSyntax) bool {
 	if !ok {
 		return false
 	}
-	return strings.EqualFold(exactEffectClauseText(effect), "Return "+phrase+" to its owner's hand.")
+	return strings.EqualFold(exactEffectClauseText(effect), "Return "+phrase+" "+bounceHandDestSingular)
 }
 
 func exactBounceEffectSyntax(effect *EffectSyntax) bool {
 	return len(effect.Targets) == 1 &&
 		effect.Targets[0].Exact &&
-		strings.EqualFold(exactEffectClauseText(effect), "Return "+effect.Targets[0].Text+" to its owner's hand.")
+		strings.EqualFold(exactEffectClauseText(effect), "Return "+effect.Targets[0].Text+" "+bounceHandDestSingular)
 }
 
 // exactDualBounceEffectSyntax recognizes the dual-target battlefield bounce
@@ -747,7 +1434,7 @@ func exactDualBounceEffectSyntax(effect *EffectSyntax) bool {
 			return false
 		}
 	}
-	reconstruction := "Return " + effect.Targets[0].Text + " and " + effect.Targets[1].Text + " to their owners' hands."
+	reconstruction := "Return " + effect.Targets[0].Text + " and " + effect.Targets[1].Text + " " + bounceHandDestPlural
 	return strings.EqualFold(exactEffectClauseText(effect), reconstruction)
 }
 
@@ -761,7 +1448,7 @@ func exactMultiBounceEffectSyntax(effect *EffectSyntax) bool {
 	return len(effect.Targets) == 1 &&
 		effect.Targets[0].Exact &&
 		effect.Targets[0].Cardinality.Max >= 2 &&
-		strings.EqualFold(exactEffectClauseText(effect), "Return "+effect.Targets[0].Text+" to their owners' hands.")
+		strings.EqualFold(exactEffectClauseText(effect), "Return "+effect.Targets[0].Text+" "+bounceHandDestPlural)
 }
 
 // exactSelfBounceEffectSyntax recognizes "Return <subject> to its owner's hand."
@@ -781,7 +1468,7 @@ func exactSelfBounceEffectSyntax(effect *EffectSyntax) bool {
 		return false
 	}
 	subject := joinedEffectText(effect.References[0].Tokens)
-	return strings.EqualFold(exactEffectClauseText(effect), "Return "+subject+" to its owner's hand.")
+	return strings.EqualFold(exactEffectClauseText(effect), "Return "+subject+" "+bounceHandDestSingular)
 }
 
 func exactDirectPronounEffectSyntax(effect *EffectSyntax, exact string) bool {
@@ -938,9 +1625,12 @@ func exactMassEffectSyntax(effect *EffectSyntax, prefix string) bool {
 	}
 	phrase := text[len(prefix) : len(text)-1]
 	if base, ok := massChosenTypeBasePhrase(&effect.Selection, phrase); ok {
-		return exactMassGroupPhrase(base)
+		return exactMassGroupPhrase(&effect.Selection, base)
 	}
-	return exactMassGroupPhrase(phrase) || exactMassSubtypePhrase(&effect.Selection, phrase)
+	if base, ok := massCounterBasePhrase(&effect.Selection, phrase); ok {
+		return exactMassGroupPhrase(&effect.Selection, base) || exactMassSubtypePhrase(&effect.Selection, base)
+	}
+	return exactMassGroupPhrase(&effect.Selection, phrase) || exactMassSubtypePhrase(&effect.Selection, phrase)
 }
 
 // massChosenTypeBasePhrase strips a trailing chosen-type qualifier ("of the
@@ -966,6 +1656,94 @@ func massChosenTypeBasePhrase(selection *SelectionSyntax, phrase string) (string
 	return "", false
 }
 
+// massCounterBasePhrase strips a trailing counter qualifier ("with a +1/+1
+// counter on it" / "with a -1/-1 counter on them", or the negated "with no
+// counters on them") from a mass group phrase when the selection records the
+// matching counter requirement, returning the base group phrase to validate and
+// true. The base ("creatures") is then checked by the shared mass group/subtype
+// validators, so "Destroy all creatures with a +1/+1 counter on them." and
+// "Destroy all creatures with no counters on them." round-trip through the same
+// machinery as the bare mass group. Because stripping is driven by the modeled
+// CounterKind/CounterAbsent (not by text), an unmodeled named counter leaves
+// CounterRequired false and the phrase fails closed. The kind-agnostic "any
+// counter" form is intentionally not accepted: the runtime cannot honor it for a
+// mass group (it would require the zero-value counter kind in addition to any
+// counter), so it stays fail closed.
+func massCounterBasePhrase(selection *SelectionSyntax, phrase string) (string, bool) {
+	if selection.CounterKindAbsent {
+		kind := selection.CounterKind.String()
+		for _, article := range []string{"a", "an"} {
+			for _, pronoun := range []string{"it", "them"} {
+				suffix := " without " + article + " " + kind + " counter on " + pronoun
+				if base, ok := strings.CutSuffix(phrase, suffix); ok {
+					return base, true
+				}
+			}
+		}
+		return "", false
+	}
+	if selection.CounterAbsent {
+		for _, suffix := range []string{
+			" with no counters on it", " with no counters on them",
+			" with no counter on it", " with no counter on them",
+		} {
+			if base, ok := strings.CutSuffix(phrase, suffix); ok {
+				return base, true
+			}
+		}
+		return "", false
+	}
+	if !selection.CounterRequired || selection.CounterAny {
+		return "", false
+	}
+	for _, suffix := range massCounterQualifierSuffixes(selection) {
+		if base, ok := strings.CutSuffix(phrase, suffix); ok {
+			return base, true
+		}
+	}
+	return "", false
+}
+
+// massCounterQualifierSuffixes reconstructs the recognized counter-qualifier
+// suffixes for a named-counter selection from its modeled counter kind, covering
+// both the singular ("on it") and plural ("on them") pronoun and both articles
+// ("a"/"an") so the reconstructed text matches the source.
+func massCounterQualifierSuffixes(selection *SelectionSyntax) []string {
+	pronouns := []string{"it", "them"}
+	kind := selection.CounterKind.String()
+	suffixes := make([]string, 0, 2*len(pronouns))
+	for _, article := range []string{"a", "an"} {
+		for _, pronoun := range pronouns {
+			suffixes = append(suffixes, " with "+article+" "+kind+" counter on "+pronoun)
+		}
+	}
+	return suffixes
+}
+
+// massEachGroupVerbEffectSyntax reports whether the effect is a recognized
+// "<verb> each <group>" mass form for one of the group verbs that share the
+// battlefield-group machinery (destroy, exile, tap, untap, regenerate). The
+// singular "each" wording selects the whole matching group exactly like the
+// plural "all" form, so its caller flags the selection All to lower to a group
+// effect. Every other effect kind fails closed so per-player "each" distributive
+// effects and "each creature" damage recipients keep their own handling.
+func massEachGroupVerbEffectSyntax(effect *EffectSyntax) bool {
+	switch effect.Kind {
+	case EffectDestroy:
+		return exactMassEachEffectSyntax(effect, "Destroy each ")
+	case EffectExile:
+		return exactMassEachEffectSyntax(effect, "Exile each ")
+	case EffectTap:
+		return exactMassEachEffectSyntax(effect, "Tap each ")
+	case EffectUntap:
+		return exactMassEachEffectSyntax(effect, "Untap each ")
+	case EffectRegenerate:
+		return exactMassEachEffectSyntax(effect, "Regenerate each ")
+	default:
+		return false
+	}
+}
+
 // exactMassEachEffectSyntax recognizes the singular "each" mass form
 // ("Destroy each nonland permanent with mana value 2 or less.") that selects
 // every matching permanent just like the plural "all" form ("Destroy all
@@ -983,16 +1761,32 @@ func exactMassEachEffectSyntax(effect *EffectSyntax, prefix string) bool {
 	if !strings.HasPrefix(strings.ToLower(text), strings.ToLower(prefix)) || !strings.HasSuffix(text, ".") {
 		return false
 	}
-	return exactMassEachGroupPhrase(text[len(prefix) : len(text)-1])
+	phrase := text[len(prefix) : len(text)-1]
+	if base, ok := massCounterBasePhrase(&effect.Selection, phrase); ok {
+		return exactMassEachGroupPhrase(&effect.Selection, base)
+	}
+	return exactMassEachGroupPhrase(&effect.Selection, phrase)
 }
 
-// exactMassEachGroupPhrase validates the singular group phrase that follows
-// "Destroy each ". It mirrors exactMassGroupPhrase's excluded-type/color
+// exactMassEachGroupPhrase validates the singular "each" mass group phrase both
+// as text shape and against the typed selection: massEachGroupPhraseTextShape
+// recognizes the canonical wording, and selectionPhraseVerifiesMassGroup proves
+// the typed SelectionSyntax renders to that same singular phrase (closing the
+// soundness gap where text shape alone could accept a divergent selection).
+func exactMassEachGroupPhrase(selection *SelectionSyntax, phrase string) bool {
+	if !massEachGroupPhraseTextShape(phrase) {
+		return false
+	}
+	return selectionPhraseVerifiesMassGroup(selection, phrase, numberSingular)
+}
+
+// massEachGroupPhraseTextShape validates the singular group phrase that follows
+// "Destroy each ". It mirrors massGroupPhraseTextShape's excluded-type/color
 // prefixes, base nouns, and numeric comparison clauses, but in the singular
 // ("nonland permanent with mana value 2 or less" rather than the plural
 // "nonland permanents ..."), so an "each" mass clause round-trips to the same
 // group selection the plural form lowers.
-func exactMassEachGroupPhrase(phrase string) bool {
+func massEachGroupPhraseTextShape(phrase string) bool {
 	if phrase == "" || strings.TrimSpace(phrase) != phrase {
 		return false
 	}
@@ -1116,15 +1910,73 @@ func exactMassBounceEffectSyntax(effect *EffectSyntax) bool {
 	if !strings.HasPrefix(strings.ToLower(text), strings.ToLower(prefix)) {
 		return false
 	}
-	for _, suffix := range []string{" to their owners' hands.", " to their owner's hand."} {
+	for _, suffix := range []string{" " + bounceHandDestPlural, " " + bounceHandDestTheirOwner} {
 		if remainder, ok := strings.CutSuffix(text, suffix); ok {
-			return exactMassGroupPhrase(remainder[len(prefix):])
+			return exactMassGroupPhrase(&effect.Selection, remainder[len(prefix):])
 		}
 	}
 	return false
 }
 
-func exactMassGroupPhrase(phrase string) bool {
+// exactMassEachBounceEffectSyntax recognizes the singular "each" mass return
+// "Return each <group> to its owner's hand." (Wave Goodbye's "Return each
+// creature without a +1/+1 counter on it to its owner's hand."). It is the
+// "each" sibling of exactMassBounceEffectSyntax: the singular wording selects
+// every matching permanent just like the plural "all" form, so it validates the
+// group phrase in the singular through exactMassEachGroupPhrase while stripping a
+// recognized counter qualifier first. It fails closed for every other return
+// wording so the single- and multi-target bounce paths are untouched.
+func exactMassEachBounceEffectSyntax(effect *EffectSyntax) bool {
+	if effect.ToZone != zone.Hand {
+		return false
+	}
+	const prefix = "Return each "
+	text := exactEffectClauseText(effect)
+	if !strings.HasPrefix(strings.ToLower(text), strings.ToLower(prefix)) {
+		return false
+	}
+	for _, suffix := range []string{" " + bounceHandDestSingular, " " + bounceHandDestTheirOwner, " " + bounceHandDestPlural} {
+		remainder, ok := strings.CutSuffix(text, suffix)
+		if !ok {
+			continue
+		}
+		phrase := remainder[len(prefix):]
+		if base, ok := massCounterBasePhrase(&effect.Selection, phrase); ok {
+			return exactMassEachGroupPhrase(&effect.Selection, base)
+		}
+		return exactMassEachGroupPhrase(&effect.Selection, phrase)
+	}
+	return false
+}
+
+// exactMassGroupPhrase validates the plural "all" mass group phrase both as text
+// shape and against the typed selection: massGroupPhraseTextShape recognizes the
+// canonical wording, and selectionPhraseVerifiesMassGroup proves the typed
+// SelectionSyntax renders to that same plural phrase (closing the soundness gap
+// where text shape alone could accept a divergent selection).
+func exactMassGroupPhrase(selection *SelectionSyntax, phrase string) bool {
+	if !massGroupPhraseTextShape(phrase) {
+		return false
+	}
+	return selectionPhraseVerifiesMassGroup(selection, phrase, numberPlural)
+}
+
+// selectionPhraseVerifiesMassGroup confirms the typed selection renders to the
+// validated mass group phrase through the canonical selectionPhrase renderer.
+// When selectionPhrase reports it cannot represent the selection's noun-phrase
+// shape (ok=false) — for the subtype-noun and keyword group forms still owned by
+// their dedicated validators — the text-shape validation stands alone, so this
+// verification narrows nothing it does not yet model while making every shape it
+// does model fail closed on a selection that disagrees with the source text.
+func selectionPhraseVerifiesMassGroup(selection *SelectionSyntax, phrase string, number grammaticalNumber) bool {
+	rendered, ok := selectionPhrase(*selection, selectionPhraseOptions{Number: number})
+	if !ok {
+		return true
+	}
+	return strings.EqualFold(rendered, phrase)
+}
+
+func massGroupPhraseTextShape(phrase string) bool {
 	if phrase == "" || strings.TrimSpace(phrase) != phrase {
 		return false
 	}
@@ -1326,22 +2178,35 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 	if effect.Divided {
 		return exactDividedDamageText(effect, prefix, text)
 	}
-	if effect.DamageRecipientReference != DamageRecipientReferenceNone {
-		if len(effect.Targets) != 0 ||
-			effect.Amount.DynamicForm != EffectDynamicAmountFormNone {
-			return false
-		}
-		amount := "X"
-		if effect.Amount.Known {
-			amount = strconv.Itoa(effect.Amount.Value)
-		} else if !effect.Amount.VariableX {
+	if effect.DamageRecipient.Reference != DamageRecipientReferenceNone {
+		if len(effect.Targets) != 0 {
 			return false
 		}
 		recipient, ok := damageRecipientTokens(effect.Tokens)
 		if !ok {
+			recipient, ok = damageRecipientTokensAfterAmount(effect.Tokens, effect.Amount)
+			if !ok {
+				return false
+			}
+		}
+		recipientText := joinedEffectText(recipient)
+		switch effect.Amount.DynamicForm {
+		case EffectDynamicAmountFormNone:
+			amount := "X"
+			if effect.Amount.Known {
+				amount = strconv.Itoa(effect.Amount.Value)
+			} else if !effect.Amount.VariableX {
+				return false
+			}
+			return text == fmt.Sprintf("%s %s damage to %s.", prefix, amount, recipientText)
+		case EffectDynamicAmountFormEqual:
+			// "<prefix> damage equal to <referent> to <recipient>." reconstructs
+			// the dynamic amount phrase verbatim, so the recipient that follows
+			// the amount span round-trips exactly and cannot bleed into it.
+			return text == fmt.Sprintf("%s damage %s to %s.", prefix, effect.Amount.Text, recipientText)
+		default:
 			return false
 		}
-		return text == fmt.Sprintf("%s %s damage to %s.", prefix, amount, joinedEffectText(recipient))
 	}
 	if len(effect.Targets) == 0 {
 		// A "where X is the number of ..." or "equal to ..." dynamic amount on
@@ -1355,12 +2220,12 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 		if !ok {
 			return false
 		}
-		if len(effect.DamageRecipientPair) == 2 {
-			first, ok := exactGroupDamageRecipientText(effect.DamageRecipientPair[0])
+		if pair, ok := effect.DamageRecipient.GroupPair(); ok {
+			first, ok := exactGroupDamageRecipientText(pair[0])
 			if !ok {
 				return false
 			}
-			second, ok := exactGroupDamageRecipientText(effect.DamageRecipientPair[1])
+			second, ok := exactGroupDamageRecipientText(pair[1])
 			if !ok {
 				return false
 			}
@@ -1375,7 +2240,7 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 	// "<prefix> A damage to <target0> and B damage to <target1>." deals to two
 	// independently chosen single targets, reconstructed by a dedicated helper to
 	// keep this dispatcher's branch count bounded.
-	if effect.HasSecondTargetDamageRider {
+	if _, ok := SecondTargetDamageRider(effect.DamageRiders); ok {
 		return exactSecondTargetDamageEffectSyntax(effect, prefix, text)
 	}
 	if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
@@ -1385,9 +2250,16 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 	switch effect.Amount.DynamicForm {
 	case EffectDynamicAmountFormNone:
 		amount := "X"
-		if effect.Amount.Known {
+		switch {
+		case effect.Amount.Known:
 			amount = strconv.Itoa(effect.Amount.Value)
-		} else if !effect.Amount.VariableX {
+		case effect.Amount.VariableX:
+		case effect.Amount.DynamicKind == EffectDynamicAmountTriggeringCounterCount:
+			// "deals that much damage" reads the triggering counter count; the
+			// amount word reconstructs as the literal "that much" (Shalai and
+			// Hallar).
+			amount = "that much"
+		default:
 			return false
 		}
 		// "<prefix> <amount> damage to each of <target>." deals the full amount
@@ -1400,17 +2272,17 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 		}
 		// A "... and N damage to you" rider follows a single-target (Max <= 1)
 		// fixed-amount clause; it is reconstructed only for that bounded shape.
-		if effect.HasSelfDamageRider {
+		if selfRider, ok := SelfDamageRider(effect.DamageRiders); ok {
 			if !effect.Amount.Known || effect.Targets[0].Cardinality.Max >= 2 {
 				return false
 			}
 			return text == fmt.Sprintf("%s %s damage to %s and %d damage to you.",
-				prefix, amount, recipient, effect.SelfDamageRiderValue)
+				prefix, amount, recipient, selfRider.Value)
 		}
 		// A "... and N damage to that creature's controller/owner" rider follows
 		// a single-target (Max <= 1) fixed-amount clause; the rider recipient is
 		// reconstructed from its captured tokens so the round-trip stays exact.
-		if effect.TargetControllerDamageRiderRecipient != DamageRecipientReferenceNone {
+		if _, ok := TargetControllerDamageRider(effect.DamageRiders); ok {
 			if !effect.Amount.Known || effect.Targets[0].Cardinality.Max >= 2 {
 				return false
 			}
@@ -1437,19 +2309,35 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 // exactSecondTargetDamageEffectSyntax reconstructs the canonical two-target
 // damage clause "<prefix> A damage to <target0> and B damage to <target1>." in
 // which each target is chosen independently. Both targets must reconstruct
-// exactly from their own captured phrases and the primary amount must be a fixed
-// value, keeping the round-trip exact for this bounded shape.
+// exactly from their own captured phrases. The fixed form requires a known
+// primary amount and fixed rider value; the dynamic form ("<prefix> X damage to
+// <target0> and X damage to <target1>, where X is ...", The Brothers' War chapter
+// III) shares one "where X" dynamic amount across both targets. Either keeps the
+// round-trip exact for its bounded shape.
 func exactSecondTargetDamageEffectSyntax(effect *EffectSyntax, prefix, text string) bool {
 	if len(effect.Targets) != 2 ||
 		!effect.Targets[0].Exact || !effect.Targets[1].Exact ||
-		!effect.Amount.Known ||
-		effect.Amount.DynamicForm != EffectDynamicAmountFormNone ||
 		effect.Targets[0].Cardinality.Max != 1 {
+		return false
+	}
+	rider, ok := SecondTargetDamageRider(effect.DamageRiders)
+	if !ok {
+		return false
+	}
+	if rider.Dynamic {
+		if effect.Amount.DynamicForm != EffectDynamicAmountFormWhereX {
+			return false
+		}
+		return text == fmt.Sprintf("%s X damage to %s and X damage to %s, %s.",
+			prefix, effect.Targets[0].Text, effect.Targets[1].Text, effect.Amount.Text)
+	}
+	if !effect.Amount.Known ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormNone {
 		return false
 	}
 	return text == fmt.Sprintf("%s %d damage to %s and %d damage to %s.",
 		prefix, effect.Amount.Value, effect.Targets[0].Text,
-		effect.SecondTargetDamageRiderValue, effect.Targets[1].Text)
+		rider.Value, effect.Targets[1].Text)
 }
 
 // exactSourcePowerDamageEffectSyntax reconstructs the canonical one-sided
@@ -1473,15 +2361,15 @@ func exactSourcePowerDamageEffectSyntax(effect *EffectSyntax) bool {
 		return false
 	}
 	text := exactEffectClauseText(effect)
-	if len(effect.DamageRecipientPair) == 2 {
+	if pair, ok := effect.DamageRecipient.GroupPair(); ok {
 		if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
 			return false
 		}
-		first, ok := exactGroupDamageRecipientText(effect.DamageRecipientPair[0])
+		first, ok := exactGroupDamageRecipientText(pair[0])
 		if !ok {
 			return false
 		}
-		second, ok := exactGroupDamageRecipientText(effect.DamageRecipientPair[1])
+		second, ok := exactGroupDamageRecipientText(pair[1])
 		if !ok {
 			return false
 		}
@@ -1609,8 +2497,16 @@ func dividedPlainCreatureSelection(selection SelectionSyntax) bool {
 // group damage path reconstructs separately or not at all, so those wordings
 // keep failing the round-trip.
 func exactGroupDamageAmountText(amount EffectAmountSyntax) (string, bool) {
-	if amount.DynamicForm != EffectDynamicAmountFormNone ||
-		amount.DynamicKind != EffectDynamicAmountNone {
+	if amount.DynamicForm != EffectDynamicAmountFormNone {
+		return "", false
+	}
+	if amount.DynamicKind == EffectDynamicAmountTriggeringCounterCount {
+		// "<source> deals that much damage to <group>." reads the triggering
+		// event's quantity; the amount word reconstructs as the literal "that
+		// much", mirroring the single-target branch (Magmakin Artillerist).
+		return "that much", true
+	}
+	if amount.DynamicKind != EffectDynamicAmountNone {
 		return "", false
 	}
 	switch {
@@ -1641,7 +2537,7 @@ func exactGroupDamageAmountText(amount EffectAmountSyntax) (string, bool) {
 // keeping the dual-recipient and fixed paths unchanged and unsupported wordings
 // rejected.
 func exactGroupDynamicDamageText(effect *EffectSyntax, prefix, text string) bool {
-	if len(effect.DamageRecipientPair) != 0 {
+	if len(effect.DamageRecipient.Groups) != 0 {
 		return false
 	}
 	recipient, ok := exactGroupDamageRecipientText(effect.Selection)
@@ -1652,7 +2548,8 @@ func exactGroupDynamicDamageText(effect *EffectSyntax, prefix, text string) bool
 	case EffectDynamicAmountFormWhereX:
 		return text == fmt.Sprintf("%s X damage to %s, %s.", prefix, recipient, effect.Amount.Text)
 	case EffectDynamicAmountFormEqual:
-		return text == fmt.Sprintf("%s damage to %s %s.", prefix, recipient, effect.Amount.Text)
+		return text == fmt.Sprintf("%s damage to %s %s.", prefix, recipient, effect.Amount.Text) ||
+			text == fmt.Sprintf("%s damage %s to %s.", prefix, effect.Amount.Text, recipient)
 	default:
 		return false
 	}
@@ -1678,18 +2575,19 @@ func exactGroupDamageRecipientText(selection SelectionSyntax) (string, bool) {
 // exactGroupDamagePermanentRecipientText reconstructs the recipient phrase for a
 // group damage spell whose recipients form a single filtered permanent group. It
 // renders only the controller, combat, tapped, single-color, single-subtype,
-// single-excluded-type, keyword, and "other" qualifiers the executable backend
-// can represent exactly, and fails closed for every other qualifier.
+// single-excluded-type, single-excluded-subtype, nontoken/token, keyword, and
+// "other" qualifiers the executable backend can represent exactly, and fails
+// closed for every other qualifier.
 func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, bool) {
 	if selection.All || selection.Another || selection.Zone != zone.None ||
-		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
 		selection.Colorless || selection.Multicolored ||
 		len(selection.Supertypes) > 1 ||
 		len(selection.ExcludedColors) != 0 ||
 		(len(selection.RequiredTypesAny) > 1 && !selection.ConjunctiveTypes) ||
 		len(selection.ColorsAny) > 1 ||
-		len(selection.SubtypesAny) > 1 ||
-		len(selection.ExcludedTypes) > 1 {
+		len(selection.ExcludedTypes) > 1 ||
+		len(selection.ExcludedSubtypes) > 1 ||
+		(selection.NonToken && selection.TokenOnly) {
 		return "", false
 	}
 	if (selection.Attacking && selection.Blocking) ||
@@ -1737,6 +2635,11 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 		words = append(words, "untapped")
 	default:
 	}
+	if selection.NonToken {
+		words = append(words, "nontoken")
+	} else if selection.TokenOnly {
+		words = append(words, "token")
+	}
 	if len(selection.Supertypes) == 1 {
 		supertypeText, ok := supertypeWord(selection.Supertypes[0])
 		if !ok {
@@ -1751,9 +2654,15 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 		}
 		words = append(words, colorText)
 	}
-	if len(selection.SubtypesAny) == 1 {
-		words = append(words, string(selection.SubtypesAny[0]))
+	if len(selection.SubtypesAny) > 1 {
+		// A multi-subtype union ("each Pest, Bat, Insect, Snake, and Spider you
+		// control") carries no card-type noun: the subtype list is the recipient
+		// noun. The single-subtype redundancy ("each Goblin") is handled below.
+		if hasNoun {
+			return "", false
+		}
 	}
+	words = append(words, groupSubtypeListWords(selection.SubtypesAny)...)
 	if len(selection.ExcludedTypes) == 1 {
 		if !hasNoun {
 			return "", false
@@ -1764,9 +2673,15 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 		}
 		words = append(words, "non"+excludedNoun)
 	}
+	if len(selection.ExcludedSubtypes) == 1 {
+		if !hasNoun {
+			return "", false
+		}
+		words = append(words, "non-"+string(selection.ExcludedSubtypes[0]))
+	}
 	if hasNoun {
 		words = append(words, noun)
-	} else if len(selection.SubtypesAny) != 1 {
+	} else if len(selection.SubtypesAny) == 0 {
 		return "", false
 	}
 	// The canonical Oracle ordering places the controller clause immediately
@@ -1779,11 +2694,21 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 	case SelectionControllerYou:
 		words = append(words, "you", "control")
 	case SelectionControllerOpponent:
-		words = append(words, "your", "opponents", "control")
+		if selection.OpponentEach {
+			words = append(words, "each", "opponent", "controls")
+		} else {
+			words = append(words, "your", "opponents", "control")
+		}
 	case SelectionControllerNotYou:
 		words = append(words, "you", "don't", "control")
 	default:
 		return "", false
+	}
+	// A "named <Name>" filter ("each other creature you control named Charmed
+	// Stray") follows the controller clause in canonical Oracle wording. The
+	// verbatim name carries its own internal spacing, so it joins as one word.
+	if selection.RequiredName != "" {
+		words = append(words, "named", selection.RequiredName)
 	}
 	if selection.Keyword != KeywordUnknown {
 		keywordWord, ok := selection.Keyword.OracleWord()
@@ -1802,8 +2727,196 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 		}
 		words = append(words, "without", keywordWord)
 	}
+	counterWords, ok := groupSelectorCounterWords(selection)
+	if !ok {
+		return "", false
+	}
+	words = append(words, counterWords...)
 	if selection.EnteredThisTurn {
 		words = append(words, "that", "entered", "this", "turn")
 	}
-	return strings.Join(words, " "), true
+	recipient := strings.Join(words, " ")
+	rider, ok := groupSelectorNumericRider(selection)
+	if !ok {
+		return "", false
+	}
+	if !selectionPhraseVerifiesGroupRecipient(selection, recipient, rider, counterWords) {
+		return "", false
+	}
+	return recipient + rider, true
+}
+
+// selectionPhraseVerifiesGroupRecipient soft-gates the group damage recipient
+// reconstruction through the canonical selectionPhrase renderer. When the
+// renderer can model the selection's noun phrase, the bespoke recipient must
+// match its "each"-determiner rendering exactly, so the two reconstructions
+// cannot silently drift; when the renderer cannot model the selection
+// (ok=false), the bespoke reconstruction stands alone. The cross-check is
+// skipped when the recipient carries a trailing numeric rider or a counter
+// clause, because selectionPhrase orders the numeric qualifier ahead of the
+// controller clause and does not render counter qualifiers, so its rendering
+// is intentionally not comparable to the recipient in those forms.
+func selectionPhraseVerifiesGroupRecipient(selection SelectionSyntax, recipient, rider string, counterWords []string) bool {
+	if rider != "" || len(counterWords) != 0 {
+		return true
+	}
+	rendered, ok := selectionPhrase(selection, selectionPhraseOptions{
+		Number:     numberSingular,
+		Determiner: determinerEach,
+	})
+	if !ok {
+		return true
+	}
+	return strings.EqualFold(rendered, recipient)
+}
+
+// exactSingularChosenPermanentRecipientText reconstructs the recipient text for a
+// non-target single-choice counter recipient ("a creature you control",
+// "another creature you control", Ajani Fells the Godsire chapter II). It reuses
+// the group recipient assembly and swaps the "each" determiner for the singular
+// article, so every filter the group form supports (types, colors, controller,
+// keyword qualifiers) is supported here too. A genuine group ("each …", All set)
+// is left to exactGroupDamagePermanentRecipientText.
+func exactSingularChosenPermanentRecipientText(selection SelectionSyntax) (string, bool) {
+	if selection.All {
+		return "", false
+	}
+	singular := selection.Another || selection.Other
+	probe := selection
+	probe.Another = false
+	probe.Other = false
+	group, ok := exactGroupDamagePermanentRecipientText(probe)
+	if !ok {
+		return "", false
+	}
+	rest, ok := strings.CutPrefix(group, "each ")
+	if !ok {
+		return "", false
+	}
+	if singular {
+		return "another " + rest, true
+	}
+	return singularArticleFor(rest) + " " + rest, true
+}
+
+func singularArticleFor(phrase string) string {
+	if phrase == "" {
+		return "a"
+	}
+	switch phrase[0] {
+	case 'a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U':
+		return "an"
+	default:
+		return "a"
+	}
+}
+
+// subtype is its own noun ("each Goblin you control"). Two subtypes join with
+// "and/or" ("each Merfolk and/or Knight you control"); three or more form a
+// comma-separated list closed by "and" ("each Pest, Bat, Insect, Snake, and
+// Spider you control"). The reconstruction is compared byte-for-byte against the
+// source, so a recipient written with a different joiner fails closed instead of
+// matching an approximation.
+func groupSubtypeListWords(subtypes []types.Sub) []string {
+	switch len(subtypes) {
+	case 0:
+		return nil
+	case 1:
+		return []string{string(subtypes[0])}
+	case 2:
+		return []string{string(subtypes[0]), "and/or", string(subtypes[1])}
+	default:
+		words := make([]string, 0, len(subtypes)+1)
+		for i, sub := range subtypes {
+			if i == len(subtypes)-1 {
+				words = append(words, "and", string(sub))
+			} else {
+				words = append(words, string(sub)+",")
+			}
+		}
+		return words
+	}
+}
+
+// groupSelectorCounterWords reconstructs the canonical "with a <kind> counter on
+// it" / "with a counter on it" qualifier a group recipient selector may carry,
+// mirroring the runtime Selection.MatchCounter / MatchAnyCounter predicate. The
+// kind-specific form names the counter ("with a +1/+1 counter on it"); the
+// kind-agnostic form omits it ("with a counter on it"). A selector with neither
+// flag yields no words. The two flags are mutually exclusive, so a selector that
+// sets both fails closed rather than rendering an ambiguous qualifier.
+func groupSelectorCounterWords(selection SelectionSyntax) ([]string, bool) {
+	if selection.CounterRequired && selection.CounterAny {
+		return nil, false
+	}
+	switch {
+	case selection.CounterRequired:
+		return []string{"with", "a", selection.CounterKind.String(), "counter", "on", "it"}, true
+	case selection.CounterAny:
+		return []string{"with", "a", "counter", "on", "it"}, true
+	default:
+		return nil, true
+	}
+}
+
+// groupSelectorNumericRider reconstructs the canonical " with mana value N or
+// less", " with power N or greater", or " with toughness N or less" rider a
+// group recipient selector may carry, mirroring the runtime Selection numeric
+// bound. It renders at most one numeric comparison (the runtime carries a single
+// mana-value/power/toughness bound per selection), returning ok=false when more
+// than one is active or the comparison has no canonical Oracle phrasing so the
+// reconstruction fails closed instead of approximating the filter. An inactive
+// numeric filter yields the empty rider and ok=true.
+func groupSelectorNumericRider(selection SelectionSyntax) (string, bool) {
+	active := 0
+	rider := ""
+	if selection.MatchManaValue {
+		active++
+		if selection.ManaValueX {
+			rider = " with mana value X or less"
+		} else {
+			clause, ok := numericComparisonClause(selection.ManaValue)
+			if !ok {
+				return "", false
+			}
+			rider = " with mana value " + clause
+		}
+	}
+	if selection.MatchPower {
+		active++
+		clause, ok := numericComparisonClause(selection.Power)
+		if !ok {
+			return "", false
+		}
+		rider = " with power " + clause
+	}
+	if selection.MatchToughness {
+		active++
+		clause, ok := numericComparisonClause(selection.Toughness)
+		if !ok {
+			return "", false
+		}
+		rider = " with toughness " + clause
+	}
+	if active > 1 {
+		return "", false
+	}
+	return rider, true
+}
+
+// numericComparisonClause renders the canonical Oracle phrasing for a fixed
+// integer comparison ("N or less", "N or greater", "N"), mirroring the forms
+// exactMassComparisonClause accepts. It fails closed for the strict and
+// unbounded comparisons no canonical permanent-filter wording uses.
+func numericComparisonClause(bound compare.Int) (string, bool) {
+	switch bound.Op {
+	case compare.LessOrEqual:
+		return strconv.Itoa(bound.Value) + " or less", true
+	case compare.GreaterOrEqual:
+		return strconv.Itoa(bound.Value) + " or greater", true
+	case compare.Equal:
+		return strconv.Itoa(bound.Value), true
+	default:
+		return "", false
+	}
 }

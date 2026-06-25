@@ -304,3 +304,39 @@ func TestControllerScopedCounterTriggerMatchesOtherControlledCreature(t *testing
 		t.Fatal("controller-scoped counter trigger matched an opponent's counter event")
 	}
 }
+
+func TestCauseControllerCounterTriggerMatchesPlacerOnly(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	pattern := &game.TriggerPattern{
+		Event:            game.EventCountersAdded,
+		CauseController:  game.TriggerControllerYou,
+		OneOrMore:        true,
+		MatchCounterKind: true,
+		CounterKind:      counter.PlusOnePlusOne,
+	}
+
+	target := addCombatCreaturePermanent(g, game.Player1)
+	eventYou := game.Event{
+		Kind:        game.EventCountersAdded,
+		PermanentID: target.ObjectID,
+		Controller:  game.Player1,
+		CounterKind: counter.PlusOnePlusOne,
+		Amount:      2,
+	}
+	if !triggerMatchesEvent(g, source, pattern, eventYou) {
+		t.Fatal("cause-controller counter trigger did not match counters placed by its controller")
+	}
+
+	eventOpponent := game.Event{
+		Kind:        game.EventCountersAdded,
+		PermanentID: target.ObjectID,
+		Controller:  game.Player2,
+		CounterKind: counter.PlusOnePlusOne,
+		Amount:      2,
+	}
+	if triggerMatchesEvent(g, source, pattern, eventOpponent) {
+		t.Fatal("cause-controller counter trigger matched counters placed by an opponent")
+	}
+}

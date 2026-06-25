@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 // HauntedRidge is the card definition for Haunted Ridge.
@@ -28,10 +29,12 @@ var HauntedRidge = func() *game.CardDef {
 			ReplacementAbilities: []game.ReplacementAbility{
 				game.EntersTappedIfReplacement("This land enters tapped unless you control two or more other lands.", &game.Condition{
 					Negate: true,
-					ControllerControls: game.PermanentFilter{
-						Types:    []types.Card{types.Land},
+					ControlsMatching: opt.Val(game.SelectionCount{
+						Selection: game.Selection{
+							RequiredTypes: []types.Card{types.Land},
+						},
 						MinCount: 2,
-					},
+					}),
 				}),
 			},
 		},

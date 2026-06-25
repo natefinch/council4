@@ -228,8 +228,8 @@ func TestEquipActivatedAbilityBuildsCompleteMechanic(t *testing.T) {
 		targets[0].MinTargets != 1 ||
 		targets[0].MaxTargets != 1 ||
 		targets[0].Allow != TargetAllowPermanent ||
-		!slices.Equal(targets[0].Predicate.PermanentTypes, []types.Card{types.Creature}) ||
-		targets[0].Predicate.Controller != ControllerYou {
+		!slices.Equal(targets[0].Selection.Val.RequiredTypesAny, []types.Card{types.Creature}) ||
+		targets[0].Selection.Val.Controller != ControllerYou {
 		t.Fatalf("targets = %+v, want one creature you control", targets)
 	}
 }
@@ -246,12 +246,12 @@ func TestEquipRestrictedActivatedAbilityBuildsRestriction(t *testing.T) {
 	if len(targets) != 1 {
 		t.Fatalf("targets = %+v, want one", targets)
 	}
-	predicate := targets[0].Predicate
-	if !slices.Equal(predicate.Supertypes, []types.Super{types.Legendary}) {
-		t.Fatalf("supertypes = %v, want copied [Legendary]", predicate.Supertypes)
+	selection := targets[0].Selection.Val
+	if !slices.Equal(selection.Supertypes, []types.Super{types.Legendary}) {
+		t.Fatalf("supertypes = %v, want copied [Legendary]", selection.Supertypes)
 	}
-	if !slices.Equal(predicate.Subtypes, []types.Sub{types.Knight}) {
-		t.Fatalf("subtypes = %v, want copied [Knight]", predicate.Subtypes)
+	if !slices.Equal(selection.SubtypesAny, []types.Sub{types.Knight}) {
+		t.Fatalf("subtypes = %v, want copied [Knight]", selection.SubtypesAny)
 	}
 	if targets[0].Constraint != "legendary Knight you control" {
 		t.Fatalf("constraint = %q", targets[0].Constraint)
@@ -336,12 +336,12 @@ func TestEnchantStaticAbilityBuildsCompleteMechanic(t *testing.T) {
 		MaxTargets: 1,
 		Constraint: "creature",
 		Allow:      TargetAllowPermanent,
-		Predicate: TargetPredicate{
-			PermanentTypes: []types.Card{types.Creature},
-		},
+		Selection: opt.Val(Selection{
+			RequiredTypesAny: []types.Card{types.Creature},
+		}),
 	}
 	ability := EnchantStaticAbility(&target)
-	target.Predicate.PermanentTypes[0] = types.Land
+	target.Selection.Val.RequiredTypesAny[0] = types.Land
 
 	if ability.Text != "Enchant creature" {
 		t.Fatalf("text = %q, want %q", ability.Text, "Enchant creature")
@@ -351,7 +351,7 @@ func TestEnchantStaticAbilityBuildsCompleteMechanic(t *testing.T) {
 		enchantTarget.MinTargets != 1 ||
 		enchantTarget.MaxTargets != 1 ||
 		enchantTarget.Allow != TargetAllowPermanent ||
-		!slices.Equal(enchantTarget.Predicate.PermanentTypes, []types.Card{types.Creature}) {
+		!slices.Equal(enchantTarget.Selection.Val.RequiredTypesAny, []types.Card{types.Creature}) {
 		t.Fatalf("enchant target = %+v, %v; want one creature", enchantTarget, ok)
 	}
 }
@@ -725,5 +725,45 @@ func TestKeywordBodyHelpers(t *testing.T) {
 	}
 	if amount, ok := BodyToxicAmount(staticBody); !ok || amount != 2 {
 		t.Fatalf("BodyToxicAmount = %d/%v, want 2/true", amount, ok)
+	}
+}
+
+// TestPartnerWithStaticBodyCarriesKeyword confirms the partner-with keyword is
+// modeled as a simple static keyword whose reusable body reports the PartnerWith
+// keyword, so a card that has "Partner with <name>" is recognized as such.
+func TestPartnerWithStaticBodyCarriesKeyword(t *testing.T) {
+	body := PartnerWithStaticBody
+	if !BodyHasKeyword(&body, PartnerWith) {
+		t.Fatal("PartnerWithStaticBody does not carry the PartnerWith keyword")
+	}
+	if BodyHasKeyword(&body, Flying) {
+		t.Fatal("PartnerWithStaticBody unexpectedly carries the Flying keyword")
+	}
+}
+
+// TestPartnerStaticBodyCarriesKeyword confirms the partner keyword is modeled as
+// a simple static keyword whose reusable body reports the Partner keyword, so a
+// card that has "Partner" or one of its "Partner—<quality>" restricted variants
+// is recognized as such.
+func TestPartnerStaticBodyCarriesKeyword(t *testing.T) {
+	body := PartnerStaticBody
+	if !BodyHasKeyword(&body, Partner) {
+		t.Fatal("PartnerStaticBody does not carry the Partner keyword")
+	}
+	if BodyHasKeyword(&body, PartnerWith) {
+		t.Fatal("PartnerStaticBody unexpectedly carries the PartnerWith keyword")
+	}
+}
+
+// TestBandingStaticBodyCarriesKeyword confirms the banding keyword is modeled as
+// a simple static keyword whose reusable body reports the Banding keyword, so a
+// permanent that has banding (printed or granted) is recognized as such.
+func TestBandingStaticBodyCarriesKeyword(t *testing.T) {
+	body := BandingStaticBody
+	if !BodyHasKeyword(&body, Banding) {
+		t.Fatal("BandingStaticBody does not carry the Banding keyword")
+	}
+	if BodyHasKeyword(&body, Flying) {
+		t.Fatal("BandingStaticBody unexpectedly carries the Flying keyword")
 	}
 }

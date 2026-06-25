@@ -261,31 +261,46 @@ type ReplacementEffect struct {
 	// (Xorn). TokenRequiredSubtypes, when non-empty, restricts a token-creation
 	// replacement to tokens carrying all of the listed subtypes (Xorn's Treasure
 	// filter); an empty filter matches every created token (Doubling Season).
+	// TokenRequiredTypes, when non-empty, additionally restricts the replacement
+	// to tokens carrying all of the listed card types ("one or more artifact
+	// tokens", Worldwalker Helm; "one or more creature tokens", Queen Allenal).
 	TokenAddend           int
 	TokenRequiredSubtypes []types.Sub
+	TokenRequiredTypes    []types.Card
 	// TokenAddendDef, when non-nil, makes the addend create TokenAddend copies of
 	// this predefined token rather than copies of the triggering token (Tippy-Toe:
 	// "create those tokens plus an additional Food token"). The addend tokens are
 	// created directly alongside the matched tokens, so they neither re-trigger
 	// this replacement nor multiply with TokenMultiplier.
-	TokenAddendDef        *CardDef
-	CounterMultiplier     int
-	CounterAddend         int
-	MatchCounterKind      bool
-	CounterKindFilter     counter.Kind
-	CounterRecipientTypes []types.Card
-	// CounterRecipientTypesAny restricts the recipient to a permanent that has at
-	// least one of the listed card types ("an artifact or creature you control",
-	// Ozolith, the Shattered Spire). An empty slice imposes no type restriction.
-	// Unlike CounterRecipientTypes (which requires every listed type), this is a
-	// union filter.
-	CounterRecipientTypesAny      []types.Card
+	TokenAddendDef    *CardDef
+	CounterMultiplier int
+	CounterAddend     int
+	MatchCounterKind  bool
+	CounterKindFilter counter.Kind
+	// CounterRecipientSelection restricts the counter recipient to a permanent
+	// whose characteristics satisfy this canonical Selection, matched through the
+	// shared matchSelection so the recipient filter reads the same vocabulary as
+	// targets, triggers, and cost modifiers. It carries the conjunctive
+	// "creature" recipient of a typed counter-doubling replacement
+	// (CounterPlacementReplacement) via RequiredTypes and the union recipient of
+	// "an artifact or creature you control" (Ozolith, the Shattered Spire) via
+	// RequiredTypesAny. It is nil for replacements with no recipient-type filter.
+	// Recipient controller scope stays outside the Selection on
+	// CounterUseRecipientController.
+	CounterRecipientSelection     *Selection
 	CounterRecipientAnyPermanent  bool
 	CounterUseRecipientController bool
-	DamageMultiplier              int
-	DamageAddend                  int
-	DamageSourceColors            []color.Color
-	DamageExcludeSource           bool
+	// CounterRecipientSelf restricts the recipient to the replacement's own
+	// source permanent ("If one or more +1/+1 counters would be put on Mowu, ...",
+	// Mowu, Loyal Companion). When set, registration binds the replacement's
+	// AffectedObjectID to the source's object ID so it matches only counters that
+	// would be put on that one permanent. It is false for every group or broad
+	// counter-placement replacement.
+	CounterRecipientSelf bool
+	DamageMultiplier     int
+	DamageAddend         int
+	DamageSourceColors   []color.Color
+	DamageExcludeSource  bool
 	// DamageSourceTypes restricts a damage replacement to sources that have all
 	// of the listed card types ("a creature you control"). DamageRecipientOpponent
 	// restricts it to damage dealt to an opponent of the replacement's controller
@@ -347,6 +362,14 @@ type ReplacementEffect struct {
 	// It is zero for every non-Devour replacement.
 	EntryDevourMultiplier int
 
+	// EntryDevourType and EntryDevourSubtype refine a Devour replacement to a
+	// typed permanent variant (CR 702.81): the controller may sacrifice any
+	// number of permanents matching this card type (artifact, land) or subtype
+	// (Food) instead of creatures. Both are zero for the plain creature form,
+	// which sacrifices creatures.
+	EntryDevourType    types.Card
+	EntryDevourSubtype types.Sub
+
 	// EntryTributeCount marks a Tribute as-enters replacement (CR 702.110) and
 	// carries its +1/+1 counter count N. As the permanent enters, a chosen
 	// opponent may put N counters on it; doing so sets the permanent's TributePaid
@@ -361,10 +384,12 @@ type ReplacementEffect struct {
 	// ControllerFilter and EntersTappedTypes.
 	EntersTappedOthers bool
 
-	// EntersTappedTypes restricts an EntersTappedOthers replacement to entering
-	// permanents that have any of these card types. It is empty when every
-	// entering permanent is tapped ("Permanents ... enter tapped.").
-	EntersTappedTypes []types.Card
+	// EntersTappedSelection restricts an EntersTappedOthers replacement to
+	// entering permanents whose characteristics satisfy this canonical Selection,
+	// matched through the shared matchSelection. Its RequiredTypesAny carries the
+	// "any of these card types" recipient filter; it is nil when every entering
+	// permanent is tapped ("Permanents ... enter tapped.").
+	EntersTappedSelection *Selection
 
 	// EntersWithCountersOthers marks a continuous static enters-with-counters
 	// replacement that adds the EntersWithCounters placements to a group of OTHER
@@ -427,6 +452,12 @@ type ReplacementEffect struct {
 	// only consulted when EntersAsCopy is true.
 	EntersAsCopyAddTypes []types.Card
 
+	// EntersAsCopyAddSubtypes applies the "except it's a <subtype> in addition to
+	// its other types" copiable rider (Mockingbird's Bird, Synth Infiltrator's
+	// Synth) by adding these subtypes to the copied values. It is empty for every
+	// other replacement and only consulted when EntersAsCopy is true.
+	EntersAsCopyAddSubtypes []types.Sub
+
 	// EntersAsCopyConditionalCounters applies the conditional copiable counter
 	// riders of an enters-as-copy replacement, placing additional counters on the
 	// copy based on the copied card's types (Spark Double: "+1/+1 counter if it's
@@ -446,6 +477,12 @@ type ReplacementEffect struct {
 	// EntersAsCopy is true.
 	EntersAsCopyAddKeywords []Keyword
 
+	// EntersAsCopyTapped taps the permanent as it enters the battlefield as its
+	// chosen copy (Vesuva's "enter tapped as a copy of any land"). It is only
+	// consulted when EntersAsCopy is true, and applies after the optional copy
+	// choice is confirmed so a declined copy enters untapped.
+	EntersAsCopyTapped bool
+
 	// DrawCardMultiplier replaces a single "draw a card" event by the controller
 	// with drawing this many cards instead (CR 614). It backs the draw-doubling
 	// replacement "If you would draw a card, draw two cards instead." A value of
@@ -459,6 +496,27 @@ type ReplacementEffect struct {
 	// instead.", Teferi's Ageless Insight). It is only meaningful when
 	// DrawCardMultiplier is greater than one.
 	DrawCardExceptFirstInDrawStep bool
+
+	// DrawCardDigLook replaces a single "draw a card" event by the controller
+	// with looking at the top DrawCardDigLook cards of their library, putting
+	// DrawCardDigTake of them into their hand, and routing the rest to
+	// DrawCardDigRemainder (CR 614). It backs "If you would draw a card, instead
+	// look at the top three cards of your library, then put one into your hand
+	// and the rest into your graveyard." (Underrealm Lich). A value of zero
+	// leaves draws unchanged. It is registered while its source is on the
+	// battlefield and consulted each time the controller would draw.
+	DrawCardDigLook int
+
+	// DrawCardDigTake is the number of looked-at cards a DrawCardDigLook
+	// replacement puts into the controller's hand. It is only meaningful when
+	// DrawCardDigLook is greater than zero.
+	DrawCardDigTake int
+
+	// DrawCardDigRemainder is the destination of the un-taken cards of a
+	// DrawCardDigLook replacement: the controller's graveyard (the default) or
+	// the bottom of their library. It is only meaningful when DrawCardDigLook is
+	// greater than zero.
+	DrawCardDigRemainder DigRemainder
 
 	// ContinuousZoneRedirect marks a continuous static replacement that redirects
 	// a card (or permanent) headed for a graveyard to a different zone (CR 614),
@@ -482,6 +540,36 @@ type ReplacementEffect struct {
 	// It is empty when every card is redirected. It is only meaningful when
 	// ContinuousZoneRedirect is true.
 	RedirectTypeFilter []types.Card
+
+	// RedirectControlFilter restricts a ContinuousZoneRedirect replacement by the
+	// controller of the dying permanent relative to the replacement's controller,
+	// for "would die" forms ("If a creature an opponent controls would die, exile
+	// it instead."): You watches the controller's own permanents, Opponent an
+	// opponent's, and Any every controller's. It is only meaningful when
+	// ContinuousZoneRedirect is true, and applies in addition to RedirectOwnerFilter.
+	RedirectControlFilter TriggerControllerFilter
+
+	// AffectedObjectID restricts the replacement to events about a single
+	// permanent identified by its object ID. When non-zero, the replacement
+	// matches only an event whose moving permanent is exactly this object,
+	// backing a dynamically created replacement bound to one specific permanent
+	// ("If it would leave the battlefield, exile it instead of putting it
+	// anywhere else." applied to a just-reanimated creature — Whip of Erebos).
+	// It is zero for every printed or unscoped replacement, which match by their
+	// other filters alone.
+	AffectedObjectID id.ID
+
+	// AffectedCardID restricts the replacement to events about the permanent
+	// created when a single card instance enters the battlefield, identified by
+	// the card's stable instance ID. A permanent spell gains a fresh object ID as
+	// it resolves onto the battlefield, so an object-ID binding taken from the
+	// stack object cannot match the entering permanent; the card instance ID is
+	// preserved across the stack-to-battlefield move and identifies it. It backs a
+	// one-shot replacement created for a future-cast spell ("When you next cast a
+	// creature spell this turn, that creature enters with an additional +1/+1
+	// counter on it." — Summon: Fenrir chapter II). It is zero for every
+	// replacement that is not bound to one specific card instance.
+	AffectedCardID id.ID
 }
 
 // EntryTypeChoiceKey is the ChoiceKey under which an entry-time creature-type

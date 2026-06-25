@@ -7,15 +7,21 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func returnCreatureFromGraveyardInstruction() *game.Instruction {
 	return &game.Instruction{
-		Primitive: game.ReturnFromGraveyard{
-			Player:    game.ControllerReference(),
-			Selection: game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou},
-			Amount:    game.Fixed(1),
-		},
+		Primitive: game.ReturnFromGraveyardChoice(
+			game.ControllerReference(),
+			game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou},
+			game.Fixed(1),
+			zone.None,
+			false,
+			opt.V[int]{},
+			false,
+			"",
+		),
 	}
 }
 
@@ -58,6 +64,49 @@ func TestReturnFromGraveyardReturnsChosenCreature(t *testing.T) {
 	}
 	if !g.Players[game.Player1].Graveyard.Contains(instant) {
 		t.Fatal("non-matching instant was removed from graveyard")
+	}
+}
+
+// TestReturnFromGraveyardReanimatesChosenCreatureToBattlefield verifies the
+// chosen-card reanimation path (Destination Battlefield) puts the controller's
+// chosen creature onto the battlefield under their control rather than to hand.
+func TestReturnFromGraveyardReanimatesChosenCreatureToBattlefield(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Source",
+		Types: []types.Card{types.Artifact},
+	}})
+	obj := triggeredObjFor(source)
+
+	creature := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Bear",
+		Types: []types.Card{types.Creature},
+	}})
+
+	instruction := &game.Instruction{
+		Primitive: game.ReturnFromGraveyardChoice(
+			game.ControllerReference(),
+			game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou},
+			game.Fixed(1),
+			zone.Battlefield,
+			false,
+			opt.V[int]{},
+			false,
+			"",
+		),
+	}
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: defaultChoiceAgent{}}
+	engine.resolveInstructionWithChoices(g, obj, instruction, agents, &TurnLog{})
+
+	if g.Players[game.Player1].Graveyard.Contains(creature) {
+		t.Fatal("chosen creature still in graveyard")
+	}
+	if g.Players[game.Player1].Hand.Contains(creature) {
+		t.Fatal("chosen creature went to hand instead of battlefield")
+	}
+	if !onBattlefieldByCard(g, creature) {
+		t.Fatal("chosen creature was not put onto the battlefield")
 	}
 }
 

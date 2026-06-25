@@ -289,7 +289,7 @@ func TestGenerateExecutableCardSourceEntersTappedUnlessTwoBasicLands(t *testing.
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	// gofmt aligns PermanentFilter fields; check value literals rather than
+	// gofmt aligns SelectionCount fields; check value literals rather than
 	// aligned field assignments to stay resilient to column-width changes.
 	for _, wanted := range []string{
 		"game.EntersTappedIfReplacement",
@@ -362,9 +362,9 @@ func TestGenerateExecutableCardSourceLifeAndOpponentEntersTappedConditions(t *te
 		condition string
 		want      string
 	}{
-		{condition: "unless you have 10 or more life", want: "ControllerLifeAtLeast: 10"},
+		{condition: "unless you have 10 or more life", want: "Aggregate: game.AggregateControllerLife, Op: compare.GreaterOrEqual, Value: 10"},
 		{condition: "unless a player has 13 or less life", want: "AnyPlayerLifeAtMost: 13"},
-		{condition: "unless you have two or more opponents", want: "OpponentCountAtLeast: 2"},
+		{condition: "unless you have two or more opponents", want: "Aggregate: game.AggregateOpponentCount, Op: compare.GreaterOrEqual, Value: 2"},
 		{condition: "unless an opponent controls two or more lands", want: "AnyOpponentControls: opt.Val(game.SelectionCount{"},
 		{condition: "unless your opponents control eight or more lands", want: "OpponentsControl: opt.Val(game.SelectionCount{"},
 	}

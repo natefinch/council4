@@ -25,6 +25,8 @@ func (e *Engine) resolveTopOfStackWithChoices(g *game.Game, agents [game.NumPlay
 		snapshot := snapshotStackSpell(g, obj)
 		rememberLastKnown(g, &snapshot)
 	}
+	startEntry := log.entryCount()
+	eventsBefore := len(g.Events)
 	result := e.resolveStackObjectWithChoices(g, obj, agents, log)
 	releaseStateTriggerLatch(g, obj)
 	if obj.Kind == game.StackSpell && spellResolved(result) {
@@ -36,13 +38,56 @@ func (e *Engine) resolveTopOfStackWithChoices(g *game.Game, agents [game.NumPlay
 			CardID:        obj.SourceID,
 		})
 	}
+	recordEnteredBattlefield(g, log, eventsBefore)
 	log.addResolve(ResolveLog{
 		StackObjectID: obj.ID,
 		SourceID:      obj.SourceID,
 		Controller:    obj.Controller,
 		Kind:          obj.Kind,
 		Result:        result,
+		SourceName:    stackObjectSourceName(g, obj),
+		StartEntry:    startEntry,
 	})
+}
+
+// recordEnteredBattlefield logs each permanent that entered the battlefield while
+// the just-resolved stack object was resolving, scanning the events emitted since
+// eventsBefore. These entries fall in the resolution's [StartEntry, resolve)
+// range, so a report can show a fetched land or created token nested under the
+// spell or ability that caused it. Priority-time entries (a land drop) are not
+// scanned here, so they are not double-reported.
+func recordEnteredBattlefield(g *game.Game, log *TurnLog, eventsBefore int) {
+	if log == nil {
+		return
+	}
+	for i := eventsBefore; i < len(g.Events); i++ {
+		event := g.Events[i]
+		if event.Kind != game.EventPermanentEnteredBattlefield {
+			continue
+		}
+		log.addEnter(PermanentEnterLog{
+			Permanent:  event.PermanentID,
+			SourceID:   event.CardID,
+			TokenName:  event.TokenName,
+			Controller: event.Controller,
+		})
+	}
+}
+
+// stackObjectSourceName resolves the display name of a stack object's source —
+// a token definition, the source card instance for an activated or triggered
+// ability, or the card instance a spell was cast from.
+func stackObjectSourceName(g *game.Game, obj *game.StackObject) string {
+	if obj.SourceTokenDef != nil {
+		return obj.SourceTokenDef.Name
+	}
+	if instance, ok := g.CardInstances[obj.SourceCardID]; ok && instance.Def != nil {
+		return instance.Def.Name
+	}
+	if instance, ok := g.CardInstances[obj.SourceID]; ok && instance.Def != nil {
+		return instance.Def.Name
+	}
+	return ""
 }
 
 func (e *Engine) resolveStackObject(g *game.Game, obj *game.StackObject, log *TurnLog) string {
@@ -125,7 +170,7 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 		}
 		return "resolved"
 	}
-	if permanentOK && activatedOK && isEquipmentPermanent(g, permanent) && game.BodyHasKeyword(activatedBody, game.Equip) {
+	if permanentOK && activatedOK && isEquipmentPermanent(g, permanent) && bodyAttachesLikeEquip(activatedBody) {
 		sourceObjectID := obj.SourceID
 		if !permanentOK {
 			sourceObjectID = 0
@@ -241,14 +286,17 @@ func (e *Engine) resolveWardTriggeredAbilityWithChoices(g *game.Game, obj *game.
 		return "resolved"
 	}
 	payer := targetObj.Controller
-	wardCost, ok := game.BodyWardCost(ability)
+	wardKeyword, ok := game.BodyWardKeyword(ability)
 	if !ok {
 		return "resolved"
 	}
+	wardCost := wardKeyword.Cost
 	cost := &wardCost
-	if paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: payer, Cost: cost}) && e.chooseMay(g, agents, payer, "Pay ward cost?", log) {
-		prefs := e.paymentPreferencesForCost(g, payer, cost, nil, 0, agents, log)
-		if paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: payer, Cost: cost, Prefs: prefs}) {
+	request := payment.GenericRequest{PlayerID: payer, Cost: cost, AdditionalCosts: wardKeyword.AdditionalCosts}
+	if paymentOrch.canPayGenericCost(g, request) && e.chooseMay(g, agents, payer, "Pay ward cost?", log) {
+		prefs := e.paymentPreferencesForCost(g, payer, cost, wardKeyword.AdditionalCosts, 0, agents, log)
+		request.Prefs = prefs
+		if paymentOrch.payGenericCost(g, request) {
 			return "resolved"
 		}
 	}
@@ -463,6 +511,12 @@ func (e *Engine) resolveInstantOrSorcerySpell(
 		}
 		return "adventure exile"
 	}
+	if obj.SourceZone == zone.Hand && cardHasRebound(spellDef) {
+		if !e.reboundExileResolvingSpell(g, obj, card) {
+			return "invalid owner"
+		}
+		return "rebound exile"
+	}
 	if !moveStackCardToGraveyard(g, obj, card) {
 		return "invalid owner"
 	}
@@ -496,12 +550,15 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		obj.Face,
 		nil,
 		permanentCreationOptions{
-			KickerPaid:        obj.KickerPaid,
-			WasCast:           !obj.Copy,
-			CastController:    obj.Controller,
-			HasCastController: !obj.Copy,
-			CastFromZone:      obj.SourceZone,
-			XValue:            obj.XValue,
+			KickerPaid:              obj.KickerPaid,
+			KickCount:               obj.KickerCount,
+			Evoked:                  obj.Evoked,
+			WasCast:                 !obj.Copy,
+			CastController:          obj.Controller,
+			HasCastController:       !obj.Copy,
+			CastFromZone:            obj.SourceZone,
+			XValue:                  obj.XValue,
+			ColorsOfManaSpentToCast: obj.ColorsOfManaSpentToCast,
 		},
 		agents,
 		log,

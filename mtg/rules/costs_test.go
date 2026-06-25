@@ -289,8 +289,7 @@ func TestStaticChosenTypeSpellCostReductionAppliesToMatchingCreature(t *testing.
 				AffectedPlayer: game.PlayerYou,
 				CostModifier: game.CostModifier{
 					Kind:                         game.CostModifierSpell,
-					MatchCardType:                true,
-					CardType:                     types.Creature,
+					CardSelection:                game.Selection{RequiredTypes: []types.Card{types.Creature}},
 					ChosenSubtypeFromEntryChoice: true,
 					GenericReduction:             1,
 				},
@@ -327,8 +326,7 @@ func rubyMedallionPermanent() *game.CardDef {
 				AffectedPlayer: game.PlayerYou,
 				CostModifier: game.CostModifier{
 					Kind:             game.CostModifierSpell,
-					MatchColor:       true,
-					Color:            color.Red,
+					CardSelection:    game.Selection{ColorsAny: []color.Color{color.Red}},
 					GenericReduction: 1,
 				},
 			}},
@@ -388,7 +386,7 @@ func TestStaticColorlessSpellCostReductionMatchesColorlessSpells(t *testing.T) {
 					AffectedPlayer: game.PlayerYou,
 					CostModifier: game.CostModifier{
 						Kind:             game.CostModifierSpell,
-						MatchColor:       true,
+						CardSelection:    game.Selection{Colorless: true},
 						GenericReduction: 1,
 					},
 				}},
@@ -490,6 +488,99 @@ func TestPhyrexianCostCanBePaidWithManaOrLife(t *testing.T) {
 		}
 		if got := g.Players[game.Player1].Life; got != 38 {
 			t.Fatalf("life = %d, want 38", got)
+		}
+	})
+}
+
+func TestPhyrexianGenericCostCanBePaidWithManaOrLife(t *testing.T) {
+	t.Run("mana", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		addBasicLandPermanent(g, game.Player1, types.Forest)
+		addBasicLandPermanent(g, game.Player1, types.Island)
+		manaCost := cost.Mana{cost.PhyrexianGeneric(2)}
+
+		if !payTestGenericCost(g, game.Player1, &manaCost) {
+			t.Fatal("payCost() = false for {2/P} with two lands, want true")
+		}
+		if got := g.Players[game.Player1].Life; got != 40 {
+			t.Fatalf("life = %d, want 40", got)
+		}
+	})
+	t.Run("life", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		manaCost := cost.Mana{cost.PhyrexianGeneric(2)}
+		prefs := &payment.Preferences{PhyrexianLifeChoices: []bool{true}}
+
+		if !payTestGenericCostWithPreferences(g, game.Player1, &manaCost, prefs) {
+			t.Fatal("payCost() = false for {2/P} paid with life, want true")
+		}
+		if got := g.Players[game.Player1].Life; got != 38 {
+			t.Fatalf("life = %d, want 38", got)
+		}
+	})
+	t.Run("life fallback without mana", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		manaCost := cost.Mana{cost.PhyrexianGeneric(2)}
+
+		if !payTestGenericCost(g, game.Player1, &manaCost) {
+			t.Fatal("payCost() = false for {2/P} with no mana, want true via life")
+		}
+		if got := g.Players[game.Player1].Life; got != 38 {
+			t.Fatalf("life = %d, want 38", got)
+		}
+	})
+}
+
+func TestPayLifeForColoredManaRuleEffect(t *testing.T) {
+	payLifeForBlackPermanent := func(g *game.Game) {
+		addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+			Name:  "Yawgmoth's Will",
+			Types: []types.Card{types.Enchantment},
+			StaticAbilities: []game.StaticAbility{{
+				RuleEffects: []game.RuleEffect{{
+					Kind:           game.RuleEffectPayLifeForColoredMana,
+					AffectedPlayer: game.PlayerYou,
+					ManaColor:      mana.B,
+				}},
+			}},
+		}})
+	}
+
+	t.Run("colored mana symbol payable with life", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		payLifeForBlackPermanent(g)
+		manaCost := cost.Mana{cost.B}
+		prefs := &payment.Preferences{PhyrexianLifeChoices: []bool{true}}
+
+		if !payTestGenericCostWithPreferences(g, game.Player1, &manaCost, prefs) {
+			t.Fatal("payCost() = false for {B} paid with life under rule effect, want true")
+		}
+		if got := g.Players[game.Player1].Life; got != 38 {
+			t.Fatalf("life = %d, want 38", got)
+		}
+	})
+
+	t.Run("rule effect does not affect other colors", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		payLifeForBlackPermanent(g)
+		manaCost := cost.Mana{cost.G}
+
+		if canPayCost(g, game.Player1, &manaCost) {
+			t.Fatal("canPayCost() = true for {G} with no green source and black-only rule effect, want false")
+		}
+	})
+
+	t.Run("colored mana symbol still payable with mana", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		payLifeForBlackPermanent(g)
+		addBasicLandPermanent(g, game.Player1, types.Swamp)
+		manaCost := cost.Mana{cost.B}
+
+		if !payTestGenericCost(g, game.Player1, &manaCost) {
+			t.Fatal("payCost() = false for {B} paid with Swamp, want true")
+		}
+		if got := g.Players[game.Player1].Life; got != 40 {
+			t.Fatalf("life = %d, want 40", got)
 		}
 	})
 }
@@ -602,8 +693,7 @@ func spellCostReducerPermanent(controller game.PlayerID, cardType types.Card, re
 				AffectedPlayer: affected,
 				CostModifier: game.CostModifier{
 					Kind:             game.CostModifierSpell,
-					MatchCardType:    true,
-					CardType:         cardType,
+					CardSelection:    game.Selection{RequiredTypes: []types.Card{cardType}},
 					GenericReduction: reduction,
 				},
 			}},

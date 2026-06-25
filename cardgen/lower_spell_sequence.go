@@ -14,16 +14,19 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+// legacyOrderedEffectSequenceExact reports whether a two-effect body may flow
+// into the generic ordered-sequence lowerer. It returns false only for the
+// remaining effect-kind pairs the generic lowerer cannot yet sequence faithfully,
+// diverting them to the "non-exact legacy effect pair" diagnostic so they fail
+// closed rather than lower partially. Pairs the generic lowerer now handles
+// correctly (such as two power/toughness modifications joined by "and") are no
+// longer diverted here.
 func legacyOrderedEffectSequenceExact(effects []compiler.CompiledEffect) bool {
 	if len(effects) != 2 {
 		return true
 	}
 	first, second := effects[0], effects[1]
 	if first.Kind == compiler.EffectPut && second.Kind == compiler.EffectProliferate {
-		return false
-	}
-	if first.Kind == compiler.EffectModifyPT && second.Kind == compiler.EffectModifyPT &&
-		second.Connection == parser.EffectConnectionAnd {
 		return false
 	}
 	if first.Kind == compiler.EffectExile &&
@@ -53,6 +56,7 @@ func lowerLinkedCounterTokenSequence(
 func lowerOrderedSequenceSpecialCase(
 	cardName string,
 	ctx contentCtx,
+	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic, bool) {
 	if len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{},
@@ -67,7 +71,16 @@ func lowerOrderedSequenceSpecialCase(
 			unsupportedEffectSequenceDiagnostic(ctx, "structural — unsupported sacrifice-conditioned reanimation"),
 			true
 	}
+	if content, ok := lowerOptionalSacrificeScaledReward(ctx); ok {
+		return content, nil, true
+	}
+	if content, ok := lowerOptionalSacrificeThenSearchSequence(ctx); ok {
+		return content, nil, true
+	}
 	if content, ok := lowerSacrificeThenSearchSequence(ctx); ok {
+		return content, nil, true
+	}
+	if content, ok := lowerDestroyThenSearchSequence(ctx); ok {
 		return content, nil, true
 	}
 	if content, ok := lowerSacrificeWithInabilityFallback(ctx); ok {
@@ -85,6 +98,18 @@ func lowerOrderedSequenceSpecialCase(
 	if content, ok := lowerSelfBlinkSequence(ctx); ok {
 		return content, nil, true
 	}
+	if content, ok := lowerMillThenPaidReturnSequence(cardName, ctx); ok {
+		return content, nil, true
+	}
+	if content, ok := lowerMillThenOptionalAmongToHandSequence(ctx); ok {
+		return content, nil, true
+	}
+	if content, ok := lowerMillThenOptionalAmongOneOfEachToBattlefield(ctx); ok {
+		return content, nil, true
+	}
+	if content, ok := lowerMillThenPutAmongToBattlefield(ctx); ok {
+		return content, nil, true
+	}
 	for _, target := range ctx.content.Targets {
 		if _, ok := counterAbilityTargetSpec(target); ok {
 			return game.AbilityContent{},
@@ -95,7 +120,7 @@ func lowerOrderedSequenceSpecialCase(
 	// The combined-shape lowerers do not model per-effect conditions; only
 	// attempt them when the sequence carries none, so a condition can never be
 	// silently dropped.
-	if content, ok := lowerCombinedSequenceShapes(cardName, ctx); ok {
+	if content, ok := lowerCombinedSequenceShapes(cardName, ctx, syntax); ok {
 		return content, nil, true
 	}
 	if !legacyOrderedEffectSequenceExact(ctx.content.Effects) {
@@ -111,7 +136,7 @@ func lowerOrderedEffectSequence(
 	ctx contentCtx,
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
-	if content, diagnostic, handled := lowerOrderedSequenceSpecialCase(cardName, ctx); handled {
+	if content, diagnostic, handled := lowerOrderedSequenceSpecialCase(cardName, ctx, syntax); handled {
 		return content, diagnostic
 	}
 	// Resolving optionality ("you may X. If you do, Y") is realized by marking
@@ -137,6 +162,9 @@ func lowerOrderedEffectSequence(
 	if optionalFlow.enabled {
 		consumedConditions++
 	}
+	if optionalFlow.elseGateCondition >= 0 {
+		consumedConditions++
+	}
 	// Every gate condition is consumed by the matching above (which fails closed
 	// unless all conditions matched and lowered). A single condition may gate
 	// multiple effects of a shared-sentence group, so count conditions here
@@ -155,7 +183,7 @@ func lowerOrderedEffectSequence(
 	// "Otherwise, <effect>." runs the else branch of the immediately preceding
 	// conditional effect. The preceding effect is already gated on its condition;
 	// gate the otherwise effect on the negation so exactly one branch resolves.
-	otherwiseGates, ok := sequenceOtherwiseGates(ctx.content.Effects, effectConditions)
+	otherwiseGates, ok := sequenceOtherwiseGates(ctx.content.Effects, effectConditions, optionalFlow)
 	if !ok {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — otherwise branch not gatable")
 	}
@@ -182,8 +210,32 @@ func lowerOrderedEffectSequence(
 		// conditions inherited from the parent context before per-effect lowering.
 		effectAbility.content.Conditions = nil
 		clauseTargets := effect.Targets
-		clauseRefs := effect.References
+		// A leading condition that shares its effect's sentence (e.g. "If this
+		// spell was kicked, draw a card.") contributes its own references (the
+		// "this spell" object) inside the effect's clause span, so the compiler
+		// attributes them to the effect. Those references belong to the gate
+		// condition, not the effect body, and are credited separately below via
+		// conditionReferenceCount; strip them here so the per-effect lowerer sees
+		// only the effect's own references.
+		clauseRefs := referencesOutsideConditionSpans(effect.References, gateConditions)
 		ownedReferenceCount := len(clauseRefs)
+		// A group counter-placement clause whose group filter carries a "with a
+		// <kind> counter on it/them" qualifier introduces a pronoun naming each
+		// filtered group member, not the prior clause's target. Drop it before
+		// antecedent target binding so it does not bind to a prior target and
+		// force the clause onto the single-target placement path; the group
+		// lowerer represents the filter through the group selection's counter
+		// requirement. ownedReferenceCount above still credits the dropped
+		// pronoun as consumed.
+		if groupCounterQualifierClause(effect) {
+			clauseRefs = counterQualifierFilteredReferences(clauseRefs)
+		}
+		// Combined-shape and characteristic lowerers read the resolved effect's
+		// own reference list (ctx.content.Effects[0].References) rather than the
+		// clause-level References, so strip the gate-condition references there
+		// too. Otherwise a kicked-condition's "this spell" object survives as a
+		// phantom subject reference and the per-effect lowerer fails closed.
+		effectAbility.content.Effects[0].References = slices.Clone(clauseRefs)
 		var inheritedTargets []compiler.CompiledTarget
 		if effect.Context == parser.EffectContextPriorSubject {
 			inheritedTargets = priorSubjectTargets(ctx.content.Effects, i)
@@ -236,22 +288,25 @@ func lowerOrderedEffectSequence(
 		var diagnostic *shared.Diagnostic
 		// An "Otherwise," else branch is mutually exclusive with the conditional
 		// effect it follows, so an EventPermanent "it" inside it cannot denote a
-		// sibling clause's product and may bind the triggering permanent.
-		allowEventPronoun := effect.Connection == parser.EffectConnectionOtherwise
+		// sibling clause's product and may bind the triggering permanent. The
+		// first clause likewise has no prior instruction whose product an
+		// EventPermanent pronoun could denote, so its "it" must be the triggering
+		// permanent ("Whenever ~ attacks, put a +1/+1 counter on it, then ...").
+		allowEventPronoun := effect.Connection == parser.EffectConnectionOtherwise || i == 0
 		if delayedContent, handled, failed := lowerDelayedSequenceClause(ctx.content.Effects, i, effectAbility, sequence); handled {
 			if failed {
 				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — delayed-target sacrifice not linkable")
 			}
 			content = delayedContent
 		} else if allSharedTargets {
-			content, diagnostic = lowerSequenceClauseContent(cardName, ctx.enclosingKind, effectAbility.content, effectAbility.optional, &clauseAbility, allowEventPronoun)
+			content, diagnostic = lowerSequenceClauseContent(cardName, ctx, effectAbility.content, effectAbility.optional, &clauseAbility, allowEventPronoun)
 			if diagnostic != nil {
 				effectAbilityNoTarget := effectAbility
 				effectAbilityNoTarget.content.Targets = nil
-				content, diagnostic = lowerSequenceClauseContent(cardName, ctx.enclosingKind, effectAbilityNoTarget.content, effectAbilityNoTarget.optional, &clauseAbility, allowEventPronoun)
+				content, diagnostic = lowerSequenceClauseContent(cardName, ctx, effectAbilityNoTarget.content, effectAbilityNoTarget.optional, &clauseAbility, allowEventPronoun)
 			}
 		} else {
-			content, diagnostic = lowerSequenceClauseContent(cardName, ctx.enclosingKind, effectAbility.content, effectAbility.optional, &clauseAbility, allowEventPronoun)
+			content, diagnostic = lowerSequenceClauseContent(cardName, ctx, effectAbility.content, effectAbility.optional, &clauseAbility, allowEventPronoun)
 		}
 		if diagnostic != nil ||
 			len(content.SharedTargets) != 0 ||
@@ -260,6 +315,17 @@ func lowerOrderedEffectSequence(
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, sequenceClauseCategory(diagnostic))
 		}
 		mode := content.Modes[0]
+		// An inherited target that no prior clause owned (a bare "Choose target
+		// ..." sentence with no effect of its own) is first materialized here, so
+		// this clause consumes it. Inherited targets already recorded in
+		// oracleSpanToGameIdx were owned and counted by an earlier clause.
+		if allSharedTargets {
+			for _, t := range inheritedTargets {
+				if _, owned := oracleSpanToGameIdx[t.Span]; !owned {
+					consumedTargets++
+				}
+			}
+		}
 		newTargets, ok := applyTargetRemapping(
 			mode, allSharedTargets, mixedTargets,
 			inheritedTargets, clauseTargets,
@@ -299,7 +365,51 @@ func lowerOrderedEffectSequence(
 	if !sequenceCountsConsumed(ctx, consumedTargets, consumedKeywords, consumedReferences, consumedConditions) {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — unconsumed targets/references/keywords")
 	}
+	if !publishCreatedTokenLink(sequence, gateConditions) {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — created-token gate not linkable")
+	}
 	return game.Mode{Targets: targets, Sequence: sequence}.Ability(), nil
+}
+
+// publishCreatedTokenLink wires a resolving "If the token is ..." gate (Yenna,
+// Redtooth Regent) to the token a prior clause created. When a gate condition
+// binds ReferenceBindingCreatedToken its lowered object reference points at the
+// createdTokenLinkKey linked object, so the creating CreateToken instruction must
+// publish that link. It sets PublishLinked on the sequence's single CreateToken
+// instruction. It returns false (fail closed) when the sequence has no
+// CreateToken, more than one CreateToken, or a CreateToken that already
+// publishes a different link.
+func publishCreatedTokenLink(sequence []game.Instruction, conditions []compiler.CompiledCondition) bool {
+	gated := false
+	for ci := range conditions {
+		if conditions[ci].ObjectBinding == compiler.ReferenceBindingCreatedToken {
+			gated = true
+			break
+		}
+	}
+	if !gated {
+		return true
+	}
+	createIndex := -1
+	for si := range sequence {
+		if sequence[si].Primitive.Kind() != game.PrimitiveCreateToken {
+			continue
+		}
+		if createIndex >= 0 {
+			return false
+		}
+		createIndex = si
+	}
+	if createIndex < 0 {
+		return false
+	}
+	create, ok := sequence[createIndex].Primitive.(game.CreateToken)
+	if !ok || (create.PublishLinked != "" && create.PublishLinked != createdTokenLinkKey) {
+		return false
+	}
+	create.PublishLinked = createdTokenLinkKey
+	sequence[createIndex].Primitive = create
+	return true
 }
 
 // conditionReferenceCount counts the references whose span falls within one of
@@ -319,6 +429,32 @@ func conditionReferenceCount(
 		}
 	}
 	return count
+}
+
+// referencesOutsideConditionSpans returns the references whose source span is
+// not covered by any of the given conditions' spans, the complement of the
+// references credited by conditionReferenceCount. It separates a gate
+// condition's own object references (e.g. the "this spell" in "If this spell was
+// kicked, ...") from the effect body's references when both fall inside the same
+// effect clause span.
+func referencesOutsideConditionSpans(
+	references []compiler.CompiledReference,
+	conditions []compiler.CompiledCondition,
+) []compiler.CompiledReference {
+	var outside []compiler.CompiledReference
+	for ri := range references {
+		within := false
+		for ci := range conditions {
+			if spanCovered(references[ri].Span, []shared.Span{conditions[ci].Span}) {
+				within = true
+				break
+			}
+		}
+		if !within {
+			outside = append(outside, references[ri])
+		}
+	}
+	return outside
 }
 
 // sequenceCountsConsumed reports whether the per-clause lowering consumed every
@@ -365,20 +501,18 @@ func lowerLinkedSearchUntapSequence(ctx contentCtx) (game.AbilityContent, bool) 
 		group.Spec.Destination != zone.Battlefield ||
 		!group.Spec.EntersTapped ||
 		group.Spec.SplitDestination.Exists ||
-		!group.Spec.CardType.Exists ||
-		group.Spec.CardType.Val != types.Land ||
-		group.Spec.Permanent ||
-		len(group.Spec.SubtypesAny) != 0 ||
-		group.Spec.MaxManaValue.Exists ||
+		len(group.Spec.Filter.RequiredTypes) != 1 ||
+		group.Spec.Filter.RequiredTypes[0] != types.Land ||
+		group.Spec.Filter.RequirePermanentCard ||
+		len(group.Spec.Filter.SubtypesAny) != 0 ||
+		group.Spec.Filter.ManaValue.Exists ||
 		group.Spec.MaxManaValueFromX ||
-		group.Spec.MaxPower.Exists ||
-		group.Spec.MinPower.Exists ||
-		group.Spec.MaxToughness.Exists ||
-		group.Spec.MinToughness.Exists ||
+		group.Spec.Filter.Power.Exists ||
+		group.Spec.Filter.Toughness.Exists ||
 		group.Spec.Reveal ||
 		group.Spec.SharedSubtype ||
-		!group.Spec.Supertype.Exists ||
-		group.Spec.Supertype.Val != types.Basic {
+		len(group.Spec.Filter.Supertypes) != 1 ||
+		group.Spec.Filter.Supertypes[0] != types.Basic {
 		return game.AbilityContent{}, false
 	}
 	putRef := effects[1].References[0]
@@ -435,7 +569,7 @@ func exactControllerLandCountCondition(condition compiler.CompiledCondition) boo
 		!condition.Negated &&
 		condition.Threshold == 4 &&
 		len(selection.RequiredTypes) == 1 &&
-		selection.RequiredTypes[0] == compiler.ConditionCardTypeLand &&
+		selection.RequiredTypes[0] == types.Land &&
 		len(selection.Supertypes) == 0 &&
 		len(selection.SubtypesAny) == 0 &&
 		len(selection.ColorsAny) == 0 &&
@@ -486,11 +620,20 @@ func exactUnqualifiedLandSelector(selector compiler.CompiledSelector) bool {
 // (single continuous effects spread across two clauses) that do not model
 // per-effect conditions. It only runs when the sequence carries no conditions,
 // so a condition can never be silently dropped.
-func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityContent, bool) {
+func lowerCombinedSequenceShapes(cardName string, ctx contentCtx, syntax *parser.Ability) (game.AbilityContent, bool) {
 	if content, ok := lowerShuffleRevealPermanentSequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerRevealUntilSequence(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerRemovalManifestSequence(ctx); ok {
+		return content, true
+	}
+	if content, ok := lowerRevealChooseHandDiscardSequence(ctx); ok {
+		return content, true
+	}
+	if content, ok := lowerRevealHandLifeLossSaddledSequence(ctx); ok {
 		return content, true
 	}
 	if len(ctx.content.Conditions) != 0 {
@@ -511,10 +654,25 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityC
 	if content, ok := lowerLifeLostThisWayDrain(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerControllerDrawLoseShareXSpell(ctx); ok {
+		return content, true
+	}
+	if content, ok := lowerDrainXLifeSpell(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerDestroyedThisWaySequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerDiceTableSequence(cardName, ctx, syntax); ok {
+		return content, true
+	}
+	if content, ok := lowerDieRollResultSequence(cardName, ctx, syntax); ok {
+		return content, true
+	}
 	if content, ok := lowerDiscardDrawGreatestThisWaySequence(ctx); ok {
+		return content, true
+	}
+	if content, ok := lowerDiscardDrawThenManaValueDamageSequence(ctx); ok {
 		return content, true
 	}
 	if content, ok := lowerWheelDiscardDrawSequence(ctx); ok {
@@ -544,7 +702,13 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityC
 	if content, ok := lowerGroupCounterThenGroupKeywordSequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerGroupPumpThenGroupCounterSequence(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerCreateTokenThenGrantKeywordSequence(ctx); ok {
+		return content, true
+	}
+	if content, ok := lowerManifestDreadThenCountersSequence(ctx); ok {
 		return content, true
 	}
 	return game.AbilityContent{}, false
@@ -683,6 +847,87 @@ func lowerGroupCounterThenGroupKeywordSequence(ctx contentCtx) (game.AbilityCont
 					AddAbilities: abilities,
 				}},
 				Duration: game.DurationUntilEndOfTurn,
+			}},
+		},
+	}.Ability(), true
+}
+
+// groupCounterBackReferencePronoun reports whether a counter-placement
+// recipient is the plural group back-reference "each of them" / "each of those
+// creatures" / "each of those" — a pronoun ("them"/"they") or demonstrative
+// ("those") that denotes the group an immediately preceding clause affected
+// rather than a self-contained selection. The single allowed reference carries
+// no antecedent target; the group is reconstructed from the preceding clause.
+func groupCounterBackReferencePronoun(references []compiler.CompiledReference) bool {
+	return len(references) == 1 &&
+		references[0].Kind == compiler.ReferencePronoun &&
+		(references[0].Pronoun == compiler.ReferencePronounThem ||
+			references[0].Pronoun == compiler.ReferencePronounThey ||
+			references[0].Pronoun == compiler.ReferencePronounThose)
+}
+
+// lowerGroupPumpThenGroupCounterSequence lowers the ordered pair "Other
+// creatures you control get +2/+2 until end of turn. Put an indestructible
+// counter on each of them." (Summon: Knights of Round's final chapter). The
+// first clause pumps a never-resolving controlled creature group until end of
+// turn; the second places one fixed counter on every member of that same group,
+// named by the plural back-reference "each of them". Because nothing between the
+// two clauses changes the board, the runtime's group continuous effect and group
+// counter placement both snapshot the same members, so the counter clause's
+// "them" resolves to the just-pumped group. It reuses the pump clause's resolved
+// group for the counter placement and fails closed for any other shape, a
+// non-group pump subject, an unsupported counter kind, or a non-back-reference
+// recipient.
+func lowerGroupPumpThenGroupCounterSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		ctx.optional {
+		return game.AbilityContent{}, false
+	}
+	pumpEffect := ctx.content.Effects[0]
+	counterEffect := ctx.content.Effects[1]
+	if pumpEffect.Kind != compiler.EffectModifyPT ||
+		counterEffect.Kind != compiler.EffectPut ||
+		!pumpEffect.Exact ||
+		pumpEffect.Negated ||
+		pumpEffect.Optional ||
+		pumpEffect.Duration != compiler.DurationUntilEndOfTurn ||
+		pumpEffect.StaticSubject == compiler.StaticSubjectNone {
+		return game.AbilityContent{}, false
+	}
+	if counterEffect.Negated ||
+		counterEffect.Optional ||
+		counterEffect.Context != parser.EffectContextController ||
+		counterEffect.Duration != compiler.DurationNone ||
+		!counterEffect.CounterKindKnown ||
+		!compiler.CounterKindPlacementSupported(counterEffect.CounterKind) ||
+		counterEffect.CounterKind.PlayerOnly() ||
+		!counterEffect.Amount.Known ||
+		counterEffect.Amount.Value < 1 ||
+		!groupCounterBackReferencePronoun(counterEffect.References) {
+		return game.AbilityContent{}, false
+	}
+	group, ok := resolvingStaticSubjectGroup(&pumpEffect)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	continuous, ok := groupModifyPTContinuousEffect(&pumpEffect, group)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{Primitive: game.ApplyContinuous{
+				ContinuousEffects: []game.ContinuousEffect{continuous},
+				Duration:          game.DurationUntilEndOfTurn,
+			}},
+			{Primitive: game.AddCounter{
+				Amount:      game.Fixed(counterEffect.Amount.Value),
+				Group:       group,
+				CounterKind: counterEffect.CounterKind,
 			}},
 		},
 	}.Ability(), true
@@ -943,16 +1188,306 @@ func lowerShuffleRevealPermanentSequence(ctx contentCtx) (game.AbilityContent, b
 					Source:    game.LinkedBattlefieldSource(key),
 					Recipient: opt.Val(owner),
 				},
-				CardCondition: opt.Val(game.CardCondition{
+				CardCondition: opt.Val(game.CardSelection{
 					Card: game.CardReference{
 						Kind:   game.CardReferenceLinked,
 						LinkID: string(key),
 					},
-					RequirePermanentCard: true,
+					Selection: game.Selection{RequirePermanentCard: true},
 				}),
 			},
 		},
 	}.Ability(), true
+}
+
+// lowerRevealHandLifeLossSaddledSequence lowers the Caustic Bronco shape:
+// "reveal the top card of your library and put it into your hand. You lose life
+// equal to that card's mana value if this creature isn't saddled. Otherwise,
+// each opponent loses that much life." It reveals the controller's top library
+// card, moves it to hand, then drains life equal to that card's mana value —
+// from the controller on the gated branch and from each opponent on the
+// negated "otherwise" branch. The per-effect gate condition (the saddled-state
+// gate) is matched and lowered through the shared sequence-gate machinery, and
+// its negation gates the otherwise branch, so exactly one of the two life-loss
+// branches resolves. Both branches read the same revealed card's mana value,
+// which is the meaning of "that much life" here (the controller never loses
+// life on the saddled branch, so it cannot refer to a prior life loss).
+func lowerRevealHandLifeLossSaddledSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 4 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 1 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	reveal := ctx.content.Effects[0]
+	put := ctx.content.Effects[1]
+	loseSelf := ctx.content.Effects[2]
+	loseOpponents := ctx.content.Effects[3]
+	if reveal.Kind != compiler.EffectReveal ||
+		reveal.Context != parser.EffectContextController ||
+		reveal.Selector.Kind != compiler.SelectorCard ||
+		reveal.Optional || reveal.Negated ||
+		len(reveal.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	if put.Kind != compiler.EffectPut ||
+		put.Connection != parser.EffectConnectionAnd ||
+		put.Context != parser.EffectContextController ||
+		put.ToZone != zone.Hand ||
+		put.Optional || put.Negated ||
+		len(put.References) != 1 ||
+		!referencesBindTo(put.References, compiler.ReferenceBindingPriorInstructionResult, 0) {
+		return game.AbilityContent{}, false
+	}
+	if loseSelf.Kind != compiler.EffectLose ||
+		loseSelf.Context != parser.EffectContextController ||
+		!loseSelf.LifeObject ||
+		loseSelf.Optional || loseSelf.Negated ||
+		loseSelf.Amount.DynamicKind != compiler.DynamicAmountSourceManaValue ||
+		loseSelf.Amount.Multiplier != 1 ||
+		len(loseSelf.References) != 1 {
+		return game.AbilityContent{}, false
+	}
+	if loseOpponents.Kind != compiler.EffectLose ||
+		loseOpponents.Connection != parser.EffectConnectionOtherwise ||
+		loseOpponents.Context != parser.EffectContextEachOpponent ||
+		!loseOpponents.LifeObject ||
+		loseOpponents.Optional || loseOpponents.Negated ||
+		loseOpponents.Amount.DynamicKind != compiler.DynamicAmountTriggeringLifeChange ||
+		len(loseOpponents.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+
+	// Match and lower the per-effect gate condition (the saddled-state gate on
+	// the controller's life-loss branch) and derive its negation for the
+	// each-opponent otherwise branch. The single condition must gate exactly the
+	// controller branch; any other shape fails closed.
+	effectConditions, _, ok := matchSequenceEffectConditions(ctx.content.Effects, ctx.content.Conditions)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	selfGate, gated := effectConditions[2]
+	if !gated || len(effectConditions) != 1 {
+		return game.AbilityContent{}, false
+	}
+	otherwiseGates, ok := sequenceOtherwiseGates(ctx.content.Effects, effectConditions, optionalFlowPlan{elseIndex: -1})
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	opponentsGate, gated := otherwiseGates[3]
+	if !gated || len(otherwiseGates) != 1 {
+		return game.AbilityContent{}, false
+	}
+
+	key := game.LinkedKey("revealed-card-1")
+	linked := game.LinkedObjectReference(string(key))
+	manaValue, ok := objectCharacteristicAmount(compiler.DynamicAmountSourceManaValue, linked)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{Primitive: game.Reveal{
+				Amount:        game.Fixed(1),
+				Player:        game.ControllerReference(),
+				PublishLinked: key,
+			}},
+			{Primitive: game.MoveCard{
+				Card: game.CardReference{
+					Kind:   game.CardReferenceLinked,
+					LinkID: string(key),
+				},
+				FromZone:    zone.Library,
+				Destination: zone.Hand,
+			}},
+			{
+				Primitive: game.LoseLife{
+					Player: game.ControllerReference(),
+					Amount: game.Dynamic(manaValue),
+				},
+				Condition: opt.Val(selfGate),
+			},
+			{
+				Primitive: game.LoseLife{
+					PlayerGroup: game.OpponentsReference(),
+					Amount:      game.Dynamic(manaValue),
+				},
+				Condition: opt.Val(opponentsGate),
+			},
+		},
+	}.Ability(), true
+}
+
+// lowerRevealUntilSequence lowers the closed "reveal cards from the top of
+// <library> until <player> reveal a <type> card, then put those cards into
+// <zone>" family (Undercity Informer, Balustrade Spy, Treasure Hunt) into a
+// single RevealUntil primitive. The parser marks all three effects with
+// RevealUntilThenPut, records the boundary card type on the match reveal's
+// selector, and the destination on the put effect's ToZone. This text-blind
+// lowerer reads only those typed fields plus the head reveal's player subject;
+// any shape mismatch or unmodeled subject fails closed.
+func lowerRevealUntilSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 3 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	revealUntil := ctx.content.Effects[0]
+	matchReveal := ctx.content.Effects[1]
+	put := ctx.content.Effects[2]
+	if !revealUntil.RevealUntilThenPut ||
+		!matchReveal.RevealUntilThenPut ||
+		!put.RevealUntilThenPut ||
+		revealUntil.Kind != compiler.EffectReveal ||
+		matchReveal.Kind != compiler.EffectReveal ||
+		put.Kind != compiler.EffectPut {
+		return game.AbilityContent{}, false
+	}
+	if put.ToZone != zone.Graveyard && put.ToZone != zone.Hand {
+		return game.AbilityContent{}, false
+	}
+	until, ok := cardSelectionForSelector(matchReveal.Selector)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	primitive := game.RevealUntil{
+		Until:       until,
+		Destination: put.ToZone,
+	}
+	targets, ok := revealUntilPlayerSubject(ctx, revealUntil.Context, &primitive)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Targets: targets,
+		Sequence: []game.Instruction{
+			{Primitive: primitive},
+		},
+	}.Ability(), true
+}
+
+// revealUntilPlayerSubject resolves the reveal's player subject from the head
+// reveal effect's typed Context, setting the primitive's single Player or group
+// PlayerGroup, and returns the player target spec when the subject is a single
+// target player. Unmodeled subjects fail closed.
+func revealUntilPlayerSubject(
+	ctx contentCtx,
+	context parser.EffectContextKind,
+	primitive *game.RevealUntil,
+) ([]game.TargetSpec, bool) {
+	switch context {
+	case parser.EffectContextController:
+		if len(ctx.content.Targets) != 0 {
+			return nil, false
+		}
+		primitive.Player = game.ControllerReference()
+		return nil, true
+	case parser.EffectContextEachOpponent, parser.EffectContextEachOtherPlayer:
+		if len(ctx.content.Targets) != 0 {
+			return nil, false
+		}
+		primitive.PlayerGroup = game.OpponentsReference()
+		return nil, true
+	case parser.EffectContextEachPlayer:
+		if len(ctx.content.Targets) != 0 {
+			return nil, false
+		}
+		primitive.PlayerGroup = game.AllPlayersReference()
+		return nil, true
+	case parser.EffectContextTarget, parser.EffectContextPriorSubject:
+		if len(ctx.content.Targets) != 1 {
+			return nil, false
+		}
+		targetSpec, ok := playerTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return nil, false
+		}
+		primitive.Player = game.TargetPlayerReference(0)
+		return []game.TargetSpec{targetSpec}, true
+	}
+	return nil, false
+}
+
+// lowerRevealChooseHandDiscardSequence lowers the targeted hand-disruption
+// family "Target player reveals their hand. You choose a [filter] card from it.
+// That player discards that card.[ You lose N life.]" (Coercion, Duress,
+// Thoughtseize, Inquisition of Kozilek) into a single ChooseDiscardFromHand
+// primitive (optionally followed by a controller LoseLife for the Thoughtseize
+// rider). The parser marks the reveal and discard halves with
+// RevealChooseDiscard and folds the filter onto the discard's HandChoiceDiscard;
+// this text-blind lowerer reads only those typed fields plus the lone target
+// player. Any shape mismatch fails closed so the general sequence path is
+// untouched.
+func lowerRevealChooseHandDiscardSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effects := ctx.content.Effects
+	if len(effects) != 2 && len(effects) != 3 {
+		return game.AbilityContent{}, false
+	}
+	reveal := effects[0]
+	discard := effects[1]
+	if !reveal.RevealChooseDiscard ||
+		!discard.RevealChooseDiscard ||
+		reveal.Kind != compiler.EffectReveal ||
+		discard.Kind != compiler.EffectDiscard ||
+		!discard.HandChoiceDiscard.Present ||
+		reveal.Context != parser.EffectContextTarget ||
+		discard.Context != parser.EffectContextReferencedPlayer {
+		return game.AbilityContent{}, false
+	}
+	targetSpec, ok := playerTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	primitive := game.ChooseDiscardFromHand{
+		Player:          game.TargetPlayerReference(0),
+		ExcludeCreature: discard.HandChoiceDiscard.ExcludeCreature,
+		ExcludeLand:     discard.HandChoiceDiscard.ExcludeLand,
+	}
+	if discard.HandChoiceDiscard.HasMaxManaValue {
+		primitive.MaxManaValue = opt.Val(discard.HandChoiceDiscard.MaxManaValue)
+	}
+	sequence := []game.Instruction{{Primitive: primitive}}
+	if len(effects) == 3 {
+		lose, ok := revealChooseDiscardLifeLoss(effects[2])
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		sequence = append(sequence, game.Instruction{Primitive: lose})
+	}
+	return game.Mode{
+		Targets:  []game.TargetSpec{targetSpec},
+		Sequence: sequence,
+	}.Ability(), true
+}
+
+// revealChooseDiscardLifeLoss lowers the optional trailing "You lose N life."
+// rider (Thoughtseize) into a controller LoseLife of a fixed positive amount.
+// Any non-fixed or non-controller life change fails closed.
+func revealChooseDiscardLifeLoss(effect compiler.CompiledEffect) (game.LoseLife, bool) {
+	if effect.Kind != compiler.EffectLose ||
+		effect.Context != parser.EffectContextController ||
+		!effect.LifeObject ||
+		effect.Negated ||
+		!effect.Amount.Known ||
+		effect.Amount.Value < 1 {
+		return game.LoseLife{}, false
+	}
+	return game.LoseLife{
+		Amount: game.Fixed(effect.Amount.Value),
+		Player: game.ControllerReference(),
+	}, true
 }
 
 func referencesContainBinding(references []compiler.CompiledReference, binding compiler.ReferenceBinding, prior int) bool {
@@ -1148,8 +1683,94 @@ func lowerTapStunSequence(ctx contentCtx) (game.AbilityContent, bool) {
 	}.Ability(), true
 }
 
-// referencesIncludeThose reports whether the reference set contains the plural
-// demonstrative "those" — the back-reference wording ("those cards") that group
+// lowerStandaloneStunEffect lowers the standalone targeted stun "Target
+// <permanent> doesn't untap during its controller's next untap step." (Sleeper
+// Dart, House Guildmage, Skyline Cascade) into a single SkipNextUntap on the
+// effect's own permanent target. Unlike the tap-down sequence, no tap precedes
+// the stun: the spell or ability only denies the target its next untap. It
+// accepts only the parser-exact single negated-untap effect carrying one
+// permanent target and one possessive "its controller's" reference that resolves
+// to that target; every other shape (added clauses, mass or plural wording, a
+// non-target reference, or a multi-step window) fails closed so the general
+// paths are untouched.
+func lowerStandaloneStunEffect(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 || ctx.optional ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Conditions) != 0 {
+		return game.AbilityContent{}, false
+	}
+	stun := ctx.content.Effects[0]
+	if stun.Kind != compiler.EffectUntap || !stun.Negated || stun.Optional || !stun.Exact ||
+		stun.Context != parser.EffectContextTarget ||
+		stun.Duration != compiler.DurationNone || stun.DelayedTiming != 0 ||
+		len(stun.Targets) != 1 {
+		return game.AbilityContent{}, false
+	}
+	// Every content reference must be the stun clause's possessive "its" pointing
+	// at the targeted permanent (target 0); reject anything else so no reference
+	// is silently dropped.
+	if len(ctx.content.References) == 0 {
+		return game.AbilityContent{}, false
+	}
+	for _, ref := range ctx.content.References {
+		if ref.Binding != compiler.ReferenceBindingTarget || ref.Occurrence != 0 {
+			return game.AbilityContent{}, false
+		}
+	}
+	targetSpec, ok := permanentTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{
+			{Primitive: game.SkipNextUntap{Object: game.TargetPermanentReference(0)}},
+		},
+	}.Ability(), true
+}
+
+// lowerStandaloneSourceStunEffect lowers the self-source stun "This <permanent>
+// doesn't untap during your next untap step." (the dual lands Mogg Hollows /
+// Rootwater Depths and Arbalest Elite) into a single SkipNextUntap on the
+// source itself. The stunned permanent is the resolving source — there is no
+// target and no tap — so the instruction references the source permanent
+// directly. It accepts only the parser-exact single negated-untap effect whose
+// context is the source and whose one reference binds to the source ("This
+// land"/"This creature"); every other shape (added clauses, a target, mass or
+// plural wording, a non-source reference, or a multi-step window) fails closed.
+// Multi-effect abilities reach this lowerer per clause through the ordered
+// sequence path, so "{T}: Add {R} or {G}. This land doesn't untap ..." lowers
+// the appended stun as its own instruction.
+func lowerStandaloneSourceStunEffect(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 || ctx.optional ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Conditions) != 0 {
+		return game.AbilityContent{}, false
+	}
+	stun := ctx.content.Effects[0]
+	if stun.Kind != compiler.EffectUntap || !stun.Negated || stun.Optional || !stun.Exact ||
+		stun.Context != parser.EffectContextSource ||
+		stun.Duration != compiler.DurationNone || stun.DelayedTiming != 0 ||
+		len(stun.Targets) != 0 {
+		return game.AbilityContent{}, false
+	}
+	// The clause's single reference must be the self "This <permanent>" subject
+	// binding to the source; reject anything else so no reference is dropped.
+	if len(ctx.content.References) != 1 ||
+		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingSource, 0) {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{Primitive: game.SkipNextUntap{Object: game.SourcePermanentReference()}},
+		},
+	}.Ability(), true
+}
+
 // blink uses to name the several exiled cards. It distinguishes the multi-target
 // flicker from the singular "it"/"that card" single-target blink, which the
 // per-clause path lowers on its own.
@@ -1617,10 +2238,18 @@ func sequenceInsteadGates(
 func sequenceOtherwiseGates(
 	effects []compiler.CompiledEffect,
 	effectConditions map[int]game.EffectCondition,
+	optionalFlow optionalFlowPlan,
 ) (map[int]game.EffectCondition, bool) {
 	var gates map[int]game.EffectCondition
 	for j := range effects {
 		if effects[j].Connection != parser.EffectConnectionOtherwise {
+			continue
+		}
+		// An "Otherwise" effect that is the else branch of a resolving-optional
+		// flow ("you may X. If you do, Y. Otherwise, Z.") is gated on the optional
+		// result by the optional-flow envelope, not on a preceding effect's
+		// condition, so skip it here.
+		if optionalFlow.gatesElse(j) {
 			continue
 		}
 		if j == 0 {
@@ -1797,6 +2426,26 @@ func lowerDelayedSequenceClause(
 		sequence[len(sequence)-1].Primitive = modify
 		return delayed, true, false
 	}
+	if modify, delayed, ok := lowerDelayedCombatDamageDrawTrigger(effectIndex, ctx, sequence); ok {
+		sequence[len(sequence)-1].Primitive = modify
+		return delayed, true, false
+	}
+	if publisher, delayed, ok := lowerDelayedTargetExile(effectIndex, ctx, sequence); ok {
+		sequence[len(sequence)-1].Primitive = publisher
+		return delayed, true, false
+	}
+	if publisher, grant, ok := lowerSequentialReferencedKeywordGrant(effectIndex, ctx, sequence); ok {
+		sequence[len(sequence)-1].Primitive = publisher
+		return grant, true, false
+	}
+	if publisher, replacement, ok := lowerSequentialLeaveBattlefieldExileReplacement(effectIndex, ctx, sequence); ok {
+		sequence[len(sequence)-1].Primitive = publisher
+		return replacement, true, false
+	}
+	if publisher, placement, ok := lowerSequentialReanimationCounterPlacement(effectIndex, ctx, sequence); ok {
+		sequence[len(sequence)-1].Primitive = publisher
+		return placement, true, false
+	}
 	if exile, delayed, ok := lowerDelayedBlinkReturn(effects, effectIndex, ctx, sequence); ok {
 		sequence[len(sequence)-1].Primitive = exile
 		return delayed, true, false
@@ -1813,6 +2462,9 @@ func lowerDelayedSequenceClause(
 			sequence[len(sequence)-1].PublishResult = lowered.priorResult
 		}
 		return lowered.content, true, false
+	}
+	if content, ok := lowerThatMuchLifeBackref(ctx, effectIndex, sequence); ok {
+		return content, true, false
 	}
 	return game.AbilityContent{}, false, false
 }
@@ -1896,6 +2548,7 @@ func lowerCharacteristicLifeRider(
 		amountRef,
 		effectIndex,
 		sequence,
+		effect.Amount.DynamicKind == compiler.DynamicAmountSourceManaValue,
 	)
 	if !ok {
 		return characteristicLifeRiderLowering{}, false
@@ -1997,11 +2650,39 @@ func lifeRiderAmountObject(
 	amountRef compiler.CompiledReference,
 	effectIndex int,
 	sequence []game.Instruction,
+	manaValue bool,
 ) (lifeRiderAmountLowering, bool) {
 	switch amountRef.Binding {
 	case compiler.ReferenceBindingTarget:
+		// "lose life equal to that card's mana value" after an exact return to the
+		// battlefield under its owner's control ("Return target creature card from
+		// your graveyard to the battlefield") binds the amount to the returned
+		// card's target. The card becomes a fresh permanent on entry, so the rider
+		// must read the entered permanent's last-known mana value rather than the
+		// stale graveyard target. Route through the reanimation publish path, which
+		// rewrites the move to record the entered permanent and gates the life
+		// change on the move reaching the battlefield. An "under your control"
+		// return binds "that card" to the prior instruction result instead and is
+		// handled below; its target-bound "its mana value" variant stays fail
+		// closed because that pronoun does not anchor the card-to-permanent move.
+		if manaValue &&
+			reanimationManaValueAntecedent(effects, effectIndex) &&
+			!effects[effectIndex-1].UnderYourControl {
+			put, ok := sequence[effectIndex-1].Primitive.(game.PutOnBattlefield)
+			if !ok {
+				return lifeRiderAmountLowering{}, false
+			}
+			return reanimationManaValuePublish(put, amountRef, effectIndex, true)
+		}
 		obj, ok := lowerObjectReference(amountRef, referenceLoweringContext{AllowTarget: true})
 		if !ok {
+			return lifeRiderAmountLowering{}, false
+		}
+		// A power/toughness rider whose referent binds the target of a graveyard
+		// reanimation reads the stale graveyard card rather than the fresh
+		// permanent; only the mana-value publish path tracks the card-to-permanent
+		// move, so non-mana-value characteristics fail closed here.
+		if !manaValue && reanimationManaValueAntecedent(effects, effectIndex) {
 			return lifeRiderAmountLowering{}, false
 		}
 		return lifeRiderAmountLowering{object: obj}, true
@@ -2028,33 +2709,53 @@ func lifeRiderAmountObject(
 			return lifeRiderAmountLowering{object: obj, priorPrimitive: exile}, true
 		}
 		put, ok := sequence[effectIndex-1].Primitive.(game.PutOnBattlefield)
-		if !ok ||
-			put.PublishLinked != "" ||
-			!reanimationManaValueAntecedent(effects, effectIndex) {
+		if !ok || !manaValue || !reanimationManaValueAntecedent(effects, effectIndex) {
 			return lifeRiderAmountLowering{}, false
 		}
-		card, ok := put.Source.CardRef()
-		if !ok || card.Kind != game.CardReferenceTarget {
-			return lifeRiderAmountLowering{}, false
-		}
-		key := game.LinkedKey(fmt.Sprintf("life-rider-%d", effectIndex))
-		obj, ok := lowerObjectReference(amountRef, referenceLoweringContext{
-			PriorInstruction: effectIndex - 1,
-			PriorLinkedKey:   key,
-		})
-		if !ok {
-			return lifeRiderAmountLowering{}, false
-		}
-		put.PublishLinked = key
-		resultKey := game.ResultKey(fmt.Sprintf("life-rider-move-%d", effectIndex))
-		return lifeRiderAmountLowering{
-			object:         obj,
-			priorPrimitive: put,
-			priorResult:    resultKey,
-		}, true
+		return reanimationManaValuePublish(put, amountRef, effectIndex, false)
 	default:
 		return lifeRiderAmountLowering{}, false
 	}
+}
+
+// reanimationManaValuePublish rewrites the immediately preceding reanimation
+// PutOnBattlefield so it records the entered permanent under a linked key and
+// returns the linked object whose mana value the life rider reads, gated on the
+// move reaching the battlefield. targetBound selects whether the amount
+// reference binds the move's target card ("that card's mana value") or the prior
+// instruction's published result.
+func reanimationManaValuePublish(
+	put game.PutOnBattlefield,
+	amountRef compiler.CompiledReference,
+	effectIndex int,
+	targetBound bool,
+) (lifeRiderAmountLowering, bool) {
+	if put.PublishLinked != "" {
+		return lifeRiderAmountLowering{}, false
+	}
+	card, ok := put.Source.CardRef()
+	if !ok || card.Kind != game.CardReferenceTarget {
+		return lifeRiderAmountLowering{}, false
+	}
+	key := game.LinkedKey(fmt.Sprintf("life-rider-%d", effectIndex))
+	refCtx := referenceLoweringContext{}
+	if targetBound {
+		refCtx.TargetLinkedKey = key
+	} else {
+		refCtx.PriorInstruction = effectIndex - 1
+		refCtx.PriorLinkedKey = key
+	}
+	obj, ok := lowerObjectReference(amountRef, refCtx)
+	if !ok {
+		return lifeRiderAmountLowering{}, false
+	}
+	put.PublishLinked = key
+	resultKey := game.ResultKey(fmt.Sprintf("life-rider-move-%d", effectIndex))
+	return lifeRiderAmountLowering{
+		object:         obj,
+		priorPrimitive: put,
+		priorResult:    resultKey,
+	}, true
 }
 
 func reanimationManaValueAntecedent(effects []compiler.CompiledEffect, effectIndex int) bool {
@@ -2067,7 +2768,6 @@ func reanimationManaValueAntecedent(effects []compiler.CompiledEffect, effectInd
 		effect.Negated ||
 		effect.FromZone != zone.Graveyard ||
 		effect.ToZone != zone.Battlefield ||
-		!effect.UnderYourControl ||
 		effect.EntersTapped ||
 		effect.CounterKindKnown ||
 		effect.Amount.Known ||
@@ -2087,7 +2787,17 @@ func reanimationManaValueAntecedent(effects []compiler.CompiledEffect, effectInd
 	if !slices.Equal(selection.RequiredTypes, []types.Card{types.Creature}) {
 		return false
 	}
+	// "from your graveyard" restricts the reanimation target to the controller's
+	// own graveyard, leaving Controller == ControllerYou; "from a graveyard"
+	// leaves it ControllerAny. Either ownership is a valid reanimation antecedent
+	// for the mana-value rider, which reads the entered permanent regardless of
+	// whose graveyard it came from. Clear the ownership constraint before the
+	// no-other-constraints emptiness check and fail closed for any other owner.
+	if selection.Controller != game.ControllerAny && selection.Controller != game.ControllerYou {
+		return false
+	}
 	selection.RequiredTypes = nil
+	selection.Controller = game.ControllerAny
 	return selection.Empty()
 }
 
@@ -2138,7 +2848,300 @@ func lowerDelayedTargetSacrifice(
 	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
 }
 
-// publishLinkedTargetPermanent rewrites a power/toughness or keyword-granting
+// isDelayedTargetExileEffect reports whether effect is a delayed "exile it/that
+// creature at the beginning of the next end step" clause whose subject is the
+// permanent targeted by an earlier effect in the same sequence (the temporary-
+// reanimation cleanup "Return target creature card ... Exile it at the beginning
+// of the next end step." — Whip of Erebos and kin).
+func isDelayedTargetExileEffect(effect *compiler.CompiledEffect) bool {
+	return effect.Kind == compiler.EffectExile &&
+		effect.DelayedTiming == game.DelayedAtBeginningOfNextEndStep &&
+		!effect.Negated &&
+		effect.Context == parser.EffectContextController &&
+		!effect.CounterKindKnown &&
+		referencesBindTo(effect.References, compiler.ReferenceBindingTarget, 0)
+}
+
+// lowerDelayedTargetExile lowers a delayed "Exile it at the beginning of the next
+// end step." clause that exiles the permanent an earlier clause put onto the
+// battlefield or pumped. It captures that permanent under a linked key (rewriting
+// the earlier publishing instruction) and schedules a delayed end-step trigger
+// that exiles the linked object, mirroring lowerDelayedTargetSacrifice. It
+// returns ok=false (so the caller lowers the clause normally) for any shape it
+// cannot link, preserving existing behavior for unlinkable predecessors.
+func lowerDelayedTargetExile(
+	effectIndex int,
+	ctx contentCtx,
+	sequence []game.Instruction,
+) (game.Primitive, game.AbilityContent, bool) {
+	if effectIndex == 0 ||
+		len(sequence) != effectIndex ||
+		len(ctx.content.Effects) != 1 ||
+		!isDelayedTargetExileEffect(&ctx.content.Effects[0]) ||
+		ctx.optional ||
+		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0) {
+		return nil, game.AbilityContent{}, false
+	}
+	key := game.LinkedKey(fmt.Sprintf("delayed-exile-%d", effectIndex))
+	publisher, ok := publishLinkedTargetPermanent(sequence[effectIndex-1].Primitive, key)
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	consumed := ctx
+	consumed.content.References = nil
+	consumed.content.Targets = nil
+	if consumed.content.Unconsumed() {
+		return nil, game.AbilityContent{}, false
+	}
+	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+		TargetLinkedKey: key,
+	})
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+		Timing: game.DelayedAtBeginningOfNextEndStep,
+		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.Exile{
+			Object: object,
+		}}}}.Ability(),
+	}}
+	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
+}
+
+// isSequentialReferencedKeywordGrantEffect reports whether effect is an exact
+// no-duration "it gains <keyword>" clause whose subject is the permanent an
+// earlier clause in the same sequence acted on (the reanimation companion grant
+// "Return target creature card ... to the battlefield. It gains haste." — Whip of
+// Erebos, Apprentice Necromancer, Puppeteer Clique). The keyword lasts as long as
+// the permanent remains on the battlefield, so the duration is absent rather than
+// until end of turn.
+func isSequentialReferencedKeywordGrantEffect(effect *compiler.CompiledEffect) bool {
+	return effect.Kind == compiler.EffectGain &&
+		effect.Exact &&
+		!effect.Negated &&
+		effect.Context == parser.EffectContextReferencedObject &&
+		effect.Duration == compiler.DurationNone &&
+		effect.StaticSubject == compiler.StaticSubjectNone &&
+		referencesBindTo(effect.References, compiler.ReferenceBindingTarget, 0)
+}
+
+// lowerSequentialReferencedKeywordGrant lowers an "it gains <keyword>." clause
+// that grants a keyword to the permanent an earlier clause in the same sequence
+// put onto the battlefield or otherwise acted on. "It" binds to that earlier
+// permanent, which (for a reanimation) is a freshly created object that the
+// targeted graveyard card became, so a plain target-permanent reference cannot
+// resolve it. The earlier publishing instruction is rewritten to record the
+// permanent under a linked key, and the keyword grant reads that linked object,
+// mirroring lowerDelayedTargetExile's capture. It returns the rewritten
+// publishing primitive and the grant content, or false to fail closed so the
+// caller lowers the clause normally.
+func lowerSequentialReferencedKeywordGrant(
+	effectIndex int,
+	ctx contentCtx,
+	sequence []game.Instruction,
+) (game.Primitive, game.AbilityContent, bool) {
+	if effectIndex == 0 ||
+		len(sequence) != effectIndex ||
+		len(ctx.content.Effects) != 1 ||
+		ctx.optional ||
+		len(ctx.content.Keywords) == 0 ||
+		!isSequentialReferencedKeywordGrantEffect(&ctx.content.Effects[0]) {
+		return nil, game.AbilityContent{}, false
+	}
+	keywords, abilities, ok := partitionTemporaryKeywords(ctx.content.Keywords)
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	key := game.LinkedKey(fmt.Sprintf("gain-keyword-%d", effectIndex))
+	publisher, ok := publishLinkedTargetPermanent(sequence[effectIndex-1].Primitive, key)
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	consumed := ctx
+	consumed.content.References = nil
+	consumed.content.Keywords = nil
+	consumed.content.Targets = nil
+	if consumed.content.Unconsumed() {
+		return nil, game.AbilityContent{}, false
+	}
+	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+		TargetLinkedKey: key,
+	})
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	grant := game.ApplyContinuous{
+		Object: opt.Val(object),
+		ContinuousEffects: []game.ContinuousEffect{{
+			Layer:        game.LayerAbility,
+			AddKeywords:  keywords,
+			AddAbilities: abilities,
+		}},
+		Duration: game.DurationPermanent,
+	}
+	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: grant}}}.Ability(), true
+}
+
+// isLeaveBattlefieldExileReplacementEffect reports whether effect is the exact
+// leaves-the-battlefield exile replacement "If it would leave the battlefield,
+// exile it instead of putting it anywhere else." applied to the permanent an
+// earlier clause in the same sequence acted on (Whip of Erebos). "It" binds to
+// that earlier permanent.
+func isLeaveBattlefieldExileReplacementEffect(effect *compiler.CompiledEffect) bool {
+	return effect.Kind == compiler.EffectExileIfLeaveBattlefield &&
+		effect.Exact &&
+		!effect.Negated &&
+		effect.Context == parser.EffectContextReferencedObject &&
+		referencesBindTo(effect.References, compiler.ReferenceBindingTarget, 0)
+}
+
+// lowerSequentialLeaveBattlefieldExileReplacement lowers an "If it would leave
+// the battlefield, exile it instead of putting it anywhere else." clause that
+// redirects any zone change off the battlefield to exile for the permanent an
+// earlier clause in the same sequence put onto the battlefield or otherwise
+// acted on (Whip of Erebos's reanimated creature). "It" binds to that earlier
+// permanent, which (for a reanimation) is a freshly created object a plain
+// target-permanent reference cannot resolve, so the lowering reuses the linked
+// key under which an earlier clause already recorded the permanent, or rewrites
+// the immediately-prior instruction to publish it. The created replacement is a
+// CreateReplacement bound to that linked object. It returns the (possibly
+// rewritten) prior publishing primitive and the replacement content, or false to
+// fail closed so the caller lowers the clause normally.
+func lowerSequentialLeaveBattlefieldExileReplacement(
+	effectIndex int,
+	ctx contentCtx,
+	sequence []game.Instruction,
+) (game.Primitive, game.AbilityContent, bool) {
+	if effectIndex == 0 ||
+		len(sequence) != effectIndex ||
+		len(ctx.content.Effects) != 1 ||
+		ctx.optional ||
+		!isLeaveBattlefieldExileReplacementEffect(&ctx.content.Effects[0]) {
+		return nil, game.AbilityContent{}, false
+	}
+	key, publisher, ok := reuseOrPublishLinkedPermanent(effectIndex, sequence)
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	consumed := ctx
+	consumed.content.References = nil
+	consumed.content.Targets = nil
+	if consumed.content.Unconsumed() {
+		return nil, game.AbilityContent{}, false
+	}
+	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+		TargetLinkedKey: key,
+	})
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	create := game.CreateReplacement{
+		Object: object,
+		Replacement: &game.ReplacementEffect{
+			MatchEvent:    game.EventZoneChanged,
+			MatchFromZone: true,
+			FromZone:      zone.Battlefield,
+			ReplaceToZone: zone.Exile,
+		},
+	}
+	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: create}}}.Ability(), true
+}
+
+// lowerSequentialReanimationCounterPlacement lowers a counter-placement clause
+// ("Put a +1/+1 counter on it." / "Put a +1/+1 counter or a loyalty counter on
+// it.", Elspeth Conquers Death chapter III) whose "it" denotes the permanent a
+// preceding reanimation clause in the same sequence returned to the battlefield.
+// A reanimated permanent is a fresh object a plain target-permanent reference
+// cannot resolve, so the clause binds to the linked key under which the
+// immediately-prior battlefield-entry instruction publishes the entered
+// permanent. It returns the rewritten publishing primitive and the AddCounter
+// content, or false to fail closed so the caller lowers the clause normally. It
+// applies only when the prior instruction is a single-source battlefield entry,
+// where the generic target-permanent reference would be invalid; every other
+// prior shape is left to the generic referenced-counter path.
+func lowerSequentialReanimationCounterPlacement(
+	effectIndex int,
+	ctx contentCtx,
+	sequence []game.Instruction,
+) (game.Primitive, game.AbilityContent, bool) {
+	if effectIndex == 0 ||
+		len(sequence) != effectIndex ||
+		ctx.optional ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.References) != 1 {
+		return nil, game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectPut ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		!effect.Amount.Known ||
+		effect.Amount.Value <= 0 ||
+		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0) {
+		return nil, game.AbilityContent{}, false
+	}
+	if sequence[effectIndex-1].Primitive.Kind() != game.PrimitivePutOnBattlefield {
+		return nil, game.AbilityContent{}, false
+	}
+	kindChoices, ok := referencedCounterKindChoices(effect)
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	consumed := ctx
+	consumed.content.References = nil
+	consumed.content.Targets = nil
+	if consumed.content.Unconsumed() {
+		return nil, game.AbilityContent{}, false
+	}
+	key, publisher, ok := reuseOrPublishLinkedPermanent(effectIndex, sequence)
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+		TargetLinkedKey: key,
+	})
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	add := game.AddCounter{
+		Amount: game.Fixed(effect.Amount.Value),
+		Object: object,
+	}
+	if len(kindChoices) != 0 {
+		add.KindChoices = kindChoices
+	} else {
+		add.CounterKind = effect.CounterKind
+	}
+	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: add}}}.Ability(), true
+}
+
+// reuseOrPublishLinkedPermanent locates the permanent an earlier clause in the
+// sequence recorded under a linked key so a later linked effect can bind to it.
+// It scans backward for the most recent already-published linked key and reuses
+// it (returning the immediately-prior primitive unchanged); when none exists it
+// rewrites the immediately-prior instruction to publish its acted-on permanent
+// under a fresh key. It returns the key, the primitive to store at the prior
+// instruction slot, and false when the prior instruction cannot be linked.
+// It scans backward for the most recent already-published linked key and reuses
+// it (returning the immediately-prior primitive unchanged); when none exists it
+// rewrites the immediately-prior instruction to publish its acted-on permanent
+// under a fresh key. It returns the key, the primitive to store at the prior
+// instruction slot, and false when the prior instruction cannot be linked.
+func reuseOrPublishLinkedPermanent(effectIndex int, sequence []game.Instruction) (game.LinkedKey, game.Primitive, bool) {
+	for i := effectIndex - 1; i >= 0; i-- {
+		if key := game.PublishedLinkedKey(sequence[i].Primitive); key != "" {
+			return key, sequence[effectIndex-1].Primitive, true
+		}
+	}
+	key := game.LinkedKey(fmt.Sprintf("leave-bf-exile-%d", effectIndex))
+	publisher, ok := publishLinkedTargetPermanent(sequence[effectIndex-1].Primitive, key)
+	if !ok {
+		return "", nil, false
+	}
+	return key, publisher, true
+}
+
 // primitive that targets a permanent so it records that permanent under key for a
 // later linked effect. It returns the rewritten primitive, or false when the
 // primitive does not target a permanent or already publishes a linked object.
@@ -2157,12 +3160,30 @@ func publishLinkedTargetPermanent(primitive game.Primitive, key game.LinkedKey) 
 		apply, ok := primitive.(game.ApplyContinuous)
 		if !ok ||
 			!apply.Object.Exists ||
-			apply.Object.Val.Kind() != game.ObjectReferenceTargetPermanent ||
+			(apply.Object.Val.Kind() != game.ObjectReferenceTargetPermanent &&
+				apply.Object.Val.Kind() != game.ObjectReferenceLinkedObject) ||
 			apply.PublishLinked != "" {
 			return nil, false
 		}
 		apply.PublishLinked = key
 		return apply, true
+	}
+	// A single-source battlefield entry (reanimation, "Return target creature
+	// card from your graveyard to the battlefield") produces one fresh permanent
+	// the linked effect can capture, so it publishes the entered permanent under
+	// key. A multi-source (Sources) entry produces several and is left unlinkable.
+	if primitive.Kind() == game.PrimitivePutOnBattlefield {
+		put, ok := primitive.(game.PutOnBattlefield)
+		if !ok ||
+			len(put.Sources) != 0 ||
+			put.PublishLinked != "" {
+			return nil, false
+		}
+		if _, ok := put.Source.CardRef(); !ok {
+			return nil, false
+		}
+		put.PublishLinked = key
+		return put, true
 	}
 	return nil, false
 }
@@ -2466,10 +3487,30 @@ func applyTargetRemapping(
 	m := mode
 	switch {
 	case len(m.Targets) > 0 && allSharedTargets:
-		rebaseOffset, ok := sharedTargetRebaseOffset(inherited, spanToIdx)
-		if !ok || !rebaseTargetedSequence(m.Sequence, rebaseOffset, cardTargetSpecsBefore(accum, rebaseOffset)) {
+		if rebaseOffset, ok := sharedTargetRebaseOffset(inherited, spanToIdx); ok {
+			if !rebaseTargetedSequence(m.Sequence, rebaseOffset, cardTargetSpecsBefore(accum, rebaseOffset)) {
+				return nil, false
+			}
+			break
+		}
+		// The inherited target is declared by a bare "Choose target ..."
+		// sentence that owns no effect of its own, so this clause is the first
+		// to materialize it ("Choose target creature you control. It deals
+		// damage equal to its power to each other creature."). Treat the clause
+		// as the target's owner: rebase its sequence to the next accumulated
+		// index, append its target specs, and record their indices so any later
+		// shared clause rebases to the same target.
+		if len(m.Targets) != len(inherited) {
 			return nil, false
 		}
+		gameStartIdx := len(accum)
+		if !rebaseTargetedSequence(m.Sequence, gameStartIdx, cardTargetSpecsBefore(accum, gameStartIdx)) {
+			return nil, false
+		}
+		for j, t := range inherited {
+			spanToIdx[t.Span] = gameStartIdx + j
+		}
+		accum = append(accum, m.Targets...)
 	case len(m.Targets) == 0 && allSharedTargets:
 		// A shared-target clause that owns no target spec still embeds the
 		// inherited antecedent's clause-local index in its primitives (e.g. a
@@ -2718,6 +3759,139 @@ func lowerDestroyedThisWaySequence(ctx contentCtx) (game.AbilityContent, bool) {
 	}.Ability(), true
 }
 
+// lowerDiceTableSequence handles the die-roll outcome-table form "Roll a d<N>.
+// <lo>—<hi> | <effect> ..." (Bag of Tricks et al.). The compiler flattens the
+// table into a leading exact controller-scoped EffectRollDie followed by each
+// row's effects, every row effect stamped with its inclusive result interval
+// [DiceRowMin, DiceRowMax]. This emits a RollDie that publishes its rolled value
+// under dieRollResultKey, then lowers each contiguous same-interval row group
+// through the standard content path and gates every resulting instruction on the
+// rolled value falling in that interval, so exactly the matching row resolves.
+// It fails closed unless the first effect is the exact roll, every later effect
+// belongs to a row, the content carries no shared targets/conditions/modes/
+// references, and each row lowers to a single non-modal untargeted mode whose
+// instructions carry no existing result gate.
+func lowerDiceTableSequence(cardName string, ctx contentCtx, syntax *parser.Ability) (game.AbilityContent, bool) {
+	effects := ctx.content.Effects
+	if len(effects) < 2 {
+		return game.AbilityContent{}, false
+	}
+	roll := &effects[0]
+	if roll.Kind != compiler.EffectRollDie ||
+		roll.DieSides < 2 ||
+		!roll.Exact ||
+		roll.DiceRow ||
+		roll.Negated || roll.Optional || ctx.optional ||
+		roll.Context != parser.EffectContextController ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	for i := 1; i < len(effects); i++ {
+		if !effects[i].DiceRow {
+			return game.AbilityContent{}, false
+		}
+	}
+	publisher := game.Instruction{Primitive: game.RollDie{Sides: roll.DieSides}}
+	var branches []resultGatedBranch
+	for start := 1; start < len(effects); {
+		end := start + 1
+		for end < len(effects) &&
+			effects[end].DiceRowMin == effects[start].DiceRowMin &&
+			effects[end].DiceRowMax == effects[start].DiceRowMax {
+			end++
+		}
+		rowRange := game.IntRange{Min: effects[start].DiceRowMin, Max: effects[start].DiceRowMax}
+		rowCtx := ctx
+		rowCtx.content = compiler.AbilityContent{Effects: effects[start:end]}
+		rowContent, diagnostic := lowerContent(cardName, rowCtx, syntax)
+		if diagnostic != nil ||
+			rowContent.IsModal() ||
+			len(rowContent.SharedTargets) != 0 ||
+			len(rowContent.Modes[0].Targets) != 0 {
+			return game.AbilityContent{}, false
+		}
+		branches = append(branches, resultGatedBranch{
+			predicate: game.InstructionResultGate{AmountRange: opt.Val(rowRange)},
+			sequence:  rowContent.Modes[0].Sequence,
+		})
+		start = end
+	}
+	sequence, ok := assembleResultGatedBranches(publisher, dieRollResultKey, branches)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: sequence}.Ability(), true
+}
+
+// lowerDieRollResultSequence handles the dice pattern "Roll a d<N>. <payoff>"
+// where one or more payoff effects scale by "the result" (Ancient Copper Dragon
+// and the Ancient Dragon dice cycle). It emits a RollDie that publishes its
+// rolled value under dieRollResultKey, then lowers every effect after the roll
+// through the standard content path and prepends the publishing instruction.
+// Because the payoff is lowered by the general machinery, any supported payoff
+// composes: artifact-token creation (Treasure), creature-token creation (Faerie
+// Dragon), card draw, and riders such as "no maximum hand size". Each payoff's
+// "equal to the result" amount lowers (via lowerDynamicAmount) to a
+// previous-effect-result read of the published die value. It fails closed unless
+// the first effect is an exact controller-scoped die roll, the sequence carries
+// no content-level targets/conditions/modes/references/keywords, and at least
+// one payoff effect actually reads the die result.
+func lowerDieRollResultSequence(cardName string, ctx contentCtx, syntax *parser.Ability) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) < 2 {
+		return game.AbilityContent{}, false
+	}
+	roll := &ctx.content.Effects[0]
+	if roll.Kind != compiler.EffectRollDie ||
+		roll.DieSides < 2 ||
+		!roll.Exact ||
+		roll.Negated || roll.Optional || ctx.optional ||
+		roll.Context != parser.EffectContextController ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Keywords) != 0 {
+		return game.AbilityContent{}, false
+	}
+	if !sequenceReadsDieRollResult(ctx.content.Effects[1:]) {
+		return game.AbilityContent{}, false
+	}
+	// Lower the payoff (every effect after the roll) through the standard content
+	// path so any supported payoff composes; its "equal to the result" amount
+	// resolves to a previous-effect-result read keyed to the die roll. Then
+	// prepend the publishing RollDie instruction.
+	payoffCtx := ctx
+	payoffCtx.content.Effects = ctx.content.Effects[1:]
+	payoffContent, diagnostic := lowerContent(cardName, payoffCtx, syntax)
+	if diagnostic != nil || payoffContent.IsModal() ||
+		len(payoffContent.Modes) != 1 || len(payoffContent.SharedTargets) != 0 {
+		return game.AbilityContent{}, false
+	}
+	payoffContent.Modes[0].Sequence = append(
+		[]game.Instruction{{
+			Primitive:     game.RollDie{Sides: roll.DieSides},
+			PublishResult: dieRollResultKey,
+		}},
+		payoffContent.Modes[0].Sequence...,
+	)
+	return payoffContent, true
+}
+
+// sequenceReadsDieRollResult reports whether any effect in the payoff scales by
+// the die-roll result, so a RollDie is only emitted when its published value is
+// consumed.
+func sequenceReadsDieRollResult(effects []compiler.CompiledEffect) bool {
+	for i := range effects {
+		if effects[i].Amount.DynamicKind == compiler.DynamicAmountDieRollResult {
+			return true
+		}
+	}
+	return false
+}
+
 // lowerLifeLostThisWayDrain handles the two-effect drain pattern
 // "Each opponent loses <amount> life. You gain life equal to the life lost this
 // way." The two clauses are separate sentences (the joining "that much" case is
@@ -2770,6 +3944,139 @@ func lowerLifeLostThisWayDrain(ctx contentCtx) (game.AbilityContent, bool) {
 			},
 		},
 	}.Ability(), true
+}
+
+// lowerDiscardDrawThenManaValueDamageSequence handles Summon: Kujata chapter III
+// "Discard a card, then draw two cards. When you discard a card this way, this
+// creature deals damage equal to that card's mana value to each opponent." The
+// parser leaves the reflexive "When you discard a card this way" preamble
+// in-sentence, so the chapter flattens to four effects: the controller's
+// single-card discard, a fixed draw chained with "then", the reflexive
+// restatement of that same discard, and the source-dealt damage to each opponent
+// whose amount equals "that card's mana value". The restatement effect carries no
+// independent action — the controller discards exactly once — so it is collapsed.
+//
+// It emits a Discard that publishes the discarded card under a linked key,
+// followed by the fixed Draw, followed by a source Damage to each opponent whose
+// amount reads the published card's mana value. With an empty hand nothing is
+// discarded, the linked key stays empty, and the mana-value amount resolves to
+// zero, matching the reflexive trigger that never fires. It fails closed unless
+// every guard holds.
+func lowerDiscardDrawThenManaValueDamageSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 4 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	discard := &ctx.content.Effects[0]
+	draw := &ctx.content.Effects[1]
+	restatement := &ctx.content.Effects[2]
+	damage := &ctx.content.Effects[3]
+	if !singleCardControllerDiscardAction(discard) || !reflexiveDiscardRestatement(restatement) {
+		return game.AbilityContent{}, false
+	}
+	if draw.Kind != compiler.EffectDraw ||
+		(draw.Context != parser.EffectContextController && draw.Context != parser.EffectContextPriorSubject) ||
+		draw.Connection != parser.EffectConnectionThen ||
+		draw.Negated || draw.Optional ||
+		!draw.Exact ||
+		!draw.Amount.Known || draw.Amount.Value < 1 ||
+		draw.Amount.DynamicKind != compiler.DynamicAmountNone ||
+		draw.Amount.VariableX || draw.Amount.RangeKnown ||
+		len(draw.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	if damage.Kind != compiler.EffectDealDamage ||
+		damage.Context != parser.EffectContextSource ||
+		damage.Negated || damage.Optional || damage.Divided ||
+		damage.Amount.DynamicKind != compiler.DynamicAmountSourceManaValue ||
+		damage.Amount.DynamicForm != compiler.DynamicAmountEqual ||
+		damage.Amount.Multiplier != 1 ||
+		damage.Selector.Kind != compiler.SelectorOpponent || damage.Selector.Other ||
+		len(damage.DamageRecipient.GroupSelectors) != 0 {
+		return game.AbilityContent{}, false
+	}
+	if !damageSourceIsSourcePermanent(damage.References) ||
+		len(damage.References) != 2 ||
+		damage.References[1].Kind != compiler.ReferenceThatObject {
+		return game.AbilityContent{}, false
+	}
+
+	const linkKey = game.LinkedKey("discarded-card-mana-value")
+	manaValue, ok := objectCharacteristicAmount(
+		compiler.DynamicAmountSourceManaValue,
+		game.LinkedObjectReference(string(linkKey)),
+	)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{Primitive: game.Discard{
+				Amount:        game.Fixed(1),
+				Player:        game.ControllerReference(),
+				PublishLinked: linkKey,
+			}},
+			{Primitive: game.Draw{
+				Amount: game.Fixed(draw.Amount.Value),
+				Player: game.ControllerReference(),
+			}},
+			{Primitive: game.Damage{
+				Amount:       game.Dynamic(manaValue),
+				Recipient:    game.PlayerGroupDamageRecipient(game.OpponentsReference()),
+				DamageSource: opt.Val(game.SourcePermanentReference()),
+			}},
+		},
+	}.Ability(), true
+}
+
+// singleCardControllerDiscardAction reports whether the effect is the
+// controller's own unfiltered single-card discard action ("Discard a card."): an
+// exact one-card discard from hand with no typed card filter, no entire-hand or
+// at-random rider, no target/reference, and no delayed timing or duration. It is
+// the discard whose discarded card
+// lowerDiscardDrawThenManaValueDamageSequence remembers under a linked key.
+func singleCardControllerDiscardAction(effect *compiler.CompiledEffect) bool {
+	return singleCardControllerDiscard(effect) &&
+		effect.HandDiscard.Present &&
+		effect.Exact
+}
+
+// reflexiveDiscardRestatement reports whether the effect is the reflexive
+// restatement of the discard action that the parser leaves in-sentence ("When
+// you discard a card this way, ..."). It is a controller single-card discard
+// that, unlike the action itself, carries neither the HandDiscard structure nor
+// the exact flag, so it never matches a genuine "Discard a card." action and is
+// safely collapsed.
+func reflexiveDiscardRestatement(effect *compiler.CompiledEffect) bool {
+	return singleCardControllerDiscard(effect) &&
+		!effect.HandDiscard.Present &&
+		!effect.Exact
+}
+
+// singleCardControllerDiscard reports whether the effect is the controller's own
+// unfiltered single-card discard ("Discard a card."): a one-card discard with no
+// typed card filter, no entire-hand or at-random rider, no target/reference, and
+// no delayed timing or duration.
+func singleCardControllerDiscard(effect *compiler.CompiledEffect) bool {
+	return effect.Kind == compiler.EffectDiscard &&
+		effect.Context == parser.EffectContextController &&
+		!effect.DiscardEntireHand &&
+		!effect.HandDiscard.AtRandom &&
+		!effect.Negated &&
+		!effect.Optional &&
+		effect.DelayedTiming == 0 &&
+		effect.Duration == compiler.DurationNone &&
+		effect.Amount.Known &&
+		effect.Amount.Value == 1 &&
+		!effect.Amount.RangeKnown &&
+		!effect.Amount.VariableX &&
+		effect.Amount.DynamicKind == compiler.DynamicAmountNone &&
+		!discardSelectorImposesCardFilter(effect.Selector) &&
+		len(effect.References) == 0
 }
 
 // lowerDiscardDrawGreatestThisWaySequence handles the Windfall pattern

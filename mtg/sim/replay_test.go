@@ -148,7 +148,9 @@ func tutorConfigs() [game.NumPlayers]game.PlayerConfig {
 				Spec: game.SearchSpec{
 					SourceZone:  zone.Library,
 					Destination: zone.Hand,
-					CardType:    opt.Val(types.Creature),
+					Filter: game.Selection{
+						RequiredTypes: []types.Card{types.Creature},
+					},
 				},
 			},
 		}}}.Ability()),

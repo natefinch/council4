@@ -8,6 +8,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/rules/payment"
 	"github.com/natefinch/council4/opt"
 )
@@ -17,6 +18,7 @@ func createRuleEffectTemplates(g *game.Game, obj *game.StackObject, object opt.V
 		return false
 	}
 	sourceID, sourceObjectID := damageSourceIDs(g, obj)
+	appended := false
 	for i := range templates {
 		ruleEffect := templates[i]
 		ruleEffect.ID = g.IDGen.Next()
@@ -25,12 +27,32 @@ func createRuleEffectTemplates(g *game.Game, obj *game.StackObject, object opt.V
 		ruleEffect.SourceObjectID = sourceObjectID
 		if ruleEffect.AffectedSource {
 			ruleEffect.AffectedObjectID = sourceObjectID
-		} else if ruleEffect.AffectedObjectID == 0 {
-			if object.Exists {
-				if resolved, ok := resolveObjectReference(g, obj, object.Val); ok && resolved.permanent != nil {
-					ruleEffect.AffectedObjectID = resolved.permanent.ObjectID
-				}
+		} else if ruleEffect.AffectedObjectID == 0 && object.Exists {
+			// An object-scoped rule effect that names a target slot must apply
+			// only to that resolved permanent. When the slot is unfilled (an "up
+			// to N" target the controller declined) or its target became
+			// illegal, the reference does not resolve; skip the template rather
+			// than appending an AffectedObjectID==0 effect, which would otherwise
+			// match every permanent on the battlefield.
+			resolved, ok := resolveObjectReference(g, obj, object.Val)
+			if !ok || resolved.permanent == nil {
+				continue
 			}
+			ruleEffect.AffectedObjectID = resolved.permanent.ObjectID
+		}
+		if ruleEffect.AffectedPlayerRef.Kind() != game.PlayerReferenceNone {
+			affected, ok := resolvePlayerReference(g, obj, ruleEffect.AffectedPlayerRef)
+			if !ok {
+				continue
+			}
+			ruleEffect.AffectedSpecificPlayer = opt.Val(affected)
+		}
+		if ruleEffect.RequiredAttackTargetRef.Kind() != game.PlayerReferenceNone {
+			required, ok := resolvePlayerReference(g, obj, ruleEffect.RequiredAttackTargetRef)
+			if !ok {
+				continue
+			}
+			ruleEffect.RequiredAttackTarget = opt.Val(required)
 		}
 		ruleEffect.CreatedTurn = g.Turn.TurnNumber
 		if duration != game.DurationPermanent {
@@ -41,8 +63,9 @@ func createRuleEffectTemplates(g *game.Game, obj *game.StackObject, object opt.V
 			ruleEffect.ExpiresFor = obj.Controller
 		}
 		g.RuleEffects = append(g.RuleEffects, ruleEffect)
+		appended = true
 	}
-	return true
+	return appended
 }
 
 func activeRuleEffects(g *game.Game) []game.RuleEffect {
@@ -243,6 +266,15 @@ func expireRuleEffects(g *game.Game) {
 			continue
 		}
 		if effect.Duration == game.DurationUntilEndOfTurn || effect.Duration == game.DurationThisTurn {
+			continue
+		}
+		// "Until your next end step" expires at the cleanup that follows the
+		// controller's next end step. expireRuleEffects runs at every cleanup, so
+		// the effect is removed on the first cleanup whose turn belongs to the
+		// player it expires for: the creating turn when made during that player's
+		// own turn, otherwise their next turn.
+		if effect.Duration == game.DurationUntilYourNextEndStep &&
+			effect.ExpiresFor == g.Turn.ActivePlayer {
 			continue
 		}
 		if !ruleEffectSourceStillApplies(g, effect) {
@@ -547,11 +579,73 @@ func ruleEffectProhibitsBlock(g *game.Game, blocker *game.Permanent) bool {
 	effects := activeRuleEffects(g)
 	for i := range effects {
 		effect := &effects[i]
-		if effect.Kind == game.RuleEffectCantBlock && ruleEffectMatchesPermanent(g, effect, blocker) {
+		if effect.Kind != game.RuleEffectCantBlock {
+			continue
+		}
+		if effect.BlockedSource || !effect.BlockedSelection.Empty() {
+			continue
+		}
+		if ruleEffectMatchesPermanent(g, effect, blocker) {
 			return true
 		}
 	}
 	return false
+}
+
+// ruleEffectProhibitsBlockingAttacker reports whether a conditional
+// RuleEffectCantBlock restriction stops blocker from blocking attacker because
+// blocker matches the affected (restricted) group and attacker is the protected
+// object the restriction shields ("Creatures with power less than this
+// creature's power can't block it.", "... can't block creatures you control.").
+func ruleEffectProhibitsBlockingAttacker(g *game.Game, blocker, attacker *game.Permanent) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectCantBlock {
+			continue
+		}
+		if !effect.BlockedSource && effect.BlockedSelection.Empty() {
+			continue
+		}
+		if !ruleEffectMatchesPermanent(g, effect, blocker) {
+			continue
+		}
+		if effect.BlockedSource {
+			if attacker != nil && attacker.ObjectID == effect.SourceObjectID {
+				return true
+			}
+			continue
+		}
+		if ruleEffectBlockedSelectionMatches(g, effect, attacker) {
+			return true
+		}
+	}
+	return false
+}
+
+// ruleEffectBlockedSelectionMatches reports whether attacker satisfies a
+// conditional can't-block restriction's protected-object Selection ("can't block
+// creatures you control"). It builds a permanent selection subject viewed from
+// the effect's controller so the selection's controller relation resolves "you"
+// to the source controller.
+func ruleEffectBlockedSelectionMatches(g *game.Game, effect *game.RuleEffect, attacker *game.Permanent) bool {
+	if attacker == nil {
+		return false
+	}
+	sel := &effect.BlockedSelection
+	values := effectivePermanentValues(g, attacker)
+	subject := selectionSubject{
+		kind:           subjectPermanent,
+		g:              g,
+		permanent:      attacker,
+		values:         &values,
+		viewer:         effect.Controller,
+		sourceObjectID: effect.SourceObjectID,
+	}
+	if sel.Controller != game.ControllerAny {
+		subject.controller = effectiveController(g, attacker)
+	}
+	return matchSelection(&subject, sel)
 }
 
 func ruleEffectProhibitsBeingBlocked(g *game.Game, attacker *game.Permanent) bool {
@@ -570,6 +664,32 @@ func ruleEffectRequiresBeingBlocked(g *game.Game, attacker *game.Permanent) bool
 	for i := range effects {
 		effect := &effects[i]
 		if effect.Kind == game.RuleEffectMustBeBlocked && ruleEffectMatchesPermanent(g, effect, attacker) {
+			return true
+		}
+	}
+	return false
+}
+
+// ruleEffectRequiresBeingBlockedByAllAble reports whether attacker carries a
+// true-lure requirement (every creature able to block it must do so, CR 509.1c).
+func ruleEffectRequiresBeingBlockedByAllAble(g *game.Game, attacker *game.Permanent) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind == game.RuleEffectMustBeBlockedByAllAble && ruleEffectMatchesPermanent(g, effect, attacker) {
+			return true
+		}
+	}
+	return false
+}
+
+// ruleEffectAssignsCombatDamageAsThoughUnblocked reports whether attacker may
+// assign its combat damage to its attack target as though it weren't blocked.
+func ruleEffectAssignsCombatDamageAsThoughUnblocked(g *game.Game, attacker *game.Permanent) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind == game.RuleEffectAssignCombatDamageAsThoughUnblocked && ruleEffectMatchesPermanent(g, effect, attacker) {
 			return true
 		}
 	}
@@ -635,6 +755,21 @@ func ruleEffectPreventsUntap(g *game.Game, permanent *game.Permanent) bool {
 	return false
 }
 
+// ruleEffectPreventsTransform reports whether an active rule effect forbids
+// permanent from transforming ("Non-Human Werewolves you control can't
+// transform.", Immerwolf). A matching prohibition stops the transform (CR
+// 701.28), so transformPermanent does nothing.
+func ruleEffectPreventsTransform(g *game.Game, permanent *game.Permanent) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind == game.RuleEffectCantTransform && ruleEffectMatchesPermanent(g, effect, permanent) {
+			return true
+		}
+	}
+	return false
+}
+
 func ruleEffectMatchesPermanent(g *game.Game, effect *game.RuleEffect, permanent *game.Permanent) bool {
 	if effect == nil {
 		return false
@@ -642,7 +777,11 @@ func ruleEffectMatchesPermanent(g *game.Game, effect *game.RuleEffect, permanent
 	if permanent == nil {
 		return false
 	}
-	if !controllerRelationMatches(effect.Controller, effectiveController(g, permanent), effect.AffectedController) {
+	if effect.AffectedSpecificPlayer.Exists {
+		if effectiveController(g, permanent) != effect.AffectedSpecificPlayer.Val {
+			return false
+		}
+	} else if !controllerRelationMatches(effect.Controller, effectiveController(g, permanent), effect.AffectedController) {
 		return false
 	}
 	if effect.AffectedObjectID != 0 && effect.AffectedObjectID != permanent.ObjectID {
@@ -653,7 +792,32 @@ func ruleEffectMatchesPermanent(g *game.Game, effect *game.RuleEffect, permanent
 			return false
 		}
 	}
+	if !effect.AffectedSelection.Empty() && !ruleEffectAffectedSelectionMatches(g, effect, permanent) {
+		return false
+	}
 	return true
+}
+
+// ruleEffectAffectedSelectionMatches reports whether permanent satisfies a
+// group-scoped rule effect's affected-permanent Selection filter ("Blue creatures
+// you control ...", "Creatures you control with +1/+1 counters on them ..."). It
+// builds a permanent selection subject viewed from the effect's controller and
+// excluding the effect's source object, mirroring group-membership matching.
+func ruleEffectAffectedSelectionMatches(g *game.Game, effect *game.RuleEffect, permanent *game.Permanent) bool {
+	sel := &effect.AffectedSelection
+	values := effectivePermanentValues(g, permanent)
+	subject := selectionSubject{
+		kind:           subjectPermanent,
+		g:              g,
+		permanent:      permanent,
+		values:         &values,
+		viewer:         effect.Controller,
+		sourceObjectID: effect.SourceObjectID,
+	}
+	if sel.Controller != game.ControllerAny {
+		subject.controller = effectiveController(g, permanent)
+	}
+	return matchSelection(&subject, sel)
 }
 
 func controllerRelationMatches(sourceController, candidate game.PlayerID, relation game.ControllerRelation) bool {
@@ -692,7 +856,25 @@ func playerRuleEffectActive(g *game.Game, playerID game.PlayerID, kind game.Rule
 	return false
 }
 
-func staticCostModifiersForContext(g *game.Game, playerID game.PlayerID, card *game.CardDef, sourceZone zone.Type) []game.CostModifier {
+// payLifeForManaColorActive reports whether an active RuleEffectPayLifeForColoredMana
+// effect lets playerID pay 2 life instead of a mana of color c when paying a cost
+// ("For each {B} in a cost, you may pay 2 life rather than pay that mana.", K'rrik).
+func payLifeForManaColorActive(g *game.Game, playerID game.PlayerID, c mana.Color) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectPayLifeForColoredMana {
+			continue
+		}
+		if effect.ManaColor == c &&
+			playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
+			return true
+		}
+	}
+	return false
+}
+
+func staticCostModifiersForContext(g *game.Game, playerID game.PlayerID, card *game.CardDef, sourceZone zone.Type, targets []game.Target) []game.CostModifier {
 	var modifiers []game.CostModifier
 	effects := activeRuleEffects(g)
 	for i := range effects {
@@ -716,9 +898,89 @@ func staticCostModifiersForContext(g *game.Game, playerID game.PlayerID, card *g
 		if !spellCostModifierMatchesZone(modifier, sourceZone) {
 			continue
 		}
+		if !spellCostModifierMatchesTargets(modifier, effect.SourceObjectID, targets) {
+			continue
+		}
+		if modifier.SharedExiledCardTypeReduction > 0 {
+			reduction := sharedExiledCardTypeReduction(g, effect.SourceObjectID, modifier, card)
+			if reduction <= 0 {
+				continue
+			}
+			modifiers = append(modifiers, game.CostModifier{Kind: game.CostModifierSpell, GenericReduction: reduction})
+			continue
+		}
 		modifiers = append(modifiers, modifier)
 	}
 	return modifiers
+}
+
+// sharedExiledCardTypeReduction resolves the concrete generic reduction for a
+// SharedExiledCardTypeReduction spell modifier ("Spells you cast cost {N} less
+// to cast for each card type they share with cards exiled with this creature.",
+// Cemetery Prowler). It reads the source permanent's linked-exile set named by
+// the modifier's ExiledLinkKey, gathers the distinct card types among the cards
+// still exiled with the source, counts how many of those types the casting card
+// also has, and multiplies that shared count by the per-type amount.
+func sharedExiledCardTypeReduction(g *game.Game, sourceObjectID id.ID, modifier game.CostModifier, card *game.CardDef) int {
+	if card == nil {
+		return 0
+	}
+	source, ok := permanentByObjectID(g, sourceObjectID)
+	if !ok {
+		return 0
+	}
+	key := game.LinkedObjectKey{SourceID: source.CardInstanceID, LinkID: string(modifier.ExiledLinkKey)}
+	shared := 0
+	for cardType := range exiledLinkedCardTypes(g, key) {
+		if card.HasType(cardType) {
+			shared++
+		}
+	}
+	return shared * modifier.SharedExiledCardTypeReduction
+}
+
+// exiledLinkedCardTypes returns the set of distinct card types among the cards
+// still exiled under key. A linked card whose instance is gone or that has left
+// its owner's exile zone is skipped, so the count tracks only cards currently
+// exiled with the source. The links are recorded by card identity (a graveyard
+// exile publishes a card, not a permanent), so membership is checked against the
+// owner's exile zone rather than last-known object information.
+func exiledLinkedCardTypes(g *game.Game, key game.LinkedObjectKey) map[types.Card]bool {
+	distinct := make(map[types.Card]bool)
+	for _, ref := range linkedObjects(g, key) {
+		card, ok := g.GetCardInstance(ref.CardID)
+		if !ok {
+			continue
+		}
+		owner, ok := playerByID(g, card.Owner)
+		if !ok || !owner.Exile.Contains(card.ID) {
+			continue
+		}
+		for _, cardType := range graveyardCardTypes(card) {
+			distinct[cardType] = true
+		}
+	}
+	return distinct
+}
+
+// spellCostModifierMatchesTargets reports whether a spell cost modifier's
+// optional targets-source filter admits the spell being cast. A modifier
+// without the filter applies regardless of the spell's targets; one with the
+// filter applies only when one of the spell's chosen targets is exactly the
+// permanent (sourceObjectID) whose static ability carries the modifier.
+func spellCostModifierMatchesTargets(modifier game.CostModifier, sourceObjectID id.ID, targets []game.Target) bool {
+	if !modifier.TargetsSource {
+		return true
+	}
+	if sourceObjectID == 0 {
+		return false
+	}
+	for _, target := range targets {
+		if target.Kind == game.TargetPermanent && target.PermanentID == sourceObjectID {
+			return true
+		}
+	}
+	return false
 }
 
 // spellCostModifierMatchesZone reports whether a spell cost modifier's optional
@@ -735,7 +997,7 @@ func spellCostModifierMatchesZone(modifier game.CostModifier, sourceZone zone.Ty
 // that have no colors; otherwise the spell must carry the named color.
 func spellCostModifierEffectMatchesCard(g *game.Game, effect *game.RuleEffect, card *game.CardDef) bool {
 	modifier := effect.CostModifier
-	if !spellCostModifierBaseMatchesCard(modifier, card) {
+	if !spellCostModifierBaseMatchesCard(g, modifier, card) {
 		return false
 	}
 	if !modifier.ChosenSubtypeFromEntryChoice {
@@ -752,50 +1014,22 @@ func spellCostModifierEffectMatchesCard(g *game.Game, effect *game.RuleEffect, c
 		card.HasSubtype(choice.Subtype)
 }
 
-func spellCostModifierMatchesCard(modifier game.CostModifier, card *game.CardDef) bool {
-	return !modifier.ChosenSubtypeFromEntryChoice && spellCostModifierBaseMatchesCard(modifier, card)
+func spellCostModifierMatchesCard(g *game.Game, modifier game.CostModifier, card *game.CardDef) bool {
+	return !modifier.ChosenSubtypeFromEntryChoice && spellCostModifierBaseMatchesCard(g, modifier, card)
 }
 
-func spellCostModifierBaseMatchesCard(modifier game.CostModifier, card *game.CardDef) bool {
-	if modifier.MatchCardType && (card == nil || !card.HasType(modifier.CardType)) {
-		return false
+// spellCostModifierBaseMatchesCard reports whether a spell cost modifier's
+// card-subject filter admits the given spell card. It converts the modifier's
+// card filters into the canonical card-subject Selection and matches through the
+// shared matchSelection so cost modifiers describe their spells the same way
+// triggers and additional costs do. A modifier with no card filter matches any
+// card (including a nil card); any active filter fails a nil card.
+func spellCostModifierBaseMatchesCard(g *game.Game, modifier game.CostModifier, card *game.CardDef) bool {
+	sel := modifier.CardSelection
+	if sel.Empty() {
+		return true
 	}
-	if modifier.MatchColor {
-		if card == nil {
-			return false
-		}
-		if modifier.Color == "" {
-			if len(card.Colors) != 0 {
-				return false
-			}
-		} else if !slices.Contains(card.Colors, modifier.Color) {
-			return false
-		}
-	}
-	if len(modifier.MatchColors) != 0 {
-		if card == nil {
-			return false
-		}
-		matched := false
-		for _, c := range modifier.MatchColors {
-			if slices.Contains(card.Colors, c) {
-				matched = true
-				break
-			}
-		}
-		if !matched {
-			return false
-		}
-	}
-	if len(modifier.MatchSubtypes) != 0 {
-		if card == nil {
-			return false
-		}
-		if !slices.ContainsFunc(modifier.MatchSubtypes, card.HasSubtype) {
-			return false
-		}
-	}
-	return true
+	return cardDefMatchesCostSelection(g, card, sel)
 }
 
 func canCastFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
@@ -813,6 +1047,12 @@ func castPermissionsForZone(g *game.Game, playerID game.PlayerID, cardID id.ID, 
 	card, cardOK := g.GetCardInstance(cardID)
 	if face == game.FaceFront && cardOK && cardHasFlashbackAlternative(card) {
 		permissions = append(permissions, payment.SpellCastPermissionFlashback)
+	}
+	if face == game.FaceFront && cardOK && cardHasJumpStartAlternative(card) {
+		permissions = append(permissions, payment.SpellCastPermissionFlashback)
+	}
+	if face == game.FaceFront && cardOK && cardHasEscapeAlternative(card) {
+		permissions = append(permissions, payment.SpellCastPermissionEscape)
 	}
 	if hasCastFromZoneRuleEffect(g, playerID, cardID, sourceZone, face) {
 		permissions = append(permissions, payment.SpellCastPermissionRuleEffect)
@@ -879,9 +1119,18 @@ func canPlayLandFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardI
 // spells and colorless spells from the top of your library.", Mystic Forge);
 // TopCardOnly requires the card to be on top of the player's library.
 func canCastSpellsFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
+	_, ok := matchingCastSpellsFromZoneEffect(g, playerID, cardID, sourceZone, face)
+	return ok
+}
+
+// matchingCastSpellsFromZoneEffect returns the first continuous
+// RuleEffectCastSpellsFromZone permission that lets playerID cast the face of
+// cardID from sourceZone, applying the same TopCardOnly, chosen-subtype, and
+// type/colorless filters as canCastSpellsFromZoneByRuleEffect.
+func matchingCastSpellsFromZoneEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) (game.RuleEffect, bool) {
 	card, ok := g.GetCardInstance(cardID)
 	if !ok {
-		return false
+		return game.RuleEffect{}, false
 	}
 	faceDef := cardFaceOrDefault(card, face)
 	faceTypes := faceDef.Types
@@ -908,9 +1157,19 @@ func canCastSpellsFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, car
 				continue
 			}
 		}
-		return true
+		return *effect, true
 	}
-	return false
+	return game.RuleEffect{}, false
+}
+
+// castFromZoneRequiresPayLife reports whether the permission authorizing
+// playerID to cast the face of cardID from sourceZone replaces the spell's mana
+// cost with paying life equal to its mana value ("If you cast a spell this way,
+// pay life equal to its mana value rather than pay its mana cost.", Bolas's
+// Citadel, Gwenom, Remorseless).
+func castFromZoneRequiresPayLife(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
+	effect, ok := matchingCastSpellsFromZoneEffect(g, playerID, cardID, sourceZone, face)
+	return ok && effect.PayLifeEqualToManaValue
 }
 
 // cardMatchesSourceEntryChosenSubtype reports whether faceDef shares the creature
@@ -1023,4 +1282,22 @@ func cardHasFlashbackAlternative(card *game.CardInstance) bool {
 		return true
 	}
 	return slices.ContainsFunc(frontDef.AlternativeCosts, isFlashbackAlternative)
+}
+
+func cardHasEscapeAlternative(card *game.CardInstance) bool {
+	frontDef := cardFaceOrDefault(card, game.FaceFront)
+	if !frontDef.HasKeyword(game.Escape) {
+		return false
+	}
+	return slices.ContainsFunc(frontDef.AlternativeCosts, isEscapeAlternative)
+}
+
+// cardHasJumpStartAlternative reports whether the card's front face has the
+// Jump-start keyword (CR 702.134), which grants a graveyard cast paying the
+// card's other costs plus discarding a card, then exiling the card on
+// resolution. The graveyard cast reuses the Flashback permission and
+// exile-on-resolution; the discard additional cost is synthesized by the
+// payment planner.
+func cardHasJumpStartAlternative(card *game.CardInstance) bool {
+	return cardFaceOrDefault(card, game.FaceFront).HasKeyword(game.JumpStart)
 }

@@ -15,6 +15,44 @@ import (
 func appendConstructRecognizedSpans(spans []shared.Span, a *Ability) []shared.Span {
 	spans = appendCoordinatedTypeListSpans(spans, a.Tokens, a.Atoms)
 	spans = appendLeadingClauseSpans(spans, a.Sentences)
+	spans = appendCoinFlipSpans(spans, a)
+	spans = appendVoteSpans(spans, a)
+	return spans
+}
+
+// appendCoinFlipSpans credits the source spans of every sentence a recognized
+// coin flip consumed (the "Flip a coin." line and each win/lose branch). The
+// recognizer re-parsed each branch clause into typed effects and shed the
+// consumed sentences' effects and condition wording, so the construct fully
+// accounts for its tokens; crediting the whole sentence spans keeps the coverage
+// union from leaving the condition prefixes or the flip line uncovered.
+func appendCoinFlipSpans(spans []shared.Span, a *Ability) []shared.Span {
+	if a.CoinFlip == nil {
+		return spans
+	}
+	for _, span := range a.CoinFlip.Spans {
+		if span != (shared.Span{}) {
+			spans = append(spans, span)
+		}
+	}
+	return spans
+}
+
+// appendVoteSpans credits the source spans of every sentence a recognized vote
+// consumed (the "Starting with you, each player votes ..." line and each arm).
+// The recognizer re-parsed each arm clause into typed effects and shed the
+// consumed sentences' effects and condition wording, so the construct fully
+// accounts for its tokens; crediting the whole sentence spans keeps the coverage
+// union from leaving the condition prefixes or the voting line uncovered.
+func appendVoteSpans(spans []shared.Span, a *Ability) []shared.Span {
+	if a.Vote == nil {
+		return spans
+	}
+	for _, span := range a.Vote.Spans {
+		if span != (shared.Span{}) {
+			spans = append(spans, span)
+		}
+	}
 	return spans
 }
 

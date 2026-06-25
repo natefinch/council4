@@ -52,3 +52,50 @@ func TestExactPutThoseCountersAccepts(t *testing.T) {
 		}
 	}
 }
+
+// TestExactPutItsCountersAccepts covers the singular-pronoun counter-salvage
+// form "put its counters on <dest>", which names a triggering permanent's
+// counters with "its" instead of "those" and round-trips to the same
+// MoveThoseCounters salvage effect, for both a target-creature destination (Star
+// Pupil) and a self destination (Buzzard-Wasp Colony).
+func TestExactPutItsCountersAccepts(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		source string
+		card   string
+	}{
+		{
+			"When this creature dies, put its counters on target creature you control.",
+			"Star Pupil",
+		},
+		{
+			"Whenever another creature you control dies, if it had counters on it, put its counters on this creature.",
+			"Buzzard-Wasp Colony",
+		},
+	}
+	for _, tc := range cases {
+		effect := putThoseCountersEffect(t, tc.source, tc.card)
+		if !effect.MoveThoseCounters {
+			t.Errorf("MoveThoseCounters(%q) = false, want true", tc.source)
+		}
+		if !effect.Exact {
+			t.Errorf("Exact(%q) = false, want true", tc.source)
+		}
+	}
+}
+
+// TestExactPutItsNamedKindCountersFailsClosed verifies the kind-named singular
+// form "put its +1/+1 counters on <dest>" stays out of the kind-agnostic salvage
+// move (its all-of-one-kind semantics are not modeled), so MoveThoseCounters is
+// not set.
+func TestExactPutItsNamedKindCountersFailsClosed(t *testing.T) {
+	t.Parallel()
+	effect := putThoseCountersEffect(
+		t,
+		"When this creature leaves the battlefield, put its +1/+1 counters on target creature you control.",
+		"Selfless Police Captain",
+	)
+	if effect.MoveThoseCounters {
+		t.Error("MoveThoseCounters = true, want false for kind-named salvage")
+	}
+}

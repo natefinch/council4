@@ -46,6 +46,16 @@ type contentCtx struct {
 	// outside a triggered ability. It lets typed event-player references lower
 	// only where the resolving stack object retains an authoritative event.
 	triggerEvent game.EventKind
+	// triggerOneOrMore reports whether the enclosing trigger coalesces its
+	// simultaneous batch into a single trigger ("Whenever one or more ..."). It
+	// gates the batch reanimation of the triggering cards ("put them onto the
+	// battlefield") so the plural "them" resolves to the whole batch rather than
+	// a single event card.
+	triggerOneOrMore bool
+	// triggerToZone is the destination zone of the enclosing zone-change
+	// trigger, or zone.None outside one. It confirms the triggering cards rest
+	// in a graveyard before a batch reanimation recurses them.
+	triggerToZone zone.Type
 	// allowPonderPrefix permits the first spell paragraph of Ponder to lower
 	// temporarily. Face lowering rejects it unless the following spell paragraph
 	// is the exact typed draw suffix.
@@ -108,23 +118,30 @@ func lowerSpellAbilityContent(
 // bindings (such as EventPermanent "it"/"that creature" counter placement) that
 // are only trustworthy for a standalone effect: within a sequence the compiler
 // may bind a pronoun whose antecedent is a prior instruction's product to the
-// triggering event permanent.
+// triggering event permanent. It carries the parent's enclosing kind and
+// triggering-event context forward so a clause that reads the triggering event's
+// quantity ("draw that many cards", "+2/+0 for each card discarded this way")
+// still resolves against the enclosing trigger.
 func lowerSequenceClauseContent(
 	cardName string,
-	enclosingKind compiler.AbilityKind,
+	parent contentCtx,
 	content compiler.AbilityContent,
 	optional bool,
 	bodySyntax *parser.Ability,
 	allowEventPronoun bool,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	ctx := contentCtx{
-		text:              bodySyntax.Text,
-		span:              bodySyntax.Span,
-		optional:          optional,
-		content:           content,
-		enclosingKind:     enclosingKind,
-		sequenceClause:    true,
-		allowEventPronoun: allowEventPronoun,
+		text:                  bodySyntax.Text,
+		span:                  bodySyntax.Span,
+		optional:              optional,
+		content:               content,
+		enclosingKind:         parent.enclosingKind,
+		sequenceClause:        true,
+		allowEventPronoun:     allowEventPronoun,
+		triggerCardCountEvent: parent.triggerCardCountEvent,
+		triggerEvent:          parent.triggerEvent,
+		triggerOneOrMore:      parent.triggerOneOrMore,
+		triggerToZone:         parent.triggerToZone,
 	}
 	return lowerContent(cardName, ctx, bodySyntax)
 }
@@ -138,7 +155,7 @@ func lowerTriggerBodyContent(
 	content compiler.AbilityContent,
 	optional bool,
 	bodySyntax *parser.Ability,
-	triggerEvent game.EventKind,
+	pattern game.TriggerPattern,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	ctx := contentCtx{
 		text:                  bodySyntax.Text,
@@ -146,10 +163,21 @@ func lowerTriggerBodyContent(
 		optional:              optional,
 		content:               content,
 		enclosingKind:         compiler.AbilityTriggered,
-		triggerCardCountEvent: triggerEvent,
-		triggerEvent:          triggerEvent,
+		triggerCardCountEvent: pattern.Event,
+		triggerEvent:          pattern.Event,
+		triggerOneOrMore:      pattern.OneOrMore,
+		triggerToZone:         triggerPatternToZone(pattern),
 	}
 	return lowerContent(cardName, ctx, bodySyntax)
+}
+
+// triggerPatternToZone reports the destination zone a zone-change trigger
+// matches, or zone.None when the pattern does not constrain its destination.
+func triggerPatternToZone(pattern game.TriggerPattern) zone.Type {
+	if pattern.MatchToZone {
+		return pattern.ToZone
+	}
+	return zone.None
 }
 
 func lowerContent(
@@ -157,6 +185,29 @@ func lowerContent(
 	ctx contentCtx,
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if syntax != nil && syntax.CoinFlip != nil {
+		// A recognized coin flip must lower through its dedicated path, which
+		// gates every branch effect on the flip result. If that path fails
+		// closed (an unsupported branch effect, or a targeted branch), the
+		// whole ability fails closed rather than falling through to generic
+		// lowering, which would silently drop the flip and emit the branch
+		// effects ungated.
+		if content, ok := lowerCoinFlipSequence(cardName, ctx, syntax); ok {
+			return content, nil
+		}
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — coin flip branch not lowered")
+	}
+	if syntax != nil && syntax.Vote != nil {
+		// A recognized vote must lower through its dedicated path, which gates
+		// every arm effect on the vote tally. If that path fails closed (an
+		// unsupported arm effect, or a targeted arm), the whole ability fails
+		// closed rather than falling through to generic lowering, which would
+		// silently drop the vote and emit the arm effects ungated.
+		if content, ok := lowerVoteSequence(cardName, ctx, syntax); ok {
+			return content, nil
+		}
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — vote arm not lowered")
+	}
 	if content, ok := lowerPonderSequence(ctx); ok {
 		return content, nil
 	}
@@ -178,6 +229,9 @@ func lowerContent(
 	if len(ctx.content.Modes) > 0 {
 		return lowerModalContent(cardName, ctx, syntax)
 	}
+	if content, ok := lowerEventCardBatchReanimation(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerEventCardEffect(ctx); ok {
 		return content, nil
 	}
@@ -188,9 +242,19 @@ func lowerContent(
 		return content, nil
 	}
 	if len(ctx.content.Effects) > 0 && ctx.content.Effects[0].Kind == compiler.EffectSearch {
-		return lowerSearchSpell(ctx)
+		content, diagnostic := lowerSearchSpell(ctx)
+		if diagnostic == nil {
+			return content, nil
+		}
+		if trailing, ok := lowerSearchThenTrailingSequence(cardName, ctx, syntax); ok {
+			return trailing, nil
+		}
+		return content, diagnostic
 	}
 	if len(ctx.content.Effects) > 1 {
+		if content, diagnostic, handled := lowerOrAlternativeModal(cardName, ctx, syntax); handled {
+			return content, diagnostic
+		}
 		if len(ctx.content.Effects) == 2 &&
 			ctx.content.Effects[0].Kind == compiler.EffectAddMana &&
 			isManaSpendRider(&ctx.content.Effects[1]) {
@@ -202,13 +266,58 @@ func lowerContent(
 				ctx.content.Effects[1].Kind == compiler.EffectGainControl) {
 			return lowerControlSpellSequence(cardName, ctx, syntax)
 		}
+		if content, ok := lowerAesirExileGraveyardScaledGain(ctx); ok {
+			return content, nil
+		}
+		if content, ok := lowerReturnLinkedExiledPartialContent(ctx); ok {
+			return content, nil
+		}
+		if content, ok := lowerDestroyForEachPlayerTokenChainContent(ctx); ok {
+			return content, nil
+		}
+		if content, ok := lowerRetargetThenLoseLifeContent(ctx); ok {
+			return content, nil
+		}
 		return lowerOrderedEffectSequence(cardName, ctx, syntax)
 	}
 	if len(ctx.content.Effects) == 1 {
+		if content, ok := lowerNextCastEntersWithCountersReplacement(ctx); ok {
+			return content, nil
+		}
 		if content, ok := lowerStandaloneReorderLibraryTop(ctx); ok {
 			return content, nil
 		}
 		if content, ok := lowerTrailingBackReferenceExile(ctx); ok {
+			return content, nil
+		}
+		if content, ok := lowerExileUntilLeavesContent(ctx); ok {
+			return content, nil
+		}
+		if content, ok := lowerExileForEachPlayerUntilLeavesContent(ctx); ok {
+			return content, nil
+		}
+		if content, ok := lowerReturnExiledCardContent(ctx); ok {
+			return content, nil
+		}
+		if content, ok := lowerExileEntireHandContent(ctx); ok {
+			return content, nil
+		}
+		if content, ok := lowerReturnExiledCardsToHandContent(ctx); ok {
+			return content, nil
+		}
+		if content, ok := lowerBottomLinkedExiledCardsContent(ctx); ok {
+			return content, nil
+		}
+		if content, ok := lowerAesirCounterFromExiledCard(ctx); ok {
+			return content, nil
+		}
+		if content, ok := lowerAesirReturnSourceAndExiledCard(ctx); ok {
+			return content, nil
+		}
+		if content, ok := lowerStandaloneStunEffect(ctx); ok {
+			return content, nil
+		}
+		if content, ok := lowerStandaloneSourceStunEffect(ctx); ok {
 			return content, nil
 		}
 		if ctx.content.Effects[0].RequiresOrderedLowering {
@@ -221,6 +330,20 @@ func lowerContent(
 			return lowerAddManaContent(ctx)
 		case compiler.EffectBecomeCopy:
 			return lowerBecomeCopyContent(ctx)
+		case compiler.EffectBecomeType:
+			return lowerBecomeTypeContent(ctx)
+		case compiler.EffectPolymorph:
+			return lowerPolymorphContent(ctx)
+		case compiler.EffectSetBasePT:
+			return lowerSetBasePTContent(ctx)
+		case compiler.EffectSwitchPT:
+			return lowerSwitchPTContent(ctx)
+		case compiler.EffectDelayedTrigger:
+			return lowerDelayedTriggerContent(ctx)
+		case compiler.EffectPayRepeatedlyAnimate:
+			return lowerPayRepeatedlyAnimateContent(ctx)
+		case compiler.EffectCreateEmblem:
+			return lowerCreateEmblemContent(ctx)
 		default:
 		}
 		if content, ok := lowerExileFromHandContent(ctx); ok {
@@ -285,6 +408,18 @@ func lowerOptionalContent(
 	ctx contentCtx,
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if content, ok := lowerConditionalDestinationPlace(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerExileForPlay(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerKinshipReveal(cardName, ctx, syntax); ok {
+		return content, nil
+	}
+	if content, ok := lowerBecomeEquipmentGrant(ctx, syntax); ok {
+		return content, nil
+	}
 	if len(ctx.content.Modes) == 0 &&
 		len(ctx.content.Effects) > 1 &&
 		ctx.content.Effects[0].Kind != compiler.EffectSearch &&
@@ -326,8 +461,8 @@ func lowerImpulseExileContent(ctx contentCtx) (game.AbilityContent, *shared.Diag
 		effect.Negated ||
 		effect.Context != parser.EffectContextController ||
 		!ok ||
-		!effect.Amount.Known ||
-		effect.Amount.Value < 1 ||
+		(!effect.Amount.Known && !effect.Amount.VariableX) ||
+		(effect.Amount.Known && effect.Amount.Value < 1) ||
 		ctx.content.Unconsumed() {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -335,16 +470,22 @@ func lowerImpulseExileContent(ctx contentCtx) (game.AbilityContent, *shared.Diag
 			"the executable source backend supports only a fixed-count top-of-library impulse exile with a this-turn or until-end-of-turn play window",
 		)
 	}
+	amount := game.Fixed(effect.Amount.Value)
+	if effect.Amount.VariableX {
+		amount = game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
+	}
 	return game.Mode{Sequence: []game.Instruction{{Primitive: game.ImpulseExile{
 		Player:   game.ControllerReference(),
-		Amount:   game.Fixed(effect.Amount.Value),
+		Amount:   amount,
 		Duration: duration,
 	}}}}.Ability(), nil
 }
 
 // lowerImpulseExileDuration maps the supported impulse play windows to their
-// runtime durations. Both "this turn" and "until end of turn" grant play
-// permission through the end of the current turn; any other window fails closed.
+// runtime durations. "this turn" and "until end of turn" grant play permission
+// through the end of the current turn; "until the end of your next turn" and
+// "until your next end step" carry their own runtime durations. Any other window
+// fails closed.
 func lowerImpulseExileDuration(duration compiler.DurationKind) (game.EffectDuration, bool) {
 	switch duration {
 	case compiler.DurationThisTurn:
@@ -353,6 +494,8 @@ func lowerImpulseExileDuration(duration compiler.DurationKind) (game.EffectDurat
 		return game.DurationUntilEndOfTurn, true
 	case compiler.DurationUntilEndOfYourNextTurn:
 		return game.DurationUntilEndOfYourNextTurn, true
+	case compiler.DurationUntilYourNextEndStep:
+		return game.DurationUntilYourNextEndStep, true
 	default:
 		return game.DurationPermanent, false
 	}
@@ -400,19 +543,27 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 	// target-player form contributes an ability target spec and resolves the
 	// searcher to that target; every other subject fails closed.
 	search := ctx.content.Effects[0]
-	searcher, searchTargets, ok := searchSearcher(ctx, &search)
+	subject, ok := searchSearcher(ctx, &search)
 	if !ok {
 		return unsupported("the executable source backend supports only searches of your library or a single target player's library ending with \"then shuffle\"")
 	}
+	searcher, searcherGroup, searchTargets := subject.Player, subject.Group, subject.Targets
 	// Search is one runtime primitive, but each reference still binds to the
 	// prior semantic search/reveal instruction that produced the found card, or
-	// to the searching target player ("their library").
+	// to the searching player(s) ("their library").
 	targetSearcher := len(searchTargets) != 0
+	groupSearcher := searcherGroup.Kind != game.PlayerGroupReferenceNone
 	for _, ref := range ctx.content.References {
 		if ref.Binding == compiler.ReferenceBindingPriorInstructionResult {
 			continue
 		}
 		if targetSearcher && ref.Binding == compiler.ReferenceBindingTarget && isPlayerPronoun(ref.Pronoun) {
+			continue
+		}
+		// "Each player searches their library ..." — the "their" possessive
+		// refers to each searching player and is realized by the all-players
+		// group searcher, so no per-reference lowering is required.
+		if groupSearcher && isPlayerPronoun(ref.Pronoun) {
 			continue
 		}
 		return unsupported("unexpected non-result reference in search effect")
@@ -435,11 +586,15 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 	}
 	searchTargets = append(searchTargets, controllerTargets...)
 
+	if searcherGroup.Kind != game.PlayerGroupReferenceNone && controller.Exists {
+		return unsupported("the executable source backend does not support the \"under target player's control\" rider on an each-player library search")
+	}
 	sequence := []game.Instruction{{Primitive: game.Search{
-		Player:     searcher,
-		Spec:       group.Spec,
-		Amount:     game.Fixed(group.Amount),
-		Controller: controller,
+		Player:      searcher,
+		PlayerGroup: searcherGroup,
+		Spec:        group.Spec,
+		Amount:      game.Fixed(group.Amount),
+		Controller:  controller,
 	}}}
 	if group.RiderIndex != 0 {
 		inst, ok := lowerSearchRider(&ctx.content.Effects[group.RiderIndex])
@@ -479,31 +634,46 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 	return game.Mode{Targets: searchTargets, Sequence: sequence}.Ability(), nil
 }
 
+// searchSubject captures the player or player group performing a library search
+// and any ability target specs that searcher reference requires.
+type searchSubject struct {
+	Player  game.PlayerReference
+	Group   game.PlayerGroupReference
+	Targets []game.TargetSpec
+}
+
 // searchSearcher determines the player performing a library search and any
 // ability target specs that searcher reference requires. It supports the
-// controller subject ("search your library ...") and a single target player
+// controller subject ("search your library ...") , a single target player
 // subject ("target player searches their library ..."), resolving the latter to
-// TargetPlayerReference(0) with the matching player target spec. Every other
-// subject — a referenced object's controller, each player, an unsupported target
-// shape — fails closed so lowering never invents a searcher.
-func searchSearcher(ctx contentCtx, search *compiler.CompiledEffect) (game.PlayerReference, []game.TargetSpec, bool) {
+// TargetPlayerReference(0) with the matching player target spec, and the
+// each-player subject ("each player searches their library ..."), resolving to
+// the all-players group so every player searches their own library. Every other
+// subject — a referenced object's controller, an unsupported target shape —
+// fails closed so lowering never invents a searcher.
+func searchSearcher(ctx contentCtx, search *compiler.CompiledEffect) (searchSubject, bool) {
 	switch search.Context {
 	case parser.EffectContextController:
 		if len(ctx.content.Targets) != 0 {
-			return game.PlayerReference{}, nil, false
+			return searchSubject{}, false
 		}
-		return game.ControllerReference(), nil, true
+		return searchSubject{Player: game.ControllerReference()}, true
 	case parser.EffectContextTarget:
 		if len(ctx.content.Targets) != 1 {
-			return game.PlayerReference{}, nil, false
+			return searchSubject{}, false
 		}
 		spec, ok := playerTargetSpec(ctx.content.Targets[0])
 		if !ok {
-			return game.PlayerReference{}, nil, false
+			return searchSubject{}, false
 		}
-		return game.TargetPlayerReference(0), []game.TargetSpec{spec}, true
+		return searchSubject{Player: game.TargetPlayerReference(0), Targets: []game.TargetSpec{spec}}, true
+	case parser.EffectContextEachPlayer:
+		if len(ctx.content.Targets) != 0 {
+			return searchSubject{}, false
+		}
+		return searchSubject{Group: game.AllPlayersReference()}, true
 	default:
-		return game.PlayerReference{}, nil, false
+		return searchSubject{}, false
 	}
 }
 
@@ -562,7 +732,7 @@ func controllerPlayerTargetSpec(opponent bool) game.TargetSpec {
 	}
 	if opponent {
 		spec.Constraint = "target opponent"
-		spec.Predicate = game.TargetPredicate{Player: game.PlayerOpponent}
+		spec.Selection = opt.Val(game.Selection{Player: game.PlayerOpponent})
 	}
 	return spec
 }
@@ -809,22 +979,27 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 		len(selector.ExcludedColors()) != 0 {
 		return game.SearchSpec{}, false
 	}
-	spec.ColorsAny = slices.Clone(selector.ColorsAny())
+	var filter game.Selection
+	if len(selector.Alternatives) > 0 {
+		return searchSpecForAlternatives(selector)
+	}
+	filter.ColorsAny = slices.Clone(selector.ColorsAny())
+	filter.Colorless = selector.Colorless
 	spec.Name = selector.RequiredName
 	switch selector.Kind {
 	case compiler.SelectorCard:
 	case compiler.SelectorLand:
-		spec.CardType = opt.Val(types.Land)
+		filter.RequiredTypes = []types.Card{types.Land}
 	case compiler.SelectorCreature:
-		spec.CardType = opt.Val(types.Creature)
+		filter.RequiredTypes = []types.Card{types.Creature}
 	case compiler.SelectorArtifact:
-		spec.CardType = opt.Val(types.Artifact)
+		filter.RequiredTypes = []types.Card{types.Artifact}
 	case compiler.SelectorEnchantment:
-		spec.CardType = opt.Val(types.Enchantment)
+		filter.RequiredTypes = []types.Card{types.Enchantment}
 	case compiler.SelectorPlaneswalker:
-		spec.CardType = opt.Val(types.Planeswalker)
+		filter.RequiredTypes = []types.Card{types.Planeswalker}
 	case compiler.SelectorPermanent:
-		spec.Permanent = true
+		filter.RequirePermanentCard = true
 	default:
 		return game.SearchSpec{}, false
 	}
@@ -837,15 +1012,15 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 		if len(requiredTypesAny) == 1 {
 			// A single required card type reaches lowering only for a plain card
 			// selection (the spell types instant and sorcery, which have no
-			// dedicated selector kind). It lowers to the singular CardType filter
-			// so "a sorcery card" or "an instant card" tutor keeps its type.
+			// dedicated selector kind). It lowers to the singular RequiredTypes
+			// filter so "a sorcery card" or "an instant card" tutor keeps its type.
 			if selector.Kind != compiler.SelectorCard {
 				return game.SearchSpec{}, false
 			}
-			spec.CardType = opt.Val(requiredTypesAny[0])
+			filter.RequiredTypes = []types.Card{requiredTypesAny[0]}
 		} else {
-			spec.CardType = opt.V[types.Card]{}
-			spec.CardTypesAny = slices.Clone(requiredTypesAny)
+			filter.RequiredTypes = nil
+			filter.RequiredTypesAny = slices.Clone(requiredTypesAny)
 		}
 	}
 	if selector.MatchManaValue {
@@ -859,25 +1034,21 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 			if selector.ManaValue.Op != compare.LessOrEqual {
 				return game.SearchSpec{}, false
 			}
-			spec.MaxManaValue = opt.Val(selector.ManaValue.Value)
+			filter.ManaValue = opt.Val(selector.ManaValue)
 		}
 	}
 	if selector.MatchPower {
 		switch selector.Power.Op {
-		case compare.LessOrEqual:
-			spec.MaxPower = opt.Val(selector.Power.Value)
-		case compare.GreaterOrEqual:
-			spec.MinPower = opt.Val(selector.Power.Value)
+		case compare.LessOrEqual, compare.GreaterOrEqual:
+			filter.Power = opt.Val(selector.Power)
 		default:
 			return game.SearchSpec{}, false
 		}
 	}
 	if selector.MatchToughness {
 		switch selector.Toughness.Op {
-		case compare.LessOrEqual:
-			spec.MaxToughness = opt.Val(selector.Toughness.Value)
-		case compare.GreaterOrEqual:
-			spec.MinToughness = opt.Val(selector.Toughness.Value)
+		case compare.LessOrEqual, compare.GreaterOrEqual:
+			filter.Toughness = opt.Val(selector.Toughness)
 		default:
 			return game.SearchSpec{}, false
 		}
@@ -889,20 +1060,20 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 	if len(supertypes) == 1 {
 		switch supertypes[0] {
 		case types.Basic:
-			spec.Supertype = opt.Val(types.Basic)
+			filter.Supertypes = []types.Super{types.Basic}
 		case types.Legendary:
-			spec.Supertype = opt.Val(types.Legendary)
+			filter.Supertypes = []types.Super{types.Legendary}
 		default:
 			return game.SearchSpec{}, false
 		}
 	}
-	spec.SubtypesAny = slices.Clone(selector.SubtypesAny())
+	filter.SubtypesAny = slices.Clone(selector.SubtypesAny())
 	if selector.BasicLandType {
-		if selector.Kind != compiler.SelectorLand || len(spec.SubtypesAny) != 0 ||
-			spec.Supertype.Exists {
+		if selector.Kind != compiler.SelectorLand || len(filter.SubtypesAny) != 0 ||
+			len(filter.Supertypes) != 0 {
 			return game.SearchSpec{}, false
 		}
-		spec.SubtypesAny = []types.Sub{
+		filter.SubtypesAny = []types.Sub{
 			types.Plains,
 			types.Island,
 			types.Swamp,
@@ -910,6 +1081,46 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 			types.Forest,
 		}
 	}
+	spec.Filter = filter
+	return spec, true
+}
+
+// searchSpecForAlternatives lowers a disjunctive search selector (one whose
+// sides parsed into Alternatives) into a SearchSpec whose filter is a
+// Selection.AnyOf of the per-side filters. The parent selector carries only the
+// alternatives, so it must bear no flat type, supertype, subtype, color, name,
+// or numeric constraint that AnyOf could not preserve, and each side must lower
+// to a plain filter with no name or X-bounded mana value. It fails closed
+// otherwise so an unrepresentable disjunction is never silently dropped.
+func searchSpecForAlternatives(selector compiler.CompiledSelector) (game.SearchSpec, bool) {
+	if selector.Kind != compiler.SelectorUnknown ||
+		len(selector.RequiredTypesAny()) != 0 ||
+		len(selector.Supertypes()) != 0 ||
+		len(selector.ExcludedSupertypes()) != 0 ||
+		len(selector.SubtypesAny()) != 0 ||
+		len(selector.ExcludedSubtypes()) != 0 ||
+		len(selector.ColorsAny()) != 0 ||
+		selector.Colorless ||
+		selector.RequiredName != "" ||
+		selector.BasicLandType ||
+		selector.MatchManaValue ||
+		selector.MatchPower ||
+		selector.MatchToughness {
+		return game.SearchSpec{}, false
+	}
+	var spec game.SearchSpec
+	var filter game.Selection
+	for i := range selector.Alternatives {
+		altSpec, ok := searchSpecForSelector(selector.Alternatives[i])
+		if !ok {
+			return game.SearchSpec{}, false
+		}
+		if altSpec.Name != "" || altSpec.MaxManaValueFromX {
+			return game.SearchSpec{}, false
+		}
+		filter.AnyOf = append(filter.AnyOf, altSpec.Filter)
+	}
+	spec.Filter = filter
 	return spec, true
 }
 
@@ -1105,10 +1316,16 @@ func lowerDealDamageSpell(cardName string, ctx contentCtx) (game.AbilityContent,
 	if ctx.content.Effects[0].Divided {
 		return lowerDividedDamageSpell(ctx)
 	}
-	if ctx.content.Effects[0].DamageRecipientReference == parser.DamageRecipientReferenceYou {
+	if ctx.content.Effects[0].DamageRecipient.Reference == parser.DamageRecipientReferenceYou {
 		return lowerControllerDamageSpell(ctx)
 	}
+	if ctx.content.Effects[0].DamageRecipient.Reference == parser.DamageRecipientReferenceThatPlayer {
+		return lowerEventPlayerDamageSpell(ctx)
+	}
 	if content, ok := lowerInheritedPowerDamageSpell(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerInheritedPowerGroupDamageSpell(ctx); ok {
 		return content, nil
 	}
 	if content, ok := lowerSourcePowerGroupDamageSpell(ctx); ok {
@@ -1117,13 +1334,19 @@ func lowerDealDamageSpell(cardName string, ctx contentCtx) (game.AbilityContent,
 	if content, ok := lowerSourcePowerDamageSpell(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerEventPowerGroupDamageSpell(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerEachOfTargetsDamageSpell(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerEachSelfPowerDamageSpell(ctx); ok {
 		return content, nil
 	}
 	if content, ok := lowerEachSourceDamageSpell(ctx); ok {
 		return content, nil
 	}
-	if ctx.content.Effects[0].HasSecondTargetDamageRider {
+	if _, ok := parser.SecondTargetDamageRider(ctx.content.Effects[0].DamageRiders); ok {
 		return lowerTwoTargetDamageSpell(cardName, ctx)
 	}
 	if len(ctx.content.Targets) == 0 {
@@ -1140,6 +1363,9 @@ func lowerReturnSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 		return content, nil
 	}
 	if content, ok := lowerChosenCardGraveyardReturn(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerTotalManaValueGraveyardReanimation(ctx); ok {
 		return content, nil
 	}
 	if content, ok := lowerMassGraveyardReturn(ctx); ok {
@@ -1190,6 +1416,8 @@ func lowerImmediateSingleEffectSpell(
 		return lowerDealDamageSpell(cardName, ctx)
 	case compiler.EffectCantBeBlocked:
 		return lowerCantBeBlockedSpell(ctx)
+	case compiler.EffectCantBlock:
+		return lowerCantBlockSpell(ctx)
 	case compiler.EffectDraw:
 		return lowerFixedDrawSpell(ctx, syntax)
 	case compiler.EffectDestroy:
@@ -1210,12 +1438,20 @@ func lowerImmediateSingleEffectSpell(
 		})
 	case compiler.EffectInvestigate:
 		return lowerInvestigateSpell(ctx, syntax)
-	case compiler.EffectGainEnergy:
-		return lowerGainEnergySpell(ctx, syntax)
+	case compiler.EffectGainPlayerCounter:
+		return lowerGainPlayerCounterSpell(ctx, syntax)
+	case compiler.EffectBecomeMonarch:
+		return lowerBecomeMonarchSpell(ctx)
+	case compiler.EffectRingTempts:
+		return lowerRingTemptsSpell(ctx)
 	case compiler.EffectAmass:
 		return lowerAmassContent(ctx, syntax)
 	case compiler.EffectRenown:
 		return lowerRenownContent(ctx, syntax)
+	case compiler.EffectAdapt:
+		return lowerAdaptContent(ctx, syntax)
+	case compiler.EffectConnive:
+		return lowerConniveContent(ctx)
 	case compiler.EffectProliferate:
 		return lowerExactPrimitiveSpell(ctx, syntax, "proliferate", func(amount game.Quantity) game.Primitive {
 			return game.Proliferate{Amount: amount}
@@ -1227,10 +1463,18 @@ func lowerImmediateSingleEffectSpell(
 	case compiler.EffectRegenerate:
 		return lowerRegenerateSpell(ctx)
 	case compiler.EffectFight:
+		if len(ctx.content.Targets) == 1 {
+			return lowerSourceFightSpell(ctx)
+		}
 		return lowerFightSpell(ctx)
+	case compiler.EffectLookAtHand:
+		return lowerLookAtHandSpell(ctx)
 	case compiler.EffectDiscard:
 		if ctx.content.Effects[0].DiscardEntireHand {
 			return lowerDiscardEntireHandSpell(ctx)
+		}
+		if content, ok := lowerFilteredControllerDiscard(ctx); ok {
+			return content, nil
 		}
 		atRandom := ctx.content.Effects[0].HandDiscard.AtRandom
 		return lowerFixedCardCountPlayerSpell(
@@ -1254,8 +1498,16 @@ func lowerImmediateSingleEffectSpell(
 		}, func(object game.ObjectReference) game.Primitive {
 			return game.Tap{Object: object}
 		})
+	case compiler.EffectTapOrUntap:
+		return lowerFixedPermanentTargetSpell(ctx, "Tap or untap", func(object game.ObjectReference) game.Primitive {
+			return game.TapOrUntap{Object: object}
+		})
 	case compiler.EffectUntap:
 		return lowerUntapSpell(ctx)
+	case compiler.EffectRemoveFromCombat:
+		return lowerFixedPermanentTargetSpell(ctx, "remove from combat", func(object game.ObjectReference) game.Primitive {
+			return game.RemoveFromCombat{Object: object}
+		})
 	case compiler.EffectExile:
 		if len(ctx.content.Effects) == 1 &&
 			ctx.content.Effects[0].CardSource == parser.EffectCardSourceTopOfPlayerLibrary {
@@ -1272,10 +1524,13 @@ func lowerImmediateSingleEffectSpell(
 		if content, ok := lowerSourceSpellShuffleIntoLibrary(ctx); ok {
 			return content, nil
 		}
+		if content, ok := lowerControllerGraveyardShuffleIntoLibrary(ctx); ok {
+			return content, nil
+		}
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported shuffle effect",
-			"the executable source backend supports only a source-spell shuffle into its owner's library",
+			"the executable source backend supports only a source-spell shuffle into its owner's library or a controller graveyard shuffle into library",
 		)
 	case compiler.EffectReturn:
 		return lowerReturnSpell(ctx)
@@ -1283,6 +1538,8 @@ func lowerImmediateSingleEffectSpell(
 		return lowerPutEffectSpell(ctx)
 	case compiler.EffectMoveCounters:
 		return lowerMoveCountersSpell(ctx)
+	case compiler.EffectRemoveCounter:
+		return lowerRemoveCounterSpell(ctx)
 	default:
 		if content, diag, ok := lowerImmediateSingleEffectSpellTail(cardName, ctx, syntax); ok {
 			return content, diag
@@ -1310,6 +1567,10 @@ func lowerImmediateSingleEffectSpellTail(
 		content, diag := lowerFixedModifyPTSpell(ctx, syntax)
 		return content, diag, true
 	case compiler.EffectDouble:
+		if ctx.content.Effects[0].DoubleSourceCounters {
+			content, diag := lowerDoubleCountersSpell(ctx)
+			return content, diag, true
+		}
 		content, diag := lowerDoublePTSpell(ctx)
 		return content, diag, true
 	case compiler.EffectCounter:
@@ -1331,6 +1592,9 @@ func lowerImmediateSingleEffectSpellTail(
 		content, diag := lowerCreateTokenSpell(ctx)
 		return content, diag, true
 	case compiler.EffectCast:
+		if content, diag, ok := lowerCastFromGraveyardPermission(ctx); ok {
+			return content, diag, true
+		}
 		content, diag := lowerCastForFreeSpell(ctx)
 		return content, diag, true
 	case compiler.EffectAttach:
@@ -1338,6 +1602,9 @@ func lowerImmediateSingleEffectSpellTail(
 		return content, diag, true
 	case compiler.EffectWinGame:
 		content, diag := lowerWinGameSpell(ctx)
+		return content, diag, true
+	case compiler.EffectLoseGame:
+		content, diag := lowerLoseGameSpell(ctx)
 		return content, diag, true
 	case compiler.EffectMassReanimationExchange:
 		content, diag := lowerMassReanimationExchangeSpell(ctx)
@@ -1363,6 +1630,14 @@ func lowerGainSpellEffect(ctx contentCtx) (game.AbilityContent, *shared.Diagnost
 		temporaryKeywordDuration(ctx.content.Effects[0].Duration) {
 		return lowerTemporaryKeywordSpell(ctx)
 	}
+	if len(ctx.content.Keywords) != 0 {
+		if _, ok := permanentKeywordGrantDuration(ctx.content.Effects[0].Duration); ok {
+			return lowerPermanentKeywordGrantSpell(ctx)
+		}
+	}
+	if ctx.content.Effects[0].GainGrantedAbility != nil {
+		return lowerGainGrantedAbilitySpell(ctx)
+	}
 	if !ctx.content.Effects[0].LifeObject {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -1375,6 +1650,155 @@ func lowerGainSpellEffect(ctx contentCtx) (game.AbilityContent, *shared.Diagnost
 	}, func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive {
 		return game.GainLife{Amount: amount, PlayerGroup: group}
 	})
+}
+
+// permanentKeywordGrantDuration maps the compiled duration of a resolving keyword
+// grant to its runtime EffectDuration. A no-duration grant lasts as long as the
+// subject remains on the battlefield (DurationPermanent); the "for as long as you
+// control this <noun>" form expires when the source leaves the controller's
+// control. It returns ok=false for any other duration so richer grants stay
+// fail-closed.
+func permanentKeywordGrantDuration(duration compiler.DurationKind) (game.EffectDuration, bool) {
+	switch duration {
+	case compiler.DurationNone:
+		return game.DurationPermanent, true
+	case compiler.DurationForAsLongAsYouControlSource:
+		return game.DurationForAsLongAsYouControlSource, true
+	default:
+		return game.DurationPermanent, false
+	}
+}
+
+// lowerPermanentKeywordGrantSpell lowers a keyword grant to a referenced object
+// ("Return target creature card ... to the battlefield. It gains haste.") or to a
+// single targeted permanent ("Target creature you control gains indestructible
+// for as long as you control this Saga.") into a game.ApplyContinuous that adds
+// the keyword for the grant's lifetime. A no-duration grant persists for as long
+// as the object remains on the battlefield (DurationPermanent); the "for as long
+// as you control this <noun>" form expires when its controller loses the source.
+// "It" binds to the prior target, so the no-duration grant composes with
+// reanimation and similar back-referencing sequences. It fails closed for any
+// shape other than an exact, non-negated keyword grant with a supported duration
+// to a referenced or single targeted permanent.
+func lowerPermanentKeywordGrantSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported keyword or ability grant",
+			"the executable source backend does not yet lower spells that grant a keyword or quoted ability",
+		)
+	}
+	effect := ctx.content.Effects[0]
+	referencedObject := len(ctx.content.Targets) == 0 &&
+		len(ctx.content.References) == 1 &&
+		ctx.content.References[0].Binding == compiler.ReferenceBindingTarget &&
+		effect.Context == parser.EffectContextReferencedObject
+	targetSubject := len(ctx.content.Targets) == 1 &&
+		len(ctx.content.References) == 0 &&
+		effect.Context == parser.EffectContextTarget &&
+		temporaryKeywordTarget(ctx.content.Targets[0])
+	duration, durationOK := permanentKeywordGrantDuration(effect.Duration)
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		effect.Kind != compiler.EffectGain ||
+		!effect.Exact ||
+		(!referencedObject && !targetSubject) ||
+		effect.Negated ||
+		effect.StaticSubject != compiler.StaticSubjectNone ||
+		!durationOK {
+		return unsupported()
+	}
+	keywords, abilities, ok := partitionTemporaryKeywords(ctx.content.Keywords)
+	if !ok {
+		return unsupported()
+	}
+	var object game.ObjectReference
+	var target opt.V[game.TargetSpec]
+	switch {
+	case targetSubject:
+		spec, ok := permanentTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return unsupported()
+		}
+		target = opt.Val(spec)
+		object = game.TargetPermanentReference(0)
+	default:
+		object, ok = lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowTarget: true})
+		if !ok {
+			return unsupported()
+		}
+	}
+	if effect.KeywordGrantChoice {
+		if duration != game.DurationPermanent {
+			return unsupported()
+		}
+		return lowerPermanentKeywordChoiceGrant(keywords, abilities, object, target)
+	}
+	mode := game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.ApplyContinuous{
+				Object: opt.Val(object),
+				ContinuousEffects: []game.ContinuousEffect{{
+					Layer:        game.LayerAbility,
+					AddKeywords:  keywords,
+					AddAbilities: abilities,
+				}},
+				Duration: duration,
+			},
+		}},
+	}
+	if target.Exists {
+		mode.Targets = []game.TargetSpec{target.Val}
+	}
+	return mode.Ability(), nil
+}
+
+// lowerPermanentKeywordChoiceGrant lowers a disjunctive keyword grant ("that
+// creature gains banding, first strike, or trample") into a modal ability whose
+// modes each grant one of the listed keywords indefinitely. The controller picks
+// exactly one mode at resolution, which realizes the "choose one of the listed
+// keywords" semantics with the existing modal machinery. The single grant target
+// is shared across every mode. Abilities (such as a granted protection static
+// body) are never produced by a choice list, so a non-empty abilities slice is
+// rejected as unrepresentable.
+func lowerPermanentKeywordChoiceGrant(
+	keywords []game.Keyword,
+	abilities []game.Ability,
+	object game.ObjectReference,
+	target opt.V[game.TargetSpec],
+) (game.AbilityContent, *shared.Diagnostic) {
+	if len(keywords) < 2 || len(abilities) != 0 {
+		return game.AbilityContent{}, &shared.Diagnostic{
+			Severity: shared.SeverityWarning,
+			Summary:  "unsupported keyword choice grant",
+			Detail:   "the executable source backend supports only a choice among two or more simple grantable keywords",
+		}
+	}
+	modes := make([]game.Mode, 0, len(keywords))
+	for _, keyword := range keywords {
+		modes = append(modes, game.Mode{
+			Sequence: []game.Instruction{{
+				Primitive: game.ApplyContinuous{
+					Object: opt.Val(object),
+					ContinuousEffects: []game.ContinuousEffect{{
+						Layer:       game.LayerAbility,
+						AddKeywords: []game.Keyword{keyword},
+					}},
+					Duration: game.DurationPermanent,
+				},
+			}},
+		})
+	}
+	content := game.AbilityContent{
+		Modes:    modes,
+		MinModes: 1,
+		MaxModes: 1,
+	}
+	if target.Exists {
+		content.SharedTargets = []game.TargetSpec{target.Val}
+	}
+	return content, nil
 }
 
 // lowerLoseSpellEffect lowers an EffectLose body: either a temporary keyword

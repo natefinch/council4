@@ -9,6 +9,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestCompileResolutionConditionIsNotIntervening(t *testing.T) {
@@ -75,10 +76,10 @@ func TestCompileEntersTappedUnlessLegendaryCreature(t *testing.T) {
 		t.Fatalf("condition = %#v, want negated unless controller-controls", condition)
 	}
 	selection := condition.Selection
-	if len(selection.RequiredTypes) != 1 || selection.RequiredTypes[0] != ConditionCardTypeCreature {
+	if len(selection.RequiredTypes) != 1 || selection.RequiredTypes[0] != types.Creature {
 		t.Fatalf("selection = %#v, want single creature type", selection)
 	}
-	if len(selection.Supertypes) != 1 || selection.Supertypes[0] != ConditionSupertypeLegendary {
+	if len(selection.Supertypes) != 1 || selection.Supertypes[0] != types.Legendary {
 		t.Fatalf("selection = %#v, want legendary supertype", selection)
 	}
 }
@@ -125,7 +126,7 @@ func TestCompileArtifactAndEnchantmentEntersTappedReference(t *testing.T) {
 
 func TestCompileUnsupportedConstruct(t *testing.T) {
 	t.Parallel()
-	source := "Start your engines!"
+	source := "Daybound"
 	compilation, diagnostics := compileSource(source, pipelineContext{})
 	if len(compilation.Abilities) != 1 {
 		t.Fatalf("abilities = %#v", compilation.Abilities)
@@ -245,7 +246,7 @@ func TestCompileActivationConditionTotalPower(t *testing.T) {
 		t.Fatalf("condition = %#v, want only-if controller-controls", condition)
 	}
 	selection := condition.Selection
-	if len(selection.RequiredTypes) != 1 || selection.RequiredTypes[0] != ConditionCardTypeCreature {
+	if len(selection.RequiredTypes) != 1 || selection.RequiredTypes[0] != types.Creature {
 		t.Fatalf("selection = %#v, want single creature type", selection)
 	}
 	if !selection.MatchTotalPowerAtLeast || selection.TotalPowerAtLeast != 8 {
@@ -456,29 +457,29 @@ func TestCompileProvenObjectAndControllerInterveningConditions(t *testing.T) {
 		binding       ReferenceBinding
 		threshold     int
 		negated       bool
-		requiredTypes []ConditionCardType
+		requiredTypes []types.Card
 		subtypes      []string
 		tapped        ConditionTriState
 		power         int
 		excludeSource bool
 	}{
-		{"event creature", "if it was a creature", ConditionPredicateObjectMatches, ReferenceBindingEventPermanent, 0, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriAny, 0, false},
-		{"event creature contraction", "IF IT'S A CREATURE", ConditionPredicateObjectMatches, ReferenceBindingEventPermanent, 0, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriAny, 0, false},
+		{"event creature", "if it was a creature", ConditionPredicateObjectMatches, ReferenceBindingEventPermanent, 0, false, []types.Card{types.Creature}, nil, ConditionTriAny, 0, false},
+		{"event creature contraction", "IF IT'S A CREATURE", ConditionPredicateObjectMatches, ReferenceBindingEventPermanent, 0, false, []types.Card{types.Creature}, nil, ConditionTriAny, 0, false},
 		{"event Human", "if it was a Human", ConditionPredicateObjectMatches, ReferenceBindingEventPermanent, 0, false, nil, []string{"Human"}, ConditionTriAny, 0, false},
 		{"event counters", "if it had counters on it", ConditionPredicateEventSubjectHadCounters, ReferenceBindingEventPermanent, 0, false, nil, nil, ConditionTriAny, 0, false},
 		{"event name unique", "if it doesn't have the same name as another creature you control or a creature card in your graveyard", ConditionPredicateEventSubjectNameUnique, ReferenceBindingEventPermanent, 0, false, nil, nil, ConditionTriAny, 0, false},
-		{"untapped artifact source", "if this artifact is untapped", ConditionPredicateObjectMatches, ReferenceBindingSource, 0, false, []ConditionCardType{ConditionCardTypeArtifact}, nil, ConditionTriFalse, 0, false},
-		{"untapped creature source", "if this creature is untapped", ConditionPredicateObjectMatches, ReferenceBindingSource, 0, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriFalse, 0, false},
-		{"enchantment source", "if this permanent is an enchantment", ConditionPredicateObjectMatches, ReferenceBindingSource, 0, false, []ConditionCardType{ConditionCardTypeEnchantment}, nil, ConditionTriAny, 0, false},
+		{"untapped artifact source", "if this artifact is untapped", ConditionPredicateObjectMatches, ReferenceBindingSource, 0, false, []types.Card{types.Artifact}, nil, ConditionTriFalse, 0, false},
+		{"untapped creature source", "if this creature is untapped", ConditionPredicateObjectMatches, ReferenceBindingSource, 0, false, []types.Card{types.Creature}, nil, ConditionTriFalse, 0, false},
+		{"enchantment source", "if this permanent is an enchantment", ConditionPredicateObjectMatches, ReferenceBindingSource, 0, false, []types.Card{types.Enchantment}, nil, ConditionTriAny, 0, false},
 		{"source exists", "if this creature is on the battlefield", ConditionPredicateObjectExists, ReferenceBindingSource, 0, false, nil, nil, ConditionTriAny, 0, false},
 		{"two Gates", "if you control two or more Gates", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 2, false, nil, []string{"Gate"}, ConditionTriAny, 0, false},
-		{"two tapped creatures", "if you control two or more tapped creatures", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 2, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriTrue, 0, false},
-		{"power five creature", "if you control a creature with power 5 or greater", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 0, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriAny, 5, false},
-		{"another power four creature", "if you control another creature with power 4 or greater", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 0, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriAny, 4, true},
+		{"two tapped creatures", "if you control two or more tapped creatures", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 2, false, []types.Card{types.Creature}, nil, ConditionTriTrue, 0, false},
+		{"power five creature", "if you control a creature with power 5 or greater", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 0, false, []types.Card{types.Creature}, nil, ConditionTriAny, 5, false},
+		{"another power four creature", "if you control another creature with power 4 or greater", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 0, false, []types.Card{types.Creature}, nil, ConditionTriAny, 4, true},
 		{"Equipment", "if you control an Equipment", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 0, false, nil, []string{"Equipment"}, ConditionTriAny, 0, false},
-		{"no creatures", "if you control no creatures", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 1, true, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriAny, 0, false},
-		{"three creatures", "if you control three or more creatures", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 3, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriAny, 0, false},
-		{"tapped creature", "if you control a tapped creature", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 0, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriTrue, 0, false},
+		{"no creatures", "if you control no creatures", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 1, true, []types.Card{types.Creature}, nil, ConditionTriAny, 0, false},
+		{"three creatures", "if you control three or more creatures", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 3, false, []types.Card{types.Creature}, nil, ConditionTriAny, 0, false},
+		{"tapped creature", "if you control a tapped creature", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 0, false, []types.Card{types.Creature}, nil, ConditionTriTrue, 0, false},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -521,7 +522,7 @@ func TestCompileEventHistoryCreatureDiedHasCreatureSelection(t *testing.T) {
 		t.Fatal("EventHistoryPattern = nil, want non-nil")
 	}
 	sel := cond.EventHistoryPattern.SubjectSelection
-	if len(sel.RequiredTypes) != 1 || sel.RequiredTypes[0] != TriggerCardTypeCreature {
+	if len(sel.RequiredTypes) != 1 || sel.RequiredTypes[0] != types.Creature {
 		t.Fatalf("SubjectSelection = %#v, want creature", sel)
 	}
 }

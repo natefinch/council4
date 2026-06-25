@@ -73,10 +73,20 @@ func cutDelayedTiming(tokens []shared.Token) ([]shared.Token, DelayedTimingKind)
 }
 
 func leadingDelayedTiming(tokens []shared.Token) DelayedTimingKind {
-	if len(tokens) == 9 &&
-		effectWordsAt(tokens, 0, "at", "the", "beginning", "of", "your", "next", "main", "phase") &&
-		tokens[8].Kind == shared.Comma {
-		return DelayedTimingNextMain
+	if len(tokens) != 9 || tokens[8].Kind != shared.Comma {
+		return DelayedTimingNone
+	}
+	for _, pattern := range []struct {
+		words  []string
+		timing DelayedTimingKind
+	}{
+		{[]string{"at", "the", "beginning", "of", "your", "next", "main", "phase"}, DelayedTimingNextMain},
+		{[]string{"at", "the", "beginning", "of", "the", "next", "end", "step"}, DelayedTimingNextEndStep},
+		{[]string{"at", "the", "beginning", "of", "your", "next", "end", "step"}, DelayedTimingNextEndStep},
+	} {
+		if effectWordsAt(tokens, 0, pattern.words...) {
+			return pattern.timing
+		}
 	}
 	return DelayedTimingNone
 }
@@ -148,6 +158,45 @@ func parseTokenKeywords(kind EffectKind, tokens []shared.Token, atoms Atoms) []K
 	return kinds
 }
 
+// predefinedTokenNames lists the named tokens whose identity is a card name
+// rather than a card subtype, so the create clause spells out neither their
+// printed characteristics nor their abilities ("create a tapped Mutavault
+// token."). Each name maps to a fixed token definition in lowering; the parser
+// captures only these recognized names so other capitalized words in a create
+// clause are unaffected. The map key is the lowercased source word; the value is
+// the canonical token name.
+var predefinedTokenNames = map[string]string{
+	"mutavault": "Mutavault",
+}
+
+// parsePredefinedTokenName captures a created predefined named token's name from
+// the noun slot of a create clause ("create a tapped Mutavault token." ->
+// "Mutavault"). The name must be one of the recognized predefined-token names
+// (predefinedTokenNames) and must sit immediately before the "token"/"tokens"
+// noun. It returns "" for non-create clauses and for any clause whose pre-noun
+// word is not a recognized predefined-token name. The create-token exactness
+// recognizer reconstructs and byte-checks the "<Name> token" noun phrase, so a
+// spurious capture fails closed there.
+func parsePredefinedTokenName(kind EffectKind, tokens []shared.Token) string {
+	if kind != EffectCreate {
+		return ""
+	}
+	noun := -1
+	for i, token := range tokens {
+		if equalWord(token, "token") || equalWord(token, "tokens") {
+			noun = i
+			break
+		}
+	}
+	if noun < 1 {
+		return ""
+	}
+	if name, ok := predefinedTokenNames[strings.ToLower(tokens[noun-1].Text)]; ok {
+		return name
+	}
+	return ""
+}
+
 // parseTokenName captures a created creature token's explicit Oracle name from
 // the trailing "named <Name>" tail of a create clause ("... Serpent creature
 // tokens named Koma's Coil." -> "Koma's Coil"). It returns the name joined
@@ -198,7 +247,46 @@ func parseTokenName(kind EffectKind, tokens []shared.Token) string {
 	return joinedEffectText(nameTokens)
 }
 
-// parseTokenChoice reports whether a create clause offers a choice between two
+// parseLeadingTokenName captures a created token's name from the leading
+// "Create <Name>, a/an ... token ..." form ("Create Avacyn, a legendary 8/8
+// white Angel creature token with flying, vigilance, and indestructible.") used
+// by named tokens that print their name before the token description. The clause
+// arrives with its "Create"/"creates" verb already stripped, so the leading name
+// (when present) begins at the first token and runs to the comma that
+// immediately precedes the "a"/"an" token spec. It returns "" for non-create
+// clauses, for the leading-article form that names no token ("Create a ..."), and
+// for any clause whose name region holds a token noun. The create-token exactness
+// recognizer reconstructs and byte-checks the full clause, so any spurious capture
+// fails closed there.
+func parseLeadingTokenName(kind EffectKind, tokens []shared.Token) string {
+	if kind != EffectCreate || len(tokens) == 0 {
+		return ""
+	}
+	// A leading article opens the token spec directly, so no name precedes it.
+	if equalWord(tokens[0], "a") || equalWord(tokens[0], "an") {
+		return ""
+	}
+	comma := -1
+	for i := range tokens {
+		if tokens[i].Kind == shared.Comma {
+			comma = i
+			break
+		}
+		// A token noun before any comma is not the leading-name shape; fail closed
+		// so other create wordings are unaffected.
+		if equalWord(tokens[i], "token") || equalWord(tokens[i], "tokens") {
+			return ""
+		}
+	}
+	if comma <= 0 || comma+1 >= len(tokens) {
+		return ""
+	}
+	if !equalWord(tokens[comma+1], "a") && !equalWord(tokens[comma+1], "an") {
+		return ""
+	}
+	return joinedEffectText(tokens[:comma])
+}
+
 // complete token specs joined by "or" ("create a Food token or a Treasure
 // token"). The signal is a "token"/"tokens" noun on each side of an "or": each
 // alternative names its own token, so the effect creates one of the
@@ -291,7 +379,7 @@ func parseSignedAmount(sign, amount shared.Token) (SignedAmountSyntax, bool) {
 }
 
 func parseEffectAmount(kind EffectKind, tokens []shared.Token, atoms Atoms) EffectAmountSyntax {
-	if kind == EffectGainEnergy {
+	if kind == EffectGainPlayerCounter {
 		if symbols := energySymbolsAfter(tokens, 0); len(symbols) > 0 {
 			return EffectAmountSyntax{
 				Span:  shared.SpanOf(symbols),
@@ -299,7 +387,9 @@ func parseEffectAmount(kind EffectKind, tokens []shared.Token, atoms Atoms) Effe
 				Known: true,
 			}
 		}
-		return EffectAmountSyntax{}
+		// Named player-counter word form ("an experience counter", "two poison
+		// counters"): the count is an ordinary leading number/article handled by
+		// the generic amount parsing below, defaulting to one.
 	}
 	if amount, attempted, ok := parseDynamicEffectAmount(tokens, atoms); attempted {
 		if ok {
@@ -345,6 +435,71 @@ func parseEffectAmount(kind EffectKind, tokens []shared.Token, atoms Atoms) Effe
 			}
 		}
 	}
+	if kind == EffectDraw {
+		for i := 0; i+2 < len(tokens); i++ {
+			if equalWord(tokens[i], "that") && equalWord(tokens[i+1], "many") && equalWord(tokens[i+2], "cards") {
+				return EffectAmountSyntax{
+					Span:        shared.SpanOf(tokens[i : i+2]),
+					Text:        joinedEffectText(tokens[i : i+2]),
+					DynamicKind: EffectDynamicAmountTriggeringCounterCount,
+				}
+			}
+		}
+	}
+	if kind == EffectMill {
+		for i := 0; i+2 < len(tokens); i++ {
+			if equalWord(tokens[i], "that") && equalWord(tokens[i+1], "many") && equalWord(tokens[i+2], "cards") {
+				return EffectAmountSyntax{
+					Span:        shared.SpanOf(tokens[i : i+2]),
+					Text:        joinedEffectText(tokens[i : i+2]),
+					DynamicKind: EffectDynamicAmountTriggeringCombatDamage,
+				}
+			}
+		}
+	}
+	if kind == EffectPut {
+		// "put that many <kind> counters" in a triggered ability reads the
+		// quantity the trigger measured ("Whenever you discard one or more cards,
+		// put that many +1/+1 counters on this creature." — Marauding Mako;
+		// "Whenever a creature you control deals combat damage to a player, put
+		// that many +1/+1 counters on it." — Necropolis Regent; "Whenever you gain
+		// life, put that many +1/+1 counters on this creature." — Ageless Entity).
+		// The generic scan below would otherwise misread the "+1" of "+1/+1" as a
+		// fixed amount of one. The parser cannot see the trigger, so it records a
+		// generic triggering-event amount that lowering resolves per event kind,
+		// failing closed outside a measuring trigger.
+		for i := 0; i+1 < len(tokens); i++ {
+			if equalWord(tokens[i], "that") && equalWord(tokens[i+1], "many") {
+				return EffectAmountSyntax{
+					Span:        shared.SpanOf(tokens[i : i+2]),
+					Text:        joinedEffectText(tokens[i : i+2]),
+					DynamicKind: EffectDynamicAmountTriggeringEventAmount,
+				}
+			}
+		}
+	}
+	if kind == EffectDealDamage {
+		// "deals that much damage" in a counter-placement trigger reads the
+		// number of counters added by the triggering event (Shalai and Hallar).
+		// The "that much damage plus N" damage-increase replacement is a distinct
+		// construct parsed elsewhere, so a trailing "plus" excludes it here. The
+		// counter-placement gate lives in lowering (lowerEventCounterCountAmount),
+		// keeping the amount closed for every other trigger event.
+		for i := 0; i+2 < len(tokens); i++ {
+			if !equalWord(tokens[i], "that") || !equalWord(tokens[i+1], "much") ||
+				!equalWord(tokens[i+2], "damage") {
+				continue
+			}
+			if i+3 < len(tokens) && equalWord(tokens[i+3], "plus") {
+				break
+			}
+			return EffectAmountSyntax{
+				Span:        shared.SpanOf(tokens[i : i+2]),
+				Text:        joinedEffectText(tokens[i : i+2]),
+				DynamicKind: EffectDynamicAmountTriggeringCounterCount,
+			}
+		}
+	}
 	if kind == EffectDraw || kind == EffectUntap {
 		for i, token := range tokens {
 			value, ok := effectNumber(token, atoms)
@@ -375,10 +530,14 @@ func parseEffectAmount(kind EffectKind, tokens []shared.Token, atoms Atoms) Effe
 			}
 			return EffectAmountSyntax{Span: token.Span, Value: value, Known: true}
 		}
-		if equalWord(token, "a") || equalWord(token, "an") {
+		if equalWord(token, "a") || equalWord(token, "an") || equalWord(token, "another") {
 			if i > 0 && equalWord(tokens[i-1], "from") {
 				continue
 			}
+			// The determiner "another" denotes a single object other than the
+			// effect's source ("Sacrifice another creature."); its count is one,
+			// exactly like "a"/"an". The "another"/"other" exclusion itself rides
+			// on the selection's Another flag, consumed downstream.
 			return EffectAmountSyntax{Span: token.Span, Value: 1, Known: true}
 		}
 	}
@@ -601,6 +760,12 @@ func parseDynamicAmountSubjectHelper(tokens []shared.Token, start int, atoms Ato
 	if subject, ok := parseDynamicColorCountSubject(tokens, start, atoms); ok {
 		return subject, true
 	}
+	if subject, ok := parseDynamicColorsOfManaSpentSubject(tokens, start); ok {
+		return subject, true
+	}
+	if subject, ok := parseDynamicTimesKickedSubject(tokens, start); ok {
+		return subject, true
+	}
 	if subject, ok := parseDynamicGreatestDiscardedThisWaySubject(tokens, start); ok {
 		return subject, true
 	}
@@ -635,6 +800,11 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountControllerLife},
 			end:    start + 3,
 		}, true
+	case effectWordsAt(tokens, start, "your", "speed") && dynamicAmountBoundary(tokens, start+2):
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountControllerSpeed},
+			end:    start + 2,
+		}, true
 	case effectWordsAt(tokens, start, "its", "power") && dynamicAmountBoundary(tokens, start+2):
 		return dynamicAmountSubject{
 			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountSourcePower, ReferenceSpan: tokens[start].Span},
@@ -648,6 +818,30 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 	case effectWordsAt(tokens, start, "its", "mana", "value") && dynamicAmountBoundary(tokens, start+3):
 		return dynamicAmountSubject{
 			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountSourceManaValue, ReferenceSpan: tokens[start].Span},
+			end:    start + 3,
+		}, true
+	case start+1 < len(tokens) && equalWord(tokens[start], "that") &&
+		referencePossessiveObjectNoun(tokens[start+1]) &&
+		effectWordsAt(tokens, start+2, "power") &&
+		dynamicAmountBoundary(tokens, start+3):
+		// "that <object>'s power" names the power of a referenced permanent (the
+		// prior clause's permanent, or the triggering creature of an enters
+		// trigger). The reference spans the possessive object phrase ("that
+		// creature's"); collectReferences recognizes the same span so the
+		// amount's referent binds to the antecedent. It backs "deals damage
+		// equal to that creature's power" (Terror of the Peaks).
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountSourcePower, ReferenceSpan: shared.SpanOf(tokens[start : start+2])},
+			end:    start + 3,
+		}, true
+	case start+1 < len(tokens) && equalWord(tokens[start], "that") &&
+		referencePossessiveObjectNoun(tokens[start+1]) &&
+		effectWordsAt(tokens, start+2, "toughness") &&
+		dynamicAmountBoundary(tokens, start+3):
+		// "that <object>'s toughness" is the toughness sibling of the
+		// "that <object>'s power" referenced-object amount above.
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountSourceToughness, ReferenceSpan: shared.SpanOf(tokens[start : start+2])},
 			end:    start + 3,
 		}, true
 	case start+1 < len(tokens) && equalWord(tokens[start], "that") &&
@@ -684,6 +878,12 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountLifeLostThisWay},
 			end:    start + 5,
 		}, true
+	case effectWordsAt(tokens, start, "the", "result") &&
+		dynamicAmountBoundary(tokens, start+2):
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountDieRollResult},
+			end:    start + 2,
+		}, true
 	case effectWordsAt(tokens, start, "basic", "land", "type", "among", "lands", "you", "control") &&
 		dynamicAmountBoundary(tokens, start+7):
 		return dynamicAmountSubject{
@@ -709,21 +909,40 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 	for end < len(tokens) && tokens[end].Span.End.Offset <= nameSpan.End.Offset {
 		end++
 	}
-	if end < len(tokens) && equalWord(tokens[end], "power") && dynamicAmountBoundary(tokens, end+1) {
-		return dynamicAmountSubject{
-			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountSourcePower, ReferenceSpan: nameSpan},
-			end:    end + 1,
-		}, true
+	if end < len(tokens) && dynamicAmountBoundary(tokens, end+1) {
+		if kind, ok := selfNameCharacteristicKind(tokens[end]); ok {
+			return dynamicAmountSubject{
+				amount: EffectAmountSyntax{DynamicKind: kind, ReferenceSpan: nameSpan},
+				end:    end + 1,
+			}, true
+		}
 	}
 	if end+2 < len(tokens) && tokens[end].Kind == shared.Apostrophe &&
-		equalWord(tokens[end+1], "s") && equalWord(tokens[end+2], "power") &&
-		dynamicAmountBoundary(tokens, end+3) {
-		return dynamicAmountSubject{
-			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountSourcePower, ReferenceSpan: nameSpan},
-			end:    end + 3,
-		}, true
+		equalWord(tokens[end+1], "s") && dynamicAmountBoundary(tokens, end+3) {
+		if kind, ok := selfNameCharacteristicKind(tokens[end+2]); ok {
+			return dynamicAmountSubject{
+				amount: EffectAmountSyntax{DynamicKind: kind, ReferenceSpan: nameSpan},
+				end:    end + 3,
+			}, true
+		}
 	}
 	return dynamicAmountSubject{}, false
+}
+
+// selfNameCharacteristicKind maps the characteristic noun following a card's own
+// name in a possessive amount ("<Name>'s power", "<Name>'s toughness") to its
+// dynamic-amount kind. Power backs counter-scaled mana like Marwyn, the
+// Nurturer; toughness backs group enters-with-counters quantities like Arwen,
+// Weaver of Hope. Any other noun fails closed.
+func selfNameCharacteristicKind(token shared.Token) (EffectDynamicAmountKind, bool) {
+	switch {
+	case equalWord(token, "power"):
+		return EffectDynamicAmountSourcePower, true
+	case equalWord(token, "toughness"):
+		return EffectDynamicAmountSourceToughness, true
+	default:
+		return EffectDynamicAmountNone, false
+	}
 }
 
 // parseSacrificedCreatureCharacteristic recognizes "the sacrificed creature's
@@ -1070,6 +1289,8 @@ func parseDynamicTotalCharacteristicSubject(tokens []shared.Token, start int, at
 		kind, groupStart = EffectDynamicAmountTotalPower, start+4
 	case effectWordsAt(tokens, start+2, "toughness", "of"):
 		kind, groupStart = EffectDynamicAmountTotalToughness, start+4
+	case effectWordsAt(tokens, start+2, "mana", "value", "of"):
+		kind, groupStart = EffectDynamicAmountTotalManaValue, start+5
 	default:
 		return dynamicAmountSubject{}, false
 	}
@@ -1082,6 +1303,51 @@ func parseDynamicTotalCharacteristicSubject(tokens []shared.Token, start int, at
 		amount: EffectAmountSyntax{DynamicKind: kind, Selection: inner.amount.Selection},
 		end:    inner.end,
 	}, true
+}
+
+// parseDynamicColorsOfManaSpentSubject recognizes the Converge amount subject
+// "color of mana spent to cast it" (Crystalline Crawler: "enters with a +1/+1
+// counter on it for each color of mana spent to cast it"), the number of
+// distinct colors of mana spent to cast the source spell. It carries no
+// selection; the runtime records the colors of mana spent as the spell is cast.
+// The singular "color" pairs with a "for each" prefix, matching the count-number
+// agreement the dynamic-amount dispatcher enforces. It fails closed on any other
+// wording so unrelated "mana spent" phrasings stay rejected.
+func parseDynamicColorsOfManaSpentSubject(tokens []shared.Token, start int) (dynamicAmountSubject, bool) {
+	if !effectWordsAt(tokens, start, "color", "of", "mana", "spent", "to", "cast", "it") ||
+		!dynamicAmountBoundary(tokens, start+7) {
+		return dynamicAmountSubject{}, false
+	}
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountColorsOfManaSpent},
+		end:    start + 7, count: true,
+	}, true
+}
+
+// parseDynamicTimesKickedSubject recognizes the Multikicker amount subject
+// "time it was kicked" / "time this spell was kicked" (CR 702.32), the number
+// of times the spell was kicked. It backs "for each time it was kicked" amounts
+// such as Everflowing Chalice's enters-with-counters quantity and Wolfbriar
+// Elemental's Wolf-token count. It carries no selection; the runtime records
+// the kick count as the spell is cast. The singular "time" pairs with a
+// "for each" prefix, matching the count-number agreement the dynamic-amount
+// dispatcher enforces. It fails closed on any other wording.
+func parseDynamicTimesKickedSubject(tokens []shared.Token, start int) (dynamicAmountSubject, bool) {
+	if effectWordsAt(tokens, start, "time", "it", "was", "kicked") &&
+		dynamicAmountBoundary(tokens, start+4) {
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountTimesKicked},
+			end:    start + 4, count: true,
+		}, true
+	}
+	if effectWordsAt(tokens, start, "time", "this", "spell", "was", "kicked") &&
+		dynamicAmountBoundary(tokens, start+5) {
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountTimesKicked},
+			end:    start + 5, count: true,
+		}, true
+	}
+	return dynamicAmountSubject{}, false
 }
 
 // parseDynamicColorCountSubject recognizes the "color among <group>" /
@@ -1176,11 +1442,17 @@ func parseDynamicCountSubject(tokens []shared.Token, start int, atoms Atoms) (dy
 		if subject, ok := parseDynamicEventCardCountSubject(tokens, start); ok {
 			return subject, true
 		}
+		if subject, ok := parseDynamicCardsDrawnThisTurnSubject(tokens, start); ok {
+			return subject, true
+		}
 		if subject, ok := parseDynamicCardCountSubject(tokens, start, atoms); ok {
 			return subject, true
 		}
 	}
 	if subject, ok := parseDynamicTypeUnionCountSubject(tokens, start, atoms); ok {
+		return subject, true
+	}
+	if subject, ok := parseDynamicInstantSorceryCountSubject(tokens, start, atoms); ok {
 		return subject, true
 	}
 	if subject, ok := parseDynamicObjectNounCountSubject(tokens, start, atoms); ok {
@@ -1233,6 +1505,67 @@ func parseDynamicTypeUnionCountSubject(tokens []shared.Token, start int, atoms A
 		}, true
 	}
 	return dynamicAmountSubject{}, false
+}
+
+// parseDynamicInstantSorceryCountSubject recognizes a "for each instant and
+// sorcery card[s] in your graveyard/hand" count subject. "Instant and sorcery
+// cards" is a fixed idiom for cards that are instants or sorceries (no card is
+// both), so the bare "and" denotes a disjunction the runtime counts once per
+// matching card through a RequiredTypesAny union. Only the controller's own
+// graveyard and hand, where instant and sorcery cards exist, are recognized;
+// other zones, type pairs, and connectors fail closed.
+func parseDynamicInstantSorceryCountSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
+	if start+3 >= len(tokens) {
+		return dynamicAmountSubject{}, false
+	}
+	first, ok := atoms.CardTypeAt(tokens[start].Span)
+	if !ok || !equalWord(tokens[start+1], "and") {
+		return dynamicAmountSubject{}, false
+	}
+	second, ok := atoms.CardTypeAt(tokens[start+2].Span)
+	if !ok {
+		return dynamicAmountSubject{}, false
+	}
+	if !instantSorceryPair(first, second) {
+		return dynamicAmountSubject{}, false
+	}
+	headIndex := start + 3
+	if headIndex >= len(tokens) ||
+		(!equalWord(tokens[headIndex], "card") && !equalWord(tokens[headIndex], "cards")) {
+		return dynamicAmountSubject{}, false
+	}
+	plural := strings.EqualFold(tokens[headIndex].Text, "cards")
+	end := headIndex + 1
+	for _, zoneSuffix := range []struct {
+		words []string
+		kind  zone.Type
+	}{
+		{[]string{"in", "your", "graveyard"}, zone.Graveyard},
+		{[]string{"in", "your", "hand"}, zone.Hand},
+	} {
+		if !effectWordsAt(tokens, end, zoneSuffix.words...) || !dynamicAmountBoundary(tokens, end+len(zoneSuffix.words)) {
+			continue
+		}
+		subjectEnd := end + len(zoneSuffix.words)
+		selection := buildDynamicCountSelection(tokens, start, subjectEnd, atoms)
+		if len(selection.RequiredTypesAny) != 2 {
+			return dynamicAmountSubject{}, false
+		}
+		selection.Controller = SelectionControllerYou
+		selection.Zone = zoneSuffix.kind
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountCount, Selection: &selection},
+			end:    subjectEnd, count: true, plural: plural,
+		}, true
+	}
+	return dynamicAmountSubject{}, false
+}
+
+// instantSorceryPair reports whether the two card types are exactly the instant
+// and sorcery pair (in either order).
+func instantSorceryPair(a, b CardType) bool {
+	return (a == CardTypeInstant && b == CardTypeSorcery) ||
+		(a == CardTypeSorcery && b == CardTypeInstant)
 }
 
 // dynamicUnionCardTypeAt returns the counting card type beginning at index when
@@ -1290,14 +1623,66 @@ func parseDynamicEventCardCountSubject(tokens []shared.Token, start int) (dynami
 	}, true
 }
 
+// parseDynamicCardsDrawnThisTurnSubject recognizes the controller's total cards
+// drawn so far this turn as a count subject ("card[s] you've drawn this turn",
+// "card[s] you have drawn this turn"). It backs "the number of cards you've
+// drawn this turn" amounts (Thundering Djinn's attack-trigger damage). It is
+// controller-scoped: the "you" names the resolving ability's controller, so the
+// subject attaches no referent. The triggering or just-resolved draw counts,
+// since its draw event precedes the resolving ability. It fails closed on any
+// other wording (an opponent's draws, a trailing qualifier).
+func parseDynamicCardsDrawnThisTurnSubject(tokens []shared.Token, start int) (dynamicAmountSubject, bool) {
+	plural := false
+	switch {
+	case equalWord(tokens[start], "card"):
+	case equalWord(tokens[start], "cards"):
+		plural = true
+	default:
+		return dynamicAmountSubject{}, false
+	}
+	end := start + 1
+	switch {
+	case effectWordsAt(tokens, end, "you've", "drawn", "this", "turn"):
+		end += 4
+	case effectWordsAt(tokens, end, "you", "have", "drawn", "this", "turn"):
+		end += 5
+	default:
+		return dynamicAmountSubject{}, false
+	}
+	if !dynamicAmountBoundary(tokens, end) {
+		return dynamicAmountSubject{}, false
+	}
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountCardsDrawnThisTurn},
+		end:    end, count: true, plural: plural,
+	}, true
+}
+
 func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
-	noun, ok := atoms.ObjectNounAt(tokens[start].Span)
+	nounStart := start
+	if equalWord(tokens[start], "other") {
+		nounStart = start + 1
+	}
+	if nounStart >= len(tokens) {
+		return dynamicAmountSubject{}, false
+	}
+	noun, ok := atoms.ObjectNounAt(tokens[nounStart].Span)
 	if !ok {
 		return dynamicAmountSubject{}, false
 	}
-	plural := strings.HasSuffix(strings.ToLower(tokens[start].Text), "s")
+	plural := strings.HasSuffix(strings.ToLower(tokens[nounStart].Text), "s")
 	if noun == ObjectNounOpponent {
-		end := start + 1
+		end := nounStart + 1
+		if effectWordsAt(tokens, end, "you", "attacked", "this", "combat") &&
+			dynamicAmountBoundary(tokens, end+4) {
+			// "opponent you attacked this combat" is the Melee count: the number
+			// of the controller's opponents being attacked this combat. It is a
+			// distinct controller-scoped, combat-state amount, not a board count.
+			return dynamicAmountSubject{
+				amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountOpponentsAttackedThisCombat},
+				end:    end + 4, count: true, plural: plural,
+			}, true
+		}
 		if effectWordsAt(tokens, end, "you", "have") {
 			end += 2
 		}
@@ -1307,6 +1692,9 @@ func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms 
 				end:    end, count: true, plural: plural,
 			}, true
 		}
+		if subject, ok := parseOpponentControllingCountSubject(tokens, nounStart+1, plural, atoms); ok {
+			return subject, true
+		}
 		return dynamicAmountSubject{}, false
 	}
 	if !slices.Contains([]ObjectNoun{
@@ -1314,7 +1702,7 @@ func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms 
 	}, noun) {
 		return dynamicAmountSubject{}, false
 	}
-	end := start + 1
+	end := nounStart + 1
 	for _, suffix := range [][]string{{"you", "control"}, {"your", "opponents", "control"}, {"on", "the", "battlefield"}} {
 		if !effectWordsAt(tokens, end, suffix...) {
 			continue
@@ -1345,6 +1733,49 @@ func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms 
 		}, true
 	}
 	return dynamicAmountSubject{}, false
+}
+
+// parseOpponentControllingCountSubject recognizes the per-opponent control
+// predicate "opponents who control <selection>" ("opponents who control a
+// creature with power 4 or greater", Summon: Yojimbo chapter IV), counting the
+// controller's opponents that control at least one matching permanent. start is
+// the token index just past "opponents". The controlled selection is an
+// optionally articled permanent noun with an optional trailing characteristic
+// qualifier, parsed by parseSelection and scoped to "you control" so it resolves
+// relative to each counted opponent. It fails closed for any other trailing
+// wording.
+func parseOpponentControllingCountSubject(tokens []shared.Token, start int, plural bool, atoms Atoms) (dynamicAmountSubject, bool) {
+	if !effectWordsAt(tokens, start, "who", "control") {
+		return dynamicAmountSubject{}, false
+	}
+	selStart := start + 2
+	nounIdx := selStart
+	if effectWordsAt(tokens, nounIdx, "a") || effectWordsAt(tokens, nounIdx, "an") {
+		nounIdx++
+	}
+	if nounIdx >= len(tokens) {
+		return dynamicAmountSubject{}, false
+	}
+	noun, ok := atoms.ObjectNounAt(tokens[nounIdx].Span)
+	if !ok || !slices.Contains([]ObjectNoun{
+		ObjectNounArtifact, ObjectNounCreature, ObjectNounEnchantment, ObjectNounLand, ObjectNounPermanent,
+	}, noun) {
+		return dynamicAmountSubject{}, false
+	}
+	selEnd := nounIdx + 1
+	if !dynamicAmountBoundary(tokens, selEnd) {
+		cEnd, ok := dynamicCharacteristicQualifierEnd(tokens, selEnd, atoms)
+		if !ok || !dynamicAmountBoundary(tokens, cEnd) {
+			return dynamicAmountSubject{}, false
+		}
+		selEnd = cEnd
+	}
+	selection := parseSelection(tokens[selStart:selEnd], atoms)
+	selection.Controller = SelectionControllerYou
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountOpponentControllingCount, Selection: &selection},
+		end:    selEnd, count: true, plural: plural,
+	}, true
 }
 
 // dynamicCharacteristicQualifierEnd recognizes a trailing "with <characteristic>
@@ -1472,6 +1903,13 @@ func scanDynamicCountSelectionTokens(tokens []shared.Token, start int, atoms Ato
 func isDynamicCountSelectionToken(token shared.Token, atoms Atoms) bool {
 	if atoms.SelectionFlagIn(token.Span, SelectionFlagTapped) ||
 		atoms.SelectionFlagIn(token.Span, SelectionFlagUntapped) {
+		return true
+	}
+	// "historic" (artifact, legendary, or Saga; CR 702.61b) is a bare card
+	// qualifier the lexer does not atomize, so recognize the word directly. It
+	// lets a count subject such as "historic card in your graveyard" carry the
+	// Historic flag that parseSelection sets from the same word.
+	if equalWord(token, "historic") {
 		return true
 	}
 	if noun, ok := atoms.ObjectNounAt(token.Span); ok {
@@ -1723,6 +2161,21 @@ func firstZone(atoms Atoms, span shared.Span, role ZoneRole) zone.Type {
 		result = atom.Zone
 	}
 	return result
+}
+
+// effectFromZone resolves an effect's origin zone. It prefers an explicit "from
+// <zone>" atom. When none exists, a shuffle whose direct object is a graveyard
+// and whose destination is a library ("shuffle your graveyard into your
+// library") draws its source from the graveyard, which carries no "from"
+// preposition and is therefore not tagged as a ZoneRoleFrom atom.
+func effectFromZone(kind EffectKind, clause []shared.Token, atoms Atoms, span shared.Span, toZone zone.Type) zone.Type {
+	if from := firstZone(atoms, span, ZoneRoleFrom); from != zone.None {
+		return from
+	}
+	if kind == EffectShuffle && toZone == zone.Library && graveyardZonePhrase(clause) {
+		return zone.Graveyard
+	}
+	return zone.None
 }
 
 func firstEffectSymbol(tokens []shared.Token) string {

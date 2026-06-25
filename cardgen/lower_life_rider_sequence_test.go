@@ -256,6 +256,53 @@ func TestLowerGraveyardReturnManaValueGainLifeRider(t *testing.T) {
 	}
 }
 
+// TestLowerPhyrexianDelverReanimateLoseLifeRider verifies the Phyrexian Delver
+// shape: an exact graveyard-to-battlefield return under the card's owner's
+// control ("Return target creature card from your graveyard to the battlefield")
+// whose trailing "You lose life equal to that card's mana value" binds the
+// amount to the returned card's target rather than the prior instruction result.
+// The reanimation must publish the entered permanent under a linked key so the
+// rider reads its last-known mana value, gated on the move reaching the
+// battlefield.
+func TestLowerPhyrexianDelverReanimateLoseLifeRider(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Phyrexian Delver",
+		Layout:     "normal",
+		TypeLine:   "Creature — Zombie",
+		ManaCost:   "{3}{B}{B}",
+		Power:      new("3"),
+		Toughness:  new("2"),
+		OracleText: "When this creature enters, return target creature card from your graveyard to the battlefield. You lose life equal to that card's mana value.",
+	})
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %+v, want two instructions", mode.Sequence)
+	}
+	put, ok := mode.Sequence[0].Primitive.(game.PutOnBattlefield)
+	if !ok || put.PublishLinked == "" {
+		t.Fatalf("first primitive = %+v, want linked PutOnBattlefield", mode.Sequence[0].Primitive)
+	}
+	if mode.Sequence[0].PublishResult == "" {
+		t.Fatalf("reanimation instruction = %+v, want move-result publication", mode.Sequence[0])
+	}
+	lose, ok := mode.Sequence[1].Primitive.(game.LoseLife)
+	if !ok || lose.Player != game.ControllerReference() {
+		t.Fatalf("second primitive = %+v, want controller LoseLife", mode.Sequence[1].Primitive)
+	}
+	dyn := lifeRiderDynamic(t, lose.Amount)
+	if dyn.Kind != game.DynamicAmountObjectManaValue ||
+		dyn.Object != game.LinkedObjectReference(string(put.PublishLinked)) {
+		t.Fatalf("dynamic = %+v, want mana value of linked permanent", dyn)
+	}
+	gate := mode.Sequence[1].ResultGate
+	if !gate.Exists ||
+		gate.Val.Key != mode.Sequence[0].PublishResult ||
+		gate.Val.Succeeded != game.TriTrue {
+		t.Fatalf("life rider gate = %+v, want successful-move gate", gate)
+	}
+}
+
 // TestLifeRiderFailsClosed verifies the rider stays fail-closed for amount
 // characteristics and recipients it does not model: a mana-value amount paired
 // with exile (which cannot prove the destroyed-permanent referent), unsupported

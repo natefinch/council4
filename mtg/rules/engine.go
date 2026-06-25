@@ -43,8 +43,22 @@ func (e *Engine) NewGoldfishGame(config game.PlayerConfig) *game.Game {
 
 // RunGame runs a game to completion and returns its structured result.
 func (e *Engine) RunGame(g *game.Game, agents [game.NumPlayers]PlayerAgent) *GameResult {
+	return e.RunGameWithTurnLimit(g, agents, maxGameTurns)
+}
+
+// RunGameWithTurnLimit plays a full multiplayer game like RunGame but stops
+// after at most turnLimit turns, so a caller in a constrained environment (for
+// example a browser running the engine in WebAssembly) can bound a game that
+// would otherwise durdle toward the 1000-turn safety cap and exhaust memory. A
+// turnLimit of zero or less, or above maxGameTurns, uses the maxGameTurns safety
+// cap. When the limit is reached with no winner the result has HasWinner false.
+func (e *Engine) RunGameWithTurnLimit(g *game.Game, agents [game.NumPlayers]PlayerAgent, turnLimit int) *GameResult {
+	if turnLimit <= 0 || turnLimit > maxGameTurns {
+		turnLimit = maxGameTurns
+	}
 	result := &GameResult{}
 	e.drawOpeningHands(g)
+	result.OpeningHand = append([]id.ID(nil), g.Players[game.Player1].Hand.All()...)
 	markCurrentTurnEventStart(g)
 	result.addLosses(e.applyStateBasedActions(g))
 	if winner, ok := g.Winner(); ok {
@@ -54,7 +68,7 @@ func (e *Engine) RunGame(g *game.Game, agents [game.NumPlayers]PlayerAgent) *Gam
 		return result
 	}
 
-	for !g.IsGameOver() && len(result.Turns) < maxGameTurns {
+	for !g.IsGameOver() && len(result.Turns) < turnLimit {
 		turnLog := e.runTurn(g, agents)
 		result.addLosses(turnLog.Losses)
 		result.Turns = append(result.Turns, turnLog)
@@ -81,6 +95,7 @@ func (e *Engine) RunGoldfish(g *game.Game, agent PlayerAgent, turnLimit int) *Ga
 	agents[game.Player1] = agent
 	result := &GameResult{}
 	e.drawOpeningHands(g)
+	result.OpeningHand = append([]id.ID(nil), g.Players[game.Player1].Hand.All()...)
 	markCurrentTurnEventStart(g)
 	result.addLosses(e.applyStateBasedActions(g))
 	for !g.IsGameOver() && len(result.Turns) < turnLimit {
@@ -106,6 +121,7 @@ func foldFinalState(g *game.Game, result *GameResult) {
 			info.Name = instance.Def.Name
 			info.ManaValue = instance.Def.ManaValue()
 			info.Types = append([]types.Card(nil), instance.Def.Types...)
+			info.Faces = nonFrontFaceNames(instance.Def)
 		}
 		result.Cards[cardID] = info
 	}
@@ -120,4 +136,25 @@ func foldFinalState(g *game.Game, result *GameResult) {
 			CommanderCasts: player.CommanderCastCount,
 		}
 	}
+}
+
+// nonFrontFaceNames returns the name of each non-front printed face of a card,
+// keyed by face index, so a report can name the card by the face actually
+// played or cast. It returns nil for single-faced cards.
+func nonFrontFaceNames(def *game.CardDef) map[game.FaceIndex]string {
+	var names map[game.FaceIndex]string
+	for _, index := range def.FaceIndexes() {
+		if index == game.FaceFront {
+			continue
+		}
+		face, ok := def.Face(index)
+		if !ok || face.Name == "" {
+			continue
+		}
+		if names == nil {
+			names = make(map[game.FaceIndex]string)
+		}
+		names[index] = face.Name
+	}
+	return names
 }

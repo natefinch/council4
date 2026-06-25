@@ -439,6 +439,30 @@ func TestCombatTriggerPatternTypedSelectionsAndRecipients(t *testing.T) {
 			t.Fatal("first player event matched second-event pattern")
 		}
 	})
+
+	t.Run("opponent draw except first in draw step", func(t *testing.T) {
+		pattern := game.TriggerPattern{
+			Event:                      game.EventCardDrawn,
+			Player:                     game.TriggerPlayerOpponent,
+			ExcludeFirstDrawInDrawStep: true,
+		}
+		event := game.Event{
+			Kind:   game.EventCardDrawn,
+			Player: game.Player2,
+		}
+		if !triggerMatchesEvent(g, source, &pattern, event) {
+			t.Fatal("non-draw-step opponent draw did not match")
+		}
+		event.FirstInDrawStep = true
+		if triggerMatchesEvent(g, source, &pattern, event) {
+			t.Fatal("first draw-step draw matched the exclusion pattern")
+		}
+		event.FirstInDrawStep = false
+		event.Player = game.Player1
+		if triggerMatchesEvent(g, source, &pattern, event) {
+			t.Fatal("controller draw matched opponent-scoped pattern")
+		}
+	})
 }
 
 // TestUnionAttackBecameTargetTriggerFiresOnAttackAndSpellTarget exercises the
@@ -574,5 +598,44 @@ func TestUnionBlockBecameBlockedTriggerFiresOnBothCombatEvents(t *testing.T) {
 		PermanentID: source.ObjectID,
 	}) {
 		t.Fatal("unrelated attack event wrongly matched the blocks-or-becomes-blocked union")
+	}
+}
+
+// TestUnionAttackBlockTriggerFiresOnBothCombatEvents covers the event-union
+// trigger "Whenever this creature attacks or blocks": the self-scoped ability
+// must fire both when the source is declared as an attacker and when it is
+// declared as a blocker, sharing one subject, and must not fire on an unrelated
+// combat event.
+func TestUnionAttackBlockTriggerFiresOnBothCombatEvents(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	pattern := &game.TriggerPattern{
+		Event:      game.EventAttackerDeclared,
+		UnionEvent: game.EventBlockerDeclared,
+		Source:     game.TriggerSourceSelf,
+	}
+	source := addTriggeredPermanent(g, game.Player1, pattern,
+		[]game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	if !triggerMatchesEvent(g, source, pattern, game.Event{
+		Kind:        game.EventAttackerDeclared,
+		Controller:  game.Player1,
+		PermanentID: source.ObjectID,
+	}) {
+		t.Fatal("attacks constituent did not fire")
+	}
+	if !triggerMatchesEvent(g, source, pattern, game.Event{
+		Kind:        game.EventBlockerDeclared,
+		Controller:  game.Player1,
+		PermanentID: source.ObjectID,
+	}) {
+		t.Fatal("blocks constituent did not fire")
+	}
+	if triggerMatchesEvent(g, source, pattern, game.Event{
+		Kind:        game.EventAttackerBecameBlocked,
+		Controller:  game.Player1,
+		PermanentID: source.ObjectID,
+	}) {
+		t.Fatal("unrelated became-blocked event wrongly matched the attacks-or-blocks union")
 	}
 }

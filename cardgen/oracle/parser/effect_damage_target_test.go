@@ -85,7 +85,7 @@ func damageRecipientReferenceOf(t *testing.T, name, source string) (DamageRecipi
 	if len(effects) != 1 || effects[0].Kind != EffectDealDamage {
 		t.Fatalf("Parse(%q) effects = %#v", source, effects)
 	}
-	return effects[0].DamageRecipientReference, effects[0].Exact
+	return effects[0].DamageRecipient.Reference, effects[0].Exact
 }
 
 func TestDamageRecipientReferenceAccepts(t *testing.T) {
@@ -98,6 +98,32 @@ func TestDamageRecipientReferenceAccepts(t *testing.T) {
 		{"Burn Creature", "Burn Creature deals 3 damage to that creature's owner.", DamageRecipientReferenceOwner},
 		{"Burn It", "Burn It deals 1 damage to its controller.", DamageRecipientReferenceController},
 		{"Burn You", "Burn You deals 2 damage to you.", DamageRecipientReferenceYou},
+		{"Burn Player", "Burn Player deals 2 damage to that player.", DamageRecipientReferenceThatPlayer},
+	}
+	for _, test := range tests {
+		got, exact := damageRecipientReferenceOf(t, test.name, test.source)
+		if got != test.want {
+			t.Errorf("DamageRecipientReference(%q) = %v, want %v", test.source, got, test.want)
+		}
+		if !exact {
+			t.Errorf("damageEffectExact(%q) = false, want true", test.source)
+		}
+	}
+}
+
+func TestDamageRecipientReferenceAfterDynamicAmount(t *testing.T) {
+	t.Parallel()
+	// A referenced-player recipient that follows a dynamic "equal to ..." amount
+	// is recognized from the "to" after the amount span, and the dynamic-amount
+	// clause round-trips exactly. This backs "deals damage equal to its power to
+	// that player" (Gleeful Arsonist) and the controller/owner forms.
+	tests := []struct {
+		name, source string
+		want         DamageRecipientReferenceKind
+	}{
+		{"Spite Goblin", "Spite Goblin deals damage equal to its power to that player.", DamageRecipientReferenceThatPlayer},
+		{"Bond Aura", "Bond Aura deals damage equal to its power to the creature's controller.", DamageRecipientReferenceController},
+		{"Bond Owner", "Bond Owner deals damage equal to its power to that creature's owner.", DamageRecipientReferenceOwner},
 	}
 	for _, test := range tests {
 		got, exact := damageRecipientReferenceOf(t, test.name, test.source)
@@ -186,7 +212,8 @@ func selfDamageRiderOf(t *testing.T, name, source string) (hasRider bool, riderV
 	if len(effects) != 1 || effects[0].Kind != EffectDealDamage {
 		t.Fatalf("Parse(%q) effects = %#v", source, effects)
 	}
-	return effects[0].HasSelfDamageRider, effects[0].SelfDamageRiderValue, effects[0].Exact
+	rider, has := SelfDamageRider(effects[0].DamageRiders)
+	return has, rider.Value, effects[0].Exact
 }
 
 func TestSelfDamageRiderAccepts(t *testing.T) {
@@ -264,11 +291,12 @@ func TestTargetControllerDamageRiderAccepts(t *testing.T) {
 	}
 	for _, test := range tests {
 		effect, exact := damageRiderEffectOf(t, test.name, test.source)
-		if effect.TargetControllerDamageRiderRecipient != test.wantKind {
-			t.Errorf("TargetControllerDamageRiderRecipient(%q) = %v, want %v", test.source, effect.TargetControllerDamageRiderRecipient, test.wantKind)
+		rider, _ := TargetControllerDamageRider(effect.DamageRiders)
+		if rider.ReferenceRole != test.wantKind {
+			t.Errorf("TargetControllerDamageRider(%q) role = %v, want %v", test.source, rider.ReferenceRole, test.wantKind)
 		}
-		if effect.TargetControllerDamageRiderValue != test.wantValue {
-			t.Errorf("TargetControllerDamageRiderValue(%q) = %d, want %d", test.source, effect.TargetControllerDamageRiderValue, test.wantValue)
+		if rider.Value != test.wantValue {
+			t.Errorf("TargetControllerDamageRider(%q) value = %d, want %d", test.source, rider.Value, test.wantValue)
 		}
 		if !exact {
 			t.Errorf("damageEffectExact(%q) = false, want true", test.source)
@@ -288,11 +316,12 @@ func TestSecondTargetDamageRiderAccepts(t *testing.T) {
 	}
 	for _, test := range tests {
 		effect, exact := damageRiderEffectOf(t, test.name, test.source)
-		if !effect.HasSecondTargetDamageRider {
-			t.Errorf("HasSecondTargetDamageRider(%q) = false, want true", test.source)
+		rider, has := SecondTargetDamageRider(effect.DamageRiders)
+		if !has {
+			t.Errorf("SecondTargetDamageRider(%q) = false, want true", test.source)
 		}
-		if effect.SecondTargetDamageRiderValue != test.wantValue {
-			t.Errorf("SecondTargetDamageRiderValue(%q) = %d, want %d", test.source, effect.SecondTargetDamageRiderValue, test.wantValue)
+		if rider.Value != test.wantValue {
+			t.Errorf("SecondTargetDamageRider(%q) value = %d, want %d", test.source, rider.Value, test.wantValue)
 		}
 		if len(effect.Targets) != 2 || !effect.Targets[0].Exact || !effect.Targets[1].Exact {
 			t.Errorf("targets(%q) = %#v, want two exact targets", test.source, effect.Targets)
@@ -320,6 +349,82 @@ func TestSecondTargetDamageRiderFailsClosed(t *testing.T) {
 	if exact {
 		t.Error("damageEffectExact(variable primary with second-target rider) = true, want false")
 	}
+}
+
+// TestDamageRidersConsolidatedRepresentation pins the consolidated damage-rider
+// invariants: every follow-on "... and N damage to <recipient>" rider is carried
+// as one typed DamageRiderSyntax in the ordered DamageRiders list (rather than a
+// dedicated field pair per wording), the typed accessors resolve each variant,
+// and a plain single-target burn carries no rider.
+func TestDamageRidersConsolidatedRepresentation(t *testing.T) {
+	t.Parallel()
+	t.Run("self rider", func(t *testing.T) {
+		t.Parallel()
+		effect, _ := damageRiderEffectOf(t, "Char",
+			"Char deals 4 damage to any target and 2 damage to you.")
+		if len(effect.DamageRiders) != 1 {
+			t.Fatalf("DamageRiders = %#v, want one rider", effect.DamageRiders)
+		}
+		rider := effect.DamageRiders[0]
+		if rider.Recipient != DamageRiderRecipientYou ||
+			rider.Value != 2 || rider.Dynamic ||
+			rider.ReferenceRole != DamageRecipientReferenceNone {
+			t.Errorf("self rider = %#v, want {You, value 2}", rider)
+		}
+		if got, ok := SelfDamageRider(effect.DamageRiders); !ok || got != rider {
+			t.Errorf("SelfDamageRider = %#v, %v, want the self rider", got, ok)
+		}
+	})
+	t.Run("target controller rider", func(t *testing.T) {
+		t.Parallel()
+		effect, _ := damageRiderEffectOf(t, "Unleash Shell",
+			"Unleash Shell deals 5 damage to target creature or planeswalker and 2 damage to that permanent's owner.")
+		if len(effect.DamageRiders) != 1 {
+			t.Fatalf("DamageRiders = %#v, want one rider", effect.DamageRiders)
+		}
+		rider := effect.DamageRiders[0]
+		if rider.Recipient != DamageRiderRecipientTargetController ||
+			rider.Value != 2 || rider.Dynamic ||
+			rider.ReferenceRole != DamageRecipientReferenceOwner {
+			t.Errorf("target-controller rider = %#v, want {TargetController, owner, value 2}", rider)
+		}
+		if got, ok := TargetControllerDamageRider(effect.DamageRiders); !ok || got != rider {
+			t.Errorf("TargetControllerDamageRider = %#v, %v, want the rider", got, ok)
+		}
+	})
+	t.Run("second target rider", func(t *testing.T) {
+		t.Parallel()
+		effect, _ := damageRiderEffectOf(t, "Hungry Flames",
+			"Hungry Flames deals 3 damage to target creature and 2 damage to target player or planeswalker.")
+		if len(effect.DamageRiders) != 1 {
+			t.Fatalf("DamageRiders = %#v, want one rider", effect.DamageRiders)
+		}
+		rider := effect.DamageRiders[0]
+		if rider.Recipient != DamageRiderRecipientSecondTarget ||
+			rider.Value != 2 || rider.Dynamic {
+			t.Errorf("second-target rider = %#v, want {SecondTarget, value 2}", rider)
+		}
+	})
+	t.Run("dynamic second target rider", func(t *testing.T) {
+		t.Parallel()
+		effect, _ := damageRiderEffectOf(t, "Mishra's Command",
+			"Mishra's Command deals X damage to any target and X damage to any other target, where X is the number of artifacts you control.")
+		rider, ok := SecondTargetDamageRider(effect.DamageRiders)
+		if !ok || !rider.Dynamic || rider.Value != 0 {
+			t.Errorf("dynamic second-target rider = %#v, %v, want {SecondTarget, dynamic}", rider, ok)
+		}
+	})
+	t.Run("plain burn has no rider", func(t *testing.T) {
+		t.Parallel()
+		effect, _ := damageRiderEffectOf(t, "Lightning Bolt",
+			"Lightning Bolt deals 3 damage to any target.")
+		if len(effect.DamageRiders) != 0 {
+			t.Errorf("DamageRiders = %#v, want none", effect.DamageRiders)
+		}
+		if _, ok := SelfDamageRider(effect.DamageRiders); ok {
+			t.Error("SelfDamageRider(plain burn) = true, want false")
+		}
+	})
 }
 
 // TestExactDamageFullCommaNameSubjectAccepts covers legendary cards whose

@@ -35,6 +35,11 @@ func objectCharacteristicAmount(kind compiler.DynamicAmountKind, object game.Obj
 	}
 }
 
+// dieRollResultKey is the result key under which a RollDie instruction publishes
+// its rolled value, consumed by a following "...equal to the result." amount
+// (Ancient Copper Dragon and the Ancient Dragon dice cycle).
+const dieRollResultKey = game.ResultKey("die-roll-result")
+
 func lowerDynamicAmount(amount compiler.CompiledAmount, object game.ObjectReference) (game.DynamicAmount, bool) {
 	dynamic, ok := lowerDynamicAmountKind(amount, object)
 	if !ok {
@@ -62,8 +67,17 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 		dynamic.Group = game.BattlefieldGroup(selection)
 	case compiler.DynamicAmountControllerLife:
 		dynamic.Kind = game.DynamicAmountControllerLife
+	case compiler.DynamicAmountControllerSpeed:
+		dynamic.Kind = game.DynamicAmountControllerSpeed
 	case compiler.DynamicAmountOpponentCount:
 		dynamic.Kind = game.DynamicAmountOpponentCount
+	case compiler.DynamicAmountOpponentControllingCount:
+		selection, ok := dynamicAmountSelection(amount.Selector())
+		if !ok {
+			return game.DynamicAmount{}, false
+		}
+		dynamic.Kind = game.DynamicAmountOpponentControllingCount
+		dynamic.Group = game.BattlefieldGroup(selection)
 	case compiler.DynamicAmountBasicLandTypes:
 		dynamic.Kind = game.DynamicAmountControllerBasicLandTypeCount
 	case compiler.DynamicAmountSourcePower:
@@ -71,6 +85,12 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 			return game.DynamicAmount{}, false
 		}
 		dynamic.Kind = game.DynamicAmountObjectPower
+		dynamic.Object = object
+	case compiler.DynamicAmountSourceToughness:
+		if len(object.Validate()) != 0 {
+			return game.DynamicAmount{}, false
+		}
+		dynamic.Kind = game.DynamicAmountObjectToughness
 		dynamic.Object = object
 	case compiler.DynamicAmountSourceCounterCount:
 		if len(object.Validate()) != 0 || !amount.CounterKind.Valid() {
@@ -86,7 +106,7 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 		}
 		dynamic.Kind = greatestInGroupKind(amount.DynamicKind)
 		dynamic.Group = game.BattlefieldGroup(selection)
-	case compiler.DynamicAmountTotalPower, compiler.DynamicAmountTotalToughness:
+	case compiler.DynamicAmountTotalPower, compiler.DynamicAmountTotalToughness, compiler.DynamicAmountTotalManaValue:
 		selection, ok := dynamicAmountSelection(amount.Selector())
 		if !ok {
 			return game.DynamicAmount{}, false
@@ -115,10 +135,18 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 		dynamic.Colors = append([]color.Color(nil), amount.Colors...)
 	case compiler.DynamicAmountSpellsCastThisTurn:
 		dynamic.Kind = game.DynamicAmountSpellsCastThisTurn
+	case compiler.DynamicAmountColorsOfManaSpent:
+		dynamic.Kind = game.DynamicAmountColorsOfManaSpentToCast
+	case compiler.DynamicAmountTimesKicked:
+		dynamic.Kind = game.DynamicAmountTimesKicked
+	case compiler.DynamicAmountOpponentsAttackedThisCombat:
+		dynamic.Kind = game.DynamicAmountOpponentsAttackedThisCombat
 	case compiler.DynamicAmountLifeLostThisTurn:
 		dynamic.Kind = game.DynamicAmountLifeLostThisTurn
 	case compiler.DynamicAmountLifeGainedThisTurn:
 		dynamic.Kind = game.DynamicAmountLifeGainedThisTurn
+	case compiler.DynamicAmountCardsDrawnThisTurn:
+		dynamic.Kind = game.DynamicAmountCardsDrawnThisTurn
 	case compiler.DynamicAmountMaxOf:
 		operands, ok := lowerDynamicAmountOperands(amount.Operands, object)
 		if !ok {
@@ -135,6 +163,9 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 	case compiler.DynamicAmountSacrificedManaValue:
 		dynamic.Kind = game.DynamicAmountObjectManaValue
 		dynamic.Object = game.SacrificedCostReference()
+	case compiler.DynamicAmountDieRollResult:
+		dynamic.Kind = game.DynamicAmountPreviousEffectResult
+		dynamic.ResultKey = dieRollResultKey
 	default:
 		return game.DynamicAmount{}, false
 	}
@@ -179,87 +210,63 @@ func totalInGroupKind(kind compiler.DynamicAmountKind) game.DynamicAmountKind {
 	switch kind {
 	case compiler.DynamicAmountTotalToughness:
 		return game.DynamicAmountTotalToughnessInGroup
+	case compiler.DynamicAmountTotalManaValue:
+		return game.DynamicAmountTotalManaValueInGroup
 	default:
 		return game.DynamicAmountTotalPowerInGroup
 	}
 }
 
+// dynamicAmountSelection projects the battlefield-count group selector of a
+// dynamic amount ("for each other attacking creature you control") onto a
+// Selection through the canonical projector. The guard enforces the count-group
+// accept set that no SelectionMask dimension expresses: a countable permanent
+// kind (or a multi-type union, or an unknown noun carrying a count
+// characteristic), no "all" qualifier, and a you/opponent controller. It then
+// delegates the field mapping to the canonical projector, which carries the
+// combat, tapped, self-exclusion, and characteristic filters a count group does
+// support. dynamicAmountSelectionMask drops the remaining canonical dimensions a
+// count group never carries.
 func dynamicAmountSelection(selector compiler.CompiledSelector) (game.Selection, bool) {
-	if selector.Zone != zone.None {
+	if selector.All {
 		return game.Selection{}, false
 	}
-	tapped, ok := dynamicTapState(selector)
-	if !ok {
-		return game.Selection{}, false
-	}
-	combatState := dynamicCombatState(selector)
-	filtered := selector
-	filtered.Tapped = false
-	filtered.Untapped = false
-	filtered.Attacking = false
-	filtered.Blocking = false
-	selection, ok := dynamicCountCharacteristics(filtered)
-	if !ok {
-		return game.Selection{}, false
-	}
-	selection.Tapped = tapped
-	selection.CombatState = combatState
-	requiredType, known := dynamicBattlefieldRequiredType(selector.Kind)
+	_, known := dynamicBattlefieldRequiredType(selector.Kind)
 	switch {
 	case len(selector.RequiredTypesAny()) >= 2:
-		// A multi-type disjunction ("artifact and/or enchantment you control") is
-		// carried as the selection's RequiredTypesAny union by
-		// selectorCharacteristics; the selector Kind names only the first
-		// alternative, so do not also force it as a sole required type.
 	case known:
-		if requiredType != "" {
-			selection.RequiredTypes = []types.Card{requiredType}
-		}
 	case selector.Kind == compiler.SelectorUnknown && selectorHasCountCharacteristic(selector):
 	default:
 		return game.Selection{}, false
 	}
 	switch selector.Controller {
-	case compiler.ControllerAny:
-	case compiler.ControllerYou:
-		selection.Controller = game.ControllerYou
-	case compiler.ControllerOpponent:
-		selection.Controller = game.ControllerOpponent
+	case compiler.ControllerAny, compiler.ControllerYou, compiler.ControllerOpponent:
 	default:
 		return game.Selection{}, false
 	}
-	return selection, true
+	return SelectionForSelectorMasked(selector, dynamicAmountSelectionMask)
 }
 
-func dynamicTapState(selector compiler.CompiledSelector) (game.TriState, bool) {
-	switch {
-	case selector.Tapped && selector.Untapped:
-		return game.TriAny, false
-	case selector.Tapped:
-		return game.TriTrue, true
-	case selector.Untapped:
-		return game.TriFalse, true
-	default:
-		return game.TriAny, true
-	}
-}
-
-// dynamicCombatState maps a compiled count selector's combat-involvement flags
-// onto the runtime combat-state filter that scopes a battlefield-group count to
-// attacking and/or blocking permanents ("for each other attacking creature …").
-// The zero value (neither flag set) imposes no combat restriction.
-func dynamicCombatState(selector compiler.CompiledSelector) game.CombatStateFilter {
-	switch {
-	case selector.Attacking && selector.Blocking:
-		return game.CombatStateAttackingOrBlocking
-	case selector.Attacking:
-		return game.CombatStateAttacking
-	case selector.Blocking:
-		return game.CombatStateBlocking
-	default:
-		return game.CombatStateAny
-	}
-}
+// dynamicAmountSelectionMask drops the canonical dimensions a battlefield count
+// group never carries: the excluded supertype, kind-agnostic counter, "aren't of
+// the chosen type" exclusion, conjunctive type set, and per-object token state.
+// It fails closed on a source-relative power comparison (a count group has no
+// source permanent to compare against, so the predecessor projector rejected
+// that filter rather than dropping it) and on a historic disjunction, which a
+// battlefield count cannot represent through the count lowering and must not
+// silently drop.
+var dynamicAmountSelectionMask = SelectionMask{}.Ignoring(
+	DimExcludedSupertype,
+	DimMatchAnyCounter,
+	DimSubtypeChoiceExcluded,
+	DimConjunctiveTypes,
+	DimNonToken,
+	DimTokenOnly,
+).Rejecting(
+	DimPowerVsSource,
+	DimRequiredName,
+	DimHistoric,
+)
 
 func dynamicBattlefieldRequiredType(kind compiler.SelectorKind) (types.Card, bool) {
 	switch kind {
@@ -323,6 +330,11 @@ func dynamicZoneRequiredType(kind compiler.SelectorKind) (types.Card, bool) {
 	}
 }
 
+// DO-NOT-COPY(filter): wraps selectorCharacteristics for the card-zone count
+// contexts (cards in a graveyard or hand) the battlefield-only canonical
+// projector fails closed on, and defers the selector Kind and Controller to its
+// callers; prefer SelectionForSelectorMasked for new code. (retire: #1393)
+//
 // dynamicCountCharacteristics maps the characteristic filters of a compiled
 // count selector onto a runtime Selection, returning false for any filter the
 // executable backend cannot represent exactly so unsupported wordings stay
@@ -350,9 +362,18 @@ func dynamicCountCharacteristics(selector compiler.CompiledSelector) (game.Selec
 	if selector.MatchToughness {
 		selection.Toughness = opt.Val(selector.Toughness)
 	}
+	if selector.Historic {
+		selection.AnyOf = append(selection.AnyOf, historicSelectionAlternatives()...)
+	}
 	return selection, true
 }
 
+// DO-NOT-COPY(filter): maps only a selector's characteristic filters, deferring
+// the Kind, Controller, combat, tapped, and zone dimensions to its callers
+// (including card-zone contexts), so it intentionally produces a partial
+// selection the full canonical projector cannot; prefer
+// SelectionForSelectorMasked for new code. (retire: #1393)
+//
 // selectorCharacteristics maps the characteristic filters of a compiled selector
 // (colors, colorless/multicolored, keyword, excluded types, supertypes,
 // subtypes, excluded colors, and a disjunctive required-type union) onto a
@@ -360,6 +381,13 @@ func dynamicCountCharacteristics(selector compiler.CompiledSelector) (game.Selec
 // backend cannot represent exactly. It ignores the selector Kind, Controller,
 // combat, tapped, and "other" flags, which callers translate per context.
 func selectorCharacteristics(selector compiler.CompiledSelector) (game.Selection, bool) {
+	if selector.PowerLessThanSource || selector.PowerGreaterThanSource {
+		// A source-relative "with lesser/greater power" comparison is meaningful
+		// only for a targeted permanent (Mentor), where the target path carries
+		// the source. Group, count, and card-zone contexts have no source to
+		// compare against, so reject it rather than silently dropping the filter.
+		return game.Selection{}, false
+	}
 	selection := game.Selection{
 		Colorless:       selector.Colorless,
 		Multicolored:    selector.Multicolored,
@@ -498,6 +526,8 @@ func runtimeKeyword(keyword parser.KeywordKind) (game.Keyword, bool) {
 		return game.Skulk, true
 	case parser.KeywordIntimidate:
 		return game.Intimidate, true
+	case parser.KeywordRetrace:
+		return game.Retrace, true
 	default:
 		return game.KeywordNone, false
 	}
@@ -555,6 +585,67 @@ func lowerEventLifeChangeAmount(ctx contentCtx, amount compiler.CompiledAmount) 
 	}, true
 }
 
+// lowerEventCounterCountAmount lowers a "that many" card-count amount into a
+// DynamicAmountEventCounterCount. It succeeds only inside a counter-placement
+// triggered ability (ctx.triggerEvent records the triggering event kind),
+// keeping the amount closed in spell and non-matching contexts where no
+// triggering counter quantity exists.
+func lowerEventCounterCountAmount(ctx contentCtx, amount compiler.CompiledAmount) (game.DynamicAmount, bool) {
+	if ctx.triggerEvent != game.EventCountersAdded {
+		return game.DynamicAmount{}, false
+	}
+	multiplier := max(amount.Multiplier, 1)
+	return game.DynamicAmount{
+		Kind:       game.DynamicAmountEventCounterCount,
+		Multiplier: multiplier,
+	}, true
+}
+
+// triggeringEventQuantityKind reports whether a compiled dynamic amount kind is
+// a "that much"/"that many" anaphor that reads a quantity from the triggering
+// event. The parser pins each such phrase to one historically chosen kind
+// (EventCardCount, TriggeringLifeChange, TriggeringCombatDamage, or
+// TriggeringCounterCount) without knowing which event actually fired, so every
+// one of these kinds denotes the same idea: the triggering event's quantity. The
+// enclosing trigger event resolves it at lowering time
+// (lowerTriggeringEventQuantityAmount), keeping the parser text-blind.
+func triggeringEventQuantityKind(kind compiler.DynamicAmountKind) bool {
+	switch kind {
+	case compiler.DynamicAmountEventCardCount,
+		compiler.DynamicAmountTriggeringLifeChange,
+		compiler.DynamicAmountTriggeringCombatDamage,
+		compiler.DynamicAmountTriggeringCounterCount:
+		return true
+	default:
+		return false
+	}
+}
+
+// lowerTriggeringEventQuantityAmount resolves a "that much"/"that many"
+// triggering-event anaphor onto the runtime DynamicAmount for whichever event
+// actually fired, independent of which historical kind the parser pinned. A
+// draw, discard, or cycle trigger reads its card count; a damage trigger reads
+// the damage dealt; a life-change trigger reads the life gained or lost; a
+// counter trigger reads the counters added. Outside one of those triggered
+// contexts the anaphor has no source and stays rejected (ok=false).
+func lowerTriggeringEventQuantityAmount(ctx contentCtx, amount compiler.CompiledAmount) (game.DynamicAmount, bool) {
+	multiplier := max(amount.Multiplier, 1)
+	switch ctx.triggerCardCountEvent {
+	case game.EventCardDrawn, game.EventCardDiscarded, game.EventCycled:
+		return game.DynamicAmount{Kind: game.DynamicAmountEventCardCount, Multiplier: multiplier}, true
+	}
+	switch ctx.triggerEvent {
+	case game.EventDamageDealt:
+		return game.DynamicAmount{Kind: game.DynamicAmountEventDamage, Multiplier: multiplier}, true
+	case game.EventLifeGained, game.EventLifeLost:
+		return game.DynamicAmount{Kind: game.DynamicAmountEventLifeChange, Multiplier: multiplier}, true
+	case game.EventCountersAdded:
+		return game.DynamicAmount{Kind: game.DynamicAmountEventCounterCount, Multiplier: multiplier}, true
+	default:
+		return game.DynamicAmount{}, false
+	}
+}
+
 func exactDamageAmountReferences(amount compiler.CompiledAmount, references []compiler.CompiledReference) bool {
 	if amount.DynamicKind != compiler.DynamicAmountSourcePower {
 		_, ok := lowerDamageSourceReference(references)
@@ -564,8 +655,33 @@ func exactDamageAmountReferences(amount compiler.CompiledAmount, references []co
 		references[1].Span != amount.ReferenceSpan {
 		return false
 	}
-	_, ok := lowerDamageSourceReference(references[:1])
-	return ok && references[1].Binding == references[0].Binding
+	// The damage source (references[0], "this creature") and the amount referent
+	// (references[1], "its"/"that creature's") may bind different objects: the
+	// source deals the damage while the amount reads the entering creature's
+	// power. Each must lower independently, but they need not share a binding.
+	_, sourceOK := lowerDamageSourceReference(references[:1])
+	_, amountOK := lowerDamageSourceReference(references[1:])
+	return sourceOK && amountOK
+}
+
+// lowerDamageAmountObject resolves the object whose power feeds a dynamic damage
+// amount. It binds to the amount's own referent ("its" for the source,
+// "that creature's" for the triggering permanent) so "deals damage equal to that
+// creature's power" reads the entering creature rather than the damage source.
+func lowerDamageAmountObject(amount compiler.CompiledAmount, references []compiler.CompiledReference) (game.ObjectReference, bool) {
+	if amount.DynamicKind != compiler.DynamicAmountSourcePower {
+		return game.ObjectReference{}, false
+	}
+	for i := range references {
+		if references[i].Span != amount.ReferenceSpan {
+			continue
+		}
+		return lowerObjectReference(references[i], referenceLoweringContext{
+			AllowSource: true,
+			AllowEvent:  true,
+		})
+	}
+	return game.ObjectReference{}, false
 }
 
 func lowerDamageSourceReference(references []compiler.CompiledReference) (game.ObjectReference, bool) {
@@ -742,6 +858,13 @@ func damageTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 	}
 	switch target.Selector.Kind {
 	case compiler.SelectorAny:
+		// "any other target"/"any another target" as a lone target excludes the
+		// ability's source, a meaning the bare "any target" spec cannot express;
+		// reject it so single-target damage stays faithful. The two-target damage
+		// rider handles its own "other" (distinct-from-prior-target) separately.
+		if target.Selector.Other || target.Selector.Another {
+			return game.TargetSpec{}, false
+		}
 		spec.Allow = game.TargetAllowPermanent | game.TargetAllowPlayer
 	case compiler.SelectorCreature, compiler.SelectorPlaneswalker, compiler.SelectorBattle:
 		permanent, ok := permanentTargetSpec(target)
@@ -752,7 +875,7 @@ func damageTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 	case compiler.SelectorPlayer:
 		if target.Selector.PlayerOrPlaneswalker {
 			spec.Allow = game.TargetAllowPlayer | game.TargetAllowPermanent
-			spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Planeswalker}}
+			spec.Selection = opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Planeswalker}})
 			return spec, true
 		}
 		spec.Allow = game.TargetAllowPlayer
@@ -760,13 +883,13 @@ func damageTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 		spec.Allow = game.TargetAllowPlayer
 		if target.Selector.PlayerOrPlaneswalker {
 			spec.Allow |= game.TargetAllowPermanent
-			spec.Predicate = game.TargetPredicate{
-				Player:         game.PlayerOpponent,
-				PermanentTypes: []types.Card{types.Planeswalker},
-			}
+			spec.Selection = opt.Val(game.Selection{
+				Player:           game.PlayerOpponent,
+				RequiredTypesAny: []types.Card{types.Planeswalker},
+			})
 			return spec, true
 		}
-		spec.Predicate = game.TargetPredicate{Player: game.PlayerOpponent}
+		spec.Selection = opt.Val(game.Selection{Player: game.PlayerOpponent})
 	default:
 		return game.TargetSpec{}, false
 	}
@@ -798,6 +921,9 @@ func permanentTargetSpecWithCardinality(target compiler.CompiledTarget) (game.Ta
 	if len(target.Selector.Alternatives) > 0 {
 		return alternativePermanentTargetSpec(&target, &spec)
 	}
+	var selection game.Selection
+	var permanentTypes []types.Card
+	conjunctive := false
 	switch target.Selector.Kind {
 	case compiler.SelectorUnknown:
 		// A bare subtype noun ("target Soldier you control") selects any
@@ -809,18 +935,18 @@ func permanentTargetSpecWithCardinality(target compiler.CompiledTarget) (game.Ta
 		}
 
 	case compiler.SelectorArtifact:
-		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Artifact}}
+		permanentTypes = []types.Card{types.Artifact}
 	case compiler.SelectorCreature:
-		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Creature}}
+		permanentTypes = []types.Card{types.Creature}
 	case compiler.SelectorEnchantment:
-		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Enchantment}}
+		permanentTypes = []types.Card{types.Enchantment}
 	case compiler.SelectorLand:
-		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Land}}
+		permanentTypes = []types.Card{types.Land}
 	case compiler.SelectorPermanent:
 	case compiler.SelectorPlaneswalker:
-		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Planeswalker}}
+		permanentTypes = []types.Card{types.Planeswalker}
 	case compiler.SelectorBattle:
-		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Battle}}
+		permanentTypes = []types.Card{types.Battle}
 	default:
 		return game.TargetSpec{}, false
 	}
@@ -834,80 +960,103 @@ func permanentTargetSpecWithCardinality(target compiler.CompiledTarget) (game.Ta
 		// A conjunctive type set ("artifact creature") requires every listed type
 		// at once; the flag routes the same type list through the all-of filter
 		// instead of the default any-of match.
-		spec.Predicate.PermanentTypes = append([]types.Card(nil), union...)
-		spec.Predicate.PermanentTypesConjunctive = target.Selector.ConjunctiveTypes
+		permanentTypes = append([]types.Card(nil), union...)
+		conjunctive = target.Selector.ConjunctiveTypes
+	}
+	if conjunctive {
+		selection.RequiredTypes = permanentTypes
+	} else {
+		selection.RequiredTypesAny = permanentTypes
 	}
 	if excludedTypes := target.Selector.ExcludedTypes(); len(excludedTypes) > 0 {
-		spec.Predicate.ExcludedTypes = append([]types.Card(nil), excludedTypes...)
+		selection.ExcludedTypes = append([]types.Card(nil), excludedTypes...)
 	}
 	if supertypes := target.Selector.Supertypes(); len(supertypes) > 0 {
-		spec.Predicate.Supertypes = append([]types.Super(nil), supertypes...)
+		selection.Supertypes = append([]types.Super(nil), supertypes...)
 	}
 	if excludedSupertypes := target.Selector.ExcludedSupertypes(); len(excludedSupertypes) > 0 {
-		spec.Predicate.ExcludedSupertype = excludedSupertypes[0]
+		selection.ExcludedSupertype = excludedSupertypes[0]
 	}
 	if subtypes := target.Selector.SubtypesAny(); len(subtypes) > 0 {
-		spec.Predicate.Subtypes = append([]types.Sub(nil), subtypes...)
+		selection.SubtypesAny = append([]types.Sub(nil), subtypes...)
 	}
 	if colors := target.Selector.ColorsAny(); len(colors) > 0 {
-		spec.Predicate.Colors = append([]color.Color(nil), colors...)
+		selection.ColorsAny = append([]color.Color(nil), colors...)
 	}
 	if excludedColors := target.Selector.ExcludedColors(); len(excludedColors) > 0 {
-		spec.Predicate.ExcludedColors = append([]color.Color(nil), excludedColors...)
+		selection.ExcludedColors = append([]color.Color(nil), excludedColors...)
 	}
 	if target.Selector.Keyword != parser.KeywordUnknown {
 		keyword, ok := runtimeKeyword(target.Selector.Keyword)
 		if !ok {
 			return game.TargetSpec{}, false
 		}
-		spec.Predicate.Keyword = keyword
+		selection.Keyword = keyword
 	}
 	if target.Selector.ExcludedKeyword != parser.KeywordUnknown {
 		keyword, ok := runtimeKeyword(target.Selector.ExcludedKeyword)
 		if !ok {
 			return game.TargetSpec{}, false
 		}
-		spec.Predicate.ExcludedKeyword = keyword
+		selection.ExcludedKeyword = keyword
 	}
 	if target.Selector.MatchManaValue {
 		if target.Selector.ManaValueX {
 			return game.TargetSpec{}, false
 		}
-		spec.Predicate.ManaValue = opt.Val(target.Selector.ManaValue)
+		selection.ManaValue = opt.Val(target.Selector.ManaValue)
 	}
 	if target.Selector.MatchPower {
-		spec.Predicate.Power = opt.Val(target.Selector.Power)
+		selection.Power = opt.Val(target.Selector.Power)
+	}
+	if target.Selector.PowerLessThanSource {
+		selection.PowerLessThanSource = true
+	}
+	if target.Selector.PowerGreaterThanSource {
+		selection.PowerGreaterThanSource = true
 	}
 	if target.Selector.MatchToughness {
-		spec.Predicate.Toughness = opt.Val(target.Selector.Toughness)
+		selection.Toughness = opt.Val(target.Selector.Toughness)
 	}
 	if target.Selector.Another || target.Selector.Other {
-		spec.Predicate.Another = true
+		selection.ExcludeSource = true
+	}
+	if target.Selector.TokenOnly {
+		selection.TokenOnly = true
+	}
+	if target.Selector.NonToken {
+		selection.NonToken = true
+	}
+	if target.Selector.NameUniqueAmongControlled {
+		selection.NameUniqueAmongControlled = true
 	}
 
 	switch {
 	case target.Selector.Attacking && target.Selector.Blocking:
-		spec.Predicate.CombatState = game.CombatStateAttackingOrBlocking
+		selection.CombatState = game.CombatStateAttackingOrBlocking
 	case target.Selector.Attacking:
-		spec.Predicate.CombatState = game.CombatStateAttacking
+		selection.CombatState = game.CombatStateAttacking
 	case target.Selector.Blocking:
-		spec.Predicate.CombatState = game.CombatStateBlocking
+		selection.CombatState = game.CombatStateBlocking
 	case target.Selector.Tapped:
-		spec.Predicate.Tapped = game.TriTrue
+		selection.Tapped = game.TriTrue
 	case target.Selector.Untapped:
-		spec.Predicate.Tapped = game.TriFalse
+		selection.Tapped = game.TriFalse
 	default:
 	}
 	switch target.Selector.Controller {
 	case compiler.ControllerAny:
 	case compiler.ControllerYou:
-		spec.Predicate.Controller = game.ControllerYou
+		selection.Controller = game.ControllerYou
 	case compiler.ControllerOpponent:
-		spec.Predicate.Controller = game.ControllerOpponent
+		selection.Controller = game.ControllerOpponent
 	case compiler.ControllerNotYou:
-		spec.Predicate.Controller = game.ControllerNotYou
+		selection.Controller = game.ControllerNotYou
 	default:
 		return game.TargetSpec{}, false
+	}
+	if !selection.Empty() {
+		spec.Selection = opt.Val(selection)
 	}
 	spec.Constraint = lowerFirst(target.Text)
 	return spec, true
@@ -940,10 +1089,17 @@ func alternativePermanentTargetSpec(target *compiler.CompiledTarget, spec *game.
 			Selector:    selector.Alternatives[i],
 			Exact:       true,
 		})
-		if !ok || alternativeSpec.Selection.Exists {
+		if !ok {
 			return game.TargetSpec{}, false
 		}
-		selection.AnyOf = append(selection.AnyOf, alternativeSpec.Predicate.Selection())
+		// Each alternative contributes its characteristic Selection. A nested
+		// alternative (its own AnyOf) is not supported, preserving the prior
+		// fail-closed behavior.
+		altSelection := alternativeSpec.Selection.Val
+		if len(altSelection.AnyOf) > 0 {
+			return game.TargetSpec{}, false
+		}
+		selection.AnyOf = append(selection.AnyOf, altSelection)
 	}
 	spec.Selection = opt.Val(selection)
 	return *spec, true
@@ -958,13 +1114,13 @@ func alternativePermanentTargetSpec(target *compiler.CompiledTarget, spec *game.
 func selectorHasUnsupportedPermanentFilters(selector compiler.CompiledSelector) bool {
 	return selector.Zone != zone.None ||
 		selector.Colorless ||
-		selector.Multicolored
+		selector.Multicolored ||
+		selector.Historic
 }
 
 func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 	if !targetCardinalityIsOne(target) ||
 		target.Selector.Another || target.Selector.Other ||
-		target.Selector.Controller != compiler.ControllerAny ||
 		target.Selector.Attacking || target.Selector.Blocking ||
 		target.Selector.Tapped || target.Selector.Untapped ||
 		len(target.Selector.Supertypes()) != 0 ||
@@ -978,6 +1134,10 @@ func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool
 	if target.Selector.Kind != compiler.SelectorSpell {
 		return game.TargetSpec{}, false
 	}
+	controller, ok := counterAbilityController(target.Selector.Controller)
+	if !ok {
+		return game.TargetSpec{}, false
+	}
 	required := target.Selector.RequiredTypesAny()
 	excluded := target.Selector.ExcludedTypes()
 	colors := target.Selector.ColorsAny()
@@ -987,6 +1147,7 @@ func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool
 	}
 	predicate := game.TargetPredicate{
 		StackObjectKinds:       []game.StackObjectKind{game.StackSpell},
+		Controller:             controller,
 		ExcludedSpellCardTypes: append([]types.Card(nil), excluded...),
 	}
 	if target.Selector.MatchManaValue {

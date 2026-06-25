@@ -26,16 +26,22 @@ type TriggerFrequencyRestriction struct {
 // parseTrailingTriggerFrequency recognizes a trailing "This ability triggers
 // only once/twice each turn." sentence in a triggered ability's resolving body
 // and returns its typed restriction, or nil when no such sentence is present.
+// A trailing parenthetical reminder sentence (such as the "commit a crime"
+// reminder) carries no rules meaning, so it is skipped when locating the last
+// rules-bearing sentence.
 func parseTrailingTriggerFrequency(source string, tokens []shared.Token) *TriggerFrequencyRestriction {
 	sentences := ParseSentences(source, tokens)
-	if len(sentences) == 0 {
-		return nil
+	for i := len(sentences) - 1; i >= 0; i-- {
+		if len(semanticEffectTokens(sentences[i].Tokens)) == 0 {
+			continue
+		}
+		restriction, ok := parseTriggerFrequencyRestriction(sentences[i].Tokens)
+		if !ok {
+			return nil
+		}
+		return &restriction
 	}
-	restriction, ok := parseTriggerFrequencyRestriction(sentences[len(sentences)-1].Tokens)
-	if !ok {
-		return nil
-	}
-	return &restriction
+	return nil
 }
 
 func parseTriggerFrequencyRestriction(tokens []shared.Token) (TriggerFrequencyRestriction, bool) {
@@ -44,6 +50,13 @@ func parseTriggerFrequencyRestriction(tokens []shared.Token) (TriggerFrequencyRe
 		tokens = tokens[:len(tokens)-1]
 	}
 	rest, ok := cutSyntaxWords(tokens, "this", "ability", "triggers", "only")
+	if !ok {
+		// "Do this only once each turn." (Terrasymbiosis) caps the resolving
+		// effect to one execution per turn; for an ability whose only effect is
+		// the capped action this is observationally the once-per-turn trigger
+		// cap, so it lowers through the same typed restriction.
+		rest, ok = cutSyntaxWords(tokens, "do", "this", "only")
+	}
 	if !ok || len(rest) != 3 || !equalWord(rest[1], "each") || !equalWord(rest[2], "turn") {
 		return TriggerFrequencyRestriction{}, false
 	}

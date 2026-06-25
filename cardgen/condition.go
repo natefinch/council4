@@ -2,11 +2,11 @@ package cardgen
 
 import (
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
-	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -47,17 +47,27 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 	}
 	switch condition.Predicate {
 	case compiler.ConditionPredicateControllerLifeAtLeast:
-		result.ControllerLifeAtLeast = condition.Threshold
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerLife, Op: compare.GreaterOrEqual, Value: condition.Threshold})
+	case compiler.ConditionPredicateControllerLifeAtMost:
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerLife, Op: compare.LessOrEqual, Value: condition.Threshold})
+	case compiler.ConditionPredicateControllerLifeAtLeastAboveStarting:
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerLifeAboveStarting, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateControllerHandSizeAtLeast:
-		result.ControllerHandSizeAtLeast = condition.Threshold
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerHandSize, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateControllerHandSizeExactly:
-		result.ControllerHandSizeExactly = opt.Val(condition.Threshold)
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerHandSize, Op: compare.Equal, Value: condition.Threshold})
+	case compiler.ConditionPredicateControllerLibrarySizeAtLeast:
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerLibrarySize, Op: compare.GreaterOrEqual, Value: condition.Threshold})
+	case compiler.ConditionPredicateControllerLifeExactly:
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerLife, Op: compare.Equal, Value: condition.Threshold})
+	case compiler.ConditionPredicateSpellXAtLeast:
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateSpellX, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateAnyOpponentPoisonAtLeast:
 		result.AnyOpponentPoisonAtLeast = condition.Threshold
 	case compiler.ConditionPredicateAnyPlayerLifeAtMost:
 		result.AnyPlayerLifeAtMost = condition.Threshold
 	case compiler.ConditionPredicateOpponentCountAtLeast:
-		result.OpponentCountAtLeast = condition.Threshold
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateOpponentCount, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateControllerControls:
 		count, ok := lowerConditionSelectionCount(condition)
 		if !ok {
@@ -89,11 +99,21 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 	case compiler.ConditionPredicateControllerCreatedTokenThisTurn:
 		result.ControllerCreatedTokenThisTurn = true
 	case compiler.ConditionPredicateControllerGraveyardCardCountAtLeast:
-		result.ControllerGraveyardCardCountAtLeast = condition.Threshold
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerGraveyardCardCount, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateControllerGraveyardCardTypeCountAtLeast:
-		result.ControllerGraveyardCardTypeCountAtLeast = condition.Threshold
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerGraveyardCardTypeCount, Op: compare.GreaterOrEqual, Value: condition.Threshold})
+	case compiler.ConditionPredicateControllerGraveyardCardOfTypeCountAtLeast:
+		if condition.GraveyardCountCardType == "" {
+			return game.Condition{}, false
+		}
+		result.ControllerGraveyardCardOfTypeCountAtLeast = condition.Threshold
+		result.ControllerGraveyardCountCardType = condition.GraveyardCountCardType
 	case compiler.ConditionPredicateControllerCreaturePowerDiversityAtLeast:
-		result.ControllerCreaturePowerDiversityAtLeast = condition.Threshold
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerCreaturePowerDiversity, Op: compare.GreaterOrEqual, Value: condition.Threshold})
+	case compiler.ConditionPredicateAttackersAttackingControllerAtLeast:
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateAttackersAttackingController, Op: compare.GreaterOrEqual, Value: condition.Threshold})
+	case compiler.ConditionPredicateControllerGainedLifeThisTurnAtLeast:
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerGainedLifeThisTurn, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateObjectMatches:
 		object, ok := lowerConditionObjectReference(condition.ObjectBinding)
 		if !ok {
@@ -117,10 +137,30 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.Object = opt.Val(object)
 	case compiler.ConditionPredicateCastDuringControllerMainPhase:
 		result.CastDuringControllerMainPhase = true
+	case compiler.ConditionPredicateSpellWasKicked:
+		result.SpellWasKicked = true
+	case compiler.ConditionPredicateSpellWasCastFromGraveyard:
+		result.CastFromZone = opt.Val(zone.Graveyard)
+	case compiler.ConditionPredicateSourceSaddled:
+		result.SourceSaddled = true
+	case compiler.ConditionPredicateSourceNotSaddled:
+		result.SourceSaddled = true
+		result.Negate = !result.Negate
 	case compiler.ConditionPredicateSourceTributeNotPaid:
 		result.SourceTributeNotPaid = true
 	case compiler.ConditionPredicateControllerControlsCommander:
 		result.ControllerControlsCommander = true
+	case compiler.ConditionPredicateControllerControlsNamed:
+		if len(condition.ControlledNames) == 0 {
+			return game.Condition{}, false
+		}
+		result.ControllerControlsNamed = append(result.ControllerControlsNamed, condition.ControlledNames...)
+	case compiler.ConditionPredicateFirstCombatPhaseOfTurn:
+		result.FirstCombatPhaseOfTurn = true
+	case compiler.ConditionPredicateControlsGreatestPowerCreature:
+		result.ControllerControlsGreatestPowerCreature = true
+	case compiler.ConditionPredicateControlsGreatestToughnessCreature:
+		result.ControllerControlsGreatestToughnessCreature = true
 	case compiler.ConditionPredicateEventHistory:
 		if condition.EventHistoryPattern == nil {
 			return game.Condition{}, false
@@ -168,6 +208,8 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 	if ctx == conditionContextEntryCounters {
 		switch predicate {
 		case compiler.ConditionPredicateControllerLifeAtLeast,
+			compiler.ConditionPredicateControllerLifeAtMost,
+			compiler.ConditionPredicateControllerLifeAtLeastAboveStarting,
 			compiler.ConditionPredicateAnyPlayerLifeAtMost,
 			compiler.ConditionPredicateOpponentCountAtLeast,
 			compiler.ConditionPredicateControllerControls,
@@ -182,6 +224,8 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 	if ctx != conditionContextReplacement {
 		switch predicate {
 		case compiler.ConditionPredicateControllerLifeAtLeast,
+			compiler.ConditionPredicateControllerLifeAtMost,
+			compiler.ConditionPredicateControllerLifeAtLeastAboveStarting,
 			compiler.ConditionPredicateAnyPlayerLifeAtMost,
 			compiler.ConditionPredicateOpponentCountAtLeast,
 			compiler.ConditionPredicateControllerControls,
@@ -192,22 +236,41 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateControllerCreatedTokenThisTurn,
 			compiler.ConditionPredicateControllerGraveyardCardCountAtLeast,
 			compiler.ConditionPredicateControllerGraveyardCardTypeCountAtLeast,
+			compiler.ConditionPredicateControllerGraveyardCardOfTypeCountAtLeast,
 			compiler.ConditionPredicateControllerCreaturePowerDiversityAtLeast,
 			compiler.ConditionPredicateAnyOpponentPoisonAtLeast,
+			compiler.ConditionPredicateControllerLibrarySizeAtLeast,
+			compiler.ConditionPredicateControllerLifeExactly,
+			compiler.ConditionPredicateControllerGainedLifeThisTurnAtLeast,
 			compiler.ConditionPredicateObjectMatches,
 			compiler.ConditionPredicateObjectExists:
 			return true
 		case compiler.ConditionPredicateEventHistory:
-			return ctx == conditionContextInterveningTrigger || ctx == conditionContextActivation
-		case compiler.ConditionPredicateCastDuringControllerMainPhase:
+			return ctx == conditionContextInterveningTrigger ||
+				ctx == conditionContextActivation ||
+				ctx == conditionContextEffectGate
+		case compiler.ConditionPredicateCastDuringControllerMainPhase,
+			compiler.ConditionPredicateSpellWasKicked,
+			compiler.ConditionPredicateSpellWasCastFromGraveyard,
+			compiler.ConditionPredicateSpellXAtLeast,
+			compiler.ConditionPredicateSourceSaddled,
+			compiler.ConditionPredicateSourceNotSaddled,
+			compiler.ConditionPredicateControlsGreatestPowerCreature,
+			compiler.ConditionPredicateControlsGreatestToughnessCreature,
+			compiler.ConditionPredicateControllerControlsNamed:
 			return ctx == conditionContextEffectGate
+		case compiler.ConditionPredicateFirstCombatPhaseOfTurn:
+			return ctx == conditionContextEffectGate ||
+				ctx == conditionContextInterveningTrigger
 		case compiler.ConditionPredicateEventSubjectNameUnique,
-			compiler.ConditionPredicateSourceTributeNotPaid:
+			compiler.ConditionPredicateSourceTributeNotPaid,
+			compiler.ConditionPredicateAttackersAttackingControllerAtLeast:
 			return ctx == conditionContextInterveningTrigger
 		case compiler.ConditionPredicateControllerControlsCommander:
 			return ctx == conditionContextInterveningTrigger || ctx == conditionContextStatic
 		case compiler.ConditionPredicateControllerHandSizeExactly:
-			return ctx == conditionContextStatic || ctx == conditionContextActivation
+			return ctx == conditionContextStatic || ctx == conditionContextActivation ||
+				ctx == conditionContextInterveningTrigger
 		default:
 			return ctx == conditionContextStatic &&
 				predicate == compiler.ConditionPredicateControllerHandSizeAtLeast
@@ -215,6 +278,8 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 	}
 	switch predicate {
 	case compiler.ConditionPredicateControllerLifeAtLeast,
+		compiler.ConditionPredicateControllerLifeAtMost,
+		compiler.ConditionPredicateControllerLifeAtLeastAboveStarting,
 		compiler.ConditionPredicateAnyPlayerLifeAtMost,
 		compiler.ConditionPredicateOpponentCountAtLeast,
 		compiler.ConditionPredicateControllerControls,
@@ -297,63 +362,128 @@ func lowerComparisonScope(scope compiler.ConditionComparisonScope) (game.Control
 	}
 }
 
+// lowerConditionSelection projects a condition-filter onto the canonical
+// game.Selection. It is a thin adapter over the shared SelectionForSelector
+// projector: conditionSelectionSelector translates the parallel
+// ConditionSelection clone enums into a compiler.CompiledSelector,
+// SelectionForSelectorMasked maps that shared dimension cluster
+// (types/supertypes/subtypes/colors/colorless/multicolored/tapped/combat/keyword)
+// onto the runtime Selection, and the genuine condition-specific extras are
+// applied as a documented rider afterward. Routing the shared cluster through
+// the canonical projector keeps condition filters in lockstep with every other
+// selector context instead of maintaining a second hand-written projector.
 func lowerConditionSelection(selection compiler.ConditionSelection) (game.Selection, bool) {
-	required, ok := lowerConditionCardTypes(selection.RequiredTypes)
+	selector, ok := conditionSelectionSelector(selection)
 	if !ok {
 		return game.Selection{}, false
 	}
-	supertypes, ok := lowerConditionSupertypes(selection.Supertypes)
+	result, ok := SelectionForSelectorMasked(selector, SelectionMask{}.Rejecting(DimRequiredName))
 	if !ok {
 		return game.Selection{}, false
 	}
-	colors, ok := lowerConditionColors(selection.ColorsAny)
-	if !ok {
-		return game.Selection{}, false
-	}
-	tapped, ok := lowerConditionTriState(selection.Tapped)
-	if !ok {
-		return game.Selection{}, false
-	}
-	combatState, ok := lowerConditionCombatState(selection.CombatState)
-	if !ok {
-		return game.Selection{}, false
-	}
-	subtypes := make([]types.Sub, 0, len(selection.SubtypesAny))
-	for _, subtype := range selection.SubtypesAny {
-		if subtype == "" {
-			return game.Selection{}, false
-		}
-		subtypes = append(subtypes, types.Sub(subtype))
-	}
-	result := game.Selection{
-		RequiredTypes:   required,
-		Supertypes:      supertypes,
-		SubtypesAny:     subtypes,
-		ColorsAny:       colors,
-		Colorless:       selection.Colorless,
-		Multicolored:    selection.Multicolored,
-		TokenOnly:       selection.TokenOnly,
-		ExcludeSource:   selection.ExcludeSource,
-		Tapped:          tapped,
-		CombatState:     combatState,
-		MatchAnyCounter: selection.AnyCounter,
+	// Per-context extras kept on the projector result (umbrella #1414):
+	// AnyCounter (MatchAnyCounter), the named-counter count threshold
+	// (RequiredCounter + RequiredCounterCount), ExcludeSource, the power-at-least
+	// bound (Power), and TokenOnly. None of these round-trip byte-identically
+	// through CompiledSelector here (the counter-count threshold has no selector
+	// field at all), so they ride directly on the shared-core result.
+	result.MatchAnyCounter = selection.AnyCounter
+	result.ExcludeSource = selection.ExcludeSource
+	result.TokenOnly = selection.TokenOnly
+	if selection.CounterKindKnown {
+		result.RequiredCounter = selection.CounterKind
+		result.RequiredCounterCount = opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: selection.CounterCountAtLeast})
 	}
 	if selection.MatchPowerAtLeast {
 		result.Power = opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: selection.PowerAtLeast})
 	} else if selection.PowerAtLeast != 0 {
 		return game.Selection{}, false
 	}
-	if selection.Keyword != parser.KeywordUnknown {
-		keyword, ok := runtimeKeyword(selection.Keyword)
-		if !ok {
-			return game.Selection{}, false
-		}
-		result.Keyword = keyword
-	}
 	return result, len(result.Validate()) == 0
 }
 
+// conditionSelectionSelector translates a ConditionSelection's filter
+// dimensions into a compiler.CompiledSelector. Its shared-typed required-type,
+// supertype, and color fields are consumed directly, failing closed on any
+// value outside the permanent-selection vocabulary. The condition extras
+// (counters, ExcludeSource, the power-at-least bound, and TokenOnly) are applied
+// by lowerConditionSelection directly because they do not round-trip through
+// CompiledSelector.
+func conditionSelectionSelector(selection compiler.ConditionSelection) (compiler.CompiledSelector, bool) {
+	required, ok := conditionCardTypes(selection.RequiredTypes)
+	if !ok {
+		return compiler.CompiledSelector{}, false
+	}
+	supertypes, ok := conditionSupertypes(selection.Supertypes)
+	if !ok {
+		return compiler.CompiledSelector{}, false
+	}
+	colors, ok := conditionColors(selection.ColorsAny)
+	if !ok {
+		return compiler.CompiledSelector{}, false
+	}
+	tapped, ok := lowerConditionTriState(selection.Tapped)
+	if !ok {
+		return compiler.CompiledSelector{}, false
+	}
+	combatState, ok := lowerConditionCombatState(selection.CombatState)
+	if !ok {
+		return compiler.CompiledSelector{}, false
+	}
+	subtypes := make([]types.Sub, 0, len(selection.SubtypesAny))
+	for _, subtype := range selection.SubtypesAny {
+		if subtype == "" {
+			return compiler.CompiledSelector{}, false
+		}
+		subtypes = append(subtypes, types.Sub(subtype))
+	}
+
+	selector := compiler.CompiledSelector{
+		Kind:         compiler.SelectorPermanent,
+		Colorless:    selection.Colorless,
+		Multicolored: selection.Multicolored,
+		// A condition's required-type nouns are conjunctive (the matched
+		// permanent must carry every named type at once), matching the legacy
+		// projector that put them in Selection.RequiredTypes. ConjunctiveTypes
+		// makes SelectionForSelectorMasked fold RequiredTypesAny into the
+		// conjunctive RequiredTypes field.
+		ConjunctiveTypes: true,
+		Keyword:          selection.Keyword,
+	}
+
+	switch tapped {
+	case game.TriTrue:
+		selector.Tapped = true
+	case game.TriFalse:
+		selector.Untapped = true
+	default:
+	}
+
+	switch combatState {
+	case game.CombatStateAttacking:
+		selector.Attacking = true
+	case game.CombatStateBlocking:
+		selector.Blocking = true
+	case game.CombatStateAttackingOrBlocking:
+		selector.Attacking = true
+		selector.Blocking = true
+	default:
+	}
+
+	selector = selector.WithAtoms(compiler.CompiledSelectorAtoms{
+		RequiredTypesAny: required,
+		Supertypes:       supertypes,
+		SubtypesAny:      subtypes,
+		ColorsAny:        colors,
+	})
+
+	return selector, true
+}
+
 func lowerConditionObjectReference(binding compiler.ReferenceBinding) (game.ObjectReference, bool) {
+	if binding == compiler.ReferenceBindingCreatedToken {
+		return game.LinkedObjectReference(createdTokenLinkKey), true
+	}
 	return lowerObjectReference(compiler.CompiledReference{Binding: binding}, referenceLoweringContext{
 		AllowSource: true,
 		AllowEvent:  true,
@@ -423,22 +553,15 @@ func lowerConditionCombatState(value compiler.ConditionCombatState) (game.Combat
 	}
 }
 
-func lowerConditionCardTypes(values []compiler.ConditionCardType) ([]types.Card, bool) {
+// conditionCardTypes validates a condition selection's required-type filter,
+// failing closed on any value outside the permanent card types a condition may
+// select (CR 300.1) or an unset entry.
+func conditionCardTypes(values []types.Card) ([]types.Card, bool) {
 	result := make([]types.Card, 0, len(values))
 	for _, value := range values {
 		switch value {
-		case compiler.ConditionCardTypeArtifact:
-			result = append(result, types.Artifact)
-		case compiler.ConditionCardTypeBattle:
-			result = append(result, types.Battle)
-		case compiler.ConditionCardTypeCreature:
-			result = append(result, types.Creature)
-		case compiler.ConditionCardTypeEnchantment:
-			result = append(result, types.Enchantment)
-		case compiler.ConditionCardTypeLand:
-			result = append(result, types.Land)
-		case compiler.ConditionCardTypePlaneswalker:
-			result = append(result, types.Planeswalker)
+		case types.Artifact, types.Battle, types.Creature, types.Enchantment, types.Land, types.Planeswalker:
+			result = append(result, value)
 		default:
 			return nil, false
 		}
@@ -446,16 +569,15 @@ func lowerConditionCardTypes(values []compiler.ConditionCardType) ([]types.Card,
 	return result, true
 }
 
-func lowerConditionSupertypes(values []compiler.ConditionSupertype) ([]types.Super, bool) {
+// conditionSupertypes validates a condition selection's supertype filter,
+// failing closed on any value outside the supertypes a condition may select or
+// an unset entry.
+func conditionSupertypes(values []types.Super) ([]types.Super, bool) {
 	result := make([]types.Super, 0, len(values))
 	for _, value := range values {
 		switch value {
-		case compiler.ConditionSupertypeBasic:
-			result = append(result, types.Basic)
-		case compiler.ConditionSupertypeSnow:
-			result = append(result, types.Snow)
-		case compiler.ConditionSupertypeLegendary:
-			result = append(result, types.Legendary)
+		case types.Basic, types.Snow, types.Legendary:
+			result = append(result, value)
 		default:
 			return nil, false
 		}
@@ -463,20 +585,14 @@ func lowerConditionSupertypes(values []compiler.ConditionSupertype) ([]types.Sup
 	return result, true
 }
 
-func lowerConditionColors(values []compiler.ConditionColor) ([]color.Color, bool) {
+// conditionColors validates a condition selection's color filter, failing closed
+// on any value outside Magic's five colors or an unset entry.
+func conditionColors(values []color.Color) ([]color.Color, bool) {
 	result := make([]color.Color, 0, len(values))
 	for _, value := range values {
 		switch value {
-		case compiler.ConditionColorWhite:
-			result = append(result, color.White)
-		case compiler.ConditionColorBlue:
-			result = append(result, color.Blue)
-		case compiler.ConditionColorBlack:
-			result = append(result, color.Black)
-		case compiler.ConditionColorRed:
-			result = append(result, color.Red)
-		case compiler.ConditionColorGreen:
-			result = append(result, color.Green)
+		case color.White, color.Blue, color.Black, color.Red, color.Green:
+			result = append(result, value)
 		default:
 			return nil, false
 		}

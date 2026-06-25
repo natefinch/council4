@@ -363,6 +363,9 @@ func createTokenCreationCrossTypeAddends(e *Engine, g *game.Game, controller gam
 		if !tokenHasAllSubtypes(token, replacement.TokenRequiredSubtypes) {
 			continue
 		}
+		if !tokenHasAllTypes(token, replacement.TokenRequiredTypes) {
+			continue
+		}
 		if !replacementEffectMatchesEvent(g, replacement, event) {
 			continue
 		}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -14,9 +15,9 @@ import (
 
 func TestRenderConditionForETBReplacementRejectsNegativeThresholds(t *testing.T) {
 	tests := map[string]game.Condition{
-		"controller life": {ControllerLifeAtLeast: -1},
+		"controller life": {Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLife, Op: compare.GreaterOrEqual, Value: -1}}},
 		"any player life": {AnyPlayerLifeAtMost: -1},
-		"opponent count":  {OpponentCountAtLeast: -1},
+		"opponent count":  {Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateOpponentCount, Op: compare.GreaterOrEqual, Value: -1}}},
 	}
 
 	for name, condition := range tests {
@@ -66,6 +67,42 @@ func TestRenderApplyContinuousTemporaryEffects(t *testing.T) {
 	} {
 		if !strings.Contains(rendered, want) {
 			t.Fatalf("rendered temporary effect missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
+func TestRenderApplyContinuousChooseFromGroup(t *testing.T) {
+	t.Parallel()
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.ApplyContinuous{
+		ChooseFrom: game.ObjectControlledGroup(
+			game.SourcePermanentReference(),
+			game.Selection{RequiredTypes: []types.Card{types.Land}},
+		),
+		ChooseUpTo: game.Dynamic(game.DynamicAmount{
+			Kind:      game.DynamicAmountChosenNumber,
+			ResultKey: game.ResultKey("primal-pay"),
+		}),
+		Prompt: "Choose lands to animate",
+		ContinuousEffects: []game.ContinuousEffect{{
+			Layer:    game.LayerType,
+			AddTypes: []types.Card{types.Creature},
+		}},
+		Duration: game.DurationPermanent,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.ApplyContinuous",
+		"ChooseFrom:",
+		"game.ObjectControlledGroup",
+		"ChooseUpTo:",
+		"DynamicAmountChosenNumber",
+		`Prompt: "Choose lands to animate"`,
+		"game.DurationPermanent",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered choose-from group missing %q:\n%s", want, rendered)
 		}
 	}
 }
@@ -338,7 +375,7 @@ func TestRenderControlledPermanentCounterKindPlacementReplacement(t *testing.T) 
 func TestRenderConditionForETBReplacementRejectsNegativePermanentCount(t *testing.T) {
 	tests := map[string]game.Condition{
 		"controller": {
-			ControllerControls: game.PermanentFilter{MinCount: -1},
+			ControlsMatching: opt.Val(game.SelectionCount{MinCount: -1}),
 		},
 		"one opponent": {
 			AnyOpponentControls: opt.Val(game.SelectionCount{MinCount: -1}),
@@ -372,12 +409,14 @@ func TestRenderConditionRejectsTextWithoutPredicate(t *testing.T) {
 
 func TestRenderLiveStateCondition(t *testing.T) {
 	condition := game.Condition{
-		Text:                                    "if ability-word conditions are met",
-		ControllerHandEmpty:                     true,
-		ControllerGraveyardCardCountAtLeast:     7,
-		ControllerGraveyardCardTypeCountAtLeast: 4,
-		ControllerBasicLandTypeCountAtLeast:     5,
-		ControllerCreaturePowerDiversityAtLeast: 3,
+		Text:                "if ability-word conditions are met",
+		ControllerHandEmpty: true,
+		Aggregates: []game.AggregateComparison{
+			{Aggregate: game.AggregateControllerGraveyardCardCount, Op: compare.GreaterOrEqual, Value: 7},
+			{Aggregate: game.AggregateControllerGraveyardCardTypeCount, Op: compare.GreaterOrEqual, Value: 4},
+			{Aggregate: game.AggregateControllerBasicLandTypeCount, Op: compare.GreaterOrEqual, Value: 5},
+			{Aggregate: game.AggregateControllerCreaturePowerDiversity, Op: compare.GreaterOrEqual, Value: 3},
+		},
 		ControlsMatching: opt.Val(game.SelectionCount{
 			Selection: game.Selection{RequiredTypes: []types.Card{types.Artifact}},
 			MinCount:  3,
@@ -389,10 +428,10 @@ func TestRenderLiveStateCondition(t *testing.T) {
 	}
 	for _, want := range []string{
 		"ControllerHandEmpty: true",
-		"ControllerGraveyardCardCountAtLeast: 7",
-		"ControllerGraveyardCardTypeCountAtLeast: 4",
-		"ControllerBasicLandTypeCountAtLeast: 5",
-		"ControllerCreaturePowerDiversityAtLeast: 3",
+		"Aggregate: game.AggregateControllerGraveyardCardCount, Op: compare.GreaterOrEqual, Value: 7",
+		"Aggregate: game.AggregateControllerGraveyardCardTypeCount, Op: compare.GreaterOrEqual, Value: 4",
+		"Aggregate: game.AggregateControllerBasicLandTypeCount, Op: compare.GreaterOrEqual, Value: 5",
+		"Aggregate: game.AggregateControllerCreaturePowerDiversity, Op: compare.GreaterOrEqual, Value: 3",
 		"ControlsMatching: opt.Val",
 	} {
 		if !strings.Contains(rendered, want) {

@@ -30,6 +30,10 @@ type GameResult struct {
 	// name and owner, so event and end-state consumers can attribute cards by
 	// name and to the deck that owns them.
 	Cards map[id.ID]CardInfo
+	// OpeningHand lists the goldfish player's (seat one's) cards immediately
+	// after the opening hands are drawn, in hand order, so a report can show the
+	// hand the game started from.
+	OpeningHand []id.ID
 }
 
 // CardInfo is the public identity of a card instance used by reports.
@@ -38,6 +42,11 @@ type CardInfo struct {
 	Owner     game.PlayerID
 	ManaValue int
 	Types     []types.Card
+	// Faces maps each non-front printed face (FaceBack, FaceAlternate) to its
+	// name, so a report can name a card by the face that was actually played or
+	// cast — for example the back side of a modal double-faced card. It is nil
+	// for ordinary single-faced cards, whose name is Name.
+	Faces map[game.FaceIndex]string
 }
 
 // EndState is the final state of every seat at the end of a game.
@@ -67,6 +76,34 @@ type TurnLog struct {
 	CombatDamage   []CombatDamageLog
 	CreatureDamage []CreatureDamageLog
 	Deaths         []PermanentDeathLog
+
+	// LandsPlayed is the number of lands the active player played during this
+	// turn. Zero on a turn the active player could have played a land but did
+	// not is a missed land drop.
+	LandsPlayed int
+	// ManaAvailable is the active player's total mana available for the turn,
+	// measured at the end of their first precombat main phase (after their land
+	// drop). Each mana source the player controls and could tap for mana this
+	// turn counts once — lands, mana rocks, and non-summoning-sick mana dorks —
+	// approximating open mana the way the engine's own heuristic does (one mana
+	// per source). Rituals are excluded because they are spells, not permanents.
+	// A source that entered tapped this turn (a tapland) is still counted even
+	// though it cannot tap until next turn, so the figure can overstate a
+	// tapland turn by one.
+	ManaAvailable int
+	// ManaColors lists the distinct colors those sources can produce, as
+	// single-letter codes (W, U, B, R, G).
+	ManaColors []string
+	// ManaSpent is the total mana the active player removed from their mana pool
+	// to pay costs during this turn — spell and ability mana costs, including
+	// mana produced by rituals and then spent. Mana that was produced but left
+	// unspent (and emptied at end of step) is not counted.
+	ManaSpent int
+
+	// LifeTotals is each player's life total at the start of this turn, in seat
+	// order, captured before the turn's actions so a report can show how the
+	// table's life changed turn over turn.
+	LifeTotals [game.NumPlayers]int
 }
 
 // TurnLogEntryKind identifies the kind of chronological turn log entry.
@@ -84,6 +121,7 @@ const (
 	TurnLogEntryCombatDamage
 	TurnLogEntryCreatureDamage
 	TurnLogEntryDeath
+	TurnLogEntryEnter
 )
 
 // TurnLogEntry records one event in the order it happened during the turn.
@@ -97,6 +135,7 @@ type TurnLogEntry struct {
 	CombatDamage   CombatDamageLog
 	CreatureDamage CreatureDamageLog
 	Death          PermanentDeathLog
+	Enter          PermanentEnterLog
 }
 
 // DrawLog records a player draw during a game.
@@ -134,6 +173,45 @@ type ActionLog struct {
 	Action              action.Action
 	PermanentSources    map[id.ID]id.ID
 	PermanentTokenNames map[id.ID]string
+
+	// ManaAbility reports that this action activated a mana ability (one that
+	// produces mana and resolves without using the stack). It is set only for
+	// ActionActivateAbility actions.
+	ManaAbility bool
+
+	// LandEnteredTapped reports that the land this action played entered the
+	// battlefield tapped. It is set only for ActionPlayLand actions, captured
+	// just after the land enters, so a report can note a tapped land drop.
+	LandEnteredTapped bool
+
+	// AbilityText is the printed rules text of the activated ability, captured
+	// when the action is recorded. It is set only for ActionActivateAbility
+	// actions whose ability carries text, so a report can show what the ability
+	// does.
+	AbilityText string
+
+	// AbilityEffectSummary is a short, value-oriented gloss of what the activated
+	// ability costs and does, derived from the scorable-effect IR (for example
+	// "sacrifice a creature, draw a card"). It is set only for
+	// ActionActivateAbility actions whose ability has modeled effects, so a
+	// report can summarize an ability whose oracle text is long or covers several
+	// abilities. It is empty when the IR models none of the ability's effects.
+	AbilityEffectSummary string
+
+	// ManaTaps lists the permanents tapped for mana while applying this action,
+	// in tap order, so a report can show how a spell or ability was paid for.
+	// It includes lands and other sources tapped during cost payment.
+	ManaTaps []ManaTap
+}
+
+// ManaTap records one permanent tapped for mana while paying for an action.
+type ManaTap struct {
+	// Source is the display name of the tapped permanent.
+	Source string
+	// Colors lists the mana colors the tap produced, in production order, as
+	// single-letter codes (W, U, B, R, G) or the colorless symbol. It may be
+	// empty when the produced color was not recorded.
+	Colors []string
 }
 
 // ResolveLog records a stack object resolving.
@@ -143,6 +221,30 @@ type ResolveLog struct {
 	Controller    game.PlayerID
 	Kind          game.StackObjectKind
 	Result        string
+
+	// SourceName is the display name of the spell, ability source, or token
+	// that resolved, so a report can name an ability's source even though its
+	// SourceID is a permanent object ID rather than a card instance ID.
+	SourceName string
+
+	// StartEntry is the number of turn-log entries that existed before this
+	// resolution's effects ran, so a report can group the entries in
+	// [StartEntry, this resolve entry) as the effects this resolution caused.
+	// Resolution spans never overlap (a stack object resolves fully before the
+	// next is put on the stack and resolved), so these ranges are disjoint.
+	StartEntry int
+}
+
+// PermanentEnterLog records a permanent entering the battlefield as the effect
+// of a resolving spell or ability (for example a fetched land or a created
+// token), so a report can show it nested under the resolution that caused it.
+// Land drops and other priority-time entries are not logged here because they
+// are already reported by their own action.
+type PermanentEnterLog struct {
+	Permanent  id.ID
+	SourceID   id.ID
+	TokenName  string
+	Controller game.PlayerID
 }
 
 // CombatDamageLog records combat damage dealt to a player.
@@ -252,6 +354,23 @@ func (log *TurnLog) addDeath(death PermanentDeathLog) {
 	}
 	log.Deaths = append(log.Deaths, death)
 	log.Entries = append(log.Entries, TurnLogEntry{Kind: TurnLogEntryDeath, Death: death})
+}
+
+func (log *TurnLog) addEnter(enter PermanentEnterLog) {
+	if log == nil {
+		return
+	}
+	log.Entries = append(log.Entries, TurnLogEntry{Kind: TurnLogEntryEnter, Enter: enter})
+}
+
+// entryCount reports how many chronological entries the log holds, treating a
+// nil log as empty so callers can capture a resolution's start boundary without
+// a nil check.
+func (log *TurnLog) entryCount() int {
+	if log == nil {
+		return 0
+	}
+	return len(log.Entries)
 }
 
 func (r *GameResult) addLosses(losses []LossLog) {

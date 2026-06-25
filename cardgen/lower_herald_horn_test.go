@@ -34,8 +34,8 @@ func TestLowerHeraldsHornCategory(t *testing.T) {
 	}
 	modifier := face.StaticAbilities[0].Body.RuleEffects[0].CostModifier
 	if modifier.Kind != game.CostModifierSpell ||
-		!modifier.MatchCardType ||
-		modifier.CardType != types.Creature ||
+		len(modifier.CardSelection.RequiredTypes) != 1 ||
+		modifier.CardSelection.RequiredTypes[0] != types.Creature ||
 		!modifier.ChosenSubtypeFromEntryChoice ||
 		modifier.GenericReduction != 1 {
 		t.Fatalf("cost modifier = %#v, want chosen creature-type {1} reduction", modifier)
@@ -76,8 +76,8 @@ func TestLowerHeraldsHornCategory(t *testing.T) {
 	}
 	condition := sequence[1].CardCondition
 	if !condition.Exists ||
-		condition.Val.ChosenSubtypeFrom != game.EntryTypeChoiceKey ||
-		len(condition.Val.Types) != 1 || condition.Val.Types[0] != types.Creature {
+		condition.Val.Selection.ChosenSubtypeFrom != game.EntryTypeChoiceKey ||
+		len(condition.Val.Selection.RequiredTypes) != 1 || condition.Val.Selection.RequiredTypes[0] != types.Creature {
 		t.Fatalf("reveal card condition = %#v, want creature of the chosen subtype", sequence[1].CardCondition)
 	}
 

@@ -102,6 +102,16 @@ func TestLowerMassBounceSpellToGroup(t *testing.T) {
 			oracleText: "Return all blocking creatures to their owners' hands.",
 			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, CombatState: game.CombatStateBlocking}),",
 		},
+		{
+			name:       "each creature without a +1/+1 counter",
+			oracleText: "Return each creature without a +1/+1 counter on it to its owner's hand.",
+			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, MatchExcludedCounter: true, ExcludedCounter: counter.PlusOnePlusOne}),",
+		},
+		{
+			name:       "each permanent",
+			oracleText: "Return each permanent to its owner's hand.",
+			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{}),",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -824,6 +834,74 @@ func TestGenerateExecutableCardSourceReferencedControllerDamage(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceEventPlayerDamage(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name   string
+		oracle string
+	}{
+		// "Whenever an opponent draws a card, ~ deals N damage to that player."
+		// (Underworld Dreams) targets the triggering event's player.
+		{"Test Dream Pain", "Whenever an opponent draws a card, this enchantment deals 1 damage to that player."},
+		// "Whenever an opponent discards a card, ~ deals N damage to that player."
+		// (Megrim) is the same event-player recipient shape.
+		{"Test Discard Pain", "Whenever an opponent discards a card, this enchantment deals 2 damage to that player."},
+	} {
+		source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+			Name:       tc.name,
+			Layout:     "normal",
+			ManaCost:   "{2}{B}",
+			TypeLine:   "Enchantment",
+			OracleText: tc.oracle,
+		}, "t")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(diagnostics) != 0 {
+			t.Fatalf("%q: diagnostics = %#v", tc.oracle, diagnostics)
+		}
+		for _, want := range []string{
+			"game.Damage{",
+			"game.PlayerDamageRecipient(game.EventPlayerReference())",
+		} {
+			if !strings.Contains(source, want) {
+				t.Fatalf("%q: source missing %q:\n%s", tc.oracle, want, source)
+			}
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceEventPlayerSourcePowerDamage(t *testing.T) {
+	t.Parallel()
+	// "Whenever an opponent casts a noncreature spell, this creature deals
+	// damage equal to its power to that player." (Gleeful Arsonist) reads the
+	// source creature's power and deals it to the triggering event's player.
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Spite Arsonist",
+		Layout:     "normal",
+		ManaCost:   "{1}{R}",
+		TypeLine:   "Creature — Goblin",
+		OracleText: "Whenever an opponent casts a noncreature spell, this creature deals damage equal to its power to that player.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"game.Damage{",
+		"game.PlayerDamageRecipient(game.EventPlayerReference())",
+		"Kind:       game.DynamicAmountObjectPower",
+		"Object:     game.SourcePermanentReference()",
+		"DamageSource: opt.Val(game.SourcePermanentReference())",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("source missing %q:\n%s", want, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceInheritedPronounDestroy(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
@@ -995,14 +1073,201 @@ func TestGenerateExecutableCardSourceFight(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceFightAnotherTarget covers the "fights another
+// target creature" templating: the second target lowers to a
+// DistinctFromPriorTargets spec so the chosen creature must differ from the
+// first fighter.
+func TestGenerateExecutableCardSourceFightAnotherTarget(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Prey",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target creature you control fights another target creature.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.Fight") ||
+		!strings.Contains(source, "RelatedObject: game.TargetPermanentReference(1)") {
+		t.Fatalf("source missing Fight primitive:\n%s", source)
+	}
+	if !strings.Contains(source, "DistinctFromPriorTargets: true,") {
+		t.Fatalf("source missing distinct second target:\n%s", source)
+	}
+}
+
+// TestGenerateExecutableCardSourceFightSubtypeTarget covers a bare
+// creature-subtype fight target ("Target Mutant"): the subtype names a creature
+// even without the "creature" word, so the first fighter lowers to a creature
+// target carrying the subtype filter (The Curse of Fenric III).
+func TestGenerateExecutableCardSourceFightSubtypeTarget(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Mutant Brawl",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target Mutant fights target creature you don't control.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.Fight") {
+		t.Fatalf("source missing Fight primitive:\n%s", source)
+	}
+	if !strings.Contains(source, `SubtypesAny: []types.Sub{types.Sub("Mutant")}`) {
+		t.Fatalf("source missing Mutant subtype filter:\n%s", source)
+	}
+}
+
+// TestGenerateExecutableCardSourceFightNamedTarget covers a "named <Name>" fight
+// target ("another target creature named Fenric"): the name lowers to a
+// RequiredName predicate so the second fighter must be the named creature (The
+// Curse of Fenric III).
+func TestGenerateExecutableCardSourceFightNamedTarget(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Named Brawl",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target creature you control fights another target creature named Fenric.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.Fight") {
+		t.Fatalf("source missing Fight primitive:\n%s", source)
+	}
+	if !strings.Contains(source, `Name: "Fenric"`) {
+		t.Fatalf("source missing RequiredName predicate:\n%s", source)
+	}
+	if !strings.Contains(source, "DistinctFromPriorTargets: true,") {
+		t.Fatalf("source missing distinct second target:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceFightOptionalSecondTarget(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Optional Fight",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target creature you control fights up to one target creature you don't control.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.Fight") ||
+		!strings.Contains(source, "RelatedObject: game.TargetPermanentReference(1)") {
+		t.Fatalf("source missing Fight primitive:\n%s", source)
+	}
+	if !strings.Contains(source, "MinTargets: 0,") ||
+		!strings.Contains(source, "MinTargets: 1,") {
+		t.Fatalf("source missing mandatory + optional fight targets:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceReferencedFightEventPermanent(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Indrik",
+		Layout:     "normal",
+		TypeLine:   "Creature — Beast",
+		OracleText: "When this creature enters, it fights target creature you don't control.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.Fight") ||
+		!strings.Contains(source, "Object:        game.EventPermanentReference()") ||
+		!strings.Contains(source, "RelatedObject: game.TargetPermanentReference(0)") {
+		t.Fatalf("source missing event-permanent fight primitive:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceReferencedFightSourcePermanent(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Mammoth",
+		Layout:     "normal",
+		TypeLine:   "Creature — Elephant",
+		OracleText: "Whenever this creature or another creature you control enters, this creature fights up to one target creature you don't control.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.Fight") ||
+		!strings.Contains(source, "Object:        game.SourcePermanentReference()") ||
+		!strings.Contains(source, "RelatedObject: game.TargetPermanentReference(0)") ||
+		!strings.Contains(source, "MinTargets: 0,") {
+		t.Fatalf("source missing source-permanent fight primitive:\n%s", source)
+	}
+}
+
+// TestGenerateExecutableCardSourceFightAnotherExcludesSource covers "this
+// creature fights another target creature" (Brash Taunter): the fighter is the
+// source permanent, so "another" excludes the source via a Predicate.Another
+// (ExcludeSource) target rather than a DistinctFromPriorTargets second target.
+func TestGenerateExecutableCardSourceFightAnotherExcludesSource(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Taunter",
+		Layout:     "normal",
+		TypeLine:   "Creature — Goblin",
+		OracleText: "{2}{R}, {T}: This creature fights another target creature.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.Fight") ||
+		!strings.Contains(source, "Object:        game.SourcePermanentReference()") ||
+		!strings.Contains(source, "RelatedObject: game.TargetPermanentReference(0)") {
+		t.Fatalf("source missing source-permanent fight primitive:\n%s", source)
+	}
+	if !strings.Contains(source, "ExcludeSource: true") {
+		t.Fatalf("source missing source-excluding Another predicate:\n%s", source)
+	}
+	if strings.Contains(source, "DistinctFromPriorTargets: true,") {
+		t.Fatalf("single source fight target must not use DistinctFromPriorTargets:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceFixedDamageTargets(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		target string
 		wanted string
 	}{
-		{target: "creature", wanted: "PermanentTypes: []types.Card{types.Creature}"},
-		{target: "planeswalker", wanted: "PermanentTypes: []types.Card{types.Planeswalker}"},
+		{target: "creature", wanted: "RequiredTypesAny: []types.Card{types.Creature}"},
+		{target: "planeswalker", wanted: "RequiredTypesAny: []types.Card{types.Planeswalker}"},
 		{target: "player", wanted: "game.TargetAllowPlayer"},
 		{target: "opponent", wanted: "Player: game.PlayerOpponent"},
 	}
@@ -1071,6 +1336,64 @@ func TestGenerateExecutableCardSourceEachSourceDamage(t *testing.T) {
 				TypeLine:   "Instant",
 				OracleText: test.oracleText,
 				Colors:     []string{"R"},
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range test.wantedSnips {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
+// TestGenerateExecutableCardSourceEachSelfPowerDamage covers the group self-power
+// damage shape "Each <group> deals damage to itself equal to its power." (Wave of
+// Reckoning), where every group member deals its own power to itself, lowered
+// onto a GroupSelfPowerDamage primitive. The filtered "each tapped creature"
+// variant reuses the SelectionForSelector-backed damage group, so the lowering
+// records the tapped filter.
+func TestGenerateExecutableCardSourceEachSelfPowerDamage(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		oracleText  string
+		wantedSnips []string
+	}{
+		{
+			name:       "each creature",
+			oracleText: "Each creature deals damage to itself equal to its power.",
+			wantedSnips: []string{
+				"Primitive: game.GroupSelfPowerDamage",
+				"game.BattlefieldGroup(",
+				"types.Creature",
+			},
+		},
+		{
+			name:       "each tapped creature",
+			oracleText: "Each tapped creature deals damage to itself equal to its power.",
+			wantedSnips: []string{
+				"Primitive: game.GroupSelfPowerDamage",
+				"Tapped:",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Reckoning",
+				Layout:     "normal",
+				ManaCost:   "{4}{W}",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracleText,
+				Colors:     []string{"W"},
 			}
 			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
 			if err != nil {
@@ -1280,6 +1603,60 @@ func TestGenerateExecutableCardSourceFilteredGroupDamage(t *testing.T) {
 			name:        "keyword flying",
 			oracleText:  "Test Bolt deals 1 damage to each creature with flying.",
 			wantedSnips: []string{"Keyword: game.Flying"},
+		},
+		{
+			name:       "mana value",
+			oracleText: "Test Bolt deals 3 damage to each creature with mana value 3 or less.",
+			wantedSnips: []string{
+				"RequiredTypes: []types.Card{types.Creature}",
+				"ManaValue: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 3})",
+			},
+		},
+		{
+			name:       "power",
+			oracleText: "Test Bolt deals 2 damage to each creature with power 2 or greater.",
+			wantedSnips: []string{
+				"Power: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 2})",
+			},
+		},
+		{
+			name:       "toughness",
+			oracleText: "Test Bolt deals 4 damage to each creature with toughness 4 or greater.",
+			wantedSnips: []string{
+				"Toughness: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4})",
+			},
+		},
+		{
+			name:       "controller you with mana value",
+			oracleText: "Test Bolt deals 2 damage to each creature you control with mana value 2 or less.",
+			wantedSnips: []string{
+				"Controller: game.ControllerYou",
+				"ManaValue: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 2})",
+			},
+		},
+		{
+			name:       "excluded subtype",
+			oracleText: "Test Bolt deals 2 damage to each non-Dragon creature.",
+			wantedSnips: []string{
+				"RequiredTypes: []types.Card{types.Creature}",
+				`ExcludedSubtype: types.Sub("Dragon")`,
+			},
+		},
+		{
+			name:       "excluded planeswalker subtype",
+			oracleText: "Test Bolt deals 5 damage to each non-Bolas planeswalker.",
+			wantedSnips: []string{
+				"RequiredTypes: []types.Card{types.Planeswalker}",
+				`ExcludedSubtype: types.Sub("Bolas")`,
+			},
+		},
+		{
+			name:       "nontoken",
+			oracleText: "Test Bolt deals 3 damage to each nontoken creature.",
+			wantedSnips: []string{
+				"RequiredTypes: []types.Card{types.Creature}",
+				"NonToken: true",
+			},
 		},
 	}
 	for _, test := range tests {
@@ -1703,6 +2080,46 @@ func TestGenerateExecutableCardSourceTwoTargetDamageRider(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceTwoTargetAnyOtherDamage covers the "deals A
+// damage to any target and B damage to any other target" wording (Boulder Dash,
+// Arc Trail). Both targets are "any target" slots; the second carries the
+// "other" distinctness qualifier, so its TargetSpec must require a different
+// object from the first.
+func TestGenerateExecutableCardSourceTwoTargetAnyOtherDamage(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Bolt",
+		Layout:     "normal",
+		ManaCost:   "{1}{R}",
+		TypeLine:   "Sorcery",
+		OracleText: "Test Bolt deals 2 damage to any target and 1 damage to any other target.",
+		Colors:     []string{"R"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if got := strings.Count(source, "Primitive: game.Damage"); got != 2 {
+		t.Fatalf("expected 2 damage instructions, got %d:\n%s", got, source)
+	}
+	for _, wanted := range []string{
+		"game.AnyTargetDamageRecipient(0)",
+		"game.AnyTargetDamageRecipient(1)",
+		"DistinctFromPriorTargets: true",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	// Only the second ("other") target slot is distinct from the first.
+	if got := strings.Count(source, "DistinctFromPriorTargets: true"); got != 1 {
+		t.Fatalf("expected exactly one distinct target slot, got %d:\n%s", got, source)
+	}
+}
+
 // TestGenerateExecutableCardSourceTwoTargetDamageRiderFailsClosed asserts that
 // two-target damage shapes the backend cannot represent exactly stay rejected. A
 // variable primary or rider amount, and an "any target" second clause (whose
@@ -1968,5 +2385,32 @@ func TestGenerateExecutableGreatestCharacteristicDraw(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestGenerateExecutableExileTopOfEachPlayersLibrary(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Library Raider",
+		Layout:     "normal",
+		TypeLine:   "Creature — Dinosaur",
+		ManaCost:   "{4}{R}{R}",
+		Power:      new("6"),
+		Toughness:  new("6"),
+		OracleText: "Whenever Library Raider attacks, exile the top card of each player's library.",
+	}, "l")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"Primitive: game.ExileTopOfLibrary{",
+		"PlayerGroup: game.AllPlayersReference(),",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated card missing %q:\n%s", want, source)
+		}
 	}
 }

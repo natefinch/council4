@@ -37,26 +37,26 @@ var CosmicHunger = &game.CardDef{
 						MaxTargets: 1,
 						Constraint: "creature you control",
 						Allow:      game.TargetAllowPermanent,
-						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{
+						Selection: opt.Val(game.Selection{
+							RequiredTypesAny: []types.Card{
 								types.Creature,
 							},
 							Controller: game.ControllerYou,
-						},
+						}),
 					},
 					{
 						MinTargets: 1,
 						MaxTargets: 1,
 						Constraint: "another creature, planeswalker, or battle",
 						Allow:      game.TargetAllowPermanent,
-						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{
+						Selection: opt.Val(game.Selection{
+							RequiredTypesAny: []types.Card{
 								types.Creature,
 								types.Planeswalker,
 								types.Battle,
 							},
-							Another: true,
-						},
+							ExcludeSource: true,
+						}),
 					},
 				},
 				Sequence: []game.Instruction{

@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
@@ -38,7 +39,9 @@ func lowerActivationShell(
 			"the executable source backend requires an exact typed activation cost",
 		)
 	}
-	if !rulesFreeAbilityWordLabel(ability.AbilityWord) {
+	if !isBoastAbilityWord(ability.AbilityWord) &&
+		!isMaxSpeedAbilityWord(ability.AbilityWord) &&
+		!rulesFreeAbilityWordLabel(ability.AbilityWord) {
 		return loweredActivationShell{}, activationDiagnostic(
 			original,
 			"unsupported activation ability word",
@@ -84,6 +87,37 @@ func lowerActivationShell(
 			"unsupported activation zone",
 			"the executable source backend cannot lower this activation zone of function",
 		)
+	}
+	if isBoastAbilityWord(ability.AbilityWord) {
+		// Boast (CR 702.116) carries its activation restrictions in the keyword
+		// itself, not in rules text: it may be activated only if its source
+		// attacked this turn and only once each turn. Reject any Boast ability
+		// that also declares an explicit timing or condition, or that does not
+		// function from the battlefield, so unexpected shapes stay unsupported.
+		if timing != game.NoTimingRestriction || activationCondition.Exists || zoneOfFunction != zone.Battlefield {
+			return loweredActivationShell{}, activationDiagnostic(
+				original,
+				"unsupported Boast ability",
+				"the executable source backend supports only a battlefield Boast ability with no other activation restriction",
+			)
+		}
+		timing = game.OncePerTurn
+		activationCondition = opt.Val(game.BoastActivationCondition())
+	}
+	if isMaxSpeedAbilityWord(ability.AbilityWord) {
+		// The "Max speed" ability word (CR 702.179, the Start your engines! speed
+		// subsystem) gates activation on the controller having maximum speed. It
+		// imposes no timing of its own, so reject any Max speed ability that also
+		// declares an explicit timing or rules-text condition, or that does not
+		// function from the battlefield, so unexpected shapes stay unsupported.
+		if timing != game.NoTimingRestriction || activationCondition.Exists || zoneOfFunction != zone.Battlefield {
+			return loweredActivationShell{}, activationDiagnostic(
+				original,
+				"unsupported Max speed ability",
+				"the executable source backend supports only a battlefield Max speed ability with no other activation restriction",
+			)
+		}
+		activationCondition = opt.Val(game.MaxSpeedActivationCondition())
 	}
 	if !channelActivationSupported(ability, zoneOfFunction, additionalCosts) {
 		return loweredActivationShell{}, activationDiagnostic(
@@ -167,6 +201,8 @@ func lowerActivationShell(
 		Quoted:    syntax.Quoted,
 		Modal:     syntax.Modal,
 		Atoms:     syntax.Atoms,
+		CoinFlip:  syntax.CoinFlip,
+		Vote:      syntax.Vote,
 	}
 	content, diagnostic := lowerAbilityContent(cardName, ability.Kind, bodyContent, false, &bodySyntax)
 	if diagnostic != nil {
@@ -206,6 +242,14 @@ func lowerActivationShell(
 	return result, nil
 }
 
+func isBoastAbilityWord(label string) bool {
+	return strings.EqualFold(label, "Boast")
+}
+
+func isMaxSpeedAbilityWord(label string) bool {
+	return strings.EqualFold(label, "Max speed")
+}
+
 func channelActivationSupported(ability compiler.CompiledAbility, functionZone zone.Type, additionalCosts []cost.Additional) bool {
 	if !strings.EqualFold(ability.AbilityWord, "Channel") {
 		return true
@@ -219,7 +263,19 @@ func channelActivationSupported(ability compiler.CompiledAbility, functionZone z
 	}
 	for i := range ability.Content.Effects {
 		effect := &ability.Content.Effects[i]
-		if effect.Kind == compiler.EffectSearch && !effect.Selector.BasicLandType {
+		if effect.Kind != compiler.EffectSearch || effect.Selector.BasicLandType {
+			continue
+		}
+		// Beyond Boseiju's opponent-redirected "land card with a basic land type"
+		// search, allow the controller's own basic-land fetch — the Kamigawa
+		// Channel land cycle (Greater Tanuki et al.): "Search your library for a
+		// basic land card, put it onto the battlefield[ tapped], then shuffle."
+		// That shape carries no targets and selects a Basic-supertype land; the
+		// downstream body lowering validates the full search sequence and fails
+		// closed on anything else, so this stays bounded.
+		if len(ability.Content.Targets) != 0 ||
+			effect.Selector.Kind != compiler.SelectorLand ||
+			!slices.Contains(effect.Selector.Supertypes(), types.Basic) {
 			return false
 		}
 	}
@@ -227,6 +283,12 @@ func channelActivationSupported(ability compiler.CompiledAbility, functionZone z
 }
 
 func activationReferencesSupported(content compiler.AbilityContent) bool {
+	if _, ok := recognizeConditionalDestination(content); ok {
+		// The conditional-destination lowering binds the searched card through a
+		// linked key and consumes every "it"/"that card" pronoun in the routing
+		// sequence, so these references need no external antecedent resolution.
+		return true
+	}
 	for i := range content.Effects {
 		if content.Effects[i].Kind == compiler.EffectManifestDread && !content.Effects[i].Exact &&
 			len(content.References) != 0 {

@@ -452,6 +452,48 @@ func TestLowerWasCastEnterTriggers(t *testing.T) {
 	}
 }
 
+// TestLowerGraveyardEnterSelfExileThenCreateToken covers the conditional
+// "if it entered/was cast from your graveyard, exile it. If you do, create a
+// token." body (Archfiend's Vessel): the intervening condition gates the trigger,
+// the mandatory self-exile publishes its success, and the token creation is gated
+// on that success so no token is created when the source did not actually leave.
+func TestLowerGraveyardEnterSelfExileThenCreateToken(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Vessel",
+		Layout:     "normal",
+		ManaCost:   "{B}",
+		TypeLine:   "Creature — Demon",
+		OracleText: "When this creature enters, if it entered from your graveyard or you cast it from your graveyard, exile it. If you do, create a 5/5 black Demon creature token with flying.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	trigger := face.TriggeredAbilities[0].Trigger
+	if !trigger.InterveningIfEventPermanentEnteredOrCastFromControllerGraveyard {
+		t.Fatalf("trigger = %+v, want controller-graveyard intervening-if", trigger)
+	}
+	sequence := face.TriggeredAbilities[0].Content.Modes[0].Sequence
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %+v, want two instructions", sequence)
+	}
+	exile, ok := sequence[0].Primitive.(game.Exile)
+	if !ok || exile.Object != game.EventPermanentReference() {
+		t.Fatalf("instruction[0] = %+v, want exile of the entering object", sequence[0])
+	}
+	if sequence[0].PublishResult == "" || sequence[0].Optional {
+		t.Fatalf("instruction[0] = %+v, want mandatory exile publishing its result", sequence[0])
+	}
+	if _, ok := sequence[1].Primitive.(game.CreateToken); !ok {
+		t.Fatalf("instruction[1] = %+v, want token creation", sequence[1])
+	}
+	gate := sequence[1].ResultGate
+	if !gate.Exists ||
+		gate.Val.Key != sequence[0].PublishResult ||
+		gate.Val.Succeeded != game.TriTrue {
+		t.Fatalf("instruction[1] gate = %+v, want gate on exile success", gate)
+	}
+}
+
 func TestLowerSelfEnterTriggerSupportsCasterRelativeCondition(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -661,5 +703,58 @@ func TestLowerSagaChapterConsumesInlineReminderText(t *testing.T) {
 	})
 	if len(face.ChapterAbilities) != 1 {
 		t.Fatalf("got %d chapter abilities, want 1", len(face.ChapterAbilities))
+	}
+}
+
+// TestLowerSagaChapterDealsDamage proves a Saga chapter that deals a fixed amount
+// of damage to a target ("This Saga deals 4 damage to any target.") lowers onto a
+// Damage primitive sourced from the Saga permanent, mirroring the source-damage
+// spell shape.
+func TestLowerSagaChapterDealsDamage(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Damage Saga",
+		Layout:     "saga",
+		TypeLine:   "Enchantment — Saga",
+		OracleText: "I — This Saga deals 4 damage to any target.\nII — Draw a card.",
+	})
+	if len(face.ChapterAbilities) != 2 {
+		t.Fatalf("got %d chapter abilities, want 2", len(face.ChapterAbilities))
+	}
+	mode := face.ChapterAbilities[0].Content.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("chapter targets = %#v, want one", mode.Targets)
+	}
+	damage, ok := mode.Sequence[0].Primitive.(game.Damage)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.Damage", mode.Sequence[0].Primitive)
+	}
+	if damage.Amount != game.Fixed(4) {
+		t.Fatalf("damage amount = %#v, want 4", damage.Amount)
+	}
+	if damage.Recipient != game.AnyTargetDamageRecipient(0) {
+		t.Fatalf("damage recipient = %#v, want any-target", damage.Recipient)
+	}
+	if !damage.DamageSource.Exists || damage.DamageSource.Val != game.SourcePermanentReference() {
+		t.Fatalf("damage source = %#v, want source permanent", damage.DamageSource)
+	}
+}
+
+// TestLowerSagaChapterDealsDamageToOpponentCreature proves the opponent-controlled
+// target restriction ("This Saga deals 4 damage to target creature an opponent
+// controls.") lowers without a damage diagnostic.
+func TestLowerSagaChapterDealsDamageToOpponentCreature(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Opponent Damage Saga",
+		Layout:     "saga",
+		TypeLine:   "Enchantment — Saga",
+		OracleText: "I — This Saga deals 4 damage to target creature an opponent controls.\nII — Draw a card.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v, want none", diagnostics)
 	}
 }

@@ -5,20 +5,23 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // lowerSourceSpellCostReduction lowers the exact source-scoped dynamic cast cost
-// reduction "This spell costs {N} less to cast for each <countable battlefield
-// object>." into a static ability that carries an AffectedSource spell cost
-// modifier. The modifier holds the per-object generic reduction N and the typed
-// battlefield count selection; the rules layer counts the matching permanents at
-// cost time and applies the reduction only while this exact spell is being cast.
+// reduction "This spell costs {N} less to cast for each <countable object>." into
+// a static ability that carries an AffectedSource spell cost modifier. The
+// modifier holds the per-object generic reduction N and the typed count
+// selection; the rules layer counts the matching battlefield permanents, or the
+// matching cards in the caster's own graveyard or hand, at cost time and applies
+// the reduction only while this exact spell is being cast.
 //
 // It runs for both instant/sorcery (AbilitySpell) and permanent (AbilityStatic)
 // abilities, since the same wording reduces a permanent's own cast cost. The
 // count selection is derived from the effect's typed Amount through the shared
-// dynamic-count machinery, which fails closed on non-battlefield zones and
-// unsupported controllers.
+// dynamic-count machinery, which fails closed on unrepresentable zones and
+// controllers.
 func lowerSourceSpellCostReduction(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
@@ -74,9 +77,11 @@ func lowerSourceSpellCostReduction(
 // sourceSpellCostModifier builds the AffectedSource spell cost modifier for a
 // source-spell cast cost reduction. The per-object form ("costs {N} less to cast
 // for each <object>") yields a PerObjectReduction with a battlefield count
-// selection; the dynamic form ("costs {X} less to cast, where X is <dynamic
+// selection, or, when the counted objects are cards in the caster's own
+// graveyard or hand, a PerObjectReduction with that card-zone count selection and
+// CountZone; the dynamic form ("costs {X} less to cast, where X is <dynamic
 // amount>") yields a DynamicReduction carrying the typed dynamic amount the
-// runtime evaluates at cost time. Both fail closed when the counted/measured
+// runtime evaluates at cost time. All fail closed when the counted/measured
 // objects are not battlefield permanents the runtime represents.
 func sourceSpellCostModifier(ability compiler.CompiledAbility, effect *compiler.CompiledEffect) (game.CostModifier, *shared.Diagnostic) {
 	if effect.SourceSpellCostReductionDynamic {
@@ -100,12 +105,21 @@ func sourceSpellCostModifier(ability compiler.CompiledAbility, effect *compiler.
 			"the per-object generic reduction must be positive",
 		)
 	}
-	if _, ok := dynamicCardZoneAmount(effect.Amount.Selector(), effect.Amount.Multiplier); ok {
-		return game.CostModifier{}, executableDiagnostic(
-			ability,
-			"unsupported source-spell cost reduction",
-			"the counted objects must be battlefield permanents",
-		)
+	if selector := effect.Amount.Selector(); selector.Zone != zone.None {
+		zoneAmount, ok := dynamicCardZoneAmount(selector, effect.Amount.Multiplier)
+		if !ok || zoneAmount.Selection == nil || zoneAmount.Selection.Empty() {
+			return game.CostModifier{}, executableDiagnostic(
+				ability,
+				"unsupported source-spell cost reduction",
+				"the counted cards in that zone are not representable by the runtime selection vocabulary",
+			)
+		}
+		return game.CostModifier{
+			Kind:               game.CostModifierSpell,
+			PerObjectReduction: effect.SourceSpellCostReductionAmount,
+			CountSelection:     zoneAmount.Selection,
+			CountZone:          opt.Val(zoneAmount.CardZone),
+		}, nil
 	}
 	selection, ok := dynamicAmountSelection(effect.Amount.Selector())
 	if !ok {

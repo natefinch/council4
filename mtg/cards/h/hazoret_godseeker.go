@@ -93,15 +93,15 @@ var HazoretGodseeker = func() *game.CardDef {
 						MaxTargets: 1,
 						Constraint: "creature with power 2 or less",
 						Allow:      game.TargetAllowPermanent,
-						Predicate: game.TargetPredicate{
-							PermanentTypes: []types.Card{
+						Selection: opt.Val(game.Selection{
+							RequiredTypesAny: []types.Card{
 								types.Creature,
 							},
 							Power: opt.Val(compare.Int{
 								Op:    compare.LessOrEqual,
 								Value: 2,
 							}),
-						},
+						}),
 					},
 				},
 				Sequence: []game.Instruction{

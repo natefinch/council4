@@ -52,6 +52,20 @@ type CardView struct {
 	// produce colorless mana, so an agent can sequence colored sources without
 	// inspecting ability internals.
 	ProducesColors []color.Color
+	// ProducesMana reports that the card has a mana ability (a mana rock or mana
+	// dork), including colorless-only sources, so an agent can value ramp without
+	// inspecting ability internals.
+	ProducesMana bool
+	// RampsLand reports that casting or resolving the card puts a land onto the
+	// battlefield (land ramp such as Rampant Growth or a land-fetching enters
+	// trigger), derived from the scorable-effect IR, so an agent can prioritize
+	// ramp.
+	RampsLand bool
+	// EntersTapped reports that the card always enters the battlefield tapped (an
+	// unconditional tapland), so an agent can sequence a tapland into a turn it
+	// does not need the mana. Conditional or pay-to-untap lands are not flagged,
+	// since they may enter untapped.
+	EntersTapped bool
 }
 
 // PlayerView is a read-only view of one player's public state. Hand and library
@@ -289,7 +303,10 @@ func (o PlayerObservation) cardViews(z *zone.Zone) []CardView {
 		view.Types = append([]types.Card(nil), card.Def.Types...)
 		view.ManaValue = card.Def.ManaValue()
 		view.Colors = append([]color.Color(nil), card.Def.Colors...)
-		view.ProducesColors = cardFaceManaColors(&card.Def.CardFace)
+		view.ProducesColors = cardFaceManaColors(&card.Def.CardFace, commanderIdentityColors(o.g, card.Owner))
+		view.ProducesMana = len(card.Def.ManaAbilities) > 0
+		view.RampsLand = cardFaceRampsLand(&card.Def.CardFace)
+		view.EntersTapped = cardFaceEntersTapped(&card.Def.CardFace)
 		views = append(views, view)
 	}
 	return views
@@ -303,7 +320,7 @@ func (o PlayerObservation) permanentView(permanent *game.Permanent) PermanentVie
 			keywords[keyword] = true
 		}
 	}
-	producesMana, producesColors := abilitiesManaProduction(values.abilities, permanent.EntryChoices)
+	producesMana, producesColors := abilitiesManaProduction(values.abilities, permanent.EntryChoices, commanderIdentityColors(o.g, effectiveController(o.g, permanent)))
 	return PermanentView{
 		ObjectID:       permanent.ObjectID,
 		CardInstanceID: permanent.CardInstanceID,

@@ -37,6 +37,7 @@ func compileTriggerEventClause(clause *parser.TriggerEventClause) (TriggerPatter
 		MatchFaceDown:             clause.FaceDown,
 		FaceDown:                  clause.FaceDown,
 		TappedForMana:             clause.TappedForMana,
+		TappedForManaColor:        clause.TappedForManaColor,
 	}
 	var ok bool
 	pattern.Controller, ok = compileTriggerController(clause.Controller)
@@ -60,6 +61,8 @@ func compileTriggerEventClause(clause *parser.TriggerEventClause) (TriggerPatter
 		ok = compilePermanentSubjectEvent(clause, &pattern, TriggerEventBlockerDeclared)
 	case parser.TriggerEventKindBecameBlocked:
 		ok = compilePermanentSubjectEvent(clause, &pattern, TriggerEventAttackerBecameBlocked)
+	case parser.TriggerEventKindAttacksUnblocked:
+		ok = compilePermanentSubjectEvent(clause, &pattern, TriggerEventAttackerBecameUnblocked)
 	case parser.TriggerEventKindDamageDealt:
 		ok = compileDamageEvent(clause, &pattern)
 	case parser.TriggerEventKindCounterAdded:
@@ -78,6 +81,10 @@ func compileTriggerEventClause(clause *parser.TriggerEventClause) (TriggerPatter
 		ok = compileBecameTargetEvent(clause, &pattern)
 	case parser.TriggerEventKindTokenCreated:
 		ok = compileTokenCreatedEvent(clause, &pattern)
+	case parser.TriggerEventKindClassBecameLevel:
+		ok = compileClassBecameLevelEvent(clause, &pattern)
+	case parser.TriggerEventKindDoorUnlocked:
+		ok = compileDoorUnlockEvent(clause, &pattern)
 	default:
 		return TriggerPattern{}, false
 	}
@@ -105,6 +112,8 @@ func compileUnionTriggerEvent(kind parser.TriggerEventKind) (TriggerEvent, bool)
 		return TriggerEventPermanentSacrificed, true
 	case parser.TriggerEventKindAttack:
 		return TriggerEventAttackerDeclared, true
+	case parser.TriggerEventKindBlock:
+		return TriggerEventBlockerDeclared, true
 	case parser.TriggerEventKindBecameBlocked:
 		return TriggerEventAttackerBecameBlocked, true
 	case parser.TriggerEventKindDied:
@@ -164,6 +173,16 @@ func compileZoneChangeZones(clause *parser.TriggerEventClause, pattern *TriggerP
 		}
 		pattern.MatchFromZone = true
 	}
+	if clause.Zone.ExcludeFromZone {
+		pattern.FromZone, _ = compileTriggerEventZone(clause.Zone.FromZone.Kind)
+		if pattern.FromZone == TriggerZoneNone {
+			return false
+		}
+		pattern.ExcludeFromZone = true
+	}
+	if pattern.MatchFromZone && pattern.ExcludeFromZone {
+		return false
+	}
 	if pattern.Event != TriggerEventZoneChanged {
 		return true
 	}
@@ -196,6 +215,19 @@ func compileSpellCastEvent(clause *parser.TriggerEventClause, pattern *TriggerPa
 	pattern.Controller = controller
 	pattern.CardSelection = selection
 	pattern.MatchSpellCopy = clause.MatchCopy
+	pattern.SpellTargetsSource = clause.SpellTargetsSource
+	if clause.SpellTargetSelection != nil {
+		targetSelection, selectionOK := compileTriggerSelection(*clause.SpellTargetSelection)
+		if !selectionOK {
+			return false
+		}
+		pattern.SpellTargetSelection = &targetSelection
+	}
+	turn, ok := compileSpellCastTurnRelation(clause.SpellCastTurnRelation)
+	if !ok {
+		return false
+	}
+	pattern.CastDuringTurn = turn
 	pattern.RequireKickerPaid = clause.SpellSelection.Kicker
 	pattern.RequireHistoric = clause.SpellSelection.Historic
 	if clause.SpellSelection.Ordinal != 0 {
@@ -213,7 +245,29 @@ func compileSpellCastEvent(clause *parser.TriggerEventClause, pattern *TriggerPa
 		}
 		pattern.MatchFromZone = true
 	}
+	if clause.SpellSelection.CastNotFromHand {
+		// "from anywhere other than their hand" excludes spells cast from the
+		// caster's hand; the runtime fires only when the cast-from zone differs.
+		if pattern.MatchFromZone {
+			return false
+		}
+		pattern.FromZone = TriggerZoneHand
+		pattern.ExcludeFromZone = true
+	}
 	return true
+}
+
+func compileSpellCastTurnRelation(relation parser.TriggerCastTurnRelation) (TriggerCastTurn, bool) {
+	switch relation {
+	case parser.TriggerCastTurnRelationNone:
+		return TriggerCastTurnAny, true
+	case parser.TriggerCastTurnRelationYourTurn:
+		return TriggerCastTurnYours, true
+	case parser.TriggerCastTurnRelationNotYourTurn:
+		return TriggerCastTurnNotYours, true
+	default:
+		return TriggerCastTurnAny, false
+	}
 }
 
 func compileAbilityActivatedEvent(clause *parser.TriggerEventClause, pattern *TriggerPattern) bool {
@@ -255,6 +309,7 @@ func compileAttackEvent(clause *parser.TriggerEventClause, pattern *TriggerPatte
 	pattern.AttackRecipient = recipient
 	pattern.AttackRecipientSelection = selection
 	pattern.AttackAlone = clause.AttackAlone
+	pattern.AttackWhileSaddled = clause.AttackWhileSaddled
 	pattern.AttackerCountAtLeast = clause.AttackerCountAtLeast
 	return true
 }
@@ -275,6 +330,34 @@ func compilePermanentSubjectEvent(
 	if event != TriggerEventAttackerBecameBlocked {
 		pattern.RelatedSubjectSelection = related
 	}
+	return true
+}
+
+// compileClassBecameLevelEvent compiles "When this Class becomes level N" into a
+// self-source class-level-gained pattern restricted to the level reached.
+func compileClassBecameLevelEvent(clause *parser.TriggerEventClause, pattern *TriggerPattern) bool {
+	if clause.ClassBecameLevel <= 0 {
+		return false
+	}
+	if !compileEventSubject(&clause.Subject, pattern, &pattern.SubjectSelection) {
+		return false
+	}
+	pattern.Event = TriggerEventClassBecameLevel
+	pattern.ClassBecameLevel = clause.ClassBecameLevel
+	return true
+}
+
+// compileDoorUnlockEvent compiles the self-source "you unlock this door"
+// trigger of a Room half. The subject is the ability's own source, so it sets
+// Source to self and carries the door-unlock event identity.
+func compileDoorUnlockEvent(clause *parser.TriggerEventClause, pattern *TriggerPattern) bool {
+	if clause.Subject.Kind != parser.TriggerEventSubjectSelf {
+		return false
+	}
+	if !compileEventSubject(&clause.Subject, pattern, &pattern.SubjectSelection) {
+		return false
+	}
+	pattern.Event = TriggerEventDoorUnlocked
 	return true
 }
 
@@ -334,8 +417,13 @@ func compileCounterEvent(clause *parser.TriggerEventClause, pattern *TriggerPatt
 	if !ok {
 		return false
 	}
+	causeController, ok := compileTriggerActorController(clause.CauseController)
+	if !ok {
+		return false
+	}
 	pattern.Event = TriggerEventCountersAdded
 	pattern.Counter = counterValue
+	pattern.CauseController = causeController
 	switch clause.Subject.Kind {
 	case parser.TriggerEventSubjectSelf:
 		pattern.Source = TriggerSourceSelf
@@ -435,32 +523,33 @@ func compileTriggerSpellSelection(syntax parser.TriggerEventSpellSelection) (Tri
 		Colorless:        syntax.Colorless,
 		Multicolored:     syntax.Multicolored,
 		ManaValueAtLeast: syntax.ManaValueAtLeast,
+		ManaValueAtMost:  syntax.ManaValueAtMost,
 		MatchManaValue:   syntax.MatchManaValue,
 	}
 	for _, value := range syntax.Types {
 		compiled := compileTriggerCardType(value)
-		if compiled == TriggerCardTypeUnknown {
+		if compiled == "" {
 			return TriggerSelection{}, false
 		}
 		selection.RequiredTypes = append(selection.RequiredTypes, compiled)
 	}
 	for _, value := range syntax.TypesAny {
 		compiled := compileTriggerCardType(value)
-		if compiled == TriggerCardTypeUnknown {
+		if compiled == "" {
 			return TriggerSelection{}, false
 		}
 		selection.RequiredTypesAny = append(selection.RequiredTypesAny, compiled)
 	}
 	for _, value := range syntax.ExcludedTypes {
 		compiled := compileTriggerCardType(value)
-		if compiled == TriggerCardTypeUnknown {
+		if compiled == "" {
 			return TriggerSelection{}, false
 		}
 		selection.ExcludedTypes = append(selection.ExcludedTypes, compiled)
 	}
 	for _, value := range syntax.ColorsAny {
 		compiled := compileTriggerColor(value)
-		if compiled == TriggerColorUnknown {
+		if compiled == "" {
 			return TriggerSelection{}, false
 		}
 		selection.ColorsAny = append(selection.ColorsAny, compiled)
@@ -576,6 +665,8 @@ func compileTriggerCounter(value parser.TriggerEventCounterKind) (TriggerCounter
 		return TriggerCounterPlusOnePlusOne, true
 	case parser.TriggerEventCounterMinusOneMinusOne:
 		return TriggerCounterMinusOneMinusOne, true
+	case parser.TriggerEventCounterLore:
+		return TriggerCounterLore, true
 	default:
 		return TriggerCounterAny, false
 	}

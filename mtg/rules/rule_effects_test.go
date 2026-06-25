@@ -12,7 +12,7 @@ func TestSpellCostModifierColorDisjunctionMatches(t *testing.T) {
 	modifier := game.CostModifier{
 		Kind:             game.CostModifierSpell,
 		GenericReduction: 1,
-		MatchColors:      []color.Color{color.Red, color.Green},
+		CardSelection:    game.Selection{ColorsAny: []color.Color{color.Red, color.Green}},
 	}
 	tests := map[string]struct {
 		colors []color.Color
@@ -30,12 +30,12 @@ func TestSpellCostModifierColorDisjunctionMatches(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			card := &game.CardDef{CardFace: game.CardFace{Colors: test.colors}}
-			if got := spellCostModifierMatchesCard(modifier, card); got != test.want {
+			if got := spellCostModifierMatchesCard(&game.Game{}, modifier, card); got != test.want {
 				t.Fatalf("match %v = %v, want %v", test.colors, got, test.want)
 			}
 		})
 	}
-	if spellCostModifierMatchesCard(modifier, nil) {
+	if spellCostModifierMatchesCard(&game.Game{}, modifier, nil) {
 		t.Fatal("nil card matched a color-disjunction modifier, want no match")
 	}
 }

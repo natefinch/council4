@@ -349,6 +349,65 @@ func TestReadAheadSagaTokenChoosesEntryChapter(t *testing.T) {
 	assertSagaChapterOnTop(t, g, "Chapter 3")
 }
 
+func TestReadAheadGrantedToControlledSagasFromAnotherSource(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+
+	// A Barbara Wright-style anthem on the battlefield: "Sagas you control have
+	// read ahead." The grant comes from a separate source, so the entering Saga
+	// must pick it up through the layer system rather than from its own printed
+	// keyword.
+	grantorID := g.IDGen.Next()
+	g.CardInstances[grantorID] = &game.CardInstance{
+		ID:    grantorID,
+		Owner: game.Player1,
+		Def: &game.CardDef{CardFace: game.CardFace{
+			Name:  "Read Ahead Anthem",
+			Types: []types.Card{types.Enchantment},
+			StaticAbilities: []game.StaticAbility{{
+				ContinuousEffects: []game.ContinuousEffect{{
+					Layer:       game.LayerAbility,
+					Group:       game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{SubtypesAny: []types.Sub{types.Saga}}),
+					AddKeywords: []game.Keyword{game.ReadAhead},
+				}},
+			}},
+		}},
+	}
+	g.Battlefield = append(g.Battlefield, &game.Permanent{
+		ObjectID:       g.IDGen.Next(),
+		CardInstanceID: grantorID,
+		Owner:          game.Player1,
+		Controller:     game.Player1,
+	})
+
+	card := addSagaCardInstance(g, game.Player1, []game.ChapterAbility{
+		sagaNamedChapter(1),
+		sagaNamedChapter(2),
+		sagaNamedChapter(3),
+	})
+	agent := &choiceOnlyAgent{choices: [][]int{{2}}}
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: agent}
+	log := &TurnLog{}
+
+	permanent, ok := createCardPermanentFaceWithChoices(engine, g, card, game.Player1, zone.Stack, game.FaceFront, agents, log)
+	if !ok {
+		t.Fatal("create Saga under granted read ahead failed")
+	}
+	if got := permanent.SagaEntryChapter; got != 2 {
+		t.Fatalf("SagaEntryChapter = %d, want 2 from granted read ahead", got)
+	}
+	if got := permanent.Counters.Get(counter.Lore); got != 2 {
+		t.Fatalf("lore counters = %d, want 2", got)
+	}
+	if len(log.Choices) != 1 {
+		t.Fatalf("choices = %+v, want one granted read ahead choice", log.Choices)
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("chosen chapter was not put on the stack")
+	}
+	assertSagaChapterOnTop(t, g, "Chapter 2")
+}
+
 func addSagaCardInstance(g *game.Game, owner game.PlayerID, chapters []game.ChapterAbility) *game.CardInstance {
 	card := &game.CardInstance{
 		ID:    g.IDGen.Next(),

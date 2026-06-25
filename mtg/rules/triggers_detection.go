@@ -60,7 +60,12 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 		pending = append(pending, e.detectStateTriggeredAbilities(g)...)
 		pending = append(pending, e.drainFiredManaSpendRiders(g)...)
 		pending = append(pending, drainReadyDelayedTriggers(g, events)...)
+		pending = append(pending, drainReadyEventDelayedTriggers(g, events)...)
 	}()
+	if len(pending) == 0 {
+		return false
+	}
+	pending = suppressOpponentEnteringTriggers(g, pending)
 	if len(pending) == 0 {
 		return false
 	}
@@ -107,6 +112,50 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 	return placed
 }
 
+// suppressOpponentEnteringTriggers drops the pending entering-caused triggered
+// abilities of permanents controlled by an opponent of an active opponent-
+// entering-trigger suppressor's controller ("Permanents entering don't cause
+// abilities of permanents your opponents control to trigger.", Elesh Norn,
+// Mother of Machines). A trigger is suppressed when it is an ordinary triggered
+// ability whose triggering event is a permanent entering the battlefield and the
+// triggered ability's controller is an opponent of a suppressor's controller.
+// The suppressor's own controller's entering triggers are unaffected.
+func suppressOpponentEnteringTriggers(g *game.Game, pending []pendingTriggeredAbility) []pendingTriggeredAbility {
+	suppressors := make([]game.PlayerID, 0)
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		if effects[i].Kind == game.RuleEffectSuppressOpponentEnteringTriggers {
+			suppressors = append(suppressors, effects[i].Controller)
+		}
+	}
+	if len(suppressors) == 0 {
+		return pending
+	}
+	kept := pending[:0]
+	for i := range pending {
+		trigger := &pending[i]
+		if triggerSuppressedByOpponentEntering(trigger, suppressors) {
+			continue
+		}
+		kept = append(kept, *trigger)
+	}
+	return kept
+}
+
+// triggerSuppressedByOpponentEntering reports whether an entering-caused trigger
+// belongs to an opponent of any suppressor's controller.
+func triggerSuppressedByOpponentEntering(trigger *pendingTriggeredAbility, suppressors []game.PlayerID) bool {
+	if !trigger.ordinaryTrigger || !trigger.hasEvent || !eventEntersBattlefield(&trigger.event) {
+		return false
+	}
+	for _, controller := range suppressors {
+		if controller != trigger.controller {
+			return true
+		}
+	}
+	return false
+}
+
 // multiplyAdditionalTriggers expands the pending triggered abilities by the extra
 // occurrences granted by trigger-multiplying replacement effects: the
 // chosen-creature-type doublers and the entering-permanent doublers
@@ -123,6 +172,7 @@ func multiplyAdditionalTriggers(g *game.Game, pending []pendingTriggeredAbility)
 			additional = capturedChosenCreatureTypeAdditionalTriggerCount(g, &trigger)
 		}
 		additional += enteringPermanentAdditionalTriggerCount(g, &trigger)
+		additional += controlledPermanentAdditionalTriggerCount(g, &trigger)
 		for range additional {
 			multiplied = append(multiplied, trigger)
 		}
@@ -156,6 +206,106 @@ func enteringPermanentAdditionalTriggerCount(g *game.Game, trigger *pendingTrigg
 		}
 	}
 	return count
+}
+
+// controlledPermanentAdditionalTriggerCount counts the additional occurrences an
+// ordinary triggered ability gains from active controlled-permanent trigger
+// doublers ("If a triggered ability of a legendary creature you control
+// triggers, that ability triggers an additional time.", Annie Joins Up; Katara,
+// the Fearless; Splinter, Radical Rat). It applies when the triggered ability's
+// source is a permanent the doubler's controller controls and that permanent
+// matches the doubler's source-permanent selection filter. Unlike the
+// chosen-type and entering-permanent doublers this family includes the doubler's
+// own triggers ("a ... you control", not "another"). The count is read from the
+// live rule effects; the source permanent's type, supertype, and subtype are
+// taken from its current state, falling back to last-known information once it
+// has left the battlefield (so a dying creature's leaves-the-battlefield trigger
+// still doubles).
+func controlledPermanentAdditionalTriggerCount(g *game.Game, trigger *pendingTriggeredAbility) int {
+	if !trigger.ordinaryTrigger || !trigger.hasEvent {
+		return 0
+	}
+	count := 0
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectAdditionalTriggerForControlledPermanent ||
+			effect.SourceObjectID == 0 ||
+			effect.Controller != trigger.controller {
+			continue
+		}
+		if controlledTriggerSourceMatches(g, effect, trigger.sourceID) {
+			count++
+		}
+	}
+	return count
+}
+
+// controlledTriggerSourceMatches reports whether the triggered ability's source
+// is a permanent controlled by the doubler's controller that satisfies the
+// doubler's source-permanent selection filter. It checks the live permanent
+// first and falls back to last-known information for a source that has left the
+// battlefield.
+func controlledTriggerSourceMatches(g *game.Game, effect *game.RuleEffect, sourceID id.ID) bool {
+	if permanent, ok := permanentByObjectID(g, sourceID); ok {
+		return effectiveController(g, permanent) == effect.Controller &&
+			permanentMatchesTriggerSourceFilter(g, &effect.AffectedSelection, permanent)
+	}
+	snapshot, ok := lastKnownObject(g, sourceID)
+	return ok &&
+		snapshot.Controller == effect.Controller &&
+		snapshotMatchesTriggerSourceFilter(&effect.AffectedSelection, &snapshot)
+}
+
+// permanentMatchesTriggerSourceFilter reports whether a live permanent satisfies
+// the type, supertype, and subtype filter carried by a controlled-permanent
+// trigger doubler's selection. RequiredTypes and Supertypes are conjunctive;
+// SubtypesAny is disjunctive. An empty selection matches any permanent.
+func permanentMatchesTriggerSourceFilter(g *game.Game, selection *game.Selection, permanent *game.Permanent) bool {
+	for _, cardType := range selection.RequiredTypes {
+		if !permanentHasType(g, permanent, cardType) {
+			return false
+		}
+	}
+	for _, supertype := range selection.Supertypes {
+		if !permanentHasSupertype(g, permanent, supertype) {
+			return false
+		}
+	}
+	if len(selection.SubtypesAny) == 0 {
+		return true
+	}
+	for _, subtype := range selection.SubtypesAny {
+		if permanentHasSubtype(g, permanent, subtype) {
+			return true
+		}
+	}
+	return false
+}
+
+// snapshotMatchesTriggerSourceFilter mirrors permanentMatchesTriggerSourceFilter
+// against last-known information for a source permanent that has left the
+// battlefield.
+func snapshotMatchesTriggerSourceFilter(selection *game.Selection, snapshot *game.ObjectSnapshot) bool {
+	for _, cardType := range selection.RequiredTypes {
+		if !slices.Contains(snapshot.Types, cardType) {
+			return false
+		}
+	}
+	for _, supertype := range selection.Supertypes {
+		if !slices.Contains(snapshot.Supertypes, supertype) {
+			return false
+		}
+	}
+	if len(selection.SubtypesAny) == 0 {
+		return true
+	}
+	for _, subtype := range selection.SubtypesAny {
+		if slices.Contains(snapshot.Subtypes, subtype) {
+			return true
+		}
+	}
+	return false
 }
 
 func eventEntersBattlefield(event *game.Event) bool {
@@ -411,6 +561,7 @@ func (*Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []pen
 		if source, ok := leftBattlefieldTriggerSource(g, event); ok {
 			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
+		pending = append(pending, cycledCardSelfTriggers(g, event)...)
 		for _, source := range simultaneousLeftBattlefieldTriggerSources(g, event, events) {
 			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
@@ -689,7 +840,7 @@ func wardTriggerForEvent(permanent *game.Permanent, controller game.PlayerID, wa
 	}
 	return &game.TriggeredAbility{
 		Text:             "Ward",
-		KeywordAbilities: []game.KeywordAbility{game.WardKeyword{Cost: ward.Cost}},
+		KeywordAbilities: []game.KeywordAbility{game.WardKeyword{Cost: ward.Cost, AdditionalCosts: ward.AdditionalCosts}},
 	}, true
 }
 
@@ -844,6 +995,57 @@ func stateTriggerConditionSatisfied(g *game.Game, controller game.PlayerID, cond
 		}
 	}
 	return true
+}
+
+// cycledCardSelfTriggers detects a cycled card's own "When you cycle this card"
+// triggered abilities (CR 702.29e). These abilities function from the graveyard
+// the card is put into as it is cycled, so the ordinary battlefield scan in
+// detectTriggeredAbilities never sees them. Only the cycled card's self-source
+// cycle triggers are considered; its other abilities do not function from the
+// graveyard.
+func cycledCardSelfTriggers(g *game.Game, event game.Event) []pendingTriggeredAbility {
+	if event.Kind != game.EventCycled || event.CardID == 0 {
+		return nil
+	}
+	card, ok := g.GetCardInstance(event.CardID)
+	if !ok {
+		return nil
+	}
+	def, ok := cardFaceDef(card, game.FaceFront)
+	if !ok {
+		return nil
+	}
+	source := &game.Permanent{
+		ObjectID:       event.SourceID,
+		CardInstanceID: card.ID,
+		Owner:          card.Owner,
+		Controller:     event.Controller,
+		Face:           game.FaceFront,
+	}
+	var pending []pendingTriggeredAbility
+	for i := range def.TriggeredAbilities {
+		triggered := &def.TriggeredAbilities[i]
+		pattern := &triggered.Trigger.Pattern
+		if pattern.Event != game.EventCycled || pattern.Source != game.TriggerSourceSelf {
+			continue
+		}
+		if !triggerMatchesEventForController(g, source, event.Controller, pattern, event) ||
+			!triggerInterveningIf(g, source, event.Controller, &triggered.Trigger, &event) {
+			continue
+		}
+		pending = append(pending, pendingTriggeredAbility{
+			controller:      event.Controller,
+			sourceID:        event.SourceID,
+			sourceCardID:    card.ID,
+			face:            game.FaceFront,
+			abilityIndex:    i,
+			inline:          triggered,
+			event:           event,
+			hasEvent:        true,
+			ordinaryTrigger: true,
+		})
+	}
+	return pending
 }
 
 func leftBattlefieldTriggerSource(g *game.Game, event game.Event) (*game.Permanent, bool) {

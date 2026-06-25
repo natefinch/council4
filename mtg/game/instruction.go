@@ -21,11 +21,22 @@ type ChoiceKey string
 // and by CardCondition references to linked objects.
 type LinkedKey string
 
+// IntRange is an inclusive integer interval [Min, Max].
+type IntRange struct {
+	Min int
+	Max int
+}
+
 // InstructionResultGate gates an Instruction on a previously published ResultKey.
 type InstructionResultGate struct {
 	Key       ResultKey
 	Accepted  TriState
 	Succeeded TriState
+	// AmountRange, when set, additionally requires the published result's amount
+	// to fall within the inclusive interval. It implements a die-roll outcome
+	// table ("Roll a d20. 1—9 | ...; 10—19 | ...; 20 | ...") where each row's
+	// instructions are gated on the rolled value's range.
+	AmountRange opt.V[IntRange]
 }
 
 // Instruction wraps one Primitive with sequencing envelope metadata.
@@ -38,7 +49,7 @@ type Instruction struct {
 	Condition opt.V[EffectCondition]
 
 	// CardCondition gates the instruction on properties of a referenced card.
-	CardCondition opt.V[CardCondition]
+	CardCondition opt.V[CardSelection]
 
 	// ResultGate gates this instruction on the recorded result of a prior instruction
 	// identified by ResultGate.Key. Use this for "if you do" / "if you don't" branches.
@@ -116,9 +127,15 @@ func ValidateInstructionSequence(seq []Instruction, targetSpecs ...[]TargetSpec)
 	if checkTargets {
 		targets = targetSpecs[0]
 	}
-	return validateInstructionSequenceWithLinked(seq, targets, checkTargets, nil, targets, checkTargets)
+	return validateInstructionSequenceWithLinked(seq, targets, checkTargets, nil, targets, checkTargets, nil)
 }
 
+// validateInstructionSequenceWithLinked validates a sequence. siblingLinked names
+// linked keys published elsewhere on the same card face (in a different ability);
+// a primitive may consume such a key even though it is published outside this
+// sequence, because the publishing ability resolves before this one ever can.
+// siblingLinked is consulted only for consume checks and never seeds the
+// in-sequence published set, so duplicate-publish detection stays intact.
 func validateInstructionSequenceWithLinked(
 	seq []Instruction,
 	targets []TargetSpec,
@@ -126,6 +143,7 @@ func validateInstructionSequenceWithLinked(
 	inheritedLinked map[LinkedKey]int,
 	capturedTargets []TargetSpec,
 	checkCapturedTargets bool,
+	siblingLinked map[LinkedKey]int,
 ) error {
 	publishedResults := map[ResultKey]int{}
 	publishedChoices := map[ChoiceKey]int{}
@@ -155,6 +173,7 @@ func validateInstructionSequenceWithLinked(
 				publishedLinked,
 				targets,
 				checkTargets,
+				siblingLinked,
 			); err != nil {
 				return fmt.Errorf("instruction[%d]: %w", i, err)
 			}
@@ -167,7 +186,7 @@ func validateInstructionSequenceWithLinked(
 				}
 			}
 		}
-		if err := validateLinkedCardCondition(i, instr.CardCondition, publishedLinked); err != nil {
+		if err := validateLinkedCardCondition(i, instr.CardCondition, publishedLinked, siblingLinked); err != nil {
 			return err
 		}
 		refs := instr.Primitive.instructionRefs()
@@ -182,9 +201,13 @@ func validateInstructionSequenceWithLinked(
 			}
 		}
 		for _, key := range refs.consumesLinked {
-			if _, ok := publishedLinked[key]; !ok {
-				return fmt.Errorf("instruction[%d]: primitive references linked key %q not yet published", i, key)
+			if _, ok := publishedLinked[key]; ok {
+				continue
 			}
+			if _, ok := siblingLinked[key]; ok {
+				continue
+			}
+			return fmt.Errorf("instruction[%d]: primitive references linked key %q not yet published", i, key)
 		}
 		if instr.PublishResult != "" {
 			if prev, dup := publishedResults[instr.PublishResult]; dup {
@@ -208,7 +231,7 @@ func validateInstructionSequenceWithLinked(
 	return nil
 }
 
-func validateLinkedCardCondition(idx int, cond opt.V[CardCondition], published map[LinkedKey]int) error {
+func validateLinkedCardCondition(idx int, cond opt.V[CardSelection], published, siblingLinked map[LinkedKey]int) error {
 	if !cond.Exists || cond.Val.Card.Kind != CardReferenceLinked {
 		return nil
 	}
@@ -219,5 +242,17 @@ func validateLinkedCardCondition(idx int, cond opt.V[CardCondition], published m
 	if _, ok := published[key]; ok {
 		return nil
 	}
+	if _, ok := siblingLinked[key]; ok {
+		return nil
+	}
 	return fmt.Errorf("instruction[%d]: CardCondition references linked key %q not yet published", idx, key)
+}
+
+// PublishedLinkedKey reports the linked key a primitive records its acted-on
+// permanent under, or the empty key when it publishes none. It lets carddef
+// builders in other packages locate the permanent an earlier instruction
+// published under a linked key (to bind a later linked effect to it) without
+// re-inspecting each primitive's concrete type.
+func PublishedLinkedKey(primitive Primitive) LinkedKey {
+	return primitive.instructionRefs().publishesLinked
 }

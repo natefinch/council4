@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -43,21 +44,21 @@ func TestLowerLeadingConditionSelfStatic(t *testing.T) {
 	}{
 		"leading life pt and keyword": {
 			oracleText: "As long as you have 30 or more life, this creature gets +5/+5 and has flying.",
-			condition:  game.Condition{ControllerLifeAtLeast: 30},
+			condition:  game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLife, Op: compare.GreaterOrEqual, Value: 30}}},
 			power:      5,
 			toughness:  5,
 			keywords:   []game.Keyword{game.Flying},
 		},
 		"trailing life pt and keyword": {
 			oracleText: "This creature gets +5/+5 and has flying as long as you have 30 or more life.",
-			condition:  game.Condition{ControllerLifeAtLeast: 30},
+			condition:  game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLife, Op: compare.GreaterOrEqual, Value: 30}}},
 			power:      5,
 			toughness:  5,
 			keywords:   []game.Keyword{game.Flying},
 		},
 		"leading hand size": {
 			oracleText: "As long as you have seven or more cards in hand, this creature gets +2/+1 and has first strike.",
-			condition:  game.Condition{ControllerHandSizeAtLeast: 7},
+			condition:  game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerHandSize, Op: compare.GreaterOrEqual, Value: 7}}},
 			power:      2,
 			toughness:  1,
 			keywords:   []game.Keyword{game.FirstStrike},

@@ -13,7 +13,7 @@ func TestLowerStaticGrantedAnyColorManaAbility(t *testing.T) {
 		Group: compiler.StaticGroupReference{
 			Domain: compiler.StaticGroupSourceControllerPermanents,
 			Selection: compiler.StaticSelection{
-				RequiredTypes: []compiler.StaticCardType{compiler.StaticCardTypeLand},
+				RequiredTypes: []types.Card{types.Land},
 			},
 		},
 		Continuous: &compiler.StaticContinuousDeclaration{
@@ -43,7 +43,7 @@ func TestLowerStaticGrantedTreasureSacrificeManaAbility(t *testing.T) {
 		Group: compiler.StaticGroupReference{
 			Domain: compiler.StaticGroupSourceControllerPermanents,
 			Selection: compiler.StaticSelection{
-				RequiredTypes: []compiler.StaticCardType{compiler.StaticCardTypeArtifact},
+				RequiredTypes: []types.Card{types.Artifact},
 				SubtypesAny:   []types.Sub{types.Treasure},
 			},
 		},
@@ -70,5 +70,39 @@ func TestLowerStaticGrantedTreasureSacrificeManaAbility(t *testing.T) {
 	body, ok := effect.AddAbilities[0].(*game.ManaAbility)
 	if !ok || !game.IsTapSacrificeAnyOneColorManaAbility(body) {
 		t.Fatalf("granted ability = %#v, want Treasure-style sacrifice mana ability", effect.AddAbilities[0])
+	}
+}
+
+func TestLowerStaticGrantedSacrificeAnyColorManaAbility(t *testing.T) {
+	declaration := compiler.StaticDeclaration{
+		Group: compiler.StaticGroupReference{
+			Domain: compiler.StaticGroupSourceControllerPermanents,
+			Selection: compiler.StaticSelection{
+				RequiredTypes: []types.Card{types.Artifact},
+			},
+		},
+		Continuous: &compiler.StaticContinuousDeclaration{
+			Layer:     compiler.StaticLayerAbility,
+			Operation: compiler.StaticContinuousGrantManaAbility,
+			GrantedMana: &compiler.StaticGrantedManaAbility{
+				TapCost:   true,
+				Amount:    1,
+				AnyColor:  true,
+				Sacrifice: true,
+				Text:      "{T}, Sacrifice this artifact: Add one mana of any color.",
+			},
+		},
+	}
+
+	effect, ok := lowerStaticContinuousDeclaration(declaration)
+	if !ok {
+		t.Fatal("lowerStaticContinuousDeclaration() = false")
+	}
+	if effect.Layer != game.LayerAbility || len(effect.AddAbilities) != 1 {
+		t.Fatalf("effect = %#v, want one granted ability in ability layer", effect)
+	}
+	body, ok := effect.AddAbilities[0].(*game.ManaAbility)
+	if !ok || !game.IsTapSacrificeAnyColorManaAbility(body) {
+		t.Fatalf("granted ability = %#v, want count-1 sacrifice any-color mana ability", effect.AddAbilities[0])
 	}
 }

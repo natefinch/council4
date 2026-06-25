@@ -1,12 +1,143 @@
 package cardgen
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/opt"
 )
+
+// lowerOptionalSacrificeThenSearchSequence lowers the resolving-optional
+// "You may sacrifice <permanent>. If you do, <library-search group>." family
+// (The Huntsman's Redemption chapter II, Blood Speaker, Sanctum of Ugin). Unlike
+// the mandatory cost-prelude shape handled by lowerSacrificeThenSearchSequence,
+// the leading sacrifice is an optional resolving effect: the controller chooses
+// whether to perform it, and the search runs only when they did. Optionality is
+// realized through the shared optional-flow envelope — the sacrifice instruction
+// is marked Optional and publishes its result, and the single search instruction
+// is gated on that result having succeeded.
+//
+// The search group spans several effects (search, reveal, put, then shuffle)
+// that the per-effect ordered-sequence loop cannot split, so this dedicated
+// lowerer groups them via splitSequenceSearchGroups and emits one game.Search.
+// It fails closed unless the body is exactly one optional sacrifice followed by
+// one "if you do"-gated search group with no other conditions, modes, targets,
+// or keywords.
+func lowerOptionalSacrificeThenSearchSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	content := ctx.content
+	if ctx.optional ||
+		len(content.Modes) != 0 ||
+		len(content.Targets) != 0 ||
+		len(content.Keywords) != 0 ||
+		len(content.Effects) < 4 ||
+		content.Effects[0].Kind != compiler.EffectSacrifice ||
+		!content.Effects[0].Optional {
+		return game.AbilityContent{}, false
+	}
+	plan, ok := planOptionalFlow(content)
+	if !ok ||
+		!plan.enabled ||
+		plan.publishWithoutOptional ||
+		plan.optionalIndex != 0 ||
+		plan.gateIndex != 1 ||
+		plan.elseIndex >= 0 ||
+		plan.bareIndex >= 0 {
+		return game.AbilityContent{}, false
+	}
+	// The gate condition is consumed by the optional flow; no other per-effect
+	// condition may survive, or one would be silently dropped.
+	if len(optionalFlowGateConditions(content.Conditions, plan)) != 0 {
+		return game.AbilityContent{}, false
+	}
+	// Every reference must belong either to the leading sacrifice clause (the
+	// "this creature" self-reference the sacrifice lowerer resolves) or to the
+	// gated search clause (the tutor's "reveal it"/"put it" pronouns the
+	// search-group shape consumes). A reference outside both spans would be
+	// silently dropped, so fail closed.
+	clauseSpans := []shared.Span{content.Effects[0].Span, content.Effects[1].Span}
+	for i := range content.References {
+		if !spanCovered(content.References[i].Span, clauseSpans) {
+			return game.AbilityContent{}, false
+		}
+	}
+	searchEffects := searchGroupEffectsWithoutGatePrefix(content.Effects[1:], content.Conditions[plan.gateCondition].Span)
+	groups, _, ok := splitSequenceSearchGroups(searchEffects)
+	if !ok || len(groups) != 1 {
+		return game.AbilityContent{}, false
+	}
+	sacrifice, ok := lowerOptionalSacrificeLeadInstruction(ctx)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	sacrificeSeq := []game.Instruction{sacrifice}
+	if !applyOptionalFlowPublish(sacrificeSeq) {
+		return game.AbilityContent{}, false
+	}
+	searchSeq, ok := searchGroupInstructions(groups[0])
+	if !ok || !applyOptionalFlowGate(searchSeq, game.TriTrue) {
+		return game.AbilityContent{}, false
+	}
+	sequence := make([]game.Instruction, 0, len(sacrificeSeq)+len(searchSeq))
+	sequence = append(sequence, sacrificeSeq...)
+	sequence = append(sequence, searchSeq...)
+	return game.Mode{Sequence: sequence}.Ability(), true
+}
+
+// searchGroupEffectsWithoutGatePrefix returns a copy of a gated search group's
+// effects with the leading search effect's span trimmed past the "if you do"
+// gate condition. In trigger-body context the gate condition prefixes the
+// leading search effect's span, widening it past the reveal/put/shuffle effects
+// that follow; searchGroupSpec's shared-span membership guard would then reject
+// the group. When the leading effect's span begins at the gate condition, it is
+// realigned to the following effect's span start (the rest of the search
+// sentence), which restores the uniform span searchGroupSpec expects without
+// altering the recognized search shape (which keys on effect kinds and
+// connections, not spans).
+func searchGroupEffectsWithoutGatePrefix(effects []compiler.CompiledEffect, gateSpan shared.Span) []compiler.CompiledEffect {
+	trimmed := slices.Clone(effects)
+	if len(trimmed) >= 2 &&
+		trimmed[0].Span.Start.Offset == gateSpan.Start.Offset &&
+		trimmed[0].Span.End == trimmed[1].Span.End &&
+		trimmed[0].Span.Start.Offset < trimmed[1].Span.Start.Offset {
+		trimmed[0].Span.Start = trimmed[1].Span.Start
+	}
+	return trimmed
+}
+
+// lowerOptionalSacrificeLeadInstruction lowers the leading sacrifice effect of an
+// optional "you may sacrifice X. If you do, ..." sequence to its single runtime
+// instruction. Unlike lowerSequenceSacrificeInstruction it passes the effect's
+// own references so a self-referential sacrifice ("sacrifice this creature")
+// resolves, and it accepts either the source-bound Sacrifice primitive or the
+// chosen-permanent SacrificePermanents primitive. It fails closed unless the
+// effect lowers to exactly one such instruction with no target.
+func lowerOptionalSacrificeLeadInstruction(ctx contentCtx) (game.Instruction, bool) {
+	effect := ctx.content.Effects[0]
+	sacrificeCtx := ctx
+	sacrificeCtx.content = compiler.AbilityContent{
+		Effects:    []compiler.CompiledEffect{effect},
+		References: effect.References,
+	}
+	content, diagnostic := lowerSacrificeSpell(sacrificeCtx)
+	if diagnostic != nil ||
+		len(content.Modes) != 1 ||
+		len(content.Modes[0].Targets) != 0 ||
+		len(content.Modes[0].Sequence) != 1 {
+		return game.Instruction{}, false
+	}
+	instruction := content.Modes[0].Sequence[0]
+	if instruction.Primitive == nil {
+		return game.Instruction{}, false
+	}
+	kind := instruction.Primitive.Kind()
+	if kind != game.PrimitiveSacrifice && kind != game.PrimitiveSacrificePermanents {
+		return game.Instruction{}, false
+	}
+	return instruction, true
+}
 
 // lowerSacrificeThenSearchSequence lowers the "Sacrifice <permanent>.
 // <library-search group>" cost-prelude family, optionally followed by a single

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -176,7 +177,10 @@ func parseStaticSubjectDeclarations(
 	}
 	subject, verbStart, ok := parseStaticDeclarationSubject(opTokens, atoms)
 	if !ok {
-		return nil, false
+		subject, verbStart, ok = staticAttachedPronounSubject(opTokens, hasCondition, condition)
+		if !ok {
+			return nil, false
+		}
 	}
 	operations, ok := parseStaticOperations(opTokens, verbStart, subject, atoms)
 	if !ok {
@@ -252,7 +256,11 @@ func parseStaticQuotedAbilityGrantDeclarations(
 
 // staticQuotedGrantSubjectSupported reports whether subject is one the quoted
 // ability grant supports: the attached object of an Equipment/Aura ("Equipped
-// creature", "Enchanted creature") or a controlled-permanent group.
+// creature", "Enchanted creature"), a controlled-permanent group, a
+// controlled-creatures group narrowed to a single creature subtype ("Wizards
+// you control have ...", "Other Goblins you control have ..."), or a controlled
+// artifact or token group ("Artifacts you control have ...", "Tokens you control
+// have ...").
 func staticQuotedGrantSubjectSupported(subject StaticDeclarationSubject) bool {
 	if subject.Kind != StaticDeclarationSubjectGroup {
 		return false
@@ -261,6 +269,13 @@ func staticQuotedGrantSubjectSupported(subject StaticDeclarationSubject) bool {
 	case EffectStaticSubjectAttachedObject,
 		EffectStaticSubjectControlledCreatures,
 		EffectStaticSubjectOtherControlledCreatures,
+		EffectStaticSubjectControlledCreatureSubtype,
+		EffectStaticSubjectOtherControlledCreatureSubtype,
+		EffectStaticSubjectControlledArtifacts,
+		EffectStaticSubjectControlledTokens,
+		EffectStaticSubjectControlledPermanentSubtype,
+		EffectStaticSubjectOtherControlledPermanentSubtype,
+		EffectStaticSubjectOtherControlledPermanents,
 		EffectStaticSubjectControlledPermanents:
 		return true
 	default:
@@ -348,6 +363,61 @@ func parseStaticGrantedAbility(quoted Delimited) (StaticGrantedAbilitySyntax, bo
 	}, true
 }
 
+// ParseGrantedStaticAbility parses one quoted static ability clause (a Delimited
+// whose tokens are a fully quoted static ability such as "Equipped creature gets
+// +3/+3") into a typed granted-ability syntax for downstream layers that lower a
+// static ability a resolving effect grants directly from an effect's quoted
+// syntax rather than from an attached typed grant. Unlike a quoted triggered or
+// activated ability, the static-declaration recognizers require a
+// sentence-terminating period, which a printed quoted static ability omits, so
+// this helper terminates the quoted body before running it through the same
+// pipeline. The carried Text keeps the printed wording without the synthesized
+// terminator. It fails closed for any Delimited that is not a single fully
+// quoted ability body or that does not parse to exactly one ability.
+func ParseGrantedStaticAbility(quoted Delimited) (StaticGrantedAbilitySyntax, bool) {
+	tokens := quoted.Tokens
+	if len(tokens) < 3 ||
+		tokens[0].Kind != shared.Quote ||
+		tokens[len(tokens)-1].Kind != shared.Quote {
+		return StaticGrantedAbilitySyntax{}, false
+	}
+	text := staticGrantedAbilityText(quoted)
+	parsed := text
+	if !strings.HasSuffix(parsed, ".") {
+		parsed += "."
+	}
+	document, diagnostics := Parse(parsed, Context{})
+	if len(document.Abilities) != 1 {
+		return StaticGrantedAbilitySyntax{}, false
+	}
+	return StaticGrantedAbilitySyntax{
+		Span:        quoted.Span,
+		Text:        text,
+		document:    document,
+		diagnostics: diagnostics,
+	}, true
+}
+
+// staticAttachedPronounSubject recognizes the pronoun subject "it"/"them" that
+// co-refers with the attached creature named by a leading "As long as
+// equipped/enchanted creature is <state>" condition ("..., it has hexproof.").
+// It applies only when the stripped condition binds the attached object, so the
+// pronoun resolves to the equipped or enchanted creature rather than the source.
+func staticAttachedPronounSubject(tokens []shared.Token, hasCondition bool, condition ConditionClause) (StaticDeclarationSubject, int, bool) {
+	if !hasCondition || condition.ObjectBinding != ConditionObjectBindingSourceAttached {
+		return StaticDeclarationSubject{}, 0, false
+	}
+	if !staticWordsAt(tokens, 0, "it") && !staticWordsAt(tokens, 0, "them") {
+		return StaticDeclarationSubject{}, 0, false
+	}
+	span := shared.SpanOf(tokens[:1])
+	return StaticDeclarationSubject{
+		Kind:  StaticDeclarationSubjectGroup,
+		Span:  span,
+		Group: EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAttachedObject, Span: span},
+	}, 1, true
+}
+
 func parseStaticDeclarationSubject(tokens []shared.Token, atoms Atoms) (StaticDeclarationSubject, int, bool) {
 	if staticWordsAt(tokens, 0, "this", "creature") {
 		return StaticDeclarationSubject{
@@ -388,6 +458,34 @@ func parseStaticDeclarationSubject(tokens []shared.Token, atoms Atoms) (StaticDe
 			Group: group,
 		}, verbStart, true
 	}
+	if group, verbStart, ok := staticControlledCreaturesProhibitionSubject(tokens, atoms); ok {
+		return StaticDeclarationSubject{
+			Kind:  StaticDeclarationSubjectGroup,
+			Span:  group.Span,
+			Group: group,
+		}, verbStart, true
+	}
+	if group, verbStart, ok := staticSubtypeControlledCreaturesProhibitionSubject(tokens, atoms); ok {
+		return StaticDeclarationSubject{
+			Kind:  StaticDeclarationSubjectGroup,
+			Span:  group.Span,
+			Group: group,
+		}, verbStart, true
+	}
+	if group, verbStart, ok := staticBattlefieldCreaturesProhibitionSubject(tokens, atoms); ok {
+		return StaticDeclarationSubject{
+			Kind:  StaticDeclarationSubjectGroup,
+			Span:  group.Span,
+			Group: group,
+		}, verbStart, true
+	}
+	if group, verbStart, ok := staticGroupMustAttackSubject(tokens); ok {
+		return StaticDeclarationSubject{
+			Kind:  StaticDeclarationSubjectGroup,
+			Span:  group.Span,
+			Group: group,
+		}, verbStart, true
+	}
 	group := parseEffectStaticSubject(tokens, atoms)
 	if group.Kind == EffectStaticSubjectNone {
 		return StaticDeclarationSubject{}, 0, false
@@ -405,11 +503,12 @@ func parseStaticDeclarationSubject(tokens []shared.Token, atoms Atoms) (StaticDe
 
 // staticLinkingVerbGroupSubject recognizes a battlefield-group subject that a
 // characteristic-defining static joins to its predicate with the linking verb
-// "is"/"are" ("Creatures you control are Slivers ...", "All creatures are ...").
-// The shared parseEffectStaticSubject only delimits these groups before an
-// action verb (get/have/gain/lose), so the linking-verb forms used by type- and
-// color-adding statics are recognized here. It returns the group subject and the
-// index of the linking verb that follows the noun phrase.
+// "is"/"are" ("Creatures you control are Slivers ...", "Each creature you
+// control is ...", "All creatures are ..."). The shared parseEffectStaticSubject
+// only delimits these groups before an action verb (get/have/gain/lose), so the
+// linking-verb forms used by type- and color-adding statics are recognized here.
+// It returns the group subject and the index of the linking verb that follows
+// the noun phrase.
 func staticLinkingVerbGroupSubject(tokens []shared.Token) (EffectStaticSubjectSyntax, int, bool) {
 	type groupForm struct {
 		words []string
@@ -417,20 +516,34 @@ func staticLinkingVerbGroupSubject(tokens []shared.Token) (EffectStaticSubjectSy
 	}
 	forms := []groupForm{
 		{[]string{"other", "creatures", "you", "control"}, EffectStaticSubjectOtherControlledCreatures},
+		{[]string{"each", "creature", "you", "control"}, EffectStaticSubjectControlledCreatures},
 		{[]string{"creatures", "you", "control"}, EffectStaticSubjectControlledCreatures},
+		{[]string{"lands", "you", "control"}, EffectStaticSubjectControlledLands},
 		{[]string{"permanents", "you", "control"}, EffectStaticSubjectControlledPermanents},
 		{[]string{"all", "other", "creatures"}, EffectStaticSubjectAllOtherCreatures},
 		{[]string{"all", "creatures"}, EffectStaticSubjectAllCreatures},
 	}
+	offset := 0
+	var excluded []CardType
+	if len(tokens) > 0 {
+		if cardType, ok := recognizeExcludedCardTypeWord(tokens[0].Text); ok {
+			excluded = []CardType{cardType}
+			offset = 1
+		}
+	}
 	for _, form := range forms {
 		width := len(form.words)
-		if !staticWordsAt(tokens, 0, form.words...) || len(tokens) <= width {
+		if !staticWordsAt(tokens, offset, form.words...) || len(tokens) <= offset+width {
 			continue
 		}
-		if !staticLinkingVerb(tokens[width]) {
+		if !staticLinkingVerb(tokens[offset+width]) {
 			continue
 		}
-		return EffectStaticSubjectSyntax{Kind: form.kind, Span: shared.SpanOf(tokens[:width])}, width, true
+		return EffectStaticSubjectSyntax{
+			Kind:          form.kind,
+			Span:          shared.SpanOf(tokens[:offset+width]),
+			ExcludedTypes: excluded,
+		}, offset + width, true
 	}
 	return EffectStaticSubjectSyntax{}, 0, false
 }
@@ -439,6 +552,402 @@ func staticLinkingVerbGroupSubject(tokens []shared.Token) (EffectStaticSubjectSy
 // joins a characteristic-defining group subject to its predicate.
 func staticLinkingVerb(token shared.Token) bool {
 	return equalWord(token, "is") || equalWord(token, "are")
+}
+
+// staticControlledCreaturesProhibitionSubject recognizes the controller-creature
+// group subject of a mass-evasion prohibition ("<subject> can't be blocked.")
+// when it precedes a prohibition verb ("can't"/"cannot"). The shared
+// parseEffectStaticSubject only delimits a controlled-creatures group before an
+// action verb (get/have/gain/lose), so the prohibition boundary is recognized
+// here. It supports the bare "creatures you control" group, an optional leading
+// color filter ("Blue creatures you control ..."), and an optional trailing
+// "with [a] <kind> counter(s) on them" filter ("Creatures you control with +1/+1
+// counters on them ...") or "with power/toughness <comparison>" filter ("...
+// with power or toughness 1 or less ...", "... with power greater than
+// <source>'s power ..."), attaching the recognized predicate to the returned
+// subject. It returns the group subject and the index of the prohibition verb.
+func staticControlledCreaturesProhibitionSubject(tokens []shared.Token, atoms Atoms) (EffectStaticSubjectSyntax, int, bool) {
+	idx := 0
+	subject := EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatures}
+	if filter, width, ok := staticColorFilterAt(tokens, idx); ok {
+		subject.Colors = filter.colors
+		subject.Colorless = filter.colorless
+		subject.Multicolored = filter.multicolored
+		idx += width
+	}
+	if !staticWordsAt(tokens, idx, "creatures", "you", "control") {
+		return EffectStaticSubjectSyntax{}, 0, false
+	}
+	idx += 3
+	if match, ok := controlledGroupProhibitionCounterQualifier(tokens, idx); ok {
+		subject.CounterRequired = true
+		if match.Any {
+			subject.CounterAny = true
+		} else {
+			subject.CounterKind = match.Kind
+		}
+		idx = match.End
+	} else if match, ok := controlledGroupProhibitionPowerToughnessQualifier(tokens, idx, atoms); ok {
+		subject.Power = match.power
+		subject.MatchPower = match.matchPower
+		subject.Toughness = match.toughness
+		subject.MatchToughness = match.matchToughness
+		subject.PowerOrToughness = match.powerOrToughness
+		subject.PowerLessThanSource = match.powerLessThanSource
+		subject.PowerGreaterThanSource = match.powerGreaterThanSource
+		idx = match.end
+	}
+	if !staticWordsAt(tokens, idx, "can't") && !staticWordsAt(tokens, idx, "cannot") {
+		return EffectStaticSubjectSyntax{}, 0, false
+	}
+	subject.Span = shared.SpanOf(tokens[:idx])
+	return subject, idx, true
+}
+
+// staticSubtypeControlledCreaturesProhibitionSubject recognizes a
+// controller-creature group named by a creature subtype plural ("Werewolves you
+// control ...") optionally carrying a "non-<subtype>" exclusion ("Non-Human
+// Werewolves you control ...", Immerwolf) when it precedes a prohibition verb
+// ("can't"/"cannot"). The required subtype rides Subtype (so downstream maps the
+// group onto a subtype-filtered controlled-creatures Selection) and any leading
+// excluded subtype rides ExcludedSubtypes. It returns the group subject and the
+// index of the prohibition verb.
+func staticSubtypeControlledCreaturesProhibitionSubject(tokens []shared.Token, atoms Atoms) (EffectStaticSubjectSyntax, int, bool) {
+	creatureSubtypeAt := func(index int) (types.Sub, bool) {
+		if index >= len(tokens) {
+			return "", false
+		}
+		value, ok := atoms.SubtypeAt(tokens[index].Span)
+		return value, ok && SubtypeMatchesAnyRuntimeCardType(value, []types.Card{types.Creature, types.Kindred})
+	}
+	excludedCreatureSubtypeAt := func(index int) (types.Sub, bool) {
+		if index >= len(tokens) {
+			return "", false
+		}
+		value, ok := atoms.ExcludedSubtypeAt(tokens[index].Span)
+		return value, ok && SubtypeMatchesAnyRuntimeCardType(value, []types.Card{types.Creature, types.Kindred})
+	}
+	idx := 0
+	var excluded []types.Sub
+	if value, ok := excludedCreatureSubtypeAt(idx); ok {
+		excluded = append(excluded, value)
+		idx++
+	}
+	subtype, ok := creatureSubtypeAt(idx)
+	if !ok {
+		return EffectStaticSubjectSyntax{}, 0, false
+	}
+	subtypeText := tokens[idx].Text
+	idx++
+	if !staticWordsAt(tokens, idx, "you", "control") {
+		return EffectStaticSubjectSyntax{}, 0, false
+	}
+	idx += 2
+	if !staticWordsAt(tokens, idx, "can't") && !staticWordsAt(tokens, idx, "cannot") {
+		return EffectStaticSubjectSyntax{}, 0, false
+	}
+	return EffectStaticSubjectSyntax{
+		Kind:             EffectStaticSubjectControlledCreatureSubtype,
+		Span:             shared.SpanOf(tokens[:idx]),
+		Subtype:          subtype,
+		SubtypeText:      subtypeText,
+		SubtypeKnown:     true,
+		ExcludedSubtypes: excluded,
+	}, idx, true
+}
+
+// creature group subject of a mass "can't block" restriction ("Creatures with
+// power less than this creature's power can't block ...", "Creatures can't
+// block.") when it precedes a prohibition verb ("can't"/"cannot"). Unlike
+// staticControlledCreaturesProhibitionSubject the group is every creature on the
+// battlefield, so a leading "creatures you control" routes to the controlled
+// path instead. It supports an optional trailing source-relative power filter
+// ("with power greater/less than <source>'s power"), attaching the recognized
+// predicate to the returned all-creatures subject. It returns the group subject
+// and the index of the prohibition verb.
+func staticBattlefieldCreaturesProhibitionSubject(tokens []shared.Token, atoms Atoms) (EffectStaticSubjectSyntax, int, bool) {
+	if !staticWordsAt(tokens, 0, "creatures") || staticWordsAt(tokens, 1, "you", "control") {
+		return EffectStaticSubjectSyntax{}, 0, false
+	}
+	subject := EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllCreatures}
+	idx := 1
+	if match, ok := controlledGroupProhibitionPowerToughnessQualifier(tokens, idx, atoms); ok {
+		if !match.powerLessThanSource && !match.powerGreaterThanSource {
+			return EffectStaticSubjectSyntax{}, 0, false
+		}
+		subject.PowerLessThanSource = match.powerLessThanSource
+		subject.PowerGreaterThanSource = match.powerGreaterThanSource
+		idx = match.end
+	}
+	if !staticWordsAt(tokens, idx, "can't") && !staticWordsAt(tokens, idx, "cannot") {
+		return EffectStaticSubjectSyntax{}, 0, false
+	}
+	subject.Span = shared.SpanOf(tokens[:idx])
+	return subject, idx, true
+}
+
+// staticGroupMustAttackSubject recognizes the bare creature-group subject of a
+// mass forced-attack requirement ("Creatures you control attack each combat if
+// able.", "Creatures your opponents control attack each combat if able.", "All
+// creatures attack each combat if able.") when it precedes the requirement verb
+// ("attack", "attacks", or "must"). parseEffectStaticSubject only delimits these
+// groups before a get/have/gain/lose verb, so the requirement boundary is
+// recognized here. Only the unfiltered group forms are supported; any leading or
+// trailing filter fails closed.
+func staticGroupMustAttackSubject(tokens []shared.Token) (EffectStaticSubjectSyntax, int, bool) {
+	forms := []struct {
+		words []string
+		kind  EffectStaticSubjectKind
+	}{
+		{[]string{"creatures", "your", "opponents", "control"}, EffectStaticSubjectOpponentControlledCreatures},
+		{[]string{"creatures", "you", "control"}, EffectStaticSubjectControlledCreatures},
+		{[]string{"all", "creatures"}, EffectStaticSubjectAllCreatures},
+	}
+	for _, form := range forms {
+		if !staticWordsAt(tokens, 0, form.words...) {
+			continue
+		}
+		width := len(form.words)
+		if !staticWordsAt(tokens, width, "attack") &&
+			!staticWordsAt(tokens, width, "attacks") &&
+			!staticWordsAt(tokens, width, "must") {
+			return EffectStaticSubjectSyntax{}, 0, false
+		}
+		return EffectStaticSubjectSyntax{Kind: form.kind, Span: shared.SpanOf(tokens[:width])}, width, true
+	}
+	return EffectStaticSubjectSyntax{}, 0, false
+}
+
+// parseStaticBlockedObject recognizes the protected object a "can't block"
+// restriction shields, beginning at start: "it" or "this creature" (the source
+// permanent) or "creatures you control" (the controller's creatures). It returns
+// the recognized scope and the index one past it, or false when no protected
+// object is present (an unconditional "can't block").
+func parseStaticBlockedObject(tokens []shared.Token, start, end int) (StaticRuleBlockedObjectKind, int, bool) {
+	if start < end && staticWordsAt(tokens, start, "it") {
+		return StaticRuleBlockedObjectSource, start + 1, true
+	}
+	if start+1 < end && staticWordsAt(tokens, start, "this", "creature") {
+		return StaticRuleBlockedObjectSource, start + 2, true
+	}
+	if start+2 < end && staticWordsAt(tokens, start, "creatures", "you", "control") {
+		return StaticRuleBlockedObjectControlledCreatures, start + 3, true
+	}
+	return StaticRuleBlockedObjectNone, start, false
+}
+
+// staticBattlefieldCreaturesSubject reports whether subject is the
+// battlefield-wide all-creatures group, the only subject that carries a "can't
+// block" protected-object scope.
+func staticBattlefieldCreaturesSubject(subject StaticDeclarationSubject) bool {
+	return subject.Kind == StaticDeclarationSubjectGroup &&
+		subject.Group.Kind == EffectStaticSubjectAllCreatures
+}
+
+type controlledGroupPowerToughnessMatch struct {
+	power                  compare.Int
+	matchPower             bool
+	toughness              compare.Int
+	matchToughness         bool
+	powerOrToughness       bool
+	powerLessThanSource    bool
+	powerGreaterThanSource bool
+	end                    int
+}
+
+// controlledGroupProhibitionPowerToughnessQualifier recognizes a "with <power /
+// toughness comparison>" qualifier on a controlled-creature prohibition group
+// beginning at index start. It accepts the source-relative "with power
+// greater/less than <source>'s power" form (Champion of Lambholt), the
+// disjunctive "with power or toughness N or less/greater" form (Tetsuko
+// Umezawa), and the single-characteristic "with power N or less/greater" and
+// "with toughness N or less/greater" forms. It fails closed for any other
+// phrase so callers keep the unfiltered group.
+func controlledGroupProhibitionPowerToughnessQualifier(tokens []shared.Token, start int, atoms Atoms) (controlledGroupPowerToughnessMatch, bool) {
+	if !staticWordsAt(tokens, start, "with") {
+		return controlledGroupPowerToughnessMatch{}, false
+	}
+	idx := start + 1
+	if idx >= len(tokens) {
+		return controlledGroupPowerToughnessMatch{}, false
+	}
+	if equalWord(tokens[idx], "power") {
+		if match, ok := controlledGroupSourcePowerComparison(tokens, idx, atoms); ok {
+			return match, true
+		}
+		if staticWordsAt(tokens, idx+1, "or", "toughness") {
+			comparison, end, ok := numberComparisonAt(tokens, idx+3, atoms)
+			if !ok {
+				return controlledGroupPowerToughnessMatch{}, false
+			}
+			return controlledGroupPowerToughnessMatch{
+				power:            comparison,
+				matchPower:       true,
+				toughness:        comparison,
+				matchToughness:   true,
+				powerOrToughness: true,
+				end:              end,
+			}, true
+		}
+		comparison, end, ok := numberComparisonAt(tokens, idx+1, atoms)
+		if !ok {
+			return controlledGroupPowerToughnessMatch{}, false
+		}
+		return controlledGroupPowerToughnessMatch{power: comparison, matchPower: true, end: end}, true
+	}
+	if equalWord(tokens[idx], "toughness") {
+		comparison, end, ok := numberComparisonAt(tokens, idx+1, atoms)
+		if !ok {
+			return controlledGroupPowerToughnessMatch{}, false
+		}
+		return controlledGroupPowerToughnessMatch{toughness: comparison, matchToughness: true, end: end}, true
+	}
+	return controlledGroupPowerToughnessMatch{}, false
+}
+
+// controlledGroupSourcePowerComparison recognizes "power greater/less than
+// <source>'s power" beginning at powerIdx (which names the first "power"
+// token). The source possessive names the static's own source permanent (the
+// card's printed name or a "this <marker>" phrase), so the comparison is
+// source-relative. It returns the recognized predicate with its end index.
+func controlledGroupSourcePowerComparison(tokens []shared.Token, powerIdx int, atoms Atoms) (controlledGroupPowerToughnessMatch, bool) {
+	if powerIdx+2 >= len(tokens) || !equalWord(tokens[powerIdx], "power") {
+		return controlledGroupPowerToughnessMatch{}, false
+	}
+	var less, greater bool
+	switch {
+	case equalWord(tokens[powerIdx+1], "less"):
+		less = true
+	case equalWord(tokens[powerIdx+1], "greater"):
+		greater = true
+	default:
+		return controlledGroupPowerToughnessMatch{}, false
+	}
+	if !equalWord(tokens[powerIdx+2], "than") {
+		return controlledGroupPowerToughnessMatch{}, false
+	}
+	nameStart := powerIdx + 3
+	width, ok := sourceNameSpanWidthAt(tokens, nameStart, atoms)
+	if !ok {
+		return controlledGroupPowerToughnessMatch{}, false
+	}
+	powerEnd := nameStart + width
+	if powerEnd >= len(tokens) || !equalWord(tokens[powerEnd], "power") {
+		return controlledGroupPowerToughnessMatch{}, false
+	}
+	return controlledGroupPowerToughnessMatch{
+		powerLessThanSource:    less,
+		powerGreaterThanSource: greater,
+		end:                    powerEnd + 1,
+	}, true
+}
+
+// sourceNameSpanWidthAt reports the token width of a self-name or "this
+// <marker>" source phrase that begins exactly at tokens[start], or false when
+// no source phrase starts there.
+func sourceNameSpanWidthAt(tokens []shared.Token, start int, atoms Atoms) (int, bool) {
+	if start < 0 || start >= len(tokens) {
+		return 0, false
+	}
+	spans := append(append([]shared.Span(nil), atoms.SourceMarkerSpans()...), atoms.SourceNameSpans()...)
+	for _, span := range spans {
+		if span.Start.Offset != tokens[start].Span.Start.Offset {
+			continue
+		}
+		if width := tokensCoveredCount(tokens[start:], span); width > 0 {
+			return width, true
+		}
+	}
+	if width, ok := sourcePossessiveMarkerWidthAt(tokens, start); ok {
+		return width, true
+	}
+	return 0, false
+}
+
+// sourcePossessiveMarkerWidthAt recognizes a "this <marker>'s" possessive source
+// phrase beginning exactly at tokens[start] ("this creature's", "this
+// permanent's"). The source-marker scan only spans the bare "this <marker>"
+// form, so the possessive printed before a characteristic ("this creature's
+// power") is recognized here. It returns the two-token width of the possessive.
+func sourcePossessiveMarkerWidthAt(tokens []shared.Token, start int) (int, bool) {
+	if start < 0 || start+1 >= len(tokens) || !equalWord(tokens[start], "this") {
+		return 0, false
+	}
+	stem, ok := possessiveStem(tokens[start+1].Text)
+	if !ok || !sourceSubjectMarkerNoun(shared.Token{Kind: shared.Word, Text: stem}) {
+		return 0, false
+	}
+	return 2, true
+}
+
+// possessiveStem strips a trailing "'s" possessive suffix (straight or curly
+// apostrophe) from text, returning the bare noun and whether a suffix was found.
+func possessiveStem(text string) (string, bool) {
+	for _, suffix := range []string{"'s", "\u2019s"} {
+		if stem, ok := strings.CutSuffix(text, suffix); ok {
+			return stem, true
+		}
+	}
+	return "", false
+}
+
+// numberComparisonAt parses a "<N>" / "<N> or less" / "<N> or greater" numeric
+// comparison beginning at index start, returning the comparison and the index
+// one past it. It fails closed when no number is present.
+func numberComparisonAt(tokens []shared.Token, start int, atoms Atoms) (compare.Int, int, bool) {
+	if start < 0 || start >= len(tokens) {
+		return compare.Int{}, 0, false
+	}
+	value, ok := effectNumber(tokens[start], atoms)
+	if !ok {
+		return compare.Int{}, 0, false
+	}
+	if start+2 < len(tokens) && equalWord(tokens[start+1], "or") {
+		switch {
+		case equalWord(tokens[start+2], "less"):
+			return compare.Int{Op: compare.LessOrEqual, Value: value}, start + 3, true
+		case equalWord(tokens[start+2], "greater"):
+			return compare.Int{Op: compare.GreaterOrEqual, Value: value}, start + 3, true
+		}
+	}
+	return compare.Int{Op: compare.Equal, Value: value}, start + 1, true
+}
+
+// controlledGroupProhibitionCounterQualifier recognizes a "with [a] <kind>
+// counter(s) on it/them" qualifier on a controlled-creature prohibition group
+// beginning at index start. It accepts both the singular article form ("with a
+// +1/+1 counter on it") and the bare plural form printed on mass-evasion statics
+// ("with +1/+1 counters on them"), naming the required counter kind or, when no
+// kind is named, matching a counter of any kind. It fails closed for any other
+// phrase so callers keep the unfiltered group.
+func controlledGroupProhibitionCounterQualifier(tokens []shared.Token, start int) (counterQualifierMatch, bool) {
+	if !staticWordsAt(tokens, start, "with") {
+		return counterQualifierMatch{}, false
+	}
+	nameStart := start + 1
+	if nameStart < len(tokens) && (equalWord(tokens[nameStart], "a") || equalWord(tokens[nameStart], "an")) {
+		nameStart++
+	}
+	counterIndex := nameStart
+	for counterIndex < len(tokens) &&
+		!equalWord(tokens[counterIndex], "counter") && !equalWord(tokens[counterIndex], "counters") {
+		counterIndex++
+	}
+	if counterIndex >= len(tokens) {
+		return counterQualifierMatch{}, false
+	}
+	if !effectWordsAt(tokens, counterIndex+1, "on", "it") &&
+		!effectWordsAt(tokens, counterIndex+1, "on", "them") {
+		return counterQualifierMatch{}, false
+	}
+	if counterIndex == nameStart {
+		return counterQualifierMatch{Any: true, End: counterIndex + 3}, true
+	}
+	kind, _, ok := counterNameBefore(tokens, counterIndex)
+	if !ok {
+		return counterQualifierMatch{}, false
+	}
+	return counterQualifierMatch{Kind: kind, End: counterIndex + 3}, true
 }
 
 // staticSourceSubjectAt returns the span and token width of a source-marker
@@ -476,20 +985,25 @@ func staticAllLandsSubject(tokens []shared.Token) (shared.Span, int, bool) {
 	}
 }
 
-// staticAttachedObjectSubject recognizes the attached-creature subject an Aura
+// staticAttachedObjectSubject recognizes the attached-permanent subject an Aura
 // or Equipment continuous static applies to ("Equipped creature ...", "Enchanted
-// creature ..."). Unlike parseEffectStaticSubject, which only resolves this
-// subject when a "has"/"gets" verb follows, this accepts any following operation
-// (a prohibition rule, a keyword grant, etc.) so a multi-operation grant such as
-// "Equipped creature can't be blocked and has shroud." parses as one declaration
-// sequence sharing the attached-object subject. It returns the subject span and
-// the index of the verb that follows.
+// creature ...", "Enchanted land ...", "Enchanted permanent ..."). The attached
+// object is the permanent this Aura or Equipment is attached to regardless of
+// that permanent's card type, so an Aura enchanting a land names its subject the
+// same closed attached-object group. Unlike parseEffectStaticSubject, which only
+// resolves this subject when a "has"/"gets" verb follows, this accepts any
+// following operation (a prohibition rule, a keyword grant, etc.) so a
+// multi-operation grant such as "Equipped creature can't be blocked and has
+// shroud." parses as one declaration sequence sharing the attached-object
+// subject. It returns the subject span and the index of the verb that follows.
 func staticAttachedObjectSubject(tokens []shared.Token) (shared.Span, int, bool) {
 	if len(tokens) < 3 {
 		return shared.Span{}, 0, false
 	}
 	if !staticWordsAt(tokens, 0, "equipped", "creature") &&
-		!staticWordsAt(tokens, 0, "enchanted", "creature") {
+		!staticWordsAt(tokens, 0, "enchanted", "creature") &&
+		!staticWordsAt(tokens, 0, "enchanted", "land") &&
+		!staticWordsAt(tokens, 0, "enchanted", "permanent") {
 		return shared.Span{}, 0, false
 	}
 	return shared.SpanOf(tokens[:2]), 2, true
@@ -583,16 +1097,37 @@ func parseStaticEntryChoiceSubtypeOperation(
 	subject StaticDeclarationSubject,
 ) (StaticDeclarationSyntax, int, bool) {
 	const width = 10
-	if subject.Kind != StaticDeclarationSubjectSourceCreature ||
+	if !entryChoiceSubtypeSubjectSupported(subject) ||
 		index+width != end ||
-		!staticWordsAt(tokens, index,
-			"is", "the", "chosen", "type", "in", "addition", "to", "its", "other", "types") {
+		!staticEntryChoiceSubtypeWords(tokens, index) {
 		return StaticDeclarationSyntax{}, 0, false
 	}
 	return StaticDeclarationSyntax{
 		Kind:          StaticDeclarationContinuousEntryChoiceSubtype,
 		OperationSpan: shared.SpanOf(tokens[index:end]),
 	}, end, true
+}
+
+// entryChoiceSubtypeSubjectSupported reports whether subject is a "chosen type"
+// grant target: the source creature itself ("This creature is the chosen type
+// ...") or a controlled-creature group ("Creatures you control are the chosen
+// type ...", "Each creature you control is the chosen type ..."). The compiler
+// maps the typed subject onto its affected group.
+func entryChoiceSubtypeSubjectSupported(subject StaticDeclarationSubject) bool {
+	return subject.Kind == StaticDeclarationSubjectSourceCreature ||
+		subject.Kind == StaticDeclarationSubjectGroup
+}
+
+// staticEntryChoiceSubtypeWords reports whether tokens[index:] spell the
+// chosen-type grant operation "<is|are> the chosen type in addition to <its|
+// their> other types", accepting either grammatical number so the source
+// ("is ... its"), plural group ("are ... their"), and distributive group
+// ("Each creature you control is ... its") wordings all match.
+func staticEntryChoiceSubtypeWords(tokens []shared.Token, index int) bool {
+	return (staticWordsAt(tokens, index, "is") || staticWordsAt(tokens, index, "are")) &&
+		staticWordsAt(tokens, index+1, "the", "chosen", "type", "in", "addition", "to") &&
+		(staticWordsAt(tokens, index+7, "its") || staticWordsAt(tokens, index+7, "their")) &&
+		staticWordsAt(tokens, index+8, "other", "types")
 }
 
 // parseStaticBasePowerToughnessOperation recognizes the characteristic-setting
@@ -632,6 +1167,7 @@ func parseStaticBasePowerToughnessOperation(
 // caller already consumed.
 func parseStaticDynamicPowerToughnessOperation(
 	tokens []shared.Token,
+	atoms Atoms,
 	index, end int,
 	subject StaticDeclarationSubject,
 ) (StaticDeclarationSyntax, int, bool) {
@@ -647,48 +1183,137 @@ func parseStaticDynamicPowerToughnessOperation(
 		return StaticDeclarationSyntax{}, 0, false
 	}
 	cursor += 7
-	value, next, ok := parseStaticDynamicValueCount(tokens, cursor, end)
-	if !ok || next != end {
+	count, ok := parseStaticDynamicValueCount(tokens, atoms, cursor, end)
+	if !ok || count.end != end {
 		return StaticDeclarationSyntax{}, 0, false
 	}
 	return StaticDeclarationSyntax{
-		Kind:          StaticDeclarationCharacteristicDefiningPowerToughness,
-		OperationSpan: shared.SpanOf(tokens[index:next]),
-		DynamicValue:  value,
-	}, next, true
+		Kind:                StaticDeclarationCharacteristicDefiningPowerToughness,
+		OperationSpan:       shared.SpanOf(tokens[index:count.end]),
+		DynamicValue:        count.kind,
+		DynamicValueSubtype: count.subtype,
+		DynamicValueColor:   count.color,
+	}, count.end, true
 }
 
 // parseCharacteristicDefiningPowerToughnessDeclaration recognizes a
-// characteristic-defining ability that sets the source object's power and
-// toughness equal to a rules-derived count ("<source>'s power and toughness are
-// each equal to the number of cards in your hand"). The subject must be the
-// source object: the card's own possessive name or "this creature's"/"this
-// permanent's". Other subjects (an enchanted or equipped creature) fail closed
-// because the runtime models this as the source's printed characteristic only.
+// characteristic-defining ability that sets the source object's power and/or
+// toughness equal to a rules-derived count. Three forms are recognized:
+//   - "<source>'s power and toughness are each equal to <count>" (both equal);
+//   - "<source>'s power is equal to <count>" (power only; printed toughness
+//     stands);
+//   - "<source>'s power is equal to <count> and its toughness is equal to that
+//     number plus N" (power equals the count, toughness equals the count plus N
+//     — Tarmogoyf/Lhurgoyf).
+//
+// The subject must be the source object: the card's own possessive name or
+// "this creature's"/"this permanent's". Other subjects (an enchanted or equipped
+// creature) fail closed because the runtime models this as the source's printed
+// characteristic only.
 func parseCharacteristicDefiningPowerToughnessDeclaration(tokens []shared.Token, atoms Atoms) (StaticDeclarationSyntax, bool) {
-	if len(tokens) < 9 || tokens[len(tokens)-1].Kind != shared.Period {
+	period := len(tokens) - 1
+	if len(tokens) < 8 || tokens[period].Kind != shared.Period {
 		return StaticDeclarationSyntax{}, false
 	}
 	subjectSpan, next, ok := characteristicDefiningSourceSubject(tokens, atoms)
 	if !ok {
 		return StaticDeclarationSyntax{}, false
 	}
-	if !staticWordsAt(tokens, next, "power", "and", "toughness", "are", "each", "equal", "to") {
-		return StaticDeclarationSyntax{}, false
-	}
-	value, end, ok := parseStaticDynamicValueCount(tokens, next+7, len(tokens)-1)
-	if !ok || end != len(tokens)-1 {
+	op, ok := parseCharacteristicDefiningOperation(tokens, atoms, next, period)
+	if !ok {
 		return StaticDeclarationSyntax{}, false
 	}
 	return StaticDeclarationSyntax{
 		Kind:          StaticDeclarationCharacteristicDefiningPowerToughness,
 		Span:          shared.SpanOf(tokens),
-		OperationSpan: shared.SpanOf(tokens[next:end]),
+		OperationSpan: shared.SpanOf(tokens[next:op.end]),
 		Subject: StaticDeclarationSubject{
 			Kind: StaticDeclarationSubjectSourceCreature,
 			Span: subjectSpan,
 		},
-		DynamicValue: value,
+		DynamicValue:           op.kind,
+		DynamicValueSubtype:    op.subtype,
+		DynamicValueColor:      op.color,
+		DynamicSetsPower:       op.setsPower,
+		DynamicSetsToughness:   op.setsToughness,
+		DynamicToughnessOffset: op.offset,
+	}, true
+}
+
+// characteristicDefiningOperation captures the parsed operation clause of a
+// characteristic-defining power/toughness declaration: the matched count kind,
+// the index past the consumed operation, which characteristics are set, and the
+// toughness offset for the "that number plus N" form.
+type characteristicDefiningOperation struct {
+	kind          StaticDeclarationDynamicValueKind
+	subtype       types.Sub
+	color         Color
+	end           int
+	setsPower     bool
+	setsToughness bool
+	offset        int
+}
+
+// parseCharacteristicDefiningOperation parses the operation clause of a
+// characteristic-defining power/toughness declaration starting at index start
+// and ending at the trailing period at index period. It returns the matched
+// count kind, the index past the consumed operation, which characteristics are
+// set, and the toughness offset for the "that number plus N" form.
+func parseCharacteristicDefiningOperation(
+	tokens []shared.Token,
+	atoms Atoms,
+	start, period int,
+) (characteristicDefiningOperation, bool) {
+	if staticWordsAt(tokens, start, "power", "and", "toughness", "are", "each", "equal", "to") {
+		count, valueOK := parseStaticDynamicValueCount(tokens, atoms, start+7, period)
+		if !valueOK || count.end != period {
+			return characteristicDefiningOperation{}, false
+		}
+		return characteristicDefiningOperation{
+			kind:          count.kind,
+			subtype:       count.subtype,
+			color:         count.color,
+			end:           count.end,
+			setsPower:     true,
+			setsToughness: true,
+		}, true
+	}
+	if !staticWordsAt(tokens, start, "power", "is", "equal", "to") {
+		return characteristicDefiningOperation{}, false
+	}
+	count, valueOK := parseStaticDynamicValueCount(tokens, atoms, start+4, period)
+	if !valueOK {
+		return characteristicDefiningOperation{}, false
+	}
+	if count.end == period {
+		return characteristicDefiningOperation{
+			kind:      count.kind,
+			subtype:   count.subtype,
+			color:     count.color,
+			end:       count.end,
+			setsPower: true,
+		}, true
+	}
+	next := count.end
+	if !staticWordsAt(tokens, next, "and", "its", "toughness", "is", "equal", "to", "that", "number", "plus") {
+		return characteristicDefiningOperation{}, false
+	}
+	offsetIndex := next + 9
+	if offsetIndex+1 != period {
+		return characteristicDefiningOperation{}, false
+	}
+	offsetValue, offsetOK := staticUnsignedInteger(tokens[offsetIndex])
+	if !offsetOK {
+		return characteristicDefiningOperation{}, false
+	}
+	return characteristicDefiningOperation{
+		kind:          count.kind,
+		subtype:       count.subtype,
+		color:         count.color,
+		end:           offsetIndex + 1,
+		setsPower:     true,
+		setsToughness: true,
+		offset:        offsetValue,
 	}, true
 }
 
@@ -711,33 +1336,106 @@ func characteristicDefiningSourceSubject(tokens []shared.Token, atoms Atoms) (sh
 	return shared.Span{}, 0, false
 }
 
-// parseStaticDynamicValueCount recognizes the supported "the number of <count>"
-// phrases a characteristic-defining power/toughness declaration counts. It
-// returns the matched count kind and the index past the phrase.
+// staticDynamicCount is the parsed result of a characteristic-defining count
+// phrase: the matched count kind, the subtype it counts (only for
+// StaticDeclarationDynamicValueControllerSubtypeCount), the color it counts
+// (only for StaticDeclarationDynamicValueControllerColorPermanentCount), and the
+// index past the consumed phrase.
+type staticDynamicCount struct {
+	kind    StaticDeclarationDynamicValueKind
+	subtype types.Sub
+	color   Color
+	end     int
+}
+
+// parseStaticDynamicValueCount recognizes the supported count phrases a
+// characteristic-defining power/toughness declaration counts. It returns the
+// matched count and the index past the phrase.
 func parseStaticDynamicValueCount(
 	tokens []shared.Token,
+	atoms Atoms,
 	start, end int,
-) (StaticDeclarationDynamicValueKind, int, bool) {
+) (staticDynamicCount, bool) {
+	if staticWordsAt(tokens, start, "your", "life", "total") {
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerLifeTotal, end: start + 3}, true
+	}
+	if staticWordsAt(tokens, start, "the", "total", "number", "of", "cards", "in", "all", "players") &&
+		start+9 < len(tokens) && tokens[start+8].Kind == shared.Apostrophe && equalWord(tokens[start+9], "hands") {
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueAllPlayersHandSize, end: start + 10}, true
+	}
 	if !staticWordsAt(tokens, start, "the", "number", "of") {
-		return StaticDeclarationDynamicValueNone, 0, false
+		return staticDynamicCount{}, false
 	}
 	cursor := start + 3
 	switch {
+	case staticWordsAt(tokens, cursor, "cards", "you've", "drawn", "this", "turn"):
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerCardsDrawnThisTurn, end: cursor + 5}, true
+	case staticWordsAt(tokens, cursor, "cards", "you", "have", "drawn", "this", "turn"):
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerCardsDrawnThisTurn, end: cursor + 6}, true
 	case staticWordsAt(tokens, cursor, "cards", "in", "your", "hand"):
-		return StaticDeclarationDynamicValueControllerHandSize, cursor + 4, true
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerHandSize, end: cursor + 4}, true
 	case staticWordsAt(tokens, cursor, "cards", "in", "your", "graveyard"):
-		return StaticDeclarationDynamicValueControllerGraveyardSize, cursor + 4, true
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerGraveyardSize, end: cursor + 4}, true
 	case staticWordsAt(tokens, cursor, "creatures", "you", "control"):
-		return StaticDeclarationDynamicValueControllerCreatureCount, cursor + 3, true
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerCreatureCount, end: cursor + 3}, true
 	case staticWordsAt(tokens, cursor, "lands", "you", "control"):
-		return StaticDeclarationDynamicValueControllerLandCount, cursor + 3, true
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerLandCount, end: cursor + 3}, true
 	case staticWordsAt(tokens, cursor, "artifacts", "you", "control"):
-		return StaticDeclarationDynamicValueControllerArtifactCount, cursor + 3, true
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerArtifactCount, end: cursor + 3}, true
 	case staticWordsAt(tokens, cursor, "creatures", "on", "the", "battlefield"):
-		return StaticDeclarationDynamicValueAllBattlefieldCreatureCount, cursor + 4, true
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueAllBattlefieldCreatureCount, end: cursor + 4}, true
+	case staticWordsAt(tokens, cursor, "creature", "cards", "in", "all", "graveyards"):
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueCreatureCardsInAllGraveyards, end: cursor + 5}, true
+	case staticWordsAt(tokens, cursor, "card", "types", "among", "cards", "in", "all", "graveyards"):
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueCardTypesAmongAllGraveyards, end: cursor + 7}, true
+	case staticWordsAt(tokens, cursor, "cards", "in", "all", "graveyards"):
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueAllGraveyardsSize, end: cursor + 4}, true
+	case staticWordsAt(tokens, cursor, "creature", "cards", "in", "your", "graveyard"):
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerCreatureCardsInGraveyard, end: cursor + 5}, true
+	case staticWordsAt(tokens, cursor, "instant", "and", "sorcery", "cards", "in", "your", "graveyard"):
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerInstantOrSorceryCardsInGraveyard, end: cursor + 7}, true
+	case staticWordsAt(tokens, cursor, "land", "cards", "in", "your", "graveyard"):
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerLandCardsInGraveyard, end: cursor + 5}, true
+	case staticWordsAt(tokens, cursor, "permanent", "cards", "in", "your", "graveyard"):
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerPermanentCardsInGraveyard, end: cursor + 5}, true
+	case staticWordsAt(tokens, cursor, "card", "types", "among", "cards", "in", "your", "graveyard"):
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerCardTypesInGraveyard, end: cursor + 7}, true
+	case staticWordsAt(tokens, cursor, "basic", "land", "types", "among", "lands", "you", "control"):
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerBasicLandTypeCount, end: cursor + 7}, true
 	default:
-		return StaticDeclarationDynamicValueNone, 0, false
+		return parseStaticDynamicSubtypeOrColorCount(tokens, atoms, cursor)
 	}
+}
+
+// parseStaticDynamicSubtypeOrColorCount recognizes "<SubtypePlural> you control"
+// (any creature or land subtype, for example "Swamps you control" or "Goblins
+// you control") and "<color> permanents you control" (for example "red
+// permanents you control") at cursor. Subtype recognition uses the atom layer,
+// which normalizes the plural to its singular subtype identity; the basic land
+// subtypes resolve through the same path.
+func parseStaticDynamicSubtypeOrColorCount(tokens []shared.Token, atoms Atoms, cursor int) (staticDynamicCount, bool) {
+	if cursor >= len(tokens) {
+		return staticDynamicCount{}, false
+	}
+	if c, ok := atoms.ColorAt(tokens[cursor].Span); ok {
+		if !staticWordsAt(tokens, cursor+1, "permanents", "you", "control") {
+			return staticDynamicCount{}, false
+		}
+		return staticDynamicCount{
+			kind:  StaticDeclarationDynamicValueControllerColorPermanentCount,
+			color: c,
+			end:   cursor + 4,
+		}, true
+	}
+	subtype, ok := atoms.SubtypeAt(tokens[cursor].Span)
+	if !ok || !staticWordsAt(tokens, cursor+1, "you", "control") {
+		return staticDynamicCount{}, false
+	}
+	return staticDynamicCount{
+		kind:    StaticDeclarationDynamicValueControllerSubtypeCount,
+		subtype: subtype,
+		end:     cursor + 3,
+	}, true
 }
 
 // parseStaticCharacteristicOperation recognizes the characteristic operations
@@ -759,6 +1457,12 @@ func parseStaticCharacteristicOperation(
 		cursor++
 	}
 	if operation, next, ok := parseStaticAllColorsOperation(tokens, index, cursor, end); ok {
+		return operation, next, true
+	}
+	if operation, next, ok := parseStaticEveryCreatureTypeOperation(tokens, index, cursor, end); ok {
+		return operation, next, true
+	}
+	if operation, next, ok := parseStaticEveryBasicLandTypeOperation(tokens, index, cursor, end); ok {
 		return operation, next, true
 	}
 	list, next, ok := parseStaticCharacteristicList(tokens, cursor, end, atoms)
@@ -788,6 +1492,55 @@ func parseStaticCharacteristicOperation(
 	operation.ColorsAdd = len(list.colors) != 0
 	operation.OperationSpan = shared.SpanOf(tokens[index:tailNext])
 	return operation, tailNext, true
+}
+
+// parseStaticEveryCreatureTypeOperation recognizes the characteristic-set
+// operation "<group> is/are every creature type" (CR 702.73), spanning
+// tokens[index] ("is"/"are") through "type". It adds every creature subtype to
+// the affected object at the type layer. A trailing "in addition to ..." tail or
+// any other characteristic word fails closed: only the exact "every creature
+// type" form is representable here.
+func parseStaticEveryCreatureTypeOperation(
+	tokens []shared.Token,
+	index, cursor, end int,
+) (StaticDeclarationSyntax, int, bool) {
+	if !staticWordsAt(tokens, cursor, "every", "creature", "type") || cursor+3 > end {
+		return StaticDeclarationSyntax{}, 0, false
+	}
+	next := cursor + 3
+	return StaticDeclarationSyntax{
+		Kind:              StaticDeclarationContinuousCharacteristic,
+		OperationSpan:     shared.SpanOf(tokens[index:next]),
+		EveryCreatureType: true,
+	}, next, true
+}
+
+// parseStaticEveryBasicLandTypeOperation recognizes the characteristic-add
+// operation "<group> is/are every basic land type [in addition to its/their
+// other (land types|types)]" (Dryad of the Ilysian Grove, Prismatic Omen),
+// spanning tokens[index] ("is"/"are") through the matched run. It adds all five
+// basic land subtypes via the EveryBasicLandType flag. The trailing "in
+// addition" tail is optional but, when present, must enumerate "land types" or
+// "types"; any other tail fails closed.
+func parseStaticEveryBasicLandTypeOperation(
+	tokens []shared.Token,
+	index, cursor, end int,
+) (StaticDeclarationSyntax, int, bool) {
+	if !staticWordsAt(tokens, cursor, "every", "basic", "land", "type") || cursor+4 > end {
+		return StaticDeclarationSyntax{}, 0, false
+	}
+	next := cursor + 4
+	if tail, tailNext, hasTail := parseStaticInAdditionTail(tokens, next, end); hasTail {
+		if !tail.landTypes && !tail.types {
+			return StaticDeclarationSyntax{}, 0, false
+		}
+		next = tailNext
+	}
+	return StaticDeclarationSyntax{
+		Kind:               StaticDeclarationContinuousCharacteristic,
+		OperationSpan:      shared.SpanOf(tokens[index:next]),
+		EveryBasicLandType: true,
+	}, next, true
 }
 
 // staticAllColors lists every Oracle color in canonical WUBRG order; an
@@ -1140,11 +1893,23 @@ func parseStaticProhibitionRuleOperation(
 		}, qualifiers)
 	}
 	if staticWordsAt(tokens, verb, "block") {
-		return staticRuleOperation(tokens, index, verb+1, subject, constraint, StaticRuleOperation{
+		next := verb + 1
+		blocked := StaticRuleBlockedObjectNone
+		if staticBattlefieldCreaturesSubject(subject) {
+			if kind, blockedNext, ok := parseStaticBlockedObject(tokens, next, end); ok {
+				blocked = kind
+				next = blockedNext
+			}
+		}
+		declaration, declNext, ok := staticRuleOperation(tokens, index, next, subject, constraint, StaticRuleOperation{
 			Kind:  StaticRuleOperationBlock,
 			Voice: StaticRuleVoiceActive,
 			Span:  tokens[verb].Span,
 		}, nil)
+		if ok {
+			declaration.Rule.BlockedObject = blocked
+		}
+		return declaration, declNext, ok
 	}
 	if staticWordsAt(tokens, verb, "be", "blocked") {
 		next := verb + 2
@@ -1167,6 +1932,13 @@ func parseStaticProhibitionRuleOperation(
 			Kind:  StaticRuleOperationCounter,
 			Voice: StaticRuleVoicePassive,
 			Span:  shared.SpanOf(tokens[verb : verb+2]),
+		}, nil)
+	}
+	if staticWordsAt(tokens, verb, "transform") {
+		return staticRuleOperation(tokens, index, verb+1, subject, constraint, StaticRuleOperation{
+			Kind:  StaticRuleOperationTransform,
+			Voice: StaticRuleVoiceActive,
+			Span:  tokens[verb].Span,
 		}, nil)
 	}
 	return StaticDeclarationSyntax{}, 0, false
@@ -1208,8 +1980,12 @@ func parseStaticAttackRuleOperation(
 		operationStart++
 	}
 	explicit := operationStart != constraintStart
+	// The bare requirement uses the verb agreeing with its subject: the singular
+	// "This creature attacks ..." and the plural "Creatures you control attack
+	// ...". The explicit "must" form always takes the bare "attack".
 	if (explicit && !staticWordsAt(tokens, operationStart, "attack")) ||
-		(!explicit && !staticWordsAt(tokens, operationStart, "attacks")) {
+		(!explicit && !staticWordsAt(tokens, operationStart, "attacks") &&
+			!staticWordsAt(tokens, operationStart, "attack")) {
 		return StaticDeclarationSyntax{}, 0, false
 	}
 	qualifierStart := operationStart + 1
@@ -1290,7 +2066,11 @@ func staticRuleSubjectKindAllowed(subject StaticDeclarationSubject) bool {
 		StaticDeclarationSubjectSourceNamed:
 		return true
 	case StaticDeclarationSubjectGroup:
-		return subject.Group.Kind == EffectStaticSubjectAttachedObject
+		return subject.Group.Kind == EffectStaticSubjectAttachedObject ||
+			subject.Group.Kind == EffectStaticSubjectControlledCreatures ||
+			subject.Group.Kind == EffectStaticSubjectControlledCreatureSubtype ||
+			subject.Group.Kind == EffectStaticSubjectOpponentControlledCreatures ||
+			subject.Group.Kind == EffectStaticSubjectAllCreatures
 	default:
 		return false
 	}
@@ -1314,8 +2094,35 @@ func staticRuleSubjectForDeclaration(subject StaticDeclarationSubject, operation
 	case StaticDeclarationSubjectSourceCreature, StaticDeclarationSubjectSourceNamed:
 		return StaticRuleSubject{Kind: StaticRuleSubjectSourceCreature, Span: subject.Span}, true
 	case StaticDeclarationSubjectGroup:
-		if subject.Group.Kind == EffectStaticSubjectAttachedObject {
+		switch subject.Group.Kind {
+		case EffectStaticSubjectAttachedObject:
 			return StaticRuleSubject{Kind: StaticRuleSubjectAttachedObject, Span: subject.Span}, true
+		case EffectStaticSubjectControlledCreatures:
+			if operation.Kind == StaticRuleOperationBlock && operation.Voice == StaticRuleVoicePassive {
+				return StaticRuleSubject{Kind: StaticRuleSubjectControlledCreatures, Span: subject.Span}, true
+			}
+			if operation.Kind == StaticRuleOperationAttack && operation.Voice == StaticRuleVoiceActive {
+				return StaticRuleSubject{Kind: StaticRuleSubjectControlledCreatures, Span: subject.Span}, true
+			}
+			if operation.Kind == StaticRuleOperationTransform && operation.Voice == StaticRuleVoiceActive {
+				return StaticRuleSubject{Kind: StaticRuleSubjectControlledCreatures, Span: subject.Span}, true
+			}
+		case EffectStaticSubjectControlledCreatureSubtype:
+			if operation.Kind == StaticRuleOperationTransform && operation.Voice == StaticRuleVoiceActive {
+				return StaticRuleSubject{Kind: StaticRuleSubjectControlledCreatures, Span: subject.Span}, true
+			}
+		case EffectStaticSubjectOpponentControlledCreatures:
+			if operation.Kind == StaticRuleOperationAttack && operation.Voice == StaticRuleVoiceActive {
+				return StaticRuleSubject{Kind: StaticRuleSubjectOpponentControlledCreatures, Span: subject.Span}, true
+			}
+		case EffectStaticSubjectAllCreatures:
+			if operation.Kind == StaticRuleOperationBlock && operation.Voice == StaticRuleVoiceActive {
+				return StaticRuleSubject{Kind: StaticRuleSubjectBattlefieldCreatures, Span: subject.Span}, true
+			}
+			if operation.Kind == StaticRuleOperationAttack && operation.Voice == StaticRuleVoiceActive {
+				return StaticRuleSubject{Kind: StaticRuleSubjectBattlefieldCreatures, Span: subject.Span}, true
+			}
+		default:
 		}
 	default:
 	}

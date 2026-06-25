@@ -126,12 +126,26 @@ func renderPTValue(pt game.PT) string {
 // renderDynamicValue renders a typed game.DynamicValue as a Go literal. It is
 // used for characteristic-defining power/toughness values ("equal to the number
 // of cards in your hand").
-func renderDynamicValue(value game.DynamicValue) string {
+func renderDynamicValue(value game.DynamicValue) (string, error) {
 	kind := dynamicValueKindLiteral(value.Kind)
+	fields := ""
 	if value.Value != 0 {
-		return fmt.Sprintf("game.DynamicValue{Kind: %s, Value: %d}", kind, value.Value)
+		fields += fmt.Sprintf(", Value: %d", value.Value)
 	}
-	return fmt.Sprintf("game.DynamicValue{Kind: %s}", kind)
+	if value.Offset != 0 {
+		fields += fmt.Sprintf(", Offset: %d", value.Offset)
+	}
+	if value.Subtype != "" {
+		fields += fmt.Sprintf(", Subtype: %s", SubtypeToLiteral(string(value.Subtype), []string{"Land"}))
+	}
+	if value.Color != "" {
+		lit, err := colorValueToLiteral(value.Color)
+		if err != nil {
+			return "", err
+		}
+		fields += fmt.Sprintf(", Color: %s", lit)
+	}
+	return fmt.Sprintf("game.DynamicValue{Kind: %s%s}", kind, fields), nil
 }
 
 func dynamicValueKindLiteral(kind game.DynamicValueKind) string {
@@ -150,6 +164,34 @@ func dynamicValueKindLiteral(kind game.DynamicValueKind) string {
 		return "game.DynamicValueControllerArtifactCount"
 	case game.DynamicValueAllBattlefieldCreatureCount:
 		return "game.DynamicValueAllBattlefieldCreatureCount"
+	case game.DynamicValueAllGraveyardsSize:
+		return "game.DynamicValueAllGraveyardsSize"
+	case game.DynamicValueCreatureCardsInAllGraveyards:
+		return "game.DynamicValueCreatureCardsInAllGraveyards"
+	case game.DynamicValueCardTypesAmongAllGraveyards:
+		return "game.DynamicValueCardTypesAmongAllGraveyards"
+	case game.DynamicValueControllerCreatureCardsInGraveyard:
+		return "game.DynamicValueControllerCreatureCardsInGraveyard"
+	case game.DynamicValueControllerInstantOrSorceryCardsInGraveyard:
+		return "game.DynamicValueControllerInstantOrSorceryCardsInGraveyard"
+	case game.DynamicValueControllerLandCardsInGraveyard:
+		return "game.DynamicValueControllerLandCardsInGraveyard"
+	case game.DynamicValueControllerCardTypesInGraveyard:
+		return "game.DynamicValueControllerCardTypesInGraveyard"
+	case game.DynamicValueControllerPermanentCardsInGraveyard:
+		return "game.DynamicValueControllerPermanentCardsInGraveyard"
+	case game.DynamicValueControllerSubtypeCount:
+		return "game.DynamicValueControllerSubtypeCount"
+	case game.DynamicValueControllerBasicLandTypeCount:
+		return "game.DynamicValueControllerBasicLandTypeCount"
+	case game.DynamicValueControllerLifeTotal:
+		return "game.DynamicValueControllerLifeTotal"
+	case game.DynamicValueAllPlayersHandSize:
+		return "game.DynamicValueAllPlayersHandSize"
+	case game.DynamicValueControllerColorPermanentCount:
+		return "game.DynamicValueControllerColorPermanentCount"
+	case game.DynamicValueControllerCardsDrawnThisTurn:
+		return "game.DynamicValueControllerCardsDrawnThisTurn"
 	default:
 		return "game.DynamicValueNone"
 	}
@@ -303,7 +345,7 @@ func (r Renderer) writeCardDef(
 	if r.IdentifierSuffix != "" {
 		_, _ = fmt.Fprintf(b, "\n// %s is the card definition for %s.\n", varName, def.Name)
 	}
-	_, _ = fmt.Fprintf(b, "var %s = &game.CardDef{\n", varName)
+	writeCardDefBuilderOpen(b, varName)
 	if cols := def.ColorIdentity.Colors(); len(cols) > 0 {
 		ctx.need(importColor)
 		colorLits, err := colorValueLiterals(cols)
@@ -336,7 +378,7 @@ func (r Renderer) writeCardDef(
 		}
 		_, _ = b.WriteString("\t}),\n")
 	}
-	_, _ = b.WriteString("}\n")
+	writeCardDefBuilderClose(b)
 	return nil
 }
 
@@ -344,14 +386,48 @@ func (r Renderer) writeCardDef(
 // token def is a plain creature face (name, types, subtypes, colors, P/T) with no
 // abilities, referenced by a CreateToken primitive via game.TokenDef.
 func (r Renderer) writeTokenDefVar(b *strings.Builder, ctx *renderCtx, entry tokenDefEntry) error {
-	_, _ = fmt.Fprintf(b, "var %s = &game.CardDef{\n", entry.varName)
+	writeCardDefBuilderOpen(b, entry.varName)
 	_, _ = b.WriteString("\tCardFace: game.CardFace{\n")
 	if err := r.writeFaceFields(b, ctx, &entry.def.CardFace, "\t\t", tokenFaceHints(entry.def)); err != nil {
 		return err
 	}
 	_, _ = b.WriteString("\t},\n")
-	_, _ = b.WriteString("}\n")
+	writeCardDefBuilderClose(b)
 	return nil
+}
+
+// writeCardDefBuilderOpen emits the opening of a CardDef package var whose
+// construction is wrapped in a dedicated builder function, e.g.
+//
+//	var SaberAnts = newSaberAnts()
+//
+//	func newSaberAnts() *game.CardDef {
+//		return &game.CardDef{
+//
+// Wrapping each CardDef literal in its own function keeps the package-level
+// variable initializer (and thus the compiler-synthesized package init
+// function) tiny: it holds only a call, not the whole literal. This avoids the
+// WebAssembly backend's per-function limit ("function too big: init exceeds
+// 65536 blocks"), which the full generated corpus otherwise hits when a letter
+// package's many CardDef literals are inlined into one package init.
+func writeCardDefBuilderOpen(b *strings.Builder, varName string) {
+	builder := cardDefBuilderName(varName)
+	_, _ = fmt.Fprintf(b, "var %s = %s()\n\n", varName, builder)
+	_, _ = fmt.Fprintf(b, "func %s() *game.CardDef {\n", builder)
+	_, _ = b.WriteString("\treturn &game.CardDef{\n")
+}
+
+// writeCardDefBuilderClose closes the literal and the builder function opened by
+// writeCardDefBuilderOpen.
+func writeCardDefBuilderClose(b *strings.Builder) {
+	_, _ = b.WriteString("}\n}\n")
+}
+
+// cardDefBuilderName returns the unexported builder-function name for a CardDef
+// package variable, e.g. "SaberAnts" -> "newSaberAnts" and "saberAntsToken" ->
+// "newSaberAntsToken".
+func cardDefBuilderName(varName string) string {
+	return "new" + upperFirst(varName)
 }
 
 // tokenFaceHints reconstructs render hints for a synthesized token's static
@@ -389,7 +465,7 @@ func (r Renderer) writeReversibleFaceDef(b *strings.Builder, ctx *renderCtx, def
 	if r.IdentifierSuffix != "" {
 		_, _ = fmt.Fprintf(b, "\n// %s is the card definition for %s.\n", varName, def.Name)
 	}
-	_, _ = fmt.Fprintf(b, "var %s = &game.CardDef{\n", varName)
+	writeCardDefBuilderOpen(b, varName)
 	if cols := def.ColorIdentity.Colors(); len(cols) > 0 {
 		ctx.need(importColor)
 		colorLits, err := colorValueLiterals(cols)
@@ -406,7 +482,7 @@ func (r Renderer) writeReversibleFaceDef(b *strings.Builder, ctx *renderCtx, def
 	if layoutLiteral := layoutToLiteral(layout); layoutLiteral != "" {
 		_, _ = fmt.Fprintf(b, "\tLayout: %s,\n", layoutLiteral)
 	}
-	_, _ = b.WriteString("}\n")
+	writeCardDefBuilderClose(b)
 	return nil
 }
 
@@ -501,12 +577,26 @@ func (Renderer) writeFaceScalarFields(b *strings.Builder, ctx *renderCtx, face *
 	if face.DynamicPower.Exists {
 		ctx.need(importOpt)
 		ctx.need(importGame)
-		_, _ = fmt.Fprintf(b, "%sDynamicPower: opt.Val(%s),\n", indent, renderDynamicValue(face.DynamicPower.Val))
+		lit, err := renderDynamicValue(face.DynamicPower.Val)
+		if err != nil {
+			return err
+		}
+		if face.DynamicPower.Val.Color != "" {
+			ctx.need(importColor)
+		}
+		_, _ = fmt.Fprintf(b, "%sDynamicPower: opt.Val(%s),\n", indent, lit)
 	}
 	if face.DynamicToughness.Exists {
 		ctx.need(importOpt)
 		ctx.need(importGame)
-		_, _ = fmt.Fprintf(b, "%sDynamicToughness: opt.Val(%s),\n", indent, renderDynamicValue(face.DynamicToughness.Val))
+		lit, err := renderDynamicValue(face.DynamicToughness.Val)
+		if err != nil {
+			return err
+		}
+		if face.DynamicToughness.Val.Color != "" {
+			ctx.need(importColor)
+		}
+		_, _ = fmt.Fprintf(b, "%sDynamicToughness: opt.Val(%s),\n", indent, lit)
 	}
 	if face.Loyalty.Exists {
 		ctx.need(importOpt)

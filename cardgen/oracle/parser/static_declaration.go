@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -31,6 +32,7 @@ const (
 	StaticDeclarationOpponentActionRestriction            StaticDeclarationKind = "StaticDeclarationOpponentActionRestriction"
 	StaticDeclarationSpellUncounterable                   StaticDeclarationKind = "StaticDeclarationSpellUncounterable"
 	StaticDeclarationEnteringTriggerMultiplier            StaticDeclarationKind = "StaticDeclarationEnteringTriggerMultiplier"
+	StaticDeclarationControlledTriggerMultiplier          StaticDeclarationKind = "StaticDeclarationControlledTriggerMultiplier"
 	StaticDeclarationUntapDuringOtherUntapStep            StaticDeclarationKind = "StaticDeclarationUntapDuringOtherUntapStep"
 	StaticDeclarationCharacteristicDefiningPowerToughness StaticDeclarationKind = "StaticDeclarationCharacteristicDefiningPowerToughness"
 	StaticDeclarationCastAsThoughFlash                    StaticDeclarationKind = "StaticDeclarationCastAsThoughFlash"
@@ -38,6 +40,11 @@ const (
 	StaticDeclarationEnterBattlefieldRestriction          StaticDeclarationKind = "StaticDeclarationEnterBattlefieldRestriction"
 	StaticDeclarationContinuousQuotedAbilityGrant         StaticDeclarationKind = "StaticDeclarationContinuousQuotedAbilityGrant"
 	StaticDeclarationAbilityCostSet                       StaticDeclarationKind = "StaticDeclarationAbilityCostSet"
+	StaticDeclarationGraveyardCardKeywordGrant            StaticDeclarationKind = "StaticDeclarationGraveyardCardKeywordGrant"
+	StaticDeclarationDrawLimit                            StaticDeclarationKind = "StaticDeclarationDrawLimit"
+	StaticDeclarationCastLimit                            StaticDeclarationKind = "StaticDeclarationCastLimit"
+	StaticDeclarationOpeningHandPlay                      StaticDeclarationKind = "StaticDeclarationOpeningHandPlay"
+	StaticDeclarationOpponentEnteringTriggerSuppression   StaticDeclarationKind = "StaticDeclarationOpponentEnteringTriggerSuppression"
 )
 
 // StaticDeclarationDynamicValueKind identifies the rules-derived count a
@@ -48,13 +55,28 @@ type StaticDeclarationDynamicValueKind string
 // Static declaration characteristic-defining count kinds recognized by the
 // parser. Each maps onto one runtime dynamic-value kind.
 const (
-	StaticDeclarationDynamicValueNone                        StaticDeclarationDynamicValueKind = ""
-	StaticDeclarationDynamicValueControllerHandSize          StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerHandSize"
-	StaticDeclarationDynamicValueControllerGraveyardSize     StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerGraveyardSize"
-	StaticDeclarationDynamicValueControllerCreatureCount     StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerCreatureCount"
-	StaticDeclarationDynamicValueControllerLandCount         StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerLandCount"
-	StaticDeclarationDynamicValueControllerArtifactCount     StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerArtifactCount"
-	StaticDeclarationDynamicValueAllBattlefieldCreatureCount StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueAllBattlefieldCreatureCount"
+	StaticDeclarationDynamicValueNone                         StaticDeclarationDynamicValueKind = ""
+	StaticDeclarationDynamicValueControllerHandSize           StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerHandSize"
+	StaticDeclarationDynamicValueControllerGraveyardSize      StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerGraveyardSize"
+	StaticDeclarationDynamicValueControllerCreatureCount      StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerCreatureCount"
+	StaticDeclarationDynamicValueControllerLandCount          StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerLandCount"
+	StaticDeclarationDynamicValueControllerArtifactCount      StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerArtifactCount"
+	StaticDeclarationDynamicValueAllBattlefieldCreatureCount  StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueAllBattlefieldCreatureCount"
+	StaticDeclarationDynamicValueAllGraveyardsSize            StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueAllGraveyardsSize"
+	StaticDeclarationDynamicValueCreatureCardsInAllGraveyards StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueCreatureCardsInAllGraveyards"
+	StaticDeclarationDynamicValueCardTypesAmongAllGraveyards  StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueCardTypesAmongAllGraveyards"
+
+	StaticDeclarationDynamicValueControllerCreatureCardsInGraveyard         StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerCreatureCardsInGraveyard"
+	StaticDeclarationDynamicValueControllerInstantOrSorceryCardsInGraveyard StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerInstantOrSorceryCardsInGraveyard"
+	StaticDeclarationDynamicValueControllerLandCardsInGraveyard             StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerLandCardsInGraveyard"
+	StaticDeclarationDynamicValueControllerCardTypesInGraveyard             StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerCardTypesInGraveyard"
+	StaticDeclarationDynamicValueControllerPermanentCardsInGraveyard        StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerPermanentCardsInGraveyard"
+	StaticDeclarationDynamicValueControllerSubtypeCount                     StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerSubtypeCount"
+	StaticDeclarationDynamicValueControllerBasicLandTypeCount               StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerBasicLandTypeCount"
+	StaticDeclarationDynamicValueControllerLifeTotal                        StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerLifeTotal"
+	StaticDeclarationDynamicValueAllPlayersHandSize                         StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueAllPlayersHandSize"
+	StaticDeclarationDynamicValueControllerColorPermanentCount              StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerColorPermanentCount"
+	StaticDeclarationDynamicValueControllerCardsDrawnThisTurn               StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerCardsDrawnThisTurn"
 )
 
 // StaticDeclarationSubjectKind identifies the affected group named by a typed
@@ -71,6 +93,11 @@ const (
 	StaticDeclarationSubjectControllerHand StaticDeclarationSubjectKind = "StaticDeclarationSubjectControllerHand"
 	StaticDeclarationSubjectController     StaticDeclarationSubjectKind = "StaticDeclarationSubjectController"
 	StaticDeclarationSubjectEachPlayer     StaticDeclarationSubjectKind = "StaticDeclarationSubjectEachPlayer"
+	// StaticDeclarationSubjectControllerGraveyard names the set of the
+	// controller's graveyard cards a "[During your turn,] <filter> cards in your
+	// graveyard have <keyword>." keyword-grant declaration affects (Six, Wrenn
+	// and Six Emblem). CardFilter constrains the affected cards by card type.
+	StaticDeclarationSubjectControllerGraveyard StaticDeclarationSubjectKind = "StaticDeclarationSubjectControllerGraveyard"
 )
 
 // StaticDeclarationPlayerRuleKind identifies the closed player-scoped rule a
@@ -123,6 +150,17 @@ const (
 	// Jwar Isle). It is a private-visibility static: only the controller may see
 	// the card.
 	StaticDeclarationPlayerRuleLookAtTopCardAnyTime StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleLookAtTopCardAnyTime"
+	// StaticDeclarationPlayerRuleLifeForColoredMana lets the controller pay 2 life
+	// rather than a mana of ManaColor for each such colored symbol in a cost ("For
+	// each {B} in a cost, you may pay 2 life rather than pay that mana.", K'rrik,
+	// Son of Yawgmoth).
+	StaticDeclarationPlayerRuleLifeForColoredMana StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleLifeForColoredMana"
+	// StaticDeclarationPlayerRuleLifeForCommanderTax lets the controller pay 2
+	// life rather than each {2} of the command-zone commander tax when casting the
+	// source card itself ("Rather than pay {2} for each previous time you've cast
+	// this spell from the command zone this game, pay 2 life that many times.",
+	// Liesa, Shroud of Dusk).
+	StaticDeclarationPlayerRuleLifeForCommanderTax StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleLifeForCommanderTax"
 )
 
 // StaticDeclarationCardFilterKind identifies the closed card filter that a
@@ -135,6 +173,18 @@ const (
 	StaticDeclarationCardFilterLand     StaticDeclarationCardFilterKind = "StaticDeclarationCardFilterLand"
 	StaticDeclarationCardFilterCreature StaticDeclarationCardFilterKind = "StaticDeclarationCardFilterCreature"
 	StaticDeclarationCardFilterHistoric StaticDeclarationCardFilterKind = "StaticDeclarationCardFilterHistoric"
+	// StaticDeclarationCardFilterNonlandPermanent selects nonland permanent cards
+	// ("nonland permanent cards in your graveyard", Six): cards whose type line
+	// includes a permanent card type other than Land.
+	StaticDeclarationCardFilterNonlandPermanent StaticDeclarationCardFilterKind = "StaticDeclarationCardFilterNonlandPermanent"
+	// StaticDeclarationCardFilterPermanent selects permanent cards ("permanent
+	// cards in your graveyard"): cards whose type line includes any permanent
+	// card type.
+	StaticDeclarationCardFilterPermanent StaticDeclarationCardFilterKind = "StaticDeclarationCardFilterPermanent"
+	// StaticDeclarationCardFilterInstantOrSorcery selects instant and sorcery
+	// cards ("instant and sorcery cards in your graveyard", Wrenn and Six
+	// Emblem).
+	StaticDeclarationCardFilterInstantOrSorcery StaticDeclarationCardFilterKind = "StaticDeclarationCardFilterInstantOrSorcery"
 )
 
 // StaticDeclarationCostModifierKind identifies the closed cost-modifier shape a
@@ -149,6 +199,13 @@ const (
 	StaticDeclarationCostModifierReplaceFirstCost StaticDeclarationCostModifierKind = "StaticDeclarationCostModifierReplaceFirstCost"
 	StaticDeclarationCostModifierSpellReduction   StaticDeclarationCostModifierKind = "StaticDeclarationCostModifierSpellReduction"
 	StaticDeclarationCostModifierSpellIncrease    StaticDeclarationCostModifierKind = "StaticDeclarationCostModifierSpellIncrease"
+	// StaticDeclarationCostModifierSpellSharedExiledTypeReduction is the dynamic
+	// controller cast-cost discount that scales with the card types the spell
+	// shares with the cards exiled with the source permanent ("Spells you cast
+	// cost {N} less to cast for each card type they share with cards exiled with
+	// this creature.", Cemetery Prowler). CostReductionAmount carries the per-
+	// shared-type amount.
+	StaticDeclarationCostModifierSpellSharedExiledTypeReduction StaticDeclarationCostModifierKind = "StaticDeclarationCostModifierSpellSharedExiledTypeReduction"
 )
 
 // StaticDeclarationSpellTypeKind identifies the closed spell-type filter a
@@ -180,6 +237,18 @@ const (
 	StaticDeclarationSpellColorRed       StaticDeclarationSpellColorKind = "StaticDeclarationSpellColorRed"
 	StaticDeclarationSpellColorGreen     StaticDeclarationSpellColorKind = "StaticDeclarationSpellColorGreen"
 	StaticDeclarationSpellColorColorless StaticDeclarationSpellColorKind = "StaticDeclarationSpellColorColorless"
+)
+
+// StaticDeclarationSpellCasterKind identifies which players' spells a cast-cost
+// modifier affects ("Spells you cast ..." vs "Spells your opponents cast ..."
+// vs "Spells that ..."). The empty kind is the default controller scope.
+type StaticDeclarationSpellCasterKind string
+
+// Static declaration spell-caster filters recognized by the parser.
+const (
+	StaticDeclarationSpellCasterController StaticDeclarationSpellCasterKind = ""
+	StaticDeclarationSpellCasterOpponents  StaticDeclarationSpellCasterKind = "StaticDeclarationSpellCasterOpponents"
+	StaticDeclarationSpellCasterAny        StaticDeclarationSpellCasterKind = "StaticDeclarationSpellCasterAny"
 )
 
 // StaticDeclarationCastZoneKind identifies a non-hand zone that a cast-zone
@@ -288,6 +357,28 @@ type StaticDeclarationSyntax struct {
 	// sets the source object's power and toughness equal to.
 	DynamicValue StaticDeclarationDynamicValueKind `json:",omitempty"`
 
+	// DynamicValueSubtype carries the subtype counted by a
+	// StaticDeclarationDynamicValueControllerSubtypeCount declaration ("the
+	// number of Swamps you control", "the number of Goblins you control"). It is
+	// empty for every other count kind.
+	DynamicValueSubtype types.Sub `json:"-"`
+
+	// DynamicValueColor carries the color counted by a
+	// StaticDeclarationDynamicValueControllerColorPermanentCount declaration
+	// ("the number of red permanents you control"). It is empty for every other
+	// count kind.
+	DynamicValueColor Color `json:"-"`
+
+	// DynamicSetsPower and DynamicSetsToughness record which characteristics a
+	// characteristic-defining power/toughness declaration sets. "power and
+	// toughness are each equal to" sets both; "power is equal to" sets power
+	// only (the printed toughness stands); the Tarmogoyf form "power is equal to
+	// <count> and its toughness is equal to that number plus N" sets both with a
+	// toughness offset.
+	DynamicSetsPower       bool `json:",omitempty"`
+	DynamicSetsToughness   bool `json:",omitempty"`
+	DynamicToughnessOffset int  `json:",omitempty"`
+
 	// LoseAllAbilities marks a StaticDeclarationLoseAbilitiesBecome declaration
 	// whose affected object loses all abilities ("loses all abilities"). For that
 	// kind Colors, CardTypes, and Subtypes are SET (replacing the object's
@@ -303,6 +394,18 @@ type StaticDeclarationSyntax struct {
 	CardTypes []CardType  `json:"-"`
 	Subtypes  []types.Sub `json:"-"`
 	ColorsAdd bool        `json:",omitempty"`
+	// EveryCreatureType marks a "<group> is/are every creature type" continuous
+	// characteristic declaration (Maskwood Nexus, Mistform Ultimus). It adds
+	// every creature subtype at the type layer (CR 702.73) and is mutually
+	// exclusive with the enumerated Colors/CardTypes/Subtypes payload.
+	EveryCreatureType bool `json:",omitempty"`
+
+	// EveryBasicLandType marks a "<group> is/are every basic land type [in
+	// addition to their other types]" declaration (Dryad of the Ilysian Grove,
+	// Prismatic Omen). The compiler expands it to a LayerType continuous effect
+	// that adds all five basic land subtypes rather than enumerating them in the
+	// characteristic list.
+	EveryBasicLandType bool `json:",omitempty"`
 
 	// Keyword-grant and card-ability-grant payload: the spans of the granted
 	// keyword atoms in source order.
@@ -333,6 +436,24 @@ type StaticDeclarationSyntax struct {
 	// controller's spells cast from any zone.
 	SpellCastZone StaticDeclarationCastZoneKind `json:",omitempty"`
 
+	// SpellPowerAtLeast carries the base-power threshold of a cast-cost modifier
+	// filtered by power ("Creature spells you cast with power 4 or greater cost
+	// {2} less to cast.", Goreclaw): a spell matches only when its printed power
+	// is greater than or equal to this value. MatchSpellPowerAtLeast marks the
+	// threshold present so a zero threshold stays expressible. It combines with
+	// the spell-type, color, subtype, and zone filters.
+	SpellPowerAtLeast      int  `json:",omitempty"`
+	MatchSpellPowerAtLeast bool `json:",omitempty"`
+
+	// SpellCaster scopes a cast-cost modifier to a set of casting players
+	// ("Spells you cast ..." vs "Spells your opponents cast ..." vs "Spells
+	// that ..."). The empty kind is the default controller scope.
+	// SpellTargetsSource marks the "that target <source>" predicate, restricting
+	// the modifier to spells that target the source permanent ("Spells your
+	// opponents cast that target this creature cost {2} more to cast.").
+	SpellCaster        StaticDeclarationSpellCasterKind `json:",omitempty"`
+	SpellTargetsSource bool                             `json:",omitempty"`
+
 	// SpellColors lists the colors of a cast-cost modifier's color disjunction
 	// ("Each spell you cast that's red or green ..." / "Blue spells and red
 	// spells you cast ..."): a spell matches when it has any one of these
@@ -353,6 +474,11 @@ type StaticDeclarationSyntax struct {
 	AttackTaxGeneric    int                             `json:",omitempty"`
 	AdditionalLandPlays int                             `json:",omitempty"`
 
+	// ManaColor carries the colored mana symbol of a
+	// StaticDeclarationPlayerRuleLifeForColoredMana declaration ("For each {B} in
+	// a cost, ..."). It is empty for every other player rule.
+	ManaColor mana.Color `json:"-"`
+
 	// Opponent action-restriction payload: a continuous prohibition stopping the
 	// affected players from casting spells and/or activating abilities of
 	// permanents whose type is in RestrictActivateTypes. RestrictAffectsAllPlayers
@@ -371,12 +497,45 @@ type StaticDeclarationSyntax struct {
 	RestrictCastFromZones    []StaticDeclarationCastZoneKind `json:"-"`
 	RestrictCastOnlyFromHand bool                            `json:",omitempty"`
 
+	// Draw-limit payload: a continuous per-turn draw cap stopping the affected
+	// players from drawing more than DrawLimit cards each turn ("Each opponent
+	// can't draw more than one card each turn.", Narset, Parter of Veils).
+	// DrawLimitAffectsAllPlayers selects every player ("Each player can't ...",
+	// Spirit of the Labyrinth); DrawLimitAffectsController selects only the
+	// controller ("You can't ..."). With neither flag set the cap affects only the
+	// controller's opponents.
+	DrawLimit                  int  `json:",omitempty"`
+	DrawLimitAffectsAllPlayers bool `json:",omitempty"`
+	DrawLimitAffectsController bool `json:",omitempty"`
+
+	// Cast-limit payload: a continuous per-turn spell cap stopping the affected
+	// players from casting more than CastLimit spells each turn ("Each player
+	// can't cast more than one spell each turn.", Rule of Law, Eidolon of
+	// Rhetoric, Arcane Laboratory). CastLimitAffectsAllPlayers selects every
+	// player ("Each player"/"Players"); CastLimitAffectsController selects only
+	// the controller ("You"). With neither flag set the cap affects only the
+	// controller's opponents.
+	CastLimit                  int  `json:",omitempty"`
+	CastLimitAffectsAllPlayers bool `json:",omitempty"`
+	CastLimitAffectsController bool `json:",omitempty"`
+
 	// Entering-trigger-multiplier payload: the entering permanent's card-type
 	// filter for an "If <filter> entering causes a triggered ability of a
 	// permanent you control to trigger, that ability triggers an additional
 	// time." declaration. An empty EnteringFilterTypes matches any entering
 	// permanent ("a permanent").
 	EnteringFilterTypes []CardType `json:"-"`
+
+	// Controlled-trigger-multiplier payload: the source permanent's type,
+	// supertype, and subtype filter for an "If a triggered ability of <filter>
+	// you control triggers, that ability triggers an additional time."
+	// declaration (Annie Joins Up, Katara, the Fearless, Splinter, Radical Rat).
+	// ControlledFilterTypes and ControlledFilterSupertypes are conjunctive;
+	// ControlledFilterSubtypes is disjunctive. At least one of the three is
+	// non-empty.
+	ControlledFilterTypes      []CardType  `json:"-"`
+	ControlledFilterSupertypes []Supertype `json:"-"`
+	ControlledFilterSubtypes   []types.Sub `json:"-"`
 
 	// Untap-during-other-players'-untap-step payload: the filtered set of the
 	// controller's permanents that gain an extra untap during each other
@@ -402,6 +561,14 @@ type StaticDeclarationSyntax struct {
 	CastColorless          bool       `json:",omitempty"`
 	AlsoPlayLands          bool       `json:",omitempty"`
 	CastChosenCreatureType bool       `json:",omitempty"`
+	// CastPayLifeManaValue records a trailing "If you cast a spell this way, pay
+	// life equal to its mana value rather than pay its mana cost." rider on a
+	// cast-from-library-top declaration ("You may play lands and cast spells from
+	// the top of your library. If you cast a spell this way, pay life equal to its
+	// mana value rather than pay its mana cost.", Bolas's Citadel), so lowering
+	// makes spells cast this way pay life equal to their mana value instead of
+	// their mana cost.
+	CastPayLifeManaValue bool `json:",omitempty"`
 
 	// FlashSpellType and FlashSpellSubtypes carry the optional spell filter of a
 	// StaticDeclarationCastAsThoughFlash declaration ("You may cast sorcery
@@ -463,7 +630,41 @@ func emitStaticDeclarations(abilities []Ability) {
 		declarations := parseStaticDeclarations(body, ability.Quoted, ability.Atoms, ability.ConditionClauses)
 		if len(declarations) > 0 {
 			ability.StaticDeclarations = declarations
+			foldStaticCastFromTopPayLifeRider(ability, declarations)
 		}
+	}
+}
+
+// foldStaticCastFromTopPayLifeRider clears the effects of the "If you cast a
+// spell this way, pay life equal to its mana value rather than pay its mana
+// cost." rider sentence when the ability recognized a cast-from-library-top
+// static permission carrying that rider (Bolas's Citadel). The rider's life
+// payment is already captured on the static declaration, so clearing the
+// sentence's effects keeps the static permission free of a stray standalone
+// effect and lets reference and coverage scans credit the rider text.
+func foldStaticCastFromTopPayLifeRider(ability *Ability, declarations []StaticDeclarationSyntax) {
+	credited := false
+	for i := range declarations {
+		if declarations[i].PlayerRule == StaticDeclarationPlayerRuleCastSpellsFromLibraryTop &&
+			declarations[i].CastPayLifeManaValue {
+			credited = true
+			break
+		}
+	}
+	if !credited {
+		return
+	}
+	for i := range ability.Sentences {
+		if len(ability.Sentences[i].Effects) == 0 && !ability.Sentences[i].LegacyEffects {
+			continue
+		}
+		if !isPlayFromTopPayLifeRiderTokens(semanticEffectTokens(ability.Sentences[i].Tokens)) {
+			continue
+		}
+		ability.Sentences[i].Effects = nil
+		ability.Sentences[i].LegacyEffects = false
+		ability.Sentences[i].PlayFromTopPayLifeRider = true
+		return
 	}
 }
 
@@ -492,6 +693,7 @@ func emitSelfNameStaticRules(abilities []Ability) {
 // and quoted text removed, and any ability-word label and its em dash dropped.
 func staticDeclarationBodyTokens(ability *Ability) []shared.Token {
 	tokens := eventHistorySemanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
+	tokens = stripNonBattlefieldScopeRider(tokens)
 	if ability.AbilityWord == nil {
 		return tokens
 	}
@@ -503,11 +705,64 @@ func staticDeclarationBodyTokens(ability *Ability) []shared.Token {
 	return tokens
 }
 
+// stripNonBattlefieldScopeRider removes a trailing "The same is true for <spells
+// you control and cards you own> that aren't on the battlefield." sentence from a
+// static ability's body. That rider extends a "<group> is/are <characteristic>"
+// continuous declaration (Maskwood Nexus, Arcane Adaptation, Encroaching
+// Mycosynth, Conspiracy, Celestial Dawn, Biotransference) to objects in
+// non-battlefield zones — spells on the stack and cards in hand/library/
+// graveyard. Continuous effects in this engine apply only to battlefield
+// permanents, so the rider has no representable effect; dropping it lets the
+// leading battlefield declaration lower while leaving battlefield simulation
+// outcomes unchanged. The rider is distinguished by its "the same is true for"
+// opening and "on the battlefield" close, which the keyword-copying "same is
+// true for <keyword list>" riders (Odric, Cairn Wanderer) never share.
+func stripNonBattlefieldScopeRider(tokens []shared.Token) []shared.Token {
+	end := len(tokens)
+	if end == 0 || tokens[end-1].Kind != shared.Period {
+		return tokens
+	}
+	sentenceStart := 0
+	for i := end - 2; i >= 0; i-- {
+		if tokens[i].Kind == shared.Period {
+			sentenceStart = i + 1
+			break
+		}
+	}
+	if sentenceStart == 0 {
+		return tokens
+	}
+	if !isNonBattlefieldScopeRider(tokens[sentenceStart : end-1]) {
+		return tokens
+	}
+	return tokens[:sentenceStart]
+}
+
+// isNonBattlefieldScopeRider reports whether sentence (the tokens of one
+// sentence, excluding its terminating period) is the non-battlefield-zone scope
+// extension "the same is true for ... on the battlefield".
+func isNonBattlefieldScopeRider(sentence []shared.Token) bool {
+	if len(sentence) < 8 {
+		return false
+	}
+	return staticWordsAt(sentence, 0, "the", "same", "is", "true", "for") &&
+		staticWordsAt(sentence, len(sentence)-3, "on", "the", "battlefield")
+}
+
 func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms Atoms, conditions []ConditionClause) []StaticDeclarationSyntax {
+	if declaration, ok := parseStaticOpeningHandPlayDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticOpponentEnteringTriggerSuppressionDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
 	if declaration, ok := parseChosenCreatureTypeTriggerMultiplierDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseEnteringTriggerMultiplierDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseControlledTriggerMultiplierDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticCostModifierDeclaration(tokens, atoms, conditions); ok {
@@ -531,6 +786,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 	if declaration, ok := parseStaticCardAbilityGrantDeclaration(tokens, atoms); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
+	if declaration, ok := parseStaticGraveyardCardKeywordGrantDeclaration(tokens, atoms); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
 	if declaration, ok := parseStaticPermanentAbilityGrantDeclaration(tokens, quoted, conditions); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
@@ -547,6 +805,12 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticOpponentActionRestrictionDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticDrawLimitDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticCastLimitDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticEnchantedTypeChangeDeclaration(tokens, quoted, atoms); ok {
@@ -645,6 +909,93 @@ func parseEnteringFilter(tokens []shared.Token, index, end int) ([]CardType, boo
 	return cardTypes, true
 }
 
+// parseControlledTriggerMultiplierDeclaration recognizes the "triggers an
+// additional time" family scoped to a filtered controlled permanent: "If a
+// triggered ability of <filter> you control triggers, that ability triggers an
+// additional time." (Annie Joins Up — "a legendary creature"; Katara, the
+// Fearless — "an Ally"; Splinter, Radical Rat — "a Ninja creature"). <filter> is
+// an article followed by an optional supertype, optional subtype, and optional
+// card type, captured into ControlledFilterSupertypes / ControlledFilterSubtypes
+// / ControlledFilterTypes. Any deviation leaves the clause unconsumed. The
+// entering-permanent and "of the chosen type" forms are owned by their own
+// parsers and do not reach here.
+func parseControlledTriggerMultiplierDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	const prefixLen = 5
+	const suffixLen = 11
+	if len(tokens) < prefixLen+suffixLen+1 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "if", "a", "triggered", "ability", "of") {
+		return StaticDeclarationSyntax{}, false
+	}
+	tail := len(tokens) - suffixLen
+	if !staticWordsAt(tokens, tail, "you", "control", "triggers") ||
+		tokens[tail+3].Kind != shared.Comma ||
+		!staticWordsAt(tokens, tail+4, "that", "ability", "triggers", "an", "additional", "time") {
+		return StaticDeclarationSyntax{}, false
+	}
+	filter, ok := parseControlledTriggerFilter(tokens, prefixLen, tail)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                       StaticDeclarationControlledTriggerMultiplier,
+		Span:                       shared.SpanOf(tokens),
+		OperationSpan:              shared.SpanOf(tokens),
+		ControlledFilterSupertypes: filter.supertypes,
+		ControlledFilterSubtypes:   filter.subtypes,
+		ControlledFilterTypes:      filter.cardTypes,
+	}, true
+}
+
+// controlledTriggerFilter holds the type, supertype, and subtype filter parsed
+// from the source-permanent noun of a controlled-trigger multiplier.
+type controlledTriggerFilter struct {
+	supertypes []Supertype
+	subtypes   []types.Sub
+	cardTypes  []CardType
+}
+
+// parseControlledTriggerFilter consumes the source-permanent filter "a/an
+// [supertype] [subtype] [card type]" between the "of" and "you control" anchors
+// of a controlled-trigger multiplier. Each word after the article must be a
+// recognized supertype, card type, or subtype. The filter must include at least
+// one subtype or card type noun (a bare supertype is not a permanent filter) and
+// must consume the region exactly.
+func parseControlledTriggerFilter(tokens []shared.Token, index, end int) (controlledTriggerFilter, bool) {
+	if index >= end || (!equalWord(tokens[index], "a") && !equalWord(tokens[index], "an")) {
+		return controlledTriggerFilter{}, false
+	}
+	index++
+	if index >= end {
+		return controlledTriggerFilter{}, false
+	}
+	var filter controlledTriggerFilter
+	for ; index < end; index++ {
+		if tokens[index].Kind != shared.Word {
+			return controlledTriggerFilter{}, false
+		}
+		word := tokens[index].Text
+		if supertype, ok := recognizeSupertypeWord(word); ok {
+			filter.supertypes = append(filter.supertypes, supertype)
+			continue
+		}
+		if cardType, ok := recognizeCardTypeWord(word); ok {
+			filter.cardTypes = append(filter.cardTypes, cardType)
+			continue
+		}
+		if subtype, ok := recognizeSubtypePhrase(word); ok {
+			filter.subtypes = append(filter.subtypes, subtype)
+			continue
+		}
+		return controlledTriggerFilter{}, false
+	}
+	if len(filter.subtypes) == 0 && len(filter.cardTypes) == 0 {
+		return controlledTriggerFilter{}, false
+	}
+	return filter, true
+}
+
 func parseStaticPermanentAbilityGrantDeclaration(
 	tokens []shared.Token,
 	quoted []Delimited,
@@ -712,6 +1063,9 @@ func parseStaticGrantedManaAbility(quoted Delimited) (StaticGrantedManaAbilitySy
 	if ability, ok := parseStaticGrantedColorlessManaAbility(quoted); ok {
 		return ability, true
 	}
+	if ability, ok := parseStaticGrantedSacrificeAnyColorManaAbility(quoted); ok {
+		return ability, true
+	}
 	return parseStaticGrantedSacrificeManaAbility(quoted)
 }
 
@@ -763,6 +1117,35 @@ func parseStaticGrantedAnyColorManaAbility(quoted Delimited) (StaticGrantedManaA
 		TapCost:  true,
 		Amount:   1,
 		AnyColor: true,
+	}, true
+}
+
+// parseStaticGrantedSacrificeAnyColorManaAbility recognizes the count-1 quoted
+// ability "{T}, Sacrifice this artifact: Add one mana of any color." (Ninja
+// Pizza): tap and sacrifice the host artifact to add one mana of any color the
+// controller chooses. It is the any-color, count-1 counterpart of the
+// Treasure-style "Add <N> mana of any one color." sacrifice ability.
+func parseStaticGrantedSacrificeAnyColorManaAbility(quoted Delimited) (StaticGrantedManaAbilitySyntax, bool) {
+	tokens := quoted.Tokens
+	if len(tokens) != 15 ||
+		tokens[0].Kind != shared.Quote ||
+		tokens[1].Kind != shared.Symbol ||
+		tokens[1].Text != "{T}" ||
+		tokens[2].Kind != shared.Comma ||
+		!staticWordsAt(tokens, 3, "sacrifice", "this", "artifact") ||
+		tokens[6].Kind != shared.Colon ||
+		!staticWordsAt(tokens, 7, "add", "one", "mana", "of", "any", "color") ||
+		tokens[13].Kind != shared.Period ||
+		tokens[14].Kind != shared.Quote {
+		return StaticGrantedManaAbilitySyntax{}, false
+	}
+	return StaticGrantedManaAbilitySyntax{
+		Span:      shared.SpanOf(tokens[1:14]),
+		Text:      staticGrantedAbilityText(quoted),
+		TapCost:   true,
+		Amount:    1,
+		AnyColor:  true,
+		Sacrifice: true,
 	}, true
 }
 
@@ -931,8 +1314,141 @@ func parseStaticPassiveCastProhibition(tokens []shared.Token, index, end int, du
 	}, true
 }
 
-// parseStaticRestrictedActions consumes the "cast spells" and/or "activate
-// abilities of <types>" actions joined by "or". At least one action is required.
+// parseStaticDrawLimitDeclaration recognizes the continuous per-turn draw cap
+// "<players> can't draw more than <N> card[s] each turn." (Narset, Parter of
+// Veils; Spirit of the Labyrinth; Leovold). <players> is "each opponent"/"your
+// opponents" (opponents), "each player"/"players" (every player), or "you" (the
+// controller). Any deviation leaves the clause unconsumed and fails closed.
+func parseStaticDrawLimitDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) < 4 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	end := len(tokens) - 1
+	index := 0
+	affectsAll := false
+	affectsController := false
+	switch {
+	case staticWordsAt(tokens, index, "each", "opponent"):
+		index += 2
+	case staticWordsAt(tokens, index, "your", "opponents"):
+		index += 2
+	case staticWordsAt(tokens, index, "each", "player"):
+		affectsAll = true
+		index += 2
+	case staticWordsAt(tokens, index, "players"):
+		affectsAll = true
+		index++
+	case staticWordsAt(tokens, index, "you"):
+		affectsController = true
+		index++
+	default:
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, index, "can't") && !staticWordsAt(tokens, index, "cannot") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index++
+	if !staticWordsAt(tokens, index, "draw", "more", "than") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index += 3
+	if index >= end || tokens[index].Kind != shared.Word {
+		return StaticDeclarationSyntax{}, false
+	}
+	limit, ok := CardinalWordValue(tokens[index].Text)
+	if !ok || limit < 1 {
+		return StaticDeclarationSyntax{}, false
+	}
+	index++
+	if !staticWordsAt(tokens, index, "card") && !staticWordsAt(tokens, index, "cards") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index++
+	if !staticWordsAt(tokens, index, "each", "turn") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index += 2
+	if index != end {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                       StaticDeclarationDrawLimit,
+		Span:                       shared.SpanOf(tokens),
+		OperationSpan:              shared.SpanOf(tokens[:end]),
+		DrawLimit:                  limit,
+		DrawLimitAffectsAllPlayers: affectsAll,
+		DrawLimitAffectsController: affectsController,
+	}, true
+}
+
+// parseStaticCastLimitDeclaration recognizes the continuous per-turn spell cap
+// "<players> can't cast more than <N> spell[s] each turn." (Rule of Law, Eidolon
+// of Rhetoric, Arcane Laboratory; Moderation). <players> is "each
+// opponent"/"your opponents" (opponents), "each player"/"players" (every
+// player), or "you" (the controller). Only the unqualified "spell" object is
+// recognized; a type-scoped object ("noncreature spell") or any other deviation
+// leaves the clause unconsumed and fails closed.
+func parseStaticCastLimitDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) < 4 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	end := len(tokens) - 1
+	index := 0
+	affectsAll := false
+	affectsController := false
+	switch {
+	case staticWordsAt(tokens, index, "each", "opponent"):
+		index += 2
+	case staticWordsAt(tokens, index, "your", "opponents"):
+		index += 2
+	case staticWordsAt(tokens, index, "each", "player"):
+		affectsAll = true
+		index += 2
+	case staticWordsAt(tokens, index, "players"):
+		affectsAll = true
+		index++
+	case staticWordsAt(tokens, index, "you"):
+		affectsController = true
+		index++
+	default:
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, index, "can't") && !staticWordsAt(tokens, index, "cannot") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index++
+	if !staticWordsAt(tokens, index, "cast", "more", "than") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index += 3
+	if index >= end || tokens[index].Kind != shared.Word {
+		return StaticDeclarationSyntax{}, false
+	}
+	limit, ok := CardinalWordValue(tokens[index].Text)
+	if !ok || limit < 1 {
+		return StaticDeclarationSyntax{}, false
+	}
+	index++
+	if !staticWordsAt(tokens, index, "spell") && !staticWordsAt(tokens, index, "spells") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index++
+	if !staticWordsAt(tokens, index, "each", "turn") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index += 2
+	if index != end {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                       StaticDeclarationCastLimit,
+		Span:                       shared.SpanOf(tokens),
+		OperationSpan:              shared.SpanOf(tokens[:end]),
+		CastLimit:                  limit,
+		CastLimitAffectsAllPlayers: affectsAll,
+		CastLimitAffectsController: affectsController,
+	}, true
+}
 func parseStaticRestrictedActions(tokens []shared.Token, index, end int) (staticRestrictedActions, int, bool) {
 	var actions staticRestrictedActions
 	for {
@@ -1183,6 +1699,8 @@ var staticPlayerRuleParsers = []staticPlayerRuleParser{
 	parseStaticPlayWithTopCardRevealedDeclaration,
 	parseStaticCastSpellsFromLibraryTopDeclaration,
 	parseStaticLookAtTopCardAnyTimeDeclaration,
+	parseStaticLifeForColoredManaDeclaration,
+	parseStaticLifeForCommanderTaxDeclaration,
 }
 
 func parseStaticPlayerRuleDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
@@ -1485,6 +2003,81 @@ func parseStaticLookAtTopCardAnyTimeDeclaration(tokens []shared.Token) (StaticDe
 	}, true
 }
 
+// parseStaticLifeForColoredManaDeclaration recognizes the exact controller-scoped
+// life-for-mana substitution "For each {C} in a cost, you may pay 2 life rather
+// than pay that mana." (K'rrik, Son of Yawgmoth), where {C} is a single colored
+// mana symbol. It records the colored mana symbol so lowering can scope the
+// payment permission to that color.
+func parseStaticLifeForColoredManaDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 18 ||
+		tokens[2].Kind != shared.Symbol ||
+		tokens[6].Kind != shared.Comma ||
+		tokens[10].Kind != shared.Integer || tokens[10].Text != "2" ||
+		tokens[17].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "for", "each") ||
+		!staticWordsAt(tokens, 3, "in", "a", "cost") ||
+		!staticWordsAt(tokens, 7, "you", "may", "pay") ||
+		!staticWordsAt(tokens, 11, "life", "rather", "than", "pay", "that", "mana") {
+		return StaticDeclarationSyntax{}, false
+	}
+	inner, ok := strings.CutPrefix(tokens[2].Text, "{")
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	inner, ok = strings.CutSuffix(inner, "}")
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	color, ok := keywordManaColor(inner)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: tokens[7].Span,
+		},
+		PlayerRule: StaticDeclarationPlayerRuleLifeForColoredMana,
+		ManaColor:  color,
+	}, true
+}
+
+// parseStaticLifeForCommanderTaxDeclaration recognizes the exact self-scoped
+// command-zone tax substitution "Rather than pay {2} for each previous time
+// you've cast this spell from the command zone this game, pay 2 life that many
+// times." (Liesa, Shroud of Dusk), which lets the caster pay 2 life rather than
+// each {2} of the commander tax.
+func parseStaticLifeForCommanderTaxDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 26 ||
+		tokens[3].Kind != shared.Symbol || tokens[3].Text != "{2}" ||
+		tokens[18].Kind != shared.Comma ||
+		tokens[20].Kind != shared.Integer || tokens[20].Text != "2" ||
+		tokens[25].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "rather", "than", "pay") ||
+		!staticWordsAt(tokens, 4, "for", "each", "previous", "time", "you've", "cast", "this", "spell", "from", "the", "command", "zone", "this", "game") ||
+		!staticWordsAt(tokens, 19, "pay") ||
+		!staticWordsAt(tokens, 21, "life", "that", "many", "times") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: tokens[8].Span,
+		},
+		PlayerRule: StaticDeclarationPlayerRuleLifeForCommanderTax,
+	}, true
+}
+
 // parseStaticCastSpellsFromLibraryTopDeclaration recognizes the controller-scoped
 // continuous permission to cast spells from the top of the controller's library:
 // "You may cast spells from the top of your library." (Bolas's Citadel), the
@@ -1499,6 +2092,15 @@ func parseStaticLookAtTopCardAnyTimeDeclaration(tokens []shared.Token) (StaticDe
 // subtype.
 func parseStaticCastSpellsFromLibraryTopDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
 	if len(tokens) < 11 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	core, payLife, ok := splitStaticCastFromTopPayLifeRider(tokens)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	fullSpan := shared.SpanOf(tokens)
+	tokens = core
+	if len(tokens) < 11 {
 		return StaticDeclarationSyntax{}, false
 	}
 	if !staticWordsAt(tokens, 0, "you", "may") {
@@ -1531,7 +2133,7 @@ func parseStaticCastSpellsFromLibraryTopDeclaration(tokens []shared.Token) (Stat
 	}
 	return StaticDeclarationSyntax{
 		Kind:          StaticDeclarationPlayerRule,
-		Span:          shared.SpanOf(tokens),
+		Span:          fullSpan,
 		OperationSpan: shared.SpanOf(tokens[1 : len(tokens)-1]),
 		Subject: StaticDeclarationSubject{
 			Kind: StaticDeclarationSubjectController,
@@ -1542,7 +2144,38 @@ func parseStaticCastSpellsFromLibraryTopDeclaration(tokens []shared.Token) (Stat
 		CastColorless:          filter.colorless,
 		AlsoPlayLands:          alsoPlayLands,
 		CastChosenCreatureType: chosenCreatureType,
+		CastPayLifeManaValue:   payLife,
 	}, true
+}
+
+// splitStaticCastFromTopPayLifeRider separates the leading cast-from-library-top
+// sentence of a static cast permission from an optional trailing "If you cast a
+// spell this way, pay life equal to its mana value rather than pay its mana
+// cost." rider (Bolas's Citadel). The leading sentence carries no internal
+// period, so it ends at the first period; any remaining tokens must form exactly
+// the pay-life rider sentence. It returns the leading sentence's tokens, whether
+// the rider was present, and false when trailing tokens exist that are not the
+// recognized rider so the declaration fails closed rather than dropping text.
+func splitStaticCastFromTopPayLifeRider(tokens []shared.Token) (core []shared.Token, payLife, ok bool) {
+	first := -1
+	for i := range tokens {
+		if tokens[i].Kind == shared.Period {
+			first = i
+			break
+		}
+	}
+	if first < 0 {
+		return nil, false, false
+	}
+	core = tokens[:first+1]
+	rest := tokens[first+1:]
+	if len(rest) == 0 {
+		return core, false, true
+	}
+	if isPlayFromTopPayLifeRiderTokens(rest) {
+		return core, true, true
+	}
+	return nil, false, false
 }
 
 // castSpellFilter is the parsed card-type and color filter of a
@@ -1734,10 +2367,16 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token, atoms Atoms)
 	if declaration, ok := parseChosenCreatureTypeSpellCostReduction(tokens); ok {
 		return declaration, true
 	}
+	if declaration, ok := parseStaticSpellSharedExiledTypeCostReduction(tokens); ok {
+		return declaration, true
+	}
 	if declaration, ok := parseStaticSpellColorDisjunctionCostModifier(tokens); ok {
 		return declaration, true
 	}
 	if declaration, ok := parseStaticSpellColorPairCostModifier(tokens); ok {
+		return declaration, true
+	}
+	if declaration, ok := parseStaticSpellTargetsSourceCostModifier(tokens, atoms); ok {
 		return declaration, true
 	}
 	rest := tokens
@@ -1766,6 +2405,64 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token, atoms Atoms)
 		castZone = StaticDeclarationCastZoneGraveyard
 		rest = rest[3:]
 	}
+	powerAtLeast, next, ok := staticSpellPowerThreshold(rest)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	rest = next
+	tail, ok := staticSpellCostModifierTail(rest)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                   StaticDeclarationCostModifier,
+		Span:                   shared.SpanOf(tokens),
+		OperationSpan:          tail.OperationSpan,
+		CostModifier:           tail.Kind,
+		CostReductionAmount:    tail.Amount,
+		SpellType:              spellType,
+		SpellColor:             spellColor,
+		SpellSubtypes:          subtypes,
+		SpellCastZone:          castZone,
+		SpellPowerAtLeast:      powerAtLeast,
+		MatchSpellPowerAtLeast: powerAtLeast > 0,
+	}, true
+}
+
+// parseStaticSpellTargetsSourceCostModifier recognizes the static cast-cost
+// modifier "Spells [your opponents cast | you cast] that target <source> cost
+// {N} less/more to cast.", a defensive tax (or a controller discount) on spells
+// that target the source permanent ("Spells your opponents cast that target
+// this creature cost {2} more to cast.", Boreal Elemental; "Spells you cast that
+// target this creature cost {2} less to cast.", Elderwood Scion). <source> is a
+// "this creature"/"this permanent" marker or the card's own printed name (Charix,
+// Syr Elenora); any other target scope (a controlled group such as "creatures
+// you control") fails closed. An absent caster phrase ("Spells that target ...")
+// applies to every player's spells.
+func parseStaticSpellTargetsSourceCostModifier(tokens []shared.Token, atoms Atoms) (StaticDeclarationSyntax, bool) {
+	if !staticWordsAt(tokens, 0, "spells") {
+		return StaticDeclarationSyntax{}, false
+	}
+	rest := tokens[1:]
+	caster := StaticDeclarationSpellCasterAny
+	switch {
+	case staticWordsAt(rest, 0, "your", "opponents", "cast"):
+		caster = StaticDeclarationSpellCasterOpponents
+		rest = rest[3:]
+	case staticWordsAt(rest, 0, "you", "cast"):
+		caster = StaticDeclarationSpellCasterController
+		rest = rest[2:]
+	default:
+	}
+	if !staticWordsAt(rest, 0, "that", "target") {
+		return StaticDeclarationSyntax{}, false
+	}
+	rest = rest[2:]
+	width, ok := sourceNameSpanWidthAt(rest, 0, atoms)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	rest = rest[width:]
 	tail, ok := staticSpellCostModifierTail(rest)
 	if !ok {
 		return StaticDeclarationSyntax{}, false
@@ -1776,10 +2473,65 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token, atoms Atoms)
 		OperationSpan:       tail.OperationSpan,
 		CostModifier:        tail.Kind,
 		CostReductionAmount: tail.Amount,
-		SpellType:           spellType,
-		SpellColor:          spellColor,
-		SpellSubtypes:       subtypes,
-		SpellCastZone:       castZone,
+		SpellType:           StaticDeclarationSpellTypeAll,
+		SpellCaster:         caster,
+		SpellTargetsSource:  true,
+	}, true
+}
+
+// staticSpellPowerThreshold reads an optional "with power <n> or greater"
+// qualifier scoping a cast-cost modifier to spells whose base printed power
+// meets the threshold ("Creature spells you cast with power 4 or greater cost
+// {2} less to cast.", Goreclaw). It returns the threshold (zero when the
+// qualifier is absent) and the remaining tokens. A malformed qualifier fails.
+func staticSpellPowerThreshold(tokens []shared.Token) (int, []shared.Token, bool) {
+	if !staticWordsAt(tokens, 0, "with", "power") {
+		return 0, tokens, true
+	}
+	if len(tokens) < 5 {
+		return 0, nil, false
+	}
+	value, ok := conditionNumberValue(tokens[2])
+	if !ok || value <= 0 {
+		return 0, nil, false
+	}
+	if !staticWordsAt(tokens, 3, "or", "greater") {
+		return 0, nil, false
+	}
+	return value, tokens[5:], true
+}
+
+// parseStaticSpellSharedExiledTypeCostReduction recognizes the dynamic
+// controller cast-cost discount whose amount scales with the card types the
+// spell shares with the cards exiled with the source permanent:
+//
+//	"Spells you cast cost {N} less to cast for each card type they share with cards exiled with this creature." (Cemetery Prowler)
+//
+// The affected spells are all the controller's spells; the trailing "for each
+// card type they share with cards exiled with this creature" marks the per-
+// shared-type scaling. Any other tail falls through to the fixed-amount forms.
+func parseStaticSpellSharedExiledTypeCostReduction(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if !staticWordsAt(tokens, 0, "spells", "you", "cast", "cost") {
+		return StaticDeclarationSyntax{}, false
+	}
+	rest := tokens[4:]
+	if len(rest) != 17 ||
+		rest[0].Kind != shared.Symbol ||
+		!staticWordsAt(rest, 1, "less", "to", "cast", "for", "each", "card", "type", "they", "share", "with", "cards", "exiled", "with", "this", "creature") ||
+		rest[16].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	amount, ok := staticGenericSymbolValue(rest[0].Text)
+	if !ok || amount <= 0 {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                StaticDeclarationCostModifier,
+		Span:                shared.SpanOf(tokens),
+		OperationSpan:       shared.SpanOf(rest[0:4]),
+		CostModifier:        StaticDeclarationCostModifierSpellSharedExiledTypeReduction,
+		CostReductionAmount: amount,
+		SpellType:           StaticDeclarationSpellTypeAll,
 	}, true
 }
 

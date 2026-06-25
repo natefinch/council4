@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -89,6 +90,84 @@ const (
 	Landwalk
 	Dredge
 	Unearth
+	Training
+	Saddle
+	Rebound
+	Retrace
+	// Banding (CR 702.22) is a static combat keyword. It is modeled as a
+	// recognized, grantable simple keyword so cards that have or grant banding
+	// are representable. Banding's combat damage-assignment-control nuance is not
+	// simulated by the deterministic combat engine (which has no per-player
+	// Appended at the end of the enum so existing keyword ordinals are unchanged.
+	Banding
+	// Crew (CR 702.122) is the Vehicles activated keyword. It is modeled as a
+	// grantable keyword identity carried by CrewKeyword inside the activated
+	// ability built by CrewActivatedAbility. Appended at the end of the enum so
+	// existing keyword ordinals are unchanged.
+	Crew
+	// Fuse (CR 702.102) is printed on both halves of a fuse split card: "You may
+	// cast one or both halves of this card from your hand." It is modeled as a
+	// recognized simple keyword carried on each split face so fuse split cards
+	// are representable and the rules layer can detect the fuse permission via
+	// HasKeyword(Fuse). Appended at the end of the enum so existing keyword
+	// ordinals are unchanged.
+	Fuse
+	// JumpStart (CR 702.134) is printed on instants and sorceries: "Jump-start
+	// (You may cast this card from your graveyard by discarding a card in
+	// addition to paying its other costs. Then exile this card.)" It is modeled
+	// as a recognized simple keyword carried on the card so HasKeyword(JumpStart)
+	// reports true; the rules layer reads it on a card in its owner's graveyard
+	// to offer the graveyard cast with a discard additional cost and exile the
+	// card on resolution. Appended at the end of the enum so existing keyword
+	// ordinals are unchanged.
+	JumpStart
+	// PartnerWith (CR 702.124e) is the "Partner with <name>" keyword. It is
+	// modeled as a recognized simple keyword carried on the card so
+	// HasKeyword(PartnerWith) reports true. The "partner commander"
+	// deck-construction permission and the pair-fetch enters trigger are not
+	// simulated by the deterministic playtester, so the keyword is inert; it is
+	// modeled as a simple keyword purely so partner-with cards are
+	// representable. Appended at the end of the enum so existing keyword ordinals
+	// are unchanged.
+	PartnerWith
+	// ChooseABackground (CR 702.124f) is the "Choose a Background" keyword: "You
+	// can have a Background as a second commander." It is a deck-construction
+	// permission the deterministic playtester does not simulate, so the keyword
+	// is inert; it is modeled as a recognized simple keyword carried on the card
+	// so HasKeyword(ChooseABackground) reports true and choose-a-background cards
+	// are representable. Appended at the end of the enum so existing keyword
+	// ordinals are unchanged.
+	ChooseABackground
+	// Reconfigure (CR 702.151) is the Equipment-creature attach keyword:
+	// "Reconfigure <cost>" is a sorcery-speed activated ability that attaches the
+	// source to target creature you control (and may unattach it). It is modeled
+	// as a recognized keyword identity carried by ReconfigureKeyword inside the
+	// activated ability built by ReconfigureActivatedAbility; the rules layer
+	// treats it like Equip for attachment activation and resolution. The
+	// "or unattach" mode and the "while attached, this isn't a creature"
+	// type-change are not yet simulated. Appended at the end of the enum so
+	// existing keyword ordinals are unchanged.
+	Reconfigure
+	// Partner (CR 702.124a) is the "Partner" keyword and its "Partner—<quality>"
+	// restricted variants (CR 702.124f). It grants the "partner commander"
+	// deck-construction permission; the restricted variants only narrow which
+	// other partner cards a card may pair with. Both the permission and the
+	// pairing restrictions are deck-construction mechanics the deterministic
+	// playtester does not simulate, so the keyword is inert; it is modeled as a
+	// recognized simple keyword carried on the card so HasKeyword(Partner)
+	// reports true and partner cards are representable. Appended at the end of the
+	// enum so existing keyword ordinals are unchanged.
+	Partner
+	// Hideaway N (CR 702.75) is the land keyword printed on the "Hideaway lands":
+	// "When this permanent enters, look at the top N cards of your library, exile
+	// one face down, then put the rest on the bottom in a random order." A later
+	// activated ability lets the controller play that exiled card without paying
+	// its mana cost when a condition is met. It is modeled as a parameterized
+	// keyword carried by HideawayKeyword inside the enters-the-battlefield
+	// triggered ability built by HideawayTriggeredAbility, so HasKeyword(Hideaway)
+	// reports true and the rules layer runs the look/exile body. Appended at the
+	// end of the enum so existing keyword ordinals are unchanged.
+	Hideaway
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -231,6 +310,83 @@ var (
 	// counter, and prohibits blocking while such a permanent has a +1/+1 counter;
 	// the keyword itself carries no continuous effect.
 	UnleashStaticBody = simpleKeywordStaticBody("Unleash", Unleash)
+
+	// ReboundStaticBody is the reusable StaticAbilityBody for rebound (CR
+	// 702.88): "If this spell was cast from your hand, instead of putting it into
+	// your graveyard as it resolves, exile it and, at the beginning of your next
+	// upkeep, you may cast this card from exile without paying its mana cost."
+	// The runtime reads the rebound keyword on a resolving spell; the keyword
+	// itself carries no continuous effect.
+	ReboundStaticBody = simpleKeywordStaticBody("Rebound", Rebound)
+
+	// RetraceStaticBody is the reusable StaticAbilityBody for retrace (CR
+	// 702.81): "You may cast this card from your graveyard by discarding a land
+	// card in addition to paying its other costs." The runtime reads the retrace
+	// keyword on a card in its owner's graveyard to offer the alternative cast;
+	// the keyword itself carries no continuous effect.
+	RetraceStaticBody = simpleKeywordStaticBody("Retrace", Retrace)
+
+	// BandingStaticBody is the reusable StaticAbilityBody for banding (CR
+	// 702.22). It carries the Banding keyword so HasKeyword(Banding) reports
+	// true. Banding's combat damage-assignment-control rule is not simulated by
+	// the deterministic combat engine, so the keyword is inert in combat; it is
+	// modeled as a simple keyword purely so cards that have or grant banding are
+	// representable.
+	BandingStaticBody = simpleKeywordStaticBody("Banding", Banding)
+
+	// CompanionStaticBody is the reusable StaticAbilityBody for companion (CR
+	// 702.139): "Companion — <deckbuilding condition>." Companion is a static
+	// ability that functions from outside the game: it lets a player begin with
+	// the card in their sideboard as a designated companion and, once per game,
+	// pay {3} to put it into their hand. Both halves are deck-construction and
+	// sideboard mechanics the deterministic playtester does not simulate, so the
+	// keyword carries no continuous in-game effect; it is modeled as a simple
+	// keyword purely so companion cards are representable.
+	CompanionStaticBody = simpleKeywordStaticBody("Companion", Companion)
+
+	// PartnerWithStaticBody is the reusable StaticAbilityBody for the "Partner
+	// with <name>" keyword (CR 702.124e). Partner with names a specific partner
+	// card, grants the two cards the "partner commander" deck-construction
+	// permission, and gives each an enters trigger that lets the chosen player
+	// tutor the named partner into hand. Both halves are deck-construction and
+	// pair-fetch mechanics the deterministic playtester does not simulate, so the
+	// keyword carries no continuous in-game effect; it is modeled as a simple
+	// keyword purely so partner-with cards are representable.
+	PartnerWithStaticBody = simpleKeywordStaticBody("Partner with", PartnerWith)
+
+	// ChooseABackgroundStaticBody is the reusable StaticAbilityBody for the
+	// "Choose a Background" keyword (CR 702.124f): "You can have a Background as a
+	// second commander." The permission is a deck-construction mechanic the
+	// deterministic playtester does not simulate, so the keyword carries no
+	// continuous in-game effect; it is modeled as a simple keyword purely so
+	// choose-a-background cards are representable.
+	ChooseABackgroundStaticBody = simpleKeywordStaticBody("Choose a Background", ChooseABackground)
+
+	// PartnerStaticBody is the reusable StaticAbilityBody for the "Partner"
+	// keyword (CR 702.124a) and its "Partner—<quality>" restricted variants (CR
+	// 702.124f, e.g. "Partner—Survivors", "Partner—Character select"). Partner
+	// grants the two cards the "partner commander" deck-construction permission;
+	// the restricted variants only narrow which other partner cards a card may
+	// pair with. Both the permission and the pairing restrictions are
+	// deck-construction mechanics the deterministic playtester does not simulate,
+	// so the keyword carries no continuous in-game effect; it is modeled as a
+	// simple keyword purely so partner cards are representable.
+	PartnerStaticBody = simpleKeywordStaticBody("Partner", Partner)
+
+	// FuseStaticBody is the reusable StaticAbility for fuse (CR 702.102). It
+	// carries the Fuse keyword so HasKeyword(Fuse) reports true on each half of a
+	// fuse split card. The fused-casting permission itself is granted by the
+	// rules layer when it detects this keyword on a split card's faces.
+	FuseStaticBody = simpleKeywordStaticBody("Fuse", Fuse)
+
+	// JumpStartStaticBody is the reusable StaticAbility for jump-start (CR
+	// 702.134): "Jump-start (You may cast this card from your graveyard by
+	// discarding a card in addition to paying its other costs. Then exile this
+	// card.)" It carries the JumpStart keyword so HasKeyword(JumpStart) reports
+	// true on the card. The graveyard cast permission, the discard additional
+	// cost, and the exile-on-resolution are supplied by the rules layer when it
+	// detects this keyword on a card in its owner's graveyard.
+	JumpStartStaticBody = simpleKeywordStaticBody("Jump-start", JumpStart)
 )
 
 func simpleKeywordStaticBody(text string, keyword Keyword) StaticAbility {
@@ -268,7 +424,63 @@ var (
 	// Each printed instance is its own triggered ability, so multiple instances
 	// stack to -N/-N (CR 702.25c).
 	FlankingTriggeredBody = flankingTriggeredBody()
+
+	// TrainingTriggeredBody is the canonical triggered ability for training
+	// (CR 702.150): "Whenever this creature attacks with another creature with
+	// greater power, put a +1/+1 counter on this creature." The ability carries
+	// the Training keyword so HasKeyword(Training) reports true.
+	TrainingTriggeredBody = trainingTriggeredBody()
+
+	// StartEnginesTriggeredBody is the canonical triggered ability for the
+	// "Start your engines!" keyword (CR 702.179): "When this permanent enters,
+	// you get your speed. (If you have no speed, it starts at 1. ...)" Every
+	// printed instance is on a permanent, so it is modeled as an enters-the-
+	// battlefield trigger that runs the StartEngines primitive for the
+	// controller, which sets their speed to 1 if they have none. The recurring
+	// once-per-turn increase on opponent life loss is a built-in rule keyed off
+	// the player's speed, so the ability itself only seeds the starting speed.
+	StartEnginesTriggeredBody = startEnginesTriggeredBody()
 )
+
+func startEnginesTriggeredBody() TriggeredAbility {
+	return TriggeredAbility{
+		Text: "Start your engines!",
+		Trigger: TriggerCondition{
+			Type: TriggerWhen,
+			Pattern: TriggerPattern{
+				Event:  EventPermanentEnteredBattlefield,
+				Source: TriggerSourceSelf,
+			},
+		},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: StartEngines{
+				Player: ControllerReference(),
+			},
+		}}}.Ability(),
+	}
+}
+
+func trainingTriggeredBody() TriggeredAbility {
+	return TriggeredAbility{
+		Text:             "Training",
+		KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: Training}},
+		Trigger: TriggerCondition{
+			Type: TriggerWhenever,
+			Pattern: TriggerPattern{
+				Event:                           EventAttackerDeclared,
+				Source:                          TriggerSourceSelf,
+				AttacksWithGreaterPowerCreature: true,
+			},
+		},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: AddCounter{
+				Amount:      Fixed(1),
+				Object:      SourcePermanentReference(),
+				CounterKind: counter.PlusOnePlusOne,
+			},
+		}}}.Ability(),
+	}
+}
 
 func dethroneTriggeredBody() TriggeredAbility {
 	return TriggeredAbility{
@@ -421,10 +633,6 @@ type TriggerCondition struct {
 	// layer evaluates it with the trigger controller and triggering event bound.
 	InterveningCondition opt.V[Condition]
 
-	// InterveningIfControllerLifeAtLeast is a structured initial intervening-if
-	// condition for life-threshold triggers.
-	InterveningIfControllerLifeAtLeast int
-
 	// InterveningIfEventPermanentHadCounters is true for intervening-if clauses
 	// such as "if it had counters on it" on zone-change triggers. mtg/rules
 	// checks the event permanent's current object or last-known information.
@@ -443,6 +651,11 @@ type TriggerCondition struct {
 	// InterveningIfEventPermanentWasCast is true for "if it was cast" on enter
 	// triggers.
 	InterveningIfEventPermanentWasCast bool
+	// InterveningIfEventPermanentWasEvoked is true for the evoke sacrifice
+	// trigger's intervening "if its evoke cost was paid" condition (CR 702.74).
+	// The entering permanent event preserves whether the spell was cast for its
+	// Evoke alternative cost for both trigger-time and resolution-time checks.
+	InterveningIfEventPermanentWasEvoked bool
 	// InterveningIfEventPermanentWasCastByController is true for "if you cast
 	// it" and additionally requires the trigger controller to be the caster.
 	InterveningIfEventPermanentWasCastByController bool
@@ -590,6 +803,10 @@ type TriggerPattern struct {
 	ToZone        zone.Type
 	ExcludeToZone bool
 
+	// ExcludeFromZone matches a zone change only when its origin is NOT FromZone,
+	// expressing "put into <zone> from anywhere other than the battlefield".
+	ExcludeFromZone bool
+
 	MatchFaceDown bool
 	FaceDown      bool
 
@@ -607,6 +824,15 @@ type TriggerPattern struct {
 	DamageRecipientIsSource bool
 	// DamageSourceSelection restricts the permanent that dealt damage.
 	DamageSourceSelection Selection
+
+	// DamageSourceCaptured restricts an EventDamageDealt pattern to combat damage
+	// dealt by a specific permanent captured when the trigger was created, rather
+	// than by a static filter. It is only meaningful on an event-based delayed
+	// trigger whose DelayedTriggerDef carries a DamageSourceObject reference; the
+	// delayed-trigger matcher resolves that reference at schedule time and
+	// enforces the captured object identity. It must not be combined with a
+	// Source filter, Subject, or DamageSourceSelection.
+	DamageSourceCaptured bool
 
 	// AttackRecipient restricts attacker-declared events by what was attacked.
 	AttackRecipient AttackRecipientKind
@@ -630,7 +856,10 @@ type TriggerPattern struct {
 
 	SpellTargetsSource bool
 	SpellTargetAllow   TargetAllow
-	SpellTargetPattern opt.V[TargetPredicate]
+	// SpellTargetPattern restricts a spell-cast trigger to spells whose targets
+	// match this permanent/card Selection ("a spell that targets a creature you
+	// don't control"). It is matched through the canonical Selection matcher.
+	SpellTargetPattern opt.V[Selection]
 	RequireKickerPaid  bool
 	RequireHistoric    bool
 	// ExcludeManaAbility is required for EventAbilityActivated patterns until
@@ -639,6 +868,12 @@ type TriggerPattern struct {
 	// PlayerEventOrdinalThisTurn restricts a player event to its occurrence
 	// number during the current turn. Zero does not restrict the event.
 	PlayerEventOrdinalThisTurn int
+
+	// ExcludeFirstDrawInDrawStep skips an EventCardDrawn that is the drawing
+	// player's first draw during their own draw step ("except the first one they
+	// draw in each of their draw steps", Orcish Bowmasters, Xyris). It is only
+	// valid with Event == EventCardDrawn.
+	ExcludeFirstDrawInDrawStep bool
 
 	// OneOrMore coalesces matching events that happened as one batch into one
 	// trigger. The first matching event is retained as TriggerEvent.
@@ -663,6 +898,13 @@ type TriggerPattern struct {
 	// paid a mana ability's cost ("is tapped for mana"), CR 106.11a / 605.
 	RequireTappedForMana bool
 
+	// RequireProducedManaColor restricts a RequireTappedForMana trigger to taps
+	// whose produced mana included this type ("tap a permanent for {C}" requires
+	// colorless). It is empty for the unrestricted "for mana" wording, which
+	// matches a tap producing any type. It is checked against the triggering
+	// event's ProducedManaColors.
+	RequireProducedManaColor mana.Color
+
 	// UnionEvent joins a second event kind to Event under the pattern's shared
 	// subject and player filters, expressing "Whenever you create or sacrifice a
 	// token" (CR 603.2). When set, the trigger fires if the event kind equals
@@ -675,7 +917,46 @@ type TriggerPattern struct {
 	// tied for most life", dethrone CR 702.103). It is only valid with
 	// Event == EventAttackerDeclared.
 	AttackedPlayerHasMostLife bool
+
+	// AttacksWithGreaterPowerCreature restricts an EventAttackerDeclared trigger
+	// to combats where another creature with power greater than the ability's
+	// source is also attacking ("attacks with another creature with greater
+	// power", training CR 702.150). It is only valid with
+	// Event == EventAttackerDeclared and Source == TriggerSourceSelf.
+	AttacksWithGreaterPowerCreature bool
+
+	// AttackWhileSaddled restricts an EventAttackerDeclared trigger to combats
+	// where the ability's source is saddled ("attacks while saddled", saddle
+	// CR 702.166). It is only valid with Event == EventAttackerDeclared.
+	AttackWhileSaddled bool
+
+	// CastDuringTurn restricts an EventSpellCast trigger by whose turn the spell
+	// was cast on, relative to the ability's controller ("Whenever you cast a
+	// spell during your turn" / "during an opponent's turn"). TriggerTurnAny
+	// imposes no restriction. It is only valid with Event == EventSpellCast.
+	CastDuringTurn TriggerTurnRelation
+
+	// ClassBecameLevel restricts an EventClassLevelGained trigger to the level
+	// the Class became ("When this Class becomes level N"). Zero imposes no
+	// restriction; a positive value is only valid with
+	// Event == EventClassLevelGained and Source == TriggerSourceSelf.
+	ClassBecameLevel int
 }
+
+// TriggerTurnRelation restricts a trigger by whose turn the triggering event
+// occurred on, relative to the ability's controller.
+type TriggerTurnRelation int
+
+const (
+	// TriggerTurnAny imposes no turn restriction.
+	TriggerTurnAny TriggerTurnRelation = iota
+	// TriggerTurnYours restricts to the controller's own turn ("during your
+	// turn").
+	TriggerTurnYours
+	// TriggerTurnNotYours restricts to a turn that is not the controller's
+	// ("during an opponent's turn").
+	TriggerTurnNotYours
+)
 
 // TimingRestriction constrains when an activated ability can be used.
 type TimingRestriction int
@@ -755,6 +1036,13 @@ const (
 	// token that's a copy of that permanent." — Second Harvest). It is the only
 	// source that reads Group; the others read Object or the source card.
 	TokenCopySourceEachInGroup
+	// TokenCopySourceChosenFromTriggerBatch copies one permanent chosen by the
+	// controller from the set of permanents that triggered the resolving ability
+	// ("create a token that's a copy of one of them." on a "Whenever one or more
+	// ... enter" trigger, Twilight Diviner). The candidate set is the resolving
+	// ability's triggering event batch filtered by its own trigger pattern; it
+	// reads neither Object nor Group.
+	TokenCopySourceChosenFromTriggerBatch
 )
 
 // TokenCopySpec describes a token that starts as a copy of another object/card,
@@ -876,7 +1164,7 @@ func ScavengeActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 				MaxTargets: 1,
 				Constraint: "target creature",
 				Allow:      TargetAllowPermanent,
-				Predicate:  TargetPredicate{PermanentTypes: []types.Card{types.Creature}},
+				Selection:  opt.Val(Selection{RequiredTypesAny: []types.Card{types.Creature}}),
 			}},
 			Sequence: []Instruction{{
 				Primitive: AddCounter{
@@ -945,56 +1233,36 @@ type SearchSpec struct {
 	// an unrestricted exact-card search must find one when the library is nonempty.
 	FailToFindPolicy SearchFailToFindPolicy
 
-	CardType opt.V[types.Card]
-	// CardTypesAny matches cards having any listed card type, such as an
-	// "artifact or enchantment card" tutor.
-	CardTypesAny []types.Card
-	Supertype    opt.V[types.Super]
-
-	// Permanent restricts matches to permanent cards (cards with at least one
-	// permanent card type), modeling a "permanent card" library search such as
-	// "search your library for a Rebel permanent card". It composes with
-	// Supertype and SubtypesAny but is independent of CardType, which names a
-	// single card type rather than the permanent/non-permanent distinction.
-	Permanent bool
-
-	SubtypesAny []types.Sub
-
-	// ColorsAny, when non-empty, restricts matches to cards having at least one
-	// of the listed colors, modeling a "<color> card" library search such as
-	// "search your library for a green creature card" (Green Sun's Zenith). It
-	// composes with CardType, Supertype, SubtypesAny, and MaxManaValue.
-	ColorsAny []color.Color
-
-	// MaxManaValue, when present, restricts matches to cards whose mana value is
-	// less than or equal to the value, modeling a "with mana value N or less"
-	// rider on a library search.
-	MaxManaValue opt.V[int]
+	// Filter is the canonical predicate every matched library card must satisfy.
+	// It carries the search's card-type, permanent-card, supertype, subtype,
+	// color, mana-value, power, and toughness riders as a single game.Selection,
+	// matched against a card in its library zone. An empty Filter matches every
+	// library card (a plain "search your library for a card" tutor). The
+	// dedicated MaxManaValueFromX and Name fields below carry the riders no
+	// fixed Selection field can express.
+	Filter Selection
 
 	// MaxManaValueFromX, when true, restricts matches to cards whose mana value
 	// is less than or equal to the spell's chosen {X}, modeling the "with mana
 	// value X or less" rider on an X-cost library-search tutor (Green Sun's
 	// Zenith, Chord of Calling, Wargate). The bound is resolved from the
 	// resolving stack object's X as the search runs, so it is mutually exclusive
-	// with the fixed MaxManaValue.
+	// with a fixed Filter.ManaValue bound.
 	MaxManaValueFromX bool
-
-	// MaxPower and MinPower, when present, restrict matches to cards whose power
-	// is less than or equal to (MaxPower) or greater than or equal to (MinPower)
-	// the value, modeling a "with power N or less" / "with power N or greater"
-	// rider on a creature-card library search (Imperial Recruiter, Recruiter of
-	// the Guard). A card with no defined power, or a power defined by a
-	// characteristic-defining ability (*), never matches a power bound.
-	MaxPower opt.V[int]
-	MinPower opt.V[int]
-
-	// MaxToughness and MinToughness mirror MaxPower and MinPower for the card's
-	// toughness ("with toughness N or less" / "with toughness N or greater").
-	MaxToughness opt.V[int]
-	MinToughness opt.V[int]
 
 	Reveal       bool
 	EntersTapped bool
+
+	// RevealOnly, when true, makes the search find and reveal a single matching
+	// card but leave it in the library with no destination move, publishing the
+	// found card under PublishLinked so a following ConditionalDestinationPlace
+	// can route it. It backs the search half of "Search your library for a Plains
+	// card and reveal it. ... you may put that card onto the battlefield ..."
+	// (Scholar of New Horizons), where the placement and the closing shuffle are
+	// separate instructions. RevealOnly requires Destination zone.None, Reveal
+	// true, a single searching player, and no split destination, tapped entry, or
+	// controller rider.
+	RevealOnly bool
 
 	// SplitDestination, when present, makes the search distribute the found
 	// cards across two distinct single-card destination slots instead of sending
@@ -1025,18 +1293,8 @@ type SearchSpec struct {
 
 // IsUnrestricted reports whether every library card matches the search filter.
 func (s SearchSpec) IsUnrestricted() bool {
-	return !s.CardType.Exists &&
-		len(s.CardTypesAny) == 0 &&
-		!s.Supertype.Exists &&
-		!s.Permanent &&
-		len(s.SubtypesAny) == 0 &&
-		len(s.ColorsAny) == 0 &&
-		!s.MaxManaValue.Exists &&
+	return s.Filter.Empty() &&
 		!s.MaxManaValueFromX &&
-		!s.MaxPower.Exists &&
-		!s.MinPower.Exists &&
-		!s.MaxToughness.Exists &&
-		!s.MinToughness.Exists &&
 		!s.SharedSubtype &&
 		s.Name == ""
 }
@@ -1103,15 +1361,21 @@ type TargetSpec struct {
 	// "creature or planeswalker", "player").
 	Constraint string
 
-	// Allow and Predicate provide structured target legality for generated card
-	// definitions. Constraint remains for display and as a legacy fallback.
-	Allow     TargetAllow
+	// Allow describes the broad categories this target may choose from.
+	// Constraint remains for display and as a legacy fallback.
+	Allow TargetAllow
+
+	// Predicate carries the stack-object and spell-only qualifiers for
+	// stack-object targets (kinds, controller, mana value, spell card
+	// types/colors/supertypes, source types). Permanent, card, and player
+	// characteristic predicates live on Selection. A combined "spell or
+	// permanent" target sets both: Predicate gates its stack-object alternative
+	// and Selection gates its permanent alternative.
 	Predicate TargetPredicate
 
-	// Selection is the shared Selection-based form of the structured target
-	// predicate. When present it supersedes Predicate; the two must not both be
-	// specified. Predicate remains for existing cards and is adapted to a
-	// Selection by the rules matcher when Selection is absent.
+	// Selection is the canonical permanent/card/player characteristic predicate
+	// for this target. It is the sole characteristic matcher; the runtime
+	// permanent, card, and player legality tests read it directly.
 	Selection opt.V[Selection]
 
 	// TargetZone restricts card targets to one zone. It is meaningful only when
@@ -1123,6 +1387,13 @@ type TargetSpec struct {
 	// choosers, structured "you" predicates are evaluated relative to the
 	// choosing player.
 	Chooser TargetChooser
+
+	// DistinctFromPriorTargets requires every object chosen for this spec to
+	// differ from every object already chosen for the preceding target specs of
+	// the same spell or ability ("... fights another target creature"). It is
+	// meaningful only for specs after the first; the default false preserves the
+	// ordinary rule that distinct target specs may otherwise overlap.
+	DistinctFromPriorTargets bool
 }
 
 // TargetChooser identifies who chooses a target slot during announcement.
@@ -1147,6 +1418,12 @@ type Mode struct {
 
 	// Sequence is the typed instruction sequence this mode produces.
 	Sequence []Instruction
+
+	// Cost is the additional mana cost paid to choose this mode when casting a
+	// Spree spell (CR 702.171). It is set only on Spree spell modes; choosing a
+	// mode adds its Cost to the spell's total cost. An empty value means the mode
+	// has no additional cost.
+	Cost opt.V[cost.Mana]
 }
 
 // Ability creates ordinary non-modal ability content from this mode.

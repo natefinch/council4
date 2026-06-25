@@ -138,6 +138,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordTriggeredLowering(&fabricateAbility, ability, syntax), true, nil
 	}
+	if hideawayAbility, ok, diag := lowerHideawayAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordTriggeredLowering(&hideawayAbility, ability, syntax), true, nil
+	}
 	if soulshiftAbility, ok, diag := lowerSoulshiftAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -156,11 +162,23 @@ func lowerKeywordDispatch(
 		}
 		return keywordTriggeredLowering(&dethroneAbility, ability, syntax), true, nil
 	}
+	if startEnginesAbility, ok, diag := lowerStartEnginesAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordTriggeredLowering(&startEnginesAbility, ability, syntax), true, nil
+	}
 	if flankingAbility, ok, diag := lowerFlankingAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
 		}
 		return keywordTriggeredLowering(&flankingAbility, ability, syntax), true, nil
+	}
+	if trainingAbility, ok, diag := lowerTrainingAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordTriggeredLowering(&trainingAbility, ability, syntax), true, nil
 	}
 	if livingWeaponAbility, ok, diag := lowerLivingWeaponAbility(ability, syntax); ok {
 		if diag != nil {
@@ -173,6 +191,12 @@ func lowerKeywordDispatch(
 			return abilityLowering{}, true, diag
 		}
 		return keywordActivatedLowering(&equipAbility, ability, syntax), true, nil
+	}
+	if reconfigureAbility, ok, diag := lowerReconfigureAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordActivatedLowering(&reconfigureAbility, ability, syntax), true, nil
 	}
 	if cyclingAbility, ok, diag := lowerCyclingAbility(ability, syntax); ok {
 		if diag != nil {
@@ -197,6 +221,18 @@ func lowerKeywordDispatch(
 			return abilityLowering{}, true, diag
 		}
 		return keywordActivatedLowering(&outlastAbility, ability, syntax), true, nil
+	}
+	if saddleAbility, ok, diag := lowerSaddleAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordActivatedLowering(&saddleAbility, ability, syntax), true, nil
+	}
+	if crewAbility, ok, diag := lowerCrewAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordActivatedLowering(&crewAbility, ability, syntax), true, nil
 	}
 	if eternalizeAbility, ok, diag := lowerEternalizeAbility(creatureSubtypes, ability, syntax); ok {
 		if diag != nil {
@@ -233,6 +269,18 @@ func lowerKeywordDispatch(
 			return abilityLowering{}, true, diag
 		}
 		return keywordStaticLowering(&flashbackAbility, ability, syntax), true, nil
+	}
+	if evokeLowering, ok, diag := lowerEvokeAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return evokeLowering, true, nil
+	}
+	if spectacleLowering, ok, diag := lowerSpectacleAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return spectacleLowering, true, nil
 	}
 	if dredgeAbility, ok, diag := lowerDredgeAbility(ability, syntax); ok {
 		if diag != nil {
@@ -416,11 +464,78 @@ func lowerDethroneAbility(
 	return game.DethroneTriggeredBody, true, nil
 }
 
+// lowerStartEnginesAbility lowers a printed "Start your engines!" (CR 702.179)
+// keyword to its canonical enters-the-battlefield triggered ability, which runs
+// the StartEngines primitive to seed the controller's speed to 1 if they have
+// none. The keyword is printed with reminder text (stripped before lowering),
+// so the lowering expands the bare keyword to the reusable typed body. Every
+// printed instance is on a permanent, so the enters-the-battlefield trigger
+// applies universally. It supports only the exact keyword with no other rules
+// text.
+func lowerStartEnginesAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.TriggeredAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordStartEngines {
+		return game.TriggeredAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterNone ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported "+keyword.Name+" ability",
+			"the executable source backend supports only the exact "+keyword.Name+" keyword",
+		)
+	}
+	return game.StartEnginesTriggeredBody, true, nil
+}
+
 // lowerFlankingAbility lowers a printed Flanking (CR 702.25) keyword to its
 // canonical becomes-blocked triggered ability. Flanking is printed bare (its
 // reminder text is stripped), so the lowering expands the keyword to the
 // reusable typed body. It supports only the exact keyword with no other rules
 // text.
+// lowerTrainingAbility lowers a printed Training (CR 702.150) keyword to its
+// canonical attacks-with-greater-power triggered ability. Training is printed
+// bare (its reminder text is stripped), so the lowering expands the keyword to
+// the reusable typed body. It supports only the exact keyword with no other
+// rules text.
+func lowerTrainingAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.TriggeredAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordTraining {
+		return game.TriggeredAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterNone ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported "+keyword.Name+" ability",
+			"the executable source backend supports only the exact "+keyword.Name+" keyword",
+		)
+	}
+	return game.TrainingTriggeredBody, true, nil
+}
+
 func lowerFlankingAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
@@ -643,7 +758,7 @@ func enchantTargetSpec(target compiler.CompiledEnchantTarget) (game.TargetSpec, 
 		return spec, true
 	case target.Opponent:
 		spec.Allow = game.TargetAllowPlayer
-		spec.Predicate.Player = game.PlayerOpponent
+		spec.Selection = opt.Val(game.Selection{Player: game.PlayerOpponent})
 		spec.Constraint = "opponent"
 		return spec, true
 	case target.Permanent:
@@ -655,10 +770,18 @@ func enchantTargetSpec(target compiler.CompiledEnchantTarget) (game.TargetSpec, 
 	switch {
 	case len(target.Subtypes) == 0:
 		spec.Constraint = enchantConstraintText(target)
-		spec.Predicate.PermanentTypes = slices.Clone(target.CardTypes)
+		selection := game.Selection{RequiredTypesAny: slices.Clone(target.CardTypes)}
+		if target.YouControl {
+			selection.Controller = game.ControllerYou
+		}
+		spec.Selection = opt.Val(selection)
 	case len(target.CardTypes) == 0:
 		spec.Constraint = enchantConstraintText(target)
-		spec.Predicate.Subtypes = slices.Clone(target.Subtypes)
+		selection := game.Selection{SubtypesAny: slices.Clone(target.Subtypes)}
+		if target.YouControl {
+			selection.Controller = game.ControllerYou
+		}
+		spec.Selection = opt.Val(selection)
 	default:
 		// A union mixing card types and subtypes ("creature or Vehicle") is a
 		// disjunction across two characteristic families, which a single
@@ -667,12 +790,16 @@ func enchantTargetSpec(target compiler.CompiledEnchantTarget) (game.TargetSpec, 
 		// runtime permanent-type matcher re-parses a non-empty Constraint and
 		// cannot recognize a subtype as a card type, so an empty Constraint keeps
 		// the Selection authoritative for attachment legality.
-		spec.Selection = opt.Val(game.Selection{
+		selection := game.Selection{
 			AnyOf: []game.Selection{
 				{RequiredTypesAny: slices.Clone(target.CardTypes)},
 				{SubtypesAny: slices.Clone(target.Subtypes)},
 			},
-		})
+		}
+		if target.YouControl {
+			selection.Controller = game.ControllerYou
+		}
+		spec.Selection = opt.Val(selection)
 	}
 	return spec, true
 }
@@ -688,19 +815,24 @@ func enchantConstraintText(target compiler.CompiledEnchantTarget) string {
 	for _, subtype := range target.Subtypes {
 		words = append(words, strings.ToLower(string(subtype)))
 	}
-	return strings.Join(words, " or ")
+	text := strings.Join(words, " or ")
+	if target.YouControl {
+		text += " you control"
+	}
+	return text
 }
 
 func lowerEquipAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (game.ActivatedAbility, bool, *shared.Diagnostic) {
-	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordEquip {
+	if len(ability.Content.Keywords) != 1 ||
+		ability.Content.Keywords[0].Kind != parser.KeywordEquip ||
+		ability.Kind != compiler.AbilityStatic {
 		return game.ActivatedAbility{}, false, nil
 	}
 	keyword := ability.Content.Keywords[0]
 	if keyword.ParameterKind != parser.KeywordParameterManaCost ||
-		ability.Kind != compiler.AbilityStatic ||
 		ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Targets) != 0 ||
@@ -885,18 +1017,96 @@ func lowerOutlastAbility(
 	return game.OutlastActivatedAbility(slices.Clone(keyword.ManaCost)), true, nil
 }
 
+// lowerSaddleAbility lowers a Saddle N keyword to its canonical activated
+// ability (CR 702.166): "Tap any number of other creatures you control with
+// total power N or more: This Mount becomes saddled until end of turn. Saddle
+// only as a sorcery." It mirrors lowerOutlastAbility: only an isolated,
+// integer-parameterized Saddle keyword is supported.
+func lowerSaddleAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.ActivatedAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordSaddle {
+		return game.ActivatedAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterInteger ||
+		keyword.Integer < 1 ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Saddle ability",
+			"the executable source backend supports only exact Saddle with a positive integer",
+		)
+	}
+	if !keywordOnlyCovered(syntax, keyword) {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Saddle ability",
+			"the executable source backend supports only exact Saddle with a positive integer",
+		)
+	}
+	return game.SaddleActivatedAbility(keyword.Integer), true, nil
+}
+
+// lowerCrewAbility lowers a Crew N keyword to its canonical activated ability
+// (CR 702.122): "Tap any number of creatures you control with total power N or
+// more: This Vehicle becomes an artifact creature until end of turn." It mirrors
+// lowerSaddleAbility: only an isolated, integer-parameterized Crew keyword is
+// supported.
+func lowerCrewAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.ActivatedAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordCrew {
+		return game.ActivatedAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterInteger ||
+		keyword.Integer < 1 ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Crew ability",
+			"the executable source backend supports only exact Crew with a positive integer",
+		)
+	}
+	if !keywordOnlyCovered(syntax, keyword) {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Crew ability",
+			"the executable source backend supports only exact Crew with a positive integer",
+		)
+	}
+	return game.CrewActivatedAbility(keyword.Integer), true, nil
+}
+
 // landcyclingKeywordKinds maps each typed landcycling keyword to the library
 // search filter its reminder text describes. Plain Landcycling finds any land;
 // Basic landcycling finds a basic land; each typed variant finds a basic land
 // of its own land type.
 var landcyclingKeywordKinds = map[parser.KeywordKind]game.SearchSpec{
-	parser.KeywordLandcycling:      {CardType: opt.Val(types.Land)},
-	parser.KeywordBasicLandcycling: {CardType: opt.Val(types.Land), Supertype: opt.Val(types.Basic)},
-	parser.KeywordPlainscycling:    {SubtypesAny: []types.Sub{types.Plains}},
-	parser.KeywordIslandcycling:    {SubtypesAny: []types.Sub{types.Island}},
-	parser.KeywordSwampcycling:     {SubtypesAny: []types.Sub{types.Swamp}},
-	parser.KeywordMountaincycling:  {SubtypesAny: []types.Sub{types.Mountain}},
-	parser.KeywordForestcycling:    {SubtypesAny: []types.Sub{types.Forest}},
+	parser.KeywordLandcycling:      {Filter: game.Selection{RequiredTypes: []types.Card{types.Land}}},
+	parser.KeywordBasicLandcycling: {Filter: game.Selection{RequiredTypes: []types.Card{types.Land}, Supertypes: []types.Super{types.Basic}}},
+	parser.KeywordPlainscycling:    {Filter: game.Selection{SubtypesAny: []types.Sub{types.Plains}}},
+	parser.KeywordIslandcycling:    {Filter: game.Selection{SubtypesAny: []types.Sub{types.Island}}},
+	parser.KeywordSwampcycling:     {Filter: game.Selection{SubtypesAny: []types.Sub{types.Swamp}}},
+	parser.KeywordMountaincycling:  {Filter: game.Selection{SubtypesAny: []types.Sub{types.Mountain}}},
+	parser.KeywordForestcycling:    {Filter: game.Selection{SubtypesAny: []types.Sub{types.Forest}}},
 }
 
 func lowerLandcyclingAbility(
@@ -1042,6 +1252,92 @@ func lowerFlashbackAbility(
 	}, true, nil
 }
 
+// lowerEvokeAbility lowers the Evoke keyword (CR 702.74) into two lowered
+// pieces: an "Evoke" alternative spell cost the payment machinery auto-offers at
+// cast, and the canonical evoke-sacrifice triggered ability that sacrifices the
+// permanent when it enters if its evoke cost was paid. Only the exact keyword
+// with a fixed mana cost and no other rules text is supported; the em-dash
+// "Evoke—<non-mana cost>" variant carries no mana parameter and stays
+// unsupported.
+func lowerEvokeAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (abilityLowering, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordEvoke {
+		return abilityLowering{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	manaCost, fixed := fixedKeywordManaCost(keyword)
+	if !fixed ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return abilityLowering{}, true, executableDiagnostic(
+			ability,
+			"unsupported Evoke ability",
+			"the executable source backend supports only exact Evoke with a fixed mana cost",
+		)
+	}
+	return abilityLowering{
+		triggeredAbility: opt.Val(game.EvokeSacrificeTriggeredAbility()),
+		alternativeCosts: []cost.Alternative{{
+			Label:    "Evoke",
+			Mechanic: cost.AlternativeMechanicEvoke,
+			ManaCost: opt.Val(manaCost),
+		}},
+		consumed:    semanticConsumption{keywords: 1},
+		sourceSpans: keywordSpans(ability, syntax),
+	}, true, nil
+}
+
+// lowerSpectacleAbility lowers the Spectacle keyword (CR 702.107): "Spectacle
+// <cost>" lets the spell be cast for its spectacle cost rather than its mana
+// cost if an opponent lost life this turn. It produces a single conditional
+// alternative cost; unlike Evoke there is no entry sacrifice trigger. Only the
+// exact keyword with a fixed mana cost and no other rules text is supported;
+// anything else fails closed.
+func lowerSpectacleAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (abilityLowering, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordSpectacle {
+		return abilityLowering{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	manaCost, fixed := fixedKeywordManaCost(keyword)
+	if !fixed ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return abilityLowering{}, true, executableDiagnostic(
+			ability,
+			"unsupported Spectacle ability",
+			"the executable source backend supports only exact Spectacle with a fixed mana cost",
+		)
+	}
+	return abilityLowering{
+		alternativeCosts: []cost.Alternative{{
+			Label:     "Spectacle",
+			ManaCost:  opt.Val(manaCost),
+			Condition: cost.AlternativeConditionOpponentLostLifeThisTurn,
+		}},
+		consumed:    semanticConsumption{keywords: 1},
+		sourceSpans: keywordSpans(ability, syntax),
+	}, true, nil
+}
+
 // lowerDredgeAbility lowers the Dredge N keyword (CR 702.52) to its canonical
 // graveyard-functioning static ability. While the card is in its owner's
 // graveyard, the runtime offers to replace one of that player's draws with
@@ -1183,6 +1479,7 @@ func spanContains(outer, inner shared.Span) bool {
 func mixedStaticKeywordImplemented(keyword game.Keyword) bool {
 	switch keyword {
 	case game.Deathtouch,
+		game.Banding,
 		game.Defender,
 		game.DoubleStrike,
 		game.FirstStrike,
@@ -1206,7 +1503,8 @@ func mixedStaticKeywordImplemented(keyword game.Keyword) bool {
 		game.Unleash,
 		game.Fear,
 		game.Skulk,
-		game.Intimidate:
+		game.Intimidate,
+		game.ReadAhead:
 		return true
 	default:
 		return false
@@ -1336,7 +1634,7 @@ func lowerKeywordAbility(
 	}
 	bodies := make([]loweredStaticAbility, 0, len(ability.Content.Keywords))
 	for _, keyword := range ability.Content.Keywords {
-		if keyword.ParameterKind != parser.KeywordParameterNone {
+		if keyword.ParameterKind != parser.KeywordParameterNone || keyword.WardCost != nil {
 			if body, ok, diag := lowerParameterizedKeywordToStaticAbility(ability, keyword); ok {
 				if diag != nil {
 					return nil, diag
@@ -1390,8 +1688,10 @@ func rulesFreeAbilityWordLabel(label string) bool {
 	switch label {
 	case "",
 		"Addendum",
+		"Bloodrush",
 		"Celebration",
 		"Channel",
+		"Converge",
 		"Corrupted",
 		"Coven",
 		"Delirium",
@@ -1401,6 +1701,7 @@ func rulesFreeAbilityWordLabel(label string) bool {
 		"Flurry",
 		"Formidable",
 		"Hellbent",
+		"History Teacher",
 		"Inspired",
 		"Kinship",
 		"Lieutenant",
@@ -1412,7 +1713,10 @@ func rulesFreeAbilityWordLabel(label string) bool {
 		"Raid",
 		"Revolt",
 		"Survival",
+		"Teleport",
 		"Threshold",
+		"Those Who Came Before",
+		"Unlock Ability",
 		"Vivid",
 		"Void",
 		"Will of the council":
@@ -1475,8 +1779,8 @@ func lowerParameterizedKeywordToStaticAbility(
 ) (game.StaticAbility, bool, *shared.Diagnostic) {
 	switch keyword.Kind {
 	case parser.KeywordWard:
-		if keyword.ParameterKind == parser.KeywordParameterManaCost && len(keyword.ManaCost) > 0 {
-			return game.WardStaticAbility(slices.Clone(keyword.ManaCost)), true, nil
+		if body, ok := lowerWardKeyword(keyword); ok {
+			return body, true, nil
 		}
 	case parser.KeywordProtection:
 		if keyword.ProtectionKnown {
@@ -1490,6 +1794,25 @@ func lowerParameterizedKeywordToStaticAbility(
 	return game.StaticAbility{}, false, nil
 }
 
+// lowerWardKeyword lowers a Ward keyword into its runtime static ability. A
+// composite or non-mana Ward carries its payment in WardCost, which lowers
+// through the shared activation-cost kernel into the ward's mana and additional
+// costs; a mana-only Ward uses its mana parameter. It fails closed when the
+// cost has no recognized component so an unsupported Ward stays unsupported.
+func lowerWardKeyword(keyword compiler.CompiledKeyword) (game.StaticAbility, bool) {
+	if keyword.WardCost != nil {
+		manaCost, additionalCosts, ok := lowerActivationCostComponents("", keyword.WardCost)
+		if !ok || (len(manaCost) == 0 && len(additionalCosts) == 0) {
+			return game.StaticAbility{}, false
+		}
+		return game.WardStaticAbilityWithCosts(manaCost, additionalCosts), true
+	}
+	if keyword.ParameterKind == parser.KeywordParameterManaCost && len(keyword.ManaCost) > 0 {
+		return game.WardStaticAbility(slices.Clone(keyword.ManaCost)), true
+	}
+	return game.StaticAbility{}, false
+}
+
 func lowerParameterizedStaticKeyword(keyword compiler.CompiledKeyword) (game.StaticAbility, bool) {
 	body := game.StaticAbility{Text: keyword.Name + " " + keyword.Parameter}
 	switch keyword.Kind {
@@ -1499,6 +1822,12 @@ func lowerParameterizedStaticKeyword(keyword compiler.CompiledKeyword) (game.Sta
 			return game.StaticAbility{}, false
 		}
 		body.KeywordAbilities = []game.KeywordAbility{game.KickerKeyword{Cost: manaCost}}
+	case parser.KeywordMultikicker:
+		manaCost, ok := fixedKeywordManaCost(keyword)
+		if !ok {
+			return game.StaticAbility{}, false
+		}
+		body.KeywordAbilities = []game.KeywordAbility{game.KickerKeyword{Cost: manaCost, Multi: true}}
 	case parser.KeywordMadness:
 		manaCost, ok := fixedKeywordManaCost(keyword)
 		if !ok {

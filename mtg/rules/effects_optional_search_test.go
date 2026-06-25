@@ -7,7 +7,6 @@ import (
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
-	"github.com/natefinch/council4/opt"
 )
 
 // optionalSearchAgent answers the optional "Apply optional effect?" may-choice
@@ -51,7 +50,9 @@ func TestOptionalSearchDeclineLeavesLibrary(t *testing.T) {
 			Spec: game.SearchSpec{
 				SourceZone:  zone.Library,
 				Destination: zone.Hand,
-				CardType:    opt.Val(types.Creature),
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
 			},
 		},
 	}})
@@ -78,7 +79,9 @@ func TestOptionalSearchAcceptFindsCard(t *testing.T) {
 			Spec: game.SearchSpec{
 				SourceZone:  zone.Library,
 				Destination: zone.Hand,
-				CardType:    opt.Val(types.Creature),
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
 			},
 		},
 	}})

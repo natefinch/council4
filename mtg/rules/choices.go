@@ -111,7 +111,7 @@ func fallbackChoice(request game.ChoiceRequest) []int {
 			return nil
 		}
 		return []int{request.Options[0].Index}
-	case game.ChoicePayment, game.ChoiceScry, game.ChoiceSurveil, game.ChoiceZoneSelection, game.ChoiceSearch, game.ChoiceModal, game.ChoiceResolution, game.ChoiceProliferate, game.ChoicePlayer, game.ChoiceManifest, game.ChoiceDig:
+	case game.ChoicePayment, game.ChoiceScry, game.ChoiceSurveil, game.ChoiceZoneSelection, game.ChoiceSearch, game.ChoiceModal, game.ChoiceResolution, game.ChoiceProliferate, game.ChoicePlayer, game.ChoiceManifest, game.ChoiceDig, game.ChoiceVote:
 		if len(request.Options) == 0 || request.MaxChoices == 0 {
 			return nil
 		}
@@ -133,6 +133,9 @@ func choiceSelectionValid(request game.ChoiceRequest, selected []int) bool {
 		return false
 	}
 	if len(selected) < request.MinChoices || len(selected) > request.MaxChoices {
+		return false
+	}
+	if request.MaxTotalManaValue.Exists && !choiceTotalManaValueValid(request, selected) {
 		return false
 	}
 	switch request.Kind {
@@ -193,6 +196,33 @@ func choiceOptionExists(request game.ChoiceRequest, index int) bool {
 		}
 	}
 	return false
+}
+
+// choiceTotalManaValueValid reports whether the combined mana value of the
+// selected options stays within request.MaxTotalManaValue. Options without card
+// info contribute zero. Indices that name no option are rejected so an invalid
+// index can never bypass the cap by contributing nothing.
+func choiceTotalManaValueValid(request game.ChoiceRequest, selected []int) bool {
+	total := 0
+	for _, index := range selected {
+		option, ok := choiceOption(request, index)
+		if !ok {
+			return false
+		}
+		if option.Card.Exists {
+			total += option.Card.Val.ManaValue
+		}
+	}
+	return total <= request.MaxTotalManaValue.Val
+}
+
+func choiceOption(request game.ChoiceRequest, index int) (game.ChoiceOption, bool) {
+	for _, option := range request.Options {
+		if option.Index == index {
+			return option, true
+		}
+	}
+	return game.ChoiceOption{}, false
 }
 
 func mayChoiceRequest(player game.PlayerID, prompt string) game.ChoiceRequest {

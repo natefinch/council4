@@ -55,7 +55,7 @@ func lowerEnterTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary, detail)
 	}
 	body, bodySyntax, triggerOptional := prepared.body, prepared.syntax, prepared.optional
-	content, diagnostic := lowerTriggerBodyContent(cardName, body.Content, body.Optional, &bodySyntax, pattern.Event)
+	content, diagnostic := lowerTriggerBodyContent(cardName, body.Content, body.Optional, &bodySyntax, pattern)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}
@@ -130,7 +130,7 @@ func lowerLifeDamageTrigger(
 		body.Content,
 		body.Optional,
 		&bodySyntax,
-		pattern.Event,
+		pattern,
 	)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
@@ -150,6 +150,9 @@ func lowerLifeDamageTrigger(
 
 func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 1 {
+		return game.AbilityContent{}, false
+	}
+	if ctx.triggerOneOrMore {
 		return game.AbilityContent{}, false
 	}
 	if !referencesBindTo(ctx.content.References, compiler.ReferenceBindingEventCard, 0) {
@@ -179,6 +182,10 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 			return game.AbilityContent{}, false
 		}
 	case compiler.EffectExile:
+	case compiler.EffectPut:
+		if effect.ToZone != zone.Battlefield || ctx.optional {
+			return game.AbilityContent{}, false
+		}
 	case compiler.EffectCast:
 		if effect.FromZone != zone.Graveyard ||
 			effect.Duration != compiler.DurationUntilYourNextTurn ||
@@ -226,6 +233,13 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 				Duration: game.DurationUntilEndOfYourNextTurn,
 			},
 		}}}.Ability(), true
+	case compiler.EffectPut:
+		return game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.PutOnBattlefield{
+				Source:      game.CardBattlefieldSource(eventCard),
+				EntryTapped: effect.EntersTapped,
+			},
+		}}}.Ability(), true
 	case compiler.EffectExile:
 		return game.Mode{Sequence: []game.Instruction{{
 			Primitive: game.MoveCard{
@@ -237,6 +251,52 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 	default:
 		return game.AbilityContent{}, false
 	}
+}
+
+// lowerEventCardBatchReanimation lowers a coalesced one-or-more zone-change
+// trigger's "put/return them onto the battlefield" clause into a batch
+// reanimation of exactly the triggering cards. The plural "them" binds to the
+// whole simultaneous batch (ReferenceBindingEventCard under a OneOrMore
+// trigger), which the singular CardReferenceEvent of lowerEventCardEffect cannot
+// represent, so it emits a MassReturnFromGraveyard restricted to the trigger
+// batch (Hedge Shredder).
+func lowerEventCardBatchReanimation(ctx contentCtx) (game.AbilityContent, bool) {
+	if !ctx.triggerOneOrMore || ctx.triggerToZone != zone.Graveyard || ctx.optional {
+		return game.AbilityContent{}, false
+	}
+	if len(ctx.content.Effects) != 1 {
+		return game.AbilityContent{}, false
+	}
+	if !referencesBindTo(ctx.content.References, compiler.ReferenceBindingEventCard, 0) {
+		return game.AbilityContent{}, false
+	}
+	reference := ctx.content.References[0]
+	if reference.Kind != compiler.ReferencePronoun ||
+		reference.Pronoun != compiler.ReferencePronounThem {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Negated || effect.DelayedTiming != 0 || effect.ToZone != zone.Battlefield {
+		return game.AbilityContent{}, false
+	}
+	switch effect.Kind {
+	case compiler.EffectPut, compiler.EffectReturn:
+	default:
+		return game.AbilityContent{}, false
+	}
+	consumed := ctx
+	consumed.content.References = nil
+	if consumed.content.Unconsumed() {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.MassReturnFromGraveyard{
+			Player:           game.ControllerReference(),
+			Destination:      zone.Battlefield,
+			EntryTapped:      effect.EntersTapped,
+			FromTriggerBatch: true,
+		},
+	}}}.Ability(), true
 }
 
 type enterInterveningCondition struct {
@@ -286,6 +346,7 @@ func supportedSelfTriggerKind(eventKind game.EventKind, kind compiler.TriggerKin
 		return kind == compiler.TriggerWhen || kind == compiler.TriggerWhenever
 	case game.EventPermanentMutated,
 		game.EventAttackerBecameBlocked,
+		game.EventAttackerBecameUnblocked,
 		game.EventAttackerDeclared,
 		game.EventBlockerDeclared,
 		game.EventDamageDealt,
@@ -462,6 +523,22 @@ func triggerBodySpan(
 	return bodySpan
 }
 
+// hasMandatoryIfYouDoCondition reports whether the ability carries a residual
+// "if you do" gate (prior-instruction-accepted) condition that is distinct from
+// the intervening trigger condition. It selects the mandatory result-gate body
+// shape ("if CONDITION, exile it. If you do, create a token.") where the leading
+// effect is not optional but its success gates the trailing effect.
+func hasMandatoryIfYouDoCondition(conditions []compiler.CompiledCondition, interveningSpan shared.Span) bool {
+	for ci := range conditions {
+		condition := conditions[ci]
+		if condition.Predicate == compiler.ConditionPredicatePriorInstructionAccepted &&
+			condition.Span != interveningSpan {
+			return true
+		}
+	}
+	return false
+}
+
 // prepareTriggerBody builds the body CompiledAbility and syntax for a
 // supported triggered ability. It handles condition consistency, effect
 // filtering for intervening conditions, body span/text construction, reference
@@ -501,6 +578,17 @@ func prepareTriggerBody(
 	interveningOptionalSequence := hasInterveningCondition &&
 		((len(ability.Content.Effects) > 1 && hasOptionalResolvingEffect(ability.Content.Effects)) ||
 			hasOptionalPaymentResolvingEffect(ability.Content.Effects))
+	// A mandatory "if you do" result gate ("Whenever X, if CONDITION, exile it.
+	// If you do, create a token.") sits behind the intervening condition exactly
+	// like the optional sequence: the intervening condition gates the trigger and
+	// is removed from the body, while the residual "if you do" gate stays in the
+	// body for the shared ordered-effect-sequence path to consume. The leading
+	// effect is mandatory (not "you may"), so it is detected by the residual
+	// prior-instruction-accepted gate rather than by an optional resolving effect.
+	interveningResultSequence := hasInterveningCondition &&
+		len(ability.Content.Effects) > 1 &&
+		hasMandatoryIfYouDoCondition(ability.Content.Conditions, ability.Trigger.Condition.Span)
+	keepResidualBodyConditions := interveningOptionalSequence || interveningResultSequence
 	// A resolution condition ("Whenever X, EFFECT if CONDITION." or "Whenever
 	// X, if CONDITION, EFFECT.") is a body condition checked only when the
 	// ability resolves, not an intervening "if" re-checked at trigger time. It
@@ -515,7 +603,7 @@ func prepareTriggerBody(
 		len(ability.Content.Conditions) != 0 &&
 		!hasOptionalResolvingEffect(ability.Content.Effects)
 	eventPlayerPaymentCondition := exactEventPlayerPaymentCondition(ability)
-	if !optionalSequence && !resolutionCondition && !interveningOptionalSequence && !eventPlayerPaymentCondition {
+	if !optionalSequence && !resolutionCondition && !keepResidualBodyConditions && !eventPlayerPaymentCondition {
 		if (len(ability.Content.Conditions) != 0 && !hasInterveningCondition) ||
 			(hasInterveningCondition && (len(ability.Content.Conditions) != 1 ||
 				ability.Content.Conditions[0].Span != ability.Trigger.Condition.Span)) {
@@ -554,7 +642,7 @@ func prepareTriggerBody(
 	excludedReferenceSpans := []shared.Span{ability.Trigger.Span}
 	if hasInterveningCondition {
 		excludedReferenceSpans = append(excludedReferenceSpans, ability.Trigger.Condition.Span)
-		if interveningOptionalSequence {
+		if keepResidualBodyConditions {
 			// Keep body conditions other than the intervening one (the residual
 			// "if you do" optional-flow gate) so the shared ordered-effect
 			// sequence can consume it; drop only the intervening condition.
@@ -709,7 +797,7 @@ func lowerPermanentZoneChangeTrigger(
 			"the executable source backend does not support this permanent zone-change trigger body")
 	}
 	body, bodySyntax, triggerOptional := prepared.body, prepared.syntax, prepared.optional
-	content, diagnostic := lowerTriggerBodyContent(cardName, body.Content, body.Optional, &bodySyntax, pattern.Event)
+	content, diagnostic := lowerTriggerBodyContent(cardName, body.Content, body.Optional, &bodySyntax, pattern)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}
@@ -836,7 +924,7 @@ func lowerCastTrigger(
 		body.Content,
 		body.Optional,
 		&bodySyntax,
-		pattern.Event,
+		pattern,
 	)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic

@@ -3,7 +3,6 @@ package game
 import (
 	"fmt"
 
-	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -46,6 +45,11 @@ const (
 	// a spell-cast trigger. It backs "Whenever you cast a spell ..., copy that
 	// spell." copy-the-triggering-spell effects (Reflections of Littjara).
 	ObjectReferenceEventStackObject
+	// ObjectReferenceResolvingStackObject references the resolving stack object
+	// itself — the spell or ability currently resolving. It backs "copy this
+	// spell" self-copy effects (Sevinne's Reclamation, Chain Lightning), where
+	// the resolving spell copies itself onto the stack.
+	ObjectReferenceResolvingStackObject
 )
 
 // ObjectReference describes how a rules effect finds an object at resolution.
@@ -149,6 +153,12 @@ func EventStackObjectReference() ObjectReference {
 	return ObjectReference{kind: ObjectReferenceEventStackObject}
 }
 
+// ResolvingStackObjectReference references the resolving stack object itself,
+// the spell or ability currently resolving ("copy this spell").
+func ResolvingStackObjectReference() ObjectReference {
+	return ObjectReference{kind: ObjectReferenceResolvingStackObject}
+}
+
 // Validate reports structural problems with an ObjectReference that represent
 // card-definition bugs. It checks kind/field consistency only; target-index
 // bounds depend on the surrounding TargetSpec list and are checked by
@@ -224,6 +234,10 @@ func (r ObjectReference) Validate() []string {
 	case ObjectReferenceEventStackObject:
 		if r.targetIndex != 0 || r.linkID != "" {
 			return []string{"event stack object reference must not set TargetIndex or LinkID"}
+		}
+	case ObjectReferenceResolvingStackObject:
+		if r.targetIndex != 0 || r.linkID != "" {
+			return []string{"resolving stack object reference must not set TargetIndex or LinkID"}
 		}
 	case ObjectReferenceNone:
 		return []string{"object reference has no kind"}
@@ -398,14 +412,18 @@ type CardReference struct {
 	LinkID string
 }
 
-// CardCondition describes characteristics a referenced card must have for an
-// effect to apply.
-type CardCondition struct {
+// CardSelection gates an effect on a referenced card matching a Selection. It is
+// the successor to the former CardCondition shadow filter, whose duplicated
+// characteristic fields (Types/Supertypes/SubtypesAny) plus its
+// RequirePermanentCard and ChosenSubtypeFrom per-card predicates now live on
+// Selection, the single matcher description.
+type CardSelection struct {
+	// Card identifies which card the gate inspects. It is a candidate-domain
+	// concern (where the card comes from), not a per-card predicate, so it stays
+	// out of Selection, mirroring how SelectionCount keeps its counting fields
+	// beside an embedded Selection.
 	Card CardReference
 
-	RequirePermanentCard bool
-	Types                []types.Card
-	Supertypes           []types.Super
-	SubtypesAny          []types.Sub
-	ChosenSubtypeFrom    ChoiceKey
+	// Selection is the per-card predicate the referenced card must satisfy.
+	Selection Selection
 }

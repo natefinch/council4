@@ -463,6 +463,97 @@ func TestLowerActivatedRemoveCounterCosts(t *testing.T) {
 	}
 }
 
+func TestLowerActivatedRemoveCounterAmongCosts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		oracleText  string
+		typeLine    string
+		wantAmount  int
+		wantFromX   bool
+		wantKind    counter.Kind
+		wantPermTyp types.Card
+	}{
+		{
+			name:        "two +1/+1 counters from among creatures",
+			oracleText:  "Remove two +1/+1 counters from among creatures you control: Draw a card.",
+			typeLine:    "Creature — Human",
+			wantAmount:  2,
+			wantKind:    counter.PlusOnePlusOne,
+			wantPermTyp: types.Creature,
+		},
+		{
+			name:        "X +1/+1 counters from among creatures",
+			oracleText:  "Remove X +1/+1 counters from among creatures you control: Draw a card.",
+			typeLine:    "Creature — Human",
+			wantFromX:   true,
+			wantKind:    counter.PlusOnePlusOne,
+			wantPermTyp: types.Creature,
+		},
+		{
+			name:        "two +1/+1 counters from among artifacts",
+			oracleText:  "Remove two +1/+1 counters from among artifacts you control: Draw a card.",
+			typeLine:    "Artifact",
+			wantAmount:  2,
+			wantKind:    counter.PlusOnePlusOne,
+			wantPermTyp: types.Artifact,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Removal",
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracleText,
+			})
+			if len(face.ActivatedAbilities) != 1 {
+				t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+			}
+			costs := face.ActivatedAbilities[0].AdditionalCosts
+			if len(costs) != 1 {
+				t.Fatalf("additional costs = %#v, want 1", costs)
+			}
+			got := costs[0]
+			if got.Kind != cost.AdditionalRemoveCounterAmong ||
+				got.Amount != test.wantAmount ||
+				got.AmountFromX != test.wantFromX ||
+				got.CounterKind != test.wantKind ||
+				!got.MatchPermanentType ||
+				got.PermanentType != test.wantPermTyp {
+				t.Fatalf("additional cost = %#v, want among removal amount %d fromX %t kind %v type %v",
+					got, test.wantAmount, test.wantFromX, test.wantKind, test.wantPermTyp)
+			}
+		})
+	}
+}
+
+func TestLowerActivatedAbilityLowersUnkindedRemoveCounterAmong(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Removal",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "Remove three counters from among creatures you control: Draw a card.",
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+	}
+	costs := face.ActivatedAbilities[0].AdditionalCosts
+	if len(costs) != 1 {
+		t.Fatalf("additional costs = %#v, want 1", costs)
+	}
+	got := costs[0]
+	if got.Kind != cost.AdditionalRemoveCounterAmong ||
+		got.Amount != 3 ||
+		!got.AnyCounterKind ||
+		!got.MatchPermanentType ||
+		got.PermanentType != types.Creature {
+		t.Fatalf("additional cost = %#v, want any-kind among removal amount 3 type Creature", got)
+	}
+}
+
 func TestLowerActivatedAbilityRejectsVariableRemoveCounterCosts(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{

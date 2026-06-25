@@ -256,7 +256,7 @@ The layer system still has carry-forward work for richer CDA forms, exact copy/b
 - **`clampPower`** distinguishes the target read (power clamped to ≥ 0 and always applicable) from the strict controller-controls read (requires printed power). **`useBase`** forfeits power and toughness, preserving the base-characteristic condition behavior.
 - **`controller`/`viewer`** carry controller relativity so `ControllerYou`/`ControllerOpponent` resolve against the correct player (chooser for opponent-chosen targets), and **`sourceObjectID`** drives `ExcludeSource`.
 
-The adapters are: `targetSelection` (targets, `clampPower`), `controllerControlsMatchingSelection` (conditions, base/effective and counting/total-power kept outside the matcher), referenced-condition object matching after `resolveObjectReference`, `triggerSubjectSelection`/`triggerCardSelection` (trigger event subject and cast-spell filters), and `selectorSelection` (mass effects). `selectorSelection` returns fixed package-level `Selection` values so the hot continuous-matching path stays allocation-free, and it returns `ok=false` for the domain selectors (`EquippedCreature`, `AllCreaturesExceptTarget`, `OtherCreaturesDefendingPlayerControls`) whose candidate-domain semantics are expressed by `game.GroupReference` and resolved by the reference resolver's `groupMembers`. The effect-selector path also short-circuits to no match when an `Other...` selector has no source permanent, a divergence from target "another" wording that `ExcludeSource` alone cannot express; the reference resolver preserves that divergence for `ExcludeSource` groups. `selection_parity_test.go` characterizes every legacy `TargetPredicate`, `PermanentFilter`, trigger filter, and `EffectSelector` constant against reference oracles to prove the shared matcher is behavior-preserving, and `reference_resolver_test.go` proves `groupMembers(selector.GroupReference())` matches the legacy mass-effect enumeration for every selector.
+The adapters are: `targetSelection` (targets, `clampPower`), `controllerControlsMatchingSelection` (conditions, base/effective and counting/total-power kept outside the matcher), referenced-condition object matching after `resolveObjectReference`, `triggerSubjectSelection`/`triggerCardSelection` (trigger event subject and cast-spell filters), and `selectorSelection` (mass effects). `selectorSelection` returns fixed package-level `Selection` values so the hot continuous-matching path stays allocation-free, and it returns `ok=false` for the domain selectors (`EquippedCreature`, `AllCreaturesExceptTarget`, `OtherCreaturesDefendingPlayerControls`) whose candidate-domain semantics are expressed by `game.GroupReference` and resolved by the reference resolver's `groupMembers`. The effect-selector path also short-circuits to no match when an `Other...` selector has no source permanent, a divergence from target "another" wording that `ExcludeSource` alone cannot express; the reference resolver preserves that divergence for `ExcludeSource` groups. `selection_parity_test.go` characterizes every legacy `TargetPredicate`, condition controls-matching filter, trigger filter, and `EffectSelector` constant against reference oracles to prove the shared matcher is behavior-preserving, and `reference_resolver_test.go` proves `groupMembers(selector.GroupReference())` matches the legacy mass-effect enumeration for every selector.
 
 ## Reference resolution
 
@@ -332,9 +332,11 @@ age counter to the same source object, then materializes its exact fixed mana
 cost multiplied by the resulting count. Decline or inability publishes payment
 failure and routes sacrifice through the normal zone-change and event helpers.
 
-`Instruction.CardCondition` gates a primitive against a typed referenced card
-before its handler runs. Linked reveal sequences use it to test the revealed card
-for permanent card types without losing the linked card ID; a passing
+`Instruction.CardCondition` (a `game.CardSelection`) gates a primitive against a
+referenced card before its handler runs: its `Card` names which linked card to
+read and its `Selection` is the per-card predicate. Linked reveal sequences use it
+to test the revealed card for permanent card types without losing the linked card
+ID; a passing
 `PutOnBattlefield` creates a fresh permanent object and applies its explicit
 recipient as controller. It may publish that object for a linked dynamic amount;
 the instruction result records success only when the card actually reaches the

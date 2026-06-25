@@ -96,11 +96,31 @@ type StackObject struct {
 	// XValue is the chosen value of X for spells with {X} in their cost.
 	XValue int
 
+	// ColorsOfManaSpentToCast is the number of distinct colors of mana spent to
+	// cast this spell, recorded as its costs are paid (CR 202.2, CR 702.76). It
+	// backs the Converge count ("for each color of mana spent to cast it"),
+	// including the enters-with-counters quantity on the resulting permanent,
+	// where the synthetic enter-the-battlefield object carries it forward from
+	// the spell's creation options. Colorless mana contributes no color, so it
+	// is zero for a spell paid entirely with colorless or generic-from-colorless
+	// mana.
+	ColorsOfManaSpentToCast int
+
 	// KickerPaid is true if the kicker cost was paid.
 	KickerPaid bool
 
+	// KickerCount is the number of times the kicker cost was paid as the spell
+	// was cast (CR 702.32). For Multikicker it can exceed one; for ordinary
+	// Kicker it is zero (KickerPaid carries the paid-once state). It scales
+	// "for each time it was kicked" amounts as the spell resolves.
+	KickerCount int
+
 	// Overloaded is true if this spell was cast for its overload cost.
 	Overloaded bool
+
+	// Evoked is true if this spell was cast for its Evoke alternative cost
+	// (CR 702.74); the resulting permanent is sacrificed when it enters.
+	Evoked bool
 
 	// Mutate records an alternative-cost creature spell and the permanent it
 	// will merge with.

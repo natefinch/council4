@@ -199,6 +199,33 @@ func TestGenerateExecutableCardSourceSelfCannotBeBlocked(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceEveryCreatureTypeDropsScopeRider confirms a
+// "Creatures you control are every creature type. The same is true for creature
+// spells you control and creature cards you own that aren't on the battlefield."
+// anthem (Maskwood Nexus) generates: the non-battlefield-zone scope rider is
+// dropped and the battlefield every-creature-type continuous effect lowers.
+func TestGenerateExecutableCardSourceEveryCreatureTypeDropsScopeRider(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:     "Type Nexus",
+		Layout:   "normal",
+		ManaCost: "{4}",
+		TypeLine: "Artifact",
+		OracleText: "Creatures you control are every creature type. " +
+			"The same is true for creature spells you control and creature cards you own that aren't on the battlefield.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "AddEveryCreatureType: true") {
+		t.Fatalf("source missing every-creature-type continuous effect:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceSelfMustAttack(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -622,6 +649,36 @@ func TestGenerateExecutableCardSourceSelfCantAttackOrBlock(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceSelfCantBlockAndCantBeBlocked(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Changeling Outcast",
+		Layout:     "normal",
+		ManaCost:   "{B}",
+		TypeLine:   "Creature — Shapeshifter",
+		OracleText: "Changeling (This card is every creature type.)\nChangeling Outcast can't block and can't be blocked.",
+		Colors:     []string{"B"},
+		Power:      new("1"),
+		Toughness:  new("1"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Kind:           game.RuleEffectCantBlock,",
+		"Kind:           game.RuleEffectCantBeBlocked,",
+		"game.ChangelingStaticBody",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceSelfDoesntUntap(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
@@ -820,6 +877,55 @@ func TestGenerateExecutableCardSourceAuraCharacteristicAddition(t *testing.T) {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
+	}
+}
+
+func TestGenerateExecutableCardSourceGroupEveryCreatureType(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Maskwood Nexus",
+		Layout:     "normal",
+		ManaCost:   "{4}",
+		TypeLine:   "Artifact",
+		OracleText: "Creatures you control are every creature type.\n{3}, {T}: Create a 2/2 black Shapeshifter creature token with changeling.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "m")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Layer:                game.LayerType,",
+		"AddEveryCreatureType: true,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceSelfEveryCreatureType(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Mistform Ultimus",
+		Layout:     "normal",
+		ManaCost:   "{4}{U}",
+		TypeLine:   "Creature — Illusion",
+		OracleText: "Mistform Ultimus is every creature type.",
+		Power:      new("3"),
+		Toughness:  new("3"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "u")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "AddEveryCreatureType: true,") {
+		t.Fatalf("source missing every-creature-type effect:\n%s", source)
 	}
 }
 
@@ -1268,6 +1374,83 @@ func TestGenerateExecutableCardSourceAllLandsTypeAddition(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceEveryBasicLandType(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		typeLine   string
+		oracleText string
+		group      string
+	}{
+		"dryad of the ilysian grove": {
+			typeLine:   "Enchantment Creature — Dryad",
+			oracleText: "You may play an additional land on each of your turns.\nLands you control are every basic land type in addition to their other types.",
+			group:      "game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{RequiredTypes: []types.Card{types.Land}})",
+		},
+		"prismatic omen": {
+			typeLine:   "Enchantment",
+			oracleText: "Lands you control are every basic land type in addition to their other types.",
+			group:      "game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{RequiredTypes: []types.Card{types.Land}})",
+		},
+		"all lands": {
+			typeLine:   "Legendary Land",
+			oracleText: "Each land is every basic land type in addition to its other land types.",
+			group:      "game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Land}})",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Every Basic Land Static",
+				Layout:     "normal",
+				TypeLine:   tc.typeLine,
+				OracleText: tc.oracleText,
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "e")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range []string{
+				"Layer:                 game.LayerType,",
+				tc.group,
+				"AddEveryBasicLandType: true,",
+			} {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
+func TestGenerateExecutableCardSourceNonlandPermanentsAreArtifacts(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Encroaching Mycosynth",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "Nonland permanents you control are artifacts in addition to their other types. The same is true for permanent spells you control and nonland permanent cards you own that aren't on the battlefield.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "e")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Layer:    game.LayerType,",
+		"game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{ExcludedTypes: []types.Card{types.Land}})",
+		"AddTypes: []types.Card{types.Artifact},",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceAllLandsTypeAdditionFailsClosed(t *testing.T) {
 	t.Parallel()
 	for name, oracleText := range map[string]string{
@@ -1413,5 +1596,92 @@ func TestGenerateExecutableCardSourceLookAtTopCardAnyTime(t *testing.T) {
 	}
 	if strings.Contains(source, "TODO") {
 		t.Fatalf("executable source contains TODO:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceConditionalAttachedKeywordGrant(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Champion's Helm",
+		Layout:     "normal",
+		ManaCost:   "{2}",
+		TypeLine:   "Artifact — Equipment",
+		OracleText: "Equipped creature gets +2/+2.\nAs long as equipped creature is legendary, it has hexproof.\nEquip {1}",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Condition: opt.Val(game.Condition{",
+		"Object:        opt.Val(game.SourceAttachedPermanentReference()),",
+		"ObjectMatches: opt.Val(game.Selection{Supertypes: []types.Super{types.Legendary}}),",
+		"Group: game.AttachedObjectGroup(game.SourcePermanentReference()),",
+		"game.Hexproof,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if strings.Contains(source, "TODO") {
+		t.Fatalf("executable source contains TODO:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceConditionalEnchantedKeywordGrant(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Conditional Ward Aura",
+		Layout:     "normal",
+		ManaCost:   "{W}",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant creature\nAs long as enchanted creature is legendary, it has hexproof.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "e")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Object:        opt.Val(game.SourceAttachedPermanentReference()),",
+		"ObjectMatches: opt.Val(game.Selection{Supertypes: []types.Super{types.Legendary}}),",
+		"Group: game.AttachedObjectGroup(game.SourcePermanentReference()),",
+		"game.Hexproof,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceChosenTypeGroupAnthem(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Type Shaper",
+		Layout:     "normal",
+		ManaCost:   "{4}",
+		TypeLine:   "Enchantment",
+		OracleText: "As this enchantment enters, choose a creature type.\nCreatures you control are the chosen type in addition to their other types.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Layer:                     game.LayerType,",
+		"Group:                     game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{RequiredTypes: []types.Card{types.Creature}}),",
+		"AddSubtypeFromEntryChoice: game.EntryTypeChoiceKey,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
 	}
 }

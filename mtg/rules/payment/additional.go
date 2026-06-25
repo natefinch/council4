@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 type additionalCostPlan struct {
@@ -58,6 +59,20 @@ type cardZoneSelection struct {
 type evidencePayment struct {
 	cards     []cardZoneSelection
 	threshold int
+}
+
+// preferenceFallbackAllowed reports whether an additional cost whose recorded
+// preference is stale or now illegal may fall back to a deterministic legal
+// selection instead of rejecting the payment. Fallback is permitted only when
+// the player actually supplied a preference for this cost (hadPreference) — a
+// player who supplied none already received the deterministic plan, so there is
+// nothing to recover from — and only when strict replay is not demanded. Under
+// strict replay an unsatisfiable preference rejects the payment so a recorded
+// game replays exactly or not at all. This is the one invalid-preference policy
+// applied uniformly across sacrifice, tap, return, discard, exile, reveal,
+// evidence, and counter removal.
+func preferenceFallbackAllowed(prefs *Preferences, hadPreference bool) bool {
+	return hadPreference && !prefs.StrictReplay
 }
 
 //nolint:maintidx // Centralized cost dispatch keeps cross-cost reservation checks in one place.
@@ -119,6 +134,16 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 				amount: amount,
 			})
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
+		case cost.AdditionalRemoveCounterAmong:
+			if amount <= 0 {
+				return plan, false
+			}
+			removals, ok := planRemoveCounterAmong(s, playerID, additional, amount, plan.counterRemovals, prefs)
+			if !ok {
+				return plan, false
+			}
+			plan.counterRemovals = append(plan.counterRemovals, removals...)
+			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalExert:
 			if amount != 1 ||
 				source == nil ||
@@ -149,15 +174,20 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			if amount <= 0 {
 				return plan, false
 			}
+			hadPreference := prefs != nil && len(prefs.EvidenceChoices) > 0
 			chosen := preferredEvidenceCards(s, playerID, amount, plannedEvidenceCards(plan), costs[i+1:], xValue, sourceCardID, sourceZone, prefs)
+			if len(chosen) == 0 && preferenceFallbackAllowed(prefs, hadPreference) {
+				chosen = chooseEvidenceCards(s, playerID, amount, plannedEvidenceCards(plan), costs[i+1:], xValue, sourceCardID, sourceZone)
+			}
 			if len(chosen) == 0 {
 				return plan, false
 			}
 			plan.evidence = append(plan.evidence, evidencePayment{cards: chosen, threshold: amount})
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalSacrifice:
+			hadPreference := prefs != nil && len(prefs.SacrificeChoices) > 0
 			chosen := preferredSacrificePermanents(s, playerID, additional, amount, plannedBattlefieldCosts(plan), prefs, source)
-			if len(chosen) != amount && prefs != nil && len(prefs.SacrificeChoices) > 0 {
+			if len(chosen) != amount && preferenceFallbackAllowed(prefs, hadPreference) {
 				chosen = chooseSacrificePermanents(s, playerID, additional, amount, plannedBattlefieldCosts(plan), source)
 			}
 			if len(chosen) != amount {
@@ -166,8 +196,23 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			plan.sacrifices = append(plan.sacrifices, chosen...)
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalTapPermanents:
+			if additional.TotalPowerAtLeast > 0 {
+				hadPreference := prefs != nil && len(prefs.TapChoices) > 0
+				chosen := preferredTapPermanentsTotalPower(s, playerID, additional, append(plannedBattlefieldCosts(plan), reservedTapPermanents...), source, prefs)
+				if len(chosen) == 0 && preferenceFallbackAllowed(prefs, hadPreference) {
+					chosen = chooseTapPermanentsTotalPower(s, playerID, additional, append(plannedBattlefieldCosts(plan), reservedTapPermanents...), source)
+				}
+				if len(chosen) == 0 {
+					return plan, false
+				}
+				plan.permanentsToTap = append(plan.permanentsToTap, chosen...)
+				reservedTapPermanents = append(reservedTapPermanents, chosen...)
+				plan.paid = append(plan.paid, AdditionalCostText(additional))
+				continue
+			}
+			hadPreference := prefs != nil && len(prefs.TapChoices) > 0
 			chosen := preferredTapPermanents(s, playerID, additional, amount, append(plannedBattlefieldCosts(plan), reservedTapPermanents...), prefs)
-			if len(chosen) != amount && prefs != nil && len(prefs.TapChoices) > 0 {
+			if len(chosen) != amount && preferenceFallbackAllowed(prefs, hadPreference) {
 				chosen = chooseTapPermanents(s, playerID, additional, amount, append(plannedBattlefieldCosts(plan), reservedTapPermanents...))
 			}
 			if len(chosen) != amount {
@@ -177,7 +222,11 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			reservedTapPermanents = append(reservedTapPermanents, chosen...)
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalReturnToHand:
+			hadPreference := prefs != nil && len(prefs.ReturnChoices) > 0
 			chosen := preferredReturnPermanents(s, playerID, additional, amount, plannedBattlefieldCosts(plan), prefs)
+			if len(chosen) != amount && preferenceFallbackAllowed(prefs, hadPreference) {
+				chosen = chooseReturnPermanents(s, playerID, additional, amount, plannedBattlefieldCosts(plan))
+			}
 			if len(chosen) != amount {
 				return plan, false
 			}
@@ -199,7 +248,11 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			plan.sacrifices = append(plan.sacrifices, source)
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalDiscard:
+			hadPreference := prefs != nil && len(prefs.DiscardChoices) > 0
 			chosen := preferredDiscardCards(s, playerID, additional, amount, plan.discards, prefs)
+			if len(chosen) != amount && preferenceFallbackAllowed(prefs, hadPreference) {
+				chosen = chooseDiscardCards(s, playerID, additional, amount, plan.discards)
+			}
 			if len(chosen) != amount {
 				return plan, false
 			}
@@ -220,7 +273,23 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			plan.energyPaid += amount
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalExile:
+			hadPreference := prefs != nil && len(prefs.ExileChoices) > 0
+			if additional.TotalManaValueAtLeast > 0 {
+				chosen := preferredThresholdExileCards(s, playerID, additional, plannedEvidenceCards(plan), costs[i+1:], xValue, sourceCardID, sourceZone, prefs)
+				if len(chosen) == 0 && preferenceFallbackAllowed(prefs, hadPreference) {
+					chosen = chooseThresholdExileCards(s, playerID, additional, plannedEvidenceCards(plan), costs[i+1:], xValue, sourceCardID, sourceZone)
+				}
+				if len(chosen) == 0 {
+					return plan, false
+				}
+				plan.exiles = append(plan.exiles, chosen...)
+				plan.paid = append(plan.paid, AdditionalCostText(additional))
+				continue
+			}
 			chosen := preferredExileCards(s, playerID, additional, amount, plannedEvidenceCards(plan), costs[i+1:], xValue, sourceCardID, sourceZone, prefs)
+			if len(chosen) != amount && preferenceFallbackAllowed(prefs, hadPreference) {
+				chosen = chooseExileCards(s, playerID, additional, amount, plannedEvidenceCards(plan), costs[i+1:], xValue, sourceCardID, sourceZone)
+			}
 			if len(chosen) != amount {
 				return plan, false
 			}
@@ -231,7 +300,11 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 				plan.paid = append(plan.paid, AdditionalCostText(additional))
 				continue
 			}
+			hadPreference := prefs != nil && len(prefs.RevealChoices) > 0
 			chosen := preferredRevealCards(s, playerID, additional, amount, plan.reveals, prefs)
+			if len(chosen) != amount && preferenceFallbackAllowed(prefs, hadPreference) {
+				chosen = chooseRevealCards(s, playerID, additional, amount, plan.reveals)
+			}
 			if len(chosen) != amount {
 				return plan, false
 			}
@@ -257,7 +330,7 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 				return plan, false
 			}
 			card, ok := s.CardInstance(sourceCardID)
-			if !ok || !additionalCostMatchesCard(s.CardFace(card, game.FaceFront), additional) {
+			if !ok || !additionalCostMatchesCard(s, s.CardFace(card, game.FaceFront), additional) {
 				return plan, false
 			}
 			plan.exiles = append(plan.exiles, cardZoneSelection{cardID: sourceCardID, zone: sourceZone})
@@ -349,49 +422,68 @@ func permanentsInclude(permanents []*game.Permanent, target *game.Permanent) boo
 }
 
 func additionalCostMatchesPermanent(s State, permanent *game.Permanent, additional cost.Additional) bool {
-	if additional.RequireTapped && !permanent.Tapped {
+	sel, ok := SelectionForAdditionalCost(additional)
+	if !ok {
 		return false
 	}
-	if additional.RequireSupertype != "" && !s.PermanentHasSupertype(permanent, additional.RequireSupertype) {
-		return false
-	}
-	if additional.MatchPermanentType && !s.PermanentHasType(permanent, additional.PermanentType) &&
-		(additional.PermanentTypeAlt == "" || !s.PermanentHasType(permanent, additional.PermanentTypeAlt)) {
-		return false
-	}
-	if additional.MatchCardColor && !slices.Contains(s.PermanentEffectiveColors(permanent), additional.CardColor) {
-		return false
-	}
-	if additional.SubtypesAny != (cost.SubtypeSet{}) {
-		for _, subtype := range additional.SubtypesAny {
-			if subtype != "" && s.PermanentHasSubtype(permanent, subtype) {
-				return true
-			}
-		}
-		return false
-	}
-	return true
+	return s.PermanentMatchesSelection(permanent, sel)
 }
 
-func additionalCostMatchesCard(card *game.CardDef, additional cost.Additional) bool {
-	if card == nil {
+func additionalCostMatchesCard(s State, card *game.CardDef, additional cost.Additional) bool {
+	sel, ok := SelectionForAdditionalCost(additional)
+	if !ok {
 		return false
 	}
-	if additional.MatchCardType && !card.HasType(additional.CardType) {
-		return false
-	}
-	if additional.MatchCardColor && !slices.Contains(card.Colors, additional.CardColor) {
-		return false
-	}
-	if additional.SubtypesAny != (cost.SubtypeSet{}) {
-		for _, subtype := range additional.SubtypesAny {
-			if subtype != "" && card.HasSubtype(subtype) {
-				return true
-			}
+	return s.CardMatchesSelection(card, sel)
+}
+
+// SelectionForAdditionalCost converts an additional cost's object constraint
+// into a game.Selection so the choice layer and the payment planner evaluate one
+// eligibility predicate over the same objects (CR 601.2b). It maps only the
+// object-filter fields; cost-specific concerns (ExcludeSource, source-only
+// kinds, the required amount/threshold, and the tapped-for-tap-cost dedup) stay
+// with the planner where they already live. The bool reports whether the
+// constraint is representable as a Selection; callers must fail closed when it
+// is false so an unmodeled filter never silently widens the eligible set.
+func SelectionForAdditionalCost(additional cost.Additional) (game.Selection, bool) {
+	var sel game.Selection
+	if additional.MatchPermanentType {
+		sel.RequiredTypesAny = append(sel.RequiredTypesAny, additional.PermanentType)
+		if additional.PermanentTypeAlt != "" {
+			sel.RequiredTypesAny = append(sel.RequiredTypesAny, additional.PermanentTypeAlt)
 		}
-		return false
 	}
-	return true
+	if additional.MatchCardType {
+		sel.RequiredTypes = append(sel.RequiredTypes, additional.CardType)
+	}
+	if additional.ExcludePermanentType != "" {
+		sel.ExcludedTypes = append(sel.ExcludedTypes, additional.ExcludePermanentType)
+	}
+	if additional.RequireSupertype != "" {
+		sel.Supertypes = append(sel.Supertypes, additional.RequireSupertype)
+	}
+	if additional.MatchCardColor {
+		sel.ColorsAny = append(sel.ColorsAny, additional.CardColor)
+	}
+	for _, subtype := range additional.SubtypesAny {
+		if subtype != "" {
+			sel.SubtypesAny = append(sel.SubtypesAny, subtype)
+		}
+	}
+	if additional.RequireTapped {
+		sel.Tapped = game.TriTrue
+	}
+	if additional.RequireToken {
+		sel.TokenOnly = true
+	}
+	if additional.MatchHistoric {
+		sel.AnyOf = []game.Selection{
+			{RequiredTypes: []types.Card{types.Artifact}},
+			{Supertypes: []types.Super{types.Legendary}},
+			{SubtypesAny: []types.Sub{types.Saga}},
+		}
+	}
+	return sel, true
 }
 
 func evidenceCardManaValue(s State, cardID id.ID) (int, bool) {
@@ -481,11 +573,22 @@ func AdditionalCostText(additional cost.Additional) string {
 	case cost.AdditionalTap:
 		return "{T}"
 	case cost.AdditionalTapPermanents:
+		if additional.TotalPowerAtLeast > 0 {
+			if additional.Text != "" {
+				return additional.Text
+			}
+			return fmt.Sprintf("Tap creatures with total power %d", additional.TotalPowerAtLeast)
+		}
 		return fmt.Sprintf("Tap %d permanents", AdditionalCostAmount(additional))
 	case cost.AdditionalUntap:
 		return "{Q}"
 	case cost.AdditionalRemoveCounter:
 		return "Remove a counter"
+	case cost.AdditionalRemoveCounterAmong:
+		if additional.AnyCounterKind {
+			return fmt.Sprintf("Remove %d counters from among permanents you control", AdditionalCostAmount(additional))
+		}
+		return fmt.Sprintf("Remove %d %s counters from among permanents you control", AdditionalCostAmount(additional), additional.CounterKind)
 	default:
 		return "Additional cost"
 	}

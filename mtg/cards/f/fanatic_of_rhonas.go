@@ -52,15 +52,17 @@ var FanaticOfRhonas = func() *game.CardDef {
 			AdditionalCosts: cost.Tap,
 			ActivationCondition: opt.Val(game.Condition{
 				Text: "you control a creature with power 4 or greater",
-				ControllerControls: game.PermanentFilter{
-					Types: []types.Card{
-						types.Creature,
+				ControlsMatching: opt.Val(game.SelectionCount{
+					Selection: game.Selection{
+						RequiredTypes: []types.Card{
+							types.Creature,
+						},
+						Power: opt.Val(compare.Int{
+							Op:    compare.GreaterOrEqual,
+							Value: 4,
+						}),
 					},
-					Power: opt.Val(compare.Int{
-						Op:    compare.GreaterOrEqual,
-						Value: 4,
-					}),
-				},
+				}),
 			}),
 			Content: game.Mode{
 				Sequence: []game.Instruction{

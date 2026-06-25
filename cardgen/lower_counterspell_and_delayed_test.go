@@ -128,6 +128,71 @@ func TestLowerCounterSpellTargets(t *testing.T) {
 	}
 }
 
+func TestLowerCounterSpellUnionTypeTargets(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name              string
+		oracleText        string
+		wantSpellTypesAny []types.Card
+		wantExileInstead  bool
+	}{
+		{
+			name:              "instant or sorcery",
+			oracleText:        "Counter target instant or sorcery spell.",
+			wantSpellTypesAny: []types.Card{types.Instant, types.Sorcery},
+		},
+		{
+			name:              "artifact or enchantment",
+			oracleText:        "Counter target artifact or enchantment spell.",
+			wantSpellTypesAny: []types.Card{types.Artifact, types.Enchantment},
+		},
+		{
+			name:              "creature or planeswalker exile instead",
+			oracleText:        "Counter target creature or planeswalker spell. If that spell is countered this way, exile it instead of putting it into its owner's graveyard.",
+			wantSpellTypesAny: []types.Card{types.Creature, types.Planeswalker},
+			wantExileInstead:  true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Counter Union",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+			})
+			if !face.SpellAbility.Exists {
+				t.Fatal("spell ability missing")
+			}
+			mode := face.SpellAbility.Val.Modes[0]
+			if len(mode.Targets) != 1 {
+				t.Fatalf("targets = %d, want 1", len(mode.Targets))
+			}
+			target := mode.Targets[0]
+			if target.Allow != game.TargetAllowStackObject {
+				t.Fatalf("target allow = %v, want stack object", target.Allow)
+			}
+			if !slices.Equal(target.Predicate.SpellCardTypesAny, test.wantSpellTypesAny) {
+				t.Fatalf("spell card types any = %+v, want %+v", target.Predicate.SpellCardTypesAny, test.wantSpellTypesAny)
+			}
+			if len(target.Predicate.SpellCardTypes) != 0 {
+				t.Fatalf("spell card types = %+v, want none", target.Predicate.SpellCardTypes)
+			}
+			if len(mode.Sequence) != 1 {
+				t.Fatalf("sequence = %d, want 1", len(mode.Sequence))
+			}
+			counter, ok := mode.Sequence[0].Primitive.(game.CounterObject)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.CounterObject", mode.Sequence[0].Primitive)
+			}
+			if counter.ExileInstead != test.wantExileInstead {
+				t.Fatalf("exile instead = %v, want %v", counter.ExileInstead, test.wantExileInstead)
+			}
+		})
+	}
+}
+
 func TestLowerCounterSpellQualifiedTargets(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -652,6 +717,44 @@ func TestLowerCounterSpellUnlessPays(t *testing.T) {
 	}
 }
 
+func TestLowerCounterSpellUnlessPaysDynamicCount(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Circular Logic",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{2}{U}",
+		OracleText: "Counter target spell unless its controller pays {1} for each card in your graveyard.\nMadness {U} (If you discard this card, discard it into exile. When you do, cast it for its madness cost or put it into your graveyard.)",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability missing")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %d, want pay then counter", len(mode.Sequence))
+	}
+	pay, ok := mode.Sequence[0].Primitive.(game.Pay)
+	if !ok {
+		t.Fatalf("first primitive = %T, want game.Pay", mode.Sequence[0].Primitive)
+	}
+	if !pay.Payment.ManaCost.Exists || !slices.Equal(pay.Payment.ManaCost.Val, cost.Mana{cost.O(1)}) {
+		t.Fatalf("payment mana = %+v, want {1}", pay.Payment.ManaCost)
+	}
+	if !pay.Payment.ManaCostMultiplier.Exists || pay.Payment.ManaCostMultiplier.Val == nil {
+		t.Fatalf("payment multiplier = %+v, want dynamic count", pay.Payment.ManaCostMultiplier)
+	}
+	multiplier := pay.Payment.ManaCostMultiplier.Val
+	if multiplier.Kind != game.DynamicAmountCountCardsInZone || multiplier.CardZone != zone.Graveyard {
+		t.Fatalf("multiplier = %+v, want count of cards in graveyard", multiplier)
+	}
+	if _, ok := mode.Sequence[1].Primitive.(game.CounterObject); !ok {
+		t.Fatalf("second primitive = %T, want game.CounterObject", mode.Sequence[1].Primitive)
+	}
+	if len(face.StaticAbilities) != 1 {
+		t.Fatalf("static abilities = %d, want one (Madness)", len(face.StaticAbilities))
+	}
+}
+
 func TestLowerCounterSpellColorTargets(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -727,7 +830,6 @@ func TestLowerCounterSpellRejectsUnsupportedForms(t *testing.T) {
 	for _, oracleText := range []string{
 		"Counter target monocolored spell.",
 		"Counter target blue creature spell.",
-		"Counter target artifact or enchantment spell.",
 		"Counter target spell unless its controller pays {X}.",
 		"Counter target activated ability unless its controller pays {1}.",
 		"Counter target activated ability. Draw a card.",

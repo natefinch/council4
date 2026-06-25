@@ -9,6 +9,10 @@ import (
 // simple color-count APIs.
 type Pool struct {
 	mana map[Unit]int
+	// spent is the running total of mana removed from this pool to pay costs.
+	// It is never reset by Empty (emptying discards unspent mana, which is not
+	// spent), so a caller can measure mana spent over a span by differencing it.
+	spent int
 }
 
 // NewPool creates an empty mana pool.
@@ -19,7 +23,7 @@ func NewPool() Pool {
 // Clone returns a deep copy of the pool that shares no map state with the
 // receiver, so mutating one pool does not affect the other.
 func (p *Pool) Clone() Pool {
-	clone := Pool{}
+	clone := Pool{spent: p.spent}
 	if p.mana != nil {
 		clone.mana = maps.Clone(p.mana)
 	}
@@ -142,7 +146,15 @@ func (p *Pool) SpendMatching(amount int, matches func(Unit) bool) bool {
 			delete(p.mana, unit)
 		}
 	}
+	p.spent += amount
 	return remaining == 0
+}
+
+// Spent returns the running total of mana removed from this pool to pay costs
+// over its lifetime. Difference two readings to measure mana spent across a
+// span such as a turn.
+func (p *Pool) Spent() int {
+	return p.spent
 }
 
 // Total returns the total amount of mana in the pool across all colors.

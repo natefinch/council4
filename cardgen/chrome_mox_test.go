@@ -22,7 +22,7 @@ func TestGenerateExecutableCardSourceChromeMox(t *testing.T) {
 	}
 	for _, want := range []string{
 		"game.EventPermanentEnteredBattlefield",
-		"Primitive: game.ExileFromHand",
+		"Primitive: game.ChooseFromZone{",
 		"Optional: true",
 		"PublishLinked:",
 		"types.Artifact",

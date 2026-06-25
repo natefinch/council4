@@ -161,3 +161,52 @@ func TestPlainManaAbilityDealsNoSelfDamage(t *testing.T) {
 		t.Fatalf("life = %d, want %d (plain mana ability must deal no damage)", got, startLife)
 	}
 }
+
+// greatHengeGainLifeManaAbility builds the mana ability of The Great Henge:
+// "{T}: Add {G}{G}. You gain 2 life." The lowered content adds two green mana
+// then gains the rider life for the controller, matching the cardgen output.
+func greatHengeGainLifeManaAbility(amount int) game.ManaAbility {
+	return game.ManaAbility{
+		Text:            "{T}: Add {G}{G}. You gain N life.",
+		AdditionalCosts: cost.Tap,
+		Content: game.Mode{Sequence: []game.Instruction{
+			{Primitive: game.AddMana{Amount: game.Fixed(1), ManaColor: mana.G}},
+			{Primitive: game.AddMana{Amount: game.Fixed(1), ManaColor: mana.G}},
+			{Primitive: game.GainLife{
+				Amount: game.Fixed(amount),
+				Player: game.ControllerReference(),
+			}},
+		}}.Ability(),
+	}
+}
+
+// TestManaAbilityGainLifeRiderGainsLife verifies that activating a mana ability
+// carrying a "You gain N life" rider resolves immediately, taps the source, adds
+// the mana, and gains the rider life for the controller (The Great Henge).
+func TestManaAbilityGainLifeRiderGainsLife(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	body := greatHengeGainLifeManaAbility(2)
+	source := addComplexManaAbilityPermanent(g, game.Player1,
+		&game.CardDef{CardFace: game.CardFace{Name: "Test Henge", Types: []types.Card{types.Artifact}}},
+		&body,
+	)
+	startLife := g.Players[game.Player1].Life
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(gain-life mana ability) = false, want true")
+	}
+	if !source.Tapped {
+		t.Fatal("source was not tapped after activation")
+	}
+	if got := g.Players[game.Player1].ManaPool.Amount(mana.G); got != 2 {
+		t.Fatalf("mana pool (G) = %d, want 2", got)
+	}
+	if got := g.Players[game.Player1].Life; got != startLife+2 {
+		t.Fatalf("life = %d, want %d after gain-life rider", got, startLife+2)
+	}
+	if got := g.Stack.Size(); got != 0 {
+		t.Fatalf("stack size = %d, want 0 for mana ability", got)
+	}
+}

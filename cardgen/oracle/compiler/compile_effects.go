@@ -4,7 +4,9 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -131,6 +133,37 @@ func runtimeColorFromParser(colorValue parser.Color) (color.Color, bool) {
 	}
 }
 
+// polymorphColors converts the parser's set polymorph colors to runtime colors,
+// dropping any unrecognized color. The parser only yields colors recognized from
+// atoms, so a well-formed EffectPolymorph never drops a color here.
+func polymorphColors(colors []parser.Color) []color.Color {
+	result := make([]color.Color, 0, len(colors))
+	for _, parserColor := range colors {
+		runtimeColor, ok := runtimeColorFromParser(parserColor)
+		if !ok {
+			continue
+		}
+		result = append(result, runtimeColor)
+	}
+	return result
+}
+
+// polymorphSupertypes converts the parser's added polymorph supertypes
+// ("legendary") to runtime supertypes, dropping any unrecognized supertype. The
+// parser only yields supertypes recognized from atoms, so a well-formed
+// named-become polymorph never drops a supertype here.
+func polymorphSupertypes(supertypes []parser.Supertype) []types.Super {
+	result := make([]types.Super, 0, len(supertypes))
+	for _, parserSupertype := range supertypes {
+		runtimeSupertype, ok := compilerSupertype(parserSupertype)
+		if !ok {
+			continue
+		}
+		result = append(result, runtimeSupertype)
+	}
+	return result
+}
+
 // compileConditions builds the semantic conditions for an ability or mode from
 // the parser's pre-segmented condition clauses. The parser owns introducer
 // recognition, clause segmentation, and rendering; the compiler consumes each
@@ -188,108 +221,137 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 		for syntaxIndex := range sentence.Effects {
 			syntax := &sentence.Effects[syntaxIndex]
 			effects = append(effects, CompiledEffect{
-				Kind:                                 compileEffectKind(syntax.Kind),
-				Context:                              syntax.Context,
-				Connection:                           syntax.Connection,
-				ConnectionSpan:                       syntax.ConnectionSpan,
-				Span:                                 syntax.Span,
-				ClauseSpan:                           syntax.ClauseSpan,
-				Text:                                 syntax.Text,
-				VerbSpan:                             syntax.VerbSpan,
-				Player:                               syntax.Player,
-				CardSource:                           syntax.CardSource,
-				RequirePermanentCard:                 syntax.RequirePermanentCard,
-				References:                           compileTypedReferences(syntax.References),
-				SubjectReferences:                    compileTypedReferences(syntax.SubjectReferences),
-				Targets:                              compileTypedTargetList(syntax.Targets),
-				SubjectTargets:                       compileTypedTargetList(syntax.SubjectTargets),
-				Duration:                             compileEffectDuration(syntax.Duration),
-				DelayedTiming:                        compileDelayedTiming(syntax.DelayedTiming),
-				Selector:                             compileTypedSelection(syntax.Selection),
-				DamageRecipientSelectors:             compileDamageRecipientSelectors(syntax.DamageRecipientPair),
-				DamageRecipientReference:             syntax.DamageRecipientReference,
-				EachSourceDamageGroup:                compileTypedSelection(syntax.EachSourceDamageGroup),
-				EachSourceDamageRecipient:            syntax.EachSourceDamageRecipient,
-				HasSelfDamageRider:                   syntax.HasSelfDamageRider,
-				SelfDamageRiderValue:                 syntax.SelfDamageRiderValue,
-				TargetControllerDamageRiderRecipient: syntax.TargetControllerDamageRiderRecipient,
-				TargetControllerDamageRiderValue:     syntax.TargetControllerDamageRiderValue,
-				HasSecondTargetDamageRider:           syntax.HasSecondTargetDamageRider,
-				SecondTargetDamageRiderValue:         syntax.SecondTargetDamageRiderValue,
-				Amount:                               compileTypedAmount(syntax.Amount),
-				PowerDelta:                           compileSignedAmount(syntax.PowerDelta),
-				ToughnessDelta:                       compileSignedAmount(syntax.ToughnessDelta),
-				TokenPower:                           syntax.TokenPower,
-				TokenToughness:                       syntax.TokenToughness,
-				TokenPTKnown:                         syntax.TokenPTKnown,
-				TokenPTVariableX:                     syntax.TokenPTVariableX,
-				TokenPTDynamic:                       syntax.TokenPTDynamic,
-				TokenGrantedAbility:                  syntax.TokenGrantedAbility,
-				TokenName:                            syntax.TokenName,
-				AmassSubtype:                         syntax.AmassSubtype,
-				TokenCopyOfTarget:                    syntax.TokenCopyOfTarget,
-				TokenCopyOfReference:                 syntax.TokenCopyOfReference,
-				TokenCopyOfAttached:                  syntax.TokenCopyOfAttached,
-				TokenCopyDropLegendary:               syntax.TokenCopyDropLegendary,
-				TokenCopyEntersTapped:                syntax.TokenCopyEntersTapped,
-				TokenCopyGrantKeywords:               append([]parser.KeywordKind(nil), syntax.TokenCopyGrantKeywords...),
-				TokenCopyGrantRiderSpan:              syntax.TokenCopyGrantRiderSpan,
-				TokenChoice:                          syntax.TokenChoice,
-				StaticSubject:                        compileStaticSubjectKind(syntax.StaticSubject.Kind),
-				StaticSubjectSpan:                    syntax.StaticSubject.Span,
+				Kind:                 compileEffectKind(syntax.Kind),
+				Context:              syntax.Context,
+				Connection:           syntax.Connection,
+				ConnectionSpan:       syntax.ConnectionSpan,
+				Span:                 syntax.Span,
+				ClauseSpan:           syntax.ClauseSpan,
+				Text:                 syntax.Text,
+				VerbSpan:             syntax.VerbSpan,
+				Player:               syntax.Player,
+				CardSource:           syntax.CardSource,
+				RequirePermanentCard: syntax.RequirePermanentCard,
+				References:           compileTypedReferences(syntax.References),
+				SubjectReferences:    compileTypedReferences(syntax.SubjectReferences),
+				Targets:              compileTypedTargetList(syntax.Targets),
+				SubjectTargets:       compileTypedTargetList(syntax.SubjectTargets),
+				Duration:             compileEffectDuration(syntax.Duration),
+				DelayedTiming:        compileDelayedTiming(syntax.DelayedTiming),
+				Selector:             compileTypedSelection(syntax.Selection),
+				DamageRecipient: CompiledDamageRecipient{
+					GroupSelectors:  compileDamageRecipientSelectors(syntax.DamageRecipient.Groups),
+					Reference:       syntax.DamageRecipient.Reference,
+					EachSourceGroup: compileTypedSelection(syntax.DamageRecipient.EachSourceGroup),
+					EachSourceRole:  syntax.DamageRecipient.EachSourceRole,
+				},
+				DamageRiders:                   syntax.DamageRiders,
+				Amount:                         compileTypedAmount(syntax.Amount),
+				PowerDelta:                     compileSignedAmount(syntax.PowerDelta),
+				ToughnessDelta:                 compileSignedAmount(syntax.ToughnessDelta),
+				TokenPower:                     syntax.TokenPower,
+				TokenToughness:                 syntax.TokenToughness,
+				TokenPTKnown:                   syntax.TokenPTKnown,
+				TokenPTVariableX:               syntax.TokenPTVariableX,
+				TokenPTDynamic:                 syntax.TokenPTDynamic,
+				TokenGrantedAbility:            syntax.TokenGrantedAbility,
+				GainGrantedAbility:             syntax.GainGrantedAbility,
+				EmblemAbilities:                syntax.EmblemAbilities,
+				DelayedTriggerAbility:          syntax.DelayedTriggerAbility,
+				PayRepeatedlyAnimate:           syntax.PayRepeatedlyAnimate,
+				DelayedTriggerOneShot:          syntax.DelayedTriggerOneShot,
+				DelayedTriggerBindDamageSource: syntax.DelayedTriggerBindDamageSource,
+				TokenName:                      syntax.TokenName,
+				TokenPredefinedName:            syntax.TokenPredefinedName,
+				AmassSubtype:                   syntax.AmassSubtype,
+				TokenCopyOfTarget:              syntax.TokenCopyOfTarget,
+				TokenCopyOfReference:           syntax.TokenCopyOfReference,
+				TokenCopyOfAttached:            syntax.TokenCopyOfAttached,
+				TokenCopyOfTriggeringSet:       syntax.TokenCopyOfTriggeringSet,
+				TokenCopyDropLegendary:         syntax.TokenCopyDropLegendary,
+				TokenCopyEntersTapped:          syntax.TokenCopyEntersTapped,
+				TokenCopyGrantKeywords:         append([]parser.KeywordKind(nil), syntax.TokenCopyGrantKeywords...),
+				TokenCopyGrantRiderSpan:        syntax.TokenCopyGrantRiderSpan,
+				TokenChoice:                    syntax.TokenChoice,
+				StaticSubject:                  compileStaticSubjectKind(syntax.StaticSubject.Kind),
+				StaticSubjectSpan:              syntax.StaticSubject.Span,
 				Details: compiledEffectDetails(
-					staticSubjectType(syntax.StaticSubject.SubtypeText, syntax.StaticSubject.Subtype, syntax.StaticSubject.SubtypeKnown, syntax.StaticSubject.ExcludedSubtype),
-					staticSubjectColors(syntax.StaticSubject.Colors, syntax.StaticSubject.Colorless, syntax.StaticSubject.Multicolored),
+					staticSubjectType(syntax.StaticSubject.SubtypeText, syntax.StaticSubject.Subtype, syntax.StaticSubject.SubtypesAny, syntax.StaticSubject.SubtypeKnown, syntax.StaticSubject.ExcludedSubtype),
+					staticSubjectColors(syntax.StaticSubject.Colors, syntax.StaticSubject.Colorless, syntax.StaticSubject.Multicolored, syntax.StaticSubject.ChosenColorFromEntry),
 					staticSubjectKeyword(syntax.StaticSubject.Keyword, syntax.StaticSubject.ExcludedKeyword),
 					staticSubjectCounter(syntax.StaticSubject.CounterRequired, syntax.StaticSubject.CounterKind, syntax.StaticSubject.CounterAny),
 					syntax.Symbol,
 				),
-				CounterKind:              syntax.CounterKind,
-				CounterKindKnown:         syntax.CounterKnown,
-				CounterRecipientAttached: syntax.CounterRecipientAttached,
-				RegenerateAttached:       syntax.RegenerateAttached,
-				MoveCountersAll:          syntax.MoveCountersAll,
-				MoveCountersDistribute:   syntax.MoveCountersDistribute,
-				MoveThoseCounters:        syntax.MoveThoseCounters,
-				MoveCountersFromTarget:   syntax.MoveCountersFromTarget,
-				MoveCountersAnyKind:      syntax.MoveCountersAnyKind,
-				FromZone:                 syntax.FromZone,
-				GraveyardZoneExile:       syntax.GraveyardZoneExile,
-				ToZone:                   syntax.ToZone,
-				Destination:              syntax.Destination,
-				EntersTapped:             syntax.EntersTapped,
-				EntersTappedSelf:         syntax.EntersTappedSelf,
-				EntersTappedGroup:        syntax.EntersTappedGroup,
-				EntersTappedGroupScope:   syntax.EntersTappedGroupScope,
-				EntersTappedGroupTypes:   slices.Clone(syntax.EntersTappedGroupTypes),
-				EntersColorChoice:        syntax.EntersColorChoice,
-				EntersColorChoiceExclude: syntax.EntersColorChoiceExclude,
-				EntersTypeChoice:         syntax.EntersTypeChoice,
-				EntersDevour:             syntax.EntersDevour,
-				EntersDevourMultiplier:   syntax.EntersDevourMultiplier,
-				EntersTribute:            syntax.EntersTribute,
-				EntersTributeCount:       syntax.EntersTributeCount,
-				EntersAsCopy:             syntax.EntersAsCopy,
-				EntersAsCopyOptional:     syntax.EntersAsCopyOptional,
-				EntersAsCopyNotLegendary: syntax.EntersAsCopyNotLegendary,
-				EntersAsCopyAddTypes:     slices.Clone(syntax.EntersAsCopyAddTypes),
+				CounterKind:                  syntax.CounterKind,
+				CounterKindKnown:             syntax.CounterKnown,
+				CounterKindChoices:           append([]counter.Kind(nil), syntax.CounterKindChoices...),
+				CounterRecipientAttached:     syntax.CounterRecipientAttached,
+				CounterRecipientSingleChoice: syntax.CounterRecipientSingleChoice,
+				RegenerateAttached:           syntax.RegenerateAttached,
+				MoveCountersAll:              syntax.MoveCountersAll,
+				MoveCountersDistribute:       syntax.MoveCountersDistribute,
+				MoveThoseCounters:            syntax.MoveThoseCounters,
+				MoveCountersFromTarget:       syntax.MoveCountersFromTarget,
+				MoveCountersAnyKind:          syntax.MoveCountersAnyKind,
+				FromZone:                     syntax.FromZone,
+				GraveyardZoneExile:           syntax.GraveyardZoneExile,
+				ToZone:                       syntax.ToZone,
+				Destination:                  syntax.Destination,
+				EntersTapped:                 syntax.EntersTapped,
+				EntersTappedSelf:             syntax.EntersTappedSelf,
+				GroupEntryModification:       compileGroupEntryModification(syntax.GroupEntryModification),
+				EntersColorChoice:            syntax.EntersColorChoice,
+				EntersColorChoiceExclude:     syntax.EntersColorChoiceExclude,
+				EntersTypeChoice:             syntax.EntersTypeChoice,
+				EntersDevour:                 syntax.EntersDevour,
+				EntersDevourMultiplier:       syntax.EntersDevourMultiplier,
+				EntersDevourType:             syntax.EntersDevourType,
+				EntersDevourSubtype:          syntax.EntersDevourSubtype,
+				EntersTribute:                syntax.EntersTribute,
+				EntersTributeCount:           syntax.EntersTributeCount,
+				EntersAsCopy:                 syntax.EntersAsCopy,
+				EntersAsCopyOptional:         syntax.EntersAsCopyOptional,
+				EntersAsCopyNotLegendary:     syntax.EntersAsCopyNotLegendary,
+				EntersAsCopyAddTypes:         slices.Clone(syntax.EntersAsCopyAddTypes),
+				EntersAsCopyAddSubtypes:      slices.Clone(syntax.EntersAsCopyAddSubtypes),
 
 				EntersAsCopyConditionalCounters: slices.Clone(syntax.EntersAsCopyConditionalCounters),
 				EntersAsCopyUntilEndOfTurn:      syntax.EntersAsCopyUntilEndOfTurn,
 				EntersAsCopyAddKeywords:         slices.Clone(syntax.EntersAsCopyAddKeywords),
+				EntersAsCopyTapped:              syntax.EntersAsCopyTapped,
 
 				BecomeCopyUntilEndOfTurn:     syntax.BecomeCopyUntilEndOfTurn,
 				BecomeCopyRetainsThisAbility: syntax.BecomeCopyRetainsThisAbility,
 				BecomeCopyAddKeywords:        slices.Clone(syntax.BecomeCopyAddKeywords),
 
+				BecomeTypeAddTypes:       slices.Clone(syntax.BecomeTypeAddTypes),
+				BecomeTypeAddColors:      polymorphColors(syntax.BecomeTypeAddColors),
+				BecomeTypeUntilEndOfTurn: syntax.BecomeTypeUntilEndOfTurn,
+
+				PolymorphColors:        polymorphColors(syntax.PolymorphColors),
+				PolymorphColorless:     syntax.PolymorphColorless,
+				PolymorphSubtypes:      slices.Clone(syntax.PolymorphSubtypes),
+				PolymorphBasePower:     syntax.PolymorphBasePower,
+				PolymorphBaseToughness: syntax.PolymorphBaseToughness,
+				PolymorphName:          syntax.PolymorphName,
+				PolymorphSupertypes:    polymorphSupertypes(syntax.PolymorphSupertypes),
+				PolymorphPermanent:     syntax.PolymorphPermanent,
+
+				SetBasePower:               syntax.SetBasePower,
+				SetBaseToughness:           syntax.SetBaseToughness,
+				SetBasePTVariableX:         syntax.SetBasePTVariableX,
+				SetBasePTEveryCreatureType: syntax.SetBasePTEveryCreatureType,
+				SetBasePTSource:            syntax.SetBasePTSource,
+				SwitchPTSource:             syntax.SwitchPTSource,
+
 				EntersWithCounters:        syntax.EntersWithCounters,
-				EntersWithCountersGroup:   syntax.EntersWithCountersGroup,
 				UnderYourControl:          syntax.UnderYourControl,
 				UnderOwnersControl:        syntax.UnderOwnersControl,
 				TokenCopyOfForEach:        syntax.TokenCopyOfForEach,
 				TokenCopyForEachGroup:     compileTokenCopyForEachGroup(syntax.TokenCopyForEachGroup),
 				CastAsAdventure:           syntax.CastAsAdventure,
 				CastWithoutPayingManaCost: syntax.CastWithoutPayingManaCost,
+				PlayHideawayExiledCard:    syntax.PlayHideawayExiledCard,
 				Negated:                   syntax.Negated,
 				FallbackOnInability:       syntax.FallbackOnInability,
 				Optional:                  syntax.Optional,
@@ -325,47 +387,157 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 					Instead:                  syntax.Mana.Instead,
 					TriggerLandProducedType:  syntax.Mana.TriggerLandProducedType,
 				},
-				Replacement:                     syntax.Replacement,
-				Payment:                         compileEffectPayment(syntax.Payment),
-				Exact:                           syntax.Exact,
-				SourceSpellCostReduction:        syntax.SourceSpellCostReduction,
-				SourceSpellCostReductionAmount:  syntax.SourceSpellCostReductionAmount,
-				SourceSpellCostReductionDynamic: syntax.SourceSpellCostReductionDynamic,
-				RequiresOrderedLowering:         syntax.RequiresOrderedLowering,
-				HasUnrecognizedSibling:          syntax.HasUnrecognizedSibling,
-				UnsupportedDetail:               syntax.UnsupportedDetail,
-				Order:                           syntax.Order,
-				VerbOrder:                       syntax.VerbOrder,
-				PreventRegeneration:             syntax.PreventRegeneration,
-				RegenerationRiderSpan:           syntax.RegenerationRiderSpan,
-				CopyMayChooseNewTargets:         syntax.CopyMayChooseNewTargets,
-				CopyChooseNewTargetsRiderSpan:   syntax.CopyChooseNewTargetsRiderSpan,
-				Dig:                             syntax.Dig,
-				HandLibraryPut:                  syntax.HandLibraryPut,
-				HandDiscard:                     syntax.HandDiscard,
-				SearchSplit:                     syntax.SearchSplit,
-				ManaSpendRider:                  compileManaSpendRider(syntax.ManaSpendRider),
-				SearchSharedSubtype:             syntax.SearchSharedSubtype,
-				SearchDestination:               syntax.SearchDestination,
-				SearchControl:                   syntax.SearchControl,
-				DiscardEntireHand:               syntax.DiscardEntireHand,
-				CounteredSpellExileReplacement:  syntax.CounteredSpellExileReplacement,
-				CantCastSpellsAllPlayers:        syntax.CantCastSpellsAllPlayers,
-				CantCastSpellsRequiredTypes:     compilerCardTypes(syntax.CantCastSpellsRequiredTypes),
-				CantCastSpellsExcludedTypes:     compilerCardTypes(syntax.CantCastSpellsExcludedTypes),
-				PreventDamageTo:                 syntax.PreventDamageTo,
-				PreventDamageBy:                 syntax.PreventDamageBy,
-				PreventDamageGlobal:             syntax.PreventDamageGlobal,
-				SpellsCantBeCounteredNextOnly:   syntax.SpellsCantBeCounteredNextOnly,
-				DoublePower:                     syntax.DoublePower,
-				DoubleToughness:                 syntax.DoubleToughness,
-				PunisherSacrifice:               syntax.PunisherSacrifice,
-				PunisherDiscard:                 syntax.PunisherDiscard,
-				RepeatBody:                      compileEffects([]parser.Sentence{{Effects: syntax.RepeatBody}}),
-				ReturnAsEnchantment:             syntax.ReturnAsEnchantment,
-				ReturnAsEnchantmentRiderSpan:    syntax.ReturnAsEnchantmentRiderSpan,
+				Replacement:                            syntax.Replacement,
+				Payment:                                compileEffectPayment(syntax.Payment),
+				Exact:                                  syntax.Exact,
+				KeywordGrantChoice:                     syntax.KeywordGrantChoice,
+				RevealUntilThenPut:                     syntax.RevealUntilThenPut,
+				SourceSpellCostReduction:               syntax.SourceSpellCostReduction,
+				SourceSpellCostReductionAmount:         syntax.SourceSpellCostReductionAmount,
+				SourceSpellCostReductionDynamic:        syntax.SourceSpellCostReductionDynamic,
+				RequiresOrderedLowering:                syntax.RequiresOrderedLowering,
+				HasUnrecognizedSibling:                 syntax.HasUnrecognizedSibling,
+				UnsupportedDetail:                      syntax.UnsupportedDetail,
+				Order:                                  syntax.Order,
+				VerbOrder:                              syntax.VerbOrder,
+				PreventRegeneration:                    syntax.PreventRegeneration,
+				RegenerationRiderSpan:                  syntax.RegenerationRiderSpan,
+				CopyMayChooseNewTargets:                syntax.CopyMayChooseNewTargets,
+				CopyChooseNewTargetsRiderSpan:          syntax.CopyChooseNewTargetsRiderSpan,
+				Dig:                                    syntax.Dig,
+				HandLibraryPut:                         syntax.HandLibraryPut,
+				HandDiscard:                            syntax.HandDiscard,
+				RevealChooseDiscard:                    syntax.RevealChooseDiscard,
+				HandChoiceDiscard:                      syntax.HandChoiceDiscard,
+				SearchSplit:                            syntax.SearchSplit,
+				ManaSpendRider:                         compileManaSpendRider(syntax.ManaSpendRider),
+				SearchSharedSubtype:                    syntax.SearchSharedSubtype,
+				SearchDestination:                      syntax.SearchDestination,
+				SearchControl:                          syntax.SearchControl,
+				DiscardEntireHand:                      syntax.DiscardEntireHand,
+				CounteredSpellExileReplacement:         syntax.CounteredSpellExileReplacement,
+				ExileUntilSourceLeaves:                 syntax.ExileUntilSourceLeaves,
+				ReturnExiledCard:                       syntax.ReturnExiledCard,
+				ExileEntireHand:                        syntax.ExileEntireHand,
+				ReturnExiledCardsToHand:                syntax.ReturnExiledCardsToHand,
+				BottomLinkedExiledCards:                syntax.BottomLinkedExiledCards,
+				ExileForEachPlayerUntilSourceLeaves:    syntax.ExileForEachPlayerUntilSourceLeaves,
+				ReturnLinkedExiledToBattlefieldPartial: syntax.ReturnLinkedExiledToBattlefieldPartial,
+				PutLinkedExiledRestOnLibraryBottom:     syntax.PutLinkedExiledRestOnLibraryBottom,
+				DestroyForEachPlayer:                   syntax.DestroyForEachPlayer,
+				CreateTokenForEachDestroyedThisWay:     syntax.CreateTokenForEachDestroyedThisWay,
+				CounterExiledCardManaValue:             syntax.CounterExiledCardManaValue,
+				ReturnSourceAndExiledCardToHand:        syntax.ReturnSourceAndExiledCardToHand,
+				CantCastSpellsAllPlayers:               syntax.CantCastSpellsAllPlayers,
+				CantCastSpellsRequiredTypes:            compilerCardTypes(syntax.CantCastSpellsRequiredTypes),
+				CantCastSpellsExcludedTypes:            compilerCardTypes(syntax.CantCastSpellsExcludedTypes),
+				SpellCostModifierCaster:                syntax.SpellCostModifierCaster,
+				SpellCostModifierAmount:                syntax.SpellCostModifierAmount,
+				SpellCostModifierIncrease:              syntax.SpellCostModifierIncrease,
+				SpellCostModifierRequiredTypes:         compilerCardTypes(syntax.SpellCostModifierRequiredTypes),
+				SpellCostModifierExcludedTypes:         compilerCardTypes(syntax.SpellCostModifierExcludedTypes),
+				AttackTaxGeneric:                       syntax.AttackTaxGeneric,
+				PlayFromTopPayLife:                     syntax.PlayFromTopPayLife,
+				PlayFromTopPayLifeRiderSpan:            syntax.PlayFromTopPayLifeRiderSpan,
+				PreventDamageTo:                        syntax.PreventDamageTo,
+				PreventDamageBy:                        syntax.PreventDamageBy,
+				PreventDamageGlobal:                    syntax.PreventDamageGlobal,
+				SpellsCantBeCounteredNextOnly:          syntax.SpellsCantBeCounteredNextOnly,
+				DoublePower:                            syntax.DoublePower,
+				DoubleToughness:                        syntax.DoubleToughness,
+				DoubleSourceCounters:                   syntax.DoubleSourceCounters,
+				DoubleSourceCounterKind:                syntax.DoubleSourceCounterKind,
+				DoubleCountersTarget:                   syntax.DoubleCountersTarget,
+				DoubleCountersAllKinds:                 syntax.DoubleCountersAllKinds,
+				PunisherSacrifice:                      syntax.PunisherSacrifice,
+				PunisherDiscard:                        syntax.PunisherDiscard,
+				RepeatBody:                             compileEffects([]parser.Sentence{{Effects: syntax.RepeatBody}}),
+				ReturnAsEnchantment:                    syntax.ReturnAsEnchantment,
+				ReturnAsEnchantmentRiderSpan:           syntax.ReturnAsEnchantmentRiderSpan,
+				AdditionalCombatPhase:                  syntax.AdditionalCombatPhase,
+				AdditionalMainPhase:                    syntax.AdditionalMainPhase,
+				DieSides:                               syntax.DieSides,
 			})
 		}
+	}
+	return effects
+}
+
+// appendDiceTableEffects compiles each die-roll outcome-table row's resolving
+// sentences and appends them to effects, stamping every row effect with the
+// row's inclusive result interval. Lowering groups the appended effects by
+// interval and gates each on the rolled value. It returns effects unchanged
+// when the ability carries no outcome table.
+func appendDiceTableEffects(effects []CompiledEffect, table *parser.DiceTable) []CompiledEffect {
+	if table == nil {
+		return effects
+	}
+	for _, row := range table.Rows {
+		rowEffects := compileEffects(row.Sentences)
+		for i := range rowEffects {
+			rowEffects[i].DiceRow = true
+			rowEffects[i].DiceRowMin = row.Min
+			rowEffects[i].DiceRowMax = row.Max
+		}
+		effects = append(effects, rowEffects...)
+	}
+	return effects
+}
+
+// appendCoinFlipEffects compiles each branch of a recognized "Flip a coin."
+// outcome and appends the branch effects to effects, stamping every effect with
+// the branch it belongs to. Lowering groups the appended effects by branch and
+// gates each on the flip result. It returns effects unchanged when the ability
+// carries no coin flip.
+func appendCoinFlipEffects(effects []CompiledEffect, flip *parser.CoinFlip) []CompiledEffect {
+	if flip == nil {
+		return effects
+	}
+	effects = appendCoinFlipBranch(effects, flip.Win, CoinFlipBranchWin, flip.ConstructSpan)
+	effects = appendCoinFlipBranch(effects, flip.Lose, CoinFlipBranchLose, flip.ConstructSpan)
+	return effects
+}
+
+// appendCoinFlipBranch compiles one coin-flip branch's resolving sentences and
+// appends them to effects, stamping each with branch and the construct span the
+// parser recorded. The re-parsed branch effects carry consequence-clause spans
+// that omit the flip line and may be out of source order, so the shared
+// construct span keeps the backend's body-span machinery covering the whole
+// construct, exactly as it treats a same-span effect group.
+func appendCoinFlipBranch(
+	effects []CompiledEffect,
+	sentences []parser.Sentence,
+	branch CoinFlipBranch,
+	construct shared.Span,
+) []CompiledEffect {
+	branchEffects := compileEffects(sentences)
+	for i := range branchEffects {
+		branchEffects[i].CoinFlipBranch = branch
+		branchEffects[i].Span = construct
+		branchEffects[i].VerbSpan = construct
+	}
+	return append(effects, branchEffects...)
+}
+
+// appendVoteEffects compiles each arm of a recognized vote and appends the arm
+// effects to effects, stamping every effect with the arm's gating data (the
+// option index and tie-inclusiveness). Lowering groups the appended effects by
+// arm and gates each on the vote tally. It returns effects unchanged when the
+// ability carries no vote.
+func appendVoteEffects(effects []CompiledEffect, vote *parser.VoteClause) []CompiledEffect {
+	if vote == nil {
+		return effects
+	}
+	for _, arm := range vote.Arms {
+		armEffects := compileEffects(arm.Sentences)
+		for i := range armEffects {
+			armEffects[i].VoteArm = true
+			armEffects[i].VoteArmOption = arm.Option
+			armEffects[i].VoteArmTieInclusive = arm.TieInclusive
+			armEffects[i].Span = vote.ConstructSpan
+			armEffects[i].VerbSpan = vote.ConstructSpan
+		}
+		effects = append(effects, armEffects...)
 	}
 	return effects
 }
@@ -411,6 +583,10 @@ func effectKindForStaticRule(rule StaticRuleKind) EffectKind {
 		return EffectMustAttack
 	case StaticRuleMustBeBlocked:
 		return EffectMustBeBlocked
+	case StaticRuleMustBeBlockedByAllAble:
+		return EffectMustBeBlockedByAllAble
+	case StaticRuleAssignDamageAsUnblocked:
+		return EffectAssignDamageAsUnblocked
 	case StaticRuleCantBeCountered:
 		return EffectCantBeCountered
 	case StaticRuleCantBeBlockedByCreaturesWith:
@@ -419,6 +595,8 @@ func effectKindForStaticRule(rule StaticRuleKind) EffectKind {
 		return EffectCantBeBlockedByMoreThanOne
 	case StaticRuleCantAttackOrBlock:
 		return EffectCantAttackOrBlock
+	case StaticRuleCantBlockAndCantBeBlocked:
+		return EffectCantBlockAndCantBeBlocked
 	case StaticRuleDoesntUntap:
 		return EffectDoesntUntap
 	default:
@@ -465,4 +643,15 @@ func compileStaticRuleReferences(sentences []parser.Sentence) []CompiledReferenc
 		})
 	}
 	return references
+}
+
+// compileGroupEntryModification mirrors the parser's typed static group
+// entry-modification payload into its compiler form, cloning the tapped form's
+// card-type restriction.
+func compileGroupEntryModification(syntax parser.GroupEntryModificationSyntax) CompiledGroupEntryModification {
+	return CompiledGroupEntryModification{
+		Kind:            syntax.Kind,
+		ControllerScope: syntax.ControllerScope,
+		Types:           slices.Clone(syntax.Types),
+	}
 }

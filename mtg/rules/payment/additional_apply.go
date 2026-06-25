@@ -110,11 +110,16 @@ func additionalCostPlanStillValid(s State, player *game.Player, plan additionalC
 	return true
 }
 
-func applyAdditionalCostPlan(s State, plan additionalCostPlan) bool {
+// applyAdditionalCostPlan applies a prevalidated additional cost plan. As with
+// applyPaymentPlan the caller MUST confirm the plan against current state
+// (paymentApplicationReady / additionalCostPlanStillValid) first; every failure
+// here therefore denotes an internal invariant violation and panics rather than
+// returning after partial mutation, so a clean payment failure is atomic.
+func applyAdditionalCostPlan(s State, plan additionalCostPlan) {
 	if plan.lifePaid > 0 {
 		player, ok := s.Player(plan.player)
 		if !ok || player.Life < plan.lifePaid || !s.CanPayLife(plan.player) {
-			return false
+			panic("additional cost plan life payment was not prevalidated before application")
 		}
 	}
 	if plan.untapSource != nil {
@@ -122,15 +127,15 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) bool {
 	}
 	for _, removal := range plan.counterRemovals {
 		if !s.RemoveCounters(removal.source, removal.kind, removal.amount) {
-			return false
+			panic("additional cost plan became invalid while removing counters")
 		}
 	}
 	if plan.exertSource != nil && !s.ExertPermanent(plan.exertSource) {
-		return false
+		panic("additional cost plan became invalid while exerting source")
 	}
 	for _, placement := range plan.counterAdds {
 		if !s.AddCounters(plan.player, placement.source, placement.kind, placement.amount) {
-			return false
+			panic("additional cost plan became invalid while placing counters")
 		}
 	}
 	if plan.millAmount > 0 {
@@ -138,7 +143,7 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) bool {
 	}
 	for _, sacrifice := range plan.sacrifices {
 		if !s.SacrificePermanent(sacrifice) {
-			return false
+			panic("additional cost plan became invalid while sacrificing permanents")
 		}
 	}
 	for _, permanentToTap := range plan.permanentsToTap {
@@ -146,22 +151,22 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) bool {
 	}
 	for _, returned := range plan.returnsToHand {
 		if !s.MovePermanentToZone(returned.permanent, zone.Hand) {
-			return false
+			panic("additional cost plan became invalid while returning permanents")
 		}
 	}
 	for _, permanent := range plan.exilePermanents {
 		if !s.MovePermanentToZone(permanent, zone.Exile) {
-			return false
+			panic("additional cost plan became invalid while exiling permanents")
 		}
 	}
 	for _, cardID := range plan.discards {
 		if !s.DiscardFromHand(plan.player, cardID) {
-			return false
+			panic("additional cost plan became invalid while discarding cards")
 		}
 	}
 	for _, exile := range plan.exiles {
 		if !s.MoveCard(plan.player, exile.cardID, exile.zone, zone.Exile) {
-			return false
+			panic("additional cost plan became invalid while exiling cards")
 		}
 	}
 	for _, reveal := range plan.reveals {
@@ -170,7 +175,7 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) bool {
 	for _, evidence := range plan.evidence {
 		for _, card := range evidence.cards {
 			if !s.MoveCard(plan.player, card.cardID, zone.Graveyard, zone.Exile) {
-				return false
+				panic("additional cost plan became invalid while collecting evidence")
 			}
 		}
 	}
@@ -180,13 +185,12 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) bool {
 	if plan.energyPaid > 0 {
 		player, ok := s.Player(plan.player)
 		if !ok || player.EnergyCounters < plan.energyPaid {
-			return false
+			panic("additional cost plan became invalid while paying energy")
 		}
 		if !s.SetPlayerEnergyCounters(plan.player, player.EnergyCounters-plan.energyPaid) {
-			return false
+			panic("additional cost plan failed to set energy counters")
 		}
 	}
-	return true
 }
 
 func zoneContainsCard(s State, playerID game.PlayerID, zoneType zone.Type, cardID id.ID) bool {

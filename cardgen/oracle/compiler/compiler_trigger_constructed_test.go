@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestCompileConstructedPhaseStepTriggerClauses(t *testing.T) {
@@ -59,9 +61,9 @@ func TestCompileConstructedPhaseStepTriggerClauses(t *testing.T) {
 				Event: TriggerEventBeginningOfStep,
 				Step:  TriggerStepUpkeep,
 				StepPlayerSourceAttachedSelection: TriggerSelection{
-					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
-					Supertypes:    []TriggerSupertype{TriggerSupertypeLegendary},
-					ColorsAny:     []TriggerColor{TriggerColorWhite},
+					RequiredTypes: []types.Card{types.Creature},
+					Supertypes:    []types.Super{types.Legendary},
+					ColorsAny:     []color.Color{color.White},
 				},
 			},
 		},
@@ -190,7 +192,7 @@ func TestCompileConstructedPlayerEventTriggerClauses(t *testing.T) {
 				Kind:          TriggerWhenever,
 				Event:         TriggerEventCardDiscarded,
 				Player:        TriggerPlayerYou,
-				CardSelection: TriggerSelection{RequiredTypes: []TriggerCardType{TriggerCardTypeCreature}},
+				CardSelection: TriggerSelection{RequiredTypes: []types.Card{types.Creature}},
 			},
 		},
 		{
@@ -205,7 +207,7 @@ func TestCompileConstructedPlayerEventTriggerClauses(t *testing.T) {
 				Kind:          TriggerWhenever,
 				Event:         TriggerEventCardDiscarded,
 				Player:        TriggerPlayerYou,
-				CardSelection: TriggerSelection{ExcludedTypes: []TriggerCardType{TriggerCardTypeCreature, TriggerCardTypeLand}},
+				CardSelection: TriggerSelection{ExcludedTypes: []types.Card{types.Creature, types.Land}},
 			},
 		},
 		{
@@ -249,6 +251,24 @@ func TestCompileConstructedPlayerEventTriggerClauses(t *testing.T) {
 			},
 		},
 		{
+			name:   "first discard one or more each turn",
+			kind:   parser.TriggerIntroductionWhenever,
+			player: parser.TriggerPlayerSelectorYou,
+			action: parser.PlayerEventActionDiscard,
+			card:   parser.PlayerEventCardOneOrMore,
+			occurrence: parser.PlayerEventOccurrence{
+				Kind:    parser.PlayerEventOccurrenceFirstEachTurn,
+				Ordinal: 1,
+			},
+			want: TriggerPattern{
+				Kind:                       TriggerWhenever,
+				Event:                      TriggerEventCardDiscarded,
+				Player:                     TriggerPlayerYou,
+				PlayerEventOrdinalThisTurn: 1,
+				OneOrMore:                  true,
+			},
+		},
+		{
 			name:   "ordinal draw",
 			kind:   parser.TriggerIntroductionWhenever,
 			player: parser.TriggerPlayerSelectorYou,
@@ -280,6 +300,22 @@ func TestCompileConstructedPlayerEventTriggerClauses(t *testing.T) {
 				Event:                      TriggerEventSurveil,
 				Player:                     TriggerPlayerOpponent,
 				PlayerEventOrdinalThisTurn: 1,
+			},
+		},
+		{
+			name:   "except first draw in draw step",
+			kind:   parser.TriggerIntroductionWhenever,
+			player: parser.TriggerPlayerSelectorOpponent,
+			action: parser.PlayerEventActionDraw,
+			card:   parser.PlayerEventCardSingle,
+			occurrence: parser.PlayerEventOccurrence{
+				Kind: parser.PlayerEventOccurrenceExceptFirstInDrawStep,
+			},
+			want: TriggerPattern{
+				Kind:                       TriggerWhenever,
+				Event:                      TriggerEventCardDrawn,
+				Player:                     TriggerPlayerOpponent,
+				ExcludeFirstDrawInDrawStep: true,
 			},
 		},
 	}
@@ -355,9 +391,11 @@ func TestCompileConstructedPlayerEventTriggerClausesFailClosed(t *testing.T) {
 			clause.Card.Kind = parser.PlayerEventCardOneOrMore
 			return clause
 		}()},
-		{name: "discard first time", kind: parser.TriggerIntroductionWhenever, clause: func() parser.PlayerEventTriggerClause {
+		{name: "discard first time any player", kind: parser.TriggerIntroductionWhenever, clause: func() parser.PlayerEventTriggerClause {
 			clause := valid
+			clause.Player.Kind = parser.TriggerPlayerSelectorAny
 			clause.Action.Kind = parser.PlayerEventActionDiscard
+			clause.Card.Kind = parser.PlayerEventCardOneOrMore
 			clause.Occurrence = parser.PlayerEventOccurrence{Kind: parser.PlayerEventOccurrenceFirstEachTurn, Ordinal: 1}
 			return clause
 		}()},

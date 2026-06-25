@@ -142,6 +142,7 @@ func mixedKeywordDiagnostic(ctx contentCtx) *shared.Diagnostic {
 // keywordStaticBodies maps a typed keyword to its reusable typed StaticAbility and
 // the package-level variable reference the Renderer emits for it.
 var keywordStaticBodies = map[parser.KeywordKind]loweredStaticAbility{
+	parser.KeywordBanding:          {Body: game.BandingStaticBody, VarName: "game.BandingStaticBody"},
 	parser.KeywordDevoid:           {Body: game.DevoidStaticBody, VarName: "game.DevoidStaticBody"},
 	parser.KeywordDeathtouch:       {Body: game.DeathtouchStaticBody, VarName: "game.DeathtouchStaticBody"},
 	parser.KeywordDefender:         {Body: game.DefenderStaticBody, VarName: "game.DefenderStaticBody"},
@@ -153,6 +154,7 @@ var keywordStaticBodies = map[parser.KeywordKind]loweredStaticAbility{
 	parser.KeywordFirstStrike:      {Body: game.FirstStrikeStaticBody, VarName: "game.FirstStrikeStaticBody"},
 	parser.KeywordFlash:            {Body: game.FlashStaticBody, VarName: "game.FlashStaticBody"},
 	parser.KeywordFlying:           {Body: game.FlyingStaticBody, VarName: "game.FlyingStaticBody"},
+	parser.KeywordFuse:             {Body: game.FuseStaticBody, VarName: "game.FuseStaticBody"},
 	parser.KeywordHaste:            {Body: game.HasteStaticBody, VarName: "game.HasteStaticBody"},
 	parser.KeywordHexproof:         {Body: game.HexproofStaticBody, VarName: "game.HexproofStaticBody"},
 	parser.KeywordHorsemanship:     {Body: game.HorsemanshipStaticBody, VarName: "game.HorsemanshipStaticBody"},
@@ -160,12 +162,14 @@ var keywordStaticBodies = map[parser.KeywordKind]loweredStaticAbility{
 	parser.KeywordIndestructible:   {Body: game.IndestructibleStaticBody, VarName: "game.IndestructibleStaticBody"},
 	parser.KeywordInfect:           {Body: game.InfectStaticBody, VarName: "game.InfectStaticBody"},
 	parser.KeywordIntimidate:       {Body: game.IntimidateStaticBody, VarName: "game.IntimidateStaticBody"},
+	parser.KeywordJumpStart:        {Body: game.JumpStartStaticBody, VarName: "game.JumpStartStaticBody"},
 	parser.KeywordLifelink:         {Body: game.LifelinkStaticBody, VarName: "game.LifelinkStaticBody"},
 	parser.KeywordMenace:           {Body: game.MenaceStaticBody, VarName: "game.MenaceStaticBody"},
 	parser.KeywordPersist:          {Body: game.PersistStaticBody, VarName: "game.PersistStaticBody"},
 	parser.KeywordProwess:          {Body: game.ProwessStaticBody, VarName: "game.ProwessStaticBody"},
 	parser.KeywordReadAhead:        {Body: game.ReadAheadStaticBody, VarName: "game.ReadAheadStaticBody"},
 	parser.KeywordReach:            {Body: game.ReachStaticBody, VarName: "game.ReachStaticBody"},
+	parser.KeywordRetrace:          {Body: game.RetraceStaticBody, VarName: "game.RetraceStaticBody"},
 	parser.KeywordShadow:           {Body: game.ShadowStaticBody, VarName: "game.ShadowStaticBody"},
 	parser.KeywordShroud:           {Body: game.ShroudStaticBody, VarName: "game.ShroudStaticBody"},
 	parser.KeywordSkulk:            {Body: game.SkulkStaticBody, VarName: "game.SkulkStaticBody"},
@@ -188,4 +192,5 @@ var keywordStaticBodies = map[parser.KeywordKind]loweredStaticAbility{
 	parser.KeywordForestwalk:       {Body: game.ForestwalkStaticBody, VarName: "game.ForestwalkStaticBody"},
 	parser.KeywordDesertwalk:       {Body: game.DesertwalkStaticBody, VarName: "game.DesertwalkStaticBody"},
 	parser.KeywordNonbasicLandwalk: {Body: game.NonbasicLandwalkStaticBody, VarName: "game.NonbasicLandwalkStaticBody"},
+	parser.KeywordRebound:          {Body: game.ReboundStaticBody, VarName: "game.ReboundStaticBody"},
 }

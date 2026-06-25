@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -77,8 +78,8 @@ func costModifierAppliesToAbility(g *game.Game, modifier game.CostModifier, play
 	if modifier.AbilityKeyword != game.KeywordNone && !game.BodyHasKeyword(body, modifier.AbilityKeyword) {
 		return false
 	}
-	if modifier.MatchCardType {
-		if card == nil || card.Def == nil || !card.Def.HasType(modifier.CardType) {
+	if !modifier.CardSelection.Empty() {
+		if card == nil || !cardDefMatchesCostSelection(g, card.Def, modifier.CardSelection) {
 			return false
 		}
 	}
@@ -89,12 +90,7 @@ func costModifierAppliesToAbility(g *game.Game, modifier game.CostModifier, play
 }
 
 func playerCycledThisTurn(g *game.Game, playerID game.PlayerID) bool {
-	for _, event := range g.EventsThisTurn() {
-		if event.Kind == game.EventCycled && event.Player == playerID {
-			return true
-		}
-	}
-	return false
+	return eventsThisTurnWindow(g).any(eventKindPlayer(game.EventCycled, playerID))
 }
 
 func applyAbilityCostModifiers(manaCost *cost.Mana, modifiers []game.CostModifier) *cost.Mana {
@@ -272,6 +268,23 @@ func activatedAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID
 		return nil, nil, false
 	}
 	return permanent, abilities[abilityIndex], true
+}
+
+// isManaAbilityActivation reports whether activate selects a mana ability —
+// one that produces mana and resolves without using the stack — whether printed
+// on a battlefield permanent or on a card activated from hand. It mirrors the
+// mana-ability dispatch in applyActivateAbility so the turn log can flag the
+// action without re-running it.
+func isManaAbilityActivation(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction) bool {
+	if _, body, ok := activatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex); ok {
+		if _, isMana := body.(*game.ManaAbility); isMana {
+			return true
+		}
+	}
+	if _, _, ok := handManaAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex); ok {
+		return true
+	}
+	return false
 }
 
 func cyclingAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID, abilityIndex int) (*game.CardInstance, game.ActivatedAbility, bool) {
@@ -455,7 +468,7 @@ func canActivateEquipAbilityWithModes(g *game.Game, playerID game.PlayerID, perm
 	if xValue != 0 || !bodyFunctionsOnBattlefield(body) || !isEquipmentPermanent(g, permanent) {
 		return false
 	}
-	if !game.BodyHasKeyword(body, game.Equip) && body.Timing != game.SorceryOnly {
+	if !bodyAttachesLikeEquip(body) && body.Timing != game.SorceryOnly {
 		return false
 	}
 	if !isSorcerySpeed(g, playerID) || abilityHasNonTapAdditionalCosts(body.AdditionalCosts) || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, body.Timing) {
@@ -491,7 +504,7 @@ func canActivateGeneralAbilityWithModes(g *game.Game, playerID game.PlayerID, pe
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent.PhasedOut || effectiveController(g, permanent) != playerID {
 		return false
 	}
-	if game.BodyHasKeyword(body, game.Equip) || !bodyFunctionsOnBattlefield(body) {
+	if bodyAttachesLikeEquip(body) || !bodyFunctionsOnBattlefield(body) {
 		return false
 	}
 	if !activatedAbilityTimingAllows(g, playerID, body.Timing) || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, body.Timing) {
@@ -665,6 +678,11 @@ func manaBodyHasAddManaEffect(body *game.ManaAbility) bool {
 				if !ok || !isSelfControllerDamageRider(damage) {
 					return false
 				}
+			case game.PrimitiveGainLife:
+				gain, ok := sequence[i].Primitive.(game.GainLife)
+				if !ok || !isSelfControllerGainLifeRider(gain) {
+					return false
+				}
 			default:
 				return false
 			}
@@ -687,6 +705,16 @@ func isSelfControllerDamageRider(damage game.Damage) bool {
 	}
 	player, ok := damage.Recipient.PlayerReference()
 	return ok && player.Kind() == game.PlayerReferenceController
+}
+
+// isSelfControllerGainLifeRider reports whether a GainLife instruction is a mana
+// source's "You gain N life" rider: a non-group amount of life gained by the
+// ability's own controller. The Great Henge carries it. CR 605.1a keeps such
+// abilities mana abilities because the rider neither targets nor stops them from
+// adding mana, so the rider must not disqualify the ability from immediate
+// resolution.
+func isSelfControllerGainLifeRider(gain game.GainLife) bool {
+	return gain.Player.Kind() == game.PlayerReferenceController
 }
 
 func manaBodyChoicesAvailable(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ManaAbility) bool {

@@ -58,8 +58,8 @@ func TestLowerChannelActivationFromHand(t *testing.T) {
 	if !ok {
 		t.Fatalf("second primitive = %#v, want search", sequence[1].Primitive)
 	}
-	if search.Spec.Supertype.Exists ||
-		len(search.Spec.SubtypesAny) != 5 ||
+	if len(search.Spec.Filter.Supertypes) != 0 ||
+		len(search.Spec.Filter.SubtypesAny) != 5 ||
 		search.Player != game.ObjectControllerReference(game.TargetPermanentReference(0)) {
 		t.Fatalf("search = %#v, want affected controller's basic-land-type search", search)
 	}
@@ -88,5 +88,52 @@ func TestLowerBoseijuChannelNearMissesFailClosed(t *testing.T) {
 		if len(diagnostics) == 0 || lowered {
 			t.Errorf("near miss unexpectedly lowered: %q; faces=%#v diagnostics=%#v", oracleText, faces, diagnostics)
 		}
+	}
+}
+
+// TestLowerChannelBasicLandFetchToBattlefield proves the Kamigawa Channel
+// land-fetch shape lowers: Greater Tanuki's "Channel — {2}{G}, Discard this
+// card: Search your library for a basic land card, put it onto the battlefield
+// tapped, then shuffle." This self-search (no targets) to the controller's own
+// battlefield is distinct from Boseiju's opponent-redirected search, so the
+// Channel pre-gate admits a no-target Basic-supertype land search and the body
+// lowering produces the tapped battlefield put.
+func TestLowerChannelBasicLandFetchToBattlefield(t *testing.T) {
+	t.Parallel()
+
+	const oracleText = "Trample\nChannel — {2}{G}, Discard this card: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle."
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Greater Tanuki",
+		Layout:     "normal",
+		TypeLine:   "Enchantment Creature — Dog",
+		OracleText: oracleText,
+		Power:      new("6"),
+		Toughness:  new("5"),
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %#v, want one", face.ActivatedAbilities)
+	}
+	body := face.ActivatedAbilities[0]
+	if game.BodyFunctionZone(&body) != zone.Hand {
+		t.Fatalf("function zone = %v, want hand", game.BodyFunctionZone(&body))
+	}
+	if len(body.AdditionalCosts) != 1 ||
+		body.AdditionalCosts[0].Kind != cost.AdditionalDiscard ||
+		body.AdditionalCosts[0].Text != "Discard this card" {
+		t.Fatalf("additional costs = %#v, want discard this card", body.AdditionalCosts)
+	}
+	sequence := body.Content.Modes[0].Sequence
+	search, ok := sequence[0].Primitive.(game.Search)
+	if !ok {
+		t.Fatalf("first primitive = %#v, want search", sequence[0].Primitive)
+	}
+	if !search.Spec.EntersTapped {
+		t.Fatal("search spec EntersTapped = false, want tapped battlefield placement")
+	}
+	if len(search.Spec.Filter.Supertypes) != 1 || search.Spec.Filter.Supertypes[0] != types.Basic {
+		t.Fatalf("search filter supertypes = %#v, want [Basic]", search.Spec.Filter.Supertypes)
+	}
+	if len(search.Spec.Filter.RequiredTypes) != 1 || search.Spec.Filter.RequiredTypes[0] != types.Land {
+		t.Fatalf("search filter types = %#v, want [Land]", search.Spec.Filter.RequiredTypes)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -116,7 +117,7 @@ func TestPaymentManaAbilityOutputRequiresCanonicalTapAnyColorAbility(t *testing.
 		{
 			name: "activation condition",
 			mutate: func(ability *game.ManaAbility) {
-				ability.ActivationCondition = opt.Val(game.Condition{ControllerLifeAtLeast: 1})
+				ability.ActivationCondition = opt.Val(game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLife, Op: compare.GreaterOrEqual, Value: 1}}})
 			},
 		},
 		{

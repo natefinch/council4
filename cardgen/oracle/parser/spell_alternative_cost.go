@@ -6,6 +6,8 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // SpellAlternativeCostKind identifies the rules change attached to an
@@ -26,6 +28,17 @@ const (
 	// cost. The cost itself is carried through the ability's CostSyntax; this
 	// kind only marks the paragraph as granting Flashback for that cost.
 	SpellAlternativeCostFlashback
+	// SpellAlternativeCostEscape is the alternative-cost form of Escape, written
+	// "Escape—<cost>, Exile N cards from your graveyard." with an em dash before
+	// a compound cost. Like Flashback the cost is carried through the ability's
+	// CostSyntax; this kind only marks the paragraph as granting Escape for that
+	// cost (CR 702.139).
+	SpellAlternativeCostEscape
+	// SpellAlternativeCostDiscard is the Foil/Outbreak family: discard one or
+	// more cards (each an optional subtype filter) from hand rather than pay the
+	// spell's mana cost. The discards are carried as typed cost components on the
+	// ability's CostSyntax, like every other non-mana cost.
+	SpellAlternativeCostDiscard
 )
 
 // SpellAlternativeCostCondition identifies a condition on an alternative spell cost.
@@ -49,51 +62,46 @@ type SpellAlternativeCost struct {
 	WithoutPayingManaCost bool
 	ManaCost              cost.Mana
 	ReplaceTargetWithEach bool
-
-	// PitchColor is the color of the card exiled from hand by a
-	// SpellAlternativeCostPitch cost.
-	PitchColor Color
-	// PitchCount is the number of cards exiled from hand (at least one).
-	PitchCount int
-	// PitchLife is additional life paid alongside the exile, or zero.
-	PitchLife int
 }
 
-func spellAlternativeCostClause(body []shared.Token) (*SpellAlternativeCost, bool) {
+func spellAlternativeCostClause(body []shared.Token) (*SpellAlternativeCost, *Cost, bool) {
 	if alternative, ok := overloadAlternativeCostClause(body); ok {
-		return alternative, true
+		return alternative, nil, true
 	}
-	if alternative, ok := pitchAlternativeCostClause(body); ok {
-		return alternative, true
+	if alternative, pitchCost, ok := pitchAlternativeCostClause(body); ok {
+		return alternative, pitchCost, true
+	}
+	if alternative, discardCost, ok := discardAlternativeCostClause(body); ok {
+		return alternative, discardCost, true
 	}
 	words := []string{
 		"if", "you", "control", "a", "commander", "you", "may", "cast",
 		"this", "spell", "without", "paying", "its", "mana", "cost",
 	}
 	if len(body) != len(words)+2 {
-		return nil, false
+		return nil, nil, false
 	}
 	for tokenIndex, wordIndex := 0, 0; tokenIndex < len(body); tokenIndex++ {
 		switch tokenIndex {
 		case 5:
 			if body[tokenIndex].Kind != shared.Comma {
-				return nil, false
+				return nil, nil, false
 			}
 		case 3:
 			// The commander determiner is printed as either "a commander" or
 			// "your commander"; both name the controller's commander.
 			if body[tokenIndex].Kind != shared.Word ||
 				(!equalWord(body[tokenIndex], "a") && !equalWord(body[tokenIndex], "your")) {
-				return nil, false
+				return nil, nil, false
 			}
 			wordIndex++
 		case len(body) - 1:
 			if body[tokenIndex].Kind != shared.Period {
-				return nil, false
+				return nil, nil, false
 			}
 		default:
 			if body[tokenIndex].Kind != shared.Word || !equalWord(body[tokenIndex], words[wordIndex]) {
-				return nil, false
+				return nil, nil, false
 			}
 			wordIndex++
 		}
@@ -103,7 +111,7 @@ func spellAlternativeCostClause(body []shared.Token) (*SpellAlternativeCost, boo
 		Kind:                  SpellAlternativeCostCommander,
 		Condition:             SpellAlternativeCostConditionControlsCommander,
 		WithoutPayingManaCost: true,
-	}, true
+	}, nil, true
 }
 
 // flashbackAlternativeCostClause recognizes the em-dash Flashback form
@@ -130,6 +138,108 @@ func flashbackAlternativeCostClause(source string, tokens []shared.Token, dash i
 	}, phraseFromTokens(source, clause), true
 }
 
+// escapeAlternativeCostClause recognizes the em-dash Escape form
+// "Escape—<cost>, Exile N cards from your graveyard.", where the pre-dash label
+// is exactly the Escape keyword and the post-dash body is the compound escape
+// cost (its mana cost plus the graveyard-exile additional cost). The cost tokens
+// become the paragraph's cost phrase so the shared cost machinery types them;
+// the returned span covers the whole paragraph so its label and dash are
+// accounted for in coverage. It returns ok=false when the label is not Escape or
+// the body is empty.
+func escapeAlternativeCostClause(source string, tokens []shared.Token, dash int) (*SpellAlternativeCost, Phrase, bool) {
+	if !slices.Equal(normalizedWords(tokens[:dash]), []string{"escape"}) {
+		return nil, Phrase{}, false
+	}
+	clause := tokens[dash+1:]
+	if period := shared.TopLevelIndex(clause, shared.Period); period >= 0 {
+		clause = clause[:period]
+	}
+	if len(clause) == 0 {
+		return nil, Phrase{}, false
+	}
+	return &SpellAlternativeCost{
+		Span: shared.SpanOf(tokens),
+		Kind: SpellAlternativeCostEscape,
+	}, phraseFromTokens(source, clause), true
+}
+
+// discardAlternativeCostClause recognizes the Foil/Outbreak discard pitch
+// family: "you may discard <card>[ and <card>] rather than pay this spell's mana
+// cost", where each card is "a/an [<subtype>] card" or "another card". Each
+// discarded card is emitted as a typed CostComponentDiscard from hand (with an
+// optional subtype filter) so it lowers through the shared cost machinery.
+func discardAlternativeCostClause(body []shared.Token) (*SpellAlternativeCost, *Cost, bool) {
+	if !equalWordSequence(body, 0, "you", "may", "discard") {
+		return nil, nil, false
+	}
+	cursor := 3
+	var components []CostComponent
+	for {
+		component, next, ok := matchDiscardCardSpec(body, cursor)
+		if !ok {
+			return nil, nil, false
+		}
+		components = append(components, component)
+		cursor = next
+		if cursor < len(body) && equalWord(body[cursor], "and") {
+			cursor++
+			continue
+		}
+		break
+	}
+	if !equalWordSequence(body, cursor,
+		"rather", "than", "pay", "this", "spell's", "mana", "cost") {
+		return nil, nil, false
+	}
+	cursor += 7
+	if cursor != len(body)-1 || body[cursor].Kind != shared.Period {
+		return nil, nil, false
+	}
+	discardCost := &Cost{
+		Span:       shared.SpanOf(body[3:cursor]),
+		Components: components,
+	}
+	return &SpellAlternativeCost{
+		Span: shared.SpanOf(body),
+		Kind: SpellAlternativeCostDiscard,
+	}, discardCost, true
+}
+
+// matchDiscardCardSpec parses one "a/an [<subtype>] card" or "another card"
+// discard target starting at start, returning a typed CostComponentDiscard and
+// the index immediately after the matched "card" noun.
+func matchDiscardCardSpec(body []shared.Token, start int) (CostComponent, int, bool) {
+	cursor := start
+	if cursor >= len(body) || body[cursor].Kind != shared.Word ||
+		(!equalWord(body[cursor], "a") && !equalWord(body[cursor], "an") &&
+			!equalWord(body[cursor], "another")) {
+		return CostComponent{}, 0, false
+	}
+	cursor++
+	component := CostComponent{
+		Kind:         CostComponentDiscard,
+		AmountValue:  1,
+		AmountKnown:  true,
+		ObjectIsCard: true,
+		ObjectNoun:   ObjectNounCard,
+		SourceZone:   zone.Hand,
+	}
+	if cursor < len(body) && body[cursor].Kind == shared.Word && !equalWord(body[cursor], "card") {
+		sub, ok := recognizeSubtypePhrase(body[cursor].Text)
+		if !ok {
+			return CostComponent{}, 0, false
+		}
+		component.SubtypesAny = []types.Sub{sub}
+		cursor++
+	}
+	if cursor >= len(body) || !equalWord(body[cursor], "card") {
+		return CostComponent{}, 0, false
+	}
+	cursor++
+	component.Span = shared.SpanOf(body[start:cursor])
+	return component, cursor, true
+}
+
 func overloadAlternativeCostClause(body []shared.Token) (*SpellAlternativeCost, bool) {
 	if len(body) < 2 || body[0].Kind != shared.Word || !equalWord(body[0], "overload") {
 		return nil, false
@@ -151,58 +261,79 @@ func overloadAlternativeCostClause(body []shared.Token) (*SpellAlternativeCost, 
 
 // pitchAlternativeCostClause recognizes the Force of Will pitch family:
 // "[If it's not your turn, ] you may [pay N life and ] exile a/<count> <color>
-// card[s] from your hand rather than pay this spell's mana cost".
-func pitchAlternativeCostClause(body []shared.Token) (*SpellAlternativeCost, bool) {
+// card[s] from your hand rather than pay this spell's mana cost". The non-mana
+// payment is emitted as ordered typed cost components (an optional pay-life
+// component followed by an exile-from-hand component) so it lowers through the
+// same cost machinery as any other ability cost.
+func pitchAlternativeCostClause(body []shared.Token) (*SpellAlternativeCost, *Cost, bool) {
 	cursor := 0
 	condition := SpellAlternativeCostConditionUnknown
 	if equalWordSequence(body, cursor, "if", "it's", "not", "your", "turn") {
 		cursor += 5
 		if cursor >= len(body) || body[cursor].Kind != shared.Comma {
-			return nil, false
+			return nil, nil, false
 		}
 		cursor++
 		condition = SpellAlternativeCostConditionNotYourTurn
 	}
 	if !equalWordSequence(body, cursor, "you", "may") {
-		return nil, false
+		return nil, nil, false
 	}
 	cursor += 2
-	pitchLife := 0
+	var components []CostComponent
 	if cursor < len(body) && equalWord(body[cursor], "pay") {
 		if cursor+3 >= len(body) ||
 			body[cursor+1].Kind != shared.Integer ||
 			!equalWord(body[cursor+2], "life") ||
 			!equalWord(body[cursor+3], "and") {
-			return nil, false
+			return nil, nil, false
 		}
 		value, ok := conditionNumberValue(body[cursor+1])
 		if !ok || value <= 0 {
-			return nil, false
+			return nil, nil, false
 		}
-		pitchLife = value
+		components = append(components, CostComponent{
+			Kind:        CostComponentPayLife,
+			Span:        shared.SpanOf(body[cursor : cursor+3]),
+			AmountValue: value,
+			AmountKnown: true,
+		})
 		cursor += 4
 	}
+	exileStart := cursor
 	exile, ok := matchPitchExileClause(body, cursor)
 	if !ok {
-		return nil, false
+		return nil, nil, false
 	}
 	cursor = exile.next
+	components = append(components, CostComponent{
+		Kind:             CostComponentExile,
+		Span:             shared.SpanOf(body[exileStart:cursor]),
+		AmountValue:      exile.count,
+		AmountKnown:      true,
+		ObjectIsCard:     true,
+		ObjectNoun:       ObjectNounCard,
+		ObjectColor:      exile.color,
+		ObjectColorKnown: true,
+		SourceZone:       zone.Hand,
+	})
 	if !equalWordSequence(body, cursor,
 		"from", "your", "hand", "rather", "than", "pay", "this", "spell's", "mana", "cost") {
-		return nil, false
+		return nil, nil, false
 	}
 	cursor += 10
 	if cursor != len(body)-1 || body[cursor].Kind != shared.Period {
-		return nil, false
+		return nil, nil, false
+	}
+	pitchCost := &Cost{
+		Span:       shared.SpanOf(body[exileStart:exile.next]),
+		Components: components,
 	}
 	return &SpellAlternativeCost{
-		Span:       shared.SpanOf(body),
-		Kind:       SpellAlternativeCostPitch,
-		Condition:  condition,
-		PitchColor: exile.color,
-		PitchCount: exile.count,
-		PitchLife:  pitchLife,
-	}, true
+		Span:      shared.SpanOf(body),
+		Kind:      SpellAlternativeCostPitch,
+		Condition: condition,
+	}, pitchCost, true
 }
 
 // pitchExileClause is the parsed "exile a/<count> <color> card[s]" segment of a

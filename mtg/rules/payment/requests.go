@@ -19,6 +19,11 @@ const (
 	SpellCastPermissionRuleEffect
 	// SpellCastPermissionFlashback is the permission supplied by flashback.
 	SpellCastPermissionFlashback
+	// SpellCastPermissionEscape is the permission supplied by escape. Like
+	// flashback it authorizes casting only from the graveyard via the escape
+	// alternative cost, but the spell is not exiled afterward so it can be
+	// escaped again.
+	SpellCastPermissionEscape
 )
 
 // SpellRequest bundles all parameters needed to check or pay spell costs.
@@ -29,9 +34,16 @@ type SpellRequest struct {
 	Card            *game.CardDef
 	XValue          int
 	KickerPaid      bool
+	KickerCount     int
+	ChosenModes     []int
 	Alternative     opt.V[cost.Alternative]
 	CastPermissions []SpellCastPermission
 	Prefs           *Preferences
+	// Targets are the spell's chosen targets, supplied so target-dependent cost
+	// modifiers ("Spells your opponents cast that target this creature cost {N}
+	// more to cast.") can match. It is empty when the spell has no targets or is
+	// being cost-checked before targets are announced.
+	Targets []game.Target
 }
 
 // AbilityRequest bundles all parameters needed to check or pay activated
@@ -79,6 +91,19 @@ type Preferences struct {
 	ExileChoices         []id.ID
 	RevealChoices        []id.ID
 	EvidenceChoices      []id.ID
+	// RemoveCounterChoices lists the permanents chosen to lose counters for an
+	// AdditionalRemoveCounterAmong cost, one entry per counter removed. The same
+	// permanent may appear multiple times when several of its counters are
+	// removed.
+	RemoveCounterChoices []id.ID
+	// StrictReplay selects the strict invalid-preference policy. By default an
+	// additional cost whose recorded preference is stale or now illegal falls
+	// back to a deterministic legal selection so play continues; under strict
+	// replay that fallback is disabled and an unsatisfiable preference rejects
+	// the whole payment, so a recorded game replays exactly or not at all. The
+	// policy applies uniformly to sacrifice, tap, return, discard, exile,
+	// reveal, evidence, and counter-removal preferences.
+	StrictReplay bool
 }
 
 // SpellOptionSummary is a summary of one payable spell cost option for choice presentation.
@@ -125,5 +150,7 @@ func clonePreferences(prefs *Preferences) *Preferences {
 		ExileChoices:         append([]id.ID(nil), prefs.ExileChoices...),
 		RevealChoices:        append([]id.ID(nil), prefs.RevealChoices...),
 		EvidenceChoices:      append([]id.ID(nil), prefs.EvidenceChoices...),
+		RemoveCounterChoices: append([]id.ID(nil), prefs.RemoveCounterChoices...),
+		StrictReplay:         prefs.StrictReplay,
 	}
 }

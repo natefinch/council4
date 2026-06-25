@@ -83,7 +83,7 @@ func canPayCostWithX(s State, playerID game.PlayerID, manaCost *cost.Mana, xValu
 
 func canPaySpellCosts(s State, req SpellRequest) bool {
 	for _, option := range spellCostOptionsForRequest(s, req) {
-		if _, ok := buildSpellCostPlanForOption(s, req.PlayerID, req.CardID, req.SourceZone, option, req.XValue, nil); ok {
+		if _, ok := buildSpellCostPlanForOption(s, req.PlayerID, req.CardID, req.SourceZone, option, req.XValue, req.Targets, nil); ok {
 			return true
 		}
 	}
@@ -96,15 +96,11 @@ func paySpellCosts(s State, req SpellRequest) (SpellPaymentResult, bool) {
 		return SpellPaymentResult{}, false
 	}
 	player, ok := s.Player(req.PlayerID)
-	if !ok || !additionalCostPlanStillValid(s, player, plan.additional) || !paymentPlanStillValid(s, player, plan.mana) {
+	if !ok || !paymentApplicationReady(s, player, plan.mana, plan.additional) {
 		return SpellPaymentResult{}, false
 	}
-	if !applyPaymentPlan(s, req.PlayerID, plan.mana) {
-		return SpellPaymentResult{}, false
-	}
-	if !applyAdditionalCostPlan(s, plan.additional) {
-		panic("spell cost plan became invalid while paying additional costs")
-	}
+	applyPaymentPlan(s, req.PlayerID, plan.mana)
+	applyAdditionalCostPlan(s, plan.additional)
 	return SpellPaymentResult{
 		AdditionalCostsPaid: plan.additional.paid,
 		PoolSpend:           clonePoolSpend(plan.mana.poolSpend),
@@ -143,13 +139,13 @@ func buildSpellCostPlan(s State, req SpellRequest) (spellCostPlan, bool) {
 	if req.Prefs != nil {
 		for _, option := range options {
 			if option.index == req.Prefs.AlternativeIndex {
-				return buildSpellCostPlanForOption(s, req.PlayerID, req.CardID, req.SourceZone, option, req.XValue, req.Prefs)
+				return buildSpellCostPlanForOption(s, req.PlayerID, req.CardID, req.SourceZone, option, req.XValue, req.Targets, req.Prefs)
 			}
 		}
 		return spellCostPlan{}, false
 	}
 	for _, option := range options {
-		if plan, ok := buildSpellCostPlanForOption(s, req.PlayerID, req.CardID, req.SourceZone, option, req.XValue, nil); ok {
+		if plan, ok := buildSpellCostPlanForOption(s, req.PlayerID, req.CardID, req.SourceZone, option, req.XValue, req.Targets, nil); ok {
 			return plan, true
 		}
 	}
@@ -271,17 +267,11 @@ func payAbilityCosts(s State, req AbilityRequest) (poolSpend map[mana.Unit]int, 
 	if !ok || !abilityCostPlanStillValid(s, player, req.Source, plan) {
 		return nil, nil, false
 	}
-	if !applyPaymentPlan(s, req.PlayerID, plan.mana) {
-		return nil, nil, false
+	applyPaymentPlan(s, req.PlayerID, plan.mana)
+	if plan.tapSource && !tapForAbility(s, req.Source, req.ForMana) {
+		panic("ability source became untappable after prevalidation")
 	}
-	if plan.tapSource {
-		if !tapForAbility(s, req.Source, req.ForMana) {
-			return nil, nil, false
-		}
-	}
-	if !applyAdditionalCostPlan(s, plan.additional) {
-		panic("ability cost plan became invalid while paying additional costs")
-	}
+	applyAdditionalCostPlan(s, plan.additional)
 	return clonePoolSpend(plan.mana.poolSpend), sacrificedPermanentIDs(plan.additional), true
 }
 
@@ -320,15 +310,11 @@ func payGenericCost(s State, req GenericRequest) (poolSpend map[mana.Unit]int, o
 			return nil, false
 		}
 		player, ok := s.Player(req.PlayerID)
-		if !ok || !additionalCostPlanStillValid(s, player, plan.additional) || !paymentPlanStillValid(s, player, plan.mana) {
+		if !ok || !paymentApplicationReady(s, player, plan.mana, plan.additional) {
 			return nil, false
 		}
-		if !applyPaymentPlan(s, req.PlayerID, plan.mana) {
-			return nil, false
-		}
-		if !applyAdditionalCostPlan(s, plan.additional) {
-			panic("generic cost plan became invalid while paying additional costs")
-		}
+		applyPaymentPlan(s, req.PlayerID, plan.mana)
+		applyAdditionalCostPlan(s, plan.additional)
 		return clonePoolSpend(plan.mana.poolSpend), true
 	}
 	plan, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, req.Exclude, spendContext{spell: req.Spell}, req.Prefs)
@@ -339,9 +325,7 @@ func payGenericCost(s State, req GenericRequest) (poolSpend map[mana.Unit]int, o
 	if !ok || !paymentPlanStillValid(s, player, plan) {
 		return nil, false
 	}
-	if !applyPaymentPlan(s, req.PlayerID, plan) {
-		return nil, false
-	}
+	applyPaymentPlan(s, req.PlayerID, plan)
 	return clonePoolSpend(plan.poolSpend), true
 }
 
@@ -382,8 +366,8 @@ func retryGenericCostPlanAvoidingManaTapConflict(s State, req GenericRequest, pr
 	return additional, manaPlan, true
 }
 
-func buildSpellCostPlanForOption(s State, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, option spellCostOption, xValue int, prefs *Preferences) (spellCostPlan, bool) {
-	option = applyCostModifiers(s, costModificationContext{player: playerID, card: option.card, cardID: cardID, sourceZone: sourceZone, option: option})
+func buildSpellCostPlanForOption(s State, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, option spellCostOption, xValue int, targets []game.Target, prefs *Preferences) (spellCostPlan, bool) {
+	option = applyCostModifiers(s, costModificationContext{player: playerID, card: option.card, cardID: cardID, sourceZone: sourceZone, targets: targets, option: option})
 	plan := spellCostPlan{option: option}
 	if xValue < 0 ||
 		xValue != 0 && !costHasVariableMana(option.manaCost) && !additionalCostsUseX(option.additionalCosts) {
@@ -473,6 +457,42 @@ func buildPaymentPlan(s State, playerID game.PlayerID, manaCost *cost.Mana, xVal
 	return buildPaymentPlanWithPreferences(s, playerID, manaCost, xValue, exclude, spendContext{}, nil)
 }
 
+// effectiveManaSymbols rewrites the cost's colored symbols into Phyrexian symbols
+// of the same color when an active RuleEffectPayLifeForColoredMana lets playerID
+// pay 2 life rather than that mana ("For each {B} in a cost, you may pay 2 life
+// rather than pay that mana.", K'rrik). It returns manaCost unchanged when no
+// symbol is affected, so unaffected costs allocate nothing and pay exactly as
+// before.
+func effectiveManaSymbols(s State, playerID game.PlayerID, manaCost cost.Mana) []cost.Symbol {
+	converted := false
+	for i := range manaCost {
+		if manaCost[i].Kind == cost.ColoredSymbol && s.PayLifeForManaColor(playerID, manaCost[i].Color) {
+			converted = true
+			break
+		}
+	}
+	if !converted {
+		return manaCost
+	}
+	symbols := make([]cost.Symbol, len(manaCost))
+	for i := range manaCost {
+		symbol := manaCost[i]
+		if symbol.Kind == cost.ColoredSymbol && s.PayLifeForManaColor(playerID, symbol.Color) {
+			symbol = cost.PhyrexianMana(symbol.Color)
+		}
+		symbols[i] = symbol
+	}
+	return symbols
+}
+
+// EffectiveManaCost returns manaCost with each colored symbol the player may pay
+// life for instead rewritten to the equivalent Phyrexian symbol (CR for K'rrik's
+// "For each {B} in a cost, ..." static). Callers that enumerate Phyrexian payment
+// choices use it so the choice order matches the payment plan's symbol order.
+func EffectiveManaCost(s State, playerID game.PlayerID, manaCost cost.Mana) cost.Mana {
+	return effectiveManaSymbols(s, playerID, manaCost)
+}
+
 func buildPaymentPlanWithPreferences(s State, playerID game.PlayerID, manaCost *cost.Mana, xValue int, exclude map[id.ID]bool, ctx spendContext, prefs *Preferences) (paymentPlan, bool) {
 	plan := paymentPlan{poolSpend: make(map[mana.Unit]int)}
 	player, ok := s.Player(playerID)
@@ -488,7 +508,9 @@ func buildPaymentPlanWithPreferences(s State, playerID game.PlayerID, manaCost *
 		return plan, true
 	}
 
-	for _, symbol := range *manaCost {
+	symbols := effectiveManaSymbols(s, playerID, *manaCost)
+
+	for _, symbol := range symbols {
 		switch symbol.Kind {
 		case cost.ColoredSymbol:
 			if !payColoredSymbol(&plan, pool, manaSources, symbol, symbol.Color, game.SymbolPaymentMana) {
@@ -501,14 +523,14 @@ func buildPaymentPlanWithPreferences(s State, playerID game.PlayerID, manaCost *
 		default:
 		}
 	}
-	for _, symbol := range *manaCost {
+	for _, symbol := range symbols {
 		if symbol.Kind == cost.SnowSymbol {
 			if !paySnowSymbol(&plan, pool, manaSources, symbol) {
 				return plan, false
 			}
 		}
 	}
-	for _, symbol := range *manaCost {
+	for _, symbol := range symbols {
 		switch symbol.Kind {
 		case cost.HybridSymbol:
 			if !payHybridSymbol(&plan, pool, manaSources, symbol) {
@@ -522,10 +544,14 @@ func buildPaymentPlanWithPreferences(s State, playerID game.PlayerID, manaCost *
 			if !payPhyrexianSymbol(player, &plan, pool, manaSources, symbol, prefs, s.CanPayLife(playerID)) {
 				return plan, false
 			}
+		case cost.PhyrexianGenericSymbol:
+			if !payPhyrexianGenericSymbol(player, &plan, pool, manaSources, symbol, prefs, s.CanPayLife(playerID)) {
+				return plan, false
+			}
 		default:
 		}
 	}
-	for _, symbol := range *manaCost {
+	for _, symbol := range symbols {
 		switch symbol.Kind {
 		case cost.GenericSymbol:
 			if !payGenericSymbol(&plan, pool, manaSources, symbol, symbol.Generic, game.SymbolPaymentGeneric) {
@@ -541,7 +567,8 @@ func buildPaymentPlanWithPreferences(s State, playerID game.PlayerID, manaCost *
 				symbol.Kind != cost.SnowSymbol &&
 				symbol.Kind != cost.HybridSymbol &&
 				symbol.Kind != cost.TwobridSymbol &&
-				symbol.Kind != cost.PhyrexianSymbol {
+				symbol.Kind != cost.PhyrexianSymbol &&
+				symbol.Kind != cost.PhyrexianGenericSymbol {
 				return plan, false
 			}
 		}
@@ -597,12 +624,28 @@ func paymentPlanStillValid(s State, player *game.Player, plan paymentPlan) bool 
 	return player.Life >= plan.lifePayment && (plan.lifePayment == 0 || s.CanPayLife(player.ID))
 }
 
+// paymentApplicationReady reports whether a fully built mana + additional cost
+// plan can be applied without any post-mutation failure. It re-checks every
+// resource the appliers consume and, crucially, the player's combined life cost
+// across both plans (a Phyrexian mana symbol and an additional "pay N life" cost
+// can each draw from the same life total, yet each plan's own validity check
+// only sees its own share). Establishing readiness before any mutation lets
+// applyPaymentPlan and applyAdditionalCostPlan treat the plan as a validated
+// contract and panic on any inconsistency, so a clean failure here leaves game
+// state byte-for-byte unchanged.
+func paymentApplicationReady(s State, player *game.Player, manaPlan paymentPlan, additionalPlan additionalCostPlan) bool {
+	if !additionalCostPlanStillValid(s, player, additionalPlan) || !paymentPlanStillValid(s, player, manaPlan) {
+		return false
+	}
+	totalLife := manaPlan.lifePayment + additionalPlan.lifePaid
+	return totalLife == 0 || (player.Life >= totalLife && s.CanPayLife(player.ID))
+}
+
 func abilityCostPlanStillValid(s State, player *game.Player, source *game.Permanent, plan abilityCostPlan) bool {
 	if plan.tapSource && !canTapForAbility(s, source) {
 		return false
 	}
-	return additionalCostPlanStillValid(s, player, plan.additional) &&
-		paymentPlanStillValid(s, player, plan.mana)
+	return paymentApplicationReady(s, player, plan.mana, plan.additional)
 }
 
 func clonePaymentPlan(plan paymentPlan) paymentPlan {
@@ -711,6 +754,11 @@ func restrictedManaCanPay(s State, rider game.ManaRiderInstance, ctx spendContex
 		// Powerstone: usable for anything except a nonartifact spell cast. A
 		// non-spell payment (ability cost; ctx.spell is nil) is always allowed.
 		return ctx.spell == nil || ctx.spell.HasType(types.Artifact)
+	case game.ManaSpendCastCreatureSpell:
+		// Beastcaller Savant: spendable only to cast a creature spell. A
+		// non-spell payment (ability cost; ctx.spell is nil) is not a creature
+		// spell, so the tagged mana cannot pay for it.
+		return ctx.spell != nil && ctx.spell.HasType(types.Creature)
 	default:
 		return false
 	}

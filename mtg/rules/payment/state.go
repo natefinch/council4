@@ -11,6 +11,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -36,8 +37,19 @@ type stateQueries interface {
 	// CanPayLife reports whether the player may currently pay life.
 	CanPayLife(playerID game.PlayerID) bool
 
+	// PayLifeForManaColor reports whether an active rule effect lets the player
+	// pay 2 life rather than a mana of color c for each such colored symbol in a
+	// cost ("For each {B} in a cost, you may pay 2 life rather than pay that
+	// mana.", K'rrik). It makes matching colored symbols payable like Phyrexian
+	// symbols of that color.
+	PayLifeForManaColor(playerID game.PlayerID, c mana.Color) bool
+
 	// ActivePlayer returns the player whose turn it currently is.
 	ActivePlayer() game.PlayerID
+
+	// OpponentLostLifeThisTurn reports whether any opponent of playerID has lost
+	// life so far this turn, backing the Spectacle alternative-cost condition.
+	OpponentLostLifeThisTurn(playerID game.PlayerID) bool
 
 	// AdditionalDynamicAmountValue resolves a rules-derived additional-cost
 	// amount against live game state.
@@ -56,6 +68,10 @@ type stateQueries interface {
 	// PermanentByObjectID looks up a permanent by its object ID.
 	PermanentByObjectID(objectID id.ID) (*game.Permanent, bool)
 
+	// PermanentPower returns the permanent's effective power, accounting for
+	// counters and continuous power-modifying effects.
+	PermanentPower(p *game.Permanent) int
+
 	// IsCommanderPermanent reports whether a permanent contains a modeled
 	// commander card.
 	IsCommanderPermanent(p *game.Permanent) bool
@@ -66,6 +82,12 @@ type stateQueries interface {
 	// CardFace returns the requested face of a card instance, falling back to
 	// the base definition when the face does not exist.
 	CardFace(card *game.CardInstance, face game.FaceIndex) *game.CardDef
+
+	// CardMatchesSelection reports whether the card face satisfies the
+	// selection's printed-characteristic predicates. The planner uses it so an
+	// additional card cost (discard/exile/reveal) tests the same eligibility
+	// predicate as the choice layer.
+	CardMatchesSelection(card *game.CardDef, sel game.Selection) bool
 }
 
 type statePermanentQueries interface {
@@ -81,6 +103,12 @@ type statePermanentQueries interface {
 
 	// PermanentEffectiveColors returns the effective colors of the permanent.
 	PermanentEffectiveColors(p *game.Permanent) []color.Color
+
+	// PermanentMatchesSelection reports whether the permanent satisfies the
+	// selection's characteristic predicates, evaluated against live continuous
+	// effects. The planner uses it so additional-cost candidate filtering matches
+	// the choice layer's eligible set exactly.
+	PermanentMatchesSelection(p *game.Permanent, sel game.Selection) bool
 }
 
 type stateAbilityQueries interface {
@@ -98,8 +126,10 @@ type stateAbilityQueries interface {
 
 	// CostModifiersForSpell returns all applicable cost modifiers for a spell
 	// being cast by the given player from the given zone. This includes global
-	// game modifiers, commander tax, and static rule-effect modifiers.
-	CostModifiersForSpell(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone zone.Type) []game.CostModifier
+	// game modifiers, commander tax, and static rule-effect modifiers. targets
+	// carries the spell's chosen targets so target-dependent modifiers ("Spells
+	// that target this creature cost {N} more to cast.") can match.
+	CostModifiersForSpell(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone zone.Type, targets []game.Target) []game.CostModifier
 }
 
 //nolint:interfacebloat // Payment plans need one adapter surface for all atomic game-state mutations.

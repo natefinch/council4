@@ -78,8 +78,12 @@ func TestLowerGroupEntersTappedReplacement(t *testing.T) {
 			if replacement.ControllerFilter != test.controller {
 				t.Fatalf("controller filter = %v, want %v", replacement.ControllerFilter, test.controller)
 			}
-			if !slices.Equal(replacement.EntersTappedTypes, test.cardTypes) {
-				t.Fatalf("types = %v, want %v", replacement.EntersTappedTypes, test.cardTypes)
+			var gotTypes []types.Card
+			if replacement.EntersTappedSelection != nil {
+				gotTypes = replacement.EntersTappedSelection.RequiredTypesAny
+			}
+			if !slices.Equal(gotTypes, test.cardTypes) {
+				t.Fatalf("types = %v, want %v", gotTypes, test.cardTypes)
 			}
 		})
 	}
@@ -262,15 +266,15 @@ func TestLowerEntryTypeChoiceReplacement(t *testing.T) {
 
 func TestLowerEntryTypeChoiceWithReferencingAbilityFailsClosed(t *testing.T) {
 	t.Parallel()
-	// A full creature-type-choice card (Metallic Mimic) also references "the
-	// chosen type" in abilities the runtime cannot yet model; the card must fail
-	// closed rather than generate a partial face. #554 stays fail-closed for
-	// referencing abilities.
+	// An entry creature-type-choice card may also reference "the chosen type" in
+	// abilities the runtime cannot yet model, such as a chosen-type spell cost
+	// reduction (Herald's Horn). Those cards must fail closed rather than generate
+	// a partial face. #554 stays fail-closed for unsupported referencing abilities.
 	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
-		Name:       "Metallic Mimic",
+		Name:       "Test Horn",
 		Layout:     "normal",
-		TypeLine:   "Artifact Creature — Shapeshifter",
-		OracleText: "As this creature enters, choose a creature type.\nThis creature is the chosen type in addition to its other types.\nEach other creature you control of the chosen type enters with an additional +1/+1 counter on it.",
+		TypeLine:   "Artifact",
+		OracleText: "As this artifact enters, choose a creature type.\nSpells you cast of the chosen type cost {1} less to cast.",
 	})
 	if len(diagnostics) == 0 {
 		t.Fatal("expected fail-closed diagnostics for referencing abilities, got none")
@@ -432,6 +436,98 @@ func TestLowerFilteredTokenCreationReplacement(t *testing.T) {
 			replacement.TokenAddendDef == nil ||
 			replacement.TokenAddendDef.Name != "Food" {
 			t.Fatalf("replacement = %+v, want cross-type Food addend", replacement)
+		}
+	})
+	t.Run("passive food addend", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, &ScryfallCard{
+			Name:       "Peregrin Took",
+			Layout:     "normal",
+			TypeLine:   "Legendary Creature — Halfling",
+			OracleText: "If one or more tokens would be created under your control, those tokens plus an additional Food token are created instead.",
+		})
+		if len(face.ReplacementAbilities) != 1 {
+			t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+		}
+		replacement := face.ReplacementAbilities[0].Replacement
+		if replacement.MatchEvent != game.EventTokenCreated ||
+			replacement.ControllerFilter != game.TriggerControllerYou ||
+			replacement.TokenMultiplier != 1 ||
+			replacement.TokenAddend != 1 ||
+			len(replacement.TokenRequiredSubtypes) != 0 ||
+			len(replacement.TokenRequiredTypes) != 0 ||
+			replacement.TokenAddendDef == nil ||
+			replacement.TokenAddendDef.Name != "Food" {
+			t.Fatalf("replacement = %+v, want passive Food addend", replacement)
+		}
+	})
+	t.Run("passive non-additional article addend", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, &ScryfallCard{
+			Name:       "Donatello, the Brains",
+			Layout:     "normal",
+			TypeLine:   "Legendary Artifact Creature — Turtle Warrior",
+			OracleText: "If one or more tokens would be created under your control, those tokens plus a Mutagen token are created instead.",
+		})
+		if len(face.ReplacementAbilities) != 1 {
+			t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+		}
+		replacement := face.ReplacementAbilities[0].Replacement
+		if replacement.MatchEvent != game.EventTokenCreated ||
+			replacement.ControllerFilter != game.TriggerControllerYou ||
+			replacement.TokenMultiplier != 1 ||
+			replacement.TokenAddend != 1 ||
+			replacement.TokenAddendDef == nil ||
+			replacement.TokenAddendDef.Name != "Mutagen" {
+			t.Fatalf("replacement = %+v, want passive Mutagen addend", replacement)
+		}
+	})
+	t.Run("typed artifact filter addend", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, &ScryfallCard{
+			Name:       "Worldwalker Helm",
+			Layout:     "normal",
+			TypeLine:   "Artifact",
+			OracleText: "If you would create one or more artifact tokens, instead create those tokens plus an additional Map token.",
+		})
+		if len(face.ReplacementAbilities) != 1 {
+			t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+		}
+		replacement := face.ReplacementAbilities[0].Replacement
+		if replacement.MatchEvent != game.EventTokenCreated ||
+			replacement.ControllerFilter != game.TriggerControllerYou ||
+			replacement.TokenMultiplier != 1 ||
+			replacement.TokenAddend != 1 ||
+			len(replacement.TokenRequiredTypes) != 1 ||
+			replacement.TokenRequiredTypes[0] != types.Artifact ||
+			replacement.TokenAddendDef == nil ||
+			replacement.TokenAddendDef.Name != "Map" {
+			t.Fatalf("replacement = %+v, want artifact-filtered Map addend", replacement)
+		}
+	})
+	t.Run("typed passive creature-spec addend", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, &ScryfallCard{
+			Name:       "Stridehangar Automaton",
+			Layout:     "normal",
+			TypeLine:   "Artifact Creature — Construct",
+			OracleText: "If one or more artifact tokens would be created under your control, those tokens plus an additional 1/1 colorless Thopter artifact creature token with flying are created instead.",
+		})
+		if len(face.ReplacementAbilities) != 1 {
+			t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+		}
+		replacement := face.ReplacementAbilities[0].Replacement
+		if replacement.MatchEvent != game.EventTokenCreated ||
+			replacement.ControllerFilter != game.TriggerControllerYou ||
+			replacement.TokenMultiplier != 1 ||
+			replacement.TokenAddend != 1 ||
+			len(replacement.TokenRequiredTypes) != 1 ||
+			replacement.TokenRequiredTypes[0] != types.Artifact ||
+			replacement.TokenAddendDef == nil ||
+			replacement.TokenAddendDef.Name != "Thopter" ||
+			!replacement.TokenAddendDef.Power.Exists ||
+			replacement.TokenAddendDef.Power.Val.Value != 1 {
+			t.Fatalf("replacement = %+v, want artifact-filtered Thopter creature addend", replacement)
 		}
 	})
 }
@@ -1044,8 +1140,9 @@ func TestLowerControlledTypeUnionCounterReplacement(t *testing.T) {
 		t.Fatalf("replacement = %+v, want artifact-or-creature +1/+1 additive modifier", replacement)
 	}
 	want := []types.Card{types.Artifact, types.Creature}
-	if !slices.Equal(replacement.CounterRecipientTypesAny, want) {
-		t.Fatalf("recipient types = %v, want %v", replacement.CounterRecipientTypesAny, want)
+	if replacement.CounterRecipientSelection == nil ||
+		!slices.Equal(replacement.CounterRecipientSelection.RequiredTypesAny, want) {
+		t.Fatalf("recipient selection = %+v, want RequiredTypesAny %v", replacement.CounterRecipientSelection, want)
 	}
 }
 
@@ -1629,6 +1726,7 @@ func TestLowerGraveyardRedirectReplacement(t *testing.T) {
 		typeLine            string
 		oracle              string
 		ownerFilter         game.TriggerControllerFilter
+		controlFilter       game.TriggerControllerFilter
 		cardTypes           []types.Card
 		fromBattlefieldOnly bool
 	}{
@@ -1658,6 +1756,23 @@ func TestLowerGraveyardRedirectReplacement(t *testing.T) {
 			ownerFilter:         game.TriggerControllerAny,
 			fromBattlefieldOnly: true,
 		},
+		{
+			name:                "creature an opponent controls would die",
+			typeLine:            "Creature — Shade",
+			oracle:              "If a creature an opponent controls would die, exile it instead.",
+			ownerFilter:         game.TriggerControllerAny,
+			controlFilter:       game.TriggerControllerOpponent,
+			cardTypes:           []types.Card{types.Creature},
+			fromBattlefieldOnly: true,
+		},
+		{
+			name:                "creature would die",
+			typeLine:            "Artifact",
+			oracle:              "If a creature would die, exile it instead.",
+			ownerFilter:         game.TriggerControllerAny,
+			cardTypes:           []types.Card{types.Creature},
+			fromBattlefieldOnly: true,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -1680,6 +1795,9 @@ func TestLowerGraveyardRedirectReplacement(t *testing.T) {
 			}
 			if replacement.RedirectOwnerFilter != test.ownerFilter {
 				t.Fatalf("owner filter = %v, want %v", replacement.RedirectOwnerFilter, test.ownerFilter)
+			}
+			if replacement.RedirectControlFilter != test.controlFilter {
+				t.Fatalf("control filter = %v, want %v", replacement.RedirectControlFilter, test.controlFilter)
 			}
 			if !slices.Equal(replacement.RedirectTypeFilter, test.cardTypes) {
 				t.Fatalf("type filter = %v, want %v", replacement.RedirectTypeFilter, test.cardTypes)

@@ -157,6 +157,8 @@ func renderAdditionalKind(kind cost.AdditionalKind) (string, error) {
 		return "cost.AdditionalUntap", nil
 	case cost.AdditionalRemoveCounter:
 		return "cost.AdditionalRemoveCounter", nil
+	case cost.AdditionalRemoveCounterAmong:
+		return "cost.AdditionalRemoveCounterAmong", nil
 	case cost.AdditionalReturnUnblockedAttacker:
 		return "cost.AdditionalReturnUnblockedAttacker", nil
 	case cost.AdditionalTapPermanents:
@@ -255,6 +257,10 @@ func renderCounterKind(kind counter.Kind) (string, error) {
 		return "counter.Burden", nil
 	case counter.Age:
 		return "counter.Age", nil
+	case counter.Quest:
+		return "counter.Quest", nil
+	case counter.Level:
+		return "counter.Level", nil
 	default:
 		return "", fmt.Errorf("render: unsupported counter kind %d", kind)
 	}
@@ -385,6 +391,8 @@ func renderEventKind(event game.EventKind) (string, error) {
 		return "game.EventCardDrawn", nil
 	case game.EventAttackerBecameBlocked:
 		return "game.EventAttackerBecameBlocked", nil
+	case game.EventAttackerBecameUnblocked:
+		return "game.EventAttackerBecameUnblocked", nil
 	case game.EventAttackerDeclared:
 		return "game.EventAttackerDeclared", nil
 	case game.EventBlockerDeclared:
@@ -431,6 +439,10 @@ func renderEventKind(event game.EventKind) (string, error) {
 		return "game.EventTokenCreated", nil
 	case game.EventLibrarySearched:
 		return "game.EventLibrarySearched", nil
+	case game.EventClassLevelGained:
+		return "game.EventClassLevelGained", nil
+	case game.EventCrimeCommitted:
+		return "game.EventCrimeCommitted", nil
 	default:
 		return "", fmt.Errorf("render: unsupported event kind %d", event)
 	}
@@ -483,6 +495,8 @@ func renderDuration(duration game.EffectDuration) (string, error) {
 		return "game.DurationThisTurn", nil
 	case game.DurationUntilEndOfYourNextTurn:
 		return "game.DurationUntilEndOfYourNextTurn", nil
+	case game.DurationUntilYourNextEndStep:
+		return "game.DurationUntilYourNextEndStep", nil
 	case game.DurationForAsLongAsSourceOnBattlefield:
 		return "game.DurationForAsLongAsSourceOnBattlefield", nil
 	case game.DurationForAsLongAsYouControlSource:
@@ -504,6 +518,15 @@ func renderDelayedTriggerTiming(timing game.DelayedTriggerTiming) (string, error
 		return "game.DelayedAtBeginningOfNextMainPhase", nil
 	default:
 		return "", fmt.Errorf("render: unsupported delayed trigger timing %d", timing)
+	}
+}
+
+func renderDelayedTriggerWindow(window game.DelayedTriggerWindow) (string, error) {
+	switch window {
+	case game.DelayedWindowThisTurn:
+		return "game.DelayedWindowThisTurn", nil
+	default:
+		return "", fmt.Errorf("render: unsupported delayed trigger window %d", window)
 	}
 }
 

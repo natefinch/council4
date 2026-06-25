@@ -60,6 +60,12 @@ const (
 	AdditionalMill
 	AdditionalPutCounter
 	AdditionalCollectEvidence
+	// AdditionalRemoveCounterAmong removes a total of Amount counters of
+	// CounterKind spread across permanents the paying player controls that
+	// match the cost's permanent constraint, as required by "remove N +1/+1
+	// counters from among creatures you control." The payer chooses which
+	// matching permanents to remove counters from.
+	AdditionalRemoveCounterAmong
 )
 
 // Additional describes a typed non-mana cost printed on a spell, ability, or
@@ -93,10 +99,22 @@ type Additional struct {
 	// true; an empty value constrains the cost to PermanentType alone.
 	PermanentTypeAlt types.Card
 
+	// ExcludePermanentType constrains a battlefield cost to permanents that are
+	// not of the named card type, as required by "sacrifice ten nonland
+	// permanents" (Bolas's Citadel). An empty value imposes no exclusion. It is
+	// independent of MatchPermanentType.
+	ExcludePermanentType types.Card
+
 	// MatchCardType constrains card costs such as "discard a creature card."
 	// When false, any card in the relevant zone is allowed for card costs.
 	MatchCardType bool
 	CardType      types.Card
+
+	// MatchHistoric constrains card costs (and battlefield permanent costs) to
+	// historic objects, i.e. artifacts, legendaries, or Sagas (CR 702.61b), as
+	// required by "exile any number of historic cards from your graveyard." It
+	// is independent of MatchCardType.
+	MatchHistoric bool
 
 	// MatchCardColor constrains card costs to cards with the listed color, and
 	// battlefield permanent costs (such as "sacrifice a black creature") to
@@ -117,8 +135,19 @@ type Additional struct {
 	// an AdditionalRemoveCounter cost.
 	CounterKind counter.Kind
 
+	// AnyCounterKind, set only on an AdditionalRemoveCounterAmong cost, marks
+	// the generic "remove N counters from among <permanents> you control" cost
+	// that removes counters of any kind. CounterKind is ignored when it is set;
+	// the payment planner spreads the removal across whatever counters the
+	// chosen permanents carry.
+	AnyCounterKind bool
+
 	// RequireTapped constrains battlefield costs to tapped permanents.
 	RequireTapped bool
+
+	// RequireToken constrains a battlefield cost to token permanents (CR 111),
+	// as required by "sacrifice an artifact token" or a bare "sacrifice a token."
+	RequireToken bool
 
 	// RequireSupertype constrains battlefield costs to permanents with a
 	// particular supertype, such as Snow.
@@ -128,6 +157,21 @@ type Additional struct {
 	// paying ability's own source, as required by "another" (e.g. "Sacrifice
 	// another creature").
 	ExcludeSource bool
+
+	// TotalPowerAtLeast, when positive, changes an AdditionalTapPermanents cost
+	// from a fixed count to "tap any number of matching permanents with total
+	// power N or more," as required by the Saddle keyword (CR 702.166). The
+	// payer taps enough matching permanents to reach the threshold; Amount is
+	// ignored when this is set.
+	TotalPowerAtLeast int
+
+	// TotalManaValueAtLeast, when positive, changes an AdditionalExile cost from
+	// a fixed count to "exile any number of matching cards with total mana value
+	// N or greater" (The Capitoline Triad). The payer exiles enough matching
+	// cards from the cost's Source zone for their mana values to total at least
+	// N; Amount is ignored when this is set. It generalizes the collect-evidence
+	// payment to arbitrary card filters such as MatchHistoric.
+	TotalManaValueAtLeast int
 
 	// ChoiceGroup tags this cost as one alternative within a numbered choice
 	// group printed as "<cost> or <cost>" (e.g. "sacrifice an artifact or
@@ -144,7 +188,37 @@ type Alternative struct {
 	ManaCost        opt.V[Mana]
 	AdditionalCosts []Additional
 	Condition       AlternativeCondition
+	// Mechanic identifies the rules mechanic this alternative grants, so the
+	// rules layer decides Flashback/Escape/Evoke behavior from typed data
+	// rather than the display Label. AlternativeMechanicNone leaves the
+	// alternative's behavior fully described by its mana cost, additional
+	// costs, and condition.
+	Mechanic AlternativeMechanic
 }
+
+// AlternativeMechanic identifies the named rules mechanic an alternative cost
+// grants. It lets the rules layer recognize graveyard-cast permissions and
+// resolution riders (Flashback exile, Escape recast, Evoke sacrifice) from
+// typed data instead of comparing the display Label.
+type AlternativeMechanic uint8
+
+// Supported alternative-cost mechanics.
+const (
+	// AlternativeMechanicNone marks an ordinary alternative cost (pitch,
+	// discard, Spectacle, commander-free, Overload) whose behavior is fully
+	// described by its costs and condition.
+	AlternativeMechanicNone AlternativeMechanic = iota
+	// AlternativeMechanicFlashback marks the Flashback graveyard cast
+	// (CR 702.34) and the Jump-start cast (CR 702.134), which both grant the
+	// graveyard Flashback permission and exile the spell on resolution.
+	AlternativeMechanicFlashback
+	// AlternativeMechanicEscape marks the Escape graveyard cast (CR 702.139),
+	// which grants the graveyard Escape permission and does not exile the spell.
+	AlternativeMechanicEscape
+	// AlternativeMechanicEvoke marks the Evoke cast (CR 702.74), which lets the
+	// resulting permanent be sacrificed by its evoke-sacrifice trigger.
+	AlternativeMechanicEvoke
+)
 
 // AlternativeCondition identifies a condition that must be true to select an
 // alternative cost.
@@ -157,4 +231,8 @@ const (
 	// AlternativeConditionNotYourTurn requires that it is not the casting
 	// player's turn, backing the Force of Negation pitch family.
 	AlternativeConditionNotYourTurn
+	// AlternativeConditionOpponentLostLifeThisTurn requires that an opponent of
+	// the casting player has lost life so far this turn, backing the Spectacle
+	// keyword (CR 702.107).
+	AlternativeConditionOpponentLostLifeThisTurn
 )

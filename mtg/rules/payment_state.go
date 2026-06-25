@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/mtg/rules/payment"
@@ -29,8 +30,16 @@ func (s *rulesPaymentState) CanPayLife(playerID game.PlayerID) bool {
 	return !playerRuleEffectActive(s.g, playerID, game.RuleEffectLifeTotalCantChange)
 }
 
+func (s *rulesPaymentState) PayLifeForManaColor(playerID game.PlayerID, c mana.Color) bool {
+	return payLifeForManaColorActive(s.g, playerID, c)
+}
+
 func (s *rulesPaymentState) ActivePlayer() game.PlayerID {
 	return s.g.Turn.ActivePlayer
+}
+
+func (s *rulesPaymentState) OpponentLostLifeThisTurn(playerID game.PlayerID) bool {
+	return opponentLostLifeThisTurn(s.g, playerID)
 }
 
 func (s *rulesPaymentState) AdditionalDynamicAmountValue(playerID game.PlayerID, kind cost.AdditionalDynamicAmount) int {
@@ -86,6 +95,14 @@ func (s *rulesPaymentState) PermanentEffectiveColors(p *game.Permanent) []color.
 	return permanentEffectiveColors(s.g, p)
 }
 
+func (s *rulesPaymentState) PermanentMatchesSelection(p *game.Permanent, sel game.Selection) bool {
+	return permanentMatchesCostSelection(s.g, p, sel)
+}
+
+func (s *rulesPaymentState) CardMatchesSelection(card *game.CardDef, sel game.Selection) bool {
+	return cardDefMatchesCostSelection(s.g, card, sel)
+}
+
 func (s *rulesPaymentState) ActivationConditionSatisfied(playerID game.PlayerID, permanent *game.Permanent, condition opt.V[game.Condition]) bool {
 	return activationConditionSatisfied(s.g, playerID, permanent, condition)
 }
@@ -99,6 +116,10 @@ func (s *rulesPaymentState) PermanentByObjectID(objectID id.ID) (*game.Permanent
 	return permanentByObjectID(s.g, objectID)
 }
 
+func (s *rulesPaymentState) PermanentPower(p *game.Permanent) int {
+	return effectivePower(s.g, p)
+}
+
 func (s *rulesPaymentState) CardInstance(cardID id.ID) (*game.CardInstance, bool) {
 	return s.g.GetCardInstance(cardID)
 }
@@ -107,13 +128,13 @@ func (*rulesPaymentState) CardFace(card *game.CardInstance, face game.FaceIndex)
 	return cardFaceOrDefault(card, face)
 }
 
-func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone zone.Type) []game.CostModifier {
+func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone zone.Type, targets []game.Target) []game.CostModifier {
 	var modifiers []game.CostModifier
 	for _, modifier := range s.g.CostModifiers {
 		if modifier.Kind != game.CostModifierSpell {
 			continue
 		}
-		if !spellCostModifierMatchesCard(modifier, card) {
+		if !spellCostModifierMatchesCard(s.g, modifier, card) {
 			continue
 		}
 		if !spellCostModifierMatchesZone(modifier, sourceZone) {
@@ -124,13 +145,20 @@ func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *
 	if sourceZone == zone.Command && cardID != 0 {
 		player, ok := playerByID(s.g, playerID)
 		if ok && player.CommanderInstanceID == cardID && player.CommanderTax() > 0 {
-			modifiers = append(modifiers, game.CostModifier{
-				Kind:            game.CostModifierSpell,
-				GenericIncrease: player.CommanderTax(),
-			})
+			if cardPaysLifeForCommanderTax(card) {
+				modifiers = append(modifiers, game.CostModifier{
+					Kind:                    game.CostModifierSpell,
+					LifePayableTaxInstances: player.CommanderCastCount,
+				})
+			} else {
+				modifiers = append(modifiers, game.CostModifier{
+					Kind:            game.CostModifierSpell,
+					GenericIncrease: player.CommanderTax(),
+				})
+			}
 		}
 	}
-	modifiers = append(modifiers, staticCostModifiersForContext(s.g, playerID, card, sourceZone)...)
+	modifiers = append(modifiers, staticCostModifiersForContext(s.g, playerID, card, sourceZone, targets)...)
 	modifiers = append(modifiers, sourceSpellSelfCostModifiers(s.g, playerID, card)...)
 	return modifiers
 }
@@ -143,9 +171,11 @@ func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *
 // applies only while this exact spell is being cast, so it is read straight from
 // the card being cast rather than from the global active rule effects, and is
 // resolved into a plain generic reduction by counting the matching battlefield
-// permanents or evaluating the dynamic amount now. Generic mana may fall to zero
-// but colored requirements are never touched, because the resolved reduction
-// flows through the shared generic cost modifier path.
+// permanents (or, when the modifier carries a CountZone, the matching cards in
+// the caster's own graveyard or hand) or evaluating the dynamic amount now.
+// Generic mana may fall to zero but colored requirements are never touched,
+// because the resolved reduction flows through the shared generic cost modifier
+// path.
 func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *game.CardDef) []game.CostModifier {
 	if card == nil {
 		return nil
@@ -165,7 +195,12 @@ func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *ga
 			reduction := 0
 			switch {
 			case modifier.PerObjectReduction > 0:
-				count := countPermanentsMatchingGroup(g, nil, playerID, game.BattlefieldGroup(*modifier.CountSelection))
+				var count int
+				if modifier.CountZone.Exists {
+					count = countCardsInZoneForPlayer(g, playerID, playerID, modifier.CountZone.Val, *modifier.CountSelection)
+				} else {
+					count = countPermanentsMatchingGroup(g, nil, playerID, game.BattlefieldGroup(*modifier.CountSelection))
+				}
 				reduction = count * modifier.PerObjectReduction
 			case modifier.DynamicReduction != nil:
 				reduction = dynamicAmountValue(g, nil, playerID, *modifier.DynamicReduction)
@@ -182,6 +217,25 @@ func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *ga
 		}
 	}
 	return modifiers
+}
+
+// cardPaysLifeForCommanderTax reports whether the card being cast carries the
+// self-scoped static that lets its caster pay 2 life rather than each {2} of the
+// command-zone commander tax (Liesa, Shroud of Dusk). It is read straight from
+// the card being cast because the static functions while the card is in the
+// command zone, not while it is on the battlefield.
+func cardPaysLifeForCommanderTax(card *game.CardDef) bool {
+	if card == nil {
+		return false
+	}
+	for i := range card.StaticAbilities {
+		for j := range card.StaticAbilities[i].RuleEffects {
+			if card.StaticAbilities[i].RuleEffects[j].Kind == game.RuleEffectPayLifeForCommanderTax {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (s *rulesPaymentState) SetTapped(p *game.Permanent, tapped bool) {

@@ -22,12 +22,42 @@ const (
 	DynamicValueControllerLandCount
 	DynamicValueControllerArtifactCount
 	DynamicValueAllBattlefieldCreatureCount
+	DynamicValueAllGraveyardsSize
+	DynamicValueCreatureCardsInAllGraveyards
+	DynamicValueCardTypesAmongAllGraveyards
+	DynamicValueControllerCreatureCardsInGraveyard
+	DynamicValueControllerInstantOrSorceryCardsInGraveyard
+	DynamicValueControllerLandCardsInGraveyard
+	DynamicValueControllerCardTypesInGraveyard
+	DynamicValueControllerPermanentCardsInGraveyard
+	DynamicValueControllerSubtypeCount
+	DynamicValueControllerBasicLandTypeCount
+	DynamicValueControllerLifeTotal
+	DynamicValueAllPlayersHandSize
+	DynamicValueControllerColorPermanentCount
+	// DynamicValueControllerCardsDrawnThisTurn is the number of cards the
+	// controller has drawn so far this turn ("its power is equal to the number
+	// of cards you've drawn this turn", Duelist of the Mind), counted from the
+	// turn's EventCardDrawn events for that player (CR 608.2c).
+	DynamicValueControllerCardsDrawnThisTurn
 )
 
 // DynamicValue is data for a characteristic-defining numeric value.
 type DynamicValue struct {
 	Kind  DynamicValueKind
 	Value int
+	// Offset is a fixed integer added to the resolved count, modeling
+	// "<count> plus N" characteristic-defining toughness (CR 208.2, Tarmogoyf's
+	// "its toughness is equal to that number plus 1").
+	Offset int
+	// Subtype selects the subtype counted by DynamicValueControllerSubtypeCount
+	// ("the number of Swamps you control", "the number of Goblins you
+	// control"). It is unused by every other kind.
+	Subtype types.Sub
+	// Color selects the color of permanents counted by
+	// DynamicValueControllerColorPermanentCount ("the number of red permanents
+	// you control"). It is unused by every other kind.
+	Color color.Color
 }
 
 // CopyableValues records the copiable printed/effective values copied in layer
@@ -93,6 +123,12 @@ type ContinuousEffect struct {
 	TextFrom string
 	TextTo   string
 
+	// SetName replaces the affected object's name at LayerText ("becomes a ...
+	// creature named Fenric", CR 613.1c). An empty value leaves the name
+	// unchanged. The legend rule and name-matching predicates read the resulting
+	// effective name.
+	SetName string
+
 	SetSupertypes    []types.Super
 	AddSupertypes    []types.Super
 	RemoveSupertypes []types.Super
@@ -104,6 +140,17 @@ type ContinuousEffect struct {
 	SetSubtypes    []types.Sub
 	AddSubtypes    []types.Sub
 	RemoveSubtypes []types.Sub
+	// AddEveryCreatureType adds every creature subtype to the affected object at
+	// LayerType ("[group/this creature] is/are every creature type", Maskwood
+	// Nexus, Mistform Ultimus). It mirrors the Changeling keyword's type-layer
+	// expansion (CR 702.73) without enumerating the full subtype list in data.
+	AddEveryCreatureType bool
+	// AddEveryBasicLandType adds the five basic land subtypes (Plains, Island,
+	// Swamp, Mountain, Forest) to the affected object at LayerType ("[group/this
+	// land] is/are every basic land type", Dryad of the Ilysian Grove, Prismatic
+	// Omen). Each added basic subtype also confers its intrinsic mana ability
+	// (CR 305.6) through the same path as an explicitly added basic land type.
+	AddEveryBasicLandType bool
 	// AddSubtypeFromEntryChoice adds the subtype recorded under this key on the
 	// effect's source permanent. A missing source, choice, or subtype result has
 	// no effect.
@@ -126,8 +173,19 @@ type ContinuousEffect struct {
 	// applies at LayerAbility before this effect's own ability additions.
 	RemoveAllAbilities bool
 
-	SetPower              opt.V[PT]
-	SetToughness          opt.V[PT]
+	SetPower     opt.V[PT]
+	SetToughness opt.V[PT]
+	// SetPowerDynamic and SetToughnessDynamic set base power/toughness to a
+	// rules-derived amount evaluated as the effect resolves at
+	// LayerPowerToughnessSet (CR 613.4b, CR 608.2c). They back the one-shot
+	// dynamic base-P/T set such as Mirror Entity's "creatures you control have
+	// base power and toughness X/X until end of turn", where X is the cost paid.
+	// The amount is locked when the effect resolves (see snapshotContinuousX),
+	// folding into the fixed SetPower/SetToughness so the layer reads a frozen
+	// value; an amount that survives unfrozen is evaluated per layer pass like a
+	// group count. SetPower/SetToughness take precedence when both are present.
+	SetPowerDynamic       opt.V[DynamicAmount]
+	SetToughnessDynamic   opt.V[DynamicAmount]
 	PowerDelta            int
 	ToughnessDelta        int
 	PowerDeltaDynamic     opt.V[DynamicAmount]

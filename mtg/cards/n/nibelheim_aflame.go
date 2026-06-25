@@ -29,7 +29,8 @@ var NibelheimAflame = &game.CardDef{
 		}),
 		AlternativeCosts: []cost.Alternative{
 			{
-				Label: "Flashback",
+				Label:    "Flashback",
+				Mechanic: cost.AlternativeMechanicFlashback,
 				ManaCost: opt.Val(cost.Mana{
 					cost.O(5),
 					cost.R,
@@ -50,12 +51,12 @@ var NibelheimAflame = &game.CardDef{
 					MaxTargets: 1,
 					Constraint: "creature you control",
 					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						PermanentTypes: []types.Card{
+					Selection: opt.Val(game.Selection{
+						RequiredTypesAny: []types.Card{
 							types.Creature,
 						},
 						Controller: game.ControllerYou,
-					},
+					}),
 				},
 			},
 			Sequence: []game.Instruction{

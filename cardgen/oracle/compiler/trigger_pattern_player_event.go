@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
+	"github.com/natefinch/council4/mtg/game/compare"
 )
 
 func compilePlayerEventTriggerPattern(
@@ -31,14 +32,19 @@ func compilePlayerEventTriggerPattern(
 		clause.Card,
 		clause.Occurrence,
 	)
-	if !modifiers.ok || occurrenceRequiresWhenever(clause.Occurrence.Kind) && kind != TriggerWhenever {
+	if !modifiers.ok ||
+		(occurrenceRequiresWhenever(clause.Occurrence.Kind) && kind != TriggerWhenever && !modifiers.self) {
 		return pattern
 	}
 	pattern.Event = event
 	pattern.Player = player
 	pattern.OneOrMore = modifiers.oneOrMore
 	pattern.ExcludeSelf = modifiers.excludeSelf
+	if modifiers.self {
+		pattern.Source = TriggerSourceSelf
+	}
 	pattern.PlayerEventOrdinalThisTurn = modifiers.ordinal
+	pattern.ExcludeFirstDrawInDrawStep = modifiers.exceptFirstDrawInDrawStep
 	pattern.CardSelection = modifiers.cardSelection
 	return pattern
 }
@@ -61,6 +67,8 @@ func compilePlayerEventAction(action parser.PlayerEventActionKind) (TriggerEvent
 		return TriggerEventLifeLost, true
 	case parser.PlayerEventActionSearchLibrary:
 		return TriggerEventLibrarySearched, true
+	case parser.PlayerEventActionCommitCrime:
+		return TriggerEventCrimeCommitted, true
 	default:
 		return TriggerEventUnknown, false
 	}
@@ -80,11 +88,13 @@ func compilePlayerEventPlayer(player *parser.TriggerPlayerSelector) (TriggerPlay
 }
 
 type compiledPlayerEventModifiers struct {
-	oneOrMore     bool
-	excludeSelf   bool
-	ordinal       int
-	cardSelection TriggerSelection
-	ok            bool
+	oneOrMore                 bool
+	excludeSelf               bool
+	self                      bool
+	ordinal                   int
+	exceptFirstDrawInDrawStep bool
+	cardSelection             TriggerSelection
+	ok                        bool
 }
 
 func compilePlayerEventModifiers(
@@ -97,19 +107,22 @@ func compilePlayerEventModifiers(
 	if !compiledCard.ok {
 		return compiledPlayerEventModifiers{}
 	}
-	ordinal, ok := compilePlayerEventOccurrence(action, player, occurrence)
+	ordinal, exceptFirstDrawInDrawStep, ok := compilePlayerEventOccurrence(action, player, occurrence)
 	return compiledPlayerEventModifiers{
-		oneOrMore:     compiledCard.oneOrMore,
-		excludeSelf:   compiledCard.excludeSelf,
-		ordinal:       ordinal,
-		cardSelection: compiledCard.cardSelection,
-		ok:            ok,
+		oneOrMore:                 compiledCard.oneOrMore,
+		excludeSelf:               compiledCard.excludeSelf,
+		self:                      compiledCard.self,
+		ordinal:                   ordinal,
+		exceptFirstDrawInDrawStep: exceptFirstDrawInDrawStep,
+		cardSelection:             compiledCard.cardSelection,
+		ok:                        ok,
 	}
 }
 
 type compiledPlayerEventCard struct {
 	oneOrMore     bool
 	excludeSelf   bool
+	self          bool
 	cardSelection TriggerSelection
 	ok            bool
 }
@@ -133,6 +146,10 @@ func compilePlayerEventCard(action parser.PlayerEventActionKind, card parser.Pla
 			action == parser.PlayerEventActionCycle ||
 			action == parser.PlayerEventActionCycleOrDiscard
 		return compiledPlayerEventCard{excludeSelf: ok, ok: ok}
+	case parser.PlayerEventCardThis:
+		ok := action == parser.PlayerEventActionCycle ||
+			action == parser.PlayerEventActionCycleOrDiscard
+		return compiledPlayerEventCard{self: ok, ok: ok}
 	default:
 		return compiledPlayerEventCard{}
 	}
@@ -142,24 +159,33 @@ func compilePlayerEventCard(action parser.PlayerEventActionKind, card parser.Pla
 // TriggerSelection. A filter is representable only for discard, where
 // card-type-filtered discard triggers occur (CR 603.2).
 func compilePlayerEventCardSelection(card parser.PlayerEventCard) (TriggerSelection, bool) {
-	if len(card.RequiredTypes) == 0 && len(card.ExcludedTypes) == 0 {
+	if len(card.RequiredTypes) == 0 && len(card.ExcludedTypes) == 0 &&
+		len(card.RequiredTypesAny) == 0 && len(card.RequiredSubtypesAny) == 0 {
 		return TriggerSelection{}, true
 	}
 	var selection TriggerSelection
 	for _, value := range card.RequiredTypes {
 		compiled := compileTriggerCardType(value)
-		if compiled == TriggerCardTypeUnknown {
+		if compiled == "" {
 			return TriggerSelection{}, false
 		}
 		selection.RequiredTypes = append(selection.RequiredTypes, compiled)
 	}
 	for _, value := range card.ExcludedTypes {
 		compiled := compileTriggerCardType(value)
-		if compiled == TriggerCardTypeUnknown {
+		if compiled == "" {
 			return TriggerSelection{}, false
 		}
 		selection.ExcludedTypes = append(selection.ExcludedTypes, compiled)
 	}
+	for _, value := range card.RequiredTypesAny {
+		compiled := compileTriggerCardType(value)
+		if compiled == "" {
+			return TriggerSelection{}, false
+		}
+		selection.RequiredTypesAny = append(selection.RequiredTypesAny, compiled)
+	}
+	selection.SubtypesAny = append(selection.SubtypesAny, card.RequiredSubtypesAny...)
 	return selection, true
 }
 
@@ -167,18 +193,20 @@ func compilePlayerEventOccurrence(
 	action parser.PlayerEventActionKind,
 	player parser.TriggerPlayerSelectorKind,
 	occurrence parser.PlayerEventOccurrence,
-) (int, bool) {
+) (ordinal int, exceptFirstDrawInDrawStep, ok bool) {
 	switch occurrence.Kind {
 	case parser.PlayerEventOccurrenceAny:
-		return 0, occurrence.Ordinal == 0
+		return 0, false, occurrence.Ordinal == 0
 	case parser.PlayerEventOccurrenceFirstEachTurn:
-		return 1, occurrence.Ordinal == 1 && playerEventFirstEachTurnAllowed(action, player)
+		return 1, false, occurrence.Ordinal == 1 && playerEventFirstEachTurnAllowed(action, player)
 	case parser.PlayerEventOccurrenceOrdinalEachTurn:
-		return occurrence.Ordinal, action == parser.PlayerEventActionDraw &&
+		return occurrence.Ordinal, false, action == parser.PlayerEventActionDraw &&
 			occurrence.Ordinal >= 1 &&
 			occurrence.Ordinal <= 5
+	case parser.PlayerEventOccurrenceExceptFirstInDrawStep:
+		return 0, true, action == parser.PlayerEventActionDraw
 	default:
-		return 0, false
+		return 0, false, false
 	}
 }
 
@@ -292,6 +320,8 @@ func playerEventFirstEachTurnAllowed(action parser.PlayerEventActionKind, player
 		parser.PlayerEventActionScry,
 		parser.PlayerEventActionSurveil:
 		return true
+	case parser.PlayerEventActionDiscard, parser.PlayerEventActionCycle:
+		return player == parser.TriggerPlayerSelectorYou
 	case parser.PlayerEventActionGainLife, parser.PlayerEventActionLoseLife:
 		return player != parser.TriggerPlayerSelectorAny
 	default:
@@ -311,14 +341,15 @@ func phaseStepAttachedSelectionEmpty(selection TriggerSelection) bool {
 		!selection.Multicolored &&
 		selection.Tapped == TriggerTriAny &&
 		selection.CombatState == TriggerCombatStateAny &&
-		selection.Keyword == TriggerKeywordUnknown &&
-		selection.ExcludedKeyword == TriggerKeywordUnknown &&
+		selection.Keyword == parser.KeywordUnknown &&
+		selection.ExcludedKeyword == parser.KeywordUnknown &&
 		!selection.NonToken &&
 		!selection.TokenOnly &&
 		selection.ManaValueAtLeast == 0 &&
+		selection.ManaValueAtMost == 0 &&
 		!selection.MatchManaValue &&
-		selection.ManaValue.Comparison == TriggerComparisonUnknown &&
-		selection.Power.Comparison == TriggerComparisonUnknown &&
-		selection.Toughness.Comparison == TriggerComparisonUnknown &&
+		selection.ManaValue.Op == compare.Any &&
+		selection.Power.Op == compare.Any &&
+		selection.Toughness.Op == compare.Any &&
 		selection.Controller == ControllerAny
 }

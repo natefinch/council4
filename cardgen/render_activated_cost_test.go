@@ -44,3 +44,23 @@ func TestRenderActivatedAbilityIncludesSourceCostModifiersWithoutAdditionalCosts
 		}
 	}
 }
+
+func TestRenderActivatedAbilityEmitsRulesText(t *testing.T) {
+	t.Parallel()
+
+	ability := game.ActivatedAbility{
+		Text:            "{T}, Sacrifice this land: Draw a card.",
+		AdditionalCosts: cost.Tap,
+		Content: game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()},
+		}}}.Ability(),
+	}
+
+	got, err := (Renderer{}).renderActivatedAbility(newRenderCtx(), &ability)
+	if err != nil {
+		t.Fatalf("renderActivatedAbility() error = %v", err)
+	}
+	if !strings.Contains(got, "{T}, Sacrifice this land: Draw a card.") {
+		t.Fatalf("rendered ability missing its rules text:\n%s", got)
+	}
+}

@@ -45,9 +45,11 @@ var Bushwhack = &game.CardDef{
 								Spec: game.SearchSpec{
 									SourceZone:  zone.Library,
 									Destination: zone.Hand,
-									CardType:    opt.Val(types.Land),
-									Supertype:   opt.Val(types.Basic),
-									Reveal:      true,
+									Filter: game.Selection{
+										RequiredTypes: []types.Card{types.Land},
+										Supertypes:    []types.Super{types.Basic},
+									},
+									Reveal: true,
 								},
 							},
 						},
@@ -69,20 +71,20 @@ var Bushwhack = &game.CardDef{
 							MaxTargets: 1,
 							Constraint: "creature you control",
 							Allow:      game.TargetAllowPermanent,
-							Predicate: game.TargetPredicate{
-								PermanentTypes: []types.Card{types.Creature},
-								Controller:     game.ControllerYou,
-							},
+							Selection: opt.Val(game.Selection{
+								RequiredTypesAny: []types.Card{types.Creature},
+								Controller:       game.ControllerYou,
+							}),
 						},
 						{
 							MinTargets: 1,
 							MaxTargets: 1,
 							Constraint: "creature you don't control",
 							Allow:      game.TargetAllowPermanent,
-							Predicate: game.TargetPredicate{
-								PermanentTypes: []types.Card{types.Creature},
-								Controller:     game.ControllerNotYou,
-							},
+							Selection: opt.Val(game.Selection{
+								RequiredTypesAny: []types.Card{types.Creature},
+								Controller:       game.ControllerNotYou,
+							}),
 						},
 					},
 				},

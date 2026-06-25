@@ -32,6 +32,8 @@ type ConditionPredicateKind string
 const (
 	ConditionPredicateUnknown                                          ConditionPredicateKind = ""
 	ConditionPredicateControllerLifeAtLeast                            ConditionPredicateKind = "ConditionPredicateControllerLifeAtLeast"
+	ConditionPredicateControllerLifeAtMost                             ConditionPredicateKind = "ConditionPredicateControllerLifeAtMost"
+	ConditionPredicateControllerLifeAtLeastAboveStarting               ConditionPredicateKind = "ConditionPredicateControllerLifeAtLeastAboveStarting"
 	ConditionPredicateControllerHandSizeAtLeast                        ConditionPredicateKind = "ConditionPredicateControllerHandSizeAtLeast"
 	ConditionPredicateControllerHandEmpty                              ConditionPredicateKind = "ConditionPredicateControllerHandEmpty"
 	ConditionPredicateAnyPlayerLifeAtMost                              ConditionPredicateKind = "ConditionPredicateAnyPlayerLifeAtMost"
@@ -49,8 +51,10 @@ const (
 	ConditionPredicateEventSubjectHadCounters                          ConditionPredicateKind = "ConditionPredicateEventSubjectHadCounters"
 	ConditionPredicatePriorInstructionNotAccepted                      ConditionPredicateKind = "ConditionPredicatePriorInstructionNotAccepted"
 	ConditionPredicatePriorInstructionAccepted                         ConditionPredicateKind = "ConditionPredicatePriorInstructionAccepted"
+	ConditionPredicateDestroyedThisWay                                 ConditionPredicateKind = "ConditionPredicateDestroyedThisWay"
 	ConditionPredicateEventPlayerDoesNotPay                            ConditionPredicateKind = "ConditionPredicateEventPlayerDoesNotPay"
 	ConditionPredicateCounterPlacementOnControlledCreature             ConditionPredicateKind = "ConditionPredicateCounterPlacementOnControlledCreature"
+	ConditionPredicateCounterPlacementOnSelf                           ConditionPredicateKind = "ConditionPredicateCounterPlacementOnSelf"
 	ConditionPredicateControllerCounterPlacement                       ConditionPredicateKind = "ConditionPredicateControllerCounterPlacement"
 	ConditionPredicateCounterPlacementOnControlledPermanent            ConditionPredicateKind = "ConditionPredicateCounterPlacementOnControlledPermanent"
 	ConditionPredicateDamageByControlledSource                         ConditionPredicateKind = "ConditionPredicateDamageByControlledSource"
@@ -79,6 +83,21 @@ const (
 	ConditionPredicateCounterPlacementOnAnyCreature                    ConditionPredicateKind = "ConditionPredicateCounterPlacementOnAnyCreature"
 	ConditionPredicateSourceTributeNotPaid                             ConditionPredicateKind = "ConditionPredicateSourceTributeNotPaid"
 	ConditionPredicateControllerControlsCommander                      ConditionPredicateKind = "ConditionPredicateControllerControlsCommander"
+	ConditionPredicateSpellWasKicked                                   ConditionPredicateKind = "ConditionPredicateSpellWasKicked"
+	ConditionPredicateSpellWasCastFromGraveyard                        ConditionPredicateKind = "ConditionPredicateSpellWasCastFromGraveyard"
+	ConditionPredicateSourceSaddled                                    ConditionPredicateKind = "ConditionPredicateSourceSaddled"
+	ConditionPredicateSourceNotSaddled                                 ConditionPredicateKind = "ConditionPredicateSourceNotSaddled"
+	ConditionPredicateAttackersAttackingControllerAtLeast              ConditionPredicateKind = "ConditionPredicateAttackersAttackingControllerAtLeast"
+	ConditionPredicateControllerLibrarySizeAtLeast                     ConditionPredicateKind = "ConditionPredicateControllerLibrarySizeAtLeast"
+	ConditionPredicateControllerLifeExactly                            ConditionPredicateKind = "ConditionPredicateControllerLifeExactly"
+	ConditionPredicateControllerGainedLifeThisTurnAtLeast              ConditionPredicateKind = "ConditionPredicateControllerGainedLifeThisTurnAtLeast"
+	ConditionPredicateSpellXAtLeast                                    ConditionPredicateKind = "ConditionPredicateSpellXAtLeast"
+	ConditionPredicateGraveyardCardOfTypeCountAtLeast                  ConditionPredicateKind = "ConditionPredicateGraveyardCardOfTypeCountAtLeast"
+	ConditionPredicateControllerControlsNamed                          ConditionPredicateKind = "ConditionPredicateControllerControlsNamed"
+	ConditionPredicateFirstCombatPhaseOfTurn                           ConditionPredicateKind = "ConditionPredicateFirstCombatPhaseOfTurn"
+	ConditionPredicateControlsGreatestPowerCreature                    ConditionPredicateKind = "ConditionPredicateControlsGreatestPowerCreature"
+	ConditionPredicateControlsGreatestToughnessCreature                ConditionPredicateKind = "ConditionPredicateControlsGreatestToughnessCreature"
+	ConditionPredicateSubjectSharesCreatureTypeWithSource              ConditionPredicateKind = "ConditionPredicateSubjectSharesCreatureTypeWithSource"
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -91,6 +110,20 @@ const (
 	GraveyardRedirectScopeAny      GraveyardRedirectScope = ""
 	GraveyardRedirectScopeYou      GraveyardRedirectScope = "GraveyardRedirectScopeYou"
 	GraveyardRedirectScopeOpponent GraveyardRedirectScope = "GraveyardRedirectScopeOpponent"
+)
+
+// GraveyardRedirectControlScope identifies, for a "would die" graveyard-redirect
+// replacement, whose control of the dying permanent the replacement watches
+// ("a creature" = any controller, "a creature you control" = the controller, "a
+// creature an opponent controls" = an opponent). It is distinct from
+// GraveyardRedirectScope, which watches the moving card's owner.
+type GraveyardRedirectControlScope string
+
+// Graveyard redirect control scopes recognized by the parser.
+const (
+	GraveyardRedirectControlScopeAny      GraveyardRedirectControlScope = ""
+	GraveyardRedirectControlScopeYou      GraveyardRedirectControlScope = "GraveyardRedirectControlScopeYou"
+	GraveyardRedirectControlScopeOpponent GraveyardRedirectControlScope = "GraveyardRedirectControlScopeOpponent"
 )
 
 // ConditionControlScope identifies which players' battlefields a "controls"
@@ -171,6 +204,8 @@ const (
 	ConditionObjectBindingNone           ConditionObjectBinding = ""
 	ConditionObjectBindingSource         ConditionObjectBinding = "ConditionObjectBindingSource"
 	ConditionObjectBindingEventPermanent ConditionObjectBinding = "ConditionObjectBindingEventPermanent"
+	ConditionObjectBindingSourceAttached ConditionObjectBinding = "ConditionObjectBindingSourceAttached"
+	ConditionObjectBindingCreatedToken   ConditionObjectBinding = "ConditionObjectBindingCreatedToken"
 )
 
 // ConditionSelection is the source-independent permanent selection used by typed
@@ -218,6 +253,15 @@ type ConditionSelection struct {
 	// any kind ("if this permanent has counters on it"). It is the kind-agnostic
 	// companion to a named-counter requirement.
 	AnyCounter bool `json:",omitempty"`
+
+	// CounterKind, CounterKindKnown, and CounterCountAtLeast express a
+	// named-counter-count threshold the matched permanent must satisfy ("has
+	// seven or more quest counters on it"). CounterKindKnown marks the kind
+	// present; CounterCountAtLeast carries the minimum count. The compiler maps
+	// these onto the runtime counter-count selection predicate text-blind.
+	CounterKind         counter.Kind `json:",omitempty"`
+	CounterKindKnown    bool         `json:",omitempty"`
+	CounterCountAtLeast int          `json:",omitempty"`
 }
 
 // ConditionClause is composable typed syntax for a supported condition. The
@@ -272,12 +316,33 @@ type ConditionClause struct {
 	GraveyardSubjectTypesAny     []TriggerCardType      `json:",omitempty"`
 	GraveyardFromBattlefieldOnly bool                   `json:",omitempty"`
 
+	// GraveyardRedirectControlScope restricts a
+	// ConditionPredicateCardWouldGoToGraveyard clause that watches a dying
+	// permanent by who controls it ("If a creature an opponent controls would
+	// die, exile it instead."). It is empty for "would be put into a graveyard"
+	// forms, which watch the moving card's owner via GraveyardRedirectScope.
+	GraveyardRedirectControlScope GraveyardRedirectControlScope `json:",omitempty"`
+
 	// CounterRecipientTypesAny restricts a
 	// ConditionPredicateCounterPlacementOnControlledPermanent clause to a
 	// controlled permanent that has at least one of the listed card types ("an
 	// artifact or creature you control", Ozolith, the Shattered Spire). It is
 	// empty for the unrestricted "a permanent you control" form.
 	CounterRecipientTypesAny []TriggerCardType `json:",omitempty"`
+
+	// GraveyardCountCardType carries the single card type counted by a
+	// ConditionPredicateGraveyardCardOfTypeCountAtLeast clause ("if twenty or
+	// more creature cards are in your graveyard", Mortal Combat). Threshold
+	// carries the minimum count. It is TriggerCardTypeUnknown for other clauses.
+	GraveyardCountCardType TriggerCardType `json:",omitempty"`
+
+	// ControlledNames carries the card names required by a
+	// ConditionPredicateControllerControlsNamed clause ("If you control an
+	// Urza's Mine and an Urza's Tower, ..."; the Urza tron lands). The
+	// controller must control a permanent matching each listed name. The parser
+	// reconstructs each name from the source tokens; matching is normalized
+	// downstream.
+	ControlledNames []string `json:",omitempty"`
 }
 
 // ConditionControlComparison describes a cross-player control-count comparison
@@ -342,6 +407,9 @@ func parseConditionClauses(tokens []shared.Token, atoms Atoms) []ConditionClause
 		if entersAsCopyCounterRiderConditionAt(tokens, i) || punisherUnlessClauseAt(tokens, i) {
 			continue
 		}
+		if playFromTopPayLifeRiderConditionAt(tokens, i) {
+			continue
+		}
 		end := conditionClauseEnd(tokens, i)
 		if clause, ok := parseConditionClause(tokens[i:end], width, intro, atoms); ok {
 			clause.Span = shared.SpanOf(tokens[i:end])
@@ -368,6 +436,41 @@ func entersAsCopyCounterRiderConditionAt(tokens []shared.Token, i int) bool {
 		return false
 	}
 	return entersAsCopyConditionalTypePrefix(normalizedWords(tokens[i:]))
+}
+
+// conditionLeaveBattlefieldExileReplacementAt reports whether the "if" at index
+// opens the leaves-the-battlefield self-replacement clause "if it would leave
+// the battlefield, exile it instead [of putting it anywhere else]." (Whip of
+// Erebos). That clause is recognized as a whole-sentence replacement effect by
+// parseLeaveBattlefieldExileReplacement, so its leading "if" must not also
+// surface as a standalone condition. The subject is "it" (a back-reference) or
+// "this <type>" (the source).
+func conditionLeaveBattlefieldExileReplacementAt(tokens []shared.Token, i int) bool {
+	if !equalWord(tokens[i], "if") || i+1 >= len(tokens) {
+		return false
+	}
+	rest := tokens[i+1:]
+	subjectWidth := leaveBattlefieldReplacementSubjectWidth(rest)
+	if subjectWidth == 0 {
+		return false
+	}
+	return effectWordsAt(rest, subjectWidth, "would", "leave", "the", "battlefield")
+}
+
+// leaveBattlefieldReplacementSubjectWidth reports the token width of the subject
+// that opens a leaves-the-battlefield replacement clause ("it" → 1, "this
+// <type>" → 2), or 0 when tokens do not begin with such a subject.
+func leaveBattlefieldReplacementSubjectWidth(tokens []shared.Token) int {
+	if len(tokens) == 0 {
+		return 0
+	}
+	if equalWord(tokens[0], "it") {
+		return 1
+	}
+	if len(tokens) >= 2 && equalWord(tokens[0], "this") {
+		return 2
+	}
+	return 0
 }
 
 // entersAsCopyConditionalTypePrefix reports whether words begins with the
@@ -476,11 +579,16 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 	for _, recognize := range []func([]shared.Token, Atoms) (ConditionClause, bool){
 		recognizePriorInstructionCondition,
 		recognizeControlsCommanderCondition,
+		recognizeControlsGreatestPowerCondition,
+		recognizeControlsGreatestToughnessCondition,
 		recognizeDestroyedThisWayCondition,
 		recognizeEventSubjectCondition,
+		recognizeSourceSaddledCondition,
 		recognizeSourceStateCondition,
+		recognizeAttachedCreatureStateCondition,
 		recognizeSourceCounterStateCondition,
 		recognizeControllerResourceCondition,
+		recognizeGainedLifeThisTurnCondition,
 		recognizeGraveyardCondition,
 		recognizeCounterPlacementCondition,
 		recognizeDamageSourceCondition,
@@ -491,16 +599,43 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeGraveyardControlsCondition,
 		recognizeControlsCondition,
 		recognizeTotalPowerCondition,
+		recognizeControlsNamedCondition,
 		recognizeCardToGraveyardReplacementCondition,
+		recognizeCreatureWouldDieReplacementCondition,
 		recognizeSourceDeathCondition,
 		recognizeTargetColorCondition,
 		recognizeDrawFromEmptyLibraryCondition,
 		recognizeDrawCardReplacementCondition,
 		recognizeCastTimingCondition,
+		recognizeFirstCombatPhaseCondition,
+		recognizeAttackersAttackingControllerCondition,
+		recognizeSpellXCondition,
+		recognizeCreatedTokenMatchCondition,
+		recognizeSharesCreatureTypeCondition,
 	} {
 		if clause, ok := recognize(body, atoms); ok {
 			return clause, true
 		}
+	}
+	return ConditionClause{}, false
+}
+
+// recognizeSpellXCondition matches the resolving-spell value-of-X gate "X is
+// <n> or more" / "X is <n> or greater" ("If X is 10 or more, ...", the Finale
+// cycle). It reads the chosen value of the spell's {X} cost, so it gates only a
+// per-effect branch of a resolving spell. It fails closed on any other wording.
+func recognizeSpellXCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "x", "is")
+	if !ok || len(rest) < 1 {
+		return ConditionClause{}, false
+	}
+	value, ok := conditionNumberValue(rest[0])
+	if !ok {
+		return ConditionClause{}, false
+	}
+	tail := rest[1:]
+	if tokenWordsEqual(tail, "or", "more") || tokenWordsEqual(tail, "or", "greater") {
+		return ConditionClause{Predicate: ConditionPredicateSpellXAtLeast, Threshold: value}, true
 	}
 	return ConditionClause{}, false
 }
@@ -519,6 +654,36 @@ func recognizeControlsCommanderCondition(body []shared.Token, _ Atoms) (Conditio
 	return ConditionClause{}, false
 }
 
+// recognizeControlsGreatestPowerCondition matches the conditional-draw gate "you
+// control the creature with the greatest power or tied for the greatest power"
+// (Summon: Fenrir chapter III). The predicate holds when the controller controls
+// a creature whose power is at least as high as every other creature's power on
+// the battlefield (sole highest or tied for highest). It fails closed on any
+// other wording.
+func recognizeControlsGreatestPowerCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if tokenWordsEqual(body,
+		"you", "control", "the", "creature", "with", "the", "greatest", "power",
+		"or", "tied", "for", "the", "greatest", "power") {
+		return ConditionClause{Predicate: ConditionPredicateControlsGreatestPowerCreature}, true
+	}
+	return ConditionClause{}, false
+}
+
+// recognizeControlsGreatestToughnessCondition matches the conditional-draw gate
+// "you control the creature with the greatest toughness or tied for the greatest
+// toughness" (Abzan Beastmaster). The predicate holds when the controller
+// controls a creature whose toughness is at least as high as every other
+// creature's toughness on the battlefield (sole highest or tied for highest). It
+// fails closed on any other wording.
+func recognizeControlsGreatestToughnessCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if tokenWordsEqual(body,
+		"you", "control", "the", "creature", "with", "the", "greatest", "toughness",
+		"or", "tied", "for", "the", "greatest", "toughness") {
+		return ConditionClause{Predicate: ConditionPredicateControlsGreatestToughnessCreature}, true
+	}
+	return ConditionClause{}, false
+}
+
 func recognizePriorInstructionCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
 	if tokenWordsEqual(body, "you", "don't") {
 		return ConditionClause{Predicate: ConditionPredicatePriorInstructionNotAccepted}, true
@@ -529,15 +694,30 @@ func recognizePriorInstructionCondition(body []shared.Token, _ Atoms) (Condition
 	return ConditionClause{}, false
 }
 
+// recognizeSharesCreatureTypeCondition matches the Kinship resolving gate "it
+// shares a creature type with this creature", where "it" is the just-looked-at
+// top card of the controller's library and "this creature" is the source
+// permanent. The predicate holds when the looked-at card and the source share at
+// least one creature type. It fails closed on any other wording.
+func recognizeSharesCreatureTypeCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if tokenWordsEqual(body, "it", "shares", "a", "creature", "type", "with", "this", "creature") {
+		return ConditionClause{Predicate: ConditionPredicateSubjectSharesCreatureTypeWithSource}, true
+	}
+	return ConditionClause{}, false
+}
+
 // recognizeDestroyedThisWayCondition matches the resolving success gate "a
 // <permanent noun> is destroyed this way" (and the plural "are" form) that
 // follows a preceding optional destroy effect, as in Noxious Gearhulk's "you may
 // destroy another target creature. If a creature is destroyed this way, you gain
-// life equal to its toughness." It is the outcome-worded equivalent of "if you
-// do": the gate holds exactly when the prior destroy actually moved a permanent
-// to the graveyard, so it maps to the same prior-instruction success predicate.
-// The noun is the descriptive type of what the prior clause destroyed and carries
-// no selection of its own. It fails closed on any other wording.
+// life equal to its toughness." It maps to its own predicate distinct from the
+// literal "if you do" gate: the noun names only a descriptive subset of what the
+// prior clause could have destroyed (e.g. "if an artifact is destroyed this way"
+// after "destroy target artifact or land"), so it is the resolving-success
+// equivalent of "if you do" only when that noun matches every possible destroyed
+// object. The lowering treats it as an "if you do" gate solely for the existing
+// optional-destroy shape and fails closed elsewhere. It fails closed on any other
+// wording.
 func recognizeDestroyedThisWayCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
 	rest, ok := cutTokenPrefix(body, "a")
 	if !ok {
@@ -557,15 +737,64 @@ func recognizeDestroyedThisWayCondition(body []shared.Token, _ Atoms) (Condition
 	if !tokenWordsEqual(rest[1:], copula, "destroyed", "this", "way") {
 		return ConditionClause{}, false
 	}
-	return ConditionClause{Predicate: ConditionPredicatePriorInstructionAccepted}, true
+	return ConditionClause{Predicate: ConditionPredicateDestroyedThisWay}, true
 }
 
 // recognizeCastTimingCondition handles the Addendum cast-timing gate "you cast
 // this spell during your main phase", which restricts the gated effect to
 // spells cast while their controller is the active player in a main phase.
+// recognizeAttackersAttackingControllerCondition matches the intervening-if
+// combat gate "<N> or more of those creatures are attacking you and/or
+// planeswalkers you control" (Mangara, the Diplomat; Tomik, Wielder of Law).
+// "Those creatures" back-references the attackers declared by the trigger's
+// "an opponent attacks with creatures" event; the predicate counts how many of
+// those attackers are attacking the controller (directly or one of the
+// controller's planeswalkers) and holds when that count meets the threshold N.
+// It fails closed on any other wording.
+// recognizeFirstCombatPhaseCondition matches the turn-structure gate "it's the
+// first combat phase of the turn" ("if it's the first combat phase of the turn,
+// there is an additional combat phase after this phase"; Raiyuu, Storm's Edge,
+// Karlach, Fury of Avernus). It gates the extra-combat insertion so the loop
+// fires only once per turn. It fails closed on any other wording.
+func recognizeFirstCombatPhaseCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if tokenWordsEqual(body, "it's", "the", "first", "combat", "phase", "of", "the", "turn") ||
+		tokenWordsEqual(body, "it", "is", "the", "first", "combat", "phase", "of", "the", "turn") {
+		return ConditionClause{Predicate: ConditionPredicateFirstCombatPhaseOfTurn}, true
+	}
+	return ConditionClause{}, false
+}
+
+func recognizeAttackersAttackingControllerCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if len(body) < 1 {
+		return ConditionClause{}, false
+	}
+	count, ok := CardinalWordValue(body[0].Text)
+	if !ok || count < 1 {
+		return ConditionClause{}, false
+	}
+	rest, ok := cutTokenPrefix(body[1:],
+		"or", "more", "of", "those", "creatures", "are", "attacking", "you", "and")
+	if !ok || len(rest) == 0 || rest[0].Kind != shared.Slash {
+		return ConditionClause{}, false
+	}
+	if !tokenWordsEqual(rest[1:], "or", "planeswalkers", "you", "control") {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate: ConditionPredicateAttackersAttackingControllerAtLeast,
+		Threshold: count,
+	}, true
+}
+
 func recognizeCastTimingCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
 	if tokenWordsEqual(body, "you", "cast", "this", "spell", "during", "your", "main", "phase") {
 		return ConditionClause{Predicate: ConditionPredicateCastDuringControllerMainPhase}, true
+	}
+	if tokenWordsEqual(body, "this", "spell", "was", "kicked") {
+		return ConditionClause{Predicate: ConditionPredicateSpellWasKicked}, true
+	}
+	if tokenWordsEqual(body, "this", "spell", "was", "cast", "from", "a", "graveyard") {
+		return ConditionClause{Predicate: ConditionPredicateSpellWasCastFromGraveyard}, true
 	}
 	return ConditionClause{}, false
 }
@@ -604,7 +833,31 @@ func recognizeEventSubjectCondition(body []shared.Token, atoms Atoms) (Condition
 	return recognizeEventSubjectMatchCondition(body, atoms)
 }
 
-// recognizeEnteredOrCastFromGraveyardCondition handles the enters-the-battlefield
+// recognizeCreatedTokenMatchCondition handles the resolving gate "the token is a
+// <selection>" that inspects the characteristics of a token a prior effect in
+// the same ability just created (Yenna, Redtooth Regent: "If the token is an
+// Aura, untap Yenna, then scry 2."). The "the token" subject binds the
+// just-created token, so the clause carries a permanent selection matched
+// against that object. Only the singular "the token" subject is recognized; any
+// other subject falls through to the remaining recognizers.
+func recognizeCreatedTokenMatchCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "the", "token", "is", "a")
+	if !ok {
+		if rest, ok = cutTokenPrefix(body, "the", "token", "is", "an"); !ok {
+			return ConditionClause{}, false
+		}
+	}
+	selection, ok := parseConditionSelection(rest, atoms)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate:     ConditionPredicateObjectMatches,
+		ObjectBinding: ConditionObjectBindingCreatedToken,
+		Selection:     selection,
+	}, true
+}
+
 // intervening condition that gates a trigger on the entering object(s) having
 // come from a graveyard, either by entering directly from a graveyard or by
 // being cast from a graveyard. Two oracle wordings carry different ownership
@@ -751,11 +1004,43 @@ func recognizeTargetColorCondition(body []shared.Token, atoms Atoms) (ConditionC
 	}, true
 }
 
+// recognizeSourceSaddledCondition matches the per-effect gate "this <noun> is
+// saddled" / "this <noun> isn't saddled", testing the source Mount's runtime
+// saddled state (CR 702.166). It gates Caustic Bronco's split life-loss effect
+// ("... if this creature isn't saddled. Otherwise, ...") and the affirmative
+// "is saddled" form. The subject noun binds the source, so the predicate alone
+// carries the meaning; the "isn't" wording maps to the negated predicate so the
+// otherwise/instead negation machinery produces the complementary branch.
+func recognizeSourceSaddledCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "this")
+	if !ok {
+		return ConditionClause{}, false
+	}
+	if len(rest) != 3 || rest[0].Kind != shared.Word || !equalWord(rest[2], "saddled") {
+		return ConditionClause{}, false
+	}
+	switch {
+	case equalWord(rest[1], "is"):
+		return ConditionClause{Predicate: ConditionPredicateSourceSaddled}, true
+	case equalWord(rest[1], "isn't"):
+		return ConditionClause{Predicate: ConditionPredicateSourceNotSaddled}, true
+	}
+	return ConditionClause{}, false
+}
+
 // inspect the source permanent.
 func recognizeSourceStateCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
 	rest, ok := cutTokenPrefix(body, "this")
 	if !ok {
-		return ConditionClause{}, false
+		// A possessive self-name subject ("Kitsa's power is 3 or greater") names
+		// the source permanent directly rather than through "this <type>". Keep
+		// the possessive name token in rest so the shared "is" split treats
+		// "<name>'s power" as the subject, exactly as "this creature's power"
+		// does. Any non-self-name body still fails closed here.
+		if _, named := atoms.SelfNameSpanStartingAt(body[0].Span); !named {
+			return ConditionClause{}, false
+		}
+		rest = body
 	}
 	isIndex := tokenWordIndex(rest, "is")
 	if isIndex < 1 {
@@ -855,6 +1140,61 @@ func applySourceState(stateTokens []shared.Token, atoms Atoms, selection *Condit
 	return true
 }
 
+// recognizeAttachedCreatureStateCondition matches the conditional-grant gate
+// "equipped creature is <state>" / "enchanted creature is <state>" used by
+// Equipment and Auras ("As long as equipped creature is legendary, it has
+// hexproof."). The subject names the permanent the source is attached to; the
+// state is a supertype (e.g. "legendary"), a card type, or a tap/combat state.
+// It binds the attached object so a static keyword grant can gate on the
+// equipped or enchanted creature's own characteristics.
+func recognizeAttachedCreatureStateCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "equipped", "creature", "is")
+	if !ok {
+		rest, ok = cutTokenPrefix(body, "enchanted", "creature", "is")
+		if !ok {
+			return ConditionClause{}, false
+		}
+	}
+	var selection ConditionSelection
+	if !applyAttachedCreatureState(rest, atoms, &selection) {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate:     ConditionPredicateObjectMatches,
+		ObjectBinding: ConditionObjectBindingSourceAttached,
+		Selection:     selection,
+	}, true
+}
+
+// applyAttachedCreatureState fills the selection from the state words following
+// "equipped/enchanted creature is ...". A bare supertype ("legendary") sets the
+// supertype filter; other states fall through to the shared source-state vocab
+// ("a <type>", tapped/untapped, attacking/blocking).
+func applyAttachedCreatureState(stateTokens []shared.Token, atoms Atoms, selection *ConditionSelection) bool {
+	if supertypes, ok := conditionStateSupertypes(stateTokens, atoms); ok {
+		selection.Supertypes = append(selection.Supertypes, supertypes...)
+		return true
+	}
+	return applySourceState(stateTokens, atoms, selection)
+}
+
+// conditionStateSupertypes reads one or more bare supertype words ("legendary",
+// "snow", "basic") that form a complete predicate state with no trailing noun.
+func conditionStateSupertypes(tokens []shared.Token, atoms Atoms) ([]ConditionSupertype, bool) {
+	if len(tokens) == 0 {
+		return nil, false
+	}
+	supertypes := make([]ConditionSupertype, 0, len(tokens))
+	for _, token := range tokens {
+		supertype, ok := conditionSupertypeAtom(token.Span, atoms)
+		if !ok {
+			return nil, false
+		}
+		supertypes = append(supertypes, supertype)
+	}
+	return supertypes, true
+}
+
 // recognizeSourceCounterStateCondition handles the source permanent's
 // counter-presence intervening condition "<source> has counters on it" /
 // "<source> has a counter on it" ("At the beginning of combat on your turn, if
@@ -867,6 +1207,13 @@ func recognizeSourceCounterStateCondition(body []shared.Token, atoms Atoms) (Con
 	if !ok {
 		return ConditionClause{}, false
 	}
+	if selection, ok := sourceCounterCountSelection(rest, atoms); ok {
+		return ConditionClause{
+			Predicate:     ConditionPredicateObjectMatches,
+			ObjectBinding: ConditionObjectBindingSource,
+			Selection:     selection,
+		}, true
+	}
 	if !tokenWordsEqual(rest, "has", "counters", "on", "it") &&
 		!tokenWordsEqual(rest, "has", "a", "counter", "on", "it") {
 		return ConditionClause{}, false
@@ -876,6 +1223,57 @@ func recognizeSourceCounterStateCondition(body []shared.Token, atoms Atoms) (Con
 		ObjectBinding: ConditionObjectBindingSource,
 		Selection:     ConditionSelection{AnyCounter: true},
 	}, true
+}
+
+// sourceCounterCountSelection recognizes a kind-specific source counter-state
+// body. It accepts the named-counter-count threshold "has <n> or more <kind>
+// counters on it" ("As long as ~ has seven or more quest counters on it, ...",
+// the Ascension cycle) and the singular kind-specific presence "has a <kind>
+// counter on it" ("If this creature has a +1/+1 counter on it, ...", Incubation
+// Druid), which means one or more counters of that kind. It returns a Selection
+// carrying the counter kind and minimum count.
+func sourceCounterCountSelection(rest []shared.Token, atoms Atoms) (ConditionSelection, bool) {
+	after, ok := cutTokenPrefix(rest, "has")
+	if !ok {
+		return ConditionSelection{}, false
+	}
+	after, ok = stripTokenSuffix(after, "on", "it")
+	if !ok {
+		return ConditionSelection{}, false
+	}
+	atLeast, ok := sourceCounterThreshold(after)
+	if !ok {
+		return ConditionSelection{}, false
+	}
+	kind, _, ok := atoms.CounterIn(shared.SpanOf(after))
+	if !ok {
+		return ConditionSelection{}, false
+	}
+	return ConditionSelection{
+		CounterKind:         kind,
+		CounterKindKnown:    true,
+		CounterCountAtLeast: atLeast,
+	}, true
+}
+
+// sourceCounterThreshold reads the minimum count of a kind-specific source
+// counter-state body whose tokens follow "has" and precede "on it". It accepts
+// the plural threshold "<n> or more <kind> counters" (n or more of that kind)
+// and the singular presence "a <kind> counter" (one or more of that kind). It
+// fails closed on any other shape.
+func sourceCounterThreshold(after []shared.Token) (int, bool) {
+	if tokenSuffixWord(after, "counters") {
+		count, _, ok := parseLeadingCount(after)
+		if !ok || count.Comparison != ConditionComparisonAtLeast {
+			return 0, false
+		}
+		return count.Value, true
+	}
+	if tokenSuffixWord(after, "counter") &&
+		startsWithWord(after, "a", "an") {
+		return 1, true
+	}
+	return 0, false
 }
 
 // cutSourceSubjectTokens consumes a leading source self-subject — the card's own
@@ -916,22 +1314,51 @@ func recognizeControllerResourceCondition(body []shared.Token, atoms Atoms) (Con
 	}
 	rest, ok := cutTokenPrefix(body, "you", "have")
 	if ok {
-		if count, tail, ok := parseLeadingCount(rest); ok && count.Comparison == ConditionComparisonAtLeast {
-			switch {
-			case tokenWordsEqual(tail, "cards", "in", "hand"):
-				return ConditionClause{Predicate: ConditionPredicateControllerHandSizeAtLeast, Threshold: count.Value}, true
-			case tokenWordsEqual(tail, "life"):
-				return ConditionClause{Predicate: ConditionPredicateControllerLifeAtLeast, Threshold: count.Value}, true
-			case tokenWordsEqual(tail, "opponents"):
-				return ConditionClause{Predicate: ConditionPredicateOpponentCountAtLeast, Threshold: count.Value}, true
+		// "you have at least <n> life [more than your starting life total]".
+		if atLeast, ok := cutTokenPrefix(rest, "at", "least"); ok && len(atLeast) >= 1 {
+			if value, ok := conditionNumberValue(atLeast[0]); ok {
+				tail := atLeast[1:]
+				switch {
+				case tokenWordsEqual(tail, "life", "more", "than", "your", "starting", "life", "total"):
+					return ConditionClause{Predicate: ConditionPredicateControllerLifeAtLeastAboveStarting, Threshold: value}, true
+				case tokenWordsEqual(tail, "life"):
+					return ConditionClause{Predicate: ConditionPredicateControllerLifeAtLeast, Threshold: value}, true
+				}
+			}
+		}
+		if count, tail, ok := parseLeadingCount(rest); ok {
+			switch count.Comparison {
+			case ConditionComparisonAtLeast:
+				switch {
+				case tokenWordsEqual(tail, "cards", "in", "hand"),
+					tokenWordsEqual(tail, "cards", "in", "your", "hand"):
+					return ConditionClause{Predicate: ConditionPredicateControllerHandSizeAtLeast, Threshold: count.Value}, true
+				case tokenWordsEqual(tail, "cards", "in", "your", "library"):
+					return ConditionClause{Predicate: ConditionPredicateControllerLibrarySizeAtLeast, Threshold: count.Value}, true
+				case tokenWordsEqual(tail, "life"):
+					return ConditionClause{Predicate: ConditionPredicateControllerLifeAtLeast, Threshold: count.Value}, true
+				case tokenWordsEqual(tail, "opponents"):
+					return ConditionClause{Predicate: ConditionPredicateOpponentCountAtLeast, Threshold: count.Value}, true
+				}
+			case ConditionComparisonAtMost:
+				if tokenWordsEqual(tail, "life") {
+					return ConditionClause{Predicate: ConditionPredicateControllerLifeAtMost, Threshold: count.Value}, true
+				}
+			default:
 			}
 		}
 		// "you have exactly <n> cards in hand" is an equality on hand size, e.g.
 		// "Activate only if you have exactly seven cards in hand".
 		if exact, ok := cutTokenPrefix(rest, "exactly"); ok && len(exact) >= 1 {
-			if value, ok := conditionNumberValue(exact[0]); ok &&
-				tokenWordsEqual(exact[1:], "cards", "in", "hand") {
-				return ConditionClause{Predicate: ConditionPredicateControllerHandSizeExactly, Threshold: value}, true
+			if value, ok := conditionNumberValue(exact[0]); ok {
+				tail := exact[1:]
+				switch {
+				case tokenWordsEqual(tail, "cards", "in", "hand"),
+					tokenWordsEqual(tail, "cards", "in", "your", "hand"):
+					return ConditionClause{Predicate: ConditionPredicateControllerHandSizeExactly, Threshold: value}, true
+				case tokenWordsEqual(tail, "life"):
+					return ConditionClause{Predicate: ConditionPredicateControllerLifeExactly, Threshold: value}, true
+				}
 			}
 		}
 	}
@@ -954,7 +1381,26 @@ func recognizeControllerResourceCondition(body []shared.Token, atoms Atoms) (Con
 	return ConditionClause{}, false
 }
 
-func recognizeGraveyardCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+// recognizeGainedLifeThisTurnCondition matches the intervening-if body
+// "you gained <n> or more life this turn", e.g. Angelic Accord's
+// "At the beginning of each end step, if you gained 3 or more life this turn,
+// create a 4/4 white Angel creature token with flying."
+func recognizeGainedLifeThisTurnCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "you", "gained")
+	if !ok {
+		return ConditionClause{}, false
+	}
+	count, tail, ok := parseLeadingCount(rest)
+	if !ok || count.Comparison != ConditionComparisonAtLeast {
+		return ConditionClause{}, false
+	}
+	if !tokenWordsEqual(tail, "life", "this", "turn") {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{Predicate: ConditionPredicateControllerGainedLifeThisTurnAtLeast, Threshold: count.Value}, true
+}
+
+func recognizeGraveyardCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
 	rest := body
 	if trimmed, ok := cutTokenPrefix(body, "there", "are"); ok {
 		rest = trimmed
@@ -969,9 +1415,38 @@ func recognizeGraveyardCondition(body []shared.Token, _ Atoms) (ConditionClause,
 		return ConditionClause{Predicate: ConditionPredicateGraveyardCardCountAtLeast, Threshold: count.Value}, true
 	case tokenWordsEqual(tail, "card", "types", "among", "cards", "in", "your", "graveyard"):
 		return ConditionClause{Predicate: ConditionPredicateGraveyardCardTypeCountAtLeast, Threshold: count.Value}, true
-	default:
-		return ConditionClause{}, false
 	}
+	if cardType, ok := graveyardCountCardType(tail, atoms); ok {
+		return ConditionClause{
+			Predicate:              ConditionPredicateGraveyardCardOfTypeCountAtLeast,
+			Threshold:              count.Value,
+			GraveyardCountCardType: cardType,
+		}, true
+	}
+	return ConditionClause{}, false
+}
+
+// graveyardCountCardType recognizes the tail "<card type> cards [are] in your
+// graveyard" of a graveyard card-count condition filtered by a single card type
+// ("twenty or more creature cards are in your graveyard", Mortal Combat). It
+// fails closed when the noun is not a single recognized card type.
+func graveyardCountCardType(tail []shared.Token, atoms Atoms) (TriggerCardType, bool) {
+	typeTokens, ok := stripTokenSuffix(tail, "cards", "are", "in", "your", "graveyard")
+	if !ok {
+		typeTokens, ok = stripTokenSuffix(tail, "cards", "in", "your", "graveyard")
+	}
+	if !ok || len(typeTokens) != 1 {
+		return TriggerCardTypeUnknown, false
+	}
+	cardType, ok := atoms.CardTypeAt(typeTokens[0].Span)
+	if !ok {
+		return TriggerCardTypeUnknown, false
+	}
+	mapped := triggerCardTypeFromAtom(cardType)
+	if mapped == TriggerCardTypeUnknown {
+		return TriggerCardTypeUnknown, false
+	}
+	return mapped, true
 }
 
 func recognizeCounterPlacementCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
@@ -984,6 +1459,9 @@ func recognizeCounterPlacementCondition(body []shared.Token, atoms Atoms) (Condi
 	rest, ok := cutTokenPrefix(body, "one", "or", "more")
 	if !ok {
 		return ConditionClause{}, false
+	}
+	if clause, ok := recognizeSelfCounterPlacement(rest, body, atoms); ok {
+		return clause, true
 	}
 	if tail, ok := stripTokenSuffix(rest, "counters", "would", "be", "put", "on", "a", "permanent", "you", "control"); ok && len(tail) > 0 {
 		counterKind, ok := conditionCounterAtom(shared.SpanOf(body), atoms)
@@ -1018,6 +1496,31 @@ func recognizeCounterPlacementCondition(body []shared.Token, atoms Atoms) (Condi
 	}
 	return ConditionClause{
 		Predicate: ConditionPredicateCounterPlacementOnAnyCreature,
+		Counter:   counterKind,
+	}, true
+}
+
+// recognizeSelfCounterPlacement recognizes the self recipient of a
+// counter-placement replacement, as on Mowu, Loyal Companion ("If one or more
+// +1/+1 counters would be put on Mowu, that many plus one +1/+1 counters are put
+// on it instead."). The recipient after "would be put on" must be a self
+// reference (the card's own name, "this creature", or "it"). It fails closed
+// when the counter kind is unknown.
+func recognizeSelfCounterPlacement(rest, body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	split := tokenSubsequenceIndex(rest, "counters", "would", "be", "put", "on")
+	if split < 1 {
+		return ConditionClause{}, false
+	}
+	recipient := rest[split+5:]
+	if len(recipient) == 0 || !costSelfReference(recipient, atoms, true) {
+		return ConditionClause{}, false
+	}
+	counterKind, ok := conditionCounterAtom(shared.SpanOf(body), atoms)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate: ConditionPredicateCounterPlacementOnSelf,
 		Counter:   counterKind,
 	}, true
 }
@@ -1124,6 +1627,19 @@ func recognizeTokenCreationCondition(body []shared.Token, _ Atoms) (ConditionCla
 	if tokenWordsEqual(body, "an", "effect", "would", "create", "one", "or", "more", "tokens") ||
 		tokenWordsEqual(body, "one", "or", "more", "tokens", "would", "be", "created") {
 		return ConditionClause{Predicate: ConditionPredicateTokenCreationAnyController}, true
+	}
+	// The passive would-create wording may carry a card-type filter ("one or
+	// more artifact tokens would be created under your control"). The type word
+	// is tolerated here and carried downstream by the would-create group's
+	// selector, mirroring the active "you would create one or more <type>
+	// tokens" form handled just below.
+	if rest, ok := cutTokenPrefix(body, "one", "or", "more"); ok {
+		if _, ok := stripTokenSuffix(rest, "tokens", "would", "be", "created", "under", "your", "control"); ok {
+			return ConditionClause{Predicate: ConditionPredicateTokenCreationUnderController}, true
+		}
+		if _, ok := stripTokenSuffix(rest, "tokens", "would", "be", "created"); ok {
+			return ConditionClause{Predicate: ConditionPredicateTokenCreationAnyController}, true
+		}
 	}
 	if rest, ok := cutTokenPrefix(body, "you", "would", "create", "one", "or", "more"); ok {
 		if _, ok := stripTokenSuffix(rest, "tokens"); ok {
@@ -1395,6 +1911,77 @@ func recognizeTotalPowerCondition(body []shared.Token, atoms Atoms) (ConditionCl
 	}, true
 }
 
+// recognizeControlsNamedCondition matches a "you control" gate whose objects
+// are named permanents rather than card types ("If you control an Urza's Mine
+// and an Urza's Tower, ..."; the Urza tron lands). It splits the noun list on
+// "and", strips each segment's "a"/"an" determiner, and records the remaining
+// tokens as a literal card name. A segment must begin with a capitalized word
+// and must not parse as a typed condition selection, so type-based "you control
+// a creature" gates fall through to recognizeControlsCondition. Name matching is
+// normalized downstream, so the printed Oracle spelling matches the card name.
+func recognizeControlsNamedCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "you", "control")
+	if !ok {
+		return ConditionClause{}, false
+	}
+	segments := splitTokensOnWord(rest, "and")
+	if len(segments) == 0 {
+		return ConditionClause{}, false
+	}
+	names := make([]string, 0, len(segments))
+	for _, segment := range segments {
+		if trimmed, cut := cutTokenPrefix(segment, "a"); cut {
+			segment = trimmed
+		} else if trimmed, cut := cutTokenPrefix(segment, "an"); cut {
+			segment = trimmed
+		}
+		if !controlledNamePhrase(segment, atoms) {
+			return ConditionClause{}, false
+		}
+		names = append(names, joinTokens(segment))
+	}
+	return ConditionClause{
+		Predicate:       ConditionPredicateControllerControlsNamed,
+		ControlledNames: names,
+	}, true
+}
+
+// controlledNamePhrase reports whether tokens name a specific card (a proper
+// noun) rather than a card type or subtype. It requires a leading capitalized
+// word and rejects any phrase that parses as a typed condition selection.
+func controlledNamePhrase(tokens []shared.Token, atoms Atoms) bool {
+	if len(tokens) == 0 {
+		return false
+	}
+	first := tokens[0].Text
+	if first == "" || first[0] < 'A' || first[0] > 'Z' {
+		return false
+	}
+	if _, ok := parseConditionSelection(tokens, atoms); ok {
+		return false
+	}
+	return true
+}
+
+// splitTokensOnWord splits tokens into the segments separated by the given
+// connector word, dropping empty segments.
+func splitTokensOnWord(tokens []shared.Token, word string) [][]shared.Token {
+	var segments [][]shared.Token
+	start := 0
+	for i := range tokens {
+		if equalWord(tokens[i], word) {
+			if i > start {
+				segments = append(segments, tokens[start:i])
+			}
+			start = i + 1
+		}
+	}
+	if start < len(tokens) {
+		segments = append(segments, tokens[start:])
+	}
+	return segments
+}
+
 func recognizeSourceDeathCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
 	for _, candidate := range []struct {
 		suffix    []string
@@ -1449,6 +2036,63 @@ func recognizeCardToGraveyardReplacementCondition(body []shared.Token, atoms Ato
 		GraveyardSubjectTypesAny:     subjectTypes,
 		GraveyardFromBattlefieldOnly: fromBattlefieldOnly,
 	}, true
+}
+
+// recognizeCreatureWouldDieReplacementCondition recognizes the "would die"
+// graveyard-redirect replacement condition "[a/an] <type> [you control / an
+// opponent controls] would die" (Stone of Erech, Misery's Shadow, Gisa,
+// Liesa, Nemata). "X would die" means "X would be put into a graveyard from the
+// battlefield" (CR 700.4), so it always restricts the source zone to the
+// battlefield. The optional control qualifier watches who controls the dying
+// permanent, distinct from the owner-scoped "would be put into a graveyard"
+// forms. It fails closed on self ("this creature"), exclude-self ("another
+// creature"), duration ("this turn"), and counter-conditioned subjects, leaving
+// those to other recognizers or as unsupported.
+func recognizeCreatureWouldDieReplacementCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	subject, ok := stripTokenSuffix(body, "would", "die")
+	if !ok || len(subject) == 0 {
+		return ConditionClause{}, false
+	}
+	controlScope := GraveyardRedirectControlScopeAny
+	if trimmed, trimmedOK := stripTokenSuffix(subject, "an", "opponent", "controls"); trimmedOK {
+		subject = trimmed
+		controlScope = GraveyardRedirectControlScopeOpponent
+	} else if trimmed, trimmedOK := stripTokenSuffix(subject, "you", "control"); trimmedOK {
+		subject = trimmed
+		controlScope = GraveyardRedirectControlScopeYou
+	}
+	subjectTypes, ok := parseGraveyardDeathSubject(subject, atoms)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate:                     ConditionPredicateCardWouldGoToGraveyard,
+		GraveyardSubjectTypesAny:      subjectTypes,
+		GraveyardFromBattlefieldOnly:  true,
+		GraveyardRedirectControlScope: controlScope,
+	}, true
+}
+
+// parseGraveyardDeathSubject parses the dying-object subject of a "would die"
+// graveyard-redirect condition, returning the typed card-type filter (empty for
+// "a permanent"). It accepts only "a permanent" or a single permanent card-type
+// noun ("a creature", "an artifact"); it fails closed on anything else.
+func parseGraveyardDeathSubject(subject []shared.Token, atoms Atoms) (cardTypes []TriggerCardType, ok bool) {
+	if len(subject) != 2 || (!equalWord(subject[0], "a") && !equalWord(subject[0], "an")) {
+		return nil, false
+	}
+	if equalWord(subject[1], "permanent") {
+		return nil, true
+	}
+	cardType, ok := atoms.CardTypeAt(subject[1].Span)
+	if !ok {
+		return nil, false
+	}
+	mapped := triggerCardTypeFromAtom(cardType)
+	if mapped == TriggerCardTypeUnknown {
+		return nil, false
+	}
+	return []TriggerCardType{mapped}, true
 }
 
 // graveyardRedirectDestination is the parsed destination phrase of a
@@ -1740,12 +2384,24 @@ func parseConditionAlternativeNoun(tokens []shared.Token, orIndex int, atoms Ato
 	} else if trimmed, ok := cutTokenPrefix(right, "an"); ok {
 		right = trimmed
 	}
-	leftSub, leftOK := conditionSubtypeAtom(shared.SpanOf(left), atoms, CardTypeLand)
-	rightSub, rightOK := conditionSubtypeAtom(shared.SpanOf(right), atoms, CardTypeLand)
+	// Land subtype disjunction ("a Forest or an Island") carries the Land card
+	// type so the matched permanent must be a land of either basic type.
+	leftLand, leftLandOK := conditionSubtypeAtom(shared.SpanOf(left), atoms, CardTypeLand)
+	rightLand, rightLandOK := conditionSubtypeAtom(shared.SpanOf(right), atoms, CardTypeLand)
+	if leftLandOK && rightLandOK {
+		selection.RequiredTypes = append(selection.RequiredTypes, TriggerCardTypeLand)
+		selection.SubtypesAny = append(selection.SubtypesAny, leftLand, rightLand)
+		return selection, true
+	}
+	// Generic subtype disjunction ("another Wolf or Werewolf"). Each side names a
+	// subtype of any card type and the match constrains only the subtype, exactly
+	// like the single-subtype noun production, so a permanent matches if it has
+	// either named subtype.
+	leftSub, leftOK := atoms.SubtypeAt(shared.SpanOf(left))
+	rightSub, rightOK := atoms.SubtypeAt(shared.SpanOf(right))
 	if !leftOK || !rightOK {
 		return ConditionSelection{}, false
 	}
-	selection.RequiredTypes = append(selection.RequiredTypes, TriggerCardTypeLand)
 	selection.SubtypesAny = append(selection.SubtypesAny, leftSub, rightSub)
 	return selection, true
 }

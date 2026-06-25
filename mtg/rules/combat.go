@@ -92,6 +92,10 @@ func resolveUnblockedCombatDamage(g *game.Game, attacker *game.Permanent, target
 }
 
 func resolveBlockedCombatDamage(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent, target game.AttackTarget, pass combatDamagePass, log *TurnLog) {
+	if ruleEffectAssignsCombatDamageAsThoughUnblocked(g, attacker) {
+		resolveCombatDamageAsThoughUnblocked(g, attacker, blockers, target, pass, log)
+		return
+	}
 	if len(blockers) == 0 && (!dealsCombatDamageInPass(g, attacker, pass) || !hasKeyword(g, attacker, game.Trample)) {
 		return
 	}
@@ -111,6 +115,28 @@ func resolveBlockedCombatDamage(g *game.Game, attacker *game.Permanent, blockers
 	for i, blocker := range blockers {
 		if blockerDamage[i] > 0 {
 			markCreatureCombatDamage(g, blocker, attacker, blockerDamage[i], log)
+		}
+	}
+}
+
+// resolveCombatDamageAsThoughUnblocked assigns a blocked attacker's combat damage
+// to the player, planeswalker, or battle it is attacking as though it weren't
+// blocked (Lone Wolf, Thorn Elemental). The attacker still receives its blockers'
+// combat damage; it simply deals its own damage to its attack target rather than
+// to the blocking creatures. The controller's optional "you may have" choice is
+// modeled as always taken because the ability is purely beneficial and the
+// combat-damage step has no agent decision point.
+func resolveCombatDamageAsThoughUnblocked(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent, target game.AttackTarget, pass combatDamagePass, log *TurnLog) {
+	if dealsCombatDamageInPass(g, attacker, pass) {
+		if damage := effectivePower(g, attacker); damage > 0 && isLegalAttackTarget(g, effectiveController(g, attacker), target) {
+			markAttackTargetCombatDamage(g, attacker, target, damage, log)
+		}
+	}
+	for _, blocker := range blockers {
+		if dealsCombatDamageInPass(g, blocker, pass) {
+			if damage := effectivePower(g, blocker); damage > 0 {
+				markCreatureCombatDamage(g, blocker, attacker, damage, log)
+			}
 		}
 	}
 }
@@ -187,6 +213,8 @@ func markPlayerCombatDamage(g *game.Game, source *game.Permanent, defendingPlaye
 		DefendingPlayer: defendingPlayer,
 		Damage:          dealt,
 	})
+	stealMonarchByCombatDamage(g, sourceController, defendingPlayer)
+	applyRingBearerCombatDamageToPlayer(g, source)
 }
 
 func applyToxic(g *game.Game, source *game.Permanent, defendingPlayer game.PlayerID, dealt int) {
@@ -662,6 +690,9 @@ func canBlockAttacker(g *game.Game, blocker, attacker *game.Permanent) bool {
 	if ruleEffectProhibitsBeingBlocked(g, attacker) {
 		return false
 	}
+	if ruleEffectProhibitsBlockingAttacker(g, blocker, attacker) {
+		return false
+	}
 	if ruleEffectRestrictsBlocker(g, attacker, blocker) {
 		return false
 	}
@@ -866,6 +897,9 @@ func (combatEngine) declareAttackersSatisfiesRequirements(g *game.Game, playerID
 		if !goadAllowsAttackTarget(g, playerID, attacker, target) {
 			return false
 		}
+		if !directedAttackAllowsTarget(g, playerID, attacker, target) {
+			return false
+		}
 	}
 	return true
 }
@@ -876,8 +910,29 @@ func requiredAttackerCanAttackWithoutTax(g *game.Game, playerID game.PlayerID, a
 }
 
 func preferredRequiredAttackTarget(g *game.Game, playerID game.PlayerID, attacker *game.Permanent) (game.AttackTarget, bool) {
+	required, directed := directedAttackRequiredPlayers(g, attacker)
+	if directed {
+		if target, ok := firstUntaxedAttackTarget(g, playerID, attacker, required); ok {
+			return target, true
+		}
+		// The directed attack target is unreachable, so the directed requirement
+		// does not bind ("... if able"). Unless an unconditional forced-attack
+		// requirement also applies, the creature is not required to attack.
+		if !attackerHasUnconditionalMustAttack(g, attacker) {
+			return game.AttackTarget{}, false
+		}
+	}
+	return firstUntaxedAttackTarget(g, playerID, attacker, nil)
+}
+
+// firstUntaxedAttackTarget returns the first legal, goad-allowed, untaxed attack
+// target for attacker, optionally restricted to the directed required players.
+func firstUntaxedAttackTarget(g *game.Game, playerID game.PlayerID, attacker *game.Permanent, required []game.PlayerID) (game.AttackTarget, bool) {
 	for _, target := range legalAttackTargets(g, playerID) {
 		if !canAttackTarget(g, attacker, target) || !goadAllowsAttackTarget(g, playerID, attacker, target) {
+			continue
+		}
+		if len(required) > 0 && !targetSatisfiesDirectedPlayers(target, required) {
 			continue
 		}
 		declaration := []game.AttackDeclaration{{
@@ -911,6 +966,75 @@ func preferredRequiredAttackDeclarations(g *game.Game, playerID game.PlayerID, a
 
 func attackerMustAttack(g *game.Game, attacker *game.Permanent) bool {
 	return isGoaded(attacker) || ruleEffectRequiresAttack(g, attacker)
+}
+
+// attackerHasUnconditionalMustAttack reports whether attacker is forced to
+// attack regardless of which defender it picks, via goad or a non-directed
+// RuleEffectMustAttack ("Creatures you control attack each combat if able.").
+// A directed RuleEffectMustAttack is excluded: it forces an attack only while
+// the directed defender is reachable.
+func attackerHasUnconditionalMustAttack(g *game.Game, attacker *game.Permanent) bool {
+	if isGoaded(attacker) {
+		return true
+	}
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind == game.RuleEffectMustAttack && !effect.RequiredAttackTarget.Exists &&
+			ruleEffectMatchesPermanent(g, effect, attacker) {
+			return true
+		}
+	}
+	return false
+}
+
+// directedAttackRequiredPlayers returns the players attacker must attack (or a
+// planeswalker or battle they control) because of directed RuleEffectMustAttack
+// effects, and whether any such directed effect applies.
+func directedAttackRequiredPlayers(g *game.Game, attacker *game.Permanent) ([]game.PlayerID, bool) {
+	effects := activeRuleEffects(g)
+	var players []game.PlayerID
+	directed := false
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectMustAttack || !effect.RequiredAttackTarget.Exists {
+			continue
+		}
+		if !ruleEffectMatchesPermanent(g, effect, attacker) {
+			continue
+		}
+		players = append(players, effect.RequiredAttackTarget.Val)
+		directed = true
+	}
+	return players, directed
+}
+
+// targetSatisfiesDirectedPlayers reports whether target's defending player is one
+// every directed requirement demands. With a single directed requirement this is
+// the required player; conflicting requirements are satisfied by no target.
+func targetSatisfiesDirectedPlayers(target game.AttackTarget, required []game.PlayerID) bool {
+	for _, player := range required {
+		if target.Player != player {
+			return false
+		}
+	}
+	return true
+}
+
+// directedAttackAllowsTarget reports whether a declared attack target is allowed
+// by attacker's directed forced-attack requirements. When the directed defender
+// is reachable, the attack must be aimed at that player (or a planeswalker or
+// battle they control); when it is unreachable the requirement does not bind and
+// any otherwise-legal target is allowed.
+func directedAttackAllowsTarget(g *game.Game, playerID game.PlayerID, attacker *game.Permanent, target game.AttackTarget) bool {
+	required, directed := directedAttackRequiredPlayers(g, attacker)
+	if !directed {
+		return true
+	}
+	if _, ok := firstUntaxedAttackTarget(g, playerID, attacker, required); !ok {
+		return true
+	}
+	return targetSatisfiesDirectedPlayers(target, required)
 }
 
 func goadAllowsAttackTarget(g *game.Game, playerID game.PlayerID, attacker *game.Permanent, target game.AttackTarget) bool {

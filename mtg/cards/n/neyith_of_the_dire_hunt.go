@@ -110,11 +110,11 @@ var NeyithOfTheDireHunt = &game.CardDef{
 							MaxTargets: 1,
 							Constraint: "creature",
 							Allow:      game.TargetAllowPermanent,
-							Predicate: game.TargetPredicate{
-								PermanentTypes: []types.Card{
+							Selection: opt.Val(game.Selection{
+								RequiredTypesAny: []types.Card{
 									types.Creature,
 								},
-							},
+							}),
 						},
 					},
 					Sequence: []game.Instruction{

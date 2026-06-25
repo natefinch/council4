@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 // TestNoncreatureTypeUnionTargetExcludesCreatures covers the "noncreature
@@ -35,10 +36,10 @@ func TestNoncreatureTypeUnionTargetExcludesCreatures(t *testing.T) {
 		MinTargets: 1,
 		MaxTargets: 1,
 		Allow:      game.TargetAllowPermanent,
-		Predicate: game.TargetPredicate{
-			PermanentTypes: []types.Card{types.Artifact, types.Enchantment},
-			ExcludedTypes:  []types.Card{types.Creature},
-		},
+		Selection: opt.Val(game.Selection{
+			RequiredTypesAny: []types.Card{types.Artifact, types.Enchantment},
+			ExcludedTypes:    []types.Card{types.Creature},
+		}),
 	}
 
 	if !permanentTargetMatchesSpec(g, game.Player1, plainArtifact.ObjectID, &spec, plainArtifact.ObjectID) {

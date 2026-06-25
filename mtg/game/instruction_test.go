@@ -43,9 +43,9 @@ func TestValidateInstructionSequenceAcceptsLinkedBattlefieldSource(t *testing.T)
 			Primitive: PutOnBattlefield{
 				Source: LinkedBattlefieldSource(LinkedKey("revealed-card")),
 			},
-			CardCondition: opt.Val(CardCondition{
-				Card:                 CardReference{Kind: CardReferenceLinked, LinkID: "revealed-card"},
-				RequirePermanentCard: true,
+			CardCondition: opt.Val(CardSelection{
+				Card:      CardReference{Kind: CardReferenceLinked, LinkID: "revealed-card"},
+				Selection: Selection{RequirePermanentCard: true},
 			}),
 		},
 	}
@@ -116,7 +116,9 @@ func TestValidateInstructionSequenceAcceptsLinkedSearchResult(t *testing.T) {
 			Spec: SearchSpec{
 				SourceZone:  zone.Library,
 				Destination: zone.Battlefield,
-				CardType:    opt.Val(types.Land),
+				Filter: Selection{
+					RequiredTypes: []types.Card{types.Land},
+				},
 			},
 			Amount:        Fixed(1),
 			PublishLinked: key,

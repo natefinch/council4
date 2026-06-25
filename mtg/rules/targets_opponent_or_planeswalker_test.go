@@ -31,10 +31,10 @@ func TestOpponentOrPlaneswalkerTargetLegality(t *testing.T) {
 			MaxTargets: 1,
 			Constraint: "target opponent or planeswalker",
 			Allow:      game.TargetAllowPlayer | game.TargetAllowPermanent,
-			Predicate: game.TargetPredicate{
-				Player:         game.PlayerOpponent,
-				PermanentTypes: []types.Card{types.Planeswalker},
-			},
+			Selection: opt.Val(game.Selection{
+				Player:           game.PlayerOpponent,
+				RequiredTypesAny: []types.Card{types.Planeswalker},
+			}),
 		},
 	}))
 	g.Turn.Phase = game.PhasePrecombatMain

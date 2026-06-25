@@ -123,10 +123,8 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		oracleText string
 	}{
 		{name: "unsupported conditional tapped entry", cardName: "Test Land", typeLine: "Land", oracleText: "This land enters tapped unless you gained life this turn."},
-		{name: "nonmana ward", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Ward—Pay 2 life."},
 		{name: "nonmana equip", cardName: "Test Equipment", typeLine: "Artifact — Equipment", oracleText: "Equip—Pay {3} or discard a card."},
 		{name: "qualified equip", cardName: "Test Equipment", typeLine: "Artifact — Equipment", oracleText: "Equip creature token {1}"},
-		{name: "qualified enchant", cardName: "Test Aura", typeLine: "Enchantment — Aura", oracleText: "Enchant creature you control"},
 		{name: "noncolor protection (replaced by support test)", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Protection from a chosen color"},
 		{name: "divided damage variable amount", cardName: "Test Bolt", typeLine: "Instant", oracleText: "Test Bolt deals X damage divided as you choose among any number of targets."},
 		{name: "variable surveil", cardName: "Test Surveil", typeLine: "Sorcery", oracleText: "Surveil X."},
@@ -135,7 +133,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "surveil with unrecognized sibling", cardName: "Test Vision", typeLine: "Sorcery", oracleText: "Surveil 1, then celebrate."},
 		{name: "investigate with unrecognized sibling", cardName: "Test Clue", typeLine: "Sorcery", oracleText: "Investigate, then celebrate."},
 		{name: "proliferate with unrecognized sibling", cardName: "Test Counter", typeLine: "Sorcery", oracleText: "Proliferate, then celebrate."},
-		{name: "another fight target", cardName: "Test Fight", typeLine: "Sorcery", oracleText: "Target creature fights another target creature."},
 		{name: "conditional destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "If it is tapped, destroy target creature."},
 		{name: "regeneration destroy with non-pronoun subject", cardName: "Test Doom", typeLine: "Instant", oracleText: "Destroy target creature. That creature can't be regenerated."},
 		{name: "restricted destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "Destroy target nonblack nonred creature."},
@@ -218,7 +215,7 @@ func TestGenerateExecutableCardSourceRejectsPartiallyRecognizedKeywordLine(t *te
 		Name:       "Partial Keyword Tester",
 		Layout:     "normal",
 		TypeLine:   "Creature — Insect",
-		OracleText: "Flying; banding (Any creatures with banding, and up to one without, can block as a group.)",
+		OracleText: "Flying; phasing (This permanent phases in or out before you untap during each of your untap steps.)",
 	}
 	source, diagnostics, err := GenerateExecutableCardSource(card, "b")
 	if err != nil {
@@ -525,7 +522,7 @@ func TestGenerateExecutableCardSourceAdventureRejectsWhenAnyFaceUnsupported(t *t
 				Name:       "Impossible Lesson",
 				ManaCost:   "{1}{U}",
 				TypeLine:   "Sorcery — Adventure",
-				OracleText: "Start your engines!",
+				OracleText: "Daybound",
 			},
 		},
 	}

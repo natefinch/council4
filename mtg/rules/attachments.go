@@ -83,6 +83,14 @@ func isEquipmentPermanent(g *game.Game, permanent *game.Permanent) bool {
 	return permanentHasType(g, permanent, types.Artifact) && (permanentHasSubtype(g, permanent, types.Equipment) || hasKeyword(g, permanent, game.Equip))
 }
 
+// bodyAttachesLikeEquip reports whether an activated ability is an Equip-style
+// attachment activation. Reconfigure (CR 702.151) shares Equip's sorcery-speed
+// attach-to-target-creature-you-control activation and resolution, so the rules
+// layer dispatches both the same way.
+func bodyAttachesLikeEquip(body *game.ActivatedAbility) bool {
+	return game.BodyHasKeyword(body, game.Equip) || game.BodyHasKeyword(body, game.Reconfigure)
+}
+
 func isAttachmentPermanent(g *game.Game, permanent *game.Permanent) bool {
 	return isAuraPermanent(g, permanent) || isEquipmentPermanent(g, permanent)
 }

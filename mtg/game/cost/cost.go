@@ -21,7 +21,7 @@ func (m Mana) ManaValue() int {
 		switch s.Kind {
 		case ColoredSymbol, ColorlessSymbol, PhyrexianSymbol, SnowSymbol, HybridSymbol:
 			total++
-		case GenericSymbol:
+		case GenericSymbol, PhyrexianGenericSymbol:
 			total += s.Generic
 		case TwobridSymbol:
 			total += 2

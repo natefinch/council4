@@ -6,12 +6,14 @@ import "github.com/natefinch/council4/mtg/game"
 
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
+	BalustradeSpy,
 	BasiliskCollar,
 	BeastWithin,
 	BirdsOfParadise,
 	BiteDown,
 	BlazemireVerge,
 	BlazingSunsteel,
+	BolasSCitadel,
 	BridgeworksBattle,
 	BugenhagenWiseElder,
 	Bushwhack,

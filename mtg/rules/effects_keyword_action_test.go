@@ -42,8 +42,10 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 			Spec: game.SearchSpec{
 				SourceZone:  zone.Library,
 				Destination: zone.Hand,
-				CardType:    opt.Val(types.Creature),
 				Reveal:      true,
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
 			},
 		}, nil)
 
@@ -73,9 +75,11 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 			Spec: game.SearchSpec{
 				SourceZone:  zone.Library,
 				Destination: zone.Hand,
-				CardType:    opt.Val(types.Land),
-				Supertype:   opt.Val(types.Basic),
 				Reveal:      true,
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Land},
+					Supertypes:    []types.Super{types.Basic},
+				},
 			},
 		}, nil)
 
@@ -104,7 +108,9 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 			Spec: game.SearchSpec{
 				SourceZone:  zone.Library,
 				Destination: zone.Hand,
-				CardType:    opt.Val(types.Land),
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Land},
+				},
 			},
 		}, nil)
 
@@ -132,9 +138,11 @@ func TestSearchRevealAndInvestigateKeywordActions(t *testing.T) {
 			Spec: game.SearchSpec{
 				SourceZone:   zone.Library,
 				Destination:  zone.Battlefield,
-				CardType:     opt.Val(types.Land),
-				SubtypesAny:  []types.Sub{types.Forest},
 				EntersTapped: true,
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Land},
+					SubtypesAny:   []types.Sub{types.Forest},
+				},
 			},
 		}, nil)
 
@@ -272,6 +280,57 @@ func TestRenownEffectAddsCountersOnlyOnce(t *testing.T) {
 	}
 	if got := source.Counters.Get(counter.PlusOnePlusOne); got != 1 {
 		t.Fatalf("+1/+1 counters = %d, want 1 after repeated renown resolutions", got)
+	}
+}
+
+func TestAdaptEffectAddsCountersOnlyWhenUncountered(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Adapter",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 0}),
+		Toughness: opt.Val(game.PT{Value: 2})},
+	})
+	obj := &game.StackObject{
+		Kind:         game.StackActivatedAbility,
+		SourceID:     source.ObjectID,
+		SourceCardID: source.CardInstanceID,
+		Controller:   game.Player1,
+	}
+
+	resolveInstruction(engine, g, obj, game.Adapt{Amount: game.Fixed(3), Object: game.SourcePermanentReference()}, &TurnLog{})
+	resolveInstruction(engine, g, obj, game.Adapt{Amount: game.Fixed(3), Object: game.SourcePermanentReference()}, &TurnLog{})
+
+	if got := source.Counters.Get(counter.PlusOnePlusOne); got != 3 {
+		t.Fatalf("+1/+1 counters = %d, want 3 after repeated adapt resolutions (second is a no-op while countered)", got)
+	}
+}
+
+func TestBecomeSaddledEffectSetsSaddledOnce(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Mount",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2})},
+	})
+	obj := &game.StackObject{
+		Kind:         game.StackActivatedAbility,
+		SourceID:     source.ObjectID,
+		SourceCardID: source.CardInstanceID,
+		Controller:   game.Player1,
+	}
+
+	resolveInstruction(engine, g, obj, game.BecomeSaddled{Object: game.SourcePermanentReference()}, &TurnLog{})
+
+	if !source.Saddled {
+		t.Fatal("source did not become saddled")
+	}
+
+	// Resolving again is idempotent.
+	resolveInstruction(engine, g, obj, game.BecomeSaddled{Object: game.SourcePermanentReference()}, &TurnLog{})
+	if !source.Saddled {
+		t.Fatal("source unexpectedly lost saddled state")
 	}
 }
 
@@ -847,5 +906,43 @@ func TestAmassGrowsExistingArmy(t *testing.T) {
 	}
 	if got := army.Counters.Get(counter.PlusOnePlusOne); got != 2 {
 		t.Fatalf("+1/+1 counters = %d, want 2 added to the existing Army", got)
+	}
+}
+
+func TestManifestDreadPublishedLinkReceivesCounters(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	onlyCard := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Only Card",
+		Types: []types.Card{types.Instant},
+	}})
+	addInstructionSpellToStack(g, []game.Instruction{
+		{Primitive: game.Manifest{Dread: true, PublishLinked: game.LinkedKey("manifested-creature")}},
+		{Primitive: game.AddCounter{
+			Amount:      game.Fixed(3),
+			Object:      game.LinkedObjectReference("manifested-creature"),
+			CounterKind: counter.PlusOnePlusOne,
+		}},
+	})
+	log := TurnLog{}
+
+	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &log)
+
+	var manifested *game.Permanent
+	for _, permanent := range g.Battlefield {
+		if permanent.CardInstanceID == onlyCard {
+			manifested = permanent
+			break
+		}
+	}
+	if manifested == nil {
+		t.Fatal("manifest dread did not manifest the only card")
+	}
+	if !manifested.FaceDown || manifested.FaceDownKind != game.FaceDownManifest {
+		t.Fatalf("manifested face-down state = %+v", manifested)
+	}
+	if got := manifested.Counters.Get(counter.PlusOnePlusOne); got != 3 {
+		t.Fatalf("+1/+1 counters on manifested creature = %d, want 3", got)
 	}
 }

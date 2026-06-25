@@ -27,15 +27,17 @@ func TestConditionControllerControlsPermanentFilter(t *testing.T) {
 	})
 
 	condition := opt.Val(game.Condition{
-		ControllerControls: game.PermanentFilter{
-			Types:      []types.Card{types.Land},
-			Supertypes: []types.Super{types.Basic},
-			SubtypesAny: []types.Sub{
-				types.Swamp,
-				types.Mountain,
+		ControlsMatching: opt.Val(game.SelectionCount{
+			Selection: game.Selection{
+				RequiredTypes: []types.Card{types.Land},
+				Supertypes:    []types.Super{types.Basic},
+				SubtypesAny: []types.Sub{
+					types.Swamp,
+					types.Mountain,
+				},
 			},
 			MinCount: 1,
-		},
+		}),
 	})
 	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
 		t.Fatal("condition did not match controlled basic Mountain")
@@ -45,13 +47,15 @@ func TestConditionControllerControlsPermanentFilter(t *testing.T) {
 	}
 
 	powerCondition := opt.Val(game.Condition{
-		ControllerControls: game.PermanentFilter{
-			Types: []types.Card{types.Creature},
-			Power: opt.Val(compare.Int{
-				Op:    compare.GreaterOrEqual,
-				Value: 7,
-			}),
-		},
+		ControlsMatching: opt.Val(game.SelectionCount{
+			Selection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Power: opt.Val(compare.Int{
+					Op:    compare.GreaterOrEqual,
+					Value: 7,
+				}),
+			},
+		}),
 	})
 	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, powerCondition) {
 		t.Fatal("condition did not match controlled creature with power >= 7")
@@ -70,11 +74,13 @@ func TestConditionControllerControlsPermanentFilterCanExcludeSource(t *testing.T
 		Toughness: opt.Val(game.PT{Value: 5})},
 	})
 	condition := opt.Val(game.Condition{
-		ControllerControls: game.PermanentFilter{
-			Types:         []types.Card{types.Creature},
-			ExcludeSource: true,
-			Power:         opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4}),
-		},
+		ControlsMatching: opt.Val(game.SelectionCount{
+			Selection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				ExcludeSource: true,
+				Power:         opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4}),
+			},
+		}),
 	})
 	if conditionSatisfied(g, conditionContext{controller: game.Player1, source: source}, condition) {
 		t.Fatal("condition matched source as another creature")
@@ -323,11 +329,13 @@ func TestConditionControllerLiveStatePredicates(t *testing.T) {
 	}
 
 	condition := opt.Val(game.Condition{
-		ControllerHandEmpty:                     true,
-		ControllerGraveyardCardCountAtLeast:     7,
-		ControllerGraveyardCardTypeCountAtLeast: 4,
-		ControllerBasicLandTypeCountAtLeast:     3,
-		ControllerCreaturePowerDiversityAtLeast: 3,
+		ControllerHandEmpty: true,
+		Aggregates: []game.AggregateComparison{
+			{Aggregate: game.AggregateControllerGraveyardCardCount, Op: compare.GreaterOrEqual, Value: 7},
+			{Aggregate: game.AggregateControllerGraveyardCardTypeCount, Op: compare.GreaterOrEqual, Value: 4},
+			{Aggregate: game.AggregateControllerBasicLandTypeCount, Op: compare.GreaterOrEqual, Value: 3},
+			{Aggregate: game.AggregateControllerCreaturePowerDiversity, Op: compare.GreaterOrEqual, Value: 3},
+		},
 	})
 	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
 		t.Fatal("condition did not match controller live state")
@@ -348,12 +356,12 @@ func TestConditionCardCountsIgnoreTransientTokens(t *testing.T) {
 		t.Fatal("transient token in hand prevented empty-hand condition")
 	}
 	if conditionSatisfied(g, conditionContext{controller: game.Player1}, opt.Val(game.Condition{
-		ControllerHandSizeAtLeast: 1,
+		Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerHandSize, Op: compare.GreaterOrEqual, Value: 1}},
 	})) {
 		t.Fatal("transient token in hand counted toward hand size")
 	}
 	if conditionSatisfied(g, conditionContext{controller: game.Player1}, opt.Val(game.Condition{
-		ControllerGraveyardCardCountAtLeast: 1,
+		Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerGraveyardCardCount, Op: compare.GreaterOrEqual, Value: 1}},
 	})) {
 		t.Fatal("transient token in graveyard counted as a card")
 	}
@@ -371,6 +379,42 @@ func TestConditionCardCountsIgnoreTransientTokens(t *testing.T) {
 	}
 }
 
+func TestConditionGraveyardCardOfTypeCount(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	for _, cardTypes := range [][]types.Card{
+		{types.Artifact, types.Creature},
+		{types.Creature},
+		{types.Creature},
+		{types.Land},
+		{types.Instant},
+	} {
+		addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+			Name:  "Graveyard Card",
+			Types: cardTypes,
+		}})
+	}
+
+	creatureCount := opt.Val(game.Condition{
+		ControllerGraveyardCardOfTypeCountAtLeast: 3,
+		ControllerGraveyardCountCardType:          types.Creature,
+	})
+	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, creatureCount) {
+		t.Fatal("three creature cards in graveyard did not satisfy at-least-3 condition")
+	}
+
+	tooMany := opt.Val(game.Condition{
+		ControllerGraveyardCardOfTypeCountAtLeast: 4,
+		ControllerGraveyardCountCardType:          types.Creature,
+	})
+	if conditionSatisfied(g, conditionContext{controller: game.Player1}, tooMany) {
+		t.Fatal("only three creature cards present but at-least-4 condition matched")
+	}
+
+	if conditionSatisfied(g, conditionContext{controller: game.Player2}, creatureCount) {
+		t.Fatal("condition matched another player's graveyard")
+	}
+}
+
 func TestConditionDeliriumCombinesSplitCardTypesOnly(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addCardToGraveyard(g, game.Player1, &game.CardDef{
@@ -384,7 +428,7 @@ func TestConditionDeliriumCombinesSplitCardTypesOnly(t *testing.T) {
 	addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Relic", Types: []types.Card{types.Artifact}}})
 	addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Aura", Types: []types.Card{types.Enchantment}}})
 
-	delirium := opt.Val(game.Condition{ControllerGraveyardCardTypeCountAtLeast: 4})
+	delirium := opt.Val(game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerGraveyardCardTypeCount, Op: compare.GreaterOrEqual, Value: 4}}})
 	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, delirium) {
 		t.Fatal("split card did not contribute both card types to Delirium")
 	}
@@ -457,10 +501,12 @@ func TestConditionControllerControlsTotalPower(t *testing.T) {
 	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Land", Types: []types.Card{types.Land}}})
 
 	condition := opt.Val(game.Condition{
-		ControllerControls: game.PermanentFilter{
-			Types:      []types.Card{types.Creature},
+		ControlsMatching: opt.Val(game.SelectionCount{
+			Selection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+			},
 			TotalPower: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 8}),
-		},
+		}),
 	})
 	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
 		t.Fatal("condition did not match total creature power >= 8")

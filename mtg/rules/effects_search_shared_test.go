@@ -9,7 +9,6 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
-	"github.com/natefinch/council4/opt"
 )
 
 // correlatedSearchAgent answers the staged choices of a "that share a land type"
@@ -50,10 +49,12 @@ func myriadLandscapeSearchSpec() game.SearchSpec {
 	return game.SearchSpec{
 		SourceZone:    zone.Library,
 		Destination:   zone.Battlefield,
-		CardType:      opt.Val(types.Land),
-		Supertype:     opt.Val(types.Basic),
 		EntersTapped:  true,
 		SharedSubtype: true,
+		Filter: game.Selection{
+			RequiredTypes: []types.Card{types.Land},
+			Supertypes:    []types.Super{types.Basic},
+		},
 	}
 }
 

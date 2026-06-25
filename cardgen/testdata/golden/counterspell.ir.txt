@@ -1,0 +1,47 @@
+
+  [0]: 
+    Kind: spell
+    Text: Counter target spell.
+    Content: 
+      Targets: 
+        [0]: 
+          Text: target spell
+          Cardinality: 
+            Min: 1
+            Max: 1
+          Selector: 
+            Kind: 10
+          Exact: true
+          Order: 
+            Start: 2
+            End: 3
+      Effects: 
+        [0]: 
+          Kind: 12
+          Context: EffectContextController
+          Text: Counter target spell.
+          References: 
+          SubjectReferences: 
+          Targets: 
+            [0]: 
+              Text: target spell
+              Cardinality: 
+                Min: 1
+                Max: 1
+              Selector: 
+                Kind: 10
+              Exact: true
+          SubjectTargets: 
+          Selector: 
+            Kind: 10
+          DamageRecipient: 
+            EachSourceGroup: 
+          BecomeTypeAddColors: 
+          PolymorphColors: 
+          PolymorphSupertypes: 
+          Exact: true
+          Order: 
+            End: 4
+          VerbOrder: 
+            End: 1
+      Keywords: 

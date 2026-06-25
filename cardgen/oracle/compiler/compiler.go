@@ -57,12 +57,6 @@ func compileAbility(
 			WithoutPayingManaCost: ability.AlternativeCost.WithoutPayingManaCost,
 			ManaCost:              slices.Clone(ability.AlternativeCost.ManaCost),
 			ReplaceTargetWithEach: ability.AlternativeCost.ReplaceTargetWithEach,
-			PitchCount:            ability.AlternativeCost.PitchCount,
-			PitchLife:             ability.AlternativeCost.PitchLife,
-		}
-		if mapped, ok := compilerColor(ability.AlternativeCost.PitchColor); ok {
-			compiled.AlternativeCost.PitchColor = mapped
-			compiled.AlternativeCost.PitchColorKnown = true
 		}
 	}
 	if kind == AbilityTriggered {
@@ -75,7 +69,24 @@ func compileAbility(
 		if offset := ability.ExactSequence.DrawOffset; offset >= 0 && offset <= math.MaxUint8 {
 			compiled.ExactSequenceDrawOffset = uint8(offset)
 		}
+		compiled.ExactSequenceLookAtTopTypes = compilerCardTypes(ability.ExactSequence.LookAtTopCardTypes)
 	}
+	compiled.ClassLevelGain = ability.ClassLevelGain
+	compiled.LevelUpRecognized = ability.LevelUpRecognized
+	compiled.LevelUpCost = slices.Clone(ability.LevelUpCost)
+	if ability.LevelBand != nil {
+		compiled.LevelBand = &CompiledLevelBand{
+			Low:               ability.LevelBand.Low,
+			High:              ability.LevelBand.High,
+			Power:             ability.LevelBand.Power,
+			Toughness:         ability.LevelBand.Toughness,
+			HasPowerToughness: ability.LevelBand.HasPowerToughness,
+		}
+	}
+	compiled.Companion = ability.Companion != nil
+	compiled.PartnerWith = ability.PartnerWith != nil
+	compiled.ChooseABackground = ability.ChooseABackground != nil
+	compiled.Partner = ability.Partner != nil
 	if ability.Modal != nil {
 		for i := range ability.Modal.Options {
 			compiledMode, modeDiagnostics := compileMode(&ability.Modal.Options[i], context)
@@ -84,10 +95,13 @@ func compileAbility(
 		}
 		if len(compiled.Content.Modes) > 0 {
 			compiled.Content.Modes[0].Modal = &CompiledModalSemantics{
-				MinModes: ability.Modal.MinModes,
-				MaxModes: ability.Modal.MaxModes,
-				Kind:     compileModalChoiceKind(ability.Modal.ChoiceKind),
-				Bonus:    compileModeChoiceBonus(ability.Modal.ChoiceBonus),
+				MinModes:     ability.Modal.MinModes,
+				MaxModes:     ability.Modal.MaxModes,
+				Kind:         compileModalChoiceKind(ability.Modal.ChoiceKind),
+				Bonus:        compileModeChoiceBonus(ability.Modal.ChoiceBonus),
+				Spree:        ability.Modal.Spree,
+				Escalate:     ability.Modal.Escalate,
+				EscalateCost: slices.Clone(ability.Modal.EscalateCost),
 			}
 		}
 	}
@@ -131,6 +145,9 @@ func compileAbility(
 				compiled.Trigger,
 			)
 		}
+		compiled.Content.Effects = appendDiceTableEffects(compiled.Content.Effects, ability.DiceTable)
+		compiled.Content.Effects = appendCoinFlipEffects(compiled.Content.Effects, ability.CoinFlip)
+		compiled.Content.Effects = appendVoteEffects(compiled.Content.Effects, ability.Vote)
 	}
 	compiled.Content.References = bindActivationCostReferences(compiled.Kind, compiled.Cost, compiled.Content.References)
 	bindConditionReferences(compiled.Content.Conditions, compiled.Content.References, compiled.Trigger)
@@ -154,8 +171,14 @@ func compileAbility(
 			diagnostics = append(diagnostics, unsupportedDiagnostic(mode.Span, mode.Text))
 		}
 	}
-	if kind != AbilityReminder && kind != AbilitySpellAdditionalCost && kind != AbilitySpellAlternativeCost && ability.Modal == nil &&
+	if kind != AbilityReminder && kind != AbilitySpellAdditionalCost && kind != AbilitySpellAlternativeCost && kind != AbilityLevelBand && ability.Modal == nil &&
 		compiled.ExactSequence == ExactSequenceUnknown &&
+		compiled.ClassLevelGain == 0 &&
+		!compiled.LevelUpRecognized &&
+		!compiled.Companion &&
+		!compiled.PartnerWith &&
+		!compiled.ChooseABackground &&
+		!compiled.Partner &&
 		len(compiled.Content.Effects) == 0 && len(compiled.Content.Keywords) == 0 &&
 		!legacyEffectsPresent(ability.Sentences) &&
 		(compiled.Static == nil || len(compiled.Static.Declarations) == 0) {
@@ -186,6 +209,8 @@ func compileModalChoiceKind(kind parser.ModalChoiceKind) CompiledModalChoiceKind
 	switch kind {
 	case parser.ModalChoiceKindOneOrMore:
 		return CompiledModalChoiceOneOrMore
+	case parser.ModalChoiceKindOneAtRandom:
+		return CompiledModalChoiceOneAtRandom
 	default:
 		return CompiledModalChoiceUnknown
 	}
@@ -245,6 +270,8 @@ func compileAbilityKind(kind parser.AbilityKind) AbilityKind {
 		return AbilitySpellAdditionalCost
 	case parser.AbilitySpellAlternativeCost:
 		return AbilitySpellAlternativeCost
+	case parser.AbilityLevelBand:
+		return AbilityLevelBand
 	default:
 		return AbilityUnknown
 	}
@@ -260,6 +287,10 @@ func compileAlternativeCostKind(kind parser.SpellAlternativeCostKind) Alternativ
 		return AlternativeCostPitch
 	case parser.SpellAlternativeCostFlashback:
 		return AlternativeCostFlashback
+	case parser.SpellAlternativeCostEscape:
+		return AlternativeCostEscape
+	case parser.SpellAlternativeCostDiscard:
+		return AlternativeCostDiscard
 	default:
 		return AlternativeCostUnknown
 	}
@@ -432,6 +463,9 @@ func compileMode(
 			Keywords:   compileKeywords(mode.SemanticKeywords),
 			References: references,
 		},
+	}
+	if mode.SpreeCost != nil {
+		compiled.SpreeCost = slices.Clone(mode.SpreeCost.Cost)
 	}
 	applyEffectPaymentsToConditions(compiled.Content.Effects, compiled.Content.Conditions)
 	compiled.Content.Span = mode.Body.Span

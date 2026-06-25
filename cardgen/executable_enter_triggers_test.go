@@ -215,21 +215,21 @@ func TestGenerateExecutableCardSourceLibrarySearches(t *testing.T) {
 			oracleText: "Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.",
 			wants: []string{
 				"zone.Battlefield",
-				"opt.Val(types.Land)",
-				"opt.Val(types.Basic)",
+				"RequiredTypes: []types.Card{types.Land}",
+				"Supertypes: []types.Super{types.Basic}",
 				"EntersTapped",
 			},
 		},
 		{
 			name:       "Three Visits",
 			oracleText: "Search your library for a Forest card, put it onto the battlefield, then shuffle.",
-			wants:      []string{"zone.Battlefield", "SubtypesAny: []types.Sub{types.Forest}"},
+			wants:      []string{"zone.Battlefield", `SubtypesAny: []types.Sub{types.Sub("Forest")}`},
 		},
 		{
 			name:       "Farseek",
 			oracleText: "Search your library for a Plains, Island, Swamp, or Mountain card, put it onto the battlefield tapped, then shuffle.",
 			wants: []string{
-				"[]types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain}",
+				`[]types.Sub{types.Sub("Plains"), types.Sub("Island"), types.Sub("Swamp"), types.Sub("Mountain")}`,
 				"zone.Battlefield",
 				"EntersTapped",
 			},
@@ -238,7 +238,7 @@ func TestGenerateExecutableCardSourceLibrarySearches(t *testing.T) {
 			name:       "Safewright Quest",
 			oracleText: "Search your library for a Forest or Plains card, reveal it, put it into your hand, then shuffle.",
 			wants: []string{
-				"SubtypesAny: []types.Sub{types.Forest, types.Plains}",
+				`SubtypesAny: []types.Sub{types.Sub("Forest"), types.Sub("Plains")}`,
 				"zone.Hand",
 				"Reveal",
 			},
@@ -248,9 +248,9 @@ func TestGenerateExecutableCardSourceLibrarySearches(t *testing.T) {
 			oracleText: "Search your library for a Rebel permanent card with mana value 5 or less, put it onto the battlefield, then shuffle.",
 			wants: []string{
 				"zone.Battlefield",
-				"Permanent:    true",
-				"SubtypesAny:  []types.Sub{types.Rebel}",
-				"MaxManaValue: opt.Val(5)",
+				"RequirePermanentCard: true",
+				`SubtypesAny: []types.Sub{types.Sub("Rebel")}`,
+				"ManaValue: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 5})",
 			},
 		},
 		{
@@ -258,8 +258,8 @@ func TestGenerateExecutableCardSourceLibrarySearches(t *testing.T) {
 			oracleText: "Search your library for an artifact card with mana value 1 or less, reveal it, put it into your hand, then shuffle.",
 			wants: []string{
 				"zone.Hand",
-				"opt.Val(types.Artifact)",
-				"MaxManaValue: opt.Val(1)",
+				"RequiredTypes: []types.Card{types.Artifact}",
+				"ManaValue: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 1})",
 				"Reveal",
 			},
 		},
@@ -268,8 +268,8 @@ func TestGenerateExecutableCardSourceLibrarySearches(t *testing.T) {
 			oracleText: "Search your library for a legendary creature card, reveal it, put it into your hand, then shuffle.",
 			wants: []string{
 				"zone.Hand",
-				"opt.Val(types.Creature)",
-				"opt.Val(types.Legendary)",
+				"RequiredTypes: []types.Card{types.Creature}",
+				"Supertypes: []types.Super{types.Legendary}",
 				"Reveal",
 			},
 		},
@@ -356,7 +356,7 @@ func TestGenerateExecutableCardSourceEnterTriggerLibrarySearch(t *testing.T) {
 			oracleText: "When this creature enters, search your library for a Forest card, put that card onto the battlefield, then shuffle.",
 			wants: []string{
 				"zone.Battlefield",
-				"SubtypesAny: []types.Sub{types.Forest}",
+				`SubtypesAny: []types.Sub{types.Sub("Forest")}`,
 			},
 		},
 		{
@@ -374,8 +374,8 @@ func TestGenerateExecutableCardSourceEnterTriggerLibrarySearch(t *testing.T) {
 			oracleText: "When this artifact enters, search your library for a basic Island, Mountain, or Plains card, reveal it, put it into your hand, then shuffle.",
 			wants: []string{
 				"zone.Hand",
-				"opt.Val(types.Basic)",
-				"[]types.Sub{types.Island, types.Mountain, types.Plains}",
+				"Supertypes: []types.Super{types.Basic}",
+				`[]types.Sub{types.Sub("Island"), types.Sub("Mountain"), types.Sub("Plains")}`,
 				"Reveal",
 			},
 		},
@@ -539,7 +539,7 @@ func TestGenerateExecutableCardSourceEnterTargetTrigger(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"TriggeredAbilities: []game.TriggeredAbility",
-		"PermanentTypes: []types.Card{types.Artifact}",
+		"RequiredTypesAny: []types.Card{types.Artifact}",
 		"Primitive: game.Destroy",
 		"Object: game.TargetPermanentReference(0)",
 	} {
@@ -876,6 +876,82 @@ func TestGenerateExecutableCardSourceEnterOrAttackUnionTrigger(t *testing.T) {
 		"game.TriggerSourceSelf",
 		"game.PutOnBattlefield",
 		"zone.Graveyard",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceEnterDamageEqualToThatCreaturesPower(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Terror Test",
+		Layout:     "normal",
+		ManaCost:   "{3}{R}{R}",
+		TypeLine:   "Creature — Dragon",
+		OracleText: "Flying\nWhenever another creature you control enters, this creature deals damage equal to that creature's power to any target.",
+		Colors:     []string{"R"},
+		Power:      new("5"),
+		Toughness:  new("4"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EventPermanentEnteredBattlefield",
+		"game.TriggerControllerYou",
+		"ExcludeSelf:",
+		"game.DynamicAmountObjectPower",
+		// The damage amount reads the entering (triggering) creature's power.
+		"Object:     game.EventPermanentReference()",
+		"game.AnyTargetDamageRecipient(0)",
+		// The source still deals the damage even though the amount reads another permanent.
+		"DamageSource: opt.Val(game.SourcePermanentReference())",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+// TestGenerateExecutableCardSourceEnterDamageEqualToPowerEachOpponent proves the
+// Champion-of-the-Path payoff shape, in which the entering creature's power feeds
+// damage dealt to each opponent rather than a single chosen target.
+func TestGenerateExecutableCardSourceEnterDamageEqualToPowerEachOpponent(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Champion Test",
+		Layout:     "normal",
+		ManaCost:   "{3}{R}",
+		TypeLine:   "Creature — Elemental",
+		OracleText: "Whenever another creature you control enters, it deals damage equal to its power to each opponent.",
+		Colors:     []string{"R"},
+		Power:      new("3"),
+		Toughness:  new("3"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EventPermanentEnteredBattlefield",
+		"game.TriggerControllerYou",
+		"ExcludeSelf:",
+		"game.DynamicAmountObjectPower",
+		// The amount reads the entering (triggering) creature's power.
+		"Object:     game.EventPermanentReference()",
+		// The recipient is the group of opponents, not a chosen target.
+		"game.PlayerGroupDamageRecipient(game.OpponentsReference())",
+		// "it deals" makes the entering creature the damage source.
+		"DamageSource: opt.Val(game.EventPermanentReference())",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)

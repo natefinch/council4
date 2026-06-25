@@ -7,6 +7,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -107,6 +108,60 @@ func TestCardTargetedSpellCreatesActionsForMatchingGraveyardCards(t *testing.T) 
 		if len(cast.Targets) != 1 || cast.Targets[0] != currentCardTarget(t, g, instantID) {
 			t.Fatalf("unexpected card target %+v; battlefield creature was %+v", cast.Targets, battlefieldCreature)
 		}
+	}
+}
+
+// TestCardTargetedSpellManaValueFilterExcludesOverCostGraveyardCard confirms the
+// runtime per-card mana-value bound on a graveyard-return target: a creature
+// card whose mana value exceeds the "mana value 2 or less" bound is not an
+// eligible target, while a within-bound creature card is. This guards the
+// plural multi-target mana-value graveyard-return wording (Sigardian Savior),
+// whose Selection carries both the creature type and the mana-value bound.
+func TestCardTargetedSpellManaValueFilterExcludesOverCostGraveyardCard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cheapID := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Cheap Creature",
+		Types:    []types.Card{types.Creature},
+		ManaCost: opt.Val(cost.Mana{cost.O(1)}),
+	}})
+	expensiveID := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Expensive Creature",
+		Types:    []types.Card{types.Creature},
+		ManaCost: opt.Val(cost.Mana{cost.O(3)}),
+	}})
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Mass Reclamation",
+		Types: []types.Card{types.Sorcery},
+		SpellAbility: opt.Val(game.Mode{
+			Targets: []game.TargetSpec{{
+				MinTargets: 0,
+				MaxTargets: 2,
+				Allow:      game.TargetAllowCard,
+				TargetZone: zone.Graveyard,
+				Selection: opt.Val(game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+					Controller:    game.ControllerYou,
+					ManaValue:     opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 2}),
+				}),
+			}},
+			Sequence: []game.Instruction{{Primitive: game.PutOnBattlefield{
+				Source: game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceTarget}),
+			}}},
+		}.Ability()),
+	}})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	legal := engine.legalActions(g, game.Player1)
+
+	want := action.CastSpell(spellID, []game.Target{currentCardTarget(t, g, cheapID)}, 0, nil)
+	if !containsAction(legal, want) {
+		t.Fatalf("legal actions did not include within-bound creature target %+v", want)
+	}
+	unwanted := action.CastSpell(spellID, []game.Target{currentCardTarget(t, g, expensiveID)}, 0, nil)
+	if containsAction(legal, unwanted) {
+		t.Fatalf("legal actions wrongly included over-cost creature target %+v", unwanted)
 	}
 }
 

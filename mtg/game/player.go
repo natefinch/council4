@@ -21,6 +21,12 @@ type Player struct {
 	// Life is the player's current life total. Starts at 40 in Commander.
 	Life int
 
+	// StartingLife is the player's starting life total, captured at game setup
+	// (40 in Commander). It anchors conditions phrased relative to the starting
+	// life total, such as "you have at least N life more than your starting life
+	// total".
+	StartingLife int
+
 	// PoisonCounters tracks the player's poison counter total. A player
 	// with 10 or more poison counters loses the game (CR 704.5c).
 	PoisonCounters int
@@ -101,6 +107,19 @@ type Player struct {
 	// (0 = not tempted, 1–4 = ring levels).
 	RingLevel int
 
+	// RingBearerID is the ObjectID of the permanent this player has designated
+	// as their Ring-bearer (CR 701.51), or the zero ID when they have no
+	// Ring-bearer. ObjectID identifies the specific battlefield permanent (it is
+	// unique per game object and nonzero for tokens), so the designation does not
+	// carry across zone changes. The Ring's level abilities apply to this
+	// permanent.
+	RingBearerID id.ID
+
+	// RingTemptedCount is the number of times the Ring has tempted this player
+	// this game. Cards reference it ("the Ring has tempted you two or more times
+	// this game").
+	RingTemptedCount int
+
 	// EnergyCounters tracks the player's energy counter total (Kaladesh
 	// mechanic).
 	EnergyCounters int
@@ -108,7 +127,16 @@ type Player struct {
 	// ExperienceCounters tracks the player's experience counter total
 	// (Commander 2015 mechanic).
 	ExperienceCounters int
-	Speed              int
+
+	// Speed tracks the player's speed for the "Start your engines!" subsystem
+	// (CR 702.179). It starts at 0 (no speed), is set to 1 when the player
+	// gains speed, increases by at most 1 on each of the player's turns the
+	// first time an opponent loses life that turn, and is capped at 4.
+	Speed int
+
+	// SpeedIncreasedTurn records the turn number on which Speed was last
+	// increased by the once-per-turn opponent-life-loss rule, so the increase
+	// happens at most once per the player's turn (CR 702.179c).
 	SpeedIncreasedTurn int
 
 	// PowerBracket and PowerLevel are optional deck metadata carried from setup
@@ -124,6 +152,7 @@ func NewPlayer(seat PlayerID, name string) *Player {
 		ID:              seat,
 		Name:            name,
 		Life:            40,
+		StartingLife:    40,
 		CommanderDamage: make(map[id.ID]int),
 		ManaPool:        mana.NewPool(),
 		Library:         zone.New(zone.Library),

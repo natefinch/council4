@@ -160,6 +160,22 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 			if resolved, ok := resolvePermanentOrLastKnown(r.g, linked.ObjectID); ok {
 				return resolved, true
 			}
+			// A card-only linked reference (ObjectID zero) names a card that was
+			// never a battlefield permanent, such as a card exiled straight from a
+			// graveyard (The Aesir Escape Valhalla). It carries no object snapshot,
+			// so resolve it to a card snapshot the printed-characteristic readers
+			// (mana value) consult through the card instance.
+			if linked.ObjectID == 0 && linked.CardID != 0 {
+				if _, ok := r.g.GetCardInstance(linked.CardID); ok {
+					return resolvedObjectReference{snapshot: game.ObjectSnapshot{CardID: linked.CardID}}, true
+				}
+			}
+			if linked.CardID != 0 {
+				return resolvedObjectReference{snapshot: game.ObjectSnapshot{
+					CardID: linked.CardID,
+					Face:   game.FaceFront,
+				}}, true
+			}
 		}
 		return resolvedObjectReference{}, false
 	case game.ObjectReferenceEventPermanent:
@@ -221,7 +237,7 @@ func (r referenceResolver) player(ref game.PlayerReference) (game.PlayerID, bool
 	case game.PlayerReferenceCapturedTargetController:
 		playerID, ok = r.obj.CapturedTargetControllerLKI[ref.TargetIndex()]
 	case game.PlayerReferenceDefendingPlayer:
-		if r.obj.HasTriggerEvent && r.obj.TriggerEvent.Kind == game.EventAttackerDeclared {
+		if r.obj.HasTriggerEvent && defendingPlayerEvent(r.obj.TriggerEvent.Kind) {
 			playerID, ok = r.obj.TriggerEvent.Player, true
 		}
 	default:
@@ -231,6 +247,22 @@ func (r referenceResolver) player(ref game.PlayerReference) (game.PlayerID, bool
 		return 0, false
 	}
 	return playerID, true
+}
+
+// defendingPlayerEvent reports whether an event kind carries the defending
+// player of an attack in Event.Player. The attacker-declared event sets it at
+// declare-attackers; the became-blocked and became-unblocked events set it from
+// the attacker's declared target at declare-blockers, so a "defending player ..."
+// effect on any of these combat triggers resolves to the attacked player.
+func defendingPlayerEvent(kind game.EventKind) bool {
+	switch kind {
+	case game.EventAttackerDeclared,
+		game.EventAttackerBecameBlocked,
+		game.EventAttackerBecameUnblocked:
+		return true
+	default:
+		return false
+	}
 }
 
 func triggeringEventPlayer(event game.Event) (game.PlayerID, bool) {

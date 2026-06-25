@@ -71,6 +71,9 @@ func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering,
 	if replacementAbility, handled, diagnostic := lowerDrawEmptyLibraryWinReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
+	if replacementAbility, handled, diagnostic := lowerDrawReplacementDig(ability); handled || diagnostic != nil {
+		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+	}
 	if replacementAbility, handled, diagnostic := lowerDrawDoublingReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
@@ -93,7 +96,7 @@ func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering,
 func lowerGroupEntersTappedReplacement(
 	ability compiler.CompiledAbility,
 ) (game.ReplacementAbility, bool, *shared.Diagnostic) {
-	if len(ability.Content.Effects) != 1 || !ability.Content.Effects[0].EntersTappedGroup {
+	if len(ability.Content.Effects) != 1 || !ability.Content.Effects[0].EntersTappedGroup() {
 		return game.ReplacementAbility{}, false, nil
 	}
 	unsupported := func(detail string) (game.ReplacementAbility, bool, *shared.Diagnostic) {
@@ -111,11 +114,11 @@ func lowerGroupEntersTappedReplacement(
 		return unsupported("the executable source backend supports only unconditional group enters-tapped replacements")
 	}
 	effect := ability.Content.Effects[0]
-	controller, ok := groupEntersTappedController(effect.EntersTappedGroupScope)
+	controller, ok := groupEntersTappedController(effect.GroupEntryModification.ControllerScope)
 	if !ok {
 		return unsupported("the executable source backend does not lower this enters-tapped controller scope")
 	}
-	return game.EntersTappedGroupReplacement(ability.Text, controller, effect.EntersTappedGroupTypes...), true, nil
+	return game.EntersTappedGroupReplacement(ability.Text, controller, effect.GroupEntryModification.Types...), true, nil
 }
 
 // lowerDrawEmptyLibraryWinReplacement lowers the draw-from-empty-library win
@@ -149,6 +152,56 @@ func lowerDrawEmptyLibraryWinReplacement(
 		return unsupported("the executable source backend supports only the exact draw-from-empty-library win replacement")
 	}
 	return game.DrawFromEmptyLibraryWinReplacement(ability.Text), true, nil
+}
+
+// lowerDrawReplacementDig lowers the draw-replacement dig ("If you would draw a
+// card, instead look at the top N cards of your library, then put one into your
+// hand and the rest into your graveyard.", Underrealm Lich) to a persistent
+// replacement that, each time the controller would draw a card, instead looks at
+// the top N cards, puts the take count into hand, and routes the rest to the
+// recorded remainder. It reports handled=false unless a recognized
+// would-draw-card condition gates a single instead-dig effect so unrelated
+// replacements (including the plain draw-doubling form) keep flowing down the
+// chain.
+func lowerDrawReplacementDig(
+	ability compiler.CompiledAbility,
+) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Conditions) != 1 {
+		return game.ReplacementAbility{}, false, nil
+	}
+	predicate := ability.Content.Conditions[0].Predicate
+	if predicate != compiler.ConditionPredicateWouldDrawCard {
+		return game.ReplacementAbility{}, false, nil
+	}
+	if len(ability.Content.Effects) != 1 ||
+		ability.Content.Effects[0].Kind != compiler.EffectDig ||
+		!ability.Content.Effects[0].Dig.Put ||
+		ability.Content.Effects[0].Replacement.Kind != parser.EffectReplacementInstead {
+		return game.ReplacementAbility{}, false, nil
+	}
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported draw-replacement dig",
+			detail,
+		)
+	}
+	effect := ability.Content.Effects[0]
+	look := effect.Amount.Value
+	take := effect.Dig.Take
+	if !effect.Exact || effect.Optional || effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		!effect.Amount.Known || take < 1 || look <= take ||
+		len(effect.Targets) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional {
+		return unsupported("the executable source backend supports only the exact draw-replacement dig")
+	}
+	return game.DrawCardDigReplacement(ability.Text, look, take, digRemainder(effect.Dig.Remainder)), true, nil
 }
 
 // lowerDrawDoublingReplacement lowers the draw-doubling replacement ("If you
@@ -189,6 +242,17 @@ func lowerDrawDoublingReplacement(
 		return unsupported("the executable source backend supports only the exact draw-doubling replacement")
 	}
 	multiplier := ability.Content.Effects[0].Amount.Value
+	if isMaxSpeedAbilityWord(ability.AbilityWord) {
+		// "Max speed — If you would draw a card, draw N cards instead." (Vnwxt,
+		// Verbose Host) gates the draw-doubling replacement on the controller
+		// having maximum speed (CR 702.179). The runtime evaluates the condition
+		// against the in-flight draw event, so the multiplier applies only while
+		// the controller is at max speed.
+		return game.MaxSpeedDrawCardMultiplierReplacement(ability.Text, multiplier, exceptFirstInDrawStep), true, nil
+	}
+	if ability.AbilityWord != "" {
+		return unsupported("the executable source backend supports only the exact draw-doubling replacement")
+	}
 	return game.DrawCardMultiplierReplacement(ability.Text, multiplier, exceptFirstInDrawStep), true, nil
 }
 
@@ -345,6 +409,17 @@ func appendKeywordSpans(spans []shared.Span, keywords []compiler.CompiledKeyword
 	return spans
 }
 
+// replacementAbilityWordConsumed reports whether a lowered replacement ability
+// absorbed its leading ability word into a rules-bearing gate that the lowerer
+// recognized. The only such case today is the "Max speed —" draw-doubling
+// replacement (Vnwxt, Verbose Host), which gates the replacement on the
+// controller having maximum speed; its ability word span is therefore covered.
+func replacementAbilityWordConsumed(lowered abilityLowering) bool {
+	return lowered.replacementAbility.Exists &&
+		lowered.replacementAbility.Val.Replacement.Condition.Exists &&
+		lowered.replacementAbility.Val.Replacement.Condition.Val.ControllerHasMaxSpeed
+}
+
 func replacementSourceSpans(ability compiler.CompiledAbility) []shared.Span {
 	spans := make([]shared.Span, 0, len(ability.Content.Effects))
 	for i := range ability.Content.Effects {
@@ -468,20 +543,31 @@ func lowerGraveyardRedirectReplacement(
 		return unsupported("the executable source backend supports only exile graveyard-redirect replacements")
 	}
 	condition := ability.Content.Conditions[0]
-	cardTypes, ok := lowerTriggerCardTypes(condition.GraveyardSubjectTypesAny)
-	if !ok {
+	if !triggerCardTypesValid(condition.GraveyardSubjectTypesAny) {
 		return unsupported("the executable source backend does not support this graveyard-redirect card-type filter")
 	}
 	ownerFilter, ok := graveyardRedirectOwnerFilter(condition.GraveyardRedirectScope)
 	if !ok {
 		return unsupported("the executable source backend does not support this graveyard-redirect scope")
 	}
+	controlFilter, ok := graveyardRedirectControlFilter(condition.GraveyardRedirectControlScope)
+	if !ok {
+		return unsupported("the executable source backend does not support this graveyard-redirect control scope")
+	}
 	return game.GraveyardRedirectReplacement(
 		ability.Text,
 		ownerFilter,
+		controlFilter,
 		condition.GraveyardFromBattlefieldOnly,
-		cardTypes...,
+		condition.GraveyardSubjectTypesAny...,
 	), true, nil
+}
+
+// triggerCardTypesValid reports whether every entry is a recognized card type.
+// It preserves the fail-closed guard the deleted lowerTriggerCardTypes helper
+// applied: an unset (empty) card type is rejected.
+func triggerCardTypesValid(cardTypes []types.Card) bool {
+	return !slices.Contains(cardTypes, "")
 }
 
 func graveyardRedirectOwnerFilter(scope compiler.GraveyardRedirectScope) (game.TriggerControllerFilter, bool) {
@@ -491,6 +577,19 @@ func graveyardRedirectOwnerFilter(scope compiler.GraveyardRedirectScope) (game.T
 	case compiler.GraveyardRedirectScopeYou:
 		return game.TriggerControllerYou, true
 	case compiler.GraveyardRedirectScopeOpponent:
+		return game.TriggerControllerOpponent, true
+	default:
+		return game.TriggerControllerAny, false
+	}
+}
+
+func graveyardRedirectControlFilter(scope compiler.GraveyardRedirectControlScope) (game.TriggerControllerFilter, bool) {
+	switch scope {
+	case compiler.GraveyardRedirectControlScopeAny:
+		return game.TriggerControllerAny, true
+	case compiler.GraveyardRedirectControlScopeYou:
+		return game.TriggerControllerYou, true
+	case compiler.GraveyardRedirectControlScopeOpponent:
 		return game.TriggerControllerOpponent, true
 	default:
 		return game.TriggerControllerAny, false
@@ -530,6 +629,12 @@ func lowerCounterPlacementReplacement(
 			return unsupported("the executable source backend supports only +1/+1 counter-doubling or additive replacement amounts")
 		}
 		return game.CounterPlacementReplacement(ability.Text, multiplier, addend, counter.PlusOnePlusOne, game.TriggerControllerYou), true, nil
+	case compiler.ConditionPredicateCounterPlacementOnSelf:
+		multiplier, addend, ok := controlledCreatureCounterReplacementAmount(ability.Content.Effects)
+		if !ok {
+			return unsupported("the executable source backend supports only +1/+1 counter-doubling or additive replacement amounts")
+		}
+		return game.SelfCounterPlacementReplacement(ability.Text, multiplier, addend, counter.PlusOnePlusOne), true, nil
 	case compiler.ConditionPredicateCounterPlacementOnAnyCreature:
 		multiplier, addend, ok := controlledCreatureCounterReplacementAmount(ability.Content.Effects)
 		if !ok {
@@ -550,10 +655,10 @@ func lowerCounterPlacementReplacement(
 		condition := ability.Content.Conditions[0]
 		plusOnePlusOne := condition.Counter == compiler.ConditionCounterPlusOnePlusOne
 		if len(condition.CounterRecipientTypesAny) > 0 {
-			recipientTypes, ok := lowerTriggerCardTypes(condition.CounterRecipientTypesAny)
-			if !ok {
+			if !triggerCardTypesValid(condition.CounterRecipientTypesAny) {
 				return unsupported("the executable source backend does not support this counter-recipient card-type filter")
 			}
+			recipientTypes := condition.CounterRecipientTypesAny
 			if plusOnePlusOne {
 				return game.ControlledPermanentTypesCounterKindPlacementReplacement(ability.Text, multiplier, addend, counter.PlusOnePlusOne, recipientTypes, game.TriggerControllerYou), true, nil
 			}
@@ -603,11 +708,11 @@ func lowerDamageReplacement(
 	if !ok {
 		return unsupported("the executable source backend supports only double, triple, or additive damage replacements")
 	}
-	sourceColors, ok := lowerConditionColors(condition.Selection.ColorsAny)
+	sourceColors, ok := conditionColors(condition.Selection.ColorsAny)
 	if !ok {
 		return unsupported("the executable source backend supports only known source colors in damage replacements")
 	}
-	sourceTypes, ok := lowerConditionCardTypes(condition.Selection.RequiredTypes)
+	sourceTypes, ok := conditionCardTypes(condition.Selection.RequiredTypes)
 	if !ok {
 		return unsupported("the executable source backend supports only known source card types in damage replacements")
 	}
@@ -670,6 +775,8 @@ func counterPlacementReplacementCandidate(ability compiler.CompiledAbility) bool
 	condition := ability.Content.Conditions[0]
 	return condition.Predicate == compiler.ConditionPredicateControllerCounterPlacement ||
 		condition.Predicate == compiler.ConditionPredicateCounterPlacementOnControlledPermanent ||
+		(condition.Predicate == compiler.ConditionPredicateCounterPlacementOnSelf &&
+			condition.Counter == compiler.ConditionCounterPlusOnePlusOne) ||
 		(condition.Predicate == compiler.ConditionPredicateCounterPlacementOnControlledCreature ||
 			condition.Predicate == compiler.ConditionPredicateCounterPlacementOnAnyCreature) &&
 			condition.Counter == compiler.ConditionCounterPlusOnePlusOne
@@ -748,17 +855,31 @@ func lowerTokenCreationReplacement(
 	if ability.Content.Conditions[0].Predicate == compiler.ConditionPredicateTokenCreationAnyController {
 		filter = game.TriggerControllerAny
 	}
+	requiredTypes, ok := tokenCreationReplacementRequiredTypes(ability.Content.Effects[0].Selector)
+	if !ok {
+		return unsupported("the executable source backend supports only an artifact, creature, or untyped would-create filter")
+	}
 	output := ability.Content.Effects[1]
 	switch output.Replacement.Kind {
 	case parser.EffectReplacementTwiceThatMany:
 		if replacementSelectorHasUnsupportedQualifier(output.Selector) {
 			return unsupported("the executable source backend supports only token-doubling replacement amounts")
 		}
-		if filter == game.TriggerControllerYou {
+		// The doubling spec carries a card-type filter but no subtype filter, so
+		// a subtype-restricted would-create group ("one or more Treasure tokens
+		// ... twice that many") must fail closed rather than lower to a
+		// subtype-blind doubler. The additive branch below threads the
+		// would-create subtypes through explicitly, so it has no such gap.
+		if len(ability.Content.Effects[0].Selector.SubtypesAny()) != 0 ||
+			len(ability.Content.Effects[0].Selector.ExcludedSubtypes()) != 0 {
+			return unsupported("the executable source backend supports only type-filtered token-doubling replacements")
+		}
+		if filter == game.TriggerControllerYou && len(requiredTypes) == 0 {
 			return game.TokenCreationReplacement(ability.Text, 2, filter), true, nil
 		}
 		return game.TokenCreationReplacementFiltered(ability.Text, &game.TokenCreationReplacementSpec{
 			Multiplier: 2,
+			Types:      requiredTypes,
 			Filter:     filter,
 		}), true, nil
 	case parser.EffectReplacementPlusAdditional:
@@ -771,23 +892,63 @@ func lowerTokenCreationReplacement(
 				Multiplier: 1,
 				Addend:     output.Replacement.Amount,
 				Subtypes:   addendSubtypes,
+				Types:      requiredTypes,
 				Filter:     filter,
 			}), true, nil
 		}
 		addendDef, ok := synthesizeNamedArtifactTokenDef(&output)
 		if !ok {
-			return unsupported("the executable source backend supports only same-token or predefined-token additive token-creation replacements")
+			addendDef, ok = synthesizeCreatureTokenDef(&output, nil)
+		}
+		if !ok {
+			return unsupported("the executable source backend supports only same-token, predefined-token, or fixed creature additive token-creation replacements")
 		}
 		return game.TokenCreationReplacementFiltered(ability.Text, &game.TokenCreationReplacementSpec{
 			Multiplier: 1,
 			Addend:     output.Replacement.Amount,
 			Subtypes:   ability.Content.Effects[0].Selector.SubtypesAny(),
+			Types:      requiredTypes,
 			Filter:     filter,
 			AddendDef:  addendDef,
 		}), true, nil
 	default:
 		return unsupported("the executable source backend supports only token-doubling or additive replacement amounts")
 	}
+}
+
+// tokenCreationReplacementRequiredTypes derives the card-type filter restricting
+// which token-creation events a replacement matches from the would-create
+// group's selector ("one or more artifact tokens", "one or more creature
+// tokens"). The artifact/creature/enchantment/land typed selections carry their
+// type in the selector kind; an untyped, "permanent", or unparsed-noun selection
+// imposes no type filter ("one or more tokens"). It fails closed for a
+// would-create group carrying any other qualifier so an unmodeled restriction
+// never lowers to a broader replacement.
+func tokenCreationReplacementRequiredTypes(selector compiler.CompiledSelector) ([]types.Card, bool) {
+	if selector.Controller != compiler.ControllerAny ||
+		selector.Another || selector.Other || selector.Attacking || selector.Blocking ||
+		selector.Tapped || selector.Untapped || selector.Keyword != parser.KeywordUnknown ||
+		selector.MatchManaValue || selector.MatchPower || selector.MatchToughness ||
+		len(selector.ExcludedTypes()) != 0 || len(selector.Supertypes()) != 0 ||
+		len(selector.ColorsAny()) != 0 || len(selector.ExcludedColors()) != 0 {
+		return nil, false
+	}
+	var cardTypes []types.Card
+	switch selector.Kind {
+	case compiler.SelectorUnknown, compiler.SelectorAny, compiler.SelectorPermanent:
+	case compiler.SelectorArtifact:
+		cardTypes = append(cardTypes, types.Artifact)
+	case compiler.SelectorCreature:
+		cardTypes = append(cardTypes, types.Creature)
+	case compiler.SelectorEnchantment:
+		cardTypes = append(cardTypes, types.Enchantment)
+	case compiler.SelectorLand:
+		cardTypes = append(cardTypes, types.Land)
+	default:
+		return nil, false
+	}
+	cardTypes = append(cardTypes, selector.RequiredTypesAny()...)
+	return cardTypes, true
 }
 
 func replacementSelectorHasUnsupportedQualifier(selector compiler.CompiledSelector) bool {
@@ -939,7 +1100,7 @@ func lowerEntersWithCountersReplacement(
 			detail,
 		)
 	}
-	if ability.Content.Effects[0].EntersWithCountersGroup {
+	if ability.Content.Effects[0].EntersWithCountersGroup() {
 		return lowerGroupEntersWithCountersReplacement(ability, unsupported)
 	}
 	if len(ability.Content.Effects) != 1 ||
@@ -949,7 +1110,7 @@ func lowerEntersWithCountersReplacement(
 		ability.Cost != nil ||
 		ability.Trigger != nil ||
 		ability.Optional ||
-		!selfEntersWithCountersReferences(ability.Content.References) {
+		!selfEntersWithCountersReferences(ability.Content.References, ability.Content.Effects[0]) {
 		return unsupported("the executable source backend supports only exact self enters-with-counters replacements")
 	}
 	effect := ability.Content.Effects[0]
@@ -1021,9 +1182,21 @@ func isEntersWithCountersReplacement(ability compiler.CompiledAbility) bool {
 	return effect.EntersWithCounters || effect.CounterKindKnown
 }
 
-func selfEntersWithCountersReferences(references []compiler.CompiledReference) bool {
-	return len(references) == 2 &&
-		referencesBindTo(references, compiler.ReferenceBindingSource, 0)
+func selfEntersWithCountersReferences(references []compiler.CompiledReference, effect compiler.CompiledEffect) bool {
+	if !referencesBindTo(references, compiler.ReferenceBindingSource, 0) {
+		return false
+	}
+	if len(references) == 2 {
+		return true
+	}
+	// The Converge count "for each color of mana spent to cast it" (Crystalline
+	// Crawler) and the Multikicker count "for each time it was kicked"
+	// (Everflowing Chalice) each add a third self reference for the "it" inside
+	// their count phrase, so a three-reference self replacement is accepted only
+	// for those amounts.
+	return len(references) == 3 &&
+		(effect.Amount.DynamicKind == compiler.DynamicAmountColorsOfManaSpent ||
+			effect.Amount.DynamicKind == compiler.DynamicAmountTimesKicked)
 }
 
 // lowerGroupEntersWithCountersReplacement lowers a static enters-with-counters
@@ -1064,11 +1237,22 @@ func lowerGroupEntersWithCountersReplacement(
 	if !ok {
 		return unsupported("the executable source backend does not support this group enters-with-counters recipient")
 	}
-	amount := effect.Amount.Value
-	if amount <= 0 {
-		amount = 1
+	placement := game.CounterPlacement{Kind: effect.CounterKind, Amount: 1}
+	if effect.Amount.DynamicKind != compiler.DynamicAmountNone {
+		// "Each other creature you control enters with a number of additional
+		// +1/+1 counters on it equal to <amount>." (Arwen, Weaver of Hope) scales
+		// the placement by a rules-derived amount read from the replacement's
+		// source permanent at resolution; reuse the shared dynamic-amount
+		// lowering so every supported amount form works.
+		lowered, dynamicOK := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+		if !dynamicOK {
+			return unsupported("the executable source backend does not support this dynamic group enters-with-counters quantity")
+		}
+		placement.Amount = 0
+		placement.Dynamic = opt.Val(&lowered)
+	} else if effect.Amount.Value > 0 {
+		placement.Amount = effect.Amount.Value
 	}
-	placement := game.CounterPlacement{Kind: effect.CounterKind, Amount: amount}
 	return game.EntersWithCountersGroupReplacement(ability.Text, recipient, placement), true, nil
 }
 
@@ -1085,27 +1269,37 @@ func lowerGroupEntersWithCountersRecipient(selector compiler.CompiledSelector) (
 		selector.Tapped || selector.Untapped || selector.MatchCounter ||
 		selector.MatchManaValue || selector.MatchPower || selector.MatchToughness ||
 		selector.BasicLandType || selector.PlayerOrPlaneswalker ||
-		selector.SubtypeFromEntryChoice || selector.SubtypeFromChosenType ||
+		selector.SubtypeFromChosenType ||
 		len(selector.Alternatives) != 0 || selector.Zone != zone.None {
 		return nil, false
 	}
-	requiredType, ok := groupEntersWithCountersRequiredType(selector)
+	if _, ok := groupEntersWithCountersRequiredType(selector); !ok {
+		return nil, false
+	}
+	selection, ok := SelectionForSelectorMasked(selector, groupEntersWithCountersRecipientMask)
 	if !ok {
 		return nil, false
 	}
-	selection, ok := selectorCharacteristics(selector)
-	if !ok {
-		return nil, false
-	}
-	if requiredType != "" {
-		selection.RequiredTypes = append(selection.RequiredTypes, requiredType)
-	}
-	selection.Controller = game.ControllerYou
-	selection.ExcludeSource = selector.Other
-	selection.NonToken = selector.NonToken
-	selection.TokenOnly = selector.TokenOnly
 	return &selection, true
 }
+
+// groupEntersWithCountersRecipientMask drops the canonical dimensions a group
+// enters-with-counters recipient never carries: the excluded supertype,
+// kind-agnostic counter, "aren't of the chosen type" exclusion, conjunctive type
+// set, and historic disjunction. It fails closed on a source-relative power
+// comparison: an enters-with-counters group has no source permanent to compare
+// against, so the predecessor projector rejected that filter rather than dropping
+// it.
+var groupEntersWithCountersRecipientMask = SelectionMask{}.Ignoring(
+	DimExcludedSupertype,
+	DimMatchAnyCounter,
+	DimSubtypeChoiceExcluded,
+	DimConjunctiveTypes,
+	DimHistoric,
+).Rejecting(
+	DimPowerVsSource,
+	DimRequiredName,
+)
 
 // groupEntersWithCountersRequiredType maps a group enters-with-counters
 // recipient selector kind to the runtime card type the entering permanent must
@@ -1489,8 +1683,10 @@ func lowerConditionalEntersTappedReplacement(
 // lowerDevourReplacement lowers the Devour as-enters replacement (CR 702.81)
 // produced by the keyword expansion. It accepts only the exact unconditional
 // self replacement (a single EntersDevour effect with a positive multiplier and
-// no targets, conditions, cost, or trigger) and builds a game.DevourReplacement;
-// anything else keeps the card unsupported.
+// no targets, conditions, cost, or trigger) and builds the matching
+// game.Devour*Replacement: the typed variants ("Devour artifact N", "Devour land
+// N", "Devour Food N") carry their sacrifice filter and the creature form uses
+// the plain constructor; anything else keeps the card unsupported.
 func lowerDevourReplacement(ability compiler.CompiledAbility) (game.ReplacementAbility, bool, *shared.Diagnostic) {
 	devourIndex := -1
 	for i := range ability.Content.Effects {
@@ -1516,6 +1712,12 @@ func lowerDevourReplacement(ability compiler.CompiledAbility) (game.ReplacementA
 		effect.EntersDevourMultiplier <= 0 ||
 		!allReferencesBindToSource(ability.Content.References) {
 		return unsupported("the executable source backend supports only the exact unconditional self devour replacement")
+	}
+	if effect.EntersDevourSubtype != "" {
+		return game.DevourSubtypeReplacement(ability.Text, effect.EntersDevourMultiplier, effect.EntersDevourSubtype), true, nil
+	}
+	if effect.EntersDevourType != "" {
+		return game.DevourTypeReplacement(ability.Text, effect.EntersDevourMultiplier, effect.EntersDevourType), true, nil
 	}
 	return game.DevourReplacement(ability.Text, effect.EntersDevourMultiplier), true, nil
 }
@@ -1613,8 +1815,12 @@ func lowerEntersAsCopyReplacement(ability compiler.CompiledAbility) (game.Replac
 		conditionalCounters,
 		effect.EntersAsCopyUntilEndOfTurn,
 		addKeywords,
+		effect.EntersAsCopyAddSubtypes,
 		effect.EntersAsCopyAddTypes...,
 	)
+	if effect.EntersAsCopyTapped {
+		replacement = game.EntersTappedAsCopy(replacement)
+	}
 	return replacement, true, nil
 }
 

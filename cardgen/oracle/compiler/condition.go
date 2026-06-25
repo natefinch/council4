@@ -1,6 +1,10 @@
 package compiler
 
-import "github.com/natefinch/council4/cardgen/oracle/parser"
+import (
+	"github.com/natefinch/council4/cardgen/oracle/parser"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/types"
+)
 
 // recognizeCondition maps the typed parser syntax that spans this condition onto
 // closed semantic data. It consumes typed ConditionClause and
@@ -37,6 +41,7 @@ var simplePredicateMap = map[parser.ConditionPredicateKind]ConditionPredicate{
 	parser.ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard: ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard,
 	parser.ConditionPredicatePriorInstructionNotAccepted:                      ConditionPredicatePriorInstructionNotAccepted,
 	parser.ConditionPredicatePriorInstructionAccepted:                         ConditionPredicatePriorInstructionAccepted,
+	parser.ConditionPredicateDestroyedThisWay:                                 ConditionPredicateDestroyedThisWay,
 	parser.ConditionPredicateEventPlayerDoesNotPay:                            ConditionPredicateEventPlayerDoesNotPay,
 	parser.ConditionPredicateControllerCounterPlacement:                       ConditionPredicateControllerCounterPlacement,
 	parser.ConditionPredicateTokenCreationUnderController:                     ConditionPredicateTokenCreationUnderController,
@@ -53,6 +58,14 @@ var simplePredicateMap = map[parser.ConditionPredicateKind]ConditionPredicate{
 	parser.ConditionPredicateAnyPlayerLifeLoss:                                ConditionPredicateAnyPlayerLifeLoss,
 	parser.ConditionPredicateSourceTributeNotPaid:                             ConditionPredicateSourceTributeNotPaid,
 	parser.ConditionPredicateControllerControlsCommander:                      ConditionPredicateControllerControlsCommander,
+	parser.ConditionPredicateSpellWasKicked:                                   ConditionPredicateSpellWasKicked,
+	parser.ConditionPredicateSpellWasCastFromGraveyard:                        ConditionPredicateSpellWasCastFromGraveyard,
+	parser.ConditionPredicateSourceSaddled:                                    ConditionPredicateSourceSaddled,
+	parser.ConditionPredicateSourceNotSaddled:                                 ConditionPredicateSourceNotSaddled,
+	parser.ConditionPredicateFirstCombatPhaseOfTurn:                           ConditionPredicateFirstCombatPhaseOfTurn,
+	parser.ConditionPredicateControlsGreatestPowerCreature:                    ConditionPredicateControlsGreatestPowerCreature,
+	parser.ConditionPredicateControlsGreatestToughnessCreature:                ConditionPredicateControlsGreatestToughnessCreature,
+	parser.ConditionPredicateSubjectSharesCreatureTypeWithSource:              ConditionPredicateSubjectSharesCreatureTypeWithSource,
 }
 
 // compileConditionClause mechanically maps one typed ConditionClause onto the
@@ -68,11 +81,26 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 	case parser.ConditionPredicateControllerLifeAtLeast:
 		condition.Predicate = ConditionPredicateControllerLifeAtLeast
 		condition.Threshold = clause.Threshold
+	case parser.ConditionPredicateControllerLifeAtMost:
+		condition.Predicate = ConditionPredicateControllerLifeAtMost
+		condition.Threshold = clause.Threshold
+	case parser.ConditionPredicateControllerLifeAtLeastAboveStarting:
+		condition.Predicate = ConditionPredicateControllerLifeAtLeastAboveStarting
+		condition.Threshold = clause.Threshold
 	case parser.ConditionPredicateControllerHandSizeAtLeast:
 		condition.Predicate = ConditionPredicateControllerHandSizeAtLeast
 		condition.Threshold = clause.Threshold
 	case parser.ConditionPredicateControllerHandSizeExactly:
 		condition.Predicate = ConditionPredicateControllerHandSizeExactly
+		condition.Threshold = clause.Threshold
+	case parser.ConditionPredicateControllerLibrarySizeAtLeast:
+		condition.Predicate = ConditionPredicateControllerLibrarySizeAtLeast
+		condition.Threshold = clause.Threshold
+	case parser.ConditionPredicateControllerLifeExactly:
+		condition.Predicate = ConditionPredicateControllerLifeExactly
+		condition.Threshold = clause.Threshold
+	case parser.ConditionPredicateSpellXAtLeast:
+		condition.Predicate = ConditionPredicateSpellXAtLeast
 		condition.Threshold = clause.Threshold
 	case parser.ConditionPredicateAnyOpponentPoisonAtLeast:
 		condition.Predicate = ConditionPredicateAnyOpponentPoisonAtLeast
@@ -89,11 +117,27 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 	case parser.ConditionPredicateGraveyardCardTypeCountAtLeast:
 		condition.Predicate = ConditionPredicateControllerGraveyardCardTypeCountAtLeast
 		condition.Threshold = clause.Threshold
+	case parser.ConditionPredicateGraveyardCardOfTypeCountAtLeast:
+		condition.Predicate = ConditionPredicateControllerGraveyardCardOfTypeCountAtLeast
+		condition.Threshold = clause.Threshold
+		condition.GraveyardCountCardType = compileTriggerCardType(clause.GraveyardCountCardType)
 	case parser.ConditionPredicateCreaturePowerDiversityAtLeast:
 		condition.Predicate = ConditionPredicateControllerCreaturePowerDiversityAtLeast
 		condition.Threshold = clause.Threshold
+	case parser.ConditionPredicateAttackersAttackingControllerAtLeast:
+		condition.Predicate = ConditionPredicateAttackersAttackingControllerAtLeast
+		condition.Threshold = clause.Threshold
+	case parser.ConditionPredicateControllerGainedLifeThisTurnAtLeast:
+		condition.Predicate = ConditionPredicateControllerGainedLifeThisTurnAtLeast
+		condition.Threshold = clause.Threshold
 	case parser.ConditionPredicateControls:
 		compileControlsCondition(condition, clause)
+	case parser.ConditionPredicateControllerControlsNamed:
+		if len(clause.ControlledNames) == 0 {
+			return
+		}
+		condition.Predicate = ConditionPredicateControllerControlsNamed
+		condition.ControlledNames = append(condition.ControlledNames, clause.ControlledNames...)
 	case parser.ConditionPredicateControlComparison:
 		compileControlComparisonCondition(condition, clause)
 	case parser.ConditionPredicateEventSubjectHadCounters:
@@ -122,6 +166,13 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 			return
 		}
 		condition.Predicate = ConditionPredicateCounterPlacementOnControlledCreature
+		condition.Counter = counter
+	case parser.ConditionPredicateCounterPlacementOnSelf:
+		counter, ok := compileConditionCounter(clause.Counter)
+		if !ok {
+			return
+		}
+		condition.Predicate = ConditionPredicateCounterPlacementOnSelf
 		condition.Counter = counter
 	case parser.ConditionPredicateCounterPlacementOnAnyCreature:
 		counter, ok := compileConditionCounter(clause.Counter)
@@ -169,6 +220,7 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 	case parser.ConditionPredicateCardWouldGoToGraveyard:
 		condition.Predicate = ConditionPredicateCardWouldGoToGraveyard
 		condition.GraveyardRedirectScope = compileGraveyardRedirectScope(clause.GraveyardRedirectScope)
+		condition.GraveyardRedirectControlScope = compileGraveyardRedirectControlScope(clause.GraveyardRedirectControlScope)
 		condition.GraveyardFromBattlefieldOnly = clause.GraveyardFromBattlefieldOnly
 		for _, value := range clause.GraveyardSubjectTypesAny {
 			condition.GraveyardSubjectTypesAny = append(condition.GraveyardSubjectTypesAny, compileTriggerCardType(value))
@@ -296,11 +348,11 @@ func compileConditionSelection(syntax parser.ConditionSelection) (ConditionSelec
 		selection.SubtypesAny = append(selection.SubtypesAny, string(value))
 	}
 	for _, value := range syntax.ColorsAny {
-		color, ok := conditionColorFromTrigger(value)
+		col, ok := conditionColorFromTrigger(value)
 		if !ok {
 			return ConditionSelection{}, false
 		}
-		selection.ColorsAny = append(selection.ColorsAny, color)
+		selection.ColorsAny = append(selection.ColorsAny, col)
 	}
 	tapped, ok := conditionTriStateFromParser(syntax.Tapped)
 	if !ok {
@@ -327,55 +379,58 @@ func compileConditionSelection(syntax parser.ConditionSelection) (ConditionSelec
 	selection.DamageNoncombatOnly = syntax.DamageNoncombatOnly
 	selection.DamageSourceAnyController = syntax.DamageSourceAnyController
 	selection.AnyCounter = syntax.AnyCounter
+	selection.CounterKind = syntax.CounterKind
+	selection.CounterKindKnown = syntax.CounterKindKnown
+	selection.CounterCountAtLeast = syntax.CounterCountAtLeast
 	return selection, true
 }
 
-func conditionCardTypeFromTrigger(value parser.TriggerCardType) (ConditionCardType, bool) {
+func conditionCardTypeFromTrigger(value parser.TriggerCardType) (types.Card, bool) {
 	switch value {
 	case parser.TriggerCardTypeArtifact:
-		return ConditionCardTypeArtifact, true
+		return types.Artifact, true
 	case parser.TriggerCardTypeBattle:
-		return ConditionCardTypeBattle, true
+		return types.Battle, true
 	case parser.TriggerCardTypeCreature:
-		return ConditionCardTypeCreature, true
+		return types.Creature, true
 	case parser.TriggerCardTypeEnchantment:
-		return ConditionCardTypeEnchantment, true
+		return types.Enchantment, true
 	case parser.TriggerCardTypeLand:
-		return ConditionCardTypeLand, true
+		return types.Land, true
 	case parser.TriggerCardTypePlaneswalker:
-		return ConditionCardTypePlaneswalker, true
+		return types.Planeswalker, true
 	default:
-		return ConditionCardTypeUnknown, false
+		return "", false
 	}
 }
 
-func conditionSupertypeFromParser(value parser.ConditionSupertype) (ConditionSupertype, bool) {
+func conditionSupertypeFromParser(value parser.ConditionSupertype) (types.Super, bool) {
 	switch value {
 	case parser.ConditionSupertypeBasic:
-		return ConditionSupertypeBasic, true
+		return types.Basic, true
 	case parser.ConditionSupertypeSnow:
-		return ConditionSupertypeSnow, true
+		return types.Snow, true
 	case parser.ConditionSupertypeLegendary:
-		return ConditionSupertypeLegendary, true
+		return types.Legendary, true
 	default:
-		return ConditionSupertypeUnknown, false
+		return "", false
 	}
 }
 
-func conditionColorFromTrigger(value parser.TriggerColor) (ConditionColor, bool) {
+func conditionColorFromTrigger(value parser.TriggerColor) (color.Color, bool) {
 	switch value {
 	case parser.TriggerColorWhite:
-		return ConditionColorWhite, true
+		return color.White, true
 	case parser.TriggerColorBlue:
-		return ConditionColorBlue, true
+		return color.Blue, true
 	case parser.TriggerColorBlack:
-		return ConditionColorBlack, true
+		return color.Black, true
 	case parser.TriggerColorRed:
-		return ConditionColorRed, true
+		return color.Red, true
 	case parser.TriggerColorGreen:
-		return ConditionColorGreen, true
+		return color.Green, true
 	default:
-		return ConditionColorUnknown, false
+		return "", false
 	}
 }
 
@@ -424,6 +479,10 @@ func compileConditionObjectBinding(value parser.ConditionObjectBinding) Referenc
 		return ReferenceBindingSource
 	case parser.ConditionObjectBindingEventPermanent:
 		return ReferenceBindingEventPermanent
+	case parser.ConditionObjectBindingSourceAttached:
+		return ReferenceBindingSourceAttached
+	case parser.ConditionObjectBindingCreatedToken:
+		return ReferenceBindingCreatedToken
 	default:
 		return ReferenceBindingUnsupported
 	}
@@ -437,6 +496,17 @@ func compileGraveyardRedirectScope(value parser.GraveyardRedirectScope) Graveyar
 		return GraveyardRedirectScopeOpponent
 	default:
 		return GraveyardRedirectScopeAny
+	}
+}
+
+func compileGraveyardRedirectControlScope(value parser.GraveyardRedirectControlScope) GraveyardRedirectControlScope {
+	switch value {
+	case parser.GraveyardRedirectControlScopeYou:
+		return GraveyardRedirectControlScopeYou
+	case parser.GraveyardRedirectControlScopeOpponent:
+		return GraveyardRedirectControlScopeOpponent
+	default:
+		return GraveyardRedirectControlScopeAny
 	}
 }
 
@@ -520,7 +590,10 @@ func bindConditionReferences(conditions []CompiledCondition, references []Compil
 
 func conditionObjectBinding(condition CompiledCondition, references []CompiledReference) (ReferenceBinding, bool) {
 	binding := condition.ObjectBinding
-	found := binding == ReferenceBindingSource || binding == ReferenceBindingEventPermanent
+	found := binding == ReferenceBindingSource ||
+		binding == ReferenceBindingEventPermanent ||
+		binding == ReferenceBindingSourceAttached ||
+		binding == ReferenceBindingCreatedToken
 	for _, reference := range references {
 		if !condition.Order.Contains(reference.Order) {
 			continue

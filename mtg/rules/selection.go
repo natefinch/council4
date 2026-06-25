@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 // selectionSubjectKind identifies which characteristic source a selectionSubject
@@ -107,6 +108,12 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if sel.ExcludedSubtype != "" && s.hasAnySubtype([]types.Sub{sel.ExcludedSubtype}) {
 		return false
 	}
+	if sel.ChosenSubtypeFrom != "" {
+		subtype, ok := s.chosenSubtypeFromResolution(sel.ChosenSubtypeFrom)
+		if !ok || !s.hasAnySubtype([]types.Sub{subtype}) {
+			return false
+		}
+	}
 	if sel.SubtypeChoice == game.SubtypeChoiceSourceEntry {
 		subtype, ok := s.sourceEntryChoiceSubtype(game.EntryTypeChoiceKey)
 		if !ok || !s.hasAnySubtype([]types.Sub{subtype}) {
@@ -122,6 +129,12 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if sel.SubtypeChoice == game.SubtypeChoiceResolutionExcluded {
 		subtype, ok := s.resolutionChoiceSubtype(game.SpellChosenTypeChoiceKey)
 		if !ok || s.hasAnySubtype([]types.Sub{subtype}) {
+			return false
+		}
+	}
+	if sel.ColorChoice == game.ColorChoiceSourceEntry {
+		chosen, ok := s.sourceEntryChoiceColor(game.EntryColorChoiceKey)
+		if !ok || !s.hasColor(chosen) {
 			return false
 		}
 	}
@@ -161,9 +174,35 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 			return false
 		}
 	}
+	if sel.ManaValueDynamic.Exists {
+		bound, ok := dynamicManaValueBound(s.g, s.viewer, sel.ManaValueDynamic.Val)
+		if !ok {
+			return false
+		}
+		manaValue, ok := s.manaValue()
+		if !ok || manaValue > bound {
+			return false
+		}
+	}
 	if sel.Power.Exists {
 		power, ok := s.power()
 		if !ok || !sel.Power.Val.Matches(power) {
+			return false
+		}
+	}
+	if sel.PowerLessThanSource || sel.PowerGreaterThanSource {
+		power, ok := s.power()
+		if !ok {
+			return false
+		}
+		sourcePower, ok := s.sourcePower()
+		if !ok {
+			return false
+		}
+		if sel.PowerLessThanSource && power >= sourcePower {
+			return false
+		}
+		if sel.PowerGreaterThanSource && power <= sourcePower {
 			return false
 		}
 	}
@@ -176,13 +215,25 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if sel.MatchCounter && !s.hasCounter(sel.RequiredCounter) {
 		return false
 	}
+	if sel.RequiredCounterCount.Exists && !sel.RequiredCounterCount.Val.Matches(s.counterCount(sel.RequiredCounter)) {
+		return false
+	}
 	if sel.MatchAnyCounter && !s.hasAnyCounter() {
+		return false
+	}
+	if sel.MatchNoCounters && !s.hasNoCounters() {
+		return false
+	}
+	if sel.MatchExcludedCounter && !s.lacksCounter(sel.ExcludedCounter) {
 		return false
 	}
 	if sel.EnteredThisTurn && !s.enteredThisTurn() {
 		return false
 	}
 	if sel.MatchModified && !s.modified() {
+		return false
+	}
+	if sel.MatchCommander && !s.isCommander() {
 		return false
 	}
 	if sel.ExcludeSource && s.isSource() {
@@ -194,7 +245,37 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if sel.TokenOnly && !s.isToken() {
 		return false
 	}
+	if sel.Name != "" {
+		name, ok := s.name()
+		if !ok || name != sel.Name {
+			return false
+		}
+	}
+	if sel.RequirePermanentCard && !s.isPermanentCard() {
+		return false
+	}
+	if sel.NameUniqueAmongControlled && !s.nameUniqueAmongControlled() {
+		return false
+	}
+	if sel.SharesCreatureTypeWithSource && !s.sharesCreatureTypeWithSource() {
+		return false
+	}
 	return true
+}
+
+// dynamicManaValueBound evaluates the controller-relative upper bound for a
+// Selection.ManaValueDynamic predicate (CR 608.2c). It supports only the
+// turn-event life totals, applying the amount's multiplier and addend; any other
+// dynamic amount fails closed so a card-definition bug never silently widens the
+// bound.
+func dynamicManaValueBound(g *game.Game, controller game.PlayerID, bound game.ManaValueDynamicBound) (int, bool) {
+	switch bound.Kind {
+	case game.DynamicAmountLifeLostThisTurn, game.DynamicAmountLifeGainedThisTurn:
+		multiplier := max(bound.Multiplier, 1)
+		return turnEventDynamicAmount(g, controller, bound.Kind)*multiplier + bound.Addend, true
+	default:
+		return 0, false
+	}
 }
 
 func (s *selectionSubject) hasType(cardType types.Card) bool {
@@ -292,6 +373,44 @@ func (s *selectionSubject) sourceEntryChoiceSubtype(key game.ChoiceKey) (types.S
 	return choice.Subtype, true
 }
 
+// sharesCreatureTypeWithSource reports whether the subject shares at least one
+// creature type with the predicate's source permanent, the "if it shares a
+// creature type with this creature" Kinship gate. It reads the source
+// permanent's effective subtypes, keeps only those that are creature types, and
+// matches the subject against them. It reports false when the source permanent
+// is absent or has no creature types.
+func (s *selectionSubject) sharesCreatureTypeWithSource() bool {
+	source, ok := permanentByObjectID(s.g, s.sourceObjectID)
+	if !ok {
+		return false
+	}
+	var creatureSubtypes []types.Sub
+	for _, subtype := range effectivePermanentValues(s.g, source).subtypes {
+		if types.KnownSubtypeForType(types.Creature, subtype) {
+			creatureSubtypes = append(creatureSubtypes, subtype)
+		}
+	}
+	if len(creatureSubtypes) == 0 {
+		return false
+	}
+	return s.hasAnySubtype(creatureSubtypes)
+}
+
+// sourceEntryChoiceColor resolves the color the predicate's source permanent
+// recorded under key as it entered the battlefield (CR 614.12). It reports false
+// when the source permanent, the choice, or a representable color is absent.
+func (s *selectionSubject) sourceEntryChoiceColor(key game.ChoiceKey) (color.Color, bool) {
+	source, ok := permanentByObjectID(s.g, s.sourceObjectID)
+	if !ok {
+		return "", false
+	}
+	choice, ok := source.EntryChoices[key]
+	if !ok {
+		return "", false
+	}
+	return manaColor(choice.Color)
+}
+
 // resolutionChoiceSubtype resolves the creature subtype published under key by an
 // earlier Choose instruction in the same resolution (the "of that type"
 // back-reference). It reports false when the choice is absent, is not a subtype
@@ -305,6 +424,32 @@ func (s *selectionSubject) resolutionChoiceSubtype(key game.ChoiceKey) (types.Su
 		return "", false
 	}
 	return choice.Subtype, true
+}
+
+// chosenSubtypeFromResolution resolves the creature subtype published under key
+// in the resolving object's choices for a Selection.ChosenSubtypeFrom predicate.
+// Unlike resolutionChoiceSubtype it additionally requires the chosen value to be
+// a known creature subtype, failing closed otherwise, matching the chosen-type
+// library-top gate (Herald's Horn).
+func (s *selectionSubject) chosenSubtypeFromResolution(key game.ChoiceKey) (types.Sub, bool) {
+	if s.resolutionChoices == nil {
+		return "", false
+	}
+	choice, ok := s.resolutionChoices[string(key)]
+	if !ok || choice.Kind != game.ResolutionChoiceSubtype || !types.KnownSubtypeForType(types.Creature, choice.Subtype) {
+		return "", false
+	}
+	return choice.Subtype, true
+}
+
+// isPermanentCard reports whether the subject is a permanent card, for the
+// Selection.RequirePermanentCard gate. Only a card in a non-battlefield zone
+// carries the printed type line this predicate reads; other subjects fail closed.
+func (s *selectionSubject) isPermanentCard() bool {
+	if s.kind == subjectCard && s.card != nil && s.card.Def != nil {
+		return s.card.Def.IsPermanent()
+	}
+	return false
 }
 
 func (s *selectionSubject) hasColor(c color.Color) bool {
@@ -411,6 +556,24 @@ func (s *selectionSubject) hasCounter(kind counter.Kind) bool {
 	return false
 }
 
+func (s *selectionSubject) counterCount(kind counter.Kind) int {
+	if s.kind == subjectPermanent {
+		if s.permanent == nil {
+			return 0
+		}
+		return s.permanent.Counters.Get(kind)
+	}
+	if s.kind == subjectEventPermanent && s.event.PermanentID != 0 {
+		if permanent, ok := permanentByObjectID(s.g, s.event.PermanentID); ok {
+			return permanent.Counters.Get(kind)
+		}
+		if snapshot, ok := lastKnownObject(s.g, s.event.PermanentID); ok {
+			return snapshot.Counters.Get(kind)
+		}
+	}
+	return 0
+}
+
 func (s *selectionSubject) hasAnyCounter() bool {
 	if s.kind == subjectPermanent {
 		return s.permanent != nil && !s.permanent.Counters.IsEmpty()
@@ -421,6 +584,46 @@ func (s *selectionSubject) hasAnyCounter() bool {
 		}
 		if snapshot, ok := lastKnownObject(s.g, s.event.PermanentID); ok {
 			return !snapshot.Counters.IsEmpty()
+		}
+	}
+	return false
+}
+
+// lacksCounter reports whether the subject is a battlefield (or event) permanent
+// that carries no counter of the named kind ("without a +1/+1 counter on it").
+// It is the kind-specific counterpart of hasNoCounters: a card, spell, or player
+// subject has no counters to inspect and fails closed rather than matching,
+// mirroring hasNoCounters' non-battlefield handling.
+func (s *selectionSubject) lacksCounter(kind counter.Kind) bool {
+	if s.kind == subjectPermanent {
+		return s.permanent != nil && !s.permanent.Counters.Has(kind)
+	}
+	if s.kind == subjectEventPermanent && s.event.PermanentID != 0 {
+		if permanent, ok := permanentByObjectID(s.g, s.event.PermanentID); ok {
+			return !permanent.Counters.Has(kind)
+		}
+		if snapshot, ok := lastKnownObject(s.g, s.event.PermanentID); ok {
+			return !snapshot.Counters.Has(kind)
+		}
+	}
+	return false
+}
+
+// hasNoCounters reports whether the subject is a battlefield (or event)
+// permanent that carries no counters of any kind ("with no counters on them").
+// It is the negation of hasAnyCounter restricted to permanents: a card, spell,
+// or player subject has no counters to inspect and fails closed rather than
+// matching, mirroring hasAnyCounter's non-battlefield handling.
+func (s *selectionSubject) hasNoCounters() bool {
+	if s.kind == subjectPermanent {
+		return s.permanent != nil && s.permanent.Counters.IsEmpty()
+	}
+	if s.kind == subjectEventPermanent && s.event.PermanentID != 0 {
+		if permanent, ok := permanentByObjectID(s.g, s.event.PermanentID); ok {
+			return permanent.Counters.IsEmpty()
+		}
+		if snapshot, ok := lastKnownObject(s.g, s.event.PermanentID); ok {
+			return snapshot.Counters.IsEmpty()
 		}
 	}
 	return false
@@ -453,6 +656,29 @@ func (s *selectionSubject) modified() bool {
 		}
 		if snapshot, ok := lastKnownObject(s.g, s.event.PermanentID); ok {
 			return !snapshot.Counters.IsEmpty() || len(snapshot.Attachments) > 0
+		}
+	}
+	return false
+}
+
+// isCommander reports whether the subject permanent is a commander. The game
+// records every commander's CardInstance ID in Game.CommanderIDs, so a
+// permanent matches when its underlying card instance is a commander. Only
+// battlefield and event permanents carry a card instance; other subjects never
+// match.
+func (s *selectionSubject) isCommander() bool {
+	if len(s.g.CommanderIDs) == 0 {
+		return false
+	}
+	if s.kind == subjectPermanent {
+		return s.permanent != nil && s.g.CommanderIDs[s.permanent.CardInstanceID]
+	}
+	if s.kind == subjectEventPermanent && s.event.PermanentID != 0 {
+		if permanent, ok := permanentByObjectID(s.g, s.event.PermanentID); ok {
+			return s.g.CommanderIDs[permanent.CardInstanceID]
+		}
+		if snapshot, ok := lastKnownObject(s.g, s.event.PermanentID); ok {
+			return s.g.CommanderIDs[snapshot.CardID]
 		}
 	}
 	return false
@@ -511,10 +737,72 @@ func (s *selectionSubject) manaValue() (int, bool) {
 	return def.ManaValue(), true
 }
 
+// name resolves the matched object's card name for a Selection.Name equality
+// filter. It reports false when no name is available (a face-down permanent, a
+// token without a card def, or a cast-spell subject the event does not name), so
+// a name filter fails closed rather than matching an unnamed object.
+func (s *selectionSubject) name() (string, bool) {
+	switch s.kind {
+	case subjectCard:
+		if s.card == nil || s.card.Def == nil {
+			return "", false
+		}
+		return s.card.Def.Name, true
+	case subjectPermanent:
+		if s.permanent != nil && s.permanent.FaceDown {
+			return "", false
+		}
+		if _, ok := permanentCardDef(s.g, s.permanent); !ok {
+			return "", false
+		}
+		return permanentEffectiveName(s.g, s.permanent), true
+	case subjectEventPermanent:
+		def, ok := s.eventPermanentCardDef()
+		if !ok {
+			return "", false
+		}
+		return def.Name, true
+	default:
+		return "", false
+	}
+}
+
+// nameUniqueAmongControlled reports whether the subject permanent's name differs
+// from every other permanent its controller controls, the runtime side of
+// Selection.NameUniqueAmongControlled ("... that doesn't have the same name as
+// another permanent you control"). A non-permanent subject, an unavailable name,
+// or any other permanent sharing the name fails it closed.
+func (s *selectionSubject) nameUniqueAmongControlled() bool {
+	if s.kind != subjectPermanent || s.permanent == nil {
+		return false
+	}
+	name, ok := s.name()
+	if !ok {
+		return false
+	}
+	controller := effectiveController(s.g, s.permanent)
+	for _, other := range s.g.Battlefield {
+		if other == nil || other.ObjectID == s.permanent.ObjectID || other.FaceDown {
+			continue
+		}
+		if effectiveController(s.g, other) != controller {
+			continue
+		}
+		def, ok := permanentCardDef(s.g, other)
+		if ok && def.Name == name {
+			return false
+		}
+	}
+	return true
+}
+
 func (s *selectionSubject) power() (int, bool) {
 	if s.kind == subjectEventPermanent {
 		values, ok := s.eventPermanentValues()
 		return values.power, ok && values.powerOK
+	}
+	if s.kind == subjectCard {
+		return cardFacePT(s.card, func(face game.CardFace) opt.V[game.PT] { return face.Power })
 	}
 	if s.kind != subjectPermanent || s.useBase {
 		return 0, false
@@ -528,15 +816,54 @@ func (s *selectionSubject) power() (int, bool) {
 	return s.values.power, s.values.powerOK
 }
 
+// sourcePower returns the effective power of the predicate's source permanent,
+// clamped to >= 0 to mirror the target-style power read. It backs the
+// source-relative "with lesser/greater power" filters; a missing source, a
+// source that is not a battlefield permanent, or a source with no power yields
+// no value so the relative comparison fails closed.
+func (s *selectionSubject) sourcePower() (int, bool) {
+	if s.sourceObjectID == 0 {
+		return 0, false
+	}
+	permanent, ok := permanentByObjectID(s.g, s.sourceObjectID)
+	if !ok {
+		return 0, false
+	}
+	values := effectivePermanentValues(s.g, permanent)
+	if !values.powerOK {
+		return 0, false
+	}
+	return max(0, values.power), true
+}
+
 func (s *selectionSubject) toughness() (int, bool) {
 	if s.kind == subjectEventPermanent {
 		values, ok := s.eventPermanentValues()
 		return values.toughness, ok && values.toughnessOK
 	}
+	if s.kind == subjectCard {
+		return cardFacePT(s.card, func(face game.CardFace) opt.V[game.PT] { return face.Toughness })
+	}
 	if s.kind != subjectPermanent || s.useBase {
 		return 0, false
 	}
 	return s.values.toughness, s.values.toughnessOK
+}
+
+// cardFacePT reads a printed power or toughness from a card's default face for a
+// card-zone Selection comparison. A card with no defined value, or one defined
+// by a characteristic-defining ability (*), yields no value so the bound fails
+// closed rather than matching an undefined or variable characteristic (CR
+// 208.2).
+func cardFacePT(card *game.CardInstance, pick func(game.CardFace) opt.V[game.PT]) (int, bool) {
+	if card == nil || card.Def == nil {
+		return 0, false
+	}
+	pt := pick(card.Def.DefaultFace())
+	if !pt.Exists || pt.Val.IsStar {
+		return 0, false
+	}
+	return pt.Val.Value, true
 }
 
 func (s *selectionSubject) eventPermanentValues() (permanentEffectiveValues, bool) {

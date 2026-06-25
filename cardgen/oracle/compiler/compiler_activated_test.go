@@ -205,6 +205,16 @@ func TestCompileActivatedAbilityTiming(t *testing.T) {
 			"{1}: Draw a card. Activate only as a sorcery. Activate only once each turn.",
 			ActivationTimingSorceryOncePerTurn,
 		},
+		{
+			"sorcery once per turn conjoined",
+			"{1}: Draw a card. Activate only as a sorcery and only once each turn.",
+			ActivationTimingSorceryOncePerTurn,
+		},
+		{
+			"player turn once per turn conjoined unsupported",
+			"{1}: Draw a card. Activate only during your turn and only once each turn.",
+			ActivationTimingUnsupported,
+		},
 	}
 
 	for _, test := range tests {

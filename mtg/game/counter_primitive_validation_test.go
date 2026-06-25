@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestCounterPlacementPrimitiveValidation(t *testing.T) {
@@ -64,6 +65,24 @@ func TestCounterPlacementPrimitiveValidation(t *testing.T) {
 			"legacy player",
 			AddPlayerCounter{Amount: Fixed(1), Player: TargetPlayerReference(0), CounterKind: counter.Poison},
 			legacyPlayerTargets,
+		},
+		{
+			"kind choice on permanent",
+			AddCounter{
+				Amount:      Fixed(1),
+				Object:      TargetPermanentReference(0),
+				KindChoices: []counter.Kind{counter.PlusOnePlusOne, counter.Loyalty},
+			},
+			permanentTargets,
+		},
+		{
+			"kind choice on linked object",
+			AddCounter{
+				Amount:      Fixed(1),
+				Object:      LinkedObjectReference("reanimated"),
+				KindChoices: []counter.Kind{counter.PlusOnePlusOne, counter.Loyalty},
+			},
+			permanentTargets,
 		},
 	}
 	for _, test := range valid {
@@ -152,6 +171,42 @@ func TestCounterPlacementPrimitiveValidation(t *testing.T) {
 			"permanent reference to unknown target domain",
 			AddCounter{Amount: Fixed(1), Object: TargetPermanentReference(0), CounterKind: counter.Charge},
 			[]TargetSpec{{MinTargets: 1, MaxTargets: 1}},
+		},
+		{
+			"kind choice with a single kind",
+			AddCounter{
+				Amount:      Fixed(1),
+				Object:      TargetPermanentReference(0),
+				KindChoices: []counter.Kind{counter.PlusOnePlusOne},
+			},
+			permanentTargets,
+		},
+		{
+			"kind choice with a player-only kind",
+			AddCounter{
+				Amount:      Fixed(1),
+				Object:      TargetPermanentReference(0),
+				KindChoices: []counter.Kind{counter.PlusOnePlusOne, counter.Poison},
+			},
+			permanentTargets,
+		},
+		{
+			"kind choice with duplicate kinds",
+			AddCounter{
+				Amount:      Fixed(1),
+				Object:      TargetPermanentReference(0),
+				KindChoices: []counter.Kind{counter.PlusOnePlusOne, counter.PlusOnePlusOne},
+			},
+			permanentTargets,
+		},
+		{
+			"kind choice on a group",
+			AddCounter{
+				Amount:      Fixed(1),
+				Group:       BattlefieldGroup(Selection{RequiredTypes: []types.Card{types.Creature}, Controller: ControllerYou}),
+				KindChoices: []counter.Kind{counter.PlusOnePlusOne, counter.Loyalty},
+			},
+			permanentTargets,
 		},
 	}
 	for _, test := range invalid {

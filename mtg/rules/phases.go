@@ -7,17 +7,27 @@ import (
 
 const maximumHandSize = 7
 
-func (e *Engine) runTurn(g *game.Game, agents [game.NumPlayers]PlayerAgent) TurnLog {
-	log := TurnLog{
+func (e *Engine) runTurn(g *game.Game, agents [game.NumPlayers]PlayerAgent) (log TurnLog) {
+	log = TurnLog{
 		TurnNumber:   g.Turn.TurnNumber,
 		ActivePlayer: g.Turn.ActivePlayer,
 	}
+	for seat := range g.Players {
+		log.LifeTotals[seat] = g.Players[seat].Life
+	}
+
+	activePlayer := log.ActivePlayer
+	manaSpentBefore := g.Players[activePlayer].ManaPool.Spent()
+	defer func() {
+		log.ManaSpent = g.Players[activePlayer].ManaPool.Spent() - manaSpentBefore
+	}()
 
 	e.runBeginningPhase(g, agents, &log)
 	if g.IsGameOver() {
 		return log
 	}
 	e.runMainPhase(g, agents, game.PhasePrecombatMain, &log)
+	recordManaDevelopment(g, &log)
 	if g.IsGameOver() {
 		return log
 	}
@@ -29,6 +39,10 @@ func (e *Engine) runTurn(g *game.Game, agents [game.NumPlayers]PlayerAgent) Turn
 	if g.IsGameOver() {
 		return log
 	}
+	e.runExtraPhases(g, agents, &log)
+	if g.IsGameOver() {
+		return log
+	}
 	e.runEndingPhase(g, agents)
 	if g.IsGameOver() {
 		return log
@@ -36,6 +50,29 @@ func (e *Engine) runTurn(g *game.Game, agents [game.NumPlayers]PlayerAgent) Turn
 	e.advanceToNextTurn(g)
 
 	return log
+}
+
+// runExtraPhases drains the additional phases queued onto the turn by
+// extra-phase effects ("After this main phase, there is an additional combat
+// phase followed by an additional main phase." — Aggravated Assault). Queued
+// phases run in order after the postcombat main phase; a queued main phase that
+// re-activates the source re-queues more phases, so the loop continues until the
+// queue empties (the extra-combat combo, CR 505.5 / 506.2).
+func (e *Engine) runExtraPhases(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+	for len(g.Turn.ExtraPhases) > 0 {
+		phase := g.Turn.ExtraPhases[0]
+		g.Turn.ExtraPhases = g.Turn.ExtraPhases[1:]
+		switch phase {
+		case game.PhaseCombat:
+			e.runCombatPhase(g, agents, log)
+		case game.PhasePrecombatMain, game.PhasePostcombatMain:
+			e.runMainPhase(g, agents, phase, log)
+		default:
+		}
+		if g.IsGameOver() {
+			return
+		}
+	}
 }
 
 func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
@@ -100,6 +137,7 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 	// the stack before the game advances to draw (CR 603.6c, CR 117.3b).
 	emitBeginningOfStepEvent(g, game.StepUpkeep)
 	e.processSuspendUpkeep(g, g.Turn.ActivePlayer)
+	e.processReboundUpkeep(g, g.Turn.ActivePlayer, agents, log)
 	g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 	e.runPriorityLoop(g, agents, log)
 	if g.IsGameOver() {
@@ -195,6 +233,12 @@ func (e *Engine) runEndingPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	// next-end-step triggers before the end-step priority window (CR 603.6c,
 	// CR 603.7b).
 	emitBeginningOfStepEvent(g, game.StepEnd)
+	// The monarch draws a card at the beginning of their end step (CR 720.5).
+	// End steps occur only on the active player's turn, so this is the monarch's
+	// end step exactly when the active player is the monarch.
+	if monarch, ok := playerByID(g, g.Turn.ActivePlayer); ok && monarch.IsMonarch {
+		e.drawCards(g, g.Turn.ActivePlayer, 1, agents, nil)
+	}
 	if e.putTriggeredAbilitiesOnStackWithChoices(g, agents, nil) || !g.Stack.IsEmpty() {
 		g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 		e.runPriorityLoop(g, agents, nil)
@@ -213,8 +257,10 @@ func (e *Engine) runEndingPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 		permanent.TemporaryPowerModifier = 0
 		permanent.TemporaryToughnessModifier = 0
 		permanent.RegenerationShields = 0
+		permanent.Saddled = false
 	}
 	expireCleanupDurations(g)
+	expireEventDelayedTriggers(g)
 	expirePreventionShields(g)
 	expireReplacementEffects(g)
 	expireRuleEffects(g)
@@ -261,6 +307,7 @@ func (*Engine) advanceToNextTurn(g *game.Game) {
 	g.Turn.Step = game.StepUntap
 	g.Turn.LandsPlayedThisTurn = 0
 	g.Turn.LandsAllowedThisTurn = 1
+	g.Turn.CombatPhasesThisTurn = 0
 	g.ActivatedAbilitiesThisTurn = make(map[game.ActivatedAbilityUse]bool)
 	g.TriggeredAbilitiesThisTurn = make(map[game.TriggeredAbilityUse]int)
 	g.Combat = nil

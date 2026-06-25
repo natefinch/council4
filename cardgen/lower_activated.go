@@ -53,17 +53,26 @@ func lowerChapterAbility(
 		Reminders: syntax.Reminders,
 		Quoted:    syntax.Quoted,
 		Atoms:     syntax.Atoms,
+		CoinFlip:  syntax.CoinFlip,
+		Vote:      syntax.Vote,
+		Modal:     syntax.Modal,
 	}
 	content, diagnostic := lowerAbilityContent(cardName, ability.Kind, bodyContent, false, &bodySyntax)
 	if diagnostic != nil {
 		return abilityLowering{}, diagnostic
 	}
 	spans := []shared.Span{ability.ChapterSpan, syntax.BodySeparatorSpan}
+	if syntax.ChapterFlavorSpan != (shared.Span{}) {
+		spans = append(spans, syntax.ChapterFlavorSpan)
+	}
 	for i := range ability.Content.Effects {
 		spans = append(spans, ability.Content.Effects[i].Span)
 	}
 	for _, target := range ability.Content.Targets {
 		spans = append(spans, target.Span)
+		if target.ChoiceSpan != (shared.Span{}) {
+			spans = append(spans, target.ChoiceSpan)
+		}
 	}
 	for _, reference := range ability.Content.References {
 		spans = append(spans, reference.Span)
@@ -71,8 +80,28 @@ func lowerChapterAbility(
 	for _, keyword := range ability.Content.Keywords {
 		spans = append(spans, keyword.Span)
 	}
+	for i := range ability.Content.Conditions {
+		spans = append(spans, ability.Content.Conditions[i].Span)
+	}
 	for _, reminder := range syntax.Reminders {
 		spans = append(spans, reminder.Span)
+	}
+	chapterSpans := spans
+	consumed := semanticConsumption{
+		targets:    len(ability.Content.Targets),
+		effects:    len(ability.Content.Effects),
+		keywords:   len(ability.Content.Keywords),
+		references: len(ability.Content.References),
+		conditions: len(ability.Content.Conditions),
+	}
+	if len(ability.Content.Modes) > 0 {
+		// A modal chapter ("I, II, III — Choose one at random — • ...") carries its
+		// targets and effects inside each mode, which lowerModalContent verifies
+		// for complete per-option coverage. Credit the whole chapter span so the
+		// modal header and bullet tokens count as consumed, mirroring the modal
+		// spell shell.
+		consumed.modes = len(ability.Content.Modes)
+		chapterSpans = append(chapterSpans, ability.Span)
 	}
 	return abilityLowering{
 		chapterAbility: opt.Val(game.ChapterAbility{
@@ -80,13 +109,8 @@ func lowerChapterAbility(
 			Chapters: slices.Clone(ability.Chapters),
 			Content:  content,
 		}),
-		consumed: semanticConsumption{
-			targets:    len(ability.Content.Targets),
-			effects:    len(ability.Content.Effects),
-			keywords:   len(ability.Content.Keywords),
-			references: len(ability.Content.References),
-		},
-		sourceSpans: spans,
+		consumed:    consumed,
+		sourceSpans: chapterSpans,
 	}, nil
 }
 
@@ -267,6 +291,8 @@ func lowerLoyaltyAbility(
 		Reminders: syntax.Reminders,
 		Quoted:    syntax.Quoted,
 		Atoms:     syntax.Atoms,
+		CoinFlip:  syntax.CoinFlip,
+		Vote:      syntax.Vote,
 	}
 	content, diagnostic := lowerAbilityContent(cardName, ability.Kind, bodyContent, false, &bodySyntax)
 	if diagnostic != nil {
@@ -371,6 +397,20 @@ func lowerModalContent(
 		(minModes == 1 && maxModes == 2 && len(ctx.content.Modes) != 2) {
 		return unsupported("the modal choice range does not match the number of modes")
 	}
+	randomModes := modal.Kind == compiler.CompiledModalChoiceOneAtRandom
+	if randomModes {
+		// "Choose one at random" selects the single mode with the game's random
+		// source rather than letting the controller choose. Only the triggered
+		// and Saga-chapter resolution paths honor that random selection, so a
+		// random modal in any other context (a modal spell) fails closed rather
+		// than silently letting a player pick.
+		if minModes != 1 || maxModes != 1 {
+			return unsupported("an at-random modal must choose exactly one mode")
+		}
+		if ctx.enclosingKind != compiler.AbilityChapter && ctx.enclosingKind != compiler.AbilityTriggered {
+			return unsupported("the executable source backend lowers at-random modes only in triggered or Saga-chapter abilities")
+		}
+	}
 	var bonus game.ModeChoiceBonus
 	switch modal.Bonus.Condition {
 	case compiler.ModeChoiceBonusConditionNone:
@@ -432,6 +472,14 @@ func lowerModalContent(
 		}
 		loweredMode := content.Modes[0]
 		loweredMode.Text = mode.Text
+		if modal.Spree {
+			if len(mode.SpreeCost) == 0 {
+				return unsupported("a Spree option is missing its additional cost")
+			}
+			loweredMode.Cost = opt.Val(slices.Clone(mode.SpreeCost))
+		} else if len(mode.SpreeCost) != 0 {
+			return unsupported("a non-Spree modal option carries an additional cost")
+		}
 		modes = append(modes, loweredMode)
 	}
 	result := game.AbilityContent{
@@ -439,6 +487,13 @@ func lowerModalContent(
 		MinModes:        minModes,
 		MaxModes:        maxModes,
 		ModeChoiceBonus: bonus,
+		RandomModes:     randomModes,
+	}
+	if modal.Escalate {
+		if len(modal.EscalateCost) == 0 {
+			return unsupported("an Escalate modal is missing its escalate cost")
+		}
+		result.EscalateCost = opt.Val(slices.Clone(modal.EscalateCost))
 	}
 	if labeledModal(ctx.content.Modes) && !exactConnectionModes(ctx.content.Modes, result) {
 		return unsupported("the labeled modal options do not match the supported exact mode vocabulary and bodies")
@@ -450,6 +505,12 @@ func modalOptionCompletelyRecognized(content compiler.AbilityContent, syntax *pa
 	var spans []shared.Span
 	if syntax.Label != nil {
 		spans = append(spans, syntax.Label.Span, syntax.Label.SeparatorSpan)
+	}
+	if syntax.FlavorSpan != (shared.Span{}) {
+		spans = append(spans, syntax.FlavorSpan, syntax.FlavorSeparatorSpan)
+	}
+	if syntax.SpreeCost != nil {
+		spans = append(spans, syntax.SpreeCost.Span, syntax.SpreeCost.SeparatorSpan)
 	}
 	for i := range content.Effects {
 		spans = append(spans, content.Effects[i].Span)
@@ -603,6 +664,13 @@ func prepareActivationCondition(ability *compiler.CompiledAbility, syntax *parse
 		return opt.V[game.Condition]{}, false
 	}
 	if len(ability.Content.Conditions) != 1 {
+		if recognized, ok := recognizeConditionalDestination(ability.Content); ok && recognized.search != nil {
+			// The conditional-destination body keeps its gate and else-marker
+			// conditions in the body, where the dedicated content lowerer reads
+			// the gate. Leave them in place instead of failing closed on the
+			// two-condition shape.
+			return opt.V[game.Condition]{}, true
+		}
 		return opt.V[game.Condition]{}, false
 	}
 	condition, ok := lowerCondition(ability.Content.Conditions[0], conditionContextActivation)
@@ -622,6 +690,14 @@ func prepareActivationCondition(ability *compiler.CompiledAbility, syntax *parse
 	}
 	ability.Content.Effects = effects
 	ability.Content.Conditions = nil
+	// References bound inside the extracted condition (for example the "this
+	// creature" of "Activate only if this creature is attacking") belong to the
+	// activation gate, not the resolving body. Drop them so body lowerers that
+	// reject stray references — like the fixed-card draw lowerer — see only the
+	// references their effect actually uses.
+	ability.Content.References = slices.DeleteFunc(append([]compiler.CompiledReference(nil), ability.Content.References...), func(reference compiler.CompiledReference) bool {
+		return spanCovered(reference.Span, conditionSpan)
+	})
 	*syntax = syntaxWithoutAbilityWord(syntax)
 	lastEffectEnd := bodyEffects[0].Span.End.Offset
 	for i := 1; i < len(bodyEffects); i++ {

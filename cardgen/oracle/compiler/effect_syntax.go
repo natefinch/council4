@@ -38,6 +38,8 @@ func applyEffectPaymentsToConditions(effects []CompiledEffect, conditions []Comp
 			predicate = ConditionPredicateTargetControllerDoesNotPay
 		case parser.EffectPaymentPayerEventPlayer:
 			predicate = ConditionPredicateEventPlayerDoesNotPay
+		case parser.EffectPaymentPayerController:
+			predicate = ConditionPredicateControllerDoesNotPay
 		default:
 			continue
 		}
@@ -136,7 +138,10 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		Zone:                          syntax.Zone,
 		ManaValue:                     syntax.ManaValue,
 		MatchManaValue:                syntax.MatchManaValue,
+		MatchTotalManaValue:           syntax.MatchTotalManaValue,
+		TotalManaValue:                syntax.TotalManaValue,
 		ManaValueX:                    syntax.ManaValueX,
+		ManaValueDynamic:              compileDynamicAmountKind(syntax.ManaValueDynamic),
 		Power:                         syntax.Power,
 		MatchPower:                    syntax.MatchPower,
 		Toughness:                     syntax.Toughness,
@@ -144,9 +149,13 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		Colorless:                     syntax.Colorless,
 		Multicolored:                  syntax.Multicolored,
 		BasicLandType:                 syntax.BasicLandType,
+		Historic:                      syntax.Historic,
 		MatchCounter:                  syntax.CounterRequired,
 		RequiredCounter:               syntax.CounterKind,
 		MatchAnyCounter:               syntax.CounterAny,
+		MatchNoCounters:               syntax.CounterAbsent,
+		MatchExcludedCounter:          syntax.CounterKindAbsent,
+		ExcludedCounter:               syntax.CounterKind,
 		PlayerOrPlaneswalker:          syntax.PlayerOrPlaneswalker,
 		SubtypeFromEntryChoice:        syntax.SubtypeFromEntryChoice,
 		SubtypeFromChosenType:         syntax.SubtypeFromChosenType,
@@ -154,6 +163,10 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		ConjunctiveTypes:              syntax.ConjunctiveTypes,
 		RequiredName:                  syntax.RequiredName,
 		EnteredThisTurn:               syntax.EnteredThisTurn,
+		PowerLessThanSource:           syntax.PowerLessThanSource,
+		PowerGreaterThanSource:        syntax.PowerGreaterThanSource,
+		NameUniqueAmongControlled:     syntax.NameUniqueAmongControlled,
+		InclusiveOneOfEach:            syntax.InclusiveOneOfEach,
 	}
 	// A required card-type union is always kept. A single required card type is
 	// kept for a spell selection ("counter target instant or sorcery spell") and
@@ -238,6 +251,8 @@ func compileStaticSubjectKind(kind parser.EffectStaticSubjectKind) StaticSubject
 		return StaticSubjectControlledWalls
 	case parser.EffectStaticSubjectControlledArtifacts:
 		return StaticSubjectControlledArtifacts
+	case parser.EffectStaticSubjectControlledSagas:
+		return StaticSubjectControlledSagas
 	case parser.EffectStaticSubjectControlledTokens:
 		return StaticSubjectControlledTokens
 	case parser.EffectStaticSubjectOpponentControlledCreatures:
@@ -262,6 +277,10 @@ func compileStaticSubjectKind(kind parser.EffectStaticSubjectKind) StaticSubject
 		return StaticSubjectControlledLegendaryCreatures
 	case parser.EffectStaticSubjectControlledNonlegendaryCreatures:
 		return StaticSubjectControlledNonlegendaryCreatures
+	case parser.EffectStaticSubjectControlledCommanderCreatures:
+		return StaticSubjectControlledCommanderCreatures
+	case parser.EffectStaticSubjectControlledCommanders:
+		return StaticSubjectControlledCommanders
 	case parser.EffectStaticSubjectControlledUntappedCreatures:
 		return StaticSubjectControlledUntappedCreatures
 	case parser.EffectStaticSubjectControlledModifiedCreatures:
@@ -278,10 +297,16 @@ func compileStaticSubjectKind(kind parser.EffectStaticSubjectKind) StaticSubject
 		return StaticSubjectOtherControlledNontokenCreatures
 	case parser.EffectStaticSubjectAllLands:
 		return StaticSubjectAllLands
+	case parser.EffectStaticSubjectControlledLands:
+		return StaticSubjectControlledLands
 	case parser.EffectStaticSubjectControlledCreaturesChosenType:
 		return StaticSubjectControlledCreaturesChosenType
 	case parser.EffectStaticSubjectOtherControlledCreaturesChosenType:
 		return StaticSubjectOtherControlledCreaturesChosenType
+	case parser.EffectStaticSubjectControlledPermanentSubtype:
+		return StaticSubjectControlledPermanentSubtype
+	case parser.EffectStaticSubjectOtherControlledPermanentSubtype:
+		return StaticSubjectOtherControlledPermanentSubtype
 	default:
 		return StaticSubjectNone
 	}
@@ -351,6 +376,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectAttach
 	case parser.EffectCantBeBlocked:
 		return EffectCantBeBlocked
+	case parser.EffectCantBlock:
+		return EffectCantBlock
 	case parser.EffectCast:
 		return EffectCast
 	case parser.EffectCounter:
@@ -367,6 +394,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectDig
 	case parser.EffectDiscard:
 		return EffectDiscard
+	case parser.EffectLookAtHand:
+		return EffectLookAtHand
 	case parser.EffectDiscover:
 		return EffectDiscover
 	case parser.EffectDouble:
@@ -385,6 +414,10 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectGain
 	case parser.EffectGainControl:
 		return EffectGainControl
+	case parser.EffectBecomeMonarch:
+		return EffectBecomeMonarch
+	case parser.EffectRingTempts:
+		return EffectRingTempts
 	case parser.EffectGrantKeyword:
 		return EffectGrantKeyword
 	case parser.EffectLifeTotalCantChange:
@@ -393,10 +426,12 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectProtectionFromEverything
 	case parser.EffectInvestigate:
 		return EffectInvestigate
-	case parser.EffectGainEnergy:
-		return EffectGainEnergy
+	case parser.EffectGainPlayerCounter:
+		return EffectGainPlayerCounter
 	case parser.EffectImpulseExile:
 		return EffectImpulseExile
+	case parser.EffectCreateEmblem:
+		return EffectCreateEmblem
 	case parser.EffectAdditionalLandPlays:
 		return EffectAdditionalLandPlays
 	case parser.EffectExplore:
@@ -411,10 +446,26 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectEnterAsCopy
 	case parser.EffectBecomeCopy:
 		return EffectBecomeCopy
+	case parser.EffectBecomeType:
+		return EffectBecomeType
+	case parser.EffectPolymorph:
+		return EffectPolymorph
+	case parser.EffectSetBasePT:
+		return EffectSetBasePT
+	case parser.EffectSwitchPT:
+		return EffectSwitchPT
+	case parser.EffectDelayedTrigger:
+		return EffectDelayedTrigger
+	case parser.EffectPayRepeatedlyAnimate:
+		return EffectPayRepeatedlyAnimate
 	case parser.EffectAmass:
 		return EffectAmass
 	case parser.EffectRenown:
 		return EffectRenown
+	case parser.EffectAdapt:
+		return EffectAdapt
+	case parser.EffectConnive:
+		return EffectConnive
 	case parser.EffectDevour:
 		return EffectDevour
 	case parser.EffectTribute:
@@ -423,20 +474,36 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectChooseCreatureType
 	case parser.EffectNoMaximumHandSize:
 		return EffectNoMaximumHandSize
+	case parser.EffectAdditionalCombatPhase:
+		return EffectAdditionalCombatPhase
+	case parser.EffectRollDie:
+		return EffectRollDie
+	case parser.EffectExileIfLeaveBattlefield:
+		return EffectExileIfLeaveBattlefield
 	case parser.EffectMassReanimationExchange:
 		return EffectMassReanimationExchange
 	case parser.EffectPunisherLoseLife:
 		return EffectPunisherLoseLife
 	case parser.EffectMustAttack:
 		return EffectMustAttack
+	case parser.EffectDirectedMustAttack:
+		return EffectDirectedMustAttack
+	case parser.EffectAttackTax:
+		return EffectAttackTax
 	case parser.EffectRepeatProcess:
 		return EffectRepeatProcess
 	case parser.EffectChooseNewTargets:
 		return EffectChooseNewTargets
 	case parser.EffectCastAsThoughFlash:
 		return EffectCastAsThoughFlash
+	case parser.EffectPlayFromLibraryTop:
+		return EffectPlayFromLibraryTop
+	case parser.EffectPlay:
+		return EffectPlay
 	case parser.EffectCantCastSpells:
 		return EffectCantCastSpells
+	case parser.EffectSpellCostModifier:
+		return EffectSpellCostModifier
 	case parser.EffectPreventDamage:
 		return EffectPreventDamage
 	case parser.EffectSpellsCantBeCountered:
@@ -445,6 +512,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectManifest
 	case parser.EffectManifestDread:
 		return EffectManifestDread
+	case parser.EffectLookAtLibraryTop:
+		return EffectLookAtLibraryTop
 	case parser.EffectMill:
 		return EffectMill
 	case parser.EffectMoveCounters:
@@ -459,6 +528,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectPhaseOut
 	case parser.EffectProliferate:
 		return EffectProliferate
+	case parser.EffectRemoveCounter:
+		return EffectRemoveCounter
 	case parser.EffectRegenerate:
 		return EffectRegenerate
 	case parser.EffectReorderLibraryTop:
@@ -479,8 +550,12 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectShuffle
 	case parser.EffectTap:
 		return EffectTap
+	case parser.EffectTapOrUntap:
+		return EffectTapOrUntap
 	case parser.EffectUntap:
 		return EffectUntap
+	case parser.EffectRemoveFromCombat:
+		return EffectRemoveFromCombat
 	case parser.EffectTransform:
 		return EffectTransform
 	default:
@@ -496,6 +571,8 @@ func compileEffectDuration(duration parser.EffectDurationKind) DurationKind {
 		return DurationUntilYourNextTurn
 	case parser.EffectDurationUntilEndOfYourNextTurn:
 		return DurationUntilEndOfYourNextTurn
+	case parser.EffectDurationUntilYourNextEndStep:
+		return DurationUntilYourNextEndStep
 	case parser.EffectDurationThisTurn:
 		return DurationThisTurn
 	case parser.EffectDurationThisCombat:
@@ -532,6 +609,7 @@ func compileTypedAmount(amount parser.EffectAmountSyntax) CompiledAmount {
 		Minimum:       amount.Minimum,
 		Maximum:       amount.Maximum,
 		VariableX:     amount.VariableX,
+		AnyNumber:     amount.AnyNumber,
 		DynamicKind:   compileDynamicAmountKind(amount.DynamicKind),
 		DynamicForm:   compileDynamicAmountForm(amount.DynamicForm),
 		Multiplier:    amount.Multiplier,
@@ -561,8 +639,12 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountCount
 	case parser.EffectDynamicAmountControllerLife:
 		return DynamicAmountControllerLife
+	case parser.EffectDynamicAmountControllerSpeed:
+		return DynamicAmountControllerSpeed
 	case parser.EffectDynamicAmountOpponentCount:
 		return DynamicAmountOpponentCount
+	case parser.EffectDynamicAmountOpponentControllingCount:
+		return DynamicAmountOpponentControllingCount
 	case parser.EffectDynamicAmountSourcePower:
 		return DynamicAmountSourcePower
 	case parser.EffectDynamicAmountSourceToughness:
@@ -587,6 +669,8 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountTotalPower
 	case parser.EffectDynamicAmountTotalToughness:
 		return DynamicAmountTotalToughness
+	case parser.EffectDynamicAmountTotalManaValue:
+		return DynamicAmountTotalManaValue
 	case parser.EffectDynamicAmountColorCount:
 		return DynamicAmountColorCount
 	case parser.EffectDynamicAmountDevotion:
@@ -615,6 +699,20 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountLifeGainedThisTurn
 	case parser.EffectDynamicAmountMaxOf:
 		return DynamicAmountMaxOf
+	case parser.EffectDynamicAmountTriggeringCounterCount:
+		return DynamicAmountTriggeringCounterCount
+	case parser.EffectDynamicAmountColorsOfManaSpent:
+		return DynamicAmountColorsOfManaSpent
+	case parser.EffectDynamicAmountDieRollResult:
+		return DynamicAmountDieRollResult
+	case parser.EffectDynamicAmountTimesKicked:
+		return DynamicAmountTimesKicked
+	case parser.EffectDynamicAmountOpponentsAttackedThisCombat:
+		return DynamicAmountOpponentsAttackedThisCombat
+	case parser.EffectDynamicAmountTriggeringEventAmount:
+		return DynamicAmountTriggeringEventAmount
+	case parser.EffectDynamicAmountCardsDrawnThisTurn:
+		return DynamicAmountCardsDrawnThisTurn
 	default:
 		return DynamicAmountNone
 	}

@@ -68,9 +68,11 @@ func TestSelfETBTriggerSearchFetchesBasicLandTapped(t *testing.T) {
 		Spec: game.SearchSpec{
 			SourceZone:   zone.Library,
 			Destination:  zone.Battlefield,
-			CardType:     opt.Val(types.Land),
-			Supertype:    opt.Val(types.Basic),
 			EntersTapped: true,
+			Filter: game.Selection{
+				RequiredTypes: []types.Card{types.Land},
+				Supertypes:    []types.Super{types.Basic},
+			},
 		},
 	}}}, nil))
 	addBasicLandPermanent(g, game.Player1, types.Forest)

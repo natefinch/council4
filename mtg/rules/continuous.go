@@ -266,6 +266,10 @@ func dynamicValue(g *game.Game, controller game.PlayerID, dynamic *game.DynamicV
 	if dynamic == nil {
 		return 0
 	}
+	return dynamicValueBase(g, controller, dynamic) + dynamic.Offset
+}
+
+func dynamicValueBase(g *game.Game, controller game.PlayerID, dynamic *game.DynamicValue) int {
 	switch dynamic.Kind {
 	case game.DynamicValueConstant:
 		return dynamic.Value
@@ -291,9 +295,100 @@ func dynamicValue(g *game.Game, controller game.PlayerID, dynamic *game.DynamicV
 			}
 		}
 		return count
+	case game.DynamicValueAllGraveyardsSize:
+		return allGraveyardsCardCount(g, types.Creature, false)
+	case game.DynamicValueCreatureCardsInAllGraveyards:
+		return allGraveyardsCardCount(g, types.Creature, true)
+	case game.DynamicValueCardTypesAmongAllGraveyards:
+		return allGraveyardsCardTypeCount(g)
+	case game.DynamicValueControllerCreatureCardsInGraveyard:
+		return controllerGraveyardCardCount(g, controller, func(card *game.CardInstance) bool {
+			return graveyardCardHasType(card, types.Creature)
+		})
+	case game.DynamicValueControllerInstantOrSorceryCardsInGraveyard:
+		return controllerGraveyardCardCount(g, controller, func(card *game.CardInstance) bool {
+			return graveyardCardHasType(card, types.Instant) || graveyardCardHasType(card, types.Sorcery)
+		})
+	case game.DynamicValueControllerLandCardsInGraveyard:
+		return controllerGraveyardCardCount(g, controller, func(card *game.CardInstance) bool {
+			return graveyardCardHasType(card, types.Land)
+		})
+	case game.DynamicValueControllerPermanentCardsInGraveyard:
+		return controllerGraveyardCardCount(g, controller, graveyardCardIsPermanent)
+	case game.DynamicValueControllerCardTypesInGraveyard:
+		return controllerGraveyardCardTypeCount(g, controller)
+	case game.DynamicValueControllerSubtypeCount:
+		return countControlledPermanentsWithSubtype(g, controller, dynamic.Subtype)
+	case game.DynamicValueControllerColorPermanentCount:
+		return countControlledPermanentsWithColor(g, controller, dynamic.Color)
+	case game.DynamicValueControllerBasicLandTypeCount:
+		return controllerBasicLandSubtypeCount(g, controller)
+	case game.DynamicValueControllerLifeTotal:
+		if player, ok := playerByID(g, controller); ok {
+			return player.Life
+		}
+	case game.DynamicValueAllPlayersHandSize:
+		count := 0
+		for _, player := range g.Players {
+			count += player.Hand.Size()
+		}
+		return count
+	case game.DynamicValueControllerCardsDrawnThisTurn:
+		return cardsDrawnThisTurn(g, controller)
 	default:
 	}
 	return 0
+}
+
+// allGraveyardsCardCount counts cards across every player's graveyard. When
+// filterByType is true, only cards whose front (or split alternate) face has
+// cardType are counted; otherwise every card is counted.
+func allGraveyardsCardCount(g *game.Game, cardType types.Card, filterByType bool) int {
+	count := 0
+	for _, player := range g.Players {
+		for _, cardID := range player.Graveyard.All() {
+			card, ok := g.GetCardInstance(cardID)
+			if !ok {
+				continue
+			}
+			if !filterByType || graveyardCardHasType(card, cardType) {
+				count++
+			}
+		}
+	}
+	return count
+}
+
+// allGraveyardsCardTypeCount counts the distinct card types among all cards in
+// every player's graveyard (CR 208.2, Tarmogoyf).
+func allGraveyardsCardTypeCount(g *game.Game) int {
+	distinct := make(map[types.Card]bool)
+	for _, player := range g.Players {
+		for _, cardID := range player.Graveyard.All() {
+			card, ok := g.GetCardInstance(cardID)
+			if !ok {
+				continue
+			}
+			for _, cardType := range graveyardCardTypes(card) {
+				distinct[cardType] = true
+			}
+		}
+	}
+	return len(distinct)
+}
+
+// graveyardCardTypes returns the card types of a graveyard card's front face,
+// including a split card's alternate face.
+func graveyardCardTypes(card *game.CardInstance) []types.Card {
+	cardTypes := append([]types.Card(nil), cardFaceOrDefault(card, game.FaceFront).Types...)
+	if card.Def.Layout == game.LayoutSplit && card.Def.Alternate.Exists {
+		cardTypes = append(cardTypes, card.Def.Alternate.Val.Types...)
+	}
+	return cardTypes
+}
+
+func graveyardCardHasType(card *game.CardInstance, cardType types.Card) bool {
+	return slices.Contains(graveyardCardTypes(card), cardType)
 }
 
 func countControlledPermanentsWithType(g *game.Game, controller game.PlayerID, cardType types.Card) int {
@@ -306,6 +401,93 @@ func countControlledPermanentsWithType(g *game.Game, controller game.PlayerID, c
 		}
 	}
 	return count
+}
+
+// countControlledPermanentsWithSubtype counts the active permanents the given
+// player controls whose printed front face has the subtype ("the number of
+// Swamps you control"). It reads printed subtypes only, so it does not depend on
+// continuous layers and cannot recurse into power/toughness computation.
+func countControlledPermanentsWithSubtype(g *game.Game, controller game.PlayerID, subtype types.Sub) int {
+	count := 0
+	for _, permanent := range g.Battlefield {
+		if !activeBattlefieldPermanent(permanent) || permanent.Controller != controller || permanent.FaceDown {
+			continue
+		}
+		if card, ok := permanentCardDef(g, permanent); ok && card.HasSubtype(subtype) {
+			count++
+		}
+	}
+	return count
+}
+
+// countControlledPermanentsWithColor counts the active permanents the given
+// player controls whose printed front face includes the color ("the number of
+// red permanents you control"). It reads printed colors only, so it does not
+// depend on continuous layers and cannot recurse into power/toughness
+// computation.
+func countControlledPermanentsWithColor(g *game.Game, controller game.PlayerID, c color.Color) int {
+	count := 0
+	for _, permanent := range g.Battlefield {
+		if !activeBattlefieldPermanent(permanent) || permanent.Controller != controller || permanent.FaceDown {
+			continue
+		}
+		if card, ok := permanentCardDef(g, permanent); ok && slices.Contains(card.Colors, c) {
+			count++
+		}
+	}
+	return count
+}
+
+// basicLandTypes lists the five basic land subtypes (CR 305.6) counted by
+// "the number of basic land types among lands you control".
+var basicLandTypes = []types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain, types.Forest}
+
+// controllerBasicLandSubtypeCount counts the distinct basic land subtypes
+// present among the active lands the given player controls, reading printed
+// subtypes only to avoid recursing into continuous layers.
+func controllerBasicLandSubtypeCount(g *game.Game, controller game.PlayerID) int {
+	count := 0
+	for _, subtype := range basicLandTypes {
+		if countControlledPermanentsWithSubtype(g, controller, subtype) > 0 {
+			count++
+		}
+	}
+	return count
+}
+
+// controllerGraveyardCardCount counts the cards in the given player's graveyard
+// that satisfy match.
+func controllerGraveyardCardCount(g *game.Game, controller game.PlayerID, match func(*game.CardInstance) bool) int {
+	player, ok := playerByID(g, controller)
+	if !ok {
+		return 0
+	}
+	count := 0
+	for _, cardID := range player.Graveyard.All() {
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		if match(card) {
+			count++
+		}
+	}
+	return count
+}
+
+// permanentCardTypes lists the card types that make a card a permanent card
+// (CR 110.4a) for "the number of permanent cards in your graveyard".
+var permanentCardTypes = []types.Card{
+	types.Artifact, types.Creature, types.Enchantment, types.Land, types.Planeswalker, types.Battle,
+}
+
+func graveyardCardIsPermanent(card *game.CardInstance) bool {
+	for _, cardType := range permanentCardTypes {
+		if graveyardCardHasType(card, cardType) {
+			return true
+		}
+	}
+	return false
 }
 
 func basePermanentHasType(g *game.Game, permanent *game.Permanent, cardType types.Card) bool {
@@ -757,6 +939,9 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 			recalculateDynamicPT(g, values)
 		}
 	case game.LayerText:
+		if effect.SetName != "" {
+			values.name = effect.SetName
+		}
 		if effect.TextFrom != "" {
 			values.oracleText = strings.ReplaceAll(values.oracleText, effect.TextFrom, effect.TextTo)
 		}
@@ -790,9 +975,19 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 			values.powerPT = ptPtr(effect.SetPower)
 			values.dynamicPower = nil
 			values.power, values.powerOK = ptValue(g, values.controller, values.powerPT, nil)
+		} else if effect.SetPowerDynamic.Exists {
+			set := game.PT{Value: dynamicAmountValueForPermanent(g, permanent, effect.Controller, effect.SetPowerDynamic.Val, effect.Layer)}
+			values.powerPT = &set
+			values.dynamicPower = nil
+			values.power, values.powerOK = ptValue(g, values.controller, values.powerPT, nil)
 		}
 		if effect.SetToughness.Exists {
 			values.toughnessPT = ptPtr(effect.SetToughness)
+			values.dynamicToughness = nil
+			values.toughness, values.toughnessOK = ptValue(g, values.controller, values.toughnessPT, nil)
+		} else if effect.SetToughnessDynamic.Exists {
+			set := game.PT{Value: dynamicAmountValueForPermanent(g, permanent, effect.Controller, effect.SetToughnessDynamic.Val, effect.Layer)}
+			values.toughnessPT = &set
 			values.dynamicToughness = nil
 			values.toughness, values.toughnessOK = ptValue(g, values.controller, values.toughnessPT, nil)
 		}
@@ -875,6 +1070,12 @@ func applyTypeLayer(g *game.Game, values *permanentEffectiveValues, effect *game
 	}
 	values.subtypes = removeSubtypes(values.subtypes, effect.RemoveSubtypes)
 	values.subtypes = appendUniqueSubtypes(values.subtypes, effect.AddSubtypes...)
+	if effect.AddEveryCreatureType {
+		values.subtypes = appendUniqueSubtypes(values.subtypes, types.SubtypesForType(types.Creature)...)
+	}
+	if effect.AddEveryBasicLandType {
+		values.subtypes = appendUniqueSubtypes(values.subtypes, basicLandSubtypes[:]...)
+	}
 	if effect.AddSubtypeFromEntryChoice != "" {
 		if source, ok := permanentByObjectID(g, effect.SourceObjectID); ok {
 			if choice, ok := source.EntryChoices[effect.AddSubtypeFromEntryChoice]; ok &&
@@ -885,6 +1086,11 @@ func applyTypeLayer(g *game.Game, values *permanentEffectiveValues, effect *game
 		}
 	}
 }
+
+// basicLandSubtypes enumerates the five basic land subtypes (CR 305.6). It
+// backs both the basic-land-type count condition and the "every basic land
+// type" continuous type-grant (Dryad of the Ilysian Grove, Prismatic Omen).
+var basicLandSubtypes = [...]types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain, types.Forest}
 
 // applyAddedBasicLandManaAbilities grants the intrinsic mana ability that a
 // basic land type confers (CR 305.6) for every basic land subtype a continuous

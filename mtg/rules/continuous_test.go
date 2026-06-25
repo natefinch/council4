@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -58,6 +59,72 @@ func TestChangelingMatchesArbitrarySubtypesSimultaneously(t *testing.T) {
 	}
 }
 
+// TestGroupEveryCreatureTypeStaticGrantsArbitrarySubtype covers the group static
+// "Creatures you control are every creature type." (Maskwood Nexus): each
+// controlled creature is treated as having any creature type, while the original
+// subtypes survive and opponents are unaffected.
+func TestGroupEveryCreatureTypeStaticGrantsArbitrarySubtype(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	anchor := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	ally := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Goblin Ally",
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Goblin},
+	}})
+	opponentCreature := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:             1,
+		Controller:     game.Player1,
+		SourceObjectID: anchor.ObjectID,
+		Layer:          game.LayerType,
+		Group: game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		}),
+		AddEveryCreatureType: true,
+	})
+
+	for _, subtype := range []types.Sub{types.Elf, types.Zombie, types.Sliver} {
+		if !permanentHasSubtype(g, ally, subtype) {
+			t.Fatalf("controlled creature not treated as %s", subtype)
+		}
+	}
+	if !permanentHasSubtype(g, ally, types.Goblin) {
+		t.Fatal("every-creature-type static erased the creature's original Goblin subtype")
+	}
+	if permanentHasSubtype(g, opponentCreature, types.Elf) {
+		t.Fatal("opponent's creature incorrectly gained every creature type")
+	}
+}
+
+func TestSelfEveryCreatureTypeStaticGrantsArbitrarySubtype(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	permanent := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Mistform Ultimus",
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Illusion},
+	}})
+
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:                   1,
+		Controller:           game.Player1,
+		SourceObjectID:       permanent.ObjectID,
+		AffectedObjectID:     permanent.ObjectID,
+		AffectedSource:       true,
+		Layer:                game.LayerType,
+		AddEveryCreatureType: true,
+	})
+
+	for _, subtype := range []types.Sub{types.Goblin, types.Elf} {
+		if !permanentHasSubtype(g, permanent, subtype) {
+			t.Fatalf("self every-creature-type static not treated as %s", subtype)
+		}
+	}
+	if !permanentHasSubtype(g, permanent, types.Illusion) {
+		t.Fatal("every-creature-type static erased the creature's original Illusion subtype")
+	}
+}
+
 func TestGroupAddSubtypeStaticKeepsOtherTypes(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	anchor := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
@@ -87,6 +154,44 @@ func TestGroupAddSubtypeStaticKeepsOtherTypes(t *testing.T) {
 	}
 	if permanentHasSubtype(g, opponentCreature, types.Sliver) {
 		t.Fatal("opponent's creature incorrectly gained the added Sliver subtype")
+	}
+}
+
+func TestGroupAddTypeStaticExcludesLands(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	anchor := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Bear",
+		Types: []types.Card{types.Creature},
+	}})
+	land := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Forest",
+		Types: []types.Card{types.Land},
+	}})
+	opponentCreature := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:             1,
+		Controller:     game.Player1,
+		SourceObjectID: anchor.ObjectID,
+		Layer:          game.LayerType,
+		Group: game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{
+			ExcludedTypes: []types.Card{types.Land},
+		}),
+		AddTypes: []types.Card{types.Artifact},
+	})
+
+	if !permanentHasType(g, creature, types.Artifact) {
+		t.Fatal("controlled nonland permanent did not gain the added Artifact type")
+	}
+	if !permanentHasType(g, creature, types.Creature) {
+		t.Fatal("adding a type erased the creature's original Creature type")
+	}
+	if permanentHasType(g, land, types.Artifact) {
+		t.Fatal("controlled land incorrectly gained the added Artifact type")
+	}
+	if permanentHasType(g, opponentCreature, types.Artifact) {
+		t.Fatal("opponent's creature incorrectly gained the added Artifact type")
 	}
 }
 
@@ -137,9 +242,11 @@ func TestConditionalSourceKeywordEffectTracksCondition(t *testing.T) {
 		Toughness: opt.Val(game.PT{Value: 2}),
 		StaticAbilities: []game.StaticAbility{{
 			Condition: opt.Val(game.Condition{
-				ControllerControls: game.PermanentFilter{
-					SubtypesAny: []types.Sub{types.Mountain},
-				},
+				ControlsMatching: opt.Val(game.SelectionCount{
+					Selection: game.Selection{
+						SubtypesAny: []types.Sub{types.Mountain},
+					},
+				}),
 			}),
 			ContinuousEffects: []game.ContinuousEffect{{
 				Layer:          game.LayerAbility,
@@ -177,10 +284,12 @@ func TestConditionalSourceKeywordEffectUsesEffectiveCharacteristics(t *testing.T
 		Types: []types.Card{types.Creature},
 		StaticAbilities: []game.StaticAbility{{
 			Condition: opt.Val(game.Condition{
-				ControllerControls: game.PermanentFilter{
-					Types:     []types.Card{types.Creature},
-					ColorsAny: []color.Color{color.Red},
-				},
+				ControlsMatching: opt.Val(game.SelectionCount{
+					Selection: game.Selection{
+						RequiredTypes: []types.Card{types.Creature},
+						ColorsAny:     []color.Color{color.Red},
+					},
+				}),
 			}),
 			ContinuousEffects: []game.ContinuousEffect{{
 				Layer:          game.LayerAbility,
@@ -308,7 +417,7 @@ func TestStaticCovenConditionUsesLayerBoundedValues(t *testing.T) {
 		Power:     opt.Val(game.PT{Value: 1}),
 		Toughness: opt.Val(game.PT{Value: 1}),
 		StaticAbilities: []game.StaticAbility{{
-			Condition: opt.Val(game.Condition{ControllerCreaturePowerDiversityAtLeast: 3}),
+			Condition: opt.Val(game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerCreaturePowerDiversity, Op: compare.GreaterOrEqual, Value: 3}}}),
 			ContinuousEffects: []game.ContinuousEffect{{
 				Layer:          game.LayerPowerToughnessModify,
 				AffectedSource: true,
@@ -1176,6 +1285,50 @@ func TestContinuousEffectAddsSubtypeChosenAsSourceEntered(t *testing.T) {
 	}
 }
 
+// TestContinuousEffectGroupAddsSubtypeChosenAsSourceEntered verifies the
+// chosen-type group anthem ("Creatures you control are the chosen type in
+// addition to their other types", Arcane Adaptation/Xenograft): every creature
+// the source's controller controls gains the subtype chosen as the source
+// entered while keeping its printed subtypes, and opponents are unaffected.
+func TestContinuousEffectGroupAddsSubtypeChosenAsSourceEntered(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Type Shaper",
+		Types: []types.Card{types.Enchantment},
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer: game.LayerType,
+				Group: game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				}),
+				AddSubtypeFromEntryChoice: game.EntryTypeChoiceKey,
+			}},
+		}},
+	}})
+	source.EntryChoices = map[game.ChoiceKey]game.ResolutionChoiceResult{
+		game.EntryTypeChoiceKey: {
+			Kind:    game.ResolutionChoiceSubtype,
+			Subtype: types.Elf,
+		},
+	}
+	ally := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Goblin Ally",
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Goblin},
+	}})
+	opponentCreature := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+
+	if !permanentHasSubtype(g, ally, types.Elf) {
+		t.Fatal("controlled creature did not gain the source's entry-chosen creature type")
+	}
+	if !permanentHasSubtype(g, ally, types.Goblin) {
+		t.Fatal("chosen-type group anthem erased the creature's original Goblin subtype")
+	}
+	if permanentHasSubtype(g, opponentCreature, types.Elf) {
+		t.Fatal("opponent's creature incorrectly gained the entry-chosen creature type")
+	}
+}
+
 func TestContinuousEffectChosenSubtypeFailsClosedWithoutSubtypeChoice(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
@@ -1630,7 +1783,7 @@ func TestConditionalSourceLifeThresholdStatic(t *testing.T) {
 		Power:     opt.Val(game.PT{Value: 1}),
 		Toughness: opt.Val(game.PT{Value: 1}),
 		StaticAbilities: []game.StaticAbility{{
-			Condition: opt.Val(game.Condition{ControllerLifeAtLeast: 30}),
+			Condition: opt.Val(game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerLife, Op: compare.GreaterOrEqual, Value: 30}}}),
 			ContinuousEffects: []game.ContinuousEffect{
 				{
 					Layer:          game.LayerPowerToughnessModify,

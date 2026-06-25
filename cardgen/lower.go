@@ -3,6 +3,7 @@ package cardgen
 import (
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
@@ -11,7 +12,6 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
-	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -125,8 +125,16 @@ func hasAdventureCastPermission(faces []loweredFaceAbilities) bool {
 				mode := &ability.Content.Modes[modeIndex]
 				for instructionIndex := range mode.Sequence {
 					instruction := &mode.Sequence[instructionIndex]
-					if instruction.Primitive != nil &&
-						instruction.Primitive.Kind() == game.PrimitiveGrantCastPermission {
+					if instruction.Primitive == nil ||
+						instruction.Primitive.Kind() != game.PrimitiveGrantCastPermission {
+						continue
+					}
+					// Only an alternate-face cast permission is Adventure-specific
+					// and requires the Adventure layout. A front-face graveyard
+					// cast permission (Norika Yamazaki, the Poet) casts the card
+					// normally and is valid on any layout.
+					permission, ok := instruction.Primitive.(game.GrantCastPermission)
+					if ok && permission.Face == game.FaceAlternate {
 						return true
 					}
 				}
@@ -134,6 +142,27 @@ func hasAdventureCastPermission(faces []loweredFaceAbilities) bool {
 		}
 	}
 	return false
+}
+
+// compileFaceDocument parses and compiles a single face's Oracle text into the
+// conservative semantic IR. The parser owns the Oracle wording; the compiler
+// stays text-blind. lowerFaceAbilities and the golden snapshot harness share
+// this helper so both observe identical parser context and compiler output.
+func compileFaceDocument(
+	face scryfallFaceFields,
+	parsedType ParsedTypeLine,
+) (compiler.Compilation, []shared.Diagnostic) {
+	document, diagnostics := parser.Parse(face.OracleText, parser.Context{
+		InstantOrSorcery: slices.Contains(parsedType.Types, "Instant") || slices.Contains(parsedType.Types, "Sorcery"),
+		Planeswalker:     slices.Contains(parsedType.Types, "Planeswalker"),
+		Saga:             slices.Contains(parsedType.Subtypes, "Saga"),
+		Class:            slices.Contains(parsedType.Subtypes, "Class"),
+		Leveler:          face.Layout == "leveler",
+		CardName:         face.Name,
+		Legendary:        slices.Contains(parsedType.Supertypes, "Legendary"),
+	})
+	compilation, compilerDiagnostics := compiler.Compile(document, compiler.Context{})
+	return compilation, append(diagnostics, compilerDiagnostics...)
 }
 
 func lowerFaceAbilities(
@@ -150,14 +179,7 @@ func lowerFaceAbilities(
 	if face.OracleText == "" {
 		return loweredFaceAbilities{}, nil
 	}
-	document, diagnostics := parser.Parse(face.OracleText, parser.Context{
-		InstantOrSorcery: slices.Contains(parsedType.Types, "Instant") || slices.Contains(parsedType.Types, "Sorcery"),
-		Planeswalker:     slices.Contains(parsedType.Types, "Planeswalker"),
-		Saga:             slices.Contains(parsedType.Subtypes, "Saga"),
-		CardName:         face.Name,
-	})
-	compilation, compilerDiagnostics := compiler.Compile(document, compiler.Context{})
-	diagnostics = append(diagnostics, compilerDiagnostics...)
+	compilation, diagnostics := compileFaceDocument(face, parsedType)
 
 	var result loweredFaceAbilities
 	if spell, ok := lowerSpellFaceCombiner(face.Name, compilation); ok {
@@ -167,15 +189,48 @@ func lowerFaceAbilities(
 	var unsupported []shared.Diagnostic
 	var pendingPonderPrefix *compiler.CompiledAbility
 	creatureSubtypes := eternalizeFamilyCreatureSubtypes(parsedType.Subtypes)
+	saga := slices.Contains(parsedType.Subtypes, "Saga")
+	isClass := slices.Contains(parsedType.Subtypes, "Class")
+	isLeveler := face.Layout == "leveler"
+	classLevel := 1
+	var currentBand *compiler.CompiledLevelBand
 	for i, ability := range compilation.Abilities {
 		syntax := &compilation.Syntax.Abilities[i]
-		lowered, diagnostic := lowerExecutableAbility(
-			face.Name,
-			slices.Contains(parsedType.Subtypes, "Saga"),
-			creatureSubtypes,
-			ability,
-			syntax,
-		)
+		if isLeveler && ability.LevelUpRecognized {
+			activated, diagnostic := lowerLevelUpAbility(face.Name, ability)
+			if diagnostic != nil {
+				unsupported = append(unsupported, *diagnostic)
+				continue
+			}
+			result.ActivatedAbilities = append(result.ActivatedAbilities, activated)
+			continue
+		}
+		if isLeveler && ability.Kind == compiler.AbilityLevelBand {
+			currentBand = ability.LevelBand
+			static, diagnostic, emit := lowerLevelBandPowerToughness(ability)
+			if diagnostic != nil {
+				unsupported = append(unsupported, *diagnostic)
+				continue
+			}
+			if emit {
+				result.StaticAbilities = append(result.StaticAbilities, static)
+			}
+			continue
+		}
+		var lowered abilityLowering
+		var diagnostic *shared.Diagnostic
+		levelGain := ability.ClassLevelGain
+		if levelGain > 0 {
+			lowered, diagnostic = lowerClassLevelGain(face.Name, ability, syntax, classLevel)
+		} else {
+			lowered, diagnostic = lowerExecutableAbility(
+				face.Name,
+				saga,
+				creatureSubtypes,
+				ability,
+				syntax,
+			)
+		}
 		if diagnostic != nil {
 			unsupported = append(unsupported, *diagnostic)
 			continue
@@ -183,6 +238,21 @@ func lowerFaceAbilities(
 		if !lowered.complete(ability, syntax) {
 			unsupported = append(unsupported, *incompleteLoweringDiagnostic(ability))
 			continue
+		}
+		if isClass && levelGain == 0 && classLevel >= 2 {
+			if diagnostic := gateLoweredAbilityByClassLevel(&lowered, ability, classLevel); diagnostic != nil {
+				unsupported = append(unsupported, *diagnostic)
+				continue
+			}
+		}
+		if isLeveler && currentBand != nil {
+			if diagnostic := gateLoweredAbilityByLevelBand(&lowered, ability, currentBand); diagnostic != nil {
+				unsupported = append(unsupported, *diagnostic)
+				continue
+			}
+		}
+		if levelGain > 0 {
+			classLevel = levelGain
 		}
 		result.StaticAbilities = append(result.StaticAbilities, lowered.staticAbilities...)
 		appendSimpleLoweredAbilities(&result, &lowered)
@@ -281,6 +351,8 @@ func lowerFaceAbilities(
 			}
 		}
 	}
+	linkExplicitExileReturns(&result)
+	synthesizeExileUntilLeavesReturns(&result)
 	if len(unsupported) > 0 {
 		return loweredFaceAbilities{}, append(diagnostics, unsupported...)
 	}
@@ -659,6 +731,63 @@ func keywordOnlyContent(content compiler.AbilityContent) bool {
 // lowerStaticKeywordLowering lowers a keyword-only ability to its reusable
 // static keyword bodies, accumulating the keyword, ability-word, reminder, and
 // keyword-list separator source spans the ability consumes.
+// lowerCompanionAbility lowers a recognized companion keyword ability (CR
+// 702.139) to the inert companion static keyword. The companion deckbuilding
+// condition and the from-outside-the-game put-into-hand permission are sideboard
+// and deck-construction mechanics the deterministic playtester does not simulate,
+// so the keyword carries no in-game effect; the whole paragraph span is consumed.
+func lowerCompanionAbility(ability compiler.CompiledAbility) abilityLowering {
+	return abilityLowering{
+		staticAbilities: []loweredStaticAbility{
+			{Body: game.CompanionStaticBody, VarName: "game.CompanionStaticBody"},
+		},
+		sourceSpans: []shared.Span{ability.Span},
+	}
+}
+
+// lowerPartnerWithAbility lowers a recognized "Partner with <name>" keyword
+// ability (CR 702.124e) to the inert partner-with static keyword. The "partner
+// commander" deck-construction permission and the pair-fetch enters trigger are
+// mechanics the deterministic playtester does not simulate, so the keyword
+// carries no in-game effect; the whole paragraph span is consumed.
+func lowerPartnerWithAbility(ability compiler.CompiledAbility) abilityLowering {
+	return abilityLowering{
+		staticAbilities: []loweredStaticAbility{
+			{Body: game.PartnerWithStaticBody, VarName: "game.PartnerWithStaticBody"},
+		},
+		sourceSpans: []shared.Span{ability.Span},
+	}
+}
+
+// lowerChooseABackgroundAbility lowers a recognized "Choose a Background" keyword
+// ability (CR 702.124f) to the inert choose-a-background static keyword. The
+// "Background as a second commander" permission is a deck-construction mechanic
+// the deterministic playtester does not simulate, so the keyword carries no
+// in-game effect; the whole paragraph span is consumed.
+func lowerChooseABackgroundAbility(ability compiler.CompiledAbility) abilityLowering {
+	return abilityLowering{
+		staticAbilities: []loweredStaticAbility{
+			{Body: game.ChooseABackgroundStaticBody, VarName: "game.ChooseABackgroundStaticBody"},
+		},
+		sourceSpans: []shared.Span{ability.Span},
+	}
+}
+
+// lowerPartnerAbility lowers a recognized "Partner" keyword ability (CR
+// 702.124a) and its "Partner—<quality>" restricted variants (CR 702.124f) to
+// the inert partner static keyword. The "partner commander" deck-construction
+// permission and the variant pairing restrictions are mechanics the
+// deterministic playtester does not simulate, so the keyword carries no in-game
+// effect; the whole paragraph span is consumed.
+func lowerPartnerAbility(ability compiler.CompiledAbility) abilityLowering {
+	return abilityLowering{
+		staticAbilities: []loweredStaticAbility{
+			{Body: game.PartnerStaticBody, VarName: "game.PartnerStaticBody"},
+		},
+		sourceSpans: []shared.Span{ability.Span},
+	}
+}
+
 func lowerStaticKeywordLowering(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
@@ -728,6 +857,13 @@ func lowerExecutableAbility(
 				sourceSpans:  []shared.Span{body.Content.Span},
 			}, nil
 		}
+		if body.ExactSequence == compiler.ExactSequenceDiscardHandThenDraw {
+			spellAbility := lowerDiscardHandThenDrawSequence(body)
+			return abilityLowering{
+				spellAbility: opt.Val(spellAbility),
+				sourceSpans:  []shared.Span{body.Content.Span},
+			}, nil
+		}
 		if len(body.Content.Effects) == 1 &&
 			body.Content.Effects[0].Kind == compiler.EffectAddMana &&
 			(body.Content.Effects[0].Mana.AnyColor || body.Content.Effects[0].Mana.FilterPair) {
@@ -754,6 +890,9 @@ func lowerExecutableAbility(
 			if ability.Content.Effects[i].PreventRegeneration {
 				spans = append(spans, ability.Content.Effects[i].RegenerationRiderSpan)
 			}
+			if ability.Content.Effects[i].HandChoiceDiscard.Present {
+				spans = append(spans, ability.Content.Effects[i].HandChoiceDiscard.ChooseSpan)
+			}
 			if len(ability.Content.Effects[i].TokenCopyGrantKeywords) != 0 {
 				spans = append(spans, ability.Content.Effects[i].TokenCopyGrantRiderSpan)
 			}
@@ -762,6 +901,9 @@ func lowerExecutableAbility(
 			}
 			if ability.Content.Effects[i].CopyMayChooseNewTargets {
 				spans = append(spans, ability.Content.Effects[i].CopyChooseNewTargetsRiderSpan)
+			}
+			if ability.Content.Effects[i].PlayFromTopPayLife {
+				spans = append(spans, ability.Content.Effects[i].PlayFromTopPayLifeRiderSpan)
 			}
 		}
 		for _, target := range ability.Content.Targets {
@@ -801,6 +943,10 @@ func lowerExecutableAbility(
 			for i := range syntax.Reminders {
 				lowered.sourceSpans = append(lowered.sourceSpans, syntax.Reminders[i].Span)
 			}
+			if syntax.AbilityWord != nil && replacementAbilityWordConsumed(lowered) {
+				lowered.sourceSpans = append(lowered.sourceSpans,
+					syntax.AbilityWord.Span, syntax.AbilityWord.SeparatorSpan)
+			}
 		}
 		return lowered, diagnostic
 	case compiler.AbilitySpellAdditionalCost:
@@ -809,6 +955,9 @@ func lowerExecutableAbility(
 		return lowerSpellAlternativeCost(cardName, ability)
 	case compiler.AbilityReminder:
 		if saga && syntax.SagaReminder {
+			return abilityLowering{sourceSpans: []shared.Span{ability.Span}}, nil
+		}
+		if syntax.ClassReminder {
 			return abilityLowering{sourceSpans: []shared.Span{ability.Span}}, nil
 		}
 		return lowerReminderManaAbility(ability, syntax)
@@ -824,6 +973,9 @@ func lowerExecutableAbility(
 func lowerSpellAlternativeCost(cardName string, ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {
 	if ability.AlternativeCost != nil && ability.AlternativeCost.Kind == compiler.AlternativeCostFlashback {
 		return lowerFlashbackAlternativeCost(cardName, ability)
+	}
+	if ability.AlternativeCost != nil && ability.AlternativeCost.Kind == compiler.AlternativeCostEscape {
+		return lowerEscapeAlternativeCost(cardName, ability)
 	}
 	if ability.AlternativeCost != nil &&
 		ability.AlternativeCost.Kind == compiler.AlternativeCostOverload &&
@@ -846,7 +998,10 @@ func lowerSpellAlternativeCost(cardName string, ability compiler.CompiledAbility
 		}, nil
 	}
 	if ability.AlternativeCost != nil && ability.AlternativeCost.Kind == compiler.AlternativeCostPitch {
-		return lowerPitchAlternativeCost(ability)
+		return lowerPitchAlternativeCost(cardName, ability)
+	}
+	if ability.AlternativeCost != nil && ability.AlternativeCost.Kind == compiler.AlternativeCostDiscard {
+		return lowerDiscardAlternativeCost(cardName, ability)
 	}
 	if ability.AlternativeCost == nil ||
 		(ability.AlternativeCost.Kind != compiler.AlternativeCostUnknown &&
@@ -916,6 +1071,7 @@ func lowerFlashbackAlternativeCost(cardName string, ability compiler.CompiledAbi
 	}
 	alternative := cost.Alternative{
 		Label:           "Flashback",
+		Mechanic:        cost.AlternativeMechanicFlashback,
 		AdditionalCosts: additionalCosts,
 	}
 	if len(manaCost) > 0 {
@@ -937,18 +1093,72 @@ func lowerFlashbackAlternativeCost(cardName string, ability compiler.CompiledAbi
 	}, nil
 }
 
-// lowerPitchAlternativeCost lowers a Force of Will pitch alternative cost into a
-// free (no-mana) alternative whose additional costs exile a colored card from
-// hand and optionally pay life, gated by the optional not-your-turn condition.
-func lowerPitchAlternativeCost(ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {
+// lowerEscapeAlternativeCost lowers the em-dash Escape form
+// "Escape—<cost>, Exile N cards from your graveyard." into a
+// SimpleKeyword(Escape) grant plus an Escape alternative cost carrying the
+// compound escape cost typed by the shared cost machinery (its mana cost plus
+// the graveyard-exile additional cost). The runtime gates graveyard escape
+// casting on the keyword grant and pays the alternative's mana and additional
+// costs. Unlike Flashback the spell is not exiled, so it can be escaped again.
+// It fails closed when the cost is unrecognized.
+func lowerEscapeAlternativeCost(cardName string, ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {
+	if ability.Cost == nil || len(ability.Cost.Components) == 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0 {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported alternative spell cost",
+			"the executable source backend could not recognize the escape cost",
+		)
+	}
+	manaCost, additionalCosts, ok := lowerActivationCostComponents(cardName, ability.Cost)
+	if !ok {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported alternative spell cost",
+			"the executable source backend does not yet lower this escape cost",
+		)
+	}
+	alternative := cost.Alternative{
+		Label:           "Escape",
+		Mechanic:        cost.AlternativeMechanicEscape,
+		AdditionalCosts: additionalCosts,
+	}
+	if len(manaCost) > 0 {
+		alternative.ManaCost = opt.Val(manaCost)
+	}
+	return abilityLowering{
+		staticAbilities: []loweredStaticAbility{{
+			Body: game.StaticAbility{
+				KeywordAbilities: []game.KeywordAbility{game.SimpleKeyword{Kind: game.Escape}},
+			},
+		}},
+		alternativeCosts: []cost.Alternative{alternative},
+		consumed: semanticConsumption{
+			cost:            true,
+			alternativeCost: true,
+			references:      len(ability.Content.References),
+		},
+		sourceSpans: []shared.Span{ability.Span},
+	}, nil
+}
+
+// lowerPitchAlternativeCost lowers the Force of Will pitch family into a free
+// (no-mana) alternative whose non-mana cost components — an optional pay-life
+// and an exile-a-colored-card-from-hand — are lowered through the shared cost
+// machinery used for activated, additional, and resolution costs. The cost
+// rides on the ability's compiled Cost; the not-your-turn condition gates the
+// option. It fails closed when the cost is unrecognized.
+func lowerPitchAlternativeCost(cardName string, ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {
 	alternative := ability.AlternativeCost
 	unsupported := alternative == nil ||
-		!alternative.PitchColorKnown ||
-		alternative.PitchCount < 1 ||
-		alternative.PitchLife < 0 ||
 		alternative.WithoutPayingManaCost ||
 		len(alternative.ManaCost) != 0 ||
-		ability.Cost != nil ||
+		ability.Cost == nil ||
+		len(ability.Cost.Components) == 0 ||
 		len(ability.Content.Effects) != 0 ||
 		len(ability.Content.Targets) != 0 ||
 		len(ability.Content.Conditions) != 0 ||
@@ -962,32 +1172,107 @@ func lowerPitchAlternativeCost(ability compiler.CompiledAbility) (abilityLowerin
 			"the executable source backend could not recognize the spell's alternative cost",
 		)
 	}
-	var additionalCosts []cost.Additional
-	if alternative.PitchLife > 0 {
-		additionalCosts = append(additionalCosts, cost.Additional{
-			Kind:   cost.AdditionalPayLife,
-			Amount: alternative.PitchLife,
-		})
+	manaCost, additionalCosts, ok := lowerActivationCostComponents(cardName, ability.Cost)
+	if !ok || len(manaCost) != 0 || len(additionalCosts) == 0 {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported alternative spell cost",
+			"the executable source backend does not yet lower this pitch cost",
+		)
 	}
-	additionalCosts = append(additionalCosts, cost.Additional{
-		Kind:           cost.AdditionalExile,
-		Amount:         alternative.PitchCount,
-		Source:         zone.Hand,
-		MatchCardColor: true,
-		CardColor:      alternative.PitchColor,
-	})
 	return abilityLowering{
 		alternativeCosts: []cost.Alternative{{
-			Label:           pitchAlternativeLabel(alternative.PitchColor),
+			Label:           pitchAlternativeLabel(additionalCosts),
 			AdditionalCosts: additionalCosts,
 			Condition:       condition,
 		}},
 		consumed: semanticConsumption{
+			cost:            true,
 			alternativeCost: true,
 			references:      len(ability.Content.References),
 		},
 		sourceSpans: []shared.Span{ability.Span},
 	}, nil
+}
+
+// lowerDiscardAlternativeCost lowers the Foil/Outbreak family: a free (no-mana)
+// alternative whose additional costs discard one or more cards from hand,
+// optionally constrained by subtype, rather than paying the printed mana cost.
+func lowerDiscardAlternativeCost(cardName string, ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {
+	alternative := ability.AlternativeCost
+	unsupported := alternative == nil ||
+		alternative.WithoutPayingManaCost ||
+		len(alternative.ManaCost) != 0 ||
+		ability.Cost == nil ||
+		len(ability.Cost.Components) == 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0
+	condition, conditionOK := lowerAlternativeCostCondition(alternative)
+	if unsupported || !conditionOK {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported alternative spell cost",
+			"the executable source backend could not recognize the spell's alternative cost",
+		)
+	}
+	manaCost, additionalCosts, ok := lowerActivationCostComponents(cardName, ability.Cost)
+	if !ok || len(manaCost) != 0 || len(additionalCosts) == 0 {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported alternative spell cost",
+			"the executable source backend does not yet lower this discard cost",
+		)
+	}
+	return abilityLowering{
+		alternativeCosts: []cost.Alternative{{
+			Label:           discardAlternativeLabel(additionalCosts),
+			AdditionalCosts: additionalCosts,
+			Condition:       condition,
+		}},
+		consumed: semanticConsumption{
+			cost:            true,
+			alternativeCost: true,
+			references:      len(ability.Content.References),
+		},
+		sourceSpans: []shared.Span{ability.Span},
+	}, nil
+}
+
+// discardAlternativeLabel builds the display label for a discard alternative
+// from its lowered discard costs, naming each discarded card's subtype filter
+// when present.
+func discardAlternativeLabel(additionalCosts []cost.Additional) string {
+	parts := make([]string, 0, len(additionalCosts))
+	for _, additional := range additionalCosts {
+		if additional.Kind != cost.AdditionalDiscard {
+			continue
+		}
+		switch {
+		case additional.SubtypesAny[0] != "":
+			sub := string(additional.SubtypesAny[0])
+			parts = append(parts, indefiniteArticle(sub)+" "+sub+" card")
+		case len(parts) > 0:
+			parts = append(parts, "another card")
+		default:
+			parts = append(parts, "a card")
+		}
+	}
+	return "Discard " + strings.Join(parts, " and ")
+}
+
+func indefiniteArticle(word string) string {
+	if word == "" {
+		return "a"
+	}
+	switch word[0] {
+	case 'A', 'E', 'I', 'O', 'U', 'a', 'e', 'i', 'o', 'u':
+		return "an"
+	default:
+		return "a"
+	}
 }
 
 func lowerAlternativeCostCondition(alternative *compiler.CompiledAlternativeCost) (cost.AlternativeCondition, bool) {
@@ -1001,11 +1286,21 @@ func lowerAlternativeCostCondition(alternative *compiler.CompiledAlternativeCost
 	}
 }
 
-func pitchAlternativeLabel(c color.Color) string {
-	if name, ok := colorDisplayName(c); ok {
-		return "Exile a " + name + " card"
+// pitchAlternativeLabel builds the display label for a pitch alternative from
+// its lowered exile cost, naming the exiled card's color when known.
+func pitchAlternativeLabel(additionalCosts []cost.Additional) string {
+	for _, additional := range additionalCosts {
+		if additional.Kind != cost.AdditionalExile {
+			continue
+		}
+		if additional.MatchCardColor {
+			if name, ok := colorDisplayName(additional.CardColor); ok {
+				return "Exile a " + name + " card"
+			}
+		}
+		return "Exile a card"
 	}
-	return "Exile a card"
+	return "Alternative cost"
 }
 
 func colorDisplayName(c color.Color) (string, bool) {
@@ -1140,9 +1435,22 @@ func lowerExecutableAbilitySpecialCase(
 ) (abilityLowering, bool, *shared.Diagnostic) {
 	if len(ability.Content.Modes) > 0 &&
 		ability.Kind != compiler.AbilityActivated &&
-		ability.Kind != compiler.AbilityTriggered {
+		ability.Kind != compiler.AbilityTriggered &&
+		ability.Kind != compiler.AbilityChapter {
 		lowered, diagnostic := lowerModalAbility(cardName, ability, syntax)
 		return lowered, true, diagnostic
+	}
+	if ability.Companion {
+		return lowerCompanionAbility(ability), true, nil
+	}
+	if ability.PartnerWith {
+		return lowerPartnerWithAbility(ability), true, nil
+	}
+	if ability.ChooseABackground {
+		return lowerChooseABackgroundAbility(ability), true, nil
+	}
+	if ability.Partner {
+		return lowerPartnerAbility(ability), true, nil
 	}
 	if lowered, handled, diagnostic := lowerSourceSpellCostReduction(ability, syntax); handled {
 		return lowered, true, diagnostic
@@ -1155,6 +1463,9 @@ func lowerExecutableAbilitySpecialCase(
 	}
 	if diagnostic := lowerStaticDeclarationBlocker(ability); diagnostic != nil {
 		return abilityLowering{}, true, diagnostic
+	}
+	if lowered, ok, diagnostic := lowerHideawayPlayAbility(cardName, ability, syntax); ok {
+		return lowered, true, diagnostic
 	}
 	if lowered, ok, diagnostic := lowerKeywordDispatch(creatureSubtypes, ability, syntax); ok {
 		return lowered, true, diagnostic

@@ -88,6 +88,8 @@ func (Renderer) renderObjectReference(reference game.ObjectReference) (string, e
 		return "game.EventRelatedPermanentReference()", nil
 	case game.ObjectReferenceEventStackObject:
 		return "game.EventStackObjectReference()", nil
+	case game.ObjectReferenceResolvingStackObject:
+		return "game.ResolvingStackObjectReference()", nil
 	case game.ObjectReferenceSourceCard:
 		return "game.SourceCardPermanentReference()", nil
 	case game.ObjectReferenceSacrificedCost:
@@ -141,6 +143,13 @@ func (r Renderer) renderKeywordAbility(ctx *renderCtx, keyword game.KeywordAbili
 		if err != nil {
 			return "", err
 		}
+		if len(ward.AdditionalCosts) > 0 {
+			renderedAdditional, err := r.renderAdditionalCosts(ctx, ward.AdditionalCosts)
+			if err != nil {
+				return "", err
+			}
+			return fmt.Sprintf("game.WardKeyword{Cost: %s, AdditionalCosts: %s}", wardCost, renderedAdditional), nil
+		}
 		return fmt.Sprintf("game.WardKeyword{Cost: %s}", wardCost), nil
 	}
 	if cumulative, ok := keyword.(game.CumulativeUpkeepKeyword); ok {
@@ -185,6 +194,9 @@ func (r Renderer) renderKeywordAbility(ctx *renderCtx, keyword game.KeywordAbili
 		}
 		if len(kicker.BonusContent.Modes) != 0 {
 			return "", errors.New("render: Kicker bonus content must be rendered by its owning ability")
+		}
+		if kicker.Multi {
+			return fmt.Sprintf("game.KickerKeyword{Cost: %s, Multi: true}", kickerCost), nil
 		}
 		return fmt.Sprintf("game.KickerKeyword{Cost: %s}", kickerCost), nil
 	}
@@ -322,8 +334,21 @@ func (r Renderer) renderAlternativeCosts(ctx *renderCtx, alternatives []cost.Alt
 			fields = append(fields, "Condition: cost.AlternativeConditionControlsCommander,")
 		case cost.AlternativeConditionNotYourTurn:
 			fields = append(fields, "Condition: cost.AlternativeConditionNotYourTurn,")
+		case cost.AlternativeConditionOpponentLostLifeThisTurn:
+			fields = append(fields, "Condition: cost.AlternativeConditionOpponentLostLifeThisTurn,")
 		default:
 			return "", fmt.Errorf("render: unsupported alternative-cost condition %d", alternative.Condition)
+		}
+		switch alternative.Mechanic {
+		case cost.AlternativeMechanicNone:
+		case cost.AlternativeMechanicFlashback:
+			fields = append(fields, "Mechanic: cost.AlternativeMechanicFlashback,")
+		case cost.AlternativeMechanicEscape:
+			fields = append(fields, "Mechanic: cost.AlternativeMechanicEscape,")
+		case cost.AlternativeMechanicEvoke:
+			fields = append(fields, "Mechanic: cost.AlternativeMechanicEvoke,")
+		default:
+			return "", fmt.Errorf("render: unsupported alternative-cost mechanic %d", alternative.Mechanic)
 		}
 		elements = append(elements, structLit("cost.Alternative", fields)+",")
 	}
@@ -379,6 +404,14 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 			fields = append(fields, fmt.Sprintf("PermanentTypeAlt: %s,", altType))
 		}
 	}
+	if additional.ExcludePermanentType != "" {
+		excludedType, err := cardTypeLiteral(additional.ExcludePermanentType)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importTypes)
+		fields = append(fields, fmt.Sprintf("ExcludePermanentType: %s,", excludedType))
+	}
 	if additional.MatchCardType {
 		cardType, err := cardTypeLiteral(additional.CardType)
 		if err != nil {
@@ -389,6 +422,12 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 			"MatchCardType: true,",
 			fmt.Sprintf("CardType: %s,", cardType),
 		)
+	}
+	if additional.MatchHistoric {
+		fields = append(fields, "MatchHistoric: true,")
+	}
+	if additional.TotalManaValueAtLeast != 0 {
+		fields = append(fields, fmt.Sprintf("TotalManaValueAtLeast: %d,", additional.TotalManaValueAtLeast))
 	}
 	if additional.MatchCardColor {
 		colorLiteral, err := colorValueToLiteral(additional.CardColor)
@@ -403,6 +442,9 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 	}
 	if additional.RequireTapped {
 		fields = append(fields, "RequireTapped: true,")
+	}
+	if additional.RequireToken {
+		fields = append(fields, "RequireToken: true,")
 	}
 	if additional.ExcludeSource {
 		fields = append(fields, "ExcludeSource: true,")
@@ -426,7 +468,11 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 		}
 		fields = append(fields, fmt.Sprintf("SubtypesAny: cost.SubtypeSet{%s},", strings.Join(literals, ", ")))
 	}
-	if additional.Kind == cost.AdditionalRemoveCounter || additional.Kind == cost.AdditionalPutCounter {
+	if additional.Kind == cost.AdditionalRemoveCounterAmong && additional.AnyCounterKind {
+		fields = append(fields, "AnyCounterKind: true,")
+	} else if additional.Kind == cost.AdditionalRemoveCounter ||
+		additional.Kind == cost.AdditionalRemoveCounterAmong ||
+		additional.Kind == cost.AdditionalPutCounter {
 		counterKind, err := renderCounterKind(additional.CounterKind)
 		if err != nil {
 			return "", err
@@ -569,6 +615,8 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountTargetCounters", nil
 	case game.DynamicAmountControllerLife:
 		return "game.DynamicAmountControllerLife", nil
+	case game.DynamicAmountControllerSpeed:
+		return "game.DynamicAmountControllerSpeed", nil
 	case game.DynamicAmountControllerHandSize:
 		return "game.DynamicAmountControllerHandSize", nil
 	case game.DynamicAmountControllerGraveyardSize:
@@ -587,6 +635,8 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountEventDamage", nil
 	case game.DynamicAmountEventCardCount:
 		return "game.DynamicAmountEventCardCount", nil
+	case game.DynamicAmountEventCounterCount:
+		return "game.DynamicAmountEventCounterCount", nil
 	case game.DynamicAmountPreviousEffectExcessDamage:
 		return "game.DynamicAmountPreviousEffectExcessDamage", nil
 	case game.DynamicAmountObjectPower:
@@ -611,6 +661,8 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountTotalPowerInGroup", nil
 	case game.DynamicAmountTotalToughnessInGroup:
 		return "game.DynamicAmountTotalToughnessInGroup", nil
+	case game.DynamicAmountTotalManaValueInGroup:
+		return "game.DynamicAmountTotalManaValueInGroup", nil
 	case game.DynamicAmountColorCountInGroup:
 		return "game.DynamicAmountColorCountInGroup", nil
 	case game.DynamicAmountSharedCreatureTypeCountInGroup:
@@ -619,6 +671,10 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountDevotion", nil
 	case game.DynamicAmountSpellsCastThisTurn:
 		return "game.DynamicAmountSpellsCastThisTurn", nil
+	case game.DynamicAmountColorsOfManaSpentToCast:
+		return "game.DynamicAmountColorsOfManaSpentToCast", nil
+	case game.DynamicAmountTimesKicked:
+		return "game.DynamicAmountTimesKicked", nil
 	case game.DynamicAmountLifeLostThisTurn:
 		return "game.DynamicAmountLifeLostThisTurn", nil
 	case game.DynamicAmountLifeGainedThisTurn:
@@ -627,6 +683,12 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountMaxOf", nil
 	case game.DynamicAmountEventLifeChange:
 		return "game.DynamicAmountEventLifeChange", nil
+	case game.DynamicAmountOpponentsAttackedThisCombat:
+		return "game.DynamicAmountOpponentsAttackedThisCombat", nil
+	case game.DynamicAmountOpponentControllingCount:
+		return "game.DynamicAmountOpponentControllingCount", nil
+	case game.DynamicAmountCardsDrawnThisTurn:
+		return "game.DynamicAmountCardsDrawnThisTurn", nil
 	default:
 		return "", fmt.Errorf("render: unsupported dynamic amount kind %d", kind)
 	}

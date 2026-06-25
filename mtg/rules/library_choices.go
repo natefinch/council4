@@ -10,15 +10,17 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
-func millCards(g *game.Game, playerID game.PlayerID, amount int) {
+func millCards(g *game.Game, playerID game.PlayerID, amount int) []id.ID {
 	player, ok := playerByID(g, playerID)
 	if !ok || amount <= 0 {
-		return
+		return nil
 	}
+	var milled []id.ID
+	batchID := g.IDGen.Next()
 	for range amount {
 		cardID, ok := player.Library.Top()
 		if !ok {
-			return
+			return milled
 		}
 		player.Library.Remove(cardID)
 		destination := commanderReplacementDestination(g, cardID, zone.Graveyard)
@@ -28,6 +30,52 @@ func millCards(g *game.Game, playerID game.PlayerID, amount int) {
 		}
 		destinationCards, ok := destinationZone(g, zoneOwner, destination)
 		if !ok {
+			return milled
+		}
+		destinationCards.Add(cardID)
+		if destination == zone.Graveyard {
+			milled = append(milled, cardID)
+		}
+		emitZoneChangeEvent(g, game.Event{
+			Player:         playerID,
+			CardID:         cardID,
+			FromZone:       zone.Library,
+			ToZone:         destination,
+			Amount:         1,
+			SimultaneousID: batchID,
+		})
+	}
+	return milled
+}
+
+// revealUntilCards reveals cards from the top of playerID's library one at a
+// time until a revealed card matches until, then puts every card revealed this
+// way (including the matching card) into destination. When the library empties
+// before a match, every revealed card is still moved. destination must be
+// zone.Graveyard or zone.Hand; a graveyard move honors the commander
+// replacement (CR 903.9a).
+func revealUntilCards(g *game.Game, playerID game.PlayerID, until game.Selection, destination zone.Type) {
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return
+	}
+	for {
+		cardID, ok := player.Library.Top()
+		if !ok {
+			return
+		}
+		player.Library.Remove(cardID)
+		matched := revealedCardMatches(g, playerID, cardID, until)
+		dest := destination
+		if destination == zone.Graveyard {
+			dest = commanderReplacementDestination(g, cardID, zone.Graveyard)
+		}
+		zoneOwner := playerID
+		if card, ok := g.GetCardInstance(cardID); dest == zone.Command && ok {
+			zoneOwner = card.Owner
+		}
+		destinationCards, ok := destinationZone(g, zoneOwner, dest)
+		if !ok {
 			return
 		}
 		destinationCards.Add(cardID)
@@ -35,10 +83,32 @@ func millCards(g *game.Game, playerID game.PlayerID, amount int) {
 			Player:   playerID,
 			CardID:   cardID,
 			FromZone: zone.Library,
-			ToZone:   destination,
+			ToZone:   dest,
 			Amount:   1,
 		})
+		if matched {
+			return
+		}
 	}
+}
+
+// revealedCardMatches reports whether the card revealed from playerID's library
+// satisfies the reveal-until predicate. An empty predicate matches the first
+// revealed card.
+func revealedCardMatches(g *game.Game, playerID game.PlayerID, cardID id.ID, until game.Selection) bool {
+	if until.Empty() {
+		return true
+	}
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		return false
+	}
+	return matchSelection(&selectionSubject{
+		kind:   subjectCard,
+		g:      g,
+		card:   card,
+		viewer: playerID,
+	}, &until)
 }
 
 func exileTopOfLibraryCards(g *game.Game, playerID game.PlayerID, amount int) {
@@ -237,31 +307,31 @@ func (e *Engine) chooseDigCards(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	return taken
 }
 
-func (e *Engine) manifestTopCard(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID) bool {
+func (e *Engine) manifestTopCard(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID) (*game.Permanent, bool) {
 	player, ok := playerByID(g, playerID)
 	if !ok {
-		return false
+		return nil, false
 	}
 	cardID, ok := player.Library.Top()
 	if !ok {
-		return false
+		return nil, false
 	}
 	card, ok := g.GetCardInstance(cardID)
 	if !ok || !player.Library.Remove(cardID) {
-		return false
+		return nil, false
 	}
-	_, ok = createCardPermanentFaceDownWithChoices(e, g, card, playerID, zone.Library, game.FaceFront, game.FaceDownManifest, false, agents, log)
-	return ok
+	permanent, ok := createCardPermanentFaceDownWithChoices(e, g, card, playerID, zone.Library, game.FaceFront, game.FaceDownManifest, false, agents, log)
+	return permanent, ok
 }
 
-func (e *Engine) manifestDread(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID) bool {
+func (e *Engine) manifestDread(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID) (*game.Permanent, bool) {
 	player, ok := playerByID(g, playerID)
 	if !ok {
-		return false
+		return nil, false
 	}
 	cards := peekLibrary(player, 2)
 	if len(cards) == 0 {
-		return false
+		return nil, false
 	}
 	chosenIndex := 0
 	if len(cards) > 1 {
@@ -273,10 +343,11 @@ func (e *Engine) manifestDread(g *game.Game, agents [game.NumPlayers]PlayerAgent
 	chosenID := cards[chosenIndex]
 	chosen, ok := g.GetCardInstance(chosenID)
 	if !ok || !player.Library.Remove(chosenID) {
-		return false
+		return nil, false
 	}
-	if _, ok := createCardPermanentFaceDownWithChoices(e, g, chosen, playerID, zone.Library, game.FaceFront, game.FaceDownManifest, false, agents, log); !ok {
-		return false
+	manifested, ok := createCardPermanentFaceDownWithChoices(e, g, chosen, playerID, zone.Library, game.FaceFront, game.FaceDownManifest, false, agents, log)
+	if !ok {
+		return nil, false
 	}
 	for _, cardID := range cards {
 		if cardID == chosenID {
@@ -303,7 +374,7 @@ func (e *Engine) manifestDread(g *game.Game, agents [game.NumPlayers]PlayerAgent
 			Amount:   1,
 		})
 	}
-	return true
+	return manifested, true
 }
 
 func manifestDreadChoiceRequest(g *game.Game, playerID game.PlayerID, cards []id.ID) game.ChoiceRequest {

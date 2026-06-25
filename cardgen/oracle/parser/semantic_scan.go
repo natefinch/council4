@@ -11,13 +11,25 @@ func (a *Ability) computeSemanticReferences() []Reference {
 		tokens = tokensOutsideParserSpan(tokens, span)
 	}
 	for i := range a.Sentences {
-		if a.Sentences[i].RegenerationRider || a.Sentences[i].ReturnAsEnchantmentRider || a.Sentences[i].CopyChooseNewTargetsRider {
+		if a.Sentences[i].RegenerationRider || a.Sentences[i].ReturnAsEnchantmentRider || a.Sentences[i].CopyChooseNewTargetsRider || a.Sentences[i].PlayFromTopPayLifeRider {
 			tokens = tokensOutsideParserSpan(tokens, a.Sentences[i].Span)
 		}
 	}
 	for i := range a.StaticDeclarations {
 		if staticDeclarationConsumesReferences(&a.StaticDeclarations[i]) {
 			tokens = tokensOutsideParserSpan(tokens, a.StaticDeclarations[i].Span)
+		}
+	}
+	// A created attacking token's "... attacking <defender>" phrase owns any
+	// anaphoric "that player" within it; the defender-agnostic runtime ignores
+	// the defender, so remove the phrase's tokens before reference scanning to
+	// keep that pronoun from surfacing as a dangling semantic reference.
+	for i := range a.Sentences {
+		for j := range a.Sentences[i].Effects {
+			effect := &a.Sentences[i].Effects[j]
+			if effect.AttackDefender != AttackDefenderNone {
+				tokens = tokensOutsideParserSpan(tokens, effect.AttackDefenderSpan)
+			}
 		}
 	}
 	return a.Atoms.ReferencesWithin(tokens)
@@ -95,6 +107,22 @@ func linkConditionSegments(
 func emitSemanticAccessors(abilities []Ability) {
 	for i := range abilities {
 		ability := &abilities[i]
+		if ability.Companion != nil {
+			ability.ContentSpan = ability.computeContentSpan()
+			continue
+		}
+		if ability.PartnerWith != nil {
+			ability.ContentSpan = ability.computeContentSpan()
+			continue
+		}
+		if ability.ChooseABackground != nil {
+			ability.ContentSpan = ability.computeContentSpan()
+			continue
+		}
+		if ability.Partner != nil {
+			ability.ContentSpan = ability.computeContentSpan()
+			continue
+		}
 		ability.SemanticReferences = ability.computeSemanticReferences()
 		ability.SemanticKeywords = ability.computeSemanticKeywords()
 		ability.ContentSpan = ability.computeContentSpan()
@@ -194,7 +222,7 @@ func coverageSpans(tokens []shared.Token) []shared.Span {
 	spans := make([]shared.Span, 0, len(tokens))
 	for _, token := range tokens {
 		switch token.Kind {
-		case shared.Comma, shared.Colon, shared.Period:
+		case shared.Comma, shared.Colon, shared.Period, shared.Exclamation:
 			continue
 		default:
 			spans = append(spans, token.Span)

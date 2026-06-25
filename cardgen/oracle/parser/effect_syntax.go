@@ -18,7 +18,13 @@ func emitResolvingSyntax(abilities []Ability) {
 		if recognizeChosenTypeLibraryTopSequence(&abilities[i]) {
 			continue
 		}
+		if recognizeConditionalLookAtTopSequence(&abilities[i]) {
+			continue
+		}
 		if recognizeBottomHandThenDrawSequence(&abilities[i]) {
+			continue
+		}
+		if recognizeDiscardHandThenDrawSequence(&abilities[i]) {
 			continue
 		}
 		emitSentenceResolvingSyntax(
@@ -29,10 +35,19 @@ func emitResolvingSyntax(abilities []Ability) {
 			abilities[i].SourceAbilityCostReduction,
 		)
 		attachTokenGrantedAbilities(&abilities[i])
+		attachGainGrantedAbilities(&abilities[i])
+		attachEmblemEffects(&abilities[i])
 		recognizeControllerOptionalPaymentSequence(&abilities[i])
 		recognizeOptionalManaPaymentBenefitSequence(&abilities[i])
 		recognizeEventPlayerOptionalPaymentSequence(&abilities[i])
 		recognizeControllerMandatoryPaymentSequence(&abilities[i])
+		recognizePayRepeatedlyAnimateSequence(&abilities[i])
+		if abilities[i].DiceTable != nil {
+			for k := range abilities[i].DiceTable.Rows {
+				row := &abilities[i].DiceTable.Rows[k]
+				emitSentenceResolvingSyntax(row.Sentences, row.Atoms, nil, nil, nil)
+			}
+		}
 		if abilities[i].Modal == nil {
 			continue
 		}
@@ -51,6 +66,9 @@ func emitResolvingSyntax(abilities []Ability) {
 }
 
 func sentencesHaveImpulseExile(sentences []Sentence) bool {
+	for len(sentences) > 2 && isReminderSentence(sentences[len(sentences)-1]) {
+		sentences = sentences[:len(sentences)-1]
+	}
 	return len(sentences) == 2 &&
 		len(sentences[0].Effects) == 1 &&
 		sentences[0].Effects[0].Kind == EffectImpulseExile
@@ -89,6 +107,119 @@ func attachTokenGrantedAbilities(ability *Ability) {
 		effect.TokenGrantedAbility = &stored
 		effect.Exact = exactEffectSyntax(effect)
 	}
+}
+
+// attachGainGrantedAbilities binds each quoted ability captured on the ability
+// ("This creature gains \"Whenever this creature deals combat damage to a
+// player, that player loses the game.\"") to the gain effect whose clause
+// contains it, parsing the quoted body through the same pipeline so downstream
+// layers lower it from the typed inner document. It re-evaluates the affected
+// effect's exactness so the reconstructed "gains \"...\"" rider is byte-checked.
+// A quoted body that fails to parse, or that no single gain clause contains, is
+// left unattached so the grant fails closed.
+func attachGainGrantedAbilities(ability *Ability) {
+	if len(ability.Quoted) == 0 {
+		return
+	}
+	for q := range ability.Quoted {
+		quoted := ability.Quoted[q]
+		effect := gainEffectContainingSpan(ability, quoted.Span)
+		if effect == nil || effect.GainGrantedAbility != nil {
+			continue
+		}
+		granted, ok := parseStaticGrantedAbility(quoted)
+		if !ok {
+			continue
+		}
+		// Only a quoted triggered ability ("Whenever this creature deals combat
+		// damage to a player, ...") attaches. Static, activated, and mana granted
+		// abilities stay fail-closed pending dedicated lowering support, so the
+		// grant reconstructs only when the rider is a triggered ability the
+		// downstream layers handle.
+		if len(granted.document.Abilities) != 1 ||
+			granted.document.Abilities[0].Kind != AbilityTriggered {
+			continue
+		}
+		stored := granted
+		effect.GainGrantedAbility = &stored
+		effect.Exact = exactEffectSyntax(effect)
+	}
+}
+
+// attachEmblemEffects reclassifies an "You get an emblem with \"...\"" effect,
+// which the sentence pipeline first models as a generic clause, into an
+// EffectCreateEmblem carrying each quoted ability parsed through the same
+// pipeline so downstream layers lower the emblem from the typed inner
+// documents. Every quoted ability contained in the emblem clause must parse, or
+// the clause is left unchanged so the emblem fails closed.
+func attachEmblemEffects(ability *Ability) {
+	if len(ability.Quoted) == 0 {
+		return
+	}
+	effect := emblemEffectClause(ability)
+	if effect == nil {
+		return
+	}
+	var grants []StaticGrantedAbilitySyntax
+	for q := range ability.Quoted {
+		quoted := ability.Quoted[q]
+		if quoted.Span.Start.Offset < effect.ClauseSpan.Start.Offset ||
+			quoted.Span.End.Offset > effect.Span.End.Offset {
+			continue
+		}
+		granted, ok := parseStaticGrantedAbility(quoted)
+		if !ok {
+			return
+		}
+		grants = append(grants, granted)
+	}
+	if len(grants) == 0 {
+		return
+	}
+	effect.Kind = EffectCreateEmblem
+	effect.EmblemAbilities = grants
+	effect.Exact = exactEffectSyntax(effect)
+}
+
+// emblemEffectClause returns the lone effect whose clause begins "You get an
+// emblem with". It returns nil when no clause or more than one clause begins
+// that way, so an ambiguous emblem binding fails closed.
+func emblemEffectClause(ability *Ability) *EffectSyntax {
+	var match *EffectSyntax
+	for i := range ability.Sentences {
+		for j := range ability.Sentences[i].Effects {
+			effect := &ability.Sentences[i].Effects[j]
+			if _, ok := cutTokenPrefix(effect.Tokens, "you", "get", "an", "emblem", "with"); !ok {
+				continue
+			}
+			if match != nil {
+				return nil
+			}
+			match = effect
+		}
+	}
+	return match
+}
+
+// span. It returns nil when no gain clause contains span, or when more than one
+// might, so an ambiguous granted-ability binding fails closed.
+func gainEffectContainingSpan(ability *Ability, span shared.Span) *EffectSyntax {
+	var match *EffectSyntax
+	for i := range ability.Sentences {
+		for j := range ability.Sentences[i].Effects {
+			effect := &ability.Sentences[i].Effects[j]
+			if effect.Kind != EffectGain ||
+				span.Start.Offset < effect.ClauseSpan.Start.Offset ||
+				span.End.Offset > effect.Span.End.Offset {
+				continue
+			}
+			if match != nil {
+				return nil
+			}
+			match = effect
+		}
+	}
+	return match
 }
 
 // createEffectContainingSpan returns the lone create-token effect whose clause
@@ -139,13 +270,14 @@ func emitSentenceResolvingSyntax(
 			spanInsideTriggerFrequency(sentences[i].Span, triggerFrequency) {
 			continue
 		}
-		tokens := semanticEffectTokens(sentences[i].Tokens)
-		count := legacyEffectCount(tokens, atoms)
+		tokens := stripLeadingConditionClause(semanticEffectTokens(sentences[i].Tokens), atoms)
+		count := orderedEffectCount(tokens, atoms)
 		legacyEffects += count
 		sentences[i].LegacyEffects = count > 0
 		sentences[i].Targets = parseTargets(tokens, atoms)
 		sentences[i].Effects = parseEffects(sentences[i], tokens, atoms)
 		recognizeTargetOpponentHandManaSentence(&sentences[i])
+		recognizeLookAtTargetPlayerHandSentence(&sentences[i])
 		reconcileRetargetSentenceTargets(&sentences[i])
 		collapseManaSpendRiderSentence(&sentences[i], tokens)
 		currentEffects += len(sentences[i].Effects)
@@ -170,6 +302,9 @@ func emitSentenceResolvingSyntax(
 		}
 	}
 	recognizeShuffleRevealPermanentSequence(sentences)
+	recognizeRevealUntilThenPutSequence(sentences)
+	recognizeRevealChooseHandDiscardSequence(sentences)
+	creditConjoinedCopyChooseNewTargetsRider(sentences)
 	if len(chooseColorCandidates) > 0 && !creditChosenColorChoice(sentences, chooseColorCandidates) {
 		unrecognizedSibling = true
 	}
@@ -178,6 +313,10 @@ func emitSentenceResolvingSyntax(
 		currentEffects -= foldedEffects
 	}
 	if foldedLegacy, foldedEffects, ok := creditCopyChooseNewTargetsRider(sentences, atoms); ok {
+		legacyEffects -= foldedLegacy
+		currentEffects -= foldedEffects
+	}
+	if foldedLegacy, foldedEffects, ok := creditPlayFromTopPayLifeRider(sentences, atoms); ok {
 		legacyEffects -= foldedLegacy
 		currentEffects -= foldedEffects
 	}
@@ -316,7 +455,71 @@ func parseCounterPlacementScopedToCount(clause []shared.Token, amount EffectAmou
 	if amount.DynamicForm == EffectDynamicAmountFormWhereX && amount.Span != (shared.Span{}) {
 		counterClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
 	}
+	counterClause = placedCounterTokens(counterClause)
 	return parseCounterPlacement(counterClause, atoms)
+}
+
+// parseCounterPlacementChoices recognizes a placed-counter noun phrase that lets
+// the resolving controller choose between two or more counter kinds ("a +1/+1
+// counter or a loyalty counter", Elspeth Conquers Death chapter III). It returns
+// the distinct kinds in source order. The phrase must join its kinds with "or"
+// (never "and", which is a compound placement), each kind must be a real,
+// permanent-placeable kind, and the phrase must carry no other counter
+// alternative collapsing to a single atom. Any other shape returns nil so the
+// single-kind path and the fail-closed path stay unchanged.
+func parseCounterPlacementChoices(clause []shared.Token, atoms Atoms) []counter.Kind {
+	tokens := placedCounterTokens(clause)
+	hasOr := false
+	for _, token := range tokens {
+		if equalWord(token, "and") {
+			return nil
+		}
+		if equalWord(token, "or") {
+			hasOr = true
+		}
+	}
+	if !hasOr {
+		return nil
+	}
+	span := shared.SpanOf(tokens)
+	var kinds []counter.Kind
+	seen := make(map[counter.Kind]bool)
+	for _, atom := range atoms.Counters() {
+		if !spanCovers(span, atom.Span) {
+			continue
+		}
+		if !atom.Kind.Valid() || atom.Kind == counter.Finality || atom.Kind.PlayerOnly() {
+			return nil
+		}
+		if seen[atom.Kind] {
+			return nil
+		}
+		seen[atom.Kind] = true
+		kinds = append(kinds, atom.Kind)
+	}
+	if len(kinds) < 2 {
+		return nil
+	}
+	return kinds
+}
+
+// placedCounterTokens narrows a "Put <amount> <kind> counter(s) on <recipient>"
+// clause to the placed-counter noun phrase that precedes the placement
+// preposition "on". The recipient that follows may itself name a counter ("each
+// creature you control with a +1/+1 counter on it") or join subtypes with "and"
+// ("each Pest, Bat, and Spider you control"); either would make
+// parseCounterPlacement see a second counter atom or an "and" and fail closed,
+// so they are excluded here. The placed-counter portion keeps any "and" before
+// the preposition so a genuine compound placement ("a +1/+1 counter and a
+// shield counter on …") still fails closed. A clause with no "on" is returned
+// unchanged.
+func placedCounterTokens(tokens []shared.Token) []shared.Token {
+	for i := range tokens {
+		if equalWord(tokens[i], "on") {
+			return tokens[:i]
+		}
+	}
+	return tokens
 }
 
 // isChooseTargetPreambleTokens reports whether the sentence is a bare
@@ -450,7 +653,7 @@ func creditTokenCopyGrantRider(sentences []Sentence, atoms Atoms) (foldedLegacy,
 		create.TokenCopyGrantRiderSpan = sentences[i].Span
 		foldedEffects = len(sentences[i].Effects)
 		if sentences[i].LegacyEffects {
-			foldedLegacy = legacyEffectCount(tokens, atoms)
+			foldedLegacy = orderedEffectCount(tokens, atoms)
 		}
 		sentences[i].Effects = nil
 		sentences[i].TokenCopyGrantRider = true
@@ -483,7 +686,7 @@ func creditCopyChooseNewTargetsRider(sentences []Sentence, atoms Atoms) (foldedL
 		copyEffect.CopyChooseNewTargetsRiderSpan = sentences[i].Span
 		foldedEffects = len(sentences[i].Effects)
 		if sentences[i].LegacyEffects {
-			foldedLegacy = legacyEffectCount(tokens, atoms)
+			foldedLegacy = orderedEffectCount(tokens, atoms)
 		}
 		sentences[i].Effects = nil
 		sentences[i].LegacyEffects = false
@@ -699,30 +902,106 @@ func trailingDynamicCountInClause(clause []shared.Token, amount EffectAmountSynt
 	return amount.Span.Start.Offset >= clause[0].Span.Start.Offset
 }
 
-// stripLeadingConditionClause drops a leading "As long as this card/creature is
-// in your graveyard and ..." condition clause so the subject grammar sees only
-// the effect's group subject ("creatures you control"). The first effect's
-// ownership tokens begin at the sentence start, so the graveyard zone-of-
-// function condition would otherwise prevent the group subject from being
-// recognized at token zero. The strip is restricted to graveyard conditions so
-// other leading conditions keep their existing recognition path unchanged.
-func stripLeadingConditionClause(tokens []shared.Token) []shared.Token {
+// tokenAttackDefenderClause recognizes the trailing "... attacking <defender>"
+// relative clause of a created attacking token (CR 508.4) and returns the
+// matched defender kind together with the span of the defender tokens (the run
+// after "attacking", up to the clause-final period). It matches only the
+// create-token effect and the exact modern defender wordings; the bare
+// "... attacking." clause and every other tail leave it (None, _, false). The
+// returned span lets the build loop scope the token Selection to the tokens
+// before the defender phrase, so player/planeswalker nouns in the defender
+// ("that player or a planeswalker they control") do not fold into the token's
+// own type line.
+func tokenAttackDefenderClause(kind EffectKind, clause []shared.Token) (AttackDefenderKind, shared.Span, bool) {
+	if kind != EffectCreate {
+		return AttackDefenderNone, shared.Span{}, false
+	}
+	attackIndex := -1
+	for i := range clause {
+		if equalWord(clause[i], "attacking") {
+			attackIndex = i
+			break
+		}
+	}
+	if attackIndex < 0 {
+		return AttackDefenderNone, shared.Span{}, false
+	}
+	tail := clause[attackIndex+1:]
+	// Drop a trailing clause-final period so the defender words match exactly.
+	if len(tail) > 0 && tail[len(tail)-1].Text == "." {
+		tail = tail[:len(tail)-1]
+	}
+	if len(tail) == 0 {
+		return AttackDefenderNone, shared.Span{}, false
+	}
+	defenders := []struct {
+		kind  AttackDefenderKind
+		words []string
+	}{
+		{AttackDefenderThatPlayerOrPlaneswalker, []string{"that", "player", "or", "a", "planeswalker", "they", "control"}},
+		{AttackDefenderThatPlayer, []string{"that", "player"}},
+		{AttackDefenderThatOpponent, []string{"that", "opponent"}},
+	}
+	for _, d := range defenders {
+		if len(tail) == len(d.words) && effectWordsAt(tail, 0, d.words...) {
+			return d.kind, shared.SpanOf(tail), true
+		}
+	}
+	return AttackDefenderNone, shared.Span{}, false
+}
+
+// referencesOutsideAttackDefender drops anaphoric references (e.g. the
+// "that player" ReferenceThatPlayer in "... attacking that player or a
+// planeswalker they control") that fall inside a created attacking token's
+// defender phrase. The runtime EntryAttacking model is defender-agnostic, so
+// such a reference has no resolving meaning and would otherwise leave the
+// create-token body with an unconsumed reference and fail closed. It is a no-op
+// unless the effect carries a recognized token-attack defender.
+func referencesOutsideAttackDefender(refs []Reference, hasDefender bool, defender shared.Span) []Reference {
+	if !hasDefender {
+		return refs
+	}
+	kept := make([]Reference, 0, len(refs))
+	for _, ref := range refs {
+		if ref.Span.Start.Offset >= defender.Start.Offset && ref.Span.End.Offset <= defender.End.Offset {
+			continue
+		}
+		kept = append(kept, ref)
+	}
+	return kept
+}
+
+// stripLeadingConditionClause drops a leading "As long as ..." condition clause
+// so the subject grammar sees only the effect's group subject ("creatures you
+// control"). The first effect's ownership tokens begin at the sentence start, so
+// a leading "As long as <condition>, ..." gate (the Ascension cycle's "As long
+// as ~ has seven or more quest counters on it, creatures you control get +X/+X",
+// and the Incarnation cycle's graveyard zone-of-function condition) would
+// otherwise prevent the group subject from being recognized at token zero. A
+// leading "If <source> has [a <kind>] counter[s] on it, ..." gate is likewise
+// dropped: it is the counter-conditional mana multiplier rider's condition
+// (Incubation Druid's "If this creature has a +1/+1 counter on it, add three
+// mana of that type instead."), whose "has" verb would otherwise seed a spurious
+// keyword-grant effect from the gate. The condition clause itself is recognized
+// separately, so removing it here only affects subject and effect-verb
+// recognition of the gated body.
+func stripLeadingConditionClause(tokens []shared.Token, atoms Atoms) []shared.Token {
 	if len(tokens) == 0 {
 		return tokens
 	}
-	intro, width := conditionIntroAt(tokens, 0)
-	if intro == ConditionIntroUnknown {
+	intro, introWidth := conditionIntroAt(tokens, 0)
+	end := conditionClauseEnd(tokens, 0)
+	if end >= len(tokens) || tokens[end].Kind != shared.Comma {
 		return tokens
 	}
-	body := tokens[width:]
-	if _, ok := cutTokenPrefix(body, "this", "card", "is", "in", "your", "graveyard", "and"); !ok {
-		if _, ok := cutTokenPrefix(body, "this", "creature", "is", "in", "your", "graveyard", "and"); !ok {
-			return tokens
-		}
-	}
-	end := conditionClauseEnd(tokens, 0)
-	if end < len(tokens) && tokens[end].Kind == shared.Comma {
+	switch intro {
+	case ConditionIntroAsLongAs:
 		return tokens[end+1:]
+	case ConditionIntroIf:
+		if _, ok := recognizeSourceCounterStateCondition(tokens[introWidth:end], atoms); ok {
+			return tokens[end+1:]
+		}
+	default:
 	}
 	return tokens
 }
@@ -764,13 +1043,23 @@ func stripLeadingDurationClause(tokens []shared.Token, atoms Atoms) ([]shared.To
 func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
 	for _, recognize := range []func() ([]EffectSyntax, bool){
 		func() ([]EffectSyntax, bool) { return parsePassiveTokenDoublingEffects(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parsePassiveTokenAdditiveEffects(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseEntersAsCopyEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDevourEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseTributeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseBecomeCopyEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parsePolymorphEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseSetBasePowerToughnessEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseSwitchPowerToughnessEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseNamedBecomePolymorphEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseBecomeTypeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawDoublingReplacement(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseDrawReplacementDig(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseLifeGainReplacement(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) {
+			return parseLeaveBattlefieldExileReplacement(sentence, tokens, atoms)
+		},
 		func() ([]EffectSyntax, bool) { return parseLifeLossReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePunisherEachLoseLifeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseLibraryTopReorderEffect(sentence, tokens, atoms) },
@@ -778,12 +1067,22 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseGroupEntersWithCountersEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePlayerProtectionEffects(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseGroupPhaseOutEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parsePhaseOutEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseMassReanimationExchangeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseAdditionalLandPlaysEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseCastAsThoughFlashEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parsePlayFromLibraryTopEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parsePlayExiledCardEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parsePlayThatCardEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseAdditionalCombatPhaseEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parseRollDieEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parseRingTemptsEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseNoMaximumHandSizeForRestOfGameEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseCantCastSpellsEffect(sentence, tokens) },
-		func() ([]EffectSyntax, bool) { return parseGroupMustAttackEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parseSpellCostModifierEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parseGroupMustAttackEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseDirectedMustAttackEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseAttackTaxEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseSpellsCantBeCounteredEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseChangeTargetRetargetEffect(sentence, tokens, atoms) },
 	} {
@@ -802,7 +1101,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		return effects
 	}
 	indices := effectIndices(tokens, atoms)
-	requiresOrderedLowering := legacyEffectCount(tokens, atoms) > 1
+	requiresOrderedLowering := orderedEffectCount(tokens, atoms) > 1
 	effects := make([]EffectSyntax, 0, len(indices))
 	_, leadingDuration := stripLeadingDurationClause(tokens, atoms)
 	for effectIndex, tokenIndex := range indices {
@@ -821,7 +1120,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		if ambiguousZoneChoice(ownership, atoms, span) {
 			toZone = zone.None
 		}
-		subjectTokens := stripLeadingConditionClause(ownership)
+		subjectTokens := stripLeadingConditionClause(ownership, atoms)
 		subjectTokens, _ = stripLeadingDurationClause(subjectTokens, atoms)
 		staticSubject := parseEffectStaticSubject(subjectTokens, atoms)
 		payment := parseEffectPayment(tokens, atoms)
@@ -851,10 +1150,19 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		}
 		entersColorChoice, entersColorChoiceExclude := entersColorChoiceSyntax(kind, clause)
 		doublePower, doubleToughness := false, false
+		doubleSourceCounters := false
+		var doubleSourceCounterKind counter.Kind
+		doubleCountersTarget := false
+		doubleCountersAllKinds := false
 		if kind == EffectDouble {
 			if object, okDouble := parseDoublePTObject(clause, atoms); okDouble {
 				staticSubject = object.Subject
 				doublePower, doubleToughness = object.DoublePower, object.DoubleToughness
+			} else if counters, okCounters := parseDoubleCountersObject(clause, atoms); okCounters {
+				doubleSourceCounters = true
+				doubleSourceCounterKind = counters.Kind
+				doubleCountersTarget = counters.Target
+				doubleCountersAllKinds = counters.AllKinds
 			}
 		}
 		tokenPower, tokenToughness, tokenPTKnown := parseTokenPowerToughness(kind, clause)
@@ -864,6 +1172,10 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			amount = forEach
 		}
 		counterKind, counterKnown := parseCounterPlacementScopedToCount(clause, amount, atoms)
+		var counterKindChoices []counter.Kind
+		if kind == EffectPut && !counterKnown {
+			counterKindChoices = parseCounterPlacementChoices(clause, atoms)
+		}
 		// A deal-damage clause whose amount is a trailing "where X is the number
 		// of ..." count phrase ("deals X damage to each creature, where X is the
 		// number of Gates you control.") embeds the counted-subject selector in
@@ -883,11 +1195,28 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		// Selection to the run of tokens before the count phrase so the count
 		// subject's filters do not fold into the token's type line.
 		selectionClause := clause
+		tokenAttackDefender, tokenAttackDefenderSpan, hasAttackDefender := tokenAttackDefenderClause(kind, clause)
 		switch {
 		case kind == EffectDealDamage && amount.DynamicForm == EffectDynamicAmountFormWhereX:
 			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
+		case kind == EffectDealDamage && amount.DynamicForm == EffectDynamicAmountFormEqual && groupDamageRecipientFollowsAmount(clause, amount):
+			// "deals damage equal to its power to each opponent" embeds the
+			// "equal to ..." amount phrase before the recipient group, so the
+			// full clause folds the amount's "its power" referent into the
+			// recipient selection. Scope the recipient Selection to the run of
+			// tokens after the amount (the "each <group>" phrase) so the amount's
+			// referent does not bleed into the recipient. The WhereX case above
+			// is the mirror image, where the count phrase trails the recipient.
+			if recipient, ok := damageRecipientTokensAfterAmount(clause, amount); ok {
+				selectionClause = recipient
+			}
 		case kind == EffectCreate && trailingDynamicCountInClause(clause, amount):
 			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
+		case hasAttackDefender:
+			// Scope the token Selection to the tokens before the trailing
+			// "... attacking <defender>" phrase so the defender's player and
+			// planeswalker nouns do not fold into the token's own type line.
+			selectionClause = tokensBeforeOffset(clause, tokenAttackDefenderSpan.Start.Offset)
 		case kind == EffectMill && trailingDynamicCountInClause(clause, amount):
 			// "mills cards equal to <dynamic>" embeds the count subject in the
 			// same clause as the milled-card noun. Scoping the selection to the
@@ -895,9 +1224,17 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			// the amount (e.g. "the sacrificed creature's power") from folding
 			// into the milled-card selection.
 			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
+		case kind == EffectPut && amount.DynamicForm == EffectDynamicAmountFormWhereX:
+			// "put X +1/+1 counters on each creature you control, where X is the
+			// number of Shrines you control" trails the count phrase after the
+			// recipient group. Like the deal-damage WhereX case above, scope the
+			// recipient Selection to the tokens before the count phrase so the
+			// count subject's subtype or referent ("Shrines", "this creature's
+			// power") does not fold into the recipient group's type line.
+			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
 		default:
 		}
-		eachSourceDamageGroup, eachSourceDamageRecipient := eachSourceDamageSyntax(kind, tokens[ownershipStart:tokenIndex], clause, atoms)
+		eachSourceDamageGroup, eachSourceDamageRecipient := eachSourceDamageSyntax(kind, tokens[ownershipStart:tokenIndex], clause, amount, atoms)
 		fallbackOnInability := effectFallbackOnInability(tokens, ownershipStart, tokenIndex)
 		effectSelection := parseSelection(selectionClause, atoms)
 		// A group selection naming a creature conjoined with one other permanent
@@ -908,54 +1245,93 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		if conjunctiveTypeTarget(effectSelection) {
 			effectSelection.ConjunctiveTypes = true
 		}
+		// "put a Saga card and/or a land card from among them onto the
+		// battlefield" joins two singular articled card nouns with "and/or",
+		// meaning up to one card of each named type rather than a single card of
+		// either. Record it so the lowering realizes one optional pick per named
+		// type. The repeated singular "card" noun distinguishes it from a plural
+		// union ("artifacts, creatures, and/or lands"), which is a single match.
+		if kind == EffectPut && selectionJoinsCardNounsWithAndOr(selectionClause) {
+			effectSelection.InclusiveOneOfEach = true
+		}
+		// "put any number of <type> cards from among them" lets the resolving
+		// player choose any quantity from none up to all eligible cards. The
+		// literal "any number of" run is the only signal for this unbounded
+		// count: "all", "the", and a bare plural noun all compile to the same
+		// empty amount, so record the marker positively here rather than
+		// inferring it downstream from the absence of a count.
+		if kind == EffectPut && effectHasTokenWords(selectionClause, "any", "number", "of") {
+			amount.AnyNumber = true
+		}
+		// A created token's name is printed either as a leading "Create <Name>, a
+		// ..." prefix (named legendary tokens) or as a trailing "named <Name>"
+		// tail. Prefer the leading form when present and record its placement so
+		// the exactness recognizer reconstructs the name in the right position.
+		tokenName := parseTokenName(kind, clause)
+		tokenNameLeading := false
+		if leading := parseLeadingTokenName(kind, clause); leading != "" {
+			tokenName = leading
+			tokenNameLeading = true
+		}
 		effects = append(effects, EffectSyntax{
-			Kind:                      kind,
-			Context:                   context,
-			Connection:                connection,
-			ConnectionSpan:            connectionSpan,
-			Span:                      sentence.Span,
-			VerbSpan:                  tokens[tokenIndex].Span,
-			ClauseSpan:                ownershipSpan,
-			Text:                      sentence.Text,
-			Tokens:                    append([]shared.Token(nil), ownership...),
-			Duration:                  duration,
-			DelayedTiming:             delayed,
-			Selection:                 effectSelection,
-			DamageRecipientPair:       parseDamageRecipientPair(kind, clause, amount, atoms),
-			EachSourceDamageGroup:     eachSourceDamageGroup,
-			EachSourceDamageRecipient: eachSourceDamageRecipient,
-			Amount:                    amount,
-			AmassSubtype:              parseAmassSubtype(kind, clause),
-			PowerDelta:                power,
-			ToughnessDelta:            toughness,
-			TokenPower:                tokenPower,
-			TokenToughness:            tokenToughness,
-			TokenPTKnown:              tokenPTKnown,
-			TokenPTVariableX:          tokenPTVariableX,
-			TokenKeywords:             parseTokenKeywords(kind, clause, atoms),
-			TokenName:                 parseTokenName(kind, clause),
-			TokenChoice:               parseTokenChoice(kind, clause),
-			StaticSubject:             staticSubject,
-			DoublePower:               doublePower,
-			DoubleToughness:           doubleToughness,
-			CounterKind:               counterKind,
-			CounterKnown:              counterKnown,
-			CounterRecipientAttached:  counterRecipientAttached(kind, counterKnown, clause),
-			MoveCountersAll:           kind == EffectMoveCounters && moveAllCountersClause(clause),
-			MoveCountersDistribute:    kind == EffectMoveCounters && moveCountersDistributeClause(clause),
-			MoveThoseCounters:         kind == EffectPut && moveThoseCountersClause(clause),
-			FromZone:                  firstZone(atoms, span, ZoneRoleFrom),
-			ToZone:                    toZone,
-			Destination:               parseEffectDestination(ownership),
-			EntersTapped:              effectWordsAtAny(ownership, "battlefield", "tapped"),
-			EntersTappedSelf:          entersTappedSelfSyntax(kind, clause),
-			EntersColorChoice:         entersColorChoice,
-			EntersColorChoiceExclude:  entersColorChoiceExclude,
-			EntersTypeChoice:          entersTypeChoiceSyntax(kind, clause),
-			EntersWithCounters:        entersWithCountersSyntax(kind, clause),
-			UnderYourControl:          effectContainsWords(normalizedWords(ownership), "under", "your", "control"),
-			UnderOwnersControl:        underOwnersControl(ownership),
-			CastAsAdventure:           effectContainsWords(normalizedWords(clause), "as", "an", "adventure"),
+			Kind:           kind,
+			Context:        context,
+			Connection:     connection,
+			ConnectionSpan: connectionSpan,
+			Span:           sentence.Span,
+			VerbSpan:       tokens[tokenIndex].Span,
+			ClauseSpan:     ownershipSpan,
+			Text:           sentence.Text,
+			Tokens:         append([]shared.Token(nil), ownership...),
+			Duration:       duration,
+			DelayedTiming:  delayed,
+			Selection:      effectSelection,
+			DamageRecipient: DamageRecipientSyntax{
+				Groups:          parseDamageRecipientPair(kind, clause, amount, atoms),
+				EachSourceGroup: eachSourceDamageGroup,
+				EachSourceRole:  eachSourceDamageRecipient,
+			},
+			Amount:                   amount,
+			AmassSubtype:             parseAmassSubtype(kind, clause),
+			PowerDelta:               power,
+			ToughnessDelta:           toughness,
+			TokenPower:               tokenPower,
+			TokenToughness:           tokenToughness,
+			TokenPTKnown:             tokenPTKnown,
+			TokenPTVariableX:         tokenPTVariableX,
+			TokenKeywords:            parseTokenKeywords(kind, clause, atoms),
+			TokenName:                tokenName,
+			TokenPredefinedName:      parsePredefinedTokenName(kind, clause),
+			TokenNameLeading:         tokenNameLeading,
+			AttackDefender:           tokenAttackDefender,
+			AttackDefenderSpan:       tokenAttackDefenderSpan,
+			TokenChoice:              parseTokenChoice(kind, clause),
+			StaticSubject:            staticSubject,
+			DoublePower:              doublePower,
+			DoubleToughness:          doubleToughness,
+			DoubleSourceCounters:     doubleSourceCounters,
+			DoubleSourceCounterKind:  doubleSourceCounterKind,
+			DoubleCountersTarget:     doubleCountersTarget,
+			DoubleCountersAllKinds:   doubleCountersAllKinds,
+			CounterKind:              counterKind,
+			CounterKnown:             counterKnown,
+			CounterKindChoices:       counterKindChoices,
+			CounterRecipientAttached: counterRecipientAttached(kind, counterKnown, clause),
+			MoveCountersAll:          kind == EffectMoveCounters && moveAllCountersClause(clause),
+			MoveCountersDistribute:   kind == EffectMoveCounters && moveCountersDistributeClause(clause),
+			MoveThoseCounters:        kind == EffectPut && moveThoseCountersClause(clause),
+			FromZone:                 effectFromZone(kind, clause, atoms, span, toZone),
+			ToZone:                   toZone,
+			Destination:              parseEffectDestination(ownership),
+			EntersTapped:             effectWordsAtAny(ownership, "battlefield", "tapped"),
+			EntersTappedSelf:         entersTappedSelfSyntax(kind, clause),
+			EntersColorChoice:        entersColorChoice,
+			EntersColorChoiceExclude: entersColorChoiceExclude,
+			EntersTypeChoice:         entersTypeChoiceSyntax(kind, clause),
+			EntersWithCounters:       entersWithCountersSyntax(kind, clause),
+			UnderYourControl:         effectContainsWords(normalizedWords(ownership), "under", "your", "control"),
+			UnderOwnersControl:       underOwnersControl(ownership),
+			CastAsAdventure:          effectContainsWords(normalizedWords(clause), "as", "an", "adventure"),
 			CastWithoutPayingManaCost: kind == EffectCast &&
 				effectContainsWords(normalizedWords(clause), "without", "paying", "its", "mana", "cost"),
 			Negated:                 effectIsNegated(tokens, tokenIndex) && !fallbackOnInability,
@@ -966,7 +1342,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			Symbol:                  firstEffectSymbol(clause),
 			Mana:                    parseEffectMana(kind, clause, nextConnection != EffectConnectionNone),
 			Replacement:             parseEffectReplacement(ownership, atoms),
-			References:              referencesInSpan(atoms, ownershipSpan),
+			References:              referencesOutsideAttackDefender(referencesInSpan(atoms, ownershipSpan), hasAttackDefender, tokenAttackDefenderSpan),
 			SubjectReferences:       referencesInSpan(atoms, shared.SpanOf(tokens[ownershipStart:tokenIndex])),
 			Targets:                 targetsInSpan(sentence.Targets, ownershipSpan),
 			SubjectTargets:          targetsInSpan(sentence.Targets, shared.SpanOf(tokens[ownershipStart:tokenIndex])),
@@ -983,10 +1359,8 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 
 func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) {
 	effect.Divided = dividedDamageEffect(effect)
-	effect.DamageRecipientReference = damageRecipientReference(effect)
-	effect.SelfDamageRiderValue, effect.HasSelfDamageRider = damageSelfRider(effect)
-	effect.TargetControllerDamageRiderValue, effect.TargetControllerDamageRiderRecipient = damageTargetControllerRider(effect)
-	effect.SecondTargetDamageRiderValue, effect.HasSecondTargetDamageRider = damageSecondTargetRider(effect)
+	effect.DamageRecipient.Reference = damageRecipientReference(effect)
+	effect.DamageRiders = parseDamageRiders(effect)
 	effect.Dig = parseDigPut(effect)
 	effect.HandLibraryPut = parseHandLibraryPut(effect)
 	effect.HandDiscard = parseHandDiscard(effect)
@@ -1000,6 +1374,7 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	effect.MoveCountersAnyKind = effect.Kind == EffectMoveCounters &&
 		!effect.MoveCountersDistribute && !effect.MoveCountersAll && !effect.CounterKnown
 	effect.Exact = exactEffectSyntax(effect)
+	effect.KeywordGrantChoice = keywordGrantIsChoice(effect)
 	if recognizeTargetOpponentHandMana(effect) {
 		effect.Exact = true
 	}
@@ -1015,21 +1390,39 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	if recognizeTargetColorIfRider(effect, atoms) {
 		effect.Exact = true
 	}
-	// "Destroy each <permanent group>" selects every matching permanent like the
+	// "<verb> each <permanent group>" selects every matching permanent like the
 	// plural "all" form, so flag its selection as a mass group to lower to a
-	// battlefield-group destroy. Scoped to the recognized destroy mass form so
-	// "each creature" damage recipients and "each player" distributive effects on
-	// other effect kinds are untouched.
-	if effect.Kind == EffectDestroy && exactMassEachEffectSyntax(effect, "Destroy each ") {
+	// battlefield-group effect. Scoped to the recognized mass-each forms of the
+	// group verbs (destroy, exile, tap, untap, regenerate) so "each creature"
+	// damage recipients and "each player" distributive effects on other effect
+	// kinds are untouched.
+	if massEachGroupVerbEffectSyntax(effect) {
 		effect.Selection.All = true
 	}
+	// "Return each <group> to its owner's hand" selects every matching permanent
+	// like the plural "all" mass bounce, so flag its selection as a mass group to
+	// lower to a single group Bounce.
+	if exactMassEachBounceEffectSyntax(effect) {
+		effect.Selection.All = true
+	}
+	effect.CounterRecipientSingleChoice = effect.Exact && counterPlacementSingleChoiceRecipient(effect)
 	effect.TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(effect)
 	effect.TokenCopyOfReference = exactCreateCopyTokenReferenceEffectSyntax(effect)
+	effect.TokenCopyOfTriggeringSet = exactCreateCopyTokenTriggeringSetEffectSyntax(effect)
 	effect.TokenCopyOfAttached = exactCreateCopyTokenAttachedEffectSyntax(effect)
 	effect.RegenerateAttached = effect.Kind == EffectRegenerate && exactRegenerateAttachedEffectSyntax(effect)
 	if group, ok := exactCreateCopyTokenForEachEffectSyntax(effect, atoms); ok {
 		effect.TokenCopyOfForEach = true
 		effect.TokenCopyForEachGroup = group
+		// The per-each copy is the more specific shape: its "For each <group>,"
+		// prefix iterates the controlled group and its trailing "that <permanent>"
+		// pronoun names each member, not a single fixed source. Clear the
+		// single-source copy flags the reference matcher also set so the lowering
+		// dispatches to the per-each path.
+		effect.TokenCopyOfTarget = false
+		effect.TokenCopyOfReference = false
+		effect.TokenCopyOfTriggeringSet = false
+		effect.TokenCopyOfAttached = false
 	}
 	effect.Mana.LegacyBodyExact = legacyExactManaBody(effect, sentence)
 	if effect.Kind == EffectSearch {
@@ -1148,6 +1541,172 @@ func matchPassiveTokenDoubling(tokens []shared.Token) (commaIndex int, anyContro
 		return 8, true, true
 	}
 	return 0, false, false
+}
+
+// parsePassiveTokenAdditiveEffects recognizes the passive-voice additive
+// token-creation replacement "If one or more [type] tokens would be created
+// under your control, those tokens plus <addend> are created instead."
+// (Peregrin Took: "... plus an additional Food token ..."; Donatello, the
+// Brains: "... plus a Mutagen token ..."; Stridehangar Automaton: "If one or
+// more artifact tokens would be created under your control, those tokens plus an
+// additional 1/1 colorless Thopter artifact creature token with flying are
+// created instead."). Its active-voice equivalent "If you would create one or
+// more [type] tokens, instead create those tokens plus an additional <addend>."
+// (Worldwalker Helm, Xorn) parses through the ordinary create-verb path. The
+// passive wording carries no active "create" verb, so it is recognized here and
+// emitted as the same two EffectCreate instructions the active form produces:
+// the would-create group (carrying the optional card-type filter in its
+// selector) and the addend output marked EffectReplacementPlusAdditional. The
+// matching intervening-if condition is recognized separately by
+// recognizeTokenCreationCondition.
+func parsePassiveTokenAdditiveEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	commaIndex, anyController, ok := matchPassiveTokenAdditive(tokens)
+	if !ok {
+		return nil, false
+	}
+	condition := tokens[:commaIndex]
+	resolving := tokens[commaIndex+1:]
+	addendAmount, ok := passiveTokenAddendAmount(resolving, atoms)
+	if !ok {
+		return nil, false
+	}
+	// The would-create noun phrase ("one or more [type] tokens") is the
+	// condition with its leading "if" and trailing "would be created [under your
+	// control]" stripped. parseSelection over just the noun phrase keeps the
+	// "would be created" verb words and the controller clause out of the
+	// selection, leaving the optional card-type filter the lowering reads.
+	nounPhrase := condition
+	if len(nounPhrase) > 0 && equalWord(nounPhrase[0], "if") {
+		nounPhrase = nounPhrase[1:]
+	}
+	if trimmed, stripped := stripTokenSuffix(nounPhrase, "would", "be", "created", "under", "your", "control"); stripped {
+		nounPhrase = trimmed
+	} else if trimmed, stripped := stripTokenSuffix(nounPhrase, "would", "be", "created"); stripped {
+		nounPhrase = trimmed
+	}
+	createdIndex := commaIndex - 1
+	for i := range condition {
+		if equalWord(condition[i], "created") {
+			createdIndex = i
+			break
+		}
+	}
+	createEffect := EffectSyntax{
+		Kind:             EffectCreate,
+		Context:          EffectContextController,
+		Span:             shared.SpanOf(condition),
+		VerbSpan:         tokens[createdIndex].Span,
+		ClauseSpan:       shared.SpanOf(condition),
+		Text:             sentence.Text,
+		Tokens:           append([]shared.Token(nil), condition...),
+		Selection:        parseSelection(nounPhrase, atoms),
+		Amount:           EffectAmountSyntax{Value: 1, Known: true},
+		UnderYourControl: !anyController,
+	}
+	if conjunctiveTypeTarget(createEffect.Selection) {
+		createEffect.Selection.ConjunctiveTypes = true
+	}
+	// The addend clause ("those tokens plus <addend>") is the resolving clause
+	// with its trailing "are created instead ." stripped. It is parsed by the
+	// same token-characteristic helpers the active create-verb path uses, so the
+	// addend's subtypes, colors, power/toughness, keyword, and name match the
+	// active form exactly.
+	addendClause := resolving[:len(resolving)-4]
+	tokenPower, tokenToughness, tokenPTKnown := parseTokenPowerToughness(EffectCreate, addendClause)
+	plusSpan := resolving[0].Span
+	for i := range resolving {
+		if equalWord(resolving[i], "plus") {
+			plusSpan = resolving[i].Span
+			break
+		}
+	}
+	createdResolvingIndex := len(resolving) - 3
+	addendEffect := EffectSyntax{
+		Kind:                EffectCreate,
+		Context:             EffectContextReferencedObject,
+		Span:                shared.SpanOf(resolving),
+		VerbSpan:            resolving[createdResolvingIndex].Span,
+		ClauseSpan:          shared.SpanOf(resolving),
+		Text:                sentence.Text,
+		Tokens:              append([]shared.Token(nil), resolving...),
+		Selection:           parseSelection(addendClause, atoms),
+		Amount:              EffectAmountSyntax{Value: 1, Known: true},
+		TokenPower:          tokenPower,
+		TokenToughness:      tokenToughness,
+		TokenPTKnown:        tokenPTKnown,
+		TokenKeywords:       parseTokenKeywords(EffectCreate, addendClause, atoms),
+		TokenName:           parseTokenName(EffectCreate, addendClause),
+		TokenPredefinedName: parsePredefinedTokenName(EffectCreate, addendClause),
+		Replacement: EffectReplacementSyntax{
+			Kind:   EffectReplacementPlusAdditional,
+			Amount: addendAmount,
+			Span:   plusSpan,
+		},
+		References: referencesInSpan(atoms, shared.SpanOf(resolving)),
+	}
+	if conjunctiveTypeTarget(addendEffect.Selection) {
+		addendEffect.Selection.ConjunctiveTypes = true
+	}
+	return []EffectSyntax{createEffect, addendEffect}, true
+}
+
+// matchPassiveTokenAdditive reports the index of the comma separating the
+// would-create condition clause from the additive output clause when tokens
+// spell the passive additive token-creation replacement. The controller-only
+// wording ("...under your control, ...") and the controller-agnostic wording
+// ("...would be created, ...") are distinguished by anyController. The optional
+// card-type word(s) between "more" and "tokens" are tolerated here and carried
+// downstream by the would-create group's selector, mirroring the active form.
+func matchPassiveTokenAdditive(tokens []shared.Token) (commaIndex int, anyController, ok bool) {
+	if !effectWordsAt(tokens, 0, "if", "one", "or", "more") {
+		return 0, false, false
+	}
+	for i := range tokens {
+		if tokens[i].Kind != shared.Comma || !effectWordsAt(tokens, i+1, "those", "tokens", "plus") {
+			continue
+		}
+		body := tokens[1:i]
+		controllerOnly := false
+		if _, stripped := stripTokenSuffix(body, "tokens", "would", "be", "created", "under", "your", "control"); stripped {
+			controllerOnly = true
+		} else if _, stripped := stripTokenSuffix(body, "tokens", "would", "be", "created"); !stripped {
+			continue
+		}
+		if !effectWordsAt(body, 0, "one", "or", "more") {
+			continue
+		}
+		resolving := tokens[i+1:]
+		n := len(resolving)
+		if n < 4 ||
+			!effectWordsAt(resolving, n-4, "are", "created", "instead") ||
+			resolving[n-1].Kind != shared.Period {
+			continue
+		}
+		return i, !controllerOnly, true
+	}
+	return 0, false, false
+}
+
+// passiveTokenAddendAmount returns the number of additional tokens an additive
+// token-creation replacement creates, read from the "those tokens plus <amount>
+// ..." clause. The "a"/"an" article and the "an additional" rider both denote a
+// single extra token; an explicit number ("two additional ...") denotes that
+// many. Any other wording fails closed.
+func passiveTokenAddendAmount(tokens []shared.Token, atoms Atoms) (int, bool) {
+	for i := range tokens {
+		if !equalWord(tokens[i], "plus") || i+1 >= len(tokens) {
+			continue
+		}
+		next := tokens[i+1]
+		if equalWord(next, "a") || equalWord(next, "an") {
+			return 1, true
+		}
+		if amount, ok := effectNumber(next, atoms); ok {
+			return amount, true
+		}
+		return 0, false
+	}
+	return 0, false
 }
 
 // parseDrawEmptyLibraryWinReplacement recognizes the draw-from-empty-library win
@@ -1354,6 +1913,119 @@ func parseDrawDoublingReplacement(sentence Sentence, tokens []shared.Token, atom
 	}}, true
 }
 
+// parseDrawReplacementDig recognizes the draw-replacement dig "If you would draw
+// a card, instead look at the top <N> cards of your library, then put <M> [of
+// them|of those cards] into your hand and the <rest|other> <remainder>."
+// (Underrealm Lich) and emits a single dig effect carrying the look count N (in
+// Amount), the take count M and remainder destination (in Dig), and the instead
+// replacement. The matching intervening-if condition is recognized separately by
+// recognizeDrawCardReplacementCondition.
+func parseDrawReplacementDig(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	look, dig, ok := matchDrawReplacementDig(tokens)
+	if !ok {
+		return nil, false
+	}
+	// The would-draw condition is "if you would draw a card", so the separating
+	// comma is token index 6 and the resolving "instead ..." clause follows it.
+	const commaIndex = 6
+	resolving := tokens[commaIndex+1:]
+	return []EffectSyntax{{
+		Kind:       EffectDig,
+		Context:    EffectContextController,
+		Span:       shared.SpanOf(tokens),
+		VerbSpan:   tokens[commaIndex+2].Span,
+		ClauseSpan: shared.SpanOf(tokens),
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), resolving...),
+		Amount:     EffectAmountSyntax{Value: look, Known: true},
+		Dig:        dig,
+		Replacement: EffectReplacementSyntax{
+			Kind: EffectReplacementInstead,
+			Span: tokens[commaIndex+1].Span,
+		},
+		References: referencesInSpan(atoms, shared.SpanOf(resolving)),
+		Exact:      true,
+	}}, true
+}
+
+// matchDrawReplacementDig reports the look count and structured dig fields when
+// tokens spell the draw-replacement dig "if you would draw a card, instead look
+// at the top <N> cards of your library, then put <M> ... instead". The take
+// count must be at least one and fewer than the look count, mirroring the
+// impulse dig's look-exceeds-take requirement; every other wording fails closed.
+func matchDrawReplacementDig(tokens []shared.Token) (look int, dig DigSyntax, ok bool) {
+	if len(tokens) < 6 || tokens[len(tokens)-1].Kind != shared.Period {
+		return 0, DigSyntax{}, false
+	}
+	if !effectWordsAt(tokens, 0, "if", "you", "would", "draw", "a", "card") ||
+		len(tokens) <= 6 || tokens[6].Kind != shared.Comma {
+		return 0, DigSyntax{}, false
+	}
+	if !effectWordsAt(tokens, 7, "instead", "look", "at", "the", "top") {
+		return 0, DigSyntax{}, false
+	}
+	i := 12
+	if i >= len(tokens) {
+		return 0, DigSyntax{}, false
+	}
+	lookCount, lookOK := CardinalWordValue(tokens[i].Text)
+	if !lookOK || lookCount < 2 {
+		return 0, DigSyntax{}, false
+	}
+	i++
+	if !effectWordsAt(tokens, i, "cards", "of", "your", "library") {
+		return 0, DigSyntax{}, false
+	}
+	i += 4
+	if i >= len(tokens) || tokens[i].Kind != shared.Comma {
+		return 0, DigSyntax{}, false
+	}
+	i++
+	if !effectWordsAt(tokens, i, "then", "put") {
+		return 0, DigSyntax{}, false
+	}
+	i += 2
+	if i >= len(tokens) {
+		return 0, DigSyntax{}, false
+	}
+	takeCount, takeOK := CardinalWordValue(tokens[i].Text)
+	if !takeOK || takeCount < 1 || takeCount >= lookCount {
+		return 0, DigSyntax{}, false
+	}
+	i++
+	switch {
+	case effectWordsAt(tokens, i, "of", "them"):
+		dig.Source = DigSourceThem
+		i += 2
+	case effectWordsAt(tokens, i, "of", "those", "cards"):
+		dig.Source = DigSourceThoseCards
+		i += 3
+	default:
+		dig.Source = DigSourceNone
+	}
+	if !effectWordsAt(tokens, i, "into", "your", "hand", "and", "the") {
+		return 0, DigSyntax{}, false
+	}
+	i += 5
+	switch {
+	case effectWordsAt(tokens, i, "other"):
+		dig.Singular = true
+		i++
+	case effectWordsAt(tokens, i, "rest"):
+		i++
+	default:
+		return 0, DigSyntax{}, false
+	}
+	remainder, after, remainderOK := digRemainderAt(tokens, i)
+	if !remainderOK || after != len(tokens)-1 {
+		return 0, DigSyntax{}, false
+	}
+	dig.Remainder = remainder
+	dig.Take = takeCount
+	dig.Put = true
+	return lookCount, dig, true
+}
+
 // matchDrawDoubling reports the comma index separating the would-draw condition
 // from the "draw <N> cards instead" result and the multiplier N when tokens
 // spell a draw-doubling replacement. The condition must be the plain would-draw
@@ -1467,6 +2139,69 @@ func matchLifeGainReplacement(tokens []shared.Token, atoms Atoms) (commaIndex in
 	return 0, EffectReplacementSyntax{}, false
 }
 
+// parseLeaveBattlefieldExileReplacement recognizes the leaves-the-battlefield
+// self-replacement "If it would leave the battlefield, exile it instead of
+// putting it anywhere else." (Whip of Erebos) and its "this <type>" self-applied
+// and shorter "...exile it instead." variants, emitting a single
+// EffectExileIfLeaveBattlefield effect so the leading would-leave condition does
+// not become a spurious activation/intervening condition of its own. The
+// matching condition boundary is suppressed by
+// conditionLeaveBattlefieldExileReplacementAt.
+func parseLeaveBattlefieldExileReplacement(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	context, ok := matchLeaveBattlefieldExileReplacement(tokens)
+	if !ok {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:       EffectExileIfLeaveBattlefield,
+		Context:    context,
+		Span:       shared.SpanOf(tokens),
+		ClauseSpan: shared.SpanOf(tokens),
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		References: referencesInSpan(atoms, shared.SpanOf(tokens)),
+		Exact:      true,
+	}}, true
+}
+
+// matchLeaveBattlefieldExileReplacement reports the effect context (referenced
+// object for "it", source for "this <type>") when tokens spell the
+// leaves-the-battlefield exile replacement "If <subject> would leave the
+// battlefield, exile it instead[ of putting it anywhere else]."
+func matchLeaveBattlefieldExileReplacement(tokens []shared.Token) (EffectContextKind, bool) {
+	if len(tokens) < 9 || tokens[len(tokens)-1].Kind != shared.Period || !equalWord(tokens[0], "if") {
+		return EffectContextUnknown, false
+	}
+	rest := tokens[1:]
+	subjectWidth := leaveBattlefieldReplacementSubjectWidth(rest)
+	if subjectWidth == 0 {
+		return EffectContextUnknown, false
+	}
+	idx := 1 + subjectWidth
+	if !effectWordsAt(tokens, idx, "would", "leave", "the", "battlefield") {
+		return EffectContextUnknown, false
+	}
+	idx += 4
+	if idx >= len(tokens) || tokens[idx].Kind != shared.Comma {
+		return EffectContextUnknown, false
+	}
+	result := tokens[idx+1 : len(tokens)-1]
+	if !leaveBattlefieldReplacementResult(result) {
+		return EffectContextUnknown, false
+	}
+	if equalWord(rest[0], "it") {
+		return EffectContextReferencedObject, true
+	}
+	return EffectContextSource, true
+}
+
+// leaveBattlefieldReplacementResult reports whether result spells the redirect
+// "exile it instead" or "exile it instead of putting it anywhere else".
+func leaveBattlefieldReplacementResult(result []shared.Token) bool {
+	return tokenWordsEqual(result, "exile", "it", "instead") ||
+		tokenWordsEqual(result, "exile", "it", "instead", "of", "putting", "it", "anywhere", "else")
+}
+
 // parseLifeLossReplacement recognizes the life-loss replacement "If an opponent
 // would lose life during your turn, they lose twice that much life instead."
 // (Bloodletter of Aclazotz) and its untimed/any-player generalizations,
@@ -1538,14 +2273,26 @@ func matchLifeLossReplacement(tokens []shared.Token, atoms Atoms) (commaIndex in
 }
 
 func recognizeImpulseExileSequence(sentences []Sentence) bool {
+	// Trailing reminder text ("(If you cast a spell this way…)") is parsed as
+	// its own parenthesized sentence; it carries no game meaning and is excluded
+	// from coverage, so ignore it when matching the two-sentence impulse shape.
+	for len(sentences) > 2 && isReminderSentence(sentences[len(sentences)-1]) {
+		sentences = sentences[:len(sentences)-1]
+	}
 	if len(sentences) != 2 {
 		return false
 	}
-	amount, ok := matchImpulseExileClause(strings.TrimSpace(sentences[0].Text))
+	amount, variableX, ok := matchImpulseExileClause(strings.TrimSpace(sentences[0].Text))
 	if !ok {
 		return false
 	}
-	duration, ok := matchImpulsePlayPermissionClause(strings.TrimSpace(sentences[1].Text), amount)
+	// "the top X cards" agrees with the plural play-permission demonstratives
+	// ("those cards"/"them"), so resolve the object phrase as a plural.
+	objectAmount := amount
+	if variableX {
+		objectAmount = 2
+	}
+	duration, ok := matchImpulsePlayPermissionClause(strings.TrimSpace(sentences[1].Text), objectAmount)
 	if !ok {
 		return false
 	}
@@ -1557,39 +2304,54 @@ func recognizeImpulseExileSequence(sentences []Sentence) bool {
 		ClauseSpan: span,
 		Text:       sentences[0].Text + " " + sentences[1].Text,
 		Tokens:     append(append([]shared.Token(nil), sentences[0].Tokens...), sentences[1].Tokens...),
-		Amount:     EffectAmountSyntax{Value: amount, Known: true},
+		Amount:     EffectAmountSyntax{Value: amount, Known: !variableX, VariableX: variableX},
 		Duration:   duration,
 		Exact:      true,
 	}}
 	return true
 }
 
+// isReminderSentence reports whether a sentence is wholly reminder text, i.e.
+// its trimmed text is fully enclosed in parentheses ("(…)"). Such sentences
+// carry no game meaning and are excluded from coverage.
+func isReminderSentence(sentence Sentence) bool {
+	text := strings.TrimSpace(sentence.Text)
+	return strings.HasPrefix(text, "(") && strings.HasSuffix(text, ")")
+}
+
 // matchImpulseExileClause recognizes "Exile the top card of your library." and
 // its counted plural "Exile the top <N> cards of your library." (N a cardinal
-// word two..ten), returning the fixed number of cards exiled.
-func matchImpulseExileClause(text string) (int, bool) {
+// word two..ten) or variable "Exile the top X cards of your library." It returns
+// the fixed number of cards exiled and whether the count is the spell's {X}.
+func matchImpulseExileClause(text string) (amount int, variableX bool, ok bool) {
 	if strings.EqualFold(text, "Exile the top card of your library.") {
-		return 1, true
+		return 1, false, true
 	}
 	const prefix = "Exile the top "
 	const suffix = " cards of your library."
 	if len(text) <= len(prefix)+len(suffix) ||
 		!strings.EqualFold(text[:len(prefix)], prefix) ||
 		!strings.EqualFold(text[len(text)-len(suffix):], suffix) {
-		return 0, false
+		return 0, false, false
 	}
-	count, ok := CardinalWordValue(text[len(prefix) : len(text)-len(suffix)])
+	middle := text[len(prefix) : len(text)-len(suffix)]
+	if middle == "X" {
+		return 0, true, true
+	}
+	count, ok := CardinalWordValue(middle)
 	if !ok || count < 2 {
-		return 0, false
+		return 0, false, false
 	}
-	return count, true
+	return count, false, true
 }
 
 // matchImpulsePlayPermissionClause recognizes the temporary play-permission
 // sentence that follows an impulse exile: "You may play <object> this turn.",
 // the "until end of turn" variants (trailing or leading "Until end of turn,"),
-// where <object> agrees in number with the count exiled ("it"/"that card" for a
-// single card, "them"/"those cards" for several). It returns the play window.
+// the "until the end of your next turn" variants, and the "until your next end
+// step" variants (Inti, Seneschal of the Sun), where <object> agrees in number
+// with the count exiled ("it"/"that card" for a single card, "them"/"those
+// cards" for several). It returns the play window.
 func matchImpulsePlayPermissionClause(text string, amount int) (EffectDurationKind, bool) {
 	for _, object := range impulsePlayObjects(amount) {
 		switch {
@@ -1601,6 +2363,9 @@ func matchImpulsePlayPermissionClause(text string, amount int) (EffectDurationKi
 		case strings.EqualFold(text, "You may play "+object+" until the end of your next turn."),
 			strings.EqualFold(text, "Until the end of your next turn, you may play "+object+"."):
 			return EffectDurationUntilEndOfYourNextTurn, true
+		case strings.EqualFold(text, "You may play "+object+" until your next end step."),
+			strings.EqualFold(text, "Until your next end step, you may play "+object+"."):
+			return EffectDurationUntilYourNextEndStep, true
 		}
 	}
 	return EffectDurationNone, false
@@ -1653,6 +2418,36 @@ func recognizeTargetOpponentHandManaSentence(sentence *Sentence) {
 	sentence.Effects[0].Targets = []TargetSyntax{target}
 }
 
+// recognizeLookAtTargetPlayerHandSentence rewrites the manufactured possessive
+// target of a "Look at target <player>'s hand." effect into a clean runtime
+// player target. The generic target parser spans the whole "target player's
+// hand" phrase with an untyped selection, which the player-target lowering
+// cannot consume. This retypes it to a "target player" (or "target opponent")
+// selection so lowering can emit a single player target. The parser owns this
+// wording; the rewrite only fires once the effect is classified EffectLookAtHand.
+func recognizeLookAtTargetPlayerHandSentence(sentence *Sentence) {
+	if len(sentence.Effects) != 1 ||
+		sentence.Effects[0].Kind != EffectLookAtHand ||
+		len(sentence.Targets) != 1 {
+		return
+	}
+	selection := SelectionSyntax{Kind: SelectionPlayer}
+	text := "target player"
+	if strings.Contains(strings.ToLower(sentence.Targets[0].Text), "opponent") {
+		selection = SelectionSyntax{Kind: SelectionOpponent}
+		text = "target opponent"
+	}
+	target := sentence.Targets[0]
+	target.Cardinality = TargetCardinalitySyntax{Min: 1, Max: 1}
+	target.Selection = selection
+	target.Text = text
+	target.Exact = true
+	sentence.Targets[0] = target
+	sentence.Effects[0].Targets = []TargetSyntax{target}
+	sentence.Effects[0].Context = EffectContextTarget
+	sentence.Effects[0].Exact = true
+}
+
 // recognizeDynamicCountMana types an add-mana body whose produced amount scales
 // with a dynamic count: a fixed-color battlefield count ("for each <permanent>
 // you control", recognizeControlledCountMana), a chosen-color battlefield count
@@ -1661,7 +2456,9 @@ func recognizeTargetOpponentHandManaSentence(sentence *Sentence) {
 func recognizeDynamicCountMana(effect *EffectSyntax) bool {
 	return recognizeControlledCountMana(effect) ||
 		recognizeChosenColorCountMana(effect) ||
+		recognizeChosenColorSourceCounterMana(effect) ||
 		recognizeSourceCounterCountMana(effect) ||
+		recognizeSingleColorDynamicMana(effect) ||
 		recognizeAnyOneColorDynamicMana(effect)
 }
 
@@ -1705,6 +2502,44 @@ func recognizeTargetColorIfRider(effect *EffectSyntax, atoms Atoms) bool {
 	}
 	_, ok = atoms.ColorAt(rest[0].Span)
 	return ok
+}
+
+// recognizeSingleColorDynamicMana types the add-mana body "an amount of
+// <symbol> equal to <dynamic>" (Marwyn, the Nurturer: "Add an amount of {G}
+// equal to Marwyn's power."), the fixed-color sibling of
+// recognizeAnyOneColorDynamicMana. The produced quantity is the dynamic amount
+// already typed onto effect.Amount by parseEffectAmount ("equal to <dynamic>" or
+// "where X is <dynamic>"); the leading "an amount of <symbol>" body is left
+// unrecognized by parseEffectMana because the trailing amount phrase trips its
+// fixed-symbol parsing. This re-parses just the lone produced symbol and records
+// it as one fixed color, so the lowerer can emit that color scaled by the
+// dynamic amount. It fires only for a single fixed produced color, so choice,
+// any-color, and multi-symbol outputs stay fail-closed.
+func recognizeSingleColorDynamicMana(effect *EffectSyntax) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Amount.DynamicKind == EffectDynamicAmountNone {
+		return false
+	}
+	switch effect.Amount.DynamicForm {
+	case EffectDynamicAmountFormWhereX, EffectDynamicAmountFormEqual:
+	default:
+		return false
+	}
+	body := manaBodyBeforeAmount(effect)
+	for len(body) > 0 && body[len(body)-1].Kind == shared.Comma {
+		body = body[:len(body)-1]
+	}
+	if len(body) != 4 || !effectWordsAt(body, 0, "an", "amount", "of") {
+		return false
+	}
+	parsed := parseEffectMana(EffectAddMana, body[3:], true)
+	if !parsed.ColorsKnown || len(parsed.Colors) != 1 ||
+		parsed.Choice || parsed.AnyColor || parsed.Colors[0] == mana.C {
+		return false
+	}
+	parsed.Span = shared.SpanOf(body)
+	effect.Mana = parsed
+	return true
 }
 
 // recognizeAnyOneColorDynamicMana types the add-mana body "X mana of any one
@@ -1811,6 +2646,34 @@ func recognizeSourceCounterCountMana(effect *EffectSyntax) bool {
 		return false
 	}
 	effect.Mana = parsed
+	return true
+}
+
+// recognizeChosenColorSourceCounterMana types the add-mana body "one mana of
+// that color" whose produced quantity scales with the number of counters of one
+// kind on the source permanent ("Choose a color. Add one mana of that color for
+// each charge counter on this artifact.", Astral Cornucopia). The trailing "for
+// each <kind> counter on this permanent" suffix is already typed onto
+// effect.Amount as a source-counter-count dynamic amount by parseEffectAmount;
+// the leading "one mana of that color" body is left unrecognized by
+// parseEffectMana. This credits the freely-chosen single-color output when the
+// body matches exactly and the amount is a supported source-counter count, so the
+// lowerer can produce one mana of the chosen color per counter. It fails closed
+// for any other amount.
+func recognizeChosenColorSourceCounterMana(effect *EffectSyntax) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Amount.DynamicKind != EffectDynamicAmountSourceCounterCount ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormForEach ||
+		effect.Amount.Multiplier < 1 ||
+		!effect.Amount.CounterKind.Valid() {
+		return false
+	}
+	body := manaBodyBeforeAmount(effect)
+	if len(body) != 5 ||
+		!effectWordsAt(body, 0, "one", "mana", "of", "that", "color") {
+		return false
+	}
+	effect.Mana = EffectManaSyntax{Span: shared.SpanOf(body), ChosenColor: true, ChosenColorDynamic: true}
 	return true
 }
 
@@ -2054,12 +2917,14 @@ func exactControllerRandomDiscardSyntax(effect *EffectSyntax) bool {
 // parseDiscardEntireHand recognizes a "discard their hand" clause whose affected
 // player discards every card in hand. It accepts the controller ("Discard your
 // hand"), each-player, each-opponent, and single-target-player forms; the
-// amount is unknown because it depends on the player's hand at resolution.
+// amount is unknown because it depends on the player's hand at resolution. The
+// optional "You may discard your hand." offer is accepted too: exactEffectClause
+// text strips the "you may" prefix, so the controller clause reconstructs
+// exactly and the optional wrapper gates the entire-hand discard.
 func parseDiscardEntireHand(effect *EffectSyntax) bool {
 	if effect.Kind != EffectDiscard ||
 		effect.Amount.Known ||
-		effect.Negated ||
-		effect.Optional {
+		effect.Negated {
 		return false
 	}
 	text := strings.TrimSpace(exactEffectClauseText(effect))
@@ -2140,6 +3005,40 @@ func parseGroupPhaseOutEffect(sentence Sentence, tokens []shared.Token, atoms At
 		Selection:  parseSelection(tokens, atoms),
 		Exact:      true,
 	}}, true
+}
+
+// parsePhaseOutEffect recognizes the singular-subject "<subject> phases out."
+// effect (CR 702.26), such as "This creature phases out." (Blink Dog) and
+// "Target creature phases out." The plural mass form "All permanents you control
+// phase out." is handled separately by parseGroupPhaseOutEffect; this recognizer
+// keys on the singular "phases out" verb that closes the sentence, so the two
+// never overlap. The subject's self reference or target is scanned by the shared
+// reference and target passes, so the recognizer only identifies the verb and
+// covers the sentence; lowering fails closed for any subject it cannot represent.
+func parsePhaseOutEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	if !sentenceClosesWithPhasesOut(tokens) {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:       EffectPhaseOut,
+		Span:       sentence.Span,
+		ClauseSpan: sentence.Span,
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		Selection:  parseSelection(tokens, atoms),
+		Exact:      true,
+	}}, true
+}
+
+// sentenceClosesWithPhasesOut reports whether the sentence's meaningful tokens
+// end with the singular "phases out" verb immediately before the closing period.
+// It requires a subject before the verb so the bare verb alone never matches.
+func sentenceClosesWithPhasesOut(tokens []shared.Token) bool {
+	period := shared.TopLevelIndex(tokens, shared.Period)
+	if period < 3 {
+		return false
+	}
+	return equalWord(tokens[period-2], "phases") && equalWord(tokens[period-1], "out")
 }
 
 // parseMassReanimationExchangeEffect recognizes the symmetric mass-reanimation
@@ -2255,6 +3154,207 @@ func parseCastAsThoughFlashEffect(sentence Sentence, tokens []shared.Token) ([]E
 		Tokens:     append([]shared.Token(nil), tokens...),
 		Context:    EffectContextController,
 		Duration:   EffectDurationThisTurn,
+		Exact:      true,
+	}}, true
+}
+
+// parseAdditionalCombatPhaseEffect recognizes the extra-phase-insertion effect
+// in both clause orders: the leading "After this [main/combat] phase, there is
+// an additional combat phase[ followed by an additional main phase]."
+// (Aggravated Assault, Aurelia the Warleader, World at War, Combat Celebrant)
+// and the trailing "There is an additional combat phase after this phase."
+// (Raiyuu, Storm's Edge; Moraug, Fury of Akoum, which prints "there's"). It
+// inserts an additional combat phase into the current turn, optionally followed
+// by an additional main phase. The "after this <phase>" reference to the current
+// phase is descriptive; the simplified runtime model drains the inserted phases
+// after the postcombat main phase. A leading condition clause ("If it's the
+// first combat phase of the turn, ...") is stripped here so the extra-phase
+// grammar matches; that condition is recognized separately and re-associated by
+// the compiler through this effect's sentence-wide ClauseSpan. Any other wording
+// fails closed and flows through the generic parser.
+func parseAdditionalCombatPhaseEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+	effectTokens := tokens
+	if len(tokens) > 0 {
+		if intro, _ := conditionIntroAt(tokens, 0); intro != ConditionIntroUnknown {
+			end := conditionClauseEnd(tokens, 0)
+			if end >= len(tokens) || tokens[end].Kind != shared.Comma {
+				return nil, false
+			}
+			effectTokens = tokens[end+1:]
+		}
+	}
+	words := make([]shared.Token, 0, len(effectTokens))
+	for _, token := range effectTokens {
+		if token.Kind == shared.Period || token.Kind == shared.Comma {
+			continue
+		}
+		words = append(words, token)
+	}
+	verbToken, additionalMain, ok := matchAdditionalCombatPhaseWords(words)
+	if !ok {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:                  EffectAdditionalCombatPhase,
+		Span:                  sentence.Span,
+		ClauseSpan:            sentence.Span,
+		VerbSpan:              verbToken.Span,
+		Text:                  sentence.Text,
+		Tokens:                append([]shared.Token(nil), tokens...),
+		Context:               EffectContextController,
+		AdditionalCombatPhase: true,
+		AdditionalMainPhase:   additionalMain,
+		Exact:                 true,
+	}}, true
+}
+
+// matchAdditionalCombatPhaseWords matches the punctuation-stripped words of an
+// additional-combat-phase clause in either order and reports the "there is"
+// verb token and whether an additional main phase follows. It fails closed for
+// any other wording.
+func matchAdditionalCombatPhaseWords(words []shared.Token) (verb shared.Token, additionalMain bool, ok bool) {
+	if verb, main, ok := matchLeadingAdditionalCombatPhaseWords(words); ok {
+		return verb, main, true
+	}
+	return matchTrailingAdditionalCombatPhaseWords(words)
+}
+
+// matchLeadingAdditionalCombatPhaseWords matches "after this [main|combat] phase
+// there is an additional combat phase[ followed by an additional main phase]".
+func matchLeadingAdditionalCombatPhaseWords(words []shared.Token) (verb shared.Token, additionalMain bool, ok bool) {
+	rest, ok := cutTokenPrefix(words, "after", "this")
+	if !ok || len(rest) == 0 {
+		return shared.Token{}, false, false
+	}
+	if equalWord(rest[0], "main") || equalWord(rest[0], "combat") {
+		rest = rest[1:]
+	}
+	rest, ok = cutTokenPrefix(rest, "phase")
+	if !ok || len(rest) == 0 {
+		return shared.Token{}, false, false
+	}
+	verb = rest[0]
+	rest, ok = cutTokenPrefix(rest, "there", "is", "an", "additional", "combat", "phase")
+	if !ok {
+		return shared.Token{}, false, false
+	}
+	main, ok := matchAdditionalMainPhaseTail(rest)
+	if !ok {
+		return shared.Token{}, false, false
+	}
+	return verb, main, true
+}
+
+// matchTrailingAdditionalCombatPhaseWords matches "there is an additional combat
+// phase after this [phase|one][ followed by an additional main phase]", also
+// accepting the "there's" contraction.
+func matchTrailingAdditionalCombatPhaseWords(words []shared.Token) (verb shared.Token, additionalMain bool, ok bool) {
+	if len(words) == 0 {
+		return shared.Token{}, false, false
+	}
+	verb = words[0]
+	rest, ok := cutTokenPrefix(words, "there's", "an", "additional", "combat", "phase")
+	if !ok {
+		rest, ok = cutTokenPrefix(words, "there", "is", "an", "additional", "combat", "phase")
+	}
+	if !ok {
+		return shared.Token{}, false, false
+	}
+	rest, ok = cutTokenPrefix(rest, "after", "this")
+	if !ok || len(rest) == 0 || (!equalWord(rest[0], "phase") && !equalWord(rest[0], "one")) {
+		return shared.Token{}, false, false
+	}
+	main, ok := matchAdditionalMainPhaseTail(rest[1:])
+	if !ok {
+		return shared.Token{}, false, false
+	}
+	return verb, main, true
+}
+
+// matchAdditionalMainPhaseTail consumes an optional "followed by an additional
+// main phase" tail, reporting whether it was present. It fails closed if any
+// other tokens remain.
+func matchAdditionalMainPhaseTail(words []shared.Token) (additionalMain bool, ok bool) {
+	if len(words) == 0 {
+		return false, true
+	}
+	rest, ok := cutTokenPrefix(words, "followed", "by", "an", "additional", "main", "phase")
+	if !ok || len(rest) != 0 {
+		return false, false
+	}
+	return true, true
+}
+
+// parseRollDieEffect recognizes "roll a d<N>" (CR 706), the die-roll mechanic
+// whose result a following effect consumes via "...equal to the result." It
+// types an EffectRollDie carrying DieSides = N. The "d<N>" lexes as a word "d"
+// followed by an integer N; any other wording fails closed and flows through the
+// generic effect parser. It backs the Ancient Dragon dice cycle (Ancient Copper
+// Dragon et al.) and other "roll a dN" cards.
+func parseRollDieEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	if len(words) != 4 ||
+		!equalWord(words[0], "roll") ||
+		!equalWord(words[1], "a") ||
+		!equalWord(words[2], "d") ||
+		words[3].Kind != shared.Integer {
+		return nil, false
+	}
+	sides, err := strconv.Atoi(words[3].Text)
+	if err != nil || sides < 2 {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:       EffectRollDie,
+		Span:       sentence.Span,
+		ClauseSpan: sentence.Span,
+		VerbSpan:   words[0].Span,
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		Context:    EffectContextController,
+		DieSides:   sides,
+		Exact:      true,
+	}}, true
+}
+
+// parseRingTemptsEffect recognizes the fixed designation effect "The Ring
+// tempts you." (CR 701.51). The wording is fully fixed — the resolving
+// controller gets the Ring emblem, advances it one level, and chooses a
+// creature they control as their Ring-bearer — so the recognizer matches the
+// whole sentence and emits a controller-scoped EffectRingTempts carrying no
+// targets or amounts. Any other wording fails closed and flows through the
+// general effect parser.
+func parseRingTemptsEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	expected := []string{"the", "ring", "tempts", "you"}
+	if len(words) != len(expected) {
+		return nil, false
+	}
+	for i, word := range expected {
+		if !equalWord(words[i], word) {
+			return nil, false
+		}
+	}
+	return []EffectSyntax{{
+		Kind:       EffectRingTempts,
+		Span:       sentence.Span,
+		ClauseSpan: sentence.Span,
+		VerbSpan:   words[2].Span,
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		Context:    EffectContextController,
 		Exact:      true,
 	}}, true
 }
@@ -2395,17 +3495,21 @@ func cantCastSpellsFilterType(word string) (required, excluded CardType, ok bool
 	return CardTypeUnknown, CardTypeUnknown, false
 }
 
-// parseGroupMustAttackEffect recognizes the one-shot, turn-scoped forced-attack
-// effect "<group> attack this turn if able." (Bident of Thassa: "Creatures your
+// parseGroupMustAttackEffect recognizes the one-shot forced-attack effect
+// "<group> attack this turn if able." (Bident of Thassa: "Creatures your
 // opponents control attack this turn if able."; "Creatures you control attack
-// this turn if able."; "All creatures attack this turn if able."). The affected
-// creature group is recorded in StaticSubject so lowering can scope the
-// continuous must-attack rule effect by controller. Any other subject,
-// duration, or trailing clause fails closed and flows through the generic effect
-// parser.
-func parseGroupMustAttackEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
-	words := make([]shared.Token, 0, len(tokens))
-	for _, token := range tokens {
+// this turn if able."; "All creatures attack this turn if able.") and its
+// duration-scoped variant "Until your next turn, <group> attack each combat if
+// able." (The Akroan War chapter II: "Until your next turn, creatures your
+// opponents control attack each combat if able."). The affected creature group
+// is recorded in StaticSubject so lowering can scope the continuous must-attack
+// rule effect by controller, and the recognized duration becomes the rule
+// effect's lifetime. Any other subject, duration, or trailing clause fails
+// closed and flows through the generic effect parser.
+func parseGroupMustAttackEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	remaining, leadingDuration := stripLeadingDurationClause(tokens, atoms)
+	words := make([]shared.Token, 0, len(remaining))
+	for _, token := range remaining {
 		if token.Kind == shared.Period {
 			continue
 		}
@@ -2428,7 +3532,18 @@ func parseGroupMustAttackEffect(sentence Sentence, tokens []shared.Token) ([]Eff
 	default:
 		return nil, false
 	}
-	rest := []string{"attack", "this", "turn", "if", "able"}
+	var rest []string
+	var duration EffectDurationKind
+	switch leadingDuration {
+	case EffectDurationNone:
+		rest = []string{"attack", "this", "turn", "if", "able"}
+		duration = EffectDurationThisTurn
+	case EffectDurationUntilYourNextTurn:
+		rest = []string{"attack", "each", "combat", "if", "able"}
+		duration = EffectDurationUntilYourNextTurn
+	default:
+		return nil, false
+	}
 	if len(words)-index != len(rest) {
 		return nil, false
 	}
@@ -2445,13 +3560,114 @@ func parseGroupMustAttackEffect(sentence Sentence, tokens []shared.Token) ([]Eff
 		Text:          sentence.Text,
 		Tokens:        append([]shared.Token(nil), tokens...),
 		Context:       EffectContextController,
-		Duration:      EffectDurationThisTurn,
+		Duration:      duration,
 		StaticSubject: EffectStaticSubjectSyntax{Kind: subject, Span: shared.SpanOf(words[:index])},
 		Exact:         true,
 	}}, true
 }
 
-// resolving buff "The next spell you cast this turn can't be countered."
+// parseDirectedMustAttackEffect recognizes The Brothers' War chapter II directed
+// forced-attack effect "Until your next turn, each creature they control attacks
+// the other chosen player each combat if able." It pairs with the preceding
+// "Choose two target players." clause: "they" are the two chosen players and "the
+// other chosen player" is the reciprocal defender. The recognizer emits a single
+// EffectDirectedMustAttack carrying the until-your-next-turn duration; lowering
+// reconstructs the reciprocal directed structure from the two player targets. Any
+// other group, defender, duration, or trailing clause fails closed.
+func parseDirectedMustAttackEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	remaining, leadingDuration := stripLeadingDurationClause(tokens, atoms)
+	if leadingDuration != EffectDurationUntilYourNextTurn {
+		return nil, false
+	}
+	words := make([]shared.Token, 0, len(remaining))
+	for _, token := range remaining {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	want := []string{
+		"each", "creature", "they", "control",
+		"attacks", "the", "other", "chosen", "player",
+		"each", "combat", "if", "able",
+	}
+	if len(words) != len(want) {
+		return nil, false
+	}
+	for i, word := range want {
+		if !equalWord(words[i], word) {
+			return nil, false
+		}
+	}
+	return []EffectSyntax{{
+		Kind:       EffectDirectedMustAttack,
+		Span:       sentence.Span,
+		ClauseSpan: sentence.Span,
+		VerbSpan:   words[4].Span,
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		Context:    EffectContextController,
+		Duration:   EffectDurationUntilYourNextTurn,
+		Exact:      true,
+	}}, true
+}
+
+// parseAttackTaxEffect recognizes the resolving, duration-bounded attack-tax
+// effect "Until your next turn, creatures can't attack you unless their
+// controller pays {N} for each of those creatures." (Summon: Yojimbo chapters
+// II/III). The leading "Until your next turn," duration clause distinguishes this
+// resolving installation from the continuous Propaganda-style static attack tax,
+// which the static-declaration parser handles. Lowering applies a
+// RuleEffectAttackTax for the recognized duration. Any other duration, defending
+// scope ("or planeswalkers you control"), or trailing wording fails closed and
+// flows through the generic effect parser.
+func parseAttackTaxEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	remaining, leadingDuration := stripLeadingDurationClause(tokens, atoms)
+	if leadingDuration != EffectDurationUntilYourNextTurn {
+		return nil, false
+	}
+	words := make([]shared.Token, 0, len(remaining))
+	for _, token := range remaining {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	if len(words) != 14 ||
+		words[8].Kind != shared.Symbol ||
+		!equalWord(words[0], "creatures") ||
+		!equalWord(words[1], "can't") ||
+		!equalWord(words[2], "attack") ||
+		!equalWord(words[3], "you") ||
+		!equalWord(words[4], "unless") ||
+		!equalWord(words[5], "their") ||
+		!equalWord(words[6], "controller") ||
+		!equalWord(words[7], "pays") ||
+		!equalWord(words[9], "for") ||
+		!equalWord(words[10], "each") ||
+		!equalWord(words[11], "of") ||
+		!equalWord(words[12], "those") ||
+		!equalWord(words[13], "creatures") {
+		return nil, false
+	}
+	amount, ok := staticGenericSymbolValue(words[8].Text)
+	if !ok || amount <= 0 {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:             EffectAttackTax,
+		Span:             sentence.Span,
+		ClauseSpan:       sentence.Span,
+		VerbSpan:         words[2].Span,
+		Text:             sentence.Text,
+		Tokens:           append([]shared.Token(nil), tokens...),
+		Context:          EffectContextController,
+		Duration:         EffectDurationUntilYourNextTurn,
+		AttackTaxGeneric: amount,
+		Exact:            true,
+	}}, true
+}
+
 // (Mistrise Village), the all-spells form "Spells you cast this turn can't be
 // countered." (Domri, Anarch of Bolas), and the equivalent "Spells you control
 // can't be countered this turn." (Veil of Summer). The leading "The next" marks
@@ -2527,11 +3743,15 @@ func reconcileRetargetSentenceTargets(sentence *Sentence) {
 // target spell." (Redirect). The generic effect parser cannot handle this
 // sentence because parseTargets manufactures a spurious target for every
 // "target" noun ("the target of", "a single target") and blanks the real spell
-// selection, so this dedicated recognizer extracts the single clean "target
-// spell" selection itself. The "with a single target" qualifier is not modeled
-// at resolution, so the lowered effect retargets any one targeted spell, which
-// is broader than the printed restriction but safe for this family. Any other
-// wording fails closed and flows through the generic effect parser.
+// selection, so this dedicated recognizer extracts the single clean target
+// selection itself. The selection between the fixed "Change the target[s] of"
+// lead-in and the trailing "with a single target" qualifier may be either
+// "target spell" or "target spell or ability" (Bolt Bend, Redirect Lightning),
+// both of which the EffectChooseNewTargets lowering retargets. The "with a
+// single target" qualifier is not modeled at resolution, so the lowered effect
+// retargets any one targeted spell or ability, which is broader than the printed
+// restriction but safe for this family. Any other wording fails closed and flows
+// through the generic effect parser.
 func parseChangeTargetRetargetEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
 	words := make([]shared.Token, 0, len(tokens))
 	origin := make([]int, 0, len(tokens))
@@ -2542,17 +3762,18 @@ func parseChangeTargetRetargetEffect(sentence Sentence, tokens []shared.Token, a
 		words = append(words, token)
 		origin = append(origin, index)
 	}
-	if len(words) != 10 {
+	// The fixed lead-in is four words ("change the target[s] of"), the trailing
+	// qualifier is four words ("with a single target[s]"), and at least two words
+	// of selection ("target spell") sit between them.
+	if len(words) < 10 {
 		return nil, false
 	}
-	fixed := []struct {
+	end := len(words)
+	lead := []struct {
 		index int
 		want  string
-	}{
-		{0, "change"}, {1, "the"}, {3, "of"}, {4, "target"},
-		{5, "spell"}, {6, "with"}, {7, "a"}, {8, "single"},
-	}
-	for _, check := range fixed {
+	}{{0, "change"}, {1, "the"}, {3, "of"}}
+	for _, check := range lead {
 		if !equalWord(words[check.index], check.want) {
 			return nil, false
 		}
@@ -2560,17 +3781,36 @@ func parseChangeTargetRetargetEffect(sentence Sentence, tokens []shared.Token, a
 	if !equalWord(words[2], "target") && !equalWord(words[2], "targets") {
 		return nil, false
 	}
-	if !equalWord(words[9], "target") && !equalWord(words[9], "targets") {
+	tail := []struct {
+		offset int
+		want   string
+	}{{4, "with"}, {3, "a"}, {2, "single"}}
+	for _, check := range tail {
+		if !equalWord(words[end-check.offset], check.want) {
+			return nil, false
+		}
+	}
+	if !equalWord(words[end-1], "target") && !equalWord(words[end-1], "targets") {
 		return nil, false
 	}
-	// Parse the real "target spell" selection from the original token stream so
-	// the spell target carries a correct selection and span; the surrounding
-	// "the target of … a single target" nouns are discarded by the recognizer.
-	if origin[5] != origin[4]+1 {
+	// Parse the real target selection from the original token stream so the
+	// target carries a correct selection and span; the surrounding "the target
+	// of … a single target" nouns are discarded by the recognizer. The selection
+	// words span words[4 : end-4] and must be contiguous in the original tokens
+	// (no intervening period) so the slice is exactly the selection phrase.
+	selEnd := end - 5
+	if selEnd < 5 {
 		return nil, false
 	}
-	spellTargets := parseTargets(tokens[origin[4]:origin[5]+1], atoms)
-	if len(spellTargets) != 1 || spellTargets[0].Selection.Kind != SelectionSpell {
+	for i := 4; i <= selEnd; i++ {
+		if origin[i] != origin[4]+(i-4) {
+			return nil, false
+		}
+	}
+	spellTargets := parseTargets(tokens[origin[4]:origin[selEnd]+1], atoms)
+	if len(spellTargets) != 1 ||
+		(spellTargets[0].Selection.Kind != SelectionSpell &&
+			spellTargets[0].Selection.Kind != SelectionSpellActivatedOrTriggeredAbility) {
 		return nil, false
 	}
 	return []EffectSyntax{{
@@ -2968,6 +4208,17 @@ func parseDamageRecipientPair(kind EffectKind, clause []shared.Token, amount Eff
 	}
 }
 
+// groupDamageRecipientFollowsAmount reports whether a deal-damage clause whose
+// amount is a dynamic "equal to ..." phrase is followed by an "each <group>"
+// recipient ("deals damage equal to its power to each opponent"). It gates the
+// recipient-scoping rewrite so it applies only to group recipients and never
+// disturbs the single-target form ("deals damage equal to its power to any
+// target"), whose recipient is a chosen target parsed separately.
+func groupDamageRecipientFollowsAmount(clause []shared.Token, amount EffectAmountSyntax) bool {
+	recipient, ok := damageRecipientTokensAfterAmount(clause, amount)
+	return ok && len(recipient) > 0 && equalWord(recipient[0], "each")
+}
+
 // damageRecipientTokensAfterAmount returns the recipient tokens of a deal-damage
 // clause whose amount is a dynamic "equal to ..." phrase ("deals damage equal to
 // its power to each other creature and each opponent."): everything after the
@@ -3035,20 +4286,26 @@ func damageRecipientTokens(clause []shared.Token) ([]shared.Token, bool) {
 // (empty selection, None role) for every other shape: a non-damage effect, a
 // subject that does not begin with "each" or does not parse to a recognized
 // group, or a recipient that is not the bare "its controller"/"its owner".
-func eachSourceDamageSyntax(kind EffectKind, subject, clause []shared.Token, atoms Atoms) (SelectionSyntax, DamageRecipientReferenceKind) {
+func eachSourceDamageSyntax(kind EffectKind, subject, clause []shared.Token, amount EffectAmountSyntax, atoms Atoms) (SelectionSyntax, DamageRecipientReferenceKind) {
 	if kind != EffectDealDamage || len(subject) == 0 || !equalWord(subject[0], "each") {
 		return SelectionSyntax{}, DamageRecipientReferenceNone
 	}
 	recipient, ok := damageRecipientTokens(clause)
-	if !ok || len(recipient) != 2 || !equalWord(recipient[0], "its") {
+	if !ok || len(recipient) == 0 {
 		return SelectionSyntax{}, DamageRecipientReferenceNone
 	}
 	var role DamageRecipientReferenceKind
 	switch {
-	case equalWord(recipient[1], "controller"):
+	case len(recipient) == 2 && equalWord(recipient[0], "its") && equalWord(recipient[1], "controller"):
 		role = DamageRecipientReferenceController
-	case equalWord(recipient[1], "owner"):
+	case len(recipient) == 2 && equalWord(recipient[0], "its") && equalWord(recipient[1], "owner"):
 		role = DamageRecipientReferenceOwner
+	case equalWord(recipient[0], "itself") && eachSelfPowerDamageAmount(amount):
+		// "Each creature deals damage to itself equal to its power." The
+		// recipient run begins with "itself" and is followed by the source-power
+		// amount phrase; the per-member power is the amount, so the recipient is
+		// the bare "itself" rather than a player.
+		role = DamageRecipientReferenceItself
 	default:
 		return SelectionSyntax{}, DamageRecipientReferenceNone
 	}
@@ -3059,19 +4316,45 @@ func eachSourceDamageSyntax(kind EffectKind, subject, clause []shared.Token, ato
 	return selection, role
 }
 
+// eachSelfPowerDamageAmount reports whether amount is the source-power "equal to
+// its power" form that pairs with the per-member "itself" recipient. It fails
+// closed for every other amount so the self recipient stays unrecognized unless
+// the per-member power amount accompanies it.
+func eachSelfPowerDamageAmount(amount EffectAmountSyntax) bool {
+	return amount.DynamicKind == EffectDynamicAmountSourcePower &&
+		amount.DynamicForm == EffectDynamicAmountFormEqual &&
+		amount.Multiplier == 1
+}
+
 func damageRecipientReference(effect *EffectSyntax) DamageRecipientReferenceKind {
 	if effect.Kind != EffectDealDamage {
 		return DamageRecipientReferenceNone
 	}
 	recipient, ok := damageRecipientTokens(effect.Tokens)
 	if !ok {
-		return DamageRecipientReferenceNone
+		// A dynamic "deals damage equal to ... to <recipient>" clause separates
+		// "damage" from "to" with the amount phrase, so the recipient is read
+		// from the "to" that follows the amount span instead. Word order alone
+		// gates this: only the recipient after the dynamic amount is considered,
+		// so the amount's own referent ("its power", "that creature's toughness")
+		// never bleeds into the recipient.
+		recipient, ok = damageRecipientTokensAfterAmount(effect.Tokens, effect.Amount)
+		if !ok {
+			return DamageRecipientReferenceNone
+		}
 	}
 	// "deals N damage to you" names the source's own controller. The lone "you"
 	// recipient carries no object subject, so it is recognized before the
 	// referenced-object controller/owner forms below.
 	if len(recipient) == 1 && equalWord(recipient[0], "you") {
 		return DamageRecipientReferenceYou
+	}
+	// "deals N damage to that player" names the triggering event's player, the
+	// punisher recipient of "Whenever an opponent draws a card, ~ deals N damage
+	// to that player." (Underworld Dreams, Megrim). The "that player" reference
+	// binds to the event player downstream; lowering resolves it accordingly.
+	if len(recipient) == 2 && equalWord(recipient[0], "that") && equalWord(recipient[1], "player") {
+		return DamageRecipientReferenceThatPlayer
 	}
 	if len(recipient) < 2 {
 		return DamageRecipientReferenceNone
@@ -3081,6 +4364,37 @@ func damageRecipientReference(effect *EffectSyntax) DamageRecipientReferenceKind
 		return DamageRecipientReferenceNone
 	}
 	return role
+}
+
+// parseDamageRiders assembles the ordered follow-on damage riders of a
+// deal-damage clause into one typed list, in Oracle order: the self rider, the
+// target-controller/owner rider, then the second-target rider. Each detection
+// helper fails closed for its non-matching wordings, so a clause with no rider
+// yields an empty list. The order matches the order lowering emits the rider
+// Damage instructions.
+func parseDamageRiders(effect *EffectSyntax) []DamageRiderSyntax {
+	var riders []DamageRiderSyntax
+	if value, ok := damageSelfRider(effect); ok {
+		riders = append(riders, DamageRiderSyntax{
+			Recipient: DamageRiderRecipientYou,
+			Value:     value,
+		})
+	}
+	if value, role := damageTargetControllerRider(effect); role != DamageRecipientReferenceNone {
+		riders = append(riders, DamageRiderSyntax{
+			Recipient:     DamageRiderRecipientTargetController,
+			ReferenceRole: role,
+			Value:         value,
+		})
+	}
+	if value, dynamic, ok := damageSecondTargetRider(effect); ok {
+		riders = append(riders, DamageRiderSyntax{
+			Recipient: DamageRiderRecipientSecondTarget,
+			Value:     value,
+			Dynamic:   dynamic,
+		})
+	}
+	return riders
 }
 
 // damageSelfRider recognizes a "... and N damage to you" self-damage rider
@@ -3184,8 +4498,9 @@ func targetControllerDamageRiderTokens(effect *EffectSyntax) (int, DamageRecipie
 
 // referencedControllerOwnerRecipient reports whether the recipient tokens name
 // the controller or owner of a referenced object — "its controller", "its
-// owner", "that <noun>'s controller", or "that <noun>'s owner" — and returns
-// the matching recipient role. It fails closed (None) for any other phrase.
+// owner", "that <noun>'s controller", "that <noun>'s owner", "the <noun>'s
+// controller", or "the <noun>'s owner" — and returns the matching recipient
+// role. It fails closed (None) for any other phrase.
 func referencedControllerOwnerRecipient(recipient []shared.Token) (DamageRecipientReferenceKind, bool) {
 	if len(recipient) < 2 {
 		return DamageRecipientReferenceNone, false
@@ -3193,7 +4508,9 @@ func referencedControllerOwnerRecipient(recipient []shared.Token) (DamageRecipie
 	role := recipient[len(recipient)-1]
 	subject := recipient[:len(recipient)-1]
 	subjectIsReferencedObject := len(subject) == 1 && equalWord(subject[0], "its") ||
-		len(subject) == 2 && equalWord(subject[0], "that") && referencePossessiveObjectNoun(subject[1])
+		len(subject) == 2 &&
+			(equalWord(subject[0], "that") || equalWord(subject[0], "the")) &&
+			referencePossessiveObjectNoun(subject[1])
 	if !subjectIsReferencedObject {
 		return DamageRecipientReferenceNone, false
 	}
@@ -3213,11 +4530,14 @@ func referencedControllerOwnerRecipient(recipient []shared.Token) (DamageRecipie
 // damage to target player or planeswalker." It requires the clause to carry
 // exactly two parsed targets and the rider suffix "and <number> damage to" to
 // land immediately before the second target's span. It returns the fixed rider
-// amount B (>= 1) and ok=true, failing closed for every other shape so single-
-// target and group-recipient clauses keep their existing paths.
-func damageSecondTargetRider(effect *EffectSyntax) (int, bool) {
+// amount B (>= 1), whether the rider amount is the variable "X" matching the
+// primary dynamic amount ("deals X damage to any target and X damage to any
+// other target", The Brothers' War chapter III), and ok=true, failing closed for
+// every other shape so single-target and group-recipient clauses keep their
+// existing paths.
+func damageSecondTargetRider(effect *EffectSyntax) (value int, dynamic, ok bool) {
 	if effect.Kind != EffectDealDamage || len(effect.Targets) != 2 {
-		return 0, false
+		return 0, false, false
 	}
 	tokens := effect.Tokens
 	if len(tokens) > 0 && tokens[len(tokens)-1].Kind == shared.Period {
@@ -3228,18 +4548,20 @@ func damageSecondTargetRider(effect *EffectSyntax) (int, bool) {
 		if !equalWord(tokens[i], "and") {
 			continue
 		}
-		value, ok := damageRiderAmountValue(tokens[i+1])
-		if !ok || value < 1 {
+		if !equalWord(tokens[i+2], "damage") || !equalWord(tokens[i+3], "to") ||
+			tokens[i+4].Span.Start.Offset != secondStart {
 			continue
 		}
-		if !equalWord(tokens[i+2], "damage") || !equalWord(tokens[i+3], "to") {
+		if equalWord(tokens[i+1], "x") {
+			return 0, true, true
+		}
+		amount, valueOK := damageRiderAmountValue(tokens[i+1])
+		if !valueOK || amount < 1 {
 			continue
 		}
-		if tokens[i+4].Span.Start.Offset == secondStart {
-			return value, true
-		}
+		return amount, false, true
 	}
-	return 0, false
+	return 0, false, false
 }
 
 // splitEachAndEach splits recipient tokens at a single top-level "and" into two
@@ -3281,21 +4603,6 @@ func legacyExactManaBody(effect *EffectSyntax, sentence Sentence) bool {
 	return effect.Mana.AnyColor || effect.Mana.CommanderIdentity || effect.Mana.LandsProduce || effect.Mana.FilterPair || effect.Mana.ColorsAmongControlled || len(effect.Mana.Symbols) != 0
 }
 
-func legacyEffectCount(tokens []shared.Token, atoms Atoms) int {
-	if _, ok := massReanimationExchangeWords(tokens); ok {
-		return 1
-	}
-	count := 0
-	for i := range tokens {
-		if legacyEffectKindAt(tokens, i) != EffectUnknown &&
-			!atoms.SelfNameAt(tokens[i].Span) &&
-			!effectWithinCondition(tokens, i) {
-			count++
-		}
-	}
-	return count
-}
-
 func effectWithinCondition(tokens []shared.Token, index int) bool {
 	for i := index - 1; i >= 0; i-- {
 		if tokens[i].Kind == shared.Comma || tokens[i].Kind == shared.Period || tokens[i].Kind == shared.Semicolon {
@@ -3306,44 +4613,6 @@ func effectWithinCondition(tokens []shared.Token, index int) bool {
 		}
 	}
 	return false
-}
-
-func legacyEffectKindAt(tokens []shared.Token, index int) EffectKind {
-	if equalWord(tokens[index], "look") {
-		return EffectManifestDread
-	}
-	if cantBeBlockedThisTurnVerbAt(tokens, index) {
-		return EffectCantBeBlocked
-	}
-	kind := effectWordKind(tokens[index])
-	switch {
-	case kind == EffectGrantKeyword && index >= 2 &&
-		(equalWord(tokens[index-2], "opponent") || equalWord(tokens[index-2], "opponents")) &&
-		equalWord(tokens[index-1], "you"):
-		return EffectUnknown
-	case kind == EffectEnterTapped && index+1 < len(tokens) && equalWord(tokens[index+1], "prepared"):
-		return EffectEnterPrepared
-	case kind == EffectCast && index > 0 && (equalWord(tokens[index-1], "was") || equalWord(tokens[index-1], "were")):
-		return EffectUnknown
-	case kind == EffectCast && pastCastCountPhraseAt(tokens, index):
-		return EffectUnknown
-	case kind == EffectCast && castDuringMainPhaseConditionAt(tokens, index):
-		return EffectUnknown
-	case kind == EffectCast && castSpellsFromLibraryTopAt(tokens, index):
-		return EffectUnknown
-	case kind == EffectCounter && !counterVerbAt(tokens, index):
-		return EffectUnknown
-	case kind == EffectCopyStackObject && !copyVerbAt(tokens, index):
-		return EffectUnknown
-	case kind == EffectGain && index+1 < len(tokens) && equalWord(tokens[index+1], "control"):
-		return EffectGainControl
-	case kind == EffectDouble && index+1 < len(tokens) && equalWord(tokens[index+1], "strike"):
-		return EffectUnknown
-	case kind == EffectGrantKeyword && priorPTChange(tokens, index):
-		return EffectUnknown
-	default:
-		return kind
-	}
 }
 
 // entersColorChoiceSyntax recognizes the self entry color-choice clause "choose
@@ -3503,11 +4772,13 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 		return nil, false
 	}
 	enters := viaAsEnters
+	entersTapped := false
 	for i := 0; i < copyIndex; i++ {
 		if equalWord(body[i], "tapped") {
-			// "enter tapped as a copy" (Vesuva) also overrides the enters-tapped
-			// state, which this replacement does not model; fail closed.
-			return nil, false
+			// "enter tapped as a copy" (Vesuva) also taps the permanent as it
+			// enters the battlefield as its chosen copy; record it so the copy
+			// applies the tapped state after the optional choice is confirmed.
+			entersTapped = true
 		}
 		if equalWord(body[i], "enter") || equalWord(body[i], "enters") {
 			enters = true
@@ -3520,6 +4791,7 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 	filterEnd := len(body) - 1
 	var notLegendary bool
 	var addTypes []types.Card
+	var addSubtypes []types.Sub
 	var addKeywords []KeywordKind
 	var conditionalCounters []EntersAsCopyConditionalCounter
 	if exceptIndex := entersAsCopyExceptIndex(body, filterStart); exceptIndex >= 0 {
@@ -3529,6 +4801,7 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 		}
 		notLegendary = riders.notLegendary
 		addTypes = riders.addTypes
+		addSubtypes = riders.addSubtypes
 		addKeywords = riders.addKeywords
 		conditionalCounters = riders.conditionalCounters
 		filterEnd = exceptIndex
@@ -3568,10 +4841,12 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 		EntersAsCopyOptional:     optional,
 		EntersAsCopyNotLegendary: notLegendary,
 		EntersAsCopyAddTypes:     addTypes,
+		EntersAsCopyAddSubtypes:  addSubtypes,
 
 		EntersAsCopyConditionalCounters: conditionalCounters,
 		EntersAsCopyUntilEndOfTurn:      untilEndOfTurn,
 		EntersAsCopyAddKeywords:         addKeywords,
+		EntersAsCopyTapped:              entersTapped,
 	}
 	return []EffectSyntax{effect}, true
 }
@@ -3584,7 +4859,7 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 // per-sacrificed-creature multiplier N; any other sentence fails closed.
 func parseDevourEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
 	body := semanticEffectTokens(tokens)
-	n, ok := devourSentenceMultiplier(body)
+	subject, n, ok := devourSentenceParse(body)
 	if !ok {
 		return nil, false
 	}
@@ -3597,26 +4872,49 @@ func parseDevourEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([
 		Tokens:                 append([]shared.Token(nil), body...),
 		EntersDevour:           true,
 		EntersDevourMultiplier: n,
+		EntersDevourType:       subject.cardType,
+		EntersDevourSubtype:    subject.subtype,
 	}
 	effect.Exact = exactEffectSyntax(&effect)
 	return []EffectSyntax{effect}, true
 }
 
-// devourSentenceMultiplier matches the exact canonical Devour expansion token
-// sequence and returns its +1/+1 counter multiplier N. The multiplier is the
+// devourSentenceParse matches the canonical Devour expansion token sequence and
+// returns the sacrificed-permanent subject together with its +1/+1 counter
+// multiplier N. The fixed framing words are validated and the sacrificed-noun
+// positions identify the subject (creature, artifact, land, or Food); N is the
 // integer that precedes the "+1/+1 counters" phrase. Any deviation from the
 // canonical wording fails closed.
-func devourSentenceMultiplier(body []shared.Token) (int, bool) {
+func devourSentenceParse(body []shared.Token) (devourSubject, int, bool) {
 	words := normalizedWords(body)
-	expected := []string{
-		"as", "this", "creature", "enters",
-		"you", "may", "sacrifice", "any", "number", "of", "creatures",
-		"then", "it", "enters", "with",
-		"counters", "on", "it", "for", "each", "creature", "sacrificed",
+	if len(words) != 22 {
+		return devourSubject{}, 0, false
 	}
-	if !slices.Equal(words, expected) {
-		return 0, false
+	prefix := []string{"as", "this", "creature", "enters", "you", "may", "sacrifice", "any", "number", "of"}
+	if !slices.Equal(words[:10], prefix) {
+		return devourSubject{}, 0, false
 	}
+	mid := []string{"then", "it", "enters", "with", "counters", "on", "it", "for", "each"}
+	if !slices.Equal(words[11:20], mid) {
+		return devourSubject{}, 0, false
+	}
+	if words[21] != "sacrificed" {
+		return devourSubject{}, 0, false
+	}
+	subject, ok := devourSubjectByNouns(words[10], words[20])
+	if !ok {
+		return devourSubject{}, 0, false
+	}
+	n, ok := devourSentenceMultiplier(body)
+	if !ok {
+		return devourSubject{}, 0, false
+	}
+	return subject, n, true
+}
+
+// devourSentenceMultiplier returns the +1/+1 counter multiplier N of a canonical
+// Devour expansion: the integer that precedes the "+1/+1 counters" phrase.
+func devourSentenceMultiplier(body []shared.Token) (int, bool) {
 	for i := 0; i+5 < len(body); i++ {
 		if body[i].Kind == shared.Integer &&
 			body[i+1].Kind == shared.Plus &&
@@ -3754,6 +5052,305 @@ func parseBecomeCopyEffect(sentence Sentence, tokens []shared.Token, atoms Atoms
 	return []EffectSyntax{effect}, true
 }
 
+// parseBecomeTypeEffect recognizes a targeted continuous type-adding effect
+// ("Target permanent becomes an artifact in addition to its other types until
+// end of turn.", Liquimetal Torque, Liquimetal Coating; CR 613.1d). It also
+// recognizes the additive color-and-type form ("Until end of turn, target
+// creature you control becomes a blue artifact in addition to its other colors
+// and types.", Unctus, Grand Metatect), where one or more leading color words
+// precede the card-type words and the additive tail names "colors and types".
+// The "until end of turn" duration may appear as a leading clause or a trailing
+// phrase, but exactly one of the two; both or neither fail closed. The target
+// selector before "becomes" is left as an ordinary target for the target
+// machinery to extract. Only the additive "in addition to its other [colors
+// and] types" form is recognized; the type-setting form ("becomes a <type>"
+// without "in addition") and the permanent (no-duration) form fail closed so
+// those cards stay unsupported. Each card-type word must be a recognized
+// permanent card type and each color word a recognized color; any other word
+// fails closed.
+func parseBecomeTypeEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	body := semanticEffectTokens(tokens)
+	if len(body) == 0 || body[len(body)-1].Kind != shared.Period {
+		return nil, false
+	}
+	remaining, leadingDuration := stripLeadingDurationClause(body[:len(body)-1], atoms)
+	leadingUntilEndOfTurn := leadingDuration == EffectDurationUntilEndOfTurn
+	words := normalizedWords(remaining)
+	if len(words) < 5 || words[0] != "target" {
+		return nil, false
+	}
+	becomesIndex := -1
+	for i, word := range words {
+		if word == "becomes" {
+			becomesIndex = i
+			break
+		}
+	}
+	if becomesIndex < 0 || becomesIndex+1 >= len(words) {
+		return nil, false
+	}
+	// The words between "target" and "becomes" must be only the target noun
+	// phrase. A connector or pump/grant verb there marks a compound effect
+	// ("target nonartifact creature gets +1/+0 and becomes an artifact ...",
+	// Thran Forge) whose other clause this recognizer cannot represent, so it
+	// fails closed rather than silently dropping that clause.
+	for _, word := range words[1:becomesIndex] {
+		switch word {
+		case "and", "then", "gets", "get", "gains", "gain", "loses", "lose":
+			return nil, false
+		}
+	}
+	rest := words[becomesIndex+1:]
+	if rest[0] != "a" && rest[0] != "an" {
+		return nil, false
+	}
+	rest = rest[1:]
+	duration := []string{"until", "end", "of", "turn"}
+	trailingUntilEndOfTurn := false
+	if len(rest) >= len(duration) && slices.Equal(rest[len(rest)-len(duration):], duration) {
+		trailingUntilEndOfTurn = true
+		rest = rest[:len(rest)-len(duration)]
+	}
+	if leadingUntilEndOfTurn == trailingUntilEndOfTurn {
+		return nil, false
+	}
+	additiveTypes := []string{"in", "addition", "to", "its", "other", "types"}
+	additiveColorsTypes := []string{"in", "addition", "to", "its", "other", "colors", "and", "types"}
+	addsColors := false
+	switch {
+	case len(rest) >= len(additiveColorsTypes)+1 &&
+		slices.Equal(rest[len(rest)-len(additiveColorsTypes):], additiveColorsTypes):
+		addsColors = true
+		rest = rest[:len(rest)-len(additiveColorsTypes)]
+	case len(rest) >= len(additiveTypes)+1 &&
+		slices.Equal(rest[len(rest)-len(additiveTypes):], additiveTypes):
+		rest = rest[:len(rest)-len(additiveTypes)]
+	default:
+		return nil, false
+	}
+	addColors := make([]Color, 0)
+	for len(rest) > 0 {
+		parsedColor, ok := recognizeColorWord(rest[0])
+		if !ok {
+			break
+		}
+		addColors = append(addColors, parsedColor)
+		rest = rest[1:]
+	}
+	typeWords := rest
+	if len(typeWords) == 0 {
+		return nil, false
+	}
+	if addsColors != (len(addColors) > 0) {
+		return nil, false
+	}
+	addTypes := make([]types.Card, 0, len(typeWords))
+	for _, word := range typeWords {
+		cardType, ok := entersAsCopyAddTypeWord(word)
+		if !ok {
+			return nil, false
+		}
+		addTypes = append(addTypes, cardType)
+	}
+	effect := EffectSyntax{
+		Kind:                     EffectBecomeType,
+		Context:                  EffectContextController,
+		Span:                     sentence.Span,
+		ClauseSpan:               sentence.Span,
+		Text:                     sentence.Text,
+		Tokens:                   append([]shared.Token(nil), body...),
+		BecomeTypeAddTypes:       addTypes,
+		BecomeTypeAddColors:      addColors,
+		BecomeTypeUntilEndOfTurn: true,
+	}
+	return []EffectSyntax{effect}, true
+}
+
+// parsePolymorphEffect recognizes the targeted resolving polymorph effect
+// "Until end of turn, target <creature> loses all abilities and becomes a
+// [colorless] <color>* <subtype> [creature] with base power and toughness N/N."
+// (Turn to Frog, Snakeform, Gift of Tusks; CR 613). The leading "until end of
+// turn" duration is required; the target selector before "loses" is left in the
+// sentence for the target machinery to extract. The body must lose all
+// abilities and set both a creature subtype and a literal base power/toughness;
+// any other shape (no duration, a no-type "has base power and toughness" body,
+// trailing riders such as "and gains flying", a permanent duration, or a
+// non-creature card type) fails closed so those cards stay unsupported.
+func parsePolymorphEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	body := semanticEffectTokens(tokens)
+	if len(body) == 0 || body[len(body)-1].Kind != shared.Period {
+		return nil, false
+	}
+	inner := body[:len(body)-1]
+	remaining, duration := stripLeadingDurationClause(inner, atoms)
+	if duration != EffectDurationUntilEndOfTurn {
+		return nil, false
+	}
+	if len(remaining) == 0 || !equalWord(remaining[0], "target") {
+		return nil, false
+	}
+	loseIndex := -1
+	for i := 1; i+2 < len(remaining); i++ {
+		if equalWord(remaining[i], "loses") && equalWord(remaining[i+1], "all") &&
+			equalWord(remaining[i+2], "abilities") {
+			loseIndex = i
+			break
+		}
+	}
+	if loseIndex < 1 {
+		return nil, false
+	}
+	cursor := loseIndex + 3
+	if !staticWordsAt(remaining, cursor, "and", "becomes") {
+		return nil, false
+	}
+	cursor += 2
+	if staticWordsAt(remaining, cursor, "a") || staticWordsAt(remaining, cursor, "an") {
+		cursor++
+	}
+	var colorless bool
+	if staticWordsAt(remaining, cursor, "colorless") {
+		colorless = true
+		cursor++
+	}
+	list, next, ok := parseStaticCharacteristicList(remaining, cursor, len(remaining), atoms)
+	if !ok || len(list.subtypes) == 0 {
+		return nil, false
+	}
+	for _, cardType := range list.cardTypes {
+		if cardType != CardTypeCreature {
+			return nil, false
+		}
+	}
+	if !staticWordsAt(remaining, next, "with") {
+		return nil, false
+	}
+	basePT, ok := parseStaticBasePowerToughnessAt(remaining, next+1)
+	if !ok || basePT.next != len(remaining) {
+		return nil, false
+	}
+	effect := EffectSyntax{
+		Kind:                   EffectPolymorph,
+		Context:                EffectContextController,
+		Span:                   sentence.Span,
+		ClauseSpan:             sentence.Span,
+		Text:                   sentence.Text,
+		Tokens:                 append([]shared.Token(nil), body...),
+		PolymorphColors:        list.colors,
+		PolymorphColorless:     colorless,
+		PolymorphSubtypes:      list.subtypes,
+		PolymorphBasePower:     basePT.power,
+		PolymorphBaseToughness: basePT.toughness,
+	}
+	return []EffectSyntax{effect}, true
+}
+
+// parseNamedBecomePolymorphEffect recognizes the permanent named-become
+// polymorph "<target subject> becomes a N/N [legendary] [<color>*] <subtype>
+// creature named <Name> and loses all abilities." (The Curse of Fenric II). The
+// subject selector before "becomes" is left in the sentence for the target
+// machinery to extract. The body must set a literal base power/toughness, at
+// least one creature subtype, an explicit name, and lose all abilities; the
+// change is permanent. Any other shape — a leading duration, no name, no
+// power/toughness, an "in addition" rider, a non-creature card type, or a
+// quoted granted ability — fails closed so unrelated "becomes" wordings keep
+// their own recognizers.
+func parseNamedBecomePolymorphEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	body := semanticEffectTokens(tokens)
+	if len(body) == 0 || body[len(body)-1].Kind != shared.Period {
+		return nil, false
+	}
+	inner := body[:len(body)-1]
+	becomeIndex := -1
+	for i := 1; i < len(inner); i++ {
+		if equalWord(inner[i], "becomes") {
+			becomeIndex = i
+			break
+		}
+	}
+	if becomeIndex < 1 {
+		return nil, false
+	}
+	if len(inner) < becomeIndex+5 ||
+		!equalWord(inner[len(inner)-4], "and") ||
+		!equalWord(inner[len(inner)-3], "loses") ||
+		!equalWord(inner[len(inner)-2], "all") ||
+		!equalWord(inner[len(inner)-1], "abilities") {
+		return nil, false
+	}
+	mid := inner[becomeIndex+1 : len(inner)-4]
+	cursor := 0
+	if staticWordsAt(mid, cursor, "a") || staticWordsAt(mid, cursor, "an") {
+		cursor++
+	}
+	if cursor+3 > len(mid) ||
+		mid[cursor].Kind != shared.Integer ||
+		mid[cursor+1].Kind != shared.Slash ||
+		mid[cursor+2].Kind != shared.Integer {
+		return nil, false
+	}
+	power, err := strconv.Atoi(mid[cursor].Text)
+	if err != nil {
+		return nil, false
+	}
+	toughness, err := strconv.Atoi(mid[cursor+2].Text)
+	if err != nil {
+		return nil, false
+	}
+	cursor += 3
+	var supertypes []Supertype
+	for cursor < len(mid) {
+		super, ok := atoms.SupertypeAt(mid[cursor].Span)
+		if !ok {
+			break
+		}
+		supertypes = append(supertypes, super)
+		cursor++
+	}
+	list, next, ok := parseStaticCharacteristicList(mid, cursor, len(mid), atoms)
+	if !ok || len(list.subtypes) == 0 {
+		return nil, false
+	}
+	for _, cardType := range list.cardTypes {
+		if cardType != CardTypeCreature {
+			return nil, false
+		}
+	}
+	cursor = next
+	if cursor >= len(mid) || !equalWord(mid[cursor], "named") {
+		return nil, false
+	}
+	nameTokens := mid[cursor+1:]
+	if len(nameTokens) == 0 {
+		return nil, false
+	}
+	for _, token := range nameTokens {
+		if equalWord(token, "with") {
+			return nil, false
+		}
+	}
+	name := joinedEffectText(nameTokens)
+	if name == "" {
+		return nil, false
+	}
+	effect := EffectSyntax{
+		Kind:                   EffectPolymorph,
+		Context:                EffectContextController,
+		Span:                   sentence.Span,
+		ClauseSpan:             sentence.Span,
+		Text:                   sentence.Text,
+		Tokens:                 append([]shared.Token(nil), body...),
+		PolymorphColors:        list.colors,
+		PolymorphSubtypes:      list.subtypes,
+		PolymorphBasePower:     power,
+		PolymorphBaseToughness: toughness,
+		PolymorphName:          name,
+		PolymorphSupertypes:    supertypes,
+		PolymorphPermanent:     true,
+	}
+	return []EffectSyntax{effect}, true
+}
+
 // becomeCopyTrimUntilEndOfTurn removes a trailing "until end of turn" phrase from
 // rest, reporting whether it was present.
 func becomeCopyTrimUntilEndOfTurn(rest []shared.Token) ([]shared.Token, bool) {
@@ -3851,6 +5448,7 @@ func entersAsCopyExceptIndex(body []shared.Token, start int) int {
 // enters-as-copy "except <rider>" clause.
 type entersAsCopyRiders struct {
 	addTypes            []types.Card
+	addSubtypes         []types.Sub
 	addKeywords         []KeywordKind
 	notLegendary        bool
 	conditionalCounters []EntersAsCopyConditionalCounter
@@ -3883,11 +5481,12 @@ func parseEntersAsCopyRider(rider []shared.Token, atoms Atoms) (entersAsCopyRide
 			riders.addKeywords = append(riders.addKeywords, keyword)
 			continue
 		}
-		cardType, typeOK := entersAsCopyAddTypeClause(words)
+		cardTypes, subtypes, typeOK := entersAsCopyAddTypeClause(words)
 		if !typeOK {
 			return entersAsCopyRiders{}, false
 		}
-		riders.addTypes = append(riders.addTypes, cardType)
+		riders.addTypes = append(riders.addTypes, cardTypes...)
+		riders.addSubtypes = append(riders.addSubtypes, subtypes...)
 	}
 	return riders, true
 }
@@ -3951,27 +5550,49 @@ func entersAsCopyNotLegendaryClause(words []string) bool {
 	return negation
 }
 
-// entersAsCopyAddTypeClause matches the "it's an <type> in addition to its other
-// types" copiable rider exactly and returns the single added card type. It fails
-// closed on any other wording, including subtype additions such as "a Synth
-// artifact" that this replacement cannot represent.
-func entersAsCopyAddTypeClause(words []string) (types.Card, bool) {
+// entersAsCopyAddTypeClause matches the "it's a <type...> in addition to its
+// other types" copiable rider and returns the added card types and subtypes. The
+// type run between the article and "in addition" may mix card types and
+// subtypes in any order ("an artifact" Phyrexian Metamorph, "a Bird" Mockingbird,
+// "a Synth artifact creature" Synth Infiltrator, "a Faerie Shapeshifter"
+// Malleable Impostor). Each word must classify as either a recognized card type
+// or a recognized subtype; any unrecognized word fails closed.
+func entersAsCopyAddTypeClause(words []string) (cardTypes []types.Card, subtypes []types.Sub, ok bool) {
 	switch {
-	case len(words) == 9 && words[0] == "it's":
+	case len(words) >= 2 && words[0] == "it's":
 		words = words[1:]
-	case len(words) == 10 && words[0] == "it" && (words[1] == "is" || words[1] == "'s"):
+	case len(words) >= 3 && words[0] == "it" && (words[1] == "is" || words[1] == "'s"):
 		words = words[2:]
 	default:
-		return "", false
+		return nil, nil, false
 	}
-	if words[0] != "a" && words[0] != "an" {
-		return "", false
+	if len(words) < 2 || (words[0] != "a" && words[0] != "an") {
+		return nil, nil, false
 	}
-	if words[2] != "in" || words[3] != "addition" || words[4] != "to" ||
-		words[5] != "its" || words[6] != "other" || words[7] != "types" {
-		return "", false
+	words = words[1:]
+	suffix := []string{"in", "addition", "to", "its", "other", "types"}
+	if len(words) <= len(suffix) {
+		return nil, nil, false
 	}
-	return entersAsCopyAddTypeWord(words[1])
+	typeWords := words[:len(words)-len(suffix)]
+	if !slices.Equal(words[len(words)-len(suffix):], suffix) {
+		return nil, nil, false
+	}
+	for _, word := range typeWords {
+		if cardType, typeOK := entersAsCopyAddTypeWord(word); typeOK {
+			cardTypes = append(cardTypes, cardType)
+			continue
+		}
+		if sub, subOK := recognizeSubtypePhrase(word); subOK {
+			subtypes = append(subtypes, sub)
+			continue
+		}
+		return nil, nil, false
+	}
+	if len(cardTypes) == 0 && len(subtypes) == 0 {
+		return nil, nil, false
+	}
+	return cardTypes, subtypes, true
 }
 
 // entersAsCopyAddTypeWord maps a singular card-type word used in an
@@ -4169,31 +5790,34 @@ func parseGroupEntersTappedEffect(sentence Sentence, tokens []shared.Token) ([]E
 		return nil, false
 	}
 	effect := EffectSyntax{
-		Kind:                   EffectEnterTapped,
-		Context:                EffectContextController,
-		Span:                   sentence.Span,
-		ClauseSpan:             sentence.Span,
-		Text:                   sentence.Text,
-		Tokens:                 append([]shared.Token(nil), tokens...),
-		EntersTapped:           true,
-		EntersTappedGroup:      true,
-		EntersTappedGroupScope: scope,
-		EntersTappedGroupTypes: cardTypes,
+		Kind:         EffectEnterTapped,
+		Context:      EffectContextController,
+		Span:         sentence.Span,
+		ClauseSpan:   sentence.Span,
+		Text:         sentence.Text,
+		Tokens:       append([]shared.Token(nil), tokens...),
+		EntersTapped: true,
+		GroupEntryModification: GroupEntryModificationSyntax{
+			Kind:            GroupEntryModificationTapped,
+			ControllerScope: scope,
+			Types:           cardTypes,
+		},
 	}
 	effect.Exact = exactEffectSyntax(&effect)
 	return []EffectSyntax{effect}, true
 }
 
 // parseGroupEntersWithCountersEffect recognizes a static enters-with-counters
-// replacement that adds a single counter to a group of the controller's
-// permanents as they enter, e.g. "Each other creature you control enters with
-// an additional vigilance counter on it." (Tayam, Luminous Enigma) or "Each
-// planeswalker you control enters with an additional loyalty counter on it."
-// (Oath of Gideon). The subject is an "Each <group> you control" noun phrase
-// recognized by parseSelection; the predicate is exactly "enters with an
-// additional <kind> counter on it." Dynamic forms ("... for each ...", "a
-// number of additional ... counters ... equal to ...") and multi-counter or
-// numeric quantities fail closed so the card stays unsupported.
+// replacement that adds counters to a group of the controller's permanents as
+// they enter, e.g. "Each other creature you control enters with an additional
+// vigilance counter on it." (Tayam, Luminous Enigma) or "Each planeswalker you
+// control enters with an additional loyalty counter on it." (Oath of Gideon).
+// The subject is an "Each <group> you control" noun phrase recognized by
+// parseSelection; the predicate is parsed by
+// parseGroupEntersWithCountersPredicate, which accepts both the fixed single-
+// counter form and the dynamic "a number of additional <kind> counters on it
+// equal to <amount>" form (Arwen, Weaver of Hope). Multi-counter and "X"
+// quantities fail closed so the card stays unsupported.
 func parseGroupEntersWithCountersEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
 	body := semanticEffectTokens(tokens)
 	if len(body) < 8 || body[len(body)-1].Kind != shared.Period {
@@ -4217,52 +5841,123 @@ func parseGroupEntersWithCountersEffect(sentence Sentence, tokens []shared.Token
 	if len(recipient) == 0 {
 		return nil, false
 	}
+	chosenEntryType := false
+	if base, ok := cutChosenTypeQualifierSuffix(recipient); ok {
+		recipient, chosenEntryType = base, true
+	}
+	if len(recipient) == 0 {
+		return nil, false
+	}
 	if recipientHasRelativeClause(recipient) {
 		return nil, false
 	}
 	predicate := words[entersIndex+1:]
-	if len(predicate) < 5 ||
-		!equalWord(predicate[0], "with") ||
-		!equalWord(predicate[1], "an") ||
-		!equalWord(predicate[2], "additional") ||
-		!equalWord(predicate[len(predicate)-2], "on") ||
-		!equalWord(predicate[len(predicate)-1], "it") {
-		return nil, false
-	}
-	counterClause := predicate[3 : len(predicate)-2]
-	if len(counterClause) < 2 {
-		return nil, false
-	}
-	last := counterClause[len(counterClause)-1]
-	if !equalWord(last, "counter") && !equalWord(last, "counters") {
-		return nil, false
-	}
-	if equalWord(counterClause[0], "x") {
-		return nil, false
-	}
-	counterKind, counterKnown := parseCounterPlacement(counterClause, atoms)
-	if !counterKnown {
+	placement, ok := parseGroupEntersWithCountersPredicate(predicate, atoms)
+	if !ok || !placement.CounterKnown {
 		return nil, false
 	}
 	selection := parseSelection(recipient, atoms)
 	if selection.Controller != SelectionControllerYou {
 		return nil, false
 	}
+	selection.SubtypeFromEntryChoice = chosenEntryType
 	effect := EffectSyntax{
-		Kind:                    EffectEnterTapped,
-		Context:                 EffectContextController,
-		Span:                    sentence.Span,
-		ClauseSpan:              sentence.Span,
-		Text:                    sentence.Text,
-		Tokens:                  append([]shared.Token(nil), tokens...),
-		EntersWithCounters:      true,
-		EntersWithCountersGroup: true,
-		Selection:               selection,
-		CounterKind:             counterKind,
-		CounterKnown:            counterKnown,
+		Kind:               EffectEnterTapped,
+		Context:            EffectContextController,
+		Span:               sentence.Span,
+		ClauseSpan:         sentence.Span,
+		Text:               sentence.Text,
+		Tokens:             append([]shared.Token(nil), tokens...),
+		EntersWithCounters: true,
+		GroupEntryModification: GroupEntryModificationSyntax{
+			Kind: GroupEntryModificationWithCounters,
+		},
+		Selection:    selection,
+		CounterKind:  placement.CounterKind,
+		CounterKnown: placement.CounterKnown,
+		Amount:       placement.Amount,
 	}
 	effect.Exact = exactEffectSyntax(&effect)
 	return []EffectSyntax{effect}, true
+}
+
+// groupEntersWithCountersPlacement is the parsed counter placement of a group
+// enters-with-counters predicate: the counter kind, whether it was recognized,
+// and the optional dynamic amount (empty for a fixed single counter).
+type groupEntersWithCountersPlacement struct {
+	CounterKind  counter.Kind
+	CounterKnown bool
+	Amount       EffectAmountSyntax
+}
+
+// parseGroupEntersWithCountersPredicate parses the predicate of a group
+// enters-with-counters replacement ("... enters <predicate>.") into a counter
+// kind and placement amount. It accepts the fixed single-counter form ("with an
+// additional <kind> counter on it" — Tayam, Luminous Enigma) and the dynamic
+// form ("with a number of additional <kind> counters on it equal to <amount>" —
+// Arwen, Weaver of Hope). The dynamic amount is parsed by the shared
+// dynamic-amount recognizer so every supported amount form unlocks. An empty
+// returned amount means a fixed single counter. Any other shape, an "X" count,
+// or an unrecognized counter kind fails closed.
+func parseGroupEntersWithCountersPredicate(predicate []shared.Token, atoms Atoms) (groupEntersWithCountersPlacement, bool) {
+	if len(predicate) < 5 || !equalWord(predicate[0], "with") {
+		return groupEntersWithCountersPlacement{}, false
+	}
+	if equalWord(predicate[1], "a") && effectWordsAt(predicate, 2, "number", "of", "additional") {
+		return parseGroupDynamicEntersWithCounters(predicate[5:], atoms)
+	}
+	if !equalWord(predicate[1], "an") ||
+		!equalWord(predicate[2], "additional") ||
+		!equalWord(predicate[len(predicate)-2], "on") ||
+		!equalWord(predicate[len(predicate)-1], "it") {
+		return groupEntersWithCountersPlacement{}, false
+	}
+	counterClause := predicate[3 : len(predicate)-2]
+	if len(counterClause) < 2 {
+		return groupEntersWithCountersPlacement{}, false
+	}
+	last := counterClause[len(counterClause)-1]
+	if !equalWord(last, "counter") && !equalWord(last, "counters") {
+		return groupEntersWithCountersPlacement{}, false
+	}
+	if equalWord(counterClause[0], "x") {
+		return groupEntersWithCountersPlacement{}, false
+	}
+	counterKind, counterKnown := parseCounterPlacement(counterClause, atoms)
+	return groupEntersWithCountersPlacement{CounterKind: counterKind, CounterKnown: counterKnown}, true
+}
+
+// parseGroupDynamicEntersWithCounters parses the tail "<kind> counters on it
+// <amount>" of a dynamic group enters-with-counters predicate, after the leading
+// "with a number of additional" prefix has been consumed. The counter kind
+// precedes "counters on it" and the trailing dynamic amount is parsed by the
+// shared dynamic-amount recognizer. It fails closed on an "X" count, an
+// unrecognized counter kind, or a missing or unrecognized amount.
+func parseGroupDynamicEntersWithCounters(tokens []shared.Token, atoms Atoms) (groupEntersWithCountersPlacement, bool) {
+	onIndex := -1
+	for i := 1; i+2 < len(tokens); i++ {
+		if equalWord(tokens[i], "counters") &&
+			equalWord(tokens[i+1], "on") && equalWord(tokens[i+2], "it") {
+			onIndex = i
+			break
+		}
+	}
+	if onIndex < 1 {
+		return groupEntersWithCountersPlacement{}, false
+	}
+	counterClause := tokens[:onIndex+1]
+	if equalWord(counterClause[0], "x") {
+		return groupEntersWithCountersPlacement{}, false
+	}
+	counterKind, counterKnown := parseCounterPlacement(counterClause, atoms)
+	if !counterKnown {
+		return groupEntersWithCountersPlacement{}, false
+	}
+	amount, _, ok := parseDynamicEffectAmount(tokens[onIndex+3:], atoms)
+	if !ok || amount.DynamicKind == EffectDynamicAmountNone {
+		return groupEntersWithCountersPlacement{}, false
+	}
+	return groupEntersWithCountersPlacement{CounterKind: counterKind, CounterKnown: counterKnown, Amount: amount}, true
 }
 
 // recipientHasRelativeClause reports whether a group enters-with-counters
@@ -4280,6 +5975,19 @@ func recipientHasRelativeClause(recipient []shared.Token) bool {
 		}
 	}
 	return false
+}
+
+// cutChosenTypeQualifierSuffix strips a trailing "of the chosen type" qualifier
+// from a group recipient phrase ("each other creature you control of the chosen
+// type") and returns the bare recipient with ok=true. The matched permanents
+// must share the creature subtype the source permanent chose as it entered
+// (Metallic Mimic); the caller records that as Selection.SubtypeFromEntryChoice.
+func cutChosenTypeQualifierSuffix(recipient []shared.Token) ([]shared.Token, bool) {
+	n := len(recipient)
+	if n >= 4 && effectWordsAt(recipient, n-4, "of", "the", "chosen", "type") {
+		return recipient[:n-4], true
+	}
+	return recipient, false
 }
 
 // entersTappedSelfSyntax recognizes a plain self enters-tapped clause. "This
@@ -4331,10 +6039,15 @@ func moveCountersDistributeClause(clause []shared.Token) bool {
 }
 
 // moveThoseCountersClause reports the counter-salvage form "put those counters
-// on <destination>", where "those counters" names the counters a triggering
-// permanent had as it left a zone. It anchors on the literal "those counters"
-// run so an ordinary counter placement ("put a +1/+1 counter on ...") keeps
-// MoveThoseCounters false.
+// on <destination>" or its singular-pronoun variant "put its counters on
+// <destination>", where "those"/"its" name the counters a triggering permanent
+// had as it left a zone ("When this creature dies, put its counters on target
+// creature you control."). It anchors on the literal "those counters" or "its
+// counters" run so an ordinary counter placement ("put a +1/+1 counter on ...")
+// keeps MoveThoseCounters false. The kind-named singular form ("put its +1/+1
+// counters on ...") keeps the pronoun and the noun non-adjacent and so stays
+// out of this kind-agnostic salvage move.
 func moveThoseCountersClause(clause []shared.Token) bool {
-	return effectHasTokenWords(clause, "those", "counters")
+	return effectHasTokenWords(clause, "those", "counters") ||
+		effectHasTokenWords(clause, "its", "counters")
 }

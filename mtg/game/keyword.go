@@ -1,6 +1,8 @@
 package game
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -18,9 +20,14 @@ type SimpleKeyword struct {
 	Kind Keyword
 }
 
-// WardKeyword parameterizes Ward for mana-valued ward costs.
+// WardKeyword parameterizes Ward for mana-valued ward costs. AdditionalCosts
+// carries the non-mana components of a composite or non-mana ward cost
+// ("Ward—Pay 2 life.", "Ward—{2}, Pay 2 life.", "Ward—Sacrifice a creature.").
+// An opponent must pay every component of Cost and AdditionalCosts together, or
+// the spell or ability that targeted this permanent is countered (CR 702.21).
 type WardKeyword struct {
-	Cost cost.Mana
+	Cost            cost.Mana
+	AdditionalCosts []cost.Additional
 }
 
 // CumulativeUpkeepKeyword parameterizes cumulative upkeep for fixed mana costs.
@@ -30,6 +37,14 @@ type CumulativeUpkeepKeyword struct {
 
 // EquipKeyword parameterizes Equip activation costs.
 type EquipKeyword struct {
+	Cost cost.Mana
+}
+
+// ReconfigureKeyword parameterizes Reconfigure activation costs (CR 702.151).
+// It carries the Reconfigure keyword identity inside the activated ability built
+// by ReconfigureActivatedAbility so the rules layer can dispatch the attachment
+// like Equip.
+type ReconfigureKeyword struct {
 	Cost cost.Mana
 }
 
@@ -66,6 +81,19 @@ type OutlastKeyword struct {
 	Cost cost.Mana
 }
 
+// SaddleKeyword parameterizes the Saddle N keyword (CR 702.166). Power is the
+// total power of other creatures the controller must tap to saddle the Mount.
+type SaddleKeyword struct {
+	Power int
+}
+
+// CrewKeyword parameterizes the Crew N keyword (CR 702.122). Power is the total
+// power of creatures the controller must tap to make the Vehicle become an
+// artifact creature until end of turn.
+type CrewKeyword struct {
+	Power int
+}
+
 // MutateKeyword parameterizes Mutate alternative casting costs.
 type MutateKeyword struct {
 	Cost cost.Mana
@@ -75,6 +103,11 @@ type MutateKeyword struct {
 type KickerKeyword struct {
 	Cost         cost.Mana
 	BonusContent AbilityContent
+	// Multi marks the keyword as Multikicker (CR 702.32): the additional cost may
+	// be paid any number of times as the spell is cast, and the number of times
+	// it was paid (the kick count) scales "for each time it was kicked" payoffs.
+	// It is false for ordinary Kicker, which may be paid at most once.
+	Multi bool
 }
 
 // MadnessKeyword parameterizes Madness alternative costs.
@@ -118,6 +151,14 @@ type ProtectionKeyword struct {
 	// FromColors before the continuous effect is stored, so protection checks
 	// never observe ChosenColor.
 	ChosenColor bool
+}
+
+// HideawayKeyword parameterizes the Hideaway N keyword (CR 702.75). Amount is
+// the number of cards looked at from the top of the library when the permanent
+// enters; one of them is exiled face down and linked to the source, and the
+// rest are put on the bottom of the library in a random order.
+type HideawayKeyword struct {
+	Amount int
 }
 
 // ToxicKeyword parameterizes the number of poison counters given after combat
@@ -168,6 +209,7 @@ func (SimpleKeyword) isKeywordAbility()           {}
 func (WardKeyword) isKeywordAbility()             {}
 func (CumulativeUpkeepKeyword) isKeywordAbility() {}
 func (EquipKeyword) isKeywordAbility()            {}
+func (ReconfigureKeyword) isKeywordAbility()      {}
 func (EnchantKeyword) isKeywordAbility()          {}
 func (CyclingKeyword) isKeywordAbility()          {}
 func (NinjutsuKeyword) isKeywordAbility()         {}
@@ -181,6 +223,7 @@ func (DisguiseKeyword) isKeywordAbility()         {}
 func (SuspendKeyword) isKeywordAbility()          {}
 func (ProtectionKeyword) isKeywordAbility()       {}
 func (ToxicKeyword) isKeywordAbility()            {}
+func (HideawayKeyword) isKeywordAbility()         {}
 func (ScavengeKeyword) isKeywordAbility()         {}
 func (UnearthKeyword) isKeywordAbility()          {}
 func (FabricateKeyword) isKeywordAbility()        {}
@@ -188,13 +231,18 @@ func (RampageKeyword) isKeywordAbility()          {}
 func (SoulshiftKeyword) isKeywordAbility()        {}
 func (DredgeKeyword) isKeywordAbility()           {}
 func (LandwalkKeyword) isKeywordAbility()         {}
+func (SaddleKeyword) isKeywordAbility()           {}
+func (CrewKeyword) isKeywordAbility()             {}
 
 func (ability SimpleKeyword) keyword() Keyword { return ability.Kind }
 func (WardKeyword) keyword() Keyword           { return Ward }
 func (CumulativeUpkeepKeyword) keyword() Keyword {
 	return CumulativeUpkeep
 }
-func (EquipKeyword) keyword() Keyword      { return Equip }
+func (EquipKeyword) keyword() Keyword { return Equip }
+func (ReconfigureKeyword) keyword() Keyword {
+	return Reconfigure
+}
 func (EnchantKeyword) keyword() Keyword    { return Enchant }
 func (CyclingKeyword) keyword() Keyword    { return Cycling }
 func (NinjutsuKeyword) keyword() Keyword   { return Ninjutsu }
@@ -208,6 +256,7 @@ func (DisguiseKeyword) keyword() Keyword   { return Disguise }
 func (SuspendKeyword) keyword() Keyword    { return Suspend }
 func (ProtectionKeyword) keyword() Keyword { return Protection }
 func (ToxicKeyword) keyword() Keyword      { return Toxic }
+func (HideawayKeyword) keyword() Keyword   { return Hideaway }
 func (ScavengeKeyword) keyword() Keyword   { return Scavenge }
 func (UnearthKeyword) keyword() Keyword    { return Unearth }
 func (FabricateKeyword) keyword() Keyword  { return Fabricate }
@@ -215,10 +264,13 @@ func (RampageKeyword) keyword() Keyword    { return Rampage }
 func (SoulshiftKeyword) keyword() Keyword  { return Soulshift }
 func (DredgeKeyword) keyword() Keyword     { return Dredge }
 func (LandwalkKeyword) keyword() Keyword   { return Landwalk }
+func (SaddleKeyword) keyword() Keyword     { return Saddle }
+func (CrewKeyword) keyword() Keyword       { return Crew }
 
 func (ability SimpleKeyword) cloneKeywordAbility() KeywordAbility { return ability }
 func (ability WardKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	ability.AdditionalCosts = slices.Clone(ability.AdditionalCosts)
 	return ability
 }
 func (ability CumulativeUpkeepKeyword) cloneKeywordAbility() KeywordAbility {
@@ -226,6 +278,11 @@ func (ability CumulativeUpkeepKeyword) cloneKeywordAbility() KeywordAbility {
 	return ability
 }
 func (ability EquipKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
+
+func (ability ReconfigureKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.Cost = append(cost.Mana(nil), ability.Cost...)
 	return ability
 }
@@ -281,7 +338,8 @@ func (ability ProtectionKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.FromSubtypes = append([]types.Sub(nil), ability.FromSubtypes...)
 	return ability
 }
-func (ability ToxicKeyword) cloneKeywordAbility() KeywordAbility { return ability }
+func (ability ToxicKeyword) cloneKeywordAbility() KeywordAbility    { return ability }
+func (ability HideawayKeyword) cloneKeywordAbility() KeywordAbility { return ability }
 func (ability ScavengeKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.Cost = append(cost.Mana(nil), ability.Cost...)
 	return ability
@@ -295,6 +353,8 @@ func (ability RampageKeyword) cloneKeywordAbility() KeywordAbility   { return ab
 func (ability SoulshiftKeyword) cloneKeywordAbility() KeywordAbility { return ability }
 func (ability DredgeKeyword) cloneKeywordAbility() KeywordAbility    { return ability }
 func (ability LandwalkKeyword) cloneKeywordAbility() KeywordAbility  { return ability }
+func (ability SaddleKeyword) cloneKeywordAbility() KeywordAbility    { return ability }
+func (ability CrewKeyword) cloneKeywordAbility() KeywordAbility      { return ability }
 
 // SimpleKeywords returns sealed keyword variants for non-parameterized keywords.
 func SimpleKeywords(keywords ...Keyword) []KeywordAbility {
@@ -385,6 +445,20 @@ func BodyWardCost(body *TriggeredAbility) (cost.Mana, bool) {
 	return ward.Cost, true
 }
 
+// BodyWardKeyword returns the full Ward keyword (mana plus any non-mana
+// additional cost components) from a triggered ability's keywords.
+func BodyWardKeyword(body *TriggeredAbility) (WardKeyword, bool) {
+	ka, ok := BodyKeywordAbility(body, Ward)
+	if !ok {
+		return WardKeyword{}, false
+	}
+	ward, ok := ka.(WardKeyword)
+	if !ok {
+		return WardKeyword{}, false
+	}
+	return ward, true
+}
+
 // StaticBodyWardCost returns the Ward cost from a static ability.
 func StaticBodyWardCost(body *StaticAbility) (cost.Mana, bool) {
 	ka, ok := BodyKeywordAbility(body, Ward)
@@ -396,6 +470,23 @@ func StaticBodyWardCost(body *StaticAbility) (cost.Mana, bool) {
 		return nil, false
 	}
 	return ward.Cost, true
+}
+
+// StaticBodyWardCosts returns the mana and additional payment of a static
+// ability's Ward keyword, or (nil, nil, false) when the body has no Ward
+// keyword. It carries the composite and non-mana Ward payment ("Ward—{2}, Pay 2
+// life.", "Ward—Sacrifice a creature.") that StaticBodyWardCost cannot express
+// with mana alone.
+func StaticBodyWardCosts(body *StaticAbility) (cost.Mana, []cost.Additional, bool) {
+	ka, ok := BodyKeywordAbility(body, Ward)
+	if !ok {
+		return nil, nil, false
+	}
+	ward, ok := ka.(WardKeyword)
+	if !ok {
+		return nil, nil, false
+	}
+	return ward.Cost, ward.AdditionalCosts, true
 }
 
 // StaticBodyDredgeCount returns the Dredge mill count carried by a static
@@ -451,6 +542,34 @@ func ActivatedBodyUnearthCost(body *ActivatedAbility) (cost.Mana, bool) {
 	return unearth.Cost, true
 }
 
+// ActivatedBodySaddlePower returns the Saddle N power threshold from an
+// activated ability, used to recognize and render the Saddle template.
+func ActivatedBodySaddlePower(body *ActivatedAbility) (int, bool) {
+	ka, ok := BodyKeywordAbility(body, Saddle)
+	if !ok {
+		return 0, false
+	}
+	saddle, ok := ka.(SaddleKeyword)
+	if !ok {
+		return 0, false
+	}
+	return saddle.Power, true
+}
+
+// ActivatedBodyCrewPower returns the Crew N power threshold from an activated
+// ability, used to recognize and render the Crew template.
+func ActivatedBodyCrewPower(body *ActivatedAbility) (int, bool) {
+	ka, ok := BodyKeywordAbility(body, Crew)
+	if !ok {
+		return 0, false
+	}
+	crew, ok := ka.(CrewKeyword)
+	if !ok {
+		return 0, false
+	}
+	return crew.Power, true
+}
+
 // ActivatedBodyNinjutsuCost returns the Ninjutsu cost from an activated ability.
 func ActivatedBodyNinjutsuCost(body *ActivatedAbility) (cost.Mana, bool) {
 	ka, ok := BodyKeywordAbility(body, Ninjutsu)
@@ -488,6 +607,20 @@ func ActivatedBodyEquipCost(body *ActivatedAbility) (cost.Mana, bool) {
 		return nil, false
 	}
 	return equip.Cost, true
+}
+
+// ActivatedBodyReconfigureCost returns the Reconfigure cost from an activated
+// ability.
+func ActivatedBodyReconfigureCost(body *ActivatedAbility) (cost.Mana, bool) {
+	ka, ok := BodyKeywordAbility(body, Reconfigure)
+	if !ok {
+		return nil, false
+	}
+	reconfigure, ok := ka.(ReconfigureKeyword)
+	if !ok {
+		return nil, false
+	}
+	return reconfigure.Cost, true
 }
 
 // BodyMadnessCost returns the Madness cost from a TriggeredAbilityBody's keywords.

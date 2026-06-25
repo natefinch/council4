@@ -2,9 +2,11 @@ package rules
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -22,19 +24,75 @@ type conditionContext struct {
 // conditionParametersNegative reports whether any numeric condition parameter is
 // negative, which is structurally invalid and must fail closed.
 func conditionParametersNegative(cond *game.Condition) bool {
-	return cond.ControllerLifeAtLeast < 0 ||
-		cond.AnyPlayerLifeAtMost < 0 ||
+	for _, agg := range cond.Aggregates {
+		if agg.Value < 0 {
+			return true
+		}
+	}
+	return cond.AnyPlayerLifeAtMost < 0 ||
 		cond.AnyOpponentPoisonAtLeast < 0 ||
-		cond.ControllerHandSizeExactly.Exists && cond.ControllerHandSizeExactly.Val < 0 ||
-		cond.OpponentCountAtLeast < 0 ||
-		cond.ControllerGraveyardCardCountAtLeast < 0 ||
-		cond.ControllerGraveyardCardTypeCountAtLeast < 0 ||
-		cond.ControllerBasicLandTypeCountAtLeast < 0 ||
-		cond.ControllerCreaturePowerDiversityAtLeast < 0 ||
-		cond.ControllerControls.MinCount < 0 ||
+		cond.ControllerGraveyardCardOfTypeCountAtLeast < 0 ||
 		cond.ControlsMatching.Exists && cond.ControlsMatching.Val.MinCount < 0 ||
 		cond.AnyOpponentControls.Exists && cond.AnyOpponentControls.Val.MinCount < 0 ||
-		cond.OpponentsControl.Exists && cond.OpponentsControl.Val.MinCount < 0
+		cond.OpponentsControl.Exists && cond.OpponentsControl.Val.MinCount < 0 ||
+		cond.SourceLevelCountersAtLeast < 0 ||
+		cond.SourceLevelCountersLessThan < 0
+}
+
+// aggregateValue evaluates a player- or board-derived quantity in the given
+// condition context. It returns the value and whether it could be resolved; an
+// unresolved quantity fails the comparison closed.
+func aggregateValue(g *game.Game, ctx conditionContext, kind game.AggregateKind) (int, bool) {
+	switch kind {
+	case game.AggregateControllerLife:
+		player, ok := playerByID(g, ctx.controller)
+		if !ok {
+			return 0, false
+		}
+		return player.Life, true
+	case game.AggregateControllerLifeAboveStarting:
+		player, ok := playerByID(g, ctx.controller)
+		if !ok {
+			return 0, false
+		}
+		return player.Life - player.StartingLife, true
+	case game.AggregateControllerHandSize:
+		player, ok := playerByID(g, ctx.controller)
+		if !ok {
+			return 0, false
+		}
+		return cardInstanceCount(g, player.Hand.All()), true
+	case game.AggregateControllerLibrarySize:
+		player, ok := playerByID(g, ctx.controller)
+		if !ok {
+			return 0, false
+		}
+		return cardInstanceCount(g, player.Library.All()), true
+	case game.AggregateControllerGraveyardCardCount:
+		player, ok := playerByID(g, ctx.controller)
+		if !ok {
+			return 0, false
+		}
+		return cardInstanceCount(g, player.Graveyard.All()), true
+	case game.AggregateControllerGraveyardCardTypeCount:
+		return controllerGraveyardCardTypeCount(g, ctx.controller), true
+	case game.AggregateControllerBasicLandTypeCount:
+		return controllerBasicLandTypeCount(g, ctx), true
+	case game.AggregateControllerCreaturePowerDiversity:
+		return controllerCreaturePowerDiversity(g, ctx), true
+	case game.AggregateOpponentCount:
+		return len(aliveOpponents(g, ctx.controller)), true
+	case game.AggregateAttackersAttackingController:
+		return attackersAttackingPlayerCount(g, ctx.controller), true
+	case game.AggregateControllerGainedLifeThisTurn:
+		return lifeChangedThisTurn(g, ctx.controller, game.EventLifeGained), true
+	case game.AggregateSpellX:
+		if ctx.obj == nil {
+			return 0, false
+		}
+		return ctx.obj.XValue, true
+	}
+	return 0, false
 }
 
 func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game.Condition]) bool {
@@ -48,20 +106,10 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	matches := true
 	if cond.ControlsMatching.Exists {
 		matches = matches && controllerControlsMatchingSelection(g, ctx, cond.ControlsMatching.Val)
-	} else if !cond.ControllerControls.Empty() {
-		matches = matches && controllerControlsMatchingSelection(g, ctx, controlSelectionFromFilter(cond.ControllerControls))
 	}
-	if cond.ControllerLifeAtLeast > 0 {
-		player, ok := playerByID(g, ctx.controller)
-		matches = matches && ok && player.Life >= cond.ControllerLifeAtLeast
-	}
-	if cond.ControllerHandSizeAtLeast > 0 {
-		player, ok := playerByID(g, ctx.controller)
-		matches = matches && ok && cardInstanceCount(g, player.Hand.All()) >= cond.ControllerHandSizeAtLeast
-	}
-	if cond.ControllerHandSizeExactly.Exists {
-		player, ok := playerByID(g, ctx.controller)
-		matches = matches && ok && cardInstanceCount(g, player.Hand.All()) == cond.ControllerHandSizeExactly.Val
+	for _, agg := range cond.Aggregates {
+		value, ok := aggregateValue(g, ctx, agg.Aggregate)
+		matches = matches && ok && compare.Int{Op: agg.Op, Value: agg.Value}.Matches(value)
 	}
 	if cond.AnyOpponentPoisonAtLeast > 0 {
 		matches = matches && anyOpponentPoisonAtLeast(g, ctx.controller, cond.AnyOpponentPoisonAtLeast)
@@ -69,25 +117,12 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.AnyPlayerLifeAtMost > 0 {
 		matches = matches && anyPlayerLifeAtMost(g, cond.AnyPlayerLifeAtMost)
 	}
-	if cond.OpponentCountAtLeast > 0 {
-		matches = matches && len(aliveOpponents(g, ctx.controller)) >= cond.OpponentCountAtLeast
-	}
 	if cond.ControllerHandEmpty {
 		player, ok := playerByID(g, ctx.controller)
 		matches = matches && ok && cardInstanceCount(g, player.Hand.All()) == 0
 	}
-	if cond.ControllerGraveyardCardCountAtLeast > 0 {
-		player, ok := playerByID(g, ctx.controller)
-		matches = matches && ok && cardInstanceCount(g, player.Graveyard.All()) >= cond.ControllerGraveyardCardCountAtLeast
-	}
-	if cond.ControllerGraveyardCardTypeCountAtLeast > 0 {
-		matches = matches && controllerGraveyardCardTypeCount(g, ctx.controller) >= cond.ControllerGraveyardCardTypeCountAtLeast
-	}
-	if cond.ControllerBasicLandTypeCountAtLeast > 0 {
-		matches = matches && controllerBasicLandTypeCount(g, ctx) >= cond.ControllerBasicLandTypeCountAtLeast
-	}
-	if cond.ControllerCreaturePowerDiversityAtLeast > 0 {
-		matches = matches && controllerCreaturePowerDiversity(g, ctx) >= cond.ControllerCreaturePowerDiversityAtLeast
+	if cond.ControllerGraveyardCardOfTypeCountAtLeast > 0 {
+		matches = matches && controllerGraveyardCardOfTypeCount(g, ctx.controller, cond.ControllerGraveyardCountCardType) >= cond.ControllerGraveyardCardOfTypeCountAtLeast
 	}
 	if cond.AnyOpponentControls.Exists {
 		matches = matches && anyOpponentControlsMatchingSelection(g, ctx, cond.AnyOpponentControls.Val)
@@ -110,8 +145,17 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.SourceClassLevelLessThan > 0 {
 		matches = matches && ctx.source != nil && ctx.source.ClassLevel < cond.SourceClassLevelLessThan
 	}
+	if cond.SourceLevelCountersAtLeast > 0 {
+		matches = matches && ctx.source != nil && ctx.source.Counters.Get(counter.Level) >= cond.SourceLevelCountersAtLeast
+	}
+	if cond.SourceLevelCountersLessThan > 0 {
+		matches = matches && ctx.source != nil && ctx.source.Counters.Get(counter.Level) < cond.SourceLevelCountersLessThan
+	}
 	if cond.SourceNotMonstrous {
 		matches = matches && ctx.source != nil && !ctx.source.Monstrous
+	}
+	if cond.SourceSaddled {
+		matches = matches && ctx.source != nil && ctx.source.Saddled
 	}
 	if cond.SourceTributeNotPaid {
 		matches = matches && ctx.source != nil && !ctx.source.TributePaid
@@ -129,6 +173,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.CastDuringControllerMainPhase {
 		matches = matches && ctx.obj != nil && !ctx.obj.Copy && ctx.obj.CastDuringControllerMainPhase
 	}
+	if cond.SpellWasKicked {
+		matches = matches && ctx.obj != nil && !ctx.obj.Copy && ctx.obj.KickerPaid
+	}
 	if cond.ControllerCreatedTokenThisTurn {
 		matches = matches && controllerCreatedTokenThisTurn(g, ctx.controller)
 	}
@@ -137,6 +184,18 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	}
 	if cond.ControllerControlsCommander {
 		matches = matches && playerControlsCommander(g, ctx.controller)
+	}
+	if len(cond.ControllerControlsNamed) > 0 {
+		matches = matches && controllerControlsNamed(g, ctx, cond.ControllerControlsNamed)
+	}
+	if cond.FirstCombatPhaseOfTurn {
+		matches = matches && g.Turn.CombatPhasesThisTurn <= 1
+	}
+	if cond.ControllerControlsGreatestPowerCreature {
+		matches = matches && controllerControlsGreatestPowerCreature(g, ctx)
+	}
+	if cond.ControllerControlsGreatestToughnessCreature {
+		matches = matches && controllerControlsGreatestToughnessCreature(g, ctx)
 	}
 	if cond.Negate {
 		return !matches
@@ -148,6 +207,23 @@ func cardInstanceCount(g *game.Game, objectIDs []id.ID) int {
 	count := 0
 	for _, objectID := range objectIDs {
 		if _, ok := g.GetCardInstance(objectID); ok {
+			count++
+		}
+	}
+	return count
+}
+
+// attackersAttackingPlayerCount counts the attackers declared this combat that
+// are attacking the given player directly or one of that player's planeswalkers
+// ("attacking you and/or planeswalkers you control"). Battle attacks are
+// excluded. The full attacker declaration is authoritative in g.Combat.
+func attackersAttackingPlayerCount(g *game.Game, player game.PlayerID) int {
+	if g.Combat == nil {
+		return 0
+	}
+	count := 0
+	for _, declaration := range g.Combat.Attackers {
+		if declaration.Target.Player == player && declaration.Target.BattleID == 0 {
 			count++
 		}
 	}
@@ -177,8 +253,33 @@ func controllerGraveyardCardTypeCount(g *game.Game, controller game.PlayerID) in
 	return len(distinct)
 }
 
+// controllerGraveyardCardOfTypeCount counts the cards in the controller's
+// graveyard whose card types include cardType ("twenty or more creature cards
+// are in your graveyard", Mortal Combat).
+func controllerGraveyardCardOfTypeCount(g *game.Game, controller game.PlayerID, cardType types.Card) int {
+	player, ok := playerByID(g, controller)
+	if !ok {
+		return 0
+	}
+	count := 0
+	for _, cardID := range player.Graveyard.All() {
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		if slices.Contains(cardFaceOrDefault(card, game.FaceFront).Types, cardType) {
+			count++
+			continue
+		}
+		if card.Def.Layout == game.LayoutSplit && card.Def.Alternate.Exists &&
+			slices.Contains(card.Def.Alternate.Val.Types, cardType) {
+			count++
+		}
+	}
+	return count
+}
+
 func controllerBasicLandTypeCount(g *game.Game, ctx conditionContext) int {
-	basicLandTypes := [...]types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain, types.Forest}
 	distinct := make(map[types.Sub]bool)
 	for _, permanent := range g.Battlefield {
 		if permanent.PhasedOut {
@@ -188,7 +289,7 @@ func controllerBasicLandTypeCount(g *game.Game, ctx conditionContext) int {
 		if values.controller != ctx.controller || !slices.Contains(values.types, types.Land) {
 			continue
 		}
-		for _, subtype := range basicLandTypes {
+		for _, subtype := range basicLandSubtypes {
 			if slices.Contains(values.subtypes, subtype) {
 				distinct[subtype] = true
 			}
@@ -211,6 +312,66 @@ func controllerCreaturePowerDiversity(g *game.Game, ctx conditionContext) int {
 		}
 	}
 	return len(distinct)
+}
+
+// controllerControlsGreatestPowerCreature reports whether the context controller
+// controls a creature whose power equals the greatest power among all creatures
+// on the battlefield ("you control the creature with the greatest power or tied
+// for the greatest power"). It is false when no creatures with a defined power
+// exist.
+func controllerControlsGreatestPowerCreature(g *game.Game, ctx conditionContext) bool {
+	greatest := 0
+	haveGreatest := false
+	controllerGreatest := 0
+	haveControllerGreatest := false
+	for _, permanent := range g.Battlefield {
+		if permanent.PhasedOut {
+			continue
+		}
+		values := permanentValuesForCondition(g, permanent, ctx)
+		if !slices.Contains(values.types, types.Creature) || !values.powerOK {
+			continue
+		}
+		if !haveGreatest || values.power > greatest {
+			greatest = values.power
+			haveGreatest = true
+		}
+		if values.controller == ctx.controller && (!haveControllerGreatest || values.power > controllerGreatest) {
+			controllerGreatest = values.power
+			haveControllerGreatest = true
+		}
+	}
+	return haveGreatest && haveControllerGreatest && controllerGreatest >= greatest
+}
+
+// controllerControlsGreatestToughnessCreature reports whether the context
+// controller controls a creature whose toughness equals the greatest toughness
+// among all creatures on the battlefield ("you control the creature with the
+// greatest toughness or tied for the greatest toughness"). It is false when no
+// creatures with a defined toughness exist.
+func controllerControlsGreatestToughnessCreature(g *game.Game, ctx conditionContext) bool {
+	greatest := 0
+	haveGreatest := false
+	controllerGreatest := 0
+	haveControllerGreatest := false
+	for _, permanent := range g.Battlefield {
+		if permanent.PhasedOut {
+			continue
+		}
+		values := permanentValuesForCondition(g, permanent, ctx)
+		if !slices.Contains(values.types, types.Creature) || !values.toughnessOK {
+			continue
+		}
+		if !haveGreatest || values.toughness > greatest {
+			greatest = values.toughness
+			haveGreatest = true
+		}
+		if values.controller == ctx.controller && (!haveControllerGreatest || values.toughness > controllerGreatest) {
+			controllerGreatest = values.toughness
+			haveControllerGreatest = true
+		}
+	}
+	return haveGreatest && haveControllerGreatest && controllerGreatest >= greatest
 }
 
 func permanentValuesForCondition(g *game.Game, permanent *game.Permanent, ctx conditionContext) permanentEffectiveValues {
@@ -328,16 +489,58 @@ func resolvedObjectHasType(g *game.Game, resolved *resolvedObjectReference, card
 	return slices.Contains(resolved.snapshot.Types, cardType)
 }
 
-func controlSelectionFromFilter(filter game.PermanentFilter) game.SelectionCount {
-	return game.SelectionCount{
-		Selection:  filter.Selection(),
-		MinCount:   filter.MinCount,
-		TotalPower: filter.TotalPower,
-	}
-}
-
 func controllerControlsMatchingSelection(g *game.Game, ctx conditionContext, control game.SelectionCount) bool {
 	return playersControlMatchingSelection(g, ctx, []game.PlayerID{ctx.controller}, control)
+}
+
+// controllerControlsNamed reports whether the context controller controls, for
+// each requested name, at least one active battlefield permanent whose
+// effective name matches. Names are compared case-insensitively with hyphens
+// and spaces treated alike, so the printed Oracle spelling ("Urza's
+// Power-Plant") matches the canonical card name ("Urza's Power Plant").
+func controllerControlsNamed(g *game.Game, ctx conditionContext, names []string) bool {
+	for _, name := range names {
+		want := normalizeControlledName(name)
+		if want == "" {
+			return false
+		}
+		found := false
+		for _, permanent := range g.Battlefield {
+			if !activeBattlefieldPermanent(permanent) ||
+				effectiveController(g, permanent) != ctx.controller {
+				continue
+			}
+			if normalizeControlledName(permanentEffectiveName(g, permanent)) == want {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
+// normalizeControlledName canonicalizes a permanent name for the
+// control-a-named-permanent predicate: lowercased, with every hyphen treated as
+// a space and runs of whitespace collapsed. This reconciles the Oracle-text
+// spelling used in conditions with the printed card name.
+func normalizeControlledName(name string) string {
+	var builder strings.Builder
+	lastSpace := true
+	for _, r := range strings.ToLower(name) {
+		if r == '-' || r == ' ' || r == '\t' || r == '\n' {
+			if !lastSpace {
+				_ = builder.WriteByte(' ')
+				lastSpace = true
+			}
+			continue
+		}
+		_, _ = builder.WriteRune(r)
+		lastSpace = false
+	}
+	return strings.TrimSpace(builder.String())
 }
 
 func anyOpponentControlsMatchingSelection(g *game.Game, ctx conditionContext, control game.SelectionCount) bool {
@@ -560,12 +763,9 @@ func conditionTargetEnteredThisTurn(g *game.Game, ctx conditionContext, targetIn
 // the battlefield during the current turn, scanning this turn's events for its
 // enter-the-battlefield event.
 func permanentEnteredThisTurn(g *game.Game, permanentID id.ID) bool {
-	for _, event := range g.EventsThisTurn() {
-		if event.Kind == game.EventPermanentEnteredBattlefield && event.PermanentID == permanentID {
-			return true
-		}
-	}
-	return false
+	return eventsThisTurnWindow(g).any(func(event game.Event) bool {
+		return event.Kind == game.EventPermanentEnteredBattlefield && event.PermanentID == permanentID
+	})
 }
 
 func eventPermanentNameUniqueAmongControlledAndGraveyardCreatures(g *game.Game, ctx conditionContext) bool {
@@ -630,14 +830,11 @@ func activationConditionSatisfied(g *game.Game, playerID game.PlayerID, permanen
 // event log as a battlefield-entry event carrying the token's definition, so the
 // scan reuses that log rather than tracking separate mutable state.
 func controllerCreatedTokenThisTurn(g *game.Game, controller game.PlayerID) bool {
-	for _, event := range g.EventsThisTurn() {
-		if event.Kind == game.EventPermanentEnteredBattlefield &&
+	return eventsThisTurnWindow(g).any(func(event game.Event) bool {
+		return event.Kind == game.EventPermanentEnteredBattlefield &&
 			event.TokenDef != nil &&
-			event.Controller == controller {
-			return true
-		}
-	}
-	return false
+			event.Controller == controller
+	})
 }
 
 // conditionEventHistorySatisfied returns true when the chosen turn's event
@@ -645,24 +842,26 @@ func controllerCreatedTokenThisTurn(g *game.Game, controller game.PlayerID) bool
 // one when MinCount is zero). The source permanent is passed to
 // triggerMatchesEvent so controller-relative filters (TriggerControllerYou,
 // TriggerPlayerYou, etc.) resolve correctly. A nil source permanent fails closed
-// for any pattern that requires a controller.
+// for any pattern that references the source (such filters can never match
+// without one); source-agnostic patterns, such as "a creature died this turn"
+// gating a resolving instant, evaluate against the event log directly.
 func conditionEventHistorySatisfied(g *game.Game, ctx conditionContext, hist *game.EventHistoryCondition) bool {
-	if ctx.source == nil {
+	if ctx.source == nil && eventHistoryPatternNeedsSource(&hist.Pattern) {
 		return false
 	}
-	var events []game.Event
+	var events eventWindow
 	switch hist.Window {
 	case game.EventHistoryCurrentTurn:
-		events = g.EventsThisTurn()
+		events = eventsThisTurnWindow(g)
 	case game.EventHistoryPreviousTurn:
-		events = g.EventsPreviousTurn()
+		events = eventsPreviousTurnWindow(g)
 	default:
 		return false
 	}
 	want := max(hist.MinCount, 1)
 	matches := 0
-	for _, event := range events {
-		if triggerMatchesEvent(g, ctx.source, &hist.Pattern, event) {
+	for i := range events {
+		if triggerMatchesEvent(g, ctx.source, &hist.Pattern, events[i]) {
 			matches++
 			if matches >= want {
 				return true
@@ -670,4 +869,21 @@ func conditionEventHistorySatisfied(g *game.Game, ctx conditionContext, hist *ga
 		}
 	}
 	return false
+}
+
+// eventHistoryPatternNeedsSource reports whether a trigger pattern consults the
+// ability's source permanent (its controller, identity, or attachment) to match
+// an event. Such patterns can never match without a source, so a source-agnostic
+// caller (a resolving instant gating on event history) fails them closed instead
+// of dereferencing a nil source.
+func eventHistoryPatternNeedsSource(pattern *game.TriggerPattern) bool {
+	return pattern.Controller != game.TriggerControllerAny ||
+		pattern.CauseController != game.TriggerControllerAny ||
+		pattern.Player != game.TriggerPlayerAny ||
+		pattern.Source != game.TriggerSourceAny ||
+		pattern.ExcludeSelf ||
+		pattern.SubjectSelectionOrSelf ||
+		pattern.DamageRecipientIsSource ||
+		pattern.SpellTargetsSource ||
+		!pattern.StepPlayerSourceAttachedSelection.Empty()
 }

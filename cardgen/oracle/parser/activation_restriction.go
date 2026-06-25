@@ -10,11 +10,16 @@ func parseTrailingActivationRestrictions(
 	sentences := ParseSentences(source, activationRestrictionSemanticTokens(tokens, reminders, quoted))
 	var restrictions []ActivationRestriction
 	for i := len(sentences) - 1; i >= 0; i-- {
-		restriction, ok := parseActivationRestriction(sentences[i].Tokens)
+		clauses, ok := parseActivationRestriction(sentences[i].Tokens)
 		if !ok {
 			break
 		}
-		restrictions = append(restrictions, restriction)
+		// Sentences are walked back-to-front and the whole slice is reversed
+		// below to restore source order; append each sentence's own clauses
+		// reversed so that final reversal also restores their in-sentence order.
+		for j := len(clauses) - 1; j >= 0; j-- {
+			restrictions = append(restrictions, clauses[j])
+		}
 	}
 	for left, right := 0, len(restrictions)-1; left < right; left, right = left+1, right-1 {
 		restrictions[left], restrictions[right] = restrictions[right], restrictions[left]
@@ -44,50 +49,90 @@ func activationRestrictionSemanticTokens(
 	return result
 }
 
-func parseActivationRestriction(tokens []shared.Token) (ActivationRestriction, bool) {
+// parseActivationRestriction parses one "Activate only …" sentence into its
+// typed restriction clauses. A single sentence may conjoin two restrictions
+// ("Activate only as a sorcery and only once each turn."), so it returns a
+// slice: each conjoined clause becomes its own ActivationRestriction sharing the
+// full sentence span. The compiler combines the resulting clause kinds (e.g.
+// sorcery + once-per-turn) and fails closed on any unrecognized pairing.
+func parseActivationRestriction(tokens []shared.Token) ([]ActivationRestriction, bool) {
 	fullSpan := shared.SpanOf(tokens)
 	if len(tokens) > 0 && tokens[len(tokens)-1].Kind == shared.Period {
 		tokens = tokens[:len(tokens)-1]
 	}
 	if len(tokens) < 2 || !syntaxWordsEqual(tokens[:2], "activate", "only") {
-		return ActivationRestriction{}, false
-	}
-	restriction := ActivationRestriction{
-		Kind: ActivationRestrictionUnsupported,
-		Span: fullSpan,
+		return nil, false
 	}
 	if len(tokens) == 2 {
-		return restriction, true
+		return []ActivationRestriction{{Kind: ActivationRestrictionUnsupported, Span: fullSpan}}, true
 	}
 	if equalWord(tokens[2], "if") {
-		return ActivationRestriction{}, false
+		return nil, false
 	}
-	remainder := tokens[2:]
+	clauses := splitActivationRestrictionConjunction(tokens[2:])
+	restrictions := make([]ActivationRestriction, 0, len(clauses))
+	for _, clause := range clauses {
+		restriction := ActivationRestriction{Kind: ActivationRestrictionUnsupported, Span: fullSpan}
+		matchActivationRestrictionBody(clause, &restriction)
+		restrictions = append(restrictions, restriction)
+	}
+	return restrictions, true
+}
+
+// splitActivationRestrictionConjunction splits the body of an "Activate only …"
+// sentence on a top-level "and" conjunction, dropping a leading "only" that
+// reintroduces the restriction framing on the following clause ("… and only
+// once each turn"). None of the supported restriction bodies (sorcery/instant
+// timing, once-per-turn frequency, phase/step, player turn) contain an internal
+// "and", so splitting there never fractures a single supported body; an
+// unsupported split simply fails closed in the compiler.
+func splitActivationRestrictionConjunction(tokens []shared.Token) [][]shared.Token {
+	var clauses [][]shared.Token
+	start := 0
+	for i := 0; i < len(tokens); i++ {
+		if !equalWord(tokens[i], "and") {
+			continue
+		}
+		clauses = append(clauses, tokens[start:i])
+		next := i + 1
+		if next < len(tokens) && equalWord(tokens[next], "only") {
+			next++
+		}
+		start = next
+		i = next - 1
+	}
+	clauses = append(clauses, tokens[start:])
+	return clauses
+}
+
+// matchActivationRestrictionBody recognizes a single restriction clause body and
+// sets restriction.Kind (and any typed sub-structure) accordingly. An
+// unrecognized body leaves Kind at ActivationRestrictionUnsupported.
+func matchActivationRestrictionBody(remainder []shared.Token, restriction *ActivationRestriction) {
 	if sorcerySpan, ok := parseActivationSorceryTiming(remainder); ok {
 		restriction.Kind = ActivationRestrictionSorceryTiming
 		restriction.SorcerySpan = sorcerySpan
-		return restriction, true
+		return
 	}
 	if parseActivationInstantTiming(remainder) {
 		restriction.Kind = ActivationRestrictionInstantTiming
-		return restriction, true
+		return
 	}
 	if frequency, ok := parseActivationFrequencyRestriction(remainder); ok {
 		restriction.Kind = ActivationRestrictionFrequency
 		restriction.Frequency = frequency
-		return restriction, true
+		return
 	}
 	if phaseStep, ok := parseActivationPhaseStepRestriction(remainder); ok {
 		restriction.Kind = ActivationRestrictionPhaseStep
 		restriction.PhaseStep = phaseStep
-		return restriction, true
+		return
 	}
 	if playerTurn, ok := parseActivationPlayerTurnRestriction(remainder); ok {
 		restriction.Kind = ActivationRestrictionPlayerTurn
 		restriction.PlayerTurn = playerTurn
-		return restriction, true
+		return
 	}
-	return restriction, true
 }
 
 // parseActivationInstantTiming reports whether the restriction names instant

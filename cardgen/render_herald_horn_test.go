@@ -54,10 +54,12 @@ func TestRenderRevealOfLinkedCard(t *testing.T) {
 }
 
 func TestRenderCardConditionChosenSubtype(t *testing.T) {
-	rendered, err := (Renderer{}).renderCardCondition(newRenderCtx(), game.CardCondition{
-		Card:              game.CardReference{Kind: game.CardReferenceLinked, LinkID: "chosen-type-top"},
-		Types:             []types.Card{types.Creature},
-		ChosenSubtypeFrom: game.EntryTypeChoiceKey,
+	rendered, err := (Renderer{}).renderCardSelection(newRenderCtx(), game.CardSelection{
+		Card: game.CardReference{Kind: game.CardReferenceLinked, LinkID: "chosen-type-top"},
+		Selection: game.Selection{
+			RequiredTypes:     []types.Card{types.Creature},
+			ChosenSubtypeFrom: game.EntryTypeChoiceKey,
+		},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -71,8 +73,7 @@ func TestRenderCardConditionChosenSubtype(t *testing.T) {
 func TestRenderCostModifierChosenSubtype(t *testing.T) {
 	rendered, err := (Renderer{}).renderCostModifier(newRenderCtx(), game.CostModifier{
 		Kind:                         game.CostModifierSpell,
-		MatchCardType:                true,
-		CardType:                     types.Creature,
+		CardSelection:                game.Selection{RequiredTypes: []types.Card{types.Creature}},
 		ChosenSubtypeFromEntryChoice: true,
 		GenericReduction:             1,
 	})
@@ -89,12 +90,12 @@ func TestRenderCostModifierColorDisjunction(t *testing.T) {
 	rendered, err := (Renderer{}).renderCostModifier(newRenderCtx(), game.CostModifier{
 		Kind:             game.CostModifierSpell,
 		GenericReduction: 1,
-		MatchColors:      []color.Color{color.Red, color.Green},
+		CardSelection:    game.Selection{ColorsAny: []color.Color{color.Red, color.Green}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(rendered, "MatchColors: []color.Color{color.Red, color.Green}") {
+	if !strings.Contains(rendered, "CardSelection: game.Selection{ColorsAny: []color.Color{color.Red, color.Green}}") {
 		t.Fatalf("rendered CostModifier missing color disjunction:\n%s", rendered)
 	}
 	assertParsesAsGoExpr(t, rendered)

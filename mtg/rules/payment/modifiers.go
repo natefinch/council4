@@ -13,11 +13,12 @@ type costModificationContext struct {
 	card       *game.CardDef
 	cardID     id.ID
 	sourceZone zone.Type
+	targets    []game.Target
 	option     spellCostOption
 }
 
 func applyCostModifiers(s State, ctx costModificationContext) spellCostOption {
-	ctx.option.manaCost = applyGenericCostModifiers(ctx.option.manaCost, s.CostModifiersForSpell(ctx.player, ctx.card, ctx.cardID, ctx.sourceZone))
+	ctx.option.manaCost = applyGenericCostModifiers(ctx.option.manaCost, s.CostModifiersForSpell(ctx.player, ctx.card, ctx.cardID, ctx.sourceZone, ctx.targets))
 	return ctx.option
 }
 
@@ -27,6 +28,7 @@ func applyGenericCostModifiers(manaCost *cost.Mana, modifiers []game.CostModifie
 	}
 	generic := genericCostAmount(manaCost)
 	minimum := 0
+	taxInstances := 0
 	set := (*int)(nil)
 	for _, modifier := range modifiers {
 		if modifier.SetGeneric.Exists {
@@ -34,6 +36,7 @@ func applyGenericCostModifiers(manaCost *cost.Mana, modifiers []game.CostModifie
 		}
 		generic += modifier.GenericIncrease
 		generic -= modifier.GenericReduction
+		taxInstances += modifier.LifePayableTaxInstances
 		if modifier.MinimumGeneric > minimum {
 			minimum = modifier.MinimumGeneric
 		}
@@ -47,7 +50,7 @@ func applyGenericCostModifiers(manaCost *cost.Mana, modifiers []game.CostModifie
 	if generic < 0 {
 		generic = 0
 	}
-	return costWithGenericAmount(manaCost, generic)
+	return costWithGenericAmount(manaCost, generic, taxInstances)
 }
 
 func genericCostAmount(manaCost *cost.Mana) int {
@@ -63,10 +66,13 @@ func genericCostAmount(manaCost *cost.Mana) int {
 	return total
 }
 
-func costWithGenericAmount(manaCost *cost.Mana, generic int) *cost.Mana {
+func costWithGenericAmount(manaCost *cost.Mana, generic, taxInstances int) *cost.Mana {
 	var modified cost.Mana
 	if generic > 0 {
 		modified = append(modified, cost.O(generic))
+	}
+	for range taxInstances {
+		modified = append(modified, cost.PhyrexianGeneric(2))
 	}
 	if manaCost != nil {
 		for _, symbol := range *manaCost {

@@ -1054,6 +1054,43 @@ Cards outside compiler coverage remain unsupported by Card Generation. Truly
 exceptional mechanics may still use a hand-written **Card Implementation** with
 an `ImplementationID`; that escape hatch is independent of this compiler.
 
+## Golden snapshot harness
+
+`golden_test.go` snapshots, for a small curated set of representative cards,
+both the compiler's semantic IR and the generated executable Go source. It
+turns reviewing a card into accepting a readable diff and turns an unintended
+regression in the parser, compiler, lowering, or renderer into a diff across
+the suite.
+
+For each curated card the harness writes two golden files under
+`testdata/golden/`:
+
+- `<key>.ir.txt` — the `[]compiler.CompiledAbility` semantic IR for each
+  executable face, rendered through a deterministic, zero-omitting dumper
+  (declaration-order fields, no maps, source spans/positions elided as
+  non-semantic).
+- `<key>.source.txt` — the rendered executable Go source from
+  `GenerateExecutableCardSource`.
+
+The curated set is intentionally small and fast, with one card per major effect
+family (single-target burn, ordered multi-clause sequence, plain draw, stack
+interaction, targeted removal, temporary pump, token creation, vanilla
+creature, ETB trigger, activated tap ability, mana ability, and static anthem).
+Each entry documents its rationale in `goldenCards`. `TestGoldenSnapshotsAreSupported`
+guards the invariant that every curated card still lowers to non-empty source
+with zero diagnostics, and `TestGoldenSnapshotsAreDeterministic` proves both
+snapshots are byte-stable across two generations.
+
+Update the goldens after an intended change (or when adding a card) by running:
+
+```bash
+go test ./cardgen/ -run TestGolden -update
+```
+
+Then review the diff under `testdata/golden/` before committing. The suite runs
+in CI as ordinary `go test ./cardgen/`; a drifted golden fails the run with a
+got/want diff.
+
 ## Tooling layout
 
 - `cardgen/oracle`: lexer, parser, semantic compiler, corpus checks, and bulk

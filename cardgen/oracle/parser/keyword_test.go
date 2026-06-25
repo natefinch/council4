@@ -25,13 +25,14 @@ func TestParseKeywordVocabularyMeaning(t *testing.T) {
 		"Emerge": KeywordEmerge, "Enchant": KeywordEnchant, "Equip": KeywordEquip, "Escape": KeywordEscape,
 		"Eternalize": KeywordEternalize, "Embalm": KeywordEmbalm, "Evolve": KeywordEvolve, "Exalted": KeywordExalted, "Fear": KeywordFear, "First strike": KeywordFirstStrike,
 		"Flash": KeywordFlash, "Flashback": KeywordFlashback, "Flying": KeywordFlying, "Foretell": KeywordForetell,
+		"Fuse":  KeywordFuse,
 		"Haste": KeywordHaste, "Hexproof": KeywordHexproof, "Improvise": KeywordImprovise,
 		"Horsemanship":   KeywordHorsemanship,
-		"Indestructible": KeywordIndestructible, "Infect": KeywordInfect, "Intimidate": KeywordIntimidate, "Kicker": KeywordKicker,
+		"Indestructible": KeywordIndestructible, "Infect": KeywordInfect, "Intimidate": KeywordIntimidate, "Jump-start": KeywordJumpStart, "Kicker": KeywordKicker,
 		"Lifelink": KeywordLifelink, "Madness": KeywordMadness, "Menace": KeywordMenace, "Morph": KeywordMorph,
 		"Mutate": KeywordMutate, "Ninjutsu": KeywordNinjutsu, "Outlast": KeywordOutlast, "Persist": KeywordPersist,
 		"Protection": KeywordProtection, "Prowess": KeywordProwess, "Read ahead": KeywordReadAhead,
-		"Reach": KeywordReach, "Shroud": KeywordShroud, "Skulk": KeywordSkulk, "Split second": KeywordSplitSecond, "Storm": KeywordStorm,
+		"Reach": KeywordReach, "Reconfigure": KeywordReconfigure, "Shroud": KeywordShroud, "Skulk": KeywordSkulk, "Split second": KeywordSplitSecond, "Storm": KeywordStorm,
 		"Suspend": KeywordSuspend, "Toxic": KeywordToxic, "Trample": KeywordTrample, "Undying": KeywordUndying,
 		"Unleash":   KeywordUnleash,
 		"Vigilance": KeywordVigilance, "Ward": KeywordWard, "Wither": KeywordWither, "Riot": KeywordRiot,
@@ -41,6 +42,8 @@ func TestParseKeywordVocabularyMeaning(t *testing.T) {
 		"Forestcycling": KeywordForestcycling,
 		"Flanking":      KeywordFlanking,
 		"Dethrone":      KeywordDethrone,
+		"Banding":       KeywordBanding,
+		"Partner with":  KeywordPartnerWith,
 	}
 	for source, want := range tests {
 		keywords := keywordsFor(t, source)
@@ -497,6 +500,49 @@ func TestExpandAnnihilatorKeywordLeavesOtherTextAlone(t *testing.T) {
 	}
 }
 
+func TestExpandAfterlifeKeyword(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		source string
+		want   string
+	}{
+		{
+			"ministrant of obligation",
+			"Afterlife 2 (When this creature dies, create two 1/1 white and black Spirit creature tokens with flying.)",
+			"When this creature dies, create two 1/1 white and black Spirit creature tokens with flying.",
+		},
+		{
+			"single token",
+			"Afterlife 1",
+			"When this creature dies, create a 1/1 white and black Spirit creature token with flying.",
+		},
+		{
+			"bare keyword three",
+			"Afterlife 3",
+			"When this creature dies, create three 1/1 white and black Spirit creature tokens with flying.",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			if got := expandAfterlifeKeyword(test.source); got != test.want {
+				t.Fatalf("expandAfterlifeKeyword = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+func TestExpandAfterlifeKeywordLeavesOtherTextAlone(t *testing.T) {
+	t.Parallel()
+	if got := expandAfterlifeKeyword("Whenever Afterlife dies, draw a card."); got != "Whenever Afterlife dies, draw a card." {
+		t.Fatalf("rewrote unrelated line: %q", got)
+	}
+	if got := expandAfterlifeKeyword("Afterlife"); got != "Afterlife" {
+		t.Fatalf("rewrote rankless keyword: %q", got)
+	}
+}
+
 func TestExpandBattleCryKeyword(t *testing.T) {
 	t.Parallel()
 	want := "Whenever this creature attacks, each other attacking creature gets +1/+0 until end of turn."
@@ -508,5 +554,126 @@ func TestExpandBattleCryKeyword(t *testing.T) {
 		if got := expandBattleCryKeyword(source); got != want {
 			t.Fatalf("expandBattleCryKeyword(%q) = %q, want %q", source, got, want)
 		}
+	}
+}
+
+func TestExpandMentorKeyword(t *testing.T) {
+	t.Parallel()
+	want := "Whenever this creature attacks, " +
+		"put a +1/+1 counter on target attacking creature with lesser power."
+	sources := []string{
+		"Mentor (Whenever this creature attacks, put a +1/+1 counter on target attacking creature with lesser power.)",
+		"Mentor",
+	}
+	for _, source := range sources {
+		if got := expandMentorKeyword(source); got != want {
+			t.Fatalf("expandMentorKeyword(%q) = %q, want %q", source, got, want)
+		}
+	}
+}
+
+func TestExpandMentorKeywordLeavesOtherTextAlone(t *testing.T) {
+	t.Parallel()
+	sources := []string{
+		"Mentor of the Meek",
+		"When this creature attacks, you may mentor it.",
+		"{1}: Mentor gains flying.",
+	}
+	for _, source := range sources {
+		if got := expandMentorKeyword(source); got != source {
+			t.Fatalf("expandMentorKeyword(%q) = %q, want unchanged", source, got)
+		}
+	}
+}
+
+func TestExpandMeleeKeyword(t *testing.T) {
+	t.Parallel()
+	want := "Whenever this creature attacks, it gets +1/+1 until " +
+		"end of turn for each opponent you attacked this combat."
+	sources := []string{
+		"Melee (Whenever this creature attacks, it gets +1/+1 until end of turn for each opponent you attacked this combat.)",
+		"Melee",
+	}
+	for _, source := range sources {
+		if got := expandMeleeKeyword(source); got != want {
+			t.Fatalf("expandMeleeKeyword(%q) = %q, want %q", source, got, want)
+		}
+	}
+}
+
+func TestExpandMeleeKeywordLeavesOtherTextAlone(t *testing.T) {
+	t.Parallel()
+	sources := []string{
+		"Marvelous Melee deals 4 damage to each tapped creature.",
+		"Redcap Melee",
+		"{1}: Melee gains flying.",
+	}
+	for _, source := range sources {
+		if got := expandMeleeKeyword(source); got != source {
+			t.Fatalf("expandMeleeKeyword(%q) = %q, want unchanged", source, got)
+		}
+	}
+}
+
+func TestParseSelectionWithLesserPower(t *testing.T) {
+	t.Parallel()
+	doc, diags := Parse(
+		"Whenever this creature attacks, put a +1/+1 counter on target attacking creature with lesser power.",
+		Context{CardName: "Probe"})
+	if len(diags) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diags)
+	}
+	var selection SelectionSyntax
+	found := false
+	for _, ability := range doc.Abilities {
+		for s := range ability.Sentences {
+			for _, effect := range ability.Sentences[s].Effects {
+				for _, target := range effect.Targets {
+					selection = target.Selection
+					found = true
+				}
+			}
+		}
+	}
+	if !found {
+		t.Fatal("no target selection parsed")
+	}
+	if !selection.Attacking {
+		t.Error("expected Attacking selection flag")
+	}
+	if !selection.PowerLessThanSource {
+		t.Error("expected PowerLessThanSource set for \"with lesser power\"")
+	}
+	if selection.PowerGreaterThanSource {
+		t.Error("did not expect PowerGreaterThanSource")
+	}
+	if !slices.Contains(selection.RequiredTypesAny, CardTypeCreature) {
+		t.Error("expected creature card type")
+	}
+}
+
+func TestParseSelectionWithGreaterPower(t *testing.T) {
+	t.Parallel()
+	doc, diags := Parse(
+		"Whenever this creature attacks, put a +1/+1 counter on target attacking creature with greater power.",
+		Context{CardName: "Probe"})
+	if len(diags) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diags)
+	}
+	var selection SelectionSyntax
+	for _, ability := range doc.Abilities {
+		for s := range ability.Sentences {
+			for _, effect := range ability.Sentences[s].Effects {
+				for _, target := range effect.Targets {
+					selection = target.Selection
+				}
+			}
+		}
+	}
+	if !selection.PowerGreaterThanSource {
+		t.Error("expected PowerGreaterThanSource set for \"with greater power\"")
+	}
+	if selection.PowerLessThanSource {
+		t.Error("did not expect PowerLessThanSource")
 	}
 }

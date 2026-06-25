@@ -8,6 +8,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -168,6 +169,30 @@ func TestRenderPutPermanentOnLibraryPrimitive(t *testing.T) {
 	}
 }
 
+func TestRenderPayRepeatedlyPrimitive(t *testing.T) {
+	t.Parallel()
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.PayRepeatedly{
+		Payment: game.ResolutionPayment{
+			ManaCost: opt.Val(cost.Mana{cost.O(1), cost.G}),
+		},
+		PublishCount: game.ResultKey("paid-count"),
+		Prompt:       "Pay {1}{G}?",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.PayRepeatedly",
+		"PublishCount: \"paid-count\"",
+		"Prompt: \"Pay {1}{G}?\"",
+		"game.ResolutionPayment",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered PayRepeatedly missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
 func TestRenderBoundedUntapPrimitive(t *testing.T) {
 	t.Parallel()
 	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.Untap{
@@ -209,9 +234,9 @@ func TestRenderShuffleRevealLinkedPutSequence(t *testing.T) {
 				Source:    game.LinkedBattlefieldSource(key),
 				Recipient: opt.Val(owner),
 			},
-			CardCondition: opt.Val(game.CardCondition{
-				Card:                 game.CardReference{Kind: game.CardReferenceLinked, LinkID: string(key)},
-				RequirePermanentCard: true,
+			CardCondition: opt.Val(game.CardSelection{
+				Card:      game.CardReference{Kind: game.CardReferenceLinked, LinkID: string(key)},
+				Selection: game.Selection{RequirePermanentCard: true},
 			}),
 		},
 	}
@@ -234,7 +259,7 @@ func TestRenderShuffleRevealLinkedPutSequence(t *testing.T) {
 		"Player: game.ObjectOwnerReference(game.TargetPermanentReference(0))",
 		`PublishLinked: game.LinkedKey("revealed-card")`,
 		"game.LinkedBattlefieldSource(game.LinkedKey(\"revealed-card\"))",
-		"CardCondition: opt.Val(game.CardCondition",
+		"CardCondition: opt.Val(game.CardSelection",
 		"RequirePermanentCard: true",
 	} {
 		if !strings.Contains(joined, want) {
@@ -274,11 +299,13 @@ func TestRenderSearchPrimitive(t *testing.T) {
 		Spec: game.SearchSpec{
 			SourceZone:   zone.Library,
 			Destination:  zone.Battlefield,
-			CardType:     opt.Val(types.Land),
-			Supertype:    opt.Val(types.Basic),
-			SubtypesAny:  []types.Sub{types.Forest, types.Plains},
 			Reveal:       true,
 			EntersTapped: true,
+			Filter: game.Selection{
+				RequiredTypes: []types.Card{types.Land},
+				Supertypes:    []types.Super{types.Basic},
+				SubtypesAny:   []types.Sub{types.Forest, types.Plains},
+			},
 		},
 		Amount: game.Fixed(1),
 	})
@@ -290,9 +317,9 @@ func TestRenderSearchPrimitive(t *testing.T) {
 		"Player: game.ControllerReference()",
 		"SourceZone: zone.Library",
 		"Destination: zone.Battlefield",
-		"CardType: opt.Val(types.Land)",
-		"Supertype: opt.Val(types.Basic)",
-		"SubtypesAny: []types.Sub{types.Forest, types.Plains}",
+		"RequiredTypes: []types.Card{types.Land}",
+		"Supertypes: []types.Super{types.Basic}",
+		`SubtypesAny: []types.Sub{types.Sub("Forest"), types.Sub("Plains")}`,
 		"Reveal: true",
 		"EntersTapped: true",
 		"Amount: game.Fixed(1)",
@@ -301,7 +328,7 @@ func TestRenderSearchPrimitive(t *testing.T) {
 			t.Fatalf("rendered search missing %q:\n%s", want, rendered)
 		}
 	}
-	for _, requiredImport := range []string{importZone, importTypes, importOpt} {
+	for _, requiredImport := range []string{importZone, importTypes} {
 		if _, ok := ctx.imports[requiredImport]; !ok {
 			t.Fatalf("search primitive did not request import %q", requiredImport)
 		}
@@ -314,11 +341,13 @@ func TestRenderSearchPrimitivePermanentManaValue(t *testing.T) {
 	rendered, err := (Renderer{}).renderPrimitive(ctx, game.Search{
 		Player: game.ControllerReference(),
 		Spec: game.SearchSpec{
-			SourceZone:   zone.Library,
-			Destination:  zone.Battlefield,
-			Permanent:    true,
-			SubtypesAny:  []types.Sub{types.Rebel},
-			MaxManaValue: opt.Val(5),
+			SourceZone:  zone.Library,
+			Destination: zone.Battlefield,
+			Filter: game.Selection{
+				RequirePermanentCard: true,
+				SubtypesAny:          []types.Sub{types.Rebel},
+				ManaValue:            opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 5}),
+			},
 		},
 		Amount: game.Fixed(1),
 	})
@@ -327,9 +356,9 @@ func TestRenderSearchPrimitivePermanentManaValue(t *testing.T) {
 	}
 
 	for _, want := range []string{
-		"Permanent: true",
-		"SubtypesAny: []types.Sub{types.Rebel}",
-		"MaxManaValue: opt.Val(5)",
+		"RequirePermanentCard: true",
+		`SubtypesAny: []types.Sub{types.Sub("Rebel")}`,
+		"ManaValue: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 5})",
 	} {
 		if !strings.Contains(rendered, want) {
 			t.Fatalf("rendered search missing %q:\n%s", want, rendered)
@@ -349,8 +378,10 @@ func TestRenderSearchPrimitiveLibraryTopTypeUnion(t *testing.T) {
 			SourceZone:          zone.Library,
 			Destination:         zone.Library,
 			DestinationPosition: game.SearchPositionTop,
-			CardTypesAny:        []types.Card{types.Artifact, types.Enchantment},
 			Reveal:              true,
+			Filter: game.Selection{
+				RequiredTypesAny: []types.Card{types.Artifact, types.Enchantment},
+			},
 		},
 		Amount: game.Fixed(1),
 	})
@@ -360,7 +391,7 @@ func TestRenderSearchPrimitiveLibraryTopTypeUnion(t *testing.T) {
 	for _, want := range []string{
 		"Destination: zone.Library",
 		"DestinationPosition: game.SearchPositionTop",
-		"CardTypesAny: []types.Card{types.Artifact, types.Enchantment}",
+		"RequiredTypesAny: []types.Card{types.Artifact, types.Enchantment}",
 		"Reveal: true",
 	} {
 		if !strings.Contains(rendered, want) {
@@ -400,11 +431,13 @@ func TestRenderSearchPrimitiveSplitDestination(t *testing.T) {
 		Spec: game.SearchSpec{
 			SourceZone:       zone.Library,
 			Destination:      zone.Battlefield,
-			CardType:         opt.Val(types.Land),
-			Supertype:        opt.Val(types.Basic),
 			Reveal:           true,
 			EntersTapped:     true,
 			SplitDestination: opt.Val(game.SearchDestination{Zone: zone.Hand}),
+			Filter: game.Selection{
+				RequiredTypes: []types.Card{types.Land},
+				Supertypes:    []types.Super{types.Basic},
+			},
 		},
 		Amount: game.Fixed(2),
 	})
@@ -468,10 +501,12 @@ func TestRenderSearchPrimitiveSharedSubtype(t *testing.T) {
 		Spec: game.SearchSpec{
 			SourceZone:    zone.Library,
 			Destination:   zone.Battlefield,
-			CardType:      opt.Val(types.Land),
-			Supertype:     opt.Val(types.Basic),
 			EntersTapped:  true,
 			SharedSubtype: true,
+			Filter: game.Selection{
+				RequiredTypes: []types.Card{types.Land},
+				Supertypes:    []types.Super{types.Basic},
+			},
 		},
 		Amount: game.Fixed(2),
 	})

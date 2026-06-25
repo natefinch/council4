@@ -5,4 +5,9 @@ package s
 import "github.com/natefinch/council4/mtg/game"
 
 // Cards lists all card definitions in this package.
-var Cards = []*game.CardDef{}
+var Cards = []*game.CardDef{
+	SetessanTraining,
+	ShelteredByGhosts,
+	SkyriderElf,
+	SpringmantleCleric,
+}

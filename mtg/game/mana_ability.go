@@ -126,3 +126,30 @@ func IsTapSacrificeAnyOneColorManaAbility(body *ManaAbility) bool {
 	}
 	return reflect.DeepEqual(*body, TapSacrificeAnyOneColorManaAbility(body.Text, count))
 }
+
+// TapSacrificeAnyColorManaAbility builds the granted mana ability
+// "{T}, Sacrifice this artifact: Add one mana of any color." (Ninja Pizza): tap
+// and sacrifice the host artifact to add one mana of any one of the five colors
+// the controller chooses. It is the count-1 any-color counterpart of the
+// Treasure-style sacrifice ability. text is the ability's printed wording,
+// passed through so the rendered ability matches.
+func TapSacrificeAnyColorManaAbility(text string) ManaAbility {
+	ability := TapAnyColorManaAbility()
+	ability.Text = text
+	ability.AdditionalCosts = append(slices.Clone(ability.AdditionalCosts), cost.Additional{
+		Kind:   cost.AdditionalSacrificeSource,
+		Text:   "Sacrifice this artifact",
+		Amount: 1,
+	})
+	return ability
+}
+
+// IsTapSacrificeAnyColorManaAbility reports whether body is the count-1
+// tap-and-sacrifice granted mana ability that adds one mana of any color
+// (Ninja Pizza).
+func IsTapSacrificeAnyColorManaAbility(body *ManaAbility) bool {
+	if body == nil {
+		return false
+	}
+	return reflect.DeepEqual(*body, TapSacrificeAnyColorManaAbility(body.Text))
+}

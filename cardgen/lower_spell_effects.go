@@ -14,17 +14,76 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+// plainGraveyardReturn reports the shared precondition the self/source and
+// chosen-at-resolution graveyard-return scopes require before inspecting their
+// own subject: a non-negated, non-delayed, no-duration EffectReturn whose source
+// zone is the graveyard. Exactness, destination, ownership, and subject-specific
+// riders stay caller-side because they diverge per scope (the mass scope also
+// accepts EffectPut and the targeted scope gates on exactness instead, so neither
+// shares this precondition).
+func plainGraveyardReturn(effect compiler.CompiledEffect) bool {
+	return effect.Kind == compiler.EffectReturn &&
+		!effect.Negated &&
+		effect.DelayedTiming == 0 &&
+		effect.Duration == compiler.DurationNone &&
+		effect.FromZone == zone.Graveyard
+}
+
+// graveyardReturnDestination carries the validated per-card move a single
+// graveyard-return subject makes once its card reference is known: the
+// destination zone plus the entry-tapped, owner-control, library-position, and
+// entry-counter riders the scope already validated.
+type graveyardReturnDestination struct {
+	Zone              zone.Type
+	EntryTapped       bool
+	UnderYourControl  bool
+	DestinationBottom bool
+	EntryCounters     []game.CounterPlacement
+}
+
+// graveyardReturnInstruction builds the instruction that returns one card from
+// the graveyard to dest. The self/source and single-target scopes share it so the
+// MoveCard-to-hand, MoveCard-to-library, and PutOnBattlefield (with its
+// entry-tapped, owner-control, and entry-counter riders) reconstruction lives in
+// one place instead of being respelled per scope. It fails closed on any
+// destination zone the graveyard-return scopes do not model.
+func graveyardReturnInstruction(card game.CardReference, dest graveyardReturnDestination) (game.Instruction, bool) {
+	switch dest.Zone {
+	case zone.Hand:
+		return game.Instruction{Primitive: game.MoveCard{
+			Card:        card,
+			FromZone:    zone.Graveyard,
+			Destination: zone.Hand,
+		}}, true
+	case zone.Library:
+		return game.Instruction{Primitive: game.MoveCard{
+			Card:              card,
+			FromZone:          zone.Graveyard,
+			Destination:       zone.Library,
+			DestinationBottom: dest.DestinationBottom,
+		}}, true
+	case zone.Battlefield:
+		put := game.PutOnBattlefield{
+			Source:        game.CardBattlefieldSource(card),
+			EntryTapped:   dest.EntryTapped,
+			EntryCounters: dest.EntryCounters,
+		}
+		if dest.UnderYourControl {
+			put.Recipient = opt.Val(game.ControllerReference())
+		}
+		return game.Instruction{Primitive: put}, true
+	default:
+		return game.Instruction{}, false
+	}
+}
+
 func lowerSelfCardGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 1 {
 		return game.AbilityContent{}, false
 	}
 	effect := ctx.content.Effects[0]
-	if effect.Kind != compiler.EffectReturn ||
+	if !plainGraveyardReturn(effect) ||
 		!effect.Exact ||
-		effect.FromZone != zone.Graveyard ||
-		effect.Negated ||
-		effect.DelayedTiming != 0 ||
-		effect.Duration != compiler.DurationNone ||
 		effect.UnderYourControl ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
@@ -37,32 +96,27 @@ func lowerSelfCardGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 	if !ok {
 		return game.AbilityContent{}, false
 	}
+	dest := graveyardReturnDestination{Zone: effect.ToZone, EntryTapped: effect.EntersTapped}
 	switch effect.ToZone {
 	case zone.Hand:
 		if effect.EntersTapped || effect.CounterKindKnown || effect.Amount.Known {
 			return game.AbilityContent{}, false
 		}
-		return game.Mode{Sequence: []game.Instruction{{Primitive: game.MoveCard{
-			Card:        sourceCard,
-			FromZone:    zone.Graveyard,
-			Destination: zone.Hand,
-		}}}}.Ability(), true
 	case zone.Battlefield:
-		if effect.CounterKindKnown &&
-			(effect.CounterKind != counter.PlusOnePlusOne || !effect.Amount.Known || effect.Amount.Value < 1) {
-			return game.AbilityContent{}, false
-		}
-		put := game.PutOnBattlefield{
-			Source:      game.CardBattlefieldSource(sourceCard),
-			EntryTapped: effect.EntersTapped,
-		}
 		if effect.CounterKindKnown {
-			put.EntryCounters = []game.CounterPlacement{{Kind: counter.PlusOnePlusOne, Amount: effect.Amount.Value}}
+			if effect.CounterKind != counter.PlusOnePlusOne || !effect.Amount.Known || effect.Amount.Value < 1 {
+				return game.AbilityContent{}, false
+			}
+			dest.EntryCounters = []game.CounterPlacement{{Kind: counter.PlusOnePlusOne, Amount: effect.Amount.Value}}
 		}
-		return game.Mode{Sequence: []game.Instruction{{Primitive: put}}}.Ability(), true
 	default:
 		return game.AbilityContent{}, false
 	}
+	instruction, ok := graveyardReturnInstruction(sourceCard, dest)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{instruction}}.Ability(), true
 }
 
 func selfCardGraveyardReturnReferences(references []compiler.CompiledReference) bool {
@@ -74,7 +128,7 @@ func selfCardGraveyardReturnReferences(references []compiler.CompiledReference) 
 // is chosen from the controller's own graveyard at resolution rather than
 // targeted (Takenuma's "creature or planeswalker card", Grapple with the Past,
 // ...). The targeted form lowers through lowerTargetedGraveyardReturn instead.
-// It produces one game.ReturnFromGraveyard instruction whose Selection carries
+// It produces one game.ChooseFromZone instruction whose Filter carries
 // the same card filter the targeted and search paths reconstruct. It is
 // card-name-blind and fails closed on any shape it does not fully model — a
 // reference or target, a non-graveyard source, a non-hand destination, an
@@ -90,16 +144,13 @@ func lowerChosenCardGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) 
 		return game.AbilityContent{}, false
 	}
 	effect := ctx.content.Effects[0]
-	if effect.Kind != compiler.EffectReturn ||
+	battlefield := effect.ToZone == zone.Battlefield
+	if !plainGraveyardReturn(effect) ||
 		!effect.Exact ||
-		effect.Negated ||
-		effect.DelayedTiming != 0 ||
-		effect.Duration != compiler.DurationNone ||
-		effect.FromZone != zone.Graveyard ||
-		effect.ToZone != zone.Hand ||
-		effect.EntersTapped ||
-		effect.CounterKindKnown ||
-		effect.UnderYourControl {
+		(effect.ToZone != zone.Hand && effect.ToZone != zone.Battlefield) ||
+		(effect.EntersTapped && !battlefield) ||
+		(effect.UnderYourControl && !battlefield) ||
+		effect.CounterKindKnown {
 		return game.AbilityContent{}, false
 	}
 	selector := effect.Selector
@@ -110,7 +161,7 @@ func lowerChosenCardGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) 
 		selector.Other ||
 		selector.Attacking ||
 		selector.Blocking ||
-		selector.Tapped ||
+		(selector.Tapped && (!battlefield || !effect.EntersTapped)) ||
 		selector.Untapped {
 		return game.AbilityContent{}, false
 	}
@@ -125,13 +176,23 @@ func lowerChosenCardGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) 
 	if !ok {
 		return game.AbilityContent{}, false
 	}
-	return game.Mode{Sequence: []game.Instruction{{
-		Primitive: game.ReturnFromGraveyard{
-			Player:    game.ControllerReference(),
-			Selection: selection,
-			Amount:    game.Fixed(1),
-		},
-	}}}.Ability(), true
+	destination := zone.Hand
+	entryTapped := false
+	if battlefield {
+		destination = zone.Battlefield
+		entryTapped = effect.EntersTapped
+	}
+	primitive := game.ReturnFromGraveyardChoice(
+		game.ControllerReference(),
+		selection,
+		game.Fixed(1),
+		destination,
+		entryTapped,
+		opt.V[int]{},
+		false,
+		"",
+	)
+	return game.Mode{Sequence: []game.Instruction{{Primitive: primitive}}}.Ability(), true
 }
 
 // lowerMassGraveyardReturn lowers the non-target mass recursion wording "Return
@@ -286,87 +347,68 @@ func lowerTargetedGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 		ctx.content.Effects[0].FromZone != zone.Graveyard {
 		return game.AbilityContent{}, false
 	}
+	effect := ctx.content.Effects[0]
 	// The plain return clause is byte-exact. The only inexact form accepted here
 	// is a return-to-battlefield carrying a recognized counter entry rider ("...
 	// with a +1/+1 counter on it", "... with two additional +1/+1 counters on
 	// it"), whose supported counter kind and fixed count the compiler captures;
 	// every other inexact return fails closed.
-	counterRider := ctx.content.Effects[0].ToZone == zone.Battlefield &&
-		ctx.content.Effects[0].CounterKindKnown
-	if !ctx.content.Effects[0].Exact && !counterRider {
+	counterRider := effect.ToZone == zone.Battlefield &&
+		effect.CounterKindKnown
+	if !effect.Exact && !counterRider {
 		return game.AbilityContent{}, false
 	}
 	targetSpec, ok := cardInZoneTargetSpec(ctx.content.Targets[0], zone.Graveyard)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
-	sequence := make([]game.Instruction, 0, targetSpec.MaxTargets)
-	switch ctx.content.Effects[0].ToZone {
+	dest := graveyardReturnDestination{
+		Zone:             effect.ToZone,
+		EntryTapped:      effect.EntersTapped,
+		UnderYourControl: effect.UnderYourControl,
+	}
+	switch effect.ToZone {
 	case zone.Hand:
-		for i := range targetSpec.MaxTargets {
-			sequence = append(sequence, game.Instruction{Primitive: game.MoveCard{
-				Card:        game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: i},
-				FromZone:    zone.Graveyard,
-				Destination: zone.Hand,
-			}})
-		}
-		return game.Mode{
-			Targets:  []game.TargetSpec{targetSpec},
-			Sequence: sequence,
-		}.Ability(), true
 	case zone.Library:
-		if ctx.content.Effects[0].Destination != parser.EffectDestinationTop &&
-			ctx.content.Effects[0].Destination != parser.EffectDestinationBottom {
+		if effect.Destination != parser.EffectDestinationTop &&
+			effect.Destination != parser.EffectDestinationBottom {
 			return game.AbilityContent{}, false
 		}
-		destinationBottom := ctx.content.Effects[0].Destination == parser.EffectDestinationBottom
-		for i := range targetSpec.MaxTargets {
-			sequence = append(sequence, game.Instruction{Primitive: game.MoveCard{
-				Card:              game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: i},
-				FromZone:          zone.Graveyard,
-				Destination:       zone.Library,
-				DestinationBottom: destinationBottom,
-			}})
-		}
-		return game.Mode{
-			Targets:  []game.TargetSpec{targetSpec},
-			Sequence: sequence,
-		}.Ability(), true
+		dest.DestinationBottom = effect.Destination == parser.EffectDestinationBottom
 	case zone.Battlefield:
-		var entryCounters []game.CounterPlacement
 		if counterRider {
 			// The counter count rides in the effect amount; a single-target return
 			// keeps that amount unambiguous (multi-target cardinality would also
 			// land in the amount), so only the fixed positive single-target form is
 			// modeled.
 			if targetSpec.MaxTargets != 1 ||
-				!ctx.content.Effects[0].Amount.Known ||
-				ctx.content.Effects[0].Amount.Value < 1 {
+				!effect.Amount.Known ||
+				effect.Amount.Value < 1 {
 				return game.AbilityContent{}, false
 			}
-			entryCounters = []game.CounterPlacement{{
-				Kind:   ctx.content.Effects[0].CounterKind,
-				Amount: ctx.content.Effects[0].Amount.Value,
+			dest.EntryCounters = []game.CounterPlacement{{
+				Kind:   effect.CounterKind,
+				Amount: effect.Amount.Value,
 			}}
 		}
-		for i := range targetSpec.MaxTargets {
-			put := game.PutOnBattlefield{
-				Source:        game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: i}),
-				EntryTapped:   ctx.content.Effects[0].EntersTapped,
-				EntryCounters: entryCounters,
-			}
-			if ctx.content.Effects[0].UnderYourControl {
-				put.Recipient = opt.Val(game.ControllerReference())
-			}
-			sequence = append(sequence, game.Instruction{Primitive: put})
-		}
-		return game.Mode{
-			Targets:  []game.TargetSpec{targetSpec},
-			Sequence: sequence,
-		}.Ability(), true
 	default:
 		return game.AbilityContent{}, false
 	}
+	sequence := make([]game.Instruction, 0, targetSpec.MaxTargets)
+	for i := range targetSpec.MaxTargets {
+		instruction, ok := graveyardReturnInstruction(
+			game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: i},
+			dest,
+		)
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		sequence = append(sequence, instruction)
+	}
+	return game.Mode{
+		Targets:  []game.TargetSpec{targetSpec},
+		Sequence: sequence,
+	}.Ability(), true
 }
 
 func cardInZoneTargetSpec(target compiler.CompiledTarget, targetZone zone.Type) (game.TargetSpec, bool) {
@@ -392,7 +434,31 @@ func cardInZoneTargetSpec(target compiler.CompiledTarget, targetZone zone.Type) 
 	}, true
 }
 
+// lowerManaValueDynamicBound maps a compiled dynamic mana-value bound kind to a
+// runtime ManaValueDynamicBound. Only the turn-event life totals are modeled
+// (matching the runtime predicate); any other kind fails closed.
+func lowerManaValueDynamicBound(kind compiler.DynamicAmountKind) (game.ManaValueDynamicBound, bool) {
+	switch kind {
+	case compiler.DynamicAmountLifeLostThisTurn:
+		return game.ManaValueDynamicBound{Kind: game.DynamicAmountLifeLostThisTurn, Multiplier: 1}, true
+	case compiler.DynamicAmountLifeGainedThisTurn:
+		return game.ManaValueDynamicBound{Kind: game.DynamicAmountLifeGainedThisTurn, Multiplier: 1}, true
+	default:
+		return game.ManaValueDynamicBound{}, false
+	}
+}
+
+// DO-NOT-COPY(filter): projects card-zone (graveyard/hand/library/exile)
+// selections, including the bare "a card" (SelectorCard) noun and a zone
+// filter, which the battlefield-only canonical projector fails closed on by
+// design; prefer SelectionForSelectorMasked for new code. (retire: #1393)
 func cardSelectionForSelector(selector compiler.CompiledSelector) (game.Selection, bool) {
+	if selector.PowerLessThanSource || selector.PowerGreaterThanSource {
+		// A source-relative power comparison applies only to a targeted
+		// permanent (Mentor); a card-zone selection has no source to compare
+		// against, so reject it rather than silently dropping the filter.
+		return game.Selection{}, false
+	}
 	selection := game.Selection{
 		RequiredTypesAny: slices.Clone(selector.RequiredTypesAny()),
 		ExcludedTypes:    slices.Clone(selector.ExcludedTypes()),
@@ -428,6 +494,18 @@ func cardSelectionForSelector(selector compiler.CompiledSelector) (game.Selectio
 	if len(selection.RequiredTypesAny) > 0 {
 		selection.RequiredTypes = nil
 	}
+	if selector.Historic {
+		// A historic card is an artifact, a legendary, or a Saga (CR 702.61b).
+		// That spans a card type, a supertype, and a subtype, which the flat
+		// type/supertype/subtype fields cannot OR together, so it lowers to an
+		// AnyOf disjunction. AnyOf is conjunctive with the selection's other
+		// fields, so a card-type Kind or controller filter still applies on top.
+		selection.AnyOf = append(selection.AnyOf,
+			game.Selection{RequiredTypes: []types.Card{types.Artifact}},
+			game.Selection{Supertypes: []types.Super{types.Legendary}},
+			game.Selection{SubtypesAny: []types.Sub{types.Saga}},
+		)
+	}
 	switch selector.Controller {
 	case compiler.ControllerAny:
 	case compiler.ControllerYou:
@@ -454,6 +532,20 @@ func cardSelectionForSelector(selector compiler.CompiledSelector) (game.Selectio
 		}
 		selection.ManaValue = opt.Val(selector.ManaValue)
 	}
+	if selector.ManaValueDynamic != compiler.DynamicAmountNone {
+		bound, ok := lowerManaValueDynamicBound(selector.ManaValueDynamic)
+		if !ok {
+			return game.Selection{}, false
+		}
+		selection.ManaValueDynamic = opt.Val(bound)
+	}
+	// A total (set-sum) mana-value bound is not a per-card filter; game.Selection
+	// cannot express it. Fail closed here so no path silently drops the
+	// constraint; the dedicated total-mana-value reanimation lowering clears this
+	// flag before building the selection and models the cap on the primitive.
+	if selector.MatchTotalManaValue {
+		return game.Selection{}, false
+	}
 	selection.Colorless = selector.Colorless
 	selection.Multicolored = selector.Multicolored
 	if selector.MatchPower || selector.MatchToughness {
@@ -470,6 +562,9 @@ func lowerCounterPlacementSpell(
 	}
 	effect := ctx.content.Effects[0]
 	if content, ok := lowerGroupCounterPlacement(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerSingleChoiceCounterPlacement(ctx); ok {
 		return content, nil
 	}
 	if len(ctx.content.Targets) == 0 &&
@@ -588,18 +683,21 @@ func lowerAttachedCounterPlacement(ctx contentCtx) (game.AbilityContent, bool) {
 	}.Ability(), true
 }
 
-// lowerMultiTargetCounterPlacement lowers an exact fixed counter placement that
-// puts a counter on each of several targets ("Put a +1/+1 counter on each of up
-// to two target creatures.") or on an optional single target ("Put a +1/+1
-// counter on up to one target creature."). The runtime models this as a single
-// target spec with one AddCounter instruction per target index, mirroring the
-// per-target instruction fan-out of multi-target graveyard return; resolution
-// skips instructions whose optional target was not chosen. It is restricted to
-// fixed positive amounts of a supported permanent counter kind on a plain
-// permanent target, failing closed for player counters, dynamic amounts, and any
-// referenced or conditional shape. The plain single target ("Put a +1/+1 counter
-// on target creature") is handled by the dedicated single-target branch in
-// lowerCounterPlacementSpell, not here.
+// lowerMultiTargetCounterPlacement lowers an exact counter placement that puts
+// counters on each of several targets ("Put a +1/+1 counter on each of up to two
+// target creatures.") or on an optional single target ("Put a number of +1/+1
+// counters on up to one other target creature you control equal to the amount of
+// life you gained this turn." — Betor, Ancestor's Voice). The runtime models
+// this as a single target spec with one AddCounter instruction per target index,
+// mirroring the per-target instruction fan-out of multi-target graveyard return;
+// resolution skips instructions whose optional target was not chosen. The
+// per-target count is a fixed positive amount or a life-changed-this-turn
+// dynamic amount (the amount of life you gained/lost this turn), applied
+// identically to every chosen target. It is restricted to a supported permanent
+// counter kind on a plain permanent target, failing closed for player counters
+// and any referenced or conditional shape. The plain single target ("Put a
+// +1/+1 counter on target creature") is handled by the dedicated single-target
+// branch in lowerCounterPlacementSpell, not here.
 func lowerMultiTargetCounterPlacement(ctx contentCtx) (game.AbilityContent, bool) {
 	effect := ctx.content.Effects[0]
 	if len(ctx.content.Targets) != 1 ||
@@ -611,9 +709,11 @@ func lowerMultiTargetCounterPlacement(ctx contentCtx) (game.AbilityContent, bool
 		effect.Context != parser.EffectContextController ||
 		!effect.CounterKindKnown ||
 		!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
-		effect.CounterKind.PlayerOnly() ||
-		!effect.Amount.Known ||
-		effect.Amount.Value < 1 {
+		effect.CounterKind.PlayerOnly() {
+		return game.AbilityContent{}, false
+	}
+	amount, ok := multiTargetCounterAmount(effect.Amount)
+	if !ok {
 		return game.AbilityContent{}, false
 	}
 	target := ctx.content.Targets[0]
@@ -631,7 +731,7 @@ func lowerMultiTargetCounterPlacement(ctx contentCtx) (game.AbilityContent, bool
 	sequence := make([]game.Instruction, 0, spec.MaxTargets)
 	for i := range spec.MaxTargets {
 		sequence = append(sequence, game.Instruction{Primitive: game.AddCounter{
-			Amount:      game.Fixed(effect.Amount.Value),
+			Amount:      amount,
 			Object:      game.TargetPermanentReference(i),
 			CounterKind: effect.CounterKind,
 		}})
@@ -640,6 +740,33 @@ func lowerMultiTargetCounterPlacement(ctx contentCtx) (game.AbilityContent, bool
 		Targets:  []game.TargetSpec{spec},
 		Sequence: sequence,
 	}.Ability(), true
+}
+
+// multiTargetCounterAmount resolves the per-target count for a fan-out counter
+// placement, accepting a fixed positive amount or a life-changed-this-turn
+// dynamic amount ("a number of +1/+1 counters ... equal to the amount of life
+// you gained this turn" — Betor, Ancestor's Voice). Those turn-event totals are
+// computed once for the controller and apply identically to every chosen target.
+// It fails closed for non-positive fixed amounts, the variable X, and every
+// other dynamic amount, whose per-target or distribution semantics this fan-out
+// does not model.
+func multiTargetCounterAmount(amount compiler.CompiledAmount) (game.Quantity, bool) {
+	switch {
+	case amount.Known:
+		if amount.Value < 1 {
+			return game.Quantity{}, false
+		}
+		return game.Fixed(amount.Value), true
+	case amount.DynamicKind == compiler.DynamicAmountLifeGainedThisTurn ||
+		amount.DynamicKind == compiler.DynamicAmountLifeLostThisTurn:
+		dynamic, ok := lowerDynamicAmount(amount, game.SourcePermanentReference())
+		if !ok {
+			return game.Quantity{}, false
+		}
+		return game.Dynamic(dynamic), true
+	default:
+		return game.Quantity{}, false
+	}
 }
 
 // counterPlacementKeywordsBenign reports whether every semantic keyword on a
@@ -710,10 +837,22 @@ func lowerGroupCounterPlacement(ctx contentCtx) (game.AbilityContent, bool) {
 		effect.Context != parser.EffectContextController ||
 		!effect.CounterKindKnown ||
 		!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
-		effect.CounterKind.PlayerOnly() {
+		effect.CounterKind.PlayerOnly() ||
+		effect.CounterRecipientSingleChoice {
 		return game.AbilityContent{}, false
 	}
-	amount, ok := groupCounterPlacementAmount(effect.Amount, ctx.content.References)
+	// A "with a <kind> counter on it/them" group filter carries a trailing
+	// pronoun referent ("it"/"them") that names the filtered permanent, not a
+	// placement count subject. The runtime represents that filter through the
+	// group selection's counter requirement, so drop the qualifier pronoun
+	// before validating the placement amount; otherwise its stray reference
+	// makes the fixed-amount shape look reference-bearing and the group fails to
+	// reconstruct.
+	references := ctx.content.References
+	if effect.Selector.MatchCounter || effect.Selector.MatchAnyCounter {
+		references = counterQualifierFilteredReferences(references)
+	}
+	amount, ok := groupCounterPlacementAmount(effect.Amount, references)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
@@ -732,7 +871,48 @@ func lowerGroupCounterPlacement(ctx contentCtx) (game.AbilityContent, bool) {
 	}.Ability(), true
 }
 
-// groupCounterPlacementAmount validates the references accompanying a group
+// lowerSingleChoiceCounterPlacement lowers an exact fixed counter placement whose
+// non-target recipient is a single chosen member of a battlefield group ("put a
+// vigilance counter on a creature you control", Ajani Fells the Godsire chapter
+// II; "another creature you control"). The resolving controller chooses one
+// matching permanent at resolution, so the placement carries the group and the
+// ChooseOne flag rather than a target. It reuses the group recipient projection,
+// so every filter the group form supports is supported here too, and is
+// restricted to fixed positive amounts of a supported permanent counter kind
+// with no references, targets, conditions, or modes.
+func lowerSingleChoiceCounterPlacement(ctx contentCtx) (game.AbilityContent, bool) {
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		!counterPlacementKeywordsBenign(ctx.content.Keywords, effect.CounterKind) ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		!effect.CounterKindKnown ||
+		!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
+		effect.CounterKind.PlayerOnly() ||
+		!effect.CounterRecipientSingleChoice ||
+		!effect.Amount.Known || effect.Amount.Value < 1 {
+		return game.AbilityContent{}, false
+	}
+	group, ok := groupCounterRecipient(effect.Selector)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.AddCounter{
+				Amount:      game.Fixed(effect.Amount.Value),
+				Group:       group,
+				CounterKind: effect.CounterKind,
+				ChooseOne:   true,
+			},
+		}},
+	}.Ability(), true
+}
+
 // counter placement and reconstructs its count: a fixed positive amount accepts
 // no references, while a recognized dynamic amount accepts either no references
 // or source-bound referents (such as "this creature" in "where X is the number
@@ -759,6 +939,54 @@ func groupCounterPlacementAmount(
 		return game.Quantity{}, false
 	}
 	return game.Dynamic(dynamic), true
+}
+
+// counterQualifierFilteredReferences drops the pronoun referent a
+// "with a <kind> counter on it/them" group filter introduces ("it", "them"),
+// leaving the references that genuinely bind a placement count. The caller
+// applies it only when the recipient selector carries a counter requirement, so
+// the only pronoun present names the filtered permanent rather than a placement
+// recipient or count subject.
+func counterQualifierFilteredReferences(references []compiler.CompiledReference) []compiler.CompiledReference {
+	filtered := make([]compiler.CompiledReference, 0, len(references))
+	for _, reference := range references {
+		if reference.Kind == compiler.ReferencePronoun && counterQualifierPronoun(reference.Pronoun) {
+			continue
+		}
+		filtered = append(filtered, reference)
+	}
+	return filtered
+}
+
+func counterQualifierPronoun(pronoun compiler.ReferencePronounKind) bool {
+	switch pronoun {
+	case compiler.ReferencePronounIt,
+		compiler.ReferencePronounIts,
+		compiler.ReferencePronounThem,
+		compiler.ReferencePronounThose,
+		compiler.ReferencePronounThey,
+		compiler.ReferencePronounTheir:
+		return true
+	default:
+		return false
+	}
+}
+
+// groupCounterQualifierClause reports whether an ordered-sequence effect is an
+// exact counter placement on a filtered battlefield group whose filter requires
+// group members to carry a counter ("each creature you control with a +1/+1
+// counter on it"). Such a clause carries a qualifier pronoun ("it"/"them")
+// naming each filtered member rather than a prior clause's target, so the
+// sequence lowerer drops that pronoun before antecedent target binding.
+func groupCounterQualifierClause(effect *compiler.CompiledEffect) bool {
+	if !effect.Exact ||
+		!effect.CounterKindKnown ||
+		effect.Context != parser.EffectContextController ||
+		(!effect.Selector.MatchCounter && !effect.Selector.MatchAnyCounter) {
+		return false
+	}
+	_, ok := groupCounterRecipient(effect.Selector)
+	return ok
 }
 
 // groupCounterRecipient reconstructs the battlefield group a counter placement
@@ -799,13 +1027,17 @@ func lowerReferencedCounterPlacement(ctx contentCtx) (game.AbilityContent, *shar
 		len(ctx.content.References) != 1 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		!effect.Amount.Known || effect.Amount.Value <= 0 ||
-		!effect.CounterKindKnown ||
-		!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
-		effect.CounterKind.PlayerOnly() ||
 		!effect.Exact ||
 		effect.Negated ||
 		effect.Context != parser.EffectContextController {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	amount, ok := referencedCounterPlacementAmount(ctx, effect.Amount)
+	if !ok {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	kindChoices, ok := referencedCounterKindChoices(effect)
+	if !ok {
 		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
 	}
 	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
@@ -816,15 +1048,93 @@ func lowerReferencedCounterPlacement(ctx contentCtx) (game.AbilityContent, *shar
 	if !ok {
 		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
 	}
+	add := game.AddCounter{
+		Amount: amount,
+		Object: object,
+	}
+	if len(kindChoices) != 0 {
+		add.KindChoices = kindChoices
+	} else {
+		add.CounterKind = effect.CounterKind
+	}
 	return game.Mode{
 		Sequence: []game.Instruction{{
-			Primitive: game.AddCounter{
-				Amount:      game.Fixed(effect.Amount.Value),
-				Object:      object,
-				CounterKind: effect.CounterKind,
-			},
+			Primitive: add,
 		}},
 	}.Ability(), nil
+}
+
+// referencedCounterPlacementAmount lowers the count of a referenced counter
+// placement ("Put a +1/+1 counter on this creature.", "Whenever you discard one
+// or more cards, put that many +1/+1 counters on this creature."). It accepts a
+// fixed positive amount or the generic quantity the enclosing trigger measured
+// (DynamicAmountTriggeringEventAmount), which lowerTriggeringEventQuantity keeps
+// closed outside a measuring trigger. Every other shape, including X and
+// unrecognized dynamic amounts, fails closed.
+func referencedCounterPlacementAmount(
+	ctx contentCtx,
+	amount compiler.CompiledAmount,
+) (game.Quantity, bool) {
+	if amount.Known {
+		if amount.Value <= 0 {
+			return game.Quantity{}, false
+		}
+		return game.Fixed(amount.Value), true
+	}
+	if amount.DynamicKind == compiler.DynamicAmountTriggeringEventAmount {
+		dynamic, ok := lowerTriggeringEventQuantity(ctx, amount)
+		if !ok {
+			return game.Quantity{}, false
+		}
+		return game.Dynamic(dynamic), true
+	}
+	return game.Quantity{}, false
+}
+
+// lowerTriggeringEventQuantity resolves a generic "that many" triggering-event
+// amount to the per-event quantity its enclosing trigger measured: combat damage
+// dealt, life gained or lost, counters added, or cards drawn or discarded. Each
+// candidate lowerer is already gated on its own trigger event kind, and the
+// event kinds are mutually exclusive, so at most one matches. It fails closed in
+// a spell context or any trigger whose event publishes no such quantity.
+func lowerTriggeringEventQuantity(
+	ctx contentCtx,
+	amount compiler.CompiledAmount,
+) (game.DynamicAmount, bool) {
+	if dynamic, ok := lowerEventCombatDamageAmount(ctx, amount); ok {
+		return dynamic, true
+	}
+	if dynamic, ok := lowerEventLifeChangeAmount(ctx, amount); ok {
+		return dynamic, true
+	}
+	if dynamic, ok := lowerEventCounterCountAmount(ctx, amount); ok {
+		return dynamic, true
+	}
+	if dynamic, ok := lowerEventCardCountAmount(ctx, amount); ok {
+		return dynamic, true
+	}
+	return game.DynamicAmount{}, false
+}
+
+// placement applies. A single recognized, placeable kind yields no choice list; a
+// two-or-more-kind choice ("a +1/+1 counter or a loyalty counter", Elspeth
+// Conquers Death chapter III) yields the list of placeable kinds. Any
+// unrecognized, player-only, or otherwise unplaceable kind fails closed.
+func referencedCounterKindChoices(effect compiler.CompiledEffect) ([]counter.Kind, bool) {
+	if len(effect.CounterKindChoices) >= 2 {
+		for _, kind := range effect.CounterKindChoices {
+			if !compiler.CounterKindPlacementSupported(kind) || kind.PlayerOnly() {
+				return nil, false
+			}
+		}
+		return append([]counter.Kind(nil), effect.CounterKindChoices...), true
+	}
+	if effect.CounterKindKnown &&
+		compiler.CounterKindPlacementSupported(effect.CounterKind) &&
+		!effect.CounterKind.PlayerOnly() {
+		return nil, true
+	}
+	return nil, false
 }
 
 // lowerMoveCountersSpell lowers the counter-movement family ("Move a +1/+1
@@ -844,6 +1154,9 @@ func lowerMoveCountersSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 	}
 	if effect.MoveCountersFromTarget {
 		return lowerMoveCountersFromTargetSpell(ctx)
+	}
+	if content, ok := lowerMoveCountersOntoEventPermanent(ctx); ok {
+		return content, nil
 	}
 	if !effect.Exact ||
 		effect.Negated ||
@@ -884,6 +1197,113 @@ func lowerMoveCountersSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 			Primitive: move,
 		}},
 	}.Ability(), nil
+}
+
+// lowerRemoveCounterSpell lowers the "remove a counter from target permanent"
+// family (Ferropede, Cemetery Desecrator, Mutated Cultist, Thrull Parasite,
+// Medicine Runner) into a single RemoveCounter instruction acting on one target
+// permanent. The kind-unspecified "a counter" wording leaves the kind to the
+// resolving controller (ChooseKind); a named, placeable kind removes that kind
+// directly. It fails closed for any non-controller or negated effect, a wrong
+// target count or cardinality, a non-permanent target, a non-positive or
+// dynamic amount, a non-placeable named kind, and any reference, conditional, or
+// modal content.
+func lowerRemoveCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		len(ctx.content.Targets) != 1 ||
+		ctx.content.Targets[0].Cardinality.Max != 1 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		!effect.Amount.Known ||
+		effect.Amount.Value < 1 {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	target, ok := permanentTargetSpecWithCardinality(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	remove := game.RemoveCounter{
+		Amount: game.Fixed(effect.Amount.Value),
+		Object: game.TargetPermanentReference(0),
+	}
+	if effect.CounterKindKnown {
+		if !compiler.CounterKindPlacementSupported(effect.CounterKind) ||
+			effect.CounterKind.PlayerOnly() {
+			return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+		}
+		remove.CounterKind = effect.CounterKind
+	} else {
+		// The kind-unspecified form removes one counter of a single
+		// controller-chosen kind; a plural unspecified count has no
+		// single-choice resolution, so fail closed rather than removing the
+		// whole amount from one kind.
+		if effect.Amount.Value != 1 {
+			return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+		}
+		remove.ChooseKind = true
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{target},
+		Sequence: []game.Instruction{{
+			Primitive: remove,
+		}},
+	}.Ability(), nil
+}
+
+// lowerMoveCountersOntoEventPermanent lowers the Graft-style move "move a +1/+1
+// counter from this creature onto that creature." where the destination "that
+// creature" is the permanent of the triggering enters event (CR 702.57). It
+// reads one counter of the named kind from the ability's own source
+// (CounterSourceSelf) and places it on the event permanent
+// (EventPermanentReference). It fails closed (ok=false) for any shape outside
+// exactly: a controller-context, non-negated, single named +1/+1 move of one
+// counter; no targets; exactly two references — one source-bound counter source
+// and one event-permanent-bound destination — and no conditions or modes.
+func lowerMoveCountersOntoEventPermanent(ctx contentCtx) (game.AbilityContent, bool) {
+	effect := ctx.content.Effects[0]
+	if effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		effect.MoveCountersAll ||
+		!effect.CounterKindKnown ||
+		!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
+		effect.CounterKind.PlayerOnly() ||
+		!effect.Amount.Known ||
+		effect.Amount.Value != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 2 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	sources, destinations := 0, 0
+	for _, reference := range ctx.content.References {
+		switch reference.Binding {
+		case compiler.ReferenceBindingSource:
+			sources++
+		case compiler.ReferenceBindingEventPermanent:
+			destinations++
+		default:
+			return game.AbilityContent{}, false
+		}
+	}
+	if sources != 1 || destinations != 1 {
+		return game.AbilityContent{}, false
+	}
+	move := game.MoveCounters{
+		Object:      game.EventPermanentReference(),
+		Source:      game.CounterSourceSpec{Kind: game.CounterSourceSelf},
+		Amount:      game.Fixed(effect.Amount.Value),
+		CounterKind: effect.CounterKind,
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: move,
+		}},
+	}.Ability(), true
 }
 
 // lowerPutThoseCountersSpell lowers the counter-salvage form "put those counters
@@ -1095,10 +1515,12 @@ func textWithoutDelimited(text string, span shared.Span, groups []parser.Delimit
 func lowerFightSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	if len(ctx.content.Targets) != 2 ||
 		ctx.content.Targets[0].Cardinality != (compiler.TargetCardinality{Min: 1, Max: 1}) ||
-		ctx.content.Targets[1].Cardinality != (compiler.TargetCardinality{Min: 1, Max: 1}) ||
+		ctx.content.Targets[1].Cardinality.Max != 1 ||
+		ctx.content.Targets[1].Cardinality.Min < 0 ||
+		ctx.content.Targets[1].Cardinality.Min > 1 ||
 		ctx.content.Effects[0].Negated ||
 		!ctx.content.Effects[0].Exact ||
-		ctx.content.Effects[0].Selector.Another ||
+		ctx.content.Targets[0].Selector.Another ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
@@ -1111,8 +1533,8 @@ func lowerFightSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 			"the executable source backend supports only exact fights between two target creatures",
 		)
 	}
-	first, firstOK := fightCreatureTargetSpec(ctx.content.Targets[0])
-	second, secondOK := fightCreatureTargetSpec(ctx.content.Targets[1])
+	first, firstOK := fightCreatureTargetSpec(ctx.content.Targets[0], fightAnotherReject)
+	second, secondOK := fightCreatureTargetSpec(ctx.content.Targets[1], fightAnotherPriorTarget)
 	if !firstOK || !secondOK {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -1131,10 +1553,135 @@ func lowerFightSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	}.Ability(), nil
 }
 
-func fightCreatureTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
-	if !targetCardinalityIsOne(target) ||
-		target.Selector.Kind != compiler.SelectorCreature ||
-		target.Selector.Another ||
+// lowerSourceFightSpell lowers the source-referenced fight family, where the
+// fighting permanent is the source pronoun rather than a second target:
+// "it fights target creature" (the event permanent of an enters trigger) and
+// "this creature fights up to one target creature an opponent controls" (the
+// source permanent). The parser leaves a single subject reference bound to the
+// event or source permanent and a single creature target; this emits a Fight
+// with the resolved source object against the lone target, reusing the shared
+// fight target spec so controller and "up to one" optionality carry through.
+func lowerSourceFightSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := contentDiagnostic(
+		ctx,
+		"unsupported fight spell",
+		"the executable source backend supports only a source permanent fighting one target creature",
+	)
+	effect := ctx.content.Effects[0]
+	// "another target creature" excludes the source fighter. It is only sound to
+	// drop the fighter from the target pool when the fighting object is the
+	// source permanent itself, so the "another" determiner is accepted only for
+	// the source-object shape and stays unsupported for the event-permanent
+	// ("it fights ...") shape, where ExcludeSource would exclude the wrong object.
+	isSourceObject := effect.Context == parser.EffectContextSource &&
+		len(ctx.content.References) == 1 &&
+		ctx.content.References[0].Binding == compiler.ReferenceBindingSource
+	if effect.Negated ||
+		effect.Optional ||
+		ctx.optional ||
+		(effect.Selector.Another && !isSourceObject) ||
+		(effect.Context != parser.EffectContextReferencedObject &&
+			effect.Context != parser.EffectContextSource) ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.References) != 1 ||
+		(ctx.content.References[0].Binding != compiler.ReferenceBindingSource &&
+			ctx.content.References[0].Binding != compiler.ReferenceBindingEventPermanent) ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, unsupported
+	}
+	anotherKind := fightAnotherReject
+	if isSourceObject {
+		anotherKind = fightAnotherExcludeSource
+	}
+	target, ok := fightCreatureTargetSpec(ctx.content.Targets[0], anotherKind)
+	if !ok {
+		return game.AbilityContent{}, unsupported
+	}
+	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+		AllowSource: true,
+		AllowEvent:  true,
+	})
+	if !ok {
+		return game.AbilityContent{}, unsupported
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{target},
+		Sequence: []game.Instruction{{
+			Primitive: game.Fight{
+				Object:        object,
+				RelatedObject: game.TargetPermanentReference(0),
+			},
+		}},
+	}.Ability(), nil
+}
+
+// lowerLookAtHandSpell lowers "Look at target player's hand." to a single
+// player-targeted LookAtHand primitive. The parser retypes the possessive hand
+// phrase into a clean "target player"/"target opponent" target, so this reads
+// only the typed target and rejects any other shape (riders, conditions,
+// keywords, modes, references).
+func lowerLookAtHandSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported look-at-hand spell",
+			"the executable source backend supports only looking at one target player's hand",
+		)
+	}
+	if len(ctx.content.Targets) != 1 ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		ctx.optional ||
+		effect.Context != parser.EffectContextTarget ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 0 {
+		return unsupported()
+	}
+	targetSpec, ok := playerTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return unsupported()
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{{
+			Primitive: game.LookAtHand{Player: game.TargetPlayerReference(0)},
+		}},
+	}.Ability(), nil
+}
+
+// fightAnotherKind selects how a fight target's "another" determiner lowers.
+type fightAnotherKind int
+
+const (
+	// fightAnotherReject fails closed on "another target creature".
+	fightAnotherReject fightAnotherKind = iota
+	// fightAnotherPriorTarget lowers "another" to DistinctFromPriorTargets so the
+	// chosen creature must differ from an earlier fight target (the second target
+	// of a two-target "X fights another target creature" spell).
+	fightAnotherPriorTarget
+	// fightAnotherExcludeSource lowers "another" to a source-excluding predicate
+	// so the chosen creature must differ from the source fighter ("this creature
+	// fights another target creature", Brash Taunter, Rhonas-style activations).
+	fightAnotherExcludeSource
+)
+
+// fightCreatureTargetSpec lowers one fight target. The another parameter selects
+// how the "another target creature" determiner lowers: rejected, distinct from a
+// prior fight target (two-target fights), or distinct from the source fighter
+// (source fights). "the other" (Selector.Other) and the directional combat
+// qualifiers remain unsupported.
+func fightCreatureTargetSpec(target compiler.CompiledTarget, another fightAnotherKind) (game.TargetSpec, bool) {
+	if target.Cardinality.Max != 1 ||
+		target.Cardinality.Min < 0 ||
+		target.Cardinality.Min > 1 ||
+		!fightTargetSelectsCreature(target.Selector) ||
+		(target.Selector.Another && another == fightAnotherReject) ||
 		target.Selector.Other ||
 		target.Selector.Attacking ||
 		target.Selector.Blocking ||
@@ -1143,26 +1690,63 @@ func fightCreatureTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, b
 		return game.TargetSpec{}, false
 	}
 	spec := game.TargetSpec{
-		MinTargets: 1,
-		MaxTargets: 1,
-		Constraint: target.Text,
-		Allow:      game.TargetAllowPermanent,
-		Predicate: game.TargetPredicate{
-			PermanentTypes: []types.Card{types.Creature},
-		},
+		MinTargets:               target.Cardinality.Min,
+		MaxTargets:               1,
+		Constraint:               target.Text,
+		Allow:                    game.TargetAllowPermanent,
+		DistinctFromPriorTargets: target.Selector.Another && another == fightAnotherPriorTarget,
+	}
+	selection := game.Selection{
+		RequiredTypesAny: []types.Card{types.Creature},
+		SubtypesAny:      slices.Clone(target.Selector.SubtypesAny()),
+		Name:             target.Selector.RequiredName,
+		ExcludeSource:    target.Selector.Another && another == fightAnotherExcludeSource,
 	}
 	switch target.Selector.Controller {
 	case compiler.ControllerAny:
 	case compiler.ControllerYou:
-		spec.Predicate.Controller = game.ControllerYou
+		selection.Controller = game.ControllerYou
 	case compiler.ControllerOpponent:
-		spec.Predicate.Controller = game.ControllerOpponent
+		selection.Controller = game.ControllerOpponent
 	case compiler.ControllerNotYou:
-		spec.Predicate.Controller = game.ControllerNotYou
+		selection.Controller = game.ControllerNotYou
 	default:
 		return game.TargetSpec{}, false
 	}
+	spec.Selection = opt.Val(selection)
 	return spec, true
+}
+
+// fightTargetSelectsCreature reports whether a fight target's selector denotes a
+// creature. The plain "target creature" selection compiles to SelectorCreature;
+// a bare creature-subtype selection ("Target Mutant", The Curse of Fenric III)
+// carries no card-type word, so it compiles to SelectorUnknown with only the
+// subtype recorded. A subtype defined for the creature type (CR 205.3m) denotes
+// a creature, so that subtype-only shape is accepted while every other Unknown
+// selection, and any selector carrying additional type, color, or supertype
+// filters the fight spec cannot represent, fails closed.
+func fightTargetSelectsCreature(selector compiler.CompiledSelector) bool {
+	if selector.Kind == compiler.SelectorCreature {
+		return true
+	}
+	if selector.Kind != compiler.SelectorUnknown || len(selector.SubtypesAny()) == 0 {
+		return false
+	}
+	if len(selector.RequiredTypesAny()) != 0 ||
+		len(selector.ExcludedTypes()) != 0 ||
+		len(selector.ColorsAny()) != 0 ||
+		len(selector.ExcludedColors()) != 0 ||
+		len(selector.Supertypes()) != 0 ||
+		len(selector.ExcludedSupertypes()) != 0 ||
+		len(selector.ExcludedSubtypes()) != 0 {
+		return false
+	}
+	for _, subtype := range selector.SubtypesAny() {
+		if !parser.SubtypeMatchesCardType(subtype, parser.CardTypeCreature) {
+			return false
+		}
+	}
+	return true
 }
 
 func lowerInvestigateSpell(
@@ -1179,24 +1763,120 @@ func lowerInvestigateSpell(
 	)
 }
 
-// lowerGainEnergySpell lowers "You get {E}…{E}." to a player-counter placement of
-// the fixed number of energy counters on the controller.
-func lowerGainEnergySpell(
+// lowerGainPlayerCounterSpell lowers "You get {E}…{E}." / "You get <N> <kind>
+// counter(s)." and the broader "<recipient> gets <N> <kind> counter(s)." to a
+// player-counter placement of the fixed count. The energy symbol form carries no
+// named counter kind, so it defaults to energy; the named word form carries the
+// recognized player counter. The recipient is resolved from the same typed
+// context the fixed-life lowering uses: controller, defending player, the
+// triggering "that player", a lone targeted player, or a player group ("each
+// opponent" / "each player").
+func lowerGainPlayerCounterSpell(
 	ctx contentCtx,
-	syntax *parser.Ability,
+	_ *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
-	return lowerExactPrimitiveSpell(
+	effect := ctx.content.Effects[0]
+	kind := counter.Energy
+	if effect.CounterKindKnown {
+		kind = effect.CounterKind
+	}
+	unsupported := contentDiagnostic(
 		ctx,
-		syntax,
-		"gain energy",
-		func(amount game.Quantity) game.Primitive {
-			return game.AddPlayerCounter{
-				Amount:      amount,
-				Player:      game.ControllerReference(),
-				CounterKind: counter.Energy,
-			}
-		},
+		"unsupported gain player counter spell",
+		"the executable source backend supports only exact gain player counter",
 	)
+	if effect.Negated || ctx.optional || !effect.Exact ||
+		!effect.Amount.Known || effect.Amount.Value < 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, unsupported
+	}
+	amount := game.Fixed(effect.Amount.Value)
+	if len(ctx.content.Targets) == 0 {
+		var group game.PlayerGroupReference
+		switch effect.Context {
+		case parser.EffectContextEachOpponent, parser.EffectContextEachOtherPlayer:
+			group = game.OpponentsReference()
+		case parser.EffectContextEachPlayer:
+			group = game.AllPlayersReference()
+		default:
+		}
+		if group.Kind != game.PlayerGroupReferenceNone {
+			return game.Mode{
+				Sequence: []game.Instruction{{
+					Primitive: game.AddPlayerCounter{
+						Amount:      amount,
+						PlayerGroup: group,
+						CounterKind: kind,
+					},
+				}},
+			}.Ability(), nil
+		}
+	}
+	playerRef, targets, ok := gainPlayerCounterRecipient(ctx, effect)
+	if !ok {
+		return game.AbilityContent{}, unsupported
+	}
+	return game.Mode{
+		Targets: targets,
+		Sequence: []game.Instruction{{
+			Primitive: game.AddPlayerCounter{
+				Amount:      amount,
+				Player:      playerRef,
+				CounterKind: kind,
+			},
+		}},
+	}.Ability(), nil
+}
+
+// gainPlayerCounterRecipient resolves the player who receives the counters from
+// the effect's typed context, returning any target specs the reference needs.
+// It mirrors the single-player recipients lowerFixedLifeSpell supports, plus the
+// referenced-object-controller recipient ("its controller gets a counter"): the
+// controller of an inherited sequence target ("Destroy target creature. Its
+// controller gets a poison counter.") or of the triggering event permanent
+// ("Whenever enchanted artifact becomes tapped, its controller gets a poison
+// counter.").
+func gainPlayerCounterRecipient(
+	ctx contentCtx,
+	effect compiler.CompiledEffect,
+) (game.PlayerReference, []game.TargetSpec, bool) {
+	switch {
+	case len(ctx.content.Targets) == 0 && len(ctx.content.References) == 0 &&
+		effect.Context == parser.EffectContextController:
+		return game.ControllerReference(), nil, true
+	case len(ctx.content.Targets) == 0 && len(ctx.content.References) == 0 &&
+		effect.Context == parser.EffectContextDefendingPlayer:
+		return game.DefendingPlayerReference(), nil, true
+	case len(ctx.content.Targets) == 0 && len(ctx.content.References) == 1 &&
+		(effect.Context == parser.EffectContextEventPlayer &&
+			ctx.content.References[0].Kind == compiler.ReferencePronoun &&
+			ctx.content.References[0].Pronoun == compiler.ReferencePronounThey ||
+			effect.Context == parser.EffectContextReferencedPlayer &&
+				ctx.content.References[0].Kind == compiler.ReferenceThatPlayer &&
+				ctx.content.References[0].Binding != compiler.ReferenceBindingTarget):
+		return game.EventPlayerReference(), nil, true
+	case len(ctx.content.Targets) == 1 &&
+		(effect.Context == parser.EffectContextTarget ||
+			effect.Context == parser.EffectContextPriorSubject):
+		targetSpec, ok := playerTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return game.PlayerReference{}, nil, false
+		}
+		return game.TargetPlayerReference(0), []game.TargetSpec{targetSpec}, true
+	case len(ctx.content.Targets) == 1 &&
+		effect.Context == parser.EffectContextReferencedObjectController:
+		ref, ok := referencedControllerPlayerRef(ctx)
+		return ref, nil, ok
+	case len(ctx.content.Targets) == 0 &&
+		len(ctx.content.References) == 1 &&
+		effect.Context == parser.EffectContextReferencedObjectController &&
+		ctx.content.References[0].Binding == compiler.ReferenceBindingEventPermanent:
+		return game.ObjectControllerReference(game.EventPermanentReference()), nil, true
+	default:
+		return game.PlayerReference{}, nil, false
+	}
 }
 
 // lowerAmassContent lowers a single amass keyword-action effect ("Amass Orcs N"
@@ -1235,27 +1915,131 @@ func lowerRenownContent(
 	)
 }
 
+// lowerAdaptContent lowers the Adapt keyword action written out as an activated
+// ability effect ("Adapt N."). It produces a game.Adapt primitive targeting the
+// source permanent and carrying the fixed counter count. The runtime guard adds
+// the counters only when the source has no +1/+1 counters on it, subsuming the
+// printed "if it has no +1/+1 counters" reminder.
+func lowerAdaptContent(
+	ctx contentCtx,
+	syntax *parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
+	return lowerExactPrimitiveSpell(
+		ctx,
+		syntax,
+		"adapt",
+		func(amount game.Quantity) game.Primitive {
+			return game.Adapt{Object: game.SourcePermanentReference(), Amount: amount}
+		},
+	)
+}
+
+// lowerConniveContent lowers the connive keyword action whose subject is the
+// source permanent ("this creature connives."). It produces a game.Connive
+// primitive whose controller draws and discards and whose source permanent
+// receives a +1/+1 counter for each nonland card discarded. A bare "connives"
+// is connive 1; an explicit numeric count must be a fixed value of at least one.
+// The references the trigger context contributes ("their", "this creature")
+// carry no additional instruction data, so they are consumed here; any leftover
+// targets, conditions, keywords, or modes fail closed.
+func lowerConniveContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := contentDiagnostic(
+		ctx,
+		"unsupported connive effect",
+		"the executable source backend supports only the source permanent connive keyword action",
+	)
+	effect := ctx.content.Effects[0]
+	if effect.Negated ||
+		!effect.Exact ||
+		effect.Context != parser.EffectContextSource {
+		return game.AbilityContent{}, unsupported
+	}
+	amount := 1
+	if effect.Amount.Known {
+		if effect.Amount.Value < 1 {
+			return game.AbilityContent{}, unsupported
+		}
+		amount = effect.Amount.Value
+	}
+	if !conniveReferencesBenign(ctx.content.References) {
+		return game.AbilityContent{}, unsupported
+	}
+	consumed := ctx
+	consumed.content.References = nil
+	if consumed.content.Unconsumed() {
+		return game.AbilityContent{}, unsupported
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.Connive{
+			Object: game.SourcePermanentReference(),
+			Player: game.ControllerReference(),
+			Amount: game.Fixed(amount),
+		},
+	}}}.Ability(), nil
+}
+
+// conniveReferencesBenign reports whether every reference in a source-scoped
+// connive body is one the connive keyword action fully determines on its own:
+// the source subject itself or a trigger-context player/permanent the action
+// does not read. Any other binding (a target, a prior-instruction result) fails
+// closed so an unexpected connive subject is not silently dropped.
+func conniveReferencesBenign(references []compiler.CompiledReference) bool {
+	for _, reference := range references {
+		switch reference.Binding {
+		case compiler.ReferenceBindingSource,
+			compiler.ReferenceBindingEventPlayer,
+			compiler.ReferenceBindingEventPermanent,
+			compiler.ReferenceBindingEventStackObject,
+			compiler.ReferenceBindingEventCard:
+		default:
+			return false
+		}
+	}
+	return true
+}
+
 func lowerExploreSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupportedExplore := contentDiagnostic(
 		ctx,
 		"unsupported explore spell",
-		"the executable source backend supports only the source permanent pattern \"it explores\"",
+		"the executable source backend supports only the source permanent patterns \"it explores\" and \"this creature explores\" and a single target creature",
 	)
-	if ctx.content.Effects[0].Negated ||
-		!ctx.content.Effects[0].Exact ||
-		ctx.content.Effects[0].Context != parser.EffectContextReferencedObject ||
-		len(ctx.content.References) != 1 ||
-		(ctx.content.References[0].Binding != compiler.ReferenceBindingSource &&
-			ctx.content.References[0].Binding != compiler.ReferenceBindingEventPermanent) {
+	effect := ctx.content.Effects[0]
+	if effect.Negated || !effect.Exact {
 		return game.AbilityContent{}, unsupportedExplore
 	}
-	// Reference validated as "it" pronoun — clear before the fail-closed check.
+	// "Target creature you control explores." names a single target permanent as
+	// the explore subject.
+	if effect.Context == parser.EffectContextTarget {
+		return lowerTargetExploreSpell(ctx)
+	}
+	if len(ctx.content.References) != 1 {
+		return game.AbilityContent{}, unsupportedExplore
+	}
+	reference := ctx.content.References[0]
+	// "It explores." binds the explore subject to a referenced object pronoun
+	// (the source or the triggering permanent); "This creature explores." /
+	// "<name> explores." names the source permanent directly.
+	switch effect.Context {
+	case parser.EffectContextReferencedObject:
+		if reference.Binding != compiler.ReferenceBindingSource &&
+			reference.Binding != compiler.ReferenceBindingEventPermanent {
+			return game.AbilityContent{}, unsupportedExplore
+		}
+	case parser.EffectContextSource:
+		if reference.Binding != compiler.ReferenceBindingSource {
+			return game.AbilityContent{}, unsupportedExplore
+		}
+	default:
+		return game.AbilityContent{}, unsupportedExplore
+	}
+	// Reference validated as the explore subject — clear before the fail-closed check.
 	consumed := ctx
 	consumed.content.References = nil
 	if consumed.content.Unconsumed() {
 		return game.AbilityContent{}, unsupportedExplore
 	}
-	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+	object, ok := lowerObjectReference(reference, referenceLoweringContext{
 		AllowSource: true,
 		AllowEvent:  true,
 	})
@@ -1265,6 +2049,36 @@ func lowerExploreSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic)
 	return game.Mode{Sequence: []game.Instruction{{
 		Primitive: game.Explore{Creature: object},
 	}}}.Ability(), nil
+}
+
+// lowerTargetExploreSpell lowers "Target creature you control explores." into a
+// single-target explore. The target plumbing rejects any restriction the
+// permanent target spec cannot express (e.g. "target creature that crewed it
+// this turn"), so such forms fail closed.
+func lowerTargetExploreSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	unsupportedExplore := contentDiagnostic(
+		ctx,
+		"unsupported explore spell",
+		"the executable source backend supports only the source permanent patterns \"it explores\" and \"this creature explores\" and a single target creature",
+	)
+	if len(ctx.content.Targets) != 1 || len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, unsupportedExplore
+	}
+	consumed := ctx
+	consumed.content.Targets = nil
+	if consumed.content.Unconsumed() {
+		return game.AbilityContent{}, unsupportedExplore
+	}
+	spec, ok := permanentTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, unsupportedExplore
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{spec},
+		Sequence: []game.Instruction{{
+			Primitive: game.Explore{Creature: game.TargetPermanentReference(0)},
+		}},
+	}.Ability(), nil
 }
 
 func lowerManifestSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
@@ -1342,6 +2156,74 @@ func lowerWinGameSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic)
 	return game.Mode{Sequence: []game.Instruction{{
 		Primitive: game.PlayerWinsGame{Player: game.ControllerReference()},
 	}}}.Ability(), nil
+}
+
+// lowerLoseGameSpell lowers an exact EffectLoseGame body to a single
+// PlayerLosesGame instruction scoped to the losing player. It mirrors
+// lowerWinGameSpell but resolves the player from the effect context, supporting
+// the controller ("You lose the game."), the referenced triggering player
+// ("Whenever this creature deals combat damage to a player, that player loses
+// the game."), and a single targeted player ("Target player loses the game.").
+// Negated, optional, durational, conditional, and group forms fail closed.
+func lowerLoseGameSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported lose-game effect",
+			"the executable source backend supports only the exact controller, referenced, or target \"loses the game\" effect",
+		)
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Negated ||
+		!effect.Exact ||
+		ctx.optional ||
+		effect.Optional ||
+		effect.Duration != compiler.DurationNone ||
+		effect.DelayedTiming != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return unsupported()
+	}
+	player, targets, ok := loseGamePlayer(ctx, effect)
+	if !ok {
+		return unsupported()
+	}
+	return game.Mode{
+		Targets: targets,
+		Sequence: []game.Instruction{{
+			Primitive: game.PlayerLosesGame{Player: player},
+		}},
+	}.Ability(), nil
+}
+
+// loseGamePlayer resolves the player who loses the game from an EffectLoseGame
+// body's typed context. It accepts the controller, the referenced triggering
+// player ("that player"), and a single targeted player, returning any target
+// spec the reference requires. Every other recipient shape fails closed.
+func loseGamePlayer(
+	ctx contentCtx,
+	effect compiler.CompiledEffect,
+) (game.PlayerReference, []game.TargetSpec, bool) {
+	switch {
+	case len(ctx.content.Targets) == 0 && len(ctx.content.References) == 0 &&
+		effect.Context == parser.EffectContextController:
+		return game.ControllerReference(), nil, true
+	case len(ctx.content.Targets) == 0 && len(ctx.content.References) == 1 &&
+		effect.Context == parser.EffectContextReferencedPlayer &&
+		ctx.content.References[0].Kind == compiler.ReferenceThatPlayer &&
+		ctx.content.References[0].Binding != compiler.ReferenceBindingTarget:
+		return game.EventPlayerReference(), nil, true
+	case len(ctx.content.Targets) == 1 && len(ctx.content.References) == 0 &&
+		effect.Context == parser.EffectContextTarget:
+		targetSpec, ok := playerTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return game.PlayerReference{}, nil, false
+		}
+		return game.TargetPlayerReference(0), []game.TargetSpec{targetSpec}, true
+	default:
+		return game.PlayerReference{}, nil, false
+	}
 }
 
 // lowerPreventDamageSpell lowers an EffectPreventDamage clause into one or two

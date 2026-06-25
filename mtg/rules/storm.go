@@ -10,12 +10,9 @@ func stormCopyCount(g *game.Game, spell *game.CardDef) int {
 	if spell == nil || !spell.HasKeyword(game.Storm) {
 		return 0
 	}
-	count := 0
-	for _, event := range g.EventsThisTurn() {
-		if event.Kind == game.EventSpellCast {
-			count++
-		}
-	}
+	count := eventsThisTurnWindow(g).count(func(event game.Event) bool {
+		return event.Kind == game.EventSpellCast
+	})
 	return count
 }
 

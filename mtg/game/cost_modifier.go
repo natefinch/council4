@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -21,16 +22,14 @@ const (
 
 // CostModifier is a generic-cost increase/reduction/set effect.
 //
-// MatchColor constrains a spell cost modifier to spells of a single color. When
-// MatchColor is set, Color names the required color; an empty Color is the
-// colorless sentinel, constraining the modifier to colorless spells. MatchColor
-// may combine with MatchCardType ("black creature spells"). MatchSubtypes and
-// MatchColors are each mutually exclusive with MatchCardType.
+// CardSelection is the sole card-subject filter for a spell cost modifier: it
+// names the spells the modifier affects by card type, excluded card type, color,
+// color disjunction, subtype, and minimum power, matched through the shared
+// card-subject Selection matcher. An empty CardSelection affects every spell the
+// caster filter admits.
 type CostModifier struct {
 	Kind             CostModifierKind
 	Controller       PlayerID
-	CardType         types.Card
-	Color            color.Color
 	AbilityKeyword   Keyword
 	GenericIncrease  int
 	GenericReduction int
@@ -38,12 +37,17 @@ type CostModifier struct {
 	SetManaCost      opt.V[cost.Mana]
 	MinimumGeneric   int
 
-	MatchCardType bool
-	MatchColor    bool
+	// LifePayableTaxInstances, when positive on a CostModifierSpell, adds that
+	// many "{2} or 2 life" generic Phyrexian symbols to the spell's cost instead
+	// of plain generic mana. The rules layer sets it for the command-zone
+	// commander tax of a spell whose static lets the caster pay 2 life rather
+	// than each {2} of that tax (Liesa, Shroud of Dusk).
+	LifePayableTaxInstances int
+
 	// ChosenSubtypeFromEntryChoice constrains a creature spell cost modifier to
 	// spells whose subtype matches the source permanent's entry-time
 	// creature-type choice (see EntryTypeChoiceKey). It is meaningful only on a
-	// CostModifierSpell that matches creatures by card type.
+	// CostModifierSpell whose CardSelection matches creatures by card type.
 	ChosenSubtypeFromEntryChoice bool
 	FirstCycleEachTurn           bool
 
@@ -61,6 +65,13 @@ type CostModifier struct {
 	// is non-zero. It is a pointer so CostModifier stays cheap to copy; a nil
 	// pointer means the modifier counts nothing.
 	CountSelection *Selection
+	// CountZone, when present, scopes a PerObjectReduction count to the caster's
+	// cards in this zone matching CountSelection rather than to battlefield
+	// permanents ("This spell costs {N} less to cast for each <card> in your
+	// graveyard."). It names a real card zone the caster owns (graveyard or
+	// hand). It is meaningful only when PerObjectReduction is non-zero on a
+	// CostModifierSpell; when absent the count is over battlefield permanents.
+	CountZone opt.V[zone.Type]
 	// DynamicReduction is a generic cost reduction whose amount is evaluated as
 	// the spell is cast ("This spell costs {X} less to cast, where X is <dynamic
 	// amount>", e.g. the greatest power among creatures you control, or the number
@@ -72,26 +83,52 @@ type CostModifier struct {
 	// reduction; it is a pointer so CostModifier stays cheap to copy.
 	DynamicReduction *DynamicAmount
 
-	// MatchColors constrains a spell cost modifier to spells carrying any one of
-	// these colors ("... that's red or green ..."): the modifier applies when
-	// the spell has at least one of the listed colors. It holds two or more real
-	// colors and is mutually exclusive with MatchColor and MatchCardType.
-	MatchColors []color.Color
-
-	// MatchSubtypes constrains a spell cost modifier to spells carrying any one
-	// of these subtypes ("Aura and Equipment spells ..."): the modifier applies
-	// when the spell has at least one of the listed subtypes. It may combine with
-	// MatchColor and is mutually exclusive with MatchCardType and MatchColors.
-	MatchSubtypes []types.Sub
-
 	// SourceZone constrains a spell cost modifier to spells being cast from a
 	// single zone ("Spells you cast from your graveyard cost {N} less to cast.",
 	// Gravebreaker Lamia, Patrician Geist): the modifier applies only when the
 	// spell is cast from this zone. When the option is absent the modifier
 	// applies to spells cast from any zone. It is meaningful only on a
-	// CostModifierSpell and combines with the card-type, color, and subtype
-	// filters.
+	// CostModifierSpell and combines with the CardSelection card filter.
 	SourceZone opt.V[zone.Type]
+
+	// TargetsSource constrains a spell cost modifier to spells that target the
+	// permanent whose static ability carries the modifier ("Spells your
+	// opponents cast that target this creature cost {2} more to cast.", Boreal
+	// Elemental; "Spells you cast that target this creature cost {2} less to
+	// cast.", Elderwood Scion). The rules layer applies the modifier only when
+	// one of the casting spell's chosen targets is exactly the source
+	// permanent. It is meaningful only on a CostModifierSpell and combines with
+	// the affected-player caster filter (PlayerOpponent for the defensive tax,
+	// PlayerYou for the controller's discount).
+	TargetsSource bool
+
+	// SharedExiledCardTypeReduction, when positive on a CostModifierSpell,
+	// reduces the affected spell's generic cost by this much for each card type
+	// the spell shares with the cards exiled with the source permanent ("Spells
+	// you cast cost {N} less to cast for each card type they share with cards
+	// exiled with this creature.", Cemetery Prowler). The rules layer reads the
+	// source permanent's linked-exile set named by ExiledLinkKey, takes the
+	// distinct card types among those exiled cards, intersects them with the
+	// casting spell's card types, and resolves the shared count times this
+	// amount into a plain generic reduction, which never touches colored
+	// requirements and never drops a cost below zero. It is meaningful only on a
+	// CostModifierSpell supplied by another permanent's static (not
+	// AffectedSource) and pairs with a non-empty ExiledLinkKey.
+	SharedExiledCardTypeReduction int
+	// ExiledLinkKey names the linked-exile set whose exiled cards a
+	// SharedExiledCardTypeReduction reads, keyed by the source permanent's card
+	// identity. It is meaningful only when that reduction is positive.
+	ExiledLinkKey LinkedKey
+
+	// CardSelection is the canonical card-subject filter for a spell cost
+	// modifier, mirroring how triggers and additional costs describe the card
+	// they match: card type, excluded card type, color, color disjunction,
+	// subtype, and minimum power. The rules layer matches it through the shared
+	// card-subject Selection matcher. An empty CardSelection affects every spell
+	// the caster filter admits. Cost-specific context (source zone, target
+	// relation, entry-choice subtype, linked-exile and dynamic reductions) stays
+	// on its own fields, outside the Selection.
+	CardSelection Selection
 }
 
 // RuleEffectKind identifies non-layer continuous rules effects such as
@@ -111,6 +148,12 @@ const (
 	RuleEffectMustBeBlocked
 	RuleEffectMustAttack
 	RuleEffectGrantHandCardAbility
+	// RuleEffectGrantGraveyardCardKeyword grants GrantedKeyword to the affected
+	// player's graveyard cards that match CardSelection ("[During your turn,]
+	// nonland permanent cards in your graveyard have retrace.", Six, Wrenn and
+	// Six Emblem). RestrictedDuringControllerTurn scopes the grant to the
+	// controller's turn.
+	RuleEffectGrantGraveyardCardKeyword
 	RuleEffectDoesntUntap
 	RuleEffectCantBeBlockedByMoreThanOne
 	// RuleEffectNoMaximumHandSize removes the maximum hand size of the affected
@@ -240,6 +283,85 @@ const (
 	// It is a private-visibility static (only the affected player sees the card)
 	// and grants no play or cast permission on its own.
 	RuleEffectLookAtTopCardAnyTime
+	// RuleEffectPayLifeForColoredMana lets the affected player pay 2 life rather
+	// than the mana for each ManaColor symbol in any cost they pay ("For each {B}
+	// in a cost, you may pay 2 life rather than pay that mana.", K'rrik, Son of
+	// Yawgmoth). It makes every colored mana symbol of ManaColor in the affected
+	// player's costs payable like a Phyrexian symbol of that color.
+	RuleEffectPayLifeForColoredMana
+	// RuleEffectPayLifeForCommanderTax lets the caster pay 2 life rather than
+	// each {2} of the command-zone commander tax when casting the source card
+	// itself ("Rather than pay {2} for each previous time you've cast this spell
+	// from the command zone this game, pay 2 life that many times.", Liesa,
+	// Shroud of Dusk). It is a self-scoped static read from the card being cast;
+	// the rules layer emits the commander tax as generic Phyrexian symbols so
+	// each {2} instance is independently payable with 2 life.
+	RuleEffectPayLifeForCommanderTax
+	// RuleEffectDrawLimitPerTurn caps the number of cards the affected players
+	// (AffectedPlayer) may draw each turn at DrawLimitPerTurn ("Each opponent
+	// can't draw more than one card each turn.", Narset, Parter of Veils, Leovold;
+	// "Each player can't draw more than one card each turn.", Spirit of the
+	// Labyrinth). It is a continuous draw restriction (CR 120.3): once an affected
+	// player has drawn DrawLimitPerTurn cards this turn, each further draw is
+	// replaced by drawing nothing.
+	RuleEffectDrawLimitPerTurn
+	// RuleEffectCastLimitPerTurn caps the number of spells the affected players
+	// (AffectedPlayer) may cast each turn at CastLimitPerTurn ("Each player can't
+	// cast more than one spell each turn.", Rule of Law, Eidolon of Rhetoric,
+	// Arcane Laboratory; "You can't cast more than one spell each turn.",
+	// Moderation). It is a continuous casting restriction: once an affected player
+	// has cast CastLimitPerTurn spells this turn, they can't begin to cast
+	// another. SpellTypes and ExcludedSpellTypes optionally narrow the cap to
+	// spells of, or other than, those card types; empty filters count every spell.
+	RuleEffectCastLimitPerTurn
+	// RuleEffectAdditionalTriggerForControlledPermanent makes a triggered ability
+	// of a permanent controlled by this effect's controller trigger one
+	// additional time when that permanent matches AffectedSelection ("If a
+	// triggered ability of a legendary creature you control triggers, that
+	// ability triggers an additional time.", Annie Joins Up; "... of an Ally you
+	// control ...", Katara, the Fearless; "... of a Ninja creature you control
+	// ...", Splinter, Radical Rat). AffectedSelection carries the source
+	// permanent's type, supertype, and subtype filter; unlike the chosen-type and
+	// entering-permanent doublers it includes the source object itself ("a ... you
+	// control", not "another"). An empty AffectedSelection matches any controlled
+	// permanent.
+	RuleEffectAdditionalTriggerForControlledPermanent
+	// RuleEffectMustBeBlockedByAllAble is the true-lure requirement: every
+	// creature able to block the affected attacker must do so ("All creatures
+	// able to block this creature do so.", Taunting Elf; "All creatures able to
+	// block enchanted creature do so.", Lure; "... equipped creature ...",
+	// Nemesis Mask). Unlike RuleEffectMustBeBlocked, which only forces at least
+	// one blocker, this forces every able blocker onto the attacker (CR 509.1c).
+	// AffectedSource scopes it to the source creature; AffectedAttached scopes it
+	// to the creature an Aura or Equipment is attached to.
+	RuleEffectMustBeBlockedByAllAble
+	// RuleEffectAssignCombatDamageAsThoughUnblocked lets the affected attacker
+	// assign its combat damage to the player, planeswalker, or battle it is
+	// attacking as though it weren't blocked ("You may have this creature assign
+	// its combat damage as though it weren't blocked.", Lone Wolf, Thorn
+	// Elemental, Rhox). While blocked, the attacker still takes its blockers'
+	// damage, but it deals its own combat damage to its attack target rather than
+	// to the blockers. AffectedSource scopes it to the source creature;
+	// AffectedAttached scopes it to the attached creature.
+	RuleEffectAssignCombatDamageAsThoughUnblocked
+	// RuleEffectCantTransform prevents the affected permanents from transforming
+	// ("Non-Human Werewolves you control can't transform.", Immerwolf). Like the
+	// other group prohibitions it scopes the affected permanents with
+	// AffectedController, PermanentTypes, and AffectedSelection (or AffectedSource
+	// / AffectedAttached for a self- or attached-scoped form). A matching
+	// permanent's transform is prevented (CR 701.28), so any attempt to transform
+	// it does nothing.
+	RuleEffectCantTransform
+	// RuleEffectSuppressOpponentEnteringTriggers prevents a permanent entering the
+	// battlefield from causing triggered abilities of permanents controlled by
+	// the effect controller's opponents to trigger ("Permanents entering don't
+	// cause abilities of permanents your opponents control to trigger.", Elesh
+	// Norn, Mother of Machines). A pending triggered ability is suppressed when
+	// its triggering event is a permanent entering the battlefield and its source
+	// permanent is controlled by a player the effect controller treats as an
+	// opponent (CR 614 / the entering-trigger interaction). The effect is global;
+	// it carries no filters.
+	RuleEffectSuppressOpponentEnteringTriggers
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -255,6 +377,7 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectMustBeBlocked,
 		RuleEffectMustAttack,
 		RuleEffectGrantHandCardAbility,
+		RuleEffectGrantGraveyardCardKeyword,
 		RuleEffectDoesntUntap,
 		RuleEffectCantBeBlockedByMoreThanOne,
 		RuleEffectNoMaximumHandSize,
@@ -275,7 +398,27 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectCastSpellsFromZone,
 		RuleEffectCantCastFromZones,
 		RuleEffectCantEnterFromZones,
-		RuleEffectLookAtTopCardAnyTime:
+		RuleEffectLookAtTopCardAnyTime,
+		RuleEffectPayLifeForColoredMana,
+		RuleEffectPayLifeForCommanderTax,
+		RuleEffectDrawLimitPerTurn,
+		RuleEffectCastLimitPerTurn,
+		RuleEffectAdditionalTriggerForControlledPermanent,
+		RuleEffectMustBeBlockedByAllAble,
+		RuleEffectAssignCombatDamageAsThoughUnblocked,
+		RuleEffectCantTransform,
+		RuleEffectSuppressOpponentEnteringTriggers:
+		return true
+	default:
+		return false
+	}
+}
+
+// manaColorValid reports whether c is one of the five real colors of mana
+// (colorless is rejected), backing RuleEffectPayLifeForColoredMana validation.
+func manaColorValid(c mana.Color) bool {
+	switch c {
+	case mana.W, mana.U, mana.B, mana.R, mana.G:
 		return true
 	default:
 		return false
@@ -338,10 +481,19 @@ type RuleEffect struct {
 	Protection         ProtectionKeyword
 	AttackTaxGeneric   int
 
+	// ManaColor names the colored mana symbol a RuleEffectPayLifeForColoredMana
+	// effect lets the affected player pay 2 life for instead ("For each {B} in a
+	// cost, ...", K'rrik). It is unused for every other kind.
+	ManaColor mana.Color
+
 	CostModifier CostModifier
 
 	CardSelection  Selection
 	GrantedAbility ActivatedAbility
+	// GrantedKeyword is the keyword a RuleEffectGrantGraveyardCardKeyword effect
+	// confers on the affected player's matching graveyard cards. It is unused for
+	// every other kind.
+	GrantedKeyword Keyword
 
 	CastFromZone   zone.Type
 	AffectedCardID id.ID
@@ -351,6 +503,18 @@ type RuleEffect struct {
 	// AdditionalLandPlays is the number of extra land plays granted by a
 	// RuleEffectAdditionalLandPlays effect. It is unused for every other kind.
 	AdditionalLandPlays int
+
+	// DrawLimitPerTurn caps how many cards the affected players may draw each turn
+	// for a RuleEffectDrawLimitPerTurn effect ("Each opponent can't draw more than
+	// one card each turn."). It is a positive count and unused for every other
+	// kind.
+	DrawLimitPerTurn int
+
+	// CastLimitPerTurn caps how many spells the affected players may cast each
+	// turn for a RuleEffectCastLimitPerTurn effect ("Each player can't cast more
+	// than one spell each turn."). It is a positive count and unused for every
+	// other kind.
+	CastLimitPerTurn int
 
 	// RestrictedDuringControllerTurn scopes a RuleEffectCantCastSpells or
 	// RuleEffectCantActivateAbilities prohibition to the source controller's turn
@@ -405,4 +569,66 @@ type RuleEffect struct {
 	// Realmwalker). The empty key applies no chosen-type filter. It is unused for
 	// every other kind.
 	SpellChosenSubtypeFrom ChoiceKey
+
+	// PayLifeEqualToManaValue makes spells cast under a
+	// RuleEffectCastSpellsFromZone permission cost life equal to the cast spell's
+	// mana value instead of its mana cost ("If you cast a spell this way, pay life
+	// equal to its mana value rather than pay its mana cost.", Bolas's Citadel,
+	// Gwenom, Remorseless). It is unused for every other kind.
+	PayLifeEqualToManaValue bool
+
+	// AffectedSelection optionally narrows the permanents a group-scoped rule
+	// effect applies to beyond the AffectedController and PermanentTypes filters,
+	// expressing the filtered controlled-creature mass statics ("Blue creatures
+	// you control can't be blocked.", "Creatures you control with +1/+1 counters
+	// on them can't be blocked."). An empty Selection imposes no extra filter.
+	AffectedSelection Selection
+
+	// BlockedSelection scopes a RuleEffectCantBlock restriction to a protected
+	// group of attackers the affected blockers can't block ("Creatures with power
+	// less than this creature's power can't block creatures you control."). A
+	// non-empty Selection makes the prohibition conditional: an affected blocker
+	// may still block attackers outside the selection. The selection is matched
+	// from the effect's controller, so its controller relation resolves "you" to
+	// the source controller. An empty Selection with BlockedSource false leaves the
+	// can't-block prohibition unconditional.
+	BlockedSelection Selection
+
+	// BlockedSource scopes a RuleEffectCantBlock restriction to the effect's
+	// source permanent ("Creatures with power less than this creature's power
+	// can't block it."). When true the affected blockers can't block only the
+	// source object; they may still block any other attacker. It is mutually
+	// exclusive with a non-empty BlockedSelection.
+	BlockedSource bool
+
+	// AffectedPlayerRef binds a group-scoped rule effect's affected permanents to
+	// a specific player chosen at resolution rather than to the AffectedController
+	// relation, expressing "each creature <a chosen target player> controls"
+	// (The Brothers' War chapter II). createRuleEffectTemplates resolves it to
+	// AffectedSpecificPlayer; a template whose reference does not resolve is
+	// dropped. It is PlayerReferenceNone for every other effect.
+	AffectedPlayerRef PlayerReference
+
+	// AffectedSpecificPlayer is the resolved player whose creatures a
+	// RuleEffectMustAttack effect affects. When set, ruleEffectMatchesPermanent
+	// matches only permanents that player controls and ignores AffectedController.
+	// It is the resolved form of AffectedPlayerRef and is unset for every other
+	// effect.
+	AffectedSpecificPlayer opt.V[PlayerID]
+
+	// RequiredAttackTargetRef binds a RuleEffectMustAttack effect's directed
+	// attack target to a specific player chosen at resolution ("attacks the other
+	// chosen player ... each combat if able", The Brothers' War chapter II).
+	// createRuleEffectTemplates resolves it to RequiredAttackTarget; a template
+	// whose reference does not resolve is dropped. It is PlayerReferenceNone for
+	// every other effect.
+	RequiredAttackTargetRef PlayerReference
+
+	// RequiredAttackTarget is the resolved player an affected creature must attack
+	// (or a planeswalker or battle that player controls) each combat if able. When
+	// set, the forced-attack requirement is directed: the creature is forced only
+	// while it can attack that player, and an attack it makes must be aimed there.
+	// It is the resolved form of RequiredAttackTargetRef and is unset for every
+	// other effect.
+	RequiredAttackTarget opt.V[PlayerID]
 }

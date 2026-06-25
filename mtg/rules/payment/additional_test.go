@@ -1,6 +1,7 @@
 package payment
 
 import (
+	"reflect"
 	"slices"
 	"testing"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -38,24 +40,67 @@ func TestAdditionalCostSourceZone(t *testing.T) {
 	}
 }
 
-func TestAdditionalCostMatchesAnyCardSubtype(t *testing.T) {
-	additional := cost.Additional{
-		Kind:        cost.AdditionalReveal,
-		SubtypesAny: cost.SubtypeSet{types.Forest, types.Mountain},
+func TestSelectionForAdditionalCost(t *testing.T) {
+	tests := []struct {
+		name string
+		cost cost.Additional
+		want game.Selection
+	}{
+		{
+			name: "single permanent type",
+			cost: cost.Additional{Kind: cost.AdditionalSacrifice, MatchPermanentType: true, PermanentType: types.Creature},
+			want: game.Selection{RequiredTypesAny: []types.Card{types.Creature}},
+		},
+		{
+			name: "permanent type union",
+			cost: cost.Additional{Kind: cost.AdditionalSacrifice, MatchPermanentType: true, PermanentType: types.Artifact, PermanentTypeAlt: types.Creature},
+			want: game.Selection{RequiredTypesAny: []types.Card{types.Artifact, types.Creature}},
+		},
+		{
+			name: "card type",
+			cost: cost.Additional{Kind: cost.AdditionalDiscard, MatchCardType: true, CardType: types.Creature},
+			want: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+		},
+		{
+			name: "permanent color",
+			cost: cost.Additional{Kind: cost.AdditionalSacrifice, MatchCardColor: true, CardColor: color.Black},
+			want: game.Selection{ColorsAny: []color.Color{color.Black}},
+		},
+		{
+			name: "supertype and subtype",
+			cost: cost.Additional{Kind: cost.AdditionalSacrifice, RequireSupertype: types.Legendary, SubtypesAny: cost.SubtypeSet{types.Goblin, types.Orc}},
+			want: game.Selection{Supertypes: []types.Super{types.Legendary}, SubtypesAny: []types.Sub{types.Goblin, types.Orc}},
+		},
+		{
+			name: "exclude permanent type and token",
+			cost: cost.Additional{Kind: cost.AdditionalSacrifice, ExcludePermanentType: types.Land, RequireToken: true},
+			want: game.Selection{ExcludedTypes: []types.Card{types.Land}, TokenOnly: true},
+		},
+		{
+			name: "tapped",
+			cost: cost.Additional{Kind: cost.AdditionalTapPermanents, RequireTapped: true},
+			want: game.Selection{Tapped: game.TriTrue},
+		},
+		{
+			name: "historic disjunction",
+			cost: cost.Additional{Kind: cost.AdditionalExile, MatchHistoric: true},
+			want: game.Selection{AnyOf: []game.Selection{
+				{RequiredTypes: []types.Card{types.Artifact}},
+				{Supertypes: []types.Super{types.Legendary}},
+				{SubtypesAny: []types.Sub{types.Saga}},
+			}},
+		},
 	}
-	forest := &game.CardDef{CardFace: game.CardFace{
-		Types:    []types.Card{types.Land},
-		Subtypes: []types.Sub{types.Forest},
-	}}
-	if !additionalCostMatchesCard(forest, additional) {
-		t.Fatal("Forest did not match Forest-or-Mountain reveal cost")
-	}
-	creature := &game.CardDef{CardFace: game.CardFace{
-		Types:    []types.Card{types.Creature},
-		Subtypes: []types.Sub{types.Elf},
-	}}
-	if additionalCostMatchesCard(creature, additional) {
-		t.Fatal("Elf matched Forest-or-Mountain reveal cost")
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, ok := SelectionForAdditionalCost(test.cost)
+			if !ok {
+				t.Fatalf("SelectionForAdditionalCost(%s) returned ok=false", test.name)
+			}
+			if !reflect.DeepEqual(got, test.want) {
+				t.Fatalf("SelectionForAdditionalCost(%s) = %#v, want %#v", test.name, got, test.want)
+			}
+		})
 	}
 }
 
@@ -81,8 +126,13 @@ type subtypeMatchState struct {
 	subtypes map[id.ID][]types.Sub
 }
 
-func (s subtypeMatchState) PermanentHasSubtype(permanent *game.Permanent, sub types.Sub) bool {
-	return slices.Contains(s.subtypes[permanent.ObjectID], sub)
+func (s subtypeMatchState) PermanentMatchesSelection(permanent *game.Permanent, sel game.Selection) bool {
+	if len(sel.SubtypesAny) == 0 {
+		return true
+	}
+	return slices.ContainsFunc(sel.SubtypesAny, func(sub types.Sub) bool {
+		return slices.Contains(s.subtypes[permanent.ObjectID], sub)
+	})
 }
 
 type colorMatchState struct {
@@ -91,8 +141,13 @@ type colorMatchState struct {
 	colors map[id.ID][]color.Color
 }
 
-func (s colorMatchState) PermanentEffectiveColors(permanent *game.Permanent) []color.Color {
-	return s.colors[permanent.ObjectID]
+func (s colorMatchState) PermanentMatchesSelection(permanent *game.Permanent, sel game.Selection) bool {
+	if len(sel.ColorsAny) == 0 {
+		return true
+	}
+	return slices.ContainsFunc(sel.ColorsAny, func(c color.Color) bool {
+		return slices.Contains(s.colors[permanent.ObjectID], c)
+	})
 }
 
 func TestAdditionalCostMatchesPermanentColor(t *testing.T) {
@@ -156,6 +211,7 @@ func TestPreferredReturnPermanentsRejectsInvalidPreference(t *testing.T) {
 
 type fakePaymentState struct {
 	battlefield []*game.Permanent
+	powers      map[id.ID]int
 }
 
 func (fakePaymentState) Player(playerID game.PlayerID) (*game.Player, bool) {
@@ -164,7 +220,11 @@ func (fakePaymentState) Player(playerID game.PlayerID) (*game.Player, bool) {
 
 func (fakePaymentState) CanPayLife(game.PlayerID) bool { return true }
 
+func (fakePaymentState) PayLifeForManaColor(game.PlayerID, mana.Color) bool { return false }
+
 func (fakePaymentState) ActivePlayer() game.PlayerID { return game.Player1 }
+
+func (fakePaymentState) OpponentLostLifeThisTurn(game.PlayerID) bool { return false }
 
 func (fakePaymentState) AdditionalDynamicAmountValue(game.PlayerID, cost.AdditionalDynamicAmount) int {
 	return 0
@@ -189,6 +249,7 @@ func (s fakePaymentState) PermanentByObjectID(objectID id.ID) (*game.Permanent, 
 }
 
 func (fakePaymentState) CardInstance(id.ID) (*game.CardInstance, bool) { return nil, false }
+func (s fakePaymentState) PermanentPower(p *game.Permanent) int        { return s.powers[p.ObjectID] }
 func (fakePaymentState) CardFace(*game.CardInstance, game.FaceIndex) *game.CardDef {
 	return nil
 }
@@ -196,6 +257,10 @@ func (fakePaymentState) PermanentHasType(*game.Permanent, types.Card) bool      
 func (fakePaymentState) PermanentHasSupertype(*game.Permanent, types.Super) bool { return false }
 func (fakePaymentState) PermanentHasSubtype(*game.Permanent, types.Sub) bool     { return false }
 func (fakePaymentState) PermanentEffectiveColors(*game.Permanent) []color.Color  { return nil }
+func (fakePaymentState) PermanentMatchesSelection(*game.Permanent, game.Selection) bool {
+	return true
+}
+func (fakePaymentState) CardMatchesSelection(*game.CardDef, game.Selection) bool { return true }
 func (fakePaymentState) PermanentEffectiveAbilities(*game.Permanent) []game.Ability {
 	return nil
 }
@@ -205,7 +270,7 @@ func (fakePaymentState) ActivationConditionSatisfied(game.PlayerID, *game.Perman
 func (fakePaymentState) ManaAbilityTimingAllowed(game.PlayerID, *game.Permanent, int, game.TimingRestriction) bool {
 	return true
 }
-func (fakePaymentState) CostModifiersForSpell(game.PlayerID, *game.CardDef, id.ID, zone.Type) []game.CostModifier {
+func (fakePaymentState) CostModifiersForSpell(game.PlayerID, *game.CardDef, id.ID, zone.Type, []game.Target) []game.CostModifier {
 	return nil
 }
 func (fakePaymentState) SetTapped(*game.Permanent, bool)                                   {}
@@ -265,5 +330,192 @@ func TestPreferredSacrificePermanentsRejectsSourcePreferenceWhenExcluded(t *test
 	chosen := preferredSacrificePermanents(state, game.Player1, additional, 1, nil, prefs, source)
 	if len(chosen) != 1 || chosen[0].ObjectID != other.ObjectID {
 		t.Fatalf("chosen = %#v, want the non-source preference honored", chosen)
+	}
+}
+
+func TestChooseTapPermanentsTotalPowerSelectsThreshold(t *testing.T) {
+	source := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	mid := &game.Permanent{ObjectID: 2, Controller: game.Player1}
+	small := &game.Permanent{ObjectID: 3, Controller: game.Player1}
+	tapped := &game.Permanent{ObjectID: 4, Controller: game.Player1, Tapped: true}
+	opp := &game.Permanent{ObjectID: 5, Controller: game.Player2}
+	state := fakePaymentState{
+		battlefield: []*game.Permanent{source, mid, small, tapped, opp},
+		powers:      map[id.ID]int{1: 5, 2: 2, 3: 1, 4: 9, 5: 9},
+	}
+	additional := cost.Additional{
+		Kind:              cost.AdditionalTapPermanents,
+		ExcludeSource:     true,
+		TotalPowerAtLeast: 3,
+	}
+	chosen := chooseTapPermanentsTotalPower(state, game.Player1, additional, nil, source)
+	got := map[id.ID]bool{}
+	total := 0
+	for _, p := range chosen {
+		got[p.ObjectID] = true
+		total += state.powers[p.ObjectID]
+	}
+	if total < additional.TotalPowerAtLeast {
+		t.Fatalf("total power = %d, want >= %d", total, additional.TotalPowerAtLeast)
+	}
+	if got[source.ObjectID] {
+		t.Fatal("source must be excluded by ExcludeSource")
+	}
+	if got[tapped.ObjectID] {
+		t.Fatal("tapped permanents must be excluded")
+	}
+	if got[opp.ObjectID] {
+		t.Fatal("opponent's permanents must be excluded")
+	}
+}
+
+func TestChooseTapPermanentsTotalPowerUnreachableReturnsNil(t *testing.T) {
+	source := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	c2 := &game.Permanent{ObjectID: 2, Controller: game.Player1}
+	state := fakePaymentState{
+		battlefield: []*game.Permanent{source, c2},
+		powers:      map[id.ID]int{1: 5, 2: 2},
+	}
+	additional := cost.Additional{
+		Kind:              cost.AdditionalTapPermanents,
+		ExcludeSource:     true,
+		TotalPowerAtLeast: 10,
+	}
+	if chosen := chooseTapPermanentsTotalPower(state, game.Player1, additional, nil, source); chosen != nil {
+		t.Fatalf("expected nil when threshold unreachable, got %v", chosen)
+	}
+}
+
+func removeCounterAmongTotal(removals []counterRemoval) int {
+	total := 0
+	for _, removal := range removals {
+		total += removal.amount
+	}
+	return total
+}
+
+func TestPlanRemoveCounterAmongGreedySpreadsAcrossPermanents(t *testing.T) {
+	first := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	first.Counters.Add(counter.PlusOnePlusOne, 1)
+	second := &game.Permanent{ObjectID: 2, Controller: game.Player1}
+	second.Counters.Add(counter.PlusOnePlusOne, 3)
+	state := fakePaymentState{battlefield: []*game.Permanent{first, second}}
+	additional := cost.Additional{Kind: cost.AdditionalRemoveCounterAmong, Amount: 2, CounterKind: counter.PlusOnePlusOne}
+
+	removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 2, nil, nil)
+	if !ok || removeCounterAmongTotal(removals) != 2 {
+		t.Fatalf("removals = %#v ok = %t, want total 2", removals, ok)
+	}
+	for _, removal := range removals {
+		if removal.kind != counter.PlusOnePlusOne {
+			t.Fatalf("removal kind = %v, want +1/+1", removal.kind)
+		}
+	}
+}
+
+func TestPlanRemoveCounterAmongHonorsPreference(t *testing.T) {
+	first := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	first.Counters.Add(counter.PlusOnePlusOne, 1)
+	second := &game.Permanent{ObjectID: 2, Controller: game.Player1}
+	second.Counters.Add(counter.PlusOnePlusOne, 3)
+	state := fakePaymentState{battlefield: []*game.Permanent{first, second}}
+	additional := cost.Additional{Kind: cost.AdditionalRemoveCounterAmong, Amount: 2, CounterKind: counter.PlusOnePlusOne}
+	prefs := &Preferences{RemoveCounterChoices: []id.ID{2, 2}}
+
+	removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 2, nil, prefs)
+	if !ok || len(removals) != 1 || removals[0].source != second || removals[0].amount != 2 {
+		t.Fatalf("removals = %#v ok = %t, want both from permanent 2", removals, ok)
+	}
+	if len(prefs.RemoveCounterChoices) != 0 {
+		t.Fatalf("remaining choices = %#v, want consumed", prefs.RemoveCounterChoices)
+	}
+}
+
+func TestPlanRemoveCounterAmongFailsWhenInsufficient(t *testing.T) {
+	only := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	only.Counters.Add(counter.PlusOnePlusOne, 1)
+	state := fakePaymentState{battlefield: []*game.Permanent{only}}
+	additional := cost.Additional{Kind: cost.AdditionalRemoveCounterAmong, Amount: 2, CounterKind: counter.PlusOnePlusOne}
+
+	if removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 2, nil, nil); ok {
+		t.Fatalf("removals = %#v ok = true, want failure for insufficient counters", removals)
+	}
+}
+
+func TestPlanRemoveCounterAmongReservesPlannedCounters(t *testing.T) {
+	only := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	only.Counters.Add(counter.PlusOnePlusOne, 2)
+	state := fakePaymentState{battlefield: []*game.Permanent{only}}
+	additional := cost.Additional{Kind: cost.AdditionalRemoveCounterAmong, Amount: 2, CounterKind: counter.PlusOnePlusOne}
+	planned := []counterRemoval{{source: only, kind: counter.PlusOnePlusOne, amount: 1}}
+
+	if removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 2, planned, nil); ok {
+		t.Fatalf("removals = %#v ok = true, want failure once reserved counters are excluded", removals)
+	}
+}
+
+func TestPlanRemoveCounterAmongInvalidPreferenceFallsBack(t *testing.T) {
+	only := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	only.Counters.Add(counter.PlusOnePlusOne, 2)
+	state := fakePaymentState{battlefield: []*game.Permanent{only}}
+	additional := cost.Additional{Kind: cost.AdditionalRemoveCounterAmong, Amount: 1, CounterKind: counter.PlusOnePlusOne}
+
+	// Default policy: a stale preference falls back to a deterministic legal
+	// removal rather than rejecting the payment.
+	prefs := &Preferences{RemoveCounterChoices: []id.ID{999}}
+	removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 1, nil, prefs)
+	if !ok {
+		t.Fatal("planRemoveCounterAmong with stale preference = !ok, want fallback to deterministic removal")
+	}
+	if len(removals) != 1 || removals[0].source != only || removals[0].amount != 1 {
+		t.Fatalf("removals = %#v, want one counter removed from the only matching permanent", removals)
+	}
+
+	// Strict replay: a stale preference rejects the payment instead of
+	// substituting a different choice.
+	strict := &Preferences{RemoveCounterChoices: []id.ID{999}, StrictReplay: true}
+	if removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 1, nil, strict); ok {
+		t.Fatalf("removals = %#v ok = true, want strict replay to reject invalid preference", removals)
+	}
+}
+
+func TestPlanRemoveCounterAmongAnyKindSpreadsAcrossKinds(t *testing.T) {
+	first := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	first.Counters.Add(counter.Vigilance, 1)
+	second := &game.Permanent{ObjectID: 2, Controller: game.Player1}
+	second.Counters.Add(counter.Charge, 1)
+	second.Counters.Add(counter.PlusOnePlusOne, 1)
+	state := fakePaymentState{battlefield: []*game.Permanent{first, second}}
+	additional := cost.Additional{Kind: cost.AdditionalRemoveCounterAmong, Amount: 3, AnyCounterKind: true}
+
+	removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 3, nil, nil)
+	if !ok || removeCounterAmongTotal(removals) != 3 {
+		t.Fatalf("removals = %#v ok = %t, want total 3 across any kinds", removals, ok)
+	}
+}
+
+func TestPlanRemoveCounterAmongAnyKindHonorsPreference(t *testing.T) {
+	first := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	first.Counters.Add(counter.Vigilance, 1)
+	second := &game.Permanent{ObjectID: 2, Controller: game.Player1}
+	second.Counters.Add(counter.Charge, 2)
+	state := fakePaymentState{battlefield: []*game.Permanent{first, second}}
+	additional := cost.Additional{Kind: cost.AdditionalRemoveCounterAmong, Amount: 2, AnyCounterKind: true}
+	prefs := &Preferences{RemoveCounterChoices: []id.ID{2, 2}}
+
+	removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 2, nil, prefs)
+	if !ok || len(removals) != 1 || removals[0].source != second || removals[0].kind != counter.Charge || removals[0].amount != 2 {
+		t.Fatalf("removals = %#v ok = %t, want both charge counters from permanent 2", removals, ok)
+	}
+}
+
+func TestPlanRemoveCounterAmongAnyKindFailsWhenInsufficient(t *testing.T) {
+	only := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	only.Counters.Add(counter.Charge, 1)
+	state := fakePaymentState{battlefield: []*game.Permanent{only}}
+	additional := cost.Additional{Kind: cost.AdditionalRemoveCounterAmong, Amount: 2, AnyCounterKind: true}
+
+	if removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 2, nil, nil); ok {
+		t.Fatalf("removals = %#v ok = true, want failure for insufficient counters", removals)
 	}
 }

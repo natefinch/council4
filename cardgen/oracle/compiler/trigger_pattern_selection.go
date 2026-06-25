@@ -2,6 +2,9 @@ package compiler
 
 import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func compileTriggerSelection(syntax parser.TriggerSelection) (TriggerSelection, bool) {
@@ -14,42 +17,42 @@ func compileTriggerSelection(syntax parser.TriggerSelection) (TriggerSelection, 
 	var ok bool
 	for _, value := range syntax.RequiredTypes {
 		selection.RequiredTypes = append(selection.RequiredTypes, compileTriggerCardType(value))
-		if selection.RequiredTypes[len(selection.RequiredTypes)-1] == TriggerCardTypeUnknown {
+		if selection.RequiredTypes[len(selection.RequiredTypes)-1] == "" {
 			return TriggerSelection{}, false
 		}
 	}
 	for _, value := range syntax.RequiredTypesAny {
 		selection.RequiredTypesAny = append(selection.RequiredTypesAny, compileTriggerCardType(value))
-		if selection.RequiredTypesAny[len(selection.RequiredTypesAny)-1] == TriggerCardTypeUnknown {
+		if selection.RequiredTypesAny[len(selection.RequiredTypesAny)-1] == "" {
 			return TriggerSelection{}, false
 		}
 	}
 	for _, value := range syntax.ExcludedTypes {
 		selection.ExcludedTypes = append(selection.ExcludedTypes, compileTriggerCardType(value))
-		if selection.ExcludedTypes[len(selection.ExcludedTypes)-1] == TriggerCardTypeUnknown {
+		if selection.ExcludedTypes[len(selection.ExcludedTypes)-1] == "" {
 			return TriggerSelection{}, false
 		}
 	}
 	for _, value := range syntax.Supertypes {
 		selection.Supertypes = append(selection.Supertypes, compileTriggerSupertype(value))
-		if selection.Supertypes[len(selection.Supertypes)-1] == TriggerSupertypeUnknown {
+		if selection.Supertypes[len(selection.Supertypes)-1] == "" {
 			return TriggerSelection{}, false
 		}
 	}
 	for _, value := range syntax.ColorsAny {
 		selection.ColorsAny = append(selection.ColorsAny, compileTriggerColor(value))
-		if selection.ColorsAny[len(selection.ColorsAny)-1] == TriggerColorUnknown {
+		if selection.ColorsAny[len(selection.ColorsAny)-1] == "" {
 			return TriggerSelection{}, false
 		}
 	}
 	for _, value := range syntax.ExcludedColors {
 		selection.ExcludedColors = append(selection.ExcludedColors, compileTriggerColor(value))
-		if selection.ExcludedColors[len(selection.ExcludedColors)-1] == TriggerColorUnknown {
+		if selection.ExcludedColors[len(selection.ExcludedColors)-1] == "" {
 			return TriggerSelection{}, false
 		}
 	}
 	if len(syntax.SubtypesAny) > 0 {
-		selection.SubtypesAny = make([]TriggerSubtype, len(syntax.SubtypesAny))
+		selection.SubtypesAny = make([]types.Sub, len(syntax.SubtypesAny))
 		copy(selection.SubtypesAny, syntax.SubtypesAny)
 	}
 	selection.Controller, ok = compileTriggerController(syntax.Controller)
@@ -85,57 +88,59 @@ func compileTriggerSelection(syntax parser.TriggerSelection) (TriggerSelection, 
 		return TriggerSelection{}, false
 	}
 	selection.SubtypeFromEntryChoice = syntax.SubtypeFromEntryChoice
+	selection.MatchAnyCounter = syntax.MatchAnyCounter
+	selection.Modified = syntax.Modified
 	return selection, true
 }
 
-func compileTriggerCardType(value parser.TriggerCardType) TriggerCardType {
+func compileTriggerCardType(value parser.TriggerCardType) types.Card {
 	switch value {
 	case parser.TriggerCardTypeArtifact:
-		return TriggerCardTypeArtifact
+		return types.Artifact
 	case parser.TriggerCardTypeBattle:
-		return TriggerCardTypeBattle
+		return types.Battle
 	case parser.TriggerCardTypeCreature:
-		return TriggerCardTypeCreature
+		return types.Creature
 	case parser.TriggerCardTypeEnchantment:
-		return TriggerCardTypeEnchantment
+		return types.Enchantment
 	case parser.TriggerCardTypeInstant:
-		return TriggerCardTypeInstant
+		return types.Instant
 	case parser.TriggerCardTypeLand:
-		return TriggerCardTypeLand
+		return types.Land
 	case parser.TriggerCardTypePlaneswalker:
-		return TriggerCardTypePlaneswalker
+		return types.Planeswalker
 	case parser.TriggerCardTypeSorcery:
-		return TriggerCardTypeSorcery
+		return types.Sorcery
 	default:
-		return TriggerCardTypeUnknown
+		return ""
 	}
 }
 
-func compileTriggerSupertype(value parser.TriggerSupertype) TriggerSupertype {
+func compileTriggerSupertype(value parser.TriggerSupertype) types.Super {
 	switch value {
 	case parser.TriggerSupertypeLegendary:
-		return TriggerSupertypeLegendary
+		return types.Legendary
 	case parser.TriggerSupertypeSnow:
-		return TriggerSupertypeSnow
+		return types.Snow
 	default:
-		return TriggerSupertypeUnknown
+		return ""
 	}
 }
 
-func compileTriggerColor(value parser.TriggerColor) TriggerColor {
+func compileTriggerColor(value parser.TriggerColor) color.Color {
 	switch value {
 	case parser.TriggerColorWhite:
-		return TriggerColorWhite
+		return color.White
 	case parser.TriggerColorBlue:
-		return TriggerColorBlue
+		return color.Blue
 	case parser.TriggerColorBlack:
-		return TriggerColorBlack
+		return color.Black
 	case parser.TriggerColorRed:
-		return TriggerColorRed
+		return color.Red
 	case parser.TriggerColorGreen:
-		return TriggerColorGreen
+		return color.Green
 	default:
-		return TriggerColorUnknown
+		return ""
 	}
 }
 
@@ -178,36 +183,36 @@ func compileTriggerSelectionCombatState(value parser.TriggerSelectionCombatState
 	}
 }
 
-func compileTriggerSelectionKeyword(value parser.KeywordKind) (TriggerKeyword, bool) {
+func compileTriggerSelectionKeyword(value parser.KeywordKind) (parser.KeywordKind, bool) {
 	switch value {
 	case parser.KeywordUnknown:
-		return TriggerKeywordUnknown, true
+		return parser.KeywordUnknown, true
 	case parser.KeywordDefender:
-		return TriggerKeywordDefender, true
+		return parser.KeywordDefender, true
 	case parser.KeywordFlash:
-		return TriggerKeywordFlash, true
+		return parser.KeywordFlash, true
 	case parser.KeywordFlying:
-		return TriggerKeywordFlying, true
+		return parser.KeywordFlying, true
 	case parser.KeywordHaste:
-		return TriggerKeywordHaste, true
+		return parser.KeywordHaste, true
 	case parser.KeywordShadow:
-		return TriggerKeywordShadow, true
+		return parser.KeywordShadow, true
 	default:
-		return TriggerKeywordUnknown, false
+		return parser.KeywordUnknown, false
 	}
 }
 
-func compileTriggerSelectionNumber(value parser.TriggerSelectionNumber) (TriggerNumberFilter, bool) {
+func compileTriggerSelectionNumber(value parser.TriggerSelectionNumber) (compare.Int, bool) {
 	switch value.Comparison {
 	case parser.TriggerSelectionComparisonUnknown:
-		return TriggerNumberFilter{}, value.Value == 0
+		return compare.Int{}, value.Value == 0
 	case parser.TriggerSelectionComparisonEqual:
-		return TriggerNumberFilter{Comparison: TriggerComparisonEqual, Value: value.Value}, value.Value >= 0
+		return compare.Int{Op: compare.Equal, Value: value.Value}, value.Value >= 0
 	case parser.TriggerSelectionComparisonAtMost:
-		return TriggerNumberFilter{Comparison: TriggerComparisonAtMost, Value: value.Value}, value.Value >= 0
+		return compare.Int{Op: compare.LessOrEqual, Value: value.Value}, value.Value >= 0
 	case parser.TriggerSelectionComparisonAtLeast:
-		return TriggerNumberFilter{Comparison: TriggerComparisonAtLeast, Value: value.Value}, value.Value >= 0
+		return compare.Int{Op: compare.GreaterOrEqual, Value: value.Value}, value.Value >= 0
 	default:
-		return TriggerNumberFilter{}, false
+		return compare.Int{}, false
 	}
 }

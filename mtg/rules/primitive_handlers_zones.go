@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
@@ -114,6 +115,109 @@ func handleShuffleLibrary(r *effectResolver, prim game.ShuffleLibrary) effectRes
 	return res
 }
 
+// handleShuffleGraveyardIntoLibrary moves every card in the referenced player's
+// graveyard into that player's library, then shuffles the library. Per the
+// shuffle rules the library is shuffled even when no cards moved.
+func handleShuffleGraveyardIntoLibrary(r *effectResolver, prim game.ShuffleGraveyardIntoLibrary) effectResolved {
+	res := effectResolved{accepted: true}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return res
+	}
+	for _, cardID := range player.Graveyard.All() {
+		moveCardBetweenZones(r.game, playerID, cardID, zone.Graveyard, zone.Library)
+	}
+	player.Library.Shuffle(r.engine.rng)
+	res.succeeded = true
+	return res
+}
+
+// handleLookAtHand resolves a "look at target player's hand" effect. Looking at
+// a hand reveals hidden information to the source's controller but does not
+// change game state, so the handler resolves the player and succeeds.
+func handleLookAtHand(r *effectResolver, prim game.LookAtHand) effectResolved {
+	res := effectResolved{accepted: true}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	if _, ok := playerByID(r.game, playerID); !ok {
+		return res
+	}
+	res.succeeded = true
+	return res
+}
+
+// handleChooseDiscardFromHand resolves the targeted hand-disruption family
+// (Coercion / Duress / Thoughtseize / Inquisition of Kozilek): the resolving
+// controller looks at the referenced player's hand, chooses one card matching
+// the filter, and that player discards it. The hand is revealed even when no
+// card matches, so the effect succeeds whenever the player resolves.
+func handleChooseDiscardFromHand(r *effectResolver, prim game.ChooseDiscardFromHand) effectResolved {
+	res := effectResolved{accepted: true}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return res
+	}
+	res.succeeded = true
+	var candidates []id.ID
+	for _, cardID := range player.Hand.All() {
+		card, ok := r.game.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		if prim.ExcludeCreature && card.Def.HasType(types.Creature) {
+			continue
+		}
+		if prim.ExcludeLand && card.Def.HasType(types.Land) {
+			continue
+		}
+		if prim.MaxManaValue.Exists && card.Def.ManaValue() > prim.MaxManaValue.Val {
+			continue
+		}
+		if !handCardMatchesSelection(r.game, card, prim.Selection, playerID) {
+			continue
+		}
+		candidates = append(candidates, cardID)
+	}
+	if len(candidates) == 0 {
+		return res
+	}
+	options := make([]game.ChoiceOption, len(candidates))
+	for i, cardID := range candidates {
+		options[i] = game.ChoiceOption{
+			Index: i,
+			Label: cardChoiceLabel(r.game, cardID),
+			Card:  cardChoiceInfo(r.game, cardID),
+		}
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           r.obj.Controller,
+		Prompt:           "Choose a card for that player to discard",
+		Options:          options,
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: firstChoiceIndices(1),
+	}, r.log)
+	simultaneousID := r.game.IDGen.Next()
+	for _, idx := range selected {
+		if idx < 0 || idx >= len(candidates) {
+			continue
+		}
+		discardCardFromHandInBatch(r.game, playerID, candidates[idx], simultaneousID)
+	}
+	return res
+}
+
 func handleDiscard(r *effectResolver, prim game.Discard) effectResolved {
 	if prim.EntireHand {
 		return handleDiscardEntireHand(r, prim)
@@ -127,10 +231,15 @@ func handleDiscard(r *effectResolver, prim game.Discard) effectResolved {
 	}
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
+		var publishKey game.LinkedObjectKey
+		if prim.PublishLinked != "" {
+			publishKey = linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
+			clearLinkedObjects(r.game, publishKey)
+		}
 		if prim.AtRandom {
-			res.succeeded = r.discardCardsAtRandom(playerID, res.amount)
+			res.succeeded = r.discardCardsAtRandom(playerID, res.amount, publishKey)
 		} else {
-			res.succeeded = r.discardCardsWithChoices(playerID, res.amount)
+			res.succeeded = r.discardCardsWithChoices(playerID, res.amount, publishKey)
 		}
 	}
 	return res
@@ -159,7 +268,7 @@ func handleDiscardEntireHand(r *effectResolver, prim game.Discard) effectResolve
 	return res
 }
 
-func (r *effectResolver) discardCardsWithChoices(playerID game.PlayerID, amount int) bool {
+func (r *effectResolver) discardCardsWithChoices(playerID game.PlayerID, amount int, publishKey game.LinkedObjectKey) bool {
 	player, ok := playerByID(r.game, playerID)
 	if !ok {
 		return false
@@ -192,7 +301,12 @@ func (r *effectResolver) discardCardsWithChoices(playerID game.PlayerID, amount 
 		if idx < 0 || idx >= len(candidates) {
 			continue
 		}
-		discarded = discardCardFromHandInBatch(r.game, playerID, candidates[idx], simultaneousID) || discarded
+		if discardCardFromHandInBatch(r.game, playerID, candidates[idx], simultaneousID) {
+			discarded = true
+			if publishKey != (game.LinkedObjectKey{}) {
+				rememberLinkedObject(r.game, publishKey, game.LinkedObjectRef{CardID: candidates[idx]})
+			}
+		}
 	}
 	return discarded
 }
@@ -200,7 +314,7 @@ func (r *effectResolver) discardCardsWithChoices(playerID game.PlayerID, amount 
 // discardCardsAtRandom discards up to amount cards chosen uniformly at random
 // from the player's hand, as one simultaneous batch ("Discard a card at
 // random."). It returns whether any card was discarded.
-func (r *effectResolver) discardCardsAtRandom(playerID game.PlayerID, amount int) bool {
+func (r *effectResolver) discardCardsAtRandom(playerID game.PlayerID, amount int, publishKey game.LinkedObjectKey) bool {
 	player, ok := playerByID(r.game, playerID)
 	if !ok {
 		return false
@@ -220,7 +334,12 @@ func (r *effectResolver) discardCardsAtRandom(playerID game.PlayerID, amount int
 	simultaneousID := r.game.IDGen.Next()
 	discarded := false
 	for _, idx := range order[:amount] {
-		discarded = discardCardFromHandInBatch(r.game, playerID, candidates[idx], simultaneousID) || discarded
+		if discardCardFromHandInBatch(r.game, playerID, candidates[idx], simultaneousID) {
+			discarded = true
+			if publishKey != (game.LinkedObjectKey{}) {
+				rememberLinkedObject(r.game, publishKey, game.LinkedObjectRef{CardID: candidates[idx]})
+			}
+		}
 	}
 	return discarded
 }
@@ -228,6 +347,19 @@ func (r *effectResolver) discardCardsAtRandom(playerID game.PlayerID, amount int
 func handleSearch(r *effectResolver, prim game.Search) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	if !searchSpecSupported(prim.Spec) {
+		return res
+	}
+	if prim.Spec.RevealOnly {
+		return handleSearchRevealOnly(r, prim)
+	}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		// "Each player searches their library ..." — every member searches their
+		// own library and any found permanent enters under that searcher's
+		// control (no Controller rider applies to a group search).
+		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
+			succeeded, _ := r.engine.searchLibrary(r.game, r.obj, r.agents, r.log, playerID, playerID, prim.Spec, res.amount)
+			res.succeeded = succeeded || res.succeeded
+		}
 		return res
 	}
 	playerID, ok := r.resolvePlayer(prim.Player)
@@ -250,6 +382,29 @@ func handleSearch(r *effectResolver, prim game.Search) effectResolved {
 		if prim.PublishLinked != "" && permanent != nil {
 			rememberLinkedObject(r.game, key, permanentLinkedObjectRef(permanent))
 		}
+	}
+	return res
+}
+
+func handleSearchRevealOnly(r *effectResolver, prim game.Search) effectResolved {
+	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	var key game.LinkedObjectKey
+	if prim.PublishLinked != "" {
+		key = linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
+		clearLinkedObjects(r.game, key)
+	}
+	cardID, found := r.engine.searchLibraryRevealOnly(r.game, r.obj, r.agents, r.log, playerID, prim.Spec, res.amount)
+	if !found {
+		return res
+	}
+	res.succeeded = true
+	res.amount = 1
+	if prim.PublishLinked != "" {
+		rememberLinkedObject(r.game, key, game.LinkedObjectRef{CardID: cardID})
 	}
 	return res
 }
@@ -360,6 +515,9 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	if spec, ok := prim.Source.TokenCopy(); ok && spec.Source == game.TokenCopySourceEachInGroup {
 		return r.createCopyTokensForEach(prim, spec, recipient)
 	}
+	if spec, ok := prim.Source.TokenCopy(); ok && spec.Source == game.TokenCopySourceChosenFromTriggerBatch {
+		return r.createCopyTokenFromTriggerBatch(prim, spec, recipient)
+	}
 	token, ok := r.typedTokenDefinition(prim.Source)
 	if !ok {
 		return res
@@ -419,6 +577,129 @@ func (r *effectResolver) createCopyTokensForEach(prim game.CreateToken, spec gam
 		res.succeeded = true
 	}
 	return res
+}
+
+// createCopyTokenFromTriggerBatch creates one token copying a controller-chosen
+// member of the resolving ability's triggering event batch ("create a token
+// that's a copy of one of them.", Twilight Diviner). The candidate set is the
+// permanents that triggered the resolving ability and are still on the
+// battlefield; the controller chooses one and the token starts as a copy of it,
+// applying the spec's copy modifiers. No candidates yields no token.
+func (r *effectResolver) createCopyTokenFromTriggerBatch(prim game.CreateToken, spec game.TokenCopySpec, recipient game.PlayerID) effectResolved {
+	res := effectResolved{accepted: true}
+	candidates := r.triggeringBatchPermanents()
+	chosen := r.chooseTriggeringBatchMember(recipient, candidates)
+	if chosen == nil {
+		return res
+	}
+	source, ok := permanentCopyDef(r.game, chosen)
+	if !ok {
+		return res
+	}
+	def, ok := applyTokenCopyOverrides(source, spec)
+	if !ok {
+		return res
+	}
+	created, ok := createTokenPermanentsCollectingWithChoices(r.engine, r.game, recipient, def, 1, prim.EntryTapped, r.agents, r.log)
+	if !ok {
+		return res
+	}
+	if prim.EntryAttacking {
+		declareCreatedTokensAttacking(r.engine, r.game, recipient, created, r.agents, r.log)
+	}
+	res.amount = 1
+	res.succeeded = true
+	return res
+}
+
+// triggeringBatchPermanents returns the battlefield permanents that triggered
+// the resolving ability: the entering permanents of its triggering event batch
+// (the primary event plus every event sharing its simultaneous batch) that still
+// match the ability's own trigger pattern and remain on the battlefield. The
+// list is deduplicated and order-stable in event order.
+func (r *effectResolver) triggeringBatchPermanents() []*game.Permanent {
+	obj := r.obj
+	if obj == nil || !obj.HasTriggerEvent {
+		return nil
+	}
+	pattern, ok := resolvingTriggerPattern(r.game, obj)
+	if !ok {
+		return nil
+	}
+	source, _ := permanentByObjectID(r.game, obj.SourceID)
+	batchID := obj.TriggerEvent.SimultaneousID
+	seen := make(map[id.ID]bool)
+	var members []*game.Permanent
+	consider := func(event game.Event) {
+		if event.PermanentID == 0 || seen[event.PermanentID] {
+			return
+		}
+		if !triggerMatchesEvent(r.game, source, pattern, event) {
+			return
+		}
+		permanent, ok := permanentByObjectID(r.game, event.PermanentID)
+		if !ok || !activeBattlefieldPermanent(permanent) {
+			return
+		}
+		seen[event.PermanentID] = true
+		members = append(members, permanent)
+	}
+	consider(obj.TriggerEvent)
+	if batchID != 0 {
+		for _, event := range r.game.Events {
+			if event.SimultaneousID == batchID {
+				consider(event)
+			}
+		}
+	}
+	return members
+}
+
+// chooseTriggeringBatchMember asks chooser to pick one of the triggering-batch
+// candidates to copy. A single candidate is chosen automatically; an empty set
+// yields nil.
+func (r *effectResolver) chooseTriggeringBatchMember(chooser game.PlayerID, candidates []*game.Permanent) *game.Permanent {
+	if len(candidates) == 0 {
+		return nil
+	}
+	if len(candidates) == 1 {
+		return candidates[0]
+	}
+	options := make([]game.ChoiceOption, 0, len(candidates))
+	for i, candidate := range candidates {
+		options = append(options, game.ChoiceOption{Index: i, Label: permanentEffectiveName(r.game, candidate)})
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           chooser,
+		Prompt:           "Choose a creature to copy",
+		Options:          options,
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: []int{0},
+	}, r.log)
+	if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(candidates) {
+		return candidates[0]
+	}
+	return candidates[selected[0]]
+}
+
+// resolvingTriggerPattern returns the trigger pattern of the triggered ability
+// represented by obj, whether it is an inline-generated trigger or an ability
+// addressable on the source definition by AbilityIndex.
+func resolvingTriggerPattern(g *game.Game, obj *game.StackObject) (*game.TriggerPattern, bool) {
+	if obj.InlineTrigger != nil {
+		return &obj.InlineTrigger.Trigger.Pattern, true
+	}
+	def, ok := stackObjectSourceDef(g, obj)
+	if !ok {
+		return nil, false
+	}
+	body, ok := def.BodyAt(obj.AbilityIndex).(*game.TriggeredAbility)
+	if !ok {
+		return nil, false
+	}
+	return &body.Trigger.Pattern, true
 }
 
 func handleShufflePermanentIntoLibrary(r *effectResolver, prim game.ShufflePermanentIntoLibrary) effectResolved {
@@ -483,16 +764,17 @@ func handleExile(r *effectResolver, prim game.Exile) effectResolved {
 		}
 		return res
 	}
-	if prim.Group.Valid() {
-		for _, permanent := range r.groupPermanents(prim.Group) {
+	targets := r.resolveObjectGroup(prim.Object, prim.Group)
+	if !targets.single {
+		for _, permanent := range targets.permanents {
 			res.succeeded = movePermanentToZone(r.game, permanent, zone.Exile) || res.succeeded
 		}
 		return res
 	}
-	permanent, ok := r.resolveObject(prim.Object)
-	if !ok {
+	if !targets.resolved {
 		return res
 	}
+	permanent := targets.permanents[0]
 	linkedObjectRef := permanentLinkedObjectRef(permanent)
 	res.succeeded = movePermanentToZone(r.game, permanent, zone.Exile)
 	if prim.ExileLinkedKey != "" {
@@ -501,138 +783,17 @@ func handleExile(r *effectResolver, prim game.Exile) effectResolved {
 	return res
 }
 
-// handleExileFromHand exiles up to prim.Amount cards a player chooses from hand
-// that match prim.Selection, used for "you may exile a nonartifact, nonland card
-// from your hand" (Chrome Mox's imprint). The whole instruction is optional, so
-// the engine has already gathered the player's consent before this runs; here the
-// player chooses which matching card to exile, if any. When prim.PublishLinked is
-// set, the exiled card is linked to the source permanent by its object identity,
-// so the imprint follows that specific object and a re-entered object (new object
-// ID) finds no prior link. With no matching card, nothing is exiled and no link is
-// recorded, leaving any reader (the imprint mana ability) with an empty color set.
-func handleExileFromHand(r *effectResolver, prim game.ExileFromHand) effectResolved {
-	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	playerID, ok := r.resolvePlayer(prim.Player)
-	if !ok {
-		return res
-	}
-	publish := prim.PublishLinked != ""
-	var key game.LinkedObjectKey
-	if publish {
-		key = linkedObjectByObjectKey(r.game, r.obj, string(prim.PublishLinked))
-		clearLinkedObjects(r.game, key)
-	}
-	player, ok := playerByID(r.game, playerID)
-	if !ok {
-		return res
-	}
-	var candidates []id.ID
-	for _, cardID := range player.Hand.All() {
-		card, cardOK := r.game.GetCardInstance(cardID)
-		if !cardOK {
-			continue
-		}
-		if handCardMatchesSelection(r.game, card, prim.Selection, playerID) {
-			candidates = append(candidates, cardID)
-		}
-	}
-	amount := min(res.amount, len(candidates))
-	if amount <= 0 {
-		return res
-	}
-	options := make([]game.ChoiceOption, len(candidates))
-	for i, cardID := range candidates {
-		options[i] = game.ChoiceOption{
-			Index: i,
-			Label: cardChoiceLabel(r.game, cardID),
-			Card:  cardChoiceInfo(r.game, cardID),
-		}
-	}
-	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
-		Kind:             game.ChoiceResolution,
-		Player:           playerID,
-		Prompt:           "Choose a card to exile",
-		Options:          options,
-		MinChoices:       amount,
-		MaxChoices:       amount,
-		DefaultSelection: firstChoiceIndices(amount),
-	}, r.log)
-	for _, idx := range selected {
-		if idx < 0 || idx >= len(candidates) {
-			continue
-		}
-		cardID := candidates[idx]
-		if moveCardBetweenZones(r.game, playerID, cardID, zone.Hand, zone.Exile) {
-			res.succeeded = true
-			if publish {
-				rememberLinkedObject(r.game, key, game.LinkedObjectRef{CardID: cardID})
-			}
-		}
-	}
-	return res
-}
-
-// handlePutFromHand puts up to prim.Amount cards a player chooses from hand that
-// match prim.Selection onto the battlefield under that player's control, used for
-// ramp / cheat-into-play wording such as "put a land card from your hand onto the
-// battlefield". A "you may" wrapper is expressed by the enclosing instruction's
-// Optional flag, so the engine has already gathered consent before this runs;
-// here the player chooses which matching card to put. With no matching card,
-// nothing is put.
-func handlePutFromHand(r *effectResolver, prim game.PutFromHand) effectResolved {
-	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	playerID, ok := r.resolvePlayer(prim.Player)
-	if !ok {
-		return res
-	}
-	player, ok := playerByID(r.game, playerID)
-	if !ok {
-		return res
-	}
-	var candidates []id.ID
-	for _, cardID := range player.Hand.All() {
-		card, cardOK := r.game.GetCardInstance(cardID)
-		if !cardOK {
-			continue
-		}
-		if handCardMatchesSelection(r.game, card, prim.Selection, playerID) {
-			candidates = append(candidates, cardID)
-		}
-	}
-	amount := min(res.amount, len(candidates))
-	if amount <= 0 {
-		return res
-	}
-	options := make([]game.ChoiceOption, len(candidates))
-	for i, cardID := range candidates {
-		options[i] = game.ChoiceOption{
-			Index: i,
-			Label: cardChoiceLabel(r.game, cardID),
-			Card:  cardChoiceInfo(r.game, cardID),
-		}
-	}
-	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
-		Kind:             game.ChoiceResolution,
-		Player:           playerID,
-		Prompt:           "Choose a card to put onto the battlefield",
-		Options:          options,
-		MinChoices:       amount,
-		MaxChoices:       amount,
-		DefaultSelection: firstChoiceIndices(amount),
-	}, r.log)
-	creationOptions := permanentCreationOptions{ForceTapped: prim.EntersTapped}
-	for _, idx := range selected {
-		if idx < 0 || idx >= len(candidates) {
-			continue
-		}
-		card, cardOK := r.game.GetCardInstance(candidates[idx])
-		if !cardOK {
-			continue
-		}
-		if _, putOK := r.putResolvedCardOnBattlefieldValue(card, zone.Hand, playerID, nil, creationOptions); putOK {
-			res.succeeded = true
-		}
-	}
+// handleChooseFromZone resolves the canonical choose-from-zone primitive: the
+// resolving player chooses cards from prim.SourceZone matching prim.Filter, and
+// each chosen card moves to prim.Destination with prim.Riders applied. It is the
+// single runtime handler for the retired per-family wrappers (exile from hand /
+// graveyard, put from hand, return from graveyard), all of which now lower to a
+// game.ChooseFromZone envelope. res.amount preserves the requested quantity (the
+// historical resolution reported the requested amount rather than the number
+// chosen).
+func handleChooseFromZone(r *effectResolver, prim game.ChooseFromZone) effectResolved {
+	res := r.resolveChooseFromZone(prim)
+	res.amount = r.quantity(prim.Quantity)
 	return res
 }
 
@@ -641,6 +802,10 @@ func handlePutFromHand(r *effectResolver, prim game.PutFromHand) effectResolved 
 // with a legal cast choice; the enclosing instruction's Optional flag already
 // gathered "you may" consent, so here the player picks which eligible spell to
 // cast, casting nothing when none qualify.
+//
+// DO-NOT-COPY(zone-choice): the chosen card is cast (put on the stack) rather
+// than moved to a destination zone, so it has no game.ChooseFromZone movement to
+// reuse; prefer game.ChooseFromZone. (retire: #1396)
 func handleCastForFree(r *effectResolver, prim game.CastForFree) effectResolved {
 	res := effectResolved{accepted: true}
 	playerID, ok := r.resolvePlayer(prim.Player)
@@ -697,62 +862,14 @@ func handleCastForFree(r *effectResolver, prim game.CastForFree) effectResolved 
 	return res
 }
 
-func handleReturnFromGraveyard(r *effectResolver, prim game.ReturnFromGraveyard) effectResolved {
-	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	playerID, ok := r.resolvePlayer(prim.Player)
-	if !ok {
-		return res
-	}
-	player, ok := playerByID(r.game, playerID)
-	if !ok {
-		return res
-	}
-	var candidates []id.ID
-	for _, cardID := range player.Graveyard.All() {
-		card, cardOK := r.game.GetCardInstance(cardID)
-		if !cardOK {
-			continue
-		}
-		if handCardMatchesSelection(r.game, card, prim.Selection, playerID) {
-			candidates = append(candidates, cardID)
-		}
-	}
-	amount := min(res.amount, len(candidates))
-	if amount <= 0 {
-		return res
-	}
-	options := make([]game.ChoiceOption, len(candidates))
-	for i, cardID := range candidates {
-		options[i] = game.ChoiceOption{
-			Index: i,
-			Label: cardChoiceLabel(r.game, cardID),
-			Card:  cardChoiceInfo(r.game, cardID),
-		}
-	}
-	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
-		Kind:             game.ChoiceResolution,
-		Player:           playerID,
-		Prompt:           "Choose a card to return to your hand",
-		Options:          options,
-		MinChoices:       amount,
-		MaxChoices:       amount,
-		DefaultSelection: firstChoiceIndices(amount),
-	}, r.log)
-	for _, idx := range selected {
-		if idx < 0 || idx >= len(candidates) {
-			continue
-		}
-		card, cardOK := r.game.GetCardInstance(candidates[idx])
-		if !cardOK {
-			continue
-		}
-		if moveCardBetweenZonesWithPlacement(r.game, card.Owner, candidates[idx], zone.Graveyard, zone.Hand, false) {
-			res.succeeded = true
-		}
-	}
-	return res
-}
-
+// handleMassReturnFromGraveyard returns every matching graveyard card at once
+// with no player choice, optionally scanning multiple players' graveyards
+// (SourceGroup) and entering cards under their owners' control (ControlledByOwner).
+//
+// DO-NOT-COPY(zone-choice): the player makes no choice (all matching cards move)
+// and the candidate pool spans several players' graveyards, neither of which the
+// single-zone, choice-issuing game.ChooseFromZone envelope models; prefer
+// game.ChooseFromZone. (retire: #1396)
 func handleMassReturnFromGraveyard(r *effectResolver, prim game.MassReturnFromGraveyard) effectResolved {
 	res := effectResolved{accepted: true}
 	controllerID, ok := r.resolvePlayer(prim.Player)
@@ -784,6 +901,16 @@ func handleMassReturnFromGraveyard(r *effectResolver, prim game.MassReturnFromGr
 				candidates = append(candidates, graveyardCandidate{cardID: cardID, owner: owner})
 			}
 		}
+	}
+	if prim.FromTriggerBatch {
+		batch := triggerBatchCardIDs(r.game, r.obj)
+		filtered := candidates[:0]
+		for _, candidate := range candidates {
+			if batch[candidate.cardID] {
+				filtered = append(filtered, candidate)
+			}
+		}
+		candidates = filtered
 	}
 	if len(candidates) == 0 {
 		return res
@@ -818,6 +945,43 @@ func handleMassReturnFromGraveyard(r *effectResolver, prim game.MassReturnFromGr
 		}
 	}
 	return res
+}
+
+// triggerBatchCardIDs returns the card IDs that triggered the resolving
+// one-or-more zone-change ability: the cards whose simultaneous zone-change
+// events (the retained trigger event plus every event sharing its
+// SimultaneousID) match the resolving trigger's pattern. Filtering by the
+// pattern keeps "put them onto the battlefield" restricted to the cards the
+// trigger actually fired for (e.g. only the land cards of "one or more land
+// cards"), mirroring triggeringBatchPermanents for graveyard-bound cards.
+func triggerBatchCardIDs(g *game.Game, obj *game.StackObject) map[id.ID]bool {
+	if obj == nil || !obj.HasTriggerEvent {
+		return nil
+	}
+	pattern, ok := resolvingTriggerPattern(g, obj)
+	if !ok {
+		return nil
+	}
+	source, _ := permanentByObjectID(g, obj.SourceID)
+	ids := make(map[id.ID]bool)
+	consider := func(event game.Event) {
+		if event.CardID == 0 || ids[event.CardID] {
+			return
+		}
+		if !triggerMatchesEvent(g, source, pattern, event) {
+			return
+		}
+		ids[event.CardID] = true
+	}
+	consider(obj.TriggerEvent)
+	if obj.TriggerEvent.SimultaneousID != 0 {
+		for _, event := range g.Events {
+			if event.SimultaneousID == obj.TriggerEvent.SimultaneousID {
+				consider(event)
+			}
+		}
+	}
+	return ids
 }
 
 // handleMassReanimationExchange resolves "Each player exiles all <type> cards
@@ -890,17 +1054,13 @@ func handleBounce(r *effectResolver, prim game.Bounce) effectResolved {
 		)
 		return res
 	}
-	if prim.Group.Valid() {
-		res.succeeded = movePermanentsToZoneSimultaneously(
-			r.game,
-			r.groupPermanents(prim.Group),
-			zone.Hand,
-		)
+	targets := r.resolveObjectGroup(prim.Object, prim.Group)
+	if !targets.single {
+		res.succeeded = movePermanentsToZoneSimultaneously(r.game, targets.permanents, zone.Hand)
 		return res
 	}
-	permanent, ok := r.resolveObject(prim.Object)
-	if ok {
-		res.succeeded = movePermanentToZone(r.game, permanent, zone.Hand)
+	if targets.resolved {
+		res.succeeded = movePermanentToZone(r.game, targets.permanents[0], zone.Hand)
 		return res
 	}
 	if resolved, ok := resolveObjectReference(r.game, r.obj, prim.Object); ok && resolved.stack != nil {
@@ -1157,6 +1317,122 @@ func handleGrantCastPermission(r *effectResolver, prim game.GrantCastPermission)
 	return res
 }
 
+func handleExileForPlay(r *effectResolver, prim game.ExileForPlay) effectResolved {
+	res := effectResolved{accepted: true}
+	cardID, ok := exileForPlayCardID(r, prim)
+	if !ok {
+		return res
+	}
+	card, ok := r.game.GetCardInstance(cardID)
+	if !ok {
+		return res
+	}
+	simultaneousID := r.game.IDGen.Next()
+	if !moveCardBetweenZonesInBatch(r.game, card.Owner, cardID, prim.FromZone, zone.Exile, false, simultaneousID) {
+		return res
+	}
+	kind := game.RuleEffectPlayFromZone
+	if prim.Cast {
+		kind = game.RuleEffectCastFromZone
+	}
+	r.game.RuleEffects = append(r.game.RuleEffects, game.RuleEffect{
+		ID:             r.game.IDGen.Next(),
+		Kind:           kind,
+		Controller:     r.obj.Controller,
+		SourceCardID:   r.obj.SourceCardID,
+		SourceObjectID: r.obj.SourceID,
+		AffectedPlayer: game.PlayerYou,
+		Duration:       prim.Duration,
+		CreatedTurn:    r.game.Turn.TurnNumber,
+		CastFromZone:   zone.Exile,
+		AffectedCardID: cardID,
+		ExpiresFor:     r.obj.Controller,
+	})
+	res.succeeded = true
+	return res
+}
+
+// exileForPlayCardID resolves which card an ExileForPlay exiles. In the default
+// mode it reads prim.Card and confirms it rests in FromZone. In SelectFromBatch
+// mode it gathers the triggering batch's cards still in FromZone ("one of them"
+// over a "discard one or more cards" batch) and has the resolving controller
+// choose one; with a single eligible card the choice is made automatically.
+func exileForPlayCardID(r *effectResolver, prim game.ExileForPlay) (id.ID, bool) {
+	if !prim.SelectFromBatch {
+		cardID, fromZone, ok := resolveCardReference(r.game, r.obj, prim.Card)
+		if !ok || fromZone != prim.FromZone {
+			return 0, false
+		}
+		return cardID, true
+	}
+	pool := exileForPlayBatchCards(r.game, r.obj, prim.FromZone)
+	switch len(pool) {
+	case 0:
+		return 0, false
+	case 1:
+		return pool[0], true
+	default:
+		return r.chooseExileForPlayBatchCard(pool)
+	}
+}
+
+// exileForPlayBatchCards returns the cards from the resolving object's triggering
+// batch event that currently rest in fromZone, in event order with duplicates
+// removed. A "discard one or more cards" trigger coalesces its simultaneous batch
+// into one trigger and retains the first matching event, so the batch is the set
+// of events sharing the trigger event's SimultaneousID, Kind, and affected player
+// (CR 603.3a). A trigger with no batch (SimultaneousID zero) yields the lone
+// triggering card.
+func exileForPlayBatchCards(g *game.Game, obj *game.StackObject, fromZone zone.Type) []id.ID {
+	if obj == nil || !obj.HasTriggerEvent {
+		return nil
+	}
+	trigger := obj.TriggerEvent
+	var pool []id.ID
+	seen := make(map[id.ID]bool)
+	consider := func(cardID id.ID) {
+		if cardID == 0 || seen[cardID] {
+			return
+		}
+		if cardZoneType, ok := cardZone(g, cardID); !ok || cardZoneType != fromZone {
+			return
+		}
+		seen[cardID] = true
+		pool = append(pool, cardID)
+	}
+	if trigger.SimultaneousID == 0 {
+		consider(trigger.CardID)
+		return pool
+	}
+	for _, event := range g.Events {
+		if event.SimultaneousID == trigger.SimultaneousID &&
+			event.Kind == trigger.Kind &&
+			event.Player == trigger.Player {
+			consider(event.CardID)
+		}
+	}
+	return pool
+}
+
+// chooseExileForPlayBatchCard asks the resolving controller which of the batch's
+// eligible cards to exile. The caller has already accepted the optional "you may
+// exile" offer, so the selection itself is mandatory.
+func (r *effectResolver) chooseExileForPlayBatchCard(pool []id.ID) (id.ID, bool) {
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           r.obj.Controller,
+		Prompt:           "Choose a card to exile",
+		Options:          chooseFromZoneOptions(r.game, pool),
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: []int{0},
+	}, r.log)
+	if len(selected) == 1 && selected[0] >= 0 && selected[0] < len(pool) {
+		return pool[selected[0]], true
+	}
+	return 0, false
+}
+
 func handleSacrifice(r *effectResolver, prim game.Sacrifice) effectResolved {
 	res := effectResolved{accepted: true}
 	permanent, ok := r.resolveObject(prim.Object)
@@ -1190,6 +1466,13 @@ func handleSacrificePermanents(r *effectResolver, prim game.SacrificePermanents)
 		}
 		chosen = append(chosen, r.engine.chooseSacrificePermanentsForPlayer(r.game, resolver, playerID, amount, prim.Selection, r.agents, r.log)...)
 	}
+	if prim.PublishLinked != "" {
+		key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
+		clearLinkedObjects(r.game, key)
+		for _, permanent := range chosen {
+			rememberLinkedObject(r.game, key, permanentLinkedObjectRef(permanent))
+		}
+	}
 	res.succeeded = sacrificePermanentsSimultaneously(r.game, chosen)
 	r.applySacrificeFallback(prim.Fallback, cantSacrifice)
 	return res
@@ -1220,7 +1503,7 @@ func (r *effectResolver) applySacrificeFallback(fallback game.SacrificeFallback,
 	for _, playerID := range players {
 		switch fallback.Kind {
 		case game.SacrificeFallbackDiscard:
-			r.discardCardsWithChoices(playerID, amount)
+			r.discardCardsWithChoices(playerID, amount, game.LinkedObjectKey{})
 		case game.SacrificeFallbackLoseLife:
 			loseLife(r.game, playerID, amount)
 		default:
@@ -1316,7 +1599,7 @@ func (r *effectResolver) applyPunisherForPlayer(prim game.PunisherEachLoseLife, 
 		}
 		sacrificePermanentsSimultaneously(r.game, chosen)
 	case punisherDiscard:
-		if !r.discardCardsWithChoices(playerID, 1) {
+		if !r.discardCardsWithChoices(playerID, 1, game.LinkedObjectKey{}) {
 			loseLife(r.game, playerID, amount)
 		}
 	default:
@@ -1346,11 +1629,7 @@ func handleChooseNewTargets(r *effectResolver, prim game.ChooseNewTargets) effec
 // independently of the original; when the effect allows it, the resolving
 // controller may choose new targets for the copy (CR 707.10c).
 func handleCopyStackObject(r *effectResolver, prim game.CopyStackObject) effectResolved {
-	stackObjectID, ok := copyStackObjectSourceID(r.obj, prim.Object)
-	if !ok {
-		return effectResolved{accepted: true}
-	}
-	original, ok := stackObjectByID(r.game, stackObjectID)
+	original, ok := copyStackObjectSource(r, prim.Object)
 	if !ok {
 		return effectResolved{accepted: true}
 	}
@@ -1362,11 +1641,27 @@ func handleCopyStackObject(r *effectResolver, prim game.CopyStackObject) effectR
 	return effectResolved{accepted: true, succeeded: true}
 }
 
-// copyStackObjectSourceID resolves the stack object a CopyStackObject effect
-// copies. It supports a chosen stack-object target ("Copy target spell.") and
-// the triggering spell of a spell-cast trigger ("Whenever you cast a spell ...,
-// copy that spell.", Reflections of Littjara), read from the event's
-// StackObjectID.
+// copyStackObjectSource resolves the stack object a CopyStackObject effect
+// copies. It supports a chosen stack-object target ("Copy target spell."), the
+// triggering spell of a spell-cast trigger ("Whenever you cast a spell ...,
+// copy that spell.", Reflections of Littjara), and the resolving spell itself
+// ("copy this spell", Sevinne's Reclamation). The resolving spell has already
+// been popped from the stack when its effects run, so the resolving case copies
+// the resolving object directly rather than looking it up by ID.
+func copyStackObjectSource(r *effectResolver, ref game.ObjectReference) (*game.StackObject, bool) {
+	if ref.Kind() == game.ObjectReferenceResolvingStackObject {
+		return r.obj, true
+	}
+	stackObjectID, ok := copyStackObjectSourceID(r.obj, ref)
+	if !ok {
+		return nil, false
+	}
+	return stackObjectByID(r.game, stackObjectID)
+}
+
+// copyStackObjectSourceID resolves the stack object id a CopyStackObject effect
+// copies for references read from the stack ("Copy target spell." and the
+// triggering spell of a spell-cast trigger).
 func copyStackObjectSourceID(obj *game.StackObject, ref game.ObjectReference) (id.ID, bool) {
 	switch ref.Kind() {
 	case game.ObjectReferenceTargetStackObject:
@@ -1491,7 +1786,14 @@ func handleMill(r *effectResolver, prim game.Mill) effectResolved {
 	}
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
-		millCards(r.game, playerID, res.amount)
+		milled := millCards(r.game, playerID, res.amount)
+		if prim.PublishLinked != "" {
+			key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
+			clearLinkedObjects(r.game, key)
+			for _, cardID := range milled {
+				rememberLinkedObject(r.game, key, game.LinkedObjectRef{CardID: cardID})
+			}
+		}
 		res.succeeded = res.amount > 0
 	}
 	return res
@@ -1517,6 +1819,26 @@ func handleExileTopOfLibrary(r *effectResolver, prim game.ExileTopOfLibrary) eff
 // handlePutHandOnLibraryThenDraw has the resolving player put any number of
 // cards from their hand on one end of their library, then draw a number of
 // cards equal to the number put plus prim.DrawOffset.
+// handleRevealUntil reveals cards from the top of one player's library, or each
+// player's library in a referenced group, until a card matching prim.Until is
+// revealed, then puts those cards into prim.Destination.
+func handleRevealUntil(r *effectResolver, prim game.RevealUntil) effectResolved {
+	res := effectResolved{accepted: true}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
+			revealUntilCards(r.game, playerID, prim.Until, prim.Destination)
+		}
+		res.succeeded = true
+		return res
+	}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if ok {
+		revealUntilCards(r.game, playerID, prim.Until, prim.Destination)
+		res.succeeded = true
+	}
+	return res
+}
+
 func handlePutHandOnLibraryThenDraw(r *effectResolver, prim game.PutHandOnLibraryThenDraw) effectResolved {
 	res := effectResolved{accepted: true}
 	playerID, ok := r.resolvePlayer(prim.Player)
@@ -1661,12 +1983,23 @@ func handleManifest(r *effectResolver, prim game.Manifest) effectResolved {
 		}
 		playerID = resolved
 	}
-	if prim.Dread {
-		res.succeeded = r.engine.manifestDread(r.game, r.agents, r.log, playerID)
-		return res
+	if prim.PublishLinked != "" {
+		clearLinkedObjects(r.game, linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked)))
 	}
-	if r.engine.manifestTopCard(r.game, r.agents, r.log, playerID) {
-		res.succeeded = true
+	var manifested *game.Permanent
+	var ok bool
+	if prim.Dread {
+		manifested, ok = r.engine.manifestDread(r.game, r.agents, r.log, playerID)
+	} else {
+		manifested, ok = r.engine.manifestTopCard(r.game, r.agents, r.log, playerID)
+	}
+	res.succeeded = ok
+	if ok && prim.PublishLinked != "" && manifested != nil {
+		rememberLinkedObject(
+			r.game,
+			linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked)),
+			permanentLinkedObjectRef(manifested),
+		)
 	}
 	return res
 }
@@ -1702,7 +2035,7 @@ func (r *effectResolver) putLinkedCardOnBattlefieldValue(linkedKey game.LinkedKe
 			continue
 		}
 		card, ok := r.game.GetCardInstance(ref.CardID)
-		if !ok || !cardMatchesCondition(card.Def, cardCondition, r.obj) {
+		if !ok || !cardConditionPredicateSatisfied(r.game, r.obj, card, cardCondition) {
 			continue
 		}
 		owner, ok := playerByID(r.game, card.Owner)

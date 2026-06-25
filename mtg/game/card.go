@@ -630,10 +630,6 @@ func cloneTargetSpecs(specs []TargetSpec) []TargetSpec {
 
 func cloneTargetPredicate(predicate TargetPredicate) TargetPredicate {
 	cloned := predicate
-	cloned.PermanentTypes = slices.Clone(predicate.PermanentTypes)
-	cloned.ExcludedTypes = slices.Clone(predicate.ExcludedTypes)
-	cloned.Supertypes = slices.Clone(predicate.Supertypes)
-	cloned.Subtypes = slices.Clone(predicate.Subtypes)
 	cloned.SpellCardTypes = slices.Clone(predicate.SpellCardTypes)
 	cloned.SpellCardTypesAny = slices.Clone(predicate.SpellCardTypesAny)
 	cloned.ExcludedSpellCardTypes = slices.Clone(predicate.ExcludedSpellCardTypes)
@@ -642,8 +638,6 @@ func cloneTargetPredicate(predicate TargetPredicate) TargetPredicate {
 	cloned.SpellColors = slices.Clone(predicate.SpellColors)
 	cloned.SpellExcludedColors = slices.Clone(predicate.SpellExcludedColors)
 	cloned.StackObjectSourceTypes = slices.Clone(predicate.StackObjectSourceTypes)
-	cloned.Colors = slices.Clone(predicate.Colors)
-	cloned.ExcludedColors = slices.Clone(predicate.ExcludedColors)
 	return cloned
 }
 
@@ -683,6 +677,9 @@ func clonePrimitive(primitive Primitive) Primitive {
 	case Pay:
 		value.Payment = cloneResolutionPayment(value.Payment)
 		return value
+	case PayRepeatedly:
+		value.Payment = cloneResolutionPayment(value.Payment)
+		return value
 	case PutOnBattlefield:
 		value.Sources = slices.Clone(value.Sources)
 		value.ContinuousEffects = slices.Clone(value.ContinuousEffects)
@@ -690,6 +687,9 @@ func clonePrimitive(primitive Primitive) Primitive {
 		return value
 	case SacrificePermanents:
 		value.Selection = cloneSelection(value.Selection)
+		return value
+	case ApplyContinuous:
+		value.ChooseFrom = cloneGroupReference(value.ChooseFrom)
 		return value
 	default:
 		return primitive

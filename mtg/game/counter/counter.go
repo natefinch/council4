@@ -45,11 +45,13 @@ const (
 	Experience                   // Experience counter (on players)
 	Burden                       // Burden counter
 	Age                          // Age counter (cumulative upkeep)
+	Quest                        // Quest counter (Ascension cycle)
+	Level                        // Level counter (leveler cards, CR 711)
 )
 
 // Valid reports whether k is a recognized counter kind.
 func (k Kind) Valid() bool {
-	return k >= PlusOnePlusOne && k <= Age
+	return k >= PlusOnePlusOne && k <= Level
 }
 
 // PlayerOnly reports whether k may be placed only on players.
@@ -127,6 +129,10 @@ func (k Kind) String() string {
 		return "burden"
 	case Age:
 		return "age"
+	case Quest:
+		return "quest"
+	case Level:
+		return "level"
 	default:
 		return "unknown"
 	}

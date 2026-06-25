@@ -7,7 +7,9 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -25,10 +27,16 @@ const (
 	StaticDeclarationOpponentActionRestriction
 	StaticDeclarationSpellUncounterable
 	StaticDeclarationEnteringTriggerMultiplier
+	StaticDeclarationControlledTriggerMultiplier
 	StaticDeclarationUntapStep
 	StaticDeclarationCharacteristicPowerToughness
 	StaticDeclarationEnterBattlefieldRestriction
 	StaticDeclarationCastAsThoughFlash
+	StaticDeclarationGraveyardCardKeywordGrant
+	StaticDeclarationDrawLimit
+	StaticDeclarationCastLimit
+	StaticDeclarationOpeningHandPlay
+	StaticDeclarationOpponentEnteringTriggerSuppression
 )
 
 // StaticDeclarationBlocker identifies exact static wording whose declaration
@@ -100,6 +108,9 @@ const (
 	StaticRuleDomainAttackBlock
 	StaticRuleDomainUntap
 	StaticRuleDomainTrigger
+	// StaticRuleDomainTransform constrains transforming a permanent ("... can't
+	// transform").
+	StaticRuleDomainTransform
 )
 
 // Static rule declarations currently recognized by Card Generation.
@@ -125,6 +136,23 @@ const (
 	// characteristic travels in StaticRuleDeclaration.Blocker.
 	StaticRuleCantBeBlockedByCreaturesWith
 	StaticRuleAdditionalTriggerForChosenCreatureType
+	// StaticRuleCantBlockAndCantBeBlocked combines the active "can't block" and
+	// passive "can't be blocked" prohibitions printed as one sentence; it lowers
+	// to both the can't-block and can't-be-blocked runtime rule effects.
+	StaticRuleCantBlockAndCantBeBlocked
+	// StaticRuleMustBeBlockedByAllAble is the true-lure requirement printed as
+	// "All creatures able to block <subject> do so." (Taunting Elf, Lure, Nemesis
+	// Mask): every creature able to block the subject attacker must do so.
+	StaticRuleMustBeBlockedByAllAble
+	// StaticRuleAssignDamageAsUnblocked is the permission printed as "You may have
+	// <subject> assign its combat damage as though it weren't blocked." (Lone
+	// Wolf, Thorn Elemental): the subject attacker may deal its combat damage to
+	// its attack target rather than to its blockers.
+	StaticRuleAssignDamageAsUnblocked
+	// StaticRuleCantTransform prohibits transforming the subject ("Non-Human
+	// Werewolves you control can't transform.", Immerwolf); it lowers to the
+	// can't-transform runtime rule effect.
+	StaticRuleCantTransform
 )
 
 // StaticBlockerRestrictionKind identifies the blocker characteristic bounding a
@@ -182,20 +210,12 @@ const (
 	// {N}." Its members are matched at runtime by the Equip activated ability, so
 	// the lowered cost modifier targets the Equip keyword directly.
 	StaticGroupControllerEquipment
-)
-
-// StaticCardType identifies card types used by a static Selection.
-type StaticCardType uint8
-
-// Static Selection card types.
-const (
-	StaticCardTypeUnknown StaticCardType = iota
-	StaticCardTypeArtifact
-	StaticCardTypeCreature
-	StaticCardTypeLand
-	StaticCardTypeEnchantment
-	StaticCardTypeInstant
-	StaticCardTypeSorcery
+	// StaticGroupControllerGraveyardCards is the set of the controller's
+	// graveyard cards a "[During your turn,] <filter> cards in your graveyard
+	// have <keyword>." declaration grants a keyword to (Six, Wrenn and Six
+	// Emblem). Its members are matched at runtime by the lowered rule effect's
+	// card selection.
+	StaticGroupControllerGraveyardCards
 )
 
 // StaticCombatState constrains a static group's members by combat involvement.
@@ -221,23 +241,28 @@ const (
 // StaticSelection is source-independent semantic data describing WHAT objects
 // in a static declaration's group match.
 type StaticSelection struct {
-	RequiredTypes []StaticCardType
+	RequiredTypes []types.Card
 	Supertypes    []types.Super
 	// ExcludedSupertypes lists supertypes a member must NOT carry (the
 	// "nonlegendary creatures you control" exclusion). Lowering routes the first
 	// entry onto the runtime Selection.ExcludedSupertype scalar.
 	ExcludedSupertypes []types.Super
 	SubtypesAny        []types.Sub
-	ColorsAny          []color.Color
-	Colorless          bool
-	Multicolored       bool
-	Controller         ControllerKind
-	CombatState        StaticCombatState
-	TapState           StaticTapState
-	Keyword            parser.KeywordKind
-	ExcludedKeyword    parser.KeywordKind
-	TokenOnly          bool
-	NonToken           bool
+	// ExcludedSubtypes lists creature subtypes a member must NOT carry (the
+	// "non-<subtype>" exclusion on a subtyped group, "Non-Human Werewolves you
+	// control"). Lowering routes the first entry onto the runtime
+	// Selection.ExcludedSubtype scalar.
+	ExcludedSubtypes []types.Sub
+	ColorsAny        []color.Color
+	Colorless        bool
+	Multicolored     bool
+	Controller       ControllerKind
+	CombatState      StaticCombatState
+	TapState         StaticTapState
+	Keyword          parser.KeywordKind
+	ExcludedKeyword  parser.KeywordKind
+	TokenOnly        bool
+	NonToken         bool
 	// MatchCounter, when true, restricts the group to permanents carrying a
 	// counter of RequiredCounter's kind ("creature you control with a +1/+1
 	// counter on it"). A bool flag distinguishes "no counter requirement" from
@@ -259,6 +284,39 @@ type StaticSelection struct {
 	// creatures you control"). Lowering routes it to the runtime
 	// Selection.MatchModified predicate.
 	Modified bool
+	// Commander, when true, restricts the group to permanents that are a
+	// commander ("commander creatures you control"). Lowering routes it to the
+	// runtime Selection.MatchCommander predicate.
+	Commander bool
+	// ColorFromEntryChoice constrains the group to permanents whose color
+	// matches the source permanent's entry-time color choice ("creatures you
+	// control of the chosen color"). Lowering routes it to the runtime
+	// Selection.ColorChoice = ColorChoiceSourceEntry predicate.
+	ColorFromEntryChoice bool
+	// Power and Toughness carry an optional numeric power/toughness comparison
+	// constraining the group ("creatures you control with power 1 or less").
+	// MatchPower and MatchToughness mark each comparison active. PowerOrToughness
+	// marks the disjunctive "power or toughness N or less" form (Tetsuko): a
+	// member matches if EITHER its power OR its toughness satisfies the bound;
+	// lowering emits a Selection.AnyOf of the two single-characteristic
+	// alternatives rather than ANDing the two thresholds.
+	Power            compare.Int
+	MatchPower       bool
+	Toughness        compare.Int
+	MatchToughness   bool
+	PowerOrToughness bool
+	// PowerLessThanSource and PowerGreaterThanSource compare each member's power
+	// to the static's SOURCE permanent's power ("with power greater than
+	// <source>'s power", Champion of Lambholt). They are source-relative, so they
+	// carry no fixed comparison and lower to Selection.PowerLessThanSource /
+	// Selection.PowerGreaterThanSource.
+	PowerLessThanSource    bool
+	PowerGreaterThanSource bool
+	// ExcludedTypes lists card types a member must NOT carry, set by a
+	// "non-<type>" prefix on a group noun ("Nonland permanents you control are
+	// artifacts ...", Encroaching Mycosynth). Lowering routes it onto the runtime
+	// Selection.ExcludedTypes predicate.
+	ExcludedTypes []types.Card
 }
 
 // StaticGroupReference describes WHERE a static declaration finds objects and
@@ -300,10 +358,20 @@ type StaticContinuousDeclaration struct {
 	// (StaticContinuousAddTypes); SetTypes/SetSubtypes replace the affected
 	// object's card types and creature types (StaticContinuousSetTypes,
 	// StaticContinuousSetSubtypes).
-	AddTypes    []StaticCardType
+	AddTypes    []types.Card
 	AddSubtypes []types.Sub
-	SetTypes    []StaticCardType
+	SetTypes    []types.Card
 	SetSubtypes []types.Sub
+	// AddEveryCreatureType adds every creature subtype at the type layer
+	// (StaticContinuousAddTypes), the runtime expansion of "is/are every
+	// creature type" (CR 702.73). It is mutually exclusive with the enumerated
+	// AddTypes/AddSubtypes payload.
+	AddEveryCreatureType bool
+	// AddEveryBasicLandType adds all five basic land subtypes at LayerType
+	// ("<group> is/are every basic land type", Dryad of the Ilysian Grove,
+	// Prismatic Omen). The runtime expands it rather than enumerating subtypes
+	// here.
+	AddEveryBasicLandType bool
 }
 
 // StaticGrantedManaAbility is one closed activated mana ability granted in the
@@ -325,12 +393,32 @@ type StaticGrantedManaAbility struct {
 	Colorless bool
 }
 
+// StaticBlockedObjectKind identifies the protected object an active "can't
+// block" restriction shields. The empty value (None) is an unconditional block
+// prohibition; the others scope the prohibition to blocking a specific group.
+type StaticBlockedObjectKind uint8
+
+// Static blocked-object scopes.
+const (
+	StaticBlockedObjectNone StaticBlockedObjectKind = iota
+	// StaticBlockedObjectSource shields the source permanent itself ("can't block
+	// it", "can't block this creature").
+	StaticBlockedObjectSource
+	// StaticBlockedObjectControlledCreatures shields the source controller's
+	// creatures ("can't block creatures you control").
+	StaticBlockedObjectControlledCreatures
+)
+
 // StaticRuleDeclaration is one prohibition, requirement, or permission.
 type StaticRuleDeclaration struct {
 	Domain  StaticRuleDomain
 	Kind    StaticRuleKind
 	Zone    StaticZone
 	Blocker StaticBlockerRestriction
+	// BlockedObject scopes an active "can't block" restriction to a protected
+	// object ("can't block it", "can't block creatures you control"). It is None
+	// for an unconditional block prohibition and unused for every other rule.
+	BlockedObject StaticBlockedObjectKind
 }
 
 // StaticCostModifierKind identifies which semantic cost category is modified.
@@ -353,7 +441,7 @@ const (
 type StaticCostModifierDeclaration struct {
 	Kind                         StaticCostModifierKind
 	AbilityKeyword               parser.KeywordKind
-	SpellTypes                   []StaticCardType
+	SpellTypes                   []types.Card
 	MatchSpellColor              bool
 	SpellColor                   color.Color
 	ChosenSubtypeFromEntryChoice bool
@@ -378,7 +466,46 @@ type StaticCostModifierDeclaration struct {
 	// The empty kind applies no zone filter, so the modifier affects spells cast
 	// from any zone. It combines with the card-type, color, and subtype filters.
 	SourceZone parser.StaticDeclarationCastZoneKind
+
+	// MinPower constrains a spell cost modifier to spells whose base printed
+	// power is at least this threshold ("Creature spells you cast with power 4
+	// or greater cost {2} less to cast.", Goreclaw). MatchMinPower marks the
+	// threshold present so a zero threshold stays expressible. It combines with
+	// the card-type, color, subtype, and zone filters.
+	MinPower      int
+	MatchMinPower bool
+
+	// TargetsSource constrains a spell cost modifier to spells that target the
+	// source permanent ("Spells your opponents cast that target this creature
+	// cost {2} more to cast.", Boreal Elemental). Caster identifies which
+	// players' spells the modifier affects.
+	TargetsSource bool
+	Caster        StaticSpellCasterKind
+
+	// SharedExiledCardTypeReduction, when positive, is the per-shared-type
+	// generic discount of a dynamic controller cast-cost modifier whose amount
+	// scales with the card types the spell shares with the cards exiled with the
+	// source permanent ("Spells you cast cost {N} less to cast for each card type
+	// they share with cards exiled with this creature.", Cemetery Prowler). It is
+	// mutually exclusive with GenericReduction and GenericIncrease.
+	SharedExiledCardTypeReduction int
 }
+
+// StaticSpellCasterKind identifies which players' spells a cast-cost modifier
+// affects.
+type StaticSpellCasterKind uint8
+
+// Static spell caster kinds recognized by Card Generation.
+const (
+	// StaticSpellCasterController is the default: the static ability
+	// controller's own spells ("Spells you cast ...").
+	StaticSpellCasterController StaticSpellCasterKind = iota
+	// StaticSpellCasterOpponents is the controller's opponents' spells
+	// ("Spells your opponents cast ...").
+	StaticSpellCasterOpponents
+	// StaticSpellCasterAny is every player's spells ("Spells that ...").
+	StaticSpellCasterAny
+)
 
 // StaticPlayerRuleKind identifies a closed player-scoped static rule.
 type StaticPlayerRuleKind uint8
@@ -396,6 +523,8 @@ const (
 	StaticPlayerRuleCastThisFromGraveyard
 	StaticPlayerRuleLookAtTopCardAnyTime
 	StaticPlayerRuleCastThisFromExile
+	StaticPlayerRuleLifeForColoredMana
+	StaticPlayerRuleLifeForCommanderTax
 )
 
 // StaticPlayerRuleDeclaration is one player-scoped static rule applied to the
@@ -420,6 +549,17 @@ type StaticPlayerRuleDeclaration struct {
 	CastColorless          bool
 	AlsoPlayLands          bool
 	CastChosenCreatureType bool
+	// CastPayLifeManaValue records the "If you cast a spell this way, pay life
+	// equal to its mana value rather than pay its mana cost." rider on a
+	// StaticPlayerRuleCastSpellsFromLibraryTop permission (Bolas's Citadel), so
+	// lowering makes spells cast from the top pay life equal to their mana value
+	// instead of their mana cost. It is unused for every other kind.
+	CastPayLifeManaValue bool
+
+	// ManaColor carries the colored mana symbol of a
+	// StaticPlayerRuleLifeForColoredMana rule ("For each {B} in a cost, ...",
+	// K'rrik). It is empty for every other kind.
+	ManaColor mana.Color
 }
 
 // StaticCardAbilityGrantDeclaration grants a keyword ability to cards in a
@@ -427,6 +567,17 @@ type StaticPlayerRuleDeclaration struct {
 type StaticCardAbilityGrantDeclaration struct {
 	Keyword CompiledKeyword
 	Text    string
+}
+
+// StaticGraveyardKeywordGrantDeclaration grants a parameterless keyword to a
+// filtered set of the controller's graveyard cards ("[During your turn,]
+// <filter> cards in your graveyard have <keyword>.", Six, Wrenn and Six
+// Emblem). Filter constrains the affected cards by card type; DuringControllerTurn
+// scopes the grant to the controller's turn.
+type StaticGraveyardKeywordGrantDeclaration struct {
+	Keyword              CompiledKeyword
+	Filter               parser.StaticDeclarationCardFilterKind
+	DuringControllerTurn bool
 }
 
 // StaticOpponentActionRestrictionDeclaration is a continuous prohibition that
@@ -466,7 +617,7 @@ type StaticEnterBattlefieldRestrictionDeclaration struct {
 // is the disjunction of card types the affected spells must include; an empty
 // SpellTypes affects every spell the controller casts.
 type StaticSpellUncounterableDeclaration struct {
-	SpellTypes []StaticCardType
+	SpellTypes []types.Card
 }
 
 // StaticEnteringTriggerMultiplierDeclaration makes a triggered ability of a
@@ -488,7 +639,7 @@ type StaticEnteringTriggerMultiplierDeclaration struct {
 // permanent the controller controls).
 type StaticUntapStepDeclaration struct {
 	Self           bool
-	PermanentTypes []StaticCardType
+	PermanentTypes []types.Card
 }
 
 // StaticCastAsThoughFlashDeclaration grants the controller a continuous timing
@@ -497,8 +648,35 @@ type StaticUntapStepDeclaration struct {
 // optionally narrow the grant to spells of those card types ("sorcery spells")
 // or subtypes ("Aura and Equipment spells"); empty filters permit every spell.
 type StaticCastAsThoughFlashDeclaration struct {
-	SpellTypes    []StaticCardType
+	SpellTypes    []types.Card
 	SpellSubtypes []types.Sub
+}
+
+// StaticPerTurnLimitOperation identifies which per-turn player action a
+// StaticPerTurnLimitDeclaration caps.
+type StaticPerTurnLimitOperation uint8
+
+// Static per-turn limit operations.
+const (
+	StaticPerTurnLimitUnknown StaticPerTurnLimitOperation = iota
+	// StaticPerTurnLimitDraw caps cards drawn each turn ("... can't draw more
+	// than one card each turn.", Narset, Parter of Veils).
+	StaticPerTurnLimitDraw
+	// StaticPerTurnLimitCast caps spells cast each turn ("... can't cast more
+	// than one spell each turn.", Rule of Law, Eidolon of Rhetoric).
+	StaticPerTurnLimitCast
+)
+
+// StaticPerTurnLimitDeclaration caps a per-turn player action at Limit. Operation
+// selects whether the cap counts cards drawn (StaticPerTurnLimitDraw) or spells
+// cast (StaticPerTurnLimitCast). AffectsAllPlayers selects every player ("Each
+// player"/"Players"); AffectsController selects only the controller ("You"). With
+// neither flag set the cap affects only the controller's opponents.
+type StaticPerTurnLimitDeclaration struct {
+	Operation         StaticPerTurnLimitOperation
+	Limit             int
+	AffectsAllPlayers bool
+	AffectsController bool
 }
 
 // StaticDeclaration is source-spanned semantic data attached directly to a
@@ -510,27 +688,56 @@ type StaticDeclaration struct {
 	Group         StaticGroupReference
 	Condition     *CompiledCondition
 
-	// Exactly one variant payload matching Kind is non-nil.
-	Continuous          *StaticContinuousDeclaration
-	Rule                *StaticRuleDeclaration
-	Cost                *StaticCostModifierDeclaration
-	CardGrant           *StaticCardAbilityGrantDeclaration
-	Player              *StaticPlayerRuleDeclaration
-	OpponentRestriction *StaticOpponentActionRestrictionDeclaration
-	EnterRestriction    *StaticEnterBattlefieldRestrictionDeclaration
-	SpellUncounterable  *StaticSpellUncounterableDeclaration
-	EnteringMultiplier  *StaticEnteringTriggerMultiplierDeclaration
-	Untap               *StaticUntapStepDeclaration
-	CharacteristicPT    *StaticCharacteristicPowerToughnessDeclaration
-	CastAsThoughFlash   *StaticCastAsThoughFlashDeclaration
+	// Exactly one variant payload matching Kind is non-nil. PerTurnLimit serves
+	// both the StaticDeclarationDrawLimit and StaticDeclarationCastLimit kinds,
+	// discriminated by its Operation.
+	Continuous                  *StaticContinuousDeclaration
+	Rule                        *StaticRuleDeclaration
+	Cost                        *StaticCostModifierDeclaration
+	CardGrant                   *StaticCardAbilityGrantDeclaration
+	Player                      *StaticPlayerRuleDeclaration
+	OpponentRestriction         *StaticOpponentActionRestrictionDeclaration
+	EnterRestriction            *StaticEnterBattlefieldRestrictionDeclaration
+	SpellUncounterable          *StaticSpellUncounterableDeclaration
+	EnteringMultiplier          *StaticEnteringTriggerMultiplierDeclaration
+	ControlledMultiplier        *StaticControlledTriggerMultiplierDeclaration
+	Untap                       *StaticUntapStepDeclaration
+	CharacteristicPT            *StaticCharacteristicPowerToughnessDeclaration
+	CastAsThoughFlash           *StaticCastAsThoughFlashDeclaration
+	GraveyardGrant              *StaticGraveyardKeywordGrantDeclaration
+	PerTurnLimit                *StaticPerTurnLimitDeclaration
+	OpeningHandPlay             *StaticOpeningHandPlayDeclaration
+	OpponentEnteringSuppression *StaticOpponentEnteringTriggerSuppressionDeclaration
 }
+
+// StaticOpeningHandPlayDeclaration marks the pre-game permission "If this card
+// is in your opening hand, you may begin the game with it on the battlefield."
+// (the Leyline cycle). The permission is a special action taken before the game
+// begins; this engine starts every game from a fixed setup and never models
+// opening hands, so the declaration carries no payload and lowers to an inert
+// static ability.
+type StaticOpeningHandPlayDeclaration struct{}
+
+// StaticOpponentEnteringTriggerSuppressionDeclaration marks the static
+// "Permanents entering don't cause abilities of permanents your opponents
+// control to trigger." (Elesh Norn, Mother of Machines). It suppresses the
+// entering-caused triggered abilities of permanents the controller's opponents
+// control. The semantics are fixed, so the declaration carries no payload.
+type StaticOpponentEnteringTriggerSuppressionDeclaration struct{}
 
 // StaticCharacteristicPowerToughnessDeclaration carries the rules-derived count
 // a characteristic-defining ability sets the source object's power and toughness
 // equal to ("its power and toughness are each equal to the number of cards in
-// your hand"). It applies only to the source object.
+// your hand"). It applies only to the source object. SetsPower and SetsToughness
+// record which characteristics the declaration sets; ToughnessOffset is the
+// fixed integer added to the toughness count for the "that number plus N" form.
 type StaticCharacteristicPowerToughnessDeclaration struct {
-	Value game.DynamicValueKind
+	Value           game.DynamicValueKind
+	Subtype         types.Sub
+	Color           color.Color
+	SetsPower       bool
+	SetsToughness   bool
+	ToughnessOffset int
 }
 
 // CompiledStaticSemantics contains declarations recognized for a static
@@ -582,7 +789,27 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
 	}
+	if declarations, ok := recognizeStaticControlledGroupRuleDeclarations(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
+		return
+	}
+	if declarations, ok := recognizeStaticBattlefieldBlockRuleDeclarations(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
+		return
+	}
+	if declarations, ok := recognizeStaticGroupMustAttackDeclarations(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
+		return
+	}
 	if declaration, ok := recognizeStaticEntryChoiceSubtypeDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticOpeningHandPlayDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticOpponentEnteringTriggerSuppressionDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
@@ -591,6 +818,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticEnteringTriggerMultiplier(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticControlledTriggerMultiplier(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
@@ -622,6 +853,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
+	if declaration, ok := recognizeStaticGraveyardCardKeywordGrantDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
 	if declaration, ok := recognizeStaticPermanentAbilityGrantDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
@@ -635,6 +870,14 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticOpponentActionRestrictionDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticDrawLimitDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticCastLimitDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
@@ -723,10 +966,70 @@ func recognizeStaticEnteringTriggerMultiplier(ability CompiledAbility, statics [
 	}, true
 }
 
+// StaticControlledTriggerMultiplierDeclaration makes a triggered ability of a
+// permanent the controller controls trigger one additional time when that
+// permanent matches the source-permanent filter ("If a triggered ability of a
+// legendary creature you control triggers, that ability triggers an additional
+// time.", Annie Joins Up; Katara, the Fearless; Splinter, Radical Rat). Types
+// and Supertypes are conjunctive; Subtypes is disjunctive. Unlike the
+// chosen-type and entering-permanent doublers this family includes the doubler's
+// own triggers ("a ... you control", not "another").
+type StaticControlledTriggerMultiplierDeclaration struct {
+	Types      []types.Card
+	Supertypes []types.Super
+	Subtypes   []types.Sub
+}
+
+// recognizeStaticControlledTriggerMultiplier maps the parser-owned
+// controlled-trigger multiplier syntax onto its closed semantic payload. The
+// source permanent's type, supertype, and subtype filter travels in Types,
+// Supertypes, and Subtypes.
+func recognizeStaticControlledTriggerMultiplier(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationControlledTriggerMultiplier) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		!enteringTriggerMultiplierContent(ability.Content) {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	cardTypes := make([]types.Card, 0, len(node.ControlledFilterTypes))
+	for _, cardType := range node.ControlledFilterTypes {
+		converted, ok := compilerCardType(cardType)
+		if !ok {
+			return StaticDeclaration{}, false
+		}
+		cardTypes = append(cardTypes, converted)
+	}
+	supertypes := make([]types.Super, 0, len(node.ControlledFilterSupertypes))
+	for _, supertype := range node.ControlledFilterSupertypes {
+		converted, ok := compilerSupertype(supertype)
+		if !ok {
+			return StaticDeclaration{}, false
+		}
+		supertypes = append(supertypes, converted)
+	}
+	subtypes := append([]types.Sub(nil), node.ControlledFilterSubtypes...)
+	if len(cardTypes) == 0 && len(supertypes) == 0 && len(subtypes) == 0 {
+		return StaticDeclaration{}, false
+	}
+	return StaticDeclaration{
+		Kind:          StaticDeclarationControlledTriggerMultiplier,
+		Span:          node.Span,
+		OperationSpan: node.OperationSpan,
+		ControlledMultiplier: &StaticControlledTriggerMultiplierDeclaration{
+			Types:      cardTypes,
+			Supertypes: supertypes,
+			Subtypes:   subtypes,
+		},
+	}, true
+}
+
 // enteringTriggerMultiplierContent reports whether the leftover content matches
 // the entering-trigger multiplier shape: a single unsupported "if ... causes ...
 // to trigger" condition and no other content the static declaration would
-// otherwise own.
+// otherwise own. The controlled-permanent multiplier shares this leftover shape.
 func enteringTriggerMultiplierContent(content AbilityContent) bool {
 	if len(content.Conditions) != 1 ||
 		len(content.Effects) != 0 ||
@@ -749,22 +1052,31 @@ func recognizeStaticEntryChoiceSubtypeDeclaration(ability CompiledAbility, stati
 		len(ability.Content.Targets) != 0 ||
 		len(ability.Content.Conditions) != 0 ||
 		len(ability.Content.Effects) != 0 ||
-		len(ability.Content.Keywords) != 0 ||
-		!entryChoiceSubtypeContent(ability.Content) {
+		len(ability.Content.Keywords) != 0 {
 		return StaticDeclaration{}, false
 	}
 	node := statics[0]
-	if node.Subject.Kind != parser.StaticDeclarationSubjectSourceCreature {
+	group, ok := staticGroupForParserSubject(node.Subject)
+	if !ok {
+		return StaticDeclaration{}, false
+	}
+	switch node.Subject.Kind {
+	case parser.StaticDeclarationSubjectSourceCreature:
+		if !entryChoiceSubtypeContent(ability.Content) {
+			return StaticDeclaration{}, false
+		}
+	case parser.StaticDeclarationSubjectGroup:
+		if !entryChoiceSubtypeGroupContent(ability.Content) {
+			return StaticDeclaration{}, false
+		}
+	default:
 		return StaticDeclaration{}, false
 	}
 	return StaticDeclaration{
 		Kind:          StaticDeclarationContinuous,
 		Span:          ability.Span,
 		OperationSpan: node.OperationSpan,
-		Group: StaticGroupReference{
-			Span:   node.Subject.Span,
-			Domain: StaticGroupSource,
-		},
+		Group:         group,
 		Continuous: &StaticContinuousDeclaration{
 			Layer:     StaticLayerType,
 			Operation: StaticContinuousAddSubtypeFromEntryChoice,
@@ -801,6 +1113,20 @@ func entryChoiceSubtypeContent(content AbilityContent) bool {
 		possessive.Kind == ReferencePronoun &&
 		possessive.Pronoun == ReferencePronounIts &&
 		possessive.Binding == ReferenceBindingSource
+}
+
+// entryChoiceSubtypeGroupContent reports whether a group "<group> is/are the
+// chosen type in addition to its/their other types" declaration leaves only its
+// trailing possessive pronoun as residual content. The group noun phrase is
+// consumed by the static-declaration subject, so the body carries a single
+// possessive pronoun ("its"/"their") and no other resolving content.
+func entryChoiceSubtypeGroupContent(content AbilityContent) bool {
+	if len(content.References) != 1 {
+		return false
+	}
+	possessive := content.References[0]
+	return possessive.Kind == ReferencePronoun &&
+		(possessive.Pronoun == ReferencePronounIts || possessive.Pronoun == ReferencePronounTheir)
 }
 
 // staticSyntaxKindsAre reports whether the parser emitted exactly the given
@@ -866,7 +1192,8 @@ func recognizedStaticAbilityWord(word string) bool {
 		"Ferocious",
 		"Hellbent",
 		"Metalcraft",
-		"Threshold":
+		"Threshold",
+		"Unlock Ability":
 		return true
 	default:
 		return false
@@ -941,17 +1268,24 @@ func staticRuleGroupDomain(kind parser.StaticRuleSubjectKind) (StaticGroupDomain
 		return StaticGroupSource, true
 	case parser.StaticRuleSubjectAttachedObject:
 		return StaticGroupAttachedObject, true
+	case parser.StaticRuleSubjectControlledCreatures:
+		return StaticGroupSourceControllerPermanents, true
+	case parser.StaticRuleSubjectBattlefieldCreatures:
+		return StaticGroupBattlefield, true
 	default:
 		return StaticGroupUnknown, false
 	}
 }
 
 // isCreatureRuleSubject reports whether a static rule subject scopes a creature:
-// either the source creature itself or the creature an Aura or Equipment is
-// attached to. Combat and untap rule operations apply to either.
+// either the source creature itself, the creature an Aura or Equipment is
+// attached to, or the creatures the source's controller controls. Combat and
+// untap rule operations apply to either.
 func isCreatureRuleSubject(kind parser.StaticRuleSubjectKind) bool {
 	switch kind {
-	case parser.StaticRuleSubjectSourceCreature, parser.StaticRuleSubjectAttachedObject:
+	case parser.StaticRuleSubjectSourceCreature, parser.StaticRuleSubjectAttachedObject,
+		parser.StaticRuleSubjectControlledCreatures, parser.StaticRuleSubjectBattlefieldCreatures,
+		parser.StaticRuleSubjectOpponentControlledCreatures:
 		return true
 	default:
 		return false
@@ -1011,6 +1345,20 @@ func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, 
 		len(rule.Qualifiers) == 0 {
 		return StaticRuleCantAttackOrBlock, StaticZoneBattlefield, true
 	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == parser.StaticRuleOperationBlockAndBeBlocked &&
+		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
+		len(rule.Qualifiers) == 0 {
+		return StaticRuleCantBlockAndCantBeBlocked, StaticZoneBattlefield, true
+	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == parser.StaticRuleOperationTransform &&
+		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
+		len(rule.Qualifiers) == 0 {
+		return StaticRuleCantTransform, StaticZoneBattlefield, true
+	}
 	if isUntapRuleSubject(rule.Subject.Kind) &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
 		rule.Operation.Kind == parser.StaticRuleOperationUntap &&
@@ -1031,6 +1379,20 @@ func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, 
 		rule.Operation.Voice == parser.StaticRuleVoicePassive &&
 		staticRuleQualifiersAre(rule.Qualifiers, parser.StaticRuleQualifierIfAble) {
 		return StaticRuleMustBeBlocked, StaticZoneBattlefield, true
+	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintRequirement &&
+		rule.Operation.Kind == parser.StaticRuleOperationBlockedByAll &&
+		rule.Operation.Voice == parser.StaticRuleVoicePassive &&
+		len(rule.Qualifiers) == 0 {
+		return StaticRuleMustBeBlockedByAllAble, StaticZoneBattlefield, true
+	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintRequirement &&
+		rule.Operation.Kind == parser.StaticRuleOperationAssignDamageAsUnblocked &&
+		rule.Operation.Voice == parser.StaticRuleVoicePassive &&
+		len(rule.Qualifiers) == 0 {
+		return StaticRuleAssignDamageAsUnblocked, StaticZoneBattlefield, true
 	}
 	if rule.Subject.Kind == parser.StaticRuleSubjectSourceSpell &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
@@ -1083,6 +1445,10 @@ func staticRuleForEffect(kind EffectKind) StaticRuleKind {
 		return StaticRuleMustAttack
 	case EffectMustBeBlocked:
 		return StaticRuleMustBeBlocked
+	case EffectMustBeBlockedByAllAble:
+		return StaticRuleMustBeBlockedByAllAble
+	case EffectAssignDamageAsUnblocked:
+		return StaticRuleAssignDamageAsUnblocked
 	case EffectCantBeCountered:
 		return StaticRuleCantBeCountered
 	case EffectCantBeBlockedByCreaturesWith:
@@ -1091,6 +1457,8 @@ func staticRuleForEffect(kind EffectKind) StaticRuleKind {
 		return StaticRuleCantBeBlockedByMoreThanOne
 	case EffectCantAttackOrBlock:
 		return StaticRuleCantAttackOrBlock
+	case EffectCantBlockAndCantBeBlocked:
+		return StaticRuleCantBlockAndCantBeBlocked
 	case EffectDoesntUntap:
 		return StaticRuleDoesntUntap
 	default:
@@ -1129,7 +1497,8 @@ func staticRuleDomain(rule StaticRuleKind) StaticRuleDomain {
 	case StaticRuleCantAttack, StaticRuleMustAttack, StaticRuleCantAttackYou:
 		return StaticRuleDomainAttack
 	case StaticRuleCantBlock, StaticRuleCantBeBlocked, StaticRuleMustBeBlocked, StaticRuleCantBeBlockedByMoreThanOne,
-		StaticRuleCantBeBlockedByCreaturesWith:
+		StaticRuleCantBeBlockedByCreaturesWith, StaticRuleCantBlockAndCantBeBlocked,
+		StaticRuleMustBeBlockedByAllAble, StaticRuleAssignDamageAsUnblocked:
 		return StaticRuleDomainBlock
 	case StaticRuleCantBeCountered:
 		return StaticRuleDomainCountering
@@ -1137,6 +1506,8 @@ func staticRuleDomain(rule StaticRuleKind) StaticRuleDomain {
 		return StaticRuleDomainAttackBlock
 	case StaticRuleDoesntUntap:
 		return StaticRuleDomainUntap
+	case StaticRuleCantTransform:
+		return StaticRuleDomainTransform
 	default:
 		return StaticRuleDomainUnknown
 	}
@@ -1574,10 +1945,141 @@ func recognizeStaticKeywordGrantRuleDeclarations(ability CompiledAbility, static
 	}, true
 }
 
-// staticKeywordGrantRuleGroup resolves the affected group shared by a keyword
-// grant and a static rule on the same subject. It prefers the compiled keyword
-// grant effect's subject, but the legacy effect drops its attached-object
-// subject when the grant is the sentence's trailing clause ("Equipped creature
+// recognizeStaticControlledGroupRuleDeclarations maps a standalone group-scoped
+// static rule onto a closed semantic declaration, e.g. "Creatures you control
+// can't be blocked." The rule has no resolving content effect, so the affected
+// group derives entirely from the typed parser rule subject: the
+// controlled-creatures subject yields a controller-permanents group restricted
+// to creatures. Costs, triggers, conditions, or any resolving content fail
+// closed because a continuous group rule carries none.
+func recognizeStaticControlledGroupRuleDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationRule) {
+		return nil, false
+	}
+	ruleNode := &statics[0]
+	if ruleNode.Rule.Subject.Kind != parser.StaticRuleSubjectControlledCreatures {
+		return nil, false
+	}
+	group, ok := staticGroupForParserSubject(ruleNode.Subject)
+	if !ok || group.Domain != StaticGroupSourceControllerPermanents {
+		return nil, false
+	}
+	rule, zone, ok := semanticStaticRuleForSyntax(ruleNode.Rule)
+	if !ok {
+		return nil, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 {
+		return nil, false
+	}
+	declaration := staticRuleDeclaration(ability.Span, group.Span, ruleNode.OperationSpan, rule, zone, group.Domain, staticBlockerRestrictionForSyntax(ruleNode.Rule), nil)
+	declaration.Group = group
+	return []StaticDeclaration{declaration}, true
+}
+
+// recognizeStaticBattlefieldBlockRuleDeclarations maps a standalone
+// battlefield-scoped "can't block" restriction onto a closed semantic
+// declaration, e.g. "Creatures with power less than this creature's power can't
+// block it." or "... can't block creatures you control." The battlefield-creatures
+// subject yields an every-creature affected group narrowed by the typed parser
+// rule subject (its source-relative power filter), and the protected object the
+// restriction shields travels in the rule declaration's BlockedObject. Costs,
+// triggers, conditions, or any resolving content fail closed because a continuous
+// group rule carries none.
+func recognizeStaticBattlefieldBlockRuleDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationRule) {
+		return nil, false
+	}
+	ruleNode := &statics[0]
+	if ruleNode.Rule.Subject.Kind != parser.StaticRuleSubjectBattlefieldCreatures {
+		return nil, false
+	}
+	group, ok := staticGroupForParserSubject(ruleNode.Subject)
+	if !ok || group.Domain != StaticGroupBattlefield {
+		return nil, false
+	}
+	rule, zone, ok := semanticStaticRuleForSyntax(ruleNode.Rule)
+	if !ok || rule != StaticRuleCantBlock {
+		return nil, false
+	}
+	blocked, ok := compileStaticBlockedObject(ruleNode.Rule.BlockedObject)
+	if !ok {
+		return nil, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 {
+		return nil, false
+	}
+	declaration := staticRuleDeclaration(ability.Span, group.Span, ruleNode.OperationSpan, rule, zone, group.Domain, staticBlockerRestrictionForSyntax(ruleNode.Rule), nil)
+	declaration.Group = group
+	declaration.Rule.BlockedObject = blocked
+	return []StaticDeclaration{declaration}, true
+}
+
+// recognizeStaticGroupMustAttackDeclarations maps a standalone battlefield- or
+// opponent-scoped forced-attack requirement onto a closed semantic declaration,
+// e.g. "All creatures attack each combat if able." or "Creatures your opponents
+// control attack each combat if able." The affected group derives entirely from
+// the typed parser subject: the all-creatures subject yields an every-creature
+// group and the opponent-controlled subject yields a battlefield group whose
+// affected-permanent Selection scopes the controller to the opponent relation.
+// The controller-scoped "Creatures you control" form is handled by
+// recognizeStaticControlledGroupRuleDeclarations. Costs, triggers, conditions, or
+// any resolving content fail closed because a continuous group rule carries none.
+func recognizeStaticGroupMustAttackDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationRule) {
+		return nil, false
+	}
+	ruleNode := &statics[0]
+	switch ruleNode.Rule.Subject.Kind {
+	case parser.StaticRuleSubjectBattlefieldCreatures, parser.StaticRuleSubjectOpponentControlledCreatures:
+	default:
+		return nil, false
+	}
+	rule, zone, ok := semanticStaticRuleForSyntax(ruleNode.Rule)
+	if !ok || rule != StaticRuleMustAttack {
+		return nil, false
+	}
+	group, ok := staticGroupForParserSubject(ruleNode.Subject)
+	if !ok || group.Domain != StaticGroupBattlefield {
+		return nil, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 {
+		return nil, false
+	}
+	declaration := staticRuleDeclaration(ability.Span, group.Span, ruleNode.OperationSpan, rule, zone, group.Domain, staticBlockerRestrictionForSyntax(ruleNode.Rule), nil)
+	declaration.Group = group
+	return []StaticDeclaration{declaration}, true
+}
+
+// compileStaticBlockedObject maps the parser's typed "can't block" protected
+// object onto its compiler scope. It fails closed for an unrepresentable scope.
+func compileStaticBlockedObject(kind parser.StaticRuleBlockedObjectKind) (StaticBlockedObjectKind, bool) {
+	switch kind {
+	case parser.StaticRuleBlockedObjectNone:
+		return StaticBlockedObjectNone, true
+	case parser.StaticRuleBlockedObjectSource:
+		return StaticBlockedObjectSource, true
+	case parser.StaticRuleBlockedObjectControlledCreatures:
+		return StaticBlockedObjectControlledCreatures, true
+	default:
+		return StaticBlockedObjectNone, false
+	}
+}
+
 // can't be blocked and has shroud."); in that case it recovers the group from
 // the rule node's subject, which the parser resolves independently of clause
 // order. The recovered group is limited to the attached-object domain so a
@@ -1876,6 +2378,7 @@ func staticSubjectsEquivalent(a, b parser.StaticDeclarationSubject) bool {
 		a.Group.SubtypeKnown == b.Group.SubtypeKnown &&
 		a.Group.Colorless == b.Group.Colorless &&
 		a.Group.Multicolored == b.Group.Multicolored &&
+		a.Group.ChosenColorFromEntry == b.Group.ChosenColorFromEntry &&
 		slices.Equal(a.Group.Colors, b.Group.Colors)
 }
 
@@ -1891,11 +2394,11 @@ func staticGroupForParserSubject(subject parser.StaticDeclarationSubject) (Stati
 		if kind == StaticSubjectNone {
 			return StaticGroupReference{}, false
 		}
-		group, ok := staticGroupForSubject(kind, subject.Group.Span, subject.Group.Subtype, subject.Group.SubtypeKnown, staticColorFilter{
+		group, ok := staticGroupForSubject(kind, subject.Group.Span, subject.Group.Subtype, subject.Group.SubtypeKnown, subject.Group.SubtypesAny, staticColorFilter{
 			Colors:       subject.Group.Colors,
 			Colorless:    subject.Group.Colorless,
 			Multicolored: subject.Group.Multicolored,
-		}, parser.KeywordUnknown, parser.KeywordUnknown)
+		}, parser.KeywordUnknown, parser.KeywordUnknown, subject.Group.ChosenColorFromEntry)
 		if ok && subject.Group.CounterRequired {
 			if subject.Group.CounterAny {
 				group.Selection.MatchAnyCounter = true
@@ -1903,6 +2406,25 @@ func staticGroupForParserSubject(subject parser.StaticDeclarationSubject) (Stati
 				group.Selection.MatchCounter = true
 				group.Selection.RequiredCounter = subject.Group.CounterKind
 			}
+		}
+		if ok {
+			group.Selection.Power = subject.Group.Power
+			group.Selection.MatchPower = subject.Group.MatchPower
+			group.Selection.Toughness = subject.Group.Toughness
+			group.Selection.MatchToughness = subject.Group.MatchToughness
+			group.Selection.PowerOrToughness = subject.Group.PowerOrToughness
+			group.Selection.PowerLessThanSource = subject.Group.PowerLessThanSource
+			group.Selection.PowerGreaterThanSource = subject.Group.PowerGreaterThanSource
+		}
+		if ok && len(subject.Group.ExcludedTypes) > 0 {
+			excluded, mapped := staticCardTypesFromParser(subject.Group.ExcludedTypes)
+			if !mapped {
+				return StaticGroupReference{}, false
+			}
+			group.Selection.ExcludedTypes = excluded
+		}
+		if ok && len(subject.Group.ExcludedSubtypes) > 0 {
+			group.Selection.ExcludedSubtypes = slices.Clone(subject.Group.ExcludedSubtypes)
 		}
 		return group, ok
 	default:
@@ -1955,13 +2477,28 @@ func recognizeStaticCharacteristicPowerToughnessDeclaration(ability CompiledAbil
 	if !ok {
 		return StaticDeclaration{}, false
 	}
+	if !node.DynamicSetsPower && !node.DynamicSetsToughness {
+		return StaticDeclaration{}, false
+	}
+	var countColor color.Color
+	if node.DynamicValueColor != "" {
+		countColor, ok = compilerColor(node.DynamicValueColor)
+		if !ok {
+			return StaticDeclaration{}, false
+		}
+	}
 	return StaticDeclaration{
 		Kind:          StaticDeclarationCharacteristicPowerToughness,
 		Span:          ability.Span,
 		OperationSpan: node.OperationSpan,
 		Group:         StaticGroupReference{Span: node.Subject.Span, Domain: StaticGroupSource},
 		CharacteristicPT: &StaticCharacteristicPowerToughnessDeclaration{
-			Value: value,
+			Value:           value,
+			Subtype:         node.DynamicValueSubtype,
+			Color:           countColor,
+			SetsPower:       node.DynamicSetsPower,
+			SetsToughness:   node.DynamicSetsToughness,
+			ToughnessOffset: node.DynamicToughnessOffset,
 		},
 	}, true
 }
@@ -1982,6 +2519,34 @@ func compileStaticDynamicValueKind(kind parser.StaticDeclarationDynamicValueKind
 		return game.DynamicValueControllerArtifactCount, true
 	case parser.StaticDeclarationDynamicValueAllBattlefieldCreatureCount:
 		return game.DynamicValueAllBattlefieldCreatureCount, true
+	case parser.StaticDeclarationDynamicValueAllGraveyardsSize:
+		return game.DynamicValueAllGraveyardsSize, true
+	case parser.StaticDeclarationDynamicValueCreatureCardsInAllGraveyards:
+		return game.DynamicValueCreatureCardsInAllGraveyards, true
+	case parser.StaticDeclarationDynamicValueCardTypesAmongAllGraveyards:
+		return game.DynamicValueCardTypesAmongAllGraveyards, true
+	case parser.StaticDeclarationDynamicValueControllerCreatureCardsInGraveyard:
+		return game.DynamicValueControllerCreatureCardsInGraveyard, true
+	case parser.StaticDeclarationDynamicValueControllerInstantOrSorceryCardsInGraveyard:
+		return game.DynamicValueControllerInstantOrSorceryCardsInGraveyard, true
+	case parser.StaticDeclarationDynamicValueControllerLandCardsInGraveyard:
+		return game.DynamicValueControllerLandCardsInGraveyard, true
+	case parser.StaticDeclarationDynamicValueControllerCardTypesInGraveyard:
+		return game.DynamicValueControllerCardTypesInGraveyard, true
+	case parser.StaticDeclarationDynamicValueControllerPermanentCardsInGraveyard:
+		return game.DynamicValueControllerPermanentCardsInGraveyard, true
+	case parser.StaticDeclarationDynamicValueControllerSubtypeCount:
+		return game.DynamicValueControllerSubtypeCount, true
+	case parser.StaticDeclarationDynamicValueControllerBasicLandTypeCount:
+		return game.DynamicValueControllerBasicLandTypeCount, true
+	case parser.StaticDeclarationDynamicValueControllerLifeTotal:
+		return game.DynamicValueControllerLifeTotal, true
+	case parser.StaticDeclarationDynamicValueAllPlayersHandSize:
+		return game.DynamicValueAllPlayersHandSize, true
+	case parser.StaticDeclarationDynamicValueControllerColorPermanentCount:
+		return game.DynamicValueControllerColorPermanentCount, true
+	case parser.StaticDeclarationDynamicValueControllerCardsDrawnThisTurn:
+		return game.DynamicValueControllerCardsDrawnThisTurn, true
 	default:
 		return game.DynamicValueNone, false
 	}
@@ -2035,6 +2600,34 @@ func staticCharacteristicDeclarations(span shared.Span, node *parser.StaticDecla
 			},
 		})
 	}
+	if node.EveryCreatureType {
+		declarations = append(declarations, StaticDeclaration{
+			Kind:          StaticDeclarationContinuous,
+			Span:          span,
+			OperationSpan: node.OperationSpan,
+			Group:         group,
+			Condition:     condition,
+			Continuous: &StaticContinuousDeclaration{
+				Layer:                StaticLayerType,
+				Operation:            StaticContinuousAddTypes,
+				AddEveryCreatureType: true,
+			},
+		})
+	}
+	if node.EveryBasicLandType {
+		declarations = append(declarations, StaticDeclaration{
+			Kind:          StaticDeclarationContinuous,
+			Span:          span,
+			OperationSpan: node.OperationSpan,
+			Group:         group,
+			Condition:     condition,
+			Continuous: &StaticContinuousDeclaration{
+				Layer:                 StaticLayerType,
+				Operation:             StaticContinuousAddTypes,
+				AddEveryBasicLandType: true,
+			},
+		})
+	}
 	if len(declarations) == 0 {
 		return nil, false
 	}
@@ -2053,8 +2646,8 @@ func staticRuntimeColors(colors []parser.Color) ([]color.Color, bool) {
 	return result, true
 }
 
-func staticCardTypesFromParser(cardTypes []parser.CardType) ([]StaticCardType, bool) {
-	result := make([]StaticCardType, 0, len(cardTypes))
+func staticCardTypesFromParser(cardTypes []parser.CardType) ([]types.Card, bool) {
+	result := make([]types.Card, 0, len(cardTypes))
 	for _, value := range cardTypes {
 		mapped, ok := staticCardTypeFromParser(value)
 		if !ok {
@@ -2065,22 +2658,22 @@ func staticCardTypesFromParser(cardTypes []parser.CardType) ([]StaticCardType, b
 	return result, true
 }
 
-func staticCardTypeFromParser(value parser.CardType) (StaticCardType, bool) {
+func staticCardTypeFromParser(value parser.CardType) (types.Card, bool) {
 	switch value {
 	case parser.CardTypeArtifact:
-		return StaticCardTypeArtifact, true
+		return types.Artifact, true
 	case parser.CardTypeCreature:
-		return StaticCardTypeCreature, true
+		return types.Creature, true
 	case parser.CardTypeLand:
-		return StaticCardTypeLand, true
+		return types.Land, true
 	case parser.CardTypeEnchantment:
-		return StaticCardTypeEnchantment, true
+		return types.Enchantment, true
 	case parser.CardTypeInstant:
-		return StaticCardTypeInstant, true
+		return types.Instant, true
 	case parser.CardTypeSorcery:
-		return StaticCardTypeSorcery, true
+		return types.Sorcery, true
 	default:
-		return StaticCardTypeUnknown, false
+		return "", false
 	}
 }
 
@@ -2127,6 +2720,18 @@ func recognizeStaticKeywordGrantDeclarations(ability CompiledAbility, statics []
 		return nil, false
 	}
 	effect := &ability.Content.Effects[0]
+	// "As long as equipped/enchanted creature is <state>, it has <keyword>": the
+	// pronoun "it" co-refers with the attached creature named by the gating
+	// condition, so the grant applies to the attached object. The pronoun has no
+	// antecedent reference of its own and binds Ambiguous, so the attached group
+	// is taken from the condition's binding rather than from the effect group.
+	if condition != nil && condition.ObjectBinding == ReferenceBindingSourceAttached {
+		if !staticKeywordGrantBindsAttachedPronoun(ability, effect) {
+			return nil, false
+		}
+		group := StaticGroupReference{Span: ability.Content.References[0].Span, Domain: StaticGroupAttachedObject}
+		return []StaticDeclaration{staticKeywordGrantDeclaration(ability.Span, group, condition, ability.Content.Keywords)}, true
+	}
 	group, ok := staticDeclarationEffectGroup(ability, effect)
 	if !ok {
 		return nil, false
@@ -2143,6 +2748,23 @@ func recognizeStaticKeywordGrantDeclarations(ability CompiledAbility, statics []
 		return nil, false
 	}
 	return []StaticDeclaration{staticKeywordGrantDeclaration(ability.Span, group.Group, condition, ability.Content.Keywords)}, true
+}
+
+// staticKeywordGrantBindsAttachedPronoun reports whether a conditional keyword
+// grant is the attached-creature pronoun form "..., it has <keyword>": the
+// effect recipient is a referenced object filled by exactly one "it"/"them"
+// pronoun reference whose own antecedent is unresolved (Ambiguous). The pronoun
+// co-refers with the attached creature named by the gating condition.
+func staticKeywordGrantBindsAttachedPronoun(ability CompiledAbility, effect *CompiledEffect) bool {
+	if effect.StaticSubject != StaticSubjectNone ||
+		effect.Context != parser.EffectContextReferencedObject ||
+		len(ability.Content.References) != 1 {
+		return false
+	}
+	reference := ability.Content.References[0]
+	return reference.Kind == ReferencePronoun &&
+		(reference.Pronoun == ReferencePronounIt || reference.Pronoun == ReferencePronounThem) &&
+		reference.Binding == ReferenceBindingAmbiguous
 }
 
 func staticDeclarationCondition(conditions []CompiledCondition) (*CompiledCondition, bool) {
@@ -2208,16 +2830,17 @@ func staticSubjectGroupReferencesTolerated(references []CompiledReference, effec
 }
 
 func staticDeclarationEffectGroup(ability CompiledAbility, effect *CompiledEffect) (staticDeclarationEffectGroupResult, bool) {
+	freeReferences := staticFreeReferences(ability)
 	if effect.StaticSubject != StaticSubjectNone {
-		if !staticSubjectGroupReferencesTolerated(ability.Content.References, effect) {
+		if !staticSubjectGroupReferencesTolerated(freeReferences, effect) {
 			return staticDeclarationEffectGroupResult{}, false
 		}
 		keyword, excludedKeyword := staticSubjectKeywordFilter(effect)
-		group, ok := staticGroupForSubject(effect.StaticSubject, effect.StaticSubjectSpan, effect.StaticSubjectSub(), effect.StaticSubjectSubKnown(), staticColorFilter{
+		group, ok := staticGroupForSubject(effect.StaticSubject, effect.StaticSubjectSpan, effect.StaticSubjectSub(), effect.StaticSubjectSubKnown(), effect.StaticSubjectSubsAny(), staticColorFilter{
 			Colors:       effect.StaticSubjectColorsAny(),
 			Colorless:    effect.StaticSubjectColorless(),
 			Multicolored: effect.StaticSubjectMulticolored(),
-		}, keyword, excludedKeyword)
+		}, keyword, excludedKeyword, effect.StaticSubjectChosenColorFromEntry())
 		if ok {
 			if kind, anyKind, present := effect.StaticSubjectCounter(); present {
 				if anyKind {
@@ -2230,10 +2853,10 @@ func staticDeclarationEffectGroup(ability CompiledAbility, effect *CompiledEffec
 		}
 		return staticDeclarationEffectGroupResult{Group: group}, ok
 	}
-	if len(ability.Content.References) == 1 && ability.Content.References[0].Binding == ReferenceBindingSource {
+	if len(freeReferences) == 1 && freeReferences[0].Binding == ReferenceBindingSource {
 		return staticDeclarationEffectGroupResult{
 			Group: StaticGroupReference{
-				Span:   ability.Content.References[0].Span,
+				Span:   freeReferences[0].Span,
 				Domain: StaticGroupSource,
 			},
 			AffectedSource: true,
@@ -2242,30 +2865,68 @@ func staticDeclarationEffectGroup(ability CompiledAbility, effect *CompiledEffec
 	return staticDeclarationEffectGroupResult{}, false
 }
 
-func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype types.Sub, subtypeKnown bool, colors staticColorFilter, keyword, excludedKeyword parser.KeywordKind) (StaticGroupReference, bool) {
+// staticFreeReferences returns the ability's references that are not consumed by
+// a recognized condition clause. A condition that names the source ("as long as
+// ~ has seven or more quest counters on it") contributes source references that
+// belong to the gate rather than to the affected group, so the group derivation
+// must not treat them as free referents that bind a separate antecedent.
+func staticFreeReferences(ability CompiledAbility) []CompiledReference {
+	references := ability.Content.References
+	free := make([]CompiledReference, 0, len(references))
+	for i := range references {
+		consumed := false
+		for j := range ability.Content.Conditions {
+			condition := ability.Content.Conditions[j]
+			if condition.Predicate == ConditionPredicateUnsupported {
+				continue
+			}
+			if condition.Order.Contains(references[i].Order) {
+				consumed = true
+				break
+			}
+		}
+		if !consumed {
+			free = append(free, references[i])
+		}
+	}
+	return free
+}
+
+// staticGroupSubtypes returns the affected-group subtype filter, using the
+// disjunctive SubsAny list when the subject named more than one creature subtype
+// ("... that's a Wolf or a Werewolf") and falling back to the single subtype
+// otherwise. A permanent matches if it carries any one of the returned subtypes.
+func staticGroupSubtypes(subtype types.Sub, subsAny []types.Sub) []types.Sub {
+	if len(subsAny) > 0 {
+		return slices.Clone(subsAny)
+	}
+	return []types.Sub{subtype}
+}
+
+func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype types.Sub, subtypeKnown bool, subsAny []types.Sub, colors staticColorFilter, keyword, excludedKeyword parser.KeywordKind, chosenColorFromEntry bool) (StaticGroupReference, bool) {
 	group := StaticGroupReference{Span: span}
 	switch subject {
 	case StaticSubjectAttachedObject:
 		group.Domain = StaticGroupAttachedObject
 	case StaticSubjectAllCreatures:
 		group.Domain = StaticGroupBattlefield
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 	case StaticSubjectAllOtherCreatures:
 		group.Domain = StaticGroupBattlefield
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.ExcludeSource = true
 	case StaticSubjectAttackingCreatures:
 		group.Domain = StaticGroupBattlefield
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.CombatState = StaticCombatStateAttacking
 	case StaticSubjectOtherAttackingCreatures:
 		group.Domain = StaticGroupBattlefield
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.CombatState = StaticCombatStateAttacking
 		group.ExcludeSource = true
 	case StaticSubjectBlockingCreatures:
 		group.Domain = StaticGroupBattlefield
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.CombatState = StaticCombatStateBlocking
 	case StaticSubjectControlledPermanents:
 		group.Domain = StaticGroupSourceControllerPermanents
@@ -2274,109 +2935,122 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 		group.ExcludeSource = true
 	case StaticSubjectControlledCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 	case StaticSubjectOtherControlledCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.ExcludeSource = true
 	case StaticSubjectControlledWalls:
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.SubtypesAny = []types.Sub{types.Wall}
 	case StaticSubjectControlledArtifacts:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeArtifact}
+		group.Selection.RequiredTypes = []types.Card{types.Artifact}
+	case StaticSubjectControlledSagas:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.SubtypesAny = []types.Sub{types.Saga}
 	case StaticSubjectControlledTokens:
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.TokenOnly = true
 	case StaticSubjectOpponentControlledCreatures:
 		group.Domain = StaticGroupBattlefield
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.Controller = ControllerOpponent
-	case StaticSubjectControlledCreatureSubtype:
+	case StaticSubjectControlledCreatureSubtype, StaticSubjectControlledPermanentSubtype:
 		if !subtypeKnown {
 			return StaticGroupReference{}, false
 		}
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.SubtypesAny = []types.Sub{subtype}
-	case StaticSubjectOtherControlledCreatureSubtype:
+		group.Selection.SubtypesAny = staticGroupSubtypes(subtype, subsAny)
+	case StaticSubjectOtherControlledCreatureSubtype, StaticSubjectOtherControlledPermanentSubtype:
 		if !subtypeKnown {
 			return StaticGroupReference{}, false
 		}
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.SubtypesAny = []types.Sub{subtype}
+		group.Selection.SubtypesAny = staticGroupSubtypes(subtype, subsAny)
 		group.ExcludeSource = true
 	case StaticSubjectAllCreatureSubtype:
 		if !subtypeKnown {
 			return StaticGroupReference{}, false
 		}
 		group.Domain = StaticGroupBattlefield
-		group.Selection.SubtypesAny = []types.Sub{subtype}
+		group.Selection.SubtypesAny = staticGroupSubtypes(subtype, subsAny)
 	case StaticSubjectOtherCreatureSubtype:
 		if !subtypeKnown {
 			return StaticGroupReference{}, false
 		}
 		group.Domain = StaticGroupBattlefield
-		group.Selection.SubtypesAny = []types.Sub{subtype}
+		group.Selection.SubtypesAny = staticGroupSubtypes(subtype, subsAny)
 		group.ExcludeSource = true
 	case StaticSubjectControlledAttackingCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.CombatState = StaticCombatStateAttacking
 	case StaticSubjectControlledCreatureTokens:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.TokenOnly = true
 	case StaticSubjectBattlefieldCreatureTokens:
 		group.Domain = StaticGroupBattlefield
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.TokenOnly = true
 	case StaticSubjectControlledLegendaryCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.Supertypes = []types.Super{types.Legendary}
 	case StaticSubjectControlledNonlegendaryCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.ExcludedSupertypes = []types.Super{types.Legendary}
+	case StaticSubjectControlledCommanderCreatures:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
+		group.Selection.Commander = true
+	case StaticSubjectControlledCommanders:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.Commander = true
 	case StaticSubjectControlledUntappedCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.TapState = StaticTapStateUntapped
 	case StaticSubjectControlledModifiedCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.Modified = true
 	case StaticSubjectOtherControlledTappedCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.TapState = StaticTapStateTapped
 		group.ExcludeSource = true
 	case StaticSubjectControlledArtifactCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeArtifact, StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Artifact, types.Creature}
 	case StaticSubjectOtherControlledArtifactCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeArtifact, StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Artifact, types.Creature}
 		group.ExcludeSource = true
 	case StaticSubjectControlledNontokenCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.NonToken = true
 	case StaticSubjectOtherControlledNontokenCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.NonToken = true
 		group.ExcludeSource = true
 	case StaticSubjectAllLands:
 		group.Domain = StaticGroupBattlefield
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeLand}
+		group.Selection.RequiredTypes = []types.Card{types.Land}
+	case StaticSubjectControlledLands:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.RequiredTypes = []types.Card{types.Land}
 	case StaticSubjectControlledCreaturesChosenType:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.SubtypeFromEntryChoice = true
 	case StaticSubjectOtherControlledCreaturesChosenType:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.SubtypeFromEntryChoice = true
 		group.ExcludeSource = true
 	default:
@@ -2387,6 +3061,9 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 	}
 	if !applyStaticKeywordFilter(&group.Selection, keyword, excludedKeyword) {
 		return StaticGroupReference{}, false
+	}
+	if chosenColorFromEntry {
+		group.Selection.ColorFromEntryChoice = true
 	}
 	return group, true
 }
@@ -2481,16 +3158,30 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 	}
 	node := statics[0]
 	if node.CostModifier != parser.StaticDeclarationCostModifierSpellReduction &&
-		node.CostModifier != parser.StaticDeclarationCostModifierSpellIncrease {
+		node.CostModifier != parser.StaticDeclarationCostModifierSpellIncrease &&
+		node.CostModifier != parser.StaticDeclarationCostModifierSpellSharedExiledTypeReduction {
 		return StaticDeclaration{}, false
 	}
 	if ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
-		len(ability.Content.Targets) != 0 ||
-		len(ability.Content.References) != 0 ||
 		len(ability.Content.Keywords) != 0 ||
 		len(ability.Content.Conditions) != 0 {
+		return StaticDeclaration{}, false
+	}
+	// A targets-source cost modifier ("Spells your opponents cast that target
+	// this creature cost {N} more to cast.") intentionally carries the "that
+	// target <source>" phrase, which the effect machinery records as a target
+	// and a reference; the parser owns that wording and marks it via
+	// SpellTargetsSource, so those payloads are expected here. The shared-exiled-
+	// type discount ("... for each card type they share with cards exiled with
+	// this creature.") likewise carries "they"/"this creature" references the
+	// parser owns. Every other cast-cost modifier must carry no targets or
+	// references.
+	parserOwnsReferences := node.SpellTargetsSource ||
+		node.CostModifier == parser.StaticDeclarationCostModifierSpellSharedExiledTypeReduction
+	if !parserOwnsReferences &&
+		(len(ability.Content.Targets) != 0 || len(ability.Content.References) != 0) {
 		return StaticDeclaration{}, false
 	}
 	spellTypes, ok := staticSpellTypeCardTypes(node.SpellType)
@@ -2524,6 +3215,13 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 	if node.SpellCastZone != "" && node.ChosenCreatureType {
 		return StaticDeclaration{}, false
 	}
+	if node.MatchSpellPowerAtLeast && node.SpellPowerAtLeast <= 0 {
+		return StaticDeclaration{}, false
+	}
+	caster, ok := staticSpellCasterKind(node.SpellCaster)
+	if !ok {
+		return StaticDeclaration{}, false
+	}
 	cost := StaticCostModifierDeclaration{
 		Kind:                         StaticCostModifierSpell,
 		SpellTypes:                   spellTypes,
@@ -2533,10 +3231,17 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 		SpellSubtypes:                node.SpellSubtypes,
 		ChosenSubtypeFromEntryChoice: node.ChosenCreatureType,
 		SourceZone:                   node.SpellCastZone,
+		MinPower:                     node.SpellPowerAtLeast,
+		MatchMinPower:                node.MatchSpellPowerAtLeast,
+		TargetsSource:                node.SpellTargetsSource,
+		Caster:                       caster,
 	}
-	if node.CostModifier == parser.StaticDeclarationCostModifierSpellIncrease {
+	switch node.CostModifier {
+	case parser.StaticDeclarationCostModifierSpellIncrease:
 		cost.GenericIncrease = node.CostReductionAmount
-	} else {
+	case parser.StaticDeclarationCostModifierSpellSharedExiledTypeReduction:
+		cost.SharedExiledCardTypeReduction = node.CostReductionAmount
+	default:
 		cost.GenericReduction = node.CostReductionAmount
 	}
 	return StaticDeclaration{
@@ -2551,24 +3256,39 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 	}, true
 }
 
+// staticSpellCasterKind maps the parser's closed caster filter onto the
+// compiler's caster kind. An unrecognized filter fails closed.
+func staticSpellCasterKind(filter parser.StaticDeclarationSpellCasterKind) (StaticSpellCasterKind, bool) {
+	switch filter {
+	case parser.StaticDeclarationSpellCasterController:
+		return StaticSpellCasterController, true
+	case parser.StaticDeclarationSpellCasterOpponents:
+		return StaticSpellCasterOpponents, true
+	case parser.StaticDeclarationSpellCasterAny:
+		return StaticSpellCasterAny, true
+	default:
+		return StaticSpellCasterController, false
+	}
+}
+
 // staticSpellTypeCardTypes maps a closed spell-type filter onto the card types
 // whose disjunction the runtime matches. An all-spells filter returns no types.
-func staticSpellTypeCardTypes(filter parser.StaticDeclarationSpellTypeKind) ([]StaticCardType, bool) {
+func staticSpellTypeCardTypes(filter parser.StaticDeclarationSpellTypeKind) ([]types.Card, bool) {
 	switch filter {
 	case parser.StaticDeclarationSpellTypeAll:
 		return nil, true
 	case parser.StaticDeclarationSpellTypeArtifact:
-		return []StaticCardType{StaticCardTypeArtifact}, true
+		return []types.Card{types.Artifact}, true
 	case parser.StaticDeclarationSpellTypeCreature:
-		return []StaticCardType{StaticCardTypeCreature}, true
+		return []types.Card{types.Creature}, true
 	case parser.StaticDeclarationSpellTypeEnchantment:
-		return []StaticCardType{StaticCardTypeEnchantment}, true
+		return []types.Card{types.Enchantment}, true
 	case parser.StaticDeclarationSpellTypeInstant:
-		return []StaticCardType{StaticCardTypeInstant}, true
+		return []types.Card{types.Instant}, true
 	case parser.StaticDeclarationSpellTypeSorcery:
-		return []StaticCardType{StaticCardTypeSorcery}, true
+		return []types.Card{types.Sorcery}, true
 	case parser.StaticDeclarationSpellTypeInstantOrSorcery:
-		return []StaticCardType{StaticCardTypeInstant, StaticCardTypeSorcery}, true
+		return []types.Card{types.Instant, types.Sorcery}, true
 	default:
 		return nil, false
 	}
@@ -2738,10 +3458,10 @@ func recognizeStaticCardAbilityGrantDeclaration(ability CompiledAbility, statics
 	var text string
 	switch node.Subject.CardFilter {
 	case parser.StaticDeclarationCardFilterLand:
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeLand}
+		group.Selection.RequiredTypes = []types.Card{types.Land}
 		text = "Each land card in your hand has cycling " + keyword.Parameter + "."
 	case parser.StaticDeclarationCardFilterCreature:
-		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		text = "Each creature card in your hand has cycling " + keyword.Parameter + "."
 	default:
 		return StaticDeclaration{}, false
@@ -2809,13 +3529,14 @@ func recognizeStaticPermanentAbilityGrantDeclaration(ability CompiledAbility, st
 }
 
 // staticGrantedManaAbilityValid reports whether the parsed granted mana ability
-// is one of the two closed shapes the runtime can confer: the bare
-// tap-for-one-mana-of-any-color ability, and the Treasure-style sacrifice
-// ability that adds N mana (N >= 2) of one chosen color.
+// is one of the closed shapes the runtime can confer: the bare
+// tap-for-one-mana-of-any-color ability, the Treasure-style sacrifice ability
+// that adds N mana (N >= 2) of one chosen color, and the count-1 sacrifice
+// ability that adds one mana of any color (Ninja Pizza).
 func staticGrantedManaAbilityValid(granted *parser.StaticGrantedManaAbilitySyntax) bool {
 	switch {
 	case granted.AnyColor:
-		return granted.Amount == 1 && !granted.Sacrifice && !granted.AnyOneColor && !granted.Colorless
+		return granted.Amount == 1 && !granted.AnyOneColor && !granted.Colorless
 	case granted.AnyOneColor:
 		return granted.Amount >= 2 && granted.Sacrifice
 	case granted.Colorless:
@@ -2832,11 +3553,11 @@ func staticGrantedManaAbilityValid(granted *parser.StaticGrantedManaAbilitySynta
 func staticPermanentGrantSelection(group parser.EffectStaticSubjectSyntax) (StaticSelection, bool) {
 	switch group.Kind {
 	case parser.EffectStaticSubjectControlledLands:
-		return StaticSelection{RequiredTypes: []StaticCardType{StaticCardTypeLand}}, true
+		return StaticSelection{RequiredTypes: []types.Card{types.Land}}, true
 	case parser.EffectStaticSubjectControlledCreatures:
-		return StaticSelection{RequiredTypes: []StaticCardType{StaticCardTypeCreature}}, true
+		return StaticSelection{RequiredTypes: []types.Card{types.Creature}}, true
 	case parser.EffectStaticSubjectControlledArtifacts:
-		selection := StaticSelection{RequiredTypes: []StaticCardType{StaticCardTypeArtifact}}
+		selection := StaticSelection{RequiredTypes: []types.Card{types.Artifact}}
 		if group.SubtypeKnown {
 			selection.SubtypesAny = []types.Sub{group.Subtype}
 		}
@@ -2885,6 +3606,7 @@ type staticPlayerRuleSpec struct {
 	kind                    StaticPlayerRuleKind
 	usesAttackTax           bool
 	usesAdditionalLandPlays bool
+	usesManaColor           bool
 	allowsAllPlayers        bool
 	matchesContent          func(AbilityContent) bool
 }
@@ -2933,6 +3655,15 @@ var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPla
 		kind:           StaticPlayerRuleLookAtTopCardAnyTime,
 		matchesContent: emptyStaticPlayerRuleContent,
 	},
+	parser.StaticDeclarationPlayerRuleLifeForColoredMana: {
+		kind:           StaticPlayerRuleLifeForColoredMana,
+		usesManaColor:  true,
+		matchesContent: emptyStaticPlayerRuleContent,
+	},
+	parser.StaticDeclarationPlayerRuleLifeForCommanderTax: {
+		kind:           StaticPlayerRuleLifeForCommanderTax,
+		matchesContent: lifeForCommanderTaxStaticPlayerRuleContent,
+	},
 }
 
 // recognizeStaticPlayerRuleDeclaration maps parser-owned player-rule syntax to
@@ -2959,7 +3690,9 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 		(spec.usesAttackTax && node.AttackTaxGeneric <= 0) ||
 		(!spec.usesAttackTax && node.AttackTaxGeneric != 0) ||
 		(spec.usesAdditionalLandPlays && node.AdditionalLandPlays <= 0) ||
-		(!spec.usesAdditionalLandPlays && node.AdditionalLandPlays != 0) {
+		(!spec.usesAdditionalLandPlays && node.AdditionalLandPlays != 0) ||
+		(spec.usesManaColor && !compilerManaColorValid(node.ManaColor)) ||
+		(!spec.usesManaColor && node.ManaColor != "") {
 		return StaticDeclaration{}, false
 	}
 	var spellTypes []types.Card
@@ -2972,7 +3705,7 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 			}
 			spellTypes = append(spellTypes, converted)
 		}
-	} else if len(node.CastSpellTypes) != 0 || node.CastColorless || node.AlsoPlayLands || node.CastChosenCreatureType {
+	} else if len(node.CastSpellTypes) != 0 || node.CastColorless || node.AlsoPlayLands || node.CastChosenCreatureType || node.CastPayLifeManaValue {
 		return StaticDeclaration{}, false
 	}
 	var condition *CompiledCondition
@@ -2997,6 +3730,8 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 			CastColorless:          node.CastColorless,
 			AlsoPlayLands:          node.AlsoPlayLands,
 			CastChosenCreatureType: node.CastChosenCreatureType,
+			CastPayLifeManaValue:   node.CastPayLifeManaValue,
+			ManaColor:              node.ManaColor,
 		},
 	}, true
 }
@@ -3018,6 +3753,34 @@ func staticPlayerRuleSubjectAllowed(subject parser.StaticDeclarationSubjectKind,
 
 func emptyStaticPlayerRuleContent(content AbilityContent) bool {
 	return len(content.Conditions) == 0 && len(content.References) == 0
+}
+
+// lifeForCommanderTaxStaticPlayerRuleContent accepts the life-for-commander-tax
+// cost-substitution player rule ("Rather than pay {2} for each previous time
+// you've cast this spell from the command zone this game, pay 2 life that many
+// times."). The sentence carries a single "this spell" source self-reference and
+// no condition clauses.
+func lifeForCommanderTaxStaticPlayerRuleContent(content AbilityContent) bool {
+	if len(content.Conditions) != 0 {
+		return false
+	}
+	for i := range content.References {
+		if content.References[i].Binding != ReferenceBindingSource {
+			return false
+		}
+	}
+	return true
+}
+
+// compilerManaColorValid reports whether c is one of the five real colors of
+// mana, backing the StaticPlayerRuleLifeForColoredMana color requirement.
+func compilerManaColorValid(c mana.Color) bool {
+	switch c {
+	case mana.W, mana.U, mana.B, mana.R, mana.G:
+		return true
+	default:
+		return false
+	}
 }
 
 // castThisFromGraveyardStaticPlayerRuleContent accepts the self-scoped
@@ -3095,6 +3858,74 @@ func recognizeStaticOpponentActionRestrictionDeclaration(ability CompiledAbility
 			CastFromZones:        append([]parser.StaticDeclarationCastZoneKind(nil), node.RestrictCastFromZones...),
 			AffectsAllPlayers:    node.RestrictAffectsAllPlayers,
 			DuringControllerTurn: node.RestrictDuringControllerTurn,
+		},
+	}, true
+}
+
+// recognizeStaticDrawLimitDeclaration maps the parser-owned draw-limit syntax
+// ("Each opponent can't draw more than one card each turn.", Narset, Parter of
+// Veils) onto its closed semantic payload. The continuous draw cap consumes no
+// resolving content effects, so the ability must carry no cost, trigger, modes,
+// targets, keywords, or ability word.
+func recognizeStaticDrawLimitDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationDrawLimit) {
+		return StaticDeclaration{}, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		ability.AbilityWord != "" {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	if node.DrawLimit < 1 {
+		return StaticDeclaration{}, false
+	}
+	return StaticDeclaration{
+		Kind:          StaticDeclarationDrawLimit,
+		Span:          node.Span,
+		OperationSpan: node.OperationSpan,
+		PerTurnLimit: &StaticPerTurnLimitDeclaration{
+			Operation:         StaticPerTurnLimitDraw,
+			Limit:             node.DrawLimit,
+			AffectsAllPlayers: node.DrawLimitAffectsAllPlayers,
+			AffectsController: node.DrawLimitAffectsController,
+		},
+	}, true
+}
+
+// recognizeStaticCastLimitDeclaration maps the parser-owned cast-limit syntax
+// ("Each player can't cast more than one spell each turn.", Rule of Law) onto
+// its closed semantic payload. The continuous spell cap consumes no resolving
+// content effects, so the ability must carry no cost, trigger, modes, targets,
+// keywords, or ability word.
+func recognizeStaticCastLimitDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationCastLimit) {
+		return StaticDeclaration{}, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		ability.AbilityWord != "" {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	if node.CastLimit < 1 {
+		return StaticDeclaration{}, false
+	}
+	return StaticDeclaration{
+		Kind:          StaticDeclarationCastLimit,
+		Span:          node.Span,
+		OperationSpan: node.OperationSpan,
+		PerTurnLimit: &StaticPerTurnLimitDeclaration{
+			Operation:         StaticPerTurnLimitCast,
+			Limit:             node.CastLimit,
+			AffectsAllPlayers: node.CastLimitAffectsAllPlayers,
+			AffectsController: node.CastLimitAffectsController,
 		},
 	}, true
 }
@@ -3243,25 +4074,25 @@ func staticUntapStepPayload(group parser.StaticUntapGroupKind, span shared.Span)
 		return StaticUntapStepDeclaration{},
 			StaticGroupReference{Span: span, Domain: StaticGroupSourceControllerPermanents}, true
 	case parser.StaticUntapGroupCreatures:
-		return StaticUntapStepDeclaration{PermanentTypes: []StaticCardType{StaticCardTypeCreature}},
+		return StaticUntapStepDeclaration{PermanentTypes: []types.Card{types.Creature}},
 			StaticGroupReference{
 				Span:      span,
 				Domain:    StaticGroupSourceControllerPermanents,
-				Selection: StaticSelection{RequiredTypes: []StaticCardType{StaticCardTypeCreature}},
+				Selection: StaticSelection{RequiredTypes: []types.Card{types.Creature}},
 			}, true
 	case parser.StaticUntapGroupArtifacts:
-		return StaticUntapStepDeclaration{PermanentTypes: []StaticCardType{StaticCardTypeArtifact}},
+		return StaticUntapStepDeclaration{PermanentTypes: []types.Card{types.Artifact}},
 			StaticGroupReference{
 				Span:      span,
 				Domain:    StaticGroupSourceControllerPermanents,
-				Selection: StaticSelection{RequiredTypes: []StaticCardType{StaticCardTypeArtifact}},
+				Selection: StaticSelection{RequiredTypes: []types.Card{types.Artifact}},
 			}, true
 	case parser.StaticUntapGroupLands:
-		return StaticUntapStepDeclaration{PermanentTypes: []StaticCardType{StaticCardTypeLand}},
+		return StaticUntapStepDeclaration{PermanentTypes: []types.Card{types.Land}},
 			StaticGroupReference{
 				Span:      span,
 				Domain:    StaticGroupSourceControllerPermanents,
-				Selection: StaticSelection{RequiredTypes: []StaticCardType{StaticCardTypeLand}},
+				Selection: StaticSelection{RequiredTypes: []types.Card{types.Land}},
 			}, true
 	default:
 		return StaticUntapStepDeclaration{}, StaticGroupReference{}, false

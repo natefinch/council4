@@ -249,9 +249,9 @@ func TestSpellTargetTriggerPredicates(t *testing.T) {
 		Event:            game.EventSpellCast,
 		Controller:       game.TriggerControllerYou,
 		SpellTargetAllow: game.TargetAllowPermanent,
-		SpellTargetPattern: opt.Val(game.TargetPredicate{
-			PermanentTypes: []types.Card{types.Creature},
-			Controller:     game.ControllerNotYou,
+		SpellTargetPattern: opt.Val(game.Selection{
+			RequiredTypesAny: []types.Card{types.Creature},
+			Controller:       game.ControllerNotYou,
 		}),
 	}, event) {
 		t.Fatal("spell target predicate did not match opponent creature target")
@@ -261,9 +261,9 @@ func TestSpellTargetTriggerPredicates(t *testing.T) {
 		Event:            game.EventSpellCast,
 		Controller:       game.TriggerControllerYou,
 		SpellTargetAllow: game.TargetAllowPermanent,
-		SpellTargetPattern: opt.Val(game.TargetPredicate{
-			PermanentTypes: []types.Card{types.Creature},
-			Controller:     game.ControllerNotYou,
+		SpellTargetPattern: opt.Val(game.Selection{
+			RequiredTypesAny: []types.Card{types.Creature},
+			Controller:       game.ControllerNotYou,
 		}),
 	}, event) {
 		t.Fatal("spell target predicate matched own creature target")
@@ -333,6 +333,69 @@ func TestSpellCastTriggerMatchesColorSelection(t *testing.T) {
 	engine.resolveTopOfStack(g, &TurnLog{})
 	if got := g.Players[game.Player1].Hand.Size(); got != 1 {
 		t.Fatalf("hand size = %d, want green-spell trigger to draw one card", got)
+	}
+}
+
+func TestSpellCastTriggerColorUnionMatchesEitherColor(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:      game.EventSpellCast,
+		Controller: game.TriggerControllerYou,
+		CardSelection: game.Selection{
+			ColorsAny: []color.Color{color.Blue, color.Black},
+		},
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+	blackSpell := &game.CardDef{CardFace: game.CardFace{
+		Name:     "Dark Ritual",
+		ManaCost: opt.Val(cost.Mana{cost.B}),
+		Types:    []types.Card{types.Instant},
+		Colors:   []color.Color{color.Black},
+	}}
+	spellID := addCardToHand(g, game.Player1, blackSpell)
+	addBasicLandPermanent(g, game.Player1, types.Swamp)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("cast black instant failed")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("blue-or-black union trigger did not fire for black instant")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if got := g.Players[game.Player1].Hand.Size(); got != 1 {
+		t.Fatalf("hand size = %d, want union trigger to draw one card", got)
+	}
+}
+
+func TestSpellCastTriggerColorUnionExcludesUnlistedColor(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:      game.EventSpellCast,
+		Controller: game.TriggerControllerYou,
+		CardSelection: game.Selection{
+			ColorsAny: []color.Color{color.Blue, color.Black},
+		},
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+	greenSpell := &game.CardDef{CardFace: game.CardFace{
+		Name:     "Giant Growth",
+		ManaCost: greenCost(),
+		Types:    []types.Card{types.Instant},
+		Colors:   []color.Color{color.Green},
+	}}
+	spellID := addCardToHand(g, game.Player1, greenSpell)
+	addBasicLandPermanent(g, game.Player1, types.Forest)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("cast green instant failed")
+	}
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("blue-or-black union trigger incorrectly fired for green instant")
 	}
 }
 
@@ -464,6 +527,38 @@ func TestSpellCastTriggerMatchesManaValueKickerAndSourceZone(t *testing.T) {
 				},
 			},
 			event: game.Event{Kind: game.EventSpellCast, Controller: game.Player1},
+		},
+		{
+			name: "mana value at most matches lower value",
+			pattern: game.TriggerPattern{
+				Event: game.EventSpellCast,
+				CardSelection: game.Selection{
+					ManaValue: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 3}),
+				},
+			},
+			event: game.Event{Kind: game.EventSpellCast, Controller: game.Player1, ManaValue: opt.Val(2)},
+			want:  true,
+		},
+		{
+			name: "mana value at most matches equal value",
+			pattern: game.TriggerPattern{
+				Event: game.EventSpellCast,
+				CardSelection: game.Selection{
+					ManaValue: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 3}),
+				},
+			},
+			event: game.Event{Kind: game.EventSpellCast, Controller: game.Player1, ManaValue: opt.Val(3)},
+			want:  true,
+		},
+		{
+			name: "mana value at most rejects higher value",
+			pattern: game.TriggerPattern{
+				Event: game.EventSpellCast,
+				CardSelection: game.Selection{
+					ManaValue: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 3}),
+				},
+			},
+			event: game.Event{Kind: game.EventSpellCast, Controller: game.Player1, ManaValue: opt.Val(4)},
 		},
 		{
 			name:    "kicked matches",

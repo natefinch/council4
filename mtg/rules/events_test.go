@@ -17,7 +17,7 @@ func TestDrawCardEmitsDrawAndZoneChangeEvents(t *testing.T) {
 	engine := NewEngine(nil)
 	cardID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn Card"}})
 
-	drawn, ok := engine.drawCard(g, game.Player1)
+	drawn, ok := engine.drawCard(g, game.Player1, false)
 
 	if !ok || drawn != cardID {
 		t.Fatalf("drawCard() = %v, %v, want %v, true", drawn, ok, cardID)
@@ -43,6 +43,27 @@ func TestDrawCardEmitsDrawAndZoneChangeEvents(t *testing.T) {
 	}) {
 		t.Fatalf("draw zone-change event should precede draw-specific event: %+v", g.Events)
 	}
+}
+
+func TestDrawCardThreadsFirstInDrawStep(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "First Card"}})
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Extra Card"}})
+
+	if _, ok := engine.drawCard(g, game.Player1, true); !ok {
+		t.Fatal("first drawCard failed")
+	}
+	assertEvent(t, g.Events, game.EventCardDrawn, func(event game.Event) bool {
+		return event.Player == game.Player1 && event.FirstInDrawStep
+	})
+
+	if _, ok := engine.drawCard(g, game.Player1, false); !ok {
+		t.Fatal("second drawCard failed")
+	}
+	assertEvent(t, g.Events, game.EventCardDrawn, func(event game.Event) bool {
+		return event.Player == game.Player1 && !event.FirstInDrawStep
+	})
 }
 
 func TestCastAndResolvePermanentSpellEmitsEvents(t *testing.T) {

@@ -70,6 +70,15 @@ func TestLowerCombatEventTriggers(t *testing.T) {
 			wantTyp: game.TriggerWhenever,
 		},
 		{
+			name: "attacks and isn't blocked",
+			text: "Whenever this creature attacks and isn't blocked, draw a card.",
+			want: game.TriggerPattern{
+				Event:  game.EventAttackerBecameUnblocked,
+				Source: game.TriggerSourceSelf,
+			},
+			wantTyp: game.TriggerWhenever,
+		},
+		{
 			name: "blocks or becomes blocked union",
 			text: "Whenever this creature blocks or becomes blocked, draw a card.",
 			want: game.TriggerPattern{
@@ -125,6 +134,16 @@ func TestLowerCombatEventTriggers(t *testing.T) {
 			},
 			wantTyp: game.TriggerWhenever,
 		},
+		{
+			name: "battalion self and at least two other creatures attack",
+			text: "Whenever this creature and at least two other creatures attack, draw a card.",
+			want: game.TriggerPattern{
+				Event:                game.EventAttackerDeclared,
+				Source:               game.TriggerSourceSelf,
+				AttackerCountAtLeast: 3,
+			},
+			wantTyp: game.TriggerWhenever,
+		},
 	}
 
 	for _, tc := range tests {
@@ -155,8 +174,7 @@ func TestLowerCombatEventTriggers(t *testing.T) {
 func TestLowerCombatEventTriggersFailClosed(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
-		"Whenever this creature attacks and isn't blocked, draw a card.",
-		"Whenever this creature attacks or blocks, draw a card.",
+		"Whenever this creature attacks the player with the most life, draw a card.",
 	} {
 		t.Run(oracleText, func(t *testing.T) {
 			t.Parallel()
@@ -328,7 +346,7 @@ func TestCombatPhaseAndStepTriggerDiagnosticsNameMissingCapability(t *testing.T)
 		},
 		{
 			name:   "missing combat relation",
-			text:   "Whenever this creature attacks or blocks, draw a card.",
+			text:   "Whenever this creature attacks the player with the most life, draw a card.",
 			detail: "requires a missing runtime capability",
 		},
 	} {

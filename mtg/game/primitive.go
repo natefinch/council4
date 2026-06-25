@@ -27,6 +27,7 @@ const (
 	PrimitiveModifyPT
 	PrimitiveFight
 	PrimitiveTap
+	PrimitiveTapOrUntap
 	PrimitiveSearch
 	PrimitiveReveal
 	PrimitivePutOnBattlefield
@@ -70,11 +71,8 @@ const (
 	PrimitiveImpulseExile
 	PrimitiveReorderLibraryTop
 	PrimitiveShuffleLibrary
-	PrimitiveExileFromHand
 	PrimitiveLookAtLibraryTop
-	PrimitivePutFromHand
 	PrimitiveCastForFree
-	PrimitiveReturnFromGraveyard
 	PrimitivePlayerLosesGame
 	PrimitiveAttach
 	PrimitiveMoveCommander
@@ -93,10 +91,46 @@ const (
 	PrimitiveShuffleSpellIntoLibrary
 	PrimitiveExileTopOfLibrary
 	PrimitivePutHandOnLibraryThenDraw
+	PrimitiveRevealUntil
+	PrimitiveBecomeSaddled
+	PrimitiveAddExtraPhases
+	PrimitiveLookAtHand
+	PrimitiveRollDie
+	PrimitiveRemoveFromCombat
+	PrimitiveChooseDiscardFromHand
+	PrimitiveShuffleGraveyardIntoLibrary
+	PrimitiveGroupSelfPowerDamage
+	PrimitiveBecomeMonarch
+	PrimitiveRingTempts
+	PrimitiveVote
+	PrimitiveExileEntireHand
+	PrimitiveReturnExiledCardsToHand
+	PrimitivePutLinkedExiledCardsInLibrary
+	PrimitiveConditionalDestinationPlace
+	PrimitiveExileForEachPlayer
+	PrimitiveReturnLinkedExiledCardsToBattlefield
+	PrimitiveDestroyForEachPlayer
+	PrimitiveCreateTokenForEachDestroyed
+	PrimitiveAdapt
+	PrimitiveConnive
+	PrimitivePayRepeatedly
+	PrimitiveExileForPlay
+	// PrimitiveHideawayExile is the Hideaway N enters action (look at top N,
+	// exile one face down linked to the source, rest to bottom in random order).
+	PrimitiveHideawayExile
+	// PrimitivePlayHideawayCard plays the source's hidden-away exiled card
+	// without paying its mana cost, gated by the enclosing instruction condition.
+	PrimitivePlayHideawayCard
+	// PrimitiveChooseFromZone is the single canonical "player chooses cards from
+	// a zone matching a filter, then those cards move to a destination" primitive
+	// (game.ChooseFromZone). It supersedes the retired per-family wrapper
+	// primitives ExileFromHand, ExileFromGraveyard, PutFromHand, and
+	// ReturnFromGraveyard, which now lower to a ChooseFromZone envelope.
+	PrimitiveChooseFromZone
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitivePutHandOnLibraryThenDraw) + 1
+const primitiveKindCount = int(PrimitiveChooseFromZone) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -145,6 +179,17 @@ type GroupSourceDamage struct {
 	ToOwner bool
 }
 
+// GroupSelfPowerDamage has each permanent in a battlefield group deal damage to
+// itself equal to its own power, evaluated per member ("Each creature deals
+// damage to itself equal to its power.", Wave of Reckoning; "Each tapped
+// creature deals damage to itself equal to its power.", The Akroan War chapter
+// III). Every group member is both the damage source and the recipient, and the
+// amount is that member's power computed individually rather than a single
+// group-wide value.
+type GroupSelfPowerDamage struct {
+	Group GroupReference
+}
+
 // Draw draws cards for a referenced player, or for every player in a referenced
 // group ("each player draws", "each opponent draws"). Exactly one of Player or
 // PlayerGroup is set.
@@ -174,6 +219,42 @@ type ShuffleLibrary struct {
 	Player PlayerReference
 }
 
+// ShuffleGraveyardIntoLibrary moves every card in a referenced player's
+// graveyard into that player's library and then shuffles it ("shuffle your
+// graveyard into your library", The Mending of Dominaria). The library is
+// shuffled even when the graveyard is empty (CR 701.x shuffle).
+type ShuffleGraveyardIntoLibrary struct {
+	Player PlayerReference
+}
+
+// LookAtHand lets the source's controller privately look at a referenced
+// player's hand. It conveys hidden information only and does not change game
+// state (CR 701.x look effects).
+type LookAtHand struct {
+	Player PlayerReference
+}
+
+// ChooseDiscardFromHand makes the resolving spell's controller choose a card
+// from a referenced player's revealed hand, which that player then discards
+// (the Duress / Thoughtseize / Coercion targeted-discard family). The chooser
+// is always the controller; Player names the discarding player. ExcludeCreature
+// and ExcludeLand restrict the eligible cards ("noncreature card" /
+// "nonland card"), and MaxManaValue, when set, bounds the chosen card's mana
+// value ("with mana value N or less", Inquisition of Kozilek).
+//
+// Selection further restricts the eligible cards to those matching a typed card
+// filter ("a creature card", "a land card", "a nonland card"). It is the
+// general filter used by the controller's own filtered self-discard ("you may
+// discard a creature card") and composes with the exclude flags above: a card
+// must satisfy both. The zero Selection imposes no constraint.
+type ChooseDiscardFromHand struct {
+	Player          PlayerReference
+	ExcludeCreature bool
+	ExcludeLand     bool
+	MaxManaValue    opt.V[int]
+	Selection       Selection
+}
+
 // Discard causes a referenced player, or every player in a referenced group
 // ("each player discards", "each opponent discards"), to discard cards. A
 // single referenced player chooses exactly Amount distinct cards when available,
@@ -186,12 +267,18 @@ type ShuffleLibrary struct {
 //
 // AtRandom marks an "at random" discard ("Discard a card at random."): the
 // discarded cards are chosen at random rather than by the player.
+//
+// PublishLinked, when set, remembers each discarded card under this key so a
+// later instruction can read it ("Discard a card, then ... deals damage equal
+// to that card's mana value ..."). It is meaningful only for a single-player,
+// non-entire-hand discard.
 type Discard struct {
-	Amount      Quantity
-	Player      PlayerReference      // single player; zero if PlayerGroup is set
-	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
-	EntireHand  bool
-	AtRandom    bool
+	Amount        Quantity
+	Player        PlayerReference      // single player; zero if PlayerGroup is set
+	PlayerGroup   PlayerGroupReference // opponents or all players; zero if Player is set
+	EntireHand    bool
+	AtRandom      bool
+	PublishLinked LinkedKey
 }
 
 // Destroy destroys one referenced permanent or every permanent in a referenced group.
@@ -244,12 +331,32 @@ type AddCounter struct {
 	Object      ObjectReference // single permanent; zero if Group is set
 	Group       GroupReference  // every permanent in a group; zero if Object is set
 	CounterKind counter.Kind
+	// AllKinds doubles every kind of counter already on Object: the runtime adds,
+	// for each counter kind present, that many more, ignoring Amount and
+	// CounterKind. It backs "double the number of each kind of counter on
+	// <permanent>" (Vorel of the Hull Clade) and is set only with a single
+	// Object, never a Group.
+	AllKinds bool
+	// ChooseOne makes the resolving controller choose exactly one permanent from
+	// Group to receive the counters, rather than every member ("put a vigilance
+	// counter on a creature you control", Ajani Fells the Godsire chapter II). It
+	// is set only with a Group and an empty Object; when no group member exists
+	// the effect does nothing.
+	ChooseOne bool
+	// KindChoices, when non-empty, lets the resolving controller choose one
+	// counter kind from this list to place, ignoring CounterKind ("Put a +1/+1
+	// counter or a loyalty counter on it.", Elspeth Conquers Death chapter III).
+	// It holds two or more distinct, permanent-placeable kinds and is set only
+	// with a single Object, never a Group or AllKinds.
+	KindChoices []counter.Kind
 }
 
-// AddPlayerCounter places counters on a referenced player.
+// AddPlayerCounter places counters on a referenced player or group of players.
+// Exactly one of Player or PlayerGroup must be set.
 type AddPlayerCounter struct {
 	Amount      Quantity
 	Player      PlayerReference
+	PlayerGroup PlayerGroupReference
 	CounterKind counter.Kind
 }
 
@@ -286,11 +393,22 @@ type MoveCounters struct {
 // ApplyContinuous applies continuous effects to a target (or globally).
 // PublishLinked remembers the affected permanent for a later linked effect, such
 // as a delayed "sacrifice it" trigger that must resolve the earlier target.
+//
+// When ChooseFrom is set, the resolving controller instead chooses up to
+// ChooseUpTo distinct permanents from that group at resolution and the
+// continuous effects are applied to each chosen permanent ("up to that many
+// target lands you control become 3/3 creatures ...", Primal Adversary). The
+// ChooseUpTo amount may be dynamic, so a payment-count or other resolution
+// number can bound the selection. Object and ChooseFrom are mutually exclusive.
 type ApplyContinuous struct {
 	Object            opt.V[ObjectReference]
 	ContinuousEffects []ContinuousEffect
 	Duration          EffectDuration
 	PublishLinked     LinkedKey
+
+	ChooseFrom GroupReference
+	ChooseUpTo Quantity
+	Prompt     string
 }
 
 // ApplyRule creates rule effects for a target (or globally).
@@ -323,13 +441,26 @@ type Tap struct {
 	Group  GroupReference
 }
 
+// TapOrUntap lets the controller choose to tap or untap the referenced
+// permanent ("Tap or untap target creature."). The choice is made when the
+// instruction resolves.
+type TapOrUntap struct {
+	Object ObjectReference
+}
+
 // Search searches a player's library for cards matching spec. PublishLinked may
 // retain the permanent created by an exact singular battlefield search. When
 // Controller is set, a found card put onto the battlefield enters under that
 // player's control instead of the searching player's ("put it onto the
 // battlefield ... under target player's control", Yavimaya Dryad).
+// Search has one referenced player, or every player in a referenced group
+// ("each player searches their library"), search a library. Exactly one of
+// Player or PlayerGroup is set. When PlayerGroup is set every member searches
+// their own library and any found permanent enters under that searcher's
+// control, so Controller must be unset.
 type Search struct {
 	Player        PlayerReference
+	PlayerGroup   PlayerGroupReference
 	Spec          SearchSpec
 	Amount        Quantity
 	Controller    opt.V[PlayerReference]
@@ -410,8 +541,27 @@ type PutPermanentOnLibrary struct {
 	Bottom bool
 }
 
+// PutLinkedExiledCardsInLibrary moves every card a sibling clause exiled under
+// LinkedKey from exile to its owner's library, to the bottom when Bottom is set.
+// It backs the linked disposal "The owner of each card exiled with <this
+// permanent> puts that card on the bottom of their library." (Trial of a Time
+// Lord), consuming the link the paired exile-until-leaves clause published so
+// the runtime clears it and the synthesized leaves trigger returns nothing.
+type PutLinkedExiledCardsInLibrary struct {
+	LinkedKey LinkedKey
+	Bottom    bool
+}
+
 // StartEngines starts engine effects for a player.
 type StartEngines struct {
+	Player PlayerReference
+}
+
+// BecomeMonarch makes the referenced player the monarch (CR 720). At most one
+// player is the monarch at a time, so the runtime clears any prior monarch when
+// it applies this primitive. It backs "you become the monarch" and "target
+// player becomes the monarch".
+type BecomeMonarch struct {
 	Player PlayerReference
 }
 
@@ -449,12 +599,59 @@ type Renown struct {
 	Amount Quantity
 }
 
+// Adapt performs the Adapt keyword action (CR 701.43): if the referenced
+// creature has no +1/+1 counters on it, the controller puts Amount +1/+1
+// counters on it. A creature that already has a +1/+1 counter is left
+// unchanged, so the effect applies only while the creature is uncountered.
+type Adapt struct {
+	Object ObjectReference
+	Amount Quantity
+}
+
+// Connive performs the connive keyword action (CR 702.154): the controller of
+// the conniving permanent draws Amount cards, then discards Amount cards, and a
+// +1/+1 counter is placed on Object for each nonland card discarded this way.
+// Player draws and discards (the conniving permanent's controller) and Object is
+// the conniving permanent that receives the counters.
+type Connive struct {
+	Object ObjectReference
+	Player PlayerReference
+	Amount Quantity
+}
+
+// BecomeSaddled performs the Saddle keyword action (CR 702.166): the referenced
+// Mount becomes saddled until end of turn. The saddled state is cleared during
+// cleanup. The effect is idempotent; saddling an already-saddled Mount leaves it
+// unchanged.
+type BecomeSaddled struct {
+	Object ObjectReference
+}
+
 // Pay prompts the controller to pay an optional cost during resolution.
 // The instruction's Optional field controls whether declining is allowed.
 // Results are published via the Instruction.PublishResult for downstream ResultGate checks.
 type Pay struct {
 	Payment ResolutionPayment
 	Prompt  string
+}
+
+// PayRepeatedly prompts the controller to pay an optional cost any number of
+// times during resolution and records how many times it was paid ("you may pay
+// {1}{G} any number of times.", the Adversary cycle; "you may pay {2} any number
+// of times.", Squad; "you may pay {1}{G} any number of times.", Taste of
+// Paradise). The controller is offered Payment repeatedly; each accepted and
+// successful payment increases the recorded count by one, and the loop stops the
+// first time the controller declines or can no longer pay. The final count is
+// published under PublishCount as a ResolutionChoiceNumber result so a later
+// instruction reads it through DynamicAmountChosenNumber ("put that many +1/+1
+// counters on this creature", "create that many tokens"). A count of zero is
+// published when the controller never pays, which lets a gated reflexive payoff
+// resolve to nothing. The loop is bounded by an internal cap so a free or
+// fully-affordable cost cannot iterate without limit.
+type PayRepeatedly struct {
+	Payment      ResolutionPayment
+	PublishCount ResultKey
+	Prompt       string
 }
 
 // Choose makes a resolution-time choice and publishes it via PublishChoice.
@@ -505,34 +702,87 @@ type Exile struct {
 	ExileLinkedKey LinkedKey
 }
 
-// ExileFromHand has Player choose Amount cards from their hand that match
-// Selection and exiles them, modelling "exile a ... card from your hand." The
-// enclosing Instruction's Optional flag expresses the "you may" wrapper. When
-// PublishLinked is set, each exiled card is remembered as an object-scoped
-// linked object on the source permanent (imprint) so a later ability can read
-// it; the link follows the permanent's object identity, so a re-entered object
-// starts without an imprint. Fewer matching cards than Amount exiles all of
-// them; no matching card exiles nothing.
-type ExileFromHand struct {
-	Player        PlayerReference
-	Selection     Selection
-	Amount        Quantity
-	PublishLinked LinkedKey
+// ExileEntireHand exiles every card in Player's hand at once with no choice,
+// modeling the involuntary whole-hand wording "exile all cards from your hand."
+// (Wormfang Behemoth). Each exiled card is remembered under LinkedKey, keyed by
+// the source permanent's card identity, so a paired ReturnExiledCardsToHand on
+// the same face returns exactly that set when the source leaves. LinkedKey must
+// be set; the exiled cards are otherwise unrecoverable.
+type ExileEntireHand struct {
+	Player    PlayerReference
+	LinkedKey LinkedKey
 }
 
-// PutFromHand has Player choose up to Amount cards from their hand that match
-// Selection and puts each onto the battlefield under that player's control,
-// modeling "put a land card from your hand onto the battlefield" and similar
-// cheat-into-play / ramp effects. The enclosing Instruction's Optional flag
-// expresses a "you may" wrapper, so the engine gathers consent before this runs;
-// here the player chooses which matching card to put, if any. EntersTapped makes
-// each card enter the battlefield tapped. Fewer matching cards than Amount puts
-// all of them; no matching card puts nothing.
-type PutFromHand struct {
-	Player       PlayerReference
-	Selection    Selection
-	Amount       Quantity
-	EntersTapped bool
+// ReturnExiledCardsToHand returns the cards an earlier ExileEntireHand exiled
+// under LinkedKey to their owners' hands, modeling "return the exiled cards to
+// their owner's hand." (Wormfang Behemoth). It consumes the source-keyed linked
+// set the paired exile published and clears it after returning; cards no longer
+// in exile are skipped. LinkedKey must be set.
+type ReturnExiledCardsToHand struct {
+	LinkedKey LinkedKey
+}
+
+// ExileForEachPlayer walks every player in the game and, for each, has Chooser
+// pick up to one permanent that player controls matching Selection and exiles
+// it, remembering each chosen permanent under LinkedKey (an exile-until-leaves
+// link) keyed by the source permanent. It models the distributive Saga chapter
+// "For each player, exile up to one [other] target <permanent> that player
+// controls until this Saga leaves the battlefield." (Vault 13: Dweller's
+// Journey, Battle at the Helvault). Each player's permanents are an independent
+// candidate pool, so the chapter exiles at most one per player. The chosen
+// permanents accumulate under the same key across chapters, so the paired return
+// — synthesized on the source leaving, or an explicit later chapter — brings
+// back exactly the set this exiled. Selection's ExcludeSource models the "other"
+// qualifier so the Saga never exiles itself. LinkedKey must be set; the exiled
+// permanents are otherwise unrecoverable.
+type ExileForEachPlayer struct {
+	Chooser   PlayerReference
+	Selection Selection
+	LinkedKey LinkedKey
+}
+
+// ReturnLinkedExiledCardsToBattlefield returns up to Amount cards a sibling
+// exile-until-leaves clause exiled under LinkedKey to the battlefield under
+// their owners' control; Chooser picks which cards return when more than Amount
+// remain in exile. When RestToLibraryBottom is set, every remaining linked card
+// moves to the bottom of its owner's library. It models the partial Saga payoff
+// "Return N cards exiled with this Saga to the battlefield under their owners'
+// control and put the rest on the bottom of their owners' libraries." (Vault 13:
+// Dweller's Journey). It consumes and clears the link after resolving, so the
+// synthesized leaves-the-battlefield safety-net return finds nothing left.
+// LinkedKey must be set.
+type ReturnLinkedExiledCardsToBattlefield struct {
+	Chooser             PlayerReference
+	LinkedKey           LinkedKey
+	Amount              Quantity
+	RestToLibraryBottom bool
+}
+
+// DestroyForEachPlayer walks every player in the game and, for each, has Chooser
+// pick up to one permanent that player controls matching Selection and destroys
+// it, remembering each destroyed permanent under LinkedKey keyed by the source
+// permanent. It models the distributive Saga chapter "For each player, destroy
+// up to one target creature that player controls." (The Curse of Fenric, chapter
+// I). Each player's permanents are an independent candidate pool, so the chapter
+// destroys at most one per player. The destroyed permanents are linked so a
+// paired CreateTokenForEachDestroyed clause creates one token for each, under
+// that permanent's last-known controller. LinkedKey must be set; the destroyed
+// permanents are otherwise unrecoverable for the token payoff.
+type DestroyForEachPlayer struct {
+	Chooser   PlayerReference
+	Selection Selection
+	LinkedKey LinkedKey
+}
+
+// CreateTokenForEachDestroyed creates one token defined by Source for each
+// permanent a sibling DestroyForEachPlayer recorded under LinkedKey, giving each
+// token to that destroyed permanent's last-known controller. It models the per-
+// controller Saga payoff "For each creature destroyed this way, its controller
+// creates a <token>." (The Curse of Fenric, chapter I). It consumes and clears
+// the link after resolving. LinkedKey must be set and Source must be valid.
+type CreateTokenForEachDestroyed struct {
+	Source    TokenSource
+	LinkedKey LinkedKey
 }
 
 // CastForFree has Player cast one card matching Selection from Zone without
@@ -545,20 +795,6 @@ type CastForFree struct {
 	Player    PlayerReference
 	Selection Selection
 	Zone      zone.Type
-}
-
-// ReturnFromGraveyard has Player choose up to Amount cards from their graveyard
-// that match Selection and returns each to their hand, modeling the non-target
-// graveyard recursion wording "Return a <filter> card from your graveyard to
-// your hand" (Takenuma's "creature or planeswalker card", Grapple with the
-// Past, ...). The targeted form ("Return target creature card ...") lowers to a
-// card target instead; this primitive covers the choose-at-resolution form
-// where the returned card is selected rather than targeted. Fewer matching
-// cards than Amount returns all of them; no matching card returns nothing.
-type ReturnFromGraveyard struct {
-	Player    PlayerReference
-	Selection Selection
-	Amount    Quantity
 }
 
 // MassReturnFromGraveyard returns every card in Player's graveyard matching
@@ -576,6 +812,13 @@ type ReturnFromGraveyard struct {
 // When ControlledByOwner is set, each card entering the battlefield does so
 // under its own owner's control rather than Player's ("... under their owners'
 // control").
+//
+// FromTriggerBatch restricts the moved cards to those that triggered the
+// enclosing one-or-more zone-change ability, modeling "Whenever one or more
+// <filter> cards are put into your graveyard ..., put them onto the
+// battlefield" (Hedge Shredder). "Them" denotes exactly the coalesced batch
+// of triggering cards rather than the whole graveyard, so only cards still in
+// the graveyard whose IDs appear in that batch move.
 type MassReturnFromGraveyard struct {
 	Player            PlayerReference
 	Selection         Selection
@@ -583,6 +826,7 @@ type MassReturnFromGraveyard struct {
 	EntryTapped       bool
 	SourceGroup       PlayerGroupReference
 	ControlledByOwner bool
+	FromTriggerBatch  bool
 }
 
 // MassReanimationExchange resolves the symmetric mass-reanimation exchange "Each
@@ -662,6 +906,25 @@ type GrantCastPermission struct {
 	Duration EffectDuration
 }
 
+// ExileForPlay exiles a referenced card from a specific zone and grants the
+// resolving controller permission to play (or, when Cast is set, cast) it for a
+// bounded duration. The move and the permission grant happen atomically: the
+// card identity is captured before the move so the permission binds by identity
+// rather than through the pre-exile event reference, which the move would
+// otherwise invalidate by advancing the card's zone version.
+//
+// When SelectFromBatch is set the exiled card is not read from Card; instead the
+// resolving controller chooses one card from the triggering batch event still in
+// FromZone ("you may exile one of them from your graveyard" over a "discard one
+// or more cards" batch). Card is ignored in that mode.
+type ExileForPlay struct {
+	Card            CardReference
+	FromZone        zone.Type
+	Duration        EffectDuration
+	Cast            bool
+	SelectFromBatch bool
+}
+
 // Sacrifice sacrifices the referenced permanent. When no object is set, the
 // controller's first permanent is used.
 type Sacrifice struct {
@@ -679,6 +942,15 @@ type SacrificePermanents struct {
 	// matching Selection, i.e. who can't satisfy the edict ("Each player who
 	// can't discards a card."). SacrificeFallbackNone leaves no rider.
 	Fallback SacrificeFallback
+	// PublishLinked, when set, records the permanents sacrificed by this edict as
+	// linked objects under the given key so a later instruction can read them
+	// through last-known information once they have left the battlefield. It
+	// backs an optional resolving sacrifice whose follow-up effect is scaled by
+	// the sacrificed permanent ("you may sacrifice another creature. If you do,
+	// you gain X life and draw X cards, where X is that creature's power." —
+	// Disciple of Freyalise). Empty when no downstream effect reads the
+	// sacrificed permanent.
+	PublishLinked LinkedKey
 }
 
 // SacrificeFallbackKind identifies the per-player rider applied to players who
@@ -750,6 +1022,15 @@ type SkipNextUntap struct {
 	Object ObjectReference
 }
 
+// RemoveFromCombat removes the referenced creature from combat ("Remove target
+// attacking creature you control from combat." — Reconnaissance). The permanent
+// stops being an attacker or blocker: it deals and is dealt no further combat
+// damage and its attack/block declarations are discarded. Object references the
+// creature to remove.
+type RemoveFromCombat struct {
+	Object ObjectReference
+}
+
 // CounterObject counters a referenced spell or ability on the stack. When
 // ExileInstead is set, a countered spell is exiled instead of being put into
 // its owner's graveyard (CR 614-style replacement, e.g. Force of Negation).
@@ -788,6 +1069,13 @@ type Mill struct {
 	Amount      Quantity
 	Player      PlayerReference      // single player; zero if PlayerGroup is set
 	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
+
+	// PublishLinked, when set, remembers every card milled this way as a
+	// card-scoped linked object on the source permanent so a later instruction
+	// can act on exactly those cards ("mill three cards. ... put a card from
+	// among those cards into your hand"). It is meaningful only for the single
+	// Player form; the group form publishes nothing.
+	PublishLinked LinkedKey
 }
 
 // ExileTopOfLibrary moves the top Amount cards of a referenced player's library
@@ -796,6 +1084,22 @@ type ExileTopOfLibrary struct {
 	Amount      Quantity
 	Player      PlayerReference      // single player; zero if PlayerGroup is set
 	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
+}
+
+// RevealUntil reveals cards from the top of a referenced player's library one at
+// a time until a revealed card matches Until, then puts every card revealed this
+// way (including the matching card) into Destination. It models the closed
+// "reveals cards from the top of their library until they reveal a <type> card,
+// then puts those cards into their <zone>" family. Exactly one of Player or
+// PlayerGroup is set; the group form runs the reveal for every member in APNAP
+// order. Destination is the zone the revealed cards move to (graveyard or hand);
+// other zones are not modeled and fail closed upstream. An empty Until matches
+// the first card revealed.
+type RevealUntil struct {
+	Player      PlayerReference      // single player; zero if PlayerGroup is set
+	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
+	Until       Selection            // first revealed card matching this stops the reveal
+	Destination zone.Type            // graveyard or hand
 }
 
 // PutHandOnLibraryThenDraw has Player put any number of cards from their hand on
@@ -857,6 +1161,25 @@ type ImpulseExile struct {
 	Duration EffectDuration
 }
 
+// HideawayExile implements the Hideaway N enters-the-battlefield action (CR
+// 702.75a): the resolving controller looks at the top Amount cards of their
+// library, exiles one of them face down linked to the source permanent, and
+// puts the rest on the bottom of their library in a random order. The exiled
+// card is played later by the source permanent's Hideaway activated ability
+// through PlayHideawayCard, which reads the same source-scoped link.
+type HideawayExile struct {
+	Amount Quantity
+}
+
+// PlayHideawayCard implements the "you may play the exiled card without paying
+// its mana cost" half of the Hideaway mechanic (CR 702.75c). The resolving
+// controller may play the card the source permanent exiled face down with its
+// HideawayExile action, casting it as a spell or putting it onto the
+// battlefield as a land without paying its mana cost. The enclosing
+// instruction's Condition gates the play on the printed Hideaway condition and
+// its Optional flag carries the "may".
+type PlayHideawayCard struct{}
+
 // Investigate creates Clue tokens for the recipient (controller by default).
 type Investigate struct {
 	Amount    Quantity
@@ -880,6 +1203,11 @@ type Explore struct {
 type Manifest struct {
 	Dread  bool
 	Player PlayerReference
+	// PublishLinked, when set, remembers the manifested permanent as an
+	// object-scoped linked object so a later instruction can reference it ("put
+	// three +1/+1 counters on that creature", Weight Room). It is empty when no
+	// later instruction references the manifested creature.
+	PublishLinked LinkedKey
 }
 
 // Goad goads the referenced creature.
@@ -893,6 +1221,11 @@ type RemoveCounter struct {
 	Object      ObjectReference
 	Group       GroupReference
 	CounterKind counter.Kind
+	// ChooseKind removes a counter of a kind the resolving controller chooses
+	// from among the kinds present on the object, modeling the kind-unspecified
+	// "remove a counter from <permanent>" wording (Ferropede). When false the
+	// fixed CounterKind is removed. It is ignored for Group removals.
+	ChooseKind bool
 }
 
 // Transform transforms the referenced permanent.
@@ -907,9 +1240,13 @@ type PhaseOut struct {
 	Group  GroupReference
 }
 
-// Regenerate sets up a regeneration shield on the referenced permanent.
+// Regenerate sets up a regeneration shield on one referenced permanent
+// ("Regenerate target creature.") or on every permanent in a referenced group
+// ("Regenerate each creature you control."). Exactly one of Object or Group is
+// set.
 type Regenerate struct {
 	Object ObjectReference
+	Group  GroupReference
 }
 
 // BecomeCopy makes the source permanent become a copy of the referenced target
@@ -957,9 +1294,15 @@ type CreateDelayedTrigger struct {
 }
 
 // CreateReplacement creates a replacement effect that applies to a future event.
+// When Object references a permanent, the created replacement is bound to that
+// resolved permanent (its AffectedObjectID), so it matches only events about
+// that one object ("If it would leave the battlefield, exile it instead." on a
+// just-reanimated creature). When Object is absent the replacement matches by
+// its own filters alone.
 type CreateReplacement struct {
 	Replacement *ReplacementEffect
 	Duration    EffectDuration
+	Object      ObjectReference
 }
 
 // PreventDamage creates a damage-prevention shield for exactly one referenced
@@ -979,4 +1322,24 @@ type PreventDamage struct {
 	CombatOnly bool
 	BySource   bool
 	Global     bool
+}
+
+// AddExtraPhases inserts additional phases into the current turn (CR 505.5,
+// 506.2). It models "After this main phase, there is an additional combat
+// phase[ followed by an additional main phase]." (Aggravated Assault, Aurelia
+// the Warleader, World at War, Combat Celebrant). Combat queues an extra combat
+// phase; Main queues an extra main phase after it. The runtime appends the
+// queued phases to TurnState.ExtraPhases, which the turn loop drains in order.
+type AddExtraPhases struct {
+	Combat bool
+	Main   bool
+}
+
+// RollDie rolls a single fair die with Sides faces and publishes the rolled
+// value (1..Sides) as the instruction's resolved amount (CR 706). It backs
+// "roll a d20" and similar dice mechanics; a later instruction consumes the
+// result via a DynamicAmountPreviousEffectResult amount keyed to this
+// instruction's PublishResult ("...equal to the result").
+type RollDie struct {
+	Sides int
 }

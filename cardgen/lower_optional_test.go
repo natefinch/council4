@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // lowerSpellSequence lowers a sorcery body and returns its resolving
@@ -56,6 +57,77 @@ func TestLowerOptionalIfYouDoDiscardDraw(t *testing.T) {
 	if gate.Key != optionalIfYouDoResultKey || gate.Succeeded != game.TriTrue {
 		t.Fatalf("instruction[1].ResultGate = %#v, want succeeded gate on %q", gate, optionalIfYouDoResultKey)
 	}
+}
+
+// TestLowerOptionalIfYouDoOtherwiseElseBranch verifies the "you may X. If you
+// do, Y. Otherwise, Z." else branch: X is optional and publishes its result, Y
+// is gated on that result having succeeded, and the trailing "Otherwise" effect
+// Z is gated on the exact complement — the result having failed — so exactly one
+// of Y/Z resolves.
+func TestLowerOptionalIfYouDoOtherwiseElseBranch(t *testing.T) {
+	t.Parallel()
+	sequence := lowerSpellSequence(t, "Otherwise Flow Test",
+		"You may discard a card. If you do, draw two cards. Otherwise, draw a card.")
+	if len(sequence) != 3 {
+		t.Fatalf("sequence = %#v, want three instructions", sequence)
+	}
+	discard := sequence[0]
+	if _, ok := discard.Primitive.(game.Discard); !ok {
+		t.Fatalf("instruction[0] = %T, want game.Discard", discard.Primitive)
+	}
+	if !discard.Optional || discard.PublishResult != optionalIfYouDoResultKey {
+		t.Fatalf("instruction[0] = %#v, want optional publishing %q", discard, optionalIfYouDoResultKey)
+	}
+	if _, ok := sequence[1].Primitive.(game.Draw); !ok {
+		t.Fatalf("instruction[1] = %T, want game.Draw", sequence[1].Primitive)
+	}
+	if gate := sequence[1].ResultGate; !gate.Exists ||
+		gate.Val.Key != optionalIfYouDoResultKey || gate.Val.Succeeded != game.TriTrue {
+		t.Fatalf("instruction[1].ResultGate = %#v, want succeeded gate on %q", sequence[1].ResultGate, optionalIfYouDoResultKey)
+	}
+	if _, ok := sequence[2].Primitive.(game.Draw); !ok {
+		t.Fatalf("instruction[2] = %T, want game.Draw", sequence[2].Primitive)
+	}
+	if gate := sequence[2].ResultGate; !gate.Exists ||
+		gate.Val.Key != optionalIfYouDoResultKey || gate.Val.Succeeded != game.TriFalse {
+		t.Fatalf("instruction[2].ResultGate = %#v, want failed gate on %q", sequence[2].ResultGate, optionalIfYouDoResultKey)
+	}
+}
+
+// TestLowerOptionalIfYouDontElseBranch verifies the "you may X. If you do, Y. If
+// you don't, Z." wording lowers to the same TriTrue/TriFalse split as the
+// "Otherwise," wording, and that the parser's "don't" negation artifact on Z is
+// dropped (the lowered Z is the plain action, gated only on the optional result
+// having failed).
+func TestLowerOptionalIfYouDontElseBranch(t *testing.T) {
+	t.Parallel()
+	sequence := lowerSpellSequence(t, "If You Don't Flow Test",
+		"You may sacrifice a creature. If you do, draw a card. If you don't, you lose 2 life.")
+	if len(sequence) != 3 {
+		t.Fatalf("sequence = %#v, want three instructions", sequence)
+	}
+	if _, ok := sequence[0].Primitive.(game.SacrificePermanents); !ok {
+		t.Fatalf("instruction[0] = %T, want game.SacrificePermanents", sequence[0].Primitive)
+	}
+	if !sequence[0].Optional || sequence[0].PublishResult != optionalIfYouDoResultKey {
+		t.Fatalf("instruction[0] = %#v, want optional publishing %q", sequence[0], optionalIfYouDoResultKey)
+	}
+	if _, ok := sequence[1].Primitive.(game.Draw); !ok {
+		t.Fatalf("instruction[1] = %T, want game.Draw", sequence[1].Primitive)
+	}
+	if gate := sequence[1].ResultGate; !gate.Exists ||
+		gate.Val.Key != optionalIfYouDoResultKey || gate.Val.Succeeded != game.TriTrue {
+		t.Fatalf("instruction[1].ResultGate = %#v, want succeeded gate on %q", sequence[1].ResultGate, optionalIfYouDoResultKey)
+	}
+	loseLife, ok := sequence[2].Primitive.(game.LoseLife)
+	if !ok {
+		t.Fatalf("instruction[2] = %T, want game.LoseLife (the \"don't\" negation artifact dropped)", sequence[2].Primitive)
+	}
+	if gate := sequence[2].ResultGate; !gate.Exists ||
+		gate.Val.Key != optionalIfYouDoResultKey || gate.Val.Succeeded != game.TriFalse {
+		t.Fatalf("instruction[2].ResultGate = %#v, want failed gate on %q", sequence[2].ResultGate, optionalIfYouDoResultKey)
+	}
+	_ = loseLife
 }
 
 // TestLowerReflexiveWhenYouDoGatesOnOptional verifies that the reflexive
@@ -350,9 +422,7 @@ func TestLowerOptionalFlowFailsClosed(t *testing.T) {
 		name       string
 		oracleText string
 	}{
-		{"otherwise branch", "You may discard a card. If you do, draw a card. Otherwise, draw a card."},
 		{"if you don't branch", "You may discard a card. If you don't, draw a card."},
-		{"two optional effects", "You may discard a card. If you do, you may draw a card."},
 		{"optional without if-you-do", "You may discard a card. Draw a card."},
 		// An independent effect after the gated "if you do" tail ("Scry 2.")
 		// does not structurally contain the gate condition, so it would resolve
@@ -381,6 +451,303 @@ func TestLowerOptionalFlowFailsClosed(t *testing.T) {
 			}
 			if len(diagnostics) == 0 {
 				t.Fatal("diagnostics = none, want fail-closed rejection")
+			}
+		})
+	}
+}
+
+// TestLowerOptionalSacrificeAnotherIfYouDoDraw verifies that a clause-leading
+// "another" on a sacrifice ("You may sacrifice another creature. If you do, draw
+// a card.") lowers: the determiner "another" counts as one and excludes the
+// effect's own source from the sacrifice selection, while the optional flow
+// publishes its result so the draw is gated on the sacrifice being taken.
+func TestLowerOptionalSacrificeAnotherIfYouDoDraw(t *testing.T) {
+	t.Parallel()
+	sequence := lowerSpellSequence(t, "Sacrifice Another Flow",
+		"You may sacrifice another creature. If you do, draw a card.")
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions", sequence)
+	}
+	sacrifice := sequence[0]
+	prim, ok := sacrifice.Primitive.(game.SacrificePermanents)
+	if !ok {
+		t.Fatalf("instruction[0] = %T, want game.SacrificePermanents", sacrifice.Primitive)
+	}
+	if !prim.Selection.ExcludeSource {
+		t.Fatal("sacrifice selection.ExcludeSource = false, want true for \"another\"")
+	}
+	if prim.Amount.Value() != 1 {
+		t.Fatalf("sacrifice amount = %d, want 1", prim.Amount.Value())
+	}
+	if !sacrifice.Optional {
+		t.Fatal("instruction[0].Optional = false, want optional")
+	}
+	if sacrifice.PublishResult != optionalIfYouDoResultKey {
+		t.Fatalf("instruction[0].PublishResult = %q, want %q", sacrifice.PublishResult, optionalIfYouDoResultKey)
+	}
+	draw := sequence[1]
+	if _, ok := draw.Primitive.(game.Draw); !ok {
+		t.Fatalf("instruction[1] = %T, want game.Draw", draw.Primitive)
+	}
+	if !draw.ResultGate.Exists {
+		t.Fatal("instruction[1].ResultGate missing")
+	}
+	if gate := draw.ResultGate.Val; gate.Key != optionalIfYouDoResultKey || gate.Succeeded != game.TriTrue {
+		t.Fatalf("instruction[1].ResultGate = %#v, want succeeded gate on %q", gate, optionalIfYouDoResultKey)
+	}
+}
+
+// TestLowerOptionalPayLifeIfYouDoDraw verifies that "You may pay N life. If you
+// do, draw a card." lowers the pay-life cost as an optional life loss whose
+// taken result gates the draw: paying N life is losing that much life
+// (CR 119.1b), so the controller's yes/no choice publishes a result the benefit
+// reads.
+func TestLowerOptionalPayLifeIfYouDoDraw(t *testing.T) {
+	t.Parallel()
+	sequence := lowerSpellSequence(t, "Pay Life Flow", "You may pay 2 life. If you do, draw a card.")
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions", sequence)
+	}
+	pay := sequence[0]
+	lose, ok := pay.Primitive.(game.LoseLife)
+	if !ok {
+		t.Fatalf("instruction[0] = %T, want game.LoseLife", pay.Primitive)
+	}
+	if lose.Amount.Value() != 2 {
+		t.Fatalf("lose-life amount = %d, want 2", lose.Amount.Value())
+	}
+	if !pay.Optional {
+		t.Fatal("instruction[0].Optional = false, want optional")
+	}
+	if pay.PublishResult != optionalIfYouDoResultKey {
+		t.Fatalf("instruction[0].PublishResult = %q, want %q", pay.PublishResult, optionalIfYouDoResultKey)
+	}
+	draw := sequence[1]
+	if _, ok := draw.Primitive.(game.Draw); !ok {
+		t.Fatalf("instruction[1] = %T, want game.Draw", draw.Primitive)
+	}
+	if !draw.ResultGate.Exists {
+		t.Fatal("instruction[1].ResultGate missing")
+	}
+	if gate := draw.ResultGate.Val; gate.Key != optionalIfYouDoResultKey || gate.Succeeded != game.TriTrue {
+		t.Fatalf("instruction[1].ResultGate = %#v, want succeeded gate on %q", gate, optionalIfYouDoResultKey)
+	}
+}
+
+// TestLowerOptionalIfYouDoDiscardHandDraw verifies that the optional "You may
+// discard your hand. If you do, <Y>." form lowers the entire-hand discard as an
+// optional result-publishing instruction with the benefit gated on it. The
+// controller offer reconstructs exactly once the optional "you may" prefix is
+// stripped, so the entire-hand discard flag is recognized inside the wrapper.
+func TestLowerOptionalIfYouDoDiscardHandDraw(t *testing.T) {
+	t.Parallel()
+	sequence := lowerSpellSequence(t, "Optional Hand Dump",
+		"You may discard your hand. If you do, draw a card.")
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions", sequence)
+	}
+	discard, ok := sequence[0].Primitive.(game.Discard)
+	if !ok {
+		t.Fatalf("instruction[0] = %T, want game.Discard", sequence[0].Primitive)
+	}
+	if !discard.EntireHand {
+		t.Fatalf("discard = %#v, want EntireHand", discard)
+	}
+	if !sequence[0].Optional || sequence[0].PublishResult != optionalIfYouDoResultKey {
+		t.Fatalf("discard must be optional and publish %q: %#v", optionalIfYouDoResultKey, sequence[0])
+	}
+	if _, ok := sequence[1].Primitive.(game.Draw); !ok {
+		t.Fatalf("instruction[1] = %T, want game.Draw", sequence[1].Primitive)
+	}
+	gate := sequence[1].ResultGate
+	if !gate.Exists || gate.Val.Key != optionalIfYouDoResultKey || gate.Val.Succeeded != game.TriTrue {
+		t.Fatalf("draw ResultGate = %#v, want succeeded gate on %q", gate, optionalIfYouDoResultKey)
+	}
+}
+
+// TestLowerOptionalIfYouDoSelfSacrificeDraw verifies that the optional "you may
+// sacrifice this creature. If you do, <Y>." form lowers the self-sacrifice (the
+// source permanent named by "this creature") as an optional result-publishing
+// instruction with the benefit gated on it, matching the "sacrifice it." path.
+func TestLowerOptionalIfYouDoSelfSacrificeDraw(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Self Sac Spirit",
+		Layout:     "normal",
+		TypeLine:   "Creature — Spirit",
+		ManaCost:   "{1}",
+		OracleText: "When this creature enters, you may sacrifice this creature. If you do, draw a card.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	sequence := face.TriggeredAbilities[0].Content.Modes[0].Sequence
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions", sequence)
+	}
+	if _, ok := sequence[0].Primitive.(game.Sacrifice); !ok {
+		t.Fatalf("instruction[0] = %T, want game.Sacrifice", sequence[0].Primitive)
+	}
+	if !sequence[0].Optional || sequence[0].PublishResult != optionalIfYouDoResultKey {
+		t.Fatalf("sacrifice must be optional and publish %q: %#v", optionalIfYouDoResultKey, sequence[0])
+	}
+	if _, ok := sequence[1].Primitive.(game.Draw); !ok {
+		t.Fatalf("instruction[1] = %T, want game.Draw", sequence[1].Primitive)
+	}
+	gate := sequence[1].ResultGate
+	if !gate.Exists || gate.Val.Key != optionalIfYouDoResultKey || gate.Val.Succeeded != game.TriTrue {
+		t.Fatalf("draw ResultGate = %#v, want succeeded gate on %q", gate, optionalIfYouDoResultKey)
+	}
+}
+
+// TestLowerFilteredControllerDiscard verifies the standalone controller filtered
+// self-discard ("Discard a creature card." / "Discard a nonland card.") lowers
+// to a ChooseDiscardFromHand whose Selection carries the typed card filter, and
+// that the bare unfiltered "Discard a card." stays on the plain Discard path.
+func TestLowerFilteredControllerDiscard(t *testing.T) {
+	t.Parallel()
+	creature := lowerSpellSequence(t, "Filtered Discard Creature", "Discard a creature card.")
+	if len(creature) != 1 {
+		t.Fatalf("sequence = %#v, want one instruction", creature)
+	}
+	choose, ok := creature[0].Primitive.(game.ChooseDiscardFromHand)
+	if !ok {
+		t.Fatalf("instruction[0] = %T, want game.ChooseDiscardFromHand", creature[0].Primitive)
+	}
+	if len(choose.Selection.RequiredTypes) != 1 || choose.Selection.RequiredTypes[0] != types.Creature {
+		t.Fatalf("Selection.RequiredTypes = %#v, want [Creature]", choose.Selection.RequiredTypes)
+	}
+
+	nonland := lowerSpellSequence(t, "Filtered Discard Nonland", "Discard a nonland card.")
+	choose, ok = nonland[0].Primitive.(game.ChooseDiscardFromHand)
+	if !ok {
+		t.Fatalf("instruction[0] = %T, want game.ChooseDiscardFromHand", nonland[0].Primitive)
+	}
+	if len(choose.Selection.ExcludedTypes) != 1 || choose.Selection.ExcludedTypes[0] != types.Land {
+		t.Fatalf("Selection.ExcludedTypes = %#v, want [Land]", choose.Selection.ExcludedTypes)
+	}
+
+	bare := lowerSpellSequence(t, "Bare Discard", "Discard a card.")
+	if _, ok := bare[0].Primitive.(game.Discard); !ok {
+		t.Fatalf("bare discard instruction[0] = %T, want game.Discard", bare[0].Primitive)
+	}
+}
+
+// TestLowerOptionalFilteredDiscardDraw verifies that a filtered self-discard as
+// the optional X-action of "You may <X>. If you do, <Y>." publishes its result
+// (Optional + PublishResult) and the "if you do" draw is gated on it, reusing
+// the optional-flow envelope around the new ChooseDiscardFromHand instruction.
+func TestLowerOptionalFilteredDiscardDraw(t *testing.T) {
+	t.Parallel()
+	sequence := lowerSpellSequence(t, "Optional Filtered Discard",
+		"You may discard a creature card. If you do, draw two cards.")
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions", sequence)
+	}
+	choose, ok := sequence[0].Primitive.(game.ChooseDiscardFromHand)
+	if !ok {
+		t.Fatalf("instruction[0] = %T, want game.ChooseDiscardFromHand", sequence[0].Primitive)
+	}
+	if len(choose.Selection.RequiredTypes) != 1 || choose.Selection.RequiredTypes[0] != types.Creature {
+		t.Fatalf("Selection.RequiredTypes = %#v, want [Creature]", choose.Selection.RequiredTypes)
+	}
+	if !sequence[0].Optional {
+		t.Fatal("instruction[0].Optional = false, want optional")
+	}
+	if sequence[0].PublishResult != optionalIfYouDoResultKey {
+		t.Fatalf("instruction[0].PublishResult = %q, want %q", sequence[0].PublishResult, optionalIfYouDoResultKey)
+	}
+	if _, ok := sequence[1].Primitive.(game.Draw); !ok {
+		t.Fatalf("instruction[1] = %T, want game.Draw", sequence[1].Primitive)
+	}
+	gate := sequence[1].ResultGate
+	if !gate.Exists || gate.Val.Key != optionalIfYouDoResultKey || gate.Val.Succeeded != game.TriTrue {
+		t.Fatalf("draw ResultGate = %#v, want succeeded gate on %q", gate, optionalIfYouDoResultKey)
+	}
+}
+
+// TestLowerOptionalSacrificeFilteredSelectors verifies that the optional
+// "you may sacrifice X. If you do, draw a card." flow accepts the broadened
+// sacrifice selector shapes — a single excluded card type ("nonland
+// permanent"), a named token subtype ("Blood token"), and the bare token noun
+// ("a token") — mapping each to the runtime SacrificePermanents selection.
+func TestLowerOptionalSacrificeFilteredSelectors(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		clause string
+		verify func(t *testing.T, sel game.Selection)
+	}{
+		{
+			name:   "nonland permanent",
+			clause: "sacrifice a nonland permanent",
+			verify: func(t *testing.T, sel game.Selection) {
+				if len(sel.ExcludedTypes) != 1 || sel.ExcludedTypes[0] != types.Land {
+					t.Fatalf("ExcludedTypes = %#v, want [Land]", sel.ExcludedTypes)
+				}
+			},
+		},
+		{
+			name:   "noncreature artifact",
+			clause: "sacrifice a noncreature artifact",
+			verify: func(t *testing.T, sel game.Selection) {
+				if len(sel.RequiredTypes) != 1 || sel.RequiredTypes[0] != types.Artifact {
+					t.Fatalf("RequiredTypes = %#v, want [Artifact]", sel.RequiredTypes)
+				}
+				if len(sel.ExcludedTypes) != 1 || sel.ExcludedTypes[0] != types.Creature {
+					t.Fatalf("ExcludedTypes = %#v, want [Creature]", sel.ExcludedTypes)
+				}
+			},
+		},
+		{
+			name:   "token subtype",
+			clause: "sacrifice a Blood token",
+			verify: func(t *testing.T, sel game.Selection) {
+				if !sel.TokenOnly {
+					t.Fatal("TokenOnly = false, want true")
+				}
+				if len(sel.SubtypesAny) != 1 || sel.SubtypesAny[0] != types.Blood {
+					t.Fatalf("SubtypesAny = %#v, want [Blood]", sel.SubtypesAny)
+				}
+			},
+		},
+		{
+			name:   "bare token",
+			clause: "sacrifice a token",
+			verify: func(t *testing.T, sel game.Selection) {
+				if !sel.TokenOnly {
+					t.Fatal("TokenOnly = false, want true")
+				}
+				if len(sel.RequiredTypes) != 0 || len(sel.SubtypesAny) != 0 {
+					t.Fatalf("selection = %#v, want bare token (no type/subtype)", sel)
+				}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			sequence := lowerSpellSequence(t, "Optional Sacrifice "+test.name,
+				"You may "+test.clause+". If you do, draw a card.")
+			if len(sequence) != 2 {
+				t.Fatalf("sequence = %#v, want two instructions", sequence)
+			}
+			sacrifice, ok := sequence[0].Primitive.(game.SacrificePermanents)
+			if !ok {
+				t.Fatalf("instruction[0] = %T, want game.SacrificePermanents", sequence[0].Primitive)
+			}
+			if !sequence[0].Optional || sequence[0].PublishResult != optionalIfYouDoResultKey {
+				t.Fatalf("instruction[0] = %#v, want optional publishing %q", sequence[0], optionalIfYouDoResultKey)
+			}
+			test.verify(t, sacrifice.Selection)
+			if _, ok := sequence[1].Primitive.(game.Draw); !ok {
+				t.Fatalf("instruction[1] = %T, want game.Draw", sequence[1].Primitive)
+			}
+			gate := sequence[1].ResultGate
+			if !gate.Exists || gate.Val.Key != optionalIfYouDoResultKey || gate.Val.Succeeded != game.TriTrue {
+				t.Fatalf("draw ResultGate = %#v, want succeeded gate on %q", gate, optionalIfYouDoResultKey)
 			}
 		})
 	}

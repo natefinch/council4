@@ -25,6 +25,16 @@ type AbilityContent struct {
 	MaxModes            int
 	ModeChoiceBonus     ModeChoiceBonus
 	AllowDuplicateModes bool
+	// RandomModes reports that the single required mode is chosen at random
+	// rather than by the controller ("Choose one at random —", CR 700.2). It is
+	// set only on one/one modal content; mode resolution picks the mode with the
+	// game's random source instead of prompting the controller.
+	RandomModes bool
+	// EscalateCost is the additional mana cost paid once for each mode chosen
+	// beyond the first on an Escalate spell (CR 702.121). It is set only on the
+	// spell ability of an Escalate modal spell; an empty value means the modal
+	// has no escalate cost.
+	EscalateCost opt.V[cost.Mana]
 }
 
 // ModeChoiceCondition identifies a cast-time condition that expands the
@@ -147,7 +157,11 @@ func EntersTappedGroupReplacement(text string, controller TriggerControllerFilte
 	replacement.EntersTapped = true
 	replacement.EntersTappedOthers = true
 	replacement.ControllerFilter = controller
-	replacement.EntersTappedTypes = append([]types.Card(nil), cardTypes...)
+	if len(cardTypes) > 0 {
+		replacement.EntersTappedSelection = &Selection{
+			RequiredTypesAny: append([]types.Card(nil), cardTypes...),
+		}
+	}
 	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
@@ -155,11 +169,12 @@ func EntersTappedGroupReplacement(text string, controller TriggerControllerFilte
 // exiles a card (or permanent) that would be put into a watched graveyard
 // instead (CR 614), as in "If a card would be put into a graveyard from
 // anywhere, exile it instead." (Leyline of the Void). ownerFilter selects whose
-// graveyard is watched relative to the source's controller; cardTypes restricts
-// the redirected cards to any of the listed types (empty redirects every card);
-// fromBattlefieldOnly limits the redirect to cards leaving the battlefield ("a
-// permanent").
-func GraveyardRedirectReplacement(text string, ownerFilter TriggerControllerFilter, fromBattlefieldOnly bool, cardTypes ...types.Card) ReplacementAbility {
+// graveyard is watched relative to the source's controller; controlFilter
+// selects who controls the dying permanent for "would die" forms ("an opponent
+// controls"); cardTypes restricts the redirected cards to any of the listed
+// types (empty redirects every card); fromBattlefieldOnly limits the redirect to
+// cards leaving the battlefield ("a permanent").
+func GraveyardRedirectReplacement(text string, ownerFilter, controlFilter TriggerControllerFilter, fromBattlefieldOnly bool, cardTypes ...types.Card) ReplacementAbility {
 	replacement := ReplacementEffect{
 		Description:            text,
 		MatchEvent:             EventZoneChanged,
@@ -170,6 +185,7 @@ func GraveyardRedirectReplacement(text string, ownerFilter TriggerControllerFilt
 		ContinuousZoneRedirect: true,
 		RedirectOwnerFilter:    ownerFilter,
 		RedirectTypeFilter:     append([]types.Card(nil), cardTypes...),
+		RedirectControlFilter:  controlFilter,
 	}
 	if fromBattlefieldOnly {
 		replacement.MatchFromZone = true
@@ -271,6 +287,32 @@ func BloodthirstReplacement(text string, n int) ReplacementAbility {
 	})
 }
 
+// MaxSpeedActivationCondition creates the activation condition for the "Max
+// speed" ability word (CR 702.179, the Start your engines! speed subsystem): the
+// ability can be activated only while its controller has maximum speed (a speed
+// of 4). The runtime evaluates ControllerHasMaxSpeed against the controller's
+// current speed.
+func MaxSpeedActivationCondition() Condition {
+	return Condition{ControllerHasMaxSpeed: true}
+}
+
+// BoastActivationCondition creates the activation condition for the Boast keyword
+// (CR 702.116): a Boast ability can be activated only if its source attacked this
+// turn (and only once each turn, which is modeled separately as a OncePerTurn
+// timing restriction). The condition matches the source permanent's own
+// attacker-declaration event in the current turn's event history.
+func BoastActivationCondition() Condition {
+	return Condition{
+		EventHistory: opt.Val(EventHistoryCondition{
+			Pattern: TriggerPattern{
+				Event:  EventAttackerDeclared,
+				Source: TriggerSourceSelf,
+			},
+			Window: EventHistoryCurrentTurn,
+		}),
+	}
+}
+
 // EntersTappedWithCountersReplacement creates a combined ETB replacement for
 // "This permanent enters tapped with N <kind> counters on it." (the Vivid land
 // cycle). The permanent enters tapped and with the listed counters.
@@ -347,6 +389,30 @@ func DevourReplacement(text string, multiplier int) ReplacementAbility {
 	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
+// DevourTypeReplacement creates the typed Devour as-enters replacement (CR
+// 702.81) whose controller may sacrifice any number of permanents of cardType
+// they control (such as "Devour artifact N" or "Devour land N") instead of
+// creatures, the permanent entering with multiplier +1/+1 counters on it for
+// each one sacrificed. multiplier must be positive and cardType non-empty.
+func DevourTypeReplacement(text string, multiplier int, cardType types.Card) ReplacementAbility {
+	replacement := etbReplacement(text)
+	replacement.EntryDevourMultiplier = multiplier
+	replacement.EntryDevourType = cardType
+	return ReplacementAbility{Text: text, Replacement: replacement}
+}
+
+// DevourSubtypeReplacement creates the typed Devour as-enters replacement (CR
+// 702.81) whose controller may sacrifice any number of permanents with subtype
+// they control (such as "Devour Food N") instead of creatures, the permanent
+// entering with multiplier +1/+1 counters on it for each one sacrificed.
+// multiplier must be positive and subtype non-empty.
+func DevourSubtypeReplacement(text string, multiplier int, subtype types.Sub) ReplacementAbility {
+	replacement := etbReplacement(text)
+	replacement.EntryDevourMultiplier = multiplier
+	replacement.EntryDevourSubtype = subtype
+	return ReplacementAbility{Text: text, Replacement: replacement}
+}
+
 // TributeReplacement creates the as-enters replacement that the Tribute keyword
 // abbreviates (CR 702.110): as this creature enters, an opponent of its
 // controller's choice may put count +1/+1 counters on it. If they do, the
@@ -364,18 +430,31 @@ func TributeReplacement(text string, count int) ReplacementAbility {
 // permanent enters its controller chooses one permanent matching selection to
 // copy; optional marks the "You may ..." form, notLegendary applies the "except
 // it isn't legendary" rider, and addTypes applies the "except it's an <type> in
-// addition to its other types" rider (CR 706, CR 614).
-func EntersAsCopyReplacement(text string, selection *Selection, optional, notLegendary bool, conditionalCounters []ConditionalCounterPlacement, untilEndOfTurn bool, addKeywords []Keyword, addTypes ...types.Card) ReplacementAbility {
+// addition to its other types" rider (CR 706, CR 614). addSubtypes applies the
+// matching "except it's a <subtype> in addition to its other types" rider
+// (Mockingbird's Bird, Synth Infiltrator's Synth).
+func EntersAsCopyReplacement(text string, selection *Selection, optional, notLegendary bool, conditionalCounters []ConditionalCounterPlacement, untilEndOfTurn bool, addKeywords []Keyword, addSubtypes []types.Sub, addTypes ...types.Card) ReplacementAbility {
 	replacement := etbReplacement(text)
 	replacement.EntersAsCopy = true
 	replacement.EntersAsCopyOptional = optional
 	replacement.EntersAsCopySelection = selection
 	replacement.EntersAsCopyNotLegendary = notLegendary
 	replacement.EntersAsCopyAddTypes = append([]types.Card(nil), addTypes...)
+	replacement.EntersAsCopyAddSubtypes = append([]types.Sub(nil), addSubtypes...)
 	replacement.EntersAsCopyConditionalCounters = append([]ConditionalCounterPlacement(nil), conditionalCounters...)
 	replacement.EntersAsCopyUntilEndOfTurn = untilEndOfTurn
 	replacement.EntersAsCopyAddKeywords = append([]Keyword(nil), addKeywords...)
 	return ReplacementAbility{Text: text, Replacement: replacement}
+}
+
+// EntersTappedAsCopy marks an enters-as-copy replacement so the permanent also
+// enters the battlefield tapped when it enters as its chosen copy (Vesuva's
+// "enter tapped as a copy of any land on the battlefield"). It wraps an
+// EntersAsCopyReplacement value rather than extending that constructor, so only
+// the tapped form carries the flag.
+func EntersTappedAsCopy(ability ReplacementAbility) ReplacementAbility {
+	ability.Replacement.EntersAsCopyTapped = true
+	return ability
 }
 
 // TokenCreationReplacement creates a persistent replacement that multiplies
@@ -397,13 +476,16 @@ func TokenCreationReplacement(text string, multiplier int, filter TriggerControl
 // replacement (CR 614). Multiplier multiplies the created token count (1 leaves
 // it unchanged) and Addend then adds a fixed number of extra tokens. Subtypes,
 // when non-empty, restricts the replacement to tokens carrying all listed
-// subtypes. Filter scopes which player's creations are affected. AddendDef, when
-// non-nil, makes the Addend create copies of that predefined token rather than
-// of the triggering token (Tippy-Toe's additional Food token).
+// subtypes; Types, when non-empty, additionally restricts it to tokens carrying
+// all listed card types ("one or more artifact tokens", Worldwalker Helm).
+// Filter scopes which player's creations are affected. AddendDef, when non-nil,
+// makes the Addend create copies of that predefined token rather than of the
+// triggering token (Tippy-Toe's additional Food token).
 type TokenCreationReplacementSpec struct {
 	Multiplier int
 	Addend     int
 	Subtypes   []types.Sub
+	Types      []types.Card
 	Filter     TriggerControllerFilter
 	AddendDef  *CardDef
 }
@@ -422,6 +504,7 @@ func TokenCreationReplacementFiltered(text string, spec *TokenCreationReplacemen
 			TokenMultiplier:       spec.Multiplier,
 			TokenAddend:           spec.Addend,
 			TokenRequiredSubtypes: append([]types.Sub(nil), spec.Subtypes...),
+			TokenRequiredTypes:    append([]types.Card(nil), spec.Types...),
 			TokenAddendDef:        spec.AddendDef,
 			Duration:              DurationPermanent,
 		},
@@ -481,6 +564,53 @@ func DrawCardMultiplierReplacement(text string, multiplier int, exceptFirstInDra
 	}
 }
 
+// MaxSpeedDrawCardMultiplierReplacement builds the "Max speed —" gated
+// draw-doubling replacement "Max speed — If you would draw a card, draw
+// <multiplier> cards instead." (Vnwxt, Verbose Host). It is a
+// DrawCardMultiplierReplacement whose effect applies only while the controller
+// has maximum speed (CR 702.179); the runtime evaluates ControllerHasMaxSpeed
+// against each in-flight draw event.
+func MaxSpeedDrawCardMultiplierReplacement(text string, multiplier int, exceptFirstInDrawStep bool) ReplacementAbility {
+	ability := DrawCardMultiplierReplacement(text, multiplier, exceptFirstInDrawStep)
+	ability.Replacement.Condition = opt.Val(MaxSpeedActivationCondition())
+	return ability
+}
+
+// DrawCardDigReplacement builds the draw-replacement dig "If you would draw a
+// card, instead look at the top <look> cards of your library, then put <take>
+// into your hand and the rest into your <remainder>." (Underrealm Lich). Each
+// time the controller would draw a card, they instead look at the top look cards
+// of their library, put take of them into their hand, and route the rest to
+// remainder. It is registered while its source is on the battlefield.
+func DrawCardDigReplacement(text string, look, take int, remainder DigRemainder) ReplacementAbility {
+	return ReplacementAbility{
+		Text: text,
+		Replacement: ReplacementEffect{
+			Description:          text,
+			MatchEvent:           EventCardDrawn,
+			ControllerFilter:     TriggerControllerYou,
+			DrawCardDigLook:      look,
+			DrawCardDigTake:      take,
+			DrawCardDigRemainder: remainder,
+			Duration:             DurationPermanent,
+		},
+	}
+}
+
+// SelfCounterPlacementReplacement creates a persistent replacement that modifies
+// placement of one specific counter kind on the source permanent itself by
+// multiplying the count and then adding a fixed amount, as in Mowu, Loyal
+// Companion ("If one or more +1/+1 counters would be put on Mowu, that many plus
+// one +1/+1 counters are put on it instead.", CR 614). Registration binds the
+// replacement to the source's object ID so it matches only that one permanent.
+func SelfCounterPlacementReplacement(text string, multiplier, addend int, kindFilter counter.Kind) ReplacementAbility {
+	replacement := AnyCounterPlacementReplacement(text, multiplier, addend, TriggerControllerAny)
+	replacement.Replacement.MatchCounterKind = true
+	replacement.Replacement.CounterKindFilter = kindFilter
+	replacement.Replacement.CounterRecipientSelf = true
+	return replacement
+}
+
 // CounterPlacementReplacement creates a persistent replacement that modifies
 // placement of one specific counter kind by multiplying the count and then
 // adding a fixed amount (CR 614).
@@ -488,7 +618,7 @@ func CounterPlacementReplacement(text string, multiplier, addend int, kindFilter
 	replacement := AnyCounterPlacementReplacement(text, multiplier, addend, filter)
 	replacement.Replacement.MatchCounterKind = true
 	replacement.Replacement.CounterKindFilter = kindFilter
-	replacement.Replacement.CounterRecipientTypes = []types.Card{types.Creature}
+	replacement.Replacement.CounterRecipientSelection = &Selection{RequiredTypes: []types.Card{types.Creature}}
 	replacement.Replacement.CounterUseRecipientController = true
 	return replacement
 }
@@ -537,7 +667,9 @@ func ControlledPermanentCounterKindPlacementReplacement(text string, multiplier,
 func ControlledPermanentTypesCounterPlacementReplacement(text string, multiplier, addend int, recipientTypesAny []types.Card, filter TriggerControllerFilter) ReplacementAbility {
 	replacement := AnyCounterPlacementReplacement(text, multiplier, addend, filter)
 	replacement.Replacement.CounterUseRecipientController = true
-	replacement.Replacement.CounterRecipientTypesAny = append([]types.Card(nil), recipientTypesAny...)
+	replacement.Replacement.CounterRecipientSelection = &Selection{
+		RequiredTypesAny: append([]types.Card(nil), recipientTypesAny...),
+	}
 	return replacement
 }
 
@@ -732,6 +864,50 @@ func BodyContent(body Ability) AbilityContent {
 	}
 }
 
+// BodyText returns the printed rules text of a sealed ability body, or "" for
+// variants that carry none (AbilityContent).
+func BodyText(body Ability) string {
+	switch b := body.(type) {
+	case *ActivatedAbility:
+		if b == nil {
+			return ""
+		}
+		return b.Text
+	case *ManaAbility:
+		if b == nil {
+			return ""
+		}
+		return b.Text
+	case *LoyaltyAbility:
+		if b == nil {
+			return ""
+		}
+		return b.Text
+	case *TriggeredAbility:
+		if b == nil {
+			return ""
+		}
+		return b.Text
+	case *ChapterAbility:
+		if b == nil {
+			return ""
+		}
+		return b.Text
+	case *ReplacementAbility:
+		if b == nil {
+			return ""
+		}
+		return b.Text
+	case *StaticAbility:
+		if b == nil {
+			return ""
+		}
+		return b.Text
+	default:
+		return ""
+	}
+}
+
 // BodyTargets returns the target specs for a sealed ability body's content.
 // Non-modal content uses its sole mode's targets; modal content uses shared targets.
 func BodyTargets(body Ability) []TargetSpec {
@@ -763,6 +939,26 @@ func BodyFunctionZone(body Ability) zone.Type {
 		return b.ZoneOfFunction
 	default:
 		return zone.None
+	}
+}
+
+// BodyAdditionalCosts returns the non-mana additional costs paid to use the
+// body (sacrifice, pay life, discard, exile, tap), or nil for bodies that have
+// none.
+func BodyAdditionalCosts(body Ability) []cost.Additional {
+	switch b := body.(type) {
+	case *ActivatedAbility:
+		if b == nil {
+			return nil
+		}
+		return b.AdditionalCosts
+	case *ManaAbility:
+		if b == nil {
+			return nil
+		}
+		return b.AdditionalCosts
+	default:
+		return nil
 	}
 }
 

@@ -1,7 +1,11 @@
 // Package parser recognizes the grammatical structure of Oracle text.
 package parser
 
-import "github.com/natefinch/council4/cardgen/oracle/shared"
+import (
+	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/mana"
+)
 
 // AbilityKind is the syntactic category of an Oracle-text ability.
 type AbilityKind string
@@ -25,6 +29,10 @@ const (
 	// AbilitySpellAlternativeCost is a spell paragraph that declares an
 	// optional alternative to its printed mana cost.
 	AbilitySpellAlternativeCost AbilityKind = "AbilitySpellAlternativeCost"
+	// AbilityLevelBand is a leveler card's "LEVEL lo-hi" / "LEVEL lo+" band
+	// header (CR 711). It carries the band's level range and printed P/T through
+	// Ability.LevelBand and has no resolving body of its own.
+	AbilityLevelBand AbilityKind = "AbilityLevelBand"
 )
 
 // Context supplies card-face facts that Oracle text alone cannot express.
@@ -32,9 +40,23 @@ type Context struct {
 	InstantOrSorcery bool `json:",omitempty"`
 	Planeswalker     bool `json:",omitempty"`
 	Saga             bool `json:",omitempty"`
+	// Class reports that the card is a Class enchantment. The parser uses it to
+	// recognize the Class level-up activated abilities ("{cost}: Level N") and
+	// the intrinsic Class reminder line, which share wording only Class cards use.
+	Class bool `json:",omitempty"`
+	// Leveler reports that the card is a leveler card (CR 711, layout "leveler").
+	// The parser uses it to recognize the "Level up {cost}" activated ability and
+	// the "LEVEL lo-hi" / "LEVEL lo+" band headers with their printed P/T, which
+	// share wording only leveler cards use.
+	Leveler bool `json:",omitempty"`
 	// CardName is the card's own name. The parser uses it to recognize explicit
 	// self-name references so the compiler need not inspect name spelling.
 	CardName string `json:",omitempty"`
+	// Legendary reports that the card is legendary. The parser uses it to admit
+	// the legend's "<short name> of <place>" pre-"of" short name as an additional
+	// self-name spelling (e.g. "Rosie Cotton" for "Rosie Cotton of South Lane"),
+	// a proper-noun self reference only legendary names denote unambiguously.
+	Legendary bool `json:",omitempty"`
 }
 
 // Document is a lossless syntax tree for one card face's Oracle text.
@@ -54,11 +76,23 @@ type Ability struct {
 	AbilityWord *AbilityWordClause `json:",omitempty"`
 	Chapters    []int              `json:",omitempty"`
 	ChapterSpan shared.Span        `json:"-"`
+	// ChapterFlavorSpan is the source span of a Saga chapter's flavor-name prefix
+	// (the first em dash and the Title-Case proper name set off before the
+	// effect, as in "I — Gungnir — Destroy ..."), or the zero span when the
+	// chapter has no flavor name. The name is rules-free flavor; consumers account
+	// for its tokens through this span so the effect body lowers as if absent.
+	ChapterFlavorSpan shared.Span `json:"-"`
 	// costPhrase is the source cost phrase recognized before the typed cost is
 	// emitted. It is parser-internal: the compiler consumes the typed cost via
 	// CostSyntax and only ever needs the cost's presence, not its tokens.
 	costPhrase *Phrase
-	Trigger    *TriggerClause `json:",omitempty"`
+	// wardCostPhrase is the source cost phrase of a "Ward—<cost>" keyword whose
+	// payment is a non-mana or composite cost (e.g. "Ward—{2}, Pay 2 life.",
+	// "Ward—Pay 3 life.", "Ward—Sacrifice a creature."). It is parser-internal;
+	// emitWardKeywordCost parses it into the typed WardCost carried on the Ward
+	// keyword so the compiler consumes the cost components there.
+	wardCostPhrase *Phrase
+	Trigger        *TriggerClause `json:",omitempty"`
 	// BodySpan is the source span of the ability's resolving body: the tokens
 	// after the activated/loyalty cost colon or the triggered event comma (and
 	// after any ability-word or chapter prefix). It is the zero span when the
@@ -95,6 +129,33 @@ type Ability struct {
 	ConditionClauses []ConditionClause `json:",omitempty"`
 	// StaticDeclarations are the ability's typed static declarations.
 	StaticDeclarations []StaticDeclarationSyntax `json:",omitempty"`
+	// Companion is the recognized companion keyword ability (CR 702.139), or nil
+	// when this paragraph is not a companion ability. The parser owns the
+	// companion wording (the standard "Companion — <deckbuilding condition>" form
+	// and the "<X>'s companion" partner variant, as on Barbara Wright's "Doctor's
+	// companion"); when it is set the paragraph's competing effect, keyword, and
+	// declaration semantics are cleared so downstream stages consume only the
+	// companion identity.
+	Companion *CompanionClause `json:",omitempty"`
+	// PartnerWith is the recognized "Partner with <name>" keyword ability (CR
+	// 702.124e), or nil when this paragraph is not a partner-with ability. The
+	// parser owns the "Partner with <name>" wording; when it is set the
+	// paragraph's competing effect, keyword, and declaration semantics are
+	// cleared so downstream stages consume only the partner-with identity.
+	PartnerWith *PartnerWithClause `json:",omitempty"`
+	// ChooseABackground is the recognized "Choose a Background" keyword ability
+	// (CR 702.124f), or nil when this paragraph is not a choose-a-background
+	// ability. The parser owns the "Choose a Background" wording; when it is set
+	// the paragraph's competing effect, keyword, and declaration semantics are
+	// cleared so downstream stages consume only the choose-a-background identity.
+	ChooseABackground *ChooseABackgroundClause `json:",omitempty"`
+	// Partner is the recognized "Partner" keyword ability (CR 702.124a) and its
+	// "Partner—<quality>" restricted variants (CR 702.124f), or nil when this
+	// paragraph is not a partner ability. The parser owns the "Partner" and
+	// "Partner—<quality>" wording; when it is set the paragraph's competing
+	// effect, keyword, declaration, and ability-word semantics are cleared so
+	// downstream stages consume only the partner identity.
+	Partner *PartnerClause `json:",omitempty"`
 	// ConditionSegments are the ability's condition clauses, pre-segmented over
 	// the same semantic token stream the compiler historically scanned.
 	ConditionSegments []ConditionSegment `json:",omitempty"`
@@ -118,6 +179,28 @@ type Ability struct {
 	Reminders        []Delimited                  `json:"-"`
 	Quoted           []Delimited                  `json:"-"`
 	Modal            *Modal                       `json:",omitempty"`
+	// DiceTable is the recognized die-roll outcome table that follows this
+	// ability's "Roll a d<N>." line ("1—9 | <effect>", "10—19 | <effect>",
+	// "20 | <effect>"). It is nil for abilities without an outcome table. Each
+	// row carries its inclusive result interval and its own resolving sentences;
+	// downstream stages consume these typed values instead of re-reading the
+	// row wording or the em-dash/pipe glyphs.
+	DiceTable *DiceTable `json:",omitempty"`
+	// CoinFlip is the recognized "Flip a coin." outcome on this ability: a flip
+	// sentence followed by one or both of "If you win the flip, <effect>." and
+	// "If you lose the flip, <effect>." branches. It is nil for abilities without
+	// a recognized coin flip. Each branch carries its own freshly parsed
+	// resolving sentences so downstream stages consume typed effects rather than
+	// re-reading the condition wording; the flip itself lowers to a fair
+	// two-sided random draw whose result gates the win and lose branches.
+	CoinFlip *CoinFlip `json:",omitempty"`
+	// Vote is the recognized "Starting with you, each player votes for <A> or
+	// <B>." voting construct (CR 701.32), or nil when the ability holds no vote.
+	// Like CoinFlip, the recognizer re-parses each "If <option> gets more
+	// votes[ or the vote is tied], ..." arm clause in isolation and sheds the
+	// consumed sentences' effects and condition wording, so the construct lowers
+	// to a Vote interaction whose tally gates each arm.
+	Vote *VoteClause `json:",omitempty"`
 	// ReadAheadSacrificeChapter is the final lore chapter named by a recognized
 	// "Read ahead" reminder ("Sacrifice after <chapter>"), or 0 when the reminder
 	// omits the sacrifice clause. The chapter is a typed semantic value derived
@@ -137,6 +220,30 @@ type Ability struct {
 	// fixed boilerplate; downstream stages consume this typed flag instead of
 	// re-reading the reminder wording.
 	DevoidRecognized bool `json:",omitempty"`
+	// ClassReminder reports that this ability is a Class enchantment's intrinsic
+	// level-up reminder ("(Gain the next level as a sorcery to add its
+	// ability.)"). Reminder text carries no game meaning, so downstream stages
+	// consume this typed flag instead of re-reading the reminder wording.
+	ClassReminder bool `json:",omitempty"`
+	// ClassLevelGain is the target level of a Class enchantment's level-up
+	// activated ability ("{cost}: Level N"), or 0 when this ability is not a
+	// level-up. The level number is a typed semantic value the parser reads from
+	// the ability body so downstream stages need not re-read the wording.
+	ClassLevelGain int `json:",omitempty"`
+	// LevelUpCost is the mana cost of a leveler card's "Level up {cost}" ability
+	// (CR 711), set only when LevelUpRecognized is true. The leveler activated
+	// ability puts a level counter on the source at sorcery speed; the cost is a
+	// typed semantic value the parser reads so downstream stages need not re-read
+	// the wording.
+	LevelUpCost cost.Mana `json:",omitempty"`
+	// LevelUpRecognized reports that this ability is a leveler card's intrinsic
+	// "Level up {cost}" activated ability line.
+	LevelUpRecognized bool `json:",omitempty"`
+	// LevelBand carries a leveler card's "LEVEL lo-hi" / "LEVEL lo+" band header
+	// with its printed base power/toughness. It is nil for non-band abilities.
+	// The abilities printed below a band header belong to that band until the
+	// next band header; downstream stages gate them by level-counter count.
+	LevelBand *LevelBand `json:",omitempty"`
 	// Atoms holds the source-spanned typed semantic atoms recognized within this
 	// ability's semantic tokens. Downstream stages consume these typed values by
 	// span instead of re-recognizing Oracle spelling.
@@ -158,17 +265,23 @@ const (
 	ExactSequenceUnknown ExactSequenceKind = iota
 	ExactSequenceChosenTypeLibraryTopToHand
 	ExactSequenceBottomHandThenDraw
+	ExactSequenceDiscardHandThenDraw
+	ExactSequenceConditionalLookAtTopReveal
 )
 
 // ExactSequenceSyntax records an exact sequence and its resolving-body span.
 // Bottom and DrawOffset are only meaningful for ExactSequenceBottomHandThenDraw:
 // Bottom selects the library end the hand cards move to, and DrawOffset is the
 // fixed number added to the "draw that many cards" count ("plus one" => 1).
+// LookAtTopCardTypes is only meaningful for
+// ExactSequenceConditionalLookAtTopReveal: it lists the card types whose
+// disjunction satisfies the "If it's a <type> card" gate before revealing.
 type ExactSequenceSyntax struct {
-	Kind       ExactSequenceKind
-	Span       shared.Span
-	Bottom     bool
-	DrawOffset int
+	Kind               ExactSequenceKind
+	Span               shared.Span
+	Bottom             bool
+	DrawOffset         int
+	LookAtTopCardTypes []CardType
 }
 
 // SourceAbilityCostReductionSyntax is the typed syntax for a source-local
@@ -366,6 +479,18 @@ const (
 	// (TriggerEventClause.UnionKind); a standalone dies trigger is a zone-change
 	// clause with ZoneChange.Kind == TriggerEventZoneChangeDied.
 	TriggerEventKindDied TriggerEventKind = "TriggerEventKindDied"
+	// TriggerEventKindAttacksUnblocked marks "this creature attacks and isn't
+	// blocked" (CR 509.1h). Unlike a bare attack clause it fires after the
+	// declare-blockers step, so it compiles to its own runtime event.
+	TriggerEventKindAttacksUnblocked TriggerEventKind = "TriggerEventKindAttacksUnblocked"
+	// TriggerEventKindClassBecameLevel marks "When this Class becomes level N"
+	// (CR 716), a self-source trigger on a Class enchantment reaching a new
+	// level. The target level is carried by TriggerEventClause.ClassBecameLevel.
+	TriggerEventKindClassBecameLevel TriggerEventKind = "TriggerEventKindClassBecameLevel"
+	// TriggerEventKindDoorUnlocked marks "When you unlock this door" (CR 715),
+	// the self-source trigger on a Room enchantment half that fires as that
+	// door becomes unlocked. Its subject is the ability's own source.
+	TriggerEventKindDoorUnlocked TriggerEventKind = "TriggerEventKindDoorUnlocked"
 )
 
 // TriggerEventSubjectKind identifies the grammatical subject in a trigger event.
@@ -408,6 +533,18 @@ const (
 	TriggerEventActorYou      TriggerEventActorKind = "TriggerEventActorYou"
 	TriggerEventActorPlayer   TriggerEventActorKind = "TriggerEventActorPlayer"
 	TriggerEventActorOpponent TriggerEventActorKind = "TriggerEventActorOpponent"
+)
+
+// TriggerCastTurnRelation restricts a spell-cast trigger to the caster's own
+// turn or to a turn that isn't theirs ("during your turn", "during an
+// opponent's turn").
+type TriggerCastTurnRelation string
+
+// Spell-cast turn relations recognized by the syntax parser.
+const (
+	TriggerCastTurnRelationNone        TriggerCastTurnRelation = ""
+	TriggerCastTurnRelationYourTurn    TriggerCastTurnRelation = "TriggerCastTurnRelationYourTurn"
+	TriggerCastTurnRelationNotYourTurn TriggerCastTurnRelation = "TriggerCastTurnRelationNotYourTurn"
 )
 
 // TriggerEventActor is a source-spanned acting player.
@@ -458,12 +595,13 @@ type TriggerEventZoneChange struct {
 
 // TriggerEventZoneContext is composable zone-change context.
 type TriggerEventZoneContext struct {
-	Span          shared.Span      `json:"-"`
-	MatchFromZone bool             `json:",omitempty"`
-	FromZone      TriggerEventZone `json:",omitzero"`
-	MatchToZone   bool             `json:",omitempty"`
-	ToZone        TriggerEventZone `json:",omitzero"`
-	ExcludeToZone bool             `json:",omitempty"`
+	Span            shared.Span      `json:"-"`
+	MatchFromZone   bool             `json:",omitempty"`
+	FromZone        TriggerEventZone `json:",omitzero"`
+	MatchToZone     bool             `json:",omitempty"`
+	ToZone          TriggerEventZone `json:",omitzero"`
+	ExcludeToZone   bool             `json:",omitempty"`
+	ExcludeFromZone bool             `json:",omitempty"`
 }
 
 // TriggerEventTappedStateKind identifies an ETB tapped-state qualifier.
@@ -559,6 +697,7 @@ const (
 	TriggerEventCounterAny              TriggerEventCounterKind = ""
 	TriggerEventCounterPlusOnePlusOne   TriggerEventCounterKind = "TriggerEventCounterPlusOnePlusOne"
 	TriggerEventCounterMinusOneMinusOne TriggerEventCounterKind = "TriggerEventCounterMinusOneMinusOne"
+	TriggerEventCounterLore             TriggerEventCounterKind = "TriggerEventCounterLore"
 )
 
 // TriggerEventCounter is a source-spanned counter kind.
@@ -580,6 +719,7 @@ type TriggerEventSpellSelection struct {
 	Kicker           bool              `json:",omitempty"`
 	Historic         bool              `json:",omitempty"`
 	ManaValueAtLeast int               `json:",omitempty"`
+	ManaValueAtMost  int               `json:",omitempty"`
 	MatchManaValue   bool              `json:",omitempty"`
 	FromZone         TriggerEventZone  `json:",omitzero"`
 	// Ordinal records a per-turn spell-cast position from "your Nth spell each
@@ -592,6 +732,13 @@ type TriggerEventSpellSelection struct {
 	// permanent chose as it entered. It lowers to the runtime
 	// Selection.SubtypeFromSourceEntryChoice predicate.
 	SubtypeFromEntryChoice bool `json:",omitempty"`
+	// CastNotFromHand records the trailing "from anywhere other than their hand"
+	// (or "your hand") cast-provenance restriction ("Whenever an opponent casts
+	// a spell from anywhere other than their hand"). It fires only for spells
+	// cast from a zone other than the caster's hand and lowers to the runtime
+	// ExcludeFromZone filter against the hand. Unlike FromZone, it is recognized
+	// for every caster actor, not only the controller-scoped "you".
+	CastNotFromHand bool `json:",omitempty"`
 }
 
 // TriggerEventClause is composable typed syntax for a trigger event.
@@ -631,6 +778,10 @@ type TriggerEventClause struct {
 	// that attacks alone, i.e. the only attacking creature this combat ("attacks
 	// alone", CR 506.5 / the Exalted wording).
 	AttackAlone bool `json:",omitempty"`
+	// AttackWhileSaddled marks an attacker-declared clause restricted to combats
+	// where the attacking source is saddled ("attacks while saddled", saddle
+	// CR 702.166).
+	AttackWhileSaddled bool `json:",omitempty"`
 	// AttackerCountAtLeast restricts a controller-scoped attack clause to combats
 	// where the controller attacks with at least this many creatures ("attack
 	// with two or more creatures"). Zero imposes no minimum.
@@ -641,12 +792,39 @@ type TriggerEventClause struct {
 	// TappedForMana restricts a becomes-tapped clause to taps that paid the cost
 	// of a mana ability ("is tapped for mana"), CR 106.11a / 605.
 	TappedForMana bool `json:",omitempty"`
+	// TappedForManaColor narrows a TappedForMana clause to taps that produced a
+	// specific type of mana, e.g. "tap a permanent for {C}" restricts to taps
+	// that added colorless mana. It is empty for the unrestricted "for mana"
+	// wording, which matches a tap that produced any type.
+	TappedForManaColor mana.Color `json:"-"`
 	// UnionKind names a second trigger event family whose constituent event
 	// joins Kind under a shared subject and actor, expressing "Whenever you
 	// create or sacrifice a token" (CR 603.2). The trigger fires when either the
 	// Kind event or the UnionKind event occurs. It is empty for single-event
 	// clauses.
 	UnionKind TriggerEventKind `json:",omitempty"`
+	// SpellTargetsSource is set on a spell-cast clause whose "that targets this
+	// creature" / "that targets <source name>" wording restricts the trigger to
+	// spells that target the source permanent (CR 603.2e, the Heroic ability
+	// word). It is empty for unrestricted spell-cast clauses.
+	SpellTargetsSource bool `json:",omitempty"`
+	// SpellTargetSelection restricts a spell-cast clause to spells that target a
+	// permanent matching this selection ("...that targets a creature you
+	// control" / "...a creature an opponent controls"). It is nil when the clause
+	// imposes no such relation. The self-target special case is carried by
+	// SpellTargetsSource instead and never co-occurs with this field.
+	SpellTargetSelection *TriggerSelection `json:",omitempty"`
+
+	// SpellCastTurnRelation restricts a spell-cast clause to the caster's own
+	// turn or to a turn that isn't theirs ("Whenever you cast a spell during
+	// your turn" / "during an opponent's turn"). It is empty for spell-cast
+	// clauses with no turn restriction.
+	SpellCastTurnRelation TriggerCastTurnRelation `json:",omitempty"`
+
+	// ClassBecameLevel carries the target level of a "When this Class becomes
+	// level N" clause (TriggerEventKindClassBecameLevel). It is zero for clauses
+	// of any other kind.
+	ClassBecameLevel int `json:",omitempty"`
 }
 
 // EventHistoryWindowKind identifies the turn window for an event-history
@@ -780,6 +958,7 @@ const (
 	PlayerEventActionGainLife       PlayerEventActionKind = "PlayerEventActionGainLife"
 	PlayerEventActionLoseLife       PlayerEventActionKind = "PlayerEventActionLoseLife"
 	PlayerEventActionSearchLibrary  PlayerEventActionKind = "PlayerEventActionSearchLibrary"
+	PlayerEventActionCommitCrime    PlayerEventActionKind = "PlayerEventActionCommitCrime"
 )
 
 // PlayerEventAction is a source-spanned player-event action.
@@ -798,6 +977,10 @@ const (
 	PlayerEventCardSingle    PlayerEventCardKind = "PlayerEventCardSingle"
 	PlayerEventCardOneOrMore PlayerEventCardKind = "PlayerEventCardOneOrMore"
 	PlayerEventCardAnother   PlayerEventCardKind = "PlayerEventCardAnother"
+
+	// PlayerEventCardThis is the self-referential card object "this card",
+	// naming the ability's own source ("When you cycle this card", CR 702.29e).
+	PlayerEventCardThis PlayerEventCardKind = "PlayerEventCardThis"
 )
 
 // PlayerEventCard is a source-spanned player-event card-object modifier.
@@ -809,6 +992,15 @@ type PlayerEventCard struct {
 	// card object, such as "a creature card" or "a noncreature, nonland card".
 	RequiredTypes []TriggerCardType `json:",omitempty"`
 	ExcludedTypes []TriggerCardType `json:",omitempty"`
+
+	// RequiredTypesAny and RequiredSubtypesAny record a disjunctive union on the
+	// event's card object: a card matching any one of the listed card types
+	// ("an artifact or creature card") or subtypes ("an Island, Pirate, or
+	// Vehicle card"). The two union dimensions are mutually exclusive because the
+	// runtime selection conjoins them, so a mixed type/subtype union fails
+	// closed in the parser.
+	RequiredTypesAny    []TriggerCardType `json:",omitempty"`
+	RequiredSubtypesAny []TriggerSubtype  `json:",omitempty"`
 }
 
 // PlayerEventOccurrenceKind identifies an event's supported turn-relative
@@ -821,6 +1013,11 @@ const (
 	PlayerEventOccurrenceAny             PlayerEventOccurrenceKind = "PlayerEventOccurrenceAny"
 	PlayerEventOccurrenceFirstEachTurn   PlayerEventOccurrenceKind = "PlayerEventOccurrenceFirstEachTurn"
 	PlayerEventOccurrenceOrdinalEachTurn PlayerEventOccurrenceKind = "PlayerEventOccurrenceOrdinalEachTurn"
+
+	// PlayerEventOccurrenceExceptFirstInDrawStep matches every qualifying draw
+	// except the first card a player draws during each of their draw steps
+	// ("except the first one they draw in each of their draw steps").
+	PlayerEventOccurrenceExceptFirstInDrawStep PlayerEventOccurrenceKind = "PlayerEventOccurrenceExceptFirstInDrawStep"
 )
 
 // PlayerEventOccurrence is a source-spanned player-event occurrence modifier.
@@ -872,6 +1069,12 @@ type Sentence struct {
 	// copy-stack-object effect. Reference and coverage scans treat its tokens as
 	// belonging to that copy effect rather than as an unrecognized sibling.
 	CopyChooseNewTargetsRider bool `json:",omitempty"`
+	// PlayFromTopPayLifeRider reports that this sentence is a credited "If you
+	// cast a spell this way, pay life equal to its mana value rather than pay its
+	// mana cost." rider folded onto a preceding play-from-library-top grant.
+	// Reference and coverage scans treat its tokens as belonging to that grant
+	// rather than as an unrecognized sibling.
+	PlayFromTopPayLifeRider bool `json:",omitempty"`
 }
 
 // StaticRuleSubjectKind identifies the source object constrained by a simple
@@ -885,6 +1088,39 @@ const (
 	StaticRuleSubjectSourcePermanent StaticRuleSubjectKind = "StaticRuleSubjectSourcePermanent"
 	StaticRuleSubjectSourceSpell     StaticRuleSubjectKind = "StaticRuleSubjectSourceSpell"
 	StaticRuleSubjectAttachedObject  StaticRuleSubjectKind = "StaticRuleSubjectAttachedObject"
+	// StaticRuleSubjectControlledCreatures scopes a static rule to the creatures
+	// the source's controller controls ("Creatures you control can't be
+	// blocked."). It is the only group-scoped rule subject; the compiler maps it
+	// to the controller-permanents affected group.
+	StaticRuleSubjectControlledCreatures StaticRuleSubjectKind = "StaticRuleSubjectControlledCreatures"
+	// StaticRuleSubjectBattlefieldCreatures scopes a static rule to every creature
+	// on the battlefield, optionally narrowed by a source-relative power filter
+	// ("Creatures with power less than this creature's power can't block ..."). The
+	// compiler maps it to the battlefield affected group; it backs the conditional
+	// "can't block" restrictions whose restricted blockers are any creatures, not
+	// only the controller's.
+	StaticRuleSubjectBattlefieldCreatures StaticRuleSubjectKind = "StaticRuleSubjectBattlefieldCreatures"
+	// StaticRuleSubjectOpponentControlledCreatures scopes a static rule to the
+	// creatures the source's controller's opponents control ("Creatures your
+	// opponents control attack each combat if able."). The compiler maps it to a
+	// battlefield affected group whose affected-permanent Selection scopes the
+	// controller to the opponent relation.
+	StaticRuleSubjectOpponentControlledCreatures StaticRuleSubjectKind = "StaticRuleSubjectOpponentControlledCreatures"
+)
+
+// StaticRuleBlockedObjectKind identifies the protected object an active "can't
+// block" restriction shields ("can't block it", "can't block creatures you
+// control"). It is the blocked-relationship scope of a block prohibition and is
+// unused for every other operation.
+type StaticRuleBlockedObjectKind string
+
+// Static-rule blocked-object scopes.
+const (
+	StaticRuleBlockedObjectNone   StaticRuleBlockedObjectKind = ""
+	StaticRuleBlockedObjectSource StaticRuleBlockedObjectKind = "StaticRuleBlockedObjectSource"
+	// StaticRuleBlockedObjectControlledCreatures shields the source controller's
+	// creatures ("can't block creatures you control").
+	StaticRuleBlockedObjectControlledCreatures StaticRuleBlockedObjectKind = "StaticRuleBlockedObjectControlledCreatures"
 )
 
 // StaticRuleConstraintKind identifies whether a rule prohibits or requires an
@@ -909,6 +1145,24 @@ const (
 	StaticRuleOperationCounter       StaticRuleOperationKind = "StaticRuleOperationCounter"
 	StaticRuleOperationAttackOrBlock StaticRuleOperationKind = "StaticRuleOperationAttackOrBlock"
 	StaticRuleOperationUntap         StaticRuleOperationKind = "StaticRuleOperationUntap"
+	// StaticRuleOperationTransform constrains transforming the subject ("...
+	// can't transform").
+	StaticRuleOperationTransform StaticRuleOperationKind = "StaticRuleOperationTransform"
+	// StaticRuleOperationBlockAndBeBlocked combines the active "block" and
+	// passive "be blocked" prohibitions printed as a single sentence ("can't
+	// block and can't be blocked"); it lowers to both block-domain rule effects.
+	StaticRuleOperationBlockAndBeBlocked StaticRuleOperationKind = "StaticRuleOperationBlockAndBeBlocked"
+	// StaticRuleOperationBlockedByAll is the true-lure requirement printed as
+	// "All creatures able to block <subject> do so." Every creature able to block
+	// the subject attacker must do so (CR 509.1c). It always pairs with a
+	// requirement constraint and passive voice.
+	StaticRuleOperationBlockedByAll StaticRuleOperationKind = "StaticRuleOperationBlockedByAll"
+	// StaticRuleOperationAssignDamageAsUnblocked is the permission printed as "You
+	// may have <subject> assign its combat damage as though it weren't blocked."
+	// The subject attacker may deal its combat damage to its attack target rather
+	// than to its blockers. It always pairs with a requirement constraint and
+	// passive voice.
+	StaticRuleOperationAssignDamageAsUnblocked StaticRuleOperationKind = "StaticRuleOperationAssignDamageAsUnblocked"
 )
 
 // StaticRuleVoice identifies the grammatical role the subject has in an
@@ -1010,6 +1264,12 @@ type StaticRuleSyntax struct {
 	// Order is the rule's dense source-order rank (of Span), used downstream to
 	// order static-rule effects without byte offsets.
 	Order shared.SourceOrder `json:"-"`
+	// BlockedObject names the protected object an active "can't block" restriction
+	// shields ("Creatures with power less than this creature's power can't block
+	// it.", "... can't block creatures you control."). The empty value means the
+	// block prohibition is unconditional ("Creatures can't block."); it is unused
+	// for every non-block operation.
+	BlockedObject StaticRuleBlockedObjectKind `json:",omitempty"`
 }
 
 // Delimited is parenthesized reminder text or a quoted granted ability.
@@ -1024,6 +1284,24 @@ type Modal struct {
 	header  Phrase
 	Options []Mode `json:",omitempty"`
 	Atoms   Atoms  `json:",omitzero"`
+	// Spree marks a Spree modal (CR 702.171): a "Spree" keyword header whose
+	// options are "+ {cost} — effect" lines, each with its own additional mana
+	// cost. The controller chooses one or more options and pays each chosen
+	// option's cost. It is recognized directly from the Spree header, so its
+	// choice range is set without consulting the choose-header vocabulary.
+	Spree bool `json:",omitempty"`
+	// Escalate marks an Escalate modal (CR 702.121): a "Escalate <cost>" keyword
+	// header printed above an ordinary choose-one-or-more modal whose controller
+	// pays EscalateCost once for each mode chosen beyond the first. Unlike Spree,
+	// every option shares the single escalate cost rather than carrying its own,
+	// so the cost lives on the modal rather than on each Mode.
+	Escalate bool `json:",omitempty"`
+	// EscalateCost is the additional mana cost paid for each mode chosen beyond
+	// the first on an Escalate modal. It is set only when Escalate is true.
+	EscalateCost cost.Mana `json:",omitempty"`
+	// EscalateSpan covers the recognized "Escalate <cost>" keyword header so
+	// coverage and rendering can credit its source tokens.
+	EscalateSpan shared.Span `json:"-"`
 	// MinModes and MaxModes are the recognized choice range of the choose
 	// header (e.g. "Choose two —" yields 2/2 and "Choose one or both —" yields
 	// 1/2). They are populated only when ChoiceKnown is true; downstream code
@@ -1035,6 +1313,80 @@ type Modal struct {
 	ChoiceBonus ModalChoiceBonusSyntax `json:",omitzero"`
 }
 
+// DiceTable is a recognized die-roll outcome table: a "Roll a d<N>." line
+// followed by result rows that each map an inclusive interval of the rolled
+// value to a resolving effect.
+type DiceTable struct {
+	// DieSides is the number of faces of the rolled die (the N in "d<N>"). An
+	// open-ended row ("15+ |") uses DieSides as its inclusive upper bound.
+	DieSides int            `json:",omitempty"`
+	Rows     []DiceTableRow `json:",omitempty"`
+}
+
+// DiceTableRow is one outcome row of a DiceTable: an inclusive result interval
+// [Min, Max] and the resolving sentences that apply when the roll lands in it.
+type DiceTableRow struct {
+	Span      shared.Span    `json:"-"`
+	Text      string         `json:",omitempty"`
+	Tokens    []shared.Token `json:"-"`
+	Min       int            `json:",omitempty"`
+	Max       int            `json:",omitempty"`
+	Sentences []Sentence     `json:",omitempty"`
+	Atoms     Atoms          `json:",omitzero"`
+}
+
+// CoinFlip is a recognized "Flip a coin." outcome and its win/lose branches.
+// The flip resolves to a fair two-sided random draw (CR 705); a win branch
+// applies on heads and a lose branch applies on tails. At least one branch is
+// present. Each branch holds its own freshly parsed resolving sentences, parsed
+// from the clause after "If you win the flip," / "If you lose the flip," so the
+// condition wording carries no residual effect tokens.
+type CoinFlip struct {
+	// Win holds the resolving sentences of the "If you win the flip, ..." branch,
+	// or nil when the ability has no win branch.
+	Win []Sentence `json:",omitempty"`
+	// Lose holds the resolving sentences of the "If you lose the flip, ..."
+	// branch, or nil when the ability has no lose branch.
+	Lose []Sentence `json:",omitempty"`
+	// Spans are the source spans of every sentence the coin-flip recognizer
+	// consumed (the flip sentence and each branch sentence). Coverage credits
+	// them whole because the recognizer fully accounts for their wording.
+	Spans []shared.Span `json:"-"`
+	// ConstructSpan covers the whole coin-flip construct, from the "Flip a coin."
+	// sentence through the last branch sentence. The compiler stamps it on every
+	// branch effect so the position-blind backend's body-span machinery covers
+	// the entire construct without reasoning about source offsets itself.
+	ConstructSpan shared.Span `json:"-"`
+}
+
+// VoteClause is the recognized "Starting with you, each player votes for <A> or
+// <B>." voting construct and its majority-gated arms (CR 701.32). Options holds
+// the two printed choice labels in printed order; Arms holds one entry per "If
+// <option> gets more votes[ or the vote is tied], <effect>." consequence, each
+// naming the option index it depends on and whether a tie also satisfies it.
+type VoteClause struct {
+	// Options are the two named choice labels in printed order.
+	Options []string `json:",omitempty"`
+	// Arms are the majority-gated consequences, in printed order.
+	Arms []VoteArm `json:",omitempty"`
+	// Spans are the source spans of every sentence the recognizer consumed (the
+	// voting sentence and each arm sentence). Coverage credits them whole.
+	Spans []shared.Span `json:"-"`
+	// ConstructSpan covers the whole construct, from the voting sentence through
+	// the last arm sentence. The compiler stamps it on every arm effect so the
+	// position-blind backend's body-span machinery covers the entire construct.
+	ConstructSpan shared.Span `json:"-"`
+}
+
+// VoteArm is one majority-gated consequence of a VoteClause. Option is the index
+// into VoteClause.Options whose vote count the arm depends on; TieInclusive
+// reports whether a tied vote also satisfies the arm ("or the vote is tied").
+type VoteArm struct {
+	Option       int        `json:",omitempty"`
+	TieInclusive bool       `json:",omitempty"`
+	Sentences    []Sentence `json:",omitempty"`
+}
+
 // ModalChoiceKind identifies exact modal header vocabulary whose range alone
 // is not sufficient to preserve fail-closed lowering.
 type ModalChoiceKind string
@@ -1044,6 +1396,12 @@ const (
 	ModalChoiceKindUnknown ModalChoiceKind = ""
 	// ModalChoiceKindOneOrMore marks the exact "choose one or more" header.
 	ModalChoiceKindOneOrMore ModalChoiceKind = "ModalChoiceKindOneOrMore"
+	// ModalChoiceKindOneAtRandom marks the exact "choose one at random" header,
+	// where the single mode is selected at random rather than by the controller
+	// (CR 700.2). Its range stays one/one; the kind preserves that the choice is
+	// not made by a player so downstream lowering can fail closed where random
+	// selection is unsupported.
+	ModalChoiceKindOneAtRandom ModalChoiceKind = "ModalChoiceKindOneAtRandom"
 )
 
 // ModalChoiceBonusCondition identifies a cast-time condition that expands a
@@ -1088,10 +1446,18 @@ type ModeLabelClause struct {
 
 // Mode is one bullet option in a modal ability.
 type Mode struct {
-	Span                   shared.Span             `json:"-"`
-	Text                   string                  `json:",omitempty"`
-	Tokens                 []shared.Token          `json:"-"`
-	Label                  *ModeLabelClause        `json:",omitempty"`
+	Span      shared.Span      `json:"-"`
+	Text      string           `json:",omitempty"`
+	Tokens    []shared.Token   `json:"-"`
+	Label     *ModeLabelClause `json:",omitempty"`
+	SpreeCost *SpreeCostClause `json:",omitempty"`
+	// FlavorSpan covers a Final Fantasy "Summon:" Saga modal option's flavor-name
+	// prefix ("Combine Powers! — Put three +1/+1 counters..."), a Title-Case
+	// proper name set off by an em dash. The name carries no rules meaning (CR
+	// 207.2c) and is stripped from the option body, so it lowers as if absent;
+	// the span is retained only so coverage credits the flavor tokens.
+	FlavorSpan             shared.Span             `json:"-"`
+	FlavorSeparatorSpan    shared.Span             `json:"-"`
 	Body                   Phrase                  `json:",omitzero"`
 	Sentences              []Sentence              `json:",omitempty"`
 	ConditionBoundaries    []ConditionBoundary     `json:",omitempty"`

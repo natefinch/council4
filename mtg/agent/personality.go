@@ -34,6 +34,14 @@ const (
 	riskHoldUpUnit       = 0.5 // hold-up penalty removed per risk point (as a fraction)
 	riskCardCostUnit     = 0.5 // reactive card-economy cost removed per risk point
 	politicsThreatUnit   = 1.0 // extra opponent-threat weight per politics point
+
+	// aggressionBoardUnit scales up the value an aggressive agent places on
+	// board-presence effects (tokens), per aggression point.
+	aggressionBoardUnit = 0.15
+	// aggressionCardUnit scales down the value an aggressive agent places on card
+	// advantage (drawing, and the cost of losing cards), per aggression point, so
+	// a controlling (low-aggression) agent values cards relatively more.
+	aggressionCardUnit = 0.10
 )
 
 // WithNoiseSource returns a copy of the personality that draws decision noise
@@ -70,6 +78,20 @@ func (p Personality) cardCostScale() float64 {
 
 func (p Personality) extraThreatWeight() float64 {
 	return p.PoliticsWeight * politicsThreatUnit
+}
+
+// boardValueScale scales the value of board-presence effects (tokens): an
+// aggressive agent weights developing a board more heavily. It never goes below
+// zero.
+func (p Personality) boardValueScale() float64 {
+	return max(0, 1+p.Aggression*aggressionBoardUnit)
+}
+
+// cardValueScale scales the value of card advantage (drawing, and the cost of
+// losing cards): an aggressive agent cares less about cards, a controlling one
+// more. It never goes below zero.
+func (p Personality) cardValueScale() float64 {
+	return max(0, 1-p.Aggression*aggressionCardUnit)
 }
 
 // noise returns the random jitter to add to one action score, or zero when no

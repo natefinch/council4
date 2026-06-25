@@ -37,10 +37,10 @@ func TestBareSubtypeTargetSpecMatchesBySubtype(t *testing.T) {
 		MaxTargets: 1,
 		Allow:      game.TargetAllowPermanent,
 		Constraint: "target Beast you control",
-		Predicate: game.TargetPredicate{
-			Subtypes:   []types.Sub{types.Beast},
-			Controller: game.ControllerYou,
-		},
+		Selection: opt.Val(game.Selection{
+			SubtypesAny: []types.Sub{types.Beast},
+			Controller:  game.ControllerYou,
+		}),
 	}
 
 	if !permanentTargetMatchesSpec(g, game.Player1, 0, &spec, ownBeast.ObjectID) {
@@ -67,11 +67,11 @@ func TestBareSubtypeAnotherTargetExcludesSource(t *testing.T) {
 		MaxTargets: 1,
 		Allow:      game.TargetAllowPermanent,
 		Constraint: "another target Soldier you control",
-		Predicate: game.TargetPredicate{
-			Subtypes:   []types.Sub{types.Soldier},
-			Controller: game.ControllerYou,
-			Another:    true,
-		},
+		Selection: opt.Val(game.Selection{
+			SubtypesAny:   []types.Sub{types.Soldier},
+			Controller:    game.ControllerYou,
+			ExcludeSource: true,
+		}),
 	}
 
 	if permanentTargetMatchesSpec(g, game.Player1, source.ObjectID, &spec, source.ObjectID) {

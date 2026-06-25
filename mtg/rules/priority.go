@@ -2,9 +2,13 @@ package rules
 
 import (
 	"slices"
+	"strings"
 
+	"github.com/natefinch/council4/mtg/eval"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 )
 
 func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
@@ -53,14 +57,20 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 			chosen = actionBuild.pass()
 		}
 
-		log.addAction(&ActionLog{
+		actionLog := &ActionLog{
 			Player: playerID,
 			Action: chosen,
-		})
+		}
+		recordActionSource(g, playerID, actionLog, chosen)
+		log.addAction(actionLog)
+		entryIndex := lastEntryIndex(log)
+		eventsBefore := len(g.Events)
 
 		if !e.applyActionWithChoices(g, playerID, chosen, agents, log) {
 			panic("applyAction failed for validated action")
 		}
+		recordActionManaTaps(g, log, entryIndex, eventsBefore)
+		recordLandEnteredTapped(g, log, entryIndex, chosen)
 		if chosen.Kind != action.ActionPass {
 			e.notifyActionObservers(g, agents, playerID, chosen)
 		}
@@ -86,6 +96,149 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 
 func observe(g *game.Game, playerID game.PlayerID) PlayerObservation {
 	return NewObservation(g, playerID)
+}
+
+// recordActionSource snapshots the permanent that is the source of an action so
+// the turn log can attribute the action to a named card, and flags activations
+// of mana abilities. Only activated abilities need the source snapshot: their
+// source is a battlefield permanent identified by object ID, whereas a land
+// played or spell cast from hand is already identified by its card instance ID
+// in the action payload. The snapshot is a no-op when the source is not a
+// battlefield permanent (for example an ability activated from a card in hand).
+func recordActionSource(g *game.Game, playerID game.PlayerID, actionLog *ActionLog, a action.Action) {
+	payload, ok := a.ActivateAbilityPayload()
+	if !ok {
+		return
+	}
+	actionLog.addPermanentSnapshot(g, payload.SourceID)
+	actionLog.ManaAbility = isManaAbilityActivation(g, playerID, payload)
+	actionLog.AbilityText = activatedAbilityText(g, playerID, payload)
+	actionLog.AbilityEffectSummary = activatedAbilityEffectSummary(g, playerID, payload)
+}
+
+// recordLandEnteredTapped flags a play-land action whose land entered the
+// battlefield tapped, on that action's log entry. It is called just after the
+// land enters, before the controller taps it for mana, so the permanent's tapped
+// state reflects entry (for example a tapland or a conditional "enters tapped
+// unless ..."). It writes to the logged entry by index because addAction stored
+// a copy of the action log before the land entered. It is a no-op for any other
+// action.
+func recordLandEnteredTapped(g *game.Game, log *TurnLog, entryIndex int, a action.Action) {
+	if log == nil || entryIndex < 0 || entryIndex >= len(log.Entries) {
+		return
+	}
+	payload, ok := a.PlayLandPayload()
+	if !ok {
+		return
+	}
+	for _, permanent := range g.Battlefield {
+		if permanent.CardInstanceID == payload.CardID {
+			if permanent.Tapped {
+				log.Entries[entryIndex].Action.LandEnteredTapped = true
+			}
+			return
+		}
+	}
+}
+
+// activatedAbilityEffectSummary returns a short value-oriented gloss of what the
+// activated ability costs and does, derived from the scorable-effect IR, or an
+// empty string when the ability cannot be resolved or the IR models none of its
+// effects.
+func activatedAbilityEffectSummary(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction) string {
+	if _, body, ok := activatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex); ok {
+		return eval.Describe(eval.ScorableAbilityOfModes(body, activate.ChosenModes))
+	}
+	if _, body, ok := handActivatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex); ok {
+		return eval.Describe(eval.ScorableAbilityOfModes(&body, activate.ChosenModes))
+	}
+	return ""
+}
+
+// activatedAbilityText returns the rules text describing the ability the action
+// activates, whether it is printed on a battlefield permanent or on a card
+// activated from hand (for example cycling). Generated card defs omit per-ability
+// text, so it falls back to the source's full oracle text. It returns "" when no
+// text is available.
+func activatedAbilityText(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction) string {
+	if _, body, ok := activatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex); ok {
+		if text := strings.TrimSpace(game.BodyText(body)); text != "" {
+			return text
+		}
+		if permanent, ok := permanentByObjectID(g, activate.SourceID); ok {
+			if def, ok := permanentFaceDef(g, permanent); ok {
+				return strings.TrimSpace(def.OracleText)
+			}
+		}
+		return ""
+	}
+	if card, body, ok := handActivatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex); ok {
+		if text := strings.TrimSpace(body.Text); text != "" {
+			return text
+		}
+		if card != nil && card.Def != nil {
+			return strings.TrimSpace(card.Def.OracleText)
+		}
+	}
+	return ""
+}
+
+// lastEntryIndex returns the index of the most recently appended turn-log entry,
+// or -1 when there is none (for example when log is nil and addAction was a
+// no-op).
+func lastEntryIndex(log *TurnLog) int {
+	if log == nil {
+		return -1
+	}
+	return len(log.Entries) - 1
+}
+
+// recordActionManaTaps attributes the permanents tapped for mana while applying
+// an action to that action's log entry, so a report can show how a spell or
+// ability was paid for, including lands tapped during cost payment. It scans the
+// events emitted since eventsBefore for tapped-for-mana taps.
+func recordActionManaTaps(g *game.Game, log *TurnLog, entryIndex, eventsBefore int) {
+	if log == nil || entryIndex < 0 || entryIndex >= len(log.Entries) {
+		return
+	}
+	var taps []ManaTap
+	for i := eventsBefore; i < len(g.Events); i++ {
+		event := g.Events[i]
+		if event.Kind != game.EventPermanentTapped || !event.TappedForMana {
+			continue
+		}
+		taps = append(taps, ManaTap{
+			Source: tappedManaSourceName(g, event.PermanentID),
+			Colors: manaColorCodes(event.ProducedManaColors),
+		})
+	}
+	if len(taps) > 0 {
+		log.Entries[entryIndex].Action.ManaTaps = taps
+	}
+}
+
+// tappedManaSourceName resolves the display name of a tapped mana source.
+func tappedManaSourceName(g *game.Game, permanentID id.ID) string {
+	permanent, ok := permanentByObjectID(g, permanentID)
+	if !ok {
+		return ""
+	}
+	if permanent.Token {
+		return permanentTokenName(permanent)
+	}
+	return permanentEffectiveName(g, permanent)
+}
+
+// manaColorCodes converts produced mana colors to their string codes.
+func manaColorCodes(colors []mana.Color) []string {
+	if len(colors) == 0 {
+		return nil
+	}
+	codes := make([]string, 0, len(colors))
+	for _, c := range colors {
+		codes = append(codes, string(c))
+	}
+	return codes
 }
 
 func agentFor(agents [game.NumPlayers]PlayerAgent, playerID game.PlayerID) PlayerAgent {

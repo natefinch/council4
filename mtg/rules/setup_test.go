@@ -13,7 +13,7 @@ func TestDrawCardMovesTopLibraryCardToHand(t *testing.T) {
 	engine := NewEngine(nil)
 	cardID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Top Card"}})
 
-	got, ok := engine.drawCard(g, game.Player1)
+	got, ok := engine.drawCard(g, game.Player1, false)
 	if !ok {
 		t.Fatal("drawCard() ok = false, want true")
 	}
@@ -35,7 +35,7 @@ func TestDrawCardEmptyLibrarySetsFailedDraw(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 
-	if _, ok := engine.drawCard(g, game.Player1); ok {
+	if _, ok := engine.drawCard(g, game.Player1, false); ok {
 		t.Fatal("drawCard() ok = true, want false")
 	}
 	if !g.FailedDraws[game.Player1] {

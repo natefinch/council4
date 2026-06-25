@@ -105,6 +105,33 @@ func TestParseEntersAsCopyConditionalCounters(t *testing.T) {
 	}
 }
 
+func TestParseEntersAsCopyAddSubtype(t *testing.T) {
+	effect := entersAsCopyEffect(t, "Mockingbird",
+		"You may have this creature enter as a copy of any creature on the battlefield, except it's a Bird in addition to its other types and it has flying.")
+	if len(effect.EntersAsCopyAddSubtypes) != 1 || effect.EntersAsCopyAddSubtypes[0] != types.Bird {
+		t.Errorf("add subtypes = %v, want [Bird]", effect.EntersAsCopyAddSubtypes)
+	}
+	if len(effect.EntersAsCopyAddKeywords) != 1 || effect.EntersAsCopyAddKeywords[0] != KeywordFlying {
+		t.Errorf("add keywords = %v, want [flying]", effect.EntersAsCopyAddKeywords)
+	}
+	if len(effect.EntersAsCopyAddTypes) != 0 {
+		t.Errorf("add types = %v, want none", effect.EntersAsCopyAddTypes)
+	}
+}
+
+func TestParseEntersAsCopyAddSubtypeAndCardTypes(t *testing.T) {
+	effect := entersAsCopyEffect(t, "Synth Infiltrator",
+		"You may have this creature enter as a copy of any creature on the battlefield, except it's a Synth artifact creature in addition to its other types.")
+	if len(effect.EntersAsCopyAddSubtypes) != 1 || effect.EntersAsCopyAddSubtypes[0] != types.Synth {
+		t.Errorf("add subtypes = %v, want [Synth]", effect.EntersAsCopyAddSubtypes)
+	}
+	wantTypes := []types.Card{types.Artifact, types.Creature}
+	if len(effect.EntersAsCopyAddTypes) != 2 ||
+		effect.EntersAsCopyAddTypes[0] != wantTypes[0] || effect.EntersAsCopyAddTypes[1] != wantTypes[1] {
+		t.Errorf("add types = %v, want %v", effect.EntersAsCopyAddTypes, wantTypes)
+	}
+}
+
 func hasEntersAsCopyEffect(t *testing.T, name, text string) bool {
 	t.Helper()
 	doc, _ := Parse(text, Context{CardName: name})
@@ -125,12 +152,32 @@ func TestParseEntersAsCopyFailsClosed(t *testing.T) {
 	cases := []struct{ name, text string }{
 		{"Essence of the Wild", "Creatures you control enter as a copy of this creature."},
 		{"Body Double", "You may have this creature enter as a copy of any creature card in a graveyard."},
-		{"Vesuva", "You may have this land enter tapped as a copy of any land on the battlefield."},
-		{"Synth Infiltrator", "You may have this creature enter as a copy of any creature on the battlefield, except it's a Synth artifact in addition to its other types."},
 	}
 	for _, tc := range cases {
 		if hasEntersAsCopyEffect(t, tc.name, tc.text) {
 			t.Errorf("%s: expected enters-as-copy to fail closed", tc.name)
 		}
+	}
+}
+
+func TestParseEntersTappedAsCopy(t *testing.T) {
+	effect := entersAsCopyEffect(t, "Vesuva",
+		"You may have this land enter tapped as a copy of any land on the battlefield.")
+	if !effect.EntersAsCopyOptional {
+		t.Error("expected optional copy")
+	}
+	if !effect.EntersAsCopyTapped {
+		t.Error("expected enters-tapped rider")
+	}
+	if len(effect.Selection.RequiredTypesAny) != 1 || effect.Selection.RequiredTypesAny[0] != CardTypeLand {
+		t.Errorf("selection required types = %v, want [Land]", effect.Selection.RequiredTypesAny)
+	}
+}
+
+func TestParseEntersAsCopyNotTappedByDefault(t *testing.T) {
+	effect := entersAsCopyEffect(t, "Clone",
+		"You may have Clone enter the battlefield as a copy of any creature on the battlefield.")
+	if effect.EntersAsCopyTapped {
+		t.Error("plain enters-as-copy must not set the enters-tapped rider")
 	}
 }

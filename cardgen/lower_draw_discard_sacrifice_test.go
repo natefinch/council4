@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -39,6 +40,35 @@ func TestLowerDrawTriggerYou(t *testing.T) {
 	}
 	if got.Trigger.Pattern.OneOrMore {
 		t.Error("Pattern.OneOrMore = true, want false")
+	}
+}
+
+// TestLowerUpkeepDrawIfGreatestToughness verifies that Abzan Beastmaster's
+// "draw a card if you control the creature with the greatest toughness or tied
+// for the greatest toughness" gates the upkeep draw on the greatest-toughness
+// condition.
+func TestLowerUpkeepDrawIfGreatestToughness(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Beastmaster",
+		Layout:     "normal",
+		ManaCost:   "{2}{G}",
+		TypeLine:   "Creature — Dog Shaman",
+		OracleText: "At the beginning of your upkeep, draw a card if you control the creature with the greatest toughness or tied for the greatest toughness.",
+		Colors:     []string{"G"},
+		Power:      new("2"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	instruction := face.TriggeredAbilities[0].Content.Modes[0].Sequence[0]
+	if _, ok := instruction.Primitive.(game.Draw); !ok {
+		t.Fatalf("primitive = %#v, want Draw", instruction.Primitive)
+	}
+	if !instruction.Condition.Exists ||
+		!instruction.Condition.Val.Condition.Val.ControllerControlsGreatestToughnessCreature {
+		t.Fatalf("draw was not gated on the greatest-toughness condition: %#v", instruction.Condition)
 	}
 }
 
@@ -337,8 +367,8 @@ func TestLowerDrawDiscardTriggerSupportedInterveningCondition(t *testing.T) {
 	if trigger.InterveningIf == "" || !trigger.InterveningCondition.Exists {
 		t.Fatalf("trigger = %+v, want intervening condition", trigger)
 	}
-	if trigger.InterveningCondition.Val.ControllerLifeAtLeast != 5 {
-		t.Errorf("condition = %+v, want ControllerLifeAtLeast 5", trigger.InterveningCondition.Val)
+	if got := trigger.InterveningCondition.Val.Aggregates; len(got) != 1 || got[0].Aggregate != game.AggregateControllerLife || got[0].Op != compare.GreaterOrEqual || got[0].Value != 5 {
+		t.Errorf("condition = %+v, want controller life >= 5", trigger.InterveningCondition.Val)
 	}
 }
 
@@ -465,6 +495,43 @@ func TestLowerSacrificeSpellEachOtherPlayerCreature(t *testing.T) {
 	}
 	if prim.Player.Kind() != game.PlayerReferenceNone {
 		t.Fatalf("player = %v, want none", prim.Player.Kind())
+	}
+	if prim.Amount.Value() != 1 {
+		t.Fatalf("amount = %d, want 1", prim.Amount.Value())
+	}
+	if !slices.Equal(prim.Selection.RequiredTypes, []types.Card{types.Creature}) {
+		t.Fatalf("selection = %#v, want creature filter", prim.Selection)
+	}
+}
+
+// TestLowerSacrificeSpellThatPlayerEventPlayerChoice covers the "that player
+// sacrifices ... of their choice" edict on a phase trigger (Sheoldred,
+// Whispering One): the player named by the triggering event chooses, lowered to
+// game.EventPlayerReference.
+func TestLowerSacrificeSpellThatPlayerEventPlayerChoice(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Praetor",
+		Layout:     "normal",
+		TypeLine:   "Legendary Creature — Praetor",
+		OracleText: "At the beginning of each opponent's upkeep, that player sacrifices a creature of their choice.",
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	if len(mode.Targets) != 0 {
+		t.Fatalf("targets = %d, want none", len(mode.Targets))
+	}
+	prim, ok := mode.Sequence[0].Primitive.(game.SacrificePermanents)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.SacrificePermanents", mode.Sequence[0].Primitive)
+	}
+	if prim.Player.Kind() != game.PlayerReferenceEventPlayer {
+		t.Fatalf("player = %v, want event player", prim.Player.Kind())
+	}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		t.Fatalf("player group = %v, want none", prim.PlayerGroup.Kind)
 	}
 	if prim.Amount.Value() != 1 {
 		t.Fatalf("amount = %d, want 1", prim.Amount.Value())
@@ -978,5 +1045,70 @@ func TestLowerSacrificeThenConditionalInsteadSearchSequence(t *testing.T) {
 	}
 	if !mode.Sequence[2].Condition.Exists || mode.Sequence[2].Condition.Val.Condition.Val.Negate {
 		t.Error("instead search should be gated on the non-negated condition")
+	}
+}
+
+// TestLowerSacrificeSpellTokenSubtype verifies that "Sacrifice a <token
+// subtype>." (Treasure, Food, ...) lowers the controller-sacrifice choice with
+// a SubtypesAny selection filter rather than a card-type filter, so the runtime
+// edict matches only permanents carrying that artifact-token subtype.
+func TestLowerSacrificeSpellTokenSubtype(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Treasure Edict",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Sacrifice a Treasure.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not found")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	prim, ok := mode.Sequence[0].Primitive.(game.SacrificePermanents)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.SacrificePermanents", mode.Sequence[0].Primitive)
+	}
+	if prim.Amount.Value() != 1 {
+		t.Fatalf("amount = %d, want 1", prim.Amount.Value())
+	}
+	if !slices.Equal(prim.Selection.SubtypesAny, []types.Sub{types.Treasure}) {
+		t.Fatalf("selection = %#v, want Treasure subtype filter", prim.Selection)
+	}
+	if len(prim.Selection.RequiredTypes) != 0 {
+		t.Fatalf("selection RequiredTypes = %#v, want none for a subtype-only edict", prim.Selection.RequiredTypes)
+	}
+}
+
+// TestLowerOptionalSacrificeTokenSubtype verifies the token-subtype sacrifice
+// composes as the optional X action in "You may sacrifice a <token subtype>. If
+// you do, <Y>.": the sacrifice is optional and publishes its result, and the
+// benefit is gated on it.
+func TestLowerOptionalSacrificeTokenSubtype(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Optional Food Sac",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "You may sacrifice a Food. If you do, draw a card.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not found")
+	}
+	sequence := face.SpellAbility.Val.Modes[0].Sequence
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions", sequence)
+	}
+	prim, ok := sequence[0].Primitive.(game.SacrificePermanents)
+	if !ok {
+		t.Fatalf("instruction[0] = %T, want game.SacrificePermanents", sequence[0].Primitive)
+	}
+	if !slices.Equal(prim.Selection.SubtypesAny, []types.Sub{types.Food}) {
+		t.Fatalf("selection = %#v, want Food subtype filter", prim.Selection)
+	}
+	if !sequence[0].Optional || sequence[0].PublishResult == "" {
+		t.Fatalf("sacrifice must be optional and publish a result: %#v", sequence[0])
+	}
+	if !sequence[1].ResultGate.Exists || sequence[1].ResultGate.Val.Succeeded != game.TriTrue {
+		t.Fatalf("draw must be gated on the sacrifice result: %#v", sequence[1])
 	}
 }

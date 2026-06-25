@@ -137,9 +137,14 @@ mana cost, additional costs, or both:
 ```go
 cost.Alternative{
 	Label:    "Flashback",
+	Mechanic: cost.AlternativeMechanicFlashback,
 	ManaCost: opt.Val(cost.Mana{cost.O(2), cost.R}),
 }
 ```
+
+`Alternative.Mechanic` names the rules mechanic an option grants (Flashback,
+Escape, Evoke). The rules layer recognizes graveyard-cast permissions and
+resolution riders from this typed field, never from the display `Label`.
 
 Put spell alternatives on `game.CardFace.AlternativeCosts`. Activated ability
 alternatives remain on the corresponding ability body.

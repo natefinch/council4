@@ -211,6 +211,71 @@ func TestLowerForEachTokenCount(t *testing.T) {
 	}
 }
 
+func TestLowerForEachNamedArtifactTokenCount(t *testing.T) {
+	t.Parallel()
+	t.Run("treasure for each artifact you control", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, &ScryfallCard{
+			Name:       "Test Treasure ForEach",
+			Layout:     "normal",
+			TypeLine:   "Sorcery",
+			OracleText: "Create a Treasure token for each artifact you control.",
+		})
+		create := createTokenPrimitive(t, face)
+		if create.EntryTapped {
+			t.Fatal("EntryTapped = true, want false")
+		}
+		def, ok := create.Source.TokenDefRef()
+		if !ok || def.Name != string(types.Treasure) {
+			t.Fatalf("token def = %#v, want a Treasure token", create.Source)
+		}
+		want := game.DynamicAmount{
+			Kind:       game.DynamicAmountCountSelector,
+			Multiplier: 1,
+			Group: game.BattlefieldGroup(game.Selection{
+				RequiredTypes: []types.Card{types.Artifact},
+				Controller:    game.ControllerYou,
+			}),
+		}
+		if got := create.Amount.DynamicAmount().Val; !reflect.DeepEqual(got, want) {
+			t.Fatalf("dynamic amount = %+v, want %+v", got, want)
+		}
+	})
+	t.Run("tapped powerstone for each other creature you control", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, &ScryfallCard{
+			Name:       "Test Powerstone ForEach",
+			Layout:     "normal",
+			TypeLine:   "Creature — Human Artificer",
+			OracleText: "When this creature enters, create a tapped Powerstone token for each other creature you control. (They're artifacts with \"{T}: Add {C}. This mana can't be spent to cast a nonartifact spell.\")",
+			Colors:     []string{"W"},
+		})
+		create, ok := face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive.(game.CreateToken)
+		if !ok {
+			t.Fatalf("primitive = %T, want game.CreateToken", face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive)
+		}
+		if !create.EntryTapped {
+			t.Fatal("EntryTapped = false, want true")
+		}
+		def, ok := create.Source.TokenDefRef()
+		if !ok || def.Name != string(types.Powerstone) {
+			t.Fatalf("token def = %#v, want a Powerstone token", create.Source)
+		}
+		want := game.DynamicAmount{
+			Kind:       game.DynamicAmountCountSelector,
+			Multiplier: 1,
+			Group: game.BattlefieldGroup(game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Controller:    game.ControllerYou,
+				ExcludeSource: true,
+			}),
+		}
+		if got := create.Amount.DynamicAmount().Val; !reflect.DeepEqual(got, want) {
+			t.Fatalf("dynamic amount = %+v, want %+v", got, want)
+		}
+	})
+}
+
 func TestLowerForEachGraveyardCardCount(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -567,7 +632,7 @@ func TestGenerateExecutableCardSourceTokenTargetOpponentRecipient(t *testing.T) 
 	for _, wanted := range []string{
 		`Constraint: "Target opponent",`,
 		"Allow:      game.TargetAllowPlayer,",
-		"Player: game.PlayerOpponent,",
+		"Player: game.PlayerOpponent",
 		"Primitive: game.CreateToken{",
 		"Recipient: opt.Val(game.TargetPlayerReference(0)),",
 		`Name:      "Horror",`,
@@ -602,7 +667,7 @@ func TestLowerTargetPlayerNamedTokenRecipient(t *testing.T) {
 		t.Fatalf("token def = %+v, want Treasure", create.Source)
 	}
 	targets := face.SpellAbility.Val.Modes[0].Targets
-	if len(targets) != 1 || targets[0].Predicate.Player != game.PlayerOpponent {
+	if len(targets) != 1 || targets[0].Selection.Val.Player != game.PlayerOpponent {
 		t.Fatalf("targets = %+v, want one opponent target", targets)
 	}
 }
@@ -625,8 +690,8 @@ func TestGenerateExecutableCardSourceCopyOfTargetCreatureToken(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"Constraint: \"target creature you control\",",
-		"PermanentTypes: []types.Card{types.Creature},",
-		"Controller:     game.ControllerYou,",
+		"RequiredTypesAny: []types.Card{types.Creature},",
+		"Controller: game.ControllerYou",
 		"Primitive: game.CreateToken{",
 		"Source: game.TokenCopyOf(game.TokenCopySpec{",
 		"Source: game.TokenCopySourceObject,",
@@ -804,7 +869,8 @@ func TestGenerateExecutableCardSourceCreatureTokenCompiles(t *testing.T) {
 	for _, wanted := range []string{
 		"Primitive: game.CreateToken{",
 		"Source: game.TokenDef(testTokenToken)",
-		"var testTokenToken = &game.CardDef{",
+		"var testTokenToken = newTestTokenToken()",
+		"func newTestTokenToken() *game.CardDef {",
 		`Name:      "Bear",`,
 		"Subtypes:  []types.Sub{types.Bear},",
 		"Power:     opt.Val(game.PT{Value: 2}),",
@@ -1264,7 +1330,8 @@ func TestGenerateExecutableCardSourceTreasureTokenCompiles(t *testing.T) {
 	for _, wanted := range []string{
 		"Primitive: game.CreateToken{",
 		"Amount: game.Fixed(2),",
-		"var testTreasureToken = &game.CardDef{",
+		"var testTreasureToken = newTestTreasureToken()",
+		"func newTestTreasureToken() *game.CardDef {",
 		`Name:     "Treasure",`,
 		"Types:    []types.Card{types.Artifact},",
 		"Subtypes: []types.Sub{types.Treasure},",
@@ -1530,6 +1597,41 @@ func TestGenerateExecutableCardSourceAttackingOnlyTokenRendersEntryAttacking(t *
 	}
 	if strings.Contains(source, "EntryTapped: true,") {
 		t.Fatalf("attacking-only token should not enter tapped:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceAttackingDefenderTokenRendersEntryAttacking(t *testing.T) {
+	t.Parallel()
+	// A created attacking token with an explicit "... attacking <defender>"
+	// designation (CR 508.4) lowers to EntryAttacking; the defender-agnostic
+	// runtime ignores the named defender. Covers the modern per-opponent
+	// templating (Adeline, Resplendent Cathar) and the bare "that player" /
+	// "that opponent" forms.
+	for _, oracle := range []string{
+		"For each opponent, create a 1/1 white Human creature token that's tapped and attacking that player or a planeswalker they control.",
+		"Create a 1/1 white Human creature token that's tapped and attacking that player.",
+		"Create a 1/1 white Human creature token that's tapped and attacking that opponent.",
+	} {
+		source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+			Name:       "Test Attacking Defender",
+			Layout:     "normal",
+			ManaCost:   "{1}{W}",
+			TypeLine:   "Sorcery",
+			OracleText: oracle,
+			Colors:     []string{"W"},
+		}, "t")
+		if err != nil {
+			t.Fatalf("%q: %v", oracle, err)
+		}
+		if len(diagnostics) != 0 {
+			t.Fatalf("%q: diagnostics = %#v", oracle, diagnostics)
+		}
+		if !strings.Contains(source, "EntryAttacking: true,") {
+			t.Fatalf("%q: source missing EntryAttacking:\n%s", oracle, source)
+		}
+		if !strings.Contains(source, "EntryTapped:") {
+			t.Fatalf("%q: tapped-and-attacking token should enter tapped:\n%s", oracle, source)
+		}
 	}
 }
 

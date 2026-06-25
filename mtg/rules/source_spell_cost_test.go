@@ -39,7 +39,7 @@ func sourceSpellReductionCard(name string, manaCost cost.Mana, selection game.Se
 func sourceSpellGenericReduction(g *game.Game, playerID game.PlayerID, card *game.CardDef) int {
 	state := &rulesPaymentState{g: g}
 	total := 0
-	for _, modifier := range state.CostModifiersForSpell(playerID, card, 0, zone.Hand) {
+	for _, modifier := range state.CostModifiersForSpell(playerID, card, 0, zone.Hand, nil) {
 		total += modifier.GenericReduction
 	}
 	return total
@@ -47,6 +47,63 @@ func sourceSpellGenericReduction(g *game.Game, playerID game.PlayerID, card *gam
 
 func anyCreatureSelection() game.Selection {
 	return game.Selection{RequiredTypes: []types.Card{types.Creature}}
+}
+
+// sourceSpellZoneReductionCard models a spell that costs perObject generic less
+// to cast for each card in the caster's own zone matching selection, encoded as
+// the AffectedSource spell cost modifier the cardgen backend emits for the
+// "This spell costs {N} less to cast for each <card> in your graveyard/hand"
+// ability.
+func sourceSpellZoneReductionCard(name string, manaCost cost.Mana, selection game.Selection, perObject int, cardZone zone.Type) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:     name,
+		Types:    []types.Card{types.Sorcery},
+		ManaCost: opt.Val(manaCost),
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:           game.RuleEffectCostModifier,
+				AffectedSource: true,
+				CostModifier: game.CostModifier{
+					Kind:               game.CostModifierSpell,
+					PerObjectReduction: perObject,
+					CountSelection:     &selection,
+					CountZone:          opt.Val(cardZone),
+				},
+			}},
+		}},
+	}}
+}
+
+func graveyardCreatureCard(g *game.Game, playerID game.PlayerID) {
+	cardID := addCardToHand(g, playerID, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Graveyard Creature",
+		Types: []types.Card{types.Creature},
+	}})
+	g.Players[playerID].Hand.Remove(cardID)
+	g.Players[playerID].Graveyard.Add(cardID)
+}
+
+func TestSourceSpellCostReductionCountsGraveyardCards(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	graveyardCreatureCard(g, game.Player1)
+	graveyardCreatureCard(g, game.Player1)
+	graveyardCreatureCard(g, game.Player2)
+	// A battlefield creature must not be counted: only the caster's graveyard.
+	addCreaturePermanent(g, game.Player1)
+	card := sourceSpellZoneReductionCard("Hollow Marauder", cost.Mana{cost.O(6), cost.B}, anyCreatureSelection(), 1, zone.Graveyard)
+
+	if got := sourceSpellGenericReduction(g, game.Player1, card); got != 2 {
+		t.Fatalf("reduction for each creature card in your graveyard = %d, want 2", got)
+	}
+}
+
+func TestSourceSpellCostReductionZeroGraveyardCardsNoReduction(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	card := sourceSpellZoneReductionCard("Hollow Marauder", cost.Mana{cost.O(6), cost.B}, anyCreatureSelection(), 1, zone.Graveyard)
+
+	if got := sourceSpellGenericReduction(g, game.Player1, card); got != 0 {
+		t.Fatalf("reduction with an empty graveyard = %d, want 0", got)
+	}
 }
 
 func TestSourceSpellCostReductionZeroCreaturesNoReduction(t *testing.T) {
@@ -214,5 +271,69 @@ func TestSourceSpellDynamicCostReductionNoCreaturesNoReduction(t *testing.T) {
 
 	if got := sourceSpellGenericReduction(g, game.Player1, card); got != 0 {
 		t.Fatalf("dynamic reduction with no creatures = %d, want 0", got)
+	}
+}
+
+// addArtifactWithManaValue puts a vanilla artifact with the given printed mana
+// value onto the battlefield under controller, used to drive total-mana-value
+// dynamic amounts.
+func addArtifactWithManaValue(g *game.Game, controller game.PlayerID, manaValue int) *game.Permanent {
+	cardID := g.IDGen.Next()
+	g.CardInstances[cardID] = &game.CardInstance{
+		ID: cardID,
+		Def: &game.CardDef{CardFace: game.CardFace{
+			Name:     "Test Artifact",
+			Types:    []types.Card{types.Artifact},
+			ManaCost: opt.Val(cost.Mana{cost.O(manaValue)}),
+		}},
+		Owner: controller,
+	}
+	permanent := &game.Permanent{
+		ObjectID:       g.IDGen.Next(),
+		CardInstanceID: cardID,
+		Owner:          controller,
+		Controller:     controller,
+	}
+	g.Battlefield = append(g.Battlefield, permanent)
+	return permanent
+}
+
+func totalManaValueArtifactsYouControlAmount() *game.DynamicAmount {
+	return &game.DynamicAmount{
+		Kind:  game.DynamicAmountTotalManaValueInGroup,
+		Group: game.BattlefieldGroup(artifactsYouControlSelection()),
+	}
+}
+
+func TestSourceSpellDynamicCostReductionTotalManaValue(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addArtifactWithManaValue(g, game.Player1, 2)
+	addArtifactWithManaValue(g, game.Player1, 5)
+	addArtifactWithManaValue(g, game.Player2, 4)
+	card := sourceSpellDynamicReductionCard("Metalwork Colossus", cost.Mana{cost.O(11)}, totalManaValueArtifactsYouControlAmount())
+
+	if got := sourceSpellGenericReduction(g, game.Player1, card); got != 7 {
+		t.Fatalf("dynamic reduction = %d, want 7 (total mana value of controlled artifacts)", got)
+	}
+}
+
+func artifactsYouControlSelection() game.Selection {
+	return game.Selection{RequiredTypes: []types.Card{types.Artifact}, Controller: game.ControllerYou}
+}
+
+// TestSourceSpellCostReductionAffinityForArtifacts exercises the cost modifier
+// that "Affinity for artifacts" lowers to: the spell costs {1} less to cast for
+// each artifact its caster controls, counting only the caster's artifacts.
+func TestSourceSpellCostReductionAffinityForArtifacts(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addArtifactPermanent(g, game.Player1)
+	addArtifactPermanent(g, game.Player1)
+	addArtifactPermanent(g, game.Player1)
+	addArtifactPermanent(g, game.Player2)
+	addCreaturePermanent(g, game.Player1)
+	card := sourceSpellReductionCard("Thought Monitor", cost.Mana{cost.O(5), cost.U, cost.U}, artifactsYouControlSelection(), 1)
+
+	if got := sourceSpellGenericReduction(g, game.Player1, card); got != 3 {
+		t.Fatalf("Affinity reduction with three controlled artifacts = %d, want 3", got)
 	}
 }

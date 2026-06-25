@@ -1,7 +1,11 @@
 package compiler
 
 import (
+	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -38,6 +42,29 @@ const (
 	TriggerEventAttackerBecameBlocked
 	TriggerEventTokenCreated
 	TriggerEventLibrarySearched
+	TriggerEventAttackerBecameUnblocked
+	TriggerEventClassBecameLevel
+	// TriggerEventDoorUnlocked is the self-source door-unlock trigger of a Room
+	// enchantment half ("When you unlock this door", CR 715). The runtime models
+	// the cast-door unlock that happens as the Room enters; lowering maps it onto
+	// the permanent-entered-battlefield event for that half.
+	TriggerEventDoorUnlocked
+	// TriggerEventCrimeCommitted is the acting-player "commit a crime" event
+	// (CR 700.15): a player puts a spell or ability on the stack that targets an
+	// opponent, an object an opponent controls, or a card in an opponent's
+	// graveyard.
+	TriggerEventCrimeCommitted
+)
+
+// TriggerCastTurn restricts a spell-cast pattern by whose turn the spell was
+// cast on, relative to the ability's controller.
+type TriggerCastTurn uint8
+
+// Spell-cast turn relations.
+const (
+	TriggerCastTurnAny TriggerCastTurn = iota
+	TriggerCastTurnYours
+	TriggerCastTurnNotYours
 )
 
 // TriggerSourceRelation identifies the event object's relationship to the
@@ -154,68 +181,7 @@ const (
 	TriggerCounterAny TriggerCounter = iota
 	TriggerCounterPlusOnePlusOne
 	TriggerCounterMinusOneMinusOne
-)
-
-// TriggerCardType identifies a card type used by a semantic trigger Selection.
-type TriggerCardType uint8
-
-// Trigger card types.
-const (
-	TriggerCardTypeUnknown TriggerCardType = iota
-	TriggerCardTypeArtifact
-	TriggerCardTypeBattle
-	TriggerCardTypeCreature
-	TriggerCardTypeEnchantment
-	TriggerCardTypeInstant
-	TriggerCardTypeLand
-	TriggerCardTypePlaneswalker
-	TriggerCardTypeSorcery
-)
-
-// TriggerColor identifies a color used by a semantic trigger Selection.
-type TriggerColor uint8
-
-// Trigger colors.
-const (
-	TriggerColorUnknown TriggerColor = iota
-	TriggerColorWhite
-	TriggerColorBlue
-	TriggerColorBlack
-	TriggerColorRed
-	TriggerColorGreen
-)
-
-// TriggerSubtype identifies a typed subtype used by a semantic trigger Selection.
-type TriggerSubtype = types.Sub
-
-// Trigger subtypes.
-const (
-	TriggerSubtypeUnknown TriggerSubtype = ""
-	TriggerSubtypeSpirit  TriggerSubtype = types.Spirit
-	TriggerSubtypeArcane  TriggerSubtype = types.Arcane
-)
-
-// TriggerSupertype identifies a supertype used by a semantic trigger Selection.
-type TriggerSupertype uint8
-
-// Trigger supertypes.
-const (
-	TriggerSupertypeUnknown TriggerSupertype = iota
-	TriggerSupertypeLegendary
-	TriggerSupertypeSnow
-)
-
-// TriggerKeyword identifies a keyword used by a semantic trigger Selection.
-type TriggerKeyword uint8
-
-// Trigger keywords.
-const (
-	TriggerKeywordUnknown TriggerKeyword = iota
-	TriggerKeywordDefender
-	TriggerKeywordFlash
-	TriggerKeywordFlying
-	TriggerKeywordHaste
-	TriggerKeywordShadow
+	TriggerCounterLore
 )
 
 // TriggerTriState is a closed semantic true/false filter.
@@ -238,52 +204,42 @@ const (
 	TriggerCombatStateBlocking
 )
 
-// TriggerComparison identifies an integer-comparison relation.
-type TriggerComparison uint8
-
-// Trigger comparison relations.
-const (
-	TriggerComparisonUnknown TriggerComparison = iota
-	TriggerComparisonEqual
-	TriggerComparisonAtMost
-	TriggerComparisonAtLeast
-)
-
-// TriggerNumberFilter is a closed semantic integer predicate.
-type TriggerNumberFilter struct {
-	Comparison TriggerComparison
-	Value      int
-}
-
 // TriggerSelection is the closed semantic Selection vocabulary currently used
 // by representable event subjects and cast spells. Its zero value is a
 // wildcard.
 type TriggerSelection struct {
-	RequiredTypes    []TriggerCardType
-	RequiredTypesAny []TriggerCardType
-	ExcludedTypes    []TriggerCardType
-	Supertypes       []TriggerSupertype
-	SubtypesAny      []TriggerSubtype
-	ColorsAny        []TriggerColor
-	ExcludedColors   []TriggerColor
+	RequiredTypes    []types.Card
+	RequiredTypesAny []types.Card
+	ExcludedTypes    []types.Card
+	Supertypes       []types.Super
+	SubtypesAny      []types.Sub
+	ColorsAny        []color.Color
+	ExcludedColors   []color.Color
 	Colorless        bool
 	Multicolored     bool
 	Tapped           TriggerTriState
 	CombatState      TriggerCombatState
-	Keyword          TriggerKeyword
-	ExcludedKeyword  TriggerKeyword
+	Keyword          parser.KeywordKind
+	ExcludedKeyword  parser.KeywordKind
 	NonToken         bool
 	TokenOnly        bool
 	ManaValueAtLeast int
+	ManaValueAtMost  int
 	MatchManaValue   bool
-	ManaValue        TriggerNumberFilter
-	Power            TriggerNumberFilter
-	Toughness        TriggerNumberFilter
+	ManaValue        compare.Int
+	Power            compare.Int
+	Toughness        compare.Int
 	Controller       ControllerKind
+	// MatchAnyCounter records a kind-agnostic "with a counter on it" subject
+	// qualifier. It lowers to the matching CompiledSelector counter dimension.
+	MatchAnyCounter bool
 	// SubtypeFromEntryChoice requires the matched object to share the creature
 	// subtype the predicate's source permanent chose as it entered ("of the
 	// chosen type"). It lowers to Selection.SubtypeFromSourceEntryChoice.
 	SubtypeFromEntryChoice bool
+	// Modified requires the matched permanent to be modified (a counter, Aura, or
+	// Equipment, CR 701.50). It lowers to Selection.MatchModified.
+	Modified bool
 }
 
 // TriggerPattern is a source-spanned semantic description of a representable
@@ -324,6 +280,8 @@ type TriggerPattern struct {
 	ToZone        TriggerZone
 	ExcludeToZone bool
 
+	ExcludeFromZone bool
+
 	MatchFaceDown bool
 	FaceDown      bool
 
@@ -340,6 +298,9 @@ type TriggerPattern struct {
 	// AttackAlone restricts an attacker-declared pattern to a creature that
 	// attacks alone (the only attacking creature this combat).
 	AttackAlone bool
+	// AttackWhileSaddled restricts an attacker-declared pattern to combats where
+	// the attacking source is saddled ("attacks while saddled", CR 702.166).
+	AttackWhileSaddled bool
 	// AttackerCountAtLeast restricts a controller-scoped attacker-declared
 	// pattern to combats with at least this many attacking creatures. Zero
 	// imposes no minimum.
@@ -356,15 +317,45 @@ type TriggerPattern struct {
 	// events ("Whenever you cast or copy ...", magecraft).
 	MatchSpellCopy bool
 
+	// SpellTargetsSource restricts a spell-cast pattern to spells that target
+	// the source permanent ("Whenever you cast a spell that targets this
+	// creature", the Heroic ability word).
+	SpellTargetsSource bool
+
+	// SpellTargetSelection restricts a spell-cast pattern to spells that target a
+	// permanent matching this selection ("Whenever you cast a spell that targets
+	// a creature you control"). It is nil when no such relation applies.
+	SpellTargetSelection *TriggerSelection
+
+	// CastDuringTurn restricts a spell-cast pattern by whose turn the spell was
+	// cast on, relative to the ability's controller ("Whenever you cast a spell
+	// during your turn" / "during an opponent's turn").
+	CastDuringTurn TriggerCastTurn
 	// TappedForMana restricts a permanent-tapped pattern to taps that paid a
 	// mana ability's cost ("is tapped for mana").
 	TappedForMana bool
+
+	// TappedForManaColor narrows a TappedForMana pattern to taps that produced a
+	// specific type of mana ("tap a permanent for {C}"). It is empty for the
+	// unrestricted "for mana" wording.
+	TappedForManaColor mana.Color
 
 	// NextOccurrence marks a one-shot "next" phase/step relation ("your next
 	// upkeep") rather than a recurring trigger. Such a pattern is representable
 	// only as a delayed triggered ability created when a spell resolves
 	// (CR 603.7), so direct trigger lowering rejects it.
 	NextOccurrence bool
+
+	// ExcludeFirstDrawInDrawStep narrows a card-draw pattern to draws other than
+	// the first card a player draws during each of their draw steps ("except the
+	// first one they draw in each of their draw steps", Orcish Bowmasters). It is
+	// only meaningful for the card-draw event.
+	ExcludeFirstDrawInDrawStep bool
+
+	// ClassBecameLevel restricts a class-level-gained pattern to the level the
+	// Class became ("When this Class becomes level N"). Zero imposes no
+	// restriction.
+	ClassBecameLevel int
 
 	InterveningCondition *CompiledCondition
 }

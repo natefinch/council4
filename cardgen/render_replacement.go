@@ -13,6 +13,10 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 	if ability.Replacement.EntersAsCopy {
 		return r.renderEntersAsCopyReplacement(ctx, ability)
 	}
+	if ability.Replacement.EntryDevourMultiplier > 0 &&
+		(ability.Replacement.EntryDevourType != "" || ability.Replacement.EntryDevourSubtype != "") {
+		return renderTypedDevourReplacement(ctx, ability)
+	}
 	if rendered, handled := renderStringReplacement(ability); handled {
 		return rendered, nil
 	}
@@ -167,9 +171,12 @@ func renderLifeModifierReplacement(ability *game.ReplacementAbility) (string, bo
 }
 
 // renderStringReplacement renders the replacements that depend only on the
-// ability text plus a few scalar parameters (Devour, draw-from-empty-library
-// win, draw multiplier, and the life-modifier family), reporting handled=false
-// when the replacement is none of these.
+// ability text plus a few scalar parameters (the creature-form Devour,
+// draw-from-empty-library win, draw multiplier, and the life-modifier family),
+// reporting handled=false when the replacement is none of these. Typed Devour
+// variants are rendered separately by renderTypedDevourReplacement, which is
+// dispatched before this function so the creature form's two-argument call here
+// stays unchanged.
 func renderStringReplacement(ability *game.ReplacementAbility) (string, bool) {
 	if ability.Replacement.EntryDevourMultiplier > 0 {
 		return fmt.Sprintf("game.DevourReplacement(%q, %d)", ability.Text, ability.Replacement.EntryDevourMultiplier), true
@@ -181,10 +188,52 @@ func renderStringReplacement(ability *game.ReplacementAbility) (string, bool) {
 		return fmt.Sprintf("game.DrawFromEmptyLibraryWinReplacement(%q)", ability.Text), true
 	}
 	if ability.Replacement.DrawCardMultiplier > 1 {
+		if ability.Replacement.Condition.Exists {
+			if ability.Replacement.Condition.Val.ControllerHasMaxSpeed {
+				return fmt.Sprintf("game.MaxSpeedDrawCardMultiplierReplacement(%q, %d, %t)",
+					ability.Text, ability.Replacement.DrawCardMultiplier, ability.Replacement.DrawCardExceptFirstInDrawStep), true
+			}
+			return "", false
+		}
 		return fmt.Sprintf("game.DrawCardMultiplierReplacement(%q, %d, %t)",
 			ability.Text, ability.Replacement.DrawCardMultiplier, ability.Replacement.DrawCardExceptFirstInDrawStep), true
 	}
+	if ability.Replacement.DrawCardDigLook > 0 {
+		return fmt.Sprintf("game.DrawCardDigReplacement(%q, %d, %d, %s)",
+			ability.Text, ability.Replacement.DrawCardDigLook, ability.Replacement.DrawCardDigTake,
+			renderDigRemainder(ability.Replacement.DrawCardDigRemainder)), true
+	}
 	return renderLifeModifierReplacement(ability)
+}
+
+// renderTypedDevourReplacement renders the typed Devour variants ("Devour
+// artifact N", "Devour land N", "Devour Food N") to their dedicated game
+// constructors, emitting the sacrificed permanent's card type or subtype literal
+// and requiring the types import.
+func renderTypedDevourReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	ctx.need(importTypes)
+	if ability.Replacement.EntryDevourSubtype != "" {
+		literal := SubtypeToLiteral(string(ability.Replacement.EntryDevourSubtype),
+			[]string{"Artifact", "Creature", "Land", "Enchantment", "Planeswalker", "Battle"})
+		return fmt.Sprintf("game.DevourSubtypeReplacement(%q, %d, %s)",
+			ability.Text, ability.Replacement.EntryDevourMultiplier, literal), nil
+	}
+	literal, err := cardTypeLiteral(ability.Replacement.EntryDevourType)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("game.DevourTypeReplacement(%q, %d, %s)",
+		ability.Text, ability.Replacement.EntryDevourMultiplier, literal), nil
+}
+
+// renderDigRemainder renders the DigRemainder destination constant for a
+// draw-replacement dig. The graveyard default and the library-bottom variant are
+// the only runtime placements.
+func renderDigRemainder(remainder game.DigRemainder) string {
+	if remainder == game.DigRemainderLibraryBottom {
+		return "game.DigRemainderLibraryBottom"
+	}
+	return "game.DigRemainderGraveyard"
 }
 
 // renderGroupEntersTappedReplacement renders a continuous static enters-tapped
@@ -202,12 +251,13 @@ func (Renderer) renderGroupEntersTappedReplacement(ctx *renderCtx, ability *game
 	if err != nil {
 		return "", err
 	}
-	if len(replacement.EntersTappedTypes) == 0 {
+	if replacement.EntersTappedSelection == nil {
 		return fmt.Sprintf("game.EntersTappedGroupReplacement(%q, %s)", ability.Text, controller), nil
 	}
 	ctx.need(importTypes)
-	typeLiterals := make([]string, 0, len(replacement.EntersTappedTypes))
-	for _, cardType := range replacement.EntersTappedTypes {
+	recipientTypes := replacement.EntersTappedSelection.RequiredTypesAny
+	typeLiterals := make([]string, 0, len(recipientTypes))
+	for _, cardType := range recipientTypes {
 		literal, err := cardTypeLiteral(cardType)
 		if err != nil {
 			return "", err
@@ -349,10 +399,26 @@ func renderCounterPlacementReplacement(ctx *renderCtx, ability *game.Replacement
 	if err != nil {
 		return "", err
 	}
-	if len(replacement.CounterRecipientTypesAny) > 0 {
+	if replacement.CounterRecipientSelf {
+		if !replacement.MatchCounterKind {
+			return "", errors.New("render: self counter-placement replacement requires a counter kind")
+		}
+		kind, err := renderCounterKind(replacement.CounterKindFilter)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importCounter)
+		return fmt.Sprintf("game.SelfCounterPlacementReplacement(%q, %d, %d, %s)",
+			ability.Text,
+			replacement.CounterMultiplier,
+			replacement.CounterAddend,
+			kind,
+		), nil
+	}
+	if sel := replacement.CounterRecipientSelection; sel != nil && len(sel.RequiredTypesAny) > 0 {
 		ctx.need(importTypes)
-		typeLiterals := make([]string, 0, len(replacement.CounterRecipientTypesAny))
-		for _, cardType := range replacement.CounterRecipientTypesAny {
+		typeLiterals := make([]string, 0, len(sel.RequiredTypesAny))
+		for _, cardType := range sel.RequiredTypesAny {
 			literal, err := cardTypeLiteral(cardType)
 			if err != nil {
 				return "", err
@@ -471,6 +537,7 @@ func renderTokenCreationReplacement(ctx *renderCtx, ability *game.ReplacementAbi
 	if replacement.ControllerFilter != game.TriggerControllerAny &&
 		replacement.TokenAddend == 0 &&
 		len(replacement.TokenRequiredSubtypes) == 0 &&
+		len(replacement.TokenRequiredTypes) == 0 &&
 		replacement.TokenMultiplier > 1 {
 		controller, err := renderTriggerController(replacement.ControllerFilter)
 		if err != nil {
@@ -507,6 +574,13 @@ func renderFilteredTokenCreationReplacement(ctx *renderCtx, ability *game.Replac
 		}
 		fields = append(fields, fmt.Sprintf("Subtypes: %s,", subtypes))
 	}
+	if len(replacement.TokenRequiredTypes) != 0 {
+		cardTypes, err := renderTypesCardSlice(ctx, replacement.TokenRequiredTypes)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Types: %s,", cardTypes))
+	}
 	if replacement.TokenAddendDef != nil {
 		fields = append(fields, fmt.Sprintf("AddendDef: %s,", ctx.tokenDefVar(replacement.TokenAddendDef)))
 	}
@@ -535,9 +609,13 @@ func (Renderer) renderGraveyardRedirectReplacement(ctx *renderCtx, ability *game
 	if err != nil {
 		return "", err
 	}
+	controlFilter, err := renderGroupEntersTappedController(replacement.RedirectControlFilter)
+	if err != nil {
+		return "", err
+	}
 	if len(replacement.RedirectTypeFilter) == 0 {
-		return fmt.Sprintf("game.GraveyardRedirectReplacement(%q, %s, %t)",
-			ability.Text, controller, fromBattlefieldOnly), nil
+		return fmt.Sprintf("game.GraveyardRedirectReplacement(%q, %s, %s, %t)",
+			ability.Text, controller, controlFilter, fromBattlefieldOnly), nil
 	}
 	ctx.need(importTypes)
 	typeLiterals := make([]string, 0, len(replacement.RedirectTypeFilter))
@@ -548,8 +626,8 @@ func (Renderer) renderGraveyardRedirectReplacement(ctx *renderCtx, ability *game
 		}
 		typeLiterals = append(typeLiterals, literal)
 	}
-	return fmt.Sprintf("game.GraveyardRedirectReplacement(%q, %s, %t, %s)",
-		ability.Text, controller, fromBattlefieldOnly, strings.Join(typeLiterals, ", ")), nil
+	return fmt.Sprintf("game.GraveyardRedirectReplacement(%q, %s, %s, %t, %s)",
+		ability.Text, controller, controlFilter, fromBattlefieldOnly, strings.Join(typeLiterals, ", ")), nil
 }
 
 func renderZoneDestinationReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
@@ -703,6 +781,21 @@ func (r Renderer) renderPay(ctx *renderCtx, pay game.Pay) (string, error) {
 	return structLit("game.Pay", fields), nil
 }
 
+func (r Renderer) renderPayRepeatedly(ctx *renderCtx, pay game.PayRepeatedly) (string, error) {
+	payment, err := r.renderResolutionPayment(ctx, pay.Payment)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Payment: %s,", payment)}
+	if pay.PublishCount != "" {
+		fields = append(fields, fmt.Sprintf("PublishCount: %q,", string(pay.PublishCount)))
+	}
+	if pay.Prompt != "" {
+		fields = append(fields, fmt.Sprintf("Prompt: %q,", pay.Prompt))
+	}
+	return structLit("game.PayRepeatedly", fields), nil
+}
+
 // renderConditionForETBReplacement renders a game.Condition for use in a
 // conditional enters-tapped replacement. Only the exact supported shape is
 // accepted; any other combination returns an error.
@@ -719,23 +812,22 @@ func (r Renderer) renderStaticAbilityCondition(ctx *renderCtx, cond *game.Condit
 }
 
 func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.Condition, context string) (string, error) {
-	if cond.ControllerLifeAtLeast < 0 ||
-		cond.ControllerHandSizeAtLeast < 0 ||
-		cond.AnyPlayerLifeAtMost < 0 ||
-		cond.OpponentCountAtLeast < 0 ||
-		cond.ControllerGraveyardCardCountAtLeast < 0 ||
-		cond.ControllerGraveyardCardTypeCountAtLeast < 0 ||
-		cond.ControllerBasicLandTypeCountAtLeast < 0 ||
-		cond.ControllerCreaturePowerDiversityAtLeast < 0 {
+	for i := range cond.Aggregates {
+		if cond.Aggregates[i].Value < 0 {
+			return "", fmt.Errorf("render: %s condition has a negative threshold", context)
+		}
+	}
+	if cond.AnyPlayerLifeAtMost < 0 ||
+		cond.SourceClassLevelAtLeast < 0 ||
+		cond.SourceClassLevelLessThan < 0 ||
+		cond.SourceLevelCountersAtLeast < 0 ||
+		cond.SourceLevelCountersLessThan < 0 ||
+		cond.ControllerGraveyardCardOfTypeCountAtLeast < 0 {
 		return "", fmt.Errorf("render: %s condition has a negative threshold", context)
 	}
 	// Reject unsupported condition fields.
-	if cond.SourceClassLevelAtLeast != 0 ||
-		cond.SourceClassLevelLessThan != 0 ||
-		cond.SourceNotMonstrous ||
-		cond.ControllerHasMaxSpeed ||
-		cond.TargetEnteredThisTurn.Exists ||
-		cond.CastFromZone.Exists {
+	if cond.SourceNotMonstrous ||
+		cond.TargetEnteredThisTurn.Exists {
 		return "", fmt.Errorf("render: unsupported condition shape for %s", context)
 	}
 	var fields []string
@@ -747,20 +839,6 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		return "", err
 	}
 	fields = append(fields, objectFields...)
-	if !cond.ControllerControls.Empty() {
-		filter := cond.ControllerControls
-		if filter.Power.Exists ||
-			filter.Toughness.Exists ||
-			filter.TotalPower.Exists {
-			return "", fmt.Errorf("render: unsupported PermanentFilter shape for %s condition", context)
-		}
-		filterStr, err := r.renderPermanentFilterForCondition(ctx, filter)
-		if err != nil {
-			return "", err
-		}
-		fields = append(fields, fmt.Sprintf("ControllerControls: %s,", filterStr))
-		hasPredicate = true
-	}
 	if cond.ControlsMatching.Exists {
 		rendered, err := r.renderSelectionCountForCondition(ctx, cond.ControlsMatching.Val)
 		if err != nil {
@@ -770,17 +848,28 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, fmt.Sprintf("ControlsMatching: opt.Val(%s),", rendered))
 		hasPredicate = true
 	}
-	if cond.ControllerLifeAtLeast > 0 {
-		fields = append(fields, fmt.Sprintf("ControllerLifeAtLeast: %d,", cond.ControllerLifeAtLeast))
+	if len(cond.Aggregates) > 0 {
+		rendered, err := renderAggregateComparisons(ctx, cond.Aggregates)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Aggregates: %s,", rendered))
 		hasPredicate = true
 	}
-	if cond.ControllerHandSizeAtLeast > 0 {
-		fields = append(fields, fmt.Sprintf("ControllerHandSizeAtLeast: %d,", cond.ControllerHandSizeAtLeast))
+	if cond.SourceClassLevelAtLeast > 0 {
+		fields = append(fields, fmt.Sprintf("SourceClassLevelAtLeast: %d,", cond.SourceClassLevelAtLeast))
 		hasPredicate = true
 	}
-	if cond.ControllerHandSizeExactly.Exists {
-		ctx.need(importOpt)
-		fields = append(fields, fmt.Sprintf("ControllerHandSizeExactly: opt.Val(%d),", cond.ControllerHandSizeExactly.Val))
+	if cond.SourceClassLevelLessThan > 0 {
+		fields = append(fields, fmt.Sprintf("SourceClassLevelLessThan: %d,", cond.SourceClassLevelLessThan))
+		hasPredicate = true
+	}
+	if cond.SourceLevelCountersAtLeast > 0 {
+		fields = append(fields, fmt.Sprintf("SourceLevelCountersAtLeast: %d,", cond.SourceLevelCountersAtLeast))
+		hasPredicate = true
+	}
+	if cond.SourceLevelCountersLessThan > 0 {
+		fields = append(fields, fmt.Sprintf("SourceLevelCountersLessThan: %d,", cond.SourceLevelCountersLessThan))
 		hasPredicate = true
 	}
 	if cond.AnyOpponentPoisonAtLeast > 0 {
@@ -789,10 +878,6 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	}
 	if cond.AnyPlayerLifeAtMost > 0 {
 		fields = append(fields, fmt.Sprintf("AnyPlayerLifeAtMost: %d,", cond.AnyPlayerLifeAtMost))
-		hasPredicate = true
-	}
-	if cond.OpponentCountAtLeast > 0 {
-		fields = append(fields, fmt.Sprintf("OpponentCountAtLeast: %d,", cond.OpponentCountAtLeast))
 		hasPredicate = true
 	}
 	if cond.ControllerHandEmpty {
@@ -807,8 +892,36 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, "SourceTributeNotPaid: true,")
 		hasPredicate = true
 	}
+	if cond.ControllerHasMaxSpeed {
+		fields = append(fields, "ControllerHasMaxSpeed: true,")
+		hasPredicate = true
+	}
+	if cond.SourceSaddled {
+		fields = append(fields, "SourceSaddled: true,")
+		hasPredicate = true
+	}
 	if cond.ControllerControlsCommander {
 		fields = append(fields, "ControllerControlsCommander: true,")
+		hasPredicate = true
+	}
+	if cond.FirstCombatPhaseOfTurn {
+		fields = append(fields, "FirstCombatPhaseOfTurn: true,")
+		hasPredicate = true
+	}
+	if cond.ControllerControlsGreatestPowerCreature {
+		fields = append(fields, "ControllerControlsGreatestPowerCreature: true,")
+		hasPredicate = true
+	}
+	if cond.ControllerControlsGreatestToughnessCreature {
+		fields = append(fields, "ControllerControlsGreatestToughnessCreature: true,")
+		hasPredicate = true
+	}
+	if len(cond.ControllerControlsNamed) > 0 {
+		quoted := make([]string, 0, len(cond.ControllerControlsNamed))
+		for _, name := range cond.ControllerControlsNamed {
+			quoted = append(quoted, fmt.Sprintf("%q", name))
+		}
+		fields = append(fields, fmt.Sprintf("ControllerControlsNamed: []string{%s},", strings.Join(quoted, ", ")))
 		hasPredicate = true
 	}
 	if cond.ControllerCreatedTokenThisTurn {
@@ -819,20 +932,28 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, "CastDuringControllerMainPhase: true,")
 		hasPredicate = true
 	}
-	if cond.ControllerGraveyardCardCountAtLeast > 0 {
-		fields = append(fields, fmt.Sprintf("ControllerGraveyardCardCountAtLeast: %d,", cond.ControllerGraveyardCardCountAtLeast))
+	if cond.SpellWasKicked {
+		fields = append(fields, "SpellWasKicked: true,")
 		hasPredicate = true
 	}
-	if cond.ControllerGraveyardCardTypeCountAtLeast > 0 {
-		fields = append(fields, fmt.Sprintf("ControllerGraveyardCardTypeCountAtLeast: %d,", cond.ControllerGraveyardCardTypeCountAtLeast))
+	if cond.CastFromZone.Exists {
+		castZone, err := renderZone(cond.CastFromZone.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importZone)
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("CastFromZone: opt.Val(%s),", castZone))
 		hasPredicate = true
 	}
-	if cond.ControllerBasicLandTypeCountAtLeast > 0 {
-		fields = append(fields, fmt.Sprintf("ControllerBasicLandTypeCountAtLeast: %d,", cond.ControllerBasicLandTypeCountAtLeast))
-		hasPredicate = true
-	}
-	if cond.ControllerCreaturePowerDiversityAtLeast > 0 {
-		fields = append(fields, fmt.Sprintf("ControllerCreaturePowerDiversityAtLeast: %d,", cond.ControllerCreaturePowerDiversityAtLeast))
+	if cond.ControllerGraveyardCardOfTypeCountAtLeast > 0 {
+		literal, err := cardTypeLiteral(cond.ControllerGraveyardCountCardType)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importTypes)
+		fields = append(fields, fmt.Sprintf("ControllerGraveyardCardOfTypeCountAtLeast: %d,", cond.ControllerGraveyardCardOfTypeCountAtLeast))
+		fields = append(fields, fmt.Sprintf("ControllerGraveyardCountCardType: %s,", literal))
 		hasPredicate = true
 	}
 	if cond.AnyOpponentControls.Exists {
@@ -1011,65 +1132,6 @@ func renderControlPlayerScope(scope game.ControlPlayerScope) (string, error) {
 	}
 }
 
-func (Renderer) renderPermanentFilterForCondition(ctx *renderCtx, filter game.PermanentFilter) (string, error) {
-	if filter.MinCount < 0 {
-		return "", errors.New("render: condition permanent-count threshold cannot be negative")
-	}
-	var fields []string
-	if len(filter.Types) > 0 {
-		lits, err := renderTypesCardSlice(ctx, filter.Types)
-		if err != nil {
-			return "", err
-		}
-		fields = append(fields, fmt.Sprintf("Types: %s,", lits))
-	}
-	if len(filter.Supertypes) > 0 {
-		ctx.need(importTypes)
-		literals := make([]string, 0, len(filter.Supertypes))
-		for _, st := range filter.Supertypes {
-			lit, err := supertypeLiteral(st)
-			if err != nil {
-				return "", err
-			}
-			literals = append(literals, lit)
-		}
-		fields = append(fields, fmt.Sprintf("Supertypes: []types.Super{%s},", strings.Join(literals, ", ")))
-	}
-	if len(filter.SubtypesAny) > 0 {
-		ctx.need(importTypes)
-		literals := make([]string, 0, len(filter.SubtypesAny))
-		cardTypes := make([]string, 0, len(filter.Types))
-		for _, cardType := range filter.Types {
-			cardTypes = append(cardTypes, string(cardType))
-		}
-		for _, subtype := range filter.SubtypesAny {
-			literals = append(literals, SubtypeToLiteral(string(subtype), cardTypes))
-		}
-		fields = append(fields, fmt.Sprintf("SubtypesAny: []types.Sub{%s},", strings.Join(literals, ", ")))
-	}
-	if len(filter.ColorsAny) > 0 {
-		literals, err := renderColorSlice(ctx, filter.ColorsAny)
-		if err != nil {
-			return "", err
-		}
-		fields = append(fields, fmt.Sprintf("ColorsAny: %s,", literals))
-	}
-	if len(filter.ExcludedColors) > 0 {
-		literals, err := renderColorSlice(ctx, filter.ExcludedColors)
-		if err != nil {
-			return "", err
-		}
-		fields = append(fields, fmt.Sprintf("ExcludedColors: %s,", literals))
-	}
-	if filter.MinCount != 0 {
-		fields = append(fields, fmt.Sprintf("MinCount: %d,", filter.MinCount))
-	}
-	if filter.ExcludeSource {
-		fields = append(fields, "ExcludeSource: true,")
-	}
-	return structLit("game.PermanentFilter", fields), nil
-}
-
 // renderEntersAsCopyReplacement renders the self enters-as-copy replacement
 // (Clone family) into a game.EntersAsCopyReplacement constructor call carrying
 // the copied-permanent selection, the optional "you may" flag, and the
@@ -1112,6 +1174,11 @@ func (r Renderer) renderEntersAsCopyReplacement(ctx *renderCtx, ability *game.Re
 		addKeywords = fmt.Sprintf("[]game.Keyword{%s}", strings.Join(rendered, ", "))
 	}
 	args = append(args, addKeywords)
+	addSubtypes, err := renderSubtypeSlice(ctx, ability.Replacement.EntersAsCopyAddSubtypes)
+	if err != nil {
+		return "", err
+	}
+	args = append(args, addSubtypes)
 	if len(ability.Replacement.EntersAsCopyAddTypes) > 0 {
 		ctx.need(importTypes)
 		for _, cardType := range ability.Replacement.EntersAsCopyAddTypes {
@@ -1123,6 +1190,9 @@ func (r Renderer) renderEntersAsCopyReplacement(ctx *renderCtx, ability *game.Re
 		}
 	}
 	rendered := fmt.Sprintf("game.EntersAsCopyReplacement(%s)", strings.Join(args, ", "))
+	if ability.Replacement.EntersAsCopyTapped {
+		rendered = fmt.Sprintf("game.EntersTappedAsCopy(%s)", rendered)
+	}
 	return rendered, nil
 }
 

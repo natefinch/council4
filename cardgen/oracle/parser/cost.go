@@ -93,6 +93,14 @@ type CostComponent struct {
 	ObjectNoun   ObjectNoun `json:",omitempty"`
 	ObjectIsCard bool       `json:",omitempty"`
 
+	// ObjectExcludedType constrains a permanent cost object to permanents that
+	// are not of the named card type, recognized from a "non-<type>" qualifier
+	// such as "nonland" in "Sacrifice ten nonland permanents." (Bolas's
+	// Citadel). ObjectExcludedTypeKnown reports its presence; the compiler maps
+	// the excluded type onto its runtime card type.
+	ObjectExcludedType      CardType `json:",omitempty"`
+	ObjectExcludedTypeKnown bool     `json:",omitempty"`
+
 	// SecondObjectNoun is the second permanent-type noun of a two-type cost
 	// union such as "sacrifice an artifact or creature." It is empty unless the
 	// object names two permanent types joined by "or".
@@ -111,6 +119,12 @@ type CostComponent struct {
 	CounterKind      counter.Kind       `json:",omitempty"`
 	CounterKindKnown bool               `json:",omitempty"`
 	SubtypesAny      []types.Sub        `json:",omitempty"`
+
+	// RemoveCounterAmong reports a "remove N counters from among <permanents>
+	// you control" cost, where the removed counters are spread across the
+	// chosen controlled permanents rather than taken from the ability's own
+	// source. The object noun/controller fields carry the permanent constraint.
+	RemoveCounterAmong bool `json:",omitempty"`
 
 	// ExcludeSource reports that the cost object excludes the ability's own
 	// source, recognized from the determiner "another" (e.g. "Sacrifice another
@@ -133,6 +147,31 @@ type CostComponent struct {
 	// compiler maps it onto its typed dynamic-amount vocabulary.
 	PayLifeDynamic PayLifeDynamicAmount `json:",omitempty"`
 
+	// AnyNumber reports a variable-cardinality card cost object printed as "any
+	// number of <cards>" (e.g. "Exile any number of historic cards from your
+	// graveyard with total mana value 30 or greater"). The payer chooses how
+	// many matching cards to exile rather than a fixed count; pairs with a
+	// constraint such as TotalManaValueAtLeast that bounds the choice.
+	AnyNumber bool `json:",omitempty"`
+
+	// ObjectHistoric reports that the cost object is constrained to historic
+	// cards (artifacts, legendaries, or Sagas; CR 702.61b), recognized from the
+	// "historic" qualifier on the card noun.
+	ObjectHistoric bool `json:",omitempty"`
+
+	// ObjectTokenOnly reports that the cost object is constrained to token
+	// permanents (CR 111), recognized from a "token" noun qualifier such as
+	// "an artifact token" or a bare "a token". The "<subtype> token" form (e.g.
+	// "a Blood token") constrains by subtype alone and does not set this flag.
+	ObjectTokenOnly bool `json:",omitempty"`
+
+	// TotalManaValueAtLeast, when positive, constrains a variable-cardinality
+	// card cost to "<cards> with total mana value N or greater": the payer
+	// exiles enough matching cards for their mana values to total at least N.
+	// It is recognized from the trailing "with total mana value N or
+	// greater/more" clause and pairs with AnyNumber.
+	TotalManaValueAtLeast int `json:",omitempty"`
+
 	// Order is the component's dense source-order rank, used downstream to test
 	// reference containment without byte offsets.
 	Order shared.SourceOrder `json:"-"`
@@ -147,6 +186,49 @@ func emitCost(abilities []Ability) {
 		}
 		cost := parseCost(*ability.costPhrase, ability.Kind, ability.Atoms)
 		ability.CostSyntax = &cost
+	}
+}
+
+// wardKeywordCostClause recognizes the cost clause of a "Ward—<cost>" keyword
+// ability, whose payment is a non-mana or composite cost set off by an em dash
+// (CR 702.21). It returns the source-spanned cost phrase after the em dash (the
+// trailing period excluded) when the pre-dash phrase is exactly the Ward
+// keyword, so the cost lowers through the same component grammar as an
+// activated-ability cost. Mana-only Ward ("Ward {2}") keeps its space-delimited
+// mana parameter and never reaches this clause.
+func wardKeywordCostClause(source string, tokens []shared.Token, dash int) (Phrase, bool) {
+	if !slices.Equal(normalizedWords(tokens[:dash]), []string{"ward"}) {
+		return Phrase{}, false
+	}
+	clause := tokens[dash+1:]
+	if period := shared.TopLevelIndex(clause, shared.Period); period >= 0 {
+		clause = clause[:period]
+	}
+	if len(clause) == 0 {
+		return Phrase{}, false
+	}
+	return phraseFromTokens(source, clause), true
+}
+
+// emitWardKeywordCost parses each recognized "Ward—<cost>" cost phrase into a
+// typed Cost and attaches it to the ability's Ward keyword(s). It runs after the
+// semantic keywords are computed so the cost rides on the same Keyword the
+// compiler reads, and after the atoms exist so the cost components recognize
+// their typed objects.
+func emitWardKeywordCost(abilities []Ability) {
+	for i := range abilities {
+		ability := &abilities[i]
+		if ability.wardCostPhrase == nil {
+			continue
+		}
+		cost := parseCost(*ability.wardCostPhrase, AbilityStatic, ability.Atoms)
+		for k := range ability.SemanticKeywords {
+			if ability.SemanticKeywords[k].Kind != KeywordWard {
+				continue
+			}
+			clone := cost
+			ability.SemanticKeywords[k].WardCost = &clone
+		}
 	}
 }
 
@@ -605,6 +687,40 @@ func annotateSacrificeCostObject(component *CostComponent, object []shared.Token
 			words = words[1:]
 		}
 	}
+	// "<excluded type> permanent(s)" restricts the sacrifice to permanents that
+	// are not of the named card type, e.g. "ten nonland permanents" (Bolas's
+	// Citadel). The "non-<type>" prefix is a typed excluded-card-type atom.
+	if len(words) == 2 {
+		if excluded, ok := atoms.ExcludedCardTypeAt(words[0].Span); ok {
+			if noun, ok := atoms.ObjectNounAt(words[1].Span); ok && noun == ObjectNounPermanent {
+				component.ObjectNoun = ObjectNounPermanent
+				component.ObjectExcludedType = excluded
+				component.ObjectExcludedTypeKnown = true
+				return
+			}
+		}
+	}
+	// "<type> token" / "token" restricts the sacrifice to token permanents
+	// (CR 111), e.g. "an artifact token" (Sophia, Dogged Detective) or a bare "a
+	// token". The "<subtype> token" form (e.g. "a Blood token") is left for
+	// annotateCostSubtypeWithNoun below, which constrains by subtype alone.
+	if len(words) >= 1 {
+		if last, ok := atoms.ObjectNounAt(words[len(words)-1].Span); ok && last == ObjectNounToken {
+			switch {
+			case len(words) == 1:
+				component.ObjectTokenOnly = true
+				component.ObjectNoun = ObjectNounPermanent
+				return
+			case len(words) == 2:
+				if noun, ok := atoms.ObjectNounAt(words[0].Span); ok && costObjectNounAccepted(noun) {
+					component.ObjectTokenOnly = true
+					component.ObjectNoun = noun
+					return
+				}
+			default:
+			}
+		}
+	}
 	if first, second, ok := costTwoTypeUnionNouns(words); ok {
 		if annotateCostTwoTypeUnionObject(component, first, second, atoms) {
 			return
@@ -843,20 +959,122 @@ func annotatePutCounterCostObject(component *CostComponent, object []shared.Toke
 
 func annotateRemoveCounterCostObject(component *CostComponent, object []shared.Token, atoms Atoms) {
 	counterIndex := singleCounterWordIndex(object)
-	if counterIndex <= 1 || counterIndex+2 >= len(object) || !equalWord(object[counterIndex+1], "from") {
+	if counterIndex < 1 || counterIndex+2 >= len(object) || !equalWord(object[counterIndex+1], "from") {
 		return
 	}
-	if !costAmountAt(component, object[0], atoms, false) ||
-		!costSelfReference(object[counterIndex+2:], atoms, true) {
+	kindTokens := object[1:counterIndex]
+	rest := object[counterIndex+2:]
+	if annotateRemoveCounterAmongObject(component, object[0], kindTokens, rest, atoms) {
 		return
 	}
-	kind, ok := exactCostCounterKind(object[1:counterIndex], atoms, removeCounterCostKinds())
+	if annotateRemoveCounterPermanentObject(component, object[0], kindTokens, rest, atoms) {
+		return
+	}
+	annotateRemoveCounterSourceObject(component, object[0], kindTokens, rest, atoms)
+}
+
+// annotateRemoveCounterSourceObject recognizes the single-source cost "Remove N
+// <kind> counters from <this permanent>", which removes the counters from the
+// ability's own source. It requires an explicit counter kind.
+func annotateRemoveCounterSourceObject(component *CostComponent, amount shared.Token, kindTokens, rest []shared.Token, atoms Atoms) {
+	if len(kindTokens) == 0 {
+		return
+	}
+	if !costAmountAt(component, amount, atoms, false) ||
+		!costSelfReference(rest, atoms, true) {
+		return
+	}
+	kind, ok := exactCostCounterKind(kindTokens, atoms, removeCounterCostKinds())
 	if !ok {
 		return
 	}
 	component.CounterKind = kind
 	component.CounterKindKnown = true
 	component.SourceSelf = true
+}
+
+// annotateRemoveCounterAmongObject recognizes the spread cost "Remove N <kind>
+// counters from among <permanents> you control", where the removed counters are
+// distributed across the chosen controlled permanents. The amount may be a fixed
+// count or X; the counter kind, when named, must be a recognized kind.
+func annotateRemoveCounterAmongObject(component *CostComponent, amount shared.Token, kindTokens, rest []shared.Token, atoms Atoms) bool {
+	if len(rest) < 4 ||
+		!equalWord(rest[0], "among") ||
+		!equalWord(rest[len(rest)-2], "you") ||
+		!equalWord(rest[len(rest)-1], "control") {
+		return false
+	}
+	typeTokens := rest[1 : len(rest)-2]
+	if !annotateCostPermanentObject(component, typeTokens, atoms, false, sacrificeSubtypeFamilies) {
+		return false
+	}
+	if !costAmountAt(component, amount, atoms, true) {
+		clearRemoveCounterAmongObject(component)
+		return false
+	}
+	if len(kindTokens) > 0 {
+		kind, ok := exactCostCounterKind(kindTokens, atoms, removeCounterCostKinds())
+		if !ok {
+			clearRemoveCounterAmongObject(component)
+			return false
+		}
+		component.CounterKind = kind
+		component.CounterKindKnown = true
+	}
+	component.ObjectController = ControllerRelationYouControl
+	component.RemoveCounterAmong = true
+	return true
+}
+
+// annotateRemoveCounterPermanentObject recognizes the single-permanent cost
+// "Remove a <kind> counter from a permanent you control", which removes one
+// counter from a single permanent the payer controls. It reuses the spread
+// removal machinery with a fixed amount of one: a single-permanent removal is a
+// spread removal that happens to draw its one counter from one chosen
+// permanent. The amount must be a fixed count; the counter kind, when named,
+// must be a recognized kind, and the permanent constraint comes from the named
+// noun.
+func annotateRemoveCounterPermanentObject(component *CostComponent, amount shared.Token, kindTokens, rest []shared.Token, atoms Atoms) bool {
+	if len(rest) < 4 ||
+		equalWord(rest[0], "among") ||
+		!equalWord(rest[len(rest)-2], "you") ||
+		!equalWord(rest[len(rest)-1], "control") {
+		return false
+	}
+	body := rest[:len(rest)-2]
+	if !equalWord(body[0], "a") && !equalWord(body[0], "an") {
+		return false
+	}
+	typeTokens := body[1:]
+	if !annotateCostPermanentObject(component, typeTokens, atoms, false, sacrificeSubtypeFamilies) {
+		return false
+	}
+	if !costAmountAt(component, amount, atoms, false) || component.AmountValue != 1 {
+		clearRemoveCounterAmongObject(component)
+		return false
+	}
+	if len(kindTokens) > 0 {
+		kind, ok := exactCostCounterKind(kindTokens, atoms, removeCounterCostKinds())
+		if !ok {
+			clearRemoveCounterAmongObject(component)
+			return false
+		}
+		component.CounterKind = kind
+		component.CounterKindKnown = true
+	}
+	component.ObjectController = ControllerRelationYouControl
+	component.RemoveCounterAmong = true
+	return true
+}
+
+// among-removal cost may have set so the component falls back to bare and
+// lowering fails closed.
+func clearRemoveCounterAmongObject(component *CostComponent) {
+	component.ObjectNoun = ObjectNounUnknown
+	component.ObjectController = ControllerRelationUnknown
+	component.SubtypesAny = nil
+	component.ObjectSupertype = ""
+	component.SupertypeKnown = false
 }
 
 func singleCounterWordIndex(tokens []shared.Token) int {
@@ -1039,6 +1257,7 @@ func annotateCostSupertypeObject(component *CostComponent, supertype Supertype, 
 }
 
 func annotateExileCostObject(component *CostComponent, object []shared.Token, atoms Atoms) {
+	object = annotateExileTotalManaValueClause(component, object)
 	if len(object) < 5 ||
 		!equalWord(object[len(object)-3], "from") ||
 		!equalWord(object[len(object)-2], "your") {
@@ -1063,6 +1282,9 @@ func annotateExileCostObject(component *CostComponent, object []shared.Token, at
 	// below does not classify as a card selector.
 	component.SourceZone = sourceZone
 	prefix := object[:len(object)-3]
+	if annotateExileAnyNumberPrefix(component, prefix, atoms) {
+		return
+	}
 	switch {
 	case len(prefix) == 2 && equalWord(prefix[0], "this") && costSelfExileNoun(prefix[1], atoms):
 		// "Exile this card/creature from your hand or graveyard" exiles the
@@ -1072,6 +1294,14 @@ func annotateExileCostObject(component *CostComponent, object []shared.Token, at
 	case len(prefix) == 2 && exileCardAmount(component, prefix[0], atoms) && costCardNoun(prefix[1], atoms):
 		component.ObjectNoun = ObjectNounCard
 		component.ObjectIsCard = true
+	case len(prefix) == 3 && exileCardAmount(component, prefix[0], atoms) &&
+		equalWord(prefix[1], "other") && costCardNoun(prefix[2], atoms):
+		// "Exile N other cards from your graveyard" (Escape): "other" excludes
+		// the escaping card itself, which is still in the graveyard while the
+		// cost is being paid and must not be exiled to satisfy its own cost.
+		component.ObjectNoun = ObjectNounCard
+		component.ObjectIsCard = true
+		component.ExcludeSource = true
 	case len(prefix) == 3 && exileCardAmount(component, prefix[0], atoms) && costCardNoun(prefix[2], atoms):
 		if noun, ok := atoms.ObjectNounAt(prefix[1].Span); ok {
 			if !costCardTypeNounAccepted(noun) {
@@ -1094,9 +1324,58 @@ func annotateExileCostObject(component *CostComponent, object []shared.Token, at
 	}
 }
 
-// exileCardSubtypeFamilies lists the card-type families whose subtypes a
-// graveyard exile cost object may name, e.g. "Exile an Elf card from your
-// graveyard." A named subtype must belong to one of these families to be
+// annotateExileTotalManaValueClause recognizes the trailing "with total mana
+// value N or greater/more" constraint on a variable-cardinality exile cost
+// object and records the threshold on the component. It returns the object
+// tokens with the recognized clause removed so the remaining "<cards> from your
+// <zone>" suffix recognition proceeds unchanged; the object is returned intact
+// when no such clause is present.
+func annotateExileTotalManaValueClause(component *CostComponent, object []shared.Token) []shared.Token {
+	const clauseLen = 7
+	if len(object) < clauseLen {
+		return object
+	}
+	clause := object[len(object)-clauseLen:]
+	if !equalWord(clause[0], "with") ||
+		!equalWord(clause[1], "total") ||
+		!equalWord(clause[2], "mana") ||
+		!equalWord(clause[3], "value") ||
+		!equalWord(clause[5], "or") ||
+		(!equalWord(clause[6], "greater") && !equalWord(clause[6], "more")) {
+		return object
+	}
+	threshold, err := strconv.Atoi(clause[4].Text)
+	if err != nil || threshold <= 0 {
+		return object
+	}
+	component.TotalManaValueAtLeast = threshold
+	return object[:len(object)-clauseLen]
+}
+
+// annotateExileAnyNumberPrefix recognizes a variable-cardinality exile cost
+// object prefix printed as "any number of [historic] cards" and records the
+// AnyNumber and ObjectHistoric flags. It reports whether the prefix matched so
+// the caller skips the fixed-count prefix recognition.
+func annotateExileAnyNumberPrefix(component *CostComponent, prefix []shared.Token, atoms Atoms) bool {
+	if len(prefix) < 4 || !startsWords(normalizedWords(prefix), "any", "number", "of") {
+		return false
+	}
+	rest := prefix[3:]
+	historic := false
+	if equalWord(rest[0], "historic") {
+		historic = true
+		rest = rest[1:]
+	}
+	if len(rest) != 1 || !costCardNoun(rest[0], atoms) {
+		return false
+	}
+	component.AnyNumber = true
+	component.ObjectHistoric = historic
+	component.ObjectNoun = ObjectNounCard
+	component.ObjectIsCard = true
+	return true
+}
+
 // recognized as an exile constraint.
 var exileCardSubtypeFamilies = []types.Card{
 	types.Artifact,

@@ -113,6 +113,7 @@ func TestVandalblastOverloadDoesNotReplaceForcedFlashback(t *testing.T) {
 	def := vandalblastDefinition()
 	def.AlternativeCosts = []cost.Alternative{{
 		Label:    "Flashback",
+		Mechanic: cost.AlternativeMechanicFlashback,
 		ManaCost: opt.Val(cost.Mana{cost.O(2), cost.R}),
 	}}
 	spellID := addCardToGraveyard(g, game.Player1, def)

@@ -682,3 +682,315 @@ func TestZoneChangeTriggerChosenTypeSubjectGatesOnSourceEntryChoice(t *testing.T
 		t.Fatal("chosen-type trigger matched a creature whose subtype is not the chosen type")
 	}
 }
+
+// addArtifactPermanent adds an Artifact permanent so the self-or-another
+// battlefield-to-graveyard union tests can distinguish a matching artifact from
+// a non-artifact creature.
+func addArtifactPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Scrap Artifact",
+		Types: []types.Card{types.Artifact},
+	}})
+}
+
+// selfGraveyardOrAnotherArtifactPattern models Scrap Trawler's "Whenever this
+// creature dies or another artifact you control is put into a graveyard from the
+// battlefield, ..." as the compiler lowers it: a battlefield-to-graveyard zone
+// change filtered to artifacts the source's controller controls, widened to the
+// source itself through SubjectSelectionOrSelf.
+func selfGraveyardOrAnotherArtifactPattern() *game.TriggerPattern {
+	return &game.TriggerPattern{
+		Event:                  game.EventZoneChanged,
+		Controller:             game.TriggerControllerYou,
+		SubjectSelectionOrSelf: true,
+		MatchFromZone:          true,
+		FromZone:               zone.Battlefield,
+		MatchToZone:            true,
+		ToZone:                 zone.Graveyard,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Artifact},
+		},
+	}
+}
+
+// TestSelfGraveyardOrAnotherArtifactTriggerFiresForAnotherArtifact verifies the
+// union fires when a different artifact the controller controls is put into a
+// graveyard from the battlefield.
+func TestSelfGraveyardOrAnotherArtifactTriggerFiresForAnotherArtifact(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, selfGraveyardOrAnotherArtifactPattern(),
+		[]game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	other := addArtifactPermanent(g, game.Player1)
+	if !movePermanentToZone(g, other, zone.Graveyard) {
+		t.Fatal("movePermanentToZone failed")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("self-or-another graveyard trigger did not fire for another artifact")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != source.ObjectID || obj.TriggerEvent.PermanentID != other.ObjectID {
+		t.Fatalf("top of stack = %+v, want trigger from source %v for %v", obj, source.ObjectID, other.ObjectID)
+	}
+}
+
+// TestSelfGraveyardOrAnotherArtifactTriggerFiresForSource verifies the union
+// fires when the source itself is put into a graveyard from the battlefield
+// (i.e. dies), even though the self-excluding "another" wording would otherwise
+// reject it.
+func TestSelfGraveyardOrAnotherArtifactTriggerFiresForSource(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, selfGraveyardOrAnotherArtifactPattern(),
+		[]game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	if !movePermanentToZone(g, source, zone.Graveyard) {
+		t.Fatal("movePermanentToZone failed")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("self-or-another graveyard trigger did not fire for its own source dying")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != source.ObjectID || obj.TriggerEvent.PermanentID != source.ObjectID {
+		t.Fatalf("top of stack = %+v, want self trigger from source %v", obj, source.ObjectID)
+	}
+}
+
+// TestSelfGraveyardOrAnotherArtifactTriggerDoesNotFireForNonArtifact verifies
+// the union does not fire when a non-artifact creature the controller controls
+// dies, since it neither matches the artifact selection nor is the source.
+func TestSelfGraveyardOrAnotherArtifactTriggerDoesNotFireForNonArtifact(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, selfGraveyardOrAnotherArtifactPattern(),
+		[]game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	creature := addCombatCreaturePermanent(g, game.Player1)
+	if !movePermanentToZone(g, creature, zone.Graveyard) {
+		t.Fatal("movePermanentToZone failed")
+	}
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("self-or-another graveyard trigger fired for a non-artifact, non-source creature")
+	}
+}
+
+// graveyardLeaveYouPattern models "Whenever one or more cards leave your
+// graveyard, ..." as the compiler lowers it: an any-card zone change whose
+// origin graveyard belongs to the source's controller.
+func graveyardLeaveYouPattern() *game.TriggerPattern {
+	return &game.TriggerPattern{
+		Event:         game.EventZoneChanged,
+		Player:        game.TriggerPlayerYou,
+		MatchFromZone: true,
+		FromZone:      zone.Graveyard,
+		OneOrMore:     true,
+	}
+}
+
+// TestGraveyardLeaveYouTriggerFiresWhenControllerCardLeavesGraveyard verifies
+// the trigger fires when a card the controller owns leaves the controller's
+// graveyard for another zone.
+func TestGraveyardLeaveYouTriggerFiresWhenControllerCardLeavesGraveyard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, graveyardLeaveYouPattern(),
+		[]game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	cardID := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Graveyard Card"}})
+	if !moveCardBetweenZones(g, game.Player1, cardID, zone.Graveyard, zone.Hand) {
+		t.Fatal("moveCardBetweenZones failed")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("graveyard-leave trigger did not fire when controller's card left their graveyard")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != source.ObjectID {
+		t.Fatalf("top of stack = %+v, want trigger from source %v", obj, source.ObjectID)
+	}
+}
+
+// TestGraveyardLeaveYouTriggerDoesNotFireForOpponentGraveyard verifies the
+// "your graveyard" scoping: a card leaving an opponent's graveyard must not
+// fire the controller's trigger.
+func TestGraveyardLeaveYouTriggerDoesNotFireForOpponentGraveyard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, graveyardLeaveYouPattern(),
+		[]game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	cardID := addCardToGraveyard(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Opponent Graveyard Card"}})
+	if !moveCardBetweenZones(g, game.Player2, cardID, zone.Graveyard, zone.Hand) {
+		t.Fatal("moveCardBetweenZones failed")
+	}
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("graveyard-leave trigger fired when an opponent's card left their graveyard")
+	}
+}
+
+// graveyardLeaveCreatureCardPattern models "Whenever one or more creature cards
+// leave your graveyard, ..." — the any-creature-card subject form whose origin
+// graveyard belongs to the source's controller.
+func graveyardLeaveCreatureCardPattern() *game.TriggerPattern {
+	return &game.TriggerPattern{
+		Event:         game.EventZoneChanged,
+		Player:        game.TriggerPlayerYou,
+		MatchFromZone: true,
+		FromZone:      zone.Graveyard,
+		OneOrMore:     true,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}
+}
+
+// TestGraveyardLeaveCreatureCardTriggerFiresOnlyForCreatureCards verifies the
+// typed-subject path: the trigger fires when a creature card leaves the
+// controller's graveyard but not when a noncreature card does.
+func TestGraveyardLeaveCreatureCardTriggerFiresOnlyForCreatureCards(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, graveyardLeaveCreatureCardPattern(),
+		[]game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	instant := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Graveyard Instant",
+		Types: []types.Card{types.Instant},
+	}})
+	if !moveCardBetweenZones(g, game.Player1, instant, zone.Graveyard, zone.Hand) {
+		t.Fatal("moveCardBetweenZones failed for instant")
+	}
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("creature-card graveyard-leave trigger fired for a noncreature card")
+	}
+
+	creature := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Graveyard Creature",
+		Types: []types.Card{types.Creature},
+	}})
+	if !moveCardBetweenZones(g, game.Player1, creature, zone.Graveyard, zone.Hand) {
+		t.Fatal("moveCardBetweenZones failed for creature")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("creature-card graveyard-leave trigger did not fire for a creature card")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != source.ObjectID {
+		t.Fatalf("top of stack = %+v, want trigger from source %v", obj, source.ObjectID)
+	}
+}
+
+// graveyardPutIntoFromAnywhereCreaturePattern models "Whenever a creature card
+// is put into your graveyard from anywhere, ..." — a card move into the
+// source controller's graveyard with no origin-zone constraint, so it fires for
+// deaths, mills, and discards alike.
+func graveyardPutIntoFromAnywhereCreaturePattern() *game.TriggerPattern {
+	return &game.TriggerPattern{
+		Event:       game.EventZoneChanged,
+		Player:      game.TriggerPlayerYou,
+		MatchToZone: true,
+		ToZone:      zone.Graveyard,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}
+}
+
+// TestGraveyardPutIntoFromAnywhereTriggerFiresOnMillAndDeath verifies the
+// "put into your graveyard from anywhere" form fires when a creature card is
+// milled (library to graveyard) and when a creature dies (battlefield to
+// graveyard), but not for a noncreature card or an opponent's graveyard.
+func TestGraveyardPutIntoFromAnywhereTriggerFiresOnMillAndDeath(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, graveyardPutIntoFromAnywhereCreaturePattern(),
+		[]game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	// A noncreature card milled into your graveyard must NOT fire.
+	land := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Wastes", Types: []types.Card{types.Land}}})
+	if !moveCardBetweenZones(g, game.Player1, land, zone.Library, zone.Graveyard) {
+		t.Fatal("moveCardBetweenZones failed for land")
+	}
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("put-into-graveyard creature trigger fired for a land card")
+	}
+
+	// A creature card milled into an opponent's graveyard must NOT fire.
+	oppCreature := addCardToLibrary(g, game.Player2, greenCreature())
+	if !moveCardBetweenZones(g, game.Player2, oppCreature, zone.Library, zone.Graveyard) {
+		t.Fatal("moveCardBetweenZones failed for opponent creature")
+	}
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("put-into-your-graveyard trigger fired for an opponent's graveyard")
+	}
+
+	// A creature card milled into your graveyard MUST fire.
+	creature := addCardToLibrary(g, game.Player1, greenCreature())
+	if !moveCardBetweenZones(g, game.Player1, creature, zone.Library, zone.Graveyard) {
+		t.Fatal("moveCardBetweenZones failed for creature")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("put-into-graveyard trigger did not fire for a milled creature card")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != source.ObjectID {
+		t.Fatalf("top of stack = %+v, want trigger from source %v", obj, source.ObjectID)
+	}
+	g.Stack.Pop()
+
+	// A creature dying (battlefield to your graveyard) MUST also fire.
+	dying := addCombatCreaturePermanent(g, game.Player1)
+	destroyPermanent(g, dying.ObjectID)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("put-into-graveyard trigger did not fire for a creature death")
+	}
+}
+
+// graveyardPutIntoExcludingBattlefieldCreaturePattern models "Whenever a
+// creature card is put into a graveyard from anywhere other than the
+// battlefield, ..." — a card move into the graveyard whose origin must not be
+// the battlefield, so it fires for mills and discards but not for deaths.
+func graveyardPutIntoExcludingBattlefieldCreaturePattern() *game.TriggerPattern {
+	return &game.TriggerPattern{
+		Event:           game.EventZoneChanged,
+		MatchToZone:     true,
+		ToZone:          zone.Graveyard,
+		ExcludeFromZone: true,
+		FromZone:        zone.Battlefield,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}
+}
+
+// TestGraveyardPutIntoExcludingBattlefieldTriggerSkipsDeaths verifies the "from
+// anywhere other than the battlefield" form fires when a creature card is milled
+// (library to graveyard) but not when a creature dies (battlefield to
+// graveyard).
+func TestGraveyardPutIntoExcludingBattlefieldTriggerSkipsDeaths(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, graveyardPutIntoExcludingBattlefieldCreaturePattern(),
+		[]game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	// A creature dying (battlefield to graveyard) must NOT fire.
+	dying := addCombatCreaturePermanent(g, game.Player1)
+	destroyPermanent(g, dying.ObjectID)
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("excluding-battlefield trigger fired for a creature death")
+	}
+
+	// A creature card milled into the graveyard (library to graveyard) MUST fire.
+	creature := addCardToLibrary(g, game.Player1, greenCreature())
+	if !moveCardBetweenZones(g, game.Player1, creature, zone.Library, zone.Graveyard) {
+		t.Fatal("moveCardBetweenZones failed for milled creature")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("excluding-battlefield trigger did not fire for a milled creature card")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != source.ObjectID {
+		t.Fatalf("top of stack = %+v, want trigger from source %v", obj, source.ObjectID)
+	}
+}

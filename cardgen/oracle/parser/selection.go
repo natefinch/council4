@@ -120,6 +120,18 @@ type TriggerSelection struct {
 	Power            TriggerSelectionNumber      `json:",omitzero"`
 	Toughness        TriggerSelectionNumber      `json:",omitzero"`
 
+	// MatchAnyCounter records a kind-agnostic "with a counter on it" subject
+	// qualifier. It compiles to the matching CompiledSelector counter dimension.
+	// A kind-specific "with a <kind> counter on it" wording is intentionally not
+	// recognized here: the runtime trigger event data exposes no per-kind counter
+	// information for a subject, so that form must stay unsupported (fail closed).
+	MatchAnyCounter bool `json:",omitempty"`
+
+	// Modified records a "modified" subject qualifier ("a modified creature you
+	// control"): the matched permanent must carry a counter or have an Aura or
+	// Equipment attached (CR 701.50). It compiles to Selection.MatchModified.
+	Modified bool `json:",omitempty"`
+
 	// SubtypeFromEntryChoice records a trailing "of the chosen type" qualifier
 	// ("a creature you control of the chosen type"), tying the matched permanent
 	// to the creature subtype the trigger's source permanent chose as it entered.
@@ -249,6 +261,8 @@ func consumeTriggerSelectionModifiers(words []string, selection *TriggerSelectio
 			selection.CombatState = TriggerSelectionAttacking
 		case "blocking":
 			selection.CombatState = TriggerSelectionBlocking
+		case "modified":
+			selection.Modified = true
 		default:
 			return words
 		}
@@ -360,12 +374,23 @@ func parseTriggerSelectionQualifier(words []string, excluded bool, selection *Tr
 	if excluded || len(words) < 2 {
 		return false
 	}
+	if triggerCounterAnyQualifier(words) {
+		selection.MatchAnyCounter = true
+		return true
+	}
 	var destination *TriggerSelectionNumber
 	switch {
 	case words[0] == "power":
 		destination = &selection.Power
 	case words[0] == "toughness":
 		destination = &selection.Toughness
+	case len(words) >= 3 && words[0] == "base" && words[1] == "power":
+		// A "base power N" subject filter has no runtime base-power
+		// characteristic distinct from current power; it lowers to the same
+		// power comparison the Power slot carries, the representable
+		// approximation that matches at the moment the subject enters.
+		destination = &selection.Power
+		words = words[1:]
 	case len(words) >= 3 && words[0] == "mana" && words[1] == "value":
 		destination = &selection.ManaValue
 		words = words[1:]
@@ -378,6 +403,20 @@ func parseTriggerSelectionQualifier(words []string, excluded bool, selection *Tr
 	}
 	*destination = number
 	return true
+}
+
+// triggerCounterAnyQualifier recognizes the kind-agnostic "with a counter on
+// it/them" subject qualifier. It returns false for any other shape, including a
+// kind-specific "with a <kind> counter on it" wording, so unrelated qualifiers
+// keep their existing handling and unrepresentable kind-specific forms fail
+// closed.
+func triggerCounterAnyQualifier(words []string) bool {
+	if len(words) != 4 || (words[0] != "a" && words[0] != "an") {
+		return false
+	}
+	return (words[1] == "counter" || words[1] == "counters") &&
+		words[2] == "on" &&
+		(words[3] == "it" || words[3] == "them")
 }
 
 func parseTriggerSelectionNumber(words []string) (TriggerSelectionNumber, bool) {

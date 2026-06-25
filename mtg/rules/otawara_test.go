@@ -119,9 +119,9 @@ func otawaraTestCard() *game.CardDef {
 					MinTargets: 1,
 					MaxTargets: 1,
 					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{PermanentTypes: []types.Card{
+					Selection: opt.Val(game.Selection{RequiredTypesAny: []types.Card{
 						types.Artifact, types.Creature, types.Enchantment, types.Planeswalker,
-					}},
+					}}),
 				}},
 				Sequence: []game.Instruction{{
 					Primitive: game.Bounce{Object: game.TargetPermanentReference(0)},

@@ -196,8 +196,8 @@ func TestValidateCardDefStackObjectTargetKinds(t *testing.T) {
 				Allow:      TargetAllowStackObject,
 				Predicate: TargetPredicate{
 					StackObjectKinds: []StackObjectKind{StackActivatedAbility},
-					PermanentTypes:   []types.Card{types.Creature},
 				},
+				Selection: opt.Val(Selection{RequiredTypesAny: []types.Card{types.Creature}}),
 			},
 			wantIssue: true,
 		},
@@ -275,7 +275,6 @@ func TestValidateCardDefStackObjectTargetKinds(t *testing.T) {
 					Controller: ControllerOpponent,
 				}),
 			},
-			wantIssue: true,
 		},
 		{
 			name: "stack target with unknown allow bit",
@@ -333,7 +332,8 @@ func TestValidateCardDefReportsInvalidTargetChooserSpec(t *testing.T) {
 				MinTargets: 1,
 				MaxTargets: 1,
 				Chooser:    TargetChooserOpponent,
-				Predicate:  TargetPredicate{Controller: ControllerOpponent},
+				Allow:      TargetAllowPermanent,
+				Selection:  opt.Val(Selection{Controller: ControllerOpponent}),
 			},
 		},
 		{
@@ -466,12 +466,12 @@ func TestValidateCardDefRejectsSelectionFieldsUnavailableInContext(t *testing.T)
 			}}},
 		},
 		{
-			name: "non-cast trigger card with color",
+			name: "non-cast trigger card with power",
 			face: CardFace{TriggeredAbilities: []TriggeredAbility{{
 				Content: Mode{}.Ability(),
 				Trigger: TriggerCondition{Pattern: TriggerPattern{
 					Event:         EventCardDrawn,
-					CardSelection: Selection{ColorsAny: []color.Color{color.Blue}},
+					CardSelection: Selection{Power: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 2})},
 				}},
 			}}},
 		},
@@ -538,7 +538,7 @@ func TestValidateCardDefMultiTargetSpecAdmitsPerSlotReferences(t *testing.T) {
 					MinTargets: 0,
 					MaxTargets: 3,
 					Allow:      TargetAllowPermanent,
-					Predicate:  TargetPredicate{PermanentTypes: []types.Card{types.Enchantment}},
+					Selection:  opt.Val(Selection{RequiredTypesAny: []types.Card{types.Enchantment}}),
 				}},
 				Sequence: sequence,
 			}.Ability()),

@@ -180,9 +180,9 @@ func TestRenderUsesEnchantMechanicTemplate(t *testing.T) {
 		MaxTargets: 1,
 		Constraint: "creature",
 		Allow:      game.TargetAllowPermanent,
-		Predicate: game.TargetPredicate{
-			PermanentTypes: []types.Card{types.Creature},
-		},
+		Selection: opt.Val(game.Selection{
+			RequiredTypesAny: []types.Card{types.Creature},
+		}),
 	}
 	card := &ScryfallCard{Name: "Test Aura", Layout: "normal", TypeLine: "Enchantment — Aura"}
 	def := &game.CardDef{CardFace: game.CardFace{
@@ -203,11 +203,11 @@ func TestRenderUsesEnchantMechanicTemplate(t *testing.T) {
 
 func TestRenderTargetPredicateQualifiers(t *testing.T) {
 	ctx := newRenderCtx()
-	lit, ok, err := (Renderer{}).renderTargetPredicate(ctx, game.TargetPredicate{
-		PermanentTypes:    []types.Card{types.Creature},
+	lit, err := (Renderer{}).renderSelection(ctx, game.Selection{
+		RequiredTypesAny:  []types.Card{types.Creature},
 		ExcludedTypes:     []types.Card{types.Artifact},
 		ExcludedSupertype: types.Basic,
-		Colors:            []color.Color{color.Green},
+		ColorsAny:         []color.Color{color.Green},
 		ExcludedColors:    []color.Color{color.Blue},
 		Controller:        game.ControllerYou,
 		Tapped:            game.TriTrue,
@@ -226,21 +226,18 @@ func TestRenderTargetPredicateQualifiers(t *testing.T) {
 			Op:    compare.Equal,
 			Value: 2,
 		}),
-		Another: true,
+		ExcludeSource: true,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !ok {
-		t.Fatal("renderTargetPredicate() did not render qualified predicate")
-	}
 	if _, ok := ctx.imports[importOpt]; !ok {
-		t.Fatal("renderTargetPredicate() did not request opt import")
+		t.Fatal("renderSelection() did not request opt import")
 	}
 	for _, want := range []string{
 		"ExcludedTypes: []types.Card{types.Artifact}",
 		"ExcludedSupertype: types.Basic",
-		"Colors: []color.Color{color.Green}",
+		"ColorsAny: []color.Color{color.Green}",
 		"ExcludedColors: []color.Color{color.Blue}",
 		"Controller: game.ControllerYou",
 		"Tapped: game.TriTrue",
@@ -250,10 +247,10 @@ func TestRenderTargetPredicateQualifiers(t *testing.T) {
 		"ManaValue: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 3})",
 		"Power: opt.Val(compare.Int{Op: compare.GreaterThan, Value: 1})",
 		"Toughness: opt.Val(compare.Int{Op: compare.Equal, Value: 2})",
-		"Another: true",
+		"ExcludeSource: true",
 	} {
 		if !strings.Contains(lit, want) {
-			t.Fatalf("predicate literal %q does not contain %q", lit, want)
+			t.Fatalf("selection literal %q does not contain %q", lit, want)
 		}
 	}
 }

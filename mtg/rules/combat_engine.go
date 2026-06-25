@@ -29,6 +29,7 @@ type combatEngine struct {
 // g.Combat; callers must not touch g.Combat while this is running.
 func (ce combatEngine) runPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	g.Turn.Phase = game.PhaseCombat
+	g.Turn.CombatPhasesThisTurn++
 	g.Combat = &game.CombatState{}
 	defer func() {
 		g.Combat = nil
@@ -154,6 +155,53 @@ func (ce combatEngine) declareBlockers(g *game.Game, agents [game.NumPlayers]Pla
 		}
 		ce.e.notifyActionObservers(g, agents, playerID, chosen)
 	}
+	emitUnblockedAttackerEvents(g)
+}
+
+// attackerDefendingPlayer returns the defending player an attacker was declared
+// against (AttackTarget.Player holds it even when a planeswalker or battle is the
+// direct target). A blocked attacker is always a current declared attacker, so
+// the lookup succeeds; it falls back to the active player only if no declaration
+// matches.
+func attackerDefendingPlayer(g *game.Game, attackerObjectID id.ID) game.PlayerID {
+	if g.Combat != nil {
+		for _, declaration := range g.Combat.Attackers {
+			if declaration.Attacker == attackerObjectID {
+				return declaration.Target.Player
+			}
+		}
+	}
+	return g.Turn.ActivePlayer
+}
+
+// emitUnblockedAttackerEvents fires EventAttackerBecameUnblocked once for each
+// attacker that no creature blocked, after every defending player has finished
+// declaring blockers (CR 509.1h). The events share a simultaneous batch so
+// "whenever this creature attacks and isn't blocked" triggers all see a single
+// declare-blockers boundary.
+func emitUnblockedAttackerEvents(g *game.Game) {
+	if g.Combat == nil || len(g.Combat.Attackers) == 0 {
+		return
+	}
+	batchID := g.IDGen.Next()
+	for _, declaration := range g.Combat.Attackers {
+		if g.Combat.BlockedAttackers[declaration.Attacker] {
+			continue
+		}
+		attacker, ok := permanentByObjectID(g, declaration.Attacker)
+		if !ok {
+			continue
+		}
+		emitEvent(g, game.Event{
+			Kind:           game.EventAttackerBecameUnblocked,
+			SourceID:       attacker.CardInstanceID,
+			SourceObjectID: attacker.ObjectID,
+			Controller:     effectiveController(g, attacker),
+			Player:         declaration.Target.Player,
+			PermanentID:    attacker.ObjectID,
+			SimultaneousID: batchID,
+		})
+	}
 }
 
 // legalAttackers returns the legal declare-attackers actions for playerID.
@@ -217,6 +265,8 @@ func (combatEngine) legalBlockers(g *game.Game, playerID game.PlayerID) []action
 	attackers := attacksAgainstPlayer(g, playerID)
 	blockers := eligibleBlockers(g, playerID)
 	required := satisfiableMustBlockAttackers(g, playerID, attackers, blockers)
+	lures := trueLureAttackers(g, attackers, blockers)
+	lureForcesBlock := lureForcesAnyBlocker(g, lures, blockers)
 	actions := make([]action.Action, 0, len(attackers)*len(blockers)+1)
 	for _, attacker := range attackers {
 		var allBlockers []game.BlockDeclaration
@@ -235,21 +285,120 @@ func (combatEngine) legalBlockers(g *game.Game, playerID game.PlayerID) []action
 			allBlockers = append(allBlockers, block)
 			if !attackerRequiresMultipleBlockers(g, attackingPermanent) {
 				declaration := []game.BlockDeclaration{block}
-				if blockDeclarationsSatisfyMustBlockRequirements(required, declaration) {
+				if blockDeclarationsSatisfyMustBlockRequirements(required, declaration) &&
+					blockDeclarationsSatisfyLures(g, lures, blockers, declaration) {
 					actions = append(actions, actionBuild.declareBlockers(declaration))
 				}
 			}
 		}
 		if len(allBlockers) > 1 && !ruleEffectLimitsBlockersToOne(g, attackingPermanent) {
-			if blockDeclarationsSatisfyMustBlockRequirements(required, allBlockers) {
+			if blockDeclarationsSatisfyMustBlockRequirements(required, allBlockers) &&
+				blockDeclarationsSatisfyLures(g, lures, blockers, allBlockers) {
 				actions = append(actions, actionBuild.declareBlockers(allBlockers))
 			}
 		}
 	}
-	if len(required) == 0 {
+	if len(required) == 0 && !lureForcesBlock {
 		actions = append(actions, actionBuild.declareBlockers(nil))
 	}
 	return actions
+}
+
+// trueLureAttackers returns the set of attacker object IDs whose true-lure
+// requirement is active and satisfiable (every creature able to block them must
+// do so, CR 509.1c). A lure whose block-count constraints make the
+// every-able-blocker requirement impossible — a menaced lure with fewer than two
+// legal blockers, or a lure that can be blocked by at most one creature while
+// more than one is able — is excluded so it fails open as an ordinary attacker
+// rather than forcing blocks or invalidating other attackers' legal blocks.
+func trueLureAttackers(g *game.Game, attackers []game.AttackDeclaration, blockers []*game.Permanent) map[id.ID]bool {
+	var lures map[id.ID]bool
+	for _, attack := range attackers {
+		attacker, ok := permanentByObjectID(g, attack.Attacker)
+		if !ok || !ruleEffectRequiresBeingBlockedByAllAble(g, attacker) {
+			continue
+		}
+		if !lureRequirementSatisfiable(g, attacker, blockers) {
+			continue
+		}
+		if lures == nil {
+			lures = make(map[id.ID]bool)
+		}
+		lures[attack.Attacker] = true
+	}
+	return lures
+}
+
+// lureRequirementSatisfiable reports whether every creature able to block the
+// lure attacker can legally do so simultaneously, given the attacker's
+// block-count constraints. It mirrors satisfiableMustBlockAttackers' menace
+// guard and additionally rejects the limit-to-one conflict.
+func lureRequirementSatisfiable(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent) bool {
+	legalBlockerCount := 0
+	for _, blocker := range blockers {
+		if canBlockAttacker(g, blocker, attacker) {
+			legalBlockerCount++
+		}
+	}
+	if legalBlockerCount == 0 {
+		return false
+	}
+	if attackerRequiresMultipleBlockers(g, attacker) && legalBlockerCount < 2 {
+		return false
+	}
+	if ruleEffectLimitsBlockersToOne(g, attacker) && legalBlockerCount > 1 {
+		return false
+	}
+	return true
+}
+
+// lureForcesAnyBlocker reports whether at least one eligible blocker is able to
+// block a true-lure attacker, so the defending player can't decline to block.
+func lureForcesAnyBlocker(g *game.Game, lures map[id.ID]bool, blockers []*game.Permanent) bool {
+	if len(lures) == 0 {
+		return false
+	}
+	for _, blocker := range blockers {
+		if blockerCanBlockAnyLure(g, lures, blocker) {
+			return true
+		}
+	}
+	return false
+}
+
+// blockerCanBlockAnyLure reports whether blocker is able to block any of the
+// true-lure attackers.
+func blockerCanBlockAnyLure(g *game.Game, lures map[id.ID]bool, blocker *game.Permanent) bool {
+	for lureID := range lures {
+		lure, ok := permanentByObjectID(g, lureID)
+		if ok && canBlockAttacker(g, blocker, lure) {
+			return true
+		}
+	}
+	return false
+}
+
+// blockDeclarationsSatisfyLures reports whether the block declarations honor every
+// true-lure requirement: each eligible blocker able to block a lure attacker is
+// declared blocking one of the lure attackers it can block (CR 509.1c).
+func blockDeclarationsSatisfyLures(g *game.Game, lures map[id.ID]bool, blockers []*game.Permanent, declarations []game.BlockDeclaration) bool {
+	if len(lures) == 0 {
+		return true
+	}
+	declaredBlocking := make(map[id.ID]id.ID, len(declarations))
+	for _, declaration := range declarations {
+		declaredBlocking[declaration.Blocker] = declaration.Blocking
+	}
+	for _, blocker := range blockers {
+		if !blockerCanBlockAnyLure(g, lures, blocker) {
+			continue
+		}
+		blocking, ok := declaredBlocking[blocker.ObjectID]
+		if !ok || !lures[blocking] {
+			return false
+		}
+	}
+	return true
 }
 
 func satisfiableMustBlockAttackers(g *game.Game, playerID game.PlayerID, attackers []game.AttackDeclaration, blockers []*game.Permanent) map[id.ID]bool {
@@ -408,7 +557,12 @@ func (combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, declare 
 	}
 	allBlockers := append([]game.BlockDeclaration(nil), g.Combat.Blockers...)
 	allBlockers = append(allBlockers, declare.Blockers...)
-	if !blockDeclarationsSatisfyMustBlockRequirements(satisfiableMustBlockAttackers(g, playerID, attacksAgainstPlayer(g, playerID), eligibleBlockers(g, playerID)), allBlockers) {
+	attackers := attacksAgainstPlayer(g, playerID)
+	eligible := eligibleBlockers(g, playerID)
+	if !blockDeclarationsSatisfyMustBlockRequirements(satisfiableMustBlockAttackers(g, playerID, attackers, eligible), allBlockers) {
+		return false
+	}
+	if !blockDeclarationsSatisfyLures(g, trueLureAttackers(g, attackers, eligible), eligible, allBlockers) {
 		return false
 	}
 
@@ -433,6 +587,7 @@ func (combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, declare 
 					SourceID:           attacker.CardInstanceID,
 					SourceObjectID:     attacker.ObjectID,
 					Controller:         effectiveController(g, attacker),
+					Player:             attackerDefendingPlayer(g, attacker.ObjectID),
 					PermanentID:        attacker.ObjectID,
 					RelatedPermanentID: block.Blocker,
 					SimultaneousID:     g.Combat.BlockDeclarationBatchID,

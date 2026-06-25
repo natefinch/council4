@@ -9,10 +9,16 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
-func applyPaymentPlan(s State, playerID game.PlayerID, plan paymentPlan) bool {
+// applyPaymentPlan applies a prevalidated mana payment plan. The caller MUST
+// have confirmed the plan against current state (paymentApplicationReady or
+// paymentPlanStillValid) before calling, so every check here guards an
+// invariant: a violation panics as an internal error rather than returning
+// after partial mutation, guaranteeing a clean payment failure never leaves the
+// game state half-applied.
+func applyPaymentPlan(s State, playerID game.PlayerID, plan paymentPlan) {
 	player, ok := s.Player(playerID)
 	if !ok || !paymentPlanStillValid(s, player, plan) {
-		return false
+		panic("payment plan was not prevalidated before application")
 	}
 	for _, tap := range plan.manaTaps {
 		if !activateManaForPayment(s, playerID, tap) {
@@ -54,11 +60,10 @@ func applyPaymentPlan(s State, playerID game.PlayerID, plan paymentPlan) bool {
 	}
 	if plan.lifePayment > 0 {
 		if player.Life < plan.lifePayment || !s.CanPayLife(playerID) {
-			return false
+			panic("payment plan became invalid while paying life")
 		}
 		s.LoseLife(playerID, plan.lifePayment)
 	}
-	return true
 }
 
 func activateManaForPayment(s State, playerID game.PlayerID, activation manaTap) bool {
@@ -227,6 +232,41 @@ func payPhyrexianSymbol(player *game.Player, plan *paymentPlan, pool map[mana.Un
 	}
 	if trySymbolPayment(plan, pool, sources, func(trialPlan *paymentPlan, trialPool map[mana.Unit]int, trialSources map[mana.Color][]manaSource) bool {
 		return payColoredSymbol(trialPlan, trialPool, trialSources, symbol, symbol.Color, game.SymbolPaymentPhyrexianMana)
+	}) {
+		return true
+	}
+	if !canPayLife || player.Life-plan.lifePayment < 2 {
+		return false
+	}
+	plan.lifePayment += 2
+	plan.symbolPayments = append(plan.symbolPayments, game.SymbolPayment{
+		Symbol:   symbol,
+		Method:   game.SymbolPaymentPhyrexianLife,
+		LifePaid: 2,
+	})
+	return true
+}
+
+// payPhyrexianGenericSymbol pays a "{N} or 2 life" generic Phyrexian symbol,
+// emitted for the command-zone commander tax of a spell whose static lets the
+// caster pay 2 life rather than each {2} of that tax (Liesa, Shroud of Dusk). It
+// mirrors payPhyrexianSymbol but pays the symbol's generic mana rather than a
+// color when not paying life.
+func payPhyrexianGenericSymbol(player *game.Player, plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Color][]manaSource, symbol cost.Symbol, prefs *Preferences, canPayLife bool) bool {
+	if prefs != nil && prefs.NextPhyrexianLifeChoice() {
+		if !canPayLife || player.Life-plan.lifePayment < 2 {
+			return false
+		}
+		plan.lifePayment += 2
+		plan.symbolPayments = append(plan.symbolPayments, game.SymbolPayment{
+			Symbol:   symbol,
+			Method:   game.SymbolPaymentPhyrexianLife,
+			LifePaid: 2,
+		})
+		return true
+	}
+	if trySymbolPayment(plan, pool, sources, func(trialPlan *paymentPlan, trialPool map[mana.Unit]int, trialSources map[mana.Color][]manaSource) bool {
+		return payGenericSymbol(trialPlan, trialPool, trialSources, symbol, symbol.Generic, game.SymbolPaymentPhyrexianMana)
 	}) {
 		return true
 	}

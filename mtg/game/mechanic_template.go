@@ -194,6 +194,23 @@ func WardStaticAbility(manaCost cost.Mana) StaticAbility {
 	}
 }
 
+// WardStaticAbilityWithCosts builds the complete static ability for Ward with a
+// composite or non-mana cost ("Ward—Pay 2 life.", "Ward—{2}, Pay 2 life.",
+// "Ward—Sacrifice a creature."). manaCost may be empty when the ward cost has no
+// mana component; additionalCosts carries the non-mana components an opponent
+// must pay alongside the mana to avoid having their spell or ability countered.
+func WardStaticAbilityWithCosts(manaCost cost.Mana, additionalCosts []cost.Additional) StaticAbility {
+	return StaticAbility{
+		Text: "Ward",
+		KeywordAbilities: []KeywordAbility{
+			WardKeyword{
+				Cost:            append(cost.Mana(nil), manaCost...),
+				AdditionalCosts: slices.Clone(additionalCosts),
+			},
+		},
+	}
+}
+
 // DredgeStaticAbility builds the complete static ability for the Dredge N
 // keyword (CR 702.52). It functions from its owner's graveyard, where it offers
 // to replace one of that player's draws with milling n cards and returning this
@@ -219,12 +236,7 @@ func EnchantStaticAbility(target *TargetSpec) StaticAbility {
 
 func cloneTargetSpec(source *TargetSpec) TargetSpec {
 	target := *source
-	target.Predicate.PermanentTypes = append([]types.Card(nil), target.Predicate.PermanentTypes...)
-	target.Predicate.ExcludedTypes = append([]types.Card(nil), target.Predicate.ExcludedTypes...)
-	target.Predicate.Supertypes = append([]types.Super(nil), target.Predicate.Supertypes...)
-	target.Predicate.Subtypes = append([]types.Sub(nil), target.Predicate.Subtypes...)
-	target.Predicate.Colors = append([]color.Color(nil), target.Predicate.Colors...)
-	target.Predicate.ExcludedColors = append([]color.Color(nil), target.Predicate.ExcludedColors...)
+	target.Predicate = cloneTargetPredicate(target.Predicate)
 	if target.Selection.Exists {
 		target.Selection = opt.Val(cloneSelection(target.Selection.Val))
 	}
@@ -433,6 +445,67 @@ func OutlastActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 	}
 }
 
+// SaddleActivatedAbility builds the complete activated ability for Saddle N
+// (CR 702.166): "Tap any number of other creatures you control with total power
+// N or more: This Mount becomes saddled until end of turn. Saddle only as a
+// sorcery." The ability has no mana cost; its additional cost taps other
+// creatures the controller controls with total power at least n.
+func SaddleActivatedAbility(n int) ActivatedAbility {
+	return ActivatedAbility{
+		Text: "Saddle " + strconv.Itoa(n),
+		AdditionalCosts: []cost.Additional{{
+			Kind:               cost.AdditionalTapPermanents,
+			Text:               "Tap any number of other creatures you control with total power " + strconv.Itoa(n) + " or more",
+			MatchPermanentType: true,
+			PermanentType:      types.Creature,
+			ExcludeSource:      true,
+			TotalPowerAtLeast:  n,
+		}},
+		ZoneOfFunction: zone.Battlefield,
+		Timing:         SorceryOnly,
+		KeywordAbilities: []KeywordAbility{
+			SaddleKeyword{Power: n},
+		},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: BecomeSaddled{Object: SourcePermanentReference()},
+		}}}.Ability(),
+	}
+}
+
+// CrewActivatedAbility builds the complete activated ability for Crew N
+// (CR 702.122): "Tap any number of creatures you control with total power N or
+// more: This Vehicle becomes an artifact creature until end of turn." The
+// ability has no mana cost and is activated at instant speed; its additional
+// cost taps creatures the controller controls with total power at least n. The
+// Vehicle keeps its printed power and toughness, which become relevant once it
+// is a creature.
+func CrewActivatedAbility(n int) ActivatedAbility {
+	return ActivatedAbility{
+		Text: "Crew " + strconv.Itoa(n),
+		AdditionalCosts: []cost.Additional{{
+			Kind:               cost.AdditionalTapPermanents,
+			Text:               "Tap any number of creatures you control with total power " + strconv.Itoa(n) + " or more",
+			MatchPermanentType: true,
+			PermanentType:      types.Creature,
+			TotalPowerAtLeast:  n,
+		}},
+		ZoneOfFunction: zone.Battlefield,
+		KeywordAbilities: []KeywordAbility{
+			CrewKeyword{Power: n},
+		},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: ApplyContinuous{
+				Object: opt.Val(SourcePermanentReference()),
+				ContinuousEffects: []ContinuousEffect{{
+					Layer:    LayerType,
+					AddTypes: []types.Card{types.Creature},
+				}},
+				Duration: DurationUntilEndOfTurn,
+			},
+		}}}.Ability(),
+	}
+}
+
 // LandcyclingActivatedAbility builds the complete activated ability for the
 // typed landcycling family (Basic landcycling, Plainscycling, and so on). It is
 // a cycling variant (CR 702.29): the discard-from-hand activation searches the
@@ -575,6 +648,30 @@ func FabricateTriggeredAbility(count int) TriggeredAbility {
 	}
 }
 
+// EvokeSacrificeTriggeredAbility builds the canonical Evoke sacrifice trigger
+// (CR 702.74): "When this permanent enters, if its evoke cost was paid,
+// sacrifice it." The intervening-if gates the sacrifice on the spell having been
+// cast for its Evoke alternative cost, preserved on the entering permanent event
+// for both trigger-time and resolution-time checks (CR 603.4).
+func EvokeSacrificeTriggeredAbility() TriggeredAbility {
+	return TriggeredAbility{
+		Text: "When this permanent enters, if its evoke cost was paid, sacrifice it.",
+		Trigger: TriggerCondition{
+			Type: TriggerWhen,
+			Pattern: TriggerPattern{
+				Event:  EventPermanentEnteredBattlefield,
+				Source: TriggerSourceSelf,
+			},
+			InterveningIfEventPermanentWasEvoked: true,
+		},
+		Content: Mode{
+			Sequence: []Instruction{{
+				Primitive: Sacrifice{Object: SourcePermanentReference()},
+			}},
+		}.Ability(),
+	}
+}
+
 // RampageTriggeredAbility builds the canonical Rampage N triggered ability
 // (CR 702.23): "Whenever this creature becomes blocked, it gets +N/+N until end
 // of turn for each creature blocking it beyond the first." The +N/+N delta is a
@@ -657,12 +754,12 @@ func EquipActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 func EquipRestrictedActivatedAbility(manaCost cost.Mana, supertypes []types.Super, subtypes []types.Sub) ActivatedAbility {
 	activationCost := append(cost.Mana(nil), manaCost...)
 	keywordCost := append(cost.Mana(nil), manaCost...)
-	predicate := TargetPredicate{
-		PermanentTypes: []types.Card{types.Creature},
-		Controller:     ControllerYou,
-		Supertypes:     append([]types.Super(nil), supertypes...),
+	selection := Selection{
+		RequiredTypesAny: []types.Card{types.Creature},
+		Controller:       ControllerYou,
+		Supertypes:       append([]types.Super(nil), supertypes...),
 	}
-	predicate.Subtypes = append([]types.Sub(nil), subtypes...)
+	selection.SubtypesAny = append([]types.Sub(nil), subtypes...)
 	return ActivatedAbility{
 		Text:           "Equip " + manaCost.String(),
 		ManaCost:       opt.Val(activationCost),
@@ -676,7 +773,37 @@ func EquipRestrictedActivatedAbility(manaCost cost.Mana, supertypes []types.Supe
 			MaxTargets: 1,
 			Constraint: equipRestrictionConstraint(supertypes, subtypes),
 			Allow:      TargetAllowPermanent,
-			Predicate:  predicate,
+			Selection:  opt.Val(selection),
+		}}}.Ability(),
+	}
+}
+
+// ReconfigureActivatedAbility builds the complete activated ability for
+// Reconfigure with a mana cost (CR 702.151). Like Equip, it is a sorcery-speed
+// activation that attaches the source Equipment to target creature you control;
+// the rules layer dispatches the attachment on resolution by recognizing the
+// Reconfigure keyword. The unattach mode and the "while attached, this isn't a
+// creature" type-change are not yet simulated.
+func ReconfigureActivatedAbility(manaCost cost.Mana) ActivatedAbility {
+	activationCost := append(cost.Mana(nil), manaCost...)
+	keywordCost := append(cost.Mana(nil), manaCost...)
+	return ActivatedAbility{
+		Text:           "Reconfigure " + manaCost.String(),
+		ManaCost:       opt.Val(activationCost),
+		ZoneOfFunction: zone.Battlefield,
+		Timing:         SorceryOnly,
+		KeywordAbilities: []KeywordAbility{
+			ReconfigureKeyword{Cost: keywordCost},
+		},
+		Content: Mode{Targets: []TargetSpec{{
+			MinTargets: 1,
+			MaxTargets: 1,
+			Constraint: "creature you control",
+			Allow:      TargetAllowPermanent,
+			Selection: opt.Val(Selection{
+				RequiredTypesAny: []types.Card{types.Creature},
+				Controller:       ControllerYou,
+			}),
 		}}}.Ability(),
 	}
 }
@@ -1346,6 +1473,31 @@ var livingWeaponGermToken = &CardDef{
 // livingWeaponGermLinkKey links the freshly created Germ token to the subsequent
 // self-attach so Living weapon attaches the Equipment to that exact token.
 const livingWeaponGermLinkKey = LinkedKey("living-weapon-germ")
+
+// HideawayTriggeredAbility builds the canonical Hideaway N enters-the-battlefield
+// triggered ability (CR 702.75a): "When this permanent enters, look at the top N
+// cards of your library, exile one of them face down, then put the rest on the
+// bottom of your library in a random order." The exiled card is played later by
+// the source's Hideaway activated ability. amount is the number of cards looked
+// at (4 on every printed Hideaway land).
+func HideawayTriggeredAbility(amount int) TriggeredAbility {
+	return TriggeredAbility{
+		Text: fmt.Sprintf("Hideaway %d", amount),
+		Trigger: TriggerCondition{
+			Type: TriggerWhen,
+			Pattern: TriggerPattern{
+				Event:  EventPermanentEnteredBattlefield,
+				Source: TriggerSourceSelf,
+			},
+		},
+		KeywordAbilities: []KeywordAbility{
+			HideawayKeyword{Amount: amount},
+		},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: HideawayExile{Amount: Fixed(amount)},
+		}}}.Ability(),
+	}
+}
 
 // LivingWeaponTriggeredAbility builds the entry trigger for Living weapon
 // (CR 702.91): when this Equipment enters, create a 0/0 black Phyrexian Germ

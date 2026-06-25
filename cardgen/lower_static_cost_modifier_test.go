@@ -1,11 +1,13 @@
 package cardgen
 
 import (
+	"reflect"
 	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -25,44 +27,44 @@ func TestLowerStaticSpellCostModifier(t *testing.T) {
 		"artifact spells reduction": {
 			oracleText: "Artifact spells you cast cost {1} less to cast.",
 			modifiers: []game.CostModifier{
-				{Kind: game.CostModifierSpell, MatchCardType: true, CardType: types.Artifact, GenericReduction: 1},
+				{Kind: game.CostModifierSpell, CardSelection: game.Selection{RequiredTypes: []types.Card{types.Artifact}}, GenericReduction: 1},
 			},
 		},
 		"creature spells increase": {
 			oracleText: "Creature spells you cast cost {1} more to cast.",
 			modifiers: []game.CostModifier{
-				{Kind: game.CostModifierSpell, MatchCardType: true, CardType: types.Creature, GenericIncrease: 1},
+				{Kind: game.CostModifierSpell, CardSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}}, GenericIncrease: 1},
 			},
 		},
 		"instant and sorcery reduction": {
 			oracleText: "Instant and sorcery spells you cast cost {1} less to cast.",
 			modifiers: []game.CostModifier{
-				{Kind: game.CostModifierSpell, MatchCardType: true, CardType: types.Instant, GenericReduction: 1},
-				{Kind: game.CostModifierSpell, MatchCardType: true, CardType: types.Sorcery, GenericReduction: 1},
+				{Kind: game.CostModifierSpell, CardSelection: game.Selection{RequiredTypes: []types.Card{types.Instant}}, GenericReduction: 1},
+				{Kind: game.CostModifierSpell, CardSelection: game.Selection{RequiredTypes: []types.Card{types.Sorcery}}, GenericReduction: 1},
 			},
 		},
 		"red spells reduction": {
 			oracleText: "Red spells you cast cost {1} less to cast.",
 			modifiers: []game.CostModifier{
-				{Kind: game.CostModifierSpell, MatchColor: true, Color: color.Red, GenericReduction: 1},
+				{Kind: game.CostModifierSpell, CardSelection: game.Selection{ColorsAny: []color.Color{color.Red}}, GenericReduction: 1},
 			},
 		},
 		"colorless spells reduction": {
 			oracleText: "Colorless spells you cast cost {1} less to cast.",
 			modifiers: []game.CostModifier{
-				{Kind: game.CostModifierSpell, MatchColor: true, GenericReduction: 1},
+				{Kind: game.CostModifierSpell, CardSelection: game.Selection{Colorless: true}, GenericReduction: 1},
 			},
 		},
 		"green spells increase": {
 			oracleText: "Green spells you cast cost {2} more to cast.",
 			modifiers: []game.CostModifier{
-				{Kind: game.CostModifierSpell, MatchColor: true, Color: color.Green, GenericIncrease: 2},
+				{Kind: game.CostModifierSpell, CardSelection: game.Selection{ColorsAny: []color.Color{color.Green}}, GenericIncrease: 2},
 			},
 		},
 		"black creature spells reduction": {
 			oracleText: "Black creature spells you cast cost {1} less to cast.",
 			modifiers: []game.CostModifier{
-				{Kind: game.CostModifierSpell, MatchColor: true, Color: color.Black, MatchCardType: true, CardType: types.Creature, GenericReduction: 1},
+				{Kind: game.CostModifierSpell, CardSelection: game.Selection{ColorsAny: []color.Color{color.Black}, RequiredTypes: []types.Card{types.Creature}}, GenericReduction: 1},
 			},
 		},
 	}
@@ -92,10 +94,7 @@ func TestLowerStaticSpellCostModifier(t *testing.T) {
 				got := effect.CostModifier
 				want := test.modifiers[i]
 				if got.Kind != want.Kind ||
-					got.MatchCardType != want.MatchCardType ||
-					got.CardType != want.CardType ||
-					got.MatchColor != want.MatchColor ||
-					got.Color != want.Color ||
+					!reflect.DeepEqual(got.CardSelection, want.CardSelection) ||
 					got.GenericReduction != want.GenericReduction ||
 					got.GenericIncrease != want.GenericIncrease {
 					t.Fatalf("rule effect %d cost modifier = %#v, want %#v", i, got, want)
@@ -134,10 +133,10 @@ func TestLowerStaticSpellColorDisjunctionCostModifier(t *testing.T) {
 			}
 			modifier := face.StaticAbilities[0].Body.RuleEffects[0].CostModifier
 			if modifier.Kind != game.CostModifierSpell ||
-				modifier.MatchColor ||
-				modifier.MatchCardType ||
+				modifier.CardSelection.Colorless ||
+				len(modifier.CardSelection.RequiredTypes) != 0 ||
 				modifier.GenericReduction != 1 ||
-				!slices.Equal(modifier.MatchColors, test.colors) {
+				!slices.Equal(modifier.CardSelection.ColorsAny, test.colors) {
 				t.Fatalf("modifier = %#v, want color disjunction %v", modifier, test.colors)
 			}
 		})
@@ -156,8 +155,8 @@ func TestLowerStaticChosenTypeSpellCostModifier(t *testing.T) {
 	}
 	modifier := face.StaticAbilities[0].Body.RuleEffects[0].CostModifier
 	if modifier.Kind != game.CostModifierSpell ||
-		!modifier.MatchCardType ||
-		modifier.CardType != types.Creature ||
+		len(modifier.CardSelection.RequiredTypes) != 1 ||
+		modifier.CardSelection.RequiredTypes[0] != types.Creature ||
 		!modifier.ChosenSubtypeFromEntryChoice ||
 		modifier.GenericReduction != 1 {
 		t.Fatalf("modifier = %#v, want chosen creature type reduction", modifier)
@@ -193,10 +192,10 @@ func TestLowerStaticSpellSubtypeCostModifier(t *testing.T) {
 			}
 			modifier := face.StaticAbilities[0].Body.RuleEffects[0].CostModifier
 			if modifier.Kind != game.CostModifierSpell ||
-				modifier.MatchColor ||
-				modifier.MatchCardType ||
+				len(modifier.CardSelection.ColorsAny) != 0 ||
+				len(modifier.CardSelection.RequiredTypes) != 0 ||
 				modifier.GenericReduction != 1 ||
-				!slices.Equal(modifier.MatchSubtypes, test.subtypes) {
+				!slices.Equal(modifier.CardSelection.SubtypesAny, test.subtypes) {
 				t.Fatalf("modifier = %#v, want subtype filter %v", modifier, test.subtypes)
 			}
 		})
@@ -216,12 +215,35 @@ func TestLowerStaticSpellCostModifierGraveyardZone(t *testing.T) {
 	}
 	modifier := face.StaticAbilities[0].Body.RuleEffects[0].CostModifier
 	if modifier.Kind != game.CostModifierSpell ||
-		modifier.MatchCardType ||
-		modifier.MatchColor ||
+		!modifier.CardSelection.Empty() ||
 		modifier.GenericReduction != 1 ||
 		!modifier.SourceZone.Exists ||
 		modifier.SourceZone.Val != zone.Graveyard {
 		t.Fatalf("modifier = %#v, want graveyard-scoped {1} reduction", modifier)
+	}
+}
+
+func TestLowerStaticSpellCostModifierPowerThreshold(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Goreclaw, Terror of Qal Sisma",
+		Layout:     "normal",
+		TypeLine:   "Legendary Creature — Bear",
+		Power:      new("4"),
+		Toughness:  new("4"),
+		OracleText: "Creature spells you cast with power 4 or greater cost {2} less to cast.",
+	})
+	if len(face.StaticAbilities) != 1 || len(face.StaticAbilities[0].Body.RuleEffects) != 1 {
+		t.Fatalf("static abilities = %#v, want one power-threshold cost effect", face.StaticAbilities)
+	}
+	modifier := face.StaticAbilities[0].Body.RuleEffects[0].CostModifier
+	if modifier.Kind != game.CostModifierSpell ||
+		len(modifier.CardSelection.RequiredTypes) != 1 ||
+		modifier.CardSelection.RequiredTypes[0] != types.Creature ||
+		modifier.GenericReduction != 2 ||
+		!modifier.CardSelection.Power.Exists ||
+		modifier.CardSelection.Power.Val != (compare.Int{Op: compare.GreaterOrEqual, Value: 4}) {
+		t.Fatalf("modifier = %#v, want power-4 creature {2} reduction", modifier)
 	}
 }
 

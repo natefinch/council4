@@ -50,10 +50,12 @@ func lowerChosenTypeLibraryTopTrigger(
 		},
 		{
 			Primitive: game.Reveal{Card: lookedCard},
-			CardCondition: opt.Val(game.CardCondition{
-				Card:              lookedCard,
-				Types:             []types.Card{types.Creature},
-				ChosenSubtypeFrom: game.EntryTypeChoiceKey,
+			CardCondition: opt.Val(game.CardSelection{
+				Card: lookedCard,
+				Selection: game.Selection{
+					RequiredTypes:     []types.Card{types.Creature},
+					ChosenSubtypeFrom: game.EntryTypeChoiceKey,
+				},
 			}),
 			Optional:      true,
 			PublishResult: heraldHornRevealedKey,

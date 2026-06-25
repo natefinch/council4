@@ -38,24 +38,24 @@ var Arena = &game.CardDef{
 							MaxTargets: 1,
 							Constraint: "creature you control",
 							Allow:      game.TargetAllowPermanent,
-							Predicate: game.TargetPredicate{
-								PermanentTypes: []types.Card{
+							Selection: opt.Val(game.Selection{
+								RequiredTypesAny: []types.Card{
 									types.Creature,
 								},
 								Controller: game.ControllerYou,
-							},
+							}),
 						},
 						{
 							MinTargets: 1,
 							MaxTargets: 1,
 							Constraint: "creature of an opponent's choice they control",
 							Allow:      game.TargetAllowPermanent,
-							Predicate: game.TargetPredicate{
-								PermanentTypes: []types.Card{
+							Selection: opt.Val(game.Selection{
+								RequiredTypesAny: []types.Card{
 									types.Creature,
 								},
 								Controller: game.ControllerYou,
-							},
+							}),
 							Chooser: game.TargetChooserOpponent,
 						},
 					},
