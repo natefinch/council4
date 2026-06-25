@@ -193,9 +193,7 @@ func isSelfDamageToControllerRider(effect *compiler.CompiledEffect) bool {
 		effect.DamageRecipientReference == parser.DamageRecipientReferenceYou &&
 		len(effect.DamageRecipientSelectors) == 0 &&
 		len(effect.Targets) == 0 &&
-		!effect.HasSelfDamageRider &&
-		!effect.HasSecondTargetDamageRider &&
-		effect.TargetControllerDamageRiderRecipient == parser.DamageRecipientReferenceNone &&
+		len(effect.DamageRiders) == 0 &&
 		effect.Duration == compiler.DurationNone &&
 		effect.DelayedTiming == 0 &&
 		effect.Amount.Known &&

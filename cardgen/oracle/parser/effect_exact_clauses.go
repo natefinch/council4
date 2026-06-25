@@ -2228,7 +2228,7 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 	// "<prefix> A damage to <target0> and B damage to <target1>." deals to two
 	// independently chosen single targets, reconstructed by a dedicated helper to
 	// keep this dispatcher's branch count bounded.
-	if effect.HasSecondTargetDamageRider {
+	if _, ok := SecondTargetDamageRider(effect.DamageRiders); ok {
 		return exactSecondTargetDamageEffectSyntax(effect, prefix, text)
 	}
 	if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
@@ -2260,17 +2260,17 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 		}
 		// A "... and N damage to you" rider follows a single-target (Max <= 1)
 		// fixed-amount clause; it is reconstructed only for that bounded shape.
-		if effect.HasSelfDamageRider {
+		if selfRider, ok := SelfDamageRider(effect.DamageRiders); ok {
 			if !effect.Amount.Known || effect.Targets[0].Cardinality.Max >= 2 {
 				return false
 			}
 			return text == fmt.Sprintf("%s %s damage to %s and %d damage to you.",
-				prefix, amount, recipient, effect.SelfDamageRiderValue)
+				prefix, amount, recipient, selfRider.Value)
 		}
 		// A "... and N damage to that creature's controller/owner" rider follows
 		// a single-target (Max <= 1) fixed-amount clause; the rider recipient is
 		// reconstructed from its captured tokens so the round-trip stays exact.
-		if effect.TargetControllerDamageRiderRecipient != DamageRecipientReferenceNone {
+		if _, ok := TargetControllerDamageRider(effect.DamageRiders); ok {
 			if !effect.Amount.Known || effect.Targets[0].Cardinality.Max >= 2 {
 				return false
 			}
@@ -2308,7 +2308,11 @@ func exactSecondTargetDamageEffectSyntax(effect *EffectSyntax, prefix, text stri
 		effect.Targets[0].Cardinality.Max != 1 {
 		return false
 	}
-	if effect.SecondTargetDamageRiderDynamic {
+	rider, ok := SecondTargetDamageRider(effect.DamageRiders)
+	if !ok {
+		return false
+	}
+	if rider.Dynamic {
 		if effect.Amount.DynamicForm != EffectDynamicAmountFormWhereX {
 			return false
 		}
@@ -2321,7 +2325,7 @@ func exactSecondTargetDamageEffectSyntax(effect *EffectSyntax, prefix, text stri
 	}
 	return text == fmt.Sprintf("%s %d damage to %s and %d damage to %s.",
 		prefix, effect.Amount.Value, effect.Targets[0].Text,
-		effect.SecondTargetDamageRiderValue, effect.Targets[1].Text)
+		rider.Value, effect.Targets[1].Text)
 }
 
 // exactSourcePowerDamageEffectSyntax reconstructs the canonical one-sided

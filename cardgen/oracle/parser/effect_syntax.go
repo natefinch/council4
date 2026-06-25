@@ -1358,9 +1358,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) {
 	effect.Divided = dividedDamageEffect(effect)
 	effect.DamageRecipientReference = damageRecipientReference(effect)
-	effect.SelfDamageRiderValue, effect.HasSelfDamageRider = damageSelfRider(effect)
-	effect.TargetControllerDamageRiderValue, effect.TargetControllerDamageRiderRecipient = damageTargetControllerRider(effect)
-	effect.SecondTargetDamageRiderValue, effect.SecondTargetDamageRiderDynamic, effect.HasSecondTargetDamageRider = damageSecondTargetRider(effect)
+	effect.DamageRiders = parseDamageRiders(effect)
 	effect.Dig = parseDigPut(effect)
 	effect.HandLibraryPut = parseHandLibraryPut(effect)
 	effect.HandDiscard = parseHandDiscard(effect)
@@ -4364,6 +4362,37 @@ func damageRecipientReference(effect *EffectSyntax) DamageRecipientReferenceKind
 		return DamageRecipientReferenceNone
 	}
 	return role
+}
+
+// parseDamageRiders assembles the ordered follow-on damage riders of a
+// deal-damage clause into one typed list, in Oracle order: the self rider, the
+// target-controller/owner rider, then the second-target rider. Each detection
+// helper fails closed for its non-matching wordings, so a clause with no rider
+// yields an empty list. The order matches the order lowering emits the rider
+// Damage instructions.
+func parseDamageRiders(effect *EffectSyntax) []DamageRiderSyntax {
+	var riders []DamageRiderSyntax
+	if value, ok := damageSelfRider(effect); ok {
+		riders = append(riders, DamageRiderSyntax{
+			Recipient: DamageRiderRecipientYou,
+			Value:     value,
+		})
+	}
+	if value, role := damageTargetControllerRider(effect); role != DamageRecipientReferenceNone {
+		riders = append(riders, DamageRiderSyntax{
+			Recipient:     DamageRiderRecipientTargetController,
+			ReferenceRole: role,
+			Value:         value,
+		})
+	}
+	if value, dynamic, ok := damageSecondTargetRider(effect); ok {
+		riders = append(riders, DamageRiderSyntax{
+			Recipient: DamageRiderRecipientSecondTarget,
+			Value:     value,
+			Dynamic:   dynamic,
+		})
+	}
+	return riders
 }
 
 // damageSelfRider recognizes a "... and N damage to you" self-damage rider
