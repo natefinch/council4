@@ -121,8 +121,9 @@ func handleDestroy(r *effectResolver, prim game.Destroy) effectResolved {
 // handleAddMana resolves an "add mana" effect, putting the produced mana into the
 // recipient's mana pool (CR 106.4: when an effect instructs a player to add mana,
 // that mana goes into their mana pool). This is the effect of a mana ability or a
-// spell/ability that produces mana (CR 106.3); the source of the mana is this
-// object (CR 113.7).
+// mana-producing spell/ability (CR 106.3); the source of that mana is the spell
+// itself, or for an ability the source of that ability (CR 106.3, with an
+// ability's source identified by CR 113.7).
 func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	if res.amount <= 0 && !prim.Amount.IsDynamic() {
