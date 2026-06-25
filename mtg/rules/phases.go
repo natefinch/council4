@@ -326,6 +326,9 @@ func popExtraTurn(extraTurns *[]game.PlayerID, turnOrder *game.TurnOrder) (game.
 	return 0, false
 }
 
+// emptyManaPools empties every player's mana pool. Each player's mana pool empties
+// at the end of each step and phase, and any unspent mana is lost (CR 106.4); the
+// engine calls this at those boundaries.
 func emptyManaPools(g *game.Game) {
 	for _, player := range g.Players {
 		player.ManaPool.Empty()

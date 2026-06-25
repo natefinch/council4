@@ -9,8 +9,13 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
-// applyPaymentPlan applies a prevalidated mana payment plan. The caller MUST
-// have confirmed the plan against current state (paymentApplicationReady or
+// applyPaymentPlan applies a prevalidated mana payment plan, performing the
+// "pay the total cost" step of casting a spell or activating an ability
+// (CR 601.2h): it activates the planned mana sources (CR 601.2g: mana abilities
+// are activated before costs are paid), taps convoke/improvise permanents, exiles
+// delve cards, spends mana from the pool, and pays life. Partial payments are not
+// allowed (CR 601.2h), so the plan must be fully payable. The caller MUST have
+// confirmed the plan against current state (paymentApplicationReady or
 // paymentPlanStillValid) before calling, so every check here guards an
 // invariant: a violation panics as an internal error rather than returning
 // after partial mutation, guaranteeing a clean payment failure never leaves the
@@ -66,6 +71,12 @@ func applyPaymentPlan(s State, playerID game.PlayerID, plan paymentPlan) {
 	}
 }
 
+// activateManaForPayment activates one mana ability to produce mana for a payment.
+// An activated mana ability does not go on the stack; it resolves immediately,
+// adding its mana to the player's mana pool (CR 605.3b, CR 106.3-106.4). It taps
+// or untaps and optionally sacrifices the source as the ability's cost, then adds
+// the produced mana. It returns false if the planned source no longer matches the
+// live game state.
 func activateManaForPayment(s State, playerID game.PlayerID, activation manaTap) bool {
 	permanent := activation.permanent
 	if permanent.Tapped != activation.untap || s.EffectiveController(permanent) != playerID {
