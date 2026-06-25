@@ -11,60 +11,19 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 )
 
+// chooseEvidenceCards greedily selects graveyard cards (highest mana value
+// first) whose total mana value reaches the evidence threshold and that leave
+// later graveyard costs payable. It enumerates and backtracks through the shared
+// card-zone engine so the planner and the choice layer agree on the eligible set
+// and the deterministic default selection.
 func chooseEvidenceCards(s State, playerID game.PlayerID, threshold int, alreadyChosen []cardZoneSelection, remainingCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type) []cardZoneSelection {
-	player, ok := s.Player(playerID)
-	if !ok {
-		return nil
-	}
-	chosenIDs := make(map[id.ID]bool, len(alreadyChosen))
-	for _, chosen := range alreadyChosen {
-		chosenIDs[chosen.cardID] = true
-	}
-	type evidenceCandidate struct {
-		cardID    id.ID
-		manaValue int
-	}
-	var candidates []evidenceCandidate
-	for _, cardID := range player.Graveyard.All() {
-		if chosenIDs[cardID] {
-			continue
-		}
-		manaValue, ok := evidenceCardManaValue(s, cardID)
-		if !ok || manaValue <= 0 {
-			continue
-		}
-		candidates = append(candidates, evidenceCandidate{cardID: cardID, manaValue: manaValue})
-	}
-	slices.SortStableFunc(candidates, func(a, b evidenceCandidate) int {
-		switch {
-		case a.manaValue > b.manaValue:
-			return -1
-		case a.manaValue < b.manaValue:
-			return 1
-		default:
-			return 0
-		}
+	reserved := reservedFromSelections(alreadyChosen)
+	candidates := candidateCardsForObjectCost(s, playerID, cardCostChoice{domain: zone.Graveyard}, reserved)
+	selected := chooseThresholdCardSet(s, candidates, threshold, func(chosen []id.ID) bool {
+		reserved := appendCardZoneSelections(alreadyChosen, cardZoneSelectionsFor(chosen, zone.Graveyard)...)
+		return remainingGraveyardCostsPayable(s, playerID, remainingCosts, xValue, reserved, sourceCardID, sourceZone)
 	})
-	var search func(start int, total int, chosen []cardZoneSelection) []cardZoneSelection
-	search = func(start int, total int, chosen []cardZoneSelection) []cardZoneSelection {
-		if total >= threshold {
-			reserved := appendCardZoneSelections(alreadyChosen, chosen...)
-			if remainingGraveyardCostsPayable(s, playerID, remainingCosts, xValue, reserved, sourceCardID, sourceZone) {
-				return append([]cardZoneSelection(nil), chosen...)
-			}
-			return nil
-		}
-		for i := start; i < len(candidates); i++ {
-			candidate := candidates[i]
-			next := slices.Clone(chosen)
-			next = append(next, cardZoneSelection{cardID: candidate.cardID, zone: zone.Graveyard})
-			if selected := search(i+1, total+candidate.manaValue, next); len(selected) > 0 {
-				return selected
-			}
-		}
-		return nil
-	}
-	return search(0, 0, nil)
+	return cardZoneSelectionsFor(selected, zone.Graveyard)
 }
 
 func preferredEvidenceCards(s State, playerID game.PlayerID, threshold int, alreadyChosen []cardZoneSelection, remainingCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type, prefs *Preferences) []cardZoneSelection {
@@ -102,65 +61,17 @@ func preferredEvidenceCards(s State, playerID game.PlayerID, threshold int, alre
 // Triad). It generalizes chooseEvidenceCards to an arbitrary card filter and is
 // payable only when a satisfying set also leaves later graveyard costs payable.
 func chooseThresholdExileCards(s State, playerID game.PlayerID, additional cost.Additional, alreadyChosen []cardZoneSelection, remainingCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type) []cardZoneSelection {
-	player, ok := s.Player(playerID)
+	choice, ok := cardCostChoiceForCost(additional, sourceCardID)
 	if !ok {
 		return nil
 	}
-	selectionZone := additionalCostSourceZone(additional.Source)
-	chosenIDs := make(map[id.ID]bool, len(alreadyChosen))
-	for _, chosen := range alreadyChosen {
-		chosenIDs[chosen.cardID] = true
-	}
-	type thresholdCandidate struct {
-		cardID    id.ID
-		manaValue int
-	}
-	var candidates []thresholdCandidate
-	for _, cardID := range cardIDsInZone(player, selectionZone) {
-		if chosenIDs[cardID] || (additional.ExcludeSource && cardID == sourceCardID) {
-			continue
-		}
-		card, ok := s.CardInstance(cardID)
-		if !ok || !additionalCostMatchesCard(s, s.CardFace(card, game.FaceFront), additional) {
-			continue
-		}
-		manaValue, ok := evidenceCardManaValue(s, cardID)
-		if !ok || manaValue <= 0 {
-			continue
-		}
-		candidates = append(candidates, thresholdCandidate{cardID: cardID, manaValue: manaValue})
-	}
-	slices.SortStableFunc(candidates, func(a, b thresholdCandidate) int {
-		switch {
-		case a.manaValue > b.manaValue:
-			return -1
-		case a.manaValue < b.manaValue:
-			return 1
-		default:
-			return 0
-		}
+	reserved := reservedFromSelections(alreadyChosen)
+	candidates := candidateCardsForObjectCost(s, playerID, choice, reserved)
+	selected := chooseThresholdCardSet(s, candidates, additional.TotalManaValueAtLeast, func(chosen []id.ID) bool {
+		reserved := appendCardZoneSelections(alreadyChosen, cardZoneSelectionsFor(chosen, choice.domain)...)
+		return remainingGraveyardCostsPayable(s, playerID, remainingCosts, xValue, reserved, sourceCardID, sourceZone)
 	})
-	threshold := additional.TotalManaValueAtLeast
-	var search func(start int, total int, chosen []cardZoneSelection) []cardZoneSelection
-	search = func(start int, total int, chosen []cardZoneSelection) []cardZoneSelection {
-		if total >= threshold {
-			reserved := appendCardZoneSelections(alreadyChosen, chosen...)
-			if remainingGraveyardCostsPayable(s, playerID, remainingCosts, xValue, reserved, sourceCardID, sourceZone) {
-				return append([]cardZoneSelection(nil), chosen...)
-			}
-			return nil
-		}
-		for i := start; i < len(candidates); i++ {
-			candidate := candidates[i]
-			next := slices.Clone(chosen)
-			next = append(next, cardZoneSelection{cardID: candidate.cardID, zone: selectionZone})
-			if selected := search(i+1, total+candidate.manaValue, next); len(selected) > 0 {
-				return selected
-			}
-		}
-		return nil
-	}
-	return search(0, 0, nil)
+	return cardZoneSelectionsFor(selected, choice.domain)
 }
 
 func preferredThresholdExileCards(s State, playerID game.PlayerID, additional cost.Additional, alreadyChosen []cardZoneSelection, remainingCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type, prefs *Preferences) []cardZoneSelection {
@@ -199,33 +110,17 @@ func preferredThresholdExileCards(s State, playerID game.PlayerID, additional co
 }
 
 func chooseExileCards(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []cardZoneSelection, remainingCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type) []cardZoneSelection {
-	player, ok := s.Player(playerID)
+	choice, ok := cardCostChoiceForCost(additional, sourceCardID)
 	if !ok {
 		return nil
 	}
-	selectionZone := additionalCostSourceZone(additional.Source)
-	chosenIDs := make(map[id.ID]bool)
-	for _, chosen := range alreadyChosen {
-		chosenIDs[chosen.cardID] = true
-	}
-	var candidates []cardZoneSelection
-	for _, cardID := range cardIDsInZone(player, selectionZone) {
-		if chosenIDs[cardID] {
-			continue
-		}
-		if additional.ExcludeSource && cardID == sourceCardID {
-			continue
-		}
-		card, ok := s.CardInstance(cardID)
-		if !ok || !additionalCostMatchesCard(s, s.CardFace(card, game.FaceFront), additional) {
-			continue
-		}
-		candidates = append(candidates, cardZoneSelection{cardID: cardID, zone: selectionZone})
-	}
-	return chooseFixedCardZoneSelection(candidates, amount, func(chosen []cardZoneSelection) bool {
-		reserved := appendCardZoneSelections(alreadyChosen, chosen...)
+	reserved := reservedFromSelections(alreadyChosen)
+	candidates := candidateCardsForObjectCost(s, playerID, choice, reserved)
+	selected := chooseFixedCardSet(candidates, amount, func(chosen []id.ID) bool {
+		reserved := appendCardZoneSelections(alreadyChosen, cardZoneSelectionsFor(chosen, choice.domain)...)
 		return remainingGraveyardCostsPayable(s, playerID, remainingCosts, xValue, reserved, sourceCardID, sourceZone)
 	})
+	return cardZoneSelectionsFor(selected, choice.domain)
 }
 
 func preferredExileCards(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []cardZoneSelection, remainingCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type, prefs *Preferences) []cardZoneSelection {
@@ -253,34 +148,6 @@ func preferredExileCards(s State, playerID game.PlayerID, additional cost.Additi
 		}
 	}
 	return nil
-}
-
-func chooseFixedCardZoneSelection(candidates []cardZoneSelection, amount int, allowsRemaining func([]cardZoneSelection) bool) []cardZoneSelection {
-	if amount == 0 {
-		if allowsRemaining(nil) {
-			return nil
-		}
-		return nil
-	}
-	var search func(start int, chosen []cardZoneSelection) []cardZoneSelection
-	search = func(start int, chosen []cardZoneSelection) []cardZoneSelection {
-		if len(chosen) == amount {
-			if allowsRemaining(chosen) {
-				return append([]cardZoneSelection(nil), chosen...)
-			}
-			return nil
-		}
-		remainingNeeded := amount - len(chosen)
-		for i := start; i <= len(candidates)-remainingNeeded; i++ {
-			next := slices.Clone(chosen)
-			next = append(next, candidates[i])
-			if selected := search(i+1, next); len(selected) == amount {
-				return selected
-			}
-		}
-		return nil
-	}
-	return search(0, nil)
 }
 
 func remainingGraveyardCostsPayable(s State, playerID game.PlayerID, remainingCosts []cost.Additional, xValue int, alreadyChosen []cardZoneSelection, sourceCardID id.ID, sourceZone zone.Type) bool {
@@ -579,29 +446,12 @@ func preferredReturnPermanents(s State, playerID game.PlayerID, additional cost.
 }
 
 func chooseDiscardCards(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []id.ID) []id.ID {
-	player, ok := s.Player(playerID)
+	choice, ok := cardCostChoiceForCost(additional, 0)
 	if !ok {
 		return nil
 	}
-	chosenIDs := make(map[id.ID]bool)
-	for _, cardID := range alreadyChosen {
-		chosenIDs[cardID] = true
-	}
-	var chosen []id.ID
-	for _, cardID := range player.Hand.All() {
-		if chosenIDs[cardID] {
-			continue
-		}
-		card, ok := s.CardInstance(cardID)
-		if !ok || !additionalCostMatchesCard(s, s.CardFace(card, game.FaceFront), additional) {
-			continue
-		}
-		chosen = append(chosen, cardID)
-		if len(chosen) == amount {
-			return chosen
-		}
-	}
-	return chosen
+	candidates := candidateCardsForObjectCost(s, playerID, choice, reservedCardIDSet(alreadyChosen))
+	return truncateCardIDs(candidates, amount)
 }
 
 func preferredDiscardCards(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []id.ID, prefs *Preferences) []id.ID {
