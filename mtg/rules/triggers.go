@@ -13,9 +13,9 @@ import (
 // in the order they choose. CR 603.3b technically describes two APNAP passes
 // (abilities that trigger on another ability triggering are placed in the second
 // pass); this engine uses a single APNAP pass, which matches the rules except
-// for the rare ability that triggers on a triggered ability being put on the
-// stack. Because the stack is last-in-first-out, the last player's triggers
-// resolve first. Triggers with no identifiable controller are appended last.
+// for the rare ability that triggers on another ability triggering. Because the
+// stack is last-in-first-out, the last player's triggers resolve first. Triggers
+// with no identifiable controller are appended last.
 func (e *Engine) orderTriggeredAbilitiesAPNAP(g *game.Game, triggers []pendingTriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []pendingTriggeredAbility {
 	if len(triggers) == 0 {
 		return triggers
