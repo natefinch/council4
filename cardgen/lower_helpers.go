@@ -14,6 +14,14 @@ func targetCardinalityIsOne(target compiler.CompiledTarget) bool {
 	return target.Cardinality.Min == 1 && target.Cardinality.Max == 1
 }
 
+// targetCardinalityIsUnbounded reports whether the target uses the unbounded
+// "any number of" cardinality the parser encodes as Min 0, Max 99. Such a target
+// cannot be unrolled into a fixed instruction per slot; only lowerers that model
+// the whole group with one instruction may accept it.
+func targetCardinalityIsUnbounded(target compiler.CompiledTarget) bool {
+	return target.Cardinality.Min == 0 && target.Cardinality.Max == 99
+}
+
 func signedAmountText(amount compiler.CompiledSignedAmount) string {
 	if amount.Negative {
 		return fmt.Sprintf("-%d", amount.Value)

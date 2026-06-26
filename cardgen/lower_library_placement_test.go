@@ -49,6 +49,6 @@ func TestLibraryPlacementYourLibraryNotCounter(t *testing.T) {
 	t.Parallel()
 	expectLibraryPlacementNotCounter(
 		t,
-		"Put any number of target creature cards from your graveyard on top of your library.",
+		"Put target creature card from your graveyard into your library third from the top.",
 	)
 }

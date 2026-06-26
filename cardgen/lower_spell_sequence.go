@@ -687,6 +687,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx, syntax *parser
 	if content, ok := lowerGroupBlinkSequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerMassGroupBlinkSequence(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerDigSequence(ctx); ok {
 		return content, true
 	}
@@ -1819,28 +1822,9 @@ func lowerGroupBlinkSequence(ctx contentCtx) (game.AbilityContent, bool) {
 	if targetCardinalityIsOne(target) {
 		return game.AbilityContent{}, false
 	}
-	var delayed bool
-	switch {
-	case ret.Connection == parser.EffectConnectionThen && ret.DelayedTiming == 0:
-		delayed = false
-	case ret.DelayedTiming == game.DelayedAtBeginningOfNextEndStep:
-		delayed = true
-	default:
+	delayed, entryCounters, ok := blinkReturnRider(ret)
+	if !ok {
 		return game.AbilityContent{}, false
-	}
-	if ret.Kind != compiler.EffectReturn || ret.Negated ||
-		ret.ToZone != zone.Battlefield ||
-		ret.EntersColorChoice || ret.EntersTypeChoice || ret.EntersWithCounters {
-		return game.AbilityContent{}, false
-	}
-	// "with a <kind> counter on it" rider: only fixed, known, positive counts of a
-	// known kind are modeled; every other counter form fails closed.
-	var entryCounters []game.CounterPlacement
-	if ret.CounterKindKnown {
-		if !ret.Amount.Known || ret.Amount.Value < 1 {
-			return game.AbilityContent{}, false
-		}
-		entryCounters = []game.CounterPlacement{{Kind: ret.CounterKind, Amount: ret.Amount.Value}}
 	}
 	// Every content reference must be the return clause's plural back-reference to
 	// the exiled cards (prior instruction 0). Requiring the "those" demonstrative
@@ -1855,9 +1839,46 @@ func lowerGroupBlinkSequence(ctx contentCtx) (game.AbilityContent, bool) {
 	if consumed.content.Unconsumed() {
 		return game.AbilityContent{}, false
 	}
-	targetSpec, ok := permanentTargetSpecWithCardinality(target)
+	targetSpec, ok := permanentTargetSpecAllowingUnbounded(target, true)
 	if !ok || targetSpec.MaxTargets < 1 {
 		return game.AbilityContent{}, false
+	}
+	makePut := func(key game.LinkedKey) game.PutOnBattlefield {
+		put := game.PutOnBattlefield{
+			Source:        game.LinkedBattlefieldSource(key),
+			EntryTapped:   ret.EntersTapped,
+			EntryCounters: entryCounters,
+		}
+		if ret.UnderYourControl {
+			put.Recipient = opt.Val(game.ControllerReference())
+		}
+		return put
+	}
+	// The unbounded "any number of target" count cannot unroll a fixed slot per
+	// target, so capture every chosen permanent under one linked key with a
+	// single exile and return the whole group with one put — the runtime
+	// all-target-permanents reference and linked-battlefield source carry the
+	// group across the exile and return.
+	if targetCardinalityIsUnbounded(target) {
+		const key = game.LinkedKey("group-blink")
+		exileInstr := game.Instruction{Primitive: game.Exile{
+			Object:         game.AllTargetPermanentsReference(0),
+			ExileLinkedKey: key,
+		}}
+		putInstr := game.Instruction{Primitive: makePut(key)}
+		var sequence []game.Instruction
+		if delayed {
+			sequence = []game.Instruction{exileInstr, {Primitive: game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+				Timing:  game.DelayedAtBeginningOfNextEndStep,
+				Content: game.Mode{Sequence: []game.Instruction{putInstr}}.Ability(),
+			}}}}
+		} else {
+			sequence = []game.Instruction{exileInstr, putInstr}
+		}
+		return game.Mode{
+			Targets:  []game.TargetSpec{targetSpec},
+			Sequence: sequence,
+		}.Ability(), true
 	}
 	sequence := make([]game.Instruction, 0, 2*targetSpec.MaxTargets)
 	keys := make([]game.LinkedKey, targetSpec.MaxTargets)
@@ -1871,15 +1892,7 @@ func lowerGroupBlinkSequence(ctx contentCtx) (game.AbilityContent, bool) {
 	}
 	puts := make([]game.Instruction, 0, targetSpec.MaxTargets)
 	for i := range targetSpec.MaxTargets {
-		put := game.PutOnBattlefield{
-			Source:        game.LinkedBattlefieldSource(keys[i]),
-			EntryTapped:   ret.EntersTapped,
-			EntryCounters: entryCounters,
-		}
-		if ret.UnderYourControl {
-			put.Recipient = opt.Val(game.ControllerReference())
-		}
-		puts = append(puts, game.Instruction{Primitive: put})
+		puts = append(puts, game.Instruction{Primitive: makePut(keys[i])})
 	}
 	if delayed {
 		sequence = append(sequence, game.Instruction{Primitive: game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
@@ -1895,7 +1908,106 @@ func lowerGroupBlinkSequence(ctx contentCtx) (game.AbilityContent, bool) {
 	}.Ability(), true
 }
 
-// lowerDigSequence lowers the impulse "dig" sequence — "Look at the top N cards
+// blinkReturnRider validates a group-blink return clause and reports whether the
+// return is delayed to the next end step (versus an immediate "then return")
+// along with any fixed entry-counter rider. It accepts only the battlefield
+// return form with no color/type entry choice and a fixed, known, positive
+// counter of a known kind, failing closed for every other return shape so the
+// group and mass blink lowerers share one return contract.
+func blinkReturnRider(ret compiler.CompiledEffect) (delayed bool, entryCounters []game.CounterPlacement, ok bool) {
+	switch {
+	case ret.Connection == parser.EffectConnectionThen && ret.DelayedTiming == 0:
+		delayed = false
+	case ret.DelayedTiming == game.DelayedAtBeginningOfNextEndStep:
+		delayed = true
+	default:
+		return false, nil, false
+	}
+	if ret.Kind != compiler.EffectReturn || ret.Negated ||
+		ret.ToZone != zone.Battlefield ||
+		ret.EntersColorChoice || ret.EntersTypeChoice || ret.EntersWithCounters {
+		return false, nil, false
+	}
+	if ret.CounterKindKnown {
+		if !ret.Amount.Known || ret.Amount.Value < 1 {
+			return false, nil, false
+		}
+		entryCounters = []game.CounterPlacement{{Kind: ret.CounterKind, Amount: ret.Amount.Value}}
+	}
+	return delayed, entryCounters, true
+}
+
+// lowerMassGroupBlinkSequence lowers the untargeted mass "blink" (flicker)
+// sequence — "Exile each <permanent> you control. Return those cards to the
+// battlefield under their owner's control [at the beginning of the next end
+// step]." (Ghostway) — into one group exile that captures every exiled permanent
+// under a single linked key and one return that brings the whole group back. It
+// requires the exile to be an exact mass ("each"/"all") group selection with no
+// targets so the cards leave and re-enter as new objects. Both the immediate
+// and delayed return timings, the controller riders, and a fixed entry-counter
+// rider are modeled; every other shape — a targeted exile, a singular
+// back-reference, negated or optional clauses, an unexpressible mass selector —
+// fails closed so the targeted group path and the general sequence path are
+// untouched.
+func lowerMassGroupBlinkSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 || ctx.optional ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	exile := ctx.content.Effects[0]
+	ret := ctx.content.Effects[1]
+	if exile.Kind != compiler.EffectExile || exile.Negated || exile.Optional || !exile.Exact ||
+		exile.Context != parser.EffectContextController ||
+		exile.DelayedTiming != 0 ||
+		!exile.Selector.All ||
+		len(exile.References) != 0 || len(exile.Targets) != 0 {
+		return game.AbilityContent{}, false
+	}
+	selection, ok := massGroupSelection(exile.Selector)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	delayed, entryCounters, ok := blinkReturnRider(ret)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	if !referencesBindTo(ctx.content.References, compiler.ReferenceBindingPriorInstructionResult, 0) ||
+		!referencesIncludeThose(ctx.content.References) {
+		return game.AbilityContent{}, false
+	}
+	consumed := ctx
+	consumed.content.References = nil
+	if consumed.content.Unconsumed() {
+		return game.AbilityContent{}, false
+	}
+	const key = game.LinkedKey("group-blink")
+	exileInstr := game.Instruction{Primitive: game.Exile{
+		Group:          game.BattlefieldGroup(selection),
+		ExileLinkedKey: key,
+	}}
+	put := game.PutOnBattlefield{
+		Source:        game.LinkedBattlefieldSource(key),
+		EntryTapped:   ret.EntersTapped,
+		EntryCounters: entryCounters,
+	}
+	if ret.UnderYourControl {
+		put.Recipient = opt.Val(game.ControllerReference())
+	}
+	putInstr := game.Instruction{Primitive: put}
+	var sequence []game.Instruction
+	if delayed {
+		sequence = []game.Instruction{exileInstr, {Primitive: game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+			Timing:  game.DelayedAtBeginningOfNextEndStep,
+			Content: game.Mode{Sequence: []game.Instruction{putInstr}}.Ability(),
+		}}}}
+	} else {
+		sequence = []game.Instruction{exileInstr, putInstr}
+	}
+	return game.Mode{Sequence: sequence}.Ability(), true
+}
+
 // of your library. Put M of them into your hand and the rest into your
 // graveyard." — into a single Dig primitive: the controller looks at the top N
 // cards, takes M into hand, and the remainder goes to their graveyard. It
@@ -3188,27 +3300,56 @@ func publishLinkedTargetPermanent(primitive game.Primitive, key game.LinkedKey) 
 	return nil, false
 }
 
+// lowerDelayedBlinkReturn lowers the delayed single-target "Exile target
+// <permanent>. … return that card to the battlefield … at the beginning of the
+// next end step" flicker (blink) clause. The return clause is the second effect
+// of a two-step sequence whose object back-references the exiled card (a
+// ReferenceBindingPriorInstructionResult "it"/"that card"). Unlike
+// lowerImmediateBlinkReturn the card returns at the next end step, so the
+// put-onto-battlefield instruction is wrapped in a delayed trigger.
+//
+// The "under your control" controller rider, the "tapped" entry rider, and a
+// fixed "with a <kind> counter on it" entry-counter rider are modeled, matching
+// the immediate, self, and group blink lowerers. The same shape with no rider
+// (Turn to Mist) and the counter form (Otherworldly Journey, Long Road Home)
+// both lower. Every other shape — plural/group exiles, non-target exiles, color
+// or type entry choices, unknown counter forms, or unconsumed clause content —
+// fails closed so the general sequence path is untouched.
 func lowerDelayedBlinkReturn(
 	effects []compiler.CompiledEffect,
 	effectIndex int,
 	ctx contentCtx,
 	sequence []game.Instruction,
 ) (game.Exile, game.AbilityContent, bool) {
+	returnEffect := ctx.content.Effects[0]
 	if effectIndex == 0 ||
 		len(sequence) != effectIndex ||
 		effects[effectIndex-1].Kind != compiler.EffectExile ||
 		effects[effectIndex-1].DelayedTiming != 0 ||
 		len(ctx.content.Effects) != 1 ||
-		ctx.content.Effects[0].Kind != compiler.EffectReturn ||
-		ctx.content.Effects[0].DelayedTiming != game.DelayedAtBeginningOfNextEndStep ||
-		ctx.content.Effects[0].Negated ||
-		ctx.content.Effects[0].ToZone != zone.Battlefield ||
-		ctx.content.Effects[0].UnderYourControl ||
-		ctx.content.Effects[0].CounterKindKnown {
+		returnEffect.Kind != compiler.EffectReturn ||
+		returnEffect.DelayedTiming != game.DelayedAtBeginningOfNextEndStep ||
+		returnEffect.Negated ||
+		returnEffect.ToZone != zone.Battlefield ||
+		returnEffect.EntersColorChoice ||
+		returnEffect.EntersTypeChoice ||
+		returnEffect.EntersWithCounters {
 		return game.Exile{}, game.AbilityContent{}, false
 	}
 	if !referencesBindTo(ctx.content.References, compiler.ReferenceBindingPriorInstructionResult, effectIndex-1) {
 		return game.Exile{}, game.AbilityContent{}, false
+	}
+	// "with a <kind> counter on it" rider: only fixed, known, positive counts of a
+	// known kind are modeled; every other counter form fails closed.
+	var entryCounters []game.CounterPlacement
+	if returnEffect.CounterKindKnown {
+		if !returnEffect.Amount.Known || returnEffect.Amount.Value < 1 {
+			return game.Exile{}, game.AbilityContent{}, false
+		}
+		entryCounters = []game.CounterPlacement{{
+			Kind:   returnEffect.CounterKind,
+			Amount: returnEffect.Amount.Value,
+		}}
 	}
 	// References validated — clear before fail-closed check.
 	consumed := ctx
@@ -3231,11 +3372,17 @@ func lowerDelayedBlinkReturn(
 		return game.Exile{}, game.AbilityContent{}, false
 	}
 	exile.ExileLinkedKey = key
+	put := game.PutOnBattlefield{
+		Source:        game.LinkedBattlefieldSource(key),
+		EntryTapped:   returnEffect.EntersTapped,
+		EntryCounters: entryCounters,
+	}
+	if returnEffect.UnderYourControl {
+		put.Recipient = opt.Val(game.ControllerReference())
+	}
 	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
-		Timing: game.DelayedAtBeginningOfNextEndStep,
-		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.PutOnBattlefield{
-			Source: game.LinkedBattlefieldSource(key),
-		}}}}.Ability(),
+		Timing:  game.DelayedAtBeginningOfNextEndStep,
+		Content: game.Mode{Sequence: []game.Instruction{{Primitive: put}}}.Ability(),
 	}}
 	return exile, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
 }

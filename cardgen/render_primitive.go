@@ -1285,8 +1285,18 @@ func (r Renderer) renderExile(ctx *renderCtx, value game.Exile) (string, error) 
 	if value.ExileLinkedKey == "" {
 		return r.renderObjectOrGroup(ctx, "game.Exile", value.Object, value.Group)
 	}
+	// A linked exile over a group (mass blink) remembers every exiled permanent
+	// under the key so a later linked return brings the whole group back; render
+	// the group reference alongside the key rather than a single object.
 	if value.Group.Domain() != 0 {
-		return "", errors.New("render: linked exile requires one object")
+		rendered, err := r.renderGroupReference(ctx, value.Group)
+		if err != nil {
+			return "", err
+		}
+		return structLit("game.Exile", []string{
+			fmt.Sprintf("Group: %s,", rendered),
+			fmt.Sprintf("ExileLinkedKey: game.LinkedKey(%q),", string(value.ExileLinkedKey)),
+		}), nil
 	}
 	rendered, err := r.renderObjectReference(value.Object)
 	if err != nil {

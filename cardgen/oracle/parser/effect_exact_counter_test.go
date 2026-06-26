@@ -58,6 +58,9 @@ func TestExactMultiTargetCounterPlacementAccepts(t *testing.T) {
 		"Put a +1/+1 counter on each of up to two other target creatures.",
 		"Put a +1/+1 counter on each of up to two other target creatures you control.",
 		"Put a -1/-1 counter on each of up to two target creatures.",
+		// The unbounded "each of any number of target" multi-target object is
+		// reconstructed exactly; the lowering layer decides which forms it models.
+		"Put a +1/+1 counter on each of any number of target creatures.",
 	}
 	for _, source := range accepted {
 		if !counterPlacementExact(t, source) {
@@ -73,8 +76,6 @@ func TestExactMultiTargetCounterPlacementFailsClosed(t *testing.T) {
 		"Put a +1/+1 counter on up to two target creatures.",
 		// Subtype-restricted plural targets are not a plain permanent noun.
 		"Put a +1/+1 counter on each of up to two target Merfolk.",
-		// An unbounded cardinality has no exact count word.
-		"Put a +1/+1 counter on each of any number of target creatures.",
 	}
 	for _, source := range rejected {
 		if counterPlacementExact(t, source) {

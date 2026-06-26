@@ -668,12 +668,17 @@ func exactMultiPermanentUnionTargetSyntax(text, prefix string, plural bool, sele
 // multiTargetCardinalityPrefix returns the canonical count words that precede
 // "target" for a supported multi-target or optional cardinality, whether the
 // target noun is plural, and whether the cardinality is one the round-trip
-// represents. It fails closed for the unbounded "any number of" shape (Max 99),
-// the divided-damage "one or two" ranges (Min neither 0 nor Max), and counts
-// without a small-cardinal word.
+// represents. It reconstructs the unbounded "any number of" shape (Min 0,
+// Max 99) as a plural count, and fails closed for the divided-damage "one or
+// two" ranges (Min neither 0 nor Max) and counts without a small-cardinal word.
 func multiTargetCardinalityPrefix(c TargetCardinalitySyntax) (prefix string, plural, ok bool) {
 	if c.Min == 0 && c.Max == 1 {
 		return "up to one ", false, true
+	}
+	// The unbounded "any number of" shape (Min 0, Max 99) reconstructs its own
+	// canonical count words and always pluralizes the target noun.
+	if c.Min == 0 && c.Max == 99 {
+		return "any number of ", true, true
 	}
 	if c.Max < 2 {
 		return "", false, false

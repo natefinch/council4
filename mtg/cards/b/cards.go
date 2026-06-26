@@ -15,6 +15,8 @@ var Cards = []*game.CardDef{
 	BlazemireVerge,
 	BlazingSunsteel,
 	BolasSCitadel,
+	BoneHarvest,
+	BragoKingEternal,
 	BridgeworksBattle,
 	BugenhagenWiseElder,
 	Bushwhack,

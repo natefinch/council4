@@ -1205,8 +1205,9 @@ func TestLowerMultipleDelayedBlinkPairsUseDistinctKeys(t *testing.T) {
 func TestLowerDelayedBlinkRejectsUnsupportedVariants(t *testing.T) {
 	t.Parallel()
 	for _, text := range []string{
-		"Exile target creature. Return it to the battlefield under your control at the beginning of the next end step.",
-		"Exile target creature. Return it to the battlefield under its owner's control with a +1/+1 counter on it at the beginning of the next end step.",
+		// A delayed return timed to a step other than the next end step is not
+		// modeled and must fail closed.
+		"Exile target creature. Return it to the battlefield under its owner's control at the beginning of your next upkeep.",
 	} {
 		t.Run(text, func(t *testing.T) {
 			t.Parallel()
@@ -1218,6 +1219,76 @@ func TestLowerDelayedBlinkRejectsUnsupportedVariants(t *testing.T) {
 			})
 			if len(diagnostics) == 0 {
 				t.Fatal("expected unsupported blink variant to fail closed")
+			}
+		})
+	}
+}
+
+// delayedBlinkPut extracts the put-on-battlefield wrapped in the delayed trigger
+// of a single-target delayed blink mode, failing the test if the shape differs.
+func delayedBlinkPut(t *testing.T, mode game.Mode) game.PutOnBattlefield {
+	t.Helper()
+	if len(mode.Targets) != 1 || len(mode.Sequence) != 2 {
+		t.Fatalf("mode = %#v, want one target and two instructions", mode)
+	}
+	exile, ok := mode.Sequence[0].Primitive.(game.Exile)
+	if !ok || exile.Object != game.TargetPermanentReference(0) || exile.ExileLinkedKey == "" {
+		t.Fatalf("exile = %#v, want linked target exile", mode.Sequence[0].Primitive)
+	}
+	delayed, ok := mode.Sequence[1].Primitive.(game.CreateDelayedTrigger)
+	if !ok || delayed.Trigger.Timing != game.DelayedAtBeginningOfNextEndStep {
+		t.Fatalf("delayed = %#v, want next-end-step trigger", mode.Sequence[1].Primitive)
+	}
+	put, ok := delayed.Trigger.Content.Modes[0].Sequence[0].Primitive.(game.PutOnBattlefield)
+	if !ok {
+		t.Fatalf("delayed content = %#v, want put on battlefield", delayed.Trigger.Content.Modes[0].Sequence[0].Primitive)
+	}
+	key, linked := put.Source.LinkedKey()
+	if !linked || key != exile.ExileLinkedKey {
+		t.Fatalf("put source = %#v, want linked source %q", put.Source, exile.ExileLinkedKey)
+	}
+	return put
+}
+
+// TestLowerDelayedBlinkUnderYourControl confirms a delayed single-target return
+// "under your control" lowers with the controller recipient, the same rider the
+// immediate return already modeled.
+func TestLowerDelayedBlinkUnderYourControl(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Delayed Your Control",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Exile target creature. Return it to the battlefield under your control at the beginning of the next end step.",
+	})
+	put := delayedBlinkPut(t, face.SpellAbility.Val.Modes[0])
+	if !put.Recipient.Exists || put.Recipient.Val != game.ControllerReference() {
+		t.Fatalf("recipient = %#v, want controller", put.Recipient)
+	}
+}
+
+// TestLowerDelayedBlinkWithCounter confirms a delayed single-target return that
+// adds a +1/+1 counter lowers with that counter on the delayed put. This is the
+// Otherworldly Journey / Long Road Home shape, in both trailing and leading
+// delayed-clause positions.
+func TestLowerDelayedBlinkWithCounter(t *testing.T) {
+	t.Parallel()
+	for _, text := range []string{
+		"Exile target creature. Return it to the battlefield under its owner's control with a +1/+1 counter on it at the beginning of the next end step.",
+		"Exile target creature. At the beginning of the next end step, return that card to the battlefield under its owner's control with a +1/+1 counter on it.",
+	} {
+		t.Run(text, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Delayed Counter",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: text,
+			})
+			put := delayedBlinkPut(t, face.SpellAbility.Val.Modes[0])
+			want := game.CounterPlacement{Kind: counter.PlusOnePlusOne, Amount: 1}
+			if len(put.EntryCounters) != 1 || put.EntryCounters[0] != want {
+				t.Fatalf("entry counters = %#v, want %#v", put.EntryCounters, want)
 			}
 		})
 	}

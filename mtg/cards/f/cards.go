@@ -16,5 +16,8 @@ var Cards = []*game.CardDef{
 	FiresOfYavimaya,
 	FlamespeakerSWill,
 	FootMystic,
+	FootbottomFeast,
 	Forest,
+	ForeverYoung,
+	FranticSalvage,
 }

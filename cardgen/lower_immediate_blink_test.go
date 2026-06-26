@@ -172,14 +172,11 @@ func TestLowerSelfBlinkRejectsStandaloneSelfExile(t *testing.T) {
 }
 
 // TestLowerImmediateBlinkRejectsUnsupportedVariants confirms the immediate blink
-// lowerer fails closed for shapes it does not fully model, such as a return that
-// also adds a +1/+1 counter or an exile of a selector the sequence cannot model.
+// lowerer fails closed for shapes it does not fully model, such as an exile of a
+// selector the sequence cannot model.
 func TestLowerImmediateBlinkRejectsUnsupportedVariants(t *testing.T) {
 	t.Parallel()
 	for _, text := range []string{
-		// Leading-position delayed return that also adds a counter on return: the
-		// counter rider is unmodeled, so the body must fail closed.
-		"Exile target creature. At the beginning of the next end step, return it to the battlefield under its owner's control with a +1/+1 counter on it.",
 		// Exile of a non-supported selector still blocks the sequence.
 		"Exile target multicolored permanent, then return it to the battlefield under its owner's control.",
 	} {
@@ -314,5 +311,92 @@ func TestLowerGroupBlinkDelayed(t *testing.T) {
 	}
 	if len(delayed.Trigger.Content.Modes[0].Sequence) != 2 {
 		t.Fatalf("delayed content = %#v, want two puts", delayed.Trigger.Content.Modes[0].Sequence)
+	}
+}
+
+// TestLowerGroupBlinkAnyNumberDelayed confirms the unbounded "any number of
+// target" group blink (Eerie Interlude) lowers as a single linked exile of every
+// chosen permanent plus one delayed group return, rather than unrolling a fixed
+// slot per target.
+func TestLowerGroupBlinkAnyNumberDelayed(t *testing.T) {
+	t.Parallel()
+	mode := groupBlinkMode(t,
+		"Exile any number of target creatures you control. Return those cards to the battlefield under their owner's control at the beginning of the next end step.")
+	if len(mode.Targets) != 1 || mode.Targets[0].MinTargets != 0 || mode.Targets[0].MaxTargets != 99 {
+		t.Fatalf("targets = %#v, want one any-number spec", mode.Targets)
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want one exile and one delayed trigger", mode.Sequence)
+	}
+	exile, ok := mode.Sequence[0].Primitive.(game.Exile)
+	if !ok || exile.Object != game.AllTargetPermanentsReference(0) || exile.ExileLinkedKey == "" {
+		t.Fatalf("exile = %#v, want linked all-target-permanents exile", mode.Sequence[0].Primitive)
+	}
+	delayed, ok := mode.Sequence[1].Primitive.(game.CreateDelayedTrigger)
+	if !ok || delayed.Trigger.Timing != game.DelayedAtBeginningOfNextEndStep {
+		t.Fatalf("instruction[1] = %#v, want next-end-step delayed trigger", mode.Sequence[1].Primitive)
+	}
+	put, ok := delayed.Trigger.Content.Modes[0].Sequence[0].Primitive.(game.PutOnBattlefield)
+	if !ok {
+		t.Fatalf("delayed content = %#v, want one put on battlefield", delayed.Trigger.Content.Modes[0].Sequence)
+	}
+	key, linked := put.Source.LinkedKey()
+	if !linked || key != exile.ExileLinkedKey {
+		t.Fatalf("put source = %#v, want linked source %q", put.Source, exile.ExileLinkedKey)
+	}
+}
+
+// TestLowerGroupBlinkAnyNumberImmediate confirms the unbounded "any number of
+// target" group blink returns immediately when the return is connected with
+// "then" rather than delayed to the next end step.
+func TestLowerGroupBlinkAnyNumberImmediate(t *testing.T) {
+	t.Parallel()
+	mode := groupBlinkMode(t,
+		"Exile any number of target creatures you control, then return those cards to the battlefield under their owner's control.")
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want one exile and one put", mode.Sequence)
+	}
+	exile, ok := mode.Sequence[0].Primitive.(game.Exile)
+	if !ok || exile.Object != game.AllTargetPermanentsReference(0) || exile.ExileLinkedKey == "" {
+		t.Fatalf("exile = %#v, want linked all-target-permanents exile", mode.Sequence[0].Primitive)
+	}
+	put, ok := mode.Sequence[1].Primitive.(game.PutOnBattlefield)
+	if !ok {
+		t.Fatalf("instruction[1] = %#v, want put on battlefield", mode.Sequence[1].Primitive)
+	}
+	key, linked := put.Source.LinkedKey()
+	if !linked || key != exile.ExileLinkedKey {
+		t.Fatalf("put source = %#v, want linked source %q", put.Source, exile.ExileLinkedKey)
+	}
+}
+
+// TestLowerMassGroupBlink confirms the untargeted mass blink (Ghostway) lowers
+// as one group exile of every controlled permanent under a single linked key
+// plus one delayed group return, with no target spec.
+func TestLowerMassGroupBlink(t *testing.T) {
+	t.Parallel()
+	mode := groupBlinkMode(t,
+		"Exile each creature you control. Return those cards to the battlefield under their owner's control at the beginning of the next end step.")
+	if len(mode.Targets) != 0 {
+		t.Fatalf("targets = %#v, want none for mass blink", mode.Targets)
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want one exile and one delayed trigger", mode.Sequence)
+	}
+	exile, ok := mode.Sequence[0].Primitive.(game.Exile)
+	if !ok || !exile.Group.Valid() || exile.ExileLinkedKey == "" {
+		t.Fatalf("exile = %#v, want linked group exile", mode.Sequence[0].Primitive)
+	}
+	delayed, ok := mode.Sequence[1].Primitive.(game.CreateDelayedTrigger)
+	if !ok || delayed.Trigger.Timing != game.DelayedAtBeginningOfNextEndStep {
+		t.Fatalf("instruction[1] = %#v, want next-end-step delayed trigger", mode.Sequence[1].Primitive)
+	}
+	put, ok := delayed.Trigger.Content.Modes[0].Sequence[0].Primitive.(game.PutOnBattlefield)
+	if !ok {
+		t.Fatalf("delayed content = %#v, want one put on battlefield", delayed.Trigger.Content.Modes[0].Sequence)
+	}
+	key, linked := put.Source.LinkedKey()
+	if !linked || key != exile.ExileLinkedKey {
+		t.Fatalf("put source = %#v, want linked source %q", put.Source, exile.ExileLinkedKey)
 	}
 }

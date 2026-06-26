@@ -11,6 +11,7 @@ var Cards = []*game.CardDef{
 	LifecraftCavalry,
 	LightningBolt,
 	LlanowarWastes,
+	LongRoadHome,
 	LordDreggInsectInvader,
 	LoxodonWarhammer,
 	LustForWar,
