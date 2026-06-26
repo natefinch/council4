@@ -139,3 +139,81 @@ func TestLowerRemoveCounterUnsupportedDynamicAmount(t *testing.T) {
 		OracleText: "{T}: Remove all counters from target permanent.",
 	})
 }
+
+// removeCounterFromSelfMode pulls the single RemoveCounter primitive out of a
+// no-target, one-instruction ability mode whose object is the ability's own
+// source, failing the test on any other shape.
+func removeCounterFromSelfMode(t *testing.T, content game.AbilityContent) game.RemoveCounter {
+	t.Helper()
+	if len(content.Modes) != 1 {
+		t.Fatalf("modes = %#v", content.Modes)
+	}
+	mode := content.Modes[0]
+	if len(mode.Targets) != 0 {
+		t.Fatalf("targets = %#v", mode.Targets)
+	}
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("sequence = %#v", mode.Sequence)
+	}
+	remove, ok := mode.Sequence[0].Primitive.(game.RemoveCounter)
+	if !ok {
+		t.Fatalf("primitive = %#v", mode.Sequence[0].Primitive)
+	}
+	if remove.Object != game.SourcePermanentReference() {
+		t.Fatalf("object = %#v", remove.Object)
+	}
+	return remove
+}
+
+// TestLowerRemoveCounterSelfNamedKind proves the source/self-referenced removal
+// "Remove a -1/-1 counter from this creature." (Magmaroth, the Hatchling cycle)
+// lowers to a RemoveCounter on the ability's own source naming that exact kind.
+func TestLowerRemoveCounterSelfNamedKind(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Magmaroth",
+		Layout:     "normal",
+		TypeLine:   "Creature — Hippo Beast",
+		OracleText: "At the beginning of your upkeep, remove a -1/-1 counter from this creature.",
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %#v", face.TriggeredAbilities)
+	}
+	remove := removeCounterFromSelfMode(t, face.TriggeredAbilities[0].Content)
+	if remove.Amount != game.Fixed(1) || remove.ChooseKind || remove.CounterKind != counter.MinusOneMinusOne {
+		t.Fatalf("remove = %#v", remove)
+	}
+}
+
+// TestLowerRemoveCounterSelfActivated proves the activated self-removal "Remove
+// a -1/-1 counter from this creature." (the Hatchling cycle) lowers to a
+// source-object RemoveCounter.
+func TestLowerRemoveCounterSelfActivated(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Sturdy Hatchling",
+		Layout:     "normal",
+		TypeLine:   "Artifact Creature — Elemental",
+		OracleText: "{2}, Sacrifice another artifact or creature: Remove a -1/-1 counter from this creature.",
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %#v", face.ActivatedAbilities)
+	}
+	remove := removeCounterFromSelfMode(t, face.ActivatedAbilities[0].Content)
+	if remove.Amount != game.Fixed(1) || remove.ChooseKind || remove.CounterKind != counter.MinusOneMinusOne {
+		t.Fatalf("remove = %#v", remove)
+	}
+}
+
+// TestLowerRemoveCounterSelfUnsupportedAll proves the "remove all" self form
+// ("remove all +1/+1 counters from this creature.", Blood Hound) fails closed:
+// its byte-exact reconstruction never matches the "all" wording.
+func TestLowerRemoveCounterSelfUnsupportedAll(t *testing.T) {
+	t.Parallel()
+	lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+		Name:       "Test Blood Hound",
+		Layout:     "normal",
+		TypeLine:   "Creature — Elemental Dog",
+		OracleText: "{2}{R}: Remove all +1/+1 counters from this creature.",
+	})
+}

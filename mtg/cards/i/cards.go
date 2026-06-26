@@ -12,6 +12,7 @@ var Cards = []*game.CardDef{
 	InameLifeAspect,
 	InfernoFist,
 	InfiltrationLens,
+	IngeniousProdigy,
 	InsectoidExterminator,
 	Insolence,
 	IroasSBlessing,

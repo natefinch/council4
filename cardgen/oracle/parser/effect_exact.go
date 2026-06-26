@@ -3779,12 +3779,7 @@ func exactMoveCountersEffectSyntax(effect *EffectSyntax) bool {
 // and matched byte-exact, so the mass "all counters" form, dynamic counts, and
 // any referenced or pronoun-object shape stay non-exact and fail closed.
 func exactRemoveCounterEffectSyntax(effect *EffectSyntax) bool {
-	if len(effect.Targets) != 1 ||
-		len(effect.References) != 0 ||
-		!effect.Targets[0].Exact ||
-		effect.Targets[0].Cardinality.Max != 1 ||
-		!effect.Amount.Known ||
-		effect.Amount.Value < 1 {
+	if !effect.Amount.Known || effect.Amount.Value < 1 {
 		return false
 	}
 	// The kind-unspecified "a counter" form removes one counter of a single
@@ -3793,11 +3788,14 @@ func exactRemoveCounterEffectSyntax(effect *EffectSyntax) bool {
 	if !effect.CounterKnown && effect.Amount.Value != 1 {
 		return false
 	}
+	object, ok := exactRemoveCounterObjectText(effect)
+	if !ok {
+		return false
+	}
 	noun := "counters"
 	if effect.Amount.Value == 1 {
 		noun = "counter"
 	}
-	object := effect.Targets[0].Text
 	text := exactEffectClauseText(effect)
 	if effect.CounterKnown {
 		return strings.EqualFold(
@@ -3811,6 +3809,29 @@ func exactRemoveCounterEffectSyntax(effect *EffectSyntax) bool {
 		fmt.Sprintf("Remove %s %s from %s.",
 			effectAmountSourceText(effect), noun, object),
 	)
+}
+
+// exactRemoveCounterObjectText returns the rendered object a counter is removed
+// from, for either a single exact target permanent ("target creature") or a lone
+// source/self reference ("this creature"/"this artifact"/the card's own name, as
+// in "Remove a -1/-1 counter from this creature."). It fails closed for every
+// other shape — multiple or inexact targets, a targeted cardinality above one, a
+// group ("each creature you control"), or a "from it" pronoun paired with delayed
+// timing — so unrepresentable removals keep the wording unsupported.
+func exactRemoveCounterObjectText(effect *EffectSyntax) (string, bool) {
+	switch {
+	case len(effect.Targets) == 1 && len(effect.References) == 0:
+		if !effect.Targets[0].Exact || effect.Targets[0].Cardinality.Max != 1 {
+			return "", false
+		}
+		return effect.Targets[0].Text, true
+	case len(effect.Targets) == 0 && len(effect.References) == 1:
+		if object, ok := exactObjectReferenceText(effect.References); ok {
+			return object, true
+		}
+		return exactSelfSubjectReferenceText(effect.References)
+	}
+	return "", false
 }
 
 // exactPutThoseCountersEffectSyntax recognizes the counter-salvage form "put

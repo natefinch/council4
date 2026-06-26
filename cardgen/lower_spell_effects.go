@@ -1213,22 +1213,19 @@ func lowerRemoveCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 	if !effect.Exact ||
 		effect.Negated ||
 		effect.Context != parser.EffectContextController ||
-		len(ctx.content.Targets) != 1 ||
-		ctx.content.Targets[0].Cardinality.Max != 1 ||
-		len(ctx.content.References) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		!effect.Amount.Known ||
 		effect.Amount.Value < 1 {
 		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
 	}
-	target, ok := permanentTargetSpecWithCardinality(ctx.content.Targets[0])
+	object, targets, ok := removeCounterObjectAndTargets(ctx)
 	if !ok {
 		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
 	}
 	remove := game.RemoveCounter{
 		Amount: game.Fixed(effect.Amount.Value),
-		Object: game.TargetPermanentReference(0),
+		Object: object,
 	}
 	if effect.CounterKindKnown {
 		if !compiler.CounterKindPlacementSupported(effect.CounterKind) ||
@@ -1247,11 +1244,43 @@ func lowerRemoveCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 		remove.ChooseKind = true
 	}
 	return game.Mode{
-		Targets: []game.TargetSpec{target},
+		Targets: targets,
 		Sequence: []game.Instruction{{
 			Primitive: remove,
 		}},
 	}.Ability(), nil
+}
+
+// removeCounterObjectAndTargets resolves the permanent a counter is removed from
+// for a controller-context removal. It accepts the targeted form ("Remove a +1/+1
+// counter from target creature.") — one exact single-cardinality target, no
+// references, lowered to the target permanent — or the source/self-referenced
+// form ("Remove a -1/-1 counter from this creature.", "Remove a blood counter
+// from this artifact.") — no targets and a lone reference that binds to the
+// ability's own source. Any other shape fails closed (ok=false).
+func removeCounterObjectAndTargets(ctx contentCtx) (game.ObjectReference, []game.TargetSpec, bool) {
+	switch {
+	case len(ctx.content.Targets) == 1 && len(ctx.content.References) == 0:
+		if ctx.content.Targets[0].Cardinality.Max != 1 {
+			return game.ObjectReference{}, nil, false
+		}
+		target, ok := permanentTargetSpecWithCardinality(ctx.content.Targets[0])
+		if !ok {
+			return game.ObjectReference{}, nil, false
+		}
+		return game.TargetPermanentReference(0), []game.TargetSpec{target}, true
+	case len(ctx.content.Targets) == 0 && len(ctx.content.References) == 1:
+		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+			AllowSource: true,
+			AllowTarget: true,
+			AllowEvent:  !ctx.sequenceClause || ctx.allowEventPronoun,
+		})
+		if !ok {
+			return game.ObjectReference{}, nil, false
+		}
+		return object, nil, true
+	}
+	return game.ObjectReference{}, nil, false
 }
 
 // lowerMoveCountersOntoEventPermanent lowers the Graft-style move "move a +1/+1

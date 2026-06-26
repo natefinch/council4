@@ -10,4 +10,5 @@ var Cards = []*game.CardDef{
 	EmblemOfTheWarmind,
 	EnduringCourage,
 	EpicConfrontation,
+	ExemplarOfStrength,
 }

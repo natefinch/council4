@@ -18,6 +18,7 @@ var Cards = []*game.CardDef{
 	ChelonianTackle,
 	CinderGlade,
 	CliveSHideaway,
+	ClockworkHydra,
 	CommandTower,
 	ContestOfClaws,
 	CosmicHunger,

@@ -11,6 +11,7 @@ var Cards = []*game.CardDef{
 	HauntedRidge,
 	HazoretGodseeker,
 	HeatOfBattle,
+	HeirloomAuntie,
 	HiddenStockpile,
 	HuntTheHunter,
 	HuntTheWeak,
