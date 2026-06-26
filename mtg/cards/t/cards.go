@@ -11,4 +11,5 @@ var Cards = []*game.CardDef{
 	TempestTechnique,
 	TheIrencrag,
 	TreasureHunt,
+	TwinflameTravelers,
 }

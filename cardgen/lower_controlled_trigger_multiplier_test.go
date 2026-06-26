@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -47,6 +48,20 @@ func TestLowerControlledTriggerMultiplierFilters(t *testing.T) {
 				SubtypesAny:   []types.Sub{types.Sub("Ninja")},
 			},
 		},
+		"another subtype excludes self": {
+			oracleText: "If a triggered ability of another Elemental you control triggers, it triggers an additional time.",
+			want: game.Selection{
+				SubtypesAny:   []types.Sub{types.Sub("Elemental")},
+				ExcludeSource: true,
+			},
+		},
+		"another card type with that-ability tail": {
+			oracleText: "If a triggered ability of another creature you control triggers, that ability triggers an additional time.",
+			want: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				ExcludeSource: true,
+			},
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -62,10 +77,36 @@ func TestLowerControlledTriggerMultiplierFilters(t *testing.T) {
 			}
 			if !equalCardSlice(got.RequiredTypes, tc.want.RequiredTypes) ||
 				!equalSuperSlice(got.Supertypes, tc.want.Supertypes) ||
-				!equalSubSlice(got.SubtypesAny, tc.want.SubtypesAny) {
+				!equalSubSlice(got.SubtypesAny, tc.want.SubtypesAny) ||
+				got.ExcludeSource != tc.want.ExcludeSource {
 				t.Fatalf("selection = %#v, want %#v", got, tc.want)
 			}
 		})
+	}
+}
+
+// TestLowerControlledTriggerMultiplierDisjunction verifies the "or"-joined filter
+// "a Shaman or another Wizard you control" (Harmonic Prodigy) lowers to an AnyOf
+// of two branch selections, the second carrying ExcludeSource for "another".
+func TestLowerControlledTriggerMultiplierDisjunction(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test disjunction",
+		Layout:     "normal",
+		TypeLine:   "Legendary Creature — Human Wizard",
+		OracleText: "If a triggered ability of a Shaman or another Wizard you control triggers, that ability triggers an additional time.",
+	})
+	got := controlledMultiplierSelection(t, face)
+	if len(got.AnyOf) != 2 {
+		t.Fatalf("AnyOf = %#v, want two branches", got.AnyOf)
+	}
+	shaman := got.AnyOf[0]
+	if !equalSubSlice(shaman.SubtypesAny, []types.Sub{types.Sub("Shaman")}) || shaman.ExcludeSource {
+		t.Fatalf("first branch = %#v, want bare Shaman", shaman)
+	}
+	wizard := got.AnyOf[1]
+	if !equalSubSlice(wizard.SubtypesAny, []types.Sub{types.Sub("Wizard")}) || !wizard.ExcludeSource {
+		t.Fatalf("second branch = %#v, want Wizard excluding self", wizard)
 	}
 }
 
@@ -73,9 +114,8 @@ func TestLowerControlledTriggerMultiplierFailsClosed(t *testing.T) {
 	t.Parallel()
 	for name, oracleText := range map[string]string{
 		"bare supertype no noun": "If a triggered ability of a legendary permanent you control triggers, that ability triggers an additional time.",
-		"or-joined subtypes":     "If a triggered ability of a Shaman or another Wizard you control triggers, that ability triggers an additional time.",
-		"another qualifier":      "If a triggered ability of another creature you control triggers, that ability triggers an additional time.",
-		"it-triggers tail":       "If a triggered ability of a legendary creature you control triggers, it triggers an additional time.",
+		"branch missing article": "If a triggered ability of a Shaman or Wizard you control triggers, that ability triggers an additional time.",
+		"bare another supertype": "If a triggered ability of another legendary you control triggers, that ability triggers an additional time.",
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -124,6 +164,36 @@ func TestGenerateExecutableControlledTriggerMultiplierCards(t *testing.T) {
 				`SubtypesAny: []types.Sub{types.Sub("Ally")}`,
 			},
 		},
+		"harmonic prodigy": {
+			card: &ScryfallCard{
+				Name:       "Harmonic Prodigy",
+				Layout:     "normal",
+				ManaCost:   "{1}{R}",
+				TypeLine:   "Legendary Creature — Human Wizard",
+				OracleText: "Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)\nIf a triggered ability of a Shaman or another Wizard you control triggers, that ability triggers an additional time.",
+				Power:      new("1"),
+				Toughness:  new("3"),
+			},
+			wants: []string{
+				"game.RuleEffectAdditionalTriggerForControlledPermanent",
+				`AnyOf: []game.Selection{game.Selection{SubtypesAny: []types.Sub{types.Sub("Shaman")}}, game.Selection{SubtypesAny: []types.Sub{types.Sub("Wizard")}, ExcludeSource: true}}`,
+			},
+		},
+		"twinflame travelers": {
+			card: &ScryfallCard{
+				Name:       "Twinflame Travelers",
+				Layout:     "normal",
+				ManaCost:   "{2}{U}{R}",
+				TypeLine:   "Creature — Elemental Sorcerer",
+				OracleText: "Flying\nIf a triggered ability of another Elemental you control triggers, it triggers an additional time.",
+				Power:      new("3"),
+				Toughness:  new("3"),
+			},
+			wants: []string{
+				"game.RuleEffectAdditionalTriggerForControlledPermanent",
+				`SubtypesAny: []types.Sub{types.Sub("Elemental")}, ExcludeSource: true`,
+			},
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -144,37 +214,13 @@ func TestGenerateExecutableControlledTriggerMultiplierCards(t *testing.T) {
 }
 
 func equalCardSlice(a, b []types.Card) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
+	return slices.Equal(a, b)
 }
 
 func equalSuperSlice(a, b []types.Super) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
+	return slices.Equal(a, b)
 }
 
 func equalSubSlice(a, b []types.Sub) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
+	return slices.Equal(a, b)
 }

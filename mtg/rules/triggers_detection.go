@@ -227,11 +227,13 @@ func enteringPermanentAdditionalTriggerCount(g *game.Game, trigger *pendingTrigg
 // triggers, that ability triggers an additional time.", Annie Joins Up; Katara,
 // the Fearless; Splinter, Radical Rat). It applies when the triggered ability's
 // source is a permanent the doubler's controller controls and that permanent
-// matches the doubler's source-permanent selection filter. Unlike the
-// chosen-type and entering-permanent doublers this family includes the doubler's
-// own triggers ("a ... you control", not "another"). The count is read from the
-// live rule effects; the source permanent's type, supertype, and subtype are
-// taken from its current state, falling back to last-known information once it
+// matches the doubler's source-permanent selection filter. A plain "a ... you
+// control" filter includes the doubler's own triggers; an "another ... you
+// control" filter (Twinflame Travelers, the Wizard branch of Harmonic Prodigy)
+// sets ExcludeSource so the doubler does not double its own triggers. The count
+// is read from the live rule effects; the source permanent's type, supertype,
+// and subtype are taken from its current state, falling back to last-known
+// information once it
 // has left the battlefield (so a dying creature's leaves-the-battlefield trigger
 // still doubles).
 func controlledPermanentAdditionalTriggerCount(g *game.Game, trigger *pendingTriggeredAbility) int {
@@ -262,19 +264,31 @@ func controlledPermanentAdditionalTriggerCount(g *game.Game, trigger *pendingTri
 func controlledTriggerSourceMatches(g *game.Game, effect *game.RuleEffect, sourceID id.ID) bool {
 	if permanent, ok := permanentByObjectID(g, sourceID); ok {
 		return effectiveController(g, permanent) == effect.Controller &&
-			permanentMatchesTriggerSourceFilter(g, &effect.AffectedSelection, permanent)
+			permanentMatchesTriggerSourceFilter(g, &effect.AffectedSelection, permanent, effect.SourceObjectID)
 	}
 	snapshot, ok := lastKnownObject(g, sourceID)
 	return ok &&
 		snapshot.Controller == effect.Controller &&
-		snapshotMatchesTriggerSourceFilter(&effect.AffectedSelection, &snapshot)
+		snapshotMatchesTriggerSourceFilter(&effect.AffectedSelection, &snapshot, sourceID, effect.SourceObjectID)
 }
 
 // permanentMatchesTriggerSourceFilter reports whether a live permanent satisfies
 // the type, supertype, and subtype filter carried by a controlled-permanent
 // trigger doubler's selection. RequiredTypes and Supertypes are conjunctive;
-// SubtypesAny is disjunctive. An empty selection matches any permanent.
-func permanentMatchesTriggerSourceFilter(g *game.Game, selection *game.Selection, permanent *game.Permanent) bool {
+// SubtypesAny is disjunctive. AnyOf requires the permanent to satisfy at least
+// one alternative ("a Shaman or another Wizard you control"). ExcludeSource drops
+// the doubler's own source, modeling the "another ... you control" wording
+// (Twinflame Travelers; the Wizard branch of Harmonic Prodigy); doublerSourceID
+// names that source. An empty selection matches any permanent.
+func permanentMatchesTriggerSourceFilter(g *game.Game, selection *game.Selection, permanent *game.Permanent, doublerSourceID id.ID) bool {
+	if len(selection.AnyOf) > 0 && !slices.ContainsFunc(selection.AnyOf, func(alternative game.Selection) bool {
+		return permanentMatchesTriggerSourceFilter(g, &alternative, permanent, doublerSourceID)
+	}) {
+		return false
+	}
+	if selection.ExcludeSource && permanent.ObjectID == doublerSourceID {
+		return false
+	}
 	for _, cardType := range selection.RequiredTypes {
 		if !permanentHasType(g, permanent, cardType) {
 			return false
@@ -298,8 +312,17 @@ func permanentMatchesTriggerSourceFilter(g *game.Game, selection *game.Selection
 
 // snapshotMatchesTriggerSourceFilter mirrors permanentMatchesTriggerSourceFilter
 // against last-known information for a source permanent that has left the
-// battlefield.
-func snapshotMatchesTriggerSourceFilter(selection *game.Selection, snapshot *game.ObjectSnapshot) bool {
+// battlefield. sourceID names the matched source so ExcludeSource can drop the
+// doubler's own source (doublerSourceID).
+func snapshotMatchesTriggerSourceFilter(selection *game.Selection, snapshot *game.ObjectSnapshot, sourceID, doublerSourceID id.ID) bool {
+	if len(selection.AnyOf) > 0 && !slices.ContainsFunc(selection.AnyOf, func(alternative game.Selection) bool {
+		return snapshotMatchesTriggerSourceFilter(&alternative, snapshot, sourceID, doublerSourceID)
+	}) {
+		return false
+	}
+	if selection.ExcludeSource && sourceID == doublerSourceID {
+		return false
+	}
 	for _, cardType := range selection.RequiredTypes {
 		if !slices.Contains(snapshot.Types, cardType) {
 			return false
