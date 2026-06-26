@@ -301,6 +301,17 @@ const (
 	// creature" refers to the source. It lowers to a CreateReplacement bound to
 	// that object.
 	EffectExileIfLeaveBattlefield EffectKind = "EffectExileIfLeaveBattlefield"
+	// EffectExileIfWouldDieThisTurn models the single-target damage-spell rider
+	// "If that creature [or planeswalker] would die this turn, exile it instead."
+	// (Lava Coil, Obliterating Bolt, Magma Spray, Flame-Blessed Bolt, Bleed Dry,
+	// ...). The subject ("that creature", "that creature or planeswalker", or
+	// "it") and the "it" of the result both bind to the spell's single target, so
+	// the rider redirects the targeted permanent's death to exile for the rest of
+	// the turn. It lowers to a CreateReplacement bound to that target for the
+	// turn. It is emitted as a whole-sentence effect so the leading "If ... would
+	// die this turn" does not also surface as a spurious condition; the matching
+	// condition boundary is suppressed by conditionDieThisTurnExileReplacementAt.
+	EffectExileIfWouldDieThisTurn EffectKind = "EffectExileIfWouldDieThisTurn"
 	// EffectBecomeType models a targeted continuous type-adding effect ("Target
 	// permanent becomes an artifact in addition to its other types until end of
 	// turn.", Liquimetal Torque, Liquimetal Coating). The added card types are

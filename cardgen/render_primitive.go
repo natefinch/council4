@@ -59,6 +59,7 @@ func (r Renderer) renderCreateReplacementEffect(ctx *renderCtx, replacement game
 		if zoneErr != nil {
 			return "", zoneErr
 		}
+		ctx.need(importZone)
 		fields = append(fields,
 			"MatchFromZone: true,",
 			fmt.Sprintf("FromZone: %s,", fromZone),
@@ -69,6 +70,7 @@ func (r Renderer) renderCreateReplacementEffect(ctx *renderCtx, replacement game
 		if zoneErr != nil {
 			return "", zoneErr
 		}
+		ctx.need(importZone)
 		fields = append(fields,
 			"MatchToZone: true,",
 			fmt.Sprintf("ToZone: %s,", toZone),
@@ -79,6 +81,7 @@ func (r Renderer) renderCreateReplacementEffect(ctx *renderCtx, replacement game
 		if zoneErr != nil {
 			return "", zoneErr
 		}
+		ctx.need(importZone)
 		fields = append(fields, fmt.Sprintf("ReplaceToZone: %s,", replaceZone))
 	}
 	if len(replacement.EntersWithCounters) > 0 {

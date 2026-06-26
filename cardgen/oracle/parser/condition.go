@@ -473,6 +473,24 @@ func leaveBattlefieldReplacementSubjectWidth(tokens []shared.Token) int {
 	return 0
 }
 
+// conditionDieThisTurnExileReplacementAt reports whether the "if" at index opens
+// the single-target damage-spell rider "If that creature [or planeswalker] would
+// die this turn, exile it instead." (Lava Coil, Obliterating Bolt). That clause
+// is recognized as a whole-sentence replacement effect by
+// parseDieThisTurnExileReplacement, so its leading "if" must not also surface as
+// a standalone condition.
+func conditionDieThisTurnExileReplacementAt(tokens []shared.Token, i int) bool {
+	if !equalWord(tokens[i], "if") || i+1 >= len(tokens) {
+		return false
+	}
+	rest := tokens[i+1:]
+	subjectWidth := dieThisTurnExileSubjectWidth(rest)
+	if subjectWidth == 0 {
+		return false
+	}
+	return effectWordsAt(rest, subjectWidth, "would", "die", "this", "turn")
+}
+
 // entersAsCopyConditionalTypePrefix reports whether words begins with the
 // "if it's a <type>" / "if it is a <type>" predicate of a conditional copiable
 // counter rider, where <type> is a recognized card type.

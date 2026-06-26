@@ -1066,6 +1066,9 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) {
 			return parseLeaveBattlefieldExileReplacement(sentence, tokens, atoms)
 		},
+		func() ([]EffectSyntax, bool) {
+			return parseDieThisTurnExileReplacement(sentence, tokens, atoms)
+		},
 		func() ([]EffectSyntax, bool) { return parseLifeLossReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePunisherEachLoseLifeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseLibraryTopReorderEffect(sentence, tokens, atoms) },
@@ -2207,6 +2210,72 @@ func matchLeaveBattlefieldExileReplacement(tokens []shared.Token) (EffectContext
 func leaveBattlefieldReplacementResult(result []shared.Token) bool {
 	return tokenWordsEqual(result, "exile", "it", "instead") ||
 		tokenWordsEqual(result, "exile", "it", "instead", "of", "putting", "it", "anywhere", "else")
+}
+
+// parseDieThisTurnExileReplacement recognizes the single-target damage-spell
+// rider "If that creature [or planeswalker] would die this turn, exile it
+// instead." (Lava Coil, Obliterating Bolt, Magma Spray, Flame-Blessed Bolt,
+// Bleed Dry, ...) and emits a single EffectExileIfWouldDieThisTurn effect so the
+// leading would-die condition does not become a spurious activation/intervening
+// condition of its own. The matching condition boundary is suppressed by
+// conditionDieThisTurnExileReplacementAt. The subject ("that creature", "that
+// creature or planeswalker", or "it") and the result's "it" are carried as
+// references that bind to the spell's single target.
+func parseDieThisTurnExileReplacement(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	if !matchDieThisTurnExileReplacement(tokens) {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:       EffectExileIfWouldDieThisTurn,
+		Context:    EffectContextController,
+		Span:       shared.SpanOf(tokens),
+		ClauseSpan: shared.SpanOf(tokens),
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		References: referencesInSpan(atoms, shared.SpanOf(tokens)),
+		Exact:      true,
+	}}, true
+}
+
+// matchDieThisTurnExileReplacement reports whether tokens spell the would-die
+// exile rider "If <subject> would die this turn, exile it instead." where the
+// subject is "that creature", "that creature or planeswalker", or "it".
+func matchDieThisTurnExileReplacement(tokens []shared.Token) bool {
+	if len(tokens) < 9 || tokens[len(tokens)-1].Kind != shared.Period || !equalWord(tokens[0], "if") {
+		return false
+	}
+	subjectWidth := dieThisTurnExileSubjectWidth(tokens[1:])
+	if subjectWidth == 0 {
+		return false
+	}
+	idx := 1 + subjectWidth
+	if !effectWordsAt(tokens, idx, "would", "die", "this", "turn") {
+		return false
+	}
+	idx += 4
+	if idx >= len(tokens) || tokens[idx].Kind != shared.Comma {
+		return false
+	}
+	return tokenWordsEqual(tokens[idx+1:len(tokens)-1], "exile", "it", "instead")
+}
+
+// dieThisTurnExileSubjectWidth reports the token width of the subject that opens
+// a would-die exile rider ("it" → 1, "that creature" → 2, "that creature or
+// planeswalker" → 4), or 0 when tokens do not begin with such a subject.
+func dieThisTurnExileSubjectWidth(tokens []shared.Token) int {
+	if len(tokens) == 0 {
+		return 0
+	}
+	if equalWord(tokens[0], "it") {
+		return 1
+	}
+	if len(tokens) >= 4 && tokenWordsEqual(tokens[:4], "that", "creature", "or", "planeswalker") {
+		return 4
+	}
+	if len(tokens) >= 2 && tokenWordsEqual(tokens[:2], "that", "creature") {
+		return 2
+	}
+	return 0
 }
 
 // parseLifeLossReplacement recognizes the life-loss replacement "If an opponent

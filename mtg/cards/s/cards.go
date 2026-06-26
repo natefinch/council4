@@ -8,6 +8,8 @@ import "github.com/natefinch/council4/mtg/game"
 var Cards = []*game.CardDef{
 	SalvationSwan,
 	SavageSmash,
+	ScorchingDragonfire,
+	Scorchmark,
 	ServoSchematic,
 	SetessanTraining,
 	ShedWeakness,
@@ -19,6 +21,7 @@ var Cards = []*game.CardDef{
 	SkyriderElf,
 	SlateStreetRuffian,
 	SludgeTitan,
+	SmiteTheDeathless,
 	SolemnRecruit,
 	SpawnbedProtector,
 	SphinxMindbreaker,

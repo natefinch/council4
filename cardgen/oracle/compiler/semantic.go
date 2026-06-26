@@ -1500,6 +1500,15 @@ const (
 	// LayerPowerToughnessSwitch until end of turn. Added last so existing kinds
 	// keep their wire values.
 	EffectSwitchPT
+	// EffectExileIfWouldDieThisTurn models the damage-spell rider "If that
+	// creature [or planeswalker] would die this turn, exile it instead." (Lava
+	// Coil, Obliterating Bolt, Magma Spray, Flame-Blessed Bolt, ...). It rides on
+	// a single-target damage or -X/-X spell and redirects the targeted
+	// permanent's death (a battlefield-to-graveyard zone change) to exile for the
+	// rest of the turn. "That creature"/"it" bind to the spell's single target,
+	// so it lowers to a CreateReplacement bound to that target for the turn. Added
+	// last so existing kinds keep their wire values.
+	EffectExileIfWouldDieThisTurn
 )
 
 // DurationKind identifies common continuous-effect durations.
