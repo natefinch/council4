@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,509 of 32,501 cards eligible for paper support (44.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,515 of 32,501 cards eligible for paper support (44.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -184,6 +184,7 @@ Council4 currently supports **14,509 of 32,501 cards eligible for paper support 
 - Agoraphobia
 - Ahriman
 - Aid the Fallen
+- Aim for the Head
 - Aim High
 - Ainok Bond-Kin
 - Ainok Tracker
@@ -6871,6 +6872,7 @@ Council4 currently supports **14,509 of 32,501 cards eligible for paper support 
 - Kwende, Pride of Femeref
 - Kykar, Wind's Fury
 - Kykar, Zephyr Awakener
+- Kyoki, Sanity's Eclipse
 - Kyoshi Village
 - Kyoshi Warrior Guard
 - Kyoshi Warriors
@@ -7755,6 +7757,7 @@ Council4 currently supports **14,509 of 32,501 cards eligible for paper support 
 - Mindful Biomancer
 - Mindless Automaton
 - Mindless Conscription
+- Mindmelter
 - Mindscour Dragon
 - Mindslicer
 - Mindstab Thrull
@@ -11148,6 +11151,7 @@ Council4 currently supports **14,509 of 32,501 cards eligible for paper support 
 - Skull of Orm
 - Skull of Ramos
 - Skull Prophet
+- Skullcap Snail
 - Skullclamp
 - Skullmead Cauldron
 - Skullslither Worm
@@ -13320,6 +13324,7 @@ Council4 currently supports **14,509 of 32,501 cards eligible for paper support 
 - Unrooted Ancestor
 - Unruly Catapult
 - Unruly Mob
+- Unscrupulous Agent
 - Unsettling Twins
 - Unspeakable Symbol
 - Unstable Obelisk
@@ -13556,6 +13561,7 @@ Council4 currently supports **14,509 of 32,501 cards eligible for paper support 
 - Vesperlark
 - Vessel of Endless Rest
 - Vessel of Ephemera
+- Vessel of Malignity
 - Vessel of Paramnesia
 - Vessel of Volatility
 - Vestige of Emrakul
