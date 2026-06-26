@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,788 of 32,501 cards eligible for paper support (45.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,802 of 32,501 cards eligible for paper support (45.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -489,6 +489,7 @@ Council4 currently supports **14,788 of 32,501 cards eligible for paper support 
 - Apostle of Invasion
 - Apostle of Purifying Light
 - Apothecary Geist
+- Apothecary Initiate
 - Appa, Aang's Companion
 - Appa, the Vigilant
 - Appeal to Eirdu
@@ -769,6 +770,7 @@ Council4 currently supports **14,788 of 32,501 cards eligible for paper support 
 - Auriok Transfixer
 - Auron's Inspiration
 - Auroral Procession
+- Auspicious Ancestor
 - Auspicious Arrival
 - Austere Command
 - Authority of the Consuls
@@ -1434,6 +1436,7 @@ Council4 currently supports **14,788 of 32,501 cards eligible for paper support 
 - Bog Witch
 - Bog Wraith
 - Bog Wreckage
+- Bog-Strider Ash
 - Bogardan Firefiend
 - Bogardan Hellkite
 - Bogardan Lancer
@@ -2656,6 +2659,7 @@ Council4 currently supports **14,788 of 32,501 cards eligible for paper support 
 - Crystal Golem
 - Crystal Grotto
 - Crystal Quarry
+- Crystal Rod
 - Crystal Seer
 - Crystal Slipper
 - Crystal Vein
@@ -4163,6 +4167,7 @@ Council4 currently supports **14,788 of 32,501 cards eligible for paper support 
 - Farewell
 - Farfinder
 - Farhaven Elf
+- Farmstead
 - Farmstead Gleaner
 - Farseek
 - Farsight Adept
@@ -4675,6 +4680,7 @@ Council4 currently supports **14,788 of 32,501 cards eligible for paper support 
 - Fresh Volunteers
 - Fresh-Faced Recruit
 - Fretwork Colony
+- Freyalise's Charm
 - Friendly Ghost
 - Friendly Neighborhood
 - Friendly Teddy
@@ -6451,6 +6457,7 @@ Council4 currently supports **14,788 of 32,501 cards eligible for paper support 
 - Iron Man, Modern Marvel
 - Iron Man, Tony Stark
 - Iron Myr
+- Iron Star
 - Iron Tusk Elephant
 - Iron Will
 - Iron-Barb Hellion
@@ -6487,6 +6494,7 @@ Council4 currently supports **14,788 of 32,501 cards eligible for paper support 
 - It'll Quench Ya!
 - It's Clobberin' Time!
 - Ithilien Kingfisher
+- Ivory Cup
 - Ivy Elemental
 - Ivy Lane Denizen
 - Ixalli's Diviner
@@ -7187,6 +7195,7 @@ Council4 currently supports **14,788 of 32,501 cards eligible for paper support 
 - Lifecreed Duo
 - Lifeforce
 - Lifegift
+- Lifesmith
 - Lifespinner
 - Lifespring Druid
 - Lifetap
@@ -11666,6 +11675,7 @@ Council4 currently supports **14,788 of 32,501 cards eligible for paper support 
 - Soul Enervation
 - Soul Feast
 - Soul Manipulation
+- Soul Net
 - Soul of Innistrad
 - Soul of Magma
 - Soul of Migration
@@ -12551,6 +12561,7 @@ Council4 currently supports **14,788 of 32,501 cards eligible for paper support 
 - Syr Vondam, the Lucent
 - Sythis, Harvest's Hand
 - Tablet of Compleation
+- Tablet of Epityr
 - Tah-Crop Skirmisher
 - Tah-Crop Skirmisher
 - Taiga
@@ -12985,6 +12996,7 @@ Council4 currently supports **14,788 of 32,501 cards eligible for paper support 
 - Thriving Isle
 - Thriving Moor
 - Throes of Chaos
+- Throne of Bone
 - Throne of Geth
 - Throne of the God-Pharaoh
 - Throne of the High City
@@ -13628,6 +13640,7 @@ Council4 currently supports **14,788 of 32,501 cards eligible for paper support 
 - Ursapine
 - Uruk-hai Berserker
 - Urza's Cave
+- Urza's Chalice
 - Urza's Factory
 - Urza's Guilt
 - Urza's Incubator
@@ -14536,6 +14549,7 @@ Council4 currently supports **14,788 of 32,501 cards eligible for paper support 
 - Wooded Bastion
 - Wooded Foothills
 - Wooded Ridgeline
+- Wooden Sphere
 - Woodfall Primus
 - Woodland Acolyte // Mend the Wilds
 - Woodland Cemetery
