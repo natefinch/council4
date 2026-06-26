@@ -15,6 +15,7 @@ var Cards = []*game.CardDef{
 	HazoretGodseeker,
 	HeatOfBattle,
 	HeirloomAuntie,
+	HengeWalker,
 	HerdMigration,
 	HiddenStockpile,
 	HornbashMentor,

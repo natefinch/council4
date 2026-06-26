@@ -19,6 +19,7 @@ var Cards = []*game.CardDef{
 	LilianaSSpoils,
 	LivingPhone,
 	LlanowarWastes,
+	LocthwainPaladin,
 	LongRoadHome,
 	LordDreggInsectInvader,
 	LoxodonWarhammer,

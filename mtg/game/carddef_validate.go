@@ -1503,6 +1503,15 @@ func (v *cardDefValidator) validateCondition(faceName, path string, condition *C
 	if condition.EventHistory.Exists {
 		v.validateEventHistoryCondition(faceName, appendPath(path, "EventHistory"), &condition.EventHistory.Val)
 	}
+	if condition.SpellColorManaSpent.Count < 0 {
+		v.add(faceName, appendPath(path, "SpellColorManaSpent.Count"), CardDefIssueInvalidCondition, "colored-mana-spend threshold cannot be negative")
+	}
+	if condition.SpellColorManaSpent.Count > 0 && condition.SpellColorManaSpent.Color == "" {
+		v.add(faceName, appendPath(path, "SpellColorManaSpent.Color"), CardDefIssueInvalidCondition, "colored-mana-spend predicate requires a color")
+	}
+	if condition.SpellSameColorManaSpentAtLeast < 0 {
+		v.add(faceName, appendPath(path, "SpellSameColorManaSpentAtLeast"), CardDefIssueInvalidCondition, "same-color-mana-spend threshold cannot be negative")
+	}
 }
 
 func (v *cardDefValidator) validateConditionSelectionCount(faceName, path string, count SelectionCount) {

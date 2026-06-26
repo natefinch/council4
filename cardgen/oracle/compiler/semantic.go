@@ -765,6 +765,19 @@ const (
 	// Skyblazer). It gates a continuous self-static so the granted keyword or
 	// power/toughness bonus applies only on the controller's own turns.
 	ConditionPredicateControllerTurn
+	// ConditionPredicateColoredManaSpentToCastAtLeast is satisfied when at least
+	// Threshold mana of ManaSpentColor was spent to cast the resolving spell ("if
+	// at least three white mana was spent to cast this spell"; the Adamant
+	// ability word on the Throne of Eldraine Paladin cycle). It gates a
+	// resolving-spell enters-with-counters replacement against the per-color mana
+	// spend captured on the stack object.
+	ConditionPredicateColoredManaSpentToCastAtLeast
+	// ConditionPredicateSameColorManaSpentToCastAtLeast is satisfied when at least
+	// Threshold mana of a single color was spent to cast the resolving spell ("if
+	// at least three mana of the same color was spent to cast this spell"; Henge
+	// Walker). It compares the largest single-color tally of the captured
+	// per-color mana spend against Threshold.
+	ConditionPredicateSameColorManaSpentToCastAtLeast
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -1004,6 +1017,14 @@ type CompiledCondition struct {
 	// Urza's Mine and an Urza's Tower, ..."). The controller must control a
 	// permanent matching each listed name.
 	ControlledNames []string
+
+	// ManaSpentColor carries the color required by a
+	// ConditionPredicateColoredManaSpentToCastAtLeast clause ("if at least three
+	// white mana was spent to cast this spell"; the Adamant ability word).
+	// Threshold carries the minimum amount of that color of mana. It is the empty
+	// color for the same-color form, which compares the largest single-color
+	// tally instead of a named color.
+	ManaSpentColor color.Color
 }
 
 // TargetCardinality is an inclusive target count range.

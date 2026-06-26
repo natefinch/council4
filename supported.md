@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,710 of 32,501 cards eligible for paper support (45.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,716 of 32,501 cards eligible for paper support (45.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -592,6 +592,7 @@ Council4 currently supports **14,710 of 32,501 cards eligible for paper support 
 - Ardent Militia
 - Ardent Plea
 - Ardent Recruit
+- Ardenvale Paladin
 - Ardenvale Tactician // Dizzying Swoop
 - Ardoz, Cobbler of War
 - Arena Athlete
@@ -3770,6 +3771,7 @@ Council4 currently supports **14,710 of 32,501 cards eligible for paper support 
 - Ember Shot
 - Ember Weaver
 - Ember-Eye Wolf
+- Embereth Paladin
 - Embereth Shieldbreaker // Battle Display
 - Embermage Goblin
 - Embermaw Hellion
@@ -4802,6 +4804,7 @@ Council4 currently supports **14,710 of 32,501 cards eligible for paper support 
 - Gangly Stompling
 - Gangrenous Goliath
 - Garenbrig Carver // Shield's Might
+- Garenbrig Paladin
 - Gargos, Vicious Watcher
 - Gargoyle
 - Gargoyle Castle
@@ -5763,6 +5766,7 @@ Council4 currently supports **14,710 of 32,501 cards eligible for paper support 
 - Henchbots
 - Henge Guardian
 - Henge of Ramos
+- Henge Walker
 - Hengegate Pathway // Mistgate Pathway
 - Herald of Anguish
 - Herald of Dromoka
@@ -7267,6 +7271,7 @@ Council4 currently supports **14,710 of 32,501 cards eligible for paper support 
 - Lockjaw Snapper
 - Locthwain Gargoyle
 - Locthwain Lancer
+- Locthwain Paladin
 - Locust Spray
 - Locust Swarm
 - Lodestone Myr
@@ -13649,6 +13654,7 @@ Council4 currently supports **14,710 of 32,501 cards eligible for paper support 
 - Vanquish the Weak
 - Vanquisher's Axe
 - Vanquisher's Banner
+- Vantress Paladin
 - Vapor Snag
 - Varmint
 - Varragoth, Bloodsky Sire

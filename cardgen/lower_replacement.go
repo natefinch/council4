@@ -378,7 +378,7 @@ func replacementAbilityLowering(ability compiler.CompiledAbility, replacementAbi
 			keywords:   entersAsCopyConsumedKeywords(ability),
 			references: len(ability.Content.References),
 		},
-		sourceSpans: replacementSourceSpans(ability),
+		sourceSpans: replacementSourceSpans(ability, replacementAbility),
 	}, nil
 }
 
@@ -411,21 +411,54 @@ func appendKeywordSpans(spans []shared.Span, keywords []compiler.CompiledKeyword
 
 // replacementAbilityWordConsumed reports whether a lowered replacement ability
 // absorbed its leading ability word into a rules-bearing gate that the lowerer
-// recognized. The only such case today is the "Max speed —" draw-doubling
-// replacement (Vnwxt, Verbose Host), which gates the replacement on the
-// controller having maximum speed; its ability word span is therefore covered.
+// recognized. Two cases qualify: the "Max speed —" draw-doubling replacement
+// (Vnwxt, Verbose Host), which gates on the controller having maximum speed, and
+// the "Adamant —" enters-with-counters replacement (the Throne of Eldraine
+// Paladin cycle), which gates on the per-color mana spent to cast the spell. In
+// both cases the ability word span is therefore covered.
 func replacementAbilityWordConsumed(lowered abilityLowering) bool {
-	return lowered.replacementAbility.Exists &&
-		lowered.replacementAbility.Val.Replacement.Condition.Exists &&
+	if !lowered.replacementAbility.Exists {
+		return false
+	}
+	if replacementManaSpentCondition(&lowered.replacementAbility.Val) {
+		return true
+	}
+	return lowered.replacementAbility.Val.Replacement.Condition.Exists &&
 		lowered.replacementAbility.Val.Replacement.Condition.Val.ControllerHasMaxSpeed
 }
 
-func replacementSourceSpans(ability compiler.CompiledAbility) []shared.Span {
+func replacementSourceSpans(ability compiler.CompiledAbility, replacementAbility *game.ReplacementAbility) []shared.Span {
 	spans := make([]shared.Span, 0, len(ability.Content.Effects))
 	for i := range ability.Content.Effects {
 		spans = append(spans, ability.Content.Effects[i].Span)
 	}
+	// An Adamant enters-with-counters replacement ("Adamant — If at least three
+	// white mana was spent to cast this spell, this creature enters with a +1/+1
+	// counter on it.") carries its gate in a leading condition clause whose
+	// source span and "this spell" reference span fall outside the
+	// enters-with-counters effect span, so cover them here. The mana-spent
+	// condition fields mark this case; every other replacement keeps the prior
+	// effect-only coverage so its source accounting is unchanged.
+	if replacementManaSpentCondition(replacementAbility) {
+		for i := range ability.Content.Conditions {
+			spans = append(spans, ability.Content.Conditions[i].Span)
+		}
+		for i := range ability.Content.References {
+			spans = append(spans, ability.Content.References[i].Span)
+		}
+	}
 	return spans
+}
+
+// replacementManaSpentCondition reports whether a lowered replacement gates on an
+// Adamant "mana was spent to cast this spell" condition, whose leading clause and
+// "this spell" reference need explicit source-span coverage.
+func replacementManaSpentCondition(replacementAbility *game.ReplacementAbility) bool {
+	if replacementAbility == nil || !replacementAbility.Replacement.Condition.Exists {
+		return false
+	}
+	condition := replacementAbility.Replacement.Condition.Val
+	return condition.SpellColorManaSpent.Count > 0 || condition.SpellSameColorManaSpentAtLeast > 0
 }
 
 func lowerEntersTappedReplacement(
@@ -1129,7 +1162,7 @@ func lowerEntersWithCountersReplacement(
 		ability.Cost != nil ||
 		ability.Trigger != nil ||
 		ability.Optional ||
-		!selfEntersWithCountersReferences(ability.Content.References, ability.Content.Effects[0]) {
+		!selfEntersWithCountersReferences(ability.Content.References, ability.Content.Effects[0], ability.Content.Conditions) {
 		return unsupported("the executable source backend supports only exact self enters-with-counters replacements")
 	}
 	effect := ability.Content.Effects[0]
@@ -1201,7 +1234,7 @@ func isEntersWithCountersReplacement(ability compiler.CompiledAbility) bool {
 	return effect.EntersWithCounters || effect.CounterKindKnown
 }
 
-func selfEntersWithCountersReferences(references []compiler.CompiledReference, effect compiler.CompiledEffect) bool {
+func selfEntersWithCountersReferences(references []compiler.CompiledReference, effect compiler.CompiledEffect, conditions []compiler.CompiledCondition) bool {
 	if !referencesBindTo(references, compiler.ReferenceBindingSource, 0) {
 		return false
 	}
@@ -1213,9 +1246,31 @@ func selfEntersWithCountersReferences(references []compiler.CompiledReference, e
 	// (Everflowing Chalice) each add a third self reference for the "it" inside
 	// their count phrase, so a three-reference self replacement is accepted only
 	// for those amounts.
-	return len(references) == 3 &&
+	if len(references) == 3 &&
 		(effect.Amount.DynamicKind == compiler.DynamicAmountColorsOfManaSpent ||
-			effect.Amount.DynamicKind == compiler.DynamicAmountTimesKicked)
+			effect.Amount.DynamicKind == compiler.DynamicAmountTimesKicked) {
+		return true
+	}
+	// An Adamant condition ("if at least three white mana was spent to cast this
+	// spell", the Throne of Eldraine Paladin cycle) adds a third self reference
+	// for the "this spell" inside its gate, so a three-reference self replacement
+	// is accepted when that condition is present.
+	return len(references) == 3 && hasManaSpentToCastCondition(conditions)
+}
+
+// hasManaSpentToCastCondition reports whether any condition is an Adamant
+// per-color or same-color "mana was spent to cast this spell" gate, whose "this
+// spell" reference binds the source and so adds a self reference to an
+// enters-with-counters replacement.
+func hasManaSpentToCastCondition(conditions []compiler.CompiledCondition) bool {
+	for i := range conditions {
+		switch conditions[i].Predicate {
+		case compiler.ConditionPredicateColoredManaSpentToCastAtLeast,
+			compiler.ConditionPredicateSameColorManaSpentToCastAtLeast:
+			return true
+		}
+	}
+	return false
 }
 
 // lowerGroupEntersWithCountersReplacement lowers a static enters-with-counters

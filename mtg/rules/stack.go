@@ -584,6 +584,7 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 			CastFromZone:            obj.SourceZone,
 			XValue:                  obj.XValue,
 			ColorsOfManaSpentToCast: obj.ColorsOfManaSpentToCast,
+			ManaSpentByColorToCast:  obj.ManaSpentByColorToCast,
 		},
 		agents,
 		log,

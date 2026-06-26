@@ -954,6 +954,20 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, "SpellWasKicked: true,")
 		hasPredicate = true
 	}
+	if cond.SpellColorManaSpent.Count > 0 {
+		colorLiteral, err := colorValueToLiteral(cond.SpellColorManaSpent.Color)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importColor)
+		fields = append(fields, fmt.Sprintf("SpellColorManaSpent: game.ColorManaSpendThreshold{Color: %s, Count: %d},",
+			colorLiteral, cond.SpellColorManaSpent.Count))
+		hasPredicate = true
+	}
+	if cond.SpellSameColorManaSpentAtLeast > 0 {
+		fields = append(fields, fmt.Sprintf("SpellSameColorManaSpentAtLeast: %d,", cond.SpellSameColorManaSpentAtLeast))
+		hasPredicate = true
+	}
 	if cond.CastFromZone.Exists {
 		castZone, err := renderZone(cond.CastFromZone.Val)
 		if err != nil {

@@ -2,6 +2,7 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -47,6 +48,13 @@ type permanentCreationOptions struct {
 	// permanent that did not enter from a cast spell (a token, a copy, a
 	// put-into-play effect).
 	ColorsOfManaSpentToCast int
+	// ManaSpentByColorToCast carries, per color, how much colored mana was spent
+	// to cast the spell that is resolving into this permanent, so an Adamant
+	// enters-with-counters replacement ("if at least three <color> mana was spent
+	// to cast this spell") reads it as the permanent enters. It is nil for a
+	// permanent that did not enter from a cast spell (a token, a copy, a
+	// put-into-play effect).
+	ManaSpentByColorToCast map[color.Color]int
 }
 
 // createCardPermanentFaceWithOptions puts a card onto the battlefield as a new
@@ -92,6 +100,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		xValue:            options.XValue,
 		kickCount:         options.KickCount,
 		colorsOfManaSpent: options.ColorsOfManaSpentToCast,
+		manaSpentByColor:  options.ManaSpentByColorToCast,
 	}, g, permanent, fromZone)
 	if options.ForceTapped {
 		permanent.Tapped = true
@@ -172,6 +181,7 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 		xValue:            options.XValue,
 		kickCount:         options.KickCount,
 		colorsOfManaSpent: options.ColorsOfManaSpentToCast,
+		manaSpentByColor:  options.ManaSpentByColorToCast,
 	}, g, permanent, fromZone)
 	if options.ForceTapped {
 		permanent.Tapped = true

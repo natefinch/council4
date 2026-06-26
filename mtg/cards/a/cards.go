@@ -23,6 +23,7 @@ var Cards = []*game.CardDef{
 	AnkhOfMishra,
 	ArcaneInfusion,
 	ArcanistSOwl,
+	ArdenvalePaladin,
 	Arena,
 	ArmorThrull,
 	AshePrincessOfDalmasca,
