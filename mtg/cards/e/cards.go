@@ -9,4 +9,5 @@ var Cards = []*game.CardDef{
 	EerieInterlude,
 	EmblemOfTheWarmind,
 	EnduringCourage,
+	EpicConfrontation,
 }

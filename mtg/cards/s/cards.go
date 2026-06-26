@@ -7,6 +7,7 @@ import "github.com/natefinch/council4/mtg/game"
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
 	SalvationSwan,
+	SavageSmash,
 	ServoSchematic,
 	SetessanTraining,
 	ShelteredByGhosts,
@@ -14,4 +15,5 @@ var Cards = []*game.CardDef{
 	SkyriderElf,
 	SolemnRecruit,
 	SpringmantleCleric,
+	SwiftKick,
 }

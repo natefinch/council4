@@ -1519,14 +1519,11 @@ func lowerFightSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 		ctx.content.Targets[1].Cardinality.Min < 0 ||
 		ctx.content.Targets[1].Cardinality.Min > 1 ||
 		ctx.content.Effects[0].Negated ||
-		!ctx.content.Effects[0].Exact ||
 		ctx.content.Targets[0].Selector.Another ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		len(ctx.content.References) != 0 ||
-		(ctx.content.Effects[0].Context != parser.EffectContextTarget &&
-			ctx.content.Effects[0].Context != parser.EffectContextPriorSubject) {
+		!fightTwoTargetShape(ctx.content) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported fight spell",
@@ -1551,6 +1548,34 @@ func lowerFightSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 			},
 		}},
 	}.Ability(), nil
+}
+
+// fightTwoTargetShape reports whether a two-target fight clause matches one of
+// the two accepted subject shapes for "<fighter> fights <creature>":
+//
+//   - exact shape: the fighter is itself the first target ("Target creature you
+//     control fights target creature you don't control") or the elided prior
+//     subject of a then-joined fight chain ("..., then fights target creature").
+//     The clause is exact and leaves no trailing reference.
+//   - prior-subject pronoun shape: an earlier clause buffed or put a counter on
+//     the first target, and "It fights target creature you don't control" names
+//     that creature with an "It" pronoun. The ordered-sequence machinery
+//     inherits the buffed creature as the first fight target and localizes the
+//     pronoun to a single target-bound reference at occurrence 0 (the fighter),
+//     so the clause reads as a referenced-object effect rather than an exact
+//     one. The pronoun is redundant with the first target, so it is accepted.
+func fightTwoTargetShape(content compiler.AbilityContent) bool {
+	effect := content.Effects[0]
+	if effect.Exact &&
+		len(content.References) == 0 &&
+		(effect.Context == parser.EffectContextTarget ||
+			effect.Context == parser.EffectContextPriorSubject) {
+		return true
+	}
+	return effect.Context == parser.EffectContextReferencedObject &&
+		len(content.References) == 1 &&
+		content.References[0].Binding == compiler.ReferenceBindingTarget &&
+		content.References[0].Occurrence == 0
 }
 
 // lowerSourceFightSpell lowers the source-referenced fight family, where the
