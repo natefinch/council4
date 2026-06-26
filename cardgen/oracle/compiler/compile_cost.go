@@ -41,6 +41,7 @@ func compileCostComponent(component parser.CostComponent) CostComponent {
 		SubtypesAny:           append([]types.Sub(nil), component.SubtypesAny...),
 		ExcludeSource:         component.ExcludeSource,
 		DiscardWholeHand:      component.DiscardWholeHand,
+		Random:                component.Random,
 		AnyNumber:             component.AnyNumber,
 		ObjectHistoric:        component.ObjectHistoric,
 		ObjectTokenOnly:       component.ObjectTokenOnly,

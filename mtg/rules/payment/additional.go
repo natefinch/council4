@@ -24,14 +24,19 @@ type additionalCostPlan struct {
 	exertSource     *game.Permanent
 	millAmount      int
 	discards        []id.ID
-	exiles          []cardZoneSelection
-	reveals         []cardZoneSelection
-	evidence        []evidencePayment
-	lifePaid        int
-	energyPaid      int
-	untapSource     *game.Permanent
-	counterRemovals []counterRemoval
-	counterAdds     []counterPlacement
+	// randomDiscardAmount totals the cards to discard at random for
+	// AdditionalDiscard costs marked Random. The specific cards are not chosen
+	// during planning; the rules layer selects them uniformly at random when
+	// the plan is applied.
+	randomDiscardAmount int
+	exiles              []cardZoneSelection
+	reveals             []cardZoneSelection
+	evidence            []evidencePayment
+	lifePaid            int
+	energyPaid          int
+	untapSource         *game.Permanent
+	counterRemovals     []counterRemoval
+	counterAdds         []counterPlacement
 }
 
 type counterRemoval struct {
@@ -248,6 +253,15 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			plan.sacrifices = append(plan.sacrifices, source)
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalDiscard:
+			if additional.Random {
+				player, ok := s.Player(playerID)
+				if !ok || player.Hand.Size()-len(plan.discards)-plan.randomDiscardAmount < amount {
+					return plan, false
+				}
+				plan.randomDiscardAmount += amount
+				plan.paid = append(plan.paid, AdditionalCostText(additional))
+				continue
+			}
 			hadPreference := prefs != nil && len(prefs.DiscardChoices) > 0
 			chosen := preferredDiscardCards(s, playerID, additional, amount, plan.discards, prefs)
 			if len(chosen) != amount && preferenceFallbackAllowed(prefs, hadPreference) {

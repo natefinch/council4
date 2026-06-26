@@ -499,5 +499,17 @@ func lowerDiscardCost(component compiler.CostComponent) (cost.Additional, bool) 
 	if len(component.SubtypesAny) == 1 {
 		additional.SubtypesAny = cost.SubtypeSet{component.SubtypesAny[0]}
 	}
+	if component.Random {
+		// A random discard removes cards the payer does not choose, so the
+		// rules layer selects them uniformly at random. Only the unfiltered
+		// "discard <count> card(s) at random" form is supported; a random
+		// discard constrained to a card type, color, or subtype would require
+		// random selection from that filtered set, so fail closed on any such
+		// combination.
+		if additional.MatchCardType || additional.MatchCardColor || additional.SubtypesAny != (cost.SubtypeSet{}) {
+			return cost.Additional{}, false
+		}
+		additional.Random = true
+	}
 	return additional, true
 }

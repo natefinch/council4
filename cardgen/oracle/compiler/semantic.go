@@ -415,6 +415,11 @@ type CostComponent struct {
 	// the parser. The payer discards every card in their hand.
 	DiscardWholeHand bool
 
+	// Random reports a "discard <count> card(s) at random" cost object,
+	// recognized by the parser. The payer discards randomly chosen cards
+	// rather than cards of their choice (CR 701.9a).
+	Random bool
+
 	// AnyNumber reports a variable-cardinality card cost object ("any number of
 	// <cards>"), recognized by the parser. The payer chooses how many matching
 	// cards to take, bounded by a constraint such as TotalManaValueAtLeast.

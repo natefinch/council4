@@ -315,33 +315,13 @@ func (r *effectResolver) discardCardsWithChoices(playerID game.PlayerID, amount 
 // from the player's hand, as one simultaneous batch ("Discard a card at
 // random."). It returns whether any card was discarded.
 func (r *effectResolver) discardCardsAtRandom(playerID game.PlayerID, amount int, publishKey game.LinkedObjectKey) bool {
-	player, ok := playerByID(r.game, playerID)
-	if !ok {
-		return false
-	}
-	candidates := player.Hand.All()
-	amount = min(amount, len(candidates))
-	if amount <= 0 {
-		return false
-	}
-	order := make([]int, len(candidates))
-	for i := range order {
-		order[i] = i
-	}
-	r.engine.rng.Shuffle(len(order), func(i, j int) {
-		order[i], order[j] = order[j], order[i]
-	})
-	simultaneousID := r.game.IDGen.Next()
-	discarded := false
-	for _, idx := range order[:amount] {
-		if discardCardFromHandInBatch(r.game, playerID, candidates[idx], simultaneousID) {
-			discarded = true
-			if publishKey != (game.LinkedObjectKey{}) {
-				rememberLinkedObject(r.game, publishKey, game.LinkedObjectRef{CardID: candidates[idx]})
-			}
+	discarded := discardCardsAtRandomFromHand(r.game, playerID, amount)
+	for _, cardID := range discarded {
+		if publishKey != (game.LinkedObjectKey{}) {
+			rememberLinkedObject(r.game, publishKey, game.LinkedObjectRef{CardID: cardID})
 		}
 	}
-	return discarded
+	return len(discarded) > 0
 }
 
 func handleSearch(r *effectResolver, prim game.Search) effectResolved {

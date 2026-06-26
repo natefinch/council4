@@ -324,6 +324,10 @@ func (s *rulesPaymentState) DiscardFromHand(playerID game.PlayerID, cardID id.ID
 	return discardCardFromHand(s.g, playerID, cardID)
 }
 
+func (s *rulesPaymentState) DiscardAtRandom(playerID game.PlayerID, amount int) bool {
+	return len(discardCardsAtRandomFromHand(s.g, playerID, amount)) == amount
+}
+
 func (s *rulesPaymentState) MoveCard(playerID game.PlayerID, cardID id.ID, from, to zone.Type) bool {
 	return moveCardBetweenZones(s.g, playerID, cardID, from, to)
 }

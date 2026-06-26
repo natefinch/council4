@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,439 of 32,501 cards eligible for paper support (44.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,456 of 32,501 cards eligible for paper support (44.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -54,6 +54,7 @@ Council4 currently supports **14,439 of 32,501 cards eligible for paper support 
 - Academy Wall
 - Accelerate
 - Accelerated Mutation
+- Acceptable Losses
 - Access Tunnel
 - Accomplished Automaton
 - Accorder Paladin
@@ -324,6 +325,7 @@ Council4 currently supports **14,439 of 32,501 cards eligible for paper support 
 - Ambush Viper
 - Ambush Wolf
 - Amethyst Dragon // Explosive Crystal
+- Amok
 - Amonkhet Raceway
 - Amorphous Axe
 - Amphibian Downpour
@@ -1795,6 +1797,7 @@ Council4 currently supports **14,439 of 32,501 cards eligible for paper support 
 - Canopy Tactician
 - Canopy Vista
 - Canyon Crawler
+- Canyon Drake
 - Canyon Jerboa
 - Canyon Lurkers
 - Canyon Minotaur
@@ -2422,6 +2425,7 @@ Council4 currently supports **14,439 of 32,501 cards eligible for paper support 
 - Coral Barrier
 - Coral Commando
 - Coral Eel
+- Coral Helm
 - Coral Merfolk
 - Coral Trickster
 - Coralhelm Guide
@@ -3220,6 +3224,7 @@ Council4 currently supports **14,439 of 32,501 cards eligible for paper support 
 - Downpour
 - Dowsing Shaman
 - Dr. Madison Li
+- Draconian Cylix
 - Draconic Disciple
 - Draconic Muralists
 - Dracosaur Auxiliary
@@ -3469,6 +3474,7 @@ Council4 currently supports **14,439 of 32,501 cards eligible for paper support 
 - Dwarven Nomad
 - Dwarven Priest
 - Dwarven Ruins
+- Dwarven Strike Force
 - Dwarven Trader
 - Dwarven Warriors
 - Dwarven Weaponsmith
@@ -4567,6 +4573,7 @@ Council4 currently supports **14,439 of 32,501 cards eligible for paper support 
 - Freejam Regent
 - Freewind Falcon
 - Freeze in Place
+- Frenetic Ogre
 - Frenzied Arynx
 - Frenzied Devils
 - Frenzied Rage
@@ -5642,6 +5649,7 @@ Council4 currently supports **14,439 of 32,501 cards eligible for paper support 
 - Hell's Caretaker
 - Hell's Kitchen
 - Hell's Thunder
+- Hell-Bent Raider
 - Hellhole Flailer
 - Hellion
 - Hellkite Igniter
@@ -7289,6 +7297,7 @@ Council4 currently supports **14,439 of 32,501 cards eligible for paper support 
 - Maestros Initiate
 - Maestros Theater
 - Magda, the Hoardmaster
+- Mage il-Vec
 - Mage Tower Referee
 - Mage's Guile
 - Mage-Ring Bully
@@ -7647,6 +7656,7 @@ Council4 currently supports **14,439 of 32,501 cards eligible for paper support 
 - Metathran Soldier
 - Metathran Zombie
 - Meteor Golem
+- Meteor Storm
 - Meteor Sword
 - Meteoric Mace
 - Meteorite
@@ -8471,6 +8481,7 @@ Council4 currently supports **14,439 of 32,501 cards eligible for paper support 
 - Ogre Recluse
 - Ogre Resister
 - Ogre Sentry
+- Ogre Shaman
 - Ogre Slumlord
 - Ogre Taskmaster
 - Ogre Warrior
@@ -8737,6 +8748,8 @@ Council4 currently supports **14,439 of 32,501 cards eligible for paper support 
 - Parcel Myr
 - Parch
 - Pardic Collaborator
+- Pardic Lancer
+- Pardic Swordsmith
 - Pardic Wanderer
 - Parhelion II
 - Parhelion Patrol
@@ -9317,6 +9330,7 @@ Council4 currently supports **14,439 of 32,501 cards eligible for paper support 
 - Pyroconvergence
 - Pyrokinesis
 - Pyromancer's Assault
+- Pyromania
 - Pyromantic Pilgrim
 - Pyrostatic Pillar
 - Pyrotechnics
@@ -11369,7 +11383,9 @@ Council4 currently supports **14,439 of 32,501 cards eligible for paper support 
 - Song-Mad Treachery // Song-Mad Ruins
 - Songbird, Sonic Screamer
 - Sonic Assault
+- Sonic Burst
 - Sonic Screwdriver
+- Sonic Seizure
 - Sootfeather Flock
 - Soothing Balm
 - Soothing of Sméagol
@@ -11905,6 +11921,7 @@ Council4 currently supports **14,439 of 32,501 cards eligible for paper support 
 - Storm's Wrath
 - Storm, Shaker of Skies
 - Storm-Kiln Artist
+- Stormbind
 - Stormblood Berserker
 - Stormcaller of Keranos
 - Stormcaller's Boon

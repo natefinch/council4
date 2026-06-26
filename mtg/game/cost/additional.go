@@ -179,6 +179,12 @@ type Additional struct {
 	// nonzero ChoiceGroup are alternatives; the payer pays exactly one member of
 	// each group. It stays a scalar so Additional values remain comparable.
 	ChoiceGroup uint8
+
+	// Random, set only on an AdditionalDiscard cost, marks a "discard <count>
+	// card(s) at random" cost (CR 701.9a). The payer discards randomly chosen
+	// cards rather than cards of their choice, so the rules layer selects the
+	// discarded cards uniformly at random instead of honoring a player choice.
+	Random bool
 }
 
 // Alternative describes an optional cost that replaces a spell or ability's
