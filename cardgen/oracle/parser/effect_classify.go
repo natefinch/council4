@@ -1077,6 +1077,21 @@ func manaSpentToCastPhraseAt(tokens []shared.Token, index int) bool {
 		effectWordsAt(tokens, index, "cast", "it")
 }
 
+// manaWasSpentToCastSpellPhraseAt reports whether the "cast" verb at index is
+// the infinitive inside the Adamant condition phrase "mana was spent to cast
+// this spell" rather than a casting effect. The Adamant condition ("if at least
+// three <color> mana was spent to cast this spell") leads an
+// enters-with-counters sentence, so the bare "cast" must not seed a separate
+// cast effect that would split the sentence into two effects and defeat the
+// enters-with-counters recognizer.
+func manaWasSpentToCastSpellPhraseAt(tokens []shared.Token, index int) bool {
+	return index >= 3 &&
+		equalWord(tokens[index-3], "was") &&
+		equalWord(tokens[index-2], "spent") &&
+		equalWord(tokens[index-1], "to") &&
+		effectWordsAt(tokens, index, "cast", "this", "spell")
+}
+
 func resolvingClauseEnd(tokens []shared.Token, indices []int, effectIndex int) int {
 	start := indices[effectIndex] + 1
 	end := len(tokens)
@@ -1296,6 +1311,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 	case kind == EffectCast && castThisFromGraveyardAt(tokens, index):
 		return EffectUnknown
 	case kind == EffectCast && manaSpentToCastPhraseAt(tokens, index):
+		return EffectUnknown
+	case kind == EffectCast && manaWasSpentToCastSpellPhraseAt(tokens, index):
 		return EffectUnknown
 	case kind == EffectCast && spellCostModifierCastAt(tokens, index):
 		// A resolving spell-cost-modifier sentence carries two "cast" tokens

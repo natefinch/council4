@@ -14,6 +14,7 @@ var Cards = []*game.CardDef{
 	EerieInterlude,
 	EfreetFlamepainter,
 	ElspethSSmite,
+	EmberethPaladin,
 	EmblemOfTheWarmind,
 	EmeraldCharm,
 	EmrakulSMessenger,

@@ -102,6 +102,8 @@ const (
 	ConditionPredicateControllerHasInitiative                          ConditionPredicateKind = "ConditionPredicateControllerHasInitiative"
 	ConditionPredicateControllerHasCityBlessing                        ConditionPredicateKind = "ConditionPredicateControllerHasCityBlessing"
 	ConditionPredicateControllerTurn                                   ConditionPredicateKind = "ConditionPredicateControllerTurn"
+	ConditionPredicateColoredManaSpentToCastAtLeast                    ConditionPredicateKind = "ConditionPredicateColoredManaSpentToCastAtLeast"
+	ConditionPredicateSameColorManaSpentToCastAtLeast                  ConditionPredicateKind = "ConditionPredicateSameColorManaSpentToCastAtLeast"
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -347,6 +349,14 @@ type ConditionClause struct {
 	// reconstructs each name from the source tokens; matching is normalized
 	// downstream.
 	ControlledNames []string `json:",omitempty"`
+
+	// ManaSpentColor carries the color required by a
+	// ConditionPredicateColoredManaSpentToCastAtLeast clause ("if at least three
+	// white mana was spent to cast this spell"; the Adamant ability word).
+	// Threshold carries the minimum amount of that color of mana. It is
+	// TriggerColorUnknown for the same-color form, which compares the largest
+	// single-color tally instead of a named color.
+	ManaSpentColor TriggerColor `json:",omitempty"`
 }
 
 // ConditionControlComparison describes a cross-player control-count comparison
@@ -654,6 +664,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeControllerTurnCondition,
 		recognizeAttackersAttackingControllerCondition,
 		recognizeSpellXCondition,
+		recognizeAdamantManaSpentCondition,
 		recognizeCreatedTokenMatchCondition,
 		recognizeSharesCreatureTypeCondition,
 		recognizeControllerDesignationCondition,
@@ -661,6 +672,45 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		if clause, ok := recognize(body, atoms); ok {
 			return clause, true
 		}
+	}
+	return ConditionClause{}, false
+}
+
+// recognizeAdamantManaSpentCondition matches the Adamant ability word's gate "at
+// least <n> <color> mana was spent to cast this spell" ("Adamant — If at least
+// three white mana was spent to cast this spell, this creature enters with a
+// +1/+1 counter on it.", the Throne of Eldraine Paladin cycle) and its
+// same-color form "at least <n> mana of the same color was spent to cast this
+// spell" (Henge Walker). It reads the colored mana actually spent to cast the
+// resolving spell (CR 702.132), so it gates a resolving-spell replacement. It
+// fails closed on any other wording.
+func recognizeAdamantManaSpentCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "at", "least")
+	if !ok || len(rest) < 2 {
+		return ConditionClause{}, false
+	}
+	value, ok := conditionNumberValue(rest[0])
+	if !ok || value <= 0 {
+		return ConditionClause{}, false
+	}
+	rest = rest[1:]
+	tail := []string{"mana", "was", "spent", "to", "cast", "this", "spell"}
+	if color, ok := recognizeColorWord(rest[0].Text); ok {
+		if !tokenWordsEqual(rest[1:], tail...) {
+			return ConditionClause{}, false
+		}
+		return ConditionClause{
+			Predicate:      ConditionPredicateColoredManaSpentToCastAtLeast,
+			Threshold:      value,
+			ManaSpentColor: triggerColorFromAtom(color),
+		}, true
+	}
+	sameColor := append([]string{"mana", "of", "the", "same", "color"}, tail[1:]...)
+	if tokenWordsEqual(rest, sameColor...) {
+		return ConditionClause{
+			Predicate: ConditionPredicateSameColorManaSpentToCastAtLeast,
+			Threshold: value,
+		}, true
 	}
 	return ConditionClause{}, false
 }

@@ -189,6 +189,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	obj.Flashback = paymentResult.CastPermission == payment.SpellCastPermissionFlashback
 	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
 	obj.ColorsOfManaSpentToCast = distinctManaColorsSpent(paymentResult.PoolSpend)
+	obj.ManaSpentByColorToCast = manaSpentByColor(paymentResult.PoolSpend)
 
 	// stormCopyCount must be read before the spell-cast event is emitted, since
 	// that event increments the storm count for later spells this turn.
@@ -288,6 +289,7 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 		ToZone:         zone.Stack,
 	})
 	obj.ColorsOfManaSpentToCast = distinctManaColorsSpent(paymentResult.PoolSpend)
+	obj.ManaSpentByColorToCast = manaSpentByColor(paymentResult.PoolSpend)
 	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, paymentResult.PoolSpend, spellDef, obj)
 	return true
 }
@@ -480,6 +482,7 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 	})
 	createStormCopies(g, obj, spellDef, stormCopies)
 	obj.ColorsOfManaSpentToCast = distinctManaColorsSpent(paymentResult.PoolSpend)
+	obj.ManaSpentByColorToCast = manaSpentByColor(paymentResult.PoolSpend)
 	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, paymentResult.PoolSpend, spellDef, obj)
 	e.resolveCascadeForCast(g, obj, spellDef, agents, log)
 	return true

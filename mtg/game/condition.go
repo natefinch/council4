@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -170,6 +171,29 @@ type Condition struct {
 	// conditional self-static so the granted keyword or power/toughness bonus
 	// applies only on the controller's own turns.
 	SourceControllerTurn bool
+
+	// SpellColorManaSpent gates the Adamant ability word "If at least three
+	// <color> mana was spent to cast this spell, ..." (CR 702.132). It is
+	// satisfied when at least SpellColorManaSpent.Count mana of
+	// SpellColorManaSpent.Color was spent to cast the resolving spell. It reads
+	// the resolving stack object's per-color mana-spend record and is false for
+	// copies and for permanents that did not enter from a cast spell. Its zero
+	// value (Count == 0) disables the predicate.
+	SpellColorManaSpent ColorManaSpendThreshold
+
+	// SpellSameColorManaSpentAtLeast gates the Adamant ability word "If at least
+	// three mana of the same color was spent to cast this spell, ..." (Henge
+	// Walker). It is satisfied when some single color contributed at least this
+	// many mana to the resolving spell's cost. Zero disables the predicate.
+	SpellSameColorManaSpentAtLeast int
+}
+
+// ColorManaSpendThreshold names a single color and the minimum number of mana of
+// that color that must have been spent to cast the resolving spell for the
+// Adamant predicate to hold. A zero Count disables the predicate.
+type ColorManaSpendThreshold struct {
+	Color color.Color
+	Count int
 }
 
 // ControlPlayerScope selects which players' battlefields a control-count
@@ -243,7 +267,9 @@ func (c *Condition) Empty() bool {
 		!c.ControllerIsMonarch &&
 		!c.ControllerHasInitiative &&
 		!c.ControllerHasCityBlessing &&
-		!c.SourceControllerTurn
+		!c.SourceControllerTurn &&
+		c.SpellColorManaSpent.Count == 0 &&
+		c.SpellSameColorManaSpentAtLeast == 0
 }
 
 // EventHistoryWindow selects which turn's event log an EventHistoryCondition

@@ -24,6 +24,7 @@ type enterBattlefieldContext struct {
 	xValue            int
 	kickCount         int
 	colorsOfManaSpent int
+	manaSpentByColor  map[color.Color]int
 }
 
 type damageEvent struct {
@@ -995,7 +996,18 @@ func staticETBReplacementEffects(ctx enterBattlefieldContext, g *game.Game, perm
 		if ability.UnlessPaid.Exists && enterBattlefieldPaymentPaid(ctx, g, event.Controller, permanent, ability.UnlessPaid.Val) {
 			continue
 		}
-		if replacementEffectMatchesEventWithSource(g, &replacement, event, permanent) {
+		// A self enters-with-counters replacement may carry an Adamant condition
+		// ("if at least three <color> mana was spent to cast this spell"), which
+		// reads the resolving spell's per-color mana spend. The cast-time tallies
+		// travel on the entry context, so synthesize an object that carries them
+		// into the condition evaluation.
+		obj := &game.StackObject{
+			Controller:              event.Controller,
+			ColorsOfManaSpentToCast: ctx.colorsOfManaSpent,
+			ManaSpentByColorToCast:  ctx.manaSpentByColor,
+			KickerCount:             ctx.kickCount,
+		}
+		if replacementEffectMatchesEventWithSource(g, &replacement, event, permanent, obj) {
 			replacements = append(replacements, replacement)
 		}
 	}
@@ -1157,7 +1169,7 @@ func matchingETBReplacementEffects(g *game.Game, permanent *game.Permanent, even
 				continue
 			}
 		}
-		if !replacementEffectMatchesEventWithSource(g, replacement, event, source) {
+		if !replacementEffectMatchesEventWithSource(g, replacement, event, source, nil) {
 			continue
 		}
 		matches = append(matches, *replacement)
@@ -1467,17 +1479,19 @@ func permanentMatchesReplacementSelection(g *game.Game, permanent *game.Permanen
 }
 
 func replacementEffectMatchesEvent(g *game.Game, replacement *game.ReplacementEffect, event game.Event) bool {
-	return replacementEffectMatchesEventWithSource(g, replacement, event, nil)
+	return replacementEffectMatchesEventWithSource(g, replacement, event, nil, nil)
 }
 
 // replacementEffectMatchesEventWithSource reports whether the replacement
 // applies to the event. A non-nil source supplies the source permanent to the
 // condition context so source-relative condition predicates (such as the
 // EventHistory "this turn" conditions on enters-with-counters replacements)
-// resolve "you" against the replacement's own permanent. The source-less
-// replacementEffectMatchesEvent wrapper preserves the prior behavior for every
-// other replacement category.
-func replacementEffectMatchesEventWithSource(g *game.Game, replacement *game.ReplacementEffect, event game.Event, source *game.Permanent) bool {
+// resolve "you" against the replacement's own permanent. A non-nil obj supplies
+// the resolving spell's cast-time data (mana spent by color) so an Adamant self
+// enters-with-counters condition resolves as the permanent enters. The
+// source-less replacementEffectMatchesEvent wrapper preserves the prior
+// behavior for every other replacement category.
+func replacementEffectMatchesEventWithSource(g *game.Game, replacement *game.ReplacementEffect, event game.Event, source *game.Permanent, obj *game.StackObject) bool {
 	if !replacementSourceIsActive(g, replacement) {
 		return false
 	}
@@ -1507,6 +1521,7 @@ func replacementEffectMatchesEventWithSource(g *game.Game, replacement *game.Rep
 		controller: controller,
 		source:     source,
 		event:      &event,
+		obj:        obj,
 	}, replacement.Condition) {
 		return false
 	}

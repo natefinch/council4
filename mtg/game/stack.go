@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -105,6 +106,15 @@ type StackObject struct {
 	// is zero for a spell paid entirely with colorless or generic-from-colorless
 	// mana.
 	ColorsOfManaSpentToCast int
+
+	// ManaSpentByColorToCast records, per color, how much colored mana was spent
+	// to cast this spell, recorded as its costs are paid (CR 202.2). It backs the
+	// Adamant ability word's "at least three <color> mana was spent to cast this
+	// spell" and "at least three mana of the same color" predicates (CR 702.132),
+	// which the synthetic enter-the-battlefield object carries forward from the
+	// spell's creation options. Colorless and generic-from-colorless mana
+	// contribute no entry, so it is nil for a spell paid entirely with such mana.
+	ManaSpentByColorToCast map[color.Color]int
 
 	// KickerPaid is true if the kicker cost was paid.
 	KickerPaid bool

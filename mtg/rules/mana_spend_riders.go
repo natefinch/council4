@@ -28,6 +28,30 @@ func distinctManaColorsSpent(poolSpend map[mana.Unit]int) int {
 	return len(seen)
 }
 
+// manaSpentByColor records, per color, how much colored mana a payment's
+// per-unit pool spend consumed (CR 202.2), backing the Adamant ability word's
+// "at least three <color> mana was spent to cast this spell" and "mana of the
+// same color" predicates (CR 702.132). Colorless mana contributes no entry and
+// snow provenance is ignored, so the same color from a snow and a non-snow
+// source accrues to one tally. It returns nil when no colored mana was spent.
+func manaSpentByColor(poolSpend map[mana.Unit]int) map[color.Color]int {
+	var byColor map[color.Color]int
+	for unit, count := range poolSpend {
+		if count <= 0 {
+			continue
+		}
+		c, ok := manaColor(unit.Color)
+		if !ok {
+			continue
+		}
+		if byColor == nil {
+			byColor = make(map[color.Color]int, len(poolSpend))
+		}
+		byColor[c] += count
+	}
+	return byColor
+}
+
 // poolUnitsSnapshot records a player's per-unit mana pool counts. The rules
 // engine captures it immediately before paying a cost so it can measure, after
 // the payment, how much pre-existing mana of each exact unit (color and snow
@@ -421,4 +445,18 @@ func commanderStackFaceDef(g *game.Game, commander *game.CardInstance) (*game.Ca
 		return faceDef, true
 	}
 	return nil, false
+}
+
+// greatestSameColorManaSpent returns the largest amount of a single color of
+// mana recorded in a per-color spend tally, backing the Adamant "at least three
+// mana of the same color was spent to cast this spell" predicate (CR 702.132).
+// It returns zero for an empty tally.
+func greatestSameColorManaSpent(byColor map[color.Color]int) int {
+	greatest := 0
+	for _, count := range byColor {
+		if count > greatest {
+			greatest = count
+		}
+	}
+	return greatest
 }
