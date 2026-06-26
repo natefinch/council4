@@ -1271,8 +1271,11 @@ func TestParseCreateCreatureTokenTypeExactness(t *testing.T) {
 		{"Create a 1/1 white Human creature token that's tapped and attacking that opponent.", true},
 		// A "blocking" entry remains unrepresentable and stays fail-closed.
 		{"Create a 2/2 green Boar creature token that's tapped and blocking.", false},
-		// A quoted granted ability is not representable and stays fail-closed.
-		{"Create a 1/1 black Rat creature token with \"This token can't block.\"", false},
+		// A quoted static granted ability ("This token can't block.") is now
+		// representable: the token enters with the corresponding self static
+		// ability. Quoted triggered and activated abilities are likewise
+		// representable.
+		{"Create a 1/1 black Rat creature token with \"This token can't block.\"", true},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {

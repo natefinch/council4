@@ -95,6 +95,45 @@ func TestLowerTokenGrantedAbilityWithKeyword(t *testing.T) {
 	}
 }
 
+// TestLowerTokenWithGrantedStaticCantBlock verifies a token created "with" a
+// quoted static restriction ability ("create a 1/1 black Rat creature token
+// with \"This token can't block.\"") lowers the inner static ability and
+// attaches it to the synthesized token definition. The token's self subject
+// ("This token") threads to the same can't-block rule effect the printed "This
+// creature can't block." form produces.
+func TestLowerTokenWithGrantedStaticCantBlock(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Granted Static Token",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		Colors:     []string{"B"},
+		OracleText: "Create a 1/1 black Rat creature token with \"This token can't block.\"",
+	})
+	create := createTokenPrimitive(t, face)
+	def, ok := create.Source.TokenDefRef()
+	if !ok {
+		t.Fatal("token source is not a token definition")
+	}
+	if def.Name != "Rat" {
+		t.Fatalf("token name = %q, want Rat", def.Name)
+	}
+	if len(def.TriggeredAbilities) != 0 || len(def.ActivatedAbilities) != 0 {
+		t.Fatalf("granted token has triggered=%d activated=%d, want 0/0",
+			len(def.TriggeredAbilities), len(def.ActivatedAbilities))
+	}
+	if len(def.StaticAbilities) != 1 {
+		t.Fatalf("static abilities = %d, want 1 (can't block)", len(def.StaticAbilities))
+	}
+	if len(def.StaticAbilities[0].RuleEffects) != 1 {
+		t.Fatalf("rule effects = %d, want 1", len(def.StaticAbilities[0].RuleEffects))
+	}
+	effect := def.StaticAbilities[0].RuleEffects[0]
+	if effect.Kind != game.RuleEffectCantBlock || !effect.AffectedSource {
+		t.Fatalf("rule effect = %+v, want RuleEffectCantBlock on source", effect)
+	}
+}
+
 // TestLowerDynamicSizedTokenWithPayLifeCost verifies the full Tivash, Gloom
 // Summoner shape: an end-step trigger that may pay X life (X = life gained this
 // turn) to create an X/X token. The create token carries a dynamic power and

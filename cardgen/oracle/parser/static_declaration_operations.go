@@ -425,6 +425,17 @@ func parseStaticDeclarationSubject(tokens []shared.Token, atoms Atoms) (StaticDe
 			Span: shared.SpanOf(tokens[:2]),
 		}, 2, true
 	}
+	// A created token's own abilities print "This token ..." (a token has no
+	// printed name); the self reference is the token itself, the same source the
+	// "this creature" form names. Only quoted token-granted abilities reach this
+	// recognizer with that wording, so it threads the token's self static through
+	// the SourceCreature subject the downstream layers already resolve to self.
+	if staticWordsAt(tokens, 0, "this", "token") {
+		return StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectSourceCreature,
+			Span: shared.SpanOf(tokens[:2]),
+		}, 2, true
+	}
 	if staticWordsAt(tokens, 0, "this", "spell") {
 		return StaticDeclarationSubject{
 			Kind: StaticDeclarationSubjectSourceSpell,

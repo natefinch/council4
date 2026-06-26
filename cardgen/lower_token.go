@@ -685,10 +685,10 @@ func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect, extraKeywords [
 
 // attachTokenGrantedAbility compiles and lowers the quoted ability a created
 // token enters with ("... token with \"When this token dies, you gain 1
-// life.\""), appending the resulting triggered, activated, or mana ability to
-// the token definition. It mirrors lowerStaticGrantedQuotedAbility's recursive
-// compile + lower of an already-parsed quoted body, and fails closed when the
-// inner document does not compile to exactly one such lowered ability.
+// life.\""), appending the resulting triggered, activated, mana, or static
+// ability to the token definition. It mirrors lowerStaticGrantedQuotedAbility's
+// recursive compile + lower of an already-parsed quoted body, and fails closed
+// when the inner document does not compile to exactly one such lowered ability.
 func attachTokenGrantedAbility(def *game.CardDef, granted *parser.StaticGrantedAbilitySyntax) bool {
 	innerDocument, innerDiags := granted.Inner()
 	if len(innerDiags) != 0 {
@@ -705,6 +705,16 @@ func attachTokenGrantedAbility(def *game.CardDef, granted *parser.StaticGrantedA
 		return false
 	}
 	switch {
+	case len(lowered.staticAbilities) == 1 &&
+		!lowered.triggeredAbility.Exists &&
+		!lowered.activatedAbility.Exists &&
+		!lowered.manaAbility.Exists:
+		// A quoted static ability ("This token can't block.") appends its lowered
+		// static body to the token definition. Only a lone static ability with no
+		// other lowered ability kind is accepted; any richer inner document falls
+		// through and fails closed.
+		def.StaticAbilities = append(def.StaticAbilities, lowered.staticAbilities[0].Body)
+		return true
 	case lowered.triggeredAbility.Exists:
 		if abilityContentCreatesToken(lowered.triggeredAbility.Val.Content) {
 			return false
