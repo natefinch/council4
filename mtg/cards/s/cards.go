@@ -7,10 +7,12 @@ import "github.com/natefinch/council4/mtg/game"
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
 	SalvationSwan,
+	SanarUnfinishedGenius,
 	SaprolingMigration,
 	SavageSmash,
 	ScorchingDragonfire,
 	Scorchmark,
+	SeekerOfInsight,
 	SeiferAlmasy,
 	ServoSchematic,
 	SetessanTraining,
@@ -35,6 +37,7 @@ var Cards = []*game.CardDef{
 	SpiritShackle,
 	SpringmantleCleric,
 	SteamAugury,
+	StellaLeeWildCard,
 	SturdyHatchling,
 	SunDroplet,
 	SwiftKick,
