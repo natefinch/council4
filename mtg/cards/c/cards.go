@@ -24,6 +24,7 @@ var Cards = []*game.CardDef{
 	ClockworkHydra,
 	CommandTower,
 	CompellingArgument,
+	ConquerorSPledge,
 	ContestOfClaws,
 	CosmicHunger,
 	CountlessGearsRenegade,

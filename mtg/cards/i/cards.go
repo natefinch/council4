@@ -10,6 +10,7 @@ var Cards = []*game.CardDef{
 	IgnobleHierarch,
 	ImpendingDoom,
 	InameLifeAspect,
+	IncreasingDevotion,
 	InfernoFist,
 	InfiltrationLens,
 	IngeniousProdigy,
