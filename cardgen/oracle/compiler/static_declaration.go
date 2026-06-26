@@ -1013,58 +1013,77 @@ func recognizeStaticEnteringTriggerMultiplier(ability CompiledAbility, statics [
 // permanent the controller controls trigger one additional time when that
 // permanent matches the source-permanent filter ("If a triggered ability of a
 // legendary creature you control triggers, that ability triggers an additional
-// time.", Annie Joins Up; Katara, the Fearless; Splinter, Radical Rat). Types
-// and Supertypes are conjunctive; Subtypes is disjunctive. Unlike the
-// chosen-type and entering-permanent doublers this family includes the doubler's
-// own triggers ("a ... you control", not "another").
+// time.", Annie Joins Up; Katara, the Fearless; Splinter, Radical Rat). The
+// filter is one or more "or"-joined Branches; within a branch Types and
+// Supertypes are conjunctive and Subtypes is disjunctive. A branch's ExcludeSelf
+// drops the doubler's own source, modeling the "another ... you control" wording
+// (Twinflame Travelers; the Wizard branch of Harmonic Prodigy's "a Shaman or
+// another Wizard").
 type StaticControlledTriggerMultiplierDeclaration struct {
-	Types      []types.Card
-	Supertypes []types.Super
-	Subtypes   []types.Sub
+	Branches []ControlledTriggerSourceFilter
+}
+
+// ControlledTriggerSourceFilter is one branch of a controlled-trigger
+// multiplier's source-permanent filter. Types and Supertypes are conjunctive;
+// Subtypes is disjunctive. ExcludeSelf records a leading "another".
+type ControlledTriggerSourceFilter struct {
+	Types       []types.Card
+	Supertypes  []types.Super
+	Subtypes    []types.Sub
+	ExcludeSelf bool
 }
 
 // recognizeStaticControlledTriggerMultiplier maps the parser-owned
 // controlled-trigger multiplier syntax onto its closed semantic payload. The
-// source permanent's type, supertype, and subtype filter travels in Types,
-// Supertypes, and Subtypes.
+// source permanent's filter travels as one or more branches.
 func recognizeStaticControlledTriggerMultiplier(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
 	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationControlledTriggerMultiplier) ||
 		ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
 		len(ability.Content.Targets) != 0 ||
-		!enteringTriggerMultiplierContent(ability.Content) {
+		!controlledTriggerMultiplierContent(ability.Content) {
 		return StaticDeclaration{}, false
 	}
 	node := statics[0]
-	cardTypes := make([]types.Card, 0, len(node.ControlledFilterTypes))
-	for _, cardType := range node.ControlledFilterTypes {
-		converted, ok := compilerCardType(cardType)
-		if !ok {
-			return StaticDeclaration{}, false
-		}
-		cardTypes = append(cardTypes, converted)
-	}
-	supertypes := make([]types.Super, 0, len(node.ControlledFilterSupertypes))
-	for _, supertype := range node.ControlledFilterSupertypes {
-		converted, ok := compilerSupertype(supertype)
-		if !ok {
-			return StaticDeclaration{}, false
-		}
-		supertypes = append(supertypes, converted)
-	}
-	subtypes := append([]types.Sub(nil), node.ControlledFilterSubtypes...)
-	if len(cardTypes) == 0 && len(supertypes) == 0 && len(subtypes) == 0 {
+	if len(node.ControlledFilterBranches) == 0 {
 		return StaticDeclaration{}, false
+	}
+	branches := make([]ControlledTriggerSourceFilter, 0, len(node.ControlledFilterBranches))
+	for _, parsed := range node.ControlledFilterBranches {
+		cardTypes := make([]types.Card, 0, len(parsed.CardTypes))
+		for _, cardType := range parsed.CardTypes {
+			converted, ok := compilerCardType(cardType)
+			if !ok {
+				return StaticDeclaration{}, false
+			}
+			cardTypes = append(cardTypes, converted)
+		}
+		supertypes := make([]types.Super, 0, len(parsed.Supertypes))
+		for _, supertype := range parsed.Supertypes {
+			converted, ok := compilerSupertype(supertype)
+			if !ok {
+				return StaticDeclaration{}, false
+			}
+			supertypes = append(supertypes, converted)
+		}
+		subtypes := append([]types.Sub(nil), parsed.Subtypes...)
+		if len(cardTypes) == 0 && len(supertypes) == 0 && len(subtypes) == 0 {
+			return StaticDeclaration{}, false
+		}
+		branches = append(branches, ControlledTriggerSourceFilter{
+			Types:       cardTypes,
+			Supertypes:  supertypes,
+			Subtypes:    subtypes,
+			ExcludeSelf: parsed.ExcludeSelf,
+		})
 	}
 	return StaticDeclaration{
 		Kind:          StaticDeclarationControlledTriggerMultiplier,
 		Span:          node.Span,
 		OperationSpan: node.OperationSpan,
 		ControlledMultiplier: &StaticControlledTriggerMultiplierDeclaration{
-			Types:      cardTypes,
-			Supertypes: supertypes,
-			Subtypes:   subtypes,
+			Branches: branches,
 		},
 	}, true
 }
@@ -1085,6 +1104,39 @@ func enteringTriggerMultiplierContent(content AbilityContent) bool {
 		condition.Predicate == ConditionPredicateUnsupported &&
 		!condition.Intervening &&
 		!condition.Resolving
+}
+
+// controlledTriggerMultiplierContent reports whether the leftover content matches
+// a controlled-permanent multiplier shape: a single unsupported "if ... triggers"
+// condition and no other content the static declaration would otherwise own. The
+// closing clause may be "that ability triggers an additional time." (no residual
+// reference) or "it triggers an additional time." (the residual "it" pronoun,
+// matching the chosen-type form's tail), so a single ambiguous "it" pronoun is
+// permitted alongside the no-reference shape.
+func controlledTriggerMultiplierContent(content AbilityContent) bool {
+	if len(content.Conditions) != 1 ||
+		len(content.Effects) != 0 ||
+		len(content.Keywords) != 0 {
+		return false
+	}
+	condition := content.Conditions[0]
+	if condition.Kind != ConditionIf ||
+		condition.Predicate != ConditionPredicateUnsupported ||
+		condition.Intervening ||
+		condition.Resolving {
+		return false
+	}
+	switch len(content.References) {
+	case 0:
+		return true
+	case 1:
+		reference := content.References[0]
+		return reference.Kind == ReferencePronoun &&
+			reference.Pronoun == ReferencePronounIt &&
+			reference.Binding == ReferenceBindingAmbiguous
+	default:
+		return false
+	}
 }
 
 func recognizeStaticEntryChoiceSubtypeDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {

@@ -560,16 +560,15 @@ type StaticDeclarationSyntax struct {
 	// permanent ("a permanent").
 	EnteringFilterTypes []CardType `json:"-"`
 
-	// Controlled-trigger-multiplier payload: the source permanent's type,
-	// supertype, and subtype filter for an "If a triggered ability of <filter>
-	// you control triggers, that ability triggers an additional time."
-	// declaration (Annie Joins Up, Katara, the Fearless, Splinter, Radical Rat).
-	// ControlledFilterTypes and ControlledFilterSupertypes are conjunctive;
-	// ControlledFilterSubtypes is disjunctive. At least one of the three is
-	// non-empty.
-	ControlledFilterTypes      []CardType  `json:"-"`
-	ControlledFilterSupertypes []Supertype `json:"-"`
-	ControlledFilterSubtypes   []types.Sub `json:"-"`
+	// Controlled-trigger-multiplier payload: the source permanent's filter for an
+	// "If a triggered ability of <filter> you control triggers, that ability
+	// triggers an additional time." declaration (Annie Joins Up, Katara, the
+	// Fearless, Splinter, Radical Rat). Each branch carries a conjunctive
+	// type/supertype filter and a disjunctive subtype filter; a leading "another"
+	// sets ExcludeSelf. Multiple branches model an "or"-joined filter ("a Shaman
+	// or another Wizard", Harmonic Prodigy). At least one branch is present and
+	// every branch names at least one subtype or card type.
+	ControlledFilterBranches []ControlledTriggerSourceFilter `json:"-"`
 
 	// Untap-during-other-players'-untap-step payload: the filtered set of the
 	// controller's permanents that gain an extra untap during each other
@@ -950,87 +949,159 @@ func parseEnteringFilter(tokens []shared.Token, index, end int) ([]CardType, boo
 // additional time" family scoped to a filtered controlled permanent: "If a
 // triggered ability of <filter> you control triggers, that ability triggers an
 // additional time." (Annie Joins Up — "a legendary creature"; Katara, the
-// Fearless — "an Ally"; Splinter, Radical Rat — "a Ninja creature"). <filter> is
-// an article followed by an optional supertype, optional subtype, and optional
-// card type, captured into ControlledFilterSupertypes / ControlledFilterSubtypes
-// / ControlledFilterTypes. Any deviation leaves the clause unconsumed. The
-// entering-permanent and "of the chosen type" forms are owned by their own
-// parsers and do not reach here.
+// Fearless — "an Ally"; Splinter, Radical Rat — "a Ninja creature"). The closing
+// clause may instead read "it triggers an additional time." (Twinflame
+// Travelers). <filter> is one or more "or"-joined branches, each an article
+// ("a", "an", or "another") followed by an optional supertype, optional subtype,
+// and optional card type ("a Shaman or another Wizard", Harmonic Prodigy); a
+// branch led by "another" excludes the doubler itself. Any deviation leaves the
+// clause unconsumed. The entering-permanent and "of the chosen type" forms are
+// owned by their own parsers and do not reach here.
 func parseControlledTriggerMultiplierDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
 	const prefixLen = 5
-	const suffixLen = 11
-	if len(tokens) < prefixLen+suffixLen+1 || tokens[len(tokens)-1].Kind != shared.Period {
+	if len(tokens) == 0 || tokens[len(tokens)-1].Kind != shared.Period {
 		return StaticDeclarationSyntax{}, false
 	}
 	if !staticWordsAt(tokens, 0, "if", "a", "triggered", "ability", "of") {
 		return StaticDeclarationSyntax{}, false
 	}
-	tail := len(tokens) - suffixLen
-	if !staticWordsAt(tokens, tail, "you", "control", "triggers") ||
-		tokens[tail+3].Kind != shared.Comma ||
-		!staticWordsAt(tokens, tail+4, "that", "ability", "triggers", "an", "additional", "time") {
+	tail, ok := controlledTriggerMultiplierFilterEnd(tokens)
+	if !ok || tail <= prefixLen {
 		return StaticDeclarationSyntax{}, false
 	}
-	filter, ok := parseControlledTriggerFilter(tokens, prefixLen, tail)
+	branches, ok := parseControlledTriggerBranches(tokens, prefixLen, tail)
 	if !ok {
 		return StaticDeclarationSyntax{}, false
 	}
 	return StaticDeclarationSyntax{
-		Kind:                       StaticDeclarationControlledTriggerMultiplier,
-		Span:                       shared.SpanOf(tokens),
-		OperationSpan:              shared.SpanOf(tokens),
-		ControlledFilterSupertypes: filter.supertypes,
-		ControlledFilterSubtypes:   filter.subtypes,
-		ControlledFilterTypes:      filter.cardTypes,
+		Kind:                     StaticDeclarationControlledTriggerMultiplier,
+		Span:                     shared.SpanOf(tokens),
+		OperationSpan:            shared.SpanOf(tokens),
+		ControlledFilterBranches: branches,
 	}, true
 }
 
-// controlledTriggerFilter holds the type, supertype, and subtype filter parsed
-// from the source-permanent noun of a controlled-trigger multiplier.
-type controlledTriggerFilter struct {
-	supertypes []Supertype
-	subtypes   []types.Sub
-	cardTypes  []CardType
+// controlledTriggerMultiplierFilterEnd locates the index just past the source
+// filter, i.e. the start of the "you control triggers, <that ability|it>
+// triggers an additional time." suffix. It returns false when the suffix is not
+// the exact controlled-trigger multiplier closing clause.
+func controlledTriggerMultiplierFilterEnd(tokens []shared.Token) (int, bool) {
+	for _, suffix := range [][]string{
+		{"you", "control", "triggers", ",", "that", "ability", "triggers", "an", "additional", "time", "."},
+		{"you", "control", "triggers", ",", "it", "triggers", "an", "additional", "time", "."},
+	} {
+		start := len(tokens) - len(suffix)
+		if start < 0 {
+			continue
+		}
+		if controlledTriggerSuffixMatches(tokens, start, suffix) {
+			return start, true
+		}
+	}
+	return 0, false
 }
 
-// parseControlledTriggerFilter consumes the source-permanent filter "a/an
-// [supertype] [subtype] [card type]" between the "of" and "you control" anchors
-// of a controlled-trigger multiplier. Each word after the article must be a
-// recognized supertype, card type, or subtype. The filter must include at least
-// one subtype or card type noun (a bare supertype is not a permanent filter) and
-// must consume the region exactly.
-func parseControlledTriggerFilter(tokens []shared.Token, index, end int) (controlledTriggerFilter, bool) {
-	if index >= end || (!equalWord(tokens[index], "a") && !equalWord(tokens[index], "an")) {
-		return controlledTriggerFilter{}, false
+// controlledTriggerSuffixMatches reports whether the tokens from start match the
+// given closing-clause words, treating "," and "." as their punctuation kinds
+// and every other element as a word.
+func controlledTriggerSuffixMatches(tokens []shared.Token, start int, suffix []string) bool {
+	for offset, word := range suffix {
+		token := tokens[start+offset]
+		switch word {
+		case ",":
+			if token.Kind != shared.Comma {
+				return false
+			}
+		case ".":
+			if token.Kind != shared.Period {
+				return false
+			}
+		default:
+			if !equalWord(token, word) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// ControlledTriggerSourceFilter is one "or"-joined branch of a
+// controlled-trigger multiplier's source-permanent filter. Supertypes and
+// CardTypes are conjunctive; Subtypes is disjunctive. ExcludeSelf records a
+// leading "another", dropping the doubler's own source from the branch.
+type ControlledTriggerSourceFilter struct {
+	Supertypes  []Supertype
+	Subtypes    []types.Sub
+	CardTypes   []CardType
+	ExcludeSelf bool
+}
+
+// parseControlledTriggerBranches consumes the source-permanent filter between the
+// "of" and "you control" anchors as one or more "or"-joined branches. Each branch
+// is "a/an/another [supertype] [subtype] [card type]" naming at least one subtype
+// or card type; a bare supertype is not a permanent filter. The region must be
+// consumed exactly.
+func parseControlledTriggerBranches(tokens []shared.Token, index, end int) ([]ControlledTriggerSourceFilter, bool) {
+	var branches []ControlledTriggerSourceFilter
+	for index < end {
+		branch, next, ok := parseControlledTriggerBranch(tokens, index, end)
+		if !ok {
+			return nil, false
+		}
+		branches = append(branches, branch)
+		if next == end {
+			return branches, true
+		}
+		if !equalWord(tokens[next], "or") {
+			return nil, false
+		}
+		index = next + 1
+	}
+	return nil, false
+}
+
+// parseControlledTriggerBranch consumes a single branch starting at index,
+// returning the branch and the index of the following token (the "or" separator
+// or end). The branch begins with an article; "another" sets ExcludeSelf.
+func parseControlledTriggerBranch(tokens []shared.Token, index, end int) (ControlledTriggerSourceFilter, int, bool) {
+	if index >= end || tokens[index].Kind != shared.Word {
+		return ControlledTriggerSourceFilter{}, 0, false
+	}
+	var branch ControlledTriggerSourceFilter
+	switch {
+	case equalWord(tokens[index], "a"), equalWord(tokens[index], "an"):
+	case equalWord(tokens[index], "another"):
+		branch.ExcludeSelf = true
+	default:
+		return ControlledTriggerSourceFilter{}, 0, false
 	}
 	index++
-	if index >= end {
-		return controlledTriggerFilter{}, false
-	}
-	var filter controlledTriggerFilter
-	for ; index < end; index++ {
-		if tokens[index].Kind != shared.Word {
-			return controlledTriggerFilter{}, false
-		}
+	for index < end && tokens[index].Kind == shared.Word {
 		word := tokens[index].Text
+		if equalWord(tokens[index], "or") {
+			break
+		}
 		if supertype, ok := recognizeSupertypeWord(word); ok {
-			filter.supertypes = append(filter.supertypes, supertype)
+			branch.Supertypes = append(branch.Supertypes, supertype)
+			index++
 			continue
 		}
 		if cardType, ok := recognizeCardTypeWord(word); ok {
-			filter.cardTypes = append(filter.cardTypes, cardType)
+			branch.CardTypes = append(branch.CardTypes, cardType)
+			index++
 			continue
 		}
 		if subtype, ok := recognizeSubtypePhrase(word); ok {
-			filter.subtypes = append(filter.subtypes, subtype)
+			branch.Subtypes = append(branch.Subtypes, subtype)
+			index++
 			continue
 		}
-		return controlledTriggerFilter{}, false
+		return ControlledTriggerSourceFilter{}, 0, false
 	}
-	if len(filter.subtypes) == 0 && len(filter.cardTypes) == 0 {
-		return controlledTriggerFilter{}, false
+	if len(branch.Subtypes) == 0 && len(branch.CardTypes) == 0 {
+		return ControlledTriggerSourceFilter{}, 0, false
 	}
-	return filter, true
+	return branch, index, true
 }
 
 func parseStaticPermanentAbilityGrantDeclaration(

@@ -1275,25 +1275,38 @@ func appendStaticEnteringTriggerMultiplierDeclaration(body *game.StaticAbility, 
 // ability of <filter> you control triggers, that ability triggers an additional
 // time." declaration into a controller-scoped trigger-multiplier rule effect on
 // the static ability body. The source-permanent filter is carried in
-// AffectedSelection (RequiredTypes and Supertypes conjunctive, SubtypesAny
-// disjunctive); the runtime fires a matching triggered ability one extra time
-// when its source is a permanent the controller controls that satisfies the
-// filter.
+// AffectedSelection: a single branch lowers to a flat selection (RequiredTypes
+// and Supertypes conjunctive, SubtypesAny disjunctive, ExcludeSource for
+// "another"), and an "or"-joined filter lowers to an AnyOf of those branch
+// selections. The runtime fires a matching triggered ability one extra time when
+// its source is a permanent the controller controls that satisfies the filter.
 func appendStaticControlledTriggerMultiplierDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
 	if declaration.ControlledMultiplier == nil {
 		return false
 	}
-	multiplier := declaration.ControlledMultiplier
-	if len(multiplier.Types) == 0 && len(multiplier.Supertypes) == 0 && len(multiplier.Subtypes) == 0 {
+	branches := declaration.ControlledMultiplier.Branches
+	if len(branches) == 0 {
 		return false
 	}
+	selections := make([]game.Selection, 0, len(branches))
+	for _, branch := range branches {
+		if len(branch.Types) == 0 && len(branch.Supertypes) == 0 && len(branch.Subtypes) == 0 {
+			return false
+		}
+		selections = append(selections, game.Selection{
+			RequiredTypes: append([]types.Card(nil), branch.Types...),
+			Supertypes:    append([]types.Super(nil), branch.Supertypes...),
+			SubtypesAny:   append([]types.Sub(nil), branch.Subtypes...),
+			ExcludeSource: branch.ExcludeSelf,
+		})
+	}
+	selection := selections[0]
+	if len(selections) > 1 {
+		selection = game.Selection{AnyOf: selections}
+	}
 	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
-		Kind: game.RuleEffectAdditionalTriggerForControlledPermanent,
-		AffectedSelection: game.Selection{
-			RequiredTypes: append([]types.Card(nil), multiplier.Types...),
-			Supertypes:    append([]types.Super(nil), multiplier.Supertypes...),
-			SubtypesAny:   append([]types.Sub(nil), multiplier.Subtypes...),
-		},
+		Kind:              game.RuleEffectAdditionalTriggerForControlledPermanent,
+		AffectedSelection: selection,
 	})
 	return true
 }

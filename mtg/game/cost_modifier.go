@@ -321,10 +321,13 @@ const (
 	// ability triggers an additional time.", Annie Joins Up; "... of an Ally you
 	// control ...", Katara, the Fearless; "... of a Ninja creature you control
 	// ...", Splinter, Radical Rat). AffectedSelection carries the source
-	// permanent's type, supertype, and subtype filter; unlike the chosen-type and
-	// entering-permanent doublers it includes the source object itself ("a ... you
-	// control", not "another"). An empty AffectedSelection matches any controlled
-	// permanent.
+	// permanent's type, supertype, and subtype filter. A plain "a ... you
+	// control" filter includes the source object itself; an "another ... you
+	// control" filter sets ExcludeSource so the doubler does not double its own
+	// triggers (Twinflame Travelers), and AnyOf models an "or"-joined filter
+	// whose branches may differ in self-exclusion ("a Shaman or another Wizard
+	// you control", Harmonic Prodigy). An empty AffectedSelection matches any
+	// controlled permanent.
 	RuleEffectAdditionalTriggerForControlledPermanent
 	// RuleEffectMustBeBlockedByAllAble is the true-lure requirement: every
 	// creature able to block the affected attacker must do so ("All creatures
