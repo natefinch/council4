@@ -107,6 +107,35 @@ func TestLowerActivatedNonManaCosts(t *testing.T) {
 			},
 		},
 		{
+			name:       "discard at random",
+			oracleText: "Discard a card at random: Draw a card.",
+			check: func(t *testing.T, costs []cost.Additional) {
+				t.Helper()
+				if len(costs) != 1 ||
+					costs[0].Kind != cost.AdditionalDiscard ||
+					costs[0].Amount != 1 ||
+					!costs[0].Random ||
+					costs[0].MatchCardType ||
+					costs[0].Source != zone.Hand {
+					t.Fatalf("additional costs = %#v, want one card discarded at random", costs)
+				}
+			},
+		},
+		{
+			name:       "discard two cards at random",
+			oracleText: "Discard two cards at random: Draw a card.",
+			check: func(t *testing.T, costs []cost.Additional) {
+				t.Helper()
+				if len(costs) != 1 ||
+					costs[0].Kind != cost.AdditionalDiscard ||
+					costs[0].Amount != 2 ||
+					!costs[0].Random ||
+					costs[0].Source != zone.Hand {
+					t.Fatalf("additional costs = %#v, want two cards discarded at random", costs)
+				}
+			},
+		},
+		{
 			name:       "pay life",
 			oracleText: "Pay 2 life: Draw a card.",
 			check: func(t *testing.T, costs []cost.Additional) {
@@ -662,6 +691,30 @@ func TestLowerActivatedAbilityRejectsUnsupportedRevealCosts(t *testing.T) {
 		"Reveal the player you chose: Draw a card.",
 		"Reveal this card from your hand: Draw a card.",
 		"Reveal a toy you own: Draw a card.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Test Engine",
+				Layout:     "normal",
+				TypeLine:   "Artifact",
+				OracleText: oracleText,
+			})
+			if len(faces) != 1 || len(faces[0].ActivatedAbilities) != 0 {
+				t.Fatalf("faces = %#v, want face with no partially lowered ability", faces)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatal("expected unsupported diagnostic")
+			}
+		})
+	}
+}
+
+func TestLowerActivatedAbilityRejectsFilteredRandomDiscardCost(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Discard a creature card at random: Draw a card.",
+		"Discard a red card at random: Draw a card.",
 	} {
 		t.Run(oracleText, func(t *testing.T) {
 			t.Parallel()

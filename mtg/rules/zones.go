@@ -622,6 +622,38 @@ func discardCardFromHand(g *game.Game, playerID game.PlayerID, cardID id.ID) boo
 	return discardCardFromHandInBatch(g, playerID, cardID, 0)
 }
 
+// discardCardsAtRandomFromHand discards amount cards chosen uniformly at random
+// from the player's hand as one simultaneous batch (CR 701.9a). It discards
+// min(amount, hand size) cards and returns the discarded cards' instance IDs in
+// the order they left the hand. Randomness is drawn from g.RNG, so a replay with
+// the same seed discards the same cards.
+func discardCardsAtRandomFromHand(g *game.Game, playerID game.PlayerID, amount int) []id.ID {
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return nil
+	}
+	candidates := player.Hand.All()
+	amount = min(amount, len(candidates))
+	if amount <= 0 {
+		return nil
+	}
+	order := make([]int, len(candidates))
+	for i := range order {
+		order[i] = i
+	}
+	g.RNG.Shuffle(len(order), func(i, j int) {
+		order[i], order[j] = order[j], order[i]
+	})
+	simultaneousID := g.IDGen.Next()
+	var discarded []id.ID
+	for _, idx := range order[:amount] {
+		if discardCardFromHandInBatch(g, playerID, candidates[idx], simultaneousID) {
+			discarded = append(discarded, candidates[idx])
+		}
+	}
+	return discarded
+}
+
 // discardCardFromHandInBatch discards a card by moving it from its owner's hand to
 // their graveyard (CR 701.9a), subject to zone-change replacement effects (e.g.
 // madness exiles it instead, CR 702.35a). The discarded card becomes a new object

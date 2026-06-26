@@ -142,6 +142,13 @@ type CostComponent struct {
 	// compiler carries it onto the typed cost component.
 	DiscardWholeHand bool `json:",omitempty"`
 
+	// Random reports a "discard <count> card(s) at random" cost object, where
+	// the payer discards randomly chosen cards rather than cards of their
+	// choice (CR 701.9a). It is recognized from the trailing "at random"
+	// qualifier on a discard cost object; the count is parsed normally. The
+	// compiler carries it onto the typed cost component.
+	Random bool `json:",omitempty"`
+
 	// PayLifeDynamic names a recognized rules-derived amount for a "pay life
 	// equal to ..." cost whose value is neither a fixed integer nor X. The
 	// compiler maps it onto its typed dynamic-amount vocabulary.
@@ -539,6 +546,11 @@ func annotateCostObjectNoun(component *CostComponent, noun ObjectNoun) bool {
 }
 
 func annotateExactCostObject(component *CostComponent, object []shared.Token, atoms Atoms, cardObject bool) {
+	if component.Kind == CostComponentDiscard && len(object) >= 2 &&
+		equalWord(object[len(object)-2], "at") && equalWord(object[len(object)-1], "random") {
+		component.Random = true
+		object = object[:len(object)-2]
+	}
 	if component.Kind == CostComponentDiscard && discardWholeHandObject(object) {
 		component.DiscardWholeHand = true
 		component.SourceZone = zone.Hand

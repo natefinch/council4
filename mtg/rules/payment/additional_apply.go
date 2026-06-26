@@ -83,6 +83,9 @@ func additionalCostPlanStillValid(s State, player *game.Player, plan additionalC
 			return false
 		}
 	}
+	if plan.randomDiscardAmount > 0 && player.Hand.Size()-len(plan.discards) < plan.randomDiscardAmount {
+		return false
+	}
 	for _, exile := range plan.exiles {
 		if !zoneContainsCard(s, player.ID, exile.zone, exile.cardID) {
 			return false
@@ -163,6 +166,9 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) {
 		if !s.DiscardFromHand(plan.player, cardID) {
 			panic("additional cost plan became invalid while discarding cards")
 		}
+	}
+	if plan.randomDiscardAmount > 0 && !s.DiscardAtRandom(plan.player, plan.randomDiscardAmount) {
+		panic("additional cost plan became invalid while discarding cards at random")
 	}
 	for _, exile := range plan.exiles {
 		if !s.MoveCard(plan.player, exile.cardID, exile.zone, zone.Exile) {

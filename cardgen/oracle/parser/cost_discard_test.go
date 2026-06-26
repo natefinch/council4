@@ -35,4 +35,35 @@ func TestParseDiscardFixedCardCostIsNotWholeHand(t *testing.T) {
 	if !component.AmountKnown || component.AmountValue != 1 {
 		t.Fatalf("amount = (%d, %v), want 1", component.AmountValue, component.AmountKnown)
 	}
+	if component.Random {
+		t.Fatal("Random = true, want false for an ordinary discard")
+	}
+}
+
+func TestParseDiscardAtRandomCost(t *testing.T) {
+	t.Parallel()
+	component := soleCostComponent(t, "Discard a card at random: Draw a card.")
+	if component.Kind != CostComponentDiscard {
+		t.Fatalf("kind = %v, want discard", component.Kind)
+	}
+	if !component.Random {
+		t.Fatal("Random = false, want true for an at-random discard")
+	}
+	if !component.AmountKnown || component.AmountValue != 1 {
+		t.Fatalf("amount = (%d, %v), want 1", component.AmountValue, component.AmountKnown)
+	}
+}
+
+func TestParseDiscardTwoCardsAtRandomCost(t *testing.T) {
+	t.Parallel()
+	component := soleCostComponent(t, "Discard two cards at random: Draw a card.")
+	if component.Kind != CostComponentDiscard {
+		t.Fatalf("kind = %v, want discard", component.Kind)
+	}
+	if !component.Random {
+		t.Fatal("Random = false, want true for an at-random discard")
+	}
+	if !component.AmountKnown || component.AmountValue != 2 {
+		t.Fatalf("amount = (%d, %v), want 2", component.AmountValue, component.AmountKnown)
+	}
 }

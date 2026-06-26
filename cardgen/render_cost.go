@@ -485,6 +485,9 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 	if additional.ChoiceGroup != 0 {
 		fields = append(fields, fmt.Sprintf("ChoiceGroup: %d,", additional.ChoiceGroup))
 	}
+	if additional.Random {
+		fields = append(fields, "Random: true,")
+	}
 	return structLit("", fields), nil
 }
 

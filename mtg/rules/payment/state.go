@@ -189,6 +189,12 @@ type stateMutations interface {
 	// appropriate discard and zone-change events.
 	DiscardFromHand(playerID game.PlayerID, cardID id.ID) bool
 
+	// DiscardAtRandom discards exactly amount cards chosen uniformly at random
+	// from the player's hand as a single simultaneous batch (CR 701.9a),
+	// emitting the appropriate discard and zone-change events. It returns false
+	// when the player's hand holds fewer than amount cards.
+	DiscardAtRandom(playerID game.PlayerID, amount int) bool
+
 	// MoveCard moves a non-battlefield card between zones and emits a zone-change event.
 	MoveCard(playerID game.PlayerID, cardID id.ID, from zone.Type, to zone.Type) bool
 }
