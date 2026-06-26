@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,567 of 32,501 cards eligible for paper support (44.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,583 of 32,501 cards eligible for paper support (44.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2626,6 +2626,7 @@ Council4 currently supports **14,567 of 32,501 cards eligible for paper support 
 - Crystal Vein
 - Crystalline Armor
 - Crystalline Crawler
+- Crystalline Sliver
 - Crystallization
 - Cubwarden
 - Cudgel Troll
@@ -2860,6 +2861,7 @@ Council4 currently supports **14,567 of 32,501 cards eligible for paper support 
 - Death's Duet
 - Death's-Head Buzzard
 - Death-Hood Cobra
+- Death-Priest of Myrkul
 - Deathbellow Raider
 - Deathbloom Gardener
 - Deathbloom Ritualist
@@ -3570,6 +3572,7 @@ Council4 currently supports **14,567 of 32,501 cards eligible for paper support 
 - Elaborate Firecannon
 - Eladamri's Call
 - Eladamri's Vineyard
+- Eladamri, Lord of Leaves
 - Elas il-Kor, Sadistic Pilgrim
 - Elder Auntie
 - Elder Druid
@@ -4948,6 +4951,7 @@ Council4 currently supports **14,567 of 32,501 cards eligible for paper support 
 - Giott, King of the Dwarves
 - Gird for Battle
 - Gisa's Bidding
+- Gisa, the Hellraiser
 - Gitaxian Probe
 - Gitaxian Raptor
 - Githzerai Monk
@@ -5117,6 +5121,7 @@ Council4 currently supports **14,567 of 32,501 cards eligible for paper support 
 - Goblin Grenadiers
 - Goblin Hero
 - Goblin Instigator
+- Goblin King
 - Goblin Lackey
 - Goblin Lookout
 - Goblin Lore
@@ -7220,8 +7225,10 @@ Council4 currently supports **14,567 of 32,501 cards eligible for paper support 
 - Loran's Escape
 - Loran, Disciple of History
 - Lord Dregg, Insect Invader
+- Lord of Atlantis
 - Lord of Change
 - Lord of Extinction
+- Lord of the Accursed
 - Lord of the Undead
 - Lord of the Unreal
 - Lord of Tresserhorn
@@ -7515,6 +7522,7 @@ Council4 currently supports **14,567 of 32,501 cards eligible for paper support 
 - Maro
 - Marrow Bats
 - Marrow Shards
+- Marrow-Gnawer
 - Marsh Boa
 - Marsh Crocodile
 - Marsh Flats
@@ -7567,6 +7575,7 @@ Council4 currently supports **14,567 of 32,501 cards eligible for paper support 
 - Master the Way
 - Master Thief
 - Master Transmuter
+- Master Trinketeer
 - Master's Call
 - Master's Rebuke
 - Masterful Flourish
@@ -8457,6 +8466,7 @@ Council4 currently supports **14,567 of 32,501 cards eligible for paper support 
 - Nurturing Bristleback
 - Nurturing Peatland
 - Nurturing Presence
+- Nut Collector
 - Nutrient Block
 - Nykthos, Shrine to Nyx
 - Nylea's Disciple
@@ -8659,6 +8669,7 @@ Council4 currently supports **14,567 of 32,501 cards eligible for paper support 
 - Orcish Cannoneers
 - Orcish Mechanics
 - Orcish Oriflamme
+- Orcish Siegemaster
 - Orcish Vandal
 - Order of Leitbur
 - Order of Midnight // Alter Fate
@@ -9468,6 +9479,7 @@ Council4 currently supports **14,567 of 32,501 cards eligible for paper support 
 - Racecourse Fury
 - Racers' Ring
 - Rack and Ruin
+- Radagast, Wizard of Wilds
 - Radha, Coalition Warlord
 - Radha, Heir to Keld
 - Radiant Essence
@@ -12654,6 +12666,7 @@ Council4 currently supports **14,567 of 32,501 cards eligible for paper support 
 - The Spirit Oasis
 - The Stasis Coffin
 - The Surgical Bay
+- The Swarmweaver
 - The Terror of Serpent's Pass
 - The Thing, Ben Grimm
 - The Tiger God
@@ -12668,6 +12681,7 @@ Council4 currently supports **14,567 of 32,501 cards eligible for paper support 
 - The Whizzer, Classic Speedster
 - The Wind Crystal
 - Their Name Is Death
+- Thelonite Hermit
 - Thermal Blast
 - Thermal Glider
 - Thermal Navigator
@@ -13256,6 +13270,7 @@ Council4 currently supports **14,567 of 32,501 cards eligible for paper support 
 - Ultimecia, Temporal Threat
 - Ultimo, Civilization's End
 - Ultramarines Honour Guard
+- Ultron, Machine Overlord
 - Ulvenwald Bear
 - Ulvenwald Hydra
 - Ulvenwald Mysteries
@@ -13958,6 +13973,7 @@ Council4 currently supports **14,567 of 32,501 cards eligible for paper support 
 - Warehouse Tabby
 - Warehouse Thief
 - Warfire Javelineer
+- Warg Rider
 - Wargate
 - Warhost's Frenzy
 - Warleader's Call
