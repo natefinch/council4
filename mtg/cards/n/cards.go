@@ -12,5 +12,6 @@ var Cards = []*game.CardDef{
 	NibelheimAflame,
 	NightMarketAeronaut,
 	NimblewrightSchematic,
+	NoxiousHatchling,
 	NyxbloomAncient,
 }

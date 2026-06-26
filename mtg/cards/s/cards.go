@@ -10,10 +10,13 @@ var Cards = []*game.CardDef{
 	SavageSmash,
 	ServoSchematic,
 	SetessanTraining,
+	ShedWeakness,
 	ShelteredByGhosts,
 	SilkweaverElite,
 	SkyriderElf,
 	SolemnRecruit,
 	SpringmantleCleric,
+	SturdyHatchling,
+	SunDroplet,
 	SwiftKick,
 }
