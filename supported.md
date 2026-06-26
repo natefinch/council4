@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,487 of 32,501 cards eligible for paper support (44.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,491 of 32,501 cards eligible for paper support (44.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2356,6 +2356,7 @@ Council4 currently supports **14,487 of 32,501 cards eligible for paper support 
 - Conjurer's Closet
 - Connive // Concoct
 - Conquering Manticore
+- Conqueror's Pledge
 - Conscripted Infantry
 - Consecrated by Blood
 - Consecrated Sphinx
@@ -6133,6 +6134,7 @@ Council4 currently supports **14,487 of 32,501 cards eligible for paper support 
 - Incandescent Aria
 - Incendiary Sabotage
 - Incorrigible Youths
+- Increasing Devotion
 - Incubation Druid
 - Incubation Sac
 - Incurable Ogre
@@ -9953,6 +9955,7 @@ Council4 currently supports **14,487 of 32,501 cards eligible for paper support 
 - Rite of Flame
 - Rite of Oblivion
 - Rite of Passage
+- Rite of Replication
 - Rite of the Dragoncaller
 - Rite of Undoing
 - Rites of Reaping
@@ -10304,6 +10307,7 @@ Council4 currently supports **14,487 of 32,501 cards eligible for paper support 
 - Saproling
 - Saproling // Elf Knight
 - Saproling // Insect
+- Saproling Migration
 - Sapseep Forest
 - Sarah Jane Smith
 - Sarcatog
