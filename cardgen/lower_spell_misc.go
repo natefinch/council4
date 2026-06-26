@@ -282,6 +282,9 @@ func lowerFixedExileSpell(
 	if content, ok := lowerPlayerGraveyardExile(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerTargetPlayerHandExile(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerAllGraveyardExile(ctx); ok {
 		return content, nil
 	}
