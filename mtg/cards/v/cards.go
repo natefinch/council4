@@ -10,5 +10,6 @@ var Cards = []*game.CardDef{
 	VengefulRebel,
 	Vesperlark,
 	VictorTimelyWilyTycoon,
+	VivienReid,
 	VoraciousHatchling,
 }

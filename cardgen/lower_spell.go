@@ -443,6 +443,9 @@ func lowerOptionalContent(
 			return content, nil
 		}
 	}
+	if content, ok := lowerOptionalDigReveal(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerSingleOptionalEffect(cardName, ctx, syntax); ok {
 		return content, nil
 	}

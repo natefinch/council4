@@ -19,6 +19,7 @@ import (
 	"github.com/natefinch/council4/mtg/cards/n"
 	"github.com/natefinch/council4/mtg/cards/o"
 	"github.com/natefinch/council4/mtg/cards/p"
+	"github.com/natefinch/council4/mtg/cards/q"
 	"github.com/natefinch/council4/mtg/cards/r"
 	"github.com/natefinch/council4/mtg/cards/s"
 	"github.com/natefinch/council4/mtg/cards/t"
@@ -26,6 +27,7 @@ import (
 	"github.com/natefinch/council4/mtg/cards/v"
 	"github.com/natefinch/council4/mtg/cards/w"
 	"github.com/natefinch/council4/mtg/cards/x"
+	"github.com/natefinch/council4/mtg/cards/y"
 	"github.com/natefinch/council4/mtg/cards/z"
 	"github.com/natefinch/council4/mtg/game"
 )
@@ -50,6 +52,7 @@ func defaultCardSets() [][]*game.CardDef {
 		n.Cards,
 		o.Cards,
 		p.Cards,
+		q.Cards,
 		r.Cards,
 		s.Cards,
 		t.Cards,
@@ -57,6 +60,7 @@ func defaultCardSets() [][]*game.CardDef {
 		v.Cards,
 		w.Cards,
 		x.Cards,
+		y.Cards,
 		z.Cards,
 	}
 }

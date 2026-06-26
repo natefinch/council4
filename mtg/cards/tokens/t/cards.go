@@ -16,6 +16,7 @@ var Cards = []*game.CardDef{
 	ThopterTokene3c8482ece2143f8ac07c26c01941a4d,
 	ThrullToken3c8dd2e4a80843138463f5cef7bb077e,
 	ThrullTokend31b98f6dfc642d99cbc4fad16f1879f,
+	ThundertrapTrainerTokend226cc591991488889122d1438bb99ee,
 	TimelessDragonToken849cba98136f43d6a8f7c71219821ef3,
 	TinyToken39fe23378ab44f1a9a0b826830e2f470,
 	ToyToken0c597b2e4e2b4240843f9ed8fc2bda9d,

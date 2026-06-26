@@ -17,6 +17,7 @@ var Cards = []*game.CardDef{
 	DesertSDue,
 	DingusEgg,
 	DingusStaff,
+	DirectorNickFury,
 	DivineVisitation,
 	DomriAnarchOfBolas,
 	DonatelloMutantMechanic,
