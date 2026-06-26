@@ -28,35 +28,112 @@ func exactGraveyardReturnEffectSyntax(effect *EffectSyntax) bool {
 			return exactChosenGraveyardReturnEffectSyntax(effect, text)
 		}
 	}
-	if len(effect.Targets) != 1 || !exactGraveyardCardTargetSyntax(&effect.Targets[0]) {
+	if len(effect.Targets) != 1 {
 		return false
 	}
-	prefix := "Return " + effect.Targets[0].Text
-	for _, suffix := range []string{
-		" to your hand.",
-		// An owner-relative hand destination ("to its owner's hand", the plural
-		// "to their owners' hands", or the opponent-graveyard "to their hand")
-		// returns a graveyard card the controller does not own (a card targeted
-		// "from a graveyard" or "from an opponent's graveyard"). The runtime
-		// MoveCard handler always routes a returned card to its own owner's hand,
-		// so these lower identically to the "to your hand." form.
-		" to its owner's hand.",
-		" to their owners' hands.",
-		" to their hand.",
-		" to the battlefield.",
-		" to the battlefield tapped.",
-		" to the battlefield under your control.",
-		" to the battlefield tapped under your control.",
-		" on top of your library.",
-		" on the top of your library.",
-		" on bottom of your library.",
-		" on the bottom of your library.",
-	} {
+	if effect.Amount.VariableX {
+		return exactVariableXGraveyardReturnEffectSyntax(effect, text)
+	}
+	if !exactGraveyardCardTargetSyntax(&effect.Targets[0]) {
+		return false
+	}
+	return matchesGraveyardReturnDestination(text, "Return "+effect.Targets[0].Text)
+}
+
+// graveyardReturnDestinationSuffixes are the canonical destination clauses that
+// follow a graveyard-card return's target noun phrase. An owner-relative hand
+// destination ("to its owner's hand", the plural "to their owners' hands", or
+// the opponent-graveyard "to their hand") returns a graveyard card the
+// controller does not own (a card targeted "from a graveyard" or "from an
+// opponent's graveyard"). The runtime MoveCard handler always routes a returned
+// card to its own owner's hand, so these lower identically to the "to your
+// hand." form.
+var graveyardReturnDestinationSuffixes = []string{
+	" to your hand.",
+	" to its owner's hand.",
+	" to their owners' hands.",
+	" to their hand.",
+	" to the battlefield.",
+	" to the battlefield tapped.",
+	" to the battlefield under your control.",
+	" to the battlefield tapped under your control.",
+	" on top of your library.",
+	" on the top of your library.",
+	" on bottom of your library.",
+	" on the bottom of your library.",
+}
+
+// matchesGraveyardReturnDestination reports whether text is the return clause
+// prefix joined with one canonical destination suffix.
+func matchesGraveyardReturnDestination(text, prefix string) bool {
+	for _, suffix := range graveyardReturnDestinationSuffixes {
 		if strings.EqualFold(text, prefix+suffix) {
 			return true
 		}
 	}
 	return false
+}
+
+// exactVariableXGraveyardReturnEffectSyntax reports whether effect is the
+// variable-count graveyard-card return "Return X target <noun> cards from
+// <owner> graveyard to <destination>", whose chosen {X} fixes how many cards are
+// returned. The compiler carries the X count on the effect amount and leaves the
+// lone target a singular cardinality, so this path reconstructs the target's
+// plural noun phrase ("X target creature cards from your graveyard") and the full
+// clause byte-for-byte, accepting the same destinations and noun filters the
+// fixed targeted return does. It fails closed for every qualifier those shared
+// reconstructors reject, so an unrepresentable variable-count return keeps
+// failing rather than lowering to a wrong predicate.
+func exactVariableXGraveyardReturnEffectSyntax(effect *EffectSyntax, text string) bool {
+	targetText, ok := exactVariableXGraveyardTargetText(&effect.Targets[0])
+	if !ok {
+		return false
+	}
+	return matchesGraveyardReturnDestination(text, "Return X "+targetText)
+}
+
+// exactVariableXGraveyardTargetText reconstructs the canonical plural target noun
+// phrase of a variable-count graveyard-card return ("target creature cards from
+// your graveyard") from the target's typed selection and reports whether it
+// matches target.Text. It accepts the same graveyard noun filters as
+// exactGraveyardCardTargetSyntax (a card-type, a union of card types, a permanent
+// card, a single color, a colorless or multicolored card, a single subtype, a
+// single supertype, or the plain "card" noun, with an optional power, toughness,
+// or "with mana value N or less" qualifier) and fails closed for every other
+// shape, including any multi-target or "up to N" cardinality, whose count words
+// the variable-count "X target " prefix replaces.
+func exactVariableXGraveyardTargetText(target *TargetSyntax) (string, bool) {
+	sel := target.Selection
+	if sel.Zone != zone.Graveyard || sel.Other {
+		return "", false
+	}
+	if target.Cardinality != (TargetCardinalitySyntax{Min: 1, Max: 1}) || sel.Another {
+		return "", false
+	}
+	if sel.All || sel.Attacking || sel.Blocking || sel.Tapped || sel.Untapped ||
+		sel.Keyword != KeywordUnknown ||
+		len(sel.ExcludedTypes) != 0 || len(sel.SourceTypes) != 0 ||
+		len(sel.ExcludedSupertypes) != 0 || len(sel.ExcludedColors) != 0 {
+		return "", false
+	}
+	owner, ok := graveyardOwnerSuffix(sel.Controller)
+	if !ok {
+		return "", false
+	}
+	noun, ok := graveyardCardNoun(sel, true)
+	if !ok {
+		return "", false
+	}
+	noun += "s"
+	qualifier, ok := graveyardNumericQualifier(sel)
+	if !ok {
+		return "", false
+	}
+	reconstructed := "target " + noun + qualifier + " " + owner
+	if !strings.EqualFold(target.Text, reconstructed) {
+		return "", false
+	}
+	return reconstructed, true
 }
 
 // exactChosenGraveyardReturnEffectSyntax recognizes the non-target "Return a
@@ -68,10 +145,10 @@ func exactGraveyardReturnEffectSyntax(effect *EffectSyntax) bool {
 // planeswalker card" does not). It reconstructs the canonical noun phrase from
 // the effect's typed Selection the same way the targeted path does, accepting a
 // single card-type, a union of card types, a permanent card, a single color, a
-// colorless or multicolored card, a single subtype, or the plain "card" noun,
-// with an optional "with mana value N or less" qualifier, and fails closed for
-// every other selection shape so an unrepresentable filter keeps failing rather
-// than lowering to a wrong predicate.
+// colorless or multicolored card, a single subtype, a single supertype adjective,
+// or the plain "card" noun, with an optional power, toughness, or "with mana value
+// N or less" qualifier, and fails closed for every other selection shape so an
+// unrepresentable filter keeps failing rather than lowering to a wrong predicate.
 func exactChosenGraveyardReturnEffectSyntax(effect *EffectSyntax, text string) bool {
 	if len(effect.References) != 0 {
 		return false
@@ -90,10 +167,10 @@ func exactChosenGraveyardReturnEffectSyntax(effect *EffectSyntax, text string) b
 	// without entry-tapped still fails closed.
 	entryTapped := effect.ToZone == zone.Battlefield && effect.EntersTapped
 	if sel.All || sel.Another || sel.Other || sel.Attacking || sel.Blocking ||
-		(sel.Tapped && !entryTapped) || sel.Untapped || sel.MatchPower || sel.MatchToughness ||
+		(sel.Tapped && !entryTapped) || sel.Untapped ||
 		sel.Keyword != KeywordUnknown || sel.ExcludedKeyword != KeywordUnknown ||
 		len(sel.ExcludedTypes) != 0 || len(sel.SourceTypes) != 0 ||
-		len(sel.Supertypes) != 0 || len(sel.ExcludedSupertypes) != 0 ||
+		len(sel.ExcludedSupertypes) != 0 ||
 		len(sel.ExcludedColors) != 0 || len(sel.Alternatives) != 0 {
 		return false
 	}
@@ -101,13 +178,9 @@ func exactChosenGraveyardReturnEffectSyntax(effect *EffectSyntax, text string) b
 	if !ok {
 		return false
 	}
-	manaClause := ""
-	if sel.MatchManaValue {
-		clause, ok := graveyardManaValueClause(sel.ManaValue)
-		if !ok {
-			return false
-		}
-		manaClause = clause
+	manaClause, ok := graveyardNumericQualifier(sel)
+	if !ok {
+		return false
 	}
 	article := indefiniteArticle(noun)
 	prefix := "Return " + article + " " + noun + manaClause + " from your graveyard to "
@@ -741,11 +814,13 @@ func exactGraveyardPutEffectSyntax(effect *EffectSyntax) bool {
 // byte from the selection's typed fields and compares it to target.Text,
 // accepting a single card-type, a union of card types ("creature or enchantment
 // card"), a permanent card, a single color, a colorless or multicolored card, a
-// single subtype, or the plain "card" noun, with an optional "with mana value N
-// or less" qualifier and an optional multi-target or "up to N" count. It fails
-// closed for every qualifier the canonical phrasing cannot render (power,
-// toughness, keyword, supertype, excluded types or colors, combinations), so an
-// unrepresentable target keeps failing rather than lowering to a wrong predicate.
+// single subtype, or the plain "card" noun, with an optional power, toughness, or
+// "with mana value N or less" qualifier and an optional multi-target or "up to N"
+// count. It also accepts a single supertype adjective ("legendary creature card",
+// "snow land card"). It fails closed for every qualifier the canonical phrasing
+// cannot render (keyword, excluded supertype, excluded types or colors,
+// combinations), so an unrepresentable target keeps failing rather than lowering
+// to a wrong predicate.
 func exactGraveyardCardTargetSyntax(target *TargetSyntax) bool {
 	sel := target.Selection
 	if sel.Zone != zone.Graveyard || sel.Other {
@@ -756,9 +831,9 @@ func exactGraveyardCardTargetSyntax(target *TargetSyntax) bool {
 		return true
 	}
 	if sel.All || sel.Attacking || sel.Blocking || sel.Tapped || sel.Untapped ||
-		sel.Keyword != KeywordUnknown || sel.MatchPower || sel.MatchToughness ||
+		sel.Keyword != KeywordUnknown ||
 		len(sel.ExcludedTypes) != 0 || len(sel.SourceTypes) != 0 ||
-		len(sel.Supertypes) != 0 || len(sel.ExcludedColors) != 0 {
+		len(sel.ExcludedSupertypes) != 0 || len(sel.ExcludedColors) != 0 {
 		return false
 	}
 	owner, ok := graveyardOwnerSuffix(sel.Controller)
@@ -776,31 +851,9 @@ func exactGraveyardCardTargetSyntax(target *TargetSyntax) bool {
 	if plural {
 		noun += "s"
 	}
-	manaClause := ""
-	if sel.MatchManaValue {
-		// The canonical mana-value qualifier follows the noun in both the
-		// singular ("creature card with mana value 3 or less") and the
-		// pluralized multi-target ("two target creature cards with mana value 2
-		// or less", Sigardian Savior) forms; every card the plural target
-		// gathers individually satisfies the per-card bound.
-		clause, ok := graveyardManaValueClause(sel.ManaValue)
-		if !ok {
-			return false
-		}
-		manaClause = clause
-	}
-	if sel.ManaValueDynamic != "" {
-		// A dynamic "less than or equal to the amount of life you (lost|gained)
-		// this turn" bound (Betor, Ancestor's Voice) is independent of the fixed
-		// MatchManaValue path and never combines with it on a printed card.
-		if sel.MatchManaValue {
-			return false
-		}
-		clause, ok := graveyardManaValueDynamicClause(sel.ManaValueDynamic)
-		if !ok {
-			return false
-		}
-		manaClause = clause
+	manaClause, ok := graveyardNumericQualifier(sel)
+	if !ok {
+		return false
 	}
 	return strings.EqualFold(target.Text, prefix+noun+manaClause+" "+owner)
 }
@@ -856,13 +909,16 @@ func graveyardCardCardinalityPrefix(c TargetCardinalitySyntax, another bool) (pr
 // graveyardCardNoun reconstructs the singular graveyard-card noun ("creature
 // card", "sorcery card", "creature or enchantment card", "permanent card",
 // "green card", "red sorcery card", "multicolored creature card", "colorless
-// card", "Zombie card", or the plain "card") from selection's typed fields. It
-// accepts an optional single color qualifier (a single color, "colorless", or
-// "multicolored") followed by at most one type/subtype/permanent core, rendered
-// in canonical Oracle order, and fails closed for any combination it could not
-// reconstruct. A plural multi-target return joins a card-type union with the
-// "and/or" conjunction the Oracle templating uses for plural counts ("instant
-// and/or sorcery cards") rather than the singular "or".
+// card", "Zombie card", "legendary creature card", or the plain "card") from
+// selection's typed fields. It accepts an optional single supertype adjective
+// ("legendary", "snow") or single color qualifier (a single color, "colorless",
+// or "multicolored") followed by at most one type/subtype/permanent core,
+// rendered in canonical Oracle order, and fails closed for any combination it
+// could not reconstruct, including a supertype combined with a color or "historic"
+// qualifier (which has no single canonical word order). A plural multi-target
+// return joins a card-type union with the "and/or" conjunction the Oracle
+// templating uses for plural counts ("instant and/or sorcery cards") rather than
+// the singular "or".
 func graveyardCardNoun(sel SelectionSyntax, plural bool) (string, bool) {
 	colorPrefix, hasColor, ok := graveyardColorPrefix(sel)
 	if !ok {
@@ -924,7 +980,38 @@ func graveyardCardNoun(sel SelectionSyntax, plural bool) (string, bool) {
 	if sel.Historic {
 		historicPrefix = "historic "
 	}
-	return colorPrefix + historicPrefix + core, true
+	supertypePrefix, hasSupertype, ok := graveyardSupertypePrefix(sel)
+	if !ok {
+		return "", false
+	}
+	// A supertype adjective ("legendary creature card", "snow land card") has no
+	// single canonical order relative to a color word in Oracle text (both
+	// "legendary white" and "white legendary" occur), so the two never combine
+	// here; the "historic" qualifier likewise renders no supertype phrasing.
+	if hasSupertype && (hasColor || sel.Historic) {
+		return "", false
+	}
+	return supertypePrefix + colorPrefix + historicPrefix + core, true
+}
+
+// graveyardSupertypePrefix renders the optional leading supertype qualifier of a
+// graveyard-card noun ("legendary ", "snow ", "basic ", "world "), followed by a
+// trailing space so the caller appends the core noun directly. It reports whether
+// a supertype qualifier was present and fails closed for more than one supertype
+// or an unknown supertype word, which have no canonical single-adjective
+// phrasing.
+func graveyardSupertypePrefix(sel SelectionSyntax) (prefix string, hasSupertype, ok bool) {
+	if len(sel.Supertypes) == 0 {
+		return "", false, true
+	}
+	if len(sel.Supertypes) != 1 {
+		return "", false, false
+	}
+	word, ok := supertypeWord(sel.Supertypes[0])
+	if !ok {
+		return "", false, false
+	}
+	return word + " ", true, true
 }
 
 // graveyardColorPrefix renders the optional leading color qualifier of a
@@ -1025,6 +1112,71 @@ func serialList(words []string, conjunction string) string {
 	default:
 		head := strings.Join(words[:len(words)-1], ", ")
 		return head + ", " + conjunction + " " + words[len(words)-1]
+	}
+}
+
+// graveyardNumericQualifier renders the single optional numeric qualifier a
+// graveyard-card selection may carry after its noun: the fixed " with mana value
+// N or less", the dynamic life-total mana-value bound (Betor, Ancestor's Voice),
+// or a fixed " with power/toughness N or less/greater" characteristic bound
+// (Dusk // Dawn's "creature cards with power 2 or less", Reveillark). Printed
+// cards carry at most one such qualifier, so it fails closed when more than one
+// is set rather than guessing their order, and fails closed for any comparison
+// operator the canonical Oracle wording does not use. The empty string is
+// returned (ok=true) when the selection carries no numeric qualifier.
+func graveyardNumericQualifier(sel SelectionSyntax) (string, bool) {
+	clauses := 0
+	qualifier := ""
+	if sel.MatchManaValue {
+		clause, ok := graveyardManaValueClause(sel.ManaValue)
+		if !ok {
+			return "", false
+		}
+		qualifier = clause
+		clauses++
+	}
+	if sel.ManaValueDynamic != "" {
+		clause, ok := graveyardManaValueDynamicClause(sel.ManaValueDynamic)
+		if !ok {
+			return "", false
+		}
+		qualifier = clause
+		clauses++
+	}
+	if sel.MatchPower {
+		clause, ok := graveyardCharacteristicClause("power", sel.Power)
+		if !ok {
+			return "", false
+		}
+		qualifier = clause
+		clauses++
+	}
+	if sel.MatchToughness {
+		clause, ok := graveyardCharacteristicClause("toughness", sel.Toughness)
+		if !ok {
+			return "", false
+		}
+		qualifier = clause
+		clauses++
+	}
+	if clauses > 1 {
+		return "", false
+	}
+	return qualifier, true
+}
+
+// graveyardCharacteristicClause renders the canonical " with power N or less",
+// " with power N or greater", or the toughness equivalents from a fixed
+// power/toughness comparison. It accepts only the "or less" and "or greater"
+// bounds the printed Oracle wording uses, failing closed for any other operator.
+func graveyardCharacteristicClause(characteristic string, bound compare.Int) (string, bool) {
+	switch bound.Op {
+	case compare.LessOrEqual:
+		return " with " + characteristic + " " + strconv.Itoa(bound.Value) + " or less", true
+	case compare.GreaterOrEqual:
+		return " with " + characteristic + " " + strconv.Itoa(bound.Value) + " or greater", true
+	default:
+		return "", false
 	}
 }
 

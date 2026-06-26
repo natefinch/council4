@@ -11,6 +11,8 @@ var Cards = []*game.CardDef{
 	RancorousArchaic,
 	ReduceToAshes,
 	RenegadeRallier,
+	ReturnToTheRanks,
+	Reveillark,
 	RhinoSRampage,
 	RhonasTheIndomitable,
 	Riddlekeeper,

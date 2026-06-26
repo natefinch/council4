@@ -528,6 +528,16 @@ func parseEffectAmount(kind EffectKind, tokens []shared.Token, atoms Atoms) Effe
 			if i >= 2 && equalWord(tokens[i-1], "value") && equalWord(tokens[i-2], "mana") {
 				continue
 			}
+			// A number that completes a "with power N or less/greater" or "with
+			// toughness N or less/greater" filter qualifier on a target or
+			// selection is likewise the filter's bound, not the effect's amount
+			// (e.g. "Return all creature cards with power 2 or less from your
+			// graveyard to your hand.", Dusk // Dawn). Skip it so the return/put/
+			// etc. effect keeps its unknown amount, mirroring the mana-value skip.
+			if i >= 2 && equalWord(tokens[i-2], "with") &&
+				(equalWord(tokens[i-1], "power") || equalWord(tokens[i-1], "toughness")) {
+				continue
+			}
 			return EffectAmountSyntax{Span: token.Span, Value: value, Known: true}
 		}
 		if equalWord(token, "a") || equalWord(token, "an") || equalWord(token, "another") {
