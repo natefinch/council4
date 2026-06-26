@@ -1,0 +1,61 @@
+name: Keep supported.md current
+
+# Card-support changes are expected to refresh the committed supported-card list
+# (supported.md), but that step is easy to forget. On every pull request this
+# regenerates supported.md from the current Oracle corpus and, when it differs,
+# commits the refreshed list back to the PR branch so the page that reads it (and
+# anyone browsing the repo) always sees an accurate list.
+on:
+  pull_request:
+
+# Needed to push the regenerated supported.md back to the pull request branch.
+permissions:
+  contents: write
+
+concurrency:
+  group: supported-md-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  regenerate:
+    name: Regenerate supported.md
+    # Pull requests from forks get a read-only token and cannot be pushed to, so
+    # only run for branches in this repository.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the pull request branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Select Scryfall cache date
+        id: scryfall-cache
+        run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache daily Scryfall Oracle corpus
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/council4/oracle-cards.json
+          key: scryfall-oracle-${{ runner.os }}-${{ steps.scryfall-cache.outputs.date }}
+
+      - name: Regenerate supported.md
+        run: go run github.com/magefile/mage@v1.15.0 supportedDoc
+
+      - name: Commit supported.md when it changed
+        run: |
+          if git diff --quiet -- supported.md; then
+            echo "supported.md is already up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add supported.md
+          git commit -m "Regenerate supported.md"
+          git push origin "HEAD:${{ github.head_ref }}"
