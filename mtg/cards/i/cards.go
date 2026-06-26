@@ -17,5 +17,6 @@ var Cards = []*game.CardDef{
 	InsectoidExterminator,
 	Insolence,
 	IroasSBlessing,
+	IronHeartChimera,
 	ItThatHeraldsTheEnd,
 }

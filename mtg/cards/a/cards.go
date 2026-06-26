@@ -14,5 +14,6 @@ var Cards = []*game.CardDef{
 	Anger,
 	AnkhOfMishra,
 	Arena,
+	ArmorThrull,
 	AspectOfLamprey,
 }
