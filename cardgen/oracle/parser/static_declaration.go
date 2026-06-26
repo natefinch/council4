@@ -471,6 +471,16 @@ type StaticDeclarationSyntax struct {
 	SpellPowerAtLeast      int  `json:",omitempty"`
 	MatchSpellPowerAtLeast bool `json:",omitempty"`
 
+	// SpellManaValueAtLeast carries the mana-value threshold of a cast-cost
+	// modifier filtered by mana value ("Creature spells you cast with mana value
+	// 6 or greater cost {2} less to cast.", Krosan Drover): a spell matches only
+	// when its mana value is greater than or equal to this value.
+	// MatchSpellManaValueAtLeast marks the threshold present so a zero threshold
+	// stays expressible. It is mutually exclusive with the power threshold and
+	// combines with the spell-type, color, subtype, and zone filters.
+	SpellManaValueAtLeast      int  `json:",omitempty"`
+	MatchSpellManaValueAtLeast bool `json:",omitempty"`
+
 	// SpellCaster scopes a cast-cost modifier to a set of casting players
 	// ("Spells you cast ..." vs "Spells your opponents cast ..." vs "Spells
 	// that ..."). The empty kind is the default controller scope.
@@ -2529,22 +2539,32 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token, atoms Atoms)
 		return StaticDeclarationSyntax{}, false
 	}
 	rest = next
+	var manaValueAtLeast int
+	if powerAtLeast == 0 {
+		manaValueAtLeast, next, ok = staticSpellManaValueThreshold(rest)
+		if !ok {
+			return StaticDeclarationSyntax{}, false
+		}
+		rest = next
+	}
 	tail, ok := staticSpellCostModifierTail(rest)
 	if !ok {
 		return StaticDeclarationSyntax{}, false
 	}
 	return StaticDeclarationSyntax{
-		Kind:                   StaticDeclarationCostModifier,
-		Span:                   shared.SpanOf(tokens),
-		OperationSpan:          tail.OperationSpan,
-		CostModifier:           tail.Kind,
-		CostReductionAmount:    tail.Amount,
-		SpellType:              spellType,
-		SpellColor:             spellColor,
-		SpellSubtypes:          subtypes,
-		SpellCastZone:          castZone,
-		SpellPowerAtLeast:      powerAtLeast,
-		MatchSpellPowerAtLeast: powerAtLeast > 0,
+		Kind:                       StaticDeclarationCostModifier,
+		Span:                       shared.SpanOf(tokens),
+		OperationSpan:              tail.OperationSpan,
+		CostModifier:               tail.Kind,
+		CostReductionAmount:        tail.Amount,
+		SpellType:                  spellType,
+		SpellColor:                 spellColor,
+		SpellSubtypes:              subtypes,
+		SpellCastZone:              castZone,
+		SpellPowerAtLeast:          powerAtLeast,
+		MatchSpellPowerAtLeast:     powerAtLeast > 0,
+		SpellManaValueAtLeast:      manaValueAtLeast,
+		MatchSpellManaValueAtLeast: manaValueAtLeast > 0,
 	}, true
 }
 
@@ -2618,6 +2638,29 @@ func staticSpellPowerThreshold(tokens []shared.Token) (int, []shared.Token, bool
 		return 0, nil, false
 	}
 	return value, tokens[5:], true
+}
+
+// staticSpellManaValueThreshold reads an optional "with mana value <n> or
+// greater" qualifier scoping a cast-cost modifier to spells whose mana value
+// meets the threshold ("Creature spells you cast with mana value 6 or greater
+// cost {2} less to cast.", Krosan Drover). It returns the threshold (zero when
+// the qualifier is absent) and the remaining tokens. A malformed qualifier
+// fails.
+func staticSpellManaValueThreshold(tokens []shared.Token) (int, []shared.Token, bool) {
+	if !staticWordsAt(tokens, 0, "with", "mana", "value") {
+		return 0, tokens, true
+	}
+	if len(tokens) < 6 {
+		return 0, nil, false
+	}
+	value, ok := conditionNumberValue(tokens[3])
+	if !ok || value <= 0 {
+		return 0, nil, false
+	}
+	if !staticWordsAt(tokens, 4, "or", "greater") {
+		return 0, nil, false
+	}
+	return value, tokens[6:], true
 }
 
 // parseStaticSpellSharedExiledTypeCostReduction recognizes the dynamic

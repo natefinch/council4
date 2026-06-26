@@ -651,6 +651,70 @@ func TestRecognizeStaticZeroPowerThresholdSpellCostModifierFailsClosed(t *testin
 	}
 }
 
+func TestRecognizeStaticManaValueThresholdSpellCostModifierFromTypedNode(t *testing.T) {
+	t.Parallel()
+	node := parser.StaticDeclarationSyntax{
+		Kind:                       parser.StaticDeclarationCostModifier,
+		CostModifier:               parser.StaticDeclarationCostModifierSpellReduction,
+		CostReductionAmount:        2,
+		SpellType:                  parser.StaticDeclarationSpellTypeCreature,
+		SpellManaValueAtLeast:      6,
+		MatchSpellManaValueAtLeast: true,
+	}
+
+	declaration, ok := recognizeStaticSpellCostModifierDeclaration(
+		CompiledAbility{Kind: AbilityStatic},
+		[]parser.StaticDeclarationSyntax{node},
+	)
+
+	if !ok || declaration.Cost == nil ||
+		!declaration.Cost.MatchMinManaValue ||
+		declaration.Cost.MinManaValue != 6 ||
+		declaration.Cost.MatchMinPower ||
+		declaration.Cost.GenericReduction != 2 {
+		t.Fatalf("declaration = %#v ok = %v, want mana-value-6 creature reduction", declaration, ok)
+	}
+}
+
+func TestRecognizeStaticZeroManaValueThresholdSpellCostModifierFailsClosed(t *testing.T) {
+	t.Parallel()
+	node := parser.StaticDeclarationSyntax{
+		Kind:                       parser.StaticDeclarationCostModifier,
+		CostModifier:               parser.StaticDeclarationCostModifierSpellReduction,
+		CostReductionAmount:        2,
+		SpellType:                  parser.StaticDeclarationSpellTypeCreature,
+		MatchSpellManaValueAtLeast: true,
+	}
+
+	if _, ok := recognizeStaticSpellCostModifierDeclaration(
+		CompiledAbility{Kind: AbilityStatic},
+		[]parser.StaticDeclarationSyntax{node},
+	); ok {
+		t.Fatal("recognized a zero mana value threshold cost modifier, want fail closed")
+	}
+}
+
+func TestRecognizeStaticBothPowerAndManaValueThresholdSpellCostModifierFailsClosed(t *testing.T) {
+	t.Parallel()
+	node := parser.StaticDeclarationSyntax{
+		Kind:                       parser.StaticDeclarationCostModifier,
+		CostModifier:               parser.StaticDeclarationCostModifierSpellReduction,
+		CostReductionAmount:        2,
+		SpellType:                  parser.StaticDeclarationSpellTypeCreature,
+		SpellPowerAtLeast:          4,
+		MatchSpellPowerAtLeast:     true,
+		SpellManaValueAtLeast:      6,
+		MatchSpellManaValueAtLeast: true,
+	}
+
+	if _, ok := recognizeStaticSpellCostModifierDeclaration(
+		CompiledAbility{Kind: AbilityStatic},
+		[]parser.StaticDeclarationSyntax{node},
+	); ok {
+		t.Fatal("recognized a combined power+mana value threshold cost modifier, want fail closed")
+	}
+}
+
 func TestRecognizeStaticZoneScopedChosenTypeSpellCostModifierFailsClosed(t *testing.T) {
 	t.Parallel()
 	node := parser.StaticDeclarationSyntax{

@@ -1614,6 +1614,9 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 	if cost.MatchMinPower {
 		base.CardSelection.Power = opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: cost.MinPower})
 	}
+	if cost.MatchMinManaValue {
+		base.CardSelection.ManaValue = opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: cost.MinManaValue})
+	}
 	if len(cost.SpellColors) != 0 {
 		if cost.MatchSpellColor || len(cost.SpellTypes) != 0 || len(cost.SpellSubtypes) != 0 {
 			return false
@@ -1676,6 +1679,7 @@ func appendStaticSpellSharedExiledTypeCostModifier(body *game.StaticAbility, dec
 		cost.ChosenSubtypeFromEntryChoice ||
 		cost.MatchSpellColor ||
 		cost.MatchMinPower ||
+		cost.MatchMinManaValue ||
 		cost.SourceZone != "" ||
 		len(cost.SpellTypes) != 0 ||
 		len(cost.SpellColors) != 0 ||

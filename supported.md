@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,456 of 32,501 cards eligible for paper support (44.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,459 of 32,501 cards eligible for paper support (44.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -6343,6 +6343,7 @@ Council4 currently supports **14,456 of 32,501 cards eligible for paper support 
 - Isolated Chapel
 - Isolation Zone
 - Isperia, Supreme Judge
+- It That Heralds the End
 - It'll Quench Ya!
 - It's Clobberin' Time!
 - Ithilien Kingfisher
@@ -6819,6 +6820,7 @@ Council4 currently supports **14,456 of 32,501 cards eligible for paper support 
 - Krosan Cloudscraper
 - Krosan Colossus
 - Krosan Constrictor
+- Krosan Drover
 - Krosan Druid
 - Krosan Grip
 - Krosan Groundshaker
@@ -11490,6 +11492,7 @@ Council4 currently supports **14,456 of 32,501 cards eligible for paper support 
 - Spearbreaker Behemoth
 - Species Gorger
 - Species Specialist
+- Spectacle Mage
 - Spectacle Summit
 - Spectacular Spider-Man
 - Spectacular Tactics

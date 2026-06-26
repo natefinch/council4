@@ -25,6 +25,7 @@ var Cards = []*game.CardDef{
 	SmiteTheDeathless,
 	SolemnRecruit,
 	SpawnbedProtector,
+	SpectacleMage,
 	SphinxMindbreaker,
 	SphinxOfUthuun,
 	SpiderSpawning,
