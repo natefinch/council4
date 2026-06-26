@@ -34,7 +34,32 @@ func TestSkipDrawStepStaticSkipsTurnBasedDraw(t *testing.T) {
 	}
 }
 
-// TestDrawStepHappensWithoutSkipStatic is the control for
+// TestSkipDrawStepStaticConsumesScheduledSkip confirms that a scheduled one-shot
+// draw-step skip is consumed during the active player's beginning phase even
+// when a static "Skip your draw step." effect also skips the step. The queued
+// skip must not survive to skip a later, unintended draw step.
+func TestSkipDrawStepStaticConsumesScheduledSkip(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Skip Draw Enchantment",
+		StaticAbilities: []game.StaticAbility{game.SkipDrawStepStaticBody},
+	}})
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Draw Step Card"}})
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.PriorityPlayer = game.Player1
+	scheduleSkipStep(g, game.Player1, game.StepDraw)
+
+	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	if consumeSkipStep(g, game.Player1, game.StepDraw) {
+		t.Fatal("scheduled draw-step skip survived; it should have been consumed by the already-skipped step")
+	}
+	if got := g.Players[game.Player1].Hand.Size(); got != 0 {
+		t.Fatalf("hand size = %d, want 0 (draw step skipped)", got)
+	}
+}
+
 // TestSkipDrawStepStaticSkipsTurnBasedDraw: with no skip-draw-step static in
 // play, the active player performs the turn-based draw as usual.
 func TestDrawStepHappensWithoutSkipStatic(t *testing.T) {
