@@ -570,6 +570,75 @@ func TestDoubleToughnessIncludesEarlierMinusCounterInLayer7c(t *testing.T) {
 	}
 }
 
+// TestOrderContinuousEffectsLoopWaitsForExternalDependencyOfAnyMember covers
+// CR 613.8b at the strongly-connected-component level: a loop waits until every
+// dependency any of its members has on an effect outside the loop is applied.
+// A(ts10) and B(ts20) form a loop, and A also depends on the independent D(ts30).
+// The whole loop must wait for D, so the order is D, A, B — not B, D, A.
+func TestOrderContinuousEffectsLoopWaitsForExternalDependencyOfAnyMember(t *testing.T) {
+	a := game.ContinuousEffect{ID: 1, Timestamp: 10, DependsOn: []id.ID{2, 4}}
+	b := game.ContinuousEffect{ID: 2, Timestamp: 20, DependsOn: []id.ID{1}}
+	d := game.ContinuousEffect{ID: 4, Timestamp: 30}
+
+	ordered := orderContinuousEffects([]game.ContinuousEffect{a, b, d})
+
+	gotIDs := make([]id.ID, len(ordered))
+	for i := range ordered {
+		gotIDs[i] = ordered[i].ID
+	}
+	want := []id.ID{4, 1, 2}
+	if !slices.Equal(gotIDs, want) {
+		t.Fatalf("ordered effect IDs = %v, want %v (loop waits for external dependency D, then A,B in timestamp order)", gotIDs, want)
+	}
+}
+
+// TestOrderContinuousEffectsLoopMemberAppliesBeforeLaterIndependentEffect covers
+// CR 613.8b together with timestamp order: a loop member's mutual dependency is
+// ignored, so it is applied in timestamp order even relative to an independent
+// effect. A(ts10) and B(ts30) form a loop; C(ts20) is independent. The loop's
+// dependency is ignored, so the order is pure timestamp A, C, B — the early loop
+// member A is not deferred behind the later C.
+func TestOrderContinuousEffectsLoopMemberAppliesBeforeLaterIndependentEffect(t *testing.T) {
+	a := game.ContinuousEffect{ID: 1, Timestamp: 10, DependsOn: []id.ID{2}}
+	c := game.ContinuousEffect{ID: 3, Timestamp: 20}
+	b := game.ContinuousEffect{ID: 2, Timestamp: 30, DependsOn: []id.ID{1}}
+
+	ordered := orderContinuousEffects([]game.ContinuousEffect{a, c, b})
+
+	gotIDs := make([]id.ID, len(ordered))
+	for i := range ordered {
+		gotIDs[i] = ordered[i].ID
+	}
+	want := []id.ID{1, 3, 2}
+	if !slices.Equal(gotIDs, want) {
+		t.Fatalf("ordered effect IDs = %v, want %v (loop member A before later independent C)", gotIDs, want)
+	}
+}
+
+// TestOrderContinuousEffectsAppliesLoopMembersBeforeExternalDependents covers
+// CR 613.8b: when a dependency loop exists, only the effects in the loop ignore
+// their dependencies and are applied in timestamp order; an effect that merely
+// depends on a loop member must still wait. Here A(ts10) and B(ts30) form a loop
+// (A depends on B, B depends on A) and C(ts20) depends on B from outside the loop.
+// The correct order is A, B (the loop in timestamp order), then C after B — not
+// the timestamp order A, C, B that would apply C before its dependency B.
+func TestOrderContinuousEffectsAppliesLoopMembersBeforeExternalDependents(t *testing.T) {
+	a := game.ContinuousEffect{ID: 1, Timestamp: 10, DependsOn: []id.ID{2}}
+	c := game.ContinuousEffect{ID: 3, Timestamp: 20, DependsOn: []id.ID{2}}
+	b := game.ContinuousEffect{ID: 2, Timestamp: 30, DependsOn: []id.ID{1}}
+
+	ordered := orderContinuousEffects([]game.ContinuousEffect{a, c, b})
+
+	gotIDs := make([]id.ID, len(ordered))
+	for i := range ordered {
+		gotIDs[i] = ordered[i].ID
+	}
+	want := []id.ID{1, 2, 3}
+	if !slices.Equal(gotIDs, want) {
+		t.Fatalf("ordered effect IDs = %v, want %v (loop A,B in timestamp order then external dependent C)", gotIDs, want)
+	}
+}
+
 // TestContinuousEffectDependencyKeepsTimestampOrderForUnblockedEffects covers
 // CR 613.8b/613.8c: once a dependency is applied, the dependent effect applies
 // just after it, and any independent later-timestamp effect must not jump ahead

@@ -930,8 +930,16 @@ func continuousSelectionApplies(g *game.Game, resolver referenceResolver, group 
 // order (CR 613.8): each step applies the earliest-timestamp effect whose
 // dependencies have already been applied, reevaluating after each one
 // (CR 613.8c), so a dependent effect applies just after its dependencies
-// (CR 613.8b). If a dependency loop remains, the still-unordered effects are
-// applied in timestamp order (CR 613.8b).
+// orderContinuousEffects orders the effects within a single layer. Effects are
+// first sorted by timestamp, breaking ties by ID (CR 613.7: an effect with an
+// earlier timestamp is applied first). Dependencies then override timestamp
+// order (CR 613.8): each step applies the earliest-timestamp applicable effect,
+// reevaluating after each one (CR 613.8c), so a dependent effect applies just
+// after its dependencies (CR 613.8b). Effects that form a dependency loop are
+// treated as a strongly connected component: CR 613.8b ignores the mutual
+// dependencies within the loop and applies the loop's effects in timestamp order,
+// but the loop as a whole still waits until every dependency any of its members
+// has on an effect outside the loop has been applied.
 func orderContinuousEffects(effects []game.ContinuousEffect) []game.ContinuousEffect {
 	if len(effects) <= 1 {
 		return effects
@@ -944,38 +952,103 @@ func orderContinuousEffects(effects []game.ContinuousEffect) []game.ContinuousEf
 	}
 	remaining := append([]game.ContinuousEffect(nil), ordered...)
 	result := make([]game.ContinuousEffect, 0, len(ordered))
-	applied := make(map[id.ID]bool, len(ordered))
 	for len(remaining) > 0 {
-		// CR 613.8c: after each effect is applied the remaining order is
-		// reevaluated. remaining stays timestamp-sorted, so scanning from the
-		// front and taking the first effect whose dependencies are satisfied
-		// applies the earliest-timestamp unblocked effect next (CR 613.8b: a
-		// dependent effect waits until just after its dependencies, otherwise
-		// timestamp order governs).
+		// CR 613.8c: reevaluate after each application. Applied effects are
+		// removed from remaining, so a dependency that is no longer present is
+		// already satisfied. Scanning the timestamp-sorted remaining front to
+		// back takes the earliest-timestamp applicable effect.
+		adjacency := dependencyIndexAdjacency(remaining)
+		reachable := reachabilityMatrix(adjacency)
 		next := -1
 		for i := range remaining {
-			if dependenciesSatisfied(&remaining[i], applied, remaining) {
+			if effectComponentApplicable(i, adjacency, reachable) {
 				next = i
 				break
 			}
 		}
 		if next == -1 {
-			// No remaining effect is applicable, so a dependency loop exists.
-			// CR 613.8b resolves the effects in the loop in timestamp order;
-			// the remaining effects are already timestamp-sorted, so they are
-			// applied in that order as a best-effort approximation. This is
-			// imprecise when an effect outside the loop merely depends on a loop
-			// member (it should wait for that member); that case does not arise
-			// with the supported cards and is tracked in #1904.
+			// Defensive: the condensation of the dependency graph is a DAG, so a
+			// non-empty set always has an applicable component; fall back to
+			// timestamp order to guarantee progress if that ever fails.
 			return append(result, remaining...)
 		}
 		result = append(result, remaining[next])
-		if remaining[next].ID != 0 {
-			applied[remaining[next].ID] = true
-		}
 		remaining = append(remaining[:next], remaining[next+1:]...)
 	}
 	return result
+}
+
+// dependencyIndexAdjacency builds the dependency graph among the remaining effects
+// keyed by their index in remaining: adjacency[i] holds the indices of the effects
+// that effect i depends on that are still remaining. A dependency that is no longer
+// remaining (already applied, or never present) is omitted, and effects without an
+// ID can't be depended on so they have no incoming edges.
+func dependencyIndexAdjacency(remaining []game.ContinuousEffect) [][]int {
+	indexByID := make(map[id.ID]int, len(remaining))
+	for i := range remaining {
+		if remaining[i].ID != 0 {
+			indexByID[remaining[i].ID] = i
+		}
+	}
+	adjacency := make([][]int, len(remaining))
+	for i := range remaining {
+		for _, dependency := range remaining[i].DependsOn {
+			if dependency == 0 {
+				continue
+			}
+			if j, ok := indexByID[dependency]; ok {
+				adjacency[i] = append(adjacency[i], j)
+			}
+		}
+	}
+	return adjacency
+}
+
+// reachabilityMatrix returns reachable where reachable[i][j] reports whether
+// effect j is reachable from effect i along dependency edges.
+func reachabilityMatrix(adjacency [][]int) [][]bool {
+	reachable := make([][]bool, len(adjacency))
+	for i := range adjacency {
+		reachable[i] = make([]bool, len(adjacency))
+		var walk func(node int)
+		walk = func(node int) {
+			for _, next := range adjacency[node] {
+				if !reachable[i][next] {
+					reachable[i][next] = true
+					walk(next)
+				}
+			}
+		}
+		walk(i)
+	}
+	return reachable
+}
+
+// sameComponent reports whether effects i and j are in the same strongly
+// connected component of the dependency graph (each reaches the other), i.e. they
+// are in the same dependency loop.
+func sameComponent(i, j int, reachable [][]bool) bool {
+	return i == j || (reachable[i][j] && reachable[j][i])
+}
+
+// effectComponentApplicable reports whether effect i can be applied now (CR 613.8):
+// its strongly connected component has no remaining dependency on an effect outside
+// the component. Within a component the mutual dependencies are ignored (CR 613.8b),
+// so once the component's external dependencies are applied its members become
+// applicable in timestamp order; an effect that depends on a loop member from
+// outside the loop is its own component and still waits for that member.
+func effectComponentApplicable(i int, adjacency [][]int, reachable [][]bool) bool {
+	for j := range adjacency {
+		if !sameComponent(i, j, reachable) {
+			continue
+		}
+		for _, dependency := range adjacency[j] {
+			if !sameComponent(i, dependency, reachable) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // compareContinuousEffects orders two effects by timestamp, breaking ties by ID
@@ -994,25 +1067,6 @@ func compareContinuousEffects(left, right *game.ContinuousEffect) int {
 		return 1
 	}
 	return 0
-}
-
-// dependenciesSatisfied reports whether every effect this one depends on has
-// already been applied, so a dependent effect waits until the effects it depends
-// on are applied (CR 613.8). A dependency that is not among the remaining effects
-// is treated as satisfied.
-func dependenciesSatisfied(effect *game.ContinuousEffect, applied map[id.ID]bool, remaining []game.ContinuousEffect) bool {
-	for _, dependency := range effect.DependsOn {
-		if dependency == 0 || applied[dependency] {
-			continue
-		}
-		for i := range remaining {
-			other := &remaining[i]
-			if other.ID == dependency {
-				return false
-			}
-		}
-	}
-	return true
 }
 
 // applyContinuousEffect applies a single continuous effect to a permanent's
