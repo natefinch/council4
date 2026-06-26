@@ -101,6 +101,7 @@ const (
 	ConditionPredicateControllerIsMonarch                              ConditionPredicateKind = "ConditionPredicateControllerIsMonarch"
 	ConditionPredicateControllerHasInitiative                          ConditionPredicateKind = "ConditionPredicateControllerHasInitiative"
 	ConditionPredicateControllerHasCityBlessing                        ConditionPredicateKind = "ConditionPredicateControllerHasCityBlessing"
+	ConditionPredicateControllerTurn                                   ConditionPredicateKind = "ConditionPredicateControllerTurn"
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -525,6 +526,12 @@ func conditionIntroAt(tokens []shared.Token, index int) (kind ConditionIntroKind
 		equalWord(tokens[index+1], "long") &&
 		equalWord(tokens[index+2], "as"):
 		return ConditionIntroAsLongAs, 3
+	case isControllerTurnIntro(tokens, index):
+		// A sentence-leading "During your turn," gates a continuous self-static on
+		// the controller being the active player, exactly like an "As long as it's
+		// your turn" clause. The "during" introducer alone is consumed; the "your
+		// turn" body is recognized as the controller-turn predicate.
+		return ConditionIntroAsLongAs, 1
 	case isReflexiveWhenYouDoIntro(tokens, index):
 		// The reflexive "When you do," preamble gates its trailing effect on the
 		// just-performed optional action having been taken, exactly like an "If
@@ -539,7 +546,22 @@ func conditionIntroAt(tokens []shared.Token, index int) (kind ConditionIntroKind
 	}
 }
 
-// isReflexiveWhenYouDoIntro reports whether the tokens at index open the closed
+// isControllerTurnIntro reports whether the tokens at index open a
+// sentence-leading "During your turn," preamble that gates a continuous static
+// on the controller being the active player (Fresh-Faced Recruit, Embereth
+// Skyblazer). Only a clause-leading occurrence is treated as a condition; a
+// trailing "... during your turn." (Dragonlord Dromoka) and every other use are
+// left untouched so existing static recognizers keep owning that wording.
+func isControllerTurnIntro(tokens []shared.Token, index int) bool {
+	if index != 0 && tokens[index-1].Kind != shared.Period {
+		return false
+	}
+	return index+2 < len(tokens) &&
+		equalWord(tokens[index], "during") &&
+		equalWord(tokens[index+1], "your") &&
+		equalWord(tokens[index+2], "turn")
+}
+
 // reflexive preamble "When you do," that gates its trailing effect on a
 // preceding optional action having been taken. Only a reflexive that follows an
 // earlier "you may" in the same body is treated as a resolving condition gate;
@@ -629,6 +651,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeDrawCardReplacementCondition,
 		recognizeCastTimingCondition,
 		recognizeFirstCombatPhaseCondition,
+		recognizeControllerTurnCondition,
 		recognizeAttackersAttackingControllerCondition,
 		recognizeSpellXCondition,
 		recognizeCreatedTokenMatchCondition,
@@ -782,6 +805,17 @@ func recognizeFirstCombatPhaseCondition(body []shared.Token, _ Atoms) (Condition
 	if tokenWordsEqual(body, "it's", "the", "first", "combat", "phase", "of", "the", "turn") ||
 		tokenWordsEqual(body, "it", "is", "the", "first", "combat", "phase", "of", "the", "turn") {
 		return ConditionClause{Predicate: ConditionPredicateFirstCombatPhaseOfTurn}, true
+	}
+	return ConditionClause{}, false
+}
+
+// recognizeControllerTurnCondition matches the controller-turn body "your turn"
+// that the "During your turn," introducer leaves behind (Fresh-Faced Recruit,
+// Embereth Skyblazer). It gates a conditional self-static on the controller
+// being the active player. It fails closed on any other wording.
+func recognizeControllerTurnCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if tokenWordsEqual(body, "your", "turn") {
+		return ConditionClause{Predicate: ConditionPredicateControllerTurn}, true
 	}
 	return ConditionClause{}, false
 }

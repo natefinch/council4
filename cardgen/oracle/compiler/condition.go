@@ -69,6 +69,7 @@ var simplePredicateMap = map[parser.ConditionPredicateKind]ConditionPredicate{
 	parser.ConditionPredicateControllerIsMonarch:                              ConditionPredicateControllerIsMonarch,
 	parser.ConditionPredicateControllerHasInitiative:                          ConditionPredicateControllerHasInitiative,
 	parser.ConditionPredicateControllerHasCityBlessing:                        ConditionPredicateControllerHasCityBlessing,
+	parser.ConditionPredicateControllerTurn:                                   ConditionPredicateControllerTurn,
 }
 
 // compileConditionClause mechanically maps one typed ConditionClause onto the

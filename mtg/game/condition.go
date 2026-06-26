@@ -164,6 +164,12 @@ type Condition struct {
 	// city's blessing (CR 702.131 ascend), as in "if you have the city's
 	// blessing, ...". It reads the controller's live HasCityBlessing flag.
 	ControllerHasCityBlessing bool
+	// SourceControllerTurn is satisfied while it is the context controller's turn,
+	// i.e. the controller is the active player ("During your turn, this creature
+	// has first strike"; Fresh-Faced Recruit, Embereth Skyblazer). It gates a
+	// conditional self-static so the granted keyword or power/toughness bonus
+	// applies only on the controller's own turns.
+	SourceControllerTurn bool
 }
 
 // ControlPlayerScope selects which players' battlefields a control-count
@@ -236,7 +242,8 @@ func (c *Condition) Empty() bool {
 		!c.ControllerControlsGreatestToughnessCreature &&
 		!c.ControllerIsMonarch &&
 		!c.ControllerHasInitiative &&
-		!c.ControllerHasCityBlessing
+		!c.ControllerHasCityBlessing &&
+		!c.SourceControllerTurn
 }
 
 // EventHistoryWindow selects which turn's event log an EventHistoryCondition

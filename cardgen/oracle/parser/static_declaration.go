@@ -684,10 +684,76 @@ func emitStaticDeclarations(abilities []Ability) {
 		declarations := parseStaticDeclarations(body, ability.Quoted, ability.Atoms, ability.ConditionClauses)
 		if len(declarations) > 0 {
 			ability.StaticDeclarations = declarations
+			dropControllerTurnConditionsNativelyConsumed(ability, declarations)
 			foldStaticCastFromTopPayLifeRider(ability, declarations)
 			foldStaticSkipDrawStep(ability, declarations)
 		}
 	}
+}
+
+// dropControllerTurnConditionsNativelyConsumed removes the controller-turn
+// condition ("During your turn,") the generic scanner emits when a static
+// declaration on the same ability already encodes the controller's-turn scope
+// itself: the graveyard-card keyword grant and the opponent action restriction
+// both strip the "During your turn," prefix into RestrictDuringControllerTurn.
+// Both the condition boundary (which feeds the compiler's condition segments)
+// and the matching clause are dropped, so the prefix surfaces exactly once,
+// through the consuming declaration, restoring those cards' prior behavior.
+func dropControllerTurnConditionsNativelyConsumed(ability *Ability, declarations []StaticDeclarationSyntax) {
+	var consuming []shared.Span
+	for i := range declarations {
+		if declarations[i].RestrictDuringControllerTurn {
+			consuming = append(consuming, declarations[i].Span)
+		}
+	}
+	if len(consuming) == 0 {
+		return
+	}
+	keptBoundaries := ability.ConditionBoundaries[:0]
+	for _, boundary := range ability.ConditionBoundaries {
+		if boundary.Kind == ConditionIntroAsLongAs &&
+			positionWithinAnySpan(boundary.Start, consuming) &&
+			tokenWordAtPosition(ability.Tokens, boundary.Start, "during") {
+			continue
+		}
+		keptBoundaries = append(keptBoundaries, boundary)
+	}
+	ability.ConditionBoundaries = keptBoundaries
+	keptClauses := ability.ConditionClauses[:0]
+	for _, clause := range ability.ConditionClauses {
+		if clause.Predicate == ConditionPredicateControllerTurn && spanCoveredByAny(clause.Span, consuming) {
+			continue
+		}
+		keptClauses = append(keptClauses, clause)
+	}
+	ability.ConditionClauses = keptClauses
+}
+
+func positionWithinAnySpan(pos shared.Position, spans []shared.Span) bool {
+	for _, span := range spans {
+		if span.Start.Offset <= pos.Offset && pos.Offset < span.End.Offset {
+			return true
+		}
+	}
+	return false
+}
+
+func tokenWordAtPosition(tokens []shared.Token, pos shared.Position, word string) bool {
+	for i := range tokens {
+		if tokens[i].Span.Start.Offset == pos.Offset {
+			return equalWord(tokens[i], word)
+		}
+	}
+	return false
+}
+
+func spanCoveredByAny(inner shared.Span, outers []shared.Span) bool {
+	for _, outer := range outers {
+		if spanCovers(outer, inner) {
+			return true
+		}
+	}
+	return false
 }
 
 // foldStaticCastFromTopPayLifeRider clears the effects of the "If you cast a
