@@ -1113,6 +1113,32 @@ func blockUnionTriggerEventClauseTests() []triggerEventClauseTest {
 				}
 			},
 		},
+		{
+			name:   "blocks or becomes blocked by a creature union self",
+			source: "Whenever this creature blocks or becomes blocked by a creature, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindBlock ||
+					clause.UnionKind != TriggerEventKindBecameBlocked ||
+					clause.Subject.Kind != TriggerEventSubjectSelf ||
+					!selectionHasType(clause.RelatedSelection, TriggerCardTypeCreature) {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "blocks or becomes blocked by a white creature union self",
+			source: "Whenever this creature blocks or becomes blocked by a white creature, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindBlock ||
+					clause.UnionKind != TriggerEventKindBecameBlocked ||
+					clause.Subject.Kind != TriggerEventSubjectSelf ||
+					!selectionHasType(clause.RelatedSelection, TriggerCardTypeCreature) {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
 	}
 }
 

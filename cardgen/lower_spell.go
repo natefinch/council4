@@ -1257,6 +1257,7 @@ func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) 
 	hasDirectObject := false
 	for _, ref := range ctx.content.References {
 		if ref.Binding != compiler.ReferenceBindingEventPermanent &&
+			ref.Binding != compiler.ReferenceBindingEventRelatedPermanent &&
 			ref.Binding != compiler.ReferenceBindingTarget &&
 			ref.Binding != compiler.ReferenceBindingSource {
 			return game.AbilityContent{}, false
@@ -1339,6 +1340,9 @@ func lowerDealDamageSpell(cardName string, ctx contentCtx) (game.AbilityContent,
 	}
 	if ctx.content.Effects[0].DamageRecipient.Reference == parser.DamageRecipientReferenceThatPlayer {
 		return lowerEventPlayerDamageSpell(ctx)
+	}
+	if ctx.content.Effects[0].DamageRecipient.Reference == parser.DamageRecipientReferenceThatCreature {
+		return lowerEventRelatedPermanentDamageSpell(ctx)
 	}
 	if content, ok := lowerInheritedPowerDamageSpell(ctx); ok {
 		return content, nil

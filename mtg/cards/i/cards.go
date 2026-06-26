@@ -14,6 +14,7 @@ var Cards = []*game.CardDef{
 	InameLifeAspect,
 	IncreasingDevotion,
 	Incubation,
+	InfernoElemental,
 	InfernoFist,
 	InfiltrationLens,
 	IngeniousProdigy,

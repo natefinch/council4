@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,716 of 32,501 cards eligible for paper support (45.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,724 of 32,501 cards eligible for paper support (45.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -70,6 +70,7 @@ Council4 currently supports **14,716 of 32,501 cards eligible for paper support 
 - Acidic Slime
 - Acolyte of Aclazotz
 - Acolyte of Affliction
+- Acolyte of the Inferno
 - Acolyte of Xathrid
 - Acorn Harvest
 - Acrobatic Leap
@@ -689,6 +690,7 @@ Council4 currently supports **14,716 of 32,501 cards eligible for paper support 
 - Ashiok's Adept
 - Ashiok's Reaper
 - Ashiok's Skulker
+- Ashmouth Hound
 - Ashnod's Altar
 - Ashnod's Harvester
 - Ashnod, Flesh Mechanist
@@ -4903,6 +4905,7 @@ Council4 currently supports **14,716 of 32,501 cards eligible for paper support 
 - Ghor-Clan Rampager
 - Ghor-Clan Savage
 - Ghor-Clan Wrecker
+- Ghost Hounds
 - Ghost Quarter
 - Ghost Ship
 - Ghost Tactician
@@ -6261,6 +6264,7 @@ Council4 currently supports **14,716 of 32,501 cards eligible for paper support 
 - Infernal Rebirth
 - Infernal Scarring
 - Inferno
+- Inferno Elemental
 - Inferno Fist
 - Inferno Jet
 - Inferno Titan
@@ -6864,6 +6868,7 @@ Council4 currently supports **14,716 of 32,501 cards eligible for paper support 
 - Kodama's Reach
 - Koilos Roc
 - Kokusho, the Evening Star
+- Kolaghan Aspirant
 - Kolaghan Warmonger
 - Kolaghan's Command
 - Koma's Coil
@@ -8781,6 +8786,7 @@ Council4 currently supports **14,716 of 32,501 cards eligible for paper support 
 - Origin Spellbomb
 - Ornamental Courage
 - Ornery Dilophosaur
+- Ornery Goblin
 - Ornery Kudu
 - Ornery Tumblewagg
 - Ornitharch
@@ -11271,6 +11277,7 @@ Council4 currently supports **14,716 of 32,501 cards eligible for paper support 
 - Skeletonize
 - Skemfar Avenger
 - Skemfar Elderhall
+- Skewer Slinger
 - Skewer the Critics
 - Skillful Lunge
 - Skinbrand Goblin
@@ -11580,6 +11587,7 @@ Council4 currently supports **14,716 of 32,501 cards eligible for paper support 
 - Somberwald Dryad
 - Somberwald Spider
 - Somberwald Stag
+- Somberwald Vigilante
 - Somnomancer
 - Song of Creation
 - Song of the Dryads

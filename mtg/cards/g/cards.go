@@ -13,6 +13,7 @@ var Cards = []*game.CardDef{
 	GempalmAvenger,
 	GempalmStrider,
 	GeralfSMindcrusher,
+	GhostHounds,
 	Ghostway,
 	GiantSGrasp,
 	GiftOfTheGargantuan,
