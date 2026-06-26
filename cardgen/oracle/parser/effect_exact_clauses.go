@@ -872,18 +872,30 @@ func graveyardCardNoun(sel SelectionSyntax, plural bool) (string, bool) {
 	hasTypes := len(sel.RequiredTypesAny) > 0
 	hasSubtype := len(sel.SubtypesAny) > 0
 	isPermanent := sel.Kind == SelectionPermanent
+	// A single subtype adjective may qualify a card-type noun ("Zombie creature
+	// card", "Hero creature cards", "Ally creature cards"); it precedes the type
+	// noun in canonical Oracle order and counts as one combined core with that
+	// type rather than as a second independent core. The permanent noun has no
+	// subtype-qualified Oracle phrasing, so a subtype never combines with it.
+	subtypeQualifiesType := hasTypes && hasSubtype && !isPermanent && len(sel.SubtypesAny) == 1
 	cores := 0
 	for _, present := range []bool{hasTypes, hasSubtype, isPermanent} {
 		if present {
 			cores++
 		}
 	}
-	if cores > 1 {
+	if cores > 1 && !subtypeQualifiesType {
 		return "", false
 	}
 
 	var core string
 	switch {
+	case subtypeQualifiesType:
+		typeNoun, ok := graveyardCardTypeNoun(sel, plural)
+		if !ok {
+			return "", false
+		}
+		core = string(sel.SubtypesAny[0]) + " " + typeNoun
 	case hasTypes:
 		core, ok = graveyardCardTypeNoun(sel, plural)
 		if !ok {

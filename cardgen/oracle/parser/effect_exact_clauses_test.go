@@ -182,6 +182,13 @@ func TestExactGraveyardCardTargetAccepts(t *testing.T) {
 		"Return target red sorcery card from your graveyard to your hand.",
 		"Return target colorless artifact card from your graveyard to the battlefield.",
 		"Return target Zombie card from your graveyard to the battlefield.",
+		// A single subtype adjective may also qualify a card-type noun ("Zombie
+		// creature card", "Hero creature cards"); the subtype precedes the type
+		// noun and lowering restricts on both the subtype and the type.
+		"Return target Zombie creature card from your graveyard to the battlefield.",
+		"Return target Hero creature card from your graveyard to your hand.",
+		"Return target Zombie creature card from your graveyard to the battlefield tapped.",
+		"Return up to three target Hero creature cards from your graveyard to the battlefield.",
 		"Return target creature card with mana value 3 or less from your graveyard to your hand.",
 		"Return another target creature card from your graveyard to your hand.",
 		"Return two target creature cards from your graveyard to your hand.",
@@ -222,6 +229,10 @@ func TestExactGraveyardCardTargetFailsClosed(t *testing.T) {
 		// Supertype and excluded-type combinations are unrendered.
 		"Return target basic land card from your graveyard to the battlefield.",
 		"Return target nonland permanent card from your graveyard to the battlefield.",
+		// A subtype-qualified type noun is exact, but a supertype exclusion on
+		// that noun ("nonlegendary creature card") is still unrendered, so it must
+		// keep failing closed rather than dropping the exclusion.
+		"Return target nonlegendary creature card from your graveyard to the battlefield.",
 	}
 	for _, source := range rejected {
 		if graveyardReturnExact(t, source) {
