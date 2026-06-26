@@ -246,3 +246,112 @@ func TestEventHistoryConditionsFailClosed(t *testing.T) {
 		})
 	}
 }
+
+func TestEventHistoryYouCastSpellConditions(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		condition     string
+		minCount      int
+		excludedTypes []TriggerCardType
+		typesAny      []TriggerCardType
+	}{
+		{
+			name:          "noncreature spell",
+			condition:     "you've cast a noncreature spell this turn",
+			excludedTypes: []TriggerCardType{TriggerCardTypeCreature},
+		},
+		{
+			name:      "instant or sorcery spell",
+			condition: "you've cast an instant or sorcery spell this turn",
+			typesAny:  []TriggerCardType{TriggerCardTypeInstant, TriggerCardTypeSorcery},
+		},
+		{
+			name:      "two or more spells",
+			condition: "you've cast two or more spells this turn",
+			minCount:  2,
+		},
+		{
+			name:      "bare you cast a spell",
+			condition: "you cast a spell this turn",
+		},
+		{
+			name:      "you have cast a spell",
+			condition: "you have cast a spell this turn",
+		},
+	}
+	for i := range tests {
+		test := &tests[i]
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			source := "{T}: Draw a card. Activate only if " + test.condition + "."
+			document, diagnostics := Parse(source, Context{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if len(document.Abilities) != 1 || len(document.Abilities[0].EventHistoryConditions) != 1 {
+				t.Fatalf("event history conditions = %#v", document.Abilities)
+			}
+			condition := &document.Abilities[0].EventHistoryConditions[0]
+			if condition.Window.Kind != EventHistoryWindowCurrentTurn || condition.Negated {
+				t.Fatalf("condition = %#v", condition)
+			}
+			if condition.MinCount != test.minCount {
+				t.Fatalf("condition MinCount = %d, want %d", condition.MinCount, test.minCount)
+			}
+			event := condition.TriggerEvent
+			if event == nil || condition.PlayerEvent != nil {
+				t.Fatalf("condition = %#v", condition)
+			}
+			if event.Kind != TriggerEventKindSpellCast {
+				t.Fatalf("event kind = %q, want %q", event.Kind, TriggerEventKindSpellCast)
+			}
+			if event.Actor.Kind != TriggerEventActorYou {
+				t.Fatalf("event actor = %q, want %q", event.Actor.Kind, TriggerEventActorYou)
+			}
+			if got := event.SpellSelection.ExcludedTypes; !equalTriggerCardTypes(got, test.excludedTypes) {
+				t.Fatalf("excluded types = %#v, want %#v", got, test.excludedTypes)
+			}
+			if got := event.SpellSelection.TypesAny; !equalTriggerCardTypes(got, test.typesAny) {
+				t.Fatalf("types any = %#v, want %#v", got, test.typesAny)
+			}
+		})
+	}
+}
+
+func TestEventHistoryYouCastSpellFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, condition := range []string{
+		"you've cast a spell last turn",
+		"you've cast one or more spells this turn",
+		"an opponent cast a spell this turn",
+		"you've cast a creature spell",
+	} {
+		t.Run(condition, func(t *testing.T) {
+			t.Parallel()
+			source := "{T}: Draw a card. Activate only if " + condition + "."
+			document, diagnostics := Parse(source, Context{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if len(document.Abilities) != 1 {
+				t.Fatalf("abilities = %d", len(document.Abilities))
+			}
+			if got := document.Abilities[0].EventHistoryConditions; len(got) != 0 {
+				t.Fatalf("event history conditions = %#v, want none", got)
+			}
+		})
+	}
+}
+
+func equalTriggerCardTypes(got, want []TriggerCardType) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	for i := range got {
+		if got[i] != want[i] {
+			return false
+		}
+	}
+	return true
+}

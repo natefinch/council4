@@ -25,6 +25,7 @@ import (
 	"github.com/natefinch/council4/mtg/cards/u"
 	"github.com/natefinch/council4/mtg/cards/v"
 	"github.com/natefinch/council4/mtg/cards/w"
+	"github.com/natefinch/council4/mtg/cards/x"
 	"github.com/natefinch/council4/mtg/game"
 )
 
@@ -54,5 +55,6 @@ func defaultCardSets() [][]*game.CardDef {
 		u.Cards,
 		v.Cards,
 		w.Cards,
+		x.Cards,
 	}
 }

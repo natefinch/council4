@@ -88,6 +88,12 @@ func parseEventHistoryCondition(tokens []shared.Token, introWidth int) (EventHis
 	event, condition.MinCount = stripAttackedCreatureCount(event)
 	condition.TriggerEvent = parseEventHistoryTriggerEvent(event)
 	if condition.TriggerEvent == nil {
+		if clause, minCount, ok := parseEventHistoryYouCastSpell(event); ok {
+			condition.TriggerEvent = clause
+			condition.MinCount = minCount
+		}
+	}
+	if condition.TriggerEvent == nil {
 		condition.PlayerEvent = parseEventHistoryPlayerEvent(event)
 	}
 	if condition.TriggerEvent == nil && condition.PlayerEvent == nil {
@@ -105,7 +111,16 @@ func eventHistoryCombinationAllowed(condition *EventHistoryCondition) bool {
 		case TriggerEventKindAttack, TriggerEventKindZoneChange:
 			return !condition.Negated && condition.Window.Kind == EventHistoryWindowCurrentTurn
 		case TriggerEventKindSpellCast:
-			return condition.Negated && condition.Window.Kind == EventHistoryWindowPreviousTurn
+			if condition.Negated {
+				return condition.Window.Kind == EventHistoryWindowPreviousTurn
+			}
+			// A positive "you've cast ... this turn" restriction counts the
+			// controller's own current-turn spell casts. Only the controller-
+			// scoped actor is reduced to a typed event-history clause; the
+			// passive "spells were cast" form remains the negated previous-turn
+			// shape handled above.
+			return condition.TriggerEvent.Actor.Kind == TriggerEventActorYou &&
+				condition.Window.Kind == EventHistoryWindowCurrentTurn
 		default:
 			return false
 		}
@@ -209,6 +224,79 @@ func parseEventHistoryTriggerEvent(tokens []shared.Token) *TriggerEventClause {
 		}
 	}
 	return parseEventHistoryLeftBattlefield(tokens, span)
+}
+
+// parseEventHistoryYouCastSpell recognizes a controller-scoped past-tense
+// spell-cast event-history clause introduced by "you've cast", "you have cast",
+// or the bare "you cast". It returns a spell-cast clause whose controller is the
+// ability's controller together with the minimum number of matching casts the
+// window must contain. Two body shapes are recognized: a counted plural run
+// ("two or more spells") that sets the minimum count and matches any spell, and
+// a singular filtered run ("a noncreature spell", "an instant or sorcery spell")
+// that reuses the live spell-cast trigger's selection grammar and treats a
+// single matching cast as sufficient. Anything else fails closed.
+func parseEventHistoryYouCastSpell(tokens []shared.Token) (*TriggerEventClause, int, bool) {
+	actorWidth, ok := eventHistoryYouCastPrefix(tokens)
+	if !ok {
+		return nil, 0, false
+	}
+	actor := TriggerEventActor{
+		Kind: TriggerEventActorYou,
+		Span: shared.SpanOf(tokens[:actorWidth]),
+	}
+	body := tokens[actorWidth:]
+	if count, ok := eventHistoryCastSpellCount(body); ok {
+		return &TriggerEventClause{
+			Kind:           TriggerEventKindSpellCast,
+			Span:           shared.SpanOf(tokens),
+			Actor:          actor,
+			SpellSelection: TriggerEventSpellSelection{Span: shared.SpanOf(body)},
+		}, count, true
+	}
+	selection, ok := parseTriggerEventSpellSelection(body)
+	if !ok {
+		return nil, 0, false
+	}
+	return &TriggerEventClause{
+		Kind:           TriggerEventKindSpellCast,
+		Span:           shared.SpanOf(tokens),
+		Actor:          actor,
+		SpellSelection: selection,
+	}, 0, true
+}
+
+// eventHistoryYouCastPrefix reports the token width of a controller-scoped
+// past-tense cast actor ("you've cast", "you have cast", "you cast") at the
+// start of an event-history clause, or false when none is present.
+func eventHistoryYouCastPrefix(tokens []shared.Token) (int, bool) {
+	if len(tokens) >= 2 && equalWord(tokens[0], "you've") && equalWord(tokens[1], "cast") {
+		return 2, true
+	}
+	if len(tokens) >= 3 && equalWord(tokens[0], "you") && equalWord(tokens[1], "have") && equalWord(tokens[2], "cast") {
+		return 3, true
+	}
+	if len(tokens) >= 2 && equalWord(tokens[0], "you") && equalWord(tokens[1], "cast") {
+		return 2, true
+	}
+	return 0, false
+}
+
+// eventHistoryCastSpellCount recognizes a counted plural spell run ("two or more
+// spells") and returns the cardinal minimum. The minimum must be at least two so
+// the counted form never overlaps the singular "a spell" selection, which
+// treats a single cast as sufficient.
+func eventHistoryCastSpellCount(tokens []shared.Token) (int, bool) {
+	if len(tokens) != 4 ||
+		!equalWord(tokens[1], "or") ||
+		!equalWord(tokens[2], "more") ||
+		!equalWord(tokens[3], "spells") {
+		return 0, false
+	}
+	count, ok := CardinalWordValue(tokens[0].Text)
+	if !ok || count < 2 {
+		return 0, false
+	}
+	return count, true
 }
 
 // parseEventHistoryLeftBattlefield recognizes the Revolt event-history clause
