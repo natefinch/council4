@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // recognizeRevealChooseHandDiscardSequence recognizes the closed targeted hand-
@@ -71,14 +72,15 @@ func isDiscardThatCardSentence(sentence *Sentence) bool {
 }
 
 // parseHandChoiceDiscardFilter parses the middle "You choose a [filter] card
-// from it." sentence into a typed filter. It accepts the any-card, noncreature,
-// and nonland descriptors, the "from it" / "from among them" / "from those
-// cards" source phrasings, and an optional "with mana value N or less" bound;
-// every other wording fails closed.
+// from it." sentence into a typed filter. It accepts the any-card descriptor,
+// the "noncreature" / "nonland" exclusions, positive card-type descriptors
+// (a single type or an "or"-joined union such as "an artifact or creature"),
+// the "nonbasic" / "nonlegendary" supertype exclusions, the "from it" / "from
+// among them" / "from those cards" source phrasings, and an optional "with mana
+// value N or less" bound; every other wording fails closed.
 func parseHandChoiceDiscardFilter(text string, span shared.Span) (HandChoiceDiscardSyntax, bool) {
 	normalized := strings.TrimSuffix(strings.TrimSpace(strings.ToLower(text)), ".")
-	const prefix = "you choose a "
-	rest, ok := strings.CutPrefix(normalized, prefix)
+	rest, ok := cutChooseArticle(normalized)
 	if !ok {
 		return HandChoiceDiscardSyntax{}, false
 	}
@@ -86,19 +88,12 @@ func parseHandChoiceDiscardFilter(text string, span shared.Span) (HandChoiceDisc
 	if !ok {
 		return HandChoiceDiscardSyntax{}, false
 	}
-	filter := HandChoiceDiscardSyntax{Present: true, ChooseSpan: span}
-	if descriptor = strings.TrimSpace(descriptor); descriptor != "" {
-		for token := range strings.FieldsSeq(strings.ReplaceAll(descriptor, ",", " ")) {
-			switch token {
-			case "noncreature":
-				filter.ExcludeCreature = true
-			case "nonland":
-				filter.ExcludeLand = true
-			default:
-				return HandChoiceDiscardSyntax{}, false
-			}
-		}
+	filter, ok := handChoiceDescriptorFilter(strings.TrimSpace(descriptor))
+	if !ok {
+		return HandChoiceDiscardSyntax{}, false
 	}
+	filter.Present = true
+	filter.ChooseSpan = span
 	bound, ok := cutHandChoiceSource(strings.TrimSpace(after))
 	if !ok {
 		return HandChoiceDiscardSyntax{}, false
@@ -112,6 +107,78 @@ func parseHandChoiceDiscardFilter(text string, span shared.Span) (HandChoiceDisc
 		filter.MaxManaValue = value
 	}
 	return filter, true
+}
+
+// cutChooseArticle strips the leading "you choose a " / "you choose an " article
+// from the middle sentence, returning the remaining descriptor-and-source text.
+func cutChooseArticle(normalized string) (string, bool) {
+	if rest, ok := strings.CutPrefix(normalized, "you choose an "); ok {
+		return rest, true
+	}
+	return strings.CutPrefix(normalized, "you choose a ")
+}
+
+// handChoiceDescriptorFilter classifies the descriptor words preceding "card"
+// into the typed filter fields. A bare descriptor (the any-card case) yields the
+// zero filter. Recognized words are the "noncreature" / "nonland" exclusions,
+// the "nonbasic" / "nonlegendary" supertype exclusions, and the positive card
+// types; the separators "or" and "," are skipped. Two or more positive types
+// require an explicit "or" / "," separator so an adjacent conjunctive type line
+// ("artifact creature") is never silently treated as a union. Any other word
+// fails closed.
+func handChoiceDescriptorFilter(descriptor string) (HandChoiceDiscardSyntax, bool) {
+	var filter HandChoiceDiscardSyntax
+	if descriptor == "" {
+		return filter, true
+	}
+	hasSeparator := strings.Contains(descriptor, " or ") || strings.Contains(descriptor, ",")
+	for token := range strings.FieldsSeq(strings.ReplaceAll(descriptor, ",", " ")) {
+		switch token {
+		case "or":
+		case "noncreature":
+			filter.ExcludeCreature = true
+		case "nonland":
+			filter.ExcludeLand = true
+		case "nonbasic":
+			filter.ExcludedSupertype = types.Basic
+		case "nonlegendary":
+			filter.ExcludedSupertype = types.Legendary
+		default:
+			cardType, ok := handChoiceCardType(token)
+			if !ok {
+				return HandChoiceDiscardSyntax{}, false
+			}
+			filter.RequiredTypesAny = append(filter.RequiredTypesAny, cardType)
+		}
+	}
+	if len(filter.RequiredTypesAny) >= 2 && !hasSeparator {
+		return HandChoiceDiscardSyntax{}, false
+	}
+	return filter, true
+}
+
+// handChoiceCardType maps a positive card-type descriptor word to its card type.
+func handChoiceCardType(token string) (types.Card, bool) {
+	switch token {
+	case "artifact":
+		return types.Artifact, true
+	case "battle":
+		return types.Battle, true
+	case "creature":
+		return types.Creature, true
+	case "enchantment":
+		return types.Enchantment, true
+	case "instant":
+		return types.Instant, true
+	case "land":
+		return types.Land, true
+	case "planeswalker":
+		return types.Planeswalker, true
+	case "sorcery":
+		return types.Sorcery, true
+	default:
+		return "", false
+	}
 }
 
 // cutHandChoiceSource strips the "from it" / "from among them" / "from those

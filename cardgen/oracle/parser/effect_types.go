@@ -470,13 +470,23 @@ type HandDiscardSyntax struct {
 // sentence so the text-blind lowering can credit its tokens toward source
 // coverage. The parser sets this only on the EffectDiscard half of the
 // sequence; it is the zero value for every other effect.
+//
+// RequiredTypesAny carries a positive card-type filter: a single required card
+// type ("a creature card") or a disjunctive union ("an artifact or creature
+// card", "a creature or planeswalker card"). A chosen card must carry at least
+// one listed type. ExcludedSupertype, when non-empty, names a single supertype
+// the chosen card must lack ("a nonbasic land card", "a nonlegendary, nonland
+// card"). These compose conjunctively with the exclude flags and the
+// mana-value bound.
 type HandChoiceDiscardSyntax struct {
-	Present         bool        `json:",omitempty"`
-	ExcludeCreature bool        `json:",omitempty"`
-	ExcludeLand     bool        `json:",omitempty"`
-	HasMaxManaValue bool        `json:",omitempty"`
-	MaxManaValue    int         `json:",omitempty"`
-	ChooseSpan      shared.Span `json:"-"`
+	Present           bool         `json:",omitempty"`
+	ExcludeCreature   bool         `json:",omitempty"`
+	ExcludeLand       bool         `json:",omitempty"`
+	HasMaxManaValue   bool         `json:",omitempty"`
+	MaxManaValue      int          `json:",omitempty"`
+	RequiredTypesAny  []types.Card `json:",omitempty"`
+	ExcludedSupertype types.Super  `json:",omitempty"`
+	ChooseSpan        shared.Span  `json:"-"`
 }
 
 // SearchSplitSlot is one single-card destination slot of a split-destination

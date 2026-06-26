@@ -1464,6 +1464,9 @@ func lowerRevealChooseHandDiscardSequence(ctx contentCtx) (game.AbilityContent, 
 		ExcludeCreature: discard.HandChoiceDiscard.ExcludeCreature,
 		ExcludeLand:     discard.HandChoiceDiscard.ExcludeLand,
 	}
+	if selection, ok := handChoiceDiscardSelection(discard.HandChoiceDiscard); ok {
+		primitive.Selection = selection
+	}
 	if discard.HandChoiceDiscard.HasMaxManaValue {
 		primitive.MaxManaValue = opt.Val(discard.HandChoiceDiscard.MaxManaValue)
 	}
@@ -1497,6 +1500,27 @@ func revealChooseDiscardLifeLoss(effect compiler.CompiledEffect) (game.LoseLife,
 		Amount: game.Fixed(effect.Amount.Value),
 		Player: game.ControllerReference(),
 	}, true
+}
+
+// handChoiceDiscardSelection builds the canonical card filter for a positive
+// reveal-choose-discard descriptor ("a creature card", "an artifact or creature
+// card", "a nonbasic land card"). It returns ok=false for the zero filter (the
+// any-card / pure noncreature-nonland forms already modeled by the primitive's
+// exclude flags) so those continue to emit no Selection. The Selection composes
+// conjunctively with the primitive's ExcludeCreature/ExcludeLand flags and
+// mana-value bound, so the supertype exclusion and required-type union here are
+// the only fields it carries.
+func handChoiceDiscardSelection(filter parser.HandChoiceDiscardSyntax) (game.Selection, bool) {
+	if len(filter.RequiredTypesAny) == 0 && filter.ExcludedSupertype == "" {
+		return game.Selection{}, false
+	}
+	selection := game.Selection{
+		RequiredTypesAny: slices.Clone(filter.RequiredTypesAny),
+	}
+	if filter.ExcludedSupertype != "" {
+		selection.ExcludedSupertype = filter.ExcludedSupertype
+	}
+	return selection, true
 }
 
 func referencesContainBinding(references []compiler.CompiledReference, binding compiler.ReferenceBinding, prior int) bool {
