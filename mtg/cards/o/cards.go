@@ -9,6 +9,7 @@ var Cards = []*game.CardDef{
 	ObNixilisSCruelty,
 	ObliteratingBolt,
 	ObscuraStorefront,
+	OnduWarCleric,
 	OrcGeneral,
 	OtherworldlyJourney,
 }

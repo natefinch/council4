@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,588 of 32,501 cards eligible for paper support (44.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,601 of 32,501 cards eligible for paper support (44.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3311,6 +3311,7 @@ Council4 currently supports **14,588 of 32,501 cards eligible for paper support 
 - Dramatic Finale
 - Dramatic Rescue
 - Dramatic Reversal
+- Drana's Chosen
 - Drana's Emissary
 - Drana, Liberator of Malakir
 - Drannith Healer
@@ -4788,6 +4789,7 @@ Council4 currently supports **14,588 of 32,501 cards eligible for paper support 
 - Gather the White Lotus
 - Gauntlet of Might
 - Gavi, Nest Warden
+- Gavony Ironwright
 - Gavony Silversmith
 - Gavony Township
 - Gavony Trapper
@@ -5232,6 +5234,7 @@ Council4 currently supports **14,588 of 32,501 cards eligible for paper support 
 - Golgari Guildmage
 - Golgari Locket
 - Golgari Longlegs
+- Golgari Raiders
 - Golgari Rot Farm
 - Golgari Rotwurm
 - Golgari Signet
@@ -7421,6 +7424,7 @@ Council4 currently supports **14,588 of 32,501 cards eligible for paper support 
 - Malakir Bloodwitch
 - Malakir Cullblade
 - Malakir Familiar
+- Malakir Soothsayer
 - Malamet Brawler
 - Malamet Scythe
 - Malamet War Scribe
@@ -7926,6 +7930,7 @@ Council4 currently supports **14,588 of 32,501 cards eligible for paper support 
 - Mold Shambler
 - Molder Beast
 - Molder Slug
+- Molderhulk
 - Moldering Gym // Weight Room
 - Moldering Karok
 - Moldervine Cloak
@@ -8093,6 +8098,7 @@ Council4 currently supports **14,588 of 32,501 cards eligible for paper support 
 - Multiversal Incursion
 - Multiversal Recruitment
 - Mummy Paramount
+- Munda's Vanguard
 - Munitions
 - Munitions Expert
 - Muraganda Raceway
@@ -8610,6 +8616,7 @@ Council4 currently supports **14,588 of 32,501 cards eligible for paper support 
 - Ondu Greathorn
 - Ondu Inversion // Ondu Skyruins
 - Ondu Spiritdancer
+- Ondu War Cleric
 - One with Nature
 - One with Nothing
 - One with the Machine
@@ -9924,6 +9931,7 @@ Council4 currently supports **14,588 of 32,501 cards eligible for paper support 
 - Rhino
 - Rhino Warrior
 - Rhino's Rampage
+- Rhizome Lurcher
 - Rhonas the Indomitable
 - Rhonas's Monument
 - Rhox
@@ -11583,6 +11591,7 @@ Council4 currently supports **14,588 of 32,501 cards eligible for paper support 
 - Spawn of Rix Maadi
 - Spawn of Thraxes
 - Spawnbed Protector
+- Spawnbinder Mage
 - Spawning Grounds
 - Spawning Pit
 - Spawnwrithe
@@ -11611,6 +11620,7 @@ Council4 currently supports **14,588 of 32,501 cards eligible for paper support 
 - Spell Pierce
 - Spell Snare
 - Spell Snip
+- Spell Snuff
 - Spell Syphon
 - Spellbook
 - Spellbook Seeker // Careful Study
@@ -12758,6 +12768,7 @@ Council4 currently supports **14,588 of 32,501 cards eligible for paper support 
 - Thoughtweft Lieutenant
 - Thousand Moons Infantry
 - Thousand-legged Kami
+- Thraben Doomsayer
 - Thraben Foulbloods
 - Thraben Heretic
 - Thraben Inspector
@@ -14490,6 +14501,7 @@ Council4 currently supports **14,588 of 32,501 cards eligible for paper support 
 - Yuyan Archers
 - Zabu
 - Zacama, Primal Calamity
+- Zada's Commando
 - Zagoth Crystal
 - Zagoth Mamba
 - Zagoth Triome
@@ -14584,6 +14596,7 @@ Council4 currently supports **14,588 of 32,501 cards eligible for paper support 
 - Zuko's Exile
 - Zuko's Offense
 - Zuko, Avatar Hunter
+- Zulaport Chainmage
 - Zulaport Cutthroat
 - Zur the Enchanter
 - Zuran Enchanter

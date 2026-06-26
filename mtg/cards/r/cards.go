@@ -18,6 +18,7 @@ var Cards = []*game.CardDef{
 	ReturnToTheRanks,
 	Reveillark,
 	RhinoSRampage,
+	RhizomeLurcher,
 	RhonasTheIndomitable,
 	Riddlekeeper,
 	RiseFromTheTides,
