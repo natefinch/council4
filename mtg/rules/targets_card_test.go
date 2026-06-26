@@ -253,6 +253,64 @@ func TestIndexedCardTargetReferencesMoveMultipleTargetCards(t *testing.T) {
 	}
 }
 
+// TestIndexedCardTargetReferencesNoOpBeyondChosenTargets verifies that a per-index
+// graveyard-return sequence whose instruction count exceeds the number of chosen
+// targets safely no-ops every instruction past the last chosen target, moving
+// only the cards that were actually targeted. This is the resolution invariant the
+// variable-count "Return X target creature cards" form relies on: it unrolls one
+// return instruction for every legal X up to the engine maximum, and a cast with a
+// smaller X leaves the higher per-index slots empty (CountEqualsX enforces the
+// chosen count at cast time).
+func TestIndexedCardTargetReferencesNoOpBeyondChosenTargets(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	firstID := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "First Creature",
+		Types: []types.Card{types.Creature},
+	}})
+	secondID := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Second Creature",
+		Types: []types.Card{types.Creature},
+	}})
+	leftoverID := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Untargeted Creature",
+		Types: []types.Card{types.Creature},
+	}})
+	sequence := make([]game.Instruction, 3)
+	for i := range sequence {
+		sequence[i] = game.Instruction{Primitive: game.MoveCard{
+			Card:        game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: i},
+			FromZone:    zone.Graveyard,
+			Destination: zone.Hand,
+		}}
+	}
+	sourceID := addInstructionSpellToStackForController(g, game.Player1, sequence,
+		[]game.Target{currentCardTarget(t, g, firstID), currentCardTarget(t, g, secondID)})
+	card, ok := g.GetCardInstance(sourceID)
+	if !ok {
+		t.Fatal("source card instance not found")
+	}
+	card.Def.SpellAbility.Val.Modes[0].Targets = []game.TargetSpec{{
+		MinTargets:   0,
+		MaxTargets:   3,
+		Allow:        game.TargetAllowCard,
+		TargetZone:   zone.Graveyard,
+		CountEqualsX: true,
+	}}
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if !g.Players[game.Player1].Hand.Contains(firstID) || !g.Players[game.Player1].Hand.Contains(secondID) {
+		t.Fatalf("hand = %+v, want both chosen target cards moved", g.Players[game.Player1].Hand.All())
+	}
+	if g.Players[game.Player1].Hand.Contains(leftoverID) {
+		t.Fatal("untargeted card was moved by the unfilled per-index slot")
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(leftoverID) {
+		t.Fatal("untargeted card left the graveyard")
+	}
+}
+
 func currentCardTarget(t *testing.T, g *game.Game, cardID id.ID) game.Target {
 	t.Helper()
 	card, ok := g.GetCardInstance(cardID)

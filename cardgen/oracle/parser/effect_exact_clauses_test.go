@@ -190,6 +190,18 @@ func TestExactGraveyardCardTargetAccepts(t *testing.T) {
 		"Return target Zombie creature card from your graveyard to the battlefield tapped.",
 		"Return up to three target Hero creature cards from your graveyard to the battlefield.",
 		"Return target creature card with mana value 3 or less from your graveyard to your hand.",
+		// A power or toughness numeric qualifier renders in canonical order and
+		// lowering restricts the graveyard-card selection on the bound.
+		"Return target creature card with power 2 or less from your graveyard to your hand.",
+		"Return target creature card with toughness 3 or greater from your graveyard to the battlefield.",
+		// A single supertype adjective ("basic", "legendary", "snow") precedes
+		// the card-type noun and lowering restricts on the supertype.
+		"Return target basic land card from your graveyard to the battlefield.",
+		"Return target legendary creature card from your graveyard to your hand.",
+		// "Return X target <type> cards" consumes the X into the effect amount,
+		// rendering "Return X " before the plural noun phrase.
+		"Return X target creature cards from your graveyard to your hand.",
+		"Return X target creature cards from your graveyard to the battlefield.",
 		"Return another target creature card from your graveyard to your hand.",
 		"Return two target creature cards from your graveyard to your hand.",
 		"Return up to two target creature cards from your graveyard to your hand.",
@@ -226,8 +238,7 @@ func TestExactGraveyardCardTargetFailsClosed(t *testing.T) {
 	// cannot faithfully reconstruct, so the round-trip must fail closed and the
 	// card must keep failing rather than lower to a wrong predicate.
 	rejected := []string{
-		// Supertype and excluded-type combinations are unrendered.
-		"Return target basic land card from your graveyard to the battlefield.",
+		// An excluded card type ("nonland permanent") is unrendered.
 		"Return target nonland permanent card from your graveyard to the battlefield.",
 		// A subtype-qualified type noun is exact, but a supertype exclusion on
 		// that noun ("nonlegendary creature card") is still unrendered, so it must
@@ -261,6 +272,9 @@ func TestExactChosenGraveyardReturnAccepts(t *testing.T) {
 		"Return a blue creature card from your graveyard to your hand.",
 		"Return a red sorcery card from your graveyard to your hand.",
 		"Return a creature card with mana value 3 or less from your graveyard to your hand.",
+		// A single supertype adjective precedes the card-type noun and lowering
+		// restricts on the supertype.
+		"Return a basic land card from your graveyard to your hand.",
 	}
 	for _, source := range accepted {
 		if !graveyardReturnExact(t, source) {
@@ -275,8 +289,6 @@ func TestExactChosenGraveyardReturnAccepts(t *testing.T) {
 func TestExactChosenGraveyardReturnFailsClosed(t *testing.T) {
 	t.Parallel()
 	rejected := []string{
-		// Supertype combinations are unrendered.
-		"Return a basic land card from your graveyard to your hand.",
 		// Another player's graveyard has no non-target "your" phrasing here.
 		"Return a creature card from an opponent's graveyard to your hand.",
 	}
@@ -601,6 +613,10 @@ func TestExactGraveyardExileAccepts(t *testing.T) {
 		"Exile target creature card from a graveyard.",
 		"Exile target artifact card from a graveyard.",
 		"Exile up to one target card from a graveyard.",
+		// A power or toughness numeric qualifier renders in canonical order and
+		// lowering restricts the graveyard-card selection on the bound, the same
+		// as the graveyard return and put paths.
+		"Exile target creature card with power 4 or greater from a graveyard.",
 	}
 	for _, source := range accepted {
 		if !exileEffectExact(t, source) {
@@ -611,13 +627,12 @@ func TestExactGraveyardExileAccepts(t *testing.T) {
 
 // TestExactGraveyardExileFailsClosed keeps graveyard-exile wordings the canonical
 // owner-suffix reconstruction cannot render outside the exact envelope: the "from
-// a single graveyard" shared-graveyard constraint and a power qualifier that
-// graveyard cards never carry in printed Oracle text.
+// a single graveyard" shared-graveyard constraint that no canonical owner suffix
+// expresses.
 func TestExactGraveyardExileFailsClosed(t *testing.T) {
 	t.Parallel()
 	rejected := []string{
 		"Exile up to three target cards from a single graveyard.",
-		"Exile target creature card with power 4 or greater from a graveyard.",
 	}
 	for _, source := range rejected {
 		if exileEffectExact(t, source) {

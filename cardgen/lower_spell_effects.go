@@ -394,6 +394,19 @@ func lowerTargetedGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 	default:
 		return game.AbilityContent{}, false
 	}
+	if effect.Amount.VariableX {
+		// "Return X target <noun> cards from your graveyard ...": the spell's
+		// chosen X fixes how many graveyard cards are returned. Bind the
+		// resolving target count to X with CountEqualsX and unroll one per-index
+		// return instruction for every legal X up to the engine's maximum,
+		// mirroring the variable-removal target spec's count binding and the
+		// per-slot unroll the fixed multi-target return already uses (unchosen
+		// indices above the chosen X no-op, exactly as an "up to N" return's
+		// unfilled slots do).
+		targetSpec.MinTargets = 0
+		targetSpec.MaxTargets = maxVariableRemovalTargets
+		targetSpec.CountEqualsX = true
+	}
 	sequence := make([]game.Instruction, 0, targetSpec.MaxTargets)
 	for i := range targetSpec.MaxTargets {
 		instruction, ok := graveyardReturnInstruction(
@@ -548,8 +561,17 @@ func cardSelectionForSelector(selector compiler.CompiledSelector) (game.Selectio
 	}
 	selection.Colorless = selector.Colorless
 	selection.Multicolored = selector.Multicolored
-	if selector.MatchPower || selector.MatchToughness {
-		return game.Selection{}, false
+	// A fixed power/toughness comparison ("creature card with power 2 or less",
+	// Dusk // Dawn; "toughness 2 or less") reads the card's printed base
+	// power/toughness in its current zone, which game.Selection's Power/Toughness
+	// bounds already match. The source-relative comparisons rejected above are a
+	// distinct, target-only filter, so a card-zone selection lowers only this
+	// fixed form.
+	if selector.MatchPower {
+		selection.Power = opt.Val(selector.Power)
+	}
+	if selector.MatchToughness {
+		selection.Toughness = opt.Val(selector.Toughness)
 	}
 	return selection, true
 }

@@ -12,6 +12,7 @@ var Cards = []*game.CardDef{
 	Scorchmark,
 	ServoSchematic,
 	SetessanTraining,
+	ShatteredCrypt,
 	ShedWeakness,
 	ShelteredByGhosts,
 	ShriekingSpecter,
