@@ -254,6 +254,12 @@ func parseStaticRuleSubject(tokens []shared.Token) (StaticRuleSubject, int, bool
 	switch {
 	case staticRuleWordsAt(tokens, 1, "creature"):
 		subject.Kind = StaticRuleSubjectSourceCreature
+	// A created token's own rule text reads "This token ..."; the token is the
+	// self source the "this creature" form names. Only quoted token-granted
+	// abilities reach this recognizer with that wording, so it threads the
+	// token's self combat rule through the SourceCreature subject.
+	case staticRuleWordsAt(tokens, 1, "token"):
+		subject.Kind = StaticRuleSubjectSourceCreature
 	case staticRuleWordsAt(tokens, 1, "artifact"),
 		staticRuleWordsAt(tokens, 1, "permanent"):
 		subject.Kind = StaticRuleSubjectSourcePermanent
