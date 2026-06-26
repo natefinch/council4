@@ -58,7 +58,7 @@ func TestPlayerProtectionRuleEffectsAndDuration(t *testing.T) {
 	if !targetProtectedFromSource(g, game.Player2, nil, 0, game.PlayerTarget(game.Player1)) {
 		t.Fatal("protected player remained targetable")
 	}
-	if got := applyDamagePrevention(g, damageEvent{
+	if got := applyDamageModifications(g, damageEvent{
 		controller: game.Player2,
 		player:     game.Player1,
 		amount:     7,

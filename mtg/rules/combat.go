@@ -273,12 +273,7 @@ func dealPlayerDamage(g *game.Game, sourceID, sourceObjectID id.ID, controller, 
 		amount:         damage,
 		combatDamage:   combatDamage,
 	}
-	dealt := applyDamagePrevention(g, event)
-	if dealt <= 0 {
-		return 0
-	}
-	event.amount = dealt
-	dealt = replacementDamageAmount(g, event)
+	dealt := applyDamageModifications(g, event)
 	if dealt <= 0 {
 		return 0
 	}
@@ -308,12 +303,7 @@ func dealPermanentDamage(g *game.Game, sourceID, sourceObjectID id.ID, controlle
 		amount:         damage,
 		combatDamage:   combatDamage,
 	}
-	dealt := applyDamagePrevention(g, event)
-	if dealt <= 0 {
-		return 0
-	}
-	event.amount = dealt
-	dealt = replacementDamageAmount(g, event)
+	dealt := applyDamageModifications(g, event)
 	if dealt <= 0 {
 		return 0
 	}

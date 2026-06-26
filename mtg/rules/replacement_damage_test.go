@@ -249,8 +249,8 @@ func TestMultiplePreventionShieldsRecordDeterministicReplacementOrder(t *testing
 		t.Fatalf("replacement decisions = %+v, want one deterministic prevention order", g.ReplacementDecisions)
 	}
 	decision := g.ReplacementDecisions[0]
-	if decision.Player != game.Player2 || !decision.UsedFallback || len(decision.Selected) != 2 || decision.Selected[0] != 0 || decision.Selected[1] != 1 {
-		t.Fatalf("replacement decision = %+v, want Player2 fallback order [0 1]", decision)
+	if decision.Player != game.Player2 || !decision.UsedFallback || len(decision.Selected) != 1 || decision.Selected[0] != 0 {
+		t.Fatalf("replacement decision = %+v, want Player2 fallback (first prevention shield)", decision)
 	}
 }
 
@@ -382,6 +382,31 @@ func TestDamageReplacementFallbackRecordedWhenChooserHasNoChoiceAgent(t *testing
 	decision := g.ReplacementDecisions[0]
 	if !decision.UsedFallback || len(decision.Selected) != 1 || decision.Selected[0] != 0 {
 		t.Fatalf("replacement decision = %+v, want fallback first-effect", decision)
+	}
+}
+
+// TestDamagePreventionAndReplacementSelectionHonorsPlayerChoice covers CR 616.1
+// with prevention and replacement effects interleaved: a "prevent 2" shield and a
+// "double damage" replacement both apply to a 5-damage event. The deterministic
+// fallback prevents first (5 -> 3 -> doubled 6), but the affected player may choose
+// to double first (5 -> 10 -> prevent 2 -> 8).
+func TestDamagePreventionAndReplacementSelectionHonorsPlayerChoice(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, damageMultiplierReplacementCardDef())
+	g.PreventionShields = append(g.PreventionShields, regPlayerShield(1, game.Player2, 2))
+	sourceID := addColoredSourceCard(g, game.Player1, color.Red)
+
+	engine := NewEngine(nil)
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player2: replacementChoosingAgent{prefer: "double"},
+	}
+	engine.setReplacementChoiceContext(g, agents, &TurnLog{})
+	defer g.ClearChoiceContext()
+
+	dealt := dealPlayerDamage(g, sourceID, 0, game.Player1, game.Player2, 5, false)
+
+	if dealt != 8 {
+		t.Fatalf("damage dealt = %d, want 8 (double then prevent 2 chosen by the affected player)", dealt)
 	}
 }
 

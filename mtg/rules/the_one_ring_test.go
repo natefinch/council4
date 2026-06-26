@@ -233,7 +233,7 @@ func TestPlayerProtectionPreventsTargetingAndDamage(t *testing.T) {
 	if targetProtectedFromSource(g, game.Player2, source, 0, game.PlayerTarget(game.Player2)) {
 		t.Fatal("protection affected the wrong player")
 	}
-	if got := applyDamagePrevention(g, damageEvent{player: game.Player1, amount: 7}); got != 0 {
+	if got := applyDamageModifications(g, damageEvent{player: game.Player1, amount: 7}); got != 0 {
 		t.Fatalf("damage after protection = %d, want 0", got)
 	}
 }

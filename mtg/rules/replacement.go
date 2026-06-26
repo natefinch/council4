@@ -36,92 +36,115 @@ type damageEvent struct {
 	combatDamage   bool
 }
 
-// applyDamagePrevention applies prevention effects to a damage event and returns
-// the amount of damage that will actually be dealt (CR 615.1: prevention effects
-// watch for a damage event and prevent some or all of the damage). Protection
-// from the source prevents all of the damage (CR 702.16e), and prevention shields
-// and shield counters prevent damage per their own rules. The amount prevented is
-// reported via a damage-prevented event.
-func applyDamagePrevention(g *game.Game, event damageEvent) int {
+// applyDamageModifications applies the replacement and prevention effects that
+// modify a damage event and returns the amount of damage actually dealt. It
+// interleaves damage replacement effects (CR 614) with prevention shields and
+// shield counters (CR 615) in a single CR 616.1 selection loop: while more than
+// one modifying effect applies, the affected object's controller or the affected
+// player chooses which to apply next, the chosen effect is applied (consuming a
+// finite shield's amount or a shield counter), and the applicable set is then
+// recomputed (CR 616.1f). Each replacement effect affects the event at most once
+// (CR 614.5). Protection from the source prevents all of the damage (CR 702.16e)
+// and is applied first, since it costs nothing and zeroes the event regardless of
+// order. Each prevention reports the amount it prevented via a damage-prevented
+// event.
+func applyDamageModifications(g *game.Game, event damageEvent) int {
 	if event.amount <= 0 {
 		return 0
 	}
+	if damageEventProtected(g, event) {
+		emitDamagePreventedEvent(g, event, event.amount)
+		return 0
+	}
+	chooser := replacementDecisionPlayer(g, event)
+	appliedReplacements := make(map[id.ID]bool)
 	amount := event.amount
-	permanentProtected := event.permanent != nil &&
-		permanentProtectedFromSource(g, event.permanent, event.sourceID, event.sourceObjectID)
-	if permanentProtected {
-		amount = 0
-	}
-	if event.permanent == nil &&
-		playerProtectedFromSource(g, event.player, event.sourceID, event.sourceObjectID, nil) {
-		amount = 0
-	}
-	if amount > 0 {
-		amount = applyPreventionShields(g, event, amount)
-	}
-	if amount > 0 && event.permanent != nil && event.permanent.Counters.Remove(counter.Shield, 1) > 0 {
-		amount = 0
-	}
-	if prevented := event.amount - amount; prevented > 0 {
-		emitDamagePreventedEvent(g, event, prevented)
+	for amount > 0 {
+		event.amount = amount
+		shieldIndices := applicablePreventionShieldIndices(g, event)
+		hasShieldCounter := event.permanent != nil && event.permanent.Counters.Get(counter.Shield) > 0
+		replacements := matchingDamageReplacementEffects(g, event, appliedReplacements)
+
+		// Candidates are listed prevention-first so the deterministic fallback
+		// (no agent) prevents before replacing, but an agent may choose any
+		// applicable effect, including a replacement before a prevention.
+		labels := make([]string, 0, len(shieldIndices)+1+len(replacements))
+		for range shieldIndices {
+			labels = append(labels, "prevention shield")
+		}
+		if hasShieldCounter {
+			labels = append(labels, "shield counter")
+		}
+		labels = append(labels, replacementEffectLabels(replacements)...)
+		if len(labels) == 0 {
+			break
+		}
+
+		chosen := 0
+		if len(labels) > 1 {
+			decision := chooseReplacementDecision(g, chooser, labels)
+			chosen = decision.Selected[0]
+		}
+
+		shieldCounterIndex := len(shieldIndices)
+		replacementsStart := shieldCounterIndex
+		if hasShieldCounter {
+			replacementsStart++
+		}
+		switch {
+		case chosen < len(shieldIndices):
+			shield := &g.PreventionShields[shieldIndices[chosen]]
+			prevented := amount
+			if !shield.All {
+				prevented = min(amount, shield.Amount)
+				shield.Amount -= prevented
+			}
+			amount -= prevented
+			g.PreventionShields = compactPreventionShields(g.PreventionShields)
+			if prevented > 0 {
+				emitDamagePreventedEvent(g, event, prevented)
+			}
+		case hasShieldCounter && chosen == shieldCounterIndex:
+			// A shield counter prevents all of the remaining damage to its
+			// permanent and is removed (CR 122.1c).
+			event.permanent.Counters.Remove(counter.Shield, 1)
+			emitDamagePreventedEvent(g, event, amount)
+			amount = 0
+		default:
+			replacement := replacements[chosen-replacementsStart]
+			appliedReplacements[replacement.ID] = true
+			if replacement.DamageMultiplier > 1 {
+				amount *= replacement.DamageMultiplier
+			}
+			amount += replacement.DamageAddend
+			if amount < 0 {
+				amount = 0
+			}
+		}
 	}
 	return amount
 }
 
-// replacementDamageAmount applies damage replacement effects to a damage event
-// and returns the resulting amount (CR 614.1: replacement effects watch for an
-// event and replace it). It loops because replacing the event can expose further
-// replacement effects, tracking applied effects so each one affects the event at
-// most once (CR 614.5) and repeating until none remain (CR 616.1f). When more
-// than one replacement effect would apply at once, the affected object's
-// controller or the affected player chooses one (CR 616.1) via
-// chooseReplacementDecision, falling back to the first match when no agent is
-// available.
-func replacementDamageAmount(g *game.Game, event damageEvent) int {
-	if event.amount <= 0 {
-		return event.amount
+// damageEventProtected reports whether the damage event's recipient has protection
+// from the source, which prevents all of the damage (CR 702.16e).
+func damageEventProtected(g *game.Game, event damageEvent) bool {
+	if event.permanent != nil {
+		return permanentProtectedFromSource(g, event.permanent, event.sourceID, event.sourceObjectID)
 	}
-	applied := make(map[id.ID]bool)
-	for {
-		matches := matchingDamageReplacementEffects(g, event, applied)
-		if len(matches) == 0 {
-			return event.amount
-		}
-		replacement := matches[0]
-		if len(matches) > 1 {
-			decision := chooseReplacementDecision(g, replacementDecisionPlayer(g, event), replacementEffectLabels(matches))
-			replacement = selectedReplacementEffect(matches, decision)
-		}
-		applied[replacement.ID] = true
-		if replacement.DamageMultiplier > 1 {
-			event.amount *= replacement.DamageMultiplier
-		}
-		event.amount += replacement.DamageAddend
-		if event.amount <= 0 {
-			return 0
-		}
-	}
+	return playerProtectedFromSource(g, event.player, event.sourceID, event.sourceObjectID, nil)
 }
 
-// orderedPreventionShieldIndices returns the indices of the prevention shields
-// that apply to a damage event, in the order they will be applied (CR 615.1:
-// prevention effects). CR 616.1 calls for the affected player or controller to
-// choose the order, but prevention shields reduce damage commutatively, so the
-// engine applies them all in a deterministic order; the choice point is still
-// recorded for the turn log. Interleaving prevention with damage replacement
-// effects in one CR 616.1 selection loop is tracked in #1915.
-func orderedPreventionShieldIndices(g *game.Game, event damageEvent) []int {
+// applicablePreventionShieldIndices returns the indices of the prevention shields
+// that currently apply to a damage event (CR 615.1): a global or matching shield
+// that either prevents all damage or still has prevention left.
+func applicablePreventionShieldIndices(g *game.Game, event damageEvent) []int {
 	var indices []int
-	var options []string
-	for i, shield := range g.PreventionShields {
+	for i := range g.PreventionShields {
+		shield := g.PreventionShields[i]
 		if !preventionShieldApplies(shield, event) || (!shield.All && shield.Amount <= 0) {
 			continue
 		}
 		indices = append(indices, i)
-		options = append(options, "prevention shield")
-	}
-	if len(indices) > 1 {
-		recordReplacementDecision(g, replacementDecisionPlayer(g, event), options)
 	}
 	return indices
 }
@@ -1725,28 +1748,6 @@ func createPreventionShield(g *game.Game, obj *game.StackObject, amount int, pri
 	}
 	g.PreventionShields = append(g.PreventionShields, shield)
 	return true
-}
-
-func applyPreventionShields(g *game.Game, event damageEvent, amount int) int {
-	order := orderedPreventionShieldIndices(g, event)
-	for _, i := range order {
-		shield := &g.PreventionShields[i]
-		if !preventionShieldApplies(*shield, event) || amount <= 0 {
-			continue
-		}
-		if shield.All {
-			amount = 0
-			continue
-		}
-		if shield.Amount <= 0 {
-			continue
-		}
-		prevented := min(amount, shield.Amount)
-		amount -= prevented
-		shield.Amount -= prevented
-	}
-	g.PreventionShields = compactPreventionShields(g.PreventionShields)
-	return amount
 }
 
 func preventionShieldApplies(shield game.PreventionShield, event damageEvent) bool {

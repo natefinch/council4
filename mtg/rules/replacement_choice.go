@@ -5,7 +5,7 @@ import "github.com/natefinch/council4/mtg/game"
 // replacementChoiceContext carries the agents and log needed to prompt a player
 // for a CR 616.1 replacement selection from within the free functions that apply
 // replacement and prevention effects (e.g. replacementZoneChange,
-// replacementDamageAmount). Those functions are reached through deep zone-change
+// applyDamageModifications). Those functions are reached through deep zone-change
 // and damage call chains that do not carry the player agents, so the rules layer
 // stashes this context on the game for the duration of an agent-driven turn (see
 // runTurn) and retrieves it at the selection point.
