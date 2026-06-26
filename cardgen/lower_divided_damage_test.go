@@ -6,9 +6,10 @@ import (
 )
 
 // TestGenerateExecutableCardSourceDividedDamage asserts that "deals N damage
-// divided as you choose among <cardinality> <targets>" with a fixed total lowers
-// to a single multi-target spec and a Divided Damage instruction whose maximum
-// target count is capped at the total.
+// divided as you choose among <cardinality> <targets>" with a fixed or variable
+// X total lowers to a single multi-target spec and a Divided Damage instruction
+// whose maximum target count is capped at a fixed total and left at the wording's
+// bound for a variable X.
 func TestGenerateExecutableCardSourceDividedDamage(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -25,6 +26,29 @@ func TestGenerateExecutableCardSourceDividedDamage(t *testing.T) {
 				"Allow:      game.TargetAllowPermanent | game.TargetAllowPlayer",
 				"Amount:    game.Fixed(3)",
 				"Recipient: game.AnyTargetDamageRecipient(0)",
+				"Divided:   true",
+			},
+		},
+		{
+			name:       "variable X among any number of targets",
+			oracleText: "Test Bolt deals X damage divided as you choose among any number of targets.",
+			wantedSnips: []string{
+				"MinTargets: 1",
+				"MaxTargets: 99",
+				"Allow:      game.TargetAllowPermanent | game.TargetAllowPlayer",
+				"Kind: game.DynamicAmountX",
+				"Recipient: game.AnyTargetDamageRecipient(0)",
+				"Divided:   true",
+			},
+		},
+		{
+			name:       "variable X among any number of target creatures",
+			oracleText: "Test Bolt deals X damage divided as you choose among any number of target creatures.",
+			wantedSnips: []string{
+				"MinTargets: 1",
+				"MaxTargets: 99",
+				"RequiredTypesAny: []types.Card{types.Creature}",
+				"Kind: game.DynamicAmountX",
 				"Divided:   true",
 			},
 		},
@@ -85,8 +109,8 @@ func TestGenerateExecutableCardSourceDividedDamageFailsClosed(t *testing.T) {
 		oracleText string
 	}{
 		{
-			name:       "variable total",
-			oracleText: "Test Bolt deals X damage divided as you choose among any number of targets.",
+			name:       "variable total with plus rider",
+			oracleText: "Test Bolt deals X plus 1 damage divided as you choose among any number of targets.",
 		},
 		{
 			name:       "keyword filtered creatures",
