@@ -1,4 +1,4 @@
-package p
+package s
 
 import (
 	"github.com/natefinch/council4/mtg/game"
@@ -8,26 +8,27 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// PrimalMight is the card definition for Primal Might.
+// SavageSmash is the card definition for Savage Smash.
 //
 // Type: Sorcery
-// Cost: {X}{G}
+// Cost: {1}{R}{G}
 //
 // Oracle text:
 //
-//	Target creature you control gets +X/+X until end of turn. Then it fights up to one target creature you don't control. (Each deals damage equal to its power to the other.)
-var PrimalMight = newPrimalMight()
+//	Target creature you control gets +2/+2 until end of turn. It fights target creature you don't control. (Each deals damage equal to its power to the other.)
+var SavageSmash = newSavageSmash()
 
-func newPrimalMight() *game.CardDef {
+func newSavageSmash() *game.CardDef {
 	return &game.CardDef{
-		ColorIdentity: color.NewIdentity(color.Green),
+		ColorIdentity: color.NewIdentity(color.Red, color.Green),
 		CardFace: game.CardFace{
-			Name: "Primal Might",
+			Name: "Savage Smash",
 			ManaCost: opt.Val(cost.Mana{
-				cost.X,
+				cost.O(1),
+				cost.R,
 				cost.G,
 			}),
-			Colors: []color.Color{color.Green},
+			Colors: []color.Color{color.Green, color.Red},
 			Types:  []types.Card{types.Sorcery},
 			SpellAbility: opt.Val(game.Mode{
 				Targets: []game.TargetSpec{
@@ -39,9 +40,9 @@ func newPrimalMight() *game.CardDef {
 						Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}, Controller: game.ControllerYou}),
 					},
 					game.TargetSpec{
-						MinTargets: 0,
+						MinTargets: 1,
 						MaxTargets: 1,
-						Constraint: "up to one target creature you don't control",
+						Constraint: "target creature you don't control",
 						Allow:      game.TargetAllowPermanent,
 						Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}, Controller: game.ControllerNotYou}),
 					},
@@ -49,16 +50,10 @@ func newPrimalMight() *game.CardDef {
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.ModifyPT{
-							Object: game.TargetPermanentReference(0),
-							PowerDelta: game.Dynamic(game.DynamicAmount{
-								Kind:       game.DynamicAmountX,
-								Multiplier: 1,
-							}),
-							ToughnessDelta: game.Dynamic(game.DynamicAmount{
-								Kind:       game.DynamicAmountX,
-								Multiplier: 1,
-							}),
-							Duration: game.DurationUntilEndOfTurn,
+							Object:         game.TargetPermanentReference(0),
+							PowerDelta:     game.Fixed(2),
+							ToughnessDelta: game.Fixed(2),
+							Duration:       game.DurationUntilEndOfTurn,
 						},
 					},
 					{
@@ -70,7 +65,7 @@ func newPrimalMight() *game.CardDef {
 				},
 			}.Ability()),
 			OracleText: `
-			Target creature you control gets +X/+X until end of turn. Then it fights up to one target creature you don't control. (Each deals damage equal to its power to the other.)
+			Target creature you control gets +2/+2 until end of turn. It fights target creature you don't control. (Each deals damage equal to its power to the other.)
 		`,
 		},
 	}

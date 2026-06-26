@@ -15,6 +15,7 @@ var Cards = []*game.CardDef{
 	ChainsOfCustody,
 	ChandraSIgnition,
 	ChaosWarp,
+	ChelonianTackle,
 	CinderGlade,
 	CliveSHideaway,
 	CommandTower,

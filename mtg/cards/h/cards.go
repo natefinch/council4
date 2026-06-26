@@ -12,5 +12,7 @@ var Cards = []*game.CardDef{
 	HazoretGodseeker,
 	HeatOfBattle,
 	HiddenStockpile,
+	HuntTheHunter,
+	HuntTheWeak,
 	HunterSTalent,
 }
