@@ -17,5 +17,6 @@ var Cards = []*game.CardDef{
 	DivineVisitation,
 	DomriAnarchOfBolas,
 	DonatelloMutantMechanic,
+	DragonEgg,
 	DragonskullSummit,
 }

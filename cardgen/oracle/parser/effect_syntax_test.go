@@ -737,8 +737,9 @@ func TestParseCreateTokenDynamicCountExactness(t *testing.T) {
 		// Fixed counts remain exact (regression guard).
 		{"Create a 1/1 white Soldier creature token.", true},
 		{"Create two 1/1 white Soldier creature tokens.", true},
-		// A quoted granted ability is not part of the spec, so it stays fail-closed.
-		{`Create X 1/1 red Goblin creature tokens with "{T}: Add {R}."`, false},
+		// A quoted granted mana/activated ability is spliced out and reattached to
+		// the token, so the printed clause is fully reconstructed and stays exact.
+		{`Create X 1/1 red Goblin creature tokens with "{T}: Add {R}."`, true},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {

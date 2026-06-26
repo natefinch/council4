@@ -9,6 +9,7 @@ var Cards = []*game.CardDef{
 	NarnamRenegade,
 	NatureSLore,
 	NeyithOfTheDireHunt,
+	NezumiLinkbreaker,
 	NibelheimAflame,
 	NightMarketAeronaut,
 	NimblewrightSchematic,

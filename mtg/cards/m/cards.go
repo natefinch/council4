@@ -20,6 +20,7 @@ var Cards = []*game.CardDef{
 	MossfireValley,
 	MosswortBridge,
 	Mountain,
+	MournerSSurprise,
 	MrOrfeoTheBoulder,
 	MurderInvestigation,
 	MycosynthWellspring,

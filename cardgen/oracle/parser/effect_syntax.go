@@ -95,12 +95,17 @@ func attachTokenGrantedAbilities(ability *Ability) {
 		if !ok {
 			continue
 		}
-		// Only a quoted triggered ability ("When this token dies, ...") attaches
-		// to the created token. Static, activated, and mana granted abilities stay
-		// fail-closed pending dedicated lowering support, so the create reconstructs
-		// only when the rider is a triggered ability the downstream layers handle.
+		// A quoted triggered ability ("When this token dies, ...") or activated
+		// ability, including a mana ability ("{T}: Add {C}", "Sacrifice this
+		// token: Add {C}"), attaches to the created token; the lowerer compiles
+		// the inner body and appends the resulting triggered, activated, or mana
+		// ability to the token definition. Static granted abilities stay
+		// fail-closed pending dedicated lowering support, so the create
+		// reconstructs only when the rider is an ability the downstream layers
+		// handle.
 		if len(granted.document.Abilities) != 1 ||
-			granted.document.Abilities[0].Kind != AbilityTriggered {
+			(granted.document.Abilities[0].Kind != AbilityTriggered &&
+				granted.document.Abilities[0].Kind != AbilityActivated) {
 			continue
 		}
 		stored := granted

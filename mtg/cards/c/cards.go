@@ -23,6 +23,7 @@ var Cards = []*game.CardDef{
 	ContestOfClaws,
 	CosmicHunger,
 	CountlessGearsRenegade,
+	CrashTheParty,
 	CrystallineCrawler,
 	CurseOfTheSwine,
 }

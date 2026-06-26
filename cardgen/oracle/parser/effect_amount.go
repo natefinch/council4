@@ -656,7 +656,10 @@ func parseDynamicAmountPrefix(tokens []shared.Token, index int, atoms Atoms) (dy
 
 func precedingEffectMultiplier(tokens []shared.Token, atoms Atoms) int {
 	multiplier := 0
-	for _, token := range tokens {
+	for i, token := range tokens {
+		if powerToughnessDigit(tokens, i) {
+			continue
+		}
 		value, ok := effectNumber(token, atoms)
 		if !ok || value == 0 {
 			continue
@@ -670,6 +673,24 @@ func precedingEffectMultiplier(tokens []shared.Token, atoms Atoms) int {
 		return 1
 	}
 	return multiplier
+}
+
+// powerToughnessDigit reports whether the token at index i is one of the two
+// integers in a created token's printed "<power>/<toughness>" (an integer
+// adjacent to a slash that joins two integers). Such digits describe the token's
+// size, not a token count, so a "Create a 2/2 ... token for each <iterator>"
+// clause must not mistake the printed "2" for a per-iteration multiplier.
+func powerToughnessDigit(tokens []shared.Token, i int) bool {
+	if tokens[i].Kind != shared.Integer {
+		return false
+	}
+	if i+2 < len(tokens) && tokens[i+1].Kind == shared.Slash && tokens[i+2].Kind == shared.Integer {
+		return true
+	}
+	if i-2 >= 0 && tokens[i-1].Kind == shared.Slash && tokens[i-2].Kind == shared.Integer {
+		return true
+	}
+	return false
 }
 
 // parseDynamicMaxSubject recognizes the "whichever is greater" combinator over
