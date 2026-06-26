@@ -71,7 +71,7 @@ func TestRegPreventionShieldsStackAndChoiceIsRecorded(t *testing.T) {
 	)
 	event := regPlayerDamageEvent(game.Player2, 4)
 
-	remaining := applyDamagePrevention(g, event)
+	remaining := applyDamageModifications(g, event)
 
 	// 4 damage against 2+3 prevention -> fully prevented.
 	if remaining != 0 {
@@ -97,7 +97,7 @@ func TestRegStackedDamageReplacementsRecordOneChoicePerRound(t *testing.T) {
 	)
 	event := regPlayerDamageEvent(game.Player2, 3)
 
-	got := replacementDamageAmount(g, event)
+	got := applyDamageModifications(g, event)
 
 	// Round 1 picks the first match (+2) -> 5; round 2 doubles -> 10.
 	if got != 10 {
@@ -128,7 +128,7 @@ func TestRegPreventionShieldStackingProperty(t *testing.T) {
 		damage := 1 + rng.IntN(12)
 		event := regPlayerDamageEvent(game.Player2, damage)
 
-		remaining := applyDamagePrevention(g, event)
+		remaining := applyDamageModifications(g, event)
 
 		want := max(damage-totalPrevention, 0)
 		if remaining != want {
