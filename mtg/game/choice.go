@@ -46,6 +46,12 @@ const (
 	// single option index the player votes for. MinChoices and MaxChoices both
 	// equal one.
 	ChoiceVote
+	// ChoiceReplacement asks the affected object's controller or the affected
+	// player which of several applicable replacement or prevention effects to
+	// apply to an event (CR 616.1). Each option corresponds to one applicable
+	// effect; the returned selection is the single option index chosen.
+	// MinChoices and MaxChoices both equal one.
+	ChoiceReplacement
 )
 
 // ChoiceCardInfo carries the public characteristics of a card or permanent that
