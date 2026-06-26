@@ -13,6 +13,7 @@ var Cards = []*game.CardDef{
 	TheDawningArchaic,
 	TheHauntOfHightower,
 	TheIrencrag,
+	ThrabenDoomsayer,
 	ThroneWarden,
 	TinWingChimera,
 	TolarianSerpent,

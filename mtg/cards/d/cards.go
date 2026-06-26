@@ -22,5 +22,6 @@ var Cards = []*game.CardDef{
 	DonatelloMutantMechanic,
 	DragonEgg,
 	DragonskullSummit,
+	DranaSChosen,
 	DuskfangMentor,
 }

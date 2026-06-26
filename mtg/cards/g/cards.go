@@ -8,6 +8,7 @@ import "github.com/natefinch/council4/mtg/game"
 var Cards = []*game.CardDef{
 	GarrukPrimalHunter,
 	GarrulousSycophant,
+	GavonyIronwright,
 	GempalmAvenger,
 	GempalmStrider,
 	GeralfSMindcrusher,
@@ -21,6 +22,7 @@ var Cards = []*game.CardDef{
 	GoblinDarkDwellers,
 	GoblinLookout,
 	GoblinPyromancer,
+	GolgariRaiders,
 	GracefulRestoration,
 	GraveVenerations,
 	GravenCairns,

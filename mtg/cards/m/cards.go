@@ -7,10 +7,11 @@ import "github.com/natefinch/council4/mtg/game"
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
 	MaestrosTheater,
-	Magmaroth,
 	MagmaSpray,
+	Magmaroth,
 	Magmaw,
 	MagneticMine,
+	MalakirSoothsayer,
 	MalametBattleGlyph,
 	ManaReflection,
 	MarthaJones,
@@ -24,6 +25,7 @@ var Cards = []*game.CardDef{
 	MindeyeDrake,
 	MindstabThrull,
 	Mobilization,
+	Molderhulk,
 	MoonveilDragon,
 	MorbidOpportunist,
 	MortalObstinacy,
@@ -32,6 +34,7 @@ var Cards = []*game.CardDef{
 	Mountain,
 	MournerSSurprise,
 	MrOrfeoTheBoulder,
+	MundaSVanguard,
 	MurderInvestigation,
 	MycosynthWellspring,
 	MysticMight,
