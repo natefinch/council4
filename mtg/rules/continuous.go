@@ -159,9 +159,10 @@ func effectiveController(g *game.Game, permanent *game.Permanent) game.PlayerID 
 
 // effectivePermanentValues computes a permanent's characteristics by the
 // continuous-effect layer system (CR 613.1): start with the permanent's own
-// printed/defined values, apply each layer in order, then apply the counter and
-// temporary power/toughness modifiers. Results are memoized per static-source
-// frame.
+// printed/defined values, then apply each layer in order. Counters and temporary
+// power/toughness modifiers are applied within power/toughness layer 7c during
+// the layer pass (see applyContinuousLayers), not afterward. Results are memoized
+// per static-source frame.
 func effectivePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffectiveValues {
 	fc := frameCacheFor(g)
 	if fc != nil {
@@ -173,7 +174,6 @@ func effectivePermanentValues(g *game.Game, permanent *game.Permanent) permanent
 	baseSubtypes := append([]types.Sub(nil), values.subtypes...)
 	applyContinuousLayers(g, permanent, &values)
 	applyAddedBasicLandManaAbilities(&values, baseSubtypes)
-	applyCounterAndTemporaryValues(permanent, &values)
 	for _, keyword := range keywordCounters(permanent) {
 		values.keywords[keyword] = true
 	}
@@ -517,18 +517,53 @@ func basePermanentHasType(g *game.Game, permanent *game.Permanent, cardType type
 // with the effects within a layer ordered by timestamp and dependency (see
 // orderContinuousEffects). The Changeling special case adds every creature type
 // in the type-changing layer 4 (CR 613.1d) before type-dependent effects apply.
+//
+// CR 613.4c: +1/+1 / -1/-1 counters and temporary "until end of turn" power and
+// toughness modifiers are part of power/toughness layer 7c, alongside the 7c
+// modifying continuous effects. They are injected here as a single synthetic 7c
+// effect timestamped with the permanent's own timestamp (CR 613.7c counters are
+// timestamped when placed; the engine does not track per-counter timestamps, so
+// it uses the permanent's timestamp), so they are ordered by timestamp with the
+// other 7c effects and applied before the layer 7d power/toughness switch. This
+// matters only for non-commutative interactions (a doubling 7c effect, or an
+// asymmetric temporary modifier combined with a 7d switch); additive modifiers
+// commute, so the result is unchanged for them.
 func applyContinuousLayers(g *game.Game, permanent *game.Permanent, values *permanentEffectiveValues) {
 	sources := staticAbilitySources(g)
+	counterEffect, hasCounterEffect := counterAndTemporaryEffect(permanent)
 	for _, layer := range continuousLayers {
 		if layer == game.LayerType && values.keywords[game.Changeling] {
 			values.subtypes = append([]types.Sub(nil), types.SubtypesForType(types.Creature)...)
 		}
 		effects := continuousEffectsForLayer(g, permanent, values, layer, sources)
+		if layer == game.LayerPowerToughnessModify && hasCounterEffect {
+			effects = append(effects, counterEffect)
+		}
 		ordered := orderContinuousEffects(effects)
 		for i := range ordered {
 			applyContinuousEffect(g, permanent, values, &ordered[i])
 		}
 	}
+}
+
+// counterAndTemporaryEffect builds the synthetic layer-7c continuous effect that
+// represents a permanent's +1/+1 / -1/-1 counters and temporary power/toughness
+// modifiers (CR 613.4c), so they interleave with the other 7c effects by
+// timestamp. It reports false when there is no net modifier.
+func counterAndTemporaryEffect(permanent *game.Permanent) (game.ContinuousEffect, bool) {
+	counterDelta := powerToughnessCounterDelta(permanent)
+	powerDelta := counterDelta + permanent.TemporaryPowerModifier
+	toughnessDelta := counterDelta + permanent.TemporaryToughnessModifier
+	if powerDelta == 0 && toughnessDelta == 0 {
+		return game.ContinuousEffect{}, false
+	}
+	return game.ContinuousEffect{
+		AffectedObjectID: permanent.ObjectID,
+		Timestamp:        permanent.Timestamp(),
+		Layer:            game.LayerPowerToughnessModify,
+		PowerDelta:       powerDelta,
+		ToughnessDelta:   toughnessDelta,
+	}, true
 }
 
 func permanentValuesBeforeLayer(g *game.Game, permanent *game.Permanent, stop game.ContinuousLayer) permanentEffectiveValues {
@@ -556,7 +591,8 @@ func permanentValuesBeforeLayer(g *game.Game, permanent *game.Permanent, stop ga
 // (613.1f), then the layer 7 power/toughness sublayers (613.4): 7b set effects
 // (613.4b), 7c modifying effects and counters (613.4c), and 7d power/toughness
 // switch (613.4d). Layer 7a characteristic-defining P/T (613.4a) is folded into
-// the base values, and layer 7c counters are applied in applyCounterAndTemporaryValues.
+// the base values; layer 7c counters and temporary modifiers are injected into
+// the 7c pass as a synthetic effect (see counterAndTemporaryEffect).
 var continuousLayers = [...]game.ContinuousLayer{
 	game.LayerCopy,
 	game.LayerControl,
@@ -1051,8 +1087,9 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 		}
 	case game.LayerPowerToughnessModify:
 		// Layer 7c: effects that modify (but don't set) power and/or toughness,
-		// including doubling (CR 613.4c). Counters, also part of 7c, are applied
-		// in applyCounterAndTemporaryValues.
+		// including doubling (CR 613.4c). Counters and temporary modifiers, also
+		// part of 7c, are injected here as a synthetic effect during the final
+		// layer pass (see counterAndTemporaryEffect).
 		powerDelta := effect.PowerDelta
 		if effect.PowerDeltaDynamic.Exists {
 			powerDelta = dynamicAmountValueForPermanent(g, permanent, effect.Controller, effect.PowerDeltaDynamic.Val, effect.Layer)
@@ -1200,15 +1237,12 @@ func basicLandSubtypeManaColor(subtype types.Sub) (mana.Color, bool) {
 }
 
 // applyCounterAndTemporaryValues applies +1/+1 and -1/-1 counters and temporary
-// power/toughness modifiers. Both belong to power/toughness layer 7c (CR 613.4c):
-// counters modify P/T and are timestamped when placed (CR 613.7c), and temporary
-// "until end of turn" modifiers come from resolving spells/abilities and are
-// timestamped when created (CR 613.7b). The engine applies both after the whole
-// layer pass instead of interleaving them into 7c by timestamp. This yields the
-// same result for the usual commutative additive modifiers, but can diverge for
-// a non-commutative 7c effect (e.g. a power/toughness doubling effect) and, for
-// asymmetric temporary modifiers, from the required 7c-before-7d ordering when a
-// 7d power/toughness switch is also present. See #1903.
+// power/toughness modifiers as a flat addition. It is used when evaluating a
+// permanent's characteristics for a static ability's condition, where the current
+// power/toughness (including counters) is needed at a bounded layer boundary. The
+// final effective values instead inject these as a timestamped layer-7c effect
+// during the layer pass (see counterAndTemporaryEffect), so they order correctly
+// with non-commutative 7c effects and the 7d switch (CR 613.4c).
 func applyCounterAndTemporaryValues(permanent *game.Permanent, values *permanentEffectiveValues) {
 	counterDelta := powerToughnessCounterDelta(permanent)
 	if values.powerOK {

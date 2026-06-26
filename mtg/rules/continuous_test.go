@@ -499,6 +499,53 @@ func TestContinuousEffectsApplyInLayerOrderBeforeTimestamp(t *testing.T) {
 	}
 }
 
+// TestDoublingIncludesEarlierCounterInLayer7c covers CR 613.4c/613.7c: a +1/+1
+// counter and a power-doubling effect are both in layer 7c, so a counter placed
+// before the doubling effect's timestamp is included in the doubled value. Base
+// 2/2 + counter (3/3) then double power -> 6, not double-first (4) then counter
+// (5).
+func TestDoublingIncludesEarlierCounterInLayer7c(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	creature.Counters.Add(counter.PlusOnePlusOne, 1)
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:               1,
+		AffectedObjectID: creature.ObjectID,
+		// Later timestamp than the permanent (which carries the counter's
+		// timestamp), so the counter applies first within layer 7c.
+		Timestamp:   creature.Timestamp() + 100,
+		Layer:       game.LayerPowerToughnessModify,
+		DoublePower: true,
+	})
+
+	if got := effectivePower(g, creature); got != 6 {
+		t.Fatalf("effective power = %d, want 6 (counter included in doubling)", got)
+	}
+}
+
+// TestTemporaryModifierAppliesBeforePowerToughnessSwitch covers CR 613.4c before
+// 613.4d: an asymmetric temporary power/toughness modifier is layer 7c and must
+// apply before a layer-7d power/toughness switch. Base 2/2 with +2/+0 -> 4/2,
+// then switch -> 2/4 (not switch-first 2/2 then +2/+0 -> 4/2).
+func TestTemporaryModifierAppliesBeforePowerToughnessSwitch(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	creature.TemporaryPowerModifier = 2
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:               1,
+		AffectedObjectID: creature.ObjectID,
+		Timestamp:        creature.Timestamp() + 100,
+		Layer:            game.LayerPowerToughnessSwitch,
+	})
+
+	if got := effectivePower(g, creature); got != 2 {
+		t.Fatalf("effective power = %d, want 2 (+2/+0 in 7c then switch)", got)
+	}
+	if got, ok := effectiveToughness(g, creature); !ok || got != 4 {
+		t.Fatalf("effective toughness = %d ok=%v, want 4", got, ok)
+	}
+}
+
 // TestContinuousEffectDependencyKeepsTimestampOrderForUnblockedEffects covers
 // CR 613.8b/613.8c: once a dependency is applied, the dependent effect applies
 // just after it, and any independent later-timestamp effect must not jump ahead
