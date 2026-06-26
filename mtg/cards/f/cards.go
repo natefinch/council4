@@ -14,6 +14,7 @@ var Cards = []*game.CardDef{
 	Farseek,
 	FeedTheFlames,
 	Fiendlash,
+	FightAsOne,
 	FireLitThicket,
 	FireWhip,
 	FiresOfYavimaya,
@@ -27,4 +28,5 @@ var Cards = []*game.CardDef{
 	FormAPosse,
 	FracturedSanity,
 	FranticSalvage,
+	FrillscareMentor,
 }

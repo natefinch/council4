@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,541 of 32,501 cards eligible for paper support (44.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,567 of 32,501 cards eligible for paper support (44.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -135,6 +135,7 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Aether Helix
 - Aether Hub
 - Aether Meltdown
+- Aether Shockwave
 - Aether Spellbomb
 - Aether Sting
 - Aether Syphon
@@ -763,6 +764,7 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Avacyn's Collar
 - Avacyn's Pilgrim
 - Avacyn, Angel of Hope
+- Avacynian Priest
 - Avarax
 - Avaricious Dragon
 - Avatar
@@ -2387,6 +2389,7 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Consult the Necrosages
 - Consume Strength
 - Consume the Meek
+- Consuming Bonfire
 - Consuming Corruption
 - Consuming Fervor
 - Consumptive Goo
@@ -2580,6 +2583,7 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Cruel Edict
 - Cruel Finality
 - Cruel Grimnarch
+- Cruel Revival
 - Cruel Somnophage // Can't Wake Up
 - Cruel Truths
 - Cruel Tutor
@@ -2596,6 +2600,7 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Crushing Disappointment
 - Crushing Vines
 - Crustacean Commando
+- Crux of Fate
 - Crypt Cobra
 - Crypt Creeper
 - Crypt Feaster
@@ -3452,6 +3457,7 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Dusk Urchins
 - Duskborne Skymarcher
 - Duskdale Wurm
+- Duskfang Mentor
 - Duskhunter Bat
 - Duskmantle Operative
 - Duskmantle Prowler
@@ -3735,6 +3741,7 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Embraal Gear-Smasher
 - Embrace the Paradox
 - Embrace the Unknown
+- Emerald Charm
 - Emerald Dragonfly
 - Emerald Medallion
 - Emerald Oryx
@@ -3983,6 +3990,7 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Eyeblight Assassin
 - Eyeblight Cullers
 - Eyeblight Massacre
+- Eyeblight's Ending
 - Eyes of the Beholder
 - Eyes of the Watcher
 - Eyes of the Wisent
@@ -4235,6 +4243,7 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Fiery Islet
 - Fiery Justice
 - Fiery Temper
+- Fight as One
 - Fight On!
 - Fighting Drake
 - Filigree Angel
@@ -4607,6 +4616,7 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Frilled Sandwalla
 - Frilled Sea Serpent
 - Frilled Sparkshooter
+- Frillscare Mentor
 - Frog
 - Frog Butler
 - Frog Lizard
@@ -5866,6 +5876,7 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Horn of Gondor
 - Horn of Ramos
 - Horn of Valhalla // Ysgard's Call
+- Hornbash Mentor
 - Horned Kavu
 - Horned Sliver
 - Horned Stoneseeker
@@ -6041,6 +6052,7 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Iceridge Serpent
 - Icetill Explorer
 - Icewind Elemental
+- Icewind Stalwart
 - Ichor Explosion
 - Ichor Rats
 - Ichor Slick
@@ -6603,6 +6615,7 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Keeneye Aven
 - Keening Apparition
 - Keening Banshee
+- Keensight Mentor
 - Keep Out
 - Keeper of Kookus
 - Keeper of the Accord
@@ -9658,10 +9671,12 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Reality Anchor
 - Reality Hemorrhage
 - Reality Shift
+- Realm-Cloaked Giant // Cast Off
 - Realmwalker
 - Reanimate
 - Reap the Seagraf
 - Reap What Is Sown
+- Reaper from the Abyss
 - Reaper King
 - Reaper of Flight Moonsilver
 - Reaper of the Wilds
@@ -9778,6 +9793,7 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Remorseful Cleric
 - Remote Isle
 - Remove Soul
+- Rend Flesh
 - Rend Spirit
 - Rendclaw Trow
 - Rending Volley
@@ -9839,6 +9855,7 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Restless Apparition
 - Restless Dead
 - Restock
+- Restoration Angel
 - Restoration Gearsmith
 - Restore
 - Restricted Office // Lecture Hall
@@ -10014,6 +10031,7 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Riveteers Overlook
 - Rix Maadi, Dungeon Palace
 - RMS Titanic
+- Roaming Ghostlight
 - Roaming Throne
 - Roar of Endless Song
 - Roar of the Crowd
@@ -10099,6 +10117,7 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Rorix Bladewing
 - Rosa, Resolute White Mage
 - Rosemane Centaur
+- Rosethorn Halberd
 - Rosie Cotton of South Lane
 - Rosnakht, Heir of Rohgahh
 - Rot Farm Mortipede
@@ -10993,6 +11012,7 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Sift
 - Sigarda's Aid
 - Sigarda's Summons
+- Sigardian Priest
 - Sigardian Savior
 - Sight Beyond Sight
 - Sighted-Caste Sorcerer
@@ -11197,6 +11217,7 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Skyclave Geopede
 - Skyclave Relic
 - Skycloud Expanse
+- Skycoach Conductor // All Aboard
 - Skycrash
 - Skygames
 - Skyhunter Patrol
@@ -11695,6 +11716,7 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Spirit
 - Spirit
 - Spirit Away
+- Spirit Bonds
 - Spirit Cairn
 - Spirit Cleric
 - Spirit Flare
@@ -11903,6 +11925,7 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Stensia Masquerade
 - Steppe Lynx
 - Sterling Hound
+- Sterling Keykeeper
 - Sterling Supplier
 - Stern Constable
 - Stern Dismissal
@@ -12996,6 +13019,7 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Traitorous Blood
 - Tramway Station
 - Tranquil Cove
+- Tranquil Domain
 - Tranquil Expanse
 - Tranquil Garden
 - Tranquil Grove
@@ -13833,6 +13857,7 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Wakedancer
 - Waker of Waves
 - Waking Nightmare
+- Walk the Plank
 - Walker
 - Walker of the Grove
 - Walking Atlas
@@ -14214,6 +14239,7 @@ Council4 currently supports **14,541 of 32,501 cards eligible for paper support 
 - Wings of the Cosmos
 - Wings of the Guard
 - Wingshield Agent
+- Wingspan Mentor
 - Wingspan Stride
 - Wingsteed Rider
 - Winnower Patrol

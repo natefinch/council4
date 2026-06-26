@@ -10,9 +10,11 @@ var Cards = []*game.CardDef{
 	EfreetFlamepainter,
 	ElspethSSmite,
 	EmblemOfTheWarmind,
+	EmeraldCharm,
 	EmrakulSMessenger,
 	EnduringCourage,
 	EpicConfrontation,
 	ExemplarOfStrength,
 	EyeblightMassacre,
+	EyeblightSEnding,
 }

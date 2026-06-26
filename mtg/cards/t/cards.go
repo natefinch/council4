@@ -19,6 +19,7 @@ var Cards = []*game.CardDef{
 	TorrentialGearhulk,
 	TowerOfMurmurs,
 	ToweringWaveMystic,
+	TranquilDomain,
 	TreasureHunt,
 	TwinflameTravelers,
 }

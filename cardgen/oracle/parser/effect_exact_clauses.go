@@ -1792,9 +1792,9 @@ func exactMassEffectSyntax(effect *EffectSyntax, prefix string) bool {
 		return exactMassGroupPhrase(&effect.Selection, base)
 	}
 	if base, ok := massCounterBasePhrase(&effect.Selection, phrase); ok {
-		return exactMassGroupPhrase(&effect.Selection, base) || exactMassSubtypePhrase(&effect.Selection, base)
+		return exactMassGroupPhrase(&effect.Selection, base) || exactMassSubtypePhrase(&effect.Selection, base) || exactMassExcludedSubtypePhrase(&effect.Selection, base)
 	}
-	return exactMassGroupPhrase(&effect.Selection, phrase) || exactMassSubtypePhrase(&effect.Selection, phrase)
+	return exactMassGroupPhrase(&effect.Selection, phrase) || exactMassSubtypePhrase(&effect.Selection, phrase) || exactMassExcludedSubtypePhrase(&effect.Selection, phrase)
 }
 
 // massChosenTypeBasePhrase strips a trailing chosen-type qualifier ("of the
@@ -2054,6 +2054,40 @@ func exactMassSubtypePhrase(selection *SelectionSyntax, phrase string) bool {
 	// other recorded subtypes add a trailing "s". Mismatched pluralizations fall
 	// through and fail closed without producing a false positive.
 	return strings.EqualFold(phrase, subtype) || strings.EqualFold(phrase, subtype+"s")
+}
+
+// exactMassExcludedSubtypePhrase reconstructs the canonical mass phrase for an
+// excluded-subtype group ("non-Dragon creatures", "non-Gorgon creatures") from
+// the parsed selection and compares it byte-exactly to the source phrase. It
+// mirrors exactMassSubtypePhrase but negates a single creature subtype: the
+// group restricts to a permanent card type ("creatures") and excludes one
+// subtype, rendered as "non-<subtype> <noun>s". It accepts exactly one excluded
+// subtype with a required permanent card-type noun and no other qualifier,
+// failing closed for every other wording so unsupported mass forms keep failing
+// the round-trip.
+func exactMassExcludedSubtypePhrase(selection *SelectionSyntax, phrase string) bool {
+	if len(selection.ExcludedSubtypes) != 1 ||
+		len(selection.SubtypesAny) != 0 ||
+		selection.Controller != SelectionControllerAny ||
+		selection.Another || selection.Other ||
+		selection.Attacking || selection.Blocking ||
+		selection.Tapped || selection.Untapped ||
+		selection.NonToken || selection.TokenOnly ||
+		selection.Keyword != KeywordUnknown || selection.ExcludedKeyword != KeywordUnknown ||
+		selection.Zone != zone.None ||
+		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		selection.Colorless || selection.Multicolored ||
+		!selectionRedundantRequiredNoun(*selection) || len(selection.ExcludedTypes) != 0 ||
+		len(selection.Supertypes) != 0 || len(selection.ExcludedSupertypes) != 0 ||
+		len(selection.ColorsAny) != 0 || len(selection.ExcludedColors) != 0 {
+		return false
+	}
+	noun, ok := permanentSelectionNoun(selection.Kind)
+	if !ok {
+		return false
+	}
+	excluded := strings.ToLower(string(selection.ExcludedSubtypes[0]))
+	return strings.EqualFold(phrase, "non-"+excluded+" "+noun+"s")
 }
 
 // exactMassBounceEffectSyntax recognizes the mass battlefield return
