@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,515 of 32,501 cards eligible for paper support (44.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,521 of 32,501 cards eligible for paper support (44.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -9127,6 +9127,7 @@ Council4 currently supports **14,515 of 32,501 cards eligible for paper support 
 - Possessed Skaab
 - Pothole Mole
 - Potion of Healing
+- Potioner's Trove
 - Pounce
 - Pouncing Cheetah
 - Pouncing Shoreshark
@@ -10272,6 +10273,7 @@ Council4 currently supports **14,515 of 32,501 cards eligible for paper support 
 - Samut, Tyrant Smasher
 - Samut, Voice of Dissent
 - Samwise Gamgee
+- Sanar, Unfinished Genius // Wild Idea
 - Sanctifier of Souls
 - Sanctify
 - Sanctimony
@@ -10597,6 +10599,7 @@ Council4 currently supports **14,515 of 32,501 cards eligible for paper support 
 - Seedpod Squire
 - Seedship Agrarian
 - Seek the Horizon
+- Seeker of Insight
 - Seeker of Skybreak
 - Seeker of Sunlight
 - Seeker of the Way
@@ -11873,6 +11876,7 @@ Council4 currently supports **14,515 of 32,501 cards eligible for paper support 
 - Steelshaper's Gift
 - Steeple Creeper
 - Steeple Roc
+- Stella Lee, Wild Card
 - Stenchskipper
 - Stensia Banquet
 - Stensia Bloodhall
@@ -12392,6 +12396,7 @@ Council4 currently supports **14,515 of 32,501 cards eligible for paper support 
 - Tangletrap
 - Tanufel Rimespeaker
 - Taoist Hermit
+- Tapestry of the Ages
 - Tar Pit Warrior
 - Tar Pitcher
 - Tar Snare
@@ -14348,6 +14353,7 @@ Council4 currently supports **14,515 of 32,501 cards eligible for paper support 
 - Xander's Lounge
 - Xathrid Necromancer
 - Xenograft
+- Xerex Strobe-Knight
 - Xira Arien
 - Xorn
 - Yahenni's Expertise
