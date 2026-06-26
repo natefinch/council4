@@ -911,10 +911,26 @@ func permanentTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool)
 // the target's own MinTargets/MaxTargets range, supporting plural ("two target
 // creatures") and optional ("up to N target creatures") cardinalities in
 // addition to the single-target form. permanentTargetSpec keeps the
-// single-target gate for callers that only lower one target.
+// single-target gate for callers that only lower one target. It rejects the
+// unbounded "any number of" cardinality so the per-slot unroll callers never
+// emit one instruction per sentinel slot; the group-blink lowerer that models
+// the unbounded form with a single all-target instruction opts in through
+// permanentTargetSpecAllowingUnbounded.
 func permanentTargetSpecWithCardinality(target compiler.CompiledTarget) (game.TargetSpec, bool) {
+	return permanentTargetSpecAllowingUnbounded(target, false)
+}
+
+// permanentTargetSpecAllowingUnbounded builds the permanent TargetSpec like
+// permanentTargetSpecWithCardinality, but allowUnbounded permits the unbounded
+// "any number of" cardinality (Min 0, Max 99). Only callers that lower the
+// unbounded form with a single group/all-target instruction may pass true; every
+// per-slot unroll caller passes false so it does not emit 99 instructions.
+func permanentTargetSpecAllowingUnbounded(target compiler.CompiledTarget, allowUnbounded bool) (game.TargetSpec, bool) {
 	if !target.Exact || target.Cardinality.Max < 1 || target.Cardinality.Min < 0 ||
 		target.Cardinality.Min > target.Cardinality.Max {
+		return game.TargetSpec{}, false
+	}
+	if !allowUnbounded && targetCardinalityIsUnbounded(target) {
 		return game.TargetSpec{}, false
 	}
 	spec := game.TargetSpec{

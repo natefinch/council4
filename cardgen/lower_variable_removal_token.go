@@ -128,7 +128,10 @@ func variableRemovalTargetSpec(target compiler.CompiledTarget, removeEffect comp
 		return game.TargetSpec{}, false
 	}
 	target.Exact = true
-	spec, ok := permanentTargetSpecWithCardinality(target)
+	// This lowering models the whole chosen group with one RemoveTargetsForToken
+	// instruction, so it opts into the unbounded "any number of" cardinality the
+	// shared builder otherwise rejects for the per-slot unroll callers.
+	spec, ok := permanentTargetSpecAllowingUnbounded(target, true)
 	if !ok {
 		return game.TargetSpec{}, false
 	}

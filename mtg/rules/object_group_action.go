@@ -35,8 +35,45 @@ func (r *effectResolver) resolveObjectGroup(object game.ObjectReference, group g
 	if group.Valid() {
 		return objectGroupTargets{permanents: r.groupPermanents(group)}
 	}
+	if object.Kind() == game.ObjectReferenceAllTargetPermanents {
+		return objectGroupTargets{permanents: r.targetSpecPermanents(object.TargetIndex())}
+	}
 	if permanent, ok := r.resolveObject(object); ok {
 		return objectGroupTargets{permanents: []*game.Permanent{permanent}, single: true, resolved: true}
 	}
 	return objectGroupTargets{single: true}
+}
+
+// targetSpecPermanents gathers every battlefield permanent chosen for the target
+// spec at specIndex, slicing the flat chosen-target list by the per-spec counts
+// the same way dividedTargets does. It backs the all-target-permanents group
+// reference, so the group-blink exile can capture every chosen permanent under
+// one linked key. Targets that have left the battlefield since selection are
+// skipped.
+func (r *effectResolver) targetSpecPermanents(specIndex int) []*game.Permanent {
+	if r.obj == nil {
+		return nil
+	}
+	all := r.obj.Targets
+	start, end := 0, len(all)
+	if counts := r.obj.TargetCounts; specIndex >= 0 && specIndex < len(counts) {
+		start = 0
+		for i := range specIndex {
+			start += counts[i]
+		}
+		end = start + counts[specIndex]
+	}
+	if start < 0 || end > len(all) || start > end {
+		return nil
+	}
+	permanents := make([]*game.Permanent, 0, end-start)
+	for i := start; i < end; i++ {
+		if all[i].Kind != game.TargetPermanent {
+			continue
+		}
+		if permanent, ok := permanentByObjectID(r.game, all[i].PermanentID); ok {
+			permanents = append(permanents, permanent)
+		}
+	}
+	return permanents
 }

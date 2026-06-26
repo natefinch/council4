@@ -50,6 +50,12 @@ const (
 	// spell" self-copy effects (Sevinne's Reclamation, Chain Lightning), where
 	// the resolving spell copies itself onto the stack.
 	ObjectReferenceResolvingStackObject
+	// ObjectReferenceAllTargetPermanents references every permanent chosen for a
+	// single target spec at once, addressed by the spec's index. It backs the
+	// "any number of target <permanent>s" blink family (Eerie Interlude), where
+	// one exile must capture all chosen permanents under a single linked key so
+	// one return brings the whole group back together.
+	ObjectReferenceAllTargetPermanents
 )
 
 // ObjectReference describes how a rules effect finds an object at resolution.
@@ -159,6 +165,14 @@ func ResolvingStackObjectReference() ObjectReference {
 	return ObjectReference{kind: ObjectReferenceResolvingStackObject}
 }
 
+// AllTargetPermanentsReference references every permanent chosen for the target
+// spec at specIndex at once. It backs group blink over an unbounded target count
+// ("any number of target creatures you control"), where one exile must remember
+// the whole chosen group under a single linked key.
+func AllTargetPermanentsReference(specIndex int) ObjectReference {
+	return ObjectReference{kind: ObjectReferenceAllTargetPermanents, targetIndex: specIndex}
+}
+
 // Validate reports structural problems with an ObjectReference that represent
 // card-definition bugs. It checks kind/field consistency only; target-index
 // bounds depend on the surrounding TargetSpec list and are checked by
@@ -238,6 +252,13 @@ func (r ObjectReference) Validate() []string {
 	case ObjectReferenceResolvingStackObject:
 		if r.targetIndex != 0 || r.linkID != "" {
 			return []string{"resolving stack object reference must not set TargetIndex or LinkID"}
+		}
+	case ObjectReferenceAllTargetPermanents:
+		if r.linkID != "" {
+			return []string{"all target permanents reference must not set LinkID"}
+		}
+		if r.targetIndex < 0 {
+			return []string{"all target permanents reference must not use a negative TargetIndex"}
 		}
 	case ObjectReferenceNone:
 		return []string{"object reference has no kind"}

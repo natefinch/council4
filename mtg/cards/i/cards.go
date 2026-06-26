@@ -9,6 +9,7 @@ var Cards = []*game.CardDef{
 	IchorWellspring,
 	IgnobleHierarch,
 	ImpendingDoom,
+	InameLifeAspect,
 	InfernoFist,
 	InfiltrationLens,
 	InsectoidExterminator,

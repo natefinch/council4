@@ -3055,8 +3055,9 @@ func TestParseMultiTargetExileExactness(t *testing.T) {
 		// Fail-closed: subtype and tapped qualifiers are not reconstructed here.
 		{"Exile up to two target Goblin creatures.", false, 0, 2},
 		{"Exile two target tapped creatures.", false, 2, 2},
-		// Fail-closed: the unbounded "any number of" shape has no cardinal word.
-		{"Exile any number of target creatures.", false, 0, 99},
+		// The unbounded "any number of" shape is reconstructed exactly so the
+		// lowering layer can decide which unbounded forms it supports.
+		{"Exile any number of target creatures.", true, 0, 99},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {

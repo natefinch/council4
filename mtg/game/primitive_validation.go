@@ -121,6 +121,21 @@ func validateObjectReferenceTargetBounds(ref ObjectReference, targets []TargetSp
 	switch ref.Kind() {
 	case ObjectReferenceTargetPermanent, ObjectReferenceTargetStackObject, ObjectReferenceTargetAttachedPermanent, ObjectReferenceTargetObject:
 		return validateTargetReference(ref.TargetIndex(), targets, checkTargets)
+	case ObjectReferenceAllTargetPermanents:
+		return validateTargetSpecReference(ref.TargetIndex(), targets, checkTargets)
+	}
+	return nil
+}
+
+// validateTargetSpecReference bounds-checks a reference that addresses a whole
+// target spec by its index (not a flat target slot), used by the group-blink
+// all-target-permanents reference. The index must name a declared spec.
+func validateTargetSpecReference(specIndex int, targets []TargetSpec, checkTargets bool) error {
+	if specIndex < 0 {
+		return fmt.Errorf("target spec index %d is negative", specIndex)
+	}
+	if checkTargets && specIndex >= len(targets) {
+		return fmt.Errorf("target spec index %d has no matching target specification", specIndex)
 	}
 	return nil
 }
@@ -1681,8 +1696,8 @@ func (p Exile) validatePrimitive(targets []TargetSpec, checkTargets bool) error 
 		}
 		return nil
 	}
-	if p.ExileLinkedKey != "" && p.Group.Valid() {
-		return errors.New("linked exile requires one object")
+	if p.ExileLinkedKey != "" && p.Group.Valid() && p.Object.Kind() != ObjectReferenceNone {
+		return errors.New("linked exile must not set both an object and a group")
 	}
 	return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
 }

@@ -766,8 +766,21 @@ func handleExile(r *effectResolver, prim game.Exile) effectResolved {
 	}
 	targets := r.resolveObjectGroup(prim.Object, prim.Group)
 	if !targets.single {
+		// A group exile that carries a linked key (group blink) must remember
+		// every exiled permanent under that key, capturing each link before the
+		// move so a later linked return brings the whole group back together.
+		var key game.LinkedObjectKey
+		if prim.ExileLinkedKey != "" {
+			key = linkedObjectSourceKey(r.game, r.obj, string(prim.ExileLinkedKey))
+		}
 		for _, permanent := range targets.permanents {
-			res.succeeded = movePermanentToZone(r.game, permanent, zone.Exile) || res.succeeded
+			linkedObjectRef := permanentLinkedObjectRef(permanent)
+			if movePermanentToZone(r.game, permanent, zone.Exile) {
+				res.succeeded = true
+				if prim.ExileLinkedKey != "" {
+					rememberLinkedObject(r.game, key, linkedObjectRef)
+				}
+			}
 		}
 		return res
 	}
