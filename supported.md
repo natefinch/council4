@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,732 of 32,501 cards eligible for paper support (45.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,763 of 32,501 cards eligible for paper support (45.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -897,6 +897,7 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Balthor the Stout
 - Balustrade Spy
 - Bamboo Grove Archer
+- Bandit's Haul
 - Bane Alley Blackguard
 - Banehound
 - Baneslayer Angel
@@ -2918,6 +2919,7 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Deathmask Nezumi
 - Deathreap Ritual
 - Deathrite Shaman
+- Deathspore Thallid
 - Deathsprout
 - Debilitating Injury
 - Debris Beetle
@@ -3314,6 +3316,7 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Dragon Whisperer
 - Dragon's Claw
 - Dragon's Eye Sentry
+- Dragon's Hoard
 - Dragon's Presence
 - Dragon's Rage Channeler
 - Dragon-Scarred Bear
@@ -3339,6 +3342,7 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Drain the Well
 - Drake
 - Drake
+- Drake Hatcher
 - Drake Hatchling
 - Drake Haven
 - Drake-Skull Cameo
@@ -3464,6 +3468,7 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Dualcaster Mage
 - Dub
 - Dubious Delicacy
+- Duchess, Wayward Tavernkeep
 - Duelcraft Trainer
 - Dueling Rapier
 - Duelist of Deep Faith
@@ -3746,6 +3751,7 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Elvish Clancaller
 - Elvish Doomsayer
 - Elvish Eulogist
+- Elvish Farmer
 - Elvish Guidance
 - Elvish Handservant
 - Elvish Harbinger
@@ -4236,6 +4242,7 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Feral Prowler
 - Feral Ridgewolf
 - Feral Shadow
+- Feral Thallid
 - Ferocious Charge
 - Ferocious Pup
 - Ferocious Zheng
@@ -4381,6 +4388,7 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Fists of the Anvil
 - Fit of Rage
 - Five Hundred Year Diary
+- Five-Alarm Fire
 - Flagstones of Trokair
 - Flame Blitz
 - Flame Elemental
@@ -4723,6 +4731,7 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Funeral Longboat
 - Funeral Rites
 - Funeral Room // Awakening Hall
+- Fungal Bloom
 - Fungal Fortitude
 - Fungal Infection
 - Fungal Plots
@@ -5924,6 +5933,7 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Hooded Kavu
 - Hoodwink
 - Hoof Skulkin
+- Hoofprints of the Stag
 - Hookblade Veteran
 - Hooting Mandrills
 - Hop to It
@@ -6106,6 +6116,7 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Hystrodon
 - Icatian Crier
 - Icatian Infantry
+- Icatian Javelineers
 - Icatian Lieutenant
 - Icatian Phalanx
 - Icatian Priest
@@ -6114,6 +6125,7 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Ice Flan
 - Ice Storm
 - Ice Tunnel
+- Iceberg
 - Iceberg Cancrix
 - Icebind Pillar
 - Icecave Crasher
@@ -8212,6 +8224,7 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Mutilate
 - Mwonvuli Acid-Moss
 - Mycoid Shepherd
+- Mycologist
 - Mycoloth
 - Myconid Spore Tender
 - Mycosynth Wellspring
@@ -8811,6 +8824,7 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Orzhov Racketeers
 - Orzhov Signet
 - Orzhova, the Church of Deals
+- Osai Vultures
 - Oscorp Research Team
 - Ossuary Rats
 - Ostiary Thrull
@@ -8891,6 +8905,7 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Palinchron
 - Palladia-Mors
 - Palladium Myr
+- Pallid Mycoderm
 - Panharmonicon
 - Panic Attack
 - Panic Spellbomb
@@ -9446,6 +9461,7 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Psychic Whorl
 - Psychosis Crawler
 - Psychotic Haze
+- Psychotrope Thallid
 - Pterafractyl
 - Pterodon Knight
 - Pteron Ghost
@@ -10083,6 +10099,7 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Rin and Seri, Inseparable
 - Ring of Renewal
 - Ring of the Lucii
+- Ring of Three Wishes
 - Ringwarden Owl
 - Rinoa Heartilly
 - Riot Devils
@@ -10523,6 +10540,7 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Savage Silhouette
 - Savage Smash
 - Savage Surge
+- Savage Thallid
 - Savage Twister
 - Savageborn Hydra
 - Savai Crystal
@@ -11728,6 +11746,7 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Spectral Sailor
 - Spectral Shepherd
 - Spell Pierce
+- Spell Satchel
 - Spell Snare
 - Spell Snip
 - Spell Snuff
@@ -11904,12 +11923,15 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Spontaneous Generation
 - Spore Burst
 - Spore Crawler
+- Spore Flower
 - Spore Frog
 - Spore Swarm
 - Sporeback Wolf
 - Sporecap Spider
 - Sporecrown Thallid
 - Sporemound
+- Sporesower Thallid
+- Sporoloth Ancient
 - Spotcycle Scouter
 - Spotted Griffin
 - Spread the Sickness
@@ -11968,6 +11990,7 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Stadium Tidalmage
 - Staff of Domination
 - Staff of Nin
+- Staff of the Storyteller
 - Staff of Zegon
 - Stag Beetle
 - Staggering Insight
@@ -12095,6 +12118,7 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Stitcher's Supplier
 - Stitchwing Skaab
 - Stock Up
+- Stocking the Pantry
 - Stockman, Mad Fly-entist
 - Stockpiling Celebrant
 - Stoic Builder
@@ -12740,6 +12764,10 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Thalakos Sentry
 - Thalia's Geistcaller
 - Thalia's Lieutenant
+- Thallid
+- Thallid Devourer
+- Thallid Germinator
+- Thallid Shell-Dweller
 - Thallid Soothsayer
 - Thanos, Death's Consort
 - Thantis, the Warweaver
@@ -12857,6 +12885,7 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Thorn Lieutenant
 - Thorn Mammoth
 - Thorn of the Black Rose
+- Thorn Thallid
 - Thorn-Thrash Viashino
 - Thornado
 - Thorncaster Sliver
@@ -13588,6 +13617,7 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Usher of the Fallen
 - Uthden Troll
 - Utility Knife
+- Utopia Mycon
 - Utopia Sprawl
 - Utopia Tree
 - Utopia Vow
@@ -13884,6 +13914,7 @@ Council4 currently supports **14,732 of 32,501 cards eligible for paper support 
 - Vitality Charm
 - Vitalize
 - Vitalizing Wind
+- Vitaspore Thallid
 - Vithian Renegades
 - Vithian Stinger
 - Vito, Thorn of the Dusk Rose
