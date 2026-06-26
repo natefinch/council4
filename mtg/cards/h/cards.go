@@ -19,6 +19,7 @@ var Cards = []*game.CardDef{
 	HengeWalker,
 	HerdMigration,
 	HiddenStockpile,
+	HoofprintsOfTheStag,
 	HornbashMentor,
 	HowlOfTheNightPack,
 	HuntTheHunter,

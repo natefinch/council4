@@ -23,6 +23,7 @@ var Cards = []*game.CardDef{
 	RhizomeLurcher,
 	RhonasTheIndomitable,
 	Riddlekeeper,
+	RingOfThreeWishes,
 	RiseFromTheTides,
 	RiteOfFlame,
 	RiteOfOblivion,

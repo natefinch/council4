@@ -1126,6 +1126,15 @@ func removeCounterCostKinds() []counter.Kind {
 		counter.Oil, counter.Blood, counter.Indestructible, counter.Deathtouch,
 		counter.Flying, counter.FirstStrike, counter.Hexproof, counter.Lifelink,
 		counter.Menace, counter.Reach, counter.Trample, counter.Vigilance,
+		counter.Quest, counter.Age, counter.Burden,
+		counter.Spore, counter.Fade, counter.Divinity, counter.Healing, counter.Wish,
+		counter.Study, counter.Dream, counter.Supply, counter.Story, counter.Film,
+		counter.Hoofprint, counter.Suspect, counter.Javelin, counter.Cube, counter.Polyp,
+		counter.Component, counter.Eon, counter.Incubation, counter.Devotion,
+		counter.Foreshadow, counter.Arrowhead, counter.Carrion, counter.Corpse,
+		counter.Loot, counter.Net, counter.Gold, counter.Currency, counter.Book,
+		counter.Blaze, counter.Palliation, counter.Gem, counter.Pressure, counter.Flame,
+		counter.Ice, counter.Coin,
 	}
 }
 

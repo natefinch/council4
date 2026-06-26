@@ -13,6 +13,7 @@ var Cards = []*game.CardDef{
 	OperaLoveSong,
 	OrcGeneral,
 	OrneryGoblin,
+	OsaiVultures,
 	OtherworldlyJourney,
 	OvergrownPest,
 }

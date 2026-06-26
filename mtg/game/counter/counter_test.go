@@ -15,6 +15,19 @@ func TestAgeCounterKind(t *testing.T) {
 	}
 }
 
+func TestSporeCounterKind(t *testing.T) {
+	t.Parallel()
+	if !Spore.Valid() {
+		t.Fatal("Spore.Valid() = false; want true")
+	}
+	if Spore.PlayerOnly() {
+		t.Fatal("Spore.PlayerOnly() = true; want false")
+	}
+	if got, want := Spore.String(), "spore"; got != want {
+		t.Fatalf("Spore.String() = %q; want %q", got, want)
+	}
+}
+
 func TestLevelCounterKind(t *testing.T) {
 	t.Parallel()
 	if !Level.Valid() {

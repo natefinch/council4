@@ -11,6 +11,7 @@ var Cards = []*game.CardDef{
 	DeadeyeHarpooner,
 	DeathDenied,
 	DeathcapGlade,
+	DeathsporeThallid,
 	Decommission,
 	DemonicAppetite,
 	DescentOfTheDragons,
@@ -22,7 +23,10 @@ var Cards = []*game.CardDef{
 	DomriAnarchOfBolas,
 	DonatelloMutantMechanic,
 	DragonEgg,
+	DragonSHoard,
 	DragonskullSummit,
+	DrakeHatcher,
 	DranaSChosen,
+	DuchessWaywardTavernkeep,
 	DuskfangMentor,
 }

@@ -281,6 +281,76 @@ func renderCounterKind(kind counter.Kind) (string, error) {
 		return "counter.MinusTwoMinusOne", nil
 	case counter.MinusOneMinusZero:
 		return "counter.MinusOneMinusZero", nil
+	case counter.Spore:
+		return "counter.Spore", nil
+	case counter.Fade:
+		return "counter.Fade", nil
+	case counter.Divinity:
+		return "counter.Divinity", nil
+	case counter.Healing:
+		return "counter.Healing", nil
+	case counter.Wish:
+		return "counter.Wish", nil
+	case counter.Study:
+		return "counter.Study", nil
+	case counter.Dream:
+		return "counter.Dream", nil
+	case counter.Supply:
+		return "counter.Supply", nil
+	case counter.Story:
+		return "counter.Story", nil
+	case counter.Film:
+		return "counter.Film", nil
+	case counter.Hoofprint:
+		return "counter.Hoofprint", nil
+	case counter.Suspect:
+		return "counter.Suspect", nil
+	case counter.Javelin:
+		return "counter.Javelin", nil
+	case counter.Cube:
+		return "counter.Cube", nil
+	case counter.Polyp:
+		return "counter.Polyp", nil
+	case counter.Component:
+		return "counter.Component", nil
+	case counter.Eon:
+		return "counter.Eon", nil
+	case counter.Incubation:
+		return "counter.Incubation", nil
+	case counter.Devotion:
+		return "counter.Devotion", nil
+	case counter.Foreshadow:
+		return "counter.Foreshadow", nil
+	case counter.Arrowhead:
+		return "counter.Arrowhead", nil
+	case counter.Carrion:
+		return "counter.Carrion", nil
+	case counter.Corpse:
+		return "counter.Corpse", nil
+	case counter.Loot:
+		return "counter.Loot", nil
+	case counter.Net:
+		return "counter.Net", nil
+	case counter.Gold:
+		return "counter.Gold", nil
+	case counter.Currency:
+		return "counter.Currency", nil
+	case counter.Book:
+		return "counter.Book", nil
+	case counter.Blaze:
+		return "counter.Blaze", nil
+	case counter.Palliation:
+		return "counter.Palliation", nil
+	case counter.Gem:
+		return "counter.Gem", nil
+	case counter.Pressure:
+		return "counter.Pressure", nil
+	case counter.Flame:
+		return "counter.Flame", nil
+	case counter.Ice:
+		return "counter.Ice", nil
+	case counter.Coin:
+		return "counter.Coin", nil
 	default:
 		return "", fmt.Errorf("render: unsupported counter kind %d", kind)
 	}

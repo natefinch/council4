@@ -11,4 +11,5 @@ var Cards = []*game.CardDef{
 	UneshCriosphinxSovereign,
 	UnfathomableTruths,
 	UntimelyMalfunction,
+	UtopiaMycon,
 }

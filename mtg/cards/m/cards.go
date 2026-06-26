@@ -41,6 +41,7 @@ var Cards = []*game.CardDef{
 	MrOrfeoTheBoulder,
 	MundaSVanguard,
 	MurderInvestigation,
+	Mycologist,
 	MycosynthWellspring,
 	MysticMight,
 }
