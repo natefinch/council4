@@ -221,6 +221,7 @@ func (fakePaymentState) Player(playerID game.PlayerID) (*game.Player, bool) {
 func (fakePaymentState) CanPayLife(game.PlayerID) bool { return true }
 
 func (fakePaymentState) PayLifeForManaColor(game.PlayerID, mana.Color) bool { return false }
+func (fakePaymentState) ManaProductionMultiplier(game.PlayerID) int         { return 1 }
 
 func (fakePaymentState) ActivePlayer() game.PlayerID { return game.Player1 }
 

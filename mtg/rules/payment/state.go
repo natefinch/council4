@@ -44,6 +44,13 @@ type stateQueries interface {
 	// symbols of that color.
 	PayLifeForManaColor(playerID game.PlayerID, c mana.Color) bool
 
+	// ManaProductionMultiplier returns the factor by which mana produced when
+	// playerID taps a permanent for mana is scaled, the product of all active
+	// RuleEffectManaProductionMultiplier effects the player controls ("If you tap
+	// a permanent for mana, it produces twice as much of that mana instead.", Mana
+	// Reflection; Nyxbloom Ancient). It returns 1 when no such effect applies.
+	ManaProductionMultiplier(playerID game.PlayerID) int
+
 	// ActivePlayer returns the player whose turn it currently is.
 	ActivePlayer() game.PlayerID
 

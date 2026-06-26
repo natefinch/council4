@@ -9,6 +9,7 @@ var Cards = []*game.CardDef{
 	Magmaw,
 	MagneticMine,
 	MalametBattleGlyph,
+	ManaReflection,
 	MarthaJones,
 	MasterSRebuke,
 	MephiticDraught,

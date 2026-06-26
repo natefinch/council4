@@ -65,21 +65,22 @@ func permanentManaOutputForActivation(s State, permanent *game.Permanent, activa
 
 func permanentManaOutputs(s State, permanent *game.Permanent) []permanentManaOutputResult {
 	var outputs []permanentManaOutputResult
+	controller := s.EffectiveController(permanent)
+	multiplier := s.ManaProductionMultiplier(controller)
 	if c, ok := basicLandManaColor(s, permanent); ok {
 		outputs = append(outputs, permanentManaOutputResult{
 			color:        c,
-			amount:       1,
+			amount:       multiplyTappedManaAmount(1, false, multiplier),
 			snow:         s.PermanentHasSupertype(permanent, types.Snow),
 			abilityIndex: -1,
 		})
 	}
-	controller := s.EffectiveController(permanent)
 	abilities := paymentManaAbilities(s, controller, permanent)
 	for _, ability := range abilities {
 		for _, color := range ability.colors {
 			outputs = appendUniquePermanentManaOutput(outputs, permanentManaOutputResult{
 				color:        color,
-				amount:       ability.amount,
+				amount:       multiplyTappedManaAmount(ability.amount, ability.untap, multiplier),
 				snow:         s.PermanentHasSupertype(permanent, types.Snow),
 				untap:        ability.untap,
 				sacrifice:    ability.sacrifice,
@@ -89,6 +90,18 @@ func permanentManaOutputs(s State, permanent *game.Permanent) []permanentManaOut
 		}
 	}
 	return outputs
+}
+
+// multiplyTappedManaAmount scales a mana ability's produced amount by an active
+// RuleEffectManaProductionMultiplier (Mana Reflection, Nyxbloom Ancient). The
+// replacement applies only when a permanent is tapped to produce the mana, so an
+// untap-cost ability ({Q}) is left unscaled. With no multiplier (factor 1) the
+// amount is unchanged.
+func multiplyTappedManaAmount(amount int, untap bool, multiplier int) int {
+	if untap || multiplier <= 1 {
+		return amount
+	}
+	return amount * multiplier
 }
 
 func appendUniquePermanentManaOutput(outputs []permanentManaOutputResult, candidate permanentManaOutputResult) []permanentManaOutputResult {

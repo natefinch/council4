@@ -158,3 +158,50 @@ func creatureAttackTaxContent(content AbilityContent, amount StaticCreatureAttac
 	}
 	return second.Pronoun == ReferencePronounThose
 }
+
+func recognizeStaticManaProductionMultiplierDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationManaProductionMultiplier) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	if node.ManaMultiplier < 2 || !manaProductionMultiplierContent(ability.Content) {
+		return StaticDeclaration{}, false
+	}
+	return StaticDeclaration{
+		Kind:                     StaticDeclarationManaProductionMultiplier,
+		Span:                     ability.Span,
+		OperationSpan:            node.OperationSpan,
+		ManaProductionMultiplier: &StaticManaProductionMultiplierDeclaration{Factor: node.ManaMultiplier},
+	}, true
+}
+
+// manaProductionMultiplierContent reports whether the residual body of the
+// mana-production replacement is only its "if" guard, the tap clause it
+// replaces, and the ambiguous "it" pronoun the sentence names ("If you tap a
+// permanent for mana, it produces twice as much of that mana instead.").
+func manaProductionMultiplierContent(content AbilityContent) bool {
+	if len(content.Conditions) != 1 ||
+		len(content.Effects) != 1 ||
+		len(content.Keywords) != 0 ||
+		len(content.References) != 1 {
+		return false
+	}
+	condition := content.Conditions[0]
+	if condition.Kind != ConditionIf ||
+		condition.Predicate != ConditionPredicateUnsupported ||
+		condition.Intervening ||
+		condition.Resolving {
+		return false
+	}
+	if content.Effects[0].Kind != EffectTap {
+		return false
+	}
+	pronoun := content.References[0]
+	return pronoun.Kind == ReferencePronoun &&
+		pronoun.Binding == ReferenceBindingAmbiguous &&
+		pronoun.Pronoun == ReferencePronounIt
+}

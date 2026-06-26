@@ -1197,6 +1197,38 @@ func TestValidateCardDefAttackTaxRuleEffect(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefManaProductionMultiplierRuleEffect(t *testing.T) {
+	valid := RuleEffect{
+		Kind:                     RuleEffectManaProductionMultiplier,
+		ManaProductionMultiplier: 3,
+	}
+	card := func(effect RuleEffect) *CardDef {
+		return &CardDef{CardFace: CardFace{
+			Name:            "Mana Multiplier Tester",
+			StaticAbilities: []StaticAbility{{RuleEffects: []RuleEffect{effect}}},
+		}}
+	}
+	if issues := ValidateCardDef(card(valid)); len(issues) != 0 {
+		t.Fatalf("valid issues = %+v, want none", issues)
+	}
+
+	tests := map[string]RuleEffect{
+		"factor of one":    {Kind: RuleEffectManaProductionMultiplier, ManaProductionMultiplier: 1},
+		"zero factor":      {Kind: RuleEffectManaProductionMultiplier},
+		"negative factor":  {Kind: RuleEffectManaProductionMultiplier, ManaProductionMultiplier: -2},
+		"extra payload":    {Kind: RuleEffectManaProductionMultiplier, ManaProductionMultiplier: 2, AffectedPlayer: PlayerYou},
+		"permanent scoped": {Kind: RuleEffectManaProductionMultiplier, ManaProductionMultiplier: 2, AffectedSource: true},
+	}
+	for name, effect := range tests {
+		t.Run(name, func(t *testing.T) {
+			issues := ValidateCardDef(card(effect))
+			if !hasCardDefIssue(issues, CardDefIssueInvalidRuleEffect) {
+				t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidRuleEffect)
+			}
+		})
+	}
+}
+
 func TestValidateCardDefAllowsHandCyclingGrantRuleEffect(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name: "Cycling Granter",

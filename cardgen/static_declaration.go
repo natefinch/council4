@@ -119,6 +119,8 @@ func lowerStaticDeclarations(
 				ok = appendStaticOpponentEnteringTriggerSuppressionDeclaration(&body, declaration)
 			case compiler.StaticDeclarationCreatureAttackTax:
 				ok = appendStaticCreatureAttackTaxDeclaration(&body, declaration)
+			case compiler.StaticDeclarationManaProductionMultiplier:
+				ok = appendStaticManaProductionMultiplierDeclaration(&body, declaration)
 			default:
 				ok = false
 			}
@@ -353,6 +355,9 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.CreatureAttackTax != nil {
 		payloads++
 	}
+	if declaration.ManaProductionMultiplier != nil {
+		payloads++
+	}
 	if payloads != 1 {
 		return false
 	}
@@ -397,6 +402,8 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 		return declaration.OpponentEnteringSuppression != nil
 	case compiler.StaticDeclarationCreatureAttackTax:
 		return declaration.CreatureAttackTax != nil
+	case compiler.StaticDeclarationManaProductionMultiplier:
+		return declaration.ManaProductionMultiplier != nil
 	default:
 		return false
 	}
@@ -1333,6 +1340,25 @@ func appendStaticOpponentEnteringTriggerSuppressionDeclaration(body *game.Static
 	}
 	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
 		Kind: game.RuleEffectSuppressOpponentEnteringTriggers,
+	})
+	return true
+}
+
+// appendStaticManaProductionMultiplierDeclaration lowers the mana-production
+// replacement "If you tap a permanent for mana, it produces twice as much of
+// that mana instead." (Mana Reflection, factor 2) and "...three times as much
+// of that mana instead." (Nyxbloom Ancient, factor 3) into a controller-scoped
+// mana-production multiplier rule effect. The runtime multiplies the mana a
+// permanent the controller controls produces when it is tapped for mana;
+// multiple multipliers from different sources compound.
+func appendStaticManaProductionMultiplierDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	multiplier := declaration.ManaProductionMultiplier
+	if multiplier == nil || multiplier.Factor < 2 {
+		return false
+	}
+	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+		Kind:                     game.RuleEffectManaProductionMultiplier,
+		ManaProductionMultiplier: multiplier.Factor,
 	})
 	return true
 }

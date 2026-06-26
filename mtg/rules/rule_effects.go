@@ -345,6 +345,32 @@ func additionalLandPlaysFor(g *game.Game, playerID game.PlayerID) int {
 	return total
 }
 
+// manaProductionMultiplierFor returns the factor by which mana produced when
+// playerID taps a permanent for mana is multiplied, the product of all active
+// RuleEffectManaProductionMultiplier effects that player controls ("If you tap a
+// permanent for mana, it produces twice as much of that mana instead.", Mana
+// Reflection; "... three times as much ...", Nyxbloom Ancient). It returns 1 when
+// no such effect applies, so the common case is unchanged. Multiple multipliers
+// compound multiplicatively (CR 616 lets the affected player order overlapping
+// replacement effects; the product is order-independent).
+func manaProductionMultiplierFor(g *game.Game, playerID game.PlayerID) int {
+	multiplier := 1
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectManaProductionMultiplier {
+			continue
+		}
+		if effect.Controller != playerID {
+			continue
+		}
+		if effect.ManaProductionMultiplier > 1 {
+			multiplier *= effect.ManaProductionMultiplier
+		}
+	}
+	return multiplier
+}
+
 // playerHasNoMaximumHandSize reports whether an active rule effect removes the
 // maximum hand size of playerID, so that player skips discarding down to a
 // hand-size limit during their cleanup step (CR 402.2).
