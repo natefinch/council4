@@ -9,7 +9,12 @@ var Cards = []*game.CardDef{
 	TajuruStalwart,
 	TeferiSProtection,
 	TempestTechnique,
+	TheHauntOfHightower,
 	TheIrencrag,
+	TolarianSerpent,
+	TomeScour,
+	TowerOfMurmurs,
+	ToweringWaveMystic,
 	TreasureHunt,
 	TwinflameTravelers,
 }

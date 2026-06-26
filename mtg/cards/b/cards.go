@@ -13,6 +13,7 @@ var Cards = []*game.CardDef{
 	BattleStrain,
 	BeastWithin,
 	BelligerentHatchling,
+	Bereavement,
 	BirdsOfParadise,
 	BiteDown,
 	BlazemireVerge,

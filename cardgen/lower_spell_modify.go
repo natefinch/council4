@@ -3372,6 +3372,18 @@ func lowerFixedCardCountPlayerSpell(
 	hasReferencedControllerRef := len(ctx.content.References) == 1 &&
 		ctx.content.References[0].Binding == compiler.ReferenceBindingTarget &&
 		effect.Context == parser.EffectContextReferencedObjectController
+	// "That permanent's controller mills N." / "Its controller mills N." on a
+	// triggered ability binds the recipient to the controller of the triggering
+	// event permanent (Mesmeric Orb, Chronic Flooding, Riddlekeeper).
+	hasEventPermanentControllerRef := len(ctx.content.References) == 1 &&
+		ctx.content.References[0].Binding == compiler.ReferenceBindingEventPermanent &&
+		effect.Context == parser.EffectContextReferencedObjectController
+	// "Defending player mills N." on a combat trigger binds the recipient to the
+	// attacked player carried by the triggering attack/blocked event (Flint
+	// Golem, Nemesis of Reason). The triggering source is implicit, so the
+	// content carries no reference; the defending player is named by context.
+	hasDefendingPlayerContext := len(ctx.content.References) == 0 &&
+		effect.Context == parser.EffectContextDefendingPlayer
 	if (effect.Amount.Known && effect.Amount.Value < 1) ||
 		!effect.Amount.Known && !effect.Amount.VariableX && effect.Amount.DynamicKind == compiler.DynamicAmountNone ||
 		!effect.Exact ||
@@ -3382,14 +3394,15 @@ func lowerFixedCardCountPlayerSpell(
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		(len(ctx.content.References) != 0 && !hasEventPlayerRef && !hasReferencedControllerRef) {
+		(len(ctx.content.References) != 0 && !hasEventPlayerRef && !hasReferencedControllerRef &&
+			!hasEventPermanentControllerRef) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported "+controllerVerb+" spell",
 			"the executable source backend supports only exact fixed "+controllerVerb+" by one player",
 		)
 	}
-	amount, ok := cardCountQuantity(effect.Amount, allowDynamic)
+	amount, ok := cardCountQuantityForContext(ctx, effect.Amount, allowDynamic)
 	if !ok {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -3417,8 +3430,7 @@ func lowerFixedCardCountPlayerSpell(
 	}
 	switch {
 	case hasEventPlayerRef && len(ctx.content.Targets) == 0 &&
-		(effect.Context == parser.EffectContextEventPlayer || effect.Context == parser.EffectContextReferencedPlayer) &&
-		effect.Amount.Known:
+		(effect.Context == parser.EffectContextEventPlayer || effect.Context == parser.EffectContextReferencedPlayer):
 		playerRef = game.EventPlayerReference()
 	case len(ctx.content.Targets) == 0 &&
 		!hasEventPlayerRef &&
@@ -3433,6 +3445,10 @@ func lowerFixedCardCountPlayerSpell(
 			)
 		}
 		playerRef = ref
+	case hasEventPermanentControllerRef && len(ctx.content.Targets) == 0:
+		playerRef = game.ObjectControllerReference(game.EventPermanentReference())
+	case hasDefendingPlayerContext && len(ctx.content.Targets) == 0:
+		playerRef = game.DefendingPlayerReference()
 	case len(ctx.content.Targets) == 1 &&
 		!hasEventPlayerRef &&
 		(effect.Context == parser.EffectContextTarget || effect.Context == parser.EffectContextPriorSubject):
@@ -3638,6 +3654,24 @@ func lowerFixedControllerSpell(
 			},
 		},
 	}.Ability(), nil
+}
+
+// cardCountQuantityForContext resolves a draw/discard/mill card-count amount,
+// additionally accepting a "that many" triggering-event anaphor ("that player
+// mills that many cards.") and binding it to whichever event fired the enclosing
+// triggered ability (the life lost on a life-loss trigger, the damage dealt on a
+// combat-damage trigger, and so on). Outside a triggered context, or when the
+// caller forbids dynamic amounts, the anaphor has no source and the helper falls
+// back to cardCountQuantity, leaving every other amount form unchanged.
+func cardCountQuantityForContext(ctx contentCtx, amount compiler.CompiledAmount, allowDynamic bool) (game.Quantity, bool) {
+	if allowDynamic && !amount.Known && triggeringEventQuantityKind(amount.DynamicKind) {
+		dynamic, ok := lowerTriggeringEventQuantityAmount(ctx, amount)
+		if !ok {
+			return game.Quantity{}, false
+		}
+		return game.Dynamic(dynamic), true
+	}
+	return cardCountQuantity(amount, allowDynamic)
 }
 
 func cardCountQuantity(amount compiler.CompiledAmount, allowDynamic bool) (game.Quantity, bool) {

@@ -12,8 +12,10 @@ var Cards = []*game.CardDef{
 	RenegadeRallier,
 	RhinoSRampage,
 	RhonasTheIndomitable,
+	Riddlekeeper,
 	RiseFromTheTides,
 	RiteOfFlame,
 	RiteOfOblivion,
+	RotcrownGhoul,
 	RuthlessPredation,
 }
