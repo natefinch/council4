@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,474 of 32,501 cards eligible for paper support (44.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,487 of 32,501 cards eligible for paper support (44.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3239,6 +3239,7 @@ Council4 currently supports **14,474 of 32,501 cards eligible for paper support 
 - Dragon
 - Dragon
 - Dragon
+- Dragon Appeasement
 - Dragon Arch
 - Dragon Bell Monk
 - Dragon Blood
@@ -3301,6 +3302,7 @@ Council4 currently supports **14,474 of 32,501 cards eligible for paper support 
 - Drannith Healer
 - Drannith Magistrate
 - Drannith Stinger
+- Drastic Revelation
 - Draugr Recruiter
 - Drawn from Dreams
 - Dread Linnorm // Scale Deflection
@@ -4488,6 +4490,7 @@ Council4 currently supports **14,474 of 32,501 cards eligible for paper support 
 - Force Spike
 - Force Void
 - Forced Adaptation
+- Forced Fruition
 - Forced Worship
 - Forceful Denial
 - Forcemage Advocate
@@ -5369,6 +5372,7 @@ Council4 currently supports **14,474 of 32,501 cards eligible for paper support 
 - Grimclaw Bats
 - Grinning Demon
 - Grip of Desolation
+- Griselbrand
 - Grisly Ritual
 - Grisly Survivor
 - Grisly Transformation
@@ -6238,6 +6242,7 @@ Council4 currently supports **14,474 of 32,501 cards eligible for paper support 
 - Inspired Insurgent
 - Inspired Sphinx
 - Inspired Tinkering
+- Inspired Ultimatum
 - Inspiring Call
 - Inspiring Captain
 - Inspiring Cleric
@@ -8268,6 +8273,7 @@ Council4 currently supports **14,474 of 32,501 cards eligible for paper support 
 - Niblis of the Breath
 - Niblis of the Mist
 - Niblis of the Urn
+- Nicol Bolas, the Deceiver
 - Night Incarnate
 - Night Market
 - Night Market Aeronaut
@@ -8378,6 +8384,7 @@ Council4 currently supports **14,474 of 32,501 cards eligible for paper support 
 - Norwood Riders
 - Norwood Warrior
 - Not on My Watch
+- Nothic
 - Notion Rain
 - Nourish
 - Nova Cleric
@@ -8677,6 +8684,7 @@ Council4 currently supports **14,474 of 32,501 cards eligible for paper support 
 - Overcome
 - Overeager Apprentice
 - Overflowing Basin
+- Overflowing Insight
 - Overgrown Armasaur
 - Overgrown Estate
 - Overgrown Farmland
@@ -9488,6 +9496,7 @@ Council4 currently supports **14,474 of 32,501 cards eligible for paper support 
 - Rakshasa's Secret
 - Ral's Reinforcements
 - Ral's Staticaster
+- Ral, Caller of Storms
 - Rally
 - Rally Maneuver
 - Rally of Wings
@@ -12260,6 +12269,7 @@ Council4 currently supports **14,474 of 32,501 cards eligible for paper support 
 - Symbiosis
 - Symbiote Spawn
 - Symbiotic Beast
+- Symbiotic Deployment
 - Symbiotic Elf
 - Symbiotic Wurm
 - Symbol of Unsummoning
@@ -12286,6 +12296,7 @@ Council4 currently supports **14,474 of 32,501 cards eligible for paper support 
 - Tah-Crop Skirmisher
 - Taiga
 - Taigam's Scheming
+- Taigam, Sidisi's Hand
 - Tail Slash
 - Tainted Field
 - Tainted Isle
@@ -14076,6 +14087,7 @@ Council4 currently supports **14,474 of 32,501 cards eligible for paper support 
 - Wild Ox
 - Wild Pack Squad
 - Wild Wanderer
+- Wild Wasteland
 - Wild-Field Scarecrow
 - Wilderness Hypnotist
 - Wilderness Reclamation
@@ -14333,6 +14345,7 @@ Council4 currently supports **14,474 of 32,501 cards eligible for paper support 
 - Yavimaya Wurm
 - Yavimaya's Embrace
 - Yavimaya, Cradle of Growth
+- Yawgmoth's Bargain
 - Yawgmoth's Edict
 - Yawgmoth's Vile Offering
 - Yawgmoth, Thran Physician
