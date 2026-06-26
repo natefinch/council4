@@ -391,6 +391,9 @@ func exactSinglePermanentTargetSyntax(text string, selection SelectionSyntax) bo
 	if len(selection.ExcludedSupertypes) > 0 {
 		return exactExcludedSupertypeTargetSyntax(text, selection)
 	}
+	if len(selection.ExcludedSubtypes) > 0 {
+		return exactExcludedSubtypeTargetSyntax(text, selection)
+	}
 
 	expected, ok := exactPermanentTargetText(selection)
 	if !ok {
@@ -1553,6 +1556,45 @@ func exactExcludedSupertypeTargetSyntax(text string, selection SelectionSyntax) 
 	return strings.EqualFold(text, expected)
 }
 
+// exactExcludedSubtypeTargetSyntax reconstructs the canonical Oracle phrase for a
+// permanent target restricted by a single excluded subtype ("target non-Spirit
+// creature", "target non-Wall creature", "target non-Aura enchantment") and
+// compares it byte-exactly to the source text. It mirrors
+// exactExcludedSupertypeTargetSyntax: it accepts exactly one excluded subtype on
+// a redundant permanent noun with an optional controller clause, failing closed
+// for every other qualifier so unsupported wordings keep failing the text-blind
+// round-trip. The single excluded subtype lowers to Selection.ExcludedSubtype.
+func exactExcludedSubtypeTargetSyntax(text string, selection SelectionSyntax) bool {
+	if selection.All || selection.Another || selection.Other ||
+		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
+		selection.Keyword != KeywordUnknown || selection.ExcludedKeyword != KeywordUnknown ||
+		selection.Zone != zone.None ||
+		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		selection.PowerLessThanSource || selection.PowerGreaterThanSource ||
+		selection.Colorless || selection.Multicolored ||
+		len(selection.Supertypes) != 0 || len(selection.ExcludedSupertypes) != 0 ||
+		len(selection.ExcludedTypes) != 0 ||
+		len(selection.ColorsAny) != 0 || len(selection.ExcludedColors) != 0 ||
+		len(selection.SubtypesAny) != 0 {
+		return false
+	}
+	if !selectionRedundantRequiredNoun(selection) {
+		return false
+	}
+	if len(selection.ExcludedSubtypes) != 1 {
+		return false
+	}
+	noun, ok := permanentSelectionNoun(selection.Kind)
+	if !ok {
+		return false
+	}
+	expected, ok := targetControllerSuffix("target non-"+string(selection.ExcludedSubtypes[0])+" "+noun, selection.Controller)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(text, expected)
+}
+
 func targetSelectionHasUnsupportedQualifier(tokens []shared.Token, atoms Atoms) bool {
 	dynStart, dynEnd, hasDyn := selectionManaValueDynamicSpan(tokens)
 	for idx, token := range tokens {
@@ -1624,6 +1666,11 @@ func selectionAtomCoversToken(atoms Atoms, token shared.Token) bool {
 		}
 	}
 	for _, atom := range atoms.Subtypes() {
+		if covered(atom.Span) {
+			return true
+		}
+	}
+	for _, atom := range atoms.ExcludedSubtypes() {
 		if covered(atom.Span) {
 			return true
 		}

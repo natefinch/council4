@@ -6,9 +6,11 @@ import "github.com/natefinch/council4/mtg/game"
 
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
+	WalkThePlank,
 	WantedGriffin,
 	WildestDreams,
 	WildInstincts,
 	WindbriskHeights,
+	WingspanMentor,
 	WoodlandWanderer,
 }

@@ -1000,6 +1000,15 @@ func permanentTargetSpecAllowingUnbounded(target compiler.CompiledTarget, allowU
 	if subtypes := target.Selector.SubtypesAny(); len(subtypes) > 0 {
 		selection.SubtypesAny = append([]types.Sub(nil), subtypes...)
 	}
+	if excludedSubtypes := target.Selector.ExcludedSubtypes(); len(excludedSubtypes) > 0 {
+		// The runtime Selection models a single excluded subtype ("non-Spirit
+		// creature"); more than one ("non-Spirit, non-Zombie creature") has no
+		// representable form, so it fails closed.
+		if len(excludedSubtypes) != 1 {
+			return game.TargetSpec{}, false
+		}
+		selection.ExcludedSubtype = excludedSubtypes[0]
+	}
 	if colors := target.Selector.ColorsAny(); len(colors) > 0 {
 		selection.ColorsAny = append([]color.Color(nil), colors...)
 	}

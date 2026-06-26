@@ -9,6 +9,7 @@ var Cards = []*game.CardDef{
 	Kapow,
 	KarplusanForest,
 	KayaSGhostform,
+	KeensightMentor,
 	KessigCagebreakers,
 	KessigWolfRun,
 	KhalniAmbush,

@@ -15,6 +15,7 @@ var Cards = []*game.CardDef{
 	HeirloomAuntie,
 	HerdMigration,
 	HiddenStockpile,
+	HornbashMentor,
 	HowlOfTheNightPack,
 	HuntTheHunter,
 	HuntTheWeak,

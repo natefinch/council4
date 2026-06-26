@@ -1575,21 +1575,23 @@ func massCounterQualifierReferencesOnly(
 // massGroupSelection projects the battlefield-group selector of a mass effect
 // ("Destroy all artifacts", "Each creature you control ...") onto a Selection.
 // It is the canonical projector restricted to the dimensions a mass-effect
-// group can express: the per-object token, historic, excluded-subtype, and
-// source-relative-power qualifiers belong to other contexts and never reach a
-// mass group, so the mask drops them.
+// group can express: the per-object token, historic, and source-relative-power
+// qualifiers belong to other contexts and never reach a mass group, so the mask
+// drops them. An excluded creature subtype is honored for "non-<subtype>" board
+// wipes.
 func massGroupSelection(selector compiler.CompiledSelector) (game.Selection, bool) {
 	return SelectionForSelectorMasked(selector, massGroupSelectionMask)
 }
 
 // massGroupSelectionMask drops the canonical dimensions a mass-effect group
-// never carries: per-object token state, the historic disjunction, an excluded
-// creature subtype, and the source-relative power comparison.
+// never carries: per-object token state, the historic disjunction, and the
+// source-relative power comparison. An excluded creature subtype IS honored: a
+// "Destroy all non-Dragon creatures" board wipe carries one excluded subtype the
+// group must emit so the runtime spares the named subtype.
 var massGroupSelectionMask = SelectionMask{}.Ignoring(
 	DimNonToken,
 	DimTokenOnly,
 	DimHistoric,
-	DimExcludedSubtype,
 	DimPowerVsSource,
 ).Rejecting(
 	DimRequiredName,
