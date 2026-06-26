@@ -8,6 +8,7 @@ import "github.com/natefinch/council4/mtg/game"
 var Cards = []*game.CardDef{
 	SalvationSwan,
 	SanarUnfinishedGenius,
+	SaprazzanOutrigger,
 	SaprolingMigration,
 	SarkhanSDragonfire,
 	SavageSmash,
@@ -68,6 +69,7 @@ var Cards = []*game.CardDef{
 	StellaLeeWildCard,
 	SterlingKeykeeper,
 	StockingThePantry,
+	StoicEphemera,
 	StormOfSteel,
 	StormboundGeist,
 	StormcloudDjinn,

@@ -11,6 +11,7 @@ var Cards = []*game.CardDef{
 	PathOfAnnihilation,
 	PeerThroughDepths,
 	PhalanxTactics,
+	PhantomWhelp,
 	PhyrexianDriver,
 	PicturesOfSpiderMan,
 	PlanarGuide,

@@ -44,6 +44,7 @@ const (
 	DelayedAtBeginningOfNextEndStep DelayedTriggerTiming = iota + 1
 	DelayedAtBeginningOfNextUpkeep
 	DelayedAtBeginningOfNextMainPhase
+	DelayedAtEndOfCombat
 )
 
 // DelayedTriggerWindow bounds the lifetime of an event-based delayed trigger.

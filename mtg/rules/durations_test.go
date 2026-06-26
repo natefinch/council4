@@ -335,6 +335,37 @@ func TestDelayedSourceCardPermanentExileFollowsReturnedCard(t *testing.T) {
 	}
 }
 
+func TestDelayedAtEndOfCombatTriggerFiresInEndOfCombatStep(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	if !scheduleDelayedTrigger(g, &game.StackObject{
+		Kind:         game.StackTriggeredAbility,
+		SourceID:     creature.ObjectID,
+		SourceCardID: creature.CardInstanceID,
+		Controller:   game.Player1,
+	}, &game.DelayedTriggerDef{
+		Timing: game.DelayedAtEndOfCombat,
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.Sacrifice{Object: game.SourceCardPermanentReference()}}},
+		}.Ability(),
+	}) {
+		t.Fatal("scheduleDelayedTrigger failed")
+	}
+
+	engine.runCombatPhase(g, allFirstLegalAgents(), &TurnLog{})
+
+	if len(g.DelayedTriggers) != 0 {
+		t.Fatalf("delayed triggers after end of combat = %d, want 0", len(g.DelayedTriggers))
+	}
+	if _, ok := permanentByObjectID(g, creature.ObjectID); ok {
+		t.Fatal("source permanent remained on battlefield after end-of-combat sacrifice")
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(creature.CardInstanceID) {
+		t.Fatal("source permanent was not sacrificed to its owner's graveyard")
+	}
+}
+
 func TestDelayedSourceCardPermanentSacrificeFailsClosedWhenSourceLeft(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

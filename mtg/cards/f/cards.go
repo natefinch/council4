@@ -27,6 +27,7 @@ var Cards = []*game.CardDef{
 	FlamespeakerSWill,
 	FlintGolem,
 	FloriferousVinewall,
+	FogElemental,
 	FootMystic,
 	FootbottomFeast,
 	Forest,

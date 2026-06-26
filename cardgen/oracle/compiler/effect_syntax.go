@@ -599,6 +599,8 @@ func compileDelayedTiming(timing parser.DelayedTimingKind) game.DelayedTriggerTi
 		return game.DelayedAtBeginningOfNextUpkeep
 	case parser.DelayedTimingNextMain:
 		return game.DelayedAtBeginningOfNextMainPhase
+	case parser.DelayedTimingEndOfCombat:
+		return game.DelayedAtEndOfCombat
 	default:
 		return 0
 	}

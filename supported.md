@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,845 of 32,501 cards eligible for paper support (45.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,862 of 32,501 cards eligible for paper support (45.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -653,6 +653,7 @@ Council4 currently supports **14,845 of 32,501 cards eligible for paper support 
 - Arno Dorian
 - Aron, Benalia's Ruin
 - Arrester's Admonition
+- Arrogant Bloodlord
 - Arrogant Outlaw
 - Arrogant Poet
 - Arrogant Vampire
@@ -1574,6 +1575,7 @@ Council4 currently supports **14,845 of 32,501 cards eligible for paper support 
 - Bountiful Landscape
 - Bountiful Promenade
 - Bovine Intervention
+- Brackwater Elemental
 - Brago, King Eternal
 - Braids, Cabal Minion
 - Braidwood Cup
@@ -2028,6 +2030,7 @@ Council4 currently supports **14,845 of 32,501 cards eligible for paper support 
 - Cephalid Scout
 - Cephalopod Sentry
 - Ceremonial Groundbreaker
+- Ceremonial Guard
 - Ceremonial Knife
 - Ceremonious Rejection
 - Cerodon Yearling
@@ -2172,6 +2175,7 @@ Council4 currently supports **14,845 of 32,501 cards eligible for paper support 
 - Cinder Marsh
 - Cinder Shade
 - Cinder Storm
+- Cinder Wall
 - Cinderbones
 - Cinderhaze Wretch
 - Cindering Cutthroat
@@ -2574,6 +2578,7 @@ Council4 currently supports **14,845 of 32,501 cards eligible for paper support 
 - Craw Wurm
 - Crawl from the Cellar
 - Crawling Filth
+- Crazed Armodon
 - Crazed Goblin
 - Crazed Skirge
 - Creakwood Ghoul
@@ -2640,6 +2645,7 @@ Council4 currently supports **14,845 of 32,501 cards eligible for paper support 
 - Cruel Tutor
 - Cruel Witness
 - Crumble
+- Crumbling Colossus
 - Crumbling Necropolis
 - Crumbling Vestige
 - Crusader of Odric
@@ -4550,6 +4556,7 @@ Council4 currently supports **14,845 of 32,501 cards eligible for paper support 
 - Fodder Launch
 - Fodder Tosser
 - Fog
+- Fog Elemental
 - Fog of Gnats
 - Foggy Bottom Swamp
 - Foggy Nelson, On Retainer
@@ -7630,6 +7637,7 @@ Council4 currently supports **14,845 of 32,501 cards eligible for paper support 
 - Marchesa's Infiltrator
 - Mardu Ascendancy
 - Mardu Banner
+- Mardu Blazebringer
 - Mardu Devotee
 - Mardu Hateblade
 - Mardu Heart-Piercer
@@ -9111,6 +9119,7 @@ Council4 currently supports **14,845 of 32,501 cards eligible for paper support 
 - Phantom Monster
 - Phantom Ninja
 - Phantom Warrior
+- Phantom Whelp
 - Pharagax Giant
 - Pharaoh Rama-Tut
 - Pharika's Chosen
@@ -9618,6 +9627,7 @@ Council4 currently supports **14,845 of 32,501 cards eligible for paper support 
 - Quickbeam, Upstart Ent
 - Quicksand
 - Quicksilver Amulet
+- Quicksilver Behemoth
 - Quicksilver Dagger
 - Quicksilver Fisher
 - Quicksilver Geyser
@@ -10378,6 +10388,7 @@ Council4 currently supports **14,845 of 32,501 cards eligible for paper support 
 - Rummaging Wizard
 - Run Amok
 - Runaway Boulder
+- Runaway Carriage
 - Rune-Cervin Rider
 - Rune-Scarred Demon
 - Rune-Sealed Wall
@@ -10549,6 +10560,7 @@ Council4 currently supports **14,845 of 32,501 cards eligible for paper support 
 - Sapphire Drake
 - Sapphire Medallion
 - Saprazzan Heir
+- Saprazzan Outrigger
 - Saproling
 - Saproling // Elf Knight
 - Saproling // Insect
@@ -12185,6 +12197,7 @@ Council4 currently supports **14,845 of 32,501 cards eligible for paper support 
 - Stockpiling Celebrant
 - Stoic Builder
 - Stoic Champion
+- Stoic Ephemera
 - Stoic Grove-Guide
 - Stoke the Flames
 - Stolen Grain
@@ -13798,6 +13811,7 @@ Council4 currently supports **14,845 of 32,501 cards eligible for paper support 
 - Vault Skirge
 - Vault Skyward
 - Vaultguard Trooper
+- Vebulid
 - Vec Townships
 - Vecna
 - Vectis Agents
@@ -14153,6 +14167,7 @@ Council4 currently supports **14,845 of 32,501 cards eligible for paper support 
 - Wall of Granite
 - Wall of Heat
 - Wall of Ice
+- Wall of Junk
 - Wall of Kelp
 - Wall of Lava
 - Wall of Light
@@ -14491,6 +14506,7 @@ Council4 currently supports **14,845 of 32,501 cards eligible for paper support 
 - Windrider Patrol
 - Windrider Wizard
 - Winds of Rebuke
+- Windscouter
 - Windseeker Centaur
 - Windstorm
 - Windstorm Drake
@@ -14775,6 +14791,7 @@ Council4 currently supports **14,845 of 32,501 cards eligible for paper support 
 - Zephyr Falcon
 - Zephyr Net
 - Zephyr Scribe
+- Zephyr Spirit
 - Zephyr Sprite
 - Zephyr Winder
 - Zephyrim
