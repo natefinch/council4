@@ -775,6 +775,15 @@ func analyzeSearchClause(effect *EffectSyntax) searchClauseAnalysis {
 		// models so the search clause itself stays exact.
 		return searchClauseAnalysis{detail: "", sharedSubtype: sharedSubtype, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 	}
+	if base, ok := stripSearchLifeGainRider(destination); ok && searchDestinationSupported(base, plural) {
+		// A "you gain N life" reward may close the search sentence, joined to the
+		// trailing "then shuffle" by "and" — "..., then shuffle and you gain 1
+		// life." (the Cabaretti Courtyard tapped-fetch land cycle). The life gain
+		// is compiled as its own effect that lowering validates and lowers after
+		// the search; here we only confirm the rider-free base destination is one
+		// the runtime models so the search clause itself stays exact.
+		return searchClauseAnalysis{detail: "", sharedSubtype: sharedSubtype, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
+	}
 	if !plural && searchTopDestinationSupported(destination) && !sharedSubtype {
 		return searchClauseAnalysis{detail: "", sharedSubtype: false, destinationPosition: EffectDestinationTop, control: SearchControlRiderNone}
 	}
@@ -824,7 +833,36 @@ func stripSearchLifeLossRider(head string) (string, bool) {
 	return head[:idx], true
 }
 
-// searchSharedSubtypeRiderText is the exact "that share a land type" correlation
+// stripSearchLifeGainRider removes a trailing "and you gain N life" reward (N a
+// positive integer) that closes a search sentence after its "then shuffle" — the
+// Cabaretti Courtyard tapped-fetch land cycle ends "..., then shuffle and you
+// gain 1 life." It returns the rider-free destination (ending again at "then
+// shuffle.") and true when the rider is present, so the base destination can be
+// matched against the destination whitelist. The life gain is compiled as its
+// own effect that lowering lowers after the search.
+func stripSearchLifeGainRider(destination string) (string, bool) {
+	head, ok := strings.CutSuffix(destination, " life.")
+	if !ok {
+		return destination, false
+	}
+	idx := strings.LastIndex(head, " and you gain ")
+	if idx < 0 {
+		return destination, false
+	}
+	amount := head[idx+len(" and you gain "):]
+	if amount == "" {
+		return destination, false
+	}
+	if _, err := strconv.Atoi(amount); err != nil {
+		return destination, false
+	}
+	base := head[:idx]
+	if !strings.HasSuffix(base, "then shuffle") {
+		return destination, false
+	}
+	return base + ".", true
+}
+
 // rider that follows the searched noun phrase, requiring every found card to
 // share a land subtype with the others (Myriad Landscape).
 const searchSharedSubtypeRiderText = " that share a land type"
@@ -887,6 +925,7 @@ func searchClausePrefix(effect *EffectSyntax) (prefix, text string) {
 	const lowerControllerPrefix = "search your library for "
 	const affectedPlayerPrefix = "That player may search their library for "
 	text = trimLeadingInterveningCondition(effect.Text)
+	text = stripMandatoryReflexiveConnector(text)
 	// A clause-initial "instead" marks a conditional replacement search ("If
 	// <condition>, instead search your library ..."); strip it so the search
 	// wording that follows reconstructs against the canonical prefix. The
@@ -992,6 +1031,23 @@ func trimLeadingInterveningCondition(text string) string {
 				return after
 			}
 		}
+	}
+	return text
+}
+
+// stripMandatoryReflexiveConnector removes a leading mandatory-reflexive "When
+// you do, " connector from a search effect's text so the byte-exact clause
+// reconstruction can match the search wording that follows. The parser leaves a
+// "When you do," after a *mandatory* action in-sentence and resolves its trailing
+// effect unconditionally (parseConditionIntro only converts the reflexive into an
+// "if you did" gate when a preceding "you may" makes the action optional). The
+// connector's literal presence therefore guarantees the unconditional form, as on
+// the Cabaretti Courtyard tapped-fetch land cycle ("When this land enters,
+// sacrifice it. When you do, search your library for ..."), so stripping it for
+// reconstruction is safe; the always-performed sequencing is unchanged.
+func stripMandatoryReflexiveConnector(text string) string {
+	if rest, ok := strings.CutPrefix(text, "When you do, "); ok {
+		return rest
 	}
 	return text
 }
