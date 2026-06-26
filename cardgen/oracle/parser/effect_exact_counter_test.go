@@ -305,3 +305,59 @@ func TestThatManyCounterPlacementAmount(t *testing.T) {
 		}
 	}
 }
+
+// TestExactEquippedCounterPlacementAccepts covers the Equipment recipient
+// "equipped creature", which shares the attached-permanent reference with the
+// Aura "enchanted creature" recipient and so must round-trip exactly too.
+func TestExactEquippedCounterPlacementAccepts(t *testing.T) {
+	t.Parallel()
+	accepted := []string{
+		"Put a +1/+1 counter on equipped creature.",
+		"Put a charge counter on equipped creature.",
+		"Put two +1/+1 counters on equipped creature.",
+	}
+	for _, source := range accepted {
+		effect := counterPlacementEffect(t, source)
+		if !effect.CounterRecipientAttached {
+			t.Errorf("CounterRecipientAttached(%q) = false, want true", source)
+		}
+		if !effect.Exact {
+			t.Errorf("counterPlacementExact(%q) = false, want true", source)
+		}
+	}
+}
+
+// TestExactForEachCounterPlacementAccepts covers the "for each <group>" dynamic
+// count form, which places one counter per counted object on the source.
+func TestExactForEachCounterPlacementAccepts(t *testing.T) {
+	t.Parallel()
+	accepted := []string{
+		"Put a +1/+1 counter on this creature for each creature card in your graveyard.",
+		"Put a +1/+1 counter on this creature for each card in your hand.",
+		"Put a +1/+1 counter on this creature for each creature you control.",
+	}
+	for _, source := range accepted {
+		if !counterPlacementExact(t, source) {
+			t.Errorf("counterPlacementExact(%q) = false, want true", source)
+		}
+	}
+}
+
+// TestExactForEachCounterPlacementFailsClosed keeps for-each forms the runtime
+// cannot model out of the exact production: a count word above one (the bare "a
+// <kind> counter" wording is required) and an iterator the dynamic-amount lowerer
+// does not recognize both leave the effect inexact.
+func TestExactForEachCounterPlacementFailsClosed(t *testing.T) {
+	t.Parallel()
+	rejected := []string{
+		// A multiplier above one is not the bare "a <kind> counter" count word.
+		"Put two +1/+1 counters on this creature for each creature you control.",
+		// Combat-state iterators are not recognized dynamic count subjects.
+		"Put a +1/+1 counter on this creature for each attacking creature you control.",
+	}
+	for _, source := range rejected {
+		if counterPlacementExact(t, source) {
+			t.Errorf("counterPlacementExact(%q) = true, want false", source)
+		}
+	}
+}

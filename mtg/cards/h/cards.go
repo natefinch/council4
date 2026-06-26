@@ -23,6 +23,7 @@ var Cards = []*game.CardDef{
 	HornbashMentor,
 	HoverguardObserver,
 	HowlOfTheNightPack,
+	HuatliRadiantChampion,
 	HuntTheHunter,
 	HuntTheWeak,
 	HunterSTalent,

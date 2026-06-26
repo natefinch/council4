@@ -1814,10 +1814,10 @@ type EffectSyntax struct {
 	CounterKindChoices []counter.Kind `json:",omitempty"`
 	// CounterRecipientAttached reports that a counter-placement effect places its
 	// counters on the permanent the source is attached to ("... on enchanted
-	// creature"), the Aura recipient the runtime models with its source
-	// attached-permanent reference. It is set only for the bare "enchanted
-	// creature" recipient; any other wording leaves it false so lowering fails
-	// closed.
+	// creature", "... on equipped creature"), the Aura or Equipment recipient the
+	// runtime models with its source attached-permanent reference. It is set only
+	// for the bare attached-creature recipient; any other wording leaves it false
+	// so lowering fails closed.
 	CounterRecipientAttached bool `json:",omitempty"`
 	// CounterRecipientSingleChoice reports that a non-target counter-placement
 	// effect places its counters on a single permanent the controller chooses

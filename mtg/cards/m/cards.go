@@ -30,6 +30,7 @@ var Cards = []*game.CardDef{
 	MindstabThrull,
 	Mobilization,
 	Molderhulk,
+	MoldgrafMillipede,
 	MonumentalHenge,
 	MoonveilDragon,
 	MorbidOpportunist,
