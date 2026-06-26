@@ -10,6 +10,7 @@ var Cards = []*game.CardDef{
 	FaithUnbroken,
 	FalseMemories,
 	FanaticOfRhonas,
+	FaramirStewardOfGondor,
 	FarhavenElf,
 	Farseek,
 	FeedTheFlames,

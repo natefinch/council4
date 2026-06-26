@@ -161,6 +161,12 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.ControllerControlsGreatestPowerCreature = true
 	case compiler.ConditionPredicateControlsGreatestToughnessCreature:
 		result.ControllerControlsGreatestToughnessCreature = true
+	case compiler.ConditionPredicateControllerIsMonarch:
+		result.ControllerIsMonarch = true
+	case compiler.ConditionPredicateControllerHasInitiative:
+		result.ControllerHasInitiative = true
+	case compiler.ConditionPredicateControllerHasCityBlessing:
+		result.ControllerHasCityBlessing = true
 	case compiler.ConditionPredicateEventHistory:
 		if condition.EventHistoryPattern == nil {
 			return game.Condition{}, false
@@ -264,6 +270,9 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 				ctx == conditionContextInterveningTrigger
 		case compiler.ConditionPredicateEventSubjectNameUnique,
 			compiler.ConditionPredicateSourceTributeNotPaid,
+			compiler.ConditionPredicateControllerIsMonarch,
+			compiler.ConditionPredicateControllerHasInitiative,
+			compiler.ConditionPredicateControllerHasCityBlessing,
 			compiler.ConditionPredicateAttackersAttackingControllerAtLeast:
 			return ctx == conditionContextInterveningTrigger
 		case compiler.ConditionPredicateControllerControlsCommander:

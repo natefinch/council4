@@ -26,6 +26,7 @@ var Cards = []*game.CardDef{
 	Skeletonize,
 	SkitteringPrecursor,
 	SkycoachConductor,
+	SkylineDespot,
 	SkyriderElf,
 	SlateStreetRuffian,
 	SludgeTitan,

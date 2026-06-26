@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,583 of 32,501 cards eligible for paper support (44.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,588 of 32,501 cards eligible for paper support (44.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4099,6 +4099,7 @@ Council4 currently supports **14,583 of 32,501 cards eligible for paper support 
 - Fangren Pathcutter
 - Fantastic Elasticity
 - Far // Away
+- Faramir, Steward of Gondor
 - Farbog Boneflinger
 - Farbog Explorer
 - Farbog Revenant
@@ -4773,6 +4774,7 @@ Council4 currently supports **14,583 of 32,501 cards eligible for paper support 
 - Garruk's Uprising
 - Garruk, Cursed Huntsman
 - Garruk, Primal Hunter
+- Garrulous Sycophant
 - Gate Colossus
 - Gatebreaker Ram
 - Gatecreeper Vine
@@ -5302,6 +5304,7 @@ Council4 currently supports **14,583 of 32,501 cards eligible for paper support 
 - Grave Robbers
 - Grave Titan
 - Grave Upheaval
+- Grave Venerations
 - Grave-Shell Scarab
 - Graveborn
 - Graveborn Muse
@@ -11239,6 +11242,7 @@ Council4 currently supports **14,583 of 32,501 cards eligible for paper support 
 - Skyknight Vanguard
 - Skylasher
 - Skyline Cascade
+- Skyline Despot
 - Skyline Predator
 - Skymarch Bloodletter
 - Skyraker Giant
@@ -12801,6 +12805,7 @@ Council4 currently supports **14,583 of 32,501 cards eligible for paper support 
 - Throne of Geth
 - Throne of the God-Pharaoh
 - Throne of the High City
+- Throne Warden
 - Throttle
 - Throwing Knife
 - Thrull

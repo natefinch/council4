@@ -197,6 +197,18 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.ControllerControlsGreatestToughnessCreature {
 		matches = matches && controllerControlsGreatestToughnessCreature(g, ctx)
 	}
+	if cond.ControllerIsMonarch {
+		player, ok := playerByID(g, ctx.controller)
+		matches = matches && ok && player.IsMonarch
+	}
+	if cond.ControllerHasInitiative {
+		player, ok := playerByID(g, ctx.controller)
+		matches = matches && ok && player.HasInitiative
+	}
+	if cond.ControllerHasCityBlessing {
+		player, ok := playerByID(g, ctx.controller)
+		matches = matches && ok && player.HasCityBlessing
+	}
 	if cond.Negate {
 		return !matches
 	}
