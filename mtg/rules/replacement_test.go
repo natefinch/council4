@@ -131,8 +131,8 @@ func TestMultipleGenericReplacementsRecordOrder(t *testing.T) {
 		t.Fatalf("replacement decisions = %+v, want one order decision", g.ReplacementDecisions)
 	}
 	decision := g.ReplacementDecisions[0]
-	if decision.Player != game.Player1 || len(decision.Selected) != 2 || decision.Selected[0] != 0 || decision.Selected[1] != 1 {
-		t.Fatalf("replacement decision = %+v, want deterministic Player1 order", decision)
+	if decision.Player != game.Player1 || len(decision.Selected) != 1 || decision.Selected[0] != 0 {
+		t.Fatalf("replacement decision = %+v, want deterministic Player1 first-effect order", decision)
 	}
 	if !g.Players[game.Player1].Hand.Contains(target.CardInstanceID) {
 		t.Fatal("second replacement in fallback order should move card to hand")

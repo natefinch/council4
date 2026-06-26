@@ -198,6 +198,13 @@ type Game struct {
 	// copied (Clone starts with a cold cache), and must only be open while game
 	// state is not mutating. See static_frame.go.
 	staticFrame *staticSourceFrame
+
+	// choiceCtx is a transient, rules-owned context (held as an opaque any to
+	// avoid an import cycle) used to prompt a player for a CR 616.1 replacement
+	// selection from deep within zone-change and damage code. It is nil outside a
+	// running agent-driven turn and is never deep copied (Clone starts without
+	// it). See choice_context.go.
+	choiceCtx any
 }
 
 // RunMode identifies the rules engine's player topology.

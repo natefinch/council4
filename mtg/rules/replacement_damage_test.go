@@ -1,9 +1,11 @@
 package rules
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -145,8 +147,8 @@ func TestDamageReplacementEffectsUseFallbackOrderingWhenNoChoiceIsAvailable(t *t
 		t.Fatalf("replacement decision player = %v, want damaged player", got)
 	}
 	decision := g.ReplacementDecisions[0]
-	if !decision.UsedFallback || len(decision.Selected) != 2 || decision.Selected[0] != 0 || decision.Selected[1] != 1 {
-		t.Fatalf("replacement decision = %+v, want deterministic fallback order", decision)
+	if !decision.UsedFallback || len(decision.Selected) != 1 || decision.Selected[0] != 0 {
+		t.Fatalf("replacement decision = %+v, want deterministic fallback (first effect)", decision)
 	}
 }
 
@@ -301,6 +303,88 @@ func TestRegenerationShieldExpiresDuringCleanup(t *testing.T) {
 	}
 }
 
+// replacementChoosingAgent picks the replacement/prevention effect whose label
+// contains a preferred substring when asked a CR 616.1 selection, and otherwise
+// defers. It passes on all priority actions.
+type replacementChoosingAgent struct {
+	prefer string
+}
+
+func (replacementChoosingAgent) ChooseAction(PlayerObservation, []action.Action) action.Action {
+	return action.Pass()
+}
+
+func (a replacementChoosingAgent) ChooseChoice(_ PlayerObservation, request game.ChoiceRequest) []int {
+	if request.Kind == game.ChoiceReplacement {
+		for _, option := range request.Options {
+			if strings.Contains(strings.ToLower(option.Label), a.prefer) {
+				return []int{option.Index}
+			}
+		}
+	}
+	return request.DefaultSelection
+}
+
+// TestDamageReplacementSelectionHonorsPlayerChoice covers CR 616.1: when two
+// replacement effects apply to the same damage event, the affected player chooses
+// which to apply first, and that choice changes the result. The fallback order
+// (add 1, then double) yields (2+1)*2 = 6; choosing to double first yields
+// (2*2)+1 = 5.
+func TestDamageReplacementSelectionHonorsPlayerChoice(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, damageAddendReplacementCardDef())
+	addReplacementPermanent(t, g, game.Player1, damageMultiplierReplacementCardDef())
+	sourceID := addColoredSourceCard(g, game.Player1, color.Red)
+
+	engine := NewEngine(nil)
+	agents := [game.NumPlayers]PlayerAgent{
+		// The damaged player (CR 616.1 chooser) elects to double the damage first.
+		game.Player2: replacementChoosingAgent{prefer: "double"},
+	}
+	engine.setReplacementChoiceContext(g, agents, &TurnLog{})
+	defer g.ClearChoiceContext()
+
+	dealt := dealPlayerDamage(g, sourceID, 0, game.Player1, game.Player2, 2, false)
+
+	if dealt != 5 {
+		t.Fatalf("damage dealt = %d, want 5 (double-then-add chosen by the affected player)", dealt)
+	}
+	if len(g.ReplacementDecisions) != 1 || g.ReplacementDecisions[0].UsedFallback {
+		t.Fatalf("replacement decisions = %+v, want one agent-made decision", g.ReplacementDecisions)
+	}
+}
+
+// TestDamageReplacementFallbackRecordedWhenChooserHasNoChoiceAgent covers the
+// UsedFallback metadata: when a choice context is present but the chooser's agent
+// can't answer a CR 616.1 selection (it doesn't implement ChoiceAgent), the engine
+// falls back to the first effect and records the decision as a fallback.
+func TestDamageReplacementFallbackRecordedWhenChooserHasNoChoiceAgent(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, damageAddendReplacementCardDef())
+	addReplacementPermanent(t, g, game.Player1, damageMultiplierReplacementCardDef())
+	sourceID := addColoredSourceCard(g, game.Player1, color.Red)
+
+	engine := NewEngine(nil)
+	// firstLegalAgent implements ChooseAction but not ChoiceAgent, so the CR 616.1
+	// selection falls back to the first match.
+	agents := [game.NumPlayers]PlayerAgent{game.Player2: firstLegalAgent{}}
+	engine.setReplacementChoiceContext(g, agents, &TurnLog{})
+	defer g.ClearChoiceContext()
+
+	dealt := dealPlayerDamage(g, sourceID, 0, game.Player1, game.Player2, 2, false)
+
+	if dealt != 6 {
+		t.Fatalf("damage dealt = %d, want fallback add-then-double 6", dealt)
+	}
+	if len(g.ReplacementDecisions) != 1 {
+		t.Fatalf("replacement decisions = %d, want 1", len(g.ReplacementDecisions))
+	}
+	decision := g.ReplacementDecisions[0]
+	if !decision.UsedFallback || len(decision.Selected) != 1 || decision.Selected[0] != 0 {
+		t.Fatalf("replacement decision = %+v, want fallback first-effect", decision)
+	}
+}
+
 func TestShieldAndRegenerationReplacementOrderIsRecorded(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
@@ -313,8 +397,8 @@ func TestShieldAndRegenerationReplacementOrderIsRecorded(t *testing.T) {
 		t.Fatalf("replacement decisions = %+v, want one shield/regeneration order", g.ReplacementDecisions)
 	}
 	decision := g.ReplacementDecisions[0]
-	if decision.Player != game.Player1 || !decision.UsedFallback || len(decision.Selected) != 2 {
-		t.Fatalf("replacement decision = %+v, want Player1 fallback order", decision)
+	if decision.Player != game.Player1 || !decision.UsedFallback || len(decision.Selected) != 1 {
+		t.Fatalf("replacement decision = %+v, want Player1 fallback (first effect)", decision)
 	}
 	if creature.Counters.Get(counter.Shield) != 0 || creature.RegenerationShields != 1 {
 		t.Fatalf("shield counters=%d regeneration=%d, want shield used before regeneration", creature.Counters.Get(counter.Shield), creature.RegenerationShields)

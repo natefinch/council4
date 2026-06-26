@@ -50,6 +50,14 @@ type ChoiceAgent interface {
 }
 
 func (e *Engine) chooseChoice(g *game.Game, agents [game.NumPlayers]PlayerAgent, request game.ChoiceRequest, log *TurnLog) []int {
+	selected, _ := e.chooseChoiceWithFallback(g, agents, request, log)
+	return selected
+}
+
+// chooseChoiceWithFallback is chooseChoice but also reports whether the engine had
+// to use a deterministic fallback (no agent, no ChoiceAgent, or an invalid agent
+// answer), so callers that record their own decision can mirror that flag.
+func (e *Engine) chooseChoiceWithFallback(g *game.Game, agents [game.NumPlayers]PlayerAgent, request game.ChoiceRequest, log *TurnLog) ([]int, bool) {
 	if request.ID == 0 {
 		request.ID = nextChoiceID(log)
 	}
@@ -67,7 +75,7 @@ func (e *Engine) chooseChoice(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 		Selected:     selected,
 		UsedFallback: usedFallback,
 	})
-	return selected
+	return selected, usedFallback
 }
 
 func (*Engine) agentChoice(g *game.Game, agents [game.NumPlayers]PlayerAgent, request game.ChoiceRequest) ([]int, bool) {

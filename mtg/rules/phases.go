@@ -18,7 +18,11 @@ func (e *Engine) runTurn(g *game.Game, agents [game.NumPlayers]PlayerAgent) (log
 
 	activePlayer := log.ActivePlayer
 	manaSpentBefore := g.Players[activePlayer].ManaPool.Spent()
+	// Make the player agents reachable from the replacement-selection chokepoint
+	// (CR 616.1) for the duration of the turn; see replacement_choice.go.
+	e.setReplacementChoiceContext(g, agents, &log)
 	defer func() {
+		g.ClearChoiceContext()
 		log.ManaSpent = g.Players[activePlayer].ManaPool.Spent() - manaSpentBefore
 	}()
 
