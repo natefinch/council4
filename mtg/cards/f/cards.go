@@ -7,6 +7,7 @@ import "github.com/natefinch/council4/mtg/game"
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
 	FaithUnbroken,
+	FalseMemories,
 	FanaticOfRhonas,
 	FarhavenElf,
 	Farseek,
@@ -15,10 +16,12 @@ var Cards = []*game.CardDef{
 	FireWhip,
 	FiresOfYavimaya,
 	FlamespeakerSWill,
+	FlintGolem,
 	FootMystic,
 	FootbottomFeast,
 	Forest,
 	ForeverYoung,
 	FormAPosse,
+	FracturedSanity,
 	FranticSalvage,
 }

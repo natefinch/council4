@@ -3140,7 +3140,14 @@ func tokenCreatureKeyword(k KeywordKind) bool {
 }
 
 func exactCardCountEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVerb string, allowDynamic bool) bool {
-	if effect.Amount.Known && !exactLegacyFixedAmountSyntax(effect) {
+	// Mill amounts are routinely spelled out well above the four-card ceiling
+	// the legacy fixed-amount shortcut enforces ("mills five cards", "mills ten
+	// cards", "mills thirteen cards"). The exact-reconstruction below already
+	// rebuilds the clause from the original amount token, so a spelled mill
+	// count round-trips byte-for-byte and needs no digit form. The shortcut
+	// still guards the other card-count verbs (draw, discard, hand-to-library)
+	// where the conservative ceiling remains in force.
+	if effect.Amount.Known && effect.Kind != EffectMill && !exactLegacyFixedAmountSyntax(effect) {
 		return false
 	}
 	if effect.Kind == EffectMill && effect.Amount.DynamicKind == EffectDynamicAmountControllerLife {
@@ -3156,6 +3163,8 @@ func exactCardCountEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVer
 		prefixes = inabilityAwarePrefixes(effect, "Each other player", subjectVerb)
 	case EffectContextEachOpponent:
 		prefixes = inabilityAwarePrefixes(effect, "Each opponent", subjectVerb)
+	case EffectContextDefendingPlayer:
+		prefixes = []string{"Defending player " + subjectVerb}
 	case EffectContextTarget:
 		if len(effect.Targets) == 1 && effect.Targets[0].Exact &&
 			exactCardCountTargetPlayer(effect.Targets[0].Selection) {
