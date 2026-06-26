@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,491 of 32,501 cards eligible for paper support (44.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,499 of 32,501 cards eligible for paper support (44.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -609,6 +609,7 @@ Council4 currently supports **14,491 of 32,501 cards eligible for paper support 
 - Armguard Familiar
 - Armillary Sphere
 - Armistice
+- Armor Thrull
 - Armor Wars
 - Armorcraft Judge
 - Armored Ascension
@@ -1569,6 +1570,7 @@ Council4 currently supports **14,491 of 32,501 cards eligible for paper support 
 - Brass Man
 - Brass Secretary
 - Brass's Bounty
+- Brass-Talon Chimera
 - Braulios of Pheres Band
 - Bravado
 - Brave-Kin Duo
@@ -6330,6 +6332,7 @@ Council4 currently supports **14,491 of 32,501 cards eligible for paper support 
 - Iron Will
 - Iron-Barb Hellion
 - Iron-Fist Pulverizer
+- Iron-Heart Chimera
 - Iron-Shield Elf
 - Ironclad Krovod
 - Ironclad Revolutionary
@@ -6952,6 +6955,7 @@ Council4 currently supports **14,491 of 32,501 cards eligible for paper support 
 - Lazotep Reaver
 - Lead Astray
 - Lead Pipe
+- Lead-Belly Chimera
 - Leaden Myr
 - Leaf Arrow
 - Leaf Dancer
@@ -7069,6 +7073,7 @@ Council4 currently supports **14,491 of 32,501 cards eligible for paper support 
 - Lightning Mare
 - Lightning Prowess
 - Lightning Rager
+- Lightning Serpent
 - Lightning Skelemental
 - Lightning Spear
 - Lightning Stormkin
@@ -10832,6 +10837,7 @@ Council4 currently supports **14,491 of 32,501 cards eligible for paper support 
 - Shield Bearer
 - Shield Mate
 - Shield of Duty and Reason
+- Shield Sphere
 - Shield Wall
 - Shielded Aether Thief
 - Shifting Wall
@@ -11666,6 +11672,7 @@ Council4 currently supports **14,491 of 32,501 cards eligible for paper support 
 - Spirit of the Hunt
 - Spirit of the Labyrinth
 - Spirit of the Spires
+- Spirit Shackle
 - Spirit Summoning
 - Spirit Warrior
 - Spirit Weaver
@@ -12803,6 +12810,7 @@ Council4 currently supports **14,491 of 32,501 cards eligible for paper support 
 - Timid Shieldbearer
 - Timin, Youthful Geist
 - Tin Street Market
+- Tin-Wing Chimera
 - Tinder Farm
 - Tine Shrike
 - Tinker
