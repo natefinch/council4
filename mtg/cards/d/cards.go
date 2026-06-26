@@ -28,5 +28,6 @@ var Cards = []*game.CardDef{
 	DrakeHatcher,
 	DranaSChosen,
 	DuchessWaywardTavernkeep,
+	DreamcallerSiren,
 	DuskfangMentor,
 }

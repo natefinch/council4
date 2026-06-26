@@ -788,6 +788,29 @@ func blockerMatchesRestriction(g *game.Game, blocker *game.Permanent, restrictio
 	}
 }
 
+// ruleEffectLimitsBlockerToCreaturesWith reports whether a blocker-side "can
+// block only creatures with ..." permission restriction on blocker stops it from
+// blocking attacker because attacker does not match the restriction's
+// BlockerRestriction characteristic ("This creature can block only creatures with
+// flying."). The restriction describes the attacker the blocker may block, so the
+// match is tested against attacker rather than against another blocker.
+func ruleEffectLimitsBlockerToCreaturesWith(g *game.Game, blocker, attacker *game.Permanent) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectCanBlockOnlyCreaturesWith {
+			continue
+		}
+		if !ruleEffectMatchesPermanent(g, effect, blocker) {
+			continue
+		}
+		if !blockerMatchesRestriction(g, attacker, effect.BlockerRestriction) {
+			return true
+		}
+	}
+	return false
+}
+
 func ruleEffectPreventsUntap(g *game.Game, permanent *game.Permanent) bool {
 	effects := activeRuleEffects(g)
 	for i := range effects {

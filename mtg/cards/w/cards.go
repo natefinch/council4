@@ -8,8 +8,10 @@ import "github.com/natefinch/council4/mtg/game"
 var Cards = []*game.CardDef{
 	WalkThePlank,
 	WanderingMind,
+	WanderlightSpirit,
 	WantedGriffin,
 	Weatherlight,
+	WelkinTern,
 	WildInstincts,
 	WildestDreams,
 	WindbriskHeights,

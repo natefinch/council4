@@ -24,6 +24,7 @@ var Cards = []*game.CardDef{
 	InnerDemon,
 	InsectoidExterminator,
 	Insolence,
+	IntoTheFaeCourt,
 	InvasionOfIxalan,
 	IroasSBlessing,
 	IronHeartChimera,

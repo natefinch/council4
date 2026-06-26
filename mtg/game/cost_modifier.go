@@ -403,6 +403,14 @@ const (
 	// controller-scoped turn-structure static carrying no payload beyond the
 	// affected player.
 	RuleEffectSkipDrawStep
+	// RuleEffectCanBlockOnlyCreaturesWith is the blocker-side permission
+	// restriction "can block only creatures with flying" (Cloud Sprite,
+	// Gloomwidow): the affected creature may block an attacker only when that
+	// attacker matches the carried BlockerRestriction (currently flying). Unlike
+	// RuleEffectCantBeBlockedByCreaturesWith, the restriction characteristic
+	// describes the attacker being blocked rather than the affected creature's own
+	// blockers.
+	RuleEffectCanBlockOnlyCreaturesWith
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -451,7 +459,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectSuppressOpponentEnteringTriggers,
 		RuleEffectAttackTaxPerCreature,
 		RuleEffectManaProductionMultiplier,
-		RuleEffectSkipDrawStep:
+		RuleEffectSkipDrawStep,
+		RuleEffectCanBlockOnlyCreaturesWith:
 		return true
 	default:
 		return false

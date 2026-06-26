@@ -798,6 +798,11 @@ func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.
 			effects[i].BlockerRestriction = restriction
 		}
 	}
+	if declaration.Rule.Kind == compiler.StaticRuleCanBlockOnlyCreaturesWithFlying {
+		for i := range effects {
+			effects[i].BlockerRestriction = game.BlockerRestriction{Kind: game.BlockerRestrictionFlying}
+		}
+	}
 	functionZone, ok := lowerStaticZone(declaration.Rule.Zone)
 	if !ok || (body.ZoneOfFunction != zone.None && body.ZoneOfFunction != functionZone) {
 		return false
@@ -863,6 +868,7 @@ func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {
 		return compiler.StaticRuleDomainAttack
 	case compiler.StaticRuleCantBlock, compiler.StaticRuleCantBeBlocked, compiler.StaticRuleMustBeBlocked,
 		compiler.StaticRuleCantBeBlockedByMoreThanOne, compiler.StaticRuleCantBeBlockedByCreaturesWith,
+		compiler.StaticRuleCanBlockOnlyCreaturesWithFlying,
 		compiler.StaticRuleCantBlockAndCantBeBlocked,
 		compiler.StaticRuleMustBeBlockedByAllAble, compiler.StaticRuleAssignDamageAsUnblocked:
 		return compiler.StaticRuleDomainBlock
@@ -1442,6 +1448,8 @@ func lowerStaticRuleKind(kind compiler.StaticRuleKind) (game.RuleEffectKind, boo
 		return game.RuleEffectCantBeBlockedByMoreThanOne, true
 	case compiler.StaticRuleCantBeBlockedByCreaturesWith:
 		return game.RuleEffectCantBeBlockedByCreaturesWith, true
+	case compiler.StaticRuleCanBlockOnlyCreaturesWithFlying:
+		return game.RuleEffectCanBlockOnlyCreaturesWith, true
 	case compiler.StaticRuleCantAttack:
 		return game.RuleEffectCantAttack, true
 	case compiler.StaticRuleMustAttack:

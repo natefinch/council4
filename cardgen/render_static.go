@@ -613,7 +613,7 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("GrantedKeyword: %s,", keyword))
 	}
-	if effect.Kind == game.RuleEffectCantBeBlockedByCreaturesWith {
+	if effect.Kind == game.RuleEffectCantBeBlockedByCreaturesWith || effect.Kind == game.RuleEffectCanBlockOnlyCreaturesWith {
 		restriction, err := renderBlockerRestriction(effect.BlockerRestriction)
 		if err != nil {
 			return "", err
@@ -857,6 +857,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectCantBeBlocked", nil
 	case game.RuleEffectCantBeBlockedByCreaturesWith:
 		return "game.RuleEffectCantBeBlockedByCreaturesWith", nil
+	case game.RuleEffectCanBlockOnlyCreaturesWith:
+		return "game.RuleEffectCanBlockOnlyCreaturesWith", nil
 	case game.RuleEffectCantBeBlockedByMoreThanOne:
 		return "game.RuleEffectCantBeBlockedByMoreThanOne", nil
 	case game.RuleEffectMustAttack:

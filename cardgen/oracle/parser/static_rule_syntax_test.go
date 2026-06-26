@@ -285,3 +285,47 @@ func TestParseSelfNameStaticRuleUncounterableFailsClosed(t *testing.T) {
 		}
 	}
 }
+
+func TestParseSelfCanBlockOnlyFlyingStaticRuleSentence(t *testing.T) {
+	t.Parallel()
+	rule := parseStaticRuleSentence(t, "This creature can block only creatures with flying.")
+	if rule == nil {
+		t.Fatal("StaticRule = nil, want a static rule")
+	}
+	if rule.Subject.Kind != StaticRuleSubjectSourceCreature {
+		t.Fatalf("subject = %s, want %s", rule.Subject.Kind, StaticRuleSubjectSourceCreature)
+	}
+	if rule.Constraint.Kind != StaticRuleConstraintRequirement {
+		t.Fatalf("constraint = %s, want %s", rule.Constraint.Kind, StaticRuleConstraintRequirement)
+	}
+	if rule.Operation.Kind != StaticRuleOperationBlock || rule.Operation.Voice != StaticRuleVoiceActive {
+		t.Fatalf("operation = %#v, want %s voice %s", rule.Operation, StaticRuleOperationBlock, StaticRuleVoiceActive)
+	}
+	if len(rule.Qualifiers) != 1 || rule.Qualifiers[0].Kind != StaticRuleQualifierBlockedAttackerFlying {
+		t.Fatalf("qualifiers = %#v, want one %s", rule.Qualifiers, StaticRuleQualifierBlockedAttackerFlying)
+	}
+}
+
+func TestParseCanBlockOnlyFlyingStaticRuleSentencesFailClosed(t *testing.T) {
+	t.Parallel()
+	for name, source := range map[string]string{
+		"power restriction":  "This creature can block only creatures with power 2 or less.",
+		"non flying keyword": "This creature can block only creatures with reach.",
+		"trailing clause":    "This creature can block only creatures with flying this turn.",
+		"can attack variant": "This creature can attack only creatures with flying.",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(source, Context{})
+			if len(document.Abilities) != 1 {
+				t.Fatalf("abilities = %#v, want one", document.Abilities)
+			}
+			for _, sentence := range document.Abilities[0].Sentences {
+				if sentence.StaticRule != nil && len(sentence.StaticRule.Qualifiers) == 1 &&
+					sentence.StaticRule.Qualifiers[0].Kind == StaticRuleQualifierBlockedAttackerFlying {
+					t.Fatalf("sentence produced can-block-only-flying StaticRule %#v, want none (fail closed)", sentence.StaticRule)
+				}
+			}
+		})
+	}
+}

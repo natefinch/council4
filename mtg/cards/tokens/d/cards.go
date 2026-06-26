@@ -38,6 +38,7 @@ var Cards = []*game.CardDef{
 	DragonTokeneaf318f02cad437c816278462ecbc235,
 	DrakeToken6c037566d502456dab95390172103117,
 	DrakeToken9e26637480f1458a941716220d2a013a,
+	DroneToken1c68ec5e2ffa48b7b3694b6148d9dce4,
 	DwarfBerserkerToken0cc90ce15c094bd28ce44e96449b4402,
 	DwarfToken1c65717f09ac46f3b48019c2cafe9fe9,
 	DwarfTokenTokenc92fc51f5d4e4e41bcbc4259d36f9f39,

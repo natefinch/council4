@@ -1569,6 +1569,12 @@ const (
 	// so it lowers to a CreateReplacement bound to that target for the turn. Added
 	// last so existing kinds keep their wire values.
 	EffectExileIfWouldDieThisTurn
+	// EffectCanBlockOnlyCreaturesWithFlying is the blocker-side permission
+	// restriction "can block only creatures with flying" (Cloud Sprite,
+	// Gloomwidow): the subject creature may block only attackers that have flying.
+	// It lowers to the can-block-only runtime rule effect bounded by the flying
+	// blocker restriction. Added last so existing kinds keep their wire values.
+	EffectCanBlockOnlyCreaturesWithFlying
 )
 
 // DurationKind identifies common continuous-effect durations.

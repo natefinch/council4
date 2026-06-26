@@ -225,6 +225,15 @@ func parseStaticRuleOperationsForSubject(tokens []shared.Token, subject StaticRu
 		}
 		return rule, true
 	}
+	if block, ok := parseCanBlockOnlyFlyingRule(tokens, next); ok {
+		rule.Constraint = block.Constraint
+		rule.Operation = block.Operation
+		rule.Qualifiers = block.Qualifiers
+		if !validStaticRuleSyntax(*rule) {
+			return nil, false
+		}
+		return rule, true
+	}
 	if constraint, operation, ok := parseStaticDoesntUntapRule(tokens, next); ok {
 		rule.Constraint = constraint
 		rule.Operation = operation
@@ -397,6 +406,34 @@ func parseRequiredBlockRule(tokens []shared.Token, start int) (requiredAttackRul
 				Span: shared.SpanOf(tokens[start+3 : start+5]),
 			},
 		},
+	}, true
+}
+
+// parseCanBlockOnlyFlyingRule recognizes the blocker-side permission restriction
+// "can block only creatures with flying" (Cloud Sprite, Gloomwidow): the subject
+// creature may block only attackers that have flying. The phrasing is fixed and
+// fully consumed; any other restriction wording fails closed so the recognizer
+// stays narrow. It models the restriction as a requirement on the active block
+// operation bounded by the flying-attacker qualifier.
+func parseCanBlockOnlyFlyingRule(tokens []shared.Token, start int) (requiredAttackRuleSyntax, bool) {
+	if !staticRuleWordsAt(tokens, start, "can", "block", "only", "creatures", "with", "flying") ||
+		start+6 != len(tokens)-1 {
+		return requiredAttackRuleSyntax{}, false
+	}
+	return requiredAttackRuleSyntax{
+		Constraint: StaticRuleConstraint{
+			Kind: StaticRuleConstraintRequirement,
+			Span: shared.SpanOf(tokens[start : start+3]),
+		},
+		Operation: StaticRuleOperation{
+			Kind:  StaticRuleOperationBlock,
+			Voice: StaticRuleVoiceActive,
+			Span:  tokens[start+1].Span,
+		},
+		Qualifiers: []StaticRuleQualifier{{
+			Kind: StaticRuleQualifierBlockedAttackerFlying,
+			Span: shared.SpanOf(tokens[start+2 : start+6]),
+		}},
 	}, true
 }
 
@@ -620,6 +657,10 @@ func validCreatureStaticRuleOperation(rule StaticRuleSyntax) bool {
 			rule.Operation.Kind == StaticRuleOperationBlock &&
 			rule.Operation.Voice == StaticRuleVoicePassive &&
 			staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierIfAble)) ||
+		(rule.Constraint.Kind == StaticRuleConstraintRequirement &&
+			rule.Operation.Kind == StaticRuleOperationBlock &&
+			rule.Operation.Voice == StaticRuleVoiceActive &&
+			staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockedAttackerFlying)) ||
 		(rule.Constraint.Kind == StaticRuleConstraintRequirement &&
 			rule.Operation.Kind == StaticRuleOperationBlockedByAll &&
 			rule.Operation.Voice == StaticRuleVoicePassive &&

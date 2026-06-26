@@ -34,6 +34,7 @@ var Cards = []*game.CardDef{
 	BirdTokenc1cb2b2bb5954049bee6af6aee059743,
 	BirdTokened1eaac279f74d4fa0c5f87a4cf6042c,
 	BirdTokenee6f463c5dd34a1d85437f7cf7f27f48,
+	BirdTokenf50b144c021a40259dc71639fdc65505,
 	BoarToken11734409b03b4905af83261f29a96bc2,
 	BoarToken780beda20f2c49f2a3b541a31bfc5f7d,
 	BoarTokene4a19155668943de8175f28dd2cf0a9a,
