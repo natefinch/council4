@@ -546,6 +546,30 @@ func TestTemporaryModifierAppliesBeforePowerToughnessSwitch(t *testing.T) {
 	}
 }
 
+// TestDoubleToughnessIncludesEarlierMinusCounterInLayer7c covers the toughness
+// side and negative counters: base 3/3, a -1/-1 counter, then double toughness.
+// CR 7c order: counter (2/2) then double toughness -> 2/4, not double-first (3/6)
+// then counter (2/5).
+func TestDoubleToughnessIncludesEarlierMinusCounterInLayer7c(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	creature.Counters.Add(counter.MinusOneMinusOne, 1)
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:               1,
+		AffectedObjectID: creature.ObjectID,
+		Timestamp:        creature.Timestamp() + 100,
+		Layer:            game.LayerPowerToughnessModify,
+		DoubleToughness:  true,
+	})
+
+	if got := effectivePower(g, creature); got != 2 {
+		t.Fatalf("effective power = %d, want 2", got)
+	}
+	if got, ok := effectiveToughness(g, creature); !ok || got != 4 {
+		t.Fatalf("effective toughness = %d ok=%v, want 4 (counter included in doubling)", got, ok)
+	}
+}
+
 // TestContinuousEffectDependencyKeepsTimestampOrderForUnblockedEffects covers
 // CR 613.8b/613.8c: once a dependency is applied, the dependent effect applies
 // just after it, and any independent later-timestamp effect must not jump ahead
