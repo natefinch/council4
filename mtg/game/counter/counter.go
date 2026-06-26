@@ -63,11 +63,53 @@ const (
 	PlusZeroPlusTwo   // +0/+2 counter
 	MinusTwoMinusOne  // -2/-1 counter
 	MinusOneMinusZero // -1/-0 counter
+
+	// Named marker counters with no inherent rules meaning beyond being a
+	// counter of a particular name (CR 122). They are placed and removed like
+	// any other counter and back the many cards whose costs or abilities track
+	// a uniquely named counter. Ordered last so the discrete kind values that
+	// precede them, and the generated source identifiers, are unchanged.
+
+	Spore      // Spore counter (Thallid/Saproling cycle)
+	Fade       // Fade counter (Fading)
+	Divinity   // Divinity counter (Myojin cycle)
+	Healing    // Healing counter (Fylgja)
+	Wish       // Wish counter (Wishclaw Talisman, Ring of Three Wishes)
+	Study      // Study counter (Pursuit of Knowledge)
+	Dream      // Dream counter (Rasputin Dreamweaver)
+	Supply     // Supply counter (Stocking the Pantry)
+	Story      // Story counter (Staff of the Storyteller)
+	Film       // Film counter (Peter Parker's Camera)
+	Hoofprint  // Hoofprint counter (Hoofprints of the Stag)
+	Suspect    // Suspect counter (Investigator's Journal)
+	Javelin    // Javelin counter (Icatian Javelineers)
+	Cube       // Cube counter (Delif's Cube)
+	Polyp      // Polyp counter (Coral Reef)
+	Component  // Component counter (Component Pouch)
+	Eon        // Eon counter (Magosi, the Waterveil)
+	Incubation // Incubation counter (Drake Hatcher)
+	Devotion   // Devotion counter (Pious Kitsune)
+	Foreshadow // Foreshadow counter (Ominous Seas)
+	Arrowhead  // Arrowhead counter (Serrated Arrows)
+	Carrion    // Carrion counter (Osai Vultures)
+	Corpse     // Corpse counter (Scavenging Ghoul)
+	Loot       // Loot counter (Bandit's Haul)
+	Net        // Net counter (Braided Net)
+	Gold       // Gold counter (Dragon's Hoard)
+	Currency   // Currency counter (Trade Caravan)
+	Book       // Book counter (Spell Satchel)
+	Blaze      // Blaze counter (Five-Alarm Fire)
+	Palliation // Palliation counter (Palliation Accord)
+	Gem        // Gem counter (Briber's Purse)
+	Pressure   // Pressure counter (Hellion Crucible)
+	Flame      // Flame counter (Flame Channeler)
+	Ice        // Ice counter (Iceberg)
+	Coin       // Coin counter (Noble's Purse)
 )
 
 // Valid reports whether k is a recognized counter kind.
 func (k Kind) Valid() bool {
-	return k >= PlusOnePlusOne && k <= MinusOneMinusZero
+	return k >= PlusOnePlusOne && k <= Coin
 }
 
 // PlayerOnly reports whether k may be placed only on players.
@@ -169,6 +211,76 @@ func (k Kind) String() string {
 		return "-2/-1"
 	case MinusOneMinusZero:
 		return "-1/-0"
+	case Spore:
+		return "spore"
+	case Fade:
+		return "fade"
+	case Divinity:
+		return "divinity"
+	case Healing:
+		return "healing"
+	case Wish:
+		return "wish"
+	case Study:
+		return "study"
+	case Dream:
+		return "dream"
+	case Supply:
+		return "supply"
+	case Story:
+		return "story"
+	case Film:
+		return "film"
+	case Hoofprint:
+		return "hoofprint"
+	case Suspect:
+		return "suspect"
+	case Javelin:
+		return "javelin"
+	case Cube:
+		return "cube"
+	case Polyp:
+		return "polyp"
+	case Component:
+		return "component"
+	case Eon:
+		return "eon"
+	case Incubation:
+		return "incubation"
+	case Devotion:
+		return "devotion"
+	case Foreshadow:
+		return "foreshadow"
+	case Arrowhead:
+		return "arrowhead"
+	case Carrion:
+		return "carrion"
+	case Corpse:
+		return "corpse"
+	case Loot:
+		return "loot"
+	case Net:
+		return "net"
+	case Gold:
+		return "gold"
+	case Currency:
+		return "currency"
+	case Book:
+		return "book"
+	case Blaze:
+		return "blaze"
+	case Palliation:
+		return "palliation"
+	case Gem:
+		return "gem"
+	case Pressure:
+		return "pressure"
+	case Flame:
+		return "flame"
+	case Ice:
+		return "ice"
+	case Coin:
+		return "coin"
 	default:
 		return "unknown"
 	}

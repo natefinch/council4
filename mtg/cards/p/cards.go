@@ -6,6 +6,7 @@ import "github.com/natefinch/council4/mtg/game"
 
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
+	PallidMycoderm,
 	ParadoxSurveyor,
 	PathOfAnnihilation,
 	PeerThroughDepths,
@@ -21,5 +22,6 @@ var Cards = []*game.CardDef{
 	PropagatorDrone,
 	ProsperityTycoon,
 	PsychicVenom,
+	PsychotropeThallid,
 	PuncturingBlow,
 }

@@ -401,7 +401,7 @@ func TestRebaseAddPlayerCounterTargetReference(t *testing.T) {
 func TestLowerCounterPlacementRejectsUnsupportedForms(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
-		"Put a fade counter on target permanent.",
+		"Put a petal counter on target permanent.",
 		"Put an energy counter on target creature.",
 		"Put a charge counter on target player.",
 		"Put a charge counter on any target.",
