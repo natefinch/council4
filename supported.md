@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,601 of 32,501 cards eligible for paper support (44.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,632 of 32,501 cards eligible for paper support (45.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -183,6 +183,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Agonizing Demise
 - Agonizing Syphon
 - Agoraphobia
+- Ahn-Crop Invader
 - Ahriman
 - Aid the Fallen
 - Aim for the Head
@@ -1022,6 +1023,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Bear Cub
 - Bear Trap
 - Bear's Companion
+- Bearer of Glory
 - Bearer of Memory
 - Bearer of the Heavens
 - Bearscape
@@ -1292,6 +1294,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Blood
 - Blood Artist
 - Blood Bairn
+- Blood Burglar
 - Blood Celebrant
 - Blood Crypt
 - Blood Curdle
@@ -2307,6 +2310,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Colossodon Yearling
 - Colossus Hammer
 - Colossus of Sardia
+- Colossus, Steel Stalwart
 - Combat Courier
 - Combat Professor
 - Combat Tutorial
@@ -2689,6 +2693,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Daggerdrome Imp
 - Daggerfang Duo
 - Daggermaw Megalodon
+- Daggersail Aeronaut
 - Dai Li Censor
 - Daily Bugle Newspaper
 - Daily Regimen
@@ -2710,6 +2715,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Dancing Scimitar
 - Dangerous Wager
 - Danitha Capashen, Paragon
+- Dapper Shieldmate
 - Daraja Griffin
 - Darba
 - Daredevil's Billy Club
@@ -3430,6 +3436,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Dubious Delicacy
 - Duelcraft Trainer
 - Dueling Rapier
+- Duelist of Deep Faith
 - Duelist of the Mind
 - Duergar Assailant
 - Duergar Cave-Guard
@@ -4155,6 +4162,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Feedback Bolt
 - Feeding Frenzy
 - Feeling of Dread
+- Feisty Spikeling
 - Feiyi Snake
 - Feldon's Cane
 - Felhide Minotaur
@@ -4611,6 +4619,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Frenzied Raptor
 - Frenzied Tilling
 - Fresh Volunteers
+- Fresh-Faced Recruit
 - Fretwork Colony
 - Friendly Ghost
 - Friendly Neighborhood
@@ -5571,6 +5580,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Hardened Scales
 - Hardened Tactician
 - Hardened-Scale Armor
+- Hardy Veteran
 - Harmattan Efreet
 - Harmonic Prodigy
 - Harmonious Archon
@@ -5865,6 +5875,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Hooded Kavu
 - Hoodwink
 - Hoof Skulkin
+- Hookblade Veteran
 - Hooting Mandrills
 - Hop to It
 - Hope Charm
@@ -6443,6 +6454,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Jarvis, Earth's Mightiest Butler
 - Jasmine Boreal
 - Jaspera Sentinel
+- Javelin of Lightning
 - Jawbone Duelist
 - Jawbone Skulkin
 - Jaya's Firenado
@@ -6749,6 +6761,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Kjeldoran Skyknight
 - Kjeldoran Warrior
 - Klothys's Design
+- Knife
 - Knight
 - Knight
 - Knight
@@ -7014,6 +7027,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Ledev Guardian
 - Ledger Shredder
 - Leech Bonder
+- Leech Fanatic
 - Leech Gauntlet
 - Leeching Bite
 - Leeching Sliver
@@ -8469,6 +8483,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Null Brooch
 - Null Caller
 - Null Champion
+- Null Group Biological Assets
 - Nullmage Shepherd
 - Nullpriest of Oblivion
 - Numai Outcast
@@ -9181,6 +9196,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Potioner's Trove
 - Pounce
 - Pouncing Cheetah
+- Pouncing Lynx
 - Pouncing Shoreshark
 - Power Armor
 - Power Boost
@@ -9195,6 +9211,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Prairie Stream
 - Prakhata Club Security
 - Prakhata Pillar-Bug
+- Prava of the Steel Legion
 - Prayer of Binding
 - Precinct Captain
 - Precise Strike
@@ -9221,6 +9238,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Prey Upon
 - Prey's Vengeance
 - Price of Freedom
+- Prickleboar
 - Prickly Boggart
 - Prickly Marmoset
 - Prickly Pair
@@ -9451,6 +9469,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Quest for the Goblin Lord
 - Queza, Augur of Agonies
 - Quick Study
+- Quick-Draw Katana
 - Quickbeam, Upstart Ent
 - Quicksand
 - Quicksilver Amulet
@@ -9606,6 +9625,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Rankle's Prank
 - Ransack the Lab
 - Rapacious Dragon
+- Raph's Bravado
 - Raphael, Tough Turtle
 - Rapid Hybridization
 - Rappelling Scouts
@@ -9620,6 +9640,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Rat King, Pale Piper
 - Rat Rogue
 - Ratcatcher
+- Ratcatcher Trainee // Pest Problem
 - Rath's Edge
 - Rathi Fiend
 - Rathi Intimidator
@@ -11201,6 +11222,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Skittering Surveyor
 - Skitterskin
 - Skola Grovedancer
+- Skophos Reaver
 - Skophos Warleader
 - Skorpekh Destroyer
 - Skred
@@ -11425,6 +11447,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Snow-Covered Wastes
 - Snowfield Sinkhole
 - Snowhorn Rider
+- Snowmelt Stag
 - Soaring Drake
 - Soaring Hope
 - Soaring Sandwing
@@ -11585,6 +11608,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Sparkmage Apprentice
 - Sparring Construct
 - Sparring Mummy
+- Spartan Veteran
 - Spatial Contortion
 - Spawn
 - Spawn of Mayhem
@@ -11663,6 +11687,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Spider Spawning
 - Spider-Bot
 - Spider-Byte, Web Warden
+- Spider-Girl, Legacy Hero
 - Spider-Gwen, Free Spirit
 - Spider-Man 2099, Miguel O'Hara
 - Spider-Man, Hometown Hero
@@ -11766,6 +11791,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Spiteful Blow
 - Spiteful Bully
 - Spiteful Motives
+- Spiteful Prankster
 - Spiteful Sliver
 - Spiteful Squad
 - Spiteful Visions
@@ -11794,6 +11820,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Spore Crawler
 - Spore Frog
 - Spore Swarm
+- Sporeback Wolf
 - Sporecap Spider
 - Sporecrown Thallid
 - Sporemound
@@ -12079,6 +12106,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Stream Hopper
 - Stream of Life
 - Stream of Unconsciousness
+- Street Riot
 - Streetbreaker Wurm
 - Strength Bobblehead
 - Strength from the Fallen
@@ -12199,6 +12227,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Sun-Crested Pterodon
 - Sun-Crowned Hunters
 - Sun-Dappled Celebrant
+- Sun-Spider, Nimble Webber
 - Sunastian Falconer
 - Sunbaked Canyon
 - Sunbeam Spellbomb
@@ -12222,6 +12251,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Sunken Hollow
 - Sunken Ruins
 - Sunlance
+- Sunlit Hoplite
 - Sunlit Marsh
 - Sunmane Pegasus
 - Sunpetal Grove
@@ -14208,6 +14238,7 @@ Council4 currently supports **14,601 of 32,501 cards eligible for paper support 
 - Wildsize
 - Wildslayer Elves
 - Wildwood Escort
+- Wildwood Geist
 - Wildwood Mentor
 - Wildwood Patrol
 - Wildwood Rebirth

@@ -209,6 +209,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 		player, ok := playerByID(g, ctx.controller)
 		matches = matches && ok && player.HasCityBlessing
 	}
+	if cond.SourceControllerTurn {
+		matches = matches && g.Turn.ActivePlayer == ctx.controller
+	}
 	if cond.Negate {
 		return !matches
 	}

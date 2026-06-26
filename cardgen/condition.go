@@ -157,6 +157,8 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.ControllerControlsNamed = append(result.ControllerControlsNamed, condition.ControlledNames...)
 	case compiler.ConditionPredicateFirstCombatPhaseOfTurn:
 		result.FirstCombatPhaseOfTurn = true
+	case compiler.ConditionPredicateControllerTurn:
+		result.SourceControllerTurn = true
 	case compiler.ConditionPredicateControlsGreatestPowerCreature:
 		result.ControllerControlsGreatestPowerCreature = true
 	case compiler.ConditionPredicateControlsGreatestToughnessCreature:
@@ -268,6 +270,9 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 		case compiler.ConditionPredicateFirstCombatPhaseOfTurn:
 			return ctx == conditionContextEffectGate ||
 				ctx == conditionContextInterveningTrigger
+		case compiler.ConditionPredicateControllerTurn:
+			return ctx == conditionContextStatic ||
+				ctx == conditionContextStaticRuleGuard
 		case compiler.ConditionPredicateEventSubjectNameUnique,
 			compiler.ConditionPredicateSourceTributeNotPaid,
 			compiler.ConditionPredicateControllerIsMonarch,

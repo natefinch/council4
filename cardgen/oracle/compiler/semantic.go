@@ -759,6 +759,12 @@ const (
 	// controller has the city's blessing (CR 702.131 ascend). It is a live
 	// single-player game-state predicate with no clause parameters.
 	ConditionPredicateControllerHasCityBlessing
+	// ConditionPredicateControllerTurn is satisfied while it is the context
+	// controller's turn, i.e. the controller is the active player ("During your
+	// turn, this creature has first strike"; Fresh-Faced Recruit, Embereth
+	// Skyblazer). It gates a continuous self-static so the granted keyword or
+	// power/toughness bonus applies only on the controller's own turns.
+	ConditionPredicateControllerTurn
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
