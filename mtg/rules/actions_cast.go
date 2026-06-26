@@ -386,6 +386,7 @@ func canCastPreparedCopy(g *game.Game, playerID game.PlayerID, permanent *game.P
 		!isSupportedSpell(spellDef) ||
 		(!spellDef.HasType(types.Instant) && !spellDef.HasType(types.Sorcery)) ||
 		!targetsValidForSpell(g, playerID, spellDef, chosenModes, targets) ||
+		!spellTargetCountsMatchX(g, playerID, spellDef, chosenModes, targets, xValue) ||
 		!canCastAtCurrentTiming(g, playerID, spellDef) {
 		return false
 	}
@@ -617,6 +618,9 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		return false
 	}
 	if !modesValidForSpellAt(g, playerID, announcementDef, chosenModes) || !isSupportedSpell(spellDef) || !targetsValidForSpell(g, playerID, announcementDef, chosenModes, targets) {
+		return false
+	}
+	if !spellTargetCountsMatchX(g, playerID, announcementDef, chosenModes, targets, xValue) {
 		return false
 	}
 	if !canCastAtCurrentTiming(g, playerID, spellDef) {

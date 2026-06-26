@@ -47,6 +47,9 @@ func (r Renderer) renderTargetSpec(ctx *renderCtx, spec *game.TargetSpec) (strin
 	if spec.DistinctFromPriorTargets {
 		fields = append(fields, "DistinctFromPriorTargets: true,")
 	}
+	if spec.CountEqualsX {
+		fields = append(fields, "CountEqualsX: true,")
+	}
 	return structLit("game.TargetSpec", fields), nil
 }
 

@@ -33,6 +33,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectCreate:
 		return exactCreateTokenEffectSyntax(effect) ||
 			exactCreateTokenForEachDestroyedThisWayEffectSyntax(effect) ||
+			exactCreateTokenForEachExiledThisWayEffectSyntax(effect) ||
 			exactCreateNamedTokenEffectSyntax(effect) ||
 			exactCreatePredefinedTokenEffectSyntax(effect) ||
 			exactCreateNamedTokenChoiceEffectSyntax(effect) ||

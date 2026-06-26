@@ -10,6 +10,7 @@ var Cards = []*game.CardDef{
 	DeathcapGlade,
 	Decommission,
 	DemonicAppetite,
+	DescentOfTheDragons,
 	DesertSDue,
 	DingusEgg,
 	DingusStaff,

@@ -428,6 +428,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				PutLinkedExiledRestOnLibraryBottom:     syntax.PutLinkedExiledRestOnLibraryBottom,
 				DestroyForEachPlayer:                   syntax.DestroyForEachPlayer,
 				CreateTokenForEachDestroyedThisWay:     syntax.CreateTokenForEachDestroyedThisWay,
+				CreateTokenForEachExiledThisWay:        syntax.CreateTokenForEachExiledThisWay,
 				CounterExiledCardManaValue:             syntax.CounterExiledCardManaValue,
 				ReturnSourceAndExiledCardToHand:        syntax.ReturnSourceAndExiledCardToHand,
 				CantCastSpellsAllPlayers:               syntax.CantCastSpellsAllPlayers,

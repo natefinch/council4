@@ -2109,6 +2109,12 @@ type CompiledEffect struct {
 	// compiler boundary so lowering creates one token for each creature a sibling
 	// DestroyForEachPlayer destroyed, controlled by that creature's controller.
 	CreateTokenForEachDestroyedThisWay bool
+	// CreateTokenForEachExiledThisWay carries the parser-recognized per-controller
+	// payoff "For each creature exiled this way, its controller creates a
+	// <token>." (Curse of the Swine) through the text-blind compiler boundary so
+	// lowering creates one token for each creature a sibling variable-target exile
+	// removed, controlled by that creature's controller.
+	CreateTokenForEachExiledThisWay bool
 	// to the mana value of the exiled card." (The Aesir Escape Valhalla) through
 	// the text-blind compiler boundary so lowering scales the placement by the
 	// linked exiled card's mana value.

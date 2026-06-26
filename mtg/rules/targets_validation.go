@@ -78,6 +78,35 @@ func spellTargetCounts(g *game.Game, controller game.PlayerID, card *game.CardDe
 	return targetCountsForSpecs(g, controller, card, 0, spellTargetSpecs(card, chosenModes), targets)
 }
 
+// spellTargetCountsMatchX reports whether every CountEqualsX target spec of the
+// spell has exactly xValue targets chosen for it. A CountEqualsX spec binds its
+// resolving target count to the spell's chosen X ("Exile X target creatures"), so
+// a cast is legal only when the announced target count for that spec equals X.
+// Spells without a CountEqualsX spec are unaffected.
+func spellTargetCountsMatchX(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target, xValue int) bool {
+	specs := spellTargetSpecs(card, chosenModes)
+	requiresMatch := false
+	for i := range specs {
+		if specs[i].CountEqualsX {
+			requiresMatch = true
+			break
+		}
+	}
+	if !requiresMatch {
+		return true
+	}
+	counts, ok := spellTargetCounts(g, controller, card, chosenModes, targets)
+	if !ok {
+		return false
+	}
+	for i := range specs {
+		if specs[i].CountEqualsX && (i >= len(counts) || counts[i] != xValue) {
+			return false
+		}
+	}
+	return true
+}
+
 func bodyTargetCounts(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, targets []game.Target) ([]int, bool) {
 	return bodyTargetCountsWithModes(g, controller, source, sourceObjectID, body, nil, targets)
 }

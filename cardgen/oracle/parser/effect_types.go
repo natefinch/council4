@@ -2209,6 +2209,13 @@ type EffectSyntax struct {
 	// controller create one token, so the count is one per destroyed creature
 	// rather than a multiplier on the create.
 	CreateTokenForEachDestroyedThisWay bool `json:",omitempty"`
+	// CreateTokenForEachExiledThisWay marks the exact per-controller payoff "For
+	// each creature exiled this way, its controller creates a <token>." (Curse of
+	// the Swine). It mirrors CreateTokenForEachDestroyedThisWay but pairs with a
+	// preceding variable-target exile clause: each creature exiled this way has
+	// its controller create one token, so the count is one per exiled creature
+	// rather than a multiplier on the create.
+	CreateTokenForEachExiledThisWay bool `json:",omitempty"`
 	// ReturnExiledCard marks the explicit O-Ring leaves-the-battlefield clause
 	// "return the exiled card to the battlefield under its owner's control."
 	// (Oblivion Ring, Journey to Nowhere, Fiend Hunter). The returned card is the

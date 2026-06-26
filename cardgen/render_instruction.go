@@ -362,6 +362,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", err
 		}
 		return r.renderCreateTokenForEachDestroyed(ctx, value)
+	case game.PrimitiveRemoveTargetsForToken:
+		value, err := assertPrimitive[game.RemoveTargetsForToken](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderRemoveTargetsForToken(value)
 	case game.PrimitiveChooseFromZone:
 		value, err := assertPrimitive[game.ChooseFromZone](primitive)
 		if err != nil {
@@ -839,6 +845,18 @@ func (r Renderer) renderCreateTokenForEachDestroyed(ctx *renderCtx, value game.C
 		fmt.Sprintf("Source: %s,", source),
 		fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)),
 	}), nil
+}
+
+func (Renderer) renderRemoveTargetsForToken(value game.RemoveTargetsForToken) (string, error) {
+	fields := []string{}
+	if value.Exile {
+		fields = append(fields, "Exile: true,")
+	}
+	if value.PreventRegeneration {
+		fields = append(fields, "PreventRegeneration: true,")
+	}
+	fields = append(fields, fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)))
+	return structLit("game.RemoveTargetsForToken", fields), nil
 }
 
 // renderChooseFromZone renders the canonical game.ChooseFromZone envelope, the
