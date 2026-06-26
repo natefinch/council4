@@ -14,4 +14,5 @@ var Cards = []*game.CardDef{
 	EnduringCourage,
 	EpicConfrontation,
 	ExemplarOfStrength,
+	EyeblightMassacre,
 }

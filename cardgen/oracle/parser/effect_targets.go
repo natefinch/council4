@@ -2819,6 +2819,19 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "creatures", "you", "control") &&
 		staticGroupVerb(tokens[3]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatures, Span: shared.SpanOf(tokens[:3])}
+	case len(tokens) >= 6 && effectWordsAt(tokens, 0, "each", "other", "creature") &&
+		effectWordsAt(tokens, 3, "you", "control") &&
+		staticGroupVerbSingular(tokens[5]):
+		// "Each other creature you control gets ..." is the singular distributive
+		// wording for the same source-excluding group as "Other creatures you
+		// control get ...".
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherControlledCreatures, Span: shared.SpanOf(tokens[:5])}
+	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "each", "creature") &&
+		effectWordsAt(tokens, 2, "you", "control") &&
+		staticGroupVerbSingular(tokens[4]):
+		// "Each creature you control gets ..." is the singular distributive
+		// wording for the same group as "Creatures you control get ...".
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatures, Span: shared.SpanOf(tokens[:4])}
 	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "permanents", "your", "opponents", "control") &&
 		staticGroupVerb(tokens[4]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOpponentControlledPermanents, Span: shared.SpanOf(tokens[:4])}
@@ -3202,6 +3215,13 @@ func parseBattlefieldCreatureGroupSubject(tokens []shared.Token, atoms Atoms) (E
 		value, ok := atoms.SubtypeAt(tokens[index].Span)
 		return value, ok && SubtypeMatchesAnyRuntimeCardType(value, []types.Card{types.Creature, types.Kindred})
 	}
+	excludedSubtypeAt := func(index int) (types.Sub, bool) {
+		if index >= len(tokens) {
+			return "", false
+		}
+		value, ok := atoms.ExcludedSubtypeAt(tokens[index].Span)
+		return value, ok && SubtypeMatchesAnyRuntimeCardType(value, []types.Card{types.Creature, types.Kindred})
+	}
 	switch {
 	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "attacking", "creatures") &&
 		effectWordsAt(tokens, 2, "you", "control") &&
@@ -3212,10 +3232,27 @@ func parseBattlefieldCreatureGroupSubject(tokens []shared.Token, atoms Atoms) (E
 		if value, ok := subtypeAt(1); ok {
 			return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllCreatureSubtype, Span: shared.SpanOf(tokens[:3]), Subtype: value, SubtypeText: tokens[1].Text, SubtypeKnown: true}, true
 		}
+		if value, ok := excludedSubtypeAt(1); ok {
+			return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllCreatureSubtype, Span: shared.SpanOf(tokens[:3]), Subtype: value, SubtypeText: tokens[1].Text, SubtypeKnown: true, ExcludedSubtype: true}, true
+		}
 	case len(tokens) >= 5 && equalWord(tokens[0], "other") && equalWord(tokens[2], "creatures") &&
 		(equalWord(tokens[3], "get") || equalWord(tokens[3], "have")):
 		if value, ok := subtypeAt(1); ok {
 			return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherCreatureSubtype, Span: shared.SpanOf(tokens[:3]), Subtype: value, SubtypeText: tokens[1].Text, SubtypeKnown: true}, true
+		}
+	// Bare "<Subtype> creatures get/have ..." names every creature of that
+	// subtype on the battlefield ("Goblin creatures get +1/+1 until end of
+	// turn."), the unprefixed sibling of "All <Subtype> creatures get ...".
+	case len(tokens) >= 3 && equalWord(tokens[1], "creatures") &&
+		(equalWord(tokens[2], "get") || equalWord(tokens[2], "have")):
+		if value, ok := subtypeAt(0); ok {
+			return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllCreatureSubtype, Span: shared.SpanOf(tokens[:2]), Subtype: value, SubtypeText: tokens[0].Text, SubtypeKnown: true}, true
+		}
+		// "Non-<Subtype> creatures get/have ..." names every creature on the
+		// battlefield that does not carry the named subtype ("Non-Elf creatures
+		// get -2/-2 until end of turn.").
+		if value, ok := excludedSubtypeAt(0); ok {
+			return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllCreatureSubtype, Span: shared.SpanOf(tokens[:2]), Subtype: value, SubtypeText: tokens[0].Text, SubtypeKnown: true, ExcludedSubtype: true}, true
 		}
 	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "creature", "tokens") &&
 		(equalWord(tokens[2], "get") || equalWord(tokens[2], "have")):

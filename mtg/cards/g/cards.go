@@ -7,6 +7,8 @@ import "github.com/natefinch/council4/mtg/game"
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
 	GarrukPrimalHunter,
+	GempalmAvenger,
+	GempalmStrider,
 	GeralfSMindcrusher,
 	Ghostway,
 	GiantSGrasp,
@@ -16,6 +18,8 @@ var Cards = []*game.CardDef{
 	GlaringFleshraker,
 	GlimpseTheUnthinkable,
 	GoblinDarkDwellers,
+	GoblinLookout,
+	GoblinPyromancer,
 	GracefulRestoration,
 	GravenCairns,
 	Gravepurge,
