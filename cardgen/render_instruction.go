@@ -1009,19 +1009,30 @@ func (r Renderer) renderCastForFree(ctx *renderCtx, value game.CastForFree) (str
 	if err != nil {
 		return "", err
 	}
-	selection, err := r.renderSelection(ctx, value.Selection)
-	if err != nil {
-		return "", err
-	}
 	sourceZone, err := renderZone(value.Zone)
 	if err != nil {
 		return "", err
 	}
-	return structLit("game.CastForFree", []string{
-		fmt.Sprintf("Player: %s,", player),
-		fmt.Sprintf("Selection: %s,", selection),
-		fmt.Sprintf("Zone: %s,", sourceZone),
-	}), nil
+	fields := []string{fmt.Sprintf("Player: %s,", player)}
+	if value.Card.Kind == game.CardReferenceNone {
+		selection, err := r.renderSelection(ctx, value.Selection)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Selection: %s,", selection))
+	}
+	fields = append(fields, fmt.Sprintf("Zone: %s,", sourceZone))
+	if value.Card.Kind != game.CardReferenceNone {
+		card, err := renderCardReference(value.Card)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Card: %s,", card))
+	}
+	if value.ExileOnResolution {
+		fields = append(fields, "ExileOnResolution: true,")
+	}
+	return structLit("game.CastForFree", fields), nil
 }
 
 func (r Renderer) renderMassReturnFromGraveyard(ctx *renderCtx, value game.MassReturnFromGraveyard) (string, error) {

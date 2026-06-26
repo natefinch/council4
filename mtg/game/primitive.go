@@ -809,16 +809,29 @@ type RemoveTargetsForToken struct {
 	LinkedKey           LinkedKey
 }
 
-// CastForFree has Player cast one card matching Selection from Zone without
-// paying its mana cost, modeling "(You may) cast a spell [with mana value N or
-// less] from your hand without paying its mana cost." and similar free-cast
-// effects. The enclosing Instruction's Optional flag expresses a "you may"
-// wrapper, so the engine gathers consent before this runs; here the player
-// chooses which eligible card to cast, if any. No eligible card casts nothing.
+// CastForFree has Player cast one card from Zone without paying its mana cost,
+// modeling "(You may) cast a spell [with mana value N or less] from your hand
+// without paying its mana cost." and similar free-cast effects. The enclosing
+// Instruction's Optional flag expresses a "you may" wrapper, so the engine
+// gathers consent before this runs.
+//
+// When Card is unset (CardReferenceNone), the resolving player chooses which
+// eligible card matching Selection to cast from their own Zone; no eligible card
+// casts nothing. When Card is set, that one referenced card is cast instead —
+// the spell-or-ability already targeted it (Memory Plunder targets an instant or
+// sorcery card in an opponent's graveyard), so Selection is ignored and the card
+// is cast from whichever player's Zone currently holds it.
+//
+// ExileOnResolution sets the cast spell to move to exile instead of its owner's
+// graveyard after it resolves or is countered, modeling the recurring rider "If
+// that spell would be put into your graveyard, exile it instead." (Torrential
+// Gearhulk).
 type CastForFree struct {
-	Player    PlayerReference
-	Selection Selection
-	Zone      zone.Type
+	Player            PlayerReference
+	Selection         Selection
+	Zone              zone.Type
+	Card              CardReference
+	ExileOnResolution bool
 }
 
 // MassReturnFromGraveyard returns every card in Player's graveyard matching

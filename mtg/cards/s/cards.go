@@ -11,6 +11,7 @@ var Cards = []*game.CardDef{
 	SavageSmash,
 	ScorchingDragonfire,
 	Scorchmark,
+	SeiferAlmasy,
 	ServoSchematic,
 	SetessanTraining,
 	ShatteredCrypt,

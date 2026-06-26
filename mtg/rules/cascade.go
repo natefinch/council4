@@ -139,7 +139,49 @@ func (e *Engine) castFreeSpellFromExile(g *game.Game, playerID game.PlayerID, ca
 // no longer in fromZone or has no legal cast choice.
 func (e *Engine) castFreeSpellFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, fromZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	player, ok := playerByID(g, playerID)
-	if !ok || !castSourceContains(player, cardID, fromZone) {
+	if !ok {
+		return false
+	}
+	return e.castFreeSpellFromSource(g, player, playerID, cardID, fromZone, false, agents, log)
+}
+
+// castFreeTargetedSpell casts a specific targeted card from fromZone for
+// controllerID without paying its mana cost, locating whichever player's zone
+// currently holds the card so a spell that targets a card in an opponent's
+// graveyard (Memory Plunder) casts it under the controller's control. When
+// exileOnResolution is set the cast spell moves to exile instead of its owner's
+// graveyard after it resolves, modeling the "exile it instead" rider. It returns
+// false when the card no longer rests in a player's fromZone or has no legal cast
+// choice.
+func (e *Engine) castFreeTargetedSpell(g *game.Game, controllerID game.PlayerID, cardID id.ID, fromZone zone.Type, exileOnResolution bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	source, ok := playerHoldingCastSource(g, cardID, fromZone)
+	if !ok {
+		return false
+	}
+	return e.castFreeSpellFromSource(g, source, controllerID, cardID, fromZone, exileOnResolution, agents, log)
+}
+
+// playerHoldingCastSource returns the player whose fromZone currently contains
+// cardID, scanning every player in turn order. It backs targeted free casts,
+// whose card may rest in any player's zone (an opponent's graveyard).
+func playerHoldingCastSource(g *game.Game, cardID id.ID, fromZone zone.Type) (*game.Player, bool) {
+	for i := range g.Players {
+		player := g.Players[i]
+		if castSourceContains(player, cardID, fromZone) {
+			return player, true
+		}
+	}
+	return nil, false
+}
+
+// castFreeSpellFromSource casts cardID out of sourcePlayer's fromZone for
+// controllerID without paying its mana cost, choosing the first legal
+// modes/targets and pushing the spell to the stack as a free cast under
+// controllerID's control. The source player and controller differ only for a
+// targeted cast from another player's zone. exileOnResolution redirects the
+// resolved spell to exile in place of its owner's graveyard.
+func (e *Engine) castFreeSpellFromSource(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, cardID id.ID, fromZone zone.Type, exileOnResolution bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	if sourcePlayer == nil || !castSourceContains(sourcePlayer, cardID, fromZone) {
 		return false
 	}
 	card, ok := g.GetCardInstance(cardID)
@@ -147,32 +189,33 @@ func (e *Engine) castFreeSpellFromZone(g *game.Game, playerID game.PlayerID, car
 		return false
 	}
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
-	modes, targets, ok := firstLegalSpellCastChoice(g, playerID, spellDef)
+	modes, targets, ok := firstLegalSpellCastChoice(g, controllerID, spellDef)
 	if !ok {
 		return false
 	}
-	targetCounts, ok := spellTargetCounts(g, playerID, spellDef, modes, targets)
+	targetCounts, ok := spellTargetCounts(g, controllerID, spellDef, modes, targets)
 	if !ok {
 		panic("validated free-cast spell targets could not be segmented")
 	}
-	if !removeCastSourceCard(g, player, cardID, fromZone) {
+	if !removeCastSourceCard(g, sourcePlayer, cardID, fromZone) {
 		return false
 	}
 	obj := &game.StackObject{
-		ID:           g.IDGen.Next(),
-		Kind:         game.StackSpell,
-		SourceID:     cardID,
-		Face:         game.FaceFront,
-		Controller:   playerID,
-		Targets:      append([]game.Target(nil), targets...),
-		TargetCounts: targetCounts,
-		ChosenModes:  append([]int(nil), modes...),
+		ID:                g.IDGen.Next(),
+		Kind:              game.StackSpell,
+		SourceID:          cardID,
+		Face:              game.FaceFront,
+		Controller:        controllerID,
+		Targets:           append([]game.Target(nil), targets...),
+		TargetCounts:      targetCounts,
+		ChosenModes:       append([]int(nil), modes...),
+		ExileOnResolution: exileOnResolution,
 	}
 	stormCopies := stormCopyCount(g, spellDef)
 	pushSpellToStack(g, obj, game.Event{
 		SourceID:       cardID,
 		StackObjectID:  obj.ID,
-		Controller:     playerID,
+		Controller:     controllerID,
 		CardID:         cardID,
 		CardTypes:      cardTypes(spellDef),
 		CardSupertypes: cardSupertypes(spellDef),

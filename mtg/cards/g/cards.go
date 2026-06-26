@@ -15,6 +15,7 @@ var Cards = []*game.CardDef{
 	GimliSRecklessMight,
 	GlaringFleshraker,
 	GlimpseTheUnthinkable,
+	GoblinDarkDwellers,
 	GracefulRestoration,
 	GravenCairns,
 	Gravepurge,
