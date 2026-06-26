@@ -63,6 +63,7 @@ func cutDelayedTiming(tokens []shared.Token) ([]shared.Token, DelayedTimingKind)
 	}{
 		{[]string{"at", "the", "beginning", "of", "the", "next", "end", "step"}, DelayedTimingNextEndStep},
 		{[]string{"at", "the", "beginning", "of", "the", "next", "turn's", "upkeep"}, DelayedTimingNextUpkeep},
+		{[]string{"at", "end", "of", "combat"}, DelayedTimingEndOfCombat},
 	} {
 		start := end - len(suffix.words)
 		if start >= 0 && effectWordsAt(tokens, start, suffix.words...) {

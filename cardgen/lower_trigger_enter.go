@@ -342,13 +342,19 @@ func supportedSelfTriggerKind(eventKind game.EventKind, kind compiler.TriggerKin
 		game.EventZoneChanged,
 		game.EventPermanentTurnedFaceUp,
 		game.EventPermanentSacrificed,
-		game.EventObjectBecameTarget:
+		game.EventObjectBecameTarget,
+		// The fragile attacker/blocker idiom "When this creature attacks or
+		// blocks, <delayed self-disposal> at end of combat" (Fog Elemental,
+		// Cinder Wall) introduces its self attack/block trigger with "When".
+		// "When" and "Whenever" are mechanically identical for a triggered
+		// ability (CR 603.1); a creature is declared as an attacker or blocker
+		// at most once per combat, so the single-shot reading matches.
+		game.EventAttackerDeclared,
+		game.EventBlockerDeclared:
 		return kind == compiler.TriggerWhen || kind == compiler.TriggerWhenever
 	case game.EventPermanentMutated,
 		game.EventAttackerBecameBlocked,
 		game.EventAttackerBecameUnblocked,
-		game.EventAttackerDeclared,
-		game.EventBlockerDeclared,
 		game.EventDamageDealt,
 		game.EventPermanentTapped,
 		game.EventPermanentUntapped,

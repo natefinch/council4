@@ -301,6 +301,8 @@ func delayedTriggerTimingForStepBoundary(events []game.Event) game.DelayedTrigge
 			return game.DelayedAtBeginningOfNextEndStep
 		case game.StepPrecombatMain, game.StepPostcombatMain:
 			return game.DelayedAtBeginningOfNextMainPhase
+		case game.StepEndOfCombat:
+			return game.DelayedAtEndOfCombat
 		}
 	}
 	return 0

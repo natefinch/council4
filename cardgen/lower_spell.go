@@ -56,6 +56,12 @@ type contentCtx struct {
 	// trigger, or zone.None outside one. It confirms the triggering cards rest
 	// in a graveyard before a batch reanimation recurses them.
 	triggerToZone zone.Type
+	// selfTrigger reports whether the enclosing trigger fires on the source
+	// permanent itself (TriggerSourceSelf). For such a trigger the triggering
+	// event permanent is the source, so an "it"/"that creature" reference bound
+	// to the event permanent denotes the source and a delayed self-disposal can
+	// resolve it through the stable source-card reference.
+	selfTrigger bool
 	// allowPonderPrefix permits the first spell paragraph of Ponder to lower
 	// temporarily. Face lowering rejects it unless the following spell paragraph
 	// is the exact typed draw suffix.
@@ -142,6 +148,7 @@ func lowerSequenceClauseContent(
 		triggerEvent:          parent.triggerEvent,
 		triggerOneOrMore:      parent.triggerOneOrMore,
 		triggerToZone:         parent.triggerToZone,
+		selfTrigger:           parent.selfTrigger,
 	}
 	return lowerContent(cardName, ctx, bodySyntax)
 }
@@ -167,6 +174,7 @@ func lowerTriggerBodyContent(
 		triggerEvent:          pattern.Event,
 		triggerOneOrMore:      pattern.OneOrMore,
 		triggerToZone:         triggerPatternToZone(pattern),
+		selfTrigger:           pattern.Source == game.TriggerSourceSelf,
 	}
 	return lowerContent(cardName, ctx, bodySyntax)
 }
@@ -1193,7 +1201,20 @@ func lowerDelayedSelfPrimitive(ctx contentCtx) (game.Primitive, bool) {
 	if ctx.content.Effects[0].Negated {
 		return nil, false
 	}
-	if !referencesBindTo(ctx.content.References, compiler.ReferenceBindingSource, 0) {
+	references := ctx.content.References
+	selfBound := referencesBindTo(references, compiler.ReferenceBindingSource, 0)
+	// In a self trigger the triggering event permanent is the source, so an
+	// "it" reference the compiler bound to the event permanent (as it does for
+	// "destroy it"/"put it ...") still denotes the source and resolves through
+	// the stable source-card reference at the delayed firing. Restrict this
+	// relaxation to references that name the source itself ("it"/"this") so a
+	// demonstrative bound to the event permanent — "destroy that creature" on a
+	// combat-damage trigger, "exile that token" — is never mistaken for the
+	// source; those fall through to the generic delayed path instead.
+	eventBound := !selfBound && ctx.selfTrigger &&
+		referencesBindTo(references, compiler.ReferenceBindingEventPermanent, 0) &&
+		referencesDenoteSelf(references)
+	if !selfBound && !eventBound {
 		return nil, false
 	}
 	consumed := ctx
@@ -1201,12 +1222,16 @@ func lowerDelayedSelfPrimitive(ctx contentCtx) (game.Primitive, bool) {
 	if consumed.content.Unconsumed() {
 		return nil, false
 	}
-	sourcePermanent, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
-		AllowSource:      true,
-		SourceCardObject: true,
-	})
-	if !ok {
-		return nil, false
+	sourcePermanent := game.SourceCardPermanentReference()
+	if selfBound {
+		var ok bool
+		sourcePermanent, ok = lowerObjectReference(references[0], referenceLoweringContext{
+			AllowSource:      true,
+			SourceCardObject: true,
+		})
+		if !ok {
+			return nil, false
+		}
 	}
 	effect := ctx.content.Effects[0]
 	switch effect.Kind {
@@ -1214,9 +1239,19 @@ func lowerDelayedSelfPrimitive(ctx contentCtx) (game.Primitive, bool) {
 		return game.Exile{Object: sourcePermanent}, true
 	case compiler.EffectSacrifice:
 		return game.Sacrifice{Object: sourcePermanent}, true
+	case compiler.EffectDestroy:
+		return game.Destroy{Object: sourcePermanent}, true
 	case compiler.EffectReturn:
 		if effect.ToZone != zone.Hand {
 			return nil, false
+		}
+		// "Return it to its owner's hand" means different zones depending on
+		// where the source rests when the delayed trigger fires. After an
+		// attack/block trigger the creature is still on the battlefield at end
+		// of combat, so it bounces; after a dies trigger it rests in the
+		// graveyard, so it reanimates to hand.
+		if selfTriggerSourceOnBattlefield(ctx.triggerEvent) {
+			return game.Bounce{Object: sourcePermanent}, true
 		}
 		sourceCard, ok := lowerCardReference(ctx.content.References[0], referenceLoweringContext{AllowSource: true})
 		if !ok {
@@ -1227,9 +1262,58 @@ func lowerDelayedSelfPrimitive(ctx contentCtx) (game.Primitive, bool) {
 			FromZone:    zone.Graveyard,
 			Destination: zone.Hand,
 		}, true
+	case compiler.EffectPut:
+		if effect.ToZone != zone.Library {
+			return nil, false
+		}
+		var bottom bool
+		switch effect.Destination {
+		case parser.EffectDestinationTop:
+			bottom = false
+		case parser.EffectDestinationBottom:
+			bottom = true
+		default:
+			return nil, false
+		}
+		return game.PutPermanentOnLibrary{Object: sourcePermanent, Bottom: bottom}, true
 	default:
 		return nil, false
 	}
+}
+
+// selfTriggerSourceOnBattlefield reports whether a self trigger leaves its source
+// permanent on the battlefield when its delayed body resolves. Attack and block
+// declarations fire while the creature is on the battlefield, and the matching
+// end-of-combat disposal resolves before the creature leaves, so "return it to
+// its owner's hand" bounces the permanent rather than reanimating a card.
+func selfTriggerSourceOnBattlefield(triggerEvent game.EventKind) bool {
+	return triggerEvent == game.EventAttackerDeclared ||
+		triggerEvent == game.EventBlockerDeclared
+}
+
+// referencesDenoteSelf reports whether every reference names the source
+// permanent itself: the card's own name, "this <type>", or the pronoun "it"/
+// "its". A demonstrative such as "that creature" or "that token"
+// (ReferenceThatObject) names a different object and must not be treated as the
+// source, so it returns false and the self-disposal path declines it.
+func referencesDenoteSelf(references []compiler.CompiledReference) bool {
+	if len(references) == 0 {
+		return false
+	}
+	for i := range references {
+		reference := references[i]
+		switch reference.Kind {
+		case compiler.ReferenceSelfName, compiler.ReferenceThisObject:
+		case compiler.ReferencePronoun:
+			if reference.Pronoun != compiler.ReferencePronounIt &&
+				reference.Pronoun != compiler.ReferencePronounIts {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 func unsupportedDelayedEffectDiagnostic(ctx contentCtx) *shared.Diagnostic {

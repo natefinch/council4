@@ -14,6 +14,7 @@ var Cards = []*game.CardDef{
 	MalakirSoothsayer,
 	MalametBattleGlyph,
 	ManaReflection,
+	MarduBlazebringer,
 	MarthaJones,
 	MasterPiandao,
 	MasterSRebuke,

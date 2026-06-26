@@ -552,6 +552,7 @@ const (
 	DelayedTimingNextEndStep DelayedTimingKind = "DelayedTimingNextEndStep"
 	DelayedTimingNextUpkeep  DelayedTimingKind = "DelayedTimingNextUpkeep"
 	DelayedTimingNextMain    DelayedTimingKind = "DelayedTimingNextMain"
+	DelayedTimingEndOfCombat DelayedTimingKind = "DelayedTimingEndOfCombat"
 )
 
 // EffectDestinationPosition identifies an ordered position in a destination

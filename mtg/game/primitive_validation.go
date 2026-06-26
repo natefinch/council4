@@ -2214,7 +2214,7 @@ func (p CreateDelayedTrigger) validatePrimitive(targets []TargetSpec, checkTarge
 		}
 	} else {
 		switch p.Trigger.Timing {
-		case DelayedAtBeginningOfNextEndStep, DelayedAtBeginningOfNextUpkeep, DelayedAtBeginningOfNextMainPhase:
+		case DelayedAtBeginningOfNextEndStep, DelayedAtBeginningOfNextUpkeep, DelayedAtBeginningOfNextMainPhase, DelayedAtEndOfCombat:
 		default:
 			return errors.New("delayed trigger requires a recognized timing")
 		}

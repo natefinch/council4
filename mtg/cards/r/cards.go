@@ -33,5 +33,6 @@ var Cards = []*game.CardDef{
 	RoamingGhostlight,
 	RosethornHalberd,
 	RotcrownGhoul,
+	RunawayCarriage,
 	RuthlessPredation,
 }

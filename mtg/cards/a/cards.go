@@ -32,6 +32,7 @@ var Cards = []*game.CardDef{
 	Arena,
 	ArmorThrull,
 	AscendingAven,
+	ArrogantBloodlord,
 	AshePrincessOfDalmasca,
 	AshmouthHound,
 	AspectOfLamprey,

@@ -9,6 +9,7 @@ var Cards = []*game.CardDef{
 	VantressPaladin,
 	Vaporkin,
 	VastlandsScavenger,
+	Vebulid,
 	VengefulRebel,
 	Vesperlark,
 	VictorTimelyWilyTycoon,
