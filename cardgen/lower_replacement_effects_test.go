@@ -920,6 +920,77 @@ func TestGenerateTokenCreationReplacementSource(t *testing.T) {
 	}
 }
 
+func TestLowerIdentityTokenCreationReplacement(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Divine Visitation",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		ManaCost:   "{3}{W}{W}",
+		OracleText: "If one or more creature tokens would be created under your control, that many 4/4 white Angel creature tokens with flying and vigilance are created instead.",
+	})
+	if len(face.ReplacementAbilities) != 1 {
+		t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+	}
+	replacement := face.ReplacementAbilities[0].Replacement
+	if replacement.MatchEvent != game.EventTokenCreated ||
+		replacement.ControllerFilter != game.TriggerControllerYou ||
+		replacement.TokenMultiplier != 1 ||
+		replacement.TokenAddend != 0 ||
+		replacement.Duration != game.DurationPermanent {
+		t.Fatalf("replacement = %+v, want identity token-creation replacement", replacement)
+	}
+	if !slices.Equal(replacement.TokenRequiredTypes, []types.Card{types.Creature}) {
+		t.Fatalf("required types = %v, want [Creature]", replacement.TokenRequiredTypes)
+	}
+	def := replacement.TokenReplaceDef
+	if def == nil {
+		t.Fatalf("replacement %+v, want a substitute token definition", replacement)
+	}
+	if def.Name != "Angel" ||
+		!slices.Equal(def.Colors, []color.Color{color.White}) ||
+		!slices.Equal(def.Types, []types.Card{types.Creature}) ||
+		!slices.Equal(def.Subtypes, []types.Sub{types.Angel}) ||
+		!def.Power.Exists || def.Power.Val.Value != 4 ||
+		!def.Toughness.Exists || def.Toughness.Val.Value != 4 ||
+		len(def.StaticAbilities) != 2 {
+		t.Fatalf("substitute def = %+v, want 4/4 white Angel with two static keywords", def)
+	}
+}
+
+func TestGenerateIdentityTokenCreationReplacementSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Divine Visitation",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		ManaCost:   "{3}{W}{W}",
+		OracleText: "If one or more creature tokens would be created under your control, that many 4/4 white Angel creature tokens with flying and vigilance are created instead.",
+	}, "d")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.TokenCreationReplacementFiltered",
+		"ReplaceDef:",
+		"types.Creature",
+		"types.Angel",
+		"game.FlyingStaticBody",
+		"game.VigilanceStaticBody",
+		"game.TriggerControllerYou",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
 func TestGenerateLifeGainReplacementSource(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{

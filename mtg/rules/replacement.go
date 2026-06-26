@@ -289,6 +289,20 @@ func replacementTokenCreationTypes(g *game.Game, controller game.PlayerID, token
 	}
 	for i := range g.ReplacementEffects {
 		replacement := &g.ReplacementEffects[i]
+		if replacement.TokenReplaceDef != nil {
+			if !tokenHasAllSubtypes(token, replacement.TokenRequiredSubtypes) ||
+				!tokenHasAllTypes(token, replacement.TokenRequiredTypes) {
+				continue
+			}
+			if !replacementEffectMatchesEvent(g, replacement, event) {
+				continue
+			}
+			// The identity substitution replaces the matched token with one copy
+			// of the spelled-out substitute (Divine Visitation: a 4/4 Angel for
+			// each creature token), so the substitute itself is created without
+			// re-entering this matched replacement.
+			return []*game.CardDef{replacement.TokenReplaceDef}
+		}
 		if len(replacement.CreateOneOfEachTokens) == 0 {
 			continue
 		}

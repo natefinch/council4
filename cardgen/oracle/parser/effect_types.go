@@ -847,6 +847,12 @@ const (
 	EffectReplacementTripleThat     EffectReplacementKind = "EffectReplacementTripleThat"
 	EffectReplacementTwiceThatMuch  EffectReplacementKind = "EffectReplacementTwiceThatMuch"
 	EffectReplacementPlusAdditional EffectReplacementKind = "EffectReplacementPlusAdditional"
+	// EffectReplacementThatManyIdentity marks the output of an identity
+	// substitution token-creation replacement: "If one or more <type> tokens
+	// would be created under your control, that many <other token> are created
+	// instead." (Divine Visitation). The output effect carries the substitute
+	// token's printed characteristics; the would-create count is preserved.
+	EffectReplacementThatManyIdentity EffectReplacementKind = "EffectReplacementThatManyIdentity"
 )
 
 // EffectReplacementSyntax is a source-spanned replacement modifier.

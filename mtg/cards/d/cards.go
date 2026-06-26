@@ -13,6 +13,7 @@ var Cards = []*game.CardDef{
 	DesertSDue,
 	DingusEgg,
 	DingusStaff,
+	DivineVisitation,
 	DomriAnarchOfBolas,
 	DonatelloMutantMechanic,
 	DragonskullSummit,
