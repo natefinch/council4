@@ -1381,7 +1381,16 @@ func (p CastForFree) validatePrimitive(targets []TargetSpec, checkTargets bool) 
 	if p.Zone == zone.None {
 		return errors.New("cast for free requires a source zone")
 	}
-	return validatePlayerReference(p.Player, targets, checkTargets)
+	if err := validatePlayerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.Card.Kind != CardReferenceNone {
+		if err := validateCardReference(p.Card); err != nil {
+			return err
+		}
+		return validateTargetCardReference(p.Card, targets, checkTargets)
+	}
+	return nil
 }
 
 func (p MassReturnFromGraveyard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {

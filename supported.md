@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,499 of 32,501 cards eligible for paper support (44.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,507 of 32,501 cards eligible for paper support (44.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2716,6 +2716,7 @@ Council4 currently supports **14,499 of 32,501 cards eligible for paper support 
 - Daring Saboteur
 - Daring Skyjek
 - Daring Thunder-Thief
+- Daring Waverider
 - Dark Banishing
 - Dark Betrayal
 - Dark Deed
@@ -3544,6 +3545,7 @@ Council4 currently supports **14,499 of 32,501 cards eligible for paper support 
 - Eerie Procession
 - Eerie Soultender
 - Efficient Construction
+- Efreet Flamepainter
 - Egg
 - Eidolon of Blossoms
 - Eidolon of Inspiration
@@ -5075,6 +5077,7 @@ Council4 currently supports **14,499 of 32,501 cards eligible for paper support 
 - Goblin Chirurgeon
 - Goblin Commando
 - Goblin Construct
+- Goblin Dark-Dwellers
 - Goblin Deathraiders
 - Goblin Digging Team
 - Goblin Dirigible
@@ -7597,6 +7600,7 @@ Council4 currently supports **14,499 of 32,501 cards eligible for paper support 
 - Memory Drain
 - Memory Erosion
 - Memory Guardian
+- Memory Plunder
 - Memory Worm
 - Menagerie Liberator
 - Mendicant Core, Guidelight
@@ -10603,6 +10607,7 @@ Council4 currently supports **14,499 of 32,501 cards eligible for paper support 
 - Segmented Wurm
 - Segovian Angel
 - Segovian Leviathan
+- Seifer Almasy
 - Seismic Assault
 - Seismic Mage
 - Seismic Monstrosaur
@@ -12557,6 +12562,7 @@ Council4 currently supports **14,499 of 32,501 cards eligible for paper support 
 - The Chase Is On
 - The Crystal's Chosen
 - The Curse of Fenric
+- The Dawning Archaic
 - The Dross Pits
 - The Eldest Reborn
 - The Fabulous Frog-Man
@@ -12900,6 +12906,7 @@ Council4 currently supports **14,499 of 32,501 cards eligible for paper support 
 - Tornado Elemental
 - Torpor Dust
 - Torrent of Fire
+- Torrential Gearhulk
 - Torsten Von Ursus
 - Tortoise Formation
 - Torture
@@ -13595,6 +13602,7 @@ Council4 currently supports **14,499 of 32,501 cards eligible for paper support 
 - Vicious Kavu
 - Vicious Rumors
 - Victimize
+- Victor Timely, Wily Tycoon
 - Victorious Destruction
 - Victory's Envoy
 - Victory's Herald

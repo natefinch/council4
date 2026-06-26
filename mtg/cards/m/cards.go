@@ -15,6 +15,7 @@ var Cards = []*game.CardDef{
 	ManaReflection,
 	MarthaJones,
 	MasterSRebuke,
+	MemoryPlunder,
 	MephiticDraught,
 	MesmericOrb,
 	MichelangeloGameMaster,

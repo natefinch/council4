@@ -432,6 +432,9 @@ func lowerOptionalContent(
 	if content, ok := lowerGraveyardTargetCastThatCard(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerTargetedGraveyardFreeCast(ctx); ok {
+		return content, nil
+	}
 	if len(ctx.content.Modes) == 0 &&
 		len(ctx.content.Effects) > 1 &&
 		ctx.content.Effects[0].Kind != compiler.EffectSearch &&

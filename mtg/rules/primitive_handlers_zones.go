@@ -805,6 +805,16 @@ func handleCastForFree(r *effectResolver, prim game.CastForFree) effectResolved 
 	if !ok {
 		return res
 	}
+	if prim.Card.Kind != game.CardReferenceNone {
+		cardID, fromZone, ok := resolveCardReference(r.game, r.obj, prim.Card)
+		if !ok || fromZone != prim.Zone {
+			return res
+		}
+		if r.engine.castFreeTargetedSpell(r.game, playerID, cardID, prim.Zone, prim.ExileOnResolution, r.agents, r.log) {
+			res.succeeded = true
+		}
+		return res
+	}
 	player, ok := playerByID(r.game, playerID)
 	if !ok {
 		return res

@@ -9,5 +9,6 @@ var Cards = []*game.CardDef{
 	VastlandsScavenger,
 	VengefulRebel,
 	Vesperlark,
+	VictorTimelyWilyTycoon,
 	VoraciousHatchling,
 }
