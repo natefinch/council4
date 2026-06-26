@@ -9,6 +9,7 @@ var Cards = []*game.CardDef{
 	BackForMore,
 	BalustradeSpy,
 	BasiliskCollar,
+	BaskingBroodscale,
 	BattleStrain,
 	BeastWithin,
 	BelligerentHatchling,

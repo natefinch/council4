@@ -63,23 +63,35 @@ func TestLowerTokenWithGrantedDeathTrigger(t *testing.T) {
 	}
 }
 
-// TestLowerTokenGrantedAbilityWithKeywordFailsClosed verifies the text-blind
-// lowering rejects a token that combines printed keywords with a granted quoted
-// ability rather than guessing how the two compose.
-func TestLowerTokenGrantedAbilityWithKeywordFailsClosed(t *testing.T) {
+// TestLowerTokenGrantedAbilityWithKeyword verifies the text-blind lowering
+// composes a token that combines a printed keyword with a trailing quoted
+// granted ability, emitting both the keyword's static body and the granted
+// ability.
+func TestLowerTokenGrantedAbilityWithKeyword(t *testing.T) {
 	t.Parallel()
-	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Test Granted Keyword Token",
 		Layout:     "normal",
 		TypeLine:   "Sorcery",
 		Colors:     []string{"B"},
 		OracleText: "Create a 1/1 black Zombie creature token with flying and \"When this token dies, you gain 1 life.\"",
-	}, "t")
-	if err != nil {
-		t.Fatalf("generate: %v", err)
+	})
+	create := createTokenPrimitive(t, face)
+	def, ok := create.Source.TokenDefRef()
+	if !ok {
+		t.Fatal("token source is not a token definition")
 	}
-	if len(diagnostics) == 0 {
-		t.Fatal("expected fail-closed for keyword + granted ability token, got supported")
+	if len(def.StaticAbilities) != 1 {
+		t.Fatalf("static abilities = %d, want 1 (flying)", len(def.StaticAbilities))
+	}
+	if def.StaticAbilities[0].Text != "Flying" {
+		t.Fatalf("static ability text = %q, want Flying", def.StaticAbilities[0].Text)
+	}
+	if len(def.TriggeredAbilities) != 1 {
+		t.Fatalf("granted triggered abilities = %d, want 1", len(def.TriggeredAbilities))
+	}
+	if got := def.TriggeredAbilities[0].Trigger.Pattern.Event; got != game.EventPermanentDied {
+		t.Fatalf("granted trigger event = %v, want EventPermanentDied", got)
 	}
 }
 

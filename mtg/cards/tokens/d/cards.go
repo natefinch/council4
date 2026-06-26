@@ -28,6 +28,7 @@ var Cards = []*game.CardDef{
 	DjinnMonkToken28571b5cf7f54f9c9891405b54a28f60,
 	DogToken791a992f6f6741a08100a4a6401e6148,
 	DogToken87d64dcfbbd947acba0435af18a70987,
+	DragonEggToken015b712b3778449d9280f848eef0fd8a,
 	DragonElementalToken396a7698cfbf4655b0d0b1265f4093a9,
 	DragonIllusionToken33b8ab7a1c2746f0a6827c9d7e9f43a6,
 	DragonSpiritToken6e8925e1022640819e96b95d23c20061,

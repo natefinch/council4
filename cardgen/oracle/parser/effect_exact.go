@@ -2074,16 +2074,23 @@ func creatureTokenSpecBody(effect *EffectSyntax) (func(countWord, noun string) s
 		return nil, false
 	}
 	// A token's quoted granted ability ("... token with \"When this token dies,
-	// ...\"") is stripped from the clause text to a bare "with"; reconstruct that
-	// trailing word so the byte-exact comparison succeeds. The keyword rider and
-	// the granted-ability rider both occupy the "with" slot, so reject the
-	// combined "with <keyword> and \"...\"" shape pending dedicated support.
+	// ...\"") is stripped from the clause text to a bare trailing connector;
+	// reconstruct that connector so the byte-exact comparison succeeds. With no
+	// keyword rider the connector is the bare "with" the granted ability follows;
+	// with a keyword rider the granted ability is the final item of the
+	// "with <keyword>[, <keyword>], and \"...\"" list, so the connector is the
+	// "and"/", and" that joins it to the keyword words.
 	grantedPart := ""
 	if effect.TokenGrantedAbility != nil {
-		if len(effect.TokenKeywords) != 0 {
-			return nil, false
+		if len(effect.TokenKeywords) == 0 {
+			grantedPart = " with"
+		} else {
+			rider, ok := tokenKeywordGrantedRiderPart(effect.TokenKeywords)
+			if !ok {
+				return nil, false
+			}
+			keywordPart = rider
 		}
-		grantedPart = " with"
 	}
 	colorPart, ok := tokenColorPart(sel)
 	if !ok {
@@ -2166,6 +2173,32 @@ func tokenKeywordPart(keywords []KeywordKind) (string, bool) {
 		words = append(words, word)
 	}
 	return " with " + joinKeywordWords(words), true
+}
+
+// tokenKeywordGrantedRiderPart renders the "with <keyword>[, <keyword>], and"
+// rider for a created token that carries both bare creature keywords and a
+// trailing quoted granted ability, where the quoted ability is the final item of
+// the with-list ("... token with flying and \"...\"", "... token with flying,
+// indestructible, and \"...\""). The quoted body is stripped from the clause
+// text, so the rider ends at the connector that would precede it. It joins the
+// keyword words and the omitted final item, then drops that placeholder, leaving
+// the trailing "and"/", and". It returns ok=false if any keyword is not a
+// representable bare creature keyword.
+func tokenKeywordGrantedRiderPart(keywords []KeywordKind) (string, bool) {
+	words := make([]string, 0, len(keywords)+1)
+	for _, kw := range keywords {
+		if !tokenCreatureKeyword(kw) {
+			return "", false
+		}
+		word, ok := kw.OracleWord()
+		if !ok {
+			return "", false
+		}
+		words = append(words, word)
+	}
+	joined := joinKeywordWords(append(words, "\x00"))
+	joined = strings.TrimRight(strings.TrimSuffix(joined, "\x00"), " ")
+	return " with " + joined, true
 }
 
 // tokenColorPart renders a created token's canonical color words ("colorless " or
