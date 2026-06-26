@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,862 of 32,501 cards eligible for paper support (45.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,868 of 32,501 cards eligible for paper support (45.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2375,6 +2375,7 @@ Council4 currently supports **14,862 of 32,501 cards eligible for paper support 
 - Commune with Lava
 - Commune with Nature
 - Commune with Spirits
+- Commune with the Gods
 - Companion of the Trials
 - Company Commander
 - Compass Gnome
@@ -5066,6 +5067,7 @@ Council4 currently supports **14,862 of 32,501 cards eligible for paper support 
 - Gixian Skullflayer
 - Glacial Floodplain
 - Glacial Fortress
+- Glacial Revelation
 - Glacial Stalker
 - Glacial Wall
 - Glacier Godmaw
@@ -5514,6 +5516,7 @@ Council4 currently supports **14,862 of 32,501 cards eligible for paper support 
 - Grip of Desolation
 - Griselbrand
 - Grisly Ritual
+- Grisly Salvage
 - Grisly Survivor
 - Grisly Transformation
 - Gristle Grinner
@@ -10591,6 +10594,7 @@ Council4 currently supports **14,862 of 32,501 cards eligible for paper support 
 - Satyr Hoplite
 - Satyr Nyx-Smith
 - Satyr Rambler
+- Satyr Wayfinder
 - Satyr's Cunning
 - Sauroform Hybrid
 - Sauron, the Lidless Eye
@@ -10720,6 +10724,7 @@ Council4 currently supports **14,862 of 32,501 cards eligible for paper support 
 - Scourgemark
 - Scouring Sands
 - Scouring Swarm
+- Scout the Borders
 - Scout the Wilderness
 - Scouting Hawk
 - Scragnoth
@@ -13888,6 +13893,7 @@ Council4 currently supports **14,862 of 32,501 cards eligible for paper support 
 - Vessel of Endless Rest
 - Vessel of Ephemera
 - Vessel of Malignity
+- Vessel of Nascency
 - Vessel of Paramnesia
 - Vessel of Volatility
 - Vestige of Emrakul
