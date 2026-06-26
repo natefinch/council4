@@ -2814,6 +2814,9 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	if subject, ok := parseBattlefieldCreatureGroupSubject(tokens, atoms); ok {
 		return subject
 	}
+	if subject, ok := parsePluralSubtypeGroupSubject(tokens, atoms); ok {
+		return subject
+	}
 	switch {
 	case len(tokens) >= 3 &&
 		(equalWord(tokens[0], "enchanted") || equalWord(tokens[0], "equipped")) &&
