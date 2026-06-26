@@ -22,6 +22,9 @@ func lowerPutEffectSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 	if content, ok := lowerMassGraveyardReturn(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerChosenCardGraveyardPut(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerPutFromHandSpell(ctx); ok {
 		return content, nil
 	}
