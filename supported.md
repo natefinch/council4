@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,763 of 32,501 cards eligible for paper support (45.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,782 of 32,501 cards eligible for paper support (45.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1326,6 +1326,7 @@ Council4 currently supports **14,763 of 32,501 cards eligible for paper support 
 - Blood Ogre
 - Blood Pact
 - Blood Pet
+- Blood Petal Celebrant
 - Blood Researcher
 - Blood Rites
 - Blood Seeker
@@ -3327,6 +3328,7 @@ Council4 currently supports **14,763 of 32,501 cards eligible for paper support 
 - Dragonlair Spider
 - Dragonloft Idol
 - Dragonlord Dromoka
+- Dragonlord Ojutai
 - Dragonlord Silumgar
 - Dragonlord's Servant
 - Dragonmaster Outcast
@@ -3385,6 +3387,7 @@ Council4 currently supports **14,763 of 32,501 cards eligible for paper support 
 - Dream Trawler
 - Dream Twist
 - Dreamcatcher
+- Dreampod Druid
 - Dreamroot Cascade
 - Dreams of Laguna
 - Dreamscape Artist
@@ -4439,6 +4442,7 @@ Council4 currently supports **14,763 of 32,501 cards eligible for paper support 
 - Fledgling Griffin
 - Fledgling Imp
 - Fledgling Mawcor
+- Fledgling Osprey
 - Fleet-Footed Monk
 - Fleetfeather Sandals
 - Fleetfoot Dancer
@@ -4966,6 +4970,7 @@ Council4 currently supports **14,763 of 32,501 cards eligible for paper support 
 - Giant Spider
 - Giant Strength
 - Giant Teddy Bear
+- Giant Tortoise
 - Giant Warrior
 - Giant Warrior
 - Giant Warthog
@@ -5358,6 +5363,7 @@ Council4 currently supports **14,763 of 32,501 cards eligible for paper support 
 - Grasp of Darkness
 - Grasping Dunes
 - Grasping Longneck
+- Grasping Scoundrel
 - Grasping Thrull
 - Grasslands
 - Grateful Apparition
@@ -6802,6 +6808,7 @@ Council4 currently supports **14,763 of 32,501 cards eligible for paper support 
 - Kite Shield
 - Kitesail
 - Kitesail Cleric
+- Kitesail Corsair
 - Kitesail Scout
 - Kithkeeper
 - Kithkin
@@ -6905,6 +6912,7 @@ Council4 currently supports **14,763 of 32,501 cards eligible for paper support 
 - Kor Hookmaster
 - Kor Line-Slinger
 - Kor Sanctifiers
+- Kor Scythemaster
 - Kor Sky Climber
 - Kor Skyfisher
 - Kor Soldier
@@ -6952,6 +6960,7 @@ Council4 currently supports **14,763 of 32,501 cards eligible for paper support 
 - Krenko, Tin Street Kingpin
 - Kris Mage
 - Kronch Wrangler
+- Krond the Dawn-Clad
 - Krosan Archer
 - Krosan Avenger
 - Krosan Beast
@@ -8913,6 +8922,7 @@ Council4 currently supports **14,763 of 32,501 cards eligible for paper support 
 - Panther Robot
 - Panther Warriors
 - Papercraft Decoy
+- Paradise Druid
 - Paradise Mantle
 - Paradox Engine
 - Paradox Gardens
@@ -9493,6 +9503,7 @@ Council4 currently supports **14,763 of 32,501 cards eligible for paper support 
 - Purify the Grave
 - Purple Pentapus
 - Purple-Crystal Crab
+- Purraj of Urborg
 - Pursue Glory
 - Pursue the Past
 - Pursuit of Flight
@@ -11380,6 +11391,7 @@ Council4 currently supports **14,763 of 32,501 cards eligible for paper support 
 - Skymarch Bloodletter
 - Skyraker Giant
 - Skyrider Elf
+- Skyrider Trainee
 - Skyscanner
 - Skyscythe Engulfer
 - Skyshaper
@@ -11602,6 +11614,7 @@ Council4 currently supports **14,763 of 32,501 cards eligible for paper support 
 - Soltari Crusader
 - Soltari Emissary
 - Soltari Foot Soldier
+- Soltari Lancer
 - Soltari Monk
 - Soltari Priest
 - Soltari Trooper
@@ -11881,6 +11894,7 @@ Council4 currently supports **14,763 of 32,501 cards eligible for paper support 
 - Spirit of Malevolence
 - Spirit of the Hunt
 - Spirit of the Labyrinth
+- Spirit of the Night
 - Spirit of the Spires
 - Spirit Shackle
 - Spirit Summoning
@@ -12889,6 +12903,7 @@ Council4 currently supports **14,763 of 32,501 cards eligible for paper support 
 - Thorn-Thrash Viashino
 - Thornado
 - Thorncaster Sliver
+- Thorned Moloch
 - Thornglint Bridge
 - Thornhide Wolves
 - Thornling
@@ -13197,6 +13212,7 @@ Council4 currently supports **14,763 of 32,501 cards eligible for paper support 
 - Trained Jackal
 - Trained Orgg
 - Training Center
+- Training Drone
 - Training Regimen
 - Traitorous Blood
 - Tramway Station
@@ -13464,6 +13480,7 @@ Council4 currently supports **14,763 of 32,501 cards eligible for paper support 
 - Unburied Earthcarver
 - Uncaged Fury
 - Uncanny Speed
+- Unchained Berserker
 - Uncharted Haven
 - Unclaimed Territory
 - Uncomfortable Chill
@@ -13921,6 +13938,7 @@ Council4 currently supports **14,763 of 32,501 cards eligible for paper support 
 - Vitu-Ghazi, the City-Tree
 - Vivid Crag
 - Vivid Creek
+- Vivid Flying Fish
 - Vivid Grove
 - Vivid Marsh
 - Vivid Meadow
@@ -13985,6 +14003,7 @@ Council4 currently supports **14,763 of 32,501 cards eligible for paper support 
 - Volcano Imp
 - Voldaren Duelist
 - Voldaren Epicure
+- Voldaren Stinger
 - Volley of Boulders
 - Volley Veteran
 - Volrath's Gardens
