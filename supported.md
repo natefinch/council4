@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,724 of 32,501 cards eligible for paper support (45.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,732 of 32,501 cards eligible for paper support (45.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -319,6 +319,7 @@ Council4 currently supports **14,724 of 32,501 cards eligible for paper support 
 - Always Watching
 - Amaranthine Wall
 - Amateur Hero
+- Amazing Acrobatics
 - Ambassador Laquatus
 - Ambassador Oak
 - Ambition's Cost
@@ -490,6 +491,7 @@ Council4 currently supports **14,724 of 32,501 cards eligible for paper support 
 - Apothecary Geist
 - Appa, Aang's Companion
 - Appa, the Vigilant
+- Appeal to Eirdu
 - Appendage Amalgam
 - Appetite for the Unnatural
 - Applied Biomancy
@@ -2501,6 +2503,7 @@ Council4 currently supports **14,724 of 32,501 cards eligible for paper support 
 - Council of Advisors
 - Counsel of the Soratami
 - Count on Luck
+- Counterintelligence
 - Counterlash
 - Countermand
 - Counterspell
@@ -5715,6 +5718,7 @@ Council4 currently supports **14,724 of 32,501 cards eligible for paper support 
 - Hearthfire Hobgoblin
 - Heartless Pillage
 - Heartless Summoning
+- Hearts on Fire
 - Heartstabber Mosquito
 - Heartwood Giant
 - Heartwood Treefolk
@@ -8726,6 +8730,7 @@ Council4 currently supports **14,724 of 32,501 cards eligible for paper support 
 - Open the Gates
 - Open the Graves
 - Open the Vaults
+- Opera Love Song
 - Ophidian Eye
 - Ophiomancer
 - Opportunity
@@ -9354,6 +9359,7 @@ Council4 currently supports **14,724 of 32,501 cards eligible for paper support 
 - Prince Imrahil the Fair
 - Princess Lucrezia
 - Prismari Campus
+- Prismari Charm
 - Prismari Command
 - Prismatic Lens
 - Prismatic Omen
@@ -12140,6 +12146,7 @@ Council4 currently supports **14,724 of 32,501 cards eligible for paper support 
 - Storm Front
 - Storm God's Oracle
 - Storm Herd
+- Storm of Steel
 - Storm Sculptor
 - Storm Shaman
 - Storm Skreelix
@@ -13534,6 +13541,7 @@ Council4 currently supports **14,724 of 32,501 cards eligible for paper support 
 - Untamed Might
 - Untamed Wilds
 - Untethered Express
+- Untimely Malfunction
 - Unwanted Remake
 - Unwavering Initiate
 - Unwavering Initiate
