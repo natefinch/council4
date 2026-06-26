@@ -8,8 +8,10 @@ import "github.com/natefinch/council4/mtg/game"
 var Cards = []*game.CardDef{
 	IchorWellspring,
 	IgnobleHierarch,
+	ImpendingDoom,
 	InfernoFist,
 	InfiltrationLens,
 	InsectoidExterminator,
+	Insolence,
 	IroasSBlessing,
 }
