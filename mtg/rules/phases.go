@@ -148,7 +148,13 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 		return
 	}
 
-	if !consumeSkipStep(g, g.Turn.ActivePlayer, game.StepDraw) {
+	// Consume any scheduled one-shot draw-step skip unconditionally: a queued
+	// "skip your next draw step" applies to this turn's draw step even when a
+	// static "Skip your draw step." effect (Necropotence, Yawgmoth's Bargain)
+	// also skips it, so it must not survive to skip a later, unintended draw
+	// step. Either source skips the draw step entirely (CR 500.8).
+	scheduledSkip := consumeSkipStep(g, g.Turn.ActivePlayer, game.StepDraw)
+	if !playerSkipsDrawStep(g, g.Turn.ActivePlayer) && !scheduledSkip {
 		g.Turn.Step = game.StepDraw
 		emitBeginningOfStepEvent(g, game.StepDraw)
 		e.drawCardWithReplacements(g, g.Turn.ActivePlayer, agents, log, true)

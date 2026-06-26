@@ -537,6 +537,7 @@ const (
 	StaticPlayerRuleCastThisFromExile
 	StaticPlayerRuleLifeForColoredMana
 	StaticPlayerRuleLifeForCommanderTax
+	StaticPlayerRuleSkipDrawStep
 )
 
 // StaticPlayerRuleDeclaration is one player-scoped static rule applied to the
@@ -3817,6 +3818,10 @@ type staticPlayerRuleSpec struct {
 var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPlayerRuleSpec{
 	parser.StaticDeclarationPlayerRuleNoMaximumHandSize: {
 		kind:           StaticPlayerRuleNoMaximumHandSize,
+		matchesContent: emptyStaticPlayerRuleContent,
+	},
+	parser.StaticDeclarationPlayerRuleSkipDrawStep: {
+		kind:           StaticPlayerRuleSkipDrawStep,
 		matchesContent: emptyStaticPlayerRuleContent,
 	},
 	parser.StaticDeclarationPlayerRuleAttackTax: {

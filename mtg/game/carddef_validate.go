@@ -1013,7 +1013,7 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if effect.GrantedKeyword == KeywordNone {
 			v.add(faceName, appendPath(path, "GrantedKeyword"), CardDefIssueInvalidRuleEffect, "graveyard-card keyword grant must grant a keyword")
 		}
-	case RuleEffectNoMaximumHandSize, RuleEffectLifeTotalCantChange, RuleEffectCastSpellsAsThoughFlash, RuleEffectPlayWithTopCardRevealed, RuleEffectLookAtTopCardAnyTime:
+	case RuleEffectNoMaximumHandSize, RuleEffectLifeTotalCantChange, RuleEffectCastSpellsAsThoughFlash, RuleEffectPlayWithTopCardRevealed, RuleEffectLookAtTopCardAnyTime, RuleEffectSkipDrawStep:
 		if effect.AffectedPlayer == PlayerAny {
 			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "player rule effects must set affected player")
 		}

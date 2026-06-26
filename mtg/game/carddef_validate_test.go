@@ -1099,6 +1099,16 @@ func TestValidateCardDefAlternateFaceDefaultName(t *testing.T) {
 	t.Fatalf("issues = %+v, want oracle issue with face name 'alternate face'", issues)
 }
 
+func TestValidateCardDefAllowsSkipDrawStepRuleEffect(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:            "Skip Draw Tester",
+		StaticAbilities: []StaticAbility{SkipDrawStepStaticBody},
+	}}
+	if issues := ValidateCardDef(card); len(issues) != 0 {
+		t.Fatalf("issues = %+v, want none", issues)
+	}
+}
+
 func TestValidateCardDefAllowsNoMaximumHandSizeRuleEffect(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name:            "Reliquary Tester",

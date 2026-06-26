@@ -132,8 +132,11 @@ type StaticDeclarationPlayerRuleKind string
 
 // Static declaration player rules recognized by the parser.
 const (
-	StaticDeclarationPlayerRuleUnknown             StaticDeclarationPlayerRuleKind = ""
-	StaticDeclarationPlayerRuleNoMaximumHandSize   StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleNoMaximumHandSize"
+	StaticDeclarationPlayerRuleUnknown           StaticDeclarationPlayerRuleKind = ""
+	StaticDeclarationPlayerRuleNoMaximumHandSize StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleNoMaximumHandSize"
+	// StaticDeclarationPlayerRuleSkipDrawStep makes the controller skip their draw
+	// step ("Skip your draw step.", Necropotence, Yawgmoth's Bargain).
+	StaticDeclarationPlayerRuleSkipDrawStep        StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleSkipDrawStep"
 	StaticDeclarationPlayerRuleAttackTax           StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleAttackTax"
 	StaticDeclarationPlayerRuleAdditionalLandPlays StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleAdditionalLandPlays"
 	// StaticDeclarationPlayerRulePlayLandsFromGraveyard grants the controller a
@@ -682,6 +685,7 @@ func emitStaticDeclarations(abilities []Ability) {
 		if len(declarations) > 0 {
 			ability.StaticDeclarations = declarations
 			foldStaticCastFromTopPayLifeRider(ability, declarations)
+			foldStaticSkipDrawStep(ability, declarations)
 		}
 	}
 }
@@ -719,7 +723,37 @@ func foldStaticCastFromTopPayLifeRider(ability *Ability, declarations []StaticDe
 	}
 }
 
-// emitSelfNameStaticRules populates Sentence.StaticRule for static-rule sentences
+// foldStaticSkipDrawStep clears the legacy effect that the imperative "Skip your
+// draw step." sentence produces once the ability has recognized that text as the
+// controller-scoped skip-draw-step turn-structure rule (Necropotence, Yawgmoth's
+// Bargain). The static declaration already captures the turn-structure rule, so
+// dropping the sentence's standalone effect keeps the static ability free of a
+// stray imperative effect and lets it lower through the typed player-rule path
+// instead of the unsupported non-keyword static fallback.
+func foldStaticSkipDrawStep(ability *Ability, declarations []StaticDeclarationSyntax) {
+	credited := false
+	for i := range declarations {
+		if declarations[i].PlayerRule == StaticDeclarationPlayerRuleSkipDrawStep {
+			credited = true
+			break
+		}
+	}
+	if !credited {
+		return
+	}
+	for i := range ability.Sentences {
+		if len(ability.Sentences[i].Effects) == 0 && !ability.Sentences[i].LegacyEffects {
+			continue
+		}
+		if !staticWordsAt(semanticEffectTokens(ability.Sentences[i].Tokens), 0, "skip", "your", "draw", "step") {
+			continue
+		}
+		ability.Sentences[i].Effects = nil
+		ability.Sentences[i].LegacyEffects = false
+		return
+	}
+}
+
 // whose subject is the card's own printed name ("Toski attacks each combat if
 // able.") instead of a "this creature"/"this permanent" marker. Sentence
 // splitting runs before atoms are recognized, so the self-name form is resolved
@@ -1820,6 +1854,7 @@ func parseStaticCardTypeList(tokens []shared.Token, index, end int) ([]CardType,
 
 var staticPlayerRuleParsers = []staticPlayerRuleParser{
 	parseStaticNoMaximumHandSizeDeclaration,
+	parseStaticSkipDrawStepDeclaration,
 	parseStaticAttackTaxDeclaration,
 	parseStaticAdditionalLandPlaysDeclaration,
 	parseStaticEachPlayerAdditionalLandPlaysDeclaration,
@@ -1859,6 +1894,27 @@ func parseStaticNoMaximumHandSizeDeclaration(tokens []shared.Token) (StaticDecla
 			Span: tokens[0].Span,
 		},
 		PlayerRule: StaticDeclarationPlayerRuleNoMaximumHandSize,
+	}, true
+}
+
+// parseStaticSkipDrawStepDeclaration recognizes the exact controller-scoped
+// "Skip your draw step." turn-structure rule (Necropotence, Yawgmoth's Bargain).
+func parseStaticSkipDrawStepDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 5 || tokens[4].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "skip", "your", "draw", "step") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens[0:4]),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: tokens[1].Span,
+		},
+		PlayerRule: StaticDeclarationPlayerRuleSkipDrawStep,
 	}, true
 }
 

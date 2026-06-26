@@ -134,6 +134,17 @@ var NoMaximumHandSizeStaticBody = StaticAbility{
 	}},
 }
 
+// SkipDrawStepStaticBody is the complete static ability for "Skip your draw
+// step." (Necropotence, Yawgmoth's Bargain). While the source applies, the
+// controller's draw step does not happen at all (CR 500.8, CR 504).
+var SkipDrawStepStaticBody = StaticAbility{
+	Text: "Skip your draw step.",
+	RuleEffects: []RuleEffect{{
+		Kind:           RuleEffectSkipDrawStep,
+		AffectedPlayer: PlayerYou,
+	}},
+}
+
 // PlayLandsFromGraveyardStaticBody is the complete static ability for "You may
 // play lands from your graveyard." The controller may play land cards from their
 // graveyard, subject to the usual one-land-per-turn limit.

@@ -395,6 +395,14 @@ const (
 	// other non-tap mana sources are unaffected. Multiple such effects compound
 	// multiplicatively. It carries no filters beyond the factor.
 	RuleEffectManaProductionMultiplier
+	// RuleEffectSkipDrawStep makes the affected player skip their draw step
+	// ("Skip your draw step.", Necropotence, Yawgmoth's Bargain). While the
+	// effect applies, the affected player's draw step does not happen at all: no
+	// beginning-of-draw-step triggers fire, no turn-based draw occurs, and no
+	// priority is given during that step (CR 500.8, CR 504). It is a
+	// controller-scoped turn-structure static carrying no payload beyond the
+	// affected player.
+	RuleEffectSkipDrawStep
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -442,7 +450,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectCantTransform,
 		RuleEffectSuppressOpponentEnteringTriggers,
 		RuleEffectAttackTaxPerCreature,
-		RuleEffectManaProductionMultiplier:
+		RuleEffectManaProductionMultiplier,
+		RuleEffectSkipDrawStep:
 		return true
 	default:
 		return false

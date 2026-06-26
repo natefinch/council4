@@ -388,6 +388,24 @@ func playerHasNoMaximumHandSize(g *game.Game, playerID game.PlayerID) bool {
 	return false
 }
 
+// playerSkipsDrawStep reports whether an active rule effect makes playerID skip
+// their draw step ("Skip your draw step.", Necropotence, Yawgmoth's Bargain).
+// When it does, the draw step does not happen at all: no beginning-of-step
+// triggers, no turn-based draw, and no priority during that step (CR 500.8).
+func playerSkipsDrawStep(g *game.Game, playerID game.PlayerID) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectSkipDrawStep {
+			continue
+		}
+		if playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
+			return true
+		}
+	}
+	return false
+}
+
 // entryFromZoneProhibited reports whether an active RuleEffectCantEnterFromZones
 // effect forbids a card with the given definition from entering the battlefield
 // out of sourceZone ("Creature cards in graveyards and libraries can't enter the
