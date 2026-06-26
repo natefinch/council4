@@ -1667,6 +1667,12 @@ type CompiledEffect struct {
 	// toughness each equal, bound from the ability's "where X is <dynamic>" clause.
 	// It is set only when TokenPTVariableX is true. It is empty for fixed tokens.
 	TokenPTDynamic parser.EffectDynamicAmountKind
+	// TokenKeywords lists, in source order, every creature keyword a created token
+	// enters with ("with flying and vigilance" -> [Flying, Vigilance]). Lowering
+	// reads it for token-creation replacements whose substitute token carries more
+	// than the single keyword the selector records (Divine Visitation's 4/4 Angel
+	// with flying and vigilance). It is nil for tokens with no keyword rider.
+	TokenKeywords []parser.KeywordKind
 	// TokenGrantedAbility is the quoted ability a created token enters with ("...
 	// token with \"When this token dies, you gain 1 life.\""), parsed once through
 	// the pipeline. Lowering compiles its inner document and attaches the runtime

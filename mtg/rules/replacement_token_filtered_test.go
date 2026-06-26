@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -85,6 +86,82 @@ func TestTokenCreationAnyControllerScopeAffectsOpponent(t *testing.T) {
 	}
 	if got := countTokenPermanentsNamed(g, "Saproling"); got != 2 {
 		t.Fatalf("opponent-created tokens under any-player doubler = %d, want 2", got)
+	}
+}
+
+func identityCreatureTokenReplacementCardDef() *game.CardDef {
+	angel := &game.CardDef{CardFace: game.CardFace{
+		Name:     "Angel",
+		Colors:   []color.Color{color.White},
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Angel},
+	}}
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  "Divine Visitation",
+		Types: []types.Card{types.Enchantment},
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.TokenCreationReplacementFiltered(
+				"If one or more creature tokens would be created under your control, that many Angels are created instead.",
+				&game.TokenCreationReplacementSpec{
+					Multiplier: 1,
+					Types:      []types.Card{types.Creature},
+					Filter:     game.TriggerControllerYou,
+					ReplaceDef: angel,
+				},
+			),
+		},
+	}}
+}
+
+func TestIdentityReplacementSubstitutesEachCreatureToken(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, identityCreatureTokenReplacementCardDef())
+	token := &game.CardDef{CardFace: game.CardFace{Name: "Soldier", Types: []types.Card{types.Creature}}}
+
+	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player1, token, 3, false, [game.NumPlayers]PlayerAgent{}, nil) {
+		t.Fatal("createTokenPermanentsWithChoices() = false, want true")
+	}
+	if got := countTokenPermanentsNamed(g, "Angel"); got != 3 {
+		t.Fatalf("substituted Angel tokens = %d, want 3", got)
+	}
+	if got := countTokenPermanentsNamed(g, "Soldier"); got != 0 {
+		t.Fatalf("original Soldier tokens = %d, want 0", got)
+	}
+}
+
+func TestIdentityReplacementIgnoresNonCreatureToken(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, identityCreatureTokenReplacementCardDef())
+	token := &game.CardDef{CardFace: game.CardFace{
+		Name:     "Treasure",
+		Types:    []types.Card{types.Artifact},
+		Subtypes: []types.Sub{types.Treasure},
+	}}
+
+	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player1, token, 1, false, [game.NumPlayers]PlayerAgent{}, nil) {
+		t.Fatal("createTokenPermanentsWithChoices() = false, want true")
+	}
+	if got := countTokenPermanentsNamed(g, "Treasure"); got != 1 {
+		t.Fatalf("non-creature Treasure tokens = %d, want 1", got)
+	}
+	if got := countTokenPermanentsNamed(g, "Angel"); got != 0 {
+		t.Fatalf("Angel substitutes for non-creature token = %d, want 0", got)
+	}
+}
+
+func TestIdentityReplacementIgnoresOpponentUnderYourControlScope(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, identityCreatureTokenReplacementCardDef())
+	token := &game.CardDef{CardFace: game.CardFace{Name: "Soldier", Types: []types.Card{types.Creature}}}
+
+	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player2, token, 1, false, [game.NumPlayers]PlayerAgent{}, nil) {
+		t.Fatal("createTokenPermanentsWithChoices(Player2) = false, want true")
+	}
+	if got := countTokenPermanentsNamed(g, "Soldier"); got != 1 {
+		t.Fatalf("opponent Soldier tokens under your-control identity replacement = %d, want 1", got)
+	}
+	if got := countTokenPermanentsNamed(g, "Angel"); got != 0 {
+		t.Fatalf("Angel substitutes for opponent token = %d, want 0", got)
 	}
 }
 

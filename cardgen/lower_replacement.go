@@ -911,8 +911,27 @@ func lowerTokenCreationReplacement(
 			Filter:     filter,
 			AddendDef:  addendDef,
 		}), true, nil
+	case parser.EffectReplacementThatManyIdentity:
+		// The identity substitution replaces each would-be-created token with one
+		// copy of a fully spelled-out substitute token ("... that many 4/4 white
+		// Angel creature tokens with flying and vigilance are created instead.").
+		// The substitute is synthesized from the output effect exactly as the
+		// active create-verb path builds a creature token, with the output
+		// clause's keywords ("flying and vigilance") threaded in. The would-create
+		// group's subtypes restrict which token-creation events are replaced.
+		replaceDef, ok := synthesizeCreatureTokenDef(&output, output.TokenKeywords)
+		if !ok {
+			return unsupported("the executable source backend supports only fixed creature substitute token-creation replacements")
+		}
+		return game.TokenCreationReplacementFiltered(ability.Text, &game.TokenCreationReplacementSpec{
+			Multiplier: 1,
+			Subtypes:   ability.Content.Effects[0].Selector.SubtypesAny(),
+			Types:      requiredTypes,
+			Filter:     filter,
+			ReplaceDef: replaceDef,
+		}), true, nil
 	default:
-		return unsupported("the executable source backend supports only token-doubling or additive replacement amounts")
+		return unsupported("the executable source backend supports only token-doubling, additive, or identity replacement amounts")
 	}
 }
 

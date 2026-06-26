@@ -55,6 +55,20 @@ func (a *Ability) computeSemanticKeywords() []Keyword {
 	if span, ok := a.activationTimingSpan(); ok {
 		body = tokensOutsideParserSpan(body, span)
 	}
+	// An identity-substitution token-creation replacement spells out its
+	// substitute token's keywords ("... that many 4/4 white Angel creature tokens
+	// with flying and vigilance are created instead."). Those keywords describe
+	// the created token, not a static keyword ability of the source permanent, so
+	// the recognized output clause owns them; remove its span before keyword
+	// scanning to keep them from surfacing as the ability's own keywords.
+	for i := range a.Sentences {
+		for j := range a.Sentences[i].Effects {
+			effect := &a.Sentences[i].Effects[j]
+			if effect.Replacement.Kind == EffectReplacementThatManyIdentity {
+				body = tokensOutsideParserSpan(body, effect.Span)
+			}
+		}
+	}
 	tokens := eventHistorySemanticTokens(body, a.Reminders, a.Quoted)
 	tokens = stripCreatureSpellHasteRiderTokens(tokens)
 	return a.Atoms.KeywordsWithin(tokens)

@@ -488,6 +488,11 @@ type TokenCreationReplacementSpec struct {
 	Types      []types.Card
 	Filter     TriggerControllerFilter
 	AddendDef  *CardDef
+	// ReplaceDef, when non-nil, replaces each created token matched by the
+	// Types/Subtypes filter with one copy of this definition (Divine Visitation's
+	// 4/4 Angel). A spec with ReplaceDef carries Multiplier 1 and no addend; the
+	// original would-create count is preserved as the substitute count.
+	ReplaceDef *CardDef
 }
 
 // TokenCreationReplacementFiltered creates a persistent replacement that
@@ -506,6 +511,7 @@ func TokenCreationReplacementFiltered(text string, spec *TokenCreationReplacemen
 			TokenRequiredSubtypes: append([]types.Sub(nil), spec.Subtypes...),
 			TokenRequiredTypes:    append([]types.Card(nil), spec.Types...),
 			TokenAddendDef:        spec.AddendDef,
+			TokenReplaceDef:       spec.ReplaceDef,
 			Duration:              DurationPermanent,
 		},
 	}

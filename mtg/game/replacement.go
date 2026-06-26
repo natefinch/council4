@@ -272,7 +272,17 @@ type ReplacementEffect struct {
 	// "create those tokens plus an additional Food token"). The addend tokens are
 	// created directly alongside the matched tokens, so they neither re-trigger
 	// this replacement nor multiply with TokenMultiplier.
-	TokenAddendDef    *CardDef
+	TokenAddendDef *CardDef
+	// TokenReplaceDef, when non-nil, replaces each token the matched creation
+	// event would create with one copy of this definition, backing the identity
+	// substitution "If one or more <type> tokens would be created under your
+	// control, that many <other token> are created instead." (Divine Visitation:
+	// each created creature token becomes a 4/4 Angel). The would-create count is
+	// preserved (one substitute per original token), so the substitution carries
+	// TokenMultiplier 1 and no addend; TokenRequiredTypes / TokenRequiredSubtypes
+	// restrict which created tokens it replaces. It is nil for every multiplying
+	// or additive token-creation replacement.
+	TokenReplaceDef   *CardDef
 	CounterMultiplier int
 	CounterAddend     int
 	MatchCounterKind  bool

@@ -1044,6 +1044,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 	for _, recognize := range []func() ([]EffectSyntax, bool){
 		func() ([]EffectSyntax, bool) { return parsePassiveTokenDoublingEffects(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePassiveTokenAdditiveEffects(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parsePassiveTokenIdentityEffects(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseEntersAsCopyEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDevourEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseTributeEffect(sentence, tokens, atoms) },
