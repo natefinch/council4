@@ -2251,6 +2251,38 @@ func TestParseControllerMayPaySuccessConsequence(t *testing.T) {
 	}
 }
 
+func TestParseControllerMayPaySuccessConsequenceSubjectLed(t *testing.T) {
+	t.Parallel()
+	// The consequence clause leads with the "you" subject before its verb
+	// ("you gain 1 life"), unlike the verb-first "untap this artifact" form.
+	// The optional payment must still fold onto the subject-led consequence.
+	document, diagnostics := Parse(
+		"Whenever a creature you control dies, you may pay {1}. If you do, you gain 1 life.",
+		Context{CardName: "Soul Net"},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := document.Abilities[0]
+	if ability.Optional || len(ability.Sentences) != 2 ||
+		ability.Sentences[0].PaymentPrelude == nil {
+		t.Fatalf("payment sequence = %#v", ability)
+	}
+	effect := ability.Sentences[1].Effects[0]
+	if effect.Payment.Form != EffectPaymentFormMayPayThenIfDo ||
+		effect.Payment.Payer != EffectPaymentPayerController ||
+		!slices.Equal(effect.Payment.ManaCost, cost.Mana{cost.O(1)}) ||
+		effect.Optional || effect.Negated || !effect.Exact {
+		t.Fatalf("consequence = %#v", effect)
+	}
+	if len(ability.ConditionClauses) != 1 ||
+		ability.ConditionClauses[0].Predicate != ConditionPredicatePriorInstructionAccepted ||
+		len(ability.ConditionBoundaries) != 1 ||
+		ability.ConditionBoundaries[0].NodeID != effect.Payment.SuccessConditionNodeID {
+		t.Fatalf("conditions = %#v", ability.ConditionClauses)
+	}
+}
+
 func TestParseControllerMandatoryPayOrLoseGame(t *testing.T) {
 	t.Parallel()
 	document, diagnostics := Parse(

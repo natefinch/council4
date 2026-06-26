@@ -27,5 +27,7 @@ var Cards = []*game.CardDef{
 	InvasionOfIxalan,
 	IroasSBlessing,
 	IronHeartChimera,
+	IronStar,
 	ItThatHeraldsTheEnd,
+	IvoryCup,
 }

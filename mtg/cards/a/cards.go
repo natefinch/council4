@@ -23,6 +23,7 @@ var Cards = []*game.CardDef{
 	AngelicSellSword,
 	Anger,
 	AnkhOfMishra,
+	ApothecaryInitiate,
 	AppealToEirdu,
 	ArcaneInfusion,
 	ArcanistSOwl,
@@ -33,5 +34,6 @@ var Cards = []*game.CardDef{
 	AshmouthHound,
 	AspectOfLamprey,
 	AugurOfBolas,
+	AuspiciousAncestor,
 	AvacynianPriest,
 }

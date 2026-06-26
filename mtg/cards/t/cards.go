@@ -6,6 +6,7 @@ import "github.com/natefinch/council4/mtg/game"
 
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
+	TabletOfEpityr,
 	TajuruStalwart,
 	TapestryOfTheAges,
 	TappingAtTheWindow,
@@ -20,6 +21,7 @@ var Cards = []*game.CardDef{
 	TheIrencrag,
 	ThornThallid,
 	ThrabenDoomsayer,
+	ThroneOfBone,
 	ThroneWarden,
 	TinWingChimera,
 	TolarianSerpent,
