@@ -478,6 +478,15 @@ type StaticCostModifierDeclaration struct {
 	MinPower      int
 	MatchMinPower bool
 
+	// MinManaValue constrains a spell cost modifier to spells whose mana value is
+	// at least this threshold ("Creature spells you cast with mana value 6 or
+	// greater cost {2} less to cast.", Krosan Drover). MatchMinManaValue marks the
+	// threshold present so a zero threshold stays expressible. It is mutually
+	// exclusive with MinPower and combines with the card-type, color, subtype,
+	// and zone filters.
+	MinManaValue      int
+	MatchMinManaValue bool
+
 	// TargetsSource constrains a spell cost modifier to spells that target the
 	// source permanent ("Spells your opponents cast that target this creature
 	// cost {2} more to cast.", Boreal Elemental). Caster identifies which
@@ -3404,6 +3413,12 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 	if node.MatchSpellPowerAtLeast && node.SpellPowerAtLeast <= 0 {
 		return StaticDeclaration{}, false
 	}
+	if node.MatchSpellManaValueAtLeast && node.SpellManaValueAtLeast <= 0 {
+		return StaticDeclaration{}, false
+	}
+	if node.MatchSpellPowerAtLeast && node.MatchSpellManaValueAtLeast {
+		return StaticDeclaration{}, false
+	}
 	caster, ok := staticSpellCasterKind(node.SpellCaster)
 	if !ok {
 		return StaticDeclaration{}, false
@@ -3419,6 +3434,8 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 		SourceZone:                   node.SpellCastZone,
 		MinPower:                     node.SpellPowerAtLeast,
 		MatchMinPower:                node.MatchSpellPowerAtLeast,
+		MinManaValue:                 node.SpellManaValueAtLeast,
+		MatchMinManaValue:            node.MatchSpellManaValueAtLeast,
 		TargetsSource:                node.SpellTargetsSource,
 		Caster:                       caster,
 	}

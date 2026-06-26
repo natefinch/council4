@@ -247,6 +247,31 @@ func TestLowerStaticSpellCostModifierPowerThreshold(t *testing.T) {
 	}
 }
 
+func TestLowerStaticSpellCostModifierManaValueThreshold(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Krosan Drover",
+		Layout:     "normal",
+		TypeLine:   "Creature — Elf",
+		Power:      new("2"),
+		Toughness:  new("2"),
+		OracleText: "Creature spells you cast with mana value 6 or greater cost {2} less to cast.",
+	})
+	if len(face.StaticAbilities) != 1 || len(face.StaticAbilities[0].Body.RuleEffects) != 1 {
+		t.Fatalf("static abilities = %#v, want one mana-value-threshold cost effect", face.StaticAbilities)
+	}
+	modifier := face.StaticAbilities[0].Body.RuleEffects[0].CostModifier
+	if modifier.Kind != game.CostModifierSpell ||
+		len(modifier.CardSelection.RequiredTypes) != 1 ||
+		modifier.CardSelection.RequiredTypes[0] != types.Creature ||
+		modifier.GenericReduction != 2 ||
+		modifier.CardSelection.Power.Exists ||
+		!modifier.CardSelection.ManaValue.Exists ||
+		modifier.CardSelection.ManaValue.Val != (compare.Int{Op: compare.GreaterOrEqual, Value: 6}) {
+		t.Fatalf("modifier = %#v, want mana-value-6 creature {2} reduction", modifier)
+	}
+}
+
 func TestLowerStaticSpellCostModifierRejectsUnsupported(t *testing.T) {
 	t.Parallel()
 	sources := map[string]string{

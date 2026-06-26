@@ -1292,14 +1292,15 @@ func TestParseStaticAbilityCostSetDeclarationMeaning(t *testing.T) {
 func TestParseStaticSpellCostModifierDeclarationMeaning(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
-		source        string
-		modifier      StaticDeclarationCostModifierKind
-		spellType     StaticDeclarationSpellTypeKind
-		spellColor    StaticDeclarationSpellColorKind
-		spellSubtypes []types.Sub
-		castZone      StaticDeclarationCastZoneKind
-		amount        int
-		powerAtLeast  int
+		source           string
+		modifier         StaticDeclarationCostModifierKind
+		spellType        StaticDeclarationSpellTypeKind
+		spellColor       StaticDeclarationSpellColorKind
+		spellSubtypes    []types.Sub
+		castZone         StaticDeclarationCastZoneKind
+		amount           int
+		powerAtLeast     int
+		manaValueAtLeast int
 	}{
 		"all spells reduction": {
 			source:    "Spells you cast cost {1} less to cast.",
@@ -1401,6 +1402,20 @@ func TestParseStaticSpellCostModifierDeclarationMeaning(t *testing.T) {
 			amount:       2,
 			powerAtLeast: 4,
 		},
+		"creature mana value threshold reduction": {
+			source:           "Creature spells you cast with mana value 6 or greater cost {2} less to cast.",
+			modifier:         StaticDeclarationCostModifierSpellReduction,
+			spellType:        StaticDeclarationSpellTypeCreature,
+			amount:           2,
+			manaValueAtLeast: 6,
+		},
+		"instant sorcery mana value threshold reduction": {
+			source:           "Instant and sorcery spells you cast with mana value 5 or greater cost {1} less to cast.",
+			modifier:         StaticDeclarationCostModifierSpellReduction,
+			spellType:        StaticDeclarationSpellTypeInstantOrSorcery,
+			amount:           1,
+			manaValueAtLeast: 5,
+		},
 		"shared exiled card type reduction": {
 			source:    "Spells you cast cost {1} less to cast for each card type they share with cards exiled with this creature.",
 			modifier:  StaticDeclarationCostModifierSpellSharedExiledTypeReduction,
@@ -1429,6 +1444,10 @@ func TestParseStaticSpellCostModifierDeclarationMeaning(t *testing.T) {
 			if declaration.SpellPowerAtLeast != test.powerAtLeast ||
 				declaration.MatchSpellPowerAtLeast != (test.powerAtLeast > 0) {
 				t.Fatalf("declaration power threshold = %d (match %t), want %d", declaration.SpellPowerAtLeast, declaration.MatchSpellPowerAtLeast, test.powerAtLeast)
+			}
+			if declaration.SpellManaValueAtLeast != test.manaValueAtLeast ||
+				declaration.MatchSpellManaValueAtLeast != (test.manaValueAtLeast > 0) {
+				t.Fatalf("declaration mana value threshold = %d (match %t), want %d", declaration.SpellManaValueAtLeast, declaration.MatchSpellManaValueAtLeast, test.manaValueAtLeast)
 			}
 		})
 	}

@@ -12,5 +12,6 @@ var Cards = []*game.CardDef{
 	KessigCagebreakers,
 	KessigWolfRun,
 	KhalniAmbush,
+	KrosanDrover,
 	KusariGama,
 }
