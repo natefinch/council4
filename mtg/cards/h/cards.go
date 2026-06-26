@@ -21,6 +21,7 @@ var Cards = []*game.CardDef{
 	HiddenStockpile,
 	HoofprintsOfTheStag,
 	HornbashMentor,
+	HoverguardObserver,
 	HowlOfTheNightPack,
 	HuntTheHunter,
 	HuntTheWeak,

@@ -28,6 +28,7 @@ var Cards = []*game.CardDef{
 	CitizenTokenffbc483301db45f8b8b4c2e2c8235d0c,
 	ClericToken196f944465ac40728b9e233e8df98d08,
 	ClericToken3759f91ad82949a68b72542a41789ebd,
+	CloudSpriteToken5b04de5c19b74767a38fd5420d5da472,
 	ClownRobotTokenf96931c5939544d48ada47b62e6bd623,
 	ConstructToken180881c95ae74810a17a06b5994a48a1,
 	ConstructToken63ff850ddf4a490395cbcc04dfacc3f1,

@@ -23,6 +23,7 @@ var Cards = []*game.CardDef{
 	GlaringFleshraker,
 	GlimpseTheUnthinkable,
 	GlintNestCrane,
+	Gloomwidow,
 	GoblinDarkDwellers,
 	GoblinLookout,
 	GoblinPyromancer,

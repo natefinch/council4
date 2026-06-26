@@ -10,6 +10,7 @@ var Cards = []*game.CardDef{
 	TajuruStalwart,
 	TapestryOfTheAges,
 	TappingAtTheWindow,
+	TatteredHaunter,
 	TeferiSProtection,
 	TempestTechnique,
 	Thallid,

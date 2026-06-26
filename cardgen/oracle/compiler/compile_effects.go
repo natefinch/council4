@@ -608,6 +608,8 @@ func effectKindForStaticRule(rule StaticRuleKind) EffectKind {
 		return EffectCantBlockAndCantBeBlocked
 	case StaticRuleDoesntUntap:
 		return EffectDoesntUntap
+	case StaticRuleCanBlockOnlyCreaturesWithFlying:
+		return EffectCanBlockOnlyCreaturesWithFlying
 	default:
 		return EffectUnknown
 	}

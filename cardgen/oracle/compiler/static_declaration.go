@@ -156,6 +156,12 @@ const (
 	// Werewolves you control can't transform.", Immerwolf); it lowers to the
 	// can't-transform runtime rule effect.
 	StaticRuleCantTransform
+	// StaticRuleCanBlockOnlyCreaturesWithFlying is the blocker-side permission
+	// restriction "can block only creatures with flying" (Cloud Sprite,
+	// Gloomwidow): the subject creature may block only attackers that have flying.
+	// It lowers to the can-block-only runtime rule effect bounded by the flying
+	// blocker restriction.
+	StaticRuleCanBlockOnlyCreaturesWithFlying
 )
 
 // StaticBlockerRestrictionKind identifies the blocker characteristic bounding a
@@ -1501,6 +1507,13 @@ func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, 
 	}
 	if isCreatureRuleSubject(rule.Subject.Kind) &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintRequirement &&
+		rule.Operation.Kind == parser.StaticRuleOperationBlock &&
+		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
+		staticRuleQualifiersAre(rule.Qualifiers, parser.StaticRuleQualifierBlockedAttackerFlying) {
+		return StaticRuleCanBlockOnlyCreaturesWithFlying, StaticZoneBattlefield, true
+	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintRequirement &&
 		rule.Operation.Kind == parser.StaticRuleOperationBlockedByAll &&
 		rule.Operation.Voice == parser.StaticRuleVoicePassive &&
 		len(rule.Qualifiers) == 0 {
@@ -1580,6 +1593,8 @@ func staticRuleForEffect(kind EffectKind) StaticRuleKind {
 		return StaticRuleCantBlockAndCantBeBlocked
 	case EffectDoesntUntap:
 		return StaticRuleDoesntUntap
+	case EffectCanBlockOnlyCreaturesWithFlying:
+		return StaticRuleCanBlockOnlyCreaturesWithFlying
 	default:
 		return StaticRuleUnknown
 	}
@@ -1617,7 +1632,8 @@ func staticRuleDomain(rule StaticRuleKind) StaticRuleDomain {
 		return StaticRuleDomainAttack
 	case StaticRuleCantBlock, StaticRuleCantBeBlocked, StaticRuleMustBeBlocked, StaticRuleCantBeBlockedByMoreThanOne,
 		StaticRuleCantBeBlockedByCreaturesWith, StaticRuleCantBlockAndCantBeBlocked,
-		StaticRuleMustBeBlockedByAllAble, StaticRuleAssignDamageAsUnblocked:
+		StaticRuleMustBeBlockedByAllAble, StaticRuleAssignDamageAsUnblocked,
+		StaticRuleCanBlockOnlyCreaturesWithFlying:
 		return StaticRuleDomainBlock
 	case StaticRuleCantBeCountered:
 		return StaticRuleDomainCountering

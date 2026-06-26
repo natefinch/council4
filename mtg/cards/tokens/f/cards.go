@@ -11,6 +11,7 @@ var Cards = []*game.CardDef{
 	FaerieRogueToken759b1cd0a2d946d3843333892abd184c,
 	FaerieToken03fc0caea6d34fae995d038eb32c48ac,
 	FaerieToken521939c6cf5a4b92874f11f2889061d7,
+	FaerieToken6004bdefb95240db9113921e6d6b8964,
 	FirstMateRagavanTokenee4b3162e2b44c10acd675ff9ec1d44e,
 	FishToken5bef2c1c72154b018bb3426e1c3dd2e0,
 	FishTokenbdb03306355c41e596bcf60483e59b2a,

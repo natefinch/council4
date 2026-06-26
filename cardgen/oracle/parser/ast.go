@@ -1216,6 +1216,13 @@ const (
 	// prohibition to artifact-creature blockers ("can't be blocked by artifact
 	// creatures").
 	StaticRuleQualifierBlockerArtifact StaticRuleQualifierKind = "StaticRuleQualifierBlockerArtifact"
+	// StaticRuleQualifierBlockedAttackerFlying restricts a "can block only"
+	// permission to attackers with flying ("This creature can block only
+	// creatures with flying."): the subject blocker may block only attackers that
+	// have flying. Unlike the StaticRuleQualifierBlocker* kinds the matched
+	// characteristic describes the attacker the subject blocks, not the subject's
+	// own blockers.
+	StaticRuleQualifierBlockedAttackerFlying StaticRuleQualifierKind = "StaticRuleQualifierBlockedAttackerFlying"
 )
 
 // StaticRuleSubject is a source-spanned simple static-rule subject.

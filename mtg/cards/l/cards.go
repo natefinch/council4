@@ -21,6 +21,7 @@ var Cards = []*game.CardDef{
 	LivingPhone,
 	LlanowarWastes,
 	LocthwainPaladin,
+	LongFinnedSkywhale,
 	LongRoadHome,
 	LordDreggInsectInvader,
 	LoxodonWarhammer,

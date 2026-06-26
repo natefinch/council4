@@ -25,6 +25,7 @@ var Cards = []*game.CardDef{
 	Riddlekeeper,
 	RingOfThreeWishes,
 	RiseFromTheTides,
+	RishadanAirship,
 	RiteOfFlame,
 	RiteOfOblivion,
 	RiteOfReplication,
