@@ -24,6 +24,7 @@ var Cards = []*game.CardDef{
 	LongFinnedSkywhale,
 	LongRoadHome,
 	LordDreggInsectInvader,
+	LostJitte,
 	LoxodonWarhammer,
 	LupinflowerVillage,
 	LustForWar,

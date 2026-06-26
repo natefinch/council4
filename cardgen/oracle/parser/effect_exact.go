@@ -4129,7 +4129,11 @@ func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
 		objects = append(objects, object)
 	case len(effect.Targets) == 0:
 		if effect.CounterRecipientAttached {
-			objects = append(objects, "enchanted creature")
+			// The attached recipient is "enchanted creature" (Aura) or
+			// "equipped creature" (Equipment); both lower to the source's
+			// attached-permanent reference, so offer both candidates and let the
+			// byte-exact text match select the one the source printed.
+			objects = append(objects, "enchanted creature", "equipped creature")
 			break
 		}
 		// A trailing dynamic count ("… where X is the number of +1/+1 counters
@@ -4228,6 +4232,19 @@ func counterPlacementTextMatches(effect *EffectSyntax, object string) bool {
 	if effect.Amount.DynamicForm == EffectDynamicAmountFormEqual {
 		equalPrefix := fmt.Sprintf("Put a number of %s counters on %s", effect.CounterKind.String(), object)
 		return strings.EqualFold(text, equalPrefix+" "+effect.Amount.Text+".")
+	}
+	// The "for each" form ("Put a +1/+1 counter on target creature for each Elf
+	// you control.") places one counter per counted object and states its count
+	// as a trailing "for each <iterator>" clause that the amount captured
+	// verbatim. Only the multiplier-one form prints the bare "a <kind> counter"
+	// count word, so a richer multiplier or an unrecognized iterator fails
+	// closed.
+	if effect.Amount.DynamicForm == EffectDynamicAmountFormForEach {
+		if effect.Amount.DynamicKind == EffectDynamicAmountNone || effect.Amount.Multiplier != 1 {
+			return false
+		}
+		forEachPrefix := fmt.Sprintf("Put a %s counter on %s", effect.CounterKind.String(), object)
+		return strings.EqualFold(text, forEachPrefix+" "+effect.Amount.Text+".")
 	}
 	prefix := fmt.Sprintf("Put %s %s %s on %s", effectAmountSourceText(effect), effect.CounterKind.String(), noun, object)
 	if strings.EqualFold(text, prefix+".") {

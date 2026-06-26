@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,837 of 32,501 cards eligible for paper support (45.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,845 of 32,501 cards eligible for paper support (45.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4901,6 +4901,7 @@ Council4 currently supports **14,837 of 32,501 cards eligible for paper support 
 - Gene Pollinator
 - General Kreat, the Boltbringer
 - General Kudro of Drannith
+- General Leo Cristophe
 - General Thunderbolt Ross
 - General Traag, Heart of Stone
 - Generator Servant
@@ -4947,6 +4948,7 @@ Council4 currently supports **14,837 of 32,501 cards eligible for paper support 
 - Ghor-Clan Savage
 - Ghor-Clan Wrecker
 - Ghost Hounds
+- Ghost Lantern // Bind Spirit
 - Ghost Quarter
 - Ghost Ship
 - Ghost Tactician
@@ -5399,6 +5401,7 @@ Council4 currently supports **14,837 of 32,501 cards eligible for paper support 
 - Grave Pact
 - Grave Peril
 - Grave Robbers
+- Grave Strength
 - Grave Titan
 - Grave Upheaval
 - Grave Venerations
@@ -6055,6 +6058,7 @@ Council4 currently supports **14,837 of 32,501 cards eligible for paper support 
 - Huatli's Final Strike
 - Huatli's Raptor
 - Huatli's Snubhorn
+- Huatli, Radiant Champion
 - Hugs, Grisly Guardian
 - Hulk, Always Angry
 - Hulk, Bruce Banner
@@ -7382,6 +7386,7 @@ Council4 currently supports **14,837 of 32,501 cards eligible for paper support 
 - Lossarnach Captain
 - Lost in a Labyrinth
 - Lost in the Mist
+- Lost Jitte
 - Lost Legion
 - Lost Leonin
 - Lost Soul
@@ -8069,6 +8074,7 @@ Council4 currently supports **14,837 of 32,501 cards eligible for paper support 
 - Moldering Karok
 - Moldervine Cloak
 - Moldervine Reclamation
+- Moldgraf Millipede
 - Moldgraf Scavenger
 - Mole Module
 - Molecular Modifier
@@ -12681,6 +12687,7 @@ Council4 currently supports **14,837 of 32,501 cards eligible for paper support 
 - Tarmogoyf
 - Tarnished Citadel
 - Tarpan
+- Tarrian's Soulcleaver
 - Tasigur's Cruelty
 - Task Force
 - Tasseled Dromedary
@@ -12969,6 +12976,7 @@ Council4 currently supports **14,837 of 32,501 cards eligible for paper support 
 - Thought Collapse
 - Thought Courier
 - Thought Erasure
+- Thought Gorger
 - Thought Monitor
 - Thought Reflection
 - Thought Scour

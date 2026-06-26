@@ -6156,16 +6156,18 @@ func entersTappedSelfSyntax(kind EffectKind, clause []shared.Token) bool {
 }
 
 // counterRecipientAttached reports that a counter-placement effect ("put ...
-// counter(s) on enchanted creature") targets the permanent the source Aura is
-// attached to. It gates on the counter verb and a known counter kind and matches
-// only the bare "on enchanted creature" recipient; exact canonical
-// reconstruction independently confirms the full clause wording, so any
-// additional qualifier leaves the effect inexact and fails closed in lowering.
+// counter(s) on enchanted creature" / "on equipped creature") targets the
+// permanent the source Aura or Equipment is attached to. It gates on the counter
+// verb and a known counter kind and matches only the bare attached-creature
+// recipient; exact canonical reconstruction independently confirms the full
+// clause wording, so any additional qualifier leaves the effect inexact and
+// fails closed in lowering.
 func counterRecipientAttached(kind EffectKind, counterKnown bool, clause []shared.Token) bool {
 	if kind != EffectPut || !counterKnown {
 		return false
 	}
-	return effectHasTokenWords(clause, "on", "enchanted", "creature")
+	return effectHasTokenWords(clause, "on", "enchanted", "creature") ||
+		effectHasTokenWords(clause, "on", "equipped", "creature")
 }
 
 // moveAllCountersClause reports the kind-agnostic "move all counters" form,
