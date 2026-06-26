@@ -9,6 +9,7 @@ var Cards = []*game.CardDef{
 	RakishCrew,
 	RampantGrowth,
 	RancorousArchaic,
+	ReduceToAshes,
 	RenegadeRallier,
 	RhinoSRampage,
 	RhonasTheIndomitable,

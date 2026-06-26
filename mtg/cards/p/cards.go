@@ -14,4 +14,5 @@ var Cards = []*game.CardDef{
 	PropagatorDrone,
 	ProsperityTycoon,
 	PsychicVenom,
+	PuncturingBlow,
 }

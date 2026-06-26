@@ -8,6 +8,7 @@ import "github.com/natefinch/council4/mtg/game"
 var Cards = []*game.CardDef{
 	LassoedByTheLaw,
 	LatticeBladeMantis,
+	LavaCoil,
 	LegolasMasterArcher,
 	LifeBurst,
 	LifecraftCavalry,
