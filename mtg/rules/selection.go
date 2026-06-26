@@ -239,6 +239,12 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if sel.MatchCommander && !s.isCommander() {
 		return false
 	}
+	if sel.MatchEnchanted && !s.enchanted() {
+		return false
+	}
+	if sel.MatchEquipped && !s.equipped() {
+		return false
+	}
 	if sel.ExcludeSource && s.isSource() {
 		return false
 	}
@@ -662,6 +668,37 @@ func (s *selectionSubject) modified() bool {
 		}
 	}
 	return false
+}
+
+// enchanted reports whether the subject permanent has one or more Auras
+// attached to it (CR 702.5e), and equipped whether it has one or more Equipment
+// attached (CR 702.6e). Only battlefield and event permanents carry
+// attachments; other subjects never match.
+func (s *selectionSubject) enchanted() bool {
+	if permanent, ok := s.attachmentSubjectPermanent(); ok {
+		return permanentIsEnchanted(s.g, permanent)
+	}
+	return false
+}
+
+func (s *selectionSubject) equipped() bool {
+	if permanent, ok := s.attachmentSubjectPermanent(); ok {
+		return permanentIsEquipped(s.g, permanent)
+	}
+	return false
+}
+
+// attachmentSubjectPermanent resolves the live battlefield permanent whose
+// attachments an attachment-state filter inspects, for both the live-permanent
+// and triggering-event-permanent subject kinds.
+func (s *selectionSubject) attachmentSubjectPermanent() (*game.Permanent, bool) {
+	if s.kind == subjectPermanent {
+		return s.permanent, s.permanent != nil
+	}
+	if s.kind == subjectEventPermanent && s.event.PermanentID != 0 {
+		return permanentByObjectID(s.g, s.event.PermanentID)
+	}
+	return nil, false
 }
 
 // isCommander reports whether the subject permanent is a commander. The game

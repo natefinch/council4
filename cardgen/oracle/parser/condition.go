@@ -181,6 +181,18 @@ const (
 	ConditionCombatAttackingOrBlocking ConditionCombatState = "ConditionCombatAttackingOrBlocking"
 )
 
+// ConditionAttachmentState is a typed attachment-state selection filter testing
+// whether the matched permanent has an Aura ("enchanted") or Equipment
+// ("equipped") attached to it.
+type ConditionAttachmentState string
+
+// Attachment-state filters recognized by the parser.
+const (
+	ConditionAttachmentAny       ConditionAttachmentState = ""
+	ConditionAttachmentEnchanted ConditionAttachmentState = "ConditionAttachmentEnchanted"
+	ConditionAttachmentEquipped  ConditionAttachmentState = "ConditionAttachmentEquipped"
+)
+
 // ConditionSupertype identifies a supertype in a typed condition selection.
 type ConditionSupertype string
 
@@ -217,19 +229,23 @@ const (
 // ConditionSelection is the source-independent permanent selection used by typed
 // condition clauses. Subtype names are canonical typed identities.
 type ConditionSelection struct {
-	RequiredTypes     []TriggerCardType    `json:",omitempty"`
-	Supertypes        []ConditionSupertype `json:",omitempty"`
-	SubtypesAny       []types.Sub          `json:",omitempty"`
-	ColorsAny         []TriggerColor       `json:",omitempty"`
-	Colorless         bool                 `json:",omitempty"`
-	Multicolored      bool                 `json:",omitempty"`
-	TokenOnly         bool                 `json:",omitempty"`
-	ExcludeSource     bool                 `json:",omitempty"`
-	Tapped            ConditionTappedState `json:",omitempty"`
-	CombatState       ConditionCombatState `json:",omitempty"`
-	Keyword           KeywordKind          `json:",omitempty"`
-	PowerAtLeast      int                  `json:",omitempty"`
-	MatchPowerAtLeast bool                 `json:",omitempty"`
+	RequiredTypes []TriggerCardType    `json:",omitempty"`
+	Supertypes    []ConditionSupertype `json:",omitempty"`
+	SubtypesAny   []types.Sub          `json:",omitempty"`
+	ColorsAny     []TriggerColor       `json:",omitempty"`
+	Colorless     bool                 `json:",omitempty"`
+	Multicolored  bool                 `json:",omitempty"`
+	TokenOnly     bool                 `json:",omitempty"`
+	ExcludeSource bool                 `json:",omitempty"`
+	Tapped        ConditionTappedState `json:",omitempty"`
+	CombatState   ConditionCombatState `json:",omitempty"`
+	// Attachment tests whether the matched permanent has an Aura ("enchanted")
+	// or Equipment ("equipped") attached to it ("as long as this creature is
+	// equipped"). Its zero value imposes no attachment requirement.
+	Attachment        ConditionAttachmentState `json:",omitempty"`
+	Keyword           KeywordKind              `json:",omitempty"`
+	PowerAtLeast      int                      `json:",omitempty"`
+	MatchPowerAtLeast bool                     `json:",omitempty"`
 	// TotalPowerAtLeast is the collective-power threshold for a "have total
 	// power <n> or greater" qualifier, applied to the selected permanents as a
 	// group rather than to each permanent individually. MatchTotalPowerAtLeast
@@ -1136,6 +1152,9 @@ func recognizeSourceSaddledCondition(body []shared.Token, _ Atoms) (ConditionCla
 
 // inspect the source permanent.
 func recognizeSourceStateCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	if clause, ok := recognizeSourcePronounStateCondition(body, atoms); ok {
+		return clause, true
+	}
 	rest, ok := cutTokenPrefix(body, "this")
 	if !ok {
 		// A possessive self-name subject ("Kitsa's power is 3 or greater") names
@@ -1189,6 +1208,32 @@ func recognizeSourceStateCondition(body []shared.Token, atoms Atoms) (ConditionC
 	}, true
 }
 
+// recognizeSourcePronounStateCondition matches a bare pronoun subject ("it's
+// attacking", "it is untapped", "it's equipped") that refers to the source
+// permanent in a self-static gate ("This creature has first strike as long as
+// it's attacking."). The pronoun carries no subject noun, so the source binding
+// alone identifies the inspected permanent and the state words fill the
+// selection. Only the source-state vocabulary (tap/combat/attachment) is
+// accepted; "it's a <type>" and "it's <color>" are handled by the event-subject
+// and target-color recognizers earlier in the dispatch chain.
+func recognizeSourcePronounStateCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	stateTokens, ok := cutTokenPrefix(body, "it's")
+	if !ok {
+		if stateTokens, ok = cutTokenPrefix(body, "it", "is"); !ok {
+			return ConditionClause{}, false
+		}
+	}
+	var selection ConditionSelection
+	if !applySourceState(stateTokens, atoms, &selection) {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate:     ConditionPredicateObjectMatches,
+		ObjectBinding: ConditionObjectBindingSource,
+		Selection:     selection,
+	}, true
+}
+
 // recognizeSourcePowerState recognizes a possessive "<subject>'s power" subject
 // paired with an "<n> or greater" state, binding the source permanent's power.
 func recognizeSourcePowerState(subjectTokens, stateTokens []shared.Token) (ConditionSelection, bool) {
@@ -1224,6 +1269,12 @@ func applySourceState(stateTokens []shared.Token, atoms Atoms, selection *Condit
 		return true
 	case tokenWordsEqual(stateTokens, "attacking", "or", "blocking"):
 		selection.CombatState = ConditionCombatAttackingOrBlocking
+		return true
+	case tokenWordsEqual(stateTokens, "equipped"):
+		selection.Attachment = ConditionAttachmentEquipped
+		return true
+	case tokenWordsEqual(stateTokens, "enchanted"):
+		selection.Attachment = ConditionAttachmentEnchanted
 		return true
 	}
 	// "this permanent is an enchantment": the state is a typed card type.
@@ -2712,6 +2763,7 @@ func conditionSelectionEmptyExceptType(selection ConditionSelection) bool {
 		!selection.Colorless &&
 		!selection.ExcludeSource &&
 		selection.Tapped == ConditionTappedAny &&
+		selection.Attachment == ConditionAttachmentAny &&
 		!selection.MatchPowerAtLeast
 }
 

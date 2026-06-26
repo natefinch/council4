@@ -1293,25 +1293,26 @@ func TestLowerSourceConditionalProtectionKeywordGrant(t *testing.T) {
 	}
 }
 
-func TestRejectUnsupportedSourceConditionalKeywordGrant(t *testing.T) {
+// TestLowerLeadingPronounSourceStateConditionKeywordGrant proves that a leading
+// "As long as it's <state>, this creature ..." self-static — where the
+// condition uses the bare pronoun source subject and the effect names the
+// source explicitly — lowers onto a source-bound ObjectMatches condition rather
+// than being rejected as an unsupported conditional keyword grant.
+func TestLowerLeadingPronounSourceStateConditionKeywordGrant(t *testing.T) {
 	t.Parallel()
-	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
-		Name:       "Test Attacker",
-		Layout:     "normal",
-		TypeLine:   "Creature — Human",
-		OracleText: "As long as it's attacking, this creature has flying.",
-		Power:      new("2"),
-		Toughness:  new("2"),
-	}, "t")
-	if err != nil {
-		t.Fatal(err)
+	ability := lowerSelfStatic(t, "As long as it's attacking, this creature has flying.")
+	if !ability.Condition.Exists {
+		t.Fatalf("condition missing: %#v", ability)
 	}
-	if source != "" {
-		t.Fatalf("unexpected source:\n%s", source)
+	condition := ability.Condition.Val
+	if !condition.Object.Exists || condition.Object.Val != game.SourcePermanentReference() {
+		t.Fatalf("condition Object = %#v, want source permanent reference", condition.Object)
 	}
-	if len(diagnostics) == 0 {
-		t.Fatal("expected unsupported conditional keyword diagnostic")
+	if !condition.ObjectMatches.Exists ||
+		condition.ObjectMatches.Val.CombatState != game.CombatStateAttacking {
+		t.Fatalf("ObjectMatches = %#v, want CombatStateAttacking", condition.ObjectMatches)
 	}
+	assertSelfContinuous(t, &ability, 0, 0, []game.Keyword{game.Flying})
 }
 
 func TestRejectStaticPTBuffWithUnsupportedKeywordText(t *testing.T) {

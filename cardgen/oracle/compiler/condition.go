@@ -377,12 +377,17 @@ func compileConditionSelection(syntax parser.ConditionSelection) (ConditionSelec
 	if !ok {
 		return ConditionSelection{}, false
 	}
+	attachment, ok := conditionAttachmentFromParser(syntax.Attachment)
+	if !ok {
+		return ConditionSelection{}, false
+	}
 	selection.Colorless = syntax.Colorless
 	selection.Multicolored = syntax.Multicolored
 	selection.TokenOnly = syntax.TokenOnly
 	selection.ExcludeSource = syntax.ExcludeSource
 	selection.Tapped = tapped
 	selection.CombatState = combatState
+	selection.Attachment = attachment
 	selection.Keyword = syntax.Keyword
 	selection.PowerAtLeast = syntax.PowerAtLeast
 	selection.MatchPowerAtLeast = syntax.MatchPowerAtLeast
@@ -474,6 +479,19 @@ func conditionCombatStateFromParser(value parser.ConditionCombatState) (Conditio
 		return ConditionCombatStateAttackingOrBlocking, true
 	default:
 		return ConditionCombatStateAny, false
+	}
+}
+
+func conditionAttachmentFromParser(value parser.ConditionAttachmentState) (ConditionAttachment, bool) {
+	switch value {
+	case parser.ConditionAttachmentAny:
+		return ConditionAttachmentNone, true
+	case parser.ConditionAttachmentEnchanted:
+		return ConditionAttachmentEnchanted, true
+	case parser.ConditionAttachmentEquipped:
+		return ConditionAttachmentEquipped, true
+	default:
+		return ConditionAttachmentNone, false
 	}
 }
 
