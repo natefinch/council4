@@ -108,6 +108,7 @@ func TestExactDistributivePumpAccepts(t *testing.T) {
 		"Up to two target creatures each get +2/+2 until end of turn.",
 		"Up to five target creatures each get -1/-1 until end of turn.",
 		"Up to two target creatures you control each get +1/+0 until end of turn.",
+		"One or two target creatures each get +2/+1 until end of turn.",
 	}
 	for _, source := range accepted {
 		if !modifyOrGainExact(t, source) {
@@ -118,11 +119,11 @@ func TestExactDistributivePumpAccepts(t *testing.T) {
 
 func TestExactDistributivePumpFailsClosed(t *testing.T) {
 	t.Parallel()
-	// "One or two" is a divided-style enumeration the multi-target round-trip
-	// does not reconstruct, and "another"/"other" distributive subjects carry a
-	// qualifier the canonical wording drops, so none may be marked exact.
+	// An adjacent "one or two" enumeration round-trips as a bounded minimum, but
+	// a wider Oxford-comma range ("one, two, or three") uses a list the
+	// multi-target round-trip does not reconstruct, so it must not be exact.
 	rejected := []string{
-		"One or two target creatures each get +2/+1 until end of turn.",
+		"One, two, or three target creatures each get +2/+1 until end of turn.",
 	}
 	for _, source := range rejected {
 		if modifyOrGainExact(t, source) {
@@ -159,6 +160,7 @@ func TestExactDistributiveCombinedBuffAccepts(t *testing.T) {
 		"Two target creatures you control each get +2/+2 and gain flying until end of turn.",
 		"Up to two target creatures each get +1/+0 and gain first strike until end of turn.",
 		"Up to two target creatures each get +2/+2 and gain trample until end of turn.",
+		"One or two target creatures each get +2/+1 and gain trample until end of turn.",
 	}
 	for _, source := range accepted {
 		if !distributiveCombinedBuffEffectsExact(t, source) {
@@ -169,11 +171,11 @@ func TestExactDistributiveCombinedBuffAccepts(t *testing.T) {
 
 func TestExactDistributiveCombinedBuffFailsClosed(t *testing.T) {
 	t.Parallel()
-	// "One or two" is a divided-style enumeration the multi-target round-trip
-	// does not reconstruct, so the modify clause must not be marked exact even
-	// when a keyword grant is appended.
+	// A wider Oxford-comma range ("one, two, or three") uses a list the
+	// multi-target round-trip does not reconstruct, so the modify clause must not
+	// be marked exact even when a keyword grant is appended.
 	rejected := []string{
-		"One or two target creatures each get +2/+1 and gain trample until end of turn.",
+		"One, two, or three target creatures each get +2/+1 and gain trample until end of turn.",
 	}
 	for _, source := range rejected {
 		if distributiveCombinedBuffEffectsExact(t, source) {

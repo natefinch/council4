@@ -56,6 +56,7 @@ var Cards = []*game.CardDef{
 	SteamAugury,
 	StellaLeeWildCard,
 	SterlingKeykeeper,
+	StormOfSteel,
 	SturdyHatchling,
 	SumalaWoodshaper,
 	SunDroplet,

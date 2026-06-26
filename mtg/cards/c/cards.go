@@ -34,6 +34,7 @@ var Cards = []*game.CardDef{
 	ConsumingBonfire,
 	ContestOfClaws,
 	CosmicHunger,
+	Counterintelligence,
 	CountlessGearsRenegade,
 	CourageousOutrider,
 	Cowabunga,

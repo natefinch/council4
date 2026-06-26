@@ -16,6 +16,7 @@ var Cards = []*game.CardDef{
 	PotionerSTrove,
 	PricklyPair,
 	PrimalMight,
+	PrismariCharm,
 	PrizedStatue,
 	PropagatorDrone,
 	ProsperityTycoon,

@@ -10,6 +10,7 @@ var Cards = []*game.CardDef{
 	ObliteratingBolt,
 	ObscuraStorefront,
 	OnduWarCleric,
+	OperaLoveSong,
 	OrcGeneral,
 	OrneryGoblin,
 	OtherworldlyJourney,
