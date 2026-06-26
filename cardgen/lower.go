@@ -905,6 +905,9 @@ func lowerExecutableAbility(
 			if ability.Content.Effects[i].PlayFromTopPayLife {
 				spans = append(spans, ability.Content.Effects[i].PlayFromTopPayLifeRiderSpan)
 			}
+			if ability.Content.Effects[i].PileSplitSequence && ability.Content.Effects[i].PileSplitMiddleSpan != (shared.Span{}) {
+				spans = append(spans, ability.Content.Effects[i].PileSplitMiddleSpan)
+			}
 		}
 		for _, target := range ability.Content.Targets {
 			spans = append(spans, target.Span)

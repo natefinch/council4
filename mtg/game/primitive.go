@@ -128,10 +128,15 @@ const (
 	// primitives ExileFromHand, ExileFromGraveyard, PutFromHand, and
 	// ReturnFromGraveyard, which now lower to a ChooseFromZone envelope.
 	PrimitiveChooseFromZone
+	// PrimitivePileSplit reveals the top N cards of a player's library, has the
+	// separating player split them into two piles, has the choosing player pick
+	// one pile, and routes the kept and other piles to their destinations
+	// (game.PileSplit). It models the "Fact or Fiction" family.
+	PrimitivePileSplit
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveChooseFromZone) + 1
+const primitiveKindCount = int(PrimitivePileSplit) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -1175,6 +1180,24 @@ type Dig struct {
 	Look      Quantity
 	Take      Quantity
 	Remainder DigRemainder
+}
+
+// PileSplit reveals the top Amount cards of the referenced player's library,
+// has the separating player divide the revealed cards into two piles, has the
+// choosing player pick one pile to keep, then moves the kept pile to Kept and
+// the other pile to Other (both zones belonging to Player). It models the "Fact
+// or Fiction" family: "Reveal the top N cards of your library. An opponent
+// separates those cards into two piles. Put one pile into your hand and the
+// other into your graveyard." SeparatorOpponent and ChooserOpponent select
+// whether an opponent (rather than the controller) separates the piles and
+// chooses which pile is kept; the unchosen actor role is the controller.
+type PileSplit struct {
+	Player            PlayerReference
+	Amount            Quantity
+	SeparatorOpponent bool
+	ChooserOpponent   bool
+	Kept              zone.Type
+	Other             zone.Type
 }
 
 // ImpulseExile exiles cards from the top of a player's library and lets the

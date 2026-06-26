@@ -2057,6 +2057,22 @@ func (p Dig) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p PileSplit) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if !p.Amount.IsDynamic() && p.Amount.Value() < 1 {
+		return errors.New("PileSplit requires revealing a positive number of cards")
+	}
+	if p.Kept != zone.Hand {
+		return errors.New("PileSplit requires a Hand kept destination")
+	}
+	if p.Other != zone.Graveyard && p.Other != zone.Library {
+		return errors.New("PileSplit requires a Graveyard or Library other destination")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
 func (p ImpulseExile) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err

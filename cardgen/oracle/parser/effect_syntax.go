@@ -268,6 +268,7 @@ func emitSentenceResolvingSyntax(
 	var riderCandidates []int
 	var chooseColorCandidates []int
 	var enchantmentReturnCandidates []int
+	var pileSplitMiddleCandidates []int
 	for i := range sentences {
 		if sentences[i].StaticRule != nil ||
 			sourceCostReduction != nil && sentences[i].Span == sourceCostReduction.Span ||
@@ -296,6 +297,8 @@ func emitSentenceResolvingSyntax(
 				chooseColorCandidates = append(chooseColorCandidates, i)
 			case isEnchantmentReturnRiderTokens(tokens):
 				enchantmentReturnCandidates = append(enchantmentReturnCandidates, i)
+			case isPileSplitMiddleTokens(tokens):
+				pileSplitMiddleCandidates = append(pileSplitMiddleCandidates, i)
 			case isChooseTargetPreambleTokens(tokens) && len(sentences[i].Targets) > 0:
 				// A bare "Choose [another] target <object>." preamble declares a
 				// target consumed by a following effect's "it" pronoun and emits
@@ -309,6 +312,9 @@ func emitSentenceResolvingSyntax(
 	recognizeShuffleRevealPermanentSequence(sentences)
 	recognizeRevealUntilThenPutSequence(sentences)
 	recognizeRevealChooseHandDiscardSequence(sentences)
+	if len(pileSplitMiddleCandidates) > 0 && !recognizePileSplitSequence(sentences) {
+		unrecognizedSibling = true
+	}
 	creditConjoinedCopyChooseNewTargetsRider(sentences)
 	if len(chooseColorCandidates) > 0 && !creditChosenColorChoice(sentences, chooseColorCandidates) {
 		unrecognizedSibling = true

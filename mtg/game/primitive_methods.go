@@ -198,6 +198,9 @@ func (Surveil) Kind() PrimitiveKind { return PrimitiveSurveil }
 // Kind implements Primitive for Dig.
 func (Dig) Kind() PrimitiveKind { return PrimitiveDig }
 
+// Kind implements Primitive for PileSplit.
+func (PileSplit) Kind() PrimitiveKind { return PrimitivePileSplit }
+
 // Kind implements Primitive for ImpulseExile.
 func (ImpulseExile) Kind() PrimitiveKind { return PrimitiveImpulseExile }
 
@@ -378,6 +381,7 @@ func (RevealUntil) isPrimitive()                          {}
 func (Scry) isPrimitive()                                 {}
 func (Surveil) isPrimitive()                              {}
 func (Dig) isPrimitive()                                  {}
+func (PileSplit) isPrimitive()                            {}
 func (ImpulseExile) isPrimitive()                         {}
 func (Investigate) isPrimitive()                          {}
 func (Proliferate) isPrimitive()                          {}
@@ -591,6 +595,7 @@ func (RevealUntil) instructionRefs() primitiveRefs              { return primiti
 func (p Scry) instructionRefs() primitiveRefs                   { return quantityRefs(p.Amount) }
 func (p Surveil) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }
 func (p Dig) instructionRefs() primitiveRefs                    { return quantityRefs(p.Look) }
+func (p PileSplit) instructionRefs() primitiveRefs              { return quantityRefs(p.Amount) }
 func (p ImpulseExile) instructionRefs() primitiveRefs           { return quantityRefs(p.Amount) }
 func (p Investigate) instructionRefs() primitiveRefs            { return quantityRefs(p.Amount) }
 func (p Proliferate) instructionRefs() primitiveRefs            { return quantityRefs(p.Amount) }

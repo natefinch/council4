@@ -1614,6 +1614,41 @@ func (r Renderer) renderRevealUntil(ctx *renderCtx, value *game.RevealUntil) (st
 	return structLit("game.RevealUntil", fields), nil
 }
 
+func (r Renderer) renderPileSplit(ctx *renderCtx, value *game.PileSplit) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	renderedAmount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	kept, err := renderZone(value.Kept)
+	if err != nil {
+		return "", err
+	}
+	other, err := renderZone(value.Other)
+	if err != nil {
+		return "", err
+	}
+	ctx.need(importZone)
+	fields := []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Amount: %s,", renderedAmount),
+	}
+	if value.SeparatorOpponent {
+		fields = append(fields, "SeparatorOpponent: true,")
+	}
+	if value.ChooserOpponent {
+		fields = append(fields, "ChooserOpponent: true,")
+	}
+	fields = append(fields,
+		fmt.Sprintf("Kept: %s,", kept),
+		fmt.Sprintf("Other: %s,", other),
+	)
+	return structLit("game.PileSplit", fields), nil
+}
+
 func (r Renderer) renderPunisherEachLoseLife(ctx *renderCtx, value *game.PunisherEachLoseLife) (string, error) {
 	renderedAmount, err := r.renderQuantity(ctx, value.Amount)
 	if err != nil {

@@ -623,6 +623,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", err
 		}
 		return r.renderRevealUntil(ctx, &value)
+	case game.PrimitivePileSplit:
+		value, err := assertPrimitive[game.PileSplit](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderPileSplit(ctx, &value)
 	case game.PrimitivePunisherEachLoseLife:
 		value, err := assertPrimitive[game.PunisherEachLoseLife](primitive)
 		if err != nil {

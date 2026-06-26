@@ -52,6 +52,18 @@ const (
 	// effect; the returned selection is the single option index chosen.
 	// MinChoices and MaxChoices both equal one.
 	ChoiceReplacement
+	// ChoicePileSeparate asks the separating player of a PileSplit effect to
+	// divide the revealed cards into two piles. Each option corresponds to one
+	// revealed card; the returned selection is the indices of the cards placed
+	// in the first pile (the rest form the second pile). MinChoices is zero and
+	// MaxChoices equals the number of revealed cards, so either pile may be
+	// empty.
+	ChoicePileSeparate
+	// ChoicePileChoose asks the choosing player of a PileSplit effect which of
+	// the two piles is kept. There are exactly two options (the first and second
+	// pile); the returned selection is the single option index of the kept pile.
+	// MinChoices and MaxChoices both equal one.
+	ChoicePileChoose
 )
 
 // ChoiceCardInfo carries the public characteristics of a card or permanent that

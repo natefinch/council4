@@ -1974,6 +1974,27 @@ type CompiledEffect struct {
 	// the recognized shape; lowering keys on it (with the match-Reveal's
 	// Selector and the Put's ToZone) to emit a single RevealUntil primitive.
 	RevealUntilThenPut bool
+	// PileSplitSequence, with the role/destination/amount/middle-span fields
+	// below, carries the parser's typed marker for the closed pile-split
+	// sequence (Fact or Fiction, Steam Augury, Sphinx of Uthuun). It is set on
+	// the Reveal and Put effects of the recognized shape; lowering keys on it to
+	// emit a single PileSplit primitive.
+	PileSplitSequence bool
+	// PileSplitSeparatorOpponent and PileSplitChooserOpponent report whether an
+	// opponent (rather than the controller) separates the revealed cards into two
+	// piles, and whether an opponent chooses which pile the controller keeps. They
+	// are set only on the Put effect of a recognized pile-split sequence.
+	PileSplitSeparatorOpponent bool
+	PileSplitChooserOpponent   bool
+	// PileSplitOtherZone is the destination of the pile the controller does not
+	// keep (the kept pile always goes to hand); PileSplitAmount is the number of
+	// cards revealed. They are set only on the Put effect of a pile-split sequence.
+	PileSplitOtherZone zone.Type
+	PileSplitAmount    int
+	// PileSplitMiddleSpan covers the zero-effect middle sentence so lowering can
+	// credit its tokens toward source coverage. It is set only on the Put effect
+	// of a recognized pile-split sequence.
+	PileSplitMiddleSpan shared.Span
 	// SourceSpellCostReduction and SourceSpellCostReductionAmount carry the typed
 	// source-scoped cast cost reduction recognized by the parser ("This spell
 	// costs {N} less to cast for each <countable battlefield object>"). Amount

@@ -627,6 +627,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx, syntax *parser
 	if content, ok := lowerRevealUntilSequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerPileSplitSequence(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerRemovalManifestSequence(ctx); ok {
 		return content, true
 	}
@@ -2006,6 +2009,60 @@ func lowerMassGroupBlinkSequence(ctx contentCtx) (game.AbilityContent, bool) {
 		sequence = []game.Instruction{exileInstr, putInstr}
 	}
 	return game.Mode{Sequence: sequence}.Ability(), true
+}
+
+// lowerPileSplitSequence lowers the closed pile-split family "reveal the top N
+// cards of your library[ and separate them into two piles]. An opponent
+// {separates those cards into|chooses one of} two piles. Put {one|that} pile
+// into your hand and the other into your graveyard." (Fact or Fiction, Steam
+// Augury, Sphinx of Uthuun) into a single PileSplit primitive. The parser marks
+// the reveal and put effects with PileSplitSequence and records the separate and
+// choose roles, the non-kept destination, the revealed amount, and the
+// zero-effect middle sentence span on the put effect. This text-blind lowerer
+// reads only those typed fields; any shape mismatch or unmodeled destination
+// fails closed.
+func lowerPileSplitSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 || ctx.optional ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	reveal := ctx.content.Effects[0]
+	put := ctx.content.Effects[1]
+	if reveal.Kind != compiler.EffectReveal || !reveal.PileSplitSequence ||
+		put.Kind != compiler.EffectPut || !put.PileSplitSequence ||
+		reveal.Context != parser.EffectContextController ||
+		put.Context != parser.EffectContextController ||
+		put.PileSplitAmount < 1 {
+		return game.AbilityContent{}, false
+	}
+	if put.PileSplitOtherZone != zone.Graveyard && put.PileSplitOtherZone != zone.Library {
+		return game.AbilityContent{}, false
+	}
+	// The pile-split clauses' only references are the put clause's "those cards"/
+	// "the other" anaphors back to the revealed cards, which the PileSplit
+	// primitive models directly. Every content reference must fall within the
+	// reveal, middle, or put spans so no reference needing its own instruction is
+	// dropped.
+	for ri := range ctx.content.References {
+		if !spanCovered(ctx.content.References[ri].Span, []shared.Span{reveal.Span, put.PileSplitMiddleSpan, put.Span}) {
+			return game.AbilityContent{}, false
+		}
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{Primitive: game.PileSplit{
+				Player:            game.ControllerReference(),
+				Amount:            game.Fixed(put.PileSplitAmount),
+				SeparatorOpponent: put.PileSplitSeparatorOpponent,
+				ChooserOpponent:   put.PileSplitChooserOpponent,
+				Kept:              zone.Hand,
+				Other:             put.PileSplitOtherZone,
+			}},
+		},
+	}.Ability(), true
 }
 
 // of your library. Put M of them into your hand and the rest into your
