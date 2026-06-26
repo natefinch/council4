@@ -187,6 +187,14 @@ type Selection struct {
 	// matches. Placed beside MatchModified to pack into the bool cluster.
 	MatchCommander bool
 
+	// MatchEnchanted requires the matched permanent to have one or more Auras
+	// attached to it ("as long as this creature is enchanted"); MatchEquipped
+	// requires one or more Equipment attached to it ("as long as this creature
+	// is equipped"). A non-battlefield subject never matches. Placed beside
+	// MatchModified to pack into the bool cluster.
+	MatchEnchanted bool
+	MatchEquipped  bool
+
 	// SubtypeChoice constrains the matched permanent to a creature subtype chosen
 	// during play; see SubtypeChoiceSource. The zero value imposes no restriction.
 	SubtypeChoice SubtypeChoiceSource
@@ -331,6 +339,8 @@ func (s Selection) Empty() bool {
 		!s.EnteredThisTurn &&
 		!s.MatchModified &&
 		!s.MatchCommander &&
+		!s.MatchEnchanted &&
+		!s.MatchEquipped &&
 		s.ColorChoice == ColorChoiceNone &&
 		!s.ExcludeSource &&
 		!s.NonToken &&

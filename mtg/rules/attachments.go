@@ -79,6 +79,16 @@ func permanentIsEnchanted(g *game.Game, permanent *game.Permanent) bool {
 	return false
 }
 
+func permanentIsEquipped(g *game.Game, permanent *game.Permanent) bool {
+	for _, attachmentID := range permanent.Attachments {
+		attachment, ok := permanentByObjectID(g, attachmentID)
+		if ok && activeBattlefieldPermanent(attachment) && isEquipmentPermanent(g, attachment) {
+			return true
+		}
+	}
+	return false
+}
+
 func isEquipmentPermanent(g *game.Game, permanent *game.Permanent) bool {
 	return permanentHasType(g, permanent, types.Artifact) && (permanentHasSubtype(g, permanent, types.Equipment) || hasKeyword(g, permanent, game.Equip))
 }

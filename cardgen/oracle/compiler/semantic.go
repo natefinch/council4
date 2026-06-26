@@ -846,6 +846,18 @@ const (
 	ConditionCombatStateAttackingOrBlocking
 )
 
+// ConditionAttachment is a closed semantic attachment-state selection filter
+// testing whether the matched permanent has an Aura ("enchanted") or Equipment
+// ("equipped") attached to it.
+type ConditionAttachment uint8
+
+// Condition attachment-state values.
+const (
+	ConditionAttachmentNone ConditionAttachment = iota
+	ConditionAttachmentEnchanted
+	ConditionAttachmentEquipped
+)
+
 // ConditionComparisonScope selects which players' battlefields a control-count
 // comparison counts.
 type ConditionComparisonScope uint8
@@ -869,16 +881,20 @@ const (
 // ConditionSelection is the source-independent Selection vocabulary used by
 // semantic conditions. Subtype names are canonicalized during recognition.
 type ConditionSelection struct {
-	RequiredTypes     []types.Card
-	Supertypes        []types.Super
-	SubtypesAny       []string
-	ColorsAny         []color.Color
-	Colorless         bool
-	Multicolored      bool
-	TokenOnly         bool
-	ExcludeSource     bool
-	Tapped            ConditionTriState
-	CombatState       ConditionCombatState
+	RequiredTypes []types.Card
+	Supertypes    []types.Super
+	SubtypesAny   []string
+	ColorsAny     []color.Color
+	Colorless     bool
+	Multicolored  bool
+	TokenOnly     bool
+	ExcludeSource bool
+	Tapped        ConditionTriState
+	CombatState   ConditionCombatState
+	// Attachment tests whether the matched permanent has an Aura ("enchanted")
+	// or Equipment ("equipped") attached to it. Its zero value imposes no
+	// attachment requirement.
+	Attachment        ConditionAttachment
 	Keyword           parser.KeywordKind
 	PowerAtLeast      int
 	MatchPowerAtLeast bool

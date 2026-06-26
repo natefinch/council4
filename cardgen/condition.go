@@ -419,6 +419,13 @@ func lowerConditionSelection(selection compiler.ConditionSelection) (game.Select
 	result.MatchAnyCounter = selection.AnyCounter
 	result.ExcludeSource = selection.ExcludeSource
 	result.TokenOnly = selection.TokenOnly
+	switch selection.Attachment {
+	case compiler.ConditionAttachmentEnchanted:
+		result.MatchEnchanted = true
+	case compiler.ConditionAttachmentEquipped:
+		result.MatchEquipped = true
+	default:
+	}
 	if selection.CounterKindKnown {
 		result.RequiredCounter = selection.CounterKind
 		result.RequiredCounterCount = opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: selection.CounterCountAtLeast})
