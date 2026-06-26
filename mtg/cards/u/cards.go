@@ -10,4 +10,5 @@ var Cards = []*game.CardDef{
 	UndercityInformer,
 	UneshCriosphinxSovereign,
 	UnfathomableTruths,
+	UntimelyMalfunction,
 }

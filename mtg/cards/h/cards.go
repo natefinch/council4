@@ -13,6 +13,7 @@ var Cards = []*game.CardDef{
 	HarperRecruiter,
 	HauntedRidge,
 	HazoretGodseeker,
+	HeartsOnFire,
 	HeatOfBattle,
 	HeirloomAuntie,
 	HengeWalker,

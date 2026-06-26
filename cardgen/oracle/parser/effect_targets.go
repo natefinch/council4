@@ -672,8 +672,10 @@ func exactMultiPermanentUnionTargetSyntax(text, prefix string, plural bool, sele
 // "target" for a supported multi-target or optional cardinality, whether the
 // target noun is plural, and whether the cardinality is one the round-trip
 // represents. It reconstructs the unbounded "any number of" shape (Min 0,
-// Max 99) as a plural count, and fails closed for the divided-damage "one or
-// two" ranges (Min neither 0 nor Max) and counts without a small-cardinal word.
+// Max 99) as a plural count, reconstructs an adjacent "<lo> or <hi>" range (Min
+// at least one, Max exactly one more, "one or two", "two or three") as a plural
+// count, and fails closed for wider ranges and counts without a small-cardinal
+// word.
 func multiTargetCardinalityPrefix(c TargetCardinalitySyntax) (prefix string, plural, ok bool) {
 	if c.Min == 0 && c.Max == 1 {
 		return "up to one ", false, true
@@ -695,6 +697,17 @@ func multiTargetCardinalityPrefix(c TargetCardinalitySyntax) (prefix string, plu
 	}
 	if c.Min == c.Max {
 		return word + " ", true, true
+	}
+	// An adjacent count range ("one or two", "two or three") is the only bounded
+	// minimum the round-trip represents: it reads as "<lo> or <hi> target". A
+	// wider range ("one, two, or three") uses an Oxford-comma list this shape
+	// does not model and fails closed.
+	if c.Max == c.Min+1 {
+		minWord, minFound := cardinalWord(c.Min)
+		if !minFound {
+			return "", false, false
+		}
+		return minWord + " or " + word + " ", true, true
 	}
 	return "", false, false
 }
