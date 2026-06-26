@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,507 of 32,501 cards eligible for paper support (44.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,509 of 32,501 cards eligible for paper support (44.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4256,6 +4256,7 @@ Council4 currently supports **14,507 of 32,501 cards eligible for paper support 
 - Fire // Ice
 - Fire Ambush
 - Fire Ants
+- Fire Covenant
 - Fire Diamond
 - Fire Dragon
 - Fire Drake
@@ -10045,6 +10046,7 @@ Council4 currently supports **14,507 of 32,501 cards eligible for paper support 
 - Rollick of Abandon
 - Rolling Hamsphere
 - Rolling Temblor
+- Rolling Thunder
 - Romantic Rendezvous
 - Ronin Cavekeeper
 - Ronin Houndmaster

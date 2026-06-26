@@ -2626,14 +2626,15 @@ func dividedDamageEffect(effect *EffectSyntax) bool {
 
 // exactDividedDamageText reconstructs the canonical "deals N damage divided as
 // you choose among <cardinality> <noun>" clause and compares it byte-for-byte to
-// the source. It supports only a fixed total and the cardinality and target
-// nouns the executable backend can represent exactly, failing closed otherwise.
+// the source. It supports a fixed total or the spell's variable X and the
+// cardinality and target nouns the executable backend can represent exactly,
+// failing closed otherwise.
 func exactDividedDamageText(effect *EffectSyntax, prefix, text string) bool {
-	if !effect.Amount.Known || effect.Amount.Value < 1 ||
-		effect.Amount.DynamicForm != EffectDynamicAmountFormNone ||
-		effect.Amount.DynamicKind != EffectDynamicAmountNone ||
-		effect.Negated ||
-		len(effect.Targets) != 1 {
+	if effect.Negated || len(effect.Targets) != 1 {
+		return false
+	}
+	amountText, ok := dividedDamageAmountText(effect.Amount)
+	if !ok {
 		return false
 	}
 	cardinality, ok := dividedCardinalityPhrase(effect.Targets[0].Cardinality)
@@ -2644,9 +2645,34 @@ func exactDividedDamageText(effect *EffectSyntax, prefix, text string) bool {
 	if !ok {
 		return false
 	}
-	expected := fmt.Sprintf("%s %d damage divided as you choose among %s %s.",
-		prefix, effect.Amount.Value, cardinality, noun)
+	expected := fmt.Sprintf("%s %s damage divided as you choose among %s %s.",
+		prefix, amountText, cardinality, noun)
 	return text == expected
+}
+
+// dividedDamageAmountText reconstructs the canonical amount token for a divided
+// damage clause: the literal integer for a fixed total of at least one, or "X"
+// for the spell's bare variable X. It fails closed for a non-positive fixed
+// total, for any dynamic amount form ("equal to ...", "where X is ..."), and for
+// the "X plus N" rider, none of which the divided path can represent, so those
+// wordings keep failing the round-trip.
+func dividedDamageAmountText(amount EffectAmountSyntax) (string, bool) {
+	if amount.DynamicForm != EffectDynamicAmountFormNone ||
+		amount.DynamicKind != EffectDynamicAmountNone ||
+		amount.Addend != 0 || amount.Multiplier != 0 {
+		return "", false
+	}
+	switch {
+	case amount.Known:
+		if amount.Value < 1 {
+			return "", false
+		}
+		return strconv.Itoa(amount.Value), true
+	case amount.VariableX:
+		return "X", true
+	default:
+		return "", false
+	}
 }
 
 // dividedCardinalityPhrase reconstructs the cardinal phrase that introduces the

@@ -126,7 +126,7 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "nonmana equip", cardName: "Test Equipment", typeLine: "Artifact — Equipment", oracleText: "Equip—Pay {3} or discard a card."},
 		{name: "qualified equip", cardName: "Test Equipment", typeLine: "Artifact — Equipment", oracleText: "Equip creature token {1}"},
 		{name: "noncolor protection (replaced by support test)", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Protection from a chosen color"},
-		{name: "divided damage variable amount", cardName: "Test Bolt", typeLine: "Instant", oracleText: "Test Bolt deals X damage divided as you choose among any number of targets."},
+		{name: "divided damage variable amount with plus rider", cardName: "Test Bolt", typeLine: "Instant", oracleText: "Test Bolt deals X plus 1 damage divided as you choose among any number of targets."},
 		{name: "variable surveil", cardName: "Test Surveil", typeLine: "Sorcery", oracleText: "Surveil X."},
 		{name: "repeated proliferate", cardName: "Test Proliferate", typeLine: "Sorcery", oracleText: "Proliferate X times."},
 		{name: "scry with unrecognized sibling", cardName: "Test Vision", typeLine: "Sorcery", oracleText: "Scry 1, then celebrate."},
