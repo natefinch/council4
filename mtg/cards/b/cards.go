@@ -26,6 +26,7 @@ var Cards = []*game.CardDef{
 	BotBashingTime,
 	BragoKingEternal,
 	BridgeworksBattle,
+	BrokersHideout,
 	BugenhagenWiseElder,
 	BurnTheAccursed,
 	Bushwhack,

@@ -68,7 +68,7 @@ func lowerOptionalSacrificeThenSearchSequence(ctx contentCtx) (game.AbilityConte
 	if !ok || len(groups) != 1 {
 		return game.AbilityContent{}, false
 	}
-	sacrifice, ok := lowerOptionalSacrificeLeadInstruction(ctx)
+	sacrifice, ok := lowerSacrificeLeadInstruction(ctx)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
@@ -107,14 +107,14 @@ func searchGroupEffectsWithoutGatePrefix(effects []compiler.CompiledEffect, gate
 	return trimmed
 }
 
-// lowerOptionalSacrificeLeadInstruction lowers the leading sacrifice effect of an
-// optional "you may sacrifice X. If you do, ..." sequence to its single runtime
-// instruction. Unlike lowerSequenceSacrificeInstruction it passes the effect's
-// own references so a self-referential sacrifice ("sacrifice this creature")
+// lowerSacrificeLeadInstruction lowers the leading sacrifice effect of a
+// sacrifice-then-search sequence to its single runtime instruction. It passes the
+// effect's own references so a self-referential sacrifice ("sacrifice this
+// creature", the Cabaretti Courtyard "sacrifice it" reflexive backreference)
 // resolves, and it accepts either the source-bound Sacrifice primitive or the
 // chosen-permanent SacrificePermanents primitive. It fails closed unless the
 // effect lowers to exactly one such instruction with no target.
-func lowerOptionalSacrificeLeadInstruction(ctx contentCtx) (game.Instruction, bool) {
+func lowerSacrificeLeadInstruction(ctx contentCtx) (game.Instruction, bool) {
 	effect := ctx.content.Effects[0]
 	sacrificeCtx := ctx
 	sacrificeCtx.content = compiler.AbilityContent{
@@ -148,6 +148,13 @@ func lowerOptionalSacrificeLeadInstruction(ctx contentCtx) (game.Instruction, bo
 // replacement gated on one resolving condition, so the first group runs on the
 // negation and the second on the condition — exactly one performs the search.
 //
+// A single trailing rider may close the sentence after the last group's shuffle
+// — the Cabaretti Courtyard tapped-fetch land cycle ends "..., then shuffle and
+// you gain 1 life." (the "When this land enters, sacrifice it. When you do,
+// search ..." form, whose mandatory reflexive trigger flattens into this
+// sacrifice-then-search shape). The rider is lowered as its own instruction
+// after the search, mirroring the post-search rider handling in lowerSearchSpell.
+//
 // Each search group is a multi-effect run (search, put, then shuffle) that the
 // per-effect ordered-sequence loop cannot split, so this dedicated lowerer
 // groups them via searchGroupSpec and emits one game.Search per group.
@@ -161,17 +168,29 @@ func lowerSacrificeThenSearchSequence(ctx contentCtx) (game.AbilityContent, bool
 		content.Effects[0].Kind != compiler.EffectSacrifice {
 		return game.AbilityContent{}, false
 	}
+	// Every reference must belong either to the leading sacrifice clause (the
+	// "it"/"this land" self-reference the sacrifice lowerer resolves) or to the
+	// trailing search/rider clauses (the tutor's "put it" pronoun the
+	// search-group shape consumes, bound as a prior-instruction result). A
+	// reference outside the sacrifice clause that is not a prior-instruction
+	// result would be silently dropped, so fail closed.
 	for i := range content.References {
-		if content.References[i].Binding != compiler.ReferenceBindingPriorInstructionResult {
-			return game.AbilityContent{}, false
+		if content.References[i].Binding == compiler.ReferenceBindingPriorInstructionResult {
+			continue
 		}
+		if spanCovered(content.References[i].Span, []shared.Span{content.Effects[0].Span}) {
+			continue
+		}
+		return game.AbilityContent{}, false
 	}
-	groups, starts, ok := splitSequenceSearchGroups(content.Effects[1:])
+	searchEffects := content.Effects[1:]
+	trailingRider, searchEffects, hasRider := peelTrailingSearchRider(searchEffects)
+	groups, starts, ok := splitSequenceSearchGroups(searchEffects)
 	if !ok || len(groups) < 1 || len(groups) > 2 {
 		return game.AbilityContent{}, false
 	}
 
-	sacrifice, ok := lowerSequenceSacrificeInstruction(ctx)
+	sacrifice, ok := lowerSacrificeLeadInstruction(ctx)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
@@ -186,7 +205,15 @@ func lowerSacrificeThenSearchSequence(ctx contentCtx) (game.AbilityContent, bool
 			return game.AbilityContent{}, false
 		}
 		sequence = append(sequence, searchSeq...)
+		if hasRider {
+			sequence = append(sequence, trailingRider)
+		}
 		return game.Mode{Sequence: sequence}.Ability(), true
+	}
+	// The conditional "instead" two-group form is not modeled with a trailing
+	// rider, so reject that pairing rather than silently dropping the rider.
+	if hasRider {
+		return game.AbilityContent{}, false
 	}
 
 	// Two groups: the second is a conditional "instead" replacement of the
@@ -257,7 +284,26 @@ func splitSequenceSearchGroups(effects []compiler.CompiledEffect) ([]searchGroup
 	return groups, starts, true
 }
 
-// searchGroupInstructions builds the runtime instructions for one library-search
+// peelTrailingSearchRider removes a single rider effect that closes a
+// sacrifice-then-search sentence after the final group's shuffle — the "you gain
+// N life" reward on the Cabaretti Courtyard tapped-fetch land cycle. The rider
+// must immediately follow a shuffle effect and lower through lowerSearchRider
+// (the same fixed controller life-change or random-discard riders the spell
+// search path lowers after its group). It returns the rider instruction, the
+// effects with the rider removed, and true when a rider is present; otherwise it
+// returns the unchanged effects and false so the no-rider shape is unaffected.
+func peelTrailingSearchRider(effects []compiler.CompiledEffect) (game.Instruction, []compiler.CompiledEffect, bool) {
+	n := len(effects)
+	if n < 2 || effects[n-2].Kind != compiler.EffectShuffle {
+		return game.Instruction{}, effects, false
+	}
+	inst, ok := lowerSearchRider(&effects[n-1])
+	if !ok {
+		return game.Instruction{}, effects, false
+	}
+	return inst, effects[:n-1], true
+}
+
 // group: a single Search primitive carrying the group spec and fixed count. A
 // group carrying an in-clause rider is not modeled here and fails closed.
 func searchGroupInstructions(group searchGroup) ([]game.Instruction, bool) {

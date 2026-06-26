@@ -17,6 +17,7 @@ var Cards = []*game.CardDef{
 	RiseFromTheTides,
 	RiteOfFlame,
 	RiteOfOblivion,
+	RiveteersOverlook,
 	RotcrownGhoul,
 	RuthlessPredation,
 }
