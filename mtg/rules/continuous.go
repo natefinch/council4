@@ -9,7 +9,6 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
-	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -551,9 +550,9 @@ func applyContinuousLayers(g *game.Game, permanent *game.Permanent, values *perm
 // modifiers (CR 613.4c), so they interleave with the other 7c effects by
 // timestamp. It reports false when there is no net modifier.
 func counterAndTemporaryEffect(permanent *game.Permanent) (game.ContinuousEffect, bool) {
-	counterDelta := powerToughnessCounterDelta(permanent)
-	powerDelta := counterDelta + permanent.TemporaryPowerModifier
-	toughnessDelta := counterDelta + permanent.TemporaryToughnessModifier
+	counterPower, counterToughness := powerToughnessCounterDelta(permanent)
+	powerDelta := counterPower + permanent.TemporaryPowerModifier
+	toughnessDelta := counterToughness + permanent.TemporaryToughnessModifier
 	if powerDelta == 0 && toughnessDelta == 0 {
 		return game.ContinuousEffect{}, false
 	}
@@ -1298,12 +1297,12 @@ func basicLandSubtypeManaColor(subtype types.Sub) (mana.Color, bool) {
 // during the layer pass (see counterAndTemporaryEffect), so they order correctly
 // with non-commutative 7c effects and the 7d switch (CR 613.4c).
 func applyCounterAndTemporaryValues(permanent *game.Permanent, values *permanentEffectiveValues) {
-	counterDelta := powerToughnessCounterDelta(permanent)
+	counterPower, counterToughness := powerToughnessCounterDelta(permanent)
 	if values.powerOK {
-		values.power += counterDelta + permanent.TemporaryPowerModifier
+		values.power += counterPower + permanent.TemporaryPowerModifier
 	}
 	if values.toughnessOK {
-		values.toughness += counterDelta + permanent.TemporaryToughnessModifier
+		values.toughness += counterToughness + permanent.TemporaryToughnessModifier
 	}
 }
 
@@ -1323,8 +1322,8 @@ func bodyFunctionsOnBattlefield(body game.Ability) bool {
 	return functionZone == zone.None || functionZone == zone.Battlefield
 }
 
-func powerToughnessCounterDelta(permanent *game.Permanent) int {
-	return permanent.Counters.Get(counter.PlusOnePlusOne) - permanent.Counters.Get(counter.MinusOneMinusOne)
+func powerToughnessCounterDelta(permanent *game.Permanent) (power, toughness int) {
+	return permanent.Counters.PowerToughnessDelta()
 }
 
 func keywordCounters(permanent *game.Permanent) []game.Keyword {

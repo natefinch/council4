@@ -203,6 +203,16 @@ var counterKindNames = []counter.Kind{
 	counter.Burden,
 	counter.Age,
 	counter.Quest,
+	counter.PlusOnePlusZero,
+	counter.PlusTwoPlusTwo,
+	counter.MinusZeroMinusOne,
+	counter.PlusZeroPlusOne,
+	counter.MinusZeroMinusTwo,
+	counter.MinusTwoMinusTwo,
+	counter.PlusOnePlusTwo,
+	counter.PlusZeroPlusTwo,
+	counter.MinusTwoMinusOne,
+	counter.MinusOneMinusZero,
 }
 
 // scanCounters emits a counter atom for each "<kind> counter(s)" phrase, spanning

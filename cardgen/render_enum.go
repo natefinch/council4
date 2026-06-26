@@ -261,6 +261,26 @@ func renderCounterKind(kind counter.Kind) (string, error) {
 		return "counter.Quest", nil
 	case counter.Level:
 		return "counter.Level", nil
+	case counter.PlusOnePlusZero:
+		return "counter.PlusOnePlusZero", nil
+	case counter.PlusTwoPlusTwo:
+		return "counter.PlusTwoPlusTwo", nil
+	case counter.MinusZeroMinusOne:
+		return "counter.MinusZeroMinusOne", nil
+	case counter.PlusZeroPlusOne:
+		return "counter.PlusZeroPlusOne", nil
+	case counter.MinusZeroMinusTwo:
+		return "counter.MinusZeroMinusTwo", nil
+	case counter.MinusTwoMinusTwo:
+		return "counter.MinusTwoMinusTwo", nil
+	case counter.PlusOnePlusTwo:
+		return "counter.PlusOnePlusTwo", nil
+	case counter.PlusZeroPlusTwo:
+		return "counter.PlusZeroPlusTwo", nil
+	case counter.MinusTwoMinusOne:
+		return "counter.MinusTwoMinusOne", nil
+	case counter.MinusOneMinusZero:
+		return "counter.MinusOneMinusZero", nil
 	default:
 		return "", fmt.Errorf("render: unsupported counter kind %d", kind)
 	}

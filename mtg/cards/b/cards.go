@@ -25,6 +25,7 @@ var Cards = []*game.CardDef{
 	BoneHarvest,
 	BotBashingTime,
 	BragoKingEternal,
+	BrassTalonChimera,
 	BridgeworksBattle,
 	BrokersHideout,
 	BugenhagenWiseElder,

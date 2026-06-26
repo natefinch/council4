@@ -247,6 +247,43 @@ func TestParseEmitsCounterAtoms(t *testing.T) {
 	}
 }
 
+// TestParseEmitsAsymmetricCounterAtoms proves the parser recognizes the
+// asymmetric power/toughness counter kinds (CR 122.1) whose printed power and
+// toughness differ, spanning the printed name exactly the way the symmetric
+// +1/+1 counter does.
+func TestParseEmitsAsymmetricCounterAtoms(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name string
+		kind counter.Kind
+	}{
+		{"+1/+0", counter.PlusOnePlusZero},
+		{"+2/+2", counter.PlusTwoPlusTwo},
+		{"-0/-1", counter.MinusZeroMinusOne},
+		{"+0/+1", counter.PlusZeroPlusOne},
+		{"-0/-2", counter.MinusZeroMinusTwo},
+		{"-2/-2", counter.MinusTwoMinusTwo},
+		{"+1/+2", counter.PlusOnePlusTwo},
+		{"+0/+2", counter.PlusZeroPlusTwo},
+		{"-2/-1", counter.MinusTwoMinusOne},
+		{"-1/-0", counter.MinusOneMinusZero},
+	}
+	for _, c := range cases {
+		source := "put a " + c.name + " counter on target creature"
+		atoms := atomsFor(t, source, "")
+		if len(atoms.Counters()) != 1 {
+			t.Errorf("%s: emitted %d counter atoms; want 1 (%+v)", c.name, len(atoms.Counters()), atoms.Counters())
+			continue
+		}
+		if atoms.Counters()[0].Kind != c.kind {
+			t.Errorf("%s: counter kind = %v; want %s", c.name, atoms.Counters()[0].Kind, c.name)
+		}
+		if got := shared.SliceSpan(source, atoms.Counters()[0].Span); got != c.name {
+			t.Errorf("%s: counter name span = %q; want %q", c.name, got, c.name)
+		}
+	}
+}
+
 // TestRecognizeCardinalVocabulary keeps the parser-owned cardinal vocabulary
 // covered and asserts the emitted typed values.
 func TestRecognizeCardinalVocabulary(t *testing.T) {

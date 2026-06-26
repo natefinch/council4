@@ -47,11 +47,27 @@ const (
 	Age                          // Age counter (cumulative upkeep)
 	Quest                        // Quest counter (Ascension cycle)
 	Level                        // Level counter (leveler cards, CR 711)
+
+	// Asymmetric power/toughness counters (CR 122.1). Unlike the symmetric
+	// +1/+1 and -1/-1 counters these modify power and toughness by different
+	// amounts. They are ordered after Level so the discrete kind values that
+	// precede them, and the generated source identifiers, are unchanged.
+
+	PlusOnePlusZero   // +1/+0 counter
+	PlusTwoPlusTwo    // +2/+2 counter
+	MinusZeroMinusOne // -0/-1 counter
+	PlusZeroPlusOne   // +0/+1 counter
+	MinusZeroMinusTwo // -0/-2 counter
+	MinusTwoMinusTwo  // -2/-2 counter
+	PlusOnePlusTwo    // +1/+2 counter
+	PlusZeroPlusTwo   // +0/+2 counter
+	MinusTwoMinusOne  // -2/-1 counter
+	MinusOneMinusZero // -1/-0 counter
 )
 
 // Valid reports whether k is a recognized counter kind.
 func (k Kind) Valid() bool {
-	return k >= PlusOnePlusOne && k <= Level
+	return k >= PlusOnePlusOne && k <= MinusOneMinusZero
 }
 
 // PlayerOnly reports whether k may be placed only on players.
@@ -133,8 +149,63 @@ func (k Kind) String() string {
 		return "quest"
 	case Level:
 		return "level"
+	case PlusOnePlusZero:
+		return "+1/+0"
+	case PlusTwoPlusTwo:
+		return "+2/+2"
+	case MinusZeroMinusOne:
+		return "-0/-1"
+	case PlusZeroPlusOne:
+		return "+0/+1"
+	case MinusZeroMinusTwo:
+		return "-0/-2"
+	case MinusTwoMinusTwo:
+		return "-2/-2"
+	case PlusOnePlusTwo:
+		return "+1/+2"
+	case PlusZeroPlusTwo:
+		return "+0/+2"
+	case MinusTwoMinusOne:
+		return "-2/-1"
+	case MinusOneMinusZero:
+		return "-1/-0"
 	default:
 		return "unknown"
+	}
+}
+
+// powerToughness returns the power and toughness a power/toughness counter of
+// this kind modifies (CR 122.1, 613.4c), and whether kind is a power/toughness
+// counter at all. The symmetric +1/+1 and -1/-1 counters report equal power and
+// toughness; the asymmetric kinds report their printed dimensions.
+func (k Kind) powerToughness() (power, toughness int, ok bool) {
+	switch k {
+	case PlusOnePlusOne:
+		return 1, 1, true
+	case MinusOneMinusOne:
+		return -1, -1, true
+	case PlusOnePlusZero:
+		return 1, 0, true
+	case PlusTwoPlusTwo:
+		return 2, 2, true
+	case MinusZeroMinusOne:
+		return 0, -1, true
+	case PlusZeroPlusOne:
+		return 0, 1, true
+	case MinusZeroMinusTwo:
+		return 0, -2, true
+	case MinusTwoMinusTwo:
+		return -2, -2, true
+	case PlusOnePlusTwo:
+		return 1, 2, true
+	case PlusZeroPlusTwo:
+		return 0, 2, true
+	case MinusTwoMinusOne:
+		return -2, -1, true
+	case MinusOneMinusZero:
+		return -1, 0, true
+	default:
+		return 0, 0, false
 	}
 }
 
@@ -215,6 +286,20 @@ func (s *Set) All() map[Kind]int {
 	result := make(map[Kind]int, len(s.counts))
 	maps.Copy(result, s.counts)
 	return result
+}
+
+// PowerToughnessDelta returns the total power and toughness modification from
+// every power/toughness counter on the set (CR 613.4c). The symmetric +1/+1 and
+// -1/-1 counters contribute equal power and toughness; the asymmetric kinds
+// contribute their printed dimensions. Non-power/toughness counters are ignored.
+func (s *Set) PowerToughnessDelta() (power, toughness int) {
+	for kind, count := range s.counts {
+		if p, t, ok := kind.powerToughness(); ok {
+			power += p * count
+			toughness += t * count
+		}
+	}
+	return power, toughness
 }
 
 // Clone returns a deep copy of the set that shares no map state with the

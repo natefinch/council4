@@ -11,6 +11,7 @@ var Cards = []*game.CardDef{
 	TempestTechnique,
 	TheHauntOfHightower,
 	TheIrencrag,
+	TinWingChimera,
 	TolarianSerpent,
 	TomeScour,
 	TowerOfMurmurs,
