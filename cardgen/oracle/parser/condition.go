@@ -98,6 +98,9 @@ const (
 	ConditionPredicateControlsGreatestPowerCreature                    ConditionPredicateKind = "ConditionPredicateControlsGreatestPowerCreature"
 	ConditionPredicateControlsGreatestToughnessCreature                ConditionPredicateKind = "ConditionPredicateControlsGreatestToughnessCreature"
 	ConditionPredicateSubjectSharesCreatureTypeWithSource              ConditionPredicateKind = "ConditionPredicateSubjectSharesCreatureTypeWithSource"
+	ConditionPredicateControllerIsMonarch                              ConditionPredicateKind = "ConditionPredicateControllerIsMonarch"
+	ConditionPredicateControllerHasInitiative                          ConditionPredicateKind = "ConditionPredicateControllerHasInitiative"
+	ConditionPredicateControllerHasCityBlessing                        ConditionPredicateKind = "ConditionPredicateControllerHasCityBlessing"
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -630,6 +633,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeSpellXCondition,
 		recognizeCreatedTokenMatchCondition,
 		recognizeSharesCreatureTypeCondition,
+		recognizeControllerDesignationCondition,
 	} {
 		if clause, ok := recognize(body, atoms); ok {
 			return clause, true
@@ -1416,6 +1420,25 @@ func recognizeGainedLifeThisTurnCondition(body []shared.Token, _ Atoms) (Conditi
 		return ConditionClause{}, false
 	}
 	return ConditionClause{Predicate: ConditionPredicateControllerGainedLifeThisTurnAtLeast, Threshold: count.Value}, true
+}
+
+// recognizeControllerDesignationCondition matches an intervening-if body that
+// tests whether the controller currently holds a player designation: the
+// monarch (CR 720), the initiative (CR 720/dungeon), or the city's blessing
+// (CR 702.131 ascend). These are live single-player game-state predicates that
+// the runtime evaluates against the ability controller's designation flags.
+func recognizeControllerDesignationCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	switch {
+	case tokenWordsEqual(body, "you're", "the", "monarch"),
+		tokenWordsEqual(body, "you", "are", "the", "monarch"):
+		return ConditionClause{Predicate: ConditionPredicateControllerIsMonarch}, true
+	case tokenWordsEqual(body, "you", "have", "the", "initiative"):
+		return ConditionClause{Predicate: ConditionPredicateControllerHasInitiative}, true
+	case tokenWordsEqual(body, "you", "have", "the", "city's", "blessing"):
+		return ConditionClause{Predicate: ConditionPredicateControllerHasCityBlessing}, true
+	default:
+		return ConditionClause{}, false
+	}
 }
 
 func recognizeGraveyardCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {

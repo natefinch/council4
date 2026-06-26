@@ -66,6 +66,9 @@ var simplePredicateMap = map[parser.ConditionPredicateKind]ConditionPredicate{
 	parser.ConditionPredicateControlsGreatestPowerCreature:                    ConditionPredicateControlsGreatestPowerCreature,
 	parser.ConditionPredicateControlsGreatestToughnessCreature:                ConditionPredicateControlsGreatestToughnessCreature,
 	parser.ConditionPredicateSubjectSharesCreatureTypeWithSource:              ConditionPredicateSubjectSharesCreatureTypeWithSource,
+	parser.ConditionPredicateControllerIsMonarch:                              ConditionPredicateControllerIsMonarch,
+	parser.ConditionPredicateControllerHasInitiative:                          ConditionPredicateControllerHasInitiative,
+	parser.ConditionPredicateControllerHasCityBlessing:                        ConditionPredicateControllerHasCityBlessing,
 }
 
 // compileConditionClause mechanically maps one typed ConditionClause onto the

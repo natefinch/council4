@@ -149,6 +149,21 @@ type Condition struct {
 	// Beastmaster). It holds when the controller has the sole highest-toughness
 	// creature or is tied for highest, and is false when no creatures exist.
 	ControllerControlsGreatestToughnessCreature bool
+
+	// ControllerIsMonarch is satisfied when the context controller is the
+	// monarch (CR 720), as in "At the beginning of your end step, if you're the
+	// monarch, ...". It reads the controller's live IsMonarch designation flag.
+	ControllerIsMonarch bool
+
+	// ControllerHasInitiative is satisfied when the context controller has the
+	// initiative (CR 720), as in "At the beginning of your end step, if you have
+	// the initiative, ...". It reads the controller's live HasInitiative flag.
+	ControllerHasInitiative bool
+
+	// ControllerHasCityBlessing is satisfied when the context controller has the
+	// city's blessing (CR 702.131 ascend), as in "if you have the city's
+	// blessing, ...". It reads the controller's live HasCityBlessing flag.
+	ControllerHasCityBlessing bool
 }
 
 // ControlPlayerScope selects which players' battlefields a control-count
@@ -218,7 +233,10 @@ func (c *Condition) Empty() bool {
 		len(c.ControllerControlsNamed) == 0 &&
 		!c.FirstCombatPhaseOfTurn &&
 		!c.ControllerControlsGreatestPowerCreature &&
-		!c.ControllerControlsGreatestToughnessCreature
+		!c.ControllerControlsGreatestToughnessCreature &&
+		!c.ControllerIsMonarch &&
+		!c.ControllerHasInitiative &&
+		!c.ControllerHasCityBlessing
 }
 
 // EventHistoryWindow selects which turn's event log an EventHistoryCondition

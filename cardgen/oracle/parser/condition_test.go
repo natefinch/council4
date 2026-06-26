@@ -134,6 +134,10 @@ func TestParseConditionPredicateMeaning(t *testing.T) {
 		{"controls commander", "you control your commander", ConditionPredicateControllerControlsCommander, 0},
 		{"spell X at least more", "X is 10 or more", ConditionPredicateSpellXAtLeast, 10},
 		{"spell X at least greater", "X is 4 or greater", ConditionPredicateSpellXAtLeast, 4},
+		{"controller is monarch", "you're the monarch", ConditionPredicateControllerIsMonarch, 0},
+		{"controller is monarch long form", "you are the monarch", ConditionPredicateControllerIsMonarch, 0},
+		{"controller has initiative", "you have the initiative", ConditionPredicateControllerHasInitiative, 0},
+		{"controller has city's blessing", "you have the city's blessing", ConditionPredicateControllerHasCityBlessing, 0},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

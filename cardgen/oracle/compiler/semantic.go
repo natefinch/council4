@@ -747,6 +747,18 @@ const (
 	// It carries no selection parameters; the lowering binds it to the looked-at
 	// card and the source permanent.
 	ConditionPredicateSubjectSharesCreatureTypeWithSource
+	// ConditionPredicateControllerIsMonarch is satisfied when the context
+	// controller is the monarch (CR 720). It is a live single-player game-state
+	// predicate with no clause parameters.
+	ConditionPredicateControllerIsMonarch
+	// ConditionPredicateControllerHasInitiative is satisfied when the context
+	// controller has the initiative (CR 720). It is a live single-player
+	// game-state predicate with no clause parameters.
+	ConditionPredicateControllerHasInitiative
+	// ConditionPredicateControllerHasCityBlessing is satisfied when the context
+	// controller has the city's blessing (CR 702.131 ascend). It is a live
+	// single-player game-state predicate with no clause parameters.
+	ConditionPredicateControllerHasCityBlessing
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
